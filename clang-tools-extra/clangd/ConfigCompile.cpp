@@ -131,7 +131,7 @@ struct FragmentCompiler {
       return std::nullopt;
     }
     llvm::SmallString<256> AbsPath = llvm::StringRef(*Path);
-    llvm::sys::fs::make_absolute(FragmentDirectory, AbsPath);
+    llvm::sys::path::make_absolute(FragmentDirectory, AbsPath);
     llvm::sys::path::native(AbsPath, Style);
     return AbsPath.str().str();
   }
@@ -198,6 +198,7 @@ struct FragmentCompiler {
     compile(std::move(F.InlayHints));
     compile(std::move(F.SemanticTokens));
     compile(std::move(F.Style));
+    compile(std::move(F.Documentation));
   }
 
   void compile(Fragment::IfBlock &&F) {
@@ -439,8 +440,7 @@ struct FragmentCompiler {
           [Normalized(std::move(Normalized))](const Params &, Config &C) {
             if (C.Diagnostics.SuppressAll)
               return;
-            for (llvm::StringRef N : Normalized)
-              C.Diagnostics.Suppress.insert(N);
+            C.Diagnostics.Suppress.insert_range(Normalized);
           });
 
     if (F.UnusedIncludes) {
@@ -536,7 +536,7 @@ struct FragmentCompiler {
     }
     if (Filters->empty())
       return std::nullopt;
-    auto Filter = [Filters](llvm::StringRef Path) {
+    auto Filter = [Filters = std::move(Filters)](llvm::StringRef Path) {
       for (auto &Regex : *Filters)
         if (Regex.match(Path))
           return true;
@@ -564,10 +564,10 @@ struct FragmentCompiler {
       auto Fast = isFastTidyCheck(Str);
       if (!Fast.has_value()) {
         diag(Warning,
-             llvm::formatv(
-                 "Latency of clang-tidy check '{0}' is not known. "
-                 "It will only run if ClangTidy.FastCheckFilter is Loose or None",
-                 Str)
+             llvm::formatv("Latency of clang-tidy check '{0}' is not known. "
+                           "It will only run if ClangTidy.FastCheckFilter is "
+                           "Loose or None",
+                           Str)
                  .str(),
              Arg.Range);
       } else if (!*Fast) {
@@ -708,6 +708,29 @@ struct FragmentCompiler {
           C.Completion.HeaderInsertion = *Val;
         });
     }
+
+    if (F.CodePatterns) {
+      if (auto Val = compileEnum<Config::CodePatternsPolicy>("CodePatterns",
+                                                             *F.CodePatterns)
+                         .map("All", Config::CodePatternsPolicy::All)
+                         .map("None", Config::CodePatternsPolicy::None)
+                         .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Completion.CodePatterns = *Val;
+        });
+    }
+
+    if (F.MacroFilter) {
+      if (auto Val =
+              compileEnum<Config::MacroFilterPolicy>("MacroFilter",
+                                                     *F.MacroFilter)
+                  .map("ExactPrefix", Config::MacroFilterPolicy::ExactPrefix)
+                  .map("FuzzyMatch", Config::MacroFilterPolicy::FuzzyMatch)
+                  .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Completion.MacroFilter = *Val;
+        });
+    }
   }
 
   void compile(Fragment::HoverBlock &&F) {
@@ -715,6 +738,12 @@ struct FragmentCompiler {
       Out.Apply.push_back([ShowAKA(**F.ShowAKA)](const Params &, Config &C) {
         C.Hover.ShowAKA = ShowAKA;
       });
+    }
+    if (F.MacroContentsLimit) {
+      Out.Apply.push_back(
+          [Limit(**F.MacroContentsLimit)](const Params &, Config &C) {
+            C.Hover.MacroContentsLimit = Limit;
+          });
     }
   }
 
@@ -780,6 +809,21 @@ struct FragmentCompiler {
             C.SemanticTokens.DisabledModifiers.push_back(std::move(Kind));
         }
       });
+    }
+  }
+
+  void compile(Fragment::DocumentationBlock &&F) {
+    if (F.CommentFormat) {
+      if (auto Val =
+              compileEnum<Config::CommentFormatPolicy>("CommentFormat",
+                                                       *F.CommentFormat)
+                  .map("Plaintext", Config::CommentFormatPolicy::PlainText)
+                  .map("Markdown", Config::CommentFormatPolicy::Markdown)
+                  .map("Doxygen", Config::CommentFormatPolicy::Doxygen)
+                  .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.Documentation.CommentFormat = *Val;
+        });
     }
   }
 

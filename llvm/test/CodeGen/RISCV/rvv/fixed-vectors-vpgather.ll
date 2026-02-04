@@ -8,8 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfhmin,+zvfbfmin,+v \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=RV64
 
-declare <2 x i8> @llvm.vp.gather.v2i8.v2p0(<2 x ptr>, <2 x i1>, i32)
-
 define <2 x i8> @vpgather_v2i8(<2 x ptr> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v2i8:
 ; RV32:       # %bb.0:
@@ -154,8 +152,6 @@ define <2 x i64> @vpgather_v2i8_zextload_v2i64(<2 x ptr> %ptrs, <2 x i1> %m, i32
   ret <2 x i64> %ev
 }
 
-declare <3 x i8> @llvm.vp.gather.v3i8.v3p0(<3 x ptr>, <3 x i1>, i32)
-
 define <3 x i8> @vpgather_v3i8(<3 x ptr> %ptrs, <3 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v3i8:
 ; RV32:       # %bb.0:
@@ -192,8 +188,6 @@ define <3 x i8> @vpgather_truemask_v3i8(<3 x ptr> %ptrs, i32 zeroext %evl) {
   ret <3 x i8> %v
 }
 
-declare <4 x i8> @llvm.vp.gather.v4i8.v4p0(<4 x ptr>, <4 x i1>, i32)
-
 define <4 x i8> @vpgather_v4i8(<4 x ptr> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v4i8:
 ; RV32:       # %bb.0:
@@ -229,8 +223,6 @@ define <4 x i8> @vpgather_truemask_v4i8(<4 x ptr> %ptrs, i32 zeroext %evl) {
   %v = call <4 x i8> @llvm.vp.gather.v4i8.v4p0(<4 x ptr> %ptrs, <4 x i1> splat (i1 1), i32 %evl)
   ret <4 x i8> %v
 }
-
-declare <8 x i8> @llvm.vp.gather.v8i8.v8p0(<8 x ptr>, <8 x i1>, i32)
 
 define <8 x i8> @vpgather_v8i8(<8 x ptr> %ptrs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v8i8:
@@ -270,8 +262,6 @@ define <8 x i8> @vpgather_baseidx_v8i8(ptr %base, <8 x i8> %idxs, <8 x i1> %m, i
   %v = call <8 x i8> @llvm.vp.gather.v8i8.v8p0(<8 x ptr> %ptrs, <8 x i1> %m, i32 %evl)
   ret <8 x i8> %v
 }
-
-declare <32 x i8> @llvm.vp.gather.v32i8.v32p0(<32 x ptr>, <32 x i1>, i32)
 
 define <32 x i8> @vpgather_baseidx_v32i8(ptr %base, <32 x i8> %idxs, <32 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_baseidx_v32i8:
@@ -316,8 +306,6 @@ define <32 x i8> @vpgather_baseidx_v32i8(ptr %base, <32 x i8> %idxs, <32 x i1> %
   %v = call <32 x i8> @llvm.vp.gather.v32i8.v32p0(<32 x ptr> %ptrs, <32 x i1> %m, i32 %evl)
   ret <32 x i8> %v
 }
-
-declare <2 x i16> @llvm.vp.gather.v2i16.v2p0(<2 x ptr>, <2 x i1>, i32)
 
 define <2 x i16> @vpgather_v2i16(<2 x ptr> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v2i16:
@@ -421,8 +409,6 @@ define <2 x i64> @vpgather_v2i16_zextload_v2i64(<2 x ptr> %ptrs, <2 x i1> %m, i3
   ret <2 x i64> %ev
 }
 
-declare <4 x i16> @llvm.vp.gather.v4i16.v4p0(<4 x ptr>, <4 x i1>, i32)
-
 define <4 x i16> @vpgather_v4i16(<4 x ptr> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v4i16:
 ; RV32:       # %bb.0:
@@ -458,8 +444,6 @@ define <4 x i16> @vpgather_truemask_v4i16(<4 x ptr> %ptrs, i32 zeroext %evl) {
   %v = call <4 x i16> @llvm.vp.gather.v4i16.v4p0(<4 x ptr> %ptrs, <4 x i1> splat (i1 1), i32 %evl)
   ret <4 x i16> %v
 }
-
-declare <8 x i16> @llvm.vp.gather.v8i16.v8p0(<8 x ptr>, <8 x i1>, i32)
 
 define <8 x i16> @vpgather_v8i16(<8 x ptr> %ptrs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v8i16:
@@ -570,8 +554,6 @@ define <8 x i16> @vpgather_baseidx_v8i16(ptr %base, <8 x i16> %idxs, <8 x i1> %m
   ret <8 x i16> %v
 }
 
-declare <2 x i32> @llvm.vp.gather.v2i32.v2p0(<2 x ptr>, <2 x i1>, i32)
-
 define <2 x i32> @vpgather_v2i32(<2 x ptr> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v2i32:
 ; RV32:       # %bb.0:
@@ -631,8 +613,6 @@ define <2 x i64> @vpgather_v2i32_zextload_v2i64(<2 x ptr> %ptrs, <2 x i1> %m, i3
   ret <2 x i64> %ev
 }
 
-declare <4 x i32> @llvm.vp.gather.v4i32.v4p0(<4 x ptr>, <4 x i1>, i32)
-
 define <4 x i32> @vpgather_v4i32(<4 x ptr> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v4i32:
 ; RV32:       # %bb.0:
@@ -666,8 +646,6 @@ define <4 x i32> @vpgather_truemask_v4i32(<4 x ptr> %ptrs, i32 zeroext %evl) {
   %v = call <4 x i32> @llvm.vp.gather.v4i32.v4p0(<4 x ptr> %ptrs, <4 x i1> splat (i1 1), i32 %evl)
   ret <4 x i32> %v
 }
-
-declare <8 x i32> @llvm.vp.gather.v8i32.v8p0(<8 x ptr>, <8 x i1>, i32)
 
 define <8 x i32> @vpgather_v8i32(<8 x ptr> %ptrs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v8i32:
@@ -850,8 +828,6 @@ define <8 x i32> @vpgather_baseidx_v8i32(ptr %base, <8 x i32> %idxs, <8 x i1> %m
   ret <8 x i32> %v
 }
 
-declare <2 x i64> @llvm.vp.gather.v2i64.v2p0(<2 x ptr>, <2 x i1>, i32)
-
 define <2 x i64> @vpgather_v2i64(<2 x ptr> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v2i64:
 ; RV32:       # %bb.0:
@@ -868,8 +844,6 @@ define <2 x i64> @vpgather_v2i64(<2 x ptr> %ptrs, <2 x i1> %m, i32 zeroext %evl)
   %v = call <2 x i64> @llvm.vp.gather.v2i64.v2p0(<2 x ptr> %ptrs, <2 x i1> %m, i32 %evl)
   ret <2 x i64> %v
 }
-
-declare <4 x i64> @llvm.vp.gather.v4i64.v4p0(<4 x ptr>, <4 x i1>, i32)
 
 define <4 x i64> @vpgather_v4i64(<4 x ptr> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v4i64:
@@ -904,8 +878,6 @@ define <4 x i64> @vpgather_truemask_v4i64(<4 x ptr> %ptrs, i32 zeroext %evl) {
   %v = call <4 x i64> @llvm.vp.gather.v4i64.v4p0(<4 x ptr> %ptrs, <4 x i1> splat (i1 1), i32 %evl)
   ret <4 x i64> %v
 }
-
-declare <8 x i64> @llvm.vp.gather.v8i64.v8p0(<8 x ptr>, <8 x i1>, i32)
 
 define <8 x i64> @vpgather_v8i64(<8 x ptr> %ptrs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v8i64:
@@ -1156,8 +1128,6 @@ define <8 x i64> @vpgather_baseidx_v8i64(ptr %base, <8 x i64> %idxs, <8 x i1> %m
   ret <8 x i64> %v
 }
 
-declare <2 x bfloat> @llvm.vp.gather.v2bf16.v2p0(<2 x ptr>, <2 x i1>, i32)
-
 define <2 x bfloat> @vpgather_v2bf16(<2 x ptr> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v2bf16:
 ; RV32:       # %bb.0:
@@ -1175,8 +1145,6 @@ define <2 x bfloat> @vpgather_v2bf16(<2 x ptr> %ptrs, <2 x i1> %m, i32 zeroext %
   %v = call <2 x bfloat> @llvm.vp.gather.v2bf16.v2p0(<2 x ptr> %ptrs, <2 x i1> %m, i32 %evl)
   ret <2 x bfloat> %v
 }
-
-declare <4 x bfloat> @llvm.vp.gather.v4bf16.v4p0(<4 x ptr>, <4 x i1>, i32)
 
 define <4 x bfloat> @vpgather_v4bf16(<4 x ptr> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v4bf16:
@@ -1213,8 +1181,6 @@ define <4 x bfloat> @vpgather_truemask_v4bf16(<4 x ptr> %ptrs, i32 zeroext %evl)
   %v = call <4 x bfloat> @llvm.vp.gather.v4bf16.v4p0(<4 x ptr> %ptrs, <4 x i1> splat (i1 1), i32 %evl)
   ret <4 x bfloat> %v
 }
-
-declare <8 x bfloat> @llvm.vp.gather.v8bf16.v8p0(<8 x ptr>, <8 x i1>, i32)
 
 define <8 x bfloat> @vpgather_v8bf16(<8 x ptr> %ptrs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v8bf16:
@@ -1325,8 +1291,6 @@ define <8 x bfloat> @vpgather_baseidx_v8bf16(ptr %base, <8 x i16> %idxs, <8 x i1
   ret <8 x bfloat> %v
 }
 
-declare <2 x half> @llvm.vp.gather.v2f16.v2p0(<2 x ptr>, <2 x i1>, i32)
-
 define <2 x half> @vpgather_v2f16(<2 x ptr> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v2f16:
 ; RV32:       # %bb.0:
@@ -1344,8 +1308,6 @@ define <2 x half> @vpgather_v2f16(<2 x ptr> %ptrs, <2 x i1> %m, i32 zeroext %evl
   %v = call <2 x half> @llvm.vp.gather.v2f16.v2p0(<2 x ptr> %ptrs, <2 x i1> %m, i32 %evl)
   ret <2 x half> %v
 }
-
-declare <4 x half> @llvm.vp.gather.v4f16.v4p0(<4 x ptr>, <4 x i1>, i32)
 
 define <4 x half> @vpgather_v4f16(<4 x ptr> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v4f16:
@@ -1382,8 +1344,6 @@ define <4 x half> @vpgather_truemask_v4f16(<4 x ptr> %ptrs, i32 zeroext %evl) {
   %v = call <4 x half> @llvm.vp.gather.v4f16.v4p0(<4 x ptr> %ptrs, <4 x i1> splat (i1 1), i32 %evl)
   ret <4 x half> %v
 }
-
-declare <8 x half> @llvm.vp.gather.v8f16.v8p0(<8 x ptr>, <8 x i1>, i32)
 
 define <8 x half> @vpgather_v8f16(<8 x ptr> %ptrs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v8f16:
@@ -1494,8 +1454,6 @@ define <8 x half> @vpgather_baseidx_v8f16(ptr %base, <8 x i16> %idxs, <8 x i1> %
   ret <8 x half> %v
 }
 
-declare <2 x float> @llvm.vp.gather.v2f32.v2p0(<2 x ptr>, <2 x i1>, i32)
-
 define <2 x float> @vpgather_v2f32(<2 x ptr> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v2f32:
 ; RV32:       # %bb.0:
@@ -1512,8 +1470,6 @@ define <2 x float> @vpgather_v2f32(<2 x ptr> %ptrs, <2 x i1> %m, i32 zeroext %ev
   %v = call <2 x float> @llvm.vp.gather.v2f32.v2p0(<2 x ptr> %ptrs, <2 x i1> %m, i32 %evl)
   ret <2 x float> %v
 }
-
-declare <4 x float> @llvm.vp.gather.v4f32.v4p0(<4 x ptr>, <4 x i1>, i32)
 
 define <4 x float> @vpgather_v4f32(<4 x ptr> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v4f32:
@@ -1548,8 +1504,6 @@ define <4 x float> @vpgather_truemask_v4f32(<4 x ptr> %ptrs, i32 zeroext %evl) {
   %v = call <4 x float> @llvm.vp.gather.v4f32.v4p0(<4 x ptr> %ptrs, <4 x i1> splat (i1 1), i32 %evl)
   ret <4 x float> %v
 }
-
-declare <8 x float> @llvm.vp.gather.v8f32.v8p0(<8 x ptr>, <8 x i1>, i32)
 
 define <8 x float> @vpgather_v8f32(<8 x ptr> %ptrs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v8f32:
@@ -1732,8 +1686,6 @@ define <8 x float> @vpgather_baseidx_v8f32(ptr %base, <8 x i32> %idxs, <8 x i1> 
   ret <8 x float> %v
 }
 
-declare <2 x double> @llvm.vp.gather.v2f64.v2p0(<2 x ptr>, <2 x i1>, i32)
-
 define <2 x double> @vpgather_v2f64(<2 x ptr> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v2f64:
 ; RV32:       # %bb.0:
@@ -1750,8 +1702,6 @@ define <2 x double> @vpgather_v2f64(<2 x ptr> %ptrs, <2 x i1> %m, i32 zeroext %e
   %v = call <2 x double> @llvm.vp.gather.v2f64.v2p0(<2 x ptr> %ptrs, <2 x i1> %m, i32 %evl)
   ret <2 x double> %v
 }
-
-declare <4 x double> @llvm.vp.gather.v4f64.v4p0(<4 x ptr>, <4 x i1>, i32)
 
 define <4 x double> @vpgather_v4f64(<4 x ptr> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v4f64:
@@ -1786,8 +1736,6 @@ define <4 x double> @vpgather_truemask_v4f64(<4 x ptr> %ptrs, i32 zeroext %evl) 
   %v = call <4 x double> @llvm.vp.gather.v4f64.v4p0(<4 x ptr> %ptrs, <4 x i1> splat (i1 1), i32 %evl)
   ret <4 x double> %v
 }
-
-declare <8 x double> @llvm.vp.gather.v8f64.v8p0(<8 x ptr>, <8 x i1>, i32)
 
 define <8 x double> @vpgather_v8f64(<8 x ptr> %ptrs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v8f64:
@@ -2037,8 +1985,6 @@ define <8 x double> @vpgather_baseidx_v8f64(ptr %base, <8 x i64> %idxs, <8 x i1>
   %v = call <8 x double> @llvm.vp.gather.v8f64.v8p0(<8 x ptr> %ptrs, <8 x i1> %m, i32 %evl)
   ret <8 x double> %v
 }
-
-declare <32 x double> @llvm.vp.gather.v32f64.v32p0(<32 x ptr>, <32 x i1>, i32)
 
 define <32 x double> @vpgather_v32f64(<32 x ptr> %ptrs, <32 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpgather_v32f64:
@@ -2613,31 +2559,30 @@ define <32 x double> @vpgather_baseidx_v32f64(ptr %base, <32 x i64> %idxs, <32 x
 ; RV32-LABEL: vpgather_baseidx_v32f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; RV32-NEXT:    vmv1r.v v7, v0
 ; RV32-NEXT:    vnsrl.wi v24, v16, 0
 ; RV32-NEXT:    vnsrl.wi v16, v8, 0
 ; RV32-NEXT:    li a2, 32
-; RV32-NEXT:    addi a3, a1, -16
-; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; RV32-NEXT:    vslidedown.vi v0, v0, 2
 ; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; RV32-NEXT:    vslideup.vi v16, v24, 16
-; RV32-NEXT:    vsll.vi v24, v16, 3
-; RV32-NEXT:    sltu a2, a1, a3
-; RV32-NEXT:    addi a2, a2, -1
-; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; RV32-NEXT:    vslidedown.vi v8, v24, 16
-; RV32-NEXT:    and a2, a2, a3
-; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
-; RV32-NEXT:    vluxei32.v v16, (a0), v8, v0.t
-; RV32-NEXT:    li a2, 16
-; RV32-NEXT:    bltu a1, a2, .LBB104_2
+; RV32-NEXT:    li a3, 16
+; RV32-NEXT:    vsll.vi v16, v16, 3
+; RV32-NEXT:    mv a2, a1
+; RV32-NEXT:    bltu a1, a3, .LBB104_2
 ; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    li a1, 16
+; RV32-NEXT:    li a2, 16
 ; RV32-NEXT:  .LBB104_2:
-; RV32-NEXT:    vmv1r.v v0, v7
+; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; RV32-NEXT:    vluxei32.v v8, (a0), v16, v0.t
+; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV32-NEXT:    vslidedown.vi v24, v16, 16
+; RV32-NEXT:    addi a2, a1, -16
+; RV32-NEXT:    sltu a1, a1, a2
+; RV32-NEXT:    addi a1, a1, -1
+; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; RV32-NEXT:    vslidedown.vi v0, v0, 2
+; RV32-NEXT:    and a1, a1, a2
 ; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; RV32-NEXT:    vluxei32.v v8, (a0), v24, v0.t
+; RV32-NEXT:    vluxei32.v v16, (a0), v24, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpgather_baseidx_v32f64:

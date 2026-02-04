@@ -69,19 +69,19 @@ def AOp : NS_Op<"a_op", []> {
 
 // DEF:      ::llvm::LogicalResult AOpAdaptor::verify
 // DEF-NEXT: auto tblgen_aAttr = getProperties().aAttr; (void)tblgen_aAttr;
-// DEF-NEXT: if (!tblgen_aAttr) return emitError(loc, "'test.a_op' op ""requires attribute 'aAttr'");
+// DEF-NEXT: if (!tblgen_aAttr) return emitError(loc, "'test.a_op' op requires attribute 'aAttr'");
 // DEF-NEXT: auto tblgen_bAttr = getProperties().bAttr; (void)tblgen_bAttr;
 // DEF-NEXT: auto tblgen_cAttr = getProperties().cAttr; (void)tblgen_cAttr;
 // DEF-NEXT: auto tblgen_dAttr = getProperties().dAttr; (void)tblgen_dAttr;
 
 // DEF:      if (tblgen_aAttr && !((some-condition)))
-// DEF-NEXT:   return emitError(loc, "'test.a_op' op ""attribute 'aAttr' failed to satisfy constraint: some attribute kind");
+// DEF-NEXT:   return emitError(loc, "'test.a_op' op attribute 'aAttr' failed to satisfy constraint: some attribute kind");
 // DEF:      if (tblgen_bAttr && !((some-condition)))
-// DEF-NEXT:   return emitError(loc, "'test.a_op' op ""attribute 'bAttr' failed to satisfy constraint: some attribute kind");
+// DEF-NEXT:   return emitError(loc, "'test.a_op' op attribute 'bAttr' failed to satisfy constraint: some attribute kind");
 // DEF:      if (tblgen_cAttr && !((some-condition)))
-// DEF-NEXT:   return emitError(loc, "'test.a_op' op ""attribute 'cAttr' failed to satisfy constraint: some attribute kind");
+// DEF-NEXT:   return emitError(loc, "'test.a_op' op attribute 'cAttr' failed to satisfy constraint: some attribute kind");
 // DEF:      if (tblgen_dAttr && !((some-condition)))
-// DEF-NEXT:   return emitError(loc, "'test.a_op' op ""attribute 'dAttr' failed to satisfy constraint: some attribute kind");
+// DEF-NEXT:   return emitError(loc, "'test.a_op' op attribute 'dAttr' failed to satisfy constraint: some attribute kind");
 
 // Test getter methods
 // ---
@@ -219,13 +219,13 @@ def AgetOp : Op<Test2_Dialect, "a_get_op", []> {
 
 // DEF:      ::llvm::LogicalResult AgetOpAdaptor::verify
 // DEF: auto tblgen_aAttr = getProperties().aAttr; (void)tblgen_aAttr;
-// DEF: if (!tblgen_aAttr) return emitError(loc, "'test2.a_get_op' op ""requires attribute 'aAttr'");
+// DEF: if (!tblgen_aAttr) return emitError(loc, "'test2.a_get_op' op requires attribute 'aAttr'");
 // DEF: auto tblgen_bAttr = getProperties().bAttr; (void)tblgen_bAttr;
 // DEF: auto tblgen_cAttr = getProperties().cAttr; (void)tblgen_cAttr;
 // DEF:      if (tblgen_bAttr && !((some-condition)))
-// DEF-NEXT:   return emitError(loc, "'test2.a_get_op' op ""attribute 'bAttr' failed to satisfy constraint: some attribute kind");
+// DEF-NEXT:   return emitError(loc, "'test2.a_get_op' op attribute 'bAttr' failed to satisfy constraint: some attribute kind");
 // DEF:      if (tblgen_cAttr && !((some-condition)))
-// DEF-NEXT:   return emitError(loc, "'test2.a_get_op' op ""attribute 'cAttr' failed to satisfy constraint: some attribute kind");
+// DEF-NEXT:   return emitError(loc, "'test2.a_get_op' op attribute 'cAttr' failed to satisfy constraint: some attribute kind");
 
 // Test getter methods
 // ---
@@ -469,6 +469,52 @@ def EOp : NS_Op<"e_op", []> {
 // DECL-LABEL: EOp declarations
 // DECL: static void build({{.*}}, uint32_t i32_attr, uint32_t dv_i32_attr, ::llvm::APFloat f64_attr, ::llvm::APFloat dv_f64_attr, ::llvm::StringRef str_attr, ::llvm::StringRef dv_str_attr, bool bool_attr, bool dv_bool_attr, ::SomeI32Enum enum_attr, ::SomeI32Enum dv_enum_attr = ::SomeI32Enum::case5)
 
+// Test verifyInvariantsImpl for op in dialect with `usePropertiesForAttributes = 0` set.
+// ---
+
+def Test3_Dialect : Dialect {
+  let name = "test3";
+  let cppNamespace = "foobar3";
+  let usePropertiesForAttributes = 0;
+}
+def FOp : Op<Test3_Dialect, "f_op", []> {
+  let arguments = (ins
+      SomeAttr:$aAttr,
+      DefaultValuedOptionalAttr<SomeAttr, "4.2">:$bAttr,
+      OptionalAttr<SomeAttr>:$cAttr
+  );
+}
+
+// DEF-LABEL: FOp definitions
+// DEF: ::llvm::LogicalResult FOp::verifyInvariantsImpl() {
+// DEF:   auto namedAttrRange = (*this)->getAttrs();
+// DEF:   auto namedAttrIt = namedAttrRange.begin();
+// DEF:   ::mlir::Attribute tblgen_aAttr;
+
+// DEF:   while (true) {
+// DEF:     if (namedAttrIt == namedAttrRange.end())
+// DEF:       return emitOpError("requires attribute 'aAttr'");
+// DEF:     if (namedAttrIt->getName() == getAAttrAttrName()) {
+// DEF:       tblgen_aAttr = namedAttrIt->getValue();
+// DEF:       break;
+// DEF:     }
+// DEF:     ++namedAttrIt;
+// DEF:   }
+
+// DEF:   ::mlir::Attribute tblgen_bAttr;
+// DEF:   ::mlir::Attribute tblgen_cAttr;
+// DEF:   while (true) {
+// DEF:     if (namedAttrIt == namedAttrRange.end()) {
+// DEF:       break;
+// DEF:     }
+// DEF:     else if (namedAttrIt->getName() == getBAttrAttrName()) {
+// DEF:       tblgen_bAttr = namedAttrIt->getValue();
+// DEF:     }
+// DEF:     else if (namedAttrIt->getName() == getCAttrAttrName()) {
+// DEF:       tblgen_cAttr = namedAttrIt->getValue();
+// DEF:     }
+// DEF:     ++namedAttrIt;
+// DEF:   }
 
 // Test proper namespacing for AttrDef
 // ---

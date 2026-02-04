@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX10 %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX11PLUS %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GFX11PLUS %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1030 < %s | FileCheck -enable-var-scope -check-prefix=GFX10 %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1100 < %s | FileCheck -enable-var-scope -check-prefix=GFX11PLUS %s
+; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1200 < %s | FileCheck -enable-var-scope -check-prefix=GFX11PLUS %s
 
 ; SPI_TMPRING_SIZE.WAVESIZE = 5
 ; GFX10: .long 165608

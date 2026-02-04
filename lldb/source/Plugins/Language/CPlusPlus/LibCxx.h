@@ -25,7 +25,21 @@ GetChildMemberWithName(ValueObject &obj,
 
 lldb::ValueObjectSP GetFirstValueOfLibCXXCompressedPair(ValueObject &pair);
 lldb::ValueObjectSP GetSecondValueOfLibCXXCompressedPair(ValueObject &pair);
-bool isOldCompressedPairLayout(ValueObject &pair_obj);
+
+/// Returns the ValueObjectSP of the child of \c obj. If \c obj has no
+/// child named \c child_name, returns the __compressed_pair child instead
+/// with \c compressed_pair_name, if one exists.
+///
+/// Latest libc++ wrap the compressed children in an anonymous structure.
+/// The \c anon_struct_idx indicates the location of this struct.
+///
+/// The returned boolean is \c true if the returned child was has an old-style
+/// libc++ __compressed_pair layout.
+///
+/// If no child was found returns a nullptr.
+std::pair<lldb::ValueObjectSP, bool>
+GetValueOrOldCompressedPair(ValueObject &obj, llvm::StringRef child_name,
+                            llvm::StringRef compressed_pair_name);
 bool isStdTemplate(ConstString type_name, llvm::StringRef type);
 
 bool LibcxxStringSummaryProviderASCII(
@@ -77,12 +91,21 @@ bool LibcxxFunctionSummaryProvider(
     ValueObject &valobj, Stream &stream,
     const TypeSummaryOptions &options); // libc++ std::function<>
 
+bool LibcxxPartialOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::partial_ordering
+
+bool LibcxxWeakOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::weak_ordering
+
+bool LibcxxStrongOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream,
+    const TypeSummaryOptions &options); // libc++ std::strong_ordering
+
 SyntheticChildrenFrontEnd *
 LibcxxVectorBoolSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                          lldb::ValueObjectSP);
-
-bool LibcxxContainerSummaryProvider(ValueObject &valobj, Stream &stream,
-                                    const TypeSummaryOptions &options);
 
 /// Formatter for libc++ std::span<>.
 bool LibcxxSpanSummaryProvider(ValueObject &valobj, Stream &stream,
@@ -102,12 +125,13 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
   ~LibcxxSharedPtrSyntheticFrontEnd() override;
 
 private:
   ValueObject *m_cntrl;
+  ValueObject *m_ptr_obj;
 };
 
 class LibcxxUniquePtrSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
@@ -120,7 +144,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
   ~LibcxxUniquePtrSyntheticFrontEnd() override;
 
@@ -180,10 +204,6 @@ LibcxxStdUnorderedMapSyntheticFrontEndCreator(CXXSyntheticChildren *,
 SyntheticChildrenFrontEnd *
 LibCxxUnorderedMapIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
                                                    lldb::ValueObjectSP);
-
-SyntheticChildrenFrontEnd *
-LibcxxInitializerListSyntheticFrontEndCreator(CXXSyntheticChildren *,
-                                              lldb::ValueObjectSP);
 
 SyntheticChildrenFrontEnd *LibcxxQueueFrontEndCreator(CXXSyntheticChildren *,
                                                       lldb::ValueObjectSP);

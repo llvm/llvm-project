@@ -138,9 +138,9 @@ func.func @static_load(%static : memref<10x42xf32>, %i : index, %j : index) {
 // CHECK-DAG:  %[[JJ:.*]] = builtin.unrealized_conversion_cast %[[J]]
 // CHECK:  %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK:  %[[st0:.*]] = llvm.mlir.constant(42 : index) : i64
-// CHECK:  %[[offI:.*]] = llvm.mul %[[II]], %[[st0]] : i64
-// CHECK:  %[[off1:.*]] = llvm.add %[[offI]], %[[JJ]] : i64
-// CHECK:  %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK:  %[[offI:.*]] = llvm.mul %[[II]], %[[st0]] overflow<nsw, nuw> : i64
+// CHECK:  %[[off1:.*]] = llvm.add %[[offI]], %[[JJ]] overflow<nsw, nuw> : i64
+// CHECK:  %[[addr:.*]] = llvm.getelementptr inbounds|nuw %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK:  llvm.load %[[addr]] : !llvm.ptr -> f32
   %0 = memref.load %static[%i, %j] : memref<10x42xf32>
   return
@@ -166,9 +166,9 @@ func.func @static_store(%static : memref<10x42xf32>, %i : index, %j : index, %va
 // CHECK-DAG: %[[JJ:.*]] = builtin.unrealized_conversion_cast %[[J]]
 // CHECK: %[[ptr:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 // CHECK: %[[st0:.*]] = llvm.mlir.constant(42 : index) : i64
-// CHECK: %[[offI:.*]] = llvm.mul %[[II]], %[[st0]] : i64
-// CHECK: %[[off1:.*]] = llvm.add %[[offI]], %[[JJ]] : i64
-// CHECK: %[[addr:.*]] = llvm.getelementptr %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// CHECK: %[[offI:.*]] = llvm.mul %[[II]], %[[st0]] overflow<nsw, nuw> : i64
+// CHECK: %[[off1:.*]] = llvm.add %[[offI]], %[[JJ]] overflow<nsw, nuw> : i64
+// CHECK: %[[addr:.*]] = llvm.getelementptr inbounds|nuw %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // CHECK: llvm.store %{{.*}}, %[[addr]] : f32, !llvm.ptr
 
   memref.store %val, %static[%i, %j] : memref<10x42xf32>
@@ -307,7 +307,7 @@ func.func @memref.reshape.dynamic.dim(%arg: memref<?x?x?xf32>, %shape: memref<4x
   // CHECK: %[[three_hundred_and_eighty_four:.*]] = llvm.mlir.constant(384 : index) : i64
   // CHECK: %[[one1:.*]] = llvm.mlir.constant(1 : index) : i64
   // CHECK: %[[shape_ptr0:.*]] = llvm.extractvalue %[[shape_cast]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-  // CHECK: %[[shape_gep0:.*]] = llvm.getelementptr %[[shape_ptr0]][%[[one1]]] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+  // CHECK: %[[shape_gep0:.*]] = llvm.getelementptr inbounds|nuw %[[shape_ptr0]][%[[one1]]] : (!llvm.ptr, i64) -> !llvm.ptr, i64
   // CHECK: %[[shape_load0:.*]] = llvm.load %[[shape_gep0]] : !llvm.ptr -> i64
   // CHECK: %[[insert7:.*]] = llvm.insertvalue %[[shape_load0]], %[[insert6]][3, 1] : !llvm.struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>
   // CHECK: %[[insert8:.*]] = llvm.insertvalue %[[three_hundred_and_eighty_four]], %[[insert7]][4, 1] : !llvm.struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>
@@ -315,7 +315,7 @@ func.func @memref.reshape.dynamic.dim(%arg: memref<?x?x?xf32>, %shape: memref<4x
   // CHECK: %[[mul:.*]] = llvm.mul %19, %23  : i64
   // CHECK: %[[zero1:.*]] = llvm.mlir.constant(0 : index) : i64
   // CHECK: %[[shape_ptr1:.*]] = llvm.extractvalue %[[shape_cast]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-  // CHECK: %[[shape_gep1:.*]] = llvm.getelementptr %[[shape_ptr1]][%[[zero1]]] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+  // CHECK: %[[shape_gep1:.*]] = llvm.getelementptr inbounds|nuw %[[shape_ptr1]][%[[zero1]]] : (!llvm.ptr, i64) -> !llvm.ptr, i64
   // CHECK: %[[shape_load1:.*]] = llvm.load %[[shape_gep1]] : !llvm.ptr -> i64
   // CHECK: %[[insert9:.*]] = llvm.insertvalue %[[shape_load1]], %[[insert8]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>
   // CHECK: %[[insert10:.*]] = llvm.insertvalue %[[mul]], %[[insert9]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<4 x i64>, array<4 x i64>)>
@@ -347,7 +347,7 @@ func.func @memref.reshape_index(%arg0: memref<?x?xi32>, %shape: memref<1xindex>)
   // CHECK: %[[zero1:.*]] = llvm.mlir.constant(0 : index) : i64
 
   // CHECK: %[[shape_ptr0:.*]] = llvm.extractvalue %[[shape_cast:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
-  // CHECK: %[[shape_gep0:.*]] = llvm.getelementptr %[[shape_ptr0:.*]][%[[zero1:.*]]] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+  // CHECK: %[[shape_gep0:.*]] = llvm.getelementptr inbounds|nuw %[[shape_ptr0:.*]][%[[zero1:.*]]] : (!llvm.ptr, i64) -> !llvm.ptr, i64
   // CHECK: %[[shape_load0:.*]] = llvm.load %[[shape_gep0:.*]] : !llvm.ptr -> i64
   // CHECK: %[[insert3:.*]] = llvm.insertvalue %[[shape_load0:.*]], %[[insert2:.*]][3, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK: %[[insert4:.*]] = llvm.insertvalue %[[one0:.*]], %[[insert3:.*]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>

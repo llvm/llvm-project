@@ -432,11 +432,8 @@ unsigned A15SDOptimizer::createExtractSubreg(
     const DebugLoc &DL, unsigned DReg, unsigned Lane,
     const TargetRegisterClass *TRC) {
   Register Out = MRI->createVirtualRegister(TRC);
-  BuildMI(MBB,
-          InsertBefore,
-          DL,
-          TII->get(TargetOpcode::COPY), Out)
-    .addReg(DReg, 0, Lane);
+  BuildMI(MBB, InsertBefore, DL, TII->get(TargetOpcode::COPY), Out)
+      .addReg(DReg, {}, Lane);
 
   return Out;
 }
@@ -617,10 +614,9 @@ bool A15SDOptimizer::runOnInstruction(MachineInstr *MI) {
         continue;
 
       // Collect all the uses of this MI's DPR def for updating later.
-      SmallVector<MachineOperand*, 8> Uses;
       Register DPRDefReg = MI->getOperand(0).getReg();
-      for (MachineOperand &MO : MRI->use_operands(DPRDefReg))
-        Uses.push_back(&MO);
+      SmallVector<MachineOperand *, 8> Uses(
+          llvm::make_pointer_range(MRI->use_operands(DPRDefReg)));
 
       // We can optimize this.
       unsigned NewReg = optimizeSDPattern(MI);

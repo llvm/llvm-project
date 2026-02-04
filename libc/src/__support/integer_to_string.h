@@ -57,8 +57,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_INTEGER_TO_STRING_H
 #define LLVM_LIBC_SRC___SUPPORT_INTEGER_TO_STRING_H
 
-#include <stdint.h>
-
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/algorithm.h" // max
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/bit.h"
@@ -379,9 +378,8 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
     using UNSIGNED_T = make_integral_or_big_int_unsigned_t<T>;
 
     LIBC_INLINE static char digit_char(uint8_t digit) {
-      const int result = internal::int_to_b36_char(digit);
-      return static_cast<char>(Fmt::IS_UPPERCASE ? internal::toupper(result)
-                                                 : result);
+      const char result = internal::int_to_b36_char(digit);
+      return Fmt::IS_UPPERCASE ? internal::toupper(result) : result;
     }
 
     LIBC_INLINE static void

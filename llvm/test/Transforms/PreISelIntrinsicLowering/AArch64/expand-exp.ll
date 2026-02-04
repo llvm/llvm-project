@@ -7,7 +7,7 @@ define <vscale x 4 x float> @scalable_vec_exp(<vscale x 4 x float> %input) {
 ; CHECK-LABEL: define <vscale x 4 x float> @scalable_vec_exp(
 ; CHECK-SAME: <vscale x 4 x float> [[INPUT:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]
@@ -38,6 +38,5 @@ define <4 x float> @fixed_vec_exp(<4 x float> %input) {
 declare <4 x float> @llvm.exp.v4f32(<4 x float>) #0
 declare <vscale x 4 x float> @llvm.exp.nxv4f32(<vscale x 4 x float>) #0
 
-; CHECK: attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK-NEXT: attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) }
+; CHECK: attributes #0 = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

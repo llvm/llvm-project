@@ -17,7 +17,7 @@ namespace llvm {
 
 class MachineRegisterInfo;
 class GCNSubtarget;
-class GISelKnownBits;
+class GISelValueTracking;
 class LLT;
 class MachineFunction;
 class MachineIRBuilder;
@@ -28,7 +28,7 @@ namespace AMDGPU {
 /// Returns base register and constant offset.
 std::pair<Register, unsigned>
 getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
-                          GISelKnownBits *KnownBits = nullptr,
+                          GISelValueTracking *ValueTracking = nullptr,
                           bool CheckNUW = false);
 
 // Currently finds S32/S64 lane masks that can be declared as divergent by
@@ -51,6 +51,8 @@ private:
 
 void buildReadAnyLane(MachineIRBuilder &B, Register SgprDst, Register VgprSrc,
                       const RegisterBankInfo &RBI);
+void buildReadFirstLane(MachineIRBuilder &B, Register SgprDst, Register VgprSrc,
+                        const RegisterBankInfo &RBI);
 }
 }
 

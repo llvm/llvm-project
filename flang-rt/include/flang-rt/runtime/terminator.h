@@ -12,6 +12,7 @@
 #define FLANG_RT_RUNTIME_TERMINATOR_H_
 
 #include "flang/Common/api-attrs.h"
+#include "flang/Runtime/stop.h"
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
@@ -112,9 +113,31 @@ private:
   else \
     Terminator{__FILE__, __LINE__}.CheckFailed(#pred)
 
-RT_API_ATTRS void NotifyOtherImagesOfNormalEnd();
+void SetNormalEndCallback(void (*callback)(int));
+void SetFailImageCallback(void (*callback)(void));
+void SetErrorCallback(void (*callback)(int));
+
+[[noreturn]] void NormalExit(int exitCode);
+[[noreturn]] void ErrorExit(int exitCode);
+
+RT_API_ATTRS void SynchronizeImagesOfNormalEnd(int);
 RT_API_ATTRS void NotifyOtherImagesOfFailImageStatement();
-RT_API_ATTRS void NotifyOtherImagesOfErrorTermination();
+RT_API_ATTRS void NotifyOtherImagesOfErrorTermination(int);
+
+#if defined(RT_DEVICE_COMPILATION)
+/// Trap the execution on the device.
+[[noreturn]] static inline void RT_API_ATTRS DeviceTrap() {
+#if defined(__CUDACC__)
+  // NVCC supports __trap().
+  __trap();
+#elif defined(__clang__)
+  // Clang supports __builtin_trap().
+  __builtin_trap();
+#else
+#error "unsupported compiler"
+#endif
+}
+#endif
 } // namespace Fortran::runtime
 
 namespace Fortran::runtime::io {

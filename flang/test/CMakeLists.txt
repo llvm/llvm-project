@@ -4,9 +4,9 @@ add_subdirectory(lib)
 
 llvm_canonicalize_cmake_booleans(
   FLANG_STANDALONE_BUILD
-  LLVM_BUILD_EXAMPLES
   LLVM_BYE_LINK_INTO_TOOLS
   LLVM_ENABLE_PLUGINS
+  LLVM_INCLUDE_EXAMPLES
 )
 
 set(FLANG_TOOLS_DIR ${FLANG_BINARY_DIR}/bin)
@@ -65,24 +65,25 @@ set(FLANG_TEST_DEPENDS
   bbc
   FortranDecimal
 )
+
 if (NOT FLANG_STANDALONE_BUILD)
   list(APPEND FLANG_TEST_DEPENDS
     llvm-config
     FileCheck
     count
     not
+    llvm-bcanalyzer
     llvm-dis
+    llvm-objcopy
     llvm-objdump
+    llvm-profdata
+    llvm-readelf
     llvm-readobj
     split-file
   )
 endif ()
 
-if (FLANG_INCLUDE_RUNTIME)
-  list(APPEND FLANG_TEST_DEPENDS flang_rt.runtime)
-endif ()
-
-if (LLVM_ENABLE_PLUGINS AND NOT WIN32 AND NOT FLANG_STANDALONE_BUILD)
+if (LLVM_INCLUDE_EXAMPLES AND LLVM_ENABLE_PLUGINS AND NOT (WIN32 OR CYGWIN) AND NOT FLANG_STANDALONE_BUILD)
   list(APPEND FLANG_TEST_DEPENDS Bye)
 endif()
 
@@ -92,7 +93,7 @@ if (FLANG_INCLUDE_TESTS)
   endif()
 endif()
 
-if (LLVM_BUILD_EXAMPLES)
+if (LLVM_INCLUDE_EXAMPLES)
   list(APPEND FLANG_TEST_DEPENDS
     flangPrintFunctionNames
     flangOmpReport
@@ -132,9 +133,3 @@ if (DEFINED FLANG_TEST_TARGET_TRIPLE)
                         "to use FLANG_TEST_TARGET_TRIPLE.")
   endif()
 endif()
-
-# Compatibility targets.
-if (FLANG_INCLUDE_RUNTIME)
-  add_custom_target(check-flang-rt)
-  add_dependencies(check-flang-rt check-flang)
-endif ()

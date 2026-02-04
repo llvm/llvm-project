@@ -119,39 +119,39 @@ func.func @extract_strided_metadata_of_subview(%base: memref<5x4xf32>)
 // when dynamic sizes are involved.
 // See extract_strided_metadata_of_subview for an explanation of the actual
 // expansion.
-// Orig strides: [64, 4, 1]
+// Orig strides: [384, 24, 1]
 // Sub strides: [1, 1, 1]
-// => New strides: [64, 4, 1]
+// => New strides: [384, 24, 1]
 //
 // Orig offset: 0
 // Sub offsets: [3, 4, 2]
-// => Final offset: 3 * 64 + 4 * 4 + 2 * 1 + 0 == 210
+// => Final offset: 3 * 384 + 4 * 24 + 2 * 1 + 0 == 1250
 //
 // Final sizes == subview sizes == [%size, 6, 3]
 //
 // CHECK-LABEL: func @extract_strided_metadata_of_subview_with_dynamic_size
-//  CHECK-SAME: (%[[ARG:.*]]: memref<8x16x4xf32>,
+//  CHECK-SAME: (%[[ARG:.*]]: memref<8x16x24xf32>,
 //  CHECK-SAME: %[[DYN_SIZE:.*]]: index)
 //
-//   CHECK-DAG: %[[C210:.*]] = arith.constant 210 : index
-//   CHECK-DAG: %[[C64:.*]] = arith.constant 64 : index
+//   CHECK-DAG: %[[C1250:.*]] = arith.constant 1250 : index
+//   CHECK-DAG: %[[C384:.*]] = arith.constant 384 : index
 //   CHECK-DAG: %[[C6:.*]] = arith.constant 6 : index
-//   CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
+//   CHECK-DAG: %[[C24:.*]] = arith.constant 24 : index
 //   CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
 //   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
 //
 //   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:3, %[[STRIDES:.*]]:3 = memref.extract_strided_metadata %[[ARG]]
 //
-//       CHECK: return %[[BASE]], %[[C210]], %[[DYN_SIZE]], %[[C6]], %[[C3]], %[[C64]], %[[C4]], %[[C1]]
+//       CHECK: return %[[BASE]], %[[C1250]], %[[DYN_SIZE]], %[[C6]], %[[C3]], %[[C384]], %[[C24]], %[[C1]]
 func.func @extract_strided_metadata_of_subview_with_dynamic_size(
-    %base: memref<8x16x4xf32>, %size: index)
+    %base: memref<8x16x24xf32>, %size: index)
     -> (memref<f32>, index, index, index, index, index, index, index) {
 
   %subview = memref.subview %base[3, 4, 2][%size, 6, 3][1, 1, 1] :
-    memref<8x16x4xf32> to memref<?x6x3xf32, strided<[64, 4, 1], offset: 210>>
+    memref<8x16x24xf32> to memref<?x6x3xf32, strided<[384, 24, 1], offset: 1250>>
 
   %base_buffer, %offset, %sizes:3, %strides:3 = memref.extract_strided_metadata %subview :
-    memref<?x6x3xf32, strided<[64,4,1], offset: 210>>
+    memref<?x6x3xf32, strided<[384, 24, 1], offset: 1250>>
     -> memref<f32>, index, index, index, index, index, index, index
 
   return %base_buffer, %offset, %sizes#0, %sizes#1, %sizes#2, %strides#0, %strides#1, %strides#2 :
@@ -167,37 +167,37 @@ func.func @extract_strided_metadata_of_subview_with_dynamic_size(
 // See extract_strided_metadata_of_subview for an explanation of the actual
 // expansion.
 //
-// Orig strides: [64, 4, 1]
+// Orig strides: [384, 24, 1]
 // Sub strides: [1, 1, 1]
-// => New strides: [64, 4, 1]
-// Final strides == filterOutReducedDim(new strides, 0) == [4 , 1]
+// => New strides: [384, 24, 1]
+// Final strides == filterOutReducedDim(new strides, 0) == [24 , 1]
 //
 // Orig offset: 0
 // Sub offsets: [3, 4, 2]
-// => Final offset: 3 * 64 + 4 * 4 + 2 * 1 + 0 == 210
+// => Final offset: 3 * 384 + 4 * 24 + 2 * 1 + 0 == 1250
 //
 // Final sizes == filterOutReducedDim(subview sizes, 0) == [6, 3]
 //
 // CHECK-LABEL: func @extract_strided_metadata_of_rank_reduced_subview
-//  CHECK-SAME: (%[[ARG:.*]]: memref<8x16x4xf32>)
+//  CHECK-SAME: (%[[ARG:.*]]: memref<8x16x24xf32>)
 //
-//   CHECK-DAG: %[[C210:.*]] = arith.constant 210 : index
+//   CHECK-DAG: %[[C1250:.*]] = arith.constant 1250 : index
 //   CHECK-DAG: %[[C6:.*]] = arith.constant 6 : index
-//   CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
+//   CHECK-DAG: %[[C24:.*]] = arith.constant 24 : index
 //   CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
 //   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
 //
 //   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:3, %[[STRIDES:.*]]:3 = memref.extract_strided_metadata %[[ARG]]
 //
-//       CHECK: return %[[BASE]], %[[C210]], %[[C6]], %[[C3]], %[[C4]], %[[C1]]
-func.func @extract_strided_metadata_of_rank_reduced_subview(%base: memref<8x16x4xf32>)
+//       CHECK: return %[[BASE]], %[[C1250]], %[[C6]], %[[C3]], %[[C24]], %[[C1]]
+func.func @extract_strided_metadata_of_rank_reduced_subview(%base: memref<8x16x24xf32>)
     -> (memref<f32>, index, index, index, index, index) {
 
   %subview = memref.subview %base[3, 4, 2][1, 6, 3][1, 1, 1] :
-    memref<8x16x4xf32> to memref<6x3xf32, strided<[4, 1], offset: 210>>
+    memref<8x16x24xf32> to memref<6x3xf32, strided<[24, 1], offset: 1250>>
 
   %base_buffer, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %subview :
-    memref<6x3xf32, strided<[4,1], offset: 210>>
+    memref<6x3xf32, strided<[24, 1], offset: 1250>>
     -> memref<f32>, index, index, index, index, index
 
   return %base_buffer, %offset, %sizes#0, %sizes#1, %strides#0, %strides#1 :
@@ -215,21 +215,21 @@ func.func @extract_strided_metadata_of_rank_reduced_subview(%base: memref<8x16x4
 // See extract_strided_metadata_of_subview for an explanation of the actual
 // expansion.
 //
-// Orig strides: [64, 4, 1]
+// Orig strides: [384, 24, 1]
 // Sub strides: [1, %stride, 1]
-// => New strides: [64, 4 * %stride, 1]
-// Final strides == filterOutReducedDim(new strides, 0) == [4 * %stride , 1]
+// => New strides: [384, 24 * %stride, 1]
+// Final strides == filterOutReducedDim(new strides, 0) == [24 * %stride , 1]
 //
 // Orig offset: 0
 // Sub offsets: [3, 4, 2]
-// => Final offset: 3 * 64 + 4 * 4 + 2 * 1 + 0 == 210
+// => Final offset: 3 * 384 + 4 * 24 + 2 * 1 + 0 == 1250
 //
-//   CHECK-DAG: #[[$STRIDE1_MAP:.*]] = affine_map<()[s0] -> (s0 * 4)>
+//   CHECK-DAG: #[[$STRIDE1_MAP:.*]] = affine_map<()[s0] -> (s0 * 24)>
 // CHECK-LABEL: func @extract_strided_metadata_of_rank_reduced_subview_w_variable_strides
-//  CHECK-SAME: (%[[ARG:.*]]: memref<8x16x4xf32>,
+//  CHECK-SAME: (%[[ARG:.*]]: memref<8x16x24xf32>,
 //  CHECK-SAME: %[[DYN_STRIDE:.*]]: index)
 //
-//   CHECK-DAG: %[[C210:.*]] = arith.constant 210 : index
+//   CHECK-DAG: %[[C1250:.*]] = arith.constant 1250 : index
 //   CHECK-DAG: %[[C6:.*]] = arith.constant 6 : index
 //   CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
 //   CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
@@ -238,16 +238,16 @@ func.func @extract_strided_metadata_of_rank_reduced_subview(%base: memref<8x16x4
 //
 //   CHECK-DAG: %[[DIM1_STRIDE:.*]] = affine.apply #[[$STRIDE1_MAP]]()[%[[DYN_STRIDE]]]
 //
-//       CHECK: return %[[BASE]], %[[C210]], %[[C6]], %[[C3]], %[[DIM1_STRIDE]], %[[C1]]
+//       CHECK: return %[[BASE]], %[[C1250]], %[[C6]], %[[C3]], %[[DIM1_STRIDE]], %[[C1]]
 func.func @extract_strided_metadata_of_rank_reduced_subview_w_variable_strides(
-    %base: memref<8x16x4xf32>, %stride: index)
+    %base: memref<8x16x24xf32>, %stride: index)
     -> (memref<f32>, index, index, index, index, index) {
 
   %subview = memref.subview %base[3, 4, 2][1, 6, 3][1, %stride, 1] :
-    memref<8x16x4xf32> to memref<6x3xf32, strided<[?, 1], offset: 210>>
+    memref<8x16x24xf32> to memref<6x3xf32, strided<[?, 1], offset: 1250>>
 
   %base_buffer, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %subview :
-    memref<6x3xf32, strided<[?, 1], offset: 210>>
+    memref<6x3xf32, strided<[?, 1], offset: 1250>>
     -> memref<f32>, index, index, index, index, index
 
   return %base_buffer, %offset, %sizes#0, %sizes#1, %strides#0, %strides#1 :
@@ -1378,133 +1378,6 @@ func.func @extract_strided_metadata_of_get_global_with_offset()
 
 // -----
 
-// Check that we simplify extract_strided_metadata of cast
-// when the source of the cast is compatible with what
-// `extract_strided_metadata`s accept.
-//
-// When we apply the transformation the resulting offset, sizes and strides
-// should come straight from the inputs of the cast.
-// Additionally the folder on extract_strided_metadata should propagate the
-// static information.
-//
-// CHECK-LABEL: func @extract_strided_metadata_of_cast
-//  CHECK-SAME: %[[ARG:.*]]: memref<3x?xi32, strided<[4, ?], offset: ?>>)
-//
-//   CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
-//   CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
-//       CHECK: %[[BASE:.*]], %[[DYN_OFFSET:.*]], %[[DYN_SIZES:.*]]:2, %[[DYN_STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]]
-//
-//       CHECK: return %[[BASE]], %[[DYN_OFFSET]], %[[C3]], %[[DYN_SIZES]]#1, %[[C4]], %[[DYN_STRIDES]]#1
-func.func @extract_strided_metadata_of_cast(
-  %arg : memref<3x?xi32, strided<[4, ?], offset:?>>)
-  -> (memref<i32>, index,
-      index, index,
-      index, index) {
-
-  %cast =
-    memref.cast %arg :
-      memref<3x?xi32, strided<[4, ?], offset: ?>> to
-      memref<?x?xi32, strided<[?, ?], offset: ?>>
-
-  %base, %base_offset, %sizes:2, %strides:2 =
-    memref.extract_strided_metadata %cast:memref<?x?xi32, strided<[?, ?], offset: ?>>
-    -> memref<i32>, index,
-       index, index,
-       index, index
-
-  return %base, %base_offset,
-    %sizes#0, %sizes#1,
-    %strides#0, %strides#1 :
-      memref<i32>, index,
-      index, index,
-      index, index
-}
-
-// -----
-
-// Check that we simplify extract_strided_metadata of cast
-// when the source of the cast is compatible with what
-// `extract_strided_metadata`s accept.
-//
-// Same as extract_strided_metadata_of_cast but with constant sizes and strides
-// in the destination type.
-//
-// CHECK-LABEL: func @extract_strided_metadata_of_cast_w_csts
-//  CHECK-SAME: %[[ARG:.*]]: memref<?x?xi32, strided<[?, ?], offset: ?>>)
-//
-//   CHECK-DAG: %[[C4:.*]] = arith.constant 4 : index
-//   CHECK-DAG: %[[C18:.*]] = arith.constant 18 : index
-//   CHECK-DAG: %[[C25:.*]] = arith.constant 25 : index
-//       CHECK: %[[BASE:.*]], %[[DYN_OFFSET:.*]], %[[DYN_SIZES:.*]]:2, %[[DYN_STRIDES:.*]]:2 = memref.extract_strided_metadata %[[ARG]]
-//
-//       CHECK: return %[[BASE]], %[[C25]], %[[C4]], %[[DYN_SIZES]]#1, %[[DYN_STRIDES]]#0, %[[C18]]
-func.func @extract_strided_metadata_of_cast_w_csts(
-  %arg : memref<?x?xi32, strided<[?, ?], offset:?>>)
-  -> (memref<i32>, index,
-      index, index,
-      index, index) {
-
-  %cast =
-    memref.cast %arg :
-      memref<?x?xi32, strided<[?, ?], offset: ?>> to
-      memref<4x?xi32, strided<[?, 18], offset: 25>>
-
-  %base, %base_offset, %sizes:2, %strides:2 =
-    memref.extract_strided_metadata %cast:memref<4x?xi32, strided<[?, 18], offset: 25>>
-    -> memref<i32>, index,
-       index, index,
-       index, index
-
-  return %base, %base_offset,
-    %sizes#0, %sizes#1,
-    %strides#0, %strides#1 :
-      memref<i32>, index,
-      index, index,
-      index, index
-}
-
-// -----
-
-// Check that we don't simplify extract_strided_metadata of
-// cast when the source of the cast is unranked.
-// Unranked memrefs cannot feed into extract_strided_metadata operations.
-// Note: Technically we could still fold the sizes and strides.
-//
-// CHECK-LABEL: func @extract_strided_metadata_of_cast_unranked
-//  CHECK-SAME: %[[ARG:.*]]: memref<*xi32>)
-//
-//       CHECK: %[[CAST:.*]] = memref.cast %[[ARG]] :
-//       CHECK: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:2, %[[STRIDES:.*]]:2 = memref.extract_strided_metadata %[[CAST]]
-//
-//       CHECK: return %[[BASE]], %[[OFFSET]], %[[SIZES]]#0, %[[SIZES]]#1, %[[STRIDES]]#0, %[[STRIDES]]#1
-func.func @extract_strided_metadata_of_cast_unranked(
-  %arg : memref<*xi32>)
-  -> (memref<i32>, index,
-      index, index,
-      index, index) {
-
-  %cast =
-    memref.cast %arg :
-      memref<*xi32> to
-      memref<?x?xi32, strided<[?, ?], offset: ?>>
-
-  %base, %base_offset, %sizes:2, %strides:2 =
-    memref.extract_strided_metadata %cast:memref<?x?xi32, strided<[?, ?], offset: ?>>
-    -> memref<i32>, index,
-       index, index,
-       index, index
-
-  return %base, %base_offset,
-    %sizes#0, %sizes#1,
-    %strides#0, %strides#1 :
-      memref<i32>, index,
-      index, index,
-      index, index
-}
-
-
-// -----
-
 memref.global "private" @dynamicShmem : memref<0xf16,3>
 
 // CHECK-LABEL: func @zero_sized_memred
@@ -1582,3 +1455,20 @@ func.func @extract_strided_metadata_of_memory_space_cast_no_base(%base: memref<2
 
 // CHECK-LABEL:  func @extract_strided_metadata_of_memory_space_cast_no_base
 //   CHECK-NOT:  memref.memory_space_cast
+
+// -----
+
+func.func @negative_memref_view_extract_aligned_pointer(%arg0: memref<?xi8>) -> index {
+  // `extract_aligned_pointer_as_index` must not be folded as `memref.view` can change the base pointer
+  // CHECK-LABEL: func @negative_memref_view_extract_aligned_pointer
+  // CHECK-SAME: (%[[ARG0:.*]]: memref<?xi8>)
+  // CHECK: %[[C10:.*]] = arith.constant 10 : index
+  // CHECK: %[[VIEW:.*]] = memref.view %[[ARG0]][%[[C10]]][] : memref<?xi8> to memref<f32>
+  // CHECK: %[[PTR:.*]] = memref.extract_aligned_pointer_as_index %[[VIEW]] : memref<f32> -> index
+  // CHECK: return %[[PTR]] : index
+
+  %c10 = arith.constant 10 : index
+  %0 = memref.view %arg0[%c10][] : memref<?xi8> to memref<f32>
+  %1 = memref.extract_aligned_pointer_as_index %0: memref<f32> -> index
+  return %1 : index
+}

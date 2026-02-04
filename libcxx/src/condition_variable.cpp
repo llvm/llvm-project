@@ -7,7 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include <condition_variable>
+#include <limits>
+#include <ratio>
 #include <thread>
+#include <__chrono/duration.h>
+#include <__chrono/system_clock.h>
+#include <__chrono/time_point.h>
+#include <__system_error/throw_system_error.h>
 
 #if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)
 #  pragma comment(lib, "pthread")

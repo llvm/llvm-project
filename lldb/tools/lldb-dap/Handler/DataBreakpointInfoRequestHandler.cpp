@@ -7,184 +7,114 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "DAPError.h"
 #include "EventHelper.h"
-#include "JSONUtils.h"
+#include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBAddress.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "llvm/ADT/StringExtras.h"
+#include <optional>
 
 namespace lldb_dap {
 
-// "DataBreakpointInfoRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Obtains information on a possible data breakpoint that
-//     could be set on an expression or variable.\nClients should only call this
-//     request if the corresponding capability `supportsDataBreakpoints` is
-//     true.", "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "dataBreakpointInfo" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/DataBreakpointInfoArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
-// "DataBreakpointInfoArguments": {
-//   "type": "object",
-//   "description": "Arguments for `dataBreakpointInfo` request.",
-//   "properties": {
-//     "variablesReference": {
-//       "type": "integer",
-//       "description": "Reference to the variable container if the data
-//       breakpoint is requested for a child of the container. The
-//       `variablesReference` must have been obtained in the current suspended
-//       state. See 'Lifetime of Object References' in the Overview section for
-//       details."
-//     },
-//     "name": {
-//       "type": "string",
-//       "description": "The name of the variable's child to obtain data
-//       breakpoint information for.\nIf `variablesReference` isn't specified,
-//       this can be an expression."
-//     },
-//     "frameId": {
-//       "type": "integer",
-//       "description": "When `name` is an expression, evaluate it in the scope
-//       of this stack frame. If not specified, the expression is evaluated in
-//       the global scope. When `variablesReference` is specified, this property
-//       has no effect."
-//     }
-//   },
-//   "required": [ "name" ]
-// },
-// "DataBreakpointInfoResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to `dataBreakpointInfo` request.",
-//     "properties": {
-//       "body": {
-//         "type": "object",
-//         "properties": {
-//           "dataId": {
-//             "type": [ "string", "null" ],
-//             "description": "An identifier for the data on which a data
-//             breakpoint can be registered with the `setDataBreakpoints`
-//             request or null if no data breakpoint is available. If a
-//             `variablesReference` or `frameId` is passed, the `dataId` is
-//             valid in the current suspended state, otherwise it's valid
-//             indefinitely. See 'Lifetime of Object References' in the Overview
-//             section for details. Breakpoints set using the `dataId` in the
-//             `setDataBreakpoints` request may outlive the lifetime of the
-//             associated `dataId`."
-//           },
-//           "description": {
-//             "type": "string",
-//             "description": "UI string that describes on what data the
-//             breakpoint is set on or why a data breakpoint is not available."
-//           },
-//           "accessTypes": {
-//             "type": "array",
-//             "items": {
-//               "$ref": "#/definitions/DataBreakpointAccessType"
-//             },
-//             "description": "Attribute lists the available access types for a
-//             potential data breakpoint. A UI client could surface this
-//             information."
-//           },
-//           "canPersist": {
-//             "type": "boolean",
-//             "description": "Attribute indicates that a potential data
-//             breakpoint could be persisted across sessions."
-//           }
-//         },
-//         "required": [ "dataId", "description" ]
-//       }
-//     },
-//     "required": [ "body" ]
-//   }]
-// }
-void DataBreakpointInfoRequestHandler::operator()(
-    const llvm::json::Object &request) const {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  llvm::json::Object body;
-  lldb::SBError error;
-  llvm::json::Array accessTypes{"read", "write", "readWrite"};
-  const auto *arguments = request.getObject("arguments");
-  const auto variablesReference =
-      GetInteger<uint64_t>(arguments, "variablesReference").value_or(0);
-  llvm::StringRef name = GetString(arguments, "name").value_or("");
-  lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
-  lldb::SBValue variable = dap.variables.FindVariable(variablesReference, name);
+static bool IsRW(DAP &dap, lldb::addr_t load_addr) {
+  if (!lldb::SBAddress(load_addr, dap.target).IsValid())
+    return false;
+  lldb::SBMemoryRegionInfo region;
+  lldb::SBError err =
+      dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
+  // Only lldb-server supports "qMemoryRegionInfo". So, don't fail this
+  // request if SBProcess::GetMemoryRegionInfo returns error.
+  if (err.Success()) {
+    if (!(region.IsReadable() || region.IsWritable())) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/// Obtains information on a possible data breakpoint that could be set on an
+/// expression or variable. Clients should only call this request if the
+/// corresponding capability supportsDataBreakpoints is true.
+llvm::Expected<protocol::DataBreakpointInfoResponseBody>
+DataBreakpointInfoRequestHandler::Run(
+    const protocol::DataBreakpointInfoArguments &args) const {
+  protocol::DataBreakpointInfoResponseBody response;
+  lldb::SBValue variable = dap.variables.FindVariable(
+      args.variablesReference.value_or(0), args.name);
   std::string addr, size;
 
+  bool is_data_ok = true;
   if (variable.IsValid()) {
     lldb::addr_t load_addr = variable.GetLoadAddress();
     size_t byte_size = variable.GetByteSize();
     if (load_addr == LLDB_INVALID_ADDRESS) {
-      body.try_emplace("dataId", nullptr);
-      body.try_emplace("description",
-                       "does not exist in memory, its location is " +
-                           std::string(variable.GetLocation()));
+      is_data_ok = false;
+      response.description = "does not exist in memory, its location is " +
+                             std::string(variable.GetLocation());
     } else if (byte_size == 0) {
-      body.try_emplace("dataId", nullptr);
-      body.try_emplace("description", "variable size is 0");
+      is_data_ok = false;
+      response.description = "variable size is 0";
     } else {
       addr = llvm::utohexstr(load_addr);
       size = llvm::utostr(byte_size);
     }
-  } else if (variablesReference == 0 && frame.IsValid()) {
-    lldb::SBValue value = frame.EvaluateExpression(name.data());
+  } else if (lldb::SBFrame frame = dap.GetLLDBFrame(args.frameId);
+             args.variablesReference.value_or(0) == 0 && frame.IsValid()) {
+    lldb::SBValue value = frame.EvaluateExpression(args.name.c_str());
     if (value.GetError().Fail()) {
       lldb::SBError error = value.GetError();
       const char *error_cstr = error.GetCString();
-      body.try_emplace("dataId", nullptr);
-      body.try_emplace("description", error_cstr && error_cstr[0]
-                                          ? std::string(error_cstr)
-                                          : "evaluation failed");
+      is_data_ok = false;
+      response.description = error_cstr && error_cstr[0]
+                                 ? std::string(error_cstr)
+                                 : "evaluation failed";
     } else {
       uint64_t load_addr = value.GetValueAsUnsigned();
       lldb::SBData data = value.GetPointeeData();
       if (data.IsValid()) {
         size = llvm::utostr(data.GetByteSize());
         addr = llvm::utohexstr(load_addr);
-        lldb::SBMemoryRegionInfo region;
-        lldb::SBError err =
-            dap.target.GetProcess().GetMemoryRegionInfo(load_addr, region);
-        // Only lldb-server supports "qMemoryRegionInfo". So, don't fail this
-        // request if SBProcess::GetMemoryRegionInfo returns error.
-        if (err.Success()) {
-          if (!(region.IsReadable() || region.IsWritable())) {
-            body.try_emplace("dataId", nullptr);
-            body.try_emplace("description",
-                             "memory region for address " + addr +
-                                 " has no read or write permissions");
-          }
+        if (!IsRW(dap, load_addr)) {
+          is_data_ok = false;
+          response.description = "memory region for address " + addr +
+                                 " has no read or write permissions";
         }
       } else {
-        body.try_emplace("dataId", nullptr);
-        body.try_emplace("description",
-                         "unable to get byte size for expression: " +
-                             name.str());
+        is_data_ok = false;
+        response.description =
+            "unable to get byte size for expression: " + args.name;
       }
     }
+  } else if (args.asAddress) {
+    size = llvm::utostr(args.bytes.value_or(dap.target.GetAddressByteSize()));
+    lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
+    if (llvm::StringRef(args.name).getAsInteger<lldb::addr_t>(0, load_addr))
+      return llvm::make_error<DAPError>(args.name + " is not a valid address",
+                                        llvm::inconvertibleErrorCode(), false);
+    addr = llvm::utohexstr(load_addr);
+    if (!IsRW(dap, load_addr))
+      return llvm::make_error<DAPError>("memory region for address " + addr +
+                                            " has no read or write permissions",
+                                        llvm::inconvertibleErrorCode(), false);
   } else {
-    body.try_emplace("dataId", nullptr);
-    body.try_emplace("description", "variable not found: " + name.str());
+    is_data_ok = false;
+    response.description = "variable not found: " + args.name;
   }
 
-  if (!body.getObject("dataId")) {
-    body.try_emplace("dataId", addr + "/" + size);
-    body.try_emplace("accessTypes", std::move(accessTypes));
-    body.try_emplace("description",
-                     size + " bytes at " + addr + " " + name.str());
+  if (is_data_ok) {
+    response.dataId = addr + "/" + size;
+    response.accessTypes = {protocol::eDataBreakpointAccessTypeRead,
+                            protocol::eDataBreakpointAccessTypeWrite,
+                            protocol::eDataBreakpointAccessTypeReadWrite};
+    if (args.asAddress)
+      response.description = size + " bytes at " + addr;
+    else
+      response.description = size + " bytes at " + addr + " " + args.name;
   }
-  response.try_emplace("body", std::move(body));
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+
+  return response;
 }
 
 } // namespace lldb_dap

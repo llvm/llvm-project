@@ -544,6 +544,43 @@ define <4 x i64> @blend_splat1_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x 
   ret <4 x i64> %r
 }
 
+define <4 x float> @blend_splat1_mask_cond_v4f32(<4 x i32> %x, <4 x float> %y, <4 x float> %z) {
+; AVX12-LABEL: blend_splat1_mask_cond_v4f32:
+; AVX12:       # %bb.0:
+; AVX12-NEXT:    vpslld $31, %xmm0, %xmm0
+; AVX12-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX12-NEXT:    retq
+;
+; AVX512F-LABEL: blend_splat1_mask_cond_v4f32:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    # kill: def $xmm2 killed $xmm2 def $zmm2
+; AVX512F-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512F-NEXT:    vptestnmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k1
+; AVX512F-NEXT:    vblendmps %zmm1, %zmm2, %zmm0 {%k1}
+; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512F-NEXT:    vzeroupper
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: blend_splat1_mask_cond_v4f32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vptestnmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %k1
+; AVX512VL-NEXT:    vblendmps %xmm1, %xmm2, %xmm0 {%k1}
+; AVX512VL-NEXT:    retq
+;
+; XOP-LABEL: blend_splat1_mask_cond_v4f32:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; XOP-NEXT:    vpcomneqd %xmm3, %xmm0, %xmm0
+; XOP-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; XOP-NEXT:    retq
+  %a = and <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
+  %c = icmp eq <4 x i32> %a, zeroinitializer
+  %r = select <4 x i1> %c, <4 x float> %y, <4 x float> %z
+  ret <4 x float> %r
+}
+
 define <4 x i32> @blend_splat1_mask_cond_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; AVX12-LABEL: blend_splat1_mask_cond_v4i32:
 ; AVX12:       # %bb.0:
@@ -1046,7 +1083,7 @@ define <2 x i64> @blend_mask_cond_v2i64(<2 x i64> %x, <2 x i64> %y, <2 x i64> %z
 define <4 x i32> @blend_mask_cond_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z) {
 ; AVX1-LABEL: blend_mask_cond_v4i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [32768,4194304,1073741824,2147483648]
 ; AVX1-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
@@ -1211,9 +1248,9 @@ define <4 x i64> @blend_mask_cond_v4i64(<4 x i64> %x, <4 x i64> %y, <4 x i64> %z
 define <8 x i32> @blend_mask_cond_v8i32(<8 x i32> %x, <8 x i32> %y, <8 x i32> %z) {
 ; AVX1-LABEL: blend_mask_cond_v8i32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm3
+; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm3 # [2147483648,1073741824,268435456,536870912]
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [268435456,2097152,1073741824,524288]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
 ; AVX1-NEXT:    vblendvps %ymm0, %ymm2, %ymm1, %ymm0
 ; AVX1-NEXT:    retq
@@ -1558,7 +1595,7 @@ define void @store_blend_load_v16i16(ptr %a0, ptr %a1, ptr %a2) {
 ; XOP-NEXT:    vmovdqa (%rdi), %ymm0
 ; XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [7,7,7,7,7,7,7,7]
 ; XOP-NEXT:    vpcomltuw 16(%rdi), %xmm1, %xmm2
-; XOP-NEXT:    vpcomltuw (%rdi), %xmm1, %xmm1
+; XOP-NEXT:    vpcomgtuw %xmm1, %xmm0, %xmm1
 ; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; XOP-NEXT:    vpcmov %ymm1, (%rsi), %ymm0, %ymm0
 ; XOP-NEXT:    vmovdqa %ymm0, (%rdx)
@@ -1627,7 +1664,7 @@ define void @store_blend_load_v32i8(ptr %a0, ptr %a1, ptr %a2) {
 ; XOP-NEXT:    vmovdqa (%rdi), %ymm0
 ; XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
 ; XOP-NEXT:    vpcomltub 16(%rdi), %xmm1, %xmm2
-; XOP-NEXT:    vpcomltub (%rdi), %xmm1, %xmm1
+; XOP-NEXT:    vpcomgtub %xmm1, %xmm0, %xmm1
 ; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; XOP-NEXT:    vpcmov %ymm1, (%rsi), %ymm0, %ymm0
 ; XOP-NEXT:    vmovdqa %ymm0, (%rdx)
@@ -1763,7 +1800,7 @@ define <64 x i8> @PR110875(<32 x i8> %a0, <32 x i8> %a1, i64 %a2) {
 ; AVX512F-NEXT:    vpcmpeqb %ymm3, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
 ; AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 = mem ^ (zmm0 & (zmm1 ^ mem))
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 = m32bcst ^ (zmm0 & (zmm1 ^ m32bcst))
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: PR110875:
@@ -1780,7 +1817,7 @@ define <64 x i8> @PR110875(<32 x i8> %a0, <32 x i8> %a1, i64 %a2) {
 ; AVX512VL-NEXT:    vpcmpeqb %ymm3, %ymm2, %ymm2
 ; AVX512VL-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
-; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 = mem ^ (zmm0 & (zmm1 ^ mem))
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 = m32bcst ^ (zmm0 & (zmm1 ^ m32bcst))
 ; AVX512VL-NEXT:    retq
 ;
 ; XOP-LABEL: PR110875:

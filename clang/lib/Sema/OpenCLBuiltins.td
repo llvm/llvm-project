@@ -139,6 +139,10 @@ def ArmIntegerDotProductAccumulateInt8         : FunctionExtension<"cl_arm_integ
 def ArmIntegerDotProductAccumulateInt16        : FunctionExtension<"cl_arm_integer_dot_product_accumulate_int16">;
 def ArmIntegerDotProductAccumulateSaturateInt8 : FunctionExtension<"cl_arm_integer_dot_product_accumulate_saturate_int8">;
 
+// AMD extensions.
+def AMDMediaOps : FunctionExtension<"cl_amd_media_ops">;
+def AMDMediaOps2 : FunctionExtension<"cl_amd_media_ops2">;
+
 // Qualified Type.  These map to ASTContext::QualType.
 class QualType<string _TypeExpr, bit _IsAbstract=0> {
   // Expression to obtain the QualType inside OCL2Qual.
@@ -246,7 +250,7 @@ class ImageType<Type _Ty, string _AccessQualifier> :
   let Extension = !cond(
       !and(!eq(_Ty.Name, "image3d_t"), !eq(_AccessQualifier, "WO")) : TypeExtension<"cl_khr_3d_image_writes">,
       !and(!eq(_Ty.Name, "image3d_t"), !eq(_AccessQualifier, "RW")) : TypeExtension<"cl_khr_3d_image_writes __opencl_c_read_write_images">,
-      !or(!eq(_Ty.Name, "image2d_depth_t"), !eq(_Ty.Name, "image2d_array_depth_t")) : TypeExtension<"cl_khr_depth_images">,
+      !or(!eq(_Ty.Name, "image2d_depth_t"), !eq(_Ty.Name, "image2d_array_depth_t")) : TypeExtension<"__opencl_depth_image_builtins">,
       !eq(_AccessQualifier, "RW") : TypeExtension<"__opencl_c_read_write_images">,
       true : _Ty.Extension);
 }
@@ -958,11 +962,23 @@ foreach name = ["async_work_group_strided_copy"] in {
   def : Builtin<name, [Event, PointerType<AGenTypeN, LocalAS>, PointerType<ConstType<AGenTypeN>, GlobalAS>, Size, Size, Event]>;
   def : Builtin<name, [Event, PointerType<AGenTypeN, GlobalAS>, PointerType<ConstType<AGenTypeN>, LocalAS>, Size, Size, Event]>;
 }
-foreach name = ["wait_group_events"] in {
-  def : Builtin<name, [Void, Int, PointerType<Event, GenericAS>]>;
-}
 foreach name = ["prefetch"] in {
   def : Builtin<name, [Void, PointerType<ConstType<AGenTypeN>, GlobalAS>, Size]>;
+}
+
+// The wait_group_events is declared with an argument of type event_t*.
+// The address-space of the pointer parameter is different if the generic address space is available.
+multiclass BuiltinWithDefaultPointerArg<AddressSpace AS> {
+  foreach name = ["wait_group_events"] in {
+    def : Builtin<name, [Void, Int, PointerType<Event, AS>]>;
+  }
+}
+
+let Extension = FuncExtOpenCLCNamedAddressSpaceBuiltins in {
+  defm : BuiltinWithDefaultPointerArg<PrivateAS>;
+}
+let Extension = FuncExtOpenCLCGenericAddressSpace in {
+  defm : BuiltinWithDefaultPointerArg<GenericAS>;
 }
 
 //--------------------------------------------------------------------
@@ -1512,7 +1528,7 @@ let Extension = FuncExtOpenCLCDeviceEnqueue in {
 // OpenCL Extension v2.0 s9.18 - Mipmaps
 let Extension = FuncExtKhrMipmapImage in {
   // Added to section 6.13.14.2.
-  foreach aQual = ["RO"] in {
+  foreach aQual = ["RO", "RW"] in {
     foreach imgTy = [Image2d] in {
       foreach name = ["read_imagef"] in {
         def : Builtin<name, [VectorType<Float, 4>, ImageType<imgTy, aQual>, Sampler, VectorType<Float, 2>, Float], Attr.Pure>;
@@ -1614,7 +1630,7 @@ let Extension = FuncExtKhrMipmapImage in {
 // Write functions are enabled using a separate extension.
 let Extension = FuncExtKhrMipmapImageWrites in {
   // Added to section 6.13.14.4.
-  foreach aQual = ["WO"] in {
+  foreach aQual = ["WO", "RW"] in {
     foreach imgTy = [Image2d] in {
       def : Builtin<"write_imagef", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int, VectorType<Float, 4>]>;
       def : Builtin<"write_imagei", [Void, ImageType<imgTy, aQual>, VectorType<Int, 2>, Int, VectorType<Int, 4>]>;
@@ -1891,4 +1907,32 @@ let Extension = ArmIntegerDotProductAccumulateSaturateInt8 in {
     def : Builtin<name, [UInt, VectorType<UChar, 4>, VectorType<UChar, 4>, UInt]>;
     def : Builtin<name, [Int, VectorType<Char, 4>, VectorType<Char, 4>, Int]>;
   }
+}
+
+//--------------------------------------------------------------------
+// AMD extensions.
+let Extension = AMDMediaOps in {
+  foreach name = ["amd_bitalign", "amd_bytealign", "amd_lerp", "amd_sadhi", "amd_sad"] in {
+    def : Builtin<name, [GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar]>;
+  }
+  foreach name = ["amd_unpack0", "amd_unpack1", "amd_unpack2", "amd_unpack3"] in {
+    def : Builtin<name, [GenTypeFloatVecAndScalar, GenTypeUIntVecAndScalar]>;
+  }
+  def : Builtin<"amd_pack", [UInt, VectorType<Float, 4>]>;
+  def : Builtin<"amd_sad4", [UInt, VectorType<UInt, 4>, VectorType<UInt, 4>, UInt]>;
+}
+
+let Extension = AMDMediaOps2 in {
+  def : Builtin<"amd_bfe", [GenTypeIntVecAndScalar, GenTypeIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar]>;
+  foreach name = ["amd_bfe", "amd_msad", "amd_sadd", "amd_sadw"] in {
+    def : Builtin<name, [GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar]>;
+  }
+  def : Builtin<"amd_bfm", [GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar, GenTypeUIntVecAndScalar]>;
+  foreach name = ["amd_max3", "amd_median3", "amd_min3"] in {
+    foreach gentype = [GenTypeFloatVecAndScalar, GenTypeIntVecAndScalar, GenTypeUIntVecAndScalar] in {
+      def : Builtin<name, [gentype, gentype, gentype, gentype]>;
+    }
+  }
+  def : Builtin<"amd_mqsad", [GenTypeULongVecAndScalar, GenTypeULongVecAndScalar, GenTypeUIntVecAndScalar, GenTypeULongVecAndScalar]>;
+  def : Builtin<"amd_qsad", [GenTypeULongVecAndScalar, GenTypeULongVecAndScalar, GenTypeUIntVecAndScalar, GenTypeULongVecAndScalar]>;
 }

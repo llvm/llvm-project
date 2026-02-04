@@ -9,7 +9,6 @@
 // REQUIRES: can-create-symlinks
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
-// UNSUPPORTED: availability-filesystem-missing
 
 // Android's fchmodat seems broken on various OS versions -- see D140183. This
 // test probably passes on new-enough phones (not the emulator).
@@ -166,7 +165,7 @@ static void test_no_resolve_symlink_on_symlink()
     };
     for (auto const& TC : cases) {
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(_AIX)
-        // On OS X symlink permissions are supported. We should get an empty
+        // On macOS symlink permissions are supported. We should get an empty
         // error code and the expected permissions.
         const auto expected_link_perms = TC.expected;
         std::error_code expected_ec;

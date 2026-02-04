@@ -19,7 +19,7 @@ foo:
 # CHECK-CUSTOM:      - Type:            MEMORY
 # CHECK-CUSTOM-NEXT:   Memories:
 # CHECK-CUSTOM-NEXT:   - Flags:           [ HAS_PAGE_SIZE ]
-# CHECK-CUSTOM-NEXT:     Minimum:         0x10410
+# CHECK-CUSTOM-NEXT:     Minimum:         0x10004
 # CHECK-CUSTOM-NEXT:     PageSize:        0x1
 
 # RUN: llvm-objdump --disassemble-symbols=_start %t.custom.wasm | FileCheck %s --check-prefix=CHECK-CUSTOM-DIS
@@ -41,3 +41,21 @@ foo:
 # CHECK-DEFAULT-DIS:      <_start>:
 # CHECK-DEFAULT-DIS:          i32.const 65536
 # CHECK-DEFAULT-DIS-NEXT:     end
+
+# RUN: wasm-ld -no-gc-sections -o %t.custom-import.wasm %t.o --page-size=1 --import-memory
+# RUN: obj2yaml %t.custom-import.wasm | FileCheck %s --check-prefix=CHECK-CUSTOM-IMPORT
+
+# CHECK-CUSTOM-IMPORT:      Imports:
+# CHECK-CUSTOM-IMPORT-NEXT:   - Module:          env
+# CHECK-CUSTOM-IMPORT-NEXT:     Field:           memory
+# CHECK-CUSTOM-IMPORT-NEXT:     Kind:            MEMORY
+# CHECK-CUSTOM-IMPORT-NEXT:     Memory:
+# CHECK-CUSTOM-IMPORT-NEXT:       Flags:           [ HAS_PAGE_SIZE ]
+# CHECK-CUSTOM-IMPORT-NEXT:       Minimum:         0x10004
+# CHECK-CUSTOM-IMPORT-NEXT:       PageSize:        0x1
+
+# RUN: llvm-objdump --disassemble-symbols=_start %t.custom-import.wasm | FileCheck %s --check-prefix=CHECK-CUSTOM-IMPORT-DIS
+
+# CHECK-CUSTOM-IMPORT-DIS:      <_start>:
+# CHECK-CUSTOM-IMPORT-DIS:          i32.const 1
+# CHECK-CUSTOM-IMPORT-DIS-NEXT:     end

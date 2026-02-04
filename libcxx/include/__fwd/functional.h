@@ -22,13 +22,13 @@ template <class _Tp = void>
 #else
 template <class _Tp>
 #endif
-struct _LIBCPP_TEMPLATE_VIS less;
+struct less;
 
 template <class>
-struct _LIBCPP_TEMPLATE_VIS hash;
+struct hash;
 
 template <class>
-class _LIBCPP_TEMPLATE_VIS reference_wrapper;
+class reference_wrapper;
 
 _LIBCPP_END_NAMESPACE_STD
 

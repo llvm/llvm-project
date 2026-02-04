@@ -28,7 +28,6 @@
 #include "llvm/Support/Error.h"
 
 #include <cstdint>
-#include <map>
 #include <vector>
 
 namespace llvm {
@@ -56,8 +55,11 @@ public:
   StringRef value() const;
   Kind kind() const;
 
-  // Check if a token describes a binary operator.
-  bool isBinaryOp() const;
+  // Check if a token describes a low precedence binary operator.
+  bool isLowPrecedenceBinaryOp() const;
+
+  // Check if a token describes a high precedence binary operator.
+  bool isHighPrecedenceBinaryOp() const;
 
 private:
   Kind TokenKind;
@@ -73,7 +75,7 @@ private:
 // Tokens returned by this function hold only references to the parts
 // of the Input. Memory buffer containing Input cannot be freed,
 // modified or reallocated.
-Expected<std::vector<RCToken>> tokenizeRC(StringRef Input);
+Expected<std::vector<RCToken>> tokenizeRC(StringRef Input, bool IsWindres);
 
 } // namespace llvm
 

@@ -24,9 +24,18 @@
 
 namespace mlir {
 
-/// Return true if `v` is an IntegerAttr with value `0` of a ConstantIndexOp
-/// with attribute with value `0`.
-bool isZeroIndex(OpFoldResult v);
+/// Return "true" if `v` is an integer value/attribute with constant value `0`.
+bool isZeroInteger(OpFoldResult v);
+
+/// Return "true" if `v` is a float value/attribute with constant value `0.0`.
+bool isZeroFloat(OpFoldResult v);
+
+/// Return "true" if `v` is an integer/float value/attribute with constant
+/// value zero.
+bool isZeroIntegerOrFloat(OpFoldResult v);
+
+/// Return true if `v` is an IntegerAttr with value `1`.
+bool isOneInteger(OpFoldResult v);
 
 /// Represents a range (offset, size, and stride) where each element of the
 /// triple may be dynamic or static.
@@ -82,10 +91,9 @@ getSimplifiedOfrAndStaticSizePair(OpFoldResult ofr, Builder &b);
 /// Extract integer values from the assumed ArrayAttr of IntegerAttr.
 template <typename IntTy>
 SmallVector<IntTy> extractFromIntegerArrayAttr(Attribute attr) {
-  return llvm::to_vector(
-      llvm::map_range(cast<ArrayAttr>(attr), [](Attribute a) -> IntTy {
-        return cast<IntegerAttr>(a).getInt();
-      }));
+  return llvm::map_to_vector(cast<ArrayAttr>(attr), [](Attribute a) -> IntTy {
+    return cast<IntegerAttr>(a).getInt();
+  });
 }
 
 /// Given a value, try to extract a constant Attribute. If this fails, return
@@ -103,6 +111,10 @@ OpFoldResult getAsIndexOpFoldResult(MLIRContext *ctx, int64_t val);
 SmallVector<OpFoldResult> getAsIndexOpFoldResult(MLIRContext *ctx,
                                                  ArrayRef<int64_t> values);
 
+/// If ofr is a constant integer or an IntegerAttr, return the integer.
+/// The second return value indicates whether the value is an index type
+/// and thus the bitwidth is not defined (the APInt will be set with 64bits).
+std::optional<std::pair<APInt, bool>> getConstantAPIntValue(OpFoldResult ofr);
 /// If ofr is a constant integer or an IntegerAttr, return the integer.
 std::optional<int64_t> getConstantIntValue(OpFoldResult ofr);
 /// If all ofrs are constant integers or IntegerAttrs, return the integers.
@@ -154,7 +166,7 @@ SmallVector<OpFoldResult> getMixedValues(ArrayRef<int64_t> staticValues,
 /// corresponding pair of arrays. This is the inverse function of
 /// `getMixedValues`.
 std::pair<SmallVector<int64_t>, SmallVector<Value>>
-decomposeMixedValues(const SmallVectorImpl<OpFoldResult> &mixedValues);
+decomposeMixedValues(ArrayRef<OpFoldResult> mixedValues);
 
 /// Helper to sort `values` according to matching `keys`.
 SmallVector<Value>
@@ -199,9 +211,27 @@ foldDynamicOffsetSizeList(SmallVectorImpl<OpFoldResult> &offsetsOrSizes);
 LogicalResult foldDynamicStrideList(SmallVectorImpl<OpFoldResult> &strides);
 
 /// Return the number of iterations for a loop with a lower bound `lb`, upper
-/// bound `ub` and step `step`.
-std::optional<int64_t> constantTripCount(OpFoldResult lb, OpFoldResult ub,
-                                         OpFoldResult step);
+/// bound `ub` and step `step`, as an unsigned integer. The `isSigned` flag
+/// indicates whether the loop comparison between lb and ub is signed or
+/// unsigned. (The result of this function must be interpreted as an unsigned
+/// integer.) A lower bound greater than the upper bound is considered invalid
+/// and will yield a zero trip count.
+/// The `computeUbMinusLb` callback is invoked to compute the difference between
+/// the upper and lower bound when not constant. It can be used by the client
+/// to compute a static difference when the bounds are not constant.
+///
+/// For example, the following code:
+///
+///   %ub = arith.addi nsw %lb, %c16_i32 : i32
+///   %1 = scf.for %arg0 = %lb to %ub ...
+///
+/// where %ub is computed as a static offset from %lb.
+/// Note: the matched addition should be nsw/nuw (matching the loop comparison)
+/// to avoid overflow, otherwise an overflow would imply a zero trip count.
+std::optional<APInt> constantTripCount(
+    OpFoldResult lb, OpFoldResult ub, OpFoldResult step, bool isSigned,
+    llvm::function_ref<std::optional<llvm::APSInt>(Value, Value, bool)>
+        computeUbMinusLb);
 
 /// Idiomatic saturated operations on values like offsets, sizes, and strides.
 struct SaturatedInteger {

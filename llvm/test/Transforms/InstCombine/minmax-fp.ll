@@ -118,7 +118,7 @@ define float @fmin_fmin_zero_mismatch(float %x) {
 }
 
 ; max(max(x, -0.0), -0.0) --> max(x, -0.0)
-define float @fmax_fmax_zero_mismatch(float %x) {
+define float @fmax_fmax_zero_mismatch(float noundef %x) {
 ; CHECK-LABEL: @fmax_fmax_zero_mismatch(
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[MAX1:%.*]] = select i1 [[CMP1]], float [[X]], float -0.000000e+00
@@ -160,7 +160,7 @@ define i8 @t9(float %a) {
   ; Either operand could be NaN, but fast modifier applied.
 define i8 @t11(float %a, float %b) {
 ; CHECK-LABEL: @t11(
-; CHECK-NEXT:    [[DOTV:%.*]] = call fast float @llvm.minnum.f32(float [[B:%.*]], float [[A:%.*]])
+; CHECK-NEXT:    [[DOTV:%.*]] = call nnan ninf nsz float @llvm.minnum.f32(float [[B:%.*]], float [[A:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[DOTV]] to i8
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
@@ -174,8 +174,7 @@ define i8 @t11(float %a, float %b) {
 ; Either operand could be NaN, but nnan modifier applied.
 define i8 @t12(float %a, float %b) {
 ; CHECK-LABEL: @t12(
-; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp nnan oge float [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[DOTV:%.*]] = select nnan i1 [[DOTINV]], float [[A]], float [[B]]
+; CHECK-NEXT:    [[DOTV:%.*]] = call nnan nsz float @llvm.minnum.f32(float [[B:%.*]], float [[A:%.*]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[DOTV]] to i8
 ; CHECK-NEXT:    ret i8 [[TMP1]]
 ;
@@ -230,7 +229,7 @@ define i8 @t14_commute(float %a) {
 define i8 @t15(float %a) {
 ; CHECK-LABEL: @t15(
 ; CHECK-NEXT:    [[DOTINV:%.*]] = fcmp nsz oge float [[A:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = select nsz i1 [[DOTINV]], float 0.000000e+00, float [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[DOTINV]], float 0.000000e+00, float [[A]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fptosi float [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
@@ -281,7 +280,8 @@ define float @fneg_fmax(float %x, float %y) {
 
 define <2 x float> @fsub_fmax(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: @fsub_fmax(
-; CHECK-NEXT:    [[MAX_V:%.*]] = call nnan nsz <2 x float> @llvm.minnum.v2f32(<2 x float> [[X:%.*]], <2 x float> [[Y:%.*]])
+; CHECK-NEXT:    [[COND_INV:%.*]] = fcmp nnan nsz ogt <2 x float> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MAX_V:%.*]] = select nnan <2 x i1> [[COND_INV]], <2 x float> [[Y]], <2 x float> [[X]]
 ; CHECK-NEXT:    [[MAX:%.*]] = fneg <2 x float> [[MAX_V]]
 ; CHECK-NEXT:    ret <2 x float> [[MAX]]
 ;
@@ -308,7 +308,8 @@ define <2 x double> @fsub_fmin(<2 x double> %x, <2 x double> %y) {
 
 define double @fneg_fmin(double %x, double %y) {
 ; CHECK-LABEL: @fneg_fmin(
-; CHECK-NEXT:    [[MAX_V:%.*]] = call nnan nsz double @llvm.maxnum.f64(double [[X:%.*]], double [[Y:%.*]])
+; CHECK-NEXT:    [[COND_INV:%.*]] = fcmp nnan nsz olt double [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[MAX_V:%.*]] = select nnan i1 [[COND_INV]], double [[Y]], double [[X]]
 ; CHECK-NEXT:    [[MAX:%.*]] = fneg double [[MAX_V]]
 ; CHECK-NEXT:    ret double [[MAX]]
 ;
@@ -321,21 +322,21 @@ define double @fneg_fmin(double %x, double %y) {
 
 define float @maxnum_ogt_fmf_on_select(float %a, float %b) {
 ; CHECK-LABEL: @maxnum_ogt_fmf_on_select(
-; CHECK-NEXT:    [[F:%.*]] = call nsz float @llvm.maxnum.f32(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    [[F:%.*]] = call nnan nsz float @llvm.maxnum.f32(float [[A:%.*]], float [[B:%.*]])
 ; CHECK-NEXT:    ret float [[F]]
 ;
-  %cond = fcmp ogt float %a, %b
-  %f = select nnan nsz i1 %cond, float %a, float %b
+  %cond = fcmp nnan ogt float %a, %b
+  %f = select nsz i1 %cond, float %a, float %b
   ret float %f
 }
 
 define <2 x float> @maxnum_oge_fmf_on_select(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: @maxnum_oge_fmf_on_select(
-; CHECK-NEXT:    [[F:%.*]] = call ninf nsz <2 x float> @llvm.maxnum.v2f32(<2 x float> [[A:%.*]], <2 x float> [[B:%.*]])
+; CHECK-NEXT:    [[F:%.*]] = call nnan nsz <2 x float> @llvm.maxnum.v2f32(<2 x float> [[A:%.*]], <2 x float> [[B:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[F]]
 ;
-  %cond = fcmp oge <2 x float> %a, %b
-  %f = select ninf nnan nsz <2 x i1> %cond, <2 x float> %a, <2 x float> %b
+  %cond = fcmp nnan oge <2 x float> %a, %b
+  %f = select nsz <2 x i1> %cond, <2 x float> %a, <2 x float> %b
   ret <2 x float> %f
 }
 
@@ -363,12 +364,12 @@ define <2 x float> @maxnum_oge_fmf_on_fcmp(<2 x float> %a, <2 x float> %b) {
 
 define float @maxnum_no_nsz(float %a, float %b) {
 ; CHECK-LABEL: @maxnum_no_nsz(
-; CHECK-NEXT:    [[COND:%.*]] = fcmp ogt float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[F:%.*]] = select nnan i1 [[COND]], float [[A]], float [[B]]
+; CHECK-NEXT:    [[COND:%.*]] = fcmp nnan ogt float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[F:%.*]] = select i1 [[COND]], float [[A]], float [[B]]
 ; CHECK-NEXT:    ret float [[F]]
 ;
-  %cond = fcmp ogt float %a, %b
-  %f = select nnan i1 %cond, float %a, float %b
+  %cond = fcmp nnan ogt float %a, %b
+  %f = select i1 %cond, float %a, float %b
   ret float %f
 }
 
@@ -383,23 +384,33 @@ define float @maxnum_no_nnan(float %a, float %b) {
   ret float %f
 }
 
-define float @minnum_olt_fmf_on_select(float %a, float %b) {
-; CHECK-LABEL: @minnum_olt_fmf_on_select(
-; CHECK-NEXT:    [[F:%.*]] = call nsz float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
+define float @minnum_olt_fmf_on_select_both_ninf(float %a, float %b) {
+; CHECK-LABEL: @minnum_olt_fmf_on_select_both_ninf(
+; CHECK-NEXT:    [[F:%.*]] = call nnan ninf nsz float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
 ; CHECK-NEXT:    ret float [[F]]
 ;
-  %cond = fcmp olt float %a, %b
-  %f = select nnan nsz i1 %cond, float %a, float %b
+  %cond = fcmp nnan ninf olt float %a, %b
+  %f = select ninf nsz i1 %cond, float %a, float %b
+  ret float %f
+}
+
+define float @minnum_olt_fmf_on_select(float %a, float %b) {
+; CHECK-LABEL: @minnum_olt_fmf_on_select(
+; CHECK-NEXT:    [[F:%.*]] = call nnan nsz float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    ret float [[F]]
+;
+  %cond = fcmp nnan olt float %a, %b
+  %f = select nsz i1 %cond, float %a, float %b
   ret float %f
 }
 
 define <2 x float> @minnum_ole_fmf_on_select(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: @minnum_ole_fmf_on_select(
-; CHECK-NEXT:    [[F:%.*]] = call ninf nsz <2 x float> @llvm.minnum.v2f32(<2 x float> [[A:%.*]], <2 x float> [[B:%.*]])
+; CHECK-NEXT:    [[F:%.*]] = call nnan nsz <2 x float> @llvm.minnum.v2f32(<2 x float> [[A:%.*]], <2 x float> [[B:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[F]]
 ;
-  %cond = fcmp ole <2 x float> %a, %b
-  %f = select ninf nnan nsz <2 x i1> %cond, <2 x float> %a, <2 x float> %b
+  %cond = fcmp nnan ole <2 x float> %a, %b
+  %f = select ninf nsz <2 x i1> %cond, <2 x float> %a, <2 x float> %b
   ret <2 x float> %f
 }
 
@@ -427,12 +438,12 @@ define <2 x float> @minnum_ole_fmf_on_fcmp(<2 x float> %a, <2 x float> %b) {
 
 define float @minnum_no_nsz(float %a, float %b) {
 ; CHECK-LABEL: @minnum_no_nsz(
-; CHECK-NEXT:    [[COND:%.*]] = fcmp olt float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[F:%.*]] = select nnan i1 [[COND]], float [[A]], float [[B]]
+; CHECK-NEXT:    [[COND:%.*]] = fcmp nnan olt float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[F:%.*]] = select i1 [[COND]], float [[A]], float [[B]]
 ; CHECK-NEXT:    ret float [[F]]
 ;
-  %cond = fcmp olt float %a, %b
-  %f = select nnan i1 %cond, float %a, float %b
+  %cond = fcmp nnan olt float %a, %b
+  %f = select i1 %cond, float %a, float %b
   ret float %f
 }
 
@@ -459,3 +470,19 @@ define float @pr64937_preserve_min_idiom(float %a) {
   %res = fmul nnan float %sel, 6.553600e+04
   ret float %res
 }
+
+define float @minnum_shared_op_mixed(float %x) {
+; CHECK-LABEL: @minnum_shared_op_mixed(
+; CHECK-NEXT:    [[M0:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 0.000000e+00)
+; CHECK-NEXT:    [[F:%.*]] = call float @llvm.fma.f32(float [[X]], float 0.000000e+00, float [[X]])
+; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.minnum.f32(float [[F]], float [[M0]])
+; CHECK-NEXT:    ret float [[M2]]
+;
+  %m0 = call float @llvm.minnum.f32(float %x, float 0.000000e+00)
+  %f = call float @llvm.fma.f32(float %x, float 0.000000e+00, float %x)
+  %m2 = call float @llvm.minnum.f32(float %f, float %m0)
+  ret float %m2
+}
+
+declare float @llvm.minnum.f32(float, float)
+declare float @llvm.fma.f32(float, float, float)

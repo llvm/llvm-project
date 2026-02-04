@@ -46,44 +46,43 @@ bool maybeReachableFromEachOther(const SmallVectorImpl<IntrinsicInst *> &Insts,
 } // namespace
 
 bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
-                          const LoopInfo &LI, const Instruction *Start,
-                          const SmallVectorImpl<IntrinsicInst *> &Ends,
+                          const LoopInfo &LI, const AllocaInfo &AInfo,
                           const SmallVectorImpl<Instruction *> &RetVec,
                           llvm::function_ref<void(Instruction *)> Callback) {
-  if (Ends.size() == 1 && PDT.dominates(Ends[0], Start)) {
-    Callback(Ends[0]);
+  if (AInfo.LifetimeEnd.size() == 1 && AInfo.LifetimeStart.size() == 1 &&
+      PDT.dominates(AInfo.LifetimeEnd[0], AInfo.LifetimeStart[0])) {
+    Callback(AInfo.LifetimeEnd[0]);
     return true;
   }
   SmallPtrSet<BasicBlock *, 2> EndBlocks;
-  for (auto *End : Ends) {
-    EndBlocks.insert(End->getParent());
+  SmallVector<BasicBlock *, 2> StartBlocks;
+  for (const auto &[BB, ID] : AInfo.LastBBLifetime) {
+    if (ID == Intrinsic::lifetime_end)
+      EndBlocks.insert(BB);
+    else
+      StartBlocks.push_back(BB);
   }
-  SmallVector<Instruction *, 8> ReachableRetVec;
-  unsigned NumCoveredExits = 0;
-  for (auto *RI : RetVec) {
-    if (!isPotentiallyReachable(Start, RI, nullptr, &DT, &LI))
-      continue;
-    ReachableRetVec.push_back(RI);
-    // If there is an end in the same basic block as the return, we know for
-    // sure that the return is covered. Otherwise, we can check whether there
-    // is a way to reach the RI from the start of the lifetime without passing
-    // through an end.
-    if (EndBlocks.contains(RI->getParent()) ||
-        !isPotentiallyReachable(Start, RI, &EndBlocks, &DT, &LI)) {
-      ++NumCoveredExits;
+  bool UncoveredRets = false;
+
+  if (!StartBlocks.empty()) {
+    for (auto *RI : RetVec) {
+      auto WL = StartBlocks;
+      // If the block with the return is an EndBlock (i.e. a block where the
+      // last relevant lifetime intrinsic is an end), we don't have to run a
+      // complicated algorithm to know that the RetInst is never reachable
+      // without going through an end.
+      if (!EndBlocks.contains(RI->getParent()) &&
+          isPotentiallyReachableFromMany(WL, RI->getParent(), &EndBlocks, &DT,
+                                         &LI)) {
+        Callback(RI);
+        UncoveredRets = true;
+      }
     }
   }
-  if (NumCoveredExits == ReachableRetVec.size()) {
-    for_each(Ends, Callback);
-  } else {
-    // If there's a mix of covered and non-covered exits, just put the untag
-    // on exits, so we avoid the redundancy of untagging twice.
-    for_each(ReachableRetVec, Callback);
-    // We may have inserted untag outside of the lifetime interval.
-    // Signal the caller to remove the lifetime end call for this alloca.
-    return false;
-  }
-  return true;
+  for_each(AInfo.LifetimeEnd, Callback);
+  // We may have inserted untag outside of the lifetime interval.
+  // Signal the caller to remove the lifetime end call for this alloca.
+  return !UncoveredRets;
 }
 
 bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
@@ -93,7 +92,7 @@ bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
   // An alloca that has exactly one start and end in every possible execution.
   // If it has multiple ends, they have to be unreachable from each other, so
   // at most one of them is actually used for each execution of the function.
-  return LifetimeStart.size() == 1 &&
+  return LifetimeStart.size() > 0 &&
          (LifetimeEnd.size() == 1 ||
           (LifetimeEnd.size() > 0 &&
            !maybeReachableFromEachOther(LifetimeEnd, DT, LI, MaxLifetimes)));
@@ -155,34 +154,17 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
     return;
   }
   if (auto *II = dyn_cast<LifetimeIntrinsic>(&Inst)) {
-    AllocaInst *AI = findAllocaForValue(II->getArgOperand(1));
-    if (!AI) {
-      Info.UnrecognizedLifetimes.push_back(&Inst);
-      return;
-    }
-    if (getAllocaInterestingness(*AI) != AllocaInterestingness::kInteresting)
+    AllocaInst *AI = dyn_cast<AllocaInst>(II->getArgOperand(0));
+    if (!AI ||
+        getAllocaInterestingness(*AI) != AllocaInterestingness::kInteresting)
       return;
     if (II->getIntrinsicID() == Intrinsic::lifetime_start)
       Info.AllocasToInstrument[AI].LifetimeStart.push_back(II);
     else
       Info.AllocasToInstrument[AI].LifetimeEnd.push_back(II);
+    Info.AllocasToInstrument[AI].LastBBLifetime[II->getParent()] =
+        II->getIntrinsicID();
     return;
-  }
-  if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst)) {
-    auto AddIfInteresting = [&](Value *V) {
-      if (auto *AI = dyn_cast_or_null<AllocaInst>(V)) {
-        if (getAllocaInterestingness(*AI) !=
-            AllocaInterestingness::kInteresting)
-          return;
-        AllocaInfo &AInfo = Info.AllocasToInstrument[AI];
-        auto &DVIVec = AInfo.DbgVariableIntrinsics;
-        if (DVIVec.empty() || DVIVec.back() != DVI)
-          DVIVec.push_back(DVI);
-      }
-    };
-    for_each(DVI->location_ops(), AddIfInteresting);
-    if (auto *DAI = dyn_cast<DbgAssignIntrinsic>(DVI))
-      AddIfInteresting(DAI->getAddress());
   }
 
   Instruction *ExitUntag = getUntagLocationIfFunctionExit(Inst);
@@ -192,13 +174,14 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
 
 AllocaInterestingness
 StackInfoBuilder::getAllocaInterestingness(const AllocaInst &AI) {
-  if (AI.getAllocatedType()->isSized() &&
+  std::optional<TypeSize> Size = AI.getAllocationSize(AI.getDataLayout());
+  if (Size &&
       // FIXME: support vscale.
-      !AI.getAllocatedType()->isScalableTy() &&
+      !Size->isScalable() &&
       // FIXME: instrument dynamic allocas, too
       AI.isStaticAlloca() &&
       // alloca() may be called with 0 size, ignore it.
-      memtag::getAllocaSizeInBytes(AI) > 0 &&
+      !Size->isZero() &&
       // We are only interested in allocas not promotable to registers.
       // Promotable allocas are common under -O0.
       !isAllocaPromotable(&AI) &&
@@ -248,13 +231,7 @@ void alignAndPadAlloca(memtag::AllocaInfo &Info, llvm::Align Alignment) {
   NewAI->setSwiftError(Info.AI->isSwiftError());
   NewAI->copyMetadata(*Info.AI);
 
-  Value *NewPtr = NewAI;
-
-  // TODO: Remove when typed pointers dropped
-  if (Info.AI->getType() != NewAI->getType())
-    NewPtr = new BitCastInst(NewAI, Info.AI->getType(), "", Info.AI->getIterator());
-
-  Info.AI->replaceAllUsesWith(NewPtr);
+  Info.AI->replaceAllUsesWith(NewAI);
   Info.AI->eraseFromParent();
   Info.AI = NewAI;
 }
@@ -286,18 +263,34 @@ Value *getFP(IRBuilder<> &IRB) {
       IRB.getIntPtrTy(M->getDataLayout()));
 }
 
+Value *getDarwinSlotPtr(IRBuilder<> &IRB, int Slot) {
+  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+  // FIXME: This should use the thread_pointer intrinsic. However, the
+  // intrinsic is not currently implemented on Darwin correctly. The
+  // TPIDRRO_EL0 register became part of the ABI to access TSD on recent
+  // versions of OS and so it is safe to use here
+  // Darwin provides a fixed slot for sanitizers at offset 231.
+  MDNode *MD = MDNode::get(M->getContext(),
+                           {MDString::get(M->getContext(), "TPIDRRO_EL0")});
+  Value *Args[] = {MetadataAsValue::get(M->getContext(), MD)};
+  return IRB.CreateConstGEP1_32(
+      IRB.getInt8Ty(),
+      IRB.CreateIntToPtr(
+          IRB.CreateIntrinsic(Intrinsic::read_register,
+                              {IRB.getIntPtrTy(M->getDataLayout())}, Args),
+          IRB.getPtrTy()),
+      8 * Slot);
+}
+
 Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot) {
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   // Android provides a fixed TLS slot for sanitizers. See TLS_SLOT_SANITIZER
   // in Bionic's libc/private/bionic_tls.h.
-  Function *ThreadPointerFunc =
-      Intrinsic::getOrInsertDeclaration(M, Intrinsic::thread_pointer);
+  Function *ThreadPointerFunc = Intrinsic::getOrInsertDeclaration(
+      M, Intrinsic::thread_pointer,
+      IRB.getPtrTy(M->getDataLayout().getDefaultGlobalsAddressSpace()));
   return IRB.CreateConstGEP1_32(IRB.getInt8Ty(),
                                 IRB.CreateCall(ThreadPointerFunc), 8 * Slot);
-}
-
-static DbgAssignIntrinsic *DynCastToDbgAssign(DbgVariableIntrinsic *DVI) {
-  return dyn_cast<DbgAssignIntrinsic>(DVI);
 }
 
 static DbgVariableRecord *DynCastToDbgAssign(DbgVariableRecord *DVR) {
@@ -305,10 +298,7 @@ static DbgVariableRecord *DynCastToDbgAssign(DbgVariableRecord *DVR) {
 }
 
 void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag) {
-  // Helper utility for adding DW_OP_LLVM_tag_offset to debug-info records,
-  // abstracted over whether they're intrinsic-stored or DbgVariableRecord
-  // stored.
-  auto AnnotateDbgRecord = [&](auto *DPtr) {
+  auto AnnotateDbgRecord = [&](DbgVariableRecord *DPtr) {
     // Prepend "tag_offset, N" to the dwarf expression.
     // Tag offset logically applies to the alloca pointer, and it makes sense
     // to put it at the beginning of the expression.
@@ -324,12 +314,11 @@ void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag) {
     }
   };
 
-  llvm::for_each(Info.DbgVariableIntrinsics, AnnotateDbgRecord);
   llvm::for_each(Info.DbgVariableRecords, AnnotateDbgRecord);
 }
 
 Value *incrementThreadLong(IRBuilder<> &IRB, Value *ThreadLong,
-                           unsigned int Inc) {
+                           unsigned int Inc, bool IsMemtagDarwin) {
   // Update the ring buffer. Top byte of ThreadLong defines the size of the
   // buffer in pages, it must be a power of two, and the start of the buffer
   // must be aligned by twice that much. Therefore wrap around of the ring
@@ -353,9 +342,16 @@ Value *incrementThreadLong(IRBuilder<> &IRB, Value *ThreadLong,
   //            0x01AAAAAAAAAAA000
   //
   // Then the WrapMask will be a no-op until the next wrap case.
+  //
+  // Darwin relies on bit 60-62 to store the size of the buffer in pages. This
+  // limits N to [0,2] while the rest of the proof remains unchanged. Bits
+  // 56-59 are avoided in order to prevent MTE Canonical Tag Faults while
+  // accessing the ring buffer. Bit 63 is avoided to prevent unintentional
+  // signed extension by AShr.
   assert((4096 % Inc) == 0);
   Value *WrapMask = IRB.CreateXor(
-      IRB.CreateShl(IRB.CreateAShr(ThreadLong, 56), 12, "", true, true),
+      IRB.CreateShl(IRB.CreateAShr(ThreadLong, IsMemtagDarwin ? 60 : 56), 12,
+                    "", true, true),
       ConstantInt::get(ThreadLong->getType(), (uint64_t)-1));
   return IRB.CreateAnd(
       IRB.CreateAdd(ThreadLong, ConstantInt::get(ThreadLong->getType(), Inc)),

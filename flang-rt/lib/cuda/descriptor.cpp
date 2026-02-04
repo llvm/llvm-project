@@ -20,7 +20,8 @@ RT_EXT_API_GROUP_BEGIN
 
 Descriptor *RTDEF(CUFAllocDescriptor)(
     std::size_t sizeInBytes, const char *sourceFile, int sourceLine) {
-  return reinterpret_cast<Descriptor *>(CUFAllocManaged(sizeInBytes));
+  return reinterpret_cast<Descriptor *>(
+      CUFAllocManaged(sizeInBytes, /*asyncObject=*/nullptr));
 }
 
 void RTDEF(CUFFreeDescriptor)(
@@ -51,6 +52,14 @@ void RTDEF(CUFSyncGlobalDescriptor)(
   void *devAddr{RTNAME(CUFGetDeviceAddress)(hostPtr, sourceFile, sourceLine)};
   RTNAME(CUFDescriptorSync)
   ((Descriptor *)devAddr, (Descriptor *)hostPtr, sourceFile, sourceLine);
+}
+
+void RTDEF(CUFDescriptorCheckSection)(
+    const Descriptor *desc, const char *sourceFile, int sourceLine) {
+  if (desc && !desc->IsContiguous()) {
+    Terminator terminator{sourceFile, sourceLine};
+    terminator.Crash("device array section argument is not contiguous");
+  }
 }
 
 RT_EXT_API_GROUP_END

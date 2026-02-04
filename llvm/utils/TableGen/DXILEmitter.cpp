@@ -37,15 +37,6 @@ struct DXILIntrinsicSelect {
   SmallVector<const Record *> ArgSelectRecords;
 };
 
-static StringRef StripIntrinArgSelectTypePrefix(StringRef Type) {
-  StringRef Prefix = "IntrinArgSelect_";
-  if (!Type.starts_with(Prefix)) {
-    PrintFatalError("IntrinArgSelectType definintion must be prefixed with "
-                    "'IntrinArgSelect_'");
-  }
-  return Type.substr(Prefix.size());
-}
-
 struct DXILOperationDesc {
   std::string OpName; // name of DXIL operation
   int OpCode;         // ID of DXIL operation
@@ -65,6 +56,15 @@ struct DXILOperationDesc {
   DXILOperationDesc(const Record *);
 };
 } // end anonymous namespace
+
+static StringRef stripIntrinArgSelectTypePrefix(StringRef Type) {
+  StringRef Prefix = "IntrinArgSelect_";
+  if (!Type.starts_with(Prefix)) {
+    PrintFatalError("IntrinArgSelectType definintion must be prefixed with "
+                    "'IntrinArgSelect_'");
+  }
+  return Type.substr(Prefix.size());
+}
 
 /// In-place sort TableGen records of class with a field
 ///    Version dxil_version
@@ -113,9 +113,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
 
   ParamTypeRecs.push_back(R->getValueAsDef("result"));
 
-  for (const Record *ArgTy : R->getValueAsListOfDefs("arguments")) {
-    ParamTypeRecs.push_back(ArgTy);
-  }
+  llvm::append_range(ParamTypeRecs, R->getValueAsListOfDefs("arguments"));
   size_t ParamTypeRecsSize = ParamTypeRecs.size();
   // Populate OpTypes with return type and parameter types
 
@@ -148,9 +146,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Sort records in ascending order of DXIL version
   ascendingSortByVersion(Recs);
 
-  for (const Record *CR : Recs) {
-    OverloadRecs.push_back(CR);
-  }
+  llvm::append_range(OverloadRecs, Recs);
 
   // Get stage records
   Recs = R->getValueAsListOfDefs("stages");
@@ -163,9 +159,7 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Sort records in ascending order of DXIL version
   ascendingSortByVersion(Recs);
 
-  for (const Record *CR : Recs) {
-    StageRecs.push_back(CR);
-  }
+  llvm::append_range(StageRecs, Recs);
 
   // Get attribute records
   Recs = R->getValueAsListOfDefs("attributes");
@@ -173,17 +167,14 @@ DXILOperationDesc::DXILOperationDesc(const Record *R) {
   // Sort records in ascending order of DXIL version
   ascendingSortByVersion(Recs);
 
-  for (const Record *CR : Recs) {
-    AttrRecs.push_back(CR);
-  }
+  llvm::append_range(AttrRecs, Recs);
 
   // Get the operation class
   OpClass = R->getValueAsDef("OpClass")->getName();
 
-  if (!OpClass.str().compare("UnknownOpClass")) {
+  if (OpClass.str() == "UnknownOpClass")
     PrintFatalError(R, Twine("Unspecified DXIL OpClass for DXIL operation - ") +
                            OpName);
-  }
 
   auto IntrinsicSelectRecords = R->getValueAsListOfDefs("intrinsics");
   if (IntrinsicSelectRecords.size()) {
@@ -458,7 +449,7 @@ static void emitDXILIntrinsicMap(ArrayRef<DXILOperationDesc> Ops,
             ArgSelect->getValueAsDef("type")->getNameInitAsString();
         int Value = ArgSelect->getValueAsInt("value");
         OS << "(IntrinArgSelect{"
-           << "IntrinArgSelect::Type::" << StripIntrinArgSelectTypePrefix(Type)
+           << "IntrinArgSelect::Type::" << stripIntrinArgSelectTypePrefix(Type)
            << "," << Value << "}), ";
       }
       OS << ")\n";
@@ -475,7 +466,7 @@ static void emitDXILIntrinsicArgSelectTypes(const RecordKeeper &Records,
   OS << "#ifdef DXIL_OP_INTRINSIC_ARG_SELECT_TYPE\n";
   for (const Record *Records :
        Records.getAllDerivedDefinitions("IntrinArgSelectType")) {
-    StringRef StrippedName = StripIntrinArgSelectTypePrefix(Records->getName());
+    StringRef StrippedName = stripIntrinArgSelectTypePrefix(Records->getName());
     OS << "DXIL_OP_INTRINSIC_ARG_SELECT_TYPE(" << StrippedName << ")\n";
   }
   OS << "#undef DXIL_OP_INTRINSIC_ARG_SELECT_TYPE\n";

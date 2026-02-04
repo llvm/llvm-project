@@ -215,7 +215,7 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
                                         const Triple &TT, Mangler &Mangler) {
   if (GV->hasDLLExportStorageClass() && !GV->isDeclaration()) {
 
-    if (TT.isWindowsMSVCEnvironment())
+    if (TT.isWindowsMSVCEnvironment() || TT.isUEFI())
       OS << " /EXPORT:";
     else
       OS << " -export:";
@@ -227,7 +227,6 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
       std::string Flag;
       raw_string_ostream FlagOS(Flag);
       Mangler.getNameWithPrefix(FlagOS, GV, false);
-      FlagOS.flush();
       if (Flag[0] == GV->getDataLayout().getGlobalPrefix())
         OS << Flag.substr(1);
       else
@@ -249,7 +248,7 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
       OS << "\"";
 
     if (!GV->getValueType()->isFunctionTy()) {
-      if (TT.isWindowsMSVCEnvironment())
+      if (TT.isWindowsMSVCEnvironment() || TT.isUEFI())
         OS << ",DATA";
       else
         OS << ",data";
@@ -266,7 +265,6 @@ void llvm::emitLinkerFlagsForGlobalCOFF(raw_ostream &OS, const GlobalValue *GV,
     std::string Flag;
     raw_string_ostream FlagOS(Flag);
     Mangler.getNameWithPrefix(FlagOS, GV, false);
-    FlagOS.flush();
     if (Flag[0] == GV->getDataLayout().getGlobalPrefix())
       OS << Flag.substr(1);
     else
@@ -292,6 +290,9 @@ void llvm::emitLinkerFlagsForUsedCOFF(raw_ostream &OS, const GlobalValue *GV,
 }
 
 std::optional<std::string> llvm::getArm64ECMangledFunctionName(StringRef Name) {
+  assert(!Name.empty() &&
+         "getArm64ECMangledFunctionName requires non-empty name");
+
   if (Name[0] != '?') {
     // For non-C++ symbols, prefix the name with "#" unless it's already
     // mangled.
@@ -303,6 +304,19 @@ std::optional<std::string> llvm::getArm64ECMangledFunctionName(StringRef Name) {
   // If the name contains $$h, then it is already mangled.
   if (Name.contains("$$h"))
     return std::nullopt;
+
+  // Handle MD5 mangled names, which use a slightly different rule from
+  // other C++ manglings.
+  //
+  // A non-Arm64EC function:
+  //
+  // ??@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@
+  //
+  // An Arm64EC function:
+  //
+  // ??@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@$$h@
+  if (Name.starts_with("??@") && Name.ends_with("@"))
+    return (Name + "$$h@").str();
 
   // Ask the demangler where we should insert "$$h".
   auto InsertIdx = getArm64ECInsertionPointInMangledName(Name);
@@ -320,6 +334,10 @@ llvm::getArm64ECDemangledFunctionName(StringRef Name) {
     return std::optional<std::string>(Name.substr(1));
   if (Name[0] != '?')
     return std::nullopt;
+
+  // MD5 mangled name; see comment in getArm64ECMangledFunctionName.
+  if (Name.starts_with("??@") && Name.ends_with("@$$h@"))
+    return Name.drop_back(4).str();
 
   // Drop the ARM64EC "$$h" tag.
   std::pair<StringRef, StringRef> Pair = Name.split("$$h");

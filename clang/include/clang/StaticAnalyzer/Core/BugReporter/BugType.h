@@ -27,11 +27,7 @@ class BugReporter;
 
 class BugType {
 private:
-  struct CheckerPartRef {
-    const CheckerBase *Checker;
-    CheckerPartIdx Idx;
-  };
-  using CheckerNameInfo = std::variant<CheckerNameRef, CheckerPartRef>;
+  using CheckerNameInfo = std::variant<CheckerNameRef, const CheckerFrontend *>;
 
   const CheckerNameInfo CheckerName;
   const std::string Description;
@@ -43,7 +39,7 @@ private:
 public:
   // Straightforward constructor where the checker name is specified directly.
   // TODO: As far as I know all applications of this constructor involve ugly
-  // hacks that could be avoided by switching to a different constructor.
+  // hacks that could be avoided by switching to the other constructor.
   // When those are all eliminated, this constructor should be removed to
   // eliminate the `variant` and simplify this class.
   BugType(CheckerNameRef CheckerName, StringRef Desc,
@@ -52,18 +48,11 @@ public:
         SuppressOnSink(SuppressOnSink) {}
   // Constructor that can be called from the constructor of a checker object.
   // At that point the checker name is not yet available, but we can save a
-  // pointer to the checker and later use that to query the name.
-  BugType(const CheckerBase *Checker, StringRef Desc,
+  // pointer to the checker and use that to query the name.
+  BugType(const CheckerFrontend *Checker, StringRef Desc,
           StringRef Cat = categories::LogicError, bool SuppressOnSink = false)
-      : CheckerName(CheckerPartRef{Checker, DefaultPart}), Description(Desc),
-        Category(Cat), SuppressOnSink(SuppressOnSink) {}
-  // Constructor that can be called from the constructor of a checker object
-  // when it has multiple parts with separate names. We save the name and the
-  // part index to be able to query the name of that part later.
-  BugType(const CheckerBase *Checker, CheckerPartIdx Idx, StringRef Desc,
-          StringRef Cat = categories::LogicError, bool SuppressOnSink = false)
-      : CheckerName(CheckerPartRef{Checker, Idx}), Description(Desc),
-        Category(Cat), SuppressOnSink(SuppressOnSink) {}
+      : CheckerName(Checker), Description(Desc), Category(Cat),
+        SuppressOnSink(SuppressOnSink) {}
   virtual ~BugType() = default;
 
   StringRef getDescription() const { return Description; }
@@ -72,14 +61,28 @@ public:
     if (const auto *CNR = std::get_if<CheckerNameRef>(&CheckerName))
       return *CNR;
 
-    auto [Checker, Idx] = std::get<CheckerPartRef>(CheckerName);
-    return Checker->getName(Idx);
+    return std::get<const CheckerFrontend *>(CheckerName)->getName();
   }
 
   /// isSuppressOnSink - Returns true if bug reports associated with this bug
   ///  type should be suppressed if the end node of the report is post-dominated
   ///  by a sink node.
   bool isSuppressOnSink() const { return SuppressOnSink; }
+};
+
+/// Trivial convenience class for the common case when a certain checker
+/// frontend always uses the same bug type. This way instead of writing
+/// ```
+///   CheckerFrontend LongCheckerFrontendName;
+///   BugType LongCheckerFrontendNameBug{LongCheckerFrontendName, "..."};
+/// ```
+/// we can use `CheckerFrontendWithBugType LongCheckerFrontendName{"..."}`.
+class CheckerFrontendWithBugType : public CheckerFrontend, public BugType {
+public:
+  CheckerFrontendWithBugType(StringRef Desc,
+                             StringRef Cat = categories::LogicError,
+                             bool SuppressOnSink = false)
+      : BugType(this, Desc, Cat, SuppressOnSink) {}
 };
 
 } // namespace ento

@@ -33,7 +33,7 @@ MaxClause("amdgpu-max-memory-clause", cl::Hidden, cl::init(15),
 namespace {
 
 class SIFormMemoryClausesImpl {
-  using RegUse = DenseMap<unsigned, std::pair<unsigned, LaneBitmask>>;
+  using RegUse = DenseMap<unsigned, std::pair<RegState, LaneBitmask>>;
 
   bool canBundle(const MachineInstr &MI, const RegUse &Defs,
                  const RegUse &Uses) const;
@@ -78,8 +78,7 @@ public:
   }
 
   MachineFunctionProperties getClearedProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 
@@ -100,7 +99,7 @@ FunctionPass *llvm::createSIFormMemoryClausesLegacyPass() {
 }
 
 static bool isVMEMClauseInst(const MachineInstr &MI) {
-  return SIInstrInfo::isFLAT(MI) || SIInstrInfo::isVMEM(MI);
+  return SIInstrInfo::isVMEM(MI);
 }
 
 static bool isSMEMClauseInst(const MachineInstr &MI) {
@@ -133,8 +132,8 @@ static bool isValidClauseInst(const MachineInstr &MI, bool IsVMEMClause) {
   return true;
 }
 
-static unsigned getMopState(const MachineOperand &MO) {
-  unsigned S = 0;
+static RegState getMopState(const MachineOperand &MO) {
+  RegState S = {};
   if (MO.isImplicit())
     S |= RegState::Implicit;
   if (MO.isDead())
@@ -198,7 +197,9 @@ bool SIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
   // pointer becomes dead and could otherwise be reused for destination.
   RPT.advanceToNext();
   GCNRegPressure MaxPressure = RPT.moveMaxPressure();
-  unsigned Occupancy = MaxPressure.getOccupancy(*ST);
+  unsigned Occupancy = MaxPressure.getOccupancy(
+      *ST,
+      MI.getMF()->getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize());
 
   // Don't push over half the register budget. We don't want to introduce
   // spilling just to form a soft clause.
@@ -233,7 +234,7 @@ void SIFormMemoryClausesImpl::collectRegUses(const MachineInstr &MI,
                            : LaneBitmask::getAll();
     RegUse &Map = MO.isDef() ? Defs : Uses;
 
-    unsigned State = getMopState(MO);
+    RegState State = getMopState(MO);
     auto [Loc, Inserted] = Map.try_emplace(Reg, State, Mask);
     if (!Inserted) {
       Loc->second.first |= State;
@@ -348,7 +349,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
           continue;
 
         // Collect the register operands we should extend the live ranges of.
-        SmallVector<std::tuple<unsigned, unsigned>> KillOps;
+        SmallVector<std::tuple<RegState, unsigned>> KillOps;
         const LiveInterval &LI = LIS->getInterval(R.first);
 
         if (!LI.hasSubRanges()) {

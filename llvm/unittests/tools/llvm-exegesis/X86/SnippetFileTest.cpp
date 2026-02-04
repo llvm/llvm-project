@@ -23,9 +23,6 @@
 
 namespace llvm {
 namespace exegesis {
-
-void InitializeX86ExegesisTarget();
-
 namespace {
 
 using testing::ElementsAre;

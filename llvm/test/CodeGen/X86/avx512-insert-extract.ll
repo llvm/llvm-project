@@ -1669,8 +1669,7 @@ define i32 @test_insertelement_variable_v32i1(<32 x i8> %a, i8 %b, i32 %index) n
 ; SKX-NEXT:    vpmovm2b %k0, %ymm0
 ; SKX-NEXT:    vpbroadcastb %eax, %ymm0 {%k1}
 ; SKX-NEXT:    vpsllw $7, %ymm0, %ymm0
-; SKX-NEXT:    vpmovb2m %ymm0, %k0
-; SKX-NEXT:    kmovd %k0, %eax
+; SKX-NEXT:    vpmovmskb %ymm0, %eax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <32 x i8> %a, zeroinitializer
@@ -2164,7 +2163,7 @@ define void @test_concat_v2i1(ptr %arg, ptr %arg1, ptr %arg2) nounwind {
 ; KNL-NEXT:    setb %al
 ; KNL-NEXT:    andl $1, %eax
 ; KNL-NEXT:    kmovw %eax, %k0
-; KNL-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[1,1,1,1,4,5,6,7]
+; KNL-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; KNL-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; KNL-NEXT:    vucomiss %xmm2, %xmm0
 ; KNL-NEXT:    setb %al

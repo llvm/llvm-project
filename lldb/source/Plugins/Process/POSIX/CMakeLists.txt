@@ -3,9 +3,9 @@ add_lldb_library(lldbPluginProcessPOSIX
   NativeProcessELF.cpp
   ProcessPOSIXLog.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbPluginProcessUtility
     lldbUtility
-  LINK_COMPONENTS
-    Support
   )

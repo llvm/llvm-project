@@ -111,8 +111,6 @@ define i64 @xnor_i64(i64 %a, i64 %b) nounwind {
   ret i64 %xor
 }
 
-declare i32 @llvm.fshl.i32(i32, i32, i32)
-
 define i32 @rol_i32(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: rol_i32:
 ; RV32I:       # %bb.0:
@@ -132,8 +130,6 @@ define i32 @rol_i32(i32 %a, i32 %b) nounwind {
 
 ; This test is presented here in case future expansions of the Bitmanip
 ; extensions introduce instructions suitable for this pattern.
-
-declare i64 @llvm.fshl.i64(i64, i64, i64)
 
 define i64 @rol_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: rol_i64:
@@ -187,8 +183,6 @@ define i64 @rol_i64(i64 %a, i64 %b) nounwind {
   ret i64 %or
 }
 
-declare i32 @llvm.fshr.i32(i32, i32, i32)
-
 define i32 @ror_i32(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: ror_i32:
 ; RV32I:       # %bb.0:
@@ -208,8 +202,6 @@ define i32 @ror_i32(i32 %a, i32 %b) nounwind {
 
 ; This test is presented here in case future expansions of the Bitmanip
 ; extensions introduce instructions suitable for this pattern.
-
-declare i64 @llvm.fshr.i64(i64, i64, i64)
 
 define i64 @ror_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: ror_i64:
@@ -327,7 +319,7 @@ define i64 @rori_i64_fshr(i64 %a) nounwind {
 define i8 @srli_i8(i8 %a) nounwind {
 ; CHECK-LABEL: srli_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    srli a0, a0, 6
 ; CHECK-NEXT:    ret
   %1 = lshr i8 %a, 6

@@ -41,9 +41,9 @@
 //
 // RUN: rm -rf %t/SDKs/WatchOS3.0.sdk
 // RUN: mkdir -p %t/SDKs/WatchOS3.0.sdk
-// RUN: env SDKROOT=%t/SDKs/WatchOS3.0.sdk %clang %s -fuse-ld= -mlinker-version=400 -### 2>&1 \
+// RUN: env SDKROOT=%t/SDKs/WatchOS3.0.sdk %clang %s -fuse-ld= -arch arm64_32 -mlinker-version=400 -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-WATCH %s
-// RUN: env WATCHOS_DEPLOYMENT_TARGET=3.0 %clang %s -fuse-ld= -isysroot %t/SDKs/WatchOS3.0.sdk -mlinker-version=400 -### 2>&1 \
+// RUN: env WATCHOS_DEPLOYMENT_TARGET=3.0 %clang %s -fuse-ld= -arch arm64_32 -isysroot %t/SDKs/WatchOS3.0.sdk -mlinker-version=400 -### 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-WATCH %s
 //
 // CHECK-WATCH: clang

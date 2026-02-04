@@ -60,15 +60,14 @@ define half @test_pow_fast_f16__integral_y(half %x, i32 %y.i) {
 ; CHECK-NEXT:    v_cvt_f32_i32_e32 v1, v1
 ; CHECK-NEXT:    v_log_f16_e64 v3, |v0|
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; CHECK-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; CHECK-NEXT:    v_cvt_i32_f32_e32 v1, v1
-; CHECK-NEXT:    v_cvt_f32_i32_e32 v2, v1
-; CHECK-NEXT:    v_lshlrev_b16_e32 v1, 15, v1
-; CHECK-NEXT:    v_and_b32_e32 v0, v1, v0
-; CHECK-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; CHECK-NEXT:    v_mul_f16_e32 v2, v3, v2
-; CHECK-NEXT:    v_exp_f16_e32 v2, v2
-; CHECK-NEXT:    v_or_b32_e32 v0, v0, v2
+; CHECK-NEXT:    v_cvt_f32_f16_e32 v2, v1
+; CHECK-NEXT:    v_trunc_f16_e32 v1, v1
+; CHECK-NEXT:    v_mul_f16_e32 v1, v3, v1
+; CHECK-NEXT:    v_exp_f16_e32 v1, v1
+; CHECK-NEXT:    v_cvt_i32_f32_e32 v2, v2
+; CHECK-NEXT:    v_lshlrev_b16_e32 v2, 15, v2
+; CHECK-NEXT:    v_and_b32_e32 v0, v2, v0
+; CHECK-NEXT:    v_or_b32_e32 v0, v0, v1
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %y = sitofp i32 %y.i to half
   %pow = tail call fast half @_Z3powDhDh(half %x, half %y)
@@ -79,28 +78,28 @@ define float @test_pow_fast_f32__integral_y(float %x, i32 %y.i) {
 ; CHECK-LABEL: test_pow_fast_f32__integral_y:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_cvt_f32_i32_e32 v1, v1
 ; CHECK-NEXT:    s_mov_b32 s4, 0x800000
 ; CHECK-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
 ; CHECK-NEXT:    v_cndmask_b32_e64 v3, 0, 32, vcc
-; CHECK-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; CHECK-NEXT:    v_ldexp_f32 v3, |v0|, v3
 ; CHECK-NEXT:    v_log_f32_e32 v3, v3
+; CHECK-NEXT:    v_cvt_f32_i32_e32 v1, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0x42000000
-; CHECK-NEXT:    v_cvt_f32_i32_e32 v4, v1
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; CHECK-NEXT:    v_sub_f32_e32 v2, v3, v2
+; CHECK-NEXT:    v_trunc_f32_e32 v3, v1
+; CHECK-NEXT:    v_mul_f32_e32 v4, v2, v3
 ; CHECK-NEXT:    s_mov_b32 s4, 0xc2fc0000
-; CHECK-NEXT:    v_mul_f32_e32 v3, v2, v4
 ; CHECK-NEXT:    v_mov_b32_e32 v5, 0x42800000
-; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v3
-; CHECK-NEXT:    v_cndmask_b32_e32 v3, 0, v5, vcc
-; CHECK-NEXT:    v_fma_f32 v2, v2, v4, v3
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v4
+; CHECK-NEXT:    v_cndmask_b32_e32 v4, 0, v5, vcc
+; CHECK-NEXT:    v_fma_f32 v2, v2, v3, v4
 ; CHECK-NEXT:    v_exp_f32_e32 v2, v2
+; CHECK-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; CHECK-NEXT:    v_not_b32_e32 v3, 63
 ; CHECK-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
-; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
 ; CHECK-NEXT:    v_ldexp_f32 v2, v2, v3
+; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
 ; CHECK-NEXT:    v_and_or_b32 v0, v1, v0, v2
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %y = sitofp i32 %y.i to float
@@ -768,6 +767,3 @@ define double @test_pown_fast_f64_known_odd(double %x, i32 %y.arg) {
   %call = tail call fast double @_Z4powndi(double %x, i32 %y)
   ret double %call
 }
-
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}

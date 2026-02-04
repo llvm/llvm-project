@@ -26,68 +26,19 @@
 using namespace mlir;
 using namespace cir;
 
+namespace mlir {
+#define GEN_PASS_DEF_CIRCANONICALIZE
+#include "clang/CIR/Dialect/Passes.h.inc"
+} // namespace mlir
+
 namespace {
-
-/// Removes branches between two blocks if it is the only branch.
-///
-/// From:
-///   ^bb0:
-///     cir.br ^bb1
-///   ^bb1:  // pred: ^bb0
-///     cir.return
-///
-/// To:
-///   ^bb0:
-///     cir.return
-struct RemoveRedundantBranches : public OpRewritePattern<BrOp> {
-  using OpRewritePattern<BrOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(BrOp op,
-                                PatternRewriter &rewriter) const final {
-    Block *block = op.getOperation()->getBlock();
-    Block *dest = op.getDest();
-
-    assert(!cir::MissingFeatures::labelOp());
-
-    // Single edge between blocks: merge it.
-    if (block->getNumSuccessors() == 1 &&
-        dest->getSinglePredecessor() == block) {
-      rewriter.eraseOp(op);
-      rewriter.mergeBlocks(dest, block);
-      return success();
-    }
-
-    return failure();
-  }
-};
-
-struct RemoveEmptyScope
-    : public OpRewritePattern<ScopeOp>::SplitMatchAndRewrite {
-  using SplitMatchAndRewrite::SplitMatchAndRewrite;
-
-  LogicalResult match(ScopeOp op) const final {
-    // TODO: Remove this logic once CIR uses MLIR infrastructure to remove
-    // trivially dead operations
-    if (op.isEmpty())
-      return success();
-
-    Region &region = op.getScopeRegion();
-    if (region.getBlocks().front().getOperations().size() == 1)
-      return success(isa<YieldOp>(region.getBlocks().front().front()));
-
-    return failure();
-  }
-
-  void rewrite(ScopeOp op, PatternRewriter &rewriter) const final {
-    rewriter.eraseOp(op);
-  }
-};
 
 //===----------------------------------------------------------------------===//
 // CIRCanonicalizePass
 //===----------------------------------------------------------------------===//
 
-struct CIRCanonicalizePass : public CIRCanonicalizeBase<CIRCanonicalizePass> {
+struct CIRCanonicalizePass
+    : public impl::CIRCanonicalizeBase<CIRCanonicalizePass> {
   using CIRCanonicalizeBase::CIRCanonicalizeBase;
 
   // The same operation rewriting done here could have been performed
@@ -101,33 +52,29 @@ struct CIRCanonicalizePass : public CIRCanonicalizeBase<CIRCanonicalizePass> {
   void runOnOperation() override;
 };
 
-void populateCIRCanonicalizePatterns(RewritePatternSet &patterns) {
-  // clang-format off
-  patterns.add<
-    RemoveRedundantBranches,
-    RemoveEmptyScope
-  >(patterns.getContext());
-  // clang-format on
-}
-
 void CIRCanonicalizePass::runOnOperation() {
-  // Collect rewrite patterns.
   RewritePatternSet patterns(&getContext());
-  populateCIRCanonicalizePatterns(patterns);
+
+  // Collect canonicalization patterns from CIR ops.
+  mlir::Dialect *cir = getContext().getLoadedDialect<cir::CIRDialect>();
+  for (mlir::RegisteredOperationName op :
+       getContext().getRegisteredOperations())
+    if (&op.getDialect() == cir)
+      op.getCanonicalizationPatterns(patterns, &getContext());
 
   // Collect operations to apply patterns.
   llvm::SmallVector<Operation *, 16> ops;
   getOperation()->walk([&](Operation *op) {
-    assert(!cir::MissingFeatures::switchOp());
     assert(!cir::MissingFeatures::tryOp());
-    assert(!cir::MissingFeatures::selectOp());
-    assert(!cir::MissingFeatures::complexCreateOp());
-    assert(!cir::MissingFeatures::complexRealOp());
-    assert(!cir::MissingFeatures::complexImagOp());
     assert(!cir::MissingFeatures::callOp());
-    // CastOp and UnaryOp are here to perform a manual `fold` in
+
+    // Many operations are here to perform a manual `fold` in
     // applyOpPatternsGreedily.
-    if (isa<BrOp, BrCondOp, ScopeOp, CastOp, UnaryOp>(op))
+    if (isa<BrOp, BrCondOp, CastOp, ScopeOp, SwitchOp, SelectOp, UnaryOp,
+            ComplexCreateOp, ComplexImagOp, ComplexRealOp, VecCmpOp,
+            VecCreateOp, VecExtractOp, VecShuffleOp, VecShuffleDynamicOp,
+            VecTernaryOp, BitClrsbOp, BitClzOp, BitCtzOp, BitFfsOp, BitParityOp,
+            BitPopcountOp, BitReverseOp, ByteSwapOp, RotateOp, ConstantOp>(op))
       ops.push_back(op);
   });
 

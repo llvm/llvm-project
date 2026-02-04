@@ -1,5 +1,4 @@
-// RUN: mlir-translate -mlir-to-llvmir --write-experimental-debuginfo=false --split-input-file %s | FileCheck %s --check-prefixes=CHECK,INTRINSICS
-// RUN: mlir-translate -mlir-to-llvmir --write-experimental-debuginfo=true --split-input-file %s | FileCheck %s --check-prefixes=CHECK,RECORDS
+// RUN: mlir-translate -mlir-to-llvmir --split-input-file %s | FileCheck %s --check-prefixes=CHECK,RECORDS
 
 // CHECK-LABEL: define void @func_with_empty_named_info()
 // Check that translation doens't crash in the presence of an inlineble call
@@ -41,10 +40,14 @@ llvm.func @func_no_debug() {
   sizeInBits = 64, alignInBits = 32, offsetInBits = 8,
   dwarfAddressSpace = 3
 >
+#flags = #llvm.di_derived_type<
+  tag = DW_TAG_pointer_type, baseType = #si32,
+  sizeInBits = 64, flags = "Artificial|ObjectPointer"
+>
 #cu = #llvm.di_compile_unit<
   id = distinct[0]<>, sourceLanguage = DW_LANG_C, file = #file,
   producer = "MLIR", isOptimized = true, emissionKind = Full,
-  nameTableKind = None
+  nameTableKind = None, splitDebugFilename = "test.dwo"
 >
 #composite = #llvm.di_composite_type<
   tag = DW_TAG_structure_type, name = "composite", file = #file,
@@ -57,7 +60,7 @@ llvm.func @func_no_debug() {
   elements = #llvm.di_subrange<lowerBound = 0, upperBound = 4, stride = 1>
 >
 #null = #llvm.di_null_type
-#spType0 = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #null, #si64, #ptr, #named, #ptrWithAddressSpace, #composite, #vector>
+#spType0 = #llvm.di_subroutine_type<callingConvention = DW_CC_normal, types = #null, #si64, #ptr, #named, #ptrWithAddressSpace, #flags, #composite, #vector>
 #toplevel_namespace = #llvm.di_namespace<
   name = "toplevel", exportSymbols = true
 >
@@ -100,15 +103,12 @@ llvm.func @func_with_debug(%arg: i64) {
   %allocCount = llvm.mlir.constant(1 : i32) : i32
   %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr
 
-  // INTRINSICS: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 1))
   // RECORDS: #dbg_value(i64 %[[ARG]], ![[VAR_LOC:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 1), !{{.*}})
   llvm.intr.dbg.value #variable #llvm.di_expression<[DW_OP_LLVM_fragment(0, 1)]> = %arg : i64
 
-  // INTRINSICS: call void @llvm.dbg.declare(metadata ptr %[[ALLOC]], metadata ![[ADDR_LOC:[0-9]+]], metadata !DIExpression(DW_OP_deref, DW_OP_LLVM_convert, 4, DW_ATE_signed))
   // RECORDS: #dbg_declare(ptr %[[ALLOC]], ![[ADDR_LOC:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_LLVM_convert, 4, DW_ATE_signed), !{{.*}})
   llvm.intr.dbg.declare #variableAddr #llvm.di_expression<[DW_OP_deref, DW_OP_LLVM_convert(4, DW_ATE_signed)]> = %alloc : !llvm.ptr
 
-  // INTRINSICS: call void @llvm.dbg.value(metadata i64 %[[ARG]], metadata ![[NO_NAME_VAR:[0-9]+]], metadata !DIExpression())
   // RECORDS: #dbg_value(i64 %[[ARG]], ![[NO_NAME_VAR:[0-9]+]], !DIExpression(), !{{.*}})
   llvm.intr.dbg.value #noNameVariable = %arg : i64
 
@@ -144,19 +144,20 @@ llvm.func @empty_types() {
   llvm.return
 } loc(fused<#sp1>["foo.mlir":2:1])
 
-// CHECK: ![[CU_LOC:.*]] = distinct !DICompileUnit(language: DW_LANG_C, file: ![[CU_FILE_LOC:.*]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, nameTableKind: None)
+// CHECK: ![[CU_LOC:.*]] = distinct !DICompileUnit(language: DW_LANG_C, file: ![[CU_FILE_LOC:.*]], producer: "MLIR", isOptimized: true, runtimeVersion: 0, splitDebugFilename: "test.dwo", emissionKind: FullDebug, nameTableKind: None)
 // CHECK: ![[CU_FILE_LOC]] = !DIFile(filename: "foo.mlir", directory: "/test/")
 
 // CHECK: ![[FUNC_LOC]] = distinct !DISubprogram(name: "func_with_debug", linkageName: "func_with_debug", scope: ![[NESTED_NAMESPACE:.*]], file: ![[CU_FILE_LOC]], line: 3, type: ![[FUNC_TYPE:.*]], scopeLine: 3, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: ![[CU_LOC]])
 // CHECK: ![[NESTED_NAMESPACE]] = !DINamespace(name: "nested", scope: ![[TOPLEVEL_NAMESPACE:.*]])
 // CHECK: ![[TOPLEVEL_NAMESPACE]] = !DINamespace(name: "toplevel", scope: null, exportSymbols: true)
 // CHECK: ![[FUNC_TYPE]] = !DISubroutineType(cc: DW_CC_normal, types: ![[FUNC_ARGS:.*]])
-// CHECK: ![[FUNC_ARGS]] = !{null, ![[ARG_TYPE:.*]], ![[PTR_TYPE:.*]], ![[NAMED_TYPE:.*]], ![[PTR_WITH_ADDR_SPACE:.*]], ![[COMPOSITE_TYPE:.*]], ![[VECTOR_TYPE:.*]]}
+// CHECK: ![[FUNC_ARGS]] = !{null, ![[ARG_TYPE:.*]], ![[PTR_TYPE:.*]], ![[NAMED_TYPE:.*]], ![[PTR_WITH_ADDR_SPACE:.*]], ![[FLAGS:.*]], ![[COMPOSITE_TYPE:.*]], ![[VECTOR_TYPE:.*]]}
 // CHECK: ![[ARG_TYPE]] = !DIBasicType(name: "si64")
 // CHECK: ![[PTR_TYPE]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[BASE_TYPE:.*]], size: 64, align: 32, offset: 8, extraData: ![[BASE_TYPE]])
 // CHECK: ![[BASE_TYPE]] = !DIBasicType(name: "si32", size: 32, encoding: DW_ATE_signed)
 // CHECK: ![[NAMED_TYPE]] = !DIDerivedType(tag: DW_TAG_pointer_type, name: "named", baseType: ![[BASE_TYPE:.*]])
 // CHECK: ![[PTR_WITH_ADDR_SPACE]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[BASE_TYPE:.*]], size: 64, align: 32, offset: 8, dwarfAddressSpace: 3)
+// CHECK: ![[FLAGS]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[BASE_TYPE:.*]], size: 64, flags: DIFlagArtificial | DIFlagObjectPointer)
 // CHECK: ![[COMPOSITE_TYPE]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "composite", file: ![[CU_FILE_LOC]], line: 42, size: 64, align: 32, elements: ![[COMPOSITE_ELEMENTS:.*]])
 // CHECK: ![[COMPOSITE_ELEMENTS]] = !{![[COMPOSITE_ELEMENT:.*]]}
 // CHECK: ![[COMPOSITE_ELEMENT]] = !DISubrange(count: 4)
@@ -230,13 +231,10 @@ llvm.func @func_decl_with_subprogram() -> (i32) loc(fused<#di_subprogram>["foo.m
 // CHECK-LABEL: define i32 @func_with_inlined_dbg_value(
 // CHECK-SAME: i32 %[[ARG:.*]]) !dbg ![[OUTER_FUNC:[0-9]+]]
 llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
-  // INTRINSICS: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC0:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC0:.*]]
   // RECORDS: #dbg_value(i32 %[[ARG]], ![[VAR_LOC0:[0-9]+]], !DIExpression(), ![[DBG_LOC0:.*]])
   llvm.intr.dbg.value #di_local_variable0 = %arg0 : i32 loc(fused<#di_subprogram>[#loc0])
-  // INTRINSICS: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC1:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC1:.*]]
   // RECORDS: #dbg_value(i32 %[[ARG]], ![[VAR_LOC1:[0-9]+]], !DIExpression(), ![[DBG_LOC1:.*]])
   llvm.intr.dbg.value #di_local_variable1 = %arg0 : i32 loc(#loc1)
-  // INTRINSICS: call void @llvm.dbg.label(metadata ![[LABEL:[0-9]+]]), !dbg ![[DBG_LOC1:.*]]
   // RECORDS: #dbg_label(![[LABEL:[0-9]+]], ![[DBG_LOC1:.*]])
   llvm.intr.dbg.label #di_label loc(#loc1)
   llvm.return %arg0 : i32
@@ -268,7 +266,6 @@ llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
 // CHECK-LABEL: define void @func_without_subprogram(
 // CHECK-SAME: i32 %[[ARG:.*]])
 llvm.func @func_without_subprogram(%0 : i32) {
-  // INTRINSICS: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC0:.*]]
   // RECORDS: #dbg_value(i32 %[[ARG]], ![[VAR_LOC:[0-9]+]], !DIExpression(), ![[DBG_LOC0:.*]])
   llvm.intr.dbg.value #di_local_variable = %0 : i32 loc(fused<#di_subprogram>[#loc])
   llvm.return
@@ -300,13 +297,10 @@ llvm.func @func_without_subprogram(%0 : i32) {
 llvm.func @dbg_intrinsics_with_no_location(%arg0: i32) -> (i32) {
   %allocCount = llvm.mlir.constant(1 : i32) : i32
   %alloc = llvm.alloca %allocCount x i64 : (i32) -> !llvm.ptr
-  // INTRINSICS-NOT: @llvm.dbg.value
   // RECORDS-NOT: #dbg_value
   llvm.intr.dbg.value #di_local_variable = %arg0 : i32
-  // INTRINSICS-NOT: @llvm.dbg.declare
   // RECORDS-NOT: #dbg_declare
   llvm.intr.dbg.declare #declared_var = %alloc : !llvm.ptr
-  // INTRINSICS-NOT: @llvm.dbg.label
   // RECORDS-NOT: #dbg_label
   llvm.intr.dbg.label #di_label
   llvm.return %arg0 : i32

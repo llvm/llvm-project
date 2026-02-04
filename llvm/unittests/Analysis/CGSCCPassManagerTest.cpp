@@ -1641,7 +1641,7 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses8) {
         CGU.initialize(CG, C, AM, UR);
         ASSERT_NO_FATAL_FAILURE(CGU.replaceFunctionWith(*FnF, *FnewF));
         ASSERT_TRUE(FnF->isDeclaration());
-        ASSERT_EQ(FnF->getNumUses(), 0U);
+        ASSERT_TRUE(FnF->use_empty());
       }));
 
   ModulePassManager MPM;
@@ -1936,26 +1936,26 @@ TEST_F(CGSCCPassManagerTest, TestDeletionOfFunctionInNonTrivialRefSCC) {
 TEST_F(CGSCCPassManagerTest, TestInsertionOfNewNonTrivialCallEdge) {
   std::unique_ptr<Module> M = parseIR("define void @f1() {\n"
                                       "entry:\n"
-                                      "  %a = bitcast void ()* @f4 to i8*\n"
-                                      "  %b = bitcast void ()* @f2 to i8*\n"
+                                      "  %a = bitcast ptr @f4 to ptr\n"
+                                      "  %b = bitcast ptr @f2 to ptr\n"
                                       "  ret void\n"
                                       "}\n"
                                       "define void @f2() {\n"
                                       "entry:\n"
-                                      "  %a = bitcast void ()* @f1 to i8*\n"
-                                      "  %b = bitcast void ()* @f3 to i8*\n"
+                                      "  %a = bitcast ptr @f1 to ptr\n"
+                                      "  %b = bitcast ptr @f3 to ptr\n"
                                       "  ret void\n"
                                       "}\n"
                                       "define void @f3() {\n"
                                       "entry:\n"
-                                      "  %a = bitcast void ()* @f2 to i8*\n"
-                                      "  %b = bitcast void ()* @f4 to i8*\n"
+                                      "  %a = bitcast ptr @f2 to ptr\n"
+                                      "  %b = bitcast ptr @f4 to ptr\n"
                                       "  ret void\n"
                                       "}\n"
                                       "define void @f4() {\n"
                                       "entry:\n"
-                                      "  %a = bitcast void ()* @f3 to i8*\n"
-                                      "  %b = bitcast void ()* @f1 to i8*\n"
+                                      "  %a = bitcast ptr @f3 to ptr\n"
+                                      "  %b = bitcast ptr @f1 to ptr\n"
                                       "  ret void\n"
                                       "}\n");
 

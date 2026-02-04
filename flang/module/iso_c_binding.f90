@@ -43,15 +43,16 @@ module iso_c_binding
   integer, parameter, public :: &
     c_int = c_int32_t, &
     c_short = c_int16_t, &
+#if defined(_WIN32)
+    c_long = c_int32_t, &
+#else
     c_long = c_int64_t, &
+#endif
     c_long_long = c_int64_t, &
     c_signed_char = c_int8_t, &
     c_size_t = kind(c_sizeof(1)), &
-#if __powerpc__
+    ! Currently both gcc and clang define intmax_t to be 64 bit.
     c_intmax_t = c_int64_t, &
-#else
-    c_intmax_t = c_int128_t, &
-#endif
     c_intptr_t = c_size_t, &
     c_ptrdiff_t = c_size_t
   integer, parameter, public :: &
@@ -77,8 +78,10 @@ module iso_c_binding
   integer, parameter, public :: &
     c_float = 4, &
     c_double = 8, &
-#if __x86_64__
+#if defined(__x86_64__)
     c_long_double = 10
+#elif defined(_WIN32) && defined(__aarch64__)
+    c_long_double = 8
 #else
     c_long_double = 16
 #endif
@@ -120,9 +123,13 @@ module iso_c_binding
     c_unsigned_char = c_uint8_t, &
     c_unsigned_short = c_uint16_t, &
     c_unsigned = c_uint32_t, &
+#if defined(_WIN32)
+    c_unsigned_long = c_uint32_t, &
+#else
     c_unsigned_long = c_uint64_t, &
-    c_unsigned_long_long = c_unsigned_long, &
-#if __powerpc__
+#endif
+    c_unsigned_long_long = c_uint64_t, &
+#if defined(__powerpc__) || defined(_WIN32)
     c_uintmax_t = c_uint64_t
 #else
     c_uintmax_t = c_uint128_t

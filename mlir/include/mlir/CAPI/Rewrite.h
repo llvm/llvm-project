@@ -18,7 +18,26 @@
 #include "mlir-c/Rewrite.h"
 #include "mlir/CAPI/Wrap.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Rewrite/FrozenRewritePatternSet.h"
+#include "mlir/Transforms/DialectConversion.h"
 
 DEFINE_C_API_PTR_METHODS(MlirRewriterBase, mlir::RewriterBase)
+DEFINE_C_API_PTR_METHODS(MlirRewritePattern, const mlir::RewritePattern)
+DEFINE_C_API_PTR_METHODS(MlirRewritePatternSet, mlir::RewritePatternSet)
+DEFINE_C_API_PTR_METHODS(MlirFrozenRewritePatternSet,
+                         mlir::FrozenRewritePatternSet)
+DEFINE_C_API_PTR_METHODS(MlirPatternRewriter, mlir::PatternRewriter)
+DEFINE_C_API_PTR_METHODS(MlirConversionTarget, mlir::ConversionTarget)
+DEFINE_C_API_PTR_METHODS(MlirConversionPattern, const mlir::ConversionPattern)
+DEFINE_C_API_PTR_METHODS(MlirTypeConverter, mlir::TypeConverter)
+DEFINE_C_API_PTR_METHODS(MlirConversionPatternRewriter,
+                         mlir::ConversionPatternRewriter)
+DEFINE_C_API_PTR_METHODS(MlirConversionConfig, mlir::ConversionConfig)
 
-#endif // MLIR_CAPIREWRITER_H
+#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
+DEFINE_C_API_PTR_METHODS(MlirPDLPatternModule, mlir::PDLPatternModule)
+DEFINE_C_API_PTR_METHODS(MlirPDLResultList, mlir::PDLResultList)
+DEFINE_C_API_PTR_METHODS(MlirPDLValue, const mlir::PDLValue)
+#endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
+
+#endif // MLIR_CAPI_REWRITE_H

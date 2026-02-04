@@ -136,7 +136,7 @@ define i32 @select_sdiv_lhs_opaque_const0_i32(i1 %cond) {
 ; GCN-NEXT:    v_mov_b32_e32 v1, s4
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, 5, v1, vcc
 ; GCN-NEXT:    v_sub_u32_e32 v1, vcc, 0, v0
-; GCN-NEXT:    v_max_i32_e32 v1, v0, v1
+; GCN-NEXT:    v_max_i32_e32 v1, v1, v0
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v2, v1
 ; GCN-NEXT:    v_sub_u32_e32 v3, vcc, 0, v1
 ; GCN-NEXT:    s_mov_b32 s4, 0xf4240
@@ -218,7 +218,7 @@ define i32 @select_sdiv_lhs_opaque_const1_i32(i1 %cond) {
 ; GCN-NEXT:    v_mov_b32_e32 v1, s4
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v1, 5, vcc
 ; GCN-NEXT:    v_sub_u32_e32 v1, vcc, 0, v0
-; GCN-NEXT:    v_max_i32_e32 v1, v0, v1
+; GCN-NEXT:    v_max_i32_e32 v1, v1, v0
 ; GCN-NEXT:    v_cvt_f32_u32_e32 v2, v1
 ; GCN-NEXT:    v_sub_u32_e32 v3, vcc, 0, v1
 ; GCN-NEXT:    s_mov_b32 s4, 0xf4240
@@ -393,6 +393,9 @@ define amdgpu_kernel void @select_add_lhs_const_i16(i1 %cond) {
 ; GCN-LABEL: select_add_lhs_const_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s0, s[8:9], 0x0
+; GCN-NEXT:    s_add_i32 s12, s12, s17
+; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bitcmp1_b32 s0, 0
 ; GCN-NEXT:    s_movk_i32 s0, 0x80

@@ -57,6 +57,7 @@ void TokenLexer::Init(Token &Tok, SourceLocation ELEnd, MacroInfo *MI,
   IsReinject = false;
   NumTokens = Macro->tokens_end()-Macro->tokens_begin();
   MacroExpansionStart = SourceLocation();
+  LexingCXXModuleDirective = false;
 
   SourceManager &SM = PP.getSourceManager();
   MacroStartSLocOffset = SM.getNextLocalOffset();
@@ -113,6 +114,7 @@ void TokenLexer::Init(const Token *TokArray, unsigned NumToks,
   HasLeadingSpace = false;
   NextTokGetsSpace = false;
   MacroExpansionStart = SourceLocation();
+  LexingCXXModuleDirective = false;
 
   // Set HasLeadingSpace/AtStartOfLine so that the first token will be
   // returned unmodified.
@@ -625,6 +627,18 @@ bool TokenLexer::Lex(Token &Tok) {
     // that it is no longer being expanded.
     if (Macro) Macro->EnableMacro();
 
+    // CWG2947: Allow the following code:
+    //
+    // export module m; int x;
+    // extern "C++" int *y = &x;
+    //
+    // The 'extern' token should has 'StartOfLine' flag when current TokenLexer
+    // exits and propagate line start/leading space info.
+    if (!Macro && isLexingCXXModuleDirective()) {
+      AtStartOfLine = true;
+      setLexingCXXModuleDirective(false);
+    }
+
     Tok.startToken();
     Tok.setFlagValue(Token::StartOfLine , AtStartOfLine);
     Tok.setFlagValue(Token::LeadingSpace, HasLeadingSpace || NextTokGetsSpace);
@@ -699,7 +713,9 @@ bool TokenLexer::Lex(Token &Tok) {
   HasLeadingSpace = false;
 
   // Handle recursive expansion!
-  if (!Tok.isAnnotation() && Tok.getIdentifierInfo() != nullptr) {
+  if (!Tok.isAnnotation() && Tok.getIdentifierInfo() != nullptr &&
+      (!PP.getLangOpts().CPlusPlusModules ||
+       !Tok.isModuleContextualKeyword())) {
     // Change the kind of this identifier to the appropriate token kind, e.g.
     // turning "for" into a keyword.
     IdentifierInfo *II = Tok.getIdentifierInfo();
@@ -748,6 +764,7 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
   const char *ResultTokStrPtr = nullptr;
   SourceLocation StartLoc = LHSTok.getLocation();
   SourceLocation PasteOpLoc;
+  bool HasUCNs = false;
 
   auto IsAtEnd = [&TokenStream, &CurIdx] {
     return TokenStream.size() == CurIdx;
@@ -885,6 +902,9 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
 
     // Finally, replace LHS with the result, consume the RHS, and iterate.
     ++CurIdx;
+
+    // Set Token::HasUCN flag if LHS or RHS contains any UCNs.
+    HasUCNs = LHSTok.hasUCN() || RHS.hasUCN() || HasUCNs;
     LHSTok = Result;
   } while (!IsAtEnd() && TokenStream[CurIdx].is(tok::hashhash));
 
@@ -913,6 +933,13 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
   // token pasting re-lexes the result token in raw mode, identifier information
   // isn't looked up.  As such, if the result is an identifier, look up id info.
   if (LHSTok.is(tok::raw_identifier)) {
+
+    // If there has any UNCs in concated token, we should mark this token
+    // with Token::HasUCN flag, then LookUpIdentifierInfo will expand UCNs in
+    // token.
+    if (HasUCNs)
+      LHSTok.setFlag(Token::HasUCN);
+
     // Look up the identifier info for the token.  We disabled identifier lookup
     // by saying we're skipping contents, so we need to do this manually.
     PP.LookUpIdentifierInfo(LHSTok);
@@ -921,19 +948,31 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
 }
 
 /// isNextTokenLParen - If the next token lexed will pop this macro off the
-/// expansion stack, return 2.  If the next unexpanded token is a '(', return
-/// 1, otherwise return 0.
-unsigned TokenLexer::isNextTokenLParen() const {
+/// expansion stack, return std::nullopt, otherwise return the next unexpanded
+/// token.
+std::optional<Token> TokenLexer::peekNextPPToken() const {
   // Out of tokens?
   if (isAtEnd())
-    return 2;
-  return Tokens[CurTokenIdx].is(tok::l_paren);
+    return std::nullopt;
+  return Tokens[CurTokenIdx];
 }
 
 /// isParsingPreprocessorDirective - Return true if we are in the middle of a
 /// preprocessor directive.
 bool TokenLexer::isParsingPreprocessorDirective() const {
   return Tokens[NumTokens-1].is(tok::eod) && !isAtEnd();
+}
+
+/// setLexingCXXModuleDirective - This is set to true if this TokenLexer is
+/// created when handling C++ module directive.
+void TokenLexer::setLexingCXXModuleDirective(bool Val) {
+  LexingCXXModuleDirective = Val;
+}
+
+/// isLexingCXXModuleDirective - Return true if we are lexing a C++ module or
+/// import directive.
+bool TokenLexer::isLexingCXXModuleDirective() const {
+  return LexingCXXModuleDirective;
 }
 
 /// HandleMicrosoftCommentPaste - In microsoft compatibility mode, /##/ pastes

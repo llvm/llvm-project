@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan %s -o - -filetype=obj | spirv-val %}
 
 ; Code here is an excerpt of clang/test/CodeGenHLSL/builtins/AddUint64.hlsl compiled for spirv using the following command
 ; clang -cc1 -finclude-default-header -triple spirv-unknown-vulkan-compute clang/test/CodeGenHLSL/builtins/AddUint64.hlsl -emit-llvm -disable-llvm-passes -o llvm/test/CodeGen/SPIRV/hlsl-intrinsics/uadd_with_overflow.ll
@@ -7,10 +7,10 @@
 ; CHECK-DAG: %[[#int_32:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#vec2_int_32:]] = OpTypeVector %[[#int_32]] 2
 ; CHECK-DAG: %[[#bool:]] = OpTypeBool
-; CHECK-DAG: %[[#const_i32_1:]] = OpConstant %[[#int_32]] 1
+; CHECK-DAG: %[[#const_i32_1:]] = OpConstant %[[#int_32]] 1{{$}}
 ; CHECK-DAG: %[[#struct_i32_i32:]] = OpTypeStruct %[[#int_32]] %[[#int_32]]
 ; CHECK-DAG: %[[#func_v2i32_v2i32_v2i32:]] = OpTypeFunction %[[#vec2_int_32]] %[[#vec2_int_32]] %[[#vec2_int_32]]
-; CHECK-DAG: %[[#const_i32_0:]] = OpConstant %[[#int_32]] 0
+; CHECK-DAG: %[[#const_i32_0:]] = OpConstant %[[#int_32]] 0{{$}}
 ; CHECK-DAG: %[[#undef_v2i32:]] = OpUndef %[[#vec2_int_32]]
 ; CHECK-DAG: %[[#vec4_int_32:]] = OpTypeVector %[[#int_32]] 4
 ; CHECK-DAG: %[[#vec2_bool:]] = OpTypeVector %[[#bool]] 2
@@ -63,7 +63,7 @@ entry:
 ; CHECK: %[[#a_high:]] = OpVectorShuffle %[[#vec2_int_32]] %[[#a]] %[[#undef_v4i32]] 1 3
 ; CHECK: %[[#b_low:]] = OpVectorShuffle %[[#vec2_int_32]] %[[#b]] %[[#undef_v4i32]] 0 2
 ; CHECK: %[[#b_high:]] = OpVectorShuffle %[[#vec2_int_32]] %[[#b]] %[[#undef_v4i32]] 1 3
-; CHECK: %[[#iaddcarry:]] = OpIAddCarry %[[#struct_v2i32_v2i32]] %[[#a_low]] %[[#vec2_int_32]]
+; CHECK: %[[#iaddcarry:]] = OpIAddCarry %[[#struct_v2i32_v2i32]] %[[#a_low]] %[[#b_low]]
 ; CHECK: %[[#lowsum:]] = OpCompositeExtract %[[#vec2_int_32]] %[[#iaddcarry]] 0
 ; CHECK: %[[#carry:]] = OpCompositeExtract %[[#vec2_int_32]] %[[#iaddcarry]] 1
 ; CHECK: %[[#carry_ne0:]] = OpINotEqual %[[#vec2_bool]] %[[#carry]] %[[#const_v2i32_0_0]]

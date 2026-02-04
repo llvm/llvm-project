@@ -83,8 +83,6 @@ constrainRegClass(MachineRegisterInfo &MRI, Register Reg,
 
 const TargetRegisterClass *MachineRegisterInfo::constrainRegClass(
     Register Reg, const TargetRegisterClass *RC, unsigned MinNumRegs) {
-  if (Reg.isPhysical())
-    return nullptr;
   return ::constrainRegClass(*this, Reg, getRegClass(Reg), RC, MinNumRegs);
 }
 
@@ -432,6 +430,16 @@ bool MachineRegisterInfo::hasOneNonDBGUser(Register RegNo) const {
   return hasSingleElement(use_nodbg_instructions(RegNo));
 }
 
+MachineOperand *MachineRegisterInfo::getOneNonDBGUse(Register RegNo) const {
+  auto RegNoDbgUses = use_nodbg_operands(RegNo);
+  return hasSingleElement(RegNoDbgUses) ? &*RegNoDbgUses.begin() : nullptr;
+}
+
+MachineInstr *MachineRegisterInfo::getOneNonDBGUser(Register RegNo) const {
+  auto RegNoDbgUsers = use_nodbg_instructions(RegNo);
+  return hasSingleElement(RegNoDbgUsers) ? &*RegNoDbgUsers.begin() : nullptr;
+}
+
 bool MachineRegisterInfo::hasAtMostUserInstrs(Register Reg,
                                               unsigned MaxUsers) const {
   return hasNItemsOrLess(use_instr_nodbg_begin(Reg), use_instr_nodbg_end(),
@@ -657,7 +665,7 @@ void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {
   IsUpdatedCSRsInitialized = true;
 }
 
-bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
+bool MachineRegisterInfo::isReservedRegUnit(MCRegUnit Unit) const {
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
     if (all_of(TRI->superregs_inclusive(*Root),

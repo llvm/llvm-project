@@ -198,6 +198,45 @@ InFlightDiagnostic Parser::emitError(const Twine &message) {
   return emitError(SMLoc::getFromPointer(loc.getPointer() - 1), message);
 }
 
+/// Find the start of a line comment (`//`) in the given string, ignoring
+/// occurrences inside string literals. Returns StringRef::npos if no comment
+/// is found.
+static size_t findCommentStart(StringRef line) {
+  // Fast path: no comment in line at all.
+  size_t slashPos = line.find("//");
+  if (slashPos == StringRef::npos)
+    return StringRef::npos;
+
+  // Fast path: comment at start of line, or no quote before the '//'.
+  if (slashPos == 0)
+    return 0;
+  size_t quotePos = line.find('"');
+  if (quotePos == StringRef::npos || quotePos > slashPos)
+    return slashPos;
+
+  // A quote appears before '//'. Parse carefully to handle string literals.
+  bool inString = false;
+  for (size_t i = 0, e = line.size(); i < e; ++i) {
+    char c = line[i];
+    if (inString) {
+      // Skip escaped characters inside strings.
+      if (c == '\\') {
+        ++i;
+        continue;
+      }
+      if (c == '"')
+        inString = false;
+    } else {
+      if (c == '"') {
+        inString = true;
+      } else if (c == '/' && i + 1 < e && line[i + 1] == '/') {
+        return i;
+      }
+    }
+  }
+  return StringRef::npos;
+}
+
 InFlightDiagnostic Parser::emitError(SMLoc loc, const Twine &message) {
   auto diag = mlir::emitError(getEncodedSourceLocation(loc), message);
 
@@ -247,16 +286,15 @@ InFlightDiagnostic Parser::emitWrongTokenError(const Twine &message) {
     // Drop the \n so we emit the diagnostic at the end of the line.
     startOfBuffer = startOfBuffer.drop_back();
 
-    // Check to see if the preceding line has a comment on it.  We assume that a
-    // `//` is the start of a comment, which is mostly correct.
-    // TODO: This will do the wrong thing for // in a string literal.
+    // Check to see if the preceding line has a comment on it.
     auto prevLine = startOfBuffer;
     size_t newLineIndex = prevLine.find_last_of("\n\r");
     if (newLineIndex != StringRef::npos)
       prevLine = prevLine.drop_front(newLineIndex);
 
-    // If we find a // in the current line, then emit the diagnostic before it.
-    size_t commentStart = prevLine.find("//");
+    // If we find a // in the current line (outside of string literals), then
+    // emit the diagnostic before it.
+    size_t commentStart = findCommentStart(prevLine);
     if (commentStart != StringRef::npos)
       startOfBuffer = startOfBuffer.drop_back(prevLine.size() - commentStart);
   }
@@ -407,8 +445,8 @@ Parser::parseFloatFromIntegerLiteral(std::optional<APFloat> &result,
                      "hexadecimal float constant out of range for type");
   }
 
-  APInt truncatedValue(typeSizeInBits, intValue.getNumWords(),
-                       intValue.getRawData());
+  APInt truncatedValue(typeSizeInBits,
+                       ArrayRef(intValue.getRawData(), intValue.getNumWords()));
   result.emplace(semantics, truncatedValue);
   return success();
 }
@@ -435,6 +473,7 @@ ParseResult Parser::parseOptionalKeywordOrString(std::string *result) {
 
 //===----------------------------------------------------------------------===//
 // Resource Parsing
+//===----------------------------------------------------------------------===//
 
 FailureOr<AsmDialectResourceHandle>
 Parser::parseResourceHandle(const OpAsmDialectInterface *dialect,
@@ -478,6 +517,7 @@ Parser::parseResourceHandle(Dialect *dialect) {
 
 //===----------------------------------------------------------------------===//
 // Code Completion
+//===----------------------------------------------------------------------===//
 
 ParseResult Parser::codeCompleteDialectName() {
   state.codeCompleteContext->completeDialectName();
@@ -1196,8 +1236,8 @@ Value OperationParser::createForwardRefPlaceholder(SMLoc loc, Type type) {
   auto name = OperationName("builtin.unrealized_conversion_cast", getContext());
   auto *op = Operation::create(
       getEncodedSourceLocation(loc), name, type, /*operands=*/{},
-      /*attributes=*/std::nullopt, /*properties=*/nullptr, /*successors=*/{},
-      /*numRegions=*/0);
+      /*attributes=*/NamedAttrList(), /*properties=*/nullptr,
+      /*successors=*/{}, /*numRegions=*/0);
   forwardRefPlaceholders[op->getResult(0)] = loc;
   forwardRefOps.insert(op);
   return op->getResult(0);
@@ -2003,6 +2043,11 @@ private:
 
 FailureOr<OperationName> OperationParser::parseCustomOperationName() {
   Token nameTok = getToken();
+  // Accept keywords here as they may be interpreted as a shortened operation
+  // name, e.g., `dialect.keyword` can be spelled as just `keyword` within a
+  // region of an operation from `dialect`.
+  if (nameTok.getKind() != Token::bare_identifier && !nameTok.isKeyword())
+    return emitError("expected bare identifier or keyword");
   StringRef opName = nameTok.getSpelling();
   if (opName.empty())
     return (emitError("empty operation name is invalid"), failure());
@@ -2069,10 +2114,46 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
       if (originalOpName != opName)
         diag << " (tried '" << opName << "' as well)";
       auto &note = diag.attachNote();
-      note << "Registered dialects: ";
-      llvm::interleaveComma(getContext()->getAvailableDialects(), note,
-                            [&](StringRef dialect) { note << dialect; });
-      note << " ; for more info on dialect registration see "
+      note << "Available dialects: ";
+      std::vector<StringRef> registered = getContext()->getAvailableDialects();
+      auto loaded = getContext()->getLoadedDialects();
+
+      // Merge the sorted lists of registered and loaded dialects.
+      SmallVector<std::pair<StringRef, bool>> mergedDialects;
+      auto regIt = registered.begin(), regEnd = registered.end();
+      auto loadIt = loaded.rbegin(), loadEnd = loaded.rend();
+      bool isRegistered = false;
+      bool isOnlyLoaded = true;
+      while (regIt != regEnd && loadIt != loadEnd) {
+        StringRef reg = *regIt;
+        StringRef load = (*loadIt)->getNamespace();
+        if (load < reg) {
+          mergedDialects.emplace_back(load, isOnlyLoaded);
+          ++loadIt;
+        } else {
+          mergedDialects.emplace_back(reg, isRegistered);
+          ++regIt;
+          if (reg == load)
+            ++loadIt;
+        }
+      }
+      for (; regIt != regEnd; ++regIt)
+        mergedDialects.emplace_back(*regIt, isRegistered);
+      for (; loadIt != loadEnd; ++loadIt)
+        mergedDialects.emplace_back((*loadIt)->getNamespace(), isOnlyLoaded);
+
+      bool loadedUnregistered = false;
+      llvm::interleaveComma(mergedDialects, note, [&](auto &pair) {
+        note << pair.first;
+        if (pair.second) {
+          loadedUnregistered = true;
+          note << " (*)";
+        }
+      });
+      note << " ";
+      if (loadedUnregistered)
+        note << "(* corresponding to loaded but unregistered dialects)";
+      note << "; for more info on dialect registration see "
               "https://mlir.llvm.org/getting_started/Faq/"
               "#registered-loaded-dependent-whats-up-with-dialects-management";
       return nullptr;
@@ -2088,7 +2169,7 @@ OperationParser::parseCustomOperation(ArrayRef<ResultRecord> resultIDs) {
     parseAssemblyFn = *dialectHook;
   }
   getState().defaultDialectStack.push_back(defaultDialect);
-  auto restoreDefaultDialect = llvm::make_scope_exit(
+  llvm::scope_exit restoreDefaultDialect(
       [&]() { getState().defaultDialectStack.pop_back(); });
 
   // If the custom op parser crashes, produce some indication to help
@@ -2234,7 +2315,7 @@ ParseResult OperationParser::parseRegionBody(Region &region, SMLoc startLoc,
 
   // Parse the first block directly to allow for it to be unnamed.
   auto owningBlock = std::make_unique<Block>();
-  auto failureCleanup = llvm::make_scope_exit([&] {
+  llvm::scope_exit failureCleanup([&] {
     if (owningBlock) {
       // If parsing failed, as indicated by the fact that `owningBlock` still
       // owns the block, drop all forward references from preceding operations
@@ -2339,7 +2420,7 @@ ParseResult OperationParser::parseBlock(Block *&block) {
   // only in the case of a successful parse. This ensures that the Block
   // allocated is released if the parse fails and control returns early.
   std::unique_ptr<Block> inflightBlock;
-  auto cleanupOnFailure = llvm::make_scope_exit([&] {
+  llvm::scope_exit cleanupOnFailure([&] {
     if (inflightBlock)
       inflightBlock->dropAllDefinedValueUses();
   });

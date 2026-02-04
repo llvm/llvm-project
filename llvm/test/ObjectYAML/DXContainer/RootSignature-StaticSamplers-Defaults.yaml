@@ -1,0 +1,53 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       1
+  PartOffsets:     [ 60 ]
+Parts:
+  - Name:            RTS0
+    Size:            76
+    RootSignature:
+      Version: 2
+      NumRootParameters: 0
+      RootParametersOffset: 24
+      NumStaticSamplers: 1
+      StaticSamplersOffset: 24
+      Parameters: []
+      Samplers: 
+        - ShaderRegister: 31 
+          RegisterSpace: 32
+          ShaderVisibility:  Mesh
+      AllowInputAssemblerInputLayout: true
+      DenyGeometryShaderRootAccess: true
+
+#CHECK:  - Name:            RTS0
+#CHECK-NEXT:    Size:            76
+#CHECK-NEXT:    RootSignature:
+#CHECK-NEXT:      Version:         2
+#CHECK-NEXT:      NumRootParameters: 0
+#CHECK-NEXT:      RootParametersOffset: 24
+#CHECK-NEXT:      NumStaticSamplers: 1
+#CHECK-NEXT:      StaticSamplersOffset: 24
+#CHECK-NEXT:      Parameters:      []
+#CHECK-NEXT:      Samplers:
+#CHECK-NEXT:      - Filter:          Anisotropic
+#CHECK-NEXT:        AddressU:        Wrap
+#CHECK-NEXT:        AddressV:        Wrap
+#CHECK-NEXT:        AddressW:        Wrap
+#CHECK-NEXT:        MipLODBias:      0
+#CHECK-NEXT:        MaxAnisotropy:   16
+#CHECK-NEXT:        ComparisonFunc:  LessEqual
+#CHECK-NEXT:        BorderColor:     OpaqueWhite
+#CHECK-NEXT:        MinLOD:          0
+#CHECK-NEXT:        MaxLOD:          3.40282e+38
+#CHECK-NEXT:        ShaderRegister:  31
+#CHECK-NEXT:        RegisterSpace:   32
+#CHECK-NEXT:        ShaderVisibility: Mesh
+#CHECK-NEXT:      AllowInputAssemblerInputLayout: true
+#CHECK-NEXT:      DenyGeometryShaderRootAccess: true

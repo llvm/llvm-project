@@ -184,7 +184,7 @@ namespace cwg522 { // cwg522: 2.7
     b2(am);
     b2a(am);
     // expected-error@-1 {{no matching function for call to 'b2a'}}
-    //   expected-note@#cwg522-b2a {{candidate template ignored: deduced type 'volatile int *S::*const *' of 1st parameter does not match adjusted type 'int *S::**' of argument}}
+    //   expected-note@#cwg522-b2a {{candidate template ignored: deduced type 'volatile int *S::*const *' of 1st parameter does not match adjusted type 'int *S::**' of argument [with T = int]}}
     b3(d);
     b3(cd);
   }
@@ -254,9 +254,9 @@ namespace cwg526 { // cwg526: 2.7
     typedef int type;
     X<N>::type v1;
     X<(N)>::type v2;
-    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'X<(N)>::type'; implicit 'typename' is a C++20 extension}}
+    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'X<(N)>::type' is a C++20 extension}}
     X<+N>::type v3;
-    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'X<+N>::type'; implicit 'typename' is a C++20 extension}}
+    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'X<+N>::type' is a C++20 extension}}
   };
 } // namespace cwg526
 
@@ -348,11 +348,11 @@ namespace cwg531 { // cwg531: partial
     void A<int>::f(int) {}
     // expected-error@-1 {{template specialization requires 'template<>'}}
     template<typename U> void A<int>::g(int, U) {}
-    // expected-error@-1 {{template parameter list matching the non-templated nested type 'cwg531::bad::A<int>' should be empty}}
+    // expected-error@-1 {{template parameter list matching the non-templated nested type 'cwg531::bad::A<int>' should be empty ('template<>')}}
     struct A<int>::B {};
     // expected-error@-1 {{template specialization requires 'template<>'}}
     template<typename U> struct A<int>::C {};
-    // expected-error@-1 {{template parameter list matching the non-templated nested type 'cwg531::bad::A<int>' should be empty}}
+    // expected-error@-1 {{template parameter list matching the non-templated nested type 'cwg531::bad::A<int>' should be empty ('template<>')}}
     // expected-error@-2 {{redefinition of 'C' as different kind of symbol}}
     //   expected-note@#cwg531-C {{previous definition is here}}
     int A<int>::n = 0;
@@ -783,7 +783,7 @@ struct Outer {
 };
 template <class T>
 Outer<T>::Inner* Outer<T>::Inner::self() { return this; }
-// cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'Outer<T>::Inner'; implicit 'typename' is a C++20 extension}}
+// cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'Outer<T>::Inner' is a C++20 extension}}
 
 } // namespace cwg560
 
@@ -880,7 +880,7 @@ namespace cwg569 { // cwg569: 2.7 c++11
   // FIXME: This is a DR issue against C++98, so should probably apply there
   // too.
   ;;;;;
-  // cxx98-error@-1 {{C++11 extension}}
+  // cxx98-error@-1 {{extra ';' outside of a function is a C++11 extension}}
 } // namespace cwg569
 
 namespace cwg570 { // cwg570: dup 633
@@ -957,7 +957,7 @@ namespace cwg574 { // cwg574: 3.0
 #elif __cplusplus >= 201103L
     // FIXME: We shouldn't produce the 'cannot overload' diagnostics here.
     friend C &C::operator=(const C&); // #cwg574-test-C
-    // since-cxx11-error@#cwg574-test-C {{cannot overload}}
+    // since-cxx11-error@#cwg574-test-C {{cannot overload a member function without a ref-qualifier with a member function with ref-qualifier '&'}}
     //   since-cxx11-note@#cwg574-C-copy-assign {{previous declaration is here}}
     // since-cxx11-error@#cwg574-test-C {{friend declaration of 'operator=' does not match any declaration in 'cwg574::C'}}
     //   since-cxx11-note@#cwg574-C-copy-assign {{candidate function}}
@@ -1238,7 +1238,7 @@ namespace cwg591 { // cwg591: 20
 
   template<typename T> struct A<T>::B::D : A<T*> {
     M m;
-    // expected-error@-1 {{field has incomplete type 'M' (aka 'void'}}
+    // expected-error@-1 {{field has incomplete type 'M' (aka 'void')}}
   };
 
   template<typename T>
@@ -1246,7 +1246,7 @@ namespace cwg591 { // cwg591: 20
   template<typename F>
   struct H<T>::B<U>::C<F>::P : B<F> {
     M m;
-    // expected-error@-1 {{field has incomplete type 'M' (aka 'void'}}
+    // expected-error@-1 {{field has incomplete type 'M' (aka 'void')}}
   };
 } // namespace cwg591
 

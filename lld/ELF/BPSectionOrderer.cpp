@@ -53,7 +53,7 @@ struct BPOrdererELF : lld::BPOrderer<BPOrdererELF> {
       hashes.push_back(byte);
 
     llvm::sort(hashes);
-    hashes.erase(std::unique(hashes.begin(), hashes.end()), hashes.end());
+    hashes.erase(llvm::unique(hashes), hashes.end());
   }
 
   static StringRef getSymName(const Defined &sym) { return sym.getName(); }
@@ -76,12 +76,15 @@ DenseMap<const InputSectionBase *, int> elf::runBalancedPartitioning(
     if (!d)
       return;
     auto *sec = dyn_cast_or_null<InputSection>(d->section);
-    // Skip empty, discarded, ICF folded sections. Skipping ICF folded sections
-    // reduces duplicate detection work in BPSectionOrderer.
-    if (!sec || sec->size == 0 || !sec->isLive() || sec->repl != sec ||
+    // Skip section symbols. Skip empty, discarded, ICF folded sections, .bss.
+    // Skipping ICF folded sections reduces duplicate detection work in
+    // BPSectionOrderer.
+    if (sym.isSection() || !sec || sec->size == 0 || !sec->isLive() ||
+        sec->repl != sec || !sec->content().data() ||
         !orderer.secToSym.try_emplace(sec, d).second)
       return;
-    rootSymbolToSectionIdxs[CachedHashStringRef(getRootSymbol(sym.getName()))]
+    rootSymbolToSectionIdxs[CachedHashStringRef(
+                                lld::utils::getRootSymbol(sym.getName()))]
         .insert(sections.size());
     sections.emplace_back(sec);
   };

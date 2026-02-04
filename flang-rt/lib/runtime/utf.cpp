@@ -56,7 +56,7 @@ std::size_t MeasurePreviousUTF8Bytes(const char *end, std::size_t limit) {
 }
 
 // Non-minimal encodings are accepted.
-Fortran::common::optional<char32_t> DecodeUTF8(const char *p0) {
+common::optional<char32_t> DecodeUTF8(const char *p0) {
   const std::uint8_t *p{reinterpret_cast<const std::uint8_t *>(p0)};
   std::size_t bytes{MeasureUTF8Bytes(*p0)};
   if (bytes == 1) {
@@ -66,7 +66,7 @@ Fortran::common::optional<char32_t> DecodeUTF8(const char *p0) {
     for (std::size_t j{1}; j < bytes; ++j) {
       std::uint8_t next{p[j]};
       if (next < 0x80 || next > 0xbf) {
-        return Fortran::common::nullopt;
+        return common::nullopt;
       }
       result = (result << 6) | (next & 0x3f);
     }
@@ -74,7 +74,7 @@ Fortran::common::optional<char32_t> DecodeUTF8(const char *p0) {
       return static_cast<char32_t>(result);
     }
   }
-  return Fortran::common::nullopt;
+  return common::nullopt;
 }
 
 std::size_t EncodeUTF8(char *p0, char32_t ucs) {

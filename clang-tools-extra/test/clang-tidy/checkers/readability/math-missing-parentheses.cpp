@@ -123,7 +123,7 @@ void f(){
     //CHECK-MESSAGES: :[[@LINE+3]]:77: warning: '-' has higher precedence than '^'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
     //CHECK-MESSAGES: :[[@LINE+2]]:94: warning: '/' has higher precedence than '-'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
     //CHECK-FIXES: int q = (1 MACRO_ADD (2 MACRO_MULTIPLY 3)) MACRO_OR ((4 MACRO_AND 5) MACRO_XOR (6 MACRO_SUBTRACT (7 MACRO_DIVIDE 8)));
-    int q = 1 MACRO_ADD 2 MACRO_MULTIPLY 3 MACRO_OR 4 MACRO_AND 5 MACRO_XOR 6 MACRO_SUBTRACT 7 MACRO_DIVIDE 8; // No warning
+    int q = 1 MACRO_ADD 2 MACRO_MULTIPLY 3 MACRO_OR 4 MACRO_AND 5 MACRO_XOR 6 MACRO_SUBTRACT 7 MACRO_DIVIDE 8;
 
     //CHECK-MESSAGES: :[[@LINE+1]]:21: warning: '*' has higher precedence than '+'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
     int r = FUN(0 + 1 * 2);
@@ -156,4 +156,39 @@ namespace PR92516 {
     int j;
     for (j = i + 1, 2; j < 1; ++j) {}
   }
+}
+
+namespace PR141249 {
+  void AssignAsParentBinOp(int* netChange, int* nums, int k, int i) {
+    //CHECK-MESSAGES: :[[@LINE+2]]:30: warning: '-' has higher precedence than '^'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
+    //CHECK-FIXES: netChange[i] = nums[i] ^ (k - nums[i]);
+    netChange[i] = nums[i] ^ k - nums[i];
+  }
+}
+
+void CompareAsParentBinOp(int b) {
+  //CHECK-MESSAGES: :[[@LINE+2]]:12: warning: '*' has higher precedence than '-'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
+  //CHECK-FIXES: if (b == (1 * 2) - 3)   {
+  if (b == 1 * 2 - 3)   {
+
+  }
+}
+
+void test_with_parentheses() {
+  // CHECK-MESSAGES: :[[@LINE+2]]:14: warning: '/' has higher precedence than '-'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
+  // CHECK-FIXES: int z = (2-(4*3/2)) / (3-1);
+  int z = (2-4*3/2) / (3-1);
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:14: warning: '/' has higher precedence than '-'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
+  // CHECK-FIXES: int x = (2-(4*3/2));
+  int x = (2-4*3/2);
+
+  // CHECK-MESSAGES: :[[@LINE+2]]:17: warning: '*' has higher precedence than '+'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
+  // CHECK-FIXES: int y = ((1 + (2 * 3)));
+  int y = ((1 + 2 * 3));
+
+  short s = 0;
+  // CHECK-MESSAGES: :[[@LINE+2]]:13: warning: '*' has higher precedence than '+'; add parentheses to explicitly specify the order of operations [readability-math-missing-parentheses]
+  // CHECK-FIXES: s = ((1 + (2 * 3)));
+  s = ((1 + 2 * 3));
 }

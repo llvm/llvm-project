@@ -32,11 +32,44 @@ define half @test3(float %a) {
 define half @test3_fast(float %a) {
 ; CHECK-LABEL: @test3_fast(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
-; CHECK-NEXT:    [[C:%.*]] = call half @llvm.fabs.f16(half [[TMP1]])
+; CHECK-NEXT:    [[C:%.*]] = call fast half @llvm.fabs.f16(half [[TMP1]])
 ; CHECK-NEXT:    ret half [[C]]
 ;
   %b = call float @llvm.fabs.f32(float %a)
   %c = fptrunc fast float %b to half
+  ret half %c
+}
+
+define half @test3_both_ninf(float %a) {
+; CHECK-LABEL: @test3_both_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = call ninf half @llvm.fabs.f16(half [[TMP1]])
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = call ninf float @llvm.fabs.f32(float %a)
+  %c = fptrunc ninf float %b to half
+  ret half %c
+}
+
+define half @test3_fabs_ninf(float %a) {
+; CHECK-LABEL: @test3_fabs_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = call half @llvm.fabs.f16(half [[TMP1]])
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = call ninf float @llvm.fabs.f32(float %a)
+  %c = fptrunc float %b to half
+  ret half %c
+}
+
+define half @test3_fptrunc_ninf(float %a) {
+; CHECK-LABEL: @test3_fptrunc_ninf(
+; CHECK-NEXT:    [[TMP1:%.*]] = fptrunc float [[A:%.*]] to half
+; CHECK-NEXT:    [[C:%.*]] = call ninf half @llvm.fabs.f16(half [[TMP1]])
+; CHECK-NEXT:    ret half [[C]]
+;
+  %b = call float @llvm.fabs.f32(float %a)
+  %c = fptrunc ninf float %b to half
   ret half %c
 }
 
@@ -490,9 +523,7 @@ define <2 x i32> @fptosi_nonnorm_copysign_vec(<2 x float> %x) {
 
 define i32 @fptosi_nonnorm_fmul(float %x) {
 ; CHECK-LABEL: @fptosi_nonnorm_fmul(
-; CHECK-NEXT:    [[SEL:%.*]] = fmul float [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[RET:%.*]] = fptosi float [[SEL]] to i32
-; CHECK-NEXT:    ret i32 [[RET]]
+; CHECK-NEXT:    ret i32 0
 ;
   %sel = fmul float %x, 0.000000e+00
   %ret = fptosi float %sel to i32

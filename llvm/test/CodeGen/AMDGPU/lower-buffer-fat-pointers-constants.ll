@@ -2,7 +2,6 @@
 ; RUN: opt -S -mcpu=gfx900 -amdgpu-lower-buffer-fat-pointers < %s | FileCheck %s
 ; RUN: opt -S -mcpu=gfx900 -passes=amdgpu-lower-buffer-fat-pointers < %s | FileCheck %s
 
-target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8"
 target triple = "amdgcn--"
 
 @buf = external addrspace(8) global i8
@@ -223,4 +222,44 @@ define i32 @fancy_zero() {
   ret i32 ptrtoint (
   ptr addrspace(7) addrspacecast (ptr addrspace(8) @buf to ptr addrspace(7))
   to i32)
+}
+
+define i32 @load_null() {
+; CHECK-LABEL: define i32 @load_null
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 4 null, i32 0, i32 0, i32 0)
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = load i32, ptr addrspace(7) null, align 4
+  ret i32 %x
+}
+
+define void @store_null() {
+; CHECK-LABEL: define void @store_null
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 0, ptr addrspace(8) align 4 null, i32 0, i32 0, i32 0)
+; CHECK-NEXT:    ret void
+;
+  store i32 0, ptr addrspace(7) null, align 4
+  ret void
+}
+
+define i32 @load_poison() {
+; CHECK-LABEL: define i32 @load_poison
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    [[X:%.*]] = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) align 4 poison, i32 poison, i32 0, i32 0)
+; CHECK-NEXT:    ret i32 [[X]]
+;
+  %x = load i32, ptr addrspace(7) poison, align 4
+  ret i32 %x
+}
+
+define void @store_poison() {
+; CHECK-LABEL: define void @store_poison
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 0, ptr addrspace(8) align 4 poison, i32 poison, i32 0, i32 0)
+; CHECK-NEXT:    ret void
+;
+  store i32 0, ptr addrspace(7) poison, align 4
+  ret void
 }

@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_X86_X86REGISTERINFO_H
 #define LLVM_LIB_TARGET_X86_X86REGISTERINFO_H
 
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
@@ -27,9 +28,16 @@ private:
   ///
   bool Is64Bit;
 
+  /// Is this x86_64 with the LP64 programming model (standard AMD64, no x32)?
+  bool IsTarget64BitLP64;
+
   /// IsWin64 - Is the target on of win64 flavours
   ///
   bool IsWin64;
+
+  /// IsUEFI64 - Is UEFI 64 bit target.
+  ///
+  bool IsUEFI64;
 
   /// SlotSize - Stack slot size in bytes.
   ///
@@ -73,19 +81,13 @@ public:
   /// getPointerRegClass - Returns a TargetRegisterClass used for pointer
   /// values.
   const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF,
-                     unsigned Kind = 0) const override;
+  getPointerRegClass(unsigned Kind = 0) const override;
 
   /// getCrossCopyRegClass - Returns a legal register class to copy a register
   /// in the specified class to or from. Returns NULL if it is possible to copy
   /// between a two registers of the specified class.
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
-
-  /// getGPRsForTailCall - Returns a register class with registers that can be
-  /// used in forming tail calls.
-  const TargetRegisterClass *
-  getGPRsForTailCall(const MachineFunction &MF) const;
 
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
@@ -171,6 +173,15 @@ public:
                              SmallVectorImpl<MCPhysReg> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
+
+  const TargetRegisterClass *
+  constrainRegClassToNonRex2(const TargetRegisterClass *RC) const;
+
+  bool isNonRex2RegClass(const TargetRegisterClass *RC) const;
+
+  bool requiresRegisterScavenging(const MachineFunction &MF) const override {
+    return true;
+  }
 };
 
 } // End llvm namespace

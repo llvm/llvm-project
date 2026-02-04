@@ -88,21 +88,18 @@ class ProgressTesterCommand:
             progress = lldb.SBProgress(
                 "Progress tester", "Initial Detail", total, debugger
             )
+        # Check to see if total is set to None to indicate an indeterminate
+        # progress then default to 3 steps.
+        with progress:
+            if total is None:
+                total = 3
 
-        # Check to see if total is set to None to indicate an indeterminate progress
-        # then default to 10 steps.
-        if total is None:
-            total = 10
-
-        for i in range(1, total):
-            if cmd_options.no_details:
-                progress.Increment(1)
-            else:
-                progress.Increment(1, f"Step {i}")
-            time.sleep(cmd_options.seconds)
-
-        # Not required for deterministic progress, but required for indeterminate progress.
-        progress.Finalize()
+            for i in range(1, total):
+                if cmd_options.no_details:
+                    progress.Increment(1)
+                else:
+                    progress.Increment(1, f"Step {i}")
+                time.sleep(cmd_options.seconds)
 
 
 def __lldb_init_module(debugger, dict):

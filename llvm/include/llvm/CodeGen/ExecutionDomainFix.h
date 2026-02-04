@@ -133,7 +133,7 @@ class ExecutionDomainFix : public MachineFunctionPass {
   using OutRegsInfoMap = SmallVector<LiveRegsDVInfo, 4>;
   OutRegsInfoMap MBBOutRegsInfos;
 
-  ReachingDefAnalysis *RDA = nullptr;
+  ReachingDefInfo *RDI = nullptr;
 
 public:
   ExecutionDomainFix(char &PassID, const TargetRegisterClass &RC)
@@ -141,15 +141,14 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
-    AU.addRequired<ReachingDefAnalysis>();
+    AU.addRequired<ReachingDefInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:

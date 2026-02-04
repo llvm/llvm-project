@@ -33,7 +33,7 @@
 // ===
 // Compile for OpenCL 2.0 for the first time. The module should change.
 // RUN: %clang_cc1 -triple spir-unknown-unknown -O0 -emit-llvm -o - -cl-std=CL2.0 -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -fdisable-module-hash -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK20 --check-prefix=CHECK-MOD %s
-// RUN: not diff %t/1_0.pcm %t/opencl_c.pcm
+// RUN: not diff %t/1_0.pcm %t/opencl_c.pcm > /dev/null
 // RUN: chmod u-w %t/opencl_c.pcm
 
 // ===
@@ -44,10 +44,10 @@
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 // RUN: %clang_cc1 -triple spir64-unknown-unknown -emit-llvm -o - -cl-std=CL1.2 -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-MOD %s
-// RUN: %clang_cc1 -triple amdgcn--amdhsa -O0 -emit-llvm -o - -cl-std=CL2.0 -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK20 --check-prefix=CHECK-MOD %s
+// RUN: %clang_cc1 -triple amdgcn--amdhsa -target-cpu gfx700 -O0 -emit-llvm -o - -cl-std=CL2.0 -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK20 --check-prefix=CHECK-MOD %s
 // RUN: chmod u-w %t 
 // RUN: %clang_cc1 -triple spir64-unknown-unknown -emit-llvm -o - -cl-std=CL1.2 -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-MOD %s
-// RUN: %clang_cc1 -triple amdgcn--amdhsa -O0 -emit-llvm -o - -cl-std=CL2.0 -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK20 --check-prefix=CHECK-MOD %s
+// RUN: %clang_cc1 -triple amdgcn--amdhsa -target-cpu gfx700 -O0 -emit-llvm -o - -cl-std=CL2.0 -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK20 --check-prefix=CHECK-MOD %s
 // RUN: chmod u+w %t
 
 // Verify that called builtins occur in the generated IR.
@@ -104,46 +104,129 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #endif //__OPENCL_C_VERSION__
 #pragma OPENCL EXTENSION cl_intel_planar_yuv : enable
 
-#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+#if (defined(__OPENCL_CPP_VERSION__) || defined(__OPENCL_C_VERSION__))
 
-#if cl_khr_subgroup_extended_types != 1
-#error "Incorrectly defined cl_khr_subgroup_extended_types"
-#endif
-#if cl_khr_subgroup_non_uniform_vote != 1
-#error "Incorrectly defined cl_khr_subgroup_non_uniform_vote"
-#endif
-#if cl_khr_subgroup_ballot != 1
-#error "Incorrectly defined cl_khr_subgroup_ballot"
-#endif
-#if cl_khr_subgroup_non_uniform_arithmetic != 1
-#error "Incorrectly defined cl_khr_subgroup_non_uniform_arithmetic"
-#endif
-#if cl_khr_subgroup_shuffle != 1
-#error "Incorrectly defined cl_khr_subgroup_shuffle"
-#endif
-#if cl_khr_subgroup_shuffle_relative != 1
-#error "Incorrectly defined cl_khr_subgroup_shuffle_relative"
-#endif
-#if cl_khr_subgroup_clustered_reduce != 1
-#error "Incorrectly defined cl_khr_subgroup_clustered_reduce"
-#endif
-#if cl_khr_subgroup_rotate != 1
-#error "Incorrectly defined cl_khr_subgroup_rotate"
+#if cl_khr_depth_images != 1
+#error "Incorrectly defined cl_khr_depth_images"
 #endif
 #if cl_khr_extended_bit_ops != 1
 #error "Incorrectly defined cl_khr_extended_bit_ops"
 #endif
+#if cl_ext_float_atomics != 1
+#error "Incorrectly defined cl_ext_float_atomics"
+#endif
+#if cl_khr_gl_msaa_sharing != 1
+#error "Incorrectly defined cl_khr_gl_msaa_sharing"
+#endif
 #if cl_khr_integer_dot_product != 1
 #error "Incorrectly defined cl_khr_integer_dot_product"
 #endif
+#if cl_khr_kernel_clock != 1
+#error "Incorrectly defined cl_khr_kernel_clock"
+#endif
+#if cl_khr_mipmap_image != 1
+#error "Incorrectly defined cl_khr_mipmap_image"
+#endif
+#if cl_khr_mipmap_image_writes != 1
+#error "Incorrectly defined cl_khr_mipmap_image_writes"
+#endif
+#if cl_khr_subgroup_ballot != 1
+#error "Incorrectly defined cl_khr_subgroup_ballot"
+#endif
+#if cl_khr_subgroup_clustered_reduce != 1
+#error "Incorrectly defined cl_khr_subgroup_clustered_reduce"
+#endif
+#if cl_khr_subgroup_extended_types != 1
+#error "Incorrectly defined cl_khr_subgroup_extended_types"
+#endif
+#if cl_khr_subgroup_non_uniform_arithmetic != 1
+#error "Incorrectly defined cl_khr_subgroup_non_uniform_arithmetic"
+#endif
+#if cl_khr_subgroup_non_uniform_vote != 1
+#error "Incorrectly defined cl_khr_subgroup_non_uniform_vote"
+#endif
+#if cl_khr_subgroup_rotate != 1
+#error "Incorrectly defined cl_khr_subgroup_rotate"
+#endif
+#if cl_khr_subgroup_shuffle_relative != 1
+#error "Incorrectly defined cl_khr_subgroup_shuffle_relative"
+#endif
+#if cl_khr_subgroup_shuffle != 1
+#error "Incorrectly defined cl_khr_subgroup_shuffle"
+#endif
+#if cl_khr_subgroups != 1
+#error "Incorrectly defined cl_khr_subgroups"
+#endif
+#if cl_khr_3d_image_writes != 1
+#error "Incorrectly defined cl_khr_3d_image_writes"
+#endif
+
+#else
+
+#ifdef cl_khr_depth_images
+#error "Incorrect cl_khr_depth_images define"
+#endif
+#ifdef cl_khr_extended_bit_ops
+#error "Incorrect cl_khr_extended_bit_ops define"
+#endif
+#ifdef cl_ext_float_atomics
+#error "Incorrect cl_ext_float_atomics define"
+#endif
+#ifdef cl_khr_gl_msaa_sharing
+#error "Incorrect cl_khr_gl_msaa_sharing define"
+#endif
+#ifdef cl_khr_integer_dot_product
+#error "Incorrect cl_khr_integer_dot_product define"
+#endif
+#ifdef cl_khr_kernel_clock
+#error "Incorrect cl_khr_kernel_clock define"
+#endif
+#ifdef cl_khr_mipmap_image
+#error "Incorrect cl_khr_mipmap_image define"
+#endif
+#ifdef cl_khr_mipmap_image_writes
+#error "Incorrect cl_khr_mipmap_image_writes define"
+#endif
+#ifdef cl_khr_subgroup_ballot
+#error "Incorrect cl_khr_subgroup_ballot define"
+#endif
+#ifdef cl_khr_subgroup_clustered_reduce
+#error "Incorrect cl_khr_subgroup_clustered_reduce define"
+#endif
+#ifdef cl_khr_subgroup_extended_types
+#error "Incorrect cl_khr_subgroup_extended_types define"
+#endif
+#ifdef cl_khr_subgroup_non_uniform_arithmetic
+#error "Incorrect cl_khr_subgroup_non_uniform_arithmetic define"
+#endif
+#ifdef cl_khr_subgroup_non_uniform_vote
+#error "Incorrect cl_khr_subgroup_non_uniform_vote define"
+#endif
+#ifdef cl_khr_subgroup_rotate
+#error "Incorrect cl_khr_subgroup_rotate define"
+#endif
+#ifdef cl_khr_subgroup_shuffle_relative
+#error "Incorrect cl_khr_subgroup_shuffle_relative define"
+#endif
+#ifdef cl_khr_subgroup_shuffle
+#error "Incorrect cl_khr_subgroup_shuffle define"
+#endif
+#ifdef cl_khr_subgroups
+#error "Incorrect cl_khr_subgroups define"
+#endif
+#ifdef cl_khr_3d_image_writes
+#error "Incorrect cl_khr_3d_image_writes define"
+#endif
+
+#endif // (defined(__OPENCL_CPP_VERSION__) || defined(__OPENCL_C_VERSION__))
+
+#if (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
+
 #if __opencl_c_integer_dot_product_input_4x8bit != 1
 #error "Incorrectly defined __opencl_c_integer_dot_product_input_4x8bit"
 #endif
 #if __opencl_c_integer_dot_product_input_4x8bit_packed != 1
 #error "Incorrectly defined __opencl_c_integer_dot_product_input_4x8bit_packed"
-#endif
-#if cl_ext_float_atomics != 1
-#error "Incorrectly defined cl_ext_float_atomics"
 #endif
 #if __opencl_c_ext_fp16_global_atomic_load_store != 1
 #error "Incorrectly defined __opencl_c_ext_fp16_global_atomic_load_store"
@@ -193,47 +276,17 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #if __opencl_c_ext_image_unorm_int_2_101010 != 1
 #error "Incorrectly defined __opencl_c_ext_image_unorm_int_2_101010"
 #endif
+#if __opencl_c_ext_image_unsigned_10x6_12x4_14x2 != 1
+#error "Incorrectly defined __opencl_c_ext_image_unsigned_10x6_12x4_14x2"
+#endif
 
 #else
 
-#ifdef cl_khr_subgroup_extended_types
-#error "Incorrect cl_khr_subgroup_extended_types define"
-#endif
-#ifdef cl_khr_subgroup_non_uniform_vote
-#error "Incorrect cl_khr_subgroup_non_uniform_vote define"
-#endif
-#ifdef cl_khr_subgroup_ballot
-#error "Incorrect cl_khr_subgroup_ballot define"
-#endif
-#ifdef cl_khr_subgroup_non_uniform_arithmetic
-#error "Incorrect cl_khr_subgroup_non_uniform_arithmetic define"
-#endif
-#ifdef cl_khr_subgroup_shuffle
-#error "Incorrect cl_khr_subgroup_shuffle define"
-#endif
-#ifdef cl_khr_subgroup_shuffle_relative
-#error "Incorrect cl_khr_subgroup_shuffle_relative define"
-#endif
-#ifdef cl_khr_subgroup_clustered_reduce
-#error "Incorrect cl_khr_subgroup_clustered_reduce define"
-#endif
-#ifdef cl_khr_subgroup_rotate
-#error "Incorrect cl_khr_subgroup_rotate define"
-#endif
-#ifdef cl_khr_extended_bit_ops
-#error "Incorrect cl_khr_extended_bit_ops define"
-#endif
-#ifdef cl_khr_integer_dot_product
-#error "Incorrect cl_khr_integer_dot_product define"
-#endif
 #ifdef __opencl_c_integer_dot_product_input_4x8bit
 #error "Incorrect __opencl_c_integer_dot_product_input_4x8bit define"
 #endif
 #ifdef __opencl_c_integer_dot_product_input_4x8bit_packed
 #error "Incorrect __opencl_c_integer_dot_product_input_4x8bit_packed define"
-#endif
-#ifdef cl_ext_float_atomics
-#error "Incorrect cl_ext_float_atomics define"
 #endif
 #ifdef __opencl_c_ext_fp16_global_atomic_load_store
 #error "Incorrect __opencl_c_ext_fp16_global_atomic_load_store define"
@@ -282,6 +335,9 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #endif
 #ifdef __opencl_c_ext_image_unorm_int_2_101010
 #error "Incorrect __opencl_c_ext_image_unorm_int_2_101010 define"
+#endif
+#ifdef __opencl_c_ext_image_unsigned_10x6_12x4_14x2
+#error "Incorrect __opencl_c_ext_image_unsigned_10x6_12x4_14x2 define"
 #endif
 
 #endif //(defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)

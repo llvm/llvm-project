@@ -25,6 +25,9 @@
 #define __constant__ __attribute__((constant))
 #define __managed__ __attribute__((managed))
 
+#define __cluster_dims__(...) __attribute__((cluster_dims(__VA_ARGS__)))
+#define __no_cluster__ __attribute__((no_cluster))
+
 #if !defined(__cplusplus) || __cplusplus < 201103L
   #define nullptr NULL;
 #endif

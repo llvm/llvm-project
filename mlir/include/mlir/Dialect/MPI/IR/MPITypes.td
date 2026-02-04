@@ -41,6 +41,17 @@ def MPI_Retval : MPI_Type<"Retval", "retval"> {
 }
 
 //===----------------------------------------------------------------------===//
+// mpi::CommType
+//===----------------------------------------------------------------------===//
+
+def MPI_Comm : MPI_Type<"Comm", "comm"> {
+  let summary = "MPI communicator handler";
+  let description = [{
+    This type represents a handler for the MPI communicator.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // mpi::RequestType
 //===----------------------------------------------------------------------===//
 

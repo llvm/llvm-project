@@ -410,9 +410,9 @@ define void @prop_fn_decl_fail_alloca(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_fn_decl_fail_alloca
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[A_I:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar2(ptr [[P]], ptr [[A_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar1(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -425,9 +425,9 @@ define void @prop_cb_def_wr_fail_alloca(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_cb_def_wr_fail_alloca
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[A_I:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar2(ptr [[P]], ptr [[A_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar1(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -440,10 +440,10 @@ define void @prop_fn_decl_partially_okay_alloca(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_fn_decl_partially_okay_alloca
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[A_I:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar1(ptr [[P]])
 ; CHECK-NEXT:    call void @bar2(ptr [[P]], ptr [[A_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar1(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -456,10 +456,10 @@ define void @prop_cb_def_wr_partially_okay_alloca(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_cb_def_wr_partially_okay_alloca
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[A_I:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar1(ptr [[P]])
 ; CHECK-NEXT:    call void @bar2(ptr [[P]], ptr [[A_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar1(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -748,5 +748,73 @@ define void @prop_range_direct(i32 %v) {
 ; CHECK-NEXT:    ret void
 ;
   call void @foo4(i32 range(i32 1, 11) %v)
+  ret void
+}
+
+declare void @bar_fp(float %x)
+
+define void @foo_fp(float %x) {
+; CHECK-LABEL: define {{[^@]+}}@foo_fp
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    call void @bar_fp(float [[X]])
+; CHECK-NEXT:    ret void
+;
+  call void @bar_fp(float %x)
+  ret void
+}
+
+define void @prop_param_nofpclass(float %x) {
+; CHECK-LABEL: define {{[^@]+}}@prop_param_nofpclass
+; CHECK-SAME: (float [[X:%.*]]) {
+; CHECK-NEXT:    call void @bar_fp(float nofpclass(nan inf) [[X]])
+; CHECK-NEXT:    ret void
+;
+  call void @foo_fp(float nofpclass(nan inf) %x)
+  ret void
+}
+
+declare void @func_fp(float)
+
+define void @union_nofpclass(float %v) {
+; CHECK-LABEL: define {{[^@]+}}@union_nofpclass
+; CHECK-SAME: (float [[V:%.*]]) {
+; CHECK-NEXT:    call void @func_fp(float nofpclass(inf) [[V]])
+; CHECK-NEXT:    ret void
+;
+  call void @func_fp(float nofpclass(inf) %v)
+  ret void
+}
+
+define void @prop_nofpclass_union(float %v) {
+; CHECK-LABEL: define {{[^@]+}}@prop_nofpclass_union
+; CHECK-SAME: (float [[V:%.*]]) {
+; CHECK-NEXT:    call void @func_fp(float nofpclass(nan inf) [[V]])
+; CHECK-NEXT:    ret void
+;
+  call void @union_nofpclass(float nofpclass(nan) %v)
+  ret void
+}
+
+declare void @ext_f32_i32(float, i32)
+
+define void @callee_callsite_has_nofpclass(float %a, i32 %b) {
+; CHECK-LABEL: define {{[^@]+}}@callee_callsite_has_nofpclass
+; CHECK-SAME: (float [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    call void @ext_f32_i32(float nofpclass(nan inf) [[A]], i32 [[B]])
+; CHECK-NEXT:    ret void
+;
+  call void @ext_f32_i32(float nofpclass(inf nan) %a, i32 %b)
+  ret void
+}
+
+; Need to have one attribute on the callsite to attempt the attribute
+; propagation in some argument,.
+define void @prop_param_nofpclass_none_on_input_arg(float %a, i32 %b) {
+; CHECK-LABEL: define {{[^@]+}}@prop_param_nofpclass_none_on_input_arg
+; CHECK-SAME: (float [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    call void @ext_f32_i32(float nofpclass(nan inf) [[A]], i32 range(i32 0, 256) [[B]])
+; CHECK-NEXT:    ret void
+;
+  call void @callee_callsite_has_nofpclass(float %a, i32 range(i32 0, 256) %b)
   ret void
 }

@@ -53,24 +53,15 @@ static bool traverseMoveUse(MachineInstr &U, const MachineRegisterInfo &MRI,
                             SmallVectorImpl<MachineInstr *> &RemoveList,
                             SmallVectorImpl<MachineInstr *> &LoadInsts) {
   switch (U.getOpcode()) {
-  case NVPTX::LD_f32:
-  case NVPTX::LD_f64:
   case NVPTX::LD_i16:
   case NVPTX::LD_i32:
   case NVPTX::LD_i64:
-  case NVPTX::LD_i8:
-  case NVPTX::LDV_f32_v2:
-  case NVPTX::LDV_f32_v4:
-  case NVPTX::LDV_f64_v2:
-  case NVPTX::LDV_f64_v4:
   case NVPTX::LDV_i16_v2:
   case NVPTX::LDV_i16_v4:
   case NVPTX::LDV_i32_v2:
   case NVPTX::LDV_i32_v4:
   case NVPTX::LDV_i64_v2:
-  case NVPTX::LDV_i64_v4:
-  case NVPTX::LDV_i8_v2:
-  case NVPTX::LDV_i8_v4: {
+  case NVPTX::LDV_i64_v4: {
     LoadInsts.push_back(&U);
     return true;
   }
@@ -136,16 +127,10 @@ static bool forwardDeviceParams(MachineFunction &MF) {
 ///                       Pass (Manager) Boilerplate
 /// ----------------------------------------------------------------------------
 
-namespace llvm {
-void initializeNVPTXForwardParamsPassPass(PassRegistry &);
-} // namespace llvm
-
 namespace {
 struct NVPTXForwardParamsPass : public MachineFunctionPass {
   static char ID;
-  NVPTXForwardParamsPass() : MachineFunctionPass(ID) {
-    initializeNVPTXForwardParamsPassPass(*PassRegistry::getPassRegistry());
-  }
+  NVPTXForwardParamsPass() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

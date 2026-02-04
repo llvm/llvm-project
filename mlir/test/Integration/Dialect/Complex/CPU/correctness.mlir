@@ -49,6 +49,11 @@ func.func @conj(%arg: complex<f32>) -> complex<f32> {
   func.return %conj : complex<f32>
 }
 
+func.func @exp(%arg: complex<f32>) -> complex<f32> {
+  %exp = complex.exp %arg : complex<f32>
+  func.return %exp : complex<f32>
+}
+
 // %input contains pairs of lhs, rhs, i.e. [lhs_0, rhs_0, lhs_1, rhs_1,...]
 func.func @test_binary(%input: tensor<?xcomplex<f32>>,
                        %func: (complex<f32>, complex<f32>) -> complex<f32>) {
@@ -352,6 +357,33 @@ func.func @entry() {
 
   call @test_element_f64(%abs_test_cast, %abs_func)
     : (tensor<?xcomplex<f64>>, (complex<f64>) -> f64) -> ()
+
+  // complex.exp test
+  %exp_test = arith.constant dense<[
+    (1.0, 2.0),
+    // CHECK:      -1.1312
+    // CHECK-NEXT:  2.4717
+
+    // The first case to consider is overflow of exp(real_part). If computed
+    // directly, this yields inf * 0 = NaN, which is incorrect.
+    (500.0, 0.0),
+    // CHECK-NEXT:  inf
+    // CHECK-NOT:   nan
+    // CHECK-NEXT:  0
+
+    // In this case, the overflow of exp(real_part) is compensated when
+    // sin(imag_part) is close to zero, yielding a finite imaginary part.
+    (90.0238094, 5.900613e-39)
+    // CHECK-NEXT:  inf
+    // CHECK-NOT:   inf
+    // CHECK-NEXT:  7.3746
+  ]> : tensor<3xcomplex<f32>>
+  %exp_test_cast = tensor.cast %exp_test
+    :  tensor<3xcomplex<f32>> to tensor<?xcomplex<f32>>
+
+  %exp_func = func.constant @exp : (complex<f32>) -> complex<f32>
+  call @test_unary(%exp_test_cast, %exp_func)
+    : (tensor<?xcomplex<f32>>, (complex<f32>) -> complex<f32>) -> ()
 
   func.return
 }

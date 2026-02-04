@@ -10,8 +10,8 @@ define amdgpu_cs void @max_6_vgprs(ptr addrspace(1) %p) "amdgpu-num-vgpr"="6" {
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_lshlrev_b64_e32 v[2:3], 2, v[2:3]
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v2
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; CHECK-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; CHECK-NEXT:    global_load_b32 v5, v[0:1], off scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    global_load_b32 v2, v[0:1], off offset:16 scope:SCOPE_SYS
@@ -78,8 +78,8 @@ define amdgpu_cs void @max_11_vgprs_branch(ptr addrspace(1) %p, i32 %tmp) "amdgp
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    v_lshlrev_b64_e32 v[3:4], 2, v[3:4]
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v3
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; CHECK-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v1, v4, vcc_lo
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v4, vcc_lo
 ; CHECK-NEXT:    global_load_b32 v3, v[0:1], off offset:336 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    scratch_store_b32 off, v3, off offset:8 ; 4-byte Folded Spill

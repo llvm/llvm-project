@@ -52,7 +52,7 @@ TEST(SetVector, ContainsTest) {
 }
 
 TEST(SetVector, ConstPtrKeyTest) {
-  SetVector<int *, SmallVector<int *, 8>, SmallPtrSet<const int *, 8>> S, T;
+  SetVector<int *> S, T;
   int i, j, k, m, n;
 
   S.insert(&i);
@@ -88,9 +88,21 @@ TEST(SetVector, ConstPtrKeyTest) {
   EXPECT_FALSE(S.contains((const int *)&j));
 }
 
+TEST(SetVector, CtorRange) {
+  constexpr unsigned Args[] = {3, 1, 2};
+  SetVector<unsigned> Set(llvm::from_range, Args);
+  EXPECT_THAT(Set, ::testing::ElementsAre(3, 1, 2));
+}
+
 TEST(SetVector, InsertRange) {
   SetVector<unsigned> Set;
   constexpr unsigned Args[] = {3, 1, 2};
   Set.insert_range(Args);
+  EXPECT_THAT(Set, ::testing::ElementsAre(3, 1, 2));
+}
+
+TEST(SmallSetVector, CtorRange) {
+  constexpr unsigned Args[] = {3, 1, 2};
+  SmallSetVector<unsigned, 4> Set(llvm::from_range, Args);
   EXPECT_THAT(Set, ::testing::ElementsAre(3, 1, 2));
 }

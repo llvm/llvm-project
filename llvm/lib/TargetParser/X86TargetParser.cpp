@@ -72,7 +72,7 @@ constexpr FeatureBitset FeaturesX86_64_V2 = FeaturesX86_64 | FeatureSAHF |
 constexpr FeatureBitset FeaturesX86_64_V3 =
     FeaturesX86_64_V2 | FeatureAVX2 | FeatureBMI | FeatureBMI2 | FeatureF16C |
     FeatureFMA | FeatureLZCNT | FeatureMOVBE | FeatureXSAVE;
-constexpr FeatureBitset FeaturesX86_64_V4 = FeaturesX86_64_V3 | FeatureEVEX512 |
+constexpr FeatureBitset FeaturesX86_64_V4 = FeaturesX86_64_V3 |
                                             FeatureAVX512BW | FeatureAVX512CD |
                                             FeatureAVX512DQ | FeatureAVX512VL;
 
@@ -95,9 +95,8 @@ constexpr FeatureBitset FeaturesBroadwell =
 
 // Intel Knights Landing and Knights Mill
 // Knights Landing has feature parity with Broadwell.
-constexpr FeatureBitset FeaturesKNL = FeaturesBroadwell | FeatureAES |
-                                      FeatureAVX512F | FeatureEVEX512 |
-                                      FeatureAVX512CD;
+constexpr FeatureBitset FeaturesKNL =
+    FeaturesBroadwell | FeatureAES | FeatureAVX512F | FeatureAVX512CD;
 constexpr FeatureBitset FeaturesKNM = FeaturesKNL | FeatureAVX512VPOPCNTDQ;
 
 // Intel Skylake processors.
@@ -107,9 +106,9 @@ constexpr FeatureBitset FeaturesSkylakeClient =
 // SkylakeServer inherits all SkylakeClient features except SGX.
 // FIXME: That doesn't match gcc.
 constexpr FeatureBitset FeaturesSkylakeServer =
-    (FeaturesSkylakeClient & ~FeatureSGX) | FeatureAVX512F | FeatureEVEX512 |
-    FeatureAVX512CD | FeatureAVX512DQ | FeatureAVX512BW | FeatureAVX512VL |
-    FeatureCLWB | FeaturePKU;
+    (FeaturesSkylakeClient & ~FeatureSGX) | FeatureAVX512F | FeatureAVX512CD |
+    FeatureAVX512DQ | FeatureAVX512BW | FeatureAVX512VL | FeatureCLWB |
+    FeaturePKU;
 constexpr FeatureBitset FeaturesCascadeLake =
     FeaturesSkylakeServer | FeatureAVX512VNNI;
 constexpr FeatureBitset FeaturesCooperLake =
@@ -117,9 +116,9 @@ constexpr FeatureBitset FeaturesCooperLake =
 
 // Intel 10nm processors.
 constexpr FeatureBitset FeaturesCannonlake =
-    FeaturesSkylakeClient | FeatureAVX512F | FeatureEVEX512 | FeatureAVX512CD |
-    FeatureAVX512DQ | FeatureAVX512BW | FeatureAVX512VL | FeatureAVX512IFMA |
-    FeatureAVX512VBMI | FeaturePKU | FeatureSHA;
+    FeaturesSkylakeClient | FeatureAVX512F | FeatureAVX512CD | FeatureAVX512DQ |
+    FeatureAVX512BW | FeatureAVX512VL | FeatureAVX512IFMA | FeatureAVX512VBMI |
+    FeaturePKU | FeatureSHA;
 constexpr FeatureBitset FeaturesICLClient =
     FeaturesCannonlake | FeatureAVX512BITALG | FeatureAVX512VBMI2 |
     FeatureAVX512VNNI | FeatureAVX512VPOPCNTDQ | FeatureGFNI | FeatureRDPID |
@@ -135,17 +134,16 @@ constexpr FeatureBitset FeaturesSapphireRapids =
     FeatureAVX512BF16 | FeatureAVX512FP16 | FeatureAVXVNNI | FeatureCLDEMOTE |
     FeatureENQCMD | FeatureMOVDIR64B | FeatureMOVDIRI | FeaturePTWRITE |
     FeatureSERIALIZE | FeatureSHSTK | FeatureTSXLDTRK | FeatureUINTR |
-    FeatureWAITPKG;
+    FeatureWAITPKG | FeatureAVX512DQ | FeatureAVX512VL;
 constexpr FeatureBitset FeaturesGraniteRapids =
     FeaturesSapphireRapids | FeatureAMX_FP16 | FeaturePREFETCHI;
 constexpr FeatureBitset FeaturesDiamondRapids =
-    FeaturesGraniteRapids | FeatureAMX_COMPLEX | FeatureAVX10_2_512 |
+    FeaturesGraniteRapids | FeatureAMX_COMPLEX | FeatureAVX10_2 |
     FeatureCMPCCXADD | FeatureAVXIFMA | FeatureAVXNECONVERT |
     FeatureAVXVNNIINT8 | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
     FeatureSM4 | FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 |
-    FeaturePPX | FeatureNDD | FeatureNF | FeatureCF | FeatureMOVRS |
-    FeatureAMX_MOVRS | FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32 |
-    FeatureAMX_TRANSPOSE | FeatureUSERMSR;
+    FeaturePPX | FeatureNDD | FeatureNF | FeatureMOVRS | FeatureAMX_MOVRS |
+    FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
@@ -165,17 +163,25 @@ constexpr FeatureBitset FeaturesAlderlake =
     FeaturesTremont | FeatureADX | FeatureBMI | FeatureBMI2 | FeatureF16C |
     FeatureFMA | FeatureINVPCID | FeatureLZCNT | FeaturePCONFIG | FeaturePKU |
     FeatureSERIALIZE | FeatureSHSTK | FeatureVAES | FeatureVPCLMULQDQ |
-    FeatureCLDEMOTE | FeatureMOVDIR64B | FeatureMOVDIRI | FeatureWAITPKG |
-    FeatureAVXVNNI | FeatureHRESET | FeatureWIDEKL;
-constexpr FeatureBitset FeaturesSierraforest =
+    FeatureMOVDIR64B | FeatureMOVDIRI | FeatureWAITPKG | FeatureAVXVNNI |
+    FeatureHRESET | FeatureWIDEKL;
+constexpr FeatureBitset FeaturesArrowlake =
     FeaturesAlderlake | FeatureCMPCCXADD | FeatureAVXIFMA | FeatureUINTR |
     FeatureENQCMD | FeatureAVXNECONVERT | FeatureAVXVNNIINT8;
-constexpr FeatureBitset FeaturesArrowlakeS = FeaturesSierraforest |
-    FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 | FeatureSM4;
+constexpr FeatureBitset FeaturesSierraforest =
+    FeaturesArrowlake | FeatureCLDEMOTE;
+constexpr FeatureBitset FeaturesArrowlakeS =
+    FeaturesArrowlake | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
+    FeatureSM4;
 constexpr FeatureBitset FeaturesPantherlake =
-    FeaturesArrowlakeS | FeaturePREFETCHI;
+    (FeaturesArrowlakeS ^ FeatureWIDEKL);
+constexpr FeatureBitset FeaturesNovalake =
+    FeaturesPantherlake | FeaturePREFETCHI | FeatureAVX10_2 | FeatureMOVRS |
+    FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 | FeaturePPX |
+    FeatureNDD | FeatureNF;
 constexpr FeatureBitset FeaturesClearwaterforest =
-    FeaturesArrowlakeS | FeatureUSERMSR | FeaturePREFETCHI;
+    (FeaturesSierraforest ^ FeatureWIDEKL) | FeatureAVXVNNIINT16 |
+    FeatureSHA512 | FeatureSM3 | FeatureSM4 | FeaturePREFETCHI | FeatureUSERMSR;
 
 // Geode Processor.
 constexpr FeatureBitset FeaturesGeode =
@@ -240,11 +246,10 @@ static constexpr FeatureBitset FeaturesZNVER3 = FeaturesZNVER2 |
                                                 FeatureINVPCID | FeaturePKU |
                                                 FeatureVAES | FeatureVPCLMULQDQ;
 static constexpr FeatureBitset FeaturesZNVER4 =
-    FeaturesZNVER3 | FeatureAVX512F | FeatureEVEX512 | FeatureAVX512CD |
-    FeatureAVX512DQ | FeatureAVX512BW | FeatureAVX512VL | FeatureAVX512IFMA |
-    FeatureAVX512VBMI | FeatureAVX512VBMI2 | FeatureAVX512VNNI |
-    FeatureAVX512BITALG | FeatureAVX512VPOPCNTDQ | FeatureAVX512BF16 |
-    FeatureGFNI | FeatureSHSTK;
+    FeaturesZNVER3 | FeatureAVX512F | FeatureAVX512CD | FeatureAVX512DQ |
+    FeatureAVX512BW | FeatureAVX512VL | FeatureAVX512IFMA | FeatureAVX512VBMI |
+    FeatureAVX512VBMI2 | FeatureAVX512VNNI | FeatureAVX512BITALG |
+    FeatureAVX512VPOPCNTDQ | FeatureAVX512BF16 | FeatureGFNI | FeatureSHSTK;
 
 static constexpr FeatureBitset FeaturesZNVER5 =
     FeaturesZNVER4 | FeatureAVXVNNI | FeatureMOVDIRI | FeatureMOVDIR64B |
@@ -367,7 +372,7 @@ constexpr ProcInfo Processors[] = {
   // Meteorlake microarchitecture based processors.
   { {"meteorlake"}, CK_Meteorlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
   // Arrowlake microarchitecture based processors.
-  { {"arrowlake"}, CK_Arrowlake, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
+  { {"arrowlake"}, CK_Arrowlake, FEATURE_AVX2, FeaturesArrowlake, 'p', false },
   { {"arrowlake-s"}, CK_ArrowlakeS, FEATURE_AVX2, FeaturesArrowlakeS, '\0', false },
   { {"arrowlake_s"}, CK_ArrowlakeS, FEATURE_AVX2, FeaturesArrowlakeS, 'p', true },
   // Lunarlake microarchitecture based processors.
@@ -376,6 +381,9 @@ constexpr ProcInfo Processors[] = {
   { {"gracemont"}, CK_Gracemont, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
   // Pantherlake microarchitecture based processors.
   { {"pantherlake"}, CK_Lunarlake, FEATURE_AVX2, FeaturesPantherlake, 'p', false },
+  { {"wildcatlake"}, CK_Lunarlake, FEATURE_AVX2, FeaturesPantherlake, 'p', false },
+  // Novalake microarchitecture based processors.
+  { {"novalake"}, CK_Novalake, FEATURE_AVX2, FeaturesNovalake, 'r', false },
   // Sierraforest microarchitecture based processors.
   { {"sierraforest"}, CK_Sierraforest, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
   // Grandridge microarchitecture based processors.
@@ -390,7 +398,7 @@ constexpr ProcInfo Processors[] = {
   // Clearwaterforest microarchitecture based processors.
   { {"clearwaterforest"}, CK_Lunarlake, FEATURE_AVX2, FeaturesClearwaterforest, 'p', false },
   // Diamond Rapids microarchitecture based processors.
-  { {"diamondrapids"}, CK_Diamondrapids, FEATURE_AVX10_2_512, FeaturesDiamondRapids, 'z', false },
+  { {"diamondrapids"}, CK_Diamondrapids, FEATURE_AVX10_2, FeaturesDiamondRapids, 'z', false },
   // Knights Landing processor.
   { {"knl"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', false },
   { {"mic_avx512"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', true },
@@ -536,8 +544,6 @@ constexpr FeatureBitset ImpliedFeaturesWBNOINVD = {};
 constexpr FeatureBitset ImpliedFeaturesVZEROUPPER = {};
 constexpr FeatureBitset ImpliedFeaturesX87 = {};
 constexpr FeatureBitset ImpliedFeaturesXSAVE = {};
-constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE1 = {};
-constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE2 = {};
 
 // Not really CPU features, but need to be in the table because clang uses
 // target features to communicate them to the backend.
@@ -609,10 +615,9 @@ constexpr FeatureBitset ImpliedFeaturesAMX_FP16 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_INT8 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_COMPLEX = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_FP8 = FeatureAMX_TILE;
-constexpr FeatureBitset ImpliedFeaturesAMX_TRANSPOSE = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_MOVRS = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_AVX512 =
-    FeatureAMX_TILE | FeatureAVX10_2_512;
+    FeatureAMX_TILE | FeatureAVX10_2;
 constexpr FeatureBitset ImpliedFeaturesAMX_TF32 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesHRESET = {};
 
@@ -624,8 +629,7 @@ constexpr FeatureBitset ImpliedFeaturesAVXVNNIINT8 = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVXIFMA = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVXNECONVERT = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesSHA512 = FeatureAVX2;
-constexpr FeatureBitset ImpliedFeaturesAVX512FP16 =
-    FeatureAVX512BW | FeatureAVX512DQ | FeatureAVX512VL;
+constexpr FeatureBitset ImpliedFeaturesAVX512FP16 = FeatureAVX512BW;
 // Key Locker Features
 constexpr FeatureBitset ImpliedFeaturesKL = FeatureSSE2;
 constexpr FeatureBitset ImpliedFeaturesWIDEKL = FeatureKL;
@@ -637,13 +641,9 @@ constexpr FeatureBitset ImpliedFeaturesAVXVNNI = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVX10_1 =
     FeatureAVX512CD | FeatureAVX512VBMI | FeatureAVX512IFMA |
     FeatureAVX512VNNI | FeatureAVX512BF16 | FeatureAVX512VPOPCNTDQ |
-    FeatureAVX512VBMI2 | FeatureAVX512BITALG | FeatureVAES | FeatureVPCLMULQDQ |
-    FeatureAVX512FP16;
-constexpr FeatureBitset ImpliedFeaturesAVX10_1_512 =
-    FeatureAVX10_1 | FeatureEVEX512;
+    FeatureAVX512VBMI2 | FeatureAVX512BITALG | FeatureAVX512FP16 |
+    FeatureAVX512DQ | FeatureAVX512VL;
 constexpr FeatureBitset ImpliedFeaturesAVX10_2 = FeatureAVX10_1;
-constexpr FeatureBitset ImpliedFeaturesAVX10_2_512 =
-    FeatureAVX10_2 | FeatureAVX10_1_512;
 
 // APX Features
 constexpr FeatureBitset ImpliedFeaturesEGPR = {};
@@ -655,9 +655,14 @@ constexpr FeatureBitset ImpliedFeaturesNF = {};
 constexpr FeatureBitset ImpliedFeaturesCF = {};
 constexpr FeatureBitset ImpliedFeaturesZU = {};
 
+constexpr FeatureBitset ImpliedFeaturesAPXF =
+    ImpliedFeaturesEGPR | ImpliedFeaturesPush2Pop2 | ImpliedFeaturesPPX |
+    ImpliedFeaturesNDD | ImpliedFeaturesCCMP | ImpliedFeaturesNF |
+    ImpliedFeaturesCF | ImpliedFeaturesZU;
+
 constexpr FeatureBitset ImpliedFeaturesMOVRS = {};
 
-constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {
+constexpr FeatureInfo FeatureInfos[] = {
 #define X86_FEATURE(ENUM, STR) {{"+" STR}, ImpliedFeatures##ENUM},
 #include "llvm/TargetParser/X86TargetParser.def"
 };
@@ -757,10 +762,9 @@ llvm::X86::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   std::array<uint32_t, 4> FeatureMask{};
   for (StringRef FeatureStr : FeatureStrs) {
     unsigned Feature = StringSwitch<unsigned>(FeatureStr)
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
-  .Case(STR, llvm::X86::FEATURE_##ENUM)
-#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY)                               \
-  .Case(STR, llvm::X86::FEATURE_##ENUM)
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, ABI_VALUE)
+#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE)                    \
+  .Case(STR, ABI_VALUE)
 #include "llvm/TargetParser/X86TargetParser.def"
         ;
     assert(Feature / 32 < FeatureMask.size());
@@ -773,15 +777,14 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
 #ifndef NDEBUG
   // Check that priorities are set properly in the .def file. We expect that
   // "compat" features are assigned non-duplicate consecutive priorities
-  // starting from one (1, ..., 37) and multiple zeros.
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) PRIORITY,
+  // starting from one (1, ..., MAX_PRIORITY) and multiple zeros.
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE) PRIORITY,
   unsigned Priorities[] = {
 #include "llvm/TargetParser/X86TargetParser.def"
   };
   std::array<unsigned, std::size(Priorities)> HelperList;
-  const size_t MaxPriority = 37;
-  std::iota(HelperList.begin(), HelperList.begin() + MaxPriority + 1, 0);
-  for (size_t i = MaxPriority + 1; i != std::size(Priorities); ++i)
+  std::iota(HelperList.begin(), HelperList.begin() + MAX_PRIORITY + 1, 0);
+  for (size_t i = MAX_PRIORITY + 1; i != std::size(Priorities); ++i)
     HelperList[i] = 0;
   assert(std::is_permutation(HelperList.begin(), HelperList.end(),
                              std::begin(Priorities), std::end(Priorities)) &&
@@ -789,7 +792,7 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
 #endif
 
   switch (Feat) {
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE)                     \
   case X86::FEATURE_##ENUM:                                                    \
     return PRIORITY;
 #include "llvm/TargetParser/X86TargetParser.def"

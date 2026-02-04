@@ -44,8 +44,7 @@ define dso_local void @predicate_loop_hint(ptr noalias nocapture %A, ptr noalias
 ; CHECK-LABEL: predicate_loop_hint(
 ; CHECK:       vector.body:
 ; CHECK:         %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK:         %[[ELEM0:.*]] = add i64 %index, 0
-; CHECK:         %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %[[ELEM0]], i64 430)
+; CHECK:         %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %index, i64 430)
 ; CHECK:         %[[WML1:.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0({{.*}}<4 x i1> %active.lane.mask
 ; CHECK:         %[[WML2:.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0({{.*}}<4 x i1> %active.lane.mask
 ; CHECK:         %[[ADD:.*]] = add nsw <4 x i32> %[[WML2]], %[[WML1]]
@@ -53,7 +52,7 @@ define dso_local void @predicate_loop_hint(ptr noalias nocapture %A, ptr noalias
 ; CHECK:         %index.next = add nuw i64 %index, 4
 ; CHECK:         br i1 %{{.*}}, label %{{.*}}, label %vector.body, !llvm.loop [[VEC_LOOP2:![0-9]+]]
 ;
-; CHECK:         br i1 %{{.*}}, label %{{.*}}, label %for.body, !llvm.loop [[SCALAR_LOOP2:![0-9]+]]
+; CHECK-NOT:     br i1 %{{.*}}, label %{{.*}}, label %for.body, !llvm.loop
 entry:
   br label %for.body
 
@@ -79,7 +78,6 @@ for.body:
 ; CHECK-NEXT: [[MD_RT_UNROLL_DIS]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK-NEXT: [[SCALAR_LOOP1]] = distinct !{[[SCALAR_LOOP1]], [[MD_RT_UNROLL_DIS]], [[MD_IS_VEC]]}
 ; CHECK-NEXT: [[VEC_LOOP2]] = distinct !{[[VEC_LOOP2]], [[MD_IS_VEC]], [[MD_RT_UNROLL_DIS]]}
-; CHECK-NEXT: [[SCALAR_LOOP2]] = distinct !{[[SCALAR_LOOP2]], [[MD_RT_UNROLL_DIS]], [[MD_IS_VEC]]}
 
 !6 = distinct !{!6, !7, !8}
 !7 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}

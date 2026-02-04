@@ -1,4 +1,17 @@
-Checks: '-*,clang-diagnostic-*,llvm-*,misc-*,-misc-const-correctness,-misc-unused-parameters,-misc-non-private-member-variables-in-classes,-misc-no-recursion,-misc-use-anonymous-namespace,readability-identifier-naming,-misc-include-cleaner'
+HeaderFilterRegex: ''
+Checks: >
+  -*,
+  clang-diagnostic-*,
+  llvm-*,
+  misc-*,
+  -misc-const-correctness,
+  -misc-include-cleaner,
+  -misc-no-recursion,
+  -misc-non-private-member-variables-in-classes,
+  -misc-unused-parameters,
+  -misc-use-anonymous-namespace,
+  readability-identifier-naming
+
 CheckOptions:
   - key:             readability-identifier-naming.ClassCase
     value:           CamelCase

@@ -85,6 +85,10 @@ endif()
 # CMake modules to be in that directory as well.
 list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
 
+separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
+add_definitions(${LLVM_DEFINITIONS_LIST})
+list(APPEND CMAKE_REQUIRED_DEFINITIONS ${LLVM_DEFINITIONS_LIST})
+
 include(AddLLVM)
 include(TableGen)
 include(HandleLLVMOptions)

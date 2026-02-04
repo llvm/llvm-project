@@ -10,7 +10,10 @@
 #define PROFILE_INSTRPROFILING_H_
 
 #include "InstrProfilingPort.h"
+#include <stddef.h>
+#ifndef COMPILER_RT_PROFILE_BAREMETAL
 #include <stdio.h>
+#endif
 
 // Make sure __LLVM_INSTR_PROFILE_GENERATE is always defined before
 // including instr_prof_interface.h so the interface functions are
@@ -200,7 +203,9 @@ int __llvm_profile_write_file(void);
  * copying the old profile file to new profile file and this function is usually
  * used when the proess doesn't have permission to open file.
  */
+#ifndef COMPILER_RT_PROFILE_BAREMETAL
 int __llvm_profile_set_file_object(FILE *File, int EnableMerge);
+#endif
 
 /*! \brief Register to write instrumentation data to file at exit. */
 int __llvm_profile_register_write_file_atexit(void);
@@ -277,7 +282,7 @@ uint64_t __llvm_profile_get_vtable_section_size(const VTableProfData *Begin,
 
 /* ! \brief Given the sizes of the data and counter information, computes the
  * number of padding bytes before and after the counter section, as well as the
- * number of padding bytes after other setions in the raw profile.
+ * number of padding bytes after other sections in the raw profile.
  * Returns -1 upon errors and 0 upon success. Output parameters should be used
  * iff return value is 0.
  *
@@ -302,7 +307,7 @@ int __llvm_profile_get_padding_sizes_for_counters(
 void __llvm_profile_set_dumped(void);
 
 /*!
- * \brief Write custom target-specific profiling data to a seperate file.
+ * \brief Write custom target-specific profiling data to a separate file.
  * Used by offload PGO.
  */
 int __llvm_write_custom_profile(const char *Target,

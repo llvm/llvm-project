@@ -11,8 +11,6 @@
 ; This tests a mix of vfnmacc and vfnmadd by using different operand orders to
 ; trigger commuting in TwoAddressInstructionPass.
 
-declare <vscale x 1 x half> @llvm.experimental.constrained.fma.nxv1f16(<vscale x 1 x half>, <vscale x 1 x half>, <vscale x 1 x half>, metadata, metadata)
-
 define <vscale x 1 x half> @vfnmsub_vv_nxv1f16(<vscale x 1 x half> %va, <vscale x 1 x half> %vb, <vscale x 1 x half> %vc) strictfp {
 ; ZVFH-LABEL: vfnmsub_vv_nxv1f16:
 ; ZVFH:       # %bb.0:
@@ -70,8 +68,6 @@ define <vscale x 1 x half> @vfnmsub_vf_nxv1f16(<vscale x 1 x half> %va, <vscale 
   %vd = call <vscale x 1 x half> @llvm.experimental.constrained.fma.nxv1f16(<vscale x 1 x half> %neg, <vscale x 1 x half> %splat, <vscale x 1 x half> %neg2, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 1 x half> %vd
 }
-
-declare <vscale x 2 x half> @llvm.experimental.constrained.fma.nxv2f16(<vscale x 2 x half>, <vscale x 2 x half>, <vscale x 2 x half>, metadata, metadata)
 
 define <vscale x 2 x half> @vfnmsub_vv_nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x half> %vb, <vscale x 2 x half> %vc) strictfp {
 ; ZVFH-LABEL: vfnmsub_vv_nxv2f16:
@@ -131,8 +127,6 @@ define <vscale x 2 x half> @vfnmsub_vf_nxv2f16(<vscale x 2 x half> %va, <vscale 
   ret <vscale x 2 x half> %vd
 }
 
-declare <vscale x 4 x half> @llvm.experimental.constrained.fma.nxv4f16(<vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, metadata, metadata)
-
 define <vscale x 4 x half> @vfnmsub_vv_nxv4f16(<vscale x 4 x half> %va, <vscale x 4 x half> %vb, <vscale x 4 x half> %vc) strictfp {
 ; ZVFH-LABEL: vfnmsub_vv_nxv4f16:
 ; ZVFH:       # %bb.0:
@@ -190,8 +184,6 @@ define <vscale x 4 x half> @vfnmsub_vf_nxv4f16(<vscale x 4 x half> %va, <vscale 
   %vd = call <vscale x 4 x half> @llvm.experimental.constrained.fma.nxv4f16(<vscale x 4 x half> %va, <vscale x 4 x half> %neg, <vscale x 4 x half> %neg2, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 4 x half> %vd
 }
-
-declare <vscale x 8 x half> @llvm.experimental.constrained.fma.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, metadata, metadata)
 
 define <vscale x 8 x half> @vfnmsub_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x 8 x half> %vb, <vscale x 8 x half> %vc) strictfp {
 ; ZVFH-LABEL: vfnmsub_vv_nxv8f16:
@@ -251,8 +243,6 @@ define <vscale x 8 x half> @vfnmsub_vf_nxv8f16(<vscale x 8 x half> %va, <vscale 
   ret <vscale x 8 x half> %vd
 }
 
-declare <vscale x 16 x half> @llvm.experimental.constrained.fma.nxv16f16(<vscale x 16 x half>, <vscale x 16 x half>, <vscale x 16 x half>, metadata, metadata)
-
 define <vscale x 16 x half> @vfnmsub_vv_nxv16f16(<vscale x 16 x half> %va, <vscale x 16 x half> %vb, <vscale x 16 x half> %vc) strictfp {
 ; ZVFH-LABEL: vfnmsub_vv_nxv16f16:
 ; ZVFH:       # %bb.0:
@@ -311,8 +301,6 @@ define <vscale x 16 x half> @vfnmsub_vf_nxv16f16(<vscale x 16 x half> %va, <vsca
   ret <vscale x 16 x half> %vd
 }
 
-declare <vscale x 32 x half> @llvm.experimental.constrained.fma.nxv32f16(<vscale x 32 x half>, <vscale x 32 x half>, <vscale x 32 x half>, metadata, metadata)
-
 define <vscale x 32 x half> @vfnmsub_vv_nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x half> %vb, <vscale x 32 x half> %vc) strictfp {
 ; ZVFH-LABEL: vfnmsub_vv_nxv32f16:
 ; ZVFH:       # %bb.0:
@@ -336,7 +324,7 @@ define <vscale x 32 x half> @vfnmsub_vv_nxv32f16(<vscale x 32 x half> %va, <vsca
 ; ZVFHMIN-NEXT:    mul a1, a1, a2
 ; ZVFHMIN-NEXT:    add a1, sp, a1
 ; ZVFHMIN-NEXT:    addi a1, a1, 16
-; ZVFHMIN-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
+; ZVFHMIN-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; ZVFHMIN-NEXT:    vl8re16.v v16, (a0)
 ; ZVFHMIN-NEXT:    lui a0, 8
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v8
@@ -346,23 +334,23 @@ define <vscale x 32 x half> @vfnmsub_vv_nxv32f16(<vscale x 32 x half> %va, <vsca
 ; ZVFHMIN-NEXT:    slli a1, a1, 4
 ; ZVFHMIN-NEXT:    add a1, sp, a1
 ; ZVFHMIN-NEXT:    addi a1, a1, 16
-; ZVFHMIN-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
+; ZVFHMIN-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; ZVFHMIN-NEXT:    vxor.vx v16, v16, a0
 ; ZVFHMIN-NEXT:    addi a0, sp, 16
-; ZVFHMIN-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
+; ZVFHMIN-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v0, v8
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vs8r.v v0, (a0) # Unknown-size Folded Spill
+; ZVFHMIN-NEXT:    vs8r.v v0, (a0) # vscale x 64-byte Folded Spill
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v0, v16
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfmadd.vv v24, v0, v8
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
@@ -370,30 +358,30 @@ define <vscale x 32 x half> @vfnmsub_vv_nxv32f16(<vscale x 32 x half> %va, <vsca
 ; ZVFHMIN-NEXT:    mul a0, a0, a1
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v0, v12
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 4
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    li a1, 24
 ; ZVFHMIN-NEXT:    mul a0, a0, a1
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
+; ZVFHMIN-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
 ; ZVFHMIN-NEXT:    addi a0, sp, 16
-; ZVFHMIN-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
+; ZVFHMIN-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v20
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    li a1, 24
 ; ZVFHMIN-NEXT:    mul a0, a0, a1
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vl8r.v v16, (a0) # Unknown-size Folded Reload
+; ZVFHMIN-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfmadd.vv v0, v8, v16
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
@@ -432,7 +420,7 @@ define <vscale x 32 x half> @vfnmsub_vf_nxv32f16(<vscale x 32 x half> %va, <vsca
 ; ZVFHMIN-NEXT:    slli a0, a0, 4
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vs8r.v v16, (a0) # Unknown-size Folded Spill
+; ZVFHMIN-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
 ; ZVFHMIN-NEXT:    fmv.x.h a0, fa0
 ; ZVFHMIN-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
 ; ZVFHMIN-NEXT:    vmv.v.x v0, a0
@@ -446,20 +434,20 @@ define <vscale x 32 x half> @vfnmsub_vf_nxv32f16(<vscale x 32 x half> %va, <vsca
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
+; ZVFHMIN-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v0, v16
 ; ZVFHMIN-NEXT:    addi a0, sp, 16
-; ZVFHMIN-NEXT:    vs8r.v v0, (a0) # Unknown-size Folded Spill
+; ZVFHMIN-NEXT:    vs8r.v v0, (a0) # vscale x 64-byte Folded Spill
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v0, v8
-; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfmadd.vv v24, v0, v8
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 4
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v0, v12
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v8, v20
@@ -467,18 +455,18 @@ define <vscale x 32 x half> @vfnmsub_vf_nxv32f16(<vscale x 32 x half> %va, <vsca
 ; ZVFHMIN-NEXT:    slli a0, a0, 4
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vs8r.v v8, (a0) # Unknown-size Folded Spill
+; ZVFHMIN-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 3
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v12
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    slli a0, a0, 4
 ; ZVFHMIN-NEXT:    add a0, sp, a0
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
-; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # Unknown-size Folded Reload
+; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfmadd.vv v0, v16, v8
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
@@ -499,8 +487,6 @@ define <vscale x 32 x half> @vfnmsub_vf_nxv32f16(<vscale x 32 x half> %va, <vsca
   %vd = call <vscale x 32 x half> @llvm.experimental.constrained.fma.nxv32f16(<vscale x 32 x half> %neg, <vscale x 32 x half> %vb, <vscale x 32 x half> %neg2, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 32 x half> %vd
 }
-
-declare <vscale x 1 x float> @llvm.experimental.constrained.fma.nxv1f32(<vscale x 1 x float>, <vscale x 1 x float>, <vscale x 1 x float>, metadata, metadata)
 
 define <vscale x 1 x float> @vfnmsub_vv_nxv1f32(<vscale x 1 x float> %va, <vscale x 1 x float> %vb, <vscale x 1 x float> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_nxv1f32:
@@ -528,8 +514,6 @@ define <vscale x 1 x float> @vfnmsub_vf_nxv1f32(<vscale x 1 x float> %va, <vscal
   ret <vscale x 1 x float> %vd
 }
 
-declare <vscale x 2 x float> @llvm.experimental.constrained.fma.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, metadata, metadata)
-
 define <vscale x 2 x float> @vfnmsub_vv_nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x float> %vb, <vscale x 2 x float> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_nxv2f32:
 ; CHECK:       # %bb.0:
@@ -555,8 +539,6 @@ define <vscale x 2 x float> @vfnmsub_vf_nxv2f32(<vscale x 2 x float> %va, <vscal
   %vd = call <vscale x 2 x float> @llvm.experimental.constrained.fma.nxv2f32(<vscale x 2 x float> %splat, <vscale x 2 x float> %neg, <vscale x 2 x float> %neg2, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 2 x float> %vd
 }
-
-declare <vscale x 4 x float> @llvm.experimental.constrained.fma.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, metadata, metadata)
 
 define <vscale x 4 x float> @vfnmsub_vv_nxv4f32(<vscale x 4 x float> %va, <vscale x 4 x float> %vb, <vscale x 4 x float> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_nxv4f32:
@@ -584,8 +566,6 @@ define <vscale x 4 x float> @vfnmsub_vf_nxv4f32(<vscale x 4 x float> %va, <vscal
   ret <vscale x 4 x float> %vd
 }
 
-declare <vscale x 8 x float> @llvm.experimental.constrained.fma.nxv8f32(<vscale x 8 x float>, <vscale x 8 x float>, <vscale x 8 x float>, metadata, metadata)
-
 define <vscale x 8 x float> @vfnmsub_vv_nxv8f32(<vscale x 8 x float> %va, <vscale x 8 x float> %vb, <vscale x 8 x float> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_nxv8f32:
 ; CHECK:       # %bb.0:
@@ -611,8 +591,6 @@ define <vscale x 8 x float> @vfnmsub_vf_nxv8f32(<vscale x 8 x float> %va, <vscal
   %vd = call <vscale x 8 x float> @llvm.experimental.constrained.fma.nxv8f32(<vscale x 8 x float> %vb, <vscale x 8 x float> %neg, <vscale x 8 x float> %neg2, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 8 x float> %vd
 }
-
-declare <vscale x 16 x float> @llvm.experimental.constrained.fma.nxv16f32(<vscale x 16 x float>, <vscale x 16 x float>, <vscale x 16 x float>, metadata, metadata)
 
 define <vscale x 16 x float> @vfnmsub_vv_nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x float> %vb, <vscale x 16 x float> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_nxv16f32:
@@ -641,8 +619,6 @@ define <vscale x 16 x float> @vfnmsub_vf_nxv16f32(<vscale x 16 x float> %va, <vs
   ret <vscale x 16 x float> %vd
 }
 
-declare <vscale x 1 x double> @llvm.experimental.constrained.fma.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, metadata, metadata)
-
 define <vscale x 1 x double> @vfnmsub_vv_nxv1f64(<vscale x 1 x double> %va, <vscale x 1 x double> %vb, <vscale x 1 x double> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_nxv1f64:
 ; CHECK:       # %bb.0:
@@ -668,8 +644,6 @@ define <vscale x 1 x double> @vfnmsub_vf_nxv1f64(<vscale x 1 x double> %va, <vsc
   %vd = call <vscale x 1 x double> @llvm.experimental.constrained.fma.nxv1f64(<vscale x 1 x double> %neg, <vscale x 1 x double> %splat, <vscale x 1 x double> %neg2, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 1 x double> %vd
 }
-
-declare <vscale x 2 x double> @llvm.experimental.constrained.fma.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, metadata, metadata)
 
 define <vscale x 2 x double> @vfnmsub_vv_nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x double> %vb, <vscale x 2 x double> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_nxv2f64:
@@ -697,8 +671,6 @@ define <vscale x 2 x double> @vfnmsub_vf_nxv2f64(<vscale x 2 x double> %va, <vsc
   ret <vscale x 2 x double> %vd
 }
 
-declare <vscale x 4 x double> @llvm.experimental.constrained.fma.nxv4f64(<vscale x 4 x double>, <vscale x 4 x double>, <vscale x 4 x double>, metadata, metadata)
-
 define <vscale x 4 x double> @vfnmsub_vv_nxv4f64(<vscale x 4 x double> %va, <vscale x 4 x double> %vb, <vscale x 4 x double> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_nxv4f64:
 ; CHECK:       # %bb.0:
@@ -724,8 +696,6 @@ define <vscale x 4 x double> @vfnmsub_vf_nxv4f64(<vscale x 4 x double> %va, <vsc
   %vd = call <vscale x 4 x double> @llvm.experimental.constrained.fma.nxv4f64(<vscale x 4 x double> %va, <vscale x 4 x double> %neg, <vscale x 4 x double> %neg2, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <vscale x 4 x double> %vd
 }
-
-declare <vscale x 8 x double> @llvm.experimental.constrained.fma.nxv8f64(<vscale x 8 x double>, <vscale x 8 x double>, <vscale x 8 x double>, metadata, metadata)
 
 define <vscale x 8 x double> @vfnmsub_vv_nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %vb, <vscale x 8 x double> %vc) strictfp {
 ; CHECK-LABEL: vfnmsub_vv_nxv8f64:

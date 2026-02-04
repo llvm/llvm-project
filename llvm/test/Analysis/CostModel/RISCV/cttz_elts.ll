@@ -131,19 +131,3 @@ define void @foo_vscale_range_2_16() vscale_range(2,16) {
 
   ret void
 }
-
-declare i64 @llvm.experimental.cttz.elts.i64.nxv2i1(<vscale x 2 x i1>, i1)
-declare i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1>, i1)
-declare i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1>, i1)
-declare i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1>, i1)
-declare i64 @llvm.experimental.cttz.elts.i64.nxv32i1(<vscale x 32 x i1>, i1)
-declare i64 @llvm.experimental.cttz.elts.i64.nxv64i1(<vscale x 64 x i1>, i1)
-declare i64 @llvm.experimental.cttz.elts.i64.nxv128i1(<vscale x 128 x i1>, i1)
-
-declare i32 @llvm.experimental.cttz.elts.i32.nxv2i1(<vscale x 2 x i1>, i1)
-declare i32 @llvm.experimental.cttz.elts.i32.nxv4i1(<vscale x 4 x i1>, i1)
-declare i32 @llvm.experimental.cttz.elts.i32.nxv8i1(<vscale x 8 x i1>, i1)
-declare i32 @llvm.experimental.cttz.elts.i32.nxv16i1(<vscale x 16 x i1>, i1)
-declare i32 @llvm.experimental.cttz.elts.i32.nxv32i1(<vscale x 32 x i1>, i1)
-declare i32 @llvm.experimental.cttz.elts.i32.nxv64i1(<vscale x 64 x i1>, i1)
-declare i32 @llvm.experimental.cttz.elts.i32.nxv128i1(<vscale x 128 x i1>, i1)

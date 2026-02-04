@@ -125,8 +125,7 @@ body:             |
 ...
 # GCN-LABEL: name: sgemm32x32_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 15
 # GCN-NEXT: V_MFMA
 name:            sgemm32x32_mfma_write_agpr_mfma_read_overlap
 body:             |
@@ -136,8 +135,7 @@ body:             |
 ...
 # GCN-LABEL: name: sgemm32x32_mfma_write_vgpr_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 15
 # GCN-NEXT: V_MFMA
 name:            sgemm32x32_mfma_write_vgpr_mfma_read_overlap
 body:             |
@@ -147,8 +145,7 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GCN-NEXT: S_NOP 8
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_mfma_read_overlap
 body:             |
@@ -196,8 +193,7 @@ body:             |
 ...
 # GCN-LABEL: name: sgemm16x16_mfma_write_vgpr_dgemm_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GCN-NEXT: S_NOP 8
 # GCN-NEXT: V_MFMA
 name:            sgemm16x16_mfma_write_vgpr_dgemm_mfma_read_overlap
 body:             |
@@ -207,8 +203,7 @@ body:             |
 ...
 # GCN-LABEL: name: sgemm32x32_mfma_write_vgpr_dgemm_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 15
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_MFMA
 name:            sgemm32x32_mfma_write_vgpr_dgemm_mfma_read_overlap
@@ -249,8 +244,7 @@ body:             |
 ...
 # GCN-LABEL: name: sgemm16x16_mfma_write_agpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MFMA
 name:            sgemm16x16_mfma_write_agpr_mfma_srca_read_overlap
 body:             |
@@ -260,8 +254,7 @@ body:             |
 ...
 # GCN-LABEL: name: sgemm32x32_mfma_write_agpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 15
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            sgemm32x32_mfma_write_agpr_mfma_srca_read_overlap
@@ -312,8 +305,7 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_mfma_srca_read_overlap
 body:             |
@@ -333,8 +325,7 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_sgemm_mfma_srca_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_sgemm_mfma_srca_read_overlap
 body:             |
@@ -384,8 +375,7 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_vgpr_mfma_srcb_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_mfma_srcb_read_overlap
 body:             |
@@ -435,8 +425,7 @@ body:             |
 ...
 # GCN-LABEL: name: smfma16x16_write_vgpr_flat_read
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            smfma16x16_write_vgpr_flat_read
 body:             |
@@ -446,8 +435,7 @@ body:             |
 ...
 # GCN-LABEL: name: smfma32x32_write_vgpr_flat_read
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 15
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            smfma32x32_write_vgpr_flat_read
@@ -458,8 +446,7 @@ body:             |
 ...
 # GCN-LABEL: name: dmfma4x4_write_vgpr_flat_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GCN-NEXT: S_NOP 8
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            dmfma4x4_write_vgpr_flat_read_overlap
 body:             |
@@ -469,8 +456,7 @@ body:             |
 ...
 # GCN-LABEL: name: dmfma4x4_write_vgpr_flat_read_full
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GCN-NEXT: S_NOP 8
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            dmfma4x4_write_vgpr_flat_read_full
 body:             |
@@ -480,8 +466,7 @@ body:             |
 ...
 # GCN-LABEL: name: dmfma16x16_write_vgpr_flat_read
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 15
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            dmfma16x16_write_vgpr_flat_read
@@ -502,8 +487,7 @@ body:             |
 ...
 # GCN-LABEL: name: smfma16x16_write_vgpr_valu_read
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MOV_B32
 name:            smfma16x16_write_vgpr_valu_read
 body:             |
@@ -513,8 +497,7 @@ body:             |
 ...
 # GCN-LABEL: name: smfma32x32_write_vgpr_valu_read
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 15
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MOV_B32
 name:            smfma32x32_write_vgpr_valu_read
@@ -535,8 +518,7 @@ body:             |
 ...
 # GCN-LABEL: name: dmfma16x16_write_vgpr_valu_read
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MOV_B32
 name:            dmfma16x16_write_vgpr_valu_read
 body:             |
@@ -556,8 +538,7 @@ body:             |
 ...
 # GCN-LABEL: name: smfma16x16_write_vgpr_accv_read
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            smfma16x16_write_vgpr_accv_read
 body:             |
@@ -567,8 +548,7 @@ body:             |
 ...
 # GCN-LABEL: name: smfma32x32_write_vgpr_accv_read
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 15
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            smfma32x32_write_vgpr_accv_read
@@ -599,8 +579,7 @@ body:             |
 ...
 # GCN-LABEL: name: dmfma16x16_write_vgpr_dot_read
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_DOT
 name:            dmfma16x16_write_vgpr_dot_read
 body:             |
@@ -620,8 +599,7 @@ body:             |
 ...
 # GCN-LABEL: name: smfma16x16_write_vgpr_valu_write
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MOV_B32
 name:            smfma16x16_write_vgpr_valu_write
 body:             |
@@ -631,8 +609,7 @@ body:             |
 ...
 # GCN-LABEL: name: smfma32x32_write_vgpr_valu_write
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 15
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MOV_B32
 name:            smfma32x32_write_vgpr_valu_write
@@ -653,8 +630,7 @@ body:             |
 ...
 # GCN-LABEL: name: smfma16x16_write_vgpr_valu_f16_write
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_FMA_F16_e64
 name:            smfma16x16_write_vgpr_valu_f16_write
 body:             |
@@ -664,8 +640,7 @@ body:             |
 ...
 # GCN-LABEL: name: smfma32x32_write_vgpr_valu_f16_write
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 15
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_FMA_F16_e64
 name:            smfma32x32_write_vgpr_valu_f16_write
@@ -686,8 +661,7 @@ body:             |
 ...
 # GCN-LABEL: name: smfma16x16_write_vgpr_valu_sdwa_write
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MOV_B32_sdwa
 name:            smfma16x16_write_vgpr_valu_sdwa_write
 body:             |
@@ -697,8 +671,7 @@ body:             |
 ...
 # GCN-LABEL: name: smfma32x32_write_vgpr_valu_sdwa_write
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 15
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MOV_B32_sdwa
 name:            smfma32x32_write_vgpr_valu_sdwa_write
@@ -719,8 +692,7 @@ body:             |
 ...
 # GCN-LABEL: name: dmfma16x16_write_vgpr_valu_write
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MOV_B32
 name:            dmfma16x16_write_vgpr_valu_write
 body:             |
@@ -770,8 +742,7 @@ body:             |
 ...
 # GCN-LABEL: name: smfma32x32_read_srcc_vgpr_valu_write
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 6
+# GCN-NEXT: S_NOP 14
 # GCN-NEXT: V_MOV_B32
 name:            smfma32x32_read_srcc_vgpr_valu_write
 body:             |
@@ -1040,8 +1011,7 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GCN-NEXT: S_NOP 8
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_mfma_read_overlap
 body:             |
@@ -1080,8 +1050,7 @@ body:             |
 ...
 # GCN-LABEL: name: sgemm16x16_mfma_write_sgpr_dgemm_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GCN-NEXT: S_NOP 8
 # GCN-NEXT: V_MFMA
 name:            sgemm16x16_mfma_write_sgpr_dgemm_mfma_read_overlap
 body:             |
@@ -1091,8 +1060,7 @@ body:             |
 ...
 # GCN-LABEL: name: sgemm32x32_mfma_write_agpr_dgemm_mfma_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 15
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_MFMA
 name:            sgemm32x32_mfma_write_agpr_dgemm_mfma_read_overlap
@@ -1133,8 +1101,7 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_mfma_srca_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_mfma_srca_read_overlap
 body:             |
@@ -1154,8 +1121,7 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_sgemm_mfma_srca_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_sgemm_mfma_srca_read_overlap
 body:             |
@@ -1185,8 +1151,7 @@ body:             |
 ...
 # GCN-LABEL: name: dgemm16x16_mfma_write_agpr_mfma_srcb_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_mfma_srcb_read_overlap
 body:             |
@@ -1196,8 +1161,7 @@ body:             |
 ...
 # GCN-LABEL: name: dmfma4x4_write_agpr_flat_read_overlap
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GCN-NEXT: S_NOP 8
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            dmfma4x4_write_agpr_flat_read_overlap
 body:             |
@@ -1207,8 +1171,7 @@ body:             |
 ...
 # GCN-LABEL: name: dmfma4x4_write_agpr_flat_read_full
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 0
+# GCN-NEXT: S_NOP 8
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            dmfma4x4_write_agpr_flat_read_full
 body:             |
@@ -1218,8 +1181,7 @@ body:             |
 ...
 # GCN-LABEL: name: dmfma16x16_write_agpr_flat_read
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 15
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            dmfma16x16_write_agpr_flat_read
@@ -1240,8 +1202,7 @@ body:             |
 ...
 # GCN-LABEL: name: dmfma16x16_write_agpr_valu_read
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_ACCVGPR_READ_B32_e64
 name:            dmfma16x16_write_agpr_valu_read
 body:             |
@@ -1261,8 +1222,7 @@ body:             |
 ...
 # GCN-LABEL: name: dmfma16x16_write_agpr_valu_write
 # GCN:      V_MFMA
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 2
+# GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            dmfma16x16_write_agpr_valu_write
 body:             |

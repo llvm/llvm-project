@@ -1,15 +1,17 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
 
-llvm.func @_QPopenmp_target_data() {
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x i32 {bindc_name = "i", in_type = i32, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFopenmp_target_dataEi"} : (i64) -> !llvm.ptr
-  %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data map_entries(%2 : !llvm.ptr) {
-    %3 = llvm.mlir.constant(99 : i32) : i32
-    llvm.store %3, %1 : i32, !llvm.ptr
-    omp.terminator
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  llvm.func @_QPopenmp_target_data() {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x i32 {bindc_name = "i", in_type = i32, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFopenmp_target_dataEi"} : (i64) -> !llvm.ptr
+    %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.target_data map_entries(%2 : !llvm.ptr) {
+      %3 = llvm.mlir.constant(99 : i32) : i32
+      llvm.store %3, %1 : i32, !llvm.ptr
+      omp.terminator
+    }
+    llvm.return
   }
-  llvm.return
 }
 
 // CHECK:         @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 4]
@@ -38,23 +40,25 @@ llvm.func @_QPopenmp_target_data() {
 
 // -----
 
-llvm.func @_QPopenmp_target_data_region(%0 : !llvm.ptr) {
-  %1 = llvm.mlir.constant(1023 : index) : i64
-  %2 = llvm.mlir.constant(0 : index) : i64
-  %3 = llvm.mlir.constant(1024 : index) : i64
-  %4 = llvm.mlir.constant(1 : index) : i64
-  %5 = omp.map.bounds   lower_bound(%2 : i64) upper_bound(%1 : i64) extent(%3 : i64) stride(%4 : i64) start_idx(%4 : i64)
-  %6 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(from) capture(ByRef) bounds(%5)  -> !llvm.ptr {name = ""}
-  omp.target_data map_entries(%6 : !llvm.ptr) {
-    %7 = llvm.mlir.constant(99 : i32) : i32
-    %8 = llvm.mlir.constant(1 : i64) : i64
-    %9 = llvm.mlir.constant(1 : i64) : i64
-    %10 = llvm.mlir.constant(0 : i64) : i64
-    %11 = llvm.getelementptr %0[0, %10] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1024 x i32>
-    llvm.store %7, %11 : i32, !llvm.ptr
-    omp.terminator
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  llvm.func @_QPopenmp_target_data_region(%0 : !llvm.ptr) {
+    %1 = llvm.mlir.constant(1023 : index) : i64
+    %2 = llvm.mlir.constant(0 : index) : i64
+    %3 = llvm.mlir.constant(1024 : index) : i64
+    %4 = llvm.mlir.constant(1 : index) : i64
+    %5 = omp.map.bounds   lower_bound(%2 : i64) upper_bound(%1 : i64) extent(%3 : i64) stride(%4 : i64) start_idx(%4 : i64)
+    %6 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(from) capture(ByRef) bounds(%5)  -> !llvm.ptr {name = ""}
+    omp.target_data map_entries(%6 : !llvm.ptr) {
+      %7 = llvm.mlir.constant(99 : i32) : i32
+      %8 = llvm.mlir.constant(1 : i64) : i64
+      %9 = llvm.mlir.constant(1 : i64) : i64
+      %10 = llvm.mlir.constant(0 : i64) : i64
+      %11 = llvm.getelementptr %0[0, %10] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1024 x i32>
+      llvm.store %7, %11 : i32, !llvm.ptr
+      omp.terminator
+    }
+    llvm.return
   }
-  llvm.return
 }
 
 // CHECK:         @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 4096]
@@ -85,50 +89,52 @@ llvm.func @_QPopenmp_target_data_region(%0 : !llvm.ptr) {
 
 // -----
 
-llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr, %3 : !llvm.ptr) {
-  %4 = llvm.mlir.constant(1 : i64) : i64
-  %5 = llvm.alloca %4 x i32 {bindc_name = "dvc", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_enter_exitEdvc"} : (i64) -> !llvm.ptr
-  %6 = llvm.mlir.constant(1 : i64) : i64
-  %7 = llvm.alloca %6 x i32 {bindc_name = "i", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_enter_exitEi"} : (i64) -> !llvm.ptr
-  %8 = llvm.mlir.constant(5 : i32) : i32
-  llvm.store %8, %7 : i32, !llvm.ptr
-  %9 = llvm.mlir.constant(2 : i32) : i32
-  llvm.store %9, %5 : i32, !llvm.ptr
-  %10 = llvm.load %7 : !llvm.ptr -> i32
-  %11 = llvm.mlir.constant(10 : i32) : i32
-  %12 = llvm.icmp "slt" %10, %11 : i32
-  %13 = llvm.load %5 : !llvm.ptr -> i32
-  %14 = llvm.mlir.constant(1023 : index) : i64
-  %15 = llvm.mlir.constant(0 : index) : i64
-  %16 = llvm.mlir.constant(1024 : index) : i64
-  %17 = llvm.mlir.constant(1 : index) : i64
-  %18 = omp.map.bounds   lower_bound(%15 : i64) upper_bound(%14 : i64) extent(%16 : i64) stride(%17 : i64) start_idx(%17 : i64)
-  %map1 = omp.map.info var_ptr(%1 : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(to) capture(ByRef) bounds(%18) -> !llvm.ptr {name = ""}
-  %19 = llvm.mlir.constant(511 : index) : i64
-  %20 = llvm.mlir.constant(0 : index) : i64
-  %21 = llvm.mlir.constant(512 : index) : i64
-  %22 = llvm.mlir.constant(1 : index) : i64
-  %23 = omp.map.bounds   lower_bound(%20 : i64) upper_bound(%19 : i64) extent(%21 : i64) stride(%22 : i64) start_idx(%22 : i64)
-  %map2 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.array<512 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) bounds(%23) -> !llvm.ptr {name = ""}
-  omp.target_enter_data   if(%12) device(%13 : i32) map_entries(%map1, %map2 : !llvm.ptr, !llvm.ptr)
-  %24 = llvm.load %7 : !llvm.ptr -> i32
-  %25 = llvm.mlir.constant(10 : i32) : i32
-  %26 = llvm.icmp "sgt" %24, %25 : i32
-  %27 = llvm.load %5 : !llvm.ptr -> i32
-  %28 = llvm.mlir.constant(1023 : index) : i64
-  %29 = llvm.mlir.constant(0 : index) : i64
-  %30 = llvm.mlir.constant(1024 : index) : i64
-  %31 = llvm.mlir.constant(1 : index) : i64
-  %32 = omp.map.bounds   lower_bound(%29 : i64) upper_bound(%28 : i64) extent(%30 : i64) stride(%31 : i64) start_idx(%31 : i64)
-  %map3 = omp.map.info var_ptr(%1 : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(from) capture(ByRef) bounds(%32) -> !llvm.ptr {name = ""}
-  %33 = llvm.mlir.constant(511 : index) : i64
-  %34 = llvm.mlir.constant(0 : index) : i64
-  %35 = llvm.mlir.constant(512 : index) : i64
-  %36 = llvm.mlir.constant(1 : index) : i64
-  %37 = omp.map.bounds   lower_bound(%34 : i64) upper_bound(%33 : i64) extent(%35 : i64) stride(%36 : i64) start_idx(%36 : i64)
-  %map4 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.array<512 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) bounds(%37) -> !llvm.ptr {name = ""}
-  omp.target_exit_data   if(%26) device(%27 : i32) map_entries(%map3, %map4 : !llvm.ptr, !llvm.ptr)
-  llvm.return
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr, %3 : !llvm.ptr) {
+    %4 = llvm.mlir.constant(1 : i64) : i64
+    %5 = llvm.alloca %4 x i32 {bindc_name = "dvc", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_enter_exitEdvc"} : (i64) -> !llvm.ptr
+    %6 = llvm.mlir.constant(1 : i64) : i64
+    %7 = llvm.alloca %6 x i32 {bindc_name = "i", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFomp_target_enter_exitEi"} : (i64) -> !llvm.ptr
+    %8 = llvm.mlir.constant(5 : i32) : i32
+    llvm.store %8, %7 : i32, !llvm.ptr
+    %9 = llvm.mlir.constant(2 : i32) : i32
+    llvm.store %9, %5 : i32, !llvm.ptr
+    %10 = llvm.load %7 : !llvm.ptr -> i32
+    %11 = llvm.mlir.constant(10 : i32) : i32
+    %12 = llvm.icmp "slt" %10, %11 : i32
+    %13 = llvm.load %5 : !llvm.ptr -> i32
+    %14 = llvm.mlir.constant(1023 : index) : i64
+    %15 = llvm.mlir.constant(0 : index) : i64
+    %16 = llvm.mlir.constant(1024 : index) : i64
+    %17 = llvm.mlir.constant(1 : index) : i64
+    %18 = omp.map.bounds   lower_bound(%15 : i64) upper_bound(%14 : i64) extent(%16 : i64) stride(%17 : i64) start_idx(%17 : i64)
+    %map1 = omp.map.info var_ptr(%1 : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(to) capture(ByRef) bounds(%18) -> !llvm.ptr {name = ""}
+    %19 = llvm.mlir.constant(511 : index) : i64
+    %20 = llvm.mlir.constant(0 : index) : i64
+    %21 = llvm.mlir.constant(512 : index) : i64
+    %22 = llvm.mlir.constant(1 : index) : i64
+    %23 = omp.map.bounds   lower_bound(%20 : i64) upper_bound(%19 : i64) extent(%21 : i64) stride(%22 : i64) start_idx(%22 : i64)
+    %map2 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.array<512 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) bounds(%23) -> !llvm.ptr {name = ""}
+    omp.target_enter_data   if(%12) device(%13 : i32) map_entries(%map1, %map2 : !llvm.ptr, !llvm.ptr)
+    %24 = llvm.load %7 : !llvm.ptr -> i32
+    %25 = llvm.mlir.constant(10 : i32) : i32
+    %26 = llvm.icmp "sgt" %24, %25 : i32
+    %27 = llvm.load %5 : !llvm.ptr -> i32
+    %28 = llvm.mlir.constant(1023 : index) : i64
+    %29 = llvm.mlir.constant(0 : index) : i64
+    %30 = llvm.mlir.constant(1024 : index) : i64
+    %31 = llvm.mlir.constant(1 : index) : i64
+    %32 = omp.map.bounds   lower_bound(%29 : i64) upper_bound(%28 : i64) extent(%30 : i64) stride(%31 : i64) start_idx(%31 : i64)
+    %map3 = omp.map.info var_ptr(%1 : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(from) capture(ByRef) bounds(%32) -> !llvm.ptr {name = ""}
+    %33 = llvm.mlir.constant(511 : index) : i64
+    %34 = llvm.mlir.constant(0 : index) : i64
+    %35 = llvm.mlir.constant(512 : index) : i64
+    %36 = llvm.mlir.constant(1 : index) : i64
+    %37 = omp.map.bounds   lower_bound(%34 : i64) upper_bound(%33 : i64) extent(%35 : i64) stride(%36 : i64) start_idx(%36 : i64)
+    %map4 = omp.map.info var_ptr(%3 : !llvm.ptr, !llvm.array<512 x i32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) bounds(%37) -> !llvm.ptr {name = ""}
+    omp.target_exit_data   if(%26) device(%27 : i32) map_entries(%map3, %map4 : !llvm.ptr, !llvm.ptr)
+    llvm.return
+  }
 }
 
 // CHECK:         @.offload_sizes = private unnamed_addr constant [2 x i64] [i64 4096, i64 2048]
@@ -150,6 +156,7 @@ llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr, %3 : !llvm.ptr) {
 // CHECK:         %[[VAL_8:.*]] = load i32, ptr %[[VAL_7]], align 4
 // CHECK:         %[[VAL_9:.*]] = icmp slt i32 %[[VAL_8]], 10
 // CHECK:         %[[VAL_10:.*]] = load i32, ptr %[[VAL_6]], align 4
+// CHECK:         %[[DEV_I64_BEGIN:.*]] = sext i32 %[[VAL_10:.*]] to i64
 // CHECK:         br label %[[VAL_11:.*]]
 // CHECK:       entry:                                            ; preds = %[[VAL_12:.*]]
 // CHECK:         br i1 %[[VAL_9]], label %[[VAL_13:.*]], label %[[VAL_14:.*]]
@@ -170,7 +177,7 @@ llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr, %3 : !llvm.ptr) {
 // CHECK:         store ptr null, ptr %[[VAL_22]], align 8
 // CHECK:         %[[VAL_23:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_3]], i32 0, i32 0
 // CHECK:         %[[VAL_24:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_4]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @3, i64 -1, i32 2, ptr %[[VAL_23]], ptr %[[VAL_24]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
+// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @3, i64 %[[DEV_I64_BEGIN]], i32 2, ptr %[[VAL_23]], ptr %[[VAL_24]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         br label %[[VAL_25:.*]]
 // CHECK:       omp_if.else:                                      ; preds = %[[VAL_11]]
 // CHECK:         br label %[[VAL_25]]
@@ -178,6 +185,7 @@ llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr, %3 : !llvm.ptr) {
 // CHECK:         %[[VAL_26:.*]] = load i32, ptr %[[VAL_7]], align 4
 // CHECK:         %[[VAL_27:.*]] = icmp sgt i32 %[[VAL_26]], 10
 // CHECK:         %[[VAL_28:.*]] = load i32, ptr %[[VAL_6]], align 4
+// CHECK:         %[[DEV_I64_END:.*]] = sext i32 %[[VAL_28]] to i64
 // CHECK:         br i1 %[[VAL_27]], label %[[VAL_29:.*]], label %[[VAL_30:.*]]
 // CHECK:       omp_if.then2:                                     ; preds = %[[VAL_25]]
 // CHECK:         %[[ARR_OFFSET3:.*]] = getelementptr inbounds [1024 x i32], ptr %[[VAL_16]], i64 0, i64 0
@@ -196,7 +204,7 @@ llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr, %3 : !llvm.ptr) {
 // CHECK:         store ptr null, ptr %[[VAL_36]], align 8
 // CHECK:         %[[VAL_37:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_38:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_end_mapper(ptr @3, i64 -1, i32 2, ptr %[[VAL_37]], ptr %[[VAL_38]], ptr @.offload_sizes.1, ptr @.offload_maptypes.2, ptr @.offload_mapnames.3, ptr null)
+// CHECK:         call void @__tgt_target_data_end_mapper(ptr @3, i64 %[[DEV_I64_END]], i32 2, ptr %[[VAL_37]], ptr %[[VAL_38]], ptr @.offload_sizes.1, ptr @.offload_maptypes.2, ptr @.offload_mapnames.3, ptr null)
 // CHECK:         br label %[[VAL_39:.*]]
 // CHECK:       omp_if.else8:                                     ; preds = %[[VAL_25]]
 // CHECK:         br label %[[VAL_39]]
@@ -205,18 +213,20 @@ llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr, %3 : !llvm.ptr) {
 
 // -----
 
-llvm.func @_QPopenmp_target_use_dev_ptr() {
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %a = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
-  %map1 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
-  %map2 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data  map_entries(%map1 : !llvm.ptr) use_device_ptr(%map2 -> %arg0 : !llvm.ptr)  {
-    %1 = llvm.mlir.constant(10 : i32) : i32
-    %2 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
-    llvm.store %1, %2 : i32, !llvm.ptr
-    omp.terminator
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  llvm.func @_QPopenmp_target_use_dev_ptr() {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %a = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
+    %map1 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
+    %map2 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.target_data  map_entries(%map1 : !llvm.ptr) use_device_ptr(%map2 -> %arg0 : !llvm.ptr)  {
+      %1 = llvm.mlir.constant(10 : i32) : i32
+      %2 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
+      llvm.store %1, %2 : i32, !llvm.ptr
+      omp.terminator
+    }
+    llvm.return
   }
-  llvm.return
 }
 
 // CHECK:         @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 8]
@@ -249,18 +259,20 @@ llvm.func @_QPopenmp_target_use_dev_ptr() {
 
 // -----
 
-llvm.func @_QPopenmp_target_use_dev_addr() {
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %a = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
-  %map = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
-  %map2 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%map2 -> %arg0 : !llvm.ptr)  {
-    %1 = llvm.mlir.constant(10 : i32) : i32
-    %2 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
-    llvm.store %1, %2 : i32, !llvm.ptr
-    omp.terminator
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  llvm.func @_QPopenmp_target_use_dev_addr() {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %a = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
+    %map = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
+    %map2 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%map2 -> %arg0 : !llvm.ptr)  {
+      %1 = llvm.mlir.constant(10 : i32) : i32
+      %2 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
+      llvm.store %1, %2 : i32, !llvm.ptr
+      omp.terminator
+    }
+    llvm.return
   }
-  llvm.return
 }
 
 // CHECK:         @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 8]
@@ -291,17 +303,19 @@ llvm.func @_QPopenmp_target_use_dev_addr() {
 
 // -----
 
-llvm.func @_QPopenmp_target_use_dev_addr_no_ptr() {
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %a = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
-  %map = omp.map.info var_ptr(%a : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-  %map2 = omp.map.info var_ptr(%a : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%map2 -> %arg0 : !llvm.ptr)  {
-    %1 = llvm.mlir.constant(10 : i32) : i32
-    llvm.store %1, %arg0 : i32, !llvm.ptr
-    omp.terminator
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  llvm.func @_QPopenmp_target_use_dev_addr_no_ptr() {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %a = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
+    %map = omp.map.info var_ptr(%a : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %map2 = omp.map.info var_ptr(%a : !llvm.ptr, i32)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%map2 -> %arg0 : !llvm.ptr)  {
+      %1 = llvm.mlir.constant(10 : i32) : i32
+      llvm.store %1, %arg0 : i32, !llvm.ptr
+      omp.terminator
+    }
+    llvm.return
   }
-  llvm.return
 }
 
 // CHECK:         @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 4]
@@ -331,23 +345,25 @@ llvm.func @_QPopenmp_target_use_dev_addr_no_ptr() {
 
 // -----
 
-llvm.func @_QPopenmp_target_use_dev_addr_nomap() {
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %a = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
-  %1 = llvm.mlir.constant(1 : i64) : i64
-  %b = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
-  %map = omp.map.info var_ptr(%b : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
-  %map2 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%map2 -> %arg0 : !llvm.ptr)  {
-    %2 = llvm.mlir.constant(10 : i32) : i32
-    %3 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
-    llvm.store %2, %3 : i32, !llvm.ptr
-    %4 = llvm.mlir.constant(20 : i32) : i32
-    %5 = llvm.load %b : !llvm.ptr -> !llvm.ptr
-    llvm.store %4, %5 : i32, !llvm.ptr
-    omp.terminator
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  llvm.func @_QPopenmp_target_use_dev_addr_nomap() {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %a = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
+    %1 = llvm.mlir.constant(1 : i64) : i64
+    %b = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
+    %map = omp.map.info var_ptr(%b : !llvm.ptr, !llvm.ptr)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
+    %map2 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.target_data  map_entries(%map : !llvm.ptr) use_device_addr(%map2 -> %arg0 : !llvm.ptr)  {
+      %2 = llvm.mlir.constant(10 : i32) : i32
+      %3 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
+      llvm.store %2, %3 : i32, !llvm.ptr
+      %4 = llvm.mlir.constant(20 : i32) : i32
+      %5 = llvm.load %b : !llvm.ptr -> !llvm.ptr
+      llvm.store %4, %5 : i32, !llvm.ptr
+      omp.terminator
+    }
+    llvm.return
   }
-  llvm.return
 }
 
 // CHECK:         @.offload_sizes = private unnamed_addr constant [2 x i64] [i64 8, i64 0]
@@ -387,25 +403,27 @@ llvm.func @_QPopenmp_target_use_dev_addr_nomap() {
 
 // -----
 
-llvm.func @_QPopenmp_target_use_dev_both() {
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %a = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
-  %1 = llvm.mlir.constant(1 : i64) : i64
-  %b = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
-  %map = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-  %map1 = omp.map.info var_ptr(%b : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-  %map2 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-  %map3 = omp.map.info var_ptr(%b : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data  map_entries(%map, %map1 : !llvm.ptr, !llvm.ptr) use_device_addr(%map3 -> %arg0 : !llvm.ptr) use_device_ptr(%map2 -> %arg1 : !llvm.ptr)  {
-    %2 = llvm.mlir.constant(10 : i32) : i32
-    %3 = llvm.load %arg1 : !llvm.ptr -> !llvm.ptr
-    llvm.store %2, %3 : i32, !llvm.ptr
-    %4 = llvm.mlir.constant(20 : i32) : i32
-    %5 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
-    llvm.store %4, %5 : i32, !llvm.ptr
-    omp.terminator
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  llvm.func @_QPopenmp_target_use_dev_both() {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %a = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
+    %1 = llvm.mlir.constant(1 : i64) : i64
+    %b = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr
+    %map = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %map1 = omp.map.info var_ptr(%b : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %map2 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %map3 = omp.map.info var_ptr(%b : !llvm.ptr, !llvm.ptr)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.target_data  map_entries(%map, %map1 : !llvm.ptr, !llvm.ptr) use_device_addr(%map3 -> %arg0 : !llvm.ptr) use_device_ptr(%map2 -> %arg1 : !llvm.ptr)  {
+      %2 = llvm.mlir.constant(10 : i32) : i32
+      %3 = llvm.load %arg1 : !llvm.ptr -> !llvm.ptr
+      llvm.store %2, %3 : i32, !llvm.ptr
+      %4 = llvm.mlir.constant(20 : i32) : i32
+      %5 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
+      llvm.store %4, %5 : i32, !llvm.ptr
+      omp.terminator
+    }
+    llvm.return
   }
-  llvm.return
 }
 
 // CHECK:         @.offload_sizes = private unnamed_addr constant [2 x i64] [i64 8, i64 8]
@@ -448,19 +466,21 @@ llvm.func @_QPopenmp_target_use_dev_both() {
 
 // -----
 
-llvm.func @_QPopenmp_target_data_update() {
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x i32 {bindc_name = "i", in_type = i32, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFopenmp_target_dataEi"} : (i64) -> !llvm.ptr
-  %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32)   map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
-  omp.target_data map_entries(%2 : !llvm.ptr) {
-    %3 = llvm.mlir.constant(99 : i32) : i32
-    llvm.store %3, %1 : i32, !llvm.ptr
-    omp.terminator
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  llvm.func @_QPopenmp_target_data_update() {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x i32 {bindc_name = "i", in_type = i32, operand_segment_sizes = array<i32: 0, 0>, uniq_name = "_QFopenmp_target_dataEi"} : (i64) -> !llvm.ptr
+    %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32)   map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.target_data map_entries(%2 : !llvm.ptr) {
+      %3 = llvm.mlir.constant(99 : i32) : i32
+      llvm.store %3, %1 : i32, !llvm.ptr
+      omp.terminator
+    }
+
+    omp.target_update map_entries(%2 : !llvm.ptr)
+
+    llvm.return
   }
-
-  omp.target_update map_entries(%2 : !llvm.ptr)
-
-  llvm.return
 }
 
 // CHECK-LABEL: define void @_QPopenmp_target_data_update
@@ -488,26 +508,28 @@ llvm.func @_QPopenmp_target_data_update() {
 
 // -----
 
-omp.declare_mapper @_QQFmy_testmy_mapper : !llvm.struct<"_QFmy_testTmy_type", (i32)> {
-^bb0(%arg0: !llvm.ptr):
-  %0 = llvm.mlir.constant(0 : i32) : i32
-  %1 = llvm.getelementptr %arg0[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"_QFmy_testTmy_type", (i32)>
-  %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "var%data"}
-  %3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<"_QFmy_testTmy_type", (i32)>) map_clauses(tofrom) capture(ByRef) members(%2 : [0] : !llvm.ptr) -> !llvm.ptr {name = "var", partial_map = true}
-  omp.declare_mapper.info map_entries(%3, %2 : !llvm.ptr, !llvm.ptr)
-}
-
-llvm.func @_QPopenmp_target_data_mapper() {
-  %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.alloca %0 x !llvm.struct<"_QFmy_testTmy_type", (i32)> {bindc_name = "a"} : (i64) -> !llvm.ptr
-  %2 = omp.map.info var_ptr(%1 : !llvm.ptr, !llvm.struct<"_QFmy_testTmy_type", (i32)>) map_clauses(tofrom) capture(ByRef) mapper(@_QQFmy_testmy_mapper) -> !llvm.ptr {name = "a"}
-  omp.target_data map_entries(%2 : !llvm.ptr) {
-    %3 = llvm.mlir.constant(10 : i32) : i32
-    %4 = llvm.getelementptr %1[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"_QFmy_testTmy_type", (i32)>
-    llvm.store %3, %4 : i32, !llvm.ptr
-    omp.terminator
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  omp.declare_mapper @_QQFmy_testmy_mapper : !llvm.struct<"_QFmy_testTmy_type", (i32)> {
+  ^bb0(%arg0: !llvm.ptr):
+    %0 = llvm.mlir.constant(0 : i32) : i32
+    %1 = llvm.getelementptr %arg0[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"_QFmy_testTmy_type", (i32)>
+    %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "var%data"}
+    %3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<"_QFmy_testTmy_type", (i32)>) map_clauses(tofrom) capture(ByRef) members(%2 : [0] : !llvm.ptr) -> !llvm.ptr {name = "var", partial_map = true}
+    omp.declare_mapper.info map_entries(%3, %2 : !llvm.ptr, !llvm.ptr)
   }
-  llvm.return
+
+  llvm.func @_QPopenmp_target_data_mapper() {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x !llvm.struct<"_QFmy_testTmy_type", (i32)> {bindc_name = "a"} : (i64) -> !llvm.ptr
+    %2 = omp.map.info var_ptr(%1 : !llvm.ptr, !llvm.struct<"_QFmy_testTmy_type", (i32)>) map_clauses(tofrom) capture(ByRef) mapper(@_QQFmy_testmy_mapper) -> !llvm.ptr {name = "a"}
+    omp.target_data map_entries(%2 : !llvm.ptr) {
+      %3 = llvm.mlir.constant(10 : i32) : i32
+      %4 = llvm.getelementptr %1[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"_QFmy_testTmy_type", (i32)>
+      llvm.store %3, %4 : i32, !llvm.ptr
+      omp.terminator
+    }
+    llvm.return
+  }
 }
 
 // CHECK:         @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 4]
@@ -542,10 +564,7 @@ llvm.func @_QPopenmp_target_data_mapper() {
 // CHECK:         %[[VAL_20:.*]] = icmp sgt i64 %[[VAL_15]], 1
 // CHECK:         %[[VAL_21:.*]] = and i64 %[[VAL_22:.*]], 8
 // CHECK:         %[[VAL_23:.*]] = icmp ne ptr %[[VAL_24:.*]], %[[VAL_19]]
-// CHECK:         %[[VAL_25:.*]] = and i64 %[[VAL_22]], 16
-// CHECK:         %[[VAL_26:.*]] = icmp ne i64 %[[VAL_25]], 0
-// CHECK:         %[[VAL_27:.*]] = and i1 %[[VAL_23]], %[[VAL_26]]
-// CHECK:         %[[VAL_28:.*]] = or i1 %[[VAL_20]], %[[VAL_27]]
+// CHECK:         %[[VAL_28:.*]] = or i1 %[[VAL_20]], %[[VAL_23]]
 // CHECK:         %[[VAL_29:.*]] = icmp eq i64 %[[VAL_21]], 0
 // CHECK:         %[[VAL_30:.*]] = and i1 %[[VAL_28]], %[[VAL_29]]
 // CHECK:         br i1 %[[VAL_30]], label %[[VAL_31:.*]], label %[[VAL_32:.*]]
@@ -602,3 +621,20 @@ llvm.func @_QPopenmp_target_data_mapper() {
 // CHECK:         br label %[[VAL_40]]
 // CHECK:       omp.done:                                         ; preds = %[[VAL_68]], %[[VAL_63]], %[[VAL_32]]
 // CHECK:         ret void
+
+// -----
+
+module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
+  llvm.func @_QPomp_target_is_device_ptr(%arg0 : !llvm.ptr) {
+    %map = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.ptr)
+        map_clauses(is_device_ptr) capture(ByRef) -> !llvm.ptr {name = ""}
+    omp.target map_entries(%map -> %ptr_arg : !llvm.ptr) {
+      omp.terminator
+    }
+    llvm.return
+  }
+}
+
+// CHECK: @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 8]
+// CHECK: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 288]
+// CHECK-LABEL: define void @_QPomp_target_is_device_ptr

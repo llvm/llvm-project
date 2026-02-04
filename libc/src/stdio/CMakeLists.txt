@@ -125,6 +125,10 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
+    libc.src.stdio.printf_core.core_structs
+    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.libc_errno
+    libc.src.__support.CPP.limits
 )
 
 add_entrypoint_object(
@@ -136,6 +140,10 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
+    libc.src.stdio.printf_core.core_structs
+    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.libc_errno
+    libc.src.__support.CPP.limits
 )
 
 add_entrypoint_object(
@@ -146,6 +154,10 @@ add_entrypoint_object(
     asprintf.h
   DEPENDS
     libc.src.stdio.printf_core.vasprintf_internal
+    libc.src.stdio.printf_core.core_structs
+    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.libc_errno
+    libc.src.__support.CPP.limits
 )
 
 add_entrypoint_object(
@@ -157,6 +169,10 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
+    libc.src.stdio.printf_core.core_structs
+    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.libc_errno
+    libc.src.__support.CPP.limits
 )
 
 add_entrypoint_object(
@@ -168,6 +184,10 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
+    libc.src.stdio.printf_core.core_structs
+    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.libc_errno
+    libc.src.__support.CPP.limits
 )
 
 add_entrypoint_object(
@@ -178,6 +198,10 @@ add_entrypoint_object(
     vasprintf.h
   DEPENDS
     libc.src.stdio.printf_core.vasprintf_internal
+    libc.src.stdio.printf_core.core_structs
+    libc.src.stdio.printf_core.error_mapper
+    libc.src.__support.libc_errno
+    libc.src.__support.CPP.limits
 )
 
 add_subdirectory(printf_core)
@@ -221,6 +245,7 @@ add_stdio_entrypoint_object(fopen)
 add_stdio_entrypoint_object(fclose)
 add_stdio_entrypoint_object(fread_unlocked)
 add_stdio_entrypoint_object(fread)
+add_stdio_entrypoint_object(perror)
 add_stdio_entrypoint_object(puts)
 add_stdio_entrypoint_object(fputs)
 add_stdio_entrypoint_object(fwrite_unlocked)

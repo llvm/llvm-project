@@ -60,12 +60,17 @@ _Pragma("omp end declare target");
 #include <nvptxintrin.h>
 #elif defined(__AMDGPU__)
 #include <amdgpuintrin.h>
+#elif defined(__SPIRV__)
+#include <spirvintrin.h>
 #elif !defined(_OPENMP)
 #error "This header is only meant to be used on GPU architectures."
 #endif
 
 _Pragma("omp begin declare target device_type(nohost)");
 _Pragma("omp begin declare variant match(device = {kind(gpu)})");
+
+// Attribute to declare a function as a kernel.
+#define __gpu_kernel __attribute__((device_kernel, visibility("protected")))
 
 #define __GPU_X_DIM 0
 #define __GPU_Y_DIM 1
@@ -81,7 +86,7 @@ _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks(int __dim) {
   case 2:
     return __gpu_num_blocks_z();
   default:
-    __builtin_unreachable();
+    return 1;
   }
 }
 
@@ -95,7 +100,7 @@ _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_block_id(int __dim) {
   case 2:
     return __gpu_block_id_z();
   default:
-    __builtin_unreachable();
+    return 0;
   }
 }
 
@@ -109,7 +114,7 @@ _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_threads(int __dim) {
   case 2:
     return __gpu_num_threads_z();
   default:
-    __builtin_unreachable();
+    return 1;
   }
 }
 
@@ -123,7 +128,7 @@ _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_thread_id(int __dim) {
   case 2:
     return __gpu_thread_id_z();
   default:
-    __builtin_unreachable();
+    return 0;
   }
 }
 
@@ -261,12 +266,13 @@ __DO_LANE_SUM(double, f64);   // double __gpu_lane_sum_f64(m, x)
 // Returns a bitmask marking all lanes that have the same value of __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_any_u32_impl(uint64_t __lane_mask, uint32_t __x) {
-  uint32_t __match_mask = 0;
+  uint64_t __match_mask = 0;
 
   bool __done = 0;
-  while (__gpu_ballot(__lane_mask, !__done)) {
+  for (uint64_t __active_mask = __lane_mask; __active_mask;
+       __active_mask = __gpu_ballot(__lane_mask, !__done)) {
     if (!__done) {
-      uint32_t __first = __gpu_read_first_lane_u32(__lane_mask, __x);
+      uint32_t __first = __gpu_read_first_lane_u32(__active_mask, __x);
       if (__first == __x) {
         __match_mask = __gpu_lane_mask();
         __done = 1;
@@ -283,9 +289,10 @@ __gpu_match_any_u64_impl(uint64_t __lane_mask, uint64_t __x) {
   uint64_t __match_mask = 0;
 
   bool __done = 0;
-  while (__gpu_ballot(__lane_mask, !__done)) {
+  for (uint64_t __active_mask = __lane_mask; __active_mask;
+       __active_mask = __gpu_ballot(__lane_mask, !__done)) {
     if (!__done) {
-      uint64_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
+      uint64_t __first = __gpu_read_first_lane_u64(__active_mask, __x);
       if (__first == __x) {
         __match_mask = __gpu_lane_mask();
         __done = 1;

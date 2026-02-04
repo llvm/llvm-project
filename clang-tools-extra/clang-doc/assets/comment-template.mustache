@@ -1,0 +1,80 @@
+{{!
+    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+    See https://llvm.org/LICENSE.txt for license information.
+    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+    
+    This file defines templates for generating comments
+}}
+{{#BriefComments}}
+<div class="nested-delimiter-container">
+    {{#.}}
+    <p>{{TextComment}}</p>
+    {{/.}}
+</div>
+{{/BriefComments}}
+{{#ParagraphComments}}
+<div class="nested-delimiter-container">
+    {{#.}}
+    <p>{{TextComment}}</p>
+    {{/.}}
+</div>
+{{/ParagraphComments}}
+{{#ParagraphComment}}
+{{#Children}}
+{{TextComment}}
+{{/Children}}
+{{/ParagraphComment}}
+{{#HasParamComments}}
+<div class="nested-delimiter-container">
+    <h3>Parameters</h3>
+    {{#ParamComments}}
+    <div>
+        <b>{{ParamName}}</b> {{#Explicit}}{{Direction}}{{/Explicit}} {{#Children}}{{TextComment}}{{/Children}}
+    </div> 
+    {{/ParamComments}}
+</div>
+{{/HasParamComments}}
+{{#HasTParamComments}}
+<h3>Template Parameters</h3>
+{{#TParamComments}}
+<div class="nested-delimiter-container">
+    <div>
+        <b>{{ParamName}}</b> {{#Explicit}}{{Direction}}{{/Explicit}} {{#Children}}{{TextComment}}{{/Children}}
+    </div>
+</div>
+{{/TParamComments}}
+{{/HasTParamComments}}
+{{#HasReturnComments}}
+<div class="nested-delimiter-container">
+    <h3>Returns</h3>
+    {{#ReturnComments}}
+        {{#.}}
+        <p>{{TextComment}}</p>
+        {{/.}}
+    {{/ReturnComments}}
+</div>
+{{/HasReturnComments}}
+{{#HasCodeComments}}
+<h3>Code</h3> 
+{{#CodeComments}}
+<div>
+    <pre class="code-block">
+        <code>
+        {{#.}}
+            {{.}}
+        {{/.}}
+        </code>
+    </pre>
+</div>
+{{/CodeComments}}
+{{/HasCodeComments}}
+{{#HasThrowsComments}}
+<div class="nested-delimiter-container">
+    <h3>Throws</h3>
+    {{#ThrowsComments}}
+    <div>
+      <b>{{Exception}}</b> {{#Children}}{{TextComment}}{{/Children}}
+    </div>
+    {{/ThrowsComments}}
+</div>
+{{/HasThrowsComments}}

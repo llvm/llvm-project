@@ -1,6 +1,10 @@
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s --defsym RV32=1  | llvm-objdump -dr -M no-aliases - | FileCheck %s --check-prefixes=INST,RV32
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s | llvm-objdump -dr -M no-aliases - | FileCheck %s --check-prefixes=INST,RV64
 
+# RUN: llvm-mc -filetype=obj -triple riscv32 < %s --mattr=+relax --defsym RV32=1  | llvm-objdump -dr -M no-aliases - | FileCheck %s --check-prefixes=INST,RELAX,RV32
+# RUN: llvm-mc -filetype=obj -triple riscv64 < %s --mattr=+relax | llvm-objdump -dr -M no-aliases - | FileCheck %s --check-prefixes=INST,RELAX,RV64
+
+
 # RUN: not llvm-mc -triple riscv32 < %s --defsym RV32=1 --defsym ERR=1 2>&1 | FileCheck %s --check-prefixes=ERR
 # RUN: not llvm-mc -triple riscv64 < %s --defsym ERR=1 2>&1 | FileCheck %s --check-prefixes=ERR
 
@@ -10,9 +14,11 @@ start:                                  # @start
 	auipc a0, %tlsdesc_hi(a-4)
 	# INST: auipc a0, 0x0
 	# INST-NEXT: R_RISCV_TLSDESC_HI20 a-0x4
+	# RELAX-NEXT: R_RISCV_RELAX
 	auipc	a0, %tlsdesc_hi(unspecified)
 	# INST-NEXT: auipc a0, 0x0
 	# INST-NEXT: R_RISCV_TLSDESC_HI20 unspecified
+	# RELAX-NEXT: R_RISCV_RELAX
 .ifdef RV32
 	lw	a1, %tlsdesc_load_lo(.Ltlsdesc_hi0)(a0)
 	# RV32: lw a1, 0x0(a0)
@@ -34,9 +40,9 @@ start:                                  # @start
 
 ## Check invalid usage
 .ifdef ERR
-	auipc x1, %tlsdesc_call(foo) # ERR: :[[#@LINE]]:12: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi modifier or an integer in the range
-	auipc x1, %tlsdesc_call(1234) # ERR: :[[#@LINE]]:12: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi modifier or an integer in the range
-	auipc a0, %tlsdesc_hi(a+b) # ERR: :[[#@LINE]]:12: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi modifier or an integer in the range
+	auipc x1, %tlsdesc_call(foo) # ERR: :[[#@LINE]]:12: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range
+	auipc x1, %tlsdesc_call(1234) # ERR: :[[#@LINE]]:12: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range
+	auipc a0, %tlsdesc_hi(a+b) # ERR: :[[#@LINE]]:12: error: operand must be a symbol with a %pcrel_hi/%got_pcrel_hi/%tls_ie_pcrel_hi/%tls_gd_pcrel_hi specifier or an integer in the range
 
 	lw   a0, t0, %tlsdesc_load_lo(a_symbol) # ERR: :[[#@LINE]]:15: error: invalid operand for instruction
 	lw   a0, t0, %tlsdesc_load_lo(a_symbol)(a4) # ERR: :[[#@LINE]]:15: error: invalid operand for instruction
@@ -45,6 +51,6 @@ start:                                  # @start
 	addi a0, %tlsdesc_add_lo(a_symbol) # ERR: :[[#@LINE]]:11: error: invalid operand for instruction
 	addi x1, %tlsdesc_load_lo(a_symbol)(a0) # ERR: :[[#@LINE]]:11: error: invalid operand for instruction
 
-	jalr x5, 0(a1), %tlsdesc_hi(a_symbol) # ERR: :[[#@LINE]]:18: error: operand must be a symbol with %tlsdesc_call modifier
-	jalr x1, 0(a1), %tlsdesc_call(a_symbol) # ERR: :[[#@LINE]]:13: error: the output operand must be t0/x5 when using %tlsdesc_call modifier
+	jalr x5, 0(a1), %tlsdesc_hi(a_symbol) # ERR: :[[#@LINE]]:18: error: operand must be a symbol with %tlsdesc_call specifier
+	jalr x1, 0(a1), %tlsdesc_call(a_symbol) # ERR: :[[#@LINE]]:13: error: the output operand must be t0/x5 when using %tlsdesc_call specifier
 .endif

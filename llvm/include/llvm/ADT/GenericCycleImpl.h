@@ -299,7 +299,7 @@ void GenericCycleInfo<ContextT>::moveTopLevelCycleToNewParent(CycleT *NewParent,
   CurrentContainer.pop_back();
   Child->ParentCycle = NewParent;
 
-  NewParent->Blocks.insert(Child->block_begin(), Child->block_end());
+  NewParent->Blocks.insert_range(Child->blocks());
 
   for (auto &It : BlockMapTopLevel)
     if (It.second == Child)
@@ -559,6 +559,17 @@ auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(CycleT *A,
   }
 
   return A;
+}
+
+/// \brief Find the innermost cycle containing both given blocks.
+///
+/// \returns the innermost cycle containing both \p A and \p B
+///          or nullptr if there is no such cycle.
+template <typename ContextT>
+auto GenericCycleInfo<ContextT>::getSmallestCommonCycle(BlockT *A,
+                                                        BlockT *B) const
+    -> CycleT * {
+  return getSmallestCommonCycle(getCycle(A), getCycle(B));
 }
 
 /// \brief get the depth for the cycle which containing a given block.

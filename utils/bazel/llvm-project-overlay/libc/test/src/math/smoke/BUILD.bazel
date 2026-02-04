@@ -476,7 +476,20 @@ math_test(
     hdrs = ["FloorTest.h"],
 )
 
-# TODO: Add fma, fmaf, fmal, fmaf128 tests.
+math_test(
+    name = "fma",
+    hdrs = ["FmaTest.h"],
+)
+
+math_test(
+    name = "fmaf",
+    hdrs = ["FmaTest.h"],
+)
+
+math_test(
+    name = "fmaf16",
+    hdrs = ["FmaTest.h"],
+)
 
 math_test(
     name = "fmax",
@@ -734,6 +747,16 @@ math_test(
 )
 
 math_test(
+    name = "fmodbf16",
+    hdrs = [
+        "FModTest.h",
+    ],
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
+math_test(
     name = "fmodf",
     hdrs = ["FModTest.h"],
 )
@@ -890,6 +913,11 @@ math_test(
 
 math_test(
     name = "hypotf",
+    hdrs = ["HypotTest.h"],
+)
+
+math_test(
+    name = "hypotf16",
     hdrs = ["HypotTest.h"],
 )
 
@@ -1164,26 +1192,31 @@ math_test(
 math_test(
     name = "nextafter",
     hdrs = ["NextAfterTest.h"],
+    deps = ["//libc:__support_sign"],
 )
 
 math_test(
     name = "nextafterf",
     hdrs = ["NextAfterTest.h"],
+    deps = ["//libc:__support_sign"],
 )
 
 math_test(
     name = "nextafterl",
     hdrs = ["NextAfterTest.h"],
+    deps = ["//libc:__support_sign"],
 )
 
 math_test(
     name = "nextafterf128",
     hdrs = ["NextAfterTest.h"],
+    deps = ["//libc:__support_sign"],
 )
 
 math_test(
     name = "nextafterf16",
     hdrs = ["NextAfterTest.h"],
+    deps = ["//libc:__support_sign"],
 )
 
 math_test(
@@ -1512,6 +1545,8 @@ math_test(name = "tan")
 math_test(name = "tanf")
 
 math_test(name = "tanhf")
+
+math_test(name = "tanpif")
 
 math_test(
     name = "totalorder",

@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CGDebugInfo.h"
 #include "CGOpenMPRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
@@ -25,10 +26,6 @@ using namespace CodeGen;
 //===----------------------------------------------------------------------===//
 //                        Complex Expression Emitter
 //===----------------------------------------------------------------------===//
-
-namespace llvm {
-extern cl::opt<bool> EnableSingleByteCoverage;
-} // namespace llvm
 
 typedef CodeGenFunction::ComplexPairTy ComplexPairTy;
 
@@ -303,6 +300,10 @@ public:
     // doubles the exponent of SmallerType.LargestFiniteVal)
     if (llvm::APFloat::semanticsMaxExponent(ElementTypeSemantics) * 2 + 1 <=
         llvm::APFloat::semanticsMaxExponent(HigherElementTypeSemantics)) {
+      if (!Ctx.getTargetInfo().hasLongDoubleType() &&
+          HigherElementType.getCanonicalType().getUnqualifiedType() ==
+              Ctx.LongDoubleTy)
+        return QualType();
       FPHasBeenPromoted = true;
       return Ctx.getComplexType(HigherElementType);
     } else {
@@ -315,7 +316,7 @@ public:
   QualType getPromotionType(FPOptionsOverride Features, QualType Ty,
                             bool IsComplexDivisor) {
     if (auto *CT = Ty->getAs<ComplexType>()) {
-      QualType ElementType = CT->getElementType();
+      QualType ElementType = CT->getElementType().getCanonicalType();
       bool IsFloatingType = ElementType->isFloatingType();
       bool IsComplexRangePromoted = CGF.getLangOpts().getComplexRange() ==
                                     LangOptions::ComplexRangeKind::CX_Promoted;
@@ -359,15 +360,19 @@ public:
 
   // Compound assignments.
   ComplexPairTy VisitBinAddAssign(const CompoundAssignOperator *E) {
+    ApplyAtomGroup Grp(CGF.getDebugInfo());
     return EmitCompoundAssign(E, &ComplexExprEmitter::EmitBinAdd);
   }
   ComplexPairTy VisitBinSubAssign(const CompoundAssignOperator *E) {
+    ApplyAtomGroup Grp(CGF.getDebugInfo());
     return EmitCompoundAssign(E, &ComplexExprEmitter::EmitBinSub);
   }
   ComplexPairTy VisitBinMulAssign(const CompoundAssignOperator *E) {
+    ApplyAtomGroup Grp(CGF.getDebugInfo());
     return EmitCompoundAssign(E, &ComplexExprEmitter::EmitBinMul);
   }
   ComplexPairTy VisitBinDivAssign(const CompoundAssignOperator *E) {
+    ApplyAtomGroup Grp(CGF.getDebugInfo());
     return EmitCompoundAssign(E, &ComplexExprEmitter::EmitBinDiv);
   }
 
@@ -456,8 +461,12 @@ void ComplexExprEmitter::EmitStoreOfComplex(ComplexPairTy Val, LValue lvalue,
   Address RealPtr = CGF.emitAddrOfRealComponent(Ptr, lvalue.getType());
   Address ImagPtr = CGF.emitAddrOfImagComponent(Ptr, lvalue.getType());
 
-  Builder.CreateStore(Val.first, RealPtr, lvalue.isVolatileQualified());
-  Builder.CreateStore(Val.second, ImagPtr, lvalue.isVolatileQualified());
+  auto *R =
+      Builder.CreateStore(Val.first, RealPtr, lvalue.isVolatileQualified());
+  CGF.addInstToCurrentSourceAtom(R, Val.first);
+  auto *I =
+      Builder.CreateStore(Val.second, ImagPtr, lvalue.isVolatileQualified());
+  CGF.addInstToCurrentSourceAtom(I, Val.second);
 }
 
 
@@ -608,6 +617,7 @@ ComplexPairTy ComplexExprEmitter::EmitCast(CastKind CK, Expr *Op,
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLMatrixTruncation:
   case CK_HLSLArrayRValue:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:
@@ -1270,7 +1280,7 @@ EmitCompoundAssignLValue(const CompoundAssignOperator *E,
     else
       OpInfo.LHS = EmitComplexToComplexCast(LHSVal, LHSTy, OpInfo.Ty, Loc);
   } else {
-    llvm::Value *LHSVal = CGF.EmitLoadOfScalar(LHS, Loc);
+    llvm::Value *LHSVal = CGF.EmitLoadOfLValue(LHS, Loc).getScalarVal();
     // For floating point real operands we can directly pass the scalar form
     // to the binary operator emission and potentially get more efficient code.
     if (LHSTy->isRealFloatingType()) {
@@ -1305,7 +1315,7 @@ EmitCompoundAssignLValue(const CompoundAssignOperator *E,
   } else {
     llvm::Value *ResVal =
         CGF.EmitComplexToScalarConversion(Result, OpInfo.Ty, LHSTy, Loc);
-    CGF.EmitStoreOfScalar(ResVal, LHS, /*isInit*/ false);
+    CGF.EmitStoreThroughLValue(RValue::get(ResVal), LHS, /*isInit*/ false);
     Val = RValue::get(ResVal);
   }
 
@@ -1352,6 +1362,7 @@ LValue ComplexExprEmitter::EmitBinAssignLValue(const BinaryOperator *E,
 
 ComplexPairTy ComplexExprEmitter::VisitBinAssign(const BinaryOperator *E) {
   ComplexPairTy Val;
+  ApplyAtomGroup Grp(CGF.getDebugInfo());
   LValue LV = EmitBinAssignLValue(E, Val);
 
   // The result of an assignment in C is the assigned r-value.
@@ -1388,11 +1399,7 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
   eval.begin(CGF);
   CGF.EmitBlock(LHSBlock);
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(E->getTrueExpr());
-  else
-    CGF.incrementProfileCounter(E);
-
+  CGF.incrementProfileCounter(CGF.UseExecPath, E);
   ComplexPairTy LHS = Visit(E->getTrueExpr());
   LHSBlock = Builder.GetInsertBlock();
   CGF.EmitBranch(ContBlock);
@@ -1400,13 +1407,10 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
   eval.begin(CGF);
   CGF.EmitBlock(RHSBlock);
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(E->getFalseExpr());
+  CGF.incrementProfileCounter(CGF.UseSkipPath, E);
   ComplexPairTy RHS = Visit(E->getFalseExpr());
   RHSBlock = Builder.GetInsertBlock();
   CGF.EmitBlock(ContBlock);
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(E);
   eval.end(CGF);
 
   // Create a PHI node for the real part.
@@ -1527,6 +1531,7 @@ static CompoundFunc getComplexOp(BinaryOperatorKind Op) {
 
 LValue CodeGenFunction::
 EmitComplexCompoundAssignmentLValue(const CompoundAssignOperator *E) {
+  ApplyAtomGroup Grp(getDebugInfo());
   CompoundFunc Op = getComplexOp(E->getOpcode());
   RValue Val;
   return ComplexExprEmitter(*this).EmitCompoundAssignLValue(E, Op, Val);
@@ -1535,6 +1540,8 @@ EmitComplexCompoundAssignmentLValue(const CompoundAssignOperator *E) {
 LValue CodeGenFunction::
 EmitScalarCompoundAssignWithComplex(const CompoundAssignOperator *E,
                                     llvm::Value *&Result) {
+  // Key Instructions: Don't need to create an atom group here; one will already
+  // be active through scalar handling code.
   CompoundFunc Op = getComplexOp(E->getOpcode());
   RValue Val;
   LValue Ret = ComplexExprEmitter(*this).EmitCompoundAssignLValue(E, Op, Val);

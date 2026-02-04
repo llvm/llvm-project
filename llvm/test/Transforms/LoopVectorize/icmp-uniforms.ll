@@ -44,7 +44,7 @@ for.end:
 ; CHECK-NEXT: Live-in ir<14> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:
-; CHECK-NEXT: Successor(s): vector.ph
+; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT: Successor(s): vector loop
@@ -55,7 +55,7 @@ for.end:
 ; CHECK-NEXT:   ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]
 ; CHECK-NEXT:   EMIT vp<[[COND:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%cond0> = icmp ult ir<%iv>, ir<13>
-; CHECK-NEXT:   WIDEN-SELECT ir<%s> = select ir<%cond0>, ir<10>, ir<20>
+; CHECK-NEXT:   WIDEN ir<%s> = select ir<%cond0>, ir<10>, ir<20>
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <xVFxUF> pred.store: {

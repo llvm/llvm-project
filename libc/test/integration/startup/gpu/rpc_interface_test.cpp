@@ -6,19 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/llvm-libc-types/test_rpc_opcodes_t.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "test/IntegrationTest/test.h"
 
 using namespace LIBC_NAMESPACE;
 
-// Test to ensure that we can use aribtrary combinations of sends and recieves
+// Test to ensure that we can use arbitrary combinations of sends and receives
 // as long as they are mirrored.
 static void test_interface(bool end_with_send) {
   uint64_t cnt = 0;
   LIBC_NAMESPACE::rpc::Client::Port port =
-      LIBC_NAMESPACE::rpc::client.open<RPC_TEST_INTERFACE>();
+      LIBC_NAMESPACE::rpc::client.open<LIBC_TEST_INTERFACE>();
   port.send([&](LIBC_NAMESPACE::rpc::Buffer *buffer, uint32_t) {
     buffer->data[0] = end_with_send;
   });

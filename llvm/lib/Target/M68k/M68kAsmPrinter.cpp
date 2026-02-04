@@ -189,11 +189,12 @@ void M68kAsmPrinter::emitFunctionBodyStart() {}
 
 void M68kAsmPrinter::emitFunctionBodyEnd() {}
 
-void M68kAsmPrinter::emitStartOfAsmFile(Module &M) {
-  OutStreamer->emitSyntaxDirective();
-}
-
 void M68kAsmPrinter::emitEndOfAsmFile(Module &M) {}
+
+char M68kAsmPrinter::ID = 0;
+
+INITIALIZE_PASS(M68kAsmPrinter, "m68k-asm-printer", "M68k Assembly Printer",
+                false, false)
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeM68kAsmPrinter() {
   RegisterAsmPrinter<M68kAsmPrinter> X(getTheM68kTarget());

@@ -42,7 +42,7 @@ class AMDGPUPrintfRuntimeBinding final : public ModulePass {
 public:
   static char ID;
 
-  explicit AMDGPUPrintfRuntimeBinding();
+  explicit AMDGPUPrintfRuntimeBinding() : ModulePass(ID) {}
 
 private:
   bool runOnModule(Module &M) override;
@@ -76,14 +76,8 @@ INITIALIZE_PASS_END(AMDGPUPrintfRuntimeBinding, "amdgpu-printf-runtime-binding",
 
 char &llvm::AMDGPUPrintfRuntimeBindingID = AMDGPUPrintfRuntimeBinding::ID;
 
-namespace llvm {
-ModulePass *createAMDGPUPrintfRuntimeBinding() {
+ModulePass *llvm::createAMDGPUPrintfRuntimeBinding() {
   return new AMDGPUPrintfRuntimeBinding();
-}
-} // namespace llvm
-
-AMDGPUPrintfRuntimeBinding::AMDGPUPrintfRuntimeBinding() : ModulePass(ID) {
-  initializeAMDGPUPrintfRuntimeBindingPass(*PassRegistry::getPassRegistry());
 }
 
 void AMDGPUPrintfRuntimeBindingImpl::getConversionSpecifiers(
@@ -94,7 +88,7 @@ void AMDGPUPrintfRuntimeBindingImpl::getConversionSpecifiers(
   // are %p and %s, which use to know if we
   // are either storing a literal string or a
   // pointer to the printf buffer.
-  static const char ConvSpecifiers[] = "cdieEfgGaosuxXp";
+  static const char ConvSpecifiers[] = "cdieEfFgGaAosuxXp";
   size_t CurFmtSpecifierIdx = 0;
   size_t PrevFmtSpecifierIdx = 0;
 
@@ -134,12 +128,11 @@ static StringRef getAsConstantStr(Value *V) {
 }
 
 static void diagnoseInvalidFormatString(const CallBase *CI) {
-  DiagnosticInfoUnsupported UnsupportedFormatStr(
-      *CI->getParent()->getParent(),
+  CI->getContext().diagnose(DiagnosticInfoUnsupported(
+      *CI->getFunction(),
       "printf format string must be a trivially resolved constant string "
       "global variable",
-      CI->getDebugLoc());
-  CI->getContext().diagnose(UnsupportedFormatStr);
+      CI->getDebugLoc()));
 }
 
 bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
@@ -423,9 +416,13 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
     }
   }
 
-  // erase the printf calls
-  for (auto *CI : Printfs)
+  // Erase the printf calls and replace all uses with 0, signaling success.
+  // Since OpenCL only specifies undefined behaviors and not success criteria,
+  // returning 0 sinalling success always is valid.
+  for (auto *CI : Printfs) {
+    CI->replaceAllUsesWith(ConstantInt::get(CI->getType(), 0));
     CI->eraseFromParent();
+  }
 
   Printfs.clear();
   return true;
@@ -439,6 +436,17 @@ bool AMDGPUPrintfRuntimeBindingImpl::run(Module &M) {
   auto *PrintfFunction = M.getFunction("printf");
   if (!PrintfFunction || !PrintfFunction->isDeclaration() ||
       M.getModuleFlag("openmp"))
+    return false;
+
+  // Verify the signature of the printf function and skip if it isn't correct.
+  const FunctionType *PrintfFunctionTy = PrintfFunction->getFunctionType();
+  if (PrintfFunctionTy->getNumParams() != 1 || !PrintfFunctionTy->isVarArg() ||
+      !PrintfFunctionTy->getReturnType()->isIntegerTy(32))
+    return false;
+  Type *PrintfFormatArgTy = PrintfFunctionTy->getParamType(0);
+  if (!PrintfFormatArgTy->isPointerTy() ||
+      !AMDGPU::isFlatGlobalAddrSpace(
+          PrintfFormatArgTy->getPointerAddressSpace()))
     return false;
 
   for (auto &U : PrintfFunction->uses()) {

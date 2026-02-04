@@ -20,7 +20,7 @@ assistance.
 Lead Maintainer
 ---------------
 | Aaron Ballman
-| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
 
 Contained Components
@@ -31,7 +31,7 @@ Clang that are typically contained to one area of the compiler.
 AST matchers
 ~~~~~~~~~~~~
 | Aaron Ballman
-| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
 
 AST Visitors
@@ -42,21 +42,25 @@ AST Visitors
 
 Clang LLVM IR generation
 ~~~~~~~~~~~~~~~~~~~~~~~~
-| John McCall
-| rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)
-
 | Eli Friedman
-| efriedma\@quicinc.com (email), efriedma (Phabricator), efriedma-quic (GitHub)
+| efriedma\@qti.qualcomm.com (email), efriedma (Phabricator), efriedma-quic (GitHub)
 
 | Anton Korobeynikov
 | anton\@korobeynikov.info (email), asl (Phabricator), asl (GitHub)
 
+Clang MLIR generation
+~~~~~~~~~~~~~~~~~~~~~
+| Andy Kaylor
+| akaylor\@nvidia.com (email), AndyKaylor (Discord), AndyKaylor (GitHub)
+
+| Bruno Cardoso Lopes
+| bruno.cardoso\@gmail.com (email), sonicsprawl (Discord), bcardosolopes (GitHub)
+
+| Henrich Lauko
+| henrich.lau\@gmail.com  (email), henrich.lauko (Discord), xlauko (GitHub)
 
 Analysis & CFG
 ~~~~~~~~~~~~~~
-| Dmitri Gribenko
-| gribozavr\@gmail.com (email), gribozavr (Phabricator), gribozavr (GitHub)
-
 | Yitzhak Mandelbaum
 | yitzhakm\@google.com (email), ymandel (Phabricator), ymand (GitHub)
 
@@ -103,6 +107,12 @@ Templates
 | ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
 
 
+Concepts
+~~~~~~~~
+| Corentin Jabot
+| corentin.jabot\@gmail.com (email), cor3ntin (Phabricator), cor3ntin (GitHub)
+
+
 Lambdas
 ~~~~~~~
 | Corentin Jabot
@@ -130,14 +140,17 @@ Exception handling
 Clang static analyzer
 ~~~~~~~~~~~~~~~~~~~~~
 | Artem Dergachev
-| adergachev\@apple.com (email), NoQ (Phabricator), haoNoQ (GitHub)
+| artem.dergachev\@gmail.com (email), NoQ (Phabricator), haoNoQ (GitHub)
 
 | Gábor Horváth
 | xazax.hun\@gmail.com (email), xazax.hun (Phabricator), Xazax-hun (GitHub)
 
 | Balázs Benics
 | benicsbalazs\@gmail.com (email), steakhal (Phabricator), steakhal (GitHub)
-| balazs.benics\@sonarsource.com (email), balazs-benics-sonarsource (GitHub)
+
+| Donát Nagy
+| donat.nagy\@ericsson.com (email), NagyDonat (GitHub), DonatNagyE (Discourse)
+
 
 Compiler options
 ~~~~~~~~~~~~~~~~
@@ -158,6 +171,14 @@ OpenBSD driver
 ~~~~~~~~~~~~~~
 | Brad Smith
 | brad\@comstyle.com (email), brad (Phabricator), brad0 (GitHub)
+
+Offloading driver
+~~~~~~~~~~~~~~~~~
+| Joseph Huber
+| joseph.huber\@amd.com (email), jhuber6 (GitHub)
+
+| Nick Sarnie
+| nick.sarnie\@intel.com (email), sarnex (GitHub)
 
 
 Driver parts not covered by someone else
@@ -187,6 +208,21 @@ Function Effect Analysis
 | aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
 
 
+Code Coverage
+~~~~~~~~~~~~~
+| Takumi Nakamura
+| geek4civic\@gmail.com (email), chapuni(GitHub), chapuni (Discord), chapuni (Discourse)
+
+| Alan Phipps
+| a-phipps\@ti.com (email), evodius96 (GitHub), evodius96 (Discourse)
+
+
+Python Bindings
+~~~~~~~~~~~~~~~
+| Vlad Serebrennikov
+| serebrennikov.vladislav\@gmail.com (email), Endilll (GitHub), Endill (Discord), Endill (Discourse)
+
+
 Tools
 -----
 These maintainers are responsible for user-facing tools under the Clang
@@ -208,14 +244,12 @@ The following people are responsible for decisions involving ABI.
 
 Itanium ABI
 ~~~~~~~~~~~
-| John McCall
-| rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)
 
 
 Microsoft ABI
 ~~~~~~~~~~~~~
 | Reid Kleckner
-| rnk\@google.com (email), rnk (Phabricator), rnk (GitHub)
+| rnk\@llvm.org (email), rnk (GitHub), rnk (Discourse), rnk (Discord), rnk (Phabricator)
 
 
 ARM EABI
@@ -227,13 +261,13 @@ ARM EABI
 Compiler-Wide Topics
 --------------------
 The following people are responsible for functionality that does not fit into
-a single part of the compiler, but instead span multiple components within the
+a single part of the compiler, but instead spans multiple components within the
 compiler.
 
 Attributes
 ~~~~~~~~~~
-| Erich Keane
-| ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
+| Aaron Ballman
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
 
 Plugins
@@ -250,9 +284,6 @@ Inline assembly
 
 Text encodings
 ~~~~~~~~~~~~~~
-| Tom Honermann
-| tom\@honermann.net (email), tahonermann (Phabricator), tahonermann (GitHub)
-
 | Corentin Jabot
 | corentin.jabot\@gmail.com (email), cor3ntin (Phabricator), cor3ntin (GitHub)
 
@@ -262,14 +293,11 @@ CMake integration
 | Petr Hosek
 | phosek\@google.com (email), phosek (Phabricator), petrhosek (GitHub)
 
-| John Ericson
-| git\@johnericson.me (email), Ericson2314 (Phabricator), Ericson2314 (GitHub)
-
 
 General Windows support
 ~~~~~~~~~~~~~~~~~~~~~~~
 | Reid Kleckner
-| rnk\@google.com (email), rnk (Phabricator), rnk (GitHub)
+| rnk\@llvm.org (email), rnk (GitHub), rnk (Discourse), rnk (Discord), rnk (Phabricator)
 
 
 Incremental compilation, REPLs, clang-repl
@@ -287,7 +315,7 @@ standard, when fixing standards bugs, or when implementing a new standard featur
 C conformance
 ~~~~~~~~~~~~~
 | Aaron Ballman
-| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
 
 C++ conformance
@@ -310,8 +338,8 @@ C++ Defect Reports
 
 Objective-C/C++ conformance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-| John McCall
-| rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)
+| Akira Hatanaka
+| ahatanak\@gmail.com,  ahatanak (GitHub), ahatanak4220 (Discord), ahatanak (Discourse)
 
 
 OpenMP conformance
@@ -371,3 +399,7 @@ Inactive component maintainers
 | Chandler Carruth (chandlerc\@gmail.com, chandlerc\@google.com) -- CMake, library layering
 | Devin Coughlin (dcoughlin\@apple.com) -- Clang static analyzer
 | Manuel Klimek (klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)) -- Tooling, AST matchers
+| Dmitri Gribenko (gribozavr\@gmail.com (email), gribozavr (Phabricator), gribozavr (GitHub)) -- Analysis & CFG
+| Tom Honermann (tom\@honermann.net (email), tahonermann (Phabricator), tahonermann (GitHub)) -- Text Encodings
+| John McCall (rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)) -- Clang LLVM IR generation, Objective-C/C++ conformance, Itanium ABI
+| John Ericson (git\@johnericson.me (email), Ericson2314 (Phabricator), Ericson2314 (GitHub)) -- CMake Integration

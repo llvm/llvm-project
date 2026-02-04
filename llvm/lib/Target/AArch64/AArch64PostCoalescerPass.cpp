@@ -21,9 +21,7 @@ namespace {
 struct AArch64PostCoalescer : public MachineFunctionPass {
   static char ID;
 
-  AArch64PostCoalescer() : MachineFunctionPass(ID) {
-    initializeAArch64PostCoalescerPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64PostCoalescer() : MachineFunctionPass(ID) {}
 
   LiveIntervals *LIS;
   MachineRegisterInfo *MRI;
@@ -76,6 +74,10 @@ bool AArch64PostCoalescer::runOnMachineFunction(MachineFunction &MF) {
         Register Dst = MI.getOperand(0).getReg();
         if (Src != Dst)
           MRI->replaceRegWith(Dst, Src);
+
+        if (MI.getOperand(1).isUndef())
+          for (MachineOperand &MO : MRI->use_operands(Dst))
+            MO.setIsUndef();
 
         // MI must be erased from the basic block before recalculating the live
         // interval.

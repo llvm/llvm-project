@@ -37,7 +37,7 @@ struct G {
 };
 
 struct H {
-  template<typename T> void *operator new(T, int); // expected-error {{'operator new' cannot take a dependent type as first parameter; use size_t}}
+  template<typename T> void *operator new(T, int); // expected-error {{'operator new' cannot take a dependent type as its 1st parameter; use size_t}}
 };
 
 struct I {

@@ -17,6 +17,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
@@ -151,17 +152,17 @@ void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
   SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
   M.getModuleFlagsMetadata(ModuleFlags);
 
-  MDNode *CFGProfile = nullptr;
+  MDNode *CGProfile = nullptr;
 
   for (const auto &MFE : ModuleFlags) {
     StringRef Key = MFE.Key->getString();
     if (Key == "CG Profile") {
-      CFGProfile = cast<MDNode>(MFE.Val);
+      CGProfile = cast<MDNode>(MFE.Val);
       break;
     }
   }
 
-  if (!CFGProfile)
+  if (!CGProfile)
     return;
 
   auto GetSym = [this](const MDOperand &MDO) -> MCSymbol * {
@@ -174,7 +175,7 @@ void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
     return TM->getSymbol(F);
   };
 
-  for (const auto &Edge : CFGProfile->operands()) {
+  for (const auto &Edge : CGProfile->operands()) {
     MDNode *E = cast<MDNode>(Edge);
     const MCSymbol *From = GetSym(E->getOperand(0));
     const MCSymbol *To = GetSym(E->getOperand(1));
@@ -189,6 +190,55 @@ void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
     Streamer.emitCGProfileEntry(MCSymbolRefExpr::create(From, C),
                                 MCSymbolRefExpr::create(To, C), Count);
   }
+}
+
+void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(
+    MCStreamer &Streamer, Module &M,
+    std::function<void(MCStreamer &Streamer)> COMDATSymEmitter) const {
+  NamedMDNode *FuncInfo = M.getNamedMetadata(PseudoProbeDescMetadataName);
+  if (!FuncInfo)
+    return;
+
+  // Emit a descriptor for every function including functions that have an
+  // available external linkage. We may not want this for imported functions
+  // that has code in another thinLTO module but we don't have a good way to
+  // tell them apart from inline functions defined in header files. Therefore
+  // we put each descriptor in a separate comdat section and rely on the
+  // linker to deduplicate.
+  auto &C = getContext();
+  for (const auto *Operand : FuncInfo->operands()) {
+    const auto *MD = cast<MDNode>(Operand);
+    auto *GUID = mdconst::extract<ConstantInt>(MD->getOperand(0));
+    auto *Hash = mdconst::extract<ConstantInt>(MD->getOperand(1));
+    auto *Name = cast<MDString>(MD->getOperand(2));
+    auto *S = C.getObjectFileInfo()->getPseudoProbeDescSection(
+        TM->getFunctionSections() ? Name->getString() : StringRef());
+
+    Streamer.switchSection(S);
+
+    // emit COFF COMDAT symbol.
+    if (COMDATSymEmitter)
+      COMDATSymEmitter(Streamer);
+
+    Streamer.emitInt64(GUID->getZExtValue());
+    Streamer.emitInt64(Hash->getZExtValue());
+    Streamer.emitULEB128IntValue(Name->getString().size());
+    Streamer.emitBytes(Name->getString());
+  }
+}
+
+static bool containsConstantPtrAuth(const Constant *C) {
+  if (isa<ConstantPtrAuth>(C))
+    return true;
+
+  if (isa<BlockAddress>(C) || isa<GlobalValue>(C))
+    return false;
+
+  for (const Value *Op : C->operands())
+    if (containsConstantPtrAuth(cast<Constant>(Op)))
+      return true;
+
+  return false;
 }
 
 /// getKindForGlobal - This is a top-level target-independent classifier for
@@ -292,6 +342,10 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       }
 
     } else {
+      // The dynamic linker always needs to fix PtrAuth relocations up.
+      if (containsConstantPtrAuth(C))
+        return SectionKind::getReadOnlyWithRel();
+
       // In static, ROPI and RWPI relocation models, the linker will resolve
       // all addresses, so the relocation entries will actually be constants by
       // the time the app starts up.  However, we can't put this into a
@@ -383,6 +437,18 @@ MCSection *TargetLoweringObjectFile::getSectionForConstant(
     return ReadOnlySection;
 
   return DataSection;
+}
+
+MCSection *TargetLoweringObjectFile::getSectionForConstant(
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    StringRef SectionPrefix) const {
+  // Fallback to `getSectionForConstant` without `SectionPrefix` parameter if it
+  // is empty.
+  if (SectionPrefix.empty())
+    return getSectionForConstant(DL, Kind, C, Alignment);
+  report_fatal_error(
+      "TargetLoweringObjectFile::getSectionForConstant that "
+      "accepts SectionPrefix is not implemented for the object file format");
 }
 
 MCSection *TargetLoweringObjectFile::getSectionForMachineBasicBlock(

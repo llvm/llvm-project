@@ -14,18 +14,22 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Transforms/Utils/ValueMapper.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -390,7 +394,7 @@ TEST(CloneLoop, CloneLoopNest) {
 
   std::unique_ptr<Module> M = parseIR(
     Context,
-    R"(define void @foo(i32* %A, i32 %ub) {
+    R"(define void @foo(ptr %A, i32 %ub) {
 entry:
   %guardcmp = icmp slt i32 0, %ub
   br i1 %guardcmp, label %for.outer.preheader, label %for.end
@@ -404,8 +408,8 @@ for.inner.preheader:
 for.inner:
   %i = phi i32 [ 0, %for.inner.preheader ], [ %inc, %for.inner ]
   %idxprom = sext i32 %i to i64
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom
-  store i32 %i, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom
+  store i32 %i, ptr %arrayidx, align 4
   %inc = add nsw i32 %i, 1
   %cmp = icmp slt i32 %inc, %ub
   br i1 %cmp, label %for.inner, label %for.inner.exit
@@ -476,13 +480,13 @@ protected:
 
     // Function DI
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
-    DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray({});
+    DITypeArray ParamTypes = DBuilder.getOrCreateTypeArray({});
     DISubroutineType *FuncType =
         DBuilder.createSubroutineType(ParamTypes);
-    auto *CU = DBuilder.createCompileUnit(dwarf::DW_LANG_C99,
-                                          DBuilder.createFile("filename.c",
-                                                              "/file/dir"),
-                                          "CloneFunc", false, "", 0);
+    auto *CU = DBuilder.createCompileUnit(
+        DISourceLanguageName(dwarf::DW_LANG_C99),
+        DBuilder.createFile("filename.c", "/file/dir"), "CloneFunc", false, "",
+        0);
 
     auto *Subprogram = DBuilder.createFunction(
         CU, "f", "f", File, 4, FuncType, 3, DINode::FlagZero,
@@ -537,7 +541,7 @@ protected:
 
     // Create another, empty, compile unit.
     DIBuilder DBuilder2(*M);
-    DBuilder2.createCompileUnit(dwarf::DW_LANG_C99,
+    DBuilder2.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C99),
                                 DBuilder.createFile("extra.c", "/file/dir"),
                                 "CloneFunc", false, "", 0);
     DBuilder2.finalize();
@@ -724,10 +728,10 @@ TEST(CloneFunction, CloneEmptyFunction) {
 
 TEST(CloneFunction, CloneFunctionWithInalloca) {
   StringRef ImplAssembly = R"(
-    declare void @a(i32* inalloca(i32))
+    declare void @a(ptr inalloca(i32))
     define void @foo() {
       %a = alloca inalloca i32
-      call void @a(i32* inalloca(i32) %a)
+      call void @a(ptr inalloca(i32) %a)
       ret void
     }
     declare void @bar()
@@ -765,7 +769,7 @@ TEST(CloneFunction, CloneFunctionWithSubprograms) {
     declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
     define void @test() !dbg !5 {
-      call void @llvm.dbg.declare(metadata i8* undef, metadata !4, metadata !DIExpression()), !dbg !6
+      call void @llvm.dbg.declare(metadata ptr undef, metadata !4, metadata !DIExpression()), !dbg !6
       ret void
     }
 
@@ -804,12 +808,151 @@ TEST(CloneFunction, CloneFunctionWithSubprograms) {
   EXPECT_FALSE(verifyModule(*ImplModule, &errs()));
 }
 
+TEST(CloneFunction, CloneFunctionWithRetainedNodes) {
+  StringRef ImplAssembly = R"(
+    declare void @llvm.dbg.declare(metadata, metadata, metadata)
+
+    define void @test() !dbg !3 {
+      call void @llvm.dbg.declare(metadata ptr poison, metadata !5, metadata !DIExpression()), !dbg !7
+      call void @llvm.dbg.declare(metadata ptr poison, metadata !25, metadata !DIExpression()), !dbg !7
+      call void @llvm.dbg.declare(metadata ptr poison, metadata !28, metadata !DIExpression()), !dbg !8
+      call void @llvm.dbg.declare(metadata ptr poison, metadata !30, metadata !DIExpression()), !dbg !8
+      ret void
+    }
+
+    declare void @cloned()
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!2}
+    !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, enums: !{!14})
+    !1 = !DIFile(filename: "test.cpp",  directory: "")
+    !2 = !{i32 1, !"Debug Info Version", i32 3}
+    !3 = distinct !DISubprogram(name: "test", scope: !1, unit: !0, retainedNodes: !9)
+    !4 = distinct !DISubprogram(name: "inlined", scope: !1, unit: !0, retainedNodes: !{!5})
+    !5 = !DILocalVariable(name: "awaitables", scope: !4, type: !23)
+    !6 = distinct !DILexicalBlock(scope: !4, file: !1, line: 1)
+    !7 = !DILocation(line: 1, scope: !6, inlinedAt: !8)
+    !8 = !DILocation(line: 10, scope: !3)
+    !9 = !{!15, !17, !18, !23, !26, !28, !30}
+    !14 = distinct !DICompositeType(tag: DW_TAG_enumeration_type, scope: !0, file: !1, line: 13, size: 200, elements: !{})
+    !15 = !DILocalVariable(name: "a", scope: !3)
+    !16 = distinct !DICompositeType(tag: DW_TAG_enumeration_type, scope: !3, file: !1, line: 13, size: 208, elements: !{})
+    !17 = !DIImportedEntity(tag: DW_TAG_imported_declaration, name: "imported_l", file: !1, line: 14, scope: !3, entity: !16)
+    !18 = !DILabel(scope: !3, name: "l", file: !1, line: 22)
+    !22 = !DIBasicType(name: "real", size: 32, align: 32, encoding: DW_ATE_float)
+    !23 = !DIDerivedType(name: "local_float", tag: DW_TAG_const_type, baseType: !22, scope: !3)
+    !float_type = !{!23}
+    !25 = !DILocalVariable(name: "inlined2", scope: !4, type: !23)
+    !inlined2 = !{!25}
+    !26 = distinct !DICompositeType(tag: DW_TAG_enumeration_type, name: "mystruct", scope: !3, file: !1, line: 13, size: 208, elements: !{})
+    !27 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !26, size: 64)
+    !28 = !DILocalVariable(name: "ptr", scope: !3, type: !27)
+    !29 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !27)
+    !30 = !DILocalVariable(name: "const_ptr", scope: !3, type: !29)
+  )";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+
+  auto ImplModule = parseAssemblyString(ImplAssembly, Error, Context);
+  EXPECT_TRUE(ImplModule != nullptr);
+  auto *Func = ImplModule->getFunction("test");
+  EXPECT_TRUE(Func != nullptr);
+  auto *ClonedFunc = ImplModule->getFunction("cloned");
+  EXPECT_TRUE(ClonedFunc != nullptr);
+
+  EXPECT_FALSE(verifyModule(*ImplModule, &errs()));
+
+  ValueToValueMapTy VMap;
+  SmallVector<ReturnInst *, 8> Returns;
+  ClonedCodeInfo CCI;
+  CloneFunctionInto(ClonedFunc, Func, VMap,
+                    CloneFunctionChangeType::GlobalChanges, Returns, "", &CCI);
+
+  EXPECT_FALSE(verifyModule(*ImplModule, &errs()));
+
+  // Check that retained and local types are copied.
+  DISubprogram *FuncSP = Func->getSubprogram();
+  DISubprogram *ClonedSP = ClonedFunc->getSubprogram();
+  EXPECT_NE(FuncSP, nullptr);
+  EXPECT_NE(ClonedSP, nullptr);
+  EXPECT_EQ(FuncSP->getRetainedNodes().size(), 7u);
+  EXPECT_EQ(FuncSP->getRetainedNodes().size(),
+            ClonedSP->getRetainedNodes().size());
+
+  // Ensure that Orig node is a clone of Copy by checking that they are
+  // different objects with the same name.
+  auto CheckNodeIsCloned = [](auto *Orig, auto *Copy) {
+    EXPECT_FALSE(Orig->getName().empty());
+    EXPECT_EQ(Orig->getName(), Copy->getName());
+
+    // Check that node was copied.
+    EXPECT_NE(Orig, Copy);
+  };
+
+  // Check that retained nodes are cloned.
+  unsigned I = 0;
+  auto CheckRetainedNode = [&](auto *Node) {
+    // The order of retained nodes should be preserved.
+    auto *Copy =
+        cast<std::decay_t<decltype(*Node)>>(ClonedSP->getRetainedNodes()[I]);
+
+    CheckNodeIsCloned(Node, Copy);
+
+    ++I;
+  };
+  FuncSP->forEachRetainedNode(CheckRetainedNode, CheckRetainedNode,
+                              CheckRetainedNode, CheckRetainedNode);
+
+  auto ToDerived = [](const DIType *Ty) { return cast<DIDerivedType>(Ty); };
+
+  // Check that derived type (pointer type) referencing local type is remapped
+  // in the cloned function even though it doesn't have an explicit scope.
+  auto CheckPointerTypeIsCloned = [&](const DIType *PtrTy,
+                                      const DIType *PtrTyCopy) {
+    auto *PointerType = ToDerived(PtrTy);
+    auto *PointerTypeCopy = ToDerived(PtrTyCopy);
+    ASSERT_EQ(PointerType->getBaseType()->getName(), "mystruct");
+    ASSERT_EQ(PointerType->getScope(), nullptr);
+    CheckNodeIsCloned(PointerType->getBaseType(),
+                      PointerTypeCopy->getBaseType());
+  };
+  auto *PointerOrig = cast<DILocalVariable>(FuncSP->getRetainedNodes()[5]);
+  auto *PointerCopy = cast<DILocalVariable>(ClonedSP->getRetainedNodes()[5]);
+  ASSERT_EQ(PointerOrig->getName(), "ptr");
+  CheckPointerTypeIsCloned(PointerOrig->getType(), PointerCopy->getType());
+
+  // Check that scopeless derived type (const type) referencing scopeless
+  // derived type (pointer type) referencing local type gets cloned.
+  auto *ConstPointerOrig = cast<DILocalVariable>(FuncSP->getRetainedNodes()[6]);
+  auto *ConstPointerCopy =
+      cast<DILocalVariable>(ClonedSP->getRetainedNodes()[6]);
+  ASSERT_EQ(ConstPointerOrig->getName(), "const_ptr");
+  auto *ConstPointerTypeOrig = ToDerived(ConstPointerOrig->getType());
+  auto *ConstPointerTypeCopy = ToDerived(ConstPointerCopy->getType());
+  ASSERT_NE(ConstPointerOrig, ConstPointerCopy);
+  CheckPointerTypeIsCloned(ToDerived(ConstPointerTypeOrig)->getBaseType(),
+                           ToDerived(ConstPointerTypeCopy)->getBaseType());
+
+  auto *FloatType = dyn_cast<DIType>(
+      ImplModule->getNamedMetadata("float_type")->getOperand(0));
+  EXPECT_EQ(FloatType->getName(), "local_float");
+  EXPECT_TRUE(VMap.MD().contains(FloatType));
+  EXPECT_NE(FloatType, VMap.MD()[FloatType]);
+
+  auto *Inlined2 = dyn_cast<DILocalVariable>(
+      ImplModule->getNamedMetadata("inlined2")->getOperand(0));
+  EXPECT_EQ(Inlined2->getName(), "inlined2");
+  EXPECT_TRUE(VMap.MD().contains(Inlined2));
+  EXPECT_EQ(Inlined2, VMap.MD()[Inlined2]);
+}
+
 TEST(CloneFunction, CloneFunctionWithInlinedSubprograms) {
   StringRef ImplAssembly = R"(
     declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
     define void @test() !dbg !3 {
-      call void @llvm.dbg.declare(metadata i8* undef, metadata !5, metadata !DIExpression()), !dbg !7
+      call void @llvm.dbg.declare(metadata ptr undef, metadata !5, metadata !DIExpression()), !dbg !7
       ret void
     }
 
@@ -950,8 +1093,9 @@ protected:
       // confirm that compile units get cloned in the correct order.
       DIBuilder EmptyBuilder(*OldM);
       auto *File = EmptyBuilder.createFile("empty.c", "/file/dir/");
-      (void)EmptyBuilder.createCompileUnit(dwarf::DW_LANG_C99, File,
-                                           "EmptyUnit", false, "", 0);
+      (void)EmptyBuilder.createCompileUnit(
+          DISourceLanguageName(dwarf::DW_LANG_C99), File, "EmptyUnit", false,
+          "", 0);
       EmptyBuilder.finalize();
     }
 
@@ -968,12 +1112,12 @@ protected:
 
     // Create debug info
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
-    DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray({});
+    DITypeArray ParamTypes = DBuilder.getOrCreateTypeArray({});
     DISubroutineType *DFuncType = DBuilder.createSubroutineType(ParamTypes);
-    auto *CU = DBuilder.createCompileUnit(dwarf::DW_LANG_C99,
-                                          DBuilder.createFile("filename.c",
-                                                              "/file/dir"),
-                                          "CloneModule", false, "", 0);
+    auto *CU = DBuilder.createCompileUnit(
+        DISourceLanguageName(dwarf::DW_LANG_C99),
+        DBuilder.createFile("filename.c", "/file/dir"), "CloneModule", false,
+        "", 0);
     // Function DI
     auto *Subprogram = DBuilder.createFunction(
         CU, "f", "f", File, 4, DFuncType, 3, DINode::FlagZero,
@@ -1000,6 +1144,16 @@ protected:
     auto *G =
         Function::Create(FuncType, GlobalValue::ExternalLinkage, "g", OldM);
     G->addMetadata(LLVMContext::MD_type, *MDNode::get(C, {}));
+
+    auto *NonEntryBlock = BasicBlock::Create(C, "", F);
+    IBuilder.SetInsertPoint(NonEntryBlock);
+    IBuilder.CreateRetVoid();
+
+    // Create a global that contains the block address in its initializer.
+    auto *BlockAddress = BlockAddress::get(NonEntryBlock);
+    new GlobalVariable(*OldM, BlockAddress->getType(), /*isConstant=*/true,
+                       GlobalVariable::ExternalLinkage, BlockAddress,
+                       "blockaddr");
 
     // Finalize the debug info
     DBuilder.finalize();
@@ -1162,4 +1316,110 @@ declare i64 @foo(i32 noundef) local_unnamed_addr
   auto NewM = llvm::CloneModule(*M);
   EXPECT_FALSE(verifyModule(*NewM, &errs()));
 }
+
+TEST_F(CloneInstruction, cloneKeyInstructions) {
+  LLVMContext Context;
+
+  std::unique_ptr<Module> M = parseIR(Context, R"(
+    define void @test(ptr align 4 %dst) !dbg !3 {
+      store i64 1, ptr %dst, align 4, !dbg !6
+      store i64 2, ptr %dst, align 4, !dbg !7
+      store i64 3, ptr %dst, align 4, !dbg !8
+      ret void, !dbg !9
+    }
+
+    !llvm.dbg.cu = !{!0}
+    !llvm.module.flags = !{!2}
+    !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
+    !1 = !DIFile(filename: "test.cpp",  directory: "")
+    !2 = !{i32 1, !"Debug Info Version", i32 3}
+    !3 = distinct !DISubprogram(name: "test", scope: !0, unit: !0, keyInstructions: true)
+    !4 = distinct !DISubprogram(name: "inlined", scope: !0, unit: !0, retainedNodes: !{!5}, keyInstructions: true)
+    !5 = !DILocalVariable(name: "awaitables", scope: !4)
+    !6 = !DILocation(line: 1, scope: !4, inlinedAt: !8, atomGroup: 1, atomRank: 1)
+    !7 = !DILocation(line: 2, scope: !3, atomGroup: 1, atomRank: 1)
+    !8 = !DILocation(line: 3, scope: !3, atomGroup: 1, atomRank: 1)
+    !9 = !DILocation(line: 4, scope: !3, atomGroup: 2, atomRank: 1)
+  )");
+
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+
+#define EXPECT_ATOM(Inst, G)                                                   \
+  EXPECT_TRUE(Inst->getDebugLoc());                                            \
+  EXPECT_EQ(Inst->getDebugLoc()->getAtomGroup(), uint64_t(G));
+
+  Function *F = M->getFunction("test");
+  BasicBlock *BB = &*F->begin();
+  ASSERT_TRUE(F);
+  Instruction *Store1 = &*BB->begin();
+  Instruction *Store2 = Store1->getNextNode();
+  Instruction *Store3 = Store2->getNextNode();
+  Instruction *Ret = Store3->getNextNode();
+
+  // Test the remapping works as expected outside of cloning.
+  ValueToValueMapTy VM;
+  // Store1 and Store2 have the same atomGroup number, but have different
+  // inlining scopes, so only Store1 should change group.
+  mapAtomInstance(Store1->getDebugLoc(), VM);
+  for (Instruction &I : *BB)
+    RemapSourceAtom(&I, VM);
+  EXPECT_ATOM(Store1, 3);
+  EXPECT_ATOM(Store2, 1);
+  EXPECT_ATOM(Store3, 1);
+  EXPECT_ATOM(Ret, 2);
+  VM.clear();
+
+  // Store2 and Store3 have the same group number; both should get remapped.
+  mapAtomInstance(Store2->getDebugLoc(), VM);
+  for (Instruction &I : *BB)
+    RemapSourceAtom(&I, VM);
+  EXPECT_ATOM(Store1, 3);
+  EXPECT_ATOM(Store2, 4);
+  EXPECT_ATOM(Store3, 4);
+  EXPECT_ATOM(Ret, 2);
+  VM.clear();
+
+  // Cloning BB with MapAtoms=false should clone the atom numbers.
+  BasicBlock *BB2 =
+      CloneBasicBlock(BB, VM, "", nullptr, nullptr, /*MapAtoms*/ false);
+  for (Instruction &I : *BB2)
+    RemapSourceAtom(&I, VM);
+  Store1 = &*BB2->begin();
+  Store2 = Store1->getNextNode();
+  Store3 = Store2->getNextNode();
+  Ret = Store3->getNextNode();
+  EXPECT_ATOM(Store1, 3);
+  EXPECT_ATOM(Store2, 4);
+  EXPECT_ATOM(Store3, 4);
+  EXPECT_ATOM(Ret, 2);
+  VM.clear();
+  delete BB2;
+
+  // Cloning BB with MapAtoms=true should map the atom numbers.
+  BasicBlock *BB3 =
+      CloneBasicBlock(BB, VM, "", nullptr, nullptr, /*MapAtoms*/ true);
+  for (Instruction &I : *BB3)
+    RemapSourceAtom(&I, VM);
+  Store1 = &*BB3->begin();
+  Store2 = Store1->getNextNode();
+  Store3 = Store2->getNextNode();
+  Ret = Store3->getNextNode();
+  EXPECT_ATOM(Store1, 5);
+  EXPECT_ATOM(Store2, 6);
+  EXPECT_ATOM(Store3, 6);
+  EXPECT_ATOM(Ret, 7);
+  VM.clear();
+  delete BB3;
+#undef EXPECT_ATOM
+}
+
+// Checks that block addresses in global initializers are properly cloned.
+TEST_F(CloneModule, GlobalWithBlockAddressesInitializer) {
+  auto *OriginalBa = cast<BlockAddress>(
+      OldM->getGlobalVariable("blockaddr")->getInitializer());
+  auto *ClonedBa = cast<BlockAddress>(
+      NewM->getGlobalVariable("blockaddr")->getInitializer());
+  ASSERT_NE(OriginalBa->getBasicBlock(), ClonedBa->getBasicBlock());
+}
+
 } // namespace

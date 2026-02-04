@@ -101,9 +101,7 @@ std::optional<AttrInfo> findAttributeInfo(const DWARFDie DIE,
   return findAttributeInfo(DIE, AbbrevDecl, *Index);
 }
 
-const DebugLineTableRowRef DebugLineTableRowRef::NULL_ROW{0, 0};
-
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static void printLE64(const std::string &S) {
   for (uint32_t I = 0, Size = S.size(); I < Size; ++I) {
     errs() << Twine::utohexstr(S[I]);
@@ -142,7 +140,7 @@ DebugRangesSectionWriter::DebugRangesSectionWriter() {
 
 void DebugRangesSectionWriter::initSection() {
   // Adds an empty range to the buffer.
-  writeAddressRanges(*RangesStream.get(), DebugAddressRangesVector{});
+  writeAddressRanges(*RangesStream, DebugAddressRangesVector{});
 }
 
 uint64_t DebugRangesSectionWriter::addRanges(
@@ -169,7 +167,7 @@ uint64_t DebugRangesSectionWriter::addRanges(DebugAddressRangesVector &Ranges) {
   // unique and correct offsets in patches.
   std::lock_guard<std::mutex> Lock(WriterMutex);
   const uint32_t EntryOffset = RangesBuffer->size();
-  writeAddressRanges(*RangesStream.get(), Ranges);
+  writeAddressRanges(*RangesStream, Ranges);
 
   return EntryOffset;
 }
@@ -321,8 +319,8 @@ void DebugRangeListsSectionWriter::finalizeSection() {
                            llvm::endianness::little);
 
   std::unique_ptr<DebugBufferVector> Header = getDWARF5Header(
-      {static_cast<uint32_t>(SizeOfArraySection + CUBodyBuffer.get()->size()),
-       5, 8, 0, static_cast<uint32_t>(RangeEntries.size())});
+      {static_cast<uint32_t>(SizeOfArraySection + CUBodyBuffer->size()), 5, 8,
+       0, static_cast<uint32_t>(RangeEntries.size())});
   *RangesStream << *Header;
   *RangesStream << *CUArrayBuffer;
   *RangesStream << *CUBodyBuffer;
@@ -676,7 +674,6 @@ static void writeDWARF5LocList(uint32_t &NumberOfEntries, DIEValue &AttrInfo,
     return;
   }
 
-  std::vector<uint64_t> OffsetsArray;
   auto writeExpression = [&](uint32_t Index) -> void {
     const DebugLocationEntry &Entry = LocList[Index];
     encodeULEB128(Entry.Expr.size(), LocBodyStream);
@@ -747,8 +744,8 @@ void DebugLoclistWriter::finalizeDWARF5(DIEBuilder &DIEBldr, DIE &Die) {
         llvm::endianness::little);
 
   std::unique_ptr<DebugBufferVector> Header = getDWARF5Header(
-      {static_cast<uint32_t>(SizeOfArraySection + LocBodyBuffer.get()->size()),
-       5, 8, 0, NumberOfEntries});
+      {static_cast<uint32_t>(SizeOfArraySection + LocBodyBuffer->size()), 5, 8,
+       0, NumberOfEntries});
   *LocStream << *Header;
   *LocStream << *LocArrayBuffer;
   *LocStream << *LocBodyBuffer;
@@ -879,7 +876,7 @@ void DebugStrOffsetsWriter::finalizeSection(DWARFUnit &Unit,
   DIEValue StrListBaseAttrInfo =
       Die.findAttribute(dwarf::DW_AT_str_offsets_base);
   auto RetVal = ProcessedBaseOffsets.find(*Val);
-  // Handling re-use of str-offsets section.
+  // Handling reuse of str-offsets section.
   if (RetVal == ProcessedBaseOffsets.end() || StrOffsetSectionWasModified) {
     initialize(Unit);
     // Update String Offsets that were modified.
@@ -1170,7 +1167,7 @@ void DwarfLineTable::emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
 // For functions that we do not modify we output them as raw data.
 // Re-constructing .debug_line_str so that offsets are correct for those
 // debug line tables.
-// Bonus is that when we output a final binary we can re-use .debug_line_str
+// Bonus is that when we output a final binary we can reuse .debug_line_str
 // section. So we don't have to do the SHF_ALLOC trick we did with
 // .debug_line.
 static void parseAndPopulateDebugLineStr(BinarySection &LineStrSection,

@@ -326,7 +326,7 @@ PerFunctionMIParsingState::PerFunctionMIParsingState(MachineFunction &MF,
 }
 
 VRegInfo &PerFunctionMIParsingState::getVRegInfo(Register Num) {
-  auto I = VRegInfos.insert(std::make_pair(Num, nullptr));
+  auto I = VRegInfos.try_emplace(Num);
   if (I.second) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
     VRegInfo *Info = new (Allocator) VRegInfo;
@@ -339,7 +339,7 @@ VRegInfo &PerFunctionMIParsingState::getVRegInfo(Register Num) {
 VRegInfo &PerFunctionMIParsingState::getVRegInfoNamed(StringRef RegName) {
   assert(RegName != "" && "Expected named reg.");
 
-  auto I = VRegInfosNamed.insert(std::make_pair(RegName.str(), nullptr));
+  auto I = VRegInfosNamed.try_emplace(RegName.str());
   if (I.second) {
     VRegInfo *Info = new (Allocator) VRegInfo;
     Info->VReg = MF.getRegInfo().createIncompleteVirtualRegister(RegName);
@@ -452,7 +452,7 @@ public:
   bool parseVirtualRegister(VRegInfo *&Info);
   bool parseNamedVirtualRegister(VRegInfo *&Info);
   bool parseRegister(Register &Reg, VRegInfo *&VRegInfo);
-  bool parseRegisterFlag(unsigned &Flags);
+  bool parseRegisterFlag(RegState &Flags);
   bool parseRegisterClassOrBank(VRegInfo &RegInfo);
   bool parseSubRegisterIndex(unsigned &SubReg);
   bool parseRegisterTiedDefIndex(unsigned &TiedDefIdx);
@@ -496,6 +496,7 @@ public:
   bool parseTargetIndexOperand(MachineOperand &Dest);
   bool parseDbgInstrRefOperand(MachineOperand &Dest);
   bool parseCustomRegisterMaskOperand(MachineOperand &Dest);
+  bool parseLaneMaskOperand(MachineOperand &Dest);
   bool parseLiveoutRegisterMaskOperand(MachineOperand &Dest);
   bool parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
                            MachineOperand &Dest,
@@ -718,6 +719,7 @@ bool MIParser::parseBasicBlockDefinition(
   bool IsLandingPad = false;
   bool IsInlineAsmBrIndirectTarget = false;
   bool IsEHFuncletEntry = false;
+  bool IsEHScopeEntry = false;
   std::optional<MBBSectionID> SectionID;
   uint64_t Alignment = 0;
   std::optional<UniqueBBID> BBID;
@@ -745,6 +747,10 @@ bool MIParser::parseBasicBlockDefinition(
         break;
       case MIToken::kw_ehfunclet_entry:
         IsEHFuncletEntry = true;
+        lex();
+        break;
+      case MIToken::kw_ehscope_entry:
+        IsEHScopeEntry = true;
         lex();
         break;
       case MIToken::kw_align:
@@ -803,6 +809,7 @@ bool MIParser::parseBasicBlockDefinition(
   MBB->setIsEHPad(IsLandingPad);
   MBB->setIsInlineAsmBrIndirectTarget(IsInlineAsmBrIndirectTarget);
   MBB->setIsEHFuncletEntry(IsEHFuncletEntry);
+  MBB->setIsEHScopeEntry(IsEHScopeEntry);
   if (SectionID) {
     MBB->setSectionID(*SectionID);
     MF.setBBSectionsType(BasicBlockSection::List);
@@ -1072,6 +1079,7 @@ bool MIParser::parse(MachineInstr *&MI) {
          Token.isNot(MIToken::kw_heap_alloc_marker) &&
          Token.isNot(MIToken::kw_pcsections) &&
          Token.isNot(MIToken::kw_cfi_type) &&
+         Token.isNot(MIToken::kw_deactivation_symbol) &&
          Token.isNot(MIToken::kw_debug_location) &&
          Token.isNot(MIToken::kw_debug_instr_number) &&
          Token.isNot(MIToken::coloncolon) && Token.isNot(MIToken::lbrace)) {
@@ -1120,6 +1128,14 @@ bool MIParser::parse(MachineInstr *&MI) {
       lex();
   }
 
+  GlobalValue *DS = nullptr;
+  if (Token.is(MIToken::kw_deactivation_symbol)) {
+    lex();
+    if (parseGlobalValue(DS))
+      return true;
+    lex();
+  }
+
   unsigned InstrNum = 0;
   if (Token.is(MIToken::kw_debug_instr_number)) {
     lex();
@@ -1161,6 +1177,8 @@ bool MIParser::parse(MachineInstr *&MI) {
       MemOperands.push_back(MemOp);
       if (Token.isNewlineOrEOF())
         break;
+      if (OpCode == TargetOpcode::BUNDLE && Token.is(MIToken::lbrace))
+        break;
       if (Token.isNot(MIToken::comma))
         return error("expected ',' before the next machine memory operand");
       lex();
@@ -1194,6 +1212,8 @@ bool MIParser::parse(MachineInstr *&MI) {
     MI->setPCSections(MF, PCSections);
   if (CFIType)
     MI->setCFIType(MF, CFIType);
+  if (DS)
+    MI->setDeactivationSymbol(MF, DS);
   if (!MemOperands.empty())
     MI->setMemRefs(MF, MemOperands);
   if (InstrNum)
@@ -1476,7 +1496,9 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
          Token.is(MIToken::kw_unpredictable) ||
          Token.is(MIToken::kw_nneg) ||
          Token.is(MIToken::kw_disjoint) ||
-         Token.is(MIToken::kw_samesign)) {
+         Token.is(MIToken::kw_nusw) ||
+         Token.is(MIToken::kw_samesign) ||
+         Token.is(MIToken::kw_inbounds)) {
     // clang-format on
     // Mine frame and fast math flags
     if (Token.is(MIToken::kw_frame_setup))
@@ -1513,8 +1535,12 @@ bool MIParser::parseInstruction(unsigned &OpCode, unsigned &Flags) {
       Flags |= MachineInstr::NonNeg;
     if (Token.is(MIToken::kw_disjoint))
       Flags |= MachineInstr::Disjoint;
+    if (Token.is(MIToken::kw_nusw))
+      Flags |= MachineInstr::NoUSWrap;
     if (Token.is(MIToken::kw_samesign))
       Flags |= MachineInstr::SameSign;
+    if (Token.is(MIToken::kw_inbounds))
+      Flags |= MachineInstr::InBounds;
 
     lex();
   }
@@ -1632,8 +1658,8 @@ bool MIParser::parseRegisterClassOrBank(VRegInfo &RegInfo) {
   llvm_unreachable("Unexpected register kind");
 }
 
-bool MIParser::parseRegisterFlag(unsigned &Flags) {
-  const unsigned OldFlags = Flags;
+bool MIParser::parseRegisterFlag(RegState &Flags) {
+  const RegState OldFlags = Flags;
   switch (Token.kind()) {
   case MIToken::kw_implicit:
     Flags |= RegState::Implicit;
@@ -1742,7 +1768,7 @@ bool MIParser::assignRegisterTies(MachineInstr &MI,
 bool MIParser::parseRegisterOperand(MachineOperand &Dest,
                                     std::optional<unsigned> &TiedDefIdx,
                                     bool IsDef) {
-  unsigned Flags = IsDef ? RegState::Define : 0;
+  RegState Flags = getDefRegState(IsDef);
   while (Token.isRegisterFlag()) {
     if (parseRegisterFlag(Flags))
       return true;
@@ -1769,7 +1795,7 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
         return true;
   }
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  if ((Flags & RegState::Define) == 0) {
+  if (!hasRegState(Flags, RegState::Define)) {
     if (consumeIfPresent(MIToken::lparen)) {
       unsigned Idx;
       if (!parseRegisterTiedDefIndex(Idx))
@@ -1817,19 +1843,23 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
       return error("generic virtual registers must have a type");
   }
 
-  if (Flags & RegState::Define) {
-    if (Flags & RegState::Kill)
+  if (hasRegState(Flags, RegState::Define)) {
+    if (hasRegState(Flags, RegState::Kill))
       return error("cannot have a killed def operand");
   } else {
-    if (Flags & RegState::Dead)
+    if (hasRegState(Flags, RegState::Dead))
       return error("cannot have a dead use operand");
   }
 
-  Dest = MachineOperand::CreateReg(
-      Reg, Flags & RegState::Define, Flags & RegState::Implicit,
-      Flags & RegState::Kill, Flags & RegState::Dead, Flags & RegState::Undef,
-      Flags & RegState::EarlyClobber, SubReg, Flags & RegState::Debug,
-      Flags & RegState::InternalRead, Flags & RegState::Renamable);
+  Dest = MachineOperand::CreateReg(Reg, hasRegState(Flags, RegState::Define),
+                                   hasRegState(Flags, RegState::Implicit),
+                                   hasRegState(Flags, RegState::Kill),
+                                   hasRegState(Flags, RegState::Dead),
+                                   hasRegState(Flags, RegState::Undef),
+                                   hasRegState(Flags, RegState::EarlyClobber),
+                                   SubReg, hasRegState(Flags, RegState::Debug),
+                                   hasRegState(Flags, RegState::InternalRead),
+                                   hasRegState(Flags, RegState::Renamable));
 
   return false;
 }
@@ -2329,6 +2359,8 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
   MDNode *Scope = nullptr;
   MDNode *InlinedAt = nullptr;
   bool ImplicitCode = false;
+  uint64_t AtomGroup = 0;
+  uint64_t AtomRank = 0;
 
   if (expectAndConsume(MIToken::lparen))
     return true;
@@ -2403,6 +2435,28 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
           lex();
           continue;
         }
+        if (Token.stringValue() == "atomGroup") {
+          lex();
+          if (expectAndConsume(MIToken::colon))
+            return true;
+          if (Token.isNot(MIToken::IntegerLiteral) ||
+              Token.integerValue().isSigned())
+            return error("expected unsigned integer");
+          AtomGroup = Token.integerValue().getZExtValue();
+          lex();
+          continue;
+        }
+        if (Token.stringValue() == "atomRank") {
+          lex();
+          if (expectAndConsume(MIToken::colon))
+            return true;
+          if (Token.isNot(MIToken::IntegerLiteral) ||
+              Token.integerValue().isSigned())
+            return error("expected unsigned integer");
+          AtomRank = Token.integerValue().getZExtValue();
+          lex();
+          continue;
+        }
       }
       return error(Twine("invalid DILocation argument '") +
                    Token.stringValue() + "'");
@@ -2418,7 +2472,7 @@ bool MIParser::parseDILocation(MDNode *&Loc) {
     return error("DILocation requires a scope");
 
   Loc = DILocation::get(MF.getFunction().getContext(), Line, Column, Scope,
-                        InlinedAt, ImplicitCode);
+                        InlinedAt, ImplicitCode, AtomGroup, AtomRank);
   return false;
 }
 
@@ -2758,6 +2812,9 @@ bool MIParser::parseShuffleMaskOperand(MachineOperand &Dest) {
   if (expectAndConsume(MIToken::rparen))
     return error("shufflemask should be terminated by ')'.");
 
+  if (ShufMask.size() < 2)
+    return error("shufflemask should have > 1 element");
+
   ArrayRef<int> MaskAlloc = MF.allocateShuffleMask(ShufMask);
   Dest = MachineOperand::CreateShuffleMask(MaskAlloc);
   return false;
@@ -2837,6 +2894,31 @@ bool MIParser::parseCustomRegisterMaskOperand(MachineOperand &Dest) {
   if (expectAndConsume(MIToken::rparen))
     return true;
   Dest = MachineOperand::CreateRegMask(Mask);
+  return false;
+}
+
+bool MIParser::parseLaneMaskOperand(MachineOperand &Dest) {
+  assert(Token.is(MIToken::kw_lanemask));
+
+  lex();
+  if (expectAndConsume(MIToken::lparen))
+    return true;
+
+  // Parse lanemask.
+  if (Token.isNot(MIToken::IntegerLiteral) && Token.isNot(MIToken::HexLiteral))
+    return error("expected a valid lane mask value");
+  static_assert(sizeof(LaneBitmask::Type) == sizeof(uint64_t),
+                "Use correct get-function for lane mask.");
+  LaneBitmask::Type V;
+  if (getUint64(V))
+    return true;
+  LaneBitmask LaneMask(V);
+  lex();
+
+  if (expectAndConsume(MIToken::rparen))
+    return true;
+
+  Dest = MachineOperand::CreateLaneMask(LaneMask);
   return false;
 }
 
@@ -2940,6 +3022,8 @@ bool MIParser::parseMachineOperand(const unsigned OpCode, const unsigned OpIdx,
     return parseIntrinsicOperand(Dest);
   case MIToken::kw_target_index:
     return parseTargetIndexOperand(Dest);
+  case MIToken::kw_lanemask:
+    return parseLaneMaskOperand(Dest);
   case MIToken::kw_liveout:
     return parseLiveoutRegisterMaskOperand(Dest);
   case MIToken::kw_floatpred:
@@ -3455,6 +3539,11 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
       if (parseMDNode(AAInfo.NoAlias))
         return true;
       break;
+    case MIToken::md_noalias_addrspace:
+      lex();
+      if (parseMDNode(AAInfo.NoAliasAddrSpace))
+        return true;
+      break;
     case MIToken::md_range:
       lex();
       if (parseMDNode(Range))
@@ -3463,7 +3552,7 @@ bool MIParser::parseMachineMemoryOperand(MachineMemOperand *&Dest) {
     // TODO: Report an error on duplicate metadata nodes.
     default:
       return error("expected 'align' or '!tbaa' or '!alias.scope' or "
-                   "'!noalias' or '!range'");
+                   "'!noalias' or '!range' or '!noalias.addrspace'");
     }
   }
   if (expectAndConsume(MIToken::rparen))

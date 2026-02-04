@@ -354,21 +354,21 @@ def testIsInstance():
         mul = AffineMulExpr.get(d1, c2)
 
         # CHECK: True
-        print(AffineDimExpr.isinstance(d1))
+        print(isinstance(d1, AffineDimExpr))
         # CHECK: False
-        print(AffineConstantExpr.isinstance(d1))
+        print(isinstance(d1, AffineConstantExpr))
         # CHECK: True
-        print(AffineConstantExpr.isinstance(c2))
+        print(isinstance(c2, AffineConstantExpr))
         # CHECK: False
-        print(AffineMulExpr.isinstance(c2))
+        print(isinstance(c2, AffineMulExpr))
         # CHECK: True
-        print(AffineAddExpr.isinstance(add))
+        print(isinstance(add, AffineAddExpr))
         # CHECK: False
-        print(AffineMulExpr.isinstance(add))
+        print(isinstance(add, AffineMulExpr))
         # CHECK: True
-        print(AffineMulExpr.isinstance(mul))
+        print(isinstance(mul, AffineMulExpr))
         # CHECK: False
-        print(AffineAddExpr.isinstance(mul))
+        print(isinstance(mul, AffineAddExpr))
 
 
 # CHECK-LABEL: TEST: testCompose
@@ -416,3 +416,22 @@ def testAffineExprShift():
 
         assert (dims[2] + dims[3]) == (dims[0] + dims[1]).shift_dims(2, 2)
         assert (syms[2] + syms[3]) == (syms[0] + syms[1]).shift_symbols(2, 2, 0)
+
+
+# CHECK-LABEL: TEST: testAffineExprSimplify
+@run
+def testAffineExprSimplify():
+    with Context() as ctx:
+        expr = AffineExpr.get_dim(0) + AffineExpr.get_symbol(0)
+        assert expr == AffineExpr.simplify_affine_expr(expr, 1, 1)
+
+
+# CHECK-LABEL: TEST: testAffineExprDowncast
+@run
+def testAffineExprDowncast():
+    with Context() as ctx:
+        expr = AffineExpr.get_dim(0) + AffineExpr.get_symbol(0)
+        assert isinstance(expr.lhs, AffineDimExpr)
+        assert isinstance(expr.rhs, AffineSymbolExpr)
+        assert expr.lhs.position == 0
+        assert expr.rhs.position == 0

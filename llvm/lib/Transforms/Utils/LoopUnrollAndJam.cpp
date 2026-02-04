@@ -53,7 +53,6 @@
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <assert.h>
 #include <memory>
-#include <type_traits>
 #include <vector>
 
 using namespace llvm;
@@ -102,7 +101,7 @@ static bool partitionOuterLoopBlocks(
     Loop &Root, Loop &JamLoop, BasicBlockSet &JamLoopBlocks,
     DenseMap<Loop *, BasicBlockSet> &ForeBlocksMap,
     DenseMap<Loop *, BasicBlockSet> &AftBlocksMap, DominatorTree &DT) {
-  JamLoopBlocks.insert(JamLoop.block_begin(), JamLoop.block_end());
+  JamLoopBlocks.insert_range(JamLoop.blocks());
 
   for (Loop *L : Root.getLoopsInPreorder()) {
     if (L == &JamLoop)
@@ -122,7 +121,7 @@ static bool partitionOuterLoopBlocks(Loop *L, Loop *SubLoop,
                                      BasicBlockSet &SubLoopBlocks,
                                      BasicBlockSet &AftBlocks,
                                      DominatorTree *DT) {
-  SubLoopBlocks.insert(SubLoop->block_begin(), SubLoop->block_end());
+  SubLoopBlocks.insert_range(SubLoop->blocks());
   return partitionLoopBlocks(*L, ForeBlocks, AftBlocks, *DT);
 }
 

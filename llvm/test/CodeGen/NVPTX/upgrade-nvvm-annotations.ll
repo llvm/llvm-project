@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=verify -S | FileCheck %s
 
 define i32 @test_align(i32 %a, i32 %b) {
-; CHECK-LABEL: define i32 @test_align(
+; CHECK-LABEL: define alignstack(8) i32 @test_align(
 ; CHECK-SAME: i32 alignstack(8) [[A:%.*]], i32 alignstack(16) [[B:%.*]]) {
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -96,7 +96,15 @@ define void @test_cluster_dim() {
   ret void
 }
 
-!nvvm.annotations = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12}
+define void @test_grid_constant(ptr byval(i32) %input1, i32 %input2, ptr byval(i32) %input3) {
+; CHECK-LABEL: define void @test_grid_constant(
+; CHECK-SAME: ptr byval(i32) "nvvm.grid_constant" [[INPUT1:%.*]], i32 [[INPUT2:%.*]], ptr byval(i32) "nvvm.grid_constant" [[INPUT3:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+!nvvm.annotations = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13}
 
 !0 = !{ptr @test_align, !"align", i32 u0x00000008, !"align", i32 u0x00010008, !"align", i32 u0x00020010}
 !1 = !{null, !"align", i32 u0x00000008, !"align", i32 u0x00010008, !"align", i32 u0x00020008}
@@ -111,7 +119,8 @@ define void @test_cluster_dim() {
 !10 = !{ptr @test_maxntid_4, !"maxntidz", i32 100}
 !11 = !{ptr @test_reqntid, !"reqntidx", i32 31, !"reqntidy", i32 32, !"reqntidz", i32 33}
 !12 = !{ptr @test_cluster_dim, !"cluster_dim_x", i32 101, !"cluster_dim_y", i32 102, !"cluster_dim_z", i32 103}
-
+!13 = !{ptr @test_grid_constant, !"grid_constant", !14}
+!14 = !{i32 1, i32 3}
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "nvvm.maxclusterrank"="2" }
 ; CHECK: attributes #[[ATTR1]] = { "nvvm.maxclusterrank"="3" }
@@ -123,6 +132,4 @@ define void @test_cluster_dim() {
 ; CHECK: attributes #[[ATTR7]] = { "nvvm.maxntid"="1,1,100" }
 ; CHECK: attributes #[[ATTR8]] = { "nvvm.reqntid"="31,32,33" }
 ; CHECK: attributes #[[ATTR9]] = { "nvvm.cluster_dim"="101,102,103" }
-;.
-; CHECK: [[META0:![0-9]+]] = !{ptr @test_align, !"align", i32 8}
 ;.

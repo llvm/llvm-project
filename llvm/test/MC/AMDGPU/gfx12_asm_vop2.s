@@ -65,64 +65,64 @@ v_add_co_ci_u32 v255, vcc_lo, 0xaf123456, v255, vcc_lo
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v5, vcc, v1, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_e32 v5, vcc, v1, v2, vcc ; encoding: [0x01,0x05,0x0a,0x40]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v5, vcc, v255, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_e32 v5, vcc, v255, v2, vcc ; encoding: [0xff,0x05,0x0a,0x40]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v5, vcc, s1, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_e32 v5, vcc, s1, v2, vcc ; encoding: [0x01,0x04,0x0a,0x40]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v5, vcc, s105, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_e32 v5, vcc, s105, v2, vcc ; encoding: [0x69,0x04,0x0a,0x40]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v5, vcc, vcc_lo, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_e32 v5, vcc, vcc_lo, v2, vcc ; encoding: [0x6a,0x04,0x0a,0x40]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v5, vcc, vcc_hi, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_e32 v5, vcc, vcc_hi, v2, vcc ; encoding: [0x6b,0x04,0x0a,0x40]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v5, vcc, ttmp15, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_e32 v5, vcc, ttmp15, v2, vcc ; encoding: [0x7b,0x04,0x0a,0x40]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v5, vcc, m0, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_e32 v5, vcc, m0, v2, vcc ; encoding: [0x7d,0x04,0x0a,0x40]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v5, vcc, exec_lo, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_e32 v5, vcc, exec_lo, v2, vcc ; encoding: [0x7e,0x04,0x0a,0x40]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v5, vcc, exec_hi, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_e32 v5, vcc, exec_hi, v2, vcc ; encoding: [0x7f,0x04,0x0a,0x40]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v5, vcc, null, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_e32 v5, vcc, null, v2, vcc ; encoding: [0x7c,0x04,0x0a,0x40]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v5, vcc, -1, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_e32 v5, vcc, -1, v2, vcc ; encoding: [0xc1,0x04,0x0a,0x40]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v5, vcc, 0.5, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_e32 v5, vcc, 0.5, v2, vcc ; encoding: [0xf0,0x04,0x0a,0x40]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v5, vcc, src_scc, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_e32 v5, vcc, src_scc, v2, vcc ; encoding: [0xfd,0x04,0x0a,0x40]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_co_ci_u32 v255, vcc, 0xaf123456, v255, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_add_co_ci_u32_e32 v255, vcc, 0xaf123456, v255, vcc ; encoding: [0xff,0xfe,0xff,0x41,0x56,0x34,0x12,0xaf]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_add_f16 v5.l, v1.l, v2.l
 // GFX12: v_add_f16_e32 v5.l, v1.l, v2.l          ; encoding: [0x01,0x05,0x0a,0x64]
@@ -458,64 +458,64 @@ v_cndmask_b32 v255, 0xaf123456, v255, vcc_lo
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v5, v1, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_e32 v5, v1, v2, vcc       ; encoding: [0x01,0x05,0x0a,0x02]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v5, v255, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_e32 v5, v255, v2, vcc     ; encoding: [0xff,0x05,0x0a,0x02]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v5, s1, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_e32 v5, s1, v2, vcc       ; encoding: [0x01,0x04,0x0a,0x02]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v5, s105, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_e32 v5, s105, v2, vcc     ; encoding: [0x69,0x04,0x0a,0x02]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v5, vcc_lo, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_e32 v5, vcc_lo, v2, vcc   ; encoding: [0x6a,0x04,0x0a,0x02]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v5, vcc_hi, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_e32 v5, vcc_hi, v2, vcc   ; encoding: [0x6b,0x04,0x0a,0x02]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v5, ttmp15, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_e32 v5, ttmp15, v2, vcc   ; encoding: [0x7b,0x04,0x0a,0x02]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v5, m0, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_e32 v5, m0, v2, vcc       ; encoding: [0x7d,0x04,0x0a,0x02]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v5, exec_lo, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_e32 v5, exec_lo, v2, vcc  ; encoding: [0x7e,0x04,0x0a,0x02]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v5, exec_hi, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_e32 v5, exec_hi, v2, vcc  ; encoding: [0x7f,0x04,0x0a,0x02]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v5, null, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_e32 v5, null, v2, vcc     ; encoding: [0x7c,0x04,0x0a,0x02]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v5, -1, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_e32 v5, -1, v2, vcc       ; encoding: [0xc1,0x04,0x0a,0x02]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v5, 0.5, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_e32 v5, 0.5, v2, vcc      ; encoding: [0xf0,0x04,0x0a,0x02]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v5, src_scc, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_e32 v5, src_scc, v2, vcc  ; encoding: [0xfd,0x04,0x0a,0x02]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cndmask_b32 v255, 0xaf123456, v255, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_cndmask_b32_e32 v255, 0xaf123456, v255, vcc ; encoding: [0xff,0xfe,0xff,0x03,0x56,0x34,0x12,0xaf]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_cvt_pk_rtz_f16_f32 v5, v1, v2
 // GFX12: v_cvt_pk_rtz_f16_f32_e32 v5, v1, v2     ; encoding: [0x01,0x05,0x0a,0x5e]
@@ -1102,50 +1102,62 @@ v_lshrrev_b32 v5, src_scc, v2
 v_lshrrev_b32 v255, 0xaf123456, v255
 // GFX12: v_lshrrev_b32_e32 v255, 0xaf123456, v255 ; encoding: [0xff,0xfe,0xff,0x33,0x56,0x34,0x12,0xaf]
 
-v_max_num_f16 v5, v1, v2
-// GFX12: v_max_num_f16_e32 v5, v1, v2            ; encoding: [0x01,0x05,0x0a,0x62]
+v_max_num_f16 v5.l, v1.l, v2.l
+// GFX12: v_max_num_f16_e32 v5.l, v1.l, v2.l      ; encoding: [0x01,0x05,0x0a,0x62]
 
-v_max_num_f16 v5, v127, v2
-// GFX12: v_max_num_f16_e32 v5, v127, v2          ; encoding: [0x7f,0x05,0x0a,0x62]
+v_max_num_f16 v5.l, v127.l, v2.l
+// GFX12: v_max_num_f16_e32 v5.l, v127.l, v2.l    ; encoding: [0x7f,0x05,0x0a,0x62]
 
-v_max_num_f16 v5, s1, v2
-// GFX12: v_max_num_f16_e32 v5, s1, v2            ; encoding: [0x01,0x04,0x0a,0x62]
+v_max_num_f16 v5.l, s1, v2.l
+// GFX12: v_max_num_f16_e32 v5.l, s1, v2.l        ; encoding: [0x01,0x04,0x0a,0x62]
 
-v_max_num_f16 v5, s105, v2
-// GFX12: v_max_num_f16_e32 v5, s105, v2          ; encoding: [0x69,0x04,0x0a,0x62]
+v_max_num_f16 v5.l, s105, v2.l
+// GFX12: v_max_num_f16_e32 v5.l, s105, v2.l      ; encoding: [0x69,0x04,0x0a,0x62]
 
-v_max_num_f16 v5, vcc_lo, v2
-// GFX12: v_max_num_f16_e32 v5, vcc_lo, v2        ; encoding: [0x6a,0x04,0x0a,0x62]
+v_max_num_f16 v5.l, vcc_lo, v2.l
+// GFX12: v_max_num_f16_e32 v5.l, vcc_lo, v2.l    ; encoding: [0x6a,0x04,0x0a,0x62]
 
-v_max_num_f16 v5, vcc_hi, v2
-// GFX12: v_max_num_f16_e32 v5, vcc_hi, v2        ; encoding: [0x6b,0x04,0x0a,0x62]
+v_max_num_f16 v5.l, vcc_hi, v2.l
+// GFX12: v_max_num_f16_e32 v5.l, vcc_hi, v2.l    ; encoding: [0x6b,0x04,0x0a,0x62]
 
-v_max_num_f16 v5, ttmp15, v2
-// GFX12: v_max_num_f16_e32 v5, ttmp15, v2        ; encoding: [0x7b,0x04,0x0a,0x62]
+v_max_num_f16 v5.l, ttmp15, v2.l
+// GFX12: v_max_num_f16_e32 v5.l, ttmp15, v2.l    ; encoding: [0x7b,0x04,0x0a,0x62]
 
-v_max_num_f16 v5, m0, v2
-// GFX12: v_max_num_f16_e32 v5, m0, v2            ; encoding: [0x7d,0x04,0x0a,0x62]
+v_max_num_f16 v5.l, m0, v2.l
+// GFX12: v_max_num_f16_e32 v5.l, m0, v2.l        ; encoding: [0x7d,0x04,0x0a,0x62]
 
-v_max_num_f16 v5, exec_lo, v2
-// GFX12: v_max_num_f16_e32 v5, exec_lo, v2       ; encoding: [0x7e,0x04,0x0a,0x62]
+v_max_num_f16 v5.l, exec_lo, v2.l
+// GFX12: v_max_num_f16_e32 v5.l, exec_lo, v2.l   ; encoding: [0x7e,0x04,0x0a,0x62]
 
-v_max_num_f16 v5, exec_hi, v2
-// GFX12: v_max_num_f16_e32 v5, exec_hi, v2       ; encoding: [0x7f,0x04,0x0a,0x62]
+v_max_num_f16 v5.l, exec_hi, v2.l
+// GFX12: v_max_num_f16_e32 v5.l, exec_hi, v2.l   ; encoding: [0x7f,0x04,0x0a,0x62]
 
-v_max_num_f16 v5, null, v2
-// GFX12: v_max_num_f16_e32 v5, null, v2          ; encoding: [0x7c,0x04,0x0a,0x62]
+v_max_num_f16 v5.l, null, v2.l
+// GFX12: v_max_num_f16_e32 v5.l, null, v2.l      ; encoding: [0x7c,0x04,0x0a,0x62]
 
-v_max_num_f16 v5, -1, v2
-// GFX12: v_max_num_f16_e32 v5, -1, v2            ; encoding: [0xc1,0x04,0x0a,0x62]
+v_max_num_f16 v5.l, -1, v2.l
+// GFX12: v_max_num_f16_e32 v5.l, -1, v2.l        ; encoding: [0xc1,0x04,0x0a,0x62]
 
-v_max_num_f16 v5, 0.5, v2
-// GFX12: v_max_num_f16_e32 v5, 0.5, v2           ; encoding: [0xf0,0x04,0x0a,0x62]
+v_max_num_f16 v5.l, 0.5, v2.l
+// GFX12: v_max_num_f16_e32 v5.l, 0.5, v2.l       ; encoding: [0xf0,0x04,0x0a,0x62]
 
-v_max_num_f16 v5, src_scc, v2
-// GFX12: v_max_num_f16_e32 v5, src_scc, v2       ; encoding: [0xfd,0x04,0x0a,0x62]
+v_max_num_f16 v5.l, src_scc, v2.l
+// GFX12: v_max_num_f16_e32 v5.l, src_scc, v2.l   ; encoding: [0xfd,0x04,0x0a,0x62]
 
-v_max_num_f16 v127, 0xfe0b, v127
-// GFX12: v_max_num_f16_e32 v127, 0xfe0b, v127    ; encoding: [0xff,0xfe,0xfe,0x62,0x0b,0xfe,0x00,0x00]
+v_max_num_f16 v127.l, 0xfe0b, v127.l
+// GFX12: v_max_num_f16_e32 v127.l, 0xfe0b, v127.l ; encoding: [0xff,0xfe,0xfe,0x62,0x0b,0xfe,0x00,0x00]
+
+v_max_num_f16 v5.l, v1.h, v2.l
+// GFX12: v_max_num_f16_e32 v5.l, v1.h, v2.l      ; encoding: [0x81,0x05,0x0a,0x62]
+
+v_max_num_f16 v5.l, v127.h, v2.l
+// GFX12: v_max_num_f16_e32 v5.l, v127.h, v2.l    ; encoding: [0xff,0x05,0x0a,0x62]
+
+v_max_num_f16 v5.h, src_scc, v2.h
+// GFX12: v_max_num_f16_e32 v5.h, src_scc, v2.h   ; encoding: [0xfd,0x04,0x0b,0x63]
+
+v_max_num_f16 v127.h, 0xfe0b, v127.h
+// GFX12: v_max_num_f16_e32 v127.h, 0xfe0b, v127.h ; encoding: [0xff,0xfe,0xff,0x63,0x0b,0xfe,0x00,0x00]
 
 v_max_num_f32 v5, v1, v2
 // GFX12: v_max_num_f32_e32 v5, v1, v2            ; encoding: [0x01,0x05,0x0a,0x2c]
@@ -1318,50 +1330,62 @@ v_max_u32 v5, src_scc, v2
 v_max_u32 v255, 0xaf123456, v255
 // GFX12: v_max_u32_e32 v255, 0xaf123456, v255    ; encoding: [0xff,0xfe,0xff,0x29,0x56,0x34,0x12,0xaf]
 
-v_min_num_f16 v5, v1, v2
-// GFX12: v_min_num_f16_e32 v5, v1, v2            ; encoding: [0x01,0x05,0x0a,0x60]
+v_min_num_f16 v5.l, v1.l, v2.l
+// GFX12: v_min_num_f16_e32 v5.l, v1.l, v2.l      ; encoding: [0x01,0x05,0x0a,0x60]
 
-v_min_num_f16 v5, v127, v2
-// GFX12: v_min_num_f16_e32 v5, v127, v2          ; encoding: [0x7f,0x05,0x0a,0x60]
+v_min_num_f16 v5.l, v127.l, v2.l
+// GFX12: v_min_num_f16_e32 v5.l, v127.l, v2.l    ; encoding: [0x7f,0x05,0x0a,0x60]
 
-v_min_num_f16 v5, s1, v2
-// GFX12: v_min_num_f16_e32 v5, s1, v2            ; encoding: [0x01,0x04,0x0a,0x60]
+v_min_num_f16 v5.l, s1, v2.l
+// GFX12: v_min_num_f16_e32 v5.l, s1, v2.l        ; encoding: [0x01,0x04,0x0a,0x60]
 
-v_min_num_f16 v5, s105, v2
-// GFX12: v_min_num_f16_e32 v5, s105, v2          ; encoding: [0x69,0x04,0x0a,0x60]
+v_min_num_f16 v5.l, s105, v2.l
+// GFX12: v_min_num_f16_e32 v5.l, s105, v2.l      ; encoding: [0x69,0x04,0x0a,0x60]
 
-v_min_num_f16 v5, vcc_lo, v2
-// GFX12: v_min_num_f16_e32 v5, vcc_lo, v2        ; encoding: [0x6a,0x04,0x0a,0x60]
+v_min_num_f16 v5.l, vcc_lo, v2.l
+// GFX12: v_min_num_f16_e32 v5.l, vcc_lo, v2.l    ; encoding: [0x6a,0x04,0x0a,0x60]
 
-v_min_num_f16 v5, vcc_hi, v2
-// GFX12: v_min_num_f16_e32 v5, vcc_hi, v2        ; encoding: [0x6b,0x04,0x0a,0x60]
+v_min_num_f16 v5.l, vcc_hi, v2.l
+// GFX12: v_min_num_f16_e32 v5.l, vcc_hi, v2.l    ; encoding: [0x6b,0x04,0x0a,0x60]
 
-v_min_num_f16 v5, ttmp15, v2
-// GFX12: v_min_num_f16_e32 v5, ttmp15, v2        ; encoding: [0x7b,0x04,0x0a,0x60]
+v_min_num_f16 v5.l, ttmp15, v2.l
+// GFX12: v_min_num_f16_e32 v5.l, ttmp15, v2.l    ; encoding: [0x7b,0x04,0x0a,0x60]
 
-v_min_num_f16 v5, m0, v2
-// GFX12: v_min_num_f16_e32 v5, m0, v2            ; encoding: [0x7d,0x04,0x0a,0x60]
+v_min_num_f16 v5.l, m0, v2.l
+// GFX12: v_min_num_f16_e32 v5.l, m0, v2.l        ; encoding: [0x7d,0x04,0x0a,0x60]
 
-v_min_num_f16 v5, exec_lo, v2
-// GFX12: v_min_num_f16_e32 v5, exec_lo, v2       ; encoding: [0x7e,0x04,0x0a,0x60]
+v_min_num_f16 v5.l, exec_lo, v2.l
+// GFX12: v_min_num_f16_e32 v5.l, exec_lo, v2.l   ; encoding: [0x7e,0x04,0x0a,0x60]
 
-v_min_num_f16 v5, exec_hi, v2
-// GFX12: v_min_num_f16_e32 v5, exec_hi, v2       ; encoding: [0x7f,0x04,0x0a,0x60]
+v_min_num_f16 v5.l, exec_hi, v2.l
+// GFX12: v_min_num_f16_e32 v5.l, exec_hi, v2.l   ; encoding: [0x7f,0x04,0x0a,0x60]
 
-v_min_num_f16 v5, null, v2
-// GFX12: v_min_num_f16_e32 v5, null, v2          ; encoding: [0x7c,0x04,0x0a,0x60]
+v_min_num_f16 v5.l, null, v2.l
+// GFX12: v_min_num_f16_e32 v5.l, null, v2.l      ; encoding: [0x7c,0x04,0x0a,0x60]
 
-v_min_num_f16 v5, -1, v2
-// GFX12: v_min_num_f16_e32 v5, -1, v2            ; encoding: [0xc1,0x04,0x0a,0x60]
+v_min_num_f16 v5.l, -1, v2.l
+// GFX12: v_min_num_f16_e32 v5.l, -1, v2.l        ; encoding: [0xc1,0x04,0x0a,0x60]
 
-v_min_num_f16 v5, 0.5, v2
-// GFX12: v_min_num_f16_e32 v5, 0.5, v2           ; encoding: [0xf0,0x04,0x0a,0x60]
+v_min_num_f16 v5.l, 0.5, v2.l
+// GFX12: v_min_num_f16_e32 v5.l, 0.5, v2.l       ; encoding: [0xf0,0x04,0x0a,0x60]
 
-v_min_num_f16 v5, src_scc, v2
-// GFX12: v_min_num_f16_e32 v5, src_scc, v2       ; encoding: [0xfd,0x04,0x0a,0x60]
+v_min_num_f16 v5.l, src_scc, v2.l
+// GFX12: v_min_num_f16_e32 v5.l, src_scc, v2.l   ; encoding: [0xfd,0x04,0x0a,0x60]
 
-v_min_num_f16 v127, 0xfe0b, v127
-// GFX12: v_min_num_f16_e32 v127, 0xfe0b, v127    ; encoding: [0xff,0xfe,0xfe,0x60,0x0b,0xfe,0x00,0x00]
+v_min_num_f16 v127.l, 0xfe0b, v127.l
+// GFX12: v_min_num_f16_e32 v127.l, 0xfe0b, v127.l ; encoding: [0xff,0xfe,0xfe,0x60,0x0b,0xfe,0x00,0x00]
+
+v_min_num_f16 v5.l, v1.h, v2.l
+// GFX12: v_min_num_f16_e32 v5.l, v1.h, v2.l      ; encoding: [0x81,0x05,0x0a,0x60]
+
+v_min_num_f16 v5.l, v127.h, v2.l
+// GFX12: v_min_num_f16_e32 v5.l, v127.h, v2.l    ; encoding: [0xff,0x05,0x0a,0x60]
+
+v_min_num_f16 v5.h, src_scc, v2.h
+// GFX12: v_min_num_f16_e32 v5.h, src_scc, v2.h   ; encoding: [0xfd,0x04,0x0b,0x61]
+
+v_min_num_f16 v127.h, 0xfe0b, v127.h
+// GFX12: v_min_num_f16_e32 v127.h, 0xfe0b, v127.h ; encoding: [0xff,0xfe,0xff,0x61,0x0b,0xfe,0x00,0x00]
 
 v_min_num_f32 v5, v1, v2
 // GFX12: v_min_num_f32_e32 v5, v1, v2            ; encoding: [0x01,0x05,0x0a,0x2a]
@@ -2024,7 +2048,10 @@ v_pk_fmac_f16 v5, -1, v2
 // GFX12: v_pk_fmac_f16 v5, -1, v2                ; encoding: [0xc1,0x04,0x0a,0x78]
 
 v_pk_fmac_f16 v5, 0.5, v2
-// GFX12: v_pk_fmac_f16 v5, 0.5, v2               ; encoding: [0xf0,0x04,0x0a,0x78]
+// GFX11: v_pk_fmac_f16 v5, 0.5, v2               ; encoding: [0xff,0x04,0x0a,0x78,0x00,0x38,0x00,0x00]
+
+v_pk_fmac_f16 v5, 0x38003800, v2
+// GFX11: v_pk_fmac_f16 v5, 0x38003800, v2        ; encoding: [0xf0,0x04,0x0a,0x78]
 
 v_pk_fmac_f16 v5, src_scc, v2
 // GFX12: v_pk_fmac_f16 v5, src_scc, v2           ; encoding: [0xfd,0x04,0x0a,0x78]
@@ -2093,64 +2120,64 @@ v_sub_co_ci_u32 v255, vcc_lo, 0xaf123456, v255, vcc_lo
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v5, vcc, v1, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_e32 v5, vcc, v1, v2, vcc ; encoding: [0x01,0x05,0x0a,0x42]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v5, vcc, v255, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_e32 v5, vcc, v255, v2, vcc ; encoding: [0xff,0x05,0x0a,0x42]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v5, vcc, s1, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_e32 v5, vcc, s1, v2, vcc ; encoding: [0x01,0x04,0x0a,0x42]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v5, vcc, s105, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_e32 v5, vcc, s105, v2, vcc ; encoding: [0x69,0x04,0x0a,0x42]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v5, vcc, vcc_lo, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_e32 v5, vcc, vcc_lo, v2, vcc ; encoding: [0x6a,0x04,0x0a,0x42]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v5, vcc, vcc_hi, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_e32 v5, vcc, vcc_hi, v2, vcc ; encoding: [0x6b,0x04,0x0a,0x42]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v5, vcc, ttmp15, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_e32 v5, vcc, ttmp15, v2, vcc ; encoding: [0x7b,0x04,0x0a,0x42]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v5, vcc, m0, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_e32 v5, vcc, m0, v2, vcc ; encoding: [0x7d,0x04,0x0a,0x42]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v5, vcc, exec_lo, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_e32 v5, vcc, exec_lo, v2, vcc ; encoding: [0x7e,0x04,0x0a,0x42]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v5, vcc, exec_hi, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_e32 v5, vcc, exec_hi, v2, vcc ; encoding: [0x7f,0x04,0x0a,0x42]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v5, vcc, null, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_e32 v5, vcc, null, v2, vcc ; encoding: [0x7c,0x04,0x0a,0x42]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v5, vcc, -1, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_e32 v5, vcc, -1, v2, vcc ; encoding: [0xc1,0x04,0x0a,0x42]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v5, vcc, 0.5, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_e32 v5, vcc, 0.5, v2, vcc ; encoding: [0xf0,0x04,0x0a,0x42]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v5, vcc, src_scc, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_e32 v5, vcc, src_scc, v2, vcc ; encoding: [0xfd,0x04,0x0a,0x42]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_co_ci_u32 v255, vcc, 0xaf123456, v255, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_sub_co_ci_u32_e32 v255, vcc, 0xaf123456, v255, vcc ; encoding: [0xff,0xfe,0xff,0x43,0x56,0x34,0x12,0xaf]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_sub_f16 v5.l, v1.l, v2.l
 // GFX12: v_sub_f16_e32 v5.l, v1.l, v2.l          ; encoding: [0x01,0x05,0x0a,0x66]
@@ -2360,64 +2387,64 @@ v_subrev_co_ci_u32 v255, vcc_lo, 0xaf123456, v255, vcc_lo
 // W64-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v5, vcc, v1, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_e32 v5, vcc, v1, v2, vcc ; encoding: [0x01,0x05,0x0a,0x44]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v5, vcc, v255, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_e32 v5, vcc, v255, v2, vcc ; encoding: [0xff,0x05,0x0a,0x44]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v5, vcc, s1, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_e32 v5, vcc, s1, v2, vcc ; encoding: [0x01,0x04,0x0a,0x44]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v5, vcc, s105, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_e32 v5, vcc, s105, v2, vcc ; encoding: [0x69,0x04,0x0a,0x44]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v5, vcc, vcc_lo, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_e32 v5, vcc, vcc_lo, v2, vcc ; encoding: [0x6a,0x04,0x0a,0x44]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v5, vcc, vcc_hi, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_e32 v5, vcc, vcc_hi, v2, vcc ; encoding: [0x6b,0x04,0x0a,0x44]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v5, vcc, ttmp15, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_e32 v5, vcc, ttmp15, v2, vcc ; encoding: [0x7b,0x04,0x0a,0x44]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v5, vcc, m0, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_e32 v5, vcc, m0, v2, vcc ; encoding: [0x7d,0x04,0x0a,0x44]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v5, vcc, exec_lo, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_e32 v5, vcc, exec_lo, v2, vcc ; encoding: [0x7e,0x04,0x0a,0x44]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v5, vcc, exec_hi, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_e32 v5, vcc, exec_hi, v2, vcc ; encoding: [0x7f,0x04,0x0a,0x44]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v5, vcc, null, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_e32 v5, vcc, null, v2, vcc ; encoding: [0x7c,0x04,0x0a,0x44]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v5, vcc, -1, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_e32 v5, vcc, -1, v2, vcc ; encoding: [0xc1,0x04,0x0a,0x44]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v5, vcc, 0.5, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_e32 v5, vcc, 0.5, v2, vcc ; encoding: [0xf0,0x04,0x0a,0x44]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v5, vcc, src_scc, v2, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_e32 v5, vcc, src_scc, v2, vcc ; encoding: [0xfd,0x04,0x0a,0x44]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_co_ci_u32 v255, vcc, 0xaf123456, v255, vcc
+// W32-ERR: :[[@LINE-1]]:1: error: operands are not valid for this GPU or mode
 // W64: v_subrev_co_ci_u32_e32 v255, vcc, 0xaf123456, v255, vcc ; encoding: [0xff,0xfe,0xff,0x45,0x56,0x34,0x12,0xaf]
-// W32-ERR: :[[@LINE-2]]:1: error: operands are not valid for this GPU or mode
 
 v_subrev_f16 v5.l, v1.l, v2.l
 // GFX12: v_subrev_f16_e32 v5.l, v1.l, v2.l       ; encoding: [0x01,0x05,0x0a,0x68]

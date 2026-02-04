@@ -75,7 +75,7 @@ AAResults::AAResults(const TargetLibraryInfo &TLI) : TLI(TLI) {}
 AAResults::AAResults(AAResults &&Arg)
     : TLI(Arg.TLI), AAs(std::move(Arg.AAs)), AADeps(std::move(Arg.AADeps)) {}
 
-AAResults::~AAResults() {}
+AAResults::~AAResults() = default;
 
 bool AAResults::invalidate(Function &F, const PreservedAnalyses &PA,
                            FunctionAnalysisManager::Invalidator &Inv) {
@@ -110,6 +110,9 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
 AliasResult AAResults::alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB, AAQueryInfo &AAQI,
                              const Instruction *CtxI) {
+  assert(LocA.Ptr->getType()->isPointerTy() &&
+         LocB.Ptr->getType()->isPointerTy() &&
+         "Can only call alias() on pointers");
   AliasResult Result = AliasResult::MayAlias;
 
   if (EnableAATrace) {
@@ -142,6 +145,18 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
     else
       ++NumMayAlias;
   }
+  return Result;
+}
+
+AliasResult AAResults::aliasErrno(const MemoryLocation &Loc, const Module *M) {
+  AliasResult Result = AliasResult::MayAlias;
+
+  for (const auto &AA : AAs) {
+    Result = AA->aliasErrno(Loc, M);
+    if (Result != AliasResult::MayAlias)
+      break;
+  }
+
   return Result;
 }
 
@@ -334,6 +349,26 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
   }
 
   return Result;
+}
+
+ModRefInfo AAResults::getModRefInfo(const Instruction *I1,
+                                    const Instruction *I2) {
+  SimpleAAQueryInfo AAQIP(*this);
+  return getModRefInfo(I1, I2, AAQIP);
+}
+
+ModRefInfo AAResults::getModRefInfo(const Instruction *I1,
+                                    const Instruction *I2, AAQueryInfo &AAQI) {
+  // Early-exit if either instruction does not read or write memory.
+  if (!I1->mayReadOrWriteMemory() || !I2->mayReadOrWriteMemory())
+    return ModRefInfo::NoModRef;
+
+  if (const auto *Call2 = dyn_cast<CallBase>(I2))
+    return getModRefInfo(I1, Call2, AAQI);
+
+  // FIXME: We can have a more precise result.
+  ModRefInfo MR = getModRefInfo(I1, MemoryLocation::getOrNone(I2), AAQI);
+  return isModOrRefSet(MR) ? ModRefInfo::ModRef : ModRefInfo::NoModRef;
 }
 
 MemoryEffects AAResults::getMemoryEffects(const CallBase *Call,
@@ -668,14 +703,10 @@ AAResults::Concept::~Concept() = default;
 // Provide a definition for the static object used to identify passes.
 AnalysisKey AAManager::Key;
 
-ExternalAAWrapperPass::ExternalAAWrapperPass() : ImmutablePass(ID) {
-  initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+ExternalAAWrapperPass::ExternalAAWrapperPass() : ImmutablePass(ID) {}
 
-ExternalAAWrapperPass::ExternalAAWrapperPass(CallbackT CB)
-    : ImmutablePass(ID), CB(std::move(CB)) {
-  initializeExternalAAWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+ExternalAAWrapperPass::ExternalAAWrapperPass(CallbackT CB, bool RunEarly)
+    : ImmutablePass(ID), CB(std::move(CB)), RunEarly(RunEarly) {}
 
 char ExternalAAWrapperPass::ID = 0;
 
@@ -687,9 +718,7 @@ llvm::createExternalAAWrapperPass(ExternalAAWrapperPass::CallbackT Callback) {
   return new ExternalAAWrapperPass(std::move(Callback));
 }
 
-AAResultsWrapperPass::AAResultsWrapperPass() : FunctionPass(ID) {
-  initializeAAResultsWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+AAResultsWrapperPass::AAResultsWrapperPass() : FunctionPass(ID) {}
 
 char AAResultsWrapperPass::ID = 0;
 
@@ -722,28 +751,49 @@ bool AAResultsWrapperPass::runOnFunction(Function &F) {
   AAR.reset(
       new AAResults(getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F)));
 
+  // Add any target-specific alias analyses that should be run early.
+  auto *ExtWrapperPass = getAnalysisIfAvailable<ExternalAAWrapperPass>();
+  if (ExtWrapperPass && ExtWrapperPass->RunEarly && ExtWrapperPass->CB) {
+    LLVM_DEBUG(dbgs() << "AAResults register Early ExternalAA: "
+                      << ExtWrapperPass->getPassName() << "\n");
+    ExtWrapperPass->CB(*this, F, *AAR);
+  }
+
   // BasicAA is always available for function analyses. Also, we add it first
   // so that it can trump TBAA results when it proves MustAlias.
   // FIXME: TBAA should have an explicit mode to support this and then we
   // should reconsider the ordering here.
-  if (!DisableBasicAA)
+  if (!DisableBasicAA) {
+    LLVM_DEBUG(dbgs() << "AAResults register BasicAA\n");
     AAR->addAAResult(getAnalysis<BasicAAWrapperPass>().getResult());
+  }
 
   // Populate the results with the currently available AAs.
-  if (auto *WrapperPass = getAnalysisIfAvailable<ScopedNoAliasAAWrapperPass>())
+  if (auto *WrapperPass =
+          getAnalysisIfAvailable<ScopedNoAliasAAWrapperPass>()) {
+    LLVM_DEBUG(dbgs() << "AAResults register ScopedNoAliasAA\n");
     AAR->addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = getAnalysisIfAvailable<TypeBasedAAWrapperPass>())
+  }
+  if (auto *WrapperPass = getAnalysisIfAvailable<TypeBasedAAWrapperPass>()) {
+    LLVM_DEBUG(dbgs() << "AAResults register TypeBasedAA\n");
     AAR->addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = getAnalysisIfAvailable<GlobalsAAWrapperPass>())
+  }
+  if (auto *WrapperPass = getAnalysisIfAvailable<GlobalsAAWrapperPass>()) {
+    LLVM_DEBUG(dbgs() << "AAResults register GlobalsAA\n");
     AAR->addAAResult(WrapperPass->getResult());
-  if (auto *WrapperPass = getAnalysisIfAvailable<SCEVAAWrapperPass>())
+  }
+  if (auto *WrapperPass = getAnalysisIfAvailable<SCEVAAWrapperPass>()) {
+    LLVM_DEBUG(dbgs() << "AAResults register SCEVAA\n");
     AAR->addAAResult(WrapperPass->getResult());
+  }
 
   // If available, run an external AA providing callback over the results as
   // well.
-  if (auto *WrapperPass = getAnalysisIfAvailable<ExternalAAWrapperPass>())
-    if (WrapperPass->CB)
-      WrapperPass->CB(*this, F, *AAR);
+  if (ExtWrapperPass && !ExtWrapperPass->RunEarly && ExtWrapperPass->CB) {
+    LLVM_DEBUG(dbgs() << "AAResults register Late ExternalAA: "
+                      << ExtWrapperPass->getPassName() << "\n");
+    ExtWrapperPass->CB(*this, F, *AAR);
+  }
 
   // Analyses don't mutate the IR, so return false.
   return false;
@@ -819,13 +869,13 @@ bool llvm::isEscapeSource(const Value *V) {
     return !CB->hasArgumentWithAdditionalReturnCaptureComponents();
   }
 
-  // The load case works because isNonEscapingLocalObject considers all
+  // The load case works because isNotCapturedBefore considers all
   // stores to be escapes (it passes true for the StoreCaptures argument
   // to PointerMayBeCaptured).
   if (isa<LoadInst>(V))
     return true;
 
-  // The inttoptr case works because isNonEscapingLocalObject considers all
+  // The inttoptr case works because isNotCapturedBefore considers all
   // means of converting or equating a pointer to an int (ptrtoint, ptr store
   // which could be followed by an integer load, ptr<->int compare) as
   // escaping, and objects located at well-known addresses via platform-specific

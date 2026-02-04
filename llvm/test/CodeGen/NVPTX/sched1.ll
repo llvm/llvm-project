@@ -5,10 +5,10 @@
 
 define void @foo(ptr %a) {
 ; CHECK: .func foo
-; CHECK: ld.u32
-; CHECK-NEXT: ld.u32
-; CHECK-NEXT: ld.u32
-; CHECK-NEXT: ld.u32
+; CHECK: ld.b32
+; CHECK-NEXT: ld.b32
+; CHECK-NEXT: ld.b32
+; CHECK-NEXT: ld.b32
 ; CHECK-NEXT: add.s32
 ; CHECK-NEXT: add.s32
 ; CHECK-NEXT: add.s32

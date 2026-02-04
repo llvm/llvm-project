@@ -136,9 +136,7 @@ class MachineCSELegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification
 
-  MachineCSELegacy() : MachineFunctionPass(ID) {
-    initializeMachineCSELegacyPass(*PassRegistry::getPassRegistry());
-  }
+  MachineCSELegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -153,8 +151,7 @@ public:
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 } // end anonymous namespace
@@ -325,9 +322,8 @@ bool MachineCSEImpl::hasLivePhysRegDefUses(const MachineInstr *MI,
   }
 
   // Finally, add all defs to PhysRefs as well.
-  for (unsigned i = 0, e = PhysDefs.size(); i != e; ++i)
-    for (MCRegAliasIterator AI(PhysDefs[i].second, TRI, true); AI.isValid();
-         ++AI)
+  for (const auto &Def : PhysDefs)
+    for (MCRegAliasIterator AI(Def.second, TRI, true); AI.isValid(); ++AI)
       PhysRefs.insert(*AI);
 
   return !PhysRefs.empty();
@@ -348,9 +344,8 @@ bool MachineCSEImpl::PhysRegDefsReach(MachineInstr *CSMI, MachineInstr *MI,
     if (MBB->pred_size() != 1 || *MBB->pred_begin() != CSMBB)
       return false;
 
-    for (unsigned i = 0, e = PhysDefs.size(); i != e; ++i) {
-      if (MRI->isAllocatable(PhysDefs[i].second) ||
-          MRI->isReserved(PhysDefs[i].second))
+    for (const auto &PhysDef : PhysDefs) {
+      if (MRI->isAllocatable(PhysDef.second) || MRI->isReserved(PhysDef.second))
         // Avoid extending live range of physical registers if they are
         //allocatable or reserved.
         return false;
@@ -780,8 +775,9 @@ bool MachineCSEImpl::PerformCSE(MachineDomTreeNode *Node) {
   do {
     Node = WorkList.pop_back_val();
     Scopes.push_back(Node);
-    OpenChildren[Node] = Node->getNumChildren();
+    size_t WorkListSize = WorkList.size();
     append_range(WorkList, Node->children());
+    OpenChildren[Node] = WorkList.size() - WorkListSize; // Number of children.
   } while (!WorkList.empty());
 
   // Now perform CSE.

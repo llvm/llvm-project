@@ -16,10 +16,16 @@
 
 #include "mlir/IR/Value.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/Support/Casting.h"
 
 namespace clang::CIRGen {
+
+// Forward declaration to avoid a circular dependency
+class CIRGenBuilderTy;
 
 class Address {
 
@@ -39,14 +45,18 @@ protected:
 public:
   Address(mlir::Value pointer, mlir::Type elementType,
           clang::CharUnits alignment)
-      : pointerAndKnownNonNull(pointer, false), elementType(elementType),
-        alignment(alignment) {
-    assert(mlir::isa<cir::PointerType>(pointer.getType()) &&
-           "Expected cir.ptr type");
+      : Address(pointer, elementType, alignment, false) {}
 
+  Address(mlir::Value pointer, mlir::Type elementType,
+          clang::CharUnits alignment, bool isKnownNonNull)
+      : pointerAndKnownNonNull(pointer, isKnownNonNull),
+        elementType(elementType), alignment(alignment) {
     assert(pointer && "Pointer cannot be null");
     assert(elementType && "Element type cannot be null");
     assert(!alignment.isZero() && "Alignment cannot be zero");
+
+    assert(mlir::isa<cir::PointerType>(pointer.getType()) &&
+           "Expected cir.ptr type");
 
     assert(mlir::cast<cir::PointerType>(pointer.getType()).getPointee() ==
            elementType);
@@ -65,9 +75,48 @@ public:
     return pointerAndKnownNonNull.getPointer() != nullptr;
   }
 
+  /// Return address with different pointer, but same element type and
+  /// alignment.
+  Address withPointer(mlir::Value newPtr) const {
+    return Address(newPtr, getElementType(), getAlignment());
+  }
+
+  /// Return address with different alignment, but same pointer and element
+  /// type.
+  Address withAlignment(clang::CharUnits newAlignment) const {
+    return Address(getPointer(), getElementType(), newAlignment,
+                   isKnownNonNull());
+  }
+
+  /// Return address with different element type, a bitcast pointer, and
+  /// the same alignment.
+  Address withElementType(CIRGenBuilderTy &builder, mlir::Type ElemTy) const;
+
   mlir::Value getPointer() const {
     assert(isValid());
     return pointerAndKnownNonNull.getPointer();
+  }
+
+  mlir::Value getBasePointer() const {
+    // TODO(cir): Remove the version above when we catchup with OG codegen on
+    // ptr auth.
+    assert(isValid() && "pointer isn't valid");
+    return getPointer();
+  }
+
+  /// Return the pointer contained in this class after authenticating it and
+  /// adding offset to it if necessary.
+  mlir::Value emitRawPointer() const {
+    assert(!cir::MissingFeatures::addressPointerAuthInfo());
+    return getBasePointer();
+  }
+
+  mlir::Type getType() const {
+    assert(mlir::cast<cir::PointerType>(
+               pointerAndKnownNonNull.getPointer().getType())
+               .getPointee() == elementType);
+
+    return mlir::cast<cir::PointerType>(getPointer().getType());
   }
 
   mlir::Type getElementType() const {
@@ -76,6 +125,37 @@ public:
                pointerAndKnownNonNull.getPointer().getType())
                .getPointee() == elementType);
     return elementType;
+  }
+
+  cir::TargetAddressSpaceAttr getAddressSpace() const {
+    auto ptrTy = mlir::dyn_cast<cir::PointerType>(getType());
+    return ptrTy.getAddrSpace();
+  }
+
+  clang::CharUnits getAlignment() const { return alignment; }
+
+  /// Get the operation which defines this address.
+  mlir::Operation *getDefiningOp() const {
+    if (!isValid())
+      return nullptr;
+    return getPointer().getDefiningOp();
+  }
+
+  template <typename OpTy> OpTy getDefiningOp() const {
+    return mlir::dyn_cast_or_null<OpTy>(getDefiningOp());
+  }
+
+  /// Whether the pointer is known not to be null.
+  bool isKnownNonNull() const {
+    assert(isValid() && "Invalid address");
+    return static_cast<bool>(pointerAndKnownNonNull.getInt());
+  }
+
+  /// Set the non-null bit.
+  Address setKnownNonNull() {
+    assert(isValid() && "Invalid address");
+    pointerAndKnownNonNull.setInt(true);
+    return *this;
   }
 };
 

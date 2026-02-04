@@ -1,8 +1,9 @@
 
 # RUN: llvm-mc -triple s390x-unknown-unknown -mcpu=z13 --show-encoding %s | FileCheck %s
 
-# RUN: llvm-mc -triple s390x-unknown-unknown -mcpu=z13 -filetype=obj %s | \
-# RUN: llvm-readobj -r - | FileCheck %s -check-prefix=CHECK-REL
+# RUN: llvm-mc -triple s390x-unknown-unknown -mcpu=z13 -filetype=obj %s -o %t
+# RUN: llvm-readobj -r %t | FileCheck %s -check-prefix=CHECK-REL
+# RUN: llvm-readelf -s - < %t | FileCheck %s --check-prefix=READELF --implicit-check-not=TLS
 
 # RUN: llvm-mc -triple s390x-unknown-unknown -mcpu=z13 -filetype=obj %s | \
 # RUN: llvm-objdump -d - | FileCheck %s -check-prefix=CHECK-DIS
@@ -25,11 +26,11 @@
 	.align 16
 	larl %r14, target@gotent
 
-# CHECK: larl %r14, target@INDNTPOFF            # encoding: [0xc0,0xe0,A,A,A,A]
-# CHECK-NEXT:                                   # fixup A - offset: 2, value: target@INDNTPOFF+2, kind: FK_390_PC32DBL
-# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_TLS_IEENT target 0x2
+# CHECK: larl %r14, s_indntpoff@INDNTPOFF       # encoding: [0xc0,0xe0,A,A,A,A]
+# CHECK-NEXT:                                   # fixup A - offset: 2, value: s_indntpoff@INDNTPOFF+2, kind: FK_390_PC32DBL
+# CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_TLS_IEENT s_indntpoff 0x2
 	.align 16
-	larl %r14, target@indntpoff
+	larl %r14, s_indntpoff@indntpoff
 
 # CHECK: brasl %r14, target                     # encoding: [0xc0,0xe5,A,A,A,A]
 # CHECK-NEXT:                                   # fixup A - offset: 2, value: target+2, kind: FK_390_PC32DBL
@@ -43,21 +44,21 @@
 	.align 16
 	brasl %r14, target@plt
 
-# CHECK: brasl %r14, target@PLT:tls_gdcall:sym  # encoding: [0xc0,0xe5,A,A,A,A]
+# CHECK: brasl %r14, target@PLT:tls_gdcall:s_gdcall  # encoding: [0xc0,0xe5,A,A,A,A]
 # CHECK-NEXT:                                   # fixup A - offset: 2, value: target@PLT+2, kind: FK_390_PC32DBL
-# CHECK-NEXT:                                   # fixup B - offset: 0, value: sym@TLSGD, kind: FK_390_TLS_CALL
+# CHECK-NEXT:                                   # fixup B - offset: 0, value: s_gdcall@TLSGD, kind: FK_390_TLS_CALL
 # CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_PLT32DBL target 0x2
-# CHECK-REL:                                    0x{{[0-9A-F]*0}} R_390_TLS_GDCALL sym 0x0
+# CHECK-REL:                                    0x{{[0-9A-F]*0}} R_390_TLS_GDCALL s_gdcall 0x0
 	.align 16
-	brasl %r14, target@plt:tls_gdcall:sym
+	brasl %r14, target@plt:tls_gdcall:s_gdcall
 
-# CHECK: brasl %r14, target@PLT:tls_ldcall:sym  # encoding: [0xc0,0xe5,A,A,A,A]
+# CHECK: brasl %r14, target@PLT:tls_ldcall:s_ldcall  # encoding: [0xc0,0xe5,A,A,A,A]
 # CHECK-NEXT:                                   # fixup A - offset: 2, value: target@PLT+2, kind: FK_390_PC32DBL
-# CHECK-NEXT:                                   # fixup B - offset: 0, value: sym@TLSLDM, kind: FK_390_TLS_CALL
+# CHECK-NEXT:                                   # fixup B - offset: 0, value: s_ldcall@TLSLDM, kind: FK_390_TLS_CALL
 # CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_PLT32DBL target 0x2
-# CHECK-REL:                                    0x{{[0-9A-F]*0}} R_390_TLS_LDCALL sym 0x0
+# CHECK-REL:                                    0x{{[0-9A-F]*0}} R_390_TLS_LDCALL s_ldcall 0x0
 	.align 16
-	brasl %r14, target@plt:tls_ldcall:sym
+	brasl %r14, target@plt:tls_ldcall:s_ldcall
 
 # CHECK: bras %r14, target                      # encoding: [0xa7,0xe5,A,A]
 # CHECK-NEXT:                                   # fixup A - offset: 2, value: target+2, kind: FK_390_PC16DBL
@@ -71,21 +72,21 @@
 	.align 16
 	bras %r14, target@plt
 
-# CHECK: bras %r14, target@PLT:tls_gdcall:sym   # encoding: [0xa7,0xe5,A,A]
+# CHECK: bras %r14, target@PLT:tls_gdcall:gdcall   # encoding: [0xa7,0xe5,A,A]
 # CHECK-NEXT:                                   # fixup A - offset: 2, value: target@PLT+2, kind: FK_390_PC16DBL
-# CHECK-NEXT:                                   # fixup B - offset: 0, value: sym@TLSGD, kind: FK_390_TLS_CALL
+# CHECK-NEXT:                                   # fixup B - offset: 0, value: gdcall@TLSGD, kind: FK_390_TLS_CALL
 # CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_PLT16DBL target 0x2
-# CHECK-REL:                                    0x{{[0-9A-F]*0}} R_390_TLS_GDCALL sym 0x0
+# CHECK-REL:                                    0x{{[0-9A-F]*0}} R_390_TLS_GDCALL gdcall 0x0
 	.align 16
-	bras %r14, target@plt:tls_gdcall:sym
+	bras %r14, target@plt:tls_gdcall:gdcall
 
-# CHECK: bras %r14, target@PLT:tls_ldcall:sym   # encoding: [0xa7,0xe5,A,A]
+# CHECK: bras %r14, target@PLT:tls_ldcall:ldcall   # encoding: [0xa7,0xe5,A,A]
 # CHECK-NEXT:                                   # fixup A - offset: 2, value: target@PLT+2, kind: FK_390_PC16DBL
-# CHECK-NEXT:                                   # fixup B - offset: 0, value: sym@TLSLDM, kind: FK_390_TLS_CALL
+# CHECK-NEXT:                                   # fixup B - offset: 0, value: ldcall@TLSLDM, kind: FK_390_TLS_CALL
 # CHECK-REL:                                    0x{{[0-9A-F]*2}} R_390_PLT16DBL target 0x2
-# CHECK-REL:                                    0x{{[0-9A-F]*0}} R_390_TLS_LDCALL sym 0x0
+# CHECK-REL:                                    0x{{[0-9A-F]*0}} R_390_TLS_LDCALL ldcall 0x0
 	.align 16
-	bras %r14, target@plt:tls_ldcall:sym
+	bras %r14, target@plt:tls_ldcall:ldcall
 
 
 # Symbolic displacements
@@ -420,41 +421,58 @@ local_s32:
         .align 16
         lgfi %r1,src-.
 
+# CHECK-REL-LABEL: .rela.adjusted
+# CHECK-REL:       R_390_GOTENT local
+# CHECK-REL:       R_390_PLT32DBL local
+.section .adjusted,"ax"
+local:
+larl %r14, local@got
+brasl %r14, local@plt
+
 # Data relocs
 # llvm-mc does not show any "encoding" string for data, so we just check the relocs
 
-# CHECK-REL: .rela.data
+# CHECK-REL-LABEL: .rela.data
 	.data
 
-# CHECK-REL: 0x{{[0-9A-F]*0}} R_390_TLS_LE64 target 0x0
+# CHECK-REL: 0x{{[0-9A-F]*0}} R_390_TLS_LE64 s_ntpoff 0x0
 	.align 16
-	.quad target@ntpoff
+	.quad s_ntpoff@ntpoff
 
-# CHECK-REL: 0x{{[0-9A-F]*0}} R_390_TLS_LDO64 target 0x0
+# CHECK-REL: 0x{{[0-9A-F]*0}} R_390_TLS_LDO64 s_dtpoff 0x0
 	.align 16
-	.quad target@dtpoff
+	.quad s_dtpoff@dtpoff
 
-# CHECK-REL: 0x{{[0-9A-F]*0}} R_390_TLS_LDM64 target 0x0
+# CHECK-REL: 0x{{[0-9A-F]*0}} R_390_TLS_LDM64 s_tlsldm 0x0
 	.align 16
-	.quad target@tlsldm
+	.quad s_tlsldm@tlsldm
 
-# CHECK-REL: 0x{{[0-9A-F]*0}} R_390_TLS_GD64 target 0x0
+# CHECK-REL: 0x{{[0-9A-F]*0}} R_390_TLS_GD64 s_tlsgd 0x0
 	.align 16
-	.quad target@tlsgd
+	.quad s_tlsgd@tlsgd
 
-# CHECK-REL: 0x{{[0-9A-F]*0}} R_390_TLS_LE32 target 0x0
+# CHECK-REL: 0x{{[0-9A-F]*0}} R_390_TLS_LE32 s_ntpoff 0x0
 	.align 16
-	.long target@ntpoff
+	.long s_ntpoff@ntpoff
 
-# CHECK-REL: 0x{{[0-9A-F]*0}} R_390_TLS_LDO32 target 0x0
+# CHECK-REL: 0x{{[0-9A-F]*0}} R_390_TLS_LDO32 s_dtpoff 0x0
 	.align 16
-	.long target@dtpoff
+	.long s_dtpoff@dtpoff
 
-# CHECK-REL: 0x{{[0-9A-F]*0}} R_390_TLS_LDM32 target 0x0
+# CHECK-REL: 0x{{[0-9A-F]*0}} R_390_TLS_LDM32 s_tlsldm 0x0
 	.align 16
-	.long target@tlsldm
+	.long s_tlsldm@tlsldm
 
-# CHECK-REL: 0x{{[0-9A-F]*0}} R_390_TLS_GD32 target 0x0
+# CHECK-REL: 0x{{[0-9A-F]*0}} R_390_TLS_GD32 s_tlsgd 0x0
 	.align 16
-	.long target@tlsgd
+	.long s_tlsgd@tlsgd
 
+# READELF: TLS     GLOBAL DEFAULT  UND s_indntpoff
+# READELF: TLS     GLOBAL DEFAULT  UND s_gdcall
+# READELF: TLS     GLOBAL DEFAULT  UND s_ldcall
+# READELF: TLS     GLOBAL DEFAULT  UND gdcall
+# READELF: TLS     GLOBAL DEFAULT  UND ldcall
+# READELF: TLS     GLOBAL DEFAULT  UND s_ntpoff
+# READELF: TLS     GLOBAL DEFAULT  UND s_dtpoff
+# READELF: TLS     GLOBAL DEFAULT  UND s_tlsldm
+# READELF: TLS     GLOBAL DEFAULT  UND s_tlsgd

@@ -16,8 +16,4 @@ entry:
   ret i1 %call2
 }
 
-
 declare i1 @return_i1()
-declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
-declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32)
-declare i1 @llvm.experimental.gc.result.i1(token)

@@ -10,13 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ABIInfo.h"
 #include "CGBuiltin.h"
-#include "CodeGenFunction.h"
-#include "TargetInfo.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/IR/InlineAsm.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/Support/ScopedPrinter.h"
 
@@ -63,7 +59,7 @@ static llvm::Value *emitPPCLoadReserveIntrinsic(CodeGenFunction &CGF,
     Constraints += MachineClobbers;
   }
 
-  llvm::Type *PtrType = CGF.UnqualPtrTy;
+  llvm::Type *PtrType = CGF.DefaultPtrTy;
   llvm::FunctionType *FTy = llvm::FunctionType::get(RetType, {PtrType}, false);
 
   llvm::InlineAsm *IA =
@@ -1155,6 +1151,15 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
       Value *Acc = Builder.CreateLoad(Addr);
       CallOps.push_back(Acc);
     }
+    if (BuiltinID == PPC::BI__builtin_mma_dmmr ||
+        BuiltinID == PPC::BI__builtin_mma_dmxor ||
+        BuiltinID == PPC::BI__builtin_mma_disassemble_dmr ||
+        BuiltinID == PPC::BI__builtin_mma_dmsha2hash) {
+      Address Addr = EmitPointerWithAlignment(E->getArg(1));
+      Ops[1] = Builder.CreateLoad(Addr);
+    }
+    if (BuiltinID == PPC::BI__builtin_mma_disassemble_dmr)
+      return Builder.CreateAlignedStore(Ops[1], Ops[0], MaybeAlign());
     for (unsigned i=1; i<Ops.size(); i++)
       CallOps.push_back(Ops[i]);
     llvm::Function *F = CGM.getIntrinsic(ID);
@@ -1354,5 +1359,46 @@ Value *CodeGenFunction::EmitPPCBuiltinExpr(unsigned BuiltinID,
                               {EmitScalarExpr(E->getArg(0))});
   case PPC::BI__builtin_ppc_mffs:
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_readflm));
+
+  case PPC::BI__builtin_amo_lwat_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Op2 = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_lwat),
+                              {Op0, Op1, Op2});
+  }
+  case PPC::BI__builtin_amo_ldat_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Op2 = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_ldat),
+                              {Op0, Op1, Op2});
+  }
+  case PPC::BI__builtin_amo_lwat_cond_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_lwat_cond),
+                              {Op0, Op1});
+  }
+  case PPC::BI__builtin_amo_ldat_cond_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_ldat_cond),
+                              {Op0, Op1});
+  }
+  case PPC::BI__builtin_amo_stwat_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Op2 = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_stwat),
+                              {Op0, Op1, Op2});
+  }
+  case PPC::BI__builtin_amo_stdat_s: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Op2 = EmitScalarExpr(E->getArg(2));
+    return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::ppc_amo_stdat),
+                              {Op0, Op1, Op2});
+  }
   }
 }

@@ -139,16 +139,16 @@ define dso_local void @rv_marker_3() personality ptr @__gxx_personality_v0 {
 ; SELDAG-NEXT:    mov x29, x29
 ; SELDAG-NEXT:    bl _objc_retainAutoreleasedReturnValue
 ; SELDAG-NEXT:    mov x19, x0
-; SELDAG-NEXT:  Ltmp0:
+; SELDAG-NEXT:  Ltmp0: ; EH_LABEL
 ; SELDAG-NEXT:    bl _objc_object
-; SELDAG-NEXT:  Ltmp1:
+; SELDAG-NEXT:  Ltmp1: ; EH_LABEL
 ; SELDAG-NEXT:  ; %bb.1: ; %invoke.cont
 ; SELDAG-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; SELDAG-NEXT:    mov x0, x19
 ; SELDAG-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; SELDAG-NEXT:    b _objc_release
 ; SELDAG-NEXT:  LBB3_2: ; %lpad
-; SELDAG-NEXT:  Ltmp2:
+; SELDAG-NEXT:  Ltmp2: ; EH_LABEL
 ; SELDAG-NEXT:    mov x20, x0
 ; SELDAG-NEXT:    mov x0, x19
 ; SELDAG-NEXT:    bl _objc_release
@@ -197,9 +197,9 @@ define dso_local void @rv_marker_3() personality ptr @__gxx_personality_v0 {
 ; GISEL-NEXT:    mov x29, x29
 ; GISEL-NEXT:    bl _objc_retainAutoreleasedReturnValue
 ; GISEL-NEXT:    mov x19, x0
-; GISEL-NEXT:  Ltmp0:
+; GISEL-NEXT:  Ltmp0: ; EH_LABEL
 ; GISEL-NEXT:    bl _objc_object
-; GISEL-NEXT:  Ltmp1:
+; GISEL-NEXT:  Ltmp1: ; EH_LABEL
 ; GISEL-NEXT:  ; %bb.1: ; %invoke.cont
 ; GISEL-NEXT:  Lloh0:
 ; GISEL-NEXT:    adrp x1, _objc_release@GOTPAGE
@@ -210,7 +210,7 @@ define dso_local void @rv_marker_3() personality ptr @__gxx_personality_v0 {
 ; GISEL-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; GISEL-NEXT:    br x1
 ; GISEL-NEXT:  LBB3_2: ; %lpad
-; GISEL-NEXT:  Ltmp2:
+; GISEL-NEXT:  Ltmp2: ; EH_LABEL
 ; GISEL-NEXT:  Lloh2:
 ; GISEL-NEXT:    adrp x8, _objc_release@GOTPAGE
 ; GISEL-NEXT:    mov x20, x0
@@ -278,16 +278,16 @@ define dso_local void @rv_marker_4() personality ptr @__gxx_personality_v0 {
 ; SELDAG-NEXT:    .cfi_offset w29, -16
 ; SELDAG-NEXT:    .cfi_offset w19, -24
 ; SELDAG-NEXT:    .cfi_offset w20, -32
-; SELDAG-NEXT:  Ltmp3:
+; SELDAG-NEXT:  Ltmp3: ; EH_LABEL
 ; SELDAG-NEXT:    bl _foo1
 ; SELDAG-NEXT:    mov x29, x29
 ; SELDAG-NEXT:    bl _objc_retainAutoreleasedReturnValue
-; SELDAG-NEXT:  Ltmp4:
+; SELDAG-NEXT:  Ltmp4: ; EH_LABEL
 ; SELDAG-NEXT:  ; %bb.1: ; %invoke.cont
-; SELDAG-NEXT:  Ltmp6:
+; SELDAG-NEXT:  Ltmp6: ; EH_LABEL
 ; SELDAG-NEXT:    mov x19, x0
 ; SELDAG-NEXT:    bl _objc_object
-; SELDAG-NEXT:  Ltmp7:
+; SELDAG-NEXT:  Ltmp7: ; EH_LABEL
 ; SELDAG-NEXT:  ; %bb.2: ; %invoke.cont2
 ; SELDAG-NEXT:    mov x0, x19
 ; SELDAG-NEXT:    bl _objc_release
@@ -298,13 +298,13 @@ define dso_local void @rv_marker_4() personality ptr @__gxx_personality_v0 {
 ; SELDAG-NEXT:    add sp, sp, #48
 ; SELDAG-NEXT:    ret
 ; SELDAG-NEXT:  LBB4_3: ; %lpad1
-; SELDAG-NEXT:  Ltmp8:
+; SELDAG-NEXT:  Ltmp8: ; EH_LABEL
 ; SELDAG-NEXT:    mov x20, x0
 ; SELDAG-NEXT:    mov x0, x19
 ; SELDAG-NEXT:    bl _objc_release
 ; SELDAG-NEXT:    b LBB4_5
 ; SELDAG-NEXT:  LBB4_4: ; %lpad
-; SELDAG-NEXT:  Ltmp5:
+; SELDAG-NEXT:  Ltmp5: ; EH_LABEL
 ; SELDAG-NEXT:    mov x20, x0
 ; SELDAG-NEXT:  LBB4_5: ; %ehcleanup
 ; SELDAG-NEXT:    add x0, sp, #15
@@ -351,16 +351,16 @@ define dso_local void @rv_marker_4() personality ptr @__gxx_personality_v0 {
 ; GISEL-NEXT:    .cfi_offset w29, -16
 ; GISEL-NEXT:    .cfi_offset w19, -24
 ; GISEL-NEXT:    .cfi_offset w20, -32
-; GISEL-NEXT:  Ltmp3:
+; GISEL-NEXT:  Ltmp3: ; EH_LABEL
 ; GISEL-NEXT:    bl _foo1
 ; GISEL-NEXT:    mov x29, x29
 ; GISEL-NEXT:    bl _objc_retainAutoreleasedReturnValue
-; GISEL-NEXT:  Ltmp4:
+; GISEL-NEXT:  Ltmp4: ; EH_LABEL
 ; GISEL-NEXT:  ; %bb.1: ; %invoke.cont
-; GISEL-NEXT:  Ltmp6:
+; GISEL-NEXT:  Ltmp6: ; EH_LABEL
 ; GISEL-NEXT:    mov x19, x0
 ; GISEL-NEXT:    bl _objc_object
-; GISEL-NEXT:  Ltmp7:
+; GISEL-NEXT:  Ltmp7: ; EH_LABEL
 ; GISEL-NEXT:  ; %bb.2: ; %invoke.cont2
 ; GISEL-NEXT:  Lloh4:
 ; GISEL-NEXT:    adrp x8, _objc_release@GOTPAGE
@@ -375,7 +375,7 @@ define dso_local void @rv_marker_4() personality ptr @__gxx_personality_v0 {
 ; GISEL-NEXT:    add sp, sp, #48
 ; GISEL-NEXT:    ret
 ; GISEL-NEXT:  LBB4_3: ; %lpad1
-; GISEL-NEXT:  Ltmp8:
+; GISEL-NEXT:  Ltmp8: ; EH_LABEL
 ; GISEL-NEXT:  Lloh6:
 ; GISEL-NEXT:    adrp x8, _objc_release@GOTPAGE
 ; GISEL-NEXT:    mov x20, x0
@@ -385,7 +385,7 @@ define dso_local void @rv_marker_4() personality ptr @__gxx_personality_v0 {
 ; GISEL-NEXT:    blr x8
 ; GISEL-NEXT:    b LBB4_5
 ; GISEL-NEXT:  LBB4_4: ; %lpad
-; GISEL-NEXT:  Ltmp5:
+; GISEL-NEXT:  Ltmp5: ; EH_LABEL
 ; GISEL-NEXT:    mov x20, x0
 ; GISEL-NEXT:  LBB4_5: ; %ehcleanup
 ; GISEL-NEXT:    add x0, sp, #15
@@ -544,7 +544,35 @@ define dso_local void @rv_marker_multiarg(i64 %a, i64 %b, i64 %c) {
   ret void
 }
 
+define dso_local ptr @rv_marker_claim() {
+; SELDAG-LABEL: rv_marker_claim:
+; SELDAG:       ; %bb.0: ; %entry
+; SELDAG-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; SELDAG-NEXT:    .cfi_def_cfa_offset 16
+; SELDAG-NEXT:    .cfi_offset w30, -8
+; SELDAG-NEXT:    .cfi_offset w29, -16
+; SELDAG-NEXT:    bl _foo1
+; SELDAG-NEXT:    bl _objc_claimAutoreleasedReturnValue
+; SELDAG-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; SELDAG-NEXT:    ret
+;
+; GISEL-LABEL: rv_marker_claim:
+; GISEL:       ; %bb.0: ; %entry
+; GISEL-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; GISEL-NEXT:    .cfi_def_cfa_offset 16
+; GISEL-NEXT:    .cfi_offset w30, -8
+; GISEL-NEXT:    .cfi_offset w29, -16
+; GISEL-NEXT:    bl _foo1
+; GISEL-NEXT:    bl _objc_claimAutoreleasedReturnValue
+; GISEL-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; GISEL-NEXT:    ret
+entry:
+  %call = call ptr @foo1() [ "clang.arc.attachedcall"(ptr @objc_claimAutoreleasedReturnValue) ]
+  ret ptr %call
+}
+
 declare ptr @objc_retainAutoreleasedReturnValue(ptr)
+declare ptr @objc_claimAutoreleasedReturnValue(ptr)
 declare ptr @objc_unsafeClaimAutoreleasedReturnValue(ptr)
 declare i32 @__gxx_personality_v0(...)
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:

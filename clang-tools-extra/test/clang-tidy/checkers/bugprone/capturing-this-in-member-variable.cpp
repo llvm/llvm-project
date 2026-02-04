@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-capturing-this-in-member-variable %t -- -config="{CheckOptions: {bugprone-capturing-this-in-member-variable.FunctionWrapperTypes: '::std::function;::Fn'}}" --
+// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-capturing-this-in-member-variable %t -- -config="{CheckOptions: {bugprone-capturing-this-in-member-variable.FunctionWrapperTypes: '::std::function;::Fn', bugprone-capturing-this-in-member-variable.BindFunctions: '::std::bind;::Bind'}}" --
 
 namespace std {
 
@@ -12,11 +12,21 @@ public:
   template<class F> function(F &&);
 };
 
+template <typename F, typename... Args>
+function<F(Args...)> bind(F&&, Args&&...) {
+  return {};
+}
+
 } // namespace std
 
 struct Fn {
   template<class F> Fn(F &&);
 };
+
+template <typename F, typename... Args>
+std::function<F(Args...)> Bind(F&&, Args&&...) {
+  return {};
+}
 
 struct BasicConstructor {
   BasicConstructor() : Captured([this]() { static_cast<void>(this); }) {}
@@ -207,4 +217,50 @@ struct CustomFunctionWrapper {
   // CHECK-MESSAGES: :[[@LINE-1]]:38: warning: 'this' captured by a lambda and stored in a class member variable;
   Fn Captured;
   // CHECK-MESSAGES: :[[@LINE-1]]:6: note: class member of type 'Fn' that stores captured 'this'
+};
+
+struct BindConstructor {
+  BindConstructor() : Captured(std::bind(&BindConstructor::method, this)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: 'this' captured by a 'std::bind' call and stored in a class member variable;
+  void method() {}
+  std::function<void()> Captured;
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
+};
+
+struct BindField1 {
+  void method() {}
+  std::function<void()> Captured = std::bind(&BindField1::method, this);
+  // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: 'this' captured by a 'std::bind' call and stored in a class member variable;
+  // CHECK-MESSAGES: :[[@LINE-2]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
+};
+
+struct BindField2 {
+  void method() {}
+  std::function<void()> Captured{std::bind(&BindField2::method, this)};
+  // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: 'this' captured by a 'std::bind' call and stored in a class member variable;
+  // CHECK-MESSAGES: :[[@LINE-2]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
+};
+
+struct BindCustom {
+  BindCustom() : Captured(Bind(&BindCustom::method, this)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: 'this' captured by a 'Bind' call and stored in a class member variable;
+  void method() {}
+  std::function<void()> Captured;
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: class member of type 'std::function<void (void)>' that stores captured 'this'
+};
+
+struct BindNotCapturingThis {
+  void method(int) {}
+  BindNotCapturingThis(int V) : Captured(std::bind(&BindNotCapturingThis::method, V)) {}
+  std::function<void()> Captured;
+};
+
+struct DeletedCopyMoveWithBind {
+  DeletedCopyMoveWithBind() : Captured(std::bind(&DeletedCopyMoveWithBind::method, this)) {}
+  DeletedCopyMoveWithBind(DeletedCopyMoveWithBind const&) = delete;
+  DeletedCopyMoveWithBind(DeletedCopyMoveWithBind &&) = delete;
+  DeletedCopyMoveWithBind& operator=(DeletedCopyMoveWithBind const&) = delete;
+  DeletedCopyMoveWithBind& operator=(DeletedCopyMoveWithBind &&) = delete;
+  void method() {}
+  std::function<void()> Captured;
 };

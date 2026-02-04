@@ -198,8 +198,7 @@ static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
       if (!BufferOrErr)
         return createFileError(Filename, BufferOrErr.takeError());
       std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufferOrErr);
-      std::copy(Sec.OriginalData.begin(), Sec.OriginalData.end(),
-                Buf->getBufferStart());
+      llvm::copy(Sec.OriginalData, Buf->getBufferStart());
       if (Error E = Buf->commit())
         return createFileError(Filename, std::move(E));
       return Error::success();
@@ -352,8 +351,7 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
       Sym.Name = std::string(I->getValue());
 
     if (!Config.SymbolsPrefixRemove.empty() && Sym.Type != STT_SECTION)
-      if (Sym.Name.compare(0, Config.SymbolsPrefixRemove.size(),
-                           Config.SymbolsPrefixRemove) == 0)
+      if (StringRef(Sym.Name).starts_with(Config.SymbolsPrefixRemove))
         Sym.Name = Sym.Name.substr(Config.SymbolsPrefixRemove.size());
 
     if (!Config.SymbolsPrefix.empty() && Sym.Type != STT_SECTION)
@@ -662,13 +660,13 @@ RemoveNoteDetail::updateData(ArrayRef<uint8_t> OldData,
   for (const DeletedRange &RemRange : ToRemove) {
     if (CurPos < RemRange.OldFrom) {
       auto Slice = OldData.slice(CurPos, RemRange.OldFrom - CurPos);
-      NewData.insert(NewData.end(), Slice.begin(), Slice.end());
+      llvm::append_range(NewData, Slice);
     }
     CurPos = RemRange.OldTo;
   }
   if (CurPos < OldData.size()) {
     auto Slice = OldData.slice(CurPos);
-    NewData.insert(NewData.end(), Slice.begin(), Slice.end());
+    llvm::append_range(NewData, Slice);
   }
   return NewData;
 }
@@ -857,8 +855,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
           "cannot change section address in a non-relocatable file");
     StringMap<AddressUpdate> SectionsToUpdateAddress;
     for (const SectionPatternAddressUpdate &PatternUpdate :
-         make_range(Config.ChangeSectionAddress.rbegin(),
-                    Config.ChangeSectionAddress.rend())) {
+         reverse(Config.ChangeSectionAddress)) {
       for (SectionBase &Sec : Obj.sections()) {
         if (PatternUpdate.SectionPattern.matches(Sec.Name) &&
             SectionsToUpdateAddress.try_emplace(Sec.Name, PatternUpdate.Update)

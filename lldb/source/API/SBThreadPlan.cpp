@@ -326,6 +326,29 @@ SBThreadPlan::QueueThreadPlanForStepOut(uint32_t frame_idx_to_step_to,
 }
 
 SBThreadPlan
+SBThreadPlan::QueueThreadPlanForStepSingleInstruction(bool step_over,
+                                                      SBError &error) {
+  LLDB_INSTRUMENT_VA(this, step_over, error);
+
+  ThreadPlanSP thread_plan_sp(GetSP());
+  if (thread_plan_sp) {
+    Status plan_status;
+    SBThreadPlan plan(
+        thread_plan_sp->GetThread().QueueThreadPlanForStepSingleInstruction(
+            step_over, false, false, plan_status));
+
+    if (plan_status.Fail())
+      error.SetErrorString(plan_status.AsCString());
+    else
+      plan.GetSP()->SetPrivate(true);
+
+    return plan;
+  }
+
+  return SBThreadPlan();
+}
+
+SBThreadPlan
 SBThreadPlan::QueueThreadPlanForRunToAddress(SBAddress sb_address) {
   LLDB_INSTRUMENT_VA(this, sb_address);
 

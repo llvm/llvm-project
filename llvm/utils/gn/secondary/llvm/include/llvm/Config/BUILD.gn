@@ -74,14 +74,16 @@ write_cmake_config("abi-breaking") {
 }
 
 write_cmake_config("config") {
-  public_deps = [ ":llvm-config" ]
+  public_deps = [
+    ":Targets",
+    ":llvm-config",
+  ]
 
   input = "config.h.cmake"
   output = "$target_gen_dir/config.h"
   values = [
     "BUG_REPORT_URL=https://github.com/llvm/llvm-project/issues/",
     "ENABLE_BACKTRACES=1",
-    "ENABLE_DEBUGLOC_COVERAGE_TRACKING=",
     "ENABLE_CRASH_OVERRIDES=1",
     "BACKTRACE_HEADER=execinfo.h",
     "HAVE_BUILTIN_THREAD_POINTER=",
@@ -92,6 +94,8 @@ write_cmake_config("config") {
     "HAVE_FFI_CALL=",
     "HAVE_FFI_FFI_H=",
     "HAVE_FFI_H=",
+    "HAVE_ICONV=",
+    "HAVE_ICU=",
     "HAVE_LIBPFM=",
     "HAVE_LIBPSAPI=",
     "HAVE_MALLCTL=",
@@ -219,6 +223,7 @@ write_cmake_config("config") {
       "HAVE_SIGALTSTACK=",
       "HAVE_STRERROR_R=",
       "HAVE_SYSCONF=",
+      "HAVE_SYS_IOCTL_H=",
       "HAVE_SYS_MMAN_H=",
       "HAVE_UNISTD_H=",
       "HAVE__CHSIZE_S=1",
@@ -246,6 +251,7 @@ write_cmake_config("config") {
       "HAVE_SIGALTSTACK=1",
       "HAVE_STRERROR_R=1",
       "HAVE_SYSCONF=1",
+      "HAVE_SYS_IOCTL_H=1",
       "HAVE_SYS_MMAN_H=1",
       "HAVE_UNISTD_H=1",
       "HAVE__CHSIZE_S=",
@@ -290,12 +296,18 @@ write_cmake_config("llvm-config") {
   input = "llvm-config.h.cmake"
   output = "$target_gen_dir/llvm-config.h"
   values = [
+    "LLVM_ENABLE_PROFCHECK=",
     "LLVM_BUILD_LLVM_DYLIB=",
     "LLVM_BUILD_SHARED_LIBS=",
+    "LLVM_ENABLE_LLVM_C_EXPORT_ANNOTATIONS=",
     "LLVM_ENABLE_TELEMETRY=",
     "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
+    "LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE=",
+    "LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN=",
     "LLVM_ENABLE_DUMP=",
     "LLVM_ENABLE_HTTPLIB=",
+    "LLVM_ENABLE_IO_SANDBOX=",
+    "LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS=",
     "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",
     "LLVM_HAS_LOGF128=",
@@ -355,6 +367,12 @@ write_cmake_config("llvm-config") {
     values += [ "LLVM_ENABLE_DIA_SDK=" ]
   }
 
+  if (llvm_enable_ondisk_cas) {
+    values += [ "LLVM_ENABLE_ONDISK_CAS=1" ]
+  } else {
+    values += [ "LLVM_ENABLE_ONDISK_CAS=" ]
+  }
+
   if (llvm_enable_threads) {
     values += [ "LLVM_ENABLE_THREADS=1" ]
   } else {
@@ -384,6 +402,12 @@ write_cmake_config("llvm-config") {
   } else {
     values += [ "LLVM_FORCE_ENABLE_STATS=" ]
   }
+}
+
+write_cmake_config("Targets") {
+  input = "Targets.h.cmake"
+  output = "$target_gen_dir/Targets.h"
+  values = []
 
   if (llvm_build_AArch64) {
     values += [ "LLVM_HAS_AARCH64_TARGET=1" ]

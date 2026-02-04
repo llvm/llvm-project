@@ -17,13 +17,11 @@
 #include "mlir/IR/Threading.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Support/DebugStringHelper.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 
 #define DEBUG_TYPE "inlining"
 
@@ -45,7 +43,7 @@ static void walkReferencedSymbolNodes(
 
   Operation *symbolTableOp = op->getParentOp();
   for (const SymbolTable::SymbolUse &use : *symbolUses) {
-    auto refIt = resolvedRefs.insert({use.getSymbolRef(), nullptr});
+    auto refIt = resolvedRefs.try_emplace(use.getSymbolRef());
     CallGraphNode *&node = refIt.first->second;
 
     // If this is the first instance of this reference, try to resolve a
@@ -65,6 +63,7 @@ static void walkReferencedSymbolNodes(
 
 //===----------------------------------------------------------------------===//
 // CGUseList
+//===----------------------------------------------------------------------===//
 
 namespace {
 /// This struct tracks the uses of callgraph nodes that can be dropped when
@@ -349,13 +348,11 @@ static void collectCallOps(iterator_range<Region::iterator> blocks,
 // InlinerInterfaceImpl
 //===----------------------------------------------------------------------===//
 
-#ifndef NDEBUG
 static std::string getNodeName(CallOpInterface op) {
   if (llvm::dyn_cast_if_present<SymbolRefAttr>(op.getCallableForCallee()))
     return debugString(op);
   return "_unnamed_callee_";
 }
-#endif
 
 /// Return true if the specified `inlineHistoryID`  indicates an inline history
 /// that already includes `node`.
@@ -540,7 +537,7 @@ Inliner::Impl::optimizeSCCAsync(MutableArrayRef<CallGraphNode *> nodesToVisit,
 
   // An atomic failure variable for the async executors.
   std::vector<std::atomic<bool>> activePMs(pipelines.size());
-  std::fill(activePMs.begin(), activePMs.end(), false);
+  llvm::fill(activePMs, false);
   return failableParallelForEach(ctx, nodesToVisit, [&](CallGraphNode *node) {
     // Find a pass manager for this operation.
     auto it = llvm::find_if(activePMs, [](std::atomic<bool> &isActive) {
@@ -615,10 +612,10 @@ Inliner::Impl::inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
   std::vector<InlineHistoryT> callHistory(calls.size(), InlineHistoryT{});
 
   LLVM_DEBUG({
-    llvm::dbgs() << "* Inliner: Initial calls in SCC are: {\n";
-    for (unsigned i = 0, e = calls.size(); i < e; ++i)
-      llvm::dbgs() << "  " << i << ". " << calls[i].call << ",\n";
-    llvm::dbgs() << "}\n";
+    LDBG() << "* Inliner: Initial calls in SCC are: {";
+    for (unsigned I = 0, E = calls.size(); I < E; ++I)
+      LDBG() << "  " << I << ". " << calls[I].call << ",";
+    LDBG() << "}";
   });
 
   // Try to inline each of the call operations. Don't cache the end iterator
@@ -636,9 +633,9 @@ Inliner::Impl::inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
     CallOpInterface call = it.call;
     LLVM_DEBUG({
       if (doInline)
-        llvm::dbgs() << "* Inlining call: " << i << ". " << call << "\n";
+        LDBG() << "* Inlining call: " << i << ". " << call;
       else
-        llvm::dbgs() << "* Not inlining call: " << i << ". " << call << "\n";
+        LDBG() << "* Not inlining call: " << i << ". " << call;
     });
     if (!doInline)
       continue;
@@ -651,11 +648,11 @@ Inliner::Impl::inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
     bool inlineInPlace = useList.hasOneUseAndDiscardable(it.targetNode);
 
     LogicalResult inlineResult =
-        inlineCall(inlinerIface, call,
+        inlineCall(inlinerIface, inliner.config.getCloneCallback(), call,
                    cast<CallableOpInterface>(targetRegion->getParentOp()),
                    targetRegion, /*shouldCloneInlinedRegion=*/!inlineInPlace);
     if (failed(inlineResult)) {
-      LLVM_DEBUG(llvm::dbgs() << "** Failed to inline\n");
+      LDBG() << "** Failed to inline";
       continue;
     }
     inlinedAnyCalls = true;
@@ -668,19 +665,16 @@ Inliner::Impl::inlineCallsInSCC(InlinerInterfaceImpl &inlinerIface,
     auto historyToString = [](InlineHistoryT h) {
       return h.has_value() ? std::to_string(*h) : "root";
     };
-    (void)historyToString;
-    LLVM_DEBUG(llvm::dbgs()
-               << "* new inlineHistory entry: " << newInlineHistoryID << ". ["
-               << getNodeName(call) << ", " << historyToString(inlineHistoryID)
-               << "]\n");
+    LDBG() << "* new inlineHistory entry: " << newInlineHistoryID << ". ["
+           << getNodeName(call) << ", " << historyToString(inlineHistoryID)
+           << "]";
 
     for (unsigned k = prevSize; k != calls.size(); ++k) {
       callHistory.push_back(newInlineHistoryID);
-      LLVM_DEBUG(llvm::dbgs() << "* new call " << k << " {" << calls[i].call
-                              << "}\n   with historyID = " << newInlineHistoryID
-                              << ", added due to inlining of\n  call {" << call
-                              << "}\n with historyID = "
-                              << historyToString(inlineHistoryID) << "\n");
+      LDBG() << "* new call " << k << " {" << calls[k].call
+             << "}\n   with historyID = " << newInlineHistoryID
+             << ", added due to inlining of\n  call {" << call
+             << "}\n with historyID = " << historyToString(inlineHistoryID);
     }
 
     // If the inlining was successful, Merge the new uses into the source node.
@@ -729,19 +723,22 @@ bool Inliner::Impl::shouldInline(ResolvedCall &resolvedCall) {
 
   // Don't allow inlining if the callee has multiple blocks (unstructured
   // control flow) but we cannot be sure that the caller region supports that.
-  bool calleeHasMultipleBlocks =
-      llvm::hasNItemsOrMore(*callableRegion, /*N=*/2);
-  // If both parent ops have the same type, it is safe to inline. Otherwise,
-  // decide based on whether the op has the SingleBlock trait or not.
-  // Note: This check does currently not account for SizedRegion/MaxSizedRegion.
-  auto callerRegionSupportsMultipleBlocks = [&]() {
-    return callableRegion->getParentOp()->getName() ==
-               resolvedCall.call->getParentOp()->getName() ||
-           !resolvedCall.call->getParentOp()
-                ->mightHaveTrait<OpTrait::SingleBlock>();
-  };
-  if (calleeHasMultipleBlocks && !callerRegionSupportsMultipleBlocks())
-    return false;
+  if (!inliner.config.getCanHandleMultipleBlocks()) {
+    bool calleeHasMultipleBlocks =
+        llvm::hasNItemsOrMore(*callableRegion, /*N=*/2);
+    // If both parent ops have the same type, it is safe to inline. Otherwise,
+    // decide based on whether the op has the SingleBlock trait or not.
+    // Note: This check does currently not account for
+    // SizedRegion/MaxSizedRegion.
+    auto callerRegionSupportsMultipleBlocks = [&]() {
+      return callableRegion->getParentOp()->getName() ==
+                 resolvedCall.call->getParentOp()->getName() ||
+             !resolvedCall.call->getParentOp()
+                  ->mightHaveTrait<OpTrait::SingleBlock>();
+    };
+    if (calleeHasMultipleBlocks && !callerRegionSupportsMultipleBlocks())
+      return false;
+  }
 
   if (!inliner.isProfitableToInline(resolvedCall))
     return false;

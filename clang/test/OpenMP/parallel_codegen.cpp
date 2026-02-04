@@ -893,6 +893,7 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TID_ADDR]], align 4
 // CHECK4-NEXT:    store i32 [[TMP1]], ptr [[TID_ADDR_LOCAL]], align 4
 // CHECK4-NEXT:    [[TID:%.*]] = load i32, ptr [[TID_ADDR_LOCAL]], align 4
+// CHECK4-NEXT:      #dbg_declare(ptr [[LOADGEP_VLA]], [[META36:![0-9]+]], !DIExpression(), [[META37:![0-9]+]])
 // CHECK4-NEXT:    br label [[OMP_PAR_REGION:%.*]]
 // CHECK4:       omp.par.region:
 // CHECK4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[LOADGEP_VLA]], i64 1, !dbg [[DBG35:![0-9]+]]
@@ -905,6 +906,8 @@ int main (int argc, char **argv) {
 // CHECK4:       omp.par.region.parallel.after:
 // CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK4:       omp.par.pre_finalize:
+// CHECK4-NEXT:    br label [[FINI:%.*]]
+// CHECK4:       .fini:
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]], !dbg [[DBG35]]
 // CHECK4:       omp.par.exit.exitStub:
 // CHECK4-NEXT:    ret void
@@ -960,6 +963,7 @@ int main (int argc, char **argv) {
 // CHECK4-NEXT:    [[TID:%.*]] = load i32, ptr [[TID_ADDR_LOCAL]], align 4
 // CHECK4-NEXT:    [[VAR:%.*]] = alloca ptr, align 8
 // CHECK4-NEXT:    [[TMP2:%.*]] = load i64, ptr [[LOADGEP__RELOADED]], align 8
+// CHECK4-NEXT:      #dbg_declare(ptr [[LOADGEP_ARGC_ADDR]], [[META60:![0-9]+]], !DIExpression(), [[META61:![0-9]+]])
 // CHECK4-NEXT:    br label [[OMP_PAR_REGION:%.*]]
 // CHECK4:       omp.par.region:
 // CHECK4-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[LOADGEP_ARGC_ADDR]], align 8, !dbg [[DBG56:![0-9]+]]
@@ -973,6 +977,8 @@ int main (int argc, char **argv) {
 // CHECK4:       omp.par.region.parallel.after:
 // CHECK4-NEXT:    br label [[OMP_PAR_PRE_FINALIZE:%.*]]
 // CHECK4:       omp.par.pre_finalize:
+// CHECK4-NEXT:    br label [[FINI:%.*]]
+// CHECK4:       .fini:
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT_EXITSTUB:%.*]], !dbg [[DBG66]]
 // CHECK4:       omp.par.exit.exitStub:
 // CHECK4-NEXT:    ret void

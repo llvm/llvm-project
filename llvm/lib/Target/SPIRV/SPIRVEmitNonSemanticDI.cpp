@@ -21,18 +21,19 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Path.h"
 
 #define DEBUG_TYPE "spirv-nonsemantic-debug-info"
 
-namespace llvm {
+using namespace llvm;
+
+namespace {
 struct SPIRVEmitNonSemanticDI : public MachineFunctionPass {
   static char ID;
   SPIRVTargetMachine *TM;
-  SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM);
-  SPIRVEmitNonSemanticDI();
+  SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM = nullptr)
+      : MachineFunctionPass(ID), TM(TM) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -40,9 +41,7 @@ private:
   bool IsGlobalDIEmitted = false;
   bool emitGlobalDI(MachineFunction &MF);
 };
-} // namespace llvm
-
-using namespace llvm;
+} // anonymous namespace
 
 INITIALIZE_PASS(SPIRVEmitNonSemanticDI, DEBUG_TYPE,
                 "SPIRV NonSemantic.Shader.DebugInfo.100 emitter", false, false)
@@ -52,15 +51,6 @@ char SPIRVEmitNonSemanticDI::ID = 0;
 MachineFunctionPass *
 llvm::createSPIRVEmitNonSemanticDIPass(SPIRVTargetMachine *TM) {
   return new SPIRVEmitNonSemanticDI(TM);
-}
-
-SPIRVEmitNonSemanticDI::SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM)
-    : MachineFunctionPass(ID), TM(TM) {
-  initializeSPIRVEmitNonSemanticDIPass(*PassRegistry::getPassRegistry());
-}
-
-SPIRVEmitNonSemanticDI::SPIRVEmitNonSemanticDI() : MachineFunctionPass(ID) {
-  initializeSPIRVEmitNonSemanticDIPass(*PassRegistry::getPassRegistry());
 }
 
 enum BaseTypeAttributeEncoding {
@@ -122,10 +112,12 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
         FilePaths.emplace_back();
         sys::path::append(FilePaths.back(), File->getDirectory(),
                           File->getFilename());
-        LLVMSourceLanguages.push_back(CompileUnit->getSourceLanguage());
+        LLVMSourceLanguages.push_back(
+            CompileUnit->getSourceLanguage().getUnversionedName());
       }
     }
     const NamedMDNode *ModuleFlags = M->getNamedMetadata("llvm.module.flags");
+    assert(ModuleFlags && "Expected llvm.module.flags metadata to be present");
     for (const auto *Op : ModuleFlags->operands()) {
       const MDOperand &MaybeStrOp = Op->getOperand(1);
       if (MaybeStrOp.equalsStr("Dwarf Version"))

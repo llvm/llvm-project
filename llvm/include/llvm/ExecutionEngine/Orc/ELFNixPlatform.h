@@ -18,6 +18,7 @@
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/Support/Compiler.h"
 
 #include <future>
 #include <thread>
@@ -65,7 +66,7 @@ using DeferredRuntimeFnMap = std::unordered_map<
     FunctionPairKeyHash, FunctionPairKeyEqual>;
 
 /// Mediates between ELFNix initialization and ExecutionSession state.
-class ELFNixPlatform : public Platform {
+class LLVM_ABI ELFNixPlatform : public Platform {
 public:
   /// Try to create a ELFNixPlatform instance, adding the ORC runtime to the
   /// given JITDylib.
@@ -165,7 +166,7 @@ private:
   // The ELFNixPlatformPlugin scans/modifies LinkGraphs to support ELF
   // platform features including initializers, exceptions, TLV, and language
   // runtime registration.
-  class ELFNixPlatformPlugin : public ObjectLinkingLayer::Plugin {
+  class LLVM_ABI ELFNixPlatformPlugin : public ObjectLinkingLayer::Plugin {
   public:
     ELFNixPlatformPlugin(ELFNixPlatform &MP) : MP(MP) {}
 
@@ -202,6 +203,9 @@ private:
                                MaterializationResponsibility &MR);
 
     Error registerInitSections(jitlink::LinkGraph &G, JITDylib &JD,
+                               bool IsBootstrapping);
+
+    Error registerFiniSections(jitlink::LinkGraph &G, JITDylib &JD,
                                bool IsBootstrapping);
 
     Error fixTLVSectionsAndEdges(jitlink::LinkGraph &G, JITDylib &JD);
@@ -261,6 +265,10 @@ private:
       ES.intern("__orc_rt_elfnix_register_init_sections")};
   RuntimeFunction DeregisterInitSections{
       ES.intern("__orc_rt_elfnix_deregister_init_sections")};
+  RuntimeFunction RegisterFiniSections{
+      ES.intern("__orc_rt_elfnix_register_fini_sections")};
+  RuntimeFunction DeregisterFiniSections{
+      ES.intern("__orc_rt_elfnix_deregister_fini_sections")};
   RuntimeFunction CreatePThreadKey{
       ES.intern("__orc_rt_elfnix_create_pthread_key")};
 

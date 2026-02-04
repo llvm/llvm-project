@@ -252,7 +252,7 @@ namespace cwg1330 { // cwg1330: 4 c++11
   void (B<P>::*bpf3)() = &B<P>::f;
   void (B<P>::*bpf4)() throw() = &B<P>::f;
   // cxx98-14-error@-1 {{target exception specification is not superset of source}}
-  // since-cxx17-error@-2 {{cannot initialize a variable of type 'void (B<P>::*)() throw()' with an rvalue of type 'void (B<P>::*)() throw(T, typename P::type)': different exception specifications}}
+  // since-cxx17-error@-2 {{cannot initialize a variable of type 'void (B<P>::*)() throw()' with an rvalue of type 'void (B<P>::*)() throw(T, typename cwg1330::P::type)': different exception specifications}}
 
 #if __cplusplus >= 201103L
   static_assert(noexcept(B<P>().g()), "");
@@ -528,11 +528,11 @@ namespace cwg1359 { // cwg1359: 3.5
   union B { constexpr B() = default; int a; }; // #cwg1359-B
   // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr before C++23}}
   union C { constexpr C() = default; int a, b; }; // #cwg1359-C
-  // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}}
+  // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr before C++23}}
   struct X { constexpr X() = default; union {}; };
   // since-cxx11-error@-1 {{declaration does not declare anything}}
   struct Y { constexpr Y() = default; union { int a; }; }; // #cwg1359-Y
-  // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr}}
+  // cxx11-17-error@-1 {{defaulted definition of default constructor cannot be marked constexpr before C++23}}
 
   constexpr A a = A();
   constexpr B b = B();

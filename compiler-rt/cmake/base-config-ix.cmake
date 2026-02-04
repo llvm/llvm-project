@@ -59,9 +59,9 @@ if (LLVM_TREE_AVAILABLE)
     set(_host_executable_suffix ${CMAKE_EXECUTABLE_SUFFIX})
   endif()
   set(COMPILER_RT_TEST_COMPILER
-    ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang${_host_executable_suffix})
+    ${LLVM_TOOLS_BINARY_DIR}/clang${_host_executable_suffix})
   set(COMPILER_RT_TEST_CXX_COMPILER
-    ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++${_host_executable_suffix})
+    ${LLVM_TOOLS_BINARY_DIR}/clang++${_host_executable_suffix})
 else()
     # Take output dir and install path from the user.
   set(COMPILER_RT_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR} CACHE PATH
@@ -109,7 +109,7 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" lib)
   set(COMPILER_RT_INSTALL_LIBRARY_DIR "${default_install_path}" CACHE PATH
     "Path where built compiler-rt libraries should be installed.")
-else()
+else(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(COMPILER_RT_OUTPUT_LIBRARY_DIR
     ${COMPILER_RT_OUTPUT_DIR}/lib/${COMPILER_RT_OS_DIR})
   extend_path(default_install_path "${COMPILER_RT_INSTALL_PATH}" "lib/${COMPILER_RT_OS_DIR}")

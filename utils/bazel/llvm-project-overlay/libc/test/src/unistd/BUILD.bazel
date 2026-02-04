@@ -13,188 +13,161 @@ licenses(["notice"])
 libc_test(
     name = "access_test",
     srcs = ["access_test.cpp"],
-    libc_function_deps = [
-        "//libc:open",
+    deps = [
         "//libc:access",
         "//libc:close",
+        "//libc:open",
         "//libc:unlink",
-    ],
-    deps = [
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
 libc_test(
     name = "dup_test",
     srcs = ["dup_test.cpp"],
-    libc_function_deps = [
-        "//libc:open",
+    deps = [
         "//libc:close",
         "//libc:dup",
+        "//libc:open",
         "//libc:read",
         "//libc:unlink",
         "//libc:write",
-    ],
-    deps = [
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
 libc_test(
     name = "dup2_test",
     srcs = ["dup2_test.cpp"],
-    libc_function_deps = [
-        "//libc:open",
+    deps = [
         "//libc:close",
         "//libc:dup2",
+        "//libc:open",
         "//libc:read",
         "//libc:unlink",
         "//libc:write",
-    ],
-    deps = [
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
 libc_test(
     name = "dup3_test",
     srcs = ["dup3_test.cpp"],
-    libc_function_deps = [
-        "//libc:open",
+    deps = [
         "//libc:close",
         "//libc:dup3",
+        "//libc:open",
         "//libc:read",
         "//libc:unlink",
         "//libc:write",
-    ],
-    deps = [
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
 libc_test(
     name = "ftruncate_test",
     srcs = ["ftruncate_test.cpp"],
-    libc_function_deps = [
-        "//libc:open",
+    deps = [
+        "//libc:__support_cpp_string_view",
         "//libc:close",
-        "//libc:read",
         "//libc:ftruncate",
+        "//libc:open",
+        "//libc:read",
         "//libc:unlink",
         "//libc:write",
     ],
+)
+
+libc_test(
+    name = "getpagesize_test",
+    srcs = ["getpagesize_test.cpp"],
     deps = [
-        "//libc:__support_cpp_string_view",
-        "//libc/test/UnitTest:errno_test_helpers",
+        "//libc:getpagesize",
     ],
 )
 
 libc_test(
     name = "pread_pwrite_test",
     srcs = ["pread_pwrite_test.cpp"],
-    libc_function_deps = [
-        "//libc:open",
+    deps = [
         "//libc:close",
         "//libc:fsync",
+        "//libc:open",
         "//libc:pread",
         "//libc:pwrite",
         "//libc:unlink",
         "//libc:write",
-    ],
-    deps = [
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
 libc_test(
     name = "read_write_test",
     srcs = ["read_write_test.cpp"],
-    libc_function_deps = [
-        "//libc:open",
+    deps = [
         "//libc:close",
         "//libc:fsync",
+        "//libc:open",
         "//libc:read",
-        "//libc:write",
         "//libc:remove",
-    ],
-    deps = [
-        "//libc/test/UnitTest:errno_test_helpers",
+        "//libc:write",
     ],
 )
 
 libc_test(
     name = "link_test",
     srcs = ["link_test.cpp"],
-    libc_function_deps = [
-        "//libc:open",
+    deps = [
         "//libc:close",
         "//libc:link",
+        "//libc:open",
         "//libc:unlink",
-    ],
-    deps = [
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
 libc_test(
     name = "swab_test",
     srcs = ["swab_test.cpp"],
-    libc_function_deps = [
-        "//libc:swab",
-    ],
     deps = [
         "//libc:string_utils",
+        "//libc:swab",
     ],
 )
 
 libc_test(
     name = "symlink_test",
     srcs = ["symlink_test.cpp"],
-    libc_function_deps = [
-        "//libc:open",
+    deps = [
         "//libc:close",
+        "//libc:open",
         "//libc:symlink",
         "//libc:unlink",
-    ],
-    deps = [
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
 libc_test(
     name = "truncate_test",
     srcs = ["truncate_test.cpp"],
-    libc_function_deps = [
-        "//libc:open",
+    deps = [
+        "//libc:__support_cpp_string_view",
         "//libc:close",
+        "//libc:open",
         "//libc:read",
         "//libc:truncate",
         "//libc:unlink",
         "//libc:write",
-    ],
-    deps = [
-        "//libc:__support_cpp_string_view",
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
 libc_test(
     name = "unlink_test",
     srcs = ["unlink_test.cpp"],
-    libc_function_deps = [
-        "//libc:open",
-        "//libc:close",
-        "//libc:unlink",
-    ],
     deps = [
-        "//libc/test/UnitTest:errno_test_helpers",
+        "//libc:close",
+        "//libc:open",
+        "//libc:unlink",
     ],
 )
 
 libc_test(
     name = "getppid_test",
     srcs = ["getppid_test.cpp"],
-    libc_function_deps = [
+    deps = [
         "//libc:getppid",
     ],
 )
@@ -202,7 +175,7 @@ libc_test(
 libc_test(
     name = "getuid_test",
     srcs = ["getuid_test.cpp"],
-    libc_function_deps = [
+    deps = [
         "//libc:getuid",
     ],
 )
@@ -210,20 +183,17 @@ libc_test(
 libc_test(
     name = "isatty_test",
     srcs = ["isatty_test.cpp"],
-    libc_function_deps = [
+    deps = [
+        "//libc:close",
         "//libc:isatty",
         "//libc:open",
-        "//libc:close",
-    ],
-    deps = [
-        "//libc/test/UnitTest:errno_test_helpers",
     ],
 )
 
 libc_test(
     name = "geteuid_test",
     srcs = ["geteuid_test.cpp"],
-    libc_function_deps = [
+    deps = [
         "//libc:geteuid",
     ],
 )
@@ -236,7 +206,7 @@ libc_test(
 # libc_test(
 #     name = "syscall_test",
 #     srcs = ["syscall_test.cpp"],
-#     libc_function_deps = [
+#     deps = [
 #         "//libc:syscall",
 #     ],
 # )
@@ -246,7 +216,7 @@ libc_test(
 # libc_test(
 #     name = "sysconf_test",
 #     srcs = ["sysconf_test.cpp"],
-#     libc_function_deps = [
+#     deps = [
 #         "//libc:sysconf",
 #     ],
 # )
@@ -256,12 +226,10 @@ libc_test(
 # libc_test(
 #     name = "getopt_test",
 #     srcs = ["getopt_test.cpp"],
-#     libc_function_deps = [
+#     deps = [
+#         "//libc:__support_cpp_array",
 #         "//libc:getopt",
 #         "//libc:fopencookie",
 #         "//libc:fflush",
-#     ],
-#     deps = [
-#         "//libc:__support_cpp_array",
 #     ],
 # )

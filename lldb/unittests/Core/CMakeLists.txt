@@ -1,22 +1,31 @@
 
 add_lldb_unittest(LLDBCoreTests
+  DebuggerTest.cpp
   CommunicationTest.cpp
   DiagnosticEventTest.cpp
   DumpDataExtractorTest.cpp
   DumpRegisterInfoTest.cpp
   FormatEntityTest.cpp
   MangledTest.cpp
+  ModuleListTest.cpp
   ModuleSpecTest.cpp
+  ModuleTest.cpp
+  PluginManagerTest.cpp
   ProgressReportTest.cpp
   RichManglingContextTest.cpp
   SourceLocationSpecTest.cpp
   SourceManagerTest.cpp
   TelemetryTest.cpp
   UniqueCStringMapTest.cpp
+  Value.cpp
 
+  LINK_COMPONENTS
+    Support
+    Telemetry
   LINK_LIBS
     lldbCore
     lldbHost
+    lldbPluginCPlusPlusLanguage
     lldbPluginObjectFileELF
     lldbPluginObjectFileMachO
     lldbPluginObjectFilePECOFF
@@ -26,7 +35,4 @@ add_lldb_unittest(LLDBCoreTests
     lldbUtilityHelpers
     lldbHostHelpers
     LLVMTestingSupport
-  LINK_COMPONENTS
-    Support
-    Telemetry
   )

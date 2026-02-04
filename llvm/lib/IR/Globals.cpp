@@ -14,6 +14,7 @@
 #include "LLVMContextImpl.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
@@ -73,8 +74,9 @@ void GlobalValue::copyAttributesFrom(const GlobalValue *Src) {
     removeSanitizerMetadata();
 }
 
-GlobalValue::GUID GlobalValue::getGUID(StringRef GlobalName) {
-  return MD5Hash(GlobalName);
+GlobalValue::GUID
+GlobalValue::getGUIDAssumingExternalLinkage(StringRef GlobalIdentifier) {
+  return MD5Hash(GlobalIdentifier);
 }
 
 void GlobalValue::removeFromParent() {
@@ -287,10 +289,22 @@ void GlobalObject::setSection(StringRef S) {
   setGlobalObjectFlag(HasSectionHashEntryBit, !S.empty());
 }
 
-void GlobalObject::setSectionPrefix(StringRef Prefix) {
+bool GlobalObject::setSectionPrefix(StringRef Prefix) {
+  StringRef ExistingPrefix;
+  if (std::optional<StringRef> MaybePrefix = getSectionPrefix())
+    ExistingPrefix = *MaybePrefix;
+
+  if (ExistingPrefix == Prefix)
+    return false;
+
+  if (Prefix.empty()) {
+    setMetadata(LLVMContext::MD_section_prefix, nullptr);
+    return true;
+  }
   MDBuilder MDB(getContext());
   setMetadata(LLVMContext::MD_section_prefix,
               MDB.createGlobalObjectSectionPrefix(Prefix));
+  return true;
 }
 
 std::optional<StringRef> GlobalObject::getSectionPrefix() const {
@@ -375,6 +389,15 @@ bool GlobalObject::canIncreaseAlignment() const {
   return true;
 }
 
+bool GlobalObject::hasMetadataOtherThanDebugLoc() const {
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  getAllMetadata(MDs);
+  for (const auto &V : MDs)
+    if (V.first != LLVMContext::MD_dbg)
+      return true;
+  return false;
+}
+
 template <typename Operation>
 static const GlobalObject *
 findBaseObject(const Constant *C, DenseSet<const GlobalAlias *> &Aliases,
@@ -403,8 +426,10 @@ findBaseObject(const Constant *C, DenseSet<const GlobalAlias *> &Aliases,
       return findBaseObject(CE->getOperand(0), Aliases, Op);
     }
     case Instruction::IntToPtr:
+    case Instruction::PtrToAddr:
     case Instruction::PtrToInt:
     case Instruction::BitCast:
+    case Instruction::AddrSpaceCast:
     case Instruction::GetElementPtr:
       return findBaseObject(CE->getOperand(0), Aliases, Op);
     default:
@@ -533,6 +558,11 @@ void GlobalVariable::replaceInitializer(Constant *InitVal) {
   setInitializer(InitVal);
 }
 
+uint64_t GlobalVariable::getGlobalSize(const DataLayout &DL) const {
+  // We don't support scalable global variables.
+  return DL.getTypeAllocSize(getValueType()).getFixedValue();
+}
+
 /// Copy all additional attributes (those not needed to create a GlobalVariable)
 /// from the GlobalVariable Src to this one.
 void GlobalVariable::copyAttributesFrom(const GlobalVariable *Src) {
@@ -555,6 +585,15 @@ void GlobalVariable::setCodeModel(CodeModel::Model CM) {
                      (CodeModelData << CodeModelShift);
   setGlobalValueSubClassData(NewData);
   assert(getCodeModel() == CM && "Code model representation error!");
+}
+
+void GlobalVariable::clearCodeModel() {
+  unsigned CodeModelData = 0;
+  unsigned OldData = getGlobalValueSubClassData();
+  unsigned NewData = (OldData & ~(CodeModelMask << CodeModelShift)) |
+                     (CodeModelData << CodeModelShift);
+  setGlobalValueSubClassData(NewData);
+  assert(getCodeModel() == std::nullopt && "Code model representation error!");
 }
 
 //===----------------------------------------------------------------------===//

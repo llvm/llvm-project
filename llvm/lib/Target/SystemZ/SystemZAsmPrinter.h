@@ -24,6 +24,9 @@ class Module;
 class raw_ostream;
 
 class LLVM_LIBRARY_VISIBILITY SystemZAsmPrinter : public AsmPrinter {
+public:
+  static char ID;
+
 private:
   MCSymbol *CurrentFnPPA1Sym;     // PPA1 Symbol.
   MCSymbol *CurrentFnEPMarkerSym; // Entry Point Marker.
@@ -97,7 +100,7 @@ private:
 
 public:
   SystemZAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), CurrentFnPPA1Sym(nullptr),
+      : AsmPrinter(TM, std::move(Streamer), ID), CurrentFnPPA1Sym(nullptr),
         CurrentFnEPMarkerSym(nullptr), PPA2Sym(nullptr),
         ADATable(TM.getPointerSize(0)) {}
 
@@ -105,6 +108,8 @@ public:
   StringRef getPassName() const override { return "SystemZ Assembly Printer"; }
   void emitInstruction(const MachineInstr *MI) override;
   void emitMachineConstantPoolValue(MachineConstantPoolValue *MCPV) override;
+  void emitXXStructorList(const DataLayout &DL, const Constant *List,
+                          bool IsCtor) override;
   void emitEndOfAsmFile(Module &M) override;
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &OS) override;
@@ -127,6 +132,9 @@ public:
   void emitFunctionEntryLabel() override;
   void emitFunctionBodyEnd() override;
   void emitStartOfAsmFile(Module &M) override;
+  const MCExpr *lowerConstant(const Constant *CV,
+                              const Constant *BaseCV = nullptr,
+                              uint64_t Offset = 0) override;
 
 private:
   void emitCallInformation(CallType CT);

@@ -12,13 +12,13 @@
 ; CHECK: Extension "SPV_EXT_shader_atomic_float_add"
 ; CHECK-DAG: %[[TyFP32:[0-9]+]] = OpTypeFloat 32
 ; CHECK-DAG: %[[TyInt32:[0-9]+]] = OpTypeInt 32 0
-; CHECK-DAG: %[[Const0:[0-9]+]] = OpConstant %[[TyFP32]] 0
-; CHECK-DAG: %[[Const42:[0-9]+]] = OpConstant %[[TyFP32]] 42
+; CHECK-DAG: %[[Const0:[0-9]+]] = OpConstantNull %[[TyFP32]]
+; CHECK-DAG: %[[Const42:[0-9]+]] = OpConstant %[[TyFP32]] 42{{$}}
 ; CHECK-DAG: %[[ScopeAllSvmDevices:[0-9]+]] = OpConstantNull %[[TyInt32]]
-; CHECK-DAG: %[[MemSeqCst:[0-9]+]] = OpConstant %[[TyInt32]] 16
-; CHECK-DAG: %[[ScopeDevice:[0-9]+]] = OpConstant %[[TyInt32]] 1
-; CHECK-DAG: %[[ScopeWorkgroup:[0-9]+]] = OpConstant %[[TyInt32]] 2
-; CHECK-DAG: %[[WorkgroupMemory:[0-9]+]] = OpConstant %[[TyInt32]] 512
+; CHECK-DAG: %[[MemSeqCst:[0-9]+]] = OpConstant %[[TyInt32]] 16{{$}}
+; CHECK-DAG: %[[ScopeDevice:[0-9]+]] = OpConstant %[[TyInt32]] 1{{$}}
+; CHECK-DAG: %[[ScopeWorkgroup:[0-9]+]] = OpConstant %[[TyInt32]] 2{{$}}
+; CHECK-DAG: %[[WorkgroupMemory:[0-9]+]] = OpConstant %[[TyInt32]] 512{{$}}
 ; CHECK-DAG: %[[TyFP32Ptr:[0-9]+]] = OpTypePointer {{[a-zA-Z]+}} %[[TyFP32]]
 ; CHECK-DAG: %[[DblPtr:[0-9]+]] = OpVariable %[[TyFP32Ptr]] {{[a-zA-Z]+}} %[[Const0]]
 ; CHECK: OpAtomicFAddEXT %[[TyFP32]] %[[DblPtr]] %[[ScopeAllSvmDevices]] %[[MemSeqCst]] %[[Const42]]
@@ -69,15 +69,15 @@ declare spir_func float @_Z25atomic_fetch_sub_explicitPU3AS1VU7_Atomicff12memory
 
 define dso_local spir_func void @test4(i64 noundef %arg, float %val) local_unnamed_addr {
 entry:
-  %ptr1 = inttoptr i64 %arg to float addrspace(1)*
+  %ptr1 = inttoptr i64 %arg to ptr addrspace(1)
   %v1 = atomicrmw fadd ptr addrspace(1) %ptr1, float %val seq_cst, align 4
-  %ptr2 = inttoptr i64 %arg to float addrspace(1)*
+  %ptr2 = inttoptr i64 %arg to ptr addrspace(1)
   %v2 = atomicrmw fsub ptr addrspace(1) %ptr2, float %val seq_cst, align 4
-  %ptr3 = inttoptr i64 %arg to float addrspace(1)*
+  %ptr3 = inttoptr i64 %arg to ptr addrspace(1)
   %v3 = tail call spir_func float @_Z21__spirv_AtomicFAddEXT(ptr addrspace(1) %ptr3, i32 1, i32 16, float %val)
-  %ptr4 = inttoptr i64 %arg to float addrspace(1)*
+  %ptr4 = inttoptr i64 %arg to ptr addrspace(1)
   %v4 = tail call spir_func float @_Z25atomic_fetch_add_explicitPU3AS1VU7_Atomicff12memory_order(ptr addrspace(1) %ptr4, float %val, i32 0)
-  %ptr5 = inttoptr i64 %arg to float addrspace(1)*
+  %ptr5 = inttoptr i64 %arg to ptr addrspace(1)
   %v5 = tail call spir_func float @_Z25atomic_fetch_sub_explicitPU3AS1VU7_Atomicff12memory_order(ptr addrspace(1) %ptr5, float %val, i32 0)
   ret void
 }

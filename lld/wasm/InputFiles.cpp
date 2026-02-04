@@ -12,7 +12,6 @@
 #include "InputElement.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
-#include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Reproduce.h"
 #include "llvm/BinaryFormat/Wasm.h"
@@ -209,7 +208,7 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
     return getTagSymbol(reloc.Index)->getTagIndex();
   case R_WASM_FUNCTION_OFFSET_I32:
   case R_WASM_FUNCTION_OFFSET_I64: {
-    if (isa<UndefinedFunction>(sym)) {
+    if (isa<UndefinedFunction>(sym) || sym->isShared()) {
       return tombstone ? tombstone : reloc.Addend;
     }
     auto *f = cast<DefinedFunction>(sym);
@@ -423,8 +422,10 @@ ObjFile::ObjFile(MemoryBufferRef m, StringRef archiveName, bool lazy)
   // https://github.com/llvm/llvm-project/issues/98778
   checkArch(wasmObj->getArch());
 
-  // If this isn't part of an archive, it's eagerly linked, so mark it live.
-  if (archiveName.empty())
+  // Unless we are processing this as a lazy object file (e.g. part of an
+  // archive file or within `--start-lib`/`--end-lib`, it's eagerly linked, so
+  // mark it live.
+  if (!lazy)
     markLive();
 }
 

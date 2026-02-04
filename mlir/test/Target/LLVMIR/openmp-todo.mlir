@@ -26,63 +26,10 @@ llvm.func @atomic_hint(%v : !llvm.ptr, %x : !llvm.ptr, %expr : i32) {
 
 // -----
 
-llvm.func @cancel() {
-  // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
-  omp.parallel {
-    // expected-error@below {{not yet implemented: omp.cancel}}
-    // expected-error@below {{LLVM Translation failed for operation: omp.cancel}}
-    omp.cancel cancellation_construct_type(parallel)
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @cancellation_point() {
-  // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
-  omp.parallel {
-    // expected-error@below {{not yet implemented: omp.cancellation_point}}
-    // expected-error@below {{LLVM Translation failed for operation: omp.cancellation_point}}
-    omp.cancellation_point cancellation_construct_type(parallel)
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @do_simd(%lb : i32, %ub : i32, %step : i32) {
-  omp.wsloop {
-    // expected-warning@below {{simd information on composite construct discarded}}
-    omp.simd {
-      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-        omp.yield
-      }
-    } {omp.composite}
-  } {omp.composite}
-  llvm.return
-}
-
-// -----
-
 llvm.func @distribute_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.distribute operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.distribute}}
   omp.distribute allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @distribute_dist_schedule(%lb : i32, %ub : i32, %step : i32, %x : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause dist_schedule with chunk_size in omp.distribute operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.distribute}}
-  omp.distribute dist_schedule_static dist_schedule_chunk_size(%x : i32) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -156,62 +103,6 @@ llvm.func @sections_private(%x : !llvm.ptr) {
 
 // -----
 
-llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause linear in omp.simd operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.simd}}
-  omp.simd linear(%x = %step : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @simd_nontemporal(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause nontemporal in omp.simd operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.simd}}
-  omp.simd nontemporal(%x : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
-omp.declare_reduction @add_f32 : f32
-init {
-^bb0(%arg: f32):
-  %0 = llvm.mlir.constant(0.0 : f32) : f32
-  omp.yield (%0 : f32)
-}
-combiner {
-^bb1(%arg0: f32, %arg1: f32):
-  %1 = llvm.fadd %arg0, %arg1 : f32
-  omp.yield (%1 : f32)
-}
-atomic {
-^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
-  %2 = llvm.load %arg3 : !llvm.ptr -> f32
-  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
-  omp.yield
-}
-llvm.func @simd_reduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause reduction in omp.simd operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.simd}}
-  omp.simd reduction(@add_f32 %x -> %prv : !llvm.ptr) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
-  }
-  llvm.return
-}
-
-// -----
-
 omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
@@ -282,17 +173,6 @@ llvm.func @target_allocate(%x : !llvm.ptr) {
 
 // -----
 
-llvm.func @target_device(%x : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause device in omp.target operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target device(%x : i32) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):
@@ -314,34 +194,6 @@ llvm.func @target_in_reduction(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause in_reduction in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
   omp.target in_reduction(@add_f32 %x -> %prv : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-llvm.func @target_is_device_ptr(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause is_device_ptr in omp.target operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target is_device_ptr(%x : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
-omp.private {type = firstprivate} @x.privatizer : i32 copy {
-^bb0(%mold: !llvm.ptr, %private: !llvm.ptr):
-  %0 = llvm.load %mold : !llvm.ptr -> i32
-  llvm.store %0, %private : i32, !llvm.ptr
-  omp.yield(%private: !llvm.ptr)
-}
-llvm.func @target_firstprivate(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause firstprivate in omp.target operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target private(@x.privatizer %x -> %arg0 : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -457,13 +309,12 @@ llvm.func @taskgroup_task_reduction(%x : !llvm.ptr) {
   }
   llvm.return
 }
-
 // -----
 
-llvm.func @taskloop(%lb : i32, %ub : i32, %step : i32) {
-  // expected-error@below {{not yet implemented: omp.taskloop}}
+llvm.func @taskloop_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.taskloop operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop {
+  omp.taskloop allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -473,10 +324,55 @@ llvm.func @taskloop(%lb : i32, %ub : i32, %step : i32) {
 
 // -----
 
-llvm.func @taskloop_untied(%lb : i32, %ub : i32, %step : i32) {
-  // expected-error@below {{not yet implemented: omp.taskloop}}
+llvm.func @taskloop_collapse(%lb : i32, %ub : i32, %step : i32, %lb1 : i32, %ub1 : i32, %step1 : i32) {
   // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
-  omp.taskloop untied {
+  omp.taskloop {
+    // expected-error@below {{not yet implemented: Unhandled clause collapse in omp.loop_nest operation}}
+    // expected-error@below {{LLVM Translation failed for operation: omp.loop_nest}}
+    omp.loop_nest (%iv, %iv1) : i32 = (%lb, %lb1) to (%ub, %ub1) inclusive step (%step, %step1) collapse(2) {
+      omp.yield
+    }
+  }
+  llvm.return
+}
+
+// -----
+ omp.declare_reduction @add_reduction_i32 : i32 init {
+  ^bb0(%arg0: i32):
+    %0 = llvm.mlir.constant(0 : i32) : i32
+    omp.yield(%0 : i32)
+  }combiner {
+  ^bb0(%arg0: i32, %arg1: i32):
+    %0 = llvm.add %arg0, %arg1 : i32
+    omp.yield(%0 : i32)
+  }
+
+llvm.func @taskloop_inreduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause in_reduction in omp.taskloop operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
+  omp.taskloop in_reduction(@add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
+    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      omp.yield
+    }
+  }
+  llvm.return
+}
+
+// -----
+ omp.declare_reduction @add_reduction_i32 : i32 init {
+  ^bb0(%arg0: i32):
+    %0 = llvm.mlir.constant(0 : i32) : i32
+    omp.yield(%0 : i32)
+  }combiner {
+  ^bb0(%arg0: i32, %arg1: i32):
+    %0 = llvm.add %arg0, %arg1 : i32
+    omp.yield(%0 : i32)
+  }
+
+llvm.func @taskloop_reduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause reduction in omp.taskloop operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop}}
+  omp.taskloop reduction(@add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -536,27 +432,32 @@ llvm.func @teams_private(%x : !llvm.ptr) {
 
 // -----
 
-omp.declare_reduction @add_f32 : f32
-init {
-^bb0(%arg: f32):
-  %0 = llvm.mlir.constant(0.0 : f32) : f32
-  omp.yield (%0 : f32)
-}
-combiner {
-^bb1(%arg0: f32, %arg1: f32):
-  %1 = llvm.fadd %arg0, %arg1 : f32
-  omp.yield (%1 : f32)
-}
-atomic {
-^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
-  %2 = llvm.load %arg3 : !llvm.ptr -> f32
-  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
-  omp.yield
-}
-llvm.func @teams_reduction(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause reduction in omp.teams operation}}
+llvm.func @teams_num_teams_multi_dim(%lb : i32, %ub : i32) {
+  // expected-error@below {{not yet implemented: Unhandled clause num_teams with multi-dimensional values in omp.teams operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.teams}}
-  omp.teams reduction(@add_f32 %x -> %prv : !llvm.ptr) {
+  omp.teams num_teams(to %ub, %ub, %ub : i32, i32, i32) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @parallel_num_threads_multi_dim(%lb : i32, %ub : i32) {
+  // expected-error@below {{not yet implemented: Unhandled clause num_threads with multi-dimensional values in omp.parallel operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
+  omp.parallel num_threads(%lb, %ub : i32, i32) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @teams_thread_limit_multi_dim(%lb : i32, %ub : i32) {
+  // expected-error@below {{not yet implemented: Unhandled clause thread_limit with multi-dimensional values in omp.teams operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.teams}}
+  omp.teams thread_limit(%lb, %ub : i32, i32) {
     omp.terminator
   }
   llvm.return
@@ -576,11 +477,10 @@ llvm.func @wsloop_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 }
 
 // -----
-
-llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause linear in omp.wsloop operation}}
+llvm.func @wsloop_order(%lb : i32, %ub : i32, %step : i32) {
+  // expected-error@below {{not yet implemented: Unhandled clause order in omp.wsloop operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
-  omp.wsloop linear(%x = %step : !llvm.ptr) {
+  omp.wsloop order(concurrent) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -589,14 +489,11 @@ llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 }
 
 // -----
-
-llvm.func @wsloop_order(%lb : i32, %ub : i32, %step : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause order in omp.wsloop operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}
-  omp.wsloop order(concurrent) {
-    omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
-      omp.yield
-    }
+llvm.func @task_affinity(%x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause affinity in omp.task operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
+  omp.task affinity(%x : !llvm.ptr) {
+    omp.terminator
   }
   llvm.return
 }

@@ -19,7 +19,7 @@ deallocate(r)
 
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_ptr_Uxi32 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> alloc {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_ptr_Uxi32 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> attributes {byref_element_type = !fir.array<?xi32>} alloc {
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:           omp.yield(%[[VAL_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK-LABEL:   } init {
@@ -40,7 +40,6 @@ end program
 ! CHECK:             %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_9]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:             %[[VAL_11:.*]] = fir.shape %[[VAL_10]]#1 : (index) -> !fir.shape<1>
 ! CHECK:             %[[VAL_12:.*]] = fir.allocmem !fir.array<?xi32>, %[[VAL_10]]#1 {bindc_name = ".tmp", uniq_name = ""}
-! CHECK:             %[[VAL_13:.*]] = arith.constant true
 ! CHECK:             %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]](%[[VAL_11]]) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<?xi32>>, !fir.shape<1>) -> (!fir.box<!fir.array<?xi32>>, !fir.heap<!fir.array<?xi32>>)
 ! CHECK:             %[[VAL_15:.*]] = arith.constant 0 : index
 ! CHECK:             %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_15]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -56,7 +55,8 @@ end program
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_5:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_4]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
-! CHECK:           %[[VAL_6:.*]] = fir.shape_shift %[[VAL_5]]#0, %[[VAL_5]]#1 : (index, index) -> !fir.shapeshift<1>
+! CHECK:           %[[C1:.*]] = arith.constant 1 : index
+! CHECK:           %[[VAL_6:.*]] = fir.shape_shift %[[C1]], %[[VAL_5]]#1 : (index, index) -> !fir.shapeshift<1>
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 1 : index
 ! CHECK:           fir.do_loop %[[VAL_8:.*]] = %[[VAL_7]] to %[[VAL_5]]#1 step %[[VAL_7]] unordered {
 ! CHECK:             %[[VAL_9:.*]] = fir.array_coor %[[VAL_2]](%[[VAL_6]]) %[[VAL_8]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
@@ -81,7 +81,7 @@ end program
 ! CHECK:           omp.yield
 ! CHECK:         }
 
-! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "reduce"} {
+! CHECK-LABEL:   func.func @_QQmain() attributes {fir.bindc_name = "REDUCE"} {
 ! CHECK:           %[[VAL_0:.*]] = fir.address_of(@_QFEi) : !fir.ref<i32>
 ! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_2:.*]] = fir.address_of(@_QFEr) : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
@@ -104,7 +104,7 @@ end program
 ! CHECK:           fir.call @_FortranAPointerSetBounds(%[[VAL_15]], %[[VAL_14]], %[[VAL_16]], %[[VAL_17]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i64, i64) -> ()
 ! CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_3]]#0 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.char<{{.*}}>>) -> !fir.ref<i8>
-! CHECK:           %[[VAL_21:.*]] = fir.call @_FortranAPointerAllocate(%[[VAL_19]], %[[VAL_4]], %[[VAL_5]], %[[VAL_20]], %[[VAL_7]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:           %[[VAL_21:.*]] = fir.call @_FortranAPointerAllocate(%[[VAL_19]], %[[VAL_4]], %[[VAL_5]], %[[VAL_20]], %[[VAL_7]], {{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32, {{.*}}) -> i32
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_24:.*]] = arith.constant 0 : i32
 ! CHECK:             %[[VAL_25:.*]] = arith.constant 10 : i32

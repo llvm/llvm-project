@@ -14,6 +14,7 @@
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
+#include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
@@ -805,7 +806,7 @@ static llvm::Value *emitARCRetainLoadOfScalar(CodeGenFunction &CGF,
 /// its pointer, name, and types registered in the class structure.
 void CodeGenFunction::GenerateObjCMethod(const ObjCMethodDecl *OMD) {
   StartObjCMethod(OMD, OMD->getClassInterface());
-  PGO.assignRegionCounters(GlobalDecl(OMD), CurFn);
+  PGO->assignRegionCounters(GlobalDecl(OMD), CurFn);
   assert(isa<CompoundStmt>(OMD->getBody()));
   incrementProfileCounter(OMD->getBody());
   EmitCompoundStmtWithoutScope(*cast<CompoundStmt>(OMD->getBody()));
@@ -998,8 +999,8 @@ PropertyImplStrategy::PropertyImplStrategy(CodeGenModule &CGM,
 
   // Compute whether the ivar has strong members.
   if (CGM.getLangOpts().getGC())
-    if (const RecordType *recordType = ivarType->getAs<RecordType>())
-      HasStrong = recordType->getDecl()->hasObjectMember();
+    if (const auto *RD = ivarType->getAsRecordDecl())
+      HasStrong = RD->hasObjectMember();
 
   // We can never access structs with object members with a native
   // access, because we need to use write barriers.  This is what
@@ -1192,16 +1193,23 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     ivarAddr = ivarAddr.withElementType(bitcastType);
     llvm::LoadInst *load = Builder.CreateLoad(ivarAddr, "load");
     load->setAtomic(llvm::AtomicOrdering::Unordered);
+    llvm::Value *ivarVal = load;
+    if (PointerAuthQualifier PAQ = ivar->getType().getPointerAuth()) {
+      CGPointerAuthInfo SrcInfo = EmitPointerAuthInfo(PAQ, ivarAddr);
+      CGPointerAuthInfo TargetInfo =
+          CGM.getPointerAuthInfoForType(getterMethod->getReturnType());
+      ivarVal = emitPointerAuthResign(ivarVal, ivar->getType(), SrcInfo,
+                                      TargetInfo, /*isKnownNonNull=*/false);
+    }
 
     // Store that value into the return address.  Doing this with a
     // bitcast is likely to produce some pretty ugly IR, but it's not
     // the *most* terrible thing in the world.
     llvm::Type *retTy = ConvertType(getterMethod->getReturnType());
     uint64_t retTySize = CGM.getDataLayout().getTypeSizeInBits(retTy);
-    llvm::Value *ivarVal = load;
     if (ivarSize > retTySize) {
       bitcastType = llvm::Type::getIntNTy(getLLVMContext(), retTySize);
-      ivarVal = Builder.CreateTrunc(load, bitcastType);
+      ivarVal = Builder.CreateTrunc(ivarVal, bitcastType);
     }
     Builder.CreateStore(ivarVal, ReturnValue.withElementType(bitcastType));
 
@@ -1213,6 +1221,16 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
   case PropertyImplStrategy::GetSetProperty: {
     llvm::FunctionCallee getPropertyFn =
         CGM.getObjCRuntime().GetPropertyGetFunction();
+
+    if (ivar->getType().getPointerAuth()) {
+      // This currently cannot be hit, but if we ever allow objc pointers
+      // to be signed, this will become possible. Reaching here would require
+      // a copy, weak, etc property backed by an authenticated pointer.
+      CGM.ErrorUnsupported(propImpl,
+                           "Obj-C getter requiring pointer authentication");
+      return;
+    }
+
     if (!getPropertyFn) {
       CGM.ErrorUnsupported(propImpl, "Obj-C getter requiring atomic copy");
       return;
@@ -1268,7 +1286,9 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     LValue LV = EmitLValueForIvar(TypeOfSelfObject(), LoadObjCSelf(), ivar, 0);
 
     QualType ivarType = ivar->getType();
-    switch (getEvaluationKind(ivarType)) {
+    auto EvaluationKind = getEvaluationKind(ivarType);
+    assert(!ivarType.getPointerAuth() || EvaluationKind == TEK_Scalar);
+    switch (EvaluationKind) {
     case TEK_Complex: {
       ComplexPairTy pair = EmitLoadOfComplex(LV, SourceLocation());
       EmitStoreOfComplex(pair, MakeAddrLValue(ReturnValue, ivarType),
@@ -1286,6 +1306,11 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     case TEK_Scalar: {
       llvm::Value *value;
       if (propType->isReferenceType()) {
+        if (ivarType.getPointerAuth()) {
+          CGM.ErrorUnsupported(propImpl,
+                               "Obj-C getter for authenticated reference type");
+          return;
+        }
         value = LV.getAddress().emitRawPointer(*this);
       } else {
         // We want to load and autoreleaseReturnValue ARC __weak ivars.
@@ -1299,7 +1324,19 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
         // Otherwise we want to do a simple load, suppressing the
         // final autorelease.
         } else {
-          value = EmitLoadOfLValue(LV, SourceLocation()).getScalarVal();
+          if (PointerAuthQualifier PAQ = ivar->getType().getPointerAuth()) {
+            Address ivarAddr = LV.getAddress();
+            llvm::LoadInst *LoadInst = Builder.CreateLoad(ivarAddr, "load");
+            llvm::Value *Load = LoadInst;
+            auto SrcInfo = EmitPointerAuthInfo(PAQ, ivarAddr);
+            auto TargetInfo =
+                CGM.getPointerAuthInfoForType(getterMethod->getReturnType());
+            Load = emitPointerAuthResign(Load, ivarType, SrcInfo, TargetInfo,
+                                         /*isKnownNonNull=*/false);
+            value = Load;
+          } else
+            value = EmitLoadOfLValue(LV, SourceLocation()).getScalarVal();
+
           AutoreleaseResult = false;
         }
 
@@ -1488,6 +1525,14 @@ CodeGenFunction::generateObjCSetterBody(const ObjCImplementationDecl *classImpl,
     ivarAddr = ivarAddr.withElementType(castType);
 
     llvm::Value *load = Builder.CreateLoad(argAddr);
+
+    if (PointerAuthQualifier PAQ = ivar->getType().getPointerAuth()) {
+      QualType PropertyType = propImpl->getPropertyDecl()->getType();
+      CGPointerAuthInfo SrcInfo = CGM.getPointerAuthInfoForType(PropertyType);
+      CGPointerAuthInfo TargetInfo = EmitPointerAuthInfo(PAQ, ivarAddr);
+      load = emitPointerAuthResign(load, ivar->getType(), SrcInfo, TargetInfo,
+                                   /*isKnownNonNull=*/false);
+    }
 
     // Perform an atomic store.  There are no memory ordering requirements.
     llvm::StoreInst *store = Builder.CreateStore(load, ivarAddr);
@@ -1967,7 +2012,9 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
     const ObjCInterfaceType *InterfaceTy =
         ObjPtrTy ? ObjPtrTy->getInterfaceType() : nullptr;
     if (InterfaceTy) {
-      SanitizerScope SanScope(this);
+      auto CheckOrdinal = SanitizerKind::SO_ObjCCast;
+      auto CheckHandler = SanitizerHandler::InvalidObjCCast;
+      SanitizerDebugLocation SanScope(this, {CheckOrdinal}, CheckHandler);
       auto &C = CGM.getContext();
       assert(InterfaceTy->getDecl() && "No decl for ObjC interface type");
       Selector IsKindOfClassSel = GetUnarySelector("isKindOfClass", C);
@@ -1984,8 +2031,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
       llvm::Constant *StaticData[] = {
           EmitCheckSourceLocation(S.getBeginLoc()),
           EmitCheckTypeDescriptor(QualType(InterfaceTy, 0))};
-      EmitCheck({{IsClass, SanitizerKind::SO_ObjCCast}},
-                SanitizerHandler::InvalidObjCCast,
+      EmitCheck({{IsClass, CheckOrdinal}}, CheckHandler,
                 ArrayRef<llvm::Constant *>(StaticData), CurrentItem);
     }
   }
@@ -2010,7 +2056,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
     EmitAutoVarCleanups(variable);
 
   // Perform the loop body, setting up break and continue labels.
-  BreakContinueStack.push_back(BreakContinue(LoopEnd, AfterBody));
+  BreakContinueStack.push_back(BreakContinue(S, LoopEnd, AfterBody));
   {
     RunCleanupsScope Scope(*this);
     EmitStmt(S.getBody());
@@ -2386,7 +2432,8 @@ static llvm::Value *emitOptimizedARCReturnCall(llvm::Value *value,
   // FIXME: Do this on all targets and at -O0 too. This can be enabled only if
   // the target backend knows how to handle the operand bundle.
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0 &&
-      (Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::x86_64)) {
+      (Arch == llvm::Triple::aarch64 || Arch == llvm::Triple::aarch64_32 ||
+       Arch == llvm::Triple::x86_64)) {
     llvm::Value *bundleArgs[] = {EP};
     llvm::OperandBundleDef OB("clang.arc.attachedcall", bundleArgs);
     auto *oldCall = cast<llvm::CallBase>(value);
@@ -3170,8 +3217,8 @@ ARCExprEmitter<Impl,Result>::visitPseudoObjectExpr(const PseudoObjectExpr *E) {
   }
 
   // Unbind all the opaques now.
-  for (unsigned i = 0, e = opaques.size(); i != e; ++i)
-    opaques[i].unbind(CGF);
+  for (CodeGenFunction::OpaqueValueMappingData &opaque : opaques)
+    opaque.unbind(CGF);
 
   return result;
 }

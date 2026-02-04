@@ -19,6 +19,8 @@
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
+#include "OrcTestCommon.h"
+
 using namespace llvm;
 using namespace llvm::jitlink;
 using namespace llvm::orc;
@@ -32,7 +34,7 @@ ArrayRef<char> BlockContent(BlockContentBytes);
 
 class ObjectLinkingLayerTest : public testing::Test {
 public:
-  ~ObjectLinkingLayerTest() {
+  ~ObjectLinkingLayerTest() override {
     if (auto Err = ES.endSession())
       ES.reportError(std::move(Err));
   }
@@ -159,7 +161,7 @@ TEST_F(ObjectLinkingLayerTest, HandleErrorDuringPostAllocationPass) {
   // abandon the in-flight allocation and report an error.
   class TestPlugin : public ObjectLinkingLayer::Plugin {
   public:
-    ~TestPlugin() { EXPECT_TRUE(ErrorReported); }
+    ~TestPlugin() override { EXPECT_TRUE(ErrorReported); }
 
     void modifyPassConfig(MaterializationResponsibility &MR,
                           jitlink::LinkGraph &G,
@@ -213,7 +215,7 @@ TEST_F(ObjectLinkingLayerTest, AddAndRemovePlugins) {
     TestPlugin(size_t &ActivationCount, bool &PluginDestroyed)
         : ActivationCount(ActivationCount), PluginDestroyed(PluginDestroyed) {}
 
-    ~TestPlugin() { PluginDestroyed = true; }
+    ~TestPlugin() override { PluginDestroyed = true; }
 
     void modifyPassConfig(MaterializationResponsibility &MR,
                           jitlink::LinkGraph &G,
@@ -299,7 +301,7 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
 
     void lookupSymbolsAsync(ArrayRef<LookupRequest> Request,
                             SymbolLookupCompleteFn Complete) override {
-      std::vector<ExecutorSymbolDef> Result;
+      std::vector<std::optional<ExecutorSymbolDef>> Result;
       EXPECT_EQ(Request.size(), 1u);
       for (auto &LR : Request) {
         EXPECT_EQ(LR.Symbols.size(), 1u);
@@ -307,7 +309,7 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
           if (*Sym.first == "_testFunc") {
             ExecutorSymbolDef Def{ExecutorAddr::fromPtr((void *)0x1000),
                                   JITSymbolFlags::Exported};
-            Result.push_back(Def);
+            Result.emplace_back(Def);
           } else {
             ADD_FAILURE() << "unexpected symbol request " << *Sym.first;
           }
@@ -334,7 +336,7 @@ TEST(ObjectLinkingLayerSearchGeneratorTest, AbsoluteSymbolsObjectLayer) {
 
   class CheckDefs : public ObjectLinkingLayer::Plugin {
   public:
-    ~CheckDefs() { EXPECT_TRUE(SawSymbolDef); }
+    ~CheckDefs() override { EXPECT_TRUE(SawSymbolDef); }
 
     void modifyPassConfig(MaterializationResponsibility &MR,
                           jitlink::LinkGraph &G,

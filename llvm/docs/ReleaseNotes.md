@@ -1,6 +1,9 @@
 <!-- This document is written in Markdown and uses extra directives provided by
 MyST (https://myst-parser.readthedocs.io/en/latest/). -->
 
+<!-- If you want to modify sections/contents permanently, you should modify both
+ReleaseNotes.md and ReleaseNotesTemplate.txt. -->
+
 LLVM {{env.config.release}} Release Notes
 =========================================
 
@@ -56,20 +59,14 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
-* The `nocapture` attribute has been replaced by `captures(none)`.
-* The constant expression variants of the following instructions have been
-  removed:
-
-  * `mul`
-
-* Updated semantics of `llvm.type.checked.load.relative` to match that of
-  `llvm.load.relative`.
+* Removed `llvm.convert.to.fp16` and `llvm.convert.from.fp16`
+  intrinsics. These are equivalent to `fptrunc` and `fpext` with half
+  with a bitcast.
 
 Changes to LLVM infrastructure
 ------------------------------
 
-* Removed support for target intrinsics being defined in the target directories
-  themselves (i.e., the `TargetIntrinsicInfo` class).
+* Removed TypePromoteFloat legalization from SelectionDAG
 
 Changes to building LLVM
 ------------------------
@@ -80,17 +77,16 @@ Changes to TableGen
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
+Changes to Vectorizers
+----------------------
+
 Changes to the AArch64 Backend
 ------------------------------
 
 Changes to the AMDGPU Backend
 -----------------------------
 
-* Enabled the
-  [FWD_PROGRESS bit](https://llvm.org/docs/AMDGPUUsage.html#code-object-v3-kernel-descriptor)
-  for all GFX ISAs greater or equal to 10, for the AMDHSA OS.
-
-* Bump the default `.amdhsa_code_object_version` to 6. ROCm 6.3 is required to run any program compiled with COV6.
+* Initial support for gfx1310
 
 Changes to the ARM Backend
 --------------------------
@@ -107,12 +103,18 @@ Changes to the Hexagon Backend
 Changes to the LoongArch Backend
 --------------------------------
 
-* Changing the default code model from `small` to `medium` for 64-bit.
+* DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
+  to be used together when building for the LoongArch platform.
 
 Changes to the MIPS Backend
 ---------------------------
 
-* `-mcpu=i6400` and `-mcpu=i6500` were added.
+Changes to the NVPTX Backend
+----------------------------
+
+* The default SM version has been changed from `sm_30` to `sm_75`. `sm_75` is
+  the oldest GPU variant compatible with the widest range of recent major CUDA
+  Toolkit versions (11/12/13).
 
 Changes to the PowerPC Backend
 ------------------------------
@@ -120,27 +122,13 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
-* Adds experimental assembler support for the Qualcomm uC 'Xqcilb` (Long Branch)
-  extension.
-* Adds experimental assembler support for the Qualcomm uC 'Xqcili` (Load Large Immediate)
-  extension.
-* Adds experimental assembler support for the Qualcomm uC 'Xqcilia` (Large Immediate Arithmetic)
-  extension.
-* Adds experimental assembler support for the Qualcomm uC 'Xqcibm` (Bit Manipulation)
-  extension.
-* Adds experimental assembler support for the Qualcomm uC 'Xqcibi` (Branch Immediate)
-  extension.
-* Adds experimental assembler and code generation support for the Qualcomm
-  'Xqccmp' extension, which is a frame-pointer convention compatible version of
-  Zcmp.
-* Added non-quadratic ``log-vrgather`` cost model for ``vrgather.vv`` instruction
-* Adds experimental assembler support for the Qualcomm uC 'Xqcisim` (Simulation Hint)
-  extension.
-* Adds assembler support for the 'Zilsd` (Load/Store Pair Instructions)
-  extension.
-* Adds assembler support for the 'Zclsd` (Compressed Load/Store Pair Instructions)
-  extension.
-* Adds experimental assembler support for Zvqdotq.
+* `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
+* `-mcpu=spacemit-x100` was added.
+* Change P extension version to match the 019 draft specification. Encoded in `-march` as `0p19`.
+* Mnemonics for MOP/HINT-based instructions (`lpad`, `pause`, `ntl.*`, `c.ntl.*`,
+  `sspush`, `sspopchk`, `ssrdp`, `c.sspush`, `c.sspopchk`) are now always
+  available in the assembler and disassembler without requiring their respective
+  extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -148,11 +136,15 @@ Changes to the WebAssembly Backend
 Changes to the Windows Target
 -----------------------------
 
-* `fp128` is now passed indirectly, meaning it uses the same calling convention
-  as `i128`.
+* The `.seh_startchained` and `.seh_endchained` assembly instructions have been removed and replaced
+  with a new `.seh_splitchained` instruction.
 
 Changes to the X86 Backend
 --------------------------
+
+* `.att_syntax` directive is now emitted for assembly files when AT&T syntax is
+  in use. This matches the behaviour of Intel syntax and aids with
+  compatibility when changing the default Clang syntax to the Intel syntax.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -163,51 +155,27 @@ Changes to the Python bindings
 Changes to the C API
 --------------------
 
-* The following functions for creating constant expressions have been removed,
-  because the underlying constant expressions are no longer supported. Instead,
-  an instruction should be created using the `LLVMBuildXYZ` APIs, which will
-  constant fold the operands if possible and create an instruction otherwise:
-
-  * `LLVMConstMul`
-  * `LLVMConstNUWMul`
-  * `LLVMConstNSWMul`
-
 Changes to the CodeGen infrastructure
 -------------------------------------
 
 Changes to the Metadata Info
----------------------------------
+----------------------------
 
 Changes to the Debug Info
----------------------------------
+-------------------------
 
 Changes to the LLVM tools
----------------------------------
+-------------------------
 
-* llvm-objcopy now supports the `--update-section` flag for intermediate Mach-O object files.
-* llvm-strip now supports continuing to process files on encountering an error.
-* In llvm-objcopy/llvm-strip's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
-  ([#47468](https://github.com/llvm/llvm-project/issues/47468))
+* `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
+* `FileCheck` option `-check-prefix` now accepts a comma-separated list of
+  prefixes, making it an alias of the existing `-check-prefixes` option.
 
 Changes to LLDB
----------------------------------
-
-* When building LLDB with Python support, the minimum version of Python is now
-  3.8.
-* LLDB now supports hardware watchpoints for AArch64 Windows targets. Windows
-  does not provide API to query the number of supported hardware watchpoints.
-  Therefore current implementation allows only 1 watchpoint, as tested with
-  Windows 11 on the Microsoft SQ2 and Snapdragon Elite X platforms.
-* LLDB now steps through C++ thunks. This fixes an issue where previously, it
-  wouldn't step into multiple inheritance virtual functions.
-
-### Changes to lldb-dap
-
-* Breakpoints can now be set for specific columns within a line.
-* Function return value is now displayed on step-out.
+---------------
 
 Changes to BOLT
----------------------------------
+---------------
 
 Changes to Sanitizers
 ---------------------
@@ -217,8 +185,6 @@ Other Changes
 
 External Open Source Projects Using LLVM {{env.config.release}}
 ===============================================================
-
-* A project...
 
 Additional Information
 ======================

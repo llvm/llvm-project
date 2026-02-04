@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FormatterBytecode.h"
+#include "lldb/DataFormatters/FormatterBytecode.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Format.h"
@@ -25,8 +26,8 @@ std::string toString(FormatterBytecode::OpCodes op) {
     const char *s = MNEMONIC;                                                  \
     return s ? s : #NAME;                                                      \
   }
-#include "FormatterBytecode.def"
-#undef DEFINE_SIGNATURE
+#include "lldb/DataFormatters/FormatterBytecode.def"
+#undef DEFINE_OPCODE
   }
   return llvm::utostr(op);
 }
@@ -36,8 +37,8 @@ std::string toString(FormatterBytecode::Selectors sel) {
 #define DEFINE_SELECTOR(ID, NAME)                                              \
   case ID:                                                                     \
     return "@" #NAME;
-#include "FormatterBytecode.def"
-#undef DEFINE_SIGNATURE
+#include "lldb/DataFormatters/FormatterBytecode.def"
+#undef DEFINE_SELECTOR
   }
   return "@" + llvm::utostr(sel);
 }
@@ -47,7 +48,7 @@ std::string toString(FormatterBytecode::Signatures sig) {
 #define DEFINE_SIGNATURE(ID, NAME)                                             \
   case ID:                                                                     \
     return "@" #NAME;
-#include "FormatterBytecode.def"
+#include "lldb/DataFormatters/FormatterBytecode.def"
 #undef DEFINE_SIGNATURE
   }
   return llvm::utostr(sig);
@@ -489,7 +490,10 @@ llvm::Error Interpret(std::vector<ControlStackElement> &control,
         TYPE_CHECK(Object, String);
         auto name = data.Pop<std::string>();
         POP_VALOBJ(valobj);
-        data.Push((uint64_t)valobj->GetIndexOfChildWithName(name));
+        if (auto index_or_err = valobj->GetIndexOfChildWithName(name))
+          data.Push((uint64_t)*index_or_err);
+        else
+          return index_or_err.takeError();
         break;
       }
       case sel_get_type: {
