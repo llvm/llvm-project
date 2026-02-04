@@ -10,6 +10,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
+#include "mlir/Dialect/MPI/IR/MPI.h"
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
