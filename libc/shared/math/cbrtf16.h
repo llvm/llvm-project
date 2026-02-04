@@ -10,6 +10,9 @@
 #define LLVM_LIBC_SHARED_MATH_CBRTF16_H
 
 #include "shared/libc_common.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
 #include "src/__support/math/cbrtf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -19,5 +22,7 @@ using math::cbrtf16;
 
 } // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SHARED_MATH_CBRTF16_H
