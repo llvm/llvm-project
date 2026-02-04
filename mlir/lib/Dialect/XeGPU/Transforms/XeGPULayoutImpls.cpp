@@ -307,8 +307,13 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   // Maps each source dimension to the range of destination dimensions it splits
   // into
   SmallVector<SmallVector<int64_t>> splitDimGroups;
-  if (xegpu::matchSplitDimExpansion(srcShape, resShape, splitDimGroups))
-    return resLayout.collapseDims(splitDimGroups);
+  if (xegpu::matchSplitDimExpansion(srcShape, resShape, splitDimGroups)) {
+    auto srcLayout = resLayout;
+    for (const auto &dimGroup : splitDimGroups)
+      srcLayout = srcLayout.collapseDims(dimGroup);
+
+    return srcLayout;
+  }
 
   auto matchCollapseToInnermostDim = [&](ArrayRef<int64_t> src,
                                          ArrayRef<int64_t> dst) -> bool {

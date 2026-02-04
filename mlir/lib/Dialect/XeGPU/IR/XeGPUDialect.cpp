@@ -501,17 +501,17 @@ DistributeLayoutAttr LayoutAttr::setDimData(int64_t dim, int64_t sgData,
       getOrder());
 }
 
-// Derive a new layout by collapsing groups of dimensions.
-// Each inner array in `dimGroups` specifies a set of adjacent dimensions
+// Derive a new layout by collapsing dimensions.
+// `dimGroup` specifies a group of adjacent dimensions
 // that are collapsed into a single dimension in the derived layout.
-DistributeLayoutAttr
-LayoutAttr::collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const {
+DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
 
   SmallVector<int64_t> sgLayout = getEffectiveSgLayoutAsInt();
   SmallVector<int64_t> sgData = getEffectiveSgDataAsInt();
   SmallVector<int64_t> instData = getEffectiveInstDataAsInt();
   SmallVector<int64_t> laneLayout = getEffectiveLaneLayoutAsInt();
   SmallVector<int64_t> laneData = getEffectiveLaneDataAsInt();
+  int64_t rank = getRank();
 
   DenseI32ArrayAttr orderAttr = getOrder();
   SmallVector<int64_t> orderVec;
@@ -519,6 +519,29 @@ LayoutAttr::collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const {
     orderVec = llvm::to_vector(
         llvm::map_range(orderAttr.asArrayRef(),
                         [](int32_t idx) { return static_cast<int64_t>(idx); }));
+  }
+
+  SmallVector<int64_t> sortedDimGroup = dimGroup;
+  llvm::sort(sortedDimGroup);
+  int64_t dimBeforeCurrent = -1;
+  for (auto dimIdx : sortedDimGroup) {
+    // when order is present, adjacency dims are on order values like [3, 2, 1,
+    // 0] in decreasing order otherwise based on dim indices like [0, 1, 2, 3]
+    // in increasing order
+    if (dimBeforeCurrent >= 0) {
+      if (!orderVec.empty()) {
+        int64_t orderBefore = orderVec[dimBeforeCurrent];
+        int64_t orderCurrent = orderVec[dimIdx];
+        if (orderBefore != (orderCurrent - 1))
+          llvm::report_fatal_error(
+              "dimensions being collapsed must be adjacent in order");
+      } else {
+        if (dimIdx != (dimBeforeCurrent + 1))
+          llvm::report_fatal_error(
+              "dimensions being collapsed must be adjacent");
+      }
+    }
+    dimBeforeCurrent = dimIdx;
   }
 
   SmallVector<int64_t> collapsedSgLayout;
@@ -529,44 +552,38 @@ LayoutAttr::collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const {
   SmallVector<int64_t> collapsedOrder;
   SetVector<int64_t> coveredDims;
 
-  for (const auto &group : dimGroups) {
+  // Collapse by multiplying values across dimension group
+  int64_t collapsedSg = 1, collapsedSgD = 1, collapsedInst = 1;
+  int64_t collapsedLaneL = 1, collapsedLaneD = 1;
+  int64_t collapsedOrderValue = -1;
 
-    // Collapse by multiplying values across dimension group
-    int64_t collapsedSg = 1, collapsedSgD = 1, collapsedInst = 1;
-    int64_t collapsedLaneL = 1, collapsedLaneD = 1;
-    int64_t collapsedOrderValue = -1;
-    int64_t dimBeforeCurrent = group.front() - 1;
-    for (int64_t dimIdx : group) {
-      // no two groups can cover the same dimension
-      if (!coveredDims.insert(dimIdx))
-        llvm::report_fatal_error(Twine("dimension ") + Twine(dimIdx) +
-                                 " is covered more than once");
-      // dims within group must be adjacent
-      if (dimBeforeCurrent != (dimIdx - 1))
-        llvm::report_fatal_error("dimensions being collapsed must be adjacent");
-      dimBeforeCurrent = dimIdx;
-
+  for (int64_t dimIdx = 0; dimIdx < rank; ++dimIdx) {
+    if (llvm::is_contained(dimGroup, dimIdx)) {
       collapsedSg *= sgLayout[dimIdx];
       collapsedSgD *= sgData[dimIdx];
       collapsedInst *= instData[dimIdx];
       collapsedLaneL *= laneLayout[dimIdx];
       collapsedLaneD *= laneData[dimIdx];
+      collapsedOrderValue = orderVec[dimIdx]; // take the last one's order
+      if (dimIdx == dimGroup.back()) {
+        collapsedSgLayout.push_back(collapsedSg);
+        collapsedSgData.push_back(collapsedSgD);
+        collapsedInstData.push_back(collapsedInst);
+        collapsedLaneLayout.push_back(collapsedLaneL);
+        collapsedLaneData.push_back(collapsedLaneD);
+        if (!orderVec.empty())
+          collapsedOrder.push_back(collapsedOrderValue);
+      }
+    } else {
+      collapsedSgLayout.push_back(sgLayout[dimIdx]);
+      collapsedSgData.push_back(sgData[dimIdx]);
+      collapsedInstData.push_back(instData[dimIdx]);
+      collapsedLaneLayout.push_back(laneLayout[dimIdx]);
+      collapsedLaneData.push_back(laneData[dimIdx]);
       if (!orderVec.empty())
-        collapsedOrderValue = orderVec[dimIdx]; // take the last one's order
+        collapsedOrder.push_back(orderVec[dimIdx]);
     }
-
-    collapsedSgLayout.push_back(collapsedSg);
-    collapsedSgData.push_back(collapsedSgD);
-    collapsedInstData.push_back(collapsedInst);
-    collapsedLaneLayout.push_back(collapsedLaneL);
-    collapsedLaneData.push_back(collapsedLaneD);
-    collapsedOrder.push_back(collapsedOrderValue);
   }
-
-  // check covered all dimensions
-  if (coveredDims.size() != sgLayout.size())
-    llvm::report_fatal_error(
-        "not all dimensions are covered in collapseGroups");
 
   // Create collapsed layout
   SmallVector<int32_t> collapsedSgLayout32(collapsedSgLayout.begin(),
@@ -580,9 +597,10 @@ LayoutAttr::collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const {
   SmallVector<int32_t> collapsedLaneData32(collapsedLaneData.begin(),
                                            collapsedLaneData.end());
 
-  // go through the values inside collapsedOrder, and re-map the order values to
-  // be in range of [0, N-1] where N is the number of dimensions in collapsed
-  // shape
+  // go through the values inside collapsedOrder, and re-map the order values
+  // to be in range of [0, N-1] where N is the number of dimensions in
+  // collapsed shape for exmaple, collapse dim group {2, 3} of order[1, 2, 3,
+  // 4] to new order[1, 3, 4]. the loop below remaps it to [1, 2, 3].
   SmallVector<int32_t> remappedOrder32;
   if (!orderVec.empty()) {
     int64_t orderSize = static_cast<int64_t>(collapsedOrder.size());
@@ -770,9 +788,9 @@ bool SliceAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
 static SmallVector<int64_t>
 mapSlicedDimsToParentSpace(const SmallVector<int64_t> &dimsToMap,
                            ArrayRef<int64_t> sliceDims) {
-  // Rather than recovering the exact parent rank, we compute a safe upper bound
-  // so that dimsToMap can be adjusted safely. This upper bound is defined as
-  // max(dimsToMap, sliceDims) + 1 + sliceDims.size().
+  // Rather than recovering the exact parent rank, we compute a safe upper
+  // bound so that dimsToMap can be adjusted safely. This upper bound is
+  // defined as max(dimsToMap, sliceDims) + 1 + sliceDims.size().
   int64_t maxDim = -1;
   maxDim =
       std::max(maxDim, *std::max_element(sliceDims.begin(), sliceDims.end()));
@@ -833,7 +851,7 @@ SliceAttr::setUnitDimLayout(SmallVector<int64_t> unitDims) const {
 DistributeLayoutAttr SliceAttr::setDimData(int64_t dim, int64_t sgData,
                                            int64_t instData, int64_t laneData) {
   ArrayRef<int64_t> sliceDims = getDims().asArrayRef();
-  auto parent = dyn_cast<LayoutAttr>(getParent());
+  auto parent = getParent();
 
   SmallVector<int64_t> dimSet;
   dimSet.push_back(dim);
@@ -844,26 +862,18 @@ DistributeLayoutAttr SliceAttr::setDimData(int64_t dim, int64_t sgData,
       parent.setDimData(adjustDims[0], sgData, instData, laneData), getDims());
 }
 
-// Derive a new layout by collapsing groups of dimensions.
-// Each inner array in `dimGroups` specifies a set of dimensions
+// Derive a new layout by collapsing dimensions.
+// `dimGroup` specifies a group of adjacent dimensions
 // that are collapsed into a single dimension in the derived layout.
-DistributeLayoutAttr
-SliceAttr::collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const {
+DistributeLayoutAttr SliceAttr::collapseDims(SmallVector<int64_t> dimGroup) {
 
   // Map the sliced dims from parent space to collapsed space
   SmallVector<int64_t> sliceDims = llvm::to_vector(getDims().asArrayRef());
 
-  // go through dimGroups and map each dim from sliced space to parent space
-  SmallVector<SmallVector<int64_t>> adjustedDimGroups;
-  for (const auto &group : dimGroups) {
-    SmallVector<int64_t> groupSet(group.begin(), group.end());
-    SmallVector<int64_t> mappedDims =
-        mapSlicedDimsToParentSpace(groupSet, sliceDims);
-    adjustedDimGroups.push_back(
-        SmallVector<int64_t>(mappedDims.begin(), mappedDims.end()));
-  }
+  SmallVector<int64_t> dimsInParentSpace =
+      mapSlicedDimsToParentSpace(dimGroup, sliceDims);
 
-  auto collapsedParent = getParent().collapseDims(adjustedDimGroups);
+  auto collapsedParent = getParent().collapseDims(dimsInParentSpace);
 
   return SliceAttr::get(getContext(), collapsedParent,
                         DenseI64ArrayAttr::get(getContext(), sliceDims));
@@ -1004,7 +1014,8 @@ TensorDescType::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "unsupported element type " << elementType
                        << ": expected integer or float";
 
-  // for gather and scatter ops, Low-precision types are packed in 32-bit units.
+  // for gather and scatter ops, Low-precision types are packed in 32-bit
+  // units.
   unsigned bitWidth = elementType.getIntOrFloatBitWidth();
   int chunkAlignmentFactor =
       bitWidth < xegpu::uArch::generalPackedFormatBitSize

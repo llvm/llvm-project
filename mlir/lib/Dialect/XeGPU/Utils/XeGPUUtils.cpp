@@ -700,7 +700,7 @@ bool xegpu::matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
     else
       return false;
   return srcIdx == src.size();
-};
+}
 
 // Checks if dst shape is an expansion of src shape where each dimension in src
 // is split into one or more consecutive dimensions in dst whose product equals
@@ -735,4 +735,4 @@ bool xegpu::matchSplitDimExpansion(
     }
   }
   return srcIdx == src.size();
-};
+}
