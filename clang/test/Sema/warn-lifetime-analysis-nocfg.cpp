@@ -429,6 +429,29 @@ int *returnPtrToLocalArray() {
   return std::begin(a); // TODO
 }
 
+namespace lifetimebound_stl_algorithms {
+
+std::vector<std::string> GetTemporaryString();
+std::vector<std::string_view> GetTemporaryView();
+
+std::string_view test_str_local() {
+  std::vector<std::string> v;
+  return *std::find(v.begin(), // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                    v.end(), "42");
+}
+std::string_view test_str_temporary() {
+  return *std::find(GetTemporaryString().begin(), // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                    GetTemporaryString().end(), "42");
+}
+std::string_view test_view() {
+  std::vector<std::string_view> v;
+  return *std::find(v.begin(), v.end(), "42");
+}
+std::string_view test_view_local() {
+  return *std::find(GetTemporaryView().begin(), GetTemporaryView().end(), "42");
+}
+} // namespace lifetimebound_stl_algorithms
+
 struct ptr_wrapper {
   std::vector<int>::iterator member;
 };

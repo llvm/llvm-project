@@ -996,6 +996,7 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node, bit Scaled = 
   Instruction Opcode = !cast<Instruction>(NAME);
   bit is_dgemm = 0;
   bit is_gfx940_xdl = 0;
+  let isConvergent = 1;
   let PseudoInstr = NAME; // FIXME: Why is this not the default
 }
 
@@ -1033,7 +1034,7 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
   defvar ProfileVGPR = !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD");
 
 
-  let isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1 in {
+  let mayRaiseFPException = 0, ReadsModeReg = 1 in {
     // FP32 denorm mode is respected, rounding mode is not. Exceptions are not supported.
     let Constraints = !if(NoDstOverlap, "@earlyclobber $vdst", "") in {
       def _e64 : MAIInst<OpName, ProfileAGPR,
@@ -1060,7 +1061,7 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
                               MFMATable<1, "VGPR", NAME # "_vgprcd_e64", NAME # "_mac_e64">;
       }
     }
-  } // End isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1
+  } // mayRaiseFPException = 0, ReadsModeReg = 1
 }
 
 // Provide a wrapper around MAIInst that provides the appended operands from V_MFMA_LD_SCALE_B32
@@ -1396,13 +1397,13 @@ multiclass WMMAInst<string Suffix, string Instr, VOPProfile P, SDPatternOperator
   defvar WMMAConstraints3Addr = "@earlyclobber $vdst";
 
   defvar WMMAProfile = VOPProfileWMMA<P, Suffix, _Src01RC64, Type.hasClamp, Type.hasOpsel>;
-  let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
+  let isConvergent = 1, Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
     let Constraints = WMMAConstraints2Addr, isConvertibleToThreeAddress = convertibleTo3Addr in {
       def _twoaddr # Suffix : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
     }
   }
   if convertibleTo3Addr then {
-    let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
+    let isConvergent = 1, Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
       let Constraints = WMMAConstraints3Addr, SchedRW = [Write32Bit, Write32Bit] in {
         def _threeaddr # Suffix : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
       }
