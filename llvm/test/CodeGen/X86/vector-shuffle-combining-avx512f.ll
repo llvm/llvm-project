@@ -1062,7 +1062,7 @@ define <8 x i64> @PR179008(ptr %p0) {
 ; X86-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512F-NEXT:    movb $31, %cl
 ; X86-AVX512F-NEXT:    kmovw %ecx, %k1
-; X86-AVX512F-NEXT:    vpexpandq (%eax), %zmm0 {%k1} {z}
+; X86-AVX512F-NEXT:    vmovdqu64 (%eax), %zmm0 {%k1} {z}
 ; X86-AVX512F-NEXT:    retl
 ;
 ; X86-AVX512BW-LABEL: PR179008:
@@ -1070,21 +1070,21 @@ define <8 x i64> @PR179008(ptr %p0) {
 ; X86-AVX512BW-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512BW-NEXT:    movb $31, %cl
 ; X86-AVX512BW-NEXT:    kmovd %ecx, %k1
-; X86-AVX512BW-NEXT:    vpexpandq (%eax), %zmm0 {%k1} {z}
+; X86-AVX512BW-NEXT:    vmovdqu64 (%eax), %zmm0 {%k1} {z}
 ; X86-AVX512BW-NEXT:    retl
 ;
 ; X64-AVX512F-LABEL: PR179008:
 ; X64-AVX512F:       # %bb.0:
 ; X64-AVX512F-NEXT:    movb $31, %al
 ; X64-AVX512F-NEXT:    kmovw %eax, %k1
-; X64-AVX512F-NEXT:    vpexpandq (%rdi), %zmm0 {%k1} {z}
+; X64-AVX512F-NEXT:    vmovdqu64 (%rdi), %zmm0 {%k1} {z}
 ; X64-AVX512F-NEXT:    retq
 ;
 ; X64-AVX512BW-LABEL: PR179008:
 ; X64-AVX512BW:       # %bb.0:
 ; X64-AVX512BW-NEXT:    movb $31, %al
 ; X64-AVX512BW-NEXT:    kmovd %eax, %k1
-; X64-AVX512BW-NEXT:    vpexpandq (%rdi), %zmm0 {%k1} {z}
+; X64-AVX512BW-NEXT:    vmovdqu64 (%rdi), %zmm0 {%k1} {z}
 ; X64-AVX512BW-NEXT:    retq
   %load = load <8 x i64>, ptr %p0, align 1
   %shuf = shufflevector <8 x i64> %load, <8 x i64> <i64 poison, i64 poison, i64 poison, i64 poison, i64 poison, i64 0, i64 0, i64 0>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 13, i32 14, i32 15>
