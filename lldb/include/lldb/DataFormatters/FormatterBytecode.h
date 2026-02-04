@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLDB_DATAFORMATTERS_FORMATTERBYTECODE_H
+#define LLDB_DATAFORMATTERS_FORMATTERBYTECODE_H
+
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Symbol/CompilerType.h"
 
@@ -62,3 +65,5 @@ std::string toString(FormatterBytecode::Selectors sel);
 std::string toString(FormatterBytecode::Signatures sig);
 
 } // namespace lldb_private
+
+#endif
