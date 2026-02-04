@@ -26,6 +26,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "llvm/CodeGen/MIR2Vec.h"
@@ -151,38 +152,40 @@ void IR2VecTool::writeEntitiesToStream(raw_ostream &OS) {
     OS << Entities[EntityID] << '\t' << EntityID << '\n';
 }
 
-std::optional<Embedding>
-IR2VecTool::getFunctionEmbedding(const Function &F, IR2VecKind Kind) const {
+Expected<Embedding> IR2VecTool::getFunctionEmbedding(const Function &F,
+                                                     IR2VecKind Kind) const {
   if (!Vocab || !Vocab->isValid())
-    return createStringError(errc::invalid_argument,
-                             "Failed to initialize IR2Vec vocabulary");
+    return createStringError(
+        errc::invalid_argument,
+        "Vocabulary is not valid. IR2VecTool not initialized.");
 
   if (F.isDeclaration())
-    return std::nullopt;
+    return createStringError(errc::invalid_argument,
+                             "Function is a declaration.");
 
   auto Emb = Embedder::create(Kind, F, *Vocab);
-  if (!Emb) {
-    WithColor::error(errs(), ToolName)
-        << "Failed to create embedder for function '" << F.getName() << "'.\n";
-    return std::nullopt;
-  }
+  if (!Emb)
+    return createStringError(errc::invalid_argument,
+                             "Failed to create embedder for function '%s'.",
+                             F.getName().str().c_str());
+
   return Emb->getFunctionVector();
 }
 
-FuncEmbMap IR2VecTool::getFunctionEmbeddingsMap(IR2VecKind Kind) const {
+Expected<FuncEmbMap>
+IR2VecTool::getFunctionEmbeddingsMap(IR2VecKind Kind) const {
   if (!Vocab || !Vocab->isValid())
-    return createStringError(errc::invalid_argument,
-                             "Failed to initialize IR2Vec vocabulary");
+    return createStringError(
+        errc::invalid_argument,
+        "Vocabulary is not valid. IR2VecTool not initialized.");
 
   FuncEmbMap Result;
 
-  for (const Function &F : M) {
-    if (F.isDeclaration())
-      continue;
-
+  for (const Function &F : M.getFunctionDefs()) {
     auto Emb = getFunctionEmbedding(F, Kind);
-    if (Emb.has_value())
-      Result.try_emplace(&F, std::move(*Emb));
+    if (!Emb)
+      return Emb.takeError();
+    Result.try_emplace(&F, std::move(*Emb));
   }
 
   return Result;
@@ -190,9 +193,11 @@ FuncEmbMap IR2VecTool::getFunctionEmbeddingsMap(IR2VecKind Kind) const {
 
 void IR2VecTool::writeEmbeddingsToStream(raw_ostream &OS,
                                          EmbeddingLevel Level) const {
-  if (!Vocab || !Vocab->isValid())
-    return createStringError(errc::invalid_argument,
-                             "Failed to initialize IR2Vec vocabulary");
+  if (!Vocab || !Vocab->isValid()) {
+    WithColor::error(errs(), ToolName)
+        << "Vocabulary is not valid. IR2VecTool not initialized.\n";
+    return;
+  }
 
   for (const Function &F : M.getFunctionDefs())
     writeEmbeddingsToStream(F, OS, Level);
@@ -200,9 +205,11 @@ void IR2VecTool::writeEmbeddingsToStream(raw_ostream &OS,
 
 void IR2VecTool::writeEmbeddingsToStream(const Function &F, raw_ostream &OS,
                                          EmbeddingLevel Level) const {
-  if (!Vocab || !Vocab->isValid())
-    return createStringError(errc::invalid_argument,
-                             "Failed to initialize IR2Vec vocabulary");
+  if (!Vocab || !Vocab->isValid()) {
+    WithColor::error(errs(), ToolName)
+        << "Vocabulary is not valid. IR2VecTool not initialized.\n";
+    return;
+  }
 
   if (F.isDeclaration()) {
     OS << "Function " << F.getName() << " is a declaration, skipping.\n";
@@ -395,8 +402,7 @@ void MIR2VecTool::writeEntitiesToStream(raw_ostream &OS) const {
 void MIR2VecTool::writeEmbeddingsToStream(const Module &M, raw_ostream &OS,
                                           EmbeddingLevel Level) const {
   if (!Vocab) {
-    WithColor::error(errs(), ToolName)
-        << "Vocabulary not initialized properly.\n";
+    WithColor::error(errs(), ToolName) << "Vocabulary not initialized.\n";
     return;
   }
 
@@ -415,8 +421,7 @@ void MIR2VecTool::writeEmbeddingsToStream(const Module &M, raw_ostream &OS,
 void MIR2VecTool::writeEmbeddingsToStream(MachineFunction &MF, raw_ostream &OS,
                                           EmbeddingLevel Level) const {
   if (!Vocab) {
-    WithColor::error(errs(), ToolName)
-        << "Vocabulary not initialized properly.\n";
+    WithColor::error(errs(), ToolName) << "Vocabulary not initialized.\n";
     return;
   }
 

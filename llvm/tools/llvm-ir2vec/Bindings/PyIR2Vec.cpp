@@ -72,19 +72,23 @@ public:
 
   nb::dict getFuncEmbMap() {
     auto ToolFuncEmbMap = Tool->getFunctionEmbeddingsMap(OutputEmbeddingMode);
+
+    if (!ToolFuncEmbMap)
+      throw nb::value_error(toString(ToolFuncEmbMap.takeError()).c_str());
+
     nb::dict NBFuncEmbMap;
 
-    for (const auto &[FuncPtr, FuncEmb] : ToolFuncEmbMap) {
+    for (const auto &[FuncPtr, FuncEmb] : *ToolFuncEmbMap) {
       std::string FuncName = FuncPtr->getName().str();
       auto Data = FuncEmb.getData();
-      size_t Shape[1] = {Data.size()};
       double *DataPtr = new double[Data.size()];
-      std::copy(Data.data(), Data.data() + Data.size(), DataPtr);
+      std::copy(Data.begin(), Data.end(), DataPtr);
 
       auto NbArray = nb::ndarray<nb::numpy, double>(
-          DataPtr, {Data.size()}, nb::capsule(DataPtr, [](void *P) noexcept {
-            delete[] static_cast<double *>(P);
+          DataPtr, {Data.size()}, nb::capsule(DataPtr, [](void *p) noexcept {
+            delete[] static_cast<double *>(p);
           }));
+
       NBFuncEmbMap[nb::str(FuncName.c_str())] = NbArray;
     }
 
