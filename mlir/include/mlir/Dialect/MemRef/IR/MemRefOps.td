@@ -1279,14 +1279,16 @@ def LoadOp : MemRef_Op<"load",
                            [MemRead]>:$memref,
                        Variadic<Index>:$indices,
                        DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
+                       DefaultValuedOptionalAttr<BoolAttr, "false">:$volatile,
                        OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
 
   let builders = [
     OpBuilder<(ins "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
+                   CArg<"bool", "false">:$volatile,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
-      return build($_builder, $_state, memref, indices, nontemporal,
+      return build($_builder, $_state, memref, indices, nontemporal, volatile,
                    alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
                                nullptr);
     }]>,
@@ -1294,8 +1296,9 @@ def LoadOp : MemRef_Op<"load",
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
+                   CArg<"bool", "false">:$volatile,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
-      return build($_builder, $_state, resultType, memref, indices, nontemporal,
+      return build($_builder, $_state, resultType, memref, indices, nontemporal, volatile,
                    alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
                                nullptr);
     }]>,
@@ -1303,8 +1306,9 @@ def LoadOp : MemRef_Op<"load",
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
+                   CArg<"bool", "false">:$volatile,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
-      return build($_builder, $_state, resultTypes, memref, indices, nontemporal,
+      return build($_builder, $_state, resultTypes, memref, indices, nontemporal, volatile,
                    alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
                                nullptr);
     }]>
