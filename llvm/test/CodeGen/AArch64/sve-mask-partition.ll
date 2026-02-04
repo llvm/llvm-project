@@ -543,3 +543,18 @@ define <32 x i1> @mask_exclude_active_v32(<32 x i1> %mask.in) {
   %mask.out = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 0, i64 %tz.elts)
   ret <32 x i1> %mask.out
 }
+
+;; Non-matches
+define <vscale x 16 x i1> @mask_exclude_active_nxv16_nonzero_lower_bound(<vscale x 16 x i1> %mask.in) {
+; CHECK-LABEL: mask_exclude_active_nxv16_nonzero_lower_bound:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.b
+; CHECK-NEXT:    mov w9, #1 // =0x1
+; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
+; CHECK-NEXT:    cntp x8, p0, p0.b
+; CHECK-NEXT:    whilelo p0.b, x9, x8
+; CHECK-NEXT:    ret
+  %tz.elts = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> %mask.in, i1 false)
+  %mask.out = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 1, i64 %tz.elts)
+  ret <vscale x 16 x i1> %mask.out
+}
