@@ -10,6 +10,7 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-24.04
+    environment: main-branch-only
     steps:
       - env:
           RELEASE_WORKFLOW_PR_CREATE: ${{ secrets.RELEASE_WORKFLOW_PR_CREATE }}
