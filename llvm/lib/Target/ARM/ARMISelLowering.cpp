@@ -3839,8 +3839,7 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
   case Intrinsic::arm_cls: {
     // Note: arm_cls and arm_cls64 intrinsics are expanded directly here
     // in LowerINTRINSIC_WO_CHAIN since there's no native scalar CLS
-    // instruction. Vector CTLS is Legal when NEON/MVE is available (set
-    // elsewhere).
+    // instruction.
     const SDValue &Operand = Op.getOperand(1);
     const EVT VTy = Op.getValueType();
     return DAG.getNode(ISD::CTLS, dl, VTy, Operand);
@@ -3853,7 +3852,8 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
   }
   case Intrinsic::arm_neon_vcls:
   case Intrinsic::arm_mve_vcls: {
-    // Lower vector CLS intrinsics to ISD::CTLS
+    // Lower vector CLS intrinsics to ISD::CTLS.
+    // Vector CTLS is Legal when NEON/MVE is available (set elsewhere).
     const EVT VTy = Op.getValueType();
     return DAG.getNode(ISD::CTLS, dl, VTy, Op.getOperand(1));
   }
@@ -10333,7 +10333,6 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SRL_PARTS:
   case ISD::SRA_PARTS:     return LowerShiftRightParts(Op, DAG);
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
     return LowerCTTZ(Op.getNode(), DAG, Subtarget);
   case ISD::CTPOP:         return LowerCTPOP(Op.getNode(), DAG, Subtarget);
   case ISD::SETCC:         return LowerVSETCC(Op, DAG, Subtarget);
