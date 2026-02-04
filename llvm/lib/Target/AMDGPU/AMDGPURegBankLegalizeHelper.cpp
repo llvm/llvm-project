@@ -1039,9 +1039,11 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
 
     B.setInstrAndDebugLoc(MI);
     if (Ty.getSizeInBits() > 32) {
-      auto Unmerge32 = B.buildUnmerge(SgprRB_S32, Unmerge->getSourceReg());
-      for (unsigned i = 0; i < Unmerge32->getNumDefs(); ++i) {
-        auto [Dst0S32, Dst1S32] = unpackAExt(Unmerge32->getOperand(i).getReg());
+      auto UnmergeV2S16 =
+          B.buildUnmerge({SgprRB, V2S16}, Unmerge->getSourceReg());
+      for (unsigned i = 0; i < UnmergeV2S16->getNumDefs(); ++i) {
+        auto [Dst0S32, Dst1S32] =
+            unpackAExt(UnmergeV2S16->getOperand(i).getReg());
         B.buildTrunc(MI.getOperand(i * 2).getReg(), Dst0S32);
         B.buildTrunc(MI.getOperand(i * 2 + 1).getReg(), Dst1S32);
       }
