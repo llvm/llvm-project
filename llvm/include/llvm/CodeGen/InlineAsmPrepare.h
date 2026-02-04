@@ -17,6 +17,8 @@ namespace llvm {
 class InlineAsmPreparePass : public PassInfoMixin<InlineAsmPreparePass> {
 public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+
+  static bool isRequired() { return true; }
 };
 
 } // namespace llvm
