@@ -503,6 +503,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
                     /*RawBuffer=*/true, /*HasCounter=*/false)
+        .addByteAddressBufferLoadMethods()
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
   });
@@ -511,6 +512,8 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupBufferType(Decl, *SemaPtr, ResourceClass::UAV, /*IsROV=*/false,
                     /*RawBuffer=*/true, /*HasCounter=*/false)
+        .addByteAddressBufferLoadMethods()
+        .addByteAddressBufferStoreMethods()
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
   });
