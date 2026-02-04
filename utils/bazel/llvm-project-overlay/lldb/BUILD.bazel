@@ -285,11 +285,10 @@ cc_library(
     name = "DataFormatters",
     srcs = glob([
         "source/DataFormatters/**/*.cpp",
-        "source/DataFormatters/**/*.h",
     ]),
     hdrs = glob(["include/lldb/DataFormatters/**/*.h"]),
     includes = ["include"],
-    textual_hdrs = glob(["source/DataFormatters/**/*.def"]),
+    textual_hdrs = glob(["include/lldb/DataFormatters/**/*.def"]),
     deps = [
         ":CoreHeaders",
         ":Headers",
