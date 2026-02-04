@@ -19,7 +19,6 @@ namespace llvm {
 class LLVMContext;
 class VPValue;
 class VPBlendRecipe;
-class VPCostContext;
 class VPInstruction;
 class VPWidenRecipe;
 class VPWidenCallRecipe;
@@ -32,6 +31,8 @@ class Value;
 class TargetTransformInfo;
 class Type;
 class InstructionCost;
+
+struct VPCostContext;
 
 /// An analysis for type-inference for VPValues.
 /// It infers the scalar type for a given VPValue by bottom-up traversing
