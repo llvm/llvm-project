@@ -2901,6 +2901,11 @@ static bool mayFoldIntoVector(SDValue Op, const X86Subtarget &Subtarget,
     return true;
   if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
     return true;
+  EVT VT = Op.getValueType();
+  if (ISD::isBitwiseLogicOp(Op.getOpcode()) &&
+      (VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512))
+    return mayFoldIntoVector(Op.getOperand(0), Subtarget) &&
+           mayFoldIntoVector(Op.getOperand(1), Subtarget);
   return X86::mayFoldLoad(Op, Subtarget, AssumeSingleUse,
                           /*IgnoreAlignment=*/true);
 }
@@ -3164,10 +3169,10 @@ static bool useVPTERNLOG(const X86Subtarget &Subtarget, MVT VT) {
          VT.is512BitVector();
 }
 
-bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                           const CallBase &I,
-                                           MachineFunction &MF,
-                                           unsigned Intrinsic) const {
+void X86TargetLowering::getTgtMemIntrinsic(
+    SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
+    MachineFunction &MF, unsigned Intrinsic) const {
+  IntrinsicInfo Info;
   Info.flags = MachineMemOperand::MONone;
   Info.offset = 0;
 
@@ -3181,7 +3186,8 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), 48);
       Info.align = Align(1);
       Info.flags |= MachineMemOperand::MOLoad;
-      return true;
+      Infos.push_back(Info);
+      return;
     case Intrinsic::x86_aesenc256kl:
     case Intrinsic::x86_aesdec256kl:
       Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -3189,7 +3195,8 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), 64);
       Info.align = Align(1);
       Info.flags |= MachineMemOperand::MOLoad;
-      return true;
+      Infos.push_back(Info);
+      return;
     case Intrinsic::x86_aesencwide128kl:
     case Intrinsic::x86_aesdecwide128kl:
       Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -3197,7 +3204,8 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), 48);
       Info.align = Align(1);
       Info.flags |= MachineMemOperand::MOLoad;
-      return true;
+      Infos.push_back(Info);
+      return;
     case Intrinsic::x86_aesencwide256kl:
     case Intrinsic::x86_aesdecwide256kl:
       Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -3205,7 +3213,8 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), 64);
       Info.align = Align(1);
       Info.flags |= MachineMemOperand::MOLoad;
-      return true;
+      Infos.push_back(Info);
+      return;
     case Intrinsic::x86_cmpccxadd32:
     case Intrinsic::x86_cmpccxadd64:
     case Intrinsic::x86_atomic_bts:
@@ -3218,7 +3227,8 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.align = Align(Size);
       Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
                     MachineMemOperand::MOVolatile;
-      return true;
+      Infos.push_back(Info);
+      return;
     }
     case Intrinsic::x86_atomic_bts_rm:
     case Intrinsic::x86_atomic_btc_rm:
@@ -3230,7 +3240,8 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.align = Align(Size);
       Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
                     MachineMemOperand::MOVolatile;
-      return true;
+      Infos.push_back(Info);
+      return;
     }
     case Intrinsic::x86_aadd32:
     case Intrinsic::x86_aadd64:
@@ -3252,10 +3263,11 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
       Info.align = Align(Size);
       Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
                     MachineMemOperand::MOVolatile;
-      return true;
+      Infos.push_back(Info);
+      return;
     }
     }
-    return false;
+    return;
   }
 
   switch (IntrData->Type) {
@@ -3276,7 +3288,8 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVectorVT(ScalarVT, VT.getVectorNumElements());
     Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOStore;
-    break;
+    Infos.push_back(Info);
+    return;
   }
   case GATHER:
   case GATHER_AVX2: {
@@ -3289,7 +3302,8 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVectorVT(DataVT.getVectorElementType(), NumElts);
     Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOLoad;
-    break;
+    Infos.push_back(Info);
+    return;
   }
   case SCATTER: {
     Info.opc = ISD::INTRINSIC_VOID;
@@ -3301,13 +3315,12 @@ bool X86TargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVectorVT(DataVT.getVectorElementType(), NumElts);
     Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOStore;
-    break;
+    Infos.push_back(Info);
+    return;
   }
   default:
-    return false;
+    return;
   }
-
-  return true;
 }
 
 /// Returns true if the target can instruction select the
@@ -26649,7 +26662,8 @@ static SDValue getVectorMaskingNode(SDValue Op, SDValue Mask,
 static SDValue getScalarMaskingNode(SDValue Op, SDValue Mask,
                                     SDValue PreservedSrc,
                                     const X86Subtarget &Subtarget,
-                                    SelectionDAG &DAG) {
+                                    SelectionDAG &DAG,
+                                    unsigned UpperEltOpSrc = 0) {
   auto *MaskConst = dyn_cast<ConstantSDNode>(Mask);
   if (MaskConst && (MaskConst->getZExtValue() & 0x1))
     return Op;
@@ -26675,8 +26689,8 @@ static SDValue getScalarMaskingNode(SDValue Op, SDValue Mask,
     SmallVector<int, 16> ShuffleMask(VT.getVectorNumElements());
     std::iota(ShuffleMask.begin(), ShuffleMask.end(), 0);
     ShuffleMask[0] = VT.getVectorNumElements();
-    return DAG.getVectorShuffle(VT, dl, Op.getOperand(0), PreservedSrc,
-                                ShuffleMask);
+    return DAG.getVectorShuffle(VT, dl, Op.getOperand(UpperEltOpSrc),
+                                PreservedSrc, ShuffleMask);
   }
 
   return DAG.getNode(X86ISD::SELECTS, dl, VT, IMask, Op, PreservedSrc);
@@ -27337,7 +27351,8 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       if (Opc == X86ISD::VFIXUPIMM || Opc == X86ISD::VFIXUPIMM_SAE)
         return getVectorMaskingNode(FixupImm, Mask, Passthru, Subtarget, DAG);
 
-      return getScalarMaskingNode(FixupImm, Mask, Passthru, Subtarget, DAG);
+      return getScalarMaskingNode(FixupImm, Mask, Passthru, Subtarget, DAG,
+                                  /*UpperEltOpSrc=*/1);
     }
     case ROUNDP: {
       assert(IntrData->Opc0 == X86ISD::VRNDSCALE && "Unexpected opcode");
@@ -48975,12 +48990,16 @@ static SDValue checkSignTestSetCCCombine(SDValue Cmp, X86::CondCode &CC,
     if (!isNullConstant(Cmp.getOperand(1)))
       return SDValue();
     Src = Cmp.getOperand(0);
-    // Peek through a SRA node as we just need the signbit.
     // TODO: Remove one use limit once sdiv-fix regressions are fixed.
-    // TODO: Use SimplifyDemandedBits instead of just SRA?
-    if (Src.getOpcode() != ISD::SRA || !Src.hasOneUse())
+    if (!Src.hasOneUse())
       return SDValue();
-    Src = Src.getOperand(0);
+    // Peek through a SRA node as we just need the signbit.
+    // TODO: Use SimplifyMultipleUseDemandedBits instead of just SRA?
+    if (Src.getOpcode() == ISD::SRA)
+      Src = Src.getOperand(0);
+    else if (Src.getOpcode() != ISD::SHL &&
+             Src.getOpcode() != ISD::SIGN_EXTEND_INREG)
+      return SDValue();
   } else if (Cmp.getOpcode() == X86ISD::OR) {
     // OR(X,Y) -> see if only one operand contributes to the signbit.
     // TODO: XOR(X,Y) -> see if only one operand contributes to the signbit.
@@ -54547,10 +54566,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   if (VT == MVT::i256 || VT == MVT::i512) {
     MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
     if (TLI.isTypeLegal(VecVT) && ISD::isNormalStore(St) &&
-        (mayFoldIntoVector(StoredVal, Subtarget) ||
-         (DCI.isBeforeLegalize() &&
-          TLI.getOperationAction(StoredVal.getOpcode(), VT) ==
-              TargetLowering::LegalizeAction::Custom)))
+        mayFoldIntoVector(StoredVal, Subtarget))
       return DAG.getStore(St->getChain(), dl, DAG.getBitcast(VecVT, StoredVal),
                           St->getBasePtr(), St->getPointerInfo(),
                           St->getBaseAlign(), St->getMemOperand()->getFlags());

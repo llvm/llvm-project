@@ -72,22 +72,22 @@ public:
   unsigned handleTlsRelocation(RelExpr expr, RelType type, uint64_t offset,
                                Symbol &sym, int64_t addend);
 
-  // Handle R_PC relocations. These are the most common relocation type, so we
+  // Process R_PC relocations. These are the most common relocation type, so we
   // inline the isStaticLinkTimeConstant check.
-  void scanPCRel(RelType type, uint64_t offset, int64_t addend, Symbol &sym) {
+  void processR_PC(RelType type, uint64_t offset, int64_t addend, Symbol &sym) {
     if (LLVM_UNLIKELY(sym.isGnuIFunc()))
       sym.setFlags(HAS_DIRECT_RELOC);
-    if (!sym.isPreemptible && (!ctx.arg.isPic || !isAbsolute(sym))) {
+    if (sym.isPreemptible || (isAbsolute(sym) && ctx.arg.isPic))
+      processAux(R_PC, type, offset, sym, addend);
+    else
       sec->addReloc({R_PC, type, offset, addend, &sym});
-      return;
-    }
-    processAux(R_PC, type, offset, sym, addend);
   }
 
-  // Handle R_PLT_PC relocations. These are very common (calls/branches), so we
-  // inline the isStaticLinkTimeConstant check. Non-preemptible symbols are
-  // optimized to R_PC (direct call).
-  void scanPlt(RelType type, uint64_t offset, int64_t addend, Symbol &sym) {
+  // Process R_PLT_PC relocations. These are very common (calls), so we inline
+  // the isStaticLinkTimeConstant check. Non-preemptible symbols are optimized
+  // to R_PC (direct call).
+  void processR_PLT_PC(RelType type, uint64_t offset, int64_t addend,
+                       Symbol &sym) {
     if (LLVM_UNLIKELY(sym.isGnuIFunc())) {
       process(R_PLT_PC, type, offset, sym, addend);
       return;
@@ -95,7 +95,7 @@ public:
     if (sym.isPreemptible) {
       sym.setFlags(NEEDS_PLT);
       sec->addReloc({R_PLT_PC, type, offset, addend, &sym});
-    } else if (!ctx.arg.isPic || !isAbsolute(sym)) {
+    } else if (!(isAbsolute(sym) && ctx.arg.isPic)) {
       sec->addReloc({R_PC, type, offset, addend, &sym});
     } else {
       processAux(R_PC, type, offset, sym, addend);

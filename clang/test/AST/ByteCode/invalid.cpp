@@ -57,6 +57,12 @@ namespace Casts {
 
   /// Just make sure this doesn't crash.
   float PR9558 = reinterpret_cast<const float&>("asd");
+
+  /// Ensure we don't crash when trying to dereference a cast pointer where the
+  /// target type is larger than the source allocation (GH#179015).
+  void GH179015() {
+    *(int **)""; // both-warning {{expression result unused}}
+  }
 }
 
 
@@ -131,4 +137,9 @@ namespace RetVoidInInvalidFunc {
     int v = N;
   };
   X<foo()> x; // both-error {{non-type template argument is not a constant expression}}
+}
+
+namespace BitCastWithErrors {
+  template<class T> int f(); // both-note {{candidate template ignored}}
+  static union { char *x = f(); }; // both-error {{no matching function for call to 'f'}}
 }

@@ -490,12 +490,12 @@ void X86::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_386_PC8:
     case R_386_PC16:
     case R_386_PC32:
-      rs.scanPCRel(type, offset, addend, sym);
+      rs.processR_PC(type, offset, addend, sym);
       continue;
 
       // PLT-generating relocation:
     case R_386_PLT32:
-      rs.scanPlt(type, offset, addend, sym);
+      rs.processR_PLT_PC(type, offset, addend, sym);
       continue;
 
       // GOT-related relocations:

@@ -1398,7 +1398,7 @@ void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_X86_64_PC16:
     case R_X86_64_PC32:
     case R_X86_64_PC64:
-      rs.scanPCRel(type, offset, addend, sym);
+      rs.processR_PC(type, offset, addend, sym);
       continue;
 
       // GOT-generating relocations:
@@ -1429,7 +1429,7 @@ void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
 
       // PLT-generating relocation:
     case R_X86_64_PLT32:
-      rs.scanPlt(type, offset, addend, sym);
+      rs.processR_PLT_PC(type, offset, addend, sym);
       continue;
 
       // TLS relocations:

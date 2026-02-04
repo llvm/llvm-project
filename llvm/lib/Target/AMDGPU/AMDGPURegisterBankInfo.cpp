@@ -4088,6 +4088,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
   case AMDGPU::G_FPTOSI:
   case AMDGPU::G_FPTOUI:
+  case AMDGPU::G_FPTOSI_SAT:
+  case AMDGPU::G_FPTOUI_SAT:
   case AMDGPU::G_SITOFP:
   case AMDGPU::G_UITOFP: {
     unsigned SizeDst = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
@@ -4583,6 +4585,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[0] = getSGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
     OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
     break;
+  case AMDGPU::G_AMDGPU_SPONENTRY: {
+    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+    OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
+    break;
+  }
   case AMDGPU::G_INTRINSIC:
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
