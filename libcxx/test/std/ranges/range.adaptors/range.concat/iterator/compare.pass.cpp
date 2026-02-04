@@ -151,9 +151,43 @@ constexpr bool test() {
     assert(i <= j);
     assert(!(i > j));
     assert(!(i >= j));
-    auto ord1 = (i <=> j);
-    assert(ord1 < 0);
-    assert((j <=> i) > 0);
+    assert((i <=> j) == std::strong_ordering::less);
+    assert((i <=> i) == std::strong_ordering::equal);
+    assert((j <=> i) == std::strong_ordering::greater);
+
+    auto k = j;
+    assert(!(j < k));
+    assert(j <= k);
+    assert(!(j > k));
+    assert(j >= k);
+    auto ord2 = (j <=> k);
+    assert(ord2 == 0);
+
+    // const-iterator
+    const auto& cv = v;
+    auto ci        = cv.begin();
+    auto cj        = cv.begin();
+    std::ranges::advance(cj, arr_a.size());
+    assert(ci < cj);
+    assert((ci <=> cj) < 0);
+  }
+
+  {
+    // operator <, <=, >, >=
+    // two pointers point to elements in the same range
+    std::array<int, 4> arr_a{1, 2, 3, 4};
+    std::vector<int> arr_b{5, 6, 7};
+    auto v = std::views::concat(arr_a, arr_b);
+    auto i = v.begin();
+    auto j = v.begin() + 2;
+
+    assert(i < j);
+    assert(i <= j);
+    assert(!(i > j));
+    assert(!(i >= j));
+    assert((i <=> j) == std::strong_ordering::less);
+    assert((i <=> i) == std::strong_ordering::equal);
+    assert((j <=> i) == std::strong_ordering::greater);
 
     auto k = j;
     assert(!(j < k));
