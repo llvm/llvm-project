@@ -875,3 +875,25 @@ func.func @test_no_fold_mod_shape_negative_overflow() -> !tosa.shape<6> {
   %c = tosa.mod_shape %a, %b : (!tosa.shape<6>, !tosa.shape<6>) -> !tosa.shape<6>
   return %c : !tosa.shape<6>
 }
+
+// -----
+
+// CHECK-LABEL: @test_max_shape
+// CHECK: tosa.const_shape  {values = dense<[24, 7, 65, 33, 39, 5]> : tensor<6xindex>} : () -> !tosa.shape<6>
+func.func @test_max_shape() -> !tosa.shape<6> {
+  %a = tosa.const_shape {values = dense<[24, 7, 65, 33, 39, 1]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %b = tosa.const_shape {values = dense<[11, 2, 12, 13, 15, 5]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %c = tosa.max_shape %a, %b : (!tosa.shape<6>, !tosa.shape<6>) -> !tosa.shape<6>
+  return %c : !tosa.shape<6>
+}
+
+// -----
+
+// CHECK-LABEL: @test_min_shape
+// CHECK: tosa.const_shape  {values = dense<[11, 2, 12, 13, 15, 1]> : tensor<6xindex>} : () -> !tosa.shape<6>
+func.func @test_min_shape() -> !tosa.shape<6> {
+  %a = tosa.const_shape {values = dense<[24, 7, 65, 33, 39, 1]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %b = tosa.const_shape {values = dense<[11, 2, 12, 13, 15, 5]> : tensor<6xindex>} : () -> !tosa.shape<6>
+  %c = tosa.min_shape %a, %b : (!tosa.shape<6>, !tosa.shape<6>) -> !tosa.shape<6>
+  return %c : !tosa.shape<6>
+}
