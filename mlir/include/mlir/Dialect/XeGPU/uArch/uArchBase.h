@@ -256,6 +256,10 @@ struct MMAInstructionInterface {
   virtual ~MMAInstructionInterface() = default;
 };
 
+//===----------------------------------------------------------------------===//
+// Common instructions (shared across architectures)
+//===----------------------------------------------------------------------===//
+
 struct LoadGatherInstructionInterface : public Instruction {
   LoadGatherInstructionInterface()
       : Instruction(InstructionKind::LoadGather, InstructionScope::Lane) {}

@@ -734,8 +734,9 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
   auto context = resVecTy.getContext();
   auto elemBitWidth = resVecTy.getElementType().getIntOrFloatBitWidth();
 
-  const auto *uArchInstruction = dyn_cast<xegpu::uArch::LoadGatherInstruction>(
-      uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::SpirvLoadGatherInstruction>(
+          uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
   int maxChunkSize = uArchInstruction->getMaxLaneLoadSize(elemBitWidth);
 
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
@@ -827,7 +828,7 @@ xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
   auto elemBitWidth = srcVecTy.getElementType().getIntOrFloatBitWidth();
 
   const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::StoreScatterInstruction>(
+      dyn_cast<xegpu::uArch::SpirvStoreScatterInstruction>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
   int maxChunkSize = uArchInstruction->getMaxLaneStoreSize(elemBitWidth);
   return setupGenericStoreAnchorLayout(layoutKind, context, (chunkSize > 1),
