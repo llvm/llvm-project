@@ -261,7 +261,10 @@ enum LoweringMethodID {
   UnpackAExt,
   VerifyAllSgpr,
   ApplyAllVgpr,
-  UnmergeToShiftTrunc
+  UnmergeToShiftTrunc,
+  AextToS32InIncomingBlockGPHI,
+  VerifyAllSgprGPHI,
+  VerifyAllSgprOrVgprGPHI
 };
 
 enum FastRulesTypes {
