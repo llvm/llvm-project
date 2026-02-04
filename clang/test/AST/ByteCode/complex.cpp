@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=both,expected -Wno-unused-value %s
-// RUN: %clang_cc1 -verify=both,ref -Wno-unused-value %s
+// RUN: %clang_cc1                                         -verify=both,ref      -Wno-unused-value %s
 
 constexpr _Complex double z1 = {1.0, 2.0};
 static_assert(__real(z1) == 1.0, "");
@@ -130,6 +130,11 @@ constexpr int ignored() {
 static_assert(ignored() == 0, "");
 static_assert((int)I1 == 1, "");
 static_assert((float)D == 1.0f, "");
+
+
+void ignoredEmitFloat() {
+  (1.f / (2.f + 3i), 4.f);
+}
 
 static_assert(__real((_Complex unsigned)5) == 5);
 static_assert(__imag((_Complex unsigned)5) == 0);
