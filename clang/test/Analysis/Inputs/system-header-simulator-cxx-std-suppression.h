@@ -166,6 +166,6 @@ void inplace_merge(_BidirectionalIterator __first,
   // Fake error trigger
   // std::inplace_merge is expected to be evaluated conservatively.
   TRIGGER_DIV_BY_ZERO;
-  }
+}
 } // namespace std
 
