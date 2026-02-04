@@ -10556,6 +10556,27 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
         const TargetOptions &Options = DAG.getTarget().Options;
         if (Options.EmitCallSiteInfo)
           CSInfo.ArgRegPairs.emplace_back(VA.getLocReg(), i);
+        if (IsArm64ECVarArgExitThunk) {
+          Register FPReg;
+          switch (VA.getLocReg()) {
+          case AArch64::X0:
+            FPReg = AArch64::D0;
+            break;
+          case AArch64::X1:
+            FPReg = AArch64::D1;
+            break;
+          case AArch64::X2:
+            FPReg = AArch64::D2;
+            break;
+          case AArch64::X3:
+            FPReg = AArch64::D3;
+            break;
+          }
+          if (FPReg) {
+            RegsToPass.emplace_back(FPReg, Arg);
+            RegsUsed.insert(FPReg);
+          }
+        }
       }
     } else {
       assert(VA.isMemLoc());
