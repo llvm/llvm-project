@@ -9,6 +9,8 @@
 #ifndef LLDB_SOURCE_PLUGINS_INSTRUCTION_PPC64_EMULATEINSTRUCTIONPPC64_H
 #define LLDB_SOURCE_PLUGINS_INSTRUCTION_PPC64_EMULATEINSTRUCTIONPPC64_H
 
+#include "Plugins/Process/Utility/lldb-ppc64-register-enums.h"
+#include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Log.h"
@@ -73,6 +75,18 @@ public:
 
   bool CreateFunctionEntryUnwind(UnwindPlan &unwind_plan) override;
 
+  uint32_t GetPCRegNum() const {
+      return m_is_little_endian ? gpr_pc_ppc64le : gpr_pc_ppc64; }
+
+  uint32_t GetLRRegNum() const {
+      return m_is_little_endian ? gpr_lr_ppc64le : gpr_lr_ppc64; }
+
+  uint32_t GetCRRegNum() const {
+      return m_is_little_endian ? gpr_cr_ppc64le : gpr_cr_ppc64; }
+
+  uint32_t GetCTRRegNum() const {
+      return m_is_little_endian ? gpr_ctr_ppc64le : gpr_ctr_ppc64; }
+
 private:
   struct Opcode {
     uint32_t mask;
@@ -98,6 +112,8 @@ private:
   bool EmulateBCLR(uint32_t opcode);
   bool EmulateBCCTR(uint32_t opcode);
   bool EmulateBCTAR(uint32_t opcode);
+
+  bool m_is_little_endian; 
 };
 
 } // namespace lldb_private

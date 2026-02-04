@@ -74,6 +74,11 @@
 #define HWCAP2_MTE (1 << 18)
 #endif
 
+#define GPR GPR_PPC64
+#define FPR FPR_PPC64
+#define VMX VMX_PPC64
+#define VSX VSX_PPC64
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_aix;
@@ -1720,9 +1725,9 @@ void NativeProcessAIX::ThreadWasCreated(NativeThreadAIX &thread) {
   }
 }
 
-#define DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
-#include "Plugins/Process/Utility/RegisterInfos_ppc64le.h"
-#undef DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
+#define DECLARE_REGISTER_INFOS_PPC64_STRUCT
+#include "Plugins/Process/Utility/RegisterInfos_ppc64.h"
+#undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
 
 static void GetRegister(lldb::pid_t pid, long long addr, void *buf) {
   uint64_t val = 0;
@@ -1732,11 +1737,11 @@ static void GetRegister(lldb::pid_t pid, long long addr, void *buf) {
   // of no use 
   if(val == 0)
       val = ret;
-  *(uint64_t *)buf = llvm::byteswap<uint64_t>(val);
+  *(uint64_t *)buf = val;
 }
 
 static void SetRegister(lldb::pid_t pid, long long addr, void *buf) {
-  uint64_t val = llvm::byteswap<uint64_t>(*(uint64_t *)buf);
+  uint64_t val = (*(uint64_t *)buf);
   // For 32bit, ptrace64() expects the value as the 4th arg(data)
   // For 64bit, ptrace64() expects the value as the 5th arg(pointer to the buffer)
   ptrace64(PT_WRITE_GPR, pid, addr, val, (int *)&val);
@@ -1745,19 +1750,17 @@ static void SetRegister(lldb::pid_t pid, long long addr, void *buf) {
 static void GetFPRegister(lldb::pid_t pid, long long addr, void *buf) {
   uint64_t val = 0;
   ptrace64(PT_READ_FPR, pid, addr, 0, (int *)&val);
-  *(uint64_t *)buf = llvm::byteswap<uint64_t>(val);
+  *(uint64_t *)buf = val;
 }
 
 static void GetVMRegister(lldb::tid_t tid, long long addr, void *buf) {
   uint64_t val = 0;
   ptrace64(PTT_READ_VEC, tid, addr, 0, (int *)&val);
-  //*(uint64_t *)buf = llvm::byteswap<uint64_t>(val);
 }
 
 static void GetVSRegister(lldb::tid_t tid, long long addr, void *buf) {
   uint64_t val = 0;
   ptrace64(PTT_READ_VSX, tid, addr, 0, (int *)&val);
-  //*(uint64_t *)buf = llvm::byteswap<uint64_t>(val);
 }
 
 // Wrapper for ptrace to catch errors and log calls. Note that ptrace sets
@@ -1826,13 +1829,13 @@ Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
     GetRegister(pid, GPR29, &(((GPR *)data)->r29));
     GetRegister(pid, GPR30, &(((GPR *)data)->r30));
     GetRegister(pid, GPR31, &(((GPR *)data)->r31));
-    GetRegister(pid, IAR, &(((GPR *)data)->pc));
-    GetRegister(pid, MSR, &(((GPR *)data)->msr));
-    //FIXME: origr3/softe/trap on AIX?
-    GetRegister(pid, CTR, &(((GPR *)data)->ctr));
-    GetRegister(pid, LR, &(((GPR *)data)->lr));
-    GetRegister(pid, XER, &(((GPR *)data)->xer));
     GetRegister(pid, CR, &(((GPR *)data)->cr));
+    GetRegister(pid, MSR, &(((GPR *)data)->msr));
+    GetRegister(pid, XER, &(((GPR *)data)->xer));
+    //FIXME: origr3/softe/trap on AIX?
+    GetRegister(pid, LR, &(((GPR *)data)->lr));
+    GetRegister(pid, CTR, &(((GPR *)data)->ctr));
+    GetRegister(pid, IAR, &(((GPR *)data)->pc));
   } else if (req == PTRACE_SETREGS) {
     SetRegister(pid, GPR0, &(((GPR *)data)->r0));
     SetRegister(pid, GPR1, &(((GPR *)data)->r1));
@@ -1866,13 +1869,13 @@ Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
     SetRegister(pid, GPR29, &(((GPR *)data)->r29));
     SetRegister(pid, GPR30, &(((GPR *)data)->r30));
     SetRegister(pid, GPR31, &(((GPR *)data)->r31));
-    SetRegister(pid, IAR, &(((GPR *)data)->pc));
-    SetRegister(pid, MSR, &(((GPR *)data)->msr));
-    //FIXME: origr3/softe/trap on AIX?
-    SetRegister(pid, CTR, &(((GPR *)data)->ctr));
-    SetRegister(pid, LR, &(((GPR *)data)->lr));
-    SetRegister(pid, XER, &(((GPR *)data)->xer));
     SetRegister(pid, CR, &(((GPR *)data)->cr));
+    SetRegister(pid, MSR, &(((GPR *)data)->msr));
+    SetRegister(pid, XER, &(((GPR *)data)->xer));
+    //FIXME: origr3/softe/trap on AIX?
+    SetRegister(pid, LR, &(((GPR *)data)->lr));
+    SetRegister(pid, CTR, &(((GPR *)data)->ctr));
+    SetRegister(pid, IAR, &(((GPR *)data)->pc));
   } else if (req == PTRACE_GETFPREGS) {
     GetFPRegister(pid, FPR0, &(((FPR *)data)->f0));
     GetFPRegister(pid, FPR1, &(((FPR *)data)->f1));

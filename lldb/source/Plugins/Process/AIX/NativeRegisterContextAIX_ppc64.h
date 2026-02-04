@@ -11,15 +11,15 @@
 
 #if defined(__powerpc64__)
 
-#ifndef lldb_NativeRegisterContextAIX_ppc64_h
-#define lldb_NativeRegisterContextAIX_ppc64_h
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEREGISTERCONTEXTAIX_PPC64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEREGISTERCONTEXTAIX_PPC64_H
 
 #include "Plugins/Process/AIX/NativeRegisterContextAIX.h"
-#include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
+#include "Plugins/Process/Utility/lldb-ppc64-register-enums.h"
 
-#define DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
-#include "Plugins/Process/Utility/RegisterInfos_ppc64le.h"
-#undef DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
+#define DECLARE_REGISTER_INFOS_PPC64_STRUCT
+#include "Plugins/Process/Utility/RegisterInfos_ppc64.h"
+#undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
 
 namespace lldb_private {
 namespace process_aix {
@@ -80,17 +80,17 @@ protected:
 
   Status WriteVSX();
 
-  void *GetGPRBuffer() override { return &m_gpr_ppc64le; }
+  void *GetGPRBuffer() override { return &m_gpr_ppc64; }
 
-  void *GetFPRBuffer() override { return &m_fpr_ppc64le; }
+  void *GetFPRBuffer() override { return &m_fpr_ppc64; }
 
-  size_t GetFPRSize() override { return sizeof(m_fpr_ppc64le); }
+  size_t GetFPRSize() override { return sizeof(m_fpr_ppc64); }
 
 private:
-  GPR m_gpr_ppc64le; // 64-bit general purpose registers.
-  FPR m_fpr_ppc64le; // floating-point registers including extended register.
-  VMX m_vmx_ppc64le; // VMX registers.
-  VSX m_vsx_ppc64le; // Last lower bytes from first VSX registers.
+  GPR_PPC64 m_gpr_ppc64; // 64-bit general purpose registers.
+  FPR_PPC64 m_fpr_ppc64; // floating-point registers including extended register.
+  VMX_PPC64 m_vmx_ppc64; // VMX registers.
+  VSX_PPC64 m_vsx_ppc64; // Last lower bytes from first VSX registers.
 
   bool IsGPR(unsigned reg) const;
 
@@ -133,6 +133,6 @@ private:
 } // namespace process_aix
 } // namespace lldb_private
 
-#endif // #ifndef lldb_NativeRegisterContextAIX_ppc64_h
+#endif // #ifndef LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEREGISTECONTXTAIX_PPC64_H 
 
 #endif // defined(__powerpc64__)

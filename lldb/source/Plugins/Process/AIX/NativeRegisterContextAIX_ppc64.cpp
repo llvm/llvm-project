@@ -23,7 +23,7 @@
 #include "Plugins/Process/AIX/NativeProcessAIX.h"
 #include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64le.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64.h"
 
 // System includes - They have to be included after framework includes because
 // they define some macros which collide with variable names in other modules
@@ -33,84 +33,83 @@
 #include <sys/ldr.h>
 
 #define REG_CONTEXT_SIZE                                                       \
-  (GetGPRSize() + GetFPRSize() + sizeof(m_vmx_ppc64le) + sizeof(m_vsx_ppc64le))
+  (GetGPRSize() + GetFPRSize() + sizeof(m_vmx_ppc64) + sizeof(m_vsx_ppc64))
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_aix;
 
-static const uint32_t g_gpr_regnums_ppc64le[] = {
-    gpr_r0_ppc64le,   gpr_r1_ppc64le,  gpr_r2_ppc64le,     gpr_r3_ppc64le,
-    gpr_r4_ppc64le,   gpr_r5_ppc64le,  gpr_r6_ppc64le,     gpr_r7_ppc64le,
-    gpr_r8_ppc64le,   gpr_r9_ppc64le,  gpr_r10_ppc64le,    gpr_r11_ppc64le,
-    gpr_r12_ppc64le,  gpr_r13_ppc64le, gpr_r14_ppc64le,    gpr_r15_ppc64le,
-    gpr_r16_ppc64le,  gpr_r17_ppc64le, gpr_r18_ppc64le,    gpr_r19_ppc64le,
-    gpr_r20_ppc64le,  gpr_r21_ppc64le, gpr_r22_ppc64le,    gpr_r23_ppc64le,
-    gpr_r24_ppc64le,  gpr_r25_ppc64le, gpr_r26_ppc64le,    gpr_r27_ppc64le,
-    gpr_r28_ppc64le,  gpr_r29_ppc64le, gpr_r30_ppc64le,    gpr_r31_ppc64le,
-    gpr_pc_ppc64le,   gpr_msr_ppc64le, gpr_origr3_ppc64le, gpr_ctr_ppc64le,
-    gpr_lr_ppc64le,   gpr_xer_ppc64le, gpr_cr_ppc64le,     gpr_softe_ppc64le,
-    gpr_trap_ppc64le,
+static const uint32_t g_gpr_regnums_ppc64[] = {
+    gpr_r0_ppc64,   gpr_r1_ppc64,  gpr_r2_ppc64,     gpr_r3_ppc64,
+    gpr_r4_ppc64,   gpr_r5_ppc64,  gpr_r6_ppc64,     gpr_r7_ppc64,
+    gpr_r8_ppc64,   gpr_r9_ppc64,  gpr_r10_ppc64,    gpr_r11_ppc64,
+    gpr_r12_ppc64,  gpr_r13_ppc64, gpr_r14_ppc64,    gpr_r15_ppc64,
+    gpr_r16_ppc64,  gpr_r17_ppc64, gpr_r18_ppc64,    gpr_r19_ppc64,
+    gpr_r20_ppc64,  gpr_r21_ppc64, gpr_r22_ppc64,    gpr_r23_ppc64,
+    gpr_r24_ppc64,  gpr_r25_ppc64, gpr_r26_ppc64,    gpr_r27_ppc64,
+    gpr_r28_ppc64,  gpr_r29_ppc64, gpr_r30_ppc64,    gpr_r31_ppc64,
+    gpr_cr_ppc64,   gpr_msr_ppc64, gpr_xer_ppc64,    gpr_lr_ppc64,
+    gpr_ctr_ppc64,  gpr_pc_ppc64, 
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
-static const uint32_t g_fpr_regnums_ppc64le[] = {
-    fpr_f0_ppc64le,    fpr_f1_ppc64le,  fpr_f2_ppc64le,  fpr_f3_ppc64le,
-    fpr_f4_ppc64le,    fpr_f5_ppc64le,  fpr_f6_ppc64le,  fpr_f7_ppc64le,
-    fpr_f8_ppc64le,    fpr_f9_ppc64le,  fpr_f10_ppc64le, fpr_f11_ppc64le,
-    fpr_f12_ppc64le,   fpr_f13_ppc64le, fpr_f14_ppc64le, fpr_f15_ppc64le,
-    fpr_f16_ppc64le,   fpr_f17_ppc64le, fpr_f18_ppc64le, fpr_f19_ppc64le,
-    fpr_f20_ppc64le,   fpr_f21_ppc64le, fpr_f22_ppc64le, fpr_f23_ppc64le,
-    fpr_f24_ppc64le,   fpr_f25_ppc64le, fpr_f26_ppc64le, fpr_f27_ppc64le,
-    fpr_f28_ppc64le,   fpr_f29_ppc64le, fpr_f30_ppc64le, fpr_f31_ppc64le,
-    fpr_fpscr_ppc64le,
+static const uint32_t g_fpr_regnums_ppc64[] = {
+    fpr_f0_ppc64,    fpr_f1_ppc64,  fpr_f2_ppc64,  fpr_f3_ppc64,
+    fpr_f4_ppc64,    fpr_f5_ppc64,  fpr_f6_ppc64,  fpr_f7_ppc64,
+    fpr_f8_ppc64,    fpr_f9_ppc64,  fpr_f10_ppc64, fpr_f11_ppc64,
+    fpr_f12_ppc64,   fpr_f13_ppc64, fpr_f14_ppc64, fpr_f15_ppc64,
+    fpr_f16_ppc64,   fpr_f17_ppc64, fpr_f18_ppc64, fpr_f19_ppc64,
+    fpr_f20_ppc64,   fpr_f21_ppc64, fpr_f22_ppc64, fpr_f23_ppc64,
+    fpr_f24_ppc64,   fpr_f25_ppc64, fpr_f26_ppc64, fpr_f27_ppc64,
+    fpr_f28_ppc64,   fpr_f29_ppc64, fpr_f30_ppc64, fpr_f31_ppc64,
+    fpr_fpscr_ppc64,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
-static const uint32_t g_vmx_regnums_ppc64le[] = {
-    vmx_vr0_ppc64le,  vmx_vr1_ppc64le,    vmx_vr2_ppc64le,  vmx_vr3_ppc64le,
-    vmx_vr4_ppc64le,  vmx_vr5_ppc64le,    vmx_vr6_ppc64le,  vmx_vr7_ppc64le,
-    vmx_vr8_ppc64le,  vmx_vr9_ppc64le,    vmx_vr10_ppc64le, vmx_vr11_ppc64le,
-    vmx_vr12_ppc64le, vmx_vr13_ppc64le,   vmx_vr14_ppc64le, vmx_vr15_ppc64le,
-    vmx_vr16_ppc64le, vmx_vr17_ppc64le,   vmx_vr18_ppc64le, vmx_vr19_ppc64le,
-    vmx_vr20_ppc64le, vmx_vr21_ppc64le,   vmx_vr22_ppc64le, vmx_vr23_ppc64le,
-    vmx_vr24_ppc64le, vmx_vr25_ppc64le,   vmx_vr26_ppc64le, vmx_vr27_ppc64le,
-    vmx_vr28_ppc64le, vmx_vr29_ppc64le,   vmx_vr30_ppc64le, vmx_vr31_ppc64le,
-    vmx_vscr_ppc64le, vmx_vrsave_ppc64le,
+static const uint32_t g_vmx_regnums_ppc64[] = {
+    vmx_vr0_ppc64,  vmx_vr1_ppc64,    vmx_vr2_ppc64,  vmx_vr3_ppc64,
+    vmx_vr4_ppc64,  vmx_vr5_ppc64,    vmx_vr6_ppc64,  vmx_vr7_ppc64,
+    vmx_vr8_ppc64,  vmx_vr9_ppc64,    vmx_vr10_ppc64, vmx_vr11_ppc64,
+    vmx_vr12_ppc64, vmx_vr13_ppc64,   vmx_vr14_ppc64, vmx_vr15_ppc64,
+    vmx_vr16_ppc64, vmx_vr17_ppc64,   vmx_vr18_ppc64, vmx_vr19_ppc64,
+    vmx_vr20_ppc64, vmx_vr21_ppc64,   vmx_vr22_ppc64, vmx_vr23_ppc64,
+    vmx_vr24_ppc64, vmx_vr25_ppc64,   vmx_vr26_ppc64, vmx_vr27_ppc64,
+    vmx_vr28_ppc64, vmx_vr29_ppc64,   vmx_vr30_ppc64, vmx_vr31_ppc64,
+    vmx_vscr_ppc64, vmx_vrsave_ppc64,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
-static const uint32_t g_vsx_regnums_ppc64le[] = {
-    vsx_vs0_ppc64le,  vsx_vs1_ppc64le,  vsx_vs2_ppc64le,  vsx_vs3_ppc64le,
-    vsx_vs4_ppc64le,  vsx_vs5_ppc64le,  vsx_vs6_ppc64le,  vsx_vs7_ppc64le,
-    vsx_vs8_ppc64le,  vsx_vs9_ppc64le,  vsx_vs10_ppc64le, vsx_vs11_ppc64le,
-    vsx_vs12_ppc64le, vsx_vs13_ppc64le, vsx_vs14_ppc64le, vsx_vs15_ppc64le,
-    vsx_vs16_ppc64le, vsx_vs17_ppc64le, vsx_vs18_ppc64le, vsx_vs19_ppc64le,
-    vsx_vs20_ppc64le, vsx_vs21_ppc64le, vsx_vs22_ppc64le, vsx_vs23_ppc64le,
-    vsx_vs24_ppc64le, vsx_vs25_ppc64le, vsx_vs26_ppc64le, vsx_vs27_ppc64le,
-    vsx_vs28_ppc64le, vsx_vs29_ppc64le, vsx_vs30_ppc64le, vsx_vs31_ppc64le,
-    vsx_vs32_ppc64le, vsx_vs33_ppc64le, vsx_vs34_ppc64le, vsx_vs35_ppc64le,
-    vsx_vs36_ppc64le, vsx_vs37_ppc64le, vsx_vs38_ppc64le, vsx_vs39_ppc64le,
-    vsx_vs40_ppc64le, vsx_vs41_ppc64le, vsx_vs42_ppc64le, vsx_vs43_ppc64le,
-    vsx_vs44_ppc64le, vsx_vs45_ppc64le, vsx_vs46_ppc64le, vsx_vs47_ppc64le,
-    vsx_vs48_ppc64le, vsx_vs49_ppc64le, vsx_vs50_ppc64le, vsx_vs51_ppc64le,
-    vsx_vs52_ppc64le, vsx_vs53_ppc64le, vsx_vs54_ppc64le, vsx_vs55_ppc64le,
-    vsx_vs56_ppc64le, vsx_vs57_ppc64le, vsx_vs58_ppc64le, vsx_vs59_ppc64le,
-    vsx_vs60_ppc64le, vsx_vs61_ppc64le, vsx_vs62_ppc64le, vsx_vs63_ppc64le,
+static const uint32_t g_vsx_regnums_ppc64[] = {
+    vsx_vs0_ppc64,  vsx_vs1_ppc64,  vsx_vs2_ppc64,  vsx_vs3_ppc64,
+    vsx_vs4_ppc64,  vsx_vs5_ppc64,  vsx_vs6_ppc64,  vsx_vs7_ppc64,
+    vsx_vs8_ppc64,  vsx_vs9_ppc64,  vsx_vs10_ppc64, vsx_vs11_ppc64,
+    vsx_vs12_ppc64, vsx_vs13_ppc64, vsx_vs14_ppc64, vsx_vs15_ppc64,
+    vsx_vs16_ppc64, vsx_vs17_ppc64, vsx_vs18_ppc64, vsx_vs19_ppc64,
+    vsx_vs20_ppc64, vsx_vs21_ppc64, vsx_vs22_ppc64, vsx_vs23_ppc64,
+    vsx_vs24_ppc64, vsx_vs25_ppc64, vsx_vs26_ppc64, vsx_vs27_ppc64,
+    vsx_vs28_ppc64, vsx_vs29_ppc64, vsx_vs30_ppc64, vsx_vs31_ppc64,
+    vsx_vs32_ppc64, vsx_vs33_ppc64, vsx_vs34_ppc64, vsx_vs35_ppc64,
+    vsx_vs36_ppc64, vsx_vs37_ppc64, vsx_vs38_ppc64, vsx_vs39_ppc64,
+    vsx_vs40_ppc64, vsx_vs41_ppc64, vsx_vs42_ppc64, vsx_vs43_ppc64,
+    vsx_vs44_ppc64, vsx_vs45_ppc64, vsx_vs46_ppc64, vsx_vs47_ppc64,
+    vsx_vs48_ppc64, vsx_vs49_ppc64, vsx_vs50_ppc64, vsx_vs51_ppc64,
+    vsx_vs52_ppc64, vsx_vs53_ppc64, vsx_vs54_ppc64, vsx_vs55_ppc64,
+    vsx_vs56_ppc64, vsx_vs57_ppc64, vsx_vs58_ppc64, vsx_vs59_ppc64,
+    vsx_vs60_ppc64, vsx_vs61_ppc64, vsx_vs62_ppc64, vsx_vs63_ppc64,
     LLDB_INVALID_REGNUM // register sets need to end with this flag
 };
 
 // Number of register sets provided by this context.
 static constexpr int k_num_register_sets = 4;
 
-static const RegisterSet g_reg_sets_ppc64le[k_num_register_sets] = {
-    {"General Purpose Registers", "gpr", k_num_gpr_registers_ppc64le,
-     g_gpr_regnums_ppc64le},
-    {"Floating Point Registers", "fpr", k_num_fpr_registers_ppc64le,
-     g_fpr_regnums_ppc64le},
-    {"AltiVec/VMX Registers", "vmx", k_num_vmx_registers_ppc64le,
-     g_vmx_regnums_ppc64le},
-    {"VSX Registers", "vsx", k_num_vsx_registers_ppc64le,
-     g_vsx_regnums_ppc64le},
+static const RegisterSet g_reg_sets_ppc64[k_num_register_sets] = {
+    {"General Purpose Registers", "gpr", k_num_gpr_registers_ppc64,
+     g_gpr_regnums_ppc64},
+    {"Floating Point Registers", "fpr", k_num_fpr_registers_ppc64,
+     g_fpr_regnums_ppc64},
+    {"AltiVec/VMX Registers", "vmx", k_num_vmx_registers_ppc64,
+     g_vmx_regnums_ppc64},
+    {"VSX Registers", "vsx", k_num_vsx_registers_ppc64,
+     g_vsx_regnums_ppc64},
 };
 
 std::unique_ptr<NativeRegisterContextAIX>
@@ -128,16 +127,16 @@ NativeRegisterContextAIX::CreateHostNativeRegisterContextAIX(
 NativeRegisterContextAIX_ppc64::NativeRegisterContextAIX_ppc64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
     : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfoPOSIX_ppc64le(target_arch)),
+          native_thread, new RegisterInfoPOSIX_ppc64(target_arch)),
       NativeRegisterContextAIX(native_thread) {
   if (target_arch.GetMachine() != llvm::Triple::ppc64) {
     llvm_unreachable("Unhandled target architecture.");
   }
 
-  ::memset(&m_gpr_ppc64le, 0, sizeof(m_gpr_ppc64le));
-  ::memset(&m_fpr_ppc64le, 0, sizeof(m_fpr_ppc64le));
-  ::memset(&m_vmx_ppc64le, 0, sizeof(m_vmx_ppc64le));
-  ::memset(&m_vsx_ppc64le, 0, sizeof(m_vsx_ppc64le));
+  ::memset(&m_gpr_ppc64, 0, sizeof(m_gpr_ppc64));
+  ::memset(&m_fpr_ppc64, 0, sizeof(m_fpr_ppc64));
+  ::memset(&m_vmx_ppc64, 0, sizeof(m_vmx_ppc64));
+  ::memset(&m_vsx_ppc64, 0, sizeof(m_vsx_ppc64));
   ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
 }
 
@@ -148,7 +147,7 @@ uint32_t NativeRegisterContextAIX_ppc64::GetRegisterSetCount() const {
 const RegisterSet *
 NativeRegisterContextAIX_ppc64::GetRegisterSet(uint32_t set_index) const {
   if (set_index < k_num_register_sets)
-    return &g_reg_sets_ppc64le[set_index];
+    return &g_reg_sets_ppc64[set_index];
 
   return nullptr;
 }
@@ -156,7 +155,7 @@ NativeRegisterContextAIX_ppc64::GetRegisterSet(uint32_t set_index) const {
 uint32_t NativeRegisterContextAIX_ppc64::GetUserRegisterCount() const {
   uint32_t count = 0;
   for (uint32_t set_index = 0; set_index < k_num_register_sets; ++set_index)
-    count += g_reg_sets_ppc64le[set_index].num_registers;
+    count += g_reg_sets_ppc64[set_index].num_registers;
   return count;
 }
 
@@ -176,17 +175,17 @@ Status NativeRegisterContextAIX_ppc64::ReadRegister(
     if (error.Fail())
       return error;
 
-    // Get pointer to m_fpr_ppc64le variable and set the data from it.
+    // Get pointer to m_fpr_ppc64 variable and set the data from it.
     uint32_t fpr_offset = CalculateFprOffset(reg_info);
-    assert(fpr_offset < sizeof m_fpr_ppc64le);
-    uint8_t *src = (uint8_t *)&m_fpr_ppc64le + fpr_offset;
+    assert(fpr_offset < sizeof m_fpr_ppc64);
+    uint8_t *src = (uint8_t *)&m_fpr_ppc64 + fpr_offset;
     reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
-                                eByteOrderLittle, error);
+                                eByteOrderBig, error);
   } else if (IsVSX(reg)) {
     uint32_t vsx_offset = CalculateVsxOffset(reg_info);
-    assert(vsx_offset < sizeof(m_vsx_ppc64le));
+    assert(vsx_offset < sizeof(m_vsx_ppc64));
 
-    if (vsx_offset < sizeof(m_vsx_ppc64le) / 2) {
+    if (vsx_offset < sizeof(m_vsx_ppc64) / 2) {
       error = ReadVSX();
       if (error.Fail())
         return error;
@@ -198,43 +197,43 @@ Status NativeRegisterContextAIX_ppc64::ReadRegister(
       uint64_t value[2];
       uint8_t *dst, *src;
       dst = (uint8_t *)&value;
-      src = (uint8_t *)&m_vsx_ppc64le + vsx_offset / 2;
+      src = (uint8_t *)&m_vsx_ppc64 + vsx_offset / 2;
       ::memcpy(dst, src, 8);
       dst += 8;
-      src = (uint8_t *)&m_fpr_ppc64le + vsx_offset / 2;
+      src = (uint8_t *)&m_fpr_ppc64 + vsx_offset / 2;
       ::memcpy(dst, src, 8);
       reg_value.SetFromMemoryData(*reg_info, &value, reg_info->byte_size,
-                                  eByteOrderLittle, error);
+                                  eByteOrderBig, error);
     } else {
       error = ReadVMX();
       if (error.Fail())
         return error;
 
-      // Get pointer to m_vmx_ppc64le variable and set the data from it.
-      uint32_t vmx_offset = vsx_offset - sizeof(m_vsx_ppc64le) / 2;
-      uint8_t *src = (uint8_t *)&m_vmx_ppc64le + vmx_offset;
+      // Get pointer to m_vmx_ppc64 variable and set the data from it.
+      uint32_t vmx_offset = vsx_offset - sizeof(m_vsx_ppc64) / 2;
+      uint8_t *src = (uint8_t *)&m_vmx_ppc64 + vmx_offset;
       reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
-                                  eByteOrderLittle, error);
+                                  eByteOrderBig, error);
     }
   } else if (IsVMX(reg)) {
     error = ReadVMX();
     if (error.Fail())
       return error;
 
-    // Get pointer to m_vmx_ppc64le variable and set the data from it.
+    // Get pointer to m_vmx_ppc64 variable and set the data from it.
     uint32_t vmx_offset = CalculateVmxOffset(reg_info);
-    assert(vmx_offset < sizeof m_vmx_ppc64le);
-    uint8_t *src = (uint8_t *)&m_vmx_ppc64le + vmx_offset;
+    assert(vmx_offset < sizeof m_vmx_ppc64);
+    uint8_t *src = (uint8_t *)&m_vmx_ppc64 + vmx_offset;
     reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
-                                eByteOrderLittle, error);
+                                eByteOrderBig, error);
   } else if (IsGPR(reg)) {
     error = ReadGPR();
     if (error.Fail())
       return error;
 
-    uint8_t *src = (uint8_t *) &m_gpr_ppc64le + reg_info->byte_offset;
+    uint8_t *src = (uint8_t *) &m_gpr_ppc64 + reg_info->byte_offset;
     reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
-                                eByteOrderLittle, error);
+                                eByteOrderBig, error);
   } else {
     return Status("failed - register wasn't recognized to be a GPR, FPR, VSX "
                   "or VMX, read strategy unknown");
@@ -260,9 +259,8 @@ Status NativeRegisterContextAIX_ppc64::WriteRegister(
     if (error.Fail())
       return error;
 
-    uint8_t *dst = (uint8_t *)&m_gpr_ppc64le + reg_info->byte_offset;
+    uint8_t *dst = (uint8_t *)&m_gpr_ppc64 + reg_info->byte_offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_value.GetByteSize());
-    *(uint64_t *)dst = llvm::byteswap<uint64_t>(*(uint64_t *)dst);
 
     error = WriteGPR();
     if (error.Fail())
@@ -276,10 +274,10 @@ Status NativeRegisterContextAIX_ppc64::WriteRegister(
     if (error.Fail())
       return error;
 
-    // Get pointer to m_fpr_ppc64le variable and set the data to it.
+    // Get pointer to m_fpr_ppc64 variable and set the data to it.
     uint32_t fpr_offset = CalculateFprOffset(reg_info);
     assert(fpr_offset < GetFPRSize());
-    uint8_t *dst = (uint8_t *)&m_fpr_ppc64le + fpr_offset;
+    uint8_t *dst = (uint8_t *)&m_fpr_ppc64 + fpr_offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_value.GetByteSize());
 
     error = WriteFPR();
@@ -294,10 +292,10 @@ Status NativeRegisterContextAIX_ppc64::WriteRegister(
     if (error.Fail())
       return error;
 
-    // Get pointer to m_vmx_ppc64le variable and set the data to it.
+    // Get pointer to m_vmx_ppc64 variable and set the data to it.
     uint32_t vmx_offset = CalculateVmxOffset(reg_info);
-    assert(vmx_offset < sizeof(m_vmx_ppc64le));
-    uint8_t *dst = (uint8_t *)&m_vmx_ppc64le + vmx_offset;
+    assert(vmx_offset < sizeof(m_vmx_ppc64));
+    uint8_t *dst = (uint8_t *)&m_vmx_ppc64 + vmx_offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_value.GetByteSize());
 
     error = WriteVMX();
@@ -309,9 +307,9 @@ Status NativeRegisterContextAIX_ppc64::WriteRegister(
 
   if (IsVSX(reg_index)) {
     uint32_t vsx_offset = CalculateVsxOffset(reg_info);
-    assert(vsx_offset < sizeof(m_vsx_ppc64le));
+    assert(vsx_offset < sizeof(m_vsx_ppc64));
 
-    if (vsx_offset < sizeof(m_vsx_ppc64le) / 2) {
+    if (vsx_offset < sizeof(m_vsx_ppc64) / 2) {
       error = ReadVSX();
       if (error.Fail())
         return error;
@@ -324,10 +322,10 @@ Status NativeRegisterContextAIX_ppc64::WriteRegister(
       ::memcpy(value, reg_value.GetBytes(), 16);
       uint8_t *dst, *src;
       src = (uint8_t *)value;
-      dst = (uint8_t *)&m_vsx_ppc64le + vsx_offset / 2;
+      dst = (uint8_t *)&m_vsx_ppc64 + vsx_offset / 2;
       ::memcpy(dst, src, 8);
       src += 8;
-      dst = (uint8_t *)&m_fpr_ppc64le + vsx_offset / 2;
+      dst = (uint8_t *)&m_fpr_ppc64 + vsx_offset / 2;
       ::memcpy(dst, src, 8);
 
       WriteVSX();
@@ -337,9 +335,9 @@ Status NativeRegisterContextAIX_ppc64::WriteRegister(
       if (error.Fail())
         return error;
 
-      // Get pointer to m_vmx_ppc64le variable and set the data from it.
-      uint32_t vmx_offset = vsx_offset - sizeof(m_vsx_ppc64le) / 2;
-      uint8_t *dst = (uint8_t *)&m_vmx_ppc64le + vmx_offset;
+      // Get pointer to m_vmx_ppc64 variable and set the data from it.
+      uint32_t vmx_offset = vsx_offset - sizeof(m_vsx_ppc64) / 2;
+      uint8_t *dst = (uint8_t *)&m_vmx_ppc64 + vmx_offset;
       ::memcpy(dst, reg_value.GetBytes(), reg_value.GetByteSize());
       WriteVMX();
     }
@@ -373,13 +371,13 @@ Status NativeRegisterContextAIX_ppc64::ReadAllRegisterValues(
     return error;
 
   uint8_t *dst = data_sp->GetBytes();
-  ::memcpy(dst, &m_gpr_ppc64le, GetGPRSize());
+  ::memcpy(dst, &m_gpr_ppc64, GetGPRSize());
   dst += GetGPRSize();
-  ::memcpy(dst, &m_fpr_ppc64le, GetFPRSize());
+  ::memcpy(dst, &m_fpr_ppc64, GetFPRSize());
   dst += GetFPRSize();
-  ::memcpy(dst, &m_vmx_ppc64le, sizeof(m_vmx_ppc64le));
-  dst += sizeof(m_vmx_ppc64le);
-  ::memcpy(dst, &m_vsx_ppc64le, sizeof(m_vsx_ppc64le));
+  ::memcpy(dst, &m_vmx_ppc64, sizeof(m_vmx_ppc64));
+  dst += sizeof(m_vmx_ppc64);
+  ::memcpy(dst, &m_vsx_ppc64, sizeof(m_vsx_ppc64));
 
   return error;
 }
@@ -412,93 +410,93 @@ Status NativeRegisterContextAIX_ppc64::WriteAllRegisterValues(
     return error;
   }
 
-  ::memcpy(&m_gpr_ppc64le, src, GetGPRSize());
+  ::memcpy(&m_gpr_ppc64, src, GetGPRSize());
   error = WriteGPR();
 
   if (error.Fail())
     return error;
 
   src += GetGPRSize();
-  ::memcpy(&m_fpr_ppc64le, src, GetFPRSize());
+  ::memcpy(&m_fpr_ppc64, src, GetFPRSize());
 
   error = WriteFPR();
   if (error.Fail())
     return error;
 
   src += GetFPRSize();
-  ::memcpy(&m_vmx_ppc64le, src, sizeof(m_vmx_ppc64le));
+  ::memcpy(&m_vmx_ppc64, src, sizeof(m_vmx_ppc64));
 
   error = WriteVMX();
   if (error.Fail())
     return error;
 
-  src += sizeof(m_vmx_ppc64le);
-  ::memcpy(&m_vsx_ppc64le, src, sizeof(m_vsx_ppc64le));
+  src += sizeof(m_vmx_ppc64);
+  ::memcpy(&m_vsx_ppc64, src, sizeof(m_vsx_ppc64));
   error = WriteVSX();
 
   return error;
 }
 
 bool NativeRegisterContextAIX_ppc64::IsGPR(unsigned reg) const {
-  return reg <= k_last_gpr_ppc64le; // GPR's come first.
+  return reg <= k_last_gpr_ppc64; // GPR's come first.
 }
 
 bool NativeRegisterContextAIX_ppc64::IsFPR(unsigned reg) const {
-  return (k_first_fpr_ppc64le <= reg && reg <= k_last_fpr_ppc64le);
+  return (k_first_fpr_ppc64 <= reg && reg <= k_last_fpr_ppc64);
 }
 
 uint32_t NativeRegisterContextAIX_ppc64::CalculateFprOffset(
     const RegisterInfo *reg_info) const {
   return reg_info->byte_offset -
-         GetRegisterInfoAtIndex(k_first_fpr_ppc64le)->byte_offset;
+         GetRegisterInfoAtIndex(k_first_fpr_ppc64)->byte_offset;
 }
 
 uint32_t NativeRegisterContextAIX_ppc64::CalculateVmxOffset(
     const RegisterInfo *reg_info) const {
   return reg_info->byte_offset -
-         GetRegisterInfoAtIndex(k_first_vmx_ppc64le)->byte_offset;
+         GetRegisterInfoAtIndex(k_first_vmx_ppc64)->byte_offset;
 }
 
 uint32_t NativeRegisterContextAIX_ppc64::CalculateVsxOffset(
     const RegisterInfo *reg_info) const {
   return reg_info->byte_offset -
-         GetRegisterInfoAtIndex(k_first_vsx_ppc64le)->byte_offset;
+         GetRegisterInfoAtIndex(k_first_vsx_ppc64)->byte_offset;
 }
 
 Status NativeRegisterContextAIX_ppc64::ReadVMX() {
   return NativeProcessAIX::PtraceWrapper(PTRACE_GETVRREGS, m_thread.GetID(),
-                                           nullptr, &m_vmx_ppc64le,
-                                           sizeof(m_vmx_ppc64le));
+                                           nullptr, &m_vmx_ppc64,
+                                           sizeof(m_vmx_ppc64));
 }
 
 Status NativeRegisterContextAIX_ppc64::WriteVMX() {
   //FIXME
   int regset = 0/*NT_PPC_VMX*/;
   return NativeProcessAIX::PtraceWrapper(PT_CLEAR/*PTRACE_SETVRREGS*/, m_thread.GetID(),
-                                           &regset, &m_vmx_ppc64le,
-                                           sizeof(m_vmx_ppc64le));
+                                           &regset, &m_vmx_ppc64,
+                                           sizeof(m_vmx_ppc64));
 }
 
 Status NativeRegisterContextAIX_ppc64::ReadVSX() {
   return NativeProcessAIX::PtraceWrapper(PTRACE_GETVSRREGS, m_thread.GetID(),
-                                           nullptr, &m_vsx_ppc64le,
-                                           sizeof(m_vsx_ppc64le));
+                                           nullptr, &m_vsx_ppc64,
+                                           sizeof(m_vsx_ppc64));
 }
 
 Status NativeRegisterContextAIX_ppc64::WriteVSX() {
   //FIXME
   int regset = 0/*NT_PPC_VSX*/;
   return NativeProcessAIX::PtraceWrapper(PT_CLEAR/*PTRACE_SETVSRREGS*/, m_thread.GetID(),
-                                           &regset, &m_vsx_ppc64le,
-                                           sizeof(m_vsx_ppc64le));
+                                           &regset, &m_vsx_ppc64,
+                                           sizeof(m_vsx_ppc64));
 }
 
 bool NativeRegisterContextAIX_ppc64::IsVMX(unsigned reg) {
-  return (reg >= k_first_vmx_ppc64le) && (reg <= k_last_vmx_ppc64le);
+  return (reg >= k_first_vmx_ppc64) && (reg <= k_last_vmx_ppc64);
 }
 
 bool NativeRegisterContextAIX_ppc64::IsVSX(unsigned reg) {
-  return (reg >= k_first_vsx_ppc64le) && (reg <= k_last_vsx_ppc64le);
+  return (reg >= k_first_vsx_ppc64) && (reg <= k_last_vsx_ppc64);
 }
 
 uint32_t NativeRegisterContextAIX_ppc64::NumSupportedHardwareWatchpoints() {
@@ -531,7 +529,7 @@ uint32_t NativeRegisterContextAIX_ppc64::SetHardwareWatchpoint(
   uint32_t rw_mode = 0;
 
   // Check if we are setting watchpoint other than read/write/access Update
-  // watchpoint flag to match ppc64le write-read bit configuration.
+  // watchpoint flag to match ppc64 write-read bit configuration.
   switch (watch_flags) {
   case eWatchpointKindWrite:
     //FIXME
