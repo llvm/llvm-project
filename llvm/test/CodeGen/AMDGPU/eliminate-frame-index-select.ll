@@ -32,4 +32,4 @@ bb1:                                              ; preds = %bb1, %bb
   br label %bb1
 }
 
-attributes #0 = { "target-cpu"="gfx1030" }
+attributes #0 = { nounwind }
