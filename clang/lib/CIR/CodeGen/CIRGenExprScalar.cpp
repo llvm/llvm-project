@@ -2146,7 +2146,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     clang::LangAS srcLangAS = srcTy.getAddressSpace();
     mlir::ptr::MemorySpaceAttrInterface subExprAS;
     if (clang::isTargetAddressSpace(srcLangAS))
-      subExprAS = cir::toCIRAddressSpaceAttr(&cgf.getMLIRContext(), srcLangAS);
+      subExprAS = cir::toCIRAddressSpaceAttr(cgf.getMLIRContext(), srcLangAS);
     else
       cgf.cgm.errorNYI(subExpr->getSourceRange(),
                        "non-target address space conversion");
