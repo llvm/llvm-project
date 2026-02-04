@@ -798,6 +798,54 @@ define void @call_modular_format() {
 ; CHECK: llvm.func @f()
 declare void @f()
 
+; CHECK-LABEL: @call_nobuiltins_all
+define void @call_nobuiltins_all() {
+; CHECK: llvm.call @f() {nobuiltins = []}
+  call void @f() "no-builtins"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_nobuiltins_2
+define void @call_nobuiltins_2() {
+; CHECK: llvm.call @f() {nobuiltins = ["asdf", "ghij"]}
+  call void @f() "no-builtin-asdf" "no-builtin-ghij"
+  ret void
+}
+
+
+; // -----
+
+; CHECK: llvm.func @f(i32, i32)
+declare void @f(i32, i32)
+
+; CHECK-LABEL: @call_alloc_size_1
+define void @call_alloc_size_1() {
+; CHECK: llvm.call @f({{.*}}) {allocsize = array<i32: 0>}
+  call void @f(i32 0, i32 0) allocsize(0)
+  ret void
+}
+; // -----
+
+; CHECK: llvm.func @f(i32, i32)
+declare void @f(i32, i32)
+
+; CHECK-LABEL: @call_alloc_size_2
+define void @call_alloc_size_2() {
+; CHECK: llvm.call @f({{.*}}) {allocsize = array<i32: 1, 0>}
+  call void @f(i32 0, i32 0) allocsize(1, 0)
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
 ; CHECK-LABEL: @call_memory_effects
 define void @call_memory_effects() {
 ; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>}
