@@ -163,6 +163,7 @@ public:
     return success();
   }
 
+  LogicalResult applyFunctionSignatureCheck(func::FuncOp op);
   LogicalResult applyLevelCheck(Operation *op);
   LogicalResult applyAttributeCheck(Operation *op);
 
@@ -1327,6 +1328,19 @@ LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   return success();
 }
 
+LogicalResult TosaValidation::applyFunctionSignatureCheck(func::FuncOp op) {
+  const auto isShapeType = [](Type type) { return isa<tosa::shapeType>(type); };
+  if (llvm::any_of(op.getArgumentTypes(), isShapeType))
+    return op.emitOpError()
+           << "Function argument types must be a tensor type to be TOSA "
+              "compliant, got !tosa.shape type";
+  if (llvm::any_of(op.getResultTypes(), isShapeType))
+    return op.emitOpError()
+           << "Function return types must be a tensor type to be TOSA "
+              "compliant, got !tosa.shape type";
+  return success();
+}
+
 bool TosaValidation::isValidElementType(Type type, const bool allowUnsigned) {
   if (isa<FloatType>(type)) {
     return isa<Float32Type, Float16Type, BFloat16Type, Float8E4M3FNType,
@@ -1371,6 +1385,12 @@ void TosaValidation::runOnOperation() {
   if (failed(maybeTargetEnv))
     return signalPassFailure();
   targetEnv = *maybeTargetEnv;
+
+  const auto functions = modOp.getOps<func::FuncOp>();
+  if (llvm::any_of(functions, [&](func::FuncOp func) {
+        return failed(applyFunctionSignatureCheck(func));
+      }))
+    return signalPassFailure();
 
   modOp.walk([&](Operation *op) {
     if (op->getDialect() != tosaDialect)
