@@ -533,8 +533,8 @@ struct StateInfoTy {
           void *AllocPtr = Alloc.first;
           int64_t AllocSize = Alloc.second;
           return Ptr >= AllocPtr &&
-                 Ptr < reinterpret_cast<void *>(
-                           reinterpret_cast<char *>(AllocPtr) + AllocSize);
+                 Ptr < static_cast<void *>(static_cast<char *>(AllocPtr) +
+                                           AllocSize);
         });
   }
 };

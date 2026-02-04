@@ -1,6 +1,8 @@
 // RUN: %libomptarget-compile-generic -fopenmp-version=60
+// RUN: %libomptarget-run-generic
+// RUN: | %fcheck-generic -check-prefix=CHECK
 // RUN: env LIBOMPTARGET_DEBUG=1 %libomptarget-run-generic 2>&1 \
-// RUN: | %fcheck-generic -check-prefix=DEBUG -check-prefix=CHECK
+// RUN: | %fcheck-generic -check-prefix=DEBUG
 // REQUIRES: libomptarget-debug
 
 #include <omp.h>

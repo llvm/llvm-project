@@ -517,7 +517,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                       "handling ATTACH and TO/TOFROM map-types.");
   // process each input.
   for (int32_t I = 0; I < ArgNum; ++I) {
-    // Ignore private variables and arrays - there is no mapping for t.attahem.
+    // Ignore private variables and arrays - there is no mapping for them.
     if ((ArgTypes[I] & OMP_TGT_MAPTYPE_LITERAL) ||
         (ArgTypes[I] & OMP_TGT_MAPTYPE_PRIVATE))
       continue;
