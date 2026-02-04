@@ -3960,6 +3960,39 @@ TEST_P(UncheckedStatusOrAccessModelTest, StatusPtrReference) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, PairIterator) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    class iterator {
+     public:
+      const std::pair<int, absl::StatusOr<int>>* operator->() const;
+    };
+    void target() {
+      if (auto it = Make<iterator>(); it->second.ok()) {
+        it->second.value();
+      }
+    }
+)cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, PairIteratorRef) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    class iterator {
+     public:
+      const std::pair<int, absl::StatusOr<int>>& operator*() const;
+    };
+    void target() {
+      if (auto it = Make<iterator>(); (*it).second.ok()) {
+        // This is a false positive. Fix and remove the unsafe.
+        (*it).second.value();  // [[unsafe]]
+      }
+    }
+)cc");
+}
+
 } // namespace
 
 std::string
