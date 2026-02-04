@@ -1015,6 +1015,13 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(B32, {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
       .Uni(B32, {{UniInVgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
 
+  addRulesForGOpcs(
+      {G_AMDGPU_BUFFER_LOAD_FORMAT_D16, G_AMDGPU_TBUFFER_LOAD_FORMAT_D16})
+      .Any({{DivB32}, {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB64}, {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any(
+          {{DivB128}, {{VgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}});
+
   addRulesForGOpcs({G_AMDGPU_BUFFER_STORE, G_AMDGPU_BUFFER_STORE_FORMAT,
                     G_AMDGPU_BUFFER_STORE_FORMAT_D16,
                     G_AMDGPU_TBUFFER_STORE_FORMAT,

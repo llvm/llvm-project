@@ -1048,7 +1048,7 @@ static bool interp__builtin_bswap(InterpState &S, CodePtr OpPC,
                                   const InterpFrame *Frame,
                                   const CallExpr *Call) {
   const APSInt &Val = popToAPSInt(S, Call->getArg(0));
-  if (Val.getBitWidth() == 8)
+  if (Val.getBitWidth() == 8 || Val.getBitWidth() == 1)
     pushInteger(S, Val, Call->getType());
   else
     pushInteger(S, Val.byteSwap(), Call->getType());
@@ -1125,7 +1125,7 @@ static bool interp__builtin_atomic_lock_free(InterpState &S, CodePtr OpPC,
   if (BuiltinOp == Builtin::BI__atomic_always_lock_free)
     return returnBool(false);
 
-  return false;
+  return Invalid(S, OpPC);
 }
 
 /// bool __c11_atomic_is_lock_free(size_t)

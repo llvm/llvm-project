@@ -1071,7 +1071,6 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
       Register PromoteReg = MRI.createVirtualRegister(PromotionRC);
       BuildMI(*I.getParent(), I, I.getDebugLoc(),
               TII.get(AArch64::SUBREG_TO_REG), PromoteReg)
-          .addImm(0)
           .addUse(SrcReg)
           .addImm(SubReg);
       MachineOperand &RegOp = I.getOperand(1);
@@ -2888,7 +2887,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     BuildMI(MBB, I.getIterator(), I.getDebugLoc(),
             TII.get(AArch64::SUBREG_TO_REG))
         .addDef(SrcReg)
-        .addImm(0)
         .addUse(I.getOperand(2).getReg())
         .addImm(AArch64::sub_32);
     RBI.constrainGenericRegister(I.getOperand(2).getReg(),
@@ -3056,7 +3054,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         // Generate a SUBREG_TO_REG to extend it.
         MIB.setInsertPt(MIB.getMBB(), std::next(LdSt.getIterator()));
         MIB.buildInstr(AArch64::SUBREG_TO_REG, {OldDst}, {})
-            .addImm(0)
             .addUse(NewDst)
             .addImm(SubReg);
         auto SubRegRC = getRegClassForTypeOnBank(MRI.getType(OldDst), RB);
@@ -3131,7 +3128,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
       MIB.setInsertPt(MIB.getMBB(), std::next(LoadStore->getIterator()));
       MIB.buildInstr(AArch64::SUBREG_TO_REG, {DstReg}, {})
-          .addImm(0)
           .addUse(LdReg)
           .addImm(AArch64::sub_32);
       constrainSelectedInstRegOperands(*LoadStore, TII, TRI, RBI);
@@ -3350,7 +3346,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       Register ExtSrc = MRI.createVirtualRegister(&AArch64::GPR64allRegClass);
       BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::SUBREG_TO_REG))
           .addDef(ExtSrc)
-          .addImm(0)
           .addUse(SrcReg)
           .addImm(AArch64::sub_32);
       I.getOperand(1).setReg(ExtSrc);
@@ -3414,7 +3409,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
             .addImm(0);
 
         MIB.buildInstr(AArch64::SUBREG_TO_REG, {DefReg}, {})
-            .addImm(0)
             .addUse(SubregToRegSrc)
             .addImm(AArch64::sub_32);
 
@@ -3446,7 +3440,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         }
         SrcReg = MIB.buildInstr(AArch64::SUBREG_TO_REG,
                                 {&AArch64::GPR64RegClass}, {})
-                     .addImm(0)
                      .addUse(SrcReg)
                      .addImm(AArch64::sub_32)
                      .getReg(0);
@@ -3908,17 +3901,15 @@ bool AArch64InstructionSelector::selectMergeValues(
   MachineInstr &SubRegMI = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
                                     TII.get(TargetOpcode::SUBREG_TO_REG))
                                 .addDef(SubToRegDef)
-                                .addImm(0)
                                 .addUse(I.getOperand(1).getReg())
                                 .addImm(AArch64::sub_32);
   Register SubToRegDef2 = MRI.createVirtualRegister(DstRC);
   // Need to anyext the second scalar before we can use bfm
   MachineInstr &SubRegMI2 = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                                    TII.get(TargetOpcode::SUBREG_TO_REG))
-                                .addDef(SubToRegDef2)
-                                .addImm(0)
-                                .addUse(I.getOperand(2).getReg())
-                                .addImm(AArch64::sub_32);
+                                     TII.get(TargetOpcode::SUBREG_TO_REG))
+                                 .addDef(SubToRegDef2)
+                                 .addUse(I.getOperand(2).getReg())
+                                 .addImm(AArch64::sub_32);
   MachineInstr &BFM =
       *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AArch64::BFMXri))
            .addDef(I.getOperand(0).getReg())
@@ -5313,7 +5304,6 @@ bool AArch64InstructionSelector::selectUSMovFromExtend(
     Register NewReg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
     MIB.buildInstr(Opcode, {NewReg}, {Src0}).addImm(Lane);
     ExtI = MIB.buildInstr(AArch64::SUBREG_TO_REG, {DefReg}, {})
-               .addImm(0)
                .addUse(NewReg)
                .addImm(AArch64::sub_32);
     RBI.constrainGenericRegister(DefReg, AArch64::GPR64RegClass, MRI);
@@ -5582,7 +5572,6 @@ bool AArch64InstructionSelector::selectIndexedExtLoad(
   if (InsertIntoSubReg) {
     // Generate a SUBREG_TO_REG.
     auto SubToReg = MIB.buildInstr(TargetOpcode::SUBREG_TO_REG, {Dst}, {})
-                        .addImm(0)
                         .addUse(LdMI.getReg(1))
                         .addImm(InsertIntoSubReg);
     RBI.constrainGenericRegister(
@@ -5874,7 +5863,6 @@ bool AArch64InstructionSelector::tryOptBuildVecToSubregToReg(
   if (!getSubRegForClass(EltRC, TRI, SubReg))
     return false;
   auto SubregToReg = MIB.buildInstr(AArch64::SUBREG_TO_REG, {Dst}, {})
-                         .addImm(0)
                          .addUse(EltReg)
                          .addImm(SubReg);
   I.eraseFromParent();
