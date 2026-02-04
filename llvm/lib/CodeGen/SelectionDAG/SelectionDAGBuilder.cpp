@@ -7131,17 +7131,21 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::convert_from_arbitrary_fp: {
     // Extract format metadata and convert to semantics enum.
+    EVT DstVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
     Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(1))->getMetadata();
     StringRef FormatStr = cast<MDString>(MD)->getString();
     const fltSemantics *SrcSem =
         APFloatBase::getArbitraryFPSemantics(FormatStr);
-    if (!SrcSem)
-      report_fatal_error("convert_from_arbitrary_fp: not implemented format '" +
-                         FormatStr + "'");
+    if (!SrcSem) {
+      DAG.getContext()->emitError(
+          "convert_from_arbitrary_fp: not implemented format '" + FormatStr +
+          "'");
+      setValue(&I, DAG.getPOISON(DstVT));
+      return;
+    }
     APFloatBase::Semantics SemEnum = APFloatBase::SemanticsToEnum(*SrcSem);
 
     SDValue IntVal = getValue(I.getArgOperand(0));
-    EVT DstVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
 
     // Emit ISD::CONVERT_FROM_ARBITRARY_FP node.
     SDValue SemConst =

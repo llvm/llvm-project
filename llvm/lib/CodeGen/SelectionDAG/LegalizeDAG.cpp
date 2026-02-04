@@ -3524,10 +3524,14 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     case APFloatBase::S_Float4E2M1FN:
       break;
     default:
-      report_fatal_error("CONVERT_FROM_ARBITRARY_FP: unsupported source "
-                         "format (semantics enum " +
-                         Twine(SemEnum) + ")");
+      DAG.getContext()->emitError("CONVERT_FROM_ARBITRARY_FP: not implemented "
+                                  "source format (semantics enum " +
+                                  Twine(SemEnum) + ")");
+      Results.push_back(DAG.getPOISON(DstVT));
+      break;
     }
+    if (!Results.empty())
+      break;
 
     const fltSemantics &SrcSem = APFloatBase::EnumToSemantics(Sem);
 
@@ -3541,22 +3545,12 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     const fltNanEncoding NanEnc = SrcSem.nanEncoding;
 
     // Destination format parameters.
-    const fltSemantics *DstSem;
-    if (DstVT == MVT::f16)
-      DstSem = &APFloat::IEEEhalf();
-    else if (DstVT == MVT::bf16)
-      DstSem = &APFloat::BFloat();
-    else if (DstVT == MVT::f32)
-      DstSem = &APFloat::IEEEsingle();
-    else if (DstVT == MVT::f64)
-      DstSem = &APFloat::IEEEdouble();
-    else
-      llvm_unreachable("Unsupported destination float type");
+    const fltSemantics &DstSem = DstVT.getFltSemantics();
 
-    const unsigned DstBits = APFloat::getSizeInBits(*DstSem);
-    const unsigned DstMant = APFloat::semanticsPrecision(*DstSem) - 1;
+    const unsigned DstBits = APFloat::getSizeInBits(DstSem);
+    const unsigned DstMant = APFloat::semanticsPrecision(DstSem) - 1;
     const unsigned DstExpBits = DstBits - DstMant - 1;
-    const int DstMinExp = APFloat::semanticsMinExponent(*DstSem);
+    const int DstMinExp = APFloat::semanticsMinExponent(DstSem);
     const int DstBias = 1 - DstMinExp;
     const uint64_t DstExpAllOnes = (1ULL << DstExpBits) - 1;
 
@@ -3644,17 +3638,19 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
         DAG.getConstant(APInt(DstBits, BiasAdjust, true), dl, IntVT));
 
     SDValue NormDstMant;
-    if (DstMant > SrcMant)
+    if (DstMant > SrcMant) {
+      SDValue NormDstMantShift =
+          DAG.getShiftAmountConstant(DstMant - SrcMant, IntVT, dl);
       NormDstMant =
-          DAG.getNode(ISD::SHL, dl, IntVT, MantField,
-                      DAG.getShiftAmountConstant(DstMant - SrcMant, IntVT, dl));
-    else
+          DAG.getNode(ISD::SHL, dl, IntVT, MantField, NormDstMantShift);
+    } else {
       NormDstMant = MantField;
+    }
 
     // Assemble normal result.
+    SDValue DstMantShift = DAG.getShiftAmountConstant(DstMant, IntVT, dl);
     SDValue NormExpShifted =
-        DAG.getNode(ISD::SHL, dl, IntVT, NormDstExp,
-                    DAG.getShiftAmountConstant(DstMant, IntVT, dl));
+        DAG.getNode(ISD::SHL, dl, IntVT, NormDstExp, DstMantShift);
     SDValue NormResult = DAG.getNode(
         ISD::OR, dl, IntVT,
         DAG.getNode(ISD::OR, dl, IntVT, SignShifted, NormExpShifted),
@@ -3702,8 +3698,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
 
       // Assemble denorm as sign | (denorm_dst_exp << DstMant) | denorm_dst_mant
       SDValue DenormExpShifted =
-          DAG.getNode(ISD::SHL, dl, IntVT, DenormDstExp,
-                      DAG.getShiftAmountConstant(DstMant, IntVT, dl));
+          DAG.getNode(ISD::SHL, dl, IntVT, DenormDstExp, DstMantShift);
       DenormResult = DAG.getNode(
           ISD::OR, dl, IntVT,
           DAG.getNode(ISD::OR, dl, IntVT, SignShifted, DenormExpShifted),
