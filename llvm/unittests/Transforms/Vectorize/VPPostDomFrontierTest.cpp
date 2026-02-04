@@ -65,19 +65,19 @@ TEST_F(VPPostDomFrontierTest, MultipleExitsTest) {
   auto F5 = VPPDF.find(VPBB5)->second;
   auto F6 = VPPDF.find(VPBB6)->second;
 
-  EXPECT_EQ(F0.size(), 0);
-  EXPECT_EQ(F1.size(), 1);
+  EXPECT_EQ(F0.size(), 0u);
+  EXPECT_EQ(F1.size(), 1u);
   EXPECT_TRUE(is_contained(F1, VPBB0));
-  EXPECT_EQ(F2.size(), 1);
+  EXPECT_EQ(F2.size(), 1u);
   EXPECT_TRUE(is_contained(F2, VPBB0));
-  EXPECT_EQ(F3.size(), 1);
+  EXPECT_EQ(F3.size(), 1u);
   EXPECT_TRUE(is_contained(F3, VPBB2));
-  EXPECT_EQ(F4.size(), 1);
+  EXPECT_EQ(F4.size(), 1u);
   EXPECT_TRUE(is_contained(F4, VPBB1));
-  EXPECT_EQ(F5.size(), 2);
+  EXPECT_EQ(F5.size(), 2u);
   EXPECT_TRUE(is_contained(F5, VPBB1));
   EXPECT_TRUE(is_contained(F5, VPBB2));
-  EXPECT_EQ(F6.size(), 2);
+  EXPECT_EQ(F6.size(), 2u);
   EXPECT_TRUE(is_contained(F6, VPBB0));
   EXPECT_TRUE(is_contained(F6, VPBB2));
 }
