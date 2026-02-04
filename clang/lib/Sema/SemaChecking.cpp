@@ -15417,6 +15417,11 @@ void Sema::CheckArrayAccess(const Expr *expr) {
         expr = ASE->getBase();
         break;
       }
+      case Stmt::CXXMemberCallExprClass: {
+        const CXXMemberCallExpr *MCE = cast<CXXMemberCallExpr>(expr);
+        expr = MCE->getImplicitObjectArgument();
+        break;
+      }
       case Stmt::MemberExprClass: {
         expr = cast<MemberExpr>(expr)->getBase();
         break;
