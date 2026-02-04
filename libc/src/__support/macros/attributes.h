@@ -17,8 +17,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H
 #define LLVM_LIBC_SRC___SUPPORT_MACROS_ATTRIBUTES_H
 
-#include "config.h"
-#include "properties/architectures.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/architectures.h"
 
 #ifndef __has_attribute
 #define __has_attribute(x) 0
