@@ -41,10 +41,6 @@ LLVM_ABI IntrusiveRefCntPtr<OutputBackend> makeFilteringOutputBackend(
     IntrusiveRefCntPtr<OutputBackend> UnderlyingBackend,
     std::function<bool(StringRef, std::optional<OutputConfig>)> Filter);
 
-/// Make a backend where \a OutputBackend::createFile() creates a file in a map,
-/// backed by a string buffer.
-LLVM_ABI IntrusiveRefCntPtr<OutputBackend> makeInMemoryOutputBackend();
-
 /// Create a backend that forwards \a OutputBackend::createFile() to both \p
 /// Backend1 and \p Backend2. Writing to such backend will create identical
 /// outputs using two different backends.

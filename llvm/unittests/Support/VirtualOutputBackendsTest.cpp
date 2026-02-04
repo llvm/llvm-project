@@ -278,7 +278,7 @@ public:
   bool rejectsMissingDirectories() override { return false; }
 
   IntrusiveRefCntPtr<OutputBackend> createBackend() override {
-    return makeInMemoryOutputBackend();
+    return makeIntrusiveRefCnt<InMemoryOutputBackend>();
   }
   std::string getFilePathToCreate() override { return "ignored.data"; }
   std::string getFilePathToCreateUnder(StringRef Parent1,

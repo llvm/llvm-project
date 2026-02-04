@@ -79,10 +79,6 @@ IntrusiveRefCntPtr<OutputBackend> vfs::makeFilteringOutputBackend(
       std::move(UnderlyingBackend), std::move(Filter));
 }
 
-IntrusiveRefCntPtr<OutputBackend> vfs::makeInMemoryOutputBackend() {
-  return makeIntrusiveRefCnt<InMemoryOutputBackend>();
-}
-
 IntrusiveRefCntPtr<OutputBackend>
 vfs::makeMirroringOutputBackend(IntrusiveRefCntPtr<OutputBackend> Backend1,
                                 IntrusiveRefCntPtr<OutputBackend> Backend2) {
