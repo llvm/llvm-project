@@ -697,7 +697,7 @@ public:
 
   /// returns the exponent
   LLVM_ABI ExponentType getExponent() const;
-  
+
   /// returns the significand
   LLVM_ABI APInt getSignificand() const;
 
