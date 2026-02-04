@@ -27,7 +27,7 @@ SYCLInstallationDetector::SYCLInstallationDetector(
   if (DriverDir.starts_with(SysRoot) &&
       (Args.hasArg(options::OPT_fsycl) ||
        D.getVFS().exists(DriverDir + "/../lib/libsycl.so"))) {
-    llvm::sys::path::append(DriverDir, "/../lib");
+    llvm::sys::path::append(DriverDir, "..", "lib");
     SYCLRTLibPath = DriverDir;
   }
 }
