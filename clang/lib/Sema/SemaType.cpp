@@ -9679,6 +9679,7 @@ bool Sema::RequireLiteralType(SourceLocation Loc, QualType T,
     // destructors. If this class's destructor is non-trivial / non-constexpr,
     // it must be user-declared.
     CXXDestructorDecl *Dtor = RD->getDestructor();
+    // Malformed destructor declarations can leave getDestructor() null.
     if (!Dtor)
       return true;
 
