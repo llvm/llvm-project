@@ -1,4 +1,4 @@
-//===-- BFloat16 log10(x) function ----------------------------------------===//
+//===-- Shared log10bf16 function -------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/log10bf16.h"
+#ifndef LLVM_LIBC_SHARED_MATH_LOG10BF16_H
+#define LLVM_LIBC_SHARED_MATH_LOG10BF16_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/log10bf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
-LLVM_LIBC_FUNCTION(bfloat16, log10bf16, (bfloat16 x)) {
-  return math::log10bf16(x);
-}
+namespace shared {
 
+using math::log10bf16;
+
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_LOG10BF16_H
