@@ -1575,8 +1575,8 @@ AAAMDGPUClusterDims::createForPosition(const IRPosition &IRP, Attributor &A) {
   llvm_unreachable("AAAMDGPUClusterDims is only valid for function position");
 }
 
-static bool runImpl(SetVector<Function *> &Functions, Module &M,
-                    AnalysisGetter &AG, TargetMachine &TM,
+static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
+                    Module &M, AnalysisGetter &AG, TargetMachine &TM,
                     AMDGPUAttributorOptions Options,
                     ThinOrFullLTOPhase LTOPhase) {
 
@@ -1595,7 +1595,7 @@ static bool runImpl(SetVector<Function *> &Functions, Module &M,
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;
   AC.Allowed = &Allowed;
-  AC.IsModulePass = true;
+  AC.IsModulePass = IsModulePass;
   AC.DefaultInitializeLiveInternals = false;
   AC.IndirectCalleeSpecializationCallback =
       [](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
@@ -1677,7 +1677,7 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
     return PreservedAnalyses::all();
 
   // TODO: Probably preserves CFG
-  return runImpl(Functions, M, AG, TM, Options, LTOPhase)
+  return runImpl(Functions, true /*IsModulePass*/, M, AG, TM, Options, LTOPhase)
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();
 }
@@ -1692,15 +1692,10 @@ PreservedAnalyses llvm::AMDGPUAttributorCGSCCPass::run(LazyCallGraph::SCC &C,
   AnalysisGetter AG(FAM);
 
   SetVector<Function *> Functions;
-  Module *M = C.begin()->getFunction().getParent();
   for (LazyCallGraph::Node &N : C) {
     Function *F = &N.getFunction();
     if (!F->isIntrinsic())
       Functions.insert(F);
-  }
-  for (Function &F : *M) {
-    if (F.isIntrinsic())
-      Functions.insert(&F);
   }
 
   LLVM_DEBUG(dbgs() << "AMDGPUAttributorCGSCCPass: SCC size: "
@@ -1713,7 +1708,9 @@ PreservedAnalyses llvm::AMDGPUAttributorCGSCCPass::run(LazyCallGraph::SCC &C,
     return PreservedAnalyses::all();
 
   AMDGPUAttributorOptions Options;
-  return runImpl(Functions, *M, AG, TM, Options, ThinOrFullLTOPhase::None)
+  Module *M = C.begin()->getFunction().getParent();
+  return runImpl(Functions, false /*IsModulePass*/, *M, AG, TM, Options,
+                 ThinOrFullLTOPhase::None)
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();
 }
