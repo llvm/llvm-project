@@ -36,7 +36,9 @@ define i32 @cnt32_advsimd(i32 %x) nounwind readnone {
 ;
 ; CHECK-BE-LABEL: cnt32_advsimd:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    fmov s0, w0
+; CHECK-BE-NEXT:    mov w8, w0
+; CHECK-BE-NEXT:    fmov d0, x8
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-BE-NEXT:    addv b0, v0.8b
 ; CHECK-BE-NEXT:    fmov w0, s0
@@ -83,7 +85,8 @@ define i32 @cnt32_advsimd_2(<2 x i32> %x) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    fmov w8, s0
-; CHECK-BE-NEXT:    fmov s0, w8
+; CHECK-BE-NEXT:    fmov d0, x8
+; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    cnt v0.8b, v0.8b
 ; CHECK-BE-NEXT:    addv b0, v0.8b
 ; CHECK-BE-NEXT:    fmov w0, s0
@@ -414,7 +417,7 @@ define i1 @ctpop32_ne_one_nonzero(i32 %x) {
 ; CHECK-CSSC-LABEL: ctpop32_ne_one_nonzero:
 ; CHECK-CSSC:       // %bb.0: // %entry
 ; CHECK-CSSC-NEXT:    sub w8, w0, #1
-; CHECK-CSSC-NEXT:    and	w8, w0, w8
+; CHECK-CSSC-NEXT:    and w8, w0, w8
 ; CHECK-CSSC-NEXT:    umin w0, w8, #1
 ; CHECK-CSSC-NEXT:    ret
 ;

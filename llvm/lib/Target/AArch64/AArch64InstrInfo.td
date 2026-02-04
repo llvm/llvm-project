@@ -1088,6 +1088,19 @@ def AArch64WrapperLarge : SDNode<"AArch64ISD::WrapperLarge",
 /// mode without emitting such REV instructions.
 def AArch64NvCast : SDNode<"AArch64ISD::NVCAST", SDTUnaryOp>;
 
+/// The nvcast node can match either a NVCAST or a bitconvert in LE.
+def nvcast : PatFrags<(ops node:$Rn),
+                      [(bitconvert node:$Rn),
+                       (AArch64NvCast node:$Rn)],
+  [{
+   return Op.getOpcode() == AArch64ISD::NVCAST ||
+          (Op.getOpcode() == ISD::BITCAST && CurDAG->getDataLayout().isLittleEndian());
+  }]> {
+  let GISelPredicateCode = [{
+     return MI.getOpcode() == AArch64::G_BITCAST && STI.isLittleEndian();
+  }];
+}
+
 def SDT_AArch64mull : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisInt<1>,
                                     SDTCisSameAs<1, 2>]>;
 def AArch64pmull    : SDNode<"AArch64ISD::PMULL", SDT_AArch64mull,
@@ -1778,7 +1791,7 @@ class BaseSIMDSUDOTIndex<bit Q, string dst_kind, string lhs_kind,
                                         InputType, VectorIndexS, null_frag> {
   let Pattern = [(set (AccumType RegType:$dst),
                       (AccumType (AArch64usdot (AccumType RegType:$Rd),
-                                 (InputType (bitconvert (AccumType
+                                 (InputType (nvcast (AccumType
                                     (AArch64duplane32 (v4i32 V128:$Rm),
                                         VectorIndexS:$idx)))),
                                  (InputType RegType:$Rn))))];
@@ -1995,9 +2008,9 @@ let Predicates = [HasComplxNum, HasNEON, HasFullFP16] in {
   defm : FCMLA_PATS<v8f16, V128>;
 
   defm : FCMLA_LANE_PATS<v4f16, V64,
-                         (v4f16 (bitconvert (v2i32 (AArch64duplane32 (v4i32 V128:$Rm), VectorIndexD:$idx))))>;
+                         (v4f16 (nvcast (v2i32 (AArch64duplane32 (v4i32 V128:$Rm), VectorIndexD:$idx))))>;
   defm : FCMLA_LANE_PATS<v8f16, V128,
-                         (v8f16 (bitconvert (v4i32 (AArch64duplane32 (v4i32 V128:$Rm), VectorIndexS:$idx))))>;
+                         (v8f16 (nvcast (v4i32 (AArch64duplane32 (v4i32 V128:$Rm), VectorIndexS:$idx))))>;
 }
 let Predicates = [HasComplxNum, HasNEON] in {
   defm : FCMLA_PATS<v2f32, V64>;
@@ -2005,7 +2018,7 @@ let Predicates = [HasComplxNum, HasNEON] in {
   defm : FCMLA_PATS<v2f64, V128>;
 
   defm : FCMLA_LANE_PATS<v4f32, V128,
-                         (v4f32 (bitconvert (v2i64 (AArch64duplane64 (v2i64 V128:$Rm), VectorIndexD:$idx))))>;
+                         (v4f32 (nvcast (v2i64 (AArch64duplane64 (v2i64 V128:$Rm), VectorIndexD:$idx))))>;
 }
 
 // v8.3a Pointer Authentication
@@ -7911,7 +7924,7 @@ def : Pat<(v8i8 (vec_ins_or_scal_vec GPR32:$Rn)),
                          (f32 (COPY_TO_REGCLASS GPR32:$Rn, FPR32)), ssub)>;
 
 // The top bits will be zero from the FMOVWSr
-def : Pat<(v8i8 (bitconvert (i64 (zext GPR32:$Rn)))),
+def : Pat<(v8i8 (nvcast (i64 (zext GPR32:$Rn)))),
           (SUBREG_TO_REG (i32 0), (f32 (FMOVWSr GPR32:$Rn)), ssub)>;
 
 def: Pat<(f64 (bitconvert (i64 (zext (i32 (bitconvert (f32 FPR32:$Rn))))))),
@@ -10859,10 +10872,10 @@ def : Pat<(v2i32 (add (AArch64zip1 (extract_subvector (v4i32 FPR128:$Rn), (i64 0
                       (AArch64zip2 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
                                    (extract_subvector (v4i32 FPR128:$Rn), (i64 2))))),
           (EXTRACT_SUBREG (ADDPv4i32 $Rn, $Rn), dsub)>;
-def : Pat<(v4i16 (add (trunc (v4i32 (bitconvert FPR128:$Rn))),
+def : Pat<(v4i16 (add (trunc (v4i32 (nvcast FPR128:$Rn))),
                       (extract_subvector (AArch64uzp2 (v8i16 FPR128:$Rn), undef), (i64 0)))),
           (EXTRACT_SUBREG (ADDPv8i16 $Rn, $Rn), dsub)>;
-def : Pat<(v8i8  (add (trunc (v8i16 (bitconvert FPR128:$Rn))),
+def : Pat<(v8i8  (add (trunc (v8i16 (nvcast FPR128:$Rn))),
                       (extract_subvector (AArch64uzp2 (v16i8 FPR128:$Rn), undef), (i64 0)))),
           (EXTRACT_SUBREG (ADDPv16i8 $Rn, $Rn), dsub)>;
 

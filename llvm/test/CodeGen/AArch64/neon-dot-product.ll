@@ -214,10 +214,12 @@ define <2 x i32> @test_vdot_lane_u32(<2 x i32> %a, <8 x i8> %b, <8 x i8> %c) {
 ;
 ; CHECK-BE-LABEL: test_vdot_lane_u32:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.2s, v2.2s
 ; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
-; CHECK-BE-NEXT:    rev64 v2.2s, v2.2s
-; CHECK-BE-NEXT:    udot v0.2s, v1.8b, v2.4b[1]
+; CHECK-BE-NEXT:    dup v2.2s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.8b, v2.8b
+; CHECK-BE-NEXT:    udot v0.2s, v1.8b, v2.8b
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
 entry:
@@ -237,13 +239,15 @@ define <4 x i32> @test_vdotq_lane_u32(<4 x i32> %a, <16 x i8> %b, <8 x i8> %c) {
 ;
 ; CHECK-BE-LABEL: test_vdotq_lane_u32:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-BE-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    udot v0.4s, v1.16b, v2.4b[1]
+; CHECK-BE-NEXT:    dup v2.4s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.16b, v2.16b
+; CHECK-BE-NEXT:    udot v0.4s, v1.16b, v2.16b
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
@@ -267,7 +271,9 @@ define <2 x i32> @test_vdot_laneq_u32(<2 x i32> %a, <8 x i8> %b, <16 x i8> %c) {
 ; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    udot v0.2s, v1.8b, v2.4b[1]
+; CHECK-BE-NEXT:    dup v2.2s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.8b, v2.8b
+; CHECK-BE-NEXT:    udot v0.2s, v1.8b, v2.8b
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
 entry:
@@ -286,13 +292,15 @@ define <4 x i32> @test_vdotq_laneq_u32(<4 x i32> %a, <16 x i8> %b, <16 x i8> %c)
 ;
 ; CHECK-BE-LABEL: test_vdotq_laneq_u32:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
 ; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    udot v0.4s, v1.16b, v2.4b[1]
+; CHECK-BE-NEXT:    dup v2.4s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.16b, v2.16b
+; CHECK-BE-NEXT:    udot v0.4s, v1.16b, v2.16b
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
@@ -322,10 +330,12 @@ define <2 x i32> @test_vdot_lane_u32_zero(<2 x i32> %a, <8 x i8> %b, <8 x i8> %c
 ;
 ; CHECK-BE-LABEL: test_vdot_lane_u32_zero:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.2s, v2.2s
 ; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
-; CHECK-BE-NEXT:    rev64 v2.2s, v2.2s
-; CHECK-BE-NEXT:    udot v0.2s, v1.8b, v2.4b[1]
+; CHECK-BE-NEXT:    dup v2.2s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.8b, v2.8b
+; CHECK-BE-NEXT:    udot v0.2s, v1.8b, v2.8b
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
 entry:
@@ -354,13 +364,15 @@ define <4 x i32> @test_vdotq_lane_u32_zero(<4 x i32> %a, <16 x i8> %b, <8 x i8> 
 ;
 ; CHECK-BE-LABEL: test_vdotq_lane_u32_zero:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-BE-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    udot v0.4s, v1.16b, v2.4b[1]
+; CHECK-BE-NEXT:    dup v2.4s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.16b, v2.16b
+; CHECK-BE-NEXT:    udot v0.4s, v1.16b, v2.16b
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
@@ -392,7 +404,9 @@ define <2 x i32> @test_vdot_laneq_u32_zero(<2 x i32> %a, <8 x i8> %b, <16 x i8> 
 ; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    udot v0.2s, v1.8b, v2.4b[1]
+; CHECK-BE-NEXT:    dup v2.2s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.8b, v2.8b
+; CHECK-BE-NEXT:    udot v0.2s, v1.8b, v2.8b
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
 entry:
@@ -419,13 +433,15 @@ define <4 x i32> @test_vdotq_laneq_u32_zero(<4 x i32> %a, <16 x i8> %b, <16 x i8
 ;
 ; CHECK-BE-LABEL: test_vdotq_laneq_u32_zero:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
 ; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    udot v0.4s, v1.16b, v2.4b[1]
+; CHECK-BE-NEXT:    dup v2.4s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.16b, v2.16b
+; CHECK-BE-NEXT:    udot v0.4s, v1.16b, v2.16b
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
@@ -448,10 +464,12 @@ define <2 x i32> @test_vdot_lane_s32(<2 x i32> %a, <8 x i8> %b, <8 x i8> %c) {
 ;
 ; CHECK-BE-LABEL: test_vdot_lane_s32:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.2s, v2.2s
 ; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
-; CHECK-BE-NEXT:    rev64 v2.2s, v2.2s
-; CHECK-BE-NEXT:    sdot v0.2s, v1.8b, v2.4b[1]
+; CHECK-BE-NEXT:    dup v2.2s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.8b, v2.8b
+; CHECK-BE-NEXT:    sdot v0.2s, v1.8b, v2.8b
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
 entry:
@@ -471,13 +489,15 @@ define <4 x i32> @test_vdotq_lane_s32(<4 x i32> %a, <16 x i8> %b, <8 x i8> %c) {
 ;
 ; CHECK-BE-LABEL: test_vdotq_lane_s32:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-BE-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    sdot v0.4s, v1.16b, v2.4b[1]
+; CHECK-BE-NEXT:    dup v2.4s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.16b, v2.16b
+; CHECK-BE-NEXT:    sdot v0.4s, v1.16b, v2.16b
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
@@ -501,7 +521,9 @@ define <2 x i32> @test_vdot_laneq_s32(<2 x i32> %a, <8 x i8> %b, <16 x i8> %c) {
 ; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    sdot v0.2s, v1.8b, v2.4b[1]
+; CHECK-BE-NEXT:    dup v2.2s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.8b, v2.8b
+; CHECK-BE-NEXT:    sdot v0.2s, v1.8b, v2.8b
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
 entry:
@@ -520,13 +542,15 @@ define <4 x i32> @test_vdotq_laneq_s32(<4 x i32> %a, <16 x i8> %b, <16 x i8> %c)
 ;
 ; CHECK-BE-LABEL: test_vdotq_laneq_s32:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
 ; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    sdot v0.4s, v1.16b, v2.4b[1]
+; CHECK-BE-NEXT:    dup v2.4s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.16b, v2.16b
+; CHECK-BE-NEXT:    sdot v0.4s, v1.16b, v2.16b
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
@@ -556,10 +580,12 @@ define <2 x i32> @test_vdot_lane_s32_zero(<2 x i32> %a, <8 x i8> %b, <8 x i8> %c
 ;
 ; CHECK-BE-LABEL: test_vdot_lane_s32_zero:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.2s, v2.2s
 ; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
-; CHECK-BE-NEXT:    rev64 v2.2s, v2.2s
-; CHECK-BE-NEXT:    sdot v0.2s, v1.8b, v2.4b[1]
+; CHECK-BE-NEXT:    dup v2.2s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.8b, v2.8b
+; CHECK-BE-NEXT:    sdot v0.2s, v1.8b, v2.8b
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
 entry:
@@ -588,13 +614,15 @@ define <4 x i32> @test_vdotq_lane_s32_zero(<4 x i32> %a, <16 x i8> %b, <8 x i8> 
 ;
 ; CHECK-BE-LABEL: test_vdotq_lane_s32_zero:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-BE-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    sdot v0.4s, v1.16b, v2.4b[1]
+; CHECK-BE-NEXT:    dup v2.4s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.16b, v2.16b
+; CHECK-BE-NEXT:    sdot v0.4s, v1.16b, v2.16b
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
@@ -626,7 +654,9 @@ define <2 x i32> @test_vdot_laneq_s32_zero(<2 x i32> %a, <8 x i8> %b, <16 x i8> 
 ; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    sdot v0.2s, v1.8b, v2.4b[1]
+; CHECK-BE-NEXT:    dup v2.2s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.8b, v2.8b
+; CHECK-BE-NEXT:    sdot v0.2s, v1.8b, v2.8b
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
 entry:
@@ -653,13 +683,15 @@ define <4 x i32> @test_vdotq_laneq_s32_zero(<4 x i32> %a, <16 x i8> %b, <16 x i8
 ;
 ; CHECK-BE-LABEL: test_vdotq_laneq_s32_zero:
 ; CHECK-BE:       // %bb.0: // %entry
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
 ; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
-; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; CHECK-BE-NEXT:    sdot v0.4s, v1.16b, v2.4b[1]
+; CHECK-BE-NEXT:    dup v2.4s, v2.s[1]
+; CHECK-BE-NEXT:    rev32 v2.16b, v2.16b
+; CHECK-BE-NEXT:    sdot v0.4s, v1.16b, v2.16b
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ret
@@ -691,7 +723,9 @@ define <2 x i32> @be_vdot_lane_s32(<2 x i32> %r_val, <8 x i8> %a_val, <8 x i8> %
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    rev64 v1.8b, v1.8b
 ; CHECK-BE-NEXT:    rev32 v2.16b, v2.16b
-; CHECK-BE-NEXT:    sdot v0.2s, v1.8b, v2.4b[0]
+; CHECK-BE-NEXT:    dup v2.2s, v2.s[0]
+; CHECK-BE-NEXT:    rev32 v2.8b, v2.8b
+; CHECK-BE-NEXT:    sdot v0.2s, v1.8b, v2.8b
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret

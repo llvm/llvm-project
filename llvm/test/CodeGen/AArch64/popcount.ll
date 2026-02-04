@@ -845,7 +845,8 @@ define i32 @ctpop_into_extract(ptr %p) {
 ; BE-NEXT:    mov x8, x0
 ; BE-NEXT:    mov w0, wzr
 ; BE-NEXT:    fmov w9, s0
-; BE-NEXT:    fmov s1, w9
+; BE-NEXT:    fmov d1, x9
+; BE-NEXT:    rev64 v1.8b, v1.8b
 ; BE-NEXT:    cnt v1.8b, v1.8b
 ; BE-NEXT:    addv b1, v1.8b
 ; BE-NEXT:    mov v2.s[1], v1.s[0]
@@ -918,8 +919,10 @@ define <8 x i8> @bitcast_upper_bits(i32 %b, <8 x i8> %v) {
 ;
 ; BE-LABEL: bitcast_upper_bits:
 ; BE:       // %bb.0:
+; BE-NEXT:    mov w8, w0
 ; BE-NEXT:    rev64 v0.8b, v0.8b
-; BE-NEXT:    fmov s1, w0
+; BE-NEXT:    fmov d1, x8
+; BE-NEXT:    rev64 v1.8b, v1.8b
 ; BE-NEXT:    add v0.8b, v1.8b, v0.8b
 ; BE-NEXT:    rev64 v0.8b, v0.8b
 ; BE-NEXT:    ret
