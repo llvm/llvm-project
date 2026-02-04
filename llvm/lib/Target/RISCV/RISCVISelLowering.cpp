@@ -25022,16 +25022,16 @@ EVT RISCVTargetLowering::getOptimalMemOpType(
   MVT PreferredVT = MVT::getIntegerVT(Subtarget.getELen());
 
   if (Op.isMemset()) {
-    if (!Op.isZeroMemset())
-      PreferredVT = MVT::i8;
     if (Op.size() >
         Subtarget.getMaxLMULForFixedLengthVectors() * MinVLenInBytes)
       return MVT::Other;
-    if (Subtarget.hasVInstructionsI64() && Op.size() % 8 == 0)
-      PreferredVT = MVT::i64;
+    PreferredVT = MVT::i8;
     if (Op.size() % 4 == 0)
       PreferredVT = MVT::i32;
-    PreferredVT = MVT::i8;
+    if (Op.size() % 8 == 0 && isTypeLegal(MVT::i64))
+      PreferredVT = MVT::i64;
+    if (!Op.isZeroMemset())
+      PreferredVT = MVT::i8;
   }
 
   // Do we have sufficient alignment for our preferred VT?  If not, revert
