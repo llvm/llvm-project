@@ -300,6 +300,7 @@ class DebugCommunication(object):
         self.stopped_thread: Optional[dict] = None
         self.thread_stacks: Optional[Dict[int, List[dict]]]
         self.thread_stop_reasons: Dict[str, Any] = {}
+        self.focused_tid: Optional[int] = None
         self.frame_scopes: Dict[str, Any] = {}
         # keyed by breakpoint id
         self.resolved_breakpoints: dict[int, Breakpoint] = {}
@@ -539,6 +540,8 @@ class DebugCommunication(object):
             self._process_stopped()
             tid = body["threadId"]
             self.thread_stop_reasons[tid] = body
+            if "preserveFocusHint" not in body or not body["preserveFocusHint"]:
+                self.focused_tid = tid
         elif event.startswith("progress"):
             # Progress events come in as 'progressStart', 'progressUpdate',
             # and 'progressEnd' events. Keep these around in case test
@@ -599,6 +602,7 @@ class DebugCommunication(object):
         self.frame_scopes = {}
         if all_threads_continued:
             self.thread_stop_reasons = {}
+            self.focused_tid = None
 
     def _update_verified_breakpoints(self, breakpoints: List[Breakpoint]):
         for bp in breakpoints:
@@ -1593,7 +1597,7 @@ class DebugCommunication(object):
                 tid = thread["id"]
                 if tid in self.thread_stop_reasons:
                     thread_stop_info = self.thread_stop_reasons[tid]
-                    copy_keys = ["reason", "description", "text"]
+                    copy_keys = ["reason", "description", "text", "hitBreakpointIds"]
                     for key in copy_keys:
                         if key in thread_stop_info:
                             thread[key] = thread_stop_info[key]
