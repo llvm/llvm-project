@@ -885,7 +885,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// pointer that devices should use for memory transfers involving the host
   /// pinned allocation.
   Expected<void *> registerMemory(void *HstPtr, int64_t Size,
-                            bool LockMemory = true) {
+                                  bool LockMemory = true) {
     return PinnedAllocs.registerMemory(HstPtr, Size, LockMemory);
   }
 

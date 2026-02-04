@@ -1024,8 +1024,9 @@ Error PinnedAllocationMapTy::unregisterHostBuffer(void *HstPtr) {
   return eraseEntry(*Entry);
 }
 
-Expected<void *> PinnedAllocationMapTy::registerMemory(
-    void *HstPtr, size_t Size, bool LockMemory) {
+Expected<void *> PinnedAllocationMapTy::registerMemory(void *HstPtr,
+                                                       size_t Size,
+                                                       bool LockMemory) {
   assert(HstPtr && "Invalid pointer");
   assert(Size && "Invalid size");
 
