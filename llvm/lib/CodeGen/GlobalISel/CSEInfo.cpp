@@ -449,7 +449,8 @@ GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfigBase> CSEOpt,
 AnalysisKey GISelCSEAnalysisWrapperAnalysis::Key;
 
 GISelCSEAnalysisWrapperAnalysis::Result
-GISelCSEAnalysisWrapperAnalysis::run(MachineFunction &MF, MachineFunctionAnalysisManager &) {
+GISelCSEAnalysisWrapperAnalysis::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &) {
   auto Wrapper = std::make_unique<GISelCSEAnalysisWrapper>();
   Wrapper->setMF(MF);
   return Wrapper;

@@ -18,7 +18,6 @@
 #include "llvm/CodeGen/GlobalISel/GISelWorkList.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -226,7 +225,8 @@ public:
   void releaseMemory() { Info.releaseMemory(); }
 };
 
-class GISelCSEAnalysisWrapperAnalysis : public AnalysisInfoMixin<GISelCSEAnalysisWrapperAnalysis> {
+class GISelCSEAnalysisWrapperAnalysis
+    : public AnalysisInfoMixin<GISelCSEAnalysisWrapperAnalysis> {
   friend AnalysisInfoMixin<GISelCSEAnalysisWrapperAnalysis>;
   LLVM_ABI static AnalysisKey Key;
 
