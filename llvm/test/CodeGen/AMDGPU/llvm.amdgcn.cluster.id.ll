@@ -1,4 +1,5 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor %s -o %t.bc
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor-cgscc %s -o %t.bc
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 %t.bc -o - | FileCheck --check-prefixes=CHECK-UNKNOWN %s
 ; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=gfx1250 %t.bc -o - | FileCheck -check-prefixes=CHECK-MESA3D %s
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1250 %t.bc -o - | FileCheck --check-prefixes=CHECK-G-UNKNOWN %s

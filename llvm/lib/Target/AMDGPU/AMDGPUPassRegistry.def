@@ -50,6 +50,12 @@ MODULE_PASS_WITH_PARAMS(
     parseAMDGPUAttributorPassOptions, "closed-world")
 #undef MODULE_PASS_WITH_PARAMS
 
+#ifndef CGSCC_PASS
+#define CGSCC_PASS(NAME, CREATE_PASS)
+#endif
+CGSCC_PASS("amdgpu-attributor-cgscc", AMDGPUAttributorCGSCCPass(*this))
+#undef CGSCC_PASS
+
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
