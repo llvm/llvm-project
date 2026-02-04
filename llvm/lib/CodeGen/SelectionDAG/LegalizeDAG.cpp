@@ -2792,7 +2792,7 @@ SDValue SelectionDAGLegalize::expandModf(SDNode *Node) const {
         TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
     SDValue IsInf = DAG.getSetCC(dl, SetCCVT, Abs, Inf, ISD::SETOEQ);
     SDValue Zero = DAG.getConstantFP(0.0, dl, VT);
-    FracToUse = DAG.getNode(ISD::SELECT, dl, VT, IsInf, Zero, FracPart);
+    FracToUse = DAG.getSelect(dl, VT, IsInf, Zero, FracPart);
   }
 
   SDValue ResultFrac =
