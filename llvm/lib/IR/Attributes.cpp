@@ -679,10 +679,12 @@ std::string Attribute::getAsString(const Triple *TT, bool InAttrGrp) const {
       case IRMemLocation::Other:
         llvm_unreachable("This is represented as the default access kind");
       case IRMemLocation::TargetMem0:
-        OS << TT->getTargetMemLocName(static_cast<Triple::TargetMemLoc>(Loc));
+        OS << "target_mem0: ";
+        OS << TT->getTargetMemLocName(Loc);
         break;
       case IRMemLocation::TargetMem1:
-        OS << TT->getTargetMemLocName(static_cast<Triple::TargetMemLoc>(Loc));
+        OS << "target_mem1: ";
+        OS << TT->getTargetMemLocName(Loc);
         break;
       }
       OS << getModRefStr(MR);

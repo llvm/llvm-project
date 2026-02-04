@@ -21,6 +21,7 @@
 
 namespace llvm {
 enum class ExceptionHandling;
+enum class IRMemLocation;
 class Twine;
 
 /// Triple - Helper class for working with autoconf configuration names. For
@@ -334,15 +335,6 @@ public:
     SPIRV,
     Wasm,
     XCOFF,
-  };
-
-  // This should be a copy from enum class TargetMemLoc
-  // in ModRef.h
-  enum class TargetMemLoc : uint8_t {
-    TargetMem0 = 4,
-    TargetMem1 = 5,
-    // Reserve more if/when needed
-    Last
   };
 
 private:
@@ -1254,9 +1246,9 @@ public:
   /// Tests if the environment supports dllimport/export annotations.
   bool hasDLLImportExport() const { return isOSWindows() || isPS(); }
 
-  StringRef aarch64GetTargetMemLocName(TargetMemLoc Kind) const;
+  StringRef getAArch64TargetMemLocName(IRMemLocation Kind) const;
 
-  StringRef getTargetMemLocName(TargetMemLoc Kind) const;
+  std::string getTargetMemLocName(IRMemLocation Kind) const;
 
   /// @}
   /// @name Mutators
