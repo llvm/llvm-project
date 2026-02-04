@@ -12392,8 +12392,7 @@ static void DiagnoseImpCast(Sema &S, const Expr *E, QualType T,
 
 /// Diagnose an implicit cast from a floating point value to an integer value.
 static void DiagnoseFloatingImpCast(Sema &S, const Expr *E, QualType T,
-                                    SourceLocation CContext,
-                                    unsigned Diag) {
+                                    SourceLocation CContext, unsigned Diag) {
   bool IsBool = T->isSpecificBuiltinType(BuiltinType::Bool);
   bool PruneWarnings = S.inTemplateInstantiation();
 
