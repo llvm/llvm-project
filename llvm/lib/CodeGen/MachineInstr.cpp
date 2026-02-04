@@ -797,9 +797,9 @@ MachineInstr *MachineInstr::removeFromBundle() {
   return getParent()->remove_instr(this);
 }
 
-void MachineInstr::eraseFromParent() {
+MachineBasicBlock::iterator MachineInstr::eraseFromParent() {
   assert(getParent() && "Not embedded in a basic block!");
-  getParent()->erase(this);
+  return getParent()->erase(this);
 }
 
 void MachineInstr::eraseFromBundle() {
