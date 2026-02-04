@@ -1562,8 +1562,7 @@ bool AMDGPURegisterBankInfo::applyMappingBFE(MachineIRBuilder &B,
                              (Signed ? AMDGPU::S_BFE_I64 : AMDGPU::S_BFE_U64);
 
   auto MIB = B.buildInstr(Opc, {DstReg}, {SrcReg, MergedInputs});
-  if (!constrainSelectedInstRegOperands(*MIB, *TII, *TRI, *this))
-    llvm_unreachable("failed to constrain BFE");
+  constrainSelectedInstRegOperands(*MIB, *TII, *TRI, *this);
 
   MI.eraseFromParent();
   return true;
