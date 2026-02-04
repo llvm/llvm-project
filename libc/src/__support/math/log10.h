@@ -722,7 +722,7 @@ LIBC_INLINE_VAR constexpr Float128 BIG_COEFFS[4]{
 
 // Reuse the output of the fast pass range reduction.
 // -2^-8 <= m_x < 2^-7
-LIBC_INLINE static double log10_accurate(int e_x, int index, double m_x) {
+LIBC_INLINE double log10_accurate(int e_x, int index, double m_x) {
 
   Float128 e_x_f128(static_cast<float>(e_x));
   Float128 sum = fputil::quick_mul(LOG10_2, e_x_f128);
@@ -744,7 +744,7 @@ LIBC_INLINE static double log10_accurate(int e_x, int index, double m_x) {
 
 } // namespace log10_internal
 
-LIBC_INLINE static double log10(double x) {
+LIBC_INLINE double log10(double x) {
   using namespace log10_internal;
   using namespace common_constants_internal;
   using FPBits_t = typename fputil::FPBits<double>;
