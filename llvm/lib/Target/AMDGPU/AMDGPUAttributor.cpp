@@ -1698,12 +1698,6 @@ PreservedAnalyses llvm::AMDGPUAttributorCGSCCPass::run(LazyCallGraph::SCC &C,
       Functions.insert(F);
   }
 
-  LLVM_DEBUG(dbgs() << "AMDGPUAttributorCGSCCPass: SCC size: "
-                    << Functions.size() << "\n");
-  LLVM_DEBUG(for (LazyCallGraph::Node &N : C) {
-    dbgs() << "  SCC function: " << N.getFunction().getName() << "\n";
-  });
-
   if (Functions.empty())
     return PreservedAnalyses::all();
 
