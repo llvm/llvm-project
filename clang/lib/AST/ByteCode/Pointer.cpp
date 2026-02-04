@@ -947,6 +947,9 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 
   // Just load primitive types.
   if (OptPrimType T = Ctx.classify(ResultType)) {
+    if (const Descriptor *D = getFieldDesc();
+        (D->isPrimitive() || D->isPrimitiveArray()) && D->getPrimType() != *T)
+      return std::nullopt;
     TYPE_SWITCH(*T, return this->deref<T>().toAPValue(ASTCtx));
   }
 

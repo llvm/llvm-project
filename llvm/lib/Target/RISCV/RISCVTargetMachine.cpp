@@ -609,6 +609,11 @@ void RISCVPassConfig::addPreEmitPass2() {
 }
 
 void RISCVPassConfig::addMachineSSAOptimization() {
+  // It's beneficial to reduce the VL to enable more
+  // Machine SSA optimizations.
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createRISCVVLOptimizerPass());
+
   addPass(createRISCVVectorPeepholePass());
   addPass(createRISCVFoldMemOffsetPass());
 
@@ -623,7 +628,6 @@ void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVPreRAExpandPseudoPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMergeBaseOffsetOptPass());
-    addPass(createRISCVVLOptimizerPass());
     // Add Zilsd pre-allocation load/store optimization
     addPass(createRISCVPreAllocZilsdOptPass());
   }

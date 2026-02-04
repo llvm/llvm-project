@@ -1687,7 +1687,7 @@ class SelectCompressOpt<CondCode Cond>
 
 def OptForMinSize : Predicate<"MF ? MF->getFunction().hasMinSize() : false">;
 
-let Predicates = [HasStdExtC, OptForMinSize] in {
+let Predicates = [HasStdExtZca, OptForMinSize] in {
   def : SelectCompressOpt<SETEQ>;
   def : SelectCompressOpt<SETNE>;
 }

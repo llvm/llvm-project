@@ -182,14 +182,19 @@ class SiFiveVMACCScheds<string name> {
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 class CustomSiFiveVMACC<bits<6> funct6, RISCVVFormat opv, string opcodestr>
-    : RVInstVCCustom2<funct6{5-2}, opv.Value, (outs VR:$rd), (ins VR:$rs1, VR:$rs2),
-                      opcodestr, "$rd, $rs1, $rs2">,
+    : RVInstVV<funct6, opv, (outs VR:$vd), (ins VR:$vs1, VR:$vs2), opcodestr,
+               "$vd, $vs1, $vs2">,
       SchedTernaryMC<SiFiveVMACCScheds<NAME>.write,
                      SiFiveVMACCScheds<NAME>.read,
                      SiFiveVMACCScheds<NAME>.read,
                      SiFiveVMACCScheds<NAME>.read> {
   let vm = 1;
-  let funct6_lo2 = funct6{1-0};
+
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
+
+  let RVVConstraint = NoConstraint;
+  let ElementsDependOn = EltDepsVLMask;
+  let ReadsPastVL = true;
 }
 }
 
