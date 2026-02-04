@@ -410,8 +410,24 @@ spirv.ARM.Graph @matmul_invalid_input_output_element_type_combination(%arg0: !sp
 // spirv.TOSA.MaxPool2D
 //===----------------------------------------------------------------------===//
 
-spirv.ARM.Graph @maxpool2d_int(%arg0: !spirv.arm.tensor<1x3x65537x1xi8>) -> (!spirv.arm.tensor<1x2x32769x1xi16>) {
+spirv.ARM.Graph @maxpool2d_input_output_different_element_types(%arg0: !spirv.arm.tensor<1x3x65537x1xi8>) -> (!spirv.arm.tensor<1x2x32769x1xi16>) {
   // expected-error @+1 {{op failed to verify that all of {input, output} have same element type}}
   %4 = spirv.Tosa.MaxPool2D kernel = [3, 2], stride = [1, 2], pad = [1, 0, 0, 1], nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<1x3x65537x1xi8> -> !spirv.arm.tensor<1x2x32769x1xi16>
   spirv.ARM.GraphOutputs %4 : !spirv.arm.tensor<1x2x32769x1xi16>
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.TOSA.Clamp
+//===----------------------------------------------------------------------===//
+
+spirv.ARM.Graph @clamp_min_val_different_element_type_wrt_input_output(%arg0: !spirv.arm.tensor<27x44x55xi8>) -> (!spirv.arm.tensor<27x44x55xi8>) {
+  // expected-error @+1 {{op failed to verify that all of {input, output, min_val, max_val} have same element type}}
+  %3 = spirv.Tosa.Clamp min_val = -102 : i16, max_val = -100 : i8, nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<27x44x55xi8> -> !spirv.arm.tensor<27x44x55xi8>
+  spirv.ARM.GraphOutputs %3 : !spirv.arm.tensor<27x44x55xi8>
+}
+
+spirv.ARM.Graph @clamp_max_val_different_element_type_wrt_input_output(%arg0: !spirv.arm.tensor<27x44x55xi8>) -> (!spirv.arm.tensor<27x44x55xi8>) {
+  // expected-error @+1 {{op failed to verify that all of {input, output, min_val, max_val} have same element type}}
+  %3 = spirv.Tosa.Clamp min_val = -102 : i8, max_val = -100 : i16, nan_mode = <Propagate>, %arg0 : !spirv.arm.tensor<27x44x55xi8> -> !spirv.arm.tensor<27x44x55xi8>
+  spirv.ARM.GraphOutputs %3 : !spirv.arm.tensor<27x44x55xi8>
 }
