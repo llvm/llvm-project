@@ -817,6 +817,30 @@ define void @call_nobuiltins_2() {
   ret void
 }
 
+
+; // -----
+
+; CHECK: llvm.func @f(i32, i32)
+declare void @f(i32, i32)
+
+; CHECK-LABEL: @call_alloc_size_1
+define void @call_alloc_size_1() {
+; CHECK: llvm.call @f({{.*}}) {allocsize = array<i32: 0>}
+  call void @f(i32 0, i32 0) allocsize(0)
+  ret void
+}
+; // -----
+
+; CHECK: llvm.func @f(i32, i32)
+declare void @f(i32, i32)
+
+; CHECK-LABEL: @call_alloc_size_2
+define void @call_alloc_size_2() {
+; CHECK: llvm.call @f({{.*}}) {allocsize = array<i32: 1, 0>}
+  call void @f(i32 0, i32 0) allocsize(1, 0)
+  ret void
+}
+
 ; // -----
 
 ; CHECK: llvm.func @f()

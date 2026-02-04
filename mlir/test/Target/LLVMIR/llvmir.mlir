@@ -2771,6 +2771,58 @@ llvm.func @no_builtins_call_2() {
 
 // -----
 
+// CHECK-LABEL: @allocsize_1
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @allocsize_1(%arg: i32, %arg2: i32) attributes { allocsize = array<i32: 1> } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: allocsize(1)
+
+// -----
+
+// CHECK-LABEL: @allocsize_2
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @allocsize_2(%arg: i32, %arg2: i32) attributes { allocsize = array<i32:0, 1> } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: allocsize(0,1)
+
+// -----
+
+llvm.func @f(i32, i32)
+
+// CHECK-LABEL: @allocsize_call_1
+// CHECK: call void @f({{.*}}) #[[ATTRS:[0-9]+]]
+llvm.func @allocsize_call_1() {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  llvm.call @f(%0, %0) {allocsize = array<i32: 1> } : (i32, i32) -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: allocsize(1)
+
+// -----
+
+llvm.func @f(i32, i32)
+
+// CHECK-LABEL: @allocsize_call_2
+// CHECK: call void @f({{.*}}) #[[ATTRS:[0-9]+]]
+llvm.func @allocsize_call_2() {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  llvm.call @f(%0, %0) {allocsize = array<i32: 1, 0> } : (i32, i32) -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: allocsize(1,0)
+
+// -----
+
 llvm.func @f()
 
 // CHECK-LABEL: @convergent_call

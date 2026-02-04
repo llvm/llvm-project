@@ -471,5 +471,17 @@ declare void @no_builtins_2() "no-builtin-asdf" "no-builtin-defg"
 
 // -----
 
+; CHECK-LABEL: @alloc_size_1
+; CHECK-SAME: attributes {allocsize = array<i32: 0>}
+declare void @alloc_size_1(i32) allocsize(0)
+
+// -----
+
+; CHECK-LABEL: @alloc_size_2
+; CHECK-SAME: attributes {allocsize = array<i32: 0, 1>}
+declare void @alloc_size_2(i32, i32) allocsize(0, 1)
+
+// -----
+
 ; expected-warning @unknown {{'preallocated' attribute is invalid on current operation, skipping it}}
 declare void @test() preallocated(i32)
