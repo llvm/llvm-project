@@ -45,7 +45,7 @@ public:
   void setADA(MCSectionGOFF *AssociatedDataArea) {
     ADA = AssociatedDataArea;
     if (ADA)
-        AssociatedDataArea->RequiresNonZeroLength = true;
+      AssociatedDataArea->RequiresNonZeroLength = true;
   }
   MCSectionGOFF *getADA() const { return ADA; }
 
