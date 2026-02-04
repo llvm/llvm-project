@@ -182,7 +182,7 @@ public:
       return Type == isInput || (Type == isOutput && isIndirect);
     }
 
-    /// hassRegMemConstraints - Returns true if and only if the constraint
+    /// hasRegMemConstraints - Returns true if and only if the constraint
     /// codes are "rm". This is useful when converting between a register form
     /// to a memory form.
     bool hasRegMemConstraints() const {
