@@ -1235,9 +1235,9 @@ public:
   /// Tests if the environment supports dllimport/export annotations.
   bool hasDLLImportExport() const { return isOSWindows() || isPS(); }
 
-  StringRef aarch64GetTargetMemLocName(TargetMemLoc Kind) const;
+  StringRef getAArch64TargetMemLocName(TargetMemLoc Kind) const;
 
-  StringRef getTargetMemLocName(TargetMemLoc Kind) const;
+  std::string getTargetMemLocName(TargetMemLoc Kind) const;
 
   /// @}
   /// @name Mutators

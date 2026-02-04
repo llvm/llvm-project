@@ -2577,10 +2577,8 @@ static std::optional<MemoryEffects::Location> keywordToLoc(lltok::Kind Tok) {
   case lltok::kw_errnomem:
     return IRMemLocation::ErrnoMem;
   case lltok::kw_target_mem0:
-  case lltok::kw_aarch64_fpmr:
     return IRMemLocation::TargetMem0;
   case lltok::kw_target_mem1:
-  case lltok::kw_aarch64_za:
     return IRMemLocation::TargetMem1;
   default:
     return std::nullopt;

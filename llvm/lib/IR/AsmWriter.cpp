@@ -4983,7 +4983,7 @@ void AssemblyWriter::printMDNodeBody(const MDNode *Node) {
 }
 
 void AssemblyWriter::writeAttribute(const Attribute &Attr, bool InAttrGroup) {
-  llvm::Triple *TT;
+  llvm::Triple *TT = nullptr;
   if (!Attr.isTypeAttribute()) {
     Out << Attr.getAsString(TT, InAttrGroup);
     return;

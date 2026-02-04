@@ -2379,27 +2379,33 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
   return ExceptionHandling::None;
 }
 
-StringRef Triple::aarch64GetTargetMemLocName(Triple::TargetMemLoc Kind) const {
+StringRef Triple::getAArch64TargetMemLocName(Triple::TargetMemLoc Kind) const {
   switch (Kind) {
+  default:
+    return "";
   case TargetMemLoc::TargetMem0:
-    return "aarch64_fprm: ";
+    return "/*aarch64_fpmr*/ ";
   case TargetMemLoc::TargetMem1:
-    return "aarch64_za: ";
+    return "/*aarch64_za:*/ ";
   }
 }
 
-StringRef Triple::getTargetMemLocName(TargetMemLoc Kind) const {
-
-  if (isAArch64())
-    return aarch64GetTargetMemLocName(Kind);
-
+std::string Triple::getTargetMemLocName(TargetMemLoc Kind) const {
+  std::string OS;
   switch (Kind) {
+  default:
+    OS += "unknown";
+    break;
   case TargetMemLoc::TargetMem0:
-    return "target_mem0: ";
+    OS += "target_mem0: ";
+    break;
   case TargetMemLoc::TargetMem1:
-    return "target_mem1: ";
+    OS += "target_mem1: ";
+    break;
   }
-  return "unkown";
+  if (isAArch64())
+    OS += getAArch64TargetMemLocName(Kind);
+  return OS;
 }
 
 // HLSL triple environment orders are relied on in the front end
