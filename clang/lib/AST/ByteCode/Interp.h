@@ -1973,8 +1973,7 @@ bool Load(InterpState &S, CodePtr OpPC) {
     return false;
   if (!Ptr.isBlockPointer())
     return false;
-  if (const Descriptor *D = Ptr.getFieldDesc();
-      !(D->isPrimitive() || D->isPrimitiveArray()) || D->getPrimType() != Name)
+  if (!Ptr.canDeref(Name))
     return false;
   S.Stk.push<T>(Ptr.deref<T>());
   return true;
@@ -1987,8 +1986,7 @@ bool LoadPop(InterpState &S, CodePtr OpPC) {
     return false;
   if (!Ptr.isBlockPointer())
     return false;
-  if (const Descriptor *D = Ptr.getFieldDesc();
-      !(D->isPrimitive() || D->isPrimitiveArray()) || D->getPrimType() != Name)
+  if (!Ptr.canDeref(Name))
     return false;
   S.Stk.push<T>(Ptr.deref<T>());
   return true;
