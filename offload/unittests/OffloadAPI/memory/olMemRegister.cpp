@@ -31,7 +31,8 @@ TEST_P(olMemRegisterTest, SuccessMultipleRegister) {
   void *PinnedPtr1 = nullptr;
   ASSERT_SUCCESS(olMemRegister(Device, Arr, sizeof(Arr), FlagsReg, &PinnedPtr));
   ASSERT_NE(PinnedPtr, nullptr);
-  ASSERT_SUCCESS(olMemRegister(Device, Arr, sizeof(Arr), FlagsReg, &PinnedPtr1));
+  ASSERT_SUCCESS(
+      olMemRegister(Device, Arr, sizeof(Arr), FlagsReg, &PinnedPtr1));
   ASSERT_NE(PinnedPtr1, nullptr);
   ASSERT_SUCCESS(olMemUnregister(Device, PinnedPtr, FlagsUnreg));
   ASSERT_SUCCESS(olMemUnregister(Device, PinnedPtr1, FlagsUnreg));
@@ -73,7 +74,8 @@ TEST_P(olMemRegisterTest, UnregisteredPtrUnRegister) {
   void *PinnedPtr = nullptr;
   ASSERT_SUCCESS(olMemRegister(Device, Arr, sizeof(Arr), FlagsReg, &PinnedPtr));
   ASSERT_NE(PinnedPtr, nullptr);
-  ASSERT_ERROR(OL_ERRC_INVALID_ARGUMENT, olMemUnregister(Device, Arr1, FlagsUnreg));
+  ASSERT_ERROR(OL_ERRC_INVALID_ARGUMENT,
+      olMemUnregister(Device, Arr1, FlagsUnreg));
   ASSERT_SUCCESS(olMemUnregister(Device, PinnedPtr, FlagsUnreg));
 }
 
@@ -84,8 +86,9 @@ TEST_P(olMemRegisterTest, PartialOverlapPtrRegister) {
   void *PinnedPtr = nullptr;
   ASSERT_SUCCESS(olMemRegister(Device, Arr, sizeof(Arr), FlagsReg, &PinnedPtr));
   ASSERT_NE(PinnedPtr, nullptr);
-  ASSERT_ERROR(OL_ERRC_INVALID_ARGUMENT,
-               olMemRegister(Device, Arr + 2, sizeof(Arr), FlagsReg, &PinnedPtr));
+  ASSERT_ERROR(
+      OL_ERRC_INVALID_ARGUMENT,
+      olMemRegister(Device, Arr + 2, sizeof(Arr), FlagsReg, &PinnedPtr));
   ASSERT_SUCCESS(olMemUnregister(Device, PinnedPtr, FlagsUnreg));
 }
 
