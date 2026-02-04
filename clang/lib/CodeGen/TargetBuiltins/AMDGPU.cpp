@@ -370,8 +370,8 @@ static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID,
                                                     bool IsFP, bool IsSigned) {
   switch (BuiltinID) {
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_add:
-    return IsFP ?
-        Intrinsic::amdgcn_wave_reduce_fadd : Intrinsic::amdgcn_wave_reduce_add;
+    return IsFP ? Intrinsic::amdgcn_wave_reduce_fadd
+                : Intrinsic::amdgcn_wave_reduce_add;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_and:
     return Intrinsic::amdgcn_wave_reduce_and;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max:
@@ -385,8 +385,8 @@ static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID,
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_or:
     return Intrinsic::amdgcn_wave_reduce_or;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_sub:
-    return IsFP ?
-        Intrinsic::amdgcn_wave_reduce_fsub : Intrinsic::amdgcn_wave_reduce_sub;
+    return IsFP ? Intrinsic::amdgcn_wave_reduce_fsub
+                : Intrinsic::amdgcn_wave_reduce_sub;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_xor:
     return Intrinsic::amdgcn_wave_reduce_xor;
   default:
