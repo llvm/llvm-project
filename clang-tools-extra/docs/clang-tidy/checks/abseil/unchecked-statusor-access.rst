@@ -382,3 +382,20 @@ accessed:
        }
      }
    }
+
+Reasoning about integers
+------------------------
+
+Because it uses a simple SAT solver, the checker cannot reason about integers
+inequalities. For instance, the following will result in a false positive:
+
+.. code:: cpp
+   void f(int n, absl::StatusOr<int> x) {
+      if (n > 0)
+        CHECK_OK(x);
+      if (n > 1)
+        return *x;  // false positive
+      return 0;
+   }
+
+In fact, currently this is also the case if the two conditinos are identical.
