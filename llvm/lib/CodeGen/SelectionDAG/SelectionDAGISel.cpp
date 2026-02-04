@@ -3350,7 +3350,8 @@ public:
 
 void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
                                         const uint8_t *MatcherTable,
-                                        unsigned TableSize) {
+                                        unsigned TableSize,
+                                        const uint8_t *OperandLists) {
   // FIXME: Should these even be selected?  Handle these cases in the caller?
   switch (NodeToMatch->getOpcode()) {
   default:
@@ -4307,14 +4308,22 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
 
       // Get the operand list.
       unsigned NumOps = MatcherTable[MatcherIndex++];
-      SmallVector<SDValue, 8> Ops;
-      for (unsigned i = 0; i != NumOps; ++i) {
-        unsigned RecNo = MatcherTable[MatcherIndex++];
-        if (RecNo & 128)
-          RecNo = GetVBR(RecNo, MatcherTable, MatcherIndex);
 
-        assert(RecNo < RecordedNodes.size() && "Invalid EmitNode");
-        Ops.push_back(RecordedNodes[RecNo].first);
+      SmallVector<SDValue, 8> Ops;
+      if (NumOps != 0) {
+        // Get the index into the OperandLists.
+        uint64_t OperandIndex = MatcherTable[MatcherIndex++];
+        if (OperandIndex & 128)
+          OperandIndex = GetVBR(OperandIndex, MatcherTable, MatcherIndex);
+
+        for (unsigned i = 0; i != NumOps; ++i) {
+          unsigned RecNo = OperandLists[OperandIndex++];
+          if (RecNo & 128)
+            RecNo = GetVBR(RecNo, OperandLists, OperandIndex);
+
+          assert(RecNo < RecordedNodes.size() && "Invalid EmitNode");
+          Ops.push_back(RecordedNodes[RecNo].first);
+        }
       }
 
       // If there are variadic operands to add, handle them now.
