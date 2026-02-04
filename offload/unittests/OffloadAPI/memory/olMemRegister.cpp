@@ -75,7 +75,7 @@ TEST_P(olMemRegisterTest, UnregisteredPtrUnRegister) {
   ASSERT_SUCCESS(olMemRegister(Device, Arr, sizeof(Arr), FlagsReg, &PinnedPtr));
   ASSERT_NE(PinnedPtr, nullptr);
   ASSERT_ERROR(OL_ERRC_INVALID_ARGUMENT,
-      olMemUnregister(Device, Arr1, FlagsUnreg));
+               olMemUnregister(Device, Arr1, FlagsUnreg));
   ASSERT_SUCCESS(olMemUnregister(Device, PinnedPtr, FlagsUnreg));
 }
 

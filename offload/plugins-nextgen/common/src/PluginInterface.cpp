@@ -733,6 +733,33 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
 #undef bindOmptCallback
 
 #endif
+
+  // Envar that indicates whether mapped host buffers should be locked
+  // automatically. The possible values are boolean (on/off) and a special:
+  //   off:       Mapped host buffers are not locked.
+  //   on:        Mapped host buffers are locked in a best-effort approach.
+  //              Failure to lock the buffers are silent.
+  //   mandatory: Mapped host buffers are always locked and failures to lock
+  //              a buffer results in a fatal error.
+  StringEnvar OMPX_LockMappedBuffers("LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS",
+                                     "off");
+
+  bool Enabled;
+  if (StringParser::parse(OMPX_LockMappedBuffers.get().data(), Enabled)) {
+    // Parsed as a boolean value. Enable the feature if necessary.
+    LockMappedBuffers = Enabled;
+    IgnoreLockMappedFailures = true;
+  } else if (OMPX_LockMappedBuffers.get() == "mandatory") {
+    // Enable the feature and failures are fatal.
+    LockMappedBuffers = true;
+    IgnoreLockMappedFailures = false;
+  } else {
+    // Disable by default.
+    ODBG(OLDT_Alloc) << "Invalid value LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS="
+                     << OMPX_LockMappedBuffers.get();
+    LockMappedBuffers = false;
+  }
+
 }
 
 Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
@@ -1113,91 +1140,6 @@ Error PinnedAllocationMapTy::unregisterMemory(void *HstPtr, bool UnlockMemory) {
       return Err;
 
   // Erase the entry from the map.
-  return eraseEntry(*Entry);
-}
-
-Error PinnedAllocationMapTy::lockMappedHostBuffer(void *HstPtr, size_t Size) {
-  assert(HstPtr && "Invalid pointer");
-  assert(Size && "Invalid size");
-
-  std::lock_guard<std::shared_mutex> Lock(Mutex);
-
-  // If previously registered, just register a new user on the entry.
-  const EntryTy *Entry = findIntersecting(HstPtr);
-  if (Entry)
-    return registerEntryUse(*Entry, HstPtr, Size);
-
-  size_t BaseSize;
-  void *BaseHstPtr, *BaseDevAccessiblePtr;
-
-  // Check if it was externally pinned by a vendor-specific API.
-  auto IsPinnedOrErr = Device.isPinnedPtrImpl(HstPtr, BaseHstPtr,
-                                              BaseDevAccessiblePtr, BaseSize);
-  if (!IsPinnedOrErr)
-    return IsPinnedOrErr.takeError();
-
-  // If pinned, just insert the entry representing the whole pinned buffer.
-  if (*IsPinnedOrErr)
-    return insertEntry(BaseHstPtr, BaseDevAccessiblePtr, BaseSize,
-                       /*Externallylocked=*/true);
-
-  // Not externally pinned. Do nothing if locking of mapped buffers is disabled.
-  if (!LockMappedBuffers)
-    return Plugin::success();
-
-  // Otherwise, lock the buffer and insert the new entry.
-  auto DevAccessiblePtrOrErr = Device.dataLockImpl(HstPtr, Size);
-  if (!DevAccessiblePtrOrErr) {
-    // Errors may be tolerated.
-    if (!IgnoreLockMappedFailures)
-      return DevAccessiblePtrOrErr.takeError();
-
-    consumeError(DevAccessiblePtrOrErr.takeError());
-    return Plugin::success();
-  }
-
-  return insertEntry(HstPtr, *DevAccessiblePtrOrErr, Size);
-}
-
-Error PinnedAllocationMapTy::unlockUnmappedHostBuffer(void *HstPtr) {
-  assert(HstPtr && "Invalid pointer");
-
-  std::lock_guard<std::shared_mutex> Lock(Mutex);
-
-  // Check whether there is any intersecting entry.
-  const EntryTy *Entry = findIntersecting(HstPtr);
-
-  // No entry but automatic locking of mapped buffers is disabled, so
-  // nothing to do.
-  if (!Entry && !LockMappedBuffers)
-    return Plugin::success();
-
-  // No entry, automatic locking is enabled, but the locking may have failed, so
-  // do nothing.
-  if (!Entry && IgnoreLockMappedFailures)
-    return Plugin::success();
-
-  // No entry, but the automatic locking is enabled, so this is an error.
-  if (!Entry)
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "locked buffer not found");
-
-  // There is entry, so unregister a user and check whether it was the last one.
-  auto LastUseOrErr = unregisterEntryUse(*Entry);
-  if (!LastUseOrErr)
-    return LastUseOrErr.takeError();
-
-  // If it is not the last one, there is nothing to do.
-  if (!(*LastUseOrErr))
-    return Plugin::success();
-
-  // Otherwise, if it was the last and the buffer was locked by the plugin,
-  // unlock it.
-  if (!Entry->ExternallyLocked)
-    if (auto Err = Device.dataUnlockImpl(Entry->HstPtr))
-      return Err;
-
-  // Finally erase the entry from the map.
   return eraseEntry(*Entry);
 }
 
