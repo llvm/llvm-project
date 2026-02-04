@@ -13,7 +13,7 @@ define amdgpu_ps [4 x <2 x float>] @load_2dmsaa_v4v2f32_dmask(<8 x i32> inreg %r
 ; CHECK-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; CHECK-NEXT:    [[I2:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; CHECK-NEXT:    [[I3:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
-; CHECK-NEXT:    [[I4:%.*]] = insertvalue [4 x <2 x float>] undef, <2 x float> [[I]], 0
+; CHECK-NEXT:    [[I4:%.*]] = insertvalue [4 x <2 x float>] poison, <2 x float> [[I]], 0
 ; CHECK-NEXT:    [[I5:%.*]] = insertvalue [4 x <2 x float>] [[I4]], <2 x float> [[I1]], 1
 ; CHECK-NEXT:    [[I6:%.*]] = insertvalue [4 x <2 x float>] [[I5]], <2 x float> [[I2]], 2
 ; CHECK-NEXT:    [[I7:%.*]] = insertvalue [4 x <2 x float>] [[I6]], <2 x float> [[I3]], 3
@@ -24,7 +24,7 @@ main_body:
   %i1 = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 11, i32 %s, i32 %t, i32 1, <8 x i32> %rsrc, i32 0, i32 0)
   %i2 = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 15, i32 %s, i32 %t, i32 2, <8 x i32> %rsrc, i32 0, i32 0)
   %i3 = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 -1, i32 %s, i32 %t, i32 3, <8 x i32> %rsrc, i32 0, i32 0)
-  %i4 = insertvalue [4 x <2 x float>] undef, <2 x float> %i, 0
+  %i4 = insertvalue [4 x <2 x float>] poison, <2 x float> %i, 0
   %i5 = insertvalue [4 x <2 x float>] %i4, <2 x float> %i1, 1
   %i6 = insertvalue [4 x <2 x float>] %i5, <2 x float> %i2, 2
   %i7 = insertvalue [4 x <2 x float>] %i6, <2 x float> %i3, 3
@@ -40,7 +40,7 @@ define amdgpu_ps [4 x <3 x float>] @load_2dmsaa_v4v3f32_dmask(<8 x i32> inreg %r
 ; CHECK-NEXT:    [[I2:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32.v8i32(i32 7, i32 [[S]], i32 [[T]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; CHECK-NEXT:    [[I3:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32.v8i32(i32 -11, i32 [[S]], i32 [[T]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x float> [[I3]], <2 x float> poison, <3 x i32> <i32 0, i32 1, i32 poison>
-; CHECK-NEXT:    [[I4:%.*]] = insertvalue [4 x <3 x float>] undef, <3 x float> [[I]], 0
+; CHECK-NEXT:    [[I4:%.*]] = insertvalue [4 x <3 x float>] poison, <3 x float> [[I]], 0
 ; CHECK-NEXT:    [[I5:%.*]] = insertvalue [4 x <3 x float>] [[I4]], <3 x float> [[I1]], 1
 ; CHECK-NEXT:    [[I6:%.*]] = insertvalue [4 x <3 x float>] [[I5]], <3 x float> [[I2]], 2
 ; CHECK-NEXT:    [[I7:%.*]] = insertvalue [4 x <3 x float>] [[I6]], <3 x float> [[TMP0]], 3
@@ -51,7 +51,7 @@ main_body:
   %i1 = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32(i32 15, i32 %s, i32 %t, i32 1, <8 x i32> %rsrc, i32 0, i32 0)
   %i2 = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32(i32 31, i32 %s, i32 %t, i32 2, <8 x i32> %rsrc, i32 0, i32 0)
   %i3 = call <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32(i32 -11, i32 %s, i32 %t, i32 3, <8 x i32> %rsrc, i32 0, i32 0)
-  %i4 = insertvalue [4 x <3 x float>] undef, <3 x float> %i, 0
+  %i4 = insertvalue [4 x <3 x float>] poison, <3 x float> %i, 0
   %i5 = insertvalue [4 x <3 x float>] %i4, <3 x float> %i1, 1
   %i6 = insertvalue [4 x <3 x float>] %i5, <3 x float> %i2, 2
   %i7 = insertvalue [4 x <3 x float>] %i6, <3 x float> %i3, 3
@@ -66,7 +66,7 @@ define amdgpu_ps [4 x <2 x float>] @load_2darraymsaa_v4v2f32_dmask(<8 x i32> inr
 ; CHECK-NEXT:    [[I1:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2darraymsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; CHECK-NEXT:    [[I2:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2darraymsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; CHECK-NEXT:    [[I3:%.*]] = call <2 x float> @llvm.amdgcn.image.load.2darraymsaa.v2f32.i32.v8i32(i32 3, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
-; CHECK-NEXT:    [[I4:%.*]] = insertvalue [4 x <2 x float>] undef, <2 x float> [[I]], 0
+; CHECK-NEXT:    [[I4:%.*]] = insertvalue [4 x <2 x float>] poison, <2 x float> [[I]], 0
 ; CHECK-NEXT:    [[I5:%.*]] = insertvalue [4 x <2 x float>] [[I4]], <2 x float> [[I1]], 1
 ; CHECK-NEXT:    [[I6:%.*]] = insertvalue [4 x <2 x float>] [[I5]], <2 x float> [[I2]], 2
 ; CHECK-NEXT:    [[I7:%.*]] = insertvalue [4 x <2 x float>] [[I6]], <2 x float> [[I3]], 3
@@ -77,7 +77,7 @@ main_body:
   %i1 = call <2 x float> @llvm.amdgcn.image.load.2darraymsaa.v2f32.i32(i32 11, i32 %s, i32 %t, i32 %slice, i32 1, <8 x i32> %rsrc, i32 0, i32 0)
   %i2 = call <2 x float> @llvm.amdgcn.image.load.2darraymsaa.v2f32.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 2, <8 x i32> %rsrc, i32 0, i32 0)
   %i3 = call <2 x float> @llvm.amdgcn.image.load.2darraymsaa.v2f32.i32(i32 -1, i32 %s, i32 %t, i32 %slice, i32 3, <8 x i32> %rsrc, i32 0, i32 0)
-  %i4 = insertvalue [4 x <2 x float>] undef, <2 x float> %i, 0
+  %i4 = insertvalue [4 x <2 x float>] poison, <2 x float> %i, 0
   %i5 = insertvalue [4 x <2 x float>] %i4, <2 x float> %i1, 1
   %i6 = insertvalue [4 x <2 x float>] %i5, <2 x float> %i2, 2
   %i7 = insertvalue [4 x <2 x float>] %i6, <2 x float> %i3, 3
@@ -92,7 +92,7 @@ define amdgpu_ps [4 x <3 x float>] @load_2darraymsaa_v4v3f32_dmask(<8 x i32> inr
 ; CHECK-NEXT:    [[I1:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2darraymsaa.v3f32.i32.v8i32(i32 7, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 1, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; CHECK-NEXT:    [[I2:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2darraymsaa.v3f32.i32.v8i32(i32 7, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 2, <8 x i32> [[RSRC]], i32 0, i32 0)
 ; CHECK-NEXT:    [[I3:%.*]] = call <3 x float> @llvm.amdgcn.image.load.2darraymsaa.v3f32.i32.v8i32(i32 7, i32 [[S]], i32 [[T]], i32 [[SLICE]], i32 3, <8 x i32> [[RSRC]], i32 0, i32 0)
-; CHECK-NEXT:    [[I4:%.*]] = insertvalue [4 x <3 x float>] undef, <3 x float> [[I]], 0
+; CHECK-NEXT:    [[I4:%.*]] = insertvalue [4 x <3 x float>] poison, <3 x float> [[I]], 0
 ; CHECK-NEXT:    [[I5:%.*]] = insertvalue [4 x <3 x float>] [[I4]], <3 x float> [[I1]], 1
 ; CHECK-NEXT:    [[I6:%.*]] = insertvalue [4 x <3 x float>] [[I5]], <3 x float> [[I2]], 2
 ; CHECK-NEXT:    [[I7:%.*]] = insertvalue [4 x <3 x float>] [[I6]], <3 x float> [[I3]], 3
@@ -103,21 +103,17 @@ main_body:
   %i1 = call <3 x float> @llvm.amdgcn.image.load.2darraymsaa.v3f32.i32(i32 15, i32 %s, i32 %t, i32 %slice, i32 1, <8 x i32> %rsrc, i32 0, i32 0)
   %i2 = call <3 x float> @llvm.amdgcn.image.load.2darraymsaa.v3f32.i32(i32 31, i32 %s, i32 %t, i32 %slice, i32 2, <8 x i32> %rsrc, i32 0, i32 0)
   %i3 = call <3 x float> @llvm.amdgcn.image.load.2darraymsaa.v3f32.i32(i32 -1, i32 %s, i32 %t, i32 %slice, i32 3, <8 x i32> %rsrc, i32 0, i32 0)
-  %i4 = insertvalue [4 x <3 x float>] undef, <3 x float> %i, 0
+  %i4 = insertvalue [4 x <3 x float>] poison, <3 x float> %i, 0
   %i5 = insertvalue [4 x <3 x float>] %i4, <3 x float> %i1, 1
   %i6 = insertvalue [4 x <3 x float>] %i5, <3 x float> %i2, 2
   %i7 = insertvalue [4 x <3 x float>] %i6, <3 x float> %i3, 3
   ret [4 x <3 x float>] %i7
 }
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(read)
 declare <2 x float> @llvm.amdgcn.image.load.2dmsaa.v2f32.i32(i32 immarg, i32, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(read)
 declare <3 x float> @llvm.amdgcn.image.load.2dmsaa.v3f32.i32(i32 immarg, i32, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(read)
 declare <2 x float> @llvm.amdgcn.image.load.2darraymsaa.v2f32.i32(i32 immarg, i32, i32, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
 
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(read)
 declare <3 x float> @llvm.amdgcn.image.load.2darraymsaa.v3f32.i32(i32 immarg, i32, i32, i32, i32, <8 x i32>, i32 immarg, i32 immarg) #0
