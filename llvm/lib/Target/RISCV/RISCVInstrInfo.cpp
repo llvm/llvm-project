@@ -1898,29 +1898,6 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
   return MI;
 }
 
-bool RISCVInstrInfo::analyzeSelect(const MachineInstr &MI,
-                                   SmallVectorImpl<MachineOperand> &Cond,
-                                   unsigned &TrueOp, unsigned &FalseOp,
-                                   bool &Optimizable) const {
-  assert(MI.getOpcode() == RISCV::PseudoCCMOVGPR &&
-         "Unknown select instruction");
-  // CCMOV operands:
-  // 0: Def.
-  // 1: LHS of compare.
-  // 2: RHS of compare.
-  // 3: Condition code.
-  // 4: False use.
-  // 5: True use.
-  TrueOp = 5;
-  FalseOp = 4;
-  Cond.push_back(MI.getOperand(1));
-  Cond.push_back(MI.getOperand(2));
-  Cond.push_back(MI.getOperand(3));
-  // We can only fold when we support short forward branch opt.
-  Optimizable = STI.hasShortForwardBranchIALU();
-  return false;
-}
-
 MachineInstr *
 RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,

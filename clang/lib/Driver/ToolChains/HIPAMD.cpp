@@ -259,8 +259,6 @@ void HIPAMDToolChain::addClangTargetOptions(
     CC1Args.push_back(DriverArgs.MakeArgStringRef(ArgStr));
   }
 
-  CC1Args.push_back("-fcuda-allow-variadic-functions");
-
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,

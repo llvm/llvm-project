@@ -4967,13 +4967,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           CmdArgs.push_back(Args.MakeArgString(
               Twine("-target-sdk-version=") +
               CudaVersionToString(CTC->CudaInstallation.version())));
-        // Unsized function arguments used for variadics were introduced in
-        // CUDA-9.0. We still do not support generating code that actually uses
-        // variadic arguments yet, but we do need to allow parsing them as
-        // recent CUDA headers rely on that.
-        // https://github.com/llvm/llvm-project/issues/58410
-        if (CTC->CudaInstallation.version() >= CudaVersion::CUDA_90)
-          CmdArgs.push_back("-fcuda-allow-variadic-functions");
       }
     }
     CmdArgs.push_back("-aux-triple");
