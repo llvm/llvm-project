@@ -470,7 +470,7 @@ public:
   }
 
   void SelectCodeCommon(SDNode *NodeToMatch, const uint8_t *MatcherTable,
-                        unsigned TableSize, const uint8_t *OperandLists);
+                        unsigned TableSize);
 
   /// Return true if complex patterns for this target can mutate the
   /// DAG.
