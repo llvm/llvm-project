@@ -165,6 +165,7 @@ enum RegBankLLTMappingApplyID {
   SgprB128,
   SgprB256,
   SgprB512,
+  SgprBRC,
 
   // vgpr scalars, pointers, vectors and B-types
   Vgpr16,
@@ -189,6 +190,7 @@ enum RegBankLLTMappingApplyID {
   VgprB128,
   VgprB256,
   VgprB512,
+  VgprBRC,
   VgprV4S32,
   VgprV2S64,
 
