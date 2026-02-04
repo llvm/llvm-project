@@ -1930,7 +1930,7 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
   prepareUserCallArguments(loweredActuals, caller, callSiteType, callContext,
                            callCleanUps);
 
-  bool isElemental = callContext.isElementalProcWithArrayArgs();
+  const bool isElemental = callContext.isElementalProcWithArrayArgs();
   // Prepare lowered arguments according to the interface
   // and map the lowered values to the dummy
   // arguments.
@@ -1977,7 +1977,7 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
         loc, builder, result, tempResultName, /*insertBefore=*/callOp);
     // Allocatable result must be freed, other results are stack allocated.
     const auto *allocatable = result.getBoxOf<fir::MutableBoxValue>();
-    bool mustFree = allocatable != nullptr;
+    const bool mustFree = allocatable != nullptr;
     resultEntity = loadTrivialScalar(loc, builder, resultEntity);
     if (resultEntity.isVariable()) {
       // If the result has no finalization, it can be moved into an expression.
