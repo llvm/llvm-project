@@ -1,5 +1,10 @@
-; Ensure branch weight does not overflow when folding block 3 into block 0:
 ; RUN: opt < %s -passes=simplifycfg -S | FileCheck %s
+
+; Ensure branch weight does not overflow when folding block 3 into block 0.
+; This IR test is reduced from an optimization that occurs during the Jump
+; Threading pass, which creates a branch prediction of 0% and 100%. This is
+; reduced in SimplifyCFG into the IR shown in the
+; switch-branch-weight-overflow.ll test.
 
 define void @foo(ptr %Overflow) {
   %1 = extractvalue { i32, i1 } zeroinitializer, 0
@@ -18,5 +23,5 @@ define void @foo(ptr %Overflow) {
   ret void
 }
 
-; CHECK-NOT: branch_weights{{.*}} 0, {{.*}} 0
+; CHECK: branch_weights{{.*}} 0, {{.*}} -2147483648
 !0 = !{!"branch_weights", !"expected", i32 0, i32 -2147483648}
