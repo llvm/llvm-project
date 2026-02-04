@@ -79,13 +79,13 @@ public:
     nb::dict NBFuncEmbMap;
 
     for (const auto &[FuncPtr, FuncEmb] : *ToolFuncEmbMap) {
-      auto Data = FuncEmb.getData();
-      double *DataPtr = new double[Data.size()];
-      std::copy(Data.begin(), Data.end(), DataPtr);
+      auto FuncEmbVec = FuncEmb.getData();
+      double *NBFuncEmbVec = new double[FuncEmbVec.size()];
+      std::copy(FuncEmbVec.begin(), FuncEmbVec.end(), NBFuncEmbVec);
 
       auto NbArray = nb::ndarray<nb::numpy, double>(
-          DataPtr, {Data.size()}, nb::capsule(DataPtr, [](void *p) noexcept {
-            delete[] static_cast<double *>(p);
+          NBFuncEmbVec, {FuncEmbVec.size()}, nb::capsule(NBFuncEmbVec, [](void *P) noexcept {
+            delete[] static_cast<double *>(P);
           }));
 
       NBFuncEmbMap[nb::str(FuncPtr->getName().str().c_str())] = NbArray;
