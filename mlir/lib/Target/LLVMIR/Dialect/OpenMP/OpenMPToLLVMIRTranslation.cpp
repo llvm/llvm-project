@@ -321,6 +321,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
                           << " operation";
   };
 
+  auto checkAffinity = [&todo](auto op, LogicalResult &result) {
+    if (!op.getAffinityVars().empty())
+      result = todo("affinity");
+  };
   auto checkAllocate = [&todo](auto op, LogicalResult &result) {
     if (!op.getAllocateVars().empty() || !op.getAllocatorVars().empty())
       result = todo("allocate");
@@ -417,6 +421,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkThreadLimit(op, result);
       })
       .Case([&](omp::TaskOp op) {
+        checkAffinity(op, result);
         checkAllocate(op, result);
         checkInReduction(op, result);
       })
