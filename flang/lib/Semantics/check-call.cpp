@@ -341,8 +341,9 @@ static bool DefersSameTypeParameters(
 // List of intrinsics that are skipped when checking for device actual
 // arguments.
 static const llvm::StringSet<> cudaSkippedIntrinsics = {"__builtin_c_devloc",
-    "__builtin_c_f_pointer", "__builtin_c_loc", "allocated", "associated",
-    "kind", "lbound", "loc", "present", "shape", "size", "sizeof", "ubound"};
+    "__builtin_c_f_pointer", "__builtin_c_loc", "__builtin_show_descriptor",
+    "allocated", "associated", "kind", "lbound", "loc", "present", "shape",
+    "size", "sizeof", "ubound"};
 
 static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     const std::string &dummyName, evaluate::Expr<evaluate::SomeType> &actual,
@@ -1106,8 +1107,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         actualDataAttr = common::CUDADataAttr::Device;
       }
       // For device procedures, treat actual arguments with VALUE attribute as
-      // device data
-      if (!actualDataAttr && actualLastSymbol && IsValue(*actualLastSymbol) &&
+      // device data; also constant actual arguments.
+      if (!actualDataAttr &&
+          (!actualLastSymbol || IsValue(*actualLastSymbol)) &&
           (*procedure.cudaSubprogramAttrs ==
               common::CUDASubprogramAttrs::Device)) {
         actualDataAttr = common::CUDADataAttr::Device;

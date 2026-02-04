@@ -529,6 +529,7 @@ private:
   void verifyRangeLikeMetadata(const Value &V, const MDNode *Range, Type *Ty,
                                RangeLikeMetadataKind Kind);
   void visitRangeMetadata(Instruction &I, MDNode *Range, Type *Ty);
+  void visitNoFPClassMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitNoaliasAddrspaceMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitDereferenceableMetadata(Instruction &I, MDNode *MD);
   void visitNofreeMetadata(Instruction &I, MDNode *MD);
@@ -1622,11 +1623,11 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
 
       auto True = [](const Metadata *) { return true; };
       auto False = [](const Metadata *) { return false; };
-      bool IsTypeCorrect =
-          DISubprogram::visitRetainedNode<bool>(Op, True, True, True, False);
+      bool IsTypeCorrect = DISubprogram::visitRetainedNode<bool>(
+          Op, True, True, True, True, False);
       CheckDI(IsTypeCorrect,
-              "invalid retained nodes, expected DILocalVariable, DILabel or "
-              "DIImportedEntity",
+              "invalid retained nodes, expected DILocalVariable, DILabel, "
+              "DIImportedEntity or DIType",
               &N, Node, Op);
 
       auto *RetainedNode = cast<DINode>(Op);
@@ -1635,10 +1636,15 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
       CheckDI(RetainedNodeScope,
               "invalid retained nodes, retained node is not local", &N, Node,
               RetainedNode);
+
+      DISubprogram *RetainedNodeSP = RetainedNodeScope->getSubprogram();
+      DICompileUnit *RetainedNodeUnit =
+          RetainedNodeSP ? RetainedNodeSP->getUnit() : nullptr;
       CheckDI(
-          RetainedNodeScope->getSubprogram() == &N,
+          RetainedNodeSP == &N,
           "invalid retained nodes, retained node does not belong to subprogram",
-          &N, Node, RetainedNode, RetainedNodeScope);
+          &N, Node, RetainedNode, RetainedNodeScope, RetainedNodeSP,
+          RetainedNodeUnit);
     }
   }
   CheckDI(!hasConflictingReferenceFlags(N.getFlags()),
@@ -4570,6 +4576,25 @@ void Verifier::visitRangeMetadata(Instruction &I, MDNode *Range, Type *Ty) {
   verifyRangeLikeMetadata(I, Range, Ty, RangeLikeMetadataKind::Range);
 }
 
+void Verifier::visitNoFPClassMetadata(Instruction &I, MDNode *NoFPClass,
+                                      Type *Ty) {
+  Check(AttributeFuncs::isNoFPClassCompatibleType(Ty),
+        "nofpclass only applies to floating-point typed loads", I);
+
+  Check(NoFPClass->getNumOperands() == 1,
+        "nofpclass must have exactly one entry", NoFPClass);
+  ConstantInt *MaskVal =
+      mdconst::dyn_extract<ConstantInt>(NoFPClass->getOperand(0));
+  Check(MaskVal && MaskVal->getType()->isIntegerTy(32),
+        "nofpclass entry must be a constant i32", NoFPClass);
+  uint32_t Val = MaskVal->getZExtValue();
+  Check(Val != 0, "'nofpclass' must have at least one test bit set", NoFPClass,
+        I);
+
+  Check((Val & ~static_cast<unsigned>(fcAllFlags)) == 0,
+        "Invalid value for 'nofpclass' test mask", NoFPClass, I);
+}
+
 void Verifier::visitNoaliasAddrspaceMetadata(Instruction &I, MDNode *Range,
                                              Type *Ty) {
   assert(Range && Range == I.getMetadata(LLVMContext::MD_noalias_addrspace) &&
@@ -5690,6 +5715,11 @@ void Verifier::visitInstruction(Instruction &I) {
     Check(isa<LoadInst>(I) || isa<CallInst>(I) || isa<InvokeInst>(I),
           "Ranges are only for loads, calls and invokes!", &I);
     visitRangeMetadata(I, Range, I.getType());
+  }
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_nofpclass)) {
+    Check(isa<LoadInst>(I), "nofpclass is only for loads", &I);
+    visitNoFPClassMetadata(I, MD, I.getType());
   }
 
   if (MDNode *Range = I.getMetadata(LLVMContext::MD_noalias_addrspace)) {
@@ -7180,6 +7210,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(isa<AllocaInst>(Ptr) || isa<PoisonValue>(Ptr),
           "llvm.lifetime.start/end can only be used on alloca or poison",
           &Call);
+    break;
+  }
+  case Intrinsic::sponentry: {
+    const unsigned StackAS = DL.getAllocaAddrSpace();
+    const Type *RetTy = Call.getFunctionType()->getReturnType();
+    Check(RetTy->getPointerAddressSpace() == StackAS,
+          "llvm.sponentry must return a pointer to the stack", &Call);
     break;
   }
   };
