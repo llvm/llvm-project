@@ -412,58 +412,60 @@ bool CombinerHelper::matchRedundantSextInReg(MachineInstr &Root,
   }
 
   return true;
-  // trunc(abs(sext(x) - sext(y))) -> abds(x, y)
-  bool CombinerHelper::matchTruncAbds(const MachineInstr &MI) {
-    const GTrunc *Trunc = cast<GTrunc>(&MI);
-    const GAbs *Abs = cast<GAbs>(MRI.getVRegDef(Trunc->getSrcReg()));
-    const GSub *Sub = cast<GSub>(MRI.getVRegDef(Abs->getSourceReg()));
+}
 
-    Register Dst = Trunc->getReg(0);
-    LLT DstTy = MRI.getType(Dst);
+// trunc(abs(sext(x) - sext(y))) -> abds(x, y)
+bool CombinerHelper::matchTruncAbds(const MachineInstr &MI) const {
+  const GTrunc *Trunc = cast<GTrunc>(&MI);
+  const GAbs *Abs = cast<GAbs>(MRI.getVRegDef(Trunc->getSrcReg()));
+  const GSub *Sub = cast<GSub>(MRI.getVRegDef(Abs->getSourceReg()));
 
-    GSext *SextLHS = cast<GSext>(MRI.getVRegDef(Sub->getLHSReg()));
-    GSext *SextRHS = cast<GSext>(MRI.getVRegDef(Sub->getRHSReg()));
+  Register Dst = Trunc->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
 
-    LLT SextLHSTy = MRI.getType(SextLHS->getSrcReg());
-    LLT SextRHSTy = MRI.getType(SextRHS->getSrcReg());
+  GSext *SextLHS = cast<GSext>(MRI.getVRegDef(Sub->getLHSReg()));
+  GSext *SextRHS = cast<GSext>(MRI.getVRegDef(Sub->getRHSReg()));
 
-    if (SextLHSTy != SextRHSTy || DstTy != SextLHSTy)
-      return false;
+  LLT SextLHSTy = MRI.getType(SextLHS->getSrcReg());
+  LLT SextRHSTy = MRI.getType(SextRHS->getSrcReg());
 
-    // one-use
-    if (!MRI.hasOneNonDBGUse(Abs->getReg(0)) ||
-        !MRI.hasOneNonDBGUse(Sub->getReg(0)) ||
-        !MRI.hasOneNonDBGUse(Sub->getLHSReg()) ||
-        !MRI.hasOneNonDBGUse(Sub->getRHSReg()))
-      return false;
+  if (SextLHSTy != SextRHSTy || DstTy != SextLHSTy)
+    return false;
 
-    return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDS, {DstTy}});
-  }
+  // one-use
+  if (!MRI.hasOneNonDBGUse(Abs->getReg(0)) ||
+      !MRI.hasOneNonDBGUse(Sub->getReg(0)) ||
+      !MRI.hasOneNonDBGUse(Sub->getLHSReg()) ||
+      !MRI.hasOneNonDBGUse(Sub->getRHSReg()))
+    return false;
 
-  // trunc(abs(zext(x) - zext(y))) -> abdu(x, y)
-  bool CombinerHelper::matchTruncAbdu(const MachineInstr &MI) {
-    const GTrunc *Trunc = cast<GTrunc>(&MI);
-    const GAbs *Abs = cast<GAbs>(MRI.getVRegDef(Trunc->getSrcReg()));
-    const GSub *Sub = cast<GSub>(MRI.getVRegDef(Abs->getSourceReg()));
+  return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDS, {DstTy}});
+}
 
-    Register Dst = Trunc->getReg(0);
-    LLT DstTy = MRI.getType(Dst);
+// trunc(abs(zext(x) - zext(y))) -> abdu(x, y)
+bool CombinerHelper::matchTruncAbdu(const MachineInstr &MI) const {
+  const GTrunc *Trunc = cast<GTrunc>(&MI);
+  const GAbs *Abs = cast<GAbs>(MRI.getVRegDef(Trunc->getSrcReg()));
+  const GSub *Sub = cast<GSub>(MRI.getVRegDef(Abs->getSourceReg()));
 
-    GZext *ZextLHS = cast<GZext>(MRI.getVRegDef(Sub->getLHSReg()));
-    GZext *ZextRHS = cast<GZext>(MRI.getVRegDef(Sub->getRHSReg()));
+  Register Dst = Trunc->getReg(0);
+  LLT DstTy = MRI.getType(Dst);
 
-    LLT ZextLHSTy = MRI.getType(ZextLHS->getSrcReg());
-    LLT ZextRHSTy = MRI.getType(ZextRHS->getSrcReg());
+  GZext *ZextLHS = cast<GZext>(MRI.getVRegDef(Sub->getLHSReg()));
+  GZext *ZextRHS = cast<GZext>(MRI.getVRegDef(Sub->getRHSReg()));
 
-    if (ZextLHSTy != ZextRHSTy || DstTy != ZextLHSTy)
-      return false;
+  LLT ZextLHSTy = MRI.getType(ZextLHS->getSrcReg());
+  LLT ZextRHSTy = MRI.getType(ZextRHS->getSrcReg());
 
-    // one-use
-    if (!MRI.hasOneNonDBGUse(Abs->getReg(0)) ||
-        !MRI.hasOneNonDBGUse(Sub->getReg(0)) ||
-        !MRI.hasOneNonDBGUse(Sub->getLHSReg()) ||
-        !MRI.hasOneNonDBGUse(Sub->getRHSReg()))
-      return false;
+  if (ZextLHSTy != ZextRHSTy || DstTy != ZextLHSTy)
+    return false;
 
-    return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDU, {DstTy}});
-  }
+  // one-use
+  if (!MRI.hasOneNonDBGUse(Abs->getReg(0)) ||
+      !MRI.hasOneNonDBGUse(Sub->getReg(0)) ||
+      !MRI.hasOneNonDBGUse(Sub->getLHSReg()) ||
+      !MRI.hasOneNonDBGUse(Sub->getRHSReg()))
+    return false;
+
+  return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDU, {DstTy}});
+}

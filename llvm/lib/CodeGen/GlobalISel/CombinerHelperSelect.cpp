@@ -25,7 +25,7 @@
 using namespace llvm;
 
 // select(slt(lhs,rhs),sub(rhs,lhs),sub(lhs,rhs) -> abds(lhs, rhs)
-bool CombinerHelper::matchSelectAbds(const MachineInstr &MI) {
+bool CombinerHelper::matchSelectAbds(const MachineInstr &MI) const {
   const GSelect *Select = cast<GSelect>(&MI);
   GSub *LHS = cast<GSub>(MRI.getVRegDef(Select->getTrueReg()));
   GSub *RHS = cast<GSub>(MRI.getVRegDef(Select->getFalseReg()));
@@ -42,7 +42,7 @@ bool CombinerHelper::matchSelectAbds(const MachineInstr &MI) {
 }
 
 // select(ult(lhs,rhs),sub(rhs,lhs),sub(lhs,rhs)) -> abdu(lhs, rhs)
-bool CombinerHelper::matchSelectAbdu(const MachineInstr &MI) {
+bool CombinerHelper::matchSelectAbdu(const MachineInstr &MI) const {
   const GSelect *Select = cast<GSelect>(&MI);
   GSub *LHS = cast<GSub>(MRI.getVRegDef(Select->getTrueReg()));
   GSub *RHS = cast<GSub>(MRI.getVRegDef(Select->getFalseReg()));
