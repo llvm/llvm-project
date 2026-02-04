@@ -1013,9 +1013,9 @@ TEST(TransferTest, BinaryOperatorAssignUnknown) {
 
 TEST(TransferTest, BinaryOperatorAssignFloat) {
   using ast_matchers::binaryOperator;
+  using ast_matchers::hasOperatorName;
   using ast_matchers::match;
   using ast_matchers::selectFirst;
-  using ast_matchers::hasOperatorName;
 
   // This was crashing.
   std::string Code = R"(
