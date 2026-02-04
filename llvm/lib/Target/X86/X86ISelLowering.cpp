@@ -34277,10 +34277,10 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
 
     MVT VecVT = MVT::v8i64;
     MVT BoolVT = MVT::v8i1;
-    SDValue AllOnes = DAG.getAllOnesConstant(dl, VecVT);
 
     if (isOneConstant(RHS)) {
-      RHS = AllOnes;
+      RHS = DAG.getAllOnesConstant(dl, VecVT);
+      ;
       Opc = (IsAdd ? ISD::SUB : ISD::ADD);
       IsAdd = !IsAdd;
       // LHS + 1 => LHS - (- 1 , LHS - 1 => LHS + (- 1)
@@ -34296,7 +34296,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     ISD::CondCode CarryCC = IsAdd ? ISD::SETULT : ISD::SETUGT;
     SDValue Carry = DAG.getSetCC(dl, BoolVT, Partial, Vec0, CarryCC);
 
-    SDValue PropCmp = IsAdd ? AllOnes : DAG.getConstant(0, dl, VecVT);
+    SDValue PropCmp = IsAdd ? DAG.getAllOnesConstant(dl, VecVT)
+                            : DAG.getConstant(0, dl, VecVT);
     SDValue Propagate = DAG.getSetCC(dl, BoolVT, Partial, PropCmp, ISD::SETEQ);
 
     SDValue CarryIn = DAG.getBitcast(MVT::i8, Carry);
@@ -34315,7 +34316,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue CorrVec = DAG.getNode(ISD::BITCAST, dl, BoolVT, CorrMask);
 
     unsigned AdjustOpc = IsAdd ? ISD::SUB : ISD::ADD;
-    SDValue Adjusted = DAG.getNode(AdjustOpc, dl, VecVT, Partial, AllOnes);
+    SDValue Adjusted = DAG.getNode(AdjustOpc, dl, VecVT, Partial,
+                                   DAG.getAllOnesConstant(dl, VecVT));
     SDValue Res =
         DAG.getNode(ISD::VSELECT, dl, VecVT, CorrVec, Adjusted, Partial);
 
