@@ -506,6 +506,10 @@ public:
   /// string (separated by a '-' if the environment component is present).
   LLVM_ABI StringRef getOSAndEnvironmentName() const;
 
+  /// Get the default system encoding of the triple.
+  /// For example, "IBM-1047" for z/OS, "UTF-8" for others
+  LLVM_ABI StringRef getDefaultNarrowTextEncoding() const;
+
   /// Get the version component of the environment component as a single
   /// string (the version after the environment).
   ///

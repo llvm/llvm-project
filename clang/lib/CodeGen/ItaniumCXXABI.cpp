@@ -36,6 +36,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/TextEncoding.h"
 
 #include <optional>
 
@@ -3619,8 +3620,20 @@ llvm::GlobalVariable *ItaniumRTTIBuilder::GetAddrOfTypeName(
   // We know that the mangled name of the type starts at index 4 of the
   // mangled name of the typename, so we can just index into it in order to
   // get the mangled name of the type.
-  llvm::Constant *Init = llvm::ConstantDataArray::getString(VMContext,
-                                                            Name.substr(4));
+  llvm::Constant *Init;
+  if (CGM.getTriple().isOSzOS()) {
+    // On z/OS, typename is stored as 2 encodings: EBCDIC followed by ASCII.
+    SmallString<256> DualEncodedName;
+    llvm::ErrorOr<llvm::TextEncodingConverter> Converter =
+        llvm::TextEncodingConverter::create(
+            "UTF-8", CGM.getTriple().getDefaultNarrowTextEncoding());
+    Converter->convert(Name.substr(4), DualEncodedName);
+    DualEncodedName += '\0';
+    DualEncodedName += Name.substr(4);
+    Init = llvm::ConstantDataArray::getString(VMContext, DualEncodedName);
+  } else
+    Init = llvm::ConstantDataArray::getString(VMContext, Name.substr(4));
+
   auto Align = CGM.getContext().getTypeAlignInChars(CGM.getContext().CharTy);
 
   llvm::GlobalVariable *GV = CGM.CreateOrReplaceCXXRuntimeVariable(
