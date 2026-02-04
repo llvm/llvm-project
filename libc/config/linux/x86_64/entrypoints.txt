@@ -724,12 +724,12 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.atanhf16
     libc.src.math.atanpif16
     libc.src.math.canonicalizef16
+    libc.src.math.cbrtf16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
     libc.src.math.cosf16
     libc.src.math.coshf16
     libc.src.math.cospif16
-    libc.src.math.cbrtf16
     libc.src.math.exp10f16
     libc.src.math.exp10m1f16
     libc.src.math.exp2f16
