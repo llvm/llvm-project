@@ -2745,16 +2745,19 @@ static SDValue emitShuffleReduceTree(SelectionDAG &DAG, const SDLoc &DL,
     foldInHalf({2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
     foldInHalf({1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
     return Vec;
-  } else if (VecVT == MVT::v8i16) {
+  }
+  if (VecVT == MVT::v8i16) {
     foldInHalf({4, 5, 6, 7, 0, 0, 0, 0});
     foldInHalf({2, 3, 0, 0, 0, 0, 0, 0});
     foldInHalf({1, 0, 0, 0, 0, 0, 0, 0});
     return Vec;
-  } else if (VecVT == MVT::v4i32) {
+  }
+  if (VecVT == MVT::v4i32) {
     foldInHalf({2, 3, 0, 0});
     foldInHalf({1, 0, 0, 0});
     return Vec;
-  } else if (VecVT == MVT::v2i64) {
+  }
+  if (VecVT == MVT::v2i64) {
     foldInHalf({1, 0});
     return Vec;
   }
