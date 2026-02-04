@@ -25,7 +25,7 @@ LT_INIT
 AX_DETECT_CLANG
 
 AC_SUBST([CONFIG_STATUS_DEPENDENCIES], [$LLVM_CONFIG])
-AC_CONFIG_HEADERS(isl_config.h)
+AC_CONFIG_HEADERS(isl_config.h include/isl-interface/config.h)
 AC_CONFIG_FILES(Makefile)
 
 AC_OUTPUT

@@ -158,7 +158,8 @@ void X86CodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
   // mitigation. This is to prevent slow downs due to
   // analyses needed by the LVIHardening pass when compiling at -O0.
   if (getOptLevel() != CodeGenOptLevel::None) {
-    addMachineFunctionPass(X86LoadValueInjectionRetHardeningPass(), PMW);
+    // TODO(nigham): Add X86LoadValueInjectionLoadHardeningPass here once
+    // it has been ported.
   }
 }
 
@@ -234,8 +235,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
     // ported.
   }
 
-  // TODO(boomanaiden154): Add X86LoadValueInjectionRetHardeningPass here once
-  // it has been ported.
+  addMachineFunctionPass(X86LoadValueInjectionRetHardeningPass(), PMW);
 
   // Insert pseudo probe annotation for callsite profiling
   // TODO(boomanaiden154): Add PseudoProberInserterPass here once it has been
@@ -249,8 +249,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
   // after all real instructions have been added to the epilog.
   if (TT.isOSWindows() && TT.isX86_64()) {
-    // TODO(boomanaiden154): Add X86WinEHUnwindV2Pass here once it has been
-    // ported.
+    addMachineFunctionPass(X86WinEHUnwindV2Pass(), PMW);
   }
 }
 

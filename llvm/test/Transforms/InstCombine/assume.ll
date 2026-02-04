@@ -52,6 +52,34 @@ define i32 @align_assume_trunc_cond(ptr %a) #0 {
   ret i32 %t0
 }
 
+define void @align_32bit(ptr %ptr) {
+; CHECK-LABEL: @align_32bit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 4294967296) ]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = ptrtoint ptr %ptr to i64
+  %trunc = trunc i64 %0 to i32
+  %cmp = icmp eq i32 0, %trunc
+  call void @llvm.assume(i1 %cmp)
+  ret void
+}
+
+define void @align_63bit(ptr %ptr) {
+; CHECK-LABEL: @align_63bit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 -9223372036854775808) ]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = ptrtoint ptr %ptr to i64
+  %trunc = trunc i64 %0 to i63
+  %cmp = icmp eq i63 0, %trunc
+  call void @llvm.assume(i1 %cmp)
+  ret void
+}
+
 ; Same check as in @foo1, but make sure it works if the assume is first too.
 
 define i32 @foo2(ptr %a) #0 {
@@ -1043,4 +1071,3 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 attributes #0 = { nounwind uwtable }
 attributes #1 = { nounwind }
-

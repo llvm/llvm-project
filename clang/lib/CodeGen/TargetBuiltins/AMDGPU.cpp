@@ -374,16 +374,19 @@ static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID) {
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_add_u64:
     return Intrinsic::amdgcn_wave_reduce_add;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_fadd_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_fadd_f64:
     return Intrinsic::amdgcn_wave_reduce_fadd;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_sub_u32:
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_sub_u64:
     return Intrinsic::amdgcn_wave_reduce_sub;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_fsub_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_fsub_f64:
     return Intrinsic::amdgcn_wave_reduce_fsub;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_i32:
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_i64:
     return Intrinsic::amdgcn_wave_reduce_min;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_fmin_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_fmin_f64:
     return Intrinsic::amdgcn_wave_reduce_fmin;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_u32:
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_min_u64:
@@ -392,6 +395,7 @@ static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID) {
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_i64:
     return Intrinsic::amdgcn_wave_reduce_max;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_fmax_f32:
+  case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_fmax_f64:
     return Intrinsic::amdgcn_wave_reduce_fmax;
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_u32:
   case clang::AMDGPU::BI__builtin_amdgcn_wave_reduce_max_u64:
@@ -415,14 +419,18 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   switch (BuiltinID) {
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_add_u32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_fadd_f32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_fadd_f64:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_sub_u32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_fsub_f32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_fsub_f64:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_min_i32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_min_u32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_fmin_f32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_fmin_f64:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_max_i32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_max_u32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_fmax_f32:
+  case AMDGPU::BI__builtin_amdgcn_wave_reduce_fmax_f64:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_and_b32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_or_b32:
   case AMDGPU::BI__builtin_amdgcn_wave_reduce_xor_b32:

@@ -243,7 +243,7 @@ define i16 @PR90356(<16 x i1> %a) {
 ; CHECK-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; CHECK-NEXT:    movb $63, %al
 ; CHECK-NEXT:    kmovd %eax, %k1
-; CHECK-NEXT:    vpexpandq %zmm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax

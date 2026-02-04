@@ -43,11 +43,20 @@ void WasmSymbol::print(raw_ostream &Out) const {
     case wasm::WASM_SYMBOL_BINDING_LOCAL: Out << "local"; break;
     case wasm::WASM_SYMBOL_BINDING_WEAK: Out << "weak"; break;
   }
-  if (isHidden()) {
+  if (isHidden())
     Out << ", hidden";
-  } else {
+  else
     Out << ", default";
-  }
+  if (Info.Flags & wasm::WASM_SYMBOL_NO_STRIP)
+    Out << ", no_strip";
+  if (Info.Flags & wasm::WASM_SYMBOL_TLS)
+    Out << ", tls";
+  if (Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)
+    Out << ", absolute";
+  if (Info.Flags & wasm::WASM_SYMBOL_EXPORTED)
+    Out << ", exported";
+  if (isUndefined())
+    Out << ", undefined";
   Out << "]";
   if (!isTypeData()) {
     Out << ", ElemIndex=" << Info.ElementIndex;

@@ -885,8 +885,10 @@ private:
 /// recorded node and converts it from being a ISD::Constant to
 /// ISD::TargetConstant, likewise for ConstantFP.
 class EmitConvertToTargetMatcher : public Matcher {
+  // Recorded Node
   unsigned Slot;
 
+  // Result
   unsigned ResultNo;
 
 public:
@@ -940,7 +942,9 @@ private:
 /// pushing the chain and glue results.
 ///
 class EmitCopyToRegMatcher : public Matcher {
-  unsigned SrcSlot; // Value to copy into the physreg.
+  // Value to copy into the physreg.
+  unsigned SrcSlot;
+  // Register Destination
   const CodeGenRegister *DestPhysReg;
 
 public:
@@ -965,9 +969,12 @@ private:
 /// EmitNodeXFormMatcher - Emit an operation that runs an SDNodeXForm on a
 /// recorded node and records the result.
 class EmitNodeXFormMatcher : public Matcher {
+  // Recorded Node
   unsigned Slot;
+  // Transform
   const Record *NodeXForm;
 
+  // Result
   unsigned ResultNo;
 
 public:

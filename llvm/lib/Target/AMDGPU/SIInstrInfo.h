@@ -1689,11 +1689,7 @@ public:
   InstructionUniformity
   getGenericInstructionUniformity(const MachineInstr &MI) const;
 
-  const MIRFormatter *getMIRFormatter() const override {
-    if (!Formatter)
-      Formatter = std::make_unique<AMDGPUMIRFormatter>();
-    return Formatter.get();
-  }
+  const MIRFormatter *getMIRFormatter() const override;
 
   static unsigned getDSShaderTypeValue(const MachineFunction &MF);
 

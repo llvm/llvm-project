@@ -38,7 +38,7 @@ BreakpointLocation::BreakpointLocation(break_id_t loc_id, Breakpoint &owner,
       m_is_indirect(false), m_address(addr), m_owner(owner),
       m_condition_hash(0), m_loc_id(loc_id), m_hit_counter() {
   if (check_for_resolver) {
-    Symbol *symbol = m_address.CalculateSymbolContextSymbol();
+    const Symbol *symbol = m_address.CalculateSymbolContextSymbol();
     if (symbol && symbol->IsIndirect()) {
       SetShouldResolveIndirectFunctions(true);
     }
@@ -677,7 +677,8 @@ void BreakpointLocation::GetDescription(Stream *s,
     if (IsIndirect() && m_bp_site_sp) {
       Address resolved_address;
       resolved_address.SetLoadAddress(m_bp_site_sp->GetLoadAddress(), target);
-      Symbol *resolved_symbol = resolved_address.CalculateSymbolContextSymbol();
+      const Symbol *resolved_symbol =
+          resolved_address.CalculateSymbolContextSymbol();
       if (resolved_symbol) {
         if (level == eDescriptionLevelFull || level == eDescriptionLevelInitial)
           s->Printf(", ");

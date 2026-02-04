@@ -23,6 +23,7 @@
 ; CHECK-NEXT:   disable-postmisched-store-clustering - Disable PostRA store clustering in the machine scheduler.
 ; CHECK-NEXT:   dlen-factor-2                    - Vector unit DLEN(data path width) is half of VLEN.
 ; CHECK-NEXT:   e                                - 'E' (Embedded Instruction Set with 16 GPRs).
+; CHECK-NEXT:   enable-select-opt                - Enable the select optimize pass for select loop heuristics.
 ; CHECK-NEXT:   enable-vsetvli-sched-heuristic   - Enable vsetvli-based scheduling heuristic.
 ; CHECK-NEXT:   exact-asm                        - Enable Exact Assembly (Disables Compression and Relaxation).
 ; CHECK-NEXT:   experimental                     - Experimental intrinsics.
@@ -45,6 +46,12 @@
 ; CHECK-NEXT:   experimental-zvqdotq             - 'Zvqdotq' (Vector quad widening 4D Dot Product).
 ; CHECK-NEXT:   f                                - 'F' (Single-Precision Floating-Point).
 ; CHECK-NEXT:   forced-atomics                   - Assume that lock-free native-width atomics are available.
+; CHECK-NEXT:   fusion-add-mem                   - Enable ADD+LOAD/STORE macrofusion.
+; CHECK-NEXT:   fusion-logic-imm-reg             - Enable ANDI/ORI/XORI+AND/OR/XOR macrofusion.
+; CHECK-NEXT:   fusion-logic-reg-imm             - Enable AND/OR/XOR+ANDI/ORI/XORI macrofusion.
+; CHECK-NEXT:   fusion-logic-reg-reg             - Enable AND/OR/XOR+AND/OR/XOR macrofusion.
+; CHECK-NEXT:   fusion-mul-add                   - Enable MUL+ADD macrofusion.
+; CHECK-NEXT:   fusion-shift-bit-extract         - Enable SLLI+SRLI/SRAI macrofusion.
 ; CHECK-NEXT:   h                                - 'H' (Hypervisor).
 ; CHECK-NEXT:   i                                - 'I' (Base Integer Instruction Set).
 ; CHECK-NEXT:   ld-add-fusion                    - Enable LD+ADD macrofusion.

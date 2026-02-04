@@ -113,10 +113,11 @@ struct VectorContractToPackedTypeDotProduct
                       "RHS) dim and acc dim of size 4/8/16.");
 
     if (lhsTy.getElementType().isSignlessInteger(8) && nonUnitDim != 4 &&
-        nonUnitDim != 8 && nonUnitDimAcc.front() == nonUnitDim)
+        nonUnitDim != 8 && nonUnitDim != 16 &&
+        nonUnitDimAcc.front() == nonUnitDim)
       return rewriter.notifyMatchFailure(
           contractOp, "Int8 dot-product operation expects non-unit (LHR or "
-                      "RHS) dim and acc dim of size 4/8.");
+                      "RHS) dim and acc dim of size 4/8/16.");
 
     auto loc = contractOp.getLoc();
     auto castAcc = vector::ShapeCastOp::create(
@@ -159,10 +160,19 @@ struct VectorContractToPackedTypeDotProduct
       }
 
       if (lhsTy.getElementType().isSignlessInteger(8)) {
-        dp = x86vector::DotInt8Op::create(
-            rewriter, loc,
-            VectorType::get(nonUnitDimRhs.front(), rewriter.getIntegerType(32)),
-            castAcc, bitcastLhsPkType, castRhs);
+        if (nonUnitDimAcc.front() == 16) {
+          dp = x86vector::AVX10DotInt8Op::create(
+              rewriter, loc,
+              VectorType::get(nonUnitDimRhs.front(),
+                              rewriter.getIntegerType(32)),
+              castAcc, bitcastLhsPkType, castRhs);
+        } else {
+          dp = x86vector::DotInt8Op::create(
+              rewriter, loc,
+              VectorType::get(nonUnitDimRhs.front(),
+                              rewriter.getIntegerType(32)),
+              castAcc, bitcastLhsPkType, castRhs);
+        }
       }
     } else {
       auto castLhs = vector::ShapeCastOp::create(
@@ -192,10 +202,19 @@ struct VectorContractToPackedTypeDotProduct
       }
 
       if (lhsTy.getElementType().isSignlessInteger(8)) {
-        dp = x86vector::DotInt8Op::create(
-            rewriter, loc,
-            VectorType::get(nonUnitDimLhs.front(), rewriter.getIntegerType(32)),
-            castAcc, castLhs, bitcastRhsPkType);
+        if (nonUnitDimAcc.front() == 16) {
+          dp = x86vector::AVX10DotInt8Op::create(
+              rewriter, loc,
+              VectorType::get(nonUnitDimLhs.front(),
+                              rewriter.getIntegerType(32)),
+              castAcc, castLhs, bitcastRhsPkType);
+        } else {
+          dp = x86vector::DotInt8Op::create(
+              rewriter, loc,
+              VectorType::get(nonUnitDimLhs.front(),
+                              rewriter.getIntegerType(32)),
+              castAcc, castLhs, bitcastRhsPkType);
+        }
       }
     }
 

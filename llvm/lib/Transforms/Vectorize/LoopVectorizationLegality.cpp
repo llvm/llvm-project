@@ -885,7 +885,7 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
                                              PSE.getSE())) {
       Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
       AllowedExit.insert(RedDes.getLoopExitInstr());
-      Reductions[Phi] = RedDes;
+      Reductions[Phi] = std::move(RedDes);
       assert((!RedDes.hasUsesOutsideReductionChain() ||
               RecurrenceDescriptor::isMinMaxRecurrenceKind(
                   RedDes.getRecurrenceKind())) &&

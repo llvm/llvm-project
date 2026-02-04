@@ -3049,7 +3049,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Type *SignEltTy = Sign->getType()->getScalarType();
 
     Value *CastSrc;
-    if (match(Sign, m_ElementWiseBitCast(m_OneUse(m_Value(CastSrc)))) &&
+    if (match(Sign,
+              m_OneUse(m_ElementWiseBitCast(m_OneUse(m_Value(CastSrc))))) &&
         CastSrc->getType()->isIntOrIntVectorTy() &&
         APFloat::hasSignBitInMSB(SignEltTy->getFltSemantics())) {
       KnownBits Known(SignEltTy->getPrimitiveSizeInBits());
@@ -3698,7 +3699,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           /// TODO: we can generate a GEP instead of merging the alignment with
           /// the offset.
           RetainedKnowledge RK{Attribute::Alignment,
-                               (unsigned)MinAlign(Offset, AlignMask + 1), A};
+                               MinAlign(Offset, AlignMask + 1), A};
           if (auto *Replacement =
                   buildAssumeFromKnowledge(RK, Next, &AC, &DT)) {
 

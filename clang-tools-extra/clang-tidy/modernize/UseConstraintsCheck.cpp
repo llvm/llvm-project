@@ -318,11 +318,11 @@ static std::optional<std::string> getConditionText(const Expr *ConditionExpr,
     return std::nullopt;
 
   const bool SkipComments = false;
-  Token PrevToken;
+  std::optional<Token> PrevToken;
   std::tie(PrevToken, PrevTokenLoc) = utils::lexer::getPreviousTokenAndStart(
       PrevTokenLoc, SM, LangOpts, SkipComments);
   const bool EndsWithDoubleSlash =
-      PrevToken.is(tok::comment) &&
+      PrevToken && PrevToken->is(tok::comment) &&
       Lexer::getSourceText(CharSourceRange::getCharRange(
                                PrevTokenLoc, PrevTokenLoc.getLocWithOffset(2)),
                            SM, LangOpts) == "//";

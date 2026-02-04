@@ -87,13 +87,13 @@ class IR2VecTool {
 private:
   Module &M;
   ModuleAnalysisManager MAM;
-  const Vocabulary *Vocab = nullptr;
+  std::unique_ptr<Vocabulary> Vocab;
 
 public:
   explicit IR2VecTool(Module &M) : M(M) {}
 
-  /// Initialize the IR2Vec vocabulary analysis
-  bool initializeVocabulary();
+  /// Initialize the IR2Vec vocabulary from the specified file path.
+  Error initializeVocabulary(StringRef VocabPath);
 
   /// Generate triplets for a single function
   /// Returns a TripletResult with:

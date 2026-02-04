@@ -189,6 +189,27 @@ define float @test_fmed3_maybe_SNaN_input_ieee_true_dx10clamp_true(float %a) #2 
   ret float %fmed
 }
 
+; ieee=true dx10_clamp=true with unknown first input argument
+define float @test_fmed3_unknown_input_ieee_true_dx10clamp_true(float %a) #2 {
+; GFX10-LABEL: test_fmed3_unknown_input_ieee_true_dx10clamp_true:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_med3_f32 v0, v0, 0, 1.0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: test_fmed3_unknown_input_ieee_true_dx10clamp_true:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_med3_num_f32 v0, v0, 0, 1.0
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %fmed = call float @llvm.amdgcn.fmed3.f32(float %a, float 0.0, float 1.0)
+  ret float %fmed
+}
+
 declare half @llvm.amdgcn.fmed3.f16(half, half, half)
 declare float @llvm.amdgcn.fmed3.f32(float, float, float)
 declare float @llvm.minnum.f32(float, float)

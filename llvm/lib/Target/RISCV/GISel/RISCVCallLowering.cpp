@@ -114,7 +114,7 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
       };
 
       if (Thunk) {
-        *Thunk = assignFunc;
+        *Thunk = std::move(assignFunc);
         return 1;
       }
 
@@ -155,7 +155,7 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
     };
 
     if (Thunk) {
-      *Thunk = assignFunc;
+      *Thunk = std::move(assignFunc);
       return 2;
     }
 

@@ -31,7 +31,7 @@ isl_stat isl_stat_non_error_bool(isl_bool b)
  * That is, return isl_stat_ok if "obj" is non_NULL and
  * isl_stat_error otherwise.
  */
-isl_stat isl_stat_non_null(void *obj)
+isl_stat isl_stat_non_null(const void *obj)
 {
 	if (obj != NULL)
 		return isl_stat_ok;

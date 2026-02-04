@@ -1979,3 +1979,36 @@ acc.reduction.recipe @reduction_add_ref_f32 : !fir.ref<f32> reduction_operator <
 ^bb0(%arg0: !fir.ref<f32>, %arg1: !fir.ref<f32>):
   acc.yield %arg0 : !fir.ref<f32>
 }
+
+// -----
+// CHECK-LABEL: func.func @test_acc_loop_private2_hoisting(
+// CHECK: %[[CLAUSE_VAL1:.*]] = acc.private
+// CHECK: %[[CLAUSE_VAL2:.*]] = acc.private
+// CHECK-NOT: %[[CLAUSE_VAL1]]
+// CHECK-NOT: %[[CLAUSE_VAL2]]
+// CHECK: acc.loop{{.*}}private(%[[CLAUSE_VAL1]], %[[CLAUSE_VAL2]] : !fir.ref<f32>, !fir.ref<f32>)
+func.func @test_acc_loop_private2_hoisting() {
+  %cst = arith.constant 1.000000e+00 : f32
+  %c10_i32 = arith.constant 10 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
+  %2 = fir.declare %1 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %3 = fir.alloca f32 {bindc_name = "a", uniq_name = "_QFtestEa"}
+  %4 = fir.declare %3 {uniq_name = "_QFtestEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  acc.parallel combined(loop) {
+    %5 = acc.private varPtr(%2 : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "b"}
+    %6 = acc.private varPtr(%4 : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "a"}
+    acc.loop combined(parallel) private(%5, %6 : !fir.ref<f32>, !fir.ref<f32>) control(%arg0 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
+      %cvt = fir.convert %5 : (!fir.ref<f32>) -> !fir.ref<f32>
+      %7 = fir.declare %cvt {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+      fir.store %cst to %7 : !fir.ref<f32>
+      %cvt2 = fir.convert %6 : (!fir.ref<f32>) -> !fir.ref<f32>
+      %8 = fir.declare %cvt2 {uniq_name = "_QFtestEa"} : (!fir.ref<f32>) -> !fir.ref<f32>
+      fir.store %cst to %8 : !fir.ref<f32>
+      acc.yield
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    acc.yield
+  }
+  return
+}

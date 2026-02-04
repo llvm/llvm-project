@@ -511,6 +511,7 @@ public:
     common::visit(common::visitors{
                       [&](const CoarraySpec &) { Word("CODIMENSION["); },
                       [&](const ArraySpec &) { Word("DIMENSION("); },
+                      [&](const RankClause &) { Word("RANK("); },
                       [](const auto &) {},
                   },
         x.u);
@@ -519,6 +520,7 @@ public:
     common::visit(common::visitors{
                       [&](const CoarraySpec &) { Put(']'); },
                       [&](const ArraySpec &) { Put(')'); },
+                      [&](const RankClause &) { Put(')'); },
                       [](const auto &) {},
                   },
         x.u);

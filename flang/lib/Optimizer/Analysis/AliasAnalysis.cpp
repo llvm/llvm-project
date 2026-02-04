@@ -627,14 +627,14 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
     assert(opResult.getOwner() == defOp && "v must be a result of defOp");
     ty = opResult.getType();
     llvm::TypeSwitch<Operation *>(defOp)
-        .Case<hlfir::AsExprOp>([&](auto op) {
+        .Case([&](hlfir::AsExprOp op) {
           // TODO: we should probably always report hlfir.as_expr
           // as a unique source, and let the codegen decide whether
           // to use the original buffer or create a copy.
           v = op.getVar();
           defOp = v.getDefiningOp();
         })
-        .Case<hlfir::AssociateOp>([&](auto op) {
+        .Case([&](hlfir::AssociateOp op) {
           assert(opResult != op.getMustFreeStrorageFlag() &&
                  "MustFreeStorageFlag result is not an aliasing candidate");
 
@@ -651,7 +651,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
             defOp = v.getDefiningOp();
           }
         })
-        .Case<fir::PackArrayOp>([&](auto op) {
+        .Case([&](fir::PackArrayOp op) {
           // The packed array is not distinguishable from the original
           // array, so skip PackArrayOp and track further through
           // the array operand.
@@ -659,7 +659,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           defOp = v.getDefiningOp();
           approximateSource = true;
         })
-        .Case<fir::LoadOp>([&](auto op) {
+        .Case([&](fir::LoadOp op) {
           // If load is inside target and it points to mapped item,
           // continue tracking.
           Operation *loadMemrefOp = op.getMemref().getDefiningOp();
@@ -758,7 +758,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                   dyn_cast<omp::BlockArgOpenMPOpInterface>(op->getParentOp())) {
             Value ompValArg;
             llvm::TypeSwitch<Operation *>(op->getParentOp())
-                .template Case<omp::TargetOp>([&](auto targetOp) {
+                .Case([&](omp::TargetOp targetOp) {
                   // If declare operation is inside omp target region,
                   // continue alias analysis outside the target region
                   for (auto [opArg, blockArg] : llvm::zip_equal(
@@ -838,7 +838,7 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
           v = op.getMemref();
           defOp = v.getDefiningOp();
         })
-        .Case<fir::FortranObjectViewOpInterface>([&](auto op) {
+        .Case([&](fir::FortranObjectViewOpInterface op) {
           // This case must be located after the cases for concrete
           // operations that support FortraObjectViewOpInterface,
           // so that their special handling kicks in.

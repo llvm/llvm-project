@@ -119,12 +119,12 @@ define i1 @test_exit_compare_other_users() #0 {
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP1]], i64 -24
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP2]], i64 -7
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP3]], align 1
-; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <8 x i8> [[WIDE_LOAD]], <8 x i8> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i8> [[REVERSE]], splat (i8 32)
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 64
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <8 x i8> [[WIDE_LOAD]], <8 x i8> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i8> [[REVERSE]], splat (i8 32)
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i1> [[TMP4]], i32 7
 ; CHECK-NEXT:    br i1 false, label %[[EXIT:.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
 ; CHECK:       [[VEC_EPILOG_ITER_CHECK]]:
@@ -139,12 +139,12 @@ define i1 @test_exit_compare_other_users() #0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[REVERSE3:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD2]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <4 x i8> [[REVERSE3]], splat (i8 32)
 ; CHECK-NEXT:    [[INDEX_NEXT4]] = add nuw i64 [[INDEX1]], 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT4]], 76
 ; CHECK-NEXT:    br i1 [[TMP11]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[REVERSE4:%.*]] = shufflevector <4 x i8> [[WIDE_LOAD2]], <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <4 x i8> [[REVERSE4]], splat (i8 32)
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP10]], i32 3
 ; CHECK-NEXT:    br i1 false, label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:

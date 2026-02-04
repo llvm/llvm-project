@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENMODULE_H
 
 #include "CIRGenBuilder.h"
+#include "CIRGenCUDARuntime.h"
 #include "CIRGenCall.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
@@ -90,11 +91,16 @@ private:
   /// Holds information about C++ vtables.
   CIRGenVTables vtables;
 
+  /// Holds the CUDA runtime
+  std::unique_ptr<CIRGenCUDARuntime> cudaRuntime;
+
   /// Per-function codegen information. Updated everytime emitCIR is called
   /// for FunctionDecls's.
   CIRGenFunction *curCGF = nullptr;
 
   llvm::SmallVector<mlir::Attribute> globalScopeAsm;
+
+  void createCUDARuntime();
 
 public:
   mlir::ModuleOp getModule() const { return theModule; }
@@ -147,6 +153,7 @@ public:
   void handleCXXStaticMemberVarInstantiation(VarDecl *vd);
 
   llvm::DenseMap<const Decl *, cir::GlobalOp> staticLocalDeclMap;
+  llvm::DenseMap<const VarDecl *, cir::GlobalOp> initializerConstants;
 
   mlir::Operation *getGlobalValue(llvm::StringRef ref);
 
@@ -160,6 +167,9 @@ public:
 
   cir::GlobalOp getOrCreateStaticVarDecl(const VarDecl &d,
                                          cir::GlobalLinkageKind linkage);
+
+  Address createUnnamedGlobalFrom(const VarDecl &d, mlir::Attribute constAttr,
+                                  CharUnits align);
 
   /// If the specified mangled name is not in the module, create and return an
   /// mlir::GlobalOp value
@@ -557,6 +567,10 @@ public:
 
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
 
+  // Whether a global variable should be emitted by CUDA/HIP host/device
+  // related attributes.
+  bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
+
   void replaceUsesOfNonProtoTypeWithRealFunction(mlir::Operation *old,
                                                  cir::FuncOp newFn);
 
@@ -592,6 +606,11 @@ public:
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".
   cir::FuncOp getBuiltinLibFunction(const FunctionDecl *fd, unsigned builtinID);
+
+  CIRGenCUDARuntime &getCUDARuntime() {
+    assert(cudaRuntime != nullptr);
+    return *cudaRuntime;
+  }
 
   mlir::IntegerAttr getSize(CharUnits size) {
     return builder.getSizeFromCharUnits(size);

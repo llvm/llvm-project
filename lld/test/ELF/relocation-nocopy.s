@@ -4,12 +4,12 @@
 // RUN: ld.lld -shared %t2.o -o %t.so
 // RUN: not ld.lld -z nocopyreloc %t.o %t.so -o /dev/null 2>&1 | FileCheck %s
 
-// CHECK: unresolvable relocation R_X86_64_32S against symbol 'x'
-// CHECK: unresolvable relocation R_X86_64_32S against symbol 'y'
-// CHECK: unresolvable relocation R_X86_64_32S against symbol 'z'
-// CHECK: unresolvable relocation R_X86_64_32 against symbol 'x'
-// CHECK: unresolvable relocation R_X86_64_32 against symbol 'y'
-// CHECK: unresolvable relocation R_X86_64_32 against symbol 'z'
+// CHECK: error: unresolvable relocation R_X86_64_32S against symbol 'x'
+// CHECK: error: unresolvable relocation R_X86_64_32S against symbol 'y'
+// CHECK: error: unresolvable relocation R_X86_64_32S against symbol 'z'
+// CHECK: error: unresolvable relocation R_X86_64_32 against symbol 'x'
+// CHECK: error: unresolvable relocation R_X86_64_32 against symbol 'y'
+// CHECK: error: unresolvable relocation R_X86_64_32 against symbol 'z'
 
 .text
 .global _start

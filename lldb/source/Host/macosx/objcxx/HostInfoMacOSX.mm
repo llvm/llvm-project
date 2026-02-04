@@ -11,6 +11,8 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/DataBuffer.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
@@ -708,9 +710,11 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
         });
     assert(minVmAddr != UINT_MAX);
     assert(maxVmAddr != 0);
+    lldb::DataBufferSP data_sp = std::make_shared<DataBufferUnowned>(
+        (uint8_t *)minVmAddr, maxVmAddr - minVmAddr);
+    lldb::DataExtractorSP extractor_sp = std::make_shared<DataExtractor>(data_sp);
     m_images[dyld_image_get_installname(image)] = SharedCacheImageInfo{
-        UUID(uuid, 16), std::make_shared<DataBufferUnowned>(
-                            (uint8_t *)minVmAddr, maxVmAddr - minVmAddr)};
+        UUID(uuid, 16), extractor_sp};
   });
   return true;
 #endif
@@ -730,11 +734,13 @@ SharedCacheInfo::SharedCacheInfo() {
 
   dyld_shared_cache_iterate_text(
       dsc_uuid, ^(const dyld_shared_cache_dylib_text_info *info) {
-        m_images[info->path] = SharedCacheImageInfo{
-            UUID(info->dylibUuid, 16),
-            std::make_shared<DataBufferUnowned>(
-                shared_cache_start + info->textSegmentOffset,
-                shared_cache_size - info->textSegmentOffset)};
+        lldb::DataBufferSP data_sp = std::make_shared<DataBufferUnowned>(
+            shared_cache_start + info->textSegmentOffset,
+            shared_cache_size - info->textSegmentOffset);
+        lldb::DataExtractorSP extractor_sp =
+            std::make_shared<DataExtractor>(data_sp);
+        m_images[info->path] =
+            SharedCacheImageInfo{UUID(info->dylibUuid, 16), extractor_sp};
       });
 }
 

@@ -526,7 +526,6 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT:     ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:     vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[CAN_IV]]>, ir<1>
 ; CHECK-NEXT:     CLONE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[STEPS]]>
-; CHECK-NEXT:     WIDEN ir<%add> = add ir<%iv>, ir<%off>
 ; CHECK-NEXT:     vp<[[VEC_PTR:%.+]]> = vector-pointer inbounds ir<%gep>
 ; CHECK-NEXT:     WIDEN store vp<[[VEC_PTR]]>, ir<0>
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
@@ -536,6 +535,7 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
+; CHECK-NEXT:   WIDEN ir<%add> = add ir<%iv>, ir<%off>
 ; CHECK-NEXT:   EMIT vp<[[EXIT_PART:%.+]]> = extract-last-part ir<%add>
 ; CHECK-NEXT:   EMIT vp<[[EXIT:%.+]]> = extract-last-lane vp<[[EXIT_PART]]>
 ; CHECK-NEXT:   EMIT vp<[[CMP:%.+]]> = icmp eq ir<1000>, vp<[[VTC]]>

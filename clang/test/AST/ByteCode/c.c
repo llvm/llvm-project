@@ -425,3 +425,11 @@ int complexMul[2 * (22222222222wb + 2i) == 2]; // all-warning {{'_BitInt' suffix
 int complexDiv[2 / (22222222222wb + 2i) == 2]; // all-warning {{'_BitInt' suffix for literals is a C23 extension}} \
                                                // pedantic-warning {{imaginary constants are a C2y extension}} \
                                                // all-warning {{variable length array folded to constant array as an extension}}
+
+
+
+int i = 0;
+void intPtrCmp1(void) { &i + 1 == 2; } // all-warning {{comparison between pointer and integer}} \
+                                       // all-warning {{equality comparison result unused}}
+void intPtrCmp2(void) { 2 == &i + 1; } // all-warning {{comparison between pointer and integer}} \
+                                       // all-warning {{equality comparison result unused}}

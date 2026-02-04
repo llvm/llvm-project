@@ -449,10 +449,7 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
         return;
 
       case Stmt::SwitchStmtClass: {
-        SwitchNodeBuilder builder(Pred, B, cast<SwitchStmt>(Term)->getCond(),
-                                    this);
-
-        ExprEng.processSwitch(builder);
+        ExprEng.processSwitch(cast<SwitchStmt>(Term), *this, B, Pred);
         return;
       }
 
@@ -748,13 +745,11 @@ IndirectGotoNodeBuilder::generateNode(const iterator &I,
   return Succ;
 }
 
-ExplodedNode*
-SwitchNodeBuilder::generateCaseStmtNode(const iterator &I,
-                                        ProgramStateRef St) {
+ExplodedNode *SwitchNodeBuilder::generateCaseStmtNode(const CFGBlock *Block,
+                                                      ProgramStateRef St) {
   bool IsNew;
-  ExplodedNode *Succ =
-      Eng.G.getNode(BlockEdge(Src, I.getBlock(), Pred->getLocationContext()),
-                    St, false, &IsNew);
+  ExplodedNode *Succ = Eng.G.getNode(
+      BlockEdge(Src, Block, Pred->getLocationContext()), St, false, &IsNew);
   Succ->addPredecessor(Pred, Eng.G);
   if (!IsNew)
     return nullptr;

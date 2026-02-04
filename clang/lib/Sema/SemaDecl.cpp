@@ -5342,7 +5342,7 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
         DS.getTypeSpecType() == DeclSpec::TST_typename) {
       RecordDecl *Record = Tag ? dyn_cast<RecordDecl>(Tag)
                                : DS.getRepAsType().get()->getAsRecordDecl();
-      if (Record && getLangOpts().MicrosoftExt) {
+      if (Record && getLangOpts().MSAnonymousStructs) {
         Diag(DS.getBeginLoc(), diag::ext_ms_anonymous_record)
             << Record->isUnion() << DS.getSourceRange();
         return BuildMicrosoftCAnonymousStruct(S, DS, Record);
@@ -13825,7 +13825,7 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
 
 void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   llvm::scope_exit ResetDeclForInitializer([this]() {
-    if (this->ExprEvalContexts.empty())
+    if (!this->ExprEvalContexts.empty())
       this->ExprEvalContexts.back().DeclForInitializer = nullptr;
   });
 

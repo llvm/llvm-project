@@ -32,6 +32,7 @@
 #include <iterator>
 #include <optional>
 #include <tuple>
+#include <utility>
 
 namespace mlir::shard {
 
@@ -44,7 +45,7 @@ static bool arePartialAxesCompatible(const SourceAxes &sourceAxes,
 }
 
 static Sharding targetShardingInSplitLastAxis(MLIRContext *ctx,
-                                              Sharding sourceSharding,
+                                              const Sharding &sourceSharding,
                                               int64_t splitTensorAxis,
                                               GridAxis splitGridAxis) {
   SmallVector<GridAxesAttr> targetShardingSplitAxes =
@@ -74,7 +75,8 @@ splitLastAxisInResharding(ImplicitLocOpBuilder &builder,
                          ArrayRef<GridAxis>(splitGridAxis), splitTensorAxis)
           .getResult();
   Sharding targetSharding = targetShardingInSplitLastAxis(
-      builder.getContext(), sourceSharding, splitTensorAxis, splitGridAxis);
+      builder.getContext(), std::move(sourceSharding), splitTensorAxis,
+      splitGridAxis);
   return {targetShard, targetSharding};
 }
 
@@ -84,8 +86,8 @@ splitLastAxisInResharding(ImplicitLocOpBuilder &builder,
 // Does not detect insertions like
 // [[0, 1]] -> [[0, 2, 1]].
 static std::optional<std::tuple<int64_t, GridAxis>>
-detectSplitLastAxisInResharding(Sharding sourceSharding,
-                                Sharding targetSharding) {
+detectSplitLastAxisInResharding(const Sharding &sourceSharding,
+                                const Sharding &targetSharding) {
   for (size_t tensorAxis = 0; tensorAxis < targetSharding.getSplitAxes().size();
        ++tensorAxis) {
     if (sourceSharding.getSplitAxes().size() > tensorAxis) {
@@ -117,10 +119,11 @@ detectSplitLastAxisInResharding(Sharding sourceSharding,
 
 static std::optional<std::tuple<TypedValue<ShapedType>, Sharding>>
 trySplitLastAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
-                             Sharding sourceSharding, Sharding targetSharding,
+                             const Sharding &sourceSharding,
+                             Sharding targetSharding,
                              TypedValue<ShapedType> sourceShard) {
-  if (auto detectRes =
-          detectSplitLastAxisInResharding(sourceSharding, targetSharding)) {
+  if (auto detectRes = detectSplitLastAxisInResharding(
+          sourceSharding, std::move(targetSharding))) {
     auto [tensorAxis, gridAxis] = detectRes.value();
     return splitLastAxisInResharding(builder, sourceSharding, sourceShard, grid,
                                      tensorAxis, gridAxis);
@@ -133,8 +136,8 @@ trySplitLastAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
 // [[0, 1, 2]] -> [[0, 1]].
 // If detected, returns the corresponding tensor axis grid axis pair.
 static std::optional<std::tuple<int64_t, GridAxis>>
-detectUnsplitLastAxisInResharding(Sharding sourceSharding,
-                                  Sharding targetSharding) {
+detectUnsplitLastAxisInResharding(const Sharding &sourceSharding,
+                                  const Sharding &targetSharding) {
   for (size_t tensorAxis = 0; tensorAxis < sourceSharding.getSplitAxes().size();
        ++tensorAxis) {
     if (targetSharding.getSplitAxes().size() > tensorAxis) {
@@ -162,7 +165,7 @@ detectUnsplitLastAxisInResharding(Sharding sourceSharding,
 }
 
 static Sharding targetShardingInUnsplitLastAxis(MLIRContext *ctx,
-                                                Sharding sourceSharding,
+                                                const Sharding &sourceSharding,
                                                 int64_t splitTensorAxis) {
   SmallVector<GridAxesAttr> targetShardingSplitAxes =
       llvm::to_vector(sourceSharding.getSplitAxes());
@@ -192,8 +195,8 @@ static std::tuple<TypedValue<ShapedType>, Sharding> unsplitLastAxisInResharding(
   MLIRContext *ctx = builder.getContext();
   builder.setInsertionPointAfterValue(sourceShard);
 
-  Sharding targetSharding =
-      targetShardingInUnsplitLastAxis(ctx, sourceSharding, splitTensorAxis);
+  Sharding targetSharding = targetShardingInUnsplitLastAxis(
+      ctx, std::move(sourceSharding), splitTensorAxis);
   ShapedType allGatherResultShape = allGatherResultShapeInUnsplitLastAxis(
       sourceShard.getType(), grid.getShape()[splitGridAxis], splitTensorAxis);
   Value allGatherResult = AllGatherOp::create(
@@ -211,11 +214,12 @@ static std::tuple<TypedValue<ShapedType>, Sharding> unsplitLastAxisInResharding(
 
 static std::optional<std::tuple<TypedValue<ShapedType>, Sharding>>
 tryUnsplitLastAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
-                               Sharding sourceSharding, Sharding targetSharding,
+                               const Sharding &sourceSharding,
+                               Sharding targetSharding,
                                ShapedType sourceUnshardedShape,
                                TypedValue<ShapedType> sourceShard) {
-  if (auto detectRes =
-          detectUnsplitLastAxisInResharding(sourceSharding, targetSharding)) {
+  if (auto detectRes = detectUnsplitLastAxisInResharding(
+          sourceSharding, std::move(targetSharding))) {
     auto [tensorAxis, gridAxis] = detectRes.value();
     return unsplitLastAxisInResharding(builder, sourceSharding,
                                        sourceUnshardedShape, sourceShard, grid,
@@ -231,8 +235,8 @@ tryUnsplitLastAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
 // If detected, returns the corresponding (source_tensor_axis,
 // target_tensor_axis, grid_axis) tuple.
 static std::optional<std::tuple<int64_t, int64_t, GridAxis>>
-detectMoveLastSplitAxisInResharding(Sharding sourceSharding,
-                                    Sharding targetSharding) {
+detectMoveLastSplitAxisInResharding(const Sharding &sourceSharding,
+                                    const Sharding &targetSharding) {
   for (size_t sourceTensorAxis = 0;
        sourceTensorAxis < sourceSharding.getSplitAxes().size();
        ++sourceTensorAxis) {
@@ -273,7 +277,7 @@ detectMoveLastSplitAxisInResharding(Sharding sourceSharding,
 }
 
 static Sharding targetShardingInMoveLastAxis(MLIRContext *ctx,
-                                             Sharding sourceSharding,
+                                             const Sharding &sourceSharding,
                                              int64_t sourceTensorAxis,
                                              int64_t targetTensorAxis) {
   SmallVector<GridAxesAttr> targetShardingSplitAxes =
@@ -323,7 +327,7 @@ moveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
   builder.setInsertionPointAfterValue(sourceShard);
 
   Sharding targetSharding = targetShardingInMoveLastAxis(
-      ctx, sourceSharding, sourceTensorAxis, targetTensorAxis);
+      ctx, std::move(sourceSharding), sourceTensorAxis, targetTensorAxis);
   ShapedType allToAllResultShape = allToAllResultShapeInMoveLastAxis(
       sourceShard.getType(), grid.getShape()[gridAxis], sourceTensorAxis,
       targetTensorAxis);
@@ -342,12 +346,12 @@ moveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
 
 static std::optional<std::tuple<TypedValue<ShapedType>, Sharding>>
 tryMoveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
-                                 Sharding sourceSharding,
+                                 const Sharding &sourceSharding,
                                  Sharding targetSharding,
                                  ShapedType sourceUnshardedShape,
                                  TypedValue<ShapedType> sourceShard) {
-  if (auto detectRes =
-          detectMoveLastSplitAxisInResharding(sourceSharding, targetSharding)) {
+  if (auto detectRes = detectMoveLastSplitAxisInResharding(
+          sourceSharding, std::move(targetSharding))) {
     auto [sourceTensorAxis, targetTensorAxis, gridAxis] = detectRes.value();
     return moveLastSplitAxisInResharding(
         builder, grid, sourceSharding, sourceUnshardedShape, sourceShard,
@@ -363,7 +367,8 @@ tryMoveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
 // operation.
 static std::optional<std::tuple<TypedValue<ShapedType>, Sharding>>
 tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
-                          Sharding sourceSharding, Sharding targetSharding,
+                          const Sharding &sourceSharding,
+                          const Sharding &targetSharding,
                           ShapedType sourceUnshardedShape,
                           TypedValue<ShapedType> sourceShard) {
   // Currently handles only cases where halo sizes differ but everything else
@@ -436,7 +441,7 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
 // grid axis size.
 static TypedValue<ShapedType>
 reshardOn1DGrid(ImplicitLocOpBuilder &builder, GridOp grid,
-                Sharding sourceSharding, Sharding targetSharding,
+                const Sharding &sourceSharding, const Sharding &targetSharding,
                 TypedValue<ShapedType> sourceUnshardedValue,
                 TypedValue<ShapedType> sourceShard) {
   assert(sourceShard.getType() ==
@@ -477,8 +482,9 @@ reshardOn1DGrid(ImplicitLocOpBuilder &builder, GridOp grid,
 }
 
 static TypedValue<ShapedType>
-reshard(ImplicitLocOpBuilder &builder, GridOp grid, Sharding sourceSharding,
-        Sharding targetSharding, TypedValue<ShapedType> sourceUnshardedValue,
+reshard(ImplicitLocOpBuilder &builder, GridOp grid,
+        const Sharding &sourceSharding, const Sharding &targetSharding,
+        TypedValue<ShapedType> sourceUnshardedValue,
         TypedValue<ShapedType> sourceShard) {
   // If source and destination sharding are the same, no need to do anything.
   if (sourceSharding == targetSharding || (isFullReplication(sourceSharding) &&

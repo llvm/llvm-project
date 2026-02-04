@@ -173,7 +173,7 @@ struct PostInlineEntryExitInstrumenter : public FunctionPass {
   }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.setPreservesCFG();
   }
   bool runOnFunction(Function &F) override { return ::runOnFunction(F, true); }
 };

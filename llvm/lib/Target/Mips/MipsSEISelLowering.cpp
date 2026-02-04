@@ -52,10 +52,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mips-isel"
 
-static cl::opt<bool>
-UseMipsTailCalls("mips-tail-calls", cl::Hidden,
-                    cl::desc("MIPS: permit tail calls."), cl::init(false));
-
 static cl::opt<bool> NoDPLoadStore("mno-ldc1-sdc1", cl::init(false),
                                    cl::desc("Expand double precision loads and "
                                             "stores to their single precision "
@@ -235,10 +231,19 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
 
   if (Subtarget.hasCnMips())
     setOperationAction(ISD::MUL,              MVT::i64, Legal);
-  else if (Subtarget.isGP64bit())
+  else if (Subtarget.isR5900()) {
+    // R5900 doesn't have DMULT/DMULTU/DDIV/DDIVU - expand to 32-bit ops
+    setOperationAction(ISD::MUL, MVT::i64, Expand);
+    setOperationAction(ISD::SMUL_LOHI, MVT::i64, Expand);
+    setOperationAction(ISD::UMUL_LOHI, MVT::i64, Expand);
+    setOperationAction(ISD::MULHS, MVT::i64, Expand);
+    setOperationAction(ISD::MULHU, MVT::i64, Expand);
+    setOperationAction(ISD::SDIVREM, MVT::i64, Expand);
+    setOperationAction(ISD::UDIVREM, MVT::i64, Expand);
+  } else if (Subtarget.isGP64bit())
     setOperationAction(ISD::MUL,              MVT::i64, Custom);
 
-  if (Subtarget.isGP64bit()) {
+  if (Subtarget.isGP64bit() && !Subtarget.isR5900()) {
     setOperationAction(ISD::SMUL_LOHI,        MVT::i64, Custom);
     setOperationAction(ISD::UMUL_LOHI,        MVT::i64, Custom);
     setOperationAction(ISD::MULHS,            MVT::i64, Custom);
@@ -1206,9 +1211,6 @@ MipsSETargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 bool MipsSETargetLowering::isEligibleForTailCallOptimization(
     const CCState &CCInfo, unsigned NextStackOffset,
     const MipsFunctionInfo &FI) const {
-  if (!UseMipsTailCalls)
-    return false;
-
   // Exception has to be cleared with eret.
   if (FI.isISR())
     return false;
@@ -1217,8 +1219,7 @@ bool MipsSETargetLowering::isEligibleForTailCallOptimization(
   if (CCInfo.getInRegsParamsCount() > 0 || FI.hasByvalArg())
     return false;
 
-  // Return true if the callee's argument area is no larger than the
-  // caller's.
+  // Return true if the callee's argument area is no larger than the caller's.
   return NextStackOffset <= FI.getIncomingArgSize();
 }
 

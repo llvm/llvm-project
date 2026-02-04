@@ -1010,13 +1010,13 @@ int ModuleSlotTracker::getLocalSlot(const Value *V) {
 void ModuleSlotTracker::setProcessHook(
     std::function<void(AbstractSlotTrackerStorage *, const Module *, bool)>
         Fn) {
-  ProcessModuleHookFn = Fn;
+  ProcessModuleHookFn = std::move(Fn);
 }
 
 void ModuleSlotTracker::setProcessHook(
     std::function<void(AbstractSlotTrackerStorage *, const Function *, bool)>
         Fn) {
-  ProcessFunctionHookFn = Fn;
+  ProcessFunctionHookFn = std::move(Fn);
 }
 
 static SlotTracker *createSlotTracker(const Value *V) {
@@ -1304,13 +1304,13 @@ int SlotTracker::getGlobalSlot(const GlobalValue *V) {
 void SlotTracker::setProcessHook(
     std::function<void(AbstractSlotTrackerStorage *, const Module *, bool)>
         Fn) {
-  ProcessModuleHookFn = Fn;
+  ProcessModuleHookFn = std::move(Fn);
 }
 
 void SlotTracker::setProcessHook(
     std::function<void(AbstractSlotTrackerStorage *, const Function *, bool)>
         Fn) {
-  ProcessFunctionHookFn = Fn;
+  ProcessFunctionHookFn = std::move(Fn);
 }
 
 /// getMetadataSlot - Get the slot number of a MDNode.

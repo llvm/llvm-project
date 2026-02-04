@@ -79,4 +79,9 @@ void negative_tests() {
   negative_template_test<void>(); // expected-note {{in instantiation of function template specialization 'negative_template_test<void>' requested here}}
   constexpr auto inference_fail = __builtin_infer_alloc_token(123); // expected-error {{must be initialized by a constant expression}} \
                                                                     // expected-note {{could not infer allocation type for __builtin_infer_alloc_token}}
+
+  // PR178892: Ensure struct arguments don't crash the bytecode interpreter.
+  struct S {};
+  constexpr auto struct_arg = __builtin_infer_alloc_token(S()); // expected-error {{must be initialized by a constant expression}} \
+                                                                // expected-note {{could not infer allocation type for __builtin_infer_alloc_token}}
 }

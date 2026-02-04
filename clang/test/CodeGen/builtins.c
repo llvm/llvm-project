@@ -135,6 +135,7 @@ int main(void) {
   P(object_size, (s0, 3));
 
   // Whatever
+  P(bswapg, ((_Bool)N));
   P(bswapg, ((char)N));
   P(bswapg, ((short)N));
   P(bswapg, ((int)N));

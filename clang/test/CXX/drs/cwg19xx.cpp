@@ -123,7 +123,7 @@ namespace cwg1940 { // cwg1940: 3.5
 static union {
   static_assert(true, "");  // ok
   static_assert(false, "");
-  // since-cxx11-error@-1 {{static assertion failed}}
+  // since-cxx11-error@-1 {{static assertion failed:}}
   int not_empty;
 };
 #endif

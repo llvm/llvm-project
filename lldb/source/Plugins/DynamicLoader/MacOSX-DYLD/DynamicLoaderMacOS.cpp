@@ -616,7 +616,7 @@ DynamicLoaderMacOS::GetDyldLockVariableAddressFromModule(Module *module) {
     num_matches =
         symtab->AppendSymbolIndexesWithName(g_symbol_name, match_indexes);
     if (num_matches == 1) {
-      Symbol *symbol = symtab->SymbolAtIndex(match_indexes[0]);
+      const Symbol *symbol = symtab->SymbolAtIndex(match_indexes[0]);
       if (symbol &&
           (symbol->ValueIsAddress() || symbol->GetAddressRef().IsValid())) {
         return symbol->GetAddressRef().GetOpcodeLoadAddress(&target);

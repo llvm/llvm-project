@@ -434,18 +434,22 @@ ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
 }
 
 size_t ObjectContainerBSDArchive::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t file_size, lldb_private::ModuleSpecList &specs) {
 
+  if (!file || !extractor_sp)
+    return 0;
+
+  DataExtractorSP data_extractor_sp = extractor_sp->GetSubsetExtractorSP(
+      data_offset,
+      extractor_sp->GetSharedDataBuffer()->GetByteSize() - data_offset);
   // We have data, which means this is the first 512 bytes of the file Check to
   // see if the magic bytes match and if they do, read the entire table of
   // contents for the archive and cache it
-  DataExtractorSP extractor_sp = std::make_shared<DataExtractor>();
-  extractor_sp->SetData(data_sp, data_offset, data_sp->GetByteSize());
   ArchiveType archive_type =
-      ObjectContainerBSDArchive::MagicBytesMatch(*extractor_sp.get());
-  if (!file || !data_sp || archive_type == ArchiveType::Invalid)
+      ObjectContainerBSDArchive::MagicBytesMatch(*data_extractor_sp.get());
+  if (archive_type == ArchiveType::Invalid)
     return 0;
 
   const size_t initial_count = specs.GetSize();
@@ -456,7 +460,7 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
   bool set_archive_arch = false;
   if (!archive_sp) {
     set_archive_arch = true;
-    data_sp =
+    DataBufferSP data_sp =
         FileSystem::Instance().CreateDataBuffer(file, file_size, file_offset);
     if (data_sp) {
       extractor_sp->SetData(data_sp);

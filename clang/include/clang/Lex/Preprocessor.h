@@ -2604,13 +2604,11 @@ public:
   /// resource. \p isAngled indicates whether the file reference is for
   /// system \#include's or not (i.e. using <> instead of ""). If \p OpenFile
   /// is true, the file looked up is opened for reading, otherwise it only
-  /// validates that the file exists. Quoted filenames are looked up relative
-  /// to \p LookupFromFile if it is nonnull.
+  /// validates that the file exists.
   ///
   /// Returns std::nullopt on failure.
-  OptionalFileEntryRef
-  LookupEmbedFile(StringRef Filename, bool isAngled, bool OpenFile,
-                  const FileEntry *LookupFromFile = nullptr);
+  OptionalFileEntryRef LookupEmbedFile(StringRef Filename, bool isAngled,
+                                       bool OpenFile);
 
   /// Return true if we're in the top-level file, not in a \#include.
   bool isInPrimaryFile() const;
@@ -2920,8 +2918,7 @@ private:
       SmallVectorImpl<char> &RelativePath, SmallVectorImpl<char> &SearchPath,
       ModuleMap::KnownHeader &SuggestedModule, bool isAngled);
   // Binary data inclusion
-  void HandleEmbedDirective(SourceLocation HashLoc, Token &Tok,
-                            const FileEntry *LookupFromFile = nullptr);
+  void HandleEmbedDirective(SourceLocation HashLoc, Token &Tok);
   void HandleEmbedDirectiveImpl(SourceLocation HashLoc,
                                 const LexEmbedParametersResult &Params,
                                 StringRef BinaryContents, StringRef FileName);

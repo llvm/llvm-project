@@ -196,7 +196,6 @@ sh1add a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the followi
 clz a0, a1 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbb' (Basic Bit-Manipulation){{$}}
 clmul a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbc' (Carry-Less Multiplication) or 'Zbkc' (Carry-less multiply instructions for Cryptography){{$}}
 bset a0, a1, a2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zbs' (Single-Bit Instructions){{$}}
-pause # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zihintpause' (Pause Hint){{$}}
 
 # Using floating point registers when integer registers are expected
 addi a2, ft0, 24 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction

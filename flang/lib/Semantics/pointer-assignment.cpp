@@ -614,8 +614,8 @@ bool CheckPointerAssignment(SemanticsContext &context, parser::CharBlock source,
 
 bool CheckInitialDataPointerTarget(SemanticsContext &context,
     const SomeExpr &pointer, const SomeExpr &init, const Scope &scope) {
-  return evaluate::IsInitialDataTarget(
-             init, &context.foldingContext().messages()) &&
+  return evaluate::IsInitialDataTarget(init,
+             &context.foldingContext().messages(), &context.foldingContext()) &&
       CheckPointerAssignment(context, pointer, init, scope,
           /*isBoundsRemapping=*/false,
           /*isAssumedRank=*/false);

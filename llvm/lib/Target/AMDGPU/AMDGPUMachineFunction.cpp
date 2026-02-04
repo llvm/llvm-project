@@ -80,11 +80,6 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const Function &F,
   if (CC == CallingConv::AMDGPU_KERNEL || CC == CallingConv::SPIR_KERNEL)
     ExplicitKernArgSize = ST.getExplicitKernArgSize(F, MaxKernArgAlign);
 
-  // FIXME: Shouldn't be target specific
-  Attribute NSZAttr = F.getFnAttribute("no-signed-zeros-fp-math");
-  NoSignedZerosFPMath =
-      NSZAttr.isStringAttribute() && NSZAttr.getValueAsString() == "true";
-
   const GlobalVariable *DynLdsGlobal = getKernelDynLDSGlobalFromFunction(F);
   if (DynLdsGlobal || hasLDSKernelArgument(F))
     UsesDynamicLDS = true;

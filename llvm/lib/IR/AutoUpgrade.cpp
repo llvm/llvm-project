@@ -1750,6 +1750,14 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         }
         break; // No other applicable upgrades.
       }
+
+      // Replace llvm.riscv.clmul with llvm.clmul.
+      if (Name == "clmul.i32" || Name == "clmul.i64") {
+        NewFn = Intrinsic::getOrInsertDeclaration(
+            F->getParent(), Intrinsic::clmul, {F->getReturnType()});
+        return true;
+      }
+
       break; // No other 'riscv.*' intrinsics
     }
   } break;

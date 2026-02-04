@@ -760,6 +760,11 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
+  // After the resource directory, we prioritize the standard clang include
+  // directory.
+  if (std::optional<std::string> Path = getStdlibIncludePath())
+    addSystemInclude(DriverArgs, CC1Args, *Path);
+
   // LOCAL_INCLUDE_DIR
   addSystemInclude(DriverArgs, CC1Args, concat(SysRoot, "/usr/local/include"));
   // TOOL_INCLUDE_DIR
@@ -847,7 +852,9 @@ void Linux::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
 void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
                              ArgStringList &CmdArgs) const {
-  if (Args.hasArg(options::OPT_nostdlib) ||
+  if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                    true) ||
+      Args.hasArg(options::OPT_nostdlib) ||
       Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r))
     return;
 

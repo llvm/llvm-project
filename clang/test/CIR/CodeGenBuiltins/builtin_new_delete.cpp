@@ -9,7 +9,7 @@
 void test_builtins_basic() {
   __builtin_operator_delete(__builtin_operator_new(4));
   // CIR-LABEL: test_builtins_basic
-  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) : (!u64i) -> !cir.ptr<!void>
+  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) {allocsize = array<i32: 0>} : (!u64i) -> !cir.ptr<!void>
   // CIR: cir.call @_ZdlPv([[P]]) {{.*}}: (!cir.ptr<!void>) -> ()
   // CIR: cir.return
 
@@ -28,7 +28,7 @@ void test_sized_delete() {
   __builtin_operator_delete(__builtin_operator_new(4), 4);
 
   // CIR-LABEL: test_sized_delete
-  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) : (!u64i) -> !cir.ptr<!void>
+  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) {allocsize = array<i32: 0>} : (!u64i) -> !cir.ptr<!void>
   // CIR: cir.call @_ZdlPvm([[P]], {{%.*}}) {{.*}}: (!cir.ptr<!void>, !u64i) -> ()
   // CIR: cir.return
 

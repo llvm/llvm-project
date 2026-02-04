@@ -16,8 +16,6 @@
 #include <__type_traits/has_unique_object_representation.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_trivially_copyable.h>
-#include <__type_traits/void_t.h>
-#include <__utility/declval.h>
 #include <cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

@@ -69,6 +69,10 @@ if config.enable_profcheck:
     config.excludes.append("Instrumentation")
     # profiling doesn't work quite well on GPU, excluding
     config.excludes.append("AMDGPU")
+    # TODO targets where profiling may make sense but will be addressed later
+    config.excludes.extend(
+        ["Hexagon", "NVPTX", "PowerPC", "RISCV", "SPARC", "WebAssembly"]
+    )
     # these passes aren't hooked up to the pass pipeline:
     config.excludes.append("IRCE")
 

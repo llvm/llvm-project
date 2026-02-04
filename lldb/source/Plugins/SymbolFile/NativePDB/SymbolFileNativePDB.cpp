@@ -1757,19 +1757,23 @@ void SymbolFileNativePDB::ParseInlineSite(PdbCompilandSymId id,
   }
 
   // Get the inlined function name.
-  CVType inlinee_cvt = m_index->ipi().getType(inline_site.Inlinee);
   std::string inlinee_name;
-  if (inlinee_cvt.kind() == LF_MFUNC_ID) {
+  llvm::Expected<CVType> inlinee_cvt =
+      m_index->ipi().typeCollection().getTypeOrError(inline_site.Inlinee);
+  if (!inlinee_cvt) {
+    inlinee_name = "[error reading function name: " +
+                   llvm::toString(inlinee_cvt.takeError()) + "]";
+  } else if (inlinee_cvt->kind() == LF_MFUNC_ID) {
     MemberFuncIdRecord mfr;
     cantFail(
-        TypeDeserializer::deserializeAs<MemberFuncIdRecord>(inlinee_cvt, mfr));
+        TypeDeserializer::deserializeAs<MemberFuncIdRecord>(*inlinee_cvt, mfr));
     LazyRandomTypeCollection &types = m_index->tpi().typeCollection();
     inlinee_name.append(std::string(types.getTypeName(mfr.ClassType)));
     inlinee_name.append("::");
     inlinee_name.append(mfr.getName().str());
-  } else if (inlinee_cvt.kind() == LF_FUNC_ID) {
+  } else if (inlinee_cvt->kind() == LF_FUNC_ID) {
     FuncIdRecord fir;
-    cantFail(TypeDeserializer::deserializeAs<FuncIdRecord>(inlinee_cvt, fir));
+    cantFail(TypeDeserializer::deserializeAs<FuncIdRecord>(*inlinee_cvt, fir));
     TypeIndex parent_idx = fir.getParentScope();
     if (!parent_idx.isNoneType()) {
       LazyRandomTypeCollection &ids = m_index->ipi().typeCollection();

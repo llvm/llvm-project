@@ -953,10 +953,9 @@ InstructionCost ARMTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       BaseCost * BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 }
 
-InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
-                                               TTI::TargetCostKind CostKind,
-                                               unsigned Index, const Value *Op0,
-                                               const Value *Op1) const {
+InstructionCost ARMTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *ValTy, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   // Penalize inserting into an D-subregister. We end up with a three times
   // lower estimated throughput on swift.
   if (ST->hasSlowLoadDSubregister() && Opcode == Instruction::InsertElement &&
@@ -975,7 +974,8 @@ InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     if (ValTy->isVectorTy() &&
         ValTy->getScalarSizeInBits() <= 32)
       return std::max<InstructionCost>(
-          BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1),
+          BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
+                                    VIC),
           2U);
   }
 
@@ -989,7 +989,8 @@ InstructionCost ARMTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     return LT.first * (ValTy->getScalarType()->isIntegerTy() ? 4 : 1);
   }
 
-  return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1);
+  return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
+                                   VIC);
 }
 
 InstructionCost ARMTTIImpl::getCmpSelInstrCost(
@@ -1271,7 +1272,8 @@ int ARMTTIImpl::getNumMemOps(const IntrinsicInst *I) const {
   std::vector<EVT> MemOps;
   LLVMContext &C = F->getContext();
   if (getTLI()->findOptimalMemOpLowering(C, MemOps, Limit, MOp, DstAddrSpace,
-                                         SrcAddrSpace, F->getAttributes()))
+                                         SrcAddrSpace, F->getAttributes(),
+                                         nullptr))
     return MemOps.size() * Factor;
 
   // If we can't find an optimal memop lowering, return the default cost

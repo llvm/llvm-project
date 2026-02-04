@@ -46,6 +46,9 @@ Improvements and New Features
 Deprecations and Removals
 -------------------------
 
+- The ``std::launch::any`` enumerator that was accidentally provided as an extension is now deprecated.
+  It will be removed in LLVM 25.
+
 Potentially breaking changes
 ----------------------------
 

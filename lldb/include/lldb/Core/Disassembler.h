@@ -20,6 +20,7 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -232,6 +233,10 @@ public:
 
   static const char *GetNameForInstructionControlFlowKind(
       lldb::InstructionControlFlowKind instruction_control_flow_kind);
+
+  /// Get variable annotations for this instruction as structured data.
+  /// Returns an array of dictionaries to be used in SBInstruction class.
+  StructuredData::ArraySP GetVariableAnnotations();
 
 protected:
   Address m_address; // The section offset address of this instruction

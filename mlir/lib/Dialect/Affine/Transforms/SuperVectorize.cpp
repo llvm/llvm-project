@@ -515,7 +515,7 @@ using namespace vector;
 /// Comparing to the non-vector-dimension case, two additional things are done
 /// during vectorization of such loops:
 /// - The resulting vector returned from the loop is reduced to a scalar using
-///   `vector.reduce`.
+///   `vector.reduction`.
 /// - In some cases a mask is applied to the vector yielded at the end of the
 ///   loop to prevent garbage values from being written to the accumulator.
 ///
@@ -1645,7 +1645,7 @@ vectorizeLoopNest(std::vector<SmallVector<AffineForOp, 2>> &loops,
   }
 
   // Replace results of reduction loops with the scalar values computed using
-  // `vector.reduce` or similar ops.
+  // `vector.reduction` or similar ops.
   for (auto resPair : state.loopResultScalarReplacement)
     resPair.first.replaceAllUsesWith(resPair.second);
 

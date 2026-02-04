@@ -266,6 +266,10 @@ private:
   llvm::DenseMap<const FileEntry *, const modulemap::ModuleMapFile *>
       ParsedModuleMap;
 
+  /// Each CompilerInstance needs its own FileID for each module map, but there
+  /// should only ever be one for each.
+  llvm::DenseMap<const FileEntry *, FileID> ModuleMapLocalFileID;
+
   std::vector<std::unique_ptr<modulemap::ModuleMapFile>> ParsedModuleMaps;
 
   /// Map from top level module name to a list of ModuleDecls in the order they

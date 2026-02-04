@@ -296,8 +296,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
 
   // And in any case, remove the fixed parameters (the non-variadic ones)
   // at the end.
-  for (PrimType Ty : Func->args_reverse())
-    TYPE_SWITCH(Ty, S.Stk.discard<T>());
+  for (const Function::ParamDescriptor &PDesc : Func->args_reverse())
+    TYPE_SWITCH(PDesc.T, S.Stk.discard<T>());
 }
 
 bool isConstexprUnknown(const Pointer &P) {

@@ -18,6 +18,8 @@ add_clang_library(clangCIR
   CIRGenClass.cpp
   CIRGenCleanup.cpp
   CIRGenCoroutine.cpp
+  CIRGenCUDANV.cpp
+  CIRGenCUDARuntime.cpp
   CIRGenCXX.cpp
   CIRGenCXXABI.cpp
   CIRGenDecl.cpp

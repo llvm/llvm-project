@@ -230,7 +230,6 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT: loop.0:
 ; CHECK-NEXT:   WIDEN ir<%add> = add vp<%8>, ir<%recur.next>
 ; CHECK-NEXT:   WIDEN ir<%and.red.next> = and ir<%and.red>, ir<%add>
-; CHECK-NEXT:   EMIT vp<[[SEL:%.+]]> = select vp<%6>, ir<%and.red.next>, ir<%and.red>
 ; CHECK-NEXT:   EMIT vp<[[CAN_IV_NEXT:%.+]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:   EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
@@ -238,6 +237,7 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT: Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT: middle.block:
+; CHECK-NEXT:  EMIT vp<[[SEL:%.+]]> = select vp<%6>, ir<%and.red.next>, ir<%and.red>
 ; CHECK-NEXT:  EMIT vp<[[RED_RES:%.+]]> = compute-reduction-result (and) vp<[[SEL]]>
 ; CHECK-NEXT: Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:

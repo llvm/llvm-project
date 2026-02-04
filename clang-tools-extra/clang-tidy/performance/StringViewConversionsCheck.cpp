@@ -78,13 +78,13 @@ void StringViewConversionsCheck::registerMatchers(MatchFinder *Finder) {
                                  .bind("redundantExpr")),
                // Exclude cases of std::string methods or operator+ calls
                unless(anyOf(HasStringOperatorCall, HasStringMethodCall)))
-              .bind("expr"),
+              .bind("paramExpr"),
           parmVarDecl(hasType(IsStdStringView)))),
       this);
 }
 
 void StringViewConversionsCheck::check(const MatchFinder::MatchResult &Result) {
-  const auto *ParamExpr = Result.Nodes.getNodeAs<Expr>("expr");
+  const auto *ParamExpr = Result.Nodes.getNodeAs<Expr>("paramExpr");
   const auto *RedundantExpr = Result.Nodes.getNodeAs<Expr>("redundantExpr");
   const auto *OriginalExpr = Result.Nodes.getNodeAs<Expr>("originalStringView");
   assert(RedundantExpr && ParamExpr && OriginalExpr);
@@ -92,7 +92,10 @@ void StringViewConversionsCheck::check(const MatchFinder::MatchResult &Result) {
   // Sanity check. Verify that the redundant expression is the direct source of
   // the argument, not part of a larger expression (e.g., std::string(sv) +
   // "bar").
-  assert(ParamExpr->getSourceRange() == RedundantExpr->getSourceRange());
+  // FIXME: This is a temporary solution to avoid assertions. Instead the
+  // matcher must be fixed.
+  if (ParamExpr->getSourceRange() != RedundantExpr->getSourceRange())
+    return;
 
   const StringRef OriginalText = Lexer::getSourceText(
       CharSourceRange::getTokenRange(OriginalExpr->getSourceRange()),

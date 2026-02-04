@@ -22,8 +22,8 @@
 #include <optional>
 
 #include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
-#include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_x86.h"
+#include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 
 #define LLDB_INVALID_XSAVE_OFFSET UINT32_MAX

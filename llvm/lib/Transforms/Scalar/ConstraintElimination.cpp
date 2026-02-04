@@ -728,11 +728,11 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
     auto V2I = Value2Index.find(V);
     if (V2I != Value2Index.end())
       return V2I->second;
-    auto Insert =
-        NewIndexMap.insert({V, Value2Index.size() + NewVariables.size() + 1});
-    if (Insert.second)
+    auto [It, Inserted] = NewIndexMap.try_emplace(
+        V, Value2Index.size() + NewVariables.size() + 1);
+    if (Inserted)
       NewVariables.push_back(V);
-    return Insert.first->second;
+    return It->second;
   };
 
   // Make sure all variables have entries in Value2Index or NewVariables.
@@ -1726,7 +1726,7 @@ void ConstraintInfo::addFactImpl(CmpInst::Predicate Pred, Value *A, Value *B,
   SmallVector<Value *, 2> ValuesToRelease;
   auto &Value2Index = getValue2Index(R.IsSigned);
   for (Value *V : NewVariables) {
-    Value2Index.insert({V, Value2Index.size() + 1});
+    Value2Index.try_emplace(V, Value2Index.size() + 1);
     ValuesToRelease.push_back(V);
   }
 

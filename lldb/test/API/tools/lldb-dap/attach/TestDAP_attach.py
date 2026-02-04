@@ -103,7 +103,8 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
 
         # Test with only targetId specified (no debuggerId)
         session = {"targetId": 99999}
-        resp = self.attach(session=session, waitForResponse=True)
+        attach_seq = self.attach(session=session)
+        resp = self.dap_server.receive_response(attach_seq)
         self.assertFalse(resp["success"])
         self.assertIn(
             "missing value at arguments.session.debuggerId",
@@ -121,7 +122,7 @@ class TestDAP_attach(lldbdap_testcase.DAPTestCaseBase):
         # Since debugger ID 9999 likely doesn't exist in the global registry,
         # we expect a validation error.
         session = {"debuggerId": 9999, "targetId": 9999}
-        resp = self.attach(session=session, waitForResponse=True)
+        resp = self.attach_and_configurationDone(session=session)
         self.assertFalse(resp["success"])
         error_msg = resp["body"]["error"]["format"]
         # Either error is acceptable - both indicate the debugger reuse

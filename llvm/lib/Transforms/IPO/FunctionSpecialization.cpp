@@ -544,18 +544,19 @@ Constant *FunctionSpecializer::getPromotableAlloca(AllocaInst *Alloca,
 
 // A constant stack value is an AllocaInst that has a single constant
 // value stored to it. Return this constant if such an alloca stack value
-// is a function argument.
+// is a function argument and the value is an integer.
 Constant *FunctionSpecializer::getConstantStackValue(CallInst *Call,
                                                      Value *Val) {
   if (!Val)
     return nullptr;
   Val = Val->stripPointerCasts();
-  if (auto *ConstVal = dyn_cast<ConstantInt>(Val))
-    return ConstVal;
   auto *Alloca = dyn_cast<AllocaInst>(Val);
-  if (!Alloca || !Alloca->getAllocatedType()->isIntegerTy())
+  if (!Alloca)
     return nullptr;
-  return getPromotableAlloca(Alloca, Call);
+  Constant *C = getPromotableAlloca(Alloca, Call);
+  if (!C || !C->getType()->isIntegerTy())
+    return nullptr;
+  return C;
 }
 
 // To support specializing recursive functions, it is important to propagate

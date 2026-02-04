@@ -61,9 +61,6 @@ Clang MLIR generation
 
 Analysis & CFG
 ~~~~~~~~~~~~~~
-| Dmitri Gribenko
-| gribozavr\@gmail.com (email), gribozavr (Phabricator), gribozavr (GitHub)
-
 | Yitzhak Mandelbaum
 | yitzhakm\@google.com (email), ymandel (Phabricator), ymand (GitHub)
 
@@ -247,8 +244,6 @@ The following people are responsible for decisions involving ABI.
 
 Itanium ABI
 ~~~~~~~~~~~
-| John McCall
-| rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)
 
 
 Microsoft ABI
@@ -298,9 +293,6 @@ CMake integration
 | Petr Hosek
 | phosek\@google.com (email), phosek (Phabricator), petrhosek (GitHub)
 
-| John Ericson
-| git\@johnericson.me (email), Ericson2314 (Phabricator), Ericson2314 (GitHub)
-
 
 General Windows support
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -346,8 +338,8 @@ C++ Defect Reports
 
 Objective-C/C++ conformance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-| John McCall
-| rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)
+| Akira Hatanaka
+| ahatanak\@gmail.com,  ahatanak (GitHub), ahatanak4220 (Discord), ahatanak (Discourse)
 
 
 OpenMP conformance
@@ -407,5 +399,7 @@ Inactive component maintainers
 | Chandler Carruth (chandlerc\@gmail.com, chandlerc\@google.com) -- CMake, library layering
 | Devin Coughlin (dcoughlin\@apple.com) -- Clang static analyzer
 | Manuel Klimek (klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)) -- Tooling, AST matchers
+| Dmitri Gribenko (gribozavr\@gmail.com (email), gribozavr (Phabricator), gribozavr (GitHub)) -- Analysis & CFG
 | Tom Honermann (tom\@honermann.net (email), tahonermann (Phabricator), tahonermann (GitHub)) -- Text Encodings
-| John McCall (rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)) -- Clang LLVM IR generation
+| John McCall (rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)) -- Clang LLVM IR generation, Objective-C/C++ conformance, Itanium ABI
+| John Ericson (git\@johnericson.me (email), Ericson2314 (Phabricator), Ericson2314 (GitHub)) -- CMake Integration
