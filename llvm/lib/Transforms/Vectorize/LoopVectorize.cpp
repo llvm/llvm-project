@@ -4664,7 +4664,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
 
   if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
              IsaPred<VPCurrentIterationRecipe>)) {
-    LLVM_DEBUG(dbgs() << "LV: Preference for VP intrinsics indicated. "
+    LLVM_DEBUG(dbgs() << "LV: Loop requires variable-length step. "
                          "Unroll factor forced to be 1.\n");
     return 1;
   }
