@@ -43,6 +43,18 @@ class FacadeExample:
         if tmp_loc == self.loc_to_miss:
             return None
 
+        # Make sure we can call a function here as well:
+        options = lldb.SBExpressionOptions()
+        options.SetStopOthers(True)
+        options.SetTryAllThreads(False)
+        
+        result = frame.EvaluateExpression("change_him()", options)
+        if not result.error.success:
+            print("****** I got an error running the expression")
+            return lldb.LLDB_INVALID_BREAK_ID
+
+        print(f"Expression Evaluation returned: {result.signed}")
+
         return self.facade_locs[tmp_loc]
 
     def get_location_description(self, bp_loc, desc_level):
