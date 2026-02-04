@@ -2601,6 +2601,20 @@ def int_experimental_vector_compress:
               [LLVMMatchType<0>, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, LLVMMatchType<0>],
               [IntrNoMem]>;
 
+// Speculatively load a value from memory; lowers to a regular aligned load.
+// The loaded type must have a power-of-2 size.
+def int_speculative_load:
+  DefaultAttrsIntrinsic<[llvm_any_ty],
+            [llvm_anyptr_ty],
+            [IntrArgMemOnly, IntrWillReturn, NoCapture<ArgIndex<0>>]>;
+
+// Returns true if it's safe to speculatively load 'num_bytes' from 'ptr'.
+// The size can be a runtime value to support scalable vectors.
+def int_can_load_speculatively:
+  DefaultAttrsIntrinsic<[llvm_i1_ty],
+            [llvm_anyptr_ty, llvm_i64_ty],
+            [IntrNoMem, IntrSpeculatable, IntrWillReturn]>;
+
 // Test whether a pointer is associated with a type metadata identifier.
 def int_type_test : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],
                               [IntrNoMem, IntrSpeculatable]>;
