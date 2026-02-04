@@ -424,7 +424,9 @@ static LogicalResult lookupSymbolInImpl(
     if (!symbolOp->hasTrait<OpTrait::SymbolTable>())
       return failure();
     symbolOp = lookupSymbolFn(symbolOp, ref.getAttr());
-    if (!symbolOp)
+    // If the nested symbol is private, lookup failed.
+    if (!symbolOp || SymbolTable::getSymbolVisibility(symbolOp) ==
+                         SymbolTable::Visibility::Private)
       return failure();
     symbols.push_back(symbolOp);
   }
