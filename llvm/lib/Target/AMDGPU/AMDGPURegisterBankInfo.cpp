@@ -3282,6 +3282,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 2); // M0
       return;
     }
+    case Intrinsic::amdgcn_s_alloc_vgpr:
+      constrainOpWithReadfirstlane(B, MI, 2);
+      return;
     case Intrinsic::amdgcn_s_sendmsg:
     case Intrinsic::amdgcn_s_sendmsghalt: {
       // FIXME: Should this use a waterfall loop?
