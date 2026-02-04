@@ -5482,6 +5482,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       break;
     }
+    case Intrinsic::amdgcn_trig_preop: {
+      Known.knownNot(fcNan | fcInf);
+      break;
+    }
     default:
       break;
     }
