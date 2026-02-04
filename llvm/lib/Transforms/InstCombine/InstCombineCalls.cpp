@@ -4283,10 +4283,8 @@ Instruction *InstCombinerImpl::visitFenceInst(FenceInst &FI) {
   // Returns true if FI1 is identical or stronger fence than FI2.
   auto isIdenticalOrStrongerFence = [](FenceInst *FI1, FenceInst *FI2) {
     auto FI1SyncScope = FI1->getSyncScopeID();
-    // Consider same scope, where scope is global or single-thread.
-    if (FI1SyncScope != FI2->getSyncScopeID() ||
-        (FI1SyncScope != SyncScope::System &&
-         FI1SyncScope != SyncScope::SingleThread))
+    // Consider same scope, including target specific syncscope.
+    if (FI1SyncScope != FI2->getSyncScopeID())
       return false;
 
     return isAtLeastOrStrongerThan(FI1->getOrdering(), FI2->getOrdering());
