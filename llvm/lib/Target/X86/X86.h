@@ -40,8 +40,7 @@ FunctionPass *createX86GlobalBaseRegPass();
 /// This pass combines multiple accesses to local-dynamic TLS variables so that
 /// the TLS base address for the module is only fetched once per execution path
 /// through the function.
-class X86CleanupLocalDynamicTLSPass
-    : public PassInfoMixin<X86CleanupLocalDynamicTLSPass> {
+class X86CleanupLocalDynamicTLSPass : public PassInfoMixin<X86CleanupLocalDynamicTLSPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
