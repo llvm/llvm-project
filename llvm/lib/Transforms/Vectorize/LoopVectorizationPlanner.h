@@ -432,9 +432,12 @@ public:
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
                                   Type *ResultTy, DebugLoc DL,
                                   const VPIRFlags &Flags,
-                                  const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(
-        new VPInstructionWithType(Opcode, Op, ResultTy, Flags, Metadata, DL));
+                                  const VPIRMetadata &Metadata = {},
+                                  Instruction *UV = nullptr) {
+    auto *Cast =
+        new VPInstructionWithType(Opcode, Op, ResultTy, Flags, Metadata, DL);
+    Cast->setUnderlyingValue(UV);
+    return tryInsertInstruction(Cast);
   }
 
   VPValue *createScalarZExtOrTrunc(VPValue *Op, Type *ResultTy, Type *SrcTy,

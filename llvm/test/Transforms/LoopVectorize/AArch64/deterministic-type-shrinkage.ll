@@ -125,13 +125,11 @@ define void @test_shrink_zext_in_preheader(ptr noalias %src, ptr noalias %dst, i
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i16> poison, i16 [[B]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[A]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i16 [[TMP0]], [[B]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i16> poison, i16 [[TMP1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i16> [[BROADCAST_SPLATINSERT]], <16 x i16> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i32> poison, i32 [[A]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT1]], <16 x i32> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc <16 x i32> [[BROADCAST_SPLAT2]] to <16 x i16>
-; CHECK-NEXT:    [[TMP1:%.*]] = mul <16 x i16> [[TMP0]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <16 x i16> [[TMP1]], splat (i16 8)
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr <16 x i16> [[BROADCAST_SPLAT]], splat (i16 8)
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc <16 x i16> [[TMP2]] to <16 x i8>
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -149,13 +147,11 @@ define void @test_shrink_zext_in_preheader(ptr noalias %src, ptr noalias %dst, i
 ; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF7:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ 992, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <8 x i16> poison, i16 [[B]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i32 [[A]] to i16
+; CHECK-NEXT:    [[TMP8:%.*]] = mul i16 [[TMP7]], [[B]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <8 x i16> poison, i16 [[TMP8]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT3]], <8 x i16> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <8 x i32> poison, i32 [[A]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT6:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT5]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc <8 x i32> [[BROADCAST_SPLAT6]] to <8 x i16>
-; CHECK-NEXT:    [[TMP8:%.*]] = mul <8 x i16> [[TMP7]], [[BROADCAST_SPLAT4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = lshr <8 x i16> [[TMP8]], splat (i16 8)
+; CHECK-NEXT:    [[TMP9:%.*]] = lshr <8 x i16> [[BROADCAST_SPLAT4]], splat (i16 8)
 ; CHECK-NEXT:    [[TMP10:%.*]] = trunc <8 x i16> [[TMP9]] to <8 x i8>
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
@@ -199,12 +195,12 @@ define void @test_shrink_select(ptr noalias %src, ptr noalias %dst, i32 %A, i1 %
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[A]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc <16 x i32> [[BROADCAST_SPLAT]] to <16 x i16>
-; CHECK-NEXT:    [[TMP1:%.*]] = mul <16 x i16> [[TMP0]], splat (i16 99)
-; CHECK-NEXT:    [[TMP2:%.*]] = lshr <16 x i16> [[TMP1]], splat (i16 8)
-; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[C]], <16 x i16> [[TMP2]], <16 x i16> [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[A]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i16 [[TMP0]], 99
+; CHECK-NEXT:    [[TMP2:%.*]] = lshr i16 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP15:%.*]] = select i1 [[C]], i16 [[TMP2]], i16 [[TMP1]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i16> poison, i16 [[TMP15]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <16 x i16> [[BROADCAST_SPLATINSERT]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <16 x i16> [[TMP3]] to <16 x i8>
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -222,12 +218,12 @@ define void @test_shrink_select(ptr noalias %src, ptr noalias %dst, i32 %A, i1 %
 ; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF7]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i32 [ 992, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[A]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT1]], <8 x i32> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc <8 x i32> [[BROADCAST_SPLAT2]] to <8 x i16>
-; CHECK-NEXT:    [[TMP9:%.*]] = mul <8 x i16> [[TMP8]], splat (i16 99)
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr <8 x i16> [[TMP9]], splat (i16 8)
-; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[C]], <8 x i16> [[TMP10]], <8 x i16> [[TMP9]]
+; CHECK-NEXT:    [[TMP8:%.*]] = trunc i32 [[A]] to i16
+; CHECK-NEXT:    [[TMP9:%.*]] = mul i16 [[TMP8]], 99
+; CHECK-NEXT:    [[TMP10:%.*]] = lshr i16 [[TMP9]], 8
+; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[C]], i16 [[TMP10]], i16 [[TMP9]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i16> poison, i16 [[TMP16]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT1]], <8 x i16> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = trunc <8 x i16> [[TMP11]] to <8 x i8>
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
@@ -272,9 +268,9 @@ define void @trunc_invariant_sdiv_result(i32 %a, i32 %b, ptr noalias %src, ptr %
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[INVAR_DIV]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc <16 x i32> [[BROADCAST_SPLAT]] to <16 x i16>
+; CHECK-NEXT:    [[TMP17:%.*]] = trunc i32 [[INVAR_DIV]] to i16
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <16 x i16> poison, i16 [[TMP17]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <16 x i16> [[BROADCAST_SPLATINSERT3]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -299,9 +295,9 @@ define void @trunc_invariant_sdiv_result(i32 %a, i32 %b, ptr noalias %src, ptr %
 ; CHECK-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF14:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_PH]]:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <4 x i32> poison, i32 [[INVAR_DIV]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT2]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc <4 x i32> [[BROADCAST_SPLAT3]] to <4 x i16>
+; CHECK-NEXT:    [[TMP19:%.*]] = trunc i32 [[INVAR_DIV]] to i16
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i16> poison, i16 [[TMP19]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT8]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX4:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT6:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
