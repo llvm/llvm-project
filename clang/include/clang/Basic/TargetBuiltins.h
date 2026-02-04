@@ -93,7 +93,7 @@ namespace clang {
     FirstSMEBuiltin = SVE::FirstTSBuiltin,
     LastSMEBuiltin = SME::FirstTSBuiltin - 1,
 #define GET_BUILTIN_ENUMERATORS
-#include "clang/Basic/BuiltinsAARCH64.inc"
+#include "clang/Basic/BuiltinsAArch64.inc"
 #undef GET_BUILTIN_ENUMERATORS
     LastTSBuiltin
   };
