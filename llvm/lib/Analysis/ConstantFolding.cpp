@@ -217,81 +217,138 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   // conversion here, which depends on whether the input or output has
   // more elements.
   bool isLittleEndian = DL.isLittleEndian();
-
+  unsigned SrcBitSize = SrcEltTy->getPrimitiveSizeInBits();
+  unsigned DstBitSize = DL.getTypeSizeInBits(DstEltTy);
   SmallVector<Constant*, 32> Result;
+  unsigned SrcElt = 0;
+  APInt Rest(std::max(SrcBitSize, DstBitSize), 0);
+  unsigned RestBitSize = 0;
+  bool HasUndef = true;
+  bool HasPoison = false;
+
   if (NumDstElt < NumSrcElt) {
     // Handle: bitcast (<4 x i32> <i32 0, i32 1, i32 2, i32 3> to <2 x i64>)
-    Constant *Zero = Constant::getNullValue(DstEltTy);
-    unsigned Ratio = NumSrcElt/NumDstElt;
-    unsigned SrcBitSize = SrcEltTy->getPrimitiveSizeInBits();
-    unsigned SrcElt = 0;
-    for (unsigned i = 0; i != NumDstElt; ++i) {
-      // Build each element of the result.
-      Constant *Elt = Zero;
-      unsigned ShiftAmt = isLittleEndian ? 0 : SrcBitSize*(Ratio-1);
-      for (unsigned j = 0; j != Ratio; ++j) {
-        Constant *Src = C->getAggregateElement(SrcElt++);
-        if (isa_and_nonnull<UndefValue>(Src))
-          Src = Constant::getNullValue(
-              cast<VectorType>(C->getType())->getElementType());
-        else
-          Src = dyn_cast_or_null<ConstantInt>(Src);
-        if (!Src)  // Reject constantexpr elements.
+    //         bitcast (<4 x i24> <i24 0, i24 1, i24 2, i24 3> to <3 x i32>)
+    APInt Zero = APInt::getZero(DstBitSize);
+    while (Result.size() != NumDstElt) {
+      APInt NextVecElem;
+      if (!HasUndef)
+        NextVecElem = Zero;
+      while (RestBitSize < DstBitSize) {
+        assert(SrcElt < NumSrcElt && "Source vector overflow.");
+        auto *Element = C->getAggregateElement(SrcElt++);
+        if (!Element) // Reject constantexpr elements.
           return ConstantExpr::getBitCast(C, DestTy);
 
-        // Zero extend the element to the right size.
-        Src = ConstantFoldCastOperand(Instruction::ZExt, Src, Elt->getType(),
-                                      DL);
-        assert(Src && "Constant folding cannot fail on plain integers");
+        RestBitSize += SrcBitSize;
+        HasUndef = isa<UndefValue>(Element);
+        if (HasUndef) {
+          HasPoison |= isa<PoisonValue>(Element);
+          continue;
+        }
 
-        // Shift it to the right place, depending on endianness.
-        Src = ConstantFoldBinaryOpOperands(
-            Instruction::Shl, Src, ConstantInt::get(Src->getType(), ShiftAmt),
-            DL);
-        assert(Src && "Constant folding cannot fail on plain integers");
+        auto *Src = dyn_cast<ConstantInt>(Element);
+        if (!Src)
+          return ConstantExpr::getBitCast(C, DestTy);
+        NextVecElem = Src->getValue();
+        NextVecElem = NextVecElem.zext(DstBitSize);
 
-        ShiftAmt += isLittleEndian ? SrcBitSize : -SrcBitSize;
-
-        // Mix it in.
-        Elt = ConstantFoldBinaryOpOperands(Instruction::Or, Elt, Src, DL);
-        assert(Elt && "Constant folding cannot fail on plain integers");
+        // Shift next SrcElt to right place, depending on endianness.
+        if (isLittleEndian) {
+          Rest |= NextVecElem << RestBitSize - SrcBitSize;
+        } else {
+          if (RestBitSize <= DstBitSize)
+            Rest |= NextVecElem << (DstBitSize - RestBitSize);
+          else
+            Rest |= NextVecElem.lshr(RestBitSize - DstBitSize);
+        }
       }
-      Result.push_back(Elt);
+
+      RestBitSize -= DstBitSize;
+      if (NextVecElem.getBitWidth() != DstBitSize) {
+        if (HasPoison)
+          Result.push_back(PoisonValue::get(DstEltTy));
+        else
+          Result.push_back(UndefValue::get(DstEltTy));
+        continue;
+      }
+      Result.push_back(ConstantInt::get(DstEltTy, Rest));
+
+      // Shift unused bits from last SrcElt to next DstElt right place.
+      if (isLittleEndian)
+        Rest = NextVecElem.lshr(SrcBitSize - RestBitSize);
+      else
+        Rest = NextVecElem << (DstBitSize - RestBitSize);
     }
     return ConstantVector::get(Result);
   }
 
   // Handle: bitcast (<2 x i64> <i64 0, i64 1> to <4 x i32>)
+  //         bitcast (<3 x i64> <i64 0, i64 1, i64 2> to <8 x i24>)
   unsigned Ratio = NumDstElt/NumSrcElt;
-  unsigned DstBitSize = DL.getTypeSizeInBits(DstEltTy);
-
-  // Loop over each source value, expanding into multiple results.
-  for (unsigned i = 0; i != NumSrcElt; ++i) {
-    auto *Element = C->getAggregateElement(i);
-
+  while (Result.size() != NumDstElt) {
+    unsigned UnusedBits = SrcBitSize - RestBitSize;
+    if (RestBitSize >= DstBitSize) {
+      if (!HasUndef) {
+        APInt Elt =
+            Rest.lshr(isLittleEndian ? UnusedBits : (RestBitSize - DstBitSize));
+        Result.push_back(ConstantInt::get(DstEltTy, Elt.trunc(DstBitSize)));
+      } else if (HasPoison) {
+        Result.push_back(PoisonValue::get(DstEltTy));
+        HasPoison = RestBitSize > DstBitSize;
+      } else {
+        Result.push_back(UndefValue::get(DstEltTy));
+        HasUndef = RestBitSize > DstBitSize;
+      }
+      RestBitSize -= DstBitSize;
+      continue;
+    }
+    auto *Element = C->getAggregateElement(SrcElt++);
     if (!Element) // Reject constantexpr elements.
       return ConstantExpr::getBitCast(C, DestTy);
 
+    APInt NextVecElem;
     if (isa<UndefValue>(Element)) {
       // Correctly Propagate undef values.
-      Result.append(Ratio, UndefValue::get(DstEltTy));
-      continue;
+      HasUndef = true;
+      HasPoison = isa<PoisonValue>(Element);
+      if (RestBitSize == 0) {
+        RestBitSize += SrcBitSize;
+        continue;
+      }
+      NextVecElem = APInt::getZero(SrcBitSize);
+    } else {
+      auto *Src = dyn_cast<ConstantInt>(Element);
+      if (!Src)
+        return ConstantExpr::getBitCast(C, DestTy);
+      NextVecElem = Src->getValue();
+      HasUndef = false;
     }
-
-    auto *Src = dyn_cast<ConstantInt>(Element);
-    if (!Src)
-      return ConstantExpr::getBitCast(C, DestTy);
-
-    unsigned ShiftAmt = isLittleEndian ? 0 : DstBitSize*(Ratio-1);
+    APInt Value = Rest;
+    if (SrcBitSize % DstBitSize)
+      Rest = NextVecElem;
+    if (RestBitSize != 0) {
+      // Shift the Rest into the right place, shift NextVecElem to fit Rest.
+      if (isLittleEndian) {
+        Value.lshrInPlace(UnusedBits);
+        NextVecElem <<= RestBitSize;
+      } else {
+        Value <<= UnusedBits;
+        NextVecElem.lshrInPlace(RestBitSize);
+      }
+    }
+    Value |= NextVecElem;
+    unsigned ShiftAmt = isLittleEndian ? 0 : SrcBitSize - DstBitSize;
     for (unsigned j = 0; j != Ratio; ++j) {
       // Shift the piece of the value into the right place, depending on
       // endianness.
-      APInt Elt = Src->getValue().lshr(ShiftAmt);
+      APInt Elt = Value.lshr(ShiftAmt);
       ShiftAmt += isLittleEndian ? DstBitSize : -DstBitSize;
 
       // Truncate and remember this piece.
       Result.push_back(ConstantInt::get(DstEltTy, Elt.trunc(DstBitSize)));
     }
+    RestBitSize += SrcBitSize - Ratio * DstBitSize;
   }
 
   return ConstantVector::get(Result);

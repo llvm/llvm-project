@@ -1438,10 +1438,10 @@ define i32 @test89() {
 
 define <2 x i32> @test90() {
 ; BE-LABEL: @test90(
-; BE-NEXT:    ret <2 x i32> <i32 0, i32 15360>
+; BE-NEXT:    ret <2 x i32> <i32 poison, i32 15360>
 ;
 ; LE-LABEL: @test90(
-; LE-NEXT:    ret <2 x i32> <i32 0, i32 1006632960>
+; LE-NEXT:    ret <2 x i32> <i32 poison, i32 1006632960>
 ;
   %t6 = bitcast <4 x half> <half poison, half poison, half poison, half 0xH3C00> to <2 x i32>
   ret <2 x i32> %t6

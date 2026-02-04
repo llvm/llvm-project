@@ -10,8 +10,7 @@ define <32 x i8> @test(i1 %cond) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <4 x i64> [ zeroinitializer, %[[ENTRY]] ], [ splat (i64 1), %[[FOR_COND2]] ]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[FOR_COND2]], label %[[IF_THEN:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i64> zeroinitializer to <32 x i8>
-; CHECK-NEXT:    ret <32 x i8> [[TMP1]]
+; CHECK-NEXT:    ret <32 x i8> zeroinitializer
 ;
 entry:
   br label %for.cond2
