@@ -250,6 +250,32 @@ struct MMAInstructionInterface {
   virtual ~MMAInstructionInterface() = default;
 };
 
+//===----------------------------------------------------------------------===//
+// Common instructions (shared across architectures)
+//===----------------------------------------------------------------------===//
+
+struct StoreScatterInstructionInterface : public Instruction {
+  StoreScatterInstructionInterface()
+      : Instruction(InstructionKind::StoreScatter, InstructionScope::Lane) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::StoreScatter;
+  }
+
+  virtual int32_t getMaxLaneLoadStoreSize(int32_t bitWidth) const = 0;
+  virtual ~StoreScatterInstructionInterface() = default;
+};
+
+struct LoadGatherInstructionInterface : public Instruction {
+  LoadGatherInstructionInterface()
+      : Instruction(InstructionKind::LoadGather, InstructionScope::Lane) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::LoadGather;
+  }
+
+  virtual int32_t getMaxLaneLoadStoreSize(int32_t bitWidth) const = 0;
+  virtual ~LoadGatherInstructionInterface() = default;
+};
+
 } // namespace uArch
 } // namespace xegpu
 } // namespace mlir
