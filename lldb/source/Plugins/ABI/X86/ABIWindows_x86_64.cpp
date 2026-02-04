@@ -550,7 +550,6 @@ static bool FlattenAggregateType(
   for (uint32_t idx = 0; idx < num_children; ++idx) {
     std::string name;
     bool is_signed;
-    bool is_complex;
 
     uint64_t field_bit_offset = 0;
     CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(
@@ -573,7 +572,8 @@ static bool FlattenAggregateType(
     const uint32_t field_type_flags = field_compiler_type.GetTypeInfo();
     if (field_compiler_type.IsIntegerOrEnumerationType(is_signed) ||
         field_compiler_type.IsPointerType() ||
-        field_compiler_type.IsFloatingPointType(is_complex)) {
+        // FIXME: is this correct for complex floats or float vector types?
+        field_type_flags & eTypeIsFloat) {
       aggregate_field_offsets.push_back(field_byte_offset);
       aggregate_compiler_types.push_back(field_compiler_type);
     } else if (field_type_flags & eTypeHasChildren) {
@@ -662,7 +662,6 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
     const uint32_t num_children = aggregate_compiler_types.size();
     for (uint32_t idx = 0; idx < num_children; idx++) {
       bool is_signed;
-      bool is_complex;
 
       CompilerType field_compiler_type = aggregate_compiler_types[idx];
       uint32_t field_byte_width =
@@ -681,7 +680,8 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
       uint32_t copy_from_offset = 0;
       if (field_compiler_type.IsIntegerOrEnumerationType(is_signed) ||
           field_compiler_type.IsPointerType() ||
-          field_compiler_type.IsFloatingPointType(is_complex)) {
+          // FIXME: is this correct for complex floats or float vector types?
+          field_compiler_type.GetTypeInfo() & eTypeIsFloat) {
         copy_from_extractor = &rax_data;
         copy_from_offset = used_bytes;
         used_bytes += field_byte_width;

@@ -5438,7 +5438,6 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
     const GlobalValue *GV = cast<GlobalAddressSDNode>(Callee)->getGlobal();
 
     if (Subtarget.isAIXABI()) {
-      assert(!isa<GlobalIFunc>(GV) && "IFunc is not supported on AIX.");
       return getAIXFuncEntryPointSymbolSDNode(GV);
     }
     return DAG.getTargetGlobalAddress(GV, dl, Callee.getValueType(), 0,
@@ -8176,7 +8175,7 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   // general, fsel-based lowering of select is a finite-math-only optimization.
   // For more information, see section F.3 of the 2.06 ISA specification.
   // With ISA 3.0
-  if ((!DAG.getTarget().Options.NoInfsFPMath && !Flags.hasNoInfs()) ||
+  if (!Flags.hasNoInfs() ||
       (!DAG.getTarget().Options.NoNaNsFPMath && !Flags.hasNoNaNs()) ||
       ResVT == MVT::f128)
     return Op;
