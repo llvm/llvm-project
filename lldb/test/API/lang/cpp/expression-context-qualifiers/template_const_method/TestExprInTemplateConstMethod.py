@@ -30,7 +30,7 @@ class TestCase(TestBase):
         self.expect_expr("((Foo*)this)->bar()", result_type="double", result_value="5")
 
         options = lldb.SBExpressionOptions()
-        options.SetCppIgnoreContextQualifiers()
+        options.SetBooleanLanguageOption("cpp-ignore-context-qualifiers")
         self.expect_expr("m_mem = -2.0; m_mem", options=options, result_value="-2")
 
         lldbutil.continue_to_source_breakpoint(

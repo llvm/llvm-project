@@ -21,7 +21,7 @@ class TestCase(TestBase):
         )
 
         options = lldb.SBExpressionOptions()
-        options.SetCppIgnoreContextQualifiers()
+        options.SetBooleanLanguageOption("cpp-ignore-context-qualifiers")
         options.SetIgnoreBreakpoints(True)
         self.expect_expr("volatile_method()", options=options)
         self.expect(
