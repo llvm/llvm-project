@@ -2367,11 +2367,11 @@ public:
     llvm_unreachable("impossible call instruction");
   }
 
-  /// Return the uniformity behavior of the given instruction's output.
+  /// Return the uniformity behavior of the given value (def operand).
   /// \p DefIdx specifies which output to query (for multi-output instructions).
-  virtual InstructionUniformity getDefUniformity(const MachineInstr &MI,
-                                                 unsigned DefIdx = 0) const {
-    return InstructionUniformity::Default;
+  virtual ValueUniformity getValueUniformity(const MachineInstr &MI,
+                                             unsigned DefIdx = 0) const {
+    return ValueUniformity::Default;
   }
 
   /// Returns true if the given \p MI defines a TargetIndex operand that can be

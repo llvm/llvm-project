@@ -294,14 +294,14 @@ bool TargetTransformInfo::hasBranchDivergence(const Function *F) const {
   return TTIImpl->hasBranchDivergence(F);
 }
 
-InstructionUniformity
-llvm::TargetTransformInfo::getInstructionUniformity(const Value *V) const {
+ValueUniformity
+llvm::TargetTransformInfo::getValueUniformity(const Value *V) const {
   // Calls with the NoDivergenceSource attribute are always uniform.
   if (const auto *Call = dyn_cast<CallBase>(V)) {
     if (Call->hasFnAttr(Attribute::NoDivergenceSource))
-      return InstructionUniformity::AlwaysUniform;
+      return ValueUniformity::AlwaysUniform;
   }
-  return TTIImpl->getInstructionUniformity(V);
+  return TTIImpl->getValueUniformity(V);
 }
 
 bool llvm::TargetTransformInfo::isValidAddrSpaceCast(unsigned FromAS,

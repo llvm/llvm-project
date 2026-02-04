@@ -1667,11 +1667,11 @@ public:
 
   const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 
-  InstructionUniformity getDefUniformity(const MachineInstr &MI,
-                                         unsigned DefIdx = 0) const final;
+  ValueUniformity getValueUniformity(const MachineInstr &MI,
+                                     unsigned DefIdx = 0) const final;
 
-  InstructionUniformity getGenericDefUniformity(const MachineInstr &MI,
-                                                unsigned DefIdx = 0) const;
+  ValueUniformity getGenericValueUniformity(const MachineInstr &MI,
+                                            unsigned DefIdx = 0) const;
 
   const MIRFormatter *getMIRFormatter() const override;
 

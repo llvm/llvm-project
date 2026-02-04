@@ -1620,13 +1620,12 @@ unsigned GCNTTIImpl::getNumberOfParts(Type *Tp) const {
   return BaseT::getNumberOfParts(Tp);
 }
 
-InstructionUniformity
-GCNTTIImpl::getInstructionUniformity(const Value *V) const {
+ValueUniformity GCNTTIImpl::getValueUniformity(const Value *V) const {
   if (isAlwaysUniform(V))
-    return InstructionUniformity::AlwaysUniform;
+    return ValueUniformity::AlwaysUniform;
 
   if (isSourceOfDivergence(V))
-    return InstructionUniformity::NeverUniform;
+    return ValueUniformity::NeverUniform;
 
-  return InstructionUniformity::Default;
+  return ValueUniformity::Default;
 }

@@ -77,15 +77,15 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
     for (const MachineInstr &Instr : Block) {
       // Terminators are handled separately because:
       // 1. Many terminators (G_BRCOND, G_BR) have no def operands, so the
-      //    per-def loop below would skip them entirely.
-      // 2. Divergent terminators mark the BLOCK as divergent
-      // (DivergentTermBlocks),
-      //    not individual values, which is different from regular instructions.
-      // For terminators like SI_IF/SI_ELSE, getDefUniformity() checks the
-      // isNeverUniform() flag, so DefIdx is not relevant here.
+      // per-def loop below would skip them entirely.
+      // 2. Divergent terminators mark the BLOCK as
+      // divergent(DivergentTermBlocks), not individual values, which is
+      // different from regular instructions. For terminators like
+      // SI_IF/SI_ELSE, getValueUniformity() checks the isNeverUniform() flag,
+      // so DefIdx is not relevant here.
       if (Instr.isTerminator()) {
-        InstructionUniformity Uniformity = InstrInfo.getDefUniformity(Instr);
-        if (Uniformity == InstructionUniformity::NeverUniform) {
+        ValueUniformity Uniformity = InstrInfo.getValueUniformity(Instr);
+        if (Uniformity == ValueUniformity::NeverUniform) {
           if (DivergentTermBlocks.insert(Instr.getParent()).second) {
             Worklist.push_back(&Instr);
           }
@@ -102,14 +102,14 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
           continue;
         }
 
-        InstructionUniformity Uniformity =
-            InstrInfo.getDefUniformity(Instr, DefIdx);
+        ValueUniformity Uniformity =
+            InstrInfo.getValueUniformity(Instr, DefIdx);
 
         switch (Uniformity) {
-        case InstructionUniformity::AlwaysUniform:
+        case ValueUniformity::AlwaysUniform:
           addUniformOverride(Op.getReg());
           break;
-        case InstructionUniformity::NeverUniform:
+        case ValueUniformity::NeverUniform:
           // Skip registers that are inherently uniform (e.g., SGPRs on AMDGPU)
           // even if the instruction is marked as NeverUniform.
           if (!TRI.isUniformReg(MRI, RBI, Op.getReg())) {
@@ -117,7 +117,7 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
               HasDivergentDef = true;
           }
           break;
-        case InstructionUniformity::Default:
+        case ValueUniformity::Default:
           break;
         }
         DefIdx++;

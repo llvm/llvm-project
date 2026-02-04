@@ -443,7 +443,7 @@ private:
   SyncDependenceAnalysisT SDA;
 
   // Set of known-uniform values.
-  DenseSet<ConstValueRefT> UniformOverrides;
+  SmallDenseSet<ConstValueRefT, 8> UniformOverrides;
 
   /// \brief Mark all nodes in \p JoinBlock as divergent and push them on
   /// the worklist.
