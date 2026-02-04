@@ -865,7 +865,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// as source/destination of memory transfers. We can use this information to
   /// lock the host buffer and optimize its memory transfers.
   Error notifyDataMapped(void *HstPtr, int64_t Size) {
-    auto Err =  PinnedAllocs.registerMemory(HstPtr, Size, LockMappedBuffers);
+    auto Err = PinnedAllocs.registerMemory(HstPtr, Size, LockMappedBuffers);
     if (!Err && !IgnoreLockMappedFailures)
       return Err.takeError();
     return Plugin::success();

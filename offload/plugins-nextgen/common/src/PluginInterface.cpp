@@ -759,7 +759,6 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
                      << OMPX_LockMappedBuffers.get();
     LockMappedBuffers = false;
   }
-
 }
 
 Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
