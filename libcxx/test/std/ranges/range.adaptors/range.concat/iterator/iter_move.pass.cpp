@@ -19,22 +19,16 @@
 #include <ranges>
 #include <utility>
 
-#include "test_iterators.h"
-#include "test_macros.h"
 #include "../types.h"
-
-struct Ref {
-  int v;
-};
 
 struct ConvMayThrow {
   int v;
-  operator Ref() { return Ref{v}; }
+  operator int() { return v; }
 };
 
 struct ConvNoThrow {
   int v;
-  operator Ref() noexcept { return Ref{v}; }
+  operator int() noexcept { return v; }
 };
 
 template <typename T, bool NoThrow>
@@ -84,17 +78,17 @@ struct MiniView : std::ranges::view_base {
 };
 
 constexpr bool test() {
-  Ref ref_buf[2]               = {{1}, {2}};
+  int arr[2]                   = {1, 2};
   ConvMayThrow maythrow_buf[2] = {{3}, {4}};
   ConvNoThrow nothrow_buf[2]   = {{5}, {6}};
   {
     // All underlying iter_move are noexcept
     // => concat iter_move has noexcept(true)
-    using Iter_NoThrow     = ThowingIter<Ref, true>;
+    using Iter_NoThrow     = ThowingIter<int, true>;
     using Sentinel_NoThrow = sentinel_wrapper<Iter_NoThrow>;
     using View_NoThrow     = MiniView<Iter_NoThrow, Sentinel_NoThrow>;
-    View_NoThrow v1(Iter_NoThrow(ref_buf), Sentinel_NoThrow(Iter_NoThrow(ref_buf + 1)));
-    View_NoThrow v2(Iter_NoThrow(ref_buf), Sentinel_NoThrow(Iter_NoThrow(ref_buf + 1)));
+    View_NoThrow v1(Iter_NoThrow(arr), Sentinel_NoThrow(Iter_NoThrow(arr + 1)));
+    View_NoThrow v2(Iter_NoThrow(arr), Sentinel_NoThrow(Iter_NoThrow(arr + 1)));
 
     auto cv     = std::views::concat(v1, v2);
     using Iter  = decltype(cv.begin());
@@ -104,18 +98,20 @@ constexpr bool test() {
     static_assert(noexcept(std::ranges::iter_move(std::declval<CIter>())));
 
     auto it = cv.begin();
-    (void)std::ranges::iter_move(it);
+    auto x  = std::ranges::iter_move(it);
+    static_assert(std::is_same_v<decltype(x), int>);
+    assert(x == 1);
   }
 
   {
     // All underlying iter_move are noexcept
     // underlying ranges have different
     // => concat iter_move has noexcept(true)
-    using Iter_NoThrow     = ThowingIter<Ref, true>;
+    using Iter_NoThrow     = ThowingIter<int, true>;
     using Sentinel_NoThrow = sentinel_wrapper<Iter_NoThrow>;
     using View_NoThrow     = MiniView<Iter_NoThrow, Sentinel_NoThrow>;
-    View_NoThrow v1(Iter_NoThrow(ref_buf), Sentinel_NoThrow(Iter_NoThrow(ref_buf + 1)));
-    View_NoThrow v2(Iter_NoThrow(ref_buf), Sentinel_NoThrow(Iter_NoThrow(ref_buf + 1)));
+    View_NoThrow v1(Iter_NoThrow(arr), Sentinel_NoThrow(Iter_NoThrow(arr + 1)));
+    View_NoThrow v2(Iter_NoThrow(arr), Sentinel_NoThrow(Iter_NoThrow(arr + 1)));
 
     auto cv     = std::views::concat(v1, v2);
     using Iter  = decltype(cv.begin());
@@ -125,21 +121,23 @@ constexpr bool test() {
     static_assert(noexcept(std::ranges::iter_move(std::declval<CIter>())));
 
     auto it = cv.begin();
-    (void)std::ranges::iter_move(it);
+    auto x  = std::ranges::iter_move(it);
+    static_assert(std::is_same_v<decltype(x), int>);
+    assert(x == 1);
   }
 
   {
     // One underlying may throw
     // concat iter_move has noexcept(false)
-    using Iter_NoThrow     = ThowingIter<Ref, true>;
-    using Iter_Throw       = ThowingIter<Ref, false>;
+    using Iter_NoThrow     = ThowingIter<int, true>;
+    using Iter_Throw       = ThowingIter<int, false>;
     using Sentinel_NoThrow = sentinel_wrapper<Iter_NoThrow>;
     using Sentinel_Throw   = sentinel_wrapper<Iter_Throw>;
     using View_NoThrow     = MiniView<Iter_NoThrow, Sentinel_NoThrow>;
     using View_Throw       = MiniView<Iter_Throw, Sentinel_Throw>;
 
-    auto cv = std::views::concat(View_NoThrow{Iter_NoThrow{ref_buf}, Sentinel_NoThrow{Iter_NoThrow{ref_buf + 1}}},
-                                 View_Throw{Iter_Throw{ref_buf}, Sentinel_Throw{Iter_Throw{ref_buf + 1}}});
+    auto cv = std::views::concat(View_NoThrow{Iter_NoThrow{arr}, Sentinel_NoThrow{Iter_NoThrow{arr + 1}}},
+                                 View_Throw{Iter_Throw{arr}, Sentinel_Throw{Iter_Throw{arr + 1}}});
 
     using Iter  = decltype(cv.begin());
     using CIter = decltype(std::as_const(cv).begin());
@@ -148,13 +146,15 @@ constexpr bool test() {
     static_assert(!noexcept(std::ranges::iter_move(std::declval<CIter>())));
 
     auto it = cv.begin();
-    (void)std::ranges::iter_move(it);
+    auto x  = std::ranges::iter_move(it);
+    static_assert(std::is_same_v<decltype(x), int>);
+    assert(x == 1);
   }
 
   {
-    // one underlying iter_move may throw, convert ConvNoThrow to Ref has noexcept
+    // one underlying iter_move may throw, convert ConvNoThrow to int has noexcept
     // => iter_move has noexcept(false)
-    using Iter_NoThrow         = ThowingIter<Ref, true>;
+    using Iter_NoThrow         = ThowingIter<int, true>;
     using IterConv_NoThrow     = ThowingIter<ConvNoThrow, false>;
     using Sentinel_NoThrow     = sentinel_wrapper<Iter_NoThrow>;
     using SentinelConv_NoThrow = sentinel_wrapper<IterConv_NoThrow>;
@@ -162,7 +162,7 @@ constexpr bool test() {
     using ViewHasConv_NoThrow  = MiniView<IterConv_NoThrow, SentinelConv_NoThrow>;
 
     auto cv = std::views::concat(
-        View_NoThrow{Iter_NoThrow{ref_buf}, Sentinel_NoThrow{Iter_NoThrow{ref_buf + 1}}},
+        View_NoThrow{Iter_NoThrow{arr}, Sentinel_NoThrow{Iter_NoThrow{arr + 1}}},
         ViewHasConv_NoThrow{IterConv_NoThrow{nothrow_buf}, SentinelConv_NoThrow{IterConv_NoThrow{nothrow_buf + 1}}});
 
     using Iter  = decltype(cv.begin());
@@ -172,13 +172,15 @@ constexpr bool test() {
     static_assert(!noexcept(std::ranges::iter_move(std::declval<CIter>())));
 
     auto it = cv.begin();
-    (void)std::ranges::iter_move(it);
+    auto x  = std::ranges::iter_move(it);
+    static_assert(std::is_same_v<decltype(x), int>);
+    assert(x == 1);
   }
 
   {
-    // all underlying iter_move has noexcept, and convert ConvNoThrow to Ref has noexcept
+    // all underlying iter_move has noexcept, and convert ConvNoThrow to int has noexcept
     // => concat iter_move has noexcept(true)
-    using Iter_NoThrow         = ThowingIter<Ref, true>;
+    using Iter_NoThrow         = ThowingIter<int, true>;
     using IterConv_NoThrow     = ThowingIter<ConvNoThrow, true>;
     using Sentinel_NoThrow     = sentinel_wrapper<Iter_NoThrow>;
     using SentinelConv_NoThrow = sentinel_wrapper<IterConv_NoThrow>;
@@ -186,7 +188,7 @@ constexpr bool test() {
     using ViewHasConv_NoThrow  = MiniView<IterConv_NoThrow, SentinelConv_NoThrow>;
 
     auto cv = std::views::concat(
-        View_NoThrow{Iter_NoThrow{ref_buf}, Sentinel_NoThrow{Iter_NoThrow{ref_buf + 1}}},
+        View_NoThrow{Iter_NoThrow{arr}, Sentinel_NoThrow{Iter_NoThrow{arr + 1}}},
         ViewHasConv_NoThrow{IterConv_NoThrow{nothrow_buf}, SentinelConv_NoThrow{IterConv_NoThrow{nothrow_buf + 1}}});
 
     using Iter  = decltype(cv.begin());
@@ -196,13 +198,15 @@ constexpr bool test() {
     static_assert(noexcept(std::ranges::iter_move(std::declval<CIter>())));
 
     auto it = cv.begin();
-    (void)std::ranges::iter_move(it);
+    auto x  = std::ranges::iter_move(it);
+    static_assert(std::is_same_v<decltype(x), int>);
+    assert(x == 1);
   }
 
   {
-    // underlying iter_move has noexcept, but convert ConvMayThrow to Ref is noexcept(false)
+    // underlying iter_move has noexcept, but convert ConvMayThrow to int is noexcept(false)
     // => concat iter_move has noexcept(false)
-    using Iter_NoThrow          = ThowingIter<Ref, true>;
+    using Iter_NoThrow          = ThowingIter<int, true>;
     using IterConv_MayThrow     = ThowingIter<ConvMayThrow, true>;
     using Sentinel_NoThrow      = sentinel_wrapper<Iter_NoThrow>;
     using SentinelConv_MayThrow = sentinel_wrapper<IterConv_MayThrow>;
@@ -210,7 +214,7 @@ constexpr bool test() {
     using ViewHasConv_MayThrow  = MiniView<IterConv_MayThrow, SentinelConv_MayThrow>;
 
     auto cv = std::views::concat(
-        View_NoThrow{Iter_NoThrow{ref_buf}, Sentinel_NoThrow{Iter_NoThrow{ref_buf + 1}}},
+        View_NoThrow{Iter_NoThrow{arr}, Sentinel_NoThrow{Iter_NoThrow{arr + 1}}},
         ViewHasConv_MayThrow{
             IterConv_MayThrow{maythrow_buf}, SentinelConv_MayThrow{IterConv_MayThrow{maythrow_buf + 1}}});
 
@@ -221,7 +225,9 @@ constexpr bool test() {
     static_assert(!noexcept(std::ranges::iter_move(std::declval<CIter>())));
 
     auto it = cv.begin();
-    (void)std::ranges::iter_move(it);
+    auto x  = std::ranges::iter_move(it);
+    static_assert(std::is_same_v<decltype(x), int>);
+    assert(x == 1);
   }
 
   return true;
