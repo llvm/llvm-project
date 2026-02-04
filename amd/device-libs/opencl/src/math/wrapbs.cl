@@ -146,10 +146,6 @@ SWRAPST(fmin,float,float)
 SWRAPST(fmin,double,double)
 PWRAPST(fmin,half,half)
 
-SWRAPST(ldexp,float,int)
-SWRAPST(ldexp,double,int)
-PWRAPST(ldexp,half,int)
-
 SWRAPST(max,float,float)
 SWRAPST(max,double,double)
 PWRAPST(max,half,half)
@@ -166,3 +162,24 @@ SWRAPT(rootn,float,int)
 SWRAPT(rootn,double,int)
 PWRAPT(rootn,half,int)
 
+#define WRAP_ELEMENTWISE_TYPE(F, T, N, B)                                      \
+    ATTR T##N F(T##N x, int##N y) { return B(x, y); }                          \
+    ATTR T##N F(T##N x, int y) { return B(x, (int##N)y); }
+
+#define WRAP_ELEMENTWISE_SCALAR(F, T, B)                                       \
+    ATTR T F(T x, int y) { return B(x, y); }
+
+#define WRAP_ELEMENTWISE_VECSIZES(F, T, B)                                     \
+    WRAP_ELEMENTWISE_TYPE(F, T, 16, B)                                         \
+    WRAP_ELEMENTWISE_TYPE(F, T, 8, B)                                          \
+    WRAP_ELEMENTWISE_TYPE(F, T, 4, B)                                          \
+    WRAP_ELEMENTWISE_TYPE(F, T, 3, B)                                          \
+    WRAP_ELEMENTWISE_TYPE(F, T, 2, B)                                          \
+    WRAP_ELEMENTWISE_SCALAR(F, T, B)
+
+#define WRAP_ELEMENTWISE(F, B)                                                 \
+    WRAP_ELEMENTWISE_VECSIZES(F, half, B)                                      \
+    WRAP_ELEMENTWISE_VECSIZES(F, float, B)                                     \
+    WRAP_ELEMENTWISE_VECSIZES(F, double, B)
+
+WRAP_ELEMENTWISE(ldexp, __builtin_elementwise_ldexp)
