@@ -408,8 +408,7 @@ define void @test_31(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[T0:%.*]] = shufflevector <4 x i32> [[ADD]], <4 x i32> [[ADD]], <4 x i32> <i32 0, i32 2, i32 5, i32 2>
 ; CHECK-NEXT:    [[H0:%.*]] = getelementptr <4 x i32>, ptr [[DST:%.*]], i32 0
 ; CHECK-NEXT:    store <4 x i32> [[T0]], ptr [[H0]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[S1]], <4 x i32> poison, <4 x i32> <i32 2, i32 0, i32 1, i32 3>
-; CHECK-NEXT:    [[T1:%.*]] = add <4 x i32> [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    [[T1:%.*]] = shufflevector <4 x i32> [[ADD]], <4 x i32> [[ADD]], <4 x i32> <i32 6, i32 0, i32 1, i32 7>
 ; CHECK-NEXT:    [[H1:%.*]] = getelementptr <4 x i32>, ptr [[DST]], i32 1
 ; CHECK-NEXT:    store <4 x i32> [[T1]], ptr [[H1]], align 16
 ; CHECK-NEXT:    ret void
