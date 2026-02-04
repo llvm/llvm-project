@@ -24,13 +24,13 @@ if (LLVM_BUILD_STATIC)
 else()
   target_link_libraries(c-index-test
     PRIVATE
-    libclang
     clangAST
     clangBasic
     clangDriver
     clangFrontend
     clangIndex
     clangSerialization
+    libclang
   )
 endif()
 
