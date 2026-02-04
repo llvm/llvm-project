@@ -738,8 +738,7 @@ bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
                 } else {
                   // Always load a memory image right away in the target in case
                   // we end up trying to read the symbol table from memory...
-                  // The
-                  // __LINKEDIT will need to be mapped so we can figure out
+                  // The __LINKEDIT will need to be mapped so we can figure out
                   // where the symbol table bits are...
                   commpage_image_module_sp = *module_sp_or_err;
                   bool changed = false;
