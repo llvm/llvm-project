@@ -2,7 +2,7 @@
 
 func.func @alloc_tensor_missing_dims(%arg0: index)
 {
-  // expected-error @+1 {{expected 2 dynamic sizes}}
+  // expected-error @+1 {{incorrect number of dynamic sizes, has 1, expected 2}}
   %0 = bufferization.alloc_tensor(%arg0) : tensor<4x?x?x5xf32>
   return
 }
@@ -51,7 +51,7 @@ func.func @invalid_materialize_in_destination(%arg0: tensor<4xf32>, %arg1: tenso
 // -----
 
 func.func @invalid_materialize_in_destination(%arg0: tensor<5x5xf32>, %arg1: tensor<5xf32>) {
-  // expected-error @below{{rank mismatch between source and destination shape}}
+  // expected-error @below{{'bufferization.materialize_in_destination' op source rank (2) does not match destination rank (1)}}
   bufferization.materialize_in_destination %arg0 in %arg1 : (tensor<5x5xf32>, tensor<5xf32>) -> tensor<5xf32>
 }
 

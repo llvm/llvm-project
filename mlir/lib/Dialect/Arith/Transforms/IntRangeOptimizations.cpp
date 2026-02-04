@@ -21,6 +21,7 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/FoldUtils.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -50,8 +51,6 @@ static std::optional<APInt> getMaybeConstantValue(DataFlowSolver &solver,
 
 static void copyIntegerRange(DataFlowSolver &solver, Value oldVal,
                              Value newVal) {
-  assert(oldVal.getType() == newVal.getType() &&
-         "Can't copy integer ranges between different types");
   auto *oldState = solver.lookupState<IntegerValueRangeLattice>(oldVal);
   if (!oldState)
     return;
@@ -479,6 +478,187 @@ private:
   SmallVector<unsigned, 4> targetBitwidths;
 };
 
+struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
+  NarrowLoopBounds(MLIRContext *context, DataFlowSolver &s,
+                   ArrayRef<unsigned> target)
+      : OpInterfaceRewritePattern<LoopLikeOpInterface>(context), solver(s),
+        targetBitwidths(target),
+        boundsNarrowingFailedAttr(
+            StringAttr::get(context, "arith.bounds_narrowing_failed")) {}
+
+  LogicalResult matchAndRewrite(LoopLikeOpInterface loopLike,
+                                PatternRewriter &rewriter) const override {
+    // Skip ops where bounds narrowing previously failed.
+    if (loopLike->hasAttr(boundsNarrowingFailedAttr))
+      return rewriter.notifyMatchFailure(loopLike,
+                                         "bounds narrowing previously failed");
+
+    std::optional<SmallVector<Value>> inductionVars =
+        loopLike.getLoopInductionVars();
+    if (!inductionVars.has_value() || inductionVars->empty())
+      return rewriter.notifyMatchFailure(loopLike, "no induction variables");
+
+    std::optional<SmallVector<OpFoldResult>> lowerBounds =
+        loopLike.getLoopLowerBounds();
+    std::optional<SmallVector<OpFoldResult>> upperBounds =
+        loopLike.getLoopUpperBounds();
+    std::optional<SmallVector<OpFoldResult>> steps = loopLike.getLoopSteps();
+
+    if (!lowerBounds.has_value() || !upperBounds.has_value() ||
+        !steps.has_value())
+      return rewriter.notifyMatchFailure(loopLike, "no loop bounds or steps");
+
+    if (lowerBounds->size() != inductionVars->size() ||
+        upperBounds->size() != inductionVars->size() ||
+        steps->size() != inductionVars->size())
+      return rewriter.notifyMatchFailure(loopLike,
+                                         "mismatched bounds/steps count");
+
+    Location loc = loopLike->getLoc();
+    SmallVector<OpFoldResult> newLowerBounds(*lowerBounds);
+    SmallVector<OpFoldResult> newUpperBounds(*upperBounds);
+    SmallVector<OpFoldResult> newSteps(*steps);
+    SmallVector<std::tuple<size_t, Type, CastKind>> narrowings;
+
+    // Check each (indVar, lb, ub, step) tuple.
+    for (auto [idx, indVar, lbOFR, ubOFR, stepOFR] :
+         llvm::enumerate(*inductionVars, *lowerBounds, *upperBounds, *steps)) {
+
+      // Only process value operands, skip attributes.
+      auto maybeLb = dyn_cast<Value>(lbOFR);
+      auto maybeUb = dyn_cast<Value>(ubOFR);
+      auto maybeStep = dyn_cast<Value>(stepOFR);
+
+      if (!maybeLb || !maybeUb || !maybeStep)
+        continue;
+
+      // Collect ranges for (lb, ub, step, indVar).
+      SmallVector<ConstantIntRanges> ranges;
+      if (failed(collectRanges(
+              solver, ValueRange{maybeLb, maybeUb, maybeStep, indVar}, ranges)))
+        continue;
+
+      const ConstantIntRanges &stepRange = ranges[2];
+      const ConstantIntRanges &indVarRange = ranges[3];
+
+      Type srcType = maybeLb.getType();
+
+      // Try each target bitwidth.
+      for (unsigned targetBitwidth : targetBitwidths) {
+        Type targetType = getTargetType(srcType, targetBitwidth);
+        if (targetType == srcType)
+          continue;
+
+        // Check if the target type is valid for this loop's induction
+        // variables.
+        if (!loopLike.isValidInductionVarType(targetType))
+          continue;
+
+        // Check if all values in this tuple can be truncated.
+        CastKind castKind = CastKind::Both;
+        for (const ConstantIntRanges &range : ranges) {
+          castKind = mergeCastKinds(castKind,
+                                    checkTruncatability(range, targetBitwidth));
+          if (castKind == CastKind::None)
+            break;
+        }
+
+        if (castKind == CastKind::None)
+          continue;
+
+        // Check if indVar + step fits in the narrowed type.
+        // This is critical for loop correctness: the loop computes
+        // iv_next = iv_current + step in the narrowed type, then compares
+        // iv_next < ub. If iv_current + step overflows, the comparison may
+        // produce incorrect results and break loop termination.
+        // Both signed and unsigned interpretations must fit because loop
+        // semantics are unknown (integer types are signless).
+        ConstantIntRanges indVarPlusStepRange(
+            indVarRange.smin().sadd_sat(stepRange.smin()),
+            indVarRange.smax().sadd_sat(stepRange.smax()),
+            indVarRange.umin().uadd_sat(stepRange.umin()),
+            indVarRange.umax().uadd_sat(stepRange.umax()));
+
+        if (checkTruncatability(indVarPlusStepRange, targetBitwidth) !=
+            CastKind::Both)
+          continue;
+
+        // Narrow the bounds and step values.
+        Value newLb = doCast(rewriter, loc, maybeLb, targetType, castKind);
+        Value newUb = doCast(rewriter, loc, maybeUb, targetType, castKind);
+        Value newStep = doCast(rewriter, loc, maybeStep, targetType, castKind);
+
+        newLowerBounds[idx] = newLb;
+        newUpperBounds[idx] = newUb;
+        newSteps[idx] = newStep;
+        narrowings.push_back({idx, targetType, castKind});
+        break;
+      }
+    }
+
+    if (narrowings.empty())
+      return rewriter.notifyMatchFailure(loopLike, "no narrowings found");
+
+    // Save original types before modifying.
+    SmallVector<Type> origTypes;
+    for (auto [idx, targetType, castKind] : narrowings) {
+      Value indVar = (*inductionVars)[idx];
+      origTypes.push_back(indVar.getType());
+    }
+
+    // Attempt to update bounds and induction variable types.
+    // If this fails, mark the op so we don't try again.
+    bool updateFailed = false;
+    rewriter.modifyOpInPlace(loopLike, [&]() {
+      // Update the loop bounds and steps.
+      if (failed(loopLike.setLoopLowerBounds(newLowerBounds)) ||
+          failed(loopLike.setLoopUpperBounds(newUpperBounds)) ||
+          failed(loopLike.setLoopSteps(newSteps))) {
+        // Mark op to prevent future attempts. IR was modified (attribute
+        // added), so we must return success() from the pattern.
+        loopLike->setAttr(boundsNarrowingFailedAttr, rewriter.getUnitAttr());
+        updateFailed = true;
+        return;
+      }
+
+      // Update induction variable types.
+      for (auto [idx, targetType, castKind] : narrowings) {
+        Value indVar = (*inductionVars)[idx];
+        auto blockArg = cast<BlockArgument>(indVar);
+
+        // Change the block argument type.
+        blockArg.setType(targetType);
+      }
+    });
+
+    if (updateFailed)
+      return success();
+
+    // Insert casts back to original type for uses.
+    for (auto [narrowingIdx, narrowingInfo] : llvm::enumerate(narrowings)) {
+      auto [idx, targetType, castKind] = narrowingInfo;
+      Value indVar = (*inductionVars)[idx];
+      auto blockArg = cast<BlockArgument>(indVar);
+      Type origType = origTypes[narrowingIdx];
+
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(blockArg.getOwner());
+      Value casted = doCast(rewriter, loc, blockArg, origType, castKind);
+      copyIntegerRange(solver, blockArg, casted);
+
+      // Replace all uses of the narrowed indVar with the casted value.
+      rewriter.replaceAllUsesExcept(blockArg, casted, casted.getDefiningOp());
+    }
+
+    return success();
+  }
+
+private:
+  DataFlowSolver &solver;
+  SmallVector<unsigned, 4> targetBitwidths;
+  StringAttr boundsNarrowingFailedAttr;
+};
+
 struct IntRangeOptimizationsPass final
     : arith::impl::ArithIntRangeOptsBase<IntRangeOptimizationsPass> {
 
@@ -520,6 +700,8 @@ struct IntRangeNarrowingPass final
 
     RewritePatternSet patterns(ctx);
     populateIntRangeNarrowingPatterns(patterns, solver, bitwidthsSupported);
+    populateControlFlowValuesNarrowingPatterns(patterns, solver,
+                                               bitwidthsSupported);
 
     // We specifically need bottom-up traversal as cmpi pattern needs range
     // data, attached to its original argument values.
@@ -546,6 +728,13 @@ void mlir::arith::populateIntRangeNarrowingPatterns(
   patterns.add<FoldIndexCastChain<arith::IndexCastUIOp>,
                FoldIndexCastChain<arith::IndexCastOp>>(patterns.getContext(),
                                                        bitwidthsSupported);
+}
+
+void mlir::arith::populateControlFlowValuesNarrowingPatterns(
+    RewritePatternSet &patterns, DataFlowSolver &solver,
+    ArrayRef<unsigned> bitwidthsSupported) {
+  patterns.add<NarrowLoopBounds>(patterns.getContext(), solver,
+                                 bitwidthsSupported);
 }
 
 std::unique_ptr<Pass> mlir::arith::createIntRangeOptimizationsPass() {

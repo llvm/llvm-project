@@ -44,19 +44,21 @@ using namespace llvm;
 #define PASS_KEY "x86-return-thunks"
 #define DEBUG_TYPE PASS_KEY
 
+constexpr StringRef X86ReturnThunksPassName = "X86 Return Thunks";
+
 namespace {
-struct X86ReturnThunks final : public MachineFunctionPass {
+struct X86ReturnThunksLegacy final : public MachineFunctionPass {
   static char ID;
-  X86ReturnThunks() : MachineFunctionPass(ID) {}
-  StringRef getPassName() const override { return "X86 Return Thunks"; }
+  X86ReturnThunksLegacy() : MachineFunctionPass(ID) {}
+  StringRef getPassName() const override { return X86ReturnThunksPassName; }
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 } // namespace
 
-char X86ReturnThunks::ID = 0;
+char X86ReturnThunksLegacy::ID = 0;
 
-bool X86ReturnThunks::runOnMachineFunction(MachineFunction &MF) {
-  LLVM_DEBUG(dbgs() << getPassName() << "\n");
+static bool runX86ReturnThunks(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << X86ReturnThunksPassName << "\n");
 
   bool Modified = false;
 
@@ -94,8 +96,21 @@ bool X86ReturnThunks::runOnMachineFunction(MachineFunction &MF) {
   return Modified;
 }
 
-INITIALIZE_PASS(X86ReturnThunks, PASS_KEY, "X86 Return Thunks", false, false)
+bool X86ReturnThunksLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runX86ReturnThunks(MF);
+}
 
-FunctionPass *llvm::createX86ReturnThunksPass() {
-  return new X86ReturnThunks();
+PreservedAnalyses
+X86ReturnThunksPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  return runX86ReturnThunks(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                      .preserveSet<CFGAnalyses>()
+                                : PreservedAnalyses::all();
+}
+
+INITIALIZE_PASS(X86ReturnThunksLegacy, PASS_KEY, "X86 Return Thunks", false,
+                false)
+
+FunctionPass *llvm::createX86ReturnThunksLegacyPass() {
+  return new X86ReturnThunksLegacy();
 }
