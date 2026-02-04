@@ -108,7 +108,7 @@ void basic_correct_arc() {
 @implementation SubObj
 
 - (void)copy:(id)sender {
-  [super copy:sender];
+  [super copy:sender]; // no-warning: a void copy does not actually copy anything
 }
 
 @end
