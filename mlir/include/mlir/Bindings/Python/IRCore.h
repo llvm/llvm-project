@@ -23,6 +23,7 @@
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/Debug.h"
 #include "mlir-c/Diagnostics.h"
+#include "mlir-c/ExtensibleDialect.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/IntegerSet.h"
 #include "mlir-c/Support.h"
@@ -1843,6 +1844,44 @@ private:
   nanobind::list operands;
   PyOpAttributeMap attributes;
 };
+
+class MLIR_PYTHON_API_EXPORTED PyDynamicOpTrait {
+public:
+  PyDynamicOpTrait(MlirDynamicOpTrait trait) : trait(trait) {}
+
+  bool attach(std::string opName, DefaultingPyMlirContext context) {
+    return mlirDynamicOpTraitAttach(trait,
+                                    MlirStringRef{opName.data(), opName.size()},
+                                    context.get()->get());
+  }
+
+  static void bind(nanobind::module_ &m);
+
+private:
+  MlirDynamicOpTrait trait;
+};
+
+namespace PyDynamicOpTraits {
+
+class IsTerminator : public PyDynamicOpTrait {
+public:
+  IsTerminator() : PyDynamicOpTrait(mlirDynamicOpTraitGetIsTerminator()) {}
+  static void bind(nanobind::module_ &m) {
+    nanobind::class_<IsTerminator, PyDynamicOpTrait>(m, "IsTerminatorTrait")
+        .def(nanobind::init<>());
+  }
+};
+
+class NoTerminator : public PyDynamicOpTrait {
+public:
+  NoTerminator() : PyDynamicOpTrait(mlirDynamicOpTraitGetNoTerminator()) {}
+  static void bind(nanobind::module_ &m) {
+    nanobind::class_<NoTerminator, PyDynamicOpTrait>(m, "NoTerminatorTrait")
+        .def(nanobind::init<>());
+  }
+};
+
+} // namespace PyDynamicOpTraits
 
 MLIR_PYTHON_API_EXPORTED MlirValue getUniqueResult(MlirOperation operation);
 MLIR_PYTHON_API_EXPORTED void populateIRCore(nanobind::module_ &m);
