@@ -5360,7 +5360,7 @@ defm FCVTZU : FPToIntegerUnscaled<0b11, 0b001, "fcvtzu", any_fp_to_uint>;
 defm FCVTZS : FPToIntegerScaled<0b11, 0b000, "fcvtzs", any_fp_to_sint>;
 defm FCVTZU : FPToIntegerScaled<0b11, 0b001, "fcvtzu", any_fp_to_uint>;
 
-let Predicates = [HasNEONandIsStreamingSafe, HasFPRCVT] in{
+let Predicates = [HasFPRCVT] in{
   defm FCVTAS : FPToIntegerSIMDScalar<0b11, 0b010, "fcvtas", int_aarch64_neon_fcvtas>;
   defm FCVTAU : FPToIntegerSIMDScalar<0b11, 0b011, "fcvtau", int_aarch64_neon_fcvtau>;
   defm FCVTMS : FPToIntegerSIMDScalar<0b10, 0b100, "fcvtms", int_aarch64_neon_fcvtms>;
@@ -5403,7 +5403,7 @@ def : Pat<(i64 (any_llround f64:$Rn)),
 defm SCVTF : IntegerToFP<0b00, 0b010, "scvtf", any_sint_to_fp>;
 defm UCVTF : IntegerToFP<0b00, 0b011, "ucvtf", any_uint_to_fp>;
 
-let Predicates = [HasNEONandIsStreamingSafe, HasFPRCVT] in {
+let Predicates = [HasFPRCVT] in {
   defm SCVTF : IntegerToFPSIMDScalar<0b11, 0b100, "scvtf", any_sint_to_fp>;
   defm UCVTF : IntegerToFPSIMDScalar<0b11, 0b101, "ucvtf", any_uint_to_fp>;
 

@@ -56,10 +56,7 @@ define half @scvtf_bitcast_f32_to_f16(float %f) nounwind {
 ;
 ; CHECK-SVE-LABEL: scvtf_bitcast_f32_to_f16:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    ptrue p0.s
-; CHECK-SVE-NEXT:    // kill: def $s0 killed $s0 def $z0
-; CHECK-SVE-NEXT:    scvtf z0.h, p0/m, z0.s
-; CHECK-SVE-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-SVE-NEXT:    scvtf h0, s0
 ; CHECK-SVE-NEXT:    ret
   %i = bitcast float %f to i32
   %r = sitofp i32 %i to half
@@ -79,10 +76,7 @@ define half @ucvtf_bitcast_f32_to_f16(float %f) nounwind {
 ;
 ; CHECK-SVE-LABEL: ucvtf_bitcast_f32_to_f16:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    ptrue p0.s
-; CHECK-SVE-NEXT:    // kill: def $s0 killed $s0 def $z0
-; CHECK-SVE-NEXT:    ucvtf z0.h, p0/m, z0.s
-; CHECK-SVE-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-SVE-NEXT:    ucvtf h0, s0
 ; CHECK-SVE-NEXT:    ret
   %i = bitcast float %f to i32
   %r = uitofp i32 %i to half
@@ -102,10 +96,7 @@ define float @scvtf_bitcast_f64_to_f32(double %d) nounwind {
 ;
 ; CHECK-SVE-LABEL: scvtf_bitcast_f64_to_f32:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    ptrue p0.d
-; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-SVE-NEXT:    scvtf z0.s, p0/m, z0.d
-; CHECK-SVE-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-SVE-NEXT:    scvtf s0, d0
 ; CHECK-SVE-NEXT:    ret
   %i = bitcast double %d to i64
   %r = sitofp i64 %i to float
@@ -125,10 +116,7 @@ define float @ucvtf_bitcast_f64_to_f32(double %d) nounwind {
 ;
 ; CHECK-SVE-LABEL: ucvtf_bitcast_f64_to_f32:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    ptrue p0.d
-; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-SVE-NEXT:    ucvtf z0.s, p0/m, z0.d
-; CHECK-SVE-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-SVE-NEXT:    ucvtf s0, d0
 ; CHECK-SVE-NEXT:    ret
   %i = bitcast double %d to i64
   %r = uitofp i64 %i to float
@@ -148,10 +136,7 @@ define half @scvtf_bitcast_f64_to_f16(double %d) nounwind {
 ;
 ; CHECK-SVE-LABEL: scvtf_bitcast_f64_to_f16:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    ptrue p0.d
-; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-SVE-NEXT:    scvtf z0.h, p0/m, z0.d
-; CHECK-SVE-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-SVE-NEXT:    scvtf h0, d0
 ; CHECK-SVE-NEXT:    ret
   %i = bitcast double %d to i64
   %r = sitofp i64 %i to half
@@ -171,10 +156,7 @@ define half @ucvtf_bitcast_f64_to_f16(double %d) nounwind {
 ;
 ; CHECK-SVE-LABEL: ucvtf_bitcast_f64_to_f16:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    ptrue p0.d
-; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-SVE-NEXT:    ucvtf z0.h, p0/m, z0.d
-; CHECK-SVE-NEXT:    // kill: def $h0 killed $h0 killed $z0
+; CHECK-SVE-NEXT:    ucvtf h0, d0
 ; CHECK-SVE-NEXT:    ret
   %i = bitcast double %d to i64
   %r = uitofp i64 %i to half
@@ -194,10 +176,7 @@ define float @scvtf_bitcast_f32_to_f32(float %f) nounwind {
 ;
 ; CHECK-SVE-LABEL: scvtf_bitcast_f32_to_f32:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    ptrue p0.s
-; CHECK-SVE-NEXT:    // kill: def $s0 killed $s0 def $z0
-; CHECK-SVE-NEXT:    scvtf z0.s, p0/m, z0.s
-; CHECK-SVE-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-SVE-NEXT:    scvtf s0, s0
 ; CHECK-SVE-NEXT:    ret
   %i = bitcast float %f to i32
   %r = sitofp i32 %i to float
@@ -217,10 +196,7 @@ define float @ucvtf_bitcast_f32_to_f32(float %f) nounwind {
 ;
 ; CHECK-SVE-LABEL: ucvtf_bitcast_f32_to_f32:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    ptrue p0.s
-; CHECK-SVE-NEXT:    // kill: def $s0 killed $s0 def $z0
-; CHECK-SVE-NEXT:    ucvtf z0.s, p0/m, z0.s
-; CHECK-SVE-NEXT:    // kill: def $s0 killed $s0 killed $z0
+; CHECK-SVE-NEXT:    ucvtf s0, s0
 ; CHECK-SVE-NEXT:    ret
   %i = bitcast float %f to i32
   %r = uitofp i32 %i to float
@@ -240,10 +216,7 @@ define double @scvtf_bitcast_f64_to_f64(double %d) nounwind {
 ;
 ; CHECK-SVE-LABEL: scvtf_bitcast_f64_to_f64:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    ptrue p0.d
-; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-SVE-NEXT:    scvtf z0.d, p0/m, z0.d
-; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    scvtf d0, d0
 ; CHECK-SVE-NEXT:    ret
   %i = bitcast double %d to i64
   %r = sitofp i64 %i to double
@@ -263,10 +236,7 @@ define double @ucvtf_bitcast_f64_to_f64(double %d) nounwind {
 ;
 ; CHECK-SVE-LABEL: ucvtf_bitcast_f64_to_f64:
 ; CHECK-SVE:       // %bb.0:
-; CHECK-SVE-NEXT:    ptrue p0.d
-; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-SVE-NEXT:    ucvtf z0.d, p0/m, z0.d
-; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    ucvtf d0, d0
 ; CHECK-SVE-NEXT:    ret
   %i = bitcast double %d to i64
   %r = uitofp i64 %i to double
