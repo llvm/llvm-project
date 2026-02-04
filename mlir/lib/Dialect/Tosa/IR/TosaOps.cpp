@@ -1481,6 +1481,19 @@ static void buildVariableOp(OpBuilder &builder, OperationState &result,
 //===----------------------------------------------------------------------===//
 // TOSA Operator Return Type Inference.
 //===----------------------------------------------------------------------===//
+static FailureOr<int64_t> resolveBroadcastDim(const int64_t dim1,
+                                              const int64_t dim2) {
+  if (dim1 == 1)
+    return dim2;
+  if (dim2 == 1)
+    return dim1;
+
+  if (ShapedType::isStatic(dim1) && ShapedType::isStatic(dim2) && dim1 != dim2)
+    return failure();
+
+  // Prefer static dimension over dynamic
+  return ShapedType::isDynamic(dim1) ? dim2 : dim1;
+}
 
 static LogicalResult resolveBroadcastShape(const ValueShapeRange &operands,
                                            SmallVector<int64_t> &outShape) {
@@ -1504,15 +1517,12 @@ static LogicalResult resolveBroadcastShape(const ValueShapeRange &operands,
     for (size_t i = 0, e = shape.getRank(); i < e; ++i) {
       auto dim1 = outShape[i + rankDiff];
       auto dim2 = shape.getDimSize(i);
-      auto resolvedDim = dim1;
 
-      if (dim1 == 1) {
-        resolvedDim = dim2;
-      } else if (dim2 == 1) {
-        resolvedDim = dim1;
-      } else if (dim1 != dim2) {
+      const FailureOr<int64_t> maybeResolvedDim =
+          resolveBroadcastDim(dim1, dim2);
+      if (failed(maybeResolvedDim))
         return failure();
-      }
+      const int64_t resolvedDim = *maybeResolvedDim;
       outShape[i + rankDiff] = resolvedDim;
     }
   }
