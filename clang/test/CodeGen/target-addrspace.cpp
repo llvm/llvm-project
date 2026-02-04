@@ -53,9 +53,7 @@ void p1(void [[clang::address_space(0)]] * p) { f(p); }
 // AMDGPU-LABEL: define hidden noundef ptr @_Z2p2PU3AS3v(
 // AMDGPU-SAME: ptr addrspace(3) noundef [[P:%.*]]) #[[ATTR0]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
-// AMDGPU-NEXT:    [[RETVAL:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGPU-NEXT:    [[P_ADDR:%.*]] = alloca ptr addrspace(3), align 4, addrspace(5)
-// AMDGPU-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGPU-NEXT:    [[P_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[P_ADDR]] to ptr
 // AMDGPU-NEXT:    store ptr addrspace(3) [[P]], ptr [[P_ADDR_ASCAST]], align 4
 // AMDGPU-NEXT:    [[TMP0:%.*]] = load ptr addrspace(3), ptr [[P_ADDR_ASCAST]], align 4
@@ -75,9 +73,7 @@ void *p2(void [[clang::address_space(3)]] * p) { return p; }
 // AMDGPU-LABEL: define hidden noundef ptr @_Z2p3PU3AS3v(
 // AMDGPU-SAME: ptr addrspace(3) noundef [[P:%.*]]) #[[ATTR0]] {
 // AMDGPU-NEXT:  [[ENTRY:.*:]]
-// AMDGPU-NEXT:    [[RETVAL:%.*]] = alloca ptr, align 8, addrspace(5)
 // AMDGPU-NEXT:    [[P_ADDR:%.*]] = alloca ptr addrspace(3), align 4, addrspace(5)
-// AMDGPU-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // AMDGPU-NEXT:    [[P_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[P_ADDR]] to ptr
 // AMDGPU-NEXT:    store ptr addrspace(3) [[P]], ptr [[P_ADDR_ASCAST]], align 4
 // AMDGPU-NEXT:    [[TMP0:%.*]] = load ptr addrspace(3), ptr [[P_ADDR_ASCAST]], align 4

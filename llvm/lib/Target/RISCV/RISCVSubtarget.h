@@ -170,8 +170,6 @@ public:
   bool GETTER() const { return ATTRIBUTE; }
 #include "RISCVGenSubtargetInfo.inc"
 
-  LLVM_DEPRECATED("Now Equivalent to hasStdExtZca", "hasStdExtZca")
-  bool hasStdExtCOrZca() const { return HasStdExtZca; }
   // FIXME: Remove these and use hasStdExtZcd/hasStdExtZcf() instead.
   bool hasStdExtCOrZcd() const { return HasStdExtZcd; }
   bool hasStdExtCOrZcfOrZce() const { return HasStdExtZcf; }

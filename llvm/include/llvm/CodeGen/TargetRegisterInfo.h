@@ -1029,6 +1029,8 @@ public:
   /// the first time. Default value of 0 means we will use a callee-saved
   /// register if it is available.
   virtual unsigned getCSRFirstUseCost() const { return 0; }
+  /// FIXME: We should deprecate this usage.
+  virtual unsigned getCSRCost() const { return 0; }
 
   /// Returns true if the target requires (and can make use of) the register
   /// scavenger.

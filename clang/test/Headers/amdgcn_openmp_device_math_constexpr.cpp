@@ -38,9 +38,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init
 // CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__X_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
 // CHECK-NEXT:    [[__X_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I]] to ptr
 // CHECK-NEXT:    store float -2.000000e+00, ptr [[__X_ADDR_ASCAST_I]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I]], align 4
@@ -52,15 +50,11 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.1
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL_I_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__X_ADDR_I_I:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__X_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
 // CHECK-NEXT:    [[__X_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I]] to ptr
 // CHECK-NEXT:    store float -2.000000e+00, ptr [[__X_ADDR_ASCAST_I]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I]], align 4
-// CHECK-NEXT:    [[RETVAL_ASCAST_I_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I_I]] to ptr
 // CHECK-NEXT:    [[__X_ADDR_ASCAST_I_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I_I]] to ptr
 // CHECK-NEXT:    store float [[TMP0]], ptr [[__X_ADDR_ASCAST_I_I]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I_I]], align 4
@@ -72,9 +66,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.2
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__X_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
 // CHECK-NEXT:    [[__X_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I]] to ptr
 // CHECK-NEXT:    store float -2.000000e+00, ptr [[__X_ADDR_ASCAST_I]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I]], align 4
@@ -86,15 +78,11 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.3
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL_I_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__X_ADDR_I_I:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__X_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
 // CHECK-NEXT:    [[__X_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I]] to ptr
 // CHECK-NEXT:    store float -2.000000e+00, ptr [[__X_ADDR_ASCAST_I]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I]], align 4
-// CHECK-NEXT:    [[RETVAL_ASCAST_I_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I_I]] to ptr
 // CHECK-NEXT:    [[__X_ADDR_ASCAST_I_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I_I]] to ptr
 // CHECK-NEXT:    store float [[TMP0]], ptr [[__X_ADDR_ASCAST_I_I]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I_I]], align 4
@@ -106,9 +94,7 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.4
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__X_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
 // CHECK-NEXT:    [[__X_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I]] to ptr
 // CHECK-NEXT:    store float -2.000000e+00, ptr [[__X_ADDR_ASCAST_I]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I]], align 4
@@ -120,15 +106,11 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.5
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL_I_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__X_ADDR_I_I:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__X_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
 // CHECK-NEXT:    [[__X_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I]] to ptr
 // CHECK-NEXT:    store float -2.000000e+00, ptr [[__X_ADDR_ASCAST_I]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I]], align 4
-// CHECK-NEXT:    [[RETVAL_ASCAST_I_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I_I]] to ptr
 // CHECK-NEXT:    [[__X_ADDR_ASCAST_I_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I_I]] to ptr
 // CHECK-NEXT:    store float [[TMP0]], ptr [[__X_ADDR_ASCAST_I_I]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I_I]], align 4
@@ -140,11 +122,9 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.6
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__X_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__Y_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__Z_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
 // CHECK-NEXT:    [[__X_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I]] to ptr
 // CHECK-NEXT:    [[__Y_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__Y_ADDR_I]] to ptr
 // CHECK-NEXT:    [[__Z_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__Z_ADDR_I]] to ptr
@@ -162,15 +142,12 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.7
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL_I_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__X_ADDR_I_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__Y_ADDR_I_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__Z_ADDR_I_I:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__X_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__Y_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__Z_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
 // CHECK-NEXT:    [[__X_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I]] to ptr
 // CHECK-NEXT:    [[__Y_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__Y_ADDR_I]] to ptr
 // CHECK-NEXT:    [[__Z_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__Z_ADDR_I]] to ptr
@@ -180,7 +157,6 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[__X_ADDR_ASCAST_I]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[__Y_ADDR_ASCAST_I]], align 4
 // CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[__Z_ADDR_ASCAST_I]], align 4
-// CHECK-NEXT:    [[RETVAL_ASCAST_I_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I_I]] to ptr
 // CHECK-NEXT:    [[__X_ADDR_ASCAST_I_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I_I]] to ptr
 // CHECK-NEXT:    [[__Y_ADDR_ASCAST_I_I:%.*]] = addrspacecast ptr addrspace(5) [[__Y_ADDR_I_I]] to ptr
 // CHECK-NEXT:    [[__Z_ADDR_ASCAST_I_I:%.*]] = addrspacecast ptr addrspace(5) [[__Z_ADDR_I_I]] to ptr
@@ -198,10 +174,8 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.8
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__X_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__Y_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
 // CHECK-NEXT:    [[__X_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I]] to ptr
 // CHECK-NEXT:    [[__Y_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__Y_ADDR_I]] to ptr
 // CHECK-NEXT:    store float 2.000000e+00, ptr [[__X_ADDR_ASCAST_I]], align 4
@@ -216,10 +190,8 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.9
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__X_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__Y_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
 // CHECK-NEXT:    [[__X_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I]] to ptr
 // CHECK-NEXT:    [[__Y_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__Y_ADDR_I]] to ptr
 // CHECK-NEXT:    store float 2.000000e+00, ptr [[__X_ADDR_ASCAST_I]], align 4
@@ -250,10 +222,8 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.12
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__X_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__Y_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
 // CHECK-NEXT:    [[__X_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I]] to ptr
 // CHECK-NEXT:    [[__Y_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__Y_ADDR_I]] to ptr
 // CHECK-NEXT:    store float 2.000000e+00, ptr [[__X_ADDR_ASCAST_I]], align 4
@@ -268,10 +238,8 @@ const float constexpr_fmaxf_f32 = fmaxf(2.0f, -4.0f);
 // CHECK-LABEL: define {{[^@]+}}@__cxx_global_var_init.13
 // CHECK-SAME: () #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__X_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
 // CHECK-NEXT:    [[__Y_ADDR_I:%.*]] = alloca float, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL_I]] to ptr
 // CHECK-NEXT:    [[__X_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__X_ADDR_I]] to ptr
 // CHECK-NEXT:    [[__Y_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[__Y_ADDR_I]] to ptr
 // CHECK-NEXT:    store float 2.000000e+00, ptr [[__X_ADDR_ASCAST_I]], align 4

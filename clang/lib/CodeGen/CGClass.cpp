@@ -2495,7 +2495,7 @@ void CodeGenFunction::EmitInlinedInheritingCXXConstructorCall(
   // FIXME: This is dumb, we should ask the ABI not to try to set the return
   // value instead.
   if (!RetType->isVoidType())
-    ReturnValue = CreateIRTemp(RetType, "retval.inhctor");
+    ReturnValue = CreateIRTempWithoutCast(RetType, "retval.inhctor");
 
   CGM.getCXXABI().EmitInstanceFunctionProlog(*this);
   CXXThisValue = CXXABIThisValue;
