@@ -8,13 +8,13 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=hawaii < %s | FileCheck -check-prefixes=CI,SDAG-CI %s
 
 ; FIXME-TRUE16. enable gisel
-; XUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1100,GISEL-GFX1100,GISEL-GFX1100-TRUE16 %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1100,GISEL-GFX1100,GISEL-GFX1100-FAKE16 %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX900,GISEL-GFX900 %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx906 < %s | FileCheck -check-prefixes=GFX906,GISEL-GFX906 %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx9-generic --amdhsa-code-object-version=6 < %s | FileCheck -check-prefixes=GFX9GEN,GISEL-GFX9GEN %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=VI,GISEL-VI %s
-; RUN: llc -global-isel -mtriple=amdgcn -mcpu=hawaii < %s | FileCheck -check-prefixes=CI,GISEL-CI %s
+; XUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX1100,GISEL-GFX1100,GISEL-GFX1100-TRUE16 %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX1100,GISEL-GFX1100,GISEL-GFX1100-FAKE16 %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX900,GISEL-GFX900 %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx906 < %s | FileCheck -check-prefixes=GFX906,GISEL-GFX906 %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx9-generic --amdhsa-code-object-version=6 < %s | FileCheck -check-prefixes=GFX9GEN,GISEL-GFX9GEN %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -check-prefixes=VI,GISEL-VI %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=hawaii < %s | FileCheck -check-prefixes=CI,GISEL-CI %s
 
 define float @v_mad_mix_f32_f16lo_f16lo_f16lo(half %src0, half %src1, half %src2) #0 {
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_f16lo_f16lo:
