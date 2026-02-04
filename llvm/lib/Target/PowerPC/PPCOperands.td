@@ -65,25 +65,21 @@ multiclass ImmOpWithPatterns<ValueType vt, string asmop, int width,
 
 // Creates Operand and separate ImmLeaf definitions for unsigned immediates.
 multiclass UnsignedImmediate<ValueType vt, code pred, SDNodeXForm xform,
-                             string asmop, int width, string encoder = ""> {
-  defm "" : ImmOpWithPatterns<vt, asmop, width, 0, pred, xform, encoder>;
-}
+                             string asmop, int width, string encoder = "">
+      : ImmOpWithPatterns<vt, asmop, width, 0, pred, xform, encoder>;
 
 // Creates Operand and separate ImmLeaf definitions for signed immediates.
 multiclass SignedImmediate<ValueType vt, code pred, SDNodeXForm xform,
-                           string asmop, int width, string encoder = ""> {
-  defm "" : ImmOpWithPatterns<vt, asmop, width, 1, pred, xform, encoder>;
-}
+                           string asmop, int width, string encoder = "">
+      : ImmOpWithPatterns<vt, asmop, width, 1, pred, xform, encoder>;
 
 // Multiclass for signed immediate operands with both regular and
 // PC-relative versions.
 multiclass SignedImmediateWithPCRel<ValueType vt, code pred,
                                     SDNodeXForm xform, string asmop,
                                     int width, string fixup_imm,
-                                    string fixup_pcrel> {
-  // Regular immediate: instantiate SignedImmediate with regular fixup
-  defm "" : SignedImmediate<vt, pred, xform, asmop, width, fixup_imm>;
-
+                                    string fixup_pcrel>
+      : SignedImmediate<vt, pred, xform, asmop, width, fixup_imm> {
   // PC-relative immediate: instantiate SignedImmediate with PC-relative fixup
   defm _pcrel : SignedImmediate<vt, pred, xform, asmop, width, fixup_pcrel>;
 }
