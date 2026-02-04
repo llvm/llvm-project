@@ -2051,8 +2051,8 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
 }
 
 LogicalResult ExpandShapeOp::verify() {
-  auto srcType = getSrcType();
-  auto resultType = getResultType();
+  RankedTensorType srcType = getSrc().getType();
+  RankedTensorType resultType = getResult().getType();
 
   if ((int64_t)getStaticOutputShape().size() != resultType.getRank())
     return emitOpError("expected number of static shape dims to be equal to "
@@ -2077,7 +2077,10 @@ LogicalResult CollapseShapeOp::verify() {
                    [](ReassociationIndices group) { return group.empty(); })) {
     return op.emitOpError("reassociation indices must not be empty");
   }
-  return verifyTensorReshapeOp(*this, getSrcType(), getResultType());
+  RankedTensorType srcType = op.getSrc().getType();
+  RankedTensorType resultType = op.getResult().getType();
+
+  return verifyTensorReshapeOp(op, srcType, resultType);
 }
 
 namespace {

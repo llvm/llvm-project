@@ -1801,6 +1801,7 @@ static void genTaskClauses(
     mlir::omp::TaskOperands &clauseOps,
     llvm::SmallVectorImpl<const semantics::Symbol *> &inReductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAffinity(clauseOps);
   cp.processAllocate(clauseOps);
   cp.processDepend(symTable, stmtCtx, clauseOps);
   cp.processFinal(stmtCtx, clauseOps);
@@ -1810,8 +1811,6 @@ static void genTaskClauses(
   cp.processPriority(stmtCtx, clauseOps);
   cp.processUntied(clauseOps);
   cp.processDetach(clauseOps);
-
-  cp.processTODO<clause::Affinity>(loc, llvm::omp::Directive::OMPD_task);
 }
 
 static void genTaskgroupClauses(

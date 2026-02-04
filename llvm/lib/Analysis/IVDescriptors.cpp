@@ -653,11 +653,10 @@ bool RecurrenceDescriptor::AddReductionVar(
   // is saved as part of the RecurrenceDescriptor.
 
   // Save the description of this reduction variable.
-  RecurrenceDescriptor RD(RdxStart, ExitInstruction, IntermediateStore, Kind,
-                          FMF, ExactFPMathInst, RecurrenceType, IsSigned,
-                          IsOrdered, CastInsts, MinWidthCastToRecurrenceType);
-  RedDes = RD;
-
+  RedDes =
+      RecurrenceDescriptor(RdxStart, ExitInstruction, IntermediateStore, Kind,
+                           FMF, ExactFPMathInst, RecurrenceType, IsSigned,
+                           IsOrdered, CastInsts, MinWidthCastToRecurrenceType);
   return true;
 }
 

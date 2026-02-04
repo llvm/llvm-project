@@ -196,6 +196,15 @@ mlir::LogicalResult CIRToLLVMMemCpyOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMMemSetOpLowering::matchAndRewrite(
+    cir::MemSetOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MemsetOp>(
+      op, adaptor.getDst(), adaptor.getVal(), adaptor.getLen(),
+      /*isVolatile=*/false);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMSqrtOpLowering::matchAndRewrite(
     cir::SqrtOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
