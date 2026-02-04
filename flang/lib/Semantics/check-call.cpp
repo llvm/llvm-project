@@ -987,7 +987,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             "If a POINTER or ALLOCATABLE dummy or actual argument is polymorphic, both must be so"_err_en_US);
       }
     } else if ((dummy.ignoreTKR.test(common::IgnoreTKR::Type) ||
-            dummy.ignoreTKR.test(common::IgnoreTKR::Kind)) &&
+                   dummy.ignoreTKR.test(common::IgnoreTKR::Kind)) &&
         dummy.ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
       // Descriptor based dummy args passed with ignore_tkr(tc) or
       // ignore_tkr(kc) are allowed to have type and kind differences
