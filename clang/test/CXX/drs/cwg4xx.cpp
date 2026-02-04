@@ -309,15 +309,14 @@ namespace cwg413 { // cwg413: 2.7
   // expected-error@-1 {{excess elements in struct initializer}}
 
   struct E {};
-  struct T { // #cwg413-T
+  struct S2 {
     int a;
     E e;
     int b;
   };
-  T t1 = { 1, {}, 2 };
-  T t2 = { 1, 2 };
+  S2 s2_1 = { 1, {}, 2 };
+  S2 s2_2 = { 1, 2 };
   // expected-error@-1 {{initializer for aggregate with no elements requires explicit braces}}
-  //   expected-note@#cwg413-T {{'cwg413::T' declared here}}
 } // namespace cwg413
 
 namespace cwg414 { // cwg414: dup 305
@@ -534,16 +533,28 @@ namespace cwg425 { // cwg425: 2.7
   struct A { template<typename T> operator T() const; } a;
   float f = 1.0f * a;
   // expected-error@-1 {{use of overloaded operator '*' is ambiguous (with operand types 'float' and 'struct A')}}
-  //   expected-note@-2 +{{built-in candidate operator*}}
+  //   expected-note-re@-2 {{built-in candidate operator*{{.*}}}}
+  //   expected-note-re@-3 {{built-in candidate operator*{{.*}}}}
+  //   expected-note-re@-4 {{built-in candidate operator*{{.*}}}}
+  //   expected-note-re@-5 {{built-in candidate operator*{{.*}}}}
+  //   expected-note-re@-6 {{built-in candidate operator*{{.*}}}}
+  //   expected-note-re@-7 {{built-in candidate operator*{{.*}}}}
+  //   expected-note-re@-8 {{built-in candidate operator*{{.*}}}}
+  //   expected-note-re@-9 {{built-in candidate operator*{{.*}}}}
+  //   expected-note-re@-10 {{built-in candidate operator*{{.*}}}}
+  //   expected-note-re@-11 {{built-in candidate operator*{{.*}}}}
+  //   expected-note-re@-12 {{built-in candidate operator*{{.*}}}}
+  //   expected-note-re@-13 {{built-in candidate operator*{{.*}}}}
 
   template<typename T> struct is_float;
   template<> struct is_float<float> { typedef void type; };
 
+#if __cplusplus >= 201103L
   struct B {
     template<typename T, typename U = typename is_float<T>::type> operator T() const;
-    // cxx98-error@-1 {{default template arguments for a function template are a C++11 extension}}
   } b;
   float g = 1.0f * b; // ok
+#endif
 } // namespace cwg425
 
 namespace cwg427 { // cwg427: 2.7
@@ -767,12 +778,12 @@ namespace cwg446 { // cwg446: 2.8
     //   expected-note@#cwg446-deleted {{'A' has been explicitly marked deleted here}}
     b ? A() : A();
     // cxx98-14-error@-1 {{call to deleted constructor of 'A'}}
-    //   expected-note@#cwg446-deleted {{'A' has been explicitly marked deleted here}}
+    //   cxx98-14-note@#cwg446-deleted {{'A' has been explicitly marked deleted here}}
 
     void(b ? a : c);
     b ? a : C();
     // expected-error@-1 {{call to deleted constructor of 'A'}}
-    //   cxx98-14-note@#cwg446-deleted {{'A' has been explicitly marked deleted here}}
+    //   expected-note@#cwg446-deleted {{'A' has been explicitly marked deleted here}}
     b ? c : A();
     // cxx98-14-error@-1 {{call to deleted constructor of 'A'}}
     //   cxx98-14-note@#cwg446-deleted {{'A' has been explicitly marked deleted here}}
