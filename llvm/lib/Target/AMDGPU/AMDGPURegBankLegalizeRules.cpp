@@ -311,14 +311,14 @@ void SetOfRulesForOpcode::addFastRuleDivergent(UniformityLLTOpPredicateID Ty,
                                                RegBankLLTMapping RuleApplyIDs) {
   int Slot = getFastPredicateSlot(Ty);
   assert(Slot != -1 && "Ty unsupported in this FastRulesTypes");
-  Div[Slot] = RuleApplyIDs;
+  Div[Slot] = std::move(RuleApplyIDs);
 }
 
 void SetOfRulesForOpcode::addFastRuleUniform(UniformityLLTOpPredicateID Ty,
                                              RegBankLLTMapping RuleApplyIDs) {
   int Slot = getFastPredicateSlot(Ty);
   assert(Slot != -1 && "Ty unsupported in this FastRulesTypes");
-  Uni[Slot] = RuleApplyIDs;
+  Uni[Slot] = std::move(RuleApplyIDs);
 }
 
 int SetOfRulesForOpcode::getFastPredicateSlot(
