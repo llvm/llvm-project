@@ -6027,41 +6027,42 @@ static SDValue optimizeIncrementingWhile(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-// Match active.lane.mask(cttz.elts(x)) -> brkb(x)
-// Match active.lane.mask(add(cttz.elts(x), 1)) -> brka(x)
+// Match get.active.lane.mask(0, cttz.elts(x)) -> brkb(x)
+// Match get.active.lane.mask(0, add(cttz.elts(x), 1)) -> brka(x)
 static SDValue optimizeBrk(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
   EVT VT = N->getValueType(0);
-
-  // TODO: Do we need to do anything for fixed types post legalization?
-  if (!VT.isScalableVT())
+  // Lower bound must be 0.
+  if (!isZeroOrZeroSplat(N->getOperand(0)))
     return SDValue();
 
-  SDValue Op = N->getOperand(1);
+  SDValue Upper = N->getOperand(1);
 
   // Default to brkb, switch to brka if we find a +1.
   unsigned BrkID = Intrinsic::aarch64_sve_brkb_z;
-  if (Op->getOpcode() == ISD::ADD && isOneOrOneSplat(Op.getOperand(1))) {
-    Op = Op.getOperand(0);
+  if (Upper->getOpcode() == ISD::ADD && isOneOrOneSplat(Upper.getOperand(1))) {
+    Upper = Upper.getOperand(0);
     BrkID = Intrinsic::aarch64_sve_brka_z;
   }
 
-  if (Op.getOpcode() == AArch64ISD::CTTZ_ELTS) {
-    SDValue Mask = Op->getOperand(0);
-    SDLoc DL(N);
-    SDValue PTrue = getPTrue(DAG, DL, VT, AArch64SVEPredPattern::all);
+  // We're looking for an upper bound based on CTTZ_ELTS; this would be selected
+  // as a cntp(brk(Pg, Mask)), but if we're just going to make a whilelo based
+  // on that then we just need the brk.
+  if (Upper.getOpcode() != AArch64ISD::CTTZ_ELTS || !VT.isScalableVector())
+    return SDValue();
 
-    // brk{a,b} only support .b forms, so reinterpret to make sure all our
-    // p regs will match.
-    PTrue = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, PTrue);
-    SDValue MaskR =
-        DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, Mask);
-    SDValue ID = DAG.getTargetConstant(BrkID, DL, MVT::i64);
-    SDValue Brk = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i1, ID,
-                              PTrue, MaskR);
-    return DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, Brk);
-  }
+  SDValue Mask = Upper->getOperand(0);
+  const APInt &PgPattern = Upper.getConstantOperandAPInt(1);
+  SDValue Pg = getPTrue(DAG, DL, VT, PgPattern.getZExtValue());
 
-  return SDValue();
+  // brk{a,b} only support .b forms, so cast to make sure all our p regs match.
+  Pg = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, Pg);
+  SDValue MaskR =
+      DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, Mask);
+  SDValue ID = DAG.getTargetConstant(BrkID, DL, MVT::i64);
+  SDValue Brk =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i1, ID, Pg, MaskR);
+  return DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, Brk);
 }
 
 // Returns a safe bitcast between two scalable vector predicates, where
