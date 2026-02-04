@@ -96,6 +96,7 @@ def MPI_CommSizeOp : MPI_Op<"comm_size", [Pure]> {
   );
 
   let assemblyFormat = "`(` $comm `)` attr-dict `:` type(results)";
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

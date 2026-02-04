@@ -458,8 +458,7 @@ def FeatureStdExtZce
                       FeatureStdExtZcmt]>;
 
 def HasStdExtCOrZcfOrZce
-    : Predicate<"Subtarget->hasStdExtC() || Subtarget->hasStdExtZcf() ||"
-                "Subtarget->hasStdExtZce()">,
+    : Predicate<"Subtarget->hasStdExtCOrZcfOrZce()">,
       AssemblerPredicate<(any_of FeatureStdExtC, FeatureStdExtZcf,
                                  FeatureStdExtZce),
                          "'C' (Compressed Instructions) or "
