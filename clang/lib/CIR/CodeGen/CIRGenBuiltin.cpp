@@ -1936,8 +1936,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     // cir::LLVMIntrinsicCallOp expects intrinsic name to not have prefix
     // "llvm." For example, `llvm.nvvm.barrier0` should be passed as
     // `nvvm.barrier0`.
-    if (!name.consume_front("llvm."))
-      assert(false && "bad intrinsic name!");
+    assert(name.starts_with("llvm.");
+    name = name.drop_front(/*strlen("llvm.")=*/5);
 
     cir::FuncType intrinsicType =
         getIntrinsicType(*this, &getMLIRContext(), intrinsicID);
