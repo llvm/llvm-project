@@ -39,7 +39,7 @@ let BufferSize = 6 in {
 }
 
 let BufferSize = 4 in {
-  // LSQ: 16 entry queue, can accept 4 ops and issue 1 op per cycle
+  // LSQ: 16 entry queue, can accept 4 ops and issue 2 op per cycle
   // To model the accept bandwidth, split into 4 sub-queues of 4 entry each
   def SMTX100_LSQ : ProcResource<4>; //Load Store Queue
   // FQ0, FQ1: 8 entry queue, can accept 2 ops and issue 1 op per cycle
