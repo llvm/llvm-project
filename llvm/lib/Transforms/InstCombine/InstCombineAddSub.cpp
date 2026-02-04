@@ -2507,21 +2507,17 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     Value *X;
     if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
       // C - (zext bool) --> bool ? C - 1 : C
-      SelectInst *SI = SelectInst::Create(X, InstCombiner::SubOne(C), C);
-      if (!ProfcheckDisableMetadataFixes && I.getFunction()->hasProfileData()) {
-        MDBuilder MDB(I.getContext());
-        SI->setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(1, 1));
-      }
-      return SI;
+      if (!ProfcheckDisableMetadataFixes)
+        return createSelectInstWithUnknownProfile(X, InstCombiner::SubOne(C),
+                                                  C);
+      return SelectInst::Create(X, InstCombiner::SubOne(C), C);
     }
     if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
       // C - (sext bool) --> bool ? C + 1 : C
-      SelectInst *SI = SelectInst::Create(X, InstCombiner::AddOne(C), C);
-      if (!ProfcheckDisableMetadataFixes && I.getFunction()->hasProfileData()) {
-        MDBuilder MDB(I.getContext());
-        SI->setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(1, 1));
-      }
-      return SI;
+      if (!ProfcheckDisableMetadataFixes)
+        return createSelectInstWithUnknownProfile(X, InstCombiner::AddOne(C),
+                                                  C);
+      return SelectInst::Create(X, InstCombiner::AddOne(C), C);
     }
 
     // C - ~X == X + (1+C)

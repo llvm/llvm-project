@@ -404,5 +404,5 @@ define <4 x i32> @zextbool_sub_vector(<4 x i1> %c, <4 x i32> %x) {
 
 !0 = !{!"function_entry_count", i64 1000}
 ;.
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1}
+; CHECK: [[PROF1]] = !{!"unknown", !"instcombine"}
 ;.
