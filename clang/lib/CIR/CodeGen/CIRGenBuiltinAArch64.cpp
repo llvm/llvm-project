@@ -88,6 +88,54 @@ findARMVectorIntrinsicInMap(ArrayRef<AArch64BuiltinInfo> intrinsicMap,
   return nullptr;
 }
 
+//===----------------------------------------------------------------------===//
+//  Emit-helpers
+//===----------------------------------------------------------------------===//
+mlir::Value CIRGenFunction::emitAArch64CompareBuiltinExpr(
+    mlir::Location loc, mlir::Value src, mlir::Type ty,
+    const llvm::CmpInst::Predicate pred) {
+
+  mlir::Value res;
+  if (isa<cir::VectorType>(ty) && !cast<cir::VectorType>(ty).getIsScalable()) {
+    // Vector types are cast to i8 vectors. Recover original type.
+    cgm.errorNYI(loc, std::string("unimplemented vector compare"));
+  }
+
+  // Scalar compare is a special case that is artifically converted to a
+  // 1-element vector compare. This is to guarantee that the output result is
+  // sign- rather than zero-extended.
+  //
+  // Specifically, a compare Op will generate an i1 result that needs to be
+  // extended to match the in/out type, `ty`. Regular scalar cast wwould lead
+  // to ZExt to preserve the value, e.g. 0b1 --> 0x00000001 (i1 -0> i16).
+  // Vector compare are meant to generate masks and these are exteded via SExt,
+  // so that 0b1 --> 0x11111111 and 0b0 --> 0x00000000.
+  bool scalarInputs = isa<cir::IntType>(src.getType());
+
+  mlir::Value zero = builder.getNullValue(ty, loc);
+  if (CmpInst::isFPPredicate(pred)) {
+    cgm.errorNYI(loc, std::string("unimplemented FP compare"));
+    // TODO:
+    //   if (Pred == CmpInst::FCMP_OEQ)
+    //   else
+  } else {
+    if (scalarInputs) {
+      cir::VectorType ty = cir::VectorType::get(src.getType(), 1, false);
+      src = cir::VecSplatOp::create(builder, loc, ty, src);
+      zero = cir::VecSplatOp::create(builder, loc, ty, zero);
+    }
+  }
+
+  mlir::Value cmp =
+      builder.createVecCompare(loc, cir::CmpOpKind::eq, src, zero);
+
+  if (scalarInputs)
+    cmp =
+        cir::VecExtractOp::create(builder, loc, cmp, builder.getUInt64(0, loc));
+
+  return builder.createBitcast(loc, cmp, builder.getUInt64Ty());
+}
+
 bool CIRGenFunction::getAArch64SVEProcessedOperands(
     unsigned builtinID, const CallExpr *expr, SmallVectorImpl<mlir::Value> &ops,
     SVETypeFlags typeFlags) {
@@ -1279,7 +1327,15 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vpaddd_s64:
   case NEON::BI__builtin_neon_vpaddd_f64:
   case NEON::BI__builtin_neon_vpadds_f32:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vceqzd_s64:
+    ops.push_back(emitScalarExpr(expr->getArg(0)));
+    return emitAArch64CompareBuiltinExpr(
+        loc, ops[0], convertType(expr->getArg(0)->getType()),
+        llvm::ICmpInst::ICMP_EQ);
   case NEON::BI__builtin_neon_vceqzd_f64:
   case NEON::BI__builtin_neon_vceqzs_f32:
   case NEON::BI__builtin_neon_vceqzh_f16:

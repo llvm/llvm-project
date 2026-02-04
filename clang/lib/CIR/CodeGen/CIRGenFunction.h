@@ -36,6 +36,7 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
 #include "llvm/ADT/ScopedHashTable.h"
+#include "llvm/IR/Instructions.h"
 
 namespace {
 class ScalarExprEmitter;
@@ -1288,6 +1289,13 @@ public:
                                       SourceLocation assumptionLoc,
                                       int64_t alignment,
                                       mlir::Value offsetValue = nullptr);
+  /// -----------------------------
+  /// CIR emit functions -- AArch64
+  /// -----------------------------
+  mlir::Value
+  emitAArch64CompareBuiltinExpr(mlir::Location loc, mlir::Value src,
+                                mlir::Type ty,
+                                const llvm::CmpInst::Predicate pred);
 
 private:
   void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
