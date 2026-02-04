@@ -478,7 +478,7 @@ public:
   // WaitEventType to corresponding counter values in InstCounterType.
   virtual const WaitEventSet *getWaitEventMask() const = 0;
 
-  /// \Returns the counter that corresponds to event \p E.
+  /// \returns the counter that corresponds to event \p E.
   InstCounterType getCounterFromEvent(WaitEventType E) const {
     const WaitEventSet *WaitEvents = getWaitEventMask();
     for (auto T : inst_counter_types()) {
