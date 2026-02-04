@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <clc/internal/clc.h>
 #include <clc/internal/math/clc_sw_fma.h>
+#include <clc/math/math.h>
 
-#define __CLC_FLOAT_ONLY
-#define __CLC_FUNCTION fma
-#define __CLC_IMPL_FUNCTION(x) __clc_sw_fma
-#define __CLC_BODY <clc/shared/ternary_def.inc>
-
+#define __CLC_BODY <clc_fma.inc>
 #include <clc/math/gentype.inc>
