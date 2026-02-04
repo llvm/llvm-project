@@ -498,6 +498,21 @@ HexagonTargetLowering::initializeHVXLowering() {
   setOperationAction(ISD::SINT_TO_FP, MVT::v32i1, Custom);
 
   setTargetDAGCombine({ISD::CONCAT_VECTORS, ISD::TRUNCATE, ISD::VSELECT});
+
+  // Partial reductions.
+  {
+    static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                                      ISD::PARTIAL_REDUCE_UMLA,
+                                      ISD::PARTIAL_REDUCE_SUMLA};
+
+    auto HvxType = [=](MVT ScalarT) {
+      return MVT::getVectorVT(ScalarT, Subtarget.getVectorLength() * 8 /
+                                           ScalarT.getSizeInBits());
+    };
+
+    setPartialReduceMLAAction(MLAOps, HvxType(MVT::i32), HvxType(MVT::i8),
+                              Legal);
+  }
 }
 
 unsigned
