@@ -1012,6 +1012,13 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
       return getCallInstrCost(nullptr, VecTy, {VecTy, VecTy}, CostKind);
   }
 
+  // Vector unsigned division/remainder will be simplified to shifts/masks.
+  if ((Opcode == Instruction::UDiv || Opcode == Instruction::URem) &&
+      Op2Info.isConstant() && Op2Info.isPowerOf2())
+    return getArithmeticInstrCost(
+        Opcode == Instruction::UDiv ? Instruction::LShr : Instruction::And, Ty,
+        CostKind, Op1Info.getNoProps(), Op2Info.getNoProps());
+
   InstructionCost Cost = TTIImpl->getArithmeticInstrCost(
       Opcode, Ty, CostKind, Op1Info, Op2Info, Args, CxtI);
   assert(Cost >= 0 && "TTI should not produce negative costs!");

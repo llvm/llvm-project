@@ -2617,11 +2617,6 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   unsigned ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
 
-  InstructionCost ConvertedCost;
-  if (getConvertedArithmeticInstructionCost(ISDOpcode, Ty, CostKind, Op1Info,
-                                            Op2Info, Args, CxtI, ConvertedCost))
-    return ConvertedCost;
-
   // TODO: Handle scalar type.
   if (!LT.second.isVector()) {
     static const CostTblEntry DivTbl[]{

@@ -4290,11 +4290,6 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     return LT.first;
   }
 
-  InstructionCost ConvertedCost;
-  if (getConvertedArithmeticInstructionCost(ISD, Ty, CostKind, Op1Info, Op2Info,
-                                            Args, CxtI, ConvertedCost))
-    return ConvertedCost;
-
   switch (ISD) {
   default:
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,

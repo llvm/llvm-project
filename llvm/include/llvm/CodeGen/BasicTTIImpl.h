@@ -1048,30 +1048,6 @@ public:
 
   unsigned getMaxInterleaveFactor(ElementCount VF) const override { return 1; }
 
-  bool getConvertedArithmeticInstructionCost(unsigned ISDOpcode, Type *Ty,
-                                             TTI::TargetCostKind CostKind,
-                                             TTI::OperandValueInfo Opd1Info,
-                                             TTI::OperandValueInfo Opd2Info,
-                                             ArrayRef<const Value *> Args,
-                                             const Instruction *CxtI,
-                                             InstructionCost &Cost) const {
-    // Vector unsigned division/remainder will be simplified to shifts/masks.
-    if ((ISDOpcode == ISD::UDIV || ISDOpcode == ISD::UREM) &&
-        Opd2Info.isConstant() && Opd2Info.isPowerOf2()) {
-      if (ISDOpcode == ISD::UDIV)
-        Cost = getArithmeticInstrCost(Instruction::LShr, Ty, CostKind,
-                                      Opd1Info.getNoProps(),
-                                      Opd2Info.getNoProps());
-      // UREM
-      else
-        Cost = getArithmeticInstrCost(Instruction::And, Ty, CostKind,
-                                      Opd1Info.getNoProps(),
-                                      Opd2Info.getNoProps());
-      return true;
-    }
-    return false;
-  }
-
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
