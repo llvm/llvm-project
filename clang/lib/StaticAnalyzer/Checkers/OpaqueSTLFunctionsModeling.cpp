@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/ProgramPoint.h"
-#include "clang/Basic/IdentifierTable.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
