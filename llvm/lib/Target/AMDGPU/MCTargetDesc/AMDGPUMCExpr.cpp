@@ -455,7 +455,7 @@ static void unaryOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
     return;
   case MCUnaryExpr::Opcode::Minus: {
     KB.makeNegative();
-    KBM[Expr] = KB;
+    KBM[Expr] = std::move(KB);
     return;
   }
   case MCUnaryExpr::Opcode::Not: {
@@ -466,7 +466,7 @@ static void unaryOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
   }
   case MCUnaryExpr::Opcode::Plus: {
     KB.makeNonNegative();
-    KBM[Expr] = KB;
+    KBM[Expr] = std::move(KB);
     return;
   }
   }
@@ -488,7 +488,7 @@ static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
       knownBitsMapHelper(Arg, KBM, Depth + 1);
       KB |= KBM[Arg];
     }
-    KBM[Expr] = KB;
+    KBM[Expr] = std::move(KB);
     return;
   }
   case AMDGPUMCExpr::VariantKind::AGVK_Max: {
@@ -498,7 +498,7 @@ static void targetOpKnownBitsMapHelper(const MCExpr *Expr, KnownBitsMap &KBM,
       knownBitsMapHelper(Arg, KBM, Depth + 1);
       KB = KnownBits::umax(KB, KBM[Arg]);
     }
-    KBM[Expr] = KB;
+    KBM[Expr] = std::move(KB);
     return;
   }
   case AMDGPUMCExpr::VariantKind::AGVK_ExtraSGPRs:

@@ -49,36 +49,40 @@ define void @private_za_loop(i32 %n) "aarch64_inout_za" nounwind {
 ; CHECK-LABEL: private_za_loop:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    mov x29, sp
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    rdsvl x8, #1
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    sub x10, x29, #16
 ; CHECK-NEXT:    cmp w0, #1
 ; CHECK-NEXT:    stp x9, x8, [x29, #-16]
-; CHECK-NEXT:    msr TPIDR2_EL0, x10
-; CHECK-NEXT:    b.lt .LBB0_3
+; CHECK-NEXT:    b.lt .LBB0_5
 ; CHECK-NEXT:  // %bb.1: // %loop.preheader
 ; CHECK-NEXT:    mov w19, w0
+; CHECK-NEXT:    sub x20, x29, #16
+; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:  .LBB0_2: // %loop
+; CHECK-NEXT:    // in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    msr TPIDR2_EL0, xzr
+; CHECK-NEXT:    cbz w19, .LBB0_5
+; CHECK-NEXT:  .LBB0_3: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    msr TPIDR2_EL0, x20
 ; CHECK-NEXT:    bl private_za_call
-; CHECK-NEXT:    subs w19, w19, #1
-; CHECK-NEXT:    b.ne .LBB0_2
-; CHECK-NEXT:  .LBB0_3: // %exit
+; CHECK-NEXT:    sub w19, w19, #1
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
 ; CHECK-NEXT:    sub x0, x29, #16
-; CHECK-NEXT:    cbnz x8, .LBB0_5
-; CHECK-NEXT:  // %bb.4: // %exit
+; CHECK-NEXT:    cbnz x8, .LBB0_2
+; CHECK-NEXT:  // %bb.4: // %loop
+; CHECK-NEXT:    // in Loop: Header=BB0_3 Depth=1
 ; CHECK-NEXT:    bl __arm_tpidr2_restore
+; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:  .LBB0_5: // %exit
-; CHECK-NEXT:    msr TPIDR2_EL0, xzr
 ; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
+; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:

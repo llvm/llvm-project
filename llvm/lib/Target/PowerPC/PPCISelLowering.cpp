@@ -5438,7 +5438,6 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
     const GlobalValue *GV = cast<GlobalAddressSDNode>(Callee)->getGlobal();
 
     if (Subtarget.isAIXABI()) {
-      assert(!isa<GlobalIFunc>(GV) && "IFunc is not supported on AIX.");
       return getAIXFuncEntryPointSymbolSDNode(GV);
     }
     return DAG.getTargetGlobalAddress(GV, dl, Callee.getValueType(), 0,
@@ -8176,7 +8175,7 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   // general, fsel-based lowering of select is a finite-math-only optimization.
   // For more information, see section F.3 of the 2.06 ISA specification.
   // With ISA 3.0
-  if ((!DAG.getTarget().Options.NoInfsFPMath && !Flags.hasNoInfs()) ||
+  if (!Flags.hasNoInfs() ||
       (!DAG.getTarget().Options.NoNaNsFPMath && !Flags.hasNoNaNs()) ||
       ResVT == MVT::f128)
     return Op;
@@ -18631,10 +18630,10 @@ PPCTargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
   return false;
 }
 
-bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                           const CallBase &I,
-                                           MachineFunction &MF,
-                                           unsigned Intrinsic) const {
+void PPCTargetLowering::getTgtMemIntrinsic(
+    SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
+    MachineFunction &MF, unsigned Intrinsic) const {
+  IntrinsicInfo Info;
   switch (Intrinsic) {
   case Intrinsic::ppc_atomicrmw_xchg_i128:
   case Intrinsic::ppc_atomicrmw_add_i128:
@@ -18651,7 +18650,8 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = Align(16);
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
                  MachineMemOperand::MOVolatile;
-    return true;
+    Infos.push_back(Info);
+    return;
   case Intrinsic::ppc_atomic_load_i128:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i128;
@@ -18659,7 +18659,8 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align = Align(16);
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile;
-    return true;
+    Infos.push_back(Info);
+    return;
   case Intrinsic::ppc_atomic_store_i128:
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = MVT::i128;
@@ -18667,7 +18668,8 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align = Align(16);
     Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MOVolatile;
-    return true;
+    Infos.push_back(Info);
+    return;
   case Intrinsic::ppc_altivec_lvx:
   case Intrinsic::ppc_altivec_lvxl:
   case Intrinsic::ppc_altivec_lvebx:
@@ -18706,7 +18708,8 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.size = 2*VT.getStoreSize()-1;
     Info.align = Align(1);
     Info.flags = MachineMemOperand::MOLoad;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::ppc_altivec_stvx:
   case Intrinsic::ppc_altivec_stvxl:
@@ -18746,7 +18749,8 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.size = 2*VT.getStoreSize()-1;
     Info.align = Align(1);
     Info.flags = MachineMemOperand::MOStore;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::ppc_stdcx:
   case Intrinsic::ppc_stwcx:
@@ -18777,13 +18781,12 @@ bool PPCTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align = Alignment;
     Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MOVolatile;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   default:
     break;
   }
-
-  return false;
 }
 
 /// It returns EVT::Other if the type should be determined using generic

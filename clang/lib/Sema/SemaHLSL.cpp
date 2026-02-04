@@ -3189,10 +3189,13 @@ static bool CheckAnyScalarOrVector(Sema *S, CallExpr *TheCall,
   return false;
 }
 
-static bool CheckWaveActive(Sema *S, CallExpr *TheCall) {
+// Check that the argument is not a bool or vector<bool>
+// Returns true on error
+static bool CheckNotBoolScalarOrVector(Sema *S, CallExpr *TheCall,
+                                       unsigned ArgIndex) {
   QualType BoolType = S->getASTContext().BoolTy;
-  assert(TheCall->getNumArgs() >= 1);
-  QualType ArgType = TheCall->getArg(0)->getType();
+  assert(ArgIndex < TheCall->getNumArgs());
+  QualType ArgType = TheCall->getArg(ArgIndex)->getType();
   auto *VTy = ArgType->getAs<VectorType>();
   // is the bool or vector<bool>
   if (S->Context.hasSameUnqualifiedType(ArgType, BoolType) ||
@@ -3203,6 +3206,18 @@ static bool CheckWaveActive(Sema *S, CallExpr *TheCall) {
         << ArgType << 0;
     return true;
   }
+  return false;
+}
+
+static bool CheckWaveActive(Sema *S, CallExpr *TheCall) {
+  if (CheckNotBoolScalarOrVector(S, TheCall, 0))
+    return true;
+  return false;
+}
+
+static bool CheckWavePrefix(Sema *S, CallExpr *TheCall) {
+  if (CheckNotBoolScalarOrVector(S, TheCall, 0))
+    return true;
   return false;
 }
 
@@ -3363,6 +3378,31 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
+  case Builtin::BI__builtin_hlsl_resource_getpointer_typed: {
+    if (SemaRef.checkArgCount(TheCall, 3) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy))
+      return true;
+
+    QualType ElementTy = TheCall->getArg(2)->getType();
+    assert(ElementTy->isPointerType() &&
+           "expected pointer type for second argument");
+    ElementTy = ElementTy->getPointeeType();
+
+    // Reject array types
+    if (ElementTy->isArrayType())
+      return SemaRef.Diag(
+          cast<FunctionDecl>(SemaRef.CurContext)->getPointOfInstantiation(),
+          diag::err_invalid_use_of_array_type);
+
+    auto ReturnType =
+        SemaRef.Context.getAddrSpaceQualType(ElementTy, LangAS::hlsl_device);
+    ReturnType = SemaRef.Context.getPointerType(ReturnType);
+    TheCall->setType(ReturnType);
+
+    break;
+  }
   case Builtin::BI__builtin_hlsl_resource_load_with_status: {
     if (SemaRef.checkArgCount(TheCall, 3) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
@@ -3376,6 +3416,31 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
     QualType ReturnType = ResourceTy->getContainedType();
+    TheCall->setType(ReturnType);
+
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_load_with_status_typed: {
+    if (SemaRef.checkArgCount(TheCall, 4) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2),
+                            SemaRef.getASTContext().UnsignedIntTy) ||
+        CheckModifiableLValue(&SemaRef, TheCall, 2))
+      return true;
+
+    QualType ReturnType = TheCall->getArg(3)->getType();
+    assert(ReturnType->isPointerType() &&
+           "expected pointer type for second argument");
+    ReturnType = ReturnType->getPointeeType();
+
+    // Reject array types
+    if (ReturnType->isArrayType())
+      return SemaRef.Diag(
+          cast<FunctionDecl>(SemaRef.CurContext)->getPointOfInstantiation(),
+          diag::err_invalid_use_of_array_type);
+
     TheCall->setType(ReturnType);
 
     break;
@@ -3739,6 +3804,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     if (SemaRef.checkArgCount(TheCall, 0))
       return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_wave_prefix_sum: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    // Ensure input expr type is a scalar/vector and the same as the return type
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+    if (CheckWavePrefix(&SemaRef, TheCall))
+      return true;
+    ExprResult Expr = TheCall->getArg(0);
+    QualType ArgTyExpr = Expr.get()->getType();
+    TheCall->setType(ArgTyExpr);
     break;
   }
   case Builtin::BI__builtin_hlsl_elementwise_splitdouble: {
