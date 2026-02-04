@@ -30,7 +30,7 @@ TUSummary MockSerializationFormat::readTUSummary(llvm::StringRef Path) {
 
 void MockSerializationFormat::writeTUSummary(const TUSummary &Summary,
                                              llvm::StringRef OutputDir) {
-                                              // TODO: Implement this.
+  // TODO: Implement this.
 }
 
 static SerializationFormatRegistry::Add<MockSerializationFormat>
