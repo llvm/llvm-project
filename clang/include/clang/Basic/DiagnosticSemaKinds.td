@@ -10826,23 +10826,47 @@ def warn_lifetime_safety_return_stack_addr_strict
       InGroup<LifetimeSafetyStrict>,
       DefaultIgnore;
 
+def warn_lifetime_safety_dangling_field
+    : Warning<"address of stack memory escapes to a field">,
+      InGroup<LifetimeSafetyDanglingField>,
+      DefaultIgnore;
+
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
+def note_lifetime_safety_dangling_field_here: Note<"this field dangles">;
+def note_lifetime_safety_escapes_to_field_here: Note<"escapes to this field">;
 
-def warn_lifetime_safety_intra_tu_suggestion
+def warn_lifetime_safety_intra_tu_param_suggestion
     : Warning<"parameter in intra-TU function should be marked "
               "[[clang::lifetimebound]]">,
       InGroup<LifetimeSafetyIntraTUSuggestions>,
       DefaultIgnore;
 
-def warn_lifetime_safety_cross_tu_suggestion
+def warn_lifetime_safety_cross_tu_param_suggestion
     : Warning<"parameter in cross-TU function should be marked "
               "[[clang::lifetimebound]]">,
       InGroup<LifetimeSafetyCrossTUSuggestions>,
       DefaultIgnore;
 
+def warn_lifetime_safety_intra_tu_this_suggestion
+    : Warning<"implicit this in intra-TU function should be marked "
+              "[[clang::lifetimebound]]">,
+      InGroup<LifetimeSafetyIntraTUSuggestions>,
+      DefaultIgnore;
+
+def warn_lifetime_safety_cross_tu_this_suggestion
+    : Warning<"implicit this in cross-TU function should be marked "
+              "[[clang::lifetimebound]]">,
+      InGroup<LifetimeSafetyCrossTUSuggestions>,
+      DefaultIgnore;
+
 def note_lifetime_safety_suggestion_returned_here : Note<"param returned here">;
+
+def warn_lifetime_safety_noescape_escapes
+    : Warning<"parameter is marked [[clang::noescape]] but escapes">,
+      InGroup<LifetimeSafetyNoescape>,
+      DefaultIgnore;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -11293,6 +11317,8 @@ def err_builtin_requires_language : Error<"'%0' is only available in %1">;
 
 def err_constant_integer_arg_type : Error<
   "argument to %0 must be a constant integer">;
+def err_constant_integer_last_arg_type
+    : Error<"last argument to %0 must be a constant integer">;
 
 def ext_mixed_decls_code : Extension<
   "mixing declarations and code is a C99 extension">,

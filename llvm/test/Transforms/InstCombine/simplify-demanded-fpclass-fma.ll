@@ -2,6 +2,7 @@
 ; RUN: opt -S -passes=instcombine < %s | FileCheck %s
 
 declare nofpclass(inf norm sub zero) half @returns_nan()
+declare nofpclass(qnan inf norm sub zero) half @returns_snan()
 
 define nofpclass(inf norm sub zero) half @ret_only_nan(half %x, half %y, half %z) {
 ; CHECK-LABEL: define nofpclass(inf zero sub norm) half @ret_only_nan(
@@ -292,9 +293,74 @@ define nofpclass(nan inf) half @ret_nonan_noinf__fma_square__no_nan_no_inf_all_s
   ret half %result
 }
 
+define nofpclass(snan) half @qnan_result_demands_snan_square_src0(i1 noundef %cond, half noundef %unknown0, half noundef %unknown1) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_square_src0(
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN0:%.*]], half noundef [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call half @llvm.fma.f16(half [[SELECT]], half [[SELECT]], half [[UNKNOWN1]])
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %snan = call half @returns_snan()
+  %select = select i1 %cond, half %snan, half %unknown0
+  %result = call half @llvm.fma.f16(half %select, half %select, half %unknown1)
+  ret half %result
+}
+
+define nofpclass(snan) half @qnan_result_demands_snan_square_src1(i1 noundef %cond, half noundef %unknown0, half noundef %unknown1) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_square_src1(
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN0:%.*]], half noundef [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call half @llvm.fma.f16(half [[UNKNOWN1]], half [[UNKNOWN1]], half [[SELECT]])
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %snan = call half @returns_snan()
+  %select = select i1 %cond, half %snan, half %unknown0
+  %result = call half @llvm.fma.f16(half %unknown1, half %unknown1, half %select)
+  ret half %result
+}
+
+define nofpclass(snan) half @qnan_result_demands_snan_src0(i1 %cond, half %unknown0, half %unknown1, half %unknown2) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_src0(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]], half [[UNKNOWN2:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call half @llvm.fma.f16(half [[SELECT]], half [[UNKNOWN1]], half [[UNKNOWN2]])
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %snan = call half @returns_snan()
+  %select = select i1 %cond, half %snan, half %unknown0
+  %result = call half @llvm.fma.f16(half %select, half %unknown1, half %unknown2)
+  ret half %result
+}
+
+define nofpclass(snan) half @qnan_result_demands_snan_src1(i1 %cond, half %unknown0, half %unknown1, half %unknown2) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_src1(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]], half [[UNKNOWN2:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call half @llvm.fma.f16(half [[UNKNOWN1]], half [[SELECT]], half [[UNKNOWN2]])
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %snan = call half @returns_snan()
+  %select = select i1 %cond, half %snan, half %unknown0
+  %result = call half @llvm.fma.f16(half %unknown1, half %select, half %unknown2)
+  ret half %result
+}
+
+define nofpclass(snan) half @qnan_result_demands_snan_src2(i1 %cond, half %unknown0, half %unknown1, half %unknown2) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_src2(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]], half [[UNKNOWN2:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call half @llvm.fma.f16(half [[UNKNOWN1]], half [[UNKNOWN2]], half [[SELECT]])
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %snan = call half @returns_snan()
+  %select = select i1 %cond, half %snan, half %unknown0
+  %result = call half @llvm.fma.f16(half %unknown1, half %unknown2, half %select)
+  ret half %result
+}
 
 !0 = !{}
-
-
-
-
