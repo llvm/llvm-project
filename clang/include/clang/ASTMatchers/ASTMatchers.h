@@ -5125,20 +5125,6 @@ AST_MATCHER_P(LambdaCapture, capturesVar, internal::Matcher<ValueDecl>,
 ///   matches `[this]() { return cc; }`.
 AST_MATCHER(LambdaCapture, capturesThis) { return Node.capturesThis(); }
 
-/// Matches lambda expressions that have default capture modes.
-///
-/// Given
-/// \code
-///   auto l1 = [=]() {};  // matches
-///   auto l2 = [&]() {};  // matches
-///   auto l3 = []() {};   // does not match
-/// \endcode
-/// lambdaExpr(hasDefaultCapture())
-///   matches l1 and l2, but not l3.
-AST_MATCHER(LambdaExpr, hasDefaultCapture) {
-  return Node.getCaptureDefault() != LCD_None;
-}
-
 /// Matches a constructor call expression which uses list initialization.
 AST_MATCHER(CXXConstructExpr, isListInitialization) {
   return Node.isListInitialization();

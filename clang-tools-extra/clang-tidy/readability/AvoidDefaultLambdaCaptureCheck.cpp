@@ -15,6 +15,24 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
+namespace {
+
+/// Matches lambda expressions that have default capture modes.
+///
+/// Given
+/// \code
+///   auto l1 = [=]() {};  // matches
+///   auto l2 = [&]() {};  // matches
+///   auto l3 = []() {};   // does not match
+/// \endcode
+/// lambdaExpr(hasDefaultCapture())
+///   matches l1 and l2, but not l3.
+AST_MATCHER(LambdaExpr, hasDefaultCapture) {
+  return Node.getCaptureDefault() != LCD_None;
+}
+
+} // namespace
+
 static std::string generateCaptureText(const LambdaCapture &Capture) {
   if (Capture.capturesThis())
     return Capture.getCaptureKind() == LCK_StarThis ? "*this" : "this";
@@ -41,12 +59,11 @@ void AvoidDefaultLambdaCaptureCheck::storeOptions(
 
 void AvoidDefaultLambdaCaptureCheck::registerMatchers(MatchFinder *Finder) {
   if (IgnoreImplicitCapturesInSTL) {
-    Finder->addMatcher(
-        lambdaExpr(hasDefaultCapture(),
-                   unless(hasAncestor(
-                       callExpr(callee(functionDecl(isInStdNamespace()))))))
-            .bind("lambda"),
-        this);
+    Finder->addMatcher(lambdaExpr(hasDefaultCapture(),
+                                  unless(hasAncestor(callExpr(callee(
+                                      functionDecl(isInStdNamespace()))))))
+                           .bind("lambda"),
+                       this);
   } else {
     Finder->addMatcher(lambdaExpr(hasDefaultCapture()).bind("lambda"), this);
   }
