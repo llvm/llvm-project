@@ -36,6 +36,7 @@
 #include <iterator>
 #include <list>
 #include <ranges>
+#include <set>
 #include <string_view>
 #include <string>
 #include <vector>
@@ -320,6 +321,18 @@ void runtime_only_test_case() {
                                  // int(- 6.3) + -4.4 = - 6 + -4.4 = -10.4
                                  // int(-10.4) + -5.5 = -10 + -5.5 = -15.5
                                  // int(-15.5) + -6.6 = -15 + -6.6 = -21.6.
+    check(data, 0.0, plus, expected);
+  }
+
+  {
+    auto const data     = std::set<double>{-1.1, -2.2, -3.3, -4.4, -5.5, -6.6};
+    auto plus           = [](int const x, double const y) { return x + y; };
+    auto const expected = -21.1; // int(  0.0) + -6.6 =   0 + -6.6 =  -6.6
+                                 // int(- 6.6) + -5.5 = - 6 + -5.5 = -11.5
+                                 // int(-11.5) + -4.4 = -11 + -4.4 = -15.4
+                                 // int(-15.4) + -3.3 = -15 + -3.3 = -18.3
+                                 // int(-18.3) + -2.2 = -18 + -2.2 = -20.2
+                                 // int(-20.2) + -1.1 = -20 + -1.1 = -21.1.
     check(data, 0.0, plus, expected);
   }
 }

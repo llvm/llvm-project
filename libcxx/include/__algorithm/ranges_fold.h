@@ -91,11 +91,14 @@ struct __fold_left_with_iter {
 
     _Up __result = std::invoke(__f, std::move(__init), *__first);
     ++__first;
-    auto __for_each_f = [&](__iter_ref __element) {
-      __result = std::invoke(__f, std::move(__result), std::forward<__iter_ref>(__element));
-    };
     __identity __proj;
-    auto __end = std::__for_each(std::move(__first), std::move(__last), __for_each_f, __proj);
+    auto __end = std::__for_each(
+        std::move(__first),
+        std::move(__last),
+        [&](__iter_ref __element) {
+          __result = std::invoke(__f, std::move(__result), std::forward<__iter_ref>(__element));
+        },
+        __proj);
 
     return fold_left_with_iter_result<_Ip, _Up>{std::move(__end), std::move(__result)};
   }
