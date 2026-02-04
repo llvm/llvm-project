@@ -7195,6 +7195,10 @@ bool DeclarationVisitor::Pre(const parser::NamelistStmt::Group &x) {
     groupSymbol = &MakeSymbol(groupName, NamelistDetails{});
     groupSymbol->ReplaceName(groupName.source);
   }
+  // insert namelist variables into the symbol table
+  for (const auto &name : std::get<std::list<parser::Name>>(x.t)) {
+    ResolveName(name);
+  }
   // Name resolution of group items is deferred to FinishNamelists()
   // so that host association is handled correctly.
   GetDeferredDeclarationState(true)->namelistGroups.emplace_back(&x);

@@ -39,8 +39,8 @@ subroutine s4b
 end
 
 subroutine s5
-  namelist /nl/x
-  integer x
+  namelist /nl/i
+  integer i
 end
 
 subroutine s6
