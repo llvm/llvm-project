@@ -6790,35 +6790,21 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
             targetOp.getPrivateNeedsBarrier(), &mappedPrivateVars)))
       return llvm::make_error<PreviouslyReportedError>();
 
-    SmallVector<Region *> privateCleanupRegions;
-    llvm::transform(privateVarsInfo.privatizers,
-                    std::back_inserter(privateCleanupRegions),
-                    [](omp::PrivateClauseOp privatizer) {
-                      return &privatizer.getDeallocRegion();
-                    });
-
     LLVM::ModuleTranslation::SaveStack<OpenMPAllocStackFrame> frame(
         moduleTranslation, allocIP, deallocIPs);
     llvm::Expected<llvm::BasicBlock *> exitBlock = convertOmpOpRegions(
         targetRegion, "omp.target", builder, moduleTranslation);
 
-    if (!exitBlock)
-      return exitBlock.takeError();
+    if (failed(handleError(exitBlock, *targetOp)))
+      return llvm::make_error<PreviouslyReportedError>();
 
-    builder.SetInsertPoint(*exitBlock);
-    if (!privateCleanupRegions.empty()) {
-      if (failed(inlineOmpRegionCleanup(
-              privateCleanupRegions, privateVarsInfo.llvmVars,
-              moduleTranslation, builder, "omp.targetop.private.cleanup",
-              /*shouldLoadCleanupRegionArg=*/false))) {
-        return llvm::createStringError(
-            "failed to inline `dealloc` region of `omp.private` "
-            "op in the target region");
-      }
-      return builder.saveIP();
-    }
+    builder.SetInsertPoint(exitBlock.get()->getTerminator());
 
-    return InsertPointTy(exitBlock.get(), exitBlock.get()->end());
+    if (failed(cleanupPrivateVars(targetOp, builder, moduleTranslation,
+                                  targetOp.getLoc(), privateVarsInfo)))
+      return llvm::make_error<PreviouslyReportedError>();
+
+    return builder.saveIP();
   };
 
   StringRef parentName = parentFn.getName();
