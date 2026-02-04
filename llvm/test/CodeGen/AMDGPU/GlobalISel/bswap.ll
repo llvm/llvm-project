@@ -452,9 +452,9 @@ define amdgpu_ps i32 @s_bswap_v2i16(<2 x i16> inreg %src) {
 ; GFX7-NEXT:    s_lshl_b32 s2, s0, 8
 ; GFX7-NEXT:    s_bfe_u32 s3, s0, 0x80008
 ; GFX7-NEXT:    v_alignbit_b32 v0, s1, v0, 24
-; GFX7-NEXT:    s_or_b32 s3, s3, s2
+; GFX7-NEXT:    s_or_b32 s2, s3, s2
 ; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX7-NEXT:    s_and_b32 s0, 0xffff, s3
+; GFX7-NEXT:    s_and_b32 s0, 0xffff, s2
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX7-NEXT:    v_or_b32_e32 v0, s0, v0
 ; GFX7-NEXT:    v_readfirstlane_b32 s0, v0

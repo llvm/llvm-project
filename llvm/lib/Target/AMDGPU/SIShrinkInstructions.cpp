@@ -909,10 +909,21 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
         }
       }
 
+      // Shrink scalar logic operations.
+      if (MI.getOpcode() == AMDGPU::S_AND_B32 ||
+          MI.getOpcode() == AMDGPU::S_OR_B32 ||
+          MI.getOpcode() == AMDGPU::S_XOR_B32) {
+        ChangeKind CK = shrinkScalarLogicOp(MI);
+        if (CK == ChangeKind::UpdateHint)
+          continue;
+        Changed |= (CK == ChangeKind::UpdateInst);
+      }
+
       // Try to use S_ADDK_I32 and S_MULK_I32.
       if (MI.getOpcode() == AMDGPU::S_ADD_I32 ||
           MI.getOpcode() == AMDGPU::S_MUL_I32 ||
-          MI.getOpcode() == AMDGPU::S_OR_B32) {
+          (MI.getOpcode() == AMDGPU::S_OR_B32 &&
+           MI.getFlag(MachineInstr::MIFlag::Disjoint))) {
         const MachineOperand *Dest = &MI.getOperand(0);
         MachineOperand *Src0 = &MI.getOperand(1);
         MachineOperand *Src1 = &MI.getOperand(2);
@@ -934,30 +945,13 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
         }
         if (Src0->isReg() && Src0->getReg() == Dest->getReg()) {
           if (Src1->isImm() && isKImmOperand(*Src1)) {
-            unsigned Opc = 0;
-
-            if (MI.getOpcode() == AMDGPU::S_OR_B32) {
-              uint32_t Imm = static_cast<uint32_t>(Src1->getImm());
-              if (MI.getFlag(MachineInstr::MIFlag::Disjoint)) {
-                bool IsBitSetCandidate =
-                    isPowerOf2_32(Imm) &&
-                    MI.registerDefIsDead(AMDGPU::SCC, /*TRI=*/nullptr) &&
-                    (llvm::countr_zero(Imm) != 0);
-                if (!IsBitSetCandidate) {
-                  Opc = AMDGPU::S_ADDK_I32;
-                }
-              }
-            } else {
-              Opc = (MI.getOpcode() == AMDGPU::S_ADD_I32) ? AMDGPU::S_ADDK_I32
-                                                          : AMDGPU::S_MULK_I32;
-            }
-
-            if (Opc != 0) {
-              Src1->setImm(SignExtend64(Src1->getImm(), 32));
-              MI.setDesc(TII->get(Opc));
-              MI.tieOperands(0, 1);
-              Changed = true;
-            }
+            unsigned Opc = (MI.getOpcode() == AMDGPU::S_MUL_I32)
+                               ? AMDGPU::S_MULK_I32
+                               : AMDGPU::S_ADDK_I32;
+            Src1->setImm(SignExtend64(Src1->getImm(), 32));
+            MI.setDesc(TII->get(Opc));
+            MI.tieOperands(0, 1);
+            Changed = true;
           }
         }
       }
@@ -989,16 +983,6 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
         }
 
         continue;
-      }
-
-      // Shrink scalar logic operations.
-      if (MI.getOpcode() == AMDGPU::S_AND_B32 ||
-          MI.getOpcode() == AMDGPU::S_OR_B32 ||
-          MI.getOpcode() == AMDGPU::S_XOR_B32) {
-        ChangeKind CK = shrinkScalarLogicOp(MI);
-        if (CK == ChangeKind::UpdateHint)
-          continue;
-        Changed |= (CK == ChangeKind::UpdateInst);
       }
 
       if (IsPostRA && TII->isMIMG(MI.getOpcode()) &&
