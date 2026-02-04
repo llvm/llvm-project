@@ -84,7 +84,8 @@ public:
       std::copy(FuncEmbVec.begin(), FuncEmbVec.end(), NBFuncEmbVec);
 
       auto NbArray = nb::ndarray<nb::numpy, double>(
-          NBFuncEmbVec, {FuncEmbVec.size()}, nb::capsule(NBFuncEmbVec, [](void *P) noexcept {
+          NBFuncEmbVec, {FuncEmbVec.size()},
+          nb::capsule(NBFuncEmbVec, [](void *P) noexcept {
             delete[] static_cast<double *>(P);
           }));
 
