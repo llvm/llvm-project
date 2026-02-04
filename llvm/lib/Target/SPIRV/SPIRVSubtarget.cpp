@@ -190,12 +190,11 @@ void SPIRVSubtarget::setEnv(SPIRVEnvType E) {
 
 void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
   if (Env != Unknown) {
-    assert(
-        any_of(M,
-               [](const Function &F) {
-                 return F.hasFnAttribute("hlsl.shader");
-               }) == isShader() &&
-        "Module environment conflicts with the already resolved environment");
+    assert(!(isKernel() && any_of(M,
+                                  [](const Function &F) {
+                                    return F.hasFnAttribute("hlsl.shader");
+                                  })) &&
+           "Module has hlsl.shader attributes but environment is Kernel");
     return;
   }
 
