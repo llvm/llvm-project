@@ -386,7 +386,8 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
       if (VecTy->getElementCount().isScalar()) {
         Constant *CastElt = ConstantFoldIntegerCast(
             KnownSize, VecTy->getElementType(), false, DL);
-        Replacement = ConstantVector::getSplat(VecTy->getElementCount(), CastElt);
+        Replacement =
+            ConstantVector::getSplat(VecTy->getElementCount(), CastElt);
       }
     } else {
       Replacement =
