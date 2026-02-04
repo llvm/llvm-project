@@ -825,6 +825,17 @@ static bool EatsUnboundedNumberOfValues(const Option *O) {
          O->getNumOccurrencesFlag() == cl::OneOrMore;
 }
 
+bool llvm::cl::CheckRequiredValues(const StringMap<Option *> &OptionsMap) {
+  // Loop over args and make sure all required args are specified!
+  for (const auto &Opt : OptionsMap) {
+    if (RequiresValue(Opt.second) && Opt.second->getNumOccurrences() == 0) {
+      Opt.second->error("must be specified at least once!");
+      return false;
+    }
+  }
+  return true;
+}
+
 static bool isWhitespace(char C) {
   return C == ' ' || C == '\t' || C == '\r' || C == '\n';
 }
@@ -1827,20 +1838,8 @@ bool CommandLineParser::ParseCommandLineOptions(
                                   PositionalVals[ValNo].second);
   }
 
-  // Loop over args and make sure all required args are specified!
-  for (const auto &Opt : OptionsMap) {
-    switch (Opt.second->getNumOccurrencesFlag()) {
-    case Required:
-    case OneOrMore:
-      if (Opt.second->getNumOccurrences() == 0) {
-        Opt.second->error("must be specified at least once!");
-        ErrorParsing = true;
-      }
-      [[fallthrough]];
-    default:
-      break;
-    }
-  }
+  if (!CheckRequiredValues(OptionsMap))
+    ErrorParsing = true;
 
   // Now that we know if -debug is specified, we can use it.
   // Note that if ReadResponseFiles == true, this must be done before the
