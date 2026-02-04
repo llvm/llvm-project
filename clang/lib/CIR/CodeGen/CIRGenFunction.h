@@ -1574,6 +1574,9 @@ public:
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
 
+  RValue emitCUDAKernelCallExpr(const CUDAKernelCallExpr *expr,
+                                ReturnValueSlot returnValue);
+
   RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
 
   RValue emitNewOrDeleteBuiltinCall(const FunctionProtoType *type,
