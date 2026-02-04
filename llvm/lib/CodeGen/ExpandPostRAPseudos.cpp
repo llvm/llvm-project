@@ -95,15 +95,7 @@ bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
 
   LLVM_DEBUG(dbgs() << "subreg: CONVERTING: " << *MI);
 
-  if (MI->allDefsAreDead()) {
-    MI->setDesc(TII->get(TargetOpcode::KILL));
-    MI->removeOperand(3); // SubIdx
-    MI->removeOperand(1); // Imm
-    LLVM_DEBUG(dbgs() << "subreg: replaced by: " << *MI);
-    return true;
-  }
-
-  if (DstSubReg == InsReg) {
+  if (MI->allDefsAreDead() || DstSubReg == InsReg) {
     // No need to insert an identity copy instruction.
     // Watch out for case like this:
     // %rax = SUBREG_TO_REG 0, killed %eax, 3
