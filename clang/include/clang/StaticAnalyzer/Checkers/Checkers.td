@@ -1638,6 +1638,14 @@ def TaintPropagationChecker : Checker<"TaintPropagation">, // Modelling checker
                   "Config",
                   "Specifies the name of the configuration file.",
                   "",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "EnableDefaultConfig",
+                  "If set to false, the default source, "
+                  "sink and propagation rules are not loaded."
+                  "This way, advanced users can fully customize "
+                  "their taint configuration model.",
+                  "true",
                   Released>
   ]>,
   Documentation<NotDocumented>,
