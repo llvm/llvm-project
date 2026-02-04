@@ -365,7 +365,7 @@ AMDGPUInstructionSelector::getSubOperand64(MachineOperand &MO,
     unsigned ComposedSubIdx = TRI.composeSubRegIndices(MO.getSubReg(), SubIdx);
     Register Reg = MO.getReg();
     BuildMI(*BB, MI, MI->getDebugLoc(), TII.get(AMDGPU::COPY), DstReg)
-            .addReg(Reg, 0, ComposedSubIdx);
+        .addReg(Reg, {}, ComposedSubIdx);
 
     return MachineOperand::CreateReg(DstReg, MO.isDef(), MO.isImplicit(),
                                      MO.isKill(), MO.isDead(), MO.isUndef(),
@@ -447,7 +447,7 @@ bool AMDGPUInstructionSelector::selectG_ADD_SUB(MachineInstr &I) const {
       return constrainSelectedInstRegOperands(*Add, TII, TRI, RBI);
     }
 
-    if (STI.hasAddNoCarry()) {
+    if (STI.hasAddNoCarryInsts()) {
       const unsigned Opc = Sub ? AMDGPU::V_SUB_U32_e64 : AMDGPU::V_ADD_U32_e64;
       I.setDesc(TII.get(Opc));
       I.addOperand(*MF, MachineOperand::CreateImm(0));
@@ -652,7 +652,7 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT(MachineInstr &I) const {
                                     *SrcRC, I.getOperand(1));
   const DebugLoc &DL = I.getDebugLoc();
   BuildMI(*BB, &I, DL, TII.get(TargetOpcode::COPY), DstReg)
-    .addReg(SrcReg, 0, SubReg);
+      .addReg(SrcReg, {}, SubReg);
 
   I.eraseFromParent();
   return true;
@@ -725,7 +725,7 @@ bool AMDGPUInstructionSelector::selectG_UNMERGE_VALUES(MachineInstr &MI) const {
   for (int I = 0, E = NumDst; I != E; ++I) {
     MachineOperand &Dst = MI.getOperand(I);
     BuildMI(*BB, &MI, DL, TII.get(TargetOpcode::COPY), Dst.getReg())
-      .addReg(SrcReg, 0, SubRegs[I]);
+        .addReg(SrcReg, {}, SubRegs[I]);
 
     // Make sure the subregister index is valid for the source register.
     SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubRegs[I]);
@@ -1216,6 +1216,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
   case Intrinsic::amdgcn_permlane16_swap:
   case Intrinsic::amdgcn_permlane32_swap:
     return selectPermlaneSwapIntrin(I, IntrinsicID);
+  case Intrinsic::amdgcn_wave_shuffle:
+    return selectWaveShuffleIntrin(I);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -1946,20 +1948,52 @@ bool AMDGPUInstructionSelector::selectDSGWSIntrinsic(MachineInstr &MI,
   // The resource id offset is computed as (<isa opaque base> + M0[21:16] +
   // offset field) % 64. Some versions of the programming guide omit the m0
   // part, or claim it's from offset 0.
-  auto MIB = BuildMI(*MBB, &MI, DL, TII.get(gwsIntrinToOpcode(IID)));
+
+  unsigned Opc = gwsIntrinToOpcode(IID);
+  const MCInstrDesc &InstrDesc = TII.get(Opc);
 
   if (HasVSrc) {
     Register VSrc = MI.getOperand(1).getReg();
-    MIB.addReg(VSrc);
 
-    if (!RBI.constrainGenericRegister(VSrc, AMDGPU::VGPR_32RegClass, *MRI))
-      return false;
+    int Data0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::data0);
+    const TargetRegisterClass *DataRC = TII.getRegClass(InstrDesc, Data0Idx);
+    const TargetRegisterClass *SubRC =
+        TRI.getSubRegisterClass(DataRC, AMDGPU::sub0);
+
+    if (!SubRC) {
+      // 32-bit normal case.
+      if (!RBI.constrainGenericRegister(VSrc, *DataRC, *MRI))
+        return false;
+
+      BuildMI(*MBB, &MI, DL, InstrDesc)
+        .addReg(VSrc)
+        .addImm(ImmOffset)
+        .cloneMemRefs(MI);
+    } else {
+      // Requires even register alignment, so create 64-bit value and pad the
+      // top half with undef.
+      Register DataReg = MRI->createVirtualRegister(DataRC);
+      if (!RBI.constrainGenericRegister(VSrc, *SubRC, *MRI))
+        return false;
+
+      Register UndefReg = MRI->createVirtualRegister(SubRC);
+      BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::IMPLICIT_DEF), UndefReg);
+      BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::REG_SEQUENCE), DataReg)
+        .addReg(VSrc)
+        .addImm(AMDGPU::sub0)
+        .addReg(UndefReg)
+        .addImm(AMDGPU::sub1);
+
+      BuildMI(*MBB, &MI, DL, InstrDesc)
+        .addReg(DataReg)
+        .addImm(ImmOffset)
+        .cloneMemRefs(MI);
+    }
+  } else {
+    BuildMI(*MBB, &MI, DL, InstrDesc)
+      .addImm(ImmOffset)
+      .cloneMemRefs(MI);
   }
-
-  MIB.addImm(ImmOffset)
-     .cloneMemRefs(MI);
-
-  TII.enforceOperandRCAlignment(*MIB, AMDGPU::OpName::data0);
 
   MI.eraseFromParent();
   return true;
@@ -1998,7 +2032,7 @@ bool AMDGPUInstructionSelector::selectDSAppendConsume(MachineInstr &MI,
 }
 
 bool AMDGPUInstructionSelector::selectInitWholeWave(MachineInstr &MI) const {
-  MachineFunction *MF = MI.getParent()->getParent();
+  MachineFunction *MF = MI.getMF();
   SIMachineFunctionInfo *MFInfo = MF->getInfo<SIMachineFunctionInfo>();
 
   MFInfo->setInitWholeWave();
@@ -2360,6 +2394,16 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_signal_var:
     return selectNamedBarrierInit(I, IntrinsicID);
+  case Intrinsic::amdgcn_s_wakeup_barrier: {
+    if (!STI.hasSWakeupBarrier()) {
+      Function &F = I.getMF()->getFunction();
+      F.getContext().diagnose(
+          DiagnosticInfoUnsupported(F, "intrinsic not supported on subtarget",
+                                    I.getDebugLoc(), DS_Error));
+      return false;
+    }
+    return selectNamedBarrierInst(I, IntrinsicID);
+  }
   case Intrinsic::amdgcn_s_barrier_join:
   case Intrinsic::amdgcn_s_get_named_barrier_state:
     return selectNamedBarrierInst(I, IntrinsicID);
@@ -2464,7 +2508,7 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
     const DebugLoc &DL = I.getDebugLoc();
     MachineBasicBlock *MBB = I.getParent();
     BuildMI(*MBB, I, DL, TII.get(AMDGPU::COPY), DstReg)
-        .addReg(SrcReg, 0, AMDGPU::lo16);
+        .addReg(SrcReg, {}, AMDGPU::lo16);
     I.eraseFromParent();
     return true;
   }
@@ -2476,9 +2520,9 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
     Register LoReg = MRI->createVirtualRegister(DstRC);
     Register HiReg = MRI->createVirtualRegister(DstRC);
     BuildMI(*MBB, I, DL, TII.get(AMDGPU::COPY), LoReg)
-      .addReg(SrcReg, 0, AMDGPU::sub0);
+        .addReg(SrcReg, {}, AMDGPU::sub0);
     BuildMI(*MBB, I, DL, TII.get(AMDGPU::COPY), HiReg)
-      .addReg(SrcReg, 0, AMDGPU::sub1);
+        .addReg(SrcReg, {}, AMDGPU::sub1);
 
     if (IsVALU && STI.hasSDWA()) {
       // Write the low 16-bits of the high element into the high 16-bits of the
@@ -2670,18 +2714,18 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
       unsigned SubReg = InReg ? AMDGPU::sub0 : AMDGPU::NoSubRegister;
       if (Signed) {
         BuildMI(MBB, I, DL, TII.get(AMDGPU::S_ASHR_I32), HiReg)
-          .addReg(SrcReg, 0, SubReg)
-          .addImm(31)
-          .setOperandDead(3); // Dead scc
+            .addReg(SrcReg, {}, SubReg)
+            .addImm(31)
+            .setOperandDead(3); // Dead scc
       } else {
         BuildMI(MBB, I, DL, TII.get(AMDGPU::S_MOV_B32), HiReg)
           .addImm(0);
       }
       BuildMI(MBB, I, DL, TII.get(AMDGPU::REG_SEQUENCE), DstReg)
-        .addReg(SrcReg, 0, SubReg)
-        .addImm(AMDGPU::sub0)
-        .addReg(HiReg)
-        .addImm(AMDGPU::sub1);
+          .addReg(SrcReg, {}, SubReg)
+          .addImm(AMDGPU::sub0)
+          .addReg(HiReg)
+          .addImm(AMDGPU::sub1);
       I.eraseFromParent();
       return RBI.constrainGenericRegister(DstReg, AMDGPU::SReg_64RegClass,
                                           *MRI);
@@ -2699,10 +2743,10 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
 
       BuildMI(MBB, I, DL, TII.get(AMDGPU::IMPLICIT_DEF), UndefReg);
       BuildMI(MBB, I, DL, TII.get(AMDGPU::REG_SEQUENCE), ExtReg)
-        .addReg(SrcReg, 0, SubReg)
-        .addImm(AMDGPU::sub0)
-        .addReg(UndefReg)
-        .addImm(AMDGPU::sub1);
+          .addReg(SrcReg, {}, SubReg)
+          .addImm(AMDGPU::sub0)
+          .addReg(UndefReg)
+          .addImm(AMDGPU::sub1);
 
       BuildMI(MBB, I, DL, TII.get(BFE64), DstReg)
         .addReg(ExtReg)
@@ -2836,9 +2880,9 @@ bool AMDGPUInstructionSelector::selectG_FNEG(MachineInstr &MI) const {
   Register OpReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
   BuildMI(*BB, &MI, DL, TII.get(AMDGPU::COPY), LoReg)
-    .addReg(Src, 0, AMDGPU::sub0);
+      .addReg(Src, {}, AMDGPU::sub0);
   BuildMI(*BB, &MI, DL, TII.get(AMDGPU::COPY), HiReg)
-    .addReg(Src, 0, AMDGPU::sub1);
+      .addReg(Src, {}, AMDGPU::sub1);
   BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_MOV_B32), ConstReg)
     .addImm(0x80000000);
 
@@ -2878,9 +2922,9 @@ bool AMDGPUInstructionSelector::selectG_FABS(MachineInstr &MI) const {
     return false;
 
   BuildMI(*BB, &MI, DL, TII.get(AMDGPU::COPY), LoReg)
-    .addReg(Src, 0, AMDGPU::sub0);
+      .addReg(Src, {}, AMDGPU::sub0);
   BuildMI(*BB, &MI, DL, TII.get(AMDGPU::COPY), HiReg)
-    .addReg(Src, 0, AMDGPU::sub1);
+      .addReg(Src, {}, AMDGPU::sub1);
   BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_MOV_B32), ConstReg)
     .addImm(0x7fffffff);
 
@@ -3155,9 +3199,9 @@ bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
 
   // Extract the subregisters from the source pointer.
   BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), LoReg)
-    .addReg(SrcReg, 0, AMDGPU::sub0);
+      .addReg(SrcReg, {}, AMDGPU::sub0);
   BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), HiReg)
-    .addReg(SrcReg, 0, AMDGPU::sub1);
+      .addReg(SrcReg, {}, AMDGPU::sub1);
 
   Register MaskedLo, MaskedHi;
 
@@ -3170,7 +3214,7 @@ bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
     MaskedLo = MRI->createVirtualRegister(&RegRC);
 
     BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), MaskLo)
-      .addReg(MaskReg, 0, AMDGPU::sub0);
+        .addReg(MaskReg, {}, AMDGPU::sub0);
     BuildMI(*BB, &I, DL, TII.get(NewOpc), MaskedLo)
       .addReg(LoReg)
       .addReg(MaskLo);
@@ -3184,7 +3228,7 @@ bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
     MaskedHi = MRI->createVirtualRegister(&RegRC);
 
     BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), MaskHi)
-      .addReg(MaskReg, 0, AMDGPU::sub1);
+        .addReg(MaskReg, {}, AMDGPU::sub1);
     BuildMI(*BB, &I, DL, TII.get(NewOpc), MaskedHi)
       .addReg(HiReg)
       .addReg(MaskHi);
@@ -3272,8 +3316,8 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
 
     unsigned Opc = Is64 ? AMDGPU::S_MOVRELS_B64 : AMDGPU::S_MOVRELS_B32;
     BuildMI(*BB, &MI, DL, TII.get(Opc), DstReg)
-      .addReg(SrcReg, 0, SubReg)
-      .addReg(SrcReg, RegState::Implicit);
+        .addReg(SrcReg, {}, SubReg)
+        .addReg(SrcReg, RegState::Implicit);
     MI.eraseFromParent();
     return true;
   }
@@ -3285,8 +3329,8 @@ bool AMDGPUInstructionSelector::selectG_EXTRACT_VECTOR_ELT(
     BuildMI(*BB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
       .addReg(IdxReg);
     BuildMI(*BB, &MI, DL, TII.get(AMDGPU::V_MOVRELS_B32_e32), DstReg)
-      .addReg(SrcReg, 0, SubReg)
-      .addReg(SrcReg, RegState::Implicit);
+        .addReg(SrcReg, {}, SubReg)
+        .addReg(SrcReg, RegState::Implicit);
     MI.eraseFromParent();
     return true;
   }
@@ -3690,7 +3734,7 @@ bool AMDGPUInstructionSelector::selectBVHIntersectRayIntrinsic(
       MI.getOpcode() == AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY ? 1 : 3;
   MI.setDesc(TII.get(MI.getOperand(OpcodeOpIdx).getImm()));
   MI.removeOperand(OpcodeOpIdx);
-  MI.addImplicitDefUseOperands(*MI.getParent()->getParent());
+  MI.addImplicitDefUseOperands(*MI.getMF());
   return constrainSelectedInstRegOperands(MI, TII, TRI, RBI);
 }
 
@@ -3793,7 +3837,7 @@ bool AMDGPUInstructionSelector::selectSMFMACIntrin(MachineInstr &MI) const {
   MI.removeOperand(4); // VDst_In
   MI.removeOperand(1); // Intrinsic ID
   MI.addOperand(VDst_In); // Readd VDst_In to the end
-  MI.addImplicitDefUseOperands(*MI.getParent()->getParent());
+  MI.addImplicitDefUseOperands(*MI.getMF());
   const MCInstrDesc &MCID = MI.getDesc();
   if (MCID.getOperandConstraint(0, MCOI::EARLY_CLOBBER) != -1) {
     MI.getOperand(0).setIsEarlyClobber(true);
@@ -3847,6 +3891,133 @@ bool AMDGPUInstructionSelector::selectWaveAddress(MachineInstr &MI) const {
       IsVALU ? AMDGPU::VGPR_32RegClass : AMDGPU::SReg_32RegClass;
   if (!RBI.constrainGenericRegister(DstReg, RC, *MRI))
     return false;
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool AMDGPUInstructionSelector::selectWaveShuffleIntrin(
+    MachineInstr &MI) const {
+  assert(MI.getNumOperands() == 4);
+  MachineBasicBlock *MBB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register ValReg = MI.getOperand(2).getReg();
+  Register IdxReg = MI.getOperand(3).getReg();
+
+  const LLT DstTy = MRI->getType(DstReg);
+  unsigned DstSize = DstTy.getSizeInBits();
+  const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
+  const TargetRegisterClass *DstRC =
+      TRI.getRegClassForSizeOnBank(DstSize, *DstRB);
+
+  if (DstTy != LLT::scalar(32))
+    return false;
+
+  if (!Subtarget->supportsBPermute())
+    return false;
+
+  // If we can bpermute across the whole wave, then just do that
+  if (Subtarget->supportsWaveWideBPermute()) {
+    Register ShiftIdxReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_LSHLREV_B32_e64), ShiftIdxReg)
+        .addImm(2)
+        .addReg(IdxReg);
+
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::DS_BPERMUTE_B32), DstReg)
+        .addReg(ShiftIdxReg)
+        .addReg(ValReg)
+        .addImm(0);
+  } else {
+    // Otherwise, we need to make use of whole wave mode
+    assert(Subtarget->isWave64());
+
+    // Set inactive lanes to poison
+    Register UndefValReg =
+        MRI->createVirtualRegister(TRI.getRegClass(AMDGPU::SReg_32RegClassID));
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::IMPLICIT_DEF), UndefValReg);
+
+    Register UndefExecReg = MRI->createVirtualRegister(
+        TRI.getRegClass(AMDGPU::SReg_64_XEXECRegClassID));
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::IMPLICIT_DEF), UndefExecReg);
+
+    Register PoisonValReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_SET_INACTIVE_B32), PoisonValReg)
+        .addImm(0)
+        .addReg(ValReg)
+        .addImm(0)
+        .addReg(UndefValReg)
+        .addReg(UndefExecReg);
+
+    // ds_bpermute requires index to be multiplied by 4
+    Register ShiftIdxReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_LSHLREV_B32_e64), ShiftIdxReg)
+        .addImm(2)
+        .addReg(IdxReg);
+
+    Register PoisonIdxReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_SET_INACTIVE_B32), PoisonIdxReg)
+        .addImm(0)
+        .addReg(ShiftIdxReg)
+        .addImm(0)
+        .addReg(UndefValReg)
+        .addReg(UndefExecReg);
+
+    // Get permutation of each half, then we'll select which one to use
+    Register SameSidePermReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::DS_BPERMUTE_B32), SameSidePermReg)
+        .addReg(PoisonIdxReg)
+        .addReg(PoisonValReg)
+        .addImm(0);
+
+    Register SwappedValReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_PERMLANE64_B32), SwappedValReg)
+        .addReg(PoisonValReg);
+
+    Register OppSidePermReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::DS_BPERMUTE_B32), OppSidePermReg)
+        .addReg(PoisonIdxReg)
+        .addReg(SwappedValReg)
+        .addImm(0);
+
+    Register WWMSwapPermReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::STRICT_WWM), WWMSwapPermReg)
+        .addReg(OppSidePermReg);
+
+    // Select which side to take the permute from
+    // We can get away with only using mbcnt_lo here since we're only
+    // trying to detect which side of 32 each lane is on, and mbcnt_lo
+    // returns 32 for lanes 32-63.
+    Register ThreadIDReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_MBCNT_LO_U32_B32_e64), ThreadIDReg)
+        .addImm(-1)
+        .addImm(0);
+
+    Register XORReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_XOR_B32_e64), XORReg)
+        .addReg(ThreadIDReg)
+        .addReg(PoisonIdxReg);
+
+    Register ANDReg = MRI->createVirtualRegister(DstRC);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_AND_B32_e64), ANDReg)
+        .addReg(XORReg)
+        .addImm(32);
+
+    Register CompareReg = MRI->createVirtualRegister(
+        TRI.getRegClass(AMDGPU::SReg_64_XEXECRegClassID));
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_CMP_EQ_U32_e64), CompareReg)
+        .addReg(ANDReg)
+        .addImm(0);
+
+    // Finally do the selection
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::V_CNDMASK_B32_e64), DstReg)
+        .addImm(0)
+        .addReg(WWMSwapPermReg)
+        .addImm(0)
+        .addReg(SameSidePermReg)
+        .addReg(CompareReg);
+  }
 
   MI.eraseFromParent();
   return true;
@@ -3929,7 +4100,7 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(Register R,
     SmallVector<Register, 3> Backup(Src.begin(), Src.end());
     if (!getOperandBits(LHS, LHSBits) ||
         !getOperandBits(RHS, RHSBits)) {
-      Src = Backup;
+      Src = std::move(Backup);
       return std::make_pair(0, 0);
     }
 
@@ -4169,6 +4340,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_ATOMICRMW_UMAX:
   case TargetOpcode::G_ATOMICRMW_UINC_WRAP:
   case TargetOpcode::G_ATOMICRMW_UDEC_WRAP:
+  case TargetOpcode::G_ATOMICRMW_USUB_COND:
+  case TargetOpcode::G_ATOMICRMW_USUB_SAT:
   case TargetOpcode::G_ATOMICRMW_FADD:
   case TargetOpcode::G_ATOMICRMW_FMIN:
   case TargetOpcode::G_ATOMICRMW_FMAX:
@@ -6798,6 +6971,8 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
       llvm_unreachable("not a named barrier op");
     case Intrinsic::amdgcn_s_barrier_join:
       return AMDGPU::S_BARRIER_JOIN_IMM;
+    case Intrinsic::amdgcn_s_wakeup_barrier:
+      return AMDGPU::S_WAKEUP_BARRIER_IMM;
     case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_IMM;
     };
@@ -6807,6 +6982,8 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
       llvm_unreachable("not a named barrier op");
     case Intrinsic::amdgcn_s_barrier_join:
       return AMDGPU::S_BARRIER_JOIN_M0;
+    case Intrinsic::amdgcn_s_wakeup_barrier:
+      return AMDGPU::S_WAKEUP_BARRIER_M0;
     case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_M0;
     };

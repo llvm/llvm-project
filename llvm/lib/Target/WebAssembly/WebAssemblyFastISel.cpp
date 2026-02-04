@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "Utils/WasmAddressSpaces.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
@@ -194,8 +195,10 @@ private:
 public:
   // Backend specific FastISel code.
   WebAssemblyFastISel(FunctionLoweringInfo &FuncInfo,
-                      const TargetLibraryInfo *LibInfo)
-      : FastISel(FuncInfo, LibInfo, /*SkipTargetIndependentISel=*/true) {
+                      const TargetLibraryInfo *LibInfo,
+                      const LibcallLoweringInfo *LibcallLowering)
+      : FastISel(FuncInfo, LibInfo, LibcallLowering,
+                 /*SkipTargetIndependentISel=*/true) {
     Subtarget = &FuncInfo.MF->getSubtarget<WebAssemblySubtarget>();
     Context = &FuncInfo.Fn->getContext();
   }
@@ -770,6 +773,11 @@ bool WebAssemblyFastISel::fastLowerArguments() {
 bool WebAssemblyFastISel::selectCall(const Instruction *I) {
   const auto *Call = cast<CallInst>(I);
 
+  // FastISel does not support calls through funcref
+  if (Call->getCalledOperand()->getType()->getPointerAddressSpace() !=
+      WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_DEFAULT)
+    return false;
+
   // TODO: Support tail calls in FastISel
   if (Call->isMustTailCall() || Call->isInlineAsm() ||
       Call->getFunctionType()->isVarArg())
@@ -988,20 +996,36 @@ bool WebAssemblyFastISel::selectSelect(const Instruction *I) {
 bool WebAssemblyFastISel::selectTrunc(const Instruction *I) {
   const auto *Trunc = cast<TruncInst>(I);
 
-  Register Reg = getRegForValue(Trunc->getOperand(0));
-  if (Reg == 0)
+  const Value *Op = Trunc->getOperand(0);
+  MVT::SimpleValueType From = getSimpleType(Op->getType());
+  MVT::SimpleValueType To = getLegalType(getSimpleType(Trunc->getType()));
+  Register In = getRegForValue(Op);
+  if (In == 0)
     return false;
 
-  unsigned FromBitWidth = Trunc->getOperand(0)->getType()->getIntegerBitWidth();
-  unsigned ToBitWidth = Trunc->getType()->getIntegerBitWidth();
+  auto Truncate = [&](Register Reg) -> unsigned {
+    if (From == MVT::i64) {
+      if (To == MVT::i64)
+        return copyValue(Reg);
 
-  if (ToBitWidth <= 32 && (32 < FromBitWidth && FromBitWidth <= 64)) {
-    Register Result = createResultReg(&WebAssembly::I32RegClass);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(WebAssembly::I32_WRAP_I64), Result)
-        .addReg(Reg);
-    Reg = Result;
-  }
+      if (To == MVT::i1 || To == MVT::i8 || To == MVT::i16 || To == MVT::i32) {
+        Register Result = createResultReg(&WebAssembly::I32RegClass);
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                TII.get(WebAssembly::I32_WRAP_I64), Result)
+            .addReg(Reg);
+        return Result;
+      }
+    }
+
+    if (From == MVT::i32)
+      return copyValue(Reg);
+
+    return 0;
+  };
+
+  unsigned Reg = Truncate(In);
+  if (Reg == 0)
+    return false;
 
   updateValueMap(Trunc, Reg);
   return true;
@@ -1448,7 +1472,9 @@ bool WebAssemblyFastISel::fastSelectInstruction(const Instruction *I) {
   return selectOperator(I, I->getOpcode());
 }
 
-FastISel *WebAssembly::createFastISel(FunctionLoweringInfo &FuncInfo,
-                                      const TargetLibraryInfo *LibInfo) {
-  return new WebAssemblyFastISel(FuncInfo, LibInfo);
+FastISel *
+WebAssembly::createFastISel(FunctionLoweringInfo &FuncInfo,
+                            const TargetLibraryInfo *LibInfo,
+                            const LibcallLoweringInfo *LibcallLowering) {
+  return new WebAssemblyFastISel(FuncInfo, LibInfo, LibcallLowering);
 }

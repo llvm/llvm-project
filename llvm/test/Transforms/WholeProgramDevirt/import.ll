@@ -8,12 +8,6 @@
 ; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-vcp-branch-funnel.yaml < %s | FileCheck --check-prefixes=CHECK,VCP,VCP-X86,VCP64,BRANCH-FUNNEL %s
 ; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -wholeprogramdevirt-read-summary=%S/Inputs/import-branch-funnel.yaml < %s | FileCheck --check-prefixes=CHECK,BRANCH-FUNNEL,BRANCH-FUNNEL-NOVCP %s
 
-; Cutoff value is not explicitly set. Expect 3 remark messages.
-; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-read-summary=%S/Inputs/import-single-impl.yaml < %s  2>&1 | grep "single-impl" | count 3
-; Cutoff value is set to 1. Expect one remark messages.
-; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-cutoff=1  -wholeprogramdevirt-read-summary=%S/Inputs/import-single-impl.yaml < %s  2>&1 | grep "single-impl" | count 1
-; Cutoff value is explicitly set to zero. Expect no remark message.
-; RUN: opt -S -passes=wholeprogramdevirt -wholeprogramdevirt-summary-action=import -pass-remarks=wholeprogramdevirt -wholeprogramdevirt-cutoff=0  -wholeprogramdevirt-read-summary=%S/Inputs/import-single-impl.yaml < %s 2>&1  | FileCheck -implicit-check-not="remark" %s
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -46,7 +40,7 @@ define i32 @call1(ptr %obj) #0 {
 ; constant propagation.
 
 ; CHECK: define i1 @call2
-define i1 @call2(ptr %obj) #0 {
+define i1 @call2(ptr %obj, i32 %arg1) #0 {
   %vtable = load ptr, ptr %obj
   %pair = call {ptr, i1} @llvm.type.checked.load(ptr %vtable, i32 8, metadata !"typeid2")
   %fptr = extractvalue {ptr, i1} %pair, 0
@@ -57,8 +51,8 @@ define i1 @call2(ptr %obj) #0 {
 cont:
   ; SINGLE-IMPL: call i1 @singleimpl2
   ; INDIR: call i1 %
-  ; BRANCH-FUNNEL: call i1 @__typeid_typeid2_8_branch_funnel(ptr nest %vtable, ptr %obj, i32 undef)
-  %result = call i1 %fptr(ptr %obj, i32 undef)
+  ; BRANCH-FUNNEL: call i1 @__typeid_typeid2_8_branch_funnel(ptr nest %vtable, ptr %obj, i32 %arg1)
+  %result = call i1 %fptr(ptr %obj, i32 %arg1)
   ret i1 %result
 
 trap:

@@ -68,7 +68,7 @@ public:
   bool ExceptionPortIsValid() const;
   kern_return_t SaveExceptionPortInfo();
   kern_return_t RestoreExceptionPortInfo();
-  kern_return_t ShutDownExcecptionThread();
+  void ShutDownExceptionThread();
 
   bool StartExceptionThread(
       const RNBContext::IgnoredExceptions &ignored_exceptions, DNBError &err);

@@ -25,6 +25,7 @@
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -407,7 +408,7 @@ void BTFTypeFuncProto::completeType(BTFDebug &BDebug) {
     return;
   IsCompleted = true;
 
-  DITypeRefArray Elements = STy->getTypeArray();
+  DITypeArray Elements = STy->getTypeArray();
   auto RetType = tryRemoveAtomicType(Elements[0]);
   BTFType.Type = RetType ? BDebug.getTypeId(RetType) : 0;
   BTFType.NameOff = 0;
@@ -625,7 +626,7 @@ void BTFDebug::visitSubroutineType(
     const DISubroutineType *STy, bool ForSubprog,
     const std::unordered_map<uint32_t, StringRef> &FuncArgNames,
     uint32_t &TypeId) {
-  DITypeRefArray Elements = STy->getTypeArray();
+  DITypeArray Elements = STy->getTypeArray();
   uint32_t VLen = Elements.size() - 1;
   if (VLen > BTF::MAX_VLEN)
     return;
@@ -1108,18 +1109,23 @@ std::string BTFDebug::populateFileContent(const DIFile *File) {
   std::string Line;
   Content.push_back(Line); // Line 0 for empty string
 
+  auto LoadFile = [](StringRef FileName) {
+    // FIXME(sandboxing): Propagating vfs::FileSystem here is lots of work.
+    auto BypassSandbox = sys::sandbox::scopedDisable();
+    return MemoryBuffer::getFile(FileName);
+  };
+
   std::unique_ptr<MemoryBuffer> Buf;
   auto Source = File->getSource();
   if (Source)
     Buf = MemoryBuffer::getMemBufferCopy(*Source);
-  else if (ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-               MemoryBuffer::getFile(FileName))
+  else if (ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr = LoadFile(FileName))
     Buf = std::move(*BufOrErr);
   if (Buf)
     for (line_iterator I(*Buf, false), E; I != E; ++I)
       Content.push_back(std::string(*I));
 
-  FileContent[FileName] = Content;
+  FileContent[FileName] = std::move(Content);
   return FileName;
 }
 
@@ -1609,7 +1615,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
 
     // Calculate symbol size
     const DataLayout &DL = Global.getDataLayout();
-    uint32_t Size = DL.getTypeAllocSize(Global.getValueType());
+    uint32_t Size = Global.getGlobalSize(DL);
 
     It->second->addDataSecEntry(VarId, Asm->getSymbol(&Global), Size);
 

@@ -98,9 +98,9 @@ bgeu $a0, $a0, 0x1FFFF
 jirl $a0, $a0, 0x20000
 # CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %b16) or an integer in the range [-131072, 131068]
 
-## simm20
+## simm20_pcaddu12i
 pcaddu12i $a0, 0x80000
-# CHECK: :[[#@LINE-1]]:16: error: immediate must be an integer in the range [-524288, 524287]
+# CHECK: :[[#@LINE-1]]:16: error: operand must be a symbol with modifier (e.g. %call30 or %pcadd_hi20) or an integer in the range [-524288, 524287]
 
 ## simm20_pcaddi
 pcaddi $a0, -0x80001

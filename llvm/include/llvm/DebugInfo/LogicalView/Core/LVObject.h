@@ -20,7 +20,6 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVSupport.h"
 #include "llvm/Support/Compiler.h"
 #include <limits>
-#include <list>
 #include <string>
 
 namespace llvm {

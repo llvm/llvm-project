@@ -299,7 +299,7 @@ private:
 
   bool translateIntrinsic(
       const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
-      const TargetLowering::IntrinsicInfo *TgtMemIntrinsicInfo = nullptr);
+      ArrayRef<TargetLowering::IntrinsicInfo> TgtMemIntrinsicInfos = {});
 
   /// When an invoke or a cleanupret unwinds to the next EH pad, there are
   /// many places it could ultimately go. In the IR, we have a single unwind
@@ -317,6 +317,8 @@ private:
   bool translateInvoke(const User &U, MachineIRBuilder &MIRBuilder);
 
   bool translateCallBr(const User &U, MachineIRBuilder &MIRBuilder);
+  bool translateCallBrIntrinsic(const CallBrInst &I,
+                                MachineIRBuilder &MIRBuilder);
 
   bool translateLandingPad(const User &U, MachineIRBuilder &MIRBuilder);
 
@@ -633,6 +635,7 @@ private:
   AAResults *AA = nullptr;
   AssumptionCache *AC = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
+  const LibcallLoweringInfo *Libcalls = nullptr;
   const TargetLowering *TLI = nullptr;
   FunctionLoweringInfo FuncInfo;
 

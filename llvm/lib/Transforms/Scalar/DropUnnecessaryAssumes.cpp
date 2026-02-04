@@ -78,10 +78,15 @@ DropUnnecessaryAssumesPass::run(Function &F, FunctionAnalysisManager &FAM) {
       SmallVector<OperandBundleDef> KeptBundles;
       unsigned NumBundles = Assume->getNumOperandBundles();
       for (unsigned I = 0; I != NumBundles; ++I) {
-        auto IsDead = [](OperandBundleUse Bundle) {
+        auto IsDead = [&](OperandBundleUse Bundle) {
           // "ignore" operand bundles are always dead.
           if (Bundle.getTagName() == "ignore")
             return true;
+
+          // "dereferenceable" operand bundles are only dropped if requested
+          // (e.g., after loop vectorization has run).
+          if (Bundle.getTagName() == "dereferenceable")
+            return DropDereferenceable;
 
           // Bundles without arguments do not affect any specific values.
           // Always keep them for now.

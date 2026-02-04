@@ -36,7 +36,7 @@ def : Pat<(two_out GPR32:$val), (THREE_OUTS GPR32:$val)>;
 // CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::THREE_OUTS),
 // CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[out1]
 // CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/1, // DstI[out2]
-// CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define|RegState::Dead),
+// CHECK-NEXT: GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define|RegState::Dead)),
 // CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/2, // val
 // CHECK-NEXT: GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT: // GIR_Coverage

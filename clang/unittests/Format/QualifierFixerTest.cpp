@@ -215,6 +215,8 @@ TEST_F(QualifierFixerTest, RightQualifier) {
                Style);
   verifyFormat("void foo() const override;", Style);
   verifyFormat("void foo() const override LLVM_READONLY;", Style);
+  verifyFormat("MOCK_METHOD(ReturnType, myMethod, (int), (const override));",
+               Style);
   verifyFormat("void foo() const final;", Style);
   verifyFormat("void foo() const final LLVM_READONLY;", Style);
   verifyFormat("void foo() const LLVM_READONLY;", Style);

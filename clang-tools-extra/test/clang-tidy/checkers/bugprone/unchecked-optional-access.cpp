@@ -65,14 +65,43 @@ void bsl_optional_unchecked_value_access(const bsl::optional<int> &opt) {
 
   opt.value();
   x = *opt;
+
+  bsl::optional<int> opt1;
+  opt1.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+}
+
+void bsl_optional_unchecked_value_access_for_allocator_aware_class(const bsl::optional<bsl::string> &opt) {
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  bsl::string x = *opt;
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (!opt) {
+    return;
+  }
+
+  opt.value();
+  x = *opt;
+
+  bsl::optional<bsl::string> opt1;
+  opt1.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
 }
 
 void bsl_optional_checked_access(const bsl::optional<int> &opt) {
   if (opt.has_value()) {
     opt.value();
   }
+
   if (opt) {
     opt.value();
+  }
+
+  if (opt) {
+    bsl::optional<int> opt1(opt);
+    opt1.value();
   }
 }
 
@@ -102,6 +131,31 @@ void nullable_value_unchecked_value_access(const BloombergLP::bdlb::NullableValu
   // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
 
   if (!opt) {
+    return;
+  }
+
+  opt.value();
+  x = *opt;
+}
+
+void nullable_value_unchecked_value_access_for_allocator_aware_type(const BloombergLP::bdlb::NullableValue<bsl::string> &opt) {
+  opt.value();
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  bsl::string x = *opt;
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (opt.isNull()) {
+    opt.value();
+  }
+  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (!opt) {
+    opt.value();
+  }
+  // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: unchecked access to optional value [bugprone-unchecked-optional-access]
+
+  if (!opt.has_value()) {
     return;
   }
 

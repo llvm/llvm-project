@@ -43,7 +43,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
-#include <array>
 #include <cstdint>
 #include <cstring>
 

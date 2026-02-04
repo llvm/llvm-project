@@ -165,7 +165,8 @@ ModuleSP DynamicLoader::FindModuleViaTarget(const FileSpec &file) {
   if (ModuleSP module_sp = target.GetImages().FindFirstModule(module_spec))
     return module_sp;
 
-  if (ModuleSP module_sp = target.GetOrCreateModule(module_spec, false))
+  if (ModuleSP module_sp =
+          target.GetOrCreateModule(module_spec, /*notify=*/false))
     return module_sp;
 
   return nullptr;
@@ -175,13 +176,17 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
                                             addr_t link_map_addr,
                                             addr_t base_addr,
                                             bool base_addr_is_offset) {
-  if (ModuleSP module_sp = FindModuleViaTarget(file)) {
+  ModuleSP module_sp = FindModuleViaTarget(file);
+  // We have a core file, try to load the image from memory if we didn't find
+  // the module.
+  if (!module_sp && !m_process->IsLiveDebugSession()) {
+    module_sp = m_process->ReadModuleFromMemory(file, base_addr);
+    m_process->GetTarget().GetImages().AppendIfNeeded(module_sp, false);
+  }
+  if (module_sp)
     UpdateLoadedSections(module_sp, link_map_addr, base_addr,
                          base_addr_is_offset);
-    return module_sp;
-  }
-
-  return nullptr;
+  return module_sp;
 }
 
 static ModuleSP ReadUnnamedMemoryModule(Process *process, addr_t addr,

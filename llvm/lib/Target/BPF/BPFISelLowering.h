@@ -32,6 +32,10 @@ public:
   // with the given GlobalAddress is legal.
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
+  bool allowsMisalignedMemoryAccesses(EVT VT, unsigned, Align,
+                                      MachineMemOperand::Flags,
+                                      unsigned *) const override;
+
   BPFTargetLowering::ConstraintType
   getConstraintType(StringRef Constraint) const override;
 
@@ -60,6 +64,9 @@ private:
   bool HasJmp32;
   bool HasJmpExt;
   bool HasMovsx;
+
+  // Allows Misalignment
+  bool AllowsMisalignedMemAccess;
 
   SDValue LowerSDIVSREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;

@@ -771,44 +771,36 @@ void SemaHLSL::ActOnTopLevelFunction(FunctionDecl *FD) {
   }
 }
 
-HLSLSemanticAttr *SemaHLSL::createSemantic(const SemanticInfo &Info,
-                                           DeclaratorDecl *TargetDecl) {
-  std::string SemanticName = Info.Semantic->getAttrName()->getName().upper();
+static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
+                                HLSLAppliedSemanticAttr *Semantic,
+                                bool IsInput) {
+  if (AstContext.getTargetInfo().getTriple().getOS() != llvm::Triple::Vulkan)
+    return false;
 
-  if (dyn_cast<HLSLUserSemanticAttr>(Info.Semantic))
-    return createSemanticAttr<HLSLUserSemanticAttr>(*Info.Semantic, TargetDecl,
-                                                    Info.Index);
+  const auto *ShaderAttr = FD->getAttr<HLSLShaderAttr>();
+  assert(ShaderAttr && "Entry point has no shader attribute");
+  llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
+  auto SemanticName = Semantic->getSemanticName().upper();
 
-  if (SemanticName == "SV_DISPATCHTHREADID") {
-    return createSemanticAttr<HLSLSV_DispatchThreadIDAttr>(
-        *Info.Semantic, TargetDecl, Info.Index);
-  } else if (SemanticName == "SV_GROUPINDEX") {
-    return createSemanticAttr<HLSLSV_GroupIndexAttr>(*Info.Semantic, TargetDecl,
-                                                     Info.Index);
-  } else if (SemanticName == "SV_GROUPTHREADID") {
-    return createSemanticAttr<HLSLSV_GroupThreadIDAttr>(*Info.Semantic,
-                                                        TargetDecl, Info.Index);
-  } else if (SemanticName == "SV_GROUPID") {
-    return createSemanticAttr<HLSLSV_GroupIDAttr>(*Info.Semantic, TargetDecl,
-                                                  Info.Index);
-  } else if (SemanticName == "SV_POSITION") {
-    return createSemanticAttr<HLSLSV_PositionAttr>(*Info.Semantic, TargetDecl,
-                                                   Info.Index);
-  } else
-    Diag(Info.Semantic->getLoc(), diag::err_hlsl_unknown_semantic)
-        << *Info.Semantic;
+  // The SV_Position semantic is lowered to:
+  //  - Position built-in for vertex output.
+  //  - FragCoord built-in for fragment input.
+  if (SemanticName == "SV_POSITION") {
+    return (ST == llvm::Triple::Vertex && !IsInput) ||
+           (ST == llvm::Triple::Pixel && IsInput);
+  }
 
-  return nullptr;
+  return false;
 }
 
-bool SemaHLSL::determineActiveSemanticOnScalar(
-    FunctionDecl *FD, DeclaratorDecl *D, SemanticInfo &ActiveSemantic,
-    llvm::StringSet<> &ActiveInputSemantics) {
-
+bool SemaHLSL::determineActiveSemanticOnScalar(FunctionDecl *FD,
+                                               DeclaratorDecl *OutputDecl,
+                                               DeclaratorDecl *D,
+                                               SemanticInfo &ActiveSemantic,
+                                               SemaHLSL::SemanticContext &SC) {
   if (ActiveSemantic.Semantic == nullptr) {
-    ActiveSemantic.Semantic = D->getAttr<HLSLSemanticAttr>();
-    if (ActiveSemantic.Semantic &&
-        ActiveSemantic.Semantic->isSemanticIndexExplicit())
+    ActiveSemantic.Semantic = D->getAttr<HLSLParsedSemanticAttr>();
+    if (ActiveSemantic.Semantic)
       ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
   }
 
@@ -817,14 +809,32 @@ bool SemaHLSL::determineActiveSemanticOnScalar(
     return false;
   }
 
-  auto *A = createSemantic(ActiveSemantic, D);
+  auto *A = ::new (getASTContext())
+      HLSLAppliedSemanticAttr(getASTContext(), *ActiveSemantic.Semantic,
+                              ActiveSemantic.Semantic->getAttrName()->getName(),
+                              ActiveSemantic.Index.value_or(0));
   if (!A)
     return false;
 
-  checkSemanticAnnotation(FD, D, A);
-  FD->addAttr(A);
+  checkSemanticAnnotation(FD, D, A, SC);
+  OutputDecl->addAttr(A);
 
   unsigned Location = ActiveSemantic.Index.value_or(0);
+
+  if (!isVkPipelineBuiltin(getASTContext(), FD, A,
+                           SC.CurrentIOType & IOType::In)) {
+    bool HasVkLocation = false;
+    if (auto *A = D->getAttr<HLSLVkLocationAttr>()) {
+      HasVkLocation = true;
+      Location = A->getLocation();
+    }
+
+    if (SC.UsesExplicitVkLocations.value_or(HasVkLocation) != HasVkLocation) {
+      Diag(D->getLocation(), diag::err_hlsl_semantic_partial_explicit_indexing);
+      return false;
+    }
+    SC.UsesExplicitVkLocations = HasVkLocation;
+  }
 
   const ConstantArrayType *AT = dyn_cast<ConstantArrayType>(D->getType());
   unsigned ElementCount = AT ? AT->getZExtSize() : 1;
@@ -834,7 +844,7 @@ bool SemaHLSL::determineActiveSemanticOnScalar(
   for (unsigned I = 0; I < ElementCount; ++I) {
     Twine VariableName = BaseName.concat(Twine(Location + I));
 
-    auto [_, Inserted] = ActiveInputSemantics.insert(VariableName.str());
+    auto [_, Inserted] = SC.ActiveSemantics.insert(VariableName.str());
     if (!Inserted) {
       Diag(D->getLocation(), diag::err_hlsl_semantic_index_overlap)
           << VariableName.str();
@@ -845,26 +855,29 @@ bool SemaHLSL::determineActiveSemanticOnScalar(
   return true;
 }
 
-bool SemaHLSL::determineActiveSemantic(
-    FunctionDecl *FD, DeclaratorDecl *D, SemanticInfo &ActiveSemantic,
-    llvm::StringSet<> &ActiveInputSemantics) {
+bool SemaHLSL::determineActiveSemantic(FunctionDecl *FD,
+                                       DeclaratorDecl *OutputDecl,
+                                       DeclaratorDecl *D,
+                                       SemanticInfo &ActiveSemantic,
+                                       SemaHLSL::SemanticContext &SC) {
   if (ActiveSemantic.Semantic == nullptr) {
-    ActiveSemantic.Semantic = D->getAttr<HLSLSemanticAttr>();
-    if (ActiveSemantic.Semantic &&
-        ActiveSemantic.Semantic->isSemanticIndexExplicit())
+    ActiveSemantic.Semantic = D->getAttr<HLSLParsedSemanticAttr>();
+    if (ActiveSemantic.Semantic)
       ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
   }
 
-  const Type *T = D->getType()->getUnqualifiedDesugaredType();
+  const Type *T = D == FD ? &*FD->getReturnType() : &*D->getType();
+  T = T->getUnqualifiedDesugaredType();
+
   const RecordType *RT = dyn_cast<RecordType>(T);
   if (!RT)
-    return determineActiveSemanticOnScalar(FD, D, ActiveSemantic,
-                                           ActiveInputSemantics);
+    return determineActiveSemanticOnScalar(FD, OutputDecl, D, ActiveSemantic,
+                                           SC);
 
   const RecordDecl *RD = RT->getDecl();
   for (FieldDecl *Field : RD->fields()) {
     SemanticInfo Info = ActiveSemantic;
-    if (!determineActiveSemantic(FD, Field, Info, ActiveInputSemantics)) {
+    if (!determineActiveSemantic(FD, OutputDecl, Field, Info, SC)) {
       Diag(Field->getLocation(), diag::note_hlsl_semantic_used_here) << Field;
       return false;
     }
@@ -894,14 +907,14 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
   case llvm::Triple::Miss:
   case llvm::Triple::Callable:
     if (const auto *NT = FD->getAttr<HLSLNumThreadsAttr>()) {
-      DiagnoseAttrStageMismatch(NT, ST,
+      diagnoseAttrStageMismatch(NT, ST,
                                 {llvm::Triple::Compute,
                                  llvm::Triple::Amplification,
                                  llvm::Triple::Mesh});
       FD->setInvalidDecl();
     }
     if (const auto *WS = FD->getAttr<HLSLWaveSizeAttr>()) {
-      DiagnoseAttrStageMismatch(WS, ST,
+      diagnoseAttrStageMismatch(WS, ST,
                                 {llvm::Triple::Compute,
                                  llvm::Triple::Amplification,
                                  llvm::Triple::Mesh});
@@ -937,52 +950,80 @@ void SemaHLSL::CheckEntryPoint(FunctionDecl *FD) {
     llvm_unreachable("Unhandled environment in triple");
   }
 
-  llvm::StringSet<> ActiveInputSemantics;
+  SemaHLSL::SemanticContext InputSC = {};
+  InputSC.CurrentIOType = IOType::In;
+
   for (ParmVarDecl *Param : FD->parameters()) {
     SemanticInfo ActiveSemantic;
-    ActiveSemantic.Semantic = nullptr;
-    ActiveSemantic.Index = std::nullopt;
+    ActiveSemantic.Semantic = Param->getAttr<HLSLParsedSemanticAttr>();
+    if (ActiveSemantic.Semantic)
+      ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
 
-    if (!determineActiveSemantic(FD, Param, ActiveSemantic,
-                                 ActiveInputSemantics)) {
+    // FIXME: Verify output semantics in parameters.
+    if (!determineActiveSemantic(FD, Param, Param, ActiveSemantic, InputSC)) {
       Diag(Param->getLocation(), diag::note_previous_decl) << Param;
       FD->setInvalidDecl();
     }
   }
-  // FIXME: Verify return type semantic annotation.
+
+  SemanticInfo ActiveSemantic;
+  SemaHLSL::SemanticContext OutputSC = {};
+  OutputSC.CurrentIOType = IOType::Out;
+  ActiveSemantic.Semantic = FD->getAttr<HLSLParsedSemanticAttr>();
+  if (ActiveSemantic.Semantic)
+    ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
+  if (!FD->getReturnType()->isVoidType())
+    determineActiveSemantic(FD, FD, FD, ActiveSemantic, OutputSC);
 }
 
-void SemaHLSL::checkSemanticAnnotation(FunctionDecl *EntryPoint,
-                                       const Decl *Param,
-                                       const HLSLSemanticAttr *SemanticAttr) {
+void SemaHLSL::checkSemanticAnnotation(
+    FunctionDecl *EntryPoint, const Decl *Param,
+    const HLSLAppliedSemanticAttr *SemanticAttr, const SemanticContext &SC) {
   auto *ShaderAttr = EntryPoint->getAttr<HLSLShaderAttr>();
   assert(ShaderAttr && "Entry point has no shader attribute");
   llvm::Triple::EnvironmentType ST = ShaderAttr->getType();
 
-  switch (SemanticAttr->getKind()) {
-  case attr::HLSLSV_DispatchThreadID:
-  case attr::HLSLSV_GroupIndex:
-  case attr::HLSLSV_GroupThreadID:
-  case attr::HLSLSV_GroupID:
-    if (ST == llvm::Triple::Compute)
-      return;
-    DiagnoseAttrStageMismatch(SemanticAttr, ST, {llvm::Triple::Compute});
-    break;
-  case attr::HLSLSV_Position:
-    // TODO(#143523): allow use on other shader types & output once the overall
-    // semantic logic is implemented.
-    if (ST == llvm::Triple::Pixel)
-      return;
-    DiagnoseAttrStageMismatch(SemanticAttr, ST, {llvm::Triple::Pixel});
-    break;
-  case attr::HLSLUserSemantic:
+  auto SemanticName = SemanticAttr->getSemanticName().upper();
+  if (SemanticName == "SV_DISPATCHTHREADID" ||
+      SemanticName == "SV_GROUPINDEX" || SemanticName == "SV_GROUPTHREADID" ||
+      SemanticName == "SV_GROUPID") {
+
+    if (ST != llvm::Triple::Compute)
+      diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
+                                    {{llvm::Triple::Compute, IOType::In}});
+
+    if (SemanticAttr->getSemanticIndex() != 0) {
+      std::string PrettyName =
+          "'" + SemanticAttr->getSemanticName().str() + "'";
+      Diag(SemanticAttr->getLoc(),
+           diag::err_hlsl_semantic_indexing_not_supported)
+          << PrettyName;
+    }
     return;
-  default:
-    llvm_unreachable("Unknown SemanticAttr");
   }
+
+  if (SemanticName == "SV_POSITION") {
+    // SV_Position can be an input or output in vertex shaders,
+    // but only an input in pixel shaders.
+    diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
+                                  {{llvm::Triple::Vertex, IOType::InOut},
+                                   {llvm::Triple::Pixel, IOType::In}});
+    return;
+  }
+
+  if (SemanticName == "SV_TARGET") {
+    diagnoseSemanticStageMismatch(SemanticAttr, ST, SC.CurrentIOType,
+                                  {{llvm::Triple::Pixel, IOType::Out}});
+    return;
+  }
+
+  // FIXME: catch-all for non-implemented system semantics reaching this
+  // location.
+  if (SemanticAttr->getAttrName()->getName().starts_with_insensitive("SV_"))
+    llvm_unreachable("Unknown SemanticAttr");
 }
 
-void SemaHLSL::DiagnoseAttrStageMismatch(
+void SemaHLSL::diagnoseAttrStageMismatch(
     const Attr *A, llvm::Triple::EnvironmentType Stage,
     std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages) {
   SmallVector<StringRef, 8> StageStrings;
@@ -994,6 +1035,48 @@ void SemaHLSL::DiagnoseAttrStageMismatch(
   Diag(A->getLoc(), diag::err_hlsl_attr_unsupported_in_stage)
       << A->getAttrName() << llvm::Triple::getEnvironmentTypeName(Stage)
       << (AllowedStages.size() != 1) << join(StageStrings, ", ");
+}
+
+void SemaHLSL::diagnoseSemanticStageMismatch(
+    const Attr *A, llvm::Triple::EnvironmentType Stage, IOType CurrentIOType,
+    std::initializer_list<SemanticStageInfo> Allowed) {
+
+  for (auto &Case : Allowed) {
+    if (Case.Stage != Stage)
+      continue;
+
+    if (CurrentIOType & Case.AllowedIOTypesMask)
+      return;
+
+    SmallVector<std::string, 8> ValidCases;
+    llvm::transform(
+        Allowed, std::back_inserter(ValidCases), [](SemanticStageInfo Case) {
+          SmallVector<std::string, 2> ValidType;
+          if (Case.AllowedIOTypesMask & IOType::In)
+            ValidType.push_back("input");
+          if (Case.AllowedIOTypesMask & IOType::Out)
+            ValidType.push_back("output");
+          return std::string(
+                     HLSLShaderAttr::ConvertEnvironmentTypeToStr(Case.Stage)) +
+                 " " + join(ValidType, "/");
+        });
+    Diag(A->getLoc(), diag::err_hlsl_semantic_unsupported_iotype_for_stage)
+        << A->getAttrName() << (CurrentIOType & IOType::In ? "input" : "output")
+        << llvm::Triple::getEnvironmentTypeName(Case.Stage)
+        << join(ValidCases, ", ");
+    return;
+  }
+
+  SmallVector<StringRef, 8> StageStrings;
+  llvm::transform(
+      Allowed, std::back_inserter(StageStrings), [](SemanticStageInfo Case) {
+        return StringRef(
+            HLSLShaderAttr::ConvertEnvironmentTypeToStr(Case.Stage));
+      });
+
+  Diag(A->getLoc(), diag::err_hlsl_attr_unsupported_in_stage)
+      << A->getAttrName() << llvm::Triple::getEnvironmentTypeName(Stage)
+      << (Allowed.size() != 1) << join(StageStrings, ", ");
 }
 
 template <CastKind Kind>
@@ -1685,6 +1768,11 @@ void SemaHLSL::handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL) {
                  HLSLVkExtBuiltinInputAttr(getASTContext(), AL, ID));
 }
 
+void SemaHLSL::handleVkPushConstantAttr(Decl *D, const ParsedAttr &AL) {
+  D->addAttr(::new (getASTContext())
+                 HLSLVkPushConstantAttr(getASTContext(), AL));
+}
+
 void SemaHLSL::handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL) {
   uint32_t Id;
   if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), Id))
@@ -1705,6 +1793,15 @@ void SemaHLSL::handleVkBindingAttr(Decl *D, const ParsedAttr &AL) {
 
   D->addAttr(::new (getASTContext())
                  HLSLVkBindingAttr(getASTContext(), AL, Binding, Set));
+}
+
+void SemaHLSL::handleVkLocationAttr(Decl *D, const ParsedAttr &AL) {
+  uint32_t Location;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), Location))
+    return;
+
+  D->addAttr(::new (getASTContext())
+                 HLSLVkLocationAttr(getASTContext(), AL, Location));
 }
 
 bool SemaHLSL::diagnoseInputIDType(QualType T, const ParsedAttr &AL) {
@@ -1748,47 +1845,74 @@ void SemaHLSL::diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
     }
   }
 
-  Attr *Attribute = nullptr;
   if (SemanticName == "SV_DISPATCHTHREADID") {
     diagnoseInputIDType(ValueType, AL);
     if (IsOutput)
       Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
-    Attribute =
-        createSemanticAttr<HLSLSV_DispatchThreadIDAttr>(AL, nullptr, Index);
-  } else if (SemanticName == "SV_GROUPINDEX") {
+    if (Index.has_value())
+      Diag(AL.getLoc(), diag::err_hlsl_semantic_indexing_not_supported) << AL;
+    D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
+    return;
+  }
+
+  if (SemanticName == "SV_GROUPINDEX") {
     if (IsOutput)
       Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
-    Attribute = createSemanticAttr<HLSLSV_GroupIndexAttr>(AL, nullptr, Index);
-  } else if (SemanticName == "SV_GROUPTHREADID") {
+    if (Index.has_value())
+      Diag(AL.getLoc(), diag::err_hlsl_semantic_indexing_not_supported) << AL;
+    D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
+    return;
+  }
+
+  if (SemanticName == "SV_GROUPTHREADID") {
     diagnoseInputIDType(ValueType, AL);
     if (IsOutput)
       Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
-    Attribute =
-        createSemanticAttr<HLSLSV_GroupThreadIDAttr>(AL, nullptr, Index);
-  } else if (SemanticName == "SV_GROUPID") {
+    if (Index.has_value())
+      Diag(AL.getLoc(), diag::err_hlsl_semantic_indexing_not_supported) << AL;
+    D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
+    return;
+  }
+
+  if (SemanticName == "SV_GROUPID") {
     diagnoseInputIDType(ValueType, AL);
     if (IsOutput)
       Diag(AL.getLoc(), diag::err_hlsl_semantic_output_not_supported) << AL;
-    Attribute = createSemanticAttr<HLSLSV_GroupIDAttr>(AL, nullptr, Index);
-  } else if (SemanticName == "SV_POSITION") {
+    if (Index.has_value())
+      Diag(AL.getLoc(), diag::err_hlsl_semantic_indexing_not_supported) << AL;
+    D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
+    return;
+  }
+
+  if (SemanticName == "SV_POSITION") {
     const auto *VT = ValueType->getAs<VectorType>();
     if (!ValueType->hasFloatingRepresentation() ||
         (VT && VT->getNumElements() > 4))
       Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
           << AL << "float/float1/float2/float3/float4";
-    Attribute = createSemanticAttr<HLSLSV_PositionAttr>(AL, nullptr, Index);
-  } else
-    Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
-
-  if (!Attribute)
+    D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
     return;
-  D->addAttr(Attribute);
+  }
+
+  if (SemanticName == "SV_TARGET") {
+    const auto *VT = ValueType->getAs<VectorType>();
+    if (!ValueType->hasFloatingRepresentation() ||
+        (VT && VT->getNumElements() > 4))
+      Diag(AL.getLoc(), diag::err_hlsl_attr_invalid_type)
+          << AL << "float/float1/float2/float3/float4";
+    D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
+    return;
+  }
+
+  Diag(AL.getLoc(), diag::err_hlsl_unknown_semantic) << AL;
 }
 
 void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
-  uint32_t IndexValue, ExplicitIndex;
-  SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), IndexValue);
-  SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(1), ExplicitIndex);
+  uint32_t IndexValue(0), ExplicitIndex(0);
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), IndexValue) ||
+      !SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(1), ExplicitIndex)) {
+    assert(0 && "HLSLUnparsedSemantic is expected to have 2 int arguments.");
+  }
   assert(IndexValue > 0 ? ExplicitIndex : true);
   std::optional<unsigned> Index =
       ExplicitIndex ? std::optional<unsigned>(IndexValue) : std::nullopt;
@@ -1796,7 +1920,7 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   if (AL.getAttrName()->getName().starts_with_insensitive("SV_"))
     diagnoseSystemSemanticAttr(D, AL, Index);
   else
-    D->addAttr(createSemanticAttr<HLSLUserSemanticAttr>(AL, nullptr, Index));
+    D->addAttr(createSemanticAttr<HLSLParsedSemanticAttr>(AL, Index));
 }
 
 void SemaHLSL::handlePackOffsetAttr(Decl *D, const ParsedAttr &AL) {
@@ -1821,8 +1945,8 @@ void SemaHLSL::handlePackOffsetAttr(Decl *D, const ParsedAttr &AL) {
   // Check Component is valid for T.
   if (Component) {
     unsigned Size = getASTContext().getTypeSize(T);
-    if (IsAggregateTy || Size > 128) {
-      Diag(AL.getLoc(), diag::err_hlsl_packoffset_cross_reg_boundary);
+    if (IsAggregateTy) {
+      Diag(AL.getLoc(), diag::err_hlsl_invalid_register_or_packoffset);
       return;
     } else {
       // Make sure Component + sizeof(T) <= 4.
@@ -1881,6 +2005,7 @@ bool clang::CreateHLSLAttributedResourceType(
   HLSLAttributedResourceType::Attributes ResAttrs;
 
   bool HasResourceClass = false;
+  bool HasResourceDimension = false;
   for (const Attr *A : AttrList) {
     if (!A)
       continue;
@@ -1897,6 +2022,20 @@ bool clang::CreateHLSLAttributedResourceType(
       }
       ResAttrs.ResourceClass = RC;
       HasResourceClass = true;
+      break;
+    }
+    case attr::HLSLResourceDimension: {
+      llvm::dxil::ResourceDimension RD =
+          cast<HLSLResourceDimensionAttr>(A)->getDimension();
+      if (HasResourceDimension) {
+        S.Diag(A->getLocation(), ResAttrs.ResourceDimension == RD
+                                     ? diag::warn_duplicate_attribute_exact
+                                     : diag::warn_duplicate_attribute)
+            << A;
+        return false;
+      }
+      ResAttrs.ResourceDimension = RD;
+      HasResourceDimension = true;
       break;
     }
     case attr::HLSLROV:
@@ -2237,6 +2376,107 @@ static bool DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
   return ValidateMultipleRegisterAnnotations(S, D, RegType);
 }
 
+// return false if the slot count exceeds the limit, true otherwise
+static bool AccumulateHLSLResourceSlots(QualType Ty, uint64_t &StartSlot,
+                                        const uint64_t &Limit,
+                                        const ResourceClass ResClass,
+                                        ASTContext &Ctx,
+                                        uint64_t ArrayCount = 1) {
+  Ty = Ty.getCanonicalType();
+  const Type *T = Ty.getTypePtr();
+
+  // Early exit if already overflowed
+  if (StartSlot > Limit)
+    return false;
+
+  // Case 1: array type
+  if (const auto *AT = dyn_cast<ArrayType>(T)) {
+    uint64_t Count = 1;
+
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(AT))
+      Count = CAT->getSize().getZExtValue();
+
+    QualType ElemTy = AT->getElementType();
+    return AccumulateHLSLResourceSlots(ElemTy, StartSlot, Limit, ResClass, Ctx,
+                                       ArrayCount * Count);
+  }
+
+  // Case 2: resource leaf
+  if (auto ResTy = dyn_cast<HLSLAttributedResourceType>(T)) {
+    // First ensure this resource counts towards the corresponding
+    // register type limit.
+    if (ResTy->getAttrs().ResourceClass != ResClass)
+      return true;
+
+    // Validate highest slot used
+    uint64_t EndSlot = StartSlot + ArrayCount - 1;
+    if (EndSlot > Limit)
+      return false;
+
+    // Advance SlotCount past the consumed range
+    StartSlot = EndSlot + 1;
+    return true;
+  }
+
+  // Case 3: struct / record
+  if (const auto *RT = dyn_cast<RecordType>(T)) {
+    const RecordDecl *RD = RT->getDecl();
+
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+      for (const CXXBaseSpecifier &Base : CXXRD->bases()) {
+        if (!AccumulateHLSLResourceSlots(Base.getType(), StartSlot, Limit,
+                                         ResClass, Ctx, ArrayCount))
+          return false;
+      }
+    }
+
+    for (const FieldDecl *Field : RD->fields()) {
+      if (!AccumulateHLSLResourceSlots(Field->getType(), StartSlot, Limit,
+                                       ResClass, Ctx, ArrayCount))
+        return false;
+    }
+
+    return true;
+  }
+
+  // Case 4: everything else
+  return true;
+}
+
+// return true if there is something invalid, false otherwise
+static bool ValidateRegisterNumber(uint64_t SlotNum, Decl *TheDecl,
+                                   ASTContext &Ctx, RegisterType RegTy) {
+  const uint64_t Limit = UINT32_MAX;
+  if (SlotNum > Limit)
+    return true;
+
+  // after verifying the number doesn't exceed uint32max, we don't need
+  // to look further into c or i register types
+  if (RegTy == RegisterType::C || RegTy == RegisterType::I)
+    return false;
+
+  if (VarDecl *VD = dyn_cast<VarDecl>(TheDecl)) {
+    uint64_t BaseSlot = SlotNum;
+
+    if (!AccumulateHLSLResourceSlots(VD->getType(), SlotNum, Limit,
+                                     getResourceClass(RegTy), Ctx))
+      return true;
+
+    // After AccumulateHLSLResourceSlots runs, SlotNum is now
+    // the first free slot; last used was SlotNum - 1
+    return (BaseSlot > Limit);
+  }
+  // handle the cbuffer/tbuffer case
+  if (isa<HLSLBufferDecl>(TheDecl))
+    // resources cannot be put within a cbuffer, so no need
+    // to analyze the structure since the register number
+    // won't be pushed any higher.
+    return (SlotNum > Limit);
+
+  // we don't expect any other decl type, so fail
+  llvm_unreachable("unexpected decl type");
+}
+
 void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
   if (VarDecl *VD = dyn_cast<VarDecl>(TheDecl)) {
     QualType Ty = VD->getType();
@@ -2295,13 +2535,26 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
       Diag(SlotLoc, diag::warn_hlsl_deprecated_register_type_i);
       return;
     }
-    StringRef SlotNumStr = Slot.substr(1);
-    unsigned N;
+    const StringRef SlotNumStr = Slot.substr(1);
+
+    uint64_t N;
+
+    // validate that the slot number is a non-empty number
     if (SlotNumStr.getAsInteger(10, N)) {
       Diag(SlotLoc, diag::err_hlsl_unsupported_register_number);
       return;
     }
-    SlotNum = N;
+
+    // Validate register number. It should not exceed UINT32_MAX,
+    // including if the resource type is an array that starts
+    // before UINT32_MAX, but ends afterwards.
+    if (ValidateRegisterNumber(N, TheDecl, getASTContext(), RegType)) {
+      Diag(SlotLoc, diag::err_hlsl_register_number_too_large);
+      return;
+    }
+
+    // the slot number has been validated and does not exceed UINT32_MAX
+    SlotNum = (unsigned)N;
   }
 
   // Validate space
@@ -2571,7 +2824,7 @@ void DiagnoseHLSLAvailability::RunOnFunction(const FunctionDecl *FD) {
 
 bool DiagnoseHLSLAvailability::HasMatchingEnvironmentOrNone(
     const AvailabilityAttr *AA) {
-  IdentifierInfo *IIEnvironment = AA->getEnvironment();
+  const IdentifierInfo *IIEnvironment = AA->getEnvironment();
   if (!IIEnvironment)
     return true;
 
@@ -2615,7 +2868,7 @@ void DiagnoseHLSLAvailability::CheckDeclAvailability(NamedDecl *D,
                                                      const AvailabilityAttr *AA,
                                                      SourceRange Range) {
 
-  IdentifierInfo *IIEnv = AA->getEnvironment();
+  const IdentifierInfo *IIEnv = AA->getEnvironment();
 
   if (!IIEnv) {
     // The availability attribute does not have environment -> it depends only
@@ -2760,6 +3013,20 @@ static bool CheckAllArgTypesAreCorrect(
   return false;
 }
 
+static bool CheckFloatRepresentation(Sema *S, SourceLocation Loc,
+                                     int ArgOrdinal,
+                                     clang::QualType PassedType) {
+  clang::QualType BaseType =
+      PassedType->isVectorType()
+          ? PassedType->castAs<clang::VectorType>()->getElementType()
+          : PassedType;
+  if (!BaseType->isFloat32Type())
+    return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
+           << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
+           << /* float */ 1 << PassedType;
+  return false;
+}
+
 static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
                                            int ArgOrdinal,
                                            clang::QualType PassedType) {
@@ -2876,6 +3143,36 @@ static bool CheckScalarOrVector(Sema *S, CallExpr *TheCall, QualType Scalar,
   return false;
 }
 
+static bool CheckScalarOrVectorOrMatrix(Sema *S, CallExpr *TheCall,
+                                        QualType Scalar, unsigned ArgIndex) {
+  assert(TheCall->getNumArgs() > ArgIndex);
+
+  Expr *Arg = TheCall->getArg(ArgIndex);
+  QualType ArgType = Arg->getType();
+
+  // Scalar: T
+  if (S->Context.hasSameUnqualifiedType(ArgType, Scalar))
+    return false;
+
+  // Vector: vector<T>
+  if (const auto *VTy = ArgType->getAs<VectorType>()) {
+    if (S->Context.hasSameUnqualifiedType(VTy->getElementType(), Scalar))
+      return false;
+  }
+
+  // Matrix: ConstantMatrixType with element type T
+  if (const auto *MTy = ArgType->getAs<ConstantMatrixType>()) {
+    if (S->Context.hasSameUnqualifiedType(MTy->getElementType(), Scalar))
+      return false;
+  }
+
+  // Not a scalar/vector/matrix-of-scalar
+  S->Diag(Arg->getBeginLoc(),
+          diag::err_typecheck_expect_scalar_or_vector_or_matrix)
+      << ArgType << Scalar;
+  return true;
+}
+
 static bool CheckAnyScalarOrVector(Sema *S, CallExpr *TheCall,
                                    unsigned ArgIndex) {
   assert(TheCall->getNumArgs() >= ArgIndex);
@@ -2892,10 +3189,13 @@ static bool CheckAnyScalarOrVector(Sema *S, CallExpr *TheCall,
   return false;
 }
 
-static bool CheckWaveActive(Sema *S, CallExpr *TheCall) {
+// Check that the argument is not a bool or vector<bool>
+// Returns true on error
+static bool CheckNotBoolScalarOrVector(Sema *S, CallExpr *TheCall,
+                                       unsigned ArgIndex) {
   QualType BoolType = S->getASTContext().BoolTy;
-  assert(TheCall->getNumArgs() >= 1);
-  QualType ArgType = TheCall->getArg(0)->getType();
+  assert(ArgIndex < TheCall->getNumArgs());
+  QualType ArgType = TheCall->getArg(ArgIndex)->getType();
   auto *VTy = ArgType->getAs<VectorType>();
   // is the bool or vector<bool>
   if (S->Context.hasSameUnqualifiedType(ArgType, BoolType) ||
@@ -2906,6 +3206,18 @@ static bool CheckWaveActive(Sema *S, CallExpr *TheCall) {
         << ArgType << 0;
     return true;
   }
+  return false;
+}
+
+static bool CheckWaveActive(Sema *S, CallExpr *TheCall) {
+  if (CheckNotBoolScalarOrVector(S, TheCall, 0))
+    return true;
+  return false;
+}
+
+static bool CheckWavePrefix(Sema *S, CallExpr *TheCall) {
+  if (CheckNotBoolScalarOrVector(S, TheCall, 0))
+    return true;
   return false;
 }
 
@@ -2996,6 +3308,23 @@ static bool CheckResourceHandle(
   return false;
 }
 
+static bool CheckVectorElementCount(Sema *S, QualType PassedType,
+                                    QualType BaseType, unsigned ExpectedCount,
+                                    SourceLocation Loc) {
+  unsigned PassedCount = 1;
+  if (const auto *VecTy = PassedType->getAs<VectorType>())
+    PassedCount = VecTy->getNumElements();
+
+  if (PassedCount != ExpectedCount) {
+    QualType ExpectedType =
+        S->Context.getExtVectorType(BaseType, ExpectedCount);
+    S->Diag(Loc, diag::err_typecheck_convert_incompatible)
+        << PassedType << ExpectedType << 1 << 0 << 0;
+    return true;
+  }
+  return false;
+}
+
 // Note: returning true in this case results in CheckBuiltinFunctionCall
 // returning an ExprError
 bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
@@ -3049,55 +3378,150 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
-  case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
-    if (SemaRef.checkArgCount(TheCall, 1) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0))
+  case Builtin::BI__builtin_hlsl_resource_getpointer_typed: {
+    if (SemaRef.checkArgCount(TheCall, 3) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy))
       return true;
-    // use the type of the handle (arg0) as a return type
+
+    QualType ElementTy = TheCall->getArg(2)->getType();
+    assert(ElementTy->isPointerType() &&
+           "expected pointer type for second argument");
+    ElementTy = ElementTy->getPointeeType();
+
+    // Reject array types
+    if (ElementTy->isArrayType())
+      return SemaRef.Diag(
+          cast<FunctionDecl>(SemaRef.CurContext)->getPointOfInstantiation(),
+          diag::err_invalid_use_of_array_type);
+
+    auto ReturnType =
+        SemaRef.Context.getAddrSpaceQualType(ElementTy, LangAS::hlsl_device);
+    ReturnType = SemaRef.Context.getPointerType(ReturnType);
+    TheCall->setType(ReturnType);
+
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_load_with_status: {
+    if (SemaRef.checkArgCount(TheCall, 3) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2),
+                            SemaRef.getASTContext().UnsignedIntTy) ||
+        CheckModifiableLValue(&SemaRef, TheCall, 2))
+      return true;
+
+    auto *ResourceTy =
+        TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
+    QualType ReturnType = ResourceTy->getContainedType();
+    TheCall->setType(ReturnType);
+
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_load_with_status_typed: {
+    if (SemaRef.checkArgCount(TheCall, 4) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2),
+                            SemaRef.getASTContext().UnsignedIntTy) ||
+        CheckModifiableLValue(&SemaRef, TheCall, 2))
+      return true;
+
+    QualType ReturnType = TheCall->getArg(3)->getType();
+    assert(ReturnType->isPointerType() &&
+           "expected pointer type for second argument");
+    ReturnType = ReturnType->getPointeeType();
+
+    // Reject array types
+    if (ReturnType->isArrayType())
+      return SemaRef.Diag(
+          cast<FunctionDecl>(SemaRef.CurContext)->getPointOfInstantiation(),
+          diag::err_invalid_use_of_array_type);
+
+    TheCall->setType(ReturnType);
+
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_sample: {
+    if (SemaRef.checkArgCountRange(TheCall, 3, 5))
+      return true;
+
+    if (CheckResourceHandle(&SemaRef, TheCall, 0,
+                            [](const HLSLAttributedResourceType *ResType) {
+                              return ResType->getAttrs().ResourceDimension ==
+                                     llvm::dxil::ResourceDimension::Unknown;
+                            }))
+      return true;
+
+    if (CheckResourceHandle(&SemaRef, TheCall, 1,
+                            [](const HLSLAttributedResourceType *ResType) {
+                              return ResType->getAttrs().ResourceClass !=
+                                     llvm::hlsl::ResourceClass::Sampler;
+                            }))
+      return true;
+
+    auto *ResourceTy =
+        TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
+
+    unsigned ExpectedDim =
+        getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+    if (CheckVectorElementCount(&SemaRef, TheCall->getArg(2)->getType(),
+                                SemaRef.Context.FloatTy, ExpectedDim,
+                                TheCall->getArg(2)->getBeginLoc()))
+      return true;
+
+    if (TheCall->getNumArgs() > 3) {
+      if (CheckVectorElementCount(&SemaRef, TheCall->getArg(3)->getType(),
+                                  SemaRef.Context.IntTy, ExpectedDim,
+                                  TheCall->getArg(3)->getBeginLoc()))
+        return true;
+    }
+
+    if (TheCall->getNumArgs() > 4) {
+      QualType ClampTy = TheCall->getArg(4)->getType();
+      if (!ClampTy->isFloatingType() || ClampTy->isVectorType()) {
+        SemaRef.Diag(TheCall->getArg(4)->getBeginLoc(),
+                     diag::err_typecheck_convert_incompatible)
+            << ClampTy << SemaRef.Context.FloatTy << 1 << 0 << 0;
+        return true;
+      }
+    }
+
+    assert(ResourceTy->hasContainedType() &&
+           "Expecting a contained type for resource with a dimension "
+           "attribute.");
+    QualType ReturnType = ResourceTy->getContainedType();
+    TheCall->setType(ReturnType);
+
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
+    assert(TheCall->getNumArgs() == 1 && "expected 1 arg");
+    // Update return type to be the attributed resource type from arg0.
     QualType ResourceTy = TheCall->getArg(0)->getType();
     TheCall->setType(ResourceTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_resource_handlefrombinding: {
-    ASTContext &AST = SemaRef.getASTContext();
-    if (SemaRef.checkArgCount(TheCall, 6) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.IntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(5),
-                            AST.getPointerType(AST.CharTy.withConst())))
-      return true;
-    // use the type of the handle (arg0) as a return type
+    assert(TheCall->getNumArgs() == 6 && "expected 6 args");
+    // Update return type to be the attributed resource type from arg0.
     QualType ResourceTy = TheCall->getArg(0)->getType();
     TheCall->setType(ResourceTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_resource_handlefromimplicitbinding: {
-    ASTContext &AST = SemaRef.getASTContext();
-    if (SemaRef.checkArgCount(TheCall, 6) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.IntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(5),
-                            AST.getPointerType(AST.CharTy.withConst())))
-      return true;
-    // use the type of the handle (arg0) as a return type
+    assert(TheCall->getNumArgs() == 6 && "expected 6 args");
+    // Update return type to be the attributed resource type from arg0.
     QualType ResourceTy = TheCall->getArg(0)->getType();
     TheCall->setType(ResourceTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_resource_counterhandlefromimplicitbinding: {
+    assert(TheCall->getNumArgs() == 3 && "expected 3 args");
     ASTContext &AST = SemaRef.getASTContext();
-    if (SemaRef.checkArgCount(TheCall, 3) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.UnsignedIntTy))
-      return true;
-
     QualType MainHandleTy = TheCall->getArg(0)->getType();
     auto *MainResType = MainHandleTy->getAs<HLSLAttributedResourceType>();
     auto MainAttrs = MainResType->getAttrs();
@@ -3106,32 +3530,17 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     QualType CounterHandleTy = AST.getHLSLAttributedResourceType(
         MainResType->getWrappedType(), MainResType->getContainedType(),
         MainAttrs);
+    // Update return type to be the attributed resource type from arg0
+    // with added IsCounter flag.
     TheCall->setType(CounterHandleTy);
-    break;
-  }
-  case Builtin::BI__builtin_hlsl_resource_getdimensions_x: {
-    ASTContext &AST = SemaRef.getASTContext();
-    if (SemaRef.checkArgCount(TheCall, 2) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
-        CheckModifiableLValue(&SemaRef, TheCall, 1))
-      return true;
-    break;
-  }
-  case Builtin::BI__builtin_hlsl_resource_getstride: {
-    ASTContext &AST = SemaRef.getASTContext();
-    if (SemaRef.checkArgCount(TheCall, 2) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
-        CheckModifiableLValue(&SemaRef, TheCall, 1))
-      return true;
     break;
   }
   case Builtin::BI__builtin_hlsl_and:
   case Builtin::BI__builtin_hlsl_or: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
-    if (CheckScalarOrVector(&SemaRef, TheCall, getASTContext().BoolTy, 0))
+    if (CheckScalarOrVectorOrMatrix(&SemaRef, TheCall, getASTContext().BoolTy,
+                                    0))
       return true;
     if (CheckAllArgsHaveSameType(&SemaRef, TheCall))
       return true;
@@ -3242,7 +3651,11 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_elementwise_degrees:
   case Builtin::BI__builtin_hlsl_elementwise_radians:
   case Builtin::BI__builtin_hlsl_elementwise_rsqrt:
-  case Builtin::BI__builtin_hlsl_elementwise_frac: {
+  case Builtin::BI__builtin_hlsl_elementwise_frac:
+  case Builtin::BI__builtin_hlsl_elementwise_ddx_coarse:
+  case Builtin::BI__builtin_hlsl_elementwise_ddy_coarse:
+  case Builtin::BI__builtin_hlsl_elementwise_ddx_fine:
+  case Builtin::BI__builtin_hlsl_elementwise_ddy_fine: {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
@@ -3343,6 +3756,28 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_wave_prefix_count_bits: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    QualType ArgType = TheCall->getArg(0)->getType();
+
+    if (!(ArgType->isScalarType())) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_typecheck_expect_any_scalar_or_vector)
+          << ArgType << 0;
+      return true;
+    }
+
+    if (!(ArgType->isBooleanType())) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_typecheck_expect_any_scalar_or_vector)
+          << ArgType << 0;
+      return true;
+    }
+
+    break;
+  }
   case Builtin::BI__builtin_hlsl_wave_read_lane_at: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
@@ -3369,6 +3804,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     if (SemaRef.checkArgCount(TheCall, 0))
       return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_wave_prefix_sum: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    // Ensure input expr type is a scalar/vector and the same as the return type
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+    if (CheckWavePrefix(&SemaRef, TheCall))
+      return true;
+    ExprResult Expr = TheCall->getArg(0);
+    QualType ArgTyExpr = Expr.get()->getType();
+    TheCall->setType(ArgTyExpr);
     break;
   }
   case Builtin::BI__builtin_hlsl_elementwise_splitdouble: {
@@ -3424,14 +3873,12 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_buffer_update_counter: {
+    assert(TheCall->getNumArgs() == 2 && "expected 2 args");
     auto checkResTy = [](const HLSLAttributedResourceType *ResTy) -> bool {
       return !(ResTy->getAttrs().ResourceClass == ResourceClass::UAV &&
                ResTy->getAttrs().RawBuffer && ResTy->hasContainedType());
     };
-    if (SemaRef.checkArgCount(TheCall, 2) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0, checkResTy) ||
-        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
-                            SemaRef.getASTContext().IntTy))
+    if (CheckResourceHandle(&SemaRef, TheCall, 0, checkResTy))
       return true;
     Expr *OffsetExpr = TheCall->getArg(1);
     std::optional<llvm::APSInt> Offset =
@@ -3466,6 +3913,15 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     }
 
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().FloatTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_f32tof16: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall, CheckFloatRepresentation))
+      return true;
+    SetElementTypeAsReturnType(&SemaRef, TheCall,
+                               getASTContext().UnsignedIntTy);
     break;
   }
   }
@@ -3729,7 +4185,6 @@ bool SemaHLSL::CanPerformAggregateSplatCast(Expr *Src, QualType DestTy) {
 }
 
 // Can we perform an HLSL Elementwise cast?
-// TODO: update this code when matrices are added; see issue #88060
 bool SemaHLSL::CanPerformElementwiseCast(Expr *Src, QualType DestTy) {
 
   // Don't handle casts where LHS and RHS are any combination of scalar/vector
@@ -3740,6 +4195,10 @@ bool SemaHLSL::CanPerformElementwiseCast(Expr *Src, QualType DestTy) {
 
   if (SrcTy->isVectorType() &&
       (DestTy->isScalarType() || DestTy->isVectorType()))
+    return false;
+
+  if (SrcTy->isConstantMatrixType() &&
+      (DestTy->isScalarType() || DestTy->isConstantMatrixType()))
     return false;
 
   llvm::SmallVector<QualType> DestTypes;
@@ -3840,12 +4299,15 @@ QualType SemaHLSL::getInoutParameterType(QualType Ty) {
   return Ty;
 }
 
-static bool IsDefaultBufferConstantDecl(VarDecl *VD) {
+static bool IsDefaultBufferConstantDecl(const ASTContext &Ctx, VarDecl *VD) {
+  bool IsVulkan =
+      Ctx.getTargetInfo().getTriple().getOS() == llvm::Triple::Vulkan;
+  bool IsVKPushConstant = IsVulkan && VD->hasAttr<HLSLVkPushConstantAttr>();
   QualType QT = VD->getType();
   return VD->getDeclContext()->isTranslationUnit() &&
          QT.getAddressSpace() == LangAS::Default &&
          VD->getStorageClass() != SC_Static &&
-         !VD->hasAttr<HLSLVkConstantIdAttr>() &&
+         !VD->hasAttr<HLSLVkConstantIdAttr>() && !IsVKPushConstant &&
          !isInvalidConstantBufferLeafElementType(QT.getTypePtr());
 }
 
@@ -3863,6 +4325,19 @@ void SemaHLSL::deduceAddressSpace(VarDecl *Decl) {
     LangAS ImplAS = LangAS::hlsl_input;
     Type = SemaRef.getASTContext().getAddrSpaceQualType(Type, ImplAS);
     Decl->setType(Type);
+    return;
+  }
+
+  bool IsVulkan = getASTContext().getTargetInfo().getTriple().getOS() ==
+                  llvm::Triple::Vulkan;
+  if (IsVulkan && Decl->hasAttr<HLSLVkPushConstantAttr>()) {
+    if (HasDeclaredAPushConstant)
+      SemaRef.Diag(Decl->getLocation(), diag::err_hlsl_push_constant_unique);
+
+    LangAS ImplAS = LangAS::hlsl_push_constant;
+    Type = SemaRef.getASTContext().getAddrSpaceQualType(Type, ImplAS);
+    Decl->setType(Type);
+    HasDeclaredAPushConstant = true;
     return;
   }
 
@@ -3898,7 +4373,7 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
     // Global variables outside a cbuffer block that are not a resource, static,
     // groupshared, or an empty array or struct belong to the default constant
     // buffer $Globals (to be created at the end of the translation unit).
-    if (IsDefaultBufferConstantDecl(VD)) {
+    if (IsDefaultBufferConstantDecl(getASTContext(), VD)) {
       // update address space to hlsl_constant
       QualType NewTy = getASTContext().getAddrSpaceQualType(
           VD->getType(), LangAS::hlsl_constant);
@@ -3910,18 +4385,23 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
     if (VD->getType()->isHLSLIntangibleType())
       collectResourceBindingsOnVarDecl(VD);
 
-    if (isResourceRecordTypeOrArrayOf(VD) ||
-        VD->hasAttr<HLSLVkConstantIdAttr>()) {
-      // Make the variable for resources static. The global externally visible
-      // storage is accessed through the handle, which is a member. The variable
-      // itself is not externally visible.
+    if (VD->hasAttr<HLSLVkConstantIdAttr>())
       VD->setStorageClass(StorageClass::SC_Static);
+
+    if (isResourceRecordTypeOrArrayOf(VD) &&
+        VD->getStorageClass() != SC_Static) {
+      // Add internal linkage attribute to non-static resource variables. The
+      // global externally visible storage is accessed through the handle, which
+      // is a member. The variable itself is not externally visible.
+      VD->addAttr(InternalLinkageAttr::CreateImplicit(getASTContext()));
     }
 
     // process explicit bindings
     processExplicitBindingsOnDecl(VD);
 
-    if (VD->getType()->isHLSLResourceRecordArray()) {
+    // Add implicit binding attribute to non-static resource arrays.
+    if (VD->getType()->isHLSLResourceRecordArray() &&
+        VD->getStorageClass() != SC_Static) {
       // If the resource array does not have an explicit binding attribute,
       // create an implicit one. It will be used to transfer implicit binding
       // order_ID to codegen.
@@ -4115,8 +4595,8 @@ bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
   if (VD->getType().getAddressSpace() == LangAS::hlsl_constant)
     return true;
 
-  // Initialize resources at the global scope
-  if (VD->hasGlobalStorage()) {
+  // Initialize non-static resources at the global scope.
+  if (VD->hasGlobalStorage() && VD->getStorageClass() != SC_Static) {
     const Type *Ty = VD->getType().getTypePtr();
     if (Ty->isHLSLResourceRecord())
       return initGlobalResourceDecl(VD);
@@ -4140,10 +4620,10 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
   while (auto *ASE = dyn_cast<ArraySubscriptExpr>(E))
     E = ASE->getBase()->IgnoreParenImpCasts();
 
-  // Report error if LHS is a resource declared at a global scope.
+  // Report error if LHS is a non-static resource declared at a global scope.
   if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParens())) {
     if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
-      if (VD->hasGlobalStorage()) {
+      if (VD->hasGlobalStorage() && VD->getStorageClass() != SC_Static) {
         // assignment to global resource is not allowed
         SemaRef.Diag(Loc, diag::err_hlsl_assign_to_global_resource) << VD;
         SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
@@ -4196,8 +4676,11 @@ void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
 
   bool HasBinding = false;
   for (Attr *A : VD->attrs()) {
-    if (isa<HLSLVkBindingAttr>(A))
+    if (isa<HLSLVkBindingAttr>(A)) {
       HasBinding = true;
+      if (auto PA = VD->getAttr<HLSLVkPushConstantAttr>())
+        Diag(PA->getLoc(), diag::err_hlsl_attr_incompatible) << A << PA;
+    }
 
     HLSLResourceBindingAttr *RBA = dyn_cast<HLSLResourceBindingAttr>(A);
     if (!RBA || !RBA->hasRegisterSlot())
@@ -4305,8 +4788,8 @@ class InitListTransformer {
       unsigned Cols = MTy->getNumColumns();
       QualType ElemTy = MTy->getElementType();
 
-      for (unsigned C = 0; C < Cols; ++C) {
-        for (unsigned R = 0; R < Rows; ++R) {
+      for (unsigned R = 0; R < Rows; ++R) {
+        for (unsigned C = 0; C < Cols; ++C) {
           // row index literal
           Expr *RowIdx = IntegerLiteral::Create(
               Ctx, llvm::APInt(Ctx.getIntWidth(Ctx.IntTy), R), Ctx.IntTy,
@@ -4462,6 +4945,40 @@ public:
 };
 } // namespace
 
+// Recursively detect any incomplete array anywhere in the type graph,
+// including arrays, struct fields, and base classes.
+static bool containsIncompleteArrayType(QualType Ty) {
+  Ty = Ty.getCanonicalType();
+
+  // Array types
+  if (const ArrayType *AT = dyn_cast<ArrayType>(Ty)) {
+    if (isa<IncompleteArrayType>(AT))
+      return true;
+    return containsIncompleteArrayType(AT->getElementType());
+  }
+
+  // Record (struct/class) types
+  if (const auto *RT = Ty->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+
+    // Walk base classes (for C++ / HLSL structs with inheritance)
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+      for (const CXXBaseSpecifier &Base : CXXRD->bases()) {
+        if (containsIncompleteArrayType(Base.getType()))
+          return true;
+      }
+    }
+
+    // Walk fields
+    for (const FieldDecl *F : RD->fields()) {
+      if (containsIncompleteArrayType(F->getType()))
+        return true;
+    }
+  }
+
+  return false;
+}
+
 bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
                                  InitListExpr *Init) {
   // If the initializer is a scalar, just return it.
@@ -4488,13 +5005,29 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
   if (ExpectedSize == 0 && ActualSize == 0)
     return true;
 
+  // Reject empty initializer if *any* incomplete array exists structurally
+  if (ActualSize == 0 && containsIncompleteArrayType(Entity.getType())) {
+    QualType InitTy = Entity.getType().getNonReferenceType();
+    if (InitTy.hasAddressSpace())
+      InitTy = SemaRef.getASTContext().removeAddrSpaceQualType(InitTy);
+
+    SemaRef.Diag(Init->getBeginLoc(), diag::err_hlsl_incorrect_num_initializers)
+        << /*TooManyOrFew=*/(int)(ExpectedSize < ActualSize) << InitTy
+        << /*ExpectedSize=*/ExpectedSize << /*ActualSize=*/ActualSize;
+    return false;
+  }
+
+  // We infer size after validating legality.
   // For incomplete arrays it is completely arbitrary to choose whether we think
   // the user intended fewer or more elements. This implementation assumes that
   // the user intended more, and errors that there are too few initializers to
   // complete the final element.
-  if (Entity.getType()->isIncompleteArrayType())
+  if (Entity.getType()->isIncompleteArrayType()) {
+    assert(ExpectedSize > 0 &&
+           "The expected size of an incomplete array type must be at least 1.");
     ExpectedSize =
         ((ActualSize + ExpectedSize - 1) / ExpectedSize) * ExpectedSize;
+  }
 
   // An initializer list might be attempting to initialize a reference or
   // rvalue-reference. When checking the initializer we should look through

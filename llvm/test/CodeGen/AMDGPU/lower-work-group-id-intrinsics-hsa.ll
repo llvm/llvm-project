@@ -270,10 +270,10 @@ define void @workgroup_ids_device_func(ptr addrspace(1) %outx, ptr addrspace(1) 
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_and_b32 s0, ttmp7, 0xffff
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_dual_mov_b32 v6, ttmp9 :: v_dual_mov_b32 v7, s0
 ; GFX12-NEXT:    s_lshr_b32 s1, ttmp7, 16
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_mov_b32_e32 v8, s1
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_store_b32 v[0:1], v6, off scope:SCOPE_SYS

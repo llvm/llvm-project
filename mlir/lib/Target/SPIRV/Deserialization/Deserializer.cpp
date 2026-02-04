@@ -243,7 +243,7 @@ static LogicalResult deserializeCacheControlDecoration(
   auto value = opBuilder.getAttr<AttrTy>(cacheLevel, cacheControlAttr);
   SmallVector<Attribute> attrs;
   if (auto attrList =
-          llvm::dyn_cast_or_null<ArrayAttr>(decorations[words[0]].get(symbol)))
+          dyn_cast_or_null<ArrayAttr>(decorations[words[0]].get(symbol)))
     llvm::append_range(attrs, attrList);
   attrs.push_back(value);
   decorations[words[0]].set(symbol, opBuilder.getArrayAttr(attrs));
@@ -326,7 +326,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
         static_cast<::mlir::spirv::LinkageType>(words[wordIndex++]));
     auto linkageAttr = opBuilder.getAttr<::mlir::spirv::LinkageAttributesAttr>(
         StringAttr::get(context, linkageName), linkageTypeAttr);
-    decorations[words[0]].set(symbol, llvm::dyn_cast<Attribute>(linkageAttr));
+    decorations[words[0]].set(symbol, dyn_cast<Attribute>(linkageAttr));
     break;
   }
   case spirv::Decoration::Aliased:
@@ -346,6 +346,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
   case spirv::Decoration::Constant:
   case spirv::Decoration::Invariant:
   case spirv::Decoration::Patch:
+  case spirv::Decoration::Coherent:
     if (words.size() != 2) {
       return emitError(unknownLoc, "OpDecoration with ")
              << decorationName << "needs a single target <id>";
@@ -354,6 +355,7 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     break;
   case spirv::Decoration::Location:
   case spirv::Decoration::SpecId:
+  case spirv::Decoration::Index:
     if (words.size() != 3) {
       return emitError(unknownLoc, "OpDecoration with ")
              << decorationName << "needs a single integer literal";
@@ -1092,30 +1094,38 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     uint32_t bitWidth = operands[1];
 
     Type floatTy;
-    switch (bitWidth) {
-    case 16:
-      floatTy = opBuilder.getF16Type();
-      break;
-    case 32:
-      floatTy = opBuilder.getF32Type();
-      break;
-    case 64:
-      floatTy = opBuilder.getF64Type();
-      break;
-    default:
-      return emitError(unknownLoc, "unsupported OpTypeFloat bitwidth: ")
-             << bitWidth;
+    if (operands.size() == 2) {
+      switch (bitWidth) {
+      case 16:
+        floatTy = opBuilder.getF16Type();
+        break;
+      case 32:
+        floatTy = opBuilder.getF32Type();
+        break;
+      case 64:
+        floatTy = opBuilder.getF64Type();
+        break;
+      default:
+        return emitError(unknownLoc, "unsupported OpTypeFloat bitwidth: ")
+               << bitWidth;
+      }
     }
 
     if (operands.size() == 3) {
-      if (spirv::FPEncoding(operands[2]) != spirv::FPEncoding::BFloat16KHR)
+      if (spirv::FPEncoding(operands[2]) == spirv::FPEncoding::BFloat16KHR &&
+          bitWidth == 16)
+        floatTy = opBuilder.getBF16Type();
+      else if (spirv::FPEncoding(operands[2]) ==
+                   spirv::FPEncoding::Float8E4M3EXT &&
+               bitWidth == 8)
+        floatTy = opBuilder.getF8E4M3FNType();
+      else if (spirv::FPEncoding(operands[2]) ==
+                   spirv::FPEncoding::Float8E5M2EXT &&
+               bitWidth == 8)
+        floatTy = opBuilder.getF8E5M2Type();
+      else
         return emitError(unknownLoc, "unsupported OpTypeFloat FP encoding: ")
-               << operands[2];
-      if (bitWidth != 16)
-        return emitError(unknownLoc,
-                         "invalid OpTypeFloat bitwidth for bfloat16 encoding: ")
-               << bitWidth << " (expected 16)";
-      floatTy = opBuilder.getBF16Type();
+               << operands[2] << " and bitWidth " << bitWidth;
     }
 
     typeMap[operands[0]] = floatTy;
@@ -1510,10 +1520,10 @@ spirv::Deserializer::processTensorARMType(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "OpTypeTensorARM shape must come from a "
                                  "constant instruction of type OpTypeArray");
 
-  ArrayAttr shapeArrayAttr = llvm::dyn_cast<ArrayAttr>(shapeInfo->first);
+  ArrayAttr shapeArrayAttr = dyn_cast<ArrayAttr>(shapeInfo->first);
   SmallVector<int64_t, 1> shape;
   for (auto dimAttr : shapeArrayAttr.getValue()) {
-    auto dimIntAttr = llvm::dyn_cast<IntegerAttr>(dimAttr);
+    auto dimIntAttr = dyn_cast<IntegerAttr>(dimAttr);
     if (!dimIntAttr)
       return emitError(unknownLoc, "OpTypeTensorARM shape has an invalid "
                                    "dimension size");
@@ -1732,6 +1742,12 @@ LogicalResult spirv::Deserializer::processConstant(ArrayRef<uint32_t> operands,
     } else if (floatType.isBF16()) {
       APInt data(16, operands[2]);
       value = APFloat(APFloat::BFloat(), data);
+    } else if (floatType.isF8E4M3FN()) {
+      APInt data(8, operands[2]);
+      value = APFloat(APFloat::Float8E4M3FN(), data);
+    } else if (floatType.isF8E5M2()) {
+      APInt data(8, operands[2]);
+      value = APFloat(APFloat::Float8E5M2(), data);
     }
 
     auto attr = opBuilder.getFloatAttr(floatType, value);
@@ -2292,6 +2308,38 @@ LogicalResult spirv::Deserializer::processPhi(ArrayRef<uint32_t> operands) {
   return success();
 }
 
+LogicalResult spirv::Deserializer::processSwitch(ArrayRef<uint32_t> operands) {
+  if (!curBlock)
+    return emitError(unknownLoc, "OpSwitch must appear in a block");
+
+  if (operands.size() < 2)
+    return emitError(unknownLoc, "OpSwitch must at least specify selector and "
+                                 "a default target");
+
+  if (operands.size() % 2)
+    return emitError(unknownLoc,
+                     "OpSwitch must at have an even number of operands: "
+                     "selector, default target and any number of literal and "
+                     "label <id> pairs");
+
+  Value selector = getValue(operands[0]);
+  Block *defaultBlock = getOrCreateBlock(operands[1]);
+  Location loc = createFileLineColLoc(opBuilder);
+
+  SmallVector<int32_t> literals;
+  SmallVector<Block *> blocks;
+  for (unsigned i = 2, e = operands.size(); i < e; i += 2) {
+    literals.push_back(operands[i]);
+    blocks.push_back(getOrCreateBlock(operands[i + 1]));
+  }
+
+  SmallVector<ValueRange> targetOperands(blocks.size(), {});
+  spirv::SwitchOp::create(opBuilder, loc, selector, defaultBlock,
+                          ArrayRef<Value>(), literals, blocks, targetOperands);
+
+  return success();
+}
+
 namespace {
 /// A class for putting all blocks in a structured selection/loop in a
 /// spirv.mlir.selection/spirv.mlir.loop op.
@@ -2799,6 +2847,23 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
             branchCondOp.getFalseBlock());
 
       branchCondOp.erase();
+    } else if (auto switchOp = dyn_cast<spirv::SwitchOp>(op)) {
+      if (target == switchOp.getDefaultTarget()) {
+        SmallVector<ValueRange> targetOperands(switchOp.getTargetOperands());
+        DenseIntElementsAttr literals =
+            switchOp.getLiterals().value_or(DenseIntElementsAttr());
+        spirv::SwitchOp::create(
+            opBuilder, switchOp.getLoc(), switchOp.getSelector(),
+            switchOp.getDefaultTarget(), blockArgs, literals,
+            switchOp.getTargets(), targetOperands);
+        switchOp.erase();
+      } else {
+        SuccessorRange targets = switchOp.getTargets();
+        auto it = llvm::find(targets, target);
+        assert(it != targets.end());
+        size_t index = std::distance(targets.begin(), it);
+        switchOp.getTargetOperandsMutable(index).assign(blockArgs);
+      }
     } else {
       return emitError(unknownLoc, "unimplemented terminator for Phi creation");
     }
@@ -2819,7 +2884,7 @@ LogicalResult spirv::Deserializer::wireUpBlockArgument() {
   return success();
 }
 
-LogicalResult spirv::Deserializer::splitConditionalBlocks() {
+LogicalResult spirv::Deserializer::splitSelectionHeader() {
   // Create a copy, so we can modify keys in the original.
   BlockMergeInfoMap blockMergeInfoCopy = blockMergeInfo;
   for (auto it = blockMergeInfoCopy.begin(), e = blockMergeInfoCopy.end();
@@ -2836,7 +2901,7 @@ LogicalResult spirv::Deserializer::splitConditionalBlocks() {
     Operation *terminator = block->getTerminator();
     assert(terminator);
 
-    if (!isa<spirv::BranchConditionalOp>(terminator))
+    if (!isa<spirv::BranchConditionalOp, spirv::SwitchOp>(terminator))
       continue;
 
     // Check if the current header block is a merge block of another construct.
@@ -2846,10 +2911,10 @@ LogicalResult spirv::Deserializer::splitConditionalBlocks() {
         splitHeaderMergeBlock = true;
     }
 
-    // Do not split a block that only contains a conditional branch, unless it
-    // is also a merge block of another construct - in that case we want to
-    // split the block. We do not want two constructs to share header / merge
-    // block.
+    // Do not split a block that only contains a conditional branch / switch,
+    // unless it is also a merge block of another construct - in that case we
+    // want to split the block. We do not want two constructs to share header /
+    // merge block.
     if (!llvm::hasSingleElement(*block) || splitHeaderMergeBlock) {
       Block *newBlock = block->splitBlock(terminator);
       OpBuilder builder(block, block->end());
@@ -2887,13 +2952,10 @@ LogicalResult spirv::Deserializer::structurizeControlFlow() {
     logger.startLine() << "\n";
   });
 
-  if (failed(splitConditionalBlocks())) {
+  if (failed(splitSelectionHeader())) {
     return failure();
   }
 
-  // TODO: This loop is non-deterministic. Iteration order may vary between runs
-  // for the same shader as the key to the map is a pointer. See:
-  // https://github.com/llvm/llvm-project/issues/128547
   while (!blockMergeInfo.empty()) {
     Block *headerBlock = blockMergeInfo.begin()->first;
     BlockMergeInfo mergeInfo = blockMergeInfo.begin()->second;

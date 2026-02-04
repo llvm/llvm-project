@@ -164,6 +164,18 @@ To summarize: ``-fsanitize-address-use-after-return=<mode>``
   * ``always``: Enables detection of UAR errors in all cases. (reduces code
     size, but not as much as ``never``).
 
+Container Overflow Detection
+----------------------------
+
+AddressSanitizer can detect overflows in containers with custom allocators
+(such as std::vector) where the library developers have added calls into the
+AddressSanitizer runtime to indicate which memory is poisoned etc.
+
+In environments where not all the process binaries can be recompiled with 
+AddressSanitizer enabled, these checks can cause false positives.
+
+See `Disabling container overflow checks`_ for details on suppressing checks.
+
 Memory leak detection
 ---------------------
 
@@ -236,11 +248,103 @@ compilers, so we suggest to use it together with
 The same attribute used on a global variable prevents AddressSanitizer
 from adding redzones around it and detecting out of bounds accesses.
 
-
 AddressSanitizer also supports
 ``__attribute__((disable_sanitizer_instrumentation))``. This attribute
 works similarly to ``__attribute__((no_sanitize("address")))``, but it also
 prevents instrumentation performed by other sanitizers.
+
+Interaction of Inlining with Disabling Sanitizer Instrumentation
+-----------------------------------------------------------------
+
+* A `no_sanitize` function will not be inlined heuristically by the compiler into a sanitized function.
+* An `always_inline` function will adopt the instrumentation status of the function it is inlined into.
+* Forcibly combining `no_sanitize` and ``__attribute__((always_inline))`` is not supported, and will often lead to unexpected results. To avoid mixing these attributes, use:
+
+.. code-block:: c
+
+    // Note, __has_feature test for sanitizers is deprecated, and Clang will support __SANITIZE_<sanitizer>__ similar to GCC.
+    #if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__) || ... <other sanitizers>
+    #define ALWAYS_INLINE_IF_UNINSTRUMENTED
+    #else
+    #define ALWAYS_INLINE_IF_UNINSTRUMENTED __attribute__((always_inline))
+    #endif
+
+Explicit Sanitizer Checks with ``__builtin_allow_sanitize_check``
+-----------------------------------------------------------------
+
+The ``__builtin_allow_sanitize_check("address")`` builtin can be used to
+conditionally execute code depending on whether AddressSanitizer checks are
+enabled and permitted by the current policy (after inlining). This is
+particularly useful for inserting explicit, sanitizer-specific checks around
+operations like syscalls or inline assembly, which might otherwise be unchecked
+by the sanitizer.
+
+Example:
+
+.. code-block:: c
+
+    void __asan_load8(void *);
+
+    inline __attribute__((always_inline))
+    void my_helper(void *addr) {
+      if (__builtin_allow_sanitize_check("address"))
+        __asan_load8(addr);
+      // ... actual logic, e.g. inline assembly ...
+      asm volatile ("..." : : "r" (addr) : "memory");
+    }
+
+    void instrumented_function() {
+      ...
+      my_helper(buf); // checks are active
+      ...
+    }
+
+    __attribute__((no_sanitize("address")))
+    void uninstrumented_function() {
+      ...
+      my_helper(buf); // checks are skipped
+      ...
+    }
+
+Disabling container overflow checks
+-----------------------------------
+
+Runtime suppression
+^^^^^^^^^^^^^^^^^^^
+
+Container overflow checks can be disabled at runtime using the
+``ASAN_OPTIONS=detect_container_overflow=0`` environment variable.
+
+Compile time suppression
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+``-D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__`` can be used at compile time to
+disable container overflow checks if the container library has added support
+for this define.
+
+To support a standard way to disable container overflow checks at compile time,
+library developers should use this definition in conjunction with the 
+AddressSanitizer feature test to conditionally include container overflow 
+related code compiled into user code:
+
+The recommended form is
+
+.. code-block:: c
+
+    // include the sanitizer common interfaces
+    #include <sanitizer/common_interface_defs.h>
+
+    #if __has_feature(address_sanitizer)
+    // Container overflow detection enabled - include annotations
+    __sanitizer_annotate_contiguous_container(beg, end, old_mid, new_mid);
+    #endif
+
+This pattern ensures that:
+
+* Container overflow annotations are only included when AddressSanitizer is
+  enabled
+* Container overflow detection can be disabled by passing 
+  ``-D__SANITIZER_DISABLE_CONTAINER_OVERFLOW__`` to the compiler
 
 Suppressing Errors in Recompiled Code (Ignorelist)
 --------------------------------------------------

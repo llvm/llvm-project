@@ -48,14 +48,14 @@ struct ST {
 
 cbuffer Aggregate
 {
-    // expected-error@+1{{packoffset cannot cross register boundary}}
+    // expected-error@+1{{register or packoffset bind is not valid}}
     ST A1 : packoffset(c0.y);
-    // expected-error@+1{{packoffset cannot cross register boundary}}
+    // expected-error@+1{{register or packoffset bind is not valid}}
     float A2[2] : packoffset(c1.w);
 }
 
 cbuffer Double {
-    // expected-error@+1{{packoffset at 'y' not match alignment 64 required by 'double'}}
+    // expected-error@+1{{packoffset at 'y' does not match alignment 64 required by 'double'}}
     double d : packoffset(c.y);
     // expected-error@+1{{packoffset cannot cross register boundary}}
 	double2 d2 : packoffset(c.z);

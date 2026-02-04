@@ -55,7 +55,7 @@ AST_MATCHER(Expr, hasSideEffects) {
 } // namespace
 
 static auto
-makeExprMatcher(ast_matchers::internal::Matcher<Expr> ArgumentMatcher,
+makeExprMatcher(const ast_matchers::internal::Matcher<Expr> &ArgumentMatcher,
                 ArrayRef<StringRef> MethodNames,
                 ArrayRef<StringRef> FreeNames) {
   return expr(
@@ -199,10 +199,9 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
     if (!NodeStr.consume_front(FuncDecl))
       continue;
     Function = Value.get<FunctionDecl>();
-    size_t Index;
-    if (NodeStr.getAsInteger(10, Index)) {
+    size_t Index = 0;
+    if (NodeStr.getAsInteger(10, Index))
       llvm_unreachable("Unable to extract replacer index");
-    }
     assert(Index < Replacers.size());
     Replacer = Replacers[Index].get();
     break;

@@ -378,6 +378,31 @@ bb1:
   EXPECT_TRUE(DT.verify());
 }
 
+TEST(BasicBlockUtils, splitBlockBefore) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define i32 @basic_func(i1 %cond) {
+entry:
+  br i1 %cond, label %bb0, label %bb1
+bb0:
+  br label %bb1
+bb1:
+  %phi = phi i32 [ 0, %entry ], [ 1, %bb0 ]
+  ret i32 %phi
+}
+)IR");
+  Function *F = M->getFunction("basic_func");
+  DominatorTree DT(*F);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  BasicBlock *EntryBB = &F->getEntryBlock();
+  Instruction *TI = EntryBB->getTerminator();
+
+  // Make sure the dominator tree is properly updated if calling this on the
+  // entry block.
+  splitBlockBefore(EntryBB, TI, &DTU, nullptr, nullptr);
+  EXPECT_TRUE(DTU.getDomTree().verify());
+}
+
 TEST(BasicBlockUtils, SplitBlockPredecessors) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
@@ -484,9 +509,9 @@ exit:
 TEST(BasicBlockUtils, SplitIndirectBrCriticalEdgesIgnorePHIs) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
-define void @crit_edge(i8* %tgt, i1 %cond0, i1 %cond1) {
+define void @crit_edge(ptr %tgt, i1 %cond0, i1 %cond1) {
 entry:
-  indirectbr i8* %tgt, [label %bb0, label %bb1, label %bb2]
+  indirectbr ptr %tgt, [label %bb0, label %bb1, label %bb2]
 bb0:
   br i1 %cond0, label %bb1, label %bb2
 bb1:
@@ -526,9 +551,9 @@ bb4:
 TEST(BasicBlockUtils, SplitIndirectBrCriticalEdges) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
-define void @crit_edge(i8* %tgt, i1 %cond0, i1 %cond1) {
+define void @crit_edge(ptr %tgt, i1 %cond0, i1 %cond1) {
 entry:
-  indirectbr i8* %tgt, [label %bb0, label %bb1, label %bb2]
+  indirectbr ptr %tgt, [label %bb0, label %bb1, label %bb2]
 bb0:
   br i1 %cond0, label %bb1, label %bb2
 bb1:

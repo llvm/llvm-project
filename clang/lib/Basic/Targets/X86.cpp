@@ -164,6 +164,11 @@ bool X86TargetInfo::initFeatureMap(
   for (auto &F : CPUFeatures)
     setFeatureEnabled(Features, F, true);
 
+  if (Features.lookup("egpr") && getTriple().isOSWindows()) {
+    setFeatureEnabled(Features, "push2pop2", false);
+    setFeatureEnabled(Features, "ppx", false);
+  }
+
   std::vector<std::string> UpdatedFeaturesVec;
   for (const auto &Feature : FeaturesVec) {
     // Expand general-regs-only to -x86, -mmx and -sse
@@ -967,8 +972,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__CF__");
   if (HasZU)
     Builder.defineMacro("__ZU__");
-  if (HasEGPR && HasPush2Pop2 && HasPPX && HasNDD && HasCCMP && HasNF && HasZU)
-    Builder.defineMacro("__APX_F__");
+  if (HasEGPR && HasNDD && HasCCMP && HasNF && HasZU)
+    if (getTriple().isOSWindows() || (HasPush2Pop2 && HasPPX))
+      Builder.defineMacro("__APX_F__");
   if (HasEGPR && HasInlineAsmUseGPR32)
     Builder.defineMacro("__APX_INLINE_ASM_USE_GPR32__");
 
@@ -1302,15 +1308,15 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
 // X86TargetInfo::hasFeature for a somewhat comprehensive list).
 bool X86TargetInfo::validateCpuSupports(StringRef FeatureStr) const {
   return llvm::StringSwitch<bool>(FeatureStr)
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) .Case(STR, true)
-#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY) .Case(STR, true)
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, true)
+#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, true)
 #include "llvm/TargetParser/X86TargetParser.def"
       .Default(false);
 }
 
 static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
   return llvm::StringSwitch<llvm::X86::ProcessorFeatures>(Name)
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE)                     \
   .Case(STR, llvm::X86::FEATURE_##ENUM)
 
 #include "llvm/TargetParser/X86TargetParser.def"

@@ -169,9 +169,7 @@ public:
 } // end anonymous namespace
 
 RAGreedyLegacy::RAGreedyLegacy(const RegAllocFilterFunc F)
-    : MachineFunctionPass(ID), F(std::move(F)) {
-  initializeRAGreedyLegacyPass(*PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID), F(std::move(F)) {}
 
 struct RAGreedy::RequiredAnalyses {
   VirtRegMap *VRM = nullptr;
@@ -590,7 +588,8 @@ bool RegAllocEvictionAdvisor::canReassign(const LiveInterval &VirtReg,
                                           MCRegister FromReg) const {
   auto HasRegUnitInterference = [&](MCRegUnit Unit) {
     // Instantiate a "subquery", not to be confused with the Queries array.
-    LiveIntervalUnion::Query SubQ(VirtReg, Matrix->getLiveUnions()[Unit]);
+    LiveIntervalUnion::Query SubQ(
+        VirtReg, Matrix->getLiveUnions()[static_cast<unsigned>(Unit)]);
     return SubQ.checkInterference();
   };
 
@@ -1225,12 +1224,11 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
   return doRegionSplit(VirtReg, BestCand, HasCompact, NewVRegs);
 }
 
-unsigned
-RAGreedy::calculateRegionSplitCostAroundReg(MCPhysReg PhysReg,
-                                            AllocationOrder &Order,
-                                            BlockFrequency &BestCost,
-                                            unsigned &NumCands,
-                                            unsigned &BestCand) {
+unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
+                                                     AllocationOrder &Order,
+                                                     BlockFrequency &BestCost,
+                                                     unsigned &NumCands,
+                                                     unsigned &BestCand) {
   // Discard bad candidates before we run out of interference cache cursors.
   // This will only affect register classes with a lot of registers (>32).
   if (NumCands == IntfCache.getMaxCursors()) {
@@ -1309,7 +1307,7 @@ unsigned RAGreedy::calculateRegionSplitCost(const LiveInterval &VirtReg,
                                             unsigned &NumCands,
                                             bool IgnoreCSR) {
   unsigned BestCand = NoCand;
-  for (MCPhysReg PhysReg : Order) {
+  for (MCRegister PhysReg : Order) {
     assert(PhysReg);
     if (IgnoreCSR && EvictAdvisor->isUnusedCalleeSavedReg(PhysReg))
       continue;
@@ -1363,7 +1361,7 @@ MCRegister RAGreedy::doRegionSplit(const LiveInterval &VirtReg,
 
 // VirtReg has a physical Hint, this function tries to split VirtReg around
 // Hint if we can place new COPY instructions in cold blocks.
-bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
+bool RAGreedy::trySplitAroundHintReg(MCRegister Hint,
                                      const LiveInterval &VirtReg,
                                      SmallVectorImpl<Register> &NewVRegs,
                                      AllocationOrder &Order) {
@@ -1427,8 +1425,7 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
 
     MCRegister OtherPhysReg =
         OtherReg.isPhysical() ? OtherReg.asMCReg() : VRM->getPhys(OtherReg);
-    MCRegister ThisHint =
-        SubReg ? TRI->getSubReg(Hint, SubReg) : MCRegister(Hint);
+    MCRegister ThisHint = SubReg ? TRI->getSubReg(Hint, SubReg) : Hint;
     if (OtherPhysReg == ThisHint)
       Cost += MBFI->getBlockFreq(Instr.getParent());
   }
@@ -1683,7 +1680,7 @@ void RAGreedy::calcGapWeights(MCRegister PhysReg,
     // StartIdx and after StopIdx.
     //
     LiveIntervalUnion::SegmentIter IntI =
-        Matrix->getLiveUnions()[Unit].find(StartIdx);
+        Matrix->getLiveUnions()[static_cast<unsigned>(Unit)].find(StartIdx);
     for (unsigned Gap = 0; IntI.valid() && IntI.start() < StopIdx; ++IntI) {
       // Skip the gaps before IntI.
       while (Uses[Gap+1].getBoundaryIndex() < IntI.start())
@@ -1822,7 +1819,7 @@ MCRegister RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
       (1.0f / MBFI->getEntryFreq().getFrequency());
   SmallVector<float, 8> GapWeight;
 
-  for (MCPhysReg PhysReg : Order) {
+  for (MCRegister PhysReg : Order) {
     assert(PhysReg);
     // Keep track of the largest spill weight that would need to be evicted in
     // order to make use of PhysReg between UseSlots[I] and UseSlots[I + 1].

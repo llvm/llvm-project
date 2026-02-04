@@ -30,15 +30,6 @@ int main(int argc, char** argv) {
     return !std::none_of(first, last, pred);
   };
 
-  auto ranges_all_of = [](auto first, auto last, auto pred) {
-    // match semantics of any_of
-    return !std::ranges::all_of(first, last, [pred](auto x) { return !pred(x); });
-  };
-  auto ranges_none_of = [](auto first, auto last, auto pred) {
-    // match semantics of any_of
-    return !std::ranges::none_of(first, last, pred);
-  };
-
   // Benchmark {std,ranges}::{any_of,all_of,none_of} where we process the whole sequence,
   // which is the worst case.
   {
@@ -72,25 +63,16 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::any_of(vector<int>) (process all)", std_any_of);
     bm.operator()<std::deque<int>>("std::any_of(deque<int>) (process all)", std_any_of);
     bm.operator()<std::list<int>>("std::any_of(list<int>) (process all)", std_any_of);
-    bm.operator()<std::vector<int>>("rng::any_of(vector<int>) (process all)", std::ranges::any_of);
-    bm.operator()<std::deque<int>>("rng::any_of(deque<int>) (process all)", std::ranges::any_of);
-    bm.operator()<std::list<int>>("rng::any_of(list<int>) (process all)", std::ranges::any_of);
 
     // all_of
     bm.operator()<std::vector<int>>("std::all_of(vector<int>) (process all)", std_all_of);
     bm.operator()<std::deque<int>>("std::all_of(deque<int>) (process all)", std_all_of);
     bm.operator()<std::list<int>>("std::all_of(list<int>) (process all)", std_all_of);
-    bm.operator()<std::vector<int>>("rng::all_of(vector<int>) (process all)", ranges_all_of);
-    bm.operator()<std::deque<int>>("rng::all_of(deque<int>) (process all)", ranges_all_of);
-    bm.operator()<std::list<int>>("rng::all_of(list<int>) (process all)", ranges_all_of);
 
     // none_of
     bm.operator()<std::vector<int>>("std::none_of(vector<int>) (process all)", std_none_of);
     bm.operator()<std::deque<int>>("std::none_of(deque<int>) (process all)", std_none_of);
     bm.operator()<std::list<int>>("std::none_of(list<int>) (process all)", std_none_of);
-    bm.operator()<std::vector<int>>("rng::none_of(vector<int>) (process all)", ranges_none_of);
-    bm.operator()<std::deque<int>>("rng::none_of(deque<int>) (process all)", ranges_none_of);
-    bm.operator()<std::list<int>>("rng::none_of(list<int>) (process all)", ranges_none_of);
   }
 
   benchmark::Initialize(&argc, argv);
