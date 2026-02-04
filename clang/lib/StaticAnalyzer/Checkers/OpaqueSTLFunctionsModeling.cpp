@@ -32,7 +32,7 @@ private:
       {CDM::SimpleFunc, {"std", "stable_sort"}},
       {CDM::SimpleFunc, {"std", "inplace_merge"}}};
 };
-} // anonymous namespace
+} // namespace
 
 bool OpaqueSTLFunctionsModeling::evalCall(const CallEvent &Call,
                                           CheckerContext &C) const {
