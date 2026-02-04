@@ -2494,15 +2494,10 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
       (getLangOpts().CPlusPlusModules || getLangOpts().Modules) &&
       ModuleToImport && !ModuleToImport->isHeaderUnit();
 
-  if (MaybeTranslateInclude && (UsableHeaderUnit || UsableClangHeaderModule) &&
-      PPOpts.SingleModuleParseMode) {
-    Action = IncludeLimitReached;
-  }
   // Determine whether we should try to import the module for this #include, if
   // there is one. Don't do so if precompiled module support is disabled or we
   // are processing this module textually (because we're building the module).
-  else if (MaybeTranslateInclude &&
-           (UsableHeaderUnit || UsableClangHeaderModule)) {
+  if (MaybeTranslateInclude && (UsableHeaderUnit || UsableClangHeaderModule)) {
     // If this include corresponds to a module but that module is
     // unavailable, diagnose the situation and bail out.
     // FIXME: Remove this; loadModule does the same check (but produces
@@ -2539,7 +2534,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
            "the imported module is different than the suggested one");
 
     if (Imported) {
-      Action = Import;
+      Action = PPOpts.SingleModuleParseMode ? Skip : Import;
     } else if (Imported.isMissingExpected()) {
       markClangModuleAsAffecting(
           static_cast<Module *>(Imported)->getTopLevelModule());
