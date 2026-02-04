@@ -1439,8 +1439,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder({G_SCMP, G_UCMP}).lower();
 
-  getActionDefinitionsBuilder({G_ABDS, G_ABDU})
-      .legalFor({{v8s8}, {v4s16}, {v2s32}, {v16s8}, {v8s16}, {v4s32}});
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }

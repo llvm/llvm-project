@@ -8613,7 +8613,7 @@ bool CombinerHelper::matchSubAbds(const MachineInstr &MI) const {
   Register Dst = Sub->getReg(0);
   LLT DstTy = MRI.getType(Dst);
 
-  return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDS, {DstTy}});
+  return isLegal({TargetOpcode::G_ABDS, {DstTy}});
 }
 
 // sub(umax(lhs,rhs), umin(lhs,rhs)) -> abdu(lhs, rhs)
@@ -8629,5 +8629,5 @@ bool CombinerHelper::matchSubAbdu(const MachineInstr &MI) const {
   Register Dst = Sub->getReg(0);
   LLT DstTy = MRI.getType(Dst);
 
-  return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDU, {DstTy}});
+  return isLegal({TargetOpcode::G_ABDU, {DstTy}});
 }

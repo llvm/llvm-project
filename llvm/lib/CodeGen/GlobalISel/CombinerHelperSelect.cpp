@@ -38,7 +38,7 @@ bool CombinerHelper::matchSelectAbds(const MachineInstr &MI) const {
   Register Dst = Select->getReg(0);
   LLT DstTy = MRI.getType(Dst);
 
-  return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDS, {DstTy}});
+  return isLegal({TargetOpcode::G_ABDS, {DstTy}});
 }
 
 // select(ult(lhs,rhs),sub(rhs,lhs),sub(lhs,rhs)) -> abdu(lhs, rhs)
@@ -55,5 +55,5 @@ bool CombinerHelper::matchSelectAbdu(const MachineInstr &MI) const {
   Register Dst = Select->getReg(0);
   LLT DstTy = MRI.getType(Dst);
 
-  return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDU, {DstTy}});
+  return isLegal({TargetOpcode::G_ABDU, {DstTy}});
 }

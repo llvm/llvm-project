@@ -439,7 +439,7 @@ bool CombinerHelper::matchTruncAbds(const MachineInstr &MI) const {
       !MRI.hasOneNonDBGUse(Sub->getRHSReg()))
     return false;
 
-  return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDS, {DstTy}});
+  return isLegal({TargetOpcode::G_ABDS, {DstTy}});
 }
 
 // trunc(abs(zext(x) - zext(y))) -> abdu(x, y)
@@ -467,5 +467,5 @@ bool CombinerHelper::matchTruncAbdu(const MachineInstr &MI) const {
       !MRI.hasOneNonDBGUse(Sub->getRHSReg()))
     return false;
 
-  return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDU, {DstTy}});
+  return isLegal({TargetOpcode::G_ABDU, {DstTy}});
 }
