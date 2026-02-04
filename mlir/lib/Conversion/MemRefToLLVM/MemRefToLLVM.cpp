@@ -938,6 +938,10 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto type = loadOp.getMemRefType();
 
+    // Bail out if volatile flag is set
+    if (loadOp.getVolatile())
+      return rewriter.notifyMatchFailure(loadOp, "volatile loads not supported");
+
     // Per memref.load spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
     // hence inbounds and nuw are used when lowering to llvm.getelementptr.
@@ -960,6 +964,10 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
   matchAndRewrite(memref::StoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto type = op.getMemRefType();
+
+    // Bail out if volatile flag is set
+    if (op.getVolatile())
+      return rewriter.notifyMatchFailure(op, "volatile stores not supported");
 
     // Per memref.store spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,

@@ -276,6 +276,16 @@ func.func @load_store_alignment(%memref: memref<4xi32>) {
   return
 }
 
+// CHECK-LABEL: func @load_store_volatile
+func.func @load_store_volatile(%memref: memref<4xi32>) {
+  %c0 = arith.constant 0 : index
+  // CHECK: memref.load {{.*}} {volatile} : memref<4xi32>
+  %val = memref.load %memref[%c0] { volatile } : memref<4xi32>
+  // CHECK: memref.store {{.*}} {volatile} : memref<4xi32>
+  memref.store %val, %memref[%c0] { volatile } : memref<4xi32>
+  return
+}
+
 // CHECK-LABEL: func @memref_view(%arg0
 func.func @memref_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<2048xi8>
