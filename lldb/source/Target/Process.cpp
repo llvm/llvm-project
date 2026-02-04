@@ -5249,7 +5249,7 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
     selected_tid = LLDB_INVALID_THREAD_ID;
   }
 
-  PrivateStateThread *backup_private_state_thread;
+  PrivateStateThread *backup_private_state_thread = nullptr;
   lldb::StateType old_state = eStateInvalid;
   lldb::ThreadPlanSP stopper_base_plan_sp;
 
