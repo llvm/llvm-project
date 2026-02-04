@@ -108,10 +108,7 @@ define i1 @ule_minus1_nonzero(i32 %x) {
 
 define i1 @sge_1_positive(i32 %x) {
 ; CHECK-LABEL: @sge_1_positive(
-; CHECK-NEXT:    [[POS:%.*]] = or i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[POS]], 2147483647
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[MASKED]], 1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %pos = or i32 %x, 1  ; Set bit 0
   %masked = and i32 %pos, 2147483647  ; Clear sign bit, making it positive
@@ -183,10 +180,7 @@ define i1 @slt_1_negative(i32 %x) {
 
 define i1 @slt_1_positive(i32 %x) {
 ; CHECK-LABEL: @slt_1_positive(
-; CHECK-NEXT:    [[POS:%.*]] = or i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[POS]], 2147483647
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[MASKED]], 1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 false
 ;
   %pos = or i32 %x, 1  ; Set bit 0
   %masked = and i32 %pos, 2147483647  ; Clear sign bit, making it positive
