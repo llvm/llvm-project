@@ -3229,7 +3229,6 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   PreheaderFlushFlags Flags;
   bool HasVMemLoad = false;
   bool HasVMemStore = false;
-  bool SeenDSStoreInLoop = false;
   bool UsesVgprLoadedOutsideVMEM = false;
   bool UsesVgprLoadedOutsideDS = false;
   bool VMemInvalidated = false;
@@ -3240,20 +3239,20 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   DenseSet<MCRegUnit> VgprDefDS;
 
   for (MachineBasicBlock *MBB : ML->blocks()) {
-    bool SeenDSStoreInCurrMBB = false;
     for (MachineInstr &MI : *MBB) {
       if (isVMEMOrFlatVMEM(MI)) {
         HasVMemLoad |= MI.mayLoad();
         HasVMemStore |= MI.mayStore();
       }
-      if (mayStoreIncrementingDSCNT(MI))
-        SeenDSStoreInCurrMBB = true;
-      // Stores postdominated by a barrier will have a wait at the barrier
-      // and thus no need to be waited at the loop header. Barrier found
-      // later in the same MBB during in-order traversal is used here as a
-      // cheaper alternative to postdomination check.
-      if (MI.getOpcode() == AMDGPU::S_BARRIER)
-        SeenDSStoreInCurrMBB = false;
+      // TODO: Can we relax DSStore check? There may be cases where
+      // these DS stores are drained prior to the end of MBB (or loop).
+      if (mayStoreIncrementingDSCNT(MI)) {
+        // Early exit if both optimizations are invalidated.
+        // Otherwise, set invalid status and continue.
+        if (VMemInvalidated)
+          return Flags;
+        DSInvalidated = true;
+      }
       for (const MachineOperand &Op : MI.all_uses()) {
         if (Op.isDebug() || !TRI->isVectorRegister(*MRI, Op.getReg()))
           continue;
@@ -3324,8 +3323,6 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
         }
       }
     }
-    // Accumulate unprotected DS stores from this MBB
-    SeenDSStoreInLoop |= SeenDSStoreInCurrMBB;
   }
 
   // VMEM flush decision
@@ -3339,7 +3336,7 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
   // are not used in the loop.
   // DSInvalidated is pre-set to true on non-GFX12+ targets where DS_CNT
   // is LGKM_CNT which also tracks FLAT/SMEM.
-  if (!DSInvalidated && !SeenDSStoreInLoop && UsesVgprLoadedOutsideDS)
+  if (!DSInvalidated && UsesVgprLoadedOutsideDS)
     Flags.FlushDsCnt = true;
 
   return Flags;
