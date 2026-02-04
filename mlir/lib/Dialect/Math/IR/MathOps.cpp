@@ -370,7 +370,7 @@ OpFoldResult math::IPowIOp::fold(FoldAdaptor adaptor) {
       [](const APInt &base, const APInt &power) -> std::optional<APInt> {
         unsigned width = base.getBitWidth();
         auto zeroValue = APInt::getZero(width);
-        APInt oneValue{width, 1ULL, /*isSigned=*/true};
+        APInt oneValue{width, 1ULL, /*isSigned=*/false};
         APInt minusOneValue{width, -1ULL, /*isSigned=*/true};
 
         if (power.isZero())
