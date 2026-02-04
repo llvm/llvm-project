@@ -2042,13 +2042,13 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
     return failure();
 
   // Reshape must preserve the number of elements when statically known.
-  int64_t expandedNumElements = expandedType.getNumElements();
-  int64_t collapsedNumElements = collapsedType.getNumElements();
-  if (!ShapedType::isDynamic(expandedNumElements) &&
-      !ShapedType::isDynamic(collapsedNumElements) &&
-      expandedNumElements != collapsedNumElements) {
-    return op.emitOpError("number of elements must be preserved: ")
-           << expandedNumElements << " != " << collapsedNumElements;
+  if (expandedType.hasStaticShape() && collapsedType.hasStaticShape()) {
+    int64_t expandedNumElements = expandedType.getNumElements();
+    int64_t collapsedNumElements = collapsedType.getNumElements();
+    if (expandedNumElements != collapsedNumElements) {
+      return op.emitOpError("number of elements must be preserved: ")
+             << expandedNumElements << " != " << collapsedNumElements;
+    }
   }
 
   auto maps = op.getReassociationMaps();
