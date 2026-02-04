@@ -64,6 +64,7 @@
 ; O0-NEXT: stack-frame-layout
 ; O0-NEXT: x86-seses
 ; O0-NEXT: x86-return-thunks
+; O0-NEXT: x86-lvi-ret
 ; O0-NEXT: verify)
 ; O0-NEXT: free-machine-function)
 
@@ -144,7 +145,6 @@
 ; O2-NEXT: machinelicm
 ; O2-NEXT: x86-lower-tile-copy
 ; O2-NEXT: x86-fp-stackifier
-; O2-NEXT: x86-lvi-ret
 ; O2-NEXT: x86-lvi-load
 ; O2-NEXT: remove-redundant-debug-values
 ; O2-NEXT: fixup-statepoint-caller-saved
@@ -176,6 +176,7 @@
 ; O2-NEXT: stack-frame-layout
 ; O2-NEXT: x86-seses
 ; O2-NEXT: x86-return-thunks
+; O2-NEXT: x86-lvi-ret
 ; O2-NEXT: verify)
 ; O2-NEXT: free-machine-function)
 
@@ -236,6 +237,7 @@
 ; O0-WINDOWS-NEXT: x86-seses
 ; O0-WINDOWS-NEXT: x86-return-thunks
 ; O0-WINDOWS-NEXT: x86-avoid-trailing-call
+; O0-WINDOWS-NEXT: x86-lvi-ret
 ; O0-WINDOWS-NEXT: x86-wineh-unwindv2
 ; O0-WINDOWS-NEXT: verify)
 ; O0-WINDOWS-NEXT: free-machine-function)
@@ -319,7 +321,6 @@
 ; O3-WINDOWS-NEXT: machinelicm
 ; O3-WINDOWS-NEXT: x86-lower-tile-copy
 ; O3-WINDOWS-NEXT: x86-fp-stackifier
-; O3-WINDOWS-NEXT: x86-lvi-ret
 ; O3-WINDOWS-NEXT: x86-lvi-load
 ; O3-WINDOWS-NEXT: remove-redundant-debug-values
 ; O3-WINDOWS-NEXT: fixup-statepoint-caller-saved
@@ -352,6 +353,7 @@
 ; O3-WINDOWS-NEXT: x86-seses
 ; O3-WINDOWS-NEXT: x86-return-thunks
 ; O3-WINDOWS-NEXT: x86-avoid-trailing-call
+; O3-WINDOWS-NEXT: x86-lvi-ret
 ; O3-WINDOWS-NEXT: x86-wineh-unwindv2
 ; O3-WINDOWS-NEXT: verify)
 ; O3-WINDOWS-NEXT: free-machine-function)
