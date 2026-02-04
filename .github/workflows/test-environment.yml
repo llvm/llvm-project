@@ -1,0 +1,21 @@
+name: Environment Test
+
+permissions:
+  contents: read
+
+on:
+  push:
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          RELEASE_WORKFLOW_PR_CREATE: ${{ secrets.RELEASE_WORKFLOW_PR_CREATE }}
+          RELEASE_WORKFLOW_PUSH_SECRET: ${{ secrets.RELEASE_WORKFLOW_PUSH_SECRET }}
+          RELEASE_TASKS_USER_TOKEN: ${{ secrets.RELEASE_TASKS_USER_TOKEN }} 
+        run: |
+          echo $RELEASE_WORKFLOW_PR_CREATE | wc -c
+          echo $RELEASE_WORKFLOW_PUSH_SECRET | wc -c
+          echo $RELEASE_TASKS_USER_TOKEN | wc -c
