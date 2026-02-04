@@ -514,57 +514,24 @@ public:
 };
 
 class SwitchNodeBuilder {
-  CoreEngine& Eng;
+  const CoreEngine &Eng;
   const CFGBlock *Src;
-  const Expr *Condition;
   ExplodedNode *Pred;
 
 public:
-  SwitchNodeBuilder(ExplodedNode *pred, const CFGBlock *src,
-                    const Expr *condition, CoreEngine* eng)
-      : Eng(*eng), Src(src), Condition(condition), Pred(pred) {}
+  SwitchNodeBuilder(ExplodedNode *P, const CFGBlock *S, CoreEngine &E)
+      : Eng(E), Src(S), Pred(P) {}
 
-  class iterator {
-    friend class SwitchNodeBuilder;
+  using iterator = CFGBlock::const_succ_reverse_iterator;
 
-    CFGBlock::const_succ_reverse_iterator I;
+  iterator begin() { return Src->succ_rbegin() + 1; }
+  iterator end() { return Src->succ_rend(); }
 
-    iterator(CFGBlock::const_succ_reverse_iterator i) : I(i) {}
-
-  public:
-    iterator &operator++() { ++I; return *this; }
-    bool operator!=(const iterator &X) const { return I != X.I; }
-    bool operator==(const iterator &X) const { return I == X.I; }
-
-    const CaseStmt *getCase() const {
-      return cast<CaseStmt>((*I)->getLabel());
-    }
-
-    const CFGBlock *getBlock() const {
-      return *I;
-    }
-  };
-
-  iterator begin() { return iterator(Src->succ_rbegin()+1); }
-  iterator end() { return iterator(Src->succ_rend()); }
-
-  const SwitchStmt *getSwitch() const {
-    return cast<SwitchStmt>(Src->getTerminator());
-  }
-
-  ExplodedNode *generateCaseStmtNode(const iterator &I,
+  ExplodedNode *generateCaseStmtNode(const CFGBlock *Block,
                                      ProgramStateRef State);
 
   ExplodedNode *generateDefaultCaseNode(ProgramStateRef State,
-                                        bool isSink = false);
-
-  const Expr *getCondition() const { return Condition; }
-
-  ProgramStateRef getState() const { return Pred->State; }
-
-  const LocationContext *getLocationContext() const {
-    return Pred->getLocationContext();
-  }
+                                        bool IsSink = false);
 };
 
 } // namespace ento

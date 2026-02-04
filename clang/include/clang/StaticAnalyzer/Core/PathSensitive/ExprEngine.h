@@ -361,7 +361,8 @@ public:
 
   /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
   ///  nodes by processing the 'effects' of a switch statement.
-  void processSwitch(SwitchNodeBuilder& builder);
+  void processSwitch(const SwitchStmt *Switch, CoreEngine &CoreEng,
+                     const CFGBlock *B, ExplodedNode *Pred);
 
   /// Called by CoreEngine.  Used to notify checkers that processing a
   /// function has begun. Called for both inlined and top-level functions.
