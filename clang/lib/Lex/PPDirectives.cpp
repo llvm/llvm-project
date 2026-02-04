@@ -2534,7 +2534,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
            "the imported module is different than the suggested one");
 
     if (Imported) {
-      Action = PPOpts.SingleModuleParseMode ? Skip : Import;
+      Action = Import;
     } else if (Imported.isMissingExpected()) {
       markClangModuleAsAffecting(
           static_cast<Module *>(Imported)->getTopLevelModule());
