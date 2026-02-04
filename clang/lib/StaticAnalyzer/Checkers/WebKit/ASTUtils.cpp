@@ -339,10 +339,8 @@ bool isAllocInit(const Expr *E, const Expr **InnerExpr) {
       NameForFirstSlot.starts_with("copy") ||
       NameForFirstSlot.starts_with("mutableCopy")) {
     if (auto *MD = ObjCMsgExpr->getMethodDecl()) {
-      if (auto *T = MD->getReturnType().getTypePtrOrNull()) {
-        if (T->isVoidType())
+      if (MD->getReturnType()->isVoidType()) {
           return false;
-      }
     }
     return true;
   }
