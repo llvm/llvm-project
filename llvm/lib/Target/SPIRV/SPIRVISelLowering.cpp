@@ -654,7 +654,7 @@ SPIRVTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
 
 TargetLowering::AtomicExpansionKind
 SPIRVTargetLowering::shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const {
-  // Do not cast atomic exchange at all since SPIR-V natively supports
-  // floating-point and pointer exchanges.
+  // TODO: Pointer operand should be cast to integer in atomicrmw xchg, since
+  // SPIR-V only supports atomic exchange for integer and floating-point types.
   return AtomicExpansionKind::None;
 }
