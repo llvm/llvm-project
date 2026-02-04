@@ -396,10 +396,26 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Successors of R1.
     SmallVector<const VPBlockBase *> FromIterator(
-        VPAllSuccessorsIterator<VPBlockBase *>(R1),
-        VPAllSuccessorsIterator<VPBlockBase *>::end(R1));
+        VPHierarchicalChildrenIterator<VPBlockBase *>(R1),
+        VPHierarchicalChildrenIterator<VPBlockBase *>::end(R1));
     EXPECT_EQ(1u, FromIterator.size());
     EXPECT_EQ(R1BB1, FromIterator[0]);
+
+    // Predecessors of R1.
+    FromIterator.clear();
+    copy(VPHierarchicalChildrenIterator<VPBlockBase *, false>(R1),
+         VPHierarchicalChildrenIterator<VPBlockBase *, false>::end(R1),
+         std::back_inserter(FromIterator));
+    EXPECT_EQ(1u, FromIterator.size());
+    EXPECT_EQ(R1BB4, FromIterator[0]);
+
+    // Predecessors of R1BB1.
+    FromIterator.clear();
+    copy(VPHierarchicalChildrenIterator<VPBlockBase *, false>(R1BB1),
+         VPHierarchicalChildrenIterator<VPBlockBase *, false>::end(R1BB1),
+         std::back_inserter(FromIterator));
+    EXPECT_EQ(1u, FromIterator.size());
+    EXPECT_EQ(VPBB0, FromIterator[0]);
 
     // Depth-first.
     VPBlockDeepTraversalWrapper<VPBlockBase *> Start(R1);
@@ -414,6 +430,21 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
     EXPECT_EQ(R2BB1, FromIterator[5]);
     EXPECT_EQ(R2BB2, FromIterator[6]);
     EXPECT_EQ(R1BB3, FromIterator[7]);
+
+    // Depth-first on the inverse graph (traverse predecessors).
+    FromIterator.clear();
+    copy(depth_first<Inverse<VPBlockBase *>>(R2),
+         std::back_inserter(FromIterator));
+    EXPECT_EQ(9u, FromIterator.size());
+    EXPECT_EQ(R2, FromIterator[0]);
+    EXPECT_EQ(R2BB2, FromIterator[1]);
+    EXPECT_EQ(R2BB1, FromIterator[2]);
+    EXPECT_EQ(R1, FromIterator[3]);
+    EXPECT_EQ(R1BB4, FromIterator[4]);
+    EXPECT_EQ(R1BB2, FromIterator[5]);
+    EXPECT_EQ(R1BB1, FromIterator[6]);
+    EXPECT_EQ(VPBB0, FromIterator[7]);
+    EXPECT_EQ(R1BB3, FromIterator[8]);
 
     // const VPBasicBlocks only.
     FromIterator.clear();
