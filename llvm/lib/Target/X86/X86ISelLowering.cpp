@@ -2901,6 +2901,11 @@ static bool mayFoldIntoVector(SDValue Op, const X86Subtarget &Subtarget,
     return true;
   if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
     return true;
+  EVT VT = Op.getValueType();
+  if (ISD::isBitwiseLogicOp(Op.getOpcode()) &&
+      (VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512))
+    return mayFoldIntoVector(Op.getOperand(0), Subtarget) &&
+           mayFoldIntoVector(Op.getOperand(1), Subtarget);
   return X86::mayFoldLoad(Op, Subtarget, AssumeSingleUse,
                           /*IgnoreAlignment=*/true);
 }
@@ -54561,10 +54566,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   if (VT == MVT::i256 || VT == MVT::i512) {
     MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
     if (TLI.isTypeLegal(VecVT) && ISD::isNormalStore(St) &&
-        (mayFoldIntoVector(StoredVal, Subtarget) ||
-         (DCI.isBeforeLegalize() &&
-          TLI.getOperationAction(StoredVal.getOpcode(), VT) ==
-              TargetLowering::LegalizeAction::Custom)))
+        mayFoldIntoVector(StoredVal, Subtarget))
       return DAG.getStore(St->getChain(), dl, DAG.getBitcast(VecVT, StoredVal),
                           St->getBasePtr(), St->getPointerInfo(),
                           St->getBaseAlign(), St->getMemOperand()->getFlags());

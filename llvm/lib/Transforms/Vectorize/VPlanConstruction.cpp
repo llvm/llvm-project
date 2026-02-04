@@ -476,9 +476,8 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
   // Add a VPInstruction to increment the scalar canonical IV by VF * UF.
   // Initially the induction increment is guaranteed to not wrap, but that may
   // change later, e.g. when tail-folding, when the flags need to be dropped.
-  auto *CanonicalIVIncrement = Builder.createOverflowingOp(
-      Instruction::Add, {CanonicalIVPHI, &Plan.getVFxUF()}, {true, false}, DL,
-      "index.next");
+  auto *CanonicalIVIncrement = Builder.createAdd(
+      CanonicalIVPHI, &Plan.getVFxUF(), DL, "index.next", {true, false});
   CanonicalIVPHI->addOperand(CanonicalIVIncrement);
 
   // Add the BranchOnCount VPInstruction to the latch.
@@ -813,11 +812,10 @@ void VPlanTransforms::createInLoopReductionRecipes(
                  match(CurrentLink, m_Sub(m_VPValue(), m_VPValue()))) {
         Type *PhiTy = TypeInfo.inferScalarType(PhiR);
         auto *Zero = Plan.getConstantInt(PhiTy, 0);
-        auto *Sub = new VPInstruction(Instruction::Sub,
-                                      {Zero, CurrentLink->getOperand(1)}, {},
-                                      {}, CurrentLinkI->getDebugLoc());
+        VPBuilder Builder(LinkVPBB, CurrentLink->getIterator());
+        auto *Sub = Builder.createSub(Zero, CurrentLink->getOperand(1),
+                                      CurrentLinkI->getDebugLoc());
         Sub->setUnderlyingValue(CurrentLinkI);
-        LinkVPBB->insert(Sub, CurrentLink->getIterator());
         VecOp = Sub;
       } else {
         // Index of the first operand which holds a non-mask vector operand.
@@ -1137,9 +1135,8 @@ void VPlanTransforms::addMinimumIterationCheck(
       // Get the maximum unsigned value for the type.
       VPValue *MaxUIntTripCount =
           Plan.getConstantInt(cast<IntegerType>(TripCountTy)->getMask());
-      VPValue *DistanceToMax = Builder.createNaryOp(
-          Instruction::Sub, {MaxUIntTripCount, TripCountVPV},
-          DebugLoc::getUnknown());
+      VPValue *DistanceToMax =
+          Builder.createSub(MaxUIntTripCount, TripCountVPV);
 
       // Don't execute the vector loop if (UMax - n) < (VF * UF).
       // FIXME: Should only check VF * UF, but currently checks Step=max(VF*UF,
@@ -1187,9 +1184,8 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
   VPBuilder Builder(cast<VPBasicBlock>(Plan.getEntry()));
   VPValue *VFxUF = Builder.createExpandSCEV(SE.getElementCount(
       TripCount->getType(), (EpilogueVF * EpilogueUF), SCEV::FlagNUW));
-  VPValue *Count = Builder.createNaryOp(
-      Instruction::Sub, {TC, Plan.getOrAddLiveIn(VectorTripCount)},
-      DebugLoc::getUnknown(), "n.vec.remaining");
+  VPValue *Count = Builder.createSub(TC, Plan.getOrAddLiveIn(VectorTripCount),
+                                     DebugLoc::getUnknown(), "n.vec.remaining");
 
   // Generate code to check if the loop's trip count is less than VF * UF of
   // the vector epilogue loop.
@@ -1338,8 +1334,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   auto *IsLatchExitTaken = LatchBuilder.createICmp(
       CmpInst::ICMP_EQ, LatchExitingBranch->getOperand(0),
       LatchExitingBranch->getOperand(1));
-  auto *AnyExitTaken = LatchBuilder.createNaryOp(
-      Instruction::Or, {AnyNaNLane, IsLatchExitTaken});
+  auto *AnyExitTaken = LatchBuilder.createOr(AnyNaNLane, IsLatchExitTaken);
   LatchBuilder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
   LatchExitingBranch->eraseFromParent();
 

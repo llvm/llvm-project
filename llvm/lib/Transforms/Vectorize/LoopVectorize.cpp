@@ -7163,6 +7163,13 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
             cast<VPRecipeWithIRFlags>(R).getPredicate() !=
                 cast<CmpInst>(UI)->getPredicate())
           return true;
+
+        // Recipes with underlying instructions being moved out of the loop
+        // region by LICM may cause discrepancies between the legacy cost model
+        // and the VPlan-based cost model.
+        if (!VPBB->getEnclosingLoopRegion())
+          return true;
+
         SeenInstrs.insert(UI);
       }
     }
@@ -9168,7 +9175,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
          "the canonical IV should only be used by its increment or "
          "ScalarIVSteps when resetting the start value");
   VPBuilder Builder(Header, Header->getFirstNonPhi());
-  VPInstruction *Add = Builder.createNaryOp(Instruction::Add, {IV, VPV});
+  VPInstruction *Add = Builder.createAdd(IV, VPV);
   IV->replaceAllUsesWith(Add);
   Add->setOperand(0, IV);
 
