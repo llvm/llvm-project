@@ -83,7 +83,7 @@ define i32 @PR75692_3(i32 %x, i32 %y) {
 ; ((X + C) & M) ^ M --> ((M − C) − X) & M
 define i8 @add_and_xor_basic(i8 %x) {
 ; CHECK-LABEL: @add_and_xor_basic(
-; CHECK-NEXT:    [[ADD:%.*]] = sub i8 10, [[X:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = sub nsw i8 10, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[ADD]], 15
 ; CHECK-NEXT:    ret i8 [[AND]]
 ;
@@ -93,16 +93,13 @@ define i8 @add_and_xor_basic(i8 %x) {
   ret i8 %xor
 }
 
-; Negative test
-; Should not optimize Cases where `nsw` is added to the sub.
 define i32 @add_and_xor_nsw(i32 %x) {
 ; CHECK-LABEL: @add_and_xor_nsw(
 ; CHECK-NEXT:    [[IS_POS:%.*]] = icmp sgt i32 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_POS]])
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X]], 63
+; CHECK-NEXT:    [[ADD:%.*]] = sub nsw i32 0, [[X]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 63
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND]], 63
-; CHECK-NEXT:    ret i32 [[XOR]]
+; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %is_pos = icmp sgt i32 %x, -1
   call void @llvm.assume(i1 %is_pos)
@@ -112,15 +109,13 @@ define i32 @add_and_xor_nsw(i32 %x) {
   ret i32 %xor
 }
 
-; Should not optimize Cases where `nsw` `nuw` is added to the sub.
 define i32 @add_and_xor_nsw_nuw(i32 %x) {
 ; CHECK-LABEL: @add_and_xor_nsw_nuw(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], 10
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X]], 54
+; CHECK-NEXT:    [[ADD:%.*]] = sub nsw i32 9, [[X]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 63
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND]], 63
-; CHECK-NEXT:    ret i32 [[XOR]]
+; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %cmp = icmp ult i32 %x, 10
   call void @llvm.assume(i1 %cmp)
@@ -132,7 +127,7 @@ define i32 @add_and_xor_nsw_nuw(i32 %x) {
 
 define <4 x i32> @add_and_xor_vector_splat(<4 x i32> %x) {
 ; CHECK-LABEL: @add_and_xor_vector_splat(
-; CHECK-NEXT:    [[ADD:%.*]] = sub <4 x i32> splat (i32 53), [[X:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = sub nsw <4 x i32> splat (i32 53), [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[ADD]], splat (i32 63)
 ; CHECK-NEXT:    ret <4 x i32> [[AND]]
 ;
@@ -144,7 +139,7 @@ define <4 x i32> @add_and_xor_vector_splat(<4 x i32> %x) {
 
 define i32 @add_and_xor_overflow_addc(i32 %x) {
 ; CHECK-LABEL: @add_and_xor_overflow_addc(
-; CHECK-NEXT:    [[ADD:%.*]] = sub i32 27, [[X:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = sub nsw i32 27, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 31
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
@@ -156,7 +151,7 @@ define i32 @add_and_xor_overflow_addc(i32 %x) {
 
 define i32 @add_and_xor_negative_addc(i32 %x) {
 ; CHECK-LABEL: @add_and_xor_negative_addc(
-; CHECK-NEXT:    [[ADD:%.*]] = sub i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[ADD:%.*]] = sub nsw i32 1, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 255
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
@@ -169,7 +164,7 @@ define i32 @add_and_xor_negative_addc(i32 %x) {
 ; This test is trasformed to 'xor(and(add x, 11), 15), 15)' and being applied.
 define i8 @add_and_xor_sub_op(i8 %x) {
 ; CHECK-LABEL: @add_and_xor_sub_op(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i8 4, [[X:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 4, [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[SUB]], 15
 ; CHECK-NEXT:    ret i8 [[AND]]
 ;
