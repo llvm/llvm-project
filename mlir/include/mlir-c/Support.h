@@ -164,13 +164,13 @@ MLIR_CAPI_EXPORTED void mlirLlvmThreadPoolDestroy(MlirLlvmThreadPool pool);
 /// std::ostream does not provide the file sharing semantics required on
 /// Windows. On failure, returns a null stream and invokes the optional error
 /// callback with the error message.
-MLIR_CAPI_EXPORTED MlirLlvmRawFdOstream mlirLlvmRawFdOstreamCreate(
-    const char *path, bool binary, MlirStringCallback errorCallback,
-    void *userData);
+MLIR_CAPI_EXPORTED MlirLlvmRawFdOstream
+mlirLlvmRawFdOstreamCreate(const char *path, bool binary,
+                           MlirStringCallback errorCallback, void *userData);
 
 /// Write a string to a raw_fd_ostream created with mlirLlvmRawFdOstreamCreate.
-MLIR_CAPI_EXPORTED void mlirLlvmRawFdOstreamWrite(
-    MlirLlvmRawFdOstream stream, MlirStringRef string);
+MLIR_CAPI_EXPORTED void mlirLlvmRawFdOstreamWrite(MlirLlvmRawFdOstream stream,
+                                                  MlirStringRef string);
 
 /// Checks if a raw_fd_ostream is null.
 MLIR_CAPI_EXPORTED bool mlirLlvmRawFdOstreamIsNull(MlirLlvmRawFdOstream stream);

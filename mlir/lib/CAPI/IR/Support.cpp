@@ -39,9 +39,9 @@ void mlirLlvmThreadPoolDestroy(MlirLlvmThreadPool threadPool) {
 // LLVM raw_fd_ostream API.
 //===----------------------------------------------------------------------===//
 
-MlirLlvmRawFdOstream mlirLlvmRawFdOstreamCreate(
-    const char *path, bool binary, MlirStringCallback errorCallback,
-    void *userData) {
+MlirLlvmRawFdOstream
+mlirLlvmRawFdOstreamCreate(const char *path, bool binary,
+                           MlirStringCallback errorCallback, void *userData) {
   std::error_code ec;
   auto flags = binary ? llvm::sys::fs::OF_None : llvm::sys::fs::OF_Text;
   auto *stream = new llvm::raw_fd_ostream(path, ec, flags);
