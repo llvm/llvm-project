@@ -260,8 +260,6 @@ bool X86LoadValueInjectionLoadHardeningImpl::run(
   LLVM_DEBUG(dbgs() << "***** " << X86LVILHPassName << " : " << MF.getName()
                     << " *****\n");
   STI = &MF.getSubtarget<X86Subtarget>();
-  if (!STI->useLVILoadHardening())
-    return false;
 
   // FIXME: support 32-bit
   if (!STI->is64Bit())
@@ -803,6 +801,11 @@ bool X86LoadValueInjectionLoadHardeningLegacy::runOnMachineFunction(
   if (!F.hasOptNone() && skipFunction(F))
     return false;
 
+  // Bail early (without computing analyses) if LVI load hardening is disabled.
+  if (!MF.getSubtarget<X86Subtarget>().useLVILoadHardening()) {
+    return false;
+  }
+
   const auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   const auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   const auto &MDF = getAnalysis<MachineDominanceFrontierWrapperPass>().getMDF();
@@ -813,6 +816,11 @@ bool X86LoadValueInjectionLoadHardeningLegacy::runOnMachineFunction(
 
 PreservedAnalyses X86LoadValueInjectionLoadHardeningPass::run(
     MachineFunction &MF, MachineFunctionAnalysisManager &MFAM) {
+  // Bail early (without computing analyses) if LVI load hardening is disabled.
+  if (!MF.getSubtarget<X86Subtarget>().useLVILoadHardening()) {
+    return PreservedAnalyses::all();
+  }
+
   const auto &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
   const auto &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   const auto &MDF = MFAM.getResult<MachineDominanceFrontierAnalysis>(MF);
