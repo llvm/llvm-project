@@ -257,6 +257,10 @@ void SBExpressionOptions::SetAllowJIT(bool allow) {
                                         : eExecutionPolicyNever);
 }
 
+// FIXME: the language plugin should expression options dynamically and
+// we should validate here (by asking the language plugin) that the options
+// being set/retrieved are actually valid options.
+
 bool SBExpressionOptions::GetBooleanLanguageOption(const char *option_name,
                                                    SBError &error) const {
   LLDB_INSTRUMENT_VA(this, option_name, error);

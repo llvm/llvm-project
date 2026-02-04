@@ -5359,11 +5359,22 @@ void Target::NotifyBreakpointChanged(
     BroadcastEvent(Target::eBroadcastBitBreakpointChanged, breakpoint_data_sp);
 }
 
+// FIXME: the language plugin should expression options dynamically and
+// we should validate here (by asking the language plugin) that the options
+// being set/retrieved are actually valid options.
+
 llvm::Error
 EvaluateExpressionOptions::SetBooleanLanguageOption(llvm::StringRef option_name,
                                                     bool value) {
   if (option_name.empty())
     return llvm::createStringError("Can't set an option with an empty name.");
+
+  if (StructuredData::ObjectSP existing_sp =
+          GetLanguageOptions().GetValueForKey(option_name);
+      existing_sp && existing_sp->GetType() != eStructuredDataTypeBoolean)
+    return llvm::createStringErrorV("Trying to override existing option '{0}' "
+                                    "of type '{1}' with a boolean value.",
+                                    option_name, existing_sp->GetType());
 
   GetLanguageOptions().AddBooleanItem(option_name, value);
 
