@@ -316,6 +316,27 @@ define i64 @func5(i64 %n) {
   ret i64 %call
 }
 
+; Require saving of r5, which is not restored.
+; CHECK64: stmg 5,9,1864(4)
+; CHECK64-NEXT: aghi 4,-192
+; CHECK64: lmg 7,9,2072(4)
+; CHECK64-NEXT: aghi 4,192
+declare i32 @personality(...)
+declare void @panic()
+define void @func6() uwtable personality ptr @personality {
+entry:
+  br label %bb1
+bb1:
+  invoke void @panic()
+          to label %bb2 unwind label %bb3
+bb2:
+  ret void
+bb3:
+  %lp = landingpad { ptr, i32 }
+          catch ptr null
+  br label %bb1
+}
+
 ; CHECK-LABEL: large_stack
 ; CHECK64: agfi  4,-1048800
 ; CHECK64-NEXT: llgt  3,1208
@@ -336,12 +357,12 @@ define void @large_stack0() {
 ; CHECK64: lgr 0,3
 ; CHECK64: llgt  3,1208
 ; CHECK64: cg  4,64(3)
-; CHECK64: jhe L#BB7_2
+; CHECK64: jhe L#BB8_2
 ; CHECK64: %bb.1:
 ; CHECK64: lg  3,72(3)
 ; CHECK64: basr  3,3
 ; CHECK64: bcr 0,7
-; CHECK64: L#BB7_2:
+; CHECK64: L#BB8_2:
 ; CHECK64: stmg  6,7,2064(4)
 ; CHECK64: lgr 3,0
 
@@ -361,12 +382,12 @@ define void @large_stack1(i64 %n1, i64 %n2, i64 %n3) {
 ; CHECK64: agfi  4,-1048800
 ; CHECK64: llgt  3,1208
 ; CHECK64: cg  4,64(3)
-; CHECK64: jhe L#BB8_2
+; CHECK64: jhe L#BB9_2
 ; CHECK64: %bb.1:
 ; CHECK64: lg  3,72(3)
 ; CHECK64: basr  3,3
 ; CHECK64: bcr 0,7
-; CHECK64: L#BB8_2:
+; CHECK64: L#BB9_2:
 ; CHECK64: lgr 3,0
 ; CHECK64: lg  3,2192(3)
 ; CHECK64: stmg  4,12,2048(4)

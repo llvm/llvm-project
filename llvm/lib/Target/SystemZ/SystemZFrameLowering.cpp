@@ -1027,8 +1027,10 @@ bool SystemZXPLINKFrameLowering::assignCalleeSavedSpillSlots(
 
   // If this function has an associated personality function then the
   // environment register R5 must be saved in the DSA.
-  if (!MF.getLandingPads().empty())
+  if (!MF.getLandingPads().empty()) {
     CSI.push_back(CalleeSavedInfo(Regs.getADARegister()));
+    CSI.back().setRestored(false);
+  }
 
   // Scan the call-saved GPRs and find the bounds of the register spill area.
   Register LowRestoreGPR = 0;
