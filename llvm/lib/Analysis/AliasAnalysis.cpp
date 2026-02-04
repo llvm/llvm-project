@@ -149,11 +149,11 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
 }
 
 AliasResult AAResults::aliasErrno(const MemoryLocation &Loc,
-                                  const CallBase *Call) {
+                                  const Instruction *CtxI) {
   AliasResult Result = AliasResult::MayAlias;
 
   for (const auto &AA : AAs) {
-    Result = AA->aliasErrno(Loc, Call);
+    Result = AA->aliasErrno(Loc, CtxI);
     if (Result != AliasResult::MayAlias)
       break;
   }

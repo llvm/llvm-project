@@ -387,7 +387,7 @@ AliasResult TypeBasedAAResult::alias(const MemoryLocation &LocA,
 }
 
 AliasResult TypeBasedAAResult::aliasErrno(const MemoryLocation &Loc,
-                                          const CallBase *Call) {
+                                          const Instruction *CtxI) {
   if (!shouldUseTBAA())
     return AliasResult::MayAlias;
 
@@ -398,7 +398,7 @@ AliasResult TypeBasedAAResult::aliasErrno(const MemoryLocation &Loc,
   // There cannot be any alias with errno if TBAA proves the given memory
   // location does not alias errno.
   const auto *ErrnoTBAAMD =
-      Call->getModule()->getNamedMetadata("llvm.errno.tbaa");
+      CtxI->getModule()->getNamedMetadata("llvm.errno.tbaa");
   if (!ErrnoTBAAMD || any_of(ErrnoTBAAMD->operands(), [&](const auto *Node) {
         return Aliases(N, Node);
       }))

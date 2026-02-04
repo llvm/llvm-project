@@ -1862,7 +1862,14 @@ AliasResult BasicAAResult::aliasCheckRecursive(
 }
 
 AliasResult BasicAAResult::aliasErrno(const MemoryLocation &Loc,
-                                      const CallBase *Call) {
+                                      const Instruction *CtxI) {
+  // Do not make any assumptions when targeting freestanding environments (e.g.,
+  // in the context of baremetal LTO, errno may have been internalized or
+  // otherwise promoted to a local variable).
+  bool IsFreestanding = CtxI->getFunction()->hasFnAttribute("no-builtins");
+  if (IsFreestanding)
+    return AliasResult::MayAlias;
+
   // There cannot be any alias with errno if the given memory location is an
   // identified function-local object, or the size of the memory access is
   // larger than the integer size.
@@ -1880,10 +1887,8 @@ AliasResult BasicAAResult::aliasErrno(const MemoryLocation &Loc,
       return AliasResult::NoAlias;
 
     // Neither can errno alias globals where environments define it as a
-    // function call, unless targeting freestanding environments, for which we
-    // do not make any assumptions.
-    bool IsFreestanding = Call->getFunction()->hasFnAttribute("no-builtins");
-    if (!IsFreestanding && TLI.isErrnoFunctionCall())
+    // function call.
+    if (TLI.isErrnoFunctionCall())
       return AliasResult::NoAlias;
   }
 

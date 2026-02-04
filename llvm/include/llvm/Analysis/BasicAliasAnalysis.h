@@ -74,7 +74,7 @@ public:
                              const Instruction *CtxI);
 
   LLVM_ABI AliasResult aliasErrno(const MemoryLocation &Loc,
-                                  const CallBase *Call);
+                                  const Instruction *CtxI);
 
   LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call,
                                     const MemoryLocation &Loc,
