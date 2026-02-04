@@ -25,7 +25,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include <sstream>
 
 using namespace llvm;
 
@@ -76,24 +75,25 @@ static bool isRegMemConstraint(StringRef Constraint) {
 static std::pair<std::string, bool>
 convertConstraintsToMemory(StringRef ConstraintStr) {
   auto I = ConstraintStr.begin(), E = ConstraintStr.end();
-  std::ostringstream Out;
+  std::string Out;
+  raw_string_ostream O(Out);
   bool HasRegMem = false;
 
   while (I != E) {
     bool IsOutput = false;
     bool HasIndirect = false;
     if (*I == '=') {
-      Out << *I;
+      O << *I;
       IsOutput = true;
       ++I;
     }
     if (*I == '*') {
-      Out << '*';
+      O << '*';
       HasIndirect = true;
       ++I;
     }
     if (*I == '+') {
-      Out << '+';
+      O << '+';
       IsOutput = true;
       ++I;
     }
@@ -103,19 +103,19 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
     if (isRegMemConstraint(Sub)) {
       HasRegMem = true;
       if (IsOutput && !HasIndirect)
-        Out << '*';
+        O << '*';
     }
 
-    Out << Sub;
+    O << Sub;
 
     if (Comma == E)
       break;
 
-    Out << ',';
+    O << ',';
     I = Comma + 1;
   }
 
-  return std::make_pair(Out.str(), HasRegMem);
+  return std::make_pair(Out, HasRegMem);
 }
 
 namespace {
