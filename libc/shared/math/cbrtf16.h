@@ -1,4 +1,4 @@
-//===-- Implementation of cbrtf16 function --------------------------------===//
+//===-- Shared cbrtf16 function ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/cbrtf16.h"
+#ifndef LLVM_LIBC_SHARED_MATH_CBRTF16_H
+#define LLVM_LIBC_SHARED_MATH_CBRTF16_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/cbrtf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float16, cbrtf16, (float16 x)) { return math::cbrtf16(x); }
+using math::cbrtf16;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_CBRTF16_H

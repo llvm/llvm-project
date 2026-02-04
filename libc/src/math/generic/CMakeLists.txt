@@ -5164,13 +5164,7 @@ add_entrypoint_object(
   HDRS
     ../cbrtf16.h
   DEPENDS
-    libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.common
-    libc.src.__support.macros.config
-    libc.src.__support.macros.optimization
+    libc.src.__support.math.cbrtf16
 )
 
 add_entrypoint_object(

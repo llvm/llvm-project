@@ -359,6 +359,19 @@ add_header_library(
 )
 
 add_header_library(
+  cbrtf16
+  HDRS
+    cbrtf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   common_constants
   HDRS
     common_constants.h
