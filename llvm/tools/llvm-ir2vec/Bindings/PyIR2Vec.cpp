@@ -79,7 +79,6 @@ public:
     nb::dict NBFuncEmbMap;
 
     for (const auto &[FuncPtr, FuncEmb] : *ToolFuncEmbMap) {
-      std::string FuncName = FuncPtr->getName().str();
       auto Data = FuncEmb.getData();
       double *DataPtr = new double[Data.size()];
       std::copy(Data.begin(), Data.end(), DataPtr);
@@ -89,7 +88,7 @@ public:
             delete[] static_cast<double *>(p);
           }));
 
-      NBFuncEmbMap[nb::str(FuncName.c_str())] = NbArray;
+      NBFuncEmbMap[nb::str(FuncPtr->getName().str().c_str())] = NbArray;
     }
 
     return NBFuncEmbMap;
