@@ -445,6 +445,16 @@ GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfigBase> CSEOpt,
   }
   return Info;
 }
+
+AnalysisKey GISelCSEAnalysisWrapperAnalysis::Key;
+
+GISelCSEAnalysisWrapperAnalysis::Result
+GISelCSEAnalysisWrapperAnalysis::run(MachineFunction &MF, MachineFunctionAnalysisManager &) {
+  auto Wrapper = std::make_unique<GISelCSEAnalysisWrapper>();
+  Wrapper->setMF(MF);
+  return Wrapper;
+}
+
 void GISelCSEAnalysisWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);

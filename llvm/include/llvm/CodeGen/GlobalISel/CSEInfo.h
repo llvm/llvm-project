@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelWorkList.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -223,6 +224,16 @@ public:
   void setMF(MachineFunction &MFunc) { MF = &MFunc; }
   void setComputed(bool Computed) { AlreadyComputed = Computed; }
   void releaseMemory() { Info.releaseMemory(); }
+};
+
+class GISelCSEAnalysisWrapperAnalysis : public AnalysisInfoMixin<GISelCSEAnalysisWrapperAnalysis> {
+  friend AnalysisInfoMixin<GISelCSEAnalysisWrapperAnalysis>;
+  LLVM_ABI static AnalysisKey Key;
+
+public:
+  using Result = std::unique_ptr<GISelCSEAnalysisWrapper>;
+
+  LLVM_ABI Result run(MachineFunction &MF, MachineFunctionAnalysisManager &);
 };
 
 /// The actual analysis pass wrapper.
