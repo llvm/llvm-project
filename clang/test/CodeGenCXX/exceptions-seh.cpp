@@ -5,11 +5,11 @@
 // RUN:         -o - -mconstructor-aliases -O1 -disable-llvm-passes | \
 // RUN:         FileCheck %s --check-prefix=CHECK --check-prefix=NOCXX
 // RUN: %clang_cc1 -triple x86_64-windows -fasync-exceptions -fcxx-exceptions -fexceptions \
-// RUN:         -fms-extensions -x c++ -emit-llvm -verify -o - %s -DERR1
+// RUN:         -fms-extensions -x c++ -emit-llvm-only -verify %s -DERR1
 // RUN: %clang_cc1 -triple x86_64-windows -fasync-exceptions -fcxx-exceptions -fexceptions \
-// RUN:         -fms-extensions -x c++ -emit-llvm -verify -o - %s -DERR2
+// RUN:         -fms-extensions -x c++ -emit-llvm-only -verify %s -DERR2
 // RUN: %clang_cc1 -triple x86_64-windows -fasync-exceptions -fcxx-exceptions -fexceptions \
-// RUN:         -fms-extensions -x c++ -emit-llvm -verify -o - %s -DERR3
+// RUN:         -fms-extensions -x c++ -emit-llvm-only -verify %s -DERR3
 
 extern "C" unsigned long _exception_code();
 extern "C" void might_throw();
