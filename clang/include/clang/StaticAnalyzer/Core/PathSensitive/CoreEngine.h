@@ -401,8 +401,7 @@ public:
                   NodeBuilder *Enclosing = nullptr)
       : NodeBuilder(SrcSet, DstSet, Ctx), EnclosingBldr(Enclosing) {
     if (EnclosingBldr)
-      for (const auto I : SrcSet)
-        EnclosingBldr->takeNodes(I);
+      EnclosingBldr->takeNodes(SrcSet);
   }
 
   ~StmtNodeBuilder() override;
