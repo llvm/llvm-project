@@ -398,4 +398,4 @@ inequalities. For instance, the following will result in a false positive:
       return 0;
    }
 
-In fact, currently this is also the case if the two conditinos are identical.
+In fact, currently this is also the case if the two conditions are identical.
