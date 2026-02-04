@@ -2137,11 +2137,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
       return cgf.cgm.emitNullConstant(destTy,
                                       cgf.getLoc(subExpr->getExprLoc()));
     }
-
-    // Since target may map different address spaces in AST to the same
-    // address space, an address space conversion may end up as a bitcast.
-    return cgf.cgm.getTargetCIRGenInfo().performAddrSpaceCast(
-        cgf, Visit(subExpr), convertType(destTy));
+    return cgf.performAddrSpaceCast(Visit(subExpr), convertType(destTy));
   }
 
   case CK_AtomicToNonAtomic: {

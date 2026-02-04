@@ -321,25 +321,6 @@ public:
   /// Get the AST address space for alloca.
   virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
 
-  Address performAddrSpaceCast(CodeGen::CodeGenFunction &CGF, Address Addr,
-                               llvm::Type *DestTy,
-                               bool IsNonNull = false) const;
-
-  /// Perform address space cast of an expression of pointer type.
-  /// \param V is the LLVM value to be casted to another address space.
-  /// \param DestTy is the destination LLVM pointer type.
-  /// \param IsNonNull is the flag indicating \p V is known to be non null.
-  virtual llvm::Value *performAddrSpaceCast(CodeGen::CodeGenFunction &CGF,
-                                            llvm::Value *V, llvm::Type *DestTy,
-                                            bool IsNonNull = false) const;
-
-  /// Perform address space cast of a constant expression of pointer type.
-  /// \param V is the LLVM constant to be casted to another address space.
-  /// \param DestTy is the destination LLVM pointer type.
-  virtual llvm::Constant *performAddrSpaceCast(CodeGenModule &CGM,
-                                               llvm::Constant *V,
-                                               llvm::Type *DestTy) const;
-
   /// Get address space of pointer parameter for __cxa_atexit.
   virtual LangAS getAddrSpaceOfCxaAtexitPtrParam() const {
     return LangAS::Default;

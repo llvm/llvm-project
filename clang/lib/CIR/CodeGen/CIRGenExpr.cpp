@@ -1464,8 +1464,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
           "emitCastLValue: address space conversion from unknown address "
           "space");
 
-    mlir::Value v = getTargetHooks().performAddrSpaceCast(
-        *this, lv.getPointer(), convertType(destTy));
+    mlir::Value v = performAddrSpaceCast(lv.getPointer(), convertType(destTy));
 
     return makeAddrLValue(Address(v, convertTypeForMem(e->getType()),
                                   lv.getAddress().getAlignment()),
@@ -2509,7 +2508,7 @@ Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
     dstTy = builder.getPointerTo(ty, getCIRAllocaAddressSpace());
   else
     dstTy = builder.getPointerTo(ty, clang::LangAS::Default);
-  v = getTargetHooks().performAddrSpaceCast(*this, v, dstTy);
+  v = performAddrSpaceCast(v, dstTy);
 
   return Address(v, ty, align);
 }

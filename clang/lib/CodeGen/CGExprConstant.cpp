@@ -1224,11 +1224,11 @@ public:
     }
 
     case CK_AddressSpaceConversion: {
-      auto C = Emitter.tryEmitPrivate(subExpr, subExpr->getType());
+      llvm::Constant *C = Emitter.tryEmitPrivate(subExpr, subExpr->getType());
       if (!C)
         return nullptr;
       llvm::Type *destTy = ConvertType(E->getType());
-      return CGM.getTargetCodeGenInfo().performAddrSpaceCast(CGM, C, destTy);
+      return CGM.performAddrSpaceCast(C, destTy);
     }
 
     case CK_LValueToRValue: {

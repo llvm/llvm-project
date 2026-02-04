@@ -5344,9 +5344,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         llvm::Type *Ty = llvm::PointerType::get(getLLVMContext(),
                                                 RetAI.getIndirectAddrSpace());
 
-        SRetPtr = SRetPtr.withPointer(
-            getTargetHooks().performAddrSpaceCast(*this, V, Ty, true),
-            SRetPtr.isKnownNonNull());
+        SRetPtr = SRetPtr.withPointer(performAddrSpaceCast(V, Ty),
+                                      SRetPtr.isKnownNonNull());
       }
       IRCallArgs[IRFunctionArgs.getSRetArgNo()] =
           getAsNaturalPointerTo(SRetPtr, RetTy);
@@ -5489,8 +5488,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           // only the contextual values. If the address space mismatches, see if
           // we can look through a cast to a compatible address space value,
           // otherwise emit a copy.
-          llvm::Value *Val =
-              getTargetHooks().performAddrSpaceCast(*this, V, T, true);
+          llvm::Value *Val = performAddrSpaceCast(V, T);
           if (ArgHasMaybeUndefAttr)
             Val = Builder.CreateFreeze(Val);
           IRCallArgs[FirstIRArg] = Val;
@@ -5574,8 +5572,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         if (FirstIRArg < IRFuncTy->getNumParams() &&
             V->getType() != IRFuncTy->getParamType(FirstIRArg)) {
           assert(V->getType()->isPointerTy() && "Only pointers can mismatch!");
-          V = getTargetHooks().performAddrSpaceCast(
-              *this, V, IRFuncTy->getParamType(FirstIRArg));
+          V = performAddrSpaceCast(V, IRFuncTy->getParamType(FirstIRArg));
         }
 
         if (ArgHasMaybeUndefAttr)

@@ -129,9 +129,7 @@ RawAddress CodeGenFunction::MaybeCastStackAddressSpace(RawAddress Alloca,
     // builder.
     if (!ArraySize)
       Builder.SetInsertPoint(getPostAllocaInsertPoint());
-    V = getTargetHooks().performAddrSpaceCast(*this, V,
-                                              Builder.getPtrTy(DestAddrSpace),
-                                              /*IsNonNull=*/true);
+    V = performAddrSpaceCast(V, Builder.getPtrTy(DestAddrSpace));
   }
 
   return RawAddress(V, Alloca.getElementType(), Alloca.getAlignment(),
@@ -460,7 +458,6 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
                                            const MaterializeTemporaryExpr *M,
                                            const Expr *Inner,
                                            RawAddress *Alloca = nullptr) {
-  auto &TCG = CGF.getTargetHooks();
   switch (M->getStorageDuration()) {
   case SD_FullExpression:
   case SD_Automatic: {
@@ -483,11 +480,10 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
         GV->setAlignment(alignment.getAsAlign());
         llvm::Constant *C = GV;
         if (AS != LangAS::Default)
-          C = TCG.performAddrSpaceCast(
-              CGF.CGM, GV,
-              llvm::PointerType::get(
-                  CGF.getLLVMContext(),
-                  CGF.getContext().getTargetAddressSpace(LangAS::Default)));
+          C = CGF.CGM.performAddrSpaceCast(
+              GV, llvm::PointerType::get(
+                      CGF.getLLVMContext(),
+                      CGF.getContext().getTargetAddressSpace(LangAS::Default)));
         // FIXME: Should we put the new global into a COMDAT?
         return RawAddress(C, GV->getValueType(), alignment);
       }
@@ -3660,14 +3656,14 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
                           AlignmentSource::Decl);
 
   if (const auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
-    auto ATPO = CGM.GetAddrOfTemplateParamObject(TPO);
+    ConstantAddress ATPO = CGM.GetAddrOfTemplateParamObject(TPO);
     auto AS = getLangASFromTargetAS(ATPO.getAddressSpace());
 
     if (AS != T.getAddressSpace()) {
       auto TargetAS = getContext().getTargetAddressSpace(T.getAddressSpace());
-      auto PtrTy = llvm::PointerType::get(CGM.getLLVMContext(), TargetAS);
-      auto ASC =
-          getTargetHooks().performAddrSpaceCast(CGM, ATPO.getPointer(), PtrTy);
+      llvm::Type *PtrTy =
+          llvm::PointerType::get(CGM.getLLVMContext(), TargetAS);
+      llvm::Constant *ASC = CGM.performAddrSpaceCast(ATPO.getPointer(), PtrTy);
       ATPO = ConstantAddress(ASC, ATPO.getElementType(), ATPO.getAlignment());
     }
 
@@ -6118,8 +6114,8 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_AddressSpaceConversion: {
     LValue LV = EmitLValue(E->getSubExpr());
     QualType DestTy = getContext().getPointerType(E->getType());
-    llvm::Value *V = getTargetHooks().performAddrSpaceCast(
-        *this, LV.getPointer(*this), ConvertType(DestTy));
+    llvm::Value *V =
+        performAddrSpaceCast(LV.getPointer(*this), ConvertType(DestTy));
     return MakeAddrLValue(Address(V, ConvertTypeForMem(E->getType()),
                                   LV.getAddress().getAlignment()),
                           E->getType(), LV.getBaseInfo(), LV.getTBAAInfo());
