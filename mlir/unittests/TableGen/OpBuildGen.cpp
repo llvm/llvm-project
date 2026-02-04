@@ -46,7 +46,7 @@ protected:
   // Verify that `op` has the given set of result types, operands, and
   // attributes.
   template <typename OpTy>
-  void verifyOp(OpTy &&concreteOp, std::vector<Type> resultTypes,
+  void verifyOp(OpTy concreteOp, std::vector<Type> resultTypes,
                 std::vector<Value> operands,
                 std::vector<NamedAttribute> attrs) {
     ASSERT_NE(concreteOp, nullptr);
