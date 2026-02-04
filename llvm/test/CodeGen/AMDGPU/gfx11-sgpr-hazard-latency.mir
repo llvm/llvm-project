@@ -5,6 +5,8 @@
 ---
 name:            gemm_loop1
 tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
 body:             |
   ; GFX11-LABEL: name: gemm_loop1
   ; GFX11: bb.0:
