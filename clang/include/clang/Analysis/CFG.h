@@ -315,11 +315,11 @@ private:
 };
 
 class CFGFullExprCleanup : public CFGElement {
-  using MTEVecTy = BumpVector<const MaterializeTemporaryExpr *>;
 
 public:
-  explicit CFGFullExprCleanup(const MTEVecTy *vec)
-      : CFGElement(FullExprCleanup, vec, nullptr) {}
+  using MTEVecTy = BumpVector<const MaterializeTemporaryExpr *>;
+  explicit CFGFullExprCleanup(const MTEVecTy *MTEs)
+      : CFGElement(FullExprCleanup, MTEs, nullptr) {}
 
   ArrayRef<const MaterializeTemporaryExpr *> getExpiringMTEs() const {
     const MTEVecTy *ExpiringMTEs =

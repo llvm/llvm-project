@@ -2095,14 +2095,14 @@ void CFGBuilder::addScopeChangesHandling(LocalScope::const_iterator SrcPos,
 void CFGBuilder::addFullExprCleanupMarker(TempDtorContext &Context) {
   assert(Context.TrackExpiringMTEs);
 
-  using MTEVecTy = BumpVector<const MaterializeTemporaryExpr *>;
-  MTEVecTy *ExpiringMTEs = nullptr;
+  CFGFullExprCleanup::MTEVecTy *ExpiringMTEs = nullptr;
   BumpVectorContext &BVC = cfg->getBumpVectorContext();
 
   size_t NumCollected = Context.CollectedMTEs.size();
   if (NumCollected > 0) {
     autoCreateBlock();
-    ExpiringMTEs = new (cfg->getAllocator()) MTEVecTy(BVC, NumCollected);
+    ExpiringMTEs = new (cfg->getAllocator())
+        CFGFullExprCleanup::MTEVecTy(BVC, NumCollected);
     for (const MaterializeTemporaryExpr *MTE : Context.CollectedMTEs)
       ExpiringMTEs->push_back(MTE, BVC);
     Block->appendFullExprCleanup(ExpiringMTEs, BVC);
