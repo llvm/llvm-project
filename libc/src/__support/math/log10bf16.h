@@ -18,7 +18,6 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -76,7 +75,7 @@ constexpr fputil::ExceptValues<bfloat16, 4> EXPBF16_EXCEPTS = {{
     {0x447AU, 0x4040U, 0U, 0U, 0U},
 }};
 
-LLVM_LIBC_FUNCTION(bfloat16, log10bf16, (bfloat16 x)) {
+LIBC_INLINE static bfloat16 log10bf16(bfloat16 x) {
   using FPBits = fputil::FPBits<bfloat16>;
   FPBits x_bits(x);
 
