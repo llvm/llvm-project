@@ -727,20 +727,6 @@ public:
   }
   void Post(const parser::OmpDeclareVariantDirective &) { PopContext(); };
 
-  void Post(const parser::OmpObjectList &x) {
-    // The objects from OMP clauses should have already been resolved,
-    // except common blocks (the ResolveNamesVisitor does not visit
-    // parser::Name, those are dealt with as members of other structures).
-    // Iterate over elements of x, and resolve any common blocks that
-    // are still unresolved.
-    for (const parser::OmpObject &obj : x.v) {
-      auto *name{std::get_if<parser::Name>(&obj.u)};
-      if (name && !name->symbol) {
-        Resolve(*name, currScope().MakeCommonBlock(name->source, name->source));
-      }
-    }
-  }
-
   // 2.15.3 Data-Sharing Attribute Clauses
   bool Pre(const parser::OmpClause::Inclusive &x) {
     ResolveOmpObjectList(x.v, Symbol::Flag::OmpInclusiveScan);

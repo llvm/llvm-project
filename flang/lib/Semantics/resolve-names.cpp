@@ -1618,6 +1618,20 @@ public:
   bool Pre(const parser::OmpStylizedInstance &);
   void Post(const parser::OmpStylizedInstance &);
 
+  void Post(const parser::OmpObjectList &x) {
+    // The objects from OMP clauses should have already been resolved,
+    // except common blocks (the ResolveNamesVisitor does not visit
+    // parser::Name, those are dealt with as members of other structures).
+    // Iterate over elements of x, and resolve any common blocks that
+    // are still unresolved.
+    for (const parser::OmpObject &obj : x.v) {
+      auto *name{std::get_if<parser::Name>(&obj.u)};
+      if (name && !name->symbol) {
+        Resolve(*name, currScope().MakeCommonBlock(name->source, name->source));
+      }
+    }
+  }
+
   bool Pre(const parser::OpenMPDeclareMapperConstruct &x) {
     AddOmpSourceRange(x.source);
     return true;
