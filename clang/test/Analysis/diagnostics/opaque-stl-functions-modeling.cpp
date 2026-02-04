@@ -1,4 +1,4 @@
-// RUN: %clang --analyze -Xclang -analyzer-dump-egraph=%t.dot -std=c++11 -Xclang -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-dump-egraph=%t.dot -std=c++11 -verify %s
 // RUN: cat %t.dot | FileCheck %s
 
 #include "../Inputs/system-header-simulator-cxx-std-suppression.h"
