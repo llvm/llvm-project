@@ -39303,7 +39303,6 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
 
     // If the mask control (lower 8 bits) is less than the bitwidth, then the
     // upper bits are set to zero: dst[BW:IMM8] = 0
-    // TODO: Generalise this to use Known2 getMinValue() + getMaxValue().
     Known2 = Known2.trunc(8);
     if (Known2.isConstant()) {
       uint64_t Mask = Known2.getConstant().getZExtValue();
@@ -39313,6 +39312,27 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
         if (Known.isConstant())
           break;
       }
+    }
+
+    // If the mask control minimum value is >= bitwidth,
+    // the src knownbits are valid and can be returned
+    APInt MaskMinValue = Known2.getMinValue();
+    if (MaskMinValue.uge(BitWidth))
+      break;
+
+    // If the mask control maximum value is < bitwidth,
+    // all src knownbits above maximum value are cleared to zero
+    // all src knownbits below minimum value stay
+    // in between only src known zero bits remain
+    APInt MaskMaxValue = Known2.getMaxValue();
+    if (MaskMaxValue.ult(BitWidth)) {
+      uint64_t MinValue = MaskMinValue.getZExtValue();
+      uint64_t MaxValue = MaskMaxValue.getZExtValue();
+      Known.One.clearBits(MaxValue, BitWidth);
+      Known.Zero.setBits(MaxValue, BitWidth);
+
+      Known.One.clearBits(MinValue, MaxValue);
+      break;
     }
 
     // Zeros are retained from the src operand. But not necessarily ones.
