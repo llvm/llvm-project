@@ -27,6 +27,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/VirtualOutputBackend.h"
 #include "llvm/Support/VirtualOutputConfig.h"
+#include "llvm/Support/VirtualOutputError.h"
 #include <map>
 
 namespace llvm::vfs {
@@ -128,7 +129,11 @@ class InMemoryOutputBackend : public OutputBackend {
 protected:
   Expected<std::unique_ptr<OutputFileImpl>>
   createFileImpl(StringRef Path, std::optional<OutputConfig>) override {
-    return std::make_unique<StringBackedOutputFileImpl>(Buffers[Path.str()]);
+    auto [It, Inserted] = Buffers.try_emplace(Path.str());
+    if (Inserted)
+      return std::make_unique<StringBackedOutputFileImpl>(It->second);
+    return make_error<OutputError>(
+        Path, std::make_error_code(std::errc::file_exists));
   }
 
   IntrusiveRefCntPtr<OutputBackend> cloneImpl() const override {

@@ -10,6 +10,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BLAKE3.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/HashingOutputBackend.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ThreadPool.h"
@@ -996,6 +997,20 @@ TEST(InMemoryOutputBackendTest, EnumerateBuffers) {
                           {"file.2", "file 2 content"},
                           {"file.3", "file 3 content"},
                       }));
+}
+
+TEST(InMemoryOutputBackendTest, FileExists) {
+  InMemoryOutputBackend Backend;
+  OutputFile File;
+  ASSERT_THAT_ERROR(Backend.createFile("file.1").moveInto(File), Succeeded());
+  EXPECT_THAT_ERROR(File.discard(), Succeeded());
+
+  EXPECT_THAT_ERROR(
+      Backend.createFile("file.1").takeError(),
+      Failed<OutputError>(testing::AllOf(
+          testing::Property(&OutputError::getOutputPath, "file.1"),
+          testing::Property(&OutputError::convertToErrorCode,
+                            std::make_error_code(std::errc::file_exists)))));
 }
 
 } // end namespace
