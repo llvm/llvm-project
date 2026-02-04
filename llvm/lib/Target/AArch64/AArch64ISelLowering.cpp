@@ -16166,8 +16166,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   bool MaybeLowHalfZeroHigh =
       VT.isFixedLengthVector() && VT.getSizeInBits() == 128 && NumElts != 0;
   unsigned HalfElts = MaybeLowHalfZeroHigh ? (NumElts >> 1) : 0;
-  SDValue LowHalfFirstVal =
-      MaybeLowHalfZeroHigh ? Op.getOperand(0) : SDValue();
+  SDValue LowHalfFirstVal = MaybeLowHalfZeroHigh ? Op.getOperand(0) : SDValue();
   for (unsigned i = 0; i < NumElts; ++i) {
     SDValue V = Op.getOperand(i);
     if (MaybeLowHalfZeroHigh) {
@@ -16239,8 +16238,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   }
 
   if (MaybeLowHalfZeroHigh && LowHalfFirstVal.getNode() &&
-      !LowHalfFirstVal.isUndef() &&
-      !isIntOrFPConstant(LowHalfFirstVal)) {
+      !LowHalfFirstVal.isUndef() && !isIntOrFPConstant(LowHalfFirstVal)) {
     EVT LaneVT = VT.getVectorElementType();
     EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
 
