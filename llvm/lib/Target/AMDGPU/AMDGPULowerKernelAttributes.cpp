@@ -380,18 +380,14 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
 
     Type *GroupSizeType = GroupSize->getType();
     ConstantInt *KnownSize = mdconst::extract<ConstantInt>(MD->getOperand(I));
-    Constant *Replacement = nullptr;
+    Type *ScalarType = GroupSizeType->getScalarType();
+    Constant *Replacement =
+        ConstantFoldIntegerCast(KnownSize, ScalarType, false, DL);
 
     if (auto *VecTy = dyn_cast<VectorType>(GroupSizeType)) {
-      if (VecTy->getElementCount().isScalar()) {
-        Constant *CastElt = ConstantFoldIntegerCast(
-            KnownSize, VecTy->getElementType(), false, DL);
-        Replacement =
-            ConstantVector::getSplat(VecTy->getElementCount(), CastElt);
-      }
-    } else {
-      Replacement =
-          ConstantFoldIntegerCast(KnownSize, GroupSizeType, false, DL);
+      Replacement = VecTy->getElementCount().isScalar()
+                        ? ConstantExpr::getBitCast(Replacement, GroupSizeType)
+                        : nullptr;
     }
 
     if (Replacement) {
