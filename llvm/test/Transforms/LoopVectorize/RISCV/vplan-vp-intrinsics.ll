@@ -10,7 +10,7 @@
 
 define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL: VPlan 'Initial VPlan for VF={1},UF>=1'
-; IF-EVL-NOT: EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI
+; IF-EVL-NOT: Current-Iteration-PHI
 ;
 ; IF-EVL: VPlan 'Initial VPlan for VF={vscale x 1,vscale x 2,vscale x 4},UF={1}' {
 ; IF-EVL-NEXT: Live-in vp<[[VFUF:%[0-9]+]]> = VF * UF
@@ -23,7 +23,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT: <x1> vector loop: {
 ; IF-EVL-NEXT:  vector.body:
 ; IF-EVL-NEXT:    EMIT vp<[[IV:%[0-9]+]]> = CANONICAL-INDUCTION
-; IF-EVL-NEXT:    EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
+; IF-EVL-NEXT:    Current-Iteration-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-NEXT:    EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%N>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:    EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-NEXT:    vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>, vp<%evl>

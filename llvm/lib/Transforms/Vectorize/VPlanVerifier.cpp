@@ -103,7 +103,7 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
       return false;
     }
 
-    if (isa<VPEVLBasedIVPHIRecipe>(RecipeI) &&
+    if (isa<VPCurrentIterationRecipe>(RecipeI) &&
         !isa_and_nonnull<VPCanonicalIVPHIRecipe>(std::prev(RecipeI))) {
       errs() << "EVL based IV is not immediately after canonical IV\n";
       return false;
@@ -209,9 +209,10 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
             errs() << "EVL used by unexpected VPInstruction\n";
             return false;
           }
-          if (!VerifyLate && !isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
+          if (!VerifyLate &&
+              !isa<VPCurrentIterationRecipe>(*I->users().begin())) {
             errs() << "Result of VPInstruction::Add with EVL operand is "
-                      "not used by VPEVLBasedIVPHIRecipe\n";
+                      "not used by VPCurrentIterationRecipe\n";
             return false;
           }
           return true;

@@ -2060,7 +2060,7 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   if (all_of(Header->phis(), [](VPRecipeBase &Phi) {
         if (auto *R = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi))
           return R->isCanonical();
-        return isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe,
+        return isa<VPCanonicalIVPHIRecipe, VPCurrentIterationRecipe,
                    VPFirstOrderRecurrencePHIRecipe, VPPhi>(&Phi);
       })) {
     for (VPRecipeBase &HeaderR : make_early_inc_range(Header->phis())) {
@@ -3203,7 +3203,7 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
 /// VPInstruction::ExplicitVectorLength elements instead of VF elements each
 /// iteration.
 ///
-/// - Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
+/// - Add a VPCurrentIterationRecipe and related recipes to \p Plan and
 ///   replaces all uses except the canonical IV increment of
 ///   VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe.
 ///   VPCanonicalIVPHIRecipe is used only for loop iterations counting after
@@ -3225,13 +3225,13 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
 ///
 /// vector.body:
 /// ...
-/// %EVLPhi = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ],
-///                                               [ %NextEVLIV, %vector.body ]
+/// %CurrentIteration = Current-Iteration-PHI [ %StartV, %vector.ph ],
+///                                           [ %NextIV, %vector.body ]
 /// %AVL = phi [ trip-count, %vector.ph ], [ %NextAVL, %vector.body ]
 /// %VPEVL = EXPLICIT-VECTOR-LENGTH %AVL
 /// ...
 /// %OpEVL = cast i32 %VPEVL to IVSize
-/// %NextEVLIV = add IVSize %OpEVL, %EVLPhi
+/// %NextIV = add IVSize %OpEVL, %CurrentIteration
 /// %NextAVL = sub IVSize nuw %AVL, %OpEVL
 /// ...
 ///
@@ -3241,15 +3241,15 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
 ///
 /// vector.body:
 /// ...
-/// %EVLPhi = EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI [ %StartV, %vector.ph ],
-///                                               [ %NextEVLIV, %vector.body ]
+/// %CurrentIteration = Current-Iteration-PHI [ %StartV, %vector.ph ],
+///                                           [ %NextIV, %vector.body ]
 /// %AVL = phi [ trip-count, %vector.ph ], [ %NextAVL, %vector.body ]
 /// %cmp = cmp ult %AVL, MaxSafeElements
 /// %SAFE_AVL = select %cmp, %AVL, MaxSafeElements
 /// %VPEVL = EXPLICIT-VECTOR-LENGTH %SAFE_AVL
 /// ...
 /// %OpEVL = cast i32 %VPEVL to IVSize
-/// %NextEVLIV = add IVSize %OpEVL, %EVLPhi
+/// %NextIV = add IVSize %OpEVL, %CurrentIteration
 /// %NextAVL = sub IVSize nuw %AVL, %OpEVL
 /// ...
 ///
@@ -3264,9 +3264,10 @@ void VPlanTransforms::addExplicitVectorLength(
   auto *CanIVTy = LoopRegion->getCanonicalIVType();
   VPValue *StartV = CanonicalIVPHI->getStartValue();
 
-  // Create the ExplicitVectorLengthPhi recipe in the main loop.
-  auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc::getUnknown());
-  EVLPhi->insertAfter(CanonicalIVPHI);
+  // Create the CurrentIteration recipe in the main loop.
+  auto *CurrentIteration =
+      new VPCurrentIterationRecipe(StartV, DebugLoc::getUnknown());
+  CurrentIteration->insertAfter(CanonicalIVPHI);
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   // Create the AVL (application vector length), starting from TC -> 0 in steps
   // of EVL.
@@ -3293,11 +3294,12 @@ void VPlanTransforms::addExplicitVectorLength(
   OpVPEVL = Builder.createScalarZExtOrTrunc(
       OpVPEVL, CanIVTy, I32Ty, CanonicalIVIncrement->getDebugLoc());
 
-  auto *NextEVLIV = Builder.createAdd(
-      OpVPEVL, EVLPhi, CanonicalIVIncrement->getDebugLoc(), "index.evl.next",
-      {CanonicalIVIncrement->hasNoUnsignedWrap(),
-       CanonicalIVIncrement->hasNoSignedWrap()});
-  EVLPhi->addOperand(NextEVLIV);
+  auto *NumProcessedElementsNext =
+      Builder.createAdd(OpVPEVL, CurrentIteration,
+                        CanonicalIVIncrement->getDebugLoc(), "index.evl.next",
+                        {CanonicalIVIncrement->hasNoUnsignedWrap(),
+                         CanonicalIVIncrement->hasNoSignedWrap()});
+  CurrentIteration->addOperand(NumProcessedElementsNext);
 
   VPValue *NextAVL =
       Builder.createSub(AVLPhi, OpVPEVL, DebugLoc::getCompilerGenerated(),
@@ -3308,47 +3310,50 @@ void VPlanTransforms::addExplicitVectorLength(
   removeDeadRecipes(Plan);
 
   // Replace all uses of VPCanonicalIVPHIRecipe by
-  // VPEVLBasedIVPHIRecipe except for the canonical IV increment.
-  CanonicalIVPHI->replaceAllUsesWith(EVLPhi);
+  // VPCurrentIterationRecipe except for the canonical IV increment.
+  CanonicalIVPHI->replaceAllUsesWith(CurrentIteration);
   CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
 }
 
-void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
-  // Find EVL loop entries by locating VPEVLBasedIVPHIRecipe.
-  // There should be only one EVL PHI in the entire plan.
-  VPEVLBasedIVPHIRecipe *EVLPhi = nullptr;
+void VPlanTransforms::convertToVariableLengthStep(VPlan &Plan) {
+  // Find the vector loop entry by locating VPCurrentIterationRecipe.
+  // There should be only one VPCurrentIteration in the entire plan.
+  VPCurrentIterationRecipe *CurrentIteration = nullptr;
 
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry())))
     for (VPRecipeBase &R : VPBB->phis())
-      if (auto *PhiR = dyn_cast<VPEVLBasedIVPHIRecipe>(&R)) {
-        assert(!EVLPhi && "Found multiple EVL PHIs. Only one expected");
-        EVLPhi = PhiR;
+      if (auto *PhiR = dyn_cast<VPCurrentIterationRecipe>(&R)) {
+        assert(!CurrentIteration &&
+               "Found multiple CurrentIteration. Only one expected");
+        CurrentIteration = PhiR;
       }
 
-  // Early return if no EVL PHI is found.
-  if (!EVLPhi)
+  // Early return if it is not variable-length stepping.
+  if (!CurrentIteration)
     return;
 
-  VPBasicBlock *HeaderVPBB = EVLPhi->getParent();
-  VPValue *EVLIncrement = EVLPhi->getBackedgeValue();
+  VPBasicBlock *HeaderVPBB = CurrentIteration->getParent();
+  VPValue *CurrentIterationIncr = CurrentIteration->getBackedgeValue();
 
-  // Convert EVLPhi to concrete recipe.
+  // Convert CurrentIteration to concrete recipe.
   auto *ScalarR =
-      VPBuilder(EVLPhi).createScalarPhi({EVLPhi->getStartValue(), EVLIncrement},
-                                        EVLPhi->getDebugLoc(), "evl.based.iv");
-  EVLPhi->replaceAllUsesWith(ScalarR);
-  EVLPhi->eraseFromParent();
+      VPBuilder(CurrentIteration)
+          .createScalarPhi(
+              {CurrentIteration->getStartValue(), CurrentIterationIncr},
+              CurrentIteration->getDebugLoc(), "evl.based.iv");
+  CurrentIteration->replaceAllUsesWith(ScalarR);
+  CurrentIteration->eraseFromParent();
 
-  // Replace CanonicalIVInc with EVL-PHI increment.
+  // Replace CanonicalIVInc with CurrentIteration increment.
   auto *CanonicalIV = cast<VPPhi>(&*HeaderVPBB->begin());
   VPValue *Backedge = CanonicalIV->getIncomingValue(1);
   assert(match(Backedge, m_c_Add(m_Specific(CanonicalIV),
                                  m_Specific(&Plan.getVFxUF()))) &&
          "Unexpected canonical iv");
-  Backedge->replaceAllUsesWith(EVLIncrement);
+  Backedge->replaceAllUsesWith(CurrentIterationIncr);
 
   // Remove unused phi and increment.
   VPRecipeBase *CanonicalIVIncrement = Backedge->getDefiningRecipe();
@@ -3366,8 +3371,8 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
   if (std::next(CanIV->getIterator()) == CanIV->getParent()->end())
     return;
   // The EVL IV is always immediately after the canonical IV.
-  auto *EVLPhi =
-      dyn_cast_or_null<VPEVLBasedIVPHIRecipe>(std::next(CanIV->getIterator()));
+  auto *EVLPhi = dyn_cast_or_null<VPCurrentIterationRecipe>(
+      std::next(CanIV->getIterator()));
   if (!EVLPhi)
     return;
 
