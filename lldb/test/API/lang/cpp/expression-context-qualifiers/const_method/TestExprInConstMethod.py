@@ -29,9 +29,9 @@ class TestCase(TestBase):
         )
         self.expect_expr("m_mem", result_value="-2")
 
-        # Test short and long --cpp-ignore-context-qualifiers option.
+        # Test short and long --c++-ignore-context-qualifiers option.
         self.expect(
-            "expression --cpp-ignore-context-qualifiers -- m_mem = 3.0",
+            "expression --c++-ignore-context-qualifiers -- m_mem = 3.0",
             error=False,
         )
         self.expect_expr("m_mem", result_value="3")
@@ -42,9 +42,9 @@ class TestCase(TestBase):
         )
         self.expect_expr("m_mem", result_value="4")
 
-        # Test --cpp-ignore-context-qualifiers via SBExpressionOptions.
+        # Test --c++-ignore-context-qualifiers via SBExpressionOptions.
         options = lldb.SBExpressionOptions()
-        options.SetBooleanLanguageOption("cpp-ignore-context-qualifiers", True)
+        options.SetBooleanLanguageOption("c++-ignore-context-qualifiers", True)
         self.expect_expr("m_mem = -2.0; m_mem", options=options, result_value="-2")
 
         self.expect_expr("((Foo*)this)->bar()", result_type="double", result_value="5")

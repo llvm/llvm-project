@@ -5413,7 +5413,7 @@ StructuredData::Dictionary &EvaluateExpressionOptions::GetLanguageOptions() {
 // FIXME: this option is C++ plugin specific and should be registered by it,
 // instead of hard-coding it here.
 constexpr llvm::StringLiteral s_cpp_ignore_context_qualifiers_option =
-    "cpp-ignore-context-qualifiers";
+    "c++-ignore-context-qualifiers";
 
 EvaluateExpressionOptions::EvaluateExpressionOptions()
     : m_language_options_sp(std::make_shared<StructuredData::Dictionary>()) {

@@ -48,7 +48,7 @@ class CPPThisTestCase(TestBase):
 
         self.expect("expression -- (int)getpid(); m_a", startstr="(const int) $1 = 3")
         self.expect(
-            "expression --cpp-ignore-context-qualifiers -- m_a = 2",
+            "expression --c++-ignore-context-qualifiers -- m_a = 2",
             startstr="(int) $2 = 2",
         )
 

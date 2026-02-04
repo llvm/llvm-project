@@ -779,7 +779,7 @@ let Command = "expression" in {
              "Expression results will be labeled with $-prefixed variables, "
              "e.g. $0, $1, etc.">;
   def ignore_context_qualifiers
-      : Option<"cpp-ignore-context-qualifiers", "Q">,
+      : Option<"c++-ignore-context-qualifiers", "Q">,
         Groups<[1, 2]>,
         Desc<"When specified, evaluates the expression without taking into "
              "account the type ${Q}ualifiers of the scope. In C++, this would "
