@@ -7356,8 +7356,10 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
           VPlanPatternMatch::m_Select(VPlanPatternMatch::m_VPValue(),
                                       VPlanPatternMatch::m_VPValue(BackedgeVal),
                                       VPlanPatternMatch::m_VPValue()));
-    EpiRedHeaderPhi = cast<VPReductionPHIRecipe>(
+    EpiRedHeaderPhi = cast_if_present<VPReductionPHIRecipe>(
         vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
+    if (!EpiRedHeaderPhi)
+      return;
   }
 
   Value *MainResumeValue;
