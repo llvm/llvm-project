@@ -1,8 +1,8 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 // vector<2xf16> + vector<2xbf16> -> vector<2xf32>
-llvm.func @fadd_vector_f16_bf16_f32(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_bf16_f32(<2 x half> %0, <2 x bfloat> %1) {
+llvm.func @addf_vector_f16_bf16_f32(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_bf16_f32(<2 x half> %0, <2 x bfloat> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x bfloat> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -17,12 +17,12 @@ llvm.func @fadd_vector_f16_bf16_f32(%a : vector<2xf16>, %b : vector<2xbf16>) -> 
   // CHECK-NEXT: %14 = insertelement <2 x float> %8, float %13, i32 1
   // CHECK-NEXT: ret <2 x float> %14
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_bf16_f32_rn(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_bf16_f32_rn(<2 x half> %0, <2 x bfloat> %1) {
+llvm.func @addf_vector_f16_bf16_f32_rn(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_bf16_f32_rn(<2 x half> %0, <2 x bfloat> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x bfloat> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -37,12 +37,12 @@ llvm.func @fadd_vector_f16_bf16_f32_rn(%a : vector<2xf16>, %b : vector<2xbf16>) 
   // CHECK-NEXT: %14 = insertelement <2 x float> %8, float %13, i32 1
   // CHECK-NEXT: ret <2 x float> %14
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_bf16_f32_rn_sat(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_bf16_f32_rn_sat(<2 x half> %0, <2 x bfloat> %1) {
+llvm.func @addf_vector_f16_bf16_f32_rn_sat(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_bf16_f32_rn_sat(<2 x half> %0, <2 x bfloat> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x bfloat> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -57,12 +57,12 @@ llvm.func @fadd_vector_f16_bf16_f32_rn_sat(%a : vector<2xf16>, %b : vector<2xbf1
   // CHECK-NEXT: %14 = insertelement <2 x float> %8, float %13, i32 1
   // CHECK-NEXT: ret <2 x float> %14
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_bf16_f32_rn_ftz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_bf16_f32_rn_ftz(<2 x half> %0, <2 x bfloat> %1) {
+llvm.func @addf_vector_f16_bf16_f32_rn_ftz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_bf16_f32_rn_ftz(<2 x half> %0, <2 x bfloat> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x bfloat> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -77,12 +77,12 @@ llvm.func @fadd_vector_f16_bf16_f32_rn_ftz(%a : vector<2xf16>, %b : vector<2xbf1
   // CHECK-NEXT: %14 = insertelement <2 x float> %8, float %13, i32 1
   // CHECK-NEXT: ret <2 x float> %14
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, ftz=true} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, ftz=true} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_bf16_f32_rn_sat_ftz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_bf16_f32_rn_sat_ftz(<2 x half> %0, <2 x bfloat> %1) {
+llvm.func @addf_vector_f16_bf16_f32_rn_sat_ftz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_bf16_f32_rn_sat_ftz(<2 x half> %0, <2 x bfloat> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x bfloat> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -97,12 +97,12 @@ llvm.func @fadd_vector_f16_bf16_f32_rn_sat_ftz(%a : vector<2xf16>, %b : vector<2
   // CHECK-NEXT: %14 = insertelement <2 x float> %8, float %13, i32 1
   // CHECK-NEXT: ret <2 x float> %14
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_bf16_f32_rm(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_bf16_f32_rm(<2 x half> %0, <2 x bfloat> %1) {
+llvm.func @addf_vector_f16_bf16_f32_rm(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_bf16_f32_rm(<2 x half> %0, <2 x bfloat> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x bfloat> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -117,12 +117,12 @@ llvm.func @fadd_vector_f16_bf16_f32_rm(%a : vector<2xf16>, %b : vector<2xbf16>) 
   // CHECK-NEXT: %14 = insertelement <2 x float> %8, float %13, i32 1
   // CHECK-NEXT: ret <2 x float> %14
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rm>} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rm>} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_bf16_f32_rm_sat(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_bf16_f32_rm_sat(<2 x half> %0, <2 x bfloat> %1) {
+llvm.func @addf_vector_f16_bf16_f32_rm_sat(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_bf16_f32_rm_sat(<2 x half> %0, <2 x bfloat> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x bfloat> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -137,12 +137,12 @@ llvm.func @fadd_vector_f16_bf16_f32_rm_sat(%a : vector<2xf16>, %b : vector<2xbf1
   // CHECK-NEXT: %14 = insertelement <2 x float> %8, float %13, i32 1
   // CHECK-NEXT: ret <2 x float> %14
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_bf16_f32_rm_ftz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_bf16_f32_rm_ftz(<2 x half> %0, <2 x bfloat> %1) {
+llvm.func @addf_vector_f16_bf16_f32_rm_ftz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_bf16_f32_rm_ftz(<2 x half> %0, <2 x bfloat> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x bfloat> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -157,12 +157,12 @@ llvm.func @fadd_vector_f16_bf16_f32_rm_ftz(%a : vector<2xf16>, %b : vector<2xbf1
   // CHECK-NEXT: %14 = insertelement <2 x float> %8, float %13, i32 1
   // CHECK-NEXT: ret <2 x float> %14
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, ftz=true} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, ftz=true} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_bf16_f32_rm_sat_ftz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_bf16_f32_rm_sat_ftz(<2 x half> %0, <2 x bfloat> %1) {
+llvm.func @addf_vector_f16_bf16_f32_rm_sat_ftz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_bf16_f32_rm_sat_ftz(<2 x half> %0, <2 x bfloat> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x bfloat> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -177,12 +177,12 @@ llvm.func @fadd_vector_f16_bf16_f32_rm_sat_ftz(%a : vector<2xf16>, %b : vector<2
   // CHECK-NEXT: %14 = insertelement <2 x float> %8, float %13, i32 1
   // CHECK-NEXT: ret <2 x float> %14
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_bf16_f32_rp(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_bf16_f32_rp(<2 x half> %0, <2 x bfloat> %1) {
+llvm.func @addf_vector_f16_bf16_f32_rp(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_bf16_f32_rp(<2 x half> %0, <2 x bfloat> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x bfloat> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -197,12 +197,12 @@ llvm.func @fadd_vector_f16_bf16_f32_rp(%a : vector<2xf16>, %b : vector<2xbf16>) 
   // CHECK-NEXT: %14 = insertelement <2 x float> %8, float %13, i32 1
   // CHECK-NEXT: ret <2 x float> %14
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rp>} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rp>} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_bf16_f32_rp_sat(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_bf16_f32_rp_sat(<2 x half> %0, <2 x bfloat> %1) {
+llvm.func @addf_vector_f16_bf16_f32_rp_sat(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_bf16_f32_rp_sat(<2 x half> %0, <2 x bfloat> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x bfloat> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -217,12 +217,12 @@ llvm.func @fadd_vector_f16_bf16_f32_rp_sat(%a : vector<2xf16>, %b : vector<2xbf1
   // CHECK-NEXT: %14 = insertelement <2 x float> %8, float %13, i32 1
   // CHECK-NEXT: ret <2 x float> %14
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_bf16_f32_rp_ftz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_bf16_f32_rp_ftz(<2 x half> %0, <2 x bfloat> %1) {
+llvm.func @addf_vector_f16_bf16_f32_rp_ftz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_bf16_f32_rp_ftz(<2 x half> %0, <2 x bfloat> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x bfloat> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -237,12 +237,12 @@ llvm.func @fadd_vector_f16_bf16_f32_rp_ftz(%a : vector<2xf16>, %b : vector<2xbf1
   // CHECK-NEXT: %14 = insertelement <2 x float> %8, float %13, i32 1
   // CHECK-NEXT: ret <2 x float> %14
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, ftz=true} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, ftz=true} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_bf16_f32_rp_sat_ftz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_bf16_f32_rp_sat_ftz(<2 x half> %0, <2 x bfloat> %1) {
+llvm.func @addf_vector_f16_bf16_f32_rp_sat_ftz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_bf16_f32_rp_sat_ftz(<2 x half> %0, <2 x bfloat> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x bfloat> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -257,12 +257,12 @@ llvm.func @fadd_vector_f16_bf16_f32_rp_sat_ftz(%a : vector<2xf16>, %b : vector<2
   // CHECK-NEXT: %14 = insertelement <2 x float> %8, float %13, i32 1
   // CHECK-NEXT: ret <2 x float> %14
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_bf16_f32_rz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_bf16_f32_rz(<2 x half> %0, <2 x bfloat> %1) {
+llvm.func @addf_vector_f16_bf16_f32_rz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_bf16_f32_rz(<2 x half> %0, <2 x bfloat> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x bfloat> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -277,12 +277,12 @@ llvm.func @fadd_vector_f16_bf16_f32_rz(%a : vector<2xf16>, %b : vector<2xbf16>) 
   // CHECK-NEXT: %14 = insertelement <2 x float> %8, float %13, i32 1
   // CHECK-NEXT: ret <2 x float> %14
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_bf16_f32_rz_sat(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_bf16_f32_rz_sat(<2 x half> %0, <2 x bfloat> %1) {
+llvm.func @addf_vector_f16_bf16_f32_rz_sat(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_bf16_f32_rz_sat(<2 x half> %0, <2 x bfloat> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x bfloat> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -297,12 +297,12 @@ llvm.func @fadd_vector_f16_bf16_f32_rz_sat(%a : vector<2xf16>, %b : vector<2xbf1
   // CHECK-NEXT: %14 = insertelement <2 x float> %8, float %13, i32 1
   // CHECK-NEXT: ret <2 x float> %14
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_bf16_f32_rz_ftz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_bf16_f32_rz_ftz(<2 x half> %0, <2 x bfloat> %1) {
+llvm.func @addf_vector_f16_bf16_f32_rz_ftz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_bf16_f32_rz_ftz(<2 x half> %0, <2 x bfloat> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x bfloat> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -317,12 +317,12 @@ llvm.func @fadd_vector_f16_bf16_f32_rz_ftz(%a : vector<2xf16>, %b : vector<2xbf1
   // CHECK-NEXT: %14 = insertelement <2 x float> %8, float %13, i32 1
   // CHECK-NEXT: ret <2 x float> %14
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, ftz=true} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, ftz=true} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_bf16_f32_rz_sat_ftz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_bf16_f32_rz_sat_ftz(<2 x half> %0, <2 x bfloat> %1) {
+llvm.func @addf_vector_f16_bf16_f32_rz_sat_ftz(%a : vector<2xf16>, %b : vector<2xbf16>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_bf16_f32_rz_sat_ftz(<2 x half> %0, <2 x bfloat> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x bfloat> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -337,13 +337,13 @@ llvm.func @fadd_vector_f16_bf16_f32_rz_sat_ftz(%a : vector<2xf16>, %b : vector<2
   // CHECK-NEXT: %14 = insertelement <2 x float> %8, float %13, i32 1
   // CHECK-NEXT: ret <2 x float> %14
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xf16>, vector<2xbf16> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
 // vector<2xf16> + vector<2xf32> -> vector<2xf32>
-llvm.func @fadd_vector_f16_f32_f32(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_f32_f32(<2 x half> %0, <2 x float> %1) {
+llvm.func @addf_vector_f16_f32_f32(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_f32_f32(<2 x half> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -356,12 +356,12 @@ llvm.func @fadd_vector_f16_f32_f32(%a : vector<2xf16>, %b : vector<2xf32>) -> ve
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b : vector<2xf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b : vector<2xf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_f32_f32_rn(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_f32_f32_rn(<2 x half> %0, <2 x float> %1) {
+llvm.func @addf_vector_f16_f32_f32_rn(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_f32_f32_rn(<2 x half> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -374,12 +374,12 @@ llvm.func @fadd_vector_f16_f32_f32_rn(%a : vector<2xf16>, %b : vector<2xf32>) ->
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_f32_f32_rn_sat(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_f32_f32_rn_sat(<2 x half> %0, <2 x float> %1) {
+llvm.func @addf_vector_f16_f32_f32_rn_sat(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_f32_f32_rn_sat(<2 x half> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -392,12 +392,12 @@ llvm.func @fadd_vector_f16_f32_f32_rn_sat(%a : vector<2xf16>, %b : vector<2xf32>
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_f32_f32_rn_ftz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_f32_f32_rn_ftz(<2 x half> %0, <2 x float> %1) {
+llvm.func @addf_vector_f16_f32_f32_rn_ftz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_f32_f32_rn_ftz(<2 x half> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -410,12 +410,12 @@ llvm.func @fadd_vector_f16_f32_f32_rn_ftz(%a : vector<2xf16>, %b : vector<2xf32>
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, ftz=true} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, ftz=true} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_f32_f32_rn_sat_ftz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_f32_f32_rn_sat_ftz(<2 x half> %0, <2 x float> %1) {
+llvm.func @addf_vector_f16_f32_f32_rn_sat_ftz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_f32_f32_rn_sat_ftz(<2 x half> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -428,12 +428,12 @@ llvm.func @fadd_vector_f16_f32_f32_rn_sat_ftz(%a : vector<2xf16>, %b : vector<2x
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_f32_f32_rm(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_f32_f32_rm(<2 x half> %0, <2 x float> %1) {
+llvm.func @addf_vector_f16_f32_f32_rm(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_f32_f32_rm(<2 x half> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -446,12 +446,12 @@ llvm.func @fadd_vector_f16_f32_f32_rm(%a : vector<2xf16>, %b : vector<2xf32>) ->
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rm>} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rm>} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_f32_f32_rm_sat(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_f32_f32_rm_sat(<2 x half> %0, <2 x float> %1) {
+llvm.func @addf_vector_f16_f32_f32_rm_sat(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_f32_f32_rm_sat(<2 x half> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -464,12 +464,12 @@ llvm.func @fadd_vector_f16_f32_f32_rm_sat(%a : vector<2xf16>, %b : vector<2xf32>
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_f32_f32_rm_ftz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_f32_f32_rm_ftz(<2 x half> %0, <2 x float> %1) {
+llvm.func @addf_vector_f16_f32_f32_rm_ftz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_f32_f32_rm_ftz(<2 x half> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -482,12 +482,12 @@ llvm.func @fadd_vector_f16_f32_f32_rm_ftz(%a : vector<2xf16>, %b : vector<2xf32>
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, ftz=true} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, ftz=true} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_f32_f32_rm_sat_ftz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_f32_f32_rm_sat_ftz(<2 x half> %0, <2 x float> %1) {
+llvm.func @addf_vector_f16_f32_f32_rm_sat_ftz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_f32_f32_rm_sat_ftz(<2 x half> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -500,12 +500,12 @@ llvm.func @fadd_vector_f16_f32_f32_rm_sat_ftz(%a : vector<2xf16>, %b : vector<2x
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_f32_f32_rp(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_f32_f32_rp(<2 x half> %0, <2 x float> %1) {
+llvm.func @addf_vector_f16_f32_f32_rp(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_f32_f32_rp(<2 x half> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -518,12 +518,12 @@ llvm.func @fadd_vector_f16_f32_f32_rp(%a : vector<2xf16>, %b : vector<2xf32>) ->
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rp>} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rp>} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_f32_f32_rp_sat(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_f32_f32_rp_sat(<2 x half> %0, <2 x float> %1) {
+llvm.func @addf_vector_f16_f32_f32_rp_sat(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_f32_f32_rp_sat(<2 x half> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -536,12 +536,12 @@ llvm.func @fadd_vector_f16_f32_f32_rp_sat(%a : vector<2xf16>, %b : vector<2xf32>
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_f32_f32_rp_ftz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_f32_f32_rp_ftz(<2 x half> %0, <2 x float> %1) {
+llvm.func @addf_vector_f16_f32_f32_rp_ftz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_f32_f32_rp_ftz(<2 x half> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -554,12 +554,12 @@ llvm.func @fadd_vector_f16_f32_f32_rp_ftz(%a : vector<2xf16>, %b : vector<2xf32>
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, ftz=true} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, ftz=true} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_f32_f32_rp_sat_ftz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_f32_f32_rp_sat_ftz(<2 x half> %0, <2 x float> %1) {
+llvm.func @addf_vector_f16_f32_f32_rp_sat_ftz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_f32_f32_rp_sat_ftz(<2 x half> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -572,12 +572,12 @@ llvm.func @fadd_vector_f16_f32_f32_rp_sat_ftz(%a : vector<2xf16>, %b : vector<2x
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_f32_f32_rz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_f32_f32_rz(<2 x half> %0, <2 x float> %1) {
+llvm.func @addf_vector_f16_f32_f32_rz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_f32_f32_rz(<2 x half> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -590,12 +590,12 @@ llvm.func @fadd_vector_f16_f32_f32_rz(%a : vector<2xf16>, %b : vector<2xf32>) ->
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_f32_f32_rz_sat(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_f32_f32_rz_sat(<2 x half> %0, <2 x float> %1) {
+llvm.func @addf_vector_f16_f32_f32_rz_sat(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_f32_f32_rz_sat(<2 x half> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -608,12 +608,12 @@ llvm.func @fadd_vector_f16_f32_f32_rz_sat(%a : vector<2xf16>, %b : vector<2xf32>
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_f32_f32_rz_ftz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_f32_f32_rz_ftz(<2 x half> %0, <2 x float> %1) {
+llvm.func @addf_vector_f16_f32_f32_rz_ftz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_f32_f32_rz_ftz(<2 x half> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -626,12 +626,12 @@ llvm.func @fadd_vector_f16_f32_f32_rz_ftz(%a : vector<2xf16>, %b : vector<2xf32>
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, ftz=true} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, ftz=true} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_f16_f32_f32_rz_sat_ftz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_f16_f32_f32_rz_sat_ftz(<2 x half> %0, <2 x float> %1) {
+llvm.func @addf_vector_f16_f32_f32_rz_sat_ftz(%a : vector<2xf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_f16_f32_f32_rz_sat_ftz(<2 x half> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
@@ -644,13 +644,13 @@ llvm.func @fadd_vector_f16_f32_f32_rz_sat_ftz(%a : vector<2xf16>, %b : vector<2x
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
 // vector<2xf16> + vector<2xf64> -> vector<2xf64>
-llvm.func @fadd_vector_f16_f64_f64(%a : vector<2xf16>, %b : vector<2xf64>) -> vector<2xf64> {
-  // CHECK-LABEL: define <2 x double> @fadd_vector_f16_f64_f64(<2 x half> %0, <2 x double> %1) {
+llvm.func @addf_vector_f16_f64_f64(%a : vector<2xf16>, %b : vector<2xf64>) -> vector<2xf64> {
+  // CHECK-LABEL: define <2 x double> @addf_vector_f16_f64_f64(<2 x half> %0, <2 x double> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to double
@@ -663,12 +663,12 @@ llvm.func @fadd_vector_f16_f64_f64(%a : vector<2xf16>, %b : vector<2xf64>) -> ve
   // CHECK-NEXT: %12 = insertelement <2 x double> %7, double %11, i32 1
   // CHECK-NEXT: ret <2 x double> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b : vector<2xf16>, vector<2xf64> -> vector<2xf64>
+  %f1 = nvvm.addf %a, %b : vector<2xf16>, vector<2xf64> -> vector<2xf64>
   llvm.return %f1 : vector<2xf64>
 }
 
-llvm.func @fadd_vector_f16_f64_f64_rn(%a : vector<2xf16>, %b : vector<2xf64>) -> vector<2xf64> {
-  // CHECK-LABEL: define <2 x double> @fadd_vector_f16_f64_f64_rn(<2 x half> %0, <2 x double> %1) {
+llvm.func @addf_vector_f16_f64_f64_rn(%a : vector<2xf16>, %b : vector<2xf64>) -> vector<2xf64> {
+  // CHECK-LABEL: define <2 x double> @addf_vector_f16_f64_f64_rn(<2 x half> %0, <2 x double> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to double
@@ -681,12 +681,12 @@ llvm.func @fadd_vector_f16_f64_f64_rn(%a : vector<2xf16>, %b : vector<2xf64>) ->
   // CHECK-NEXT: %12 = insertelement <2 x double> %7, double %11, i32 1
   // CHECK-NEXT: ret <2 x double> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xf16>, vector<2xf64> -> vector<2xf64>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xf16>, vector<2xf64> -> vector<2xf64>
   llvm.return %f1 : vector<2xf64>
 }
 
-llvm.func @fadd_vector_f16_f64_f64_rm(%a : vector<2xf16>, %b : vector<2xf64>) -> vector<2xf64> {
-  // CHECK-LABEL: define <2 x double> @fadd_vector_f16_f64_f64_rm(<2 x half> %0, <2 x double> %1) {
+llvm.func @addf_vector_f16_f64_f64_rm(%a : vector<2xf16>, %b : vector<2xf64>) -> vector<2xf64> {
+  // CHECK-LABEL: define <2 x double> @addf_vector_f16_f64_f64_rm(<2 x half> %0, <2 x double> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to double
@@ -699,12 +699,12 @@ llvm.func @fadd_vector_f16_f64_f64_rm(%a : vector<2xf16>, %b : vector<2xf64>) ->
   // CHECK-NEXT: %12 = insertelement <2 x double> %7, double %11, i32 1
   // CHECK-NEXT: ret <2 x double> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rm>} : vector<2xf16>, vector<2xf64> -> vector<2xf64>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rm>} : vector<2xf16>, vector<2xf64> -> vector<2xf64>
   llvm.return %f1 : vector<2xf64>
 }
 
-llvm.func @fadd_vector_f16_f64_f64_rp(%a : vector<2xf16>, %b : vector<2xf64>) -> vector<2xf64> {
-  // CHECK-LABEL: define <2 x double> @fadd_vector_f16_f64_f64_rp(<2 x half> %0, <2 x double> %1) {
+llvm.func @addf_vector_f16_f64_f64_rp(%a : vector<2xf16>, %b : vector<2xf64>) -> vector<2xf64> {
+  // CHECK-LABEL: define <2 x double> @addf_vector_f16_f64_f64_rp(<2 x half> %0, <2 x double> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to double
@@ -717,12 +717,12 @@ llvm.func @fadd_vector_f16_f64_f64_rp(%a : vector<2xf16>, %b : vector<2xf64>) ->
   // CHECK-NEXT: %12 = insertelement <2 x double> %7, double %11, i32 1
   // CHECK-NEXT: ret <2 x double> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rp>} : vector<2xf16>, vector<2xf64> -> vector<2xf64>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rp>} : vector<2xf16>, vector<2xf64> -> vector<2xf64>
   llvm.return %f1 : vector<2xf64>
 }
 
-llvm.func @fadd_vector_f16_f64_f64_rz(%a : vector<2xf16>, %b : vector<2xf64>) -> vector<2xf64> {
-  // CHECK-LABEL: define <2 x double> @fadd_vector_f16_f64_f64_rz(<2 x half> %0, <2 x double> %1) {
+llvm.func @addf_vector_f16_f64_f64_rz(%a : vector<2xf16>, %b : vector<2xf64>) -> vector<2xf64> {
+  // CHECK-LABEL: define <2 x double> @addf_vector_f16_f64_f64_rz(<2 x half> %0, <2 x double> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x half> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to double
@@ -735,13 +735,13 @@ llvm.func @fadd_vector_f16_f64_f64_rz(%a : vector<2xf16>, %b : vector<2xf64>) ->
   // CHECK-NEXT: %12 = insertelement <2 x double> %7, double %11, i32 1
   // CHECK-NEXT: ret <2 x double> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xf16>, vector<2xf64> -> vector<2xf64>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xf16>, vector<2xf64> -> vector<2xf64>
   llvm.return %f1 : vector<2xf64>
 }
 
 // vector<2xbf16> + vector<2xf32> -> vector<2xf32>
-llvm.func @fadd_vector_bf16_f32_f32(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_bf16_f32_f32(<2 x bfloat> %0, <2 x float> %1) {
+llvm.func @addf_vector_bf16_f32_f32(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_bf16_f32_f32(<2 x bfloat> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
@@ -754,12 +754,12 @@ llvm.func @fadd_vector_bf16_f32_f32(%a : vector<2xbf16>, %b : vector<2xf32>) -> 
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_bf16_f32_f32_rn(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_bf16_f32_f32_rn(<2 x bfloat> %0, <2 x float> %1) {
+llvm.func @addf_vector_bf16_f32_f32_rn(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_bf16_f32_f32_rn(<2 x bfloat> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
@@ -772,12 +772,12 @@ llvm.func @fadd_vector_bf16_f32_f32_rn(%a : vector<2xbf16>, %b : vector<2xf32>) 
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_bf16_f32_f32_rn_sat(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_bf16_f32_f32_rn_sat(<2 x bfloat> %0, <2 x float> %1) {
+llvm.func @addf_vector_bf16_f32_f32_rn_sat(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_bf16_f32_f32_rn_sat(<2 x bfloat> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
@@ -790,12 +790,12 @@ llvm.func @fadd_vector_bf16_f32_f32_rn_sat(%a : vector<2xbf16>, %b : vector<2xf3
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_bf16_f32_f32_rn_ftz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_bf16_f32_f32_rn_ftz(<2 x bfloat> %0, <2 x float> %1) {
+llvm.func @addf_vector_bf16_f32_f32_rn_ftz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_bf16_f32_f32_rn_ftz(<2 x bfloat> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
@@ -808,12 +808,12 @@ llvm.func @fadd_vector_bf16_f32_f32_rn_ftz(%a : vector<2xbf16>, %b : vector<2xf3
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, ftz=true} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, ftz=true} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_bf16_f32_f32_rn_sat_ftz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_bf16_f32_f32_rn_sat_ftz(<2 x bfloat> %0, <2 x float> %1) {
+llvm.func @addf_vector_bf16_f32_f32_rn_sat_ftz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_bf16_f32_f32_rn_sat_ftz(<2 x bfloat> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
@@ -826,12 +826,12 @@ llvm.func @fadd_vector_bf16_f32_f32_rn_sat_ftz(%a : vector<2xbf16>, %b : vector<
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_bf16_f32_f32_rm(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_bf16_f32_f32_rm(<2 x bfloat> %0, <2 x float> %1) {
+llvm.func @addf_vector_bf16_f32_f32_rm(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_bf16_f32_f32_rm(<2 x bfloat> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
@@ -844,12 +844,12 @@ llvm.func @fadd_vector_bf16_f32_f32_rm(%a : vector<2xbf16>, %b : vector<2xf32>) 
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rm>} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rm>} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_bf16_f32_f32_rm_sat(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_bf16_f32_f32_rm_sat(<2 x bfloat> %0, <2 x float> %1) {
+llvm.func @addf_vector_bf16_f32_f32_rm_sat(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_bf16_f32_f32_rm_sat(<2 x bfloat> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
@@ -862,12 +862,12 @@ llvm.func @fadd_vector_bf16_f32_f32_rm_sat(%a : vector<2xbf16>, %b : vector<2xf3
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_bf16_f32_f32_rm_ftz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_bf16_f32_f32_rm_ftz(<2 x bfloat> %0, <2 x float> %1) {
+llvm.func @addf_vector_bf16_f32_f32_rm_ftz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_bf16_f32_f32_rm_ftz(<2 x bfloat> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
@@ -880,12 +880,12 @@ llvm.func @fadd_vector_bf16_f32_f32_rm_ftz(%a : vector<2xbf16>, %b : vector<2xf3
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, ftz=true} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, ftz=true} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_bf16_f32_f32_rm_sat_ftz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_bf16_f32_f32_rm_sat_ftz(<2 x bfloat> %0, <2 x float> %1) {
+llvm.func @addf_vector_bf16_f32_f32_rm_sat_ftz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_bf16_f32_f32_rm_sat_ftz(<2 x bfloat> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
@@ -898,12 +898,12 @@ llvm.func @fadd_vector_bf16_f32_f32_rm_sat_ftz(%a : vector<2xbf16>, %b : vector<
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_bf16_f32_f32_rp(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_bf16_f32_f32_rp(<2 x bfloat> %0, <2 x float> %1) {
+llvm.func @addf_vector_bf16_f32_f32_rp(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_bf16_f32_f32_rp(<2 x bfloat> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
@@ -916,12 +916,12 @@ llvm.func @fadd_vector_bf16_f32_f32_rp(%a : vector<2xbf16>, %b : vector<2xf32>) 
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rp>} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rp>} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_bf16_f32_f32_rp_sat(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_bf16_f32_f32_rp_sat(<2 x bfloat> %0, <2 x float> %1) {
+llvm.func @addf_vector_bf16_f32_f32_rp_sat(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_bf16_f32_f32_rp_sat(<2 x bfloat> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
@@ -934,12 +934,12 @@ llvm.func @fadd_vector_bf16_f32_f32_rp_sat(%a : vector<2xbf16>, %b : vector<2xf3
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_bf16_f32_f32_rp_ftz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_bf16_f32_f32_rp_ftz(<2 x bfloat> %0, <2 x float> %1) {
+llvm.func @addf_vector_bf16_f32_f32_rp_ftz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_bf16_f32_f32_rp_ftz(<2 x bfloat> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
@@ -952,12 +952,12 @@ llvm.func @fadd_vector_bf16_f32_f32_rp_ftz(%a : vector<2xbf16>, %b : vector<2xf3
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, ftz=true} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, ftz=true} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_bf16_f32_f32_rp_sat_ftz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_bf16_f32_f32_rp_sat_ftz(<2 x bfloat> %0, <2 x float> %1) {
+llvm.func @addf_vector_bf16_f32_f32_rp_sat_ftz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_bf16_f32_f32_rp_sat_ftz(<2 x bfloat> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
@@ -970,12 +970,12 @@ llvm.func @fadd_vector_bf16_f32_f32_rp_sat_ftz(%a : vector<2xbf16>, %b : vector<
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_bf16_f32_f32_rz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_bf16_f32_f32_rz(<2 x bfloat> %0, <2 x float> %1) {
+llvm.func @addf_vector_bf16_f32_f32_rz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_bf16_f32_f32_rz(<2 x bfloat> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
@@ -988,12 +988,12 @@ llvm.func @fadd_vector_bf16_f32_f32_rz(%a : vector<2xbf16>, %b : vector<2xf32>) 
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_bf16_f32_f32_rz_sat(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_bf16_f32_f32_rz_sat(<2 x bfloat> %0, <2 x float> %1) {
+llvm.func @addf_vector_bf16_f32_f32_rz_sat(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_bf16_f32_f32_rz_sat(<2 x bfloat> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
@@ -1006,12 +1006,12 @@ llvm.func @fadd_vector_bf16_f32_f32_rz_sat(%a : vector<2xbf16>, %b : vector<2xf3
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_bf16_f32_f32_rz_ftz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_bf16_f32_f32_rz_ftz(<2 x bfloat> %0, <2 x float> %1) {
+llvm.func @addf_vector_bf16_f32_f32_rz_ftz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_bf16_f32_f32_rz_ftz(<2 x bfloat> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
@@ -1024,12 +1024,12 @@ llvm.func @fadd_vector_bf16_f32_f32_rz_ftz(%a : vector<2xbf16>, %b : vector<2xf3
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, ftz=true} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, ftz=true} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
-llvm.func @fadd_vector_bf16_f32_f32_rz_sat_ftz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
-  // CHECK-LABEL: define <2 x float> @fadd_vector_bf16_f32_f32_rz_sat_ftz(<2 x bfloat> %0, <2 x float> %1) {
+llvm.func @addf_vector_bf16_f32_f32_rz_sat_ftz(%a : vector<2xbf16>, %b : vector<2xf32>) -> vector<2xf32> {
+  // CHECK-LABEL: define <2 x float> @addf_vector_bf16_f32_f32_rz_sat_ftz(<2 x bfloat> %0, <2 x float> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
@@ -1042,13 +1042,13 @@ llvm.func @fadd_vector_bf16_f32_f32_rz_sat_ftz(%a : vector<2xbf16>, %b : vector<
   // CHECK-NEXT: %12 = insertelement <2 x float> %7, float %11, i32 1
   // CHECK-NEXT: ret <2 x float> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>, ftz=true} : vector<2xbf16>, vector<2xf32> -> vector<2xf32>
   llvm.return %f1 : vector<2xf32>
 }
 
 // vector<2xbf16> + vector<2xf64> -> vector<2xf64>
-llvm.func @fadd_vector_bf16_f64_f64(%a : vector<2xbf16>, %b : vector<2xf64>) -> vector<2xf64> {
-  // CHECK-LABEL: define <2 x double> @fadd_vector_bf16_f64_f64(<2 x bfloat> %0, <2 x double> %1) {
+llvm.func @addf_vector_bf16_f64_f64(%a : vector<2xbf16>, %b : vector<2xf64>) -> vector<2xf64> {
+  // CHECK-LABEL: define <2 x double> @addf_vector_bf16_f64_f64(<2 x bfloat> %0, <2 x double> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to double
@@ -1061,12 +1061,12 @@ llvm.func @fadd_vector_bf16_f64_f64(%a : vector<2xbf16>, %b : vector<2xf64>) -> 
   // CHECK-NEXT: %12 = insertelement <2 x double> %7, double %11, i32 1
   // CHECK-NEXT: ret <2 x double> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b : vector<2xbf16>, vector<2xf64> -> vector<2xf64>
+  %f1 = nvvm.addf %a, %b : vector<2xbf16>, vector<2xf64> -> vector<2xf64>
   llvm.return %f1 : vector<2xf64>
 }
 
-llvm.func @fadd_vector_bf16_f64_f64_rn(%a : vector<2xbf16>, %b : vector<2xf64>) -> vector<2xf64> {
-  // CHECK-LABEL: define <2 x double> @fadd_vector_bf16_f64_f64_rn(<2 x bfloat> %0, <2 x double> %1) {
+llvm.func @addf_vector_bf16_f64_f64_rn(%a : vector<2xbf16>, %b : vector<2xf64>) -> vector<2xf64> {
+  // CHECK-LABEL: define <2 x double> @addf_vector_bf16_f64_f64_rn(<2 x bfloat> %0, <2 x double> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to double
@@ -1079,12 +1079,12 @@ llvm.func @fadd_vector_bf16_f64_f64_rn(%a : vector<2xbf16>, %b : vector<2xf64>) 
   // CHECK-NEXT: %12 = insertelement <2 x double> %7, double %11, i32 1
   // CHECK-NEXT: ret <2 x double> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xbf16>, vector<2xf64> -> vector<2xf64>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xbf16>, vector<2xf64> -> vector<2xf64>
   llvm.return %f1 : vector<2xf64>
 }
 
-llvm.func @fadd_vector_bf16_f64_f64_rm(%a : vector<2xbf16>, %b : vector<2xf64>) -> vector<2xf64> {
-  // CHECK-LABEL: define <2 x double> @fadd_vector_bf16_f64_f64_rm(<2 x bfloat> %0, <2 x double> %1) {
+llvm.func @addf_vector_bf16_f64_f64_rm(%a : vector<2xbf16>, %b : vector<2xf64>) -> vector<2xf64> {
+  // CHECK-LABEL: define <2 x double> @addf_vector_bf16_f64_f64_rm(<2 x bfloat> %0, <2 x double> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to double
@@ -1097,12 +1097,12 @@ llvm.func @fadd_vector_bf16_f64_f64_rm(%a : vector<2xbf16>, %b : vector<2xf64>) 
   // CHECK-NEXT: %12 = insertelement <2 x double> %7, double %11, i32 1
   // CHECK-NEXT: ret <2 x double> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rm>} : vector<2xbf16>, vector<2xf64> -> vector<2xf64>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rm>} : vector<2xbf16>, vector<2xf64> -> vector<2xf64>
   llvm.return %f1 : vector<2xf64>
 }
 
-llvm.func @fadd_vector_bf16_f64_f64_rp(%a : vector<2xbf16>, %b : vector<2xf64>) -> vector<2xf64> {
-  // CHECK-LABEL: define <2 x double> @fadd_vector_bf16_f64_f64_rp(<2 x bfloat> %0, <2 x double> %1) {
+llvm.func @addf_vector_bf16_f64_f64_rp(%a : vector<2xbf16>, %b : vector<2xf64>) -> vector<2xf64> {
+  // CHECK-LABEL: define <2 x double> @addf_vector_bf16_f64_f64_rp(<2 x bfloat> %0, <2 x double> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to double
@@ -1115,12 +1115,12 @@ llvm.func @fadd_vector_bf16_f64_f64_rp(%a : vector<2xbf16>, %b : vector<2xf64>) 
   // CHECK-NEXT: %12 = insertelement <2 x double> %7, double %11, i32 1
   // CHECK-NEXT: ret <2 x double> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rp>} : vector<2xbf16>, vector<2xf64> -> vector<2xf64>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rp>} : vector<2xbf16>, vector<2xf64> -> vector<2xf64>
   llvm.return %f1 : vector<2xf64>
 }
 
-llvm.func @fadd_vector_bf16_f64_f64_rz(%a : vector<2xbf16>, %b : vector<2xf64>) -> vector<2xf64> {
-  // CHECK-LABEL: define <2 x double> @fadd_vector_bf16_f64_f64_rz(<2 x bfloat> %0, <2 x double> %1) {
+llvm.func @addf_vector_bf16_f64_f64_rz(%a : vector<2xbf16>, %b : vector<2xf64>) -> vector<2xf64> {
+  // CHECK-LABEL: define <2 x double> @addf_vector_bf16_f64_f64_rz(<2 x bfloat> %0, <2 x double> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x bfloat> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to double
@@ -1133,13 +1133,13 @@ llvm.func @fadd_vector_bf16_f64_f64_rz(%a : vector<2xbf16>, %b : vector<2xf64>) 
   // CHECK-NEXT: %12 = insertelement <2 x double> %7, double %11, i32 1
   // CHECK-NEXT: ret <2 x double> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xbf16>, vector<2xf64> -> vector<2xf64>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xbf16>, vector<2xf64> -> vector<2xf64>
   llvm.return %f1 : vector<2xf64>
 }
 
 // vector<2xf32> + vector<2xf64> -> vector<2xf64>
-llvm.func @fadd_vector_f32_f64_f64(%a : vector<2xf32>, %b : vector<2xf64>) -> vector<2xf64> {
-  // CHECK-LABEL: define <2 x double> @fadd_vector_f32_f64_f64(<2 x float> %0, <2 x double> %1) {
+llvm.func @addf_vector_f32_f64_f64(%a : vector<2xf32>, %b : vector<2xf64>) -> vector<2xf64> {
+  // CHECK-LABEL: define <2 x double> @addf_vector_f32_f64_f64(<2 x float> %0, <2 x double> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x float> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext float %3 to double
@@ -1152,12 +1152,12 @@ llvm.func @fadd_vector_f32_f64_f64(%a : vector<2xf32>, %b : vector<2xf64>) -> ve
   // CHECK-NEXT: %12 = insertelement <2 x double> %7, double %11, i32 1
   // CHECK-NEXT: ret <2 x double> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b : vector<2xf32>, vector<2xf64> -> vector<2xf64>
+  %f1 = nvvm.addf %a, %b : vector<2xf32>, vector<2xf64> -> vector<2xf64>
   llvm.return %f1 : vector<2xf64>
 }
 
-llvm.func @fadd_vector_f32_f64_f64_rn(%a : vector<2xf32>, %b : vector<2xf64>) -> vector<2xf64> {
-  // CHECK-LABEL: define <2 x double> @fadd_vector_f32_f64_f64_rn(<2 x float> %0, <2 x double> %1) {
+llvm.func @addf_vector_f32_f64_f64_rn(%a : vector<2xf32>, %b : vector<2xf64>) -> vector<2xf64> {
+  // CHECK-LABEL: define <2 x double> @addf_vector_f32_f64_f64_rn(<2 x float> %0, <2 x double> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x float> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext float %3 to double
@@ -1170,12 +1170,12 @@ llvm.func @fadd_vector_f32_f64_f64_rn(%a : vector<2xf32>, %b : vector<2xf64>) ->
   // CHECK-NEXT: %12 = insertelement <2 x double> %7, double %11, i32 1
   // CHECK-NEXT: ret <2 x double> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xf32>, vector<2xf64> -> vector<2xf64>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rn>} : vector<2xf32>, vector<2xf64> -> vector<2xf64>
   llvm.return %f1 : vector<2xf64>
 }
 
-llvm.func @fadd_vector_f32_f64_f64_rm(%a : vector<2xf32>, %b : vector<2xf64>) -> vector<2xf64> {
-  // CHECK-LABEL: define <2 x double> @fadd_vector_f32_f64_f64_rm(<2 x float> %0, <2 x double> %1) {
+llvm.func @addf_vector_f32_f64_f64_rm(%a : vector<2xf32>, %b : vector<2xf64>) -> vector<2xf64> {
+  // CHECK-LABEL: define <2 x double> @addf_vector_f32_f64_f64_rm(<2 x float> %0, <2 x double> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x float> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext float %3 to double
@@ -1188,12 +1188,12 @@ llvm.func @fadd_vector_f32_f64_f64_rm(%a : vector<2xf32>, %b : vector<2xf64>) ->
   // CHECK-NEXT: %12 = insertelement <2 x double> %7, double %11, i32 1
   // CHECK-NEXT: ret <2 x double> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rm>} : vector<2xf32>, vector<2xf64> -> vector<2xf64>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rm>} : vector<2xf32>, vector<2xf64> -> vector<2xf64>
   llvm.return %f1 : vector<2xf64>
 }
 
-llvm.func @fadd_vector_f32_f64_f64_rp(%a : vector<2xf32>, %b : vector<2xf64>) -> vector<2xf64> {
-  // CHECK-LABEL: define <2 x double> @fadd_vector_f32_f64_f64_rp(<2 x float> %0, <2 x double> %1) {
+llvm.func @addf_vector_f32_f64_f64_rp(%a : vector<2xf32>, %b : vector<2xf64>) -> vector<2xf64> {
+  // CHECK-LABEL: define <2 x double> @addf_vector_f32_f64_f64_rp(<2 x float> %0, <2 x double> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x float> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext float %3 to double
@@ -1206,12 +1206,12 @@ llvm.func @fadd_vector_f32_f64_f64_rp(%a : vector<2xf32>, %b : vector<2xf64>) ->
   // CHECK-NEXT: %12 = insertelement <2 x double> %7, double %11, i32 1
   // CHECK-NEXT: ret <2 x double> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rp>} : vector<2xf32>, vector<2xf64> -> vector<2xf64>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rp>} : vector<2xf32>, vector<2xf64> -> vector<2xf64>
   llvm.return %f1 : vector<2xf64>
 }
 
-llvm.func @fadd_vector_f32_f64_f64_rz(%a : vector<2xf32>, %b : vector<2xf64>) -> vector<2xf64> {
-  // CHECK-LABEL: define <2 x double> @fadd_vector_f32_f64_f64_rz(<2 x float> %0, <2 x double> %1) {
+llvm.func @addf_vector_f32_f64_f64_rz(%a : vector<2xf32>, %b : vector<2xf64>) -> vector<2xf64> {
+  // CHECK-LABEL: define <2 x double> @addf_vector_f32_f64_f64_rz(<2 x float> %0, <2 x double> %1) {
   // CHECK-NEXT: %3 = extractelement <2 x float> %0, i32 0
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext float %3 to double
@@ -1224,6 +1224,6 @@ llvm.func @fadd_vector_f32_f64_f64_rz(%a : vector<2xf32>, %b : vector<2xf64>) ->
   // CHECK-NEXT: %12 = insertelement <2 x double> %7, double %11, i32 1
   // CHECK-NEXT: ret <2 x double> %12
   // CHECK-NEXT: }
-  %f1 = nvvm.fadd %a, %b {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xf32>, vector<2xf64> -> vector<2xf64>
+  %f1 = nvvm.addf %a, %b {rnd = #nvvm.fp_rnd_mode<rz>} : vector<2xf32>, vector<2xf64> -> vector<2xf64>
   llvm.return %f1 : vector<2xf64>
 }

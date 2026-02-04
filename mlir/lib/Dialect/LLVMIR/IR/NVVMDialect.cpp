@@ -3072,7 +3072,7 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
   return success();
 }
 
-LogicalResult NVVM::FAddOp::verify() {
+LogicalResult NVVM::AddFOp::verify() {
   mlir::Type resFType = getRes().getType();
   mlir::Type lhsFType = getLhs().getType();
   mlir::Type rhsFType = getRhs().getType();
@@ -3090,29 +3090,8 @@ LogicalResult NVVM::FAddOp::verify() {
   auto lhsBaseFType = getBaseFType(lhsFType);
   auto rhsBaseFType = getBaseFType(rhsFType);
 
-  // Supported operand types based on result types are:
-  // Result Type    : Operand Type(s)
-  // f64            : f64, f32, f16, bf16
-  // f32            : f32, f16, bf16
-  // f16            : f16
-  // bf16           : bf16
-  // vector<2xf64>  : vector<2x{f64, f32, f16, bf16}
-  // vector<2xf32>  : vector<2x{f32, f16, bf16}
-  // vector<2xf16>  : vector<2xf16>
-  // vector<2xbf16> : vector<2xbf16>
-
   bool sameTypeOperation =
       llvm::all_equal({lhsBaseFType, rhsBaseFType, resBaseFType});
-
-  if (!llvm::all_equal({isa<VectorType>(resFType), isa<VectorType>(lhsFType),
-                        isa<VectorType>(rhsFType)}))
-    return emitOpError("cannot mix vector and scalar types for floating point "
-                       "addition operation");
-
-  if (resBaseFType.getIntOrFloatBitWidth() <
-      std::max(lhsBaseFType.getIntOrFloatBitWidth(),
-               rhsBaseFType.getIntOrFloatBitWidth()))
-    return emitOpError("result type must be at least as wide as the operands");
 
   if ((resBaseFType.isF16() || resBaseFType.isBF16()) && !sameTypeOperation) {
     return emitOpError(
@@ -3237,24 +3216,24 @@ std::string NVVM::MBarrierTryWaitParityOp::getPtx() {
 // Canonicalization patterns
 //===----------------------------------------------------------------------===//
 
-struct ConvertFsubToFnegFadd : public OpRewritePattern<FSubOp> {
-  using OpRewritePattern<FSubOp>::OpRewritePattern;
+struct ConvertFsubToFnegFadd : public OpRewritePattern<SubFOp> {
+  using OpRewritePattern<SubFOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(FSubOp op,
+  LogicalResult matchAndRewrite(SubFOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
 
     Value negRhs =
         LLVM::FNegOp::create(rewriter, loc, op.getRhs().getType(), op.getRhs());
 
-    rewriter.replaceOpWithNewOp<FAddOp>(op, op.getType(), op.getLhs(), negRhs,
+    rewriter.replaceOpWithNewOp<AddFOp>(op, op.getType(), op.getLhs(), negRhs,
                                         op.getRnd(), op.getSat(), op.getFtz());
 
     return success();
   }
 };
 
-void FSubOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
+void SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
                                          MLIRContext *context) {
   patterns.add<ConvertFsubToFnegFadd>(context);
 }

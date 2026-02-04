@@ -446,9 +446,9 @@ getFenceProxySyncRestrictID(NVVM::MemOrderKind order) {
                    nvvm_fence_proxy_async_generic_release_sync_restrict_space_cta_scope_cluster;
 }
 
-void NVVM::FAddOp::lowerFAddToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
+void NVVM::AddFOp::lowerAddFToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
                                      llvm::IRBuilderBase &builder) {
-  auto thisOp = cast<NVVM::FAddOp>(op);
+  auto thisOp = cast<NVVM::AddFOp>(op);
   NVVM::FPRoundingMode rndMode = thisOp.getRnd();
   NVVM::SaturationMode satMode = thisOp.getSat();
   bool isFTZ = thisOp.getFtz();
