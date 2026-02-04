@@ -77,7 +77,7 @@ llvm.func @denormal_fp_math_f32_func_preserve_sign() attributes {denormal_fpenv 
 llvm.func @denormal_fp_math_dynamic_f32_func_preserve_sign() attributes {denormal_fpenv = #llvm.denormal_fpenv<default_output_mode = dynamic, default_input_mode = dynamic, float_output_mode = preservesign, float_input_mode = preservesign>}  {
   llvm.return
 }
-// CHECK: attributes #[[ATTRS]] = { denormal_fpenv(dynamic float: preservesign) }
+// CHECK: attributes #[[ATTRS]] = { denormal_fpenv(dynamic, float: preservesign) }
 
 // -----
 
@@ -86,7 +86,7 @@ llvm.func @denormal_fp_math_dynamic_f32_func_preserve_sign() attributes {denorma
 llvm.func @denormal_fp_math_mixed_modes() attributes {denormal_fpenv = #llvm.denormal_fpenv<default_output_mode = dynamic, default_input_mode = positivezero, float_output_mode = dynamic, float_input_mode = ieee>}  {
   llvm.return
 }
-// CHECK: attributes #[[ATTRS]] = { denormal_fpenv(dynamic|positivezero float: dynamic|ieee) }
+// CHECK: attributes #[[ATTRS]] = { denormal_fpenv(dynamic|positivezero, float: dynamic|ieee) }
 
 // -----
 

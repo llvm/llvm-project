@@ -2705,6 +2705,7 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("uwtable"),
     StringLiteral("vscale_range"),
     StringLiteral("willreturn"),
+    StringLiteral("denormal_fpenv"),
 };
 
 // List of LLVM IR attributes that are handled by prefix to map onto an MLIR

@@ -147,19 +147,19 @@ __global__ void kernel_f64(double* out, double* a, double* b, double* c) {
 // IEEEF64-PSZF32: #[[$WEAK_FUNCATTR]] = { {{.*}} denormal_fpenv(float: preservesign)
 // IEEEF64-PSZF32-SAME: "target-cpu"="gfx803"
 
-// IEEEF32-PSZF64-DYNF32: #[[$KERNELATTR]] = { {{.*}} denormal_fpenv(preservesign float: ieee) {{.*}} "target-cpu"="gfx803" {{.*}}  }
+// IEEEF32-PSZF64-DYNF32: #[[$KERNELATTR]] = { {{.*}} denormal_fpenv(preservesign, float: ieee) {{.*}} "target-cpu"="gfx803" {{.*}}  }
 // implicit-not
 // implicit check-not
 
 
-// IEEEF32-PSZF64-DYNFULL: #[[$KERNELATTR]] = { {{.*}} denormal_fpenv(preservesign float: ieee)
+// IEEEF32-PSZF64-DYNFULL: #[[$KERNELATTR]] = { {{.*}} denormal_fpenv(preservesign, float: ieee)
 // IEEEF32-PSZF64-DYNFULL-SAME: "target-cpu"="gfx803"
-// IEEEF32-PSZF64-DYNFULL: #[[$FUNCATTR]] = { {{.*}} denormal_fpenv(preservesign float: ieee)
+// IEEEF32-PSZF64-DYNFULL: #[[$FUNCATTR]] = { {{.*}} denormal_fpenv(preservesign, float: ieee)
 // IEEEF32-PSZF64-DYNFULL-SAME: "target-cpu"="gfx803"
-// IEEEF32-PSZF64-DYNFULL: #[[$WEAK_FUNCATTR]] = { {{.*}} denormal_fpenv(preservesign float: ieee)
+// IEEEF32-PSZF64-DYNFULL: #[[$WEAK_FUNCATTR]] = { {{.*}} denormal_fpenv(preservesign, float: ieee)
 // IEEEF32-PSZF64-DYNFULL-SAME: "target-cpu"="gfx803"
 
 // -mlink-bitcode-file doesn't internalize or propagate attributes.
-// NOINTERNALIZE-IEEEF32-PSZF64-DYNFULL: #[[$KERNELATTR]] = { {{.*}} denormal_fpenv(preservesign float: ieee) {{.*}} "target-cpu"="gfx803" {{.*}} }
+// NOINTERNALIZE-IEEEF32-PSZF64-DYNFULL: #[[$KERNELATTR]] = { {{.*}} denormal_fpenv(preservesign, float: ieee) {{.*}} "target-cpu"="gfx803" {{.*}} }
 // NOINTERNALIZE-IEEEF32-PSZF64-DYNFULL: #[[$FUNCATTR]] = { {{.*}} denormal_fpenv(dynamic) {{.*}} }
 // NOINTERNALIZE-IEEEF32-PSZF64-DYNFULL: #[[$WEAK_FUNCATTR]] = { {{.*}} denormal_fpenv(dynamic) {{.*}} }

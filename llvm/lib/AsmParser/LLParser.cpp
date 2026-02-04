@@ -2719,24 +2719,28 @@ std::optional<DenormalFPEnv> LLParser::parseDenormalFPEnvAttr() {
 
   Lex.Lex();
 
-  if (!EatIfPresent(lltok::lparen)) {
-    tokError("expected '('");
+  if (parseToken(lltok::lparen, "expected '('"))
     return std::nullopt;
-  }
 
   DenormalMode DefaultMode = DenormalMode::getIEEE();
   DenormalMode F32Mode = DenormalMode::getInvalid();
 
+  bool HasDefaultSection = false;
   if (Lex.getKind() != lltok::Type) {
     std::optional<DenormalMode> ParsedDefaultMode = parseDenormalFPEnvEntry();
     if (!ParsedDefaultMode)
       return {};
     DefaultMode = *ParsedDefaultMode;
+    HasDefaultSection = true;
   }
 
-  EatIfPresent(lltok::comma);
-
+  bool HasComma = EatIfPresent(lltok::comma);
   if (Lex.getKind() == lltok::Type) {
+    if (HasDefaultSection && !HasComma) {
+      tokError("expected ',' before float:");
+      return {};
+    }
+
     Type *Ty = nullptr;
     if (parseType(Ty) || !Ty->isFloatTy()) {
       tokError("expected float:");

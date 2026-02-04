@@ -23,6 +23,7 @@
 ; RUN: not llvm-as %t/both_sections_wrong_type.ll -disable-output 2>&1 | FileCheck -check-prefix=BOTH_SECTIONS_WRONG_TYPE %s
 ; RUN: not llvm-as %t/both_sections_invalid_float_entry0.ll -disable-output 2>&1 | FileCheck -check-prefix=BOTH_SECTIONS_INVALID_FLOAT_ENTRY0 %s
 ; RUN: not llvm-as %t/both_sections_invalid_float_entry1.ll -disable-output 2>&1 | FileCheck -check-prefix=BOTH_SECTIONS_INVALID_FLOAT_ENTRY1 %s
+; RUN: not llvm-as %t/missing_comma_float.ll -disable-output 2>&1 | FileCheck -check-prefix=MISSING_COMMA_FLOAT %s
 
 
 ;--- denormal_fpenv_no_parens.ll
@@ -173,23 +174,28 @@ define void @func() denormal_fpenv(float:preservesign|invalid) {
 
 ;--- both_sections_wrong_type.ll
 
-; BOTH_SECTIONS_WRONG_TYPE: :60: error: expected float:
-define void @func() denormal_fpenv(preservesign|ieee double:dynamic|preservesign) {
+; BOTH_SECTIONS_WRONG_TYPE: :61: error: expected float:
+define void @func() denormal_fpenv(preservesign|ieee, double:dynamic|preservesign) {
   ret void
 }
 
 ;--- both_sections_invalid_float_entry0.ll
 
-; BOTH_SECTIONS_INVALID_FLOAT_ENTRY0: :60: error: expected denormal behavior kind (ieee, preservesign, positivezero, dynamic)
-define void @func() denormal_fpenv(preservesign|ieee float:invalid|dynamic) {
+; BOTH_SECTIONS_INVALID_FLOAT_ENTRY0: :61: error: expected denormal behavior kind (ieee, preservesign, positivezero, dynamic)
+define void @func() denormal_fpenv(preservesign|ieee, float:invalid|dynamic) {
   ret void
 }
 
 ;--- both_sections_invalid_float_entry1.ll
 
-; BOTH_SECTIONS_INVALID_FLOAT_ENTRY1: :68: error: expected denormal behavior kind (ieee, preservesign, positivezero, dynamic)
-define void @func() denormal_fpenv(preservesign|ieee float:dynamic|invalid) {
+; BOTH_SECTIONS_INVALID_FLOAT_ENTRY1: :69: error: expected denormal behavior kind (ieee, preservesign, positivezero, dynamic)
+define void @func() denormal_fpenv(preservesign|ieee, float:dynamic|invalid) {
   ret void
 }
 
+;--- missing_comma_float.ll
 
+; MISSING_COMMA_FLOAT: :54: error: expected ',' before float:
+define void @func() denormal_fpenv(preservesign|ieee float:dynamic|invalid) {
+  ret void
+}

@@ -38,12 +38,12 @@
 // CHECK-DYNAMIC: denormal_fpenv(dynamic)
 
 
-// CHECK-PS-F32-IEEE: denormal_fpenv(preservesign float: ieee)
-// CHECK-PZ-F32-IEEE: denormal_fpenv(positivezero float: ieee)
-// CHECK-PZ-F32-DYNAMIC: denormal_fpenv(positivezero float: dynamic)
-// CHECK-PZ-F32-PS: denormal_fpenv(positivezero float: preservesign)
-// CHECK-DYNAMIC-F32-PZ: denormal_fpenv(dynamic float: positivezero)
-// CHECK: CHECK-PS-F32-PZ: denormal_fpenv(preservesign float: positivezero)
+// CHECK-PS-F32-IEEE: denormal_fpenv(preservesign, float: ieee)
+// CHECK-PZ-F32-IEEE: denormal_fpenv(positivezero, float: ieee)
+// CHECK-PZ-F32-DYNAMIC: denormal_fpenv(positivezero, float: dynamic)
+// CHECK-PZ-F32-PS: denormal_fpenv(positivezero, float: preservesign)
+// CHECK-DYNAMIC-F32-PZ: denormal_fpenv(dynamic, float: positivezero)
+// CHECK: CHECK-PS-F32-PZ: denormal_fpenv(preservesign, float: positivezero)
 
 // CHECK-F32-IEEE: denormal_fpenv(float: ieee)
 // CHECK-F32-PS: denormal_fpenv(float: preservesign)

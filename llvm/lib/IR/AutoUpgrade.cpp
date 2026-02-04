@@ -6383,7 +6383,7 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
       Attr.isValid()) {
     DenormalMode ParsedMode = parseDenormalFPAttribute(Attr.getValueAsString());
     if (ParsedMode.isValid()) {
-      DenormalFPMath = ParsedMode;
+      DenormalFPMathF32 = ParsedMode;
       AttrsToRemove.addAttribute("denormal-fp-math-f32");
       AddingAttrs = RemovingAttrs = true;
       HandleDenormalMode = true;

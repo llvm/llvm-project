@@ -2686,6 +2686,10 @@ For example:
     the mode is consistent. User or platform code is expected to set
     the floating point mode appropriately before function entry.
 
+    This may optionally specify a second pair, prefixed with
+    ``float:``. This provides an override for the behavior of 32-bit
+    float type (or vectors of 32-bit floats).
+
     If the input mode is ``preservesign``, or ``positivezero``,
     a floating-point operation must treat any input denormal value as
     zero. In some situations, if an instruction does not respect this
@@ -2694,10 +2698,10 @@ For example:
 
     This may optionally specify a second pair, prefixed with
     ``float:``. This provides an override for the behavior of 32-bit
-    float type. (or vectors of 32-bit floats). If this is present are
-    present, this overrides the base handling of the default mode. Not
-    all targets support separately setting the denormal mode per type,
-    and no attempt is made to diagnose unsupported uses. Currently this
+    float type. (or vectors of 32-bit floats). If this is present,
+    this overrides the base handling of the default mode. Not all
+    targets support separately setting the denormal mode per type, and
+    no attempt is made to diagnose unsupported uses. Currently this
     attribute is respected by the AMDGPU and NVPTX backends.
 
 :Examples:
