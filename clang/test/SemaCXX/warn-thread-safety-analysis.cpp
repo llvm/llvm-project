@@ -7484,6 +7484,16 @@ void testPointerAliasEscapeAndReset(Foo *f) {
   ptr->mu.Unlock();
 }
 
+// A function that may do anything to the objects referred to by the inputs.
+void escapeAliasMultiple(void *, void *, void *);
+void testPointerAliasEscapeMultiple(Foo *F) {
+    Foo *L;
+    F->mu.Lock(); // expected-note{{mutex acquired here}}
+    Foo *Fp = F;
+    escapeAliasMultiple(&L, &L, &Fp);
+    Fp->mu.Unlock(); // expected-warning{{releasing mutex 'Fp->mu' that was not held}}
+} // expected-warning{{mutex 'F->mu' is still held at the end of function}}
+  
 void testPointerAliasTryLock1() {
   Foo *ptr = returnsFoo();
   if (ptr->mu.TryLock()) {
