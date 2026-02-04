@@ -43,8 +43,8 @@ struct WrapFuncInClassPass
 
 class WrapFuncInClass : public OpRewritePattern<emitc::FuncOp> {
 public:
-  WrapFuncInClass(MLIRContext *context, StringRef fName)
-      : OpRewritePattern<emitc::FuncOp>(context), funcName(fName) {}
+  WrapFuncInClass(MLIRContext *context, StringRef funcName)
+      : OpRewritePattern<emitc::FuncOp>(context), funcName(funcName) {}
 
   LogicalResult matchAndRewrite(emitc::FuncOp funcOp,
                                 PatternRewriter &rewriter) const override {
@@ -110,6 +110,6 @@ private:
 };
 
 void mlir::emitc::populateWrapFuncInClass(RewritePatternSet &patterns,
-                                          StringRef fName) {
-  patterns.add<WrapFuncInClass>(patterns.getContext(), fName);
+                                          StringRef funcName) {
+  patterns.add<WrapFuncInClass>(patterns.getContext(), funcName);
 }
