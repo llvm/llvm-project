@@ -9691,8 +9691,10 @@ SDValue TargetLowering::expandCTTZ(SDNode *Node, SelectionDAG &DAG) const {
 
   // Emit Table Lookup if ISD::CTPOP used in the fallback path below is going
   // to be expanded or converted to a libcall.
+  const DataLayout &TD = DAG.getDataLayout();
   if (!VT.isVector() && !isOperationLegalOrCustomOrPromote(ISD::CTPOP, VT) &&
-      !isOperationLegal(ISD::CTLZ, VT))
+      !isOperationLegal(ISD::CTLZ, VT) &&
+      isOperationCustom(ISD::ConstantPool, getPointerTy(TD)))
     if (SDValue V = CTTZTableLookup(Node, DAG, dl, VT, Op, NumBitsPerElt))
       return V;
 
