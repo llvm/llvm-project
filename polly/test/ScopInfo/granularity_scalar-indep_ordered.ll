@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=scalar-indep -polly-print-instructions '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=scalar-indep -polly-print-instructions '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s 2>&1 | FileCheck %s -match-full-lines
 ;
 ; This case cannot be split into two statements because the order of
 ; loads and store would be violated.

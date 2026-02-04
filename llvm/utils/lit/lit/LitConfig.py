@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 import inspect
 import os
+import enum
 import platform
 import sys
 
@@ -25,7 +26,7 @@ class LitConfig(object):
         self,
         progname,
         path,
-        quiet,
+        diagnostic_level,
         useValgrind,
         valgrindLeakCheck,
         valgrindArgs,
@@ -46,7 +47,7 @@ class LitConfig(object):
         self.progname = progname
         # The items to add to the PATH environment variable.
         self.path = [str(p) for p in path]
-        self.quiet = bool(quiet)
+        self.diagnostic_level = diagnostic_level
         self.useValgrind = bool(useValgrind)
         self.valgrindLeakCheck = bool(valgrindLeakCheck)
         self.valgrindUserArgs = list(valgrindArgs)
@@ -155,8 +156,7 @@ class LitConfig(object):
     def load_config(self, config, path):
         """load_config(config, path) - Load a config object from an alternate
         path."""
-        if self.debug:
-            self.note("load_config from %r" % path)
+        self.dbg("load_config from %r" % path)
         config.load_from_path(path, self)
         return config
 
@@ -209,6 +209,8 @@ class LitConfig(object):
         return dir
 
     def _write_message(self, kind, message):
+        if not self.diagnostic_level_enabled(kind):
+            return
         # Get the file/line where this message was generated.
         f = inspect.currentframe()
         # Step out of _write_message, and then out of wrapper.
@@ -234,13 +236,21 @@ class LitConfig(object):
                 "unable to find %r parameter, use '--param=%s=VALUE'" % (key, key)
             )
 
+    def diagnostic_level_enabled(self, kind):
+        if kind == "debug":
+            return self.debug
+        return DiagnosticLevel.create(self.diagnostic_level) >= DiagnosticLevel.create(
+            kind
+        )
+
+    def dbg(self, message):
+        self._write_message("debug", message)
+
     def note(self, message):
-        if not self.quiet:
-            self._write_message("note", message)
+        self._write_message("note", message)
 
     def warning(self, message):
-        if not self.quiet:
-            self._write_message("warning", message)
+        self._write_message("warning", message)
         self.numWarnings += 1
 
     def error(self, message):
@@ -250,3 +260,25 @@ class LitConfig(object):
     def fatal(self, message):
         self._write_message("fatal", message)
         sys.exit(2)
+
+
+@enum.unique
+class DiagnosticLevel(enum.IntEnum):
+    FATAL = 0
+    ERROR = 1
+    WARNING = 2
+    NOTE = 3
+
+    @classmethod
+    def create(cls, value):
+        if value == "fatal":
+            return cls.FATAL
+        if value == "error":
+            return cls.ERROR
+        if value == "warning":
+            return cls.WARNING
+        if value == "note":
+            return cls.NOTE
+        raise ValueError(
+            f"invalid diagnostic level {repr(value)} of type {type(value)}"
+        )

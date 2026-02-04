@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(mordante) Investigate
-// UNSUPPORTED: apple-clang
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
@@ -408,19 +405,11 @@ static void test_valid_positive_integral_values() {
            "%OM='00'\t"
            "%S='00'\t"
            "%OS='00'\t"
-#  if defined(__APPLE__)
-           "%p='AM'\t"
-#  else
            "%p='午前'\t"
-#  endif
            "%R='00:00'\t"
            "%T='00:00:00'\t"
 #  if defined(__APPLE__) || defined(__FreeBSD__)
-#    if defined(__APPLE__)
-           "%r='12:00:00 AM'\t"
-#    else
            "%r='12:00:00 午前'\t"
-#    endif
            "%X='00時00分00秒'\t"
            "%EX='00時00分00秒'\t"
 #  elif defined(_WIN32)
@@ -448,19 +437,11 @@ static void test_valid_positive_integral_values() {
            "%OM='59'\t"
            "%S='59'\t"
            "%OS='59'\t"
-#  if defined(__APPLE__)
-           "%p='AM'\t"
-#  else
            "%p='午前'\t"
-#  endif
            "%R='11:59'\t"
            "%T='11:59:59'\t"
 #  if defined(__APPLE__) || defined(__FreeBSD__)
-#    if defined(__APPLE__)
-           "%r='11:59:59 AM'\t"
-#    else
            "%r='11:59:59 午前'\t"
-#    endif
            "%X='11時59分59秒'\t"
            "%EX='11時59分59秒'\t"
 #  elif defined(_WIN32)
@@ -488,19 +469,11 @@ static void test_valid_positive_integral_values() {
            "%OM='00'\t"
            "%S='00'\t"
            "%OS='00'\t"
-#  if defined(__APPLE__)
-           "%p='PM'\t"
-#  else
            "%p='午後'\t"
-#  endif
            "%R='12:00'\t"
            "%T='12:00:00'\t"
 #  if defined(__APPLE__) || defined(__FreeBSD__)
-#    if defined(__APPLE__)
-           "%r='12:00:00 PM'\t"
-#    else
            "%r='12:00:00 午後'\t"
-#    endif
            "%X='12時00分00秒'\t"
            "%EX='12時00分00秒'\t"
 #  else
@@ -528,19 +501,11 @@ static void test_valid_positive_integral_values() {
            "%OM='59'\t"
            "%S='59'\t"
            "%OS='59'\t"
-#  if defined(__APPLE__)
-           "%p='PM'\t"
-#  else
            "%p='午後'\t"
-#  endif
            "%R='23:59'\t"
            "%T='23:59:59'\t"
 #  if defined(__APPLE__) || defined(__FreeBSD__)
-#    if defined(__APPLE__)
-           "%r='11:59:59 PM'\t"
-#    else
            "%r='11:59:59 午後'\t"
-#    endif
            "%X='23時59分59秒'\t"
            "%EX='23時59分59秒'\t"
 #  else
@@ -568,19 +533,11 @@ static void test_valid_positive_integral_values() {
            "%OM='00'\t"
            "%S='00'\t"
            "%OS='00'\t"
-#  if defined(__APPLE__)
-           "%p='AM'\t"
-#  else
            "%p='午前'\t"
-#  endif
            "%R='00:00'\t"
            "%T='00:00:00'\t"
 #  if defined(__APPLE__) || defined(__FreeBSD__)
-#    if defined(__APPLE__)
-           "%r='12:00:00 AM'\t"
-#    else
            "%r='12:00:00 午前'\t"
-#    endif
            "%X='00時00分00秒'\t"
            "%EX='00時00分00秒'\t"
 #  elif defined(_WIN32)
@@ -835,19 +792,11 @@ static void test_valid_negative_integral_values() {
            "%OM='59'\t"
            "%S='59'\t"
            "%OS='59'\t"
-#  if defined(__APPLE__)
-           "%p='PM'\t"
-#  else
            "%p='午後'\t"
-#  endif
            "%R='23:59'\t"
            "%T='23:59:59'\t"
 #  if defined(__APPLE__) || defined(__FreeBSD__)
-#    if defined(__APPLE__)
-           "%r='11:59:59 PM'\t"
-#    else
            "%r='11:59:59 午後'\t"
-#    endif
            "%X='23時59分59秒'\t"
            "%EX='23時59分59秒'\t"
 #  elif defined(_WIN32)

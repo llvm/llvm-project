@@ -2753,14 +2753,6 @@ StmtResult Sema::BuildCXXForRangeStmt(
                             diag::err_for_range_incomplete_type))
       return StmtError();
 
-    // P2718R0 - Lifetime extension in range-based for loops.
-    if (getLangOpts().CPlusPlus23 && !LifetimeExtendTemps.empty()) {
-      InitializedEntity Entity =
-          InitializedEntity::InitializeVariable(RangeVar);
-      for (auto *MTE : LifetimeExtendTemps)
-        MTE->setExtendingDecl(RangeVar, Entity.allocateManglingNumber());
-    }
-
     // Build auto __begin = begin-expr, __end = end-expr.
     // Divide by 2, since the variables are in the inner scope (loop body).
     const auto DepthStr = std::to_string(S->getDepth() / 2);
@@ -3017,6 +3009,13 @@ StmtResult Sema::BuildCXXForRangeStmt(
   if (getLangOpts().OpenMP >= 50 && BeginDeclStmt.isUsable())
     OpenMP().ActOnOpenMPLoopInitialization(ForLoc, BeginDeclStmt.get());
 
+  // P2718R0 - Lifetime extension in range-based for loops.
+  if (getLangOpts().CPlusPlus23 && !LifetimeExtendTemps.empty()) {
+    InitializedEntity Entity = InitializedEntity::InitializeVariable(RangeVar);
+    for (auto *MTE : LifetimeExtendTemps)
+      MTE->setExtendingDecl(RangeVar, Entity.allocateManglingNumber());
+  }
+
   return new (Context) CXXForRangeStmt(
       InitStmt, RangeDS, cast_or_null<DeclStmt>(BeginDeclStmt.get()),
       cast_or_null<DeclStmt>(EndDeclStmt.get()), NotEqExpr.get(),
@@ -3267,11 +3266,22 @@ Sema::ActOnIndirectGotoStmt(SourceLocation GotoLoc, SourceLocation StarLoc,
   return new (Context) IndirectGotoStmt(GotoLoc, StarLoc, E);
 }
 
-static void CheckJumpOutOfSEHFinally(Sema &S, SourceLocation Loc,
-                                     const Scope &DestScope) {
+static void CheckJumpOutOfSEHFinallyOrDefer(Sema &S, SourceLocation Loc,
+                                            const Scope &DestScope,
+                                            unsigned DeferJumpKind) {
   if (!S.CurrentSEHFinally.empty() &&
       DestScope.Contains(*S.CurrentSEHFinally.back())) {
     S.Diag(Loc, diag::warn_jump_out_of_seh_finally);
+  }
+
+  if (!S.CurrentDefer.empty()) {
+    Scope *Parent = S.CurrentDefer.back().first;
+    assert(Parent);
+
+    // Note: We don't create a new scope for defer statements, so 'Parent'
+    // is actually the scope that contains the '_Defer'.
+    if (DestScope.Contains(*Parent) || &DestScope == Parent)
+      S.Diag(Loc, diag::err_jump_out_of_defer_stmt) << DeferJumpKind;
   }
 }
 
@@ -3281,6 +3291,9 @@ static Scope *FindLabeledBreakContinueScope(Sema &S, Scope *CurScope,
                                             SourceLocation LabelLoc,
                                             bool IsContinue) {
   assert(Target && "not a named break/continue?");
+
+  Target->markUsed(S.Context);
+
   Scope *Found = nullptr;
   for (Scope *Scope = CurScope; Scope; Scope = Scope->getParent()) {
     if (Scope->isFunctionScope())
@@ -3343,7 +3356,8 @@ StmtResult Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope,
         Diag(ContinueLoc, diag::err_acc_branch_in_out_compute_construct)
         << /*branch*/ 0 << /*out of */ 0);
 
-  CheckJumpOutOfSEHFinally(*this, ContinueLoc, *S);
+  CheckJumpOutOfSEHFinallyOrDefer(*this, ContinueLoc, *S,
+                                  diag::DeferJumpKind::Continue);
 
   return new (Context) ContinueStmt(ContinueLoc, LabelLoc, Target);
 }
@@ -3384,7 +3398,8 @@ StmtResult Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope,
         Diag(BreakLoc, diag::err_acc_branch_in_out_compute_construct)
         << /*branch*/ 0 << /*out of */ 0);
 
-  CheckJumpOutOfSEHFinally(*this, BreakLoc, *S);
+  CheckJumpOutOfSEHFinallyOrDefer(*this, BreakLoc, *S,
+                                  diag::DeferJumpKind::Break);
 
   return new (Context) BreakStmt(BreakLoc, LabelLoc, Target);
 }
@@ -3886,6 +3901,11 @@ bool Sema::DeduceFunctionTypeFromReturnExpr(FunctionDecl *FD,
     // Update all declarations of the function to have the deduced return type.
     Context.adjustDeducedFunctionResultType(FD, Deduced);
 
+  if (!Deduced->isDependentType() && !Deduced->isRecordType() &&
+      !FD->isFunctionTemplateSpecialization())
+    diagnoseIgnoredQualifiers(
+        diag::warn_qual_return_type,
+        FD->getDeclaredReturnType().getLocalCVRQualifiers(), FD->getLocation());
   return false;
 }
 
@@ -3924,9 +3944,28 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
 
   CurScope->updateNRVOCandidate(VD);
 
-  CheckJumpOutOfSEHFinally(*this, ReturnLoc, *CurScope->getFnParent());
+  CheckJumpOutOfSEHFinallyOrDefer(*this, ReturnLoc, *CurScope->getFnParent(),
+                                  diag::DeferJumpKind::Return);
 
   return R;
+}
+
+void Sema::ActOnStartOfDeferStmt(SourceLocation DeferLoc, Scope *CurScope) {
+  CurrentDefer.emplace_back(CurScope, DeferLoc);
+}
+
+void Sema::ActOnDeferStmtError([[maybe_unused]] Scope *CurScope) {
+  assert(!CurrentDefer.empty() && CurrentDefer.back().first == CurScope);
+  CurrentDefer.pop_back();
+}
+
+StmtResult Sema::ActOnEndOfDeferStmt(Stmt *Body,
+                                     [[maybe_unused]] Scope *CurScope) {
+  assert(!CurrentDefer.empty() && CurrentDefer.back().first == CurScope);
+  SourceLocation DeferLoc = CurrentDefer.pop_back_val().second;
+  DiagnoseEmptyStmtBody(DeferLoc, Body, diag::warn_empty_defer_body);
+  setFunctionHasBranchProtectedScope();
+  return DeferStmt::Create(Context, DeferLoc, Body);
 }
 
 static bool CheckSimplerImplicitMovesMSVCWorkaround(const Sema &S,
@@ -4354,7 +4393,7 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
                                   ArrayRef<Stmt *> Handlers) {
   const llvm::Triple &T = Context.getTargetInfo().getTriple();
   const bool IsOpenMPGPUTarget =
-      getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN());
+      getLangOpts().OpenMPIsTargetDevice && T.isGPU();
 
   DiagnoseExceptionUse(TryLoc, /* IsTry= */ true);
 
@@ -4461,7 +4500,7 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
 void Sema::DiagnoseExceptionUse(SourceLocation Loc, bool IsTry) {
   const llvm::Triple &T = Context.getTargetInfo().getTriple();
   const bool IsOpenMPGPUTarget =
-      getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN());
+      getLangOpts().OpenMPIsTargetDevice && T.isGPU();
 
   // Don't report an error if 'try' is used in system headers or in an OpenMP
   // target region compiled for a GPU architecture.
@@ -4546,7 +4585,8 @@ Sema::ActOnSEHLeaveStmt(SourceLocation Loc, Scope *CurScope) {
     SEHTryParent = SEHTryParent->getParent();
   if (!SEHTryParent)
     return StmtError(Diag(Loc, diag::err_ms___leave_not_in___try));
-  CheckJumpOutOfSEHFinally(*this, Loc, *SEHTryParent);
+  CheckJumpOutOfSEHFinallyOrDefer(*this, Loc, *SEHTryParent,
+                                  diag::DeferJumpKind::SEHLeave);
 
   return new (Context) SEHLeaveStmt(Loc);
 }

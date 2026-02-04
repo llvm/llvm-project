@@ -44,14 +44,14 @@ fixed_bool32_t global_bool32;
 // CHECK-64-SAME: <vscale x 1 x i64> [[V:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-64-NEXT:  [[ENTRY:.*:]]
 // CHECK-64-NEXT:    [[CAST_FIXED:%.*]] = tail call <1 x i64> @llvm.vector.extract.v1i64.nxv1i64(<vscale x 1 x i64> [[V]], i64 0)
-// CHECK-64-NEXT:    store <1 x i64> [[CAST_FIXED]], ptr @global_i64, align 8, !tbaa [[CHAR_TBAA6:![0-9]+]]
+// CHECK-64-NEXT:    store <1 x i64> [[CAST_FIXED]], ptr @global_i64, align 8, !tbaa [[CHAR_TBAA10:![0-9]+]]
 // CHECK-64-NEXT:    ret void
 //
 // CHECK-256-LABEL: define dso_local void @write_global_i64(
 // CHECK-256-SAME: <vscale x 1 x i64> [[V:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-256-NEXT:  [[ENTRY:.*:]]
 // CHECK-256-NEXT:    [[CAST_FIXED:%.*]] = tail call <4 x i64> @llvm.vector.extract.v4i64.nxv1i64(<vscale x 1 x i64> [[V]], i64 0)
-// CHECK-256-NEXT:    store <4 x i64> [[CAST_FIXED]], ptr @global_i64, align 8, !tbaa [[CHAR_TBAA6:![0-9]+]]
+// CHECK-256-NEXT:    store <4 x i64> [[CAST_FIXED]], ptr @global_i64, align 8, !tbaa [[CHAR_TBAA10:![0-9]+]]
 // CHECK-256-NEXT:    ret void
 //
 void write_global_i64(vint64m1_t v) { global_i64 = v; }
@@ -61,7 +61,7 @@ void write_global_i64(vint64m1_t v) { global_i64 = v; }
 // CHECK-64-NEXT:  [[ENTRY:.*:]]
 // CHECK-64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 64 x i1> [[V]] to <vscale x 8 x i8>
 // CHECK-64-NEXT:    [[CAST_FIXED:%.*]] = tail call <8 x i8> @llvm.vector.extract.v8i8.nxv8i8(<vscale x 8 x i8> [[TMP0]], i64 0)
-// CHECK-64-NEXT:    store <8 x i8> [[CAST_FIXED]], ptr @global_bool1, align 8, !tbaa [[CHAR_TBAA6]]
+// CHECK-64-NEXT:    store <8 x i8> [[CAST_FIXED]], ptr @global_bool1, align 8, !tbaa [[CHAR_TBAA10]]
 // CHECK-64-NEXT:    ret void
 //
 // CHECK-256-LABEL: define dso_local void @write_global_bool1(
@@ -69,7 +69,7 @@ void write_global_i64(vint64m1_t v) { global_i64 = v; }
 // CHECK-256-NEXT:  [[ENTRY:.*:]]
 // CHECK-256-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 64 x i1> [[V]] to <vscale x 8 x i8>
 // CHECK-256-NEXT:    [[CAST_FIXED:%.*]] = tail call <32 x i8> @llvm.vector.extract.v32i8.nxv8i8(<vscale x 8 x i8> [[TMP0]], i64 0)
-// CHECK-256-NEXT:    store <32 x i8> [[CAST_FIXED]], ptr @global_bool1, align 8, !tbaa [[CHAR_TBAA6]]
+// CHECK-256-NEXT:    store <32 x i8> [[CAST_FIXED]], ptr @global_bool1, align 8, !tbaa [[CHAR_TBAA10]]
 // CHECK-256-NEXT:    ret void
 //
 void write_global_bool1(vbool1_t v) { global_bool1 = v; }
@@ -79,7 +79,7 @@ void write_global_bool1(vbool1_t v) { global_bool1 = v; }
 // CHECK-64-NEXT:  [[ENTRY:.*:]]
 // CHECK-64-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1> [[V]] to <vscale x 2 x i8>
 // CHECK-64-NEXT:    [[CAST_FIXED:%.*]] = tail call <2 x i8> @llvm.vector.extract.v2i8.nxv2i8(<vscale x 2 x i8> [[TMP0]], i64 0)
-// CHECK-64-NEXT:    store <2 x i8> [[CAST_FIXED]], ptr @global_bool4, align 2, !tbaa [[CHAR_TBAA6]]
+// CHECK-64-NEXT:    store <2 x i8> [[CAST_FIXED]], ptr @global_bool4, align 2, !tbaa [[CHAR_TBAA10]]
 // CHECK-64-NEXT:    ret void
 //
 // CHECK-256-LABEL: define dso_local void @write_global_bool4(
@@ -87,7 +87,7 @@ void write_global_bool1(vbool1_t v) { global_bool1 = v; }
 // CHECK-256-NEXT:  [[ENTRY:.*:]]
 // CHECK-256-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 16 x i1> [[V]] to <vscale x 2 x i8>
 // CHECK-256-NEXT:    [[CAST_FIXED:%.*]] = tail call <8 x i8> @llvm.vector.extract.v8i8.nxv2i8(<vscale x 2 x i8> [[TMP0]], i64 0)
-// CHECK-256-NEXT:    store <8 x i8> [[CAST_FIXED]], ptr @global_bool4, align 8, !tbaa [[CHAR_TBAA6]]
+// CHECK-256-NEXT:    store <8 x i8> [[CAST_FIXED]], ptr @global_bool4, align 8, !tbaa [[CHAR_TBAA10]]
 // CHECK-256-NEXT:    ret void
 //
 void write_global_bool4(vbool4_t v) { global_bool4 = v; }
@@ -99,7 +99,7 @@ void write_global_bool4(vbool4_t v) { global_bool4 = v; }
 // CHECK-256-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.vector.insert.nxv8i1.nxv2i1(<vscale x 8 x i1> zeroinitializer, <vscale x 2 x i1> [[V]], i64 0)
 // CHECK-256-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 8 x i1> [[TMP0]] to <vscale x 1 x i8>
 // CHECK-256-NEXT:    [[CAST_FIXED:%.*]] = tail call <1 x i8> @llvm.vector.extract.v1i8.nxv1i8(<vscale x 1 x i8> [[TMP1]], i64 0)
-// CHECK-256-NEXT:    store <1 x i8> [[CAST_FIXED]], ptr @global_bool32, align 1, !tbaa [[CHAR_TBAA6]]
+// CHECK-256-NEXT:    store <1 x i8> [[CAST_FIXED]], ptr @global_bool32, align 1, !tbaa [[CHAR_TBAA10]]
 // CHECK-256-NEXT:    ret void
 //
 void write_global_bool32(vbool32_t v) { global_bool32 = v; }
@@ -112,14 +112,14 @@ void write_global_bool32(vbool32_t v) { global_bool32 = v; }
 // CHECK-64-LABEL: define dso_local <vscale x 1 x i64> @read_global_i64(
 // CHECK-64-SAME: ) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-64-NEXT:  [[ENTRY:.*:]]
-// CHECK-64-NEXT:    [[TMP0:%.*]] = load <1 x i64>, ptr @global_i64, align 8, !tbaa [[CHAR_TBAA6]]
+// CHECK-64-NEXT:    [[TMP0:%.*]] = load <1 x i64>, ptr @global_i64, align 8, !tbaa [[CHAR_TBAA10]]
 // CHECK-64-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v1i64(<vscale x 1 x i64> poison, <1 x i64> [[TMP0]], i64 0)
 // CHECK-64-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
 // CHECK-256-LABEL: define dso_local <vscale x 1 x i64> @read_global_i64(
 // CHECK-256-SAME: ) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 // CHECK-256-NEXT:  [[ENTRY:.*:]]
-// CHECK-256-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr @global_i64, align 8, !tbaa [[CHAR_TBAA6]]
+// CHECK-256-NEXT:    [[TMP0:%.*]] = load <4 x i64>, ptr @global_i64, align 8, !tbaa [[CHAR_TBAA10]]
 // CHECK-256-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 1 x i64> @llvm.vector.insert.nxv1i64.v4i64(<vscale x 1 x i64> poison, <4 x i64> [[TMP0]], i64 0)
 // CHECK-256-NEXT:    ret <vscale x 1 x i64> [[CAST_SCALABLE]]
 //
@@ -128,7 +128,7 @@ vint64m1_t read_global_i64() { return global_i64; }
 // CHECK-64-LABEL: define dso_local <vscale x 64 x i1> @read_global_bool1(
 // CHECK-64-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // CHECK-64-NEXT:  [[ENTRY:.*:]]
-// CHECK-64-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr @global_bool1, align 8, !tbaa [[CHAR_TBAA6]]
+// CHECK-64-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr @global_bool1, align 8, !tbaa [[CHAR_TBAA10]]
 // CHECK-64-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v8i8(<vscale x 8 x i8> poison, <8 x i8> [[TMP0]], i64 0)
 // CHECK-64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 8 x i8> [[CAST_SCALABLE]] to <vscale x 64 x i1>
 // CHECK-64-NEXT:    ret <vscale x 64 x i1> [[TMP1]]
@@ -136,7 +136,7 @@ vint64m1_t read_global_i64() { return global_i64; }
 // CHECK-256-LABEL: define dso_local <vscale x 64 x i1> @read_global_bool1(
 // CHECK-256-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // CHECK-256-NEXT:  [[ENTRY:.*:]]
-// CHECK-256-NEXT:    [[TMP0:%.*]] = load <32 x i8>, ptr @global_bool1, align 8, !tbaa [[CHAR_TBAA6]]
+// CHECK-256-NEXT:    [[TMP0:%.*]] = load <32 x i8>, ptr @global_bool1, align 8, !tbaa [[CHAR_TBAA10]]
 // CHECK-256-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 8 x i8> @llvm.vector.insert.nxv8i8.v32i8(<vscale x 8 x i8> poison, <32 x i8> [[TMP0]], i64 0)
 // CHECK-256-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 8 x i8> [[CAST_SCALABLE]] to <vscale x 64 x i1>
 // CHECK-256-NEXT:    ret <vscale x 64 x i1> [[TMP1]]
@@ -146,7 +146,7 @@ vbool1_t read_global_bool1() { return global_bool1; }
 // CHECK-64-LABEL: define dso_local <vscale x 16 x i1> @read_global_bool4(
 // CHECK-64-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // CHECK-64-NEXT:  [[ENTRY:.*:]]
-// CHECK-64-NEXT:    [[TMP0:%.*]] = load <2 x i8>, ptr @global_bool4, align 2, !tbaa [[CHAR_TBAA6]]
+// CHECK-64-NEXT:    [[TMP0:%.*]] = load <2 x i8>, ptr @global_bool4, align 2, !tbaa [[CHAR_TBAA10]]
 // CHECK-64-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v2i8(<vscale x 2 x i8> poison, <2 x i8> [[TMP0]], i64 0)
 // CHECK-64-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 2 x i8> [[CAST_SCALABLE]] to <vscale x 16 x i1>
 // CHECK-64-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
@@ -154,7 +154,7 @@ vbool1_t read_global_bool1() { return global_bool1; }
 // CHECK-256-LABEL: define dso_local <vscale x 16 x i1> @read_global_bool4(
 // CHECK-256-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // CHECK-256-NEXT:  [[ENTRY:.*:]]
-// CHECK-256-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr @global_bool4, align 8, !tbaa [[CHAR_TBAA6]]
+// CHECK-256-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr @global_bool4, align 8, !tbaa [[CHAR_TBAA10]]
 // CHECK-256-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 2 x i8> @llvm.vector.insert.nxv2i8.v8i8(<vscale x 2 x i8> poison, <8 x i8> [[TMP0]], i64 0)
 // CHECK-256-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 2 x i8> [[CAST_SCALABLE]] to <vscale x 16 x i1>
 // CHECK-256-NEXT:    ret <vscale x 16 x i1> [[TMP1]]
@@ -165,7 +165,7 @@ vbool4_t read_global_bool4() { return global_bool4; }
 // CHECK-256-LABEL: define dso_local <vscale x 2 x i1> @read_global_bool32(
 // CHECK-256-SAME: ) local_unnamed_addr #[[ATTR2]] {
 // CHECK-256-NEXT:  [[ENTRY:.*:]]
-// CHECK-256-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr @global_bool32, align 1, !tbaa [[CHAR_TBAA6]]
+// CHECK-256-NEXT:    [[TMP0:%.*]] = load <1 x i8>, ptr @global_bool32, align 1, !tbaa [[CHAR_TBAA10]]
 // CHECK-256-NEXT:    [[CAST_SCALABLE:%.*]] = tail call <vscale x 1 x i8> @llvm.vector.insert.nxv1i8.v1i8(<vscale x 1 x i8> poison, <1 x i8> [[TMP0]], i64 0)
 // CHECK-256-NEXT:    [[TMP1:%.*]] = bitcast <vscale x 1 x i8> [[CAST_SCALABLE]] to <vscale x 8 x i1>
 // CHECK-256-NEXT:    [[TMP2:%.*]] = tail call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv8i1(<vscale x 8 x i1> [[TMP1]], i64 0)
@@ -174,11 +174,11 @@ vbool4_t read_global_bool4() { return global_bool4; }
 vbool32_t read_global_bool32() { return global_bool32; }
 #endif
 //.
-// CHECK-64: [[CHAR_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
-// CHECK-64: [[META7]] = !{!"omnipotent char", [[META8:![0-9]+]], i64 0}
-// CHECK-64: [[META8]] = !{!"Simple C/C++ TBAA"}
+// CHECK-64: [[META8:![0-9]+]] = !{!"omnipotent char", [[META9:![0-9]+]], i64 0}
+// CHECK-64: [[META9]] = !{!"Simple C/C++ TBAA"}
+// CHECK-64: [[CHAR_TBAA10]] = !{[[META8]], [[META8]], i64 0}
 //.
-// CHECK-256: [[CHAR_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
-// CHECK-256: [[META7]] = !{!"omnipotent char", [[META8:![0-9]+]], i64 0}
-// CHECK-256: [[META8]] = !{!"Simple C/C++ TBAA"}
+// CHECK-256: [[META8:![0-9]+]] = !{!"omnipotent char", [[META9:![0-9]+]], i64 0}
+// CHECK-256: [[META9]] = !{!"Simple C/C++ TBAA"}
+// CHECK-256: [[CHAR_TBAA10]] = !{[[META8]], [[META8]], i64 0}
 //.

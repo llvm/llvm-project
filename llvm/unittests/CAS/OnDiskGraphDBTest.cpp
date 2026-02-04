@@ -59,6 +59,14 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBTest) {
   ASSERT_TRUE(Obj2.has_value());
   EXPECT_EQ(toStringRef(DB->getObjectData(*Obj2)), "world");
 
+  ASSERT_THAT_ERROR(DB->validateObjectID(*ID1), Succeeded());
+  ASSERT_THAT_ERROR(DB->validateObjectID(ObjectID::fromOpaqueData(0)),
+                    Failed());
+  ASSERT_THAT_ERROR(DB->validateObjectID(ObjectID::fromOpaqueData(4)),
+                    Failed());
+  ASSERT_THAT_ERROR(DB->validateObjectID(ObjectID::fromOpaqueData(8)),
+                    Failed());
+
   size_t LargeDataSize = 256LL * 1024LL; // 256K.
   // The precise size number is not important, we mainly check that the large
   // object will be properly accounted for.
@@ -102,7 +110,7 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInSingleNode) {
   std::unique_ptr<OnDiskGraphDB> DB;
   ASSERT_THAT_ERROR(
       OnDiskGraphDB::open(Temp.path(), "blake3", sizeof(HashType),
-                          std::move(UpstreamDB),
+                          UpstreamDB.get(), /*Logger=*/nullptr,
                           OnDiskGraphDB::FaultInPolicy::SingleNode)
           .moveInto(DB),
       Succeeded());
@@ -149,7 +157,7 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInSingleNode) {
   // the upstream.
   ASSERT_THAT_ERROR(
       OnDiskGraphDB::open(Temp.path(), "blake3", sizeof(HashType),
-                          /*UpstreamDB=*/nullptr,
+                          /*UpstreamDB=*/nullptr, /*Logger=*/nullptr,
                           OnDiskGraphDB::FaultInPolicy::SingleNode)
           .moveInto(DB),
       Succeeded());
@@ -208,7 +216,8 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInFullTree) {
   unittest::TempDir Temp("ondiskcas", /*Unique=*/true);
   std::unique_ptr<OnDiskGraphDB> DB;
   ASSERT_THAT_ERROR(OnDiskGraphDB::open(Temp.path(), "blake3", sizeof(HashType),
-                                        std::move(UpstreamDB),
+                                        UpstreamDB.get(),
+                                        /*Logger=*/nullptr,
                                         OnDiskGraphDB::FaultInPolicy::FullTree)
                         .moveInto(DB),
                     Succeeded());
@@ -228,6 +237,7 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInFullTree) {
   // the upstream.
   ASSERT_THAT_ERROR(OnDiskGraphDB::open(Temp.path(), "blake3", sizeof(HashType),
                                         /*UpstreamDB=*/nullptr,
+                                        /*Logger=*/nullptr,
                                         OnDiskGraphDB::FaultInPolicy::FullTree)
                         .moveInto(DB),
                     Succeeded());
@@ -264,14 +274,14 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInPolicyConflict) {
     unittest::TempDir Temp("ondiskcas", /*Unique=*/true);
     std::unique_ptr<OnDiskGraphDB> DB;
     ASSERT_THAT_ERROR(OnDiskGraphDB::open(Temp.path(), "blake3",
-                                          sizeof(HashType),
-                                          std::move(UpstreamDB), Policy1)
+                                          sizeof(HashType), UpstreamDB.get(),
+                                          /*Logger=*/nullptr, Policy1)
                           .moveInto(DB),
                       Succeeded());
     DB.reset();
     ASSERT_THAT_ERROR(OnDiskGraphDB::open(Temp.path(), "blake3",
-                                          sizeof(HashType),
-                                          std::move(UpstreamDB), Policy2)
+                                          sizeof(HashType), UpstreamDB.get(),
+                                          /*Logger=*/nullptr, Policy2)
                           .moveInto(DB),
                       Failed());
   };
@@ -283,7 +293,7 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInPolicyConflict) {
                            OnDiskGraphDB::FaultInPolicy::SingleNode);
 }
 
-#if defined(EXPENSIVE_CHECKS)
+#if defined(EXPENSIVE_CHECKS) && !defined(_WIN32)
 TEST_F(OnDiskCASTest, OnDiskGraphDBSpaceLimit) {
   setMaxOnDiskCASMappingSize();
   unittest::TempDir Temp("ondiskcas", /*Unique=*/true);

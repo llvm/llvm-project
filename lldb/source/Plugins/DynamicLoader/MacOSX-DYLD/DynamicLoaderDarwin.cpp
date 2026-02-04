@@ -916,7 +916,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
   StackFrame *current_frame = thread.GetStackFrameAtIndex(0).get();
   const SymbolContext &current_context =
       current_frame->GetSymbolContext(eSymbolContextSymbol);
-  Symbol *current_symbol = current_context.symbol;
+  const Symbol *current_symbol = current_context.symbol;
   Log *log = GetLog(LLDBLog::Step);
   TargetSP target_sp(thread.CalculateTarget());
 
@@ -949,7 +949,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
                                           reexported_symbols);
         for (const SymbolContext &context : reexported_symbols) {
           if (context.symbol) {
-            Symbol *actual_symbol =
+            const Symbol *actual_symbol =
                 context.symbol->ResolveReExportedSymbol(*target_sp.get());
             if (actual_symbol) {
               const Address actual_symbol_addr = actual_symbol->GetAddress();
@@ -1008,7 +1008,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
       // and if they do, resolve them:
       std::vector<lldb::addr_t> load_addrs;
       for (Address address : addresses) {
-        Symbol *symbol = address.CalculateSymbolContextSymbol();
+        const Symbol *symbol = address.CalculateSymbolContextSymbol();
         if (symbol && symbol->IsIndirect()) {
           Status error;
           Address symbol_address = symbol->GetAddress();
@@ -1053,7 +1053,8 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
 }
 
 void DynamicLoaderDarwin::FindEquivalentSymbols(
-    lldb_private::Symbol *original_symbol, lldb_private::ModuleList &images,
+    const lldb_private::Symbol *original_symbol,
+    lldb_private::ModuleList &images,
     lldb_private::SymbolContextList &equivalent_symbols) {
   ConstString trampoline_name =
       original_symbol->GetMangled().GetName(Mangled::ePreferMangled);
@@ -1068,7 +1069,6 @@ void DynamicLoaderDarwin::FindEquivalentSymbols(
   RegularExpression equivalent_name_regex(equivalent_regex_buf);
   images.FindSymbolsMatchingRegExAndType(equivalent_name_regex, eSymbolTypeCode,
                                          equivalent_symbols);
-
 }
 
 lldb::ModuleSP DynamicLoaderDarwin::GetPThreadLibraryModule() {

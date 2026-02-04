@@ -6,7 +6,7 @@ typedef long long v4i64 __attribute__ ((vector_size(32), aligned(32)));
 // CHECK-LABEL: define dso_local void @test_u
 // CHECK-SAME: () local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i64> asm sideeffect "xvldi ${0:u}, 1", "=f"() #[[ATTR1:[0-9]+]], !srcloc !2
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <4 x i64> asm sideeffect "xvldi ${0:u}, 1", "=f"() #[[ATTR1:[0-9]+]], !srcloc [[META6:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void test_u() {

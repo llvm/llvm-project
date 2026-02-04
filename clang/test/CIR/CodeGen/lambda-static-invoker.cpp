@@ -37,7 +37,7 @@ int g3() {
 // OGCG:   ret ptr @"_ZZ2g3vEN3$_08__invokeERKi"
 
 // lambda operator()
-// CIR: cir.func lambda internal private dso_local @_ZZ2g3vENK3$_0clERKi(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_G3:.*]]> {{.*}}, %[[REF_I_ARG:.*]]: !cir.ptr<!s32i> {{.*}})
+// CIR: cir.func no_inline lambda internal private dso_local @_ZZ2g3vENK3$_0clERKi(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_G3:.*]]> {{.*}}, %[[REF_I_ARG:.*]]: !cir.ptr<!s32i> {{.*}})
 // CIR:   %[[THIS_ALLOCA:.*]] = cir.alloca !cir.ptr<![[REC_LAM_G3]]>, !cir.ptr<!cir.ptr<![[REC_LAM_G3]]>>, ["this", init]
 // CIR:   %[[REF_I_ALLOCA:.*]] = cir.alloca {{.*}} ["i", init, const]
 // CIR:   %[[RETVAL:.*]] = cir.alloca {{.*}} ["__retval"]
@@ -66,7 +66,7 @@ int g3() {
 // In OGCG, the _ZZ2g3vENK3$_0clERKi function is emitted after _ZZ2g3vEN3$_08__invokeERKi, see below.
 
 // lambda invoker
-// CIR: cir.func internal private dso_local @_ZZ2g3vEN3$_08__invokeERKi(%[[REF_I_ARG:.*]]: !cir.ptr<!s32i> {{.*}}) -> !s32i{{.*}} {
+// CIR: cir.func no_inline internal private dso_local @_ZZ2g3vEN3$_08__invokeERKi(%[[REF_I_ARG:.*]]: !cir.ptr<!s32i> {{.*}}) -> !s32i{{.*}} {
 // CIR:   %[[REF_I_ALLOCA:.*]] = cir.alloca {{.*}} ["i", init, const]
 // CIR:   %[[RETVAL:.*]] = cir.alloca {{.*}} ["__retval"]
 // CIR:   %[[LAM_ALLOCA:.*]] = cir.alloca ![[REC_LAM_G3]], !cir.ptr<![[REC_LAM_G3]]>, ["unused.capture"]
@@ -91,7 +91,7 @@ int g3() {
 // In OGCG, the _ZZ2g3vEN3$_08__invokeERKi function is emitted after _ZN1A3barEv, see below.
 
 // lambda operator int (*)(int const&)()
-// CIR:   cir.func internal private dso_local @_ZZ2g3vENK3$_0cvPFiRKiEEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_G3]]> {{.*}}) -> !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>{{.*}} {
+// CIR:   cir.func no_inline internal private dso_local @_ZZ2g3vENK3$_0cvPFiRKiEEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_G3]]> {{.*}}) -> !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>{{.*}} {
 // CIR:   %[[THIS_ALLOCA:.*]] = cir.alloca !cir.ptr<![[REC_LAM_G3]]>, !cir.ptr<!cir.ptr<![[REC_LAM_G3]]>>, ["this", init]
 // CIR:   %[[RETVAL:.*]] = cir.alloca !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>, !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>>, ["__retval"]
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ALLOCA]]

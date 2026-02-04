@@ -1,10 +1,13 @@
+# FIXME: remove when LLDB_MINIMUM_PYTHON_VERSION > 3.8
+from __future__ import annotations
+
 import os
 import time
-from typing import Optional, Callable, Any, List, Union
+from typing import Optional, Callable, Any, List, Mapping, Final
 import uuid
 
 import dap_server
-from dap_server import Source
+from dap_server import Source, Response
 from lldbsuite.test.decorators import skipIf
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatformutil
@@ -18,7 +21,7 @@ import base64
 class DAPTestCaseBase(TestBase):
     # set timeout based on whether ASAN was enabled or not. Increase
     # timeout by a factor of 10 if ASAN is enabled.
-    DEFAULT_TIMEOUT = dap_server.DEFAULT_TIMEOUT
+    DEFAULT_TIMEOUT: Final[float] = dap_server.DEFAULT_TIMEOUT
     NO_DEBUG_INFO_TESTCASE = True
 
     def create_debug_adapter(
@@ -31,7 +34,7 @@ class DAPTestCaseBase(TestBase):
         self.assertTrue(
             is_exe(self.lldbDAPExec), "lldb-dap must exist and be executable"
         )
-        log_file_path = self.getBuildArtifact("dap.txt")
+        log_file_path = self.getBuildArtifact("dap.log")
         self.dap_server = dap_server.DebugAdapterServer(
             executable=self.lldbDAPExec,
             connection=connection,
@@ -39,6 +42,7 @@ class DAPTestCaseBase(TestBase):
             log_file=log_file_path,
             env=lldbDAPEnv,
             additional_args=additional_args or [],
+            spawn_helper=self.spawnSubprocess,
         )
 
     def build_and_create_debug_adapter(
@@ -91,9 +95,7 @@ class DAPTestCaseBase(TestBase):
         if response is None:
             return []
         breakpoints = response["body"]["breakpoints"]
-        breakpoint_ids = []
-        for breakpoint in breakpoints:
-            breakpoint_ids.append("%i" % (breakpoint["id"]))
+        breakpoint_ids = [b["id"] for b in breakpoints]
         if wait_for_resolve:
             self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
@@ -111,14 +113,12 @@ class DAPTestCaseBase(TestBase):
         if response is None:
             return []
         breakpoints = response["body"]["breakpoints"]
-        breakpoint_ids = []
-        for breakpoint in breakpoints:
-            breakpoint_ids.append("%i" % (breakpoint["id"]))
+        breakpoint_ids = [b["id"] for b in breakpoints]
         if wait_for_resolve:
             self.wait_for_breakpoints_to_resolve(breakpoint_ids)
         return breakpoint_ids
 
-    def wait_for_breakpoints_to_resolve(self, breakpoint_ids: list[str]):
+    def wait_for_breakpoints_to_resolve(self, breakpoint_ids: List[int]):
         unresolved_breakpoints = self.dap_server.wait_for_breakpoints_to_be_verified(
             breakpoint_ids
         )
@@ -152,14 +152,15 @@ class DAPTestCaseBase(TestBase):
         if key in self.dap_server.capabilities:
             self.assertEqual(self.dap_server.capabilities[key], False, msg)
 
-    def verify_breakpoint_hit(self, breakpoint_ids: List[Union[int, str]]):
+    def verify_breakpoint_hit(self, breakpoint_ids: List[int]):
         """Wait for the process we are debugging to stop, and verify we hit
         any breakpoint location in the "breakpoint_ids" array.
-        "breakpoint_ids" should be a list of breakpoint ID strings
-        (["1", "2"]). The return value from self.set_source_breakpoints()
+        "breakpoint_ids" should be a list of breakpoint IDs
+        ([1, 2]). The return value from self.set_source_breakpoints()
         or self.set_function_breakpoints() can be passed to this function"""
+        if not all(isinstance(i, int) for i in breakpoint_ids):
+            raise TypeError(f"breakpoint ids must be an int in {breakpoint_ids!r}")
         stopped_events = self.dap_server.wait_for_stopped()
-        normalized_bp_ids = [str(b) for b in breakpoint_ids]
         for stopped_event in stopped_events:
             if "body" in stopped_event:
                 body = stopped_event["body"]
@@ -168,23 +169,25 @@ class DAPTestCaseBase(TestBase):
                 if (
                     body["reason"] != "breakpoint"
                     and body["reason"] != "instruction breakpoint"
+                    and body["reason"] != "data breakpoint"
                 ):
                     continue
                 if "hitBreakpointIds" not in body:
                     continue
                 hit_breakpoint_ids = body["hitBreakpointIds"]
                 for bp in hit_breakpoint_ids:
-                    if str(bp) in normalized_bp_ids:
+                    if bp in breakpoint_ids:
                         return
-        self.assertTrue(
-            False,
+        self.fail(
             f"breakpoint not hit, wanted breakpoint_ids {breakpoint_ids} in stopped_events {stopped_events}",
         )
 
-    def verify_all_breakpoints_hit(self, breakpoint_ids):
+    def verify_all_breakpoints_hit(self, breakpoint_ids: List[int]) -> None:
         """Wait for the process we are debugging to stop, and verify we hit
         all of the breakpoint locations in the "breakpoint_ids" array.
         "breakpoint_ids" should be a list of int breakpoint IDs ([1, 2])."""
+        if not all(isinstance(i, int) for i in breakpoint_ids):
+            raise TypeError(f"breakpoint ids must be an int in {breakpoint_ids!r}")
         stopped_events = self.dap_server.wait_for_stopped()
         for stopped_event in stopped_events:
             if "body" in stopped_event:
@@ -201,29 +204,50 @@ class DAPTestCaseBase(TestBase):
                 hit_bps = body["hitBreakpointIds"]
                 if all(breakpoint_id in hit_bps for breakpoint_id in breakpoint_ids):
                     return
-        self.assertTrue(False, f"breakpoints not hit, stopped_events={stopped_events}")
+        self.fail(f"breakpoints not hit, stopped_events={stopped_events}")
 
-    def verify_stop_exception_info(self, expected_description):
-        """Wait for the process we are debugging to stop, and verify the stop
-        reason is 'exception' and that the description matches
-        'expected_description'
-        """
+    def verify_stop_exception_info(
+        self, expected_description: str, expected_text: Optional[str] = None
+    ) -> None:
+        """Wait for the debuggee to stop, and verify the stop reason is
+        'exception' with the description matching 'expected_description' and
+        text match 'expected_text', if specified."""
         stopped_events = self.dap_server.wait_for_stopped()
         for stopped_event in stopped_events:
-            if "body" in stopped_event:
-                body = stopped_event["body"]
-                if "reason" not in body:
-                    continue
-                if body["reason"] != "exception":
-                    continue
-                if "description" not in body:
-                    continue
-                description = body["description"]
-                if expected_description == description:
-                    return True
-        return False
+            body = stopped_event["body"]
+            if body["reason"] != "exception":
+                continue
+            self.assertIn(
+                "description",
+                body,
+                f"stopped event missing description {stopped_event}",
+            )
+            description = body["description"]
+            self.assertRegex(
+                description,
+                expected_description,
+                f"for 'stopped' event {stopped_event!r}",
+            )
+            if expected_text:
+                self.assertRegex(
+                    body["text"],
+                    expected_text,
+                    f"for stopped event {stopped_event!r}",
+                )
+            return
+        self.fail(f"No valid stop exception info detected in {stopped_events}")
 
-    def verify_commands(self, flavor: str, output: str, commands: list[str]):
+    def verify_stop_on_entry(self) -> None:
+        """Waits for the process to be stopped and then verifies at least one
+        thread has the stop reason 'entry'."""
+        self.dap_server.wait_for_stopped()
+        self.assertIn(
+            "entry",
+            (t["reason"] for t in self.dap_server.thread_stop_reasons.values()),
+            "Expected at least one thread to report stop reason 'entry' in {self.dap_server.thread_stop_reasons}",
+        )
+
+    def verify_commands(self, flavor: str, output: str, commands: List[str]):
         self.assertTrue(output and len(output) > 0, "expect console output")
         lines = output.splitlines()
         prefix = "(lldb) "
@@ -255,7 +279,7 @@ class DAPTestCaseBase(TestBase):
         self.assertIsNotNone(event)
         self.assertEqual(memoryReference, event["body"].get("memoryReference"))
 
-    def get_dict_value(self, d: dict, key_path: list[str]) -> Any:
+    def get_dict_value(self, d: Mapping[str, Any], key_path: List[str]) -> Any:
         """Verify each key in the key_path array is in contained in each
         dictionary within "d". Assert if any key isn't in the
         corresponding dictionary. This is handy for grabbing values from VS
@@ -264,13 +288,10 @@ class DAPTestCaseBase(TestBase):
         """
         value = d
         for key in key_path:
-            if key in value:
-                value = value[key]
-            else:
-                self.assertTrue(
-                    key in value,
-                    'key "%s" from key_path "%s" not in "%s"' % (key, key_path, d),
-                )
+            self.assertIn(
+                key, value, f"lookup failure for dict={d} key_path={key_path}"
+            )
+            value = value[key]
         return value
 
     def get_stackFrames_and_totalFramesCount(
@@ -415,19 +436,16 @@ class DAPTestCaseBase(TestBase):
         self.do_continue()
         return self.dap_server.wait_for_stopped()
 
-    def continue_to_breakpoint(self, breakpoint_id: str):
-        self.continue_to_breakpoints((breakpoint_id))
+    def continue_to_breakpoint(self, breakpoint_id: int):
+        self.continue_to_breakpoints([breakpoint_id])
 
-    def continue_to_breakpoints(self, breakpoint_ids):
+    def continue_to_breakpoints(self, breakpoint_ids: List[int]):
         self.do_continue()
         self.verify_breakpoint_hit(breakpoint_ids)
 
-    def continue_to_exception_breakpoint(self, filter_label):
+    def continue_to_exception_breakpoint(self, description, text=None):
         self.do_continue()
-        self.assertTrue(
-            self.verify_stop_exception_info(filter_label),
-            'verify we got "%s"' % (filter_label),
-        )
+        self.verify_stop_exception_info(description, text)
 
     def continue_to_exit(self, exitCode=0):
         self.do_continue()
@@ -485,12 +503,9 @@ class DAPTestCaseBase(TestBase):
         *,
         disconnectAutomatically=True,
         sourceInitFile=False,
-        expectFailure=False,
         **kwargs,
-    ):
-        """Build the default Makefile target, create the DAP debug adapter,
-        and attach to the process.
-        """
+    ) -> int:
+        """Attach to the process."""
 
         # Make sure we disconnect and terminate the DAP debug adapter even
         # if we throw an exception during the test case.
@@ -503,23 +518,27 @@ class DAPTestCaseBase(TestBase):
         self.addTearDownHook(cleanup)
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
-        response = self.dap_server.request_attach(**kwargs)
-        if expectFailure:
-            return response
-        if not (response and response["success"]):
-            error_msg = self._build_error_message("attach failed", response)
-            self.assertTrue(response and response["success"], error_msg)
+        return self.dap_server.request_attach(**kwargs)
+
+    def attach_and_configurationDone(
+        self,
+        **kwargs,
+    ) -> Response:
+        """Attach to the process."""
+        attach_seq = self.attach(**kwargs)
+        self.dap_server.wait_for_event(["initialized"])
+        self.dap_server.request_configurationDone()
+        return self.dap_server.receive_response(attach_seq)
 
     def launch(
         self,
-        program=None,
+        program: str,
         *,
         sourceInitFile=False,
         disconnectAutomatically=True,
-        expectFailure=False,
         **kwargs,
-    ):
-        """Sending launch request to dap"""
+    ) -> int:
+        """Send launch request."""
 
         # Make sure we disconnect and terminate the DAP debug adapter,
         # if we throw an exception during the test case
@@ -533,12 +552,18 @@ class DAPTestCaseBase(TestBase):
 
         # Initialize and launch the program
         self.dap_server.request_initialize(sourceInitFile)
-        response = self.dap_server.request_launch(program, **kwargs)
-        if expectFailure:
-            return response
-        if not (response and response["success"]):
-            error_msg = self._build_error_message("launch failed", response)
-            self.assertTrue(response and response["success"], error_msg)
+        return self.dap_server.request_launch(program, **kwargs)
+
+    def launch_and_configurationDone(
+        self,
+        program: str,
+        **kwargs,
+    ) -> Response:
+        """Send launch request."""
+        launch_seq = self.launch(program, **kwargs)
+        self.dap_server.wait_for_event(["initialized"])
+        self.dap_server.request_configurationDone()
+        return self.dap_server.receive_response(launch_seq)
 
     def build_and_launch(
         self,
@@ -554,6 +579,13 @@ class DAPTestCaseBase(TestBase):
         self.assertTrue(os.path.exists(program), "executable must exist")
 
         return self.launch(program, **kwargs)
+
+    def verify_configuration_done(self, expected_success=True):
+        resp = self.dap_server.request_configurationDone()
+        if expected_success:
+            self.assertTrue(resp["success"])
+        else:
+            self.assertFalse(resp["success"])
 
     def getBuiltinDebugServerTool(self):
         # Tries to find simulation/lldb-server/gdbserver tool path.

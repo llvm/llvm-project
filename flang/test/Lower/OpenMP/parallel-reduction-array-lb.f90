@@ -12,7 +12,7 @@ print *,i
 
 end program
 
-! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_3x2xi32 : !fir.ref<!fir.box<!fir.array<3x2xi32>>> alloc {
+! CHECK-LABEL:   omp.declare_reduction @add_reduction_byref_box_3x2xi32 : !fir.ref<!fir.box<!fir.array<3x2xi32>>> {{.*}} alloc {
 ! CHECK:           %[[VAL_15:.*]] = fir.alloca !fir.box<!fir.array<3x2xi32>>
 ! CHECK:           omp.yield(%[[VAL_15]] : !fir.ref<!fir.box<!fir.array<3x2xi32>>>)
 ! CHECK-LABEL:   } init {

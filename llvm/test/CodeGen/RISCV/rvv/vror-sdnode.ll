@@ -4,9 +4,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+v,+zvkb -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECK-ZVKB
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+zvkb -verify-machineinstrs < %s | FileCheck %s --check-prefix=CHECK-ZVKB
 
-declare <vscale x 1 x i8> @llvm.fshr.nxv1i8(<vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>)
-declare <vscale x 1 x i8> @llvm.fshl.nxv1i8(<vscale x 1 x i8>, <vscale x 1 x i8>, <vscale x 1 x i8>)
-
 define <vscale x 1 x i8> @vror_vv_nxv1i8(<vscale x 1 x i8> %a, <vscale x 1 x i8> %b) {
 ; CHECK-LABEL: vror_vv_nxv1i8:
 ; CHECK:       # %bb.0:
@@ -87,9 +84,6 @@ define <vscale x 1 x i8> @vror_vi_rotl_nxv1i8(<vscale x 1 x i8> %a) {
   %x = call <vscale x 1 x i8> @llvm.fshl.nxv1i8(<vscale x 1 x i8> %a, <vscale x 1 x i8> %a, <vscale x 1 x i8> splat (i8 1))
   ret <vscale x 1 x i8> %x
 }
-
-declare <vscale x 2 x i8> @llvm.fshr.nxv2i8(<vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>)
-declare <vscale x 2 x i8> @llvm.fshl.nxv2i8(<vscale x 2 x i8>, <vscale x 2 x i8>, <vscale x 2 x i8>)
 
 define <vscale x 2 x i8> @vror_vv_nxv2i8(<vscale x 2 x i8> %a, <vscale x 2 x i8> %b) {
 ; CHECK-LABEL: vror_vv_nxv2i8:
@@ -172,9 +166,6 @@ define <vscale x 2 x i8> @vror_vi_rotl_nxv2i8(<vscale x 2 x i8> %a) {
   ret <vscale x 2 x i8> %x
 }
 
-declare <vscale x 4 x i8> @llvm.fshr.nxv4i8(<vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>)
-declare <vscale x 4 x i8> @llvm.fshl.nxv4i8(<vscale x 4 x i8>, <vscale x 4 x i8>, <vscale x 4 x i8>)
-
 define <vscale x 4 x i8> @vror_vv_nxv4i8(<vscale x 4 x i8> %a, <vscale x 4 x i8> %b) {
 ; CHECK-LABEL: vror_vv_nxv4i8:
 ; CHECK:       # %bb.0:
@@ -255,9 +246,6 @@ define <vscale x 4 x i8> @vror_vi_rotl_nxv4i8(<vscale x 4 x i8> %a) {
   %x = call <vscale x 4 x i8> @llvm.fshl.nxv4i8(<vscale x 4 x i8> %a, <vscale x 4 x i8> %a, <vscale x 4 x i8> splat (i8 1))
   ret <vscale x 4 x i8> %x
 }
-
-declare <vscale x 8 x i8> @llvm.fshr.nxv8i8(<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>)
-declare <vscale x 8 x i8> @llvm.fshl.nxv8i8(<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>)
 
 define <vscale x 8 x i8> @vror_vv_nxv8i8(<vscale x 8 x i8> %a, <vscale x 8 x i8> %b) {
 ; CHECK-LABEL: vror_vv_nxv8i8:
@@ -340,9 +328,6 @@ define <vscale x 8 x i8> @vror_vi_rotl_nxv8i8(<vscale x 8 x i8> %a) {
   ret <vscale x 8 x i8> %x
 }
 
-declare <vscale x 16 x i8> @llvm.fshr.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>)
-declare <vscale x 16 x i8> @llvm.fshl.nxv16i8(<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>)
-
 define <vscale x 16 x i8> @vror_vv_nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
 ; CHECK-LABEL: vror_vv_nxv16i8:
 ; CHECK:       # %bb.0:
@@ -423,9 +408,6 @@ define <vscale x 16 x i8> @vror_vi_rotl_nxv16i8(<vscale x 16 x i8> %a) {
   %x = call <vscale x 16 x i8> @llvm.fshl.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %a, <vscale x 16 x i8> splat (i8 1))
   ret <vscale x 16 x i8> %x
 }
-
-declare <vscale x 32 x i8> @llvm.fshr.nxv32i8(<vscale x 32 x i8>, <vscale x 32 x i8>, <vscale x 32 x i8>)
-declare <vscale x 32 x i8> @llvm.fshl.nxv32i8(<vscale x 32 x i8>, <vscale x 32 x i8>, <vscale x 32 x i8>)
 
 define <vscale x 32 x i8> @vror_vv_nxv32i8(<vscale x 32 x i8> %a, <vscale x 32 x i8> %b) {
 ; CHECK-LABEL: vror_vv_nxv32i8:
@@ -508,9 +490,6 @@ define <vscale x 32 x i8> @vror_vi_rotl_nxv32i8(<vscale x 32 x i8> %a) {
   ret <vscale x 32 x i8> %x
 }
 
-declare <vscale x 64 x i8> @llvm.fshr.nxv64i8(<vscale x 64 x i8>, <vscale x 64 x i8>, <vscale x 64 x i8>)
-declare <vscale x 64 x i8> @llvm.fshl.nxv64i8(<vscale x 64 x i8>, <vscale x 64 x i8>, <vscale x 64 x i8>)
-
 define <vscale x 64 x i8> @vror_vv_nxv64i8(<vscale x 64 x i8> %a, <vscale x 64 x i8> %b) {
 ; CHECK-LABEL: vror_vv_nxv64i8:
 ; CHECK:       # %bb.0:
@@ -591,9 +570,6 @@ define <vscale x 64 x i8> @vror_vi_rotl_nxv64i8(<vscale x 64 x i8> %a) {
   %x = call <vscale x 64 x i8> @llvm.fshl.nxv64i8(<vscale x 64 x i8> %a, <vscale x 64 x i8> %a, <vscale x 64 x i8> splat (i8 1))
   ret <vscale x 64 x i8> %x
 }
-
-declare <vscale x 1 x i16> @llvm.fshr.nxv1i16(<vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>)
-declare <vscale x 1 x i16> @llvm.fshl.nxv1i16(<vscale x 1 x i16>, <vscale x 1 x i16>, <vscale x 1 x i16>)
 
 define <vscale x 1 x i16> @vror_vv_nxv1i16(<vscale x 1 x i16> %a, <vscale x 1 x i16> %b) {
 ; CHECK-LABEL: vror_vv_nxv1i16:
@@ -676,9 +652,6 @@ define <vscale x 1 x i16> @vror_vi_rotl_nxv1i16(<vscale x 1 x i16> %a) {
   ret <vscale x 1 x i16> %x
 }
 
-declare <vscale x 2 x i16> @llvm.fshr.nxv2i16(<vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>)
-declare <vscale x 2 x i16> @llvm.fshl.nxv2i16(<vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>)
-
 define <vscale x 2 x i16> @vror_vv_nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i16> %b) {
 ; CHECK-LABEL: vror_vv_nxv2i16:
 ; CHECK:       # %bb.0:
@@ -759,9 +732,6 @@ define <vscale x 2 x i16> @vror_vi_rotl_nxv2i16(<vscale x 2 x i16> %a) {
   %x = call <vscale x 2 x i16> @llvm.fshl.nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i16> %a, <vscale x 2 x i16> splat (i16 1))
   ret <vscale x 2 x i16> %x
 }
-
-declare <vscale x 4 x i16> @llvm.fshr.nxv4i16(<vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>)
-declare <vscale x 4 x i16> @llvm.fshl.nxv4i16(<vscale x 4 x i16>, <vscale x 4 x i16>, <vscale x 4 x i16>)
 
 define <vscale x 4 x i16> @vror_vv_nxv4i16(<vscale x 4 x i16> %a, <vscale x 4 x i16> %b) {
 ; CHECK-LABEL: vror_vv_nxv4i16:
@@ -844,9 +814,6 @@ define <vscale x 4 x i16> @vror_vi_rotl_nxv4i16(<vscale x 4 x i16> %a) {
   ret <vscale x 4 x i16> %x
 }
 
-declare <vscale x 8 x i16> @llvm.fshr.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>)
-declare <vscale x 8 x i16> @llvm.fshl.nxv8i16(<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>)
-
 define <vscale x 8 x i16> @vror_vv_nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %b) {
 ; CHECK-LABEL: vror_vv_nxv8i16:
 ; CHECK:       # %bb.0:
@@ -927,9 +894,6 @@ define <vscale x 8 x i16> @vror_vi_rotl_nxv8i16(<vscale x 8 x i16> %a) {
   %x = call <vscale x 8 x i16> @llvm.fshl.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %a, <vscale x 8 x i16> splat (i16 1))
   ret <vscale x 8 x i16> %x
 }
-
-declare <vscale x 16 x i16> @llvm.fshr.nxv16i16(<vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i16>)
-declare <vscale x 16 x i16> @llvm.fshl.nxv16i16(<vscale x 16 x i16>, <vscale x 16 x i16>, <vscale x 16 x i16>)
 
 define <vscale x 16 x i16> @vror_vv_nxv16i16(<vscale x 16 x i16> %a, <vscale x 16 x i16> %b) {
 ; CHECK-LABEL: vror_vv_nxv16i16:
@@ -1012,9 +976,6 @@ define <vscale x 16 x i16> @vror_vi_rotl_nxv16i16(<vscale x 16 x i16> %a) {
   ret <vscale x 16 x i16> %x
 }
 
-declare <vscale x 32 x i16> @llvm.fshr.nxv32i16(<vscale x 32 x i16>, <vscale x 32 x i16>, <vscale x 32 x i16>)
-declare <vscale x 32 x i16> @llvm.fshl.nxv32i16(<vscale x 32 x i16>, <vscale x 32 x i16>, <vscale x 32 x i16>)
-
 define <vscale x 32 x i16> @vror_vv_nxv32i16(<vscale x 32 x i16> %a, <vscale x 32 x i16> %b) {
 ; CHECK-LABEL: vror_vv_nxv32i16:
 ; CHECK:       # %bb.0:
@@ -1095,9 +1056,6 @@ define <vscale x 32 x i16> @vror_vi_rotl_nxv32i16(<vscale x 32 x i16> %a) {
   %x = call <vscale x 32 x i16> @llvm.fshl.nxv32i16(<vscale x 32 x i16> %a, <vscale x 32 x i16> %a, <vscale x 32 x i16> splat (i16 1))
   ret <vscale x 32 x i16> %x
 }
-
-declare <vscale x 1 x i32> @llvm.fshr.nxv1i32(<vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>)
-declare <vscale x 1 x i32> @llvm.fshl.nxv1i32(<vscale x 1 x i32>, <vscale x 1 x i32>, <vscale x 1 x i32>)
 
 define <vscale x 1 x i32> @vror_vv_nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b) {
 ; CHECK-LABEL: vror_vv_nxv1i32:
@@ -1193,9 +1151,6 @@ define <vscale x 1 x i32> @vror_vi_rotl_nxv1i32(<vscale x 1 x i32> %a) {
   ret <vscale x 1 x i32> %x
 }
 
-declare <vscale x 2 x i32> @llvm.fshr.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>)
-declare <vscale x 2 x i32> @llvm.fshl.nxv2i32(<vscale x 2 x i32>, <vscale x 2 x i32>, <vscale x 2 x i32>)
-
 define <vscale x 2 x i32> @vror_vv_nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %b) {
 ; CHECK-LABEL: vror_vv_nxv2i32:
 ; CHECK:       # %bb.0:
@@ -1289,9 +1244,6 @@ define <vscale x 2 x i32> @vror_vi_rotl_nxv2i32(<vscale x 2 x i32> %a) {
   %x = call <vscale x 2 x i32> @llvm.fshl.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %a, <vscale x 2 x i32> splat (i32 1))
   ret <vscale x 2 x i32> %x
 }
-
-declare <vscale x 4 x i32> @llvm.fshr.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i32> @llvm.fshl.nxv4i32(<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>)
 
 define <vscale x 4 x i32> @vror_vv_nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b) {
 ; CHECK-LABEL: vror_vv_nxv4i32:
@@ -1387,9 +1339,6 @@ define <vscale x 4 x i32> @vror_vi_rotl_nxv4i32(<vscale x 4 x i32> %a) {
   ret <vscale x 4 x i32> %x
 }
 
-declare <vscale x 8 x i32> @llvm.fshr.nxv8i32(<vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>)
-declare <vscale x 8 x i32> @llvm.fshl.nxv8i32(<vscale x 8 x i32>, <vscale x 8 x i32>, <vscale x 8 x i32>)
-
 define <vscale x 8 x i32> @vror_vv_nxv8i32(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b) {
 ; CHECK-LABEL: vror_vv_nxv8i32:
 ; CHECK:       # %bb.0:
@@ -1484,9 +1433,6 @@ define <vscale x 8 x i32> @vror_vi_rotl_nxv8i32(<vscale x 8 x i32> %a) {
   ret <vscale x 8 x i32> %x
 }
 
-declare <vscale x 16 x i32> @llvm.fshr.nxv16i32(<vscale x 16 x i32>, <vscale x 16 x i32>, <vscale x 16 x i32>)
-declare <vscale x 16 x i32> @llvm.fshl.nxv16i32(<vscale x 16 x i32>, <vscale x 16 x i32>, <vscale x 16 x i32>)
-
 define <vscale x 16 x i32> @vror_vv_nxv16i32(<vscale x 16 x i32> %a, <vscale x 16 x i32> %b) {
 ; CHECK-LABEL: vror_vv_nxv16i32:
 ; CHECK:       # %bb.0:
@@ -1580,9 +1526,6 @@ define <vscale x 16 x i32> @vror_vi_rotl_nxv16i32(<vscale x 16 x i32> %a) {
   %x = call <vscale x 16 x i32> @llvm.fshl.nxv16i32(<vscale x 16 x i32> %a, <vscale x 16 x i32> %a, <vscale x 16 x i32> splat (i32 1))
   ret <vscale x 16 x i32> %x
 }
-
-declare <vscale x 1 x i64> @llvm.fshr.nxv1i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>)
-declare <vscale x 1 x i64> @llvm.fshl.nxv1i64(<vscale x 1 x i64>, <vscale x 1 x i64>, <vscale x 1 x i64>)
 
 define <vscale x 1 x i64> @vror_vv_nxv1i64(<vscale x 1 x i64> %a, <vscale x 1 x i64> %b) {
 ; CHECK-LABEL: vror_vv_nxv1i64:
@@ -1683,9 +1626,6 @@ define <vscale x 1 x i64> @vror_vi_rotl_nxv1i64(<vscale x 1 x i64> %a) {
   ret <vscale x 1 x i64> %x
 }
 
-declare <vscale x 2 x i64> @llvm.fshr.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>)
-declare <vscale x 2 x i64> @llvm.fshl.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>)
-
 define <vscale x 2 x i64> @vror_vv_nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i64> %b) {
 ; CHECK-LABEL: vror_vv_nxv2i64:
 ; CHECK:       # %bb.0:
@@ -1785,9 +1725,6 @@ define <vscale x 2 x i64> @vror_vi_rotl_nxv2i64(<vscale x 2 x i64> %a) {
   ret <vscale x 2 x i64> %x
 }
 
-declare <vscale x 4 x i64> @llvm.fshr.nxv4i64(<vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64>)
-declare <vscale x 4 x i64> @llvm.fshl.nxv4i64(<vscale x 4 x i64>, <vscale x 4 x i64>, <vscale x 4 x i64>)
-
 define <vscale x 4 x i64> @vror_vv_nxv4i64(<vscale x 4 x i64> %a, <vscale x 4 x i64> %b) {
 ; CHECK-LABEL: vror_vv_nxv4i64:
 ; CHECK:       # %bb.0:
@@ -1886,9 +1823,6 @@ define <vscale x 4 x i64> @vror_vi_rotl_nxv4i64(<vscale x 4 x i64> %a) {
   %x = call <vscale x 4 x i64> @llvm.fshl.nxv4i64(<vscale x 4 x i64> %a, <vscale x 4 x i64> %a, <vscale x 4 x i64> splat (i64 1))
   ret <vscale x 4 x i64> %x
 }
-
-declare <vscale x 8 x i64> @llvm.fshr.nxv8i64(<vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64>)
-declare <vscale x 8 x i64> @llvm.fshl.nxv8i64(<vscale x 8 x i64>, <vscale x 8 x i64>, <vscale x 8 x i64>)
 
 define <vscale x 8 x i64> @vror_vv_nxv8i64(<vscale x 8 x i64> %a, <vscale x 8 x i64> %b) {
 ; CHECK-LABEL: vror_vv_nxv8i64:

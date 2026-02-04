@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/CPP/expected.h"
-#include "src/__support/time/linux/abs_timeout.h"
-#include "src/__support/time/linux/monotonicity.h"
+#include "src/__support/time/abs_timeout.h"
+#include "src/__support/time/monotonicity.h"
 #include "test/UnitTest/Test.h"
 
 template <class T, class E>

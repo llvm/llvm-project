@@ -333,3 +333,11 @@ def : ProcessorModel<"gfx1250", GFX1250SpeedModel,
 def : ProcessorModel<"gfx1251", GFX1250SpeedModel,
   FeatureISAVersion12_51.Features
 >;
+
+//===----------------------------------------------------------------------===//
+// GCN GFX13.
+//===----------------------------------------------------------------------===//
+
+def : ProcessorModel<"gfx1310", GFX12SpeedModel,
+  FeatureISAVersion13.Features
+>;

@@ -7,7 +7,7 @@
 # RUN: llvm-bolt %t.exe --inline-memcpy -o %t.bolt 2>&1 | FileCheck %s --check-prefix=CHECK-INLINE
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=CHECK-ASM
 
-# Verify BOLT reports that it inlined memcpy calls (11 successful inlines out of 16 total calls)
+# Verify BOLT reports that it inlined memcpy calls (11 successful inlines out of 17 total calls)
 # CHECK-INLINE: BOLT-INFO: inlined 11 memcpy() calls
 
 # Each function should use optimal size-specific instructions and NO memcpy calls
@@ -81,11 +81,14 @@
 # CHECK-ASM: bl{{.*}}<memcpy
 
 # Register move should NOT be inlined (size unknown at compile time)
-# CHECK-ASM-LABEL: <test_register_move_negative>:
+# CHECK-ASM-LABEL: <test_register_move_unknown>:
+# CHECK-ASM: bl{{.*}}<memcpy
+
+# CHECK-ASM-LABEL: <test_x2_rewrite_unknown>:
 # CHECK-ASM: bl{{.*}}<memcpy
 
 # Live-in parameter should NOT be inlined (size unknown at compile time)
-# CHECK-ASM-LABEL: <test_live_in_negative>:
+# CHECK-ASM-LABEL: <test_live_in_unknown>:
 # CHECK-ASM: bl{{.*}}<memcpy
 
 # _memcpy8 should be inlined with end-pointer return (dest+size)
@@ -259,9 +262,9 @@ test_4_byte_add_immediate:
 	ret
 	.size	test_4_byte_add_immediate, .-test_4_byte_add_immediate
 
-	.globl	test_register_move_negative
-	.type	test_register_move_negative,@function
-test_register_move_negative:
+	.globl	test_register_move_unknown
+	.type	test_register_move_unknown,@function
+test_register_move_unknown:
 	stp	x29, x30, [sp, #-32]!
 	mov	x29, sp
 	add	x1, sp, #16
@@ -271,11 +274,20 @@ test_register_move_negative:
 	bl	memcpy
 	ldp	x29, x30, [sp], #32
 	ret
-	.size	test_register_move_negative, .-test_register_move_negative
+	.size	test_register_move_unknown, .-test_register_move_unknown
 
-	.globl	test_live_in_negative
-	.type	test_live_in_negative,@function
-test_live_in_negative:
+	.globl  test_x2_rewrite_unknown
+	.type   test_x2_rewrite_unknown,@function
+test_x2_rewrite_unknown:
+	mov     x2, #8
+	ldr     x2, [sp, #24]
+	bl      memcpy
+	ret
+	.size   test_x2_rewrite_unknown, .-test_x2_rewrite_unknown
+
+	.globl	test_live_in_unknown
+	.type	test_live_in_unknown,@function
+test_live_in_unknown:
 	# x2 comes in as parameter, no instruction sets it (should NOT inline)
 	stp	x29, x30, [sp, #-32]!
 	mov	x29, sp
@@ -285,7 +297,7 @@ test_live_in_negative:
 	bl	memcpy
 	ldp	x29, x30, [sp], #32
 	ret
-	.size	test_live_in_negative, .-test_live_in_negative
+	.size	test_live_in_unknown, .-test_live_in_unknown
 
 	.globl	test_memcpy8_4_byte
 	.type	test_memcpy8_4_byte,@function

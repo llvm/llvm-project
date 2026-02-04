@@ -1,4 +1,4 @@
-; RUN: not opt -disable-output -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes=atomic-expand %s 2>&1 | FileCheck --implicit-check-not=error %s
+; RUN: not opt -disable-output -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes='require<libcall-lowering-info>,atomic-expand' %s 2>&1 | FileCheck --implicit-check-not=error %s
 
 ; CHECK: error: unsupported atomic load
 define i32 @atomic_load_global_align1(ptr addrspace(1) %ptr) {

@@ -81,7 +81,7 @@ WebAssemblyFrameLowering::getLocalForStackObject(MachineFunction &MF,
   // Abuse object size to record number of WebAssembly locals allocated to
   // this object.
   MFI.setObjectSize(FrameIndex, ValueVTs.size());
-  return static_cast<unsigned>(Local);
+  return Local;
 }
 
 /// We need a base pointer in the case of having items on the stack that

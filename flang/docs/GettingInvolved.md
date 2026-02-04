@@ -41,7 +41,7 @@ Contributions to Flang are done using GitHub Pull Requests and follow the
 ### Flang Slack Workspace
 
 -   There is a Slack workspace dedicated to Flang.
--   There are a number of topic-oriented channels available (e.g., #driver, #f18-semantics, #fir).
+-   There are a number of topic-oriented channels available (e.g., #driver, #fir).
 -   Add yourself via the *[invitation link](https://join.slack.com/t/flang-compiler/shared_invite/zt-2pcn51lh-VrRQL_YUOkxA_1CEfMGQhw "title")*
 
 ## Calls
@@ -54,7 +54,7 @@ Contributions to Flang are done using GitHub Pull Requests and follow the
       found in this [Google Doc](https://docs.google.com/document/d/1Z2U5UAtJ-Dag5wlMaLaW1KRmNgENNAYynJqLW2j2AZQ/). Alternative methods of joining, such as call-in numbers, are also available there.
 -   Time: Every other Wednesday, 8:30 a.m. Pacific Time
 -   Calendar invite: https://drive.google.com/file/d/1rkfWCtIvQFcxN0Uz8YVwQGoX_BbzT8oc/view?usp=drive_link
--   Meeting minutes are available in this [Google Doc](https://docs.google.com/document/d/1Z2U5UAtJ-Dag5wlMaLaW1KRmNgENNAYynJqLW2j2AZQ/edit).
+-   Meeting minutes are available in this [Google Doc](https://docs.google.com/document/d/18DHhXjdzPQP20rmQiDsWbv1tHfqz8TjJiSPwI-wYbY8/edit).
 -   Minutes from older meetings were posted on the [Flang forum](https://discourse.llvm.org/c/subprojects/flang). Search for `Flang Biweekly Sync - Notes`.
 
 ### LLVM Alias Analysis Technical Call

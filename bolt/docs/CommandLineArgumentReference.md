@@ -381,11 +381,6 @@
 
   Set verbosity level for diagnostic output
 
-- `--write-dwp`
-
-  Output a single dwarf package file (dwp) instead of multiple non-relocatable
-  dwarf object files (dwo).
-
 ### BOLT optimization options:
 
 - `--align-blocks`
@@ -815,6 +810,15 @@
 - `--runtime-instrumentation-lib=<string>`
 
   Specify file name of the runtime instrumentation library
+
+- `--runtime-lib-init-hook=<value>`
+
+  Primary target for hooking runtime library initialization, used in
+  fallback order of availability in input binary (entry_point -> init
+   -> init_array) (default: entry_point)
+  - `entry_point`: use ELF Header Entry Point
+  - `init`: use ELF DT_INIT entry
+  - `init_array`: use ELF .init_array entry
 
 - `--sctc-mode=<value>`
 

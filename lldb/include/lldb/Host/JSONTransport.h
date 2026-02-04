@@ -199,9 +199,7 @@ public:
   RegisterMessageHandler(MainLoop &loop, MessageHandler &handler) override {
     Status status;
     MainLoop::ReadHandleUP read_handle = loop.RegisterReadObject(
-        m_in,
-        std::bind(&IOTransport::OnRead, this, std::placeholders::_1,
-                  std::ref(handler)),
+        m_in, [this, &handler](MainLoopBase &base) { OnRead(base, handler); },
         status);
     if (status.Fail()) {
       return status.takeError();

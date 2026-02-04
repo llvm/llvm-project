@@ -8,6 +8,7 @@
 
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
@@ -92,10 +93,10 @@ TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
   llvm::raw_string_ostream DiagnosticsOS(DiagnosticOutput);
   auto DiagPrinter =
       std::make_unique<TextDiagnosticPrinter>(DiagnosticsOS, DiagOpts);
-  CompilerInstance Instance;
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags =
-      Instance.createDiagnostics(*llvm::vfs::getRealFileSystem(), DiagOpts,
-                                 DiagPrinter.get(), /*ShouldOwnClient=*/false);
+      CompilerInstance::createDiagnostics(*llvm::vfs::getRealFileSystem(),
+                                          DiagOpts, DiagPrinter.get(),
+                                          /*ShouldOwnClient=*/false);
 
   Diags->Report(diag::err_expected) << "no crash";
   ASSERT_EQ(DiagnosticOutput, "error: expected no crash\n");

@@ -35,7 +35,7 @@ void ObjectFileMinidump::Terminate() {
 }
 
 ObjectFile *ObjectFileMinidump::CreateInstance(
-    const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
+    const lldb::ModuleSP &module_sp, lldb::DataExtractorSP extractor_sp,
     lldb::offset_t data_offset, const lldb_private::FileSpec *file,
     lldb::offset_t offset, lldb::offset_t length) {
   return nullptr;

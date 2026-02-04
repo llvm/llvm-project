@@ -27,7 +27,7 @@ subroutine trans_test(store, word)
     real :: word
     store = transfer(word, store)
   end subroutine
-  
+
   ! CHECK-LABEL: func @_QPtrans_test2(
   ! CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<!fir.array<3xi32>>{{.*}}, %[[VAL_1:.*]]: !fir.ref<f32>{{.*}}) {
   ! CHECK:         %[[VAL_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
@@ -69,13 +69,13 @@ subroutine trans_test(store, word)
   ! CHECK:         fir.freemem %[[VAL_25]]
   ! CHECK:         return
   ! CHECK:       }
-  
+
   subroutine trans_test2(store, word)
     integer :: store(3)
     real :: word
     store = transfer(word, store, 3)
   end subroutine
-  
+
   integer function trans_test3(p)
     ! CHECK-LABEL: func @_QPtrans_test3(
     ! CHECK-SAME:                       %[[VAL_0:.*]]: !fir.ref<i32>{{.*}}) -> i32 {

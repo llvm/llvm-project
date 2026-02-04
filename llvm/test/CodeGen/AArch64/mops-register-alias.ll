@@ -3,12 +3,11 @@
 define void @call_memset_intrinsic() #0 {
 ; CHECK-LABEL: call_memset_intrinsic:
 ; CHECK:       // %bb.0: // %entry
-; CHECK:         setp [x{{[0-9]+}}]!, x{{[0-9]+}}!, x{{[0-9]+}}
-; CHECK-NOT:     setp [x{{[0-9]+}}]!, x[[REG:[0-9]+]]!, x[[REG]]
-; CHECK-NEXT:    setm [x{{[0-9]+}}]!, x{{[0-9]+}}!, x{{[0-9]+}}
-; CHECK-NOT:     setm [x{{[0-9]+}}]!, x[[REG:[0-9]+]]!, x[[REG]]
-; CHECK-NEXT:    sete [x{{[0-9]+}}]!, x{{[0-9]+}}!, x{{[0-9]+}}
-; CHECK-NOT:     sete [x{{[0-9]+}}]!, x[[REG:[0-9]+]]!, x[[REG]]
+; CHECK:         movi v0.16b, #64
+; CHECK-NEXT:    stp q0, q0, [sp]
+; CHECK-NEXT:    stp q0, q0, [sp, #32]
+; CHECK-NEXT:    stp q0, q0, [sp, #64]
+; CHECK-NEXT:    stp q0, q0, [sp, #96]
 entry:
 
     %V0 = alloca [65 x i8], align 1

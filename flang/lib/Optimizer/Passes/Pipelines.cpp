@@ -20,8 +20,9 @@ namespace fir {
 
 template <typename F>
 void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor) {
-  addNestedPassToOps<F, mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
-                     mlir::omp::PrivateClauseOp, fir::GlobalOp>(pm, ctor);
+  addNestedPassToOps<F, mlir::func::FuncOp, mlir::omp::DeclareMapperOp,
+                     mlir::omp::DeclareReductionOp, mlir::omp::PrivateClauseOp,
+                     fir::GlobalOp>(pm, ctor);
 }
 
 template <typename F>
@@ -205,6 +206,10 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
   pm.addPass(fir::createSimplifyRegionLite());
   pm.addPass(mlir::createCSEPass());
+
+  // Run LICM after CSE, which may reduce the number of operations to hoist.
+  if (enableFirLICM && pc.OptLevel.isOptimizingForSpeed())
+    pm.addPass(fir::createLoopInvariantCodeMotion());
 
   // Polymorphic types
   pm.addPass(fir::createPolymorphicOpConversion());
@@ -426,6 +431,12 @@ void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
 
   // Add codegen pass pipeline.
   fir::createDefaultFIRCodeGenPassPipeline(pm, config, inputFilename);
+
+  // Run a pass to prepare for translation of delayed privatization in the
+  // context of deferred target tasks.
+  addPassConditionally(pm, disableFirToLlvmIr, [&]() {
+    return mlir::omp::createPrepareForOMPOffloadPrivatizationPass();
+  });
 }
 
 } // namespace fir

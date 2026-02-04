@@ -37,8 +37,6 @@ unsigned Object::getMachine() const {
     return *Header.Machine;
   return llvm::ELF::EM_NONE;
 }
-
-constexpr StringRef SectionHeaderTable::TypeStr;
 } // namespace ELFYAML
 
 namespace yaml {
@@ -137,6 +135,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_ARM_ZA);
   ECase(NT_ARM_ZT);
   ECase(NT_ARM_FPMR);
+  ECase(NT_ARM_POE);
   ECase(NT_ARM_GCS);
   ECase(NT_FILE);
   ECase(NT_PRXFPREG);
@@ -654,6 +653,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1201, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1250, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1251, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1310, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, EF_AMDGPU_MACH);
@@ -672,7 +672,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
       for (unsigned K = ELF::EF_AMDGPU_GENERIC_VERSION_MIN;
            K <= ELF::EF_AMDGPU_GENERIC_VERSION_MAX; ++K) {
         std::string Key = "EF_AMDGPU_GENERIC_VERSION_V" + std::to_string(K);
-        IO.maskedBitSetCase(Value, Key.c_str(),
+        IO.maskedBitSetCase(Value, Key,
                             K << ELF::EF_AMDGPU_GENERIC_VERSION_OFFSET,
                             ELF::EF_AMDGPU_GENERIC_VERSION);
       }
@@ -744,6 +744,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHT>::enumeration(
   ECase(SHT_LLVM_BB_ADDR_MAP);
   ECase(SHT_LLVM_OFFLOADING);
   ECase(SHT_LLVM_LTO);
+  ECase(SHT_LLVM_CALL_GRAPH);
   ECase(SHT_GNU_SFRAME);
   ECase(SHT_GNU_ATTRIBUTES);
   ECase(SHT_GNU_HASH);
@@ -1885,7 +1886,7 @@ void MappingTraits<ELFYAML::BBAddrMapEntry>::mapping(
     IO &IO, ELFYAML::BBAddrMapEntry &E) {
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapRequired("Version", E.Version);
-  IO.mapOptional("Feature", E.Feature, Hex8(0));
+  IO.mapOptional("Feature", E.Feature, Hex16(0));
   IO.mapOptional("NumBBRanges", E.NumBBRanges);
   IO.mapOptional("BBRanges", E.BBRanges);
 }
@@ -1919,6 +1920,7 @@ void MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry>::mapping(
     IO &IO, ELFYAML::PGOAnalysisMapEntry::PGOBBEntry &E) {
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapOptional("BBFreq", E.BBFreq);
+  IO.mapOptional("PostLinkBBFreq", E.PostLinkBBFreq);
   IO.mapOptional("Successors", E.Successors);
 }
 
@@ -1928,6 +1930,7 @@ void MappingTraits<ELFYAML::PGOAnalysisMapEntry::PGOBBEntry::SuccessorEntry>::
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapRequired("ID", E.ID);
   IO.mapRequired("BrProb", E.BrProb);
+  IO.mapOptional("PostLinkBrFreq", E.PostLinkBrFreq);
 }
 
 void MappingTraits<ELFYAML::GnuHashHeader>::mapping(IO &IO,
@@ -2053,12 +2056,6 @@ void MappingTraits<ELFYAML::CallGraphEntryWeight>::mapping(
   assert(IO.getContext() && "The IO context is not initialized");
   IO.mapRequired("Weight", E.Weight);
 }
-
-LLVM_YAML_STRONG_TYPEDEF(uint8_t, MIPS_AFL_REG)
-LLVM_YAML_STRONG_TYPEDEF(uint8_t, MIPS_ABI_FP)
-LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_AFL_EXT)
-LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_AFL_ASE)
-LLVM_YAML_STRONG_TYPEDEF(uint32_t, MIPS_AFL_FLAGS1)
 
 } // end namespace yaml
 

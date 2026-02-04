@@ -496,10 +496,10 @@ primitive integer expressions, which allows them to be combined with other
 integer expressions and/or split into multiple separate integer expressions. If
 they've made non-trivial changes, translating back into LLVM IR can involve
 reverse-engineering the structure of the addressing in order to fit it into the
-static type of the original first operand. It isn't always possibly to fully
+static type of the original first operand. It isn't always possible to fully
 reconstruct this structure; sometimes the underlying addressing doesn't
 correspond with the static type at all. In such cases the optimizer instead will
-emit a GEP with the base pointer casted to a simple address-unit pointer, using
+emit a GEP with the base pointer cast to a simple address-unit pointer, using
 the name "uglygep". This isn't pretty, but it's just as valid, and it's
 sufficient to preserve the pointer aliasing guarantees that GEP provides.
 

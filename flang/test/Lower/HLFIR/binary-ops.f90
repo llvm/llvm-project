@@ -281,8 +281,8 @@ subroutine cmp_char(l, x, y)
   l = x .eq. y
 end subroutine
 ! CHECK-LABEL: func.func @_QPcmp_char(
-! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_4:.*]]#1 dummy_scope %{{[0-9]+}} {uniq_name = "_QFcmp_charEx"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_6:.*]]#1 dummy_scope %{{[0-9]+}} {uniq_name = "_QFcmp_charEy"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_4:.*]]#1 dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFcmp_charEx"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_6:.*]]#1 dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFcmp_charEy"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 ! CHECK:  %[[VAL_8:.*]] = hlfir.cmpchar eq %[[VAL_5]]#0 %[[VAL_7]]#0 : (!fir.boxchar<1>, !fir.boxchar<1>) -> i1
 ! CHECK:  %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i1) -> !fir.logical<4>
 

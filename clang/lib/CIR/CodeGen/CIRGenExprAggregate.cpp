@@ -13,6 +13,7 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
 #include "CIRGenValue.h"
+#include "mlir/IR/Builders.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 
 #include "clang/AST/Expr.h"
@@ -24,6 +25,73 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 namespace {
+// FIXME(cir): This should be a common helper between CIRGen
+// and traditional CodeGen
+/// Is the value of the given expression possibly a reference to or
+/// into a __block variable?
+static bool isBlockVarRef(const Expr *e) {
+  // Make sure we look through parens.
+  e = e->IgnoreParens();
+
+  // Check for a direct reference to a __block variable.
+  if (const DeclRefExpr *dre = dyn_cast<DeclRefExpr>(e)) {
+    const VarDecl *var = dyn_cast<VarDecl>(dre->getDecl());
+    return (var && var->hasAttr<BlocksAttr>());
+  }
+
+  // More complicated stuff.
+
+  // Binary operators.
+  if (const BinaryOperator *op = dyn_cast<BinaryOperator>(e)) {
+    // For an assignment or pointer-to-member operation, just care
+    // about the LHS.
+    if (op->isAssignmentOp() || op->isPtrMemOp())
+      return isBlockVarRef(op->getLHS());
+
+    // For a comma, just care about the RHS.
+    if (op->getOpcode() == BO_Comma)
+      return isBlockVarRef(op->getRHS());
+
+    // FIXME: pointer arithmetic?
+    return false;
+
+    // Check both sides of a conditional operator.
+  } else if (const AbstractConditionalOperator *op =
+                 dyn_cast<AbstractConditionalOperator>(e)) {
+    return isBlockVarRef(op->getTrueExpr()) ||
+           isBlockVarRef(op->getFalseExpr());
+
+    // OVEs are required to support BinaryConditionalOperators.
+  } else if (const OpaqueValueExpr *op = dyn_cast<OpaqueValueExpr>(e)) {
+    if (const Expr *src = op->getSourceExpr())
+      return isBlockVarRef(src);
+
+    // Casts are necessary to get things like (*(int*)&var) = foo().
+    // We don't really care about the kind of cast here, except
+    // we don't want to look through l2r casts, because it's okay
+    // to get the *value* in a __block variable.
+  } else if (const CastExpr *cast = dyn_cast<CastExpr>(e)) {
+    if (cast->getCastKind() == CK_LValueToRValue)
+      return false;
+    return isBlockVarRef(cast->getSubExpr());
+
+    // Handle unary operators.  Again, just aggressively look through
+    // it, ignoring the operation.
+  } else if (const UnaryOperator *uop = dyn_cast<UnaryOperator>(e)) {
+    return isBlockVarRef(uop->getSubExpr());
+
+    // Look into the base of a field access.
+  } else if (const MemberExpr *mem = dyn_cast<MemberExpr>(e)) {
+    return isBlockVarRef(mem->getBase());
+
+    // Look into the base of a subscript.
+  } else if (const ArraySubscriptExpr *sub = dyn_cast<ArraySubscriptExpr>(e)) {
+    return isBlockVarRef(sub->getBase());
+  }
+
+  return false;
+}
+
 class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
 
   CIRGenFunction &cgf;
@@ -41,9 +109,7 @@ class AggExprEmitter : public StmtVisitor<AggExprEmitter> {
   AggValueSlot ensureSlot(mlir::Location loc, QualType t) {
     if (!dest.isIgnored())
       return dest;
-
-    cgf.cgm.errorNYI(loc, "Slot for ignored address");
-    return dest;
+    return cgf.createAggTemp(t, loc, "agg.tmp.ensured");
   }
 
   void ensureDest(mlir::Location loc, QualType ty) {
@@ -65,8 +131,12 @@ public:
                      Expr *exprToVisit, ArrayRef<Expr *> args,
                      Expr *arrayFiller);
 
+  void emitFinalDestCopy(QualType type, RValue src);
+
   /// Perform the final copy to DestPtr, if desired.
-  void emitFinalDestCopy(QualType type, const LValue &src);
+  void emitFinalDestCopy(QualType type, const LValue &src,
+                         CIRGenFunction::ExprValueKind srcValueKind =
+                             CIRGenFunction::EVK_NonRValue);
 
   void emitCopy(QualType type, const AggValueSlot &dest,
                 const AggValueSlot &src);
@@ -87,6 +157,47 @@ public:
     Address retAlloca =
         cgf.createMemTemp(e->getType(), cgf.getLoc(e->getSourceRange()));
     (void)cgf.emitCompoundStmt(*e->getSubStmt(), &retAlloca, dest);
+  }
+
+  void VisitBinAssign(const BinaryOperator *e) {
+    // For an assignment to work, the value on the right has
+    // to be compatible with the value on the left.
+    assert(cgf.getContext().hasSameUnqualifiedType(e->getLHS()->getType(),
+                                                   e->getRHS()->getType()) &&
+           "Invalid assignment");
+
+    if (isBlockVarRef(e->getLHS()) &&
+        e->getRHS()->HasSideEffects(cgf.getContext())) {
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "block var reference with side effects");
+      return;
+    }
+
+    LValue lhs = cgf.emitLValue(e->getLHS());
+
+    // If we have an atomic type, evaluate into the destination and then
+    // do an atomic copy.
+    assert(!cir::MissingFeatures::atomicTypes());
+
+    // Codegen the RHS so that it stores directly into the LHS.
+    assert(!cir::MissingFeatures::aggValueSlotGC());
+    AggValueSlot lhsSlot = AggValueSlot::forLValue(
+        lhs, AggValueSlot::IsDestructed, AggValueSlot::IsAliased,
+        AggValueSlot::MayOverlap);
+
+    // A non-volatile aggregate destination might have volatile member.
+    if (!lhsSlot.isVolatile() && cgf.hasVolatileMember(e->getLHS()->getType()))
+      lhsSlot.setVolatile(true);
+
+    cgf.emitAggExpr(e->getRHS(), lhsSlot);
+
+    // Copy into the destination if the assignment isn't ignored.
+    emitFinalDestCopy(e->getType(), lhs);
+
+    if (!dest.isIgnored() && !dest.isExternallyDestructed() &&
+        e->getType().isDestructedType() == QualType::DK_nontrivial_c_struct)
+      cgf.pushDestroy(QualType::DK_nontrivial_c_struct, dest.getAddress(),
+                      e->getType());
   }
 
   void VisitDeclRefExpr(DeclRefExpr *e) { emitAggLoadOfLValue(e); }
@@ -122,6 +233,29 @@ public:
   // Stubs -- These should be moved up when they are implemented.
   void VisitCastExpr(CastExpr *e) {
     switch (e->getCastKind()) {
+    case CK_LValueToRValueBitCast: {
+      if (dest.isIgnored()) {
+        cgf.emitAnyExpr(e->getSubExpr(), AggValueSlot::ignored(),
+                        /*ignoreResult=*/true);
+        break;
+      }
+
+      LValue sourceLV = cgf.emitLValue(e->getSubExpr());
+      Address sourceAddress =
+          sourceLV.getAddress().withElementType(cgf.getBuilder(), cgf.voidTy);
+      Address destAddress =
+          dest.getAddress().withElementType(cgf.getBuilder(), cgf.voidTy);
+
+      mlir::Location loc = cgf.getLoc(e->getExprLoc());
+
+      mlir::Value sizeVal = cgf.getBuilder().getConstInt(
+          loc, cgf.sizeTy,
+          cgf.getContext().getTypeSizeInChars(e->getType()).getQuantity());
+      cgf.getBuilder().createMemCpy(loc, destAddress.getPointer(),
+                                    sourceAddress.getPointer(), sizeVal);
+
+      break;
+    }
     case CK_LValueToRValue:
       // If we're loading from a volatile type, force the destination
       // into existence.
@@ -174,6 +308,7 @@ public:
   void VisitUnaryDeref(UnaryOperator *e) { emitAggLoadOfLValue(e); }
   void VisitStringLiteral(StringLiteral *e) { emitAggLoadOfLValue(e); }
   void VisitCompoundLiteralExpr(CompoundLiteralExpr *e);
+
   void VisitPredefinedExpr(const PredefinedExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitPredefinedExpr");
@@ -185,9 +320,6 @@ public:
   void VisitPointerToDataMemberBinaryOperator(const BinaryOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "AggExprEmitter: VisitPointerToDataMemberBinaryOperator");
-  }
-  void VisitBinAssign(const BinaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitBinAssign");
   }
   void VisitBinComma(const BinaryOperator *e) {
     cgf.emitIgnoredExpr(e->getLHS());
@@ -239,8 +371,8 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitNoInitExpr");
   }
   void VisitCXXDefaultArgExpr(CXXDefaultArgExpr *dae) {
-    cgf.cgm.errorNYI(dae->getSourceRange(),
-                     "AggExprEmitter: VisitCXXDefaultArgExpr");
+    CIRGenFunction::CXXDefaultArgExprScope scope(cgf, dae);
+    Visit(dae->getExpr());
   }
   void VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -258,8 +390,7 @@ public:
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCXXTypeidExpr");
   }
   void VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitMaterializeTemporaryExpr");
+    Visit(e->getSubExpr());
   }
   void VisitOpaqueValueExpr(OpaqueValueExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(),
@@ -272,14 +403,30 @@ public:
   }
 
   void VisitVAArgExpr(VAArgExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitVAArgExpr");
+    // emitVAArg returns an aggregate value (not a pointer) at the CIR level.
+    // ABI-specific pointer handling will be done later in LoweringPrepare.
+    mlir::Value vaArgValue = cgf.emitVAArg(e);
+
+    // Create a temporary alloca to hold the aggregate value.
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    Address tmpAddr = cgf.createMemTemp(e->getType(), loc, "vaarg.tmp");
+
+    // Store the va_arg result into the temporary.
+    cgf.emitAggregateStore(vaArgValue, tmpAddr);
+
+    // Create an LValue from the temporary address.
+    LValue tmpLValue = cgf.makeAddrLValue(tmpAddr, e->getType());
+
+    // Copy the aggregate value from temporary to destination.
+    emitFinalDestCopy(e->getType(), tmpLValue);
   }
 
   void VisitCXXThrowExpr(const CXXThrowExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitCXXThrowExpr");
   }
   void VisitAtomicExpr(AtomicExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "AggExprEmitter: VisitAtomicExpr");
+    RValue result = cgf.emitAtomicExpr(e);
+    emitFinalDestCopy(e->getType(), result);
   }
 };
 
@@ -387,7 +534,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
   for (uint64_t i = 0; i != numInitElements; ++i) {
     // Advance to the next element.
     if (i > 0) {
-      one = builder.getConstantInt(loc, cgf.PtrDiffTy, i);
+      one = builder.getConstantInt(loc, cgf.ptrDiffTy, i);
       element = builder.createPtrStride(loc, begin, one);
     }
 
@@ -409,7 +556,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
         cgf.getTypes().isZeroInitializable(elementType))) {
     // Advance to the start of the rest of the array.
     if (numInitElements) {
-      one = builder.getConstantInt(loc, cgf.PtrDiffTy, 1);
+      one = builder.getConstantInt(loc, cgf.ptrDiffTy, 1);
       element = cir::PtrStrideOp::create(builder, loc, cirElementPtrType,
                                          element, one);
     }
@@ -423,7 +570,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
 
     // Compute the end of array
     cir::ConstantOp numArrayElementsConst = builder.getConstInt(
-        loc, mlir::cast<cir::IntType>(cgf.PtrDiffTy), numArrayElements);
+        loc, mlir::cast<cir::IntType>(cgf.ptrDiffTy), numArrayElements);
     mlir::Value end = cir::PtrStrideOp::create(builder, loc, cirElementPtrType,
                                                begin, numArrayElementsConst);
 
@@ -432,9 +579,8 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
         /*condBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           cir::LoadOp currentElement = builder.createLoad(loc, tmpAddr);
-          mlir::Type boolTy = cgf.convertType(cgf.getContext().BoolTy);
-          cir::CmpOp cmp = cir::CmpOp::create(
-              builder, loc, boolTy, cir::CmpOpKind::ne, currentElement, end);
+          cir::CmpOp cmp = cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne,
+                                              currentElement, end);
           builder.createCondition(cmp);
         },
         /*bodyBuilder=*/
@@ -460,7 +606,7 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
 
           // Advance pointer and store them to temporary variable
           cir::ConstantOp one = builder.getConstInt(
-              loc, mlir::cast<cir::IntType>(cgf.PtrDiffTy), 1);
+              loc, mlir::cast<cir::IntType>(cgf.ptrDiffTy), 1);
           auto nextElement = cir::PtrStrideOp::create(
               builder, loc, cirElementPtrType, currentElement, one);
           cgf.emitStoreThroughLValue(RValue::get(nextElement), tmpLV);
@@ -470,14 +616,33 @@ void AggExprEmitter::emitArrayInit(Address destPtr, cir::ArrayType arrayTy,
   }
 }
 
+/// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
+void AggExprEmitter::emitFinalDestCopy(QualType type, RValue src) {
+  assert(src.isAggregate() && "value must be aggregate value!");
+  LValue srcLV = cgf.makeAddrLValue(src.getAggregateAddress(), type);
+  emitFinalDestCopy(type, srcLV, CIRGenFunction::EVK_RValue);
+}
+
 /// Perform the final copy to destPtr, if desired.
-void AggExprEmitter::emitFinalDestCopy(QualType type, const LValue &src) {
+void AggExprEmitter::emitFinalDestCopy(
+    QualType type, const LValue &src,
+    CIRGenFunction::ExprValueKind srcValueKind) {
   // If dest is ignored, then we're evaluating an aggregate expression
   // in a context that doesn't care about the result.  Note that loads
   // from volatile l-values force the existence of a non-ignored
   // destination.
   if (dest.isIgnored())
     return;
+
+  if (srcValueKind == CIRGenFunction::EVK_RValue) {
+    if (type.isNonTrivialToPrimitiveDestructiveMove() == QualType::PCK_Struct) {
+      cgf.cgm.errorNYI("emitFinalDestCopy: EVK_RValue & PCK_Struct");
+    }
+  } else {
+    if (type.isNonTrivialToPrimitiveCopy() == QualType::PCK_Struct) {
+      cgf.cgm.errorNYI("emitFinalDestCopy: !EVK_RValue & PCK_Struct");
+    }
+  }
 
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
   assert(!cir::MissingFeatures::aggEmitFinalDestCopyRValue());
@@ -503,7 +668,8 @@ void AggExprEmitter::emitCopy(QualType type, const AggValueSlot &dest,
   LValue destLV = cgf.makeAddrLValue(dest.getAddress(), type);
   LValue srcLV = cgf.makeAddrLValue(src.getAddress(), type);
   assert(!cir::MissingFeatures::aggValueSlotVolatile());
-  cgf.emitAggregateCopy(destLV, srcLV, type, dest.mayOverlap());
+  cgf.emitAggregateCopy(destLV, srcLV, type, dest.mayOverlap(),
+                        dest.isVolatile() || src.isVolatile());
 }
 
 void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
@@ -566,7 +732,7 @@ void AggExprEmitter::emitNullInitializationToLValue(mlir::Location loc,
       return;
     }
 
-    cgf.cgm.errorNYI("emitStoreThroughBitfieldLValue");
+    cgf.emitStoreThroughBitfieldLValue(RValue::get(null), lv);
     return;
   }
 
@@ -619,7 +785,28 @@ void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
 
 void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *e) {
   CIRGenFunction::RunCleanupsScope cleanups(cgf);
-  Visit(e->getSubExpr());
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location scopeLoc = cgf.getLoc(e->getSourceRange());
+  mlir::OpBuilder::InsertPoint scopeBegin;
+
+  // Explicitly introduce a scope for cleanup expressions, even though this
+  // overlaps with the RunCleanupsScope above.
+  //
+  // CIR does not yet model cleanup scopes explicitly, so a lexical scope is
+  // used as a temporary approximation. This is expected to be revisited once
+  // cleanup handling is redesigned.
+  cir::ScopeOp::create(builder, scopeLoc, /*scopeBuilder=*/
+                       [&](mlir::OpBuilder &b, mlir::Location loc) {
+                         scopeBegin = b.saveInsertionPoint();
+                       });
+
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.restoreInsertionPoint(scopeBegin);
+    CIRGenFunction::LexicalScope lexScope{cgf, scopeLoc,
+                                          builder.getInsertionBlock()};
+    Visit(e->getSubExpr());
+  }
 }
 
 void AggExprEmitter::VisitCallExpr(const CallExpr *e) {
@@ -675,8 +862,8 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
     Expr *e, ArrayRef<Expr *> args, FieldDecl *initializedFieldInUnion,
     Expr *arrayFiller) {
 
-  const AggValueSlot dest =
-      ensureSlot(cgf.getLoc(e->getSourceRange()), e->getType());
+  const mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  const AggValueSlot dest = ensureSlot(loc, e->getType());
 
   if (e->getType()->isConstantArrayType()) {
     cir::ArrayType arrayTy =
@@ -715,12 +902,28 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
   if (auto *cxxrd = dyn_cast<CXXRecordDecl>(record)) {
     assert(numInitElements >= cxxrd->getNumBases() &&
            "missing initializer for base class");
-    if (cxxrd->getNumBases() > 0) {
-      cgf.cgm.errorNYI(e->getSourceRange(),
-                       "visitCXXParenListOrInitListExpr base class init");
-      return;
+    for (auto &base : cxxrd->bases()) {
+      assert(!base.isVirtual() && "should not see vbases here");
+      CXXRecordDecl *baseRD = base.getType()->getAsCXXRecordDecl();
+      Address address = cgf.getAddressOfDirectBaseInCompleteClass(
+          loc, dest.getAddress(), cxxrd, baseRD,
+          /*baseIsVirtual=*/false);
+      assert(!cir::MissingFeatures::aggValueSlotGC());
+      AggValueSlot aggSlot = AggValueSlot::forAddr(
+          address, Qualifiers(), AggValueSlot::IsDestructed,
+          AggValueSlot::IsNotAliased,
+          cgf.getOverlapForBaseInit(cxxrd, baseRD, false));
+      cgf.emitAggExpr(args[curInitIndex++], aggSlot);
+      if (base.getType().isDestructedType()) {
+        cgf.cgm.errorNYI(e->getSourceRange(),
+                         "push deferred deactivation cleanup");
+        return;
+      }
     }
   }
+
+  // Prepare a 'this' for CXXDefaultInitExprs.
+  CIRGenFunction::FieldConstructionScope fcScope(cgf, dest.getAddress());
 
   LValue destLV = cgf.makeAddrLValue(dest.getAddress(), e->getType());
 
@@ -804,7 +1007,8 @@ void CIRGenFunction::emitAggExpr(const Expr *e, AggValueSlot slot) {
 }
 
 void CIRGenFunction::emitAggregateCopy(LValue dest, LValue src, QualType ty,
-                                       AggValueSlot::Overlap_t mayOverlap) {
+                                       AggValueSlot::Overlap_t mayOverlap,
+                                       bool isVolatile) {
   // TODO(cir): this function needs improvements, commented code for now since
   // this will be touched again soon.
   assert(!ty->isAnyComplexType() && "Unexpected copy of complex");
@@ -860,7 +1064,7 @@ void CIRGenFunction::emitAggregateCopy(LValue dest, LValue src, QualType ty,
     cgm.errorNYI("emitAggregateCopy: GC");
 
   [[maybe_unused]] cir::CopyOp copyOp =
-      builder.createCopy(destPtr.getPointer(), srcPtr.getPointer());
+      builder.createCopy(destPtr.getPointer(), srcPtr.getPointer(), isVolatile);
 
   assert(!cir::MissingFeatures::opTBAA());
 }

@@ -851,7 +851,7 @@ enum : unsigned {
   EF_AMDGPU_MACH_AMDGCN_RESERVED_0X4D   = 0x04d,
   EF_AMDGPU_MACH_AMDGCN_GFX1201         = 0x04e,
   EF_AMDGPU_MACH_AMDGCN_GFX950          = 0x04f,
-  EF_AMDGPU_MACH_AMDGCN_RESERVED_0X50   = 0x050,
+  EF_AMDGPU_MACH_AMDGCN_GFX1310         = 0x050,
   EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC    = 0x051,
   EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC = 0x052,
   EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC = 0x053,
@@ -1125,6 +1125,8 @@ struct Elf64_Shdr {
   Elf64_Xword sh_entsize;
 };
 
+enum { PN_XNUM = 0xffff };
+
 // Special section indices.
 enum {
   SHN_UNDEF = 0,          // Undefined, missing, irrelevant, or meaningless
@@ -1185,6 +1187,7 @@ enum : unsigned {
   SHT_LLVM_LTO = 0x6fff4c0c,                // .llvm.lto for fat LTO.
   SHT_LLVM_JT_SIZES = 0x6fff4c0d,           // LLVM jump tables sizes.
   SHT_LLVM_CFI_JUMP_TABLE = 0x6fff4c0e,     // LLVM CFI jump table.
+  SHT_LLVM_CALL_GRAPH = 0x6fff4c0f,         // LLVM Call Graph Section.
   // Android's experimental support for SHT_RELR sections.
   // https://android.googlesource.com/platform/bionic/+/b7feec74547f84559a1467aca02708ff61346d2a/libc/include/elf.h#512
   SHT_ANDROID_RELR = 0x6fffff00,   // Relocation entries; only offsets.
@@ -1707,8 +1710,8 @@ enum { VER_FLG_BASE = 0x1, VER_FLG_WEAK = 0x2, VER_FLG_INFO = 0x4 };
 
 // Special constants for the version table. (SHT_GNU_versym/.gnu.version)
 enum {
-  VER_NDX_LOCAL = 0,       // Unversioned local symbol
-  VER_NDX_GLOBAL = 1,      // Unversioned global symbol
+  VER_NDX_LOCAL = 0,       // Unversioned undefined or localized defined symbol
+  VER_NDX_GLOBAL = 1,      // Unversioned non-local defined symbol
   VERSYM_VERSION = 0x7fff, // Version Index mask
   VERSYM_HIDDEN = 0x8000   // Hidden bit (non-default version)
 };
@@ -1785,6 +1788,7 @@ enum : unsigned {
   NT_ARM_ZA = 0x40c,
   NT_ARM_ZT = 0x40d,
   NT_ARM_FPMR = 0x40e,
+  NT_ARM_POE = 0x40f,
   NT_ARM_GCS = 0x410,
 
   NT_FILE = 0x46494c45,

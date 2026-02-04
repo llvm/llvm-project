@@ -393,7 +393,6 @@ enum OperandType : unsigned {
   OPERAND_UIMM14_LSB00,
   OPERAND_UIMM16,
   OPERAND_UIMM16_NONZERO,
-  OPERAND_UIMM20,
   OPERAND_UIMMLOG2XLEN,
   OPERAND_UIMMLOG2XLEN_NONZERO,
   OPERAND_UIMM32,
@@ -407,19 +406,17 @@ enum OperandType : unsigned {
   OPERAND_SIMM5_PLUS1,
   OPERAND_SIMM6,
   OPERAND_SIMM6_NONZERO,
-  OPERAND_SIMM8,
   OPERAND_SIMM8_UNSIGNED,
   OPERAND_SIMM10,
   OPERAND_SIMM10_LSB0000_NONZERO,
   OPERAND_SIMM10_UNSIGNED,
   OPERAND_SIMM11,
-  OPERAND_SIMM12,
   OPERAND_SIMM12_LSB00000,
   OPERAND_SIMM16,
   OPERAND_SIMM16_NONZERO,
+  OPERAND_SIMM20,
   OPERAND_SIMM20_LI,
   OPERAND_SIMM26,
-  OPERAND_BARE_SIMM32,
   OPERAND_CLUI_IMM,
   OPERAND_VTYPEI10,
   OPERAND_VTYPEI11,
@@ -437,6 +434,8 @@ enum OperandType : unsigned {
   OPERAND_RTZARG,
   // Condition code used by select and short forward branch pseudos.
   OPERAND_COND_CODE,
+  // Ordering for atomic pseudos.
+  OPERAND_ATOMIC_ORDERING,
   // Vector policy operand.
   OPERAND_VEC_POLICY,
   // Vector SEW operand. Stores in log2(SEW).
@@ -447,11 +446,24 @@ enum OperandType : unsigned {
   OPERAND_VEC_RM,
   // Vtype operand for XSfmm extension.
   OPERAND_XSFMM_VTYPE,
-  OPERAND_LAST_RISCV_IMM = OPERAND_XSFMM_VTYPE,
+  // XSfmm twiden operand.
+  OPERAND_XSFMM_TWIDEN,
+  OPERAND_LAST_RISCV_IMM = OPERAND_XSFMM_TWIDEN,
+
+  OPERAND_UIMM20_LUI,
+  OPERAND_UIMM20_AUIPC,
+
+  // Simm12 or constant pool, global, basicblock, etc.
+  OPERAND_SIMM12_LO,
+
+  OPERAND_BARE_SIMM32,
+
   // Operand is either a register or uimm5, this is used by V extension pseudo
   // instructions to represent a value that be passed as AVL to either vsetvli
   // or vsetivli.
   OPERAND_AVL,
+
+  OPERAND_VMASK,
 };
 } // namespace RISCVOp
 
@@ -701,7 +713,7 @@ enum RLISTENCODE {
 
 inline unsigned encodeRegList(MCRegister EndReg, bool IsRVE = false) {
   assert((!IsRVE || EndReg <= RISCV::X9) && "Invalid Rlist for RV32E");
-  switch (EndReg) {
+  switch (EndReg.id()) {
   case RISCV::X1:
     return RLISTENCODE::RA;
   case RISCV::X8:
@@ -759,12 +771,18 @@ namespace RISCVVInversePseudosTable {
 struct PseudoInfo {
   uint16_t Pseudo;
   uint16_t BaseInstr;
-  uint8_t VLMul;
-  uint8_t SEW;
+  uint16_t VLMul : 3;
+  uint16_t SEW : 8;
+  uint16_t IsAltFmt : 1;
 };
 
 #define GET_RISCVVInversePseudosTable_DECL
 #include "RISCVGenSearchableTables.inc"
+
+inline const PseudoInfo *getBaseInfo(unsigned BaseInstr, uint8_t VLMul,
+                                     uint8_t SEW, bool IsAltFmt = false) {
+  return getBaseInfoImpl(BaseInstr, VLMul, SEW, IsAltFmt);
+}
 } // namespace RISCVVInversePseudosTable
 
 namespace RISCV {

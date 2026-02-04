@@ -634,3 +634,25 @@ func.func @unsimplified_cycle_2(%c : i1) {
 ^bb7:
   cf.br ^bb6
 }
+
+// CHECK-LABEL: @drop_unreachable_branch_1
+//  CHECK-NEXT:   "test.foo"() : () -> ()
+//  CHECK-NEXT:   return
+func.func @drop_unreachable_branch_1(%c: i1) {
+  cf.cond_br %c, ^bb1, ^bb2
+^bb1:
+  "test.foo"() : () -> ()
+  return
+^bb2:
+  ub.unreachable
+}
+
+// CHECK-LABEL: @drop_unreachable_branch_2
+//  CHECK-NEXT:   ub.unreachable
+func.func @drop_unreachable_branch_2(%c: i1) {
+  cf.cond_br %c, ^bb1, ^bb2
+^bb1:
+  ub.unreachable
+^bb2:
+  ub.unreachable
+}

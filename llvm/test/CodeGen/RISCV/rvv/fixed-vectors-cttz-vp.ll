@@ -4,8 +4,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+m -target-abi=lp64d \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64
 
-declare <2 x i8> @llvm.vp.cttz.v2i8(<2 x i8>, i1 immarg, <2 x i1>, i32)
-
 define <2 x i8> @vp_cttz_v2i8(<2 x i8> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_v2i8:
 ; CHECK:       # %bb.0:
@@ -53,8 +51,6 @@ define <2 x i8> @vp_cttz_v2i8_unmasked(<2 x i8> %va, i32 zeroext %evl) {
   %v = call <2 x i8> @llvm.vp.cttz.v2i8(<2 x i8> %va, i1 false, <2 x i1> splat (i1 true), i32 %evl)
   ret <2 x i8> %v
 }
-
-declare <4 x i8> @llvm.vp.cttz.v4i8(<4 x i8>, i1 immarg, <4 x i1>, i32)
 
 define <4 x i8> @vp_cttz_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_v4i8:
@@ -104,8 +100,6 @@ define <4 x i8> @vp_cttz_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
   ret <4 x i8> %v
 }
 
-declare <8 x i8> @llvm.vp.cttz.v8i8(<8 x i8>, i1 immarg, <8 x i1>, i32)
-
 define <8 x i8> @vp_cttz_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_v8i8:
 ; CHECK:       # %bb.0:
@@ -154,8 +148,6 @@ define <8 x i8> @vp_cttz_v8i8_unmasked(<8 x i8> %va, i32 zeroext %evl) {
   ret <8 x i8> %v
 }
 
-declare <16 x i8> @llvm.vp.cttz.v16i8(<16 x i8>, i1 immarg, <16 x i1>, i32)
-
 define <16 x i8> @vp_cttz_v16i8(<16 x i8> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_v16i8:
 ; CHECK:       # %bb.0:
@@ -203,8 +195,6 @@ define <16 x i8> @vp_cttz_v16i8_unmasked(<16 x i8> %va, i32 zeroext %evl) {
   %v = call <16 x i8> @llvm.vp.cttz.v16i8(<16 x i8> %va, i1 false, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i8> %v
 }
-
-declare <2 x i16> @llvm.vp.cttz.v2i16(<2 x i16>, i1 immarg, <2 x i1>, i32)
 
 define <2 x i16> @vp_cttz_v2i16(<2 x i16> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_v2i16:
@@ -268,8 +258,6 @@ define <2 x i16> @vp_cttz_v2i16_unmasked(<2 x i16> %va, i32 zeroext %evl) {
   ret <2 x i16> %v
 }
 
-declare <4 x i16> @llvm.vp.cttz.v4i16(<4 x i16>, i1 immarg, <4 x i1>, i32)
-
 define <4 x i16> @vp_cttz_v4i16(<4 x i16> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_v4i16:
 ; CHECK:       # %bb.0:
@@ -331,8 +319,6 @@ define <4 x i16> @vp_cttz_v4i16_unmasked(<4 x i16> %va, i32 zeroext %evl) {
   %v = call <4 x i16> @llvm.vp.cttz.v4i16(<4 x i16> %va, i1 false, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i16> %v
 }
-
-declare <8 x i16> @llvm.vp.cttz.v8i16(<8 x i16>, i1 immarg, <8 x i1>, i32)
 
 define <8 x i16> @vp_cttz_v8i16(<8 x i16> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_v8i16:
@@ -396,8 +382,6 @@ define <8 x i16> @vp_cttz_v8i16_unmasked(<8 x i16> %va, i32 zeroext %evl) {
   ret <8 x i16> %v
 }
 
-declare <16 x i16> @llvm.vp.cttz.v16i16(<16 x i16>, i1 immarg, <16 x i1>, i32)
-
 define <16 x i16> @vp_cttz_v16i16(<16 x i16> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_v16i16:
 ; CHECK:       # %bb.0:
@@ -459,8 +443,6 @@ define <16 x i16> @vp_cttz_v16i16_unmasked(<16 x i16> %va, i32 zeroext %evl) {
   %v = call <16 x i16> @llvm.vp.cttz.v16i16(<16 x i16> %va, i1 false, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i16> %v
 }
-
-declare <2 x i32> @llvm.vp.cttz.v2i32(<2 x i32>, i1 immarg, <2 x i1>, i32)
 
 define <2 x i32> @vp_cttz_v2i32(<2 x i32> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_v2i32:
@@ -526,8 +508,6 @@ define <2 x i32> @vp_cttz_v2i32_unmasked(<2 x i32> %va, i32 zeroext %evl) {
   ret <2 x i32> %v
 }
 
-declare <4 x i32> @llvm.vp.cttz.v4i32(<4 x i32>, i1 immarg, <4 x i1>, i32)
-
 define <4 x i32> @vp_cttz_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_v4i32:
 ; CHECK:       # %bb.0:
@@ -591,8 +571,6 @@ define <4 x i32> @vp_cttz_v4i32_unmasked(<4 x i32> %va, i32 zeroext %evl) {
   %v = call <4 x i32> @llvm.vp.cttz.v4i32(<4 x i32> %va, i1 false, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i32> %v
 }
-
-declare <8 x i32> @llvm.vp.cttz.v8i32(<8 x i32>, i1 immarg, <8 x i1>, i32)
 
 define <8 x i32> @vp_cttz_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_v8i32:
@@ -658,8 +636,6 @@ define <8 x i32> @vp_cttz_v8i32_unmasked(<8 x i32> %va, i32 zeroext %evl) {
   ret <8 x i32> %v
 }
 
-declare <16 x i32> @llvm.vp.cttz.v16i32(<16 x i32>, i1 immarg, <16 x i1>, i32)
-
 define <16 x i32> @vp_cttz_v16i32(<16 x i32> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vp_cttz_v16i32:
 ; CHECK:       # %bb.0:
@@ -723,8 +699,6 @@ define <16 x i32> @vp_cttz_v16i32_unmasked(<16 x i32> %va, i32 zeroext %evl) {
   %v = call <16 x i32> @llvm.vp.cttz.v16i32(<16 x i32> %va, i1 false, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i32> %v
 }
-
-declare <2 x i64> @llvm.vp.cttz.v2i64(<2 x i64>, i1 immarg, <2 x i1>, i32)
 
 define <2 x i64> @vp_cttz_v2i64(<2 x i64> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v2i64:
@@ -890,8 +864,6 @@ define <2 x i64> @vp_cttz_v2i64_unmasked(<2 x i64> %va, i32 zeroext %evl) {
   ret <2 x i64> %v
 }
 
-declare <4 x i64> @llvm.vp.cttz.v4i64(<4 x i64>, i1 immarg, <4 x i1>, i32)
-
 define <4 x i64> @vp_cttz_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v4i64:
 ; RV32:       # %bb.0:
@@ -1055,8 +1027,6 @@ define <4 x i64> @vp_cttz_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) {
   %v = call <4 x i64> @llvm.vp.cttz.v4i64(<4 x i64> %va, i1 false, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i64> %v
 }
-
-declare <8 x i64> @llvm.vp.cttz.v8i64(<8 x i64>, i1 immarg, <8 x i1>, i32)
 
 define <8 x i64> @vp_cttz_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v8i64:
@@ -1222,8 +1192,6 @@ define <8 x i64> @vp_cttz_v8i64_unmasked(<8 x i64> %va, i32 zeroext %evl) {
   ret <8 x i64> %v
 }
 
-declare <15 x i64> @llvm.vp.cttz.v15i64(<15 x i64>, i1 immarg, <15 x i1>, i32)
-
 define <15 x i64> @vp_cttz_v15i64(<15 x i64> %va, <15 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v15i64:
 ; RV32:       # %bb.0:
@@ -1388,8 +1356,6 @@ define <15 x i64> @vp_cttz_v15i64_unmasked(<15 x i64> %va, i32 zeroext %evl) {
   ret <15 x i64> %v
 }
 
-declare <16 x i64> @llvm.vp.cttz.v16i64(<16 x i64>, i1 immarg, <16 x i1>, i32)
-
 define <16 x i64> @vp_cttz_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v16i64:
 ; RV32:       # %bb.0:
@@ -1553,8 +1519,6 @@ define <16 x i64> @vp_cttz_v16i64_unmasked(<16 x i64> %va, i32 zeroext %evl) {
   %v = call <16 x i64> @llvm.vp.cttz.v16i64(<16 x i64> %va, i1 false, <16 x i1> splat (i1 true), i32 %evl)
   ret <16 x i64> %v
 }
-
-declare <32 x i64> @llvm.vp.cttz.v32i64(<32 x i64>, i1 immarg, <32 x i1>, i32)
 
 define <32 x i64> @vp_cttz_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vp_cttz_v32i64:

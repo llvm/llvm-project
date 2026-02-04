@@ -155,5 +155,30 @@ int main(int, char**)
         try { f.get(); assert (false); } catch ( int ) {}
     }
 #endif
+    {
+      class CopyOnly {
+      public:
+        CopyOnly() {}
+        CopyOnly(const CopyOnly&) = default;
+        CopyOnly(CopyOnly&&)      = delete;
+
+        void operator()(const CopyOnly&) const {}
+      };
+      CopyOnly c;
+      std::future<void> f = std::async(c, c);
+      f.wait();
+    }
+    {
+      class MoveOnly {
+      public:
+        MoveOnly() {}
+        MoveOnly(const MoveOnly&) = delete;
+        MoveOnly(MoveOnly&&)      = default;
+
+        void operator()(MoveOnly&&) const {}
+      };
+      std::future<void> f = std::async(MoveOnly{}, MoveOnly{});
+      f.wait();
+    }
     return 0;
 }
