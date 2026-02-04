@@ -17590,8 +17590,7 @@ combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y, ISD::CondCode CC,
   SDValue Mask = DAG.getAllOnesConstant(DL, CmpVT);
   SDValue VL = DAG.getConstant(VecSize, DL, XLenVT);
 
-  SDValue Cmp = DAG.getNode(ISD::VP_SETCC, DL, CmpVT, VecX, VecY,
-                            DAG.getCondCode(ISD::SETNE), Mask, VL);
+  SDValue Cmp = DAG.getSetCC(DL, CmpVT, VecX, VecY, ISD::SETNE);
   return DAG.getSetCC(DL, VT,
                       DAG.getNode(ISD::VP_REDUCE_OR, DL, XLenVT,
                                   DAG.getConstant(0, DL, XLenVT), Cmp, Mask,
