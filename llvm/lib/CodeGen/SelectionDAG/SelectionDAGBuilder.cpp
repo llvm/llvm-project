@@ -3514,10 +3514,12 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
 /// - they do not need custom argument handling (no
 /// TLI.CollectTargetIntrinsicOperands())
 void SelectionDAGBuilder::visitCallBrIntrinsic(const CallBrInst &I) {
-  TargetLowering::IntrinsicInfo Info;
-  assert(!DAG.getTargetLoweringInfo().getTgtMemIntrinsic(
-             Info, I, DAG.getMachineFunction(), I.getIntrinsicID()) &&
-         "Intrinsic touches memory");
+#ifndef NDEBUG
+  SmallVector<TargetLowering::IntrinsicInfo, 2> Infos;
+  DAG.getTargetLoweringInfo().getTgtMemIntrinsic(
+      Infos, I, DAG.getMachineFunction(), I.getIntrinsicID());
+  assert(Infos.empty() && "Intrinsic touches memory");
+#endif
 
   auto [HasChain, OnlyLoad] = getTargetIntrinsicCallProperties(I);
 
@@ -5485,14 +5487,15 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
                                                unsigned Intrinsic) {
   auto [HasChain, OnlyLoad] = getTargetIntrinsicCallProperties(I);
 
-  // Info is set by getTgtMemIntrinsic
-  TargetLowering::IntrinsicInfo Info;
+  // Infos is set by getTgtMemIntrinsic.
+  SmallVector<TargetLowering::IntrinsicInfo> Infos;
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  bool IsTgtMemIntrinsic =
-      TLI.getTgtMemIntrinsic(Info, I, DAG.getMachineFunction(), Intrinsic);
+  TLI.getTgtMemIntrinsic(Infos, I, DAG.getMachineFunction(), Intrinsic);
+  // Use the first (primary) info determines the node opcode.
+  TargetLowering::IntrinsicInfo *Info = !Infos.empty() ? &Infos[0] : nullptr;
 
-  SmallVector<SDValue, 8> Ops = getTargetIntrinsicOperands(
-      I, HasChain, OnlyLoad, IsTgtMemIntrinsic ? &Info : nullptr);
+  SmallVector<SDValue, 8> Ops =
+      getTargetIntrinsicOperands(I, HasChain, OnlyLoad, Info);
   SDVTList VTs = getTargetIntrinsicVTList(I, HasChain);
 
   // Propagate fast-math-flags from IR to node(s).
@@ -5506,26 +5509,32 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
 
   // In some cases, custom collection of operands from CallInst I may be needed.
   TLI.CollectTargetIntrinsicOperands(I, Ops, DAG);
-  if (IsTgtMemIntrinsic) {
+  if (!Infos.empty()) {
     // This is target intrinsic that touches memory
-    //
-    // TODO: We currently just fallback to address space 0 if getTgtMemIntrinsic
-    //       didn't yield anything useful.
-    MachinePointerInfo MPI;
-    if (Info.ptrVal)
-      MPI = MachinePointerInfo(Info.ptrVal, Info.offset);
-    else if (Info.fallbackAddressSpace)
-      MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
-    EVT MemVT = Info.memVT;
-    LocationSize Size = LocationSize::precise(Info.size);
-    if (Size.hasValue() && !Size.getValue())
-      Size = LocationSize::precise(MemVT.getStoreSize());
-    Align Alignment = Info.align.value_or(DAG.getEVTAlign(MemVT));
-    MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
-        MPI, Info.flags, Size, Alignment, I.getAAMetadata(), /*Ranges=*/nullptr,
-        Info.ssid, Info.order, Info.failureOrder);
-    Result =
-        DAG.getMemIntrinsicNode(Info.opc, getCurSDLoc(), VTs, Ops, MemVT, MMO);
+    // Create MachineMemOperands for each memory access described by the target.
+    MachineFunction &MF = DAG.getMachineFunction();
+    SmallVector<MachineMemOperand *> MMOs;
+    for (const auto &Info : Infos) {
+      // TODO: We currently just fallback to address space 0 if
+      // getTgtMemIntrinsic didn't yield anything useful.
+      MachinePointerInfo MPI;
+      if (Info.ptrVal)
+        MPI = MachinePointerInfo(Info.ptrVal, Info.offset);
+      else if (Info.fallbackAddressSpace)
+        MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
+      EVT MemVT = Info.memVT;
+      LocationSize Size = LocationSize::precise(Info.size);
+      if (Size.hasValue() && !Size.getValue())
+        Size = LocationSize::precise(MemVT.getStoreSize());
+      Align Alignment = Info.align.value_or(DAG.getEVTAlign(MemVT));
+      MachineMemOperand *MMO = MF.getMachineMemOperand(
+          MPI, Info.flags, Size, Alignment, I.getAAMetadata(),
+          /*Ranges=*/nullptr, Info.ssid, Info.order, Info.failureOrder);
+      MMOs.push_back(MMO);
+    }
+
+    Result = DAG.getMemIntrinsicNode(Info->opc, getCurSDLoc(), VTs, Ops,
+                                     Info->memVT, MMOs);
   } else {
     Result = getTargetNonMemIntrinsicNode(*I.getType(), HasChain, Ops, VTs);
   }
@@ -9444,11 +9453,9 @@ bool SelectionDAGBuilder::visitStrCmpCall(const CallInst &I) {
   const Value *Arg0 = I.getArgOperand(0), *Arg1 = I.getArgOperand(1);
 
   const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
-  std::pair<SDValue, SDValue> Res =
-    TSI.EmitTargetCodeForStrcmp(DAG, getCurSDLoc(), DAG.getRoot(),
-                                getValue(Arg0), getValue(Arg1),
-                                MachinePointerInfo(Arg0),
-                                MachinePointerInfo(Arg1));
+  std::pair<SDValue, SDValue> Res = TSI.EmitTargetCodeForStrcmp(
+      DAG, getCurSDLoc(), DAG.getRoot(), getValue(Arg0), getValue(Arg1),
+      MachinePointerInfo(Arg0), MachinePointerInfo(Arg1), &I);
   if (Res.first.getNode()) {
     processIntegerCallValue(I, Res.first, true);
     PendingLoads.push_back(Res.second);
