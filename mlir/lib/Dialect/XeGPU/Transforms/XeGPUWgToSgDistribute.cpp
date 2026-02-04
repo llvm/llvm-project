@@ -510,8 +510,6 @@ struct WgToSgVectorBroadcastOp
     for (auto operand : adaptor.getOperands().front()) {
       auto newBroadcast = vector::BroadcastOp::create(rewriter, op.getLoc(),
                                                       newResultType, operand);
-      xegpu::setTemporaryLayout(newBroadcast->getResult(0),
-                                layout.dropSgLayoutAndData());
 
       newBroadcastOps.push_back(newBroadcast.getResult());
     }
@@ -563,9 +561,17 @@ struct WgToSgElementwiseOp : public ConversionPattern {
       OperationState state(op->getLoc(), op->getName());
       state.addOperands(opOperands);
       state.addTypes(newResultType);
-      // Copy all attributes, but update "layout_result_0" to drop
-      // sgLayout/sgData
-      state.addAttributes(xegpu::dropSgLayoutAndDataOnAttrs(op->getAttrs()));
+      // Copy all attributes except the layout attribute.
+      SmallVector<NamedAttribute> attrs;
+      auto resultLayoutName = xegpu::getTemporaryLayoutName(op->getResult(0));
+      for (auto attr : op->getAttrs()) {
+        StringRef attrName = attr.getName().strref();
+        if (attrName == resultLayoutName ||
+            attrName.starts_with("layout_operand_"))
+          continue;
+        attrs.push_back(attr);
+      }
+      state.addAttributes(attrs);
       Operation *newOp = rewriter.create(state);
       newResults.push_back(newOp->getResult(0));
     }
@@ -748,24 +754,17 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
     Location loc = op.getLoc();
     auto eltType = vecType.getElementType();
 
-    auto setLayout = [&](Value val) {
-      xegpu::setTemporaryLayout(llvm::dyn_cast<OpResult>(val),
-                                layout.dropSgLayoutAndData());
-    };
-
     if (vecAttr.isSplat()) {
       // Splat: single value for all subgroups
       Attribute singleVal = vecAttr.getSplatValue<Attribute>();
       auto sgAttr = DenseElementsAttr::get(newType, singleVal);
       auto cstOp = arith::ConstantOp::create(rewriter, loc, newType, sgAttr);
-      setLayout(cstOp->getResult(0));
       rewriter.replaceOp(op, cstOp);
       return success();
     } else if (sgShape == wgShape) { // if the entire vector is shared by all
                                      // subgroups, don't distribute
       auto newConstOp =
           arith::ConstantOp::create(rewriter, op.getLoc(), vecType, vecAttr);
-      setLayout(newConstOp->getResult(0));
       rewriter.replaceOp(op, newConstOp);
       return success();
     } else {
@@ -867,9 +866,6 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
             rewriter, loc, baseConstVec.getType(), mulOffset);
         auto finalConst =
             arith::AddIOp::create(rewriter, loc, baseConstVec, bcastOffset);
-        setLayout(baseConstVec);
-        setLayout(bcastOffset);
-        setLayout(finalConst);
         newConstOps.push_back(finalConst);
       }
       rewriter.replaceOpWithMultiple(op, {newConstOps});
@@ -925,7 +921,6 @@ struct WgToSgLoadGatherOpWithOffset
           rewriter, loc, newTy, op.getSource(), offsets, mask, chunkSizeAttr,
           op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
           newLayout);
-      newLoadOp.setAnchorLayout(newLayout);
       newLoadOps.push_back(newLoadOp);
     }
     rewriter.replaceOpWithMultiple(op, {newLoadOps});
@@ -971,17 +966,10 @@ struct WgToSgStoreScatterOpWithOffset
     auto chunkSizeAttr = rewriter.getI64IntegerAttr(chunkSize);
     for (auto [val, offs, mask] : llvm::zip(
              adaptor.getValue(), adaptor.getOffsets(), adaptor.getMask())) {
-      auto store = xegpu::StoreScatterOp::create(
-          rewriter, loc, val, op.getDest(), offs, mask, chunkSizeAttr,
-          op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(),
-          layout.dropSgLayoutAndData());
-      // Update the layout attribute to drop sg_layout and sg_data.
-      for (OpOperand &operand : store->getOpOperands()) {
-        // Skip for operand one (memref)
-        if (operand.getOperandNumber() == 1)
-          continue;
-        xegpu::setTemporaryLayout(operand, layout.dropSgLayoutAndData());
-      }
+      xegpu::StoreScatterOp::create(rewriter, loc, val, op.getDest(), offs,
+                                    mask, chunkSizeAttr, op.getL1HintAttr(),
+                                    op.getL2HintAttr(), op.getL3HintAttr(),
+                                    layout.dropSgLayoutAndData());
     }
     rewriter.eraseOp(op);
     return success();
@@ -1073,12 +1061,6 @@ struct WgToSgVectorStepOp : public OpConversionPattern<vector::StepOp> {
           vector::BroadcastOp::create(rewriter, loc, newTy, offsets[0]);
       auto finalSteps =
           arith::AddIOp::create(rewriter, loc, steps, bcastOffset);
-      xegpu::setTemporaryLayout(steps->getResult(0),
-                                layout.dropSgLayoutAndData());
-      xegpu::setTemporaryLayout(bcastOffset->getResult(0),
-                                layout.dropSgLayoutAndData());
-      xegpu::setTemporaryLayout(finalSteps->getResult(0),
-                                layout.dropSgLayoutAndData());
       newOps.push_back(finalSteps);
     }
 
@@ -1166,8 +1148,6 @@ struct WgToSgVectorShapeCastOp
     for (auto src : adaptor.getSource()) {
       auto newShapeCast = vector::ShapeCastOp::create(rewriter, op.getLoc(),
                                                       newResultType, src);
-      xegpu::setTemporaryLayout(newShapeCast->getResult(0),
-                                layout.dropSgLayoutAndData());
       newShapeCastOps.push_back(newShapeCast.getResult());
     }
 
@@ -1611,8 +1591,6 @@ struct WgToSgVectorTransposeOp
     for (auto src : adaptor.getVector()) {
       auto newTranspose = vector::TransposeOp::create(
           rewriter, op.getLoc(), newResultType, src, permutation);
-      xegpu::setTemporaryLayout(newTranspose->getResult(0),
-                                layout.dropSgLayoutAndData());
       newTransposeOps.push_back(newTranspose.getResult());
     }
 
@@ -1681,8 +1659,6 @@ struct WgToSgVectorMaskOp : public OpConversionPattern<MaskOpType> {
 
       auto newCreateMaskOp =
           vector::CreateMaskOp::create(rewriter, loc, resultType, maskOperands);
-      xegpu::setTemporaryLayout(newCreateMaskOp->getResult(0),
-                                layout.dropSgLayoutAndData());
       newCreateMaskOps.push_back(newCreateMaskOp.getResult());
     }
 

@@ -160,8 +160,7 @@ gpu.module @test_1_1_assignment {
     %load =  xegpu.load_nd %tdesc
       : !xegpu.tensor_desc<256x1xf32, #xegpu.layout<sg_layout = [8, 1], sg_data = [32, 1], lane_layout = [8, 1], lane_data = [1, 1]>>
       -> vector<256x1xf32>
-    // CHECK: vector.broadcast {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [8, 1], lane_data = [1, 1]>}
-    // CHECK-SAME: : vector<32x1xf32> to vector<32x32xf32>
+    // CHECK: vector.broadcast {{.*}} : vector<32x1xf32> to vector<32x32xf32>
     %broadcast = vector.broadcast %load
       {layout_result_0 = #xegpu.layout<sg_layout = [8, 1], sg_data = [32, 32], lane_layout = [8, 1], lane_data = [1, 1]>}
       : vector<256x1xf32> to vector<256x32xf32>
@@ -176,8 +175,7 @@ gpu.module @test_1_1_assignment {
     %load =  xegpu.load_nd %tdesc
       : !xegpu.tensor_desc<1x128xf32, #xegpu.layout<sg_layout = [1, 4], sg_data = [1, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
       -> vector<1x128xf32>
-    // CHECK: vector.broadcast {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
-    // CHECK-SAME: : vector<1x32xf32> to vector<32x32xf32>
+    // CHECK: vector.broadcast {{.*}} : vector<1x32xf32> to vector<32x32xf32>
     %broadcast = vector.broadcast %load
       {layout_result_0 = #xegpu.layout<sg_layout = [1, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>}
       : vector<1x128xf32> to vector<32x128xf32>
