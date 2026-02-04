@@ -45,7 +45,7 @@ class OptimizationRemarkEmitter;
 class TargetTransformInfo;
 class TargetLibraryInfo;
 class VPRecipeBuilder;
-class VPRegisterUsage;
+struct VPRegisterUsage;
 struct VFRange;
 
 extern cl::opt<bool> EnableVPlanNativePath;
