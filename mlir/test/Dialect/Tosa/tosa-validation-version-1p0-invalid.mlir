@@ -63,7 +63,7 @@ func.func @test_transpose_conv2d_fp8_acc32(%arg0: tensor<1x32x32x8xf8E5M2>, %arg
 // -----
 
 func.func @test_gather_bool_i64(%arg0: tensor<13x21x3xi1>, %arg1: tensor<13x26xi64>) -> tensor<13x26x3xi1> {
-  // expected-error@+1 {{'tosa.gather' op illegal: the target specification version (1.0) is not backwards compatible with the op compliance specification version (1.1)}}
+  // expected-error@+1 {{'tosa.gather' op illegal: requires [int64] but not enabled in target}}
   %0 = tosa.gather %arg0, %arg1 : (tensor<13x21x3xi1>, tensor<13x26xi64>) -> tensor<13x26x3xi1>
   return %0 : tensor<13x26x3xi1>
 }
@@ -79,7 +79,7 @@ func.func @test_gather_bool_i32(%arg0: tensor<13x21x3xi1>, %arg1: tensor<13x26xi
 // -----
 
 func.func @test_scatter_bool_i64(%arg0: tensor<13x52x3xi1>, %arg1: tensor<13x26xi64>, %arg2: tensor<13x26x3xi1>) -> tensor<13x52x3xi1> {
-  // expected-error@+1 {{'tosa.scatter' op illegal: the target specification version (1.0) is not backwards compatible with the op compliance specification version (1.1)}}
+  // expected-error@+1 {{'tosa.scatter' op illegal: requires [int64] but not enabled in target}}
   %0 = tosa.scatter %arg0, %arg1, %arg2 : (tensor<13x52x3xi1>, tensor<13x26xi64>, tensor<13x26x3xi1>) -> tensor<13x52x3xi1>
   return %0 : tensor<13x52x3xi1>
 }
