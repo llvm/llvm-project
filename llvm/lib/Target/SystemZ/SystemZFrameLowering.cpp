@@ -12,6 +12,7 @@
 #include "SystemZMachineFunctionInfo.h"
 #include "SystemZRegisterInfo.h"
 #include "SystemZSubtarget.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -1027,8 +1028,10 @@ bool SystemZXPLINKFrameLowering::assignCalleeSavedSpillSlots(
 
   // If this function has an associated personality function then the
   // environment register R5 must be saved in the DSA.
-  if (!MF.getLandingPads().empty())
+  if (!MF.getLandingPads().empty()) {
     CSI.push_back(CalleeSavedInfo(Regs.getADARegister()));
+    CSI.back().setRestored(false);
+  }
 
   // Scan the call-saved GPRs and find the bounds of the register spill area.
   Register LowRestoreGPR = 0;
@@ -1152,7 +1155,11 @@ bool SystemZXPLINKFrameLowering::spillCalleeSavedRegisters(
   }
 
   // Spill FPRs to the stack in the normal TargetInstrInfo way
-  for (const CalleeSavedInfo &I : CSI) {
+  // Registers in CSI are in inverted order so registers with large
+  // numbers will be assigned to high address.
+  // Reverse the order at spilling and restoring so instructions on
+  // registers with small numbers are emitted first.
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
     MCRegister Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
       MBB.addLiveIn(Reg);
@@ -1185,7 +1192,7 @@ bool SystemZXPLINKFrameLowering::restoreCalleeSavedRegisters(
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Restore FPRs in the normal TargetInstrInfo way.
-  for (const CalleeSavedInfo &I : CSI) {
+  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
     MCRegister Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg))
       TII->loadRegFromStackSlot(MBB, MBBI, Reg, I.getFrameIdx(),

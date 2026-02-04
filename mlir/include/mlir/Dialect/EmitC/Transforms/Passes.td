@@ -25,7 +25,8 @@ def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class"> {
   let description = [{
     This pass transforms `emitc.func` operations into `emitc.class` operations.
     Function arguments become fields of the class, and the function body is moved
-    to a new `execute` method within the class.
+    to a new member method within the class. By default, this is `operator()()`.
+
     If the corresponding function argument has attributes (accessed via `argAttrs`), 
     these attributes are attached to the field operation. 
     Otherwise, the field is created without additional attributes.
@@ -41,7 +42,7 @@ def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class"> {
     // becomes 
     emitc.class @modelClass {
       emitc.field @input_tensor : !emitc.array<1xf32> {emitc.opaque = "input_tensor"}
-      emitc.func @execute() {
+      emitc.func @operator() {
         %0 = "emitc.constant"() <{value = 0 : index}> : () -> !emitc.size_t
         %1 = get_field @input_tensor : !emitc.array<1xf32>
         %2 = subscript %1[%0] : (!emitc.array<1xf32>, !emitc.size_t) -> !emitc.lvalue<f32>
@@ -51,6 +52,12 @@ def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class"> {
     ```
   }];
   let dependentDialects = ["emitc::EmitCDialect"];
+  let options = [
+      Option<"funcName", "func-name", "std::string",
+      /*default=*/[{"operator()"}],
+      "The name of the newly generated member function with body "
+      "matching the input function.">
+  ];
 }
 
 #endif // MLIR_DIALECT_EMITC_TRANSFORMS_PASSES

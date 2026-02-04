@@ -5799,22 +5799,39 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
 ; SDAG-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; SDAG-NEXT:    s_endpgm
 ;
-; GFX11-LABEL: test_call_external_void_func_struct_i8_i32:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[4:5], s[0:1], 0x0
-; GFX11-NEXT:    s_mov_b32 s7, 0x31016000
-; GFX11-NEXT:    s_mov_b32 s6, -1
-; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_struct_i8_i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_struct_i8_i32@rel32@hi+12
-; GFX11-NEXT:    s_mov_b32 s32, 0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    buffer_load_u8 v0, off, s[4:7], 0
-; GFX11-NEXT:    buffer_load_b32 v1, off, s[4:7], 0 offset:4
-; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
-; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
-; GFX11-NEXT:    s_endpgm
+; GFX11-TRUE16-LABEL: test_call_external_void_func_struct_i8_i32:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_load_b64 s[4:5], s[0:1], 0x0
+; GFX11-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
+; GFX11-TRUE16-NEXT:    s_mov_b32 s6, -1
+; GFX11-TRUE16-NEXT:    s_getpc_b64 s[2:3]
+; GFX11-TRUE16-NEXT:    s_add_u32 s2, s2, external_void_func_struct_i8_i32@rel32@lo+4
+; GFX11-TRUE16-NEXT:    s_addc_u32 s3, s3, external_void_func_struct_i8_i32@rel32@hi+12
+; GFX11-TRUE16-NEXT:    s_mov_b32 s32, 0
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_clause 0x1
+; GFX11-TRUE16-NEXT:    buffer_load_d16_u8 v0, off, s[4:7], 0
+; GFX11-TRUE16-NEXT:    buffer_load_b32 v1, off, s[4:7], 0 offset:4
+; GFX11-TRUE16-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; GFX11-TRUE16-NEXT:    s_swappc_b64 s[30:31], s[2:3]
+; GFX11-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-FAKE16-LABEL: test_call_external_void_func_struct_i8_i32:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_load_b64 s[4:5], s[0:1], 0x0
+; GFX11-FAKE16-NEXT:    s_mov_b32 s7, 0x31016000
+; GFX11-FAKE16-NEXT:    s_mov_b32 s6, -1
+; GFX11-FAKE16-NEXT:    s_getpc_b64 s[2:3]
+; GFX11-FAKE16-NEXT:    s_add_u32 s2, s2, external_void_func_struct_i8_i32@rel32@lo+4
+; GFX11-FAKE16-NEXT:    s_addc_u32 s3, s3, external_void_func_struct_i8_i32@rel32@hi+12
+; GFX11-FAKE16-NEXT:    s_mov_b32 s32, 0
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_clause 0x1
+; GFX11-FAKE16-NEXT:    buffer_load_u8 v0, off, s[4:7], 0
+; GFX11-FAKE16-NEXT:    buffer_load_b32 v1, off, s[4:7], 0 offset:4
+; GFX11-FAKE16-NEXT:    s_mov_b64 s[6:7], s[0:1]
+; GFX11-FAKE16-NEXT:    s_swappc_b64 s[30:31], s[2:3]
+; GFX11-FAKE16-NEXT:    s_endpgm
 ;
 ; HSA-LABEL: test_call_external_void_func_struct_i8_i32:
 ; HSA:       ; %bb.0:
