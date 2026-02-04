@@ -1,4 +1,4 @@
-; RUN: not llc < %s -mtriple=wasm32-unknown-unknown -filetype=obj 2>&1 | FileCheck %s
+; RUN: not llc < %s -mtriple=wasm32-unknown-unknown -filetype=asm 2>&1 | FileCheck %s
 
 ; CHECK: error: common symbols are not yet implemented for Wasm: x
 ; CHECK: error: common symbols are not yet implemented for Wasm: y
