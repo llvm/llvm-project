@@ -23,6 +23,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Support/InstructionCost.h"
 
@@ -383,6 +384,40 @@ struct VPCostContext {
       Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,
       TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None,
       bool AlwaysIncludeReplicatingR = false);
+
+  /// Compute the cost of LastActiveLane for a predicate with the given scalar
+  /// type. LastActiveLane computes the index of the last active lane in a
+  /// predicate mask: NOT + cttz_elts + SUB.
+  InstructionCost getLastActiveLaneCost(Type *PredScalarTy, ElementCount VF) {
+    if (VF.isScalar())
+      return TTI.getCmpSelInstrCost(Instruction::ICmp, PredScalarTy,
+                                    CmpInst::makeCmpResultType(PredScalarTy),
+                                    CmpInst::ICMP_EQ, CostKind);
+    auto *PredTy = VectorType::get(PredScalarTy, VF);
+    IntrinsicCostAttributes Attrs(Intrinsic::experimental_cttz_elts,
+                                  Type::getInt64Ty(LLVMCtx),
+                                  {PredTy, Type::getInt1Ty(LLVMCtx)});
+    InstructionCost Cost = TTI.getIntrinsicInstrCost(Attrs, CostKind);
+    // Add cost of NOT operation on the predicate.
+    Cost += TTI.getArithmeticInstrCost(
+        Instruction::Xor, PredTy, CostKind,
+        {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
+        {TargetTransformInfo::OK_UniformConstantValue,
+         TargetTransformInfo::OP_None});
+    // Add cost of SUB operation on the index.
+    Cost += TTI.getArithmeticInstrCost(Instruction::Sub,
+                                       Type::getInt64Ty(LLVMCtx), CostKind);
+    return Cost;
+  }
+
+  /// Compute the cost of ExtractLane for a vector with the given scalar element
+  /// type. ExtractLane extracts an element at a runtime-determined index.
+  InstructionCost getExtractLaneCost(Type *ValTy, ElementCount VF) {
+    if (VF.isScalar())
+      return 0;
+    auto *VecTy = VectorType::get(ValTy, VF);
+    return TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind);
+  }
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without

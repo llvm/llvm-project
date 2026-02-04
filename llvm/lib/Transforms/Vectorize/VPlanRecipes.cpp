@@ -1132,16 +1132,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
   case Instruction::ExtractElement:
   case VPInstruction::ExtractLane: {
-    if (VF.isScalar()) {
-      // ExtractLane with VF=1 takes care of handling extracting across multiple
-      // parts.
-      return 0;
-    }
-
-    // Add on the cost of extracting the element.
-    auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
-    return Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
-                                      Ctx.CostKind);
+    Type *ScalarTy = Ctx.Types.inferScalarType(getOperand(0));
+    return Ctx.getExtractLaneCost(ScalarTy, VF);
   }
   case VPInstruction::AnyOf: {
     auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
@@ -1163,26 +1155,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
   case VPInstruction::LastActiveLane: {
     Type *ScalarTy = Ctx.Types.inferScalarType(getOperand(0));
-    if (VF.isScalar())
-      return Ctx.TTI.getCmpSelInstrCost(Instruction::ICmp, ScalarTy,
-                                        CmpInst::makeCmpResultType(ScalarTy),
-                                        CmpInst::ICMP_EQ, Ctx.CostKind);
-    // Calculate the cost of determining the lane index: NOT + cttz_elts + SUB.
-    auto *PredTy = toVectorTy(ScalarTy, VF);
-    IntrinsicCostAttributes Attrs(Intrinsic::experimental_cttz_elts,
-                                  Type::getInt64Ty(Ctx.LLVMCtx),
-                                  {PredTy, Type::getInt1Ty(Ctx.LLVMCtx)});
-    InstructionCost Cost = Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
-    // Add cost of NOT operation on the predicate.
-    Cost += Ctx.TTI.getArithmeticInstrCost(
-        Instruction::Xor, PredTy, Ctx.CostKind,
-        {TargetTransformInfo::OK_AnyValue, TargetTransformInfo::OP_None},
-        {TargetTransformInfo::OK_UniformConstantValue,
-         TargetTransformInfo::OP_None});
-    // Add cost of SUB operation on the index.
-    Cost += Ctx.TTI.getArithmeticInstrCost(
-        Instruction::Sub, Type::getInt64Ty(Ctx.LLVMCtx), Ctx.CostKind);
-    return Cost;
+    return Ctx.getLastActiveLaneCost(ScalarTy, VF);
   }
   case VPInstruction::ExtractLastActive: {
     Type *ScalarTy = Ctx.Types.inferScalarType(this);

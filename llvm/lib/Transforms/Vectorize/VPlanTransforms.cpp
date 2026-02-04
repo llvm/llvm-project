@@ -1643,36 +1643,14 @@ void VPlanTransforms::narrowScatters(VPlan &Plan, VPCostContext &Ctx,
                         WidenStoreR->computeCost(VF, Ctx);
                     // ConvertToScalarCost = LastActiveLane + ExtractElement +
                     // scalar store.
-                    // TODO: Automatically sync with VPInstruction::computeCost.
-                    // LastActiveLane = not + cttz.elts + sub
                     InstructionCost ScalarCost = 0;
                     auto *ValTy = Ctx.Types.inferScalarType(
                         WidenStoreR->getStoredValue());
 
-                    if (!FoldTailWithEVL) {
-                      auto *PredTy =
-                          toVectorTy(Type::getInt1Ty(Ctx.LLVMCtx), VF);
-                      IntrinsicCostAttributes Attrs(
-                          Intrinsic::experimental_cttz_elts,
-                          Type::getInt64Ty(Ctx.LLVMCtx),
-                          {PredTy, Type::getInt1Ty(Ctx.LLVMCtx)});
-                      ScalarCost +=
-                          Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
-                      ScalarCost += Ctx.TTI.getArithmeticInstrCost(
-                          Instruction::Xor, PredTy, Ctx.CostKind,
-                          {TargetTransformInfo::OK_AnyValue,
-                           TargetTransformInfo::OP_None},
-                          {TargetTransformInfo::OK_UniformConstantValue,
-                           TargetTransformInfo::OP_None});
-                    }
-                    // ExtractElement cost
-                    auto *VecTy = toVectorTy(ValTy, VF);
-                    ScalarCost += Ctx.TTI.getVectorInstrCost(
-                        Instruction::ExtractElement, VecTy, Ctx.CostKind);
-
-                    ScalarCost += Ctx.TTI.getArithmeticInstrCost(
-                        Instruction::Sub, Type::getInt64Ty(Ctx.LLVMCtx),
-                        Ctx.CostKind);
+                    if (!FoldTailWithEVL)
+                      ScalarCost += Ctx.getLastActiveLaneCost(
+                          Type::getInt1Ty(Ctx.LLVMCtx), VF);
+                    ScalarCost += Ctx.getExtractLaneCost(ValTy, VF);
 
                     // Scalar store cost
                     Instruction &I = WidenStoreR->getIngredient();
