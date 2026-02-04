@@ -735,9 +735,9 @@ class SwiftRuntimeTypeVisitor {
   bool m_visit_superclass = false;
 
   void SetFlavor() {
-    if (auto ts_sp =
-            m_type.GetTypeSystem().dyn_cast_or_null<TypeSystemSwiftTypeRef>())
-      m_flavor = ts_sp->GetManglingFlavor(&m_exe_ctx);
+    auto mangled_name = m_type.GetMangledTypeName();
+    m_flavor =
+        SwiftLanguageRuntime::GetManglingFlavor(mangled_name.GetStringRef());
   }
 
 public:
