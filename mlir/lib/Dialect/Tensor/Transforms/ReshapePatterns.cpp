@@ -444,7 +444,7 @@ struct BubbleUpExtractSliceThroughCollapseShape
     SmallVector<OpFoldResult> offsets, sizes, strides;
     if (failed(getExpandedExtractSliceInfo(
             rewriter, sliceOp, collapseShapeOp.getReassociationIndices(),
-            collapseShapeOp.getSrcType().getShape(), offsets, sizes, strides)))
+            collapseShapeOp.getSrc(), offsets, sizes, strides)))
       return failure();
 
     Value newSliceOp = tensor::ExtractSliceOp::create(
@@ -603,13 +603,17 @@ static bool isMultipleOf(OpFoldResult ofr, int64_t factor) {
   return map.getResult(0).isMultipleOf(factor);
 }
 
+/// Given a `collapsedOffset` and `collapsedSize`, this function
+/// validates that the slice is representable as a contiguous slice
+/// in the `expandedShape` and computes the corresponding expanded sizes.
+/// Returns failure if the slice cannot be guaranteed to be contiguous.
+/// On success, populates `groupSizes` with the expanded sizes for each
+/// dimension in the reassociation group.
 static LogicalResult computeExpandedSliceInfoForReassocGroup(
     OpBuilder &b, OpFoldResult collapsedSize, OpFoldResult collapsedOffset,
     const ReassociationIndices &reassocIndices, ArrayRef<int64_t> expandedShape,
-    SmallVectorImpl<OpFoldResult> &groupSizes,
-    SmallVectorImpl<OpFoldResult> &groupOffsets) {
+    SmallVectorImpl<OpFoldResult> &groupSizes) {
   assert(groupSizes.empty() && "Group sizes must be empty");
-  assert(groupOffsets.empty() && "Group offsets must be empty");
   // The first case is when there's only one non-unit dimension in the
   // reassociation group.
   // When there's only one non-unit dimension, the slice is trivially
@@ -621,13 +625,10 @@ static LogicalResult computeExpandedSliceInfoForReassocGroup(
       });
   if (nonUnitSizeCount == 1) {
     for (int64_t expandedShapeIdx : reassocIndices) {
-      if (expandedShape[expandedShapeIdx] != 1) {
+      if (expandedShape[expandedShapeIdx] != 1)
         groupSizes.push_back(collapsedSize);
-        groupOffsets.push_back(collapsedOffset);
-        continue;
-      }
-      groupSizes.push_back(b.getIndexAttr(1));
-      groupOffsets.push_back(b.getIndexAttr(0));
+      else
+        groupSizes.push_back(b.getIndexAttr(1));
     }
     return success();
   }
@@ -746,8 +747,7 @@ static LogicalResult computeExpandedSliceInfoForReassocGroup(
 
 LogicalResult mlir::tensor::getExpandedExtractSliceInfo(
     OpBuilder &b, tensor::ExtractSliceOp sliceOp,
-    ArrayRef<ReassociationIndices> reassociation,
-    ArrayRef<int64_t> expandedShape,
+    ArrayRef<ReassociationIndices> reassociation, Value expandedValue,
     SmallVectorImpl<OpFoldResult> &expandedOffsets,
     SmallVectorImpl<OpFoldResult> &expandedSizes,
     SmallVectorImpl<OpFoldResult> &expandedStrides) {
@@ -767,40 +767,34 @@ LogicalResult mlir::tensor::getExpandedExtractSliceInfo(
     return failure();
   }
 
-  using ReassocGroupResult =
-      std::pair<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>>;
-  SmallVector<ReassocGroupResult> groupResults;
-
   // Compute new offsets, sizes, and strides for tensor.extract_slice.
   // The new tensor.extract_slice will work on a tensor that has has a rank
   // equal to the rank of the src of the collapse_shape. In each iteration of
   // the loop, the offsets and sizes will be computed per reassociation group.
+  ArrayRef<int64_t> expandedShape =
+      cast<RankedTensorType>(expandedValue.getType()).getShape();
+  SmallVector<SmallVector<OpFoldResult>> groupResults;
   for (auto [collapsedSize, collapsedOffset, reassocIndices] :
        llvm::zip_equal(collapsedSizes, collapsedOffsets, reassociation)) {
 
     SmallVector<OpFoldResult> groupSizes;
-    SmallVector<OpFoldResult> groupOffsets;
     LogicalResult result = computeExpandedSliceInfoForReassocGroup(
         b, collapsedSize, collapsedOffset, reassocIndices, expandedShape,
-        groupSizes, groupOffsets);
+        groupSizes);
     if (failed(result))
       return failure();
-    groupResults.emplace_back(std::make_pair(groupSizes, groupOffsets));
+    groupResults.emplace_back(groupSizes);
   }
 
   expandedStrides.resize(expandedShape.size(), b.getIndexAttr(1));
   for (auto [groupIdx, reassocIndices] : llvm::enumerate(reassociation)) {
-    auto &[sizes, offsets] = groupResults[groupIdx];
+    auto &sizes = groupResults[groupIdx];
     expandedSizes.append(sizes);
 
-    if (!offsets.empty()) {
-      expandedOffsets.append(offsets);
-      continue;
-    }
-
-    SmallVector<int64_t> basis;
+    SmallVector<OpFoldResult> basis;
     for (int64_t expandedShapeIdx : reassocIndices)
-      basis.push_back(expandedShape[expandedShapeIdx]);
+      basis.push_back(tensor::getMixedSize(b, sliceOp.getLoc(), expandedValue,
+                                           expandedShapeIdx));
 
     OpFoldResult collapsedOffset = collapsedOffsets[groupIdx];
     Value offsetVal =
