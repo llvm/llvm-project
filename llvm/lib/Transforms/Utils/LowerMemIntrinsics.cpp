@@ -1270,32 +1270,32 @@ void llvm::expandMemCpyAsLoop(MemCpyInst *Memcpy,
   auto TripCount = getAverageMemOpLoopTripCount(*Memcpy);
   if (ConstantInt *CI = dyn_cast<ConstantInt>(Memcpy->getLength())) {
     createMemCpyLoopKnownSize(
-        /* InsertBefore */ Memcpy,
-        /* SrcAddr */ Memcpy->getRawSource(),
-        /* DstAddr */ Memcpy->getRawDest(),
-        /* CopyLen */ CI,
-        /* SrcAlign */ Memcpy->getSourceAlign().valueOrOne(),
-        /* DestAlign */ Memcpy->getDestAlign().valueOrOne(),
-        /* SrcIsVolatile */ Memcpy->isVolatile(),
-        /* DstIsVolatile */ Memcpy->isVolatile(),
-        /* CanOverlap */ CanOverlap,
-        /* TargetTransformInfo */ TTI,
-        /* AtomicElementSize */ std::nullopt,
-        /* AverageTripCount */ TripCount);
+        /*InsertBefore=*/Memcpy,
+        /*SrcAddr=*/Memcpy->getRawSource(),
+        /*DstAddr=*/Memcpy->getRawDest(),
+        /*CopyLen=*/CI,
+        /*SrcAlign=*/Memcpy->getSourceAlign().valueOrOne(),
+        /*DstAlign=*/Memcpy->getDestAlign().valueOrOne(),
+        /*SrcIsVolatile=*/Memcpy->isVolatile(),
+        /*DstIsVolatile=*/Memcpy->isVolatile(),
+        /*CanOverlap=*/CanOverlap,
+        /*TTI=*/TTI,
+        /*AtomicElementSize=*/std::nullopt,
+        /*AverageTripCount=*/TripCount);
   } else {
     createMemCpyLoopUnknownSize(
-        /* InsertBefore */ Memcpy,
-        /* SrcAddr */ Memcpy->getRawSource(),
-        /* DstAddr */ Memcpy->getRawDest(),
-        /* CopyLen */ Memcpy->getLength(),
-        /* SrcAlign */ Memcpy->getSourceAlign().valueOrOne(),
-        /* DestAlign */ Memcpy->getDestAlign().valueOrOne(),
-        /* SrcIsVolatile */ Memcpy->isVolatile(),
-        /* DstIsVolatile */ Memcpy->isVolatile(),
-        /* CanOverlap */ CanOverlap,
-        /* TargetTransformInfo */ TTI,
-        /* AtomicElementSize */ std::nullopt,
-        /* AverageTripCount */ TripCount);
+        /*InsertBefore=*/Memcpy,
+        /*SrcAddr=*/Memcpy->getRawSource(),
+        /*DstAddr=*/Memcpy->getRawDest(),
+        /*CopyLen=*/Memcpy->getLength(),
+        /*SrcAlign=*/Memcpy->getSourceAlign().valueOrOne(),
+        /*DstAlign=*/Memcpy->getDestAlign().valueOrOne(),
+        /*SrcIsVolatile=*/Memcpy->isVolatile(),
+        /*DstIsVolatile=*/Memcpy->isVolatile(),
+        /*CanOverlap=*/CanOverlap,
+        /*TTI=*/TTI,
+        /*AtomicElementSize=*/std::nullopt,
+        /*AverageTripCount=*/TripCount);
   }
 }
 
@@ -1389,13 +1389,13 @@ void llvm::expandMemSetAsLoop(MemSetInst *MemSet,
 }
 
 void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset) {
-  createMemSetLoop(/* InsertBefore=*/Memset,
-                   /* DstAddr=*/Memset->getRawDest(),
-                   /* CopyLen=*/Memset->getLength(),
-                   /* SetValue=*/Memset->getValue(),
-                   /* Alignment=*/Memset->getDestAlign().valueOrOne(),
-                   /* AverageTripCount */ getAverageMemOpLoopTripCount(*Memset),
-                   /* IsVolatile */ Memset->isVolatile());
+  createMemSetLoop(/*InsertBefore=*/Memset,
+                   /*DstAddr=*/Memset->getRawDest(),
+                   /*CopyLen=*/Memset->getLength(),
+                   /*SetValue=*/Memset->getValue(),
+                   /*DstAlign=*/Memset->getDestAlign().valueOrOne(),
+                   /*AverageTripCount=*/getAverageMemOpLoopTripCount(*Memset),
+                   /*IsVolatile=*/Memset->isVolatile());
 }
 
 void llvm::expandAtomicMemCpyAsLoop(AnyMemCpyInst *AtomicMemcpy,
@@ -1404,29 +1404,29 @@ void llvm::expandAtomicMemCpyAsLoop(AnyMemCpyInst *AtomicMemcpy,
   assert(AtomicMemcpy->isAtomic());
   if (ConstantInt *CI = dyn_cast<ConstantInt>(AtomicMemcpy->getLength())) {
     createMemCpyLoopKnownSize(
-        /* InsertBefore */ AtomicMemcpy,
-        /* SrcAddr */ AtomicMemcpy->getRawSource(),
-        /* DstAddr */ AtomicMemcpy->getRawDest(),
-        /* CopyLen */ CI,
-        /* SrcAlign */ AtomicMemcpy->getSourceAlign().valueOrOne(),
-        /* DestAlign */ AtomicMemcpy->getDestAlign().valueOrOne(),
-        /* SrcIsVolatile */ AtomicMemcpy->isVolatile(),
-        /* DstIsVolatile */ AtomicMemcpy->isVolatile(),
-        /* CanOverlap */ false, // SrcAddr & DstAddr may not overlap by spec.
-        /* TargetTransformInfo */ TTI,
-        /* AtomicElementSize */ AtomicMemcpy->getElementSizeInBytes());
+        /*InsertBefore=*/AtomicMemcpy,
+        /*SrcAddr=*/AtomicMemcpy->getRawSource(),
+        /*DstAddr=*/AtomicMemcpy->getRawDest(),
+        /*CopyLen=*/CI,
+        /*SrcAlign=*/AtomicMemcpy->getSourceAlign().valueOrOne(),
+        /*DstAlign=*/AtomicMemcpy->getDestAlign().valueOrOne(),
+        /*SrcIsVolatile=*/AtomicMemcpy->isVolatile(),
+        /*DstIsVolatile=*/AtomicMemcpy->isVolatile(),
+        /*CanOverlap=*/false, // SrcAddr & DstAddr may not overlap by spec.
+        /*TTI=*/TTI,
+        /*AtomicElementSize=*/AtomicMemcpy->getElementSizeInBytes());
   } else {
     createMemCpyLoopUnknownSize(
-        /* InsertBefore */ AtomicMemcpy,
-        /* SrcAddr */ AtomicMemcpy->getRawSource(),
-        /* DstAddr */ AtomicMemcpy->getRawDest(),
-        /* CopyLen */ AtomicMemcpy->getLength(),
-        /* SrcAlign */ AtomicMemcpy->getSourceAlign().valueOrOne(),
-        /* DestAlign */ AtomicMemcpy->getDestAlign().valueOrOne(),
-        /* SrcIsVolatile */ AtomicMemcpy->isVolatile(),
-        /* DstIsVolatile */ AtomicMemcpy->isVolatile(),
-        /* CanOverlap */ false, // SrcAddr & DstAddr may not overlap by spec.
-        /* TargetTransformInfo */ TTI,
-        /* AtomicElementSize */ AtomicMemcpy->getElementSizeInBytes());
+        /*InsertBefore=*/AtomicMemcpy,
+        /*SrcAddr=*/AtomicMemcpy->getRawSource(),
+        /*DstAddr=*/AtomicMemcpy->getRawDest(),
+        /*CopyLen=*/AtomicMemcpy->getLength(),
+        /*SrcAlign=*/AtomicMemcpy->getSourceAlign().valueOrOne(),
+        /*DstAlign=*/AtomicMemcpy->getDestAlign().valueOrOne(),
+        /*SrcIsVolatile=*/AtomicMemcpy->isVolatile(),
+        /*DstIsVolatile=*/AtomicMemcpy->isVolatile(),
+        /*CanOverlap=*/false, // SrcAddr & DstAddr may not overlap by spec.
+        /*TargetTransformInfo=*/TTI,
+        /*AtomicElementSize=*/AtomicMemcpy->getElementSizeInBytes());
   }
 }
