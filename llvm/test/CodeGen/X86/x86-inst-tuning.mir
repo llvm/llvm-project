@@ -1,0 +1,17 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f -run-pass=x86-fixup-inst-tuning %s -o - | FileCheck %s
+
+---
+name:            vblendw_test
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $xmm0, $xmm1
+    ; CHECK-LABEL: name: vblendw_test
+    ; CHECK:  renamable $xmm0 = VPBLENDDrri killed renamable $xmm0, renamable $xmm1, 5
+    ; CHECK:  renamable $xmm0 = VPBLENDDrri killed renamable $xmm0, renamable $xmm1, 10
+    ; CHECK:  renamable $xmm0 = VPBLENDWrri killed renamable $xmm0, killed renamable $xmm1, -86
+    ; CHECK:  RET64 implicit $xmm0
+    renamable $xmm0 = VPBLENDWrri killed renamable $xmm0,  renamable $xmm1, -205
+    renamable $xmm0 = VPBLENDWrri killed renamable $xmm0,  renamable $xmm1, 204
+    renamable $xmm0 = VPBLENDWrri killed renamable $xmm0, killed renamable $xmm1, -86
+    RET64 implicit $xmm0
