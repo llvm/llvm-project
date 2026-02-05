@@ -5439,30 +5439,6 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlideup(const SDLoc &DL, MVT VT,
   return convertFromScalableVector(VT, Res, DAG, Subtarget);
 }
 
-// Handle the lowering of disjoint shuffles to Vselect-Shuffle sequences
-// where the shuffle is a single-op shuffle
-// Can be lower to VMERGE followed by VRGATHER
-static SDValue lowerShuffleMaskToVselectShuffle(
-    const ShuffleVectorSDNode *SVN, SelectionDAG &DAG,
-    const RISCVSubtarget &Subtarget, const SmallVector<int, 16> &Srcs,
-    const SmallVector<int> &NewMask, SDValue V1, SDValue V2) {
-  MVT VT = SVN->getSimpleValueType(0);
-  MVT XLenVT = Subtarget.getXLenVT();
-  SDLoc DL(SVN);
-  SmallVector<SDValue> SelectMaskVals;
-  for (int Lane : Srcs) {
-    if (Lane == -1)
-      SelectMaskVals.push_back(DAG.getUNDEF(XLenVT));
-    else
-      SelectMaskVals.push_back(DAG.getConstant(Lane ? 0 : 1, DL, XLenVT));
-  }
-  MVT MaskVT = VT.changeVectorElementType(MVT::i1);
-  SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, SelectMaskVals);
-  SDValue Select = DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V1, V2);
-
-  return DAG.getVectorShuffle(VT, DL, Select, DAG.getUNDEF(VT), NewMask);
-}
-
 // A shuffle of shuffles where the final data only is drawn from 2 input ops
 // can be compressed into a single shuffle
 static SDValue compressShuffleOfShuffles(ShuffleVectorSDNode *SVN, SDValue V1,
@@ -6057,6 +6033,21 @@ static SDValue lowerDisjointIndicesShuffle(ShuffleVectorSDNode *SVN,
       return SDValue();
   }
 
+  MVT VT = SVN->getSimpleValueType(0);
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDLoc DL(SVN);
+  SmallVector<SDValue> SelectMaskVals;
+  for (int Lane : Srcs) {
+    if (Lane == -1)
+      SelectMaskVals.push_back(DAG.getUNDEF(XLenVT));
+    else
+      SelectMaskVals.push_back(DAG.getConstant(Lane ? 0 : 1, DL, XLenVT));
+  }
+  MVT MaskVT = VT.changeVectorElementType(MVT::i1);
+  SDValue SelectMask = DAG.getBuildVector(MaskVT, DL, SelectMaskVals);
+  SDValue Select = DAG.getNode(ISD::VSELECT, DL, VT, SelectMask,
+                               SVN->getOperand(0), SVN->getOperand(1));
+
   // Move all indices relative to the first source.
   SmallVector<int> NewMask(Mask.size());
   for (unsigned I = 0; I < Mask.size(); I++) {
@@ -6066,9 +6057,7 @@ static SDValue lowerDisjointIndicesShuffle(ShuffleVectorSDNode *SVN,
       NewMask[I] = Mask[I] % Mask.size();
   }
 
-  return lowerShuffleMaskToVselectShuffle(SVN, DAG, Subtarget, Srcs, NewMask,
-                                          SVN->getOperand(0),
-                                          SVN->getOperand(1));
+  return DAG.getVectorShuffle(VT, DL, Select, DAG.getUNDEF(VT), NewMask);
 }
 
 /// Is this mask local (i.e. elements only move within their local span), and
