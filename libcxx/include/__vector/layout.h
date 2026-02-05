@@ -58,9 +58,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 ///    __begin_ = 0xE4FD0, __end_ = 0xE4FF0, __capacity_ = 0xE5000
 ///                 0xE4FD0                             0xE4FF0           0xE5000
 ///                    v                                   v                 v
-///    ┌───────────────┬────────┬────────┬────────┬────────┬────────┬────────┬─────────────────────┐
-///    │ ????????????? │   3174 │   5656 │    648 │    489 │ ------ │ ------ │ ??????????????????? │
-///    └───────────────┴────────┴────────┴────────┴────────┴────────┴────────┴─────────────────────┘
+///    +---------------+--------+--------+--------+--------+--------+--------+---------------------+
+///    | ????????????? |   3174 |   5656 |    648 |    489 | ------ | ------ | ??????????????????? |
+///    +---------------+--------+--------+--------+--------+--------+--------+---------------------+
 ///                    ^                                   ^                 ^
 ///                __begin_                             __end_          __capacity_
 ///
@@ -79,9 +79,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 ///    __begin_ = 0xE4FD0, __size_ = 4, __capacity_ = 6
 ///                 0xE4FD0
 ///                    v
-///    ┌───────────────┬────────┬────────┬────────┬────────┬────────┬────────┬─────────────────────┐
-///    │ ????????????? │   3174 │   5656 │    648 │    489 │ ------ │ ------ │ ??????????????????? │
-///    └───────────────┴────────┴────────┴────────┴────────┴────────┴────────┴─────────────────────┘
+///    +---------------+--------+--------+--------+--------+--------+--------+---------------------+
+///    | ????????????? |   3174 |   5656 |    648 |    489 | ------ | ------ | ??????????????????? |
+///    +---------------+--------+--------+--------+--------+--------+--------+---------------------+
 ///                    ^
 ///                __begin_
 ///
@@ -239,7 +239,8 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(size_type __size) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(pointer __end) _NOEXCEPT;
   // Works around a Clang 20 zero-initialization bug on user-defined pointer types.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI static __boundary_type __zero_boundary_type() _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI static __boundary_type
+  __zero_boundary_type() _NOEXCEPT;
 
 private:
   pointer __begin_ = nullptr;
@@ -316,7 +317,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity(
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename __vector_layout<_Tp, _Alloc>::__boundary_type __vector_layout<_Tp, _Alloc>::__zero_boundary_type() _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename __vector_layout<_Tp, _Alloc>::__boundary_type
+__vector_layout<_Tp, _Alloc>::__zero_boundary_type() _NOEXCEPT {
   return 0;
 }
 #else
@@ -385,7 +387,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity(
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename __vector_layout<_Tp, _Alloc>::__boundary_type __vector_layout<_Tp, _Alloc>::__zero_boundary_type() _NOEXCEPT {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename __vector_layout<_Tp, _Alloc>::__boundary_type
+__vector_layout<_Tp, _Alloc>::__zero_boundary_type() _NOEXCEPT {
   return nullptr;
 }
 #endif // _LIBCPP_ABI_SIZE_BASED_VECTOR
