@@ -842,6 +842,11 @@ bool AMDGPUTargetLowering::shouldReduceLoadWidth(
   unsigned OldSize = OldVT.getStoreSizeInBits();
 
   MemSDNode *MN = cast<MemSDNode>(N);
+  // Nodes with multiple memory operands (e.g. load-to-lds intrinsics) must use
+  // memoperands(), not getMemOperand(). Skip the uniform-MO check for them.
+  if (!MN->hasUniqueMemOperand())
+    return (OldSize < 32);
+
   unsigned AS = MN->getAddressSpace();
   // Do not shrink an aligned scalar load to sub-dword.
   // Scalar engine cannot do sub-dword loads.
