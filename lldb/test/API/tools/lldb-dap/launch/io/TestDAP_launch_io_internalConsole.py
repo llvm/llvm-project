@@ -7,7 +7,7 @@ from DAP_launch_io import DAP_launchIO
 
 
 @skipIfWindows
-class TestDAP_launchInternalConsole(DAP_launchIO):
+class TestDAP_launch_io_InternalConsole(DAP_launchIO):
     console = "internalConsole"
     __debuggee_stdout = None
 
