@@ -321,7 +321,7 @@ bool ModuleSymbolTable::EmitModuleFlags(Module &M, StringRef CPU,
 
   // Emit a symbol table as module flags, so they can be traversed
   // later with CollectAsmSymbols and CollectAsmSymvers.
-  M.addModuleFlag(llvm::Module::Append, "global-asm-symbols",
+  M.addModuleFlag(llvm::Module::AppendUnique, "global-asm-symbols",
                   llvm::MDNode::get(Ctx, Symbols));
 
   SmallVector<llvm::Metadata *, 16> Symvers;
@@ -329,7 +329,7 @@ bool ModuleSymbolTable::EmitModuleFlags(Module &M, StringRef CPU,
   for (const auto &KV : SymversMap)
     Symvers.push_back(llvm::MDNode::get(Ctx, KV.second));
 
-  M.addModuleFlag(llvm::Module::Append, "global-asm-symvers",
+  M.addModuleFlag(llvm::Module::AppendUnique, "global-asm-symvers",
                   llvm::MDNode::get(Ctx, Symvers));
 
   return true;

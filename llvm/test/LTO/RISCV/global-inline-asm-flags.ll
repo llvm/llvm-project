@@ -19,8 +19,8 @@ module asm ".globl func; func: cm.mvsa01 s1, s0; ret"
 !1 = !{i32 1, !"target-abi", !"lp64"}
 !2 = !{i32 6, !"riscv-isa", !3}
 !3 = !{!"rv64i2p1_c2p0_zca1p0_zcmp1p0"}
-!4 = !{i32 5, !"global-asm-symbols", !5}
+!4 = !{i32 6, !"global-asm-symbols", !5}
 !5 = !{!6}
 !6 = !{!"func", i32 2050}
-!7 = !{i32 5, !"global-asm-symvers", !8}
+!7 = !{i32 6, !"global-asm-symvers", !8}
 !8 = !{}

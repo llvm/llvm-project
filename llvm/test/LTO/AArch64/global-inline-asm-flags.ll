@@ -61,7 +61,7 @@
 ; CHECK: module asm ".symver bar, bar@VER"
 ; CHECK: module asm ".previous"
 
-; CHECK: !{{[0-9]+}} = distinct !{i32 5, !"global-asm-symbols", ![[SYM:[0-9]+]]}
+; CHECK: !{{[0-9]+}} = distinct !{i32 6, !"global-asm-symbols", ![[SYM:[0-9]+]]}
 ; CHECK: ![[SYM]] = distinct !{![[SBAZ1:[0-9]+]], ![[SBAZ2:[0-9]+]], ![[SFOO1:[0-9]+]], ![[SBAR1:[0-9]+]], ![[SBAR2:[0-9]+]], ![[SFOO2:[0-9]+]], ![[SFOO3:[0-9]+]], ![[SFOO4:[0-9]+]]}
 ; CHECK: ![[SBAZ1]] = !{!"baz", i32 2050}
 ; CHECK: ![[SBAZ2]] = !{!"baz@VER", i32 2050}
@@ -72,7 +72,7 @@
 ; CHECK: ![[SFOO3]] = !{!"foo", i32 2050}
 ; CHECK: ![[SFOO4]] = !{!"foo@VER", i32 2050}
 
-; CHECK: !{{[0-9]+}} = distinct !{i32 5, !"global-asm-symvers", ![[SYMVER:[0-9]+]]}
+; CHECK: !{{[0-9]+}} = distinct !{i32 6, !"global-asm-symvers", ![[SYMVER:[0-9]+]]}
 ; CHECK: ![[SYMVER]] = distinct !{![[VBAZ:[0-9]+]], ![[VFOO1:[0-9]+]], ![[VFOO2:[0-9]+]], ![[VBAR:[0-9]+]]}
 ; CHECK: ![[VBAZ]] = !{!"baz", !"baz@VER"}
 ; CHECK: ![[VFOO1]] = !{!"foo", !"foo@LINKEDVER"}
@@ -94,12 +94,12 @@ module asm ".previous"
 
 !llvm.module.flags = !{!0, !5}
 
-!0 = !{i32 5, !"global-asm-symbols", !1}
+!0 = !{i32 6, !"global-asm-symbols", !1}
 !1 = !{!2, !3, !4}
 !2 = !{!"baz", i32 2050}
 !3 = !{!"baz@VER", i32 2050}
 !4 = !{!"foo@LINKEDVER", i32 2050}
-!5 = !{i32 5, !"global-asm-symvers", !6}
+!5 = !{i32 6, !"global-asm-symvers", !6}
 !6 = !{!7, !8}
 !7 = !{!"baz", !"baz@VER"}
 !8 = !{!"foo", !"foo@LINKEDVER"}

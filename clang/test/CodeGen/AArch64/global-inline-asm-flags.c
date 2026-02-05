@@ -33,14 +33,14 @@ asm (
 // CHECK: module asm ".symver bar, bar@VER"
 // CHECK: module asm ".previous"
 
-// CHECK: !{{.*}} = !{i32 5, !"global-asm-symbols", ![[SYM:[0-9]+]]}
+// CHECK: !{{.*}} = !{i32 6, !"global-asm-symbols", ![[SYM:[0-9]+]]}
 // CHECK: ![[SYM]] = !{![[SBAR1:[0-9]+]], ![[SBAR2:[0-9]+]], ![[SBAR3:[0-9]+]], ![[SFOO1:[0-9]+]], ![[SFOO2:[0-9]+]]}
 // CHECK: ![[SBAR1]] = !{!"bar", i32 2050}
 // CHECK: ![[SBAR2]] = !{!"bar@VER", i32 2050}
 // CHECK: ![[SBAR3]] = !{!"foo@ANOTHERVER", i32 2050}
 // CHECK: ![[SFOO1]] = !{!"foo", i32 2050}
 // CHECK: ![[SFOO2]] = !{!"foo@VER", i32 2050}
-// CHECK: !{{.*}} = !{i32 5, !"global-asm-symvers", ![[SYMVER:[0-9]+]]}
+// CHECK: !{{.*}} = !{i32 6, !"global-asm-symvers", ![[SYMVER:[0-9]+]]}
 // CHECK: ![[SYMVER]] = !{![[VFOO:[0-9]+]], ![[VBAR:[0-9]+]]}
 // CHECK: ![[VFOO:[0-9]+]] = !{!"foo", !"foo@VER", !"foo@ANOTHERVER"}
 // CHECK: ![[VBAR:[0-9]+]] = !{!"bar", !"bar@VER"}
