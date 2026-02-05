@@ -198,11 +198,8 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpPredicate Pred,
     return ConstantRange(std::move(SMin) + 1, APInt::getSignedMinValue(W));
   }
   case CmpInst::ICMP_UGE:
-    if (!Pred.hasSameSign())
-      return getNonEmpty(CR.getUnsignedMin(), APInt::getZero(W));
-
-    if (CR.isAllNonNegative() ||
-        (!CR.isAllNegative() && !CR.isSignWrappedSet()))
+    if (Pred.hasSameSign() && (CR.isAllNonNegative() ||
+                               (!CR.isAllNegative() && !CR.isSignWrappedSet())))
       return getNonEmpty(CR.getSignedMin(), APInt::getSignedMinValue(W));
     return getNonEmpty(CR.getUnsignedMin(), APInt::getZero(W));
   case CmpInst::ICMP_SGE:
