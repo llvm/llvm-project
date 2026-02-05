@@ -8,18 +8,22 @@
 void test_sfence(void) {
   // CIR-LABEL: @test_sfence
   // CIR: cir.call_llvm_intrinsic "x86.sse.sfence"  : () -> !void
+
   // LLVM-LABEL: @test_sfence
   // LLVM: call void @llvm.x86.sse.sfence
+
   // OGCG-LABEL: @test_sfence
   // OGCG: call void @llvm.x86.sse.sfence
   __builtin_ia32_sfence();
 }
 
-// CIR-LABEL: @test_lfence
 void test_lfence(void) {
+  // CIR-LABEL: @test_lfence
   // CIR: cir.call_llvm_intrinsic "x86.sse2.lfence"  : () -> !void
+
   // LLVM-LABEL: @test_lfence
   // LLVM: call void @llvm.x86.sse2.lfence()
+
   // OGCG-LABEL: @test_lfence
   // OGCG: call void @llvm.x86.sse2.lfence()
   __builtin_ia32_lfence();
@@ -28,8 +32,10 @@ void test_lfence(void) {
 void test_pause(void) {
   // CIR-LABEL: @test_pause
   // CIR: cir.call_llvm_intrinsic "x86.sse2.pause"  : () -> !void
+  
   // LLVM-LABEL: @test_pause
   // LLVM: call void @llvm.x86.sse2.pause()
+
   // OGCG-LABEL: @test_pause
   // OGCG: call void @llvm.x86.sse2.pause()
   __builtin_ia32_pause();
