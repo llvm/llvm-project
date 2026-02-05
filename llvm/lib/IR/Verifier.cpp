@@ -7177,7 +7177,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     unsigned NumActiveBits = popcount(DMask);
     Check(NumActiveBits <= VWidth,
           "llvm.amdgcn.image.load.* intrinsic mask cannot have more active "
-          "bits than there are elements in the return type", &Call);
+          "bits than there are elements in the return type",
+          &Call);
     break;
   }
   case Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32:
