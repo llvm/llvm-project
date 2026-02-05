@@ -177,6 +177,8 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------
 
+* Support for FreeBSD on MIPS64 has been removed.
+
 Changes to BOLT
 ---------------
 
