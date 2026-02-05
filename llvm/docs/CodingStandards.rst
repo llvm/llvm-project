@@ -292,9 +292,8 @@ A minimal documentation comment:
   void setXyzzy(bool Baz);
 
 Only include code examples, function parameters and return values when it
-provides addtional information, such as intent, usage, or behavior that’s
-non-obvious.  Avoid restating information that can easily be inferred from the
-function signature.
+provides additional information, such as intent, usage, or behavior that’s
+non-obvious.
 
 To refer to parameter names inside a paragraph, use the ``\p name`` command.
 Don't use the ``\arg name`` command since it starts a new paragraph that
