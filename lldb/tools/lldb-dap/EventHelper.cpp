@@ -248,10 +248,6 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
   return Error::success();
 }
 
-// Send a "terminated" event to indicate the process is done being
-// debugged.
-void SendTerminatedEvent(DAP &dap) { dap.SendTerminatedEvent(); }
-
 // Grab any STDOUT and STDERR from the process and send it up to VS Code
 // via an "output" event to the "stdout" and "stderr" categories.
 void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process) {
@@ -466,10 +462,11 @@ static void HandleTargetEvent(const lldb::SBEvent &event, Log &log) {
     // FindTargetByGloballyUniqueID.
     llvm::json::Object configuration;
     configuration.try_emplace("type", "lldb");
-    configuration.try_emplace("debuggerId",
-                              created_target.GetDebugger().GetID());
-    configuration.try_emplace("targetId", created_target.GetGloballyUniqueID());
     configuration.try_emplace("name", created_target.GetTargetSessionName());
+
+    json::Object session{{"targetId", created_target.GetGloballyUniqueID()},
+                         {"debuggerId", created_target.GetDebugger().GetID()}};
+    configuration.try_emplace("session", std::move(session));
 
     llvm::json::Object request;
     request.try_emplace("request", "attach");
@@ -589,7 +586,12 @@ static void HandleDiagnosticEvent(const lldb::SBEvent &event, Log &log) {
 // is required.
 void EventThread(lldb::SBDebugger debugger, lldb::SBBroadcaster broadcaster,
                  llvm::StringRef client_name, Log &log) {
-  llvm::set_thread_name("lldb.DAP.client." + client_name + ".event_handler");
+  std::string thread_name =
+      llvm::formatv("lldb.DAP.client.{}.event_handler", client_name);
+  if (thread_name.length() > llvm::get_max_thread_name_length())
+    thread_name = llvm::formatv("DAP.{}.evt", client_name);
+  llvm::set_thread_name(thread_name);
+
   lldb::SBListener listener = debugger.GetListener();
   broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
   debugger.GetBroadcaster().AddListener(

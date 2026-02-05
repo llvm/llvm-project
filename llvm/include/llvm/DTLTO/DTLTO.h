@@ -16,18 +16,37 @@ namespace llvm {
 namespace lto {
 
 class DTLTO : public LTO {
+  using Base = LTO;
+
 public:
-  // Inherit contructors from LTO base class.
-  using LTO::LTO;
-  ~DTLTO() { removeTempFiles(); }
+  LLVM_ABI DTLTO(Config Conf, ThinBackend Backend,
+                 unsigned ParallelCodeGenParallelismLevel, LTOKind LTOMode,
+                 StringRef LinkerOutputFile, bool SaveTemps)
+      : Base(std::move(Conf), Backend, ParallelCodeGenParallelismLevel,
+             LTOMode),
+        LinkerOutputFile(LinkerOutputFile), SaveTemps(SaveTemps) {
+    assert(!LinkerOutputFile.empty() && "expected a valid linker output file");
+  }
+
+  // Add an input file and prepare it for distribution.
+  LLVM_ABI Expected<std::shared_ptr<InputFile>>
+  addInput(std::unique_ptr<InputFile> InputPtr) override;
+
+protected:
+  LLVM_ABI llvm::Error handleArchiveInputs() override;
+
+  LLVM_ABI void cleanup() override;
 
 private:
   // Bump allocator for a purpose of saving updated module IDs.
   BumpPtrAllocator PtrAlloc;
   StringSaver Saver{PtrAlloc};
 
-  // Removes temporary files.
-  LLVM_ABI void removeTempFiles();
+  /// The output file to which this LTO invocation will contribute.
+  StringRef LinkerOutputFile;
+
+  /// Controls preservation of any created temporary files.
+  bool SaveTemps;
 
   // Determines if a file at the given path is a thin archive file.
   Expected<bool> isThinArchive(const StringRef ArchivePath);
@@ -44,17 +63,8 @@ private:
 
   // A cache to avoid repeatedly reading the same archive file.
   StringMap<bool> ArchiveFiles;
-
-public:
-  // Adds the input file to the LTO object's list of input files.
-  // For archive members, generates a new module ID which is a path to a real
-  // file on a filesystem.
-  LLVM_ABI virtual Expected<std::shared_ptr<lto::InputFile>>
-  addInput(std::unique_ptr<lto::InputFile> InputPtr) override;
-
-  // Entry point for DTLTO archives support.
-  LLVM_ABI virtual llvm::Error handleArchiveInputs() override;
 };
+
 } // namespace lto
 } // namespace llvm
 

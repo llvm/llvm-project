@@ -521,3 +521,32 @@ bool llvm::RunningWindows11OrGreater() {
   TerminateProcess(GetCurrentProcess(), RetCode);
   llvm_unreachable("TerminateProcess doesn't return");
 }
+
+namespace llvm::sys::windows {
+HMODULE loadSystemModuleSecure(LPCWSTR lpModuleName) {
+  // Ensure we load indeed a module from system32 path.
+  // As per GetModuleHandle documentation:
+  // "If lpModuleName does not include a path and there is more than one loaded
+  // module with the same base name and extension, you cannot predict which
+  // module handle will be returned.". This mitigates
+  // https://learn.microsoft.com/en-us/security-updates/securityadvisories/2010/2269637
+  SmallVector<wchar_t, MAX_PATH> Buf;
+  size_t Size = MAX_PATH;
+  do {
+    Buf.resize_for_overwrite(Size);
+    SetLastError(NO_ERROR);
+    Size = ::GetSystemDirectoryW(Buf.data(), Buf.size());
+    if (Size == 0)
+      return NULL;
+
+    // Try again with larger buffer.
+  } while (Size > Buf.size());
+
+  Buf.truncate(Size);
+  Buf.push_back(L'\\');
+  Buf.append(lpModuleName, lpModuleName + std::wcslen(lpModuleName));
+  Buf.push_back(0);
+
+  return ::GetModuleHandleW(Buf.data());
+}
+} // namespace llvm::sys::windows

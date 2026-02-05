@@ -238,6 +238,16 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
       return OMPC_NUMTHREADS_unknown;
     return Type;
   }
+  case OMPC_use_device_ptr: {
+    unsigned Type = llvm::StringSwitch<unsigned>(Str)
+#define OPENMP_USE_DEVICE_PTR_FALLBACK_MODIFIER(Name)                          \
+  .Case(#Name, OMPC_USE_DEVICE_PTR_FALLBACK_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+                        .Default(OMPC_USE_DEVICE_PTR_FALLBACK_unknown);
+    if (LangOpts.OpenMP < 61)
+      return OMPC_USE_DEVICE_PTR_FALLBACK_unknown;
+    return Type;
+  }
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_groupprivate:
@@ -280,7 +290,6 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   case OMPC_nogroup:
   case OMPC_hint:
   case OMPC_uniform:
-  case OMPC_use_device_ptr:
   case OMPC_use_device_addr:
   case OMPC_is_device_ptr:
   case OMPC_has_device_addr:
@@ -608,6 +617,16 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'threadset' clause modifier");
+  case OMPC_use_device_ptr:
+    switch (Type) {
+    case OMPC_USE_DEVICE_PTR_FALLBACK_unknown:
+      return "unknown";
+#define OPENMP_USE_DEVICE_PTR_FALLBACK_MODIFIER(Name)                          \
+  case OMPC_USE_DEVICE_PTR_FALLBACK_##Name:                                    \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'use_device_ptr' clause modifier");
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_groupprivate:
@@ -650,7 +669,6 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_nogroup:
   case OMPC_hint:
   case OMPC_uniform:
-  case OMPC_use_device_ptr:
   case OMPC_use_device_addr:
   case OMPC_is_device_ptr:
   case OMPC_has_device_addr:
@@ -897,7 +915,7 @@ void clang::getOpenMPCaptureRegions(
 
   auto GetRegionsForLeaf = [&](OpenMPDirectiveKind LKind) {
     assert(isLeafConstruct(LKind) && "Epecting leaf directive");
-    // Whether a leaf would require OMPD_unknown if it occured on its own.
+    // Whether a leaf would require OMPD_unknown if it occurred on its own.
     switch (LKind) {
     case OMPD_metadirective:
       CaptureRegions.push_back(OMPD_metadirective);

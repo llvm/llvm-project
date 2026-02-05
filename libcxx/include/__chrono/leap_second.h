@@ -128,7 +128,7 @@ private:
 
 template <>
 struct hash<chrono::leap_second> {
-  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::leap_second& __lp) noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::leap_second& __lp) noexcept {
     return std::__hash_combine(hash<chrono::sys_seconds>{}(__lp.date()), hash<chrono::seconds>{}(__lp.value()));
   }
 };

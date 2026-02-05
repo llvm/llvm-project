@@ -15,7 +15,7 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TFNONE:       [[VECTOR_PH]]:
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
+; TFNONE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFNONE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -50,7 +50,7 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFCOMMON-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TFCOMMON-NEXT:  [[ENTRY:.*]]:
 ; TFCOMMON-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFCOMMON-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
+; TFCOMMON-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 1
 ; TFCOMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TFCOMMON:       [[VECTOR_BODY]]:
 ; TFCOMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -72,8 +72,8 @@ define void @test_widen(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; TFA_INTERLEAVE-NEXT:  [[ENTRY:.*]]:
 ; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP3]], 2
-; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP9]], 2
+; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP3]], 1
+; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP9]], 1
 ; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP6]], i64 1025)
@@ -130,7 +130,7 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TFNONE:       [[VECTOR_PH]]:
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
+; TFNONE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFNONE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -173,7 +173,7 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFCOMMON-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0]] {
 ; TFCOMMON-NEXT:  [[ENTRY:.*]]:
 ; TFCOMMON-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFCOMMON-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
+; TFCOMMON-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 1
 ; TFCOMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TFCOMMON:       [[VECTOR_BODY]]:
 ; TFCOMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -198,8 +198,8 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0]] {
 ; TFA_INTERLEAVE-NEXT:  [[ENTRY:.*]]:
 ; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP3]], 2
-; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP9]], 2
+; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP3]], 1
+; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP9]], 1
 ; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP6]], i64 1025)
@@ -273,7 +273,7 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TFNONE:       [[VECTOR_PH]]:
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
+; TFNONE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFNONE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -321,7 +321,7 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFCOMMON-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0]] {
 ; TFCOMMON-NEXT:  [[ENTRY:.*]]:
 ; TFCOMMON-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFCOMMON-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
+; TFCOMMON-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 1
 ; TFCOMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TFCOMMON:       [[VECTOR_BODY]]:
 ; TFCOMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -349,8 +349,8 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0]] {
 ; TFA_INTERLEAVE-NEXT:  [[ENTRY:.*]]:
 ; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP3]], 2
-; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP9]], 2
+; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP3]], 1
+; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP9]], 1
 ; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP6]], i64 1025)
@@ -433,7 +433,7 @@ define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TFNONE:       [[VECTOR_PH]]:
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
+; TFNONE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFNONE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -485,7 +485,7 @@ define void @test_widen_nomask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFFALLBACK-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0]] {
 ; TFFALLBACK-NEXT:  [[ENTRY:.*]]:
 ; TFFALLBACK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFFALLBACK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
+; TFFALLBACK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; TFFALLBACK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; TFFALLBACK-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFFALLBACK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -557,7 +557,7 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TFNONE:       [[VECTOR_PH]]:
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
+; TFNONE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFNONE-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -592,7 +592,7 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFALWAYS-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0]] {
 ; TFALWAYS-NEXT:  [[ENTRY:.*]]:
 ; TFALWAYS-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFALWAYS-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
+; TFALWAYS-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 1
 ; TFALWAYS-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TFALWAYS:       [[VECTOR_BODY]]:
 ; TFALWAYS-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -614,7 +614,7 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFFALLBACK-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0]] {
 ; TFFALLBACK-NEXT:  [[ENTRY:.*]]:
 ; TFFALLBACK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFFALLBACK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
+; TFFALLBACK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 1
 ; TFFALLBACK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TFFALLBACK:       [[VECTOR_BODY]]:
 ; TFFALLBACK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -636,8 +636,8 @@ define void @test_widen_optmask(ptr noalias %a, ptr readnone %b) #4 {
 ; TFA_INTERLEAVE-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]]) #[[ATTR0]] {
 ; TFA_INTERLEAVE-NEXT:  [[ENTRY:.*]]:
 ; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP3]], 2
-; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP9]], 2
+; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP3]], 1
+; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP9]], 1
 ; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP6]], i64 1025)
@@ -696,7 +696,7 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFNONE-NEXT:    br label %[[VECTOR_PH:.*]]
 ; TFNONE:       [[VECTOR_PH]]:
 ; TFNONE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; TFNONE-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
+; TFNONE-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 1
 ; TFNONE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1025, [[TMP3]]
 ; TFNONE-NEXT:    [[N_VEC:%.*]] = sub i64 1025, [[N_MOD_VF]]
 ; TFNONE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[M]], i64 0
@@ -741,7 +741,7 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFALWAYS-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], double [[M:%.*]]) #[[ATTR0]] {
 ; TFALWAYS-NEXT:  [[ENTRY:.*]]:
 ; TFALWAYS-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFALWAYS-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
+; TFALWAYS-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 1
 ; TFALWAYS-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[M]], i64 0
 ; TFALWAYS-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
 ; TFALWAYS-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -770,7 +770,7 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFFALLBACK-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], double [[M:%.*]]) #[[ATTR0]] {
 ; TFFALLBACK-NEXT:  [[ENTRY:.*]]:
 ; TFFALLBACK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFFALLBACK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
+; TFFALLBACK-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP3]], 1
 ; TFFALLBACK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x double> poison, double [[M]], i64 0
 ; TFFALLBACK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
 ; TFFALLBACK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -799,8 +799,8 @@ define double @test_widen_fmuladd_and_call(ptr noalias %a, ptr readnone %b, doub
 ; TFA_INTERLEAVE-SAME: ptr noalias [[A:%.*]], ptr readnone [[B:%.*]], double [[M:%.*]]) #[[ATTR0]] {
 ; TFA_INTERLEAVE-NEXT:  [[ENTRY:.*]]:
 ; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP3]], 2
-; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP9]], 2
+; TFA_INTERLEAVE-NEXT:    [[TMP9:%.*]] = shl nuw i64 [[TMP3]], 1
+; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = shl nuw i64 [[TMP9]], 1
 ; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; TFA_INTERLEAVE-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 1
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[TMP6]], i64 1025)
