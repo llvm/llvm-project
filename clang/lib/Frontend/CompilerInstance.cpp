@@ -1990,11 +1990,12 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
 
     MM.cacheModuleLoad(*Path[0].getIdentifierInfo(), Module);
   } else if (getPreprocessorOpts().SingleModuleParseMode) {
-    // This mimics how findOrCompileModuleAndReadAST() find the module.
+    // This mimics how findOrCompileModuleAndReadAST() finds the module.
     Module = getPreprocessor().getHeaderSearchInfo().lookupModule(
         ModuleName, ImportLoc, true, !IsInclusionDirective);
     if (Module) {
       // Mark the module and its submodules as if they were loaded from a PCM.
+      // This prevents emission of the "missing submodule" diagnostic below.
       std::vector Worklist{Module};
       while (!Worklist.empty()) {
         auto *M = Worklist.back();
