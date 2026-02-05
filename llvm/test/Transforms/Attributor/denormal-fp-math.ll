@@ -193,7 +193,7 @@ define void @func_dapz_dapz() #4 {
 ; Could be fully preserve-sign,preserve-sign, but this isn't a
 ; realistic case and we don't bother trying to handle it.
 define internal void @leaf_f64_dynamic_f64_dynamic__f32_daz_f32_daz_from__daz_daz() #5 {
-; CHECK: Function Attrs: denormal_fpenv(dynamic float: preservesign)
+; CHECK: Function Attrs: denormal_fpenv(dynamic, float: preservesign)
 ; CHECK-LABEL: define internal void @leaf_f64_dynamic_f64_dynamic__f32_daz_f32_daz_from__daz_daz
 ; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    call void @call_of_mystery()
@@ -326,7 +326,7 @@ define internal void @leaf_ieee_f64_daz_f32() #9 {
 }
 
 define internal void @leaf_ieee_f64_daz_f32_from_ieee_f64_dynamic_f32() #10 {
-; CHECK: Function Attrs: denormal_fpenv(preservesign float: ieee)
+; CHECK: Function Attrs: denormal_fpenv(preservesign, float: ieee)
 ; CHECK-LABEL: define internal void @leaf_ieee_f64_daz_f32_from_ieee_f64_dynamic_f32
 ; CHECK-SAME: () #[[ATTR8:[0-9]+]] {
 ; CHECK-NEXT:    call void @call_of_mystery()
@@ -375,23 +375,23 @@ attributes #1 = { denormal_fpenv(float: dynamic) }
 attributes #2 = { denormal_fpenv(ieee|ieee) }
 attributes #3 = { denormal_fpenv(preservesign) }
 attributes #4 = { denormal_fpenv(positivezero|positivezero) }
-attributes #5 = { denormal_fpenv(dynamic float: preservesign) }
+attributes #5 = { denormal_fpenv(dynamic, float: preservesign) }
 attributes #6 = { denormal_fpenv(dynamic|ieee) }
 attributes #7 = { denormal_fpenv(ieee|dynamic) }
 attributes #8 = { denormal_fpenv(preservesign|dynamic) }
 attributes #9 = { denormal_fpenv(float: preservesign) }
-attributes #10 = { denormal_fpenv(preservesign|preservesign float: ieee) }
-attributes #11 = { denormal_fpenv(preservesign|dynamic float: dynamic|positivezero) }
-attributes #12 = { denormal_fpenv(preservesign|positivezero float: ieee|positivezero) }
+attributes #10 = { denormal_fpenv(preservesign|preservesign, float: ieee) }
+attributes #11 = { denormal_fpenv(preservesign|dynamic, float: dynamic|positivezero) }
+attributes #12 = { denormal_fpenv(preservesign|positivezero, float: ieee|positivezero) }
 ;.
 ; CHECK: attributes #[[ATTR0]] = { denormal_fpenv(preservesign) }
 ; CHECK: attributes #[[ATTR1]] = { denormal_fpenv(float: dynamic) }
 ; CHECK: attributes #[[ATTR2]] = { denormal_fpenv(dynamic) }
 ; CHECK: attributes #[[ATTR3]] = { denormal_fpenv(positivezero) }
-; CHECK: attributes #[[ATTR4]] = { denormal_fpenv(dynamic float: preservesign) }
+; CHECK: attributes #[[ATTR4]] = { denormal_fpenv(dynamic, float: preservesign) }
 ; CHECK: attributes #[[ATTR5]] = { denormal_fpenv(preservesign|ieee) }
 ; CHECK: attributes #[[ATTR6]] = { denormal_fpenv(dynamic|ieee) }
 ; CHECK: attributes #[[ATTR7]] = { denormal_fpenv(float: preservesign) }
-; CHECK: attributes #[[ATTR8]] = { denormal_fpenv(preservesign float: ieee) }
-; CHECK: attributes #[[ATTR9]] = { denormal_fpenv(preservesign|positivezero float: ieee|positivezero) }
+; CHECK: attributes #[[ATTR8]] = { denormal_fpenv(preservesign, float: ieee) }
+; CHECK: attributes #[[ATTR9]] = { denormal_fpenv(preservesign|positivezero, float: ieee|positivezero) }
 ;.

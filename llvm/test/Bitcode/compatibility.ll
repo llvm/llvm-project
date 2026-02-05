@@ -2397,37 +2397,37 @@ define void @denormal_fpenv_float__dynamic_dynamic() denormal_fpenv(float: dynam
   ret void
 }
 ; CHECK: define void @denormal_fpenv__ieee_ieee_float_ieee_ieee() #55 {
-define void @denormal_fpenv__ieee_ieee_float_ieee_ieee() denormal_fpenv(ieee|ieee float: ieee|ieee) {
+define void @denormal_fpenv__ieee_ieee_float_ieee_ieee() denormal_fpenv(ieee|ieee, float: ieee|ieee) {
   ret void
 }
 
 ; CHECK: define void @denormal_fpenv__ieee_ieee_float_preservesign_preservesign() #75 {
-define void @denormal_fpenv__ieee_ieee_float_preservesign_preservesign() denormal_fpenv(ieee|ieee float: preservesign|preservesign) {
+define void @denormal_fpenv__ieee_ieee_float_preservesign_preservesign() denormal_fpenv(ieee|ieee, float: preservesign|preservesign) {
   ret void
 }
 
 ; CHECK: define void @denormal_fpenv__preservesign_preservesign_float_preservesign_preservesign() #60 {
-define void @denormal_fpenv__preservesign_preservesign_float_preservesign_preservesign() denormal_fpenv(preservesign|preservesign float: preservesign|preservesign) {
+define void @denormal_fpenv__preservesign_preservesign_float_preservesign_preservesign() denormal_fpenv(preservesign|preservesign, float: preservesign|preservesign) {
   ret void
 }
 
 ; CHECK: define void @denormal_fpenv__positivezero_positivezero_float_positivezero_positivezero() #65 {
-define void @denormal_fpenv__positivezero_positivezero_float_positivezero_positivezero() denormal_fpenv(positivezero|positivezero float: positivezero|positivezero) {
+define void @denormal_fpenv__positivezero_positivezero_float_positivezero_positivezero() denormal_fpenv(positivezero|positivezero, float: positivezero|positivezero) {
   ret void
 }
 
 ; CHECK: define void @denormal_fpenv__dynamic_dynamic_float_dynamic_dynamic() #70 {
-define void @denormal_fpenv__dynamic_dynamic_float_dynamic_dynamic() denormal_fpenv(dynamic|dynamic float: dynamic|dynamic) {
+define void @denormal_fpenv__dynamic_dynamic_float_dynamic_dynamic() denormal_fpenv(dynamic|dynamic, float: dynamic|dynamic) {
   ret void
 }
 
 ; CHECK: define void @denormal_fpenv__ieee_ieee_float_dynamic_dynamic() #85 {
-define void @denormal_fpenv__ieee_ieee_float_dynamic_dynamic() denormal_fpenv(ieee|ieee float: dynamic|dynamic) {
+define void @denormal_fpenv__ieee_ieee_float_dynamic_dynamic() denormal_fpenv(ieee|ieee, float: dynamic|dynamic) {
   ret void
 }
 
 ; CHECK: define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() #86 {
-define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() denormal_fpenv(preservesign|preservesign float: dynamic|dynamic) {
+define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() denormal_fpenv(preservesign|preservesign, float: dynamic|dynamic) {
   ret void
 }
 
@@ -2517,7 +2517,7 @@ define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() d
 ; CHECK: attributes #83 = { denormal_fpenv(float: dynamic|preservesign) }
 ; CHECK: attributes #84 = { denormal_fpenv(float: dynamic|positivezero) }
 ; CHECK: attributes #85 = { denormal_fpenv(float: dynamic) }
-; CHECK: attributes #86 = { denormal_fpenv(preservesign float: dynamic) }
+; CHECK: attributes #86 = { denormal_fpenv(preservesign, float: dynamic) }
 ; CHECK: attributes #87 = { builtin }
 
 ;; Metadata

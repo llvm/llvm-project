@@ -873,4 +873,4 @@ attributes #8 = { denormal_fpenv(dynamic|preservesign) }
 attributes #9 = { denormal_fpenv(float: dynamic) }
 attributes #10 = { denormal_fpenv(float: preservesign) }
 attributes #11 = { denormal_fpenv(float: ieee|ieee) denormal_fpenv(preservesign) }
-attributes #12 = { denormal_fpenv(dynamic float: preservesign) }
+attributes #12 = { denormal_fpenv(dynamic, float: preservesign) }
