@@ -16,7 +16,7 @@
 // optimized FP implementation, which commits to more detail, we include some
 // extra test cases specific to that NaN policy.
 #if (__arm__ && !(__thumb__ && !__thumb2__)) && COMPILER_RT_ARM_OPTIMIZED_FP
-#define ARM_INVALID_HANDLING
+#  define ARM_INVALID_HANDLING
 #endif
 
 // Returns: a converted from double to int64_t
@@ -35,7 +35,7 @@ int test__fixdfdi(int line, uint64_t a_rep, uint64_t expected) {
   return ret;
 }
 
-#define test__fixdfdi(a,x) test__fixdfdi(__LINE__,a,x)
+#define test__fixdfdi(a, x) test__fixdfdi(__LINE__, a, x)
 
 int main(void) {
   int status = 0;
