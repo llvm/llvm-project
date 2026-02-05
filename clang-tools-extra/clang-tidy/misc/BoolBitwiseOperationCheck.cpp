@@ -188,8 +188,7 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
           hasAnyOperatorName("|", "&"),
           // Compound assignments ('|=' / '&='): require a simple
           // LHS so that we can safely duplicate it on the RHS.
-          allOf(CompoundOperator,
-                hasLHS(anyOf(declRefExpr(), memberExpr())))));
+          allOf(CompoundOperator, hasLHS(anyOf(declRefExpr(), memberExpr())))));
 
   auto LhsOfCompoundMatcher = traverse(TK_AsIs, expr().bind("lhsOfCompound"));
 
@@ -237,14 +236,14 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   // Case 4: `BraceCompound` option enabled and two different operators
   auto ParensCaseOpt = allOf(
       CompoundOperator,
-      hasRHS(allOf(binaryOperator(/*operators checking later*/).bind("parensExprOpt"),
-                   NotAlreadyInParenExpr)));
+      hasRHS(allOf(
+          binaryOperator(/*operators checking later*/).bind("parensExprOpt"),
+          NotAlreadyInParenExpr)));
 
   auto BaseMatcher = binaryOperator(
       hasAnyOperatorName("|", "&", "|=", "&="), hasLHS(BooleanLeaves),
       hasRHS(BooleanLeaves),
-      optionally(
-          allOf(CompoundOperator, hasLHS(LhsOfCompoundMatcher))),
+      optionally(allOf(CompoundOperator, hasLHS(LhsOfCompoundMatcher))),
       optionally(FixItMatcher.bind("fixit")),
       optionally(hasRHS(ExprWithSideEffects.bind("rhsWithSideEffects"))),
       optionally(anyOf(ParensCase1, ParensCase2, ParensCase3, ParensCaseOpt)));
@@ -271,12 +270,10 @@ BoolBitwiseOperationCheck::createDiagBuilder(
 
 void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     const BinaryOperator *BinOp, const BinaryOperator *ParensExpr,
-    const BinaryOperator *ParensExprOpt,
-    const Expr *LhsOfCompound,
+    const BinaryOperator *ParensExprOpt, const Expr *LhsOfCompound,
     // TODO: remove it
-    const Expr *RhsWithSideEffects,
-    const clang::SourceManager &SM, clang::ASTContext &Ctx,
-    bool CanApplyFixIt) {
+    const Expr *RhsWithSideEffects, const clang::SourceManager &SM,
+    clang::ASTContext &Ctx, bool CanApplyFixIt) {
   // Early exit: the matcher proved that no fix-it possible
   if (!CanApplyFixIt) {
     createDiagBuilder(RespectStrictMode, BinOp);
@@ -329,8 +326,9 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     const StringRef CompoundOpStr = BinOp->getOpcodeStr();
     const StringRef RHSLogicalOpStr = translate(RHSOpStr);
     const StringRef LogicalOpStr = translate(CompoundOpStr);
-    const bool ShouldSkipRHSBrace = (RHSOpStr == LogicalOpStr || 
-        (!RHSLogicalOpStr.empty() && RHSLogicalOpStr == LogicalOpStr));
+    const bool ShouldSkipRHSBrace =
+        (RHSOpStr == LogicalOpStr ||
+         (!RHSLogicalOpStr.empty() && RHSLogicalOpStr == LogicalOpStr));
     ParensExpr = ShouldSkipRHSBrace ? nullptr : ParensExprOpt;
   }
 
@@ -362,7 +360,8 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binOp");
   const auto *FixItBinOp = Result.Nodes.getNodeAs<BinaryOperator>("fixit");
   const auto *ParensExpr = Result.Nodes.getNodeAs<BinaryOperator>("parensExpr");
-  const auto *ParensExprOpt = Result.Nodes.getNodeAs<BinaryOperator>("parensExprOpt");
+  const auto *ParensExprOpt =
+      Result.Nodes.getNodeAs<BinaryOperator>("parensExprOpt");
   const auto *LhsOfCompound = Result.Nodes.getNodeAs<Expr>("lhsOfCompound");
   const auto *RhsWithSideEffects =
       Result.Nodes.getNodeAs<Expr>("rhsWithSideEffects");
@@ -372,9 +371,9 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   ASTContext &Ctx = *Result.Context;
 
   const bool CanApplyFixIt = (FixItBinOp != nullptr && FixItBinOp == BinOp);
-  emitWarningAndChangeOperatorsIfPossible(BinOp, ParensExpr, ParensExprOpt, LhsOfCompound,
-                                          RhsWithSideEffects, SM, Ctx,
-                                          CanApplyFixIt);
+  emitWarningAndChangeOperatorsIfPossible(BinOp, ParensExpr, ParensExprOpt,
+                                          LhsOfCompound, RhsWithSideEffects, SM,
+                                          Ctx, CanApplyFixIt);
 
   // Check if canceling the fix-it was caused by side effects.
   if (!CanApplyFixIt && RhsWithSideEffects)

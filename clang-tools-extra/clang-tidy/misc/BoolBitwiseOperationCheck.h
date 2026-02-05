@@ -33,14 +33,11 @@ public:
     return TK_IgnoreUnlessSpelledInSource;
   }
 
-  void emitWarningAndChangeOperatorsIfPossible(const BinaryOperator *BinOp,
-                                               const BinaryOperator *ParensExpr,
-                                               const BinaryOperator *ParensExprOpt,
-                                               const Expr *LhsOfCompound,
-                                               const Expr *RhsWithSideEffects,
-                                               const clang::SourceManager &SM,
-                                               clang::ASTContext &Ctx,
-                                               bool CanApplyFixIt);
+  void emitWarningAndChangeOperatorsIfPossible(
+      const BinaryOperator *BinOp, const BinaryOperator *ParensExpr,
+      const BinaryOperator *ParensExprOpt, const Expr *LhsOfCompound,
+      const Expr *RhsWithSideEffects, const clang::SourceManager &SM,
+      clang::ASTContext &Ctx, bool CanApplyFixIt);
 
 private:
   template <bool RespectStrictMode>

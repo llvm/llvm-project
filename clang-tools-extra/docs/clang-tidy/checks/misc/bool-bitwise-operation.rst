@@ -91,12 +91,12 @@ Options
     misunderstandings of precedence, and prevent `-WParens` warnings from
     compilers. Default value is `true`.
 
-    .. code-block:: c++
+.. code-block:: c++
 
-      bool a, b, c;
-      a &= b | c;  // With BraceCompound=true:  a = a && (b || c);
-                   // With BraceCompound=false: a = a && b || c;
-      
-      a &= b && c; // Always: a = a && b && c; (no parentheses needed)
-      
-      a &= b || c; // Always: a = a && (b || c); (parentheses for precedence)
+  bool a, b, c;
+  a &= b | c;  // With BraceCompound=true:  a = a && (b || c);
+                // With BraceCompound=false: a = a && b || c;
+
+  a &= b && c; // Always: a = a && b && c; (no parentheses needed)
+
+  a &= b || c; // Always: a = a && (b || c); (parentheses for precedence)
