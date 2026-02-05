@@ -112,7 +112,7 @@ static bool needsPrologueENDBR(MachineFunction &MF, const Module *M) {
 }
 
 static bool runIndirectBranchTracking(MachineFunction &MF) {
-  const X86Subtarget &SubTarget = MF.getSubtarget<X86Subtarget>();
+
 
   const Module *M = MF.getFunction().getParent();
   // Check that the cf-protection-branch is enabled.
