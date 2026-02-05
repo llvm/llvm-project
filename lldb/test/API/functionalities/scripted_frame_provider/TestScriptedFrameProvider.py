@@ -1110,3 +1110,80 @@ class ScriptedFrameProviderTestCase(TestBase):
             _ = saved_frames[1].IsValid()
         except Exception as e:
             self.fail(f"Accessing invalidated frames should not crash: {e}")
+
+    def test_event_broadcasting(self):
+        """Test that adding/removing frame providers broadcasts eBroadcastBitStackChanged."""
+        self.build()
+
+        listener = lldb.SBListener("stack_changed_listener")
+        listener.StartListeningForEventClass(
+            self.dbg,
+            lldb.SBThread.GetBroadcasterClassName(),
+            lldb.SBThread.eBroadcastBitStackChanged,
+        )
+
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
+        )
+
+        expected_thread_ids = {
+            process.GetThreadAtIndex(i).GetIndexID()
+            for i in range(process.GetNumThreads())
+        }
+
+        def collect_stack_changed_thread_ids(count):
+            event = lldb.SBEvent()
+            thread_ids = set()
+            for _ in range(count):
+                if not listener.WaitForEvent(5, event):
+                    break
+                self.assertEqual(
+                    event.GetType(),
+                    lldb.SBThread.eBroadcastBitStackChanged,
+                    "Event should be stack changed",
+                )
+                thread_ids.add(lldb.SBThread.GetThreadFromEvent(event).GetIndexID())
+            return thread_ids
+
+        # Import the test frame provider.
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        # 1. Test registration.
+        error = lldb.SBError()
+        provider_id = target.RegisterScriptedFrameProvider(
+            "test_frame_providers.ReplaceFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertSuccess(error, f"Failed to register provider: {error}")
+        self.assertEqual(
+            collect_stack_changed_thread_ids(len(expected_thread_ids)),
+            expected_thread_ids,
+            "All threads should broadcast eBroadcastBitStackChanged on registration",
+        )
+
+        # 2. Test removal.
+        result = target.RemoveScriptedFrameProvider(provider_id)
+        self.assertSuccess(result, f"Failed to remove provider: {result}")
+        self.assertEqual(
+            collect_stack_changed_thread_ids(len(expected_thread_ids)),
+            expected_thread_ids,
+            "All threads should broadcast eBroadcastBitStackChanged on removal",
+        )
+
+        # 3. Test clear.
+        target.RegisterScriptedFrameProvider(
+            "test_frame_providers.ReplaceFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        # Consume registration
+        collect_stack_changed_thread_ids(len(expected_thread_ids))
+
+        self.runCmd("target frame-provider clear")
+        self.assertEqual(
+            collect_stack_changed_thread_ids(len(expected_thread_ids)),
+            expected_thread_ids,
+            "All threads should broadcast eBroadcastBitStackChanged on clear",
+        )
