@@ -34,20 +34,20 @@ class ScriptedFrameProvider(metaclass=ABCMeta):
         import lldb
         from lldb.plugins.scripted_frame_provider import ScriptedFrameProvider
 
-        class CoroFrameProvider(ScriptedFrameProvider):
+        class MyFrameProvider(ScriptedFrameProvider):
             def __init__(self, input_frames, args):
                 super().__init__(input_frames, args)
 
             @staticmethod
             def get_description():
-                return "C++ coroutine frame unwinding"
+                return "Show each frame twice"
 
             def get_frame_at_index(self, index):
                 # Duplicate every frame
                 return int(index / 2)
 
         def __lldb_init_module(debugger, internal_dict):
-            debugger.HandleCommand(f"target frame-provider register -C {__name__}.CoroFrameProvider")
+            debugger.HandleCommand(f"target frame-provider register -C {__name__}.MyFrameProvider")
 
         if __name__ == '__main__':
             print("This script should be loaded from LLDB using `command script import <filename>`")
