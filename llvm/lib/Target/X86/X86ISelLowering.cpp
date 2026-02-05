@@ -2910,23 +2910,30 @@ bool X86::mayFoldIntoZeroExtend(SDValue Op) {
 }
 
 // Return true if its cheap to bitcast this to a vector type.
-static bool mayFoldIntoVector(SDValue Op, const X86Subtarget &Subtarget,
+static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
+                              const X86Subtarget &Subtarget,
                               bool AssumeSingleUse = false) {
   if (peekThroughBitcasts(Op).getValueType().isVector())
     return true;
   if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
     return true;
   EVT VT = Op.getValueType();
-  // TODO : might have better handling by using
-  // `TargetLowering::LegalizeAction::Custom`
   unsigned Opcode = Op.getOpcode();
-  bool BitwiseCase = (ISD::isBitwiseLogicOp(Opcode) &&
-                      (VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512));
-  bool AddSubCase =
-      ((Opcode == ISD::ADD || Opcode == ISD::SUB) && (VT == MVT::i512));
-  if (BitwiseCase || AddSubCase)
-    return mayFoldIntoVector(Op.getOperand(0), Subtarget) &&
-           mayFoldIntoVector(Op.getOperand(1), Subtarget);
+  if ((VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512) &&
+      DAG.getTargetLoweringInfo().getOperationAction(Opcode, VT) ==
+          TargetLowering::LegalizeAction::Custom) {
+    // Check for larger than legal scalar integer ops that might have been
+    // custom lowered to vector instruction.
+    switch (Opcode) {
+    case ISD::AND:
+    case ISD::OR:
+    case ISD::XOR:
+    case ISD::ADD:
+    case ISD::SUB:
+      return mayFoldIntoVector(Op.getOperand(0), DAG, Subtarget) &&
+             mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget);
+    }
+  }
   return X86::mayFoldLoad(Op, Subtarget, AssumeSingleUse,
                           /*IgnoreAlignment=*/true);
 }
@@ -23273,8 +23280,8 @@ static SDValue combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y,
 
   // Don't perform this combine if constructing the vector will be expensive.
   // TODO: Drop AssumeSingleUse = true override.
-  if ((!mayFoldIntoVector(X, Subtarget, /*AssumeSingleUse=*/true) ||
-       !mayFoldIntoVector(Y, Subtarget, /*AssumeSingleUse=*/true)) &&
+  if ((!mayFoldIntoVector(X, DAG, Subtarget, /*AssumeSingleUse=*/true) ||
+       !mayFoldIntoVector(Y, DAG, Subtarget, /*AssumeSingleUse=*/true)) &&
       !IsOrXorXorTreeCCZero)
     return SDValue();
 
@@ -34270,7 +34277,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
            "Unexpected VT!");
     // See if this is free to perform on the FPU to avoid splitting.
     MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
-    if (!mayFoldIntoVector(N0, Subtarget) || !mayFoldIntoVector(N1, Subtarget))
+    if (!mayFoldIntoVector(N0, DAG, Subtarget) ||
+        !mayFoldIntoVector(N1, DAG, Subtarget))
       return;
     SDValue Op = DAG.getNode(Opc, dl, VecVT, DAG.getBitcast(VecVT, N0),
                              DAG.getBitcast(VecVT, N1));
@@ -34287,8 +34295,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     assert(Subtarget.useAVX512Regs() && "AVX512 required");
     assert(VT == MVT::i512 && "Unexpected VT!");
 
-    if (!mayFoldIntoVector(LHS, Subtarget) ||
-        !mayFoldIntoVector(RHS, Subtarget))
+    if (!mayFoldIntoVector(LHS, DAG, Subtarget) ||
+        !mayFoldIntoVector(RHS, DAG, Subtarget))
       return;
 
     MVT VecVT = MVT::v8i64;
@@ -34385,7 +34393,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT VT = N->getValueType(0);
     assert(Subtarget.hasCDI() && "AVX512CD required");
     assert((VT == MVT::i256 || VT == MVT::i512) && "Unexpected VT!");
-    if (VT == MVT::i256 && !mayFoldIntoVector(N0, Subtarget))
+    if (VT == MVT::i256 && !mayFoldIntoVector(N0, DAG, Subtarget))
       return;
 
     unsigned SizeInBits = VT.getSizeInBits();
@@ -54167,8 +54175,8 @@ static SDValue combineMaskedLoad(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-/// If exactly one element of the mask is set for a non-truncating masked store,
-/// it is a vector extract and scalar store.
+/// If exactly one element of the mask is set for a masked store, it is a vector
+/// extract, truncate (iff truncating store) and scalar store.
 /// Note: It is expected that the degenerate cases of an all-zeros or all-ones
 /// mask have already been optimized in IR, so we don't bother with those here.
 static SDValue reduceMaskedStoreToScalarStore(MaskedStoreSDNode *MS,
@@ -54196,6 +54204,14 @@ static SDValue reduceMaskedStoreToScalarStore(MaskedStoreSDNode *MS,
   }
   SDValue Extract =
       DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Value, VecIndex);
+
+  if (MS->isTruncatingStore()) {
+    if (EltVT.isFloatingPoint())
+      return SDValue();
+
+    Extract = DAG.getNode(ISD::TRUNCATE, DL,
+                          MS->getMemoryVT().getVectorElementType(), Extract);
+  }
 
   // Store that element at the appropriate offset from the base pointer.
   return DAG.getStore(MS->getChain(), DL, Extract, Addr,
@@ -54677,7 +54693,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   if (VT == MVT::i256 || VT == MVT::i512) {
     MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
     if (TLI.isTypeLegal(VecVT) && ISD::isNormalStore(St) &&
-        mayFoldIntoVector(StoredVal, Subtarget))
+        mayFoldIntoVector(StoredVal, DAG, Subtarget))
       return DAG.getStore(St->getChain(), dl, DAG.getBitcast(VecVT, StoredVal),
                           St->getBasePtr(), St->getPointerInfo(),
                           St->getBaseAlign(), St->getMemOperand()->getFlags());

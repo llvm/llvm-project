@@ -212,6 +212,9 @@ private:
   lldb::addr_t GetCppObjectPointer(lldb::StackFrameSP frame,
                                    llvm::StringRef object_name, Status &err);
 
+  void
+  FixupCVRParseErrorDiagnostics(DiagnosticManager &diagnostic_manager) const;
+
   /// Defines how the current expression should be wrapped.
   ClangExpressionSourceCode::WrapKind GetWrapKind() const;
   bool SetupPersistentState(DiagnosticManager &diagnostic_manager,
