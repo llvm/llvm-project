@@ -217,7 +217,7 @@ static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
 }
 
 // Required to call InitTargetOptionsFromCodeGenFlags().
-static  codegen::RegisterCodeGenFlags F;
+static codegen::RegisterCodeGenFlags F;
 
 static std::unique_ptr<TargetMachine>
 createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
@@ -421,8 +421,8 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
 }
 
 static void startCodegen(const Config &Conf, TargetMachine *TM,
-                    AddStreamFn AddStream, unsigned Task, Module &Mod,
-                    const ModuleSummaryIndex &CombinedIndex) {
+                         AddStreamFn AddStream, unsigned Task, Module &Mod,
+                         const ModuleSummaryIndex &CombinedIndex) {
   llvm::TimeTraceScope timeScope("codegen");
   if (Conf.PreCodeGenModuleHook && !Conf.PreCodeGenModuleHook(Task, Mod))
     return;
@@ -534,7 +534,7 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
                   createTargetMachine(C, T, *MPartInCtx);
 
               startCodegen(C, TM.get(), AddStream, ThreadId, *MPartInCtx,
-                      CombinedIndex);
+                           CombinedIndex);
             },
             // Pass BC using std::move to ensure that it get moved rather than
             // copied into the thread's context.

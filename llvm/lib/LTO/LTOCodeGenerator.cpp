@@ -408,7 +408,7 @@ bool LTOCodeGenerator::determineTarget() {
 std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
   assert(MArch && "MArch is not set!");
   return std::unique_ptr<TargetMachine>(MArch->createTargetMachine(
-      MergedModule->getTargetTriple(), Config.CPU, FeatureStr,TO,
+      MergedModule->getTargetTriple(), Config.CPU, FeatureStr, TO,
       Config.RelocModel, std::nullopt, Config.CGOptLevel));
 }
 

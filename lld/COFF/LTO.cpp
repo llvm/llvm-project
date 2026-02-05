@@ -63,7 +63,7 @@ lto::Config BitcodeCompiler::createConfig() {
   for (StringRef C : ctx.config.mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
 
-    // Use static reloc model on 32-bit x86 because it usually results in more
+  // Use static reloc model on 32-bit x86 because it usually results in more
   // compact code, and because there are also known code generation bugs when
   // using the PIC model (see PR34306).
   if (ctx.config.machine == COFF::IMAGE_FILE_MACHINE_I386)

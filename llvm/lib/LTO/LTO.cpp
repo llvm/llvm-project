@@ -125,8 +125,7 @@ std::string llvm::computeLTOCacheKey(
     const FunctionImporter::ImportMapTy &ImportList,
     const FunctionImporter::ExportSetTy &ExportList,
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-    const GVSummaryMapTy &DefinedGlobals,
-    const Triple& TT,
+    const GVSummaryMapTy &DefinedGlobals, const Triple &TT,
     const DenseSet<GlobalValue::GUID> &CfiFunctionDefs,
     const DenseSet<GlobalValue::GUID> &CfiFunctionDecls) {
   // Compute the unique hash for this entry.
@@ -1682,7 +1681,7 @@ public:
     auto ModuleID = BM.getModuleIdentifier();
     llvm::TimeTraceScope timeScope("Run ThinLTO backend thread (first round)",
                                    ModuleID);
-      LTOLLVMContext BackendContext(Conf);
+    LTOLLVMContext BackendContext(Conf);
     auto RunThinBackend = [&](AddStreamFn CGAddStream,
                               AddStreamFn IRAddStream) {
       Expected<std::unique_ptr<Module>> MOrErr = BM.parseModule(BackendContext);
