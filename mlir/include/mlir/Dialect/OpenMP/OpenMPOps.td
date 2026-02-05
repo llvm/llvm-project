@@ -2240,11 +2240,15 @@ def TargetFreeMemOp : OpenMP_Op<"target_freemem",
 //===----------------------------------------------------------------------===//
 
 def AllocSharedMemOp : OpenMP_Op<"alloc_shared_mem", traits = [
-    AttrSizedOperandSegments
-  ], clauses = [
-    OpenMP_HeapAllocClause
+    MemoryEffects<[MemAlloc<DefaultResource>]>
   ]> {
-  let summary = "allocate storage on shared memory for an object of a given type";
+  let summary = "allocate storage on shared memory for objects of a given type";
+
+  let arguments = (ins
+    TypeAttr:$elem_type,
+    AnySignlessInteger:$array_size,
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$alignment
+  );
 
   let description = [{
     Allocates memory shared across threads of a team for an object of the given
@@ -2253,15 +2257,30 @@ def AllocSharedMemOp : OpenMP_Op<"alloc_shared_mem", traits = [
     `omp.free_shared` to avoid memory leaks.
 
     ```mlir
-      // Allocate a static 3x3 integer vector.
-      %ptr_shared = omp.alloc_shared_mem vector<3x3xi32> : !llvm.ptr
+      // Allocate an i32 vector with %size elements and aligned to 8 bytes.
+      %ptr_shared = omp.alloc_shared_mem %size x i32 {alignment = 8} : (i64) -> (!llvm.ptr)
       // ...
       omp.free_shared_mem %ptr_shared : !llvm.ptr
     ```
-  }] # clausesDescription;
+
+    The `elem_type` is the type of the object for which memory is being
+    allocated.
+
+    The `array_size` is the number of objects to allocate memory for.
+
+    The optional `alignment` is used to specify the alignment for each element.
+    If not set, the `DataLayout` defaults will be used instead.
+  }];
 
   let results = (outs OpenMP_PointerLikeType);
-  let assemblyFormat = clausesAssemblyFormat # " attr-dict `:` type(results)";
+  let assemblyFormat = [{
+    $array_size `x` $elem_type attr-dict `:` `(` type($array_size) `)` `->` type(results)
+  }];
+
+  let extraClassDeclaration = [{
+    mlir::Type getAllocatedType() { return getElemTypeAttr().getValue(); }
+  }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2280,7 +2299,7 @@ def FreeSharedMemOp : OpenMP_Op<"free_shared_mem", [MemoryEffects<[MemFree]>]> {
 
     ```mlir
       // Example of allocating and freeing shared memory.
-      %ptr_shared = omp.alloc_shared_mem vector<3x3xi32> : !llvm.ptr
+      %ptr_shared = omp.alloc_shared_mem %size x i32 : (i64) -> (!llvm.ptr)
       // ...
       omp.free_shared_mem %ptr_shared : !llvm.ptr
     ```

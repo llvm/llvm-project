@@ -222,47 +222,36 @@ static mlir::Type convertObjectType(const fir::LLVMTypeConverter &converter,
   return converter.convertType(firType);
 }
 
-// FIR Op specific conversion for allocation operations
-template <typename T>
-struct AllocMemOpConversion : public OpenMPFIROpConversion<T> {
-  using OpenMPFIROpConversion<T>::OpenMPFIROpConversion;
+// FIR Op specific conversion for TargetAllocMemOp
+struct TargetAllocMemOpConversion
+    : public OpenMPFIROpConversion<mlir::omp::TargetAllocMemOp> {
+  using OpenMPFIROpConversion::OpenMPFIROpConversion;
 
   llvm::LogicalResult
-  matchAndRewrite(T allocmemOp,
-                  typename OpenMPFIROpConversion<T>::OpAdaptor adaptor,
+  matchAndRewrite(mlir::omp::TargetAllocMemOp allocmemOp, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     mlir::Type heapTy = allocmemOp.getAllocatedType();
     mlir::Location loc = allocmemOp.getLoc();
-    auto ity = OpenMPFIROpConversion<T>::lowerTy().indexType();
+    auto ity = lowerTy().indexType();
     mlir::Type dataTy = fir::unwrapRefType(heapTy);
-    mlir::Type llvmObjectTy =
-        convertObjectType(OpenMPFIROpConversion<T>::lowerTy(), dataTy);
+    mlir::Type llvmObjectTy = convertObjectType(lowerTy(), dataTy);
     if (fir::isRecordWithTypeParameters(fir::unwrapSequenceType(dataTy)))
-      TODO(loc, allocmemOp->getName().getStringRef() +
-                    " codegen of derived type with length parameters");
+      TODO(loc, "omp.target_allocmem codegen of derived type with length "
+                "parameters");
     mlir::Value size = fir::computeElementDistance(
-        loc, llvmObjectTy, ity, rewriter,
-        OpenMPFIROpConversion<T>::lowerTy().getDataLayout());
+        loc, llvmObjectTy, ity, rewriter, lowerTy().getDataLayout());
     if (auto scaleSize = fir::genAllocationScaleSize(
             loc, allocmemOp.getInType(), ity, rewriter))
       size = mlir::LLVM::MulOp::create(rewriter, loc, ity, size, scaleSize);
-    for (mlir::Value opnd : adaptor.getTypeparams())
+    for (mlir::Value opnd : adaptor.getOperands().drop_front())
       size = mlir::LLVM::MulOp::create(
           rewriter, loc, ity, size,
-          integerCast(OpenMPFIROpConversion<T>::lowerTy(), loc, rewriter, ity,
-                      opnd));
-    for (mlir::Value opnd : adaptor.getShape())
-      size = mlir::LLVM::MulOp::create(
-          rewriter, loc, ity, size,
-          integerCast(OpenMPFIROpConversion<T>::lowerTy(), loc, rewriter, ity,
-                      opnd));
-    auto mallocTyWidth =
-        OpenMPFIROpConversion<T>::lowerTy().getIndexTypeBitwidth();
+          integerCast(lowerTy(), loc, rewriter, ity, opnd));
+    auto mallocTyWidth = lowerTy().getIndexTypeBitwidth();
     auto mallocTy =
         mlir::IntegerType::get(rewriter.getContext(), mallocTyWidth);
     if (mallocTyWidth != ity.getIntOrFloatBitWidth())
-      size = integerCast(OpenMPFIROpConversion<T>::lowerTy(), loc, rewriter,
-                         mallocTy, size);
+      size = integerCast(lowerTy(), loc, rewriter, mallocTy, size);
     rewriter.modifyOpInPlace(allocmemOp, [&]() {
       allocmemOp.setInType(rewriter.getI8Type());
       allocmemOp.getTypeparamsMutable().clear();
@@ -292,7 +281,6 @@ void fir::populateOpenMPFIRToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, mlir::RewritePatternSet &patterns) {
   patterns.add<MapInfoOpConversion>(converter);
   patterns.add<PrivateClauseOpConversion>(converter);
+  patterns.add<TargetAllocMemOpConversion>(converter);
   patterns.add<DeclareMapperOpConversion>(converter);
-  patterns.add<AllocMemOpConversion<mlir::omp::TargetAllocMemOp>,
-               AllocMemOpConversion<mlir::omp::AllocSharedMemOp>>(converter);
 }

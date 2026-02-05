@@ -3183,16 +3183,23 @@ func.func @target_allocmem_invalid_bindc_name(%device : i32) -> () {
 }
 
 // -----
-func.func @alloc_shared_mem_invalid_uniq_name() -> () {
-  // expected-error @below {{op attribute 'uniq_name' failed to satisfy constraint: string attribute}}
-  %0 = omp.alloc_shared_mem i64 {uniq_name=2}
+func.func @alloc_shared_mem_invalid_alignment1(%n: i32) -> () {
+  // expected-error @below {{op attribute 'alignment' failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
+  %0 = omp.alloc_shared_mem %n x i64 {alignment=-2} : (i32) -> !llvm.ptr
   return
 }
 
 // -----
-func.func @alloc_shared_mem_invalid_bindc_name() -> () {
-  // expected-error @below {{op attribute 'bindc_name' failed to satisfy constraint: string attribute}}
-  %0 = omp.alloc_shared_mem i64 {bindc_name=2}
+func.func @alloc_shared_mem_invalid_alignment2(%n: i32) -> () {
+  // expected-error @below {{ALIGN value : 3 must be power of 2}}
+  %0 = omp.alloc_shared_mem %n x i64 {alignment=3} : (i32) -> !llvm.ptr
+  return
+}
+
+// -----
+func.func @alloc_shared_mem_invalid_array_size(%n: f32) -> () {
+  // expected-error @below {{invalid kind of type specified: expected builtin.integer, but found 'f32'}}
+  %0 = omp.alloc_shared_mem %n x i64 : (f32) -> !llvm.ptr
   return
 }
 
