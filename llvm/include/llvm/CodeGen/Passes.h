@@ -628,8 +628,7 @@ LLVM_ABI ModulePass *createWindowsSecureHotPatchingPass();
 /// Lowers KCFI operand bundles for indirect calls.
 LLVM_ABI FunctionPass *createKCFIPass();
 
-/// Modify inline asms with "rm" constraints to "m" for the fast register
-/// allocator.
+/// Process inline assembly calls to prepare for code generation.
 LLVM_ABI FunctionPass *createInlineAsmPass();
 
 } // namespace llvm
