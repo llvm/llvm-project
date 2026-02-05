@@ -26,6 +26,8 @@
 // LiveVariables can be removed completely, and LiveIntervals can be directly
 // computed. (We still either need to regenerate kill flags after regalloc, or
 // preferably fix the scavenger to not depend on them).
+MACHINE_FUNCTION_ANALYSIS("block-uniformity-profile",
+                          BlockUniformityProfileProxy())
 MACHINE_FUNCTION_ANALYSIS("edge-bundles", EdgeBundlesAnalysis())
 MACHINE_FUNCTION_ANALYSIS("gisel-cse-analysis", GISelCSEAnalysis(TM))
 MACHINE_FUNCTION_ANALYSIS("gisel-value-tracking", GISelValueTrackingAnalysis())
@@ -98,6 +100,8 @@ MACHINE_FUNCTION_PASS("postra-machine-sink", PostRAMachineSinkingPass())
 MACHINE_FUNCTION_PASS("postmisched", PostMachineSchedulerPass(TM))
 MACHINE_FUNCTION_PASS("post-ra-pseudos", ExpandPostRAPseudosPass())
 MACHINE_FUNCTION_PASS("print", PrintMIRPass())
+MACHINE_FUNCTION_PASS("print<block-uniformity-profile>",
+                      BlockUniformityProfilePrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<gisel-value-tracking>", GISelValueTrackingPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<livedebugvars>", LiveDebugVariablesPrinterPass(errs()))
 MACHINE_FUNCTION_PASS("print<live-intervals>", LiveIntervalsPrinterPass(errs()))
