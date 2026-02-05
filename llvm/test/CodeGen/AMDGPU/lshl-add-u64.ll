@@ -116,3 +116,53 @@ define i32 @lshl_add_u64_gep(ptr %p, i64 %a) {
   %v = load i32, ptr %gep
   ret i32 %v
 }
+
+define i64 @lshl_add_u64_vvv_and_2(i64 %v, i64 %a, i64 %s) {
+; GCN-LABEL: lshl_add_u64_vvv_and_2:
+; GCN: v_and_b32_e32 [[AND:v[0-9:]+]], 2, v{{[0-9:]+}}
+; GCN: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[AND]], v[{{[0-9:]+}}]
+  %and = and i64 %s, 2
+  %shl = shl i64 %v, %and
+  %add = add i64 %shl, %a
+  ret i64 %add
+}
+
+define i64 @lshl_add_u64_vvv_and_4(i64 %v, i64 %a, i64 %s) {
+; GCN-LABEL: lshl_add_u64_vvv_and_4:
+; GCN: v_and_b32_e32 [[AND:v[0-9:]+]], 4, v{{[0-9:]+}}
+; GCN: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[AND]], v[{{[0-9:]+}}]
+  %and = and i64 %s, 4
+  %shl = shl i64 %v, %and
+  %add = add i64 %shl, %a
+  ret i64 %add
+}
+
+define i64 @lshl_add_u64_vvv_and_5(i64 %v, i64 %a, i64 %s) {
+; GCN-LABEL: lshl_add_u64_vvv_and_5:
+; GFX942: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], 0, v[{{[0-9:]+}}]
+; GFX1250: v_add_nc_u64_e32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
+  %and = and i64 %s, 5
+  %shl = shl i64 %v, %and
+  %add = add i64 %shl, %a
+  ret i64 %add
+}
+
+define i64 @lshl_add_u64_vvv_urem(i64 %v, i64 %a, i64 %s) {
+; GCN-LABEL: lshl_add_u64_vvv_urem:
+; GCN: v_and_b32_e32 [[AND:v[0-9:]+]], 3, v{{[0-9:]+}}
+; GCN: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[AND]], v[{{[0-9:]+}}]
+  %urem = urem i64 %s, 4
+  %shl = shl i64 %v, %urem
+  %add = add i64 %shl, %a
+  ret i64 %add
+}
+
+define i64 @lshl_add_u64_vvv_srem(i64 %v, i64 %a, i64 %s) {
+; GCN-LABEL: lshl_add_u64_vvv_srem:
+; GFX942: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], 0, v[{{[0-9:]+}}]
+; GFX1250: v_add_nc_u64_e32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
+  %srem = srem i64 %s, 4
+  %shl = shl i64 %v, %srem
+  %add = add i64 %shl, %a
+  ret i64 %add
+}
