@@ -25,7 +25,8 @@
 namespace clang::tidy::misc {
 
 /// Checks for unused and missing includes. Generates findings only for
-/// the main file of a translation unit.
+/// the main file of a translation unit, optionally treating some direct
+/// includes as fragments of the main file for usage scanning.
 /// Findings correspond to https://clangd.llvm.org/design/include-cleaner.
 ///
 /// For the user-facing documentation see:
@@ -45,6 +46,7 @@ private:
   include_cleaner::PragmaIncludes RecordedPI;
   const Preprocessor *PP = nullptr;
   std::vector<StringRef> IgnoreHeaders;
+  llvm::SmallVector<std::string> FragmentHeaderPatterns;
   // Whether emit only one finding per usage of a symbol.
   const bool DeduplicateFindings;
   // Whether to report unused includes.
@@ -52,6 +54,7 @@ private:
   // Whether to report missing includes.
   const bool MissingIncludes;
   llvm::SmallVector<llvm::Regex> IgnoreHeadersRegex;
+  llvm::SmallVector<llvm::Regex> FragmentHeaderRegexes;
   bool shouldIgnore(const include_cleaner::Header &H);
 };
 

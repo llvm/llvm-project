@@ -339,6 +339,225 @@ TEST(IncludeCleanerCheckTest, UnusedIncludes) {
   }
 }
 
+TEST(IncludeCleanerCheckTest, FragmentHeadersPreserveIncludes) {
+  const std::string Fragment = "gen.inc";
+  const std::string Code = llvm::formatv(R"(
+#include <vector>
+#include "{0}"
+
+Gen G;
+)",
+                                         Fragment)
+                               .str();
+  const char *FragmentCode = R"(
+struct Gen {
+  std::vector<int> Values;
+};
+)";
+  const char *VectorHeader = R"(
+#pragma once
+namespace std {
+template <typename T>
+struct vector {};
+} // namespace std
+)";
+
+  {
+    std::vector<ClangTidyError> Errors;
+    runCheckOnCode<IncludeCleanerCheck>(
+        Code, &Errors, "file.cpp", {}, ClangTidyOptions(),
+        {{Fragment, FragmentCode}, {"vector", VectorHeader}});
+    ASSERT_THAT(Errors.size(), testing::Eq(1U));
+    EXPECT_EQ(Errors.front().Message.Message,
+              "included header vector is not used directly");
+  }
+  {
+    std::vector<ClangTidyError> Errors;
+    ClangTidyOptions Opts;
+    Opts.CheckOptions["test-check-0.FragmentHeaders"] = "";
+    runCheckOnCode<IncludeCleanerCheck>(
+        Code, &Errors, "file.cpp", {}, Opts,
+        {{Fragment, FragmentCode}, {"vector", VectorHeader}});
+    ASSERT_THAT(Errors.size(), testing::Eq(1U));
+  }
+  {
+    std::vector<ClangTidyError> Errors;
+    ClangTidyOptions Opts;
+    Opts.CheckOptions["test-check-0.FragmentHeaders"] = ".*\\.inc$";
+    runCheckOnCode<IncludeCleanerCheck>(
+        Code, &Errors, "file.cpp", {}, Opts,
+        {{Fragment, FragmentCode}, {"vector", VectorHeader}});
+    ASSERT_THAT(Errors.size(), testing::Eq(0U));
+  }
+}
+
+TEST(IncludeCleanerCheckTest, FragmentHeadersGeneratedPaths) {
+  const std::string Fragment =
+      appendPathFileSystemIndependent({"gen-out", "bin", "gen.inc"});
+  const std::string Code = llvm::formatv(R"(
+#include <vector>
+#include "{0}"
+
+Gen G;
+)",
+                                         Fragment)
+                               .str();
+  const char *FragmentCode = R"(
+struct Gen {
+  std::vector<int> Values;
+};
+)";
+  const char *VectorHeader = R"(
+#pragma once
+namespace std {
+template <typename T>
+struct vector {};
+} // namespace std
+)";
+
+  std::vector<ClangTidyError> Errors;
+  ClangTidyOptions Opts;
+  Opts.CheckOptions["test-check-0.FragmentHeaders"] =
+      "(^|.*/)(gen-out|generated)/";
+  runCheckOnCode<IncludeCleanerCheck>(
+      Code, &Errors, "file.cpp", {}, Opts,
+      {{Fragment, FragmentCode}, {"vector", VectorHeader}});
+  ASSERT_THAT(Errors.size(), testing::Eq(0U));
+}
+
+TEST(IncludeCleanerCheckTest, FragmentHeadersMultiplePatterns) {
+  const char *Code = R"(
+#include <vector>
+#include <string>
+#include "gen.inc"
+#include "gen.def"
+
+IncGen Inc;
+DefGen Def;
+)";
+  const char *IncCode = R"(
+struct IncGen {
+  std::vector<int> Values;
+};
+)";
+  const char *DefCode = R"(
+struct DefGen {
+  std::string Name;
+};
+)";
+  const char *VectorHeader = R"(
+#pragma once
+namespace std {
+template <typename T>
+struct vector {};
+} // namespace std
+)";
+  const char *StringHeader = R"(
+#pragma once
+namespace std {
+struct string {};
+} // namespace std
+)";
+
+  std::vector<ClangTidyError> Errors;
+  ClangTidyOptions Opts;
+  Opts.CheckOptions["test-check-0.FragmentHeaders"] = ".*\\.inc$;.*\\.def$";
+  runCheckOnCode<IncludeCleanerCheck>(Code, &Errors, "file.cpp", {}, Opts,
+                                      {{"gen.inc", IncCode},
+                                       {"gen.def", DefCode},
+                                       {"vector", VectorHeader},
+                                       {"string", StringHeader}});
+  ASSERT_THAT(Errors.size(), testing::Eq(0U));
+}
+
+TEST(IncludeCleanerCheckTest, FragmentHeadersNonRecursive) {
+  const char *Code = R"(
+#include <vector>
+#include "gen.inc"
+
+int use = gen_value;
+)";
+  const char *GenCode = R"(
+int gen_value = 0;
+#include "sub.inc"
+)";
+  const char *SubCode = R"(
+struct Gen {
+  std::vector<int> Values;
+};
+)";
+  const char *VectorHeader = R"(
+#pragma once
+namespace std {
+template <typename T>
+struct vector {};
+} // namespace std
+)";
+
+  std::vector<ClangTidyError> Errors;
+  ClangTidyOptions Opts;
+  Opts.CheckOptions["test-check-0.FragmentHeaders"] = ".*\\.inc$";
+  runCheckOnCode<IncludeCleanerCheck>(
+      Code, &Errors, "file.cpp", {}, Opts,
+      {{"gen.inc", GenCode}, {"sub.inc", SubCode}, {"vector", VectorHeader}});
+  ASSERT_THAT(Errors.size(), testing::Eq(1U));
+  EXPECT_EQ(Errors.front().Message.Message,
+            "included header vector is not used directly");
+}
+
+TEST(IncludeCleanerCheckTest, FragmentHeadersMissingIncludeAnchored) {
+  llvm::Annotations Code(R"(
+#include $diag^"gen.inc"
+int use = gen_value;
+)");
+  const char *GenCode = R"(
+#include "foo.h"
+int gen_value = 0;
+int missing = foo();
+)";
+  const char *FooHeader = R"(
+#pragma once
+int foo();
+)";
+
+  std::vector<ClangTidyError> Errors;
+  ClangTidyOptions Opts;
+  Opts.CheckOptions["test-check-0.FragmentHeaders"] = ".*\\.inc$";
+  runCheckOnCode<IncludeCleanerCheck>(
+      Code.code(), &Errors, "file.cpp", {}, Opts,
+      {{"gen.inc", GenCode}, {"foo.h", FooHeader}});
+  ASSERT_THAT(Errors.size(), testing::Eq(1U));
+  EXPECT_EQ(Errors.front().Message.Message,
+            "no header providing \"foo\" is directly included");
+  EXPECT_EQ(Errors.front().Message.FileOffset, Code.point("diag"));
+}
+
+TEST(IncludeCleanerCheckTest, FragmentHeadersMacroUseNotCounted) {
+  const char *Code = R"(
+#include "macros.h"
+#include "gen.inc"
+
+int use = x;
+)";
+  const char *GenCode = R"(
+MAKE_INT(x)
+)";
+  const char *MacrosHeader = R"(
+#pragma once
+#define MAKE_INT(name) int name;
+)";
+
+  std::vector<ClangTidyError> Errors;
+  ClangTidyOptions Opts;
+  Opts.CheckOptions["test-check-0.FragmentHeaders"] = ".*\\.inc$";
+  runCheckOnCode<IncludeCleanerCheck>(
+      Code, &Errors, "file.cpp", {}, Opts,
+      {{"gen.inc", GenCode}, {"macros.h", MacrosHeader}});
+  ASSERT_THAT(Errors.size(), testing::Eq(1U));
+  EXPECT_EQ(Errors.front().Message.Message,
+            "included header macros.h is not used directly");
+}
+
 TEST(IncludeCleanerCheckTest, MissingIncludes) {
   const char *PreCode = R"(
 #include "baz.h" // IWYU pragma: keep

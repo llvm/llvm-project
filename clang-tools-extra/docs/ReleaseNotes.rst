@@ -199,6 +199,12 @@ Changes in existing checks
   - Added support for analyzing function parameters with the `AnalyzeParameters`
     option.
 
+- Improved :doc:`misc-include-cleaner
+  <clang-tidy/checks/misc/include-cleaner>` check by adding the
+  `FragmentHeaders` option to treat direct includes matching regular
+  expressions as fragments of the main file for usage scanning, preserving
+  main-file includes required only by those fragments.
+
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
   when an argument is part of a macro expansion.

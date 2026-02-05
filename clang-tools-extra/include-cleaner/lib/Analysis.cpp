@@ -54,6 +54,17 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
               const PragmaIncludes *PI, const Preprocessor &PP,
               UsedSymbolCB CB) {
   const auto &SM = PP.getSourceManager();
+  // Default behavior: only main file and preamble are considered for uses.
+  walkUsed(ASTRoots, MacroRefs, PI, PP, CB, [&](FileID FID) {
+    return FID == SM.getMainFileID() || FID == SM.getPreambleFileID();
+  });
+}
+
+void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
+              llvm::ArrayRef<SymbolReference> MacroRefs,
+              const PragmaIncludes *PI, const Preprocessor &PP, UsedSymbolCB CB,
+              llvm::function_ref<bool(FileID)> IsMainFile) {
+  const auto &SM = PP.getSourceManager();
   // This is duplicated in writeHTMLReport, changes should be mirrored there.
   tooling::stdlib::Recognizer Recognizer;
   for (auto *Root : ASTRoots) {
@@ -71,7 +82,8 @@ void walkUsed(llvm::ArrayRef<Decl *> ASTRoots,
         SpellLoc = SM.getSpellingLoc(Loc);
       }
       auto FID = SM.getFileID(SpellLoc);
-      if (FID != SM.getMainFileID() && FID != SM.getPreambleFileID())
+      // Allow callers to extend "main file" semantics (e.g. for fragments).
+      if (!IsMainFile(FID))
         return;
       // FIXME: Most of the work done here is repetitive. It might be useful to
       // have a cache/batching.
