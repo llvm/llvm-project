@@ -746,15 +746,6 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case SystemZ::EH_SjLj_Setup:
     return;
 
-  case SystemZ::LOAD_STACK_GUARD:
-    llvm_unreachable(
-        "LOAD_STACK_GUARD should have been eliminated by the DAG Combiner.");
-
-  case SystemZ::MOVE_SG:
-  case SystemZ::COMPARE_SG:
-    llvm_unreachable("MOVE_SG and COMPARE_SG should have "
-                     "been expanded by ExpandPostRAPseudo.");
-
   case SystemZ::LOAD_TSGA:
   case SystemZ::LOAD_GSGA:
     lowerLOAD_SGA(*MI, Lower);
