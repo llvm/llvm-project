@@ -27,6 +27,26 @@ class TestCase(TestBase):
                 "cannot assign to non-static data member within const member function"
             ],
         )
+        self.expect_expr("m_mem", result_value="-2")
+
+        # Test short and long --c++-ignore-context-qualifiers option.
+        self.expect(
+            "expression --c++-ignore-context-qualifiers -- m_mem = 3.0",
+            error=False,
+        )
+        self.expect_expr("m_mem", result_value="3")
+
+        self.expect(
+            "expression -Q -- m_mem = 4.0",
+            error=False,
+        )
+        self.expect_expr("m_mem", result_value="4")
+
+        # Test --c++-ignore-context-qualifiers via SBExpressionOptions.
+        options = lldb.SBExpressionOptions()
+        options.SetBooleanLanguageOption("c++-ignore-context-qualifiers", True)
+        self.expect_expr("m_mem = -2.0; m_mem", options=options, result_value="-2")
+
         self.expect_expr("((Foo*)this)->bar()", result_type="double", result_value="5")
 
         lldbutil.continue_to_source_breakpoint(
@@ -43,6 +63,9 @@ class TestCase(TestBase):
                 "cannot assign to non-static data member within const member function"
             ],
         )
+        self.expect_expr("x", result_value="2")
+
+        self.expect_expr("x = -5; x", options=options, result_value="-5")
 
         lldbutil.continue_to_source_breakpoint(
             self,
@@ -76,6 +99,9 @@ class TestCase(TestBase):
             ],
         )
         self.expect_expr("m_mem", result_value="-2")
+
+        self.expect_expr("m_mem = -1; m_mem", options=options, result_value="-1")
+
         self.expect_expr("((Foo*)this)->bar()", result_type="double", result_value="5")
 
         lldbutil.continue_to_source_breakpoint(
@@ -102,4 +128,6 @@ class TestCase(TestBase):
                 "cannot assign to non-static data member within const member function"
             ],
         )
-        self.expect_expr("m_mem", result_value="-2")
+        self.expect_expr("m_mem", result_value="-1")
+
+        self.expect_expr("m_mem = -2; m_mem", options=options, result_value="-2")

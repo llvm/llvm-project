@@ -29,6 +29,10 @@ class TestCase(TestBase):
         )
         self.expect_expr("((Foo*)this)->bar()", result_type="double", result_value="5")
 
+        options = lldb.SBExpressionOptions()
+        options.SetBooleanLanguageOption("c++-ignore-context-qualifiers", True)
+        self.expect_expr("m_mem = -2.0; m_mem", options=options, result_value="-2")
+
         lldbutil.continue_to_source_breakpoint(
             self,
             process,
@@ -43,6 +47,7 @@ class TestCase(TestBase):
                 "cannot assign to non-static data member within const member function"
             ],
         )
+        self.expect_expr("x = -7.0; x", options=options, result_value="-7")
 
         lldbutil.continue_to_source_breakpoint(
             self,
@@ -77,6 +82,7 @@ class TestCase(TestBase):
         )
         self.expect_expr("m_mem", result_value="-2")
         self.expect_expr("((Foo*)this)->bar()", result_type="double", result_value="5")
+        self.expect_expr("m_mem = -8.0; m_mem", options=options, result_value="-8")
 
         lldbutil.continue_to_source_breakpoint(
             self,
@@ -102,4 +108,4 @@ class TestCase(TestBase):
                 "cannot assign to non-static data member within const member function"
             ],
         )
-        self.expect_expr("m_mem", result_value="-2")
+        self.expect_expr("m_mem = -11.0; m_mem", options=options, result_value="-11")
