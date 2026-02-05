@@ -156,7 +156,7 @@ bool LoopReduceMotionPass::matchAndTransform(Loop &L, DominatorTree &DT,
                     VecBin->getOpcode() != Instruction::Add))
       continue;
     // pattern match success
-    LLVM_DEBUG(dbgs() << "FRM: Found pattern to optimize in loop "
+    LLVM_DEBUG(dbgs() << "Found pattern to optimize in loop "
                       << Header->getName() << "!\n");
 
     VectorType *VecTy = cast<VectorType>(VecBin->getType());
