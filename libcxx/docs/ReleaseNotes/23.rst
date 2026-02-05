@@ -43,6 +43,10 @@ Implemented Papers
 Improvements and New Features
 -----------------------------
 
+- The ``std::ranges::fold_left_with_iter`` algorithm has been optimized for
+  segmented iterators, resulting in a performance improvement of up to 1.38x
+  for ``std::deque<int>`` iterators.
+
 Deprecations and Removals
 -------------------------
 
