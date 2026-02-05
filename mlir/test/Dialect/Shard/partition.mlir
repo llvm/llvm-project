@@ -3,6 +3,7 @@
 // RUN:   %s | FileCheck %s
 
 shard.grid @grid_1d(shape = 2)
+shard.grid @grid_1d_4(shape = 4)
 
 // CHECK-LABEL: func @return_sharding
 func.func @return_sharding(
@@ -204,8 +205,6 @@ func.func @incomplete_sharding(
   return %3 : tensor<8x16xf32>
 }
 
-shard.grid @grid_1d_4(shape = 4)
-
 // CHECK-LABEL: func @ew_chain_with_halo
 func.func @ew_chain_with_halo(
   // CHECK-SAME: %[[IN1:[A-Za-z0-9_]+]]: tensor<5x16xf32>
@@ -317,4 +316,57 @@ func.func @test_reduce_1d(%arg0: tensor<6x6xi32>) -> (tensor<6xi32>) {
   %sharded_ret = shard.shard %sharded_red to %sharding annotate_for_users : tensor<6xi32>
   // CHECK: return %[[reduced]] : tensor<3xi32>
   return %sharded_ret : tensor<6xi32>
+}
+
+// CHECK-LABEL: func.func @mlp_1dgrid
+// CHECK-SAME: [[varg0:%.*]]: tensor<512x512xf32>, [[varg1:%.*]]: tensor<2048x256xf32>, [[varg2:%.*]]: tensor<256x2048xf32>) -> tensor<512x2048xf32>
+func.func @mlp_1dgrid(%arg0: tensor<512x2048xf32>, %arg1: tensor<2048x1024xf32>, %arg2: tensor<1024x2048xf32>) -> tensor<512x2048xf32> attributes {llvm.emit_c_interface} {
+  // CHECK: [[vcst:%.*]] = arith.constant 0.000000e+00 : f32
+  %sharding = shard.sharding @grid_1d_4 split_axes = [[], [0]] : !shard.sharding
+  %sharding_0 = shard.sharding @grid_1d_4 split_axes = [[0], []] : !shard.sharding
+  %sharding_1 = shard.sharding @grid_1d_4 split_axes = [[]] : !shard.sharding
+  %sharding_2 = shard.sharding @grid_1d_4 split_axes = [[], [0]] : !shard.sharding
+  %sharding_3 = shard.sharding @grid_1d_4 split_axes = [[], [0]] : !shard.sharding
+  %sharding_4 = shard.sharding @grid_1d_4 split_axes = [[0], []] : !shard.sharding
+  %sharding_5 = shard.sharding @grid_1d_4 split_axes = [[]] : !shard.sharding
+  %sharding_annotated = shard.shard %arg0 to %sharding_2 : tensor<512x2048xf32>
+  %sharding_annotated_6 = shard.shard %arg1 to %sharding_3 : tensor<2048x1024xf32>
+  %sharding_annotated_7 = shard.shard %arg2 to %sharding_4 : tensor<1024x2048xf32>
+  // CHECK-DAG: [[v0:%.*]] = tensor.empty() : tensor<512x256xf32>
+  %0 = tensor.empty() : tensor<512x1024xf32>
+  %sharding_annotated_8 = shard.shard %0 to %sharding : tensor<512x1024xf32>
+  %cst = arith.constant 0.000000e+00 : f32
+  %sharding_annotated_9 = shard.shard %sharding_annotated_8 to %sharding annotate_for_users : tensor<512x1024xf32>
+  // CHECK-DAG: [[v1:%.*]] = linalg.fill ins([[vcst]] : f32) outs([[v0]] : tensor<512x256xf32>) -> tensor<512x256xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%sharding_annotated_9 : tensor<512x1024xf32>) -> tensor<512x1024xf32>
+  %sharding_annotated_10 = shard.shard %1 to %sharding : tensor<512x1024xf32>
+  // CHECK-DAG: [[vall_gather:%.*]] = shard.all_gather [[varg0]] on @grid_1d_4 grid_axes = [0] gather_axis = 1 : tensor<512x512xf32> -> tensor<512x2048xf32>
+  %sharding_annotated_11 = shard.shard %sharding_annotated to %sharding_1 annotate_for_users : tensor<512x2048xf32>
+  %sharding_annotated_12 = shard.shard %sharding_annotated_6 to %sharding annotate_for_users : tensor<2048x1024xf32>
+  %sharding_annotated_13 = shard.shard %sharding_annotated_10 to %sharding annotate_for_users : tensor<512x1024xf32>
+  // CHECK: [[v2:%.*]] = linalg.matmul ins([[vall_gather]], [[varg1]] : tensor<512x2048xf32>, tensor<2048x256xf32>) outs([[v1]] : tensor<512x256xf32>) -> tensor<512x256xf32>
+  %2 = linalg.matmul ins(%sharding_annotated_11, %sharding_annotated_12 : tensor<512x2048xf32>, tensor<2048x1024xf32>) outs(%sharding_annotated_13 : tensor<512x1024xf32>) -> tensor<512x1024xf32>
+  %sharding_annotated_14 = shard.shard %2 to %sharding : tensor<512x1024xf32>
+  %sharding_annotated_15 = shard.shard %sharding_annotated_14 to %sharding annotate_for_users : tensor<512x1024xf32>
+  // CHECK: [[v3:%.*]] = tosa.sigmoid [[v2]] : (tensor<512x256xf32>) -> tensor<512x256xf32>
+  %3 = tosa.sigmoid %sharding_annotated_15 : (tensor<512x1024xf32>) -> tensor<512x1024xf32>
+  %sharding_annotated_16 = shard.shard %3 to %sharding : tensor<512x1024xf32>
+  // CHECK: [[v9:%.*]] = tensor.empty() : tensor<512x2048xf32>
+  %4 = tensor.empty() : tensor<512x2048xf32>
+  %sharding_annotated_17 = shard.shard %4 to %sharding_1 : tensor<512x2048xf32>
+  %sharding_annotated_18 = shard.shard %sharding_annotated_17 to %sharding_1 annotate_for_users : tensor<512x2048xf32>
+  // CHECK: [[v10:%.*]] = linalg.fill ins([[vcst]] : f32) outs([[v9]] : tensor<512x2048xf32>) -> tensor<512x2048xf32>
+  %5 = linalg.fill ins(%cst : f32) outs(%sharding_annotated_18 : tensor<512x2048xf32>) -> tensor<512x2048xf32>
+  %sharding_annotated_19 = shard.shard %5 to %sharding_1 : tensor<512x2048xf32>
+  %sharding_annotated_20 = shard.shard %sharding_annotated_16 to %sharding annotate_for_users : tensor<512x1024xf32>
+  %sharding_annotated_21 = shard.shard %sharding_annotated_7 to %sharding_0 annotate_for_users : tensor<1024x2048xf32>
+  %sharding_annotated_22 = shard.shard %sharding_annotated_19 to %sharding_1 annotate_for_users : tensor<512x2048xf32>
+  // CHECK: [[v7:%.*]] = scf.if
+  // CHECK: [[v8:%.*]] = linalg.matmul ins([[v3]], [[varg2]] : tensor<512x256xf32>, tensor<256x2048xf32>) outs([[v7]] : tensor<512x2048xf32>) -> tensor<512x2048xf32>
+  %6 = linalg.matmul ins(%sharding_annotated_20, %sharding_annotated_21 : tensor<512x1024xf32>, tensor<1024x2048xf32>) outs(%sharding_annotated_22 : tensor<512x2048xf32>) -> tensor<512x2048xf32>
+  %sharding_annotated_23 = shard.shard %6 to %sharding_1 : tensor<512x2048xf32>
+  // CHECK: [[vall_reduce:%.*]] = shard.all_reduce [[v8]] on @grid_1d_4 grid_axes = [0] : tensor<512x2048xf32> -> tensor<512x2048xf32>
+  %sharding_annotated_24 = shard.shard %sharding_annotated_23 to %sharding_5 annotate_for_users : tensor<512x2048xf32>
+  // CHECK: return [[vall_reduce]] : tensor<512x2048xf32>
+  return %sharding_annotated_24 : tensor<512x2048xf32>
 }

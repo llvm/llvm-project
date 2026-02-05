@@ -1411,8 +1411,14 @@ bool HoistSpillHelper::isSpillCandBB(LiveInterval &OrigLI, VNInfo &OrigVNI,
 
   for (const Register &SibReg : Siblings) {
     LiveInterval &LI = LIS.getInterval(SibReg);
-    VNInfo *VNI = LI.getVNInfoAt(Idx);
-    if (VNI) {
+    if (!LI.getVNInfoAt(Idx))
+      continue;
+    // All of the sub-ranges should be alive at the prospective slot index.
+    // Otherwise, we might risk storing unrelated / compromised values from some
+    // sub-registers to the spill slot.
+    if (all_of(LI.subranges(), [&](const LiveInterval::SubRange &SR) {
+          return SR.getVNInfoAt(Idx) != nullptr;
+        })) {
       LiveReg = SibReg;
       return true;
     }

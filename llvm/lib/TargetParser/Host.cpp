@@ -2167,8 +2167,12 @@ StringMap<bool> sys::getHostCPUFeatures() {
   bool HasAVX10 = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
   bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1) && HasAPXSave;
   Features["egpr"] = HasAPXF;
+#ifndef _WIN32
+  // TODO: We may need to check OS or MSVC version once unwinder opcodes
+  // support PUSH2/POP2/PPX.
   Features["push2pop2"] = HasAPXF;
   Features["ppx"] = HasAPXF;
+#endif
   Features["ndd"] = HasAPXF;
   Features["ccmp"] = HasAPXF;
   Features["nf"] = HasAPXF;

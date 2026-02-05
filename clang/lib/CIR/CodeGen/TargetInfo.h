@@ -124,6 +124,8 @@ public:
 
 std::unique_ptr<TargetCIRGenInfo> createX8664TargetCIRGenInfo(CIRGenTypes &cgt);
 
+std::unique_ptr<TargetCIRGenInfo> createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt);
+
 } // namespace clang::CIRGen
 
 #endif // LLVM_CLANG_LIB_CIR_TARGETINFO_H
