@@ -476,9 +476,8 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
   // Add a VPInstruction to increment the scalar canonical IV by VF * UF.
   // Initially the induction increment is guaranteed to not wrap, but that may
   // change later, e.g. when tail-folding, when the flags need to be dropped.
-  auto *CanonicalIVIncrement = Builder.createOverflowingOp(
-      Instruction::Add, {CanonicalIVPHI, &Plan.getVFxUF()}, {true, false}, DL,
-      "index.next");
+  auto *CanonicalIVIncrement = Builder.createAdd(
+      CanonicalIVPHI, &Plan.getVFxUF(), DL, "index.next", {true, false});
   CanonicalIVPHI->addOperand(CanonicalIVIncrement);
 
   // Add the BranchOnCount VPInstruction to the latch.
@@ -813,11 +812,10 @@ void VPlanTransforms::createInLoopReductionRecipes(
                  match(CurrentLink, m_Sub(m_VPValue(), m_VPValue()))) {
         Type *PhiTy = TypeInfo.inferScalarType(PhiR);
         auto *Zero = Plan.getConstantInt(PhiTy, 0);
-        auto *Sub = new VPInstruction(Instruction::Sub,
-                                      {Zero, CurrentLink->getOperand(1)}, {},
-                                      {}, CurrentLinkI->getDebugLoc());
+        VPBuilder Builder(LinkVPBB, CurrentLink->getIterator());
+        auto *Sub = Builder.createSub(Zero, CurrentLink->getOperand(1),
+                                      CurrentLinkI->getDebugLoc());
         Sub->setUnderlyingValue(CurrentLinkI);
-        LinkVPBB->insert(Sub, CurrentLink->getIterator());
         VecOp = Sub;
       } else {
         // Index of the first operand which holds a non-mask vector operand.
@@ -966,44 +964,52 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   TopRegion->getEntryBasicBlock()->setName("vector.body");
 }
 
-// Likelyhood of bypassing the vectorized loop due to a runtime check block,
-// including memory overlap checks block and wrapping/unit-stride checks block.
-static constexpr uint32_t CheckBypassWeights[] = {1, 127};
-
-void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
-                                       BasicBlock *CheckBlock,
-                                       bool AddBranchWeights) {
-  VPValue *CondVPV = Plan.getOrAddLiveIn(Cond);
-  VPBasicBlock *CheckBlockVPBB = Plan.createVPIRBasicBlock(CheckBlock);
+/// Insert \p CheckBlockVPBB on the edge leading to the vector preheader,
+/// connecting it to both vector and scalar preheaders. Updates scalar
+/// preheader phis to account for the new predecessor.
+static void insertCheckBlockBeforeVectorLoop(VPlan &Plan,
+                                             VPBasicBlock *CheckBlockVPBB) {
   VPBlockBase *VectorPH = Plan.getVectorPreheader();
-  VPBlockBase *ScalarPH = Plan.getScalarPreheader();
+  auto *ScalarPH = cast<VPBasicBlock>(Plan.getScalarPreheader());
   VPBlockBase *PreVectorPH = VectorPH->getSinglePredecessor();
   VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckBlockVPBB);
   VPBlockUtils::connectBlocks(CheckBlockVPBB, ScalarPH);
   CheckBlockVPBB->swapSuccessors();
-
-  // We just connected a new block to the scalar preheader. Update all
-  // VPPhis by adding an incoming value for it, replicating the last value.
-  unsigned NumPredecessors = ScalarPH->getNumPredecessors();
-  for (VPRecipeBase &R : cast<VPBasicBlock>(ScalarPH)->phis()) {
-    assert(isa<VPPhi>(&R) && "Phi expected to be VPPhi");
-    assert(cast<VPPhi>(&R)->getNumIncoming() == NumPredecessors - 1 &&
-           "must have incoming values for all operands");
-    R.addOperand(R.getOperand(NumPredecessors - 2));
+  unsigned NumPreds = ScalarPH->getNumPredecessors();
+  for (VPRecipeBase &R : ScalarPH->phis()) {
+    auto *Phi = cast<VPPhi>(&R);
+    assert(Phi->getNumIncoming() == NumPreds - 1 &&
+           "must have incoming values for all predecessors");
+    Phi->addOperand(Phi->getOperand(NumPreds - 2));
   }
+}
 
-  VPIRMetadata VPBranchWeights;
-  auto *Term =
-      VPBuilder(CheckBlockVPBB)
-          .createNaryOp(
-              VPInstruction::BranchOnCond, {CondVPV},
-              Plan.getVectorLoopRegion()->getCanonicalIV()->getDebugLoc());
+// Likelyhood of bypassing the vectorized loop due to a runtime check block,
+// including memory overlap checks block and wrapping/unit-stride checks block.
+static constexpr uint32_t CheckBypassWeights[] = {1, 127};
+
+/// Create a BranchOnCond terminator in \p CheckBlockVPBB. Optionally adds
+/// branch weights.
+static void addBypassBranch(VPlan &Plan, VPBasicBlock *CheckBlockVPBB,
+                            VPValue *Cond, bool AddBranchWeights) {
+  DebugLoc DL = Plan.getVectorLoopRegion()->getCanonicalIV()->getDebugLoc();
+  auto *Term = VPBuilder(CheckBlockVPBB)
+                   .createNaryOp(VPInstruction::BranchOnCond, {Cond}, DL);
   if (AddBranchWeights) {
     MDBuilder MDB(Plan.getContext());
     MDNode *BranchWeights =
         MDB.createBranchWeights(CheckBypassWeights, /*IsExpected=*/false);
     Term->setMetadata(LLVMContext::MD_prof, BranchWeights);
   }
+}
+
+void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
+                                       BasicBlock *CheckBlock,
+                                       bool AddBranchWeights) {
+  VPValue *CondVPV = Plan.getOrAddLiveIn(Cond);
+  VPBasicBlock *CheckBlockVPBB = Plan.createVPIRBasicBlock(CheckBlock);
+  insertCheckBlockBeforeVectorLoop(Plan, CheckBlockVPBB);
+  addBypassBranch(Plan, CheckBlockVPBB, CondVPV, AddBranchWeights);
 }
 
 void VPlanTransforms::addMinimumIterationCheck(
@@ -1053,9 +1059,8 @@ void VPlanTransforms::addMinimumIterationCheck(
       // Get the maximum unsigned value for the type.
       VPValue *MaxUIntTripCount =
           Plan.getConstantInt(cast<IntegerType>(TripCountTy)->getMask());
-      VPValue *DistanceToMax = Builder.createNaryOp(
-          Instruction::Sub, {MaxUIntTripCount, TripCountVPV},
-          DebugLoc::getUnknown());
+      VPValue *DistanceToMax =
+          Builder.createSub(MaxUIntTripCount, TripCountVPV);
 
       // Don't execute the vector loop if (UMax - n) < (VF * UF).
       // FIXME: Should only check VF * UF, but currently checks Step=max(VF*UF,
@@ -1103,9 +1108,8 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
   VPBuilder Builder(cast<VPBasicBlock>(Plan.getEntry()));
   VPValue *VFxUF = Builder.createExpandSCEV(SE.getElementCount(
       TripCount->getType(), (EpilogueVF * EpilogueUF), SCEV::FlagNUW));
-  VPValue *Count = Builder.createNaryOp(
-      Instruction::Sub, {TC, Plan.getOrAddLiveIn(VectorTripCount)},
-      DebugLoc::getUnknown(), "n.vec.remaining");
+  VPValue *Count = Builder.createSub(TC, Plan.getOrAddLiveIn(VectorTripCount),
+                                     DebugLoc::getUnknown(), "n.vec.remaining");
 
   // Generate code to check if the loop's trip count is less than VF * UF of
   // the vector epilogue loop.
@@ -1254,8 +1258,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   auto *IsLatchExitTaken = LatchBuilder.createICmp(
       CmpInst::ICMP_EQ, LatchExitingBranch->getOperand(0),
       LatchExitingBranch->getOperand(1));
-  auto *AnyExitTaken = LatchBuilder.createNaryOp(
-      Instruction::Or, {AnyNaNLane, IsLatchExitTaken});
+  auto *AnyExitTaken = LatchBuilder.createOr(AnyNaNLane, IsLatchExitTaken);
   LatchBuilder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
   LatchExitingBranch->eraseFromParent();
 
@@ -1461,8 +1464,20 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     }
 
     auto *FindIVPhiR = dyn_cast<VPReductionPHIRecipe>(FindIV);
-    if (!FindIVPhiR || !RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+    if (!FindIVPhiR || !RecurrenceDescriptor::isFindIVRecurrenceKind(
                            FindIVPhiR->getRecurrenceKind()))
+      return false;
+
+    // Check if FindIVPhiR is a FindLast pattern by checking the MinMaxKind
+    // on its ComputeReductionResult. SMax/UMax indicates FindLast.
+    VPInstruction *FindIVResult =
+        vputils::findUserOf<VPInstruction::ComputeReductionResult>(
+            FindIVPhiR->getBackedgeValue());
+    assert(FindIVResult &&
+           "must be able to retrieve the FindIVResult VPInstruction");
+    RecurKind FindIVMinMaxKind = FindIVResult->getRecurKind();
+    if (FindIVMinMaxKind != RecurKind::SMax &&
+        FindIVMinMaxKind != RecurKind::UMax)
       return false;
 
     // TODO: Support cases where IVOp is the IV increment.

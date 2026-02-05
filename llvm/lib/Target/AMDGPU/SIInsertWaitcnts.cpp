@@ -410,15 +410,6 @@ void WaitEventSet::dump() const {
   dbgs() << "\n";
 }
 
-// Mapping from event to counter according to the table masks.
-InstCounterType eventCounter(const WaitEventSet *masks, WaitEventType E) {
-  for (auto T : inst_counter_types()) {
-    if (masks[T].contains(E))
-      return T;
-  }
-  llvm_unreachable("event type has no associated counter");
-}
-
 class WaitcntBrackets;
 
 // This abstracts the logic for generating and updating S_WAIT* instructions
@@ -486,6 +477,16 @@ public:
   // Returns an array of WaitEventSets which can be used to map values in
   // WaitEventType to corresponding counter values in InstCounterType.
   virtual const WaitEventSet *getWaitEventMask() const = 0;
+
+  /// \returns the counter that corresponds to event \p E.
+  InstCounterType getCounterFromEvent(WaitEventType E) const {
+    const WaitEventSet *WaitEvents = getWaitEventMask();
+    for (auto T : inst_counter_types()) {
+      if (WaitEvents[T].contains(E))
+        return T;
+    }
+    llvm_unreachable("event type has no associated counter");
+  }
 
   // Returns a new waitcnt with all counters except VScnt set to 0. If
   // IncludeVSCnt is true, VScnt is set to 0, otherwise it is set to ~0u.
@@ -736,6 +737,9 @@ public:
                                    AtomicRMWState PrevState) const;
   const WaitEventSet *getWaitEventMask() const {
     return WCG->getWaitEventMask();
+  }
+  InstCounterType getCounterFromEvent(WaitEventType E) const {
+    return WCG->getCounterFromEvent(E);
   }
 };
 
@@ -1090,7 +1094,7 @@ bool WaitcntBrackets::hasPointSamplePendingVmemTypes(const MachineInstr &MI,
 }
 
 void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
-  InstCounterType T = eventCounter(Context->getWaitEventMask(), E);
+  InstCounterType T = Context->getCounterFromEvent(E);
   assert(T < Context->MaxCounter);
 
   unsigned UB = getScoreUB(T);
@@ -2302,22 +2306,26 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   AMDGPU::Waitcnt Wait;
   const unsigned Opc = MI.getOpcode();
 
-  // FIXME: This should have already been handled by the memory legalizer.
-  // Removing this currently doesn't affect any lit tests, but we need to
-  // verify that nothing was relying on this. The number of buffer invalidates
-  // being handled here should not be expanded.
-  if (Opc == AMDGPU::BUFFER_WBINVL1 || Opc == AMDGPU::BUFFER_WBINVL1_SC ||
-      Opc == AMDGPU::BUFFER_WBINVL1_VOL || Opc == AMDGPU::BUFFER_GL0_INV ||
-      Opc == AMDGPU::BUFFER_GL1_INV) {
+  switch (Opc) {
+  case AMDGPU::BUFFER_WBINVL1:
+  case AMDGPU::BUFFER_WBINVL1_SC:
+  case AMDGPU::BUFFER_WBINVL1_VOL:
+  case AMDGPU::BUFFER_GL0_INV:
+  case AMDGPU::BUFFER_GL1_INV: {
+    // FIXME: This should have already been handled by the memory legalizer.
+    // Removing this currently doesn't affect any lit tests, but we need to
+    // verify that nothing was relying on this. The number of buffer invalidates
+    // being handled here should not be expanded.
     Wait.LoadCnt = 0;
+    break;
   }
-
-  // All waits must be resolved at call return.
-  // NOTE: this could be improved with knowledge of all call sites or
-  //   with knowledge of the called routines.
-  if (Opc == AMDGPU::SI_RETURN_TO_EPILOG || Opc == AMDGPU::SI_RETURN ||
-      Opc == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN ||
-      Opc == AMDGPU::S_SETPC_B64_return) {
+  case AMDGPU::SI_RETURN_TO_EPILOG:
+  case AMDGPU::SI_RETURN:
+  case AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN:
+  case AMDGPU::S_SETPC_B64_return: {
+    // All waits must be resolved at call return.
+    // NOTE: this could be improved with knowledge of all call sites or
+    //   with knowledge of the called routines.
     ReturnInsts.insert(&MI);
     AMDGPU::Waitcnt AllZeroWait =
         WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false);
@@ -2328,33 +2336,40 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     if (ST->hasExtendedWaitCounts() &&
         !ScoreBrackets.hasPendingEvent(VMEM_ACCESS))
       AllZeroWait.LoadCnt = ~0u;
-    Wait = Wait.combined(AllZeroWait);
+    Wait = AllZeroWait;
+    break;
   }
-  // In dynamic VGPR mode, we want to release the VGPRs before the wave exits.
-  // Technically the hardware will do this on its own if we don't, but that
-  // might cost extra cycles compared to doing it explicitly.
-  // When not in dynamic VGPR mode, identify S_ENDPGM instructions which may
-  // have to wait for outstanding VMEM stores. In this case it can be useful to
-  // send a message to explicitly release all VGPRs before the stores have
-  // completed, but it is only safe to do this if there are no outstanding
-  // scratch stores.
-  else if (Opc == AMDGPU::S_ENDPGM || Opc == AMDGPU::S_ENDPGM_SAVED) {
+  case AMDGPU::S_ENDPGM:
+  case AMDGPU::S_ENDPGM_SAVED: {
+    // In dynamic VGPR mode, we want to release the VGPRs before the wave exits.
+    // Technically the hardware will do this on its own if we don't, but that
+    // might cost extra cycles compared to doing it explicitly.
+    // When not in dynamic VGPR mode, identify S_ENDPGM instructions which may
+    // have to wait for outstanding VMEM stores. In this case it can be useful
+    // to send a message to explicitly release all VGPRs before the stores have
+    // completed, but it is only safe to do this if there are no outstanding
+    // scratch stores.
     EndPgmInsts[&MI] = ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
                        !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS);
+    break;
   }
-  // Resolve vm waits before gs-done.
-  else if ((Opc == AMDGPU::S_SENDMSG || Opc == AMDGPU::S_SENDMSGHALT) &&
-           ST->hasLegacyGeometry() &&
-           ((MI.getOperand(0).getImm() & AMDGPU::SendMsg::ID_MASK_PreGFX11_) ==
-            AMDGPU::SendMsg::ID_GS_DONE_PreGFX11)) {
-    Wait.LoadCnt = 0;
+  case AMDGPU::S_SENDMSG:
+  case AMDGPU::S_SENDMSGHALT: {
+    if (ST->hasLegacyGeometry() &&
+        ((MI.getOperand(0).getImm() & AMDGPU::SendMsg::ID_MASK_PreGFX11_) ==
+         AMDGPU::SendMsg::ID_GS_DONE_PreGFX11)) {
+      // Resolve vm waits before gs-done.
+      Wait.LoadCnt = 0;
+      break;
+    }
+    [[fallthrough]];
   }
+  default: {
 
-  // Export & GDS instructions do not read the EXEC mask until after the export
-  // is granted (which can occur well after the instruction is issued).
-  // The shader program must flush all EXP operations on the export-count
-  // before overwriting the EXEC mask.
-  else {
+    // Export & GDS instructions do not read the EXEC mask until after the
+    // export is granted (which can occur well after the instruction is issued).
+    // The shader program must flush all EXP operations on the export-count
+    // before overwriting the EXEC mask.
     if (MI.modifiesRegister(AMDGPU::EXEC, TRI)) {
       // Export and GDS are tracked individually, either may trigger a waitcnt
       // for EXEC.
@@ -2500,6 +2515,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
           ScoreBrackets.determineWaitForPhysReg(X_CNT, Reg, Wait);
       }
     }
+  }
   }
 
   // Ensure safety against exceptions from outstanding memory operations while
@@ -2767,7 +2783,11 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     if (!SIInstrInfo::isLDSDMA(Inst) && FlatASCount > 1)
       ScoreBrackets->setPendingFlat();
   } else if (SIInstrInfo::isVMEM(Inst) &&
-             !llvm::AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode())) {
+             (!AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode()) ||
+              Inst.getOpcode() == AMDGPU::BUFFER_WBL2)) {
+    // BUFFER_WBL2 is included here because unlike invalidates, has to be
+    // followed "S_WAITCNT vmcnt(0)" is needed after to ensure the writeback has
+    // completed.
     IsVMEMAccess = true;
     ScoreBrackets->updateByEvent(getVmemWaitEventType(Inst), Inst);
 
@@ -3390,7 +3410,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   for (auto T : inst_counter_types())
     ForceEmitWaitcnt[T] = false;
 
-  SmemAccessCounter = eventCounter(WCG->getWaitEventMask(), SMEM_ACCESS);
+  SmemAccessCounter = getCounterFromEvent(SMEM_ACCESS);
 
   BlockInfos.clear();
   bool Modified = false;

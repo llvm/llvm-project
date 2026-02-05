@@ -6,6 +6,7 @@
 
 ; CHECK: VPlan after printAfterInitialConstruction
 ; CHECK: VPlan after VPlanTransforms::clearReductionWrapFlags
+; CHECK: VPlan after VPlanTransforms::optimizeFindIVReductions
 ; CHECK: VPlan after VPlanTransforms::handleMultiUseReductions
 ; CHECK: VPlan after VPlanTransforms::handleMaxMinNumReductions
 ; CHECK: VPlan after VPlanTransforms::handleFindLastReductions
@@ -45,7 +46,7 @@
 ; CHECK-DUMP:      VPlan after printAfterInitialConstruction
 ; CHECK-DUMP-NEXT: VPlan ' for UF>=1' {
 ;
-; CHECK-DUMP:      VPlan after VPlanTransforms::optimize
+; CHECK-DUMP:      VPlan after VPlanTransforms::optimize{{$}}
 ; CHECK-DUMP-NEXT: VPlan 'Initial VPlan for VF={4},UF>=1' {
 ;
 ; CHECK-DUMP:      VPlan after printFinalVPlan

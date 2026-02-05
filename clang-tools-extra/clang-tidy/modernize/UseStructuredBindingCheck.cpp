@@ -348,6 +348,7 @@ void UseStructuredBindingCheck::check(const MatchFinder::MatchResult &Result) {
       case TT_ByConstRef:
         return "const auto&";
       }
+      llvm_unreachable("Unhandled TransferType enum");
     }();
 
     const std::string ReplacementText =

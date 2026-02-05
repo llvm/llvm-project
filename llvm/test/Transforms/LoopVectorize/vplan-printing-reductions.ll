@@ -1110,8 +1110,6 @@ define i64 @print_ext_mul_two_uses(i64 %n, ptr %a, i16 %b, i32 %c) {
 ; CHECK-NEXT:      EMIT vp<%4> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%res2> = phi vp<%3>, vp<%5>
 ; CHECK-NEXT:      CLONE ir<%load> = load ir<%a>
-; CHECK-NEXT:      WIDEN-CAST ir<%load.ext> = sext ir<%load> to i32
-; CHECK-NEXT:      WIDEN-CAST ir<%load.ext.ext> = sext ir<%load.ext> to i64
 ; CHECK-NEXT:      EXPRESSION vp<%5> = ir<%res2> + reduce.add (ir<%mul> zext to i64)
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<%4>, vp<%0>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<%1>
@@ -1120,6 +1118,8 @@ define i64 @print_ext_mul_two_uses(i64 %n, ptr %a, i16 %b, i32 %c) {
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    WIDEN-CAST ir<%load.ext> = sext ir<%load> to i32
+; CHECK-NEXT:    WIDEN-CAST ir<%load.ext.ext> = sext ir<%load.ext> to i64
 ; CHECK-NEXT:    EMIT vp<%7> = compute-reduction-result (add, in-loop) vp<%5>
 ; CHECK-NEXT:    EMIT vp<[[EXT_PART:%.+]]> = extract-last-part ir<%load.ext.ext>
 ; CHECK-NEXT:    EMIT vp<%vector.recur.extract> = extract-last-lane vp<[[EXT_PART]]>
