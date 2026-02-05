@@ -5175,6 +5175,15 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_assume:
     // Argument is not evaluated.
     break;
+  case Builtin::BI__atomic_is_lock_free:
+  case Builtin::BI__atomic_always_lock_free: {
+    assert(E->getNumArgs() == 2);
+    if (!this->visit(E->getArg(0)))
+      return false;
+    if (!this->visitAsLValue(E->getArg(1)))
+      return false;
+  } break;
+
   default:
     if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
       // Put arguments on the stack.
