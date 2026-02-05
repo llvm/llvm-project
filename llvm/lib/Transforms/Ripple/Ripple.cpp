@@ -335,6 +335,25 @@ DebugLoc getFunctionDebugLoc(const Function *F) {
     return {};
 }
 
+unsigned getReduceOperandIdx(const IntrinsicInst *I) {
+  if (intrinsicWithId(
+          I, {Intrinsic::vector_reduce_add, Intrinsic::vector_reduce_mul,
+              Intrinsic::vector_reduce_and, Intrinsic::vector_reduce_or,
+              Intrinsic::vector_reduce_xor, Intrinsic::vector_reduce_smax,
+              Intrinsic::vector_reduce_smin, Intrinsic::vector_reduce_umax,
+              Intrinsic::vector_reduce_umin, Intrinsic::vector_reduce_fmax,
+              Intrinsic::vector_reduce_fmin, Intrinsic::vector_reduce_fmaximum,
+              Intrinsic::vector_reduce_fminimum}))
+    return 0;
+  if (intrinsicWithId(
+          I, {Intrinsic::vector_reduce_fadd, Intrinsic::vector_reduce_fmul}))
+    return 1;
+  if (auto *VPReduceI = dyn_cast<VPReductionIntrinsic>(I))
+    return VPReduceI->getVectorParamPos();
+  llvm_unreachable(
+      "Only reduction intrinsics supported in getReduceOperandIdx.");
+}
+
 } // namespace
 
 bool llvm::hasTrivialLoopLikeBackEdge(BasicBlock *BranchingBB, BasicBlock *PDom,
@@ -1580,10 +1599,9 @@ IntrinsicInst *Ripple::rippleSliceIntrinsic(Instruction *I) {
 }
 
 IntrinsicInst *Ripple::rippleIntrinsicsWithBlockShapeOperand(Instruction *I) {
-  return intrinsicWithId(I, {Intrinsic::ripple_broadcast,
-                             Intrinsic::ripple_stack,
-                             Intrinsic::ripple_block_getsize,
-                             Intrinsic::ripple_block_index});
+  return intrinsicWithId(
+      I, {Intrinsic::ripple_broadcast, Intrinsic::ripple_stack,
+          Intrinsic::ripple_block_getsize, Intrinsic::ripple_block_index});
 }
 
 PreservedAnalyses Ripple::cleanupRippleSingleLane(ProcessingStatus Status) {
@@ -1966,15 +1984,30 @@ void Ripple::padToTargetSIMDWidth() {
     return Subvec;
   };
 
+  auto CastToReductionIntrinsic =
+      [](const Instruction *I) -> const IntrinsicInst * {
+    if (auto *IntrnscI = dyn_cast<VPReductionIntrinsic>(I))
+      return IntrnscI;
+    return intrinsicWithId(
+        I, {Intrinsic::vector_reduce_add, Intrinsic::vector_reduce_mul,
+            Intrinsic::vector_reduce_fadd, Intrinsic::vector_reduce_fmul,
+            Intrinsic::vector_reduce_and, Intrinsic::vector_reduce_or,
+            Intrinsic::vector_reduce_xor, Intrinsic::vector_reduce_smax,
+            Intrinsic::vector_reduce_smin, Intrinsic::vector_reduce_umax,
+            Intrinsic::vector_reduce_umin, Intrinsic::vector_reduce_fmax,
+            Intrinsic::vector_reduce_fmin, Intrinsic::vector_reduce_fmaximum,
+            Intrinsic::vector_reduce_fminimum});
+  };
+
   /// GetInstructionsThatMustBePadded: Returns either:
   /// - A set of instructions that must be padded to align well
   ///    with the hardware's SIMD width, OR,
   /// - An error if the function `F` contains an instruction that is
   ///   unsupported.
   auto GetInstructionsThatMustBePadded =
-      [this, &GetPaddedLength,
-       &GetMaxPaddedLength]() -> Expected<DenseSet<Instruction *>> {
-    DenseSet<Instruction *> MustBePadded;
+      [this, &GetPaddedLength, &GetMaxPaddedLength,
+       &CastToReductionIntrinsic]() -> Expected<std::set<Instruction *>> {
+    std::set<Instruction *> MustBePadded;
     std::queue<Instruction *> Worklist;
 
     auto AnyValuesKnownToBeMustPadded =
@@ -2023,6 +2056,9 @@ void Ripple::padToTargetSIMDWidth() {
           if (isa<ExtractElementInst>(I)) {
             Worklist.push(&I);
           }
+          if (CastToReductionIntrinsic(&I)) {
+            Worklist.push(&I);
+          }
         } else {
           Worklist.push(&I);
         }
@@ -2042,6 +2078,13 @@ void Ripple::padToTargetSIMDWidth() {
           auto *VecOperand = ExtractElementI->getVectorOperand();
           auto PaddedLength = GetPaddedLength(VecOperand);
 
+          if (getRippleShape(VecOperand).isVector() &&
+              AnyValuesKnownToBeMustPadded({VecOperand}, PaddedLength))
+            MustBePadded.insert(I);
+        }
+        if (auto *ReduceI = CastToReductionIntrinsic(I)) {
+          auto *VecOperand = ReduceI->getOperand(getReduceOperandIdx(ReduceI));
+          auto PaddedLength = GetPaddedLength(VecOperand);
           if (getRippleShape(VecOperand).isVector() &&
               AnyValuesKnownToBeMustPadded({VecOperand}, PaddedLength))
             MustBePadded.insert(I);
@@ -2147,7 +2190,7 @@ void Ripple::padToTargetSIMDWidth() {
         auto *Cond = SelectI->getCondition();
         auto *True = SelectI->getTrueValue();
         auto *False = SelectI->getFalseValue();
-        unsigned PaddedLength = GetMaxPaddedLength({Cond, True, False});
+        unsigned PaddedLength = GetMaxPaddedLength({True, False});
 
         if (AnyValuesKnownToBeMustPadded({Cond, True, False, SelectI},
                                          PaddedLength)) {
@@ -2520,6 +2563,89 @@ void Ripple::padToTargetSIMDWidth() {
 
         irBuilder.CreateMaskedScatter(NewVals, NewPtrs, AlignVal, NewMask);
         InstructionsToRemove.push_back(IntrnscInst);
+      } else if (auto *ReduceI =
+                     intrinsicWithId(I, {Intrinsic::vector_reduce_add,
+                                         Intrinsic::vector_reduce_mul,
+                                         Intrinsic::vector_reduce_fadd,
+                                         Intrinsic::vector_reduce_fmul,
+                                         Intrinsic::vector_reduce_and,
+                                         Intrinsic::vector_reduce_or,
+                                         Intrinsic::vector_reduce_xor,
+                                         Intrinsic::vector_reduce_smax,
+                                         Intrinsic::vector_reduce_smin,
+                                         Intrinsic::vector_reduce_umax,
+                                         Intrinsic::vector_reduce_umin,
+                                         Intrinsic::vector_reduce_fmax,
+                                         Intrinsic::vector_reduce_fmin,
+                                         Intrinsic::vector_reduce_fmaximum,
+                                         Intrinsic::vector_reduce_fminimum})) {
+        Value *Operand = ReduceI->getOperand(getReduceOperandIdx(ReduceI));
+        auto [EVTType, LegalVT] = GetEvtLegalTypes(Operand);
+        if (EVTType != LegalVT) {
+          auto UnpaddedLength = EVTType.getVectorNumElements();
+          auto PaddedLength = LegalVT.getVectorNumElements();
+          auto *PaddedOperand = GetPaddedV(Operand, PaddedLength, InstToPadded);
+
+          FastMathFlags FMF = isa<FPMathOperator>(ReduceI)
+                                  ? ReduceI->getFastMathFlags()
+                                  : FastMathFlags();
+
+          auto VPReduceID =
+              VPIntrinsic::getForIntrinsic(ReduceI->getIntrinsicID());
+          irBuilder.SetInsertPoint(ReduceI);
+          auto *StartValue =
+              (ReduceI->getIntrinsicID() == Intrinsic::vector_reduce_fadd ||
+               ReduceI->getIntrinsicID() == Intrinsic::vector_reduce_fmul)
+                  ? ReduceI->getOperand(0)
+                  : getRippleNeutralReductionElement(VPReduceID,
+                                                     ReduceI->getType(), FMF);
+
+          auto *PredicatedReduceI = irBuilder.CreateIntrinsic(
+              ReduceI->getType(), VPReduceID,
+              {StartValue, PaddedOperand,
+               irBuilder.CreateVectorSplat(PaddedLength, irBuilder.getTrue()),
+               irBuilder.getInt32(UnpaddedLength)},
+              FMF, ReduceI->getName() + ".padded");
+          ReduceI->replaceAllUsesWith(PredicatedReduceI);
+          InstructionsToRemove.push_back(ReduceI);
+        } else {
+          Value *PaddedOperand =
+              GetPaddedV(Operand, LegalVT.getVectorNumElements(), InstToPadded);
+          irBuilder.SetInsertPoint(ReduceI);
+          SmallVector<Value *, 2> Args;
+          if (ReduceI->getIntrinsicID() == Intrinsic::vector_reduce_fadd ||
+              ReduceI->getIntrinsicID() == Intrinsic::vector_reduce_fmul) {
+            Args.push_back(ReduceI->getOperand(0));
+          }
+          Args.push_back(PaddedOperand);
+
+          FastMathFlags FMF = isa<FPMathOperator>(ReduceI)
+                                  ? ReduceI->getFastMathFlags()
+                                  : FastMathFlags();
+          auto *NewReduceI = irBuilder.CreateIntrinsic(
+              ReduceI->getType(), ReduceI->getIntrinsicID(), Args, FMF,
+              ReduceI->getName() + ".padded");
+          ReduceI->replaceAllUsesWith(NewReduceI);
+          InstructionsToRemove.push_back(ReduceI);
+        }
+      } else if (auto *ReduceI = dyn_cast<VPReductionIntrinsic>(I)) {
+        auto *Operand = ReduceI->getOperand(ReduceI->getVectorParamPos());
+        auto [EVTType, LegalVT] = GetEvtLegalTypes(Operand);
+        auto PaddedLength = LegalVT.getVectorNumElements();
+        auto *PaddedOperand = GetPaddedV(Operand, PaddedLength, InstToPadded);
+        FastMathFlags FMF = isa<FPMathOperator>(ReduceI)
+                                ? ReduceI->getFastMathFlags()
+                                : FastMathFlags();
+
+        irBuilder.SetInsertPoint(ReduceI);
+        auto *PredicatedReduceI = irBuilder.CreateIntrinsic(
+            ReduceI->getType(), ReduceI->getIntrinsicID(),
+            {ReduceI->getOperand(0), PaddedOperand,
+             GetPaddedV(ReduceI->getOperand(2), PaddedLength, InstToPadded),
+             ReduceI->getOperand(3)},
+            FMF, ReduceI->getName() + ".padded");
+        ReduceI->replaceAllUsesWith(PredicatedReduceI);
+        InstructionsToRemove.push_back(ReduceI);
       } else if (auto VectorIntrnscId = getVectorIntrinsicIDForCall(
                      IntrnscInst, &targetLibraryInfo);
                  VectorIntrnscId != Intrinsic::not_intrinsic) {
@@ -2593,7 +2719,7 @@ void Ripple::padToTargetSIMDWidth() {
       auto *False = SelectI->getFalseValue();
 
       unsigned PaddedLength = std::max(LegalVT.getVectorNumElements(),
-                                       GetMaxPaddedLength({Cond, True, False}));
+                                       GetMaxPaddedLength({True, False}));
 
       irBuilder.SetInsertPoint(SelectI);
 
