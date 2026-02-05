@@ -34,6 +34,7 @@ class TestCase(TestBase):
             substrs=[
                 "cannot assign to non-static data member within const member function",
                 "note: Possibly trying to mutate object in a const context. Try running the expression with",
+                "expression --c++-ignore-context-qualifiers -- x = 7.0",
             ],
         )
 

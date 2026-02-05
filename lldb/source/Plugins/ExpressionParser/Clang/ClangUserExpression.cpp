@@ -980,11 +980,12 @@ void ClangUserExpression::FixupParseErrorDiagnostics(
     return;
   }
 
-  diagnostic_manager.AddDiagnostic(
+  diagnostic_manager.Printf(
+      lldb::eSeverityInfo,
       "Possibly trying to mutate object in a const context. Try "
       "running the expression with: expression --c++-ignore-context-qualifiers "
-      "-- <your expression>",
-      lldb::eSeverityInfo, eDiagnosticOriginLLDB);
+      "-- %s",
+      !m_fixed_text.empty() ? m_fixed_text.c_str() : m_expr_text.c_str());
 }
 
 char ClangUserExpression::ClangUserExpressionHelper::ID;

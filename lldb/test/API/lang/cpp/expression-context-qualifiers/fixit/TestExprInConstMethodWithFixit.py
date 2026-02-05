@@ -18,6 +18,7 @@ class TestCase(TestBase):
                 "member reference type 'const Bar' is not a pointer",
                 "but function is not marked const",
                 "Possibly trying to mutate object in a const context. Try running the expression with",
+                "expression --c++-ignore-context-qualifiers -- m_bar.method()",
             ],
         )
 
@@ -54,11 +55,12 @@ class TestCase(TestBase):
                 "member reference type 'const Bar' is not a pointer",
                 "but function is not marked const",
                 "Possibly trying to mutate object in a const context. Try running the expression with",
+                "expression --c++-ignore-context-qualifiers -- m_bar.method() + blah",
             ],
         )
 
         self.expect(
-            "expression -K -- m_bar->method() + blah",
+            "expression -Q -- m_bar->method() + blah",
             error=True,
             substrs=[
                 "Possibly trying to mutate object in a const context. Try running the expression with",
