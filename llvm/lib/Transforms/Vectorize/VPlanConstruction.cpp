@@ -965,13 +965,18 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
 }
 
 void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   assert(Plan.getExitBlocks().size() == 1 &&
          "only a single-exit block is supported currently");
   assert(Plan.getExitBlocks().front()->getSinglePredecessor() ==
              Plan.getMiddleBlock() &&
          "the exit block must have middle block as single predecessor");
+  // TODO: Handle all successors, not just the middle block when supporting
+  // early exits.
+  assert(LoopRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
+         "The vector loop region must have the middle block as its single "
+         "successor for now");
 
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
   Header->splitAt(Header->getFirstNonPhi());
@@ -1003,7 +1008,8 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
       Latch->splitAt(IVInc->getDefiningRecipe()->getIterator());
   VPBlockUtils::connectBlocks(Header, LatchSplit);
 
-  // Insert phis for any values in the predicated body that are used outside.
+  // Insert phis for any values in the predicated body used outside. Currently,
+  // this consists of header phis and extracts in the middle block.
   Builder.setInsertPoint(LatchSplit, LatchSplit->begin());
   for (VPBasicBlock *VPBB : {Header, Plan.getMiddleBlock()}) {
     for (VPRecipeBase &R : *VPBB) {
@@ -1012,6 +1018,9 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
         if (!VR || !VR->getRegion() || VR->getParent() == LatchSplit ||
             VR->getParent() == VPBB)
           continue;
+        assert((isa<VPHeaderPHIRecipe>(R) ||
+                match(&R, m_ExtractLastPart(m_Specific(V)))) &&
+               "Unexpected user of value defined inside vector loop region");
         // TODO: For reduction phis, use phi value instead of poison.
         VPValue *Poison = Plan.getOrAddLiveIn(
             PoisonValue::get(V->getUnderlyingValue()->getType()));
