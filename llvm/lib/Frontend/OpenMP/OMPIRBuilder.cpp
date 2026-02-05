@@ -2098,7 +2098,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     llvm::function_ref<llvm::Expected<llvm::CanonicalLoopInfo *>()> LoopInfo,
     Value *LBVal, Value *UBVal, Value *StepVal, bool Untied, Value *IfCond,
     Value *GrainSize, bool NoGroup, int Sched, Value *Final, bool Mergeable,
-    Value *Priority, TaskDupCallbackTy DupCB, Value *TaskContextStructPtrVal) {
+    Value *Priority, uint64_t NumOfCollapseLoops, TaskDupCallbackTy DupCB,
+    Value *TaskContextStructPtrVal) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -2175,8 +2176,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   OI.PostOutlineCB = [this, Ident, LBVal, UBVal, StepVal, Untied,
                       TaskloopAllocaBB, CLI, Loc, TaskDupFn, ToBeDeleted,
                       IfCond, GrainSize, NoGroup, Sched, FakeLB, FakeUB,
-                      FakeStep, Final, Mergeable,
-                      Priority](Function &OutlinedFn) mutable {
+                      FakeStep, Final, Mergeable, Priority,
+                      NumOfCollapseLoops](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
@@ -2359,29 +2360,53 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     Builder.SetInsertPoint(CLI->getBody(),
                            CLI->getBody()->getFirstInsertionPt());
 
-    // The canonical loop is generated with a fixed lower bound. We need to
-    // update the index calculation code to use the task's lower bound. The
-    // generated code looks like this:
-    // %omp_loop.iv = phi ...
-    // ...
-    // %tmp = mul [type] %omp_loop.iv, step
-    // %user_index = add [type] tmp, lb
-    // OpenMPIRBuilder constructs canonical loops to have exactly three uses of
-    // the normalised induction variable:
-    // 1. This one: converting the normalised IV to the user IV
-    // 2. The increment (add)
-    // 3. The comparison against the trip count (icmp)
-    // (1) is the only use that is a mul followed by an add so this cannot match
-    // other IR.
-    assert(CLI->getIndVar()->getNumUses() == 3 &&
-           "Canonical loop should have exactly three uses of the ind var");
-    for (User *IVUser : CLI->getIndVar()->users()) {
-      if (auto *Mul = dyn_cast<BinaryOperator>(IVUser)) {
-        if (Mul->getOpcode() == Instruction::Mul) {
-          for (User *MulUser : Mul->users()) {
-            if (auto *Add = dyn_cast<BinaryOperator>(MulUser)) {
-              if (Add->getOpcode() == Instruction::Add) {
-                Add->setOperand(1, CastedTaskLB);
+    if (NumOfCollapseLoops > 1) {
+      llvm::SmallVector<User *> UsersToReplace;
+      // When using the collapse clause, the bounds of the loop have to be
+      // adjusted to properly represent the iterator of the outer loop.
+      Value *IVPlusTaskLB = Builder.CreateAdd(
+          CLI->getIndVar(),
+          Builder.CreateSub(CastedTaskLB, ConstantInt::get(IVTy, 1)));
+      // To ensure every Use is correctly captured, we first want to record
+      // which users to replace the value in, and then replace the value.
+      for (auto IVUse = CLI->getIndVar()->uses().begin();
+           IVUse != CLI->getIndVar()->uses().end(); IVUse++) {
+        User *IVUser = IVUse->getUser();
+        if (auto *Op = dyn_cast<BinaryOperator>(IVUser)) {
+          if (Op->getOpcode() == Instruction::URem ||
+              Op->getOpcode() == Instruction::UDiv) {
+            UsersToReplace.push_back(IVUser);
+          }
+        }
+      }
+      for (User *User : UsersToReplace) {
+        User->replaceUsesOfWith(CLI->getIndVar(), IVPlusTaskLB);
+      }
+    } else {
+      // The canonical loop is generated with a fixed lower bound. We need to
+      // update the index calculation code to use the task's lower bound. The
+      // generated code looks like this:
+      // %omp_loop.iv = phi ...
+      // ...
+      // %tmp = mul [type] %omp_loop.iv, step
+      // %user_index = add [type] tmp, lb
+      // OpenMPIRBuilder constructs canonical loops to have exactly three uses
+      // of the normalised induction variable:
+      // 1. This one: converting the normalised IV to the user IV
+      // 2. The increment (add)
+      // 3. The comparison against the trip count (icmp)
+      // (1) is the only use that is a mul followed by an add so this cannot
+      // match other IR.
+      assert(CLI->getIndVar()->getNumUses() == 3 &&
+             "Canonical loop should have exactly three uses of the ind var");
+      for (User *IVUser : CLI->getIndVar()->users()) {
+        if (auto *Mul = dyn_cast<BinaryOperator>(IVUser)) {
+          if (Mul->getOpcode() == Instruction::Mul) {
+            for (User *MulUser : Mul->users()) {
+              if (auto *Add = dyn_cast<BinaryOperator>(MulUser)) {
+                if (Add->getOpcode() == Instruction::Add) {
+                  Add->setOperand(1, CastedTaskLB);
+                }
               }
             }
           }

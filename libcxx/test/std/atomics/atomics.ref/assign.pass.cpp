@@ -24,7 +24,7 @@ template <typename T>
 struct TestAssign {
   void operator()() const {
     {
-      T x(T(1));
+      alignas(std::atomic_ref<T>::required_alignment) T x(T(1));
       std::atomic_ref<T> const a(x);
 
       std::same_as<T> decltype(auto) y = (a = T(2));

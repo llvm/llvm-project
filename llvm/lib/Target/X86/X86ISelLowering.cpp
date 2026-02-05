@@ -18347,6 +18347,16 @@ static SDValue lower1BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
           DAG.getVectorShuffle(OpVT, DL, Op1, DAG.getUNDEF(OpVT), Mask), CC);
   }
 
+  // If this is a sequential shuffle with zero'd elements - then lower to AND.
+  bool IsBlendWithZero = all_of(enumerate(Mask), [&Zeroable](auto M) {
+    return Zeroable[M.index()] || (M.value() == (int)M.index());
+  });
+  if (IsBlendWithZero) {
+    EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
+    SDValue BlendMask = DAG.getConstant(~Zeroable, DL, IntVT);
+    return DAG.getNode(ISD::AND, DL, VT, V1, DAG.getBitcast(VT, BlendMask));
+  }
+
   MVT ExtVT;
   switch (VT.SimpleTy) {
   default:
