@@ -194,7 +194,7 @@ static void replaceLoadOrStoreOp(vector::LoadOp loadOp,
                                  VectorType vectorTy, Value ptr, unsigned align,
                                  ConversionPatternRewriter &rewriter) {
   rewriter.replaceOpWithNewOp<LLVM::LoadOp>(loadOp, vectorTy, ptr, align,
-                                            loadOp.getVolatile(),
+                                            loadOp.getVolatile_(),
                                             loadOp.getNontemporal());
 }
 
@@ -211,7 +211,7 @@ static void replaceLoadOrStoreOp(vector::StoreOp storeOp,
                                  VectorType vectorTy, Value ptr, unsigned align,
                                  ConversionPatternRewriter &rewriter) {
   rewriter.replaceOpWithNewOp<LLVM::StoreOp>(storeOp, adaptor.getValueToStore(),
-                                             ptr, align, storeOp.getVolatile(),
+                                             ptr, align, storeOp.getVolatile_(),
                                              storeOp.getNontemporal());
 }
 
@@ -2247,3 +2247,4 @@ void mlir::vector::registerConvertVectorToLLVMInterface(
     dialect->addInterfaces<VectorToLLVMDialectInterface>();
   });
 }
+

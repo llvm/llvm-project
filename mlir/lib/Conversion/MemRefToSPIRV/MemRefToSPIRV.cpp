@@ -539,8 +539,8 @@ calculateMemoryRequirements(Value accessedPtr, LoadOrStoreOp loadOrStoreOp) {
 LogicalResult
 IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
                                   ConversionPatternRewriter &rewriter) const {
-  // Bail out if volatile flag is set
-  if (loadOp.getVolatile())
+  // Bail out if volatile flag is set.
+  if (loadOp.getVolatile_())
     return rewriter.notifyMatchFailure(loadOp, "volatile loads not yet supported");
 
   auto loc = loadOp.getLoc();
@@ -672,8 +672,8 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
 LogicalResult
 LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
                                ConversionPatternRewriter &rewriter) const {
-  // Bail out if volatile flag is set
-  if (loadOp.getVolatile())
+  // Bail out if volatile flag is set.
+  if (loadOp.getVolatile_())
     return rewriter.notifyMatchFailure(loadOp, "volatile loads not yet supported");
 
   auto memrefType = cast<MemRefType>(loadOp.getMemref().getType());
@@ -741,8 +741,8 @@ extractLoadCoordsForComposite(memref::LoadOp loadOp, OpAdaptor adaptor,
 LogicalResult
 ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
-  // Bail out if volatile flag is set
-  if (loadOp.getVolatile())
+  // Bail out if volatile flag is set.
+  if (loadOp.getVolatile_())
     return rewriter.notifyMatchFailure(loadOp, "volatile loads not yet supported");
 
   auto memrefType = cast<MemRefType>(loadOp.getMemref().getType());
@@ -830,8 +830,8 @@ ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
 LogicalResult
 IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
                                    ConversionPatternRewriter &rewriter) const {
-  // Bail out if volatile flag is set
-  if (storeOp.getVolatile())
+  // Bail out if volatile flag is set.
+  if (storeOp.getVolatile_())
     return rewriter.notifyMatchFailure(storeOp, "volatile stores not yet supported");
 
   auto memrefType = cast<MemRefType>(storeOp.getMemref().getType());
@@ -1034,8 +1034,8 @@ LogicalResult MemorySpaceCastOpPattern::matchAndRewrite(
 LogicalResult
 StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
                                 ConversionPatternRewriter &rewriter) const {
-  // Bail out if volatile flag is set
-  if (storeOp.getVolatile())
+  // Bail out if volatile flag is set.
+  if (storeOp.getVolatile_())
     return rewriter.notifyMatchFailure(storeOp, "volatile stores not yet supported");
 
   auto memrefType = cast<MemRefType>(storeOp.getMemref().getType());
@@ -1134,3 +1134,4 @@ void populateMemRefToSPIRVPatterns(const SPIRVTypeConverter &typeConverter,
                                                       patterns.getContext());
 }
 } // namespace mlir
+

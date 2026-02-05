@@ -1279,16 +1279,16 @@ def LoadOp : MemRef_Op<"load",
                            [MemRead]>:$memref,
                        Variadic<Index>:$indices,
                        DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
-                       DefaultValuedOptionalAttr<BoolAttr, "false">:$volatile,
+                       DefaultValuedOptionalAttr<BoolAttr, "false">:$volatile_,
                        OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
 
   let builders = [
     OpBuilder<(ins "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"bool", "false">:$volatile,
+                   CArg<"bool", "false">:$volatile_,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
-      return build($_builder, $_state, memref, indices, nontemporal, volatile,
+      return build($_builder, $_state, memref, indices, nontemporal, volatile_,
                    alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
                                nullptr);
     }]>,
@@ -1296,9 +1296,9 @@ def LoadOp : MemRef_Op<"load",
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"bool", "false">:$volatile,
+                   CArg<"bool", "false">:$volatile_,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
-      return build($_builder, $_state, resultType, memref, indices, nontemporal, volatile,
+      return build($_builder, $_state, resultType, memref, indices, nontemporal, volatile_,
                    alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
                                nullptr);
     }]>,
@@ -1306,9 +1306,9 @@ def LoadOp : MemRef_Op<"load",
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"bool", "false">:$volatile,
+                   CArg<"bool", "false">:$volatile_,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
-      return build($_builder, $_state, resultTypes, memref, indices, nontemporal, volatile,
+      return build($_builder, $_state, resultTypes, memref, indices, nontemporal, volatile_,
                    alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
                                nullptr);
     }]>
@@ -2058,7 +2058,7 @@ def MemRef_StoreOp : MemRef_Op<"store",
                            [MemWrite]>:$memref,
                        Variadic<Index>:$indices,
                        DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
-                       DefaultValuedOptionalAttr<BoolAttr, "false">:$volatile,
+                       DefaultValuedOptionalAttr<BoolAttr, "false">:$volatile_,
                        OptionalAttr<IntValidAlignment<I64Attr>>:$alignment);
 
   let builders = [
@@ -2066,9 +2066,9 @@ def MemRef_StoreOp : MemRef_Op<"store",
                    "Value":$memref,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"bool", "false">:$volatile,
+                   CArg<"bool", "false">:$volatile_,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
-      return build($_builder, $_state, valueToStore, memref, indices, nontemporal, volatile,
+      return build($_builder, $_state, valueToStore, memref, indices, nontemporal, volatile_,
                    alignment ? $_builder.getI64IntegerAttr(alignment->value()) :
                                nullptr);
     }]>,

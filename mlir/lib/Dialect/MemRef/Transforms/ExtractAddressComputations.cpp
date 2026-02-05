@@ -43,7 +43,7 @@ static memref::LoadOp rebuildLoadOp(RewriterBase &rewriter,
                                     ArrayRef<Value> indices) {
   Location loc = loadOp.getLoc();
   return memref::LoadOp::create(rewriter, loc, srcMemRef, indices,
-                                loadOp.getNontemporal(), loadOp.getVolatile());
+                                loadOp.getNontemporal(), loadOp.getVolatile_());
 }
 
 // Matches getViewSizeForEachDim specs for LoadOp.
@@ -74,7 +74,7 @@ static memref::StoreOp rebuildStoreOp(RewriterBase &rewriter,
   Location loc = storeOp.getLoc();
   return memref::StoreOp::create(rewriter, loc, storeOp.getValueToStore(),
                                  srcMemRef, indices, storeOp.getNontemporal(),
-                                 storeOp.getVolatile());
+                                 storeOp.getVolatile_());
 }
 
 // Matches getViewSizeForEachDim specs for StoreOp.
@@ -307,3 +307,4 @@ void memref::populateExtractAddressComputationsPatterns(
           /*rebuildOpFromAddressAndIndices=*/rebuildTransferWriteOp>>(
       patterns.getContext());
 }
+

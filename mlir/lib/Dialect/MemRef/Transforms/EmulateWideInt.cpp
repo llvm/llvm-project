@@ -68,7 +68,7 @@ struct ConvertMemRefLoad final : OpConversionPattern<memref::LoadOp> {
 
     rewriter.replaceOpWithNewOp<memref::LoadOp>(
         op, newResTy, adaptor.getMemref(), adaptor.getIndices(),
-        op.getNontemporal(), op.getVolatile());
+        op.getNontemporal(), op.getVolatile_());
     return success();
   }
 };
@@ -91,7 +91,7 @@ struct ConvertMemRefStore final : OpConversionPattern<memref::StoreOp> {
 
     rewriter.replaceOpWithNewOp<memref::StoreOp>(
         op, adaptor.getValue(), adaptor.getMemref(), adaptor.getIndices(),
-        op.getNontemporal(), op.getVolatile());
+        op.getNontemporal(), op.getVolatile_());
     return success();
   }
 };
@@ -164,3 +164,4 @@ void memref::populateMemRefWideIntEmulationConversions(
         return ty.cloneWith(std::nullopt, newElemTy);
       });
 }
+

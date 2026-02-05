@@ -255,7 +255,7 @@ LogicalResult LoadOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
       .Case([&](memref::LoadOp op) {
         rewriter.replaceOpWithNewOp<memref::LoadOp>(
             loadOp, subViewOp.getSource(), sourceIndices, op.getNontemporal(),
-            op.getVolatile());
+            op.getVolatile_());
       })
       .Case([&](vector::LoadOp op) {
         rewriter.replaceOpWithNewOp<vector::LoadOp>(
@@ -308,13 +308,13 @@ LogicalResult LoadOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
       .Case([&](memref::LoadOp op) {
         rewriter.replaceOpWithNewOp<memref::LoadOp>(
             loadOp, expandShapeOp.getViewSource(), sourceIndices,
-            op.getNontemporal(), op.getVolatile());
+            op.getNontemporal(), op.getVolatile_());
         return success();
       })
       .Case([&](vector::LoadOp op) {
         rewriter.replaceOpWithNewOp<vector::LoadOp>(
             op, op.getType(), expandShapeOp.getViewSource(), sourceIndices,
-            op.getNontemporal(), op.getVolatile());
+            op.getNontemporal(), op.getVolatile_());
         return success();
       })
       .Case([&](vector::MaskedLoadOp op) {
@@ -382,12 +382,12 @@ LogicalResult LoadOpOfCollapseShapeOpFolder<OpTy>::matchAndRewrite(
       .Case([&](memref::LoadOp op) {
         rewriter.replaceOpWithNewOp<memref::LoadOp>(
             loadOp, collapseShapeOp.getViewSource(), sourceIndices,
-            op.getNontemporal(), op.getVolatile());
+            op.getNontemporal(), op.getVolatile_());
       })
       .Case([&](vector::LoadOp op) {
         rewriter.replaceOpWithNewOp<vector::LoadOp>(
             op, op.getType(), collapseShapeOp.getViewSource(), sourceIndices,
-            op.getNontemporal(), op.getVolatile());
+            op.getNontemporal(), op.getVolatile_());
       })
       .Case([&](vector::MaskedLoadOp op) {
         rewriter.replaceOpWithNewOp<vector::MaskedLoadOp>(
@@ -422,7 +422,7 @@ LogicalResult StoreOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
       .Case([&](memref::StoreOp op) {
         rewriter.replaceOpWithNewOp<memref::StoreOp>(
             op, op.getValue(), subViewOp.getSource(), sourceIndices,
-            op.getNontemporal(), op.getVolatile());
+            op.getNontemporal(), op.getVolatile_());
       })
       .Case([&](vector::TransferWriteOp op) {
         rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
@@ -469,12 +469,12 @@ LogicalResult StoreOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
       .Case([&](memref::StoreOp op) {
         rewriter.replaceOpWithNewOp<memref::StoreOp>(
             storeOp, op.getValueToStore(), expandShapeOp.getViewSource(),
-            sourceIndices, op.getNontemporal(), op.getVolatile());
+            sourceIndices, op.getNontemporal(), op.getVolatile_());
       })
       .Case([&](vector::StoreOp op) {
         rewriter.replaceOpWithNewOp<vector::StoreOp>(
             op, op.getValueToStore(), expandShapeOp.getViewSource(),
-            sourceIndices, op.getNontemporal(), op.getVolatile());
+            sourceIndices, op.getNontemporal(), op.getVolatile_());
       })
       .Case([&](vector::MaskedStoreOp op) {
         rewriter.replaceOpWithNewOp<vector::MaskedStoreOp>(
@@ -501,12 +501,12 @@ LogicalResult StoreOpOfCollapseShapeOpFolder<OpTy>::matchAndRewrite(
       .Case([&](memref::StoreOp op) {
         rewriter.replaceOpWithNewOp<memref::StoreOp>(
             storeOp, op.getValueToStore(), collapseShapeOp.getViewSource(),
-            sourceIndices, op.getNontemporal(), op.getVolatile());
+            sourceIndices, op.getNontemporal(), op.getVolatile_());
       })
       .Case([&](vector::StoreOp op) {
         rewriter.replaceOpWithNewOp<vector::StoreOp>(
             op, op.getValueToStore(), collapseShapeOp.getViewSource(),
-            sourceIndices, op.getNontemporal(), op.getVolatile());
+            sourceIndices, op.getNontemporal(), op.getVolatile_());
       })
       .Case([&](vector::MaskedStoreOp op) {
         rewriter.replaceOpWithNewOp<vector::MaskedStoreOp>(
@@ -615,3 +615,4 @@ void FoldMemRefAliasOpsPass::runOnOperation() {
   memref::populateFoldMemRefAliasOpPatterns(patterns);
   (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }
+

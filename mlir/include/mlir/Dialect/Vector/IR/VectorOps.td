@@ -1715,7 +1715,7 @@ def Vector_LoadOp : Vector_Op<"load", [
       [MemRead]>:$base,
       Variadic<Index>:$indices,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
-      DefaultValuedOptionalAttr<BoolAttr, "false">:$volatile,
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$volatile_,
       OptionalAttr<IntValidAlignment<I64Attr>>: $alignment);
 
   let builders = [
@@ -1723,9 +1723,9 @@ def Vector_LoadOp : Vector_Op<"load", [
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"bool", "false">:$volatile,
+                   CArg<"bool", "false">:$volatile_,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
-      return build($_builder, $_state, resultType, base, indices, nontemporal, volatile,
+      return build($_builder, $_state, resultType, base, indices, nontemporal, volatile_,
                    alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
                                     nullptr);
     }]>,
@@ -1733,9 +1733,9 @@ def Vector_LoadOp : Vector_Op<"load", [
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"bool", "false">:$volatile,
+                   CArg<"bool", "false">:$volatile_,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
-      return build($_builder, $_state, resultTypes, base, indices, nontemporal, volatile,
+      return build($_builder, $_state, resultTypes, base, indices, nontemporal, volatile_,
                    alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
                                     nullptr);
     }]>
@@ -1836,7 +1836,7 @@ def Vector_StoreOp : Vector_Op<"store", [
       [MemWrite]>:$base,
       Variadic<Index>:$indices,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
-      DefaultValuedOptionalAttr<BoolAttr, "false">:$volatile,
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$volatile_,
       OptionalAttr<IntValidAlignment<I64Attr>>: $alignment);
 
   let builders = [
@@ -1844,9 +1844,9 @@ def Vector_StoreOp : Vector_Op<"store", [
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"bool", "false">:$volatile,
+                   CArg<"bool", "false">:$volatile_,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
-      return build($_builder, $_state, valueToStore, base, indices, nontemporal, volatile,
+      return build($_builder, $_state, valueToStore, base, indices, nontemporal, volatile_,
                    alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
                                     nullptr);
     }]>

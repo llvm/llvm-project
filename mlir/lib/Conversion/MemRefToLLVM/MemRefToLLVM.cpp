@@ -938,8 +938,8 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto type = loadOp.getMemRefType();
 
-    // Bail out if volatile flag is set
-    if (loadOp.getVolatile())
+    // Bail out if volatile flag is set.
+    if (loadOp.getVolatile_())
       return rewriter.notifyMatchFailure(loadOp, "volatile loads not supported");
 
     // Per memref.load spec, the indices must be in-bounds:
@@ -965,8 +965,8 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto type = op.getMemRefType();
 
-    // Bail out if volatile flag is set
-    if (op.getVolatile())
+    // Bail out if volatile flag is set.
+    if (op.getVolatile_())
       return rewriter.notifyMatchFailure(op, "volatile stores not supported");
 
     // Per memref.store spec, the indices must be in-bounds:
@@ -2144,3 +2144,4 @@ void mlir::registerConvertMemRefToLLVMInterface(DialectRegistry &registry) {
     dialect->addInterfaces<MemRefToLLVMDialectInterface>();
   });
 }
+
