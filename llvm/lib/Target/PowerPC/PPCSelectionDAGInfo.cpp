@@ -81,6 +81,13 @@ std::pair<SDValue, SDValue> PPCSelectionDAGInfo::EmitTargetCodeForMemcmp(
   return DAG.getMemcmp(Chain, dl, Op1, Op2, Op3, CI);
 }
 
+std::pair<SDValue, SDValue> PPCSelectionDAGInfo::EmitTargetCodeForStrcmp(
+    SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Op1, SDValue Op2,
+    MachinePointerInfo Op1PtrInfo, MachinePointerInfo Op2PtrInfo,
+    const CallInst *CI) const {
+  return DAG.getStrcmp(Chain, DL, Op1, Op2, CI);
+}
+
 std::pair<SDValue, SDValue> PPCSelectionDAGInfo::EmitTargetCodeForStrcpy(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dest,
     SDValue Src, MachinePointerInfo DestPtrInfo, MachinePointerInfo SrcPtrInfo,
@@ -96,4 +103,10 @@ PPCSelectionDAGInfo::EmitTargetCodeForStrlen(SelectionDAG &DAG, const SDLoc &DL,
                                              SDValue Chain, SDValue Src,
                                              const CallInst *CI) const {
   return DAG.getStrlen(Chain, DL, Src, CI);
+}
+
+std::pair<SDValue, SDValue> PPCSelectionDAGInfo::EmitTargetCodeForStrstr(
+    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Op1, SDValue Op2,
+    const CallInst *CI) const {
+  return DAG.getStrstr(Chain, dl, Op1, Op2, CI);
 }

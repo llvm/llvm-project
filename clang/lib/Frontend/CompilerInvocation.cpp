@@ -2244,7 +2244,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (UsingSampleProfile)
     NeedLocTracking = true;
 
-  if (!Opts.StackUsageOutput.empty())
+  if (!Opts.StackUsageFile.empty())
     NeedLocTracking = true;
 
   // If the user requested a flag that requires source locations available in
@@ -5156,7 +5156,7 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Invocation,
       Invocation, DummyInvocation, CommandLineArgs, Diags, Argv0);
 }
 
-std::string CompilerInvocation::getModuleHash() const {
+std::string CompilerInvocation::computeContextHash() const {
   // FIXME: Consider using SHA1 instead of MD5.
   llvm::HashBuilder<llvm::MD5, llvm::endianness::native> HBuilder;
 

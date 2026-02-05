@@ -1029,6 +1029,11 @@ def int_call_preallocated_teardown : DefaultAttrsIntrinsic<[], [llvm_token_ty]>;
 def int_callbr_landingpad : Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
                                       [IntrNoMerge]>;
 
+def int_structured_gep
+    : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
+                            [LLVMMatchType<0>, llvm_vararg_ty],
+                            [IntrNoMem, IntrSpeculatable]>;
+
 //===------------------- Standard C Library Intrinsics --------------------===//
 //
 
@@ -1132,6 +1137,22 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in
   // Truncate a floating point number with a specific rounding mode
   def int_fptrunc_round : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                 [ llvm_anyfloat_ty, llvm_metadata_ty ]>;
+
+  // Convert from native LLVM floating-point to arbitrary FP format
+  // Returns an integer containing the arbitrary FP bits
+  def int_convert_to_arbitrary_fp
+      : DefaultAttrsIntrinsic<
+            [ llvm_anyint_ty ],
+            [ llvm_anyfloat_ty, llvm_metadata_ty, llvm_metadata_ty, llvm_i1_ty ],
+            [ IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>> ]>;
+
+  // Convert from arbitrary FP format to native LLVM floating-point
+  // Takes an integer containing the arbitrary FP bits
+  def int_convert_from_arbitrary_fp
+      : DefaultAttrsIntrinsic<
+            [ llvm_anyfloat_ty ],
+            [ llvm_anyint_ty, llvm_metadata_ty ],
+            [ IntrNoMem, IntrSpeculatable ]>;
 
   def int_canonicalize : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
                                    [IntrNoMem]>;
@@ -1941,12 +1962,6 @@ def int_sideeffect : DefaultAttrsIntrinsic<[], [], [IntrInaccessibleMemOnly]>;
 // out of the block it probes.
 def int_pseudoprobe : DefaultAttrsIntrinsic<[], [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i64_ty],
                                     [IntrInaccessibleMemOnly]>;
-
-// Intrinsics to support half precision floating point format
-let IntrProperties = [IntrNoMem] in {
-def int_convert_to_fp16   : DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_anyfloat_ty]>;
-def int_convert_from_fp16 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_i16_ty]>;
-}
 
 // Saturating floating point to integer intrinsics
 let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in {
@@ -2833,12 +2848,12 @@ def int_vector_reverse : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
 def int_vector_splice_left
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
-                            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
+                            [IntrNoMem, IntrSpeculatable]>;
 
 def int_vector_splice_right
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
-                            [IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<2>>]>;
+                            [IntrNoMem, IntrSpeculatable]>;
 
 //===---------- Intrinsics to query properties of scalable vectors --------===//
 def int_vscale : DefaultAttrsIntrinsic<[llvm_anyint_ty],
@@ -2908,6 +2923,19 @@ def int_ptrauth_resign : Intrinsic<[llvm_i64_ty],
                                     llvm_i32_ty, llvm_i64_ty],
                                    [IntrNoMem, ImmArg<ArgIndex<1>>,
                                     ImmArg<ArgIndex<3>>]>;
+
+// Authenticate a signed pointer, load 32bit value at offset from pointer, add
+// both, and sign it. The second (key) and third (discriminator) arguments
+// specify the signing schema used for authenticating. The fourth and fifth
+// arguments specify the schema used for signing. The sixth argument is addend
+// added to pointer to load the relative offset. The signature must be valid.
+// This is a combined form of int_ptrauth_resign for relative pointers
+def int_ptrauth_resign_load_relative
+    : Intrinsic<[llvm_i64_ty],
+                [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty, llvm_i32_ty,
+                 llvm_i64_ty, llvm_i64_ty],
+                [IntrReadMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>,
+                 ImmArg<ArgIndex<5>>]>;
 
 // Strip the embedded signature out of a signed pointer.
 // The second argument specifies the key.

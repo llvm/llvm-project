@@ -62,6 +62,8 @@ public:
 
   // Types.
   FloatType getF8E8M0Type();
+  FloatType getF8E4M3FNType();
+  FloatType getF8E5M2Type();
   FloatType getBF16Type();
   FloatType getF16Type();
   FloatType getTF32Type();

@@ -205,66 +205,31 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-SDAG-NEXT: OPC_RecordMemRef,
 // ISEL-SDAG-NEXT: OPC_RecordNode, // #0 = 'st' chained node
 // ISEL-SDAG-NEXT: OPC_RecordChild1, // #1 = $val
-// ISEL-SDAG-NEXT: OPC_CheckChild1TypeI64,
+// ISEL-SDAG-NEXT: OPC_CheckChild1TypeByHwMode, /*{(*:i64),(m1:i64),(m2:i64)}*/0,
 // ISEL-SDAG-NEXT: OPC_RecordChild2, // #2 = $src
-// ISEL-SDAG-NEXT: OPC_Scope /*2 children */, {{[0-9]+}}, // ->{{[0-9]+}}
-// ISEL-SDAG-NEXT: OPC_CheckChild2TypeI32,
+// ISEL-SDAG-NEXT: OPC_CheckChild2TypeByHwMode, /*{(*:i32),(m3:i64)}*/1,
 // ISEL-SDAG-NEXT: OPC_CheckPredicate0,  // Predicate_unindexedstore
 // ISEL-SDAG-NEXT: OPC_CheckPredicate1,  // Predicate_store
-// ISEL-SDAG-NEXT: OPC_Scope /*3 children */, {{[0-9]+}}, // ->{{[0-9]+}}
-// ISEL-SDAG-NEXT: OPC_CheckPatternPredicate0, // (Subtarget->hasAlignedRegisters())
 // ISEL-SDAG-NEXT: OPC_EmitMergeInputChains1_0,
 // ISEL-SDAG-NEXT: OPC_MorphNodeTo0, TARGET_VAL(MyTarget::MY_STORE), 0|OPFL_Chain|OPFL_MemRefs,
-
-// ISEL-SDAG: /*Scope*/
-// ISEL-SDAG: OPC_CheckPatternPredicate1, // (Subtarget->hasUnalignedRegisters())
-// ISEL-SDAG-NEXT: OPC_EmitMergeInputChains1_0,
-// ISEL-SDAG-NEXT: OPC_MorphNodeTo0, TARGET_VAL(MyTarget::MY_STORE), 0|OPFL_Chain|OPFL_MemRefs,
-
-// ISEL-SDAG: /*Scope*/
-// ISEL-SDAG: OPC_CheckPatternPredicate2, // !((Subtarget->hasAlignedRegisters())) && !((Subtarget->hasUnalignedRegisters())) && !((Subtarget->isPtr64()))
-// ISEL-SDAG-NEXT: OPC_EmitMergeInputChains1_0,
-// ISEL-SDAG-NEXT: OPC_MorphNodeTo0, TARGET_VAL(MyTarget::MY_STORE), 0|OPFL_Chain|OPFL_MemRefs,
-
-// ISEL-SDAG: /*Scope*/
-// ISEL-SDAG-NEXT: OPC_CheckChild2TypeI64,
-// ISEL-SDAG-NEXT: OPC_CheckPredicate0,  // Predicate_unindexedstore
-// ISEL-SDAG-NEXT: OPC_CheckPredicate1,  // Predicate_store
-// ISEL-SDAG-NEXT: OPC_CheckPatternPredicate3, // (Subtarget->isPtr64())
-// ISEL-SDAG-NEXT: OPC_EmitMergeInputChains1_0,
-// ISEL-SDAG-NEXT: OPC_MorphNodeTo0, TARGET_VAL(MyTarget::MY_STORE), 0|OPFL_Chain|OPFL_MemRefs,
+// ISEL-SDAG-NEXT:     2/*#Ops*/, /*OperandList*/1, // Ops = #1 #2
 
 // ISEL-SDAG: /*SwitchOpcode*/ {{[0-9]+}}, TARGET_VAL(ISD::LOAD),
 // ISEL-SDAG-NEXT: OPC_RecordMemRef,
 // ISEL-SDAG-NEXT: OPC_RecordNode, // #0 = 'ld' chained node
 // ISEL-SDAG-NEXT: OPC_RecordChild1, // #1 = $src
+// ISEL-SDAG-NEXT: OPC_CheckChild1TypeByHwMode, /*{(*:i32),(m3:i64)}*/1,
+// ISEL-SDAG-NEXT: OPC_CheckPredicate2,  // Predicate_unindexedload
+// ISEL-SDAG-NEXT: OPC_CheckPredicate3,  // Predicate_load
 // ISEL-SDAG-NEXT: OPC_CheckTypeI64,
-// ISEL-SDAG-NEXT: OPC_Scope /*2 children */, {{[0-9]+}}, // ->{{[0-9]+}}
-// ISEL-SDAG-NEXT: OPC_CheckChild1TypeI32,
-// ISEL-SDAG-NEXT: OPC_CheckPredicate2,  // Predicate_unindexedload
-// ISEL-SDAG-NEXT: OPC_CheckPredicate3,  // Predicate_load
-// ISEL-SDAG-NEXT: OPC_Scope /*3 children */, {{[0-9]+}}, // ->{{[0-9]+}}
-// ISEL-SDAG-NEXT: OPC_CheckPatternPredicate0, // (Subtarget->hasAlignedRegisters())
 // ISEL-SDAG-NEXT: OPC_EmitMergeInputChains1_0,
-// ISEL-SDAG-NEXT: OPC_MorphNodeTo1, TARGET_VAL(MyTarget::MY_LOAD), 0|OPFL_Chain|OPFL_MemRefs,
+// ISEL-SDAG-NEXT: OPC_MorphNodeToByHwMode, TARGET_VAL(MyTarget::MY_LOAD), 0|OPFL_Chain|OPFL_MemRefs,
+// ISEL-SDAG-NEXT:     1/*#VTs*/, /*{(*:i64),(m1:i64),(m2:i64)}*/0, 1/*#Ops*/, /*OperandList*/0, // Ops = #1
 
-// ISEL-SDAG: /*Scope*/
-// ISEL-SDAG: OPC_CheckPatternPredicate1, // (Subtarget->hasUnalignedRegisters())
-// ISEL-SDAG-NEXT: OPC_EmitMergeInputChains1_0,
-// ISEL-SDAG-NEXT: OPC_MorphNodeTo1, TARGET_VAL(MyTarget::MY_LOAD), 0|OPFL_Chain|OPFL_MemRefs,
-
-// ISEL-SDAG: /*Scope*/
-// ISEL-SDAG: OPC_CheckPatternPredicate2, // !((Subtarget->hasAlignedRegisters())) && !((Subtarget->hasUnalignedRegisters())) && !((Subtarget->isPtr64()))
-// ISEL-SDAG-NEXT: OPC_EmitMergeInputChains1_0,
-// ISEL-SDAG-NEXT: OPC_MorphNodeTo1, TARGET_VAL(MyTarget::MY_LOAD), 0|OPFL_Chain|OPFL_MemRefs,
-
-// ISEL-SDAG: /*Scope*/
-// ISEL-SDAG-NEXT: OPC_CheckChild1TypeI64,
-// ISEL-SDAG-NEXT: OPC_CheckPredicate2,  // Predicate_unindexedload
-// ISEL-SDAG-NEXT: OPC_CheckPredicate3,  // Predicate_load
-// ISEL-SDAG-NEXT: OPC_CheckPatternPredicate3, // (Subtarget->isPtr64())
-// ISEL-SDAG-NEXT: OPC_EmitMergeInputChains1_0,
-// ISEL-SDAG-NEXT: OPC_MorphNodeTo1, TARGET_VAL(MyTarget::MY_LOAD), 0|OPFL_Chain|OPFL_MemRefs,
+// ISEL-SDAG:      static const uint8_t OperandLists[] = {
+// ISEL-SDAG-NEXT:   /* 0 */ 1,
+// ISEL-SDAG-NEXT:   /* 1 */ 1, 2,
+// ISEL-SDAG-NEXT: }
 
 
 

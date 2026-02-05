@@ -1147,8 +1147,7 @@ struct HardwareLimits {
   HardwareLimits() = default;
 
   /// Initializes hardware limits from ISA version.
-  /// \p HasExtendedWaitCounts should be true for gfx12+.
-  HardwareLimits(const IsaVersion &IV, bool HasExtendedWaitCounts);
+  HardwareLimits(const IsaVersion &IV);
 };
 
 // The following methods are only meaningful on targets that support
@@ -1312,8 +1311,23 @@ bool decodeDepCtr(unsigned Code, int &Id, StringRef &Name, unsigned &Val,
 /// \returns Maximum VaVdst value that can be encoded.
 unsigned getVaVdstBitMask();
 
+/// \returns Maximum VaSdst value that can be encoded.
+unsigned getVaSdstBitMask();
+
+/// \returns Maximum VaSsrc value that can be encoded.
+unsigned getVaSsrcBitMask();
+
+/// \returns Maximum HoldCnt value that can be encoded.
+unsigned getHoldCntBitMask(const IsaVersion &Version);
+
 /// \returns Maximum VmVsrc value that can be encoded.
 unsigned getVmVsrcBitMask();
+
+/// \returns Maximum VaVcc value that can be encoded.
+unsigned getVaVccBitMask();
+
+/// \returns Maximum SaSdst value that can be encoded.
+unsigned getSaSdstBitMask();
 
 /// \returns Decoded VaVdst from given immediate \p Encoded.
 unsigned decodeFieldVaVdst(unsigned Encoded);
@@ -1334,7 +1348,7 @@ unsigned decodeFieldVaVcc(unsigned Encoded);
 unsigned decodeFieldVaSsrc(unsigned Encoded);
 
 /// \returns Decoded HoldCnt from given immediate \p Encoded.
-unsigned decodeFieldHoldCnt(unsigned Encoded);
+unsigned decodeFieldHoldCnt(unsigned Encoded, const IsaVersion &Version);
 
 /// \returns \p VmVsrc as an encoded Depctr immediate.
 unsigned encodeFieldVmVsrc(unsigned VmVsrc, const MCSubtargetInfo &STI);
@@ -1370,7 +1384,8 @@ unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc);
 unsigned encodeFieldHoldCnt(unsigned HoldCnt, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p HoldCnt.
-unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt);
+unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt,
+                            const IsaVersion &Version);
 
 /// \returns \p VaSsrc as an encoded Depctr immediate.
 unsigned encodeFieldVaSsrc(unsigned VaSsrc, const MCSubtargetInfo &STI);
@@ -1600,6 +1615,9 @@ bool isGFX11Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
 bool isGFX1250(const MCSubtargetInfo &STI);
+bool isGFX1250Plus(const MCSubtargetInfo &STI);
+bool isGFX13(const MCSubtargetInfo &STI);
+bool isGFX13Plus(const MCSubtargetInfo &STI);
 bool supportsWGP(const MCSubtargetInfo &STI);
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
@@ -1702,6 +1720,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     return 2;
 
@@ -1748,6 +1767,10 @@ LLVM_READNONE
 std::optional<unsigned> getInlineEncodingV2F16(uint32_t Literal);
 
 LLVM_READNONE
+std::optional<unsigned> getPKFMACF16InlineEncoding(uint32_t Literal,
+                                                   bool IsGFX11Plus);
+
+LLVM_READNONE
 bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType);
 
 LLVM_READNONE
@@ -1758,6 +1781,9 @@ bool isInlinableLiteralV2BF16(uint32_t Literal);
 
 LLVM_READNONE
 bool isInlinableLiteralV2F16(uint32_t Literal);
+
+LLVM_READNONE
+bool isPKFMACF16InlineConstant(uint32_t Literal, bool IsGFX11Plus);
 
 LLVM_READNONE
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64);

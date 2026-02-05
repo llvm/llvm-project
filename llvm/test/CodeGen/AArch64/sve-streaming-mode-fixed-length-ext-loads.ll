@@ -130,14 +130,11 @@ define <16 x i32> @load_sext_v16i8i32(ptr %ap)  {
 ; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    mov w8, #4 // =0x4
 ; CHECK-NEXT:    mov w9, #8 // =0x8
-; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    mov w10, #12 // =0xc
-; CHECK-NEXT:    ld1sb { z1.s }, p0/z, [x0, x8]
-; CHECK-NEXT:    mov w8, w9
 ; CHECK-NEXT:    ld1sb { z0.s }, p0/z, [x0]
-; CHECK-NEXT:    ld1sb { z2.s }, p0/z, [x0, x8]
-; CHECK-NEXT:    mov w8, w10
-; CHECK-NEXT:    ld1sb { z3.s }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld1sb { z1.s }, p0/z, [x0, x8]
+; CHECK-NEXT:    ld1sb { z2.s }, p0/z, [x0, x9]
+; CHECK-NEXT:    ld1sb { z3.s }, p0/z, [x0, x10]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: load_sext_v16i8i32:

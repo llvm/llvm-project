@@ -86,6 +86,9 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     OrderIndex = 0;
     ScopeIndex = 1;
     break;
+  case AMDGPU::BI__builtin_amdgcn_s_setreg:
+    return SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/0, /*Low=*/0,
+                                           /*High=*/UINT16_MAX);
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
     return checkMovDPPFunctionCall(TheCall, 5, 1);
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:

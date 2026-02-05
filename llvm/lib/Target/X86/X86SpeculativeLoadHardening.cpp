@@ -119,9 +119,9 @@ namespace {
 
 constexpr StringRef X86SLHPassName = "X86 speculative load hardening";
 
-class X86SpeculativeLoadHardeningPass : public MachineFunctionPass {
+class X86SpeculativeLoadHardeningLegacy : public MachineFunctionPass {
 public:
-  X86SpeculativeLoadHardeningPass() : MachineFunctionPass(ID) { }
+  X86SpeculativeLoadHardeningLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return X86SLHPassName; }
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -218,7 +218,7 @@ private:
 
 } // end anonymous namespace
 
-bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
+bool X86SpeculativeLoadHardeningLegacy::runOnMachineFunction(
     MachineFunction &MF) {
   X86SpeculativeLoadHardeningImpl Impl;
   bool Changed = Impl.run(MF);
@@ -227,9 +227,9 @@ bool X86SpeculativeLoadHardeningPass::runOnMachineFunction(
   return Changed;
 }
 
-char X86SpeculativeLoadHardeningPass::ID = 0;
+char X86SpeculativeLoadHardeningLegacy::ID = 0;
 
-void X86SpeculativeLoadHardeningPass::getAnalysisUsage(
+void X86SpeculativeLoadHardeningLegacy::getAnalysisUsage(
     AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -501,7 +501,6 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
     ZeroEFLAGSDefOp->setIsDead(true);
     BuildMI(Entry, EntryInsertPt, Loc, TII->get(X86::SUBREG_TO_REG),
             PS->InitialReg)
-        .addImm(0)
         .addReg(PredStateSubReg)
         .addImm(X86::sub_32bit);
   }
@@ -1926,7 +1925,7 @@ Register X86SpeculativeLoadHardeningImpl::hardenValueInRegister(
     unsigned SubRegImm = SubRegImms[Log2_32(Bytes)];
     Register NarrowStateReg = MRI->createVirtualRegister(RC);
     BuildMI(MBB, InsertPt, Loc, TII->get(TargetOpcode::COPY), NarrowStateReg)
-        .addReg(StateReg, 0, SubRegImm);
+        .addReg(StateReg, {}, SubRegImm);
     StateReg = NarrowStateReg;
   }
 
@@ -2270,11 +2269,23 @@ void X86SpeculativeLoadHardeningImpl::hardenIndirectCallOrJumpInstr(
   ++NumCallsOrJumpsHardened;
 }
 
-INITIALIZE_PASS_BEGIN(X86SpeculativeLoadHardeningPass, PASS_KEY,
+PreservedAnalyses
+X86SpeculativeLoadHardeningPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  X86SpeculativeLoadHardeningImpl Impl;
+  const bool Changed = Impl.run(MF);
+  LLVM_DEBUG(dbgs() << "Final speculative load hardened function:\n"; MF.dump();
+             dbgs() << "\n"; MF.verify(MFAM));
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                       .preserveSet<CFGAnalyses>()
+                 : PreservedAnalyses::all();
+}
+
+INITIALIZE_PASS_BEGIN(X86SpeculativeLoadHardeningLegacy, PASS_KEY,
                       "X86 speculative load hardener", false, false)
-INITIALIZE_PASS_END(X86SpeculativeLoadHardeningPass, PASS_KEY,
+INITIALIZE_PASS_END(X86SpeculativeLoadHardeningLegacy, PASS_KEY,
                     "X86 speculative load hardener", false, false)
 
-FunctionPass *llvm::createX86SpeculativeLoadHardeningPass() {
-  return new X86SpeculativeLoadHardeningPass();
+FunctionPass *llvm::createX86SpeculativeLoadHardeningLegacyPass() {
+  return new X86SpeculativeLoadHardeningLegacy();
 }

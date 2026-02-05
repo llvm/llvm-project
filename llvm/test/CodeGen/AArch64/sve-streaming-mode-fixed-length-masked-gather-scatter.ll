@@ -36,7 +36,6 @@ define <2 x i64> @masked_gather_v2i64(ptr %a, ptr %b) vscale_range(2, 2) {
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    index z2.d, #0, #1
 ; CHECK-NEXT:    mov z1.d, z1.d[1]
-; CHECK-NEXT:    // kill: def $x8 killed $w8
 ; CHECK-NEXT:    mov z3.d, x8
 ; CHECK-NEXT:    fmov x8, d1
 ; CHECK-NEXT:    cmpeq p0.d, p0/z, z2.d, z3.d
@@ -53,7 +52,6 @@ define <2 x i64> @masked_gather_v2i64(ptr %a, ptr %b) vscale_range(2, 2) {
 ; NONEON-NOSVE-NEXT:    ldr q0, [x0]
 ; NONEON-NOSVE-NEXT:    ldr q1, [x1]
 ; NONEON-NOSVE-NEXT:    mov w8, #2 // =0x2
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    str q0, [sp, #112]
 ; NONEON-NOSVE-NEXT:    ldp x10, x9, [sp, #112]
 ; NONEON-NOSVE-NEXT:    cmp x9, #0
@@ -138,7 +136,6 @@ define void @masked_scatter_v2i64(ptr %a, ptr %b) vscale_range(2, 2) {
 ; NONEON-NOSVE-NEXT:    ldr q1, [x0]
 ; NONEON-NOSVE-NEXT:    ldr q0, [x1]
 ; NONEON-NOSVE-NEXT:    mov w8, #2 // =0x2
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    str q1, [sp, #64]
 ; NONEON-NOSVE-NEXT:    ldp x10, x9, [sp, #64]
 ; NONEON-NOSVE-NEXT:    cmp x9, #0
