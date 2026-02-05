@@ -109,8 +109,7 @@ Error X86CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
     // been ported.
   }
 
-  // TODO(boomanaiden154): Add X86GlobalPassRegPass here once it has been
-  // ported.
+  addMachineFunctionPass(X86GlobalBaseRegPass(), PMW);
   addMachineFunctionPass(X86ArgumentStackSlotPass(), PMW);
   return Error::success();
 }
