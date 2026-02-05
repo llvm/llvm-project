@@ -137,6 +137,43 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
     IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
   }
 
+  void assignValueToReg(Register ValVReg, Register PhysReg,
+                        const CCValAssign &VA,
+                        const ISD::ArgFlagsTy &Flags) override {
+    const SIRegisterInfo *TRI =
+        static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+    if (!Flags.isInReg() || !TRI->isVGPR(MRI, PhysReg)) {
+      assignValueToReg(ValVReg, PhysReg, VA);
+      return;
+    }
+
+    // Handle inreg parameters passed through VGPRs due to SGPR exhaustion.
+    // When SGPRs are exhausted, the calling convention may allocate inreg
+    // parameters to VGPRs. We insert readfirstlane to move the value from
+    // VGPR to SGPR, as required by the inreg ABI.
+    //
+    // FIXME: This may increase instruction count in some cases. If the
+    // readfirstlane result is subsequently copied back to a VGPR, we cannot
+    // optimize away the unnecessary VGPR->SGPR->VGPR sequence in later passes
+    // because the inreg attribute information is not preserved in MIR. We could
+    // use WWM_COPY (or similar instructions) and mark it as foldable to enable
+    // later optimization passes to eliminate the redundant readfirstlane.
+    markPhysRegUsed(PhysReg);
+    auto Copy = MIRBuilder.buildCopy(LLT::scalar(32), PhysReg);
+    if (VA.getLocVT().getSizeInBits() < 32) {
+      auto ToSGPR = MIRBuilder
+                        .buildIntrinsic(Intrinsic::amdgcn_readfirstlane,
+                                        {MRI.getType(Copy.getReg(0))})
+                        .addReg(Copy.getReg(0));
+      auto Extended =
+          buildExtensionHint(VA, ToSGPR.getReg(0), LLT(VA.getLocVT()));
+      MIRBuilder.buildTrunc(ValVReg, Extended);
+    }
+
+    MIRBuilder.buildIntrinsic(Intrinsic::amdgcn_readfirstlane, ValVReg)
+        .addReg(Copy.getReg(0));
+  }
+
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
                             const MachinePointerInfo &MPO,
                             const CCValAssign &VA) override {
