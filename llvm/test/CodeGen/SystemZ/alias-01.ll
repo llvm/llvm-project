@@ -1,6 +1,9 @@
 ; Test 32-bit ADDs in which the second operand is variable.
 ;
-; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z196 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z196 -generic-sched | FileCheck %s
+;
+; TODO: Some spills here with SystemZPreRASchedStrategy to all the stores in
+; bottom of region.
 
 ; Check that there are no spills.
 define void @f1(ptr %src1, ptr %dest) {

@@ -175,7 +175,7 @@ SystemZTargetMachine::getSubtargetImpl(const Function &F) const {
 
 ScheduleDAGInstrs *
 SystemZTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
-  // Use GenericScheduler if requested on CL or for Z10, which has no sched
+  // Use GenericScheduler if requested on CL or for Z10 which has no sched
   // model.
   if (GenericSched ||
       !C->MF->getSubtarget().getSchedModel().hasInstrSchedModel())
