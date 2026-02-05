@@ -7,7 +7,7 @@
 ;
 ;   for (int i = 0; i < N; i++) {
 ;     for (int j = 0; j < M; j++) {
-;       S1: A[i][j] = B[i][j] + C[i][j];      // Statement 1
+;       S1: A[i][j+1] = A[i][j] + B[i][j] + C[i][j] // Statement S1
 ;       ================================
 ;       S2: D[i][j] = E[i][j] * F[i][j];      // Statement 2
 ;     }
@@ -85,7 +85,7 @@ for.j.body:                                       ; preds = %for.j.body, %for.j.
   %idx.i = mul i64 %i, %M
   %idx = add i64 %idx.i, %j
 
-  ; Statement 1: A[i][j] = B[i][j] + C[i][j]
+  ; Statement 1: A[i][j+1] = A[i][j] + B[i][j] + C[i][j]
   %arrayidxA = getelementptr inbounds i32, ptr %A, i64 %idx
   %loadA = load i32, ptr %arrayidxA, align 4
 
