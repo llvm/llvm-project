@@ -624,26 +624,22 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    s_cbranch_vccnz .LBB3_7
 ; GFX908-NEXT:  ; %bb.6: ; %bb51
 ; GFX908-NEXT:    ; in Loop: Header=BB3_5 Depth=2
-; GFX908-NEXT:    v_cvt_f32_f16_sdwa v22, v21 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX908-NEXT:    v_cvt_f32_f16_e32 v21, v21
-; GFX908-NEXT:    v_cvt_f32_f16_sdwa v23, v20 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
-; GFX908-NEXT:    v_cvt_f32_f16_e32 v20, v20
-; GFX908-NEXT:    v_add_f32_e32 v24, v18, v12
-; GFX908-NEXT:    v_add_f32_e32 v25, v19, v13
-; GFX908-NEXT:    v_add_f32_e32 v26, 0, v12
-; GFX908-NEXT:    v_add_f32_e32 v27, 0, v13
-; GFX908-NEXT:    v_add_f32_e32 v15, v22, v15
-; GFX908-NEXT:    v_add_f32_e32 v14, v21, v14
-; GFX908-NEXT:    v_add_f32_e32 v13, v23, v13
-; GFX908-NEXT:    v_add_f32_e32 v12, v20, v12
-; GFX908-NEXT:    v_add_f32_e32 v5, v5, v25
-; GFX908-NEXT:    v_add_f32_e32 v4, v4, v24
-; GFX908-NEXT:    v_add_f32_e32 v7, v7, v27
-; GFX908-NEXT:    v_add_f32_e32 v6, v6, v26
-; GFX908-NEXT:    v_add_f32_e32 v8, v8, v14
+; GFX908-NEXT:    v_add_f32_e32 v22, v18, v12
+; GFX908-NEXT:    v_add_f32_e32 v23, v19, v13
+; GFX908-NEXT:    v_add_f32_e32 v24, 0, v12
+; GFX908-NEXT:    v_add_f32_e32 v25, 0, v13
+; GFX908-NEXT:    v_fma_mix_f32 v14, v21, 1.0, v14 op_sel_hi:[1,1,0]
+; GFX908-NEXT:    v_fma_mix_f32 v15, v21, 1.0, v15 op_sel:[1,0,0] op_sel_hi:[1,1,0]
+; GFX908-NEXT:    v_fma_mix_f32 v12, v20, 1.0, v12 op_sel_hi:[1,1,0]
+; GFX908-NEXT:    v_fma_mix_f32 v13, v20, 1.0, v13 op_sel:[1,0,0] op_sel_hi:[1,1,0]
+; GFX908-NEXT:    v_add_f32_e32 v5, v5, v23
+; GFX908-NEXT:    v_add_f32_e32 v4, v4, v22
+; GFX908-NEXT:    v_add_f32_e32 v7, v7, v25
+; GFX908-NEXT:    v_add_f32_e32 v6, v6, v24
 ; GFX908-NEXT:    v_add_f32_e32 v9, v9, v15
-; GFX908-NEXT:    v_add_f32_e32 v10, v10, v12
+; GFX908-NEXT:    v_add_f32_e32 v8, v8, v14
 ; GFX908-NEXT:    v_add_f32_e32 v11, v11, v13
+; GFX908-NEXT:    v_add_f32_e32 v10, v10, v12
 ; GFX908-NEXT:    s_branch .LBB3_4
 ; GFX908-NEXT:  .LBB3_7: ; in Loop: Header=BB3_5 Depth=2
 ; GFX908-NEXT:    s_mov_b64 s[22:23], s[18:19]
