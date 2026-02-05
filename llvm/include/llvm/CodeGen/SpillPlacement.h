@@ -36,6 +36,7 @@
 namespace llvm {
 
 class BitVector;
+class BlockUniformityProfile;
 class EdgeBundles;
 class MachineBlockFrequencyInfo;
 class MachineFunction;
@@ -169,7 +170,8 @@ private:
   void releaseMemory();
 
   void run(MachineFunction &MF, EdgeBundles *Bundles,
-           MachineBlockFrequencyInfo *MBFI);
+           MachineBlockFrequencyInfo *MBFI,
+           const BlockUniformityProfile *Profile);
   void activate(unsigned n);
   void setThreshold(BlockFrequency Entry);
 
