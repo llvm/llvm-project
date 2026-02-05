@@ -896,8 +896,7 @@ struct TruncIPattern final : public OpConversionPattern<arith::TruncIOp> {
     if (isBoolScalarOrVector(dstType))
       return failure();
 
-    Type srcType = op.getIn().getType();
-    Type convertedSrcType = getTypeConverter()->convertType(srcType);
+    Type convertedSrcType = adaptor.getIn().getType();
     if (!convertedSrcType)
       return getTypeConversionFailure(rewriter, op);
 
@@ -971,7 +970,6 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
   LogicalResult
   matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
     Type srcType = llvm::getSingleElement(adaptor.getOperands()).getType();
     Type dstType = this->getTypeConverter()->convertType(op.getType());
     if (!dstType)
@@ -990,11 +988,14 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
     };
 
     if (!isIntOrFloatScalarOrVectorNotI1(srcType) ||
-        !isIntOrFloatScalarOrVectorNotI1(dstType))
+        !isIntOrFloatScalarOrVectorNotI1(dstType)) {
+      Type srcOrigTy = llvm::getSingleElement(op->getOperands()).getType();
+      Type dstOrigTy = op.getType();
       return rewriter.notifyMatchFailure(
           op, llvm::formatv(
                   "expected int/float scalar or vector types, got {0} -> {1}",
-                  srcType, dstType));
+                  srcOrigTy, dstOrigTy));
+    }
 
     if (dstType == srcType) {
       // Due to type conversion, we are seeing the same source and target type.
