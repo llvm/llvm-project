@@ -37,7 +37,7 @@ define float @callee_nofpclass_inf_nan() {
 
 define float @caller_okay_intersect_nofpclass() {
 ; CHECK-LABEL: define float @caller_okay_intersect_nofpclass() {
-; CHECK-NEXT:    [[R_I:%.*]] = call nofpclass(nan) float @val_f32()
+; CHECK-NEXT:    [[R_I:%.*]] = call nofpclass(nan inf) float @val_f32()
 ; CHECK-NEXT:    call void @use.val(float [[R_I]])
 ; CHECK-NEXT:    ret float [[R_I]]
 ;
@@ -48,7 +48,7 @@ define float @caller_okay_intersect_nofpclass() {
 
 define float @caller_not_intersecting_nofpclass() {
 ; CHECK-LABEL: define float @caller_not_intersecting_nofpclass() {
-; CHECK-NEXT:    [[R_I:%.*]] = call nofpclass(zero) float @val_f32()
+; CHECK-NEXT:    [[R_I:%.*]] = call nofpclass(nan inf zero) float @val_f32()
 ; CHECK-NEXT:    call void @use.val(float [[R_I]])
 ; CHECK-NEXT:    ret float [[R_I]]
 ;
