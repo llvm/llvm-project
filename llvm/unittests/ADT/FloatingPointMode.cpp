@@ -25,6 +25,10 @@ TEST(FloatingPointModeTest, ParseDenormalFPAttributeComponent) {
             parseDenormalFPAttributeComponent("preserve-sign"));
   EXPECT_EQ(DenormalMode::PositiveZero,
             parseDenormalFPAttributeComponent("positive-zero"));
+  EXPECT_EQ(DenormalMode::PreserveSign,
+            parseDenormalFPAttributeComponent("preservesign"));
+  EXPECT_EQ(DenormalMode::PositiveZero,
+            parseDenormalFPAttributeComponent("positivezero"));
   EXPECT_EQ(DenormalMode::Dynamic,
             parseDenormalFPAttributeComponent("dynamic"));
   EXPECT_EQ(DenormalMode::Invalid, parseDenormalFPAttributeComponent("foo"));
@@ -102,10 +106,16 @@ TEST(FloatingPointModeTest, RenderDenormalFPAttribute) {
   EXPECT_EQ(
     "preserve-sign,preserve-sign",
     DenormalMode(DenormalMode::PreserveSign, DenormalMode::PreserveSign).str());
+  EXPECT_EQ("preserve-sign,preserve-sign",
+            DenormalMode(DenormalMode::PreserveSign, DenormalMode::PreserveSign)
+                .str());
 
   EXPECT_EQ(
     "positive-zero,positive-zero",
     DenormalMode(DenormalMode::PositiveZero, DenormalMode::PositiveZero).str());
+  EXPECT_EQ("positive-zero,positive-zero",
+            DenormalMode(DenormalMode::PositiveZero, DenormalMode::PositiveZero)
+                .str());
 
   EXPECT_EQ(
     "ieee,preserve-sign",

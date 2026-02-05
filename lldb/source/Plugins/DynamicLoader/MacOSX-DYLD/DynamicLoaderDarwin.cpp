@@ -138,7 +138,7 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
     if (image_info.uuid &&
         (!module_spec.GetUUID() || module_spec.GetUUID() == image_info.uuid)) {
       ModuleSpec shared_cache_spec(module_spec.GetFileSpec(), image_info.uuid,
-                                   image_info.data_sp);
+                                   image_info.extractor_sp);
       module_sp =
           target.GetOrCreateModule(shared_cache_spec, false /* notify */);
     }
@@ -147,9 +147,16 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
   // added to the target, don't let it be called for every one.
   if (!module_sp)
     module_sp = target.GetOrCreateModule(module_spec, false /* notify */);
-  if (!module_sp || module_sp->GetObjectFile() == nullptr)
-    module_sp = m_process->ReadModuleFromMemory(image_info.file_spec,
-                                                image_info.address);
+  if (!module_sp || module_sp->GetObjectFile() == nullptr) {
+    llvm::Expected<ModuleSP> module_sp_or_err = m_process->ReadModuleFromMemory(
+        image_info.file_spec, image_info.address);
+    if (auto err = module_sp_or_err.takeError()) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
+                     "Failed to load module from memory: {0}");
+      return {};
+    }
+    module_sp = *module_sp_or_err;
+  }
 
   if (did_create_ptr)
     *did_create_ptr = (bool)module_sp;
@@ -722,19 +729,26 @@ bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
                                                                true /* notify */);
               if (!commpage_image_module_sp ||
                   commpage_image_module_sp->GetObjectFile() == nullptr) {
-                commpage_image_module_sp = m_process->ReadModuleFromMemory(
-                    image_info.file_spec, image_info.address);
-                // Always load a memory image right away in the target in case
-                // we end up trying to read the symbol table from memory... The
-                // __LINKEDIT will need to be mapped so we can figure out where
-                // the symbol table bits are...
-                bool changed = false;
-                UpdateImageLoadAddress(commpage_image_module_sp.get(),
-                                       image_info);
-                target.GetImages().Append(commpage_image_module_sp);
-                if (changed) {
-                  image_info.load_stop_id = m_process->GetStopID();
-                  loaded_module_list.AppendIfNeeded(commpage_image_module_sp);
+                llvm::Expected<ModuleSP> module_sp_or_err =
+                    m_process->ReadModuleFromMemory(image_info.file_spec,
+                                                    image_info.address);
+                if (auto err = module_sp_or_err.takeError()) {
+                  LLDB_LOG_ERROR(log, std::move(err),
+                                 "Failed to read module from memory: {0}");
+                } else {
+                  // Always load a memory image right away in the target in case
+                  // we end up trying to read the symbol table from memory...
+                  // The __LINKEDIT will need to be mapped so we can figure out
+                  // where the symbol table bits are...
+                  commpage_image_module_sp = *module_sp_or_err;
+                  bool changed = false;
+                  UpdateImageLoadAddress(commpage_image_module_sp.get(),
+                                         image_info);
+                  target.GetImages().Append(commpage_image_module_sp);
+                  if (changed) {
+                    image_info.load_stop_id = m_process->GetStopID();
+                    loaded_module_list.AppendIfNeeded(commpage_image_module_sp);
+                  }
                 }
               }
             }
@@ -916,7 +930,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
   StackFrame *current_frame = thread.GetStackFrameAtIndex(0).get();
   const SymbolContext &current_context =
       current_frame->GetSymbolContext(eSymbolContextSymbol);
-  Symbol *current_symbol = current_context.symbol;
+  const Symbol *current_symbol = current_context.symbol;
   Log *log = GetLog(LLDBLog::Step);
   TargetSP target_sp(thread.CalculateTarget());
 
@@ -949,7 +963,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
                                           reexported_symbols);
         for (const SymbolContext &context : reexported_symbols) {
           if (context.symbol) {
-            Symbol *actual_symbol =
+            const Symbol *actual_symbol =
                 context.symbol->ResolveReExportedSymbol(*target_sp.get());
             if (actual_symbol) {
               const Address actual_symbol_addr = actual_symbol->GetAddress();
@@ -1008,7 +1022,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
       // and if they do, resolve them:
       std::vector<lldb::addr_t> load_addrs;
       for (Address address : addresses) {
-        Symbol *symbol = address.CalculateSymbolContextSymbol();
+        const Symbol *symbol = address.CalculateSymbolContextSymbol();
         if (symbol && symbol->IsIndirect()) {
           Status error;
           Address symbol_address = symbol->GetAddress();
@@ -1053,7 +1067,8 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
 }
 
 void DynamicLoaderDarwin::FindEquivalentSymbols(
-    lldb_private::Symbol *original_symbol, lldb_private::ModuleList &images,
+    const lldb_private::Symbol *original_symbol,
+    lldb_private::ModuleList &images,
     lldb_private::SymbolContextList &equivalent_symbols) {
   ConstString trampoline_name =
       original_symbol->GetMangled().GetName(Mangled::ePreferMangled);
@@ -1068,7 +1083,6 @@ void DynamicLoaderDarwin::FindEquivalentSymbols(
   RegularExpression equivalent_name_regex(equivalent_regex_buf);
   images.FindSymbolsMatchingRegExAndType(equivalent_name_regex, eSymbolTypeCode,
                                          equivalent_symbols);
-
 }
 
 lldb::ModuleSP DynamicLoaderDarwin::GetPThreadLibraryModule() {

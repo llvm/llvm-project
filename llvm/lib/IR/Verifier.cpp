@@ -1623,11 +1623,11 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
 
       auto True = [](const Metadata *) { return true; };
       auto False = [](const Metadata *) { return false; };
-      bool IsTypeCorrect =
-          DISubprogram::visitRetainedNode<bool>(Op, True, True, True, False);
+      bool IsTypeCorrect = DISubprogram::visitRetainedNode<bool>(
+          Op, True, True, True, True, False);
       CheckDI(IsTypeCorrect,
-              "invalid retained nodes, expected DILocalVariable, DILabel or "
-              "DIImportedEntity",
+              "invalid retained nodes, expected DILocalVariable, DILabel, "
+              "DIImportedEntity or DIType",
               &N, Node, Op);
 
       auto *RetainedNode = cast<DINode>(Op);
@@ -1636,10 +1636,15 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
       CheckDI(RetainedNodeScope,
               "invalid retained nodes, retained node is not local", &N, Node,
               RetainedNode);
+
+      DISubprogram *RetainedNodeSP = RetainedNodeScope->getSubprogram();
+      DICompileUnit *RetainedNodeUnit =
+          RetainedNodeSP ? RetainedNodeSP->getUnit() : nullptr;
       CheckDI(
-          RetainedNodeScope->getSubprogram() == &N,
+          RetainedNodeSP == &N,
           "invalid retained nodes, retained node does not belong to subprogram",
-          &N, Node, RetainedNode, RetainedNodeScope);
+          &N, Node, RetainedNode, RetainedNodeScope, RetainedNodeSP,
+          RetainedNodeUnit);
     }
   }
   CheckDI(!hasConflictingReferenceFlags(N.getFlags()),
@@ -2618,19 +2623,6 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     const std::optional<VFInfo> Info = VFABI::tryDemangleForVFABI(S, FT);
     if (!Info)
       CheckFailed("invalid name for a VFABI variant: " + S, V);
-  }
-
-  if (auto A = Attrs.getFnAttr("denormal-fp-math"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    if (!parseDenormalFPAttribute(S).isValid())
-      CheckFailed("invalid value for 'denormal-fp-math' attribute: " + S, V);
-  }
-
-  if (auto A = Attrs.getFnAttr("denormal-fp-math-f32"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    if (!parseDenormalFPAttribute(S).isValid())
-      CheckFailed("invalid value for 'denormal-fp-math-f32' attribute: " + S,
-                  V);
   }
 
   if (auto A = Attrs.getFnAttr("modular-format"); A.isValid()) {
@@ -3904,6 +3896,9 @@ void Verifier::visitCallBase(CallBase &Call) {
           "preallocated as a call site attribute can only be on "
           "llvm.call.preallocated.arg");
   }
+
+  Check(!Attrs.hasFnAttr(Attribute::DenormalFPEnv),
+        "denormal_fpenv attribute may not apply to call sites", Call);
 
   // Verify call attributes.
   verifyFunctionAttrs(FTy, Attrs, &Call, IsIntrinsic, Call.isInlineAsm());
@@ -7205,6 +7200,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     Check(isa<AllocaInst>(Ptr) || isa<PoisonValue>(Ptr),
           "llvm.lifetime.start/end can only be used on alloca or poison",
           &Call);
+    break;
+  }
+  case Intrinsic::sponentry: {
+    const unsigned StackAS = DL.getAllocaAddrSpace();
+    const Type *RetTy = Call.getFunctionType()->getReturnType();
+    Check(RetTy->getPointerAddressSpace() == StackAS,
+          "llvm.sponentry must return a pointer to the stack", &Call);
     break;
   }
   };

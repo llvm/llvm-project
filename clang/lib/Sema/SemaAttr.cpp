@@ -1346,6 +1346,11 @@ NamedDecl *Sema::lookupExternCFunctionOrVariable(IdentifierInfo *IdentId,
 
 void Sema::ActOnPragmaExport(IdentifierInfo *IdentId, SourceLocation NameLoc,
                              Scope *curScope) {
+  if (!CurContext->getRedeclContext()->isFileContext()) {
+    Diag(NameLoc, diag::err_pragma_expected_file_scope) << "export";
+    return;
+  }
+
   PendingPragmaInfo Info;
   Info.NameLoc = NameLoc;
   Info.Used = false;

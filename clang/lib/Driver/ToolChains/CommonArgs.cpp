@@ -90,6 +90,8 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
   case llvm::Triple::ppc64le:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
   case llvm::Triple::sparcv9:
@@ -608,6 +610,10 @@ const char *tools::getLDMOption(const llvm::Triple &T, const ArgList &Args) {
     return "elf32lriscv";
   case llvm::Triple::riscv64:
     return "elf64lriscv";
+  case llvm::Triple::riscv32be:
+    return "elf32briscv";
+  case llvm::Triple::riscv64be:
+    return "elf64briscv";
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
     return "elf32_sparc";
@@ -785,6 +791,8 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
       return "ck810";
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     return riscv::getRISCVTargetCPU(Args, T);
 
   case llvm::Triple::bpfel:
@@ -866,6 +874,8 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     break;
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     riscv::getRISCVTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::systemz:
@@ -3049,38 +3059,55 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
 void tools::addOpenCLBuiltinsLib(const Driver &D,
                                  const llvm::opt::ArgList &DriverArgs,
                                  llvm::opt::ArgStringList &CC1Args) {
-  // Check whether user specifies a libclc bytecode library
   const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib_EQ);
   if (!A)
     return;
 
-  // Find device libraries in <LLVM_DIR>/lib/clang/<ver>/lib/libclc/
-  SmallString<128> LibclcPath(D.ResourceDir);
-  llvm::sys::path::append(LibclcPath, "lib", "libclc");
-
-  // If the namespec is of the form :filename, search for that file.
+  // If the namespec is of the form :filename we use it exactly.
   StringRef LibclcNamespec(A->getValue());
   bool FilenameSearch = LibclcNamespec.consume_front(":");
-  SmallString<128> LibclcTargetFile(LibclcNamespec);
-
-  if (FilenameSearch && llvm::sys::fs::exists(LibclcTargetFile)) {
-    CC1Args.push_back("-mlink-builtin-bitcode");
-    CC1Args.push_back(DriverArgs.MakeArgString(LibclcTargetFile));
-  } else {
-    // Search the library paths for the file
-    if (!FilenameSearch)
-      LibclcTargetFile += ".bc";
-
-    llvm::sys::path::append(LibclcPath, LibclcTargetFile);
-    if (llvm::sys::fs::exists(LibclcPath)) {
+  if (FilenameSearch) {
+    SmallString<128> LibclcFile(LibclcNamespec);
+    if (llvm::sys::fs::exists(LibclcFile)) {
       CC1Args.push_back("-mlink-builtin-bitcode");
-      CC1Args.push_back(DriverArgs.MakeArgString(LibclcPath));
-    } else {
-      // Since the user requested a library, if we haven't one then report an
-      // error.
-      D.Diag(diag::err_drv_libclc_not_found) << LibclcTargetFile;
+      CC1Args.push_back(DriverArgs.MakeArgString(LibclcFile));
+      return;
+    }
+    D.Diag(diag::err_drv_libclc_not_found) << LibclcFile;
+    return;
+  }
+
+  // The OpenCL libraries are stored in <ResourceDir>/lib/<triple>.
+  SmallString<128> BasePath(D.ResourceDir);
+  llvm::sys::path::append(BasePath, "lib");
+  llvm::sys::path::append(BasePath, D.getTargetTriple());
+
+  // First check for a CPU-specific library in <ResourceDir>/lib/<triple>/<CPU>.
+  // TODO: Factor this into common logic that checks for valid subtargets.
+  if (const Arg *CPUArg =
+          DriverArgs.getLastArg(options::OPT_mcpu_EQ, options::OPT_march_EQ)) {
+    StringRef CPU = CPUArg->getValue();
+    if (!CPU.empty()) {
+      SmallString<128> CPUPath(BasePath);
+      llvm::sys::path::append(CPUPath, CPU, "libclc.bc");
+      if (llvm::sys::fs::exists(CPUPath)) {
+        CC1Args.push_back("-mlink-builtin-bitcode");
+        CC1Args.push_back(DriverArgs.MakeArgString(CPUPath));
+        return;
+      }
     }
   }
+
+  // Fall back to the generic library for the triple.
+  SmallString<128> GenericPath(BasePath);
+  llvm::sys::path::append(GenericPath, "libclc.bc");
+  if (llvm::sys::fs::exists(GenericPath)) {
+    CC1Args.push_back("-mlink-builtin-bitcode");
+    CC1Args.push_back(DriverArgs.MakeArgString(GenericPath));
+    return;
+  }
+
+  D.Diag(diag::err_drv_libclc_not_found) << "libclc.bc";
 }
 
 void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,

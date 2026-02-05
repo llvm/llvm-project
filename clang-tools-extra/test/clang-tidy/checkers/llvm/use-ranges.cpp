@@ -22,6 +22,12 @@ template <typename T> T* begin(T (&arr)[5]);
 template <typename T> T* end(T (&arr)[5]);
 
 template <class InputIt, class T>
+T accumulate(InputIt first, InputIt last, T init);
+
+template <class InputIt, class T, class BinaryOp>
+T accumulate(InputIt first, InputIt last, T init, BinaryOp op);
+
+template <class InputIt, class T>
 InputIt find(InputIt first, InputIt last, const T &value);
 
 template <class RandomIt>
@@ -78,10 +84,19 @@ OutputIt replace_copy_if(InputIt first, InputIt last, OutputIt d_first,
 
 bool is_even(int x);
 void double_ref(int& x);
+int multiply(int a, int b);
 
 void test_positive() {
   std::vector<int> vec;
   int arr[5] = {1, 2, 3, 4, 5};
+
+  int sum = std::accumulate(vec.begin(), vec.end(), 0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: use an LLVM range-based algorithm
+  // CHECK-FIXES: int sum = llvm::accumulate(vec, 0);
+
+  int product = std::accumulate(vec.begin(), vec.end(), 1, multiply);
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use an LLVM range-based algorithm
+  // CHECK-FIXES: int product = llvm::accumulate(vec, 1, multiply);
 
   auto it1 = std::find(vec.begin(), vec.end(), 3);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use an LLVM range-based algorithm
