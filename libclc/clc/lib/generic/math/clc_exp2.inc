@@ -36,11 +36,15 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_exp2(__CLC_GENTYPE x) {
 
   __CLC_GENTYPE y = 1.0f - (((-lo) - MATH_DIVIDE(t * v, 2.0f - v)) - hi);
 
-  // Scale by 2^p
-  __CLC_GENTYPE r = __CLC_AS_FLOATN(__CLC_AS_INTN(y) + (p << 23));
+  // Split the exponent to preserves subnormal results when p is very negative.
+  __CLC_INTN p1 = p / 2;
+  __CLC_INTN p2 = p - p1;
+  __CLC_GENTYPE s1 = __CLC_AS_GENTYPE((p1 + 127) << 23);
+  __CLC_GENTYPE s2 = __CLC_AS_GENTYPE((p2 + 127) << 23);
+  __CLC_GENTYPE r = y * s1 * s2;
 
   const __CLC_GENTYPE ulim = 128.0f;
-  const __CLC_GENTYPE llim = -126.0f;
+  const __CLC_GENTYPE llim = -149.0f;
 
   r = x < llim ? 0.0f : r;
   r = x < ulim ? r : __CLC_AS_FLOATN((__CLC_UINTN)0x7f800000);
