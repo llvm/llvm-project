@@ -39,6 +39,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cmath>
 #include <memory>
 #include <utility>
 
@@ -61,7 +62,9 @@ ALWAYS_ENABLED_STATISTIC(
     "The # of visited basic blocks in the analyzed functions.");
 ALWAYS_ENABLED_STATISTIC(PercentReachableBlocks,
                          "The % of reachable basic blocks.");
-STAT_MAX(MaxCFGSize, "The maximum number of basic blocks in a function.");
+ALWAYS_ENABLED_STATISTIC(MaxCFGSize,
+                         "The maximum number of basic blocks in a function.");
+static UnsignedEPStat CFGSize("CFGSize");
 //===----------------------------------------------------------------------===//
 // AnalysisConsumer declaration.
 //===----------------------------------------------------------------------===//
@@ -138,13 +141,17 @@ public:
         Injector(std::move(injector)), CTU(CI),
         MacroExpansions(CI.getLangOpts()) {
 
-    EntryPointStat::lockRegistry(getMainFileName(CI.getInvocation()));
+    EntryPointStat::lockRegistry(getMainFileName(CI.getInvocation()),
+                                 CI.getASTContext());
     DigestAnalyzerOptions();
 
     if (Opts.AnalyzerDisplayProgress || Opts.PrintStats ||
-        Opts.ShouldSerializeStats) {
+        Opts.ShouldSerializeStats || !Opts.DumpEntryPointStatsToCSV.empty()) {
       AnalyzerTimers = std::make_unique<llvm::TimerGroup>(
-          "analyzer", "Analyzer timers");
+          "analyzer", "Analyzer timers",
+          /*PrintOnExit=*/
+          (Opts.AnalyzerDisplayProgress || Opts.PrintStats ||
+           Opts.ShouldSerializeStats));
       SyntaxCheckTimer = std::make_unique<llvm::Timer>(
           "syntaxchecks", "Syntax-based analysis time", *AnalyzerTimers);
       ExprEngineTimer = std::make_unique<llvm::Timer>(
@@ -357,7 +364,7 @@ private:
   void storeTopLevelDecls(DeclGroupRef DG);
 
   /// Check if we should skip (not analyze) the given function.
-  AnalysisMode getModeForDecl(Decl *D, AnalysisMode Mode);
+  AnalysisMode getModeForDecl(const Decl *D, AnalysisMode Mode) const;
   void runAnalysisOnTranslationUnit(ASTContext &C);
 
   /// Print \p S to stderr if \c Opts.AnalyzerDisplayProgress is set.
@@ -630,8 +637,7 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
   // FIXME: This should be replaced with something that doesn't rely on
   // side-effects in PathDiagnosticConsumer's destructor. This is required when
   // used with option -disable-free.
-  const auto DiagFlusherScopeExit =
-      llvm::make_scope_exit([this] { Mgr.reset(); });
+  const llvm::scope_exit DiagFlusherScopeExit([this] { Mgr.reset(); });
 
   if (Opts.ShouldIgnoreBisonGeneratedFiles &&
       fileContainsString("/* A Bison parser, made by", C)) {
@@ -670,7 +676,7 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
 }
 
 AnalysisConsumer::AnalysisMode
-AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
+AnalysisConsumer::getModeForDecl(const Decl *D, AnalysisMode Mode) const {
   if (!Opts.AnalyzeSpecificFunction.empty() &&
       AnalysisDeclContext::getFunctionName(D) != Opts.AnalyzeSpecificFunction &&
       cross_tu::CrossTranslationUnitContext::getLookupName(D).value_or("") !=
@@ -688,7 +694,7 @@ AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
 
   const SourceManager &SM = Ctx->getSourceManager();
 
-  const SourceLocation Loc = [&SM](Decl *D) -> SourceLocation {
+  const SourceLocation Loc = [&SM](const Decl *D) -> SourceLocation {
     const Stmt *Body = D->getBody();
     SourceLocation SL = Body ? Body->getBeginLoc() : D->getLocation();
     return SM.getExpansionLoc(SL);
@@ -706,6 +712,7 @@ AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
 }
 
 static UnsignedEPStat PathRunningTime("PathRunningTime");
+static UnsignedEPStat SyntaxRunningTime("SyntaxRunningTime");
 
 void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
                                   ExprEngine::InliningModes IMode,
@@ -742,9 +749,11 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
     ++NumFunctionsAnalyzedSyntaxOnly;
     if (SyntaxCheckTimer) {
       SyntaxCheckTimer->stopTimer();
-      llvm::TimeRecord CheckerEndTime = SyntaxCheckTimer->getTotalTime();
-      CheckerEndTime -= CheckerStartTime;
-      DisplayTime(CheckerEndTime);
+      llvm::TimeRecord CheckerDuration =
+          SyntaxCheckTimer->getTotalTime() - CheckerStartTime;
+      FunctionSummaries.findOrInsertSummary(D)->second.SyntaxRunningTime =
+          std::lround(CheckerDuration.getWallTime() * 1000);
+      DisplayTime(CheckerDuration);
     }
   }
 
@@ -765,14 +774,30 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
 void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
                                               ExprEngine::InliningModes IMode,
                                               SetOfConstDecls *VisitedCallees) {
+  auto *CFG = Mgr->getCFG(D);
+
   // Construct the analysis engine.  First check if the CFG is valid.
   // FIXME: Inter-procedural analysis will need to handle invalid CFGs.
-  if (!Mgr->getCFG(D))
+  if (!CFG)
     return;
 
+  CFGSize.set(CFG->size());
+
+  auto *DeclContext = Mgr->getAnalysisDeclContext(D);
   // See if the LiveVariables analysis scales.
-  if (!Mgr->getAnalysisDeclContext(D)->getAnalysis<RelaxedLiveVariables>())
+  if (!DeclContext->getAnalysis<RelaxedLiveVariables>())
     return;
+
+  // DeclContext declaration is the redeclaration of D that has a body.
+  const Decl *DefDecl = DeclContext->getDecl();
+
+  // Get the SyntaxRunningTime from the function summary, because it is computed
+  // during the AM_Syntax analysis, which is done at a different point in time
+  // and in different order, but always before AM_Path.
+  if (const auto *Summary = FunctionSummaries.findSummary(DefDecl);
+      Summary && Summary->SyntaxRunningTime.has_value()) {
+    SyntaxRunningTime.set(*Summary->SyntaxRunningTime);
+  }
 
   ExprEngine Eng(CTU, *Mgr, VisitedCallees, &FunctionSummaries, IMode);
 
@@ -786,9 +811,11 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
                       Mgr->options.MaxNodesPerTopLevelFunction);
   if (ExprEngineTimer) {
     ExprEngineTimer->stopTimer();
-    llvm::TimeRecord ExprEngineEndTime = ExprEngineTimer->getTotalTime();
-    ExprEngineEndTime -= ExprEngineStartTime;
-    DisplayTime(ExprEngineEndTime);
+    llvm::TimeRecord ExprEngineDuration =
+        ExprEngineTimer->getTotalTime() - ExprEngineStartTime;
+    PathRunningTime.set(static_cast<unsigned>(
+        std::lround(ExprEngineDuration.getWallTime() * 1000)));
+    DisplayTime(ExprEngineDuration);
   }
 
   if (!Mgr->options.DumpExplodedGraphTo.empty())

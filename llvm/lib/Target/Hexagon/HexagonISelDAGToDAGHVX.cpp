@@ -789,7 +789,7 @@ struct ShuffleMask {
   }
 };
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const ShuffleMask &SM) {
   SM.print(OS);
   return OS;
@@ -811,8 +811,8 @@ ArrayRef<int> hi(ArrayRef<int> Vuu) { return Vuu.take_back(Vuu.size() / 2); }
 MaskT vshuffvdd(ArrayRef<int> Vu, ArrayRef<int> Vv, unsigned Rt) {
   int Len = Vu.size();
   MaskT Vdd(2 * Len);
-  std::copy(Vv.begin(), Vv.end(), Vdd.begin());
-  std::copy(Vu.begin(), Vu.end(), Vdd.begin() + Len);
+  llvm::copy(Vv, Vdd.begin());
+  llvm::copy(Vu, Vdd.begin() + Len);
 
   auto Vd0 = MutableArrayRef<int>(Vdd).take_front(Len);
   auto Vd1 = MutableArrayRef<int>(Vdd).take_back(Len);
@@ -831,8 +831,8 @@ MaskT vshuffvdd(ArrayRef<int> Vu, ArrayRef<int> Vv, unsigned Rt) {
 MaskT vdealvdd(ArrayRef<int> Vu, ArrayRef<int> Vv, unsigned Rt) {
   int Len = Vu.size();
   MaskT Vdd(2 * Len);
-  std::copy(Vv.begin(), Vv.end(), Vdd.begin());
-  std::copy(Vu.begin(), Vu.end(), Vdd.begin() + Len);
+  llvm::copy(Vv, Vdd.begin());
+  llvm::copy(Vu, Vdd.begin() + Len);
 
   auto Vd0 = MutableArrayRef<int>(Vdd).take_front(Len);
   auto Vd1 = MutableArrayRef<int>(Vdd).take_back(Len);
@@ -2952,6 +2952,10 @@ void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
   case Intrinsic::hexagon_V6_vgathermhw:
   case Intrinsic::hexagon_V6_vgathermhw_128B:
     Opcode = Hexagon::V6_vgathermhw_pseudo;
+    break;
+  case Intrinsic::hexagon_V6_vgather_vscattermh:
+  case Intrinsic::hexagon_V6_vgather_vscattermh_128B:
+    Opcode = Hexagon::V6_vgather_vscatter_mh_pseudo;
     break;
   }
 

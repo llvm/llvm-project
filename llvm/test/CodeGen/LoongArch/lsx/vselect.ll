@@ -16,6 +16,20 @@ define void @select_v16i8_imm(ptr %res, ptr %a0) nounwind {
   ret void
 }
 
+define void @select_v16i8_imm_1(ptr %res, ptr %a0) nounwind {
+; CHECK-LABEL: select_v16i8_imm_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vrepli.h $vr1, -256
+; CHECK-NEXT:    vbitseli.b $vr1, $vr0, 1
+; CHECK-NEXT:    vst $vr1, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <16 x i8>, ptr %a0
+  %sel = select <16 x i1> <i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, <16 x i8> %v0
+  store <16 x i8> %sel, ptr %res
+  ret void
+}
+
 define void @select_v16i8(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v16i8:
 ; CHECK:       # %bb.0:
@@ -28,6 +42,40 @@ define void @select_v16i8(ptr %res, ptr %a0, ptr %a1) nounwind {
   %v0 = load <16 x i8>, ptr %a0
   %v1 = load <16 x i8>, ptr %a1
   %sel = select <16 x i1> <i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <16 x i8> %v0, <16 x i8> %v1
+  store <16 x i8> %sel, ptr %res
+  ret void
+}
+
+define void @select_v16i8_1(ptr %res, ptr %a0, ptr %a1) nounwind {
+; CHECK-LABEL: select_v16i8_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI3_0)
+; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI3_0)
+; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <16 x i8>, ptr %a0
+  %v1 = load <16 x i8>, ptr %a1
+  %sel = select <16 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <16 x i8> %v0, <16 x i8> %v1
+  store <16 x i8> %sel, ptr %res
+  ret void
+}
+
+define void @select_v16i8_2(ptr %res, ptr %a0, ptr %a1) nounwind {
+; CHECK-LABEL: select_v16i8_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI4_0)
+; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI4_0)
+; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <16 x i8>, ptr %a0
+  %v1 = load <16 x i8>, ptr %a1
+  %sel = select <16 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false>, <16 x i8> %v0, <16 x i8> %v1
   store <16 x i8> %sel, ptr %res
   ret void
 }
@@ -49,6 +97,40 @@ define void @select_v8i16(ptr %res, ptr %a0, ptr %a1) nounwind {
   ret void
 }
 
+define void @select_v8i16_1(ptr %res, ptr %a0, ptr %a1) nounwind {
+; CHECK-LABEL: select_v8i16_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI6_0)
+; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI6_0)
+; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <8 x i16>, ptr %a0
+  %v1 = load <8 x i16>, ptr %a1
+  %sel = select <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x i16> %v0, <8 x i16> %v1
+  store <8 x i16> %sel, ptr %res
+  ret void
+}
+
+define void @select_v8i16_2(ptr %res, ptr %a0, ptr %a1) nounwind {
+; CHECK-LABEL: select_v8i16_2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI7_0)
+; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI7_0)
+; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <8 x i16>, ptr %a0
+  %v1 = load <8 x i16>, ptr %a1
+  %sel = select <8 x i1> <i1 false, i1 false, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false>, <8 x i16> %v0, <8 x i16> %v1
+  store <8 x i16> %sel, ptr %res
+  ret void
+}
+
 define void @select_v4i32(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v4i32:
 ; CHECK:       # %bb.0:
@@ -65,13 +147,47 @@ define void @select_v4i32(ptr %res, ptr %a0, ptr %a1) nounwind {
   ret void
 }
 
+define void @select_v4i32_1(ptr %res, ptr %a0, ptr %a1) nounwind {
+; CHECK-LABEL: select_v4i32_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI9_0)
+; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI9_0)
+; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <4 x i32>, ptr %a0
+  %v1 = load <4 x i32>, ptr %a1
+  %sel = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x i32> %v0, <4 x i32> %v1
+  store <4 x i32> %sel, ptr %res
+  ret void
+}
+
+define void @select_v4f32(ptr %res, ptr %a0, ptr %a1) nounwind {
+; CHECK-LABEL: select_v4f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI10_0)
+; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI10_0)
+; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <4 x float>, ptr %a0
+  %v1 = load <4 x float>, ptr %a1
+  %sel = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> %v0, <4 x float> %v1
+  store <4 x float> %sel, ptr %res
+  ret void
+}
+
 define void @select_v2i64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: select_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI4_0)
-; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI4_0)
+; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI11_0)
+; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI11_0)
 ; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
@@ -79,5 +195,22 @@ define void @select_v2i64(ptr %res, ptr %a0, ptr %a1) nounwind {
   %v1 = load <2 x i64>, ptr %a1
   %sel = select <2 x i1> <i1 true, i1 false>, <2 x i64> %v0, <2 x i64> %v1
   store <2 x i64> %sel, ptr %res
+  ret void
+}
+
+define void @select_v2f64(ptr %res, ptr %a0, ptr %a1) nounwind {
+; CHECK-LABEL: select_v2f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI12_0)
+; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI12_0)
+; CHECK-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
+  %v0 = load <2 x double>, ptr %a0
+  %v1 = load <2 x double>, ptr %a1
+  %sel = select <2 x i1> <i1 false, i1 true>, <2 x double> %v0, <2 x double> %v1
+  store <2 x double> %sel, ptr %res
   ret void
 }

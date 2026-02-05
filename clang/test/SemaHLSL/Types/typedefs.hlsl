@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.4-library -finclude-default-header -verify -fnative-half-type %s
-// RUN: %clang_cc1 -triple spirv-linux-vulkan-library -finclude-default-header -verify -fnative-half-type %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.4-library -finclude-default-header -verify -fnative-half-type -fnative-int16-type %s
+// RUN: %clang_cc1 -triple spirv-linux-vulkan-library -finclude-default-header -verify -fnative-half-type -fnative-int16-type %s
 
 // expected-no-diagnostics
 #define SizeCheck(Ty, SizeInBits)                                              \

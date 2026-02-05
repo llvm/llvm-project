@@ -14,7 +14,7 @@ subroutine foo(a, n)
   do concurrent (i=1:n)
     a(i) = n
   end do
-end subroutine 
+end subroutine
 
 ! CHECK-LABEL: func.func @_QPfoo
 ! CHECK: omp.target

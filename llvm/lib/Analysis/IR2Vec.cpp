@@ -40,7 +40,7 @@ namespace ir2vec {
 cl::OptionCategory IR2VecCategory("IR2Vec Options");
 
 // FIXME: Use a default vocab when not specified
-static cl::opt<std::string>
+cl::opt<std::string>
     VocabFile("ir2vec-vocab-path", cl::Optional,
               cl::desc("Path to the vocabulary file for IR2Vec"), cl::init(""),
               cl::cat(IR2VecCategory));
@@ -153,11 +153,6 @@ void Embedding::print(raw_ostream &OS) const {
 // Embedder and its subclasses
 //===----------------------------------------------------------------------===//
 
-Embedder::Embedder(const Function &F, const Vocabulary &Vocab)
-    : F(F), Vocab(Vocab), Dimension(Vocab.getDimension()),
-      OpcWeight(::OpcWeight), TypeWeight(::TypeWeight), ArgWeight(::ArgWeight),
-      FuncVector(Embedding(Dimension)) {}
-
 std::unique_ptr<Embedder> Embedder::create(IR2VecKind Mode, const Function &F,
                                            const Vocabulary &Vocab) {
   switch (Mode) {
@@ -169,110 +164,85 @@ std::unique_ptr<Embedder> Embedder::create(IR2VecKind Mode, const Function &F,
   return nullptr;
 }
 
-const InstEmbeddingsMap &Embedder::getInstVecMap() const {
-  if (InstVecMap.empty())
-    computeEmbeddings();
-  return InstVecMap;
-}
+Embedding Embedder::computeEmbeddings() const {
+  Embedding FuncVector(Dimension, 0.0);
 
-const BBEmbeddingsMap &Embedder::getBBVecMap() const {
-  if (BBVecMap.empty())
-    computeEmbeddings();
-  return BBVecMap;
-}
+  if (F.isDeclaration())
+    return FuncVector;
 
-const Embedding &Embedder::getBBVector(const BasicBlock &BB) const {
-  auto It = BBVecMap.find(&BB);
-  if (It != BBVecMap.end())
-    return It->second;
-  computeEmbeddings(BB);
-  return BBVecMap[&BB];
-}
-
-const Embedding &Embedder::getFunctionVector() const {
-  // Currently, we always (re)compute the embeddings for the function.
-  // This is cheaper than caching the vector.
-  computeEmbeddings();
+  // Consider only the basic blocks that are reachable from entry
+  for (const BasicBlock *BB : depth_first(&F))
+    FuncVector += computeEmbeddings(*BB);
   return FuncVector;
 }
 
-void Embedder::computeEmbeddings() const {
-  if (F.isDeclaration())
-    return;
-
-  FuncVector = Embedding(Dimension, 0.0);
-
-  // Consider only the basic blocks that are reachable from entry
-  for (const BasicBlock *BB : depth_first(&F)) {
-    computeEmbeddings(*BB);
-    FuncVector += BBVecMap[BB];
-  }
-}
-
-void SymbolicEmbedder::computeEmbeddings(const BasicBlock &BB) const {
+Embedding Embedder::computeEmbeddings(const BasicBlock &BB) const {
   Embedding BBVector(Dimension, 0);
 
   // We consider only the non-debug and non-pseudo instructions
-  for (const auto &I : BB.instructionsWithoutDebug()) {
-    Embedding ArgEmb(Dimension, 0);
-    for (const auto &Op : I.operands())
-      ArgEmb += Vocab[*Op];
-    auto InstVector =
-        Vocab[I.getOpcode()] + Vocab[I.getType()->getTypeID()] + ArgEmb;
-    if (const auto *IC = dyn_cast<CmpInst>(&I))
-      InstVector += Vocab[IC->getPredicate()];
-    InstVecMap[&I] = InstVector;
-    BBVector += InstVector;
-  }
-  BBVecMap[&BB] = BBVector;
+  for (const auto &I : BB.instructionsWithoutDebug())
+    BBVector += computeEmbeddings(I);
+  return BBVector;
 }
 
-void FlowAwareEmbedder::computeEmbeddings(const BasicBlock &BB) const {
-  Embedding BBVector(Dimension, 0);
+Embedding SymbolicEmbedder::computeEmbeddings(const Instruction &I) const {
+  // Currently, we always (re)compute the embeddings for symbolic embedder.
+  // This is cheaper than caching the vectors.
+  Embedding ArgEmb(Dimension, 0);
+  for (const auto &Op : I.operands())
+    ArgEmb += Vocab[*Op];
+  auto InstVector =
+      Vocab[I.getOpcode()] + Vocab[I.getType()->getTypeID()] + ArgEmb;
+  if (const auto *IC = dyn_cast<CmpInst>(&I))
+    InstVector += Vocab[IC->getPredicate()];
+  return InstVector;
+}
 
-  // We consider only the non-debug and non-pseudo instructions
-  for (const auto &I : BB.instructionsWithoutDebug()) {
-    // TODO: Handle call instructions differently.
-    // For now, we treat them like other instructions
-    Embedding ArgEmb(Dimension, 0);
-    for (const auto &Op : I.operands()) {
-      // If the operand is defined elsewhere, we use its embedding
-      if (const auto *DefInst = dyn_cast<Instruction>(Op)) {
-        auto DefIt = InstVecMap.find(DefInst);
-        // Fixme (#159171): Ideally we should never miss an instruction
-        // embedding here.
-        // But when we have cyclic dependencies (e.g., phi
-        // nodes), we might miss the embedding. In such cases, we fall back to
-        // using the vocabulary embedding. This can be fixed by iterating to a
-        // fixed-point, or by using a simple solver for the set of simultaneous
-        // equations.
-        // Another case when we might miss an instruction embedding is when
-        // the operand instruction is in a different basic block that has not
-        // been processed yet. This can be fixed by processing the basic blocks
-        // in a topological order.
-        if (DefIt != InstVecMap.end())
-          ArgEmb += DefIt->second;
-        else
-          ArgEmb += Vocab[*Op];
-      }
-      // If the operand is not defined by an instruction, we use the vocabulary
-      else {
-        LLVM_DEBUG(errs() << "Using embedding from vocabulary for operand: "
-                          << *Op << "=" << Vocab[*Op][0] << "\n");
+Embedding FlowAwareEmbedder::computeEmbeddings(const Instruction &I) const {
+  // If we have already computed the embedding for this instruction, return it
+  auto It = InstVecMap.find(&I);
+  if (It != InstVecMap.end())
+    return It->second;
+
+  // TODO: Handle call instructions differently.
+  // For now, we treat them like other instructions
+  Embedding ArgEmb(Dimension, 0);
+  for (const auto &Op : I.operands()) {
+    // If the operand is defined elsewhere, we use its embedding
+    if (const auto *DefInst = dyn_cast<Instruction>(Op)) {
+      auto DefIt = InstVecMap.find(DefInst);
+      // Fixme (#159171): Ideally we should never miss an instruction
+      // embedding here.
+      // But when we have cyclic dependencies (e.g., phi
+      // nodes), we might miss the embedding. In such cases, we fall back to
+      // using the vocabulary embedding. This can be fixed by iterating to a
+      // fixed-point, or by using a simple solver for the set of simultaneous
+      // equations.
+      // Another case when we might miss an instruction embedding is when
+      // the operand instruction is in a different basic block that has not
+      // been processed yet. This can be fixed by processing the basic blocks
+      // in a topological order.
+      if (DefIt != InstVecMap.end())
+        ArgEmb += DefIt->second;
+      else
         ArgEmb += Vocab[*Op];
-      }
     }
-    // Create the instruction vector by combining opcode, type, and arguments
-    // embeddings
-    auto InstVector =
-        Vocab[I.getOpcode()] + Vocab[I.getType()->getTypeID()] + ArgEmb;
-    // Add compare predicate embedding as an additional operand if applicable
-    if (const auto *IC = dyn_cast<CmpInst>(&I))
-      InstVector += Vocab[IC->getPredicate()];
-    InstVecMap[&I] = InstVector;
-    BBVector += InstVector;
+    // If the operand is not defined by an instruction, we use the
+    // vocabulary
+    else {
+      LLVM_DEBUG(errs() << "Using embedding from vocabulary for operand: "
+                        << *Op << "=" << Vocab[*Op][0] << "\n");
+      ArgEmb += Vocab[*Op];
+    }
   }
-  BBVecMap[&BB] = BBVector;
+  // Create the instruction vector by combining opcode, type, and arguments
+  // embeddings
+  auto InstVector =
+      Vocab[I.getOpcode()] + Vocab[I.getType()->getTypeID()] + ArgEmb;
+  if (const auto *IC = dyn_cast<CmpInst>(&I))
+    InstVector += Vocab[IC->getPredicate()];
+  InstVecMap[&I] = InstVector;
+  return InstVector;
 }
 
 // ==----------------------------------------------------------------------===//
@@ -506,18 +476,16 @@ VocabStorage Vocabulary::createDummyVocabForTest(unsigned Dim) {
   return VocabStorage(std::move(Sections));
 }
 
-// ==----------------------------------------------------------------------===//
-// IR2VecVocabAnalysis
-//===----------------------------------------------------------------------===//
+namespace {
+using VocabMap = std::map<std::string, Embedding>;
 
-// FIXME: Make this optional. We can avoid file reads
-// by auto-generating a default vocabulary during the build time.
-Error IR2VecVocabAnalysis::readVocabulary(VocabMap &OpcVocab,
-                                          VocabMap &TypeVocab,
-                                          VocabMap &ArgVocab) {
-  auto BufOrError = MemoryBuffer::getFileOrSTDIN(VocabFile, /*IsText=*/true);
+/// Read vocabulary JSON file and populate the section maps.
+Error readVocabularyFromFile(StringRef VocabFilePath, VocabMap &OpcVocab,
+                             VocabMap &TypeVocab, VocabMap &ArgVocab) {
+  auto BufOrError =
+      MemoryBuffer::getFileOrSTDIN(VocabFilePath, /*IsText=*/true);
   if (!BufOrError)
-    return createFileError(VocabFile, BufOrError.getError());
+    return createFileError(VocabFilePath, BufOrError.getError());
 
   auto Content = BufOrError.get()->getBuffer();
 
@@ -544,10 +512,12 @@ Error IR2VecVocabAnalysis::readVocabulary(VocabMap &OpcVocab,
 
   return Error::success();
 }
+} // anonymous namespace
 
-void IR2VecVocabAnalysis::generateVocabStorage(VocabMap &OpcVocab,
-                                               VocabMap &TypeVocab,
-                                               VocabMap &ArgVocab) {
+/// Generate VocabStorage from vocabulary maps.
+VocabStorage Vocabulary::buildVocabStorage(const VocabMap &OpcVocab,
+                                           const VocabMap &TypeVocab,
+                                           const VocabMap &ArgVocab) {
 
   // Helper for handling missing entities in the vocabulary.
   // Currently, we use a zero vector. In the future, we will throw an error to
@@ -619,18 +589,47 @@ void IR2VecVocabAnalysis::generateVocabStorage(VocabMap &OpcVocab,
   // Create section-based storage instead of flat vocabulary
   // Order must match Vocabulary::Section enum
   std::vector<std::vector<Embedding>> Sections(4);
-  Sections[static_cast<unsigned>(Vocabulary::Section::Opcodes)] =
+  Sections[static_cast<unsigned>(Section::Opcodes)] =
       std::move(NumericOpcodeEmbeddings); // Section::Opcodes
-  Sections[static_cast<unsigned>(Vocabulary::Section::CanonicalTypes)] =
+  Sections[static_cast<unsigned>(Section::CanonicalTypes)] =
       std::move(NumericTypeEmbeddings); // Section::CanonicalTypes
-  Sections[static_cast<unsigned>(Vocabulary::Section::Operands)] =
+  Sections[static_cast<unsigned>(Section::Operands)] =
       std::move(NumericArgEmbeddings); // Section::Operands
-  Sections[static_cast<unsigned>(Vocabulary::Section::Predicates)] =
+  Sections[static_cast<unsigned>(Section::Predicates)] =
       std::move(NumericPredEmbeddings); // Section::Predicates
 
   // Create VocabStorage from organized sections
-  Vocab.emplace(std::move(Sections));
+  return VocabStorage(std::move(Sections));
 }
+
+// ==----------------------------------------------------------------------===//
+// Vocabulary
+//===----------------------------------------------------------------------===//
+
+Expected<Vocabulary> Vocabulary::fromFile(StringRef VocabFilePath,
+                                          float OpcWeight, float TypeWeight,
+                                          float ArgWeight) {
+  VocabMap OpcVocab, TypeVocab, ArgVocab;
+  if (auto Err =
+          readVocabularyFromFile(VocabFilePath, OpcVocab, TypeVocab, ArgVocab))
+    return std::move(Err);
+
+  // Scale the vocabulary sections based on the provided weights
+  auto scaleVocabSection = [](VocabMap &Vocab, float Weight) {
+    for (auto &Entry : Vocab)
+      Entry.second *= Weight;
+  };
+  scaleVocabSection(OpcVocab, OpcWeight);
+  scaleVocabSection(TypeVocab, TypeWeight);
+  scaleVocabSection(ArgVocab, ArgWeight);
+
+  // Generate the numeric lookup vocabulary
+  return Vocabulary(buildVocabStorage(OpcVocab, TypeVocab, ArgVocab));
+}
+
+// ==----------------------------------------------------------------------===//
+// IR2VecVocabAnalysis
+//===----------------------------------------------------------------------===//
 
 void IR2VecVocabAnalysis::emitError(Error Err, LLVMContext &Ctx) {
   handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EI) {
@@ -645,7 +644,7 @@ IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
   if (Vocab.has_value())
     return Vocabulary(std::move(Vocab.value()));
 
-  // Otherwise, try to read from the vocabulary file.
+  // Otherwise, try to read from the vocabulary file specified via CLI.
   if (VocabFile.empty()) {
     // FIXME: Use default vocabulary
     Ctx->emitError("IR2Vec vocabulary file path not specified; You may need to "
@@ -653,25 +652,15 @@ IR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
     return Vocabulary(); // Return invalid result
   }
 
-  VocabMap OpcVocab, TypeVocab, ArgVocab;
-  if (auto Err = readVocabulary(OpcVocab, TypeVocab, ArgVocab)) {
-    emitError(std::move(Err), *Ctx);
+  // Use the static factory method to load the vocabulary.
+  auto VocabOrErr =
+      Vocabulary::fromFile(VocabFile, OpcWeight, TypeWeight, ArgWeight);
+  if (!VocabOrErr) {
+    emitError(VocabOrErr.takeError(), *Ctx);
     return Vocabulary();
   }
 
-  // Scale the vocabulary sections based on the provided weights
-  auto scaleVocabSection = [](VocabMap &Vocab, double Weight) {
-    for (auto &Entry : Vocab)
-      Entry.second *= Weight;
-  };
-  scaleVocabSection(OpcVocab, OpcWeight);
-  scaleVocabSection(TypeVocab, TypeWeight);
-  scaleVocabSection(ArgVocab, ArgWeight);
-
-  // Generate the numeric lookup vocabulary
-  generateVocabStorage(OpcVocab, TypeVocab, ArgVocab);
-
-  return Vocabulary(std::move(Vocab.value()));
+  return std::move(*VocabOrErr);
 }
 
 // ==----------------------------------------------------------------------===//
@@ -695,25 +684,17 @@ PreservedAnalyses IR2VecPrinterPass::run(Module &M,
     Emb->getFunctionVector().print(OS);
 
     OS << "Basic block vectors:\n";
-    const auto &BBMap = Emb->getBBVecMap();
     for (const BasicBlock &BB : F) {
-      auto It = BBMap.find(&BB);
-      if (It != BBMap.end()) {
-        OS << "Basic block: " << BB.getName() << ":\n";
-        It->second.print(OS);
-      }
+      OS << "Basic block: " << BB.getName() << ":\n";
+      Emb->getBBVector(BB).print(OS);
     }
 
     OS << "Instruction vectors:\n";
-    const auto &InstMap = Emb->getInstVecMap();
     for (const BasicBlock &BB : F) {
       for (const Instruction &I : BB) {
-        auto It = InstMap.find(&I);
-        if (It != InstMap.end()) {
-          OS << "Instruction: ";
-          I.print(OS);
-          It->second.print(OS);
-        }
+        OS << "Instruction: ";
+        I.print(OS);
+        Emb->getInstVector(I).print(OS);
       }
     }
   }

@@ -20,6 +20,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Support/Compiler.h"
+#include "llvm/Frontend/HLSL/HLSLResource.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -74,7 +75,39 @@ struct ResourceBindingAttrs {
     assert(hasBinding() && !isExplicit() && !hasImplicitOrderID());
     RegBinding->setImplicitBindingOrderID(Value);
   }
+  void setCounterImplicitOrderID(unsigned Value) const {
+    assert(hasBinding() && !hasCounterImplicitOrderID());
+    RegBinding->setImplicitCounterBindingOrderID(Value);
+  }
+
+  bool hasCounterImplicitOrderID() const {
+    return RegBinding && RegBinding->hasImplicitCounterBindingOrderID();
+  }
+
+  unsigned getCounterImplicitOrderID() const {
+    assert(hasCounterImplicitOrderID());
+    return RegBinding->getImplicitCounterBindingOrderID();
+  }
 };
+
+inline uint32_t getResourceDimensions(llvm::dxil::ResourceDimension Dim) {
+  switch (Dim) {
+  case llvm::dxil::ResourceDimension::Dim1D:
+    return 1;
+    break;
+  case llvm::dxil::ResourceDimension::Dim2D:
+    return 2;
+    break;
+  case llvm::dxil::ResourceDimension::Dim3D:
+  case llvm::dxil::ResourceDimension::Cube:
+    return 3;
+    break;
+  case llvm::dxil::ResourceDimension::Unknown:
+    llvm_unreachable(
+        "We cannot get the dimension of a resource with unknown dimension.");
+  }
+  llvm_unreachable("Unhandled llvm::dxil::ResourceDimension enum.");
+}
 
 } // namespace hlsl
 

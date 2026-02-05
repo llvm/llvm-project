@@ -236,7 +236,7 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
 ///  AFTER:
 ///  ```mlir
 ///  ...
-///  %pad_1d = vector.splat %pad : vector<[4]xi32>
+///  %pad_1d = vector.broadcast %pad : i32 to vector<[4]xi32>
 ///  %tile = scf.for %tile_slice_idx = %c0 to %svl_s step %c1
 ///                iter_args(%iter_tile = %init_tile) -> (vector<[4]x[4]xi32>) {
 ///    ...

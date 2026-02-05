@@ -26,8 +26,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-
 static cl::opt<unsigned>
     JumpTableSizeThreshold("jump-table-to-switch-size-threshold", cl::Hidden,
                            cl::desc("Only split jump tables with size less or "
@@ -43,8 +41,8 @@ static cl::opt<unsigned> FunctionSizeThreshold(
              "or equal than this threshold."),
     cl::init(50));
 
+namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-
 } // end namespace llvm
 
 #define DEBUG_TYPE "jump-table-to-switch"
@@ -80,7 +78,7 @@ static std::optional<JumpTableTy> parseJumpTable(GetElementPtrInst *GEP,
   if (!ConstantOffset.isZero())
     return std::nullopt;
   APInt StrideBytes = VariableOffsets.front().second;
-  const uint64_t JumpTableSizeBytes = DL.getTypeAllocSize(GV->getValueType());
+  const uint64_t JumpTableSizeBytes = GV->getGlobalSize(DL);
   if (JumpTableSizeBytes % StrideBytes.getZExtValue() != 0)
     return std::nullopt;
   const uint64_t N = JumpTableSizeBytes / StrideBytes.getZExtValue();
@@ -186,7 +184,7 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
   });
   if (HadProfile && !ProfcheckDisableMetadataFixes) {
     // At least one of the targets must've been taken.
-    assert(llvm::any_of(BranchWeights, [](uint64_t V) { return V != 0; }));
+    assert(llvm::any_of(BranchWeights, not_equal_to(0)));
     setBranchWeights(*Switch, downscaleWeights(BranchWeights),
                      /*IsExpected=*/false);
   } else

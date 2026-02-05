@@ -119,11 +119,17 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .widenScalarToNextPow2(0, /*Min=*/8)
       .clampScalar(0, s8, sMaxScalar);
 
-  getActionDefinitionsBuilder({G_LROUND,  G_LLROUND, G_FCOS,  G_FCOSH,  G_FACOS,
-                               G_FSIN,    G_FSINH,   G_FASIN, G_FTAN,   G_FTANH,
-                               G_FATAN,   G_FATAN2,  G_FPOW,  G_FEXP,   G_FEXP2,
-                               G_FEXP10,  G_FLOG,    G_FLOG2, G_FLOG10, G_FPOWI,
-                               G_FSINCOS, G_FCEIL,   G_FFLOOR})
+  getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
+      .widenScalarIf(typeIs(1, s16),
+                     [=](const LegalityQuery &) {
+                       return std::pair<unsigned, LLT>(1, s32);
+                     })
+      .libcall();
+
+  getActionDefinitionsBuilder(
+      {G_FCOS,  G_FCOSH, G_FACOS,  G_FSIN,  G_FSINH,   G_FASIN, G_FTAN,
+       G_FTANH, G_FATAN, G_FATAN2, G_FPOW,  G_FEXP,    G_FEXP2, G_FEXP10,
+       G_FLOG,  G_FLOG2, G_FLOG10, G_FPOWI, G_FSINCOS, G_FCEIL, G_FFLOOR})
       .libcall();
 
   getActionDefinitionsBuilder(G_FSQRT)
@@ -194,11 +200,11 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .scalarize(0);
 
   getActionDefinitionsBuilder({G_UADDE, G_UADDO, G_USUBE, G_USUBO})
-      .legalFor({{s8, s1}, {s16, s1}, {s32, s1}})
-      .legalFor(Is64Bit, {{s64, s1}})
+      .legalFor({{s8, s8}, {s16, s8}, {s32, s8}})
+      .legalFor(Is64Bit, {{s64, s8}})
       .widenScalarToNextPow2(0, /*Min=*/32)
       .clampScalar(0, s8, sMaxScalar)
-      .clampScalar(1, s1, s1)
+      .clampScalar(1, s8, s8)
       .scalarize(0);
 
   // integer multiply
@@ -269,6 +275,7 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   getActionDefinitionsBuilder(G_ICMP)
       .legalForCartesianProduct({s8}, Is64Bit ? IntTypes64 : IntTypes32)
       .clampScalar(0, s8, s8)
+      .widenScalarToNextPow2(1, /*Min=*/8)
       .clampScalar(1, s8, sMaxScalar);
 
   // bswap
@@ -446,7 +453,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   getActionDefinitionsBuilder(G_FPEXT)
       .legalFor(HasSSE2, {{s64, s32}})
       .legalFor(HasAVX, {{v4s64, v4s32}})
-      .legalFor(HasAVX512, {{v8s64, v8s32}});
+      .legalFor(HasAVX512, {{v8s64, v8s32}})
+      .libcall();
 
   getActionDefinitionsBuilder(G_FPTRUNC)
       .legalFor(HasSSE2, {{s32, s64}})
@@ -575,10 +583,13 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
 
   // todo: vectors and address spaces
   getActionDefinitionsBuilder(G_SELECT)
-      .legalFor({{s8, s32}, {s16, s32}, {s32, s32}, {s64, s32}, {p0, s32}})
+      .legalFor({{s16, s32}, {s32, s32}, {p0, s32}})
+      .legalFor(!HasCMOV, {{s8, s32}})
+      .legalFor(Is64Bit, {{s64, s32}})
+      .legalFor(UseX87, {{s80, s32}})
+      .clampScalar(1, s32, s32)
       .widenScalarToNextPow2(0, /*Min=*/8)
-      .clampScalar(0, HasCMOV ? s16 : s8, sMaxScalar)
-      .clampScalar(1, s32, s32);
+      .clampScalar(0, HasCMOV ? s16 : s8, sMaxScalar);
 
   // memory intrinsics
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
@@ -587,6 +598,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .lower();
 
   // fp intrinsics
+  // fpclass for i686 is disabled for llvm issue #171992
+  getActionDefinitionsBuilder(G_IS_FPCLASS)
+      .lowerFor(Is64Bit, {{s1, s32}, {s1, s64}, {s1, s80}});
+
   getActionDefinitionsBuilder({G_INTRINSIC_ROUNDEVEN, G_INTRINSIC_TRUNC})
       .scalarize(0)
       .minScalar(0, LLT::scalar(32))

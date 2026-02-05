@@ -116,14 +116,15 @@ def SDTIntBinOp : SDTypeProfile<1, 2, [     // add, and, or, xor, udiv, etc.
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>
 ]>;
 def SDTIntShiftOp : SDTypeProfile<1, 2, [   // shl, sra, srl
-  SDTCisSameAs<0, 1>, SDTCisInt<0>, SDTCisInt<2>
+  SDTCisSameAs<0, 1>, SDTCisInt<0>, SDTCisInt<2>, SDTCisSameNumEltsAs<0, 2>
 ]>;
 def SDTIntShiftPairOp : SDTypeProfile<2, 3, [ // shl_parts, sra_parts, srl_parts
-  SDTCisInt<0>, SDTCisSameAs<1, 0>,
-  SDTCisSameAs<2, 0>, SDTCisSameAs<3, 0>, SDTCisInt<4>
+  SDTCisInt<0>, SDTCisSameAs<1, 0>, SDTCisSameAs<2, 0>, SDTCisSameAs<3, 0>,
+  SDTCisInt<4>, SDTCisSameNumEltsAs<0, 4>
 ]>;
 def SDTIntShiftDOp: SDTypeProfile<1, 3, [   // fshl, fshr
-  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>, SDTCisInt<3>
+  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>, SDTCisInt<3>,
+  SDTCisSameNumEltsAs<0, 3>
 ]>;
 def SDTIntSatNoShOp : SDTypeProfile<1, 2, [   // ssat with no shift
   SDTCisSameAs<0, 1>, SDTCisInt<2>
@@ -139,7 +140,7 @@ def SDTFPBinOp : SDTypeProfile<1, 2, [      // fadd, fmul, etc.
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisFP<0>
 ]>;
 def SDTFPSignOp : SDTypeProfile<1, 2, [     // fcopysign.
-  SDTCisSameAs<0, 1>, SDTCisFP<0>, SDTCisFP<2>
+  SDTCisSameAs<0, 1>, SDTCisFP<0>, SDTCisFP<2>, SDTCisSameNumEltsAs<0, 2>
 ]>;
 def SDTFPTernaryOp : SDTypeProfile<1, 3, [  // fmadd, fnmsub, etc.
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisFP<0>
@@ -148,7 +149,7 @@ def SDTIntUnaryOp : SDTypeProfile<1, 1, [ // bitreverse
   SDTCisSameAs<0, 1>, SDTCisInt<0>
 ]>;
 def SDTIntBitCountUnaryOp : SDTypeProfile<1, 1, [   // ctlz, cttz
-  SDTCisInt<0>, SDTCisInt<1>
+  SDTCisInt<0>, SDTCisInt<1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
 def SDTIntExtendOp : SDTypeProfile<1, 1, [  // sext, zext, anyext
   SDTCisInt<0>, SDTCisInt<1>, SDTCisOpSmallerThanOp<1, 0>, SDTCisSameNumEltsAs<0, 1>
@@ -203,6 +204,10 @@ def SDTFreeze : SDTypeProfile<1, 1, [
 
 def SDTSetCC : SDTypeProfile<1, 3, [        // setcc
   SDTCisInt<0>, SDTCisSameAs<1, 2>, SDTCisVT<3, OtherVT>
+]>;
+
+def SDTFSetCC : SDTypeProfile<1, 3, [        // strict_fsetcc, strict_fsetccs
+  SDTCisInt<0>, SDTCisFP<1>, SDTCisSameAs<1, 2>, SDTCisVT<3, OtherVT>
 ]>;
 
 def SDTSelect : SDTypeProfile<1, 3, [       // select
@@ -296,10 +301,10 @@ def SDTVecInsert : SDTypeProfile<1, 3, [    // vector insert
   SDTCisEltOfVec<2, 1>, SDTCisSameAs<0, 1>, SDTCisPtrTy<3>
 ]>;
 def SDTVecReduce : SDTypeProfile<1, 1, [    // vector reduction
-  SDTCisInt<0>, SDTCisVec<1>
+  SDTCisInt<0>, SDTCisVec<1>, SDTCisInt<1>
 ]>;
 def SDTFPVecReduce : SDTypeProfile<1, 1, [  // FP vector reduction
-  SDTCisFP<0>, SDTCisVec<1>
+  SDTCisFP<0>, SDTCisEltOfVec<0, 1>
 ]>;
 
 def SDTVecReverse : SDTypeProfile<1, 1, [  // vector reverse
@@ -341,6 +346,11 @@ def SDTAtomicStore : SDTypeProfile<0, 2, [
 def SDTAtomicLoad : SDTypeProfile<1, 1, [
   SDTCisPtrTy<1>
 ]>;
+
+def SDTLoopDepMask : SDTypeProfile<1, 4,
+  [/*Result=*/SDTCisVec<0>, /*PtrA=*/SDTCisInt<1>, /*PtrB=*/SDTCisInt<2>,
+   /*EltSizeInBytes=*/SDTCisInt<3>, /*LaneOffset=*/SDTCisInt<4>,
+   SDTCisSameAs<2, 1>]>;
 
 class SDCallSeqStart<list<SDTypeConstraint> constraints> :
         SDTypeProfile<0, 2, constraints>;
@@ -436,6 +446,10 @@ def sra_parts  : SDNode<"ISD::SRA_PARTS" , SDTIntShiftPairOp>;
 def srl_parts  : SDNode<"ISD::SRL_PARTS" , SDTIntShiftPairOp>;
 def fshl       : SDNode<"ISD::FSHL"      , SDTIntShiftDOp>;
 def fshr       : SDNode<"ISD::FSHR"      , SDTIntShiftDOp>;
+def clmul      : SDNode<"ISD::CLMUL"     , SDTIntBinOp,
+                        [SDNPCommutative, SDNPAssociative]>;
+def clmulr     : SDNode<"ISD::CLMULR"    , SDTIntBinOp, [SDNPCommutative]>;
+def clmulh     : SDNode<"ISD::CLMULH"    , SDTIntBinOp, [SDNPCommutative]>;
 def and        : SDNode<"ISD::AND"       , SDTIntBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def or         : SDNode<"ISD::OR"        , SDTIntBinOp,
@@ -468,8 +482,8 @@ def saddsat    : SDNode<"ISD::SADDSAT"   , SDTIntBinOp, [SDNPCommutative]>;
 def uaddsat    : SDNode<"ISD::UADDSAT"   , SDTIntBinOp, [SDNPCommutative]>;
 def ssubsat    : SDNode<"ISD::SSUBSAT"   , SDTIntBinOp>;
 def usubsat    : SDNode<"ISD::USUBSAT"   , SDTIntBinOp>;
-def sshlsat    : SDNode<"ISD::SSHLSAT"   , SDTIntBinOp>;
-def ushlsat    : SDNode<"ISD::USHLSAT"   , SDTIntBinOp>;
+def sshlsat    : SDNode<"ISD::SSHLSAT"   , SDTIntShiftOp>;
+def ushlsat    : SDNode<"ISD::USHLSAT"   , SDTIntShiftOp>;
 
 def smulfix    : SDNode<"ISD::SMULFIX"   , SDTIntScaledBinOp, [SDNPCommutative]>;
 def smulfixsat : SDNode<"ISD::SMULFIXSAT", SDTIntScaledBinOp, [SDNPCommutative]>;
@@ -490,6 +504,7 @@ def bswap      : SDNode<"ISD::BSWAP"      , SDTIntUnaryOp>;
 def ctlz       : SDNode<"ISD::CTLZ"       , SDTIntBitCountUnaryOp>;
 def cttz       : SDNode<"ISD::CTTZ"       , SDTIntBitCountUnaryOp>;
 def ctpop      : SDNode<"ISD::CTPOP"      , SDTIntBitCountUnaryOp>;
+def ctls       : SDNode<"ISD::CTLS"       , SDTIntBitCountUnaryOp>;
 def ctlz_zero_undef : SDNode<"ISD::CTLZ_ZERO_UNDEF", SDTIntBitCountUnaryOp>;
 def cttz_zero_undef : SDNode<"ISD::CTTZ_ZERO_UNDEF", SDTIntBitCountUnaryOp>;
 def sext       : SDNode<"ISD::SIGN_EXTEND", SDTIntExtendOp>;
@@ -522,6 +537,8 @@ def partial_reduce_smla : SDNode<"ISD::PARTIAL_REDUCE_SMLA",
                                  SDTPartialReduceMLA>;
 def partial_reduce_sumla : SDNode<"ISD::PARTIAL_REDUCE_SUMLA",
                                  SDTPartialReduceMLA>;
+def partial_reduce_fmla : SDNode<"ISD::PARTIAL_REDUCE_FMLA",
+                                 SDTPartialReduceMLA>;
 
 def fadd       : SDNode<"ISD::FADD"       , SDTFPBinOp, [SDNPCommutative]>;
 def fsub       : SDNode<"ISD::FSUB"       , SDTFPBinOp>;
@@ -530,6 +547,7 @@ def fdiv       : SDNode<"ISD::FDIV"       , SDTFPBinOp>;
 def frem       : SDNode<"ISD::FREM"       , SDTFPBinOp>;
 def fma        : SDNode<"ISD::FMA"        , SDTFPTernaryOp, [SDNPCommutative]>;
 def fmad       : SDNode<"ISD::FMAD"       , SDTFPTernaryOp, [SDNPCommutative]>;
+def fmuladd    : SDNode<"ISD::FMULADD"    , SDTFPTernaryOp, [SDNPCommutative]>;
 def fabs       : SDNode<"ISD::FABS"       , SDTFPUnaryOp>;
 def fminnum    : SDNode<"ISD::FMINNUM"    , SDTFPBinOp,
                                   [SDNPCommutative, SDNPAssociative]>;
@@ -699,8 +717,8 @@ def strict_bf16_to_fp  : SDNode<"ISD::STRICT_BF16_TO_FP",
 def strict_fp_to_bf16  : SDNode<"ISD::STRICT_FP_TO_BF16",
                                SDTFPToIntOp, [SDNPHasChain]>;
 
-def strict_fsetcc  : SDNode<"ISD::STRICT_FSETCC",  SDTSetCC, [SDNPHasChain]>;
-def strict_fsetccs : SDNode<"ISD::STRICT_FSETCCS", SDTSetCC, [SDNPHasChain]>;
+def strict_fsetcc  : SDNode<"ISD::STRICT_FSETCC",  SDTFSetCC, [SDNPHasChain]>;
+def strict_fsetccs : SDNode<"ISD::STRICT_FSETCCS", SDTFSetCC, [SDNPHasChain]>;
 
 def get_fpenv      : SDNode<"ISD::GET_FPENV", SDTGetFPStateOp, [SDNPHasChain]>;
 def set_fpenv      : SDNode<"ISD::SET_FPENV", SDTSetFPStateOp, [SDNPHasChain]>;
@@ -824,17 +842,14 @@ def ist        : SDNode<"ISD::STORE"      , SDTIStore,
 
 def vector_shuffle : SDNode<"ISD::VECTOR_SHUFFLE", SDTVecShuffle, []>;
 def vector_reverse : SDNode<"ISD::VECTOR_REVERSE", SDTVecReverse>;
-def vector_splice : SDNode<"ISD::VECTOR_SPLICE", SDTVecSlice, []>;
+def vector_splice_left : SDNode<"ISD::VECTOR_SPLICE_LEFT", SDTVecSlice, []>;
+def vector_splice_right : SDNode<"ISD::VECTOR_SPLICE_RIGHT", SDTVecSlice, []>;
 def build_vector : SDNode<"ISD::BUILD_VECTOR", SDTypeProfile<1, -1, []>, []>;
 def splat_vector : SDNode<"ISD::SPLAT_VECTOR", SDTypeProfile<1, 1, []>, []>;
 def step_vector : SDNode<"ISD::STEP_VECTOR", SDTypeProfile<1, 1,
                        [SDTCisVec<0>, SDTCisInt<1>]>, []>;
 def scalar_to_vector : SDNode<"ISD::SCALAR_TO_VECTOR", SDTypeProfile<1, 1, []>,
                               []>;
-
-def SDTLoopDepMask : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisInt<1>,
-                                   SDTCisSameAs<2, 1>, SDTCisInt<3>,
-                                   SDTCVecEltisVT<0,i1>]>;
 def loop_dependence_war_mask : SDNode<"ISD::LOOP_DEPENDENCE_WAR_MASK",
                                       SDTLoopDepMask, []>;
 def loop_dependence_raw_mask : SDNode<"ISD::LOOP_DEPENDENCE_RAW_MASK",
@@ -902,6 +917,10 @@ def convergencectrl_loop   : SDNode<"ISD::CONVERGENCECTRL_LOOP",
                                       [SDTCisVT<0,untyped>, SDTCisVT<1,untyped>]>>;
 def convergencectrl_glue   : SDNode<"ISD::CONVERGENCECTRL_GLUE",
                                     SDTypeProfile<0, 1, [SDTCisVT<0, untyped>]>>;
+
+def sponentry : SDNode<
+  "ISD::SPONENTRY", SDTypeProfile <1, 0, [SDTCisPtrTy<0>]>
+>;
 
 //===----------------------------------------------------------------------===//
 // Selection DAG Condition Codes
@@ -1185,6 +1204,14 @@ def zext_nneg : PatFrag<(ops node:$src), (zext node:$src), [{
 def sext_like : PatFrags<(ops node:$src),
                          [(zext_nneg node:$src),
                           (sext node:$src)]>;
+
+def ffloor_nnan : PatFrag<(ops node:$src), (ffloor node:$src), [{
+  return N->getFlags().hasNoNaNs();
+}]> {
+  let GISelPredicateCode = [{
+    return MI.getFlag(MachineInstr::FmNoNans);
+  }];
+}
 
 // null_frag - The null pattern operator is used in multiclass instantiations
 // which accept an SDPatternOperator for use in matching patterns for internal

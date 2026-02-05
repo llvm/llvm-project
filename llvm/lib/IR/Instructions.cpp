@@ -64,6 +64,9 @@ static cl::opt<bool> DisableI2pP2iOpt(
 std::optional<TypeSize>
 AllocaInst::getAllocationSize(const DataLayout &DL) const {
   TypeSize Size = DL.getTypeAllocSize(getAllocatedType());
+  // Zero-sized types can return early since 0 * N = 0 for any array size N.
+  if (Size.isZero())
+    return Size;
   if (isArrayAllocation()) {
     auto *C = dyn_cast<ConstantInt>(getArraySize());
     if (!C)
@@ -137,14 +140,12 @@ PHINode::PHINode(const PHINode &PN)
 // predecessor basic block is deleted.
 Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
   Value *Removed = getIncomingValue(Idx);
-
-  // Move everything after this operand down.
-  //
-  // FIXME: we could just swap with the end of the list, then erase.  However,
-  // clients might not expect this to happen.  The code as it is thrashes the
-  // use/def lists, which is kinda lame.
-  std::copy(op_begin() + Idx + 1, op_end(), op_begin() + Idx);
-  copyIncomingBlocks(drop_begin(blocks(), Idx + 1), Idx);
+  // Swap with the end of the list.
+  unsigned Last = getNumOperands() - 1;
+  if (Idx != Last) {
+    setIncomingValue(Idx, getIncomingValue(Last));
+    setIncomingBlock(Idx, getIncomingBlock(Last));
+  }
 
   // Nuke the last value.
   Op<-1>().set(nullptr);
@@ -161,28 +162,22 @@ Value *PHINode::removeIncomingValue(unsigned Idx, bool DeletePHIIfEmpty) {
 
 void PHINode::removeIncomingValueIf(function_ref<bool(unsigned)> Predicate,
                                     bool DeletePHIIfEmpty) {
-  SmallDenseSet<unsigned> RemoveIndices;
-  for (unsigned Idx = 0; Idx < getNumIncomingValues(); ++Idx)
-    if (Predicate(Idx))
-      RemoveIndices.insert(Idx);
+  unsigned NumOps = getNumIncomingValues();
 
-  if (RemoveIndices.empty())
-    return;
+  // Loop backwards in case the predicate is purely index based.
+  for (unsigned Idx = NumOps; Idx-- > 0;) {
+    if (Predicate(Idx)) {
+      unsigned LastIdx = NumOps - 1;
+      if (Idx != LastIdx) {
+        setIncomingValue(Idx, getIncomingValue(LastIdx));
+        setIncomingBlock(Idx, getIncomingBlock(LastIdx));
+      }
+      getOperandUse(LastIdx).set(nullptr);
+      NumOps--;
+    }
+  }
 
-  // Remove operands.
-  auto NewOpEnd = remove_if(operands(), [&](Use &U) {
-    return RemoveIndices.contains(U.getOperandNo());
-  });
-  for (Use &U : make_range(NewOpEnd, op_end()))
-    U.set(nullptr);
-
-  // Remove incoming blocks.
-  (void)std::remove_if(const_cast<block_iterator>(block_begin()),
-                 const_cast<block_iterator>(block_end()), [&](BasicBlock *&BB) {
-                   return RemoveIndices.contains(&BB - block_begin());
-                 });
-
-  setNumHungOffUseOperands(getNumOperands() - RemoveIndices.size());
+  setNumHungOffUseOperands(NumOps);
 
   // If the PHI node is dead, because it has zero entries, nuke it now.
   if (getNumOperands() == 0 && DeletePHIIfEmpty) {
@@ -202,7 +197,7 @@ void PHINode::growOperands() {
   if (NumOps < 2) NumOps = 2;      // 2 op PHI nodes are VERY common.
 
   ReservedSpace = NumOps;
-  growHungoffUses(ReservedSpace, /* IsPhi */ true);
+  growHungoffUses(ReservedSpace, /*WithExtraValues=*/true);
 }
 
 /// hasConstantValue - If the specified PHI node always merges together the same
@@ -620,7 +615,8 @@ bool CallBase::hasReadingOperandBundles() const {
   // ptrauth) forces a callsite to be at least readonly.
   return hasOperandBundlesOtherThan({LLVMContext::OB_ptrauth,
                                      LLVMContext::OB_kcfi,
-                                     LLVMContext::OB_convergencectrl}) &&
+                                     LLVMContext::OB_convergencectrl,
+                                     LLVMContext::OB_deactivation_symbol}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 
@@ -628,7 +624,8 @@ bool CallBase::hasClobberingOperandBundles() const {
   return hasOperandBundlesOtherThan(
              {LLVMContext::OB_deopt, LLVMContext::OB_funclet,
               LLVMContext::OB_ptrauth, LLVMContext::OB_kcfi,
-              LLVMContext::OB_convergencectrl}) &&
+              LLVMContext::OB_convergencectrl,
+              LLVMContext::OB_deactivation_symbol}) &&
          getIntrinsicID() != Intrinsic::assume;
 }
 
@@ -2324,7 +2321,7 @@ bool ShuffleVectorInst::isOneUseSingleSourceMask(ArrayRef<int> Mask, int VF) {
     return false;
   for (unsigned K = 0, Sz = Mask.size(); K < Sz; K += VF) {
     ArrayRef<int> SubMask = Mask.slice(K, VF);
-    if (all_of(SubMask, [](int Idx) { return Idx == PoisonMaskElem; }))
+    if (all_of(SubMask, equal_to(PoisonMaskElem)))
       continue;
     SmallBitVector Used(VF, false);
     for (int Idx : SubMask) {
@@ -2878,7 +2875,7 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
     { 99,99,99, 0, 0,99,99, 0, 0,99,99,99, 4, 0}, // FPTrunc        |
     { 99,99,99, 2, 2,99,99, 8, 2,99,99,99, 4, 0}, // FPExt          |
     {  1, 0, 0,99,99, 0, 0,99,99,99,99, 7, 3, 0}, // PtrToInt       |
-    {  1, 0, 0,99,99, 0, 0,99,99,99,99, 0, 3, 0}, // PtrToAddr      |
+    {  0, 0, 0,99,99, 0, 0,99,99,99,99, 0, 3, 0}, // PtrToAddr      |
     { 99,99,99,99,99,99,99,99,99,11,11,99,15, 0}, // IntToPtr       |
     {  5, 5, 5, 0, 0, 5, 5, 0, 0,16,16, 5, 1,14}, // BitCast        |
     {  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,13,12}, // AddrSpaceCast -+
@@ -2965,8 +2962,7 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
       // zext, sext -> zext, because sext can't sign extend after zext
       return Instruction::ZExt;
     case 11: {
-      // inttoptr, ptrtoint/ptrtoaddr -> bitcast if SrcSize<=PtrSize/AddrSize
-      // and SrcSize==DstSize
+      // inttoptr, ptrtoint/ptrtoaddr -> integer cast
       if (!DL)
         return 0;
       unsigned MidSize = secondOp == Instruction::PtrToAddr
@@ -2974,10 +2970,15 @@ unsigned CastInst::isEliminableCastPair(Instruction::CastOps firstOp,
                              : DL->getPointerTypeSizeInBits(MidTy);
       unsigned SrcSize = SrcTy->getScalarSizeInBits();
       unsigned DstSize = DstTy->getScalarSizeInBits();
-      // TODO: Could also produce zext or trunc here.
-      if (SrcSize <= MidSize && SrcSize == DstSize)
-        return Instruction::BitCast;
-      return 0;
+      // If the middle size is smaller than both source and destination,
+      // an additional masking operation would be required.
+      if (MidSize < SrcSize && MidSize < DstSize)
+        return 0;
+      if (DstSize < SrcSize)
+        return Instruction::Trunc;
+      if (DstSize > SrcSize)
+        return Instruction::ZExt;
+      return Instruction::BitCast;
     }
     case 12:
       // addrspacecast, addrspacecast -> bitcast,       if SrcAS == DstAS
@@ -4070,7 +4071,7 @@ SwitchInst::SwitchInst(Value *Value, BasicBlock *Default, unsigned NumCases,
                        InsertPosition InsertBefore)
     : Instruction(Type::getVoidTy(Value->getContext()), Instruction::Switch,
                   AllocMarker, InsertBefore) {
-  init(Value, Default, 2+NumCases*2);
+  init(Value, Default, 2 + NumCases);
 }
 
 SwitchInst::SwitchInst(const SwitchInst &SI)
@@ -4078,10 +4079,12 @@ SwitchInst::SwitchInst(const SwitchInst &SI)
   init(SI.getCondition(), SI.getDefaultDest(), SI.getNumOperands());
   setNumHungOffUseOperands(SI.getNumOperands());
   Use *OL = getOperandList();
+  ConstantInt **VL = case_values();
   const Use *InOL = SI.getOperandList();
-  for (unsigned i = 2, E = SI.getNumOperands(); i != E; i += 2) {
+  ConstantInt *const *InVL = SI.case_values();
+  for (unsigned i = 2, E = SI.getNumOperands(); i != E; ++i) {
     OL[i] = InOL[i];
-    OL[i+1] = InOL[i+1];
+    VL[i - 2] = InVL[i - 2];
   }
   SubclassOptionalData = SI.SubclassOptionalData;
 }
@@ -4091,11 +4094,11 @@ SwitchInst::SwitchInst(const SwitchInst &SI)
 void SwitchInst::addCase(ConstantInt *OnVal, BasicBlock *Dest) {
   unsigned NewCaseIdx = getNumCases();
   unsigned OpNo = getNumOperands();
-  if (OpNo+2 > ReservedSpace)
+  if (OpNo + 1 > ReservedSpace)
     growOperands();  // Get more space!
   // Initialize some new operands.
-  assert(OpNo+1 < ReservedSpace && "Growing didn't work!");
-  setNumHungOffUseOperands(OpNo+2);
+  assert(OpNo < ReservedSpace && "Growing didn't work!");
+  setNumHungOffUseOperands(OpNo + 1);
   CaseHandle Case(this, NewCaseIdx);
   Case.setValue(OnVal);
   Case.setSuccessor(Dest);
@@ -4106,21 +4109,22 @@ void SwitchInst::addCase(ConstantInt *OnVal, BasicBlock *Dest) {
 SwitchInst::CaseIt SwitchInst::removeCase(CaseIt I) {
   unsigned idx = I->getCaseIndex();
 
-  assert(2 + idx*2 < getNumOperands() && "Case index out of range!!!");
+  assert(2 + idx < getNumOperands() && "Case index out of range!!!");
 
   unsigned NumOps = getNumOperands();
   Use *OL = getOperandList();
+  ConstantInt **VL = case_values();
 
   // Overwrite this case with the end of the list.
-  if (2 + (idx + 1) * 2 != NumOps) {
-    OL[2 + idx * 2] = OL[NumOps - 2];
-    OL[2 + idx * 2 + 1] = OL[NumOps - 1];
+  if (2 + idx + 1 != NumOps) {
+    OL[2 + idx] = OL[NumOps - 1];
+    VL[idx] = VL[NumOps - 2 - 1];
   }
 
   // Nuke the last value.
-  OL[NumOps-2].set(nullptr);
-  OL[NumOps-2+1].set(nullptr);
-  setNumHungOffUseOperands(NumOps-2);
+  OL[NumOps - 1].set(nullptr);
+  VL[NumOps - 2 - 1] = nullptr;
+  setNumHungOffUseOperands(NumOps - 1);
 
   return CaseIt(this, idx);
 }
@@ -4133,7 +4137,7 @@ void SwitchInst::growOperands() {
   unsigned NumOps = e*3;
 
   ReservedSpace = NumOps;
-  growHungoffUses(ReservedSpace);
+  growHungoffUses(ReservedSpace, /*WithExtraValues=*/true);
 }
 
 void SwitchInstProfUpdateWrapper::init() {
@@ -4165,6 +4169,16 @@ SwitchInstProfUpdateWrapper::removeCase(SwitchInst::CaseIt I) {
     Weights->pop_back();
   }
   return SI.removeCase(I);
+}
+
+void SwitchInstProfUpdateWrapper::replaceDefaultDest(SwitchInst::CaseIt I) {
+  auto *DestBlock = I->getCaseSuccessor();
+  if (Weights) {
+    auto Weight = getSuccessorWeight(I->getCaseIndex() + 1);
+    (*Weights)[0] = Weight.value();
+  }
+
+  SI.setDefaultDest(DestBlock);
 }
 
 void SwitchInstProfUpdateWrapper::addCase(

@@ -140,6 +140,7 @@ void registerTestOneShotModuleBufferizePass();
 void registerTestOpaqueLoc();
 void registerTestOpLoweringPasses();
 void registerTestPadFusion();
+void registerTestParallelLoopUnrollingPass();
 void registerTestRecursiveTypesPass();
 void registerTestSCFUpliftWhileToFor();
 void registerTestSCFUtilsPass();
@@ -151,6 +152,7 @@ void registerTestSliceAnalysisPass();
 void registerTestSPIRVCPURunnerPipeline();
 void registerTestSPIRVFuncSignatureConversion();
 void registerTestSPIRVVectorUnrolling();
+void registerTestStridedMetadataRangeAnalysisPass();
 void registerTestTensorCopyInsertionPass();
 void registerTestTensorLikeAndBufferLikePass();
 void registerTestTensorTransforms();
@@ -180,7 +182,7 @@ void registerTestTransformsTransformDialectExtension(DialectRegistry &);
 } // namespace test
 
 #ifdef MLIR_INCLUDE_TESTS
-void registerTestPasses() {
+static void registerTestPasses() {
   registerCloneTestPasses();
   registerConvertToTargetEnvPass();
   registerPrintTosaAvailabilityPass();
@@ -288,6 +290,7 @@ void registerTestPasses() {
   mlir::test::registerTestOpaqueLoc();
   mlir::test::registerTestOpLoweringPasses();
   mlir::test::registerTestPadFusion();
+  mlir::test::registerTestParallelLoopUnrollingPass();
   mlir::test::registerTestRecursiveTypesPass();
   mlir::test::registerTestSCFUpliftWhileToFor();
   mlir::test::registerTestSCFUtilsPass();
@@ -299,6 +302,7 @@ void registerTestPasses() {
   mlir::test::registerTestSPIRVCPURunnerPipeline();
   mlir::test::registerTestSPIRVFuncSignatureConversion();
   mlir::test::registerTestSPIRVVectorUnrolling();
+  mlir::test::registerTestStridedMetadataRangeAnalysisPass();
   mlir::test::registerTestTensorCopyInsertionPass();
   mlir::test::registerTestTensorLikeAndBufferLikePass();
   mlir::test::registerTestTensorTransforms();

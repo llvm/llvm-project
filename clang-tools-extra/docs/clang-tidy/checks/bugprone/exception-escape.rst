@@ -26,14 +26,39 @@ function also results in unexpected termination.
 
 Functions declared explicitly with ``noexcept(false)`` or ``throw(exception)``
 will be excluded from the analysis, as even though it is not recommended for
-functions like ``swap()``, ``main()``, move constructors, move assignment operators
-and destructors, it is a clear indication of the developer's intention and
-should be respected.
+functions like ``swap()``, ``main()``, move constructors, move assignment
+operators and destructors, it is a clear indication of the developer's
+intention and should be respected.
 
 WARNING! This check may be expensive on large source files.
 
 Options
 -------
+
+.. option:: CheckDestructors
+
+   When `true`, destructors are analyzed to not throw exceptions.
+   Default value is `true`.
+
+.. option:: CheckMoveMemberFunctions
+
+   When `true`, move constructors and move assignment operators are analyzed
+   to not throw exceptions. Default value is `true`.
+
+.. option:: CheckMain
+
+   When `true`, the ``main()`` function is analyzed to not throw exceptions.
+   Default value is `true`.
+
+.. option:: CheckNothrowFunctions
+
+   When `true`, functions marked with ``noexcept`` or ``throw()`` exception
+   specifications are analyzed to not throw exceptions. Default value is `true`.
+
+.. option:: CheckedSwapFunctions
+
+   Comma-separated list of swap function names which should not throw exceptions.
+   Default value is `swap,iter_swap,iter_move`.
 
 .. option:: FunctionsThatShouldNotThrow
 

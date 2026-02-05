@@ -22,6 +22,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
 using namespace ento;
@@ -247,6 +248,7 @@ class FindStackRegionsSymbolVisitor final : public SymbolVisitor {
   CheckerContext &Ctxt;
   const StackFrameContext *PoppedStackFrame;
   SmallVectorImpl<const MemRegion *> &EscapingStackRegions;
+  llvm::SmallPtrSet<const MemRegion *, 16> VisitedRegions;
 
 public:
   explicit FindStackRegionsSymbolVisitor(
@@ -258,6 +260,9 @@ public:
   bool VisitSymbol(SymbolRef sym) override { return true; }
 
   bool VisitMemRegion(const MemRegion *MR) override {
+    if (!VisitedRegions.insert(MR).second)
+      return true;
+
     SaveIfEscapes(MR);
 
     if (const BlockDataRegion *BDR = MR->getAs<BlockDataRegion>())

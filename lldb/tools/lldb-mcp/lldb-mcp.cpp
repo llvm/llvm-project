@@ -85,6 +85,8 @@ FileSpec driverPath() {
 llvm::Error launch() {
   FileSpec lldb_exec = driverPath();
   lldb_private::ProcessLaunchInfo info;
+  info.SetMonitorProcessCallback(
+      &lldb_private::ProcessLaunchInfo::NoOpMonitorCallback);
   info.SetExecutableFile(lldb_exec,
                          /*add_exe_file_as_first_arg=*/true);
   info.GetArguments().AppendArgument("-O");
@@ -215,7 +217,7 @@ int main(int argc, char *argv[]) {
           std::make_unique<lldb_private::SystemInitializerCommon>(nullptr)))
     exitWithError(std::move(err));
 
-  auto cleanup = make_scope_exit([] { g_debugger_lifetime->Terminate(); });
+  llvm::scope_exit cleanup([] { g_debugger_lifetime->Terminate(); });
 
   IOObjectSP input_sp = std::make_shared<NativeFile>(
       fileno(stdin), File::eOpenOptionReadOnly, NativeFile::Unowned);

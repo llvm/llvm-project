@@ -322,7 +322,7 @@ bool AddUsing::prepare(const Selection &Inputs) {
       if (!QualifierToRemove)
         break;
       SpelledNameRange = TL.getNameLoc();
-      MustInsertAfterLoc = TL.getOriginalDecl()->getBeginLoc();
+      MustInsertAfterLoc = TL.getDecl()->getBeginLoc();
       break;
     }
     case TypeLoc::Typedef: {

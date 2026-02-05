@@ -53,7 +53,7 @@ TEST(InstructionsTest, ReturnInst) {
   EXPECT_EQ(r0->op_begin(), r0->op_end());
 
   IntegerType* Int1 = IntegerType::get(C, 1);
-  Constant* One = ConstantInt::get(Int1, 1, true);
+  Constant* One = ConstantInt::getTrue(Int1);
   const ReturnInst* r1 = ReturnInst::Create(C, One);
   EXPECT_EQ(1U, r1->getNumOperands());
   User::const_op_iterator b(r1->op_begin());
@@ -152,7 +152,7 @@ TEST(InstructionsTest, BranchInst) {
   EXPECT_EQ(b0->op_end(), std::next(b0->op_begin()));
 
   IntegerType* Int1 = IntegerType::get(C, 1);
-  Constant* One = ConstantInt::get(Int1, 1, true);
+  Constant* One = ConstantInt::getTrue(Int1);
 
   // Conditional BranchInst
   BranchInst* b1 = BranchInst::Create(bb0, bb1, One);
@@ -606,12 +606,14 @@ TEST(InstructionTest, ConstrainedTrans) {
 
 TEST(InstructionsTest, isEliminableCastPair) {
   LLVMContext C;
-  DataLayout DL1("p1:32:32");
+  DataLayout DL1("p1:32:32-p2:64:64:64:32");
 
   Type *Int16Ty = Type::getInt16Ty(C);
+  Type *Int32Ty = Type::getInt32Ty(C);
   Type *Int64Ty = Type::getInt64Ty(C);
   Type *PtrTy64 = PointerType::get(C, 0);
   Type *PtrTy32 = PointerType::get(C, 1);
+  Type *PtrTy64_32 = PointerType::get(C, 2);
 
   // Source and destination pointers have same size -> bitcast.
   EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::PtrToInt,
@@ -636,6 +638,42 @@ TEST(InstructionsTest, isEliminableCastPair) {
                                            CastInst::PtrToInt, Int64Ty, PtrTy32,
                                            Int64Ty, &DL1),
             0U);
+
+  // Destination larger than source. Pointer type same as destination.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToInt, Int16Ty, PtrTy64,
+                                           Int64Ty, &DL1),
+            CastInst::ZExt);
+
+  // Destination larger than source. Pointer type different from destination.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToInt, Int16Ty, PtrTy32,
+                                           Int64Ty, &DL1),
+            CastInst::ZExt);
+
+  // Destination smaller than source. Pointer type same as source.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToInt, Int64Ty, PtrTy64,
+                                           Int16Ty, &DL1),
+            CastInst::Trunc);
+
+  // Destination smaller than source. Pointer type different from source.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToInt, Int64Ty, PtrTy32,
+                                           Int16Ty, &DL1),
+            CastInst::Trunc);
+
+  // ptrtoaddr with address size != pointer size. Truncating case.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToAddr, Int64Ty,
+                                           PtrTy64_32, Int32Ty, &DL1),
+            CastInst::Trunc);
+
+  // ptrtoaddr with address size != pointer size. Non-truncating case.
+  EXPECT_EQ(CastInst::isEliminableCastPair(CastInst::IntToPtr,
+                                           CastInst::PtrToAddr, Int32Ty,
+                                           PtrTy64_32, Int32Ty, &DL1),
+            CastInst::BitCast);
 
   // Test that we don't eliminate bitcasts between different address spaces,
   // or if we don't have available pointer size information.
@@ -930,6 +968,29 @@ TEST(InstructionsTest, SwitchInst) {
   const auto &Handle = *CCI;
   EXPECT_EQ(1, Handle.getCaseValue()->getSExtValue());
   EXPECT_EQ(BB1.get(), Handle.getCaseSuccessor());
+
+  // C API tests.
+  EXPECT_EQ(BB0.get(), unwrap(LLVMGetSwitchDefaultDest(wrap(SI))));
+  EXPECT_EQ(BB0.get(), unwrap(LLVMGetSuccessor(wrap(SI), 0)));
+  EXPECT_EQ(BB1.get(), unwrap(LLVMGetSuccessor(wrap(SI), 1)));
+  EXPECT_EQ(
+      1,
+      unwrap<ConstantInt>(LLVMGetSwitchCaseValue(wrap(SI), 1))->getSExtValue());
+  EXPECT_EQ(BB2.get(), unwrap(LLVMGetSuccessor(wrap(SI), 2)));
+  EXPECT_EQ(
+      2,
+      unwrap<ConstantInt>(LLVMGetSwitchCaseValue(wrap(SI), 2))->getSExtValue());
+  EXPECT_EQ(BB3.get(), unwrap(LLVMGetSuccessor(wrap(SI), 3)));
+  EXPECT_EQ(
+      3,
+      unwrap<ConstantInt>(LLVMGetSwitchCaseValue(wrap(SI), 3))->getSExtValue());
+  // Test case value modification. The C API provides case value indices
+  // matching the successor indices.
+  LLVMSetSwitchCaseValue(wrap(SI), 2, wrap(ConstantInt::get(Int32Ty, 12)));
+  EXPECT_EQ(12, (SI->case_begin() + 1)->getCaseValue()->getSExtValue());
+  EXPECT_EQ(
+      12,
+      unwrap<ConstantInt>(LLVMGetSwitchCaseValue(wrap(SI), 2))->getSExtValue());
 }
 
 TEST(InstructionsTest, SwitchInstProfUpdateWrapper) {

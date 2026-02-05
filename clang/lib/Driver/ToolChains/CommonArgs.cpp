@@ -31,11 +31,12 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Util.h"
 #include "clang/Driver/XRayArgs.h"
+#include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -69,8 +70,7 @@ using namespace llvm::opt;
 
 static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
                                               const llvm::Triple &Triple) {
-  if (Args.hasArg(clang::driver::options::OPT_pg) &&
-      !Args.hasArg(clang::driver::options::OPT_mfentry))
+  if (Args.hasArg(options::OPT_pg) && !Args.hasArg(options::OPT_mfentry))
     return true;
 
   if (Triple.isAndroid())
@@ -90,6 +90,8 @@ static bool useFramePointerForTargetByDefault(const llvm::opt::ArgList &Args,
   case llvm::Triple::ppc64le:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
   case llvm::Triple::sparcv9:
@@ -222,26 +224,39 @@ static bool framePointerImpliesLeafFramePointer(const llvm::opt::ArgList &Args,
 clang::CodeGenOptions::FramePointerKind
 getFramePointerKind(const llvm::opt::ArgList &Args,
                     const llvm::Triple &Triple) {
-  // There are three things to consider here:
+  // There are four things to consider here:
   // * Should a frame record be created for non-leaf functions?
   // * Should a frame record be created for leaf functions?
-  // * Is the frame pointer register reserved, i.e. must it always point to
-  //   either a new, valid frame record or be un-modified?
+  // * Is the frame pointer register reserved in non-leaf functions?
+  //   i.e. must it always point to either a new, valid frame record or be
+  //   un-modified?
+  // * Is the frame pointer register reserved in leaf functions?
   //
   //  Not all combinations of these are valid:
   //  * It's not useful to have leaf frame records without non-leaf ones.
   //  * It's not useful to have frame records without reserving the frame
   //    pointer.
   //
-  // | Non-leaf | Leaf | Reserved |
-  // | N        | N    | N        | FramePointerKind::None
-  // | N        | N    | Y        | FramePointerKind::Reserved
-  // | N        | Y    | N        | Invalid
-  // | N        | Y    | Y        | Invalid
-  // | Y        | N    | N        | Invalid
-  // | Y        | N    | Y        | FramePointerKind::NonLeaf
-  // | Y        | Y    | N        | Invalid
-  // | Y        | Y    | Y        | FramePointerKind::All
+  // | Frame Setup     | Reg Reserved    |
+  // |-----------------|-----------------|
+  // | Non-leaf | Leaf | Non-Leaf | Leaf |
+  // |----------|------|----------|------|
+  // | N        | N    | N        | N    | FramePointerKind::None
+  // | N        | N    | N        | Y    | Invalid
+  // | N        | N    | Y        | N    | Invalid
+  // | N        | N    | Y        | Y    | FramePointerKind::Reserved
+  // | N        | Y    | N        | N    | Invalid
+  // | N        | Y    | N        | Y    | Invalid
+  // | N        | Y    | Y        | N    | Invalid
+  // | N        | Y    | Y        | Y    | Invalid
+  // | Y        | N    | N        | N    | Invalid
+  // | Y        | N    | N        | Y    | Invalid
+  // | Y        | N    | Y        | N    | FramePointerKind::NonLeafNoReserve
+  // | Y        | N    | Y        | Y    | FramePointerKind::NonLeaf
+  // | Y        | Y    | N        | N    | Invalid
+  // | Y        | Y    | N        | Y    | Invalid
+  // | Y        | Y    | Y        | N    | Invalid
+  // | Y        | Y    | Y        | Y    | FramePointerKind::All
   //
   // The FramePointerKind::Reserved case is currently only reachable for Arm,
   // which has the -mframe-chain= option which can (in combination with
@@ -249,24 +264,29 @@ getFramePointerKind(const llvm::opt::ArgList &Args,
   // without requiring new frame records to be created.
 
   bool DefaultFP = useFramePointerForTargetByDefault(Args, Triple);
-  bool EnableFP =
-      mustUseNonLeafFramePointerForTarget(Triple) ||
-      Args.hasFlag(clang::driver::options::OPT_fno_omit_frame_pointer,
-                   clang::driver::options::OPT_fomit_frame_pointer, DefaultFP);
+  bool EnableFP = mustUseNonLeafFramePointerForTarget(Triple) ||
+                  Args.hasFlag(options::OPT_fno_omit_frame_pointer,
+                               options::OPT_fomit_frame_pointer, DefaultFP);
 
   bool DefaultLeafFP =
       useLeafFramePointerForTargetByDefault(Triple) ||
       (EnableFP && framePointerImpliesLeafFramePointer(Args, Triple));
-  bool EnableLeafFP = Args.hasFlag(
-      clang::driver::options::OPT_mno_omit_leaf_frame_pointer,
-      clang::driver::options::OPT_momit_leaf_frame_pointer, DefaultLeafFP);
+  bool EnableLeafFP =
+      Args.hasFlag(options::OPT_mno_omit_leaf_frame_pointer,
+                   options::OPT_momit_leaf_frame_pointer, DefaultLeafFP);
 
-  bool FPRegReserved = EnableFP || mustMaintainValidFrameChain(Args, Triple);
+  bool FPRegReserved = Args.hasFlag(options::OPT_mreserve_frame_pointer_reg,
+                                    options::OPT_mno_reserve_frame_pointer_reg,
+                                    mustMaintainValidFrameChain(Args, Triple));
 
   if (EnableFP) {
     if (EnableLeafFP)
       return clang::CodeGenOptions::FramePointerKind::All;
-    return clang::CodeGenOptions::FramePointerKind::NonLeaf;
+
+    if (FPRegReserved)
+      return clang::CodeGenOptions::FramePointerKind::NonLeaf;
+
+    return clang::CodeGenOptions::FramePointerKind::NonLeafNoReserve;
   }
   if (FPRegReserved)
     return clang::CodeGenOptions::FramePointerKind::Reserved;
@@ -590,6 +610,10 @@ const char *tools::getLDMOption(const llvm::Triple &T, const ArgList &Args) {
     return "elf32lriscv";
   case llvm::Triple::riscv64:
     return "elf64lriscv";
+  case llvm::Triple::riscv32be:
+    return "elf32briscv";
+  case llvm::Triple::riscv64be:
+    return "elf64briscv";
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
     return "elf32_sparc";
@@ -663,11 +687,11 @@ static std::string getAMDGPUTargetGPU(const llvm::Triple &T,
   if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ)) {
     auto GPUName = getProcessorFromTargetID(T, A->getValue());
     return llvm::StringSwitch<std::string>(GPUName)
-        .Cases("rv630", "rv635", "r600")
-        .Cases("rv610", "rv620", "rs780", "rs880")
+        .Cases({"rv630", "rv635"}, "r600")
+        .Cases({"rv610", "rv620", "rs780"}, "rs880")
         .Case("rv740", "rv770")
         .Case("palm", "cedar")
-        .Cases("sumo", "sumo2", "sumo")
+        .Cases({"sumo", "sumo2"}, "sumo")
         .Case("hemlock", "cypress")
         .Case("aruba", "cayman")
         .Default(GPUName.str());
@@ -753,7 +777,7 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
   case llvm::Triple::ppcle:
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
-    if (Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ))
+    if (Arg *A = Args.getLastArg(options::OPT_mcpu_EQ))
       return std::string(
           llvm::PPC::getNormalizedPPCTargetCPU(T, A->getValue()));
     return std::string(llvm::PPC::getNormalizedPPCTargetCPU(T));
@@ -767,6 +791,8 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
       return "ck810";
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     return riscv::getRISCVTargetCPU(Args, T);
 
   case llvm::Triple::bpfel:
@@ -848,6 +874,8 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     break;
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     riscv::getRISCVTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::systemz:
@@ -947,6 +975,24 @@ bool tools::isTLSDESCEnabled(const ToolChain &TC,
         << A->getSpelling() << V << Triple.getTriple();
   }
   return EnableTLSDESC;
+}
+
+void tools::addDTLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
+                            llvm::opt::ArgStringList &CmdArgs) {
+  if (Arg *A = Args.getLastArg(options::OPT_fthinlto_distributor_EQ)) {
+    CmdArgs.push_back(
+        Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
+    const Driver &D = ToolChain.getDriver();
+    CmdArgs.push_back(Args.MakeArgString("--thinlto-remote-compiler=" +
+                                         Twine(D.getClangProgramPath())));
+    if (auto *PA = D.getPrependArg())
+      CmdArgs.push_back(Args.MakeArgString(
+          "--thinlto-remote-compiler-prepend-arg=" + Twine(PA)));
+
+    for (const auto &A :
+         Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
+      CmdArgs.push_back(Args.MakeArgString("--thinlto-distributor-arg=" + A));
+  }
 }
 
 void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
@@ -1060,27 +1106,14 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash + "mcpu=" + CPU));
 
-  if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
-    // The optimization level matches
-    // CompilerInvocation.cpp:getOptimizationLevel().
-    StringRef OOpt;
-    if (A->getOption().matches(options::OPT_O4) ||
-        A->getOption().matches(options::OPT_Ofast))
-      OOpt = "3";
-    else if (A->getOption().matches(options::OPT_O)) {
-      OOpt = A->getValue();
-      if (OOpt == "g")
-        OOpt = "1";
-      else if (OOpt == "s" || OOpt == "z")
-        OOpt = "2";
-    } else if (A->getOption().matches(options::OPT_O0))
-      OOpt = "0";
-    if (!OOpt.empty()) {
+  if (Args.getLastArg(options::OPT_O_Group)) {
+    unsigned OptimizationLevel =
+        getOptimizationLevel(Args, InputKind(), D.getDiags());
+    CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash +
+                                         "O" + Twine(OptimizationLevel)));
+    if (IsAMDGCN)
       CmdArgs.push_back(
-          Args.MakeArgString(Twine(PluginOptPrefix) + ExtraDash + "O" + OOpt));
-      if (IsAMDGCN)
-        CmdArgs.push_back(Args.MakeArgString(Twine("--lto-CGO") + OOpt));
-    }
+          Args.MakeArgString(Twine("--lto-CGO") + Twine(OptimizationLevel)));
   }
 
   if (Args.hasArg(options::OPT_gsplit_dwarf)) {
@@ -1218,6 +1251,15 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                                            "-split-machine-functions"));
   }
 
+  if (auto *A =
+          Args.getLastArg(options::OPT_fpartition_static_data_sections,
+                          options::OPT_fno_partition_static_data_sections)) {
+    if (A->getOption().matches(options::OPT_fpartition_static_data_sections)) {
+      CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
+                                           "-partition-static-data-sections"));
+    }
+  }
+
   if (Arg *A = getLastProfileSampleUseArg(Args)) {
     StringRef FName = A->getValue();
     if (!llvm::sys::fs::exists(FName))
@@ -1271,6 +1313,11 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                    options::OPT_fno_stack_size_section, false))
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-stack-size-section"));
+
+  if (Args.hasFlag(options::OPT_fexperimental_call_graph_section,
+                   options::OPT_fno_experimental_call_graph_section, false))
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "-call-graph-section"));
 
   // Setup statistics file output.
   SmallString<128> StatsFile = getStatsFileName(Args, Output, *Input, D);
@@ -1345,16 +1392,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-time-passes"));
 
-  if (Arg *A = Args.getLastArg(options::OPT_fthinlto_distributor_EQ)) {
-    CmdArgs.push_back(
-        Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
-    CmdArgs.push_back(
-        Args.MakeArgString("--thinlto-remote-compiler=" +
-                           Twine(ToolChain.getDriver().getClangProgramPath())));
-
-    for (auto A : Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
-      CmdArgs.push_back(Args.MakeArgString("--thinlto-distributor-arg=" + A));
-  }
+  addDTLTOOptions(ToolChain, Args, CmdArgs);
 }
 
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
@@ -1719,7 +1757,7 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     if (SanArgs.needsFuzzerInterceptors())
       addSanitizerRuntime(TC, Args, CmdArgs, "fuzzer_interceptors", false,
                           true);
-    if (!Args.hasArg(clang::driver::options::OPT_nostdlibxx)) {
+    if (!Args.hasArg(options::OPT_nostdlibxx)) {
       bool OnlyLibstdcxxStatic = Args.hasArg(options::OPT_static_libstdcxx) &&
                                  !Args.hasArg(options::OPT_static);
       if (OnlyLibstdcxxStatic)
@@ -3017,57 +3055,59 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
           << LibOmpTargetName << ArchPrefix;
   }
 }
-void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
-                                 const llvm::opt::ArgList &Args,
-                                 llvm::opt::ArgStringList &CmdArgs) {
-  if ((C.getActiveOffloadKinds() & Action::OFK_HIP) &&
-      (!Args.hasArg(options::OPT_nostdlib) ||
-       TC.getTriple().isKnownWindowsMSVCEnvironment()) &&
-      !Args.hasArg(options::OPT_no_hip_rt) && !Args.hasArg(options::OPT_r)) {
-    TC.AddHIPRuntimeLibArgs(Args, CmdArgs);
-  } else {
-    // Claim "no HIP libraries" arguments if any
-    for (auto *Arg : Args.filtered(options::OPT_no_hip_rt)) {
-      Arg->claim();
-    }
-  }
-}
 
 void tools::addOpenCLBuiltinsLib(const Driver &D,
                                  const llvm::opt::ArgList &DriverArgs,
                                  llvm::opt::ArgStringList &CC1Args) {
-  // Check whether user specifies a libclc bytecode library
   const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib_EQ);
   if (!A)
     return;
 
-  // Find device libraries in <LLVM_DIR>/lib/clang/<ver>/lib/libclc/
-  SmallString<128> LibclcPath(D.ResourceDir);
-  llvm::sys::path::append(LibclcPath, "lib", "libclc");
-
-  // If the namespec is of the form :filename, search for that file.
+  // If the namespec is of the form :filename we use it exactly.
   StringRef LibclcNamespec(A->getValue());
   bool FilenameSearch = LibclcNamespec.consume_front(":");
-  SmallString<128> LibclcTargetFile(LibclcNamespec);
-
-  if (FilenameSearch && llvm::sys::fs::exists(LibclcTargetFile)) {
-    CC1Args.push_back("-mlink-builtin-bitcode");
-    CC1Args.push_back(DriverArgs.MakeArgString(LibclcTargetFile));
-  } else {
-    // Search the library paths for the file
-    if (!FilenameSearch)
-      LibclcTargetFile += ".bc";
-
-    llvm::sys::path::append(LibclcPath, LibclcTargetFile);
-    if (llvm::sys::fs::exists(LibclcPath)) {
+  if (FilenameSearch) {
+    SmallString<128> LibclcFile(LibclcNamespec);
+    if (llvm::sys::fs::exists(LibclcFile)) {
       CC1Args.push_back("-mlink-builtin-bitcode");
-      CC1Args.push_back(DriverArgs.MakeArgString(LibclcPath));
-    } else {
-      // Since the user requested a library, if we haven't one then report an
-      // error.
-      D.Diag(diag::err_drv_libclc_not_found) << LibclcTargetFile;
+      CC1Args.push_back(DriverArgs.MakeArgString(LibclcFile));
+      return;
+    }
+    D.Diag(diag::err_drv_libclc_not_found) << LibclcFile;
+    return;
+  }
+
+  // The OpenCL libraries are stored in <ResourceDir>/lib/<triple>.
+  SmallString<128> BasePath(D.ResourceDir);
+  llvm::sys::path::append(BasePath, "lib");
+  llvm::sys::path::append(BasePath, D.getTargetTriple());
+
+  // First check for a CPU-specific library in <ResourceDir>/lib/<triple>/<CPU>.
+  // TODO: Factor this into common logic that checks for valid subtargets.
+  if (const Arg *CPUArg =
+          DriverArgs.getLastArg(options::OPT_mcpu_EQ, options::OPT_march_EQ)) {
+    StringRef CPU = CPUArg->getValue();
+    if (!CPU.empty()) {
+      SmallString<128> CPUPath(BasePath);
+      llvm::sys::path::append(CPUPath, CPU, "libclc.bc");
+      if (llvm::sys::fs::exists(CPUPath)) {
+        CC1Args.push_back("-mlink-builtin-bitcode");
+        CC1Args.push_back(DriverArgs.MakeArgString(CPUPath));
+        return;
+      }
     }
   }
+
+  // Fall back to the generic library for the triple.
+  SmallString<128> GenericPath(BasePath);
+  llvm::sys::path::append(GenericPath, "libclc.bc");
+  if (llvm::sys::fs::exists(GenericPath)) {
+    CC1Args.push_back("-mlink-builtin-bitcode");
+    CC1Args.push_back(DriverArgs.MakeArgString(GenericPath));
+    return;
+  }
+
+  D.Diag(diag::err_drv_libclc_not_found) << "libclc.bc";
 }
 
 void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
@@ -3272,6 +3312,41 @@ bool tools::shouldRecordCommandLine(const ToolChain &TC,
   return FRecordCommandLine || TC.UseDwarfDebugFlags() || GRecordCommandLine;
 }
 
+void tools::renderGlobalISelOptions(const Driver &D, const ArgList &Args,
+                                    ArgStringList &CmdArgs,
+                                    const llvm::Triple &Triple) {
+  if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
+                               options::OPT_fno_global_isel)) {
+    CmdArgs.push_back("-mllvm");
+    if (A->getOption().matches(options::OPT_fglobal_isel)) {
+      CmdArgs.push_back("-global-isel=1");
+
+      // GISel is on by default on AArch64 -O0, so don't bother adding
+      // the fallback remarks for it. Other combinations will add a warning of
+      // some kind.
+      bool IsArchSupported = Triple.getArch() == llvm::Triple::aarch64;
+      bool IsOptLevelSupported = false;
+
+      Arg *A = Args.getLastArg(options::OPT_O_Group);
+      if (IsArchSupported) {
+        if (!A || A->getOption().matches(options::OPT_O0))
+          IsOptLevelSupported = true;
+      }
+      if (!IsArchSupported || !IsOptLevelSupported) {
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back("-global-isel-abort=2");
+
+        if (!IsArchSupported)
+          D.Diag(diag::warn_drv_global_isel_incomplete) << Triple.getArchName();
+        else
+          D.Diag(diag::warn_drv_global_isel_incomplete_opt);
+      }
+    } else {
+      CmdArgs.push_back("-global-isel=0");
+    }
+  }
+}
+
 void tools::renderCommonIntegerOverflowOptions(const ArgList &Args,
                                                ArgStringList &CmdArgs) {
   bool use_fwrapv = false;
@@ -3367,169 +3442,6 @@ void tools::handleInterchangeLoopsArgs(const ArgList &Args,
     CmdArgs.push_back("-floop-interchange");
 }
 
-// Parse -mprefer-vector-width=. Return the Value string if well-formed.
-// Otherwise, return an empty string and issue a diagnosic message if needed.
-StringRef tools::parseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
-                                               const llvm::opt::ArgList &Args) {
-  Arg *A = Args.getLastArg(clang::driver::options::OPT_mprefer_vector_width_EQ);
-  if (!A)
-    return "";
-
-  StringRef Value = A->getValue();
-  unsigned Width LLVM_ATTRIBUTE_UNINITIALIZED;
-
-  // Only "none" and Integer values are accepted by
-  // -mprefer-vector-width=<value>.
-  if (Value != "none" && Value.getAsInteger(10, Width)) {
-    Diags.Report(clang::diag::err_drv_invalid_value)
-        << A->getOption().getName() << Value;
-    return "";
-  }
-
-  return Value;
-}
-
-// This is a helper function for validating the optional refinement step
-// parameter in reciprocal argument strings. Return false if there is an error
-// parsing the refinement step. Otherwise, return true and set the Position
-// of the refinement step in the input string.
-static bool getRefinementStep(StringRef In, clang::DiagnosticsEngine &Diags,
-                              const Arg &A, size_t &Position) {
-  const char RefinementStepToken = ':';
-  Position = In.find(RefinementStepToken);
-  if (Position != StringRef::npos) {
-    StringRef Option = A.getOption().getName();
-    StringRef RefStep = In.substr(Position + 1);
-    // Allow exactly one numeric character for the additional refinement
-    // step parameter. This is reasonable for all currently-supported
-    // operations and architectures because we would expect that a larger value
-    // of refinement steps would cause the estimate "optimization" to
-    // under-perform the native operation. Also, if the estimate does not
-    // converge quickly, it probably will not ever converge, so further
-    // refinement steps will not produce a better answer.
-    if (RefStep.size() != 1) {
-      Diags.Report(diag::err_drv_invalid_value) << Option << RefStep;
-      return false;
-    }
-    char RefStepChar = RefStep[0];
-    if (RefStepChar < '0' || RefStepChar > '9') {
-      Diags.Report(diag::err_drv_invalid_value) << Option << RefStep;
-      return false;
-    }
-  }
-  return true;
-}
-
-// Parse -mrecip. Return the Value string if well-formed.
-// Otherwise, return an empty string and issue a diagnosic message if needed.
-StringRef tools::parseMRecipOption(clang::DiagnosticsEngine &Diags,
-                                   const ArgList &Args) {
-  StringRef DisabledPrefixIn = "!";
-  StringRef DisabledPrefixOut = "!";
-  StringRef EnabledPrefixOut = "";
-  StringRef Out = "";
-
-  Arg *A = Args.getLastArg(options::OPT_mrecip, options::OPT_mrecip_EQ);
-  if (!A)
-    return "";
-
-  unsigned NumOptions = A->getNumValues();
-  if (NumOptions == 0) {
-    // No option is the same as "all".
-    return "all";
-  }
-
-  // Pass through "all", "none", or "default" with an optional refinement step.
-  if (NumOptions == 1) {
-    StringRef Val = A->getValue(0);
-    size_t RefStepLoc;
-    if (!getRefinementStep(Val, Diags, *A, RefStepLoc))
-      return "";
-    StringRef ValBase = Val.slice(0, RefStepLoc);
-    if (ValBase == "all" || ValBase == "none" || ValBase == "default") {
-      return Val;
-    }
-  }
-
-  // Each reciprocal type may be enabled or disabled individually.
-  // Check each input value for validity, concatenate them all back together,
-  // and pass through.
-
-  llvm::StringMap<bool> OptionStrings;
-  OptionStrings.insert(std::make_pair("divd", false));
-  OptionStrings.insert(std::make_pair("divf", false));
-  OptionStrings.insert(std::make_pair("divh", false));
-  OptionStrings.insert(std::make_pair("vec-divd", false));
-  OptionStrings.insert(std::make_pair("vec-divf", false));
-  OptionStrings.insert(std::make_pair("vec-divh", false));
-  OptionStrings.insert(std::make_pair("sqrtd", false));
-  OptionStrings.insert(std::make_pair("sqrtf", false));
-  OptionStrings.insert(std::make_pair("sqrth", false));
-  OptionStrings.insert(std::make_pair("vec-sqrtd", false));
-  OptionStrings.insert(std::make_pair("vec-sqrtf", false));
-  OptionStrings.insert(std::make_pair("vec-sqrth", false));
-
-  for (unsigned i = 0; i != NumOptions; ++i) {
-    StringRef Val = A->getValue(i);
-
-    bool IsDisabled = Val.starts_with(DisabledPrefixIn);
-    // Ignore the disablement token for string matching.
-    if (IsDisabled)
-      Val = Val.substr(1);
-
-    size_t RefStep;
-    if (!getRefinementStep(Val, Diags, *A, RefStep))
-      return "";
-
-    StringRef ValBase = Val.slice(0, RefStep);
-    llvm::StringMap<bool>::iterator OptionIter = OptionStrings.find(ValBase);
-    if (OptionIter == OptionStrings.end()) {
-      // Try again specifying float suffix.
-      OptionIter = OptionStrings.find(ValBase.str() + 'f');
-      if (OptionIter == OptionStrings.end()) {
-        // The input name did not match any known option string.
-        Diags.Report(diag::err_drv_unknown_argument) << Val;
-        return "";
-      }
-      // The option was specified without a half or float or double suffix.
-      // Make sure that the double or half entry was not already specified.
-      // The float entry will be checked below.
-      if (OptionStrings[ValBase.str() + 'd'] ||
-          OptionStrings[ValBase.str() + 'h']) {
-        Diags.Report(diag::err_drv_invalid_value)
-            << A->getOption().getName() << Val;
-        return "";
-      }
-    }
-
-    if (OptionIter->second == true) {
-      // Duplicate option specified.
-      Diags.Report(diag::err_drv_invalid_value)
-          << A->getOption().getName() << Val;
-      return "";
-    }
-
-    // Mark the matched option as found. Do not allow duplicate specifiers.
-    OptionIter->second = true;
-
-    // If the precision was not specified, also mark the double and half entry
-    // as found.
-    if (ValBase.back() != 'f' && ValBase.back() != 'd' &&
-        ValBase.back() != 'h') {
-      OptionStrings[ValBase.str() + 'd'] = true;
-      OptionStrings[ValBase.str() + 'h'] = true;
-    }
-
-    // Build the output string.
-    StringRef Prefix = IsDisabled ? DisabledPrefixOut : EnabledPrefixOut;
-    Out = Args.MakeArgString(Out + Prefix + Val);
-    if (i != NumOptions - 1)
-      Out = Args.MakeArgString(Out + ",");
-  }
-
-  return Out;
-}
-
 std::string tools::complexRangeKindToStr(LangOptions::ComplexRangeKind Range) {
   switch (Range) {
   case LangOptions::ComplexRangeKind::CX_Full:
@@ -3605,4 +3517,29 @@ void tools::setComplexRange(const Driver &D, StringRef NewOpt,
     emitComplexRangeDiag(D, LastOpt, Range, NewOpt, NewRange);
   LastOpt = NewOpt;
   Range = NewRange;
+}
+
+void tools::constructLLVMLinkCommand(Compilation &C, const Tool &T,
+                                     const JobAction &JA,
+                                     const InputInfoList &JobInputs,
+                                     const ArgStringList &LinkerInputs,
+                                     const InputInfo &Output,
+                                     const llvm::opt::ArgList &Args,
+                                     const char *OutputFilename) {
+  // Construct llvm-link command.
+  // The output from llvm-link is a bitcode file.
+
+  assert(!LinkerInputs.empty() && !JobInputs.empty() &&
+         "Must have at least one input.");
+
+  ArgStringList LlvmLinkArgs(
+      {"-o", OutputFilename ? OutputFilename : Output.getFilename()});
+
+  LlvmLinkArgs.append(LinkerInputs);
+
+  const ToolChain &TC = T.getToolChain();
+  const char *LlvmLink = Args.MakeArgString(TC.GetProgramPath("llvm-link"));
+  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
+                                         LlvmLink, LlvmLinkArgs, JobInputs,
+                                         Output));
 }

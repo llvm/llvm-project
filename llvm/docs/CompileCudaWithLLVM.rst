@@ -36,7 +36,7 @@ CUDA installation on a handful of common Linux distributions, but in general the
 most reliable way to make it work is to install CUDA in a single directory from
 NVIDIA's `.run` package and specify its location via `--cuda-path=...` argument.
 
-CUDA compilation is supported on Linux. Compilation on MacOS and Windows may or
+CUDA compilation is supported on Linux. Compilation on macOS and Windows may or
 may not work and currently have no maintainers.
 
 Invoking clang
@@ -64,7 +64,7 @@ brackets as described below:
   y[2] = 6
   y[3] = 8
 
-On MacOS, replace `-lcudart_static` with `-lcudart`; otherwise, you may get
+On macOS, replace `-lcudart_static` with `-lcudart`; otherwise, you may get
 "CUDA driver version is insufficient for CUDA runtime version" errors when you
 run your program.
 

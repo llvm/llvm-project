@@ -624,6 +624,52 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, ptr n
   ret void
 }
 
+define i32 @PR164107(<16 x i1> %0) {
+; AVX1-LABEL: PR164107:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsllw $15, %xmm0, %xmm0
+; AVX1-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX1-NEXT:    vpmovsxwq %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    ret{{[l|q]}}
+;
+; AVX2-LABEL: PR164107:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastb %xmm0, %xmm0
+; AVX2-NEXT:    vpsllw $15, %xmm0, %xmm0
+; AVX2-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX2-NEXT:    vpmovsxwq %xmm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: PR164107:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
+; AVX512-NEXT:    vpslld $31, %zmm0, %zmm0
+; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
+; AVX512-NEXT:    vpbroadcastq %xmm0, %zmm0
+; AVX512-NEXT:    vptestmq %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
+; AVX512-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
+; AVX512-NEXT:    vpbroadcastw %xmm0, %xmm0
+; AVX512-NEXT:    vpmovsxwq %xmm0, %zmm0
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    ret{{[l|q]}}
+  %cmp = shufflevector <16 x i1> %0, <16 x i1> zeroinitializer, <16 x i32> zeroinitializer
+  %sext = sext <16 x i1> %cmp to <16 x i64>
+  %bc.1 = bitcast <16 x i64> %sext to <64 x i16>
+  %vecinit15.i = shufflevector <64 x i16> %bc.1, <64 x i16> zeroinitializer, <16 x i32> <i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56>
+  %conv16.i = sext <16 x i16> %vecinit15.i to <16 x i64>
+  %bc.2 = bitcast <16 x i64> %conv16.i to <32 x i32>
+  %conv22.i = extractelement <32 x i32> %bc.2, i64 4
+  ret i32 %conv22.i
+}
+
 define <4 x i64> @concat_self_v4i64(<2 x i64> %x) {
 ; AVX1-LABEL: concat_self_v4i64:
 ; AVX1:       # %bb.0:

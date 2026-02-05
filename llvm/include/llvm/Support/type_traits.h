@@ -15,7 +15,6 @@
 
 #include "llvm/Support/Compiler.h"
 #include <type_traits>
-#include <utility>
 
 namespace llvm {
 

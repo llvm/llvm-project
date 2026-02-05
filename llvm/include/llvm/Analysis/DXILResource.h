@@ -210,6 +210,14 @@ public:
   AnyResourceExtType(const AnyResourceExtType &) = delete;
   AnyResourceExtType &operator=(const AnyResourceExtType &) = delete;
 
+  Type *getResourceType() const {
+    // Sampler and feedback resources do not have an underlying type.
+    if (isa<SamplerExtType>(this) || isa<FeedbackTextureExtType>(this))
+      return nullptr;
+    // All other resources store the type in a parameter.
+    return getTypeParameter(0);
+  }
+
   static bool classof(const TargetExtType *T) {
     return isa<RawBufferExtType>(T) || isa<TypedBufferExtType>(T) ||
            isa<TextureExtType>(T) || isa<MSTextureExtType>(T) ||
@@ -237,6 +245,25 @@ public:
 
   static bool classof(const TargetExtType *T) {
     return T->getName() == "dx.Layout";
+  }
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
+/// The dx.Padding target extension type
+///
+/// `target("dx.Padding", NumBytes)`
+class PaddingExtType : public TargetExtType {
+public:
+  PaddingExtType() = delete;
+  PaddingExtType(const PaddingExtType &) = delete;
+  PaddingExtType &operator=(const PaddingExtType &) = delete;
+
+  unsigned getNumBytes() const { return getIntParameter(0); }
+
+  static bool classof(const TargetExtType *T) {
+    return T->getName() == "dx.Padding";
   }
   static bool classof(const Type *T) {
     return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
@@ -274,6 +301,7 @@ public:
 
   struct TypedInfo {
     dxil::ElementType ElementTy;
+    dxil::ElementType DXILStorageTy;
     uint32_t ElementCount;
 
     bool operator==(const TypedInfo &RHS) const {

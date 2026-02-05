@@ -63,6 +63,8 @@
 # LLVM: Type: SHT_LLVM_PART_PHDR
 # LLVM: Name: .llvm.lto
 # LLVM: Type: SHT_LLVM_LTO
+# LLVM: Name: .llvm.callgraph
+# LLVM: Type: SHT_LLVM_CALL_GRAPH
 # LLVM: Name: gnu_sframe
 # LLVM: Type: SHT_GNU_SFRAME
 # LLVM: Name: gnu_attributes
@@ -127,6 +129,7 @@
 # GNU-NEXT: part1                   LLVM_PART_EHDR
 # GNU-NEXT: .phdrs                  LLVM_PART_PHDR
 # GNU-NEXT: .llvm.lto               LLVM_LTO
+# GNU-NEXT: .llvm.callgraph         LLVM_CALL_GRAPH
 # GNU-NEXT: gnu_sframe              SFRAME
 # GNU-NEXT: gnu_attributes          ATTRIBUTES
 # GNU-NEXT: gnu_hash                GNU_HASH
@@ -218,6 +221,8 @@ Sections:
     Type: SHT_LLVM_PART_PHDR
   - Name: .llvm.lto
     Type: SHT_LLVM_LTO
+  - Name: .llvm.callgraph
+    Type: SHT_LLVM_CALL_GRAPH
   - Name: gnu_sframe
     Type: SHT_GNU_SFRAME
   - Name: gnu_attributes

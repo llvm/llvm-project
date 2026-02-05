@@ -34,8 +34,8 @@ void populateSPIRVGLCanonicalizationPatterns(RewritePatternSet &results) {
               ConvertComparisonIntoClamp2_SPIRV_SLessThanOp,
               ConvertComparisonIntoClamp2_SPIRV_SLessThanEqualOp,
               ConvertComparisonIntoClamp2_SPIRV_ULessThanOp,
-              ConvertComparisonIntoClamp2_SPIRV_ULessThanEqualOp,
-              ConvertGLLengthToGLFAbs>(results.getContext());
+              ConvertComparisonIntoClamp2_SPIRV_ULessThanEqualOp>(
+      results.getContext());
 }
 } // namespace spirv
 } // namespace mlir

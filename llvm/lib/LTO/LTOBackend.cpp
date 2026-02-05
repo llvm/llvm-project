@@ -17,6 +17,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -29,8 +30,8 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -73,6 +74,12 @@ static cl::opt<bool> ThinLTOAssumeMerged(
     cl::desc("Assume the input has already undergone ThinLTO function "
              "importing and the other pre-optimization pipeline changes."));
 
+static cl::list<std::string>
+    SaveModulesList("filter-save-modules", cl::value_desc("module names"),
+                    cl::desc("Only save bitcode for module whose name without "
+                             "path matches this for -save-temps options"),
+                    cl::CommaSeparated, cl::Hidden);
+
 namespace llvm {
 extern cl::opt<bool> NoPGOWarnMismatch;
 }
@@ -101,7 +108,17 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
   auto setHook = [&](std::string PathSuffix, ModuleHookFn &Hook) {
     // Keep track of the hook provided by the linker, which also needs to run.
     ModuleHookFn LinkerHook = Hook;
-    Hook = [=](unsigned Task, const Module &M) {
+    Hook = [=, SaveModNames = llvm::SmallVector<std::string, 1>(
+                   SaveModulesList.begin(), SaveModulesList.end())](
+               unsigned Task, const Module &M) {
+      // If SaveModulesList is not empty, only do save-temps if the module's
+      // filename (without path) matches a name in the list.
+      if (!SaveModNames.empty() &&
+          !llvm::is_contained(
+              SaveModNames,
+              std::string(llvm::sys::path::filename(M.getName()))))
+        return false;
+
       // If the linker's hook returned false, we need to pass that result
       // through.
       if (LinkerHook && !LinkerHook(Task, M))
@@ -278,7 +295,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   RegisterPassPlugins(Conf.PassPlugins, PB);
 
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
-      new TargetLibraryInfoImpl(TM->getTargetTriple()));
+      new TargetLibraryInfoImpl(TM->getTargetTriple(), TM->Options.VecLib));
   if (Conf.Freestanding)
     TLII->disableAllFunctions();
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
@@ -444,8 +461,13 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   // keep the pointer and may use it until their destruction. See #138194.
   {
     legacy::PassManager CodeGenPasses;
-    TargetLibraryInfoImpl TLII(Mod.getTargetTriple());
+    TargetLibraryInfoImpl TLII(Mod.getTargetTriple(), TM->Options.VecLib);
     CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
+    CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
+        Mod.getTargetTriple(), TM->Options.ExceptionModel,
+        TM->Options.FloatABIType, TM->Options.EABIVersion,
+        TM->Options.MCOptions.ABIName, TM->Options.VecLib));
+
     // No need to make index available if the module is empty.
     // In theory these passes should not use the index for an empty
     // module, however, this guards against doing any unnecessary summary-based
@@ -726,7 +748,6 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   }
 
   // Do this after any importing so that imported code is updated.
-  updateMemProfAttributes(Mod, CombinedIndex);
   updatePublicTypeTestCalls(Mod, CombinedIndex.withWholeProgramVisibility());
 
   if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
@@ -771,11 +792,11 @@ bool lto::initImportList(const Module &M,
   // via a WriteIndexesThinBackend.
   for (const auto &GlobalList : CombinedIndex) {
     // Ignore entries for undefined references.
-    if (GlobalList.second.SummaryList.empty())
+    if (GlobalList.second.getSummaryList().empty())
       continue;
 
     auto GUID = GlobalList.first;
-    for (const auto &Summary : GlobalList.second.SummaryList) {
+    for (const auto &Summary : GlobalList.second.getSummaryList()) {
       // Skip the summaries for the importing module. These are included to
       // e.g. record required linkage changes.
       if (Summary->modulePath() == M.getModuleIdentifier())

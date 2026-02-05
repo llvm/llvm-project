@@ -34,11 +34,9 @@ Location DebugImporter::translateFuncLocation(llvm::Function *func) {
     return UnknownLoc::get(context);
 
   // Add a fused location to link the subprogram information.
-  StringAttr funcName = StringAttr::get(context, subprogram->getName());
   StringAttr fileName = StringAttr::get(context, subprogram->getFilename());
   return FusedLocWith<DISubprogramAttr>::get(
-      {NameLoc::get(funcName),
-       FileLineColLoc::get(fileName, subprogram->getLine(), /*column=*/0)},
+      {FileLineColLoc::get(fileName, subprogram->getLine(), /*column=*/0)},
       translate(subprogram), context);
 }
 
@@ -106,7 +104,8 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
   return DIDerivedTypeAttr::get(
       context, node->getTag(), getStringAttrOrNull(node->getRawName()),
       baseType, node->getSizeInBits(), node->getAlignInBits(),
-      node->getOffsetInBits(), node->getDWARFAddressSpace(), extraData);
+      node->getOffsetInBits(), node->getDWARFAddressSpace(),
+      symbolizeDIFlags(node->getFlags()).value_or(DIFlags::Zero), extraData);
 }
 
 DIStringTypeAttr DebugImporter::translateImpl(llvm::DIStringType *node) {

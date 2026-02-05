@@ -369,12 +369,6 @@ bool RedeclarableTemplateDecl::loadLazySpecializationsImpl(
   if (!ExternalSource)
     return false;
 
-  // If TPL is not null, it implies that we're loading specializations for
-  // partial templates. We need to load all specializations in such cases.
-  if (TPL)
-    return ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(),
-                                                       /*OnlyPartial=*/false);
-
   return ExternalSource->LoadExternalSpecializations(this->getCanonicalDecl(),
                                                      Args);
 }
@@ -1670,20 +1664,25 @@ clang::getReplacedTemplateParameter(Decl *D, unsigned Index) {
     auto P = CTSD->getSpecializedTemplateOrPartial();
     TemplateParameterList *TPL;
     if (const auto *CTPSD =
-            dyn_cast<ClassTemplatePartialSpecializationDecl *>(P))
+            dyn_cast<ClassTemplatePartialSpecializationDecl *>(P)) {
       TPL = CTPSD->getTemplateParameters();
-    else
-      TPL = cast<ClassTemplateDecl *>(P)->getTemplateParameters();
+      // FIXME: Obtain Args deduced for the partial specialization.
+      return {TPL->getParam(Index), {}};
+    }
+    TPL = cast<ClassTemplateDecl *>(P)->getTemplateParameters();
     return {TPL->getParam(Index), CTSD->getTemplateArgs()[Index]};
   }
   case Decl::Kind::VarTemplateSpecialization: {
     const auto *VTSD = cast<VarTemplateSpecializationDecl>(D);
     auto P = VTSD->getSpecializedTemplateOrPartial();
     TemplateParameterList *TPL;
-    if (const auto *VTPSD = dyn_cast<VarTemplatePartialSpecializationDecl *>(P))
+    if (const auto *VTPSD =
+            dyn_cast<VarTemplatePartialSpecializationDecl *>(P)) {
       TPL = VTPSD->getTemplateParameters();
-    else
-      TPL = cast<VarTemplateDecl *>(P)->getTemplateParameters();
+      // FIXME: Obtain Args deduced for the partial specialization.
+      return {TPL->getParam(Index), {}};
+    }
+    TPL = cast<VarTemplateDecl *>(P)->getTemplateParameters();
     return {TPL->getParam(Index), VTSD->getTemplateArgs()[Index]};
   }
   case Decl::Kind::ClassTemplatePartialSpecialization:

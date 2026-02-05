@@ -34,7 +34,8 @@ class IsConstantExprHelper
     : public AllTraverse<IsConstantExprHelper<INVARIANT>, true> {
 public:
   using Base = AllTraverse<IsConstantExprHelper, true>;
-  IsConstantExprHelper() : Base{*this} {}
+  explicit IsConstantExprHelper(const FoldingContext *c)
+      : Base{*this}, context_{c} {}
   using Base::operator();
 
   // A missing expression is not considered to be constant.
@@ -91,10 +92,33 @@ public:
                 !sym.attrs().test(semantics::Attr::VALUE)));
   }
 
+  bool operator()(const ImpliedDoIndex &ido) const {
+    return acImpliedDos_.find(ido.name) != acImpliedDos_.end() || !context_ ||
+        context_->GetImpliedDo(ido.name).has_value();
+  }
+  template <typename T> bool operator()(const ImpliedDo<T> &ido) {
+    if (!(*this)(ido.lower()) || !(*this)(ido.upper()) ||
+        !(*this)(ido.stride())) {
+      return false;
+    }
+    bool deleteAfter{acImpliedDos_.insert(ido.name()).second};
+    bool result{true};
+    for (const auto &vals : ido.values()) {
+      result &= (*this)(vals);
+    }
+    if (deleteAfter) {
+      acImpliedDos_.erase(ido.name());
+    }
+    return result;
+  }
+
 private:
   bool IsConstantStructureConstructorComponent(
       const Symbol &, const Expr<SomeType> &) const;
   bool IsConstantExprShape(const Shape &) const;
+
+  std::set<parser::CharBlock> acImpliedDos_;
+  const FoldingContext *context_{nullptr};
 };
 
 template <bool INVARIANT>
@@ -103,7 +127,8 @@ bool IsConstantExprHelper<INVARIANT>::IsConstantStructureConstructorComponent(
   if (IsAllocatable(component)) {
     return IsNullObjectPointer(&expr);
   } else if (IsPointer(component)) {
-    return IsNullPointerOrAllocatable(&expr) || IsInitialDataTarget(expr) ||
+    return IsNullPointerOrAllocatable(&expr) ||
+        IsInitialDataTarget(expr, /*messages=*/nullptr, context_) ||
         IsInitialProcedureTarget(expr);
   } else {
     return (*this)(expr);
@@ -175,21 +200,27 @@ bool IsConstantExprHelper<INVARIANT>::IsConstantExprShape(
   return true;
 }
 
-template <typename A> bool IsConstantExpr(const A &x) {
-  return IsConstantExprHelper<false>{}(x);
+template <typename A> bool IsConstantExpr(const A &x, const FoldingContext *c) {
+  return IsConstantExprHelper<false>{c}(x);
 }
-template bool IsConstantExpr(const Expr<SomeType> &);
-template bool IsConstantExpr(const Expr<SomeInteger> &);
-template bool IsConstantExpr(const Expr<SubscriptInteger> &);
-template bool IsConstantExpr(const StructureConstructor &);
+template bool IsConstantExpr(const Expr<SomeType> &, const FoldingContext *);
+template bool IsConstantExpr(const Expr<SomeInteger> &, const FoldingContext *);
+template bool IsConstantExpr(
+    const Expr<SubscriptInteger> &, const FoldingContext *);
+template bool IsConstantExpr(
+    const StructureConstructor &, const FoldingContext *);
 
 // IsScopeInvariantExpr()
-template <typename A> bool IsScopeInvariantExpr(const A &x) {
-  return IsConstantExprHelper<true>{}(x);
+template <typename A>
+bool IsScopeInvariantExpr(const A &x, const FoldingContext *c) {
+  return IsConstantExprHelper<true>{c}(x);
 }
-template bool IsScopeInvariantExpr(const Expr<SomeType> &);
-template bool IsScopeInvariantExpr(const Expr<SomeInteger> &);
-template bool IsScopeInvariantExpr(const Expr<SubscriptInteger> &);
+template bool IsScopeInvariantExpr(
+    const Expr<SomeType> &, const FoldingContext *);
+template bool IsScopeInvariantExpr(
+    const Expr<SomeInteger> &, const FoldingContext *);
+template bool IsScopeInvariantExpr(
+    const Expr<SubscriptInteger> &, const FoldingContext *);
 
 // IsActuallyConstant()
 struct IsActuallyConstantHelper {
@@ -207,13 +238,16 @@ struct IsActuallyConstantHelper {
   bool operator()(const StructureConstructor &x) {
     for (const auto &pair : x) {
       const Expr<SomeType> &y{pair.second.value()};
-      const auto sym{pair.first};
-      const bool compIsConstant{(*this)(y)};
       // If an allocatable component is initialized by a constant,
       // the structure constructor is not a constant.
-      if ((!compIsConstant && !IsNullPointerOrAllocatable(&y)) ||
-          (compIsConstant && IsAllocatable(sym))) {
-        return false;
+      if ((*this)(y)) {
+        if (IsAllocatable(pair.first)) {
+          return false;
+        }
+      } else {
+        if (!IsNullPointerOrAllocatable(&y)) {
+          return false;
+        }
       }
     }
     return true;
@@ -241,8 +275,9 @@ class IsInitialDataTargetHelper
 public:
   using Base = AllTraverse<IsInitialDataTargetHelper, true>;
   using Base::operator();
-  explicit IsInitialDataTargetHelper(parser::ContextualMessages *m)
-      : Base{*this}, messages_{m} {}
+  explicit IsInitialDataTargetHelper(
+      parser::ContextualMessages *m, const FoldingContext *c)
+      : Base{*this}, messages_{m}, context_{c} {}
 
   bool emittedMessage() const { return emittedMessage_; }
 
@@ -292,15 +327,16 @@ public:
   bool operator()(const StaticDataObject &) const { return false; }
   bool operator()(const TypeParamInquiry &) const { return false; }
   bool operator()(const Triplet &x) const {
-    return IsConstantExpr(x.lower()) && IsConstantExpr(x.upper()) &&
-        IsConstantExpr(x.stride());
+    return IsConstantExpr(x.lower(), context_) &&
+        IsConstantExpr(x.upper(), context_) &&
+        IsConstantExpr(x.stride(), context_);
   }
   bool operator()(const Subscript &x) const {
     return common::visit(common::visitors{
                              [&](const Triplet &t) { return (*this)(t); },
                              [&](const auto &y) {
                                return y.value().Rank() == 0 &&
-                                   IsConstantExpr(y.value());
+                                   IsConstantExpr(y.value(), context_);
                              },
                          },
         x.u);
@@ -310,8 +346,8 @@ public:
     return CheckVarOrComponent(x.GetLastSymbol()) && (*this)(x.base());
   }
   bool operator()(const Substring &x) const {
-    return IsConstantExpr(x.lower()) && IsConstantExpr(x.upper()) &&
-        (*this)(x.parent());
+    return IsConstantExpr(x.lower(), context_) &&
+        IsConstantExpr(x.upper(), context_) && (*this)(x.parent());
   }
   bool operator()(const DescriptorInquiry &) const { return false; }
   template <typename T> bool operator()(const ArrayConstructor<T> &) const {
@@ -358,13 +394,14 @@ private:
     return false;
   }
 
-  parser::ContextualMessages *messages_;
+  parser::ContextualMessages *messages_{nullptr};
+  const FoldingContext *context_{nullptr};
   bool emittedMessage_{false};
 };
 
-bool IsInitialDataTarget(
-    const Expr<SomeType> &x, parser::ContextualMessages *messages) {
-  IsInitialDataTargetHelper helper{messages};
+bool IsInitialDataTarget(const Expr<SomeType> &x,
+    parser::ContextualMessages *messages, const FoldingContext *context) {
+  IsInitialDataTargetHelper helper{messages, context};
   bool result{helper(x)};
   if (!result && messages && !helper.emittedMessage()) {
     messages->Say(
@@ -379,8 +416,11 @@ bool IsInitialProcedureTarget(const semantics::Symbol &symbol) {
       common::visitors{
           [&](const semantics::SubprogramDetails &subp) {
             return !subp.isDummy() && !subp.stmtFunction() &&
-                symbol.owner().kind() != semantics::Scope::Kind::MainProgram &&
-                symbol.owner().kind() != semantics::Scope::Kind::Subprogram;
+                ((symbol.owner().kind() !=
+                         semantics::Scope::Kind::MainProgram &&
+                     symbol.owner().kind() !=
+                         semantics::Scope::Kind::Subprogram) ||
+                    ultimate.attrs().test(semantics::Attr::EXTERNAL));
           },
           [](const semantics::SubprogramNameDetails &x) {
             return x.kind() != semantics::SubprogramKind::Internal;
@@ -729,7 +769,7 @@ public:
             x.base().GetFirstSymbol(), x.base().GetLastSymbol(), x.field())) {
       auto restorer{common::ScopedSet(inInquiry_, true)};
       return (*this)(x.base());
-    } else if (IsConstantExpr(x)) {
+    } else if (IsConstantExpr(x, &context_)) {
       return std::nullopt;
     } else {
       return "non-constant descriptor inquiry not allowed for local object";
@@ -738,7 +778,7 @@ public:
 
   Result operator()(const TypeParamInquiry &inq) const {
     if (scope_.IsDerivedType()) {
-      if (!IsConstantExpr(inq) &&
+      if (!IsConstantExpr(inq, &context_) &&
           inq.base() /* X%T, not local T */) { // C750, C754
         return "non-constant reference to a type parameter inquiry not allowed "
                "for derived type components or type parameter values";
@@ -747,7 +787,7 @@ public:
         IsInquiryAlwaysPermissible(inq.base()->GetFirstSymbol())) {
       auto restorer{common::ScopedSet(inInquiry_, true)};
       return (*this)(inq.base());
-    } else if (!IsConstantExpr(inq)) {
+    } else if (!IsConstantExpr(inq, &context_)) {
       return "non-constant type parameter inquiry not allowed for local object";
     }
     return std::nullopt;
@@ -799,7 +839,7 @@ public:
               "' not allowed for derived type components or type parameter"
               " values";
         }
-        if (inInquiry && !IsConstantExpr(x)) {
+        if (inInquiry && !IsConstantExpr(x, &context_)) {
           return "non-constant reference to inquiry intrinsic '"s +
               intrin.name +
               "' not allowed for derived type components or type"
@@ -811,7 +851,7 @@ public:
       // DescriptorInquiry operations (LBOUND) are checked elsewhere.  If a
       // call that makes it to here satisfies the requirements of a constant
       // expression (as Fortran defines it), it's fine.
-      if (IsConstantExpr(x)) {
+      if (IsConstantExpr(x, &context_)) {
         return std::nullopt;
       }
       if (intrin.name == "present") {
@@ -1304,10 +1344,12 @@ std::optional<bool> IsContiguous(const A &x, FoldingContext &context,
 std::optional<bool> IsContiguous(const ActualArgument &actual,
     FoldingContext &fc, bool namedConstantSectionsAreContiguous,
     bool firstDimensionStride1) {
-  auto *expr{actual.UnwrapExpr()};
-  return expr &&
-      IsContiguous(
-          *expr, fc, namedConstantSectionsAreContiguous, firstDimensionStride1);
+  if (auto *expr{actual.UnwrapExpr()}) {
+    return IsContiguous(
+        *expr, fc, namedConstantSectionsAreContiguous, firstDimensionStride1);
+  } else {
+    return std::nullopt;
+  }
 }
 
 template std::optional<bool> IsContiguous(const Expr<SomeType> &,
@@ -1371,7 +1413,7 @@ public:
   Result Return(parser::Message &&msg) const {
     if (severity_) {
       msg.set_severity(*severity_);
-      if (*severity_ != parser::Severity::Error) {
+      if (parser::IsWarningSeverity(*severity_)) {
         msg.set_languageFeature(feature);
       }
     }
@@ -1473,13 +1515,12 @@ public:
       const characteristics::DummyDataObject &dummyObj)
       : fc_{fc}, actual_{actual}, dummyObj_{dummyObj} {}
 
-  // Returns true, if actual and dummy have different contiguity requirements
-  bool HaveContiguityDifferences() const {
-    // Check actual contiguity, unless dummy doesn't care
+  // Returns true if dummy arg needs to be contiguous
+  bool DummyNeedsContiguity() const {
+    if (dummyObj_.ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
+      return false;
+    }
     bool dummyTreatAsArray{dummyObj_.ignoreTKR.test(common::IgnoreTKR::Rank)};
-    bool actualTreatAsContiguous{
-        dummyObj_.ignoreTKR.test(common::IgnoreTKR::Contiguous) ||
-        IsSimplyContiguous(actual_, fc_)};
     bool dummyIsExplicitShape{dummyObj_.type.IsExplicitShape()};
     bool dummyIsAssumedSize{dummyObj_.type.attrs().test(
         characteristics::TypeAndShape::Attr::AssumedSize)};
@@ -1496,32 +1537,17 @@ public:
         (dummyTreatAsArray && !dummyIsPolymorphic) || dummyIsVoidStar ||
         dummyObj_.attrs.test(
             characteristics::DummyDataObject::Attr::Contiguous)};
-    return !actualTreatAsContiguous && dummyNeedsContiguity;
+    return dummyNeedsContiguity;
   }
 
-  // Returns true, if actual and dummy have polymorphic differences
   bool HavePolymorphicDifferences() const {
-    bool dummyIsAssumedRank{dummyObj_.type.attrs().test(
-        characteristics::TypeAndShape::Attr::AssumedRank)};
-    bool actualIsAssumedRank{semantics::IsAssumedRank(actual_)};
-    bool dummyIsAssumedShape{dummyObj_.type.attrs().test(
-        characteristics::TypeAndShape::Attr::AssumedShape)};
-    bool actualIsAssumedShape{semantics::IsAssumedShape(actual_)};
-    if ((actualIsAssumedRank && dummyIsAssumedRank) ||
-        (actualIsAssumedShape && dummyIsAssumedShape)) {
-      // Assumed-rank and assumed-shape arrays are represented by descriptors,
-      // so don't need to do polymorphic check.
-    } else if (!dummyObj_.ignoreTKR.test(common::IgnoreTKR::Type)) {
-      // flang supports limited cases of passing polymorphic to non-polimorphic.
-      // These cases require temporary of non-polymorphic type. (For example,
-      // the actual argument could be polymorphic array of child type,
-      // while the dummy argument could be non-polymorphic array of parent
-      // type.)
+    if (dummyObj_.ignoreTKR.test(common::IgnoreTKR::Type)) {
+      return false;
+    }
+    if (auto actualType{
+            characteristics::TypeAndShape::Characterize(actual_, fc_)}) {
+      bool actualIsPolymorphic{actualType->type().IsPolymorphic()};
       bool dummyIsPolymorphic{dummyObj_.type.type().IsPolymorphic()};
-      auto actualType{
-          characteristics::TypeAndShape::Characterize(actual_, fc_)};
-      bool actualIsPolymorphic{
-          actualType && actualType->type().IsPolymorphic()};
       if (actualIsPolymorphic && !dummyIsPolymorphic) {
         return true;
       }
@@ -1570,28 +1596,32 @@ private:
 // procedures with explicit interface, it's expected that "dummy" is not null.
 // For procedures with implicit interface dummy may be null.
 //
+// Returns std::optional<bool> indicating whether the copy is known to be
+// needed (true) or not needed (false); returns std::nullopt if the necessity
+// of the copy is undetermined.
+//
 // Note that these copy-in and copy-out checks are done from the caller's
 // perspective, meaning that for copy-in the caller need to do the copy
 // before calling the callee. Similarly, for copy-out the caller is expected
 // to do the copy after the callee returns.
-bool MayNeedCopy(const ActualArgument *actual,
+std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     const characteristics::DummyArgument *dummy, FoldingContext &fc,
     bool forCopyOut) {
   if (!actual) {
-    return false;
+    return std::nullopt;
   }
   if (actual->isAlternateReturn()) {
-    return false;
+    return std::nullopt;
   }
   const auto *dummyObj{dummy
           ? std::get_if<characteristics::DummyDataObject>(&dummy->u)
           : nullptr};
-  const bool forCopyIn = !forCopyOut;
+  const bool forCopyIn{!forCopyOut};
   if (!evaluate::IsVariable(*actual)) {
-    // Actual argument expressions that aren’t variables are copy-in, but
-    // not copy-out.
+    // Expressions are copy-in, but not copy-out.
     return forCopyIn;
   }
+  auto maybeContigActual{IsContiguous(*actual, fc)};
   if (dummyObj) { // Explict interface
     CopyInOutExplicitInterface check{fc, *actual, *dummyObj};
     if (forCopyOut && check.HasIntentIn()) {
@@ -1614,28 +1644,25 @@ bool MayNeedCopy(const ActualArgument *actual,
     if (!check.HaveArrayOrAssumedRankArgs()) {
       return false;
     }
-    if (check.HaveContiguityDifferences()) {
-      return true;
-    }
-    if (check.HavePolymorphicDifferences()) {
-      return true;
+    if (maybeContigActual.has_value()) {
+      // We know whether actual arg is contiguous or not
+      bool isContiguousActual{maybeContigActual.value()};
+      bool actualArgNeedsCopy{
+          (!isContiguousActual || check.HavePolymorphicDifferences()) &&
+          check.DummyNeedsContiguity()};
+      return actualArgNeedsCopy;
+    } else {
+      // We don't know whether actual arg is contiguous or not
+      return check.DummyNeedsContiguity();
     }
   } else { // Implicit interface
-    if (ExtractCoarrayRef(*actual)) {
-      // Coindexed actual args may need copy-in and copy-out with implicit
-      // interface
-      return true;
-    }
-    if (!IsSimplyContiguous(*actual, fc)) {
-      // Copy-in:  actual arguments that are variables are copy-in when
-      //           non-contiguous.
-      // Copy-out: vector subscripts could refer to duplicate elements, can't
-      //           copy out.
-      return !(forCopyOut && HasVectorSubscript(*actual));
+    if (maybeContigActual.has_value()) {
+      // If known contiguous, don't copy in/out.
+      // If known non-contiguous, copy in/out.
+      return !*maybeContigActual;
     }
   }
-  // For everything else, no copy-in or copy-out
-  return false;
+  return std::nullopt;
 }
 
 } // namespace Fortran::evaluate

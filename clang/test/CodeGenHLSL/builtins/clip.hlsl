@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-pixel %s -fnative-half-type -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -finclude-default-header -triple spirv-vulkan-pixel %s -fnative-half-type -emit-llvm -o - | FileCheck %s --check-prefix=SPIRV
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.3-pixel %s -fnative-half-type -fnative-int16-type -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -finclude-default-header -triple spirv-vulkan-pixel %s -fnative-half-type -fnative-int16-type -emit-llvm -o - | FileCheck %s --check-prefix=SPIRV
 
 
 void test_scalar(float Buf) {

@@ -1073,7 +1073,7 @@ define float @test_pow_afn_f32_nnan_ninf_x_known_positive(float nofpclass(ninf n
 ; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[X:%.*]], float [[Y:%.*]]) {
 ; CHECK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[X]])
 ; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn float [[Y]], [[__LOG2]]
-; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn float @llvm.exp2.f32(float [[__YLOGX]])
+; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[__YLOGX]])
 ; CHECK-NEXT:    ret float [[__EXP2]]
 ;
   %pow = tail call afn nnan ninf float @_Z3powff(float %x, float %y)
@@ -1095,7 +1095,7 @@ define <2 x float> @test_pow_afn_v2f32_nnan_ninf_x_known_positive(<2 x float> no
 ; CHECK-SAME: (<2 x float> nofpclass(ninf nsub nnorm) [[X:%.*]], <2 x float> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn <2 x float> @llvm.log2.v2f32(<2 x float> [[X]])
 ; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn <2 x float> [[Y]], [[__LOG2]]
-; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[__YLOGX]])
+; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) <2 x float> @llvm.exp2.v2f32(<2 x float> [[__YLOGX]])
 ; CHECK-NEXT:    ret <2 x float> [[__EXP2]]
 ;
   %pow = tail call afn nnan ninf <2 x float> @_Z3powDv2_fS_(<2 x float> %x, <2 x float> %y)
@@ -1157,7 +1157,7 @@ define double @test_pow_afn_f64_nnan_ninf_x_known_positive(double nofpclass(ninf
 ; CHECK-SAME: (double nofpclass(ninf nsub nnorm) [[X:%.*]], double [[Y:%.*]]) {
 ; CHECK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn double @_Z4log2d(double [[X]])
 ; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn double [[Y]], [[__LOG2]]
-; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn double @_Z4exp2d(double [[__YLOGX]])
+; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) double @_Z4exp2d(double [[__YLOGX]])
 ; CHECK-NEXT:    ret double [[__EXP2]]
 ;
   %pow = tail call afn nnan ninf double @_Z3powdd(double %x, double %y)
@@ -1179,7 +1179,7 @@ define <2 x double> @test_pow_afn_v2f64_nnan_ninf_x_known_positive(<2 x double> 
 ; CHECK-SAME: (<2 x double> nofpclass(ninf nsub nnorm) [[X:%.*]], <2 x double> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn <2 x double> @_Z4log2Dv2_d(<2 x double> [[X]])
 ; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn <2 x double> [[Y]], [[__LOG2]]
-; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn <2 x double> @_Z4exp2Dv2_d(<2 x double> [[__YLOGX]])
+; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) <2 x double> @_Z4exp2Dv2_d(<2 x double> [[__YLOGX]])
 ; CHECK-NEXT:    ret <2 x double> [[__EXP2]]
 ;
   %pow = tail call afn nnan ninf <2 x double> @_Z3powDv2_dS_(<2 x double> %x, <2 x double> %y)
@@ -1241,7 +1241,7 @@ define half @test_pow_afn_f16_nnan_ninf_x_known_positive(half nofpclass(ninf nno
 ; CHECK-SAME: (half nofpclass(ninf nsub nnorm) [[X:%.*]], half [[Y:%.*]]) {
 ; CHECK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn half @llvm.log2.f16(half [[X]])
 ; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn half [[Y]], [[__LOG2]]
-; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn half @llvm.exp2.f16(half [[__YLOGX]])
+; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) half @llvm.exp2.f16(half [[__YLOGX]])
 ; CHECK-NEXT:    ret half [[__EXP2]]
 ;
   %pow = tail call afn nnan ninf half @_Z3powDhDh(half %x, half %y)
@@ -1263,7 +1263,7 @@ define <2 x half> @test_pow_afn_v2f16_nnan_ninf_x_known_positive(<2 x half> nofp
 ; CHECK-SAME: (<2 x half> nofpclass(ninf nsub nnorm) [[X:%.*]], <2 x half> [[Y:%.*]]) {
 ; CHECK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn <2 x half> @llvm.log2.v2f16(<2 x half> [[X]])
 ; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn <2 x half> [[Y]], [[__LOG2]]
-; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn <2 x half> @llvm.exp2.v2f16(<2 x half> [[__YLOGX]])
+; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) <2 x half> @llvm.exp2.v2f16(<2 x half> [[__YLOGX]])
 ; CHECK-NEXT:    ret <2 x half> [[__EXP2]]
 ;
   %pow = tail call afn nnan ninf <2 x half> @_Z3powDv2_DhS_(<2 x half> %x, <2 x half> %y)
@@ -2209,7 +2209,7 @@ define float @test_pow_afn_nnan_ninf_f32_known_integral_sitofp(float %x, i32 %y)
 ; CHECK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[__FABS]])
 ; CHECK-NEXT:    [[POWNI2F:%.*]] = sitofp i32 [[TMP1]] to float
 ; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn float [[__LOG2]], [[POWNI2F]]
-; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn float @llvm.exp2.f32(float [[__YLOGX]])
+; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[__YLOGX]])
 ; CHECK-NEXT:    [[__YEVEN:%.*]] = shl i32 [[TMP1]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP2]]
@@ -2297,7 +2297,7 @@ define float @test_pow_afn_nnan_ninf_f32_known_integral_uitofp(float %x, i32 %y)
 ; CHECK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[__FABS]])
 ; CHECK-NEXT:    [[POWNI2F:%.*]] = sitofp i32 [[TMP1]] to float
 ; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn float [[__LOG2]], [[POWNI2F]]
-; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn float @llvm.exp2.f32(float [[__YLOGX]])
+; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[__YLOGX]])
 ; CHECK-NEXT:    [[__YEVEN:%.*]] = shl i32 [[TMP1]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP2]]
@@ -2346,7 +2346,7 @@ define float @test_pow_afn_nnan_ninf_f32_known_integral_uitofp_i256(float %x, i2
 ; CHECK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[__FABS]])
 ; CHECK-NEXT:    [[POWNI2F:%.*]] = sitofp i32 [[TMP1]] to float
 ; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn float [[__LOG2]], [[POWNI2F]]
-; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn float @llvm.exp2.f32(float [[__YLOGX]])
+; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[__YLOGX]])
 ; CHECK-NEXT:    [[__YEVEN:%.*]] = shl i32 [[TMP1]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP2]]
@@ -2369,7 +2369,7 @@ define float @test_pow_afn_nnan_ninf_f32_known_integral_sitofp_i256(float %x, i2
 ; CHECK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[__FABS]])
 ; CHECK-NEXT:    [[POWNI2F:%.*]] = sitofp i32 [[TMP1]] to float
 ; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn float [[__LOG2]], [[POWNI2F]]
-; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn float @llvm.exp2.f32(float [[__YLOGX]])
+; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[__YLOGX]])
 ; CHECK-NEXT:    [[__YEVEN:%.*]] = shl i32 [[TMP1]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP2]]
@@ -2392,7 +2392,7 @@ define <2 x float> @test_pow_afn_nnan_ninf_v2f32_known_integral_sitofp(<2 x floa
 ; CHECK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn <2 x float> @llvm.log2.v2f32(<2 x float> [[__FABS]])
 ; CHECK-NEXT:    [[POWNI2F:%.*]] = sitofp <2 x i32> [[TMP1]] to <2 x float>
 ; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn <2 x float> [[__LOG2]], [[POWNI2F]]
-; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[__YLOGX]])
+; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) <2 x float> @llvm.exp2.v2f32(<2 x float> [[__YLOGX]])
 ; CHECK-NEXT:    [[__YEVEN:%.*]] = shl <2 x i32> [[TMP1]], splat (i32 31)
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x float> [[X]] to <2 x i32>
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and <2 x i32> [[__YEVEN]], [[TMP2]]
@@ -2441,7 +2441,7 @@ define <2 x float> @test_pow_afn_nnan_ninf_v2f32_known_integral_uitofp(<2 x floa
 ; CHECK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn <2 x float> @llvm.log2.v2f32(<2 x float> [[__FABS]])
 ; CHECK-NEXT:    [[POWNI2F:%.*]] = sitofp <2 x i32> [[TMP1]] to <2 x float>
 ; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn <2 x float> [[__LOG2]], [[POWNI2F]]
-; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn <2 x float> @llvm.exp2.v2f32(<2 x float> [[__YLOGX]])
+; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) <2 x float> @llvm.exp2.v2f32(<2 x float> [[__YLOGX]])
 ; CHECK-NEXT:    [[__YEVEN:%.*]] = shl <2 x i32> [[TMP1]], splat (i32 31)
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x float> [[X]] to <2 x i32>
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and <2 x i32> [[__YEVEN]], [[TMP2]]
@@ -2486,7 +2486,7 @@ define float @test_pow_afn_nnan_ninf_f32__known_positive_x__known_integral_sitof
 ; CHECK-NEXT:    [[Y_CAST:%.*]] = sitofp i32 [[Y]] to float
 ; CHECK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[X]])
 ; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn float [[__LOG2]], [[Y_CAST]]
-; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn float @llvm.exp2.f32(float [[__YLOGX]])
+; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[__YLOGX]])
 ; CHECK-NEXT:    ret float [[__EXP2]]
 ;
   %y.cast = sitofp i32 %y to float
@@ -2553,7 +2553,7 @@ define float @test_pow_afn_f32_nnan_ninf__y_known_integral_trunc(float %x, float
 ; CHECK-NEXT:    [[__LOG2:%.*]] = call nnan ninf afn float @llvm.log2.f32(float [[__FABS]])
 ; CHECK-NEXT:    [[POWNI2F:%.*]] = sitofp i32 [[TMP1]] to float
 ; CHECK-NEXT:    [[__YLOGX:%.*]] = fmul nnan ninf afn float [[__LOG2]], [[POWNI2F]]
-; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn float @llvm.exp2.f32(float [[__YLOGX]])
+; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn nofpclass(nan ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[__YLOGX]])
 ; CHECK-NEXT:    [[__YEVEN:%.*]] = shl i32 [[TMP1]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float [[X]] to i32
 ; CHECK-NEXT:    [[__POW_SIGN:%.*]] = and i32 [[__YEVEN]], [[TMP2]]
@@ -2640,6 +2640,44 @@ define float @test_pow_f32__y_known_integral_nearbyint(float %x, float nofpclass
 ; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4pownfi(float [[X]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret float [[POW]]
 ;
+  %y = call float @llvm.nearbyint.f32(float %y.arg)
+  %pow = tail call float @_Z3powff(float %x, float %y)
+  ret float %pow
+}
+
+define float @test_pow_f32__y_known_integral_nearbyint_assume(float %x, float %y.arg) {
+; CHECK-LABEL: define float @test_pow_f32__y_known_integral_nearbyint_assume
+; CHECK-SAME: (float [[X:%.*]], float [[Y_ARG:%.*]]) {
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.nearbyint.f32(float [[Y_ARG]])
+; CHECK-NEXT:    [[Y_FABS:%.*]] = call float @llvm.fabs.f32(float [[Y]])
+; CHECK-NEXT:    [[Y_IS_FINITE:%.*]] = fcmp one float [[Y_FABS]], 0x7FF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_IS_FINITE]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y]] to i32
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4pownfi(float [[X]], i32 [[TMP1]])
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %y = call float @llvm.nearbyint.f32(float %y.arg)
+  %y.fabs = call float @llvm.fabs.f32(float %y)
+  %y.is.finite = fcmp one float %y.fabs, 0x7FF0000000000000
+  call void @llvm.assume(i1 %y.is.finite)
+  %pow = tail call float @_Z3powff(float %x, float %y)
+  ret float %pow
+}
+
+define float @test_pow_f32__y_known_integral_nearbyint_assume_arg_input(float %x, float %y.arg) {
+; CHECK-LABEL: define float @test_pow_f32__y_known_integral_nearbyint_assume_arg_input
+; CHECK-SAME: (float [[X:%.*]], float [[Y_ARG:%.*]]) {
+; CHECK-NEXT:    [[Y_ARG_FABS:%.*]] = call float @llvm.fabs.f32(float [[Y_ARG]])
+; CHECK-NEXT:    [[IS_FINITE:%.*]] = fcmp one float [[Y_ARG_FABS]], 0x7FF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_FINITE]])
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.nearbyint.f32(float [[Y_ARG]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y]] to i32
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4pownfi(float [[X]], i32 [[TMP1]])
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %y.arg.fabs = call float @llvm.fabs.f32(float %y.arg)
+  %is.finite = fcmp one float %y.arg.fabs, 0x7FF0000000000000
+  call void @llvm.assume(i1 %is.finite)
   %y = call float @llvm.nearbyint.f32(float %y.arg)
   %pow = tail call float @_Z3powff(float %x, float %y)
   ret float %pow

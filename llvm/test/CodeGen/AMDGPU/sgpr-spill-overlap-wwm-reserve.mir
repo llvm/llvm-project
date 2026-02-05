@@ -6,7 +6,7 @@
     ret [13 x i32] poison
   }
 
-  attributes #0 = { alwaysinline nounwind memory(readwrite) "amdgpu-flat-work-group-size"="32,32" "amdgpu-memory-bound"="false" "amdgpu-unroll-threshold"="700" "amdgpu-wave-limiter"="false" "denormal-fp-math-f32"="preserve-sign" "target-cpu"="gfx1030" "target-features"=",+wavefrontsize32,+cumode,+enable-flat-scratch" "uniform-work-group-size"="false" }
+  attributes #0 = { alwaysinline nounwind memory(readwrite) "amdgpu-flat-work-group-size"="32,32" "amdgpu-memory-bound"="false" "amdgpu-unroll-threshold"="700" "amdgpu-wave-limiter"="false" "denormal-fp-math-f32"="preserve-sign" "target-cpu"="gfx1030" "target-features"="+wavefrontsize32,+cumode,+enable-flat-scratch" "uniform-work-group-size"="false" }
 ...
 ---
 

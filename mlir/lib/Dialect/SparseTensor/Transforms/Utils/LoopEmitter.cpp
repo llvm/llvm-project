@@ -43,8 +43,8 @@ using namespace mlir::sparse_tensor;
 //===----------------------------------------------------------------------===//
 
 #ifndef NDEBUG
-LLVM_ATTRIBUTE_UNUSED static void dumpIndexMemRef(OpBuilder &builder,
-                                                  Location loc, Value memref) {
+[[maybe_unused]] static void dumpIndexMemRef(OpBuilder &builder, Location loc,
+                                             Value memref) {
   memref = memref::CastOp::create(
       builder, loc, UnrankedMemRefType::get(builder.getIndexType(), 0), memref);
   createFuncCall(builder, loc, "printMemrefInd", TypeRange{},

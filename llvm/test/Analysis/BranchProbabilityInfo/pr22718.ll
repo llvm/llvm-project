@@ -12,14 +12,14 @@
 @.str = private unnamed_addr constant [17 x i8] c"x = %lu\0Ay = %lu\0A\00", align 1
 
 ; Function Attrs: inlinehint nounwind uwtable
-define i32 @main() #0 {
+define i32 @main() {
 entry:
   %retval = alloca i32, align 4
   %i = alloca i64, align 8
   store i32 0, ptr %retval
   store i64 0, ptr @y, align 8
   store i64 0, ptr @x, align 8
-  call void @srand(i32 422304) #3
+  call void @srand(i32 422304)
   store i64 0, ptr %i, align 8
   br label %for.cond
 
@@ -29,7 +29,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.end, !prof !1
 
 for.body:                                         ; preds = %for.cond
-  %call = call i32 @rand() #3
+  %call = call i32 @rand()
   %conv = sitofp i32 %call to double
   %mul = fmul double %conv, 1.000000e+02
   %div = fdiv double %mul, 0x41E0000000000000
@@ -65,17 +65,12 @@ for.end:                                          ; preds = %for.cond
 }
 
 ; Function Attrs: nounwind
-declare void @srand(i32) #1
+declare void @srand(i32)
 
 ; Function Attrs: nounwind
-declare i32 @rand() #1
+declare i32 @rand()
 
-declare i32 @printf(ptr, ...) #2
-
-attributes #0 = { inlinehint nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nounwind }
+declare i32 @printf(ptr, ...)
 
 !llvm.ident = !{!0}
 

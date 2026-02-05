@@ -48,11 +48,10 @@ struct AdaptedIter : iterator_adaptor_base<AdaptedIter, WeirdIter> {};
 
 // Test that iterator_adaptor_base forwards typedefs, if value_type is
 // unchanged.
-static_assert(std::is_same_v<typename AdaptedIter::value_type, Shadow<0>>, "");
-static_assert(std::is_same_v<typename AdaptedIter::difference_type, Shadow<1>>,
-              "");
-static_assert(std::is_same_v<typename AdaptedIter::pointer, Shadow<2>>, "");
-static_assert(std::is_same_v<typename AdaptedIter::reference, Shadow<3>>, "");
+static_assert(std::is_same_v<AdaptedIter::value_type, Shadow<0>>, "");
+static_assert(std::is_same_v<AdaptedIter::difference_type, Shadow<1>>, "");
+static_assert(std::is_same_v<AdaptedIter::pointer, Shadow<2>>, "");
+static_assert(std::is_same_v<AdaptedIter::reference, Shadow<3>>, "");
 
 // Ensure that pointe{e,r}_iterator adaptors correctly forward the category of
 // the underlying iterator.
@@ -178,8 +177,8 @@ TEST(PointeeIteratorTest, Basic) {
   V.push_back(&arr[2]);
   V.push_back(&arr[3]);
 
-  typedef pointee_iterator<SmallVectorImpl<int *>::const_iterator>
-      test_iterator;
+  using test_iterator =
+      pointee_iterator<SmallVectorImpl<int *>::const_iterator>;
 
   test_iterator Begin, End;
   Begin = V.begin();
@@ -219,9 +218,8 @@ TEST(PointeeIteratorTest, SmartPointer) {
   V.push_back(std::make_unique<int>(3));
   V.push_back(std::make_unique<int>(4));
 
-  typedef pointee_iterator<
-      SmallVectorImpl<std::unique_ptr<int>>::const_iterator>
-      test_iterator;
+  using test_iterator =
+      pointee_iterator<SmallVectorImpl<std::unique_ptr<int>>::const_iterator>;
 
   test_iterator Begin, End;
   Begin = V.begin();

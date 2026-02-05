@@ -72,7 +72,7 @@ public:
       : InstCombiner(Worklist, Builder, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI,
                      PSI, DL, RPOT) {}
 
-  virtual ~InstCombinerImpl() = default;
+  ~InstCombinerImpl() override = default;
 
   /// Perform early cleanup and prepare the InstCombine worklist.
   bool prepareWorklist(Function &F);
@@ -143,6 +143,7 @@ public:
   Instruction *visitUIToFP(CastInst &CI);
   Instruction *visitSIToFP(CastInst &CI);
   Instruction *visitPtrToInt(PtrToIntInst &CI);
+  Instruction *visitPtrToAddr(PtrToAddrInst &CI);
   Instruction *visitIntToPtr(IntToPtrInst &CI);
   Instruction *visitBitCast(BitCastInst &CI);
   Instruction *visitAddrSpaceCast(AddrSpaceCastInst &CI);
@@ -470,15 +471,16 @@ private:
   Value *simplifyNonNullOperand(Value *V, bool HasDereferenceable,
                                 unsigned Depth = 0);
 
-  SelectInst *createSelectInst(Value *C, Value *S1, Value *S2,
-                               const Twine &NameStr = "",
-                               InsertPosition InsertBefore = nullptr,
-                               Instruction *MDFrom = nullptr) {
-    SelectInst *SI =
-        SelectInst::Create(C, S1, S2, NameStr, InsertBefore, MDFrom);
-    if (!MDFrom)
-      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, F, DEBUG_TYPE);
-    return SI;
+  /// Create `select C, S1, S2`. Use only when the profile cannot be calculated
+  /// from existing profile metadata: if the Function has profiles, this will
+  /// set the profile of this select to "unknown".
+  SelectInst *
+  createSelectInstWithUnknownProfile(Value *C, Value *S1, Value *S2,
+                                     const Twine &NameStr = "",
+                                     InsertPosition InsertBefore = nullptr) {
+    auto *Sel = SelectInst::Create(C, S1, S2, NameStr, InsertBefore, nullptr);
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Sel, DEBUG_TYPE, &F);
+    return Sel;
   }
 
 public:
@@ -609,9 +611,14 @@ public:
 
   /// Attempts to replace V with a simpler value based on the demanded
   /// floating-point classes
-  Value *SimplifyDemandedUseFPClass(Value *V, FPClassTest DemandedMask,
+  Value *SimplifyDemandedUseFPClass(Instruction *I, FPClassTest DemandedMask,
                                     KnownFPClass &Known, Instruction *CxtI,
                                     unsigned Depth = 0);
+  Value *SimplifyMultipleUseDemandedFPClass(Instruction *I,
+                                            FPClassTest DemandedMask,
+                                            KnownFPClass &Known,
+                                            Instruction *CxtI, unsigned Depth);
+
   bool SimplifyDemandedFPClass(Instruction *I, unsigned Op,
                                FPClassTest DemandedMask, KnownFPClass &Known,
                                unsigned Depth = 0);
@@ -662,7 +669,10 @@ public:
   /// This also works for Cast instructions, which obviously do not have a
   /// second operand.
   Instruction *FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
-                                bool FoldWithMultiUse = false);
+                                bool FoldWithMultiUse = false,
+                                bool SimplifyBothArms = false);
+
+  Instruction *foldBinOpSelectBinOp(BinaryOperator &Op);
 
   /// This is a convenience wrapper function for the above two functions.
   Instruction *foldBinOpIntoSelectOrPhi(BinaryOperator &I);
@@ -697,7 +707,7 @@ public:
   /// folded operation.
   void PHIArgMergedDebugLoc(Instruction *Inst, PHINode &PN);
 
-  Value *foldPtrToIntOfGEP(Type *IntTy, Value *Ptr);
+  Value *foldPtrToIntOrAddrOfGEP(Type *IntTy, Value *Ptr);
   Instruction *foldGEPICmp(GEPOperator *GEPLHS, Value *RHS, CmpPredicate Cond,
                            Instruction &I);
   Instruction *foldSelectICmp(CmpPredicate Pred, SelectInst *SI, Value *RHS,
@@ -795,6 +805,7 @@ public:
   Instruction *foldSelectExtConst(SelectInst &Sel);
   Instruction *foldSelectEqualityTest(SelectInst &SI);
   Instruction *foldSelectOpOp(SelectInst &SI, Instruction *TI, Instruction *FI);
+  Instruction *foldSelectIntrinsic(SelectInst &SI);
   Instruction *foldSelectIntoOp(SelectInst &SI, Value *, Value *);
   Instruction *foldSPFofSPF(Instruction *Inner, SelectPatternFlavor SPF1,
                             Value *A, Value *B, Instruction &Outer,

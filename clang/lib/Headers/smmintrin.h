@@ -1093,8 +1093,8 @@ _mm_max_epu32(__m128i __V1, __m128i __V2) {
 /// \param __V
 ///    A 128-bit integer vector selecting which bits to test in operand \a __M.
 /// \returns TRUE if the specified bits are all zeros; FALSE otherwise.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_testz_si128(__m128i __M,
-                                                         __m128i __V) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_testz_si128(__m128i __M, __m128i __V) {
   return __builtin_ia32_ptestz128((__v2di)__M, (__v2di)__V);
 }
 
@@ -1110,8 +1110,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_testz_si128(__m128i __M,
 /// \param __V
 ///    A 128-bit integer vector selecting which bits to test in operand \a __M.
 /// \returns TRUE if the specified bits are all ones; FALSE otherwise.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_testc_si128(__m128i __M,
-                                                         __m128i __V) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_testc_si128(__m128i __M, __m128i __V) {
   return __builtin_ia32_ptestc128((__v2di)__M, (__v2di)__V);
 }
 
@@ -1128,8 +1128,8 @@ static __inline__ int __DEFAULT_FN_ATTRS _mm_testc_si128(__m128i __M,
 ///    A 128-bit integer vector selecting which bits to test in operand \a __M.
 /// \returns TRUE if the specified bits are neither all zeros nor all ones;
 ///    FALSE otherwise.
-static __inline__ int __DEFAULT_FN_ATTRS _mm_testnzc_si128(__m128i __M,
-                                                           __m128i __V) {
+static __inline__ int __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_testnzc_si128(__m128i __M, __m128i __V) {
   return __builtin_ia32_ptestnzc128((__v2di)__M, (__v2di)__V);
 }
 
@@ -1524,7 +1524,8 @@ _mm_packus_epi32(__m128i __V1, __m128i __V2) {
 /// \returns A 128-bit value where bits [15:0] contain the minimum value found
 ///    in parameter \a __V, bits [18:16] contain the index of the minimum value
 ///    and the remaining bits are set to 0.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_minpos_epu16(__m128i __V) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_minpos_epu16(__m128i __V) {
   return (__m128i)__builtin_ia32_phminposuw128((__v8hi)__V);
 }
 

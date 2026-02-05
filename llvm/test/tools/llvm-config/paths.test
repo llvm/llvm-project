@@ -4,18 +4,34 @@ RUN: llvm-config --bindir 2>&1 | FileCheck --check-prefix=CHECK-BINDIR %s
 CHECK-BINDIR: {{.*}}{{/|\\}}bin
 CHECK-BINDIR-NOT: error:
 CHECK-BINDIR-NOT: warning
+RUN: llvm-config --bindir --quote-paths 2>&1 | FileCheck --check-prefix=CHECK-BINDIR2 %s
+CHECK-BINDIR2: {{.*}}{{/|\\\\}}bin
+CHECK-BINDIR2-NOT: error:
+CHECK-BINDIR2-NOT: warning
 
 RUN: llvm-config --includedir 2>&1 | FileCheck --check-prefix=CHECK-INCLUDEDIR %s
 CHECK-INCLUDEDIR: {{.*}}{{/|\\}}include
 CHECK-INCLUDEDIR-NOT: error:
 CHECK-INCLUDEDIR-NOT: warning
+RUN: llvm-config --includedir --quote-paths 2>&1 | FileCheck --check-prefix=CHECK-INCLUDEDIR2 %s
+CHECK-INCLUDEDIR2: {{.*}}{{/|\\\\}}include
+CHECK-INCLUDEDIR2-NOT: error:
+CHECK-INCLUDEDIR2-NOT: warning
 
 RUN: llvm-config --libdir 2>&1 | FileCheck --check-prefix=CHECK-LIBDIR %s
 CHECK-LIBDIR: {{.*}}{{/|\\}}lib{{.*}}
 CHECK-LIBDIR-NOT: error:
 CHECK-LIBDIR-NOT: warning
+RUN: llvm-config --libdir --quote-paths 2>&1 | FileCheck --check-prefix=CHECK-LIBDIR2 %s
+CHECK-LIBDIR2: {{.*}}{{/|\\\\}}lib{{.*}}
+CHECK-LIBDIR2-NOT: error:
+CHECK-LIBDIR2-NOT: warning
 
 RUN: llvm-config --cmakedir 2>&1 | FileCheck --check-prefix=CHECK-CMAKEDIR %s
 CHECK-CMAKEDIR: {{.*}}{{/|\\}}cmake{{/|\\}}llvm
 CHECK-CMAKEDIR-NOT: error:
 CHECK-CMAKEDIR-NOT: warning
+RUN: llvm-config --cmakedir --quote-paths 2>&1 | FileCheck --check-prefix=CHECK-CMAKEDIR2 %s
+CHECK-CMAKEDIR2: {{.*}}{{/|\\\\}}cmake{{/|\\\\}}llvm
+CHECK-CMAKEDIR2-NOT: error:
+CHECK-CMAKEDIR2-NOT: warning

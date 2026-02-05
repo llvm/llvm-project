@@ -2009,7 +2009,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
     } else if (const BuiltinType *BTy = BaseTy->getAs<BuiltinType>()) {
       performBuiltinTypeAlignmentUpgrade(BTy);
     } else if (const RecordType *RT = BaseTy->getAsCanonical<RecordType>()) {
-      const RecordDecl *RD = RT->getOriginalDecl();
+      const RecordDecl *RD = RT->getDecl();
       const ASTRecordLayout &FieldRecord = Context.getASTRecordLayout(RD);
       PreferredAlign = FieldRecord.getPreferredAlignment();
     }
@@ -2710,7 +2710,7 @@ MicrosoftRecordLayoutBuilder::getAdjustedElementInfo(
     if (const auto *RT = FD->getType()
                              ->getBaseElementTypeUnsafe()
                              ->getAsCanonical<RecordType>()) {
-      auto const &Layout = Context.getASTRecordLayout(RT->getOriginalDecl());
+      auto const &Layout = Context.getASTRecordLayout(RT->getDecl());
       EndsWithZeroSizedObject = Layout.endsWithZeroSizedObject();
       FieldRequiredAlignment = std::max(FieldRequiredAlignment,
                                         Layout.getRequiredAlignment());
@@ -2794,6 +2794,13 @@ void MicrosoftRecordLayoutBuilder::initializeLayout(const RecordDecl *RD) {
     UseExternalLayout = Source->layoutRecordType(
         RD, External.Size, External.Align, External.FieldOffsets,
         External.BaseOffsets, External.VirtualBaseOffsets);
+
+  if (!RD->isMsStruct(Context)) {
+    auto Location = RD->getLocation();
+    if (Location.isValid())
+      Context.getDiagnostics().Report(Location,
+                                      diag::err_itanium_layout_unimplemented);
+  }
 }
 
 void
@@ -3358,21 +3365,25 @@ void MicrosoftRecordLayoutBuilder::computeVtorDispSet(
   }
 }
 
+bool ASTContext::defaultsToMsStruct() const {
+  return getTargetInfo().hasMicrosoftRecordLayout() ||
+         getTargetInfo().getTriple().isWindowsGNUEnvironment();
+}
+
 /// getASTRecordLayout - Get or compute information about the layout of the
 /// specified record (struct/union/class), which indicates its size and field
 /// position information.
 const ASTRecordLayout &
 ASTContext::getASTRecordLayout(const RecordDecl *D) const {
-  // These asserts test different things.  A record has a definition
-  // as soon as we begin to parse the definition.  That definition is
-  // not a complete definition (which is what isDefinition() tests)
-  // until we *finish* parsing the definition.
-
   if (D->hasExternalLexicalStorage() && !D->getDefinition())
     getExternalSource()->CompleteType(const_cast<RecordDecl*>(D));
   // Complete the redecl chain (if necessary).
   (void)D->getMostRecentDecl();
 
+  // These asserts test different things.  A record has a definition
+  // as soon as we begin to parse the definition.  That definition is
+  // not a complete definition (which is what isCompleteDefinition() tests)
+  // until we *finish* parsing the definition.
   D = D->getDefinition();
   assert(D && "Cannot get layout of forward declarations!");
   assert(!D->isInvalidDecl() && "Cannot get layout of invalid decl!");

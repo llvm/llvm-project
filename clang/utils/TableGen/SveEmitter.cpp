@@ -267,14 +267,21 @@ public:
   unsigned getSplatIdx() const {
     unsigned I = 1, Param = 0;
     for (; I < Proto.size(); ++I, ++Param) {
+      assert(Proto[I] != '4' &&
+             "Handling for '4' prototype modifier not implemented");
       if (Proto[I] == 'a' || Proto[I] == 'j' || Proto[I] == 'f' ||
           Proto[I] == 'r' || Proto[I] == 'K' || Proto[I] == 'L' ||
           Proto[I] == 'R' || Proto[I] == '@' || Proto[I] == '!')
         break;
 
+      if (Proto[I] == '2')
+        Param += 1;
+
       // Multivector modifier can be skipped
-      if (Proto[I] == '.')
+      if (Proto[I] == '.') {
+        Param -= 1; // Adjust for the increment at the top of the loop
         I += 2;
+      }
     }
     assert(I != Proto.size() && "Prototype has no splat operand");
     return Param;
@@ -994,8 +1001,29 @@ Intrinsic::Intrinsic(StringRef Name, StringRef Proto, uint64_t MergeTy,
   auto FormatGuard = [](StringRef Guard, StringRef Base) -> std::string {
     if (Guard.empty() || Guard == Base)
       return Guard.str();
-    if (Guard.contains('|'))
-      return Base.str() + ",(" + Guard.str() + ")";
+
+    unsigned Depth = 0;
+    for (auto &C : Guard) {
+      switch (C) {
+      default:
+        break;
+      case '|':
+        if (Depth == 0)
+          // Group top-level ORs before ANDing with the base feature.
+          return Base.str() + ",(" + Guard.str() + ")";
+        break;
+      case '(':
+        ++Depth;
+        break;
+      case ')':
+        if (Depth == 0)
+          llvm_unreachable("Mismatched parentheses!");
+
+        --Depth;
+        break;
+      }
+    }
+
     return Base.str() + "," + Guard.str();
   };
 

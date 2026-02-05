@@ -70,11 +70,18 @@ class Stream;
 class SymbolContext;
 class Target;
 
-/// \class Debugger Debugger.h "lldb/Core/Debugger.h"
+#ifndef NDEBUG
+/// Global properties used in the LLDB testsuite.
+struct TestingProperties : public Properties {
+  TestingProperties();
+  bool GetInjectVarLocListError() const;
+  static TestingProperties &GetGlobalTestingProperties();
+};
+#endif
+
 /// A class to manage flag bits.
 ///
 /// Provides a global root objects for the debugger core.
-
 class Debugger : public std::enable_shared_from_this<Debugger>,
                  public UserID,
                  public Properties {
@@ -106,6 +113,9 @@ public:
   static void SettingsTerminate();
 
   static void Destroy(lldb::DebuggerSP &debugger_sp);
+
+  /// Get the build configuration as structured data.
+  static StructuredData::DictionarySP GetBuildConfiguration();
 
   static lldb::DebuggerSP FindDebuggerWithID(lldb::user_id_t id);
 
@@ -682,6 +692,7 @@ protected:
   lldb::LockableStreamFileSP GetErrorStreamSP() { return m_error_stream_sp; }
   /// @}
 
+  bool IsEscapeCodeCapableTTY();
   bool StatuslineSupported();
 
   void PushIOHandler(const lldb::IOHandlerSP &reader_sp,

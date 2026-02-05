@@ -1,12 +1,15 @@
 C_SOURCES := main.c
 
-EXE := uaf_mte
+EXE := uaf
 
-all: uaf_mte sign
+binary-plain:    uaf
+binary-entitled: uaf sign
+
+all: binary-entitled
 
 include Makefile.rules
 
-sign: mte-entitlements.plist uaf_mte
+sign: mte-entitlements.plist uaf
 ifeq ($(OS),Darwin)
 	codesign -s - -f --entitlements $^
 endif

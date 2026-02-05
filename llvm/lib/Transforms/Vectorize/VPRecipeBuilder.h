@@ -19,51 +19,22 @@ namespace llvm {
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class TargetLibraryInfo;
-class TargetTransformInfo;
 struct HistogramInfo;
 struct VFRange;
-
-/// A chain of instructions that form a partial reduction.
-/// Designed to match either:
-///   reduction_bin_op (extend (A), accumulator), or
-///   reduction_bin_op (bin_op (extend (A), (extend (B))), accumulator).
-struct PartialReductionChain {
-  PartialReductionChain(Instruction *Reduction, Instruction *ExtendA,
-                        Instruction *ExtendB, Instruction *ExtendUser)
-      : Reduction(Reduction), ExtendA(ExtendA), ExtendB(ExtendB),
-        ExtendUser(ExtendUser) {}
-  /// The top-level binary operation that forms the reduction to a scalar
-  /// after the loop body.
-  Instruction *Reduction;
-  /// The extension of each of the inner binary operation's operands.
-  Instruction *ExtendA;
-  Instruction *ExtendB;
-
-  /// The user of the extends that is then reduced.
-  Instruction *ExtendUser;
-};
 
 /// Helper class to create VPRecipies from IR instructions.
 class VPRecipeBuilder {
   /// The VPlan new recipes are added to.
   VPlan &Plan;
 
-  /// The loop that we evaluate.
-  Loop *OrigLoop;
-
   /// Target Library Info.
   const TargetLibraryInfo *TLI;
-
-  // Target Transform Info.
-  const TargetTransformInfo *TTI;
 
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
 
   /// The profitablity analysis.
   LoopVectorizationCostModel &CM;
-
-  PredicatedScalarEvolution &PSE;
 
   VPBuilder &Builder;
 
@@ -81,99 +52,50 @@ class VPRecipeBuilder {
   /// created.
   SmallVector<VPHeaderPHIRecipe *, 4> PhisToFix;
 
-  /// A mapping of partial reduction exit instructions to their scaling factor.
-  DenseMap<const Instruction *, unsigned> ScaledReductionMap;
-
-  /// Loop versioning instance for getting noalias metadata guaranteed by
-  /// runtime checks.
-  LoopVersioning *LVer;
-
   /// Check if \p I can be widened at the start of \p Range and possibly
   /// decrease the range such that the returned value holds for the entire \p
   /// Range. The function should not be called for memory instructions or calls.
   bool shouldWiden(Instruction *I, VFRange &Range) const;
 
-  /// Check if the load or store instruction \p I should widened for \p
+  /// Check if the load or store instruction \p VPI should widened for \p
   /// Range.Start and potentially masked. Such instructions are handled by a
   /// recipe that takes an additional VPInstruction for the mask.
-  VPWidenMemoryRecipe *tryToWidenMemory(Instruction *I,
-                                        ArrayRef<VPValue *> Operands,
-                                        VFRange &Range);
+  VPRecipeBase *tryToWidenMemory(VPInstruction *VPI, VFRange &Range);
 
-  /// Check if an induction recipe should be constructed for \p Phi. If so build
-  /// and return it. If not, return null.
-  VPHeaderPHIRecipe *tryToOptimizeInductionPHI(PHINode *Phi,
-                                               ArrayRef<VPValue *> Operands,
-                                               VFRange &Range);
-
-  /// Optimize the special case where the operand of \p I is a constant integer
-  /// induction variable.
+  /// Optimize the special case where the operand of \p VPI is a constant
+  /// integer induction variable.
   VPWidenIntOrFpInductionRecipe *
-  tryToOptimizeInductionTruncate(TruncInst *I, ArrayRef<VPValue *> Operands,
-                                 VFRange &Range);
+  tryToOptimizeInductionTruncate(VPInstruction *VPI, VFRange &Range);
 
-  /// Handle call instructions. If \p CI can be widened for \p Range.Start,
+  /// Handle call instructions. If \p VPI can be widened for \p Range.Start,
   /// return a new VPWidenCallRecipe or VPWidenIntrinsicRecipe. Range.End may be
   /// decreased to ensure same decision from \p Range.Start to \p Range.End.
-  VPSingleDefRecipe *tryToWidenCall(CallInst *CI, ArrayRef<VPValue *> Operands,
-                                    VFRange &Range);
+  VPSingleDefRecipe *tryToWidenCall(VPInstruction *VPI, VFRange &Range);
 
-  /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
-  /// if it can. The function should only be called if the cost-model indicates
-  /// that widening should be performed.
-  VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands);
+  /// Check if \p VPI has an opcode that can be widened and return a
+  /// VPWidenRecipe if it can. The function should only be called if the
+  /// cost-model indicates that widening should be performed.
+  VPWidenRecipe *tryToWiden(VPInstruction *VPI);
 
   /// Makes Histogram count operations safe for vectorization, by emitting a
   /// llvm.experimental.vector.histogram.add intrinsic in place of the
   /// Load + Add|Sub + Store operations that perform the histogram in the
   /// original scalar loop.
   VPHistogramRecipe *tryToWidenHistogram(const HistogramInfo *HI,
-                                         ArrayRef<VPValue *> Operands);
-
-  /// Examines reduction operations to see if the target can use a cheaper
-  /// operation with a wider per-iteration input VF and narrower PHI VF.
-  /// Each element within Chains is a pair with a struct containing reduction
-  /// information and the scaling factor between the number of elements in
-  /// the input and output.
-  /// Recursively calls itself to identify chained scaled reductions.
-  /// Returns true if this invocation added an entry to Chains, otherwise false.
-  /// i.e. returns false in the case that a subcall adds an entry to Chains,
-  /// but the top-level call does not.
-  bool getScaledReductions(
-      Instruction *PHI, Instruction *RdxExitInstr, VFRange &Range,
-      SmallVectorImpl<std::pair<PartialReductionChain, unsigned>> &Chains);
+                                         VPInstruction *VPI);
 
 public:
-  VPRecipeBuilder(VPlan &Plan, Loop *OrigLoop, const TargetLibraryInfo *TLI,
-                  const TargetTransformInfo *TTI,
+  VPRecipeBuilder(VPlan &Plan, const TargetLibraryInfo *TLI,
                   LoopVectorizationLegality *Legal,
-                  LoopVectorizationCostModel &CM,
-                  PredicatedScalarEvolution &PSE, VPBuilder &Builder,
-                  DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
-                  LoopVersioning *LVer)
-      : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), TTI(TTI), Legal(Legal),
-        CM(CM), PSE(PSE), Builder(Builder), BlockMaskCache(BlockMaskCache),
-        LVer(LVer) {}
+                  LoopVectorizationCostModel &CM, VPBuilder &Builder,
+                  DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache)
+      : Plan(Plan), TLI(TLI), Legal(Legal), CM(CM), Builder(Builder),
+        BlockMaskCache(BlockMaskCache) {}
 
-  std::optional<unsigned> getScalingForReduction(const Instruction *ExitInst) {
-    auto It = ScaledReductionMap.find(ExitInst);
-    return It == ScaledReductionMap.end() ? std::nullopt
-                                          : std::make_optional(It->second);
-  }
-
-  /// Find all possible partial reductions in the loop and track all of those
-  /// that are valid so recipes can be formed later.
-  void collectScaledReductions(VFRange &Range);
-
-  /// Create and return a widened recipe for \p R if one can be created within
-  /// the given VF \p Range.
-  VPRecipeBase *tryToCreateWidenRecipe(VPSingleDefRecipe *R, VFRange &Range);
-
-  /// Create and return a partial reduction recipe for a reduction instruction
-  /// along with binary operation and reduction phi operands.
-  VPRecipeBase *tryToCreatePartialReduction(Instruction *Reduction,
-                                            ArrayRef<VPValue *> Operands,
-                                            unsigned ScaleFactor);
+  /// Create and return a widened recipe for a non-phi recipe \p R if one can be
+  /// created within the given VF \p Range.
+  VPRecipeBase *tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
+                                             VFRange &Range);
 
   /// Set the recipe created for given ingredient.
   void setRecipe(Instruction *I, VPRecipeBase *R) {
@@ -197,12 +119,10 @@ public:
     return Ingredient2Recipe[I];
   }
 
-  /// Build a VPReplicationRecipe for \p I using \p Operands. If it is
-  /// predicated, add the mask as last operand. Range.End may be decreased to
-  /// ensure same recipe behavior from \p Range.Start to \p Range.End.
-  VPReplicateRecipe *handleReplication(Instruction *I,
-                                       ArrayRef<VPValue *> Operands,
-                                       VFRange &Range);
+  /// Build a VPReplicationRecipe for \p VPI. If it is predicated, add the mask
+  /// as last operand. Range.End may be decreased to ensure same recipe behavior
+  /// from \p Range.Start to \p Range.End.
+  VPReplicateRecipe *handleReplication(VPInstruction *VPI, VFRange &Range);
 
   VPValue *getVPValueOrAddLiveIn(Value *V) {
     if (auto *I = dyn_cast<Instruction>(V)) {

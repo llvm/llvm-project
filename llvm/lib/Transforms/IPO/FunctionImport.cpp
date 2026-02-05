@@ -435,14 +435,24 @@ class GlobalsImporter final {
 
       for (const auto &RefSummary : VI.getSummaryList()) {
         const auto *GVS = dyn_cast<GlobalVarSummary>(RefSummary.get());
+        // Stop looking if this is not a global variable, e.g. a function.
         // Functions could be referenced by global vars - e.g. a vtable; but we
         // don't currently imagine a reason those would be imported here, rather
         // than as part of the logic deciding which functions to import (i.e.
         // based on profile information). Should we decide to handle them here,
         // we can refactor accordingly at that time.
+        // Note that it is safe to stop looking because the one case where we
+        // might have to import (a read/write-only global variable) cannot occur
+        // if this GUID has a non-variable summary. The only case where we even
+        // might find another summary in the list that is a variable is in the
+        // case of same-named locals in different modules not compiled with
+        // enough path, and during attribute propagation we will mark all
+        // summaries for a GUID (ValueInfo) as non read/write-only if any is not
+        // a global variable.
+        if (!GVS)
+          break;
         bool CanImportDecl = false;
-        if (!GVS ||
-            shouldSkipLocalInAnotherModule(GVS, VI.getSummaryList().size(),
+        if (shouldSkipLocalInAnotherModule(GVS, VI.getSummaryList().size(),
                                            Summary.modulePath()) ||
             !Index.canImportGlobalVar(GVS, /* AnalyzeRefs */ true,
                                       CanImportDecl)) {
@@ -1368,13 +1378,13 @@ static void ComputeCrossModuleImportForModuleFromIndexForTest(
     FunctionImporter::ImportMapTy &ImportList) {
   for (const auto &GlobalList : Index) {
     // Ignore entries for undefined references.
-    if (GlobalList.second.SummaryList.empty())
+    if (GlobalList.second.getSummaryList().empty())
       continue;
 
     auto GUID = GlobalList.first;
-    assert(GlobalList.second.SummaryList.size() == 1 &&
+    assert(GlobalList.second.getSummaryList().size() == 1 &&
            "Expected individual combined index to have one summary per GUID");
-    auto &Summary = GlobalList.second.SummaryList[0];
+    auto &Summary = GlobalList.second.getSummaryList()[0];
     // Skip the summaries for the importing module. These are included to
     // e.g. record required linkage changes.
     if (Summary->modulePath() == ModulePath)
@@ -1423,7 +1433,7 @@ void updateValueInfoForIndirectCalls(ModuleSummaryIndex &Index,
 
 void llvm::updateIndirectCalls(ModuleSummaryIndex &Index) {
   for (const auto &Entry : Index) {
-    for (const auto &S : Entry.second.SummaryList) {
+    for (const auto &S : Entry.second.getSummaryList()) {
       if (auto *FS = dyn_cast<FunctionSummary>(S.get()))
         updateValueInfoForIndirectCalls(Index, FS);
     }
@@ -1456,7 +1466,7 @@ void llvm::computeDeadSymbolsAndUpdateIndirectCalls(
   // Add values flagged in the index as live roots to the worklist.
   for (const auto &Entry : Index) {
     auto VI = Index.getValueInfo(Entry);
-    for (const auto &S : Entry.second.SummaryList) {
+    for (const auto &S : Entry.second.getSummaryList()) {
       if (auto *FS = dyn_cast<FunctionSummary>(S.get()))
         updateValueInfoForIndirectCalls(Index, FS);
       if (S->isLive()) {
@@ -2094,7 +2104,7 @@ static bool doImportingForModuleForTest(
   // is only enabled when testing importing via the 'opt' tool, which does
   // not do the ThinLink that would normally determine what values to promote.
   for (auto &I : *Index) {
-    for (auto &S : I.second.SummaryList) {
+    for (auto &S : I.second.getSummaryList()) {
       if (GlobalValue::isLocalLinkage(S->linkage()))
         S->setLinkage(GlobalValue::ExternalLinkage);
     }
