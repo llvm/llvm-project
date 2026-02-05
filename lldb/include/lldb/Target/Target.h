@@ -32,11 +32,13 @@
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Target/SectionLoadHistory.h"
 #include "lldb/Target/Statistics.h"
+#include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/RealpathPrefixes.h"
+#include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
 #include "llvm/ADT/StringRef.h"
@@ -306,6 +308,9 @@ private:
 
 class EvaluateExpressionOptions {
 public:
+  EvaluateExpressionOptions()
+      : m_language_options_sp(std::make_shared<StructuredData::Dictionary>()) {}
+
 // MSVC has a bug here that reports C4268: 'const' static/global data
 // initialized with compiler generated default constructor fills the object
 // with zeros. Confirmed that MSVC is *not* zero-initializing, it's just a
@@ -321,8 +326,6 @@ public:
 
   static constexpr ExecutionPolicy default_execution_policy =
       eExecutionPolicyOnlyWhenNeeded;
-
-  EvaluateExpressionOptions() = default;
 
   ExecutionPolicy GetExecutionPolicy() const { return m_execution_policy; }
 
@@ -480,7 +483,22 @@ public:
 
   void SetIsForUtilityExpr(bool b) { m_running_utility_expression = b; }
 
+  /// Set language-plugin specific option called \c option_name to
+  /// the specified boolean \c value.
+  llvm::Error SetBooleanLanguageOption(llvm::StringRef option_name, bool value);
+
+  /// Get the language-plugin specific boolean option called \c option_name.
+  ///
+  /// If the option doesn't exist or is not a boolean option, returns false.
+  /// Otherwise returns the boolean value of the option.
+  llvm::Expected<bool>
+  GetBooleanLanguageOption(llvm::StringRef option_name) const;
+
 private:
+  const StructuredData::Dictionary &GetLanguageOptions() const;
+
+  StructuredData::Dictionary &GetLanguageOptions();
+
   ExecutionPolicy m_execution_policy = default_execution_policy;
   SourceLanguage m_language;
   std::string m_prefix;
@@ -512,6 +530,10 @@ private:
   // originates
   mutable std::string m_pound_line_file;
   mutable uint32_t m_pound_line_line = 0;
+
+  /// Dictionary mapping names of language-plugin specific options
+  /// to values.
+  StructuredData::DictionarySP m_language_options_sp = nullptr;
 
   /// During expression evaluation, any SymbolContext in this list will be
   /// used for symbol/function lookup before any other context (except for
@@ -744,6 +766,36 @@ public:
 
   Status Attach(ProcessAttachInfo &attach_info,
                 Stream *stream); // Optional stream to receive first stop info
+
+  /// Add or update a scripted frame provider descriptor for this target.
+  /// All new threads in this target will check if they match any descriptors
+  /// to create their frame providers.
+  ///
+  /// \param[in] descriptor
+  ///     The descriptor to add or update.
+  ///
+  /// \return
+  ///     The descriptor identifier if the registration succeeded, otherwise an
+  ///     llvm::Error.
+  llvm::Expected<uint32_t> AddScriptedFrameProviderDescriptor(
+      const ScriptedFrameProviderDescriptor &descriptor);
+
+  /// Remove a scripted frame provider descriptor by id.
+  ///
+  /// \param[in] id
+  ///     The id of the descriptor to remove.
+  ///
+  /// \return
+  ///     True if a descriptor was removed, false if no descriptor with that
+  ///     id existed.
+  bool RemoveScriptedFrameProviderDescriptor(uint32_t id);
+
+  /// Clear all scripted frame provider descriptors for this target.
+  void ClearScriptedFrameProviderDescriptors();
+
+  /// Get all scripted frame provider descriptors for this target.
+  const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
+  GetScriptedFrameProviderDescriptors() const;
 
   // This part handles the breakpoints.
 
@@ -1743,6 +1795,13 @@ protected:
   lldb::SearchFilterSP m_search_filter_sp;
   PathMappingList m_image_search_paths;
   TypeSystemMap m_scratch_type_system_map;
+
+  /// Map of scripted frame provider descriptors for this target.
+  /// Keys are the provider descriptors ids, values are the descriptors.
+  /// Used to initialize frame providers for new threads.
+  llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor>
+      m_frame_provider_descriptors;
+  mutable std::recursive_mutex m_frame_provider_descriptors_mutex;
 
   typedef std::map<lldb::LanguageType, lldb::REPLSP> REPLMap;
   REPLMap m_repl_map;

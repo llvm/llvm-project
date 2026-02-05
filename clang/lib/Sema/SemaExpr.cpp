@@ -30,6 +30,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
@@ -5090,6 +5091,62 @@ ExprResult Sema::tryConvertExprToType(Expr *E, QualType Ty) {
   return InitSeq.Perform(*this, Entity, Kind, E);
 }
 
+ExprResult Sema::CreateBuiltinMatrixSingleSubscriptExpr(Expr *Base,
+                                                        Expr *RowIdx,
+                                                        SourceLocation RBLoc) {
+  ExprResult BaseR = CheckPlaceholderExpr(Base);
+  if (BaseR.isInvalid())
+    return BaseR;
+  Base = BaseR.get();
+
+  ExprResult RowR = CheckPlaceholderExpr(RowIdx);
+  if (RowR.isInvalid())
+    return RowR;
+  RowIdx = RowR.get();
+
+  // Build an unanalyzed expression if any of the operands is type-dependent.
+  if (Base->isTypeDependent() || RowIdx->isTypeDependent())
+    return new (Context)
+        MatrixSingleSubscriptExpr(Base, RowIdx, Context.DependentTy, RBLoc);
+
+  // Check that IndexExpr is an integer expression. If it is a constant
+  // expression, check that it is less than Dim (= the number of elements in the
+  // corresponding dimension).
+  auto IsIndexValid = [&](Expr *IndexExpr, unsigned Dim,
+                          bool IsColumnIdx) -> Expr * {
+    if (!IndexExpr->getType()->isIntegerType() &&
+        !IndexExpr->isTypeDependent()) {
+      Diag(IndexExpr->getBeginLoc(), diag::err_matrix_index_not_integer)
+          << IsColumnIdx;
+      return nullptr;
+    }
+
+    if (std::optional<llvm::APSInt> Idx =
+            IndexExpr->getIntegerConstantExpr(Context)) {
+      if ((*Idx < 0 || *Idx >= Dim)) {
+        Diag(IndexExpr->getBeginLoc(), diag::err_matrix_index_outside_range)
+            << IsColumnIdx << Dim;
+        return nullptr;
+      }
+    }
+
+    ExprResult ConvExpr = IndexExpr;
+    assert(!ConvExpr.isInvalid() &&
+           "should be able to convert any integer type to size type");
+    return ConvExpr.get();
+  };
+
+  auto *MTy = Base->getType()->getAs<ConstantMatrixType>();
+  RowIdx = IsIndexValid(RowIdx, MTy->getNumRows(), false);
+  if (!RowIdx)
+    return ExprError();
+
+  QualType RowVecQT =
+      Context.getExtVectorType(MTy->getElementType(), MTy->getNumColumns());
+
+  return new (Context) MatrixSingleSubscriptExpr(Base, RowIdx, RowVecQT, RBLoc);
+}
+
 ExprResult Sema::CreateBuiltinMatrixSubscriptExpr(Expr *Base, Expr *RowIdx,
                                                   Expr *ColumnIdx,
                                                   SourceLocation RBLoc) {
@@ -6860,6 +6917,34 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   FunctionDecl *FDecl = dyn_cast_or_null<FunctionDecl>(NDecl);
   unsigned BuiltinID = (FDecl ? FDecl->getBuiltinID() : 0);
 
+  auto IsSJLJ = [&] {
+    switch (BuiltinID) {
+    case Builtin::BI__builtin_longjmp:
+    case Builtin::BI__builtin_setjmp:
+    case Builtin::BI__sigsetjmp:
+    case Builtin::BI_longjmp:
+    case Builtin::BI_setjmp:
+    case Builtin::BIlongjmp:
+    case Builtin::BIsetjmp:
+    case Builtin::BIsiglongjmp:
+    case Builtin::BIsigsetjmp:
+      return true;
+    default:
+      return false;
+    }
+  };
+
+  // Forbid any call to setjmp/longjmp and friends inside a '_Defer' statement.
+  if (!CurrentDefer.empty() && IsSJLJ()) {
+    // Note: If we ever start supporting '_Defer' in C++ we'll have to check
+    // for more than just blocks (e.g. lambdas, nested classes...).
+    Scope *DeferParent = CurrentDefer.back().first;
+    Scope *Block = CurScope->getBlockParent();
+    if (DeferParent->Contains(*CurScope) &&
+        (!Block || !DeferParent->Contains(*Block)))
+      Diag(Fn->getExprLoc(), diag::err_defer_invalid_sjlj) << FDecl;
+  }
+
   // Functions with 'interrupt' attribute cannot be called directly.
   if (FDecl) {
     if (FDecl->hasAttr<AnyX86InterruptAttr>()) {
@@ -7806,6 +7891,24 @@ ExprResult Sema::prepareVectorSplat(QualType VectorTy, Expr *SplattedExpr) {
   return ImpCastExprToType(SplattedExpr, DestElemTy, CK);
 }
 
+ExprResult Sema::prepareMatrixSplat(QualType MatrixTy, Expr *SplattedExpr) {
+  QualType DestElemTy = MatrixTy->castAs<MatrixType>()->getElementType();
+
+  if (DestElemTy == SplattedExpr->getType())
+    return SplattedExpr;
+
+  assert(DestElemTy->isFloatingType() ||
+         DestElemTy->isIntegralOrEnumerationType());
+
+  ExprResult CastExprRes = SplattedExpr;
+  CastKind CK = PrepareScalarCast(CastExprRes, DestElemTy);
+  if (CastExprRes.isInvalid())
+    return ExprError();
+  SplattedExpr = CastExprRes.get();
+
+  return ImpCastExprToType(SplattedExpr, DestElemTy, CK);
+}
+
 ExprResult Sema::CheckExtVectorCast(SourceRange R, QualType DestTy,
                                     Expr *CastExpr, CastKind &Kind) {
   assert(DestTy->isExtVectorType() && "Not an extended vector type!");
@@ -7819,7 +7922,8 @@ ExprResult Sema::CheckExtVectorCast(SourceRange R, QualType DestTy,
   if (SrcTy->isVectorType()) {
     if (!areLaxCompatibleVectorTypes(SrcTy, DestTy) ||
         (getLangOpts().OpenCL &&
-         !Context.hasSameUnqualifiedType(DestTy, SrcTy))) {
+         !Context.hasSameUnqualifiedType(DestTy, SrcTy) &&
+         !Context.areCompatibleVectorTypes(DestTy, SrcTy))) {
       Diag(R.getBegin(),diag::err_invalid_conversion_between_ext_vectors)
         << DestTy << SrcTy << R;
       return ExprError();
@@ -9414,6 +9518,12 @@ AssignConvertType Sema::CheckAssignmentConstraints(QualType LHSType,
         Kind = CK_IntegralToBoolean;
         return AssignConvertType::Compatible;
       }
+      // In OpenCL, allow compatible vector types (e.g. half to _Float16)
+      if (Context.getLangOpts().OpenCL &&
+          Context.areCompatibleVectorTypes(LHSType, RHSType)) {
+        Kind = CK_BitCast;
+        return AssignConvertType::Compatible;
+      }
       return AssignConvertType::Incompatible;
     }
     if (RHSType->isArithmeticType()) {
@@ -10165,7 +10275,8 @@ static ExprResult convertVector(Expr *E, QualType ElementType, Sema &S) {
 /// IntTy without losing precision.
 static bool canConvertIntToOtherIntTy(Sema &S, ExprResult *Int,
                                       QualType OtherIntTy) {
-  if (Int->get()->containsErrors())
+  Expr *E = Int->get();
+  if (E->containsErrors() || E->isInstantiationDependent())
     return false;
 
   QualType IntTy = Int->get()->getType().getUnqualifiedType();
@@ -13334,6 +13445,25 @@ QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   return GetSignedVectorType(LHS.get()->getType());
 }
 
+QualType Sema::CheckMatrixLogicalOperands(ExprResult &LHS, ExprResult &RHS,
+                                          SourceLocation Loc,
+                                          BinaryOperatorKind Opc) {
+
+  if (!getLangOpts().HLSL) {
+    assert(false && "Logical operands are not supported in C\\C++");
+    return QualType();
+  }
+
+  if (getLangOpts().getHLSLVersion() >= LangOptionsBase::HLSL_2021) {
+    (void)InvalidOperands(Loc, LHS, RHS);
+    HLSL().emitLogicalOperatorFixIt(LHS.get(), RHS.get(), Opc);
+    return QualType();
+  }
+  SemaRef.Diag(LHS.get()->getBeginLoc(), diag::err_hlsl_langstd_unimplemented)
+      << getLangOpts().getHLSLVersion();
+  return QualType();
+}
+
 QualType Sema::CheckMatrixElementwiseOperands(ExprResult &LHS, ExprResult &RHS,
                                               SourceLocation Loc,
                                               bool IsCompAssign) {
@@ -13505,6 +13635,10 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   if (LHS.get()->getType()->isVectorType() ||
       RHS.get()->getType()->isVectorType())
     return CheckVectorLogicalOperands(LHS, RHS, Loc, Opc);
+
+  if (LHS.get()->getType()->isConstantMatrixType() ||
+      RHS.get()->getType()->isConstantMatrixType())
+    return CheckMatrixLogicalOperands(LHS, RHS, Loc, Opc);
 
   bool EnumConstantInBoolContext = false;
   for (const ExprResult &HS : {LHS, RHS}) {
@@ -21527,12 +21661,17 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     return ExprError();
   }
 
-  case BuiltinType::IncompleteMatrixIdx:
-    Diag(cast<MatrixSubscriptExpr>(E->IgnoreParens())
-             ->getRowIdx()
-             ->getBeginLoc(),
-         diag::err_matrix_incomplete_index);
+  case BuiltinType::IncompleteMatrixIdx: {
+    auto *MS = cast<MatrixSubscriptExpr>(E->IgnoreParens());
+    // At this point, we know there was no second [] to complete the operator.
+    // In HLSL, treat "m[row]" as selecting a row lane of column sized vector.
+    if (getLangOpts().HLSL) {
+      return CreateBuiltinMatrixSingleSubscriptExpr(
+          MS->getBase(), MS->getRowIdx(), E->getExprLoc());
+    }
+    Diag(MS->getRowIdx()->getBeginLoc(), diag::err_matrix_incomplete_index);
     return ExprError();
+  }
 
   // Expressions of unknown type.
   case BuiltinType::ArraySection:

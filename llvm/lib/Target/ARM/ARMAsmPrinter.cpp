@@ -103,6 +103,35 @@ void ARMAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
   OutStreamer->emitValue(E, Size);
 }
 
+// An alias to a cmse entry function should also emit a `__acle_se_` symbol.
+void ARMAsmPrinter::emitCMSEVeneerAlias(const GlobalAlias &GA) {
+  const Function *BaseFn = dyn_cast_or_null<Function>(GA.getAliaseeObject());
+  if (!BaseFn || !BaseFn->hasFnAttribute("cmse_nonsecure_entry"))
+    return;
+
+  MCSymbol *AliasSym = getSymbol(&GA);
+  MCSymbol *FnSym = getSymbol(BaseFn);
+
+  MCSymbol *SEAliasSym =
+      OutContext.getOrCreateSymbol(Twine("__acle_se_") + AliasSym->getName());
+  MCSymbol *SEBaseSym =
+      OutContext.getOrCreateSymbol(Twine("__acle_se_") + FnSym->getName());
+
+  // Mirror alias linkage/visibility onto the veneer-alias symbol.
+  emitLinkage(&GA, SEAliasSym);
+  OutStreamer->emitSymbolAttribute(SEAliasSym, MCSA_ELF_TypeFunction);
+  emitVisibility(SEAliasSym, GA.getVisibility());
+
+  // emit "__acle_se_<alias> = __acle_se_<aliasee>"
+  const MCExpr *SEExpr = MCSymbolRefExpr::create(SEBaseSym, OutContext);
+  OutStreamer->emitAssignment(SEAliasSym, SEExpr);
+}
+
+void ARMAsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
+  AsmPrinter::emitGlobalAlias(M, GA);
+  emitCMSEVeneerAlias(GA);
+}
+
 void ARMAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (PromotedGlobals.count(GV))
     // The global was promoted into a constant pool. It should not be emitted.
@@ -490,7 +519,8 @@ static bool isThumb(const MCSubtargetInfo& STI) {
 }
 
 void ARMAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                                     const MCSubtargetInfo *EndInfo) const {
+                                     const MCSubtargetInfo *EndInfo,
+                                     const MachineInstr *MI) {
   // If either end mode is unknown (EndInfo == NULL) or different than
   // the start mode, then restore the start mode.
   const bool WasThumb = isThumb(StartInfo);

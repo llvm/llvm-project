@@ -58,13 +58,9 @@ static cl::opt<bool>
 
 namespace {
 
-class X86CallFrameOptimization : public MachineFunctionPass {
+class X86CallFrameOptimizationImpl {
 public:
-  X86CallFrameOptimization() : MachineFunctionPass(ID) { }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  static char ID;
+  bool runOnMachineFunction(MachineFunction &MF);
 
 private:
   // Information we know about a particular call site
@@ -114,8 +110,6 @@ private:
                                          const X86RegisterInfo &RegInfo,
                                          const DenseSet<MCRegister> &UsedRegs);
 
-  StringRef getPassName() const override { return "X86 Optimize Call Frame"; }
-
   const X86InstrInfo *TII = nullptr;
   const X86FrameLowering *TFL = nullptr;
   const X86Subtarget *STI = nullptr;
@@ -124,15 +118,27 @@ private:
   unsigned Log2SlotSize = 0;
 };
 
+class X86CallFrameOptimizationLegacy : public MachineFunctionPass {
+public:
+  X86CallFrameOptimizationLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  static char ID;
+
+private:
+  StringRef getPassName() const override { return "X86 Optimize Call Frame"; }
+};
+
 } // end anonymous namespace
-char X86CallFrameOptimization::ID = 0;
-INITIALIZE_PASS(X86CallFrameOptimization, DEBUG_TYPE,
+char X86CallFrameOptimizationLegacy::ID = 0;
+INITIALIZE_PASS(X86CallFrameOptimizationLegacy, DEBUG_TYPE,
                 "X86 Call Frame Optimization", false, false)
 
 // This checks whether the transformation is legal.
 // Also returns false in cases where it's potentially legal, but
 // we don't even want to try.
-bool X86CallFrameOptimization::isLegal(MachineFunction &MF) {
+bool X86CallFrameOptimizationImpl::isLegal(MachineFunction &MF) {
   if (NoX86CFOpt.getValue())
     return false;
 
@@ -190,8 +196,8 @@ bool X86CallFrameOptimization::isLegal(MachineFunction &MF) {
 
 // Check whether this transformation is profitable for a particular
 // function - in terms of code size.
-bool X86CallFrameOptimization::isProfitable(MachineFunction &MF,
-                                            ContextVector &CallSeqVector) {
+bool X86CallFrameOptimizationImpl::isProfitable(MachineFunction &MF,
+                                                ContextVector &CallSeqVector) {
   // This transformation is always a win when we do not expect to have
   // a reserved call frame. Under other circumstances, it may be either
   // a win or a loss, and requires a heuristic.
@@ -233,7 +239,7 @@ bool X86CallFrameOptimization::isProfitable(MachineFunction &MF,
   return Advantage >= 0;
 }
 
-bool X86CallFrameOptimization::runOnMachineFunction(MachineFunction &MF) {
+bool X86CallFrameOptimizationImpl::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<X86Subtarget>();
   TII = STI->getInstrInfo();
   TFL = STI->getFrameLowering();
@@ -244,7 +250,7 @@ bool X86CallFrameOptimization::runOnMachineFunction(MachineFunction &MF) {
   assert(isPowerOf2_32(SlotSize) && "Expect power of 2 stack slot size");
   Log2SlotSize = Log2_32(SlotSize);
 
-  if (skipFunction(MF.getFunction()) || !isLegal(MF))
+  if (!isLegal(MF))
     return false;
 
   unsigned FrameSetupOpcode = TII->getCallFrameSetupOpcode();
@@ -274,8 +280,8 @@ bool X86CallFrameOptimization::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-X86CallFrameOptimization::InstClassification
-X86CallFrameOptimization::classifyInstruction(
+X86CallFrameOptimizationImpl::InstClassification
+X86CallFrameOptimizationImpl::classifyInstruction(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     const X86RegisterInfo &RegInfo, const DenseSet<MCRegister> &UsedRegs) {
   if (MI == MBB.end())
@@ -349,10 +355,9 @@ X86CallFrameOptimization::classifyInstruction(
   return Skip;
 }
 
-void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
-                                               MachineBasicBlock &MBB,
-                                               MachineBasicBlock::iterator I,
-                                               CallContext &Context) {
+void X86CallFrameOptimizationImpl::collectCallInfo(
+    MachineFunction &MF, MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
+    CallContext &Context) {
   // Check that this particular call sequence is amenable to the
   // transformation.
   const X86RegisterInfo &RegInfo = *STI->getRegisterInfo();
@@ -488,8 +493,8 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
   Context.UsePush = true;
 }
 
-void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
-                                                  const CallContext &Context) {
+void X86CallFrameOptimizationImpl::adjustCallSequence(
+    MachineFunction &MF, const CallContext &Context) {
   // Ok, we can in fact do the transformation for this call.
   // Do not remove the FrameSetup instruction, but adjust the parameters.
   // PEI will end up finalizing the handling of this.
@@ -587,7 +592,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
   FuncInfo->setHasPushSequences(true);
 }
 
-MachineInstr *X86CallFrameOptimization::canFoldIntoRegPush(
+MachineInstr *X86CallFrameOptimizationImpl::canFoldIntoRegPush(
     MachineBasicBlock::iterator FrameSetup, Register Reg) {
   // Do an extremely restricted form of load folding.
   // ISel will often create patterns like:
@@ -624,6 +629,22 @@ MachineInstr *X86CallFrameOptimization::canFoldIntoRegPush(
   return &DefMI;
 }
 
-FunctionPass *llvm::createX86CallFrameOptimization() {
-  return new X86CallFrameOptimization();
+FunctionPass *llvm::createX86CallFrameOptimizationLegacyPass() {
+  return new X86CallFrameOptimizationLegacy();
+}
+
+bool X86CallFrameOptimizationLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  X86CallFrameOptimizationImpl Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+X86CallFrameOptimizationPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  X86CallFrameOptimizationImpl Impl;
+  bool Changed = Impl.runOnMachineFunction(MF);
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                 : PreservedAnalyses::all();
 }

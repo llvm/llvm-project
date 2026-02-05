@@ -1291,7 +1291,7 @@ def INIT_UNDEF : StandardPseudoInstruction {
 }
 def SUBREG_TO_REG : StandardPseudoInstruction {
   let OutOperandList = (outs unknown:$dst);
-  let InOperandList = (ins unknown:$implsrc, unknown:$subsrc, i32imm:$subidx);
+  let InOperandList = (ins unknown:$subsrc, i32imm:$subidx);
   let AsmString = "";
   let hasSideEffects = false;
 }
@@ -1351,6 +1351,13 @@ def COPY : StandardPseudoInstruction {
   let hasSideEffects = false;
   let isAsCheapAsAMove = true;
   let hasNoSchedulingInfo = false;
+}
+def COPY_LANEMASK : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src, unknown:$lanemask);
+  let AsmString = "";
+  let hasSideEffects = false;
+  let isAsCheapAsAMove = true;
 }
 def BUNDLE : StandardPseudoInstruction {
   let OutOperandList = (outs);
@@ -1928,6 +1935,19 @@ class Target {
   // setting hasExtraDefRegAllocReq and hasExtraSrcRegAllocReq to 1
   // for all opcodes if this flag is set to 0.
   int AllowRegisterRenaming = 0;
+
+  // RegistersAreIntervals - Controls whether registers units must form
+  // contiguous intervals for each register.
+  //
+  // Specifically, for each register, its register units must be numbered
+  // consecutively (e.g, units 5,6,7 rather than 5,7,9). If enabled,
+  // CodeGenRegisters will enforce this property and attempt to fix violations
+  // that can be resolved by rearranging regunits. Unresolved violations will
+  // result in a fatal error.
+  //
+  // This enables interval-based representation of register units, which can
+  // improve data structure representations in target backends.
+  int RegistersAreIntervals = 0;
 }
 
 //===----------------------------------------------------------------------===//

@@ -206,6 +206,19 @@ static StringRef getOSLibDir(const llvm::Triple &Triple, const ArgList &Args) {
   if (Triple.getArch() == llvm::Triple::riscv32)
     return "lib32";
 
+  if (Triple.getArch() == llvm::Triple::loongarch32) {
+    switch (Triple.getEnvironment()) {
+    default:
+      return "lib32";
+    case llvm::Triple::GNUSF:
+    case llvm::Triple::MuslSF:
+      return "lib32/sf";
+    case llvm::Triple::GNUF32:
+    case llvm::Triple::MuslF32:
+      return "lib32/f32";
+    }
+  }
+
   return Triple.isArch32Bit() ? "lib" : "lib64";
 }
 
@@ -747,6 +760,11 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
+  // After the resource directory, we prioritize the standard clang include
+  // directory.
+  if (std::optional<std::string> Path = getStdlibIncludePath())
+    addSystemInclude(DriverArgs, CC1Args, *Path);
+
   // LOCAL_INCLUDE_DIR
   addSystemInclude(DriverArgs, CC1Args, concat(SysRoot, "/usr/local/include"));
   // TOOL_INCLUDE_DIR
@@ -832,19 +850,35 @@ void Linux::AddHIPIncludeArgs(const ArgList &DriverArgs,
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
-void Linux::AddHIPRuntimeLibArgs(const ArgList &Args,
-                                 ArgStringList &CmdArgs) const {
-  CmdArgs.push_back(
-      Args.MakeArgString(StringRef("-L") + RocmInstallation->getLibPath()));
+void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
+                             ArgStringList &CmdArgs) const {
+  if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                    true) ||
+      Args.hasArg(options::OPT_nostdlib) ||
+      Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r))
+    return;
 
-  if (Args.hasFlag(options::OPT_frtlib_add_rpath,
-                   options::OPT_fno_rtlib_add_rpath, false)) {
-    SmallString<0> p = RocmInstallation->getLibPath();
-    llvm::sys::path::remove_dots(p, true);
-    CmdArgs.append({"-rpath", Args.MakeArgString(p)});
+  llvm::SmallVector<std::pair<StringRef, StringRef>> Libraries;
+  if (ActiveKinds & Action::OFK_HIP)
+    Libraries.emplace_back(RocmInstallation->getLibPath(), "libamdhip64.so");
+
+  for (auto [Path, Library] : Libraries) {
+    if (Args.hasFlag(options::OPT_frtlib_add_rpath,
+                     options::OPT_fno_rtlib_add_rpath, false)) {
+      SmallString<0> p = Path;
+      llvm::sys::path::remove_dots(p, true);
+      CmdArgs.append({"-rpath", Args.MakeArgString(p)});
+    }
+
+    SmallString<0> p = Path;
+    llvm::sys::path::append(p, Library);
+    CmdArgs.push_back(Args.MakeArgString(p));
   }
 
-  CmdArgs.push_back("-lamdhip64");
+  // FIXME: The ROCm builds implicitly depends on this being present.
+  if (ActiveKinds & Action::OFK_HIP)
+    CmdArgs.push_back(
+        Args.MakeArgString(StringRef("-L") + RocmInstallation->getLibPath()));
 }
 
 void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
@@ -914,7 +948,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   Res |= SanitizerKind::KernelAddress;
   Res |= SanitizerKind::Vptr;
   Res |= SanitizerKind::SafeStack;
-  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsLoongArch64)
+  if (IsX86_64 || IsMIPS64 || IsAArch64 || IsLoongArch64 || IsSystemZ)
     Res |= SanitizerKind::DataFlow;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsArmArch || IsPowerPC64 ||
       IsRISCV64 || IsSystemZ || IsHexagon || IsLoongArch64)
@@ -922,7 +956,7 @@ SanitizerMask Linux::getSupportedSanitizers() const {
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsPowerPC64 || IsSystemZ ||
       IsLoongArch64 || IsRISCV64)
     Res |= SanitizerKind::Thread;
-  if (IsX86_64 || IsAArch64)
+  if (IsX86_64 || IsAArch64 || IsSystemZ)
     Res |= SanitizerKind::Type;
   if (IsX86_64 || IsSystemZ || IsPowerPC64)
     Res |= SanitizerKind::KernelMemory;

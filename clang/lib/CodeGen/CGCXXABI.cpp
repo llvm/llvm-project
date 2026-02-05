@@ -14,6 +14,7 @@
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
 #include "clang/AST/Attr.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -28,11 +29,9 @@ Address CGCXXABI::getThisAddress(CodeGenFunction &CGF) {
 
 void CGCXXABI::ErrorUnsupportedABI(CodeGenFunction &CGF, StringRef S) {
   DiagnosticsEngine &Diags = CGF.CGM.getDiags();
-  unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
-                                          "cannot yet compile %0 in this ABI");
   Diags.Report(CGF.getContext().getFullLoc(CGF.CurCodeDecl->getLocation()),
-               DiagID)
-    << S;
+               diag::err_unsupported_cxx_abi_feature)
+      << S;
 }
 
 llvm::Constant *CGCXXABI::GetBogusMemberPointer(QualType T) {
@@ -261,6 +260,20 @@ void CGCXXABI::ReadArrayCookie(CodeGenFunction &CGF, Address ptr,
     cookieSize = CharUnits::Zero();
     return;
   }
+
+  cookieSize = getArrayCookieSizeImpl(eltTy);
+  Address allocAddr = CGF.Builder.CreateConstInBoundsByteGEP(ptr, -cookieSize);
+  allocPtr = allocAddr.emitRawPointer(CGF);
+  numElements = readArrayCookieImpl(CGF, allocAddr, cookieSize);
+}
+
+void CGCXXABI::ReadArrayCookie(CodeGenFunction &CGF, Address ptr,
+                               QualType eltTy, llvm::Value *&numElements,
+                               llvm::Value *&allocPtr, CharUnits &cookieSize) {
+  assert(eltTy.isDestructedType());
+
+  // Derive a char* in the same address space as the pointer.
+  ptr = ptr.withElementType(CGF.Int8Ty);
 
   cookieSize = getArrayCookieSizeImpl(eltTy);
   Address allocAddr = CGF.Builder.CreateConstInBoundsByteGEP(ptr, -cookieSize);

@@ -37,7 +37,7 @@ define i32 @test_01(ptr noundef %p, i32 noundef %n, i32 noundef %limit, ptr noun
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[COMMON_RET]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[BACKEDGE]] ], [ 0, [[GUARDED_US]] ], [ -1, [[LOOP]] ], [ -1, [[LOOP_US]] ], [ -2, [[GUARDED]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ -1, [[LOOP_US]] ], [ 0, [[GUARDED_US]] ], [ 0, [[BACKEDGE]] ], [ -1, [[LOOP]] ], [ -2, [[GUARDED]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ;
 entry:
@@ -94,7 +94,7 @@ define i32 @test_01_neg_void_profile(ptr noundef %p, i32 noundef %n, i32 noundef
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[COMMON_RET]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[BACKEDGE]] ], [ -1, [[LOOP]] ], [ -2, [[GUARDED]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ -1, [[LOOP]] ], [ 0, [[BACKEDGE]] ], [ -2, [[GUARDED]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ;
 entry:
@@ -162,7 +162,7 @@ define i32 @test_01_constants(ptr noundef %p, ptr noundef %arr, ptr noundef %x_p
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[COMMON_RET]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[BACKEDGE]] ], [ 0, [[GUARDED_US]] ], [ -1, [[LOOP]] ], [ -1, [[LOOP_US]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ -1, [[LOOP_US]] ], [ 0, [[GUARDED_US]] ], [ 0, [[BACKEDGE]] ], [ -1, [[LOOP]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ;
 entry:
@@ -218,7 +218,7 @@ define i32 @test_01_neg_degenerate_profile(ptr noundef %p, i32 noundef %n, i32 n
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[COMMON_RET]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[BACKEDGE]] ], [ -1, [[LOOP]] ], [ -2, [[GUARDED]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ -1, [[LOOP]] ], [ 0, [[BACKEDGE]] ], [ -2, [[GUARDED]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ;
 entry:
@@ -275,7 +275,7 @@ define i32 @test_01_neg_cold(ptr noundef %p, i32 noundef %n, i32 noundef %limit,
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[COMMON_RET]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[BACKEDGE]] ], [ -1, [[LOOP]] ], [ -2, [[GUARDED]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ -1, [[LOOP]] ], [ 0, [[BACKEDGE]] ], [ -2, [[GUARDED]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ;
 entry:
@@ -332,7 +332,7 @@ define i32 @test_01_neg_overflowing_metadata(ptr noundef %p, i32 noundef %n, i32
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[COMMON_RET]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[BACKEDGE]] ], [ -1, [[LOOP]] ], [ -2, [[GUARDED]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ -1, [[LOOP]] ], [ 0, [[BACKEDGE]] ], [ -2, [[GUARDED]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ;
 entry:
@@ -403,7 +403,7 @@ define i32 @test_02(ptr noundef %p, i32 noundef %n, i32 noundef %limit, ptr noun
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[COMMON_RET]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[BACKEDGE]] ], [ 0, [[GUARDED_US]] ], [ -1, [[LOOP]] ], [ -1, [[LOOP_US]] ], [ -2, [[GUARDED]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ -1, [[LOOP_US]] ], [ 0, [[GUARDED_US]] ], [ 0, [[BACKEDGE]] ], [ -1, [[LOOP]] ], [ -2, [[GUARDED]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ;
 entry:
@@ -473,7 +473,7 @@ define i32 @test_02_inverse(ptr noundef %p, i32 noundef %n, i32 noundef %limit, 
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[COMMON_RET]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[BACKEDGE]] ], [ 0, [[GUARDED_US]] ], [ -1, [[LOOP]] ], [ -1, [[LOOP_US]] ], [ -2, [[GUARDED]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ -1, [[LOOP_US]] ], [ 0, [[GUARDED_US]] ], [ 0, [[BACKEDGE]] ], [ -1, [[LOOP]] ], [ -2, [[GUARDED]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ;
 entry:
@@ -543,7 +543,7 @@ define i32 @test_03(ptr noundef %p, i32 noundef %n, i32 noundef %limit, ptr noun
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[COMMON_RET]], !llvm.loop [[LOOP13:![0-9]+]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[BACKEDGE]] ], [ 0, [[GUARDED_US]] ], [ -1, [[LOOP]] ], [ -1, [[LOOP_US]] ], [ -2, [[GUARDED]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ -1, [[LOOP_US]] ], [ 0, [[GUARDED_US]] ], [ 0, [[BACKEDGE]] ], [ -1, [[LOOP]] ], [ -2, [[GUARDED]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ;
 entry:
@@ -615,7 +615,7 @@ define i32 @test_04(ptr noundef %p, i32 noundef %n, i32 noundef %limit, ptr noun
 ; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[COMMON_RET]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       common.ret:
-; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ 0, [[BACKEDGE]] ], [ 0, [[GUARDED_US]] ], [ -1, [[LOOP]] ], [ -1, [[LOOP_US]] ], [ -2, [[GUARDED]] ]
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i32 [ -1, [[LOOP_US]] ], [ 0, [[GUARDED_US]] ], [ 0, [[BACKEDGE]] ], [ -1, [[LOOP]] ], [ -2, [[GUARDED]] ]
 ; CHECK-NEXT:    ret i32 [[COMMON_RET_OP]]
 ;
 entry:

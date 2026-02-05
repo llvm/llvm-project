@@ -171,18 +171,18 @@ void UnusedReturnValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UnusedReturnValueCheck::registerMatchers(MatchFinder *Finder) {
-  auto MatchedDirectCallExpr =
-      expr(callExpr(callee(functionDecl(
-                        // Don't match copy or move assignment operator.
-                        unless(isAssignmentOverloadedOperator()),
-                        // Don't match void overloads of checked functions.
-                        unless(returns(voidType())),
-                        anyOf(isInstantiatedFrom(matchers::matchesAnyListedName(
-                                  CheckedFunctions)),
-                              returns(hasCanonicalType(hasDeclaration(
-                                  namedDecl(matchers::matchesAnyListedName(
-                                      CheckedReturnTypes)))))))))
-               .bind("match"));
+  auto MatchedDirectCallExpr = expr(
+      callExpr(callee(functionDecl(
+                   // Don't match copy or move assignment operator.
+                   unless(isAssignmentOverloadedOperator()),
+                   // Don't match void overloads of checked functions.
+                   unless(returns(voidType())),
+                   anyOf(isInstantiatedFrom(matchers::matchesAnyListedRegexName(
+                             CheckedFunctions)),
+                         returns(hasCanonicalType(hasDeclaration(
+                             namedDecl(matchers::matchesAnyListedRegexName(
+                                 CheckedReturnTypes)))))))))
+          .bind("match"));
 
   auto CheckCastToVoid =
       AllowCastToVoid ? castExpr(unless(hasCastKind(CK_ToVoid))) : castExpr();

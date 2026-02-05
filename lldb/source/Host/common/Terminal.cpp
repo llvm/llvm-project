@@ -400,6 +400,23 @@ llvm::Error Terminal::SetHardwareFlowControl(bool enabled) {
 #endif // LLDB_ENABLE_TERMIOS
 }
 
+bool Terminal::SupportsUnicode() {
+#ifdef _WIN32
+  return true;
+#else
+  static std::optional<bool> g_result;
+  if (g_result)
+    return g_result.value();
+
+  const char *lang_var = std::getenv("LANG");
+  if (!lang_var)
+    return false;
+  g_result =
+      llvm::StringRef(lang_var).lower().find("utf-8") != std::string::npos;
+  return g_result.value();
+#endif
+}
+
 TerminalState::TerminalState(Terminal term, bool save_process_group)
     : m_tty(term) {
   Save(term, save_process_group);

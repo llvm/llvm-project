@@ -14,8 +14,10 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
+#include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprObjC.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/MissingFeatures.h"
 
@@ -73,6 +75,50 @@ static MemberCallInfo commonBuildCXXMemberOrOperatorCall(
 
   //  return {required, prefixSize};
   return {required, prefixSize};
+}
+
+RValue
+CIRGenFunction::emitCXXMemberPointerCallExpr(const CXXMemberCallExpr *ce,
+                                             ReturnValueSlot returnValue) {
+  const BinaryOperator *bo =
+      cast<BinaryOperator>(ce->getCallee()->IgnoreParens());
+  const Expr *baseExpr = bo->getLHS();
+  const Expr *memFnExpr = bo->getRHS();
+
+  const auto *mpt = memFnExpr->getType()->castAs<MemberPointerType>();
+  const auto *fpt = mpt->getPointeeType()->castAs<FunctionProtoType>();
+
+  // Emit the 'this' pointer.
+  Address thisAddr = Address::invalid();
+  if (bo->getOpcode() == BO_PtrMemI)
+    thisAddr = emitPointerWithAlignment(baseExpr);
+  else
+    thisAddr = emitLValue(baseExpr).getAddress();
+
+  assert(!cir::MissingFeatures::emitTypeCheck());
+
+  // Get the member function pointer.
+  mlir::Value memFnPtr = emitScalarExpr(memFnExpr);
+
+  // Resolve the member function pointer to the actual callee and adjust the
+  // "this" pointer for call.
+  mlir::Location loc = getLoc(ce->getExprLoc());
+  auto [/*mlir::Value*/ calleePtr, /*mlir::Value*/ adjustedThis] =
+      builder.createGetMethod(loc, memFnPtr, thisAddr.getPointer());
+
+  // Prepare the call arguments.
+  CallArgList argsList;
+  argsList.add(RValue::get(adjustedThis), getContext().VoidPtrTy);
+  emitCallArgs(argsList, fpt, ce->arguments());
+
+  RequiredArgs required = RequiredArgs::getFromProtoWithExtraSlots(fpt, 1);
+
+  // Build the call.
+  CIRGenCallee callee(fpt, calleePtr.getDefiningOp());
+  assert(!cir::MissingFeatures::opCallMustTail());
+  return emitCall(cgm.getTypes().arrangeCXXMethodCall(argsList, fpt, required,
+                                                      /*PrefixSize=*/0),
+                  callee, returnValue, argsList, nullptr, loc);
 }
 
 RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
@@ -524,13 +570,132 @@ void CIRGenFunction::emitNewArrayInitializer(
   if (!e->hasInitializer())
     return;
 
+  Address curPtr = beginPtr;
+
   unsigned initListElements = 0;
 
   const Expr *init = e->getInitializer();
+  Address endOfInit = Address::invalid();
+  QualType::DestructionKind dtorKind = elementType.isDestructedType();
+  assert(!cir::MissingFeatures::cleanupDeactivationScope());
+
+  // Attempt to perform zero-initialization using memset.
+  auto tryMemsetInitialization = [&]() -> bool {
+    mlir::Location loc = numElements.getLoc();
+
+    // FIXME: If the type is a pointer-to-data-member under the Itanium ABI,
+    // we can initialize with a memset to -1.
+    if (!cgm.getTypes().isZeroInitializable(elementType))
+      return false;
+
+    // Optimization: since zero initialization will just set the memory
+    // to all zeroes, generate a single memset to do it in one shot.
+
+    // Subtract out the size of any elements we've already initialized.
+    auto remainingSize = allocSizeWithoutCookie;
+    if (initListElements) {
+      // We know this can't overflow; we check this when doing the allocation.
+      unsigned initializedSize =
+          getContext().getTypeSizeInChars(elementType).getQuantity() *
+          initListElements;
+      cir::ConstantOp initSizeOp =
+          builder.getConstInt(loc, remainingSize.getType(), initializedSize);
+      remainingSize = builder.createSub(loc, remainingSize, initSizeOp);
+    }
+
+    // Create the memset.
+    mlir::Value castOp =
+        builder.createPtrBitcast(curPtr.getPointer(), cgm.voidTy);
+    builder.createMemSet(loc, castOp, builder.getConstInt(loc, cgm.uInt8Ty, 0),
+                         remainingSize);
+    return true;
+  };
+
   const InitListExpr *ile = dyn_cast<InitListExpr>(init);
-  if (ile) {
-    cgm.errorNYI(ile->getSourceRange(), "emitNewArrayInitializer: init list");
-    return;
+  const CXXParenListInitExpr *cplie = nullptr;
+  const StringLiteral *sl = nullptr;
+  const ObjCEncodeExpr *ocee = nullptr;
+  const Expr *ignoreParen = nullptr;
+  if (!ile) {
+    ignoreParen = init->IgnoreParenImpCasts();
+    cplie = dyn_cast<CXXParenListInitExpr>(ignoreParen);
+    sl = dyn_cast<StringLiteral>(ignoreParen);
+    ocee = dyn_cast<ObjCEncodeExpr>(ignoreParen);
+  }
+  // If the initializer is an initializer list, first do the explicit elements.
+  if (ile || cplie || sl || ocee) {
+    // Initializing from a (braced) string literal is a special case; the init
+    // list element does not initialize a (single) array element.
+    if ((ile && ile->isStringLiteralInit()) || sl || ocee) {
+      cgm.errorNYI(ile->getSourceRange(),
+                   "emitNewArrayInitializer: string literal init");
+      return;
+    }
+
+    ArrayRef<const Expr *> initExprs =
+        ile ? ile->inits() : cplie->getInitExprs();
+    initListElements = initExprs.size();
+
+    // If this is a multi-dimensional array new, we will initialize multiple
+    // elements with each init list element.
+    QualType allocType = e->getAllocatedType();
+    if (const ConstantArrayType *cat = dyn_cast_or_null<ConstantArrayType>(
+            allocType->getAsArrayTypeUnsafe())) {
+      (void)cat;
+      cgm.errorNYI(ile->getSourceRange(),
+                   "emitNewArrayInitializer: constant array init");
+      return;
+    }
+
+    // Enter a partial-destruction Cleanup if necessary.
+    if (dtorKind) {
+      cgm.errorNYI(ile->getSourceRange(),
+                   "emitNewArrayInitializer: init requires dtor");
+      return;
+    }
+
+    CharUnits elementSize = getContext().getTypeSizeInChars(elementType);
+    CharUnits startAlign = curPtr.getAlignment();
+    unsigned i = 0;
+    for (const Expr *ie : initExprs) {
+      // Tell the cleanup that it needs to destroy up to this
+      // element.  TODO: some of these stores can be trivially
+      // observed to be unnecessary.
+      if (endOfInit.isValid()) {
+        cgm.errorNYI(ie->getSourceRange(),
+                     "emitNewArrayInitializer: update dtor cleanup ptr");
+        return;
+      }
+      // FIXME: If the last initializer is an incomplete initializer list for
+      // an array, and we have an array filler, we can fold together the two
+      // initialization loops.
+      storeAnyExprIntoOneUnit(*this, ie, ie->getType(), curPtr,
+                              AggValueSlot::DoesNotOverlap);
+      mlir::Location loc = getLoc(ie->getExprLoc());
+      mlir::Value castOp = builder.createPtrBitcast(
+          curPtr.getPointer(), convertTypeForMem(allocType));
+      mlir::Value offsetOp = builder.getSignedInt(loc, 1, /*width=*/32);
+      mlir::Value dataPtr = builder.createPtrStride(loc, castOp, offsetOp);
+      curPtr = Address(dataPtr, curPtr.getElementType(),
+                       startAlign.alignmentAtOffset((++i) * elementSize));
+    }
+
+    // The remaining elements are filled with the array filler expression.
+    init = ile ? ile->getArrayFiller() : cplie->getArrayFiller();
+
+    // Extract the initializer for the individual array elements by pulling
+    // out the array filler from all the nested initializer lists. This avoids
+    // generating a nested loop for the initialization.
+    while (init && init->getType()->isConstantArrayType()) {
+      auto *subIle = dyn_cast<InitListExpr>(init);
+      if (!subIle)
+        break;
+      assert(subIle->getNumInits() == 0 && "explicit inits in array filler?");
+      init = subIle->getArrayFiller();
+    }
+
+    // Switch back to initializing one base element at a time.
+    curPtr = curPtr.withElementType(builder, beginPtr.getElementType());
   }
 
   // If all elements have already been initialized, skip any further
@@ -562,6 +727,15 @@ void CIRGenFunction::emitNewArrayInitializer(
 
     cgm.errorNYI(cce->getSourceRange(),
                  "emitNewArrayInitializer: ctor initializer");
+    return;
+  }
+
+  // If this is value-initialization, we can usually use memset.
+  if (isa<ImplicitValueInitExpr>(init)) {
+    if (tryMemsetInitialization())
+      return;
+    cgm.errorNYI(init->getSourceRange(),
+                 "emitNewArrayInitializer: implicit value init");
     return;
   }
 
@@ -690,7 +864,7 @@ struct CallObjectDelete final : EHScopeStack::Cleanup {
                    QualType elementType)
       : ptr(ptr), operatorDelete(operatorDelete), elementType(elementType) {}
 
-  void emit(CIRGenFunction &cgf) override {
+  void emit(CIRGenFunction &cgf, Flags flags) override {
     cgf.emitDeleteCall(operatorDelete, ptr, elementType);
   }
 };
@@ -776,6 +950,13 @@ void CIRGenFunction::emitCXXDeleteExpr(const CXXDeleteExpr *e) {
   // We might be deleting a pointer to array.
   deleteTy = getContext().getBaseElementType(deleteTy);
   ptr = ptr.withElementType(builder, convertTypeForMem(deleteTy));
+
+  if (e->isArrayForm() &&
+      cgm.getASTContext().getTargetInfo().emitVectorDeletingDtors(
+          cgm.getASTContext().getLangOpts())) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitCXXDeleteExpr: emitVectorDeletingDtors");
+  }
 
   if (e->isArrayForm()) {
     assert(!cir::MissingFeatures::deleteArray());

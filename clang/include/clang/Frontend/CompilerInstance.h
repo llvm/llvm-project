@@ -36,6 +36,7 @@
 
 namespace llvm {
 class raw_fd_ostream;
+class PassPlugin;
 class Timer;
 class TimerGroup;
 }
@@ -108,7 +109,7 @@ class CompilerInstance : public ModuleLoader {
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
 
   /// The cache of PCM files.
-  IntrusiveRefCntPtr<ModuleCache> ModCache;
+  std::shared_ptr<ModuleCache> ModCache;
 
   /// Functor for getting the dependency preprocessor directives of a file.
   std::unique_ptr<DependencyDirectivesGetter> GetDependencyDirectives;
@@ -130,6 +131,9 @@ class CompilerInstance : public ModuleLoader {
 
   /// The semantic analysis object.
   std::unique_ptr<Sema> TheSema;
+
+  /// Back-end pass plugins.
+  std::vector<std::unique_ptr<llvm::PassPlugin>> PassPlugins;
 
   /// The frontend timer group.
   std::unique_ptr<llvm::TimerGroup> timerGroup;
@@ -201,7 +205,7 @@ public:
           std::make_shared<CompilerInvocation>(),
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
           std::make_shared<PCHContainerOperations>(),
-      ModuleCache *ModCache = nullptr);
+      std::shared_ptr<ModuleCache> ModCache = nullptr);
   ~CompilerInstance() override;
 
   /// @name High-Level Operations
@@ -644,6 +648,14 @@ public:
   /// the compiler instance takes ownership of \p Value.
   void setCodeCompletionConsumer(CodeCompleteConsumer *Value);
 
+  /// }
+  /// @name Back-end Pass Plugins
+  /// @{
+
+  llvm::ArrayRef<std::unique_ptr<llvm::PassPlugin>> getPassPlugins() const {
+    return PassPlugins;
+  }
+
   /// @}
   /// @name Frontend timer
   /// @{
@@ -726,9 +738,9 @@ public:
     GetDependencyDirectives = std::move(Getter);
   }
 
-  std::string getSpecificModuleCachePath(StringRef ModuleHash);
+  std::string getSpecificModuleCachePath(StringRef ContextHash);
   std::string getSpecificModuleCachePath() {
-    return getSpecificModuleCachePath(getInvocation().getModuleHash());
+    return getSpecificModuleCachePath(getInvocation().computeContextHash());
   }
 
   /// Create the AST context.
@@ -860,20 +872,24 @@ public:
   class ThreadSafeCloneConfig {
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
     DiagnosticConsumer &DiagConsumer;
+    std::shared_ptr<ModuleCache> ModCache;
     std::shared_ptr<ModuleDependencyCollector> ModuleDepCollector;
 
   public:
     ThreadSafeCloneConfig(
         IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
-        DiagnosticConsumer &DiagConsumer,
+        DiagnosticConsumer &DiagConsumer, std::shared_ptr<ModuleCache> ModCache,
         std::shared_ptr<ModuleDependencyCollector> ModuleDepCollector = nullptr)
         : VFS(std::move(VFS)), DiagConsumer(DiagConsumer),
+          ModCache(std::move(ModCache)),
           ModuleDepCollector(std::move(ModuleDepCollector)) {
       assert(this->VFS && "Clone config requires non-null VFS");
+      assert(this->ModCache && "Clone config requires non-null ModuleCache");
     }
 
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> getVFS() const { return VFS; }
     DiagnosticConsumer &getDiagConsumer() const { return DiagConsumer; }
+    std::shared_ptr<ModuleCache> getModuleCache() const { return ModCache; }
     std::shared_ptr<ModuleDependencyCollector> getModuleDepCollector() const {
       return ModuleDepCollector;
     }
@@ -893,7 +909,7 @@ private:
   /// load it.
   ModuleLoadResult findOrCompileModuleAndReadAST(StringRef ModuleName,
                                                  SourceLocation ImportLoc,
-                                                 SourceLocation ModuleNameLoc,
+                                                 SourceRange ModuleNameRange,
                                                  bool IsInclusionDirective);
 
   /// Creates a \c CompilerInstance for compiling a module.
@@ -913,7 +929,7 @@ public:
   /// The \c ThreadSafeConfig takes precedence over the \c DiagnosticConsumer
   /// and \c FileSystem of this instance (and disables \c FileManager sharing).
   std::unique_ptr<CompilerInstance> cloneForModuleCompile(
-      SourceLocation ImportLoc, Module *Module, StringRef ModuleFileName,
+      SourceLocation ImportLoc, const Module *Module, StringRef ModuleFileName,
       std::optional<ThreadSafeCloneConfig> ThreadSafeConfig = std::nullopt);
 
   /// Compile a module file for the given module, using the options
@@ -955,6 +971,7 @@ public:
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);
 
   ModuleCache &getModuleCache() const { return *ModCache; }
+  std::shared_ptr<ModuleCache> getModuleCachePtr() const { return ModCache; }
 };
 
 } // end namespace clang

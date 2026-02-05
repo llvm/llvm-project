@@ -136,26 +136,70 @@ public:
             const OriginManager &OM) const override;
 };
 
+/// Represents that an origin escapes the current scope through various means.
+/// This is the base class for different escape scenarios.
 class OriginEscapesFact : public Fact {
   OriginID OID;
-  const Expr *EscapeExpr;
 
 public:
+  /// The way an origin can escape the current scope.
+  enum class EscapeKind : uint8_t {
+    Return, /// Escapes via return statement.
+    Field,  /// Escapes via assignment to a field.
+    // FIXME: Add support for escape to global (dangling global ptr).
+  } EscKind;
+
   static bool classof(const Fact *F) {
     return F->getKind() == Kind::OriginEscapes;
   }
 
-  OriginEscapesFact(OriginID OID, const Expr *EscapeExpr)
-      : Fact(Kind::OriginEscapes), OID(OID), EscapeExpr(EscapeExpr) {}
+  OriginEscapesFact(OriginID OID, EscapeKind EscKind)
+      : Fact(Kind::OriginEscapes), OID(OID), EscKind(EscKind) {}
   OriginID getEscapedOriginID() const { return OID; }
-  const Expr *getEscapeExpr() const { return EscapeExpr; };
+  EscapeKind getEscapeKind() const { return EscKind; }
+};
+
+/// Represents that an origin escapes via a return statement.
+class ReturnEscapeFact : public OriginEscapesFact {
+  const Expr *ReturnExpr;
+
+public:
+  ReturnEscapeFact(OriginID OID, const Expr *ReturnExpr)
+      : OriginEscapesFact(OID, EscapeKind::Return), ReturnExpr(ReturnExpr) {}
+
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::OriginEscapes &&
+           static_cast<const OriginEscapesFact *>(F)->getEscapeKind() ==
+               EscapeKind::Return;
+  }
+  const Expr *getReturnExpr() const { return ReturnExpr; };
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override;
+};
+
+/// Represents that an origin escapes via assignment to a field.
+/// Example: `this->view = local_var;` where local_var outlives the assignment
+/// but not the object containing the field.
+class FieldEscapeFact : public OriginEscapesFact {
+  const FieldDecl *FDecl;
+
+public:
+  FieldEscapeFact(OriginID OID, const FieldDecl *FDecl)
+      : OriginEscapesFact(OID, EscapeKind::Field), FDecl(FDecl) {}
+
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::OriginEscapes &&
+           static_cast<const OriginEscapesFact *>(F)->getEscapeKind() ==
+               EscapeKind::Field;
+  }
+  const FieldDecl *getFieldDecl() const { return FDecl; };
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &OM) const override;
 };
 
 class UseFact : public Fact {
   const Expr *UseExpr;
-  OriginID OID;
+  const OriginList *OList;
   // True if this use is a write operation (e.g., left-hand side of assignment).
   // Write operations are exempted from use-after-free checks.
   bool IsWritten = false;
@@ -163,10 +207,10 @@ class UseFact : public Fact {
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Use; }
 
-  UseFact(const Expr *UseExpr, OriginManager &OM)
-      : Fact(Kind::Use), UseExpr(UseExpr), OID(OM.get(*UseExpr)) {}
+  UseFact(const Expr *UseExpr, const OriginList *OList)
+      : Fact(Kind::Use), UseExpr(UseExpr), OList(OList) {}
 
-  OriginID getUsedOrigin() const { return OID; }
+  const OriginList *getUsedOrigins() const { return OList; }
   const Expr *getUseExpr() const { return UseExpr; }
   void markAsWritten() { IsWritten = true; }
   bool isWritten() const { return IsWritten; }
@@ -194,8 +238,8 @@ public:
 
 class FactManager {
 public:
-  void init(const CFG &Cfg) {
-    assert(BlockToFacts.empty() && "FactManager already initialized");
+  FactManager(const AnalysisDeclContext &AC, const CFG &Cfg)
+      : OriginMgr(AC.getASTContext(), AC.getDecl()) {
     BlockToFacts.resize(Cfg.getNumBlockIDs());
   }
 

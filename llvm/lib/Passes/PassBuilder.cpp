@@ -91,14 +91,14 @@
 #include "llvm/CodeGen/DwarfEHPrepare.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/EdgeBundles.h"
-#include "llvm/CodeGen/ExpandFp.h"
-#include "llvm/CodeGen/ExpandLargeDivRem.h"
+#include "llvm/CodeGen/ExpandIRInsts.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
 #include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
 #include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
+#include "llvm/CodeGen/GCEmptyBasicBlocks.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalMerge.h"
@@ -123,6 +123,7 @@
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
+#include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineLICM.h"
@@ -1633,7 +1634,7 @@ parseBoundsCheckingOptions(StringRef Params) {
   return Options;
 }
 
-Expected<CodeGenOptLevel> parseExpandFpOptions(StringRef Param) {
+Expected<CodeGenOptLevel> parseExpandIRInstsOptions(StringRef Param) {
   if (Param.empty())
     return CodeGenOptLevel::None;
 
@@ -1642,13 +1643,13 @@ Expected<CodeGenOptLevel> parseExpandFpOptions(StringRef Param) {
 
   uint8_t N;
   if (!Prefix.empty() || Digit.getAsInteger(10, N))
-    return createStringError("invalid expand-fp pass parameter '%s'",
+    return createStringError("invalid expand-ir-insts pass parameter '%s'",
                              Param.str().c_str());
 
   std::optional<CodeGenOptLevel> Level = CodeGenOpt::getLevel(N);
   if (!Level.has_value())
     return createStringError(
-        "invalid optimization level for expand-fp pass: %s",
+        "invalid optimization level for expand-ir-insts pass: %s",
         Digit.str().c_str());
 
   return *Level;

@@ -70,6 +70,7 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/ThreadPool.h"
 
 #include <memory>
@@ -2864,7 +2865,7 @@ ExpressionResults Target::EvaluateExpression(
   // We shouldn't run stop hooks in expressions.
   bool old_suppress_value = m_suppress_stop_hooks;
   m_suppress_stop_hooks = true;
-  auto on_exit = llvm::make_scope_exit([this, old_suppress_value]() {
+  llvm::scope_exit on_exit([this, old_suppress_value]() {
     m_suppress_stop_hooks = old_suppress_value;
   });
 
@@ -3200,7 +3201,7 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   }
 
   StreamSP output_sp = m_debugger.GetAsyncOutputStream();
-  auto on_exit = llvm::make_scope_exit([output_sp] { output_sp->Flush(); });
+  llvm::scope_exit on_exit([output_sp] { output_sp->Flush(); });
 
   size_t num_hooks_with_output = llvm::count_if(
       active_hooks, [](auto h) { return !h->GetSuppressOutput(); });
@@ -3718,6 +3719,61 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
     }
   }
   return error;
+}
+
+llvm::Expected<uint32_t> Target::AddScriptedFrameProviderDescriptor(
+    const ScriptedFrameProviderDescriptor &descriptor) {
+  if (!descriptor.IsValid())
+    return llvm::createStringError("invalid frame provider descriptor");
+
+  llvm::StringRef name = descriptor.GetName();
+  if (name.empty())
+    return llvm::createStringError(
+        "frame provider descriptor has no class name");
+
+  std::lock_guard<std::recursive_mutex> guard(
+      m_frame_provider_descriptors_mutex);
+
+  uint32_t descriptor_id = descriptor.GetID();
+  m_frame_provider_descriptors[descriptor_id] = descriptor;
+
+  // Clear frame providers on existing threads so they reload with new config.
+  if (ProcessSP process_sp = GetProcessSP())
+    for (ThreadSP thread_sp : process_sp->Threads())
+      thread_sp->ClearScriptedFrameProvider();
+
+  return descriptor_id;
+}
+
+bool Target::RemoveScriptedFrameProviderDescriptor(uint32_t id) {
+  std::lock_guard<std::recursive_mutex> guard(
+      m_frame_provider_descriptors_mutex);
+  bool removed = m_frame_provider_descriptors.erase(id);
+
+  if (removed)
+    if (ProcessSP process_sp = GetProcessSP())
+      for (ThreadSP thread_sp : process_sp->Threads())
+        thread_sp->ClearScriptedFrameProvider();
+
+  return removed;
+}
+
+void Target::ClearScriptedFrameProviderDescriptors() {
+  std::lock_guard<std::recursive_mutex> guard(
+      m_frame_provider_descriptors_mutex);
+
+  m_frame_provider_descriptors.clear();
+
+  if (ProcessSP process_sp = GetProcessSP())
+    for (ThreadSP thread_sp : process_sp->Threads())
+      thread_sp->ClearScriptedFrameProvider();
+}
+
+const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
+Target::GetScriptedFrameProviderDescriptors() const {
+  std::lock_guard<std::recursive_mutex> guard(
+      m_frame_provider_descriptors_mutex);
+  return m_frame_provider_descriptors;
 }
 
 void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
@@ -5090,17 +5146,17 @@ void TargetProperties::SetProcessLaunchInfo(
   const FileAction *input_file_action =
       launch_info.GetFileActionForFD(STDIN_FILENO);
   if (input_file_action) {
-    SetStandardInputPath(input_file_action->GetPath());
+    SetStandardInputPath(input_file_action->GetFileSpec().GetPath());
   }
   const FileAction *output_file_action =
       launch_info.GetFileActionForFD(STDOUT_FILENO);
   if (output_file_action) {
-    SetStandardOutputPath(output_file_action->GetPath());
+    SetStandardOutputPath(output_file_action->GetFileSpec().GetPath());
   }
   const FileAction *error_file_action =
       launch_info.GetFileActionForFD(STDERR_FILENO);
   if (error_file_action) {
-    SetStandardErrorPath(error_file_action->GetPath());
+    SetStandardErrorPath(error_file_action->GetFileSpec().GetPath());
   }
   SetDetachOnError(launch_info.GetFlags().Test(lldb::eLaunchFlagDetachOnError));
   SetDisableASLR(launch_info.GetFlags().Test(lldb::eLaunchFlagDisableASLR));
@@ -5301,4 +5357,55 @@ void Target::NotifyBreakpointChanged(
     Breakpoint &bp, const lldb::EventDataSP &breakpoint_data_sp) {
   if (EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged))
     BroadcastEvent(Target::eBroadcastBitBreakpointChanged, breakpoint_data_sp);
+}
+
+// FIXME: the language plugin should expression options dynamically and
+// we should validate here (by asking the language plugin) that the options
+// being set/retrieved are actually valid options.
+
+llvm::Error
+EvaluateExpressionOptions::SetBooleanLanguageOption(llvm::StringRef option_name,
+                                                    bool value) {
+  if (option_name.empty())
+    return llvm::createStringError("Can't set an option with an empty name.");
+
+  if (StructuredData::ObjectSP existing_sp =
+          GetLanguageOptions().GetValueForKey(option_name);
+      existing_sp && existing_sp->GetType() != eStructuredDataTypeBoolean)
+    return llvm::createStringErrorV("Trying to override existing option '{0}' "
+                                    "of type '{1}' with a boolean value.",
+                                    option_name, existing_sp->GetType());
+
+  GetLanguageOptions().AddBooleanItem(option_name, value);
+
+  return llvm::Error::success();
+}
+
+llvm::Expected<bool> EvaluateExpressionOptions::GetBooleanLanguageOption(
+    llvm::StringRef option_name) const {
+  const StructuredData::Dictionary &opts = GetLanguageOptions();
+
+  if (!opts.HasKey(option_name))
+    return llvm::createStringErrorV("Option '{0}' does not exist.",
+                                    option_name);
+
+  bool result;
+  if (!opts.GetValueForKeyAsBoolean(option_name, result))
+    return llvm::createStringErrorV("Failed to get option '{0}' as boolean.",
+                                    option_name);
+
+  return result;
+}
+
+const StructuredData::Dictionary &
+EvaluateExpressionOptions::GetLanguageOptions() const {
+  assert(m_language_options_sp);
+
+  return *m_language_options_sp;
+}
+
+StructuredData::Dictionary &EvaluateExpressionOptions::GetLanguageOptions() {
+  assert(m_language_options_sp);
+
+  return *m_language_options_sp;
 }

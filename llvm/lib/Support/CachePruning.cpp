@@ -280,7 +280,9 @@ bool llvm::pruneCache(StringRef Path, CachePruningPolicy Policy,
   if (Policy.MaxSizePercentageOfAvailableSpace > 0 || Policy.MaxSizeBytes > 0) {
     auto ErrOrSpaceInfo = sys::fs::disk_space(Path);
     if (!ErrOrSpaceInfo) {
-      report_fatal_error("Can't get available size");
+      auto EC = ErrOrSpaceInfo.getError();
+      report_fatal_error(Twine("Can't get available size for '") + Path.str() +
+                         "': " + EC.message());
     }
     sys::fs::space_info SpaceInfo = ErrOrSpaceInfo.get();
     auto AvailableSpace = TotalSize + SpaceInfo.free;

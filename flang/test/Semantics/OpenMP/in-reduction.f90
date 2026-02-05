@@ -22,7 +22,7 @@ subroutine f02(p)
 end
 
 subroutine f03
-  common /c/ a, b 
+  common /c/ a, b
 !ERROR: Common block names are not allowed in IN_REDUCTION clause
 !$omp target in_reduction(+: /c/)
 !$omp end target

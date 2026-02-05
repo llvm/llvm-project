@@ -97,11 +97,11 @@ const std::vector<TestEnvironment::Device> &TestEnvironment::getDevices() {
             S << Platform;
             if (PlatformName == SelectedPlatform &&
                 Backend != OL_PLATFORM_BACKEND_HOST) {
+              auto *OutDevices = static_cast<decltype(Devices) *>(Data);
               std::string Name;
               raw_string_ostream NameStr(Name);
-              NameStr << PlatformName << "_" << D;
-              static_cast<std::vector<TestEnvironment::Device> *>(Data)
-                  ->push_back({D, Name});
+              NameStr << PlatformName << "_" << D << OutDevices->size();
+              OutDevices->push_back({D, Name});
             }
             return true;
           },
@@ -117,11 +117,11 @@ const std::vector<TestEnvironment::Device> &TestEnvironment::getDevices() {
             olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
                               sizeof(Backend), &Backend);
             if (Backend != OL_PLATFORM_BACKEND_HOST) {
+              auto *OutDevices = static_cast<decltype(Devices) *>(Data);
               std::string Name;
               raw_string_ostream NameStr(Name);
-              NameStr << Platform << "_" << D;
-              static_cast<std::vector<TestEnvironment::Device> *>(Data)
-                  ->push_back({D, Name});
+              NameStr << Platform << "_" << D << "_" << OutDevices->size();
+              OutDevices->push_back({D, Name});
             }
             return true;
           },

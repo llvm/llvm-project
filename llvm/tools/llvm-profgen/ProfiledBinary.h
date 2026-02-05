@@ -72,10 +72,22 @@ enum SpecialFrameAddr {
 
 using RangesTy = std::vector<std::pair<uint64_t, uint64_t>>;
 
+enum DwarfNameStatus {
+  // Dwarf name matches with the symbol table (or symbol table just doesn't have
+  // this entry)
+  Matched = 0,
+  // Dwarf name is missing, but we fixed it with the name from symbol table
+  Missing = 1,
+  // Symbol table has different names on this. Log these GUIDs in
+  // AlternativeFunctionGUIDs
+  Mismatch = 2,
+};
+
 struct BinaryFunction {
   StringRef FuncName;
   // End of range is an exclusive bound.
   RangesTy Ranges;
+  DwarfNameStatus NameStatus = DwarfNameStatus::Matched;
 
   uint64_t getFuncSize() {
     uint64_t Sum = 0;
@@ -191,6 +203,8 @@ class ProfiledBinary {
   std::string Path;
   // Path of the debug info binary.
   std::string DebugBinaryPath;
+  // Path of the pseudo probe binary, either Path or DebugBinaryPath if present.
+  StringRef PseudoProbeBinPath;
   // The target triple.
   Triple TheTriple;
   // Path of symbolizer path which should be pointed to binary with debug info.
@@ -230,6 +244,14 @@ class ProfiledBinary {
 
   // GUID to symbol start address map
   DenseMap<uint64_t, uint64_t> SymbolStartAddrs;
+
+  // Binary function to GUID mapping that stores the alternative names in symbol
+  // table, despite the original name from DWARF info
+  std::unordered_multimap<const BinaryFunction *, uint64_t>
+      AlternativeFunctionGUIDs;
+
+  // Mapping of profiled binary function to its pseudo probe name
+  std::unordered_map<const BinaryFunction *, StringRef> PseudoProbeNames;
 
   // These maps are for temporary use of warning diagnosis.
   DenseSet<int64_t> AddrsWithMultipleSymbols;
@@ -299,8 +321,6 @@ class ProfiledBinary {
   // Function name to probe frame map for top-level outlined functions.
   StringMap<MCDecodedPseudoProbeInlineTree *> TopLevelProbeFrameMap;
 
-  bool UsePseudoProbes = false;
-
   bool UseFSDiscriminator = false;
 
   // Whether we need to symbolize all instructions to get function context size.
@@ -335,7 +355,8 @@ class ProfiledBinary {
   void setPreferredTextSegmentAddresses(const object::COFFObjectFile *Obj,
                                         StringRef FileName);
 
-  void checkPseudoProbe(const object::ObjectFile *Obj);
+  // Return true if pseudo probe in Obj is usable.
+  bool checkPseudoProbe(const object::ObjectFile *Obj, StringRef ObjPath);
 
   void decodePseudoProbe(const object::ObjectFile *Obj);
 
@@ -355,6 +376,9 @@ class ProfiledBinary {
 
   // Create symbol to its start address mapping.
   void populateSymbolAddressList(const object::ObjectFile *O);
+
+  // Load functions from its symbol table (when DWARF info is missing).
+  void loadSymbolsFromSymtab(const object::ObjectFile *O);
 
   // A function may be spilt into multiple non-continuous address ranges. We use
   // this to set whether start a function range is the real entry of the
@@ -459,7 +483,7 @@ public:
 
   size_t getCodeAddrVecSize() const { return CodeAddressVec.size(); }
 
-  bool usePseudoProbes() const { return UsePseudoProbes; }
+  bool usePseudoProbes() const { return !PseudoProbeBinPath.empty(); }
   bool useFSDiscriminator() const { return UseFSDiscriminator; }
   bool isKernel() const { return IsKernel; }
 
@@ -598,6 +622,10 @@ public:
                                          uint64_t EndAddress);
 
   void computeInlinedContextSizeForFunc(const BinaryFunction *Func);
+
+  void loadSymbolsFromPseudoProbe();
+
+  StringRef findPseudoProbeName(const BinaryFunction *Func);
 
   const MCDecodedPseudoProbe *getCallProbeForAddr(uint64_t Address) const {
     return ProbeDecoder.getCallProbeForAddr(Address);

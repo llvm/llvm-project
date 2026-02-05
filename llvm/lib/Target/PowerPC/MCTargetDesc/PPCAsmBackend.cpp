@@ -25,7 +25,25 @@
 #include "llvm/Support/ErrorHandling.h"
 using namespace llvm;
 
-static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
+static uint64_t adjustFixupValue(MCContext &Ctx, const MCFixup &Fixup,
+                                 unsigned Kind, uint64_t Value) {
+  auto checkBrFixup = [&](unsigned Bits) {
+    int64_t SVal = int64_t(Value);
+    if ((Value & 3) != 0) {
+      Ctx.reportError(Fixup.getLoc(), "branch target not a multiple of four (" +
+                                          Twine(SVal) + ")");
+      return;
+    }
+
+    // Low two bits are not encoded.
+    if (!isIntN(Bits + 2, Value)) {
+      Ctx.reportError(Fixup.getLoc(), "branch target out of range (" +
+                                          Twine(SVal) + " not between " +
+                                          Twine(minIntN(Bits) * 4) + " and " +
+                                          Twine(maxIntN(Bits) * 4) + ")");
+    }
+  };
+
   switch (Kind) {
   default:
     llvm_unreachable("Unknown fixup kind!");
@@ -37,10 +55,12 @@ static uint64_t adjustFixupValue(unsigned Kind, uint64_t Value) {
     return Value;
   case PPC::fixup_ppc_brcond14:
   case PPC::fixup_ppc_brcond14abs:
+    checkBrFixup(14);
     return Value & 0xfffc;
   case PPC::fixup_ppc_br24:
   case PPC::fixup_ppc_br24abs:
   case PPC::fixup_ppc_br24_notoc:
+    checkBrFixup(24);
     return Value & 0x3fffffc;
   case PPC::fixup_ppc_half16:
     return Value & 0xffff;
@@ -211,7 +231,7 @@ void PPCAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   MCFixupKind Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
-  Value = adjustFixupValue(Kind, Value);
+  Value = adjustFixupValue(getContext(), Fixup, Kind, Value);
   if (!Value)
     return; // Doesn't change encoding.
 
