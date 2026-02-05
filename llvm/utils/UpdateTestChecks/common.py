@@ -2712,7 +2712,6 @@ def get_autogennote_suffix(parser, args):
             "tool_binary",
             "opt_binary",
             "llc_binary",
-            "llubi_binary",
             "clang",
             "opt",
             "llvm_bin",
