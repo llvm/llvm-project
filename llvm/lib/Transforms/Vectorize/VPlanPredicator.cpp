@@ -205,8 +205,7 @@ void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
 void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
   SmallVector<VPPhi *> Phis;
   for (VPRecipeBase &R : VPBB->phis())
-    if (auto *PhiR = dyn_cast<VPPhi>(&R))
-      Phis.push_back(PhiR);
+    Phis.push_back(cast<VPPhi>(&R));
   for (VPPhi *PhiR : Phis) {
     // The non-header Phi is converted into a Blend recipe below,
     // so we don't have to worry about the insertion order and we can just use
@@ -252,6 +251,8 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
   for (VPBlockBase *VPB : RPOT) {
     // Non-outer regions with VPBBs only are supported at the moment.
     auto *VPBB = cast<VPBasicBlock>(VPB);
+    if (VPBB == Header)
+      continue;
     Predicator.createBlockInMask(VPBB);
     Predicator.convertPhisToBlends(VPBB);
   }
