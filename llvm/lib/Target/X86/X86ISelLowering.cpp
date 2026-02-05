@@ -56011,28 +56011,22 @@ static SDValue combineXorWithGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
 // together. XORing two affine transformations of the same input can be folded
 // by XORing both their matrices and immediates together.
 static SDValue combineXorWithTwoGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
-                                               SelectionDAG &DAG, EVT VT) {
+                                              SelectionDAG &DAG, EVT VT) {
   using namespace SDPatternMatch;
 
-  SDValue X0, Y0, X1, Y1;
+  SDValue X0, Y0, Y1;
   APInt Imm0, Imm1;
-  
   // Use sd_match for structure matching - m_Xor handles commutation
   // Match: GF2P8AFFINEQB(x, m1, i1) ^ GF2P8AFFINEQB(x, m2, i2)
-  if (!sd_match(N, m_Xor(m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, 
-                                               m_Value(X0), m_Value(Y0), 
-                                               m_ConstInt(Imm0))),
-                          m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB,
-                                               m_Value(X1), m_Value(Y1),
-                                               m_ConstInt(Imm1))))))
+  if (!sd_match(
+          N, m_Xor(m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Value(X0),
+                                        m_Value(Y0), m_ConstInt(Imm0))),
+                   m_OneUse(m_TernaryOp(X86ISD::GF2P8AFFINEQB, m_Deferred(X0),
+                                        m_Value(Y1), m_ConstInt(Imm1))))))
     return SDValue();
 
   assert((VT == MVT::v16i8 || VT == MVT::v32i8 || VT == MVT::v64i8) &&
          "Unsupported GFNI type");
-
-  // Both must operate on the same input
-  if (X0 != X1)
-    return SDValue();
 
   uint64_t NewImm = Imm0.getZExtValue() ^ Imm1.getZExtValue();
 
@@ -56149,7 +56143,6 @@ static SDValue combineXor(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue R = combineXorWithTwoGF2P8AFFINEQB(N, DL, DAG, VT))
     return R;
-
 
   // Fold not(iX bitcast(vXi1)) -> (iX bitcast(not(vec))) for legal boolvecs.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
