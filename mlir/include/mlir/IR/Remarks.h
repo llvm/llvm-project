@@ -95,7 +95,7 @@ public:
         remarkName(opts.remarkName.str()) {
     if (!categoryName.empty() && !subCategoryName.empty()) {
       (llvm::Twine(categoryName) + ":" + subCategoryName)
-          .toStringRef(fullCategoryName);
+          .toVector(fullCategoryName);
     }
   }
 
