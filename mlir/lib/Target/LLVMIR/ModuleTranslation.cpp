@@ -1874,6 +1874,26 @@ LogicalResult ModuleTranslation::convertArgAndResultAttrs(
   return success();
 }
 
+std::optional<llvm::Attribute>
+ModuleTranslation::convertNoBuiltin(llvm::LLVMContext &ctx, mlir::Attribute a) {
+  if (auto str = dyn_cast<StringAttr>(a))
+    return llvm::Attribute::get(ctx, ("no-builtin-" + str.getValue()).str());
+  return std::nullopt;
+}
+
+std::optional<llvm::Attribute>
+ModuleTranslation::convertDefaultFuncAttr(llvm::LLVMContext &ctx,
+                                          mlir::NamedAttribute namedAttr) {
+  StringAttr name = namedAttr.getName();
+  Attribute value = namedAttr.getValue();
+
+  if (auto strVal = dyn_cast<StringAttr>(value))
+    return llvm::Attribute::get(ctx, name.getValue(), strVal.getValue());
+  if (mlir::isa<UnitAttr>(value))
+    return llvm::Attribute::get(ctx, name.getValue());
+  return std::nullopt;
+}
+
 FailureOr<llvm::AttrBuilder>
 ModuleTranslation::convertParameterAttrs(Location loc,
                                          DictionaryAttr paramAttrs) {

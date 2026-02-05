@@ -2679,7 +2679,6 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("no-nans-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
     StringLiteral("no-builtins"),
-    StringLiteral("nobuiltin"),
     StringLiteral("nocallback"),
     StringLiteral("noduplicate"),
     StringLiteral("noinline"),

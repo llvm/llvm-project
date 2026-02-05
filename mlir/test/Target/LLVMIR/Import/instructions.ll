@@ -917,7 +917,6 @@ define void @call_default_func_attrs() {
 
 ; // -----
 
-
 ; CHECK: llvm.func @f()
 declare void @f()
 
