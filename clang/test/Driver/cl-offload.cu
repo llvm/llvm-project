@@ -18,11 +18,10 @@
 // CUDA-SAME: "-Weverything"
 // CUDA: link
 
-// HIP: "-cc1" "-triple" "x86_64-pc-windows-msvc{{.*}}" "-aux-triple" "amdgcn-amd-amdhsa"
-// HIP-SAME: "-Weverything"
 // HIP: "-cc1" "-triple" "amdgcn-amd-amdhsa" "-aux-triple" "x86_64-pc-windows-msvc"
 // HIP-SAME: "-Weverything"
-// HIP: {{lld.* "-flavor" "gnu" "-m" "elf64_amdgpu"}}
+// HIP: "-cc1" "-triple" "x86_64-pc-windows-msvc{{.*}}" "-aux-triple" "amdgcn-amd-amdhsa"
+// HIP-SAME: "-Weverything"
 // HIP: {{link.* "amdhip64.lib"}}
 
 // CMake uses this option when finding packages for HIP, so
