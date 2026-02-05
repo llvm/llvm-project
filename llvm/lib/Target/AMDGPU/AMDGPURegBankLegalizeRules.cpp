@@ -1768,7 +1768,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
 
-  addRulesForIOpcs({amdgcn_log, amdgcn_rcp, amdgcn_sqrt}, Standard)
+  bool hasPST = ST->hasPseudoScalarTrans();
+  addRulesForIOpcs({amdgcn_log, amdgcn_exp2, amdgcn_rcp, amdgcn_sqrt}, Standard)
       .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16}})
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr16}})
       .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32}}, hasPST)
