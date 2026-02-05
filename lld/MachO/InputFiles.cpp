@@ -1213,15 +1213,14 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
           continue;
         }
 
-        d = make<Defined>(
-            saver().save(Twine("Lcu.") + referentIsec->getName() + "." +
-                         Twine::utohexstr(add)),
-            this, referentIsec, add,
-            /*size=*/0, /*isWeakDef=*/false,
-            /*isExternal=*/false, /*isPrivateExtern=*/false,
-            /*includeInSymtab=*/false,
-            /*isReferencedDynamically=*/false,
-            /*noDeadStrip=*/false);
+        d = make<Defined>(saver().save(Twine("Lcu.") + referentIsec->getName() +
+                                       "." + Twine::utohexstr(add)),
+                          this, referentIsec, add,
+                          /*size=*/0, /*isWeakDef=*/false,
+                          /*isExternal=*/false, /*isPrivateExtern=*/false,
+                          /*includeInSymtab=*/false,
+                          /*isReferencedDynamically=*/false,
+                          /*noDeadStrip=*/false);
         // Also add to the file-level symbol list so that scanSymbols() in
         // Writer picks it up and registers it with UnwindInfoSection.
         symbols.push_back(d);
