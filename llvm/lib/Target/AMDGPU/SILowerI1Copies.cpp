@@ -25,7 +25,6 @@
 #include "AMDGPU.h"
 #include "llvm/CodeGen/MachineSSAUpdater.h"
 #include "llvm/InitializePasses.h"
-#include <iterator>
 #include <optional>
 
 #define DEBUG_TYPE "si-i1-copies"
@@ -575,7 +574,7 @@ void PhiLoweringHelper::insertMask(const Incoming &Incoming, Register DstReg) {
   /// store SCC
   Register SavedSCC = MRI->createVirtualRegister(
       ST->getWavefrontSize() == 32 ? &AMDGPU::SReg_32RegClass
-                          : &AMDGPU::SReg_64RegClass);
+                                   : &AMDGPU::SReg_64RegClass);
   BuildMI(MBB, curRegDefPos.value(), {}, TII->get(LMC.CSelectOpc), SavedSCC)
       .addImm(1)
       .addImm(0);

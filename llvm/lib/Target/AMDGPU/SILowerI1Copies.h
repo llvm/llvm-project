@@ -12,12 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSSAUpdater.h"
-#include "AMDGPULaneMaskUtils.h"
 
 namespace llvm {
 
