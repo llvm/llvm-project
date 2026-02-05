@@ -4390,9 +4390,9 @@ def warn_unknown_sanitizer_ignored : Warning<
 def warn_impcast_matrix_scalar : Warning<
   "implicit conversion turns matrix to scalar: %0 to %1">,
   InGroup<MatrixConversion>;
-def warn_impcast_matrix_float_precision
-    : Warning<"implicit conversion loses floating-point precision: %0 to %1">,
-      InGroup<MatrixConversion>;
+def warn_impcast_matrix_float_precision : Warning<
+  "implicit conversion loses floating-point precision: %0 to %1">,
+  InGroup<MatrixConversion>;
 def warn_impcast_vector_scalar : Warning<
   "implicit conversion turns vector to scalar: %0 to %1">,
   InGroup<Conversion>, DefaultIgnore;
@@ -4458,10 +4458,9 @@ def warn_impcast_literal_float_to_integer_out_of_range : Warning<
 def warn_impcast_float_integer : Warning<
   "implicit conversion turns floating-point number into integer: %0 to %1">,
   InGroup<FloatConversion>, DefaultIgnore;
-def warn_impcast_matrix_float_integer
-    : Warning<"implicit conversion turns floating-point numbers into integers: "
-              "%0 to %1">,
-      InGroup<MatrixConversion>;
+def warn_impcast_matrix_float_integer : Warning<
+  "implicit conversion turns floating-point numbers into integers: %0 to %1">,
+  InGroup<MatrixConversion>;
 def warn_impcast_float_to_objc_signed_char_bool : Warning<
   "implicit conversion from floating-point type %0 to 'BOOL'">,
   InGroup<ObjCSignedCharBoolImplicitFloatConversion>;
