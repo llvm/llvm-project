@@ -15,7 +15,7 @@ bool Interpret(std::vector<uint8_t> code, DataStack &data) {
   auto buf =
       StringRef(reinterpret_cast<const char *>(code.data()), code.size());
   ControlStack control({buf});
-  if (auto error = Interpret(control, data, sel_summary)) {
+  if (auto error = Interpret(control, data, sig_summary)) {
 #ifndef NDEBUG
     llvm::errs() << llvm::toString(std::move(error)) << '\n';
 #else
