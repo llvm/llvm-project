@@ -1447,6 +1447,28 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclareSimdConstruct &x) {
   const parser::OmpDirectiveName &dirName{x.v.DirName()};
   PushContextAndClauseSets(dirName.source, dirName.v);
 
+  const Scope &containingScope = context_.FindScope(dirName.source);
+  const Scope &progUnitScope = GetProgramUnitContaining(containingScope);
+
+  for (const parser::OmpClause &clause : x.v.Clauses().v) {
+    const auto *u = std::get_if<parser::OmpClause::Uniform>(&clause.u);
+    if (!u) {
+      continue;
+    }
+    assert(clause.Id() == llvm::omp::Clause::OMPC_uniform);
+
+    for (const parser::Name &name : u->v) {
+      const Symbol *sym{name.symbol};
+      if (!sym || !IsDummy(*sym) ||
+          &GetProgramUnitContaining(sym->owner()) != &progUnitScope) {
+        context_.Say(name.source,
+            "Variable '%s' in UNIFORM clause must be a dummy argument of the "
+            "enclosing procedure"_err_en_US,
+            name.ToString());
+      }
+    }
+  }
+
   const parser::OmpArgumentList &args{x.v.Arguments()};
   if (args.v.empty()) {
     return;
@@ -3917,21 +3939,6 @@ void OmpStructureChecker::CheckSharedBindingInOuterContext(
   }
 }
 
-void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_ordered);
-  // the parameter of ordered clause is optional
-  if (const auto &expr{x.v}) {
-    RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_ordered, *expr);
-    // 2.8.3 Loop SIMD Construct Restriction
-    if (llvm::omp::allDoSimdSet.test(GetContext().directive)) {
-      context_.Say(GetContext().clauseSource,
-          "No ORDERED clause with a parameter can be specified "
-          "on the %s directive"_err_en_US,
-          ContextDirectiveAsFortran());
-    }
-  }
-}
-
 void OmpStructureChecker::Enter(const parser::OmpClause::Shared &x) {
   CheckAllowedClause(llvm::omp::Clause::OMPC_shared);
   CheckVarIsNotPartOfAnotherVar(GetContext().clauseSource, x.v, "SHARED");
@@ -4693,6 +4700,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Lastprivate &x) {
   SymbolSourceMap currSymbols;
   GetSymbolsInObjectList(objectList, currSymbols);
   CheckDefinableObjects(currSymbols, llvm::omp::Clause::OMPC_lastprivate);
+  CheckIntentInPointer(currSymbols, llvm::omp::Clause::OMPC_lastprivate);
   CheckCopyingPolymorphicAllocatable(
       currSymbols, llvm::omp::Clause::OMPC_lastprivate);
 

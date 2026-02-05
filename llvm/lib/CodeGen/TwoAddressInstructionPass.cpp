@@ -51,6 +51,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
@@ -200,10 +201,7 @@ class TwoAddressInstructionLegacyPass : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  TwoAddressInstructionLegacyPass() : MachineFunctionPass(ID) {
-    initializeTwoAddressInstructionLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
+  TwoAddressInstructionLegacyPass() : MachineFunctionPass(ID) {}
 
   /// Pass entry point.
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -359,10 +357,10 @@ bool TwoAddressInstructionImpl::isCopyToReg(MachineInstr &MI, Register &SrcReg,
                                             bool &IsDstPhys) const {
   SrcReg = 0;
   DstReg = 0;
-  if (MI.isCopy()) {
+  if (MI.isCopy() || MI.isSubregToReg()) {
     DstReg = MI.getOperand(0).getReg();
     SrcReg = MI.getOperand(1).getReg();
-  } else if (MI.isInsertSubreg() || MI.isSubregToReg()) {
+  } else if (MI.isInsertSubreg()) {
     DstReg = MI.getOperand(0).getReg();
     SrcReg = MI.getOperand(2).getReg();
   } else {
@@ -1607,7 +1605,7 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
                                       TII->get(TargetOpcode::COPY), RegA);
     // If this operand is folding a truncation, the truncation now moves to the
     // copy so that the register classes remain valid for the operands.
-    MIB.addReg(RegB, 0, SubRegB);
+    MIB.addReg(RegB, {}, SubRegB);
     const TargetRegisterClass *RC = MRI->getRegClass(RegB);
     if (SubRegB) {
       if (RegA.isVirtual()) {

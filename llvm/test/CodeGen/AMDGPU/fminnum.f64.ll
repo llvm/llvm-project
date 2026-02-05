@@ -113,5 +113,5 @@ define amdgpu_kernel void @test_fmin_v16f64(ptr addrspace(1) %out, <16 x double>
 }
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind "denormal-fp-math"="ieee,ieee" }
-attributes #2 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #1 = { nounwind denormal_fpenv(ieee|ieee) }
+attributes #2 = { nounwind denormal_fpenv(preservesign) }

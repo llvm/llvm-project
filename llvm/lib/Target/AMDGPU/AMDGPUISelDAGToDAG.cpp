@@ -1306,7 +1306,7 @@ bool AMDGPUDAGToDAGISel::SelectDS1Addr1Offset(SDValue Addr, SDValue &Base,
 
           // FIXME: Select to VOP3 version for with-carry.
           unsigned SubOp = AMDGPU::V_SUB_CO_U32_e32;
-          if (Subtarget->hasAddNoCarry()) {
+          if (Subtarget->hasAddNoCarryInsts()) {
             SubOp = AMDGPU::V_SUB_U32_e64;
             Opnds.push_back(
                 CurDAG->getTargetConstant(0, {}, MVT::i1)); // clamp bit
@@ -1491,7 +1491,7 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
           Opnds.push_back(Zero);
           Opnds.push_back(Addr.getOperand(1));
           unsigned SubOp = AMDGPU::V_SUB_CO_U32_e32;
-          if (Subtarget->hasAddNoCarry()) {
+          if (Subtarget->hasAddNoCarryInsts()) {
             SubOp = AMDGPU::V_SUB_U32_e64;
             Opnds.push_back(
                 CurDAG->getTargetConstant(0, {}, MVT::i1)); // clamp bit
@@ -1886,7 +1886,7 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(SDNode *N, SDValue Addr,
             Opnds.push_back(N0);
             Opnds.push_back(AddOffsetLo);
             unsigned AddOp = AMDGPU::V_ADD_CO_U32_e32;
-            if (Subtarget->hasAddNoCarry()) {
+            if (Subtarget->hasAddNoCarryInsts()) {
               AddOp = AMDGPU::V_ADD_U32_e64;
               Opnds.push_back(Clamp);
             }
@@ -4204,6 +4204,24 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixBF16Mods(SDValue In, SDValue &Src,
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsNeg(SDValue In, SDValue &Src,
+                                                  SDValue &SrcMods) const {
+  unsigned Mods = 0;
+  SelectVOP3PMadMixModsImpl(In, Src, Mods, MVT::f16);
+  Mods ^= SISrcMods::NEG;
+  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixBF16ModsNeg(SDValue In, SDValue &Src,
+                                                      SDValue &SrcMods) const {
+  unsigned Mods = 0;
+  SelectVOP3PMadMixModsImpl(In, Src, Mods, MVT::bf16);
+  Mods ^= SISrcMods::NEG;
+  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
+  return true;
+}
+
 // Match BITOP3 operation and return a number of matched instructions plus
 // truth table.
 static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
@@ -4284,7 +4302,7 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
     SmallVector<SDValue, 3> Backup(Src.begin(), Src.end());
     if (!getOperandBits(LHS, LHSBits) ||
         !getOperandBits(RHS, RHSBits)) {
-      Src = Backup;
+      Src = std::move(Backup);
       return std::make_pair(0, 0);
     }
 
