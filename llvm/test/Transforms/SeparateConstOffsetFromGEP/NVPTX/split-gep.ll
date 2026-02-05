@@ -10,6 +10,7 @@
 
 @struct_array = global [1024 x %struct.S] zeroinitializer, align 16
 @float_2d_array = global [32 x [32 x float]] zeroinitializer, align 4
+@float_array = global [128 x float] zeroinitializer, align 4
 
 ; We should not extract any struct field indices, because fields in a struct
 ; may have different types.
@@ -90,6 +91,26 @@ entry:
   %1 = sext i32 %0 to i64
   ; inbound sext(i + 1) != sext(i) + 1 because a wrapped result can still be inbounds if not at start of arr
   %p = getelementptr inbounds [32 x [32 x float]], ptr %unknown_arr, i64 0, i64 %1, i64 0
+  ret ptr %p
+}
+
+; We cannot trace into sext(a + b) if a + b is an inbounds GEP but not a zero
+; offset from a known base ptr even if one of a or b is non-negative.
+define ptr @sext_add_nonzerooffset(i4 %i) {
+; CHECK-LABEL: define ptr @sext_add_nonzerooffset(
+; CHECK-SAME: i4 [[I:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i4 [[I]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[TMP0]] to i64
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr float, ptr @float_array, i64 [[TMP1]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr [128 x float], ptr [[GEP1]], i64 0, i64 64
+; CHECK-NEXT:    ret ptr [[P1]]
+;
+entry:
+  %offsetarr = getelementptr inbounds [128 x float], ptr @float_array, i64 0, i64 64
+  %add = add i4 %i, 1
+  %sext = sext i4 %add to i64
+  %p = getelementptr inbounds float, ptr %offsetarr, i64 %sext
   ret ptr %p
 }
 
