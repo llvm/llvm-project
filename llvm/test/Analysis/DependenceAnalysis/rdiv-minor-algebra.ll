@@ -15,9 +15,10 @@
 ; FIXME: DependenceAnalysis currently detects no dependency between the two
 ; stores, but it does exist.
 ;
-;  memory access       | (i, j) == (1, 1)
-; ---------------------|------------------
-;  A[3*i - 2]          | A[-2]
+;  memory access                | (i, j) == (1, 1)
+; ------------------------------|------------------
+;  A[-2]                        | A[-2]
+;  A[INT64_MAX*i + INT64_MAX*j] | A[-2]
 ;
 ; The root cause is that RDIV performs "minor algebra" and transforms the
 ; subscripts as follows:
