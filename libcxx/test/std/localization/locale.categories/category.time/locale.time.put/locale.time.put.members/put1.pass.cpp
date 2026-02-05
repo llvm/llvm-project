@@ -13,9 +13,11 @@
 // iter_type put(iter_type s, ios_base& str, char_type fill, const tm* t,
 //               const charT* pattern, const charT* pat_end) const;
 
-#include <locale>
 #include <cassert>
+#include <ctime>
 #include <ios>
+#include <locale>
+
 #include "test_macros.h"
 #include "test_iterators.h"
 
