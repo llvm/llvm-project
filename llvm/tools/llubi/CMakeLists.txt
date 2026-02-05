@@ -1,17 +1,17 @@
 set(LLVM_LINK_COMPONENTS
   Analysis
   Core
-  IRReader
   IRPrinter
+  IRReader
   Support
   )
 
 add_llvm_tool(llubi
   llubi.cpp
-  Context.cpp
-  Interpreter.cpp
-  Value.cpp
 
   DEPENDS
   intrinsics_gen
   )
+
+add_subdirectory(lib)
+target_link_libraries(llubi PRIVATE LLVMUBAwareInterpreter)
