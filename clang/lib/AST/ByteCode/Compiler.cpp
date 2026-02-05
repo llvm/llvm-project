@@ -5070,7 +5070,6 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
   if (Val.isUnion()) {
     const FieldDecl *UnionField = Val.getUnionField();
     if (!UnionField)
-      // no active fields
       return true;
     const Record *R = this->getRecord(T);
     assert(R);
