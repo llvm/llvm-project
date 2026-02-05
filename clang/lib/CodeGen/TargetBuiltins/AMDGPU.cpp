@@ -281,7 +281,6 @@ static llvm::AtomicOrdering mapCABIAtomicOrdering(unsigned AO) {
   case llvm::AtomicOrderingCABI::acquire:
   case llvm::AtomicOrderingCABI::consume:
     return llvm::AtomicOrdering::Acquire;
-    break;
   case llvm::AtomicOrderingCABI::release:
     return llvm::AtomicOrdering::Release;
   case llvm::AtomicOrderingCABI::acq_rel:
@@ -291,7 +290,6 @@ static llvm::AtomicOrdering mapCABIAtomicOrdering(unsigned AO) {
   case llvm::AtomicOrderingCABI::relaxed:
     return llvm::AtomicOrdering::Monotonic;
   }
-  llvm_unreachable("unknown CABI Ordering");
 }
 
 // For processing memory ordering and memory scope arguments of various
