@@ -6231,6 +6231,9 @@ static llvm::IRBuilderBase::InsertPoint createDeviceArgumentAccessor(
       ompBuilder.M.getContext());
   unsigned alignmentValue = 0;
   BlockArgument mlirArg;
+  SmallVector<std::pair<Value, BlockArgument>> blockArgsPairs;
+  cast<omp::BlockArgOpenMPOpInterface>(*targetOp).getBlockArgsPairs(
+      blockArgsPairs);
   // Find the associated MapInfoData entry for the current input
   for (size_t i = 0; i < mapData.MapClause.size(); ++i) {
     if (mapData.OriginalValue[i] == input) {
@@ -6239,9 +6242,16 @@ static llvm::IRBuilderBase::InsertPoint createDeviceArgumentAccessor(
       // Get information of alignment of mapped object
       alignmentValue = typeToLLVMIRTranslator.getPreferredAlignment(
           mapOp.getVarType(), ompBuilder.M.getDataLayout());
-      // Get the corresponding target entry block argument
-      mlirArg =
-          cast<omp::BlockArgOpenMPOpInterface>(*targetOp).getMapBlockArgs()[i];
+
+      // Find the corresponding entry block argument, which can be associated to
+      // a map, use_device* or has_device* clause.
+      for (auto &[val, arg] : blockArgsPairs) {
+        if (mapOp.getResult() == val) {
+          mlirArg = arg;
+          break;
+        }
+      }
+      assert(mlirArg && "expected to find entry block argument for map clause");
       break;
     }
   }
