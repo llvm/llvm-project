@@ -181,19 +181,8 @@ int main(int argc, char **argv) {
     Args.push_back(
         Ctx.getConstantValue(ConstantInt::get(IntTy, InputArgv.size())));
 
-    uint64_t Size = 0;
-    for (const auto &Arg : InputArgv)
-      Size += Arg.length() + 1;
-    auto ArgvStrMem = Ctx.allocate(Size, 8, "argv_str",
-                                   /*AS=*/0, ubi::MemInitKind::Zeroed);
-    if (!ArgvStrMem) {
-      WithColor::error(errs(), argv[0])
-          << "Failed to allocate memory for argv strings.\n";
-      return 1;
-    }
-    uint64_t Offset = 0;
-    uint32_t PtrBitWidth = Ctx.getDataLayout().getPointerSizeInBits(0);
-    uint64_t PtrsSize = PtrBitWidth * (InputArgv.size() + 1);
+    uint32_t PtrSize = Ctx.getDataLayout().getPointerSize();
+    uint64_t PtrsSize = PtrSize * (InputArgv.size() + 1);
     auto ArgvPtrsMem = Ctx.allocate(PtrsSize, 8, "argv",
                                     /*AS=*/0, ubi::MemInitKind::Zeroed);
     if (!ArgvPtrsMem) {
@@ -202,16 +191,19 @@ int main(int argc, char **argv) {
       return 1;
     }
     for (const auto &[Idx, Arg] : enumerate(InputArgv)) {
-      ubi::Pointer ArgPtr(ArgvStrMem,
-                          APInt(PtrBitWidth, ArgvStrMem->getAddress() + Offset),
-                          /*Offset=*/Offset, /*Bound=*/Size);
-      ArgvStrMem->writeRawBytes(Offset, Arg.c_str(), Arg.length());
-      ArgvPtrsMem->writePointer(Idx * PtrBitWidth, ArgPtr, Ctx.getDataLayout());
-      Offset += Arg.length() + 1;
+      uint64_t Size = Arg.length() + 1;
+      auto ArgvStrMem = Ctx.allocate(Size, 8, "argv_str",
+                                     /*AS=*/0, ubi::MemInitKind::Zeroed);
+      if (!ArgvStrMem) {
+        WithColor::error(errs(), argv[0])
+            << "Failed to allocate memory for argv strings.\n";
+        return 1;
+      }
+      ubi::Pointer ArgPtr = Ctx.deriveFromMemoryObject(ArgvStrMem);
+      ArgvStrMem->writeRawBytes(0, Arg.c_str(), Arg.length());
+      ArgvPtrsMem->writePointer(Idx * PtrSize, ArgPtr, Ctx.getDataLayout());
     }
-    Args.push_back(ubi::Pointer(ArgvPtrsMem,
-                                APInt(PtrBitWidth, ArgvPtrsMem->getAddress()),
-                                /*Offset=*/0, /*Bound=*/PtrsSize));
+    Args.push_back(Ctx.deriveFromMemoryObject(ArgvPtrsMem));
   } else {
     // If the signature does not match (e.g., llvm-reduce change the signature
     // of main), it will pass null values for all arguments.

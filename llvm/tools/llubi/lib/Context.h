@@ -25,6 +25,16 @@ enum class MemInitKind {
   Poisoned,
 };
 
+enum class MemoryObjectState {
+  // This memory object is accessible.
+  Alive,
+  // This memory object is out of lifetime. It is OK to perform
+  // operations that do not access its content, e.g., getelementptr.
+  // Otherwise, an immediate UB occurs.
+  Dead,
+  Freed,
+};
+
 class MemoryObject : public RefCountedBase<MemoryObject> {
   uint64_t Address;
   uint64_t Size;
@@ -32,9 +42,8 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
   StringRef Name;
   unsigned AS;
 
-  bool IsAlive = false;
+  MemoryObjectState State;
   bool IsConstant = false;
-  bool IsFreed = false;
 
 public:
   MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name, unsigned AS,
@@ -49,8 +58,7 @@ public:
   uint64_t getSize() const { return Size; }
   StringRef getName() const { return Name; }
   unsigned getAddressSpace() const { return AS; }
-  bool isAlive() const { return IsAlive; }
-  bool isFreed() const { return IsFreed; }
+  MemoryObjectState getState() const { return State; }
   bool isConstant() const { return IsConstant; }
   void setIsConstant(bool C) { IsConstant = C; }
 
@@ -151,6 +159,9 @@ public:
                                             StringRef Name, unsigned AS,
                                             MemInitKind InitKind);
   bool free(uint64_t Address);
+  // Derive a pointer from a memory object with offset 0.
+  // Please use Pointer's interface for further manipulations.
+  Pointer deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj);
 
   /// Execute the function \p F with arguments \p Args, and store the return
   /// value in \p RetVal if the function is not void.

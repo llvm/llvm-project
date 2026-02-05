@@ -24,13 +24,13 @@ void Pointer::print(raw_ostream &OS) const {
 }
 
 AnyValue Pointer::null(unsigned BitWidth) {
-  return AnyValue(Pointer(nullptr, APInt::getZero(BitWidth), 0, 0));
+  return AnyValue(Pointer(nullptr, APInt::getZero(BitWidth), 0));
 }
 
 MemoryObject *Pointer::getMemoryObject() const {
   if (!Obj)
     return nullptr;
-  if (Obj->isFreed())
+  if (Obj->getState() == MemoryObjectState::Freed)
     Obj.reset();
   return Obj.get();
 }

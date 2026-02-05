@@ -44,7 +44,8 @@ MemoryObject::~MemoryObject() = default;
 MemoryObject::MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name,
                            unsigned AS, MemInitKind InitKind)
     : Address(Addr), Size(Size), Name(Name), AS(AS),
-      IsAlive(InitKind != MemInitKind::Poisoned) {
+      State(InitKind != MemInitKind::Poisoned ? MemoryObjectState::Alive
+                                              : MemoryObjectState::Dead) {
   switch (InitKind) {
   case MemInitKind::Zeroed:
     Bytes.resize(Size, Byte{0, ByteKind::Concrete});
@@ -74,6 +75,7 @@ IntrusiveRefCntPtr<MemoryObject> Context::allocate(uint64_t Size,
   UsedMem += Size;
   return MemObj;
 }
+
 bool Context::free(uint64_t Address) {
   auto It = MemoryObjects.find(Address);
   if (It == MemoryObjects.end())
@@ -84,9 +86,16 @@ bool Context::free(uint64_t Address) {
   return true;
 }
 
+Pointer Context::deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj) {
+  assert(Obj && "Cannot determine the address space of a null memory object");
+  return Pointer(
+      Obj,
+      APInt(DL.getPointerSizeInBits(Obj->getAddressSpace()), Obj->getAddress()),
+      /*Offset=*/0);
+}
+
 void MemoryObject::markAsFreed() {
-  IsAlive = false;
-  IsFreed = true;
+  State = MemoryObjectState::Freed;
   Size = 0;
   Bytes.clear();
 }
@@ -96,7 +105,7 @@ void MemoryObject::writeRawBytes(uint64_t Offset, const void *Data,
   assert(SaturatingAdd(Offset, Length) <= Size && "Write out of bounds");
   const uint8_t *ByteData = static_cast<const uint8_t *>(Data);
   for (uint64_t I = 0; I < Length; ++I)
-    Bytes[Offset + I].Set(ByteData[I]);
+    Bytes[Offset + I].set(ByteData[I]);
 }
 
 void MemoryObject::writeInteger(uint64_t Offset, const APInt &Int,
@@ -107,7 +116,7 @@ void MemoryObject::writeInteger(uint64_t Offset, const APInt &Int,
   for (uint64_t I = 0; I < IntSize; ++I) {
     uint64_t ByteIndex = DL.isLittleEndian() ? I : (IntSize - 1 - I);
     uint64_t Bits = std::min(BitWidth - ByteIndex * 8, uint64_t(8));
-    Bytes[Offset + I].Set(Int.extractBitsAsZExtValue(Bits, ByteIndex * 8));
+    Bytes[Offset + I].set(Int.extractBitsAsZExtValue(Bits, ByteIndex * 8));
   }
 }
 void MemoryObject::writeFloat(uint64_t Offset, const APFloat &Float,

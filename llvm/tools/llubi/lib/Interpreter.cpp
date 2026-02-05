@@ -18,9 +18,20 @@
 namespace llvm::ubi {
 
 enum class FrameState {
+  // It is about to enter the function.
+  // Valid transition:
+  //   -> Running
   Entry,
+  // It is executing instructions inside the function.
+  // Valid transitions:
+  //   -> Pending (on call)
+  //   -> Exit (on return)
   Running,
+  // It is about to enter a callee or handle return value from the callee.
+  // Valid transitions:
+  //   -> Running (after returning from callee)
   Pending,
+  // It is about to return the control to the caller.
   Exit,
 };
 
@@ -98,6 +109,9 @@ public:
     return false;
   }
 
+  /// This function implements the main interpreter loop.
+  /// It handles function calls in a non-recursive manner to avoid stack
+  /// overflows.
   bool runMainLoop() {
     uint32_t MaxSteps = Ctx.getMaxSteps();
     uint32_t Steps = 0;
@@ -138,12 +152,15 @@ public:
             Handler.onInstructionExecuted(I, Top.ValueMap.at(&I));
         }
 
-        if (Top.State != FrameState::Running) {
-          // A function call or return has occurred.
+        // A function call or return has occurred.
+        // We need to exit the inner loop and switch to a different frame.
+        if (Top.State != FrameState::Running)
           break;
-        } else if (!I.isTerminator()) {
+
+        // Otherwise, move to the next instruction if it is not a terminator.
+        // For terminators, the PC is updated in the visit* method.
+        if (!I.isTerminator())
           ++Top.PC;
-        }
       }
 
       if (!Status)
@@ -164,9 +181,6 @@ public:
   }
 };
 
-/// This function implements the main interpreter loop.
-/// It handles function calls in a non-recursive manner to avoid stack
-/// overflows.
 bool Context::runFunction(Function &F, ArrayRef<AnyValue> Args,
                           AnyValue &RetVal, EventHandler &Handler) {
   InstExecutor Executor(*this, Handler, F, Args, RetVal);

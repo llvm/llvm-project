@@ -11,7 +11,7 @@ SYNOPSIS
 DESCRIPTION
 -----------
 
-:program:`llubi` directly executes programs in LLVM bitcode format and track values in LLVM IR semantics.
+:program:`llubi` directly executes programs in LLVM bitcode format and tracks values in LLVM IR semantics.
 Unlike :program:`lli`, :program:`llubi` is designed to be aware of undefined behaviors during execution.
 It detects immediate undefined behaviors such as integer division by zero, and respects poison generating flags
 like `nsw` and `nuw`. As it captures most of the guardable undefined behaviors, it is highly suitable for

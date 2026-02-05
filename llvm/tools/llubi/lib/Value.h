@@ -22,8 +22,14 @@ class Context;
 class AnyValue;
 
 enum class ByteKind : uint8_t {
+  // A concrete byte with a known value.
   Concrete,
+  // A uninitialized byte. Each load from an uninitialized byte yields
+  // a nondeterministic value.
   Undef,
+  // A poisoned byte. It occurs when the program stores a poison value to
+  // memory,
+  // or when a memory object is dead.
   Poison,
 };
 
@@ -32,7 +38,7 @@ struct Byte {
   ByteKind Kind : 2;
   // TODO: provenance
 
-  void Set(uint8_t V) {
+  void set(uint8_t V) {
     Value = V;
     Kind = ByteKind::Concrete;
   }
@@ -49,21 +55,28 @@ enum class StorageKind {
 };
 
 class Pointer {
+  // The underlying memory object. It can be null for invalid or dangling
+  // pointers.
   mutable IntrusiveRefCntPtr<MemoryObject> Obj;
+  // The address of the pointer. The bit width is determined by
+  // DataLayout::getPointerSizeInBits.
   APInt Address;
+  // The offset within the memory object.
   uint64_t Offset;
-  uint64_t Bound;
+  // TODO: modeling inrange(Start, End) attribute
 
 public:
   explicit Pointer(IntrusiveRefCntPtr<MemoryObject> Obj, const APInt &Address,
-                   uint64_t Offset, uint64_t Bound)
-      : Obj(std::move(Obj)), Address(Address), Offset(Offset), Bound(Bound) {}
+                   uint64_t Offset)
+      : Obj(std::move(Obj)), Address(Address), Offset(Offset) {}
   static AnyValue null(unsigned BitWidth);
   void print(raw_ostream &OS) const;
   const APInt &address() const { return Address; }
   MemoryObject *getMemoryObject() const;
 };
 
+// Value representation for actual values of LLVM values.
+// We don't model undef values here (except for byte types).
 class [[nodiscard]] AnyValue {
   StorageKind Kind;
   union {

@@ -5,7 +5,7 @@ define i32 @main(i32 %argc, ptr %argv) {
 }
 ; CHECK: Entering function: main
 ; CHECK:   i32 %argc = i32 1
-; CHECK:   ptr %argv = ptr 0x10
+; CHECK:   ptr %argv = ptr 0x8
 ; CHECK:   ret i32 poison
 ; CHECK: Exiting function: main
 ; CHECK: llubi: error: Execution of function 'main' resulted in poison return value.
