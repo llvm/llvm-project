@@ -99,9 +99,11 @@ public:
     const Function *FuncPtr = M->getFunction(FuncName);
 
     if (!FuncPtr)
-      throw nb::value_error(("Function '" + FuncName + "' not found in module").c_str());
+      throw nb::value_error(
+          ("Function '" + FuncName + "' not found in module").c_str());
 
-    auto ToolFuncEmb = Tool->getFunctionEmbedding(*FuncPtr, OutputEmbeddingMode);
+    auto ToolFuncEmb =
+        Tool->getFunctionEmbedding(*FuncPtr, OutputEmbeddingMode);
 
     if (!ToolFuncEmb)
       throw nb::value_error(toString(ToolFuncEmb.takeError()).c_str());
@@ -133,8 +135,7 @@ NB_MODULE(ir2vec, m) {
            "Generate function-level embeddings for all functions\n"
            "Returns: dict[str, ndarray[float64]] - "
            "{function_name: embedding}")
-      .def("getFuncEmb", &PyIR2VecTool::getFuncEmb,
-           nb::arg("funcName"),
+      .def("getFuncEmb", &PyIR2VecTool::getFuncEmb, nb::arg("funcName"),
            "Generate embedding for a single function by name\n"
            "Args: funcName (str) - IR-Name of the function\n"
            "Returns: ndarray[float64] - Function embedding vector");
