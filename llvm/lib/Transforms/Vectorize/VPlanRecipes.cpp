@@ -1834,12 +1834,7 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1,
                                              State.TTI)) {
     Type *RetTy = toVectorizedTy(getResultType(), State.VF);
-    ArrayRef<Type *> ContainedTys = getContainedTypes(RetTy);
-    for (auto [Idx, Ty] : enumerate(ContainedTys)) {
-      if (isVectorIntrinsicWithStructReturnOverloadAtField(VectorIntrinsicID,
-                                                           Idx, State.TTI))
-        TysForDecl.push_back(Ty);
-    }
+    append_range(TysForDecl, getContainedTypes(RetTy));
   }
   SmallVector<Value *, 4> Args;
   for (const auto &I : enumerate(operands())) {

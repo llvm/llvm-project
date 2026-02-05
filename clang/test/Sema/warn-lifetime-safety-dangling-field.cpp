@@ -24,15 +24,26 @@ struct CtorInitLifetimeBound {
 };
 
 struct CtorInitButMoved {
-  std::string_view view;
-  CtorInitButMoved(std::string s) : view(s) { takeString(std::move(s)); }
+  std::string_view view;  // expected-note {{this field dangles}}
+  CtorInitButMoved(std::string s)
+    : view(s) {  // expected-warning-re {{address of stack memory escapes to a field. {{.*}} may have been moved}}
+    takeString(std::move(s)); // expected-note {{potentially moved here}}
+  }
 };
 
 struct CtorInitButMovedOwned {
+  std::string_view view;  // expected-note {{this field dangles}}
+  std::string owned;
+  CtorInitButMovedOwned(std::string s) 
+    : view(s),  // expected-warning-re {{address of stack memory escapes to a field. {{.*}} may have been moved}}
+    owned(std::move(s)) {}  // expected-note {{potentially moved here}}
+};
+
+struct CtorInitButMovedOwnedOrderedCorrectly {
   std::string owned;
   std::string_view view;
-  CtorInitButMovedOwned(std::string s) : view(s), owned(std::move(s)) {}
-  CtorInitButMovedOwned(Dummy<1>, std::string s) : owned(std::move(s)), view(owned) {}
+  CtorInitButMovedOwnedOrderedCorrectly(std::string s) 
+    :owned(std::move(s)), view(owned) {} 
 };
 
 struct CtorInitMultipleViews {
@@ -65,8 +76,8 @@ struct CtorPointerField {
 };
 
 struct MemberSetters {
-  std::string_view view;  // expected-note 5 {{this field dangles}}
-  const char* p;          // expected-note 5 {{this field dangles}}
+  std::string_view view;  // expected-note 6 {{this field dangles}}
+  const char* p;          // expected-note 6 {{this field dangles}}
 
   void setWithParam(std::string s) {
     view = s;     // expected-warning {{address of stack memory escapes to a field}}
@@ -98,9 +109,9 @@ struct MemberSetters {
   
   void setWithLocalButMoved() {
     std::string s;
-    view = s;
-    p = s.data();
-    takeString(std::move(s));
+    view = s;                 // expected-warning-re {{address of stack memory escapes to a field. {{.*}} may have been moved}}
+    p = s.data();             // expected-warning-re {{address of stack memory escapes to a field. {{.*}} may have been moved}}
+    takeString(std::move(s)); // expected-note 2 {{potentially moved here}}
   }
 
   void setWithGlobal() {

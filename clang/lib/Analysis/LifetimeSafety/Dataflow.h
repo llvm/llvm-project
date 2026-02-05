@@ -170,6 +170,8 @@ private:
       return D->transfer(In, *F->getAs<ExpireFact>());
     case Fact::Kind::OriginFlow:
       return D->transfer(In, *F->getAs<OriginFlowFact>());
+    case Fact::Kind::MovedOrigin:
+      return D->transfer(In, *F->getAs<MovedOriginFact>());
     case Fact::Kind::OriginEscapes:
       return D->transfer(In, *F->getAs<OriginEscapesFact>());
     case Fact::Kind::Use:
@@ -184,6 +186,7 @@ public:
   Lattice transfer(Lattice In, const IssueFact &) { return In; }
   Lattice transfer(Lattice In, const ExpireFact &) { return In; }
   Lattice transfer(Lattice In, const OriginFlowFact &) { return In; }
+  Lattice transfer(Lattice In, const MovedOriginFact &) { return In; }
   Lattice transfer(Lattice In, const OriginEscapesFact &) { return In; }
   Lattice transfer(Lattice In, const UseFact &) { return In; }
   Lattice transfer(Lattice In, const TestPointFact &) { return In; }

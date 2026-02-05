@@ -540,9 +540,17 @@ def LifetimeSafetyDanglingField : DiagGroup<"lifetime-safety-dangling-field"> {
   }];
 }
 
+def LifetimeSafetyDanglingFieldStrict : DiagGroup<"lifetime-safety-dangling-field-strict"> {
+  code Documentation = [{
+    Warning to detect dangling field references.
+    This may contain false-positives, e.g. when the borrowed storage is potentially moved and is not destroyed at function exit.
+  }];
+}
+
 def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
                                          [LifetimeSafetyDanglingField]>;
-def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict">;
+def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
+                                    [LifetimeSafetyDanglingFieldStrict]>;
 
 def LifetimeSafety : DiagGroup<"lifetime-safety",
                                [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
