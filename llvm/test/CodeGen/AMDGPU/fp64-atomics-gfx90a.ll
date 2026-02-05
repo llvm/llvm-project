@@ -2427,11 +2427,11 @@ main_body:
   ret double %ret
 }
 
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #0 = { denormal_fpenv(preservesign) }
 attributes #1 = { nounwind }
-attributes #2 = { "denormal-fp-math"="ieee,ieee" }
-attributes #3 = { "denormal-fp-math"="ieee,ieee" }
-attributes #4 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #2 = { denormal_fpenv(ieee|ieee) }
+attributes #3 = { denormal_fpenv(ieee|ieee) }
+attributes #4 = { denormal_fpenv(preservesign) }
 
 !0 = !{}
 !1 = !{i32 5, i32 6}

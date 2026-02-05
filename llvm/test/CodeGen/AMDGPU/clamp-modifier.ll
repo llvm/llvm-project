@@ -2382,10 +2382,10 @@ declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #1
 
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #1
 
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { nounwind denormal_fpenv(float: preservesign) }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
-attributes #3 = { nounwind "denormal-fp-math-f32"="ieee,ieee" "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #2 = { nounwind denormal_fpenv(float: ieee|ieee) }
+attributes #3 = { nounwind denormal_fpenv(float: ieee|ieee) denormal_fpenv(preservesign) }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3}

@@ -1786,10 +1786,8 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
   // TODO: nontemporal.
   assert(!cir::MissingFeatures::opLoadStoreNontemporal());
 
-  std::optional<std::string> llvmSyncScope;
-  if (std::optional<cir::SyncScopeKind> syncScope = op.getSyncScope())
-    llvmSyncScope =
-        lowerMod->getTargetLoweringInfo().getLLVMSyncScope(*syncScope);
+  std::optional<llvm::StringRef> llvmSyncScope =
+      getLLVMSyncScope(op.getSyncScope());
 
   mlir::LLVM::LoadOp newLoad = mlir::LLVM::LoadOp::create(
       rewriter, op->getLoc(), llvmTy, adaptor.getAddr(), alignment,
@@ -1824,10 +1822,8 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   assert(!cir::MissingFeatures::opLoadStoreNontemporal());
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
 
-  std::optional<std::string> llvmSyncScope;
-  if (std::optional<cir::SyncScopeKind> syncScope = op.getSyncScope())
-    llvmSyncScope =
-        lowerMod->getTargetLoweringInfo().getLLVMSyncScope(*syncScope);
+  std::optional<llvm::StringRef> llvmSyncScope =
+      getLLVMSyncScope(op.getSyncScope());
 
   mlir::LLVM::StoreOp storeOp = mlir::LLVM::StoreOp::create(
       rewriter, op->getLoc(), value, adaptor.getAddr(), alignment,
@@ -3028,17 +3024,6 @@ mlir::LogicalResult CIRToLLVMSelectOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-std::unique_ptr<cir::LowerModule> prepareLowerModule(mlir::ModuleOp module) {
-  mlir::PatternRewriter rewriter{module->getContext()};
-  // If the triple is not present, e.g. CIR modules parsed from text, we
-  // cannot init LowerModule properly. This happens in some lowering tests,
-  // but it should not happen in real compilation.
-  assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
-  if (!module->hasAttr(cir::CIRDialect::getTripleAttrName()))
-    return {};
-  return cir::createLowerModule(module, rewriter);
-}
-
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
                                  mlir::DataLayout &dataLayout,
                                  cir::LowerModule *lowerModule) {
@@ -3339,7 +3324,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   mlir::ModuleOp module = getOperation();
   mlir::DataLayout dl(module);
   mlir::LLVMTypeConverter converter(&getContext());
-  std::unique_ptr<cir::LowerModule> lowerModule = prepareLowerModule(module);
+  std::unique_ptr<cir::LowerModule> lowerModule =
+      cir::createLowerModule(module);
   prepareTypeConverter(converter, dl, lowerModule.get());
 
   /// Tracks the state required to lower CIR `LabelOp` and `BlockAddressOp`.

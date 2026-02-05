@@ -339,15 +339,20 @@ declare void @func_attr_no_signed_zeros_fp_math_false() "no-signed-zeros-fp-math
 
 ; // -----
 
-; CHECK-LABEL: @func_attr_denormal_fp_math_ieee
-; CHECK-SAME: attributes {denormal_fp_math = "ieee"}
-declare void @func_attr_denormal_fp_math_ieee() "denormal-fp-math"="ieee"
+; CHECK-LABEL: @func_attr_denormal_fp_math_ieee(){{$}}
+declare void @func_attr_denormal_fp_math_ieee() denormal_fpenv(ieee)
 
 ; // -----
 
 ; CHECK-LABEL: @func_attr_denormal_fp_math_f32_preserve_sign
-; CHECK-SAME: attributes {denormal_fp_math_f32 = "preserve-sign"}
-declare void @func_attr_denormal_fp_math_f32_preserve_sign() "denormal-fp-math-f32"="preserve-sign"
+; CHECK-SAME: attributes {denormal_fpenv = #llvm.denormal_fpenv<default_output_mode = ieee, default_input_mode = ieee, float_output_mode = preservesign, float_input_mode = preservesign>}
+declare void @func_attr_denormal_fp_math_f32_preserve_sign() denormal_fpenv(float: preservesign)
+
+; // -----
+
+; CHECK-LABEL: @func_attr_mixed_denormal_modes
+; CHECK: attributes {denormal_fpenv = #llvm.denormal_fpenv<default_output_mode = dynamic, default_input_mode = preservesign, float_output_mode = preservesign, float_input_mode = dynamic>}
+declare void @func_attr_mixed_denormal_modes() denormal_fpenv(dynamic|preservesign, float: preservesign|dynamic)
 
 ; // -----
 

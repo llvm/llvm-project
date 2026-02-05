@@ -945,6 +945,18 @@ def LLVM_MemoryEffectsAttr : LLVM_Attr<"MemoryEffects", "memory_effects"> {
 }
 
 //===----------------------------------------------------------------------===//
+// DenormalFPEnvAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DenormalFPEnvAttr : LLVM_Attr<"DenormalFPEnv", "denormal_fpenv"> {
+  let parameters = (ins "DenormalModeKind":$default_output_mode,
+                        "DenormalModeKind":$default_input_mode,
+                        "DenormalModeKind":$float_output_mode,
+                        "DenormalModeKind":$float_input_mode);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // AliasScopeDomainAttr
 //===----------------------------------------------------------------------===//
 

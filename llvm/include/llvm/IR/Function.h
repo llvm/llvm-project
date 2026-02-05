@@ -49,6 +49,7 @@ class AssemblyAnnotationWriter;
 class Constant;
 class ConstantRange;
 class DataLayout;
+struct DenormalFPEnv;
 struct DenormalMode;
 class DISubprogram;
 enum LibFunc : unsigned;
@@ -717,14 +718,8 @@ public:
   /// function.
   DenormalMode getDenormalMode(const fltSemantics &FPType) const;
 
-  /// Return the representational value of "denormal-fp-math". Code interested
-  /// in the semantics of the function should use getDenormalMode instead.
-  DenormalMode getDenormalModeRaw() const;
-
-  /// Return the representational value of "denormal-fp-math-f32". Code
-  /// interested in the semantics of the function should use getDenormalMode
-  /// instead.
-  DenormalMode getDenormalModeF32Raw() const;
+  /// Return the representational value of the denormal_fpenv attribute.
+  DenormalFPEnv getDenormalFPEnv() const;
 
   /// copyAttributesFrom - copy all additional attributes (those not needed to
   /// create a Function) from the Function Src to this one.

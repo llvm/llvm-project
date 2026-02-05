@@ -1658,6 +1658,14 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     B.addMemoryAttr(*ME);
     return false;
   }
+  case Attribute::DenormalFPEnv: {
+    std::optional<DenormalFPEnv> Mode = parseDenormalFPEnvAttr();
+    if (!Mode)
+      return true;
+
+    B.addDenormalFPEnvAttr(*Mode);
+    return false;
+  }
   case Attribute::NoFPClass: {
     if (FPClassTest NoFPClass =
             static_cast<FPClassTest>(parseNoFPClassAttr())) {
@@ -2603,6 +2611,22 @@ static std::optional<ModRefInfo> keywordToModRef(lltok::Kind Tok) {
   }
 }
 
+static std::optional<DenormalMode::DenormalModeKind>
+keywordToDenormalModeKind(lltok::Kind Tok) {
+  switch (Tok) {
+  case lltok::kw_ieee:
+    return DenormalMode::IEEE;
+  case lltok::kw_preservesign:
+    return DenormalMode::PreserveSign;
+  case lltok::kw_positivezero:
+    return DenormalMode::PositiveZero;
+  case lltok::kw_dynamic:
+    return DenormalMode::Dynamic;
+  default:
+    return std::nullopt;
+  }
+}
+
 std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
   MemoryEffects ME = MemoryEffects::none();
 
@@ -2656,6 +2680,87 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
 
   tokError("unterminated memory attribute");
   return std::nullopt;
+}
+
+std::optional<DenormalMode> LLParser::parseDenormalFPEnvEntry() {
+  std::optional<DenormalMode::DenormalModeKind> OutputMode =
+      keywordToDenormalModeKind(Lex.getKind());
+  if (!OutputMode) {
+    tokError("expected denormal behavior kind (ieee, preservesign, "
+             "positivezero, dynamic)");
+    return {};
+  }
+
+  Lex.Lex();
+
+  std::optional<DenormalMode::DenormalModeKind> InputMode;
+  if (EatIfPresent(lltok::bar)) {
+    InputMode = keywordToDenormalModeKind(Lex.getKind());
+    if (!InputMode) {
+      tokError("expected denormal behavior kind (ieee, preservesign, "
+               "positivezero, dynamic)");
+      return {};
+    }
+
+    Lex.Lex();
+  } else {
+    // Single item, input == output mode
+    InputMode = OutputMode;
+  }
+
+  return DenormalMode(*OutputMode, *InputMode);
+}
+
+std::optional<DenormalFPEnv> LLParser::parseDenormalFPEnvAttr() {
+  // We use syntax like denormal_fpenv(float: preservesign), so the colon should
+  // not be interpreted as a label terminator.
+  Lex.setIgnoreColonInIdentifiers(true);
+  llvm::scope_exit _([&] { Lex.setIgnoreColonInIdentifiers(false); });
+
+  Lex.Lex();
+
+  if (parseToken(lltok::lparen, "expected '('"))
+    return {};
+
+  DenormalMode DefaultMode = DenormalMode::getIEEE();
+  DenormalMode F32Mode = DenormalMode::getInvalid();
+
+  bool HasDefaultSection = false;
+  if (Lex.getKind() != lltok::Type) {
+    std::optional<DenormalMode> ParsedDefaultMode = parseDenormalFPEnvEntry();
+    if (!ParsedDefaultMode)
+      return {};
+    DefaultMode = *ParsedDefaultMode;
+    HasDefaultSection = true;
+  }
+
+  bool HasComma = EatIfPresent(lltok::comma);
+  if (Lex.getKind() == lltok::Type) {
+    if (HasDefaultSection && !HasComma) {
+      tokError("expected ',' before float:");
+      return {};
+    }
+
+    Type *Ty = nullptr;
+    if (parseType(Ty) || !Ty->isFloatTy()) {
+      tokError("expected float:");
+      return {};
+    }
+
+    if (parseToken(lltok::colon, "expected ':' before float denormal_fpenv"))
+      return {};
+
+    std::optional<DenormalMode> ParsedF32Mode = parseDenormalFPEnvEntry();
+    if (!ParsedF32Mode)
+      return {};
+
+    F32Mode = *ParsedF32Mode;
+  }
+
+  if (parseToken(lltok::rparen, "unterminated denormal_fpenv"))
+    return {};
+
+  return DenormalFPEnv(DefaultMode, F32Mode);
 }
 
 static unsigned keywordToFPClassTest(lltok::Kind Tok) {

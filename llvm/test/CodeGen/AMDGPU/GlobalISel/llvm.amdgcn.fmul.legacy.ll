@@ -636,4 +636,4 @@ declare float @llvm.amdgcn.fmul.legacy(float, float) #1
 
 attributes #0 = { nounwind readnone speculatable willreturn }
 attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { "denormal-fp-math-f32"="preserve-sign" }
+attributes #2 = { denormal_fpenv(float: preservesign) }

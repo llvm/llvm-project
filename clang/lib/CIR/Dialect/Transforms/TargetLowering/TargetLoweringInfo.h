@@ -15,7 +15,6 @@
 #define LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_TARGETLOWERINGINFO_H
 
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
-#include <string>
 
 namespace cir {
 
@@ -23,7 +22,8 @@ class TargetLoweringInfo {
 public:
   virtual ~TargetLoweringInfo();
 
-  virtual std::string getLLVMSyncScope(cir::SyncScopeKind syncScope) const;
+  virtual cir::SyncScopeKind
+  convertSyncScope(cir::SyncScopeKind syncScope) const;
 };
 
 } // namespace cir

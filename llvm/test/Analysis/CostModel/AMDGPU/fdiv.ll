@@ -739,5 +739,5 @@ define i32 @frem(i32 %arg) {
   ret i32 undef
 }
 
-attributes #0 = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
-attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { nounwind denormal_fpenv(float: ieee|ieee) }
+attributes #1 = { nounwind denormal_fpenv(float: preservesign) }

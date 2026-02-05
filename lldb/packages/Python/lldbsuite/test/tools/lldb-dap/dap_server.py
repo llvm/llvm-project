@@ -44,7 +44,7 @@ DEFAULT_TIMEOUT: Final[float] = 50.0 * (10.0 if ("ASAN_OPTIONS" in os.environ) e
 # A quiet period between events, used to determine if we're done receiving
 # events in a given window, otherwise 'wait_for_stopped' would need to wait
 # until the DEFAULT_TIMEOUT occurs, slows down tests significantly.
-EVENT_QUIET_PERIOD = 0.25
+EVENT_QUIET_PERIOD = 0.25 * (20.0 if ("ASAN_OPTIONS" in os.environ) else 1.0)
 
 
 # See lldbtest.Base.spawnSubprocess, which should help ensure any processes

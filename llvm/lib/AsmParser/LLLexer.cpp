@@ -720,6 +720,12 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(provenance);
   KEYWORD(read_provenance);
 
+  // denormal_fpenv attribute
+  KEYWORD(ieee);
+  KEYWORD(preservesign);
+  KEYWORD(positivezero);
+  KEYWORD(dynamic);
+
   // nofpclass attribute
   KEYWORD(all);
   KEYWORD(nan);

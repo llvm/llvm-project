@@ -19,7 +19,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace acoshf_internal {
 
 // x should be positive, normal finite value
-LIBC_INLINE static double log_eval(double x) {
+LIBC_INLINE double log_eval(double x) {
   // For x = 2^ex * (1 + mx)
   //   log(x) = ex * log(2) + log(1 + mx)
   using FPB = fputil::FPBits<double>;

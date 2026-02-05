@@ -1720,7 +1720,7 @@ bb:
   ret float %i5
 }
 
-define i1 @is_olt_smallest_normal_dynamic(float %x) "denormal-fp-math"="dynamic,dynamic" {
+define i1 @is_olt_smallest_normal_dynamic(float %x) denormal_fpenv(dynamic) {
 ; CHECK-LABEL: @is_olt_smallest_normal_dynamic(
 ; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[X:%.*]], 0x3810000000000000
 ; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
@@ -1729,7 +1729,7 @@ define i1 @is_olt_smallest_normal_dynamic(float %x) "denormal-fp-math"="dynamic,
   ret i1 %is.denorm.or.zero
 }
 
-define i1 @is_olt_smallest_normal_ieee(float %x) "denormal-fp-math"="dynamic,ieee" {
+define i1 @is_olt_smallest_normal_ieee(float %x) denormal_fpenv(dynamic|ieee) {
 ; CHECK-LABEL: @is_olt_smallest_normal_ieee(
 ; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[X:%.*]], 0x3810000000000000
 ; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
@@ -1738,7 +1738,7 @@ define i1 @is_olt_smallest_normal_ieee(float %x) "denormal-fp-math"="dynamic,iee
   ret i1 %is.denorm.or.zero
 }
 
-define i1 @is_olt_smallest_normal_preserve_sign(float %x) "denormal-fp-math"="dynamic,preserve-sign" {
+define i1 @is_olt_smallest_normal_preserve_sign(float %x) denormal_fpenv(dynamic|preservesign) {
 ; CHECK-LABEL: @is_olt_smallest_normal_preserve_sign(
 ; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[X:%.*]], 0x3810000000000000
 ; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
@@ -1747,7 +1747,7 @@ define i1 @is_olt_smallest_normal_preserve_sign(float %x) "denormal-fp-math"="dy
   ret i1 %is.denorm.or.zero
 }
 
-define i1 @is_olt_smallest_normal_positive_zero(float %x) "denormal-fp-math"="dynamic,positive-zero" {
+define i1 @is_olt_smallest_normal_positive_zero(float %x) denormal_fpenv(dynamic|positivezero) {
 ; CHECK-LABEL: @is_olt_smallest_normal_positive_zero(
 ; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[X:%.*]], 0x3810000000000000
 ; CHECK-NEXT:    ret i1 [[IS_DENORM_OR_ZERO]]
@@ -1756,7 +1756,7 @@ define i1 @is_olt_smallest_normal_positive_zero(float %x) "denormal-fp-math"="dy
   ret i1 %is.denorm.or.zero
 }
 
-define i1 @is_fabs_olt_smallest_normal_dynamic(float %x) "denormal-fp-math"="dynamic,dynamic" {
+define i1 @is_fabs_olt_smallest_normal_dynamic(float %x) denormal_fpenv(dynamic) {
 ; CHECK-LABEL: @is_fabs_olt_smallest_normal_dynamic(
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS_X]], 0x3810000000000000
@@ -1767,7 +1767,7 @@ define i1 @is_fabs_olt_smallest_normal_dynamic(float %x) "denormal-fp-math"="dyn
   ret i1 %is.denorm.or.zero
 }
 
-define i1 @is_fabs_olt_smallest_normal_ieee(float %x) "denormal-fp-math"="dynamic,ieee" {
+define i1 @is_fabs_olt_smallest_normal_ieee(float %x) denormal_fpenv(dynamic|ieee) {
 ; CHECK-LABEL: @is_fabs_olt_smallest_normal_ieee(
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS_X]], 0x3810000000000000
@@ -1778,7 +1778,7 @@ define i1 @is_fabs_olt_smallest_normal_ieee(float %x) "denormal-fp-math"="dynami
   ret i1 %is.denorm.or.zero
 }
 
-define i1 @is_fabs_olt_smallest_normal_preserve_sign(float %x) "denormal-fp-math"="dynamic,preserve-sign" {
+define i1 @is_fabs_olt_smallest_normal_preserve_sign(float %x) denormal_fpenv(dynamic|preservesign) {
 ; CHECK-LABEL: @is_fabs_olt_smallest_normal_preserve_sign(
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS_X]], 0x3810000000000000
@@ -1789,7 +1789,7 @@ define i1 @is_fabs_olt_smallest_normal_preserve_sign(float %x) "denormal-fp-math
   ret i1 %is.denorm.or.zero
 }
 
-define i1 @is_fabs_olt_smallest_normal_positive_zero(float %x) "denormal-fp-math"="dynamic,positive-zero" {
+define i1 @is_fabs_olt_smallest_normal_positive_zero(float %x) denormal_fpenv(dynamic|positivezero) {
 ; CHECK-LABEL: @is_fabs_olt_smallest_normal_positive_zero(
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
 ; CHECK-NEXT:    [[IS_DENORM_OR_ZERO:%.*]] = fcmp olt float [[FABS_X]], 0x3810000000000000
@@ -1821,4 +1821,4 @@ declare double @llvm.copysign.f64(double, double)
 declare half @llvm.fabs.f16(half)
 declare void @llvm.assume(i1 noundef)
 
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #0 = { denormal_fpenv(preservesign) }

@@ -28,19 +28,9 @@ SIModeRegisterDefaults::SIModeRegisterDefaults(const Function &F,
       DX10Clamp = DX10ClampAttr == "true";
   }
 
-  StringRef DenormF32Attr =
-      F.getFnAttribute("denormal-fp-math-f32").getValueAsString();
-  if (!DenormF32Attr.empty())
-    FP32Denormals = parseDenormalFPAttribute(DenormF32Attr);
-
-  StringRef DenormAttr =
-      F.getFnAttribute("denormal-fp-math").getValueAsString();
-  if (!DenormAttr.empty()) {
-    DenormalMode DenormMode = parseDenormalFPAttribute(DenormAttr);
-    if (DenormF32Attr.empty())
-      FP32Denormals = DenormMode;
-    FP64FP16Denormals = DenormMode;
-  }
+  DenormalFPEnv FPEnv = F.getDenormalFPEnv();
+  FP64FP16Denormals = FPEnv.DefaultMode;
+  FP32Denormals = FPEnv.F32Mode;
 }
 
 using namespace AMDGPU;
