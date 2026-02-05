@@ -534,11 +534,11 @@ static mlir::Value emitCXXNewAllocSize(CIRGenFunction &cgf, const CXXNewExpr *e,
     // smaller width than size_t, and having a larger width than size_t.
     // However, the AST implicitly casts the size variable to size_t so none of
     // these conditions will ever be met.
-    bool isSigned =
-        (*e->getArraySize())->getType()->isSignedIntegerOrEnumerationType();
-    assert(!isSigned && (numElementsWidth == sizeWidth) &&
-           (numElements.getType() == cgf.sizeTy) &&
-           "Expected array size to be implicitly cast to size_t!");
+    assert(
+        !(*e->getArraySize())->getType()->isSignedIntegerOrEnumerationType() &&
+        (numElementsWidth == sizeWidth) &&
+        (numElements.getType() == cgf.sizeTy) &&
+        "Expected array size to be implicitly cast to size_t!");
 
     // There are up to three conditions we need to test for:
     // 1) if minElements > 0, we need to check whether numElements is smaller
