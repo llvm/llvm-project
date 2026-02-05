@@ -90,6 +90,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg).getSizeInBits() == 96;
   case B128:
     return MRI.getType(Reg).getSizeInBits() == 128;
+  case B160:
+    return MRI.getType(Reg).getSizeInBits() == 160;
   case B256:
     return MRI.getType(Reg).getSizeInBits() == 256;
   case B512:
@@ -136,6 +138,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg).getSizeInBits() == 96 && MUI.isUniform(Reg);
   case UniB128:
     return MRI.getType(Reg).getSizeInBits() == 128 && MUI.isUniform(Reg);
+  case UniB160:
+    return MRI.getType(Reg).getSizeInBits() == 160 && MUI.isUniform(Reg);
   case UniB256:
     return MRI.getType(Reg).getSizeInBits() == 256 && MUI.isUniform(Reg);
   case UniB512:
@@ -191,6 +195,8 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg).getSizeInBits() == 96 && MUI.isDivergent(Reg);
   case DivB128:
     return MRI.getType(Reg).getSizeInBits() == 128 && MUI.isDivergent(Reg);
+  case DivB160:
+    return MRI.getType(Reg).getSizeInBits() == 160 && MUI.isDivergent(Reg);
   case DivB256:
     return MRI.getType(Reg).getSizeInBits() == 256 && MUI.isDivergent(Reg);
   case DivB512:
@@ -269,7 +275,8 @@ UniformityLLTOpPredicateID LLTToBId(LLT Ty) {
     return B64;
   if (Ty == LLT::fixed_vector(3, 32))
     return B96;
-  if (Ty == LLT::fixed_vector(4, 32) || isAnyPtr(Ty, 128))
+  if (Ty == LLT::fixed_vector(4, 32) || Ty == LLT::fixed_vector(2, 64) ||
+      Ty == LLT::fixed_vector(8, 16) || isAnyPtr(Ty, 128))
     return B128;
   return _;
 }
@@ -1016,13 +1023,32 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(B32, {{UniInVgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
 
   addRulesForGOpcs(
+      {G_AMDGPU_BUFFER_LOAD_UBYTE_TFE, G_AMDGPU_BUFFER_LOAD_USHORT_TFE},
+      StandardB)
+      .Div(B64, {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Uni(B64, {{UniInVgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
+
+  addRulesForGOpcs({G_AMDGPU_BUFFER_LOAD_TFE, G_AMDGPU_BUFFER_LOAD_FORMAT_TFE},
+                   StandardB)
+      .Div(B64, {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Uni(B64, {{UniInVgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Div(B96, {{VgprB96}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Uni(B96, {{UniInVgprB96}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Div(B128, {{VgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Uni(B128, {{UniInVgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Any({{DivB160}, {{VgprB160}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{UniB160},
+            {{UniInVgprB160}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}});
+
+  addRulesForGOpcs(
       {G_AMDGPU_BUFFER_LOAD_FORMAT_D16, G_AMDGPU_TBUFFER_LOAD_FORMAT_D16})
       .Any({{DivB32}, {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
       .Any({{DivB64}, {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
       .Any(
           {{DivB128}, {{VgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}});
 
-  addRulesForGOpcs({G_AMDGPU_BUFFER_STORE, G_AMDGPU_BUFFER_STORE_FORMAT,
+  addRulesForGOpcs({G_AMDGPU_BUFFER_STORE, G_AMDGPU_BUFFER_STORE_BYTE,
+                    G_AMDGPU_BUFFER_STORE_SHORT, G_AMDGPU_BUFFER_STORE_FORMAT,
                     G_AMDGPU_BUFFER_STORE_FORMAT_D16,
                     G_AMDGPU_TBUFFER_STORE_FORMAT,
                     G_AMDGPU_TBUFFER_STORE_FORMAT_D16})
@@ -1259,6 +1285,16 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS1, _, S32}, {{Vcc}, {None, Vgpr32, Vgpr32}}})
       .Any({{UniS1, _, S64}, {{UniInVcc}, {None, Vgpr64, Vgpr64}}})
       .Any({{DivS1, _, S64}, {{Vcc}, {None, Vgpr64, Vgpr64}}});
+
+  addRulesForGOpcs({G_INTRINSIC_TRUNC, G_INTRINSIC_ROUNDEVEN, G_FFLOOR, G_FCEIL,
+                    G_FEXP2, G_FLOG2},
+                   Standard)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16}})
+      .Div(S16, {{Vgpr16}, {Vgpr16}})
+      .Uni(S32, {{UniInVgprS32}, {Vgpr32}})
+      .Div(S32, {{Vgpr32}, {Vgpr32}})
+      .Uni(S64, {{UniInVgprS64}, {Vgpr64}})
+      .Div(S64, {{Vgpr64}, {Vgpr64}});
 
   using namespace Intrinsic;
 
