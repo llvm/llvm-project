@@ -161,7 +161,6 @@ static MCInst lowerVecEltInsertion(const MachineInstr *MI, unsigned Opcode) {
 
 bool SystemZAsmPrinter::doInitialization(Module &M) {
   SM.reset();
-  bool RetVal = AsmPrinter::doInitialization(M);
 
   // In HLASM, the only way to represent aliases is to use the 
   // extra-label-at-definition strategy. This is similar to the AIX implementation
@@ -188,7 +187,7 @@ bool SystemZAsmPrinter::doInitialization(Module &M) {
             {}, "Only aliases to functions is supported in GOFF.");
     }
   }
-  return RetVal;
+  return AsmPrinter::doInitialization(M);
 }
 
 // The XPLINK ABI requires that a no-op encoding the call type is emitted after
@@ -1932,6 +1931,7 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
     // Emit aliasing label for function entry point label.
     for (const GlobalAlias *Alias : GOAliasMap[F]) {
       MCSymbol *Sym = getSymbol(Alias);
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
       emitVisibility(Sym, Alias->getVisibility());
       emitLinkage(Alias, Sym);
       OutStreamer->emitLabel(Sym);
