@@ -48,28 +48,71 @@ INSTANTIATE_TEST_SUITE_P(
                        "ModuleInfo for demangle.test"),
         std::make_pair("_D8demangle4__S14testZ", "demangle.test"),
         std::make_pair("_D8demangle4__Sd4testZ", "demangle.__Sd.test"),
-        std::make_pair("_D8demangle3fooi", "demangle.foo"),
+        std::make_pair("_D8demangle3fooi", "int demangle.foo"),
         std::make_pair("_D8demangle3foo",
                        nullptr), // symbol without a type sequence.
         std::make_pair("_D8demangle3fooinvalidtypeseq",
                        nullptr), // invalid type sequence.
         std::make_pair(
             "_D8demangle3ABCQe1ai",
-            "demangle.ABC.ABC.a"), // symbol back reference: `Qe` is a back
-                                   // reference for position 5, counting from e
-                                   // char, so decoding it points to `3`. Since
-                                   // `3` is a number, 3 chars get read and it
-                                   // succeeded.
+            "int demangle.ABC.ABC.a"), // symbol back reference: `Qe` is a back
+                                       // reference for position 5, counting
+                                       // from e char, so decoding it points to
+                                       // `3`. Since `3` is a number, 3 chars
+                                       // get read and it succeeded.
         std::make_pair("_D8demangle3ABCQa1ai",
                        nullptr), // invalid symbol back reference (recursive).
         std::make_pair("_D8demangleQDXXXXXXXXXXXXx",
                        nullptr), // overflow back reference position.
         std::make_pair(
             "_D8demangle4ABCi1aQd",
-            "demangle.ABCi.a"), // type back reference: `Qd` is a back reference
-                                // for position 4, counting from `d` char, so
-                                // decoding it points to `i`.
+            "int demangle.ABCi.a"), // type back reference: `Qd` is a back
+                                    // reference for position 4, counting from
+                                    // `d` char, so decoding it points to `i`.
         std::make_pair("_D8demangle3fooQXXXx",
                        nullptr), // invalid type back reference position.
         std::make_pair("_D8demangle5recurQa",
-                       nullptr))); // invalid type back reference (recursive).
+                       nullptr), // invalid type back reference
+                                 // (recursive).
+        std::make_pair(
+            "_D8demangle3fooMFiZv",
+            "void demangle.foo(int)"), // function with one parameter.
+        std::make_pair(
+            "_D8demangle3fooFFNaZvZv",
+            "void demangle.foo(void function() pure)"), // function with a
+                                                        // function as
+                                                        // parameter.
+        std::make_pair(
+            "_D8demangle3fooMxWNaZv",
+            "const extern (Windows) pure void demangle.foo()"), // function with
+                                                                // attributes
+                                                                // and a calling
+                                                                // convention.
+        std::make_pair("_D8demangle3fooDxWNaZv",
+                       "extern (Windows) void delegate() pure const "
+                       "demangle.foo"), // delegate with attributes and a
+                                        // calling convention.
+        std::make_pair(
+            "_D8demangle__T3fooTiZQhFiZv",
+            "void demangle.foo!(int).foo(int)"), // template instance with a
+                                                 // type and inner function.
+        std::make_pair("_D8demangle__T3fooVAiA2i1i2ZZ",
+                       "demangle.foo!([1, 2])"), // template instance with an
+                                                 // array literal.
+        std::make_pair(
+            "_D8demangle__T3fooVHiiA2i1i2i3i4ZZ",
+            "demangle.foo!([1:2, 3:4])"), // template instance with an
+                                          // assocative array literal.
+        std::make_pair(
+            "_D8demangle__T3fooVSQs3FooS1i1ZZ",
+            "demangle.foo!(demangle.Foo(1))"), // template instance with a
+                                               // struct literal.
+        std::make_pair("_D8demangle__T3fooVai97ZZ",
+                       "demangle.foo!('a')"), // template instance with a
+                                              // character literal.
+        std::make_pair("_D8demangle__T3fooVAyaa3_626172ZZ",
+                       "demangle.foo!(\"bar\")"), // template instance with a
+                                                  // string literal.
+        std::make_pair("_D8demangle__T3fooS_DQt1fSQy3FooZZ",
+                       "demangle.foo!(demangle.f)"))); // template instance with
+                                                       // a qualified name.

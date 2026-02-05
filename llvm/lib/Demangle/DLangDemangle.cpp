@@ -52,10 +52,13 @@ private:
   ///
   /// \param Demangled output buffer to write the demangled name.
   /// \param Mangled mangled symbol to be demangled.
+  /// \param PrintType writes the type information of the symbol to the
+  /// demangled name.
   ///
   /// \see https://dlang.org/spec/abi.html#name_mangling .
   /// \see https://dlang.org/spec/abi.html#MangledName .
-  void parseMangle(OutputBuffer *Demangled, std::string_view &Mangled);
+  void parseMangle(OutputBuffer *Demangled, std::string_view &Mangled,
+                   bool PrintType = true);
 
   /// Extract the number from a given string.
   ///
@@ -103,11 +106,12 @@ private:
   /// Extract and demangle backreferenced type from a given mangled symbol
   /// and append it to the output string.
   ///
+  /// \param Demangled output buffer to write the demangled name.
   /// \param Mangled mangled symbol to be demangled.
   ///
   /// \see https://dlang.org/spec/abi.html#back_ref .
   /// \see https://dlang.org/spec/abi.html#TypeBackRef .
-  void parseTypeBackref(std::string_view &Mangled);
+  void parseTypeBackref(OutputBuffer *Demangled, std::string_view &Mangled);
 
   /// Check whether it is the beginning of a symbol name.
   ///
@@ -151,12 +155,146 @@ private:
   /// Extract and demangle a type from a given mangled symbol append it to
   /// the output string.
   ///
+  /// \param Demangled Output buffer to write the demangled name.
   /// \param Mangled mangled symbol to be demangled.
   ///
   /// \return true on success, false on error.
   ///
   /// \see https://dlang.org/spec/abi.html#Type .
-  bool parseType(std::string_view &Mangled);
+  bool parseType(OutputBuffer *Demangled, std::string_view &Mangled);
+
+  /// Extract and demangle a function type from a given mangled symbol append it
+  /// to the output string.
+  ///
+  /// \param Demangled Output buffer to write the demangled name.
+  /// \param Mangled mangled symbol to be demangled.
+  /// \param IsDelegate Flag to determine if an function or a delegate is
+  /// currently being demangled.
+  ///
+  /// \return true on success, false on error.
+  ///
+  /// \see https://dlang.org/spec/abi.html#TypeFunction .
+  bool parseTypeFunction(OutputBuffer *Demangled, std::string_view &Mangled,
+                         bool IsDelegate);
+
+  /// Extract and demangle a calling convention from a given mangled symbol
+  /// append it to the output string.
+  ///
+  /// \param Demangled Output buffer to write the demangled name.
+  /// \param Mangled mangled symbol to be demangled.
+  ///
+  /// \return true on success, false on error.
+  ///
+  /// \see https://dlang.org/spec/abi.html#CallConvention
+  bool parseCallConvention(OutputBuffer *Demangled, std::string_view &Mangled);
+
+  /// Extract and demangle function parameters from a given mangled symbol
+  /// append it to the output string.
+  ///
+  /// \param Demangled Output buffer to write the demangled name.
+  /// \param Mangled mangled symbol to be demangled.
+  ///
+  /// \return true on success, false on error.
+  ///
+  /// \see https://dlang.org/spec/abi.html#Parameters
+  bool parseFuncParameters(OutputBuffer *Demangled, std::string_view &Mangled);
+
+  /// Extract function attributes from a given mangled symbol.
+  ///
+  /// \param Mangled mangled symbol to be demangled.
+  ///
+  /// \return bitmap where each bit represents one function attribute.
+  ///
+  /// \see https://dlang.org/spec/abi.html#FuncAttrs
+  unsigned short parseFuncAttributes(std::string_view &Mangled);
+
+  /// Demangle function attributes append it to the output string.
+  ///
+  /// \param Demangled Output buffer to write the demangled name.
+  /// \param Attributes The extracted function attributes.
+  ///
+  /// \see https://dlang.org/spec/abi.html#FuncAttrs
+  void demangleFuncAttributes(OutputBuffer *Demangled,
+                              unsigned short Attributes);
+
+  /// Extract modifiers from a given mangled symbol.
+  ///
+  /// \param Mangled mangled symbol to be demangled.
+  ///
+  /// \return bitmap where each bit represents one function attribute.
+  ///
+  /// \see https://dlang.org/spec/abi.html#TypeModifiers
+  unsigned short parseModifiers(std::string_view &Mangled);
+
+  /// Demangle modifiers append it to the output string.
+  ///
+  /// \param Demangled Output buffer to write the demangled name.
+  /// \param Modifiers The extracted modifiers.
+  ///
+  /// \see https://dlang.org/spec/abi.html#TypeModifiers
+  void demangleModifiers(OutputBuffer *Demangled, unsigned short Modifiers);
+
+  /// Extract and demangle a function type without a return type from a given
+  /// mangled symbol append it to the output string.
+  ///
+  /// \param Attrs Output buffer to write the demangled attributes.
+  /// \param Demangled Output buffer to write the demangled name.
+  /// \param Mangled mangled symbol to be demangled.
+  ///
+  /// \return true on success, false on error.
+  ///
+  /// \see https://dlang.org/spec/abi.html#TypeFunctionNoReturn
+  bool parseFunctionTypeNoReturn(OutputBuffer *Attrs, OutputBuffer *Demangled,
+                                 std::string_view &Mangled);
+
+  /// Extract and demangle a template instance from a given mangled symbol
+  /// append it to the output string.
+  ///
+  /// \param Demangled Output buffer to write the demangled name.
+  /// \param Mangled mangled symbol to be demangled.
+  ///
+  /// \see https://dlang.org/spec/abi.html#TemplateInstanceName
+  void parseTemplateInstanceName(OutputBuffer *Demangled,
+                                 std::string_view &Mangled);
+
+  /// Extract and demangle a template argument value from a given mangled symbol
+  /// append it to the output string.
+  ///
+  /// \param Demangled Output buffer to write the demangled name.
+  /// \param Mangled mangled symbol to be demangled.
+  /// \param Type mangled template argument type.
+  /// \param DemangledType Output buffer containing the already
+  /// demangled template argument type if present.
+  ///
+  /// \see https://dlang.org/spec/abi.html#Value
+  void parseValue(OutputBuffer *Demangled, std::string_view &Mangled,
+                  char Type = '\0', OutputBuffer *DemangledType = nullptr);
+
+  /// Writes an hexadecimal number to the output string.
+  ///
+  /// \param Demangled Output buffer to write the hexadecimal number.
+  /// \param Val the numeric value to write.
+  /// \param Width the width of the hexadecimal number.
+  void printHexNumber(OutputBuffer *Demangled, unsigned long Val,
+                      unsigned Width = 0);
+
+  /// Extract and demangle a numeric template argument value from a given
+  /// mangled symbol append it to the output string.
+  ///
+  /// \param Demangled Output buffer to write the demangled name.
+  /// \param Mangled mangled symbol to be demangled.
+  /// \param Type mangled template argument type.
+  void parseIntegerValue(OutputBuffer *Demangled, std::string_view &Mangled,
+                         char Type = '\0');
+
+  /// Extract and demangle a numeric template argument value from a given
+  /// mangled symbol append it to the output string.
+  ///
+  /// \param Demangled Output buffer to write the demangled name.
+  /// \param Mangled mangled symbol to be demangled.
+  ///
+  /// \see https://dlang.org/spec/abi.html#HexFloat
+  void parseRealValue(OutputBuffer *Demangled, std::string_view &Mangled);
 
   /// An immutable view of the string we are demangling.
   const std::string_view Str;
@@ -165,6 +303,10 @@ private:
 };
 
 } // namespace
+
+inline bool isHexDigit(char Val) {
+  return std::isdigit(Val) || (Val >= 'A' && Val <= 'F');
+}
 
 void Demangler::decodeNumber(std::string_view &Mangled, unsigned long &Ret) {
   // Clear Mangled if trying to extract something that isn't a digit.
@@ -297,7 +439,8 @@ void Demangler::parseSymbolBackref(OutputBuffer *Demangled,
     Mangled = {};
 }
 
-void Demangler::parseTypeBackref(std::string_view &Mangled) {
+void Demangler::parseTypeBackref(OutputBuffer *Demangled,
+                                 std::string_view &Mangled) {
   // A type back reference always points to a letter.
   //    TypeBackRef:
   //        Q NumberBackRef
@@ -327,7 +470,7 @@ void Demangler::parseTypeBackref(std::string_view &Mangled) {
   }
 
   // TODO: Add support for function type back references.
-  if (!parseType(Backref))
+  if (!parseType(Demangled, Backref))
     Mangled = {};
 
   LastBackref = SaveRefPos;
@@ -343,7 +486,8 @@ bool Demangler::isSymbolName(std::string_view Mangled) {
   if (std::isdigit(Mangled.front()))
     return true;
 
-  // TODO: Handle template instances.
+  if (Mangled.front() == '_')
+    return true;
 
   if (Mangled.front() != 'Q')
     return false;
@@ -356,8 +500,8 @@ bool Demangler::isSymbolName(std::string_view Mangled) {
   return std::isdigit(Qref[-Ret]);
 }
 
-void Demangler::parseMangle(OutputBuffer *Demangled,
-                            std::string_view &Mangled) {
+void Demangler::parseMangle(OutputBuffer *Demangled, std::string_view &Mangled,
+                            bool PrintType) {
   // A D mangled symbol is comprised of both scope and type information.
   //    MangleName:
   //        _D QualifiedName Type
@@ -369,7 +513,37 @@ void Demangler::parseMangle(OutputBuffer *Demangled,
   // a function or the type of a variable.
   Mangled.remove_prefix(2);
 
-  parseQualified(Demangled, Mangled);
+  size_t NotFirst = false;
+  OutputBuffer Attrs;
+  do {
+    // Skip over anonymous symbols.
+    if (!Mangled.empty() && Mangled.front() == '0') {
+      do
+        Mangled.remove_prefix(1);
+      while (!Mangled.empty() && Mangled.front() == '0');
+
+      continue;
+    }
+
+    // Ignore all attributes for parent symbols
+    Attrs.setCurrentPosition(0);
+
+    if (NotFirst)
+      *Demangled << '.';
+    NotFirst = true;
+
+    parseIdentifier(Demangled, Mangled);
+    parseFunctionTypeNoReturn(&Attrs, Demangled, Mangled);
+
+  } while (!Mangled.empty() && isSymbolName(Mangled));
+
+  size_t TypePos = 0;
+  if (!Attrs.empty()) {
+    Attrs << ' ';
+    Demangled->insert(0, Attrs.getBuffer(), Attrs.getCurrentPosition());
+    TypePos = Attrs.getCurrentPosition();
+  }
+  std::free(Attrs.getBuffer());
 
   if (Mangled.empty()) {
     Mangled = {};
@@ -379,8 +553,16 @@ void Demangler::parseMangle(OutputBuffer *Demangled,
   // Artificial symbols end with 'Z' and have no type.
   if (Mangled.front() == 'Z') {
     Mangled.remove_prefix(1);
-  } else if (!parseType(Mangled))
-    Mangled = {};
+  } else {
+    OutputBuffer tmp;
+    if (!parseType(&tmp, Mangled))
+      Mangled = {};
+    else if (PrintType) {
+      tmp << ' ';
+      Demangled->insert(TypePos, tmp.getBuffer(), tmp.getCurrentPosition());
+    }
+    std::free(tmp.getBuffer());
+  }
 }
 
 void Demangler::parseQualified(OutputBuffer *Demangled,
@@ -416,6 +598,8 @@ void Demangler::parseQualified(OutputBuffer *Demangled,
     NotFirst = true;
 
     parseIdentifier(Demangled, Mangled);
+    parseFunctionTypeNoReturn(Demangled, Demangled, Mangled);
+
   } while (!Mangled.empty() && isSymbolName(Mangled));
 }
 
@@ -429,7 +613,8 @@ void Demangler::parseIdentifier(OutputBuffer *Demangled,
   if (Mangled.front() == 'Q')
     return parseSymbolBackref(Demangled, Mangled);
 
-  // TODO: Parse lengthless template instances.
+  if (Mangled.front() == '_')
+    return parseTemplateInstanceName(Demangled, Mangled);
 
   unsigned long Len;
   decodeNumber(Mangled, Len);
@@ -465,36 +650,1005 @@ void Demangler::parseIdentifier(OutputBuffer *Demangled,
   parseLName(Demangled, Mangled, Len);
 }
 
-bool Demangler::parseType(std::string_view &Mangled) {
+bool Demangler::parseType(OutputBuffer *Demangled, std::string_view &Mangled) {
   if (Mangled.empty()) {
     Mangled = {};
     return false;
   }
 
   switch (Mangled.front()) {
-  // TODO: Parse type qualifiers.
-  // TODO: Parse function types.
-  // TODO: Parse compound types.
-  // TODO: Parse delegate types.
-  // TODO: Parse tuple types.
-
-  // Basic types.
-  case 'i':
+  // Type qualifiers.
+  case 'O': {
+    *Demangled << "shared(";
     Mangled.remove_prefix(1);
-    // TODO: Add type name dumping
-    return true;
-
-    // TODO: Add support for the rest of the basic types.
-
-  // Back referenced type.
-  case 'Q': {
-    parseTypeBackref(Mangled);
+    if (!parseType(Demangled, Mangled)) {
+      Mangled = {};
+      return false;
+    }
+    *Demangled << ')';
     return true;
   }
 
-  default: // unhandled.
+  case 'x': {
+    *Demangled << "const(";
+    Mangled.remove_prefix(1);
+    if (!parseType(Demangled, Mangled)) {
+      Mangled = {};
+      return false;
+    }
+    *Demangled << ')';
+    return true;
+  }
+
+  case 'y': {
+    *Demangled << "immutable(";
+    Mangled.remove_prefix(1);
+    if (!parseType(Demangled, Mangled)) {
+      Mangled = {};
+      return false;
+    }
+    *Demangled << ')';
+    return true;
+  }
+
+  // Function types.
+  case 'F':
+  case 'U':
+  case 'W':
+  case 'V':
+  case 'R':
+    return parseTypeFunction(Demangled, Mangled, false);
+
+  // Array types.
+  case 'A': {
+    Mangled.remove_prefix(1);
+    if (!parseType(Demangled, Mangled)) {
+      Mangled = {};
+      return false;
+    }
+    *Demangled << "[]";
+    return true;
+  }
+
+  case 'G': {
+    Mangled.remove_prefix(1);
+    unsigned long len;
+    decodeNumber(Mangled, len);
+    if (!parseType(Demangled, Mangled)) {
+      Mangled = {};
+      return false;
+    }
+    *Demangled << '[' << len << ']';
+    return true;
+  }
+
+  case 'H': {
+    Mangled.remove_prefix(1);
+    OutputBuffer tmp;
+    if (!parseType(&tmp, Mangled)) {
+      std::free(tmp.getBuffer());
+      Mangled = {};
+      return false;
+    }
+    if (!parseType(Demangled, Mangled)) {
+      std::free(tmp.getBuffer());
+      Mangled = {};
+      return false;
+    }
+    *Demangled << '[';
+    *Demangled << tmp.getBuffer();
+    *Demangled << ']';
+    std::free(tmp.getBuffer());
+    return true;
+  }
+
+  case 'P': {
+    Mangled.remove_prefix(1);
+    if (!parseType(Demangled, Mangled)) {
+      Mangled = {};
+      return false;
+    }
+    *Demangled << "*";
+    return true;
+  }
+
+  // Delegate types.
+  case 'D': {
+    Mangled.remove_prefix(1);
+    auto Modifiers = parseModifiers(Mangled);
+    if (!parseTypeFunction(Demangled, Mangled, true)) {
+      Mangled = {};
+      return false;
+    }
+    if (Modifiers > 0) {
+      *Demangled << ' ';
+      demangleModifiers(Demangled, Modifiers);
+    }
+    return true;
+  }
+
+  // Compound types.
+  case 'I':
+  case 'C':
+  case 'S':
+  case 'E':
+  case 'T': {
+    Mangled.remove_prefix(1);
+    parseQualified(Demangled, Mangled);
+    return true;
+  }
+
+  // TODO: Parse tuple types.
+
+  // Cent types.
+  case 'z': {
+    Mangled.remove_prefix(1);
+    switch (Mangled.front()) {
+    case 'i':
+      *Demangled << "cent";
+      Mangled.remove_prefix(1);
+      return true;
+    case 'k':
+      *Demangled << "ucent";
+      Mangled.remove_prefix(1);
+      return true;
+    default:
+      Mangled = {};
+      return false;
+    }
+  }
+
+  // Misc.
+  case 'N': {
+    Mangled.remove_prefix(1);
+    switch (Mangled.front()) {
+    case 'n':
+      *Demangled << "noreturn";
+      Mangled.remove_prefix(1);
+      return true;
+    case 'h':
+      *Demangled << "__vector(";
+      Mangled.remove_prefix(1);
+      if (!parseType(Demangled, Mangled)) {
+        Mangled = {};
+        return false;
+      }
+      *Demangled << ')';
+      return true;
+    case 'g':
+      *Demangled << "inout(";
+      Mangled.remove_prefix(1);
+      if (!parseType(Demangled, Mangled)) {
+        Mangled = {};
+        return false;
+      }
+      *Demangled << ')';
+      return true;
+    }
     Mangled = {};
     return false;
+  }
+
+  // Back referenced type.
+  case 'Q': {
+    parseTypeBackref(Demangled, Mangled);
+    return true;
+  }
+
+  default:
+    char c = Mangled.front();
+    // Basic types.
+    if (c >= 'a' && c <= 'w') {
+      Mangled.remove_prefix(1);
+
+      static const char *Primitives[] = {
+          "char",    // a
+          "bool",    // b
+          "creal",   // c
+          "double",  // d
+          "real",    // e
+          "float",   // f
+          "byte",    // g
+          "ubyte",   // h
+          "int",     // i
+          "ireal",   // j
+          "uint",    // k
+          "long",    // l
+          "ulong",   // m
+          0,         // n
+          "ifloat",  // o
+          "idouble", // p
+          "cfloat",  // q
+          "cdouble", // r
+          "short",   // s
+          "ushort",  // t
+          "wchar",   // u
+          "void",    // v
+          "dchar",   // w
+      };
+
+      *Demangled << Primitives[c - 'a'];
+      return true;
+    }
+
+    // unhandled.
+    Mangled = {};
+    return false;
+  }
+}
+
+bool Demangler::parseTypeFunction(OutputBuffer *Demangled,
+                                  std::string_view &Mangled, bool IsDelegate) {
+  if (!parseCallConvention(Demangled, Mangled)) {
+    Mangled = {};
+    return false;
+  }
+
+  auto funcAttrs = parseFuncAttributes(Mangled);
+  if (Mangled.empty()) {
+    Mangled = {};
+    return false;
+  }
+
+  auto begin = Demangled->getCurrentPosition();
+
+  if (IsDelegate)
+    *Demangled << "delegate";
+  else
+    *Demangled << "function";
+
+  *Demangled << '(';
+  if (!parseFuncParameters(Demangled, Mangled)) {
+    Mangled = {};
+    return false;
+  }
+  *Demangled << ')';
+
+  OutputBuffer tmp;
+  if (!parseType(&tmp, Mangled)) {
+    std::free(tmp.getBuffer());
+    Mangled = {};
+    return false;
+  }
+  tmp << ' ';
+  Demangled->insert(begin, tmp.getBuffer(), tmp.getCurrentPosition());
+  std::free(tmp.getBuffer());
+
+  if (funcAttrs > 0) {
+    *Demangled << ' ';
+    demangleFuncAttributes(Demangled, funcAttrs);
+  }
+
+  return true;
+}
+
+bool Demangler::parseCallConvention(OutputBuffer *Demangled,
+                                    std::string_view &Mangled) {
+  switch (Mangled.front()) {
+  case 'F':
+    Mangled.remove_prefix(1);
+    return true;
+  case 'U':
+    *Demangled << "extern (C) ";
+    Mangled.remove_prefix(1);
+    return true;
+  case 'W':
+    *Demangled << "extern (Windows) ";
+    Mangled.remove_prefix(1);
+    return true;
+  case 'R':
+    *Demangled << "extern (C++) ";
+    Mangled.remove_prefix(1);
+    return true;
+  default:
+    Mangled = {};
+    return false;
+  }
+}
+
+bool Demangler::parseFuncParameters(OutputBuffer *Demangled,
+                                    std::string_view &Mangled) {
+  for (size_t i = 0; true; i++) {
+    if (Mangled.empty()) {
+      Mangled = {};
+      return false;
+    }
+
+    switch (Mangled.front()) {
+    case 'X':
+      *Demangled << "...";
+      Mangled.remove_prefix(1);
+      return true;
+    case 'Y':
+      *Demangled << ", ...";
+      Mangled.remove_prefix(1);
+      return true;
+    case 'Z':
+      Mangled.remove_prefix(1);
+      return true;
+    }
+
+    if (i)
+      *Demangled << ", ";
+
+    while (1) {
+      if (Mangled.empty()) {
+        Mangled = {};
+        return false;
+      }
+
+      switch (Mangled.front()) {
+      case 'M':
+        *Demangled << "scope ";
+        Mangled.remove_prefix(1);
+        continue;
+      case 'N':
+        Mangled.remove_prefix(1);
+        if (Mangled.front() == 'k') {
+          *Demangled << "return ";
+          Mangled.remove_prefix(1);
+          continue;
+        } else
+          goto afterAttrLoop;
+      default:
+        goto afterAttrLoop;
+      }
+    }
+  afterAttrLoop:
+
+    switch (Mangled.front()) {
+    case 'I': {
+      *Demangled << "in ";
+      Mangled.remove_prefix(1);
+      if (Mangled.front() == 'K')
+        goto refStorageClass;
+      if (!parseType(Demangled, Mangled)) {
+        Mangled = {};
+        return false;
+      }
+      continue;
+    }
+
+    case 'K':
+    refStorageClass: {
+      *Demangled << "ref ";
+      Mangled.remove_prefix(1);
+      if (!parseType(Demangled, Mangled)) {
+        Mangled = {};
+        return false;
+      }
+      continue;
+    }
+
+    case 'J': {
+      *Demangled << "out ";
+      Mangled.remove_prefix(1);
+      if (!parseType(Demangled, Mangled)) {
+        Mangled = {};
+        return false;
+      }
+      continue;
+    }
+
+    case 'L': {
+      *Demangled << "lazy ";
+      Mangled.remove_prefix(1);
+      if (!parseType(Demangled, Mangled)) {
+        Mangled = {};
+        return false;
+      }
+      continue;
+    }
+
+    default:
+      if (!parseType(Demangled, Mangled)) {
+        Mangled = {};
+        return false;
+      }
+    }
+  }
+}
+
+enum FunctionAttribute {
+  Pure = (1 << 0),
+  NoThrow = (1 << 1),
+  Ref = (1 << 2),
+  Property = (1 << 3),
+  Trusted = (1 << 4),
+  Safe = (1 << 5),
+  NoGC = (1 << 6),
+  Return = (1 << 7),
+  Scope = (1 << 8),
+  Live = (1 << 9),
+  ReturnScope = (1 << 10),
+  ScopeReturn = (1 << 11),
+};
+#define FUNCTIONATTR_MAX 12
+
+unsigned short Demangler::parseFuncAttributes(std::string_view &Mangled) {
+  if (Mangled.empty()) {
+    return 0;
+  }
+
+  unsigned short Result = 0;
+  while (Mangled.front() == 'N') {
+    if (Mangled.length() < 2) {
+      return Result;
+    }
+
+    switch (Mangled.at(1)) {
+    case 'a':
+      Result |= FunctionAttribute::Pure;
+      Mangled.remove_prefix(2);
+      continue;
+    case 'b':
+      Result |= FunctionAttribute::NoThrow;
+      Mangled.remove_prefix(2);
+      continue;
+    case 'c':
+      Result |= FunctionAttribute::Ref;
+      Mangled.remove_prefix(2);
+      continue;
+    case 'd':
+      Result |= FunctionAttribute::Property;
+      Mangled.remove_prefix(2);
+      continue;
+    case 'e':
+      Result |= FunctionAttribute::Trusted;
+      Mangled.remove_prefix(2);
+      continue;
+    case 'f':
+      Result |= FunctionAttribute::Safe;
+      Mangled.remove_prefix(2);
+      continue;
+    case 'i':
+      Result |= FunctionAttribute::NoGC;
+      Mangled.remove_prefix(2);
+      continue;
+    case 'j': {
+      Mangled.remove_prefix(1);
+      if (starts_with(Mangled, "Nl")) {
+        Result |= FunctionAttribute::ReturnScope;
+        Mangled.remove_prefix(2);
+      } else
+        Result |= FunctionAttribute::Return;
+      continue;
+    }
+    case 'l': {
+      Mangled.remove_prefix(1);
+      if (starts_with(Mangled, "Nj")) {
+        Result |= FunctionAttribute::ScopeReturn;
+        Mangled.remove_prefix(2);
+      } else
+        Result |= FunctionAttribute::Scope;
+      continue;
+    }
+    case 'm':
+      Result |= FunctionAttribute::Live;
+      Mangled.remove_prefix(2);
+      continue;
+    default:
+      return Result;
+    }
+  }
+  return Result;
+}
+
+void Demangler::demangleFuncAttributes(OutputBuffer *Demangled,
+                                       unsigned short Attributes) {
+  static const char *AttributeNames[] = {
+      "pure",  "nothrow", "ref",   "@property", "@trusted",     "@safe",
+      "@nogc", "return",  "scope", "@live",     "return scope", "scope return",
+  };
+
+  bool NeedSpace = false;
+  for (unsigned short i = 0; i < FUNCTIONATTR_MAX; i++) {
+    if (Attributes & (1 << i)) {
+      if (NeedSpace)
+        *Demangled << ' ';
+      *Demangled << AttributeNames[i];
+      NeedSpace = true;
+    }
+  }
+}
+
+enum Modifier {
+  Const = (1 << 0),
+  Immutable = (1 << 1),
+  Shared = (1 << 2),
+  InOut = (1 << 3),
+};
+#define MODIFIER_MAX 4
+
+unsigned short Demangler::parseModifiers(std::string_view &Mangled) {
+  unsigned short Result = 0;
+  switch (Mangled.front()) {
+  case 'y':
+    Mangled.remove_prefix(1);
+    return Modifier::Immutable;
+  case 'O':
+    Mangled.remove_prefix(1);
+    Result |= Modifier::Shared;
+    switch (Mangled.front()) {
+    case 'x':
+      goto constMod;
+    case 'N':
+      goto wildMod;
+    default:
+      return Modifier::Shared;
+    }
+  case 'N':
+  wildMod:
+    if (Mangled.size() > 1 && Mangled.at(1) != 'g')
+      return Result;
+    Mangled.remove_prefix(2);
+    Result |= Modifier::InOut;
+    if (!Mangled.empty() && Mangled.front() == 'x')
+      goto constMod;
+    return Result;
+  case 'x':
+  constMod:
+    Mangled.remove_prefix(1);
+    Result |= Modifier::Const;
+    return Result;
+  default:
+    return 0;
+  }
+}
+
+void Demangler::demangleModifiers(OutputBuffer *Demangled,
+                                  unsigned short Modifiers) {
+  static const char *ModifierNames[] = {
+      "const",
+      "immutable",
+      "shared",
+      "inout",
+  };
+
+  bool NeedSpace = false;
+  for (unsigned short i = 0; i < MODIFIER_MAX; i++) {
+    if (Modifiers & (1 << i)) {
+      if (NeedSpace)
+        *Demangled << ' ';
+      *Demangled << ModifierNames[i];
+      NeedSpace = true;
+    }
+  }
+}
+
+bool Demangler::parseFunctionTypeNoReturn(OutputBuffer *Attrs,
+                                          OutputBuffer *Demangled,
+                                          std::string_view &Mangled) {
+  if (Mangled.empty())
+    return true;
+
+  if (Mangled.front() == 'M') {
+    Mangled.remove_prefix(1);
+    auto Modifiers = parseModifiers(Mangled);
+    if (Modifiers > 0) {
+      demangleModifiers(Attrs, Modifiers);
+      *Attrs << ' ';
+    }
+  }
+
+  switch (Mangled.front()) {
+  case 'F':
+  case 'U':
+  case 'W':
+  case 'R':
+    if (!parseCallConvention(Attrs, Mangled)) {
+      Mangled = {};
+      return false;
+    }
+
+    auto funcAttrs = parseFuncAttributes(Mangled);
+    if (funcAttrs > 0)
+      demangleFuncAttributes(Attrs, funcAttrs);
+
+    *Demangled << '(';
+    if (!parseFuncParameters(Demangled, Mangled)) {
+      Mangled = {};
+      return false;
+    }
+    *Demangled << ')';
+
+    return true;
+  }
+  return true;
+}
+
+void Demangler::parseTemplateInstanceName(OutputBuffer *Demangled,
+                                          std::string_view &Mangled) {
+  // TODO: handle template instances with length prefix
+
+  if (Mangled.length() < 3 || Mangled.substr(0, 3) != "__T") {
+    Mangled = {};
+    return;
+  }
+  Mangled.remove_prefix(3);
+
+  unsigned long Len;
+  decodeNumber(Mangled, Len);
+
+  if (Mangled.empty()) {
+    Mangled = {};
+    return;
+  }
+  if (!Len || Mangled.length() < Len) {
+    Mangled = {};
+    return;
+  }
+
+  parseLName(Demangled, Mangled, Len);
+
+  *Demangled << "!(";
+
+  for (size_t n = 0; true; n++) {
+    if (Mangled.empty()) {
+      Mangled = {};
+      return;
+    }
+
+    if (Mangled.front() == 'H')
+      Mangled.remove_prefix(1);
+
+    switch (Mangled.front()) {
+    case 'Z':
+      Mangled.remove_prefix(1);
+      goto after;
+
+    case 'T': {
+      Mangled.remove_prefix(1);
+      if (n)
+        *Demangled << ", ";
+      if (!parseType(Demangled, Mangled)) {
+        Mangled = {};
+        return;
+      }
+      continue;
+    }
+
+    case 'V': {
+      Mangled.remove_prefix(1);
+      if (n)
+        *Demangled << ", ";
+
+      char TypeChar = Mangled.front();
+      OutputBuffer DemangledType;
+      if (!parseType(&DemangledType, Mangled)) {
+        std::free(DemangledType.getBuffer());
+        Mangled = {};
+        return;
+      }
+
+      parseValue(Demangled, Mangled, TypeChar, &DemangledType);
+      std::free(DemangledType.getBuffer());
+      continue;
+    }
+
+    case 'S': {
+      Mangled.remove_prefix(1);
+      if (n)
+        *Demangled << ", ";
+
+      if (starts_with(Mangled, "_D"))
+        parseMangle(Demangled, Mangled, false);
+      else
+        parseQualified(Demangled, Mangled);
+
+      continue;
+    }
+
+    case 'X': {
+      Mangled.remove_prefix(1);
+      if (n)
+        *Demangled << ", ";
+      unsigned long Len;
+      decodeNumber(Mangled, Len);
+      parseLName(Demangled, Mangled, Len);
+      continue;
+    }
+
+    default:
+      Mangled = {};
+      return;
+    }
+  }
+after:
+
+  *Demangled << ')';
+}
+
+void Demangler::parseValue(OutputBuffer *Demangled, std::string_view &Mangled,
+                           char Type, OutputBuffer *DemangledType) {
+  if (Mangled.empty()) {
+    Mangled = {};
+    return;
+  }
+
+  switch (Mangled.front()) {
+  case 'n':
+    Mangled.remove_prefix(1);
+    *Demangled << "null";
+    return;
+
+  case 'i':
+    Mangled.remove_prefix(1);
+    if (!isdigit(Mangled.front())) {
+      Mangled = {};
+      return;
+    }
+    parseIntegerValue(Demangled, Mangled, Type);
+    return;
+
+  case 'N':
+    Mangled.remove_prefix(1);
+    *Demangled << '-';
+    parseIntegerValue(Demangled, Mangled);
+    return;
+
+  case 'e':
+    Mangled.remove_prefix(1);
+    parseRealValue(Demangled, Mangled);
+    return;
+
+  case 'c': {
+    Mangled.remove_prefix(1);
+    parseRealValue(Demangled, Mangled);
+    *Demangled << '+';
+    if (Mangled.empty() || Mangled.front() != 'c') {
+      Mangled = {};
+      return;
+    }
+    Mangled.remove_prefix(1);
+    parseRealValue(Demangled, Mangled);
+    *Demangled << 'i';
+    return;
+  }
+
+  case 'a':
+  case 'w':
+  case 'd': {
+    char Kind = Mangled.front();
+    Mangled.remove_prefix(1);
+
+    unsigned long Len;
+    decodeNumber(Mangled, Len);
+
+    if (Mangled.front() != '_') {
+      Mangled = {};
+      return;
+    }
+    Mangled.remove_prefix(1);
+
+    *Demangled << '"';
+    for (unsigned long i = 0; i < Len; i++) {
+      if (Mangled.length() < 2) {
+        Mangled = {};
+        return;
+      }
+
+      char HexVal[3] = {Mangled.at(0), Mangled.at(1), 0};
+      char Char = (char)(std::stoi(HexVal, 0, 16));
+      if (' ' <= Char && Char <= '~')
+        *Demangled << Char;
+      else
+        *Demangled << "\\x" << HexVal;
+
+      Mangled.remove_prefix(2);
+    }
+    *Demangled << '"';
+
+    if (Kind != 'a')
+      *Demangled << Kind;
+
+    return;
+  }
+
+  case 'A': {
+    Mangled.remove_prefix(1);
+
+    unsigned long Len;
+    decodeNumber(Mangled, Len);
+
+    *Demangled << '[';
+    for (size_t i = 0; i < Len; i++) {
+      if (i)
+        *Demangled << ", ";
+
+      if (Type == 'H') {
+        parseValue(Demangled, Mangled);
+        *Demangled << ':';
+      }
+
+      parseValue(Demangled, Mangled);
+    }
+    *Demangled << ']';
+    return;
+  }
+
+  case 'S': {
+    Mangled.remove_prefix(1);
+
+    unsigned long Len;
+    decodeNumber(Mangled, Len);
+
+    if (DemangledType)
+      Demangled->insert(Demangled->getCurrentPosition(),
+                        DemangledType->getBuffer(),
+                        DemangledType->getCurrentPosition());
+
+    *Demangled << '(';
+    for (size_t i = 0; i < Len; i++) {
+      if (i)
+        *Demangled << ", ";
+      parseValue(Demangled, Mangled);
+    }
+    *Demangled << ')';
+    return;
+  }
+
+    // TODO: f MangledName
+
+  default:
+    if (isdigit(Mangled.front())) {
+      parseIntegerValue(Demangled, Mangled, Type);
+      return;
+    }
+
+    Mangled = {};
+    return;
+  }
+}
+
+void Demangler::printHexNumber(OutputBuffer *Demangled, unsigned long Val,
+                               unsigned Width) {
+  if (Val == 0)
+    *Demangled << '0';
+
+  static const char Digits[] = "0123456789ABCDEF";
+
+  for (unsigned i = 0; Width ? (i < Width) : Val; ++i) {
+    unsigned char Mod = static_cast<unsigned char>(Val) & 15;
+    *Demangled << Digits[Mod];
+    Val >>= 4;
+  }
+}
+
+void Demangler::parseIntegerValue(OutputBuffer *Demangled,
+                                  std::string_view &Mangled, char Type) {
+  unsigned long Val;
+  decodeNumber(Mangled, Val);
+
+  switch (Type) {
+  case 'a':
+  case 'u':
+  case 'w': {
+    switch (Val) {
+    case '\'':
+      *Demangled << "'\\''";
+      return;
+    case '\\':
+      *Demangled << "'\\\\'";
+      return;
+    case '\a':
+      *Demangled << "'\\a'";
+      return;
+    case '\b':
+      *Demangled << "'\\b'";
+      return;
+    case '\f':
+      *Demangled << "'\\f'";
+      return;
+    case '\n':
+      *Demangled << "'\\n'";
+      return;
+    case '\r':
+      *Demangled << "'\\r'";
+      return;
+    case '\t':
+      *Demangled << "'\\t'";
+      return;
+    case '\v':
+      *Demangled << "'\\v'";
+      return;
+    default:
+      switch (Type) {
+      case 'a':
+        if (Val >= 0x20 && Val < 0x7F)
+          *Demangled << '\'' << (char)Val << '\'';
+        else {
+          *Demangled << "'\\x";
+          printHexNumber(Demangled, Val, 2);
+          *Demangled << '\'';
+        }
+        return;
+
+      case 'u':
+        *Demangled << "'\\u";
+        printHexNumber(Demangled, Val, 4);
+        *Demangled << '\'';
+        return;
+
+      case 'w':
+        *Demangled << "'\\U";
+        printHexNumber(Demangled, Val, 8);
+        *Demangled << '\'';
+        return;
+      }
+    }
+
+    Mangled = {};
+    return;
+  }
+
+  case 'b':
+    *Demangled << (Val ? "true" : "false");
+    return;
+
+  case 'h':
+  case 't':
+  case 'k':
+    *Demangled << Val << 'u';
+    return;
+
+  case 'l':
+    *Demangled << Val << 'L';
+    return;
+
+  case 'm':
+    *Demangled << Val << "uL";
+    return;
+
+  default:
+    *Demangled << Val;
+    return;
+  }
+}
+
+void Demangler::parseRealValue(OutputBuffer *Demangled,
+                               std::string_view &Mangled) {
+  if (starts_with(Mangled, "INF")) {
+    *Demangled << "real.infinity";
+    Mangled.remove_prefix(3);
+    return;
+  } else if (Mangled.front() == 'N') {
+    Mangled.remove_prefix(1);
+    if (starts_with(Mangled, "INF")) {
+      *Demangled << "-real.infinity";
+      Mangled.remove_prefix(3);
+      return;
+    }
+    if (starts_with(Mangled, "AN")) {
+      *Demangled << "real.nan";
+      Mangled.remove_prefix(2);
+      return;
+    }
+    *Demangled << '-';
+  }
+
+  *Demangled << "0x";
+
+  while (isHexDigit(Mangled.front())) {
+    *Demangled << Mangled.front();
+    Mangled.remove_prefix(1);
+  }
+
+  if (Mangled.front() != 'P') {
+    Mangled = {};
+    return;
+  }
+  Mangled.remove_prefix(1);
+
+  if (Mangled.front() == 'N') {
+    Mangled.remove_prefix(1);
+    *Demangled << '-';
+  } else
+    *Demangled << '+';
+
+  while (isdigit(Mangled.front())) {
+    *Demangled << Mangled.front();
+    Mangled.remove_prefix(1);
   }
 }
 
@@ -558,7 +1712,7 @@ Demangler::Demangler(std::string_view Mangled)
 
 const char *Demangler::parseMangle(OutputBuffer *Demangled) {
   std::string_view M(this->Str);
-  parseMangle(Demangled, M);
+  parseMangle(Demangled, M, true);
   return M.data();
 }
 
