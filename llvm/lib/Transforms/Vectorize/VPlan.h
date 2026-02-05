@@ -2509,7 +2509,13 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    return Op == getStartValue();
+    if (Op == getStartValue())
+      return true;
+
+    // For VF=1 the inputs will be scalar and the output will be scalar, so
+    // check if the users of this PHI only require the first lane too.
+    return all_of(users(),
+                  [this](VPUser *U) { return U->usesFirstLaneOnly(this); });
   }
 
 protected:

@@ -1353,6 +1353,9 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   switch (getOpcode()) {
   default:
     return false;
+  case VPInstruction::FirstOrderRecurrenceSplice:
+    // If this is for VF=1 then we must only use the first lane.
+    return vputils::onlyFirstLaneUsed(this);
   case Instruction::ExtractElement:
     return Op == getOperand(1);
   case Instruction::PHI:
