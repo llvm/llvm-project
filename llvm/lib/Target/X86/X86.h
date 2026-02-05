@@ -277,7 +277,20 @@ public:
 FunctionPass *createX86CompressEVEXLegacyPass();
 
 /// This pass creates the thunks for the retpoline feature.
-FunctionPass *createX86IndirectThunksPass();
+class X86IndirectThunksPass : public PassInfoMixin<X86IndirectThunksPass> {
+  struct Impl;
+  std::unique_ptr<Impl> PImpl;
+
+public:
+  X86IndirectThunksPass();
+  ~X86IndirectThunksPass();
+  X86IndirectThunksPass(X86IndirectThunksPass &&);
+  X86IndirectThunksPass &operator=(X86IndirectThunksPass &&);
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86IndirectThunksLegacyPass();
 
 /// This pass replaces ret instructions with jmp's to __x86_return thunk.
 class X86ReturnThunksPass : public PassInfoMixin<X86ReturnThunksPass> {
@@ -429,6 +442,7 @@ void initializeX86FastPreTileConfigLegacyPass(PassRegistry &);
 void initializeX86FastTileConfigLegacyPass(PassRegistry &);
 void initializeX86FixupSetCCLegacyPass(PassRegistry &);
 void initializeX86FlagsCopyLoweringLegacyPass(PassRegistry &);
+void initializeX86IndirectThunksLegacyPass(PassRegistry &);
 void initializeX86LoadValueInjectionLoadHardeningLegacyPass(PassRegistry &);
 void initializeX86LoadValueInjectionRetHardeningLegacyPass(PassRegistry &);
 void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);

@@ -595,7 +595,7 @@ void X86PassConfig::addPreEmitPass2() {
   // correctness of this pass. This placement has been shown to work based on
   // hand inspection of the codegen output.
   addPass(createX86SpeculativeExecutionSideEffectSuppressionLegacyPass());
-  addPass(createX86IndirectThunksPass());
+  addPass(createX86IndirectThunksLegacyPass());
   addPass(createX86ReturnThunksLegacyPass());
 
   // Insert extra int3 instructions after trailing call instructions to avoid
