@@ -161,7 +161,7 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
               Binary.bytes_begin());
       const auto *Entry =
           reinterpret_cast<const object::OffloadBinary::Entry *>(
-              Binary.bytes_begin() + Header->EntryOffset);
+              Binary.bytes_begin() + Header->EntriesOffset);
       BeginOffset = Entry->ImageOffset;
       EndOffset = Entry->ImageOffset + Entry->ImageSize;
     }
