@@ -317,7 +317,7 @@ BytecodeSyntheticChildren::FrontEnd::CalculateNumChildren() {
     return llvm::createStringError(message);
   }
 
-  const auto &top = data.back();
+  const FormatterBytecode::DataStackElement &top = data.back();
   if (auto *u = std::get_if<uint64_t>(&top))
     if (*u <= UINT32_MAX)
       return *u;
@@ -353,7 +353,7 @@ BytecodeSyntheticChildren::FrontEnd::GetChildAtIndex(uint32_t idx) {
     return {};
   }
 
-  const auto &top = data.back();
+  const FormatterBytecode::DataStackElement &top = data.back();
   if (auto *child = std::get_if<ValueObjectSP>(&top))
     return *child;
 
@@ -380,7 +380,7 @@ BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
     return llvm::createStringError(message);
   }
 
-  const auto &top = data.back();
+  const FormatterBytecode::DataStackElement &top = data.back();
   if (auto *u = std::get_if<uint64_t>(&top))
     if (*u <= SIZE_MAX)
       return *u;

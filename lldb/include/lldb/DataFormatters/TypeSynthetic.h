@@ -476,6 +476,12 @@ private:
   operator=(const ScriptedSyntheticChildren &) = delete;
 };
 
+/// A synthetic formatter that is defined in LLDB formmater bytecode.
+///
+/// See `BytecodeSummaryFormat` for the corresponding summary formatter.
+///
+/// Formatter bytecode documentation can be found in
+/// lldb/docs/resources/formatterbytecode.rst
 class BytecodeSyntheticChildren : public SyntheticChildren {
   class FrontEnd : public SyntheticChildrenFrontEnd {
   public:
