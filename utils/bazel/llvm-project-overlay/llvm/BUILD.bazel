@@ -5874,6 +5874,7 @@ cc_binary(
         ":AllTargetsDisassemblers",
         ":Core",
         ":DebugInfoDWARF",
+        ":DebugInfoPDB",
         ":Demangle",
         ":IPO",
         ":MC",
