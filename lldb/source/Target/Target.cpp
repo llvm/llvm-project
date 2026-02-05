@@ -3782,7 +3782,7 @@ void Target::InvalidateThreadFrameProviders() {
     // Clear frame providers on existing threads so they reload with new config.
     thread_sp->ClearScriptedFrameProvider();
     // Notify threads that the stack traces might have changed.
-    if (EventTypeHasListeners(Thread::eBroadcastBitStackChanged)) {
+    if (thread_sp->EventTypeHasListeners(Thread::eBroadcastBitStackChanged)) {
       auto data_sp = std::make_shared<Thread::ThreadEventData>(thread_sp);
       thread_sp->BroadcastEvent(Thread::eBroadcastBitStackChanged, data_sp);
     }
