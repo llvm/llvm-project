@@ -73,3 +73,4 @@ def ApplyShuffleVectorFMAOpsPatternsOp : Op<Transform_Dialect,
 
 
 #endif // X86VECTOR_TRANSFORM_OPS
+
