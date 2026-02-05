@@ -534,9 +534,10 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP)
   )
   set_special_properties(arm/thumb1/cmpdf2.S
     SUPERSEDES comparedf2.c PROVIDES comparedf2)
-  set_property(SOURCE arm/thumb1/cmpsf2.S PROPERTY crt_supersedes comparesf2.S)
-  # We don't need to set 'crt_provides' for cmpsf2.S, because the
-  # superseded comparesf2.S will already have enabled the comparesf2 tests.
+  set_special_properties(arm/thumb1/cmpsf2.S
+    SUPERSEDES comparesf2.S)
+  # We don't need to set PROVIDES for cmpsf2.S, because the superseded
+  # comparesf2.S will already have enabled the comparesf2 tests.
 endif()
 
 set(arm_EABI_RT_SOURCES
