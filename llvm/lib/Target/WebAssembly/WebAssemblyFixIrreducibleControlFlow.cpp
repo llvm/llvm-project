@@ -238,7 +238,7 @@ private:
     // Find the loop entries - loopers with predecessors outside their SCC -
     // and those outside blocks that reach them, the "loop enterers".
     for (auto *Looper : Loopers) {
-      unsigned LoopScc = SccId[getIndex(Looper)];
+      unsigned LoopScc = getSCCId(Looper);
       for (auto *Pred : Looper->predecessors()) {
         if (getSCCId(Pred) != LoopScc) {
           LoopEntries.insert(Looper);
