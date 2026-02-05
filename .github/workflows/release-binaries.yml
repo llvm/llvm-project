@@ -71,6 +71,13 @@ jobs:
       with:
         python-version: '3.14'
 
+    - name: Install Windows ARM64 dependencies
+      if: runner.os == 'Windows' && runner.arch == 'ARM64'
+      run: |
+        # Some of the python modules we install require this package to be installed on the system.
+        vcpkg install openssl:arm64-windows-static-md
+        echo "OPENSSL_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows-static-md" >> $env:GITHUB_ENV
+
     - name: Checkout LLVM
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
@@ -168,6 +175,10 @@ jobs:
             build_runs_on="depot-${{ inputs.runs-on }}-16"
             test_runs_on=$build_runs_on
             ;;
+          windows-11-arm)
+            build_runs_on="windows-11-arm-16core"
+            test_runs_on=$build_runs_on
+            ;;
           macos-14)
             if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
               build_runs_on="${{ inputs.runs-on }}"
@@ -223,7 +234,7 @@ jobs:
     - name: Setup Python library path
       if: runner.os == 'Windows'
       run: |
-        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.11.9\x64\libs" >> $env:GITHUB_ENV
+        echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.11.9\$($env:RUNNER_ARCH.ToLower())\libs" >> $env:GITHUB_ENV
 
     - name: Setup crlf
       if: runner.os == 'Windows'
