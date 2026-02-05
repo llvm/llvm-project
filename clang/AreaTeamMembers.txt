@@ -8,7 +8,7 @@ aaron@aaronballman.com (email), AaronBallman (Discourse), AaronBallman (GitHub),
 Secretary
 ---------
 Reid Kleckner
-rnk@google.com (email), rnk (Discourse), rnk (GitHub), rnk (Discord)
+rnk@llvm.org (email), rnk (Discourse), rnk (GitHub), rnk (Discord)
 
 Other Members
 -------------

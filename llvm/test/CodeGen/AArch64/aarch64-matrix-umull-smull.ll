@@ -634,9 +634,8 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ; CHECK-GI-NEXT:    mov w8, w2
 ; CHECK-GI-NEXT:    b.hs .LBB5_4
 ; CHECK-GI-NEXT:  // %bb.2:
-; CHECK-GI-NEXT:    mov w10, #0 // =0x0
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    mov x9, xzr
-; CHECK-GI-NEXT:    fmov s0, w10
 ; CHECK-GI-NEXT:    b .LBB5_8
 ; CHECK-GI-NEXT:  .LBB5_3:
 ; CHECK-GI-NEXT:    mov w0, wzr

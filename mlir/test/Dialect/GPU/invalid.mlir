@@ -35,6 +35,17 @@ func.func @launch_requires_gpu_return(%sz : index) {
 
 // -----
 
+func.func @launch_result_no_async() {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{gpu.launch requires 'async' keyword to return a value}}
+  %0 = gpu.launch blocks(%bx, %by, %bz) in (%gx = %c1, %gy = %c1, %gz = %c1) threads(%tx, %ty, %tz) in (%lx = %c1, %ly = %c1, %lz = %c1) {
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
 func.func @launch_func_too_few_operands(%sz : index) {
   // expected-error@+1 {{expected 6 or more operands}}
   "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz)
@@ -124,7 +135,7 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   gpu.module @kernels {
     // expected-note@+1 {{see the kernel definition here}}
-    memref.global "private" @kernel_1 : memref<4xi32>
+    memref.global @kernel_1 : memref<4xi32>
   }
 
   func.func @launch_func_undefined_function(%sz : index) {

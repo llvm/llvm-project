@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
@@ -131,15 +132,74 @@ static IndexMatchResult matchOperandMap(AffineMap map, unsigned rowDimIdx,
 }
 
 // Replaces genericOp with `NamedOpTy` op, supplied as a template arg.
-//  All the variants expressed as pseudo regular expression:
-//      `linalg.{batch_}?matmul{_transpose_a | _transpose_b}?`
-//  have same number of ins/out, so its easy to stamp different versions.
+// All the variants expressed as pseudo regular expression:
+// `linalg.{batch_}?matmul{_transpose_a | _transpose_b}?`
+// have same number of ins/out, so its easy to stamp different versions.
+// `castTy` is an optional type function that indicates whether (and which) cast
+// attribute is needed for the named matmul op variant.
 template <typename NamedOpTy>
-static LinalgOp replaceWithMatmulVariant(RewriterBase &rewriter, GenericOp op) {
+static LinalgOp replaceWithMatmulVariant(RewriterBase &rewriter, GenericOp op,
+                                         std::optional<TypeFn> castTy) {
+  SmallVector<NamedAttribute> castAttrVec;
+  // Only explicitly specify the cast attribute for unsigned cast; signed is
+  // the default for linalg.matmul/linalg.batch_matmul.
+  if (castTy.has_value() && *castTy == TypeFn::cast_unsigned)
+    castAttrVec = {rewriter.getNamedAttr(
+        "cast", TypeFnAttr::get(rewriter.getContext(), *castTy))};
+
   LinalgOp namedOp = rewriter.replaceOpWithNewOp<NamedOpTy>(
       op, ValueRange{op.getDpsInputs()[0], op.getDpsInputs()[1]},
-      ValueRange{op.getDpsInits()[0]});
+      ValueRange{op.getDpsInits()[0]}, castAttrVec);
   return namedOp;
+}
+
+// Returns the cast type to use for a matmul-like named op. If the generic
+// contains casts that cannot be represented (e.g. output casts or mixed
+// signedness), return std::nullopt.
+static std::optional<TypeFn> getCastTypeForMatmulLikeOp(GenericOp genericOp) {
+  bool foundCastForMatmulOutput = false;
+  SmallVector<TypeFn> castTyFns;
+  genericOp.getBody()->walk([&](CastOpInterface castOp) {
+    // Collect forward slice of the cast op to check if it is for the matmul
+    // output.
+    SetVector<Operation *> forwardSlice;
+    getForwardSlice(castOp, &forwardSlice);
+
+    // If there is no multiplication op in the forward slice, then this cast
+    // op is for the matmul output. Cast ops on matmul output cannot be
+    // expressed by the matmul op variant.
+    if (!llvm::any_of(forwardSlice, [](Operation *op) {
+          // We check explicitly for these multiplication ops in
+          // `specializeLinalgContractions()` to infer matmul-like ops.
+          return isa<arith::MulIOp, arith::MulFOp, complex::MulOp>(op);
+        })) {
+      foundCastForMatmulOutput = true;
+      return WalkResult::interrupt();
+    }
+
+    // Determine the cast type.
+    if (isa<arith::ExtUIOp, arith::UIToFPOp, arith::FPToUIOp>(castOp))
+      castTyFns.push_back(TypeFn::cast_unsigned);
+    else if (isa<arith::ExtSIOp, arith::SIToFPOp, arith::FPToSIOp>(castOp))
+      castTyFns.push_back(TypeFn::cast_signed);
+
+    return WalkResult::advance();
+  });
+
+  if (foundCastForMatmulOutput)
+    return std::nullopt;
+
+  if (!castTyFns.empty()) {
+    // If there were multiple different cast types found, then we can't express
+    // them using matmul-like ops. They only allow a single cast type for all
+    // inputs.
+    if (!llvm::all_equal(castTyFns))
+      return std::nullopt;
+    return castTyFns.front();
+  }
+
+  // Default to signed cast for matmul-like ops.
+  return TypeFn::cast_signed;
 }
 
 // Converts linalg.generic to named linalg.*matmul* where possible.
@@ -230,11 +290,18 @@ static FailureOr<LinalgOp> specializeLinalgContractions(RewriterBase &rewriter,
       (a == IndexMatchResult::Transposed && b == IndexMatchResult::Transposed))
     return failure();
 
+  // Determine the cast type for the named matmul op, or bail out if casts
+  // cannot be represented by the named op.
+  std::optional<TypeFn> castTy = getCastTypeForMatmulLikeOp(genericOp);
+  if (!castTy)
+    return rewriter.notifyMatchFailure(
+        genericOp, "contains invalid cast ops for the named matmul op");
+
   /// Codegen the different matmul variants.
   if (numOfBatchDims) {
-    return replaceWithMatmulVariant<BatchMatmulOp>(rewriter, genericOp);
+    return replaceWithMatmulVariant<BatchMatmulOp>(rewriter, genericOp, castTy);
   }
-  return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp);
+  return replaceWithMatmulVariant<MatmulOp>(rewriter, genericOp, castTy);
 }
 
 /// Utility to specialize a `genericOp` with a convolution op of type `ConvOpTy`

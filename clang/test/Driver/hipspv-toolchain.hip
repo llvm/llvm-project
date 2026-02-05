@@ -7,7 +7,6 @@
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "spirv64"
 // CHECK-SAME: "-aux-triple" "{{.*}}" "-emit-llvm-bc"
 // CHECK-SAME: "-fcuda-is-device"
-// CHECK-SAME: "-fcuda-allow-variadic-functions"
 // CHECK-SAME: "-mlink-builtin-bitcode" {{".*/hipspv/lib/hip-device-lib/hipspv-spirv64.bc"}}
 // CHECK-SAME: "-isystem" {{".*/hipspv/include"}}
 // CHECK-SAME: "-fhip-new-launch-api"

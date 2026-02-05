@@ -713,7 +713,7 @@ void HexagonTargetLowering::AdjustHvxInstrPostInstrSelection(
       Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
       const MachineOperand &InpOp = MI.getOperand(1);
       BuildMI(MB, At, DL, TII.get(Hexagon::S2_vsplatrb), SplatV)
-          .addReg(InpOp.getReg(), 0, InpOp.getSubReg());
+          .addReg(InpOp.getReg(), {}, InpOp.getSubReg());
       Register OutV = MI.getOperand(0).getReg();
       BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplatw), OutV)
           .addReg(SplatV);
@@ -756,8 +756,8 @@ void HexagonTargetLowering::AdjustHvxInstrPostInstrSelection(
       Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
       const MachineOperand &InpOp = MI.getOperand(1);
       BuildMI(MB, At, DL, TII.get(Hexagon::A2_combine_ll), SplatV)
-          .addReg(InpOp.getReg(), 0, InpOp.getSubReg())
-          .addReg(InpOp.getReg(), 0, InpOp.getSubReg());
+          .addReg(InpOp.getReg(), {}, InpOp.getSubReg())
+          .addReg(InpOp.getReg(), {}, InpOp.getSubReg());
       Register OutV = MI.getOperand(0).getReg();
       BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplatw), OutV).addReg(SplatV);
     }

@@ -290,11 +290,12 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM,
 static void
 addUsedSymbolToPreservedGUID(const lto::InputFile &File,
                              DenseSet<GlobalValue::GUID> &PreservedGUID) {
-  for (const auto &Sym : File.symbols()) {
-    if (Sym.isUsed())
+  Triple TT(File.getTargetTriple());
+  RTLIB::RuntimeLibcallsInfo Libcalls(TT);
+  for (const auto &Sym : File.symbols())
+    if (Sym.isUsed() || Sym.isLibcall(Libcalls))
       PreservedGUID.insert(
           GlobalValue::getGUIDAssumingExternalLinkage(Sym.getIRName()));
-  }
 }
 
 // Convert the PreservedSymbols map from "Name" based to "GUID" based.

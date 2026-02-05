@@ -270,7 +270,7 @@ def HasStdExtZacas : Predicate<"Subtarget->hasStdExtZacas()">,
 def NoStdExtZacas : Predicate<"!Subtarget->hasStdExtZacas()">;
 
 def FeatureStdExtZalasr
-    : RISCVExperimentalExtension<0, 9, "Load-Acquire and Store-Release Instructions">;
+    : RISCVExtension<1, 0, "Load-Acquire and Store-Release Instructions">;
 def HasStdExtZalasr : Predicate<"Subtarget->hasStdExtZalasr()">,
                       AssemblerPredicate<(all_of FeatureStdExtZalasr),
                           "'Zalasr' (Load-Acquire and Store-Release Instructions)">;
@@ -390,7 +390,7 @@ def FeatureStdExtZca
 // Note: Zca conditionally implies C (see RISCVISAInfo::updateImplication).
 def HasStdExtZca
     : Predicate<"Subtarget->hasStdExtZca()">,
-      AssemblerPredicate<(any_of FeatureStdExtZca),
+      AssemblerPredicate<(all_of FeatureStdExtZca),
                          "'C' (Compressed Instructions) or "
                          "'Zca' (part of the C extension, excluding "
                          "compressed floating point loads/stores)">;
@@ -398,9 +398,6 @@ def HasStdExtZca
 def FeatureStdExtC
     : RISCVExtension<2, 0, "Compressed Instructions", [FeatureStdExtZca]>,
       RISCVExtensionBitmask<0, 2>;
-def HasStdExtC : Predicate<"Subtarget->hasStdExtC()">,
-                 AssemblerPredicate<(all_of FeatureStdExtC),
-                                    "'C' (Compressed Instructions)">;
 
 def FeatureStdExtZcb
     : RISCVExtension<1, 0, "Compressed basic bit manipulation instructions",
@@ -410,23 +407,29 @@ def HasStdExtZcb : Predicate<"Subtarget->hasStdExtZcb()">,
                    AssemblerPredicate<(all_of FeatureStdExtZcb),
                        "'Zcb' (Compressed basic bit manipulation instructions)">;
 
+def FeatureStdExtZcf
+    : RISCVExtension<1, 0,
+                     "Compressed Single-Precision Floating-Point Instructions",
+                     [FeatureStdExtF, FeatureStdExtZca]>,
+      RISCVExtensionBitmask<1, 5>;
+
+def HasStdExtZcf
+    : Predicate<"Subtarget->hasStdExtZcf()">,
+      AssemblerPredicate<(all_of FeatureStdExtZcf),
+                         "'C' (Compressed Instructions) and 'F' (Single-Precision Floating-Point) or "
+                         "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
+
 def FeatureStdExtZcd
     : RISCVExtension<1, 0,
                      "Compressed Double-Precision Floating-Point Instructions",
                      [FeatureStdExtD, FeatureStdExtZca]>,
       RISCVExtensionBitmask<1, 4>;
 
-def HasStdExtCOrZcd
-    : Predicate<"Subtarget->hasStdExtCOrZcd()">,
-      AssemblerPredicate<(any_of FeatureStdExtC, FeatureStdExtZcd),
-                         "'C' (Compressed Instructions) or "
+def HasStdExtZcd
+    : Predicate<"Subtarget->hasStdExtZcd()">,
+      AssemblerPredicate<(all_of FeatureStdExtZcd),
+                         "'C' (Compressed Instructions) and 'D' (Double-Precision Floating-Point) or "
                          "'Zcd' (Compressed Double-Precision Floating-Point Instructions)">;
-
-def FeatureStdExtZcf
-    : RISCVExtension<1, 0,
-                     "Compressed Single-Precision Floating-Point Instructions",
-                     [FeatureStdExtF, FeatureStdExtZca]>,
-      RISCVExtensionBitmask<1, 5>;
 
 def FeatureStdExtZclsd
     : RISCVExtension<1, 0,
@@ -459,14 +462,6 @@ def FeatureStdExtZce
                      "Compressed extensions for microcontrollers",
                      [FeatureStdExtZca, FeatureStdExtZcb, FeatureStdExtZcmp,
                       FeatureStdExtZcmt]>;
-
-def HasStdExtCOrZcfOrZce
-    : Predicate<"Subtarget->hasStdExtC() || Subtarget->hasStdExtZcf() ||"
-                "Subtarget->hasStdExtZce()">,
-      AssemblerPredicate<(any_of FeatureStdExtC, FeatureStdExtZcf,
-                                 FeatureStdExtZce),
-                         "'C' (Compressed Instructions) or "
-                         "'Zcf' (Compressed Single-Precision Floating-Point Instructions)">;
 
 def FeatureStdExtZcmop
     : RISCVExtension<1, 0, "Compressed May-Be-Operations",
@@ -1044,6 +1039,10 @@ def FeatureStdExtSvnapot
 def FeatureStdExtSvpbmt
     : RISCVExtension<1, 0, "Page-Based Memory Types">;
 
+def FeatureStdExtSvrsw60t59b
+    : RISCVExtension<1, 0,
+                     "PTE Reserved-for-Software Bits 60-59">;
+
 def FeatureStdExtSvvptc
     : RISCVExtension<1, 0,
                      "Obviating Memory-Management Instructions after Marking PTEs Valid">;
@@ -1107,7 +1106,7 @@ def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
 
 // Packed SIMD Extensions
 def FeatureStdExtP
-    : RISCVExperimentalExtension<0, 18,
+    : RISCVExperimentalExtension<0, 19,
                                  "'Base P' (Packed SIMD)">;
 def HasStdExtP : Predicate<"Subtarget->hasStdExtP()">,
                  AssemblerPredicate<(all_of FeatureStdExtP),
@@ -1118,6 +1117,12 @@ def HasStdExtZbkbOrP
       AssemblerPredicate<(any_of FeatureStdExtZbkb, FeatureStdExtP),
                          "'Zbkb' (Bitmanip instructions for Cryptography) or "
                          "'Base P' (Packed-SIMD)">;
+
+// "Y" extension (CHERI support)
+
+def FeatureStdExtY : RISCVExperimentalExtension<0, 96, "'Base Y' (CHERI)">;
+def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
+                 AssemblerPredicate<(all_of FeatureStdExtY), "'Base Y' (CHERI)">;
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
@@ -1860,6 +1865,10 @@ def TuneOptimizedZeroStrideLoad
    : SubtargetFeature<"optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
                       "true", "Optimized (perform fewer memory operations)"
                       "zero-stride vector load">;
+
+def FeatureEnableSelectOptimize
+    : SubtargetFeature<"enable-select-opt", "EnableSelectOptimize", "true",
+                       "Enable the select optimize pass for select loop heuristics">;
 
 foreach nf = {2-8} in
   def TuneOptimizedNF#nf#SegmentLoadStore :
