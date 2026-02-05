@@ -166,7 +166,7 @@ void LTOCodeGenerator::setModule(std::unique_ptr<LTOModule> Mod) {
 }
 
 void LTOCodeGenerator::setTargetOptions(const TargetOptions &Options) {
-  Config.Options = Options;
+  TO = Options;
 }
 
 void LTOCodeGenerator::setDebugInfo(lto_debug_model Debug) {
@@ -230,7 +230,7 @@ bool LTOCodeGenerator::writeMergedModules(StringRef Path) {
 
 bool LTOCodeGenerator::useAIXSystemAssembler() {
   const auto &Triple = TargetMach->getTargetTriple();
-  return Triple.isOSAIX() && Config.Options.DisableIntegratedAS;
+  return Triple.isOSAIX() && TO.DisableIntegratedAS;
 }
 
 bool LTOCodeGenerator::runAIXSystemAssembler(SmallString<128> &AssemblyFile) {
@@ -397,7 +397,7 @@ bool LTOCodeGenerator::determineTarget() {
   // If data-sections is not explicitly set or unset, set data-sections by
   // default to match the behaviour of lld and gold plugin.
   if (!codegen::getExplicitDataSections())
-    Config.Options.DataSections = true;
+    TO.DataSections = true;
 
   TargetMach = createTargetMachine();
   assert(TargetMach && "Unable to create target machine");
@@ -408,7 +408,7 @@ bool LTOCodeGenerator::determineTarget() {
 std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
   assert(MArch && "MArch is not set!");
   return std::unique_ptr<TargetMachine>(MArch->createTargetMachine(
-      MergedModule->getTargetTriple(), Config.CPU, FeatureStr, Config.Options,
+      MergedModule->getTargetTriple(), Config.CPU, FeatureStr,TO,
       Config.RelocModel, std::nullopt, Config.CGOptLevel));
 }
 

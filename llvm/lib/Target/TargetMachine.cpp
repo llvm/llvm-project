@@ -256,9 +256,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const GlobalValue *GV) const {
 }
 
 bool TargetMachine::useEmulatedTLS() const { return Options.EmulatedTLS; }
-bool TargetMachine::useTLSDESC() const {
-  return Options.EnableTLSDESC || TargetTriple.isOSFuchsia();
-}
+bool TargetMachine::useTLSDESC() const { return Options.EnableTLSDESC; }
 
 TLSModel::Model TargetMachine::getTLSModel(const GlobalValue *GV) const {
   bool IsPIE = GV->getParent()->getPIELevel() != PIELevel::Default;

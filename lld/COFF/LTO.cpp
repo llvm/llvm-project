@@ -46,17 +46,24 @@ std::string BitcodeCompiler::getThinLTOOutputFile(StringRef path) {
 
 lto::Config BitcodeCompiler::createConfig() {
   lto::Config c;
-  c.Options = initTargetOptionsFromCodeGenFlags();
-  c.Options.EmitAddrsig = true;
+  bool emitAsm = ctx.config.emit == EmitKind::ASM;
+  c.ModifyTargetOptions = [emitAsm](TargetOptions &options) {
+    options.EmitAddrsig = true;
+    // Always emit a section per function/datum with LTO. LLVM LTO should get
+    // most of the benefit of linker GC, but there are still opportunities for
+    // ICF.
+    options.FunctionSections = true;
+    options.DataSections = true;
+
+    if (emitAsm) {
+      options.MCOptions.AsmVerbose = true;
+    }
+  };
+
   for (StringRef C : ctx.config.mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
 
-  // Always emit a section per function/datum with LTO. LLVM LTO should get most
-  // of the benefit of linker GC, but there are still opportunities for ICF.
-  c.Options.FunctionSections = true;
-  c.Options.DataSections = true;
-
-  // Use static reloc model on 32-bit x86 because it usually results in more
+    // Use static reloc model on 32-bit x86 because it usually results in more
   // compact code, and because there are also known code generation bugs when
   // using the PIC model (see PR34306).
   if (ctx.config.machine == COFF::IMAGE_FILE_MACHINE_I386)
@@ -95,7 +102,6 @@ lto::Config BitcodeCompiler::createConfig() {
     };
   } else if (ctx.config.emit == EmitKind::ASM) {
     c.CGFileType = CodeGenFileType::AssemblyFile;
-    c.Options.MCOptions.AsmVerbose = true;
   }
 
   if (!ctx.config.saveTempsArgs.empty())

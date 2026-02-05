@@ -46,47 +46,52 @@ static std::string getThinLTOOutputFile(Ctx &ctx, StringRef modulePath) {
 static lto::Config createConfig(Ctx &ctx) {
   lto::Config c;
 
-  // LLD supports the new relocations and address-significance tables.
-  c.Options = initTargetOptionsFromCodeGenFlags();
-  c.Options.EmitAddrsig = true;
+  // Set up the callback to modify TargetOptions.
+  c.ModifyTargetOptions = [&](TargetOptions &Options) -> void {
+    // LLD supports the new relocations and address-significance tables.
+    Options.EmitAddrsig = true;
+    // Always emit a section per function/datum with LTO.
+    Options.FunctionSections = true;
+    Options.DataSections = true;
+
+    // Check if basic block sections must be used.
+    // Allowed values for --lto-basic-block-sections are "all",
+    // "<file name specifying basic block ids>", or none.  This is the
+    // equivalent of -fbasic-block-sections= flag in clang.
+    if (!ctx.arg.ltoBasicBlockSections.empty()) {
+      if (ctx.arg.ltoBasicBlockSections == "all") {
+        Options.BBSections = BasicBlockSection::All;
+      } else if (ctx.arg.ltoBasicBlockSections == "labels") {
+        Options.BBAddrMap = true;
+        Warn(ctx)
+            << "'--lto-basic-block-sections=labels' is deprecated; Please use "
+               "'--lto-basic-block-address-map' instead";
+      } else if (ctx.arg.ltoBasicBlockSections == "none") {
+        Options.BBSections = BasicBlockSection::None;
+      } else {
+        ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
+            MemoryBuffer::getFile(ctx.arg.ltoBasicBlockSections.str());
+        if (!MBOrErr) {
+          ErrAlways(ctx) << "cannot open " << ctx.arg.ltoBasicBlockSections
+                         << ":" << MBOrErr.getError().message();
+        } else {
+          Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
+        }
+        Options.BBSections = BasicBlockSection::List;
+      }
+    }
+
+    Options.BBAddrMap = ctx.arg.ltoBBAddrMap;
+
+    Options.UniqueBasicBlockSectionNames =
+        ctx.arg.ltoUniqueBasicBlockSectionNames;
+    if (ctx.arg.ltoEmitAsm) {
+      Options.MCOptions.AsmVerbose = true;
+    }
+  };
+
   for (StringRef C : ctx.arg.mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
-
-  // Always emit a section per function/datum with LTO.
-  c.Options.FunctionSections = true;
-  c.Options.DataSections = true;
-
-  // Check if basic block sections must be used.
-  // Allowed values for --lto-basic-block-sections are "all",
-  // "<file name specifying basic block ids>", or none.  This is the equivalent
-  // of -fbasic-block-sections= flag in clang.
-  if (!ctx.arg.ltoBasicBlockSections.empty()) {
-    if (ctx.arg.ltoBasicBlockSections == "all") {
-      c.Options.BBSections = BasicBlockSection::All;
-    } else if (ctx.arg.ltoBasicBlockSections == "labels") {
-      c.Options.BBAddrMap = true;
-      Warn(ctx)
-          << "'--lto-basic-block-sections=labels' is deprecated; Please use "
-             "'--lto-basic-block-address-map' instead";
-    } else if (ctx.arg.ltoBasicBlockSections == "none") {
-      c.Options.BBSections = BasicBlockSection::None;
-    } else {
-      ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
-          MemoryBuffer::getFile(ctx.arg.ltoBasicBlockSections.str());
-      if (!MBOrErr) {
-        ErrAlways(ctx) << "cannot open " << ctx.arg.ltoBasicBlockSections << ":"
-                       << MBOrErr.getError().message();
-      } else {
-        c.Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
-      }
-      c.Options.BBSections = BasicBlockSection::List;
-    }
-  }
-
-  c.Options.BBAddrMap = ctx.arg.ltoBBAddrMap;
-
-  c.Options.UniqueBasicBlockSectionNames =
-      ctx.arg.ltoUniqueBasicBlockSectionNames;
 
   if (auto relocModel = getRelocModelFromCMModel())
     c.RelocModel = *relocModel;
@@ -156,7 +161,7 @@ static lto::Config createConfig(Ctx &ctx) {
 
   if (ctx.arg.ltoEmitAsm) {
     c.CGFileType = CodeGenFileType::AssemblyFile;
-    c.Options.MCOptions.AsmVerbose = true;
+    // c.Options.MCOptions.AsmVerbose = true;
   }
 
   if (!ctx.arg.saveTempsArgs.empty())

@@ -24,6 +24,7 @@
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/CGData/CodeGenData.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/CommandFlags.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/DiagnosticPrinter.h"
@@ -125,6 +126,7 @@ std::string llvm::computeLTOCacheKey(
     const FunctionImporter::ExportSetTy &ExportList,
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
     const GVSummaryMapTy &DefinedGlobals,
+    const Triple& TT,
     const DenseSet<GlobalValue::GUID> &CfiFunctionDefs,
     const DenseSet<GlobalValue::GUID> &CfiFunctionDecls) {
   // Compute the unique hash for this entry.
@@ -158,14 +160,17 @@ std::string llvm::computeLTOCacheKey(
     Hasher.update(ArrayRef<uint8_t>(&I, 1));
   };
   AddString(Conf.CPU);
+  TargetOptions Opts = codegen::InitTargetOptionsFromCodeGenFlags(TT);
+  Conf.ModifyTargetOptions(Opts);
+
   // FIXME: Hash more of Options. For now all clients initialize Options from
   // command-line flags (which is unsupported in production), but may set
   // X86RelaxRelocations. The clang driver can also pass FunctionSections,
   // DataSections and DebuggerTuning via command line flags.
-  AddUnsigned(Conf.Options.MCOptions.X86RelaxRelocations);
-  AddUnsigned(Conf.Options.FunctionSections);
-  AddUnsigned(Conf.Options.DataSections);
-  AddUnsigned((unsigned)Conf.Options.DebuggerTuning);
+  AddUnsigned(Opts.MCOptions.X86RelaxRelocations);
+  AddUnsigned(Opts.FunctionSections);
+  AddUnsigned(Opts.DataSections);
+  AddUnsigned((unsigned)Opts.DebuggerTuning);
   for (auto &A : Conf.MAttrs)
     AddString(A);
   if (Conf.RelocModel)
@@ -1557,10 +1562,10 @@ public:
       const GVSummaryMapTy &DefinedGlobals,
       MapVector<StringRef, BitcodeModule> &ModuleMap) {
     auto ModuleID = BM.getModuleIdentifier();
+    LTOLLVMContext BackendContext(Conf);
     llvm::TimeTraceScope timeScope("Run ThinLTO backend thread (in-process)",
                                    ModuleID);
     auto RunThinBackend = [&](AddStreamFn AddStream) {
-      LTOLLVMContext BackendContext(Conf);
       Expected<std::unique_ptr<Module>> MOrErr = BM.parseModule(BackendContext);
       if (!MOrErr)
         return MOrErr.takeError();
@@ -1581,10 +1586,15 @@ public:
       // no module hash.
       return RunThinBackend(AddStream);
 
+    auto Mod = ModuleMap.front().second.parseModule(BackendContext);
+    if (!Mod)
+      return Mod.takeError();
+    Triple TT = (*Mod)->getTargetTriple();
+
     // The module may be cached, this helps handling it.
     std::string Key = computeLTOCacheKey(
         Conf, CombinedIndex, ModuleID, ImportList, ExportList, ResolvedODR,
-        DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls);
+        DefinedGlobals, TT, CfiFunctionDefs, CfiFunctionDecls);
     Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, Key, ModuleID);
     if (Error Err = CacheAddStreamOrErr.takeError())
       return Err;
@@ -1672,9 +1682,9 @@ public:
     auto ModuleID = BM.getModuleIdentifier();
     llvm::TimeTraceScope timeScope("Run ThinLTO backend thread (first round)",
                                    ModuleID);
+      LTOLLVMContext BackendContext(Conf);
     auto RunThinBackend = [&](AddStreamFn CGAddStream,
                               AddStreamFn IRAddStream) {
-      LTOLLVMContext BackendContext(Conf);
       Expected<std::unique_ptr<Module>> MOrErr = BM.parseModule(BackendContext);
       if (!MOrErr)
         return MOrErr.takeError();
@@ -1700,10 +1710,15 @@ public:
       // no module hash.
       return RunThinBackend(CGAddStream, IRAddStream);
 
+    auto Mod = ModuleMap.front().second.parseModule(BackendContext);
+    if (!Mod)
+      return Mod.takeError();
+    Triple TT = (*Mod)->getTargetTriple();
+
     // Get CGKey for caching object in CGCache.
     std::string CGKey = computeLTOCacheKey(
         Conf, CombinedIndex, ModuleID, ImportList, ExportList, ResolvedODR,
-        DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls);
+        DefinedGlobals, TT, CfiFunctionDefs, CfiFunctionDecls);
     Expected<AddStreamFn> CacheCGAddStreamOrErr =
         CGCache(Task, CGKey, ModuleID);
     if (Error Err = CacheCGAddStreamOrErr.takeError())
@@ -1769,8 +1784,8 @@ public:
     auto ModuleID = BM.getModuleIdentifier();
     llvm::TimeTraceScope timeScope("Run ThinLTO backend thread (second round)",
                                    ModuleID);
+    LTOLLVMContext BackendContext(Conf);
     auto RunThinBackend = [&](AddStreamFn AddStream) {
-      LTOLLVMContext BackendContext(Conf);
       std::unique_ptr<Module> LoadedModule =
           cgdata::loadModuleForTwoRounds(BM, Task, BackendContext, *IRFiles);
 
@@ -1785,11 +1800,16 @@ public:
       // no module hash.
       return RunThinBackend(AddStream);
 
+    auto Mod = ModuleMap.front().second.parseModule(BackendContext);
+    if (!Mod)
+      return Mod.takeError();
+    Triple TT = (*Mod)->getTargetTriple();
+
     // Get Key for caching the final object file in Cache with the combined
     // CGData hash.
     std::string Key = computeLTOCacheKey(
         Conf, CombinedIndex, ModuleID, ImportList, ExportList, ResolvedODR,
-        DefinedGlobals, CfiFunctionDefs, CfiFunctionDecls);
+        DefinedGlobals, TT, CfiFunctionDefs, CfiFunctionDecls);
     Key = recomputeLTOCacheKey(Key,
                                /*ExtraID=*/std::to_string(CombinedCGDataHash));
     Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, Key, ModuleID);
@@ -2362,7 +2382,7 @@ public:
     // The module may be cached, this helps handling it.
     J.CacheKey = computeLTOCacheKey(Conf, CombinedIndex, J.ModuleID, ImportList,
                                     ExportList, ResolvedODR, DefinedGlobals,
-                                    CfiFunctionDefs, CfiFunctionDecls);
+                                    Triple, CfiFunctionDefs, CfiFunctionDecls);
 
     // The module may be cached, this helps handling it.
     auto CacheAddStreamExp = Cache(J.Task, J.CacheKey, J.ModuleID);
@@ -2458,12 +2478,14 @@ public:
     auto &Ops = CodegenOptions;
 
     Ops.push_back(Saver.save("-O" + Twine(C.OptLevel)));
+    TargetOptions TO = codegen::InitTargetOptionsFromCodeGenFlags(Triple);
+    C.ModifyTargetOptions(TO);
 
-    if (C.Options.EmitAddrsig)
+    if (TO.EmitAddrsig)
       Ops.push_back("-faddrsig");
-    if (C.Options.FunctionSections)
+    if (TO.FunctionSections)
       Ops.push_back("-ffunction-sections");
-    if (C.Options.DataSections)
+    if (TO.DataSections)
       Ops.push_back("-fdata-sections");
 
     if (C.RelocModel == Reloc::PIC_)

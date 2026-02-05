@@ -42,11 +42,11 @@ static std::string getThinLTOOutputFile(StringRef modulePath) {
 
 static lto::Config createConfig() {
   lto::Config c;
-  c.Options = initTargetOptionsFromCodeGenFlags();
-
-  // Always emit a section per function/data with LTO.
-  c.Options.FunctionSections = true;
-  c.Options.DataSections = true;
+  c.ModifyTargetOptions = [&](TargetOptions &options) {
+    // Always emit a section per function/data with LTO.
+    options.FunctionSections = true;
+    options.DataSections = true;
+  };
 
   c.DisableVerify = ctx.arg.disableVerify;
   c.DiagHandler = diagnosticHandler;
