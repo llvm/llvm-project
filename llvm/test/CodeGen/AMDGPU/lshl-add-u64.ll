@@ -157,12 +157,47 @@ define i64 @lshl_add_u64_vvv_urem(i64 %v, i64 %a, i64 %s) {
   ret i64 %add
 }
 
-define i64 @lshl_add_u64_vvv_srem(i64 %v, i64 %a, i64 %s) {
-; GCN-LABEL: lshl_add_u64_vvv_srem:
+define <4 x i64> @lshl_add_v4u64_vvv_and_2(<4 x i64> %v, <4 x i64> %a, <4 x i64> %s) {
+; GCN-LABEL: lshl_add_v4u64_vvv_and_2:
+; GCN-DAG: v_and_b32_e32 [[AND5:v[0-9:]+]], 5, v{{[0-9:]+}}
+; GCN-DAG: v_and_b32_e32 [[AND3:v[0-9:]+]], 1, v{{[0-9:]+}}
+; GCN-DAG: v_and_b32_e32 [[AND2:v[0-9:]+]], 2, v{{[0-9:]+}}
+; GCN-DAG: v_and_b32_e32 [[AND1:v[0-9:]+]], 3, v{{[0-9:]+}}
+; GCN-DAG: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[AND1]], v[{{[0-9:]+}}]
+; GCN-DAG: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[AND2]], v[{{[0-9:]+}}]
+; GCN-DAG: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[AND3]], v[{{[0-9:]+}}]
+; GFX1250: v_add_nc_u64_e32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
+; GFX942: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], 0, v[{{[0-9:]+}}]
+  %and = and <4 x i64> %s, <i64 1, i64 2, i64 3, i64 5>
+  %shl = shl <4 x i64> %v, %and
+  %add = add <4 x i64> %shl, %a
+  ret <4 x i64> %add
+}
+
+define amdgpu_kernel void @lshl_add_u64_salu_and_1(i32 %stride) {
+; GCN-LABEL: lshl_add_u64_salu_and_1:
+; GCN: s_and_b32 [[AND:s[0-9:]+]], s{{[0-9:]+}}, 1
+; GCN: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[AND]], v[{{[0-9:]+}}]
+  %call = load i32, ptr addrspace(5) null, align 4
+  %conv = zext i32 %call to i64
+  %and = and i32 %stride, 1
+  %sh_prom = zext i32 %and to i64
+  %shl = shl i64 %conv, %sh_prom
+  %add = add i64 %shl, %conv
+  store i64 %add, ptr addrspace(1) null, align 8
+  ret void
+}
+
+define amdgpu_kernel void @lshl_add_u64_salu_and_5(i32 %stride) {
+; GCN-LABEL: lshl_add_u64_salu_and_5:
 ; GFX942: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], 0, v[{{[0-9:]+}}]
 ; GFX1250: v_add_nc_u64_e32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
-  %srem = srem i64 %s, 4
-  %shl = shl i64 %v, %srem
-  %add = add i64 %shl, %a
-  ret i64 %add
+  %call = load i32, ptr addrspace(5) null, align 4
+  %conv = zext i32 %call to i64
+  %and = and i32 %stride, 5
+  %sh_prom = zext i32 %and to i64
+  %shl = shl i64 %conv, %sh_prom
+  %add = add i64 %shl, %conv
+  store i64 %add, ptr addrspace(1) null, align 8
+  ret void
 }
