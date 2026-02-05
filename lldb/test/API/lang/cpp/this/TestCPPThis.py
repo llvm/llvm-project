@@ -1,6 +1,7 @@
 """
 Tests that C++ member and static variables are available where they should be.
 """
+
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -37,18 +38,23 @@ class CPPThisTestCase(TestBase):
 
         self.runCmd("process continue")
 
-        # This would be disallowed if we enforced const.  But we don't.
-        self.expect("expression -- m_a = 2", startstr="(int) $1 = 2")
+        self.expect(
+            "expression -- m_a = 2",
+            error=True,
+            substrs=[
+                "cannot assign to non-static data member within const member function"
+            ],
+        )
 
-        self.expect("expression -- (int)getpid(); m_a", startstr="(int) $2 = 2")
+        self.expect("expression -- (int)getpid(); m_a", startstr="(const int) $1 = 3")
 
         self.runCmd("process continue")
 
-        self.expect("expression -- s_a", startstr="(int) $3 = 5")
+        self.expect("expression -- s_a", startstr="(int) $2 = 5")
 
         self.runCmd("process continue")
 
-        self.expect("expression -- m_a", startstr="(int) $4 = 2")
+        self.expect("expression -- m_a", startstr="(int) $3 = 3")
 
     def set_breakpoint(self, line):
         lldbutil.run_break_set_by_file_and_line(
