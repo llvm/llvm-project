@@ -38,7 +38,7 @@ _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_exp(__CLC_GENTYPE x) {
   __CLC_GENTYPE y = 1.0f - (((-lo) - MATH_DIVIDE(t * v, 2.0f - v)) - hi);
 
   // Split the exponent to preserves subnormal results when p is very negative.
-  __CLC_INTN p1 = p / 2;
+  __CLC_INTN p1 = p >> 1;
   __CLC_INTN p2 = p - p1;
   __CLC_GENTYPE s1 = __CLC_AS_GENTYPE((p1 + 127) << 23);
   __CLC_GENTYPE s2 = __CLC_AS_GENTYPE((p2 + 127) << 23);
