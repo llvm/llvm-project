@@ -28,7 +28,7 @@ template <typename T>
 struct TestCompareExchangeStrong {
   void operator()() const {
     {
-      T x(T(1));
+      alignas(std::atomic_ref<T>::required_alignment) T x(T(1));
       std::atomic_ref<T> const a(x);
 
       T t(T(1));
@@ -44,7 +44,7 @@ struct TestCompareExchangeStrong {
       ASSERT_NOEXCEPT(a.compare_exchange_strong(t, T(2)));
     }
     {
-      T x(T(1));
+      alignas(std::atomic_ref<T>::required_alignment) T x(T(1));
       std::atomic_ref<T> const a(x);
 
       T t(T(1));
@@ -60,7 +60,7 @@ struct TestCompareExchangeStrong {
       ASSERT_NOEXCEPT(a.compare_exchange_strong(t, T(2), std::memory_order_seq_cst));
     }
     {
-      T x(T(1));
+      alignas(std::atomic_ref<T>::required_alignment) T x(T(1));
       std::atomic_ref<T> const a(x);
 
       T t(T(1));
