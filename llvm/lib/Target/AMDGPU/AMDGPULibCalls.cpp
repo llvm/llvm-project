@@ -1041,7 +1041,17 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     opr1 = B.CreateSIToFP(opr1, nval->getType(), "pownI2F");
   }
   nval = B.CreateFMul(opr1, nval, "__ylogx");
-  nval = CreateCallEx(B,ExpExpr, nval, "__exp2");
+
+  CallInst *Exp2Call = CreateCallEx(B, ExpExpr, nval, "__exp2");
+
+  // TODO: Generalized fpclass logic for pow
+  FPClassTest KnownNot = FPClassTest::fcNegative;
+  if (FPOp->hasNoNaNs())
+    KnownNot |= FPClassTest::fcNan;
+
+  Exp2Call->addRetAttr(
+      Attribute::getWithNoFPClass(Exp2Call->getContext(), KnownNot));
+  nval = Exp2Call;
 
   if (needcopysign) {
     Type* nTyS = B.getIntNTy(eltType->getPrimitiveSizeInBits());
