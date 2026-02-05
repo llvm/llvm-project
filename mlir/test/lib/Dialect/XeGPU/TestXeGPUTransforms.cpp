@@ -272,6 +272,12 @@ struct TestXeGPUSgToWiDistributeExperimental
            "Work-item Distribution";
   }
 
+  Option<bool> enablePartialReductionLowering{
+      *this, "enable-partial-multi-reduction-lowering",
+      llvm::cl::desc(
+          "Partially lower multi-reduction ops to vector.reduction and stop."),
+      llvm::cl::init(false)};
+
   void getDependentDialects(::mlir::DialectRegistry &registry) const override {
     registry.insert<arith::ArithDialect>();
     registry.insert<memref::MemRefDialect>();
@@ -283,7 +289,8 @@ struct TestXeGPUSgToWiDistributeExperimental
 
   TestXeGPUSgToWiDistributeExperimental() = default;
   TestXeGPUSgToWiDistributeExperimental(
-      const TestXeGPUSgToWiDistributeExperimental &pass) = default;
+      const TestXeGPUSgToWiDistributeExperimental &pass)
+      : PassWrapper(pass) {}
 
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
@@ -297,6 +304,34 @@ struct TestXeGPUSgToWiDistributeExperimental
     };
     typeConverter.addSourceMaterialization(materializeCast);
     typeConverter.addTargetMaterialization(materializeCast);
+
+    // If `enablePartialReductionLowering` is set, only focus on testing the
+    // partial lowering of vector::MultiReductionOp.
+    if (enablePartialReductionLowering) {
+      xegpu::populateXeGPUSgToWiDistributeTypeConversions(typeConverter);
+      ConversionTarget target(*ctx);
+      RewritePatternSet patterns(ctx);
+      xegpu::populateXeGPUSgToWiRewriteMultiReductionToReductionPatterns(
+          patterns);
+      // Mark 2D to 1D vector::MultiDimReductionOp as illegal.
+      target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(
+          [&](vector::MultiDimReductionOp op) {
+            int64_t sourceRank = op.getSourceVectorType().getRank();
+            VectorType resultType =
+                dyn_cast<VectorType>(op.getResult().getType());
+            if (!resultType)
+              return true;
+            int64_t resultRank = resultType.getRank();
+            return sourceRank != 2 || resultRank != 1;
+          });
+      // vector::ReductionOp is legal.
+      target.addDynamicallyLegalOp<vector::ReductionOp>(
+          [&](vector::ReductionOp op) { return true; });
+      target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
+      (void)applyPartialConversion(getOperation(), target, std::move(patterns));
+      return;
+    }
+
     ConversionTarget target(*ctx);
     RewritePatternSet patterns(ctx);
     xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(

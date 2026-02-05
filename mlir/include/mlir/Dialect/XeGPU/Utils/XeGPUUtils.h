@@ -137,6 +137,16 @@ SmallVector<OpFoldResult> addWithRightAligned(OpBuilder &builder, Location loc,
 Value subgroupReduction(Location loc, OpBuilder &builder, Value input,
                         vector::CombiningKind kind, uint32_t size);
 
+/// Given a `src` and an `acc` argumments from a vector::MultiDimReductionOp,
+/// lower to a set of vector::ReductionOp ops over 1D slices extracted from
+/// `src`. The reduction is performed along `reductionDim`. The result is a
+/// vector with the same shape as `acc`.
+/// TODO: Only 2D to 1D reduction is supported for now.
+Value lowerToVectorReductions(TypedValue<VectorType> src,
+                              TypedValue<VectorType> acc,
+                              vector::CombiningKind kind, int64_t reductionDim,
+                              Location loc, PatternRewriter &rewriter);
+
 /// Helper Function to find a proper instruction multiple for the user-supplied
 /// sg-level data shape (diven by `dim`). `candidates` are uArch allowed shapes.
 /// `candidateMultiples` are uArch multiples of such shapes (i.e. block count or

@@ -82,6 +82,11 @@ void populateXeGPUSgToWiDistributeTypeConversions(TypeConverter &typeConverter);
 void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target);
+/// Appends patterns to rewrite vector::MultiDimReductionOp in terms of
+/// vector::ReductionOps if the multi-reduction involves cross-lane data
+/// movement.
+void populateXeGPUSgToWiRewriteVectorMultiReductionToVectorReductionPatterns(
+    RewritePatternSet &patterns);
 
 /// Collect a set of patterns to unroll xegpu operations to a smaller shapes.
 /// Users can control whether an operation to be unrolled or not, as well as
