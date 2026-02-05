@@ -1080,8 +1080,15 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
   case Builtin::BI__builtin_readcyclecounter:
   case Builtin::BI__builtin_readsteadycounter:
-  case Builtin::BI__builtin___clear_cache:
     return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin___clear_cache: {
+    mlir::Value begin =
+        builder.createPtrBitcast(emitScalarExpr(e->getArg(0)), cgm.voidTy);
+    mlir::Value end =
+        builder.createPtrBitcast(emitScalarExpr(e->getArg(1)), cgm.voidTy);
+    cir::ClearCacheOp::create(builder, getLoc(e->getSourceRange()), begin, end);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_trap:
     emitTrap(loc, /*createNewBlock=*/true);
     return RValue::getIgnored();
@@ -1894,7 +1901,11 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
   case llvm::Triple::r600:
+    // These are actually NYI, but that will be reported by emitBuiltinExpr.
+    // At this point, we don't even know that the builtin is target-specific.
+    return std::nullopt;
   case llvm::Triple::amdgcn:
+    return cgf->emitAMDGPUBuiltinExpr(builtinID, e);
   case llvm::Triple::systemz:
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
