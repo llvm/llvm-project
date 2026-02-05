@@ -439,3 +439,29 @@ def testExtDialectWithRegion():
         print(if_.then.blocks[0])
         # CHECK: %c3_i32 = arith.constant 3 : i32
         print(if_.else_.blocks[0])
+
+        # CHECK-LABEL: Testing violation cases
+        print("Testing violation cases:")
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            i1 = IntegerType.get_signless(1)
+            i32 = IntegerType.get_signless(32)
+            cond = arith.constant(i1, 1)
+
+            if_ = IfOp(i32, cond)
+            if_.then.blocks.append()
+            if_.else_.blocks.append()
+
+            with InsertionPoint(if_.then.blocks[0]):
+                v = arith.constant(i32, 2)
+
+            with InsertionPoint(if_.else_.blocks[0]):
+                v = arith.constant(i32, 3)
+
+        try:
+            module.operation.verify()
+        except Exception as e:
+            # CHECK: Verification failed:
+            # CHECK: block with no terminator
+            print(e)
