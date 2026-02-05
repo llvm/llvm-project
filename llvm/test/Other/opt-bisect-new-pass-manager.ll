@@ -90,6 +90,18 @@
 ; CHECK-LIMIT-MULTI-PASS: BISECT: NOT running pass (8) function-attrs on (f4)
 ; CHECK-LIMIT-MULTI-PASS: BISECT: NOT running pass (9) early-cse on f4
 
+; RUN: opt -disable-output -debug-pass-manager \
+; RUN:     -passes=lowertypetests -opt-bisect-limit=-1 %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=LTT-ALL
+; LTT-ALL-NOT: BISECT: {{.*}}LowerTypeTestsPass
+; LTT-ALL: Running pass: LowerTypeTestsPass
+
+; RUN: opt -disable-output -debug-pass-manager \
+; RUN:     -passes=lowertypetests -opt-bisect-limit=0 %s 2>&1 \
+; RUN:     | FileCheck %s --check-prefix=LTT-REQUIRED
+; LTT-REQUIRED-NOT: BISECT: {{.*}}LowerTypeTestsPass
+; LTT-REQUIRED: Running pass: LowerTypeTestsPass
+
 ; Make sure we don't skip writing the output to stdout.
 ; RUN: opt %s -opt-bisect-limit=0 -passes=early-cse | opt -S | FileCheck %s -check-prefix=CHECK-OUTPUT
 ; RUN: opt %s -opt-bisect-limit=0 -passes=early-cse -S | FileCheck %s -check-prefix=CHECK-OUTPUT

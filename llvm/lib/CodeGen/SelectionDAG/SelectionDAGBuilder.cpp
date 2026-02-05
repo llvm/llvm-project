@@ -7533,7 +7533,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 
   case Intrinsic::type_test:
   case Intrinsic::public_type_test:
-    setValue(&I, getValue(ConstantInt::getTrue(I.getType())));
+    reportFatalUsageError("llvm.type.test intrinsic must be lowered by the "
+                          "LowerTypeTests pass before code generation");
     return;
 
   case Intrinsic::assume:
