@@ -38,10 +38,10 @@ TextEncodingConfig::setConvertersFromOptions(TextEncodingConfig &TEC,
     ErrorOr<TextEncodingConverter> ErrorOrConverter =
         llvm::TextEncodingConverter::create(TEC.InternalEncoding,
                                             TEC.SystemEncoding);
-    if (ErrorOrConverter) {
+    if (ErrorOrConverter)
       TEC.ToSystemEncodingConverter =
           new TextEncodingConverter(std::move(*ErrorOrConverter));
-    } else
+    else
       return ErrorOrConverter.getError();
   }
 
@@ -52,10 +52,10 @@ TextEncodingConfig::setConvertersFromOptions(TextEncodingConfig &TEC,
   ErrorOr<TextEncodingConverter> ErrorOrConverter =
       llvm::TextEncodingConverter::create(TEC.InternalEncoding,
                                           TEC.ExecEncoding);
-  if (ErrorOrConverter) {
+  if (ErrorOrConverter)
     TEC.ToExecEncodingConverter =
         new TextEncodingConverter(std::move(*ErrorOrConverter));
-  } else
+  else
     return ErrorOrConverter.getError();
   return std::error_code();
 }
