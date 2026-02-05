@@ -9,6 +9,8 @@
 #include <cassert>
 #include <string>
 
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/FactsGenerator.h"
@@ -185,6 +187,9 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
     handleGSLPointerConstruction(CCE);
     return;
   }
+  handleFunctionCall(CCE, CCE->getConstructor(),
+                     {CCE->getArgs(), CCE->getNumArgs()},
+                     /*IsGslConstruction=*/false);
 }
 
 void FactsGenerator::handleCXXCtorInitializer(const CXXCtorInitializer *CII) {
@@ -233,23 +238,9 @@ void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
   }
 }
 
-static bool isStdMove(const FunctionDecl *FD) {
-  return FD && FD->isInStdNamespace() && FD->getIdentifier() &&
-         FD->getName() == "move";
-}
-
 void FactsGenerator::VisitCallExpr(const CallExpr *CE) {
   handleFunctionCall(CE, CE->getDirectCallee(),
                      {CE->getArgs(), CE->getNumArgs()});
-  // Track declarations that are moved via std::move.
-  // This is a flow-insensitive approximation: once a declaration is moved
-  // anywhere in the function, it's treated as moved everywhere. We do not
-  // generate expire facts for moved decls to avoid false alarms.
-  if (isStdMove(CE->getDirectCallee()))
-    if (CE->getNumArgs() == 1)
-      if (auto *DRE =
-              dyn_cast<DeclRefExpr>(CE->getArg(0)->IgnoreParenImpCasts()))
-        MovedDecls.insert(DRE->getDecl());
 }
 
 void FactsGenerator::VisitCXXNullPtrLiteralExpr(
@@ -453,11 +444,6 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   // Iterate through all loans to see if any expire.
   for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
     if (const auto *BL = dyn_cast<PathLoan>(Loan)) {
-      // Skip loans for declarations that have been moved. When a value is
-      // moved, the original owner no longer has ownership and its destruction
-      // should not cause the loan to expire, preventing false positives.
-      if (MovedDecls.contains(BL->getAccessPath().getAsValueDecl()))
-        continue;
       // Check if the loan is for a stack variable and if that variable
       // is the one being destructed.
       const AccessPath AP = BL->getAccessPath();
@@ -533,10 +519,29 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
   }
 }
 
-/// Checks if a call-like expression creates a borrow by passing a value to a
-/// reference parameter, creating an IssueFact if it does.
-/// \param IsGslConstruction True if this is a GSL construction where all
-///   argument origins should flow to the returned origin.
+void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
+                                           ArrayRef<const Expr *> Args) {
+  unsigned IsInstance = 0;
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD))
+    IsInstance = 1;
+
+  // Skip 'this' arg as it cannot be moved.
+  for (unsigned I = IsInstance;
+       I < Args.size() && I < FD->getNumParams() + IsInstance; ++I) {
+    const ParmVarDecl *PVD = FD->getParamDecl(I - IsInstance);
+    if (!PVD->getType()->isRValueReferenceType())
+      continue;
+    const Expr *Arg = Args[I];
+    OriginList *MovedOrigins = getOriginsList(*Arg);
+    assert(MovedOrigins->getLength() >= 1 &&
+           "unexpected length for r-value reference param");
+    // Arg is being moved to this parameter. Mark the origin as moved.
+    CurrentBlockFacts.push_back(FactMgr.createFact<MovedOriginFact>(
+        Arg, MovedOrigins->getOuterOriginID()));
+  }
+}
+
 void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         const FunctionDecl *FD,
                                         ArrayRef<const Expr *> Args,
@@ -544,7 +549,10 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   OriginList *CallList = getOriginsList(*Call);
   // Ignore functions returning values with no origin.
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
-  if (!FD || !CallList)
+  if (!FD)
+    return;
+  handleMovedArgsInCall(FD, Args);
+  if (!CallList)
     return;
   auto IsArgLifetimeBound = [FD](unsigned I) -> bool {
     const ParmVarDecl *PVD = nullptr;
