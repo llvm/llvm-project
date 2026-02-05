@@ -2896,7 +2896,7 @@ Status Process::LoadCore() {
       ResumePrivateStateThread();
     else {
       StartPrivateStateThread(lldb::eStateStopped,
-                              /*RunLock Is stopped*/ false);
+                              /*RunLock is stopped*/ false);
       if (!m_current_private_state_thread) {
         // We are not going to get any further here. The only way this
         // could fail is if we can't start a host thread, so we're pretty much
@@ -6044,8 +6044,6 @@ void Process::ClearPreResumeAction(PreResumeActionCallback callback, void *baton
 }
 
 ProcessRunLock &Process::GetRunLock() {
-  if (Process::CurrentThreadPosesAsPrivateStateThread())
-    return m_current_private_state_thread->GetRunLock();
   return m_current_private_state_thread->GetRunLock();
 }
 
