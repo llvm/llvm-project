@@ -1705,6 +1705,15 @@ def Vector_LoadOp : Vector_Op<"load", [
     %result = vector.load %memref[%c0] : memref<7xf32>, vector<8xf32>
     ```
 
+    A set `nontemporal` attribute indicates that this load is not expected to
+    be reused in the cache. For details, refer to the
+    [LLVM load instruction](https://llvm.org/docs/LangRef.html#load-instruction).
+
+    A set `volatile` attribute indicates that this load must not be optimized
+    away or reordered with other volatile operations. Volatile accesses are
+    guaranteed to be executed in the order they appear. For details, refer to the
+    [LLVM load instruction](https://llvm.org/docs/LangRef.html#load-instruction).
+
     An optional `alignment` attribute allows to specify the byte alignment of the
     load operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
@@ -1823,6 +1832,15 @@ def Vector_StoreOp : Vector_Op<"store", [
     ```mlir
     vector.store %valueToStore, %memref[%c0] : memref<7xf32>, vector<8xf32>
     ```
+
+    A set `nontemporal` attribute indicates that this store is not expected to
+    be reused in the cache. For details, refer to the
+    [LLVM store instruction](https://llvm.org/docs/LangRef.html#store-instruction).
+
+    A set `volatile` attribute indicates that this store must not be optimized
+    away or reordered with other volatile operations. Volatile accesses are
+    guaranteed to be executed in the order they appear. For details, refer to the
+    [LLVM store instruction](https://llvm.org/docs/LangRef.html#store-instruction).
 
     An optional `alignment` attribute allows to specify the byte alignment of the
     store operation. It must be a positive power of 2. The operation must access
