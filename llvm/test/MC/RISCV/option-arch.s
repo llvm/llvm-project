@@ -127,8 +127,7 @@ addi a0, a1, 0
 # CHECK: .option arch, +zve32x
 
 .option arch, rv32i
-# FIXME: This shouldn't require +zcf.
-.option arch, +zce, +f, +zcf
+.option arch, +zce, +f
 # CHECK-INST: flw fa0, 0x0(a0)
 # CHECK: # encoding: [0x08,0x61]
 c.flw fa0, 0(a0)

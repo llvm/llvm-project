@@ -8186,6 +8186,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
         return DAG.getMergeValues({Res, FP2Int.getValue(1)}, DL);
       }
       SDValue FP2Int = DAG.getNode(Op.getOpcode(), DL, IVecVT, Src);
+      if (EltSize == 1)
+        // The integer should be 0 or 1/-1, so compare the integer result to 0.
+        return DAG.getSetCC(DL, VT, DAG.getConstant(0, DL, IVecVT), FP2Int,
+                            ISD::SETNE);
       return DAG.getNode(ISD::TRUNCATE, DL, VT, FP2Int);
     }
 
@@ -13922,7 +13926,7 @@ SDValue RISCVTargetLowering::lowerVPSetCCMaskOp(SDValue Op,
   case ISD::SETULE: {
     SDValue Temp =
         DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Op1, AllOneMask, VL);
-    Result = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Temp, Op2, VL);
+    Result = DAG.getNode(RISCVISD::VMOR_VL, DL, ContainerVT, Temp, Op2, VL);
     break;
   }
   // X <=s Y  --> X == 1 | Y == 0  -->  ~Y | X
@@ -13931,7 +13935,7 @@ SDValue RISCVTargetLowering::lowerVPSetCCMaskOp(SDValue Op,
   case ISD::SETUGE: {
     SDValue Temp =
         DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Op2, AllOneMask, VL);
-    Result = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Temp, Op1, VL);
+    Result = DAG.getNode(RISCVISD::VMOR_VL, DL, ContainerVT, Temp, Op1, VL);
     break;
   }
   }
@@ -25962,11 +25966,6 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
     if (Inst.getOperand(i)->getType()->isScalableTy() &&
         !isa<ReturnInst>(&Inst))
       return true;
-
-  if (const AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
-    if (AI->getAllocatedType()->isScalableTy())
-      return true;
-  }
 
   return false;
 }
