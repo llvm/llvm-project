@@ -54090,6 +54090,14 @@ static SDValue reduceMaskedStoreToScalarStore(MaskedStoreSDNode *MS,
   SDValue Extract =
       DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Value, VecIndex);
 
+  if (MS->isTruncatingStore()) {
+    if (EltVT.isFloatingPoint())
+      return SDValue();
+
+    Extract = DAG.getNode(ISD::TRUNCATE, DL,
+                          MS->getMemoryVT().getVectorElementType(), Extract);
+  }
+
   // Store that element at the appropriate offset from the base pointer.
   return DAG.getStore(MS->getChain(), DL, Extract, Addr,
                       MS->getPointerInfo().getWithOffset(Offset),
