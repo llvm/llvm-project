@@ -4355,12 +4355,12 @@ bool SPIRVInstructionSelector::generateSampleImage(
   Register SampledImageReg =
       MRI->createVirtualRegister(GR.getRegClass(SampledImageType));
 
-      BuildMI(*Pos.getParent(), Pos, Loc, TII.get(SPIRV::OpSampledImage))
-          .addDef(SampledImageReg)
-          .addUse(GR.getSPIRVTypeID(SampledImageType))
-          .addUse(NewImageReg)
-          .addUse(NewSamplerReg)
-          .constrainAllUses(TII, TRI, RBI);
+  BuildMI(*Pos.getParent(), Pos, Loc, TII.get(SPIRV::OpSampledImage))
+      .addDef(SampledImageReg)
+      .addUse(GR.getSPIRVTypeID(SampledImageType))
+      .addUse(NewImageReg)
+      .addUse(NewSamplerReg)
+      .constrainAllUses(TII, TRI, RBI);
 
   bool IsExplicitLod = ImOps.GradX.has_value() || ImOps.GradY.has_value() ||
                        ImOps.Lod.has_value();
@@ -4389,8 +4389,16 @@ bool SPIRVInstructionSelector::generateSampleImage(
   if (ImOps.Offset && !isScalarOrVectorIntConstantZero(*ImOps.Offset)) {
     if (isConstReg(MRI, *ImOps.Offset))
       ImageOperands |= SPIRV::ImageOperand::ConstOffset;
-    else
-      ImageOperands |= SPIRV::ImageOperand::Offset;
+    else {
+      std::string DiagMsg;
+      raw_string_ostream OS(DiagMsg);
+      OS << "Non-constant offsets are not supported in sample instructions: ";
+      Loc.print(OS);
+      OS << " ";
+      Pos.print(OS);
+      OS.flush();
+      report_fatal_error(DiagMsg.c_str(), false);
+    }
   }
   if (ImOps.MinLod)
     ImageOperands |= SPIRV::ImageOperand::MinLod;
