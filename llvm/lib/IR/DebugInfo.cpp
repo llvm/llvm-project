@@ -304,9 +304,8 @@ void DebugInfoFinder::processMacroNode(DIMacroNode *Macro,
     return;
 
   // Recursively process nested macros in the macro file
-  for (auto *Element : MF->getElements()) {
+  for (auto *Element : MF->getElements())
     processMacroNode(Element, MF);
-  }
 }
 
 void DebugInfoFinder::processScope(DIScope *Scope) {
