@@ -14,6 +14,7 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectStreamer.h"
@@ -129,7 +130,29 @@ bool MCWasmStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
 
 void MCWasmStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                                       Align ByteAlignment) {
-  llvm_unreachable("Common symbols are not yet implemented for Wasm");
+  auto *Symbol = cast<MCSymbolWasm>(S);
+
+  pushSection();
+
+  // Common symbols are very close to weak symbols, so manually build a weak
+  // symbol.
+  MCSectionWasm *SW = getContext().getWasmSection(".bss.common." + S->getName(),
+                                                  SectionKind::getData());
+  SW->setAlignment(ByteAlignment);
+  getAssembler().registerSection(*SW);
+
+  switchSection(SW);
+
+  MCFragment *F = getCurrentFragment();
+  F->appendContents(Size, '\0');
+  Symbol->setFragment(F);
+
+  Symbol->setSize(MCConstantExpr::create(Size, getContext(), false, 8));
+  Symbol->setWeak(true);
+  Symbol->setExternal(true);
+  getAssembler().registerSymbol(*Symbol);
+
+  popSection();
 }
 
 void MCWasmStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
