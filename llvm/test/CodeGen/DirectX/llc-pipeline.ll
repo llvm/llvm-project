@@ -28,6 +28,7 @@
 ; CHECK-NEXT:   DXIL Array Flattener
 ; CHECK-NEXT:   FunctionPass Manager
 ; CHECK-NEXT:     Dominator Tree Construction
+; CHECK-NEXT:     SROA
 ; CHECK-NEXT:     DXIL Forward Handle Accesses
 ; CHECK-NEXT:     Dominator Tree Construction
 ; CHECK-NEXT:     Basic Alias Analysis (stateless AA impl)
