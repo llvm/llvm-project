@@ -3352,6 +3352,7 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
   if (S.checkArgCountRange(TheCall, MinArgs, MaxArgs))
     return true;
 
+  // Check the texture handle.
   if (CheckResourceHandle(&S, TheCall, 0,
                           [](const HLSLAttributedResourceType *ResType) {
                             return ResType->getAttrs().ResourceDimension ==
@@ -3359,6 +3360,7 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
                           }))
     return true;
 
+  // Check the sampler handle.
   if (CheckResourceHandle(&S, TheCall, 1,
                           [](const HLSLAttributedResourceType *ResType) {
                             return ResType->getAttrs().ResourceClass !=
@@ -3369,6 +3371,7 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
   auto *ResourceTy =
       TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
 
+  // Check the location.
   unsigned ExpectedDim =
       getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
   if (CheckVectorElementCount(&S, TheCall->getArg(2)->getType(),
@@ -3379,6 +3382,8 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
   unsigned NextIdx = 3;
   if (Kind == SampleKind::Bias || Kind == SampleKind::Level ||
       Kind == SampleKind::Cmp || Kind == SampleKind::CmpLevelZero) {
+    // Check the bias, lod level, or compare value, depending on the kind.
+    // All of them must be a scalar float value.
     QualType BiasOrLODOrCmpTy = TheCall->getArg(NextIdx)->getType();
     if (!BiasOrLODOrCmpTy->isFloatingType() ||
         BiasOrLODOrCmpTy->isVectorType()) {
@@ -3389,10 +3394,13 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
     }
     NextIdx++;
   } else if (Kind == SampleKind::Grad) {
+    // Check the DDX operand.
     if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx)->getType(),
                                 S.Context.FloatTy, ExpectedDim,
                                 TheCall->getArg(NextIdx)->getBeginLoc()))
       return true;
+
+    // Check the DDY operand.
     if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx + 1)->getType(),
                                 S.Context.FloatTy, ExpectedDim,
                                 TheCall->getArg(NextIdx + 1)->getBeginLoc()))
@@ -3400,7 +3408,7 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
     NextIdx += 2;
   }
 
-  // Offset
+  // Check the offset operand.
   if (TheCall->getNumArgs() > NextIdx) {
     if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx)->getType(),
                                 S.Context.IntTy, ExpectedDim,
@@ -3409,7 +3417,7 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
     NextIdx++;
   }
 
-  // Clamp
+  // Check the clamp operand.
   if (Kind != SampleKind::Level && Kind != SampleKind::CmpLevelZero &&
       TheCall->getNumArgs() > NextIdx) {
     QualType ClampTy = TheCall->getArg(NextIdx)->getType();
