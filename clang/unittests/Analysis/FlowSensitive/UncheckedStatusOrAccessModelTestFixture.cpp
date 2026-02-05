@@ -3970,7 +3970,8 @@ TEST_P(UncheckedStatusOrAccessModelTest, PairIterator) {
     };
     void target() {
       if (auto it = Make<iterator>(); it->second.ok()) {
-        it->second.value();
+        // This is a false positive. Fix and remove the unsafe.
+        it->second.value();  // [[unsafe]]
       }
     }
 )cc");

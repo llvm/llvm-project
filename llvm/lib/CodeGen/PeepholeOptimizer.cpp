@@ -959,14 +959,7 @@ bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
 /// Optimize a select instruction.
 bool PeepholeOptimizer::optimizeSelect(
     MachineInstr &MI, SmallPtrSetImpl<MachineInstr *> &LocalMIs) {
-  unsigned TrueOp = 0;
-  unsigned FalseOp = 0;
-  bool Optimizable = false;
-  SmallVector<MachineOperand, 4> Cond;
-  if (TII->analyzeSelect(MI, Cond, TrueOp, FalseOp, Optimizable))
-    return false;
-  if (!Optimizable)
-    return false;
+  assert(MI.isSelect() && "Should only be called when MI->isSelect() is true");
   if (!TII->optimizeSelect(MI, LocalMIs))
     return false;
   LLVM_DEBUG(dbgs() << "Deleting select: " << MI);

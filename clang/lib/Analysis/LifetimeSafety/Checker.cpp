@@ -47,6 +47,7 @@ namespace {
 struct PendingWarning {
   SourceLocation ExpiryLoc; // Where the loan expired.
   llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> CausingFact;
+  const Expr *MovedExpr;
   Confidence ConfidenceLevel;
 };
 
@@ -60,18 +61,21 @@ private:
   llvm::DenseMap<AnnotationTarget, const Expr *> AnnotationWarningsMap;
   llvm::DenseMap<const ParmVarDecl *, EscapingTarget> NoescapeWarningsMap;
   const LoanPropagationAnalysis &LoanPropagation;
+  const MovedLoansAnalysis &MovedLoans;
   const LiveOriginsAnalysis &LiveOrigins;
-  const FactManager &FactMgr;
+  FactManager &FactMgr;
   LifetimeSafetySemaHelper *SemaHelper;
   ASTContext &AST;
 
 public:
   LifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
-                  const LiveOriginsAnalysis &LiveOrigins, const FactManager &FM,
+                  const MovedLoansAnalysis &MovedLoans,
+                  const LiveOriginsAnalysis &LiveOrigins, FactManager &FM,
                   AnalysisDeclContext &ADC,
                   LifetimeSafetySemaHelper *SemaHelper)
-      : LoanPropagation(LoanPropagation), LiveOrigins(LiveOrigins), FactMgr(FM),
-        SemaHelper(SemaHelper), AST(ADC.getASTContext()) {
+      : LoanPropagation(LoanPropagation), MovedLoans(MovedLoans),
+        LiveOrigins(LiveOrigins), FactMgr(FM), SemaHelper(SemaHelper),
+        AST(ADC.getASTContext()) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
@@ -140,6 +144,10 @@ public:
   /// propagation (e.g., a loan may only be held on some execution paths).
   void checkExpiry(const ExpireFact *EF) {
     LoanID ExpiredLoan = EF->getLoanID();
+    const Expr *MovedExpr = nullptr;
+    if (auto *ME = MovedLoans.getMovedLoans(EF).lookup(ExpiredLoan))
+      MovedExpr = *ME;
+
     LivenessMap Origins = LiveOrigins.getLiveOriginsAt(EF);
     Confidence CurConfidence = Confidence::None;
     // The UseFact or OriginEscapesFact most indicative of a lifetime error,
@@ -166,6 +174,7 @@ public:
       return;
     FinalWarningsMap[ExpiredLoan] = {/*ExpiryLoc=*/EF->getExpiryLoc(),
                                      /*BestCausingFact=*/BestCausingFact,
+                                     /*MovedExpr=*/MovedExpr,
                                      /*ConfidenceLevel=*/CurConfidence};
   }
 
@@ -179,19 +188,21 @@ public:
       llvm::PointerUnion<const UseFact *, const OriginEscapesFact *>
           CausingFact = Warning.CausingFact;
       Confidence Confidence = Warning.ConfidenceLevel;
+      const Expr *MovedExpr = Warning.MovedExpr;
       SourceLocation ExpiryLoc = Warning.ExpiryLoc;
 
       if (const auto *UF = CausingFact.dyn_cast<const UseFact *>())
-        SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), ExpiryLoc,
-                                       Confidence);
+        SemaHelper->reportUseAfterFree(IssueExpr, UF->getUseExpr(), MovedExpr,
+                                       ExpiryLoc, Confidence);
       else if (const auto *OEF =
                    CausingFact.dyn_cast<const OriginEscapesFact *>()) {
         if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF))
-          SemaHelper->reportUseAfterReturn(
-              IssueExpr, RetEscape->getReturnExpr(), ExpiryLoc, Confidence);
+          SemaHelper->reportUseAfterReturn(IssueExpr,
+                                           RetEscape->getReturnExpr(),
+                                           MovedExpr, ExpiryLoc, Confidence);
         else if (const auto *FieldEscape = dyn_cast<FieldEscapeFact>(OEF))
           SemaHelper->reportDanglingField(
-              IssueExpr, FieldEscape->getFieldDecl(), ExpiryLoc);
+              IssueExpr, FieldEscape->getFieldDecl(), MovedExpr, ExpiryLoc);
         else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else
@@ -293,11 +304,12 @@ public:
 } // namespace
 
 void runLifetimeChecker(const LoanPropagationAnalysis &LP,
-                        const LiveOriginsAnalysis &LO,
-                        const FactManager &FactMgr, AnalysisDeclContext &ADC,
+                        const MovedLoansAnalysis &MovedLoans,
+                        const LiveOriginsAnalysis &LO, FactManager &FactMgr,
+                        AnalysisDeclContext &ADC,
                         LifetimeSafetySemaHelper *SemaHelper) {
   llvm::TimeTraceScope TimeProfile("LifetimeChecker");
-  LifetimeChecker Checker(LP, LO, FactMgr, ADC, SemaHelper);
+  LifetimeChecker Checker(LP, MovedLoans, LO, FactMgr, ADC, SemaHelper);
 }
 
 } // namespace clang::lifetimes::internal
