@@ -2339,6 +2339,7 @@ libc_support_library(
     name = "__support_math_acosh_float_constants",
     hdrs = ["src/__support/math/acosh_float_constants.h"],
     deps = [
+        ":__support_macros_attributes",
         ":__support_macros_config",
     ],
 )
@@ -2831,6 +2832,7 @@ libc_support_library(
     name = "__support_math_exp_float_constants",
     hdrs = ["src/__support/math/exp_float_constants.h"],
     deps = [
+        ":__support_macros_attributes",
         ":__support_macros_config",
     ],
 )
