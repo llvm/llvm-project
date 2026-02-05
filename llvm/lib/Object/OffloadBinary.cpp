@@ -259,7 +259,6 @@ OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
       return std::move(Err);
 
     Binaries.emplace_back(new OffloadBinary(Buf, TheHeader, TheEntry, *Index));
-    // Explicit move for compatibility with GCC7.
     return std::move(Binaries);
   }
 
@@ -272,7 +271,6 @@ OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
     Binaries.emplace_back(new OffloadBinary(Buf, TheHeader, TheEntry, I));
   }
 
-  // Explicit move for compatibility with GCC7.
   return std::move(Binaries);
 }
 
