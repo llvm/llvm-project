@@ -24,7 +24,8 @@
 // Returns: a - b
 COMPILER_RT_ABI float __subsf3(float a, float b);
 
-int test__subsf3(int line, uint32_t a_rep, uint32_t b_rep, uint32_t expected_rep) {
+int test__subsf3(int line, uint32_t a_rep, uint32_t b_rep,
+                 uint32_t expected_rep) {
   float a = fromRep32(a_rep), b = fromRep32(b_rep);
   float x = __subsf3(a, b);
 #ifdef EXPECT_EXACT_RESULTS
@@ -34,14 +35,14 @@ int test__subsf3(int line, uint32_t a_rep, uint32_t b_rep, uint32_t expected_rep
 #endif
 
   if (ret) {
-    printf("error at line %d: __subsf3(%08" PRIx32 ", %08" PRIx32 ") = %08" PRIx32
-           ", expected %08" PRIx32 "\n",
+    printf("error at line %d: __subsf3(%08" PRIx32 ", %08" PRIx32
+           ") = %08" PRIx32 ", expected %08" PRIx32 "\n",
            line, a_rep, b_rep, toRep32(x), expected_rep);
   }
   return ret;
 }
 
-#define test__subsf3(a,b,x) test__subsf3(__LINE__,a,b,x)
+#define test__subsf3(a, b, x) test__subsf3(__LINE__, a, b, x)
 
 int main() {
   int status = 0;
