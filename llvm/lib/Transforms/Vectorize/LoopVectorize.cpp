@@ -7163,6 +7163,13 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
             cast<VPRecipeWithIRFlags>(R).getPredicate() !=
                 cast<CmpInst>(UI)->getPredicate())
           return true;
+
+        // Recipes with underlying instructions being moved out of the loop
+        // region by LICM may cause discrepancies between the legacy cost model
+        // and the VPlan-based cost model.
+        if (!VPBB->getEnclosingLoopRegion())
+          return true;
+
         SeenInstrs.insert(UI);
       }
     }
@@ -7437,6 +7444,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
+  // Convert the exit condition to AVLNext == 0 for EVL tail folded loops.
+  VPlanTransforms::convertEVLExitCond(BestVPlan);
   // Regions are dissolved after optimizing for VF and UF, which completely
   // removes unneeded loop regions first.
   VPlanTransforms::dissolveLoopRegions(BestVPlan);
@@ -8329,6 +8338,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
   addReductionResultComputation(Plan, RecipeBuilder, Range.Start);
 
+  // Optimize FindIV reductions to use sentinel-based approach when possible.
+  RUN_VPLAN_PASS(VPlanTransforms::optimizeFindIVReductions, *Plan, PSE,
+                 *OrigLoop);
+
   // Apply mandatory transformation to handle reductions with multiple in-loop
   // uses if possible, bail out otherwise.
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleMultiUseReductions, *Plan))
@@ -8511,26 +8524,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         return match(U, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
       }));
     }
-    if (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind)) {
-      VPValue *Start = PhiR->getStartValue();
-      VPValue *Sentinel = Plan->getOrAddLiveIn(RdxDesc.getSentinelValue());
-      RecurKind MinMaxKind;
-      bool IsSigned =
-          RecurrenceDescriptor::isSignedRecurrenceKind(RecurrenceKind);
-      if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RecurrenceKind))
-        MinMaxKind = IsSigned ? RecurKind::SMax : RecurKind::UMax;
-      else
-        MinMaxKind = IsSigned ? RecurKind::SMin : RecurKind::UMin;
-      VPIRFlags Flags(MinMaxKind, /*IsOrdered=*/false, /*IsInLoop=*/false,
-                      FastMathFlags());
-      auto *ReducedIV =
-          Builder.createNaryOp(VPInstruction::ComputeReductionResult,
-                               {NewExitingVPV}, Flags, ExitDL);
-      auto *Cmp =
-          Builder.createICmp(CmpInst::ICMP_NE, ReducedIV, Sentinel, ExitDL);
-      FinalReductionResult = cast<VPInstruction>(
-          Builder.createSelect(Cmp, ReducedIV, Start, ExitDL));
-    } else if (AnyOfSelect) {
+    if (AnyOfSelect) {
       VPValue *Start = PhiR->getStartValue();
       // NewVal is the non-phi operand of the select.
       VPValue *NewVal = AnyOfSelect->getOperand(1) == PhiR
@@ -8631,13 +8625,6 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       continue;
     }
 
-    if (RecurrenceDescriptor::isFindIVRecurrenceKind(
-            RdxDesc.getRecurrenceKind())) {
-      // Adjust the start value for FindFirstIV/FindLastIV recurrences to use
-      // the sentinel value after generating the ResumePhi recipe, which uses
-      // the original start value.
-      PhiR->setOperand(0, Plan->getOrAddLiveIn(RdxDesc.getSentinelValue()));
-    }
     RecurKind RK = RdxDesc.getRecurrenceKind();
     if ((!RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
@@ -9163,7 +9150,7 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
          "the canonical IV should only be used by its increment or "
          "ScalarIVSteps when resetting the start value");
   VPBuilder Builder(Header, Header->getFirstNonPhi());
-  VPInstruction *Add = Builder.createNaryOp(Instruction::Add, {IV, VPV});
+  VPInstruction *Add = Builder.createAdd(IV, VPV);
   IV->replaceAllUsesWith(Add);
   Add->setOperand(0, IV);
 

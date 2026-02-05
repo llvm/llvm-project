@@ -313,6 +313,12 @@ struct VPlanTransforms {
                                          VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                          VPBasicBlock *LatchVPBB);
 
+  /// Replaces the exit condition from
+  ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)
+  /// to
+  ///   (branch-on-cond eq AVLNext, 0)
+  static void convertEVLExitCond(VPlan &Plan);
+
   /// Replace loop regions with explicit CFG.
   static void dissolveLoopRegions(VPlan &Plan);
 
@@ -327,10 +333,6 @@ struct VPlanTransforms {
   /// variable vector lengths instead of fixed lengths. This transformation:
   ///  * Makes EVL-Phi concrete.
   //   * Removes CanonicalIV and increment.
-  ///  * Replaces the exit condition from
-  ///      (branch-on-count CanonicalIVInc, VectorTripCount)
-  ///    to
-  ///      (branch-on-cond eq AVLNext, 0)
   static void canonicalizeEVLLoops(VPlan &Plan);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
@@ -452,6 +454,11 @@ struct VPlanTransforms {
   /// users in the original exit block using the VPIRInstruction wrapping to the
   /// LCSSA phi.
   static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range);
+
+  /// Optimize FindLast reductions selecting IVs by converting them to FindIV
+  /// reductions, if their IV range excludes a suitable sentinel value.
+  static void optimizeFindIVReductions(VPlan &Plan,
+                                       PredicatedScalarEvolution &PSE, Loop &L);
 
   /// Detect and create partial reduction recipes for scaled reductions in
   /// \p Plan. Must be called after recipe construction. If partial reductions
