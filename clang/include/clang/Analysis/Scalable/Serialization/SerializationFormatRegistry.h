@@ -16,6 +16,7 @@
 // format info for it:
 //
 //   namespace {
+//   using FormatInfo = MyFormat::FormatInfo;
 //   struct MyAnalysisFormatInfo : FormatInfo {
 //     MyAnalysisFormatInfo() : FormatInfo{
 //               SummaryName("MyAnalysis"),

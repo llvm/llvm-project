@@ -9,7 +9,10 @@
 #ifndef LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_REGISTRIES_MOCKSERIALIZATIONFORMAT_H
 #define LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_REGISTRIES_MOCKSERIALIZATIONFORMAT_H
 
+#include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "clang/Analysis/Scalable/Serialization/SerializationFormat.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include <string>
 
 namespace clang::ssaf {
 
@@ -22,6 +25,18 @@ public:
 
   void writeTUSummary(const TUSummary &Summary,
                       llvm::StringRef OutputDir) override;
+
+  struct SpecialFileRepresentation {
+    std::string MockRepresentation;
+  };
+
+  using SerializerFn = llvm::function_ref<SpecialFileRepresentation(
+      const EntitySummary &, MockSerializationFormat &)>;
+  using DeserializerFn = llvm::function_ref<std::unique_ptr<EntitySummary>(
+      const SpecialFileRepresentation &, EntityIdTable &)>;
+
+  using FormatInfo = FormatInfoEntry<SerializerFn, DeserializerFn>;
+  std::map<SummaryName, FormatInfo> FormatInfos;
 };
 
 } // namespace clang::ssaf
