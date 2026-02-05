@@ -47,7 +47,7 @@ class TestDAP_launch_commands(lldbdap_testcase.DAPTestCaseBase):
 
         # Get output from the console. This should contain both the
         # "initCommands" and the "preRunCommands".
-        output = self.get_console()
+        output = self.collect_console(pattern=postRunCommands[-1])
         # Verify all "initCommands" were found in console output
         self.verify_commands("initCommands", output, initCommands)
         # Verify all "preRunCommands" were found in console output
