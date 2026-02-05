@@ -96,14 +96,14 @@ public:
   }
 
   nb::ndarray<nb::numpy, double> getFuncEmb(const std::string &FuncName) {
-    const Function *FuncPtr = M->getFunction(FuncName);
+    const Function *F = M->getFunction(FuncName);
 
-    if (!FuncPtr)
+    if (!F)
       throw nb::value_error(
           ("Function '" + FuncName + "' not found in module").c_str());
 
     auto ToolFuncEmb =
-        Tool->getFunctionEmbedding(*FuncPtr, OutputEmbeddingMode);
+        Tool->getFunctionEmbedding(*F, OutputEmbeddingMode);
 
     if (!ToolFuncEmb)
       throw nb::value_error(toString(ToolFuncEmb.takeError()).c_str());
