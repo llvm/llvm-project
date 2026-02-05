@@ -9283,7 +9283,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
       // If this is OpenMP the device linker will need `-lompdevice`.
       if (Kind == Action::OFK_OpenMP && !Args.hasArg(OPT_no_offloadlib) &&
-          (TC->getTriple().isAMDGPU() || TC->getTriple().isNVPTX()))
+          TC->getTriple().isGPU())
         LinkerArgs.emplace_back("-lompdevice");
 
       // Forward all of these to the appropriate toolchain.
