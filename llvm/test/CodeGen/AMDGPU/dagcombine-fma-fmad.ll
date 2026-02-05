@@ -439,7 +439,7 @@ declare i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32>, i32, i32 immarg) #3
 ; Function Attrs: nounwind readnone willreturn
 declare <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32>, i32, i32 immarg) #3
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign" }
+attributes #0 = { denormal_fpenv(float: preservesign) }
 attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }
 attributes #2 = { nounwind readnone speculatable willreturn }
 attributes #3 = { nounwind readonly willreturn }
