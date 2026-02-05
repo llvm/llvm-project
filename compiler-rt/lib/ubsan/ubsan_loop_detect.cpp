@@ -13,15 +13,14 @@
 #include <sanitizer/ubsan_interface.h>
 
 #if defined(__linux__) && (defined(__i386__) || defined(__x86_64__))
+
 #include <asm/processor-flags.h>
 #include <signal.h>
 #include <stdint.h>
 #include <sys/time.h>
 #include <sys/ucontext.h>
-#endif
 
 int __ubsan_is_trap_loop(void *c) {
-#if defined(__linux__) && (defined(__i386__) || defined(__x86_64__))
   auto *uc = reinterpret_cast<ucontext_t *>(c);
 #if defined(__x86_64__)
   auto *ip = reinterpret_cast<const uint8_t *>(uc->uc_mcontext.gregs[REG_RIP]);
@@ -73,21 +72,15 @@ int __ubsan_is_trap_loop(void *c) {
   default:
     return false;
   }
-#else
-  return false;
-#endif
 }
 
-#if defined(__linux__) && (defined(__i386__) || defined(__x86_64__))
 static void SigprofHandler(int signo, siginfo_t *si, void *c) {
   if (__ubsan_is_trap_loop(c)) {
     __builtin_trap();
   }
 }
-#endif
 
 void __ubsan_install_trap_loop_detection(void) {
-#if defined(__linux__) && (defined(__i386__) || defined(__x86_64__))
   struct sigaction sa;
   sa.sa_sigaction = SigprofHandler;
   sigaction(SIGPROF, &sa, nullptr);
@@ -97,5 +90,11 @@ void __ubsan_install_trap_loop_detection(void) {
   timer.it_value.tv_usec = 100000;
   timer.it_interval = timer.it_value;
   setitimer(ITIMER_PROF, &timer, NULL);
-#endif
 }
+
+#else
+
+int __ubsan_is_trap_loop(void *c) { return false; }
+void __ubsan_install_trap_loop_detection(void) {}
+
+#endif

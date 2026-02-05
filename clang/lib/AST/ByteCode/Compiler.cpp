@@ -477,6 +477,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return this->delegate(SubExpr);
 
   case CK_BitCast: {
+    if (CE->containsErrors())
+      return false;
     QualType CETy = CE->getType();
     // Reject bitcasts to atomic types.
     if (CETy->isAtomicType()) {
@@ -1778,6 +1780,9 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+  if (E->getType()->isVoidType())
+    return false;
+
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
   const Expr *Index = E->getIdx();
@@ -3596,6 +3601,9 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
   const Expr *PlacementDest = nullptr;
   bool IsNoThrow = false;
 
+  if (E->containsErrors())
+    return false;
+
   if (PlacementArgs != 0) {
     // FIXME: There is no restriction on this, but it's not clear that any
     // other form makes any sense. We get here for cases such as:
@@ -4499,6 +4507,8 @@ bool Compiler<Emitter>::visitZeroArrayInitializer(QualType T, const Expr *E) {
   }
   if (ElemType->isRecordType()) {
     const Record *R = getRecord(ElemType);
+    if (!R)
+      return false;
 
     for (size_t I = 0; I != NumElems; ++I) {
       if (!this->emitConstUint32(I, E))
@@ -7578,8 +7588,6 @@ bool Compiler<Emitter>::emitDummyPtr(const DeclTy &D, const Expr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::emitFloat(const APFloat &F, const Expr *E) {
-  assert(!DiscardResult && "Should've been checked before");
-
   if (Floating::singleWord(F.getSemantics()))
     return this->emitConstFloat(Floating(F), E);
 

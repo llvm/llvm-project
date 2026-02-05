@@ -268,6 +268,9 @@ else()
         ARCHS ${ARCHS_FOR_SYMBOLS}
         PARENT_TARGET ubsan
         EXTRA ubsan.syms.extra)
+      add_sanitizer_rt_symbols(clang_rt.ubsan_loop_detect
+        ARCHS ${ARCHS_FOR_SYMBOLS}
+        PARENT_TARGET ubsan)
     endif()
   endif()
 endif()

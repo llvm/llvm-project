@@ -643,7 +643,7 @@ class QCIMVCCI<bits<3> funct3, string opcodestr, DAGOperand immType>
 }
 
 class QCI_RVInst16CB_BM<bits<2> funct2, string opcodestr>
-    : RVInst16CB<0b100, 0b01, (outs GPRC:$rd),
+    : RVInst16CB<0b100, OPC_C1, (outs GPRC:$rd),
                  (ins GPRC:$rs1, uimmlog2xlennonzero:$shamt),
                  opcodestr, "$rs1, $shamt"> {
   bits<5> shamt;
@@ -655,7 +655,7 @@ class QCI_RVInst16CB_BM<bits<2> funct2, string opcodestr>
 
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in
 class QCIRVInst16CI_RS1<bits<5> funct5, string OpcodeStr>
-    : RVInst16CI<0b000, 0b10, (outs), (ins GPRNoX0:$rs1), OpcodeStr, "$rs1"> {
+    : RVInst16CI<0b000, OPC_C2, (outs), (ins GPRNoX0:$rs1), OpcodeStr, "$rs1"> {
   bits<5> rs1;
 
   let Inst{12} = 0b1;
@@ -700,7 +700,7 @@ class QCIBranchInst48_rii<bits<5> funct5, DAGOperand InTyImm16, string opcodestr
 
 let hasSideEffects = 1 in
 class QCIRVInst16CI_NONE<bits<5> funct5, string OpcodeStr>
-    : RVInst16CI<0b000, 0b10, (outs), (ins), OpcodeStr, ""> {
+    : RVInst16CI<0b000, OPC_C2, (outs), (ins), OpcodeStr, ""> {
   let Inst{12} = 0b1;
   let Inst{11-7} = funct5;
   let Inst{6-2} = 0b00100;
@@ -744,7 +744,7 @@ class QCISync_UIMM5<bits<4> imm11_8, string opcodestr>
 
 let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
 class QCIRVInst16CBSYNC<bits<3> imm5_func2, string OpcodeStr>
-    : RVInst16CB<0b100, 0b01, (outs), (ins uimm5slist:$slist), OpcodeStr, "$slist"> {
+    : RVInst16CB<0b100, OPC_C1, (outs), (ins uimm5slist:$slist), OpcodeStr, "$slist"> {
     bits<3> slist;
 
     let Inst{6-2} = 0;
@@ -984,7 +984,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
                     Sched<[WriteIALU, ReadIALU]>;
   def QC_C_BSETI  : QCI_RVInst16CB_BM<0b01, "qc.c.bseti">,
                     Sched<[WriteIALU, ReadIALU]>;
-  def QC_C_EXTU : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd_wb),
+  def QC_C_EXTU : RVInst16CI<0b000, OPC_C2, (outs GPRNoX0:$rd_wb),
                              (ins GPRNoX0:$rd, uimm5ge6_plus1:$width),
                              "qc.c.extu", "$rd, $width">,
                   Sched<[WriteIALU, ReadIALU]> {
@@ -1000,7 +1000,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 
 let Predicates = [HasVendorXqciac, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
-  def QC_C_MULIADD : RVInst16CL<0b001, 0b10, (outs GPRC:$rd_wb),
+  def QC_C_MULIADD : RVInst16CL<0b001, OPC_C2, (outs GPRC:$rd_wb),
                                (ins GPRC:$rd, GPRC:$rs1, uimm5:$uimm),
                                "qc.c.muliadd", "$rd, $rs1, $uimm">,
                      Sched<[WriteIALU, ReadIALU, ReadIALU]> {
@@ -1083,7 +1083,7 @@ let Predicates = [HasVendorXqcicli, IsRV32] in {
 
 let Predicates = [HasVendorXqcicm, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-  def QC_C_MVEQZ   : RVInst16CL<0b101, 0b10, (outs GPRC:$rd_wb),
+  def QC_C_MVEQZ   : RVInst16CL<0b101, OPC_C2, (outs GPRC:$rd_wb),
                               (ins GPRC:$rd, GPRC:$rs1),
                               "qc.c.mveqz", "$rd, $rs1">,
                      Sched<[WriteIALU, ReadIALU, ReadIALU]> {
@@ -1111,7 +1111,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 let Predicates = [HasVendorXqciint, IsRV32], hasSideEffects = 1 in {
 
 let mayLoad = 0, mayStore = 0 in {
-def QC_C_DIR : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd), (ins),
+def QC_C_DIR : RVInst16CI<0b000, OPC_C2, (outs GPRNoX0:$rd), (ins),
                           "qc.c.dir", "$rd"> {
   bits<5> rd;
 
