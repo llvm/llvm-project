@@ -1617,7 +1617,8 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.flags = MachineMemOperand::MOLoad;
     Info.order = parseAtomicOrderingCABIArg(CI, 1);
     Info.ssid = parseSyncscopeMDArg(CI, 2);
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
   case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
@@ -1629,6 +1630,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.flags = (MachineMemOperand::MOLoad | MOCooperative);
     Info.order = parseAtomicOrderingCABIArg(CI, 1);
     Info.ssid = parseSyncscopeMDArg(CI, 2);
+    Infos.push_back(Info);
     return;
   }
   case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
@@ -1641,6 +1643,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.flags = (MachineMemOperand::MOStore | MOCooperative);
     Info.order = parseAtomicOrderingCABIArg(CI, 2);
     Info.ssid = parseSyncscopeMDArg(CI, 3);
+    Infos.push_back(Info);
     return;
   }
   case Intrinsic::amdgcn_ds_gws_init:
