@@ -347,9 +347,22 @@ def GPU_SubgroupSizeOp : GPU_Op<"subgroup_size", [
   let assemblyFormat = "(`upper_bound` $upper_bound^)? attr-dict `:` type($result)";
 }
 
-def GPU_OptionalDimSizeHintAttr : ConfinedAttr<OptionalAttr<DenseI32ArrayAttr>,
-  [AttrConstraint<Or<[IsNullAttr.predicate, DenseArrayCount<3>.predicate]>,
-    "with 3 elements (if present)">]>;
+def GPU_OptionalDimSizeHintAttr : ConfinedAttr<
+  OptionalAttr<DenseI32ArrayAttr>,
+  [AttrConstraint<
+    Or<[
+      IsNullAttr.predicate,
+      And<[
+        DenseArrayCount<3>.predicate,
+        CPred<"([](mlir::Attribute a) { "
+              "  auto arr = ::llvm::cast<::mlir::DenseI32ArrayAttr>(a).asArrayRef();"
+              "  return ::llvm::all_of(arr, [](int32_t v) { return v >= 0; });"
+              "})($_self)">
+      ]>
+    ]>,
+    "with 3 elements (if present) and all elements >= 0"
+  >]
+>;
 
 def GPU_GPUFuncOp : GPU_Op<"func", [
     HasParent<"GPUModuleOp">, AutomaticAllocationScope, FunctionOpInterface,
