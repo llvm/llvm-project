@@ -1,5 +1,4 @@
-//===-- mlir-c/ExtensibleDialect.h - Extensible dialect management ---*- C
-//-*-====//
+//===-- mlir-c/ExtensibleDialect.h - Extensible dialect APIs -----*- C -*-====//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM
 // Exceptions.
@@ -8,8 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This header provides basic access to the MLIR JIT. This is minimalist and
-// experimental at the moment.
+// This header provides APIs for extensible dialects.
 //
 //===----------------------------------------------------------------------===//
 
