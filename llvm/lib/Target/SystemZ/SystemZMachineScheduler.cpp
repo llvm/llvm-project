@@ -15,6 +15,11 @@ using namespace llvm;
 
 /// Pre-RA scheduling ///
 
+static cl::opt<unsigned> TopCycles(
+    "topcycles", cl::Hidden, cl::init(6),
+    cl::desc("Number of (decoder) cycles considered by the heuristics for the "
+             "top of the scheduling region."));
+
 namespace SystemZSched {
 enum LatencyReduction { Always, Never, More, Heuristics, CycleBased };
 } // namespace SystemZSched
@@ -42,6 +47,79 @@ static bool isRegDef(const MachineOperand &MO) {
 
 static bool isPhysRegDef(const MachineOperand &MO) {
   return isRegDef(MO) && MO.getReg().isPhysical();
+}
+
+static bool isVirtRegUse(const MachineOperand &MO) {
+  return MO.isReg() && MO.isUse() && MO.readsReg() && MO.getReg().isVirtual();
+}
+
+void SystemZPreRASchedStrategy::initializeLivenessReduction() {
+  HighSUs.clear();
+  const unsigned NumHigh = TopCycles * SchedModel->getIssueWidth();
+  // Leave the set empty if all SUs would fit to save compile time.
+  if (!RegionPolicy.ShouldTrackPressure || DAG->SUnits.size() <= NumHigh)
+    return;
+
+  std::vector<const SUnit *> SUs;
+  SUs.reserve(DAG->SUnits.size());
+  for (auto &Itr : DAG->SUnits)
+    SUs.push_back(&Itr);
+
+  std::sort(SUs.begin(), SUs.end(), [](const SUnit *lhs, const SUnit *rhs) {
+    if (lhs->getHeight() > rhs->getHeight())
+      return true;
+    else if (lhs->getHeight() < rhs->getHeight())
+      return false;
+    return lhs->NodeNum < rhs->NodeNum;
+  });
+
+  HighSUs.insert(SUs.begin(), SUs.begin() + NumHigh);
+}
+
+static bool isStoreOfVReg(const MachineInstr *MI) {
+  return MI->mayStore() && !MI->mayLoad() && MI->getNumOperands() &&
+         isVirtRegUse(MI->getOperand(0)) &&
+         MI->getDesc().operands()[0].OperandType != MCOI::OPERAND_MEMORY;
+}
+
+void SystemZPreRASchedStrategy::initializeStoresGroup() {
+  StoresGroup.clear();
+  FirstStoreInGroupScheduled = false;
+  if (!RegionPolicy.ShouldTrackPressure)
+    return;
+
+  unsigned CurrMaxDepth = 0;
+  for (unsigned Idx = DAG->SUnits.size() - 1; Idx + 1 != 0; --Idx) {
+    const SUnit *SU = &DAG->SUnits[Idx];
+    const MachineInstr *MI = SU->getInstr();
+    if (!MI->getNumOperands() || MI->isCopy())
+      continue;
+    bool IsStore = isStoreOfVReg(MI);
+
+    // Find a group of stores that all are at the bottom while avoiding
+    // regions with any additional group of lesser depth.
+    if (SU->getDepth() > CurrMaxDepth) {
+      CurrMaxDepth = SU->getDepth();
+      bool PrevGroup = StoresGroup.size() > 1;
+      StoresGroup.clear();
+      if (PrevGroup)
+        return;
+      if (IsStore)
+        StoresGroup.insert(SU);
+    } else if (IsStore && !StoresGroup.empty() &&
+               SU->getDepth() == CurrMaxDepth) {
+      // The group members should all have the same opcode.
+      if ((*StoresGroup.begin())->getInstr()->getOpcode() != MI->getOpcode()) {
+        StoresGroup.clear();
+        return;
+      }
+      StoresGroup.insert(SU);
+    }
+  }
+
+  // Value of 8 handles a known regression (with group of 20).
+  if (StoresGroup.size() < 8)
+    StoresGroup.clear();
 }
 
 void SystemZPreRASchedStrategy::initializeLatencyReduction() {
@@ -100,6 +178,35 @@ bool SystemZPreRASchedStrategy::definesCmp0Src(const MachineInstr *MI,
     assert(!isPhysRegDef(MO0) && "Did not expect physreg def!");
     if (isRegDef(MO0) && MO0.getReg() == Cmp0SrcReg)
       return true;
+  }
+  return false;
+}
+
+bool SystemZPreRASchedStrategy::isSchedLowCand(const SUnit *SU,
+                                               ScheduleDAGMILive *DAG) const {
+  // Extract the PressureChanges that all fp/vector or GR64/GR32/GRH32 regs
+  // affect respectively. misched-prera-pdiffs.mir tests against any future
+  // change in the PressureSets modelling, so simply hard-code them here.
+  int VR16PChange = 0, GRX32PChange = 0;
+  const PressureDiff &PDiff = DAG->getPressureDiff(SU);
+  for (const PressureChange &PC : PDiff) {
+    if (!PC.isValid())
+      break;
+    if (PC.getPSet() == SystemZ::VR16Bit)
+      VR16PChange = PC.getUnitInc();
+    else if (PC.getPSet() == SystemZ::GRX32Bit)
+      GRX32PChange = PC.getUnitInc();
+  }
+
+  // Return true for a (vreg) def when no uses become live. Prioritize
+  // FP/vector regs over GPRs.
+  const MachineOperand &MO0 = SU->getInstr()->getOperand(0);
+  if (isRegDef(MO0)) {
+    const TargetRegisterClass *RC = DAG->MRI.getRegClass(MO0.getReg());
+    int RegWeight = TRI->getRegClassWeight(RC).RegWeight;
+    bool VR16DefNoKill = VR16PChange == -RegWeight;
+    bool GRX32DefNoKill = GRX32PChange == -RegWeight;
+    return VR16DefNoKill || (!VR16PChange && GRX32DefNoKill);
   }
   return false;
 }
@@ -169,6 +276,26 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
     return TryCand.Reason != NoCand;
   }
 
+  auto isLivenessRelated = [&](const SUnit *SU) {
+    const MachineInstr *MI = SU->getInstr();
+    if (!RegionPolicy.ShouldTrackPressure || !MI->getNumOperands() ||
+        MI->isCopy())
+      return false;
+    assert(!isPhysRegDef(MI->getOperand(0)) && "Did not expect physreg def!");
+    return true;
+  };
+  auto isSchedLow = [&](const SUnit *SU) {
+    return isLivenessRelated(SU) && !HighSUs.count(SU) &&
+           isSchedLowCand(SU, DAG);
+  };
+  auto isSchedHigh = [&](const SUnit *SU) {
+    const MachineInstr *MI = SU->getInstr();
+    bool IsKillingStore =
+        isLivenessRelated(SU) && isStoreOfVReg(MI) &&
+        !DAG->getBotRPTracker().isRegLive(MI->getOperand(0).getReg());
+    return IsKillingStore && FirstStoreInGroupScheduled &&
+           StoresGroup.count(SU);
+  };
   auto shouldReallyReduceLatency = [&]() {
     if (shouldReduceLatency(Zone))
       if (const SUnit *HigherSU =
@@ -181,6 +308,23 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
       }
     return false;
   };
+
+  bool PreservesSchedLat_Cand =
+      Cand.SU->getHeight() <= Zone->getScheduledLatency();
+  bool SchedLow_Cand = PreservesSchedLat_Cand && isSchedLow(Cand.SU);
+  bool SchedHigh_Cand = isSchedHigh(Cand.SU);
+  bool PreservesSchedLat_TryC =
+      TryCand.SU->getHeight() <= Zone->getScheduledLatency();
+  bool SchedLow_TryC = PreservesSchedLat_TryC && isSchedLow(TryCand.SU);
+  bool SchedHigh_TryC = isSchedHigh(TryCand.SU);
+
+  // One of the SUs is a store that opens a live range.
+  if (tryLess(SchedHigh_TryC, SchedHigh_Cand, TryCand, Cand, LivenessReduce))
+    return TryCand.Reason != NoCand;
+
+  // One of the SUs closes a live range and preserves the scheduled latency.
+  if (tryGreater(SchedLow_TryC, SchedLow_Cand, TryCand, Cand, LivenessReduce))
+    return TryCand.Reason != NoCand;
 
   // One or both SUs increase the scheduled latency.
   if (shouldReallyReduceLatency()) {
@@ -212,15 +356,13 @@ void SystemZPreRASchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
                                            MachineBasicBlock::iterator End,
                                            unsigned NumRegionInstrs) {
   // Avoid setting up the register pressure tracker for small regions to save
-  // compile time. Currently only used for computeCyclicCriticalPath() which
-  // is used for single block loops.
-  MachineBasicBlock *MBB = Begin->getParent();
-  RegionPolicy.ShouldTrackPressure =
-    MBB->isSuccessor(MBB) && NumRegionInstrs >= 8;
+  // compile time.
+  RegionPolicy.ShouldTrackPressure = NumRegionInstrs >= 8;
 
   // These heuristics has so far seemed to work better without adding a
   // top-down boundary.
   RegionPolicy.OnlyBottomUp = true;
+
   BotIdx = NumRegionInstrs - 1;
   this->NumRegionInstrs = NumRegionInstrs;
 }
@@ -228,8 +370,16 @@ void SystemZPreRASchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
 void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
   GenericScheduler::initialize(dag);
 
+  NumLeft = DAG->SUnits.size();
   RemLat = ~0U;
   Cmp0SrcReg = SystemZ::NoRegister;
+
+  initializeLivenessReduction();
+
+  initializeStoresGroup();
+  LLVM_DEBUG(if (!StoresGroup.empty()) dbgs()
+                 << "Has StoresGroup of " << StoresGroup.size() << " stores.\n";
+             else dbgs() << "No StoresGroup.\n";);
 
   initializeLatencyReduction();
   LLVM_DEBUG(dbgs() << "Latency scheduling " << (HasDataSequences ? "" : "not ")
@@ -239,6 +389,11 @@ void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
 void SystemZPreRASchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
   GenericScheduler::schedNode(SU, IsTopNode);
 
+  if (!FirstStoreInGroupScheduled && StoresGroup.count(SU))
+    FirstStoreInGroupScheduled = true;
+
+  assert(NumLeft > 0);
+  --NumLeft;
   RemLat = ~0U;
 
   const SystemZInstrInfo *TII = static_cast<const SystemZInstrInfo *>(DAG->TII);
