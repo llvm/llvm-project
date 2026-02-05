@@ -17,7 +17,6 @@
 #include "lldb/Utility/ProcessInfo.h"
 
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
-#include "Plugins/Process/Utility/RegisterContextFreeBSD_mips64.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_powerpc.h"
 #include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
 #include "Plugins/Process/Utility/RegisterContextLinux_i386.h"
@@ -98,9 +97,6 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       case llvm::Triple::ppc64:
       case llvm::Triple::ppc64le:
         reg_interface = new RegisterContextFreeBSD_powerpc64(arch);
-        break;
-      case llvm::Triple::mips64:
-        reg_interface = new RegisterContextFreeBSD_mips64(arch);
         break;
       case llvm::Triple::x86:
         reg_interface = new RegisterContextFreeBSD_i386(arch);

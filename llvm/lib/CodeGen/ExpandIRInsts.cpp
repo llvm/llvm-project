@@ -742,8 +742,8 @@ static void expandIToFP(Instruction *IToFP) {
   unsigned FloatWidth = PowerOf2Ceil(FPMantissaWidth);
   bool IsSigned = IToFP->getOpcode() == Instruction::SIToFP;
 
-  assert(BitWidth > FloatWidth && "Unexpected conversion. expandIToFP() "
-                                  "assumes integer width is larger than fp.");
+  assert(BitWidth >= FloatWidth && "Unexpected conversion. expandIToFP() "
+                                   "assumes integer width >= fp width.");
 
   Value *Temp1 =
       Builder.CreateShl(Builder.getIntN(BitWidth, 1),

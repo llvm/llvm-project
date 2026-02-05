@@ -12,7 +12,7 @@
 using namespace lldb_private;
 using namespace lldb;
 
-// http://svnweb.freebsd.org/base/head/sys/x86/include/reg.h
+// https://cgit.freebsd.org/src/tree/sys/x86/include/reg.h?h=stable/14
 struct GPR {
   uint32_t fs;
   uint32_t es;

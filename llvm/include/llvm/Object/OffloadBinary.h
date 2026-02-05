@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the binary format used for budingling device metadata with
+// This file contains the binary format used for bundling device metadata with
 // an associated device image. The data can then be stored inside a host object
 // file to create a fat binary and read by the linker. This is intended to be a
 // thin wrapper around the image itself. If this format becomes sufficiently
@@ -52,6 +52,13 @@ enum ImageKind : uint16_t {
   IMG_LAST,
 };
 
+/// Flags associated with the Entry.
+enum OffloadEntryFlags : uint32_t {
+  OIF_None = 0,
+  // Entry doesn't contain an image. Used to keep metadata only entries.
+  OIF_Metadata = (1 << 0),
+};
+
 /// A simple binary serialization of an offloading file. We use this format to
 /// embed the offloading image into the host executable so it can be extracted
 /// and used by the linker.
@@ -67,7 +74,7 @@ public:
   using string_iterator_range = iterator_range<string_iterator>;
 
   /// The current version of the binary used for backwards compatibility.
-  static const uint32_t Version = 1;
+  static const uint32_t Version = 2;
 
   /// The offloading metadata that will be serialized to a memory buffer.
   struct OffloadingImage {
@@ -78,12 +85,57 @@ public:
     std::unique_ptr<MemoryBuffer> Image;
   };
 
-  /// Attempt to parse the offloading binary stored in \p Data.
-  LLVM_ABI static Expected<std::unique_ptr<OffloadBinary>>
-      create(MemoryBufferRef);
+  struct Header {
+    uint8_t Magic[4] = {0x10, 0xFF, 0x10, 0xAD}; // 0x10FF10AD magic bytes.
+    uint32_t Version = OffloadBinary::Version;   // Version identifier.
+    uint64_t Size;          // Size in bytes of this entire binary.
+    uint64_t EntriesOffset; // Offset in bytes to the start of entries block.
+    uint64_t EntriesCount;  // Number of metadata entries in the binary.
+  };
 
-  /// Serialize the contents of \p File to a binary buffer to be read later.
-  LLVM_ABI static SmallString<0> write(const OffloadingImage &);
+  struct Entry {
+    ImageKind TheImageKind;     // The kind of the image stored.
+    OffloadKind TheOffloadKind; // The producer of this image.
+    uint32_t Flags;             // Additional flags associated with the entry.
+    uint64_t StringOffset;      // Offset in bytes to the string map.
+    uint64_t NumStrings;        // Number of entries in the string map.
+    uint64_t ImageOffset;       // Offset in bytes of the actual binary image.
+    uint64_t ImageSize;         // Size in bytes of the binary image.
+  };
+
+  struct StringEntry {
+    uint64_t KeyOffset;
+    uint64_t ValueOffset;
+    uint64_t ValueSize; // Size of the value in bytes.
+  };
+
+  struct StringEntryV1 {
+    uint64_t KeyOffset;
+    uint64_t ValueOffset;
+  };
+
+  /// Attempt to extract and validate the header from the offloading binary in
+  /// \p Buf.
+  LLVM_ABI
+  static Expected<const Header *> extractHeader(MemoryBufferRef Buf);
+
+  /// Attempt to parse the offloading binary stored in \p Buf.
+  /// For version 1 binaries, always returns a single OffloadBinary.
+  /// For version 2+ binaries:
+  ///   - If \p Index is provided, returns the OffloadBinary at that index.
+  ///   - If \p Index is std::nullopt, returns all OffloadBinary entries.
+  /// \param Buf The memory buffer containing the offload binary.
+  /// \param Index Optional index to select a specific entry. If not provided,
+  ///              all entries are returned (version 2+ only).
+  /// \returns An array of unique pointers to OffloadBinary objects, or an
+  /// error.
+  LLVM_ABI static Expected<SmallVector<std::unique_ptr<OffloadBinary>>>
+  create(MemoryBufferRef Buf, std::optional<uint64_t> Index = std::nullopt);
+
+  /// Serialize the contents of \p OffloadingData to a binary buffer to be read
+  /// later.
+  LLVM_ABI static SmallString<0>
+  write(ArrayRef<OffloadingImage> OffloadingData);
 
   static uint64_t getAlignment() { return 8; }
 
@@ -92,6 +144,7 @@ public:
   uint32_t getVersion() const { return TheHeader->Version; }
   uint32_t getFlags() const { return TheEntry->Flags; }
   uint64_t getSize() const { return TheHeader->Size; }
+  uint64_t getIndex() const { return Index; }
 
   StringRef getTriple() const { return getString("triple"); }
   StringRef getArch() const { return getString("arch"); }
@@ -106,39 +159,29 @@ public:
 
   static bool classof(const Binary *V) { return V->isOffloadFile(); }
 
-  struct Header {
-    uint8_t Magic[4] = {0x10, 0xFF, 0x10, 0xAD}; // 0x10FF10AD magic bytes.
-    uint32_t Version = OffloadBinary::Version;   // Version identifier.
-    uint64_t Size;        // Size in bytes of this entire binary.
-    uint64_t EntryOffset; // Offset of the metadata entry in bytes.
-    uint64_t EntrySize;   // Size of the metadata entry in bytes.
-  };
-
-  struct Entry {
-    ImageKind TheImageKind;     // The kind of the image stored.
-    OffloadKind TheOffloadKind; // The producer of this image.
-    uint32_t Flags;             // Additional flags associated with the image.
-    uint64_t StringOffset;      // Offset in bytes to the string map.
-    uint64_t NumStrings;        // Number of entries in the string map.
-    uint64_t ImageOffset;       // Offset in bytes of the actual binary image.
-    uint64_t ImageSize;         // Size in bytes of the binary image.
-  };
-
-  struct StringEntry {
-    uint64_t KeyOffset;
-    uint64_t ValueOffset;
-  };
-
 private:
   OffloadBinary(MemoryBufferRef Source, const Header *TheHeader,
-                const Entry *TheEntry)
+                const Entry *TheEntry, const uint64_t Index = 0)
       : Binary(Binary::ID_Offload, Source), Buffer(Source.getBufferStart()),
-        TheHeader(TheHeader), TheEntry(TheEntry) {
-    const StringEntry *StringMapBegin =
-        reinterpret_cast<const StringEntry *>(&Buffer[TheEntry->StringOffset]);
+        TheHeader(TheHeader), TheEntry(TheEntry), Index(Index) {
+    // StringEntryV1 and StringEntry have ABI compatible Key/ValueOffset fields,
+    // but different sizes, so we need to manually calculate offset.
+    const char *StringMapBegin = &Buffer[TheEntry->StringOffset];
+    const size_t StringEntrySize =
+        TheHeader->Version == 1 ? sizeof(StringEntryV1) : sizeof(StringEntry);
     for (uint64_t I = 0, E = TheEntry->NumStrings; I != E; ++I) {
-      StringRef Key = &Buffer[StringMapBegin[I].KeyOffset];
-      StringData[Key] = &Buffer[StringMapBegin[I].ValueOffset];
+      const char *StringEntryPtr = StringMapBegin + I * StringEntrySize;
+      const StringEntryV1 *EntryV1 =
+          reinterpret_cast<const StringEntryV1 *>(StringEntryPtr);
+      StringRef Key = &Buffer[EntryV1->KeyOffset];
+      if (TheHeader->Version == 1) {
+        StringData[Key] = &Buffer[EntryV1->ValueOffset];
+      } else {
+        const StringEntry *Entry =
+            reinterpret_cast<const StringEntry *>(StringEntryPtr);
+        StringData[Key] =
+            StringRef(&Buffer[Entry->ValueOffset], Entry->ValueSize);
+      }
     }
   }
 
@@ -152,10 +195,13 @@ private:
   const Header *TheHeader;
   /// Location of the metadata entries within the binary.
   const Entry *TheEntry;
+  /// Index of the entry in the list of entries serialized in the Buffer.
+  const uint64_t Index;
 };
 
-/// A class to contain the binary information for a single OffloadBinary that
-/// owns its memory.
+/// A class to contain the binary information for a single OffloadBinary.
+/// Memory is shared between multiple OffloadBinary instances read from
+/// the single serialized offload binary.
 class OffloadFile : public OwningBinary<OffloadBinary> {
 public:
   using TargetID = std::pair<StringRef, StringRef>;
@@ -171,11 +217,12 @@ public:
         getBinary()->getMemoryBufferRef().getBufferIdentifier());
 
     // This parsing should never fail because it has already been parsed.
-    auto NewBinaryOrErr = OffloadBinary::create(*Buffer);
+    auto NewBinaryOrErr =
+        OffloadBinary::create(*Buffer, getBinary()->getIndex());
     assert(NewBinaryOrErr && "Failed to parse a copy of the binary?");
     if (!NewBinaryOrErr)
       llvm::consumeError(NewBinaryOrErr.takeError());
-    return OffloadFile(std::move(*NewBinaryOrErr), std::move(Buffer));
+    return OffloadFile(std::move((*NewBinaryOrErr)[0]), std::move(Buffer));
   }
 
   /// We use the Triple and Architecture pair to group linker inputs together.

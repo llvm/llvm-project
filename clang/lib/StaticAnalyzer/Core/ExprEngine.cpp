@@ -2557,19 +2557,23 @@ static const LocationContext *getInlinedLocationContext(ExplodedNode *Node,
 }
 
 /// Block entrance.  (Update counters).
+/// FIXME: `BlockEdge &L` is only used for debug statistics, consider removing
+/// it and using `BlockEntrance &BE` (where `BlockEntrance` is a subtype of
+/// `ProgramPoint`) for statistical purposes.
 void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
-                                         NodeBuilderWithSinks &nodeBuilder,
+                                         const BlockEntrance &BE,
+                                         NodeBuilder &Builder,
                                          ExplodedNode *Pred) {
   // If we reach a loop which has a known bound (and meets
   // other constraints) then consider completely unrolling it.
   if(AMgr.options.ShouldUnrollLoops) {
     unsigned maxBlockVisitOnPath = AMgr.options.maxBlockVisitOnPath;
-    const Stmt *Term = nodeBuilder.getContext().getBlock()->getTerminatorStmt();
+    const Stmt *Term = Builder.getContext().getBlock()->getTerminatorStmt();
     if (Term) {
       ProgramStateRef NewState = updateLoopStack(Term, AMgr.getASTContext(),
                                                  Pred, maxBlockVisitOnPath);
       if (NewState != Pred->getState()) {
-        ExplodedNode *UpdatedNode = nodeBuilder.generateNode(NewState, Pred);
+        ExplodedNode *UpdatedNode = Builder.generateNode(BE, NewState, Pred);
         if (!UpdatedNode)
           return;
         Pred = UpdatedNode;
@@ -2582,10 +2586,10 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
 
   // If this block is terminated by a loop and it has already been visited the
   // maximum number of times, widen the loop.
-  unsigned int BlockCount = nodeBuilder.getContext().blockCount();
+  unsigned int BlockCount = Builder.getContext().blockCount();
   if (BlockCount == AMgr.options.maxBlockVisitOnPath - 1 &&
       AMgr.options.ShouldWidenLoops) {
-    const Stmt *Term = nodeBuilder.getContext().getBlock()->getTerminatorStmt();
+    const Stmt *Term = Builder.getContext().getBlock()->getTerminatorStmt();
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
       return;
 
@@ -2600,16 +2604,17 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     // Here we just pass the the first CFG element in the block.
     ProgramStateRef WidenedState =
         getWidenedLoopState(Pred->getState(), LCtx, BlockCount,
-                            *nodeBuilder.getContext().getBlock()->ref_begin());
-    nodeBuilder.generateNode(WidenedState, Pred);
+                            *Builder.getContext().getBlock()->ref_begin());
+    Builder.generateNode(BE, WidenedState, Pred);
     return;
   }
 
   // FIXME: Refactor this into a checker.
   if (BlockCount >= AMgr.options.maxBlockVisitOnPath) {
-    static SimpleProgramPointTag tag(TagProviderName, "Block count exceeded");
+    static SimpleProgramPointTag Tag(TagProviderName, "Block count exceeded");
+    const ProgramPoint TaggedLoc = BE.withTag(&Tag);
     const ExplodedNode *Sink =
-                   nodeBuilder.generateSink(Pred->getState(), Pred, &tag);
+        Builder.generateSink(TaggedLoc, Pred->getState(), Pred);
 
     if (const LocationContext *LC = getInlinedLocationContext(Pred, G)) {
       // FIXME: This will unconditionally prevent inlining this function (even
