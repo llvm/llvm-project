@@ -59,6 +59,22 @@ public:
 
   llvm::ArrayRef<uint8_t> GetData() const override;
 
+  uint64_t GetByteSize() const override { return GetVirtualByteSize(); }
+
+  lldb::offset_t BytesLeft(lldb::offset_t offset) const override {
+    return PhysicalBytesLeft(offset);
+  }
+
+  lldb::offset_t SetData(const void *bytes, lldb::offset_t length,
+                         lldb::ByteOrder byte_order) override;
+
+  lldb::offset_t SetData(const DataExtractor &data, lldb::offset_t offset,
+                         lldb::offset_t length) override;
+
+  lldb::offset_t SetData(const lldb::DataBufferSP &data_sp,
+                         lldb::offset_t offset = 0,
+                         lldb::offset_t length = LLDB_INVALID_OFFSET) override;
+
   /// Unchecked overrides
   /// @{
   uint8_t GetU8_unchecked(lldb::offset_t *offset_ptr) const override;
@@ -75,6 +91,11 @@ protected:
   /// does not cross entry boundaries.
   bool ValidateVirtualRead(lldb::offset_t virtual_addr,
                            lldb::offset_t length) const;
+
+  uint64_t GetVirtualByteSize() const;
+  uint64_t GetPhysicalByteSize() const;
+  lldb::offset_t VirtualBytesLeft(lldb::offset_t virtual_offset) const;
+  lldb::offset_t PhysicalBytesLeft(lldb::offset_t physical_offset) const;
 
 private:
   LookupTable m_lookup_table;
