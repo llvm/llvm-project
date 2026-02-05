@@ -35,8 +35,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/TextEncoding.h"
 
 #include <optional>
 
@@ -3621,15 +3621,24 @@ llvm::GlobalVariable *ItaniumRTTIBuilder::GetAddrOfTypeName(
   // mangled name of the typename, so we can just index into it in order to
   // get the mangled name of the type.
   llvm::Constant *Init;
+
+  SmallString<256> ConvertedName;
+  llvm::ErrorOr<llvm::TextEncodingConverter> Converter =
+      llvm::TextEncodingConverter::create(
+          "UTF-8", CGM.getTriple().getDefaultNarrowTextEncoding());
+  if (Converter)
+    Converter->convert(Name.substr(4), ConvertedName);
+  else
+    ConvertedName = Name.substr(4);
+
   if (CGM.getTriple().isOSzOS()) {
     // On z/OS, typename is stored as 2 encodings: EBCDIC followed by ASCII.
-    SmallString<256> DualEncodedName;
-    llvm::ConverterEBCDIC::convertToEBCDIC(Name.substr(4), DualEncodedName);
+    SmallString<256> DualEncodedName = ConvertedName;
     DualEncodedName += '\0';
     DualEncodedName += Name.substr(4);
     Init = llvm::ConstantDataArray::getString(VMContext, DualEncodedName);
   } else
-    Init = llvm::ConstantDataArray::getString(VMContext, Name.substr(4));
+    Init = llvm::ConstantDataArray::getString(VMContext, ConvertedName);
 
   auto Align = CGM.getContext().getTypeAlignInChars(CGM.getContext().CharTy);
 
