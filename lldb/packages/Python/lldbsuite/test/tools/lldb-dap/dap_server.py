@@ -1143,18 +1143,24 @@ class DebugCommunication(object):
     def request_evaluate(
         self,
         expression,
-        frameIndex=0,
+        frameIndex: Optional[int] = 0,
         threadId=None,
         context=None,
         is_hex: Optional[bool] = None,
     ) -> Response:
-        stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
-        if stackFrame is None:
-            raise ValueError("invalid frameIndex")
         args_dict = {
             "expression": expression,
-            "frameId": stackFrame["id"],
         }
+
+        if frameIndex is not None:
+            if threadId is None:
+                threadId = self.get_thread_id()
+            stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
+
+            if stackFrame is None:
+                raise ValueError("invalid frameIndex")
+            args_dict["frameId"] = stackFrame["id"]
+
         if context:
             args_dict["context"] = context
         if is_hex is not None:
