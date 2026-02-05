@@ -189,9 +189,8 @@ AnyValue AnyValue::getPoisonValue(Context &Ctx, Type *Ty) {
   if (auto *StructTy = dyn_cast<StructType>(Ty)) {
     std::vector<AnyValue> Elements;
     Elements.reserve(StructTy->getNumElements());
-    for (uint32_t I = 0, E = StructTy->getNumElements(); I != E; ++I) {
+    for (uint32_t I = 0, E = StructTy->getNumElements(); I != E; ++I)
       Elements.push_back(getPoisonValue(Ctx, StructTy->getElementType(I)));
-    }
     return AnyValue(std::move(Elements));
   }
   llvm_unreachable("Unsupported type");
@@ -217,9 +216,8 @@ AnyValue AnyValue::getNullValue(Context &Ctx, Type *Ty) {
   if (auto *StructTy = dyn_cast<StructType>(Ty)) {
     std::vector<AnyValue> Elements;
     Elements.reserve(StructTy->getNumElements());
-    for (uint32_t I = 0, E = StructTy->getNumElements(); I != E; ++I) {
+    for (uint32_t I = 0, E = StructTy->getNumElements(); I != E; ++I)
       Elements.push_back(getNullValue(Ctx, StructTy->getElementType(I)));
-    }
     return AnyValue(std::move(Elements));
   }
   llvm_unreachable("Unsupported type");
