@@ -166,7 +166,7 @@ body:             |
   ; CHECK-NEXT:   %gp_phi2:gpr32 = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
   ; CHECK-NEXT:   %gp_phi3:gpr32 = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
   ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG %fp_phi, %subreg.hsub
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   %use_fp_phi:gpr32 = PHI %gpr_1, %bb.0, [[COPY4]], %bb.4
