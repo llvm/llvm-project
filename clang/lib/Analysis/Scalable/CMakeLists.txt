@@ -9,6 +9,7 @@ add_clang_library(clangAnalysisScalable
   Model/EntityName.cpp
   Serialization/JSONFormat.cpp
   Serialization/SerializationFormat.cpp
+  Serialization/SerializationFormatRegistry.cpp
   TUSummary/ExtractorRegistry.cpp
 
   LINK_LIBS

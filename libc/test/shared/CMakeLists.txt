@@ -56,6 +56,7 @@ add_fp_unittest(
     libc.src.__support.math.expf
     libc.src.__support.math.expf16
     libc.src.__support.math.f16fma
+    libc.src.__support.math.f16fmaf128
     libc.src.__support.math.f16fmal
     libc.src.__support.math.f16sqrt
     libc.src.__support.math.f16sqrtl
