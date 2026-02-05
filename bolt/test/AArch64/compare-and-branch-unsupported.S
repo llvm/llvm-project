@@ -45,4 +45,4 @@ large_function:
 ## Force relocation mode.
 .reloc 0, R_AARCH64_NONE
 
-# CHECK: Short range branch {{.*}} not supported outside compact code model
+# CHECK: BOLT-ERROR: short range branch not supported outside compact code model
