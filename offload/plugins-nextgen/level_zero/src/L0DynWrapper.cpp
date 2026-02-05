@@ -111,6 +111,24 @@ static bool loadLevelZero() {
   ODBG(OLDT_Init) << "Trying to load " << L0Library;
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
       llvm::sys::DynamicLibrary::getPermanentLibrary(L0Library, &ErrMsg));
+#ifndef _WIN32
+  if (!DynlibHandle->isValid()) {
+    // Try to open loader with major version number. It is repeated from the
+    // current version down to 1.
+    std::string LoaderName{LEVEL_ZERO_LIBRARY};
+    LoaderName += ".";
+    constexpr int MinZeVersion{1};
+    int CurrVersion = ZE_MAJOR_VERSION(ZE_API_VERSION_CURRENT);
+    for (int I = CurrVersion; I >= MinZeVersion && !DynlibHandle->isValid();
+         I--) {
+      std::string LoaderVer{LoaderName + std::to_string(I)};
+      ODBG(OLDT_Init) << "Trying to load " << LoaderVer;
+      DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
+          llvm::sys::DynamicLibrary::getPermanentLibrary(LoaderVer.c_str(),
+                                                         &ErrMsg));
+    }
+  }
+#endif
   if (!DynlibHandle->isValid()) {
     if (ErrMsg.empty())
       ErrMsg = "unknown error";
