@@ -2394,10 +2394,7 @@ static bool addNoRecurseAttrsTopDown(Function &F) {
   // also detects if F is directly recursive as F is not yet marked as
   // a norecurse function.
   for (auto &U : F.uses()) {
-    auto *I = dyn_cast<Instruction>(U.getUser());
-    if (!I)
-      return false;
-    CallBase *CB = dyn_cast<CallBase>(I);
+    const CallBase *CB = dyn_cast<CallBase>(U.getUser());
     if (!CB || !CB->isCallee(&U) ||
         !CB->getParent()->getParent()->doesNotRecurse())
       return false;
