@@ -16,6 +16,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
+#include "mlir/Dialect/OpenMP/Utils/Utils.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMPCommon.h"
@@ -1143,81 +1144,6 @@ struct DeferredStore {
 };
 } // namespace
 
-/// Check whether allocations for the given operation might potentially have to
-/// be done in device shared memory. That means we're compiling for an
-/// offloading target, the operation is neither an `omp::TargetOp` nor nested
-/// inside of one, or it is and that target region represents a Generic
-/// (non-SPMD) kernel.
-///
-/// This represents a necessary but not sufficient set of conditions to use
-/// device shared memory in place of regular allocas. For some variables, the
-/// associated OpenMP construct or their uses might also need to be taken into
-/// account.
-static bool
-mightAllocInDeviceSharedMemory(Operation &op,
-                               const llvm::OpenMPIRBuilder &ompBuilder) {
-  if (!ompBuilder.Config.isTargetDevice())
-    return false;
-
-  auto targetOp = dyn_cast<omp::TargetOp>(op);
-  if (!targetOp)
-    targetOp = op.getParentOfType<omp::TargetOp>();
-
-  return !targetOp ||
-         targetOp.getKernelExecFlags(targetOp.getInnermostCapturedOmpOp()) ==
-             omp::TargetExecMode::generic;
-}
-
-/// Check whether the entry block argument representing the private copy of a
-/// variable in an OpenMP construct must be allocated in device shared memory,
-/// based on what the uses of that copy are.
-///
-/// This must only be called if a previous call to
-/// \c mightAllocInDeviceSharedMemory has already returned \c true for the
-/// operation that owns the specified block argument.
-static bool mustAllocPrivateVarInDeviceSharedMemory(BlockArgument value) {
-  Operation *parentOp = value.getOwner()->getParentOp();
-  auto moduleOp = parentOp->getParentOfType<ModuleOp>();
-  for (auto *user : value.getUsers()) {
-    if (auto parallelOp = dyn_cast<omp::ParallelOp>(user)) {
-      if (llvm::is_contained(parallelOp.getReductionVars(), value))
-        return true;
-    } else if (auto callOp = dyn_cast<CallOpInterface>(user)) {
-      if (llvm::is_contained(callOp.getArgOperands(), value))
-        return true;
-    }
-
-    if (auto parallelOp = user->getParentOfType<omp::ParallelOp>()) {
-      if (parentOp->isProperAncestor(parallelOp)) {
-        // If it is used directly inside of a parallel region, skip private
-        // clause uses.
-        bool isPrivateClauseUse = false;
-        if (auto argIface = dyn_cast<omp::BlockArgOpenMPOpInterface>(user)) {
-          if (auto privateSyms = llvm::cast_or_null<ArrayAttr>(
-                  user->getAttr("private_syms"))) {
-            for (auto [var, sym] :
-                 llvm::zip_equal(argIface.getPrivateVars(), privateSyms)) {
-              if (var != value)
-                continue;
-
-              auto privateOp = cast<omp::PrivateClauseOp>(
-                  moduleOp.lookupSymbol(cast<SymbolRefAttr>(sym)));
-              if (privateOp.getCopyRegion().empty()) {
-                isPrivateClauseUse = true;
-                break;
-              }
-            }
-          }
-        }
-        if (!isPrivateClauseUse)
-          return true;
-      }
-    }
-  }
-
-  return false;
-}
-
 /// Allocate space for privatized reduction variables.
 /// `deferredStores` contains information to create store operations which needs
 /// to be inserted after all allocas
@@ -1236,8 +1162,7 @@ allocReductionVars(T op, ArrayRef<BlockArgument> reductionArgs,
   builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  bool useDeviceSharedMem = isa<omp::TeamsOp>(*op) &&
-                            mightAllocInDeviceSharedMemory(*op, *ompBuilder);
+  bool useDeviceSharedMem = omp::opInSharedDeviceContext(*op);
 
   // delay creating stores until after all allocas
   deferredStores.reserve(op.getNumReductionVars());
@@ -1368,8 +1293,7 @@ initReductionVars(OP op, ArrayRef<BlockArgument> reductionArgs,
     return success();
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  bool useDeviceSharedMem = isa<omp::TeamsOp>(*op) &&
-                            mightAllocInDeviceSharedMemory(*op, *ompBuilder);
+  bool useDeviceSharedMem = omp::opInSharedDeviceContext(*op);
 
   llvm::BasicBlock *initBlock = splitBB(builder, true, "omp.reduction.init");
   auto allocaIP = llvm::IRBuilderBase::InsertPoint(
@@ -1612,8 +1536,7 @@ static LogicalResult createReductionsAndCleanup(
       reductionRegions, privateReductionVariables, moduleTranslation, builder,
       "omp.reduction.cleanup");
 
-  bool useDeviceSharedMem = isa<omp::TeamsOp>(*op) &&
-                            mightAllocInDeviceSharedMemory(*op, *ompBuilder);
+  bool useDeviceSharedMem = omp::opInSharedDeviceContext(*op);
   if (useDeviceSharedMem) {
     for (auto [var, reductionDecl] :
          llvm::zip_equal(privateReductionVariables, reductionDecls))
@@ -1804,9 +1727,7 @@ allocatePrivateVars(T op, llvm::IRBuilderBase &builder,
   llvm::BasicBlock *afterAllocas = allocaTerminator->getSuccessor(0);
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  bool mightUseDeviceSharedMem =
-      isa<omp::TargetOp, omp::TeamsOp, omp::DistributeOp>(*op) &&
-      mightAllocInDeviceSharedMemory(*op, *ompBuilder);
+  bool mightUseDeviceSharedMem = omp::opInSharedDeviceContext(*op);
   unsigned int allocaAS =
       moduleTranslation.getLLVMModule()->getDataLayout().getAllocaAddrSpace();
   unsigned int defaultAS = moduleTranslation.getLLVMModule()
@@ -1820,8 +1741,7 @@ allocatePrivateVars(T op, llvm::IRBuilderBase &builder,
         moduleTranslation.convertType(privDecl.getType());
     builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
     llvm::Value *llvmPrivateVar = nullptr;
-    if (mightUseDeviceSharedMem &&
-        mustAllocPrivateVarInDeviceSharedMemory(blockArg)) {
+    if (mightUseDeviceSharedMem && omp::allocaUsesRequireSharedMem(blockArg)) {
       llvmPrivateVar = ompBuilder->createOMPAllocShared(builder, llvmAllocType);
     } else {
       llvmPrivateVar = builder.CreateAlloca(
@@ -1958,14 +1878,11 @@ cleanupPrivateVars(T op, llvm::IRBuilderBase &builder,
                                 "`omp.private` op in");
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
-  bool mightUseDeviceSharedMem =
-      isa<omp::TargetOp, omp::TeamsOp, omp::DistributeOp>(*op) &&
-      mightAllocInDeviceSharedMemory(*op, *ompBuilder);
+  bool mightUseDeviceSharedMem = omp::opInSharedDeviceContext(*op);
   for (auto [privDecl, llvmPrivVar, blockArg] :
        llvm::zip_equal(privateVarsInfo.privatizers, privateVarsInfo.llvmVars,
                        privateVarsInfo.blockArgs)) {
-    if (mightUseDeviceSharedMem &&
-        mustAllocPrivateVarInDeviceSharedMemory(blockArg)) {
+    if (mightUseDeviceSharedMem && omp::allocaUsesRequireSharedMem(blockArg)) {
       ompBuilder->createOMPFreeShared(
           builder, llvmPrivVar,
           moduleTranslation.convertType(privDecl.getType()));
@@ -6262,8 +6179,8 @@ static llvm::IRBuilderBase::InsertPoint createDeviceArgumentAccessor(
 
   // Create the allocation for the argument.
   llvm::Value *v = nullptr;
-  if (mightAllocInDeviceSharedMemory(*targetOp, ompBuilder) &&
-      mustAllocPrivateVarInDeviceSharedMemory(mlirArg)) {
+  if (omp::opInSharedDeviceContext(*targetOp) &&
+      omp::allocaUsesRequireSharedMem(mlirArg)) {
     // Use the beginning of the codeGenIP rather than the usual allocation point
     // for shared memory allocations because otherwise these would be done prior
     // to the target initialization call. Also, the exit block (where the
