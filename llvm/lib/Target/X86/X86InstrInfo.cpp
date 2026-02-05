@@ -10502,7 +10502,7 @@ struct CGBR : public MachineFunctionPass {
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
-} // llvm/lib/Target/X86/X86InstrInfo.cppnamespace
+} // namespace
 
 char CGBR::ID = 0;
 FunctionPass *llvm::createX86GlobalBaseRegPass() { return new CGBR(); }

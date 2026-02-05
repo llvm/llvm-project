@@ -463,8 +463,8 @@ enum : unsigned {
   PTR32_UPTR = 271,
   PTR64 = 272
 };
-} // namespace X86AS
+} // End X86AS namespace
 
-} // namespace llvm
+} // End llvm namespace
 
 #endif
