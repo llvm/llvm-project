@@ -44,6 +44,7 @@
 #include "mlir/Conversion/MathToFuncs/MathToFuncs.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MathToLibm/MathToLibm.h"
+#include "mlir/Conversion/MathToNVVM/MathToNVVM.h"
 #include "mlir/Conversion/MathToROCDL/MathToROCDL.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
@@ -4365,6 +4366,7 @@ public:
     mlir::OpPassManager mathConversionPM("builtin.module");
 
     bool isAMDGCN = fir::getTargetTriple(mod).isAMDGCN();
+    bool isNVPTX = fir::getTargetTriple(mod).isNVPTX();
     // If compiling for AMD target some math operations must be lowered to AMD
     // GPU library calls, the rest can be converted to LLVM intrinsics, which
     // is handled in the mathToLLVM conversion. The lowering to libm calls is
@@ -4373,6 +4375,10 @@ public:
       mathConversionPM.addPass(mlir::createConvertMathToROCDL());
       mathConversionPM.addPass(mlir::createConvertComplexToROCDLLibraryCalls());
     }
+    // If compiling for NVIDIA target some math operations must be lowered to
+    // NVVM libdevice calls.
+    if (isNVPTX)
+      mathConversionPM.addPass(mlir::createConvertMathToNVVM());
 
     // Convert math::FPowI operations to inline implementation
     // only if the exponent's width is greater than 32, otherwise,
@@ -4427,7 +4433,7 @@ public:
     mlir::cf::populateAssertToLLVMConversionPattern(typeConverter, pattern);
     // Math operations that have not been converted yet must be converted
     // to Libm.
-    if (!isAMDGCN)
+    if (!isAMDGCN && !isNVPTX)
       mlir::populateMathToLibmConversionPatterns(pattern);
     mlir::populateComplexToLLVMConversionPatterns(typeConverter, pattern);
     mlir::index::populateIndexToLLVMConversionPatterns(typeConverter, pattern);
