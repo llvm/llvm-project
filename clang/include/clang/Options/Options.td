@@ -5879,7 +5879,7 @@ def mstackprotector_guard_record
     : Flag<["-"], "mstack-protector-guard-record">,
       HelpText<
           "Generate a __stack_protector_loc section entry for each load of "
-          "the stackguard address.">,
+          "the stack-protector guard address.">,
       Visibility<[ClangOption, CC1Option]>,
       Group<m_Group>,
       MarshallingInfoFlag<CodeGenOpts<"StackProtectorGuardRecord">>;
