@@ -244,14 +244,12 @@ The following people are responsible for decisions involving ABI.
 
 Itanium ABI
 ~~~~~~~~~~~
-| John McCall
-| rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)
 
 
 Microsoft ABI
 ~~~~~~~~~~~~~
 | Reid Kleckner
-| rnk\@google.com (email), rnk (Phabricator), rnk (GitHub)
+| rnk\@llvm.org (email), rnk (GitHub), rnk (Discourse), rnk (Discord), rnk (Phabricator)
 
 
 ARM EABI
@@ -299,7 +297,7 @@ CMake integration
 General Windows support
 ~~~~~~~~~~~~~~~~~~~~~~~
 | Reid Kleckner
-| rnk\@google.com (email), rnk (Phabricator), rnk (GitHub)
+| rnk\@llvm.org (email), rnk (GitHub), rnk (Discourse), rnk (Discord), rnk (Phabricator)
 
 
 Incremental compilation, REPLs, clang-repl
@@ -340,8 +338,8 @@ C++ Defect Reports
 
 Objective-C/C++ conformance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-| John McCall
-| rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)
+| Akira Hatanaka
+| ahatanak\@gmail.com,  ahatanak (GitHub), ahatanak4220 (Discord), ahatanak (Discourse)
 
 
 OpenMP conformance
@@ -403,5 +401,5 @@ Inactive component maintainers
 | Manuel Klimek (klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)) -- Tooling, AST matchers
 | Dmitri Gribenko (gribozavr\@gmail.com (email), gribozavr (Phabricator), gribozavr (GitHub)) -- Analysis & CFG
 | Tom Honermann (tom\@honermann.net (email), tahonermann (Phabricator), tahonermann (GitHub)) -- Text Encodings
-| John McCall (rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)) -- Clang LLVM IR generation
+| John McCall (rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)) -- Clang LLVM IR generation, Objective-C/C++ conformance, Itanium ABI
 | John Ericson (git\@johnericson.me (email), Ericson2314 (Phabricator), Ericson2314 (GitHub)) -- CMake Integration

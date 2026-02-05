@@ -22387,6 +22387,6 @@ define void @flat_agent_atomic_fadd_noret_v2bf16__amdgpu_no_fine_grained_memory_
 }
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #1 = { nounwind denormal_fpenv(float: preservesign) }
 
 !0 = !{}

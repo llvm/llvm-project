@@ -11330,6 +11330,8 @@ def err_builtin_requires_language : Error<"'%0' is only available in %1">;
 
 def err_constant_integer_arg_type : Error<
   "argument to %0 must be a constant integer">;
+def err_constant_integer_last_arg_type
+    : Error<"last argument to %0 must be a constant integer">;
 
 def ext_mixed_decls_code : Extension<
   "mixing declarations and code is a C99 extension">,
