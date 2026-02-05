@@ -9116,12 +9116,25 @@ def fixedpoint_vec_xform : SDNodeXForm<timm, [{
   (void)N;
   return V;
 }]>;
+def gi_fixedpoint_vec_xform : GICustomOperandRenderer<"renderFixedPointXForm">,
+  GISDNodeXFormEquiv<fixedpoint_vec_xform>;
 
 def fixedpoint_v2f64 : fixedpoint_vec_f64<v2f64>;
 def fixedpoint_v2f32 : fixedpoint_vec_f32<v2f32>;
 def fixedpoint_v4f32 : fixedpoint_vec_f32<v4f32>;
 def fixedpoint_v4f16 : fixedpoint_vec_f16<v4f16>;
 def fixedpoint_v8f16 : fixedpoint_vec_f16<v8f16>;
+
+def gi_fixedpoint_v2f64 : GIComplexOperandMatcher<v2s64, "selectCVTFixedPointVec">,
+                          GIComplexPatternEquiv<fixedpoint_v2f64>;
+def gi_fixedpoint_v2f32 : GIComplexOperandMatcher<v2s32, "selectCVTFixedPointVec">,
+                          GIComplexPatternEquiv<fixedpoint_v2f32>;
+def gi_fixedpoint_v4f32 : GIComplexOperandMatcher<v4s32, "selectCVTFixedPointVec">,
+                          GIComplexPatternEquiv<fixedpoint_v4f32>;
+def gi_fixedpoint_v4f16 : GIComplexOperandMatcher<v4s16, "selectCVTFixedPointVec">,
+                          GIComplexPatternEquiv<fixedpoint_v4f16>;
+def gi_fixedpoint_v8f16 : GIComplexOperandMatcher<v8s16, "selectCVTFixedPointVec">,
+                          GIComplexPatternEquiv<fixedpoint_v8f16>;
 
 let Predicates = [HasNEON] in {
 def : Pat<(v2f32 (sint_to_fp (v2i32 (AArch64vashr_exact v2i32:$Vn, i32:$shift)))),
@@ -9161,11 +9174,15 @@ multiclass FCVTPat<ValueType FVT, ValueType IVT, ValueType ScalarVT, RegisterOpe
             (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
   def : Pat<(IVT (fp_to_sint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
             (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+  def : Pat<(IVT (fp_to_sint_sat_gi (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
 
   // fptoui(fmul(x, power2)) -> FCVTZU_shift x, log2(power2)
   def : Pat<(IVT (fp_to_uint (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
             (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
   def : Pat<(IVT (fp_to_uint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+  def : Pat<(IVT (fp_to_uint_sat_gi (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
             (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
 }
 
