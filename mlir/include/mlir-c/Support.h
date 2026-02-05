@@ -162,8 +162,14 @@ MLIR_CAPI_EXPORTED void mlirLlvmThreadPoolDestroy(MlirLlvmThreadPool pool);
 
 /// Create a raw_fd_ostream for the given path. This wrapper is needed because
 /// std::ostream does not provide the file sharing semantics required on
-/// Windows. On failure, returns a null stream and invokes the optional error
-/// callback with the error message.
+/// Windows.
+/// - `path`: output file path.
+/// - `binary`: controls text vs binary mode.
+/// - `errorCallback`: called with an error message on failure (optional).
+/// - `userData`: forwarded to `errorCallback` so it can copy the error message
+///   into caller-owned storage (e.g., a `std::string`).
+/// On failure, returns a null stream and invokes the optional error callback
+/// with the error message.
 MLIR_CAPI_EXPORTED MlirLlvmRawFdOStream
 mlirLlvmRawFdOStreamCreate(const char *path, bool binary,
                            MlirStringCallback errorCallback, void *userData);
