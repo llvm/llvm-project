@@ -2720,7 +2720,7 @@ std::optional<DenormalFPEnv> LLParser::parseDenormalFPEnvAttr() {
   Lex.Lex();
 
   if (parseToken(lltok::lparen, "expected '('"))
-    return std::nullopt;
+    return {};
 
   DenormalMode DefaultMode = DenormalMode::getIEEE();
   DenormalMode F32Mode = DenormalMode::getInvalid();
@@ -2757,10 +2757,8 @@ std::optional<DenormalFPEnv> LLParser::parseDenormalFPEnvAttr() {
     F32Mode = *ParsedF32Mode;
   }
 
-  if (!EatIfPresent(lltok::rparen)) {
-    tokError("unterminated denormal_fpenv");
+  if (parseToken(lltok::rparen, "unterminated denormal_fpenv"))
     return {};
-  }
 
   return DenormalFPEnv(DefaultMode, F32Mode);
 }

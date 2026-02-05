@@ -953,9 +953,6 @@ def LLVM_DenormalFPEnvAttr : LLVM_Attr<"DenormalFPEnv", "denormal_fpenv"> {
                         "DenormalModeKind":$default_input_mode,
                         "DenormalModeKind":$float_output_mode,
                         "DenormalModeKind":$float_input_mode);
-  let extraClassDeclaration = [{
-     bool isReadWrite();
-  }];
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
