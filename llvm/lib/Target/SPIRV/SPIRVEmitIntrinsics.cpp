@@ -1642,10 +1642,10 @@ Instruction *SPIRVEmitIntrinsics::visitIntrinsicInst(IntrinsicInst &I) {
   Args.push_back(/* inBounds= */ B.getInt1(true));
   Args.push_back(I.getOperand(0));
   Args.push_back(/* zero index */ B.getInt32(0));
-  for (unsigned I = 0; I < SGEP->getNumIndices(); ++I)
-    Args.push_back(SGEP->getIndexOperand(I));
+  for (unsigned J = 0; J < SGEP->getNumIndices(); ++J)
+    Args.push_back(SGEP->getIndexOperand(J));
 
-  auto *NewI = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
+  auto *NewI = B.CreateIntrinsic(Intrinsic::spv_gep, Types, Args);
   replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
 }
