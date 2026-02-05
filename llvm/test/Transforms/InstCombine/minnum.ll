@@ -486,6 +486,47 @@ define float @reduce_precision_multi_use_2(float %x, float %y, ptr %p, ptr %p2) 
   ret float %trunc
 }
 
+define float @reduce_precision_const(float %x) {
+; CHECK-LABEL: @reduce_precision_const(
+; CHECK-NEXT:    [[X_EXT:%.*]] = fpext float [[X:%.*]] to double
+; CHECK-NEXT:    [[MINNUM:%.*]] = call double @llvm.minnum.f64(double [[X_EXT]], double 1.000000e+00)
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[MINNUM]] to float
+; CHECK-NEXT:    ret float [[TRUNC]]
+;
+  %x.ext = fpext float %x to double
+  %minnum = call double @llvm.minnum.f64(double %x.ext, double 1.0)
+  %trunc = fptrunc double %minnum to float
+  ret float %trunc
+}
+
+define float @reduce_precision_const_not_lossless(float %x) {
+; CHECK-LABEL: @reduce_precision_const_not_lossless(
+; CHECK-NEXT:    [[X_EXT:%.*]] = fpext float [[X:%.*]] to double
+; CHECK-NEXT:    [[MINNUM:%.*]] = call double @llvm.minnum.f64(double [[X_EXT]], double 1.000000e-01)
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[MINNUM]] to float
+; CHECK-NEXT:    ret float [[TRUNC]]
+;
+  %x.ext = fpext float %x to double
+  %minnum = call double @llvm.minnum.f64(double %x.ext, double 0.1)
+  %trunc = fptrunc double %minnum to float
+  ret float %trunc
+}
+
+define float @reduce_precision_const_multi_use(float %x) {
+; CHECK-LABEL: @reduce_precision_const_multi_use(
+; CHECK-NEXT:    [[X_EXT:%.*]] = fpext float [[X:%.*]] to double
+; CHECK-NEXT:    call void @use(double [[X_EXT]])
+; CHECK-NEXT:    [[MINNUM:%.*]] = call double @llvm.minnum.f64(double [[X_EXT]], double 1.000000e+00)
+; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[MINNUM]] to float
+; CHECK-NEXT:    ret float [[TRUNC]]
+;
+  %x.ext = fpext float %x to double
+  call void @use(double %x.ext)
+  %minnum = call double @llvm.minnum.f64(double %x.ext, double 1.0)
+  %trunc = fptrunc double %minnum to float
+  ret float %trunc
+}
+
 define float @negated_op(float %x) {
 ; CHECK-LABEL: @negated_op(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
