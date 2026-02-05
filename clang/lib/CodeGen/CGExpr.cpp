@@ -181,9 +181,10 @@ RawAddress CodeGenFunction::CreateDefaultAlignTempAlloca(llvm::Type *Ty,
   return CreateTempAlloca(Ty, Align, Name);
 }
 
-RawAddress CodeGenFunction::CreateIRTemp(QualType Ty, const Twine &Name) {
+RawAddress CodeGenFunction::CreateIRTempWithoutCast(QualType Ty,
+                                                    const Twine &Name) {
   CharUnits Align = getContext().getTypeAlignInChars(Ty);
-  return CreateTempAlloca(ConvertType(Ty), Align, Name);
+  return CreateTempAllocaWithoutCast(ConvertType(Ty), Align, Name, nullptr);
 }
 
 RawAddress CodeGenFunction::CreateMemTemp(QualType Ty, const Twine &Name,
@@ -5824,8 +5825,9 @@ std::optional<LValue> HandleConditionalOperatorLValueSimpleCase(
 
     if (!CGF.ContainsLabel(Dead)) {
       // If the true case is live, we need to track its region.
-      if (CondExprBool)
-        CGF.incrementProfileCounter(E);
+      CGF.incrementProfileCounter(CondExprBool ? CGF.UseExecPath
+                                               : CGF.UseSkipPath,
+                                  E, /*UseBoth=*/true);
       CGF.markStmtMaybeUsed(Dead);
       // If a throw expression we emit it and return an undefined lvalue
       // because it can't be used.
@@ -5864,7 +5866,7 @@ ConditionalInfo EmitConditionalBlocks(CodeGenFunction &CGF,
 
   // Any temporaries created here are conditional.
   CGF.EmitBlock(Info.lhsBlock);
-  CGF.incrementProfileCounter(E);
+  CGF.incrementProfileCounter(CGF.UseExecPath, E);
   eval.begin(CGF);
   Info.LHS = BranchGenFunc(CGF, E->getTrueExpr());
   eval.end(CGF);
@@ -5875,6 +5877,7 @@ ConditionalInfo EmitConditionalBlocks(CodeGenFunction &CGF,
 
   // Any temporaries created here are conditional.
   CGF.EmitBlock(Info.rhsBlock);
+  CGF.incrementProfileCounter(CGF.UseSkipPath, E);
   eval.begin(CGF);
   Info.RHS = BranchGenFunc(CGF, E->getFalseExpr());
   eval.end(CGF);
@@ -6154,7 +6157,7 @@ CodeGenFunction::EmitHLSLOutArgLValues(const HLSLOutArgExpr *E, QualType Ty) {
   OpaqueValueMappingData::bind(*this, E->getOpaqueArgLValue(), BaseLV);
 
   QualType ExprTy = E->getType();
-  Address OutTemp = CreateIRTemp(ExprTy);
+  Address OutTemp = CreateIRTempWithoutCast(ExprTy);
   LValue TempLV = MakeAddrLValue(OutTemp, ExprTy);
 
   if (E->isInOut())
@@ -6977,14 +6980,15 @@ void CodeGenFunction::SetFPAccuracy(llvm::Value *Val, float Accuracy) {
 
 void CodeGenFunction::SetSqrtFPAccuracy(llvm::Value *Val) {
   llvm::Type *EltTy = Val->getType()->getScalarType();
-  if (!EltTy->isFloatTy())
+  if (!EltTy->isFloatTy() && !EltTy->isHalfTy())
     return;
 
   if ((getLangOpts().OpenCL &&
        !CGM.getCodeGenOpts().OpenCLCorrectlyRoundedDivSqrt) ||
       (getLangOpts().HIP && getLangOpts().CUDAIsDevice &&
        !CGM.getCodeGenOpts().HIPCorrectlyRoundedDivSqrt)) {
-    // OpenCL v1.1 s7.4: minimum accuracy of single precision / is 3ulp
+    // OpenCL v1.1 s7.4: minimum accuracy of single precision sqrt is 3 ulp.
+    // OpenCL v3.0 s7.4: minimum accuracy of half precision sqrt is 1.5 ulp.
     //
     // OpenCL v1.2 s5.6.4.2: The -cl-fp32-correctly-rounded-divide-sqrt
     // build option allows an application to specify that single precision
@@ -6992,20 +6996,21 @@ void CodeGenFunction::SetSqrtFPAccuracy(llvm::Value *Val) {
     // source are correctly rounded.
     //
     // TODO: CUDA has a prec-sqrt flag
-    SetFPAccuracy(Val, 3.0f);
+    SetFPAccuracy(Val, EltTy->isFloatTy() ? 3.0f : 1.5f);
   }
 }
 
 void CodeGenFunction::SetDivFPAccuracy(llvm::Value *Val) {
   llvm::Type *EltTy = Val->getType()->getScalarType();
-  if (!EltTy->isFloatTy())
+  if (!EltTy->isFloatTy() && !EltTy->isHalfTy())
     return;
 
   if ((getLangOpts().OpenCL &&
        !CGM.getCodeGenOpts().OpenCLCorrectlyRoundedDivSqrt) ||
       (getLangOpts().HIP && getLangOpts().CUDAIsDevice &&
        !CGM.getCodeGenOpts().HIPCorrectlyRoundedDivSqrt)) {
-    // OpenCL v1.1 s7.4: minimum accuracy of single precision / is 2.5ulp
+    // OpenCL v1.1 s7.4: minimum accuracy of single precision / is 2.5 ulp.
+    // OpenCL v3.0 s7.4: minimum accuracy of half precision / is 1 ulp.
     //
     // OpenCL v1.2 s5.6.4.2: The -cl-fp32-correctly-rounded-divide-sqrt
     // build option allows an application to specify that single precision
@@ -7013,7 +7018,7 @@ void CodeGenFunction::SetDivFPAccuracy(llvm::Value *Val) {
     // source are correctly rounded.
     //
     // TODO: CUDA has a prec-div flag
-    SetFPAccuracy(Val, 2.5f);
+    SetFPAccuracy(Val, EltTy->isFloatTy() ? 2.5f : 1.f);
   }
 }
 

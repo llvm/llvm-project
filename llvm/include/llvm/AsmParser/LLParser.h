@@ -181,6 +181,10 @@ namespace llvm {
     /// Keeps track of source locations for Values, BasicBlocks, and Functions.
     AsmParserContext *ParserContext;
 
+    /// retainedNodes of these subprograms should be cleaned up from incorrectly
+    /// scoped local types.
+    SmallVector<DISubprogram *> NewDistinctSPs;
+
     /// Only the llvm-as tool may set this to false to bypass
     /// UpgradeDebuginfo so it can generate broken bitcode.
     bool UpgradeDebugInfo;
@@ -614,10 +618,12 @@ namespace llvm {
     struct ArgInfo {
       LocTy Loc;
       Type *Ty;
+      std::optional<FileLocRange> IdentLoc;
       AttributeSet Attrs;
       std::string Name;
-      ArgInfo(LocTy L, Type *ty, AttributeSet Attr, const std::string &N)
-          : Loc(L), Ty(ty), Attrs(Attr), Name(N) {}
+      ArgInfo(LocTy L, Type *ty, std::optional<FileLocRange> IdentLoc,
+              AttributeSet Attr, const std::string &N)
+          : Loc(L), Ty(ty), IdentLoc(IdentLoc), Attrs(Attr), Name(N) {}
     };
     bool parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
                            SmallVectorImpl<unsigned> &UnnamedArgNums,

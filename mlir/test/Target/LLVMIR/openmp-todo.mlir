@@ -487,3 +487,13 @@ llvm.func @wsloop_order(%lb : i32, %ub : i32, %step : i32) {
   }
   llvm.return
 }
+
+// -----
+llvm.func @task_affinity(%x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause affinity in omp.task operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.task}}
+  omp.task affinity(%x : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}

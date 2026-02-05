@@ -792,8 +792,13 @@ public:
     else
       operand = Visit(e->getSubExpr());
 
-    bool nsw =
-        kind == cir::UnaryOpKind::Minus && e->getType()->isSignedIntegerType();
+    // TODO(cir): We might have to change this to support overflow trapping.
+    //            Classic codegen routes unary minus through emitSub to ensure
+    //            that the overflow behavior is handled correctly.
+    bool nsw = kind == cir::UnaryOpKind::Minus &&
+               e->getType()->isSignedIntegerType() &&
+               cgf.getLangOpts().getSignedOverflowBehavior() !=
+                   LangOptions::SOB_Defined;
 
     // NOTE: LLVM codegen will lower this directly to either a FNeg
     // or a Sub instruction.  In CIR this will be handled later in LowerToLLVM.

@@ -476,16 +476,16 @@ llvm::Value *CodeGenFunction::GetVTTParameter(GlobalDecl GD,
     assert(SubVTTIndex != 0 && "Sub-VTT index must be greater than zero!");
   }
 
+  llvm::Value *VTT;
   if (CGM.getCXXABI().NeedsVTTParameter(CurGD)) {
     // A VTT parameter was passed to the constructor, use it.
-    llvm::Value *VTT = LoadCXXVTT();
-    return Builder.CreateConstInBoundsGEP1_64(VoidPtrTy, VTT, SubVTTIndex);
+    VTT = LoadCXXVTT();
   } else {
     // We're the complete constructor, so get the VTT by name.
-    llvm::GlobalValue *VTT = CGM.getVTables().GetAddrOfVTT(RD);
-    return Builder.CreateConstInBoundsGEP2_64(VTT->getValueType(), VTT, 0,
-                                              SubVTTIndex);
+    VTT = CGM.getVTables().GetAddrOfVTT(RD);
   }
+  return Builder.CreateConstInBoundsGEP1_64(CGM.GlobalsInt8PtrTy, VTT,
+                                            SubVTTIndex);
 }
 
 namespace {
@@ -2495,7 +2495,7 @@ void CodeGenFunction::EmitInlinedInheritingCXXConstructorCall(
   // FIXME: This is dumb, we should ask the ABI not to try to set the return
   // value instead.
   if (!RetType->isVoidType())
-    ReturnValue = CreateIRTemp(RetType, "retval.inhctor");
+    ReturnValue = CreateIRTempWithoutCast(RetType, "retval.inhctor");
 
   CGM.getCXXABI().EmitInstanceFunctionProlog(*this);
   CXXThisValue = CXXABIThisValue;
