@@ -97,7 +97,7 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
-- New :doc:`avoid-passing-mlir-op-as-ref`
+- New :doc:`avoid-passing-mlir-op-as-ref
   <clang-tidy/checks/llvm/avoid-passing-mlir-op-as-ref>` check.
 
   Finds cases where ``mlir::Op`` derived classes are passed by reference.
