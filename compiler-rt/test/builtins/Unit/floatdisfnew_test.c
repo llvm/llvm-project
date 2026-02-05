@@ -26,7 +26,7 @@ int test__floatdisf(int line, uint64_t a, uint32_t expected_rep) {
   return ret;
 }
 
-#define test__floatdisf(a,x) test__floatdisf(__LINE__,a,x)
+#define test__floatdisf(a, x) test__floatdisf(__LINE__, a, x)
 
 int main(void) {
   int status = 0;

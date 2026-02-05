@@ -26,7 +26,7 @@ int test__floatunssisf(int line, uint32_t a, uint32_t expected_rep) {
   return ret;
 }
 
-#define test__floatunssisf(a,x) test__floatunssisf(__LINE__,a,x)
+#define test__floatunssisf(a, x) test__floatunssisf(__LINE__, a, x)
 
 int main(void) {
   int status = 0;

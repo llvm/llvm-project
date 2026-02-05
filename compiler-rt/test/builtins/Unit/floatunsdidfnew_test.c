@@ -26,7 +26,7 @@ int test__floatunsdidf(int line, uint64_t a, uint64_t expected_rep) {
   return ret;
 }
 
-#define test__floatunsdidf(a,x) test__floatunsdidf(__LINE__,a,x)
+#define test__floatunsdidf(a, x) test__floatunsdidf(__LINE__, a, x)
 
 int main(void) {
   int status = 0;

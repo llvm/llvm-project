@@ -26,7 +26,7 @@ int test__floatsisf(int line, uint32_t a, uint32_t expected_rep) {
   return ret;
 }
 
-#define test__floatsisf(a,x) test__floatsisf(__LINE__,a,x)
+#define test__floatsisf(a, x) test__floatsisf(__LINE__, a, x)
 
 int main(void) {
   int status = 0;
