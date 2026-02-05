@@ -42,7 +42,8 @@ class CPPThisTestCase(TestBase):
             "expression -- m_a = 2",
             error=True,
             substrs=[
-                "cannot assign to non-static data member within const member function"
+                "cannot assign to non-static data member within const member function",
+                "Possibly trying to mutate object in a const context. Try running the expression with: expression --c++-ignore-context-qualifiers -- m_a = 2",
             ],
         )
 
