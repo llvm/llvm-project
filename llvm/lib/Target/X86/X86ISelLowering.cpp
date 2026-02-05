@@ -18349,7 +18349,7 @@ static SDValue lower1BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // If this is a sequential shuffle with zero'd elements - then lower to AND.
   bool IsBlendWithZero = all_of(enumerate(Mask), [&Zeroable](auto M) {
-    return Zeroable[M.index()] || (M.index() == M.value());
+    return Zeroable[M.index()] || (M.value() == (int)M.index());
   });
   if (IsBlendWithZero) {
     EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
