@@ -330,12 +330,18 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
     HDTTMap.destroy();
 
   // Lambda to check if this pointer was newly allocated on the current region.
-  // This is needed to handle cases when the TO entry is encounter after an
+  // This is needed to handle cases when the TO entry is encountered after an
   // alloc entry for the same pointer. In such cases, the ref-count is already
   // non-zero when TO is encountered, but we still need to do a transfer. e.g.
   //
-  //  int *xp = &x[0];
-  // ... map(alloc: x[:]) map(to: xp[1]).
+  // struct S {
+  //   int *p;
+  // };
+  // #pragma omp declare mapper(id : S s) map(to: s.p, s.p[0 : 10])
+  //
+  // S s1;
+  // ...
+  // #pragma omp target map(alloc : s1.p[0 : 10]) map(mapper(id), to : s1)
   auto WasNewlyAllocatedForCurrentRegion = [&]() {
     if (!StateInfo)
       return false;

@@ -19,8 +19,8 @@ int main() {
       x = 222;
     }
 #pragma omp target exit data map(always, from : x) map(always, from : x)
-    // DEBUG: omptarget --> Moving 4 bytes (tgt:0x{{.*}}) -> (hst:0x{{.*}})
-    // DEBUG-NOT: omptarget --> Moving 4 bytes
+    // DEBUG: omptarget --> Moving {{.*}} bytes (tgt:0x{{.*}}) -> (hst:0x{{.*}})
+    // DEBUG-NOT: omptarget --> Moving {{.*}} bytes
   }
 
   printf("%d\n", x); // CHECK: 222

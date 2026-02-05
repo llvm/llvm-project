@@ -9,6 +9,7 @@ int main() {
 #pragma omp target enter data map(alloc : x) map(to : x)
 #pragma omp target map(present, alloc : x)
     {
+      // NOTE: It's ok for this to be 111 under "unified_shared_memory"
       printf("%d\n", x); // CHECK-NOT: 111
       x = 222;
     }

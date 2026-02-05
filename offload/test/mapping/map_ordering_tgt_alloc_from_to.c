@@ -11,10 +11,10 @@
 
 int main() {
   int x = 111;
-  // DEBUG: omptarget --> HstPtrBegin 0x[[#%x,HOST_ADDR:]] was newly allocated
-  // DEBUG-SAME:                for the current region
-  // DEBUG: omptarget --> Moving {{.*}} bytes
-  // DEBUG-SAME:          (hst:0x{{0*}}[[#HOST_ADDR]]) -> (tgt:0x{{.*}})
+  // clang-format off
+  // DEBUG: omptarget --> HstPtrBegin 0x[[#%x,HOST_ADDR:]] was newly allocated for the current region
+  // DEBUG: omptarget --> Moving {{.*}} bytes (hst:0x{{0*}}[[#HOST_ADDR]]) -> (tgt:0x{{.*}})
+  // clang-format on
 #pragma omp target map(alloc : x) map(from : x) map(to : x) map(alloc : x)
   {
     printf("%d\n", x); // CHECK: 111

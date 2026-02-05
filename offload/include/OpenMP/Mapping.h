@@ -511,7 +511,7 @@ struct StateInfoTy {
   /// Key: host pointer, Value: data size.
   llvm::DenseMap<void *, int64_t> SkippedFromEntries;
 
-  /// Host pointers for which we have attempted a FROM transfer at some point
+  /// Host pointers for which we have triggered a FROM transfer at some point
   /// during targetDataEnd. Used to avoid duplicate transfers.
   llvm::SmallSet<void *, 32> TransferredFromPtrs;
 
@@ -528,8 +528,8 @@ struct StateInfoTy {
   /// Check if a pointer falls within any of the newly allocated ranges.
   /// Returns true if the pointer is within a newly allocated region.
   bool wasNewlyAllocated(void *Ptr) const {
-    return std::any_of(
-        NewAllocations.begin(), NewAllocations.end(), [&](const auto &Alloc) {
+    return llvm::any_of(
+        NewAllocations, [&](const auto &Alloc) {
           void *AllocPtr = Alloc.first;
           int64_t AllocSize = Alloc.second;
           return Ptr >= AllocPtr &&

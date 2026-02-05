@@ -1131,7 +1131,6 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         HstPtrBegin, DataSize, UpdateRef, HasHoldModifier, !IsImplicit,
         ForceDelete, /*FromDataEnd=*/true);
     void *TgtPtrBegin = TPR.TargetPointer;
-
     if (!TPR.isPresent() && !TPR.isHostPointer() &&
         (DataSize || HasPresentModifier)) {
       ODBG(ODT_Mapping) << "Mapping does not exist ("
@@ -1247,11 +1246,11 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         void *DeletePtr = DeleteEntry.first;
         int64_t DeleteSize = DeleteEntry.second;
         if (HstPtrBegin >= DeletePtr &&
-            HstPtrBegin < (void *)((char *)DeletePtr + DeleteSize)) {
+            HstPtrBegin < static_cast<void *>(static_cast<char *>(DeletePtr) + DeleteSize)) {
           ODBG(ODT_Mapping)
               << "Pointer HstPtr=" << HstPtrBegin
               << " falls within a range previously marked for deletion ["
-              << DeletePtr << ", " << (char *)DeletePtr + DeleteSize
+              << DeletePtr << ", " << static_cast<char *>(DeletePtr) + DeleteSize
               << ") with size=" << DeleteSize;
           return true;
         }
@@ -1281,16 +1280,16 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                                  TPR.getEntry());
       if (Ret != OFFLOAD_SUCCESS)
         return OFFLOAD_FAIL;
-    } else if (!FromCopyBackAlreadyDone && IsMapFromOnNonHostNonZeroData &&
-               !IsLastOrHasAlwaysOrWasForceDeleted()) {
+    } else if (!FromCopyBackAlreadyDone && (IsMapFromOnNonHostNonZeroData &&
+               !IsLastOrHasAlwaysOrWasForceDeleted())) {
       // We can have cases like the following:
-      //   int *xp = &x[0];
-      //  ... map(storage: x[:]) map(from: xp[1:1])
+      //   p1 = p2 = &x;
+      //  ... map(storage: p1[:]) map(from: p2[1:1])
       //
       // where it's possible that when the FROM entry is processed, the
       // ref count is not zero, so no data transfer happens for it. But
       // the ref-count can go down to zero once all maps have been processed
-      // in which case a transfer should happen.
+      // for the current construct, in which case a transfer should happen.
       //
       // So, we keep track of any skipped FROM data-transfers, in case
       // the ref-count goes down to zero later on.
@@ -1317,7 +1316,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       for (auto &SkippedFromEntry : StateInfo->SkippedFromEntries) {
         void *FromBeginPtr = SkippedFromEntry.first;
         int64_t FromDataSize = SkippedFromEntry.second;
-        uintptr_t FromBeginPtrInt = (uintptr_t)FromBeginPtr;
+        uintptr_t FromBeginPtrInt = reinterpret_cast<uintptr_t>(FromBeginPtr);
 
         uintptr_t DeleteBeginPtrInt = TPR.getEntry()->HstPtrBegin;
         uintptr_t DeleteEndPtrInt = TPR.getEntry()->HstPtrEnd;
@@ -1328,15 +1327,15 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
           ODBG(ODT_Mapping)
               << "Found skipped FROM entry: HstPtr=" << FromBeginPtr
               << " size=" << FromDataSize << " within region being deleted ["
-              << DeleteBeginPtrInt << ", " << DeleteEndPtrInt << ")";
+              << reinterpret_cast<void*>(DeleteBeginPtrInt) << ", " << reinterpret_cast<void*>(DeleteEndPtrInt) << ")";
 
           // Calculate offset within the target pointer
           int64_t Offset = FromBeginPtrInt - DeleteBeginPtrInt;
-          void *FromTgtBeginPtr = (void *)((char *)TgtPtrBegin + Offset);
+          void *FromTgtBeginPtr = static_cast<void *>(static_cast<char *>(TgtPtrBegin) + Offset);
 
           // Perform the retrieval for this skipped entry
           int Ret =
-              PerformFromRetrieval((void *)FromBeginPtrInt, FromTgtBeginPtr,
+              PerformFromRetrieval(reinterpret_cast<void *>(FromBeginPtrInt), FromTgtBeginPtr,
                                    FromDataSize, TPR.getEntry());
           if (Ret != OFFLOAD_SUCCESS)
             return OFFLOAD_FAIL;
