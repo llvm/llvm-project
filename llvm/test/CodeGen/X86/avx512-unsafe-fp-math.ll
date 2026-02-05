@@ -15,11 +15,12 @@ define <16 x float> @test_max_v16f32(ptr %a_ptr, <16 x float> %b)  {
 define <16 x float> @test_max_v16f32_safe(ptr %a_ptr, <16 x float> %b)  {
 ; CHECK-LABEL: test_max_v16f32_safe:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmaxps (%rdi), %zmm0, %zmm0
+; CHECK-NEXT:    vmovaps (%rdi), %zmm1
+; CHECK-NEXT:    vmaxps %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %a = load <16 x float>, ptr %a_ptr
-  %tmp = fcmp ogt <16 x float> %a, %b
-  %tmp4 = select nsz <16 x i1> %tmp, <16 x float> %a, <16 x float> %b
+  %tmp = fcmp nsz ogt <16 x float> %a, %b
+  %tmp4 = select <16 x i1> %tmp, <16 x float> %a, <16 x float> %b
   ret <16 x float> %tmp4
 }
 
