@@ -120,7 +120,7 @@ public:
 private:
   MachineBasicBlock *Entry;
   const BlockSet &Blocks;
-  DenseMap<int, unsigned> BlockIndex;
+  DenseMap<MachineBasicBlock *, unsigned> BlockIndex;
 
   BlockSet Loopers, LoopEntries;
   DenseMap<MachineBasicBlock *, BlockSet> LoopEnterers;
@@ -134,7 +134,7 @@ private:
   SmallVector<unsigned, 0> SccSize;
 
   unsigned getIndex(MachineBasicBlock *MBB) const {
-    auto It = BlockIndex.find(MBB->getNumber());
+    auto It = BlockIndex.find(MBB);
     assert(It != BlockIndex.end());
     return It->second;
   }
@@ -148,7 +148,7 @@ private:
     BlockIndex.clear();
     BlockIndex.reserve(NumBlocks);
     for (auto *MBB : Blocks)
-      BlockIndex[MBB->getNumber()] = MMBIdx++;
+      BlockIndex[MBB] = MMBIdx++;
 
     // Add all relevant direct branches.
     MMBIdx = 0;
