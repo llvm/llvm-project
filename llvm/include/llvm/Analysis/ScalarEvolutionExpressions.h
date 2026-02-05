@@ -52,6 +52,7 @@ enum SCEVTypes : unsigned short {
   scUMinExpr,
   scSMinExpr,
   scSequentialUMinExpr,
+  scPtrToAddr,
   scPtrToInt,
   scUnknown,
   scCouldNotCompute
@@ -121,8 +122,9 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) {
-    return S->getSCEVType() == scPtrToInt || S->getSCEVType() == scTruncate ||
-           S->getSCEVType() == scZeroExtend || S->getSCEVType() == scSignExtend;
+    return S->getSCEVType() == scPtrToAddr || S->getSCEVType() == scPtrToInt ||
+           S->getSCEVType() == scTruncate || S->getSCEVType() == scZeroExtend ||
+           S->getSCEVType() == scSignExtend;
   }
 };
 
@@ -136,6 +138,18 @@ class SCEVPtrToIntExpr : public SCEVCastExpr {
 public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) { return S->getSCEVType() == scPtrToInt; }
+};
+
+/// This class represents a cast from a pointer to a pointer-sized integer
+/// value, without capturing the provenance of the pointer.
+class SCEVPtrToAddrExpr : public SCEVCastExpr {
+  friend class ScalarEvolution;
+
+  SCEVPtrToAddrExpr(const FoldingSetNodeIDRef ID, const SCEV *Op, Type *ITy);
+
+public:
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const SCEV *S) { return S->getSCEVType() == scPtrToAddr; }
 };
 
 /// This is the base class for unary integral cast operator classes.
@@ -615,6 +629,8 @@ template <typename SC, typename RetVal = void> struct SCEVVisitor {
       return ((SC *)this)->visitConstant((const SCEVConstant *)S);
     case scVScale:
       return ((SC *)this)->visitVScale((const SCEVVScale *)S);
+    case scPtrToAddr:
+      return ((SC *)this)->visitPtrToAddrExpr((const SCEVPtrToAddrExpr *)S);
     case scPtrToInt:
       return ((SC *)this)->visitPtrToIntExpr((const SCEVPtrToIntExpr *)S);
     case scTruncate:
@@ -685,6 +701,7 @@ public:
       case scVScale:
       case scUnknown:
         continue;
+      case scPtrToAddr:
       case scPtrToInt:
       case scTruncate:
       case scZeroExtend:
@@ -773,6 +790,11 @@ public:
   const SCEV *visitConstant(const SCEVConstant *Constant) { return Constant; }
 
   const SCEV *visitVScale(const SCEVVScale *VScale) { return VScale; }
+
+  const SCEV *visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
+    const SCEV *Operand = ((SC *)this)->visit(Expr->getOperand());
+    return Operand == Expr->getOperand() ? Expr : SE.getPtrToAddrExpr(Operand);
+  }
 
   const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
     const SCEV *Operand = ((SC *)this)->visit(Expr->getOperand());

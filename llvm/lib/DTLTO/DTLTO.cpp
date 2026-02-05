@@ -21,13 +21,13 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/Signals.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <iostream>
 #include <string>
 
 using namespace llvm;
@@ -116,15 +116,6 @@ Expected<bool> lto::DTLTO::isThinArchive(const StringRef ArchivePath) {
   return IsThin;
 }
 
-// Removes any temporary regular archive member files that were created during
-// processing.
-void lto::DTLTO::removeTempFiles() {
-  for (auto &Input : InputFiles) {
-    if (Input->isMemberOfArchive())
-      sys::fs::remove(Input->getName(), /*IgnoreNonExisting=*/true);
-  }
-}
-
 // This function performs the following tasks:
 // 1. Adds the input file to the LTO object's list of input files.
 // 2. For thin archive members, generates a new module ID which is a path to a
@@ -133,6 +124,7 @@ void lto::DTLTO::removeTempFiles() {
 // 4. Updates the bitcode module's identifier.
 Expected<std::shared_ptr<lto::InputFile>>
 lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
+  TimeTraceScope TimeScope("Add input for DTLTO");
 
   // Add the input file to the LTO object.
   InputFiles.emplace_back(InputPtr.release());
@@ -141,31 +133,37 @@ lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
   StringRef ModuleId = Input->getName();
   StringRef ArchivePath = Input->getArchivePath();
 
-  // Only process archive members.
-  if (ArchivePath.empty())
+  // In most cases, the module ID already points to an individual bitcode file
+  // on disk, so no further preparation for distribution is required.
+  if (ArchivePath.empty() && !Input->isFatLTOObject())
     return Input;
 
   SmallString<64> NewModuleId;
   BitcodeModule &BM = Input->getPrimaryBitcodeModule();
 
-  // Check if the archive is a thin archive.
-  Expected<bool> IsThin = isThinArchive(ArchivePath);
-  if (!IsThin)
-    return IsThin.takeError();
+  // For a member of a thin archive that is not a FatLTO object, there is an
+  // existing file on disk that can be used, so we can avoid having to
+  // materialize.
+  Expected<bool> UseThinMember =
+      Input->isFatLTOObject() ? false : isThinArchive(ArchivePath);
+  if (!UseThinMember)
+    return UseThinMember.takeError();
 
-  if (*IsThin) {
+  if (*UseThinMember) {
     // For thin archives, use the path to the actual file.
     NewModuleId =
         computeThinArchiveMemberPath(ArchivePath, Input->getMemberName());
   } else {
-    // For regular archives, generate a unique name.
-    Input->memberOfArchive(true);
+    // For regular archives and FatLTO objects, generate a unique name.
+    Input->setSerializeForDistribution(true);
 
     // Create unique identifier using process ID and sequence number.
     std::string PID = utohexstr(sys::Process::getProcessId());
     std::string Seq = std::to_string(InputFiles.size());
 
-    NewModuleId = {sys::path::filename(ModuleId), ".", Seq, ".", PID, ".o"};
+    NewModuleId = sys::path::parent_path(LinkerOutputFile);
+    sys::path::append(NewModuleId, sys::path::filename(ModuleId) + "." + Seq +
+                                       "." + PID + ".o");
   }
 
   // Update the module identifier and save it.
@@ -179,7 +177,11 @@ lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
 // previously terminated linker process and can be safely overwritten.
 Error lto::DTLTO::saveInputArchiveMember(lto::InputFile *Input) {
   StringRef ModuleId = Input->getName();
-  if (Input->isMemberOfArchive()) {
+  if (Input->getSerializeForDistribution()) {
+    TimeTraceScope TimeScope("Serialize bitcode input for DTLTO", ModuleId);
+    // Cleanup this file on abnormal process exit.
+    if (!SaveTemps)
+      llvm::sys::RemoveFileOnSignal(ModuleId);
     MemoryBufferRef MemoryBufferRef = Input->getFileBuffer();
     if (Error EC = saveBuffer(MemoryBufferRef.getBuffer(), ModuleId))
       return EC;
@@ -209,4 +211,22 @@ llvm::Error lto::DTLTO::handleArchiveInputs() {
   if (Error EC = saveInputArchiveMembers())
     return EC;
   return Error::success();
+}
+
+// Remove temporary archive member files created to enable distribution.
+void lto::DTLTO::cleanup() {
+  if (!SaveTemps) {
+    TimeTraceScope TimeScope("Remove temporary inputs for DTLTO");
+    for (auto &Input : InputFiles) {
+      if (!Input->getSerializeForDistribution())
+        continue;
+      std::error_code EC =
+          sys::fs::remove(Input->getName(), /*IgnoreNonExisting=*/true);
+      if (EC &&
+          EC != std::make_error_code(std::errc::no_such_file_or_directory))
+        errs() << "warning: could not remove temporary DTLTO input file '"
+               << Input->getName() << "': " << EC.message() << "\n";
+    }
+  }
+  Base::cleanup();
 }

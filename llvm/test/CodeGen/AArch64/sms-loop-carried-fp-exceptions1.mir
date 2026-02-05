@@ -89,7 +89,7 @@ body:             |
   
   bb.1.for.body.preheader:
     %8:gpr32 = ORRWrs $wzr, %5, 0
-    %0:gpr64 = SUBREG_TO_REG 0, killed %8, %subreg.sub_32
+    %0:gpr64 = SUBREG_TO_REG killed %8, %subreg.sub_32
     %9:gpr64all = COPY $xzr
     %7:gpr64all = COPY %9
     %13:gpr64common = ADRP target-flags(aarch64-page) @x

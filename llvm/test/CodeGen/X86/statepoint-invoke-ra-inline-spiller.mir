@@ -285,7 +285,7 @@ body:             |
 
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     %22:gr32 = MOV32r0 implicit-def dead $eflags
-    %21:gr64 = SUBREG_TO_REG 0, %22, %subreg.sub_32bit
+    %21:gr64 = SUBREG_TO_REG %22, %subreg.sub_32bit
     $rdi = COPY %21
     STATEPOINT 2, 5, 2, undef %24:gr64, killed $rdi, undef $rsi, 2, 0, 2, 0, 2, 37, 2, 0, 2, 2, 2, 0, 2, 43, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 10, 2, 1, 2, 6, 2, 0, 2, 4, 2, 1, 2, 0, 2, 0, 2, 7, 2, 0, 2, 0, 2, 0, 2, 7, 2, 0, 2, 0, 2, 0, 2, 2, 2, 4, 2, 5, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 1, 2, 0, 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp

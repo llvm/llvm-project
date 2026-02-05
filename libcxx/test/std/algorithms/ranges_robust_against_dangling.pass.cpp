@@ -224,6 +224,7 @@ constexpr bool test_all() {
 
 #if TEST_STD_VER >= 23
   dangling_1st<out_value_result<dangling, decltype(x)>>(std::ranges::iota, in, x);
+  dangling_1st(std::ranges::shift_left, in, x);
 #endif
 
   return true;

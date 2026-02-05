@@ -266,9 +266,9 @@ static cl::opt<bool> DisableSelectOptimize(
     cl::desc("Disable the select-optimization pass from running"));
 
 /// Enable garbage-collecting empty basic blocks.
-static cl::opt<bool>
-    GCEmptyBlocks("gc-empty-basic-blocks", cl::init(false), cl::Hidden,
-                  cl::desc("Enable garbage-collecting empty basic blocks"));
+static cl::opt<bool> EnableGCEmptyBlocks(
+    "enable-gc-empty-basic-blocks", cl::init(false), cl::Hidden,
+    cl::desc("Enable garbage-collecting empty basic blocks"));
 
 static cl::opt<bool>
     SplitStaticData("split-static-data", cl::Hidden, cl::init(false),
@@ -510,7 +510,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_OPTION(DisableExpandReductions)
   SET_OPTION(PrintAfterISel)
   SET_OPTION(FSProfileFile)
-  SET_OPTION(GCEmptyBlocks)
+  SET_OPTION(EnableGCEmptyBlocks)
 
 #define SET_BOOLEAN_OPTION(Option) Opt.Option = Option;
 
@@ -609,6 +609,8 @@ TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
   // Register all target independent codegen passes to activate their PassIDs,
   // including this pass itself.
   initializeCodeGen(PR);
+
+  initializeLibcallLoweringInfoWrapperPass(PR);
 
   // Also register alias analysis passes required by codegen passes.
   initializeBasicAAWrapperPassPass(PR);
@@ -1249,7 +1251,7 @@ void TargetPassConfig::addMachinePasses() {
       addPass(createMachineOutlinerPass(EnableMachineOutliner));
   }
 
-  if (GCEmptyBlocks)
+  if (EnableGCEmptyBlocks)
     addPass(llvm::createGCEmptyBasicBlocksLegacyPass());
 
   if (EnableFSDiscriminator)

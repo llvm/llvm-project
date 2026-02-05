@@ -581,6 +581,7 @@ def OMPC_To : Clause<[Spelling<"to">]> {
   let flangClass = "OmpToClause";
 }
 def OMPC_Transparent : Clause<[Spelling<"transparent">]> {
+  let clangClass = "OMPTransparentClause";
   let flangClass = "OmpTransparentClause";
   let isValueOptional = true;
 }
