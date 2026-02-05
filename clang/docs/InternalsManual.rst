@@ -3743,6 +3743,7 @@ C++ Defect Report Tests
 ^^^^^^^^^^^^^^^^^^^^^^^
 C++ Defect Report tests are placed in ``clang/test/CXX/drs`` directory, which
 consists of two types of files:
+
 - files where tests are grouped by 100 by issue number, e.g. ``cwg15xx.cpp``
   ("big files");
 - files with individual tests or smaller groups of tests, e.g. ``cwg177x.cpp``
@@ -3779,6 +3780,7 @@ the same namespace.
 Some diagnostics are expected only in certain language modes. This in handled
 in two parts. First, C++ defect report tests share a common pool of custom
 prefixes:
+
 - ``expected`` for diagnostics issued in all language modes;
 - ``cxxNN`` (e.g. ``cxx98``) for diagnostics issued only in one language mode;
 - ``since-cxxNN`` (e.g. ``since-cxx11``) for diagnostics that are issued
