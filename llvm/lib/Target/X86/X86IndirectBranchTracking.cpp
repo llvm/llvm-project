@@ -112,8 +112,6 @@ static bool needsPrologueENDBR(MachineFunction &MF, const Module *M) {
 }
 
 static bool runIndirectBranchTracking(MachineFunction &MF) {
-
-
   const Module *M = MF.getFunction().getParent();
   // Check that the cf-protection-branch is enabled.
   Metadata *isCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
