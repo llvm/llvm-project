@@ -1848,11 +1848,22 @@ private:
 class MLIR_PYTHON_API_EXPORTED PyDynamicOpTrait {
 public:
   PyDynamicOpTrait(MlirDynamicOpTrait trait) : trait(trait) {}
+  ~PyDynamicOpTrait() { mlirDynamicOpTraitDestroy(trait); }
 
   bool attach(std::string opName, DefaultingPyMlirContext context) {
+    assert(this->trait.ptr && "Trait has already been attached");
+
+    MlirDynamicOpTrait trait = this->trait;
+    this->trait = MlirDynamicOpTrait{nullptr};
     return mlirDynamicOpTraitAttach(trait,
                                     MlirStringRef{opName.data(), opName.size()},
                                     context.get()->get());
+  }
+
+  bool attachToOpView(const nanobind::type_object &opView,
+                      DefaultingPyMlirContext context) {
+    return attach(nanobind::cast<std::string>(opView.attr("OPERATION_NAME")),
+                  context);
   }
 
   static void bind(nanobind::module_ &m);
