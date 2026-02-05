@@ -404,6 +404,8 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     setGlobalISelAbort(GlobalISelAbortMode::Disable);
   }
 
+  LLT::setUseExtended(true);
+
   // AArch64 supports the MachineOutliner.
   setMachineOutliner(true);
 

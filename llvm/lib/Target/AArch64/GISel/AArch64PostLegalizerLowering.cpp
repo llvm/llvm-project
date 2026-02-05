@@ -543,9 +543,9 @@ void applyINS(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register DstVec, SrcVec;
   int DstLane, SrcLane;
   std::tie(DstVec, DstLane, SrcVec, SrcLane) = MatchInfo;
-  auto SrcCst = Builder.buildConstant(LLT::scalar(64), SrcLane);
+  auto SrcCst = Builder.buildConstant(LLT::buildInteger(64), SrcLane);
   auto Extract = Builder.buildExtractVectorElement(ScalarTy, SrcVec, SrcCst);
-  auto DstCst = Builder.buildConstant(LLT::scalar(64), DstLane);
+  auto DstCst = Builder.buildConstant(LLT::buildInteger(64), DstLane);
   Builder.buildInsertVectorElement(Dst, DstVec, Extract, DstCst);
   MI.eraseFromParent();
 }
@@ -691,6 +691,87 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     return {{C, P}};
 
   return std::nullopt;
+}
+
+// Helper function for matchStorei128AsV2i64. This aids in finding pointers that
+// can use the register-indirect-offset addressing mode
+bool isPointerRoX(const MachineRegisterInfo &MRI, llvm::GStore *&Store) {
+  auto Ptr = Store->getPointerReg();
+  auto *PtrAdd = getOpcodeDef<GPtrAdd>(Ptr, MRI);
+  if (!PtrAdd || !MRI.hasOneNonDBGUse(Ptr))
+    return false;
+
+  Register Offset = PtrAdd->getOperand(2).getReg();
+  if (auto C = getIConstantVRegValWithLookThrough(Offset, MRI))
+    return false;
+
+  auto *OffsetDef = getDefIgnoringCopies(Offset, MRI);
+  if (!OffsetDef)
+    return false;
+
+  if (OffsetDef->getOpcode() == TargetOpcode::G_SHL ||
+      OffsetDef->getOpcode() == TargetOpcode::G_MUL) {
+    auto MaybeImm = getIConstantVRegValWithLookThrough(
+        OffsetDef->getOperand(2).getReg(), MRI);
+
+    if (!MaybeImm)
+      return false;
+
+    uint64_t Shift = OffsetDef->getOpcode() == TargetOpcode::G_SHL
+                         ? MaybeImm->Value.getZExtValue()
+                         : Log2_64(MaybeImm->Value.getZExtValue());
+
+    if (Shift != Log2_32(16))
+      return false;
+  }
+  return true;
+}
+
+// FPR128 doesn't allow i128 but it does allow v2i64. This means we can't
+// duplicate the pattern for f128 used here (AArch64InstrInfo.td:4617 STRQroX).
+// Instead, we can detect when this instruction would be used and force the
+// types to be a v2i64 thus allowing matching.
+bool matchStorei128AsV2i64(MachineInstr &MI, const MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_STORE &&
+         "Expected a store instruction");
+
+  auto *Store = cast<GStore>(&MI);
+  Register ValReg = Store->getValueReg();
+  LLT ValTy = MRI.getType(ValReg);
+
+  if (!ValTy.isInteger() && ValTy.getScalarSizeInBits() != 128)
+    return false;
+
+  auto *Merge = getOpcodeDef<GMerge>(ValReg, MRI);
+  if (!Merge || Merge->getNumSources() != 2)
+    return false;
+
+  if (!MRI.hasOneNonDBGUse(ValReg))
+    return false;
+
+  auto MergeUser = MRI.use_instr_nodbg_begin(ValReg);
+  if (MergeUser == MRI.use_instr_nodbg_end() || &*MergeUser != &MI)
+    return false;
+
+  if (MRI.getType(Merge->getSourceReg(0)).getScalarSizeInBits() != 64 ||
+      MRI.getType(Merge->getSourceReg(1)).getScalarSizeInBits() != 64)
+    return false;
+
+  return isPointerRoX(MRI, Store);
+}
+
+void applyStorei128AsV2i64(MachineInstr &MI, const MachineRegisterInfo &MRI,
+                           MachineIRBuilder &MIB) {
+  auto *Store = cast<GStore>(&MI);
+  Register ValReg = Store->getValueReg();
+
+  auto *Merge = getOpcodeDef<GMerge>(ValReg, MRI);
+
+  auto BV =
+      MIB.buildBuildVector(LLT::fixed_vector(2, LLT::buildInteger(64)),
+                           {Merge->getSourceReg(0), Merge->getSourceReg(1)})
+          .getReg(0);
+  MI.getOperand(0).setReg(BV);
 }
 
 /// Determine whether or not it is possible to update the RHS and predicate of
@@ -958,7 +1039,9 @@ void applySwapICmpOperands(MachineInstr &MI, GISelChangeObserver &Observer) {
 std::function<Register(MachineIRBuilder &)>
 getVectorFCMP(AArch64CC::CondCode CC, Register LHS, Register RHS, bool NoNans,
               MachineRegisterInfo &MRI) {
-  LLT DstTy = MRI.getType(LHS);
+  LLT OldTy = MRI.getType(LHS);
+  LLT DstTy =
+      LLT::fixed_vector(OldTy.getNumElements(), OldTy.getScalarSizeInBits());
   assert(DstTy.isVector() && "Expected vector types only?");
   assert(DstTy == MRI.getType(RHS) && "Src and Dst types must match!");
   switch (CC) {
@@ -1090,7 +1173,7 @@ void applyLowerBuildToInsertVecElt(MachineInstr &MI, MachineRegisterInfo &MRI,
     Register SrcReg = GBuildVec->getSourceReg(I);
     if (mi_match(SrcReg, MRI, m_GImplicitDef()))
       continue;
-    auto IdxReg = B.buildConstant(LLT::scalar(64), I);
+    auto IdxReg = B.buildConstant(LLT::buildInteger(64), I);
     DstReg =
         B.buildInsertVectorElement(DstTy, DstReg, SrcReg, IdxReg).getReg(0);
   }

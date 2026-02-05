@@ -4,18 +4,19 @@
 define ptr @test_simple_alloca(i32 %numelts) {
   ; CHECK-LABEL: name: test_simple_alloca
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $w0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s32)
-  ; CHECK:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
-  ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
-  ; CHECK:   [[ADD:%[0-9]+]]:_(s64) = nuw G_ADD [[MUL]], [[C1]]
-  ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
-  ; CHECK:   [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
-  ; CHECK:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s64), 1
-  ; CHECK:   $x0 = COPY [[DYN_STACKALLOC]](p0)
-  ; CHECK:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT:   liveins: $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[COPY]](i32)
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i64) = G_MUL [[ZEXT]], [[C]]
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 15
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i64) = nuw G_ADD [[MUL]], [[C1]]
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 -16
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[ADD]], [[C2]]
+  ; CHECK-NEXT:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](i64), 1
+  ; CHECK-NEXT:   $x0 = COPY [[DYN_STACKALLOC]](p0)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %addr = alloca i8, i32 %numelts
   ret ptr %addr
 }
@@ -23,18 +24,19 @@ define ptr @test_simple_alloca(i32 %numelts) {
 define ptr @test_aligned_alloca(i32 %numelts) {
   ; CHECK-LABEL: name: test_aligned_alloca
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $w0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s32)
-  ; CHECK:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
-  ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
-  ; CHECK:   [[ADD:%[0-9]+]]:_(s64) = nuw G_ADD [[MUL]], [[C1]]
-  ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
-  ; CHECK:   [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
-  ; CHECK:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s64), 32
-  ; CHECK:   $x0 = COPY [[DYN_STACKALLOC]](p0)
-  ; CHECK:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT:   liveins: $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[COPY]](i32)
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i64) = G_MUL [[ZEXT]], [[C]]
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 15
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i64) = nuw G_ADD [[MUL]], [[C1]]
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 -16
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[ADD]], [[C2]]
+  ; CHECK-NEXT:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](i64), 32
+  ; CHECK-NEXT:   $x0 = COPY [[DYN_STACKALLOC]](p0)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %addr = alloca i8, i32 %numelts, align 32
   ret ptr %addr
 }
@@ -42,18 +44,19 @@ define ptr @test_aligned_alloca(i32 %numelts) {
 define ptr @test_natural_alloca(i32 %numelts) {
   ; CHECK-LABEL: name: test_natural_alloca
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK:   liveins: $w0
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
-  ; CHECK:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY]](s32)
-  ; CHECK:   [[MUL:%[0-9]+]]:_(s64) = G_MUL [[ZEXT]], [[C]]
-  ; CHECK:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 15
-  ; CHECK:   [[ADD:%[0-9]+]]:_(s64) = nuw G_ADD [[MUL]], [[C1]]
-  ; CHECK:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -16
-  ; CHECK:   [[AND:%[0-9]+]]:_(s64) = G_AND [[ADD]], [[C2]]
-  ; CHECK:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](s64), 1
-  ; CHECK:   $x0 = COPY [[DYN_STACKALLOC]](p0)
-  ; CHECK:   RET_ReallyLR implicit $x0
+  ; CHECK-NEXT:   liveins: $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 16
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[COPY]](i32)
+  ; CHECK-NEXT:   [[MUL:%[0-9]+]]:_(i64) = G_MUL [[ZEXT]], [[C]]
+  ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 15
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i64) = nuw G_ADD [[MUL]], [[C1]]
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 -16
+  ; CHECK-NEXT:   [[AND:%[0-9]+]]:_(i64) = G_AND [[ADD]], [[C2]]
+  ; CHECK-NEXT:   [[DYN_STACKALLOC:%[0-9]+]]:_(p0) = G_DYN_STACKALLOC [[AND]](i64), 1
+  ; CHECK-NEXT:   $x0 = COPY [[DYN_STACKALLOC]](p0)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %addr = alloca i128, i32 %numelts
   ret ptr %addr
 }

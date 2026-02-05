@@ -405,8 +405,8 @@ registers:
   - { id: 1, class: _ }
 
 # CHECK:  body:
-# CHECK:    %0:gpr(s32) = COPY $w0
-# FAST-NEXT:   %1:fpr(<4 x s8>) = G_BITCAST %0
+# CHECK:       %0:gpr(s32) = COPY $w0
+# FAST:        %1:fpr(<4 x s8>) = G_BITCAST %2(s32)
 # GREEDY-NEXT: %1:gpr(<4 x s8>) = G_BITCAST %0
 # The greedy check is incorrect and should produce fpr.
 body:             |
@@ -424,7 +424,7 @@ legalized:       true
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: fpr, preferred-register: '', flags: [  ] }
-# FAST-NEXT:   - { id: 1, class: gpr, preferred-register: '', flags: [  ] }
+# FAST-NEXT:   - { id: 1, class: fpr, preferred-register: '', flags: [  ] }
 # GREEDY-NEXT: - { id: 1, class: fpr, preferred-register: '', flags: [  ] }
 registers:
   - { id: 0, class: _ }
@@ -432,7 +432,7 @@ registers:
 
 # CHECK:  body:
 # CHECK:    %0:fpr(<2 x s16>) = COPY $s0
-# FAST:     %1:gpr(s32) = G_BITCAST %0
+# FAST:     %1:fpr(s32) = G_BITCAST %0(<2 x s16>)
 # GREEDY:   %1:fpr(s32) = G_BITCAST %0
 body:             |
   bb.0:
@@ -457,7 +457,7 @@ registers:
 
 # CHECK:  body:
 # CHECK:    %0:gpr(s32) = COPY $w0
-# FAST:     %1:fpr(<2 x s16>) = G_BITCAST %0
+# FAST:     %1:fpr(<2 x s16>) = G_BITCAST %2(s32)
 # GREEDY:   %1:gpr(<2 x s16>) = G_BITCAST %0
 body:             |
   bb.0:
@@ -476,7 +476,7 @@ registers:
   - { id: 1, class: _ }
 # CHECK:  body:
 # CHECK:    %0:fpr(<2 x s16>) = COPY $s0
-# FAST:     %1:gpr(s32) = G_BITCAST %0
+# FAST:     %1:fpr(s32) = G_BITCAST %0(<2 x s16>)
 # GREEDY:   %1:fpr(s32) = G_BITCAST %0
 body:             |
   bb.0:
@@ -495,7 +495,7 @@ registers:
   - { id: 1, class: _ }
 # CHECK:  body:
 # CHECK:    %0:gpr(s64) = COPY $x0
-# FAST:    %1:fpr(<2 x s32>) = G_BITCAST %0
+# FAST:    %1:fpr(<2 x s32>) = G_BITCAST %2(s64)
 # GREEDY:  %1:gpr(<2 x s32>) = G_BITCAST %0
 body:             |
   bb.0:
@@ -514,7 +514,7 @@ registers:
   - { id: 1, class: _ }
 # CHECK:  body:
 # CHECK:    %0:fpr(<2 x s32>) = COPY $d0
-# FAST:     %1:gpr(s64) = G_BITCAST %0
+# FAST:     %1:fpr(s64) = G_BITCAST %0(<2 x s32>)
 # GREEDY:   %1:fpr(s64) = G_BITCAST %0
 body:             |
   bb.0:
@@ -533,7 +533,7 @@ registers:
   - { id: 1, class: _ }
 # CHECK:  body:
 # CHECK:    %0:gpr(s64) = COPY $x0
-# FAST:     %1:fpr(<2 x s32>) = G_BITCAST %0
+# FAST:     %1:fpr(<2 x s32>) = G_BITCAST %2(s64)
 # GREEDY:   %1:gpr(<2 x s32>) = G_BITCAST %0
 body:             |
   bb.0:
@@ -552,7 +552,7 @@ registers:
   - { id: 1, class: _ }
 # CHECK:  body:
 # CHECK:    %0:fpr(<2 x s32>) = COPY $d0
-# FAST:     %1:gpr(s64) = G_BITCAST %0
+# FAST:     %1:fpr(s64) = G_BITCAST %0(<2 x s32>)
 # GREEDY:   %1:fpr(s64) = G_BITCAST %0
 body:             |
   bb.0:
@@ -691,13 +691,14 @@ registers:
 # No repairing should be necessary for both modes.
 # CHECK:         %0:gpr(s64) = COPY $x0
 # CHECK-NEXT:    %1:gpr(p0) = COPY $x1
-# FAST-NEXT:     %2:fpr(<2 x s32>) = G_BITCAST %0(s64)
+# FAST:          %2:fpr(<2 x s32>) = G_BITCAST %6(s64)
 # FAST-NEXT:     %3:fpr(<2 x s32>) = G_LOAD %1(p0) :: (load (<2 x s32>) from %ir.addr)
 # FAST-NEXT:     %4:fpr(<2 x s32>) = G_OR %2, %3
+# FAST-NEXT:     %5:fpr(s64) = G_BITCAST %4(<2 x s32>)
 # GREEDY-NEXT:   %2:gpr(<2 x s32>) = G_BITCAST %0(s64)
 # GREEDY-NEXT:   %3:gpr(<2 x s32>) = G_LOAD %1(p0) :: (load (<2 x s32>) from %ir.addr)
 # GREEDY-NEXT:   %4:gpr(<2 x s32>) = G_OR %2, %3
-# CHECK-NEXT:    %5:gpr(s64) = G_BITCAST %4(<2 x s32>)
+# GREEDY-NEXT:   %5:gpr(s64) = G_BITCAST %4(<2 x s32>)
 # CHECK-NEXT:    $x0 = COPY %5(s64)
 # CHECK-NEXT:    RET_ReallyLR implicit $x0
 body:             |

@@ -19,9 +19,9 @@ body:             |
     ; CHECK-NEXT: %dup:fpr128 = DUPv4i32gpr %copy
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %copy:gpr(s32) = COPY $w0
-    %dup:fpr(<4 x s32>) = G_DUP %copy(s32)
-    $q0 = COPY %dup(<4 x s32>)
+    %copy:gpr(i32) = COPY $w0
+    %dup:fpr(<4 x i32>) = G_DUP %copy(i32)
+    $q0 = COPY %dup(<4 x i32>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -41,9 +41,9 @@ body:             |
     ; CHECK-NEXT: %dup:fpr128 = DUPv2i64gpr %copy
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %copy:gpr(s64) = COPY $x0
-    %dup:fpr(<2 x s64>) = G_DUP %copy(s64)
-    $q0 = COPY %dup(<2 x s64>)
+    %copy:gpr(i64) = COPY $x0
+    %dup:fpr(<2 x i64>) = G_DUP %copy(i64)
+    $q0 = COPY %dup(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -63,9 +63,9 @@ body:             |
     ; CHECK-NEXT: %dup:fpr64 = DUPv2i32gpr %copy
     ; CHECK-NEXT: $d0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %copy:gpr(s32) = COPY $w0
-    %dup:fpr(<2 x s32>) = G_DUP %copy(s32)
-    $d0 = COPY %dup(<2 x s32>)
+    %copy:gpr(i32) = COPY $w0
+    %dup:fpr(<2 x i32>) = G_DUP %copy(i32)
+    $d0 = COPY %dup(<2 x i32>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -88,9 +88,9 @@ body:             |
     ; CHECK-NEXT: %dup:fpr128 = DUPv4i32lane [[INSERT_SUBREG]], 0
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %copy:fpr(s32) = COPY $s0
-    %dup:fpr(<4 x s32>) = G_DUP %copy(s32)
-    $q0 = COPY %dup(<4 x s32>)
+    %copy:fpr(i32) = COPY $s0
+    %dup:fpr(<4 x i32>) = G_DUP %copy(i32)
+    $q0 = COPY %dup(<4 x i32>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -112,9 +112,9 @@ body:             |
     ; CHECK-NEXT: %dup:fpr128 = DUPv2i64lane [[INSERT_SUBREG]], 0
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %copy:fpr(s64) = COPY $d0
-    %dup:fpr(<2 x s64>) = G_DUP %copy(s64)
-    $q0 = COPY %dup(<2 x s64>)
+    %copy:fpr(i64) = COPY $d0
+    %dup:fpr(<2 x i64>) = G_DUP %copy(i64)
+    $q0 = COPY %dup(<2 x i64>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -136,9 +136,9 @@ body:             |
     ; CHECK-NEXT: %dup:fpr64 = DUPv2i32lane [[INSERT_SUBREG]], 0
     ; CHECK-NEXT: $d0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %copy:fpr(s32) = COPY $s0
-    %dup:fpr(<2 x s32>) = G_DUP %copy(s32)
-    $d0 = COPY %dup(<2 x s32>)
+    %copy:fpr(i32) = COPY $s0
+    %dup:fpr(<2 x i32>) = G_DUP %copy(i32)
+    $d0 = COPY %dup(<2 x i32>)
     RET_ReallyLR implicit $d0
 
 
@@ -161,9 +161,9 @@ body:             |
     ; CHECK-NEXT: %dup:fpr64 = DUPv4i16lane [[INSERT_SUBREG]], 0
     ; CHECK-NEXT: $d0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %copy:fpr(s16) = COPY $h0
-    %dup:fpr(<4 x s16>) = G_DUP %copy(s16)
-    $d0 = COPY %dup(<4 x s16>)
+    %copy:fpr(i16) = COPY $h0
+    %dup:fpr(<4 x i16>) = G_DUP %copy(i16)
+    $d0 = COPY %dup(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -182,9 +182,9 @@ body:             |
     ; CHECK-NEXT: %dup:fpr64 = DUPv4i16gpr %copy
     ; CHECK-NEXT: $d0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %copy:gpr(s32) = COPY $w0
-    %dup:fpr(<4 x s16>) = G_DUP %copy(s32)
-    $d0 = COPY %dup(<4 x s16>)
+    %copy:gpr(i32) = COPY $w0
+    %dup:fpr(<4 x i16>) = G_DUP %copy(i32)
+    $d0 = COPY %dup(<4 x i16>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -206,9 +206,9 @@ body:             |
     ; CHECK-NEXT: %dup:fpr128 = DUPv8i16lane [[INSERT_SUBREG]], 0
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %copy:fpr(s16) = COPY $h0
-    %dup:fpr(<8 x s16>) = G_DUP %copy(s16)
-    $q0 = COPY %dup(<8 x s16>)
+    %copy:fpr(i16) = COPY $h0
+    %dup:fpr(<8 x i16>) = G_DUP %copy(i16)
+    $q0 = COPY %dup(<8 x i16>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -228,9 +228,9 @@ body:             |
     ; CHECK-NEXT: %dup:fpr128 = DUPv8i16gpr %copy
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %copy:gpr(s32) = COPY $w0
-    %dup:fpr(<8 x s16>) = G_DUP %copy(s32)
-    $q0 = COPY %dup(<8 x s16>)
+    %copy:gpr(i32) = COPY $w0
+    %dup:fpr(<8 x i16>) = G_DUP %copy(i32)
+    $q0 = COPY %dup(<8 x i16>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -250,10 +250,10 @@ body:             |
     ; CHECK-NEXT: %dup:fpr128 = DUPv8i16gpr %copy
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %copy:gpr(s32) = COPY $w0
-    %trunc:gpr(s16) = G_TRUNC %copy
-    %dup:fpr(<8 x s16>) = G_DUP %trunc(s16)
-    $q0 = COPY %dup(<8 x s16>)
+    %copy:gpr(i32) = COPY $w0
+    %trunc:gpr(i16) = G_TRUNC %copy
+    %dup:fpr(<8 x i16>) = G_DUP %trunc(i16)
+    $q0 = COPY %dup(<8 x i16>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -273,10 +273,10 @@ body:             |
     ; CHECK-NEXT: %dup:fpr64 = DUPv4i16gpr %copy
     ; CHECK-NEXT: $d0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %copy:gpr(s32) = COPY $w0
-    %trunc:gpr(s16) = G_TRUNC %copy
-    %dup:fpr(<4 x s16>) = G_DUP %trunc(s16)
-    $d0 = COPY %dup(<4 x s16>)
+    %copy:gpr(i32) = COPY $w0
+    %trunc:gpr(i16) = G_TRUNC %copy
+    %dup:fpr(<4 x i16>) = G_DUP %trunc(i16)
+    $d0 = COPY %dup(<4 x i16>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -296,9 +296,9 @@ body:             |
     ; CHECK-NEXT: %dup:fpr64 = DUPv8i8gpr %copy
     ; CHECK-NEXT: $d0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %copy:gpr(s32) = COPY $w0
-    %dup:fpr(<8 x s8>) = G_DUP %copy(s32)
-    $d0 = COPY %dup(<8 x s8>)
+    %copy:gpr(i32) = COPY $w0
+    %dup:fpr(<8 x i8>) = G_DUP %copy(i32)
+    $d0 = COPY %dup(<8 x i8>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -318,10 +318,10 @@ body:             |
     ; CHECK-NEXT: %dup:fpr64 = DUPv8i8gpr %copy
     ; CHECK-NEXT: $d0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %copy:gpr(s32) = COPY $w0
-    %trunc:gpr(s8) = G_TRUNC %copy(s32)
-    %dup:fpr(<8 x s8>) = G_DUP %trunc(s8)
-    $d0 = COPY %dup(<8 x s8>)
+    %copy:gpr(i32) = COPY $w0
+    %trunc:gpr(i8) = G_TRUNC %copy(i32)
+    %dup:fpr(<8 x i8>) = G_DUP %trunc(i8)
+    $d0 = COPY %dup(<8 x i8>)
     RET_ReallyLR implicit $d0
 
 ...
@@ -341,9 +341,9 @@ body:             |
     ; CHECK-NEXT: %dup:fpr128 = DUPv16i8gpr %copy
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %copy:gpr(s32) = COPY $w0
-    %dup:fpr(<16 x s8>) = G_DUP %copy(s32)
-    $q0 = COPY %dup(<16 x s8>)
+    %copy:gpr(i32) = COPY $w0
+    %dup:fpr(<16 x i8>) = G_DUP %copy(i32)
+    $q0 = COPY %dup(<16 x i8>)
     RET_ReallyLR implicit $q0
 ...
 ---
@@ -362,10 +362,10 @@ body:             |
     ; CHECK-NEXT: %dup:fpr128 = DUPv16i8gpr %copy
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %copy:gpr(s32) = COPY $w0
-    %trunc:gpr(s8) = G_TRUNC %copy
-    %dup:fpr(<16 x s8>) = G_DUP %trunc(s8)
-    $q0 = COPY %dup(<16 x s8>)
+    %copy:gpr(i32) = COPY $w0
+    %trunc:gpr(i8) = G_TRUNC %copy
+    %dup:fpr(<16 x i8>) = G_DUP %trunc(i8)
+    $q0 = COPY %dup(<16 x i8>)
     RET_ReallyLR implicit $q0
 ...
 ---
@@ -408,9 +408,9 @@ body:             |
     ; CHECK-NEXT: %dup:fpr128 = MOVIv4i32 3, 0
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
-    %cst:gpr(s32) = G_CONSTANT i32 3
-    %dup:fpr(<4 x s32>) = G_DUP %cst(s32)
-    $q0 = COPY %dup(<4 x s32>)
+    %cst:gpr(i32) = G_CONSTANT i32 3
+    %dup:fpr(<4 x i32>) = G_DUP %cst(i32)
+    $q0 = COPY %dup(<4 x i32>)
     RET_ReallyLR implicit $q0
 
 ...
@@ -428,9 +428,9 @@ body:             |
     ; CHECK-NEXT: %dup:fpr64 = MOVIv8b_ns 3
     ; CHECK-NEXT: $d0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %cst:gpr(s8) = G_CONSTANT i8 3
-    %dup:fpr(<8 x s8>) = G_DUP %cst(s8)
-    $d0 = COPY %dup(<8 x s8>)
+    %cst:gpr(i8) = G_CONSTANT i8 3
+    %dup:fpr(<8 x i8>) = G_DUP %cst(i8)
+    $d0 = COPY %dup(<8 x i8>)
     RET_ReallyLR implicit $d0
 ...
 ---
@@ -444,7 +444,9 @@ body:             |
     ; CHECK-LABEL: name: cst_v2p0
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %cst:gpr64 = MOVi64imm 3
+    ; CHECK-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 3
+    ; CHECK-NEXT: %cst:gpr64all = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY %cst
     ; CHECK-NEXT: [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) %const.0
     ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s128) from constant-pool)
     ; CHECK-NEXT: $q0 = COPY [[LDRQui]]
@@ -466,9 +468,9 @@ body:             |
     ; CHECK: %dup:fpr64 = MOVIv4i16 3, 0
     ; CHECK-NEXT: $d0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
-    %cst:gpr(s32) = G_CONSTANT i32 3
-    %dup:fpr(<4 x s16>) = G_DUP %cst(s32)
-    $d0 = COPY %dup(<4 x s16>)
+    %cst:gpr(i32) = G_CONSTANT i32 3
+    %dup:fpr(<4 x i16>) = G_DUP %cst(i32)
+    $d0 = COPY %dup(<4 x i16>)
     RET_ReallyLR implicit $d0
 
 ...

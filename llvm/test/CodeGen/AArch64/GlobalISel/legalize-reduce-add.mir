@@ -160,9 +160,10 @@ body:             |
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[DEF]](s64), [[DEF]](s64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<2 x s64>) = G_INSERT_VECTOR_ELT [[BUILD_VECTOR]], [[C]](s64), [[C]](s64)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[IVEC1:%[0-9]+]]:_(<2 x s64>) = G_INSERT_VECTOR_ELT [[IVEC]], [[C]](s64), [[C1]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<2 x s64>) = G_INSERT_VECTOR_ELT [[BUILD_VECTOR]], [[C]](s64), [[C1]](i64)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[IVEC1:%[0-9]+]]:_(<2 x s64>) = G_INSERT_VECTOR_ELT [[IVEC]], [[C]](s64), [[C2]](i64)
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(<2 x s64>) = G_ADD [[COPY2]], [[IVEC1]]
     ; CHECK-NEXT: [[ADD2:%[0-9]+]]:_(<2 x s64>) = G_ADD [[ADD]], [[ADD1]]

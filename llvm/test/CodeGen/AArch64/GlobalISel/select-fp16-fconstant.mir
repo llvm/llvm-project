@@ -12,8 +12,8 @@ body:             |
     ; CHECK: [[FMOVH0_:%[0-9]+]]:fpr16 = FMOVH0
     ; CHECK-NEXT: $h0 = COPY [[FMOVH0_]]
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
-    %0:fpr(s16) = G_FCONSTANT half 0.0
-    $h0 = COPY %0(s16)
+    %0:fpr(f16) = G_FCONSTANT half 0.0
+    $h0 = COPY %0(f16)
     RET_ReallyLR implicit $h0
 ...
 ---
@@ -27,8 +27,8 @@ body:             |
     ; CHECK: [[FMOVHi:%[0-9]+]]:fpr16 = FMOVHi 112
     ; CHECK-NEXT: $h0 = COPY [[FMOVHi]]
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
-    %0:fpr(s16) = G_FCONSTANT half 1.0
-    $h0 = COPY %0(s16)
+    %0:fpr(f16) = G_FCONSTANT half 1.0
+    $h0 = COPY %0(f16)
     RET_ReallyLR implicit $h0
 ...
 ---
@@ -43,6 +43,6 @@ body:             |
     ; CHECK-NEXT: [[LDRHui:%[0-9]+]]:fpr16 = LDRHui [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) %const.0 :: (load (s16) from constant-pool)
     ; CHECK-NEXT: $h0 = COPY [[LDRHui]]
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
-    %0:fpr(s16) = G_FCONSTANT half 0xH000B
-    $h0 = COPY %0(s16)
+    %0:fpr(f16) = G_FCONSTANT half 0xH000B
+    $h0 = COPY %0(f16)
     RET_ReallyLR implicit $h0

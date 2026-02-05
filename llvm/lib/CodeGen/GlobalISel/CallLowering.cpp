@@ -335,13 +335,24 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   if (LCMTy == LLTy) {
     // Common case where no padding is needed.
     assert(DstRegs.size() == 1);
-    return B.buildConcatVectors(DstRegs[0], SrcRegs);
+
+    SmallVector<Register, 8> ConcatRegs(SrcRegs.size());
+    llvm::copy(SrcRegs, ConcatRegs.begin());
+
+    if (LLTy.getScalarType() != PartLLT.getScalarType())
+      for (size_t I = 0, E = SrcRegs.size(); I != E; ++I) {
+        auto BitcastDst =
+            MRI.getType(SrcRegs[I]).changeElementType(LLTy.getScalarType());
+        ConcatRegs[I] = B.buildBitcast(BitcastDst, SrcRegs[I]).getReg(0);
+      }
+
+    return B.buildConcatVectors(DstRegs[0], ConcatRegs);
   }
 
   // We need to create an unmerge to the result registers, which may require
   // widening the original value.
   Register UnmergeSrcReg;
-  if (LCMTy != PartLLT) {
+  if (LCMTy.getSizeInBits() != PartLLT.getSizeInBits()) {
     assert(DstRegs.size() == 1);
     return B.buildDeleteTrailingVectorElements(
         DstRegs[0], B.buildMergeLikeInstr(LCMTy, SrcRegs));
@@ -352,14 +363,17 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
     UnmergeSrcReg = SrcRegs[0];
   }
 
-  int NumDst = LCMTy.getSizeInBits() / LLTy.getSizeInBits();
+  size_t NumDst = LCMTy.getSizeInBits() / LLTy.getSizeInBits();
 
   SmallVector<Register, 8> PadDstRegs(NumDst);
   llvm::copy(DstRegs, PadDstRegs.begin());
 
   // Create the excess dead defs for the unmerge.
-  for (int I = DstRegs.size(); I != NumDst; ++I)
+  for (size_t I = DstRegs.size(); I != NumDst; ++I)
     PadDstRegs[I] = MRI.createGenericVirtualRegister(LLTy);
+
+  if (PartLLT != LCMTy)
+    UnmergeSrcReg = B.buildBitcast(LCMTy, UnmergeSrcReg).getReg(0);
 
   if (PadDstRegs.size() == 1)
     return B.buildDeleteTrailingVectorElements(DstRegs[0], UnmergeSrcReg);
@@ -448,7 +462,7 @@ void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
       PartLLT = NewTy;
     }
 
-    if (LLTy.getScalarType() == PartLLT.getElementType()) {
+    if (LLTy.getScalarSizeInBits() == PartLLT.getScalarSizeInBits()) {
       mergeVectorRegsToResultRegs(B, OrigRegs, CastRegs);
     } else {
       unsigned I = 0;
@@ -794,8 +808,8 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
     const MVT ValVT = VA.getValVT();
     const MVT LocVT = VA.getLocVT();
 
-    const LLT LocTy(LocVT);
-    const LLT ValTy(ValVT);
+    const LLT LocTy = getLLTForMVT(LocVT);
+    const LLT ValTy = getLLTForMVT(ValVT);
     const LLT NewLLT = Handler.isIncomingArgumentHandler() ? LocTy : ValTy;
     const EVT OrigVT = TLI->getValueType(DL, Args[i].Ty);
     // Use the EVT here to strip pointerness.
@@ -1299,7 +1313,7 @@ void CallLowering::ValueHandler::copyArgumentMemory(
       MemSize, DstAlign);
 
   const LLT PtrTy = MRI.getType(DstPtr);
-  const LLT SizeTy = LLT::scalar(PtrTy.getSizeInBits());
+  const LLT SizeTy = LLT::buildInteger(PtrTy.getSizeInBits());
 
   auto SizeConst = MIRBuilder.buildConstant(SizeTy, MemSize);
   MIRBuilder.buildMemCpy(DstPtr, SrcPtr, SizeConst, *DstMMO, *SrcMMO);
@@ -1400,7 +1414,7 @@ static bool isCopyCompatibleType(LLT SrcTy, LLT DstTy) {
 void CallLowering::IncomingValueHandler::assignValueToReg(
     Register ValVReg, Register PhysReg, const CCValAssign &VA) {
   const MVT LocVT = VA.getLocVT();
-  const LLT LocTy(LocVT);
+  const LLT LocTy = getLLTForMVT(LocVT);
   const LLT RegTy = MRI.getType(ValVReg);
 
   if (isCopyCompatibleType(RegTy, LocTy)) {

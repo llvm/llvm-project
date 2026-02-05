@@ -402,6 +402,11 @@ LLVM_ABI LegalizeMutation changeElementCountTo(unsigned TypeIdx,
 LLVM_ABI LegalizeMutation changeElementSizeTo(unsigned TypeIdx,
                                               unsigned FromTypeIdx);
 
+/// Change the scalar size or element size to have the same scalar size as the
+/// type \p NewTy. Unlike changeElementTo, this discards pointer types and only
+/// changes the size.
+LLVM_ABI LegalizeMutation changeElementSizeTo(unsigned TypeIdx, LLT NewTy);
+
 /// Widen the scalar type or vector element type for the given type index to the
 /// next power of 2.
 LLVM_ABI LegalizeMutation widenScalarOrEltToNextPow2(unsigned TypeIdx,
@@ -857,6 +862,39 @@ public:
     return actionFor(LegalizeAction::NarrowScalar, Types, Mutation);
   }
 
+  /// Promote bf16 operands/results to \p PromoteEltTy so the operation executes
+  /// in that wider type before truncating back to bf16.
+  LegalizeRuleSet &convertBF16(unsigned TypeIdx = 0,
+                               LLT PromoteEltTy = LLT::float32()) {
+    assert(!PromoteEltTy.isVector() && PromoteEltTy.isScalar() &&
+           PromoteEltTy.isFloat() &&
+           "convertBF16 expects a floating-point scalar promotion type");
+    typeIdx(TypeIdx);
+    const LLT BF16Ty = LLT::bfloat16();
+    return widenScalarIf(
+        [=](const LegalityQuery &Query) {
+          if (TypeIdx >= Query.Types.size())
+            return false;
+          const LLT Ty = Query.Types[TypeIdx];
+          if (!Ty.isValid())
+            return false;
+          if (Ty == BF16Ty)
+            return true;
+          if (Ty.isVector() && Ty.getElementType() == BF16Ty)
+            return true;
+          return false;
+        },
+        LegalizeMutations::changeElementTo(TypeIdx, PromoteEltTy));
+  }
+
+  /// Conditionally promote bf16 operands/results to \p PromoteEltTy.
+  LegalizeRuleSet &convertBF16(bool Enable, unsigned TypeIdx = 0,
+                               LLT PromoteEltTy = LLT::float32()) {
+    if (!Enable)
+      return *this;
+    return convertBF16(TypeIdx, PromoteEltTy);
+  }
+
   /// Add more elements to reach the type selected by the mutation if the
   /// predicate is true.
   LegalizeRuleSet &moreElementsIf(LegalityPredicate Predicate,
@@ -1040,7 +1078,7 @@ public:
     using namespace LegalizeMutations;
     return actionIf(LegalizeAction::WidenScalar,
                     scalarOrEltNarrowerThan(TypeIdx, Ty.getScalarSizeInBits()),
-                    changeElementTo(typeIdx(TypeIdx), Ty));
+                    changeElementSizeTo(typeIdx(TypeIdx), Ty));
   }
 
   /// Ensure the scalar or element is at least as wide as Ty.
@@ -1051,7 +1089,7 @@ public:
     return actionIf(LegalizeAction::WidenScalar,
                     all(Predicate, scalarOrEltNarrowerThan(
                                        TypeIdx, Ty.getScalarSizeInBits())),
-                    changeElementTo(typeIdx(TypeIdx), Ty));
+                    changeElementSizeTo(typeIdx(TypeIdx), Ty));
   }
 
   /// Ensure the vector size is at least as wide as VectorSize by promoting the
@@ -1070,7 +1108,8 @@ public:
           const LLT VecTy = Query.Types[TypeIdx];
           unsigned NumElts = VecTy.getNumElements();
           unsigned MinSize = VectorSize / NumElts;
-          LLT NewTy = LLT::fixed_vector(NumElts, LLT::scalar(MinSize));
+          LLT NewTy = LLT::fixed_vector(
+              NumElts, VecTy.getElementType().changeElementSize(MinSize));
           return std::make_pair(TypeIdx, NewTy);
         });
   }
@@ -1081,7 +1120,7 @@ public:
     using namespace LegalizeMutations;
     return actionIf(LegalizeAction::WidenScalar,
                     scalarNarrowerThan(TypeIdx, Ty.getSizeInBits()),
-                    changeTo(typeIdx(TypeIdx), Ty));
+                    changeElementSizeTo(typeIdx(TypeIdx), Ty));
   }
   LegalizeRuleSet &minScalar(bool Pred, unsigned TypeIdx, const LLT Ty) {
     if (!Pred)
@@ -1102,7 +1141,7 @@ public:
                  QueryTy.getSizeInBits() < Ty.getSizeInBits() &&
                  Predicate(Query);
         },
-        changeTo(typeIdx(TypeIdx), Ty));
+        changeElementSizeTo(typeIdx(TypeIdx), Ty));
   }
 
   /// Ensure the scalar is at most as wide as Ty.
@@ -1111,7 +1150,7 @@ public:
     using namespace LegalizeMutations;
     return actionIf(LegalizeAction::NarrowScalar,
                     scalarOrEltWiderThan(TypeIdx, Ty.getScalarSizeInBits()),
-                    changeElementTo(typeIdx(TypeIdx), Ty));
+                    changeElementSizeTo(typeIdx(TypeIdx), Ty));
   }
 
   /// Ensure the scalar is at most as wide as Ty.
@@ -1120,7 +1159,7 @@ public:
     using namespace LegalizeMutations;
     return actionIf(LegalizeAction::NarrowScalar,
                     scalarWiderThan(TypeIdx, Ty.getSizeInBits()),
-                    changeTo(typeIdx(TypeIdx), Ty));
+                    changeElementSizeTo(typeIdx(TypeIdx), Ty));
   }
 
   /// Conditionally limit the maximum size of the scalar.
@@ -1138,7 +1177,7 @@ public:
                  QueryTy.getSizeInBits() > Ty.getSizeInBits() &&
                  Predicate(Query);
         },
-        changeElementTo(typeIdx(TypeIdx), Ty));
+        changeElementSizeTo(typeIdx(TypeIdx), Ty));
   }
 
   /// Limit the range of scalar sizes to MinTy and MaxTy.
@@ -1203,9 +1242,8 @@ public:
                  Predicate(Query);
         },
         [=](const LegalityQuery &Query) {
-          LLT T = Query.Types[LargeTypeIdx];
-          if (T.isPointerVector())
-            T = T.changeElementType(LLT::scalar(T.getScalarSizeInBits()));
+          LLT T = Query.Types[TypeIdx].changeElementSize(
+              Query.Types[LargeTypeIdx].getScalarSizeInBits());
           return std::make_pair(TypeIdx, T);
         });
   }

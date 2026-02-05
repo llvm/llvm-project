@@ -1,6 +1,7 @@
 // RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=false %s -o %t.non-optimized.cpp
 // RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=true  %s -o %t.optimized.cpp
 // RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common %s -o %t.default.cpp
+// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -gisel-extended-llt  %s -o %t.extended-llt.cpp
 
 // RUN: FileCheck %s --check-prefixes=CHECK,R19C,R19N -input-file=%t.non-optimized.cpp
 // RUN: FileCheck %s --check-prefixes=CHECK,R19C,R19O -input-file=%t.optimized.cpp
@@ -19,6 +20,7 @@
 
 // RUN: FileCheck %s --check-prefixes=CHECK,R02C,R02N,NOOPT -input-file=%t.non-optimized.cpp
 // RUN: FileCheck %s --check-prefixes=CHECK,R02C,R02O       -input-file=%t.optimized.cpp
+// RUN: FileCheck %s --check-prefixes=EXTENDED -input-file=%t.extended-llt.cpp
 
 // RUN: diff %t.default.cpp %t.optimized.cpp
 
@@ -94,14 +96,27 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 
 // CHECK-LABEL: // LLT Objects.
 // CHECK-NEXT:  enum {
-// CHECK-NEXT:    GILLT_p0s32
 // CHECK-NEXT:    GILLT_s32,
-// CHECK-NEXT:  }
+// CHECK-NEXT:    GILLT_p0s32,
+// CHECK-NEXT:  };
 // CHECK-NEXT:  const static size_t NumTypeObjects = 2;
 // CHECK-NEXT:  const static LLT TypeObjects[] = {
-// CHECK-NEXT:    LLT::pointer(0, 32),
 // CHECK-NEXT:    LLT::scalar(32),
+// CHECK-NEXT:    LLT::pointer(0, 32),
 // CHECK-NEXT:  };
+
+// EXTENDED-LABEL: // LLT Objects.
+// EXTENDED-NEXT:  enum {
+// EXTENDED-NEXT:    GILLT_i32,
+// EXTENDED-NEXT:    GILLT_f32,
+// EXTENDED-NEXT:    GILLT_p0s32,
+// EXTENDED-NEXT:  };
+// EXTENDED-NEXT:  const static size_t NumTypeObjects = 3;
+// EXTENDED-NEXT:  const static LLT TypeObjects[] = {
+// EXTENDED-NEXT:    LLT::integer(32),
+// EXTENDED-NEXT:    LLT::floatIEEE(32),
+// EXTENDED-NEXT:    LLT::pointer(0, 32),
+// EXTENDED-NEXT:  };
 
 // CHECK-LABEL: enum SubtargetFeatureBits : uint8_t {
 // CHECK-NEXT:    Feature_HasABit = 0,
@@ -252,6 +267,10 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // CHECK-LABEL: MyTargetInstructionSelector::getMatchTable() const {
 // CHECK-NEXT: MatchTable0[] = {
 
+// EXTENDED: const uint8_t *
+// EXTENDED-LABEL: MyTargetInstructionSelector::getMatchTable() const {
+// EXTENDED-NEXT: MatchTable0[] = {
+
 //===- Test a pattern with multiple ComplexPatterns in multiple instrs ----===//
 //
 // R19O-NEXT:  GIM_SwitchOpcode, /*MI*/0, /*[*/GIMT_Encode2({{[0-9]+}}), GIMT_Encode2({{[0-9]+}}), /*)*//*default:*//*Label [[DEFAULT_NUM:[0-9]+]]*/ GIMT_Encode4([[DEFAULT:[0-9]+]]),
@@ -329,6 +348,17 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // R19O:       // Label [[DEFAULT_NUM]]: @[[DEFAULT]]
 // R19O-NEXT:  GIM_Reject,
 // R19O-NEXT:  };
+//
+// EXTENDED-NEXT:  GIM_SwitchOpcode, /*MI*/0, /*[*/GIMT_Encode2({{[0-9]+}}), GIMT_Encode2({{[0-9]+}}), /*)*//*default:*//*Label [[DEFAULT_NUM:[0-9]+]]*/ GIMT_Encode4([[DEFAULT:[0-9]+]]),
+// EXTENDED-NEXT:  /*TargetOpcode::G_ADD*//*Label [[CASE_ADD_NUM:[0-9]+]]*/ GIMT_Encode4([[CASE_ADD:[0-9]+]]),
+// EXTENDED:       /*TargetOpcode::G_SELECT*//*Label [[CASE_SELECT_NUM:[0-9]+]]*/ GIMT_Encode4([[CASE_SELECT:[0-9]+]]),
+// EXTENDED:       // Label [[CASE_ADD_NUM]]: @[[CASE_ADD]]
+// EXTENDED:       // Label [[CASE_SELECT_NUM]]: @[[CASE_SELECT]]
+// EXTENDED-NEXT:  GIM_Try, /*On fail goto*//*Label [[GROUP_NUM:[0-9]+]]*/ GIMT_Encode4([[GROUP:[0-9]+]]),
+// EXTENDED-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_i32,
+// EXTENDED-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_i32,
+// EXTENDED-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_i32,
+// EXTENDED-NEXT:    GIM_RootCheckType, /*Op*/3, /*Type*/GILLT_i32,
 
 def INSN3 : I<(outs GPR32:$dst),
               (ins GPR32Op:$src1, GPR32:$src2a, GPR32:$src2b, GPR32:$scr), []>;

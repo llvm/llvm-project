@@ -2200,6 +2200,15 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
       return false;
 
     if (RBI.getRegBank(SrcReg, MRI, TRI)->getID() == AArch64::FPRRegBankID) {
+      // Need to add a copy to change the type so that the existing patterns can
+      // match when there is an integer on an FPR bank.
+      if (SrcTy.getScalarType().isInteger()) {
+        auto Copy = MIB.buildCopy(DstTy, SrcReg);
+        I.getOperand(1).setReg(Copy.getReg(0));
+        MRI.setRegClass(Copy.getReg(0),
+                        getRegClassForTypeOnBank(
+                            SrcTy, RBI.getRegBank(AArch64::FPRRegBankID)));
+      }
       if (I.getOpcode() == TargetOpcode::G_SITOFP)
         I.setDesc(TII.get(AArch64::G_SITOF));
       else
@@ -2230,8 +2239,9 @@ bool AArch64InstructionSelector::convertPtrAddToAdd(
   if (PtrTy.getAddressSpace() != 0)
     return false;
 
-  const LLT CastPtrTy =
-      PtrTy.isVector() ? LLT::fixed_vector(2, 64) : LLT::scalar(64);
+  const LLT CastPtrTy = PtrTy.isVector()
+                            ? LLT::fixed_vector(2, LLT::buildInteger(64))
+                            : LLT::buildInteger(64);
   auto PtrToInt = MIB.buildPtrToInt(CastPtrTy, AddOp1Reg);
   // Set regbanks on the registers.
   if (PtrTy.isVector())
