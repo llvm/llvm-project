@@ -28,6 +28,29 @@ class SPIRVSubtarget;
 using SPIRVType = const MachineInstr;
 using StructOffsetDecorator = std::function<void(Register)>;
 
+class SPIRVTypeInst {
+  const MachineInstr *MI;
+
+public:
+  static bool definesATypeRegister(const MachineInstr *MI) {
+    const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+    return MRI.getRegClass(MI->getOperand(0).getReg()) == &SPIRV::TYPERegClass;
+  }
+
+  SPIRVTypeInst(const MachineInstr &MI) : SPIRVTypeInst(&MI) {}
+  SPIRVTypeInst(const MachineInstr *MI) : MI(MI) {
+    // A SPIRV Type whose result is not a type is invalid.
+    assert(definesATypeRegister(MI));
+  }
+
+  const MachineInstr &operator*() const { return *MI; }
+  const MachineInstr *operator->() const { return MI; }
+  operator const MachineInstr *() const { return MI; }
+
+  bool operator==(const SPIRVTypeInst &Other) const { return MI == Other.MI; }
+  bool operator!=(const SPIRVTypeInst &Other) const { return MI != Other.MI; }
+};
+
 class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // Registers holding values which have types associated with them.
   // Initialized upon VReg definition in IRTranslator.
