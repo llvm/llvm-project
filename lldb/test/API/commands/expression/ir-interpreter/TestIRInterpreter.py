@@ -185,10 +185,10 @@ class IRInterpreterTestCase(TestBase):
         jit_options.SetAllowJIT(True)
 
         set_up_expressions = [
-            "int $i = 3",
-            "int $n = -3",
-            "unsigned $u = 5",
-            "long $l = -7",
+            "int32_t $i = 3",
+            "int32_t $n = -3",
+            "uint32_t $u = 5",
+            "int64_t $l = -7",
             "float $f = 9.0625",
             "double $d = 13.75",
             "float $nf = -11.25",
@@ -199,14 +199,14 @@ class IRInterpreterTestCase(TestBase):
             "$d - $n",  # sitofp i32 to double
             "$u + $f",  # uitofp i32 to float
             "$u + $d",  # uitofp i32 to double
-            "(int)$d",  # fptosi double to i32
-            "(int)$f",  # fptosi float to i32
-            "(long)$d",  # fptosi double to i64
-            "(short)$f",  # fptosi float to i16
-            "(long)$nf",  # fptosi float to i64
-            "(unsigned short)$f",  # fptoui float to i16
-            "(unsigned)$d",  # fptoui double to i32
-            "(unsigned long)$d",  # fptoui double to i64
+            "(int32_t)$d",  # fptosi double to i32
+            "(int32_t)$f",  # fptosi float to i32
+            "(int64_t)$d",  # fptosi double to i64
+            "(int16_t)$f",  # fptosi float to i16
+            "(int64_t)$nf",  # fptosi float to i64
+            "(uint16_t)$f",  # fptoui float to i16
+            "(uint32_t)$d",  # fptoui double to i32
+            "(uint64_t)$d",  # fptoui double to i64
             "(float)$d",  # fptrunc double to float
             "(double)$f",  # fpext float to double
             "(double)$nf",  # fpext float to double
@@ -250,14 +250,21 @@ class IRInterpreterTestCase(TestBase):
         ]
 
         expressions = [
-            ("(int)$f", "Conversion error: (float) 3.0E+9 cannot be converted to i32"),
             (
-                "(long)$d",
+                "(int32_t)$f",
+                "Conversion error: (float) 3.0E+9 cannot be converted to i32",
+            ),
+            (
+                "(uint32_t)$nf",
+                "Conversion error: (float) -1.5 cannot be converted to unsigned i32",
+            ),
+            (
+                "(int64_t)$d",
                 "Conversion error: (float) 1.0E+20 cannot be converted to i64",
             ),
             (
-                "(unsigned)$nf",
-                "Conversion error: (float) -1.5 cannot be converted to unsigned i32",
+                "(uint64_t)$d",
+                "Conversion error: (float) 1.0E+20 cannot be converted to unsigned i64",
             ),
         ]
 
@@ -271,6 +278,6 @@ class IRInterpreterTestCase(TestBase):
 
         # The conversion should succeed if the destination type can represent the result.
         self.expect_expr(
-            "(unsigned)$f", result_type="unsigned int", result_value="3000000000"
+            "(uint32_t)$f", result_type="uint32_t", result_value="3000000000"
         )
-        self.expect_expr("(int)$nf", result_type="int", result_value="-1")
+        self.expect_expr("(int32_t)$nf", result_type="int32_t", result_value="-1")
