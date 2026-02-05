@@ -676,10 +676,10 @@ define double @onecmp2(double %a, double %y, double %z) {
 ; P8-NEXT:    vspltisw v2, 1
 ; P8-NEXT:    xvcvsxwdp vs0, vs34
 ; P8-NEXT:    xscmpudp cr0, f1, f0
-; P8-NEXT:    bgt cr0, .LBB27_2
+; P8-NEXT:    bgt cr0, .LBB28_2
 ; P8-NEXT:  # %bb.1: # %entry
 ; P8-NEXT:    fmr f2, f3
-; P8-NEXT:  .LBB27_2: # %entry
+; P8-NEXT:  .LBB28_2: # %entry
 ; P8-NEXT:    fmr f1, f2
 ; P8-NEXT:    blr
 ;
@@ -688,10 +688,10 @@ define double @onecmp2(double %a, double %y, double %z) {
 ; P9-NEXT:    vspltisw v2, 1
 ; P9-NEXT:    xvcvsxwdp vs0, vs34
 ; P9-NEXT:    xscmpudp cr0, f1, f0
-; P9-NEXT:    bgt cr0, .LBB27_2
+; P9-NEXT:    bgt cr0, .LBB28_2
 ; P9-NEXT:  # %bb.1: # %entry
 ; P9-NEXT:    fmr f2, f3
-; P9-NEXT:  .LBB27_2: # %entry
+; P9-NEXT:  .LBB28_2: # %entry
 ; P9-NEXT:    fmr f1, f2
 ; P9-NEXT:    blr
 entry:
@@ -728,10 +728,10 @@ define double @onecmp3(double %a, double %y, double %z) {
 ; P8-NEXT:    vspltisw v2, 1
 ; P8-NEXT:    xvcvsxwdp vs0, vs34
 ; P8-NEXT:    xscmpudp cr0, f1, f0
-; P8-NEXT:    beq cr0, .LBB28_2
+; P8-NEXT:    beq cr0, .LBB30_2
 ; P8-NEXT:  # %bb.1: # %entry
 ; P8-NEXT:    fmr f2, f3
-; P8-NEXT:  .LBB28_2: # %entry
+; P8-NEXT:  .LBB30_2: # %entry
 ; P8-NEXT:    fmr f1, f2
 ; P8-NEXT:    blr
 ;
@@ -740,10 +740,10 @@ define double @onecmp3(double %a, double %y, double %z) {
 ; P9-NEXT:    vspltisw v2, 1
 ; P9-NEXT:    xvcvsxwdp vs0, vs34
 ; P9-NEXT:    xscmpudp cr0, f1, f0
-; P9-NEXT:    beq cr0, .LBB28_2
+; P9-NEXT:    beq cr0, .LBB30_2
 ; P9-NEXT:  # %bb.1: # %entry
 ; P9-NEXT:    fmr f2, f3
-; P9-NEXT:  .LBB28_2: # %entry
+; P9-NEXT:  .LBB30_2: # %entry
 ; P9-NEXT:    fmr f1, f2
 ; P9-NEXT:    blr
 entry:
