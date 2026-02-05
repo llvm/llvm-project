@@ -271,9 +271,8 @@ BoolBitwiseOperationCheck::createDiagBuilder(
 void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     const BinaryOperator *BinOp, const BinaryOperator *ParensExpr,
     const BinaryOperator *ParensExprOpt, const Expr *LhsOfCompound,
-    // TODO: remove it
-    const Expr *RhsWithSideEffects, const clang::SourceManager &SM,
-    clang::ASTContext &Ctx, bool CanApplyFixIt) {
+    const clang::SourceManager &SM, clang::ASTContext &Ctx,
+    bool CanApplyFixIt) {
   // Early exit: the matcher proved that no fix-it possible
   if (!CanApplyFixIt) {
     createDiagBuilder(RespectStrictMode, BinOp);
@@ -371,9 +370,8 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   ASTContext &Ctx = *Result.Context;
 
   const bool CanApplyFixIt = (FixItBinOp != nullptr && FixItBinOp == BinOp);
-  emitWarningAndChangeOperatorsIfPossible(BinOp, ParensExpr, ParensExprOpt,
-                                          LhsOfCompound, RhsWithSideEffects, SM,
-                                          Ctx, CanApplyFixIt);
+  emitWarningAndChangeOperatorsIfPossible(
+      BinOp, ParensExpr, ParensExprOpt, LhsOfCompound, SM, Ctx, CanApplyFixIt);
 
   // Check if canceling the fix-it was caused by side effects.
   if (!CanApplyFixIt && RhsWithSideEffects)

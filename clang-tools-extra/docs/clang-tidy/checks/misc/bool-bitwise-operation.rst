@@ -8,7 +8,9 @@ and their compound analogues on Boolean values where logical operators like
 ``&&`` and ``||`` would be more appropriate.
 
 Bitwise operations on Booleans can incur unnecessary performance overhead due
-to implicit integer conversions and missed short-circuit evaluation.
+to implicit integer conversions and missed short-circuit evaluation. They also
+contradict the principle of least astonishment, as logical operators are the
+expected and idiomatic way to work with Boolean values.
 
 .. code-block:: c++
 
