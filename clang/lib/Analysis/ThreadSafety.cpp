@@ -1728,24 +1728,23 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
   // The fact set for the function on exit.
   const FactSet &FunctionExitFSet;
   // Use `LVarCtx` to keep track of the context at each program point, which
-  // will be used to translate DREs (by `SExprBuilder::translateDeclRefExpr`)
+  // will be used to translate variables (by `SExprBuilder::translateVariable`)
   // to their canonical definitions:
   LocalVariableMap::Context LVarCtx;
   unsigned CtxIndex;
 
-  // To update and adjust the context.
+  // To update the context used in attr-expr translation.  If `S` is non-null,
+  // the context is updated to the program point right after 'S'.
   void updateLocalVarMapCtx(const Stmt *S) {
-    if (Analyzer->Handler.issueBetaWarnings()) {
-      // The lookup closure needs to be reconstructed with the LVarCtx at the
-      // point right before 'S'.  This is the context used for visiting 'S'.
-      Analyzer->SxBuilder.setLookupLocalVarExpr(
-          [this, Ctx = LVarCtx](const NamedDecl *D) mutable -> const Expr * {
-            return Analyzer->LocalVarMap.lookupExpr(D, Ctx);
-          });
-    }
     if (S)
-      // Update the context to the point right after 'S'.
       LVarCtx = Analyzer->LocalVarMap.getNextContext(CtxIndex, S, LVarCtx);
+    if (!Analyzer->Handler.issueBetaWarnings())
+      return;
+    // The lookup closure needs to be reconstructed with the refreshed LVarCtx.
+    Analyzer->SxBuilder.setLookupLocalVarExpr(
+        [this, Ctx = LVarCtx](const NamedDecl *D) mutable -> const Expr * {
+          return Analyzer->LocalVarMap.lookupExpr(D, Ctx);
+        });
   }
 
   // helper functions
@@ -2278,9 +2277,9 @@ void BuildLockset::VisitUnaryOperator(const UnaryOperator *UO) {
 void BuildLockset::VisitBinaryOperator(const BinaryOperator *BO) {
   if (!BO->isAssignmentOp())
     return;
-
-  updateLocalVarMapCtx(BO);
+  
   checkAccess(BO->getLHS(), AK_Written);
+  updateLocalVarMapCtx(BO);
 }
 
 /// Whenever we do an LValue to Rvalue cast, we are reading a variable and
@@ -2325,8 +2324,6 @@ void BuildLockset::examineArguments(const FunctionDecl *FD,
 }
 
 void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
-  updateLocalVarMapCtx(Exp);
-
   if (const auto *CE = dyn_cast<CXXMemberCallExpr>(Exp)) {
     const auto *ME = dyn_cast<MemberExpr>(CE->getCallee());
     // ME can be null when calling a method pointer
@@ -2390,9 +2387,9 @@ void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
   }
 
   auto *D = dyn_cast_or_null<NamedDecl>(Exp->getCalleeDecl());
-  if (!D)
-    return;
-  handleCall(Exp, D);
+  if (D)
+    handleCall(Exp, D);
+  updateLocalVarMapCtx(Exp);
 }
 
 void BuildLockset::VisitCXXConstructExpr(const CXXConstructExpr *Exp) {
@@ -2421,8 +2418,6 @@ static const Expr *UnpackConstruction(const Expr *E) {
 }
 
 void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
-  updateLocalVarMapCtx(S);
-
   for (auto *D : S->getDeclGroup()) {
     if (auto *VD = dyn_cast_or_null<VarDecl>(D)) {
       const Expr *E = VD->getInit();
@@ -2442,6 +2437,7 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
       }
     }
   }
+  updateLocalVarMapCtx(S);
 }
 
 void BuildLockset::VisitMaterializeTemporaryExpr(
@@ -2847,7 +2843,6 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
 
         case CFGElement::CleanupFunction: {
           const CFGCleanupFunction &CF = BI.castAs<CFGCleanupFunction>();
-          LocksetBuilder.updateLocalVarMapCtx(nullptr);
           LocksetBuilder.handleCall(
               /*Exp=*/nullptr, CF.getFunctionDecl(),
               SxBuilder.translateVariable(CF.getVarDecl(), nullptr),

@@ -7503,6 +7503,18 @@ void testEscapeInvalidationHappensRightAfterTheCall(Foo* F) {
     unlockFooWithEscapablePointer(&L);
 }
 
+
+void testEscapeInvalidationHappensRightAfterTheCtorCall(Foo* F) {
+  Foo* L = F;
+  MutexLock ScopeLock(&L->mu);
+
+  struct {
+    int DataMember GUARDED_BY(F->mu);
+  } Data;
+
+  Data.DataMember = 0;
+}
+
 void testCleanUpFunctionWithLocalVarUpdated(Foo* F) {
   F->mu.Lock();
   Foo * __attribute__((unused, cleanup(unlockFooWithEscapablePointer))) L = F;
