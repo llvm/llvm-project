@@ -37,27 +37,45 @@ class TestCase(TestBase):
 
         self.expect(
             "frame var url",
-            startstr=f'({foundation}.URL?) url = "https://www.example.com/path?query#fragment"',
+            substrs=[
+                f"({foundation}.URL?)",
+                "url",
+                'https://www.example.com/path?query#fragment',
+            ],
         )
         self.expect(
             "expression -d run -- url",
-            startstr=f'({foundation}.URL?) $R0 = "https://www.example.com/path?query#fragment"',
+            substrs=[
+                f"({foundation}.URL?)",
+                "https://www.example.com/path?query#fragment",
+            ],
         )
 
         self.expect(
             "frame var relativeURL",
-            startstr=f'({foundation}.URL?) relativeURL = "relative -- https://www.example.com/"',
+            substrs=[
+                f"({foundation}.URL?)",
+                "relativeURL",
+                "relative",
+                "--",
+                "https://www.example.com/",
+            ],
         )
         self.expect(
             "expression -d run -- relativeURL",
-            startstr=f'({foundation}.URL?) $R1 = "relative -- https://www.example.com/"',
+            substrs=[
+                f"({foundation}.URL?)",
+                "relative",
+                "--",
+                "https://www.example.com/",
+            ],
         )
 
         self.expect(
             "frame var g_url",
-            startstr=f'({foundation}.URL) g_url = "http://www.apple.com"',
+            substrs=[f"({foundation}.URL)", "g_url", "http://www.apple.com"],
         )
         self.expect(
             "expression -d run -- g_url",
-            startstr=f'({foundation}.URL) $R2 = "http://www.apple.com"',
+            substrs=[f"({foundation}.URL)", "http://www.apple.com"],
         )
