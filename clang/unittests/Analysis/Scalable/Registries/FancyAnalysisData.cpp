@@ -9,7 +9,6 @@
 #include "Registries/MockSerializationFormat.h"
 #include "clang/Analysis/Scalable/TUSummary/EntitySummary.h"
 #include "llvm/Support/Registry.h"
-#include <vector>
 
 using namespace clang;
 using namespace ssaf;
