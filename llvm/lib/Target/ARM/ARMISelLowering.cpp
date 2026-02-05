@@ -4630,7 +4630,7 @@ SDValue ARMTargetLowering::getVFPCmp(SDValue LHS, SDValue RHS,
 }
 
 // This function returns three things: the arithmetic computation itself
-// (Value), a comparison (OverflowCmp), and a condition code (ARMcc).  The
+// (Value), a comparison (Overflow), and a condition code (ARMcc).  The
 // comparison and the condition code define the case in which the arithmetic
 // computation *does not* overflow.
 std::pair<SDValue, SDValue>
@@ -4638,42 +4638,30 @@ ARMTargetLowering::getARMXALUOOp(SDValue Op, SelectionDAG &DAG,
                                  SDValue &ARMcc) const {
   assert(Op.getValueType() == MVT::i32 &&  "Unsupported value type");
 
-  SDValue Value, OverflowCmp;
+  SDValue Value, Overflow;
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
   SDLoc dl(Op);
-
-  // FIXME: We are currently always generating CMPs because we don't support
-  // generating CMN through the backend. This is not as good as the natural
-  // CMP case because it causes a register dependency and cannot be folded
-  // later.
+  unsigned Opc = 0;
 
   switch (Op.getOpcode()) {
   default:
     llvm_unreachable("Unknown overflow instruction!");
   case ISD::SADDO:
+    Opc = ARMISD::ADDC;
     ARMcc = DAG.getConstant(ARMCC::VC, dl, MVT::i32);
-    Value = DAG.getNode(ISD::ADD, dl, Op.getValueType(), LHS, RHS);
-    OverflowCmp = DAG.getNode(ARMISD::CMP, dl, FlagsVT, Value, LHS);
     break;
   case ISD::UADDO:
-    ARMcc = DAG.getConstant(ARMCC::HS, dl, MVT::i32);
-    // We use ADDC here to correspond to its use in LowerUnsignedALUO.
-    // We do not use it in the USUBO case as Value may not be used.
-    Value = DAG.getNode(ARMISD::ADDC, dl,
-                        DAG.getVTList(Op.getValueType(), MVT::i32), LHS, RHS)
-                .getValue(0);
-    OverflowCmp = DAG.getNode(ARMISD::CMP, dl, FlagsVT, Value, LHS);
+    Opc = ARMISD::ADDC;
+    ARMcc = DAG.getConstant(ARMCC::LO, dl, MVT::i32);
     break;
   case ISD::SSUBO:
+    Opc = ARMISD::SUBC;
     ARMcc = DAG.getConstant(ARMCC::VC, dl, MVT::i32);
-    Value = DAG.getNode(ISD::SUB, dl, Op.getValueType(), LHS, RHS);
-    OverflowCmp = DAG.getNode(ARMISD::CMP, dl, FlagsVT, LHS, RHS);
     break;
   case ISD::USUBO:
+    Opc = ARMISD::SUBC;
     ARMcc = DAG.getConstant(ARMCC::HS, dl, MVT::i32);
-    Value = DAG.getNode(ISD::SUB, dl, Op.getValueType(), LHS, RHS);
-    OverflowCmp = DAG.getNode(ARMISD::CMP, dl, FlagsVT, LHS, RHS);
     break;
   case ISD::UMULO:
     // We generate a UMUL_LOHI and then check if the high word is 0.
@@ -4681,8 +4669,8 @@ ARMTargetLowering::getARMXALUOOp(SDValue Op, SelectionDAG &DAG,
     Value = DAG.getNode(ISD::UMUL_LOHI, dl,
                         DAG.getVTList(Op.getValueType(), Op.getValueType()),
                         LHS, RHS);
-    OverflowCmp = DAG.getNode(ARMISD::CMP, dl, FlagsVT, Value.getValue(1),
-                              DAG.getConstant(0, dl, MVT::i32));
+    Overflow = DAG.getNode(ARMISD::CMP, dl, FlagsVT, Value.getValue(1),
+                           DAG.getConstant(0, dl, MVT::i32));
     Value = Value.getValue(0); // We only want the low 32 bits for the result.
     break;
   case ISD::SMULO:
@@ -4692,15 +4680,34 @@ ARMTargetLowering::getARMXALUOOp(SDValue Op, SelectionDAG &DAG,
     Value = DAG.getNode(ISD::SMUL_LOHI, dl,
                         DAG.getVTList(Op.getValueType(), Op.getValueType()),
                         LHS, RHS);
-    OverflowCmp = DAG.getNode(ARMISD::CMP, dl, FlagsVT, Value.getValue(1),
-                              DAG.getNode(ISD::SRA, dl, Op.getValueType(),
-                                          Value.getValue(0),
-                                          DAG.getConstant(31, dl, MVT::i32)));
+    Overflow = DAG.getNode(ARMISD::CMP, dl, FlagsVT, Value.getValue(1),
+                           DAG.getNode(ISD::SRA, dl, Op.getValueType(),
+                                       Value.getValue(0),
+                                       DAG.getConstant(31, dl, MVT::i32)));
     Value = Value.getValue(0); // We only want the low 32 bits for the result.
     break;
   } // switch (...)
+  if (Opc) {
+    if (Subtarget->isThumb1Only() &&
+        (Op.getOpcode() == ISD::SADDO || Op.getOpcode() == ISD::SSUBO)) {
+      // FIXME: Thumb1 has to split between the cmp and the add/sub.
+      // Remove when the peephole optimizer handles this or we no longer need to
+      // split.
+      if (Opc == ARMISD::ADDC) {
+        Value = DAG.getNode(ISD::ADD, dl, Op.getValueType(), LHS, RHS);
+        Overflow = DAG.getNode(ARMISD::CMP, dl, FlagsVT, Value, LHS);
+      } else {
+        Value = DAG.getNode(ISD::SUB, dl, Op.getValueType(), LHS, RHS);
+        Overflow = DAG.getNode(ARMISD::CMP, dl, FlagsVT, LHS, RHS);
+      }
+    } else {
+      SDVTList VTs = DAG.getVTList(Op.getValueType(), FlagsVT);
+      Value = DAG.getNode(Opc, dl, VTs, LHS, RHS);
+      Overflow = Value.getValue(1);
+    }
+  }
 
-  return std::make_pair(Value, OverflowCmp);
+  return std::make_pair(Value, Overflow);
 }
 
 SDValue
@@ -4709,20 +4716,18 @@ ARMTargetLowering::LowerSignedALUO(SDValue Op, SelectionDAG &DAG) const {
   if (!isTypeLegal(Op.getValueType()))
     return SDValue();
 
-  SDValue Value, OverflowCmp;
-  SDValue ARMcc;
-  std::tie(Value, OverflowCmp) = getARMXALUOOp(Op, DAG, ARMcc);
   SDLoc dl(Op);
+  SDValue Value, Overflow;
+  SDValue ARMcc;
+  std::tie(Value, Overflow) = getARMXALUOOp(Op, DAG, ARMcc);
   // We use 0 and 1 as false and true values.
   SDValue TVal = DAG.getConstant(1, dl, MVT::i32);
   SDValue FVal = DAG.getConstant(0, dl, MVT::i32);
-  EVT VT = Op.getValueType();
 
-  SDValue Overflow =
-      DAG.getNode(ARMISD::CMOV, dl, VT, TVal, FVal, ARMcc, OverflowCmp);
+  Overflow =
+      DAG.getNode(ARMISD::CMOV, dl, MVT::i32, TVal, FVal, ARMcc, Overflow);
 
-  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
-  return DAG.getNode(ISD::MERGE_VALUES, dl, VTs, Value, Overflow);
+  return DAG.getMergeValues({Value, Overflow}, dl);
 }
 
 static SDValue ConvertBooleanCarryToCarryFlag(SDValue BoolCarry,
@@ -4853,12 +4858,12 @@ SDValue ARMTargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     if (!isTypeLegal(Cond->getValueType(0)))
       return SDValue();
 
-    SDValue Value, OverflowCmp;
+    SDValue Value, Overflow;
     SDValue ARMcc;
-    std::tie(Value, OverflowCmp) = getARMXALUOOp(Cond, DAG, ARMcc);
+    std::tie(Value, Overflow) = getARMXALUOOp(Cond, DAG, ARMcc);
     EVT VT = Op.getValueType();
 
-    return getCMOV(dl, VT, SelectTrue, SelectFalse, ARMcc, OverflowCmp, DAG);
+    return getCMOV(dl, VT, SelectTrue, SelectFalse, ARMcc, Overflow, DAG);
   }
 
   // Convert:
@@ -5455,9 +5460,9 @@ SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
       return SDValue();
 
     // The actual operation with overflow check.
-    SDValue Value, OverflowCmp;
+    SDValue Value, Overflow;
     SDValue ARMcc;
-    std::tie(Value, OverflowCmp) = getARMXALUOOp(Cond, DAG, ARMcc);
+    std::tie(Value, Overflow) = getARMXALUOOp(Cond, DAG, ARMcc);
 
     // Reverse the condition code.
     ARMCC::CondCodes CondCode =
@@ -5466,7 +5471,7 @@ SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
     ARMcc = DAG.getConstant(CondCode, SDLoc(ARMcc), MVT::i32);
 
     return DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Chain, Dest, ARMcc,
-                       OverflowCmp);
+                       Overflow);
   }
 
   return SDValue();
@@ -5505,9 +5510,9 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
       return SDValue();
 
     // The actual operation with overflow check.
-    SDValue Value, OverflowCmp;
+    SDValue Value, Overflow;
     SDValue ARMcc;
-    std::tie(Value, OverflowCmp) = getARMXALUOOp(LHS.getValue(0), DAG, ARMcc);
+    std::tie(Value, Overflow) = getARMXALUOOp(LHS.getValue(0), DAG, ARMcc);
 
     if ((CC == ISD::SETNE) != isOneConstant(RHS)) {
       // Reverse the condition code.
@@ -5518,7 +5523,7 @@ SDValue ARMTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
     }
 
     return DAG.getNode(ARMISD::BRCOND, dl, MVT::Other, Chain, Dest, ARMcc,
-                       OverflowCmp);
+                       Overflow);
   }
 
   if (LHS.getValueType() == MVT::i32) {

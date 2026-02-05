@@ -26,12 +26,11 @@ define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ;
 ; CHECK-T2NODSP-LABEL: func32:
 ; CHECK-T2NODSP:       @ %bb.0:
-; CHECK-T2NODSP-NEXT:    mla r1, r1, r2, r0
+; CHECK-T2NODSP-NEXT:    muls r1, r2, r1
 ; CHECK-T2NODSP-NEXT:    mov.w r2, #-2147483648
-; CHECK-T2NODSP-NEXT:    cmp r1, r0
+; CHECK-T2NODSP-NEXT:    adds r0, r0, r1
 ; CHECK-T2NODSP-NEXT:    it vs
-; CHECK-T2NODSP-NEXT:    eorvs.w r1, r2, r1, asr #31
-; CHECK-T2NODSP-NEXT:    mov r0, r1
+; CHECK-T2NODSP-NEXT:    eorvs.w r0, r2, r0, asr #31
 ; CHECK-T2NODSP-NEXT:    bx lr
 ;
 ; CHECK-T2DSP-LABEL: func32:
