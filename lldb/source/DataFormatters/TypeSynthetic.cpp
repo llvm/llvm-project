@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Utility/Log.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
@@ -265,10 +266,15 @@ BytecodeSyntheticChildren::FrontEnd::FrontEnd(
   }
 
   FormatterBytecode::ControlStack control = {m_definition.init->getBuffer()};
-  auto error =
+  llvm::Error error =
       FormatterBytecode::Interpret(control, data, FormatterBytecode::sig_init);
+  if (error) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), std::move(error),
+                   "@init failed: {0}");
+    return;
+  }
 
-  if (!error && data.size() > 0)
+  if (data.size() > 0)
     m_self = std::move(data);
 }
 
@@ -278,9 +284,15 @@ lldb::ChildCacheState BytecodeSyntheticChildren::FrontEnd::Update() {
 
   FormatterBytecode::ControlStack control = {m_definition.update->getBuffer()};
   FormatterBytecode::DataStack data = m_self;
-  auto error = FormatterBytecode::Interpret(control, data,
-                                            FormatterBytecode::sig_update);
-  if (!error && data.size() > 0)
+  llvm::Error error = FormatterBytecode::Interpret(
+      control, data, FormatterBytecode::sig_update);
+  if (error) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), std::move(error),
+                   "@update failed: {0}");
+    return ChildCacheState::eRefetch;
+  }
+
+  if (data.size() > 0)
     m_self = std::move(data);
 
   return ChildCacheState::eRefetch;
@@ -294,24 +306,28 @@ BytecodeSyntheticChildren::FrontEnd::CalculateNumChildren() {
   FormatterBytecode::ControlStack control = {
       m_definition.num_children->getBuffer()};
   FormatterBytecode::DataStack data = m_self;
-  auto error = FormatterBytecode::Interpret(
+  llvm::Error error = FormatterBytecode::Interpret(
       control, data, FormatterBytecode::sig_get_num_children);
   if (error)
     return error;
 
-  if (data.size() == 0)
-    return llvm::createStringError(
-        "@get_num_children returned empty data stack");
+  if (data.size() == 0) {
+    char message[] = "@get_num_children returned empty data stack";
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters), message);
+    return llvm::createStringError(message);
+  }
 
   const auto &top = data.back();
   if (auto *u = std::get_if<uint64_t>(&top))
     if (*u <= UINT32_MAX)
       return *u;
-  if (auto *i = std::get_if<int64_t>(&top))
-    if (*i <= UINT32_MAX)
+  if (auto *i = std::get_if<int64_t>(&top)) {
+    if (*i > 0 && *i <= UINT32_MAX)
       return *i;
+    return UINT32_MAX;
+  }
 
-  return llvm::createStringError("@get_num_children returned invalid type");
+  return llvm::createStringError("@get_num_children returned invalid value");
 }
 
 lldb::ValueObjectSP
@@ -323,10 +339,19 @@ BytecodeSyntheticChildren::FrontEnd::GetChildAtIndex(uint32_t idx) {
       m_definition.get_child_at_index->getBuffer()};
   FormatterBytecode::DataStack data = m_self;
   data.emplace_back((uint64_t)idx);
-  auto error = FormatterBytecode::Interpret(
+  llvm::Error error = FormatterBytecode::Interpret(
       control, data, FormatterBytecode::sig_get_child_at_index);
-  if (error || data.size() == 0)
+  if (error) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), std::move(error),
+                   "@get_child_at_index failed: {0}");
     return {};
+  }
+
+  if (data.size() == 0) {
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+             "@get_child_at_index returned empty data stack");
+    return {};
+  }
 
   const auto &top = data.back();
   if (auto *child = std::get_if<ValueObjectSP>(&top))
@@ -344,24 +369,28 @@ BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
       m_definition.get_child_index->getBuffer()};
   FormatterBytecode::DataStack data = m_self;
   data.emplace_back(name.GetString());
-  auto error = FormatterBytecode::Interpret(
+  llvm::Error error = FormatterBytecode::Interpret(
       control, data, FormatterBytecode::sig_get_child_index);
   if (error)
     return error;
 
-  if (data.size() == 0)
-    return llvm::createStringError(
-        "@get_child_index returned empty data stack");
+  if (data.size() == 0) {
+    char message[] = "@get_child_index returned empty data stack";
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters), message);
+    return llvm::createStringError(message);
+  }
 
   const auto &top = data.back();
   if (auto *u = std::get_if<uint64_t>(&top))
-    if (*u <= UINT32_MAX)
+    if (*u <= SIZE_MAX)
       return *u;
-  if (auto *i = std::get_if<int64_t>(&top))
-    if (*i <= UINT32_MAX)
+  if (auto *i = std::get_if<int64_t>(&top)) {
+    if (*i > 0 && static_cast<uint64_t>(*i) <= SIZE_MAX)
       return *i;
+    return SIZE_MAX;
+  }
 
-  return llvm::createStringError("@get_child_index returned invalid type");
+  return llvm::createStringError("@get_child_index returned invalid value");
 }
 
 std::string BytecodeSyntheticChildren::GetDescription() {

@@ -17,7 +17,6 @@ class TestCase(TestBase):
 
         frame = thread.selected_frame
         account = frame.var("acc")
-        # breakpoint()
         self.assertEqual(account.num_children, 1)
         self.assertEqual(account.child[0].name, "username")
 
