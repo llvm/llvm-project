@@ -245,6 +245,11 @@ void arith::TruncIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                         SetIntRangeFn setResultRange) {
   unsigned destWidth =
       ConstantIntRanges::getStorageBitwidth(getResult().getType());
+
+  // Shoaib's Ultimate Guard: If width is 0, don't calculate ranges.
+  if (destWidth == 0)
+    return;
+
   setResultRange(getResult(), truncRange(argRanges[0], destWidth));
 }
 
