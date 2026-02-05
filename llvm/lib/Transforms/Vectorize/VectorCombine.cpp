@@ -2650,7 +2650,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   bool SingleSrcBinOp = (X == Y) && (Z == W) && (NewMask0 == NewMask1);
   // SingleSrcBinOp only reduces instruction count if we also eliminate the
   // original binop(s). If binops have multiple uses, they won't be eliminated.
-  ReducedInstCount |= SingleSrcBinOp && LHS->hasOneUse() && RHS->hasOneUse();
+  ReducedInstCount |= SingleSrcBinOp && LHS->hasOneUser() && RHS->hasOneUser();
 
   auto *ShuffleCmpTy =
       FixedVectorType::get(BinOpTy->getElementType(), ShuffleDstTy);
@@ -2670,9 +2670,9 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   }
   // If LHS/RHS have other uses, we need to account for the cost of keeping
   // the original instructions. When SameBinOp, only add the cost once.
-  if (!LHS->hasOneUse())
+  if (!LHS->hasOneUser())
     NewCost += LHSCost;
-  if (!SameBinOp && !RHS->hasOneUse())
+  if (!SameBinOp && !RHS->hasOneUser())
     NewCost += RHSCost;
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two binops: " << I
