@@ -676,38 +676,31 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer<write_mode> *writer,
   return convert_float_typed<T>(writer, to_conv, float_bits, ConversionType::G);
 }
 
-template <WriteMode write_mode>
-LIBC_PRINTF_MODULE_DECL int convert_float_decimal(Writer<write_mode> *writer,
-                                                  const FormatSection &to_conv);
-template <WriteMode write_mode>
-LIBC_PRINTF_MODULE_DECL int convert_float_dec_exp(Writer<write_mode> *writer,
-                                                  const FormatSection &to_conv);
-template <WriteMode write_mode>
-LIBC_PRINTF_MODULE_DECL int
-convert_float_dec_auto(Writer<write_mode> *writer,
-                       const FormatSection &to_conv);
+LIBC_PRINTF_MODULE((template <WriteMode write_mode>
+                    int convert_float_decimal(Writer<write_mode> *writer,
+                                              const FormatSection &to_conv)),
+                   {
+                     return convert_float_outer(writer, to_conv,
+                                                ConversionType::F);
+                   })
 
-#if !defined(LIBC_COPT_PRINTF_MODULAR) || defined(LIBC_PRINTF_DEFINE_MODULES)
-template <WriteMode write_mode>
-LIBC_INLINE int convert_float_decimal(Writer<write_mode> *writer,
-                                      const FormatSection &to_conv) {
-  return convert_float_outer(writer, to_conv, ConversionType::F);
-}
+LIBC_PRINTF_MODULE((template <WriteMode write_mode>
+                    int convert_float_dec_exp(Writer<write_mode> *writer,
+                                              const FormatSection &to_conv)),
+                   {
+                     return convert_float_outer(writer, to_conv,
+                                                ConversionType::E);
+                   })
 
-template <WriteMode write_mode>
-LIBC_INLINE int convert_float_dec_exp(Writer<write_mode> *writer,
-                                      const FormatSection &to_conv) {
-  return convert_float_outer(writer, to_conv, ConversionType::E);
-}
-
-template <WriteMode write_mode>
-LIBC_INLINE int convert_float_dec_auto(Writer<write_mode> *writer,
-                                       const FormatSection &to_conv) {
-  return convert_float_outer(writer, to_conv, ConversionType::G);
-}
+LIBC_PRINTF_MODULE((template <WriteMode write_mode>
+                    int convert_float_dec_auto(Writer<write_mode> *writer,
+                                               const FormatSection &to_conv)),
+                   {
+                     return convert_float_outer(writer, to_conv,
+                                                ConversionType::G);
+                   })
 
 #ifdef LIBC_PRINTF_DEFINE_MODULES
-
 #define HANDLE_WRITE_MODE(MODE)                                                \
   template int convert_float_decimal<WriteMode::MODE>(                         \
       Writer<WriteMode::MODE> * writer, const FormatSection &to_conv);
@@ -725,8 +718,6 @@ LIBC_INLINE int convert_float_dec_auto(Writer<write_mode> *writer,
       Writer<WriteMode::MODE> * writer, const FormatSection &to_conv);
 #include "src/stdio/printf_core/write_modes.def"
 #undef HANDLE_WRITE_MODE
-
-#endif
 #endif
 
 } // namespace printf_core
