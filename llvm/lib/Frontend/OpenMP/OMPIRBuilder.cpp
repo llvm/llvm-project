@@ -321,6 +321,12 @@ getTargetKernelExecMode(Function &Kernel) {
   return static_cast<OMPTgtExecModeFlags>(KernelMode->getZExtValue());
 }
 
+static bool isGenericKernel(Function &Fn) {
+  std::optional<omp::OMPTgtExecModeFlags> ExecMode =
+      getTargetKernelExecMode(Fn);
+  return !ExecMode || (*ExecMode & OMP_TGT_EXEC_MODE_GENERIC);
+}
+
 /// Make \p Source branch to \p Target.
 ///
 /// Handles two situations:
@@ -1619,10 +1625,8 @@ static void targetParallelCallback(
                   : Builder.getInt32(1);
 
   // If this is not a Generic kernel, we can skip generating the wrapper.
-  std::optional<omp::OMPTgtExecModeFlags> ExecMode =
-      getTargetKernelExecMode(*OuterFn);
   Value *WrapperFn;
-  if (ExecMode && (*ExecMode & OMP_TGT_EXEC_MODE_GENERIC))
+  if (isGenericKernel(*OuterFn))
     WrapperFn = createTargetParallelWrapper(OMPIRBuilder, OutlinedFn);
   else
     WrapperFn = Constant::getNullValue(PtrTy);
@@ -1894,19 +1898,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
 
   LLVM_DEBUG(dbgs() << "After  body codegen: " << *OuterFn << "\n");
 
-  auto OI = [&]() -> std::unique_ptr<OutlineInfo> {
-    if (Config.isTargetDevice()) {
-      std::optional<omp::OMPTgtExecModeFlags> ExecMode =
-          getTargetKernelExecMode(*OuterFn);
-
-      // If OuterFn is not a Generic kernel, skip custom allocation. This causes
-      // the CodeExtractor to follow its default behavior. Otherwise, we need to
-      // use device shared memory to allocate argument structures.
-      if (ExecMode && *ExecMode & OMP_TGT_EXEC_MODE_GENERIC)
-        return std::make_unique<DeviceSharedMemOutlineInfo>(*this);
-    }
-    return std::make_unique<OutlineInfo>();
-  }();
+  // If OuterFn is a Generic kernel, we need to use device shared memory to
+  // allocate argument structures. Otherwise, we use stack allocations as usual.
+  bool UsesDeviceSharedMemory =
+      Config.isTargetDevice() && isGenericKernel(*OuterFn);
+  std::unique_ptr<OutlineInfo> OI =
+      UsesDeviceSharedMemory
+          ? std::make_unique<DeviceSharedMemOutlineInfo>(*this)
+          : std::make_unique<OutlineInfo>();
 
   if (Config.isTargetDevice()) {
     // Generate OpenMP target specific runtime call
@@ -1993,8 +1992,17 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
       LLVM_DEBUG(llvm::dbgs() << "Forwarding input as pointer: " << V << "\n");
 
       Builder.restoreIP(OuterAllocIP);
-      Value *Ptr =
-          Builder.CreateAlloca(V.getType(), nullptr, V.getName() + ".reloaded");
+      Value *Ptr;
+      if (UsesDeviceSharedMemory) {
+        // Use device shared memory instead, if needed.
+        Ptr = createOMPAllocShared(OuterAllocIP, V.getType(),
+                                   V.getName() + ".reloaded");
+        for (InsertPointTy DeallocIP : OuterDeallocIPs)
+          createOMPFreeShared(DeallocIP, Ptr, V.getType());
+      } else {
+        Ptr = Builder.CreateAlloca(V.getType(), nullptr,
+                                   V.getName() + ".reloaded");
+      }
 
       // Store to stack at end of the block that currently branches to the entry
       // block of the to-be-outlined region.
@@ -11184,7 +11192,7 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
 
   addOutlineInfo(std::move(OI));
 
-  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+  Builder.SetInsertPoint(ExitBB);
 
   return Builder.saveIP();
 }
@@ -11229,7 +11237,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createDistribute(
 
     addOutlineInfo(std::move(OI));
   }
-  Builder.SetInsertPoint(ExitBB, ExitBB->begin());
+  Builder.SetInsertPoint(ExitBB);
 
   return Builder.saveIP();
 }
