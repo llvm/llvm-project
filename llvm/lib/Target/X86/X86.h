@@ -361,7 +361,15 @@ InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
 
 FunctionPass *createX86PostLegalizerCombiner();
 FunctionPass *createX86PreLegalizerCombiner();
-FunctionPass *createX86LoadValueInjectionLoadHardeningPass();
+
+class X86LoadValueInjectionLoadHardeningPass
+    : public PassInfoMixin<X86LoadValueInjectionLoadHardeningPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86LoadValueInjectionLoadHardeningLegacyPass();
 
 class X86LoadValueInjectionRetHardeningPass
     : public PassInfoMixin<X86LoadValueInjectionRetHardeningPass> {
@@ -421,7 +429,7 @@ void initializeX86FastPreTileConfigLegacyPass(PassRegistry &);
 void initializeX86FastTileConfigLegacyPass(PassRegistry &);
 void initializeX86FixupSetCCLegacyPass(PassRegistry &);
 void initializeX86FlagsCopyLoweringLegacyPass(PassRegistry &);
-void initializeX86LoadValueInjectionLoadHardeningPassPass(PassRegistry &);
+void initializeX86LoadValueInjectionLoadHardeningLegacyPass(PassRegistry &);
 void initializeX86LoadValueInjectionRetHardeningLegacyPass(PassRegistry &);
 void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);
 void initializeX86LowerAMXTypeLegacyPassPass(PassRegistry &);

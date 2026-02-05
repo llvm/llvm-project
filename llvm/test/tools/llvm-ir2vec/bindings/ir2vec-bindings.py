@@ -12,5 +12,22 @@ if tool is not None:
     print("SUCCESS: Tool initialized")
     print(f"Tool type: {type(tool).__name__}")
 
+    # Test getFuncEmbMap
+    print("\n=== Function Embeddings ===")
+    func_emb_map = tool.getFuncEmbMap()
+
+    # Sorting the function names for fixed-ordered output
+    for func_name in sorted(func_emb_map.keys()):
+        emb = func_emb_map[func_name]
+        print(f"Function: {func_name}")
+        print(f"  Embedding: {emb.tolist()}")
+
 # CHECK: SUCCESS: Tool initialized
 # CHECK: Tool type: IR2VecTool
+# CHECK: === Function Embeddings ===
+# CHECK: Function: add
+# CHECK-NEXT:   Embedding: [38.0, 40.0, 42.0]
+# CHECK: Function: conditional
+# CHECK-NEXT:   Embedding: [413.20000000298023, 421.20000000298023, 429.20000000298023]
+# CHECK: Function: multiply
+# CHECK-NEXT:   Embedding: [50.0, 52.0, 54.0]
