@@ -15,6 +15,7 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Value.h"
 #include "clang/AST/Attr.h"
@@ -1455,9 +1456,9 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
     QualType destTy = getContext().getPointerType(e->getType());
 
     clang::LangAS srcLangAS = e->getSubExpr()->getType().getAddressSpace();
-    cir::TargetAddressSpaceAttr srcAS;
+    mlir::ptr::MemorySpaceAttrInterface srcAS;
     if (clang::isTargetAddressSpace(srcLangAS))
-      srcAS = cir::toCIRTargetAddressSpace(getMLIRContext(), srcLangAS);
+      srcAS = cir::toCIRAddressSpaceAttr(getMLIRContext(), srcLangAS);
     else
       cgm.errorNYI(
           e->getSourceRange(),
@@ -2504,15 +2505,8 @@ Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
   // in C++ the auto variables are in the default address space. Therefore
   // cast alloca to the default address space when necessary.
 
-  LangAS allocaAS = alloca.getAddressSpace()
-                        ? clang::getLangASFromTargetAS(
-                              alloca.getAddressSpace().getValue().getUInt())
-                        : clang::LangAS::Default;
-  LangAS dstTyAS = clang::LangAS::Default;
-  if (getCIRAllocaAddressSpace()) {
-    dstTyAS = clang::getLangASFromTargetAS(
-        getCIRAllocaAddressSpace().getValue().getUInt());
-  }
+  mlir::ptr::MemorySpaceAttrInterface allocaAS = alloca.getAddressSpace();
+  mlir::ptr::MemorySpaceAttrInterface dstTyAS = getCIRAllocaAddressSpace();
 
   if (dstTyAS != allocaAS) {
     getTargetHooks().performAddrSpaceCast(*this, v, getCIRAllocaAddressSpace(),

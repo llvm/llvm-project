@@ -12,12 +12,15 @@
 
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/Support/LLVM.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypesDetails.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/APInt.h"
@@ -60,6 +63,14 @@ static void printFuncTypeParams(mlir::AsmPrinter &p,
 // AddressSpace
 //===----------------------------------------------------------------------===//
 
+mlir::ParseResult
+parseAddressSpaceValue(mlir::AsmParser &p,
+                       mlir::ptr::MemorySpaceAttrInterface &attr);
+
+void printAddressSpaceValue(mlir::AsmPrinter &printer,
+                            mlir::ptr::MemorySpaceAttrInterface attr);
+
+// Custom parser/printer for the `addrSpace` parameter in `!cir.ptr`.
 mlir::ParseResult parseTargetAddressSpace(mlir::AsmParser &p,
                                           cir::TargetAddressSpaceAttr &attr);
 
@@ -930,58 +941,159 @@ void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
 }
 
 //===----------------------------------------------------------------------===//
-// TargetAddressSpace definitions
+// AddressSpace definitions
 //===----------------------------------------------------------------------===//
 
-cir::TargetAddressSpaceAttr
-cir::toCIRTargetAddressSpace(mlir::MLIRContext &context, clang::LangAS langAS) {
-  return cir::TargetAddressSpaceAttr::get(
-      &context,
-      IntegerAttr::get(&context,
-                       llvm::APSInt(clang::toTargetAddressSpace(langAS))));
+bool cir::isSupportedCIRMemorySpaceAttr(
+    mlir::ptr::MemorySpaceAttrInterface memorySpace) {
+  return mlir::isa<cir::LangAddressSpaceAttr, cir::TargetAddressSpaceAttr>(
+      memorySpace);
 }
 
-bool cir::isMatchingAddressSpace(cir::TargetAddressSpaceAttr cirAS,
-                                 clang::LangAS as) {
-  // If there is no CIR target attr, consider it "default" and only match
-  // when the AST address space is LangAS::Default.
-  if (!cirAS)
-    return as == clang::LangAS::Default;
-
-  if (!isTargetAddressSpace(as))
-    return false;
-
-  return cirAS.getValue().getUInt() == toTargetAddressSpace(as);
+cir::LangAddressSpace cir::toCIRLangAddressSpace(clang::LangAS langAS) {
+  using clang::LangAS;
+  switch (langAS) {
+  case LangAS::Default:
+    return LangAddressSpace::Default;
+  case LangAS::opencl_global:
+    return LangAddressSpace::OffloadGlobal;
+  case LangAS::opencl_local:
+  case LangAS::cuda_shared:
+    // Local means local among the work-group (OpenCL) or block (CUDA).
+    // All threads inside the kernel can access local memory.
+    return LangAddressSpace::OffloadLocal;
+  case LangAS::cuda_device:
+    return LangAddressSpace::OffloadGlobal;
+  case LangAS::opencl_constant:
+  case LangAS::cuda_constant:
+    return LangAddressSpace::OffloadConstant;
+  case LangAS::opencl_private:
+    return LangAddressSpace::OffloadPrivate;
+  case LangAS::opencl_generic:
+    return LangAddressSpace::OffloadGeneric;
+  case LangAS::opencl_global_device:
+  case LangAS::opencl_global_host:
+  case LangAS::sycl_global:
+  case LangAS::sycl_global_device:
+  case LangAS::sycl_global_host:
+  case LangAS::sycl_local:
+  case LangAS::sycl_private:
+  case LangAS::ptr32_sptr:
+  case LangAS::ptr32_uptr:
+  case LangAS::ptr64:
+  case LangAS::hlsl_groupshared:
+  case LangAS::wasm_funcref:
+    llvm_unreachable("NYI");
+  default:
+    llvm_unreachable("unknown/unsupported clang language address space");
+  }
 }
 
-mlir::ParseResult parseTargetAddressSpace(mlir::AsmParser &p,
-                                          cir::TargetAddressSpaceAttr &attr) {
-  if (failed(p.parseKeyword("target_address_space")))
-    return mlir::failure();
+mlir::ParseResult
+parseAddressSpaceValue(mlir::AsmParser &p,
+                       mlir::ptr::MemorySpaceAttrInterface &attr) {
 
-  if (failed(p.parseLParen()))
-    return mlir::failure();
+  llvm::SMLoc loc = p.getCurrentLocation();
 
-  int32_t targetValue;
-  if (failed(p.parseInteger(targetValue)))
-    return p.emitError(p.getCurrentLocation(),
-                       "expected integer address space value");
+  // Try to parse target address space first.
+  attr = nullptr;
+  if (p.parseOptionalKeyword("target_address_space").succeeded()) {
+    unsigned val;
+    if (p.parseLParen())
+      return p.emitError(loc, "expected '(' after 'target_address_space'");
 
-  if (failed(p.parseRParen()))
-    return p.emitError(p.getCurrentLocation(),
-                       "expected ')' after address space value");
+    if (p.parseInteger(val))
+      return p.emitError(loc, "expected target address space value");
 
-  mlir::MLIRContext *context = p.getBuilder().getContext();
-  attr = cir::TargetAddressSpaceAttr::get(
-      context, p.getBuilder().getUI32IntegerAttr(targetValue));
+    if (p.parseRParen())
+      return p.emitError(loc, "expected ')'");
+
+    attr = cir::TargetAddressSpaceAttr::get(p.getContext(), val);
+    return mlir::success();
+  }
+
+  // Try to parse language specific address space.
+  if (p.parseOptionalKeyword("lang_address_space").succeeded()) {
+    if (p.parseLParen())
+      return p.emitError(loc, "expected '(' after 'lang_address_space'");
+
+    mlir::FailureOr<cir::LangAddressSpace> result =
+        mlir::FieldParser<cir::LangAddressSpace>::parse(p);
+    if (mlir::failed(result))
+      return mlir::failure();
+
+    if (p.parseRParen())
+      return p.emitError(loc, "expected ')'");
+
+    attr = cir::LangAddressSpaceAttr::get(p.getContext(), result.value());
+    return mlir::success();
+  }
+
+  llvm::StringRef keyword;
+  if (p.parseOptionalKeyword(&keyword).succeeded())
+    return p.emitError(loc, "unknown address space specifier '")
+           << keyword << "'; expected 'target_address_space' or "
+           << "'lang_address_space'";
+
   return mlir::success();
 }
 
-// The custom printer for the `addrspace` parameter in `!cir.ptr`.
-// in the format of `target_address_space(N)`.
-void printTargetAddressSpace(mlir::AsmPrinter &p,
-                             cir::TargetAddressSpaceAttr attr) {
-  p << "target_address_space(" << attr.getValue().getUInt() << ")";
+void printAddressSpaceValue(mlir::AsmPrinter &p,
+                            mlir::ptr::MemorySpaceAttrInterface attr) {
+  if (!attr)
+    return;
+
+  if (auto language = dyn_cast<cir::LangAddressSpaceAttr>(attr)) {
+    p << "lang_address_space("
+      << cir::stringifyLangAddressSpace(language.getValue()) << ')';
+    return;
+  }
+
+  if (auto target = dyn_cast<cir::TargetAddressSpaceAttr>(attr)) {
+    p << "target_address_space(" << target.getValue() << ')';
+    return;
+  }
+
+  llvm_unreachable("unexpected address-space attribute kind");
+}
+
+mlir::ptr::MemorySpaceAttrInterface
+cir::toCIRAddressSpaceAttr(mlir::MLIRContext &ctx, clang::LangAS langAS) {
+  using clang::LangAS;
+
+  if (langAS == LangAS::Default)
+    return {}; // Default address space is represented as an empty attribute.
+
+  if (clang::isTargetAddressSpace(langAS)) {
+    unsigned targetAS = clang::toTargetAddressSpace(langAS);
+    return cir::TargetAddressSpaceAttr::get(&ctx, targetAS);
+  }
+
+  return cir::LangAddressSpaceAttr::get(&ctx, toCIRLangAddressSpace(langAS));
+}
+
+bool cir::isMatchingAddressSpace(mlir::ptr::MemorySpaceAttrInterface cirAS,
+                                 clang::LangAS as) {
+  if (!cirAS)
+    return as == clang::LangAS::Default;
+  return cir::toCIRAddressSpaceAttr(*cirAS.getContext(), as) == cirAS;
+}
+
+//===----------------------------------------------------------------------===//
+// PointerType Definitions
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult cir::PointerType::verify(
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+    mlir::Type pointee, mlir::ptr::MemorySpaceAttrInterface addrSpace) {
+  if (addrSpace) {
+    if (!isSupportedCIRMemorySpaceAttr(addrSpace)) {
+      return emitError() << "unsupported address space attribute; expected "
+                            "'target_address_space' or 'lang_address_space'";
+    }
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

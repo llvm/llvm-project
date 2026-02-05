@@ -19,6 +19,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
 
@@ -2148,9 +2149,9 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
       srcTy = srcTy->getPointeeType();
 
     clang::LangAS srcLangAS = srcTy.getAddressSpace();
-    cir::TargetAddressSpaceAttr subExprAS;
+    mlir::ptr::MemorySpaceAttrInterface subExprAS;
     if (clang::isTargetAddressSpace(srcLangAS))
-      subExprAS = cir::toCIRTargetAddressSpace(cgf.getMLIRContext(), srcLangAS);
+      subExprAS = cir::toCIRAddressSpaceAttr(cgf.getMLIRContext(), srcLangAS);
     else
       cgf.cgm.errorNYI(subExpr->getSourceRange(),
                        "non-target address space conversion");
