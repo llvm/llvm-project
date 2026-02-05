@@ -1237,6 +1237,29 @@ public:
     ArrayRef<OpFoldResult> positionOf1DVectorWithinAggregate(
         positionVec.begin(),
         insertIntoInnermostDim ? positionVec.size() - 1 : positionVec.size());
+
+    if (isNestedAggregate) {
+      std::optional<SmallVector<int64_t>> maybeAggPos;
+      maybeAggPos =
+          mlir::getConstantIntValues(positionOf1DVectorWithinAggregate);
+      if (!maybeAggPos) {
+        return rewriter.notifyMatchFailure(
+            insertOp,
+            "non-constant aggregate position for extract/insertvalue");
+      }
+
+      // Bounds check against the aggregate dimensions we index into.
+      for (int64_t i = 0, e = static_cast<int64_t>(maybeAggPos->size()); i < e;
+           ++i) {
+        int64_t idx = (*maybeAggPos)[i];
+        int64_t dim = destVectorType.getDimSize(i);
+        if (idx < 0 || idx >= dim) {
+          return rewriter.notifyMatchFailure(
+              insertOp, "out-of-bounds aggregate position");
+        }
+      }
+    }
+
     OpFoldResult positionOfScalarWithin1DVector;
     if (destVectorType.getRank() == 0) {
       // Since the LLVM type converter converts 0D vectors to 1D vectors, we
