@@ -1878,6 +1878,95 @@ exit:
   ret i32 %xor
 }
 
+; Negative test for a find-last-like phi fed into a find-last select.
+define i32 @find_last_phi_fed_into_find_last_select(
+; NEON-LABEL: define i32 @find_last_phi_fed_into_find_last_select(
+; NEON-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) {
+; NEON-NEXT:  [[ENTRY:.*]]:
+; NEON-NEXT:    br label %[[LOOP:.*]]
+; NEON:       [[LOOP]]:
+; NEON-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; NEON-NEXT:    [[DATA_PHI:%.*]] = phi i32 [ [[DEFAULT_VAL]], %[[ENTRY]] ], [ [[SELECT_DATA_1:%.*]], %[[LATCH]] ]
+; NEON-NEXT:    [[A_ADDR:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV]]
+; NEON-NEXT:    [[LD_A:%.*]] = load i32, ptr [[A_ADDR]], align 4
+; NEON-NEXT:    [[IF_COND:%.*]] = icmp sgt i32 [[LD_A]], [[THRESHOLD]]
+; NEON-NEXT:    br i1 [[IF_COND]], label %[[IF_THEN:.*]], label %[[LATCH]]
+; NEON:       [[IF_THEN]]:
+; NEON-NEXT:    [[B_ADDR:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[IV]]
+; NEON-NEXT:    [[LD_B:%.*]] = load i32, ptr [[B_ADDR]], align 4
+; NEON-NEXT:    br label %[[LATCH]]
+; NEON:       [[LATCH]]:
+; NEON-NEXT:    [[SELECT_DATA:%.*]] = phi i32 [ [[LD_B]], %[[IF_THEN]] ], [ [[DATA_PHI]], %[[LOOP]] ]
+; NEON-NEXT:    [[C_ADDR:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IV]]
+; NEON-NEXT:    [[LD_C:%.*]] = load i32, ptr [[C_ADDR]], align 4
+; NEON-NEXT:    [[SELECT_CMP:%.*]] = icmp slt i32 [[LD_A]], [[LD_C]]
+; NEON-NEXT:    [[SELECT_DATA_1]] = select i1 [[SELECT_CMP]], i32 [[SELECT_DATA]], i32 [[DATA_PHI]]
+; NEON-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; NEON-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; NEON-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT:.*]], label %[[LOOP]]
+; NEON:       [[EXIT]]:
+; NEON-NEXT:    [[SELECT_DATA_1_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA_1]], %[[LATCH]] ]
+; NEON-NEXT:    ret i32 [[SELECT_DATA_1_LCSSA]]
+;
+; SVE-LABEL: define i32 @find_last_phi_fed_into_find_last_select(
+; SVE-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) #[[ATTR0]] {
+; SVE-NEXT:  [[ENTRY:.*]]:
+; SVE-NEXT:    br label %[[LOOP:.*]]
+; SVE:       [[LOOP]]:
+; SVE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; SVE-NEXT:    [[DATA_PHI:%.*]] = phi i32 [ [[DEFAULT_VAL]], %[[ENTRY]] ], [ [[SELECT_DATA_1:%.*]], %[[LATCH]] ]
+; SVE-NEXT:    [[A_ADDR:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IV]]
+; SVE-NEXT:    [[LD_A:%.*]] = load i32, ptr [[A_ADDR]], align 4
+; SVE-NEXT:    [[IF_COND:%.*]] = icmp sgt i32 [[LD_A]], [[THRESHOLD]]
+; SVE-NEXT:    br i1 [[IF_COND]], label %[[IF_THEN:.*]], label %[[LATCH]]
+; SVE:       [[IF_THEN]]:
+; SVE-NEXT:    [[B_ADDR:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[IV]]
+; SVE-NEXT:    [[LD_B:%.*]] = load i32, ptr [[B_ADDR]], align 4
+; SVE-NEXT:    br label %[[LATCH]]
+; SVE:       [[LATCH]]:
+; SVE-NEXT:    [[SELECT_DATA:%.*]] = phi i32 [ [[LD_B]], %[[IF_THEN]] ], [ [[DATA_PHI]], %[[LOOP]] ]
+; SVE-NEXT:    [[C_ADDR:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[IV]]
+; SVE-NEXT:    [[LD_C:%.*]] = load i32, ptr [[C_ADDR]], align 4
+; SVE-NEXT:    [[SELECT_CMP:%.*]] = icmp slt i32 [[LD_A]], [[LD_C]]
+; SVE-NEXT:    [[SELECT_DATA_1]] = select i1 [[SELECT_CMP]], i32 [[SELECT_DATA]], i32 [[DATA_PHI]]
+; SVE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; SVE-NEXT:    [[EXIT_CMP:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; SVE-NEXT:    br i1 [[EXIT_CMP]], label %[[EXIT:.*]], label %[[LOOP]]
+; SVE:       [[EXIT]]:
+; SVE-NEXT:    [[SELECT_DATA_1_LCSSA:%.*]] = phi i32 [ [[SELECT_DATA_1]], %[[LATCH]] ]
+; SVE-NEXT:    ret i32 [[SELECT_DATA_1_LCSSA]]
+;
+  ptr noalias %a, ptr noalias %b, ptr noalias %c, i32 %default_val, i64 %N, i32 %threshold) {
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %data.phi = phi i32 [ %default_val, %entry ], [ %select.data.1, %latch ]
+  %a.addr = getelementptr inbounds nuw i32, ptr %a, i64 %iv
+  %ld.a = load i32, ptr %a.addr, align 4
+  %if.cond = icmp sgt i32 %ld.a, %threshold
+  br i1 %if.cond, label %if.then, label %latch
+
+if.then:
+  %b.addr = getelementptr inbounds nuw i32, ptr %b, i64 %iv
+  %ld.b = load i32, ptr %b.addr, align 4
+  br label %latch
+
+latch:
+  %select.data = phi i32 [ %ld.b, %if.then ], [ %data.phi, %loop ]
+  %c.addr = getelementptr inbounds i32, ptr %c, i64 %iv
+  %ld.c = load i32, ptr %c.addr, align 4
+  %select.cmp = icmp slt i32 %ld.a, %ld.c
+  %select.data.1 = select i1 %select.cmp, i32 %select.data, i32 %data.phi
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exit.cmp = icmp eq i64 %iv.next, %N
+  br i1 %exit.cmp, label %exit, label %loop
+
+exit:
+  ret i32 %select.data.1
+}
+
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.interleave.count", i32 2}
 !3 = !{!"llvm.loop.vectorize.enable", i1 true}
