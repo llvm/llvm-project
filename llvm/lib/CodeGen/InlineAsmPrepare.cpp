@@ -6,25 +6,60 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass prepares inline assembly for code generation with the fast register
-// allocator---e.g., by converting "rm" (register-or-memory) constraints to "m"
-// (memory-only) constraints, simplifying register allocation by forcing
-// operands to memory locations, avoiding the complexity of handling dual
-// register/memory options. The other register allocators are equipped to
-// handle folding registers all ready.
+// This pass lowers callbrs and inline asm in LLVM IR in order to to assist
+// SelectionDAG's codegen.
+//
+// CallBrInst:
+//
+//   - Assists in inserting register copies for the output values of a callbr
+//     along the edges leading to the indirect target blocks. Though the output
+//     SSA value is defined by the callbr instruction itself in the IR
+//     representation, the value cannot be copied to the appropriate virtual
+//     registers prior to jumping to an indirect label, since the jump occurs
+//     within the user-provided assembly blob.
+//
+//     Instead, those copies must occur separately at the beginning of each
+//     indirect target. That requires that we create a separate SSA definition
+//     in each of them (via llvm.callbr.landingpad), and may require splitting
+//     critical edges so we have a location to place the intrinsic. Finally, we
+//     remap users of the original callbr output SSA value to instead point to
+//     the appropriate llvm.callbr.landingpad value.
+//
+//     Ideally, this could be done inside SelectionDAG, or in the
+//     MachineInstruction representation, without the use of an IR-level
+//     intrinsic.  But, within the current framework, it’s simpler to implement
+//     as an IR pass.  (If support for callbr in GlobalISel is implemented,
+//     it’s worth considering whether this is still required.)
+//
+// InlineAsm:
+//
+//   - Prepares inline assembly for code generation with the fast register
+//     allocator. In particular, it defaults "rm" (register-or-memory) to
+//     prefer the "m" constraints (the front-end opts for the "r" constraint),
+//     simplifying register allocation by forcing operands to memory locations.
+//     The other register allocators are equipped to handle folding registers
+//     already, so don't need to change the default.
 //
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/InlineAsmPrepare.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/SSAUpdater.h"
 
 using namespace llvm;
 
@@ -33,12 +68,12 @@ using namespace llvm;
 namespace {
 
 class InlineAsmPrepare : public FunctionPass {
-  InlineAsmPrepare(InlineAsmPrepare &) = delete;
-
 public:
   InlineAsmPrepare() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetPassConfig>();
+    AU.addPreserved<DominatorTreeWrapperPass>();
     AU.setPreservesCFG();
   }
   bool runOnFunction(Function &F) override;
@@ -50,30 +85,28 @@ char InlineAsmPrepare::ID = 0;
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(InlineAsmPrepare, DEBUG_TYPE,
-                "Prepare inline asm insts for fast register allocation", false,
-                false)
+INITIALIZE_PASS_BEGIN(InlineAsmPrepare, DEBUG_TYPE, "Prepare inline asm insts",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_END(InlineAsmPrepare, DEBUG_TYPE, "Prepare inline asm insts",
+                    false, false)
+
 FunctionPass *llvm::createInlineAsmPass() { return new InlineAsmPrepare(); }
 
-/// Find all inline assembly calls in the given function.
-static SmallVector<CallBase *, 4> findInlineAsms(Function &F) {
-  SmallVector<CallBase *, 4> InlineAsms;
+//===----------------------------------------------------------------------===//
+//                     Process InlineAsm instructions
+//===----------------------------------------------------------------------===//
 
-  for (BasicBlock &BB : F)
-    for (Instruction &I : BB)
-      if (CallBase *CB = dyn_cast<CallBase>(&I); CB && CB->isInlineAsm())
-        InlineAsms.push_back(CB);
-
-  return InlineAsms;
-}
-
-static bool isRegMemConstraint(StringRef Constraint) {
+/// The inline asm constraint allows both register and memory.
+static bool IsRegMemConstraint(StringRef Constraint) {
   return Constraint.size() == 2 && (Constraint == "rm" || Constraint == "mr");
 }
 
-/// Convert instances of the "rm" constraints into "m".
+/// Tag "rm" output constraints with '*' to signify that they default to a
+/// memory location.
 static std::pair<std::string, bool>
-convertConstraintsToMemory(StringRef ConstraintStr) {
+ConvertConstraintsToMemory(StringRef ConstraintStr) {
   auto I = ConstraintStr.begin(), E = ConstraintStr.end();
   std::string Out;
   raw_string_ostream O(Out);
@@ -100,7 +133,7 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
 
     auto Comma = std::find(I, E, ',');
     std::string Sub(I, Comma);
-    if (isRegMemConstraint(Sub)) {
+    if (IsRegMemConstraint(Sub)) {
       HasRegMem = true;
       if (IsOutput && !HasIndirect)
         O << '*';
@@ -118,13 +151,10 @@ convertConstraintsToMemory(StringRef ConstraintStr) {
   return std::make_pair(Out, HasRegMem);
 }
 
-namespace {
-
-/// Build a map of tied constraints.
-/// TiedOutput[i] = j means Constraint i is an Input tied to Output Constraint
-/// j.
+/// Build a map of tied constraints. TiedOutput[i] = j means Constraint i is an
+/// input tied to output constraint j.
 static void
-buildTiedConstraintMap(const InlineAsm::ConstraintInfoVector &Constraints,
+BuildTiedConstraintMap(const InlineAsm::ConstraintInfoVector &Constraints,
                        SmallVectorImpl<int> &TiedOutput) {
   for (unsigned I = 0, E = Constraints.size(); I != E; ++I) {
     const InlineAsm::ConstraintInfo &C = Constraints[I];
@@ -133,6 +163,7 @@ buildTiedConstraintMap(const InlineAsm::ConstraintInfoVector &Constraints,
       if (InputIdx >= 0 && InputIdx < (int)Constraints.size())
         TiedOutput[InputIdx] = I;
     }
+
     if (C.Type == InlineAsm::isInput && C.hasMatchingInput()) {
       int OutputIdx = C.MatchingInput;
       if (OutputIdx >= 0 && OutputIdx < (int)Constraints.size())
@@ -142,7 +173,7 @@ buildTiedConstraintMap(const InlineAsm::ConstraintInfoVector &Constraints,
 }
 
 /// Process an output constraint, creating allocas for converted constraints.
-static void processOutputConstraint(
+static void ProcessOutputConstraint(
     const InlineAsm::ConstraintInfo &C, Type *RetTy, unsigned OutputIdx,
     IRBuilder<> &EntryBuilder, SmallVectorImpl<Value *> &NewArgs,
     SmallVectorImpl<Type *> &NewArgTypes, SmallVectorImpl<Type *> &NewRetTypes,
@@ -168,57 +199,58 @@ static void processOutputConstraint(
 }
 
 /// Process an input constraint, handling tied constraints and conversions.
-static void processInputConstraint(
-    const InlineAsm::ConstraintInfo &C, Value *ArgVal,
-    const SmallVectorImpl<int> &TiedOutput,
-    const SmallVectorImpl<AllocaInst *> &OutputAllocas, unsigned ConstraintIdx,
-    IRBuilder<> &Builder, IRBuilder<> &EntryBuilder,
-    SmallVectorImpl<Value *> &NewArgs, SmallVectorImpl<Type *> &NewArgTypes) {
+static void ProcessInputConstraint(const InlineAsm::ConstraintInfo &C,
+                                   Value *ArgVal, ArrayRef<int> TiedOutput,
+                                   ArrayRef<AllocaInst *> OutputAllocas,
+                                   unsigned ConstraintIdx, IRBuilder<> &Builder,
+                                   IRBuilder<> &EntryBuilder,
+                                   SmallVectorImpl<Value *> &NewArgs,
+                                   SmallVectorImpl<Type *> &NewArgTypes) {
   Type *ArgTy = ArgVal->getType();
-  bool Handled = false;
 
   if (TiedOutput[ConstraintIdx] != -1) {
     int MatchIdx = TiedOutput[ConstraintIdx];
     if (AllocaInst *Slot = OutputAllocas[MatchIdx]) {
-      // The matched output was converted to memory.
-      // Store this input into the alloca.
+      // The matched output was converted to memory. Store this input into the
+      // alloca.
       Builder.CreateStore(ArgVal, Slot);
-      // Pass the alloca pointer as the argument, instead of ArgVal.
-      // This ensures the tied "0" constraint matches the "*m" output.
+
+      // Pass the alloca pointer as the argument, instead of ArgVal. This
+      // ensures the tied "0" constraint matches the "*m" output.
       NewArgs.push_back(Slot);
       NewArgTypes.push_back(Slot->getType());
-      Handled = true;
+      return;
     }
   }
 
-  if (!Handled) {
-    if (C.hasRegMemConstraints()) {
-      // Converted to memory constraint.
-      // Create alloca, store input, pass pointer as argument.
-      AllocaInst *Slot = EntryBuilder.CreateAlloca(ArgTy, nullptr, "asm_mem");
-      Builder.CreateStore(ArgVal, Slot);
-      NewArgs.push_back(Slot);
-      NewArgTypes.push_back(Slot->getType());
-    } else {
-      // Unchanged
-      NewArgs.push_back(ArgVal);
-      NewArgTypes.push_back(ArgTy);
-    }
+  if (C.hasRegMemConstraints()) {
+    // Converted to memory constraint. Create alloca, store input, pass pointer
+    // as argument.
+    AllocaInst *Slot = EntryBuilder.CreateAlloca(ArgTy, nullptr, "asm_mem");
+    Builder.CreateStore(ArgVal, Slot);
+    NewArgs.push_back(Slot);
+    NewArgTypes.push_back(Slot->getType());
+  } else {
+    // Unchanged
+    NewArgs.push_back(ArgVal);
+    NewArgTypes.push_back(ArgTy);
   }
 }
 
 /// Build the return type from the collected return types.
-static Type *buildReturnType(const SmallVectorImpl<Type *> &NewRetTypes,
+static Type *BuildReturnType(ArrayRef<Type *> NewRetTypes,
                              LLVMContext &Context) {
   if (NewRetTypes.empty())
     return Type::getVoidTy(Context);
+
   if (NewRetTypes.size() == 1)
     return NewRetTypes[0];
+
   return StructType::get(Context, NewRetTypes);
 }
 
 /// Create the new inline assembly call with converted constraints.
-static CallInst *createNewInlineAsm(
+static CallInst *CreateNewInlineAsm(
     InlineAsm *IA, const std::string &NewConstraintStr, Type *NewRetTy,
     const SmallVectorImpl<Type *> &NewArgTypes,
     const SmallVectorImpl<Value *> &NewArgs,
@@ -244,7 +276,7 @@ static CallInst *createNewInlineAsm(
 
 /// Reconstruct the return value from the new call and allocas.
 static Value *
-reconstructReturnValue(Type *RetTy, CallInst *NewCall,
+ReconstructReturnValue(Type *RetTy, CallInst *NewCall,
                        const InlineAsm::ConstraintInfoVector &Constraints,
                        const SmallVectorImpl<AllocaInst *> &OutputAllocas,
                        const SmallVectorImpl<Type *> &NewRetTypes,
@@ -278,6 +310,7 @@ reconstructReturnValue(Type *RetTy, CallInst *NewCall,
 
       Res = Builder.CreateInsertValue(Res, Val, OriginalOutIdx++);
     }
+
     return Res;
   }
 
@@ -297,88 +330,268 @@ reconstructReturnValue(Type *RetTy, CallInst *NewCall,
   return NewCall;
 }
 
-} // namespace
+static bool ProcessInlineAsm(Function &F, CallBase *CB) {
+  InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
+  const InlineAsm::ConstraintInfoVector &Constraints = IA->ParseConstraints();
 
-bool InlineAsmPrepare::runOnFunction(Function &F) {
-  SmallVector<CallBase *, 4> IAs = findInlineAsms(F);
-  if (IAs.empty())
+  auto [NewConstraintStr, HasRegMem] =
+      ConvertConstraintsToMemory(IA->getConstraintString());
+  if (!HasRegMem)
     return false;
 
-  bool Changed = false;
-  for (CallBase *CB : IAs) {
-    InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
-    const InlineAsm::ConstraintInfoVector &Constraints = IA->ParseConstraints();
+  IRBuilder<> Builder(CB);
+  IRBuilder<> EntryBuilder(&F.getEntryBlock(), F.getEntryBlock().begin());
 
-    auto [NewConstraintStr, HasRegMem] =
-        convertConstraintsToMemory(IA->getConstraintString());
-    if (!HasRegMem)
+  // Collect new arguments and return types.
+  SmallVector<Value *, 8> NewArgs;
+  SmallVector<Type *, 8> NewArgTypes;
+  SmallVector<Type *, 2> NewRetTypes;
+  SmallVector<std::pair<unsigned, Type *>, 8> ElementTypeAttrs;
+
+  // Track allocas created for converted outputs.
+  SmallVector<AllocaInst *, 8> OutputAllocas(Constraints.size(), nullptr);
+
+  // Build tied constraint map.
+  SmallVector<int, 8> TiedOutput(Constraints.size(), -1);
+  BuildTiedConstraintMap(Constraints, TiedOutput);
+
+  // Process constraints.
+  unsigned ArgNo = 0;
+  unsigned OutputIdx = 0;
+  for (unsigned I = 0, E = Constraints.size(); I != E; ++I) {
+    const InlineAsm::ConstraintInfo &C = Constraints[I];
+
+    if (C.Type == InlineAsm::isOutput) {
+      ProcessOutputConstraint(C, CB->getType(), OutputIdx, EntryBuilder,
+                              NewArgs, NewArgTypes, NewRetTypes,
+                              ElementTypeAttrs, OutputAllocas, I);
+      OutputIdx++;
+    } else if (C.Type == InlineAsm::isInput) {
+      Value *ArgVal = CB->getArgOperand(ArgNo);
+      ProcessInputConstraint(C, ArgVal, TiedOutput, OutputAllocas, I, Builder,
+                             EntryBuilder, NewArgs, NewArgTypes);
+      ArgNo++;
+    }
+  }
+
+  // Build the new return type.
+  Type *NewRetTy = BuildReturnType(NewRetTypes, F.getContext());
+
+  // Create the new inline assembly call.
+  CallInst *NewCall =
+      CreateNewInlineAsm(IA, NewConstraintStr, NewRetTy, NewArgTypes, NewArgs,
+                         ElementTypeAttrs, CB, Builder, F.getContext());
+
+  // Reconstruct the return value and update users.
+  if (!CB->use_empty()) {
+    if (Value *Replacement =
+            ReconstructReturnValue(CB->getType(), NewCall, Constraints,
+                                   OutputAllocas, NewRetTypes, Builder))
+      CB->replaceAllUsesWith(Replacement);
+  }
+
+  CB->eraseFromParent();
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
+//                           Process CallBrInsts
+//===----------------------------------------------------------------------===//
+
+/// The Use is in the same BasicBlock as the intrinsic call.
+static bool IsInSameBasicBlock(const Use &U, const BasicBlock *BB) {
+  const auto *I = dyn_cast<Instruction>(U.getUser());
+  return I && I->getParent() == BB;
+}
+
+#ifndef NDEBUG
+static void PrintDebugDomInfo(const DominatorTree &DT, const Use &U,
+                              const BasicBlock *BB, bool IsDefaultDest) {
+  if (isa<Instruction>(U.getUser()))
+    LLVM_DEBUG(dbgs() << "Use: " << *U.getUser() << ", in block "
+                      << cast<Instruction>(U.getUser())->getParent()->getName()
+                      << ", is " << (DT.dominates(BB, U) ? "" : "NOT ")
+                      << "dominated by " << BB->getName() << " ("
+                      << (IsDefaultDest ? "in" : "") << "direct)\n");
+}
+#endif
+
+static void UpdateSSA(DominatorTree &DT, CallBrInst *CBR, CallInst *Intrinsic,
+                      SSAUpdater &SSAUpdate) {
+  SmallPtrSet<Use *, 4> Visited;
+
+  BasicBlock *DefaultDest = CBR->getDefaultDest();
+  BasicBlock *LandingPad = Intrinsic->getParent();
+  SmallVector<Use *, 4> Uses(make_pointer_range(CBR->uses()));
+
+  for (Use *U : Uses) {
+    if (!Visited.insert(U).second)
       continue;
 
-    IRBuilder<> Builder(CB);
-    IRBuilder<> EntryBuilder(&F.getEntryBlock(), F.getEntryBlock().begin());
+#ifndef NDEBUG
+    PrintDebugDomInfo(DT, *U, LandingPad, /*IsDefaultDest*/ false);
+    PrintDebugDomInfo(DT, *U, DefaultDest, /*IsDefaultDest*/ true);
+#endif
 
-    // Collect new arguments and return types.
-    SmallVector<Value *, 8> NewArgs;
-    SmallVector<Type *, 8> NewArgTypes;
-    SmallVector<Type *, 2> NewRetTypes;
-    SmallVector<std::pair<unsigned, Type *>, 8> ElementTypeAttrs;
+    // Don't rewrite the use in the newly inserted intrinsic.
+    if (const auto *II = dyn_cast<IntrinsicInst>(U->getUser()))
+      if (II->getIntrinsicID() == Intrinsic::callbr_landingpad)
+        continue;
 
-    // Track allocas created for converted outputs.
-    SmallVector<AllocaInst *, 8> OutputAllocas(Constraints.size(), nullptr);
-
-    // Build tied constraint map.
-    SmallVector<int, 8> TiedOutput(Constraints.size(), -1);
-    buildTiedConstraintMap(Constraints, TiedOutput);
-
-    // Process constraints.
-    unsigned ArgNo = 0;
-    unsigned OutputIdx = 0;
-    for (unsigned I = 0, E = Constraints.size(); I != E; ++I) {
-      const InlineAsm::ConstraintInfo &C = Constraints[I];
-
-      if (C.Type == InlineAsm::isOutput) {
-        processOutputConstraint(C, CB->getType(), OutputIdx, EntryBuilder,
-                                NewArgs, NewArgTypes, NewRetTypes,
-                                ElementTypeAttrs, OutputAllocas, I);
-        OutputIdx++;
-      } else if (C.Type == InlineAsm::isInput) {
-        Value *ArgVal = CB->getArgOperand(ArgNo);
-        processInputConstraint(C, ArgVal, TiedOutput, OutputAllocas, I, Builder,
-                               EntryBuilder, NewArgs, NewArgTypes);
-        ArgNo++;
-      }
+    // If the Use is in the same BasicBlock as the Intrinsic call, replace
+    // the Use with the value of the Intrinsic call.
+    if (IsInSameBasicBlock(*U, LandingPad)) {
+      U->set(Intrinsic);
+      continue;
     }
 
-    // Build the new return type.
-    Type *NewRetTy = buildReturnType(NewRetTypes, F.getContext());
+    // If the Use is dominated by the default dest, do not touch it.
+    if (DT.dominates(DefaultDest, *U))
+      continue;
 
-    // Create the new inline assembly call.
-    CallInst *NewCall =
-        createNewInlineAsm(IA, NewConstraintStr, NewRetTy, NewArgTypes, NewArgs,
-                           ElementTypeAttrs, CB, Builder, F.getContext());
+    SSAUpdate.RewriteUse(*U);
+  }
+}
 
-    // Reconstruct the return value and update users.
-    if (!CB->use_empty()) {
-      if (Value *Replacement =
-              reconstructReturnValue(CB->getType(), NewCall, Constraints,
-                                     OutputAllocas, NewRetTypes, Builder))
-        CB->replaceAllUsesWith(Replacement);
-    }
+static bool SplitCriticalEdges(CallBrInst *CBR, DominatorTree *DT) {
+  bool Changed = false;
 
-    CB->eraseFromParent();
+  CriticalEdgeSplittingOptions Options(DT);
+  Options.setMergeIdenticalEdges();
+
+  // The indirect destination might be duplicated between another parameter...
+  //
+  //   %0 = callbr ... [label %x, label %x]
+  //
+  // ...hence MergeIdenticalEdges and AllowIndentical edges, but we don't need
+  // to split the default destination if it's duplicated between an indirect
+  // destination...
+  //
+  //   %1 = callbr ... to label %x [label %x]
+  //
+  // ...hence starting at 1 and checking against successor 0 (aka the default
+  // destination).
+  for (unsigned i = 1, e = CBR->getNumSuccessors(); i != e; ++i)
+    if (CBR->getSuccessor(i) == CBR->getSuccessor(0) ||
+        isCriticalEdge(CBR, i, /*AllowIdenticalEdges*/ true))
+      if (SplitKnownCriticalEdge(CBR, i, Options))
+        Changed = true;
+
+  return Changed;
+}
+
+static bool InsertIntrinsicCalls(CallBrInst *CBR, DominatorTree &DT) {
+  bool Changed = false;
+  SmallPtrSet<const BasicBlock *, 4> Visited;
+  IRBuilder<> Builder(CBR->getContext());
+
+  if (!CBR->getNumIndirectDests())
+    return false;
+
+  SSAUpdater SSAUpdate;
+  SSAUpdate.Initialize(CBR->getType(), CBR->getName());
+  SSAUpdate.AddAvailableValue(CBR->getParent(), CBR);
+  SSAUpdate.AddAvailableValue(CBR->getDefaultDest(), CBR);
+
+  for (BasicBlock *IndDest : CBR->getIndirectDests()) {
+    if (!Visited.insert(IndDest).second)
+      continue;
+
+    Builder.SetInsertPoint(&*IndDest->begin());
+    CallInst *Intrinsic = Builder.CreateIntrinsic(
+        CBR->getType(), Intrinsic::callbr_landingpad, {CBR});
+    SSAUpdate.AddAvailableValue(IndDest, Intrinsic);
+    UpdateSSA(DT, CBR, Intrinsic, SSAUpdate);
     Changed = true;
   }
 
   return Changed;
 }
 
+static bool ProcessCallBrInst(Function &F, CallBrInst *CBR, DominatorTree *DT) {
+  bool Changed = false;
+
+  Changed |= SplitCriticalEdges(CBR, DT);
+  Changed |= InsertIntrinsicCalls(CBR, *DT);
+
+  return Changed;
+}
+
+static bool runImpl(Function &F, ArrayRef<CallBase *> IAs, DominatorTree *DT) {
+  bool Changed = false;
+
+  for (CallBase *CB : IAs)
+    if (auto *CBR = dyn_cast<CallBrInst>(CB))
+      Changed |= ProcessCallBrInst(F, CBR, DT);
+    else
+      Changed |= ProcessInlineAsm(F, CB);
+
+  return Changed;
+}
+
+/// Find all inline assembly calls in the given function.
+static SmallVector<CallBase *, 4> FindInlineAsms(Function &F,
+                                                 const TargetMachine *TM) {
+  bool isOptLevelNone = TM->getOptLevel() == CodeGenOptLevel::None;
+  SmallVector<CallBase *, 4> InlineAsms;
+
+  for (BasicBlock &BB : F) {
+    if (auto *CBR = dyn_cast<CallBrInst>(BB.getTerminator())) {
+      if (!CBR->getType()->isVoidTy() && !CBR->use_empty())
+        InlineAsms.push_back(CBR);
+      continue;
+    }
+
+    if (isOptLevelNone)
+      // Only inline assembly compiled at '-O0' (i.e. uses the fast register
+      // allocator) needs to be processed.
+      for (Instruction &I : BB)
+        if (CallBase *CB = dyn_cast<CallBase>(&I); CB && CB->isInlineAsm())
+          InlineAsms.push_back(CB);
+  }
+
+  return InlineAsms;
+}
+
+bool InlineAsmPrepare::runOnFunction(Function &F) {
+  const auto *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+  SmallVector<CallBase *, 4> IAs = FindInlineAsms(F, TM);
+  if (IAs.empty())
+    return false;
+
+  // It's highly likely that most programs do not contain CallBrInsts. Follow a
+  // similar pattern from SafeStackLegacyPass::runOnFunction to reuse previous
+  // domtree analysis if available, otherwise compute it lazily. This avoids
+  // forcing Dominator Tree Construction at -O0 for programs that likely do not
+  // contain CallBrInsts. It does pessimize programs with callbr at higher
+  // optimization levels, as the DominatorTree created here is not reused by
+  // subsequent passes.
+  DominatorTree *DT;
+  std::optional<DominatorTree> LazilyComputedDomTree;
+  if (auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>())
+    DT = &DTWP->getDomTree();
+  else {
+    LazilyComputedDomTree.emplace(F);
+    DT = &*LazilyComputedDomTree;
+  }
+
+  return runImpl(F, IAs, DT);
+}
+
 PreservedAnalyses InlineAsmPreparePass::run(Function &F,
                                             FunctionAnalysisManager &FAM) {
-  bool Changed = InlineAsmPrepare().runOnFunction(F);
-  if (!Changed)
+  SmallVector<CallBase *, 4> IAs = FindInlineAsms(F, TM);
+  if (IAs.empty())
     return PreservedAnalyses::all();
 
-  PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  DominatorTree *DT = &FAM.getResult<DominatorTreeAnalysis>(F);
+
+  if (runImpl(F, IAs, DT)) {
+    PreservedAnalyses PA;
+    PA.preserve<DominatorTreeAnalysis>();
+    PA.preserveSet<CFGAnalyses>();
+    return PA;
+  }
+
+  return PreservedAnalyses::all();
 }

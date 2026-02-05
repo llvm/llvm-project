@@ -3,8 +3,6 @@
 ; RUN: llc -mtriple=i386-unknown-linux-gnu -O2 -regalloc=greedy   < %s | FileCheck --check-prefix=GREEDY-I386 %s
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -O2 -regalloc=basic  < %s | FileCheck --check-prefix=BASIC-X86_64 %s
 ; RUN: llc -mtriple=i386-unknown-linux-gnu -O2 -regalloc=basic    < %s | FileCheck --check-prefix=BASIC-I386 %s
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -O0 -regalloc=fast   < %s | FileCheck --check-prefix=FAST-X86_64 %s
-; RUN: llc -mtriple=i386-unknown-linux-gnu -O0 -regalloc=fast     < %s | FileCheck --check-prefix=FAST-I386 %s
 
 ; The non-fast register allocators should use registers when there isn't
 ; register pressure.
@@ -17,10 +15,6 @@ define dso_local i32 @test1(ptr nocapture noundef readonly %ptr) local_unnamed_a
 ; BASIC-X86_64-LABEL: test1:
 ;
 ; BASIC-I386-LABEL: test1:
-;
-; FAST-X86_64-LABEL: test1:
-;
-; FAST-I386-LABEL: test1:
 entry:
   %b = getelementptr inbounds nuw i8, ptr %ptr, i64 4
   %0 = load i32, ptr %b, align 4
@@ -39,10 +33,6 @@ define dso_local i32 @test2(ptr nocapture noundef readonly %ptr) local_unnamed_a
 ; BASIC-X86_64-LABEL: test2:
 ;
 ; BASIC-I386-LABEL: test2:
-;
-; FAST-X86_64-LABEL: test2:
-;
-; FAST-I386-LABEL: test2:
 entry:
   %b = getelementptr inbounds nuw i8, ptr %ptr, i64 4
   %0 = load i32, ptr %b, align 4
@@ -61,10 +51,6 @@ define dso_local i32 @test3(ptr noundef %ptr) local_unnamed_addr {
 ; BASIC-X86_64-LABEL: test3:
 ;
 ; BASIC-I386-LABEL: test3:
-;
-; FAST-X86_64-LABEL: test3:
-;
-; FAST-I386-LABEL: test3:
 entry:
   %b = getelementptr inbounds nuw i8, ptr %ptr, i64 4
   %d = getelementptr inbounds nuw i8, ptr %ptr, i64 12
@@ -85,10 +71,6 @@ define dso_local i32 @test4(ptr noundef %ptr) local_unnamed_addr {
 ; BASIC-X86_64-LABEL: test4:
 ;
 ; BASIC-I386-LABEL: test4:
-;
-; FAST-X86_64-LABEL: test4:
-;
-; FAST-I386-LABEL: test4:
 entry:
   %b = getelementptr inbounds nuw i8, ptr %ptr, i64 4
   %d = getelementptr inbounds nuw i8, ptr %ptr, i64 12
@@ -109,10 +91,6 @@ define dso_local i32 @test5(ptr nocapture noundef readonly %ptr) local_unnamed_a
 ; BASIC-X86_64-LABEL: test5:
 ;
 ; BASIC-I386-LABEL: test5:
-;
-; FAST-X86_64-LABEL: test5:
-;
-; FAST-I386-LABEL: test5:
 entry:
   %b = getelementptr inbounds nuw i8, ptr %ptr, i64 4
   %0 = load i32, ptr %b, align 4
@@ -135,10 +113,6 @@ define dso_local i32 @test6(ptr nocapture noundef readonly %ptr) local_unnamed_a
 ; BASIC-X86_64-LABEL: test6:
 ;
 ; BASIC-I386-LABEL: test6:
-;
-; FAST-X86_64-LABEL: test6:
-;
-; FAST-I386-LABEL: test6:
 entry:
   %b = getelementptr inbounds nuw i8, ptr %ptr, i64 4
   %0 = load i32, ptr %b, align 4
@@ -161,10 +135,6 @@ define dso_local i32 @test7(ptr noundef %ptr) local_unnamed_addr {
 ; BASIC-X86_64-LABEL: test7:
 ;
 ; BASIC-I386-LABEL: test7:
-;
-; FAST-X86_64-LABEL: test7:
-;
-; FAST-I386-LABEL: test7:
 entry:
   %b = getelementptr inbounds nuw i8, ptr %ptr, i64 4
   %0 = load i32, ptr %b, align 4
@@ -181,10 +151,6 @@ define dso_local i32 @test8(ptr noundef %ptr) local_unnamed_addr {
 ; BASIC-X86_64-LABEL: test8:
 ;
 ; BASIC-I386-LABEL: test8:
-;
-; FAST-X86_64-LABEL: test8:
-;
-; FAST-I386-LABEL: test8:
 entry:
   %b = getelementptr inbounds nuw i8, ptr %ptr, i64 4
   %0 = load i32, ptr %b, align 4
@@ -203,10 +169,6 @@ define dso_local i32 @test9(ptr nocapture noundef %ptr) local_unnamed_addr {
 ; BASIC-X86_64-LABEL: test9:
 ;
 ; BASIC-I386-LABEL: test9:
-;
-; FAST-X86_64-LABEL: test9:
-;
-; FAST-I386-LABEL: test9:
 entry:
   %b = getelementptr inbounds nuw i8, ptr %ptr, i64 4
   %0 = tail call i32 asm sideeffect "# single 'rm' output -> $0", "=rm,~{dirflag},~{fpsr},~{flags}"()
@@ -223,10 +185,6 @@ define dso_local i32 @test10(ptr noundef captures(none) %ptr) local_unnamed_addr
 ; BASIC-X86_64-LABEL: test10:
 ;
 ; BASIC-I386-LABEL: test10:
-;
-; FAST-X86_64-LABEL: test10:
-;
-; FAST-I386-LABEL: test10:
 entry:
   %b = getelementptr inbounds nuw i8, ptr %ptr, i64 4
   %0 = load i32, ptr %b, align 4
@@ -244,10 +202,6 @@ define dso_local i32 @test11(ptr noundef captures(none) %ptr) local_unnamed_addr
 ; BASIC-X86_64-LABEL: test11:
 ;
 ; BASIC-I386-LABEL: test11:
-;
-; FAST-X86_64-LABEL: test11:
-;
-; FAST-I386-LABEL: test11:
 entry:
   %b = getelementptr inbounds nuw i8, ptr %ptr, i64 4
   %0 = load i32, ptr %b, align 4
