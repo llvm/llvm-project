@@ -21,7 +21,23 @@ define i64 @switch_test(i32 %wii) sanitize_memory {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[WII]], 42
+; CHECK-NEXT:    [[TMP4:%.*]] = or i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i32 [[TMP4]], 0
+; CHECK-NEXT:    [[TMP6:%.*]] = xor i32 [[TMP4]], -1
+; CHECK-NEXT:    [[TMP7:%.*]] = and i32 [[TMP6]], [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[TMP7]], 0
+; CHECK-NEXT:    [[_MSPROP_ICMP:%.*]] = and i1 [[TMP5]], [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = xor i32 [[WII]], 43
+; CHECK-NEXT:    [[TMP10:%.*]] = or i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp ne i32 [[TMP10]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = xor i32 [[TMP10]], -1
+; CHECK-NEXT:    [[TMP13:%.*]] = and i32 [[TMP12]], [[TMP9]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i32 [[TMP13]], 0
+; CHECK-NEXT:    [[_MSPROP_ICMP1:%.*]] = and i1 [[TMP11]], [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i1 [[_MSPROP_ICMP]], [[_MSPROP_ICMP1]]
+; CHECK-NEXT:    [[TMP16:%.*]] = and i1 [[_MSCMP]], [[TMP15]]
+; CHECK-NEXT:    br i1 [[TMP16]], label %[[BB2:.*]], label %[[BB3:.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       [[BB2]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    unreachable

@@ -2422,6 +2422,92 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     I.setSuccessOrdering(addReleaseOrdering(I.getSuccessOrdering()));
   }
 
+  /// Generic handler to compute shadow for == and != comparisons.
+  ///
+  /// This function is used by handleEqualityComparison and visitSwitchInst.
+  ///
+  /// Sometimes the comparison result is known even if some of the bits of the
+  /// arguments are not.
+  Value* propagateEqualityComparison(IRBuilder<> &IRB, Value* A, Value* B,
+                                     Value* Sa, Value *Sb) {
+    assert(getShadowTy(A) == Sa->getType());
+    assert(getShadowTy(B) == Sb->getType());
+
+    // Get rid of pointers and vectors of pointers.
+    // For ints (and vectors of ints), types of A and Sa match,
+    // and this is a no-op.
+    A = IRB.CreatePointerCast(A, Sa->getType());
+    B = IRB.CreatePointerCast(B, Sb->getType());
+
+    // A == B  <==>  (C = A^B) == 0
+    // A != B  <==>  (C = A^B) != 0
+    // Sc = Sa | Sb
+    Value *C = IRB.CreateXor(A, B);
+    Value *Sc = IRB.CreateOr(Sa, Sb);
+    // Now dealing with i = (C == 0) comparison (or C != 0, does not matter now)
+    // Result is defined if one of the following is true
+    // * there is a defined 1 bit in C
+    // * C is fully defined
+    // Si = !(C & ~Sc) && Sc
+    Value *Zero = Constant::getNullValue(Sc->getType());
+    Value *MinusOne = Constant::getAllOnesValue(Sc->getType());
+    Value *LHS = IRB.CreateICmpNE(Sc, Zero);
+    Value *RHS =
+        IRB.CreateICmpEQ(IRB.CreateAnd(IRB.CreateXor(Sc, MinusOne), C), Zero);
+    Value *Si = IRB.CreateAnd(LHS, RHS);
+    Si->setName("_msprop_icmp");
+
+    return Si;
+  }
+
+  // Instrument:
+  //     switch i32 %Val, label %else [ i32 0, label %A
+  //                                    i32 1, label %B
+  //                                    i32 2, label %C ]
+  //
+  // Typically, the switch input value (%Val) is fully initialized.
+  //
+  // Sometimes the compiler may convert (icmp + br) into a switch statement.
+  // MSan allows icmp eq/ne with partly initialized inputs to still result in a
+  // fully initialized output, if there exists a bit that is initialized in
+  // both inputs with a differing value. For compatibility, we support this in
+  // the switch instrumentation as well. Note that this edge case only applies
+  // if the switch input value does not match *any* of the cases (matching any
+  // of the cases requires an exact, fully initialized match).
+  //
+  //     ShadowAgg =   (ShadowVal != 0)
+  //                 & (  propagateEqualityComparison(Val, 0)
+  //                    | propagateEqualityComparison(Val, 1)
+  //                    | propagateEqualityComparison(Val, 2))
+  void visitSwitchInst(SwitchInst &SI) {
+    IRBuilder<> IRB(&SI);
+
+    Value* Val = SI.getCondition();
+    Value* ShadowVal = getShadow(Val);
+    Value* ShadowAgg = IRB.CreateICmpNE(ShadowVal, getCleanShadow(Val));
+
+    Value* ShadowCases = nullptr;
+    for (auto Case : SI.cases()) {
+       Value *Comparator = Case.getCaseValue();
+       Value *ComparisonShadow
+         = propagateEqualityComparison(IRB, Val, Comparator,
+                                       ShadowVal, getShadow(Comparator));
+
+       if (ShadowCases)
+         ShadowCases = IRB.CreateOr(ShadowCases, ComparisonShadow);
+       else
+         ShadowCases = ComparisonShadow;
+    }
+
+    ShadowAgg = IRB.CreateAnd(ShadowAgg, ShadowCases);
+
+    insertCheckShadow(ShadowAgg, getOrigin(Val), &SI);
+
+    // If the shadow check succeeded, the shadow must be clean.
+    setShadow(&SI, getCleanShadow(&SI));
+    setOrigin(&SI, getCleanOrigin());
+  }
+
   // Vector manipulation.
   void visitExtractElementInst(ExtractElementInst &I) {
     insertCheckShadowOf(I.getOperand(1), &I);
@@ -2992,29 +3078,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Sa = getShadow(A);
     Value *Sb = getShadow(B);
 
-    // Get rid of pointers and vectors of pointers.
-    // For ints (and vectors of ints), types of A and Sa match,
-    // and this is a no-op.
-    A = IRB.CreatePointerCast(A, Sa->getType());
-    B = IRB.CreatePointerCast(B, Sb->getType());
+    Value *Si = propagateEqualityComparison(IRB, A, B, Sa, Sb);
 
-    // A == B  <==>  (C = A^B) == 0
-    // A != B  <==>  (C = A^B) != 0
-    // Sc = Sa | Sb
-    Value *C = IRB.CreateXor(A, B);
-    Value *Sc = IRB.CreateOr(Sa, Sb);
-    // Now dealing with i = (C == 0) comparison (or C != 0, does not matter now)
-    // Result is defined if one of the following is true
-    // * there is a defined 1 bit in C
-    // * C is fully defined
-    // Si = !(C & ~Sc) && Sc
-    Value *Zero = Constant::getNullValue(Sc->getType());
-    Value *MinusOne = Constant::getAllOnesValue(Sc->getType());
-    Value *LHS = IRB.CreateICmpNE(Sc, Zero);
-    Value *RHS =
-        IRB.CreateICmpEQ(IRB.CreateAnd(IRB.CreateXor(Sc, MinusOne), C), Zero);
-    Value *Si = IRB.CreateAnd(LHS, RHS);
-    Si->setName("_msprop_icmp");
     setShadow(&I, Si);
     setOriginForNaryOp(I);
   }
