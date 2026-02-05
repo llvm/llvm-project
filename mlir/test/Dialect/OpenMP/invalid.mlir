@@ -2301,7 +2301,7 @@ func.func @omp_target_exit_data_depend(%a: memref<?xi32>) {
 func.func @omp_target_update_invalid_motion_type(%map1 : memref<?xi32>) {
   %mapv = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
 
-  // expected-error @below {{at least one of to or from map types must be specified, other map types are not permitted}}
+  // expected-error @below {{at least one of to or from or attach map types must be specified, other map types are not permitted}}
   omp.target_update map_entries(%mapv : memref<?xi32>)
   return
 }
