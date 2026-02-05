@@ -63,3 +63,12 @@ const NestedBuildNamespace &
 SerializationFormat::getEntityNameNamespace(const EntityName &EN) {
   return EN.Namespace;
 }
+
+const decltype(TUSummary::Data) &
+SerializationFormat::getData(const TUSummary &S) {
+  return S.Data;
+}
+
+decltype(TUSummary::Data) &SerializationFormat::getData(TUSummary &S) {
+  return S.Data;
+}
