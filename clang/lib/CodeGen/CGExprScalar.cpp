@@ -1592,8 +1592,8 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
     return EmitConversionToBool(Src, SrcType);
 
   // Also handle conversions to atomic bools
-  if (const AtomicType *atomicType = DstType->getAs<AtomicType>()) {
-    QualType ValueType = atomicType->getValueType();
+  if (const auto *DstAsAtomic = DstType->getAs<AtomicType>()) {
+    QualType ValueType = DstAsAtomic->getValueType();
     if (ValueType->isBooleanType())
       return EmitConversionToBool(Src, ValueType);
   }
