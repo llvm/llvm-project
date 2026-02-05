@@ -1874,7 +1874,7 @@ private:
 
 namespace PyDynamicOpTraits {
 
-class IsTerminator : public PyDynamicOpTrait {
+class MLIR_PYTHON_API_EXPORTED IsTerminator : public PyDynamicOpTrait {
 public:
   IsTerminator() : PyDynamicOpTrait(mlirDynamicOpTraitGetIsTerminator()) {}
   static void bind(nanobind::module_ &m) {
@@ -1883,7 +1883,7 @@ public:
   }
 };
 
-class NoTerminator : public PyDynamicOpTrait {
+class MLIR_PYTHON_API_EXPORTED NoTerminator : public PyDynamicOpTrait {
 public:
   NoTerminator() : PyDynamicOpTrait(mlirDynamicOpTraitGetNoTerminator()) {}
   static void bind(nanobind::module_ &m) {
