@@ -1303,21 +1303,15 @@ BuiltinTypeDeclBuilder::addByteAddressBufferStoreMethods() {
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
-
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getFirstTemplateTypeParam();
-
   QualType SamplerStateType =
       lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
-
   uint32_t VecSize = getResourceDimensions(Dim);
-
   QualType FloatTy = AST.FloatTy;
   QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
-
   QualType IntTy = AST.IntTy;
   QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
-
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T Sample(SamplerState s, float2 location)
@@ -1357,21 +1351,15 @@ BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim) {
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSampleBiasMethods(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
-
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getFirstTemplateTypeParam();
-
   QualType SamplerStateType =
       lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
-
   uint32_t VecSize = getResourceDimensions(Dim);
-
   QualType FloatTy = AST.FloatTy;
   QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
-
   QualType IntTy = AST.IntTy;
   QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
-
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleBias(SamplerState s, float2 location, float bias)
@@ -1415,21 +1403,15 @@ BuiltinTypeDeclBuilder::addSampleBiasMethods(ResourceDimension Dim) {
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSampleGradMethods(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
-
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getFirstTemplateTypeParam();
-
   QualType SamplerStateType =
       lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
-
   uint32_t VecSize = getResourceDimensions(Dim);
-
   QualType FloatTy = AST.FloatTy;
   QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
-
   QualType IntTy = AST.IntTy;
   QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
-
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleGrad(SamplerState s, float2 location, float2 ddx, float2 ddy)
@@ -1478,21 +1460,15 @@ BuiltinTypeDeclBuilder::addSampleGradMethods(ResourceDimension Dim) {
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSampleLevelMethods(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
-
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getFirstTemplateTypeParam();
-
   QualType SamplerStateType =
       lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
-
   uint32_t VecSize = getResourceDimensions(Dim);
-
   QualType FloatTy = AST.FloatTy;
   QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
-
   QualType IntTy = AST.IntTy;
   QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
-
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleLevel(SamplerState s, float2 location, float lod)
@@ -1522,21 +1498,15 @@ BuiltinTypeDeclBuilder::addSampleLevelMethods(ResourceDimension Dim) {
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
-
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = AST.FloatTy;
-
   QualType SamplerComparisonStateType = lookupBuiltinType(
       SemaRef, "SamplerComparisonState", Record->getDeclContext());
-
   uint32_t VecSize = getResourceDimensions(Dim);
-
   QualType FloatTy = AST.FloatTy;
   QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
-
   QualType IntTy = AST.IntTy;
   QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
-
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleCmp(SamplerComparisonState s, float2 location, float compare_value)
@@ -1581,21 +1551,15 @@ BuiltinTypeDeclBuilder::addSampleCmpMethods(ResourceDimension Dim) {
 BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addSampleCmpLevelZeroMethods(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
-
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = AST.FloatTy;
-
   QualType SamplerComparisonStateType = lookupBuiltinType(
       SemaRef, "SamplerComparisonState", Record->getDeclContext());
-
   uint32_t VecSize = getResourceDimensions(Dim);
-
   QualType FloatTy = AST.FloatTy;
   QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
-
   QualType IntTy = AST.IntTy;
   QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
-
   using PH = BuiltinTypeMethodBuilder::PlaceHolder;
 
   // T SampleCmpLevelZero(SamplerComparisonState s, float2 location, float
