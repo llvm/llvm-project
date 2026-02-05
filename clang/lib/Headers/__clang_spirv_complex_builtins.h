@@ -1,4 +1,4 @@
-/*===-- __clang_spirv_complex_builtins - SPIRV impls of runtime complex fns ---===
+/*==-- __clang_spirv_complex_builtins - SPIRV impls of runtime complex fns --==
  *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,6 @@
 
 #pragma push_macro("__DEVICE__")
 #if defined(__OPENMP_SPIRV__)
-#include <__clang_spirv_libdevice_declares.h>
 #pragma omp declare target
 #define __DEVICE__ __attribute__((noinline, nothrow, cold, weak))
 #else
@@ -42,7 +41,6 @@
 #define _ABSf std::abs
 #define _LOGBd std::logb
 #define _LOGBf std::logb
-// Rather than pulling in std::max from algorithm everytime, use available ::max.
 #define _fmaxd max
 #define _fmaxf max
 #else
