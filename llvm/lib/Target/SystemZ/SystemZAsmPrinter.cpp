@@ -162,27 +162,26 @@ static MCInst lowerVecEltInsertion(const MachineInstr *MI, unsigned Opcode) {
 bool SystemZAsmPrinter::doInitialization(Module &M) {
   SM.reset();
 
-  // In HLASM, the only way to represent aliases is to use the 
-  // extra-label-at-definition strategy. This is similar to the AIX implementation
-  // with the additional caveat that all symbol attributes must be emitted before the label
-  // is emitted.
+  // In HLASM, the only way to represent aliases is to use the
+  // extra-label-at-definition strategy. This is similar to the AIX
+  // implementation with the additional caveat that all symbol attributes must
+  // be emitted before the label is emitted.
   if (TM.getTargetTriple().isOSzOS()) {
     // Construct an aliasing list for each GlobalObject.
     for (const auto &Alias : M.aliases()) {
       const GlobalObject *Aliasee = Alias.getAliaseeObject();
       if (!Aliasee)
-      OutContext.reportError(
-          {}, "Alias without a base object is not yet supported on z/OS.");
+        OutContext.reportError(
+            {}, "Alias without a base object is not yet supported on z/OS.");
 
       bool IsFunc = isa<Function>(Aliasee->stripPointerCasts());
       if (IsFunc) {
         if (Alias.hasWeakLinkage() || Alias.hasLinkOnceLinkage())
-          OutContext.reportError(
-              {}, "Weak alias/reference not supported on z/OS");
-        
+          OutContext.reportError({},
+                                 "Weak alias/reference not supported on z/OS");
+
         GOAliasMap[Aliasee].push_back(&Alias);
-      }
-      else
+      } else
         OutContext.reportError(
             {}, "Only aliases to functions is supported in GOFF.");
     }
@@ -1815,7 +1814,8 @@ void SystemZAsmPrinter::emitPPA2(Module &M) {
   OutStreamer->popSection();
 }
 
-void SystemZAsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
+void SystemZAsmPrinter::emitGlobalAlias(const Module &M,
+                                        const GlobalAlias &GA) {
   if (!TM.getTargetTriple().isOSzOS())
     return AsmPrinter::emitGlobalAlias(M, GA);
 
@@ -1925,7 +1925,7 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
   }
 
   AsmPrinter::emitFunctionEntryLabel();
- 
+
   if (Subtarget.getTargetTriple().isOSzOS()) {
     const Function *F = &MF->getFunction();
     // Emit aliasing label for function entry point label.

@@ -92,7 +92,7 @@ private:
   };
 
   AssociatedDataAreaTable ADATable;
-  
+
   // Record a list of GlobalAlias associated with a GlobalObject.
   // This is used for z/OS's extra-label-at-definition aliasing strategy.
   // This is similar to what is done for AIX.
