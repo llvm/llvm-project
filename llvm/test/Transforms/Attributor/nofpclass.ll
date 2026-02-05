@@ -3882,16 +3882,16 @@ define [4 x float] @infer_return_from_load_nofpclass_md_array(ptr %ptr) {
 
 declare i64 @_Z13get_global_idj(i32 noundef)
 
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #1 = { "denormal-fp-math"="preserve-sign,ieee" }
-attributes #2 = { "denormal-fp-math"="ieee,preserve-sign" }
-attributes #3 = { "denormal-fp-math"="positive-zero,positive-zero" }
-attributes #4 = { "denormal-fp-math"="positive-zero,ieee" }
-attributes #5 = { "denormal-fp-math"="ieee,positive-zero" }
-attributes #6 = { "denormal-fp-math"="dynamic,dynamic" }
-attributes #7 = { "denormal-fp-math"="preserve-sign,ieee" }
-attributes #8 = { "denormal-fp-math"="dynamic,ieee" }
-attributes #9 = { "denormal-fp-math"="ieee,dynamic" }
+attributes #0 = { denormal_fpenv(preservesign) }
+attributes #1 = { denormal_fpenv(preservesign|ieee) }
+attributes #2 = { denormal_fpenv(ieee|preservesign) }
+attributes #3 = { denormal_fpenv(positivezero|positivezero) }
+attributes #4 = { denormal_fpenv(positivezero|ieee) }
+attributes #5 = { denormal_fpenv(ieee|positivezero) }
+attributes #6 = { denormal_fpenv(dynamic) }
+attributes #7 = { denormal_fpenv(preservesign|ieee) }
+attributes #8 = { denormal_fpenv(dynamic|ieee) }
+attributes #9 = { denormal_fpenv(ieee|dynamic) }
 
 !0 = !{}
 !1 = !{i32 3}
