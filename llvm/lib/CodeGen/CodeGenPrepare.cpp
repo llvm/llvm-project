@@ -322,7 +322,6 @@ class CodeGenPrepare {
   const TargetTransformInfo *TTI = nullptr;
   const BasicBlockSectionsProfileReader *BBSectionsProfileReader = nullptr;
   const TargetLibraryInfo *TLInfo = nullptr;
-  DominatorTree *DT = nullptr;
   DomTreeUpdater *DTU = nullptr;
   LoopInfo *LI = nullptr;
   std::unique_ptr<BlockFrequencyInfo> BFI;
@@ -522,7 +521,6 @@ bool CodeGenPrepareLegacyPass::runOnFunction(Function &F) {
   CGP.TRI = CGP.SubtargetInfo->getRegisterInfo();
   CGP.TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   CGP.TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  CGP.DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   CGP.LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   CGP.BPI.reset(new BranchProbabilityInfo(F, *CGP.LI));
   CGP.BFI.reset(new BlockFrequencyInfo(F, *CGP.BPI, *CGP.LI));
@@ -530,6 +528,10 @@ bool CodeGenPrepareLegacyPass::runOnFunction(Function &F) {
   auto BBSPRWP =
       getAnalysisIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
   CGP.BBSectionsProfileReader = BBSPRWP ? &BBSPRWP->getBBSPR() : nullptr;
+  DomTreeUpdater DTUpdater(
+      &getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
+      DomTreeUpdater::UpdateStrategy::Lazy);
+  CGP.DTU = &DTUpdater;
 
   return CGP._run(F);
 }
@@ -571,7 +573,6 @@ bool CodeGenPrepare::run(Function &F, FunctionAnalysisManager &AM) {
   TRI = SubtargetInfo->getRegisterInfo();
   TLInfo = &AM.getResult<TargetLibraryAnalysis>(F);
   TTI = &AM.getResult<TargetIRAnalysis>(F);
-  DT = &AM.getResult<DominatorTreeAnalysis>(F);
   LI = &AM.getResult<LoopAnalysis>(F);
   BPI.reset(new BranchProbabilityInfo(F, *LI));
   BFI.reset(new BlockFrequencyInfo(F, *BPI, *LI));
@@ -579,6 +580,9 @@ bool CodeGenPrepare::run(Function &F, FunctionAnalysisManager &AM) {
   PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   BBSectionsProfileReader =
       AM.getCachedResult<BasicBlockSectionsProfileReaderAnalysis>(F);
+  DomTreeUpdater DTUpdater(&AM.getResult<DominatorTreeAnalysis>(F),
+                           DomTreeUpdater::UpdateStrategy::Lazy);
+  DTU = &DTUpdater;
   return _run(F);
 }
 
@@ -608,9 +612,6 @@ bool CodeGenPrepare::_run(Function &F) {
              PSI->isFunctionHotnessUnknown(F))
       (void)F.setSectionPrefix("unknown");
   }
-
-  DomTreeUpdater DTUpdater(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-  DTU = &DTUpdater;
 
   /// This optimization identifies DIV instructions that can be
   /// profitably bypassed and carried out with a shorter, faster divide.
