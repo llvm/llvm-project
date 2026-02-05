@@ -143,19 +143,17 @@ struct DenormalMode {
             static_cast<DenormalModeKind>(InputMode)};
   }
 
-  bool operator==(DenormalMode Other) const {
+  constexpr bool operator==(DenormalMode Other) const {
     return Output == Other.Output && Input == Other.Input;
   }
 
-  bool operator!=(DenormalMode Other) const {
+  constexpr bool operator!=(DenormalMode Other) const {
     return !(*this == Other);
   }
 
-  bool isSimple() const {
-    return Input == Output;
-  }
+  constexpr bool isSimple() const { return Input == Output; }
 
-  bool isValid() const {
+  constexpr bool isValid() const {
     return Output != DenormalModeKind::Invalid &&
            Input != DenormalModeKind::Invalid;
   }
@@ -197,7 +195,7 @@ struct DenormalMode {
   /// Get the effective denormal mode if the mode if this caller calls into a
   /// function with \p Callee. This promotes dynamic modes to the mode of the
   /// caller.
-  DenormalMode mergeCalleeMode(DenormalMode Callee) const {
+  constexpr DenormalMode mergeCalleeMode(DenormalMode Callee) const {
     DenormalMode MergedMode = Callee;
     if (Callee.Input == DenormalMode::Dynamic)
       MergedMode.Input = Input;
