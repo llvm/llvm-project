@@ -243,20 +243,11 @@ class NodeBuilder {
 protected:
   const NodeBuilderContext &C;
 
-  /// Specifies if the builder results have been finalized. For example, if it
-  /// is set to false, autotransitions are yet to be generated.
-  bool Finalized;
-
   bool HasGeneratedNodes = false;
 
   /// The frontier set - a set of nodes which need to be propagated after
   /// the builder dies.
   ExplodedNodeSet &Frontier;
-
-  /// Checks if the results are ready.
-  virtual bool checkResults() {
-    return Finalized;
-  }
 
   bool hasNoSinksInFrontier() {
     for (const auto  I : Frontier)
@@ -265,9 +256,6 @@ protected:
     return true;
   }
 
-  /// Allow subclasses to finalize results before result_begin() is executed.
-  virtual void finalizeResults() {}
-
   ExplodedNode *generateNodeImpl(const ProgramPoint &PP,
                                  ProgramStateRef State,
                                  ExplodedNode *Pred,
@@ -275,14 +263,14 @@ protected:
 
 public:
   NodeBuilder(ExplodedNode *SrcNode, ExplodedNodeSet &DstSet,
-              const NodeBuilderContext &Ctx, bool F = true)
-      : C(Ctx), Finalized(F), Frontier(DstSet) {
+              const NodeBuilderContext &Ctx)
+      : C(Ctx), Frontier(DstSet) {
     Frontier.Add(SrcNode);
   }
 
   NodeBuilder(const ExplodedNodeSet &SrcSet, ExplodedNodeSet &DstSet,
-              const NodeBuilderContext &Ctx, bool F = true)
-      : C(Ctx), Finalized(F), Frontier(DstSet) {
+              const NodeBuilderContext &Ctx)
+      : C(Ctx), Frontier(DstSet) {
     Frontier.insert(SrcSet);
     assert(hasNoSinksInFrontier());
   }
@@ -309,25 +297,14 @@ public:
     return generateNodeImpl(PP, State, Pred, true);
   }
 
-  const ExplodedNodeSet &getResults() {
-    finalizeResults();
-    assert(checkResults());
-    return Frontier;
-  }
+  const ExplodedNodeSet &getResults() { return Frontier; }
 
   using iterator = ExplodedNodeSet::iterator;
 
   /// Iterators through the results frontier.
-  iterator begin() {
-    finalizeResults();
-    assert(checkResults());
-    return Frontier.begin();
-  }
+  iterator begin() { return Frontier.begin(); }
 
-  iterator end() {
-    finalizeResults();
-    return Frontier.end();
-  }
+  iterator end() { return Frontier.end(); }
 
   const NodeBuilderContext &getContext() { return C; }
   bool hasGeneratedNodes() { return HasGeneratedNodes; }
@@ -340,41 +317,6 @@ public:
   void takeNodes(ExplodedNode *N) { Frontier.erase(N); }
   void addNodes(const ExplodedNodeSet &S) { Frontier.insert(S); }
   void addNodes(ExplodedNode *N) { Frontier.Add(N); }
-};
-
-/// \class NodeBuilderWithSinks
-/// This node builder keeps track of the generated sink nodes.
-class NodeBuilderWithSinks: public NodeBuilder {
-  void anchor() override;
-
-protected:
-  SmallVector<ExplodedNode*, 2> sinksGenerated;
-  ProgramPoint &Location;
-
-public:
-  NodeBuilderWithSinks(ExplodedNode *Pred, ExplodedNodeSet &DstSet,
-                       const NodeBuilderContext &Ctx, ProgramPoint &L)
-      : NodeBuilder(Pred, DstSet, Ctx), Location(L) {}
-
-  ExplodedNode *generateNode(ProgramStateRef State,
-                             ExplodedNode *Pred,
-                             const ProgramPointTag *Tag = nullptr) {
-    const ProgramPoint &LocalLoc = (Tag ? Location.withTag(Tag) : Location);
-    return NodeBuilder::generateNode(LocalLoc, State, Pred);
-  }
-
-  ExplodedNode *generateSink(ProgramStateRef State, ExplodedNode *Pred,
-                             const ProgramPointTag *Tag = nullptr) {
-    const ProgramPoint &LocalLoc = (Tag ? Location.withTag(Tag) : Location);
-    ExplodedNode *N = NodeBuilder::generateSink(LocalLoc, State, Pred);
-    if (N && N->isSink())
-      sinksGenerated.push_back(N);
-    return N;
-  }
-
-  const SmallVectorImpl<ExplodedNode*> &getSinks() const {
-    return sinksGenerated;
-  }
 };
 
 /// \class StmtNodeBuilder
@@ -401,8 +343,7 @@ public:
                   NodeBuilder *Enclosing = nullptr)
       : NodeBuilder(SrcSet, DstSet, Ctx), EnclosingBldr(Enclosing) {
     if (EnclosingBldr)
-      for (const auto I : SrcSet)
-        EnclosingBldr->takeNodes(I);
+      EnclosingBldr->takeNodes(SrcSet);
   }
 
   ~StmtNodeBuilder() override;
