@@ -42,7 +42,7 @@ half test_reflect_half(half I, half N) {
 // SPVCHECK-LABEL: define hidden spir_func noundef nofpclass(nan inf) <2 x half> @_Z18test_reflect_half2Dv2_DhS_(
 // SPVCHECK-SAME: <2 x half> noundef nofpclass(nan inf) [[I:%.*]], <2 x half> noundef nofpclass(nan inf) [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
-// SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <2 x half> @llvm.spv.reflect.v2f16(<2 x half> nofpclass(nan inf) [[I]], <2 x half> nofpclass(nan inf) [[N]])
+// SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) <2 x half> @llvm.spv.reflect.v2f16(<2 x half> nofpclass(nan inf) [[I]], <2 x half> nofpclass(nan inf) [[N]])
 // SPVCHECK-NEXT:    ret <2 x half> [[SPV_REFLECT_I]]
 //
 half2 test_reflect_half2(half2 I, half2 N) {
@@ -63,7 +63,7 @@ half2 test_reflect_half2(half2 I, half2 N) {
 // SPVCHECK-LABEL: define hidden spir_func noundef nofpclass(nan inf) <3 x half> @_Z18test_reflect_half3Dv3_DhS_(
 // SPVCHECK-SAME: <3 x half> noundef nofpclass(nan inf) [[I:%.*]], <3 x half> noundef nofpclass(nan inf) [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
-// SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <3 x half> @llvm.spv.reflect.v3f16(<3 x half> nofpclass(nan inf) [[I]], <3 x half> nofpclass(nan inf) [[N]])
+// SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) <3 x half> @llvm.spv.reflect.v3f16(<3 x half> nofpclass(nan inf) [[I]], <3 x half> nofpclass(nan inf) [[N]])
 // SPVCHECK-NEXT:    ret <3 x half> [[SPV_REFLECT_I]]
 //
 half3 test_reflect_half3(half3 I, half3 N) {
@@ -84,7 +84,7 @@ half3 test_reflect_half3(half3 I, half3 N) {
 // SPVCHECK-LABEL: define hidden spir_func noundef nofpclass(nan inf) <4 x half> @_Z18test_reflect_half4Dv4_DhS_(
 // SPVCHECK-SAME: <4 x half> noundef nofpclass(nan inf) [[I:%.*]], <4 x half> noundef nofpclass(nan inf) [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
-// SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <4 x half> @llvm.spv.reflect.v4f16(<4 x half> nofpclass(nan inf) [[I]], <4 x half> nofpclass(nan inf) [[N]])
+// SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) <4 x half> @llvm.spv.reflect.v4f16(<4 x half> nofpclass(nan inf) [[I]], <4 x half> nofpclass(nan inf) [[N]])
 // SPVCHECK-NEXT:    ret <4 x half> [[SPV_REFLECT_I]]
 //
 half4 test_reflect_half4(half4 I, half4 N) {
@@ -127,7 +127,7 @@ float test_reflect_float(float I, float N) {
 // SPVCHECK-LABEL: define hidden spir_func noundef nofpclass(nan inf) <2 x float> @_Z19test_reflect_float2Dv2_fS_(
 // SPVCHECK-SAME: <2 x float> noundef nofpclass(nan inf) [[I:%.*]], <2 x float> noundef nofpclass(nan inf) [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
-// SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <2 x float> @llvm.spv.reflect.v2f32(<2 x float> nofpclass(nan inf) [[I]], <2 x float> nofpclass(nan inf) [[N]])
+// SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) <2 x float> @llvm.spv.reflect.v2f32(<2 x float> nofpclass(nan inf) [[I]], <2 x float> nofpclass(nan inf) [[N]])
 // SPVCHECK-NEXT:    ret <2 x float> [[SPV_REFLECT_I]]
 //
 float2 test_reflect_float2(float2 I, float2 N) {
@@ -148,7 +148,7 @@ float2 test_reflect_float2(float2 I, float2 N) {
 // SPVCHECK-LABEL: define hidden spir_func noundef nofpclass(nan inf) <3 x float> @_Z19test_reflect_float3Dv3_fS_(
 // SPVCHECK-SAME: <3 x float> noundef nofpclass(nan inf) [[I:%.*]], <3 x float> noundef nofpclass(nan inf) [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
-// SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <3 x float> @llvm.spv.reflect.v3f32(<3 x float> nofpclass(nan inf) [[I]], <3 x float> nofpclass(nan inf) [[N]])
+// SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) <3 x float> @llvm.spv.reflect.v3f32(<3 x float> nofpclass(nan inf) [[I]], <3 x float> nofpclass(nan inf) [[N]])
 // SPVCHECK-NEXT:    ret <3 x float> [[SPV_REFLECT_I]]
 //
 float3 test_reflect_float3(float3 I, float3 N) {
@@ -169,7 +169,7 @@ float3 test_reflect_float3(float3 I, float3 N) {
 // SPVCHECK-LABEL: define hidden spir_func noundef nofpclass(nan inf) <4 x float> @_Z19test_reflect_float4Dv4_fS_(
 // SPVCHECK-SAME: <4 x float> noundef nofpclass(nan inf) [[I:%.*]], <4 x float> noundef nofpclass(nan inf) [[N:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // SPVCHECK-NEXT:  [[ENTRY:.*:]]
-// SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef <4 x float> @llvm.spv.reflect.v4f32(<4 x float> nofpclass(nan inf) [[I]], <4 x float> nofpclass(nan inf) [[N]])
+// SPVCHECK-NEXT:    [[SPV_REFLECT_I:%.*]] = tail call reassoc nnan ninf nsz arcp afn noundef nofpclass(nan inf) <4 x float> @llvm.spv.reflect.v4f32(<4 x float> nofpclass(nan inf) [[I]], <4 x float> nofpclass(nan inf) [[N]])
 // SPVCHECK-NEXT:    ret <4 x float> [[SPV_REFLECT_I]]
 //
 float4 test_reflect_float4(float4 I, float4 N) {

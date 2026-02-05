@@ -474,15 +474,13 @@ public:
                                 AMDGPU::Waitcnt Wait,
                                 const WaitcntBrackets &ScoreBrackets) = 0;
 
-  // Returns an array of WaitEventSets which can be used to map values in
-  // WaitEventType to corresponding counter values in InstCounterType.
-  virtual const WaitEventSet *getWaitEventMask() const = 0;
+  // Returns the WaitEventSet that corresponds to counter \p T.
+  virtual const WaitEventSet &getWaitEvents(InstCounterType T) const = 0;
 
   /// \returns the counter that corresponds to event \p E.
   InstCounterType getCounterFromEvent(WaitEventType E) const {
-    const WaitEventSet *WaitEvents = getWaitEventMask();
     for (auto T : inst_counter_types()) {
-      if (WaitEvents[T].contains(E))
+      if (getWaitEvents(T).contains(E))
         return T;
     }
     llvm_unreachable("event type has no associated counter");
@@ -523,9 +521,9 @@ public:
                         AMDGPU::Waitcnt Wait,
                         const WaitcntBrackets &ScoreBrackets) override;
 
-  const WaitEventSet *getWaitEventMask() const override {
+  const WaitEventSet &getWaitEvents(InstCounterType T) const override {
     assert(ST);
-    return WaitEventMaskForInstPreGFX12;
+    return WaitEventMaskForInstPreGFX12[T];
   }
 
   AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
@@ -567,9 +565,9 @@ public:
                         AMDGPU::Waitcnt Wait,
                         const WaitcntBrackets &ScoreBrackets) override;
 
-  const WaitEventSet *getWaitEventMask() const override {
+  const WaitEventSet &getWaitEvents(InstCounterType T) const override {
     assert(ST);
-    return WaitEventMaskForInstGFX12Plus;
+    return WaitEventMaskForInstGFX12Plus[T];
   }
 
   AMDGPU::Waitcnt getAllZeroWaitcnt(bool IncludeVSCnt) const override;
@@ -735,8 +733,8 @@ public:
                          bool ExpertMode) const;
   AtomicRMWState getAtomicRMWState(MachineInstr &MI,
                                    AtomicRMWState PrevState) const;
-  const WaitEventSet *getWaitEventMask() const {
-    return WCG->getWaitEventMask();
+  const WaitEventSet &getWaitEvents(InstCounterType T) const {
+    return WCG->getWaitEvents(T);
   }
   InstCounterType getCounterFromEvent(WaitEventType E) const {
     return WCG->getCounterFromEvent(E);
@@ -840,14 +838,14 @@ public:
     return PendingEvents.contains(E);
   }
   bool hasPendingEvent(InstCounterType T) const {
-    bool HasPending = PendingEvents & Context->getWaitEventMask()[T];
+    bool HasPending = PendingEvents & Context->getWaitEvents(T);
     assert(HasPending == (getScoreRange(T) != 0) &&
            "Expected no pending events iff scoreboard is empty");
     return HasPending;
   }
 
   bool hasMixedPendingEvents(InstCounterType T) const {
-    WaitEventSet Events = PendingEvents & Context->getWaitEventMask()[T];
+    WaitEventSet Events = PendingEvents & Context->getWaitEvents(T);
     // Return true if more than one bit is set in Events.
     return Events.twoOrMore();
   }
@@ -899,7 +897,7 @@ public:
   void setStateOnFunctionEntryOrReturn() {
     setScoreUB(STORE_CNT, getScoreUB(STORE_CNT) +
                               getWaitCountMax(Context->getLimits(), STORE_CNT));
-    PendingEvents |= Context->getWaitEventMask()[STORE_CNT];
+    PendingEvents |= Context->getWaitEvents(STORE_CNT);
   }
 
   ArrayRef<const MachineInstr *> getLDSDMAStores() const {
@@ -1514,7 +1512,7 @@ void WaitcntBrackets::tryClearSCCWriteEvent(MachineInstr *Inst) {
       PendingSCCWrite->getOperand(0).getImm() == Inst->getOperand(0).getImm()) {
     WaitEventSet SCC_WRITE_PendingEvent(SCC_WRITE);
     // If this SCC_WRITE is the only pending KM_CNT event, clear counter.
-    if ((PendingEvents & Context->getWaitEventMask()[KM_CNT]) ==
+    if ((PendingEvents & Context->getWaitEvents(KM_CNT)) ==
         SCC_WRITE_PendingEvent) {
       setScoreLB(KM_CNT, getScoreUB(KM_CNT));
     }
@@ -1547,7 +1545,7 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
     setScoreLB(T, std::max(getScoreLB(T), UB - Count));
   } else {
     setScoreLB(T, UB);
-    PendingEvents.remove(Context->getWaitEventMask()[T]);
+    PendingEvents.remove(Context->getWaitEvents(T));
   }
 
   if (T == KM_CNT && Count == 0 && hasPendingEvent(SMEM_GROUP)) {
@@ -2870,7 +2868,7 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
 
   for (auto T : inst_counter_types(Context->MaxCounter)) {
     // Merge event flags for this counter
-    const WaitEventSet &EventsForT = Context->getWaitEventMask()[T];
+    const WaitEventSet &EventsForT = Context->getWaitEvents(T);
     const WaitEventSet OldEvents = PendingEvents & EventsForT;
     const WaitEventSet OtherEvents = Other.PendingEvents & EventsForT;
     if (!OldEvents.contains(OtherEvents))

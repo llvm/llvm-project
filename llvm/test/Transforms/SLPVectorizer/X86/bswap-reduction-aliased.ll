@@ -5,24 +5,9 @@ define i32 @test(ptr %x, ptr %y) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[X]], align 1
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 3
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX3]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[X]], align 1
+; CHECK-NEXT:    [[OR10:%.*]] = call i32 @llvm.bswap.i32(i32 [[TMP0]])
 ; CHECK-NEXT:    store i8 1, ptr [[Y]], align 1
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP3]] to i32
-; CHECK-NEXT:    [[CONV4:%.*]] = zext i8 [[TMP2]] to i32
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[CONV4]], 8
-; CHECK-NEXT:    [[CONV5:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[SHL6:%.*]] = shl nuw nsw i32 [[CONV5]], 16
-; CHECK-NEXT:    [[CONV8:%.*]] = zext i8 [[TMP0]] to i32
-; CHECK-NEXT:    [[SHL9:%.*]] = shl nuw i32 [[CONV8]], 24
-; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[SHL6]], [[SHL9]]
-; CHECK-NEXT:    [[OR7:%.*]] = or disjoint i32 [[OR]], [[CONV]]
-; CHECK-NEXT:    [[OR10:%.*]] = or disjoint i32 [[OR7]], [[SHL]]
 ; CHECK-NEXT:    ret i32 [[OR10]]
 ;
 entry:
