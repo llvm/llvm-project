@@ -150,10 +150,9 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   /// This is used to allow request_evaluate to handle empty expressions
   /// (ie the user pressed 'return' and expects the previous expression to
-  /// repeat). If the previous expression was a command, this string will be
-  /// empty; if the previous expression was a variable expression, this string
-  /// will contain that expression.
-  std::string last_nonempty_var_expression;
+  /// repeat). If the previous expression was a command, it will be empty.
+  /// Else it will contain the last valid variable expression.
+  std::string last_valid_variable_expression;
 
   /// The set of features supported by the connected client.
   llvm::DenseSet<ClientFeature> clientFeatures;
@@ -432,12 +431,9 @@ struct DAP final : public DAPTransport::MessageHandler {
   /// Perform complete DAP initialization by reusing an existing debugger and
   /// target.
   ///
-  /// \param[in] debugger_id
-  ///     The ID of the existing debugger to reuse.
-  ///
-  /// \param[in] target_id
-  ///     The globally unique ID of the existing target to reuse.
-  llvm::Error InitializeDebugger(int debugger_id, lldb::user_id_t target_id);
+  /// \param[in] session
+  ///     A session consisting of an existing debugger and target.
+  llvm::Error InitializeDebugger(const protocol::DAPSession &session);
 
   /// Start event handling threads based on client capabilities.
   void StartEventThreads();

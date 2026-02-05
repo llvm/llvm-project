@@ -1230,7 +1230,7 @@ def : InstRW<[WLat15, LSU, VecDF2, GroupAlone], (instregex "TD(C|G)XT$")>;
 // Vector: Move instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[WLat1, FXb, NormalGr], (instregex "VLR(32|64)?$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "VLR(16|32|64)?$")>;
 def : InstRW<[WLat3, FXb, NormalGr], (instregex "VLGV(B|F|G|H)?$")>;
 def : InstRW<[WLat1, FXb, NormalGr], (instregex "VLVG(B|F|G|H)?$")>;
 def : InstRW<[WLat3, FXb, NormalGr], (instregex "VLVGP(32)?$")>;
