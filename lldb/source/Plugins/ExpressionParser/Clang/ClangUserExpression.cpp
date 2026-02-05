@@ -416,7 +416,8 @@ void ClangUserExpression::CreateSourceCode(
         m_filename, prefix, m_expr_text, GetWrapKind()));
 
     if (!m_source_code->GetText(m_transformed_text, exe_ctx, !m_ctx_obj,
-                                for_completion, modules_to_import)) {
+                                for_completion, modules_to_import,
+                                m_options.GetCppIgnoreContextQualifiers())) {
       diagnostic_manager.PutString(lldb::eSeverityError,
                                    "couldn't construct expression body");
       return;
@@ -950,8 +951,8 @@ char ClangUserExpression::ClangUserExpressionHelper::ID;
 void ClangUserExpression::ClangUserExpressionHelper::ResetDeclMap(
     ExecutionContext &exe_ctx,
     Materializer::PersistentVariableDelegate &delegate,
-    bool keep_result_in_memory,
-    ValueObject *ctx_obj) {
+    bool keep_result_in_memory, ValueObject *ctx_obj,
+    bool ignore_context_qualifiers) {
   std::shared_ptr<ClangASTImporter> ast_importer;
   auto *state = exe_ctx.GetTargetSP()->GetPersistentExpressionStateForLanguage(
       lldb::eLanguageTypeC);
@@ -961,7 +962,7 @@ void ClangUserExpression::ClangUserExpressionHelper::ResetDeclMap(
   }
   m_expr_decl_map_up = std::make_unique<ClangExpressionDeclMap>(
       keep_result_in_memory, &delegate, exe_ctx.GetTargetSP(), ast_importer,
-      ctx_obj);
+      ctx_obj, ignore_context_qualifiers);
 }
 
 clang::ASTConsumer *

@@ -60,6 +60,8 @@ public:
 // BEGIN SWIFT
     lldb::BindGenericTypes bind_generic_types;
 // END SWIFT
+
+    bool cpp_ignore_context_qualifiers;
   };
 
   CommandObjectExpression(CommandInterpreter &interpreter);

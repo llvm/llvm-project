@@ -47,14 +47,18 @@ class CPPThisTestCase(TestBase):
         )
 
         self.expect("expression -- (int)getpid(); m_a", startstr="(const int) $1 = 3")
+        self.expect(
+            "expression --c++-ignore-context-qualifiers -- m_a = 2",
+            startstr="(int) $2 = 2",
+        )
 
         self.runCmd("process continue")
 
-        self.expect("expression -- s_a", startstr="(int) $2 = 5")
+        self.expect("expression -- s_a", startstr="(int) $3 = 5")
 
         self.runCmd("process continue")
 
-        self.expect("expression -- m_a", startstr="(int) $3 = 3")
+        self.expect("expression -- m_a", startstr="(int) $4 = 2")
 
     def set_breakpoint(self, line):
         lldbutil.run_break_set_by_file_and_line(

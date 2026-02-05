@@ -20,6 +20,16 @@ class TestCase(TestBase):
             substrs=["has type 'const Foo'", "but function is not marked const"],
         )
 
+        options = lldb.SBExpressionOptions()
+        options.SetBooleanLanguageOption("c++-ignore-context-qualifiers", True)
+        options.SetIgnoreBreakpoints(True)
+        self.expect_expr("volatile_method()", options=options)
+        self.expect(
+            "expression --c++-ignore-context-qualifiers -- bar()",
+            error=True,
+            substrs=["call to member function 'bar' is ambiguous"],
+        )
+
         lldbutil.continue_to_source_breakpoint(
             self, process, "Break here: volatile", lldb.SBFileSpec("main.cpp")
         )
@@ -34,6 +44,13 @@ class TestCase(TestBase):
             substrs=["has type 'volatile Foo'", "but function is not marked volatile"],
         )
         self.expect_expr("volatile_method()")
+
+        self.expect_expr("const_method()", options=options)
+        self.expect(
+            "expression --c++-ignore-context-qualifiers -- bar()",
+            error=True,
+            substrs=["call to member function 'bar' is ambiguous"],
+        )
 
         lldbutil.continue_to_source_breakpoint(
             self, process, "Break here: const volatile", lldb.SBFileSpec("main.cpp")
@@ -57,4 +74,12 @@ class TestCase(TestBase):
                 "has type 'const volatile Foo'",
                 "but function is not marked const or volatile",
             ],
+        )
+
+        self.expect_expr("const_method()", options=options)
+        self.expect_expr("volatile_method()", options=options)
+        self.expect(
+            "expression --c++-ignore-context-qualifiers -- bar()",
+            error=True,
+            substrs=["call to member function 'bar' is ambiguous"],
         )
