@@ -19,16 +19,41 @@ class ScriptedFrameProvider(metaclass=ABCMeta):
     Most of the base class methods are `@abstractmethod` that need to be
     overwritten by the inheriting class.
 
+    The constructor of this class sets up the following attributes:
+
+    - ``input_frames`` (lldb.SBFrameList or None): The frame list to use as input
+    - ``thread`` (lldb.SBThread or None): The thread this provider is attached to.
+    - ``target`` (lldb.SBTarget or None): The target from the thread's process.
+    - ``process`` (lldb.SBProcess or None): The process that owns the thread.
+    - ``args`` (lldb.SBStructuredData or None): Dictionary-like structured data passed when the provider was registered.
+
     Example usage:
 
     .. code-block:: python
 
-        # Attach a frame provider to a thread
-        thread = process.GetSelectedThread()
-        error = thread.SetScriptedFrameProvider(
-                        "my_module.MyFrameProvider",
-                        lldb.SBStructuredData()
-        )
+        import lldb
+        from lldb.plugins.scripted_frame_provider import ScriptedFrameProvider
+
+        class CoroFrameProvider(ScriptedFrameProvider):
+            def __init__(self, input_frames, args):
+                super().__init__(input_frames, args)
+
+            @staticmethod
+            def get_description():
+                return "C++ coroutine frame unwinding"
+
+            def get_frame_at_index(self, index):
+                # Duplicate every frame
+                return int(index / 2)
+
+        def __lldb_init_module(debugger, internal_dict):
+            debugger.HandleCommand(f"target frame-provider register -C {__name__}.CoroFrameProvider")
+
+        if __name__ == '__main__':
+            print("This script should be loaded from LLDB using `command script import <filename>`")
+
+    You can register your frame provider either via the CLI command ``target frame-provider register`` or
+    via the API ``SBThread.RegisterScriptedFrameProvider``.
     """
 
     @staticmethod
@@ -74,6 +99,7 @@ class ScriptedFrameProvider(metaclass=ABCMeta):
 
         .. code-block:: python
 
+            @staticmethod
             def get_description(self):
                 return "Crash log frame provider for thread 1"
         """
@@ -150,10 +176,12 @@ class ScriptedFrameProvider(metaclass=ABCMeta):
                 if no frame exists at this index. The dictionary should contain:
 
             Required fields:
+
             - idx (int): The synthetic frame index (0 for youngest/top frame)
             - pc (int): The program counter address for the synthetic frame
 
             Alternatively, you can return:
+
             - A ScriptedFrame object for full control over frame behavior
             - An integer representing an input frame index to reuse
             - None to indicate no more frames exist
