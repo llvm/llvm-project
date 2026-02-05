@@ -62,6 +62,12 @@ class User:
         )
 
 
+def print_rate_limit_info(limit_info: dict) -> int:
+    cost = limit_info["cost"]
+    print(f"Rate Limit Info: cost {cost}, remaining: {limit_info['remaining']}, reset: {limit_info['resetAt']}, limit: {limit_info['limit']}")
+    return cost
+
+
 def check_manual_requests(
     gh: github.Github, start_date: datetime.datetime
 ) -> list[str]:
@@ -73,6 +79,12 @@ def check_manual_requests(
 
     query = """
         query ($query: String!, $after: String) {
+          rateLimit {
+            cost
+            remaining
+            resetAt
+            limit
+          }
           search(query: $query, type: ISSUE, first: 100, after: $after) {
             nodes {
               ... on Issue {
@@ -101,6 +113,7 @@ def check_manual_requests(
             query=query, variables=variables
         )
         data = res_data["data"]
+        print_rate_limit_info(data['rateLimit'])
         for issue in data["search"]["nodes"]:
             users.extend([user[1:] for user in re.findall("@[^ ,\n]+", issue["body"])])
             if issue["author"]:
@@ -137,6 +150,12 @@ def get_num_commits(gh: github.Github, user: str, start_date: datetime.datetime)
 
     query = """
         query ($owner: String!, $user_id: ID!, $start_date: GitTimestamp!){
+          rateLimit {
+            cost
+            remaining
+            resetAt
+            limit
+          }
           organization(login: $owner) {
             teams(query: "llvm-committers" first:1) {
               nodes {
@@ -163,6 +182,7 @@ def get_num_commits(gh: github.Github, user: str, start_date: datetime.datetime)
         query=query, variables=variables
     )
     data = res_data["data"]
+    print_rate_limit_info(data['rateLimit'])
     for repo in data["organization"]["teams"]["nodes"][0]["repositories"]["nodes"]:
         count += int(repo["ref"]["target"]["history"]["totalCount"])
         if count >= User.THRESHOLD:
@@ -178,6 +198,12 @@ def get_review_count(
     """
     query = """
         query ($query: String!) {
+          rateLimit {
+            cost
+            remaining
+            resetAt
+            limit
+          }  
           search(query: $query, type: ISSUE, first: 5) {
             issueCount
           }
@@ -195,6 +221,7 @@ def get_review_count(
         query=query, variables=variables
     )
     data = res_data["data"]
+    print_rate_limit_info(data['rateLimit'])
     return int(data["search"]["issueCount"])
 
 
@@ -207,6 +234,12 @@ def count_prs(gh: github.Github, triage_list: dict, start_date: datetime.datetim
     query = """
         query ($query: String!, $after: String) {
           search(query: $query, type: ISSUE, first: 100, after: $after) {
+          rateLimit {
+            cost
+            remaining
+            resetAt
+            limit
+          }
             issueCount,
             nodes {
               ... on PullRequest {
@@ -227,6 +260,7 @@ def count_prs(gh: github.Github, triage_list: dict, start_date: datetime.datetim
     """
     date_begin = start_date
     date_end = None
+    total_cost = 0
     while date_begin < datetime.datetime.now():
         date_end = date_begin + datetime.timedelta(days=7)
         formatted_date_begin = date_begin.strftime("%Y-%m-%dT%H:%M:%S")
@@ -241,6 +275,7 @@ def count_prs(gh: github.Github, triage_list: dict, start_date: datetime.datetim
                 query=query, variables=variables
             )
             data = res_data["data"]
+            total_cost += print_rate_limit_info(data['rateLimit'])
             for pr in data["search"]["nodes"]:
                 # Users can be None if the user has been deleted.
                 if not pr["author"]:
@@ -262,6 +297,7 @@ def count_prs(gh: github.Github, triage_list: dict, start_date: datetime.datetim
             if has_next_page:
                 variables["after"] = data["search"]["pageInfo"]["endCursor"]
         date_begin = date_end
+    print(f"Total Cost of count_prs() queries: {total_cost}")
 
 
 def main():
