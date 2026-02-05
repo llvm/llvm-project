@@ -955,7 +955,6 @@ void ClangUserExpression::FixupParseErrorDiagnostics(
       [](std::unique_ptr<Diagnostic> const &diag) {
         switch (diag->GetCompilerID()) {
         case clang::diag::err_member_function_call_bad_cvr:
-          return true;
         case clang::diag::err_typecheck_assign_const_method:
           return true;
         default:
