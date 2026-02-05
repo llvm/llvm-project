@@ -104,9 +104,9 @@ public:
     return true;
   }
 
-  // Increase the inlining cost threshold by a factor of 11, reflecting that
+  // Increase the inlining cost threshold by a factor of 29, reflecting that
   // calls are particularly expensive in NVPTX.
-  unsigned getInliningThresholdMultiplier() const override { return 11; }
+  unsigned getInliningThresholdMultiplier() const override { return 29; }
 
   InstructionCost
   getInstructionCost(const User *U, ArrayRef<const Value *> Operands,
