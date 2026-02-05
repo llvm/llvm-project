@@ -1,5 +1,5 @@
 """
-Test the redirection after launching in the integrated terminal.
+Test the redirection after launching in the internal console.
 """
 
 from lldbsuite.test.decorators import skipIfWindows
