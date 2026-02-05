@@ -375,7 +375,6 @@ private:
 
   Register buildZerosVal(const SPIRVType *ResType, MachineInstr &I) const;
   bool isScalarOrVectorIntConstantZero(Register Reg) const;
-  bool isScalarOrVectorConstant(Register Reg) const;
   Register buildZerosValF(const SPIRVType *ResType, MachineInstr &I) const;
   Register buildOnesVal(bool AllOnes, const SPIRVType *ResType,
                         MachineInstr &I) const;
@@ -3148,47 +3147,6 @@ bool SPIRVInstructionSelector::isScalarOrVectorIntConstantZero(
   return false;
 }
 
-bool SPIRVInstructionSelector::isScalarOrVectorConstant(Register Reg) const {
-  auto IsConstant = [this](Register Reg) {
-    MachineInstr *Def = getDefInstrMaybeConstant(Reg, MRI);
-    if (!Def)
-      return false;
-
-    if (TII.isConstantInstr(*Def))
-      return true;
-
-    if (Def->getOpcode() == TargetOpcode::G_CONSTANT ||
-        Def->getOpcode() == TargetOpcode::G_FCONSTANT)
-      return true;
-
-    if (Def->getOpcode() == SPIRV::OpConstantNull)
-      return true;
-
-    return false;
-  };
-
-  if (IsConstant(Reg))
-    return true;
-
-  MachineInstr *Def = MRI->getVRegDef(Reg);
-  if (!Def)
-    return false;
-
-  if (Def->getOpcode() == TargetOpcode::G_BUILD_VECTOR ||
-      (Def->getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS &&
-       cast<GIntrinsic>(Def)->getIntrinsicID() ==
-           Intrinsic::spv_const_composite)) {
-    unsigned StartOp = Def->getOpcode() == TargetOpcode::G_BUILD_VECTOR ? 1 : 2;
-    for (unsigned i = StartOp; i < Def->getNumOperands(); ++i) {
-      if (!isScalarOrVectorConstant(Def->getOperand(i).getReg()))
-        return false;
-    }
-    return true;
-  }
-
-  return false;
-}
-
 Register SPIRVInstructionSelector::buildZerosValF(const SPIRVType *ResType,
                                                   MachineInstr &I) const {
   // OpenCL uses nulls for Zero. In HLSL we don't use null constants.
@@ -4319,9 +4277,10 @@ bool SPIRVInstructionSelector::generateSampleImage(
   if (ImOps.GradX && ImOps.GradY)
     ImageOperands |= SPIRV::ImageOperand::Grad;
   if (ImOps.Offset && !isScalarOrVectorIntConstantZero(*ImOps.Offset)) {
-    if (!isScalarOrVectorConstant(*ImOps.Offset))
-      report_fatal_error("The Offset image operand must be a constant.");
-    ImageOperands |= SPIRV::ImageOperand::ConstOffset;
+    if (isConstReg(MRI, *ImOps.Offset))
+      ImageOperands |= SPIRV::ImageOperand::ConstOffset;
+    else
+      ImageOperands |= SPIRV::ImageOperand::Offset;
   }
   if (ImOps.MinLod)
     ImageOperands |= SPIRV::ImageOperand::MinLod;
@@ -4336,7 +4295,8 @@ bool SPIRVInstructionSelector::generateSampleImage(
       MIB.addUse(*ImOps.GradX);
       MIB.addUse(*ImOps.GradY);
     }
-    if (ImageOperands & SPIRV::ImageOperand::ConstOffset)
+    if (ImageOperands &
+        (SPIRV::ImageOperand::ConstOffset | SPIRV::ImageOperand::Offset))
       MIB.addUse(*ImOps.Offset);
     if (ImageOperands & SPIRV::ImageOperand::MinLod)
       MIB.addUse(*ImOps.MinLod);
