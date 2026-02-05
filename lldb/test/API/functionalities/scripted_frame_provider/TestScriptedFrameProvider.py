@@ -1178,7 +1178,8 @@ class ScriptedFrameProviderTestCase(TestBase):
             lldb.SBStructuredData(),
             error,
         )
-        collect_stack_changed_thread_ids(len(expected_thread_ids))  # Consume registration
+        # Consume registration
+        collect_stack_changed_thread_ids(len(expected_thread_ids))
 
         self.runCmd("target frame-provider clear")
         self.assertEqual(
