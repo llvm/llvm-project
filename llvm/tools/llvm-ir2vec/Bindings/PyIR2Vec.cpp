@@ -94,6 +94,30 @@ public:
 
     return NBFuncEmbMap;
   }
+
+  nb::ndarray<nb::numpy, double> getFuncEmb(const std::string &FuncName) {
+    const Function *FuncPtr = M->getFunction(FuncName);
+
+    if (!FuncPtr)
+      throw nb::value_error(("Function '" + FuncName + "' not found in module").c_str());
+
+    auto ToolFuncEmb = Tool->getFunctionEmbedding(*FuncPtr, OutputEmbeddingMode);
+
+    if (!ToolFuncEmb)
+      throw nb::value_error(toString(ToolFuncEmb.takeError()).c_str());
+
+    auto FuncEmbVec = ToolFuncEmb->getData();
+    double *NBFuncEmbVec = new double[FuncEmbVec.size()];
+    std::copy(FuncEmbVec.begin(), FuncEmbVec.end(), NBFuncEmbVec);
+
+    auto NbArray = nb::ndarray<nb::numpy, double>(
+        NBFuncEmbVec, {FuncEmbVec.size()},
+        nb::capsule(NBFuncEmbVec, [](void *P) noexcept {
+          delete[] static_cast<double *>(P);
+        }));
+
+    return NbArray;
+  }
 };
 
 } // namespace
@@ -108,7 +132,12 @@ NB_MODULE(ir2vec, m) {
       .def("getFuncEmbMap", &PyIR2VecTool::getFuncEmbMap,
            "Generate function-level embeddings for all functions\n"
            "Returns: dict[str, ndarray[float64]] - "
-           "{function_name: embedding}");
+           "{function_name: embedding}")
+      .def("getFuncEmb", &PyIR2VecTool::getFuncEmb,
+           nb::arg("funcName"),
+           "Generate embedding for a single function by name\n"
+           "Args: funcName (str) - IR-Name of the function\n"
+           "Returns: ndarray[float64] - Function embedding vector");
 
   m.def(
       "initEmbedding",
