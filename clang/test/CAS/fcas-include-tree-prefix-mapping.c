@@ -26,10 +26,10 @@
 // CHECK-NOT: [[OUT_PREFIX]]
 // CHECK-NOT: [[SDK_PREFIX]]
 // CHECK-NOT: [[TOOLCHAIN_PREFIX]]
-// CHECK: /^src{{[/\\]}}main.c
-// CHECK: /^src{{[/\\]}}inc{{[/\\]}}t.h
-// CHECK: /^toolchain{{[/\\]}}lib{{[/\\]}}clang{{[/\\]}}1000{{[/\\]}}include{{[/\\]}}stdarg.h
-// CHECK: /^sdk{{[/\\]}}usr{{[/\\]}}include{{[/\\]}}stdlib.h
+// CHECK: {{/|\\}}^src{{[/\\]}}main.c
+// CHECK: {{/|\\}}^src{{[/\\]}}inc{{[/\\]}}t.h
+// CHECK: {{/|\\}}^toolchain{{[/\\]}}lib{{[/\\]}}clang{{[/\\]}}1000{{[/\\]}}include{{[/\\]}}stdarg.h
+// CHECK: {{/|\\}}^sdk{{[/\\]}}usr{{[/\\]}}include{{[/\\]}}stdlib.h
 
 // RUN: FileCheck %s -input-file %t/out/output.ll -check-prefix=IR -DSRC_PREFIX=%t/src -DOUT_PREFIX=%t/out -DSDK_PREFIX=%S/Inputs/SDK -DTOOLCHAIN_PREFIX=%S/Inputs/toolchain_dir
 // IR-NOT: [[SRC_PREFIX]]

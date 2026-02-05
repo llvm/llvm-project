@@ -17,72 +17,18 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/Program.h"
+#include <chrono>
 #include <cstdlib>
-
-#if LLVM_ON_UNIX
-#include <sys/socket.h> // FIXME: Unix-only. Not portable.
-#include <sys/types.h>  // FIXME: Unix-only. Not portable.
-#include <sys/un.h>     // FIXME: Unix-only. Not portable.
+#include <thread>
 
 using namespace clang;
 using namespace clang::cc1depscand;
 using namespace llvm;
 
-static constexpr const char *SocketExtension = ".sock";
-
-int cc1depscand::createSocket() { return ::socket(AF_UNIX, SOCK_STREAM, 0); }
-
-int cc1depscand::acceptSocket(int Socket) {
-  sockaddr_un DataAddress;
-  socklen_t DataLength;
-  return ::accept(Socket, reinterpret_cast<sockaddr *>(&DataAddress),
-                  &DataLength);
-}
-
-static sockaddr_un configureAddress(StringRef BasePath) {
-  sockaddr_un Address;
-  SmallString<128> SocketPath = BasePath;
-  SocketPath.append(SocketExtension);
-
-  Address.sun_family = AF_UNIX;
-  if (SocketPath.size() >= sizeof(Address.sun_path))
-    llvm::cantFail(llvm::errorCodeToError(
-        std::error_code(ENAMETOOLONG, std::generic_category())));
-  ::strncpy(Address.sun_path, SocketPath.c_str(), sizeof(Address.sun_path));
-  return Address;
-}
-
-void cc1depscand::unlinkBoundSocket(StringRef BasePath) {
-  SmallString<128> SocketPath = BasePath;
-  SocketPath.append(SocketExtension);
-  ::unlink(SocketPath.c_str());
-}
-
-int cc1depscand::connectToSocket(StringRef BasePath, int Socket) {
-  sockaddr_un Address = configureAddress(BasePath);
-  return ::connect(Socket, reinterpret_cast<sockaddr *>(&Address),
-                   sizeof(Address));
-}
-int cc1depscand::bindToSocket(StringRef BasePath, int Socket) {
-  sockaddr_un Address = configureAddress(BasePath);
-  if (int Failure = ::bind(Socket, reinterpret_cast<sockaddr *>(&Address),
-                           sizeof(Address))) {
-    if (errno == EADDRINUSE) {
-      unlinkBoundSocket(BasePath);
-      Failure = ::bind(Socket, reinterpret_cast<sockaddr *>(&Address),
-                       sizeof(Address));
-    }
-    if (Failure)
-      return Failure;
-  }
-
-  // FIXME: shouldn't compute socket path twice. Also, not sure this is working
-  // on crashes.
-  SmallString<128> SocketPath = BasePath;
-  SocketPath.append(SocketExtension);
-  llvm::sys::RemoveFileOnSignal(SocketPath);
-  return 0;
-}
+//===----------------------------------------------------------------------===//
+// Utilities
+//===----------------------------------------------------------------------===//
 
 std::string cc1depscand::getBasePath(StringRef DaemonKey) {
   assert(!DaemonKey.empty() && "Expected valid daemon key");
@@ -96,176 +42,11 @@ std::string cc1depscand::getBasePath(StringRef DaemonKey) {
   return BasePath.str().str();
 }
 
-Expected<OpenSocket> OpenSocket::create(StringRef BasePath) {
-  OpenSocket Socket(::socket(AF_UNIX, SOCK_STREAM, 0));
-  if (Socket == -1)
-    return llvm::errorCodeToError(
-        std::error_code(errno, std::generic_category()));
-  return std::move(Socket);
-}
+static constexpr const char *SocketExtension = ".sock";
 
-Expected<ScanDaemon> ScanDaemon::connectToDaemon(StringRef BasePath,
-                                                 bool ShouldWait) {
-  auto reportError = [BasePath](Error &&E) -> Error {
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        Twine("could not connect to scan daemon on path '") + BasePath +
-            "': " + toString(std::move(E)));
-  };
-
-  Expected<OpenSocket> Socket = OpenSocket::create(BasePath);
-  if (!Socket)
-    return reportError(Socket.takeError());
-
-  // Wait up to 60 seconds.
-  constexpr int MaxWait = 60 * 1000 * 1000;
-  int NextBackoff = 0;
-  int TotalBackoff = 0;
-  while (TotalBackoff < MaxWait) {
-    TotalBackoff += NextBackoff;
-    if (NextBackoff > 0) {
-      if (!ShouldWait)
-        break;
-      ::usleep(NextBackoff);
-    }
-    ++NextBackoff;
-
-    // The daemon owns the .pid. Try to connect to the server with the .socket.
-    if (!cc1depscand::connectToSocket(BasePath, *Socket))
-      return ScanDaemon(std::move(*Socket));
-
-    if (errno != ENOENT && errno != ECONNREFUSED)
-      return reportError(llvm::errorCodeToError(
-          std::error_code(errno, std::generic_category())));
-  }
-
-  return llvm::createStringError(
-      std::make_error_code(std::errc::timed_out),
-      "timeout when connecting to scan daemon on path: '" + BasePath + "'");
-}
-
-Expected<ScanDaemon> ScanDaemon::launchDaemon(StringRef BasePath,
-                                              const char *Arg0,
-                                              const DepscanSharing &Sharing) {
-  std::string BasePathCStr = BasePath.str();
-  const char *Args[] = {
-      Arg0,
-      "-cc1depscand",
-      "-run",
-      BasePathCStr.c_str(),
-  };
-
-  ArrayRef<const char *> InitialArgs = ArrayRef(Args);
-  SmallVector<const char *> LaunchArgs(InitialArgs.begin(), InitialArgs.end());
-
-  llvm::BumpPtrAllocator Alloc;
-  llvm::StringSaver Saver(Alloc);
-
-  if (Sharing.ShareViaIdentifier) {
-    // Invocations that share state via identifier will be isolated from
-    // unrelated daemons, so the daemon they share is safe to stay alive longer.
-    LaunchArgs.push_back("-long-running");
-  }
-  LaunchArgs.push_back("-cas-args");
-  LaunchArgs.append(Sharing.CASArgs);
-  LaunchArgs.push_back(nullptr);
-
-  // Spawn attributes
-  posix_spawnattr_t Attrs;
-  if (int EC = posix_spawnattr_init(&Attrs))
-    return llvm::errorCodeToError(std::error_code(EC, std::generic_category()));
-  llvm::scope_exit Attrs_cleanup([&] { posix_spawnattr_destroy(&Attrs); });
-
-#ifdef POSIX_SPAWN_CLOEXEC_DEFAULT
-  // In the spawned process, close all file descriptors that are not explicitly
-  // described by the file actions object. This is particularly relevant for
-  // llbuild which waits on a "control file handle" and, if inherited, it would
-  // cause llbuild to wait for the spawned process to exit.
-  // FIXME: This is Darwin-specific extension, perform the same function on
-  // non-darwin platforms.
-  if (int EC = posix_spawnattr_setflags(&Attrs, POSIX_SPAWN_CLOEXEC_DEFAULT))
-    return llvm::errorCodeToError(std::error_code(EC, std::generic_category()));
-#endif
-
-  static constexpr const char *PassThroughEnv[] = {
-      "LLVM_CAS_LOG",
-      "LLVM_CAS_DISABLE_VALIDATION",
-      "LLVM_CAS_MAX_MAPPING_SIZE",
-  };
-  SmallVector<const char *> EnvP;
-  for (const char *Name : PassThroughEnv)
-    if (const char *Value = getenv(Name))
-      EnvP.push_back(Saver.save(llvm::Twine(Name) + "=" + Value).data());
-  EnvP.push_back(nullptr);
-
-  ::pid_t Pid;
-  int EC = ::posix_spawn(&Pid, Args[0], /*file_actions=*/nullptr, &Attrs,
-                         const_cast<char **>(LaunchArgs.data()),
-                         const_cast<char **>(EnvP.data()));
-  if (EC)
-    return llvm::errorCodeToError(std::error_code(EC, std::generic_category()));
-
-  return connectToJustLaunchedDaemon(BasePath);
-}
-
-Expected<ScanDaemon> ScanDaemon::create(StringRef BasePath, const char *Arg0,
-                                        const DepscanSharing &Sharing) {
-  if (Expected<ScanDaemon> Daemon = connectToExistingDaemon(BasePath))
-    return Daemon;
-  else
-    llvm::consumeError(Daemon.takeError()); // FIXME: Sometimes return.
-
-  return launchDaemon(BasePath, Arg0, Sharing);
-}
-
-Expected<ScanDaemon>
-ScanDaemon::constructAndShakeHands(StringRef BasePath, const char *Arg0,
-                                   const DepscanSharing &Sharing) {
-  auto Daemon = ScanDaemon::create(BasePath, Arg0, Sharing);
-  if (!Daemon)
-    return Daemon.takeError();
-
-  // If handshake failed, try relaunch the daemon.
-  if (auto E = Daemon->shakeHands()) {
-    logAllUnhandledErrors(std::move(E), llvm::errs(),
-                          "Restarting daemon due to error: ");
-
-    auto NewDaemon = launchDaemon(BasePath, Arg0, Sharing);
-    // If recover failed, return Error.
-    if (!NewDaemon)
-      return NewDaemon.takeError();
-    if (auto NE = NewDaemon->shakeHands())
-      return std::move(NE);
-
-    return NewDaemon;
-  }
-
-  return Daemon;
-}
-
-Expected<ScanDaemon> ScanDaemon::connectToDaemonAndShakeHands(StringRef Path) {
-  auto Daemon = ScanDaemon::connectToExistingDaemon(Path);
-  if (!Daemon)
-    return Daemon.takeError();
-
-  if (auto E = Daemon->shakeHands())
-    return std::move(E);
-
-  return Daemon;
-}
-
-Error ScanDaemon::shakeHands() const {
-  cc1depscand::CC1DepScanDProtocol Comms(*this);
-  cc1depscand::CC1DepScanDProtocol::ResultKind Result;
-  if (auto E = Comms.getResultKind(Result))
-    return E;
-
-  if (Result != cc1depscand::CC1DepScanDProtocol::SuccessResult)
-    return llvm::errorCodeToError(
-        std::error_code(ENOTCONN, std::generic_category()));
-
-  return llvm::Error::success();
-}
+//===----------------------------------------------------------------------===//
+// Protocol Implementation
+//===----------------------------------------------------------------------===//
 
 llvm::Error CC1DepScanDProtocol::putArgs(ArrayRef<const char *> Args) {
   // Construct the args block.
@@ -312,6 +93,27 @@ CC1DepScanDProtocol::getCommand(llvm::StringSaver &Saver,
   return llvm::Error::success();
 }
 
+llvm::Error CC1DepScanDProtocol::putScanResultSuccess(
+    StringRef RootID, ArrayRef<const char *> Args, StringRef DiagnosticOutput) {
+  if (Error E = putResultKind(SuccessResult))
+    return E;
+  if (Error E = putString(RootID))
+    return E;
+  if (Error E = putArgs(Args))
+    return E;
+  return putString(DiagnosticOutput);
+}
+
+llvm::Error
+CC1DepScanDProtocol::putScanResultFailed(StringRef Reason,
+                                         StringRef DiagnosticOutput) {
+  if (Error E = putResultKind(ErrorResult))
+    return E;
+  if (Error E = putString(Reason))
+    return E;
+  return putString(DiagnosticOutput);
+}
+
 llvm::Error
 CC1DepScanDProtocol::getScanResult(llvm::StringSaver &Saver, ResultKind &Result,
                                    StringRef &FailedReason, StringRef &RootID,
@@ -338,25 +140,178 @@ CC1DepScanDProtocol::getScanResult(llvm::StringSaver &Saver, ResultKind &Result,
   return getString(Saver, DiagnosticOutput);
 }
 
-llvm::Error CC1DepScanDProtocol::putScanResultSuccess(
-    StringRef RootID, ArrayRef<const char *> Args, StringRef DiagnosticOutput) {
-  if (Error E = putResultKind(SuccessResult))
-    return E;
-  if (Error E = putString(RootID))
-    return E;
-  if (Error E = putArgs(Args))
-    return E;
-  return putString(DiagnosticOutput);
+//===----------------------------------------------------------------------===//
+// Daemon Connection & Lifecycle
+//===----------------------------------------------------------------------===//
+
+Expected<ScanDaemon> ScanDaemon::connectToDaemon(StringRef BasePath,
+                                                 bool ShouldWait) {
+  // Construct the socket path.
+  SmallString<128> SocketPath = BasePath;
+  SocketPath.append(SocketExtension);
+
+  auto reportError = [SocketPath](Error &&E) -> Error {
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        Twine("could not connect to scan daemon on path '") + SocketPath +
+            "': " + toString(std::move(E)));
+  };
+
+  // Wait up to 60 seconds.
+  constexpr int MaxWait = 60 * 1000 * 1000;
+  int NextBackoff = 0;
+  int TotalBackoff = 0;
+  while (TotalBackoff < MaxWait) {
+    TotalBackoff += NextBackoff;
+    if (NextBackoff > 0) {
+      if (!ShouldWait)
+        break;
+      std::this_thread::sleep_for(std::chrono::microseconds(NextBackoff));
+    }
+    ++NextBackoff;
+
+    // Try to connect to the daemon socket.
+    Expected<std::unique_ptr<llvm::raw_socket_stream>> Stream =
+        llvm::raw_socket_stream::createConnectedUnix(SocketPath);
+
+    if (Stream)
+      return ScanDaemon(std::move(*Stream));
+
+    // Check if we should retry based on the error.
+    Error E = Stream.takeError();
+    std::error_code EC = errorToErrorCode(std::move(E));
+
+    bool ShouldRetry = (EC == std::errc::no_such_file_or_directory ||
+                        EC == std::errc::connection_refused);
+#ifdef _WIN32
+    // On Windows, AF_UNIX may return WSAENETDOWN (10050) or WSAECONNREFUSED
+    // (10061) when the socket file exists but the daemon isn't ready yet.
+    if (EC.value() == 10050 || EC.value() == 10061)
+      ShouldRetry = true;
+#endif
+
+    if (!ShouldRetry)
+      return reportError(llvm::errorCodeToError(EC));
+
+    // Consume the error and retry.
+    llvm::consumeError(llvm::errorCodeToError(EC));
+  }
+
+  return llvm::createStringError(
+      std::make_error_code(std::errc::timed_out),
+      "timeout when connecting to scan daemon on path: '" + BasePath + "'");
 }
 
-llvm::Error
-CC1DepScanDProtocol::putScanResultFailed(StringRef Reason,
-                                         StringRef DiagnosticOutput) {
-  if (Error E = putResultKind(ErrorResult))
-    return E;
-  if (Error E = putString(Reason))
-    return E;
-  return putString(DiagnosticOutput);
+Expected<ScanDaemon> ScanDaemon::launchDaemon(StringRef BasePath,
+                                              const char *Arg0,
+                                              const DepscanSharing &Sharing) {
+  SmallVector<StringRef> LaunchArgs;
+  // First argument must be the program name (argv[0])
+  LaunchArgs.push_back(Arg0);
+  LaunchArgs.push_back("-cc1depscand");
+  LaunchArgs.push_back("-run");
+  LaunchArgs.push_back(BasePath);
+
+  if (Sharing.ShareViaIdentifier) {
+    // Invocations that share state via identifier will be isolated from
+    // unrelated daemons, so the daemon they share is safe to stay alive longer.
+    LaunchArgs.push_back("-long-running");
+  }
+  LaunchArgs.push_back("-cas-args");
+  for (const char *Arg : Sharing.CASArgs)
+    LaunchArgs.push_back(Arg);
+
+  // Set up environment variables to pass through.
+  static constexpr const char *PassThroughEnv[] = {
+      "LLVM_CAS_LOG",
+      "LLVM_CAS_DISABLE_VALIDATION",
+#if defined(_WIN32)
+      "SYSTEMROOT",
+      "Path",
+#endif
+  };
+  llvm::BumpPtrAllocator Alloc;
+  llvm::StringSaver Saver(Alloc);
+  SmallVector<StringRef> Env;
+  for (const char *Name : PassThroughEnv)
+    if (const char *Value = getenv(Name))
+      Env.push_back(Saver.save(llvm::Twine(Name) + "=" + Value));
+
+  // Spawn the daemon process without waiting for it.
+  std::string ErrMsg;
+  bool ExecutionFailed = false;
+  std::optional<ArrayRef<StringRef>> EnvOpt =
+      Env.empty() ? std::nullopt : std::optional<ArrayRef<StringRef>>(Env);
+
+  llvm::sys::ProcessInfo PI = llvm::sys::ExecuteNoWait(
+      Arg0, LaunchArgs, EnvOpt, {}, 0, &ErrMsg, &ExecutionFailed);
+
+  if (ExecutionFailed || PI.Pid == llvm::sys::ProcessInfo::InvalidPid)
+    return llvm::createStringError(std::make_error_code(std::errc::invalid_argument),
+                                   Twine("failed to launch daemon: ") + ErrMsg);
+
+  // Give the daemon a moment to start up and create the socket before attempting
+  // to connect. This reduces spurious connection failures and retries.
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  return connectToJustLaunchedDaemon(BasePath);
 }
 
-#endif /* LLVM_ON_UNIX */
+Error ScanDaemon::shakeHands() {
+  cc1depscand::CC1DepScanDProtocol Comms(getStream());
+  cc1depscand::CC1DepScanDProtocol::ResultKind Result;
+  if (auto E = Comms.getResultKind(Result))
+    return E;
+
+  if (Result != cc1depscand::CC1DepScanDProtocol::SuccessResult)
+    return llvm::createStringError(std::errc::not_connected,
+                                   "handshake failed");
+
+  return llvm::Error::success();
+}
+
+Expected<ScanDaemon> ScanDaemon::create(StringRef BasePath, const char *Arg0,
+                                        const DepscanSharing &Sharing) {
+  Expected<ScanDaemon> Daemon = connectToExistingDaemon(BasePath);
+  if (Daemon)
+    return Daemon;
+
+  llvm::consumeError(Daemon.takeError()); // FIXME: Sometimes return.
+  return launchDaemon(BasePath, Arg0, Sharing);
+}
+
+Expected<ScanDaemon>
+ScanDaemon::constructAndShakeHands(StringRef BasePath, const char *Arg0,
+                                   const DepscanSharing &Sharing) {
+  auto Daemon = ScanDaemon::create(BasePath, Arg0, Sharing);
+  if (!Daemon)
+    return Daemon.takeError();
+
+  // If handshake failed, try relaunch the daemon.
+  if (auto E = Daemon->shakeHands()) {
+    logAllUnhandledErrors(std::move(E), llvm::errs(),
+                          "Restarting daemon due to error: ");
+
+    auto NewDaemon = launchDaemon(BasePath, Arg0, Sharing);
+    // If recover failed, return Error.
+    if (!NewDaemon)
+      return NewDaemon.takeError();
+    if (auto NE = NewDaemon->shakeHands())
+      return std::move(NE);
+
+    return NewDaemon;
+  }
+
+  return Daemon;
+}
+
+Expected<ScanDaemon> ScanDaemon::connectToDaemonAndShakeHands(StringRef Path) {
+  auto Daemon = ScanDaemon::connectToExistingDaemon(Path);
+  if (!Daemon)
+    return Daemon.takeError();
+
+  if (auto E = Daemon->shakeHands())
+    return std::move(E);
+
+  return Daemon;
+}
