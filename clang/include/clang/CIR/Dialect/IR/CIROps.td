@@ -722,7 +722,7 @@ def CIR_StoreOp : CIR_Op<"store", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_ReturnableScopes = [
-  "FuncOp", "ScopeOp", "IfOp", "SwitchOp", "CaseOp",
+  "FuncOp", "ScopeOp", "IfOp", "SwitchOp", "CaseOp", "CleanupScopeOp",
   "DoWhileOp", "WhileOp", "ForOp", "TryOp"
 ];
 
