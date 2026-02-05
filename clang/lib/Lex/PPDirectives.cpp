@@ -23,6 +23,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/IPC2978/IPCManagerCompiler.hpp"
 #include "clang/Lex/CodeCompletionHandler.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/LexDiagnostic.h"
@@ -2417,7 +2418,6 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   SmallString<1024> RelativePath;
   // We get the raw path only if we have 'Callbacks' to which we later pass
   // the path.
-  ModuleMap::KnownHeader SuggestedModule;
   SourceLocation FilenameLoc = FilenameTok.getLocation();
   StringRef LookupFilename = Filename;
 
@@ -2432,10 +2432,31 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     BackslashStyle = llvm::sys::path::Style::windows;
   }
 
-  OptionalFileEntryRef File = LookupHeaderIncludeOrImport(
-      &CurDir, Filename, FilenameLoc, FilenameRange, FilenameTok,
-      IsFrameworkFound, IsImportDecl, IsMapped, LookupFrom, LookupFromFile,
-      LookupFilename, RelativePath, SearchPath, SuggestedModule, isAngled);
+  ModuleMap::KnownHeader SuggestedModule;
+  OptionalFileEntryRef File;
+
+  if (N2978::managerCompiler) {
+    const auto &Result = N2978::managerCompiler->findResponse(
+        std::string(Filename), IsImportDecl ? N2978::FileType::HEADER_UNIT
+                                            : N2978::FileType::HEADER_FILE);
+    if (!Result) {
+      // error happend in receiving message.
+    }
+    File = getFileManager().getOptionalFileRef(Result->filePath);
+    if (Result->isSystem)
+      getHeaderSearchInfo().MarkFileSystemHeader(*File);
+    if (Result->type == N2978::FileType::HEADER_UNIT) {
+      IsImportDecl = true;
+      SuggestedModule = {
+          getModuleLoader().loadIPCReceivedHeaderUnit(Result->filePath, EndLoc),
+          ModuleMap::NormalHeader};
+    }
+  } else {
+    File = LookupHeaderIncludeOrImport(
+        &CurDir, Filename, FilenameLoc, FilenameRange, FilenameTok,
+        IsFrameworkFound, IsImportDecl, IsMapped, LookupFrom, LookupFromFile,
+        LookupFilename, RelativePath, SearchPath, SuggestedModule, isAngled);
+  }
 
   if (usingPCHWithThroughHeader() && SkippingUntilPCHThroughHeader) {
     if (File && isPCHThroughHeader(&File->getFileEntry()))
@@ -2475,8 +2496,9 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
 
   Module *ModuleToImport = SuggestedModule.getModule();
 
-  bool MaybeTranslateInclude = Action == Enter && File && ModuleToImport &&
-                               !ModuleToImport->isForBuilding(getLangOpts());
+  bool MaybeTranslateInclude =
+      Action == Enter && File && ModuleToImport &&
+      (!ModuleToImport->isForBuilding(getLangOpts()) || IsImportDecl);
 
   // Maybe a usable Header Unit
   bool UsableHeaderUnit = false;
@@ -2500,9 +2522,12 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   }
   // Determine whether we should try to import the module for this #include, if
   // there is one. Don't do so if precompiled module support is disabled or we
-  // are processing this module textually (because we're building the module).
-  else if (MaybeTranslateInclude &&
-           (UsableHeaderUnit || UsableClangHeaderModule)) {
+  // are processing this module textually (because we're building the module)
+  // or when noScanIPC is set as header-unit is already loaded.
+  if (N2978::managerCompiler && IsImportDecl) {
+    Action = Import;
+  } else if (MaybeTranslateInclude &&
+             (UsableHeaderUnit || UsableClangHeaderModule)) {
     // If this include corresponds to a module but that module is
     // unavailable, diagnose the situation and bail out.
     // FIXME: Remove this; loadModule does the same check (but produces
@@ -2641,9 +2666,11 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   }
 
   // Issue a diagnostic if the name of the file on disk has a different case
-  // than the one we're about to open.
+  // than the one we're about to open. Not checked if it is an IPC received
+  // module.
   const bool CheckIncludePathPortability =
-      !IsMapped && !File->getFileEntry().tryGetRealPathName().empty();
+      !IsImportDecl && !IsMapped &&
+      !File->getFileEntry().tryGetRealPathName().empty();
 
   if (CheckIncludePathPortability) {
     StringRef Name = LookupFilename;

@@ -14,6 +14,7 @@
 #include "clang/Serialization/ModuleManager.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/IPC2978/IPCManagerCompiler.hpp"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
@@ -201,15 +202,27 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     Entry->closeFile();
     return OutOfDate;
   } else {
-    // Get a buffer of the file and close the file descriptor when done.
-    // The file is volatile because in a parallel build we expect multiple
-    // compiler processes to use the same module file rebuilding it if needed.
-    //
-    // RequiresNullTerminator is false because module files don't need it, and
-    // this allows the file to still be mmapped.
-    auto Buf = FileMgr.getBufferForFile(NewModule->File,
-                                        /*IsVolatile=*/true,
-                                        /*RequiresNullTerminator=*/false);
+
+    auto getBuf = [&] {
+      if (N2978::managerCompiler) {
+        return llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>(
+            llvm::MemoryBuffer::getMemBuffer(
+                N2978::managerCompiler->filePathProcessMapping
+                    .at(NewModule->FileName)
+                    .file));
+      }
+
+      // Get a buffer of the file and close the file descriptor when done.
+      // The file is volatile because in a parallel build we expect multiple
+      // compiler processes to use the same module file rebuilding it if needed.
+      //
+      // RequiresNullTerminator is false because module files don't need it, and
+      // this allows the file to still be mmapped.
+      return FileMgr.getBufferForFile(NewModule->File,
+                                      /*IsVolatile=*/true,
+                                      /*RequiresNullTerminator=*/false);
+    };
+    auto Buf = getBuf();
 
     if (!Buf) {
       ErrorStr = Buf.getError().message();
