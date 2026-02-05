@@ -775,14 +775,41 @@ static bool allowsPreservingNUW(const User *U) {
   return true;
 }
 
+// An inbounds GEP does not guarantee that the index is non-negative.
+// This helper checks first if the index is known non-negative. If it is not,
+// it checks whether the GEP is directly based on a global or an alloca with
+// zero offset, in which case inbounds is sufficient to prove non-negativity.
+static bool isGEPNonNegative(const GetElementPtrInst *GEP,
+                             const Value *Idx,
+                             const DataLayout &DL) {
+  if (isKnownNonNegative(Idx, DL))
+    return true;
+
+  if (!GEP->isInBounds())
+    return false;
+
+  const Value *Ptr = GEP->getPointerOperand();
+  int64_t Offset = 0;
+  const Value *Base = GetPointerBaseWithConstantOffset(
+      const_cast<Value *>(Ptr), Offset, DL, /*AllowNonInbounds=*/false);
+  if (!Base || Offset != 0)
+    return false;
+
+  if (!isa<AllocaInst>(Base) && !isa<GlobalObject>(Base))
+    return false;
+
+  return Base == getUnderlyingObject(Ptr);
+}
+
 Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
                                         User *&UserChainTail,
                                         bool &PreservesNUW) {
   ConstantOffsetExtractor Extractor(GEP->getIterator());
+  bool GEPNonNegative = isGEPNonNegative(GEP, Idx, Extractor.DL);
   // Find a non-zero constant offset first.
   APInt ConstantOffset =
       Extractor.find(Idx, /* SignExtended */ false, /* ZeroExtended */ false,
-                     GEP->isInBounds());
+                     /* NonNegative */ GEPNonNegative);
   if (ConstantOffset == 0) {
     UserChainTail = nullptr;
     PreservesNUW = true;
@@ -798,10 +825,10 @@ Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
 }
 
 APInt ConstantOffsetExtractor::Find(Value *Idx, GetElementPtrInst *GEP) {
-  // If Idx is an index of an inbound GEP, Idx is guaranteed to be non-negative.
+  bool GEPNonNegative = isGEPNonNegative(GEP, Idx, GEP->getDataLayout());
   return ConstantOffsetExtractor(GEP->getIterator())
       .find(Idx, /* SignExtended */ false, /* ZeroExtended */ false,
-            GEP->isInBounds());
+            /* NonNegative */ GEPNonNegative);
 }
 
 bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToIndexSize(

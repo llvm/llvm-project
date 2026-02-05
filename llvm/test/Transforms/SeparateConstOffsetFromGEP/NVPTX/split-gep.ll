@@ -30,8 +30,8 @@ entry:
 }
 
 ; We should be able to trace into sext(a + b) if a + b is non-negative
-; (e.g., used as an index of an inbounds GEP) and one of a and b is
-; non-negative.
+; (e.g., used as an index of an inbounds GEP on a global base ptr) and one of a
+; or b is non-negative.
 define ptr @sext_add(i32 %i, i32 %j) {
 ; CHECK-LABEL: define ptr @sext_add(
 ; CHECK-SAME: i32 [[I:%.*]], i32 [[J:%.*]]) {
@@ -50,6 +50,65 @@ entry:
   ; However, inbound sext(j + -2) != sext(j) + -2, e.g., j = INT_MIN
   %3 = sext i32 %2 to i64
   %p = getelementptr inbounds [32 x [32 x float]], ptr @float_2d_array, i64 0, i64 %1, i64 %3
+  ret ptr %p
+}
+
+; We should trace into sext(a + b) if a + b is an inbounds GEP on a known
+; base ptr (alloca) if one of a or b is non-negative.
+define ptr @sext_add_alloca(i32 %i) {
+; CHECK-LABEL: define ptr @sext_add_alloca(
+; CHECK-SAME: i32 [[I:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ARR:%.*]] = alloca [32 x [32 x float]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [32 x [32 x float]], ptr [[ARR]], i64 0, i64 [[TMP0]], i64 0
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 128
+; CHECK-NEXT:    ret ptr [[P1]]
+;
+entry:
+  %arr = alloca [32 x [32 x float]], align 4
+  %0 = add i32 %i, 1
+  %1 = sext i32 %0 to i64
+  ; inbound sext(i + 1) = sext(i) + 1 because inbounds on base ptr -> non-negative
+  %p = getelementptr inbounds [32 x [32 x float]], ptr %arr, i64 0, i64 %1, i64 0
+  ret ptr %p
+}
+
+; We cannot trace into sext(a + b) if a + b is an inbounds GEP but not on a
+; known base ptr even if one of a or b is non-negative.
+define ptr @sext_add_nonbase(i32 %i, ptr %unknown_arr) {
+; CHECK-LABEL: define ptr @sext_add_nonbase(
+; CHECK-SAME: i32 [[I:%.*]], ptr [[ARR:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds [32 x [32 x float]], ptr [[ARR]], i64 0, i64 [[TMP1]], i64 0
+; CHECK-NEXT:    ret ptr [[P1]]
+;
+entry:
+  %0 = add i32 %i, 1
+  %1 = sext i32 %0 to i64
+  ; inbound sext(i + 1) != sext(i) + 1 because a wrapped result can still be inbounds if not at start of arr
+  %p = getelementptr inbounds [32 x [32 x float]], ptr %unknown_arr, i64 0, i64 %1, i64 0
+  ret ptr %p
+}
+
+; We can trace into sext(a + b) if a + b is non-negative (nsw flag) and one of
+; a or b is non-negative, even if the gep is not inbounds
+define ptr @sext_add_nsw(i32 %i, ptr %unknown_arr) {
+; CHECK-LABEL: define ptr @sext_add_nsw(
+; CHECK-SAME: i32 [[I:%.*]], ptr [[ARR:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[I]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [32 x [32 x float]], ptr [[ARR]], i64 0, i64 [[TMP0]], i64 0
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[TMP1]], i64 128
+; CHECK-NEXT:    ret ptr [[P1]]
+;
+entry:
+  %0 = add nsw i32 %i, 1
+  %1 = sext i32 %0 to i64
+  ; sext(nsw i + 1) = sext(i) + 1
+  %p = getelementptr [32 x [32 x float]], ptr %unknown_arr, i64 0, i64 %1, i64 0
   ret ptr %p
 }
 
