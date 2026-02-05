@@ -33,9 +33,9 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
   SharedCacheImageInfo image_info =
       HostInfo::GetSharedCacheImageInfo("/usr/lib/libobjc.A.dylib");
   EXPECT_TRUE(image_info.uuid);
-  EXPECT_TRUE(image_info.data_sp);
+  EXPECT_TRUE(image_info.extractor_sp);
 
-  ModuleSpec spec(FileSpec(), UUID(), image_info.data_sp);
+  ModuleSpec spec(FileSpec(), UUID(), image_info.extractor_sp);
   lldb::ModuleSP module = std::make_shared<Module>(spec);
   ObjectFile *OF = module->GetObjectFile();
   ASSERT_TRUE(llvm::isa<ObjectFileMachO>(OF));
@@ -56,7 +56,7 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
                                           lldb::eSymbolTypeAny, symbol_indices);
     EXPECT_EQ(symbol_indices.size(), 1u);
 
-    Symbol *sym = symtab->SymbolAtIndex(symbol_indices[0]);
+    const Symbol *sym = symtab->SymbolAtIndex(symbol_indices[0]);
     ASSERT_NE(sym, nullptr);
     Address base = sym->GetAddress();
     size_t size = sym->GetByteSize();
@@ -80,7 +80,7 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
 TEST_F(ObjectFileMachOTest, IndirectSymbolsInTheSharedCache) {
   SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
       "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit");
-  ModuleSpec spec(FileSpec(), UUID(), image_info.data_sp);
+  ModuleSpec spec(FileSpec(), UUID(), image_info.extractor_sp);
   lldb::ModuleSP module = std::make_shared<Module>(spec);
 
   ObjectFile *OF = module->GetObjectFile();

@@ -1839,6 +1839,32 @@ static ExprResult PointerAuthAuthAndResign(Sema &S, CallExpr *Call) {
   return Call;
 }
 
+static ExprResult PointerAuthAuthLoadRelativeAndSign(Sema &S, CallExpr *Call) {
+  if (S.checkArgCount(Call, 6))
+    return ExprError();
+  if (checkPointerAuthEnabled(S, Call))
+    return ExprError();
+  const Expr *AddendExpr = Call->getArg(5);
+  bool AddendIsConstInt = AddendExpr->isIntegerConstantExpr(S.Context);
+  if (!AddendIsConstInt) {
+    const Expr *Arg = Call->getArg(5)->IgnoreParenImpCasts();
+    DeclRefExpr *DRE = cast<DeclRefExpr>(Call->getCallee()->IgnoreParenCasts());
+    FunctionDecl *FDecl = cast<FunctionDecl>(DRE->getDecl());
+    S.Diag(Arg->getBeginLoc(), diag::err_constant_integer_last_arg_type)
+        << FDecl->getDeclName() << Arg->getSourceRange();
+  }
+  if (checkPointerAuthValue(S, Call->getArgs()[0], PAO_Auth) ||
+      checkPointerAuthKey(S, Call->getArgs()[1]) ||
+      checkPointerAuthValue(S, Call->getArgs()[2], PAO_Discriminator) ||
+      checkPointerAuthKey(S, Call->getArgs()[3]) ||
+      checkPointerAuthValue(S, Call->getArgs()[4], PAO_Discriminator) ||
+      !AddendIsConstInt)
+    return ExprError();
+
+  Call->setType(Call->getArgs()[0]->getType());
+  return Call;
+}
+
 static ExprResult PointerAuthStringDiscriminator(Sema &S, CallExpr *Call) {
   if (checkPointerAuthEnabled(S, Call))
     return ExprError();
@@ -2249,7 +2275,8 @@ static bool BuiltinBswapg(Sema &S, CallExpr *TheCall) {
     return true;
   }
   if (const auto *BT = dyn_cast<BitIntType>(ArgTy)) {
-    if (BT->getNumBits() % 16 != 0 && BT->getNumBits() != 8) {
+    if (BT->getNumBits() % 16 != 0 && BT->getNumBits() != 8 &&
+        BT->getNumBits() != 1) {
       S.Diag(Arg->getBeginLoc(), diag::err_bswapg_invalid_bit_width)
           << ArgTy << BT->getNumBits();
       return true;
@@ -3284,6 +3311,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     return PointerAuthSignGenericData(*this, TheCall);
   case Builtin::BI__builtin_ptrauth_auth_and_resign:
     return PointerAuthAuthAndResign(*this, TheCall);
+  case Builtin::BI__builtin_ptrauth_auth_load_relative_and_sign:
+    return PointerAuthAuthLoadRelativeAndSign(*this, TheCall);
   case Builtin::BI__builtin_ptrauth_string_discriminator:
     return PointerAuthStringDiscriminator(*this, TheCall);
 

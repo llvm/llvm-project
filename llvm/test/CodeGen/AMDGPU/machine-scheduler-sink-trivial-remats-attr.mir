@@ -37,88 +37,89 @@ body:             |
   ; GFX908: bb.0:
   ; GFX908-NEXT:   successors: %bb.1(0x80000000)
   ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 1
-  ; GFX908-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 2
-  ; GFX908-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 3
-  ; GFX908-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sgpr_32 = S_MOV_B32 4
-  ; GFX908-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sgpr_32 = S_MOV_B32 5
-  ; GFX908-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sgpr_32 = S_MOV_B32 6
-  ; GFX908-NEXT:   [[S_MOV_B32_6:%[0-9]+]]:sgpr_32 = S_MOV_B32 7
-  ; GFX908-NEXT:   [[S_MOV_B32_7:%[0-9]+]]:sgpr_32 = S_MOV_B32 8
-  ; GFX908-NEXT:   [[S_MOV_B32_8:%[0-9]+]]:sgpr_32 = S_MOV_B32 9
-  ; GFX908-NEXT:   [[S_MOV_B32_9:%[0-9]+]]:sgpr_32 = S_MOV_B32 10
-  ; GFX908-NEXT:   [[S_MOV_B32_10:%[0-9]+]]:sgpr_32 = S_MOV_B32 11
-  ; GFX908-NEXT:   [[S_MOV_B32_11:%[0-9]+]]:sgpr_32 = S_MOV_B32 12
-  ; GFX908-NEXT:   [[S_MOV_B32_12:%[0-9]+]]:sgpr_32 = S_MOV_B32 13
-  ; GFX908-NEXT:   [[S_MOV_B32_13:%[0-9]+]]:sgpr_32 = S_MOV_B32 14
-  ; GFX908-NEXT:   [[S_MOV_B32_14:%[0-9]+]]:sgpr_32 = S_MOV_B32 15
-  ; GFX908-NEXT:   [[S_MOV_B32_15:%[0-9]+]]:sgpr_32 = S_MOV_B32 16
-  ; GFX908-NEXT:   [[S_MOV_B32_16:%[0-9]+]]:sgpr_32 = S_MOV_B32 17
-  ; GFX908-NEXT:   [[S_MOV_B32_17:%[0-9]+]]:sgpr_32 = S_MOV_B32 18
-  ; GFX908-NEXT:   [[S_MOV_B32_18:%[0-9]+]]:sgpr_32 = S_MOV_B32 19
-  ; GFX908-NEXT:   [[S_MOV_B32_19:%[0-9]+]]:sgpr_32 = S_MOV_B32 20
-  ; GFX908-NEXT:   [[S_MOV_B32_20:%[0-9]+]]:sgpr_32 = S_MOV_B32 21
-  ; GFX908-NEXT:   [[S_MOV_B32_21:%[0-9]+]]:sgpr_32 = S_MOV_B32 22
-  ; GFX908-NEXT:   [[S_MOV_B32_22:%[0-9]+]]:sgpr_32 = S_MOV_B32 23
-  ; GFX908-NEXT:   [[S_MOV_B32_23:%[0-9]+]]:sgpr_32 = S_MOV_B32 24
-  ; GFX908-NEXT:   [[S_MOV_B32_24:%[0-9]+]]:sgpr_32 = S_MOV_B32 25
-  ; GFX908-NEXT:   [[S_MOV_B32_25:%[0-9]+]]:sgpr_32 = S_MOV_B32 26
-  ; GFX908-NEXT:   [[S_MOV_B32_26:%[0-9]+]]:sgpr_32 = S_MOV_B32 27
-  ; GFX908-NEXT:   [[S_MOV_B32_27:%[0-9]+]]:sgpr_32 = S_MOV_B32 28
-  ; GFX908-NEXT:   [[S_MOV_B32_28:%[0-9]+]]:sgpr_32 = S_MOV_B32 29
-  ; GFX908-NEXT:   [[S_MOV_B32_29:%[0-9]+]]:sgpr_32 = S_MOV_B32 30
-  ; GFX908-NEXT:   [[S_MOV_B32_30:%[0-9]+]]:sgpr_32 = S_MOV_B32 31
-  ; GFX908-NEXT:   [[S_MOV_B32_31:%[0-9]+]]:sgpr_32 = S_MOV_B32 32
-  ; GFX908-NEXT:   [[S_MOV_B32_32:%[0-9]+]]:sgpr_32 = S_MOV_B32 33
-  ; GFX908-NEXT:   [[S_MOV_B32_33:%[0-9]+]]:sgpr_32 = S_MOV_B32 34
-  ; GFX908-NEXT:   [[S_MOV_B32_34:%[0-9]+]]:sgpr_32 = S_MOV_B32 35
-  ; GFX908-NEXT:   [[S_MOV_B32_35:%[0-9]+]]:sgpr_32 = S_MOV_B32 36
-  ; GFX908-NEXT:   [[S_MOV_B32_36:%[0-9]+]]:sgpr_32 = S_MOV_B32 37
-  ; GFX908-NEXT:   [[S_MOV_B32_37:%[0-9]+]]:sgpr_32 = S_MOV_B32 38
-  ; GFX908-NEXT:   [[S_MOV_B32_38:%[0-9]+]]:sgpr_32 = S_MOV_B32 39
-  ; GFX908-NEXT:   [[S_MOV_B32_39:%[0-9]+]]:sgpr_32 = S_MOV_B32 40
-  ; GFX908-NEXT:   [[S_MOV_B32_40:%[0-9]+]]:sgpr_32 = S_MOV_B32 41
-  ; GFX908-NEXT:   [[S_MOV_B32_41:%[0-9]+]]:sgpr_32 = S_MOV_B32 42
-  ; GFX908-NEXT:   [[S_MOV_B32_42:%[0-9]+]]:sgpr_32 = S_MOV_B32 43
-  ; GFX908-NEXT:   [[S_MOV_B32_43:%[0-9]+]]:sgpr_32 = S_MOV_B32 44
-  ; GFX908-NEXT:   [[S_MOV_B32_44:%[0-9]+]]:sgpr_32 = S_MOV_B32 45
-  ; GFX908-NEXT:   [[S_MOV_B32_45:%[0-9]+]]:sgpr_32 = S_MOV_B32 46
-  ; GFX908-NEXT:   [[S_MOV_B32_46:%[0-9]+]]:sgpr_32 = S_MOV_B32 47
-  ; GFX908-NEXT:   [[S_MOV_B32_47:%[0-9]+]]:sgpr_32 = S_MOV_B32 48
-  ; GFX908-NEXT:   [[S_MOV_B32_48:%[0-9]+]]:sgpr_32 = S_MOV_B32 49
-  ; GFX908-NEXT:   [[S_MOV_B32_49:%[0-9]+]]:sgpr_32 = S_MOV_B32 50
-  ; GFX908-NEXT:   [[S_MOV_B32_50:%[0-9]+]]:sgpr_32 = S_MOV_B32 51
-  ; GFX908-NEXT:   [[S_MOV_B32_51:%[0-9]+]]:sgpr_32 = S_MOV_B32 52
-  ; GFX908-NEXT:   [[S_MOV_B32_52:%[0-9]+]]:sgpr_32 = S_MOV_B32 53
-  ; GFX908-NEXT:   [[S_MOV_B32_53:%[0-9]+]]:sgpr_32 = S_MOV_B32 54
-  ; GFX908-NEXT:   [[S_MOV_B32_54:%[0-9]+]]:sgpr_32 = S_MOV_B32 55
-  ; GFX908-NEXT:   [[S_MOV_B32_55:%[0-9]+]]:sgpr_32 = S_MOV_B32 56
-  ; GFX908-NEXT:   [[S_MOV_B32_56:%[0-9]+]]:sgpr_32 = S_MOV_B32 57
-  ; GFX908-NEXT:   [[S_MOV_B32_57:%[0-9]+]]:sgpr_32 = S_MOV_B32 58
-  ; GFX908-NEXT:   [[S_MOV_B32_58:%[0-9]+]]:sgpr_32 = S_MOV_B32 59
-  ; GFX908-NEXT:   [[S_MOV_B32_59:%[0-9]+]]:sgpr_32 = S_MOV_B32 60
-  ; GFX908-NEXT:   [[S_MOV_B32_60:%[0-9]+]]:sgpr_32 = S_MOV_B32 61
-  ; GFX908-NEXT:   [[S_MOV_B32_61:%[0-9]+]]:sgpr_32 = S_MOV_B32 62
-  ; GFX908-NEXT:   [[S_MOV_B32_62:%[0-9]+]]:sgpr_32 = S_MOV_B32 63
-  ; GFX908-NEXT:   [[S_MOV_B32_63:%[0-9]+]]:sgpr_32 = S_MOV_B32 64
-  ; GFX908-NEXT:   [[S_MOV_B32_64:%[0-9]+]]:sgpr_32 = S_MOV_B32 65
-  ; GFX908-NEXT:   [[S_MOV_B32_65:%[0-9]+]]:sgpr_32 = S_MOV_B32 66
-  ; GFX908-NEXT:   [[S_MOV_B32_66:%[0-9]+]]:sgpr_32 = S_MOV_B32 67
-  ; GFX908-NEXT:   [[S_MOV_B32_67:%[0-9]+]]:sgpr_32 = S_MOV_B32 68
-  ; GFX908-NEXT:   [[S_MOV_B32_68:%[0-9]+]]:sgpr_32 = S_MOV_B32 69
-  ; GFX908-NEXT:   [[S_MOV_B32_69:%[0-9]+]]:sgpr_32 = S_MOV_B32 70
-  ; GFX908-NEXT:   [[S_MOV_B32_70:%[0-9]+]]:sgpr_32 = S_MOV_B32 71
-  ; GFX908-NEXT:   [[S_MOV_B32_71:%[0-9]+]]:sgpr_32 = S_MOV_B32 72
-  ; GFX908-NEXT:   [[S_MOV_B32_72:%[0-9]+]]:sgpr_32 = S_MOV_B32 73
-  ; GFX908-NEXT:   [[S_MOV_B32_73:%[0-9]+]]:sgpr_32 = S_MOV_B32 74
-  ; GFX908-NEXT:   [[S_MOV_B32_74:%[0-9]+]]:sgpr_32 = S_MOV_B32 75
-  ; GFX908-NEXT:   [[S_MOV_B32_75:%[0-9]+]]:sgpr_32 = S_MOV_B32 76
-  ; GFX908-NEXT:   [[S_MOV_B32_76:%[0-9]+]]:sgpr_32 = S_MOV_B32 77
-  ; GFX908-NEXT:   [[S_MOV_B32_77:%[0-9]+]]:sgpr_32 = S_MOV_B32 78
-  ; GFX908-NEXT:   [[S_MOV_B32_78:%[0-9]+]]:sgpr_32 = S_MOV_B32 79
+  ; GFX908-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 6
+  ; GFX908-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 7
+  ; GFX908-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 8
+  ; GFX908-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sgpr_32 = S_MOV_B32 9
+  ; GFX908-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sgpr_32 = S_MOV_B32 10
+  ; GFX908-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sgpr_32 = S_MOV_B32 11
+  ; GFX908-NEXT:   [[S_MOV_B32_6:%[0-9]+]]:sgpr_32 = S_MOV_B32 12
+  ; GFX908-NEXT:   [[S_MOV_B32_7:%[0-9]+]]:sgpr_32 = S_MOV_B32 13
+  ; GFX908-NEXT:   [[S_MOV_B32_8:%[0-9]+]]:sgpr_32 = S_MOV_B32 14
+  ; GFX908-NEXT:   [[S_MOV_B32_9:%[0-9]+]]:sgpr_32 = S_MOV_B32 15
+  ; GFX908-NEXT:   [[S_MOV_B32_10:%[0-9]+]]:sgpr_32 = S_MOV_B32 16
+  ; GFX908-NEXT:   [[S_MOV_B32_11:%[0-9]+]]:sgpr_32 = S_MOV_B32 17
+  ; GFX908-NEXT:   [[S_MOV_B32_12:%[0-9]+]]:sgpr_32 = S_MOV_B32 18
+  ; GFX908-NEXT:   [[S_MOV_B32_13:%[0-9]+]]:sgpr_32 = S_MOV_B32 19
+  ; GFX908-NEXT:   [[S_MOV_B32_14:%[0-9]+]]:sgpr_32 = S_MOV_B32 20
+  ; GFX908-NEXT:   [[S_MOV_B32_15:%[0-9]+]]:sgpr_32 = S_MOV_B32 21
+  ; GFX908-NEXT:   [[S_MOV_B32_16:%[0-9]+]]:sgpr_32 = S_MOV_B32 22
+  ; GFX908-NEXT:   [[S_MOV_B32_17:%[0-9]+]]:sgpr_32 = S_MOV_B32 23
+  ; GFX908-NEXT:   [[S_MOV_B32_18:%[0-9]+]]:sgpr_32 = S_MOV_B32 24
+  ; GFX908-NEXT:   [[S_MOV_B32_19:%[0-9]+]]:sgpr_32 = S_MOV_B32 25
+  ; GFX908-NEXT:   [[S_MOV_B32_20:%[0-9]+]]:sgpr_32 = S_MOV_B32 26
+  ; GFX908-NEXT:   [[S_MOV_B32_21:%[0-9]+]]:sgpr_32 = S_MOV_B32 27
+  ; GFX908-NEXT:   [[S_MOV_B32_22:%[0-9]+]]:sgpr_32 = S_MOV_B32 28
+  ; GFX908-NEXT:   [[S_MOV_B32_23:%[0-9]+]]:sgpr_32 = S_MOV_B32 29
+  ; GFX908-NEXT:   [[S_MOV_B32_24:%[0-9]+]]:sgpr_32 = S_MOV_B32 30
+  ; GFX908-NEXT:   [[S_MOV_B32_25:%[0-9]+]]:sgpr_32 = S_MOV_B32 31
+  ; GFX908-NEXT:   [[S_MOV_B32_26:%[0-9]+]]:sgpr_32 = S_MOV_B32 32
+  ; GFX908-NEXT:   [[S_MOV_B32_27:%[0-9]+]]:sgpr_32 = S_MOV_B32 33
+  ; GFX908-NEXT:   [[S_MOV_B32_28:%[0-9]+]]:sgpr_32 = S_MOV_B32 34
+  ; GFX908-NEXT:   [[S_MOV_B32_29:%[0-9]+]]:sgpr_32 = S_MOV_B32 35
+  ; GFX908-NEXT:   [[S_MOV_B32_30:%[0-9]+]]:sgpr_32 = S_MOV_B32 36
+  ; GFX908-NEXT:   [[S_MOV_B32_31:%[0-9]+]]:sgpr_32 = S_MOV_B32 37
+  ; GFX908-NEXT:   [[S_MOV_B32_32:%[0-9]+]]:sgpr_32 = S_MOV_B32 38
+  ; GFX908-NEXT:   [[S_MOV_B32_33:%[0-9]+]]:sgpr_32 = S_MOV_B32 39
+  ; GFX908-NEXT:   [[S_MOV_B32_34:%[0-9]+]]:sgpr_32 = S_MOV_B32 40
+  ; GFX908-NEXT:   [[S_MOV_B32_35:%[0-9]+]]:sgpr_32 = S_MOV_B32 41
+  ; GFX908-NEXT:   [[S_MOV_B32_36:%[0-9]+]]:sgpr_32 = S_MOV_B32 42
+  ; GFX908-NEXT:   [[S_MOV_B32_37:%[0-9]+]]:sgpr_32 = S_MOV_B32 43
+  ; GFX908-NEXT:   [[S_MOV_B32_38:%[0-9]+]]:sgpr_32 = S_MOV_B32 44
+  ; GFX908-NEXT:   [[S_MOV_B32_39:%[0-9]+]]:sgpr_32 = S_MOV_B32 45
+  ; GFX908-NEXT:   [[S_MOV_B32_40:%[0-9]+]]:sgpr_32 = S_MOV_B32 46
+  ; GFX908-NEXT:   [[S_MOV_B32_41:%[0-9]+]]:sgpr_32 = S_MOV_B32 47
+  ; GFX908-NEXT:   [[S_MOV_B32_42:%[0-9]+]]:sgpr_32 = S_MOV_B32 48
+  ; GFX908-NEXT:   [[S_MOV_B32_43:%[0-9]+]]:sgpr_32 = S_MOV_B32 49
+  ; GFX908-NEXT:   [[S_MOV_B32_44:%[0-9]+]]:sgpr_32 = S_MOV_B32 50
+  ; GFX908-NEXT:   [[S_MOV_B32_45:%[0-9]+]]:sgpr_32 = S_MOV_B32 51
+  ; GFX908-NEXT:   [[S_MOV_B32_46:%[0-9]+]]:sgpr_32 = S_MOV_B32 52
+  ; GFX908-NEXT:   [[S_MOV_B32_47:%[0-9]+]]:sgpr_32 = S_MOV_B32 53
+  ; GFX908-NEXT:   [[S_MOV_B32_48:%[0-9]+]]:sgpr_32 = S_MOV_B32 54
+  ; GFX908-NEXT:   [[S_MOV_B32_49:%[0-9]+]]:sgpr_32 = S_MOV_B32 55
+  ; GFX908-NEXT:   [[S_MOV_B32_50:%[0-9]+]]:sgpr_32 = S_MOV_B32 56
+  ; GFX908-NEXT:   [[S_MOV_B32_51:%[0-9]+]]:sgpr_32 = S_MOV_B32 57
+  ; GFX908-NEXT:   [[S_MOV_B32_52:%[0-9]+]]:sgpr_32 = S_MOV_B32 58
+  ; GFX908-NEXT:   [[S_MOV_B32_53:%[0-9]+]]:sgpr_32 = S_MOV_B32 59
+  ; GFX908-NEXT:   [[S_MOV_B32_54:%[0-9]+]]:sgpr_32 = S_MOV_B32 60
+  ; GFX908-NEXT:   [[S_MOV_B32_55:%[0-9]+]]:sgpr_32 = S_MOV_B32 61
+  ; GFX908-NEXT:   [[S_MOV_B32_56:%[0-9]+]]:sgpr_32 = S_MOV_B32 62
+  ; GFX908-NEXT:   [[S_MOV_B32_57:%[0-9]+]]:sgpr_32 = S_MOV_B32 63
+  ; GFX908-NEXT:   [[S_MOV_B32_58:%[0-9]+]]:sgpr_32 = S_MOV_B32 64
+  ; GFX908-NEXT:   [[S_MOV_B32_59:%[0-9]+]]:sgpr_32 = S_MOV_B32 65
+  ; GFX908-NEXT:   [[S_MOV_B32_60:%[0-9]+]]:sgpr_32 = S_MOV_B32 66
+  ; GFX908-NEXT:   [[S_MOV_B32_61:%[0-9]+]]:sgpr_32 = S_MOV_B32 67
+  ; GFX908-NEXT:   [[S_MOV_B32_62:%[0-9]+]]:sgpr_32 = S_MOV_B32 68
+  ; GFX908-NEXT:   [[S_MOV_B32_63:%[0-9]+]]:sgpr_32 = S_MOV_B32 69
+  ; GFX908-NEXT:   [[S_MOV_B32_64:%[0-9]+]]:sgpr_32 = S_MOV_B32 70
+  ; GFX908-NEXT:   [[S_MOV_B32_65:%[0-9]+]]:sgpr_32 = S_MOV_B32 71
+  ; GFX908-NEXT:   [[S_MOV_B32_66:%[0-9]+]]:sgpr_32 = S_MOV_B32 72
+  ; GFX908-NEXT:   [[S_MOV_B32_67:%[0-9]+]]:sgpr_32 = S_MOV_B32 73
+  ; GFX908-NEXT:   [[S_MOV_B32_68:%[0-9]+]]:sgpr_32 = S_MOV_B32 74
+  ; GFX908-NEXT:   [[S_MOV_B32_69:%[0-9]+]]:sgpr_32 = S_MOV_B32 75
+  ; GFX908-NEXT:   [[S_MOV_B32_70:%[0-9]+]]:sgpr_32 = S_MOV_B32 76
+  ; GFX908-NEXT:   [[S_MOV_B32_71:%[0-9]+]]:sgpr_32 = S_MOV_B32 77
+  ; GFX908-NEXT:   [[S_MOV_B32_72:%[0-9]+]]:sgpr_32 = S_MOV_B32 78
+  ; GFX908-NEXT:   [[S_MOV_B32_73:%[0-9]+]]:sgpr_32 = S_MOV_B32 79
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.1:
-  ; GFX908-NEXT:   [[S_MOV_B32_79:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+  ; GFX908-NEXT:   [[S_MOV_B32_74:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+  ; GFX908-NEXT:   [[S_MOV_B32_75:%[0-9]+]]:sgpr_32 = S_MOV_B32 1
+  ; GFX908-NEXT:   [[S_MOV_B32_76:%[0-9]+]]:sgpr_32 = S_MOV_B32 2
+  ; GFX908-NEXT:   [[S_MOV_B32_77:%[0-9]+]]:sgpr_32 = S_MOV_B32 3
+  ; GFX908-NEXT:   [[S_MOV_B32_78:%[0-9]+]]:sgpr_32 = S_MOV_B32 4
+  ; GFX908-NEXT:   S_NOP 0, implicit [[S_MOV_B32_74]], implicit [[S_MOV_B32_75]], implicit [[S_MOV_B32_76]], implicit [[S_MOV_B32_77]], implicit [[S_MOV_B32_78]]
+  ; GFX908-NEXT:   [[S_MOV_B32_79:%[0-9]+]]:sgpr_32 = S_MOV_B32 5
   ; GFX908-NEXT:   S_NOP 0, implicit [[S_MOV_B32_79]], implicit [[S_MOV_B32_]], implicit [[S_MOV_B32_1]], implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[S_MOV_B32_4]], implicit [[S_MOV_B32_5]], implicit [[S_MOV_B32_6]], implicit [[S_MOV_B32_7]], implicit [[S_MOV_B32_8]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[S_MOV_B32_9]], implicit [[S_MOV_B32_10]], implicit [[S_MOV_B32_11]], implicit [[S_MOV_B32_12]], implicit [[S_MOV_B32_13]]
@@ -134,95 +135,95 @@ body:             |
   ; GFX908-NEXT:   S_NOP 0, implicit [[S_MOV_B32_59]], implicit [[S_MOV_B32_60]], implicit [[S_MOV_B32_61]], implicit [[S_MOV_B32_62]], implicit [[S_MOV_B32_63]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[S_MOV_B32_64]], implicit [[S_MOV_B32_65]], implicit [[S_MOV_B32_66]], implicit [[S_MOV_B32_67]], implicit [[S_MOV_B32_68]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[S_MOV_B32_69]], implicit [[S_MOV_B32_70]], implicit [[S_MOV_B32_71]], implicit [[S_MOV_B32_72]], implicit [[S_MOV_B32_73]]
-  ; GFX908-NEXT:   S_NOP 0, implicit [[S_MOV_B32_74]], implicit [[S_MOV_B32_75]], implicit [[S_MOV_B32_76]], implicit [[S_MOV_B32_77]], implicit [[S_MOV_B32_78]]
   ; GFX908-NEXT:   S_ENDPGM 0
   ;
   ; GFX90A-LABEL: name: small_num_sgprs_as_spill
   ; GFX90A: bb.0:
   ; GFX90A-NEXT:   successors: %bb.1(0x80000000)
   ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 1
-  ; GFX90A-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 2
-  ; GFX90A-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 3
-  ; GFX90A-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sgpr_32 = S_MOV_B32 4
-  ; GFX90A-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sgpr_32 = S_MOV_B32 5
-  ; GFX90A-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sgpr_32 = S_MOV_B32 6
-  ; GFX90A-NEXT:   [[S_MOV_B32_6:%[0-9]+]]:sgpr_32 = S_MOV_B32 7
-  ; GFX90A-NEXT:   [[S_MOV_B32_7:%[0-9]+]]:sgpr_32 = S_MOV_B32 8
-  ; GFX90A-NEXT:   [[S_MOV_B32_8:%[0-9]+]]:sgpr_32 = S_MOV_B32 9
-  ; GFX90A-NEXT:   [[S_MOV_B32_9:%[0-9]+]]:sgpr_32 = S_MOV_B32 10
-  ; GFX90A-NEXT:   [[S_MOV_B32_10:%[0-9]+]]:sgpr_32 = S_MOV_B32 11
-  ; GFX90A-NEXT:   [[S_MOV_B32_11:%[0-9]+]]:sgpr_32 = S_MOV_B32 12
-  ; GFX90A-NEXT:   [[S_MOV_B32_12:%[0-9]+]]:sgpr_32 = S_MOV_B32 13
-  ; GFX90A-NEXT:   [[S_MOV_B32_13:%[0-9]+]]:sgpr_32 = S_MOV_B32 14
-  ; GFX90A-NEXT:   [[S_MOV_B32_14:%[0-9]+]]:sgpr_32 = S_MOV_B32 15
-  ; GFX90A-NEXT:   [[S_MOV_B32_15:%[0-9]+]]:sgpr_32 = S_MOV_B32 16
-  ; GFX90A-NEXT:   [[S_MOV_B32_16:%[0-9]+]]:sgpr_32 = S_MOV_B32 17
-  ; GFX90A-NEXT:   [[S_MOV_B32_17:%[0-9]+]]:sgpr_32 = S_MOV_B32 18
-  ; GFX90A-NEXT:   [[S_MOV_B32_18:%[0-9]+]]:sgpr_32 = S_MOV_B32 19
-  ; GFX90A-NEXT:   [[S_MOV_B32_19:%[0-9]+]]:sgpr_32 = S_MOV_B32 20
-  ; GFX90A-NEXT:   [[S_MOV_B32_20:%[0-9]+]]:sgpr_32 = S_MOV_B32 21
-  ; GFX90A-NEXT:   [[S_MOV_B32_21:%[0-9]+]]:sgpr_32 = S_MOV_B32 22
-  ; GFX90A-NEXT:   [[S_MOV_B32_22:%[0-9]+]]:sgpr_32 = S_MOV_B32 23
-  ; GFX90A-NEXT:   [[S_MOV_B32_23:%[0-9]+]]:sgpr_32 = S_MOV_B32 24
-  ; GFX90A-NEXT:   [[S_MOV_B32_24:%[0-9]+]]:sgpr_32 = S_MOV_B32 25
-  ; GFX90A-NEXT:   [[S_MOV_B32_25:%[0-9]+]]:sgpr_32 = S_MOV_B32 26
-  ; GFX90A-NEXT:   [[S_MOV_B32_26:%[0-9]+]]:sgpr_32 = S_MOV_B32 27
-  ; GFX90A-NEXT:   [[S_MOV_B32_27:%[0-9]+]]:sgpr_32 = S_MOV_B32 28
-  ; GFX90A-NEXT:   [[S_MOV_B32_28:%[0-9]+]]:sgpr_32 = S_MOV_B32 29
-  ; GFX90A-NEXT:   [[S_MOV_B32_29:%[0-9]+]]:sgpr_32 = S_MOV_B32 30
-  ; GFX90A-NEXT:   [[S_MOV_B32_30:%[0-9]+]]:sgpr_32 = S_MOV_B32 31
-  ; GFX90A-NEXT:   [[S_MOV_B32_31:%[0-9]+]]:sgpr_32 = S_MOV_B32 32
-  ; GFX90A-NEXT:   [[S_MOV_B32_32:%[0-9]+]]:sgpr_32 = S_MOV_B32 33
-  ; GFX90A-NEXT:   [[S_MOV_B32_33:%[0-9]+]]:sgpr_32 = S_MOV_B32 34
-  ; GFX90A-NEXT:   [[S_MOV_B32_34:%[0-9]+]]:sgpr_32 = S_MOV_B32 35
-  ; GFX90A-NEXT:   [[S_MOV_B32_35:%[0-9]+]]:sgpr_32 = S_MOV_B32 36
-  ; GFX90A-NEXT:   [[S_MOV_B32_36:%[0-9]+]]:sgpr_32 = S_MOV_B32 37
-  ; GFX90A-NEXT:   [[S_MOV_B32_37:%[0-9]+]]:sgpr_32 = S_MOV_B32 38
-  ; GFX90A-NEXT:   [[S_MOV_B32_38:%[0-9]+]]:sgpr_32 = S_MOV_B32 39
-  ; GFX90A-NEXT:   [[S_MOV_B32_39:%[0-9]+]]:sgpr_32 = S_MOV_B32 40
-  ; GFX90A-NEXT:   [[S_MOV_B32_40:%[0-9]+]]:sgpr_32 = S_MOV_B32 41
-  ; GFX90A-NEXT:   [[S_MOV_B32_41:%[0-9]+]]:sgpr_32 = S_MOV_B32 42
-  ; GFX90A-NEXT:   [[S_MOV_B32_42:%[0-9]+]]:sgpr_32 = S_MOV_B32 43
-  ; GFX90A-NEXT:   [[S_MOV_B32_43:%[0-9]+]]:sgpr_32 = S_MOV_B32 44
-  ; GFX90A-NEXT:   [[S_MOV_B32_44:%[0-9]+]]:sgpr_32 = S_MOV_B32 45
-  ; GFX90A-NEXT:   [[S_MOV_B32_45:%[0-9]+]]:sgpr_32 = S_MOV_B32 46
-  ; GFX90A-NEXT:   [[S_MOV_B32_46:%[0-9]+]]:sgpr_32 = S_MOV_B32 47
-  ; GFX90A-NEXT:   [[S_MOV_B32_47:%[0-9]+]]:sgpr_32 = S_MOV_B32 48
-  ; GFX90A-NEXT:   [[S_MOV_B32_48:%[0-9]+]]:sgpr_32 = S_MOV_B32 49
-  ; GFX90A-NEXT:   [[S_MOV_B32_49:%[0-9]+]]:sgpr_32 = S_MOV_B32 50
-  ; GFX90A-NEXT:   [[S_MOV_B32_50:%[0-9]+]]:sgpr_32 = S_MOV_B32 51
-  ; GFX90A-NEXT:   [[S_MOV_B32_51:%[0-9]+]]:sgpr_32 = S_MOV_B32 52
-  ; GFX90A-NEXT:   [[S_MOV_B32_52:%[0-9]+]]:sgpr_32 = S_MOV_B32 53
-  ; GFX90A-NEXT:   [[S_MOV_B32_53:%[0-9]+]]:sgpr_32 = S_MOV_B32 54
-  ; GFX90A-NEXT:   [[S_MOV_B32_54:%[0-9]+]]:sgpr_32 = S_MOV_B32 55
-  ; GFX90A-NEXT:   [[S_MOV_B32_55:%[0-9]+]]:sgpr_32 = S_MOV_B32 56
-  ; GFX90A-NEXT:   [[S_MOV_B32_56:%[0-9]+]]:sgpr_32 = S_MOV_B32 57
-  ; GFX90A-NEXT:   [[S_MOV_B32_57:%[0-9]+]]:sgpr_32 = S_MOV_B32 58
-  ; GFX90A-NEXT:   [[S_MOV_B32_58:%[0-9]+]]:sgpr_32 = S_MOV_B32 59
-  ; GFX90A-NEXT:   [[S_MOV_B32_59:%[0-9]+]]:sgpr_32 = S_MOV_B32 60
-  ; GFX90A-NEXT:   [[S_MOV_B32_60:%[0-9]+]]:sgpr_32 = S_MOV_B32 61
-  ; GFX90A-NEXT:   [[S_MOV_B32_61:%[0-9]+]]:sgpr_32 = S_MOV_B32 62
-  ; GFX90A-NEXT:   [[S_MOV_B32_62:%[0-9]+]]:sgpr_32 = S_MOV_B32 63
-  ; GFX90A-NEXT:   [[S_MOV_B32_63:%[0-9]+]]:sgpr_32 = S_MOV_B32 64
-  ; GFX90A-NEXT:   [[S_MOV_B32_64:%[0-9]+]]:sgpr_32 = S_MOV_B32 65
-  ; GFX90A-NEXT:   [[S_MOV_B32_65:%[0-9]+]]:sgpr_32 = S_MOV_B32 66
-  ; GFX90A-NEXT:   [[S_MOV_B32_66:%[0-9]+]]:sgpr_32 = S_MOV_B32 67
-  ; GFX90A-NEXT:   [[S_MOV_B32_67:%[0-9]+]]:sgpr_32 = S_MOV_B32 68
-  ; GFX90A-NEXT:   [[S_MOV_B32_68:%[0-9]+]]:sgpr_32 = S_MOV_B32 69
-  ; GFX90A-NEXT:   [[S_MOV_B32_69:%[0-9]+]]:sgpr_32 = S_MOV_B32 70
-  ; GFX90A-NEXT:   [[S_MOV_B32_70:%[0-9]+]]:sgpr_32 = S_MOV_B32 71
-  ; GFX90A-NEXT:   [[S_MOV_B32_71:%[0-9]+]]:sgpr_32 = S_MOV_B32 72
-  ; GFX90A-NEXT:   [[S_MOV_B32_72:%[0-9]+]]:sgpr_32 = S_MOV_B32 73
-  ; GFX90A-NEXT:   [[S_MOV_B32_73:%[0-9]+]]:sgpr_32 = S_MOV_B32 74
-  ; GFX90A-NEXT:   [[S_MOV_B32_74:%[0-9]+]]:sgpr_32 = S_MOV_B32 75
-  ; GFX90A-NEXT:   [[S_MOV_B32_75:%[0-9]+]]:sgpr_32 = S_MOV_B32 76
-  ; GFX90A-NEXT:   [[S_MOV_B32_76:%[0-9]+]]:sgpr_32 = S_MOV_B32 77
-  ; GFX90A-NEXT:   [[S_MOV_B32_77:%[0-9]+]]:sgpr_32 = S_MOV_B32 78
-  ; GFX90A-NEXT:   [[S_MOV_B32_78:%[0-9]+]]:sgpr_32 = S_MOV_B32 79
+  ; GFX90A-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 6
+  ; GFX90A-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sgpr_32 = S_MOV_B32 7
+  ; GFX90A-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 8
+  ; GFX90A-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sgpr_32 = S_MOV_B32 9
+  ; GFX90A-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sgpr_32 = S_MOV_B32 10
+  ; GFX90A-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sgpr_32 = S_MOV_B32 11
+  ; GFX90A-NEXT:   [[S_MOV_B32_6:%[0-9]+]]:sgpr_32 = S_MOV_B32 12
+  ; GFX90A-NEXT:   [[S_MOV_B32_7:%[0-9]+]]:sgpr_32 = S_MOV_B32 13
+  ; GFX90A-NEXT:   [[S_MOV_B32_8:%[0-9]+]]:sgpr_32 = S_MOV_B32 14
+  ; GFX90A-NEXT:   [[S_MOV_B32_9:%[0-9]+]]:sgpr_32 = S_MOV_B32 15
+  ; GFX90A-NEXT:   [[S_MOV_B32_10:%[0-9]+]]:sgpr_32 = S_MOV_B32 16
+  ; GFX90A-NEXT:   [[S_MOV_B32_11:%[0-9]+]]:sgpr_32 = S_MOV_B32 17
+  ; GFX90A-NEXT:   [[S_MOV_B32_12:%[0-9]+]]:sgpr_32 = S_MOV_B32 18
+  ; GFX90A-NEXT:   [[S_MOV_B32_13:%[0-9]+]]:sgpr_32 = S_MOV_B32 19
+  ; GFX90A-NEXT:   [[S_MOV_B32_14:%[0-9]+]]:sgpr_32 = S_MOV_B32 20
+  ; GFX90A-NEXT:   [[S_MOV_B32_15:%[0-9]+]]:sgpr_32 = S_MOV_B32 21
+  ; GFX90A-NEXT:   [[S_MOV_B32_16:%[0-9]+]]:sgpr_32 = S_MOV_B32 22
+  ; GFX90A-NEXT:   [[S_MOV_B32_17:%[0-9]+]]:sgpr_32 = S_MOV_B32 23
+  ; GFX90A-NEXT:   [[S_MOV_B32_18:%[0-9]+]]:sgpr_32 = S_MOV_B32 24
+  ; GFX90A-NEXT:   [[S_MOV_B32_19:%[0-9]+]]:sgpr_32 = S_MOV_B32 25
+  ; GFX90A-NEXT:   [[S_MOV_B32_20:%[0-9]+]]:sgpr_32 = S_MOV_B32 26
+  ; GFX90A-NEXT:   [[S_MOV_B32_21:%[0-9]+]]:sgpr_32 = S_MOV_B32 27
+  ; GFX90A-NEXT:   [[S_MOV_B32_22:%[0-9]+]]:sgpr_32 = S_MOV_B32 28
+  ; GFX90A-NEXT:   [[S_MOV_B32_23:%[0-9]+]]:sgpr_32 = S_MOV_B32 29
+  ; GFX90A-NEXT:   [[S_MOV_B32_24:%[0-9]+]]:sgpr_32 = S_MOV_B32 30
+  ; GFX90A-NEXT:   [[S_MOV_B32_25:%[0-9]+]]:sgpr_32 = S_MOV_B32 31
+  ; GFX90A-NEXT:   [[S_MOV_B32_26:%[0-9]+]]:sgpr_32 = S_MOV_B32 32
+  ; GFX90A-NEXT:   [[S_MOV_B32_27:%[0-9]+]]:sgpr_32 = S_MOV_B32 33
+  ; GFX90A-NEXT:   [[S_MOV_B32_28:%[0-9]+]]:sgpr_32 = S_MOV_B32 34
+  ; GFX90A-NEXT:   [[S_MOV_B32_29:%[0-9]+]]:sgpr_32 = S_MOV_B32 35
+  ; GFX90A-NEXT:   [[S_MOV_B32_30:%[0-9]+]]:sgpr_32 = S_MOV_B32 36
+  ; GFX90A-NEXT:   [[S_MOV_B32_31:%[0-9]+]]:sgpr_32 = S_MOV_B32 37
+  ; GFX90A-NEXT:   [[S_MOV_B32_32:%[0-9]+]]:sgpr_32 = S_MOV_B32 38
+  ; GFX90A-NEXT:   [[S_MOV_B32_33:%[0-9]+]]:sgpr_32 = S_MOV_B32 39
+  ; GFX90A-NEXT:   [[S_MOV_B32_34:%[0-9]+]]:sgpr_32 = S_MOV_B32 40
+  ; GFX90A-NEXT:   [[S_MOV_B32_35:%[0-9]+]]:sgpr_32 = S_MOV_B32 41
+  ; GFX90A-NEXT:   [[S_MOV_B32_36:%[0-9]+]]:sgpr_32 = S_MOV_B32 42
+  ; GFX90A-NEXT:   [[S_MOV_B32_37:%[0-9]+]]:sgpr_32 = S_MOV_B32 43
+  ; GFX90A-NEXT:   [[S_MOV_B32_38:%[0-9]+]]:sgpr_32 = S_MOV_B32 44
+  ; GFX90A-NEXT:   [[S_MOV_B32_39:%[0-9]+]]:sgpr_32 = S_MOV_B32 45
+  ; GFX90A-NEXT:   [[S_MOV_B32_40:%[0-9]+]]:sgpr_32 = S_MOV_B32 46
+  ; GFX90A-NEXT:   [[S_MOV_B32_41:%[0-9]+]]:sgpr_32 = S_MOV_B32 47
+  ; GFX90A-NEXT:   [[S_MOV_B32_42:%[0-9]+]]:sgpr_32 = S_MOV_B32 48
+  ; GFX90A-NEXT:   [[S_MOV_B32_43:%[0-9]+]]:sgpr_32 = S_MOV_B32 49
+  ; GFX90A-NEXT:   [[S_MOV_B32_44:%[0-9]+]]:sgpr_32 = S_MOV_B32 50
+  ; GFX90A-NEXT:   [[S_MOV_B32_45:%[0-9]+]]:sgpr_32 = S_MOV_B32 51
+  ; GFX90A-NEXT:   [[S_MOV_B32_46:%[0-9]+]]:sgpr_32 = S_MOV_B32 52
+  ; GFX90A-NEXT:   [[S_MOV_B32_47:%[0-9]+]]:sgpr_32 = S_MOV_B32 53
+  ; GFX90A-NEXT:   [[S_MOV_B32_48:%[0-9]+]]:sgpr_32 = S_MOV_B32 54
+  ; GFX90A-NEXT:   [[S_MOV_B32_49:%[0-9]+]]:sgpr_32 = S_MOV_B32 55
+  ; GFX90A-NEXT:   [[S_MOV_B32_50:%[0-9]+]]:sgpr_32 = S_MOV_B32 56
+  ; GFX90A-NEXT:   [[S_MOV_B32_51:%[0-9]+]]:sgpr_32 = S_MOV_B32 57
+  ; GFX90A-NEXT:   [[S_MOV_B32_52:%[0-9]+]]:sgpr_32 = S_MOV_B32 58
+  ; GFX90A-NEXT:   [[S_MOV_B32_53:%[0-9]+]]:sgpr_32 = S_MOV_B32 59
+  ; GFX90A-NEXT:   [[S_MOV_B32_54:%[0-9]+]]:sgpr_32 = S_MOV_B32 60
+  ; GFX90A-NEXT:   [[S_MOV_B32_55:%[0-9]+]]:sgpr_32 = S_MOV_B32 61
+  ; GFX90A-NEXT:   [[S_MOV_B32_56:%[0-9]+]]:sgpr_32 = S_MOV_B32 62
+  ; GFX90A-NEXT:   [[S_MOV_B32_57:%[0-9]+]]:sgpr_32 = S_MOV_B32 63
+  ; GFX90A-NEXT:   [[S_MOV_B32_58:%[0-9]+]]:sgpr_32 = S_MOV_B32 64
+  ; GFX90A-NEXT:   [[S_MOV_B32_59:%[0-9]+]]:sgpr_32 = S_MOV_B32 65
+  ; GFX90A-NEXT:   [[S_MOV_B32_60:%[0-9]+]]:sgpr_32 = S_MOV_B32 66
+  ; GFX90A-NEXT:   [[S_MOV_B32_61:%[0-9]+]]:sgpr_32 = S_MOV_B32 67
+  ; GFX90A-NEXT:   [[S_MOV_B32_62:%[0-9]+]]:sgpr_32 = S_MOV_B32 68
+  ; GFX90A-NEXT:   [[S_MOV_B32_63:%[0-9]+]]:sgpr_32 = S_MOV_B32 69
+  ; GFX90A-NEXT:   [[S_MOV_B32_64:%[0-9]+]]:sgpr_32 = S_MOV_B32 70
+  ; GFX90A-NEXT:   [[S_MOV_B32_65:%[0-9]+]]:sgpr_32 = S_MOV_B32 71
+  ; GFX90A-NEXT:   [[S_MOV_B32_66:%[0-9]+]]:sgpr_32 = S_MOV_B32 72
+  ; GFX90A-NEXT:   [[S_MOV_B32_67:%[0-9]+]]:sgpr_32 = S_MOV_B32 73
+  ; GFX90A-NEXT:   [[S_MOV_B32_68:%[0-9]+]]:sgpr_32 = S_MOV_B32 74
+  ; GFX90A-NEXT:   [[S_MOV_B32_69:%[0-9]+]]:sgpr_32 = S_MOV_B32 75
+  ; GFX90A-NEXT:   [[S_MOV_B32_70:%[0-9]+]]:sgpr_32 = S_MOV_B32 76
+  ; GFX90A-NEXT:   [[S_MOV_B32_71:%[0-9]+]]:sgpr_32 = S_MOV_B32 77
+  ; GFX90A-NEXT:   [[S_MOV_B32_72:%[0-9]+]]:sgpr_32 = S_MOV_B32 78
+  ; GFX90A-NEXT:   [[S_MOV_B32_73:%[0-9]+]]:sgpr_32 = S_MOV_B32 79
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT: bb.1:
-  ; GFX90A-NEXT:   [[S_MOV_B32_79:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+  ; GFX90A-NEXT:   [[S_MOV_B32_74:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
+  ; GFX90A-NEXT:   [[S_MOV_B32_75:%[0-9]+]]:sgpr_32 = S_MOV_B32 1
+  ; GFX90A-NEXT:   [[S_MOV_B32_76:%[0-9]+]]:sgpr_32 = S_MOV_B32 2
+  ; GFX90A-NEXT:   [[S_MOV_B32_77:%[0-9]+]]:sgpr_32 = S_MOV_B32 3
+  ; GFX90A-NEXT:   [[S_MOV_B32_78:%[0-9]+]]:sgpr_32 = S_MOV_B32 4
+  ; GFX90A-NEXT:   S_NOP 0, implicit [[S_MOV_B32_74]], implicit [[S_MOV_B32_75]], implicit [[S_MOV_B32_76]], implicit [[S_MOV_B32_77]], implicit [[S_MOV_B32_78]]
+  ; GFX90A-NEXT:   [[S_MOV_B32_79:%[0-9]+]]:sgpr_32 = S_MOV_B32 5
   ; GFX90A-NEXT:   S_NOP 0, implicit [[S_MOV_B32_79]], implicit [[S_MOV_B32_]], implicit [[S_MOV_B32_1]], implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[S_MOV_B32_4]], implicit [[S_MOV_B32_5]], implicit [[S_MOV_B32_6]], implicit [[S_MOV_B32_7]], implicit [[S_MOV_B32_8]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[S_MOV_B32_9]], implicit [[S_MOV_B32_10]], implicit [[S_MOV_B32_11]], implicit [[S_MOV_B32_12]], implicit [[S_MOV_B32_13]]
@@ -238,7 +239,6 @@ body:             |
   ; GFX90A-NEXT:   S_NOP 0, implicit [[S_MOV_B32_59]], implicit [[S_MOV_B32_60]], implicit [[S_MOV_B32_61]], implicit [[S_MOV_B32_62]], implicit [[S_MOV_B32_63]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[S_MOV_B32_64]], implicit [[S_MOV_B32_65]], implicit [[S_MOV_B32_66]], implicit [[S_MOV_B32_67]], implicit [[S_MOV_B32_68]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[S_MOV_B32_69]], implicit [[S_MOV_B32_70]], implicit [[S_MOV_B32_71]], implicit [[S_MOV_B32_72]], implicit [[S_MOV_B32_73]]
-  ; GFX90A-NEXT:   S_NOP 0, implicit [[S_MOV_B32_74]], implicit [[S_MOV_B32_75]], implicit [[S_MOV_B32_76]], implicit [[S_MOV_B32_77]], implicit [[S_MOV_B32_78]]
   ; GFX90A-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1
@@ -796,9 +796,6 @@ body:             |
   ; GFX908-NEXT:   [[DEF26:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF27:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF28:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[DEF29:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[DEF30:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   [[DEF31:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 1, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_2:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 2, implicit $exec, implicit $mode, implicit-def $m0
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_3:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 3, implicit $exec, implicit $mode, implicit-def $m0
@@ -839,15 +836,18 @@ body:             |
   ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_20]], implicit [[V_CVT_I32_F64_e32_21]], implicit [[V_CVT_I32_F64_e32_22]], implicit [[V_CVT_I32_F64_e32_23]], implicit [[V_CVT_I32_F64_e32_24]]
   ; GFX908-NEXT:   [[V_CVT_I32_F64_e32_32:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 27, implicit $exec, implicit $mode
   ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_25]], implicit [[V_CVT_I32_F64_e32_26]], implicit [[V_CVT_I32_F64_e32_32]], implicit [[V_CVT_I32_F64_e32_27]], implicit [[V_CVT_I32_F64_e32_28]]
+  ; GFX908-NEXT:   [[DEF29:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
+  ; GFX908-NEXT:   [[DEF30:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
+  ; GFX908-NEXT:   [[DEF31:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
+  ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_29]], implicit [[V_CVT_I32_F64_e32_30]], implicit [[DEF29]], implicit [[DEF30]], implicit [[DEF31]]
   ; GFX908-NEXT:   [[DEF32:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_29]], implicit [[V_CVT_I32_F64_e32_30]], implicit [[DEF32]], implicit [[DEF]], implicit [[DEF1]]
-  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]]
-  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF7]], implicit [[DEF8]], implicit [[DEF9]], implicit [[DEF10]], implicit [[DEF11]]
-  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF12]], implicit [[DEF13]], implicit [[DEF14]], implicit [[DEF15]], implicit [[DEF16]]
-  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF17]], implicit [[DEF18]], implicit [[DEF19]], implicit [[DEF20]], implicit [[DEF21]]
-  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF22]], implicit [[DEF23]], implicit [[DEF24]], implicit [[DEF25]], implicit [[DEF26]]
-  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF27]], implicit [[DEF28]], implicit [[DEF29]], implicit [[DEF30]], implicit [[V_CVT_I32_F64_e32_31]]
-  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF31]]
+  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF32]], implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]]
+  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]], implicit [[DEF8]]
+  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF9]], implicit [[DEF10]], implicit [[DEF11]], implicit [[DEF12]], implicit [[DEF13]]
+  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF14]], implicit [[DEF15]], implicit [[DEF16]], implicit [[DEF17]], implicit [[DEF18]]
+  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF19]], implicit [[DEF20]], implicit [[DEF21]], implicit [[DEF22]], implicit [[DEF23]]
+  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF24]], implicit [[DEF25]], implicit [[DEF26]], implicit [[DEF27]], implicit [[V_CVT_I32_F64_e32_31]]
+  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF28]]
   ; GFX908-NEXT:   S_ENDPGM 0
   ;
   ; GFX90A-LABEL: name: reduce_arch_and_acc_vgrp_spill
@@ -910,9 +910,6 @@ body:             |
   ; GFX90A-NEXT:   [[DEF26:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[DEF27:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[DEF28:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   [[DEF29:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   [[DEF30:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   [[DEF31:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_27:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 28, implicit $exec, implicit $mode
   ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_28:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 29, implicit $exec, implicit $mode
   ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_29:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 30, implicit $exec, implicit $mode
@@ -927,15 +924,18 @@ body:             |
   ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_20]], implicit [[V_CVT_I32_F64_e32_21]], implicit [[V_CVT_I32_F64_e32_22]], implicit [[V_CVT_I32_F64_e32_23]], implicit [[V_CVT_I32_F64_e32_24]]
   ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_32:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 27, implicit $exec, implicit $mode
   ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_25]], implicit [[V_CVT_I32_F64_e32_26]], implicit [[V_CVT_I32_F64_e32_32]], implicit [[V_CVT_I32_F64_e32_27]], implicit [[V_CVT_I32_F64_e32_28]]
+  ; GFX90A-NEXT:   [[DEF29:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
+  ; GFX90A-NEXT:   [[DEF30:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
+  ; GFX90A-NEXT:   [[DEF31:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
+  ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_29]], implicit [[V_CVT_I32_F64_e32_30]], implicit [[DEF29]], implicit [[DEF30]], implicit [[DEF31]]
   ; GFX90A-NEXT:   [[DEF32:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   S_NOP 0, implicit [[V_CVT_I32_F64_e32_29]], implicit [[V_CVT_I32_F64_e32_30]], implicit [[DEF32]], implicit [[DEF]], implicit [[DEF1]]
-  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]]
-  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF7]], implicit [[DEF8]], implicit [[DEF9]], implicit [[DEF10]], implicit [[DEF11]]
-  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF12]], implicit [[DEF13]], implicit [[DEF14]], implicit [[DEF15]], implicit [[DEF16]]
-  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF17]], implicit [[DEF18]], implicit [[DEF19]], implicit [[DEF20]], implicit [[DEF21]]
-  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF22]], implicit [[DEF23]], implicit [[DEF24]], implicit [[DEF25]], implicit [[DEF26]]
-  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF27]], implicit [[DEF28]], implicit [[DEF29]], implicit [[DEF30]], implicit [[V_CVT_I32_F64_e32_31]]
-  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF31]]
+  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF32]], implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]]
+  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]], implicit [[DEF8]]
+  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF9]], implicit [[DEF10]], implicit [[DEF11]], implicit [[DEF12]], implicit [[DEF13]]
+  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF14]], implicit [[DEF15]], implicit [[DEF16]], implicit [[DEF17]], implicit [[DEF18]]
+  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF19]], implicit [[DEF20]], implicit [[DEF21]], implicit [[DEF22]], implicit [[DEF23]]
+  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF24]], implicit [[DEF25]], implicit [[DEF26]], implicit [[DEF27]], implicit [[V_CVT_I32_F64_e32_31]]
+  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF28]]
   ; GFX90A-NEXT:   S_ENDPGM 0
   bb.0:
     successors: %bb.1
@@ -2174,6 +2174,8 @@ body:             |
   ; GFX908-NEXT:   [[DEF243:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF244:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF245:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
+  ; GFX908-NEXT: {{  $}}
+  ; GFX908-NEXT: bb.1:
   ; GFX908-NEXT:   [[DEF246:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF247:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF248:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
@@ -2184,8 +2186,7 @@ body:             |
   ; GFX908-NEXT:   [[DEF253:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF254:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   [[DEF255:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
-  ; GFX908-NEXT: {{  $}}
-  ; GFX908-NEXT: bb.1:
+  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF246]], implicit [[DEF247]], implicit [[DEF248]], implicit [[DEF249]], implicit [[DEF250]], implicit [[DEF251]], implicit [[DEF252]], implicit [[DEF253]], implicit [[DEF254]], implicit [[DEF255]]
   ; GFX908-NEXT:   [[DEF256:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX908-NEXT:   S_NOP 0, implicit [[DEF256]], implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]], implicit [[DEF8]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[DEF9]], implicit [[DEF10]], implicit [[DEF11]], implicit [[DEF12]], implicit [[DEF13]], implicit [[DEF14]], implicit [[DEF15]], implicit [[DEF16]], implicit [[DEF17]], implicit [[DEF18]]
@@ -2211,8 +2212,7 @@ body:             |
   ; GFX908-NEXT:   S_NOP 0, implicit [[DEF209]], implicit [[DEF210]], implicit [[DEF211]], implicit [[DEF212]], implicit [[DEF213]], implicit [[DEF214]], implicit [[DEF215]], implicit [[DEF216]], implicit [[DEF217]], implicit [[DEF218]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[DEF219]], implicit [[DEF220]], implicit [[DEF221]], implicit [[DEF222]], implicit [[DEF223]], implicit [[DEF224]], implicit [[DEF225]], implicit [[DEF226]], implicit [[DEF227]], implicit [[DEF228]]
   ; GFX908-NEXT:   S_NOP 0, implicit [[DEF229]], implicit [[DEF230]], implicit [[DEF231]], implicit [[DEF232]], implicit [[DEF233]], implicit [[DEF234]], implicit [[DEF235]], implicit [[DEF236]], implicit [[DEF237]], implicit [[DEF238]]
-  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF239]], implicit [[DEF240]], implicit [[DEF241]], implicit [[DEF242]], implicit [[DEF243]], implicit [[DEF244]], implicit [[DEF245]], implicit [[DEF246]], implicit [[DEF247]], implicit [[DEF248]]
-  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF249]], implicit [[DEF250]], implicit [[DEF251]], implicit [[DEF252]], implicit [[DEF253]], implicit [[DEF254]], implicit [[DEF255]], implicit [[V_CVT_I32_F64_e32_]], implicit [[V_CVT_I32_F64_e32_1]]
+  ; GFX908-NEXT:   S_NOP 0, implicit [[DEF239]], implicit [[DEF240]], implicit [[DEF241]], implicit [[DEF242]], implicit [[DEF243]], implicit [[DEF244]], implicit [[DEF245]], implicit [[V_CVT_I32_F64_e32_]], implicit [[V_CVT_I32_F64_e32_1]]
   ; GFX908-NEXT:   S_ENDPGM 0
   ;
   ; GFX90A-LABEL: name: reduce_spill_agpr_above_addressable_limit
@@ -2465,6 +2465,10 @@ body:             |
   ; GFX90A-NEXT:   [[DEF243:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[DEF244:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[DEF245:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
+  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 257, implicit $exec, implicit $mode
+  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 258, implicit $exec, implicit $mode
+  ; GFX90A-NEXT: {{  $}}
+  ; GFX90A-NEXT: bb.1:
   ; GFX90A-NEXT:   [[DEF246:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[DEF247:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[DEF248:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
@@ -2475,10 +2479,7 @@ body:             |
   ; GFX90A-NEXT:   [[DEF253:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[DEF254:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   [[DEF255:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
-  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 257, implicit $exec, implicit $mode
-  ; GFX90A-NEXT:   [[V_CVT_I32_F64_e32_1:%[0-9]+]]:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 258, implicit $exec, implicit $mode
-  ; GFX90A-NEXT: {{  $}}
-  ; GFX90A-NEXT: bb.1:
+  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF246]], implicit [[DEF247]], implicit [[DEF248]], implicit [[DEF249]], implicit [[DEF250]], implicit [[DEF251]], implicit [[DEF252]], implicit [[DEF253]], implicit [[DEF254]], implicit [[DEF255]]
   ; GFX90A-NEXT:   [[DEF256:%[0-9]+]]:agpr_32 = IMPLICIT_DEF
   ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF256]], implicit [[DEF]], implicit [[DEF1]], implicit [[DEF2]], implicit [[DEF3]], implicit [[DEF4]], implicit [[DEF5]], implicit [[DEF6]], implicit [[DEF7]], implicit [[DEF8]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF9]], implicit [[DEF10]], implicit [[DEF11]], implicit [[DEF12]], implicit [[DEF13]], implicit [[DEF14]], implicit [[DEF15]], implicit [[DEF16]], implicit [[DEF17]], implicit [[DEF18]]
@@ -2504,8 +2505,7 @@ body:             |
   ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF209]], implicit [[DEF210]], implicit [[DEF211]], implicit [[DEF212]], implicit [[DEF213]], implicit [[DEF214]], implicit [[DEF215]], implicit [[DEF216]], implicit [[DEF217]], implicit [[DEF218]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF219]], implicit [[DEF220]], implicit [[DEF221]], implicit [[DEF222]], implicit [[DEF223]], implicit [[DEF224]], implicit [[DEF225]], implicit [[DEF226]], implicit [[DEF227]], implicit [[DEF228]]
   ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF229]], implicit [[DEF230]], implicit [[DEF231]], implicit [[DEF232]], implicit [[DEF233]], implicit [[DEF234]], implicit [[DEF235]], implicit [[DEF236]], implicit [[DEF237]], implicit [[DEF238]]
-  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF239]], implicit [[DEF240]], implicit [[DEF241]], implicit [[DEF242]], implicit [[DEF243]], implicit [[DEF244]], implicit [[DEF245]], implicit [[DEF246]], implicit [[DEF247]], implicit [[DEF248]]
-  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF249]], implicit [[DEF250]], implicit [[DEF251]], implicit [[DEF252]], implicit [[DEF253]], implicit [[DEF254]], implicit [[DEF255]], implicit [[V_CVT_I32_F64_e32_]], implicit [[V_CVT_I32_F64_e32_1]]
+  ; GFX90A-NEXT:   S_NOP 0, implicit [[DEF239]], implicit [[DEF240]], implicit [[DEF241]], implicit [[DEF242]], implicit [[DEF243]], implicit [[DEF244]], implicit [[DEF245]], implicit [[V_CVT_I32_F64_e32_]], implicit [[V_CVT_I32_F64_e32_1]]
   ; GFX90A-NEXT:   S_ENDPGM 0
 
   bb.0:
