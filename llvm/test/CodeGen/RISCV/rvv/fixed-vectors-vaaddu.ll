@@ -215,13 +215,10 @@ define <8 x i64> @vaaddu_vx_v8i64_floor(<8 x i64> %x, i64 %y) {
 define <8 x i8> @vaaddu_vx_floor_splat_scalar(<8 x i8> %a, i8 %sc) {
 ; CHECK-LABEL: vaaddu_vx_floor_splat_scalar:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xori a0, a0, -126
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v9, v9, 0
+; CHECK-NEXT:    xori a0, a0, 130
 ; CHECK-NEXT:    csrwi vxrm, 2
-; CHECK-NEXT:    vaaddu.vv v8, v9, v8
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vaaddu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %1 = xor i8 %sc, -126
   %c = zext i8 %1 to i16
@@ -237,13 +234,10 @@ define <8 x i8> @vaaddu_vx_floor_splat_scalar(<8 x i8> %a, i8 %sc) {
 define <8 x i8> @vaaddu_vx_ceil_splat_scalar(<8 x i8> %x, i8 %y) {
 ; CHECK-LABEL: vaaddu_vx_ceil_splat_scalar:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xori a0, a0, -126
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vmv.v.x v9, a0
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v9, v9, 0
+; CHECK-NEXT:    xori a0, a0, 130
 ; CHECK-NEXT:    csrwi vxrm, 0
-; CHECK-NEXT:    vaaddu.vv v8, v8, v9
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vaaddu.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %1 = xor i8 %y, -126
   %c = zext i8 %1 to i16

@@ -16634,16 +16634,30 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   // Attempt to pre-truncate BUILD_VECTOR sources.
   if (N0.getOpcode() == ISD::BUILD_VECTOR && !LegalOperations &&
       N0.hasOneUse() &&
-      TLI.isTruncateFree(SrcVT.getScalarType(), VT.getScalarType()) &&
       // Avoid creating illegal types if running after type legalizer.
       (!LegalTypes || TLI.isTypeLegal(VT.getScalarType()))) {
     EVT SVT = VT.getScalarType();
     SmallVector<SDValue, 8> TruncOps;
-    for (const SDValue &Op : N0->op_values()) {
-      SDValue TruncOp = DAG.getNode(ISD::TRUNCATE, DL, SVT, Op);
-      TruncOps.push_back(TruncOp);
+
+    if (TLI.isTruncateFree(SrcVT.getScalarType(), VT.getScalarType())) {
+      for (const SDValue &Op : N0->op_values()) {
+        SDValue TruncOp = DAG.getNode(ISD::TRUNCATE, DL, SVT, Op);
+        TruncOps.push_back(TruncOp);
+      }
+      return DAG.getBuildVector(VT, DL, TruncOps);
     }
-    return DAG.getBuildVector(VT, DL, TruncOps);
+    // trunc(build_vector(ext(x), ext(x)) -> build_vector(x,x)
+    SDValue SplatVal = DAG.getSplatValue(N0);
+    if (SplatVal) {
+      unsigned Opcode = SplatVal.getOpcode();
+      if ((Opcode == ISD::SIGN_EXTEND || Opcode == ISD::ZERO_EXTEND ||
+           Opcode == ISD::ANY_EXTEND) &&
+          SrcVT.getScalarType() == SplatVal.getValueType()) {
+        for (const SDValue &Op : N0->op_values())
+          TruncOps.push_back(Op);
+        return DAG.getBuildVector(VT, DL, TruncOps);
+      }
+    }
   }
 
   // trunc (splat_vector x) -> splat_vector (trunc x)
