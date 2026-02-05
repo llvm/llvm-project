@@ -380,7 +380,7 @@ define i1 @add_zext(<4 x i16> %x) {
 ; CHECK-LABEL: define i1 @add_zext(
 ; CHECK-SAME: <4 x i16> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and <4 x i16> [[X]], splat (i16 8191)
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[AND]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.umax.v4i16(<4 x i16> [[AND]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -395,7 +395,7 @@ define i1 @add_sext(<4 x i16> %x) {
 ; CHECK-LABEL: define i1 @add_sext(
 ; CHECK-SAME: <4 x i16> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[AND:%.*]] = and <4 x i16> [[X]], splat (i16 8191)
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.add.v4i16(<4 x i16> [[AND]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.umax.v4i16(<4 x i16> [[AND]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -425,9 +425,8 @@ define i1 @add_neg(<4 x i16> %x) {
 define i1 @add_mul(<4 x i16> %x) {
 ; CHECK-LABEL: define i1 @add_mul(
 ; CHECK-SAME: <4 x i16> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i16> [[X]] to <4 x i32>
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[ZEXT]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.umax.v4i16(<4 x i16> [[X]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %zext = zext <4 x i16> %x to <4 x i32>
@@ -440,9 +439,8 @@ define i1 @add_mul(<4 x i16> %x) {
 define i1 @add_shl(<4 x i16> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define i1 @add_shl(
 ; CHECK-SAME: <4 x i16> [[X:%.*]], <4 x i32> [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i16> [[X]] to <4 x i32>
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[ZEXT]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.umax.v4i16(<4 x i16> [[X]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %zext = zext <4 x i16> %x to <4 x i32>
@@ -456,9 +454,8 @@ define i1 @add_shl(<4 x i16> %x, <4 x i32> %y) {
 define i1 @add_shl_ne(<4 x i16> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define i1 @add_shl_ne(
 ; CHECK-SAME: <4 x i16> [[X:%.*]], <4 x i32> [[Y:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i16> [[X]] to <4 x i32>
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[ZEXT]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.umax.v4i16(<4 x i16> [[X]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %zext = zext <4 x i16> %x to <4 x i32>
@@ -510,7 +507,7 @@ define i1 @add_shl_multiuse(<4 x i16> %x, <4 x i32> %y, ptr %p) {
 ; CHECK-NEXT:    [[YMASKED:%.*]] = and <4 x i32> [[Y]], splat (i32 7)
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nsw <4 x i32> [[ZEXT]], [[YMASKED]]
 ; CHECK-NEXT:    store <4 x i32> [[SHL]], ptr [[P]], align 16
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[SHL]])
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[SHL]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -542,9 +539,8 @@ define i1 @add_shl_unbounded(<4 x i16> %x, <4 x i32> %y) {
 define i1 @add_mul_nonsplat(<4 x i16> %x) {
 ; CHECK-LABEL: define i1 @add_mul_nonsplat(
 ; CHECK-SAME: <4 x i16> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i16> [[X]] to <4 x i32>
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[ZEXT]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.umax.v4i16(<4 x i16> [[X]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %zext = zext <4 x i16> %x to <4 x i32>
@@ -557,9 +553,8 @@ define i1 @add_mul_nonsplat(<4 x i16> %x) {
 define i1 @add_mul_poison(<4 x i16> %x) {
 ; CHECK-LABEL: define i1 @add_mul_poison(
 ; CHECK-SAME: <4 x i16> [[X:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i16> [[X]] to <4 x i32>
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[ZEXT]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.vector.reduce.umax.v4i16(<4 x i16> [[X]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %zext = zext <4 x i16> %x to <4 x i32>
@@ -574,7 +569,7 @@ define i1 @add_mul_zero_lane(<4 x i16> %x) {
 ; CHECK-SAME: <4 x i16> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext <4 x i16> [[X]] to <4 x i32>
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw <4 x i32> [[ZEXT]], <i32 1, i32 0, i32 3, i32 4>
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[MUL]])
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[MUL]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

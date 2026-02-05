@@ -151,6 +151,7 @@ private:
   bool foldSignBitReductionCmp(Instruction &I);
   bool foldICmpEqZeroVectorReduce(Instruction &I);
   bool foldEquivalentReductionCmp(Instruction &I);
+  bool foldReduceAddCmpZero(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
   bool foldInterleaveIntrinsics(Instruction &I);
   bool shrinkType(Instruction &I);
@@ -4707,6 +4708,74 @@ bool VectorCombine::foldEquivalentReductionCmp(Instruction &I) {
   return true;
 }
 
+/// Fold (icmp eq/ne (reduce.add X), 0) to (icmp eq/ne (reduce.umax X), 0)
+/// when X elements are known non-negative or non-positive, making sum==0
+/// equivalent to all-zeros.
+bool VectorCombine::foldReduceAddCmpZero(Instruction &I) {
+  auto *Cmp = dyn_cast<ICmpInst>(&I);
+  if (!Cmp || !Cmp->isEquality())
+    return false;
+
+  Value *ReduceOp;
+  if (!match(Cmp, m_c_ICmp(m_Value(ReduceOp), m_Zero())))
+    return false;
+
+  auto *II = dyn_cast<IntrinsicInst>(ReduceOp);
+  if (!II || !II->hasOneUse() ||
+      II->getIntrinsicID() != Intrinsic::vector_reduce_add)
+    return false;
+
+  Value *Vec = II->getArgOperand(0);
+  auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+  if (!VecTy)
+    return false;
+
+  InstructionCost AddCost = TTI.getArithmeticReductionCost(
+      Instruction::Add, VecTy, std::nullopt, CostKind);
+  InstructionCost UmaxCost = TTI.getMinMaxReductionCost(
+      Intrinsic::umax, VecTy, FastMathFlags(), CostKind);
+  if (UmaxCost > AddCost)
+    return false;
+
+  unsigned BitWidth = VecTy->getScalarSizeInBits();
+  unsigned NumElts = VecTy->getNumElements();
+
+  // Determine the signed range of each element.
+  APInt Min, Max;
+  if (ComputeNumSignBits(Vec, *DL, &AC, &I, &DT) == BitWidth) {
+    Min = APInt::getAllOnes(BitWidth);
+    Max = APInt::getZero(BitWidth);
+  } else {
+    KnownBits KB = computeKnownBits(Vec, *DL, &AC, &I, &DT);
+    ConstantRange CR = ConstantRange::fromKnownBits(KB, /*IsSigned=*/true);
+    Min = CR.getSignedMin();
+    Max = CR.getSignedMax();
+  }
+
+  // Require non-positive or non-negative elements so sum == 0 iff all are 0.
+  bool NonPositive = Max.isNonPositive();
+  bool NonNegative = Min.isNonNegative();
+  if (!NonPositive && !NonNegative)
+    return false;
+
+  // Check that sum cannot wrap to zero.
+  APInt Extreme = NonPositive ? Min.abs() : Max;
+  if (Extreme.isStrictlyPositive()) {
+    APInt MaxN = APInt::getMaxValue(BitWidth).udiv(Extreme);
+    if (NumElts > MaxN.getZExtValue())
+      return false;
+  }
+
+  Builder.SetInsertPoint(&I);
+  Value *Umax =
+      Builder.CreateIntrinsic(Intrinsic::vector_reduce_umax, {VecTy}, {Vec});
+  Value *NewCmp =
+      Builder.CreateICmp(Cmp->getPredicate(), Umax,
+                         ConstantInt::getNullValue(VecTy->getScalarType()));
+  replaceValue(I, *NewCmp);
+  return true;
+}
+
 /// Returns true if this ShuffleVectorInst eventually feeds into a
 /// vector reduction intrinsic (e.g., vector_reduce_add) by only following
 /// chains of shuffles and binary operators (in any combination/order).
@@ -5744,6 +5813,8 @@ bool VectorCombine::run() {
         if (foldICmpEqZeroVectorReduce(I))
           return true;
         if (foldEquivalentReductionCmp(I))
+          return true;
+        if (foldReduceAddCmpZero(I))
           return true;
         [[fallthrough]];
       case Instruction::FCmp:

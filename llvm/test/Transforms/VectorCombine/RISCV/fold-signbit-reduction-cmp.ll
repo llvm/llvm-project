@@ -326,11 +326,11 @@ define i1 @and_eq_max_v2i64(<2 x i64> %x) {
   ret i1 %cmp
 }
 
-define i1 @negative_wrong_shift(<4 x i32> %x) {
-; CHECK-LABEL: define i1 @negative_wrong_shift(
+define i1 @wrong_shift(<4 x i32> %x) {
+; CHECK-LABEL: define i1 @wrong_shift(
 ; CHECK-SAME: <4 x i32> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[X]], splat (i32 30)
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[SHR]])
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[SHR]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -354,12 +354,12 @@ define i1 @negative_wrong_cmp_const(<4 x i32> %x) {
   ret i1 %cmp
 }
 
-define i1 @negative_multi_use_shift(<4 x i32> %x, ptr %p) {
-; CHECK-LABEL: define i1 @negative_multi_use_shift(
+define i1 @multi_use_shift(<4 x i32> %x, ptr %p) {
+; CHECK-LABEL: define i1 @multi_use_shift(
 ; CHECK-SAME: <4 x i32> [[X:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i32> [[X]], splat (i32 31)
 ; CHECK-NEXT:    store <4 x i32> [[SHR]], ptr [[P]], align 16
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[SHR]])
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[SHR]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
