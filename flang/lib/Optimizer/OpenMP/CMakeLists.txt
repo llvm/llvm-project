@@ -13,7 +13,6 @@ add_flang_library(FlangOpenMPTransforms
   LowerWorkshare.cpp
   LowerNontemporal.cpp
   SimdOnly.cpp
-  StackToShared.cpp
 
   DEPENDS
   FIRDialect
