@@ -534,9 +534,7 @@ define i32 @usub_i32(i32 %x, i32 %y) {
 define i64 @wmul_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: wmul_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mul a2, a0, a1
-; CHECK-NEXT:    mulh a1, a0, a1
-; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    wmul a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = sext i32 %x to i64
   %b = sext i32 %y to i64
@@ -547,9 +545,7 @@ define i64 @wmul_i32(i32 %x, i32 %y) {
 define i64 @wmulu_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: wmulu_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mul a2, a0, a1
-; CHECK-NEXT:    mulhu a1, a0, a1
-; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    wmulu a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = zext i32 %x to i64
   %b = zext i32 %y to i64
