@@ -76,23 +76,23 @@ public:
     if (!ToolFuncEmbMap)
       throw nb::value_error(toString(ToolFuncEmbMap.takeError()).c_str());
 
-    nb::dict NBFuncEmbMap;
+    nb::dict NbFuncEmbMap;
 
     for (const auto &[FuncPtr, FuncEmb] : *ToolFuncEmbMap) {
       auto FuncEmbVec = FuncEmb.getData();
-      double *NBFuncEmbVec = new double[FuncEmbVec.size()];
-      std::copy(FuncEmbVec.begin(), FuncEmbVec.end(), NBFuncEmbVec);
+      double *NbFuncEmbVec = new double[FuncEmbVec.size()];
+      std::copy(FuncEmbVec.begin(), FuncEmbVec.end(), NbFuncEmbVec);
 
       auto NbArray = nb::ndarray<nb::numpy, double>(
-          NBFuncEmbVec, {FuncEmbVec.size()},
-          nb::capsule(NBFuncEmbVec, [](void *P) noexcept {
+          NbFuncEmbVec, {FuncEmbVec.size()},
+          nb::capsule(NbFuncEmbVec, [](void *P) noexcept {
             delete[] static_cast<double *>(P);
           }));
 
-      NBFuncEmbMap[nb::str(FuncPtr->getName().str().c_str())] = NbArray;
+      NbFuncEmbMap[nb::str(FuncPtr->getName().str().c_str())] = NbArray;
     }
 
-    return NBFuncEmbMap;
+    return NbFuncEmbMap;
   }
 
   nb::ndarray<nb::numpy, double> getFuncEmb(const std::string &FuncName) {
@@ -109,12 +109,12 @@ public:
       throw nb::value_error(toString(ToolFuncEmb.takeError()).c_str());
 
     auto FuncEmbVec = ToolFuncEmb->getData();
-    double *NBFuncEmbVec = new double[FuncEmbVec.size()];
-    std::copy(FuncEmbVec.begin(), FuncEmbVec.end(), NBFuncEmbVec);
+    double *NbFuncEmbVec = new double[FuncEmbVec.size()];
+    std::copy(FuncEmbVec.begin(), FuncEmbVec.end(), NbFuncEmbVec);
 
     auto NbArray = nb::ndarray<nb::numpy, double>(
-        NBFuncEmbVec, {FuncEmbVec.size()},
-        nb::capsule(NBFuncEmbVec, [](void *P) noexcept {
+        NbFuncEmbVec, {FuncEmbVec.size()},
+        nb::capsule(NbFuncEmbVec, [](void *P) noexcept {
           delete[] static_cast<double *>(P);
         }));
 
