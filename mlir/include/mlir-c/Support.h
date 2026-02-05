@@ -62,7 +62,7 @@ extern "C" {
 DEFINE_C_API_STRUCT(MlirLlvmThreadPool, void);
 /// Re-export llvm::raw_fd_ostream so as to avoid including the LLVM C API
 /// directly.
-DEFINE_C_API_STRUCT(MlirLlvmRawFdOstream, void);
+DEFINE_C_API_STRUCT(MlirLlvmRawFdOStream, void);
 DEFINE_C_API_STRUCT(MlirTypeID, const void);
 DEFINE_C_API_STRUCT(MlirTypeIDAllocator, void);
 
@@ -157,27 +157,27 @@ MLIR_CAPI_EXPORTED MlirLlvmThreadPool mlirLlvmThreadPoolCreate(void);
 MLIR_CAPI_EXPORTED void mlirLlvmThreadPoolDestroy(MlirLlvmThreadPool pool);
 
 //===----------------------------------------------------------------------===//
-// MlirLlvmRawFdOstream.
+// MlirLlvmRawFdOStream.
 //===----------------------------------------------------------------------===//
 
 /// Create a raw_fd_ostream for the given path. This wrapper is needed because
 /// std::ostream does not provide the file sharing semantics required on
 /// Windows. On failure, returns a null stream and invokes the optional error
 /// callback with the error message.
-MLIR_CAPI_EXPORTED MlirLlvmRawFdOstream
-mlirLlvmRawFdOstreamCreate(const char *path, bool binary,
+MLIR_CAPI_EXPORTED MlirLlvmRawFdOStream
+mlirLlvmRawFdOStreamCreate(const char *path, bool binary,
                            MlirStringCallback errorCallback, void *userData);
 
-/// Write a string to a raw_fd_ostream created with mlirLlvmRawFdOstreamCreate.
-MLIR_CAPI_EXPORTED void mlirLlvmRawFdOstreamWrite(MlirLlvmRawFdOstream stream,
+/// Write a string to a raw_fd_ostream created with mlirLlvmRawFdOStreamCreate.
+MLIR_CAPI_EXPORTED void mlirLlvmRawFdOStreamWrite(MlirLlvmRawFdOStream stream,
                                                   MlirStringRef string);
 
 /// Checks if a raw_fd_ostream is null.
-MLIR_CAPI_EXPORTED bool mlirLlvmRawFdOstreamIsNull(MlirLlvmRawFdOstream stream);
+MLIR_CAPI_EXPORTED bool mlirLlvmRawFdOStreamIsNull(MlirLlvmRawFdOStream stream);
 
-/// Destroy a raw_fd_ostream created with mlirLlvmRawFdOstreamCreate.
+/// Destroy a raw_fd_ostream created with mlirLlvmRawFdOStreamCreate.
 MLIR_CAPI_EXPORTED void
-mlirLlvmRawFdOstreamDestroy(MlirLlvmRawFdOstream stream);
+mlirLlvmRawFdOStreamDestroy(MlirLlvmRawFdOStream stream);
 
 //===----------------------------------------------------------------------===//
 // TypeID API.

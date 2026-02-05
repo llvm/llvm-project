@@ -169,14 +169,14 @@ public:
         auto *storage = static_cast<std::string *>(userData);
         storage->assign(message.data, message.length);
       };
-      MlirLlvmRawFdOstream stream = mlirLlvmRawFdOstreamCreate(
+      MlirLlvmRawFdOStream stream = mlirLlvmRawFdOStreamCreate(
           filePath.c_str(), binary, errorCallback, &errorMessage);
-      if (mlirLlvmRawFdOstreamIsNull(stream)) {
+      if (mlirLlvmRawFdOStreamIsNull(stream)) {
         throw nanobind::value_error(
             (std::string("Unable to open file for writing: ") + errorMessage)
                 .c_str());
       }
-      writeTarget.emplace<MlirLlvmRawFdOstream>(stream);
+      writeTarget.emplace<MlirLlvmRawFdOStream>(stream);
     } else {
       writeTarget.emplace<nanobind::object>(fileOrStringObject.attr("write"));
     }
@@ -184,12 +184,12 @@ public:
 
   ~PyFileAccumulator() {
     if (writeTarget.index() == 1)
-      mlirLlvmRawFdOstreamDestroy(std::get<MlirLlvmRawFdOstream>(writeTarget));
+      mlirLlvmRawFdOStreamDestroy(std::get<MlirLlvmRawFdOStream>(writeTarget));
   }
 
   MlirStringCallback getCallback() {
     return writeTarget.index() == 0 ? getPyWriteCallback()
-                                    : getOstreamCallback();
+                                    : getOStreamCallback();
   }
 
   void *getUserData() { return this; }
@@ -211,15 +211,15 @@ private:
     };
   }
 
-  MlirStringCallback getOstreamCallback() {
+  MlirStringCallback getOStreamCallback() {
     return [](MlirStringRef part, void *userData) {
       PyFileAccumulator *accum = static_cast<PyFileAccumulator *>(userData);
-      mlirLlvmRawFdOstreamWrite(
-          std::get<MlirLlvmRawFdOstream>(accum->writeTarget), part);
+      mlirLlvmRawFdOStreamWrite(
+          std::get<MlirLlvmRawFdOStream>(accum->writeTarget), part);
     };
   }
 
-  std::variant<nanobind::object, MlirLlvmRawFdOstream> writeTarget;
+  std::variant<nanobind::object, MlirLlvmRawFdOStream> writeTarget;
   bool binary;
 };
 
