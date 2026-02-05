@@ -12,6 +12,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Lex/Lexer.h"
 #include <array>
 #include <type_traits>
@@ -171,11 +172,13 @@ void BoolBitwiseOperationCheck::storeOptions(
 void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   auto BooleanLeaves = hasAllLeavesOfBitwiseSatisfying(hasType(booleanType()));
   auto NonVolatile = unless(hasType(isVolatileQualified()));
+  auto ExprWithSideEffects = traverse(
+      TK_AsIs, expr(hasSideEffects(/*IncludePossibleEffects=*/!UnsafeMode)));
 
   auto FixItMatcher = binaryOperator(
       // Both operands must be non-volatile at the top level.
       hasOperands(NonVolatile, NonVolatile),
-      hasRHS(unless(hasSideEffects(/*IncludePossibleEffects=*/!UnsafeMode))),
+      hasRHS(unless(ExprWithSideEffects)),
       anyOf(
           // Non-compound assignments: no additional LHS
           // restriction needed.
@@ -228,13 +231,14 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
       hasRHS(allOf(binaryOperator(hasOperatorName("||")).bind("parensExpr"),
                    NotAlreadyInParenExpr)));
 
-  auto BaseMatcher =
-      binaryOperator(hasAnyOperatorName("|", "&", "|=", "&="),
-                     hasLHS(BooleanLeaves), hasRHS(BooleanLeaves),
-                     optionally(allOf(hasAnyOperatorName("|=", "&="),
-                                      hasLHS(LhsOfCompoundMatcher))),
-                     optionally(FixItMatcher.bind("fixit")),
-                     optionally(anyOf(ParensCase1, ParensCase2, ParensCase3)));
+  auto BaseMatcher = binaryOperator(
+      hasAnyOperatorName("|", "&", "|=", "&="), hasLHS(BooleanLeaves),
+      hasRHS(BooleanLeaves),
+      optionally(
+          allOf(hasAnyOperatorName("|=", "&="), hasLHS(LhsOfCompoundMatcher))),
+      optionally(FixItMatcher.bind("fixit")),
+      optionally(hasRHS(ExprWithSideEffects.bind("rhsWithSideEffects"))),
+      optionally(anyOf(ParensCase1, ParensCase2, ParensCase3)));
 
   Finder->addMatcher(BaseMatcher.bind("binOp"), this);
 }
@@ -258,8 +262,9 @@ BoolBitwiseOperationCheck::createDiagBuilder(
 
 void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     const BinaryOperator *BinOp, const Expr *ParensExpr,
-    const Expr *LhsOfCompound, const clang::SourceManager &SM,
-    clang::ASTContext &Ctx, bool CanApplyFixIt) {
+    const Expr *LhsOfCompound, const Expr *RhsWithSideEffects,
+    const clang::SourceManager &SM, clang::ASTContext &Ctx,
+    bool CanApplyFixIt) {
   // Early exit: the matcher proved that no fix-it possible
   if (!CanApplyFixIt) {
     createDiagBuilder(RespectStrictMode, BinOp);
@@ -335,14 +340,22 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *FixItBinOp = Result.Nodes.getNodeAs<BinaryOperator>("fixit");
   const auto *ParensExpr = Result.Nodes.getNodeAs<Expr>("parensExpr");
   const auto *LhsOfCompound = Result.Nodes.getNodeAs<Expr>("lhsOfCompound");
+  const auto *RhsWithSideEffects =
+      Result.Nodes.getNodeAs<Expr>("rhsWithSideEffects");
   assert(BinOp);
 
   const SourceManager &SM = *Result.SourceManager;
   ASTContext &Ctx = *Result.Context;
 
   const bool CanApplyFixIt = (FixItBinOp != nullptr && FixItBinOp == BinOp);
-  emitWarningAndChangeOperatorsIfPossible(BinOp, ParensExpr, LhsOfCompound, SM,
-                                          Ctx, CanApplyFixIt);
+  emitWarningAndChangeOperatorsIfPossible(BinOp, ParensExpr, LhsOfCompound,
+                                          RhsWithSideEffects, SM, Ctx,
+                                          CanApplyFixIt);
+
+  // Check if canceling the fix-it was caused by side effects.
+  if (!CanApplyFixIt && RhsWithSideEffects)
+    diag(RhsWithSideEffects->getExprLoc(),
+         "extract the right operand to a variable", DiagnosticIDs::Note);
 }
 
 } // namespace clang::tidy::misc

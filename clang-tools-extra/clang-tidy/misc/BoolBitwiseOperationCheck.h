@@ -36,6 +36,7 @@ public:
   void emitWarningAndChangeOperatorsIfPossible(const BinaryOperator *BinOp,
                                                const Expr *ParensExpr,
                                                const Expr *LhsOfCompound,
+                                               const Expr *RhsWithSideEffects,
                                                const clang::SourceManager &SM,
                                                clang::ASTContext &Ctx,
                                                bool CanApplyFixIt);
