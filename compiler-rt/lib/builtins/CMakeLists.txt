@@ -535,8 +535,7 @@ set(thumb1_base_SOURCES
   ${GENERIC_SOURCES}
 )
 # arm/addsf3.S implements both addition and subtraction via cross-branching
-set_property(SOURCE arm/addsf3.S PROPERTY crt_supersedes subsf3.c)
-set_property(SOURCE arm/addsf3.S DIRECTORY ${COMPILER_RT_SOURCE_DIR} PROPERTY crt_provides subsf3)
+set_special_properties(arm/addsf3.S SUPERSEDES subsf3.c PROVIDES subsf3)
 set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c PROVIDES subdf3)
 
 if(COMPILER_RT_ARM_OPTIMIZED_FP)
@@ -554,8 +553,8 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP)
     arm/funder.c
     ${thumb1_base_SOURCES}
   )
-  set_property(SOURCE arm/thumb1/addsf3.S PROPERTY crt_supersedes subsf3.c)
-  set_property(SOURCE arm/thumb1/addsf3.S DIRECTORY ${COMPILER_RT_SOURCE_DIR} PROPERTY crt_provides subsf3)
+  set_special_properties(arm/thumb1/addsf3.S
+    SUPERSEDES subsf3.c PROVIDES subsf3)
   set_special_properties(arm/thumb1/cmpdf2.S
     SUPERSEDES comparedf2.c PROVIDES comparedf2)
   set_special_properties(arm/thumb1/cmpsf2.S
