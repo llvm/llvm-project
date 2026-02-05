@@ -31,7 +31,6 @@ class ScriptedFrameProvider(metaclass=ABCMeta):
 
     .. code-block:: python
 
-        import lldb
         from lldb.plugins.scripted_frame_provider import ScriptedFrameProvider
 
         class MyFrameProvider(ScriptedFrameProvider):
