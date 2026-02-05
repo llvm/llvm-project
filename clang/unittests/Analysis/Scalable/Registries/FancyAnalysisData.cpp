@@ -15,7 +15,6 @@ using namespace ssaf;
 
 using SpecialFileRepresentation =
     MockSerializationFormat::SpecialFileRepresentation;
-using FormatInfo = MockSerializationFormat::FormatInfo;
 
 namespace {
 struct FancyAnalysisData : EntitySummary {
@@ -41,6 +40,7 @@ deserializeFancyAnalysis(const SpecialFileRepresentation &File,
 }
 
 namespace {
+using FormatInfo = MockSerializationFormat::FormatInfo;
 struct FancyAnalysisFormatInfo : FormatInfo {
   FancyAnalysisFormatInfo()
       : FormatInfo{
