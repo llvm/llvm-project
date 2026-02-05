@@ -194,8 +194,8 @@ static void replaceLoadOrStoreOp(vector::LoadOp loadOp,
                                  VectorType vectorTy, Value ptr, unsigned align,
                                  ConversionPatternRewriter &rewriter) {
   rewriter.replaceOpWithNewOp<LLVM::LoadOp>(loadOp, vectorTy, ptr, align,
-                                            loadOp.getNontemporal(),
-                                            loadOp.getVolatile_());
+                                            loadOp.getVolatile_(),
+                                            loadOp.getNontemporal());
 }
 
 static void replaceLoadOrStoreOp(vector::MaskedLoadOp loadOp,
@@ -203,7 +203,8 @@ static void replaceLoadOrStoreOp(vector::MaskedLoadOp loadOp,
                                  VectorType vectorTy, Value ptr, unsigned align,
                                  ConversionPatternRewriter &rewriter) {
   rewriter.replaceOpWithNewOp<LLVM::MaskedLoadOp>(
-      loadOp, vectorTy, ptr, adaptor.getMask(), adaptor.getPassThru(), align);
+      loadOp, vectorTy, ptr, adaptor.getMask(), adaptor.getPassThru(), align,
+      loadOp.getNontemporal());
 }
 
 static void replaceLoadOrStoreOp(vector::StoreOp storeOp,
@@ -211,8 +212,8 @@ static void replaceLoadOrStoreOp(vector::StoreOp storeOp,
                                  VectorType vectorTy, Value ptr, unsigned align,
                                  ConversionPatternRewriter &rewriter) {
   rewriter.replaceOpWithNewOp<LLVM::StoreOp>(storeOp, adaptor.getValueToStore(),
-                                             ptr, align, storeOp.getNontemporal(),
-                                             storeOp.getVolatile_());
+                                             ptr, align, storeOp.getVolatile_(),
+                                             storeOp.getNontemporal());
 }
 
 static void replaceLoadOrStoreOp(vector::MaskedStoreOp storeOp,
