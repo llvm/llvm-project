@@ -293,7 +293,8 @@ A minimal documentation comment:
 
 Only include code examples, function parameters and return values when it
 provides additional information, such as intent, usage, or behavior that’s
-non-obvious.
+non-obvious.  Use descriptive function and argument names to
+eliminate the need for documentation comments when possible.
 
 To refer to parameter names inside a paragraph, use the ``\p name`` command.
 Don't use the ``\arg name`` command since it starts a new paragraph that
