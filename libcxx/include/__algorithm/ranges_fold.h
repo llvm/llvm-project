@@ -82,8 +82,7 @@ concept __indirectly_binary_left_foldable =
 struct __fold_left_with_iter {
   template <input_iterator _Ip, sentinel_for<_Ip> _Sp, class _Tp, __indirectly_binary_left_foldable<_Tp, _Ip> _Fp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Ip __first, _Sp __last, _Tp __init, _Fp __f) {
-    using _Up        = decay_t<invoke_result_t<_Fp&, _Tp, iter_reference_t<_Ip>>>;
-    using __iter_ref = decltype(*__first);
+    using _Up = decay_t<invoke_result_t<_Fp&, _Tp, iter_reference_t<_Ip>>>;
 
     if (__first == __last) {
       return fold_left_with_iter_result<_Ip, _Up>{std::move(__first), _Up(std::move(__init))};
@@ -95,8 +94,8 @@ struct __fold_left_with_iter {
     auto __end = std::__for_each(
         std::move(__first),
         std::move(__last),
-        [&](__iter_ref __element) {
-          __result = std::invoke(__f, std::move(__result), std::forward<__iter_ref>(__element));
+        [&](auto&& __element) {
+          __result = std::invoke(__f, std::move(__result), std::forward<decltype(__element)>(__element));
         },
         __proj);
 
