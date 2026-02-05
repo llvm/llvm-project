@@ -177,7 +177,7 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------
 
-* Support for FreeBSD 13 and below has been removed.
+* Support for FreeBSD on MIPS64 has been removed.
 
 Changes to BOLT
 ---------------
