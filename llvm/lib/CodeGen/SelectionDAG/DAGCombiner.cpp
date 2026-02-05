@@ -14850,7 +14850,6 @@ SDValue DAGCombiner::foldSextSetcc(SDNode *N) {
 
   // Propagate fast-math-flags.
   SDNodeFlags Flags = N0->getFlags();
-  SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
 
   // On some architectures (such as SSE/NEON/etc) the SETCC result type is
   // the same size as the compared operands. Try to optimize sext(setcc())
@@ -14958,7 +14957,7 @@ SDValue DAGCombiner::foldSextSetcc(SDNode *N) {
         (!LegalOperations || TLI.isOperationLegal(ISD::SETCC, N00VT))) {
       SDValue SetCC = DAG.getSetCC(DL, SetCCVT, N00, N01, CC, /*Chain=*/{},
                                    /*Signaling=*/false, Flags);
-      return DAG.getSelect(DL, VT, SetCC, ExtTrueVal, Zero);
+      return DAG.getSelect(DL, VT, SetCC, ExtTrueVal, Zero, Flags);
     }
   }
 
