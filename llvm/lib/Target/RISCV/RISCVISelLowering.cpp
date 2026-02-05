@@ -5463,15 +5463,12 @@ static SDValue lowerShuffleMaskToVselectShuffle(
   return DAG.getVectorShuffle(VT, DL, Select, DAG.getUNDEF(VT), NewMask);
 }
 
-// A shuffle of shuffles where:
-// - the first level of shuffles both only used data from a single input
-// - the final output doesn't use data from the same lane of both operands
-// This can be lowered to a MERGE followed by a GATHER
-static SDValue lowerVECTOR_SHUFFLEAsMergeGather(ShuffleVectorSDNode *SVN,
-                                                SDValue V1, SDValue V2,
-                                                ArrayRef<int> Mask,
-                                                const RISCVSubtarget &Subtarget,
-                                                SelectionDAG &DAG) {
+// A shuffle of shuffles where the final data only is drawn from 2 input ops
+// can be compressed into a single shuffle
+static SDValue compressShuffleOfShuffles(ShuffleVectorSDNode *SVN, SDValue V1,
+                                         SDValue V2, ArrayRef<int> Mask,
+                                         const RISCVSubtarget &Subtarget,
+                                         SelectionDAG &DAG) {
   if (V1.getOpcode() != ISD::VECTOR_SHUFFLE ||
       V2.getOpcode() != ISD::VECTOR_SHUFFLE)
     return SDValue();
@@ -5479,66 +5476,40 @@ static SDValue lowerVECTOR_SHUFFLEAsMergeGather(ShuffleVectorSDNode *SVN,
   if (!V1.hasOneUse() || !V2.hasOneUse())
     return SDValue();
 
-  // Can just be reduced into a single gather operation
-  if (V1.getOperand(0) == V2.getOperand(0))
-    return SDValue();
-
   unsigned NumElts = Mask.size();
   auto *SVN1 = cast<ShuffleVectorSDNode>(V1.getNode());
   auto *SVN2 = cast<ShuffleVectorSDNode>(V2.getNode());
   auto V1Mask = SVN1->getMask();
   auto V2Mask = SVN2->getMask();
-  // -1: Not set, 0: Set by V1, 1: Set by V2
-  SmallVector<int, 16> ShuffleLaneUses(NumElts, -1);
+  SmallVector<int> NewMask(NumElts, -1);
   for (unsigned Idx : seq<unsigned>(NumElts)) {
     int Lane = Mask[Idx];
     // Don't assign if poison
     if (Lane == -1)
       continue;
-    int OpNum;
     int OrigLane;
+    bool SecondOp = false;
     if ((unsigned)Lane < NumElts) {
-      OpNum = 0;
       OrigLane = V1Mask[Lane];
     } else {
-      OpNum = 1;
       OrigLane = V2Mask[Lane - NumElts];
+      SecondOp = true;
     }
     if (OrigLane == -1)
       continue;
     // Don't handle if shuffling from a second operand
     if ((unsigned)OrigLane >= NumElts)
       return SDValue();
-
-    const int CurrLaneSrc = ShuffleLaneUses[OrigLane];
-    // Can't use the same lane from both operands in the merge
-    if (CurrLaneSrc != -1 && CurrLaneSrc != OpNum)
-      return SDValue();
-    ShuffleLaneUses[OrigLane] = OpNum;
+    if (SecondOp)
+      OrigLane += NumElts;
+    NewMask[Idx] = OrigLane;
   }
 
-  // Create the constant vector for the gather
-  SmallVector<int> GatherVals(NumElts);
-  for (unsigned Idx : seq<unsigned>(NumElts)) {
-    int Lane = Mask[Idx];
-    if (Lane == -1) {
-      GatherVals[Idx] = -1;
-      continue;
-    }
-    int SecondLane;
-    if ((unsigned)Lane < NumElts)
-      SecondLane = V1Mask[Lane];
-    else
-      SecondLane = V2Mask[Lane - NumElts];
-    if (SecondLane == -1)
-      GatherVals[Idx] = -1;
-    else
-      GatherVals[Idx] = SecondLane;
-  }
+  MVT VT = SVN->getSimpleValueType(0);
+  SDLoc DL(SVN);
 
-  return lowerShuffleMaskToVselectShuffle(SVN, DAG, Subtarget, ShuffleLaneUses,
-                                          GatherVals, V1->getOperand(0),
-                                          V2.getOperand(0));
+  return DAG.getVectorShuffle(VT, DL, V1->getOperand(0), V2->getOperand(0),
+                              NewMask);
 }
 
 /// Match v(f)slide1up/down idioms.  These operations involve sliding
@@ -6182,6 +6153,10 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   unsigned NumElts = VT.getVectorNumElements();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
 
+  if (SDValue V = compressShuffleOfShuffles(SVN, V1, V2, SVN->getMask(),
+                                            Subtarget, DAG))
+    return V;
+
   if (VT.getVectorElementType() == MVT::i1) {
     // Lower to a vror.vi of a larger element type if possible before we promote
     // i1s to i8s.
@@ -6305,10 +6280,6 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
 
   if (SDValue V =
           lowerVECTOR_SHUFFLEAsVSlidedown(DL, VT, V1, V2, Mask, Subtarget, DAG))
-    return V;
-
-  if (SDValue V =
-          lowerVECTOR_SHUFFLEAsMergeGather(SVN, V1, V2, Mask, Subtarget, DAG))
     return V;
 
   // A bitrotate will be one instruction on Zvkb, so try to lower to it first if
