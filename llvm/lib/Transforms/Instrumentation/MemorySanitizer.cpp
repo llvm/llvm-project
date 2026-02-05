@@ -2501,10 +2501,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     ShadowAgg = IRB.CreateAnd(ShadowAgg, ShadowCases);
 
     insertCheckShadow(ShadowAgg, getOrigin(Val), &SI);
-
-    // If the shadow check succeeded, the shadow must be clean.
-    setShadow(&SI, getCleanShadow(&SI));
-    setOrigin(&SI, getCleanOrigin());
   }
 
   // Vector manipulation.
