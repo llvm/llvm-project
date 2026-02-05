@@ -63,6 +63,9 @@ Changes to the LLVM IR
   intrinsics. These are equivalent to `fptrunc` and `fpext` with half
   with a bitcast.
 
+* "denormal-fp-math" and "denormal-fp-math-f32" string attributes were
+  migrated to first-class denormal_fpenv attribute.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -173,6 +176,8 @@ Changes to the LLVM tools
 
 Changes to LLDB
 ---------------
+
+* Support for FreeBSD on MIPS64 has been removed.
 
 Changes to BOLT
 ---------------

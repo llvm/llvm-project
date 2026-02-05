@@ -2339,6 +2339,7 @@ libc_support_library(
     name = "__support_math_acosh_float_constants",
     hdrs = ["src/__support/math/acosh_float_constants.h"],
     deps = [
+        ":__support_macros_attributes",
         ":__support_macros_config",
     ],
 )
@@ -2831,6 +2832,7 @@ libc_support_library(
     name = "__support_math_exp_float_constants",
     hdrs = ["src/__support/math/exp_float_constants.h"],
     deps = [
+        ":__support_macros_attributes",
         ":__support_macros_config",
     ],
 )
@@ -2905,6 +2907,18 @@ libc_support_library(
         ":__support_fputil_fma",
         ":__support_macros_config",
         ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_f16fmaf128",
+    hdrs = ["src/__support/math/f16fmaf128.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+        ":llvm_libc_types_float128",
     ],
 )
 
@@ -4445,7 +4459,7 @@ libc_math_function(
 libc_math_function(
     name = "f16fmaf128",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_f16fmaf128",
     ],
 )
 
