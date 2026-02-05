@@ -348,7 +348,7 @@ declare <2 x half> @llvm.fabs.v2f16(<2 x half>)
 declare double @llvm.fabs.f64(double)
 declare <2 x double> @llvm.fabs.v2f64(<2 x double>)
 
-attributes #0 = { "denormal-fp-math"="ieee,preserve-sign" }
-attributes #1 = { "denormal-fp-math"="ieee,positive-zero" }
-attributes #2 = { "denormal-fp-math"="ieee,ieee" }
-attributes #3 = { "denormal-fp-math-f32"="ieee,preserve-sign" }
+attributes #0 = { denormal_fpenv(ieee|preservesign) }
+attributes #1 = { denormal_fpenv(ieee|positivezero) }
+attributes #2 = { denormal_fpenv(ieee|ieee) }
+attributes #3 = { denormal_fpenv(float: ieee|preservesign) }

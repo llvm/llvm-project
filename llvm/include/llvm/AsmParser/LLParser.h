@@ -329,6 +329,8 @@ namespace llvm {
     bool parseOptionalUWTableKind(UWTableKind &Kind);
     bool parseAllocKind(AllocFnKind &Kind);
     std::optional<MemoryEffects> parseMemoryAttr();
+    std::optional<DenormalMode> parseDenormalFPEnvEntry();
+    std::optional<DenormalFPEnv> parseDenormalFPEnvAttr();
     unsigned parseNoFPClassAttr();
     bool parseScopeAndOrdering(bool IsAtomic, SyncScope::ID &SSID,
                                AtomicOrdering &Ordering);
