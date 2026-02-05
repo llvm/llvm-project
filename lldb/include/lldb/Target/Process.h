@@ -3187,7 +3187,7 @@ protected:
     }
   };
 
-  /// The PrivateStateThread class gathers all the bits of state needed to
+  /// The PrivateStateThread struct gathers all the bits of state needed to
   /// manage handling Process events, from receiving them on the Private State
   /// to signaling when process events are broadcase publicly, to determining
   /// when various actors can act on the process.  It also holds the current

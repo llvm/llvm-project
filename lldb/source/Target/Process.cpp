@@ -2737,7 +2737,7 @@ Status Process::Launch(ProcessLaunchInfo &launch_info) {
   } else {
     StartPrivateStateThread(state_after_launch, false);
     if (!m_current_private_state_thread) {
-      // We are not going to get any further here The only way this could fail
+      // We are not going to get any further here. The only way this could fail
       // is if we can't start a host thread, so we're pretty much toast at that
       // point.
       return Status::FromErrorString("could not start private state thread.");
@@ -2898,7 +2898,7 @@ Status Process::LoadCore() {
       StartPrivateStateThread(lldb::eStateStopped,
                               /*RunLock Is stopped*/ false);
       if (!m_current_private_state_thread) {
-        // FIXME: We are not going to get any further here. The only way this
+        // We are not going to get any further here. The only way this
         // could fail is if we can't start a host thread, so we're pretty much
         //  toast at that point.
         return Status::FromErrorString("could not start private state thread.");
@@ -3110,7 +3110,7 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
                 this, attach_info.GetResumeCount()));
             StartPrivateStateThread(lldb::eStateAttaching, true);
             if (!m_current_private_state_thread) {
-              // FIXME: We are not going to get any further here.  The only way
+              // We are not going to get any further here.  The only way
               // this could fail is if we can't start a host thread, and we're
               // pretty much toast at that point.
               return Status::FromErrorString(
@@ -3173,7 +3173,7 @@ Status Process::Attach(ProcessAttachInfo &attach_info) {
 
         StartPrivateStateThread(lldb::eStateAttaching, true);
         if (!m_current_private_state_thread) {
-          // FIXME: We are not going to get any further here.  The only way this
+          // We are not going to get any further here.  The only way this
           // could fail is if we can't start a host thread, so we're pretty much
           // toast at thatpoint.
           return Status::FromErrorString(
@@ -3360,7 +3360,7 @@ Status Process::ConnectRemote(llvm::StringRef remote_url) {
       StartPrivateStateThread(lldb::eStateStopped,
                               /*RunLock is stopped */ false);
       if (!m_current_private_state_thread) {
-        // FIXME: We are not going to get any further here.  The only way this
+        // We are not going to get any further here.  The only way this
         // could fail is if we can't start a host thread, so we're pretty much
         // toast at that point.
         return Status::FromErrorString("could not start private state thread.");
@@ -6046,8 +6046,7 @@ void Process::ClearPreResumeAction(PreResumeActionCallback callback, void *baton
 ProcessRunLock &Process::GetRunLock() {
   if (Process::CurrentThreadPosesAsPrivateStateThread())
     return m_current_private_state_thread->GetRunLock();
-  else
-    return m_current_private_state_thread->GetRunLock();
+  return m_current_private_state_thread->GetRunLock();
 }
 
 bool Process::CurrentThreadIsPrivateStateThread()
