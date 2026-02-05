@@ -436,8 +436,11 @@ def killProcessAndChildren(pid):
             for child in children_iterator:
                 try:
                     child.kill()
-                except psutil.NoSuchProcess:
+                except psutil.Error:
+                    # Ignore errors killing children (NoSuchProcess, AccessDenied, etc.)
                     pass
             psutilProc.kill()
-        except psutil.NoSuchProcess:
+        except psutil.Error:
+            # Ignore errors killing process (NoSuchProcess, AccessDenied, etc.)
+            # The process may have already exited or we may not have permission.
             pass
