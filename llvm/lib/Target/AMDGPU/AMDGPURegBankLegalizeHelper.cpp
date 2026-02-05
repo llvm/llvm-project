@@ -1183,7 +1183,7 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
     return LLT();
   case VgprB160:
   case UniInVgprB160:
-    if (Ty == LLT::scalar(160) || Ty == LLT::fixed_vector(5, 32))
+    if (Ty.getSizeInBits() == 160)
       return Ty;
     return LLT();
   case SgprB256:
