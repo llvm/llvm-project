@@ -213,6 +213,7 @@ class DAPTestCaseBase(TestBase):
         'exception' with the description matching 'expected_description' and
         text match 'expected_text', if specified."""
         stopped_events = self.dap_server.wait_for_stopped()
+        self.assertIsNotNone(stopped_events, "No stopped events detected")
         for stopped_event in stopped_events:
             body = stopped_event["body"]
             if body["reason"] != "exception":
@@ -235,7 +236,7 @@ class DAPTestCaseBase(TestBase):
                     f"for stopped event {stopped_event!r}",
                 )
             return
-        self.fail(f"No valid stop exception info detected in {stopped_events}")
+        self.fail(f"No valid stop exception info detected in {stopped_events!r}")
 
     def verify_stop_on_entry(self) -> None:
         """Waits for the process to be stopped and then verifies at least one
@@ -385,11 +386,39 @@ class DAPTestCaseBase(TestBase):
 
     def set_local(self, name, value, id=None):
         """Set a top level local variable only."""
-        return self.set_variable(1, name, str(value), id=id)
+        # Get the locals scope reference dynamically
+        locals_ref = self.get_locals_scope_reference()
+        if locals_ref is None:
+            return None
+        return self.set_variable(locals_ref, name, str(value), id=id)
 
     def set_global(self, name, value, id=None):
         """Set a top level global variable only."""
-        return self.set_variable(2, name, str(value), id=id)
+        # Get the globals scope reference dynamically
+        stackFrame = self.dap_server.get_stackFrame()
+        if stackFrame is None:
+            return None
+        frameId = stackFrame["id"]
+        scopes_response = self.dap_server.request_scopes(frameId)
+        frame_scopes = scopes_response["body"]["scopes"]
+        for scope in frame_scopes:
+            if scope["name"] == "Globals":
+                varRef = scope["variablesReference"]
+                return self.set_variable(varRef, name, str(value), id=id)
+        return None
+
+    def get_locals_scope_reference(self):
+        """Get the variablesReference for the locals scope."""
+        stackFrame = self.dap_server.get_stackFrame()
+        if stackFrame is None:
+            return None
+        frameId = stackFrame["id"]
+        scopes_response = self.dap_server.request_scopes(frameId)
+        frame_scopes = scopes_response["body"]["scopes"]
+        for scope in frame_scopes:
+            if scope["name"] == "Locals":
+                return scope["variablesReference"]
+        return None
 
     def stepIn(
         self,
@@ -443,12 +472,17 @@ class DAPTestCaseBase(TestBase):
         self.do_continue()
         self.verify_breakpoint_hit(breakpoint_ids)
 
-    def continue_to_exception_breakpoint(self, description, text=None):
+    def continue_to_exception_breakpoint(
+        self, expected_description, expected_text=None
+    ):
         self.do_continue()
-        self.verify_stop_exception_info(description, text)
+        self.verify_stop_exception_info(expected_description, expected_text)
 
     def continue_to_exit(self, exitCode=0):
         self.do_continue()
+        self.verify_process_exited(exitCode)
+
+    def verify_process_exited(self, exitCode: int = 0):
         stopped_events = self.dap_server.wait_for_stopped()
         self.assertEqual(
             len(stopped_events), 1, "stopped_events = {}".format(stopped_events)

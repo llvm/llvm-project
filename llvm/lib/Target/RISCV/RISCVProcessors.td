@@ -772,7 +772,6 @@ def SPACEMIT_X100 : RISCVProcessorModel<"spacemit-x100",
                                         !listconcat(RVA23U64Features,
                                         [FeatureStdExtZbc,
                                          FeatureStdExtZbkc,
-                                         FeatureStdExtZcd,
                                          FeatureStdExtZfbfmin,
                                          FeatureStdExtZfh,
                                          FeatureStdExtZvbc,
@@ -789,7 +788,13 @@ def SPACEMIT_X100 : RISCVProcessorModel<"spacemit-x100",
                                          TuneOptimizedNF2SegmentLoadStore,
                                          TuneOptimizedNF3SegmentLoadStore,
                                          TuneOptimizedNF4SegmentLoadStore,
-                                         TuneVXRMPipelineFlush]> {
+                                         TuneVXRMPipelineFlush,
+                                         TuneFusionLogicRegReg,
+                                         TuneFusionLogicRegImm,
+                                         TuneFusionLogicImmReg,
+                                         TuneFusionMulAdd,
+                                         TuneFusionAddMem,
+                                         TuneFusionShiftBitExtract]> {
   let MVendorID = 0x710;
   let MArchID = 0x8000000058000002;
   let MImpID = 0x33d8a600;

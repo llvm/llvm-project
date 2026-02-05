@@ -104,8 +104,8 @@ def SPIRV_GroupBroadcastOp : SPIRV_Op<"GroupBroadcast",
     %vector_value = ... : vector<4xf32>
     %scalar_localid = ... : i32
     %vector_localid = ... : vector<3xi32>
-    %0 = spirv.GroupBroadcast "Subgroup" %scalar_value, %scalar_localid : f32, i32
-    %1 = spirv.GroupBroadcast "Workgroup" %vector_value, %vector_localid :
+    %0 = spirv.GroupBroadcast <Subgroup> %scalar_value, %scalar_localid : f32, i32
+    %1 = spirv.GroupBroadcast <Workgroup> %vector_value, %vector_localid :
       vector<4xf32>, vector<3xi32>
     ```
   }];

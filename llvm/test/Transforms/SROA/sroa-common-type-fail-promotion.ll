@@ -249,8 +249,6 @@ define amdgpu_kernel void @test_half_array() #0 {
 ; CHECK-NEXT:    [[B_BLOCKWISE_COPY_SROA_4:%.*]] = alloca float, align 4
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 16 [[B_BLOCKWISE_COPY_SROA_0]], i8 0, i32 4, i1 false)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 4 [[B_BLOCKWISE_COPY_SROA_4]], i8 0, i32 4, i1 false)
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float undef to i32
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float undef to i32
 ; CHECK-NEXT:    [[DATA:%.*]] = load [4 x float], ptr undef, align 4
 ; CHECK-NEXT:    [[DATA_FCA_0_EXTRACT:%.*]] = extractvalue [4 x float] [[DATA]], 0
 ; CHECK-NEXT:    store float [[DATA_FCA_0_EXTRACT]], ptr [[B_BLOCKWISE_COPY_SROA_0]], align 16
