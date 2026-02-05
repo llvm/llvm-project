@@ -1194,14 +1194,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     }
   }
 
-  if (CGM.getCodeGenOpts().StackProtectorGuardRecord) {
-    if (CGM.getCodeGenOpts().StackProtectorGuard != "global")
-      CGM.getDiags().Report(diag::err_opt_not_valid_without_opt)
-          << "-mstack-protector-guard-record"
-          << "-mstack-protector-guard=global";
-    Fn->addFnAttr("mstackprotector-guard-record");
-  }
-
   if (CGM.getCodeGenOpts().PackedStack) {
     if (getContext().getTargetInfo().getTriple().getArch() !=
         llvm::Triple::systemz)

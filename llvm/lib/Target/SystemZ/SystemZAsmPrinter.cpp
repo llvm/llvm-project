@@ -1052,7 +1052,7 @@ void SystemZAsmPrinter::lowerLOAD_SGA(const MachineInstr &MI,
     const GlobalVariable *GV = cast<GlobalVariable>(
         TLI->getSDagStackGuard(*M, TLI->getLibcallLoweringInfo()));
     // If configured, emit the `__stack_protector_loc` entry
-    if (MF.getFunction().hasFnAttribute("mstackprotector-guard-record"))
+    if (M->hasStackProtectorGuardRecord())
       emitStackProtectorLocEntry();
     // Emit the address load.
     if (M->getPICLevel() == PICLevel::NotPIC) {
