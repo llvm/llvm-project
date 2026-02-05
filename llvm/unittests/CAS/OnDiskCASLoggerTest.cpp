@@ -18,6 +18,12 @@
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
+#if defined(__APPLE__)
+#include <crt_externs.h>
+#elif !defined(_MSC_VER)
+// Forward declare environ in case it's not provided by stdlib.h.
+extern char **environ;
+#endif
 
 using namespace llvm;
 using namespace llvm::cas;
