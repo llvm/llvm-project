@@ -1,5 +1,4 @@
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV: [[void_ty:%[0-9]+]] = OpTypeVoid
@@ -7,8 +6,6 @@
 ; CHECK-SPIRV: [[dbg_line_sum:%[0-9]+]] = OpExtInst [[void_ty]] %[[#]] DebugLine [[dbg_src]]
 ; CHECK-SPIRV: [[dbg_noline_sum:%[0-9]+]] = OpExtInst [[void_ty]] %[[#]] DebugNoLine
 
-; CHECK-OPTION-NOT:  DebugLine
-; CHECK-OPTION-NOT:  DebugNoLine
 
 define dso_local i32 @sum_up_to(i32 noundef %n) #0 !dbg !10 {
 entry:

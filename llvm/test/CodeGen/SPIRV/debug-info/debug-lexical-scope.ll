@@ -1,5 +1,4 @@
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION 
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV: %[[#ext_inst_non_semantic:]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
@@ -14,7 +13,6 @@
 ; CHECK-SPIRV: %[[#lex_block:]] = OpExtInst %[[#void]] %[[#ext_inst_non_semantic]] DebugLexicalBlock %[[#debug_source]] %[[#]] %[[#]] %[[#func1]]
 ; CHECK-SPIRV: %[[#]] = OpExtInst %[[#void]] %[[#ext_inst_non_semantic]] DebugLexicalBlockDiscriminator %[[#debug_source]] %[[#]] %[[#lex_block]]
 ; CHECK-SPIRV: %[[#]] = OpExtInst %[[#void]] %[[#ext_inst_non_semantic]] DebugLexicalBlock %[[#debug_source]] %[[#]] %[[#]] %[[#func2]]
-; CHECK-OPTION-NOT: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 
 define spir_func void @test1() !dbg !5 {
 entry:

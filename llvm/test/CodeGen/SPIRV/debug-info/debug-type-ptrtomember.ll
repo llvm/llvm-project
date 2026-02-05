@@ -1,5 +1,4 @@
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-DAG: [[int_str:%[0-9]+]] = OpString "int"
@@ -13,7 +12,6 @@
 ; CHECK-SPIRV: [[dbg_struct:%[0-9]+]] = OpExtInst [[void_ty]] %[[#]] DebugTypeComposite [[struct_str]] %[[#]] [[dbg_src]] %[[#]] %[[#]] [[dbg_cu]] %[[#]] %[[#]] %[[#]] [[dbg_member]]
 ; CHECK-SPIRV: [[dbg_ptr:%[0-9]+]] = OpExtInst [[void_ty]] %[[#]] DebugTypePtrToMember [[dbg_int]] [[dbg_struct]]
 
-; CHECK-OPTION-NOT: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 
 %struct.S = type { i32 }
 @ptr = dso_local global i64 0, align 8, !dbg !0

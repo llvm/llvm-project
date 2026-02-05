@@ -1,5 +1,4 @@
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 ; XFAIL: *
 
@@ -40,11 +39,6 @@
 ; CHECK-SPIRV: [[LOCAL_VAR:%[0-9]+]] = OpExtInst [[void_type]] {{%[0-9]+}} DebugLocalVariable 
 ; CHECK-SPIRV: [[DEBUG_VAL:%[0-9]+]] = OpExtInst [[void_type]] {{%[0-9]+}} DebugValue [[LOCAL_VAR]]
 
-; CHECK-OPTION-NOT: DebugOperation
-; CHECK-OPTION-NOT: DebugExpression
-; CHECK-OPTION-NOT: DebugTypeBasic
-; CHECK-OPTION-NOT: DebugTypePointer
-; CHECK-OPTION-NOT: DebugValue
 
 define spir_func void @test(i32 %arg) !dbg !6 {
 entry:

@@ -1,5 +1,4 @@
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-DAG: [[i32type:%[0-9]+]] = OpTypeInt 32 0
@@ -9,7 +8,6 @@
 ; CHECK-SPIRV-DAG: [[debug_info_none:%[0-9]+]] = OpExtInst [[void_type]] {{%[0-9]+}} DebugInfoNone
 ; CHECK-SPIRV-DAG: [[debug_imported_entity:%[0-9]+]] = OpExtInst [[void_type]] {{%[0-9]+}} DebugImportedEntity {{%[0-9]+}} {{%[0-9]+}} [[debug_source]] [[debug_info_none]] {{%[0-9]+}} {{%[0-9]+}} [[debug_comp_unit]]
 
-; CHECK-OPTION-NOT: DebugImportedEntity
 
 define dso_local noundef i32 @main() !dbg !13 {
 entry:

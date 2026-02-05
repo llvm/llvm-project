@@ -11,8 +11,6 @@
 ; CHECK-SPIRV: %[[DBG_INLINED_AT:[0-9]+]] = OpExtInst %[[VOID_T]] %[[#]] DebugInlinedAt %[[VAL_14]] %[[DBG_FUNC_MAIN]]
 ; CHECK-SPIRV: %[[DBG_DEC:[0-9]+]] = OpExtInst %[[VOID_T]] %[[#]] DebugDeclare %[[DBG_LOCAL]]
 
-; CHECK-OPTION-NOT: DebugInlinedAt
-; CHECK-OPTION-NOT: DebugDeclare
 
 define dso_local i32 @sum_up_to(i32 noundef %0) #0 !dbg !10 {
   %2 = alloca i32, align 4

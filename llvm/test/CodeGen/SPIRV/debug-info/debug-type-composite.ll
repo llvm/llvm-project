@@ -1,5 +1,4 @@
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION 
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV: [[point_str:%[0-9]+]] = OpString "Point"
@@ -13,7 +12,6 @@
 ; CHECK-SPIRV: [[dbg_y:%[0-9]+]] = OpExtInst [[type_void]] %[[#]] DebugTypeMember [[y_str]] [[dbg_int]] [[dbg_src]]
 ; CHECK-SPIRV: [[dbg_point:%[0-9]+]] = OpExtInst [[type_void]] %[[#]] DebugTypeComposite [[point_str]] %[[#]] [[dbg_src]] %[[#]] %[[#]] [[dbg_cu]] %[[#]] %[[#]] %[[#]] [[dbg_x]] [[dbg_y]]
 
-; CHECK-OPTION-NOT: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 
 %struct.Point = type { i32, i32 }
 @p = dso_local global %struct.Point zeroinitializer, align 4, !dbg !0

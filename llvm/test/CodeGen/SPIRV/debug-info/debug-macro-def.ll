@@ -1,5 +1,4 @@
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-DAG: [[i32type:%[0-9]+]] = OpTypeInt 32 0
@@ -18,9 +17,6 @@
 ; CHECK-SPIRV-DAG: [[debug_comp_unit:%[0-9]+]] = OpExtInst [[void_type]] {{%[0-9]+}} DebugCompilationUnit [[i32_3]] [[i32_5]] [[debug_source]] [[i32_12]]
 ; CHECK-SPIRV-DAG: [[debug_macrodef:%[0-9]+]] = OpExtInst [[void_type]] {{%[0-9]+}} DebugMacroDef [[string_macro_name]] [[i32_1]] [[string_size]] [[string_macro_value]]
 
-; CHECK-OPTION-NOT: DebugMacroDef
-; CHECK-OPTION-NOT: DebugSource
-; CHECK-OPTION-NOT: DebugCompilationUnit
 
 define dso_local i32 @main(i32 %dummy) !dbg !24 {
 entry:

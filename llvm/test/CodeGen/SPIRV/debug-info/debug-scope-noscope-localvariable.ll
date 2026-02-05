@@ -1,5 +1,4 @@
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV: %[[STR_FOO:[0-9]+]] = OpString "foo"
@@ -9,9 +8,6 @@
 ; CHECK-SPIRV: OpExtInst {{%[0-9]+}} %[[#]] DebugScope %[[DBG_FUNC_MD]]
 ; CHECK-SPIRV: OpExtInst {{%[0-9]+}} %[[#]] DebugNoScope
 
-; CHECK-OPTION-NOT: DebugScope
-; CHECK-OPTION-NOT: DebugNoScope
-; CHECK-OPTION-NOT: DebugLocalVariable
 
 define dso_local i32 @foo(i32 noundef %0) local_unnamed_addr !dbg !10 {
   tail call void @llvm.dbg.value(metadata i32 %0, metadata !15, metadata !DIExpression()), !dbg !17

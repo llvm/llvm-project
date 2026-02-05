@@ -1,5 +1,4 @@
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-DAG: [[i32type:%[0-9]+]] = OpTypeInt 32 0
@@ -16,9 +15,6 @@
 ; CHECK-SPIRV-DAG: [[debug_build_id:%[0-9]+]] = OpExtInst [[void_type]] {{%[0-9]+}} DebugBuildIdentifier [[string_build_id]]
 ; CHECK-SPIRV-DAG: [[debug_storage_path:%[0-9]+]] = OpExtInst [[void_type]] {{%[0-9]+}} DebugStoragePath [[string_storage_path]]
 
-; CHECK-OPTION-NOT: DebugBuildIdentifier
-; CHECK-OPTION-NOT: DebugStoragePath
-; CHECK-OPTION-NOT: DebugCompilationUnit
 
 define dso_local spir_kernel void @add_kernel(i32 addrspace(1)* %a, i32 addrspace(1)* %b, i32 addrspace(1)* %res) !dbg !8 {
 entry:

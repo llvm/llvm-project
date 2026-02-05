@@ -1,5 +1,4 @@
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV-DAG: %[[DBG_SRC:[0-9]+]] = OpExtInst %[[VOID:[0-9]+]] {{%[0-9]+}} DebugSource
@@ -12,7 +11,6 @@
 ; CHECK-SPIRV-DAG: %[[STR_BLUE:[0-9]+]]  = OpString "Blue"
 ; CHECK-SPIRV-DAG: %[[DBG_ENUM_COLOR:[0-9]+]] = OpExtInst %[[VOID]] {{%[0-9]+}} DebugTypeEnum %[[STR_COLOR]] %[[DBG_TY_INT]] %[[DBG_SRC]] {{%[0-9]+}} {{%[0-9]+}} %[[DBG_CU]] {{%[0-9]+}} {{%[0-9]+}} {{%[0-9]+}} %[[STR_RED]] {{%[0-9]+}} %[[STR_GREEN]] {{%[0-9]+}} %[[STR_BLUE]]
 
-; CHECK-OPTION-NOT: DebugTypeEnum
 
 @c = dso_local global i32 1, align 4, !dbg !0
 

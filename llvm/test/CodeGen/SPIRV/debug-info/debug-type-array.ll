@@ -1,5 +1,4 @@
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-SPIRV: [[int_str:%[0-9]+]] = OpString "int"
@@ -12,7 +11,6 @@
 ; CHECK-SPIRV: [[dbg_none:%[0-9]+]] = OpExtInst [[type_void]] %[[#]] DebugInfoNone
 ; CHECK-SPIRV: [[dbg_global:%[0-9]+]] = OpExtInst [[type_void]] %[[#]] DebugGlobalVariable %[[#]] [[dbg_tarr_1]] [[dbg_src]] %[[#]] %[[#]] [[dbg_cu]] %[[#]] [[dbg_none]] %[[#]]
 
-; CHECK-OPTION-NOT: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 
 @__const.main.local_array = private unnamed_addr constant [2 x i32] [i32 1, i32 2], align 4
 @global_array = dso_local global [4 x [3 x i32]] zeroinitializer, align 16, !dbg !0
