@@ -23,7 +23,7 @@ using namespace llvm::cas;
 using namespace llvm::cas::ondisk;
 using namespace llvm::sys;
 
-class OnDiskCASLoggerTest: public testing::Test {
+class OnDiskCASLoggerTest : public testing::Test {
   std::vector<StringRef> EnvTable;
   std::vector<std::string> EnvStorage;
 
@@ -212,8 +212,8 @@ TEST_F(OnDiskCASLoggerTest, MultiProcess) {
   SmallVector<ProcessInfo> PIs;
   for (int I = 0; I < 5; ++I) {
     bool ExecutionFailed;
-    auto PI = ExecuteNoWait(Executable, Argv, getEnviron(), {}, 0,
-                            &Error, &ExecutionFailed);
+    auto PI = ExecuteNoWait(Executable, Argv, getEnviron(), {}, 0, &Error,
+                            &ExecutionFailed);
     ASSERT_FALSE(ExecutionFailed) << Error;
     PIs.push_back(std::move(PI));
   }
