@@ -1591,13 +1591,6 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   if (DstType->isBooleanType())
     return EmitConversionToBool(Src, SrcType);
 
-  // Also handle conversions to atomic bools
-  if (const auto *DstAsAtomic = DstType->getAs<AtomicType>()) {
-    QualType ValueType = DstAsAtomic->getValueType();
-    if (ValueType->isBooleanType())
-      return EmitConversionToBool(Src, ValueType);
-  }
-
   llvm::Type *DstTy = ConvertType(DstType);
 
   // Cast from half through float if half isn't a native type.
@@ -4042,10 +4035,15 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
   if (LHSLV.isBitField()) {
     Previous = Result;
     Result = EmitScalarConversion(Result, PromotionTypeCR, LHSTy, Loc);
-  } else
+  } else if (const auto *atomicTy = LHSTy->getAs<AtomicType>()) {
+    Result = EmitScalarConversion(Result, PromotionTypeCR,
+                                  atomicTy->getValueType(), Loc,
+                                  ScalarConversionOpts(CGF.SanOpts));
+  } else {
     Result = EmitScalarConversion(Result, PromotionTypeCR, LHSTy, Loc,
                                   ScalarConversionOpts(CGF.SanOpts));
-
+  }
+  
   if (atomicPHI) {
     llvm::BasicBlock *curBlock = Builder.GetInsertBlock();
     llvm::BasicBlock *contBB = CGF.createBasicBlock("atomic_cont", CGF.CurFn);
