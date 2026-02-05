@@ -13,6 +13,7 @@ define <2 x i8> @test_bitcast_assertion(<4 x i32> %vqaddq_v2.i.i, ptr %BS_VAR_0)
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    umov w10, v1.h[0]
 ; CHECK-NEXT:    str q0, [sp]
+; CHECK-NEXT:    and x10, x10, #0x3
 ; CHECK-NEXT:    umull x10, w10, w9
 ; CHECK-NEXT:    ldrh w10, [x8, x10]
 ; CHECK-NEXT:    stp q1, q1, [x0, #32]

@@ -234,44 +234,6 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known = Known.trunc(BitWidth);
     break;
   }
-
-  case TargetOpcode::G_BITCAST: {
-    Register SrcReg = MI.getOperand(1).getReg();
-    LLT SrcTy = MRI.getType(SrcReg);
-    APInt SrcDemanded;
-
-    // Only handle fixed vectors
-    if (SrcTy.isFixedVector() && DstTy.isFixedVector()) {
-      unsigned SrcNumElts = SrcTy.getNumElements();
-      unsigned DstNumElts = DstTy.getNumElements();
-
-      if (SrcNumElts == DstNumElts) {
-        SrcDemanded = DemandedElts;
-      } else if (DstNumElts > SrcNumElts) {
-        unsigned Ratio = DstNumElts / SrcNumElts;
-        SrcDemanded = APInt(SrcNumElts, 0);
-        for (unsigned i = 0; i < SrcNumElts; ++i) {
-          if (DemandedElts.extractBits(Ratio, i * Ratio).getBoolValue())
-            SrcDemanded.setBit(i);
-        }
-      } else {
-        unsigned Ratio = SrcNumElts / DstNumElts;
-        SrcDemanded = APInt(SrcNumElts, 0);
-        for (unsigned i = 0; i < DstNumElts; ++i) {
-          if (DemandedElts[i]) {
-            SrcDemanded.setBits(i * Ratio, (i + 1) * Ratio);
-          }
-        }
-      }
-    } else {
-      SrcDemanded = SrcTy.isFixedVector()
-                        ? APInt::getAllOnes(SrcTy.getNumElements())
-                        : APInt(1, 1);
-    }
-    computeKnownBitsImpl(SrcReg, Known2, SrcDemanded, Depth + 1);
-    Known = Known2;
-    break;
-  }
   case TargetOpcode::COPY:
   case TargetOpcode::G_PHI:
   case TargetOpcode::PHI: {
