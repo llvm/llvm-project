@@ -207,15 +207,16 @@ static bool runLowerExecSyncGlobals(Module &M) {
 
 class AMDGPULowerExecSyncLegacy : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
   AMDGPULowerExecSyncLegacy() : ModulePass(ID) {}
   bool runOnModule(Module &M) override;
 };
 
 } // namespace
 
-char AMDGPULowerExecSyncLegacy::ID = 0;
-char &llvm::AMDGPULowerExecSyncLegacyPassID = AMDGPULowerExecSyncLegacy::ID;
+const char AMDGPULowerExecSyncLegacy::ID = 0;
+const char &llvm::AMDGPULowerExecSyncLegacyPassID =
+    AMDGPULowerExecSyncLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(AMDGPULowerExecSyncLegacy, DEBUG_TYPE,
                       "AMDGPU lowering of execution synchronization", false,

@@ -45,7 +45,7 @@ ReachingDefPrinterPass::run(MachineFunction &MF,
 INITIALIZE_PASS(ReachingDefInfoWrapperPass, DEBUG_TYPE,
                 "Reaching Definitions Analysis", false, true)
 
-char ReachingDefInfoWrapperPass::ID = 0;
+const char ReachingDefInfoWrapperPass::ID = 0;
 
 ReachingDefInfoWrapperPass::ReachingDefInfoWrapperPass()
     : MachineFunctionPass(ID) {}

@@ -24,7 +24,7 @@
 
 using namespace llvm;
 
-char Localizer::ID = 0;
+const char Localizer::ID = 0;
 INITIALIZE_PASS_BEGIN(Localizer, DEBUG_TYPE,
                       "Move/duplicate certain instructions close to their use",
                       false, false)

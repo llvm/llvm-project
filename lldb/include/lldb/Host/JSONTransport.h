@@ -47,7 +47,7 @@ namespace lldb_private::transport {
 class TransportUnhandledContentsError
     : public llvm::ErrorInfo<TransportUnhandledContentsError> {
 public:
-  static char ID;
+  static const char ID;
 
   explicit TransportUnhandledContentsError(std::string unhandled_contents);
 
@@ -66,7 +66,7 @@ private:
 /// deserialized.
 class InvalidParams : public llvm::ErrorInfo<InvalidParams> {
 public:
-  static char ID;
+  static const char ID;
 
   explicit InvalidParams(std::string method, std::string context)
       : m_method(std::move(method)), m_context(std::move(context)) {}
@@ -86,7 +86,7 @@ private:
 /// An error to indicate that no handler was registered for a given method.
 class MethodNotFound : public llvm::ErrorInfo<MethodNotFound> {
 public:
-  static char ID;
+  static const char ID;
 
   static constexpr int kErrorCode = -32601;
 

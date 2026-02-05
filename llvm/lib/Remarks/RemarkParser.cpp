@@ -22,7 +22,7 @@
 using namespace llvm;
 using namespace llvm::remarks;
 
-char EndOfFileError::ID = 0;
+const char EndOfFileError::ID = 0;
 
 ParsedStringTable::ParsedStringTable(StringRef InBuffer) : Buffer(InBuffer) {
   while (!InBuffer.empty()) {

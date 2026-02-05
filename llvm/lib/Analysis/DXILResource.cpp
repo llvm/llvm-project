@@ -1130,7 +1130,7 @@ DXILResourceTypeWrapperPass::DXILResourceTypeWrapperPass()
 
 INITIALIZE_PASS(DXILResourceTypeWrapperPass, "dxil-resource-type",
                 "DXIL Resource Type Analysis", false, true)
-char DXILResourceTypeWrapperPass::ID = 0;
+const char DXILResourceTypeWrapperPass::ID = 0;
 
 ModulePass *llvm::createDXILResourceTypeWrapperPassPass() {
   return new DXILResourceTypeWrapperPass();
@@ -1171,7 +1171,7 @@ void DXILResourceWrapperPass::dump() const { print(dbgs(), nullptr); }
 
 INITIALIZE_PASS(DXILResourceWrapperPass, "dxil-resources",
                 "DXIL Resources Analysis", false, true)
-char DXILResourceWrapperPass::ID = 0;
+const char DXILResourceWrapperPass::ID = 0;
 
 ModulePass *llvm::createDXILResourceWrapperPassPass() {
   return new DXILResourceWrapperPass();
@@ -1201,7 +1201,7 @@ void DXILResourceBindingWrapperPass::releaseMemory() { BindingInfo.reset(); }
 
 INITIALIZE_PASS(DXILResourceBindingWrapperPass, "dxil-resource-binding",
                 "DXIL Resource Binding Analysis", false, true)
-char DXILResourceBindingWrapperPass::ID = 0;
+const char DXILResourceBindingWrapperPass::ID = 0;
 
 ModulePass *llvm::createDXILResourceBindingWrapperPassPass() {
   return new DXILResourceWrapperPass();

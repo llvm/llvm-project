@@ -28,7 +28,7 @@ struct FEntryInserter {
 };
 
 struct FEntryInserterLegacy : public MachineFunctionPass {
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   FEntryInserterLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override {
@@ -57,7 +57,7 @@ bool FEntryInserter::run(MachineFunction &MF) {
   return true;
 }
 
-char FEntryInserterLegacy::ID = 0;
-char &llvm::FEntryInserterID = FEntryInserterLegacy::ID;
+const char FEntryInserterLegacy::ID = 0;
+const char &llvm::FEntryInserterID = FEntryInserterLegacy::ID;
 INITIALIZE_PASS(FEntryInserterLegacy, "fentry-insert", "Insert fentry calls",
                 false, false)

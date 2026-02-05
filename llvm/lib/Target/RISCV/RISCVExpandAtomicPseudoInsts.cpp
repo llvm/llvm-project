@@ -32,7 +32,7 @@ class RISCVExpandAtomicPseudo : public MachineFunctionPass {
 public:
   const RISCVSubtarget *STI;
   const RISCVInstrInfo *TII;
-  static char ID;
+  static const char ID;
 
   RISCVExpandAtomicPseudo() : MachineFunctionPass(ID) {}
 
@@ -68,7 +68,7 @@ private:
 #endif
 };
 
-char RISCVExpandAtomicPseudo::ID = 0;
+const char RISCVExpandAtomicPseudo::ID = 0;
 
 bool RISCVExpandAtomicPseudo::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<RISCVSubtarget>();

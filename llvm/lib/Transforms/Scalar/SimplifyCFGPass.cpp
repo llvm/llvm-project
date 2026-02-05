@@ -388,7 +388,7 @@ PreservedAnalyses SimplifyCFGPass::run(Function &F,
 
 namespace {
 struct CFGSimplifyPass : public FunctionPass {
-  static char ID;
+  static const char ID;
   SimplifyCFGOptions Options;
   std::function<bool(const Function &)> PredicateFtor;
 
@@ -426,7 +426,7 @@ struct CFGSimplifyPass : public FunctionPass {
 };
 }
 
-char CFGSimplifyPass::ID = 0;
+const char CFGSimplifyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(CFGSimplifyPass, "simplifycfg", "Simplify the CFG", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)

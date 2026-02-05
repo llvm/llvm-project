@@ -39,7 +39,7 @@ namespace {
     bool AbortOnFailedISel;
 
   public:
-    static char ID; // Pass identification, replacement for typeid
+    static const char ID; // Pass identification, replacement for typeid
     ResetMachineFunction(bool EmitFallbackDiag = false,
                          bool AbortOnFailedISel = false)
         : MachineFunctionPass(ID), EmitFallbackDiag(EmitFallbackDiag),
@@ -95,7 +95,7 @@ namespace {
   };
 } // end anonymous namespace
 
-char ResetMachineFunction::ID = 0;
+const char ResetMachineFunction::ID = 0;
 INITIALIZE_PASS(ResetMachineFunction, DEBUG_TYPE,
                 "Reset machine function if ISel failed", false, false)
 

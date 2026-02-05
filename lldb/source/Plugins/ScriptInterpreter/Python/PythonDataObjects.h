@@ -655,7 +655,7 @@ private:
   PyObject *m_repr_bytes;
 
 public:
-  static char ID;
+  static const char ID;
   const char *toCString() const;
   PythonException(const char *caller = nullptr);
   void Restore();

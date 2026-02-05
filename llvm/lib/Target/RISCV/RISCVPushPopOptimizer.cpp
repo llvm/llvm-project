@@ -21,7 +21,7 @@ using namespace llvm;
 
 namespace {
 struct RISCVPushPopOpt : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
 
   RISCVPushPopOpt() : MachineFunctionPass(ID) {}
 
@@ -39,7 +39,7 @@ struct RISCVPushPopOpt : public MachineFunctionPass {
   StringRef getPassName() const override { return RISCV_PUSH_POP_OPT_NAME; }
 };
 
-char RISCVPushPopOpt::ID = 0;
+const char RISCVPushPopOpt::ID = 0;
 
 } // end of anonymous namespace
 

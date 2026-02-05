@@ -26,13 +26,13 @@ static cl::opt<bool>
 ViewEdgeBundles("view-edge-bundles", cl::Hidden,
                 cl::desc("Pop up a window to show edge bundle graphs"));
 
-char EdgeBundlesWrapperLegacy::ID = 0;
+const char EdgeBundlesWrapperLegacy::ID = 0;
 
 INITIALIZE_PASS(EdgeBundlesWrapperLegacy, "edge-bundles",
                 "Bundle Machine CFG Edges",
                 /* cfg = */ true, /* is_analysis = */ true)
 
-char &llvm::EdgeBundlesWrapperLegacyID = EdgeBundlesWrapperLegacy::ID;
+const char &llvm::EdgeBundlesWrapperLegacyID = EdgeBundlesWrapperLegacy::ID;
 
 void EdgeBundlesWrapperLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();

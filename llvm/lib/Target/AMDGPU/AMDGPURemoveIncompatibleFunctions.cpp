@@ -65,7 +65,7 @@ private:
 
 class AMDGPURemoveIncompatibleFunctionsLegacy : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPURemoveIncompatibleFunctionsLegacy(const TargetMachine *TM)
       : ModulePass(ID), TM(TM) {}
@@ -212,7 +212,7 @@ bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
 INITIALIZE_PASS(AMDGPURemoveIncompatibleFunctionsLegacy, DEBUG_TYPE,
                 "AMDGPU Remove Incompatible Functions", false, false)
 
-char AMDGPURemoveIncompatibleFunctionsLegacy::ID = 0;
+const char AMDGPURemoveIncompatibleFunctionsLegacy::ID = 0;
 
 ModulePass *
 llvm::createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *TM) {

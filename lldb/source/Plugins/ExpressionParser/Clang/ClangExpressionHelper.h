@@ -31,7 +31,7 @@ class ClangExpressionHelper
                                ExpressionTypeSystemHelper> {
 public:
   // LLVM RTTI support
-  static char ID;
+  static const char ID;
 
   /// Return the object that the parser should use when resolving external
   /// values.  May be NULL if everything should be self-contained.

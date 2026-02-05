@@ -164,7 +164,7 @@ class IVUsersWrapperPass : public LoopPass {
   std::unique_ptr<IVUsers> IU;
 
 public:
-  static char ID;
+  static const char ID;
 
   IVUsersWrapperPass();
 

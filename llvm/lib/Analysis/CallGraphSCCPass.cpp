@@ -59,7 +59,7 @@ namespace {
 
 class CGPassManager : public ModulePass, public PMDataManager {
 public:
-  static char ID;
+  static const char ID;
 
   explicit CGPassManager() : ModulePass(ID) {}
 
@@ -117,7 +117,7 @@ private:
 
 } // end anonymous namespace.
 
-char CGPassManager::ID = 0;
+const char CGPassManager::ID = 0;
 
 bool CGPassManager::RunPassOnSCC(Pass *P, CallGraphSCC &CurSCC,
                                  CallGraph &CG, bool &CallGraphUpToDate,
@@ -665,7 +665,7 @@ namespace {
     raw_ostream &OS;       // raw_ostream to print on.
 
   public:
-    static char ID;
+    static const char ID;
 
     PrintCallGraphPass(const std::string &B, raw_ostream &OS)
       : CallGraphSCCPass(ID), Banner(B), OS(OS) {}
@@ -718,14 +718,14 @@ namespace {
 
 } // end anonymous namespace.
 
-char PrintCallGraphPass::ID = 0;
+const char PrintCallGraphPass::ID = 0;
 
 Pass *CallGraphSCCPass::createPrinterPass(raw_ostream &OS,
                                           const std::string &Banner) const {
   return new PrintCallGraphPass(Banner, OS);
 }
 
-char DummyCGSCCPass::ID = 0;
+const char DummyCGSCCPass::ID = 0;
 
 INITIALIZE_PASS(DummyCGSCCPass, "DummyCGSCCPass", "DummyCGSCCPass", false,
                 false)

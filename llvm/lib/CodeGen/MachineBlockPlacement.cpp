@@ -636,7 +636,7 @@ public:
 
 class MachineBlockPlacementLegacy : public MachineFunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   MachineBlockPlacementLegacy() : MachineFunctionPass(ID) {}
 
@@ -675,9 +675,9 @@ public:
 
 } // end anonymous namespace
 
-char MachineBlockPlacementLegacy::ID = 0;
+const char MachineBlockPlacementLegacy::ID = 0;
 
-char &llvm::MachineBlockPlacementID = MachineBlockPlacementLegacy::ID;
+const char &llvm::MachineBlockPlacementID = MachineBlockPlacementLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(MachineBlockPlacementLegacy, DEBUG_TYPE,
                       "Branch Probability Basic Block Placement", false, false)
@@ -3867,7 +3867,7 @@ public:
 
 class MachineBlockPlacementStatsLegacy : public MachineFunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   MachineBlockPlacementStatsLegacy() : MachineFunctionPass(ID) {}
 
@@ -3888,9 +3888,10 @@ public:
 
 } // end anonymous namespace
 
-char MachineBlockPlacementStatsLegacy::ID = 0;
+const char MachineBlockPlacementStatsLegacy::ID = 0;
 
-char &llvm::MachineBlockPlacementStatsID = MachineBlockPlacementStatsLegacy::ID;
+const char &llvm::MachineBlockPlacementStatsID =
+    MachineBlockPlacementStatsLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(MachineBlockPlacementStatsLegacy, "block-placement-stats",
                       "Basic Block Placement Stats", false, false)

@@ -79,7 +79,7 @@ namespace {
   // returns up, and create conditional returns, to avoid unnecessary
   // branch-to-blr sequences.
   struct PPCTOCRegDeps : public MachineFunctionPass {
-    static char ID;
+    static const char ID;
     PPCTOCRegDeps() : MachineFunctionPass(ID) {}
 
   protected:
@@ -136,7 +136,7 @@ public:
 INITIALIZE_PASS(PPCTOCRegDeps, DEBUG_TYPE,
                 "PowerPC TOC Register Dependencies", false, false)
 
-char PPCTOCRegDeps::ID = 0;
+const char PPCTOCRegDeps::ID = 0;
 FunctionPass*
 llvm::createPPCTOCRegDepsPass() { return new PPCTOCRegDeps(); }
 

@@ -219,7 +219,7 @@ private:
 
 class BasicBlockSectionsProfileReaderWrapperPass : public ImmutablePass {
 public:
-  static char ID;
+  static const char ID;
   BasicBlockSectionsProfileReader BBSPR;
 
   BasicBlockSectionsProfileReaderWrapperPass(const MemoryBuffer *Buf)

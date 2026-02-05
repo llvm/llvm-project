@@ -220,7 +220,7 @@ void PhiValuesWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
 }
 
-char PhiValuesWrapperPass::ID = 0;
+const char PhiValuesWrapperPass::ID = 0;
 
 INITIALIZE_PASS(PhiValuesWrapperPass, "phi-values", "Phi Values Analysis", false,
                 true)

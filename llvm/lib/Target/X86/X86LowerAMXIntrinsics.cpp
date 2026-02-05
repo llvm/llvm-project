@@ -663,7 +663,7 @@ PreservedAnalyses X86LowerAMXIntrinsicsPass::run(Function &F,
 namespace {
 class X86LowerAMXIntrinsicsLegacyPass : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   X86LowerAMXIntrinsicsLegacyPass() : FunctionPass(ID) {}
 
@@ -689,7 +689,7 @@ public:
 } // namespace
 
 static const char PassName[] = "Lower AMX intrinsics";
-char X86LowerAMXIntrinsicsLegacyPass::ID = 0;
+const char X86LowerAMXIntrinsicsLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(X86LowerAMXIntrinsicsLegacyPass, DEBUG_TYPE, PassName,
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)

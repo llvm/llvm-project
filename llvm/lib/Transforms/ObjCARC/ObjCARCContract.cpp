@@ -118,7 +118,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
 
-  static char ID;
+  static const char ID;
   ObjCARCContractLegacyPass() : FunctionPass(ID) {
     initializeObjCARCContractLegacyPassPass(*PassRegistry::getPassRegistry());
   }
@@ -746,7 +746,7 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
 //                             Misc Pass Manager
 //===----------------------------------------------------------------------===//
 
-char ObjCARCContractLegacyPass::ID = 0;
+const char ObjCARCContractLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ObjCARCContractLegacyPass, "objc-arc-contract",
                       "ObjC ARC contraction", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)

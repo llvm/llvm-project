@@ -748,7 +748,7 @@ void DWARFDebugNames::Entry::dump(ScopedPrinter &W) const {
   }
 }
 
-char DWARFDebugNames::SentinelError::ID;
+const char DWARFDebugNames::SentinelError::ID = 0;
 std::error_code DWARFDebugNames::SentinelError::convertToErrorCode() const {
   return inconvertibleErrorCode();
 }

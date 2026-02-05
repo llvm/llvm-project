@@ -63,7 +63,7 @@ class NVPTXAAWrapperPass : public ImmutablePass {
   std::unique_ptr<NVPTXAAResult> Result;
 
 public:
-  static char ID;
+  static const char ID;
 
   NVPTXAAWrapperPass();
 
@@ -88,7 +88,7 @@ public:
 // Note that NVPTXAA will run before BasicAA for compile time considerations.
 class NVPTXExternalAAWrapper : public ExternalAAWrapperPass {
 public:
-  static char ID;
+  static const char ID;
 
   NVPTXExternalAAWrapper()
       : ExternalAAWrapperPass(

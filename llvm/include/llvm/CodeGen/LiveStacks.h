@@ -97,7 +97,7 @@ class LiveStacksWrapperLegacy : public MachineFunctionPass {
   LiveStacks Impl;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   LiveStacksWrapperLegacy() : MachineFunctionPass(ID) {}
 

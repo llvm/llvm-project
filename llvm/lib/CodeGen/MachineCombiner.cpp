@@ -78,7 +78,7 @@ class MachineCombiner : public MachineFunctionPass {
   TargetSchedModel TSchedModel;
 
 public:
-  static char ID;
+  static const char ID;
   MachineCombiner() : MachineFunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -120,8 +120,8 @@ private:
 };
 }
 
-char MachineCombiner::ID = 0;
-char &llvm::MachineCombinerID = MachineCombiner::ID;
+const char MachineCombiner::ID = 0;
+const char &llvm::MachineCombinerID = MachineCombiner::ID;
 
 INITIALIZE_PASS_BEGIN(MachineCombiner, DEBUG_TYPE,
                       "Machine InstCombiner", false, false)

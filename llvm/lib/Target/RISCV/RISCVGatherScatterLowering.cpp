@@ -46,7 +46,7 @@ class RISCVGatherScatterLowering : public FunctionPass {
   DenseMap<GetElementPtrInst *, std::pair<Value *, Value *>> StridedAddrs;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   RISCVGatherScatterLowering() : FunctionPass(ID) {}
 
@@ -75,7 +75,7 @@ private:
 
 } // end anonymous namespace
 
-char RISCVGatherScatterLowering::ID = 0;
+const char RISCVGatherScatterLowering::ID = 0;
 
 INITIALIZE_PASS(RISCVGatherScatterLowering, DEBUG_TYPE,
                 "RISC-V gather/scatter lowering pass", false, false)

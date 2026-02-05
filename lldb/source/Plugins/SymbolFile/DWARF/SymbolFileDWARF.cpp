@@ -112,7 +112,7 @@ using namespace llvm::dwarf;
 
 LLDB_PLUGIN_DEFINE(SymbolFileDWARF)
 
-char SymbolFileDWARF::ID;
+const char SymbolFileDWARF::ID = 0;
 
 namespace {
 

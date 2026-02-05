@@ -78,7 +78,7 @@ class AArch64RedundantCopyElimination : public MachineFunctionPass {
   LiveRegUnits OptBBClobberedRegs, OptBBUsedRegs;
 
 public:
-  static char ID;
+  static const char ID;
   AArch64RedundantCopyElimination() : MachineFunctionPass(ID) {}
 
   struct RegImm {
@@ -99,7 +99,7 @@ public:
     return "AArch64 Redundant Copy Elimination";
   }
 };
-char AArch64RedundantCopyElimination::ID = 0;
+const char AArch64RedundantCopyElimination::ID = 0;
 }
 
 INITIALIZE_PASS(AArch64RedundantCopyElimination, "aarch64-copyelim",

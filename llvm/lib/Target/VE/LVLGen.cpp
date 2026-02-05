@@ -21,7 +21,7 @@ struct LVLGen : public MachineFunctionPass {
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
 
-  static char ID;
+  static const char ID;
   LVLGen() : MachineFunctionPass(ID) {}
   bool runOnMachineBasicBlock(MachineBasicBlock &MBB);
   bool runOnMachineFunction(MachineFunction &F) override;
@@ -29,7 +29,7 @@ struct LVLGen : public MachineFunctionPass {
   unsigned getVL(const MachineInstr &MI);
   int getVLIndex(unsigned Opcode);
 };
-char LVLGen::ID = 0;
+const char LVLGen::ID = 0;
 
 } // end of anonymous namespace
 

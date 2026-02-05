@@ -74,7 +74,7 @@ public:
 };
 
 struct LLVM_ABI PostDominatorTreeWrapperPass : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   PostDominatorTree DT;
 

@@ -14859,7 +14859,7 @@ INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(ScalarEvolutionWrapperPass, "scalar-evolution",
                     "Scalar Evolution Analysis", false, true)
 
-char ScalarEvolutionWrapperPass::ID = 0;
+const char ScalarEvolutionWrapperPass::ID = 0;
 
 ScalarEvolutionWrapperPass::ScalarEvolutionWrapperPass() : FunctionPass(ID) {}
 

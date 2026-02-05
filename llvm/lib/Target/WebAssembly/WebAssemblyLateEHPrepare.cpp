@@ -46,12 +46,12 @@ class WebAssemblyLateEHPrepare final : public MachineFunctionPass {
   SmallPtrSet<MachineBasicBlock *, 8> CatchRetBBs;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyLateEHPrepare() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyLateEHPrepare::ID = 0;
+const char WebAssemblyLateEHPrepare::ID = 0;
 INITIALIZE_PASS(WebAssemblyLateEHPrepare, DEBUG_TYPE,
                 "WebAssembly Late Exception Preparation", false, false)
 

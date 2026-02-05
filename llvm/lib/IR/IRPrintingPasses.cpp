@@ -32,7 +32,7 @@ class PrintModulePassWrapper : public ModulePass {
   bool ShouldPreserveUseListOrder;
 
 public:
-  static char ID;
+  static const char ID;
   PrintModulePassWrapper() : ModulePass(ID), OS(dbgs()) {}
   PrintModulePassWrapper(raw_ostream &OS, const std::string &Banner,
                          bool ShouldPreserveUseListOrder)
@@ -76,7 +76,7 @@ class PrintFunctionPassWrapper : public FunctionPass {
   std::string Banner;
 
 public:
-  static char ID;
+  static const char ID;
   PrintFunctionPassWrapper() : FunctionPass(ID), OS(dbgs()) {}
   PrintFunctionPassWrapper(raw_ostream &OS, const std::string &Banner)
       : FunctionPass(ID), OS(OS), Banner(Banner) {}
@@ -103,10 +103,10 @@ public:
 
 } // namespace
 
-char PrintModulePassWrapper::ID = 0;
+const char PrintModulePassWrapper::ID = 0;
 INITIALIZE_PASS(PrintModulePassWrapper, "print-module",
                 "Print module to stderr", false, true)
-char PrintFunctionPassWrapper::ID = 0;
+const char PrintFunctionPassWrapper::ID = 0;
 INITIALIZE_PASS(PrintFunctionPassWrapper, "print-function",
                 "Print function to stderr", false, true)
 

@@ -71,7 +71,7 @@ INITIALIZE_PASS_END(BranchProbabilityInfoWrapperPass, "branch-prob",
 BranchProbabilityInfoWrapperPass::BranchProbabilityInfoWrapperPass()
     : FunctionPass(ID) {}
 
-char BranchProbabilityInfoWrapperPass::ID = 0;
+const char BranchProbabilityInfoWrapperPass::ID = 0;
 
 // Weights are for internal use only. They are used by heuristics to help to
 // estimate edges' probability. Example:

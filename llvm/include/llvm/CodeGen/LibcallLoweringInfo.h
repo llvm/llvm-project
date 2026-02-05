@@ -128,7 +128,7 @@ class LLVM_ABI LibcallLoweringInfoWrapper : public ImmutablePass {
   RuntimeLibraryInfoWrapper *RuntimeLibcallsWrapper = nullptr;
 
 public:
-  static char ID;
+  static const char ID;
   LibcallLoweringInfoWrapper();
 
   const LibcallLoweringInfo &

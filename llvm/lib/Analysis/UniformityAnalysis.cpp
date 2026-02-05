@@ -148,7 +148,7 @@ PreservedAnalyses UniformityInfoPrinterPass::run(Function &F,
 //  UniformityInfoWrapperPass Implementation
 //===----------------------------------------------------------------------===//
 
-char UniformityInfoWrapperPass::ID = 0;
+const char UniformityInfoWrapperPass::ID = 0;
 
 UniformityInfoWrapperPass::UniformityInfoWrapperPass() : FunctionPass(ID) {}
 

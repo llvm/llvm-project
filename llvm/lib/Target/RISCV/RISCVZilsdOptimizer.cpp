@@ -62,7 +62,7 @@ namespace {
 //===----------------------------------------------------------------------===//
 class RISCVPreAllocZilsdOpt : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   RISCVPreAllocZilsdOpt() : MachineFunctionPass(ID) {}
 
@@ -115,7 +115,7 @@ private:
 
 } // end anonymous namespace
 
-char RISCVPreAllocZilsdOpt::ID = 0;
+const char RISCVPreAllocZilsdOpt::ID = 0;
 
 INITIALIZE_PASS_BEGIN(RISCVPreAllocZilsdOpt, "riscv-prera-zilsd-opt",
                       "RISC-V pre-allocation Zilsd optimization", false, false)

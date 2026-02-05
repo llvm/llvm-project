@@ -58,7 +58,7 @@ NVPTXDAGToDAGISelLegacy::NVPTXDAGToDAGISelLegacy(NVPTXTargetMachine &tm,
     : SelectionDAGISelLegacy(
           ID, std::make_unique<NVPTXDAGToDAGISel>(tm, OptLevel)) {}
 
-char NVPTXDAGToDAGISelLegacy::ID = 0;
+const char NVPTXDAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(NVPTXDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 

@@ -174,40 +174,40 @@ class PPCBoolRetToInt : public FunctionPass {
   typedef DenseMap<Value *, Value *> B2IMap;
 
  public:
-  static char ID;
+   static const char ID;
 
-  PPCBoolRetToInt() : FunctionPass(ID) {}
+   PPCBoolRetToInt() : FunctionPass(ID) {}
 
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
+   bool runOnFunction(Function &F) override {
+     if (skipFunction(F))
+       return false;
 
-    auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-    if (!TPC)
-      return false;
+     auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
+     if (!TPC)
+       return false;
 
-    auto &TM = TPC->getTM<PPCTargetMachine>();
-    ST = TM.getSubtargetImpl(F);
-    Func = &F;
+     auto &TM = TPC->getTM<PPCTargetMachine>();
+     ST = TM.getSubtargetImpl(F);
+     Func = &F;
 
-    PHINodeSet PromotablePHINodes = getPromotablePHINodes(F);
-    B2IMap Bool2IntMap;
-    bool Changed = false;
-    for (auto &BB : F) {
-      for (auto &I : BB) {
-        if (auto *R = dyn_cast<ReturnInst>(&I))
-          if (F.getReturnType()->isIntegerTy(1))
-            Changed |=
-              runOnUse(R->getOperandUse(0), PromotablePHINodes, Bool2IntMap);
+     PHINodeSet PromotablePHINodes = getPromotablePHINodes(F);
+     B2IMap Bool2IntMap;
+     bool Changed = false;
+     for (auto &BB : F) {
+       for (auto &I : BB) {
+         if (auto *R = dyn_cast<ReturnInst>(&I))
+           if (F.getReturnType()->isIntegerTy(1))
+             Changed |=
+                 runOnUse(R->getOperandUse(0), PromotablePHINodes, Bool2IntMap);
 
-        if (auto *CI = dyn_cast<CallInst>(&I))
-          for (auto &U : CI->operands())
-            if (U->getType()->isIntegerTy(1))
-              Changed |= runOnUse(U, PromotablePHINodes, Bool2IntMap);
-      }
-    }
+         if (auto *CI = dyn_cast<CallInst>(&I))
+           for (auto &U : CI->operands())
+             if (U->getType()->isIntegerTy(1))
+               Changed |= runOnUse(U, PromotablePHINodes, Bool2IntMap);
+       }
+     }
 
-    return Changed;
+     return Changed;
   }
 
   bool runOnUse(Use &U, const PHINodeSet &PromotablePHINodes,
@@ -278,7 +278,7 @@ private:
 
 } // end anonymous namespace
 
-char PPCBoolRetToInt::ID = 0;
+const char PPCBoolRetToInt::ID = 0;
 INITIALIZE_PASS(PPCBoolRetToInt, "ppc-bool-ret-to-int",
                 "Convert i1 constants to i32/i64 if they are returned", false,
                 false)

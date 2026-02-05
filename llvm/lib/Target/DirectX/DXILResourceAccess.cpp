@@ -616,13 +616,13 @@ public:
   StringRef getPassName() const override { return "DXIL Resource Access"; }
   DXILResourceAccessLegacy() : FunctionPass(ID) {}
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
   }
 };
-char DXILResourceAccessLegacy::ID = 0;
+const char DXILResourceAccessLegacy::ID = 0;
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(DXILResourceAccessLegacy, DEBUG_TYPE,

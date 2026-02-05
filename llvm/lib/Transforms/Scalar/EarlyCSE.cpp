@@ -1869,7 +1869,7 @@ namespace {
 template<bool UseMemorySSA>
 class EarlyCSELegacyCommonPass : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   EarlyCSELegacyCommonPass() : FunctionPass(ID) {
     if (UseMemorySSA)
@@ -1914,8 +1914,7 @@ public:
 
 using EarlyCSELegacyPass = EarlyCSELegacyCommonPass</*UseMemorySSA=*/false>;
 
-template<>
-char EarlyCSELegacyPass::ID = 0;
+template <> const char EarlyCSELegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(EarlyCSELegacyPass, "early-cse", "Early CSE", false,
                       false)
@@ -1928,8 +1927,7 @@ INITIALIZE_PASS_END(EarlyCSELegacyPass, "early-cse", "Early CSE", false, false)
 using EarlyCSEMemSSALegacyPass =
     EarlyCSELegacyCommonPass</*UseMemorySSA=*/true>;
 
-template<>
-char EarlyCSEMemSSALegacyPass::ID = 0;
+template <> const char EarlyCSEMemSSALegacyPass::ID = 0;
 
 FunctionPass *llvm::createEarlyCSEPass(bool UseMemorySSA) {
   if (UseMemorySSA)

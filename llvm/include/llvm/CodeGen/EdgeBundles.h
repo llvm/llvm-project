@@ -65,7 +65,7 @@ public:
 
 class EdgeBundlesWrapperLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   EdgeBundlesWrapperLegacy() : MachineFunctionPass(ID) {}
 
   EdgeBundles &getEdgeBundles() { return *Impl; }

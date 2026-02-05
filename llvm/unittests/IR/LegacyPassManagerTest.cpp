@@ -50,7 +50,7 @@ namespace llvm {
     struct ModuleNDNM: public ModulePass {
     public:
       static char run;
-      static char ID;
+      static const char ID;
       ModuleNDNM() : ModulePass(ID) { }
       bool runOnModule(Module &M) override {
         run++;
@@ -60,39 +60,39 @@ namespace llvm {
         AU.setPreservesAll();
       }
     };
-    char ModuleNDNM::ID=0;
+    const char ModuleNDNM::ID = 0;
     char ModuleNDNM::run=0;
 
     struct ModuleNDM : public ModulePass {
     public:
       static char run;
-      static char ID;
+      static const char ID;
       ModuleNDM() : ModulePass(ID) {}
       bool runOnModule(Module &M) override {
         run++;
         return true;
       }
     };
-    char ModuleNDM::ID=0;
+    const char ModuleNDM::ID = 0;
     char ModuleNDM::run=0;
 
     struct ModuleNDM2 : public ModulePass {
     public:
       static char run;
-      static char ID;
+      static const char ID;
       ModuleNDM2() : ModulePass(ID) {}
       bool runOnModule(Module &M) override {
         run++;
         return true;
       }
     };
-    char ModuleNDM2::ID=0;
+    const char ModuleNDM2::ID = 0;
     char ModuleNDM2::run=0;
 
     struct ModuleDNM : public ModulePass {
     public:
       static char run;
-      static char ID;
+      static const char ID;
       ModuleDNM() : ModulePass(ID) {
         initializeModuleNDMPass(*PassRegistry::getPassRegistry());
       }
@@ -105,7 +105,7 @@ namespace llvm {
         AU.setPreservesAll();
       }
     };
-    char ModuleDNM::ID=0;
+    const char ModuleDNM::ID = 0;
     char ModuleDNM::run=0;
 
     template<typename P>
@@ -123,7 +123,7 @@ namespace llvm {
         runc++;
       }
     public:
-      static char ID;
+      static const char ID;
       static void finishedOK(int run) {
         EXPECT_GT(runc, 0);
         EXPECT_TRUE(initialized);
@@ -142,7 +142,7 @@ namespace llvm {
         allocated--;
       }
     };
-    template<typename P> char PassTestBase<P>::ID;
+    template <typename P> const char PassTestBase<P>::ID = 0;
     template<typename P> int PassTestBase<P>::runc;
     template<typename P> bool PassTestBase<P>::initialized;
     template<typename P> bool PassTestBase<P>::finalized;
@@ -225,7 +225,7 @@ namespace llvm {
 
     struct OnTheFlyTest: public ModulePass {
     public:
-      static char ID;
+      static const char ID;
       OnTheFlyTest() : ModulePass(ID) {
         initializeFPassPass(*PassRegistry::getPassRegistry());
       }
@@ -243,7 +243,7 @@ namespace llvm {
         AU.addRequired<FPass>();
       }
     };
-    char OnTheFlyTest::ID=0;
+    const char OnTheFlyTest::ID = 0;
 
     TEST(PassManager, RunOnce) {
       LLVMContext Context;
@@ -369,7 +369,7 @@ namespace llvm {
     // Optional module pass.
     struct ModuleOpt: public ModulePass {
       char run = 0;
-      static char ID;
+      static const char ID;
       ModuleOpt() : ModulePass(ID) { }
       bool runOnModule(Module &M) override {
         if (!skipModule(M))
@@ -377,7 +377,7 @@ namespace llvm {
         return false;
       }
     };
-    char ModuleOpt::ID=0;
+    const char ModuleOpt::ID = 0;
 
     TEST(PassManager, CustomOptPassGate) {
       LLVMContext Context0;

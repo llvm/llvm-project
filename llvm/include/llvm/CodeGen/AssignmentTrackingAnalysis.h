@@ -125,7 +125,7 @@ class AssignmentTrackingAnalysis : public FunctionPass {
   std::unique_ptr<FunctionVarLocs> Results;
 
 public:
-  static char ID;
+  static const char ID;
 
   AssignmentTrackingAnalysis();
 

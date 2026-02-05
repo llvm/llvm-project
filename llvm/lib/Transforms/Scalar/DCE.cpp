@@ -117,7 +117,7 @@ PreservedAnalyses DCEPass::run(Function &F, FunctionAnalysisManager &AM) {
 
 namespace {
 struct DCELegacyPass : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   DCELegacyPass() : FunctionPass(ID) {
     initializeDCELegacyPassPass(*PassRegistry::getPassRegistry());
   }
@@ -139,7 +139,7 @@ struct DCELegacyPass : public FunctionPass {
 };
 }
 
-char DCELegacyPass::ID = 0;
+const char DCELegacyPass::ID = 0;
 INITIALIZE_PASS(DCELegacyPass, "dce", "Dead Code Elimination", false, false)
 
 FunctionPass *llvm::createDeadCodeEliminationPass() {

@@ -37,7 +37,7 @@ using namespace llvm;
 STATISTIC(NumAssigned   , "Number of registers assigned");
 STATISTIC(NumUnassigned , "Number of registers unassigned");
 
-char LiveRegMatrixWrapperLegacy::ID = 0;
+const char LiveRegMatrixWrapperLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(LiveRegMatrixWrapperLegacy, "liveregmatrix",
                       "Live Register Matrix", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)

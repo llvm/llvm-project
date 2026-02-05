@@ -57,8 +57,8 @@ LiveVariablesPrinterPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-char LiveVariablesWrapperPass::ID = 0;
-char &llvm::LiveVariablesID = LiveVariablesWrapperPass::ID;
+const char LiveVariablesWrapperPass::ID = 0;
+const char &llvm::LiveVariablesID = LiveVariablesWrapperPass::ID;
 INITIALIZE_PASS_BEGIN(LiveVariablesWrapperPass, "livevars",
                       "Live Variable Analysis", false, false)
 INITIALIZE_PASS_DEPENDENCY(UnreachableMachineBlockElimLegacy)

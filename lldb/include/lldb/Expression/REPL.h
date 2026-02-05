@@ -23,7 +23,7 @@ class REPL : public IOHandlerDelegate,
              public llvm::RTTIExtends<REPL, llvm::RTTIRoot> {
 public:
   /// LLVM RTTI support
-  static char ID;
+  static const char ID;
 
   REPL(Target &target);
 

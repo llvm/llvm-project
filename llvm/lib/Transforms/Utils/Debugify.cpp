@@ -894,7 +894,7 @@ struct DebugifyModulePass : public ModulePass {
     AU.setPreservesAll();
   }
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 
 private:
   StringRef NameOfWrappedPass;
@@ -922,7 +922,7 @@ struct DebugifyFunctionPass : public FunctionPass {
     AU.setPreservesAll();
   }
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 
 private:
   StringRef NameOfWrappedPass;
@@ -962,7 +962,7 @@ struct CheckDebugifyModulePass : public ModulePass {
     AU.setPreservesAll();
   }
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 
 private:
   StringRef NameOfWrappedPass;
@@ -1008,7 +1008,7 @@ struct CheckDebugifyFunctionPass : public FunctionPass {
     AU.setPreservesAll();
   }
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 
 private:
   StringRef NameOfWrappedPass;
@@ -1175,18 +1175,18 @@ void DebugifyEachInstrumentation::registerCallbacks(
       });
 }
 
-char DebugifyModulePass::ID = 0;
+const char DebugifyModulePass::ID = 0;
 static RegisterPass<DebugifyModulePass> DM("debugify",
                                            "Attach debug info to everything");
 
-char CheckDebugifyModulePass::ID = 0;
+const char CheckDebugifyModulePass::ID = 0;
 static RegisterPass<CheckDebugifyModulePass>
     CDM("check-debugify", "Check debug info from -debugify");
 
-char DebugifyFunctionPass::ID = 0;
+const char DebugifyFunctionPass::ID = 0;
 static RegisterPass<DebugifyFunctionPass> DF("debugify-function",
                                              "Attach debug info to a function");
 
-char CheckDebugifyFunctionPass::ID = 0;
+const char CheckDebugifyFunctionPass::ID = 0;
 static RegisterPass<CheckDebugifyFunctionPass>
     CDF("check-debugify-function", "Check debug info from -debugify-function");

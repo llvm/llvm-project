@@ -405,7 +405,7 @@ class RegAllocFast : public MachineFunctionPass {
   RegAllocFastImpl Impl;
 
 public:
-  static char ID;
+  static const char ID;
 
   RegAllocFast(const RegAllocFilterFunc F = nullptr, bool ClearVirtRegs_ = true)
       : MachineFunctionPass(ID), Impl(F, ClearVirtRegs_) {}
@@ -440,7 +440,7 @@ public:
 
 } // end anonymous namespace
 
-char RegAllocFast::ID = 0;
+const char RegAllocFast::ID = 0;
 
 INITIALIZE_PASS(RegAllocFast, "regallocfast", "Fast Register Allocator", false,
                 false)

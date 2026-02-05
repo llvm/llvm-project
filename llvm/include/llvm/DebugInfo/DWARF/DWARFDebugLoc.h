@@ -147,7 +147,7 @@ private:
 
 class LLVM_ABI ResolverError : public ErrorInfo<ResolverError> {
 public:
-  static char ID;
+  static const char ID;
 
   ResolverError(uint32_t Index, dwarf::LoclistEntries Kind) : Index(Index), Kind(Kind) {}
 

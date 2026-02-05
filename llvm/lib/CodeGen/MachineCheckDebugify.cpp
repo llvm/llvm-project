@@ -112,9 +112,9 @@ struct CheckDebugMachineModule : public ModulePass {
     AU.setPreservesAll();
   }
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 };
-char CheckDebugMachineModule::ID = 0;
+const char CheckDebugMachineModule::ID = 0;
 
 } // end anonymous namespace
 

@@ -110,7 +110,7 @@ protected:
   };
 
 public:
-  static char ID;
+  static const char ID;
 
   /// A variable that can be added to the constraint set as a "column". The
   /// value bounds infrastructure can compute bounds for variables and compare

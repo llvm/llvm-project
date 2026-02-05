@@ -139,7 +139,7 @@ PushArgMD(KernelArgMD &MD, const MDVector &V) {
 namespace {
 
 class R600OpenCLImageTypeLoweringPass : public ModulePass {
-  static char ID;
+  static const char ID;
 
   LLVMContext *Context;
   Type *Int32Type;
@@ -367,7 +367,7 @@ public:
 
 } // end anonymous namespace
 
-char R600OpenCLImageTypeLoweringPass::ID = 0;
+const char R600OpenCLImageTypeLoweringPass::ID = 0;
 
 ModulePass *llvm::createR600OpenCLImageTypeLoweringPass() {
   return new R600OpenCLImageTypeLoweringPass();

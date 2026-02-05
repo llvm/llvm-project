@@ -31,7 +31,7 @@ class LLVM_ABI MachineCycleInfoWrapperPass : public MachineFunctionPass {
   MachineCycleInfo CI;
 
 public:
-  static char ID;
+  static const char ID;
 
   MachineCycleInfoWrapperPass();
 

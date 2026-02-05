@@ -37,7 +37,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-char AppleObjCRuntimeV1::ID = 0;
+const char AppleObjCRuntimeV1::ID = 0;
 
 AppleObjCRuntimeV1::AppleObjCRuntimeV1(Process *process)
     : AppleObjCRuntime(process), m_hash_signature(),

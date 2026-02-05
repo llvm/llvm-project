@@ -55,7 +55,7 @@ public:
 namespace {
 class RISCVCodeGenPrepareLegacyPass : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   RISCVCodeGenPrepareLegacyPass() : FunctionPass(ID) {}
 
@@ -309,7 +309,7 @@ INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(RISCVCodeGenPrepareLegacyPass, DEBUG_TYPE, PASS_NAME, false,
                     false)
 
-char RISCVCodeGenPrepareLegacyPass::ID = 0;
+const char RISCVCodeGenPrepareLegacyPass::ID = 0;
 
 FunctionPass *llvm::createRISCVCodeGenPrepareLegacyPass() {
   return new RISCVCodeGenPrepareLegacyPass();

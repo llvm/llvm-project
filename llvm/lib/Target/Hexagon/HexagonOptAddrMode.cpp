@@ -54,7 +54,7 @@ namespace {
 
 class HexagonOptAddrMode : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   HexagonOptAddrMode() : MachineFunctionPass(ID) {}
 
@@ -123,7 +123,7 @@ private:
 
 } // end anonymous namespace
 
-char HexagonOptAddrMode::ID = 0;
+const char HexagonOptAddrMode::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonOptAddrMode, "amode-opt",
                       "Optimize addressing mode", false, false)

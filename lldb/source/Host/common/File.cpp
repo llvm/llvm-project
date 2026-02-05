@@ -969,6 +969,6 @@ Status SerialPort::Close() {
   return NativeFile::Close();
 }
 
-char File::ID = 0;
-char NativeFile::ID = 0;
-char SerialPort::ID = 0;
+const char File::ID = 0;
+const char NativeFile::ID = 0;
+const char SerialPort::ID = 0;

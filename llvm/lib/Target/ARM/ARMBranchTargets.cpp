@@ -31,7 +31,7 @@ using namespace llvm;
 namespace {
 class ARMBranchTargets : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   ARMBranchTargets() : MachineFunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -42,7 +42,7 @@ private:
 };
 } // end anonymous namespace
 
-char ARMBranchTargets::ID = 0;
+const char ARMBranchTargets::ID = 0;
 
 INITIALIZE_PASS(ARMBranchTargets, "arm-branch-targets", ARM_BRANCH_TARGETS_NAME,
                 false, false)

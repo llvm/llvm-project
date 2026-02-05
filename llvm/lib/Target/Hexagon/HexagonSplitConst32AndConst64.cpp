@@ -33,7 +33,7 @@ using namespace llvm;
 namespace {
   class HexagonSplitConst32AndConst64 : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
     HexagonSplitConst32AndConst64() : MachineFunctionPass(ID) {}
     StringRef getPassName() const override {
       return "Hexagon Split Const32s and Const64s";
@@ -45,7 +45,7 @@ namespace {
   };
 }
 
-char HexagonSplitConst32AndConst64::ID = 0;
+const char HexagonSplitConst32AndConst64::ID = 0;
 
 INITIALIZE_PASS(HexagonSplitConst32AndConst64, "split-const-for-sdata",
       "Hexagon Split Const32s and Const64s", false, false)

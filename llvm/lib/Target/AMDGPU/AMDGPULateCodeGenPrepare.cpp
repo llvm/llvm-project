@@ -568,7 +568,7 @@ AMDGPULateCodeGenPreparePass::run(Function &F, FunctionAnalysisManager &FAM) {
 
 class AMDGPULateCodeGenPrepareLegacy : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPULateCodeGenPrepareLegacy() : FunctionPass(ID) {}
 
@@ -611,7 +611,7 @@ INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPULateCodeGenPrepareLegacy, DEBUG_TYPE,
                     "AMDGPU IR late optimizations", false, false)
 
-char AMDGPULateCodeGenPrepareLegacy::ID = 0;
+const char AMDGPULateCodeGenPrepareLegacy::ID = 0;
 
 FunctionPass *llvm::createAMDGPULateCodeGenPrepareLegacyPass() {
   return new AMDGPULateCodeGenPrepareLegacy();

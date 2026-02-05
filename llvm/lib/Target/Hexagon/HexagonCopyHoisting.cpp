@@ -33,7 +33,7 @@ namespace {
 class HexagonCopyHoisting : public MachineFunctionPass {
 
 public:
-  static char ID;
+  static const char ID;
   HexagonCopyHoisting() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "Hexagon Copy Hoisting"; }
@@ -64,10 +64,10 @@ public:
 
 } // namespace
 
-char HexagonCopyHoisting::ID = 0;
+const char HexagonCopyHoisting::ID = 0;
 
 namespace llvm {
-char &HexagonCopyHoistingID = HexagonCopyHoisting::ID;
+const char &HexagonCopyHoistingID = HexagonCopyHoisting::ID;
 } // namespace llvm
 
 bool HexagonCopyHoisting::runOnMachineFunction(MachineFunction &Fn) {

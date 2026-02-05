@@ -40,7 +40,7 @@ GCEmptyBasicBlocksPass::run(MachineFunction &MF,
 
 class GCEmptyBasicBlocksLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   GCEmptyBasicBlocksLegacy() : MachineFunctionPass(ID) {}
 
@@ -100,7 +100,7 @@ bool removeEmptyBlocks(MachineFunction &MF) {
   return NumRemoved != 0;
 }
 
-char GCEmptyBasicBlocksLegacy::ID = 0;
+const char GCEmptyBasicBlocksLegacy::ID = 0;
 INITIALIZE_PASS(GCEmptyBasicBlocksLegacy, "gc-empty-basic-blocks",
                 "Removes empty basic blocks and redirects their uses to their "
                 "fallthrough blocks.",

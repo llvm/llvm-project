@@ -166,7 +166,7 @@ class NVPTXLowerArgsLegacyPass : public FunctionPass {
   bool runOnFunction(Function &F) override;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   NVPTXLowerArgsLegacyPass() : FunctionPass(ID) {}
   StringRef getPassName() const override {
     return "Lower pointer arguments of CUDA kernels";
@@ -177,7 +177,7 @@ public:
 };
 } // namespace
 
-char NVPTXLowerArgsLegacyPass::ID = 1;
+const char NVPTXLowerArgsLegacyPass::ID = 1;
 
 INITIALIZE_PASS_BEGIN(NVPTXLowerArgsLegacyPass, "nvptx-lower-args",
                       "Lower arguments (NVPTX)", false, false)

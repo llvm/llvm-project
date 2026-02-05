@@ -53,7 +53,7 @@ TEST(ModuleTest, sortGlobalsByName) {
 
 TEST(ModuleTest, randomNumberGenerator) {
   LLVMContext Context;
-  static char ID;
+  static const char ID = 0;
   struct DummyPass : ModulePass {
     DummyPass() : ModulePass(ID) {}
     bool runOnModule(Module &) override { return true; }

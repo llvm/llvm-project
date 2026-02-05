@@ -1023,7 +1023,7 @@ class LLVM_ABI AAResultsWrapperPass : public FunctionPass {
   std::unique_ptr<AAResults> AAR;
 
 public:
-  static char ID;
+  static const char ID;
 
   AAResultsWrapperPass();
 
@@ -1042,7 +1042,7 @@ struct ExternalAAWrapperPass : ImmutablePass {
 
   CallbackT CB;
 
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
 
   LLVM_ABI ExternalAAWrapperPass();
 

@@ -99,7 +99,7 @@ class MachineBlockHashInfo : public MachineFunctionPass {
   DenseMap<const MachineBasicBlock *, uint64_t> MBBHashInfo;
 
 public:
-  static char ID;
+  static const char ID;
   MachineBlockHashInfo();
 
   StringRef getPassName() const override { return "Basic Block Hash Compute"; }

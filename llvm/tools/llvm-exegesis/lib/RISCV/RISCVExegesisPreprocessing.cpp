@@ -22,7 +22,7 @@ using namespace llvm;
 
 namespace {
 struct RISCVExegesisPreprocessing : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
 
   RISCVExegesisPreprocessing() : MachineFunctionPass(ID) {}
 
@@ -35,7 +35,7 @@ struct RISCVExegesisPreprocessing : public MachineFunctionPass {
 };
 } // anonymous namespace
 
-char RISCVExegesisPreprocessing::ID = 0;
+const char RISCVExegesisPreprocessing::ID = 0;
 
 static bool processAVLOperand(MachineInstr &MI, MachineRegisterInfo &MRI,
                               const TargetInstrInfo &TII) {

@@ -217,7 +217,7 @@ namespace {
     bool isPositionIndependentOrROPI;
 
   public:
-    static char ID;
+    static const char ID;
 
     ARMConstantIslands() : MachineFunctionPass(ID) {}
 
@@ -290,7 +290,7 @@ namespace {
 
 } // end anonymous namespace
 
-char ARMConstantIslands::ID = 0;
+const char ARMConstantIslands::ID = 0;
 
 /// verify - check BBOffsets, BBSizes, alignment of islands
 void ARMConstantIslands::verify() {

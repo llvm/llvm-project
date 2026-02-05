@@ -30,7 +30,7 @@ public:
 
   static llvm::StringRef GetPluginNameStatic() { return "apple-objc-v1"; }
 
-  static char ID;
+  static const char ID;
 
   bool isA(const void *ClassID) const override {
     return ClassID == &ID || AppleObjCRuntime::isA(ClassID);

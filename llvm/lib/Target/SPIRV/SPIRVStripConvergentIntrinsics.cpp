@@ -24,7 +24,7 @@ using namespace llvm;
 namespace {
 class SPIRVStripConvergentIntrinsics : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SPIRVStripConvergentIntrinsics() : FunctionPass(ID) {}
 
@@ -77,7 +77,7 @@ public:
 };
 } // namespace
 
-char SPIRVStripConvergentIntrinsics::ID = 0;
+const char SPIRVStripConvergentIntrinsics::ID = 0;
 INITIALIZE_PASS(SPIRVStripConvergentIntrinsics, "strip-convergent-intrinsics",
                 "SPIRV strip convergent intrinsics", false, false)
 

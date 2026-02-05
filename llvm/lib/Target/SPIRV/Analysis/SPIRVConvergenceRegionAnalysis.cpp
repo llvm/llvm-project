@@ -311,7 +311,7 @@ ConvergenceRegionInfo llvm::SPIRV::getConvergenceRegions(Function &F,
   return Analyzer.analyze();
 }
 
-char SPIRVConvergenceRegionAnalysisWrapperPass::ID = 0;
+const char SPIRVConvergenceRegionAnalysisWrapperPass::ID = 0;
 
 SPIRVConvergenceRegionAnalysisWrapperPass::
     SPIRVConvergenceRegionAnalysisWrapperPass()

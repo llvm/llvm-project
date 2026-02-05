@@ -23,7 +23,7 @@ namespace {
 // block.
 class NVPTXAllocaHoisting : public FunctionPass {
 public:
-  static char ID; // Pass ID
+  static const char ID; // Pass ID
   NVPTXAllocaHoisting() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -56,7 +56,7 @@ bool NVPTXAllocaHoisting::runOnFunction(Function &function) {
   return functionModified;
 }
 
-char NVPTXAllocaHoisting::ID = 0;
+const char NVPTXAllocaHoisting::ID = 0;
 
 INITIALIZE_PASS(
     NVPTXAllocaHoisting, "alloca-hoisting",

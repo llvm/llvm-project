@@ -61,7 +61,7 @@ struct ThunkArgInfo {
 
 class AArch64Arm64ECCallLowering : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
   AArch64Arm64ECCallLowering() : ModulePass(ID) {}
 
   Function *buildExitThunk(FunctionType *FnTy, AttributeList Attrs);
@@ -1018,7 +1018,7 @@ bool AArch64Arm64ECCallLowering::processFunction(
   return true;
 }
 
-char AArch64Arm64ECCallLowering::ID = 0;
+const char AArch64Arm64ECCallLowering::ID = 0;
 INITIALIZE_PASS(AArch64Arm64ECCallLowering, "Arm64ECCallLowering",
                 "AArch64Arm64ECCallLowering", false, false)
 

@@ -156,7 +156,7 @@ LLVM_DUMP_METHOD void RegionInfoPass::dump() const {
 }
 #endif
 
-char RegionInfoPass::ID = 0;
+const char RegionInfoPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(RegionInfoPass, "regions",
                 "Detect single entry single exit regions", true, true)

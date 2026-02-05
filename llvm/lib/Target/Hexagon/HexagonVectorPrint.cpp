@@ -49,7 +49,7 @@ class HexagonVectorPrint : public MachineFunctionPass {
   const HexagonRegisterInfo *QRI = nullptr;
 
 public:
-  static char ID;
+  static const char ID;
 
   HexagonVectorPrint() : MachineFunctionPass(ID) {}
 
@@ -60,7 +60,7 @@ public:
 
 } // end anonymous namespace
 
-char HexagonVectorPrint::ID = 0;
+const char HexagonVectorPrint::ID = 0;
 
 static bool isVecReg(unsigned Reg) {
   return (Reg >= Hexagon::V0 && Reg <= Hexagon::V31) ||

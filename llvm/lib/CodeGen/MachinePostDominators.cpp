@@ -59,7 +59,7 @@ MachinePostDominatorTreePrinterPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-char MachinePostDominatorTreeWrapperPass::ID = 0;
+const char MachinePostDominatorTreeWrapperPass::ID = 0;
 
 //declare initializeMachinePostDominatorTreePass
 INITIALIZE_PASS(MachinePostDominatorTreeWrapperPass, "machinepostdomtree",

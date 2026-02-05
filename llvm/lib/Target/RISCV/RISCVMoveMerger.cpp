@@ -22,7 +22,7 @@ using namespace llvm;
 
 namespace {
 struct RISCVMoveMerge : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
 
   RISCVMoveMerge() : MachineFunctionPass(ID) {}
 
@@ -52,7 +52,7 @@ struct RISCVMoveMerge : public MachineFunctionPass {
   StringRef getPassName() const override { return RISCV_MOVE_MERGE_NAME; }
 };
 
-char RISCVMoveMerge::ID = 0;
+const char RISCVMoveMerge::ID = 0;
 
 } // end of anonymous namespace
 

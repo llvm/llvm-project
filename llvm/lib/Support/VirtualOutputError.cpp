@@ -20,9 +20,9 @@ void OutputError::anchor() {}
 void OutputConfigError::anchor() {}
 void TempFileOutputError::anchor() {}
 
-char OutputError::ID = 0;
-char OutputConfigError::ID = 0;
-char TempFileOutputError::ID = 0;
+const char OutputError::ID = 0;
+const char OutputConfigError::ID = 0;
+const char TempFileOutputError::ID = 0;
 
 void OutputError::log(raw_ostream &OS) const {
   OS << getOutputPath() << ": ";

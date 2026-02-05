@@ -71,13 +71,13 @@ public:
   ///@{
   /// Add the specified ID to the required set of the usage info for a pass.
   LLVM_ABI AnalysisUsage &addRequiredID(const void *ID);
-  LLVM_ABI AnalysisUsage &addRequiredID(char &ID);
+  LLVM_ABI AnalysisUsage &addRequiredID(const char &ID);
   template<class PassClass>
   AnalysisUsage &addRequired() {
     return addRequiredID(PassClass::ID);
   }
 
-  LLVM_ABI AnalysisUsage &addRequiredTransitiveID(char &ID);
+  LLVM_ABI AnalysisUsage &addRequiredTransitiveID(const char &ID);
   template<class PassClass>
   AnalysisUsage &addRequiredTransitive() {
     return addRequiredTransitiveID(PassClass::ID);
@@ -90,7 +90,7 @@ public:
     pushUnique(Preserved, ID);
     return *this;
   }
-  AnalysisUsage &addPreservedID(char &ID) {
+  AnalysisUsage &addPreservedID(const char &ID) {
     pushUnique(Preserved, &ID);
     return *this;
   }
@@ -109,7 +109,7 @@ public:
     pushUnique(Used, ID);
     return *this;
   }
-  AnalysisUsage &addUsedIfAvailableID(char &ID) {
+  AnalysisUsage &addUsedIfAvailableID(const char &ID) {
     pushUnique(Used, &ID);
     return *this;
   }

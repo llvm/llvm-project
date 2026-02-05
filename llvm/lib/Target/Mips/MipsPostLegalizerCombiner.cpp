@@ -86,7 +86,7 @@ MipsPostLegalizerCombinerImpl::MipsPostLegalizerCombinerImpl(
 
 class MipsPostLegalizerCombiner : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   MipsPostLegalizerCombiner(bool IsOptNone = false);
 
@@ -145,7 +145,7 @@ bool MipsPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   return Impl.combineMachineInstrs();
 }
 
-char MipsPostLegalizerCombiner::ID = 0;
+const char MipsPostLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(MipsPostLegalizerCombiner, DEBUG_TYPE,
                       "Combine Mips machine instrs after legalization", false,
                       false)

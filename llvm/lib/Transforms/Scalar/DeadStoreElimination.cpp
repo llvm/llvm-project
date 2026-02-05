@@ -2703,7 +2703,7 @@ namespace {
 /// A legacy pass for the legacy pass manager that wraps \c DSEPass.
 class DSELegacyPass : public FunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   DSELegacyPass() : FunctionPass(ID) {
     initializeDSELegacyPassPass(*PassRegistry::getPassRegistry());
@@ -2752,7 +2752,7 @@ public:
 
 } // end anonymous namespace
 
-char DSELegacyPass::ID = 0;
+const char DSELegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(DSELegacyPass, "dse", "Dead Store Elimination", false,
                       false)

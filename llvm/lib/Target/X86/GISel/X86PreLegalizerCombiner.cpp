@@ -94,7 +94,7 @@ bool X86PreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
 
 class X86PreLegalizerCombiner : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   X86PreLegalizerCombiner();
 
@@ -159,7 +159,7 @@ bool X86PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   return Impl.combineMachineInstrs();
 }
 
-char X86PreLegalizerCombiner::ID = 0;
+const char X86PreLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(X86PreLegalizerCombiner, DEBUG_TYPE,
                       "Combine X86 machine instrs before legalization", false,
                       false)

@@ -19,8 +19,8 @@
 using namespace llvm;
 using namespace llvm::vfs;
 
-char OutputFileImpl::ID = 0;
-char NullOutputFileImpl::ID = 0;
+const char OutputFileImpl::ID = 0;
+const char NullOutputFileImpl::ID = 0;
 
 void OutputFileImpl::anchor() {}
 void NullOutputFileImpl::anchor() {}

@@ -449,7 +449,7 @@ void ShaderFlagsAnalysisWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<DXILMetadataAnalysisWrapperPass>();
 }
 
-char ShaderFlagsAnalysisWrapper::ID = 0;
+const char ShaderFlagsAnalysisWrapper::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ShaderFlagsAnalysisWrapper, "dx-shader-flag-analysis",
                       "DXIL Shader Flag Analysis", true, true)

@@ -39,7 +39,7 @@ namespace {
   /// expanded to an array of n elements indexed by the thread ID where n is the
   /// fixed number hardware threads supported by the device.
   struct XCoreLowerThreadLocal : public ModulePass {
-    static char ID;
+    static const char ID;
 
     XCoreLowerThreadLocal() : ModulePass(ID) {}
 
@@ -49,7 +49,7 @@ namespace {
   };
 }
 
-char XCoreLowerThreadLocal::ID = 0;
+const char XCoreLowerThreadLocal::ID = 0;
 
 INITIALIZE_PASS(XCoreLowerThreadLocal, "xcore-lower-thread-local",
                 "Lower thread local variables", false, false)

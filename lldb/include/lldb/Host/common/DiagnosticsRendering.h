@@ -91,7 +91,7 @@ public:
   StructuredData::ObjectSP GetAsStructuredData() const override {
     return Serialize(GetDetails());
   }
-  static char ID;
+  static const char ID;
 };
 
 } // namespace lldb_private

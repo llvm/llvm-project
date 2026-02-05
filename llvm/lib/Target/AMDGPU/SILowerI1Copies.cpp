@@ -886,7 +886,7 @@ SILowerI1CopiesPass::run(MachineFunction &MF,
 
 class SILowerI1CopiesLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SILowerI1CopiesLegacy() : MachineFunctionPass(ID) {
     initializeSILowerI1CopiesLegacyPass(*PassRegistry::getPassRegistry());
@@ -919,9 +919,9 @@ INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(SILowerI1CopiesLegacy, DEBUG_TYPE, "SI Lower i1 Copies",
                     false, false)
 
-char SILowerI1CopiesLegacy::ID = 0;
+const char SILowerI1CopiesLegacy::ID = 0;
 
-char &llvm::SILowerI1CopiesLegacyID = SILowerI1CopiesLegacy::ID;
+const char &llvm::SILowerI1CopiesLegacyID = SILowerI1CopiesLegacy::ID;
 
 FunctionPass *llvm::createSILowerI1CopiesLegacyPass() {
   return new SILowerI1CopiesLegacy();

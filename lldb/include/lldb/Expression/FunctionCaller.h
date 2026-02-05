@@ -55,7 +55,7 @@ namespace lldb_private {
 /// argument space will be managed for you.
 class FunctionCaller : public Expression {
   // LLVM RTTI support
-  static char ID;
+  static const char ID;
 
 public:
   bool isA(const void *ClassID) const override { return ClassID == &ID; }

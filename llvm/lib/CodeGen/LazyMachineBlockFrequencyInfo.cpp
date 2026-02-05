@@ -28,7 +28,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(LazyMachineBlockFrequencyInfoPass, DEBUG_TYPE,
                     "Lazy Machine Block Frequency Analysis", true, true)
 
-char LazyMachineBlockFrequencyInfoPass::ID = 0;
+const char LazyMachineBlockFrequencyInfoPass::ID = 0;
 
 LazyMachineBlockFrequencyInfoPass::LazyMachineBlockFrequencyInfoPass()
     : MachineFunctionPass(ID) {}

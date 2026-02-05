@@ -141,7 +141,7 @@ class LLVM_ABI PhiValuesWrapperPass : public FunctionPass {
   std::unique_ptr<PhiValues> Result;
 
 public:
-  static char ID;
+  static const char ID;
   PhiValuesWrapperPass();
 
   PhiValues &getResult() { return *Result; }

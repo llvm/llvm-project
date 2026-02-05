@@ -102,7 +102,7 @@ namespace clang {
     llvm_unreachable("Function not implemented.");
   }
 
-  char ASTImportError::ID;
+  const char ASTImportError::ID = 0;
 
   template <class T>
   static SmallVector<Decl *, 2>

@@ -210,7 +210,7 @@ bool ApplyCloning(MachineFunction &MF,
 
 class BasicBlockPathCloning : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   BasicBlockSectionsProfileReaderWrapperPass *BBSectionsProfileReader = nullptr;
 
@@ -227,7 +227,7 @@ public:
 
 } // namespace
 
-char BasicBlockPathCloning::ID = 0;
+const char BasicBlockPathCloning::ID = 0;
 INITIALIZE_PASS_BEGIN(
     BasicBlockPathCloning, "bb-path-cloning",
     "Applies path clonings for the -basic-block-sections=list option", false,

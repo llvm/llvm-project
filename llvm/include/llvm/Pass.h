@@ -102,7 +102,7 @@ class LLVM_ABI Pass {
   PassKind Kind;
 
 public:
-  explicit Pass(PassKind K, char &pid) : PassID(&pid), Kind(K) {}
+  explicit Pass(PassKind K, const char &pid) : PassID(&pid), Kind(K) {}
   Pass(const Pass &) = delete;
   Pass &operator=(const Pass &) = delete;
   virtual ~Pass();
@@ -216,7 +216,7 @@ public:
   /// obviously cannot give you a properly typed instance of the class if you
   /// don't have the class name available (use getAnalysisIfAvailable if you
   /// do), but it can tell you if you need to preserve the pass at least.
-  bool mustPreserveAnalysisID(char &AID) const;
+  bool mustPreserveAnalysisID(const char &AID) const;
 
   /// getAnalysis<AnalysisType>() - This function is used by subclasses to get
   /// to the analysis information that they claim to use by overriding the
@@ -254,7 +254,7 @@ public:
 ///
 class LLVM_ABI ModulePass : public Pass {
 public:
-  explicit ModulePass(char &pid) : Pass(PT_Module, pid) {}
+  explicit ModulePass(const char &pid) : Pass(PT_Module, pid) {}
 
   // Force out-of-line virtual method.
   ~ModulePass() override;
@@ -284,7 +284,7 @@ protected:
 ///
 class LLVM_ABI ImmutablePass : public ModulePass {
 public:
-  explicit ImmutablePass(char &pid) : ModulePass(pid) {}
+  explicit ImmutablePass(const char &pid) : ModulePass(pid) {}
 
   // Force out-of-line virtual method.
   ~ImmutablePass() override;
@@ -313,7 +313,7 @@ public:
 ///
 class LLVM_ABI FunctionPass : public Pass {
 public:
-  explicit FunctionPass(char &pid) : Pass(PT_Function, pid) {}
+  explicit FunctionPass(const char &pid) : Pass(PT_Function, pid) {}
 
   /// createPrinterPass - Get a function printer pass.
   Pass *createPrinterPass(raw_ostream &OS,

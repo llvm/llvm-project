@@ -161,7 +161,7 @@ public:
 
 class PHIElimination : public MachineFunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   PHIElimination() : MachineFunctionPass(ID) {}
 
@@ -201,9 +201,9 @@ STATISTIC(NumLowered, "Number of phis lowered");
 STATISTIC(NumCriticalEdgesSplit, "Number of critical edges split");
 STATISTIC(NumReused, "Number of reused lowered phis");
 
-char PHIElimination::ID = 0;
+const char PHIElimination::ID = 0;
 
-char &llvm::PHIEliminationID = PHIElimination::ID;
+const char &llvm::PHIEliminationID = PHIElimination::ID;
 
 INITIALIZE_PASS_BEGIN(PHIElimination, DEBUG_TYPE,
                       "Eliminate PHI nodes for register allocation", false,

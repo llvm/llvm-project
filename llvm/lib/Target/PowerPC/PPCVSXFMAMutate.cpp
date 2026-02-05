@@ -55,7 +55,7 @@ namespace {
   // (Altivec and scalar floating-point registers), we need to transform the
   // copies into subregister copies with other restrictions.
   struct PPCVSXFMAMutate : public MachineFunctionPass {
-    static char ID;
+    static const char ID;
     PPCVSXFMAMutate() : MachineFunctionPass(ID) {}
 
     LiveIntervals *LIS;
@@ -369,9 +369,9 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(PPCVSXFMAMutate, DEBUG_TYPE,
                     "PowerPC VSX FMA Mutation", false, false)
 
-char &llvm::PPCVSXFMAMutateID = PPCVSXFMAMutate::ID;
+const char &llvm::PPCVSXFMAMutateID = PPCVSXFMAMutate::ID;
 
-char PPCVSXFMAMutate::ID = 0;
+const char PPCVSXFMAMutate::ID = 0;
 FunctionPass *llvm::createPPCVSXFMAMutatePass() {
   return new PPCVSXFMAMutate();
 }

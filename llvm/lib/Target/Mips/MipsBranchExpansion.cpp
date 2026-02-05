@@ -132,7 +132,7 @@ struct MBBInfo {
 
 class MipsBranchExpansion : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   MipsBranchExpansion()
       : MachineFunctionPass(ID), ABI(MipsABIInfo::Unknown()) {}
@@ -179,7 +179,7 @@ private:
 
 } // end of anonymous namespace
 
-char MipsBranchExpansion::ID = 0;
+const char MipsBranchExpansion::ID = 0;
 
 INITIALIZE_PASS(MipsBranchExpansion, DEBUG_TYPE,
                 "Expand out of range branch instructions and fix forbidden"

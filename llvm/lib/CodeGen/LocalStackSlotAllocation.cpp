@@ -98,7 +98,7 @@ namespace {
 
   class LocalStackSlotPass : public MachineFunctionPass {
   public:
-    static char ID; // Pass identification, replacement for typeid
+    static const char ID; // Pass identification, replacement for typeid
 
     explicit LocalStackSlotPass() : MachineFunctionPass(ID) {}
 
@@ -125,9 +125,9 @@ LocalStackSlotAllocationPass::run(MachineFunction &MF,
   return PA;
 }
 
-char LocalStackSlotPass::ID = 0;
+const char LocalStackSlotPass::ID = 0;
 
-char &llvm::LocalStackSlotAllocationID = LocalStackSlotPass::ID;
+const char &llvm::LocalStackSlotAllocationID = LocalStackSlotPass::ID;
 INITIALIZE_PASS(LocalStackSlotPass, DEBUG_TYPE,
                 "Local Stack Slot Allocation", false, false)
 

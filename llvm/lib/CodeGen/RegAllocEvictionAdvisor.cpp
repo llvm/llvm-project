@@ -61,7 +61,7 @@ cl::opt<unsigned> EvictInterferenceCutoff(
 #define LLVM_HAVE_TF_AOT
 #endif
 
-char RegAllocEvictionAdvisorAnalysisLegacy::ID = 0;
+const char RegAllocEvictionAdvisorAnalysisLegacy::ID = 0;
 INITIALIZE_PASS(RegAllocEvictionAdvisorAnalysisLegacy, "regalloc-evict",
                 "Regalloc eviction policy", false, true)
 

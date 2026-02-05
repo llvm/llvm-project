@@ -11,7 +11,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-char BorrowedStackFrame::ID;
+const char BorrowedStackFrame::ID = 0;
 
 BorrowedStackFrame::BorrowedStackFrame(
     StackFrameSP borrowed_frame_sp, uint32_t new_frame_index,

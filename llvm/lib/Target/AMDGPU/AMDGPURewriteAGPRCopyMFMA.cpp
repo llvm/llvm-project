@@ -592,7 +592,7 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
 
 class AMDGPURewriteAGPRCopyMFMALegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   RegisterClassInfo RegClassInfo;
 
   AMDGPURewriteAGPRCopyMFMALegacy() : MachineFunctionPass(ID) {
@@ -633,9 +633,9 @@ INITIALIZE_PASS_DEPENDENCY(LiveStacksWrapperLegacy)
 INITIALIZE_PASS_END(AMDGPURewriteAGPRCopyMFMALegacy, DEBUG_TYPE,
                     "AMDGPU Rewrite AGPR-Copy-MFMA", false, false)
 
-char AMDGPURewriteAGPRCopyMFMALegacy::ID = 0;
+const char AMDGPURewriteAGPRCopyMFMALegacy::ID = 0;
 
-char &llvm::AMDGPURewriteAGPRCopyMFMALegacyID =
+const char &llvm::AMDGPURewriteAGPRCopyMFMALegacyID =
     AMDGPURewriteAGPRCopyMFMALegacy::ID;
 
 bool AMDGPURewriteAGPRCopyMFMALegacy::runOnMachineFunction(

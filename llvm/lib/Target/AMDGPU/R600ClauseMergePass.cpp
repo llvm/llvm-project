@@ -53,7 +53,7 @@ private:
                        const MachineInstr &LatrCFAlu) const;
 
 public:
-  static char ID;
+  static const char ID;
 
   R600ClauseMergePass() : MachineFunctionPass(ID) { }
 
@@ -69,9 +69,9 @@ INITIALIZE_PASS_BEGIN(R600ClauseMergePass, DEBUG_TYPE,
 INITIALIZE_PASS_END(R600ClauseMergePass, DEBUG_TYPE,
                     "R600 Clause Merge", false, false)
 
-char R600ClauseMergePass::ID = 0;
+const char R600ClauseMergePass::ID = 0;
 
-char &llvm::R600ClauseMergePassID = R600ClauseMergePass::ID;
+const char &llvm::R600ClauseMergePassID = R600ClauseMergePass::ID;
 
 unsigned R600ClauseMergePass::getCFAluSize(const MachineInstr &MI) const {
   assert(isCFAlu(MI));

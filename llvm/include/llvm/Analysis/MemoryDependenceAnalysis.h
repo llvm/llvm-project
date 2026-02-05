@@ -533,7 +533,7 @@ class MemoryDependenceWrapperPass : public FunctionPass {
   std::optional<MemoryDependenceResults> MemDep;
 
 public:
-  static char ID;
+  static const char ID;
 
   MemoryDependenceWrapperPass();
   ~MemoryDependenceWrapperPass() override;

@@ -512,7 +512,7 @@ bool AMDGPURegBankCombinerImpl::isClampZeroToOne(MachineInstr *K0,
 
 class AMDGPURegBankCombiner : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPURegBankCombiner(bool IsOptNone = false);
 
@@ -577,7 +577,7 @@ bool AMDGPURegBankCombiner::runOnMachineFunction(MachineFunction &MF) {
   return Impl.combineMachineInstrs();
 }
 
-char AMDGPURegBankCombiner::ID = 0;
+const char AMDGPURegBankCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(AMDGPURegBankCombiner, DEBUG_TYPE,
                       "Combine AMDGPU machine instrs after regbankselect",
                       false, false)

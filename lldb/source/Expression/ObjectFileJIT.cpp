@@ -28,7 +28,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-char ObjectFileJIT::ID;
+const char ObjectFileJIT::ID = 0;
 
 void ObjectFileJIT::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),

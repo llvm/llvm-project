@@ -222,12 +222,12 @@ public:
   /// Perform ldtilecfg instructions inserting.
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  static char ID;
+  static const char ID;
 };
 
 } // end anonymous namespace
 
-char X86PreTileConfigLegacy::ID = 0;
+const char X86PreTileConfigLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(X86PreTileConfigLegacy, "tilepreconfig",
                       "Tile Register Pre-configure", false, false)

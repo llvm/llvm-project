@@ -40,7 +40,7 @@ STATISTIC(NumBroken, "Number of blocks inserted");
 
 namespace {
 struct BreakCriticalEdges : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   BreakCriticalEdges() : FunctionPass(ID) {
     initializeBreakCriticalEdgesPass(*PassRegistry::getPassRegistry());
   }
@@ -70,12 +70,12 @@ struct BreakCriticalEdges : public FunctionPass {
 };
 } // namespace
 
-char BreakCriticalEdges::ID = 0;
+const char BreakCriticalEdges::ID = 0;
 INITIALIZE_PASS(BreakCriticalEdges, "break-crit-edges",
                 "Break critical edges in CFG", false, false)
 
 // Publicly exposed interface to pass...
-char &llvm::BreakCriticalEdgesID = BreakCriticalEdges::ID;
+const char &llvm::BreakCriticalEdgesID = BreakCriticalEdges::ID;
 
 FunctionPass *llvm::createBreakCriticalEdgesPass() {
   return new BreakCriticalEdges();

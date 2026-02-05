@@ -64,7 +64,7 @@ public:
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &O) override;
 
-  static char ID;
+  static const char ID;
 };
 } // end of anonymous namespace
 
@@ -414,7 +414,7 @@ bool VEAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
   return false;
 }
 
-char VEAsmPrinter::ID = 0;
+const char VEAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(VEAsmPrinter, "ve-asm-printer", "VE Assembly Printer", false,
                 false)

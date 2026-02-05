@@ -34,7 +34,7 @@ class PMStack;
 
 class LLVM_ABI CallGraphSCCPass : public Pass {
 public:
-  explicit CallGraphSCCPass(char &pid) : Pass(PT_CallGraphSCC, pid) {}
+  explicit CallGraphSCCPass(const char &pid) : Pass(PT_CallGraphSCC, pid) {}
 
   /// createPrinterPass - Get a pass that prints the Module
   /// corresponding to a CallGraph.
@@ -115,7 +115,7 @@ public:
 /// codegen to follow bottom up order on call graph.
 class DummyCGSCCPass : public CallGraphSCCPass {
 public:
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
 
   DummyCGSCCPass() : CallGraphSCCPass(ID) {}
 

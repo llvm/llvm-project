@@ -1039,7 +1039,7 @@ private:
 
 class SIInsertWaitcntsLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   SIInsertWaitcntsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -1596,9 +1596,9 @@ INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(SIInsertWaitcntsLegacy, DEBUG_TYPE, "SI Insert Waitcnts",
                     false, false)
 
-char SIInsertWaitcntsLegacy::ID = 0;
+const char SIInsertWaitcntsLegacy::ID = 0;
 
-char &llvm::SIInsertWaitcntsID = SIInsertWaitcntsLegacy::ID;
+const char &llvm::SIInsertWaitcntsID = SIInsertWaitcntsLegacy::ID;
 
 FunctionPass *llvm::createSIInsertWaitcntsPass() {
   return new SIInsertWaitcntsLegacy();

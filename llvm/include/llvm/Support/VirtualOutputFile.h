@@ -30,7 +30,7 @@ class OutputFileImpl : public RTTIExtends<OutputFileImpl, RTTIRoot> {
   LLVM_ABI void anchor() override;
 
 public:
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
   ~OutputFileImpl() override = default;
 
   virtual Error keep() = 0;
@@ -43,7 +43,7 @@ class NullOutputFileImpl final
   LLVM_ABI void anchor() override;
 
 public:
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
   Error keep() final { return Error::success(); }
   Error discard() final { return Error::success(); }
   raw_pwrite_stream &getOS() final { return OS; }

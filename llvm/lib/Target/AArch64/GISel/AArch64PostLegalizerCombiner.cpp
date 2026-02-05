@@ -599,7 +599,7 @@ AArch64PostLegalizerCombinerImpl::AArch64PostLegalizerCombinerImpl(
 
 class AArch64PostLegalizerCombiner : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AArch64PostLegalizerCombiner(bool IsOptNone = false);
 
@@ -876,7 +876,7 @@ bool AArch64PostLegalizerCombiner::optimizeConsecutiveMemOpAddressing(
   return Changed;
 }
 
-char AArch64PostLegalizerCombiner::ID = 0;
+const char AArch64PostLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(AArch64PostLegalizerCombiner, DEBUG_TYPE,
                       "Combine AArch64 MachineInstrs after legalization", false,
                       false)

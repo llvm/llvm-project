@@ -45,7 +45,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  static char ID;
+  static const char ID;
 
 private:
   bool fixMulMulBB(MachineBasicBlock &MBB, const MipsInstrInfo &MipsII);
@@ -56,7 +56,7 @@ private:
 INITIALIZE_PASS(MipsMulMulBugFix, "mips-vr4300-mulmul-fix",
                 "Mips VR4300 mulmul bugfix", false, false)
 
-char MipsMulMulBugFix::ID = 0;
+const char MipsMulMulBugFix::ID = 0;
 
 bool MipsMulMulBugFix::runOnMachineFunction(MachineFunction &MF) {
   const MipsInstrInfo &MipsII =

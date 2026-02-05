@@ -30,7 +30,7 @@ using namespace llvm;
 // RGPassManager
 //
 
-char RGPassManager::ID = 0;
+const char RGPassManager::ID = 0;
 
 RGPassManager::RGPassManager() : FunctionPass(ID) {
   RI = nullptr;
@@ -180,7 +180,7 @@ private:
   raw_ostream &Out;       // raw_ostream to print on.
 
 public:
-  static char ID;
+  static const char ID;
   PrintRegionPass(const std::string &B, raw_ostream &o)
       : RegionPass(ID), Banner(B), Out(o) {}
 
@@ -205,7 +205,7 @@ public:
   StringRef getPassName() const override { return "Print Region IR"; }
 };
 
-char PrintRegionPass::ID = 0;
+const char PrintRegionPass::ID = 0;
 }  //end anonymous namespace
 
 //===----------------------------------------------------------------------===//

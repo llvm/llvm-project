@@ -52,7 +52,7 @@ struct DomViewerWrapperPass
     : public DOTGraphTraitsViewerWrapperPass<
           DominatorTreeWrapperPass, false, DominatorTree *,
           LegacyDominatorTreeWrapperPassAnalysisGraphTraits> {
-  static char ID;
+  static const char ID;
   DomViewerWrapperPass()
       : DOTGraphTraitsViewerWrapperPass<
             DominatorTreeWrapperPass, false, DominatorTree *,
@@ -63,7 +63,7 @@ struct DomOnlyViewerWrapperPass
     : public DOTGraphTraitsViewerWrapperPass<
           DominatorTreeWrapperPass, true, DominatorTree *,
           LegacyDominatorTreeWrapperPassAnalysisGraphTraits> {
-  static char ID;
+  static const char ID;
   DomOnlyViewerWrapperPass()
       : DOTGraphTraitsViewerWrapperPass<
             DominatorTreeWrapperPass, true, DominatorTree *,
@@ -80,7 +80,7 @@ struct PostDomViewerWrapperPass
     : public DOTGraphTraitsViewerWrapperPass<
           PostDominatorTreeWrapperPass, false, PostDominatorTree *,
           LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits> {
-  static char ID;
+  static const char ID;
   PostDomViewerWrapperPass()
       : DOTGraphTraitsViewerWrapperPass<
             PostDominatorTreeWrapperPass, false, PostDominatorTree *,
@@ -92,7 +92,7 @@ struct PostDomOnlyViewerWrapperPass
     : public DOTGraphTraitsViewerWrapperPass<
           PostDominatorTreeWrapperPass, true, PostDominatorTree *,
           LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits> {
-  static char ID;
+  static const char ID;
   PostDomOnlyViewerWrapperPass()
       : DOTGraphTraitsViewerWrapperPass<
             PostDominatorTreeWrapperPass, true, PostDominatorTree *,
@@ -101,20 +101,20 @@ struct PostDomOnlyViewerWrapperPass
 };
 } // end anonymous namespace
 
-char DomViewerWrapperPass::ID = 0;
+const char DomViewerWrapperPass::ID = 0;
 INITIALIZE_PASS(DomViewerWrapperPass, "view-dom",
                 "View dominance tree of function", false, false)
 
-char DomOnlyViewerWrapperPass::ID = 0;
+const char DomOnlyViewerWrapperPass::ID = 0;
 INITIALIZE_PASS(DomOnlyViewerWrapperPass, "view-dom-only",
                 "View dominance tree of function (with no function bodies)",
                 false, false)
 
-char PostDomViewerWrapperPass::ID = 0;
+const char PostDomViewerWrapperPass::ID = 0;
 INITIALIZE_PASS(PostDomViewerWrapperPass, "view-postdom",
                 "View postdominance tree of function", false, false)
 
-char PostDomOnlyViewerWrapperPass::ID = 0;
+const char PostDomOnlyViewerWrapperPass::ID = 0;
 INITIALIZE_PASS(PostDomOnlyViewerWrapperPass, "view-postdom-only",
                 "View postdominance tree of function "
                 "(with no function bodies)",
@@ -125,7 +125,7 @@ struct DomPrinterWrapperPass
     : public DOTGraphTraitsPrinterWrapperPass<
           DominatorTreeWrapperPass, false, DominatorTree *,
           LegacyDominatorTreeWrapperPassAnalysisGraphTraits> {
-  static char ID;
+  static const char ID;
   DomPrinterWrapperPass()
       : DOTGraphTraitsPrinterWrapperPass<
             DominatorTreeWrapperPass, false, DominatorTree *,
@@ -136,7 +136,7 @@ struct DomOnlyPrinterWrapperPass
     : public DOTGraphTraitsPrinterWrapperPass<
           DominatorTreeWrapperPass, true, DominatorTree *,
           LegacyDominatorTreeWrapperPassAnalysisGraphTraits> {
-  static char ID;
+  static const char ID;
   DomOnlyPrinterWrapperPass()
       : DOTGraphTraitsPrinterWrapperPass<
             DominatorTreeWrapperPass, true, DominatorTree *,
@@ -147,7 +147,7 @@ struct PostDomPrinterWrapperPass
     : public DOTGraphTraitsPrinterWrapperPass<
           PostDominatorTreeWrapperPass, false, PostDominatorTree *,
           LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits> {
-  static char ID;
+  static const char ID;
   PostDomPrinterWrapperPass()
       : DOTGraphTraitsPrinterWrapperPass<
             PostDominatorTreeWrapperPass, false, PostDominatorTree *,
@@ -159,7 +159,7 @@ struct PostDomOnlyPrinterWrapperPass
     : public DOTGraphTraitsPrinterWrapperPass<
           PostDominatorTreeWrapperPass, true, PostDominatorTree *,
           LegacyPostDominatorTreeWrapperPassAnalysisGraphTraits> {
-  static char ID;
+  static const char ID;
   PostDomOnlyPrinterWrapperPass()
       : DOTGraphTraitsPrinterWrapperPass<
             PostDominatorTreeWrapperPass, true, PostDominatorTree *,
@@ -168,22 +168,22 @@ struct PostDomOnlyPrinterWrapperPass
 };
 } // end anonymous namespace
 
-char DomPrinterWrapperPass::ID = 0;
+const char DomPrinterWrapperPass::ID = 0;
 INITIALIZE_PASS(DomPrinterWrapperPass, "dot-dom",
                 "Print dominance tree of function to 'dot' file", false, false)
 
-char DomOnlyPrinterWrapperPass::ID = 0;
+const char DomOnlyPrinterWrapperPass::ID = 0;
 INITIALIZE_PASS(DomOnlyPrinterWrapperPass, "dot-dom-only",
                 "Print dominance tree of function to 'dot' file "
                 "(with no function bodies)",
                 false, false)
 
-char PostDomPrinterWrapperPass::ID = 0;
+const char PostDomPrinterWrapperPass::ID = 0;
 INITIALIZE_PASS(PostDomPrinterWrapperPass, "dot-postdom",
                 "Print postdominance tree of function to 'dot' file", false,
                 false)
 
-char PostDomOnlyPrinterWrapperPass::ID = 0;
+const char PostDomOnlyPrinterWrapperPass::ID = 0;
 INITIALIZE_PASS(PostDomOnlyPrinterWrapperPass, "dot-postdom-only",
                 "Print postdominance tree of function to 'dot' file "
                 "(with no function bodies)",

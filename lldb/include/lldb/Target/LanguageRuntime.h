@@ -211,7 +211,7 @@ public:
   }
 
   virtual bool isA(const void *ClassID) const { return ClassID == &ID; }
-  static char ID;
+  static const char ID;
 
   /// A language runtime may be able to provide a special UnwindPlan for
   /// the frame represented by the register contents \a regctx when that

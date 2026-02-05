@@ -162,7 +162,7 @@ void BasicIRLayerMaterializationUnit::materialize(
   }););
 }
 
-char ObjectLayer::ID;
+const char ObjectLayer::ID = 0;
 
 ObjectLayer::ObjectLayer(ExecutionSession &ES) : ES(ES) {}
 

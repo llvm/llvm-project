@@ -139,14 +139,14 @@ static bool foldFMA(Function &F) {
 namespace {
 
 struct NVPTXIRPeephole : public FunctionPass {
-  static char ID;
+  static const char ID;
   NVPTXIRPeephole() : FunctionPass(ID) {}
   bool runOnFunction(Function &F) override;
 };
 
 } // namespace
 
-char NVPTXIRPeephole::ID = 0;
+const char NVPTXIRPeephole::ID = 0;
 INITIALIZE_PASS(NVPTXIRPeephole, "nvptx-ir-peephole", "NVPTX IR Peephole",
                 false, false)
 

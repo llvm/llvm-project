@@ -26,7 +26,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-char ClangPersistentVariables::ID;
+const char ClangPersistentVariables::ID = 0;
 
 ClangPersistentVariables::ClangPersistentVariables(
     std::shared_ptr<Target> target_sp)

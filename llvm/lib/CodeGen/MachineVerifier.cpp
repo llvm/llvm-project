@@ -361,7 +361,7 @@ struct MachineVerifier {
 };
 
 struct MachineVerifierLegacyPass : public MachineFunctionPass {
-  static char ID; // Pass ID, replacement for typeid
+  static const char ID; // Pass ID, replacement for typeid
 
   const std::string Banner;
 
@@ -403,7 +403,7 @@ MachineVerifierPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-char MachineVerifierLegacyPass::ID = 0;
+const char MachineVerifierLegacyPass::ID = 0;
 
 INITIALIZE_PASS(MachineVerifierLegacyPass, "machineverifier",
                 "Verify generated machine code", false, false)

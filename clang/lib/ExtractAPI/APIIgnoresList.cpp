@@ -21,7 +21,7 @@ using namespace clang;
 using namespace clang::extractapi;
 using namespace llvm;
 
-char IgnoresFileNotFound::ID;
+const char IgnoresFileNotFound::ID = 0;
 
 void IgnoresFileNotFound::log(llvm::raw_ostream &os) const {
   os << "Could not find API ignores file " << Path;

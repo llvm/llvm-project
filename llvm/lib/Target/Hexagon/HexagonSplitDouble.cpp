@@ -56,7 +56,7 @@ namespace {
 
   class HexagonSplitDoubleRegs : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     HexagonSplitDoubleRegs() : MachineFunctionPass(ID) {}
 
@@ -118,7 +118,7 @@ namespace {
 
 } // end anonymous namespace
 
-char HexagonSplitDoubleRegs::ID;
+const char HexagonSplitDoubleRegs::ID = 0;
 int HexagonSplitDoubleRegs::Counter = 0;
 const TargetRegisterClass *const HexagonSplitDoubleRegs::DoubleRC =
     &Hexagon::DoubleRegsRegClass;

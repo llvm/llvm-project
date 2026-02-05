@@ -76,7 +76,7 @@ private:
   void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
 
 public:
-  static char ID;
+  static const char ID;
 };
 } // end of anonymous namespace
 
@@ -510,7 +510,7 @@ bool SparcAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
-char SparcAsmPrinter::ID = 0;
+const char SparcAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(SparcAsmPrinter, "sparc-asm-printer", "Sparc Assembly Printer",
                 false, false)

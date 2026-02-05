@@ -32,7 +32,7 @@ public:
   DXILFinalizeLinkageLegacy() : ModulePass(ID) {}
   bool runOnModule(Module &M) override;
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 };
 } // namespace llvm
 

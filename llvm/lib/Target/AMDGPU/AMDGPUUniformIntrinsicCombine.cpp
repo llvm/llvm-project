@@ -164,7 +164,7 @@ AMDGPUUniformIntrinsicCombinePass::run(Function &F,
 namespace {
 class AMDGPUUniformIntrinsicCombineLegacy : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
   AMDGPUUniformIntrinsicCombineLegacy() : FunctionPass(ID) {
     initializeAMDGPUUniformIntrinsicCombineLegacyPass(
         *PassRegistry::getPassRegistry());
@@ -180,8 +180,8 @@ private:
 };
 } // namespace
 
-char AMDGPUUniformIntrinsicCombineLegacy::ID = 0;
-char &llvm::AMDGPUUniformIntrinsicCombineLegacyPassID =
+const char AMDGPUUniformIntrinsicCombineLegacy::ID = 0;
+const char &llvm::AMDGPUUniformIntrinsicCombineLegacyPassID =
     AMDGPUUniformIntrinsicCombineLegacy::ID;
 
 bool AMDGPUUniformIntrinsicCombineLegacy::runOnFunction(Function &F) {

@@ -303,7 +303,7 @@ bool MipsDAGToDAGISel::isUnneededShiftMask(SDNode *N,
   return (Known.Zero | RHS).countr_one() >= ShAmtBits;
 }
 
-char MipsDAGToDAGISelLegacy::ID = 0;
+const char MipsDAGToDAGISelLegacy::ID = 0;
 
 MipsDAGToDAGISelLegacy::MipsDAGToDAGISelLegacy(
     std::unique_ptr<SelectionDAGISel> S)

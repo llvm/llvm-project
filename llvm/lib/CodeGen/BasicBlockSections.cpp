@@ -106,7 +106,7 @@ namespace {
 
 class BasicBlockSections : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   BasicBlockSectionsProfileReaderWrapperPass *BBSectionsProfileReader = nullptr;
 
@@ -129,7 +129,7 @@ private:
 
 } // end anonymous namespace
 
-char BasicBlockSections::ID = 0;
+const char BasicBlockSections::ID = 0;
 INITIALIZE_PASS_BEGIN(
     BasicBlockSections, "bbsections-prepare",
     "Prepares for basic block sections, by splitting functions "

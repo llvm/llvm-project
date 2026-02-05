@@ -29,7 +29,7 @@ using namespace llvm;
 namespace {
 class SPIRVPostLegalizer : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   SPIRVPostLegalizer() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
@@ -583,7 +583,7 @@ bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
 INITIALIZE_PASS(SPIRVPostLegalizer, DEBUG_TYPE, "SPIRV post legalizer", false,
                 false)
 
-char SPIRVPostLegalizer::ID = 0;
+const char SPIRVPostLegalizer::ID = 0;
 
 FunctionPass *llvm::createSPIRVPostLegalizerPass() {
   return new SPIRVPostLegalizer();

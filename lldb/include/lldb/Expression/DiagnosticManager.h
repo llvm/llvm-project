@@ -32,7 +32,7 @@ class ExpressionError
   std::vector<DiagnosticDetail> m_details;
 
 public:
-  static char ID;
+  static const char ID;
   using llvm::ErrorInfo<ExpressionError, DiagnosticError>::ErrorInfo;
   ExpressionError(lldb::ExpressionResults result, std::string msg,
                   std::vector<DiagnosticDetail> details = {});

@@ -15,7 +15,7 @@
 
 using namespace lldb_private;
 
-char ExpressionVariable::ID;
+const char ExpressionVariable::ID = 0;
 
 ExpressionVariable::ExpressionVariable() : m_flags(0) {}
 
@@ -33,7 +33,7 @@ uint8_t *ExpressionVariable::GetValueBytes() {
   return nullptr;
 }
 
-char PersistentExpressionState::ID;
+const char PersistentExpressionState::ID = 0;
 
 PersistentExpressionState::PersistentExpressionState() = default;
 

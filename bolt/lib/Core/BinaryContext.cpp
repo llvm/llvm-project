@@ -92,7 +92,7 @@ static cl::opt<bool>
 namespace llvm {
 namespace bolt {
 
-char BOLTError::ID = 0;
+const char BOLTError::ID = 0;
 
 BOLTError::BOLTError(bool IsFatal, const Twine &S)
     : IsFatal(IsFatal), Msg(S.str()) {}

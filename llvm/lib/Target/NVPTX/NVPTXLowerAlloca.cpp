@@ -38,7 +38,7 @@ class NVPTXLowerAlloca : public FunctionPass {
   bool runOnFunction(Function &F) override;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   NVPTXLowerAlloca() : FunctionPass(ID) {}
   StringRef getPassName() const override {
     return "convert address space of alloca'ed memory to local";
@@ -46,7 +46,7 @@ public:
 };
 } // namespace
 
-char NVPTXLowerAlloca::ID = 1;
+const char NVPTXLowerAlloca::ID = 1;
 
 INITIALIZE_PASS(NVPTXLowerAlloca, "nvptx-lower-alloca", "Lower Alloca", false,
                 false)

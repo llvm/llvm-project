@@ -25,7 +25,7 @@ using namespace llvm;
 namespace {
   class UnpackMachineBundles : public MachineFunctionPass {
   public:
-    static char ID; // Pass identification
+    static const char ID; // Pass identification
     UnpackMachineBundles(
         std::function<bool(const MachineFunction &)> Ftor = nullptr)
         : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {}
@@ -37,8 +37,8 @@ namespace {
   };
 } // end anonymous namespace
 
-char UnpackMachineBundles::ID = 0;
-char &llvm::UnpackMachineBundlesID = UnpackMachineBundles::ID;
+const char UnpackMachineBundles::ID = 0;
+const char &llvm::UnpackMachineBundlesID = UnpackMachineBundles::ID;
 INITIALIZE_PASS(UnpackMachineBundles, "unpack-mi-bundles",
                 "Unpack machine instruction bundles", false, false)
 

@@ -104,7 +104,7 @@ bool X86PostLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
 
 class X86PostLegalizerCombiner : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   X86PostLegalizerCombiner();
 
@@ -170,7 +170,7 @@ bool X86PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   return Impl.combineMachineInstrs();
 }
 
-char X86PostLegalizerCombiner::ID = 0;
+const char X86PostLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(X86PostLegalizerCombiner, DEBUG_TYPE,
                       "Combine X86 MachineInstrs after legalization", false,
                       false)

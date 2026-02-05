@@ -73,7 +73,7 @@ class NVVMReflectLegacyPass : public ModulePass {
   NVVMReflect Impl;
 
 public:
-  static char ID;
+  static const char ID;
   NVVMReflectLegacyPass(unsigned SmVersion) : ModulePass(ID), Impl(SmVersion) {}
   bool runOnModule(Module &M) override;
 };
@@ -87,7 +87,7 @@ static cl::opt<bool>
     NVVMReflectEnabled("nvvm-reflect-enable", cl::init(true), cl::Hidden,
                        cl::desc("NVVM reflection, enabled by default"));
 
-char NVVMReflectLegacyPass::ID = 0;
+const char NVVMReflectLegacyPass::ID = 0;
 INITIALIZE_PASS(NVVMReflectLegacyPass, "nvvm-reflect",
                 "Replace occurrences of __nvvm_reflect() calls with 0/1", false,
                 false)

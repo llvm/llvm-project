@@ -36,7 +36,7 @@ class TailDuplicateBaseLegacy : public MachineFunctionPass {
   std::unique_ptr<MBFIWrapper> MBFIW;
   bool PreRegAlloc;
 public:
-  TailDuplicateBaseLegacy(char &PassID, bool PreRegAlloc)
+  TailDuplicateBaseLegacy(const char &PassID, bool PreRegAlloc)
       : MachineFunctionPass(PassID), PreRegAlloc(PreRegAlloc) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -51,13 +51,13 @@ public:
 
 class TailDuplicateLegacy : public TailDuplicateBaseLegacy {
 public:
-  static char ID;
+  static const char ID;
   TailDuplicateLegacy() : TailDuplicateBaseLegacy(ID, false) {}
 };
 
 class EarlyTailDuplicateLegacy : public TailDuplicateBaseLegacy {
 public:
-  static char ID;
+  static const char ID;
   EarlyTailDuplicateLegacy() : TailDuplicateBaseLegacy(ID, true) {}
 
   MachineFunctionProperties getClearedProperties() const override {
@@ -67,11 +67,11 @@ public:
 
 } // end anonymous namespace
 
-char TailDuplicateLegacy::ID;
-char EarlyTailDuplicateLegacy::ID;
+const char TailDuplicateLegacy::ID = 0;
+const char EarlyTailDuplicateLegacy::ID = 0;
 
-char &llvm::TailDuplicateLegacyID = TailDuplicateLegacy::ID;
-char &llvm::EarlyTailDuplicateLegacyID = EarlyTailDuplicateLegacy::ID;
+const char &llvm::TailDuplicateLegacyID = TailDuplicateLegacy::ID;
+const char &llvm::EarlyTailDuplicateLegacyID = EarlyTailDuplicateLegacy::ID;
 
 INITIALIZE_PASS(TailDuplicateLegacy, DEBUG_TYPE, "Tail Duplication", false,
                 false)

@@ -180,7 +180,7 @@ class FormulaParseError : public llvm::ErrorInfo<FormulaParseError> {
   unsigned Offset;
 
 public:
-  static char ID;
+  static const char ID;
   FormulaParseError(llvm::StringRef Formula, unsigned Offset)
       : Formula(Formula), Offset(Offset) {}
 
@@ -195,7 +195,7 @@ public:
   }
 };
 
-char FormulaParseError::ID = 0;
+const char FormulaParseError::ID = 0;
 
 } // namespace
 

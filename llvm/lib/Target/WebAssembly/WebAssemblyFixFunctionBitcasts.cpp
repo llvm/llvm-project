@@ -49,12 +49,12 @@ class FixFunctionBitcasts final : public ModulePass {
   bool runOnModule(Module &M) override;
 
 public:
-  static char ID;
+  static const char ID;
   FixFunctionBitcasts() : ModulePass(ID) {}
 };
 } // End anonymous namespace
 
-char FixFunctionBitcasts::ID = 0;
+const char FixFunctionBitcasts::ID = 0;
 INITIALIZE_PASS(FixFunctionBitcasts, DEBUG_TYPE,
                 "Fix mismatching bitcasts for WebAssembly", false, false)
 

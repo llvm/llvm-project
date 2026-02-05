@@ -40,7 +40,7 @@ private:
 };
 
 struct ExpandPostRALegacy : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
   ExpandPostRALegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -67,8 +67,8 @@ ExpandPostRAPseudosPass::run(MachineFunction &MF,
       .preserve<MachineDominatorTreeAnalysis>();
 }
 
-char ExpandPostRALegacy::ID = 0;
-char &llvm::ExpandPostRAPseudosID = ExpandPostRALegacy::ID;
+const char ExpandPostRALegacy::ID = 0;
+const char &llvm::ExpandPostRAPseudosID = ExpandPostRALegacy::ID;
 
 INITIALIZE_PASS(ExpandPostRALegacy, DEBUG_TYPE,
                 "Post-RA pseudo instruction expansion pass", false, false)

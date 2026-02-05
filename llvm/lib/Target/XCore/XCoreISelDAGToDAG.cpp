@@ -73,7 +73,7 @@ namespace {
 
   class XCoreDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
   public:
-    static char ID;
+    static const char ID;
     explicit XCoreDAGToDAGISelLegacy(XCoreTargetMachine &TM,
                                      CodeGenOptLevel OptLevel)
         : SelectionDAGISelLegacy(
@@ -81,7 +81,7 @@ namespace {
   };
 }  // end anonymous namespace
 
-char XCoreDAGToDAGISelLegacy::ID = 0;
+const char XCoreDAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(XCoreDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 

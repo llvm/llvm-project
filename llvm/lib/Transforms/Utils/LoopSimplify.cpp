@@ -736,7 +736,7 @@ bool llvm::simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
 
 namespace {
 struct LoopSimplify : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   LoopSimplify() : FunctionPass(ID) {
     initializeLoopSimplifyPass(*PassRegistry::getPassRegistry());
   }
@@ -769,7 +769,7 @@ struct LoopSimplify : public FunctionPass {
 };
 } // namespace
 
-char LoopSimplify::ID = 0;
+const char LoopSimplify::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopSimplify, "loop-simplify",
                 "Canonicalize natural loops", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
@@ -779,7 +779,7 @@ INITIALIZE_PASS_END(LoopSimplify, "loop-simplify", "Canonicalize natural loops",
                     false, false)
 
 // Publicly exposed interface to pass.
-char &llvm::LoopSimplifyID = LoopSimplify::ID;
+const char &llvm::LoopSimplifyID = LoopSimplify::ID;
 Pass *llvm::createLoopSimplifyPass() { return new LoopSimplify(); }
 
 /// runOnFunction - Run down all loops in the CFG (recursively, but we could do

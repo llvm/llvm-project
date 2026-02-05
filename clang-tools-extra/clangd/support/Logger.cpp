@@ -71,9 +71,9 @@ public:
   void log(llvm::raw_ostream &OS) const override { OS << Message; }
   std::string message() const override { return Message; }
   std::error_code convertToErrorCode() const override { return EC; }
-  static char ID;
+  static const char ID;
 };
-char SimpleStringError::ID;
+const char SimpleStringError::ID = 0;
 
 } // namespace
 

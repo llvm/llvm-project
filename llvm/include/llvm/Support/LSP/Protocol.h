@@ -81,7 +81,7 @@ class LSPError : public llvm::ErrorInfo<LSPError> {
 public:
   std::string message;
   ErrorCode code;
-  LLVM_ABI_FOR_TEST static char ID;
+  LLVM_ABI_FOR_TEST static const char ID;
 
   LSPError(std::string message, ErrorCode code)
       : message(std::move(message)), code(code) {}

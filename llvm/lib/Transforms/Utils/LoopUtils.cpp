@@ -153,8 +153,8 @@ void llvm::getLoopAnalysisUsage(AnalysisUsage &AU) {
 
   // We must also preserve LoopSimplify and LCSSA. We locally access their IDs
   // here because users shouldn't directly get them from this header.
-  extern char &LoopSimplifyID;
-  extern char &LCSSAID;
+  extern const char &LoopSimplifyID;
+  extern const char &LCSSAID;
   AU.addRequiredID(LoopSimplifyID);
   AU.addPreservedID(LoopSimplifyID);
   AU.addRequiredID(LCSSAID);

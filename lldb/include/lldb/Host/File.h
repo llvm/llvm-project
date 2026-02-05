@@ -362,7 +362,7 @@ public:
 
   bool operator!() const { return !IsValid(); };
 
-  static char ID;
+  static const char ID;
   virtual bool isA(const void *classID) const { return classID == &ID; }
   static bool classof(const File *file) { return file->isA(&ID); }
 
@@ -412,7 +412,7 @@ public:
   size_t PrintfVarArg(const char *format, va_list args) override;
   llvm::Expected<OpenOptions> GetOptions() const override;
 
-  static char ID;
+  static const char ID;
   bool isA(const void *classID) const override {
     return classID == &ID || File::isA(classID);
   }
@@ -484,7 +484,7 @@ public:
 
   Status Close() override;
 
-  static char ID;
+  static const char ID;
   bool isA(const void *classID) const override {
     return classID == &ID || File::isA(classID);
   }

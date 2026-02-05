@@ -51,7 +51,7 @@ class LLVM_ABI NamedValuesSchema
   void anchor() override;
 
 public:
-  static char ID;
+  static const char ID;
 
   bool isRootNode(const ObjectProxy &Node) const final {
     // NamedValuesSchema only has one node, thus root node.

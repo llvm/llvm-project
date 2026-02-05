@@ -71,7 +71,7 @@ namespace {
 
 class MachineFunctionSplitter : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   MachineFunctionSplitter() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
@@ -217,7 +217,7 @@ void MachineFunctionSplitter::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addUsedIfAvailable<BasicBlockSectionsProfileReaderWrapperPass>();
 }
 
-char MachineFunctionSplitter::ID = 0;
+const char MachineFunctionSplitter::ID = 0;
 INITIALIZE_PASS(MachineFunctionSplitter, "machine-function-splitter",
                 "Split machine functions using profile information", false,
                 false)

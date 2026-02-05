@@ -154,7 +154,7 @@ namespace {
 
   class HexagonVectorLoopCarriedReuseLegacyPass : public LoopPass {
   public:
-    static char ID;
+    static const char ID;
 
     explicit HexagonVectorLoopCarriedReuseLegacyPass() : LoopPass(ID) {}
 
@@ -198,7 +198,7 @@ namespace {
 
 } // end anonymous namespace
 
-char HexagonVectorLoopCarriedReuseLegacyPass::ID = 0;
+const char HexagonVectorLoopCarriedReuseLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonVectorLoopCarriedReuseLegacyPass, "hexagon-vlcr",
                       "Hexagon-specific predictive commoning for HVX vectors",

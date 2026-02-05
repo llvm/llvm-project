@@ -59,7 +59,7 @@ public:
 
 class SIFormMemoryClausesLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SIFormMemoryClausesLegacy() : MachineFunctionPass(ID) {
     initializeSIFormMemoryClausesLegacyPass(*PassRegistry::getPassRegistry());
@@ -90,9 +90,9 @@ INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(SIFormMemoryClausesLegacy, DEBUG_TYPE,
                     "SI Form memory clauses", false, false)
 
-char SIFormMemoryClausesLegacy::ID = 0;
+const char SIFormMemoryClausesLegacy::ID = 0;
 
-char &llvm::SIFormMemoryClausesID = SIFormMemoryClausesLegacy::ID;
+const char &llvm::SIFormMemoryClausesID = SIFormMemoryClausesLegacy::ID;
 
 FunctionPass *llvm::createSIFormMemoryClausesLegacyPass() {
   return new SIFormMemoryClausesLegacy();

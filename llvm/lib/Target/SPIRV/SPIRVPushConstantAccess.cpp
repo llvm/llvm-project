@@ -87,9 +87,9 @@ public:
   SPIRVPushConstantAccessLegacy(SPIRVTargetMachine *TM)
       : ModulePass(ID), TM(TM) {}
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 };
-char SPIRVPushConstantAccessLegacy::ID = 0;
+const char SPIRVPushConstantAccessLegacy::ID = 0;
 } // end anonymous namespace
 
 INITIALIZE_PASS(SPIRVPushConstantAccessLegacy, DEBUG_TYPE,

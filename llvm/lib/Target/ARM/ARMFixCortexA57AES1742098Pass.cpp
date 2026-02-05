@@ -67,7 +67,7 @@ using namespace llvm;
 namespace {
 class ARMFixCortexA57AES1742098 : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   explicit ARMFixCortexA57AES1742098() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
@@ -105,7 +105,7 @@ private:
   static bool isFirstAESPairInstr(MachineInstr &MI);
   static bool isSafeAESInput(MachineInstr &MI);
 };
-char ARMFixCortexA57AES1742098::ID = 0;
+const char ARMFixCortexA57AES1742098::ID = 0;
 
 } // end anonymous namespace
 

@@ -139,7 +139,7 @@ public:
 
 class SIModeRegisterLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SIModeRegisterLegacy() : MachineFunctionPass(ID) {}
 
@@ -155,9 +155,9 @@ public:
 INITIALIZE_PASS(SIModeRegisterLegacy, DEBUG_TYPE,
                 "Insert required mode register values", false, false)
 
-char SIModeRegisterLegacy::ID = 0;
+const char SIModeRegisterLegacy::ID = 0;
 
-char &llvm::SIModeRegisterID = SIModeRegisterLegacy::ID;
+const char &llvm::SIModeRegisterID = SIModeRegisterLegacy::ID;
 
 FunctionPass *llvm::createSIModeRegisterPass() {
   return new SIModeRegisterLegacy();

@@ -29,7 +29,7 @@ namespace {
 
 class MIRNamer : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   MIRNamer() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
@@ -59,6 +59,6 @@ public:
 
 } // end anonymous namespace
 
-char MIRNamer::ID;
+const char MIRNamer::ID = 0;
 
 INITIALIZE_PASS(MIRNamer, "mir-namer", "Rename Register Operands", false, false)

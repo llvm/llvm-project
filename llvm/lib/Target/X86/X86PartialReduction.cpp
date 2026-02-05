@@ -48,7 +48,7 @@ private:
 
 class X86PartialReductionLegacy : public FunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid.
+  static const char ID; // Pass identification, replacement for typeid.
 
   X86PartialReductionLegacy() : FunctionPass(ID) {}
 
@@ -66,7 +66,7 @@ FunctionPass *llvm::createX86PartialReductionLegacyPass() {
   return new X86PartialReductionLegacy();
 }
 
-char X86PartialReductionLegacy::ID = 0;
+const char X86PartialReductionLegacy::ID = 0;
 
 INITIALIZE_PASS(X86PartialReductionLegacy, DEBUG_TYPE, "X86 Partial Reduction",
                 false, false)

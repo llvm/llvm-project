@@ -94,7 +94,7 @@ public:
 
 class LoongArchDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   explicit LoongArchDAGToDAGISelLegacy(LoongArchTargetMachine &TM,
                                        CodeGenOptLevel OptLevel);
 };

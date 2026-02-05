@@ -35,7 +35,7 @@ using namespace llvm;
 namespace {
 class GlobalDCELegacyPass : public ModulePass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   GlobalDCELegacyPass() : ModulePass(ID) {
     initializeGlobalDCELegacyPassPass(*PassRegistry::getPassRegistry());
   }
@@ -54,7 +54,7 @@ private:
 };
 } // namespace
 
-char GlobalDCELegacyPass::ID = 0;
+const char GlobalDCELegacyPass::ID = 0;
 INITIALIZE_PASS(GlobalDCELegacyPass, "globaldce", "Dead Global Elimination",
                 false, false)
 

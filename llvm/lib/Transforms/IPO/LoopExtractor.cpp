@@ -34,7 +34,7 @@ STATISTIC(NumExtracted, "Number of loops extracted");
 
 namespace {
 struct LoopExtractorLegacyPass : public ModulePass {
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   unsigned NumLoops;
 
@@ -82,7 +82,7 @@ private:
 };
 } // namespace
 
-char LoopExtractorLegacyPass::ID = 0;
+const char LoopExtractorLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopExtractorLegacyPass, "loop-extract",
                       "Extract loops into new functions", false, false)
 INITIALIZE_PASS_DEPENDENCY(BreakCriticalEdges)
@@ -95,12 +95,12 @@ INITIALIZE_PASS_END(LoopExtractorLegacyPass, "loop-extract",
 namespace {
   /// SingleLoopExtractor - For bugpoint.
 struct SingleLoopExtractor : public LoopExtractorLegacyPass {
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   SingleLoopExtractor() : LoopExtractorLegacyPass(1) {}
 };
 } // End anonymous namespace
 
-char SingleLoopExtractor::ID = 0;
+const char SingleLoopExtractor::ID = 0;
 INITIALIZE_PASS(SingleLoopExtractor, "loop-extract-single",
                 "Extract at most one loop into a new function", false, false)
 

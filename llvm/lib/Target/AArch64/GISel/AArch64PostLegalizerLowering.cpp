@@ -1250,7 +1250,7 @@ AArch64PostLegalizerLoweringImpl::AArch64PostLegalizerLoweringImpl(
 
 class AArch64PostLegalizerLowering : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AArch64PostLegalizerLowering();
 
@@ -1300,7 +1300,7 @@ bool AArch64PostLegalizerLowering::runOnMachineFunction(MachineFunction &MF) {
   return Impl.combineMachineInstrs();
 }
 
-char AArch64PostLegalizerLowering::ID = 0;
+const char AArch64PostLegalizerLowering::ID = 0;
 INITIALIZE_PASS_BEGIN(AArch64PostLegalizerLowering, DEBUG_TYPE,
                       "Lower AArch64 MachineInstrs after legalization", false,
                       false)

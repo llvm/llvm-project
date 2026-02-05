@@ -33,7 +33,7 @@ namespace {
 
 class AMDGPURegBankSelect : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPURegBankSelect() : MachineFunctionPass(ID) {}
 
@@ -67,9 +67,9 @@ INITIALIZE_PASS_DEPENDENCY(MachineUniformityAnalysisPass)
 INITIALIZE_PASS_END(AMDGPURegBankSelect, DEBUG_TYPE,
                     "AMDGPU Register Bank Select", false, false)
 
-char AMDGPURegBankSelect::ID = 0;
+const char AMDGPURegBankSelect::ID = 0;
 
-char &llvm::AMDGPURegBankSelectID = AMDGPURegBankSelect::ID;
+const char &llvm::AMDGPURegBankSelectID = AMDGPURegBankSelect::ID;
 
 FunctionPass *llvm::createAMDGPURegBankSelectPass() {
   return new AMDGPURegBankSelect();

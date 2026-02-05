@@ -121,7 +121,7 @@ namespace {
 /// This pass frees the MachineFunction object associated with a Function.
 class FreeMachineFunction : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   FreeMachineFunction() : FunctionPass(ID) {}
 
@@ -144,7 +144,7 @@ public:
 
 } // end anonymous namespace
 
-char FreeMachineFunction::ID;
+const char FreeMachineFunction::ID = 0;
 
 FunctionPass *llvm::createFreeMachineFunctionPass() {
   return new FreeMachineFunction();
@@ -161,7 +161,7 @@ MachineModuleInfoWrapperPass::MachineModuleInfoWrapperPass(
 // Handle the Pass registration stuff necessary to use DataLayout's.
 INITIALIZE_PASS(MachineModuleInfoWrapperPass, "machinemoduleinfo",
                 "Machine Module Information", false, false)
-char MachineModuleInfoWrapperPass::ID = 0;
+const char MachineModuleInfoWrapperPass::ID = 0;
 
 static uint64_t getLocCookie(const SMDiagnostic &SMD, const SourceMgr &SrcMgr,
                              std::vector<const MDNode *> &LocInfos) {

@@ -218,7 +218,7 @@ namespace {
 
   class PPCLoopInstrFormPrep : public FunctionPass {
   public:
-    static char ID; // Pass ID, replacement for typeid
+    static const char ID; // Pass ID, replacement for typeid
 
     PPCLoopInstrFormPrep(PPCTargetMachine &TM) : FunctionPass(ID), TM(&TM) {}
 
@@ -327,7 +327,7 @@ namespace {
 
 } // end anonymous namespace
 
-char PPCLoopInstrFormPrep::ID = 0;
+const char PPCLoopInstrFormPrep::ID = 0;
 static const char *name = "Prepare loop for ppc preferred instruction forms";
 INITIALIZE_PASS_BEGIN(PPCLoopInstrFormPrep, DEBUG_TYPE, name, false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)

@@ -46,12 +46,12 @@ class WebAssemblyExplicitLocals final : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyExplicitLocals() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyExplicitLocals::ID = 0;
+const char WebAssemblyExplicitLocals::ID = 0;
 INITIALIZE_PASS(WebAssemblyExplicitLocals, DEBUG_TYPE,
                 "Convert registers to WebAssembly locals", false, false)
 

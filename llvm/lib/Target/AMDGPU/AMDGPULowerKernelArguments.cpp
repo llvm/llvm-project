@@ -41,7 +41,7 @@ namespace {
 
 class AMDGPULowerKernelArguments : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPULowerKernelArguments() : FunctionPass(ID) {}
 
@@ -381,7 +381,7 @@ INITIALIZE_PASS_BEGIN(AMDGPULowerKernelArguments, DEBUG_TYPE,
 INITIALIZE_PASS_END(AMDGPULowerKernelArguments, DEBUG_TYPE, "AMDGPU Lower Kernel Arguments",
                     false, false)
 
-char AMDGPULowerKernelArguments::ID = 0;
+const char AMDGPULowerKernelArguments::ID = 0;
 
 FunctionPass *llvm::createAMDGPULowerKernelArgumentsPass() {
   return new AMDGPULowerKernelArguments();

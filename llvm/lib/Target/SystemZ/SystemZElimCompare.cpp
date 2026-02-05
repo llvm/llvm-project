@@ -63,7 +63,7 @@ struct Reference {
 
 class SystemZElimCompare : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SystemZElimCompare() : MachineFunctionPass(ID) {}
 
@@ -96,7 +96,7 @@ private:
   const TargetRegisterInfo *TRI = nullptr;
 };
 
-char SystemZElimCompare::ID = 0;
+const char SystemZElimCompare::ID = 0;
 
 } // end anonymous namespace
 

@@ -52,7 +52,7 @@ public:
 
 class SIOptimizeExecMaskingPreRALegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SIOptimizeExecMaskingPreRALegacy() : MachineFunctionPass(ID) {
     initializeSIOptimizeExecMaskingPreRALegacyPass(
@@ -80,9 +80,10 @@ INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(SIOptimizeExecMaskingPreRALegacy, DEBUG_TYPE,
                     "SI optimize exec mask operations pre-RA", false, false)
 
-char SIOptimizeExecMaskingPreRALegacy::ID = 0;
+const char SIOptimizeExecMaskingPreRALegacy::ID = 0;
 
-char &llvm::SIOptimizeExecMaskingPreRAID = SIOptimizeExecMaskingPreRALegacy::ID;
+const char &llvm::SIOptimizeExecMaskingPreRAID =
+    SIOptimizeExecMaskingPreRALegacy::ID;
 
 FunctionPass *llvm::createSIOptimizeExecMaskingPreRAPass() {
   return new SIOptimizeExecMaskingPreRALegacy();

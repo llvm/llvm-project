@@ -34,7 +34,7 @@ using namespace llvm;
 namespace {
 class M68kExpandPseudo : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   M68kExpandPseudo() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -60,7 +60,7 @@ private:
   bool ExpandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool ExpandMBB(MachineBasicBlock &MBB);
 };
-char M68kExpandPseudo::ID = 0;
+const char M68kExpandPseudo::ID = 0;
 } // End anonymous namespace.
 
 INITIALIZE_PASS(M68kExpandPseudo, DEBUG_TYPE, PASS_NAME, false, false)

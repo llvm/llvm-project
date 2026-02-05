@@ -356,7 +356,7 @@ class WebAssemblyLowerEmscriptenEHSjLj final : public ModulePass {
   void rebuildSSA(Function &F);
 
 public:
-  static char ID;
+  static const char ID;
 
   WebAssemblyLowerEmscriptenEHSjLj()
       : ModulePass(ID), EnableEmEH(WebAssembly::WasmEnableEmEH),
@@ -376,7 +376,7 @@ public:
 };
 } // End anonymous namespace
 
-char WebAssemblyLowerEmscriptenEHSjLj::ID = 0;
+const char WebAssemblyLowerEmscriptenEHSjLj::ID = 0;
 INITIALIZE_PASS(WebAssemblyLowerEmscriptenEHSjLj, DEBUG_TYPE,
                 "WebAssembly Lower Emscripten Exceptions / Setjmp / Longjmp",
                 false, false)

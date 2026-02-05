@@ -96,12 +96,12 @@ public:
   /// Perform tile register configure.
   bool runOnMachineFunction(MachineFunction &MFunc) override;
 
-  static char ID;
+  static const char ID;
 };
 
 } // end anonymous namespace
 
-char X86FastPreTileConfigLegacy::ID = 0;
+const char X86FastPreTileConfigLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(X86FastPreTileConfigLegacy, DEBUG_TYPE,
                       "Fast Tile Register Preconfigure", false, false)

@@ -1045,7 +1045,7 @@ PreservedAnalyses StackSafetyPrinterPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-char StackSafetyInfoWrapperPass::ID = 0;
+const char StackSafetyInfoWrapperPass::ID = 0;
 
 StackSafetyInfoWrapperPass::StackSafetyInfoWrapperPass() : FunctionPass(ID) {}
 
@@ -1085,7 +1085,7 @@ PreservedAnalyses StackSafetyGlobalPrinterPass::run(Module &M,
   return PreservedAnalyses::all();
 }
 
-char StackSafetyGlobalInfoWrapperPass::ID = 0;
+const char StackSafetyGlobalInfoWrapperPass::ID = 0;
 
 StackSafetyGlobalInfoWrapperPass::StackSafetyGlobalInfoWrapperPass()
     : ModulePass(ID) {}

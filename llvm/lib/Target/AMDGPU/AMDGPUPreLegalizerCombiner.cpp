@@ -211,7 +211,7 @@ void AMDGPUPreLegalizerCombinerImpl::applyClampI64ToI16(
 
 class AMDGPUPreLegalizerCombiner : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUPreLegalizerCombiner(bool IsOptNone = false);
 
@@ -283,7 +283,7 @@ bool AMDGPUPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   return Impl.combineMachineInstrs();
 }
 
-char AMDGPUPreLegalizerCombiner::ID = 0;
+const char AMDGPUPreLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(AMDGPUPreLegalizerCombiner, DEBUG_TYPE,
                       "Combine AMDGPU machine instrs before legalization",
                       false, false)

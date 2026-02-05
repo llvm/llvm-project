@@ -31,7 +31,7 @@ namespace {
 
 class SystemZPostRewrite : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   SystemZPostRewrite() : MachineFunctionPass(ID) {}
 
   const SystemZInstrInfo *TII;
@@ -57,7 +57,7 @@ private:
   bool selectMBB(MachineBasicBlock &MBB);
 };
 
-char SystemZPostRewrite::ID = 0;
+const char SystemZPostRewrite::ID = 0;
 
 } // end anonymous namespace
 

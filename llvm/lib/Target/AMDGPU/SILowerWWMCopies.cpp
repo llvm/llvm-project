@@ -51,7 +51,7 @@ private:
 
 class SILowerWWMCopiesLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SILowerWWMCopiesLegacy() : MachineFunctionPass(ID) {
     initializeSILowerWWMCopiesLegacyPass(*PassRegistry::getPassRegistry());
@@ -79,9 +79,9 @@ INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
 INITIALIZE_PASS_END(SILowerWWMCopiesLegacy, DEBUG_TYPE, "SI Lower WWM Copies",
                     false, false)
 
-char SILowerWWMCopiesLegacy::ID = 0;
+const char SILowerWWMCopiesLegacy::ID = 0;
 
-char &llvm::SILowerWWMCopiesLegacyID = SILowerWWMCopiesLegacy::ID;
+const char &llvm::SILowerWWMCopiesLegacyID = SILowerWWMCopiesLegacy::ID;
 
 bool SILowerWWMCopies::isSCCLiveAtMI(const MachineInstr &MI) {
   // We can't determine the liveness info if LIS isn't available. Early return

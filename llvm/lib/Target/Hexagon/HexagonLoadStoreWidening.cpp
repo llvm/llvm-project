@@ -124,7 +124,7 @@ private:
 };
 
 struct HexagonStoreWidening : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
 
   HexagonStoreWidening() : MachineFunctionPass(ID) {}
 
@@ -151,7 +151,7 @@ struct HexagonStoreWidening : public MachineFunctionPass {
 };
 
 struct HexagonLoadWidening : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
 
   HexagonLoadWidening() : MachineFunctionPass(ID) {}
 
@@ -176,8 +176,8 @@ struct HexagonLoadWidening : public MachineFunctionPass {
   }
 };
 
-char HexagonStoreWidening::ID = 0;
-char HexagonLoadWidening::ID = 0;
+const char HexagonStoreWidening::ID = 0;
+const char HexagonLoadWidening::ID = 0;
 
 } // end anonymous namespace
 

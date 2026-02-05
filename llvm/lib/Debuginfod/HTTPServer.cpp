@@ -28,7 +28,7 @@
 
 using namespace llvm;
 
-char HTTPServerError::ID = 0;
+const char HTTPServerError::ID = 0;
 
 HTTPServerError::HTTPServerError(const Twine &Msg) : Msg(Msg.str()) {}
 

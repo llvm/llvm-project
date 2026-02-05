@@ -214,7 +214,7 @@ private:
   /// List of symbols to be inserted into PC sections.
   DenseMap<const MDNode *, SmallVector<const MCSymbol *>> PCSectionsSymbols;
 
-  static char ID;
+  static const char ID;
 
 protected:
   MCSymbol *CurrentFnBegin = nullptr;
@@ -267,7 +267,7 @@ private:
 
 protected:
   AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer,
-             char &ID = AsmPrinter::ID);
+             const char &ID = AsmPrinter::ID);
 
   /// Create the DwarfDebug handler. Targets can override this to provide
   /// custom debug information handling.

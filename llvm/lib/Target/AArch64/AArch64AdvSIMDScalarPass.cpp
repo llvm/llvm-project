@@ -81,7 +81,7 @@ private:
   bool processMachineBasicBlock(MachineBasicBlock *MBB);
 
 public:
-  static char ID; // Pass identification, replacement for typeid.
+  static const char ID; // Pass identification, replacement for typeid.
   explicit AArch64AdvSIMDScalar() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
@@ -93,7 +93,7 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
-char AArch64AdvSIMDScalar::ID = 0;
+const char AArch64AdvSIMDScalar::ID = 0;
 } // end anonymous namespace
 
 INITIALIZE_PASS(AArch64AdvSIMDScalar, "aarch64-simd-scalar",

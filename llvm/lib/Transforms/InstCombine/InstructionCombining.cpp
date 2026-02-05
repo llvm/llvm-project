@@ -6227,7 +6227,7 @@ void InstCombinePass::printPipeline(
   OS << '>';
 }
 
-char InstCombinePass::ID = 0;
+const char InstCombinePass::ID = 0;
 
 PreservedAnalyses InstCombinePass::run(Function &F,
                                        FunctionAnalysisManager &AM) {
@@ -6309,7 +6309,7 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
                                          BFI, BPI, PSI, InstCombineOptions());
 }
 
-char InstructionCombiningPass::ID = 0;
+const char InstructionCombiningPass::ID = 0;
 
 InstructionCombiningPass::InstructionCombiningPass() : FunctionPass(ID) {
   initializeInstructionCombiningPassPass(*PassRegistry::getPassRegistry());

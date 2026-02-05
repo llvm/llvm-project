@@ -188,7 +188,7 @@ INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(DependenceAnalysisWrapperPass, "da", "Dependence Analysis",
                     true, true)
 
-char DependenceAnalysisWrapperPass::ID = 0;
+const char DependenceAnalysisWrapperPass::ID = 0;
 
 DependenceAnalysisWrapperPass::DependenceAnalysisWrapperPass()
     : FunctionPass(ID) {}

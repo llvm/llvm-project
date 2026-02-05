@@ -104,7 +104,7 @@ namespace {
 
 class SpeculativeExecutionLegacyPass : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
   explicit SpeculativeExecutionLegacyPass(bool OnlyIfDivergentTarget = false)
       : FunctionPass(ID), OnlyIfDivergentTarget(OnlyIfDivergentTarget ||
                                                 SpecExecOnlyIfDivergentTarget),
@@ -128,7 +128,7 @@ private:
 };
 } // namespace
 
-char SpeculativeExecutionLegacyPass::ID = 0;
+const char SpeculativeExecutionLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(SpeculativeExecutionLegacyPass, "speculative-execution",
                       "Speculatively execute instructions", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)

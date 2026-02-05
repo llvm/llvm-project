@@ -46,4 +46,4 @@ const std::error_category &llvm::codeview::CVErrorCategory() {
   return CodeViewErrCategory;
 }
 
-char CodeViewError::ID;
+const char CodeViewError::ID = 0;

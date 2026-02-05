@@ -41,7 +41,7 @@ namespace {
 
   struct HexagonBranchRelaxation : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     HexagonBranchRelaxation() : MachineFunctionPass(ID) {}
 
@@ -69,7 +69,7 @@ namespace {
           DenseMap<MachineBasicBlock*, unsigned> &BlockToInstOffset);
   };
 
-  char HexagonBranchRelaxation::ID = 0;
+  const char HexagonBranchRelaxation::ID = 0;
 
 } // end anonymous namespace
 

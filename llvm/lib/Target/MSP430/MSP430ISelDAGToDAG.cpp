@@ -116,14 +116,14 @@ namespace {
 
   class MSP430DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
   public:
-    static char ID;
+    static const char ID;
     MSP430DAGToDAGISelLegacy(MSP430TargetMachine &TM, CodeGenOptLevel OptLevel)
         : SelectionDAGISelLegacy(
               ID, std::make_unique<MSP430DAGToDAGISel>(TM, OptLevel)) {}
   };
 }  // end anonymous namespace
 
-char MSP430DAGToDAGISelLegacy::ID;
+const char MSP430DAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(MSP430DAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 

@@ -806,7 +806,7 @@ bool AArch64PreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
 
 class AArch64PreLegalizerCombiner : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AArch64PreLegalizerCombiner();
 
@@ -882,7 +882,7 @@ bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   return Impl.combineMachineInstrs();
 }
 
-char AArch64PreLegalizerCombiner::ID = 0;
+const char AArch64PreLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(AArch64PreLegalizerCombiner, DEBUG_TYPE,
                       "Combine AArch64 machine instrs before legalization",
                       false, false)

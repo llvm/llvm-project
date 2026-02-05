@@ -45,7 +45,7 @@ class StackFrame : public ExecutionContextScope,
 public:
   /// LLVM RTTI support.
   /// \{
-  static char ID;
+  static const char ID;
   virtual bool isA(const void *ClassID) const { return ClassID == &ID; }
   static bool classof(const StackFrame *obj) { return obj->isA(&ID); }
   /// \}

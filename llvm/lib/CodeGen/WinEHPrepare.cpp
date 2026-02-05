@@ -98,7 +98,7 @@ class WinEHPrepare : public FunctionPass {
   bool DemoteCatchSwitchPHIOnly;
 
 public:
-  static char ID; // Pass identification, replacement for typeid.
+  static const char ID; // Pass identification, replacement for typeid.
 
   WinEHPrepare(bool DemoteCatchSwitchPHIOnly = false)
       : FunctionPass(ID), DemoteCatchSwitchPHIOnly(DemoteCatchSwitchPHIOnly) {}
@@ -120,7 +120,7 @@ PreservedAnalyses WinEHPreparePass::run(Function &F,
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
-char WinEHPrepare::ID = 0;
+const char WinEHPrepare::ID = 0;
 INITIALIZE_PASS(WinEHPrepare, DEBUG_TYPE, "Prepare Windows exceptions", false,
                 false)
 

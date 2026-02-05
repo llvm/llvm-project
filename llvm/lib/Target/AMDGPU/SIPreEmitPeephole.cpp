@@ -83,7 +83,7 @@ public:
 
 class SIPreEmitPeepholeLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SIPreEmitPeepholeLegacy() : MachineFunctionPass(ID) {
     initializeSIPreEmitPeepholeLegacyPass(*PassRegistry::getPassRegistry());
@@ -99,9 +99,9 @@ public:
 INITIALIZE_PASS(SIPreEmitPeepholeLegacy, DEBUG_TYPE,
                 "SI peephole optimizations", false, false)
 
-char SIPreEmitPeepholeLegacy::ID = 0;
+const char SIPreEmitPeepholeLegacy::ID = 0;
 
-char &llvm::SIPreEmitPeepholeID = SIPreEmitPeepholeLegacy::ID;
+const char &llvm::SIPreEmitPeepholeID = SIPreEmitPeepholeLegacy::ID;
 
 bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
   // Match:

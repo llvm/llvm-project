@@ -45,14 +45,14 @@ class LowerGlobalDtorsLegacyPass final : public ModulePass {
   bool runOnModule(Module &M) override;
 
 public:
-  static char ID;
+  static const char ID;
   LowerGlobalDtorsLegacyPass() : ModulePass(ID) {
     initializeLowerGlobalDtorsLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 };
 } // End anonymous namespace
 
-char LowerGlobalDtorsLegacyPass::ID = 0;
+const char LowerGlobalDtorsLegacyPass::ID = 0;
 INITIALIZE_PASS(LowerGlobalDtorsLegacyPass, DEBUG_TYPE,
                 "Lower @llvm.global_dtors via `__cxa_atexit`", false, false)
 

@@ -116,7 +116,7 @@ private:
   bool isLongBranchPseudo(int Opcode) const;
 
 public:
-  static char ID;
+  static const char ID;
 
   const MipsSubtarget *Subtarget;
   const MipsFunctionInfo *MipsFI;

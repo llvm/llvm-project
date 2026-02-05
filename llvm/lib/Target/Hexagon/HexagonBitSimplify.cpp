@@ -187,7 +187,7 @@ namespace {
 
   class HexagonBitSimplify : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     HexagonBitSimplify() : MachineFunctionPass(ID) {}
 
@@ -258,7 +258,7 @@ namespace {
 
 } // end anonymous namespace
 
-char HexagonBitSimplify::ID = 0;
+const char HexagonBitSimplify::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonBitSimplify, "hexagon-bit-simplify",
       "Hexagon bit simplification", false, false)
@@ -2893,7 +2893,7 @@ namespace {
 
   class HexagonLoopRescheduling : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     HexagonLoopRescheduling() : MachineFunctionPass(ID) {}
 
@@ -2938,7 +2938,7 @@ namespace {
 
 } // end anonymous namespace
 
-char HexagonLoopRescheduling::ID = 0;
+const char HexagonLoopRescheduling::ID = 0;
 
 INITIALIZE_PASS(HexagonLoopRescheduling, "hexagon-loop-resched-pass",
                 "Hexagon Loop Rescheduling", false, false)

@@ -137,7 +137,7 @@ class DominanceFrontierWrapperPass : public FunctionPass {
   DominanceFrontier DF;
 
 public:
-  static char ID; // Pass ID, replacement for typeid
+  static const char ID; // Pass ID, replacement for typeid
 
   DominanceFrontierWrapperPass();
 

@@ -61,7 +61,7 @@ class AArch64StackTaggingPreRA : public MachineFunctionPass {
   SmallVector<MachineInstr*, 16> ReTags;
 
 public:
-  static char ID;
+  static const char ID;
   AArch64StackTaggingPreRA() : MachineFunctionPass(ID) {}
 
   bool mayUseUncheckedLoadStore();
@@ -81,7 +81,7 @@ public:
 };
 } // end anonymous namespace
 
-char AArch64StackTaggingPreRA::ID = 0;
+const char AArch64StackTaggingPreRA::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AArch64StackTaggingPreRA, "aarch64-stack-tagging-pre-ra",
                       "AArch64 Stack Tagging PreRA Pass", false, false)

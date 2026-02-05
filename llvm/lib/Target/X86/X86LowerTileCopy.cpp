@@ -40,7 +40,7 @@ namespace {
 
 class X86LowerTileCopyLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   X86LowerTileCopyLegacy() : MachineFunctionPass(ID) {}
 
@@ -53,7 +53,7 @@ public:
 
 } // namespace
 
-char X86LowerTileCopyLegacy::ID = 0;
+const char X86LowerTileCopyLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(X86LowerTileCopyLegacy, DEBUG_TYPE, "Tile Copy Lowering",
                       false, false)

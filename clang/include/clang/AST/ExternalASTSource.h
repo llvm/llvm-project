@@ -68,7 +68,7 @@ class ExternalASTSource : public RefCountedBase<ExternalASTSource> {
   uint32_t CurrentGeneration = 0;
 
   /// LLVM-style RTTI.
-  static char ID;
+  static const char ID;
 
 public:
   ExternalASTSource() = default;

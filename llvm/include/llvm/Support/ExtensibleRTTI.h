@@ -26,19 +26,19 @@
 //   @code{.cpp}
 //   class MyBaseClass : public RTTIExtends<MyBaseClass, RTTIRoot> {
 //   public:
-//     static char ID;
+//     static const char ID;
 //     virtual void foo() = 0;
 //   };
 //
 //   class MyDerivedClass1 : public RTTIExtends<MyDerivedClass1, MyBaseClass> {
 //   public:
-//     static char ID;
+//     static const char ID;
 //     void foo() override {}
 //   };
 //
 //   class MyDerivedClass2 : public RTTIExtends<MyDerivedClass2, MyBaseClass> {
 //   public:
-//     static char ID;
+//     static const char ID;
 //     void foo() override {}
 //   };
 //
@@ -86,7 +86,7 @@ public:
 private:
   virtual void anchor();
 
-  static char ID;
+  static const char ID;
 };
 
 /// Inheritance utility for extensible RTTI.
@@ -102,24 +102,24 @@ private:
 /// @code{.cpp}
 /// class MyType : public RTTIExtends<MyType, RTTIRoot> {
 /// public:
-///   static char ID;
+///   static const char ID;
 /// };
 ///
 /// class MyDerivedType : public RTTIExtends<MyDerivedType, MyType> {
 /// public:
-///   static char ID;
+///   static const char ID;
 /// };
 ///
 /// class MyOtherType : public RTTIExtends<MyOtherType, MyType> {
 /// public:
-///   static char ID;
+///   static const char ID;
 /// };
 ///
 /// class MyMultipleInheritanceType
 ///   : public RTTIExtends<MyMultipleInheritanceType,
 ///                        MyDerivedType, MyOtherType> {
 /// public:
-///   static char ID;
+///   static const char ID;
 /// };
 ///
 /// @endcode

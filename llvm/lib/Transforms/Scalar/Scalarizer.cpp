@@ -341,7 +341,7 @@ private:
 
 class ScalarizerLegacyPass : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
   ScalarizerPassOptions Options;
   ScalarizerLegacyPass() : FunctionPass(ID), Options() {}
   ScalarizerLegacyPass(const ScalarizerPassOptions &Options);
@@ -360,7 +360,7 @@ void ScalarizerLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<DominatorTreeWrapperPass>();
 }
 
-char ScalarizerLegacyPass::ID = 0;
+const char ScalarizerLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ScalarizerLegacyPass, "scalarizer",
                       "Scalarize vector operations", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)

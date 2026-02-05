@@ -44,7 +44,7 @@
 using namespace llvm;
 using namespace MIPatternMatch;
 
-char llvm::GISelValueTrackingAnalysisLegacy::ID = 0;
+const char llvm::GISelValueTrackingAnalysisLegacy::ID = 0;
 
 INITIALIZE_PASS(GISelValueTrackingAnalysisLegacy, DEBUG_TYPE,
                 "Analysis for ComputingKnownBits", false, true)

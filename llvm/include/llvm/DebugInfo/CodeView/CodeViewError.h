@@ -44,7 +44,7 @@ public:
   using ErrorInfo<CodeViewError,
                   StringError>::ErrorInfo; // inherit constructors
   CodeViewError(const Twine &S) : ErrorInfo(S, cv_error_code::unspecified) {}
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
 };
 
 } // namespace codeview

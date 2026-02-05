@@ -106,7 +106,7 @@ public:
 /// value.
 class OverflowError : public ErrorInfo<OverflowError> {
 public:
-  LLVM_ABI_FOR_TEST static char ID;
+  LLVM_ABI_FOR_TEST static const char ID;
 
   std::error_code convertToErrorCode() const override {
     return std::make_error_code(std::errc::value_too_large);
@@ -175,7 +175,7 @@ private:
   StringRef VarName;
 
 public:
-  LLVM_ABI_FOR_TEST static char ID;
+  LLVM_ABI_FOR_TEST static const char ID;
 
   UndefVarError(StringRef VarName) : VarName(VarName) {}
 
@@ -512,7 +512,7 @@ private:
   SMRange Range;
 
 public:
-  LLVM_ABI_FOR_TEST static char ID;
+  LLVM_ABI_FOR_TEST static const char ID;
 
   ErrorDiagnostic(SMDiagnostic &&Diag, SMRange Range)
       : Diagnostic(Diag), Range(Range) {}
@@ -542,7 +542,7 @@ public:
 
 class NotFoundError : public ErrorInfo<NotFoundError> {
 public:
-  LLVM_ABI_FOR_TEST static char ID;
+  LLVM_ABI_FOR_TEST static const char ID;
 
   std::error_code convertToErrorCode() const override {
     return inconvertibleErrorCode();
@@ -566,7 +566,7 @@ public:
 /// a call like \c consumeError.
 class ErrorReported final : public ErrorInfo<ErrorReported> {
 public:
-  static char ID;
+  static const char ID;
 
   std::error_code convertToErrorCode() const override {
     return inconvertibleErrorCode();

@@ -26,7 +26,7 @@ using namespace llvm;
 namespace {
 class NVPTXReplaceImageHandles : public MachineFunctionPass {
 private:
-  static char ID;
+  static const char ID;
   DenseSet<MachineInstr *> InstrsToRemove;
 
 public:
@@ -43,7 +43,7 @@ private:
 };
 } // namespace
 
-char NVPTXReplaceImageHandles::ID = 0;
+const char NVPTXReplaceImageHandles::ID = 0;
 
 NVPTXReplaceImageHandles::NVPTXReplaceImageHandles()
   : MachineFunctionPass(ID) {}

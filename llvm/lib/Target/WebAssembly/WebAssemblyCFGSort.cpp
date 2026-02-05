@@ -63,12 +63,12 @@ class WebAssemblyCFGSort final : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyCFGSort() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyCFGSort::ID = 0;
+const char WebAssemblyCFGSort::ID = 0;
 INITIALIZE_PASS(WebAssemblyCFGSort, DEBUG_TYPE,
                 "Reorders blocks in topological order", false, false)
 

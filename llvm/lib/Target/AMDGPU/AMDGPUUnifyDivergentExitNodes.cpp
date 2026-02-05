@@ -73,16 +73,17 @@ public:
 
 class AMDGPUUnifyDivergentExitNodes : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
   AMDGPUUnifyDivergentExitNodes() : FunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
 };
 } // end anonymous namespace
 
-char AMDGPUUnifyDivergentExitNodes::ID = 0;
+const char AMDGPUUnifyDivergentExitNodes::ID = 0;
 
-char &llvm::AMDGPUUnifyDivergentExitNodesID = AMDGPUUnifyDivergentExitNodes::ID;
+const char &llvm::AMDGPUUnifyDivergentExitNodesID =
+    AMDGPUUnifyDivergentExitNodes::ID;
 
 INITIALIZE_PASS_BEGIN(AMDGPUUnifyDivergentExitNodes, DEBUG_TYPE,
                       "Unify divergent function exit nodes", false, false)

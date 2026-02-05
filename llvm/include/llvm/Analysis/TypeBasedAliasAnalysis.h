@@ -88,7 +88,7 @@ class LLVM_ABI TypeBasedAAWrapperPass : public ImmutablePass {
   std::unique_ptr<TypeBasedAAResult> Result;
 
 public:
-  static char ID;
+  static const char ID;
 
   TypeBasedAAWrapperPass();
 

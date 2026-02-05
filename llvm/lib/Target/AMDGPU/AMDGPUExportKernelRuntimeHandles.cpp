@@ -35,7 +35,7 @@ namespace {
 /// Lower enqueued blocks.
 class AMDGPUExportKernelRuntimeHandlesLegacy : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
 
   explicit AMDGPUExportKernelRuntimeHandlesLegacy() : ModulePass(ID) {}
 
@@ -45,9 +45,9 @@ private:
 
 } // end anonymous namespace
 
-char AMDGPUExportKernelRuntimeHandlesLegacy::ID = 0;
+const char AMDGPUExportKernelRuntimeHandlesLegacy::ID = 0;
 
-char &llvm::AMDGPUExportKernelRuntimeHandlesLegacyID =
+const char &llvm::AMDGPUExportKernelRuntimeHandlesLegacyID =
     AMDGPUExportKernelRuntimeHandlesLegacy::ID;
 
 INITIALIZE_PASS(AMDGPUExportKernelRuntimeHandlesLegacy, DEBUG_TYPE,

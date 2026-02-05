@@ -75,7 +75,7 @@ class DXILMetadataAnalysisWrapperPass : public ModulePass {
   std::unique_ptr<dxil::ModuleMetadataInfo> MetadataInfo;
 
 public:
-  static char ID; // Class identification, replacement for typeinfo
+  static const char ID; // Class identification, replacement for typeinfo
 
   DXILMetadataAnalysisWrapperPass();
   ~DXILMetadataAnalysisWrapperPass() override;

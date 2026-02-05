@@ -34,7 +34,7 @@ using namespace llvm;
 namespace {
 class InsertCodePrefetch : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   InsertCodePrefetch() : MachineFunctionPass(ID) {
     initializeInsertCodePrefetchPass(*PassRegistry::getPassRegistry());
@@ -56,7 +56,7 @@ public:
 //            Implementation
 //===----------------------------------------------------------------------===//
 
-char InsertCodePrefetch::ID = 0;
+const char InsertCodePrefetch::ID = 0;
 INITIALIZE_PASS_BEGIN(InsertCodePrefetch, DEBUG_TYPE, "Code prefetch insertion",
                       true, false)
 INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)

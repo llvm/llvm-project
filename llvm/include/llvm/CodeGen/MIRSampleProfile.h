@@ -42,7 +42,7 @@ class MIRProfileLoaderPass : public MachineFunctionPass {
   unsigned HighBit;
 
 public:
-  static char ID;
+  static const char ID;
   /// FS bits will only use the '1' bits in the Mask.
   MIRProfileLoaderPass(std::string FileName = "",
                        std::string RemappingFileName = "",

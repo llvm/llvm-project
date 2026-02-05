@@ -1527,4 +1527,4 @@ IRSimilarityAnalysisPrinterPass::run(Module &M, ModuleAnalysisManager &AM) {
   return PreservedAnalyses::all();
 }
 
-char IRSimilarityIdentifierWrapperPass::ID = 0;
+const char IRSimilarityIdentifierWrapperPass::ID = 0;

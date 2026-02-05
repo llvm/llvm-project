@@ -52,7 +52,7 @@ private:
 
 class OptimizePHIsLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   OptimizePHIsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -69,9 +69,9 @@ public:
 };
 } // end anonymous namespace
 
-char OptimizePHIsLegacy::ID = 0;
+const char OptimizePHIsLegacy::ID = 0;
 
-char &llvm::OptimizePHIsLegacyID = OptimizePHIsLegacy::ID;
+const char &llvm::OptimizePHIsLegacyID = OptimizePHIsLegacy::ID;
 
 INITIALIZE_PASS(OptimizePHIsLegacy, DEBUG_TYPE,
                 "Optimize machine instruction PHIs", false, false)

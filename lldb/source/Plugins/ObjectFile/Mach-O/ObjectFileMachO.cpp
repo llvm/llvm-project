@@ -768,7 +768,7 @@ static uint32_t MachHeaderSizeFromMagic(uint32_t magic) {
 
 #define MACHO_NLIST_ARM_SYMBOL_IS_THUMB 0x0008
 
-char ObjectFileMachO::ID;
+const char ObjectFileMachO::ID = 0;
 
 void ObjectFileMachO::Initialize() {
   PluginManager::RegisterPlugin(

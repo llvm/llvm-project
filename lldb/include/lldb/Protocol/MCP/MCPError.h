@@ -16,7 +16,7 @@ namespace lldb_protocol::mcp {
 
 class MCPError : public llvm::ErrorInfo<MCPError> {
 public:
-  static char ID;
+  static const char ID;
 
   MCPError(std::string message, int64_t error_code = kInternalError);
 
@@ -35,7 +35,7 @@ private:
 
 class UnsupportedURI : public llvm::ErrorInfo<UnsupportedURI> {
 public:
-  static char ID;
+  static const char ID;
 
   UnsupportedURI(std::string uri);
 

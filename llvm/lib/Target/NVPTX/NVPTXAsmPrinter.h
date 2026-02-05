@@ -146,7 +146,7 @@ class LLVM_LIBRARY_VISIBILITY NVPTXAsmPrinter : public AsmPrinter {
   friend class AggBuffer;
 
 public:
-  static char ID;
+  static const char ID;
 
   StringRef getPassName() const override { return "NVPTX Assembly Printer"; }
 

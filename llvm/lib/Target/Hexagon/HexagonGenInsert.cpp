@@ -496,7 +496,7 @@ namespace {
 
   class HexagonGenInsert : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     HexagonGenInsert() : MachineFunctionPass(ID) {}
 
@@ -569,7 +569,7 @@ namespace {
 
 } // end anonymous namespace
 
-char HexagonGenInsert::ID = 0;
+const char HexagonGenInsert::ID = 0;
 
 void HexagonGenInsert::dump_map() const {
   for (const auto &I : IFMap) {

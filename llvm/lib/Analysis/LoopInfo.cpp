@@ -1212,7 +1212,7 @@ MDNode *llvm::makePostTransformationMetadata(LLVMContext &Context,
 
 LoopInfoWrapperPass::LoopInfoWrapperPass() : FunctionPass(ID) {}
 
-char LoopInfoWrapperPass::ID = 0;
+const char LoopInfoWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopInfoWrapperPass, "loops", "Natural Loop Information",
                       true, true)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)

@@ -51,7 +51,7 @@ class AArch64CondBrTuning : public MachineFunctionPass {
   MachineRegisterInfo *MRI;
 
 public:
-  static char ID;
+  static const char ID;
   AArch64CondBrTuning() : MachineFunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -66,7 +66,7 @@ private:
 };
 } // end anonymous namespace
 
-char AArch64CondBrTuning::ID = 0;
+const char AArch64CondBrTuning::ID = 0;
 
 INITIALIZE_PASS(AArch64CondBrTuning, "aarch64-cond-br-tuning",
                 AARCH64_CONDBR_TUNING_NAME, false, false)

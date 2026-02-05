@@ -303,7 +303,7 @@ class AArch64StackTagging : public FunctionPass {
   const bool UseStackSafety;
 
 public:
-  static char ID; // Pass ID, replacement for typeid
+  static const char ID; // Pass ID, replacement for typeid
 
   AArch64StackTagging(bool IsOptNone = false)
       : FunctionPass(ID),
@@ -345,7 +345,7 @@ private:
 
 } // end anonymous namespace
 
-char AArch64StackTagging::ID = 0;
+const char AArch64StackTagging::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AArch64StackTagging, DEBUG_TYPE, "AArch64 Stack Tagging",
                       false, false)

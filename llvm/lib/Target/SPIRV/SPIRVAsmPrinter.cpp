@@ -52,7 +52,7 @@ public:
                            std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer), ID), ModuleSectionsEmitted(false),
         ST(nullptr), TII(nullptr), MAI(nullptr) {}
-  static char ID;
+  static const char ID;
   bool ModuleSectionsEmitted;
   const SPIRVSubtarget *ST;
   const SPIRVInstrInfo *TII;
@@ -867,7 +867,7 @@ bool SPIRVAsmPrinter::doInitialization(Module &M) {
   return AsmPrinter::doInitialization(M);
 }
 
-char SPIRVAsmPrinter::ID = 0;
+const char SPIRVAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(SPIRVAsmPrinter, "spirv-asm-printer", "SPIRV Assembly Printer",
                 false, false)

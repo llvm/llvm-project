@@ -40,7 +40,7 @@ public:
   LibCppStdFunctionCallableInfo
   FindLibCppStdFunctionCallableInfo(lldb::ValueObjectSP &valobj_sp);
 
-  static char ID;
+  static const char ID;
 
   bool isA(const void *ClassID) const override {
     return ClassID == &ID || LanguageRuntime::isA(ClassID);

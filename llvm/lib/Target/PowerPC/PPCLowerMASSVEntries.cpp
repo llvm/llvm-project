@@ -37,7 +37,7 @@ static StringRef MASSVFuncs[] = {
 
 class PPCLowerMASSVEntries : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
 
   PPCLowerMASSVEntries() : ModulePass(ID) {}
 
@@ -187,9 +187,9 @@ bool PPCLowerMASSVEntries::runOnModule(Module &M) {
   return Changed;
 }
 
-char PPCLowerMASSVEntries::ID = 0;
+const char PPCLowerMASSVEntries::ID = 0;
 
-char &llvm::PPCLowerMASSVEntriesID = PPCLowerMASSVEntries::ID;
+const char &llvm::PPCLowerMASSVEntriesID = PPCLowerMASSVEntries::ID;
 
 INITIALIZE_PASS(PPCLowerMASSVEntries, DEBUG_TYPE, "Lower MASSV entries", false,
                 false)

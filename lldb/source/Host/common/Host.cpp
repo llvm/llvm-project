@@ -631,7 +631,7 @@ uint32_t Host::FindProcesses(const ProcessInstanceInfoMatch &match_info,
   return FindProcessesImpl(match_info, process_infos);
 }
 
-char SystemLogHandler::ID;
+const char SystemLogHandler::ID = 0;
 
 SystemLogHandler::SystemLogHandler() {}
 

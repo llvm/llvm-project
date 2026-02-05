@@ -16,7 +16,7 @@ using namespace lldb;
 
 namespace lldb_private {
 
-char DiagnosticError::ID;
+const char DiagnosticError::ID = 0;
 
 lldb::ErrorType DiagnosticError::GetErrorType() const {
   return lldb::eErrorTypeExpression;

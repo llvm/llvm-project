@@ -84,14 +84,14 @@ bool canBeRepresentedAsSls(const ConstantSDNode &CN) {
 
 class LanaiDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   explicit LanaiDAGToDAGISelLegacy(LanaiTargetMachine &TM)
       : SelectionDAGISelLegacy(ID, std::make_unique<LanaiDAGToDAGISel>(TM)) {}
 };
 
 } // namespace
 
-char LanaiDAGToDAGISelLegacy::ID = 0;
+const char LanaiDAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(LanaiDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 

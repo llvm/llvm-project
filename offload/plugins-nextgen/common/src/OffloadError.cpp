@@ -37,4 +37,4 @@ const std::error_category &error::OffloadErrCategory() {
   return MSFCategory;
 }
 
-char OffloadError::ID;
+const char OffloadError::ID = 0;

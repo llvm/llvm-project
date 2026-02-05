@@ -7904,7 +7904,7 @@ bool llvm::verifyModule(const Module &M, raw_ostream *OS,
 namespace {
 
 struct VerifierLegacyPass : public FunctionPass {
-  static char ID;
+  static const char ID;
 
   std::unique_ptr<Verifier> V;
   bool FatalErrors = true;
@@ -8297,7 +8297,7 @@ bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {
   return true;
 }
 
-char VerifierLegacyPass::ID = 0;
+const char VerifierLegacyPass::ID = 0;
 INITIALIZE_PASS(VerifierLegacyPass, "verify", "Module Verifier", false, false)
 
 FunctionPass *llvm::createVerifierPass(bool FatalErrors) {

@@ -378,7 +378,7 @@ class StructurizeCFGLegacyPass : public RegionPass {
   bool SkipUniformRegions;
 
 public:
-  static char ID;
+  static const char ID;
 
   explicit StructurizeCFGLegacyPass(bool SkipUniformRegions_ = false)
       : RegionPass(ID), SkipUniformRegions(SkipUniformRegions_) {
@@ -419,7 +419,7 @@ public:
 
 } // end anonymous namespace
 
-char StructurizeCFGLegacyPass::ID = 0;
+const char StructurizeCFGLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(StructurizeCFGLegacyPass, "structurizecfg",
                       "Structurize the CFG", false, false)

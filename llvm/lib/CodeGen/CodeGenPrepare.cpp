@@ -483,7 +483,7 @@ private:
 
 class CodeGenPrepareLegacyPass : public FunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   CodeGenPrepareLegacyPass() : FunctionPass(ID) {}
 
@@ -504,7 +504,7 @@ public:
 
 } // end anonymous namespace
 
-char CodeGenPrepareLegacyPass::ID = 0;
+const char CodeGenPrepareLegacyPass::ID = 0;
 
 bool CodeGenPrepareLegacyPass::runOnFunction(Function &F) {
   if (skipFunction(F))

@@ -70,7 +70,7 @@ bool ModulePass::skipModule(const Module &M) const {
   return Gate.isEnabled() && !Gate.shouldRunPass(PassName, getDescription(M));
 }
 
-bool Pass::mustPreserveAnalysisID(char &AID) const {
+bool Pass::mustPreserveAnalysisID(const char &AID) const {
   return Resolver->getAnalysisIfAvailable(&AID) != nullptr;
 }
 
@@ -286,12 +286,12 @@ AnalysisUsage &AnalysisUsage::addRequiredID(const void *ID) {
   return *this;
 }
 
-AnalysisUsage &AnalysisUsage::addRequiredID(char &ID) {
+AnalysisUsage &AnalysisUsage::addRequiredID(const char &ID) {
   pushUnique(Required, &ID);
   return *this;
 }
 
-AnalysisUsage &AnalysisUsage::addRequiredTransitiveID(char &ID) {
+AnalysisUsage &AnalysisUsage::addRequiredTransitiveID(const char &ID) {
   pushUnique(Required, &ID);
   pushUnique(RequiredTransitive, &ID);
   return *this;

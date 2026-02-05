@@ -51,7 +51,7 @@ struct AvoidCapabilitiesSet {
   AvoidCapabilitiesSet() { S.insert_range(AvoidCapabilities); }
 };
 
-char llvm::SPIRVModuleAnalysis::ID = 0;
+const char llvm::SPIRVModuleAnalysis::ID = 0;
 
 INITIALIZE_PASS(SPIRVModuleAnalysis, DEBUG_TYPE, "SPIRV module analysis", true,
                 true)

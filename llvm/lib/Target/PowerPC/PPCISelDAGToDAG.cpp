@@ -448,7 +448,7 @@ private:
 
   class PPCDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
   public:
-    static char ID;
+    static const char ID;
     explicit PPCDAGToDAGISelLegacy(PPCTargetMachine &tm,
                                    CodeGenOptLevel OptLevel)
         : SelectionDAGISelLegacy(
@@ -456,7 +456,7 @@ private:
   };
 } // end anonymous namespace
 
-char PPCDAGToDAGISelLegacy::ID = 0;
+const char PPCDAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(PPCDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 

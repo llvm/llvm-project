@@ -456,11 +456,11 @@ private:
   std::vector<Instruction *> DeadInstructions;
 
 public:
-  static char ID;
+  static const char ID;
 };
 } // namespace
 
-char SPIRVLegalizePointerCast::ID = 0;
+const char SPIRVLegalizePointerCast::ID = 0;
 INITIALIZE_PASS(SPIRVLegalizePointerCast, "spirv-legalize-bitcast",
                 "SPIRV legalize bitcast pass", false, false)
 

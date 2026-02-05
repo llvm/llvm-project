@@ -15,7 +15,7 @@
 namespace lldb_private {
 class UnimplementedError : public llvm::ErrorInfo<UnimplementedError> {
 public:
-  static char ID;
+  static const char ID;
 
   void log(llvm::raw_ostream &OS) const override { OS << "Not implemented"; }
 

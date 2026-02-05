@@ -22,7 +22,7 @@
 
 using namespace lldb_private;
 
-char REPL::ID;
+const char REPL::ID = 0;
 
 REPL::REPL(Target &target) : m_target(target) {
   // Make sure all option values have sane defaults

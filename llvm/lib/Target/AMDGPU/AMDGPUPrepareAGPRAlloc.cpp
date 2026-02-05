@@ -44,7 +44,7 @@ public:
 
 class AMDGPUPrepareAGPRAllocLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUPrepareAGPRAllocLegacy() : MachineFunctionPass(ID) {
     initializeAMDGPUPrepareAGPRAllocLegacyPass(
@@ -67,9 +67,10 @@ INITIALIZE_PASS_BEGIN(AMDGPUPrepareAGPRAllocLegacy, DEBUG_TYPE,
 INITIALIZE_PASS_END(AMDGPUPrepareAGPRAllocLegacy, DEBUG_TYPE,
                     "AMDGPU Prepare AGPR Alloc", false, false)
 
-char AMDGPUPrepareAGPRAllocLegacy::ID = 0;
+const char AMDGPUPrepareAGPRAllocLegacy::ID = 0;
 
-char &llvm::AMDGPUPrepareAGPRAllocLegacyID = AMDGPUPrepareAGPRAllocLegacy::ID;
+const char &llvm::AMDGPUPrepareAGPRAllocLegacyID =
+    AMDGPUPrepareAGPRAllocLegacy::ID;
 
 bool AMDGPUPrepareAGPRAllocLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))

@@ -49,7 +49,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
 
-char SymbolFileDWARFDebugMap::ID;
+const char SymbolFileDWARFDebugMap::ID = 0;
 
 // Subclass lldb_private::Module so we can intercept the
 // "Module::GetObjectFile()" (so we can fixup the object file sections) and

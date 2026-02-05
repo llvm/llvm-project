@@ -19,7 +19,7 @@ using namespace llvm;
 template class llvm::GenericCycleInfo<llvm::MachineSSAContext>;
 template class llvm::GenericCycle<llvm::MachineSSAContext>;
 
-char MachineCycleInfoWrapperPass::ID = 0;
+const char MachineCycleInfoWrapperPass::ID = 0;
 
 MachineCycleInfoWrapperPass::MachineCycleInfoWrapperPass()
     : MachineFunctionPass(ID) {}
@@ -65,7 +65,7 @@ MachineCycleAnalysis::run(MachineFunction &MF,
 namespace {
 class MachineCycleInfoPrinterLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   MachineCycleInfoPrinterLegacy();
 
@@ -74,7 +74,7 @@ public:
 };
 } // namespace
 
-char MachineCycleInfoPrinterLegacy::ID = 0;
+const char MachineCycleInfoPrinterLegacy::ID = 0;
 
 MachineCycleInfoPrinterLegacy::MachineCycleInfoPrinterLegacy()
     : MachineFunctionPass(ID) {}

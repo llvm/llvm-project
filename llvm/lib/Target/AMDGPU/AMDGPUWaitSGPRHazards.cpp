@@ -533,7 +533,7 @@ public:
 
 class AMDGPUWaitSGPRHazardsLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUWaitSGPRHazardsLegacy() : MachineFunctionPass(ID) {}
 
@@ -549,9 +549,10 @@ public:
 
 } // namespace
 
-char AMDGPUWaitSGPRHazardsLegacy::ID = 0;
+const char AMDGPUWaitSGPRHazardsLegacy::ID = 0;
 
-char &llvm::AMDGPUWaitSGPRHazardsLegacyID = AMDGPUWaitSGPRHazardsLegacy::ID;
+const char &llvm::AMDGPUWaitSGPRHazardsLegacyID =
+    AMDGPUWaitSGPRHazardsLegacy::ID;
 
 INITIALIZE_PASS(AMDGPUWaitSGPRHazardsLegacy, DEBUG_TYPE,
                 "AMDGPU Insert waits for SGPR read hazards", false, false)

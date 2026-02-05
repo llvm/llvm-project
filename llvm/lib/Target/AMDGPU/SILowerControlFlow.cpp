@@ -143,7 +143,7 @@ public:
 
 class SILowerControlFlowLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SILowerControlFlowLegacy() : MachineFunctionPass(ID) {}
 
@@ -168,7 +168,7 @@ public:
 
 } // end anonymous namespace
 
-char SILowerControlFlowLegacy::ID = 0;
+const char SILowerControlFlowLegacy::ID = 0;
 
 INITIALIZE_PASS(SILowerControlFlowLegacy, DEBUG_TYPE, "SI lower control flow",
                 false, false)
@@ -180,7 +180,7 @@ static void setImpSCCDefDead(MachineInstr &MI, bool IsDead) {
   ImpDefSCC.setIsDead(IsDead);
 }
 
-char &llvm::SILowerControlFlowLegacyID = SILowerControlFlowLegacy::ID;
+const char &llvm::SILowerControlFlowLegacyID = SILowerControlFlowLegacy::ID;
 
 bool SILowerControlFlow::hasKill(const MachineBasicBlock *Begin,
                                  const MachineBasicBlock *End) {

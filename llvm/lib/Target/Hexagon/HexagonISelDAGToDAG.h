@@ -164,7 +164,7 @@ private:
 
 class HexagonDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   explicit HexagonDAGToDAGISelLegacy(HexagonTargetMachine &tm,
                                      CodeGenOptLevel OptLevel);
 };

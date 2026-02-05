@@ -25,7 +25,7 @@ using namespace llvm;
 
 namespace {
 struct FlattenCFGLegacyPass : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 public:
   FlattenCFGLegacyPass() : FunctionPass(ID) {
     initializeFlattenCFGLegacyPassPass(*PassRegistry::getPassRegistry());
@@ -69,7 +69,7 @@ static bool iterativelyFlattenCFG(Function &F, AliasAnalysis *AA) {
   return Changed;
 }
 
-char FlattenCFGLegacyPass::ID = 0;
+const char FlattenCFGLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(FlattenCFGLegacyPass, "flattencfg", "Flatten the CFG",
                       false, false)

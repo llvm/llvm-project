@@ -378,7 +378,7 @@ private:
 
 class LoadStoreVectorizerLegacyPass : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   LoadStoreVectorizerLegacyPass() : FunctionPass(ID) {
     initializeLoadStoreVectorizerLegacyPassPass(
@@ -403,7 +403,7 @@ public:
 
 } // end anonymous namespace
 
-char LoadStoreVectorizerLegacyPass::ID = 0;
+const char LoadStoreVectorizerLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(LoadStoreVectorizerLegacyPass, DEBUG_TYPE,
                       "Vectorize load and Store instructions", false, false)

@@ -31,7 +31,7 @@ void initializeDebugInfoDummyAnalysisPass(PassRegistry &);
 
 namespace {
 struct DebugInfoDrop : public FunctionPass {
-  static char ID;
+  static const char ID;
   bool runOnFunction(Function &F) override {
     // Drop DISubprogram.
     F.setSubprogram(nullptr);
@@ -52,7 +52,7 @@ struct DebugInfoDrop : public FunctionPass {
 };
 
 struct DebugValueDrop : public FunctionPass {
-  static char ID;
+  static const char ID;
   bool runOnFunction(Function &F) override {
     for (BasicBlock &BB : F) {
       for (Instruction &I : BB) {
@@ -72,7 +72,7 @@ struct DebugValueDrop : public FunctionPass {
 };
 
 struct DebugInfoDummyAnalysis : public FunctionPass {
-  static char ID;
+  static const char ID;
   bool runOnFunction(Function &F) override {
     // Do nothing, so debug info stays untouched.
     return false;
@@ -85,9 +85,9 @@ struct DebugInfoDummyAnalysis : public FunctionPass {
 };
 }
 
-char DebugInfoDrop::ID = 0;
-char DebugValueDrop::ID = 0;
-char DebugInfoDummyAnalysis::ID = 0;
+const char DebugInfoDrop::ID = 0;
+const char DebugValueDrop::ID = 0;
+const char DebugInfoDummyAnalysis::ID = 0;
 
 TEST(DebugInfoDrop, DropOriginalDebugInfo) {
   LLVMContext C;

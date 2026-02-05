@@ -80,7 +80,7 @@ using namespace llvm;
 namespace {
 
 struct RISCVMakeCompressibleOpt : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
@@ -90,7 +90,7 @@ struct RISCVMakeCompressibleOpt : public MachineFunctionPass {
 };
 } // namespace
 
-char RISCVMakeCompressibleOpt::ID = 0;
+const char RISCVMakeCompressibleOpt::ID = 0;
 INITIALIZE_PASS(RISCVMakeCompressibleOpt, "riscv-make-compressible",
                 RISCV_COMPRESS_INSTRS_NAME, false, false)
 

@@ -29,7 +29,7 @@ using namespace lldb_private::breakpad;
 
 LLDB_PLUGIN_DEFINE(SymbolFileBreakpad)
 
-char SymbolFileBreakpad::ID;
+const char SymbolFileBreakpad::ID = 0;
 
 class SymbolFileBreakpad::LineIterator {
 public:

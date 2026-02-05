@@ -33,7 +33,7 @@ STATISTIC(NumKCFIChecksAdded, "Number of indirect call checks added");
 namespace {
 class KCFI : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   KCFI() : MachineFunctionPass(ID) {}
 
@@ -53,7 +53,7 @@ private:
                  MachineBasicBlock::instr_iterator I) const;
 };
 
-char KCFI::ID = 0;
+const char KCFI::ID = 0;
 } // end anonymous namespace
 
 INITIALIZE_PASS(KCFI, DEBUG_TYPE, KCFI_PASS_NAME, false, false)

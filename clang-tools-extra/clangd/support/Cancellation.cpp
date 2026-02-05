@@ -12,7 +12,7 @@
 namespace clang {
 namespace clangd {
 
-char CancelledError::ID = 0;
+const char CancelledError::ID = 0;
 
 // We don't want a cancelable scope to "shadow" an enclosing one.
 struct CancelState {

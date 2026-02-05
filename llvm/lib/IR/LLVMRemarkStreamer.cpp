@@ -88,9 +88,9 @@ void LLVMRemarkStreamer::emit(const DiagnosticInfoOptimizationBase &Diag) {
   RS.getSerializer().emit(R);
 }
 
-char LLVMRemarkSetupFileError::ID = 0;
-char LLVMRemarkSetupPatternError::ID = 0;
-char LLVMRemarkSetupFormatError::ID = 0;
+const char LLVMRemarkSetupFileError::ID = 0;
+const char LLVMRemarkSetupPatternError::ID = 0;
+const char LLVMRemarkSetupFormatError::ID = 0;
 
 Expected<LLVMRemarkFileHandle> llvm::setupLLVMOptimizationRemarks(
     LLVMContext &Context, StringRef RemarksFilename, StringRef RemarksPasses,

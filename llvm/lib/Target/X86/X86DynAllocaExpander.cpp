@@ -73,10 +73,10 @@ private:
   StringRef getPassName() const override { return "X86 DynAlloca Expander"; }
 
 public:
-  static char ID;
+  static const char ID;
 };
 
-char X86DynAllocaExpanderLegacy::ID = 0;
+const char X86DynAllocaExpanderLegacy::ID = 0;
 
 } // end anonymous namespace
 

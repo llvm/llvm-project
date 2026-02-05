@@ -554,7 +554,7 @@ Printable reportMismatch(const GCNRPTracker::LiveRegSet &LISLR,
                          const TargetRegisterInfo *TRI, StringRef Pfx = "  ");
 
 struct GCNRegPressurePrinter : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
 
 public:
   GCNRegPressurePrinter() : MachineFunctionPass(ID) {}

@@ -21,19 +21,19 @@
 //   @code{.cpp}
 //   class MyBaseClass : public RTTIExtends<MyBaseClass, RTTIRoot> {
 //   public:
-//     static char ID;
+//     static const char ID;
 //     virtual void foo() = 0;
 //   };
 //
 //   class MyDerivedClass1 : public RTTIExtends<MyDerivedClass1, MyBaseClass> {
 //   public:
-//     static char ID;
+//     static const char ID;
 //     void foo() override {}
 //   };
 //
 //   class MyDerivedClass2 : public RTTIExtends<MyDerivedClass2, MyBaseClass> {
 //   public:
-//     static char ID;
+//     static const char ID;
 //     void foo() override {}
 //   };
 //
@@ -90,7 +90,7 @@ public:
 private:
   virtual void anchor();
 
-  static char ID;
+  static const char ID;
 };
 
 /// Inheritance utility for extensible RTTI.
@@ -104,12 +104,12 @@ private:
 ///
 /// class MyType : public RTTIExtends<MyType, RTTIRoot> {
 /// public:
-///   static char ID;
+///   static const char ID;
 /// };
 ///
 /// class MyDerivedType : public RTTIExtends<MyDerivedType, MyType> {
 /// public:
-///   static char ID;
+///   static const char ID;
 /// };
 ///
 template <typename ThisT, typename ParentT> class RTTIExtends : public ParentT {
@@ -118,7 +118,7 @@ public:
   using ParentT::isA;
   using ParentT::ParentT;
 
-  static char ID;
+  static const char ID;
 
   static const void *classID() { return &ThisT::ID; }
 
@@ -132,7 +132,7 @@ public:
 };
 
 template <typename ThisT, typename ParentT>
-char RTTIExtends<ThisT, ParentT>::ID = 0;
+const char RTTIExtends<ThisT, ParentT>::ID = 0;
 
 /// Returns true if the given value is an instance of the template type
 /// parameter.

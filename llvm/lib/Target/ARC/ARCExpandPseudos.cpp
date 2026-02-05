@@ -27,7 +27,7 @@ namespace {
 
 class ARCExpandPseudos : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   ARCExpandPseudos() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
@@ -42,7 +42,7 @@ private:
   const ARCInstrInfo *TII;
 };
 
-char ARCExpandPseudos::ID = 0;
+const char ARCExpandPseudos::ID = 0;
 
 } // end anonymous namespace
 

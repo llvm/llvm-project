@@ -61,7 +61,7 @@ public:
 
 class GCNPreRAOptimizationsLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   GCNPreRAOptimizationsLegacy() : MachineFunctionPass(ID) {
     initializeGCNPreRAOptimizationsLegacyPass(*PassRegistry::getPassRegistry());
@@ -87,9 +87,9 @@ INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(GCNPreRAOptimizationsLegacy, DEBUG_TYPE,
                     "Pre-RA optimizations", false, false)
 
-char GCNPreRAOptimizationsLegacy::ID = 0;
+const char GCNPreRAOptimizationsLegacy::ID = 0;
 
-char &llvm::GCNPreRAOptimizationsID = GCNPreRAOptimizationsLegacy::ID;
+const char &llvm::GCNPreRAOptimizationsID = GCNPreRAOptimizationsLegacy::ID;
 
 FunctionPass *llvm::createGCNPreRAOptimizationsLegacyPass() {
   return new GCNPreRAOptimizationsLegacy();

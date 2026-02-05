@@ -30,7 +30,7 @@ namespace {
 class R600Packetizer : public MachineFunctionPass {
 
 public:
-  static char ID;
+  static const char ID;
   R600Packetizer() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -396,9 +396,9 @@ INITIALIZE_PASS_BEGIN(R600Packetizer, DEBUG_TYPE,
 INITIALIZE_PASS_END(R600Packetizer, DEBUG_TYPE,
                     "R600 Packetizer", false, false)
 
-char R600Packetizer::ID = 0;
+const char R600Packetizer::ID = 0;
 
-char &llvm::R600PacketizerID = R600Packetizer::ID;
+const char &llvm::R600PacketizerID = R600Packetizer::ID;
 
 llvm::FunctionPass *llvm::createR600Packetizer() {
   return new R600Packetizer();

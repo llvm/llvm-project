@@ -134,7 +134,7 @@ private:
 
 class MachineCSELegacy : public MachineFunctionPass {
 public:
-  static char ID; // Pass identification
+  static const char ID; // Pass identification
 
   MachineCSELegacy() : MachineFunctionPass(ID) {}
 
@@ -156,9 +156,9 @@ public:
 };
 } // end anonymous namespace
 
-char MachineCSELegacy::ID = 0;
+const char MachineCSELegacy::ID = 0;
 
-char &llvm::MachineCSELegacyID = MachineCSELegacy::ID;
+const char &llvm::MachineCSELegacyID = MachineCSELegacy::ID;
 
 INITIALIZE_PASS_BEGIN(MachineCSELegacy, DEBUG_TYPE,
                       "Machine Common Subexpression Elimination", false, false)

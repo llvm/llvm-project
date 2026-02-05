@@ -258,7 +258,7 @@ public:
 
 class ShrinkWrapLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   ShrinkWrapLegacy() : MachineFunctionPass(ID) {}
 
@@ -285,9 +285,9 @@ public:
 
 } // end anonymous namespace
 
-char ShrinkWrapLegacy::ID = 0;
+const char ShrinkWrapLegacy::ID = 0;
 
-char &llvm::ShrinkWrapID = ShrinkWrapLegacy::ID;
+const char &llvm::ShrinkWrapID = ShrinkWrapLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(ShrinkWrapLegacy, DEBUG_TYPE, "Shrink Wrap Pass", false,
                       false)

@@ -334,7 +334,7 @@ class LLVM_ABI CallGraphWrapperPass : public ModulePass {
   std::unique_ptr<CallGraph> G;
 
 public:
-  static char ID; // Class identification, replacement for typeinfo
+  static const char ID; // Class identification, replacement for typeinfo
 
   CallGraphWrapperPass();
   ~CallGraphWrapperPass() override;

@@ -306,7 +306,7 @@ class SelectOptimize : public FunctionPass {
   SelectOptimizeImpl Impl;
 
 public:
-  static char ID;
+  static const char ID;
 
   SelectOptimize() : FunctionPass(ID) {}
 
@@ -335,7 +335,7 @@ PreservedAnalyses SelectOptimizePass::run(Function &F,
   return Impl.run(F, FAM);
 }
 
-char SelectOptimize::ID = 0;
+const char SelectOptimize::ID = 0;
 
 INITIALIZE_PASS_BEGIN(SelectOptimize, DEBUG_TYPE, "Optimize selects", false,
                       false)

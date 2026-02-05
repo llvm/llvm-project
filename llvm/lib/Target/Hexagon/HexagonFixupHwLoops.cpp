@@ -31,7 +31,7 @@ static cl::opt<unsigned> MaxLoopRange(
 namespace {
   struct HexagonFixupHwLoops : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     HexagonFixupHwLoops() : MachineFunctionPass(ID) {}
 
@@ -62,7 +62,7 @@ namespace {
                          MachineBasicBlock::iterator &MII);
   };
 
-  char HexagonFixupHwLoops::ID = 0;
+  const char HexagonFixupHwLoops::ID = 0;
 }
 
 INITIALIZE_PASS(HexagonFixupHwLoops, "hwloopsfixup",

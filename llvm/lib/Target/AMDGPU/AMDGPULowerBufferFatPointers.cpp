@@ -2354,7 +2354,7 @@ void SplitPtrStructs::processFunction(Function &F) {
 namespace {
 class AMDGPULowerBufferFatPointers : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPULowerBufferFatPointers() : ModulePass(ID) {}
 
@@ -2579,9 +2579,10 @@ bool AMDGPULowerBufferFatPointers::runOnModule(Module &M) {
   return run(M, TM);
 }
 
-char AMDGPULowerBufferFatPointers::ID = 0;
+const char AMDGPULowerBufferFatPointers::ID = 0;
 
-char &llvm::AMDGPULowerBufferFatPointersID = AMDGPULowerBufferFatPointers::ID;
+const char &llvm::AMDGPULowerBufferFatPointersID =
+    AMDGPULowerBufferFatPointers::ID;
 
 void AMDGPULowerBufferFatPointers::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();

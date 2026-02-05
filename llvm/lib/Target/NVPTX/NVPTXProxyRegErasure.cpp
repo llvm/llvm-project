@@ -27,7 +27,7 @@ using namespace llvm;
 namespace {
 
 struct NVPTXProxyRegErasure : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
   NVPTXProxyRegErasure() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -43,7 +43,7 @@ struct NVPTXProxyRegErasure : public MachineFunctionPass {
 
 } // namespace
 
-char NVPTXProxyRegErasure::ID = 0;
+const char NVPTXProxyRegErasure::ID = 0;
 
 INITIALIZE_PASS(NVPTXProxyRegErasure, "nvptx-proxyreg-erasure",
                 "NVPTX ProxyReg Erasure", false, false)

@@ -311,7 +311,7 @@ bool CallGraphWrapperPass::runOnModule(Module &M) {
 INITIALIZE_PASS(CallGraphWrapperPass, "basiccg", "CallGraph Construction",
                 false, true)
 
-char CallGraphWrapperPass::ID = 0;
+const char CallGraphWrapperPass::ID = 0;
 
 void CallGraphWrapperPass::releaseMemory() { G.reset(); }
 

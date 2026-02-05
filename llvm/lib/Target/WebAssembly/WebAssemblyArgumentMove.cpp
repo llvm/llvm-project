@@ -39,7 +39,7 @@ using namespace llvm;
 namespace {
 class WebAssemblyArgumentMove final : public MachineFunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyArgumentMove() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "WebAssembly Argument Move"; }
@@ -55,7 +55,7 @@ public:
 };
 } // end anonymous namespace
 
-char WebAssemblyArgumentMove::ID = 0;
+const char WebAssemblyArgumentMove::ID = 0;
 INITIALIZE_PASS(WebAssemblyArgumentMove, DEBUG_TYPE,
                 "Move ARGUMENT instructions for WebAssembly", false, false)
 

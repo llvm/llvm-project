@@ -4523,4 +4523,4 @@ AMDGPUDAGToDAGISelLegacy::AMDGPUDAGToDAGISelLegacy(TargetMachine &TM,
     : SelectionDAGISelLegacy(
           ID, std::make_unique<AMDGPUDAGToDAGISel>(TM, OptLevel)) {}
 
-char AMDGPUDAGToDAGISelLegacy::ID = 0;
+const char AMDGPUDAGToDAGISelLegacy::ID = 0;

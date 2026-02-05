@@ -301,7 +301,7 @@ namespace {
 
 class LoopTermFold : public LoopPass {
 public:
-  static char ID; // Pass ID, replacement for typeid
+  static const char ID; // Pass ID, replacement for typeid
 
   LoopTermFold();
 
@@ -360,7 +360,7 @@ PreservedAnalyses LoopTermFoldPass::run(Loop &L, LoopAnalysisManager &AM,
   return PA;
 }
 
-char LoopTermFold::ID = 0;
+const char LoopTermFold::ID = 0;
 
 INITIALIZE_PASS_BEGIN(LoopTermFold, "loop-term-fold", "Loop Terminator Folding",
                       false, false)

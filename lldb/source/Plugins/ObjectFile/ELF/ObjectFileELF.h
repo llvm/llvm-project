@@ -92,7 +92,7 @@ public:
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
   // LLVM RTTI support
-  static char ID;
+  static const char ID;
   bool isA(const void *ClassID) const override {
     return ClassID == &ID || ObjectFile::isA(ClassID);
   }

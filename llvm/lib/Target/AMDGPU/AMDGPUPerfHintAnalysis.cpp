@@ -391,7 +391,7 @@ private:
   AMDGPUPerfHintAnalysis Impl;
 
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUPerfHintAnalysisLegacy() : CallGraphSCCPass(ID) {}
 
@@ -463,8 +463,9 @@ bool AMDGPUPerfHintAnalysis::run(const GCNTargetMachine &TM,
   return Changed;
 }
 
-char AMDGPUPerfHintAnalysisLegacy::ID = 0;
-char &llvm::AMDGPUPerfHintAnalysisLegacyID = AMDGPUPerfHintAnalysisLegacy::ID;
+const char AMDGPUPerfHintAnalysisLegacy::ID = 0;
+const char &llvm::AMDGPUPerfHintAnalysisLegacyID =
+    AMDGPUPerfHintAnalysisLegacy::ID;
 
 INITIALIZE_PASS(AMDGPUPerfHintAnalysisLegacy, DEBUG_TYPE,
                 "Analysis if a function is memory bound", true, true)

@@ -59,7 +59,7 @@ class LLVM_ABI SCEVAAWrapperPass : public FunctionPass {
   std::unique_ptr<SCEVAAResult> Result;
 
 public:
-  static char ID;
+  static const char ID;
 
   SCEVAAWrapperPass();
 

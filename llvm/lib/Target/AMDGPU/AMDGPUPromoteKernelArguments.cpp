@@ -45,7 +45,7 @@ class AMDGPUPromoteKernelArguments : public FunctionPass {
   bool promoteLoad(LoadInst *LI);
 
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUPromoteKernelArguments() : FunctionPass(ID) {}
 
@@ -198,7 +198,7 @@ INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_END(AMDGPUPromoteKernelArguments, DEBUG_TYPE,
                     "AMDGPU Promote Kernel Arguments", false, false)
 
-char AMDGPUPromoteKernelArguments::ID = 0;
+const char AMDGPUPromoteKernelArguments::ID = 0;
 
 FunctionPass *llvm::createAMDGPUPromoteKernelArgumentsPass() {
   return new AMDGPUPromoteKernelArguments();

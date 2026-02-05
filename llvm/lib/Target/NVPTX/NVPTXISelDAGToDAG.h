@@ -120,7 +120,7 @@ public:
 
 class NVPTXDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   explicit NVPTXDAGToDAGISelLegacy(NVPTXTargetMachine &tm,
                                    CodeGenOptLevel OptLevel);
 };

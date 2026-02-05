@@ -28,7 +28,7 @@ class Pass;
 // instructions.
 //
 LLVM_ABI FunctionPass *createLowerInvokePass();
-LLVM_ABI extern char &LowerInvokePassID;
+LLVM_ABI extern const char &LowerInvokePassID;
 
 //===----------------------------------------------------------------------===//
 //
@@ -36,7 +36,7 @@ LLVM_ABI extern char &LowerInvokePassID;
 // chained binary branch instructions.
 //
 LLVM_ABI FunctionPass *createLowerSwitchPass();
-LLVM_ABI extern char &LowerSwitchID;
+LLVM_ABI extern const char &LowerSwitchID;
 
 //===----------------------------------------------------------------------===//
 //
@@ -59,7 +59,7 @@ LLVM_ABI FunctionPass *createPostInlineEntryExitInstrumenterPass();
 // (set, immediate dominators, tree, and frontier) information.
 //
 LLVM_ABI FunctionPass *createBreakCriticalEdgesPass();
-LLVM_ABI extern char &BreakCriticalEdgesID;
+LLVM_ABI extern const char &BreakCriticalEdgesID;
 
 //===----------------------------------------------------------------------===//
 //
@@ -67,7 +67,7 @@ LLVM_ABI extern char &BreakCriticalEdgesID;
 // optimizations.
 //
 LLVM_ABI Pass *createLCSSAPass();
-LLVM_ABI extern char &LCSSAID;
+LLVM_ABI extern const char &LCSSAID;
 
 //===----------------------------------------------------------------------===//
 //
@@ -100,7 +100,7 @@ LLVM_ABI FunctionPass *createRegToMemWrapperPass();
 //   AU.addRequiredID(LoopSimplifyID);
 //
 LLVM_ABI Pass *createLoopSimplifyPass();
-LLVM_ABI extern char &LoopSimplifyID;
+LLVM_ABI extern const char &LoopSimplifyID;
 
 //===----------------------------------------------------------------------===//
 //

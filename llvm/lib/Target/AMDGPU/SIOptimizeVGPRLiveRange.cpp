@@ -146,7 +146,7 @@ public:
 
 class SIOptimizeVGPRLiveRangeLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SIOptimizeVGPRLiveRangeLegacy() : MachineFunctionPass(ID) {}
 
@@ -621,7 +621,7 @@ void SIOptimizeVGPRLiveRange::optimizeWaterfallLiveRange(
   }
 }
 
-char SIOptimizeVGPRLiveRangeLegacy::ID = 0;
+const char SIOptimizeVGPRLiveRangeLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(SIOptimizeVGPRLiveRangeLegacy, DEBUG_TYPE,
                       "SI Optimize VGPR LiveRange", false, false)
@@ -631,7 +631,8 @@ INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
 INITIALIZE_PASS_END(SIOptimizeVGPRLiveRangeLegacy, DEBUG_TYPE,
                     "SI Optimize VGPR LiveRange", false, false)
 
-char &llvm::SIOptimizeVGPRLiveRangeLegacyID = SIOptimizeVGPRLiveRangeLegacy::ID;
+const char &llvm::SIOptimizeVGPRLiveRangeLegacyID =
+    SIOptimizeVGPRLiveRangeLegacy::ID;
 
 FunctionPass *llvm::createSIOptimizeVGPRLiveRangeLegacyPass() {
   return new SIOptimizeVGPRLiveRangeLegacy();

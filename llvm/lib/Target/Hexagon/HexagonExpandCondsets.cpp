@@ -133,7 +133,7 @@ namespace {
 
   class HexagonExpandCondsets : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     HexagonExpandCondsets() : MachineFunctionPass(ID) {
       if (OptCoaLimit.getPosition())
@@ -237,8 +237,8 @@ namespace {
 
 } // end anonymous namespace
 
-char HexagonExpandCondsets::ID = 0;
-char &llvm::HexagonExpandCondsetsID = HexagonExpandCondsets::ID;
+const char HexagonExpandCondsets::ID = 0;
+const char &llvm::HexagonExpandCondsetsID = HexagonExpandCondsets::ID;
 
 INITIALIZE_PASS_BEGIN(HexagonExpandCondsets, "expand-condsets",
   "Hexagon Expand Condsets", false, false)

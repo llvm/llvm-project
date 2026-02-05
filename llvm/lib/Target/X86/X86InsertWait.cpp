@@ -38,7 +38,7 @@ namespace {
 
 class WaitInsert : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   WaitInsert() : MachineFunctionPass(ID) {}
 
@@ -51,7 +51,7 @@ public:
 
 } // namespace
 
-char WaitInsert::ID = 0;
+const char WaitInsert::ID = 0;
 
 FunctionPass *llvm::createX86InsertX87waitPass() { return new WaitInsert(); }
 

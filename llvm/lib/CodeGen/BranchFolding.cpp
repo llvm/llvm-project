@@ -94,7 +94,7 @@ namespace {
   /// BranchFolderPass - Wrap branch folder in a machine function pass.
 class BranchFolderLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   explicit BranchFolderLegacy() : MachineFunctionPass(ID) {}
 
@@ -115,9 +115,9 @@ public:
 
 } // end anonymous namespace
 
-char BranchFolderLegacy::ID = 0;
+const char BranchFolderLegacy::ID = 0;
 
-char &llvm::BranchFolderPassID = BranchFolderLegacy::ID;
+const char &llvm::BranchFolderPassID = BranchFolderLegacy::ID;
 
 INITIALIZE_PASS(BranchFolderLegacy, DEBUG_TYPE, "Control Flow Optimizer", false,
                 false)

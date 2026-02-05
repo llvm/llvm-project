@@ -60,7 +60,7 @@ class HexagonCopyToCombine : public MachineFunctionPass  {
   SmallVector<MachineInstr *, 8> DbgMItoMove;
 
 public:
-  static char ID;
+  static const char ID;
 
   HexagonCopyToCombine() : MachineFunctionPass(ID) {}
 
@@ -110,7 +110,7 @@ private:
 
 } // End anonymous namespace.
 
-char HexagonCopyToCombine::ID = 0;
+const char HexagonCopyToCombine::ID = 0;
 
 INITIALIZE_PASS(HexagonCopyToCombine, "hexagon-copy-combine",
                 "Hexagon Copy-To-Combine Pass", false, false)

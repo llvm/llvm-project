@@ -362,7 +362,7 @@ void TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
 //===----------------------------------------------------------------------===//
 
 SelectionDAGISelLegacy::SelectionDAGISelLegacy(
-    char &ID, std::unique_ptr<SelectionDAGISel> S)
+    const char &ID, std::unique_ptr<SelectionDAGISel> S)
     : MachineFunctionPass(ID), Selector(std::move(S)) {
   initializeBranchProbabilityInfoWrapperPassPass(
       *PassRegistry::getPassRegistry());

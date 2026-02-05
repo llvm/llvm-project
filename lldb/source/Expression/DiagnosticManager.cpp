@@ -15,7 +15,7 @@
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb_private;
-char ExpressionError::ID;
+const char ExpressionError::ID = 0;
 
 /// A std::error_code category for eErrorTypeExpression.
 class ExpressionCategory : public std::error_category {

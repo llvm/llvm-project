@@ -2630,7 +2630,7 @@ class ReassociateLegacyPass : public FunctionPass {
   ReassociatePass Impl;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   ReassociateLegacyPass() : FunctionPass(ID) {
     initializeReassociateLegacyPassPass(*PassRegistry::getPassRegistry());
@@ -2655,7 +2655,7 @@ public:
 
 } // end anonymous namespace
 
-char ReassociateLegacyPass::ID = 0;
+const char ReassociateLegacyPass::ID = 0;
 
 INITIALIZE_PASS(ReassociateLegacyPass, "reassociate",
                 "Reassociate expressions", false, false)

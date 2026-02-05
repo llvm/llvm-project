@@ -30,8 +30,8 @@ using namespace llvm::AMDGPU;
 
 #define DEBUG_TYPE "amdgpu-resource-usage"
 
-char llvm::AMDGPUResourceUsageAnalysisWrapperPass::ID = 0;
-char &llvm::AMDGPUResourceUsageAnalysisID =
+const char llvm::AMDGPUResourceUsageAnalysisWrapperPass::ID = 0;
+const char &llvm::AMDGPUResourceUsageAnalysisID =
     AMDGPUResourceUsageAnalysisWrapperPass::ID;
 
 // In code object v4 and older, we need to tell the runtime some amount ahead of

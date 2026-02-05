@@ -29,7 +29,7 @@ namespace lldb_private {
 /// functions can perform error-checking for ClangUserExpressions,
 class UtilityFunction : public Expression {
   // LLVM RTTI support
-  static char ID;
+  static const char ID;
 
 public:
   bool isA(const void *ClassID) const override { return ClassID == &ID; }

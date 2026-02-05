@@ -1722,7 +1722,7 @@ MemoryDependenceAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
   return MemoryDependenceResults(AA, AC, TLI, DT, DefaultBlockScanLimit);
 }
 
-char MemoryDependenceWrapperPass::ID = 0;
+const char MemoryDependenceWrapperPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(MemoryDependenceWrapperPass, "memdep",
                       "Memory Dependence Analysis", false, true)

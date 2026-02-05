@@ -44,7 +44,7 @@
 
 using namespace lldb_private;
 
-char UserExpression::ID;
+const char UserExpression::ID = 0;
 
 UserExpression::UserExpression(ExecutionContextScope &exe_scope,
                                llvm::StringRef expr, llvm::StringRef prefix,

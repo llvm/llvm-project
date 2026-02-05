@@ -6328,7 +6328,7 @@ namespace {
 
 class LoopStrengthReduce : public LoopPass {
 public:
-  static char ID; // Pass ID, replacement for typeid
+  static const char ID; // Pass ID, replacement for typeid
 
   LoopStrengthReduce();
 
@@ -7142,7 +7142,7 @@ PreservedAnalyses LoopStrengthReducePass::run(Loop &L, LoopAnalysisManager &AM,
   return PA;
 }
 
-char LoopStrengthReduce::ID = 0;
+const char LoopStrengthReduce::ID = 0;
 
 INITIALIZE_PASS_BEGIN(LoopStrengthReduce, "loop-reduce",
                       "Loop Strength Reduction", false, false)

@@ -1394,7 +1394,7 @@ namespace {
 
 class LoopUnroll : public LoopPass {
 public:
-  static char ID; // Pass ID, replacement for typeid
+  static const char ID; // Pass ID, replacement for typeid
 
   int OptLevel;
 
@@ -1481,7 +1481,7 @@ public:
 
 } // end anonymous namespace
 
-char LoopUnroll::ID = 0;
+const char LoopUnroll::ID = 0;
 
 INITIALIZE_PASS_BEGIN(LoopUnroll, "loop-unroll", "Unroll loops", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)

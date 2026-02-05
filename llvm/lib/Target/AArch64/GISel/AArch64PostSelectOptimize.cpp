@@ -31,7 +31,7 @@ using namespace llvm;
 namespace {
 class AArch64PostSelectOptimize : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AArch64PostSelectOptimize() : MachineFunctionPass(ID) {}
 
@@ -304,7 +304,7 @@ bool AArch64PostSelectOptimize::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-char AArch64PostSelectOptimize::ID = 0;
+const char AArch64PostSelectOptimize::ID = 0;
 INITIALIZE_PASS_BEGIN(AArch64PostSelectOptimize, DEBUG_TYPE,
                       "Optimize AArch64 selected instructions",
                       false, false)

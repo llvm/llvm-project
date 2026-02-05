@@ -112,12 +112,12 @@ private:
 
   ScopedHTType ScopedHT;
 
-  static char ID;
+  static const char ID;
 };
 
 } // end of anonymous namespace
 
-char OptimizePICCall::ID = 0;
+const char OptimizePICCall::ID = 0;
 
 /// Return the first MachineOperand of MI if it is a used virtual register.
 static MachineOperand *getCallTargetRegOpnd(MachineInstr &MI) {

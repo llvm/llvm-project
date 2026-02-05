@@ -49,7 +49,7 @@ namespace {
     XCoreTargetStreamer &getTargetStreamer();
 
   public:
-    static char ID;
+    static const char ID;
 
     explicit XCoreAsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
@@ -290,7 +290,7 @@ void XCoreAsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
-char XCoreAsmPrinter::ID = 0;
+const char XCoreAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(XCoreAsmPrinter, "xcore-asm-printer", "XCore Assembly Printer",
                 false, false)

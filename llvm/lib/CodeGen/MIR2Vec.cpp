@@ -503,7 +503,7 @@ Error MIR2VecVocabProvider::readVocabulary(VocabMap &OpcodeVocab,
   return Error::success();
 }
 
-char MIR2VecVocabLegacyAnalysis::ID = 0;
+const char MIR2VecVocabLegacyAnalysis::ID = 0;
 INITIALIZE_PASS_BEGIN(MIR2VecVocabLegacyAnalysis, "mir2vec-vocab-analysis",
                       "MIR2Vec Vocabulary Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(MachineModuleInfoWrapperPass)
@@ -589,7 +589,7 @@ Embedding SymbolicMIREmbedder::computeEmbeddings(const MachineInstr &MI) const {
 // Printer Passes
 //===----------------------------------------------------------------------===//
 
-char MIR2VecVocabPrinterLegacyPass::ID = 0;
+const char MIR2VecVocabPrinterLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(MIR2VecVocabPrinterLegacyPass, "print-mir2vec-vocab",
                       "MIR2Vec Vocabulary Printer Pass", false, true)
 INITIALIZE_PASS_DEPENDENCY(MIR2VecVocabLegacyAnalysis)
@@ -631,7 +631,7 @@ llvm::createMIR2VecVocabPrinterLegacyPass(raw_ostream &OS) {
   return new MIR2VecVocabPrinterLegacyPass(OS);
 }
 
-char MIR2VecPrinterLegacyPass::ID = 0;
+const char MIR2VecPrinterLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(MIR2VecPrinterLegacyPass, "print-mir2vec",
                       "MIR2Vec Embedder Printer Pass", false, true)
 INITIALIZE_PASS_DEPENDENCY(MIR2VecVocabLegacyAnalysis)

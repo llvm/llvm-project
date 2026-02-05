@@ -27,7 +27,7 @@ class ExpressionTypeSystemHelper
     : public llvm::RTTIExtends<ExpressionTypeSystemHelper, llvm::RTTIRoot> {
 public:
   /// LLVM RTTI support
-  static char ID;
+  static const char ID;
 
   virtual ~ExpressionTypeSystemHelper() = default;
 };

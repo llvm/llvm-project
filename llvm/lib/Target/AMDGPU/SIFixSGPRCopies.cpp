@@ -163,7 +163,7 @@ public:
 
 class SIFixSGPRCopiesLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SIFixSGPRCopiesLegacy() : MachineFunctionPass(ID) {}
 
@@ -192,9 +192,9 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(SIFixSGPRCopiesLegacy, DEBUG_TYPE, "SI Fix SGPR copies",
                     false, false)
 
-char SIFixSGPRCopiesLegacy::ID = 0;
+const char SIFixSGPRCopiesLegacy::ID = 0;
 
-char &llvm::SIFixSGPRCopiesLegacyID = SIFixSGPRCopiesLegacy::ID;
+const char &llvm::SIFixSGPRCopiesLegacyID = SIFixSGPRCopiesLegacy::ID;
 
 FunctionPass *llvm::createSIFixSGPRCopiesLegacyPass() {
   return new SIFixSGPRCopiesLegacy();

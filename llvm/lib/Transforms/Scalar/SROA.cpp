@@ -6092,7 +6092,7 @@ class SROALegacyPass : public FunctionPass {
   SROAOptions PreserveCFG;
 
 public:
-  static char ID;
+  static const char ID;
 
   SROALegacyPass(SROAOptions PreserveCFG = SROAOptions::PreserveCFG)
       : FunctionPass(ID), PreserveCFG(PreserveCFG) {
@@ -6124,7 +6124,7 @@ public:
 
 } // end anonymous namespace
 
-char SROALegacyPass::ID = 0;
+const char SROALegacyPass::ID = 0;
 
 FunctionPass *llvm::createSROAPass(bool PreserveCFG) {
   return new SROALegacyPass(PreserveCFG ? SROAOptions::PreserveCFG

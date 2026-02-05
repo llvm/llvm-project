@@ -273,7 +273,7 @@ public:
 
 class SIInsertHardClausesLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   SIInsertHardClausesLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -302,9 +302,9 @@ llvm::SIInsertHardClausesPass::run(MachineFunction &MF,
   return PA;
 }
 
-char SIInsertHardClausesLegacy::ID = 0;
+const char SIInsertHardClausesLegacy::ID = 0;
 
-char &llvm::SIInsertHardClausesID = SIInsertHardClausesLegacy::ID;
+const char &llvm::SIInsertHardClausesID = SIInsertHardClausesLegacy::ID;
 
 INITIALIZE_PASS(SIInsertHardClausesLegacy, DEBUG_TYPE, "SI Insert Hard Clauses",
                 false, false)

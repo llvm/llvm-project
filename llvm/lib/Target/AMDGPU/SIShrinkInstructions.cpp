@@ -67,7 +67,7 @@ public:
 class SIShrinkInstructionsLegacy : public MachineFunctionPass {
 
 public:
-  static char ID;
+  static const char ID;
 
   SIShrinkInstructionsLegacy() : MachineFunctionPass(ID) {}
 
@@ -86,7 +86,7 @@ public:
 INITIALIZE_PASS(SIShrinkInstructionsLegacy, DEBUG_TYPE,
                 "SI Shrink Instructions", false, false)
 
-char SIShrinkInstructionsLegacy::ID = 0;
+const char SIShrinkInstructionsLegacy::ID = 0;
 
 FunctionPass *llvm::createSIShrinkInstructionsLegacyPass() {
   return new SIShrinkInstructionsLegacy();

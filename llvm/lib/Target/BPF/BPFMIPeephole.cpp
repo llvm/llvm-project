@@ -46,7 +46,7 @@ namespace {
 
 struct BPFMIPeephole : public MachineFunctionPass {
 
-  static char ID;
+  static const char ID;
   const BPFInstrInfo *TII;
   MachineFunction *MF;
   MachineRegisterInfo *MRI;
@@ -296,7 +296,7 @@ INITIALIZE_PASS(BPFMIPeephole, DEBUG_TYPE,
                 "BPF MachineSSA Peephole Optimization For ZEXT Eliminate",
                 false, false)
 
-char BPFMIPeephole::ID = 0;
+const char BPFMIPeephole::ID = 0;
 FunctionPass* llvm::createBPFMIPeepholePass() { return new BPFMIPeephole(); }
 
 STATISTIC(RedundantMovElemNum, "Number of redundant moves eliminated");
@@ -305,7 +305,7 @@ namespace {
 
 struct BPFMIPreEmitPeephole : public MachineFunctionPass {
 
-  static char ID;
+  static const char ID;
   MachineFunction *MF;
   const TargetRegisterInfo *TRI;
   const BPFInstrInfo *TII;
@@ -757,7 +757,7 @@ bool BPFMIPreEmitPeephole::addExitAfterUnreachable() {
 INITIALIZE_PASS(BPFMIPreEmitPeephole, "bpf-mi-pemit-peephole",
                 "BPF PreEmit Peephole Optimization", false, false)
 
-char BPFMIPreEmitPeephole::ID = 0;
+const char BPFMIPreEmitPeephole::ID = 0;
 FunctionPass* llvm::createBPFMIPreEmitPeepholePass()
 {
   return new BPFMIPreEmitPeephole();

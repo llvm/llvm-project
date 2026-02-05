@@ -15,7 +15,7 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(ClangREPL)
 
-char ClangREPL::ID;
+const char ClangREPL::ID = 0;
 
 ClangREPL::ClangREPL(lldb::LanguageType language, Target &target)
     : llvm::RTTIExtends<ClangREPL, REPL>(target), m_language(language),

@@ -183,7 +183,7 @@ public:
 // FIXME: This can create globals so should be a module pass.
 class AMDGPUPromoteAlloca : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUPromoteAlloca() : FunctionPass(ID) {}
 
@@ -235,7 +235,7 @@ static unsigned getMaxVGPRs(unsigned LDSBytes, const TargetMachine &TM,
 
 } // end anonymous namespace
 
-char AMDGPUPromoteAlloca::ID = 0;
+const char AMDGPUPromoteAlloca::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AMDGPUPromoteAlloca, DEBUG_TYPE,
                       "AMDGPU promote alloca to vector or LDS", false, false)
@@ -246,7 +246,7 @@ INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(AMDGPUPromoteAlloca, DEBUG_TYPE,
                     "AMDGPU promote alloca to vector or LDS", false, false)
 
-char &llvm::AMDGPUPromoteAllocaID = AMDGPUPromoteAlloca::ID;
+const char &llvm::AMDGPUPromoteAllocaID = AMDGPUPromoteAlloca::ID;
 
 PreservedAnalyses AMDGPUPromoteAllocaPass::run(Function &F,
                                                FunctionAnalysisManager &AM) {

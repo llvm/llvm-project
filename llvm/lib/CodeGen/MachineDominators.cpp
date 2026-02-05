@@ -88,7 +88,7 @@ MachineDominatorTreePrinterPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-char MachineDominatorTreeWrapperPass::ID = 0;
+const char MachineDominatorTreeWrapperPass::ID = 0;
 
 INITIALIZE_PASS(MachineDominatorTreeWrapperPass, "machinedomtree",
                 "MachineDominator Tree Construction", true, true)
@@ -96,7 +96,7 @@ INITIALIZE_PASS(MachineDominatorTreeWrapperPass, "machinedomtree",
 MachineDominatorTreeWrapperPass::MachineDominatorTreeWrapperPass()
     : MachineFunctionPass(ID) {}
 
-char &llvm::MachineDominatorsID = MachineDominatorTreeWrapperPass::ID;
+const char &llvm::MachineDominatorsID = MachineDominatorTreeWrapperPass::ID;
 
 bool MachineDominatorTreeWrapperPass::runOnMachineFunction(MachineFunction &F) {
   if (F.empty()) {

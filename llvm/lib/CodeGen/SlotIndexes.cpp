@@ -33,7 +33,7 @@ SlotIndexesPrinterPass::run(MachineFunction &MF,
   MFAM.getResult<SlotIndexesAnalysis>(MF).print(OS);
   return PreservedAnalyses::all();
 }
-char SlotIndexesWrapperPass::ID = 0;
+const char SlotIndexesWrapperPass::ID = 0;
 
 SlotIndexesWrapperPass::SlotIndexesWrapperPass() : MachineFunctionPass(ID) {}
 

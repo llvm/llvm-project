@@ -23,7 +23,7 @@ using namespace llvm;
 namespace {
   class MipsModuleDAGToDAGISel : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     MipsModuleDAGToDAGISel() : MachineFunctionPass(ID) {}
 
@@ -41,7 +41,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
   };
 
-  char MipsModuleDAGToDAGISel::ID = 0;
+  const char MipsModuleDAGToDAGISel::ID = 0;
 }
 
 bool MipsModuleDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {

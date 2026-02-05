@@ -479,7 +479,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
 
 class AMDGPULowerVGPREncodingLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPULowerVGPREncodingLegacy() : MachineFunctionPass(ID) {}
 
@@ -495,9 +495,10 @@ public:
 
 } // namespace
 
-char AMDGPULowerVGPREncodingLegacy::ID = 0;
+const char AMDGPULowerVGPREncodingLegacy::ID = 0;
 
-char &llvm::AMDGPULowerVGPREncodingLegacyID = AMDGPULowerVGPREncodingLegacy::ID;
+const char &llvm::AMDGPULowerVGPREncodingLegacyID =
+    AMDGPULowerVGPREncodingLegacy::ID;
 
 INITIALIZE_PASS(AMDGPULowerVGPREncodingLegacy, DEBUG_TYPE,
                 "AMDGPU Lower VGPR Encoding", false, false)

@@ -88,7 +88,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "cfi-fixup"
 
-char CFIFixup::ID = 0;
+const char CFIFixup::ID = 0;
 
 INITIALIZE_PASS(CFIFixup, "cfi-fixup",
                 "Insert CFI remember/restore state instructions", false, false)

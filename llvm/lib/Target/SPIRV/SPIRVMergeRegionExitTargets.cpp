@@ -33,7 +33,7 @@ namespace {
 
 class SPIRVMergeRegionExitTargets : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SPIRVMergeRegionExitTargets() : FunctionPass(ID) {}
 
@@ -267,7 +267,7 @@ public:
 };
 } // namespace
 
-char SPIRVMergeRegionExitTargets::ID = 0;
+const char SPIRVMergeRegionExitTargets::ID = 0;
 
 INITIALIZE_PASS_BEGIN(SPIRVMergeRegionExitTargets, "split-region-exit-blocks",
                       "SPIRV split region exit blocks", false, false)

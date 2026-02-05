@@ -68,13 +68,13 @@ private:
 
 class VEDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   explicit VEDAGToDAGISelLegacy(VETargetMachine &tm)
       : SelectionDAGISelLegacy(ID, std::make_unique<VEDAGToDAGISel>(tm)) {}
 };
 } // end anonymous namespace
 
-char VEDAGToDAGISelLegacy::ID = 0;
+const char VEDAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(VEDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 

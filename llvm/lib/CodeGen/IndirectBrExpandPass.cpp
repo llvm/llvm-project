@@ -51,7 +51,7 @@ namespace {
 
 class IndirectBrExpandLegacyPass : public FunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   IndirectBrExpandLegacyPass() : FunctionPass(ID) {}
 
@@ -85,7 +85,7 @@ PreservedAnalyses IndirectBrExpandPass::run(Function &F,
   return PA;
 }
 
-char IndirectBrExpandLegacyPass::ID = 0;
+const char IndirectBrExpandLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(IndirectBrExpandLegacyPass, DEBUG_TYPE,
                       "Expand indirectbr instructions", false, false)

@@ -201,7 +201,7 @@ extern cl::opt<bool> EmitBBHash;
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
 
-char AsmPrinter::ID = 0;
+const char AsmPrinter::ID = 0;
 
 namespace {
 class AddrLabelMapCallbackPtr final : CallbackVH {
@@ -406,7 +406,7 @@ Align AsmPrinter::getGVAlignment(const GlobalObject *GV, const DataLayout &DL,
 }
 
 AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
-                       char &ID)
+                       const char &ID)
     : MachineFunctionPass(ID), TM(tm), MAI(tm.getMCAsmInfo()),
       OutContext(Streamer->getContext()), OutStreamer(std::move(Streamer)),
       SM(*this) {

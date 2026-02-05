@@ -34,7 +34,7 @@ namespace lldb_private {
 /// appropriate TypeSystem.
 class UserExpression : public Expression {
   /// LLVM RTTI support.
-  static char ID;
+  static const char ID;
 
 public:
   bool isA(const void *ClassID) const override { return ClassID == &ID; }

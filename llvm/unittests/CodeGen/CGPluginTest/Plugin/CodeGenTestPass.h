@@ -19,7 +19,7 @@ void initializeCodeGenTestPass(PassRegistry &);
 
 class CodeGenTest : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   CodeGenTest();
 

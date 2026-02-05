@@ -232,7 +232,7 @@ private:
 
 class UnsupportedDisassembly : public ErrorInfo<UnsupportedDisassembly> {
 public:
-  static char ID;
+  static const char ID;
   std::string Text;
 
   UnsupportedDisassembly(StringRef Text);

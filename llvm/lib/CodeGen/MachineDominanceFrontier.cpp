@@ -21,7 +21,7 @@ template class DominanceFrontierBase<MachineBasicBlock, true>;
 template class ForwardDominanceFrontierBase<MachineBasicBlock>;
 }
 
-char MachineDominanceFrontierWrapperPass::ID = 0;
+const char MachineDominanceFrontierWrapperPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(MachineDominanceFrontierWrapperPass,
                       "machine-domfrontier",
@@ -33,7 +33,7 @@ INITIALIZE_PASS_END(MachineDominanceFrontierWrapperPass, "machine-domfrontier",
 MachineDominanceFrontierWrapperPass::MachineDominanceFrontierWrapperPass()
     : MachineFunctionPass(ID) {}
 
-char &llvm::MachineDominanceFrontierID =
+const char &llvm::MachineDominanceFrontierID =
     MachineDominanceFrontierWrapperPass::ID;
 
 bool MachineDominanceFrontier::invalidate(

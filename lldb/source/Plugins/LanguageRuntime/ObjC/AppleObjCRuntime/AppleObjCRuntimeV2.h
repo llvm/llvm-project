@@ -41,7 +41,7 @@ public:
 
   LanguageRuntime *GetPreferredLanguageRuntime(ValueObject &in_value) override;
 
-  static char ID;
+  static const char ID;
 
   bool isA(const void *ClassID) const override {
     return ClassID == &ID || AppleObjCRuntime::isA(ClassID);

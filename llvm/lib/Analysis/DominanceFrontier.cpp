@@ -27,7 +27,7 @@ template class ForwardDominanceFrontierBase<BasicBlock>;
 
 } // end namespace llvm
 
-char DominanceFrontierWrapperPass::ID = 0;
+const char DominanceFrontierWrapperPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(DominanceFrontierWrapperPass, "domfrontier",
                 "Dominance Frontier Construction", true, true)

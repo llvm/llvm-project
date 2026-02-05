@@ -8,4 +8,4 @@
 
 #include "lldb/Utility/UnimplementedError.h"
 
-char lldb_private::UnimplementedError::ID;
+const char lldb_private::UnimplementedError::ID = 0;

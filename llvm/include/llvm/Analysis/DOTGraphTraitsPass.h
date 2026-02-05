@@ -180,7 +180,7 @@ template <typename AnalysisT, bool IsSimple, typename GraphT = AnalysisT *,
               LegacyDefaultAnalysisGraphTraits<AnalysisT, GraphT>>
 class DOTGraphTraitsViewerWrapperPass : public FunctionPass {
 public:
-  DOTGraphTraitsViewerWrapperPass(StringRef GraphName, char &ID)
+  DOTGraphTraitsViewerWrapperPass(StringRef GraphName, const char &ID)
       : FunctionPass(ID), Name(GraphName) {}
 
   /// Return true if this function should be processed.
@@ -219,7 +219,7 @@ template <typename AnalysisT, bool IsSimple, typename GraphT = AnalysisT *,
               LegacyDefaultAnalysisGraphTraits<AnalysisT, GraphT>>
 class DOTGraphTraitsPrinterWrapperPass : public FunctionPass {
 public:
-  DOTGraphTraitsPrinterWrapperPass(StringRef GraphName, char &ID)
+  DOTGraphTraitsPrinterWrapperPass(StringRef GraphName, const char &ID)
       : FunctionPass(ID), Name(GraphName) {}
 
   /// Return true if this function should be processed.

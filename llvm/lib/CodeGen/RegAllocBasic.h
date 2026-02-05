@@ -102,7 +102,7 @@ public:
   bool spillInterferences(const LiveInterval &VirtReg, MCRegister PhysReg,
                           SmallVectorImpl<Register> &SplitVRegs);
 
-  static char ID;
+  static const char ID;
 };
 } // namespace llvm
 #endif

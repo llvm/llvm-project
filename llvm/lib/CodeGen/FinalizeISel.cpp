@@ -29,7 +29,7 @@ using namespace llvm;
 namespace {
   class FinalizeISel : public MachineFunctionPass {
   public:
-    static char ID; // Pass identification, replacement for typeid
+    static const char ID; // Pass identification, replacement for typeid
     FinalizeISel() : MachineFunctionPass(ID) {}
 
   private:
@@ -79,8 +79,8 @@ static std::pair<bool, bool> runImpl(MachineFunction &MF) {
   return {Changed, PreserveCFG};
 }
 
-char FinalizeISel::ID = 0;
-char &llvm::FinalizeISelID = FinalizeISel::ID;
+const char FinalizeISel::ID = 0;
+const char &llvm::FinalizeISelID = FinalizeISel::ID;
 INITIALIZE_PASS(FinalizeISel, DEBUG_TYPE,
                 "Finalize ISel and expand pseudo-instructions", false, false)
 

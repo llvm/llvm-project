@@ -442,14 +442,14 @@ E.g.
 
    class Shape : public RTTIExtends<Shape, RTTIRoot> {
    public:
-     static char ID;
+     static const char ID;
      virtual double computeArea() = 0;
    };
 
    class Square : public RTTIExtends<Square, Shape> {
      double SideLength;
    public:
-     static char ID;
+     static const char ID;
 
      Square(double S) : SideLength(S) {}
      double computeArea() override;
@@ -458,15 +458,15 @@ E.g.
    class Circle : public RTTIExtends<Circle, Shape> {
      double Radius;
    public:
-     static char ID;
+     static const char ID;
 
      Circle(double R) : Radius(R) {}
      double computeArea() override;
    };
 
-   char Shape::ID = 0;
-   char Square::ID = 0;
-   char Circle::ID = 0;
+   const char Shape::ID = 0;
+   const char Square::ID = 0;
+   const char Circle::ID = 0;
 
 Advanced Use Cases
 ==================

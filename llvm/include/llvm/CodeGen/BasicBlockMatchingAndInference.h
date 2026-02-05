@@ -35,7 +35,7 @@ private:
   };
 
 public:
-  static char ID;
+  static const char ID;
   BasicBlockMatchingAndInference();
 
   StringRef getPassName() const override {

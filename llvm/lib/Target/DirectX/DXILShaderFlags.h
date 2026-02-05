@@ -137,7 +137,7 @@ class ShaderFlagsAnalysisWrapper : public ModulePass {
   ModuleShaderFlags MSFI;
 
 public:
-  static char ID;
+  static const char ID;
 
   ShaderFlagsAnalysisWrapper() : ModulePass(ID) {}
 

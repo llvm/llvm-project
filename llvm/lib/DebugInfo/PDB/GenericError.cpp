@@ -46,4 +46,4 @@ const std::error_category &llvm::pdb::PDBErrCategory() {
   return PDBCategory;
 }
 
-char PDBError::ID;
+const char PDBError::ID = 0;

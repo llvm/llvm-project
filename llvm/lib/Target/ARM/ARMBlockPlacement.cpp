@@ -36,7 +36,7 @@ private:
   SmallVector<MachineInstr *> RevertedWhileLoops;
 
 public:
-  static char ID;
+  static const char ID;
   ARMBlockPlacement() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -58,7 +58,7 @@ FunctionPass *llvm::createARMBlockPlacementPass() {
   return new ARMBlockPlacement();
 }
 
-char ARMBlockPlacement::ID = 0;
+const char ARMBlockPlacement::ID = 0;
 
 INITIALIZE_PASS(ARMBlockPlacement, DEBUG_TYPE, "ARM block placement", false,
                 false)

@@ -88,7 +88,7 @@ class ShadowStackGCLowering : public FunctionPass {
   ShadowStackGCLoweringImpl Impl;
 
 public:
-  static char ID;
+  static const char ID;
 
   ShadowStackGCLowering();
 
@@ -129,8 +129,8 @@ PreservedAnalyses ShadowStackGCLoweringPass::run(Module &M,
   return PA;
 }
 
-char ShadowStackGCLowering::ID = 0;
-char &llvm::ShadowStackGCLoweringID = ShadowStackGCLowering::ID;
+const char ShadowStackGCLowering::ID = 0;
+const char &llvm::ShadowStackGCLoweringID = ShadowStackGCLowering::ID;
 
 INITIALIZE_PASS_BEGIN(ShadowStackGCLowering, DEBUG_TYPE,
                       "Shadow Stack GC Lowering", false, false)

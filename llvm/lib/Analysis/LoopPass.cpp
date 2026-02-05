@@ -38,7 +38,7 @@ class PrintLoopPassWrapper : public LoopPass {
   std::string Banner;
 
 public:
-  static char ID;
+  static const char ID;
   PrintLoopPassWrapper() : LoopPass(ID), OS(dbgs()) {}
   PrintLoopPassWrapper(raw_ostream &OS, const std::string &Banner)
       : LoopPass(ID), OS(OS), Banner(Banner) {}
@@ -59,14 +59,14 @@ public:
   StringRef getPassName() const override { return "Print Loop IR"; }
 };
 
-char PrintLoopPassWrapper::ID = 0;
+const char PrintLoopPassWrapper::ID = 0;
 } // namespace
 
 //===----------------------------------------------------------------------===//
 // LPPassManager
 //
 
-char LPPassManager::ID = 0;
+const char LPPassManager::ID = 0;
 
 LPPassManager::LPPassManager() : FunctionPass(ID) {
   LI = nullptr;
@@ -390,6 +390,6 @@ bool LoopPass::skipLoop(const Loop *L) const {
 
 LCSSAVerificationPass::LCSSAVerificationPass() : FunctionPass(ID) {}
 
-char LCSSAVerificationPass::ID = 0;
+const char LCSSAVerificationPass::ID = 0;
 INITIALIZE_PASS(LCSSAVerificationPass, "lcssa-verification", "LCSSA Verifier",
                 false, false)

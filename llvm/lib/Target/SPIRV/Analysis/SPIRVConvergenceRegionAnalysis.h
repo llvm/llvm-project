@@ -147,7 +147,7 @@ class SPIRVConvergenceRegionAnalysisWrapperPass : public FunctionPass {
   SPIRV::ConvergenceRegionInfo CRI;
 
 public:
-  static char ID;
+  static const char ID;
 
   SPIRVConvergenceRegionAnalysisWrapperPass();
 

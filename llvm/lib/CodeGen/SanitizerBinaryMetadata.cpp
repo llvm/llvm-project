@@ -31,7 +31,7 @@ namespace {
 // MachineFunctionPass. It should probably be moved to a FunctionPass.
 class MachineSanitizerBinaryMetadataLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   MachineSanitizerBinaryMetadataLegacy();
   bool runOnMachineFunction(MachineFunction &F) override;
@@ -46,8 +46,8 @@ struct MachineSanitizerBinaryMetadata {
 INITIALIZE_PASS(MachineSanitizerBinaryMetadataLegacy, "machine-sanmd",
                 "Machine Sanitizer Binary Metadata", false, false)
 
-char MachineSanitizerBinaryMetadataLegacy::ID = 0;
-char &llvm::MachineSanitizerBinaryMetadataID =
+const char MachineSanitizerBinaryMetadataLegacy::ID = 0;
+const char &llvm::MachineSanitizerBinaryMetadataID =
     MachineSanitizerBinaryMetadataLegacy::ID;
 
 MachineSanitizerBinaryMetadataLegacy::MachineSanitizerBinaryMetadataLegacy()

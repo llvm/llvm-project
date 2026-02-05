@@ -198,7 +198,7 @@ public:
 
 class GCNCreateVOPDLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   GCNCreateVOPDLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -227,9 +227,9 @@ llvm::GCNCreateVOPDPass::run(MachineFunction &MF,
   return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }
 
-char GCNCreateVOPDLegacy::ID = 0;
+const char GCNCreateVOPDLegacy::ID = 0;
 
-char &llvm::GCNCreateVOPDID = GCNCreateVOPDLegacy::ID;
+const char &llvm::GCNCreateVOPDID = GCNCreateVOPDLegacy::ID;
 
 INITIALIZE_PASS(GCNCreateVOPDLegacy, DEBUG_TYPE, "GCN Create VOPD Instructions",
                 false, false)

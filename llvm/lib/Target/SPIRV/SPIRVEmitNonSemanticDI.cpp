@@ -30,7 +30,7 @@ using namespace llvm;
 
 namespace {
 struct SPIRVEmitNonSemanticDI : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
   SPIRVTargetMachine *TM;
   SPIRVEmitNonSemanticDI(SPIRVTargetMachine *TM = nullptr)
       : MachineFunctionPass(ID), TM(TM) {}
@@ -46,7 +46,7 @@ private:
 INITIALIZE_PASS(SPIRVEmitNonSemanticDI, DEBUG_TYPE,
                 "SPIRV NonSemantic.Shader.DebugInfo.100 emitter", false, false)
 
-char SPIRVEmitNonSemanticDI::ID = 0;
+const char SPIRVEmitNonSemanticDI::ID = 0;
 
 MachineFunctionPass *
 llvm::createSPIRVEmitNonSemanticDIPass(SPIRVTargetMachine *TM) {

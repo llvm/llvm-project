@@ -47,7 +47,7 @@ SetLRPredicate("arm-set-lr-predicate", cl::Hidden,
 namespace {
 class MVETPAndVPTOptimisations : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   const Thumb2InstrInfo *TII;
   MachineRegisterInfo *MRI;
 
@@ -84,7 +84,7 @@ private:
                                             MachineInstr *LoopStart);
 };
 
-char MVETPAndVPTOptimisations::ID = 0;
+const char MVETPAndVPTOptimisations::ID = 0;
 
 } // end anonymous namespace
 

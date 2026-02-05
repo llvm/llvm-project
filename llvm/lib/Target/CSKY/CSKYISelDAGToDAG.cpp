@@ -55,7 +55,7 @@ public:
 
 class CSKYDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   explicit CSKYDAGToDAGISelLegacy(CSKYTargetMachine &TM,
                                   CodeGenOptLevel OptLevel)
       : SelectionDAGISelLegacy(
@@ -63,7 +63,7 @@ public:
 };
 } // namespace
 
-char CSKYDAGToDAGISelLegacy::ID = 0;
+const char CSKYDAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(CSKYDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 

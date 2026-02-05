@@ -510,7 +510,7 @@ public:
   bool runOnFunction(Function &F) override;
   DXILLegalizeLegacy() : FunctionPass(ID) {}
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 };
 } // namespace
 
@@ -529,7 +529,7 @@ bool DXILLegalizeLegacy::runOnFunction(Function &F) {
   return DXLegalize.runLegalizationPipeline(F);
 }
 
-char DXILLegalizeLegacy::ID = 0;
+const char DXILLegalizeLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(DXILLegalizeLegacy, DEBUG_TYPE, "DXIL Legalizer", false,
                       false)

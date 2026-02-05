@@ -28,7 +28,7 @@ protected:
   std::vector<int> UsedRegisters;
 
 protected:
-  LEONMachineFunctionPass(char &ID);
+  LEONMachineFunctionPass(const char &ID);
 
   void clearUsedRegisterList() { UsedRegisters.clear(); }
 
@@ -56,7 +56,7 @@ protected:
   void insertNop(MachineBasicBlock::iterator I);
 
 public:
-  static char ID;
+  static const char ID;
 
   ErrataWorkaround();
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -66,7 +66,7 @@ public:
 
 class LLVM_LIBRARY_VISIBILITY InsertNOPLoad : public LEONMachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   InsertNOPLoad();
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -81,7 +81,7 @@ public:
 class LLVM_LIBRARY_VISIBILITY DetectRoundChange
     : public LEONMachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   DetectRoundChange();
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -94,7 +94,7 @@ public:
 
 class LLVM_LIBRARY_VISIBILITY FixAllFDIVSQRT : public LEONMachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   FixAllFDIVSQRT();
   bool runOnMachineFunction(MachineFunction &MF) override;

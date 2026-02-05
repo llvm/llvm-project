@@ -48,7 +48,7 @@ MachineLoopPrinterPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-char MachineLoopInfoWrapperPass::ID = 0;
+const char MachineLoopInfoWrapperPass::ID = 0;
 MachineLoopInfoWrapperPass::MachineLoopInfoWrapperPass()
     : MachineFunctionPass(ID) {}
 INITIALIZE_PASS_BEGIN(MachineLoopInfoWrapperPass, "machine-loops",
@@ -57,7 +57,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(MachineLoopInfoWrapperPass, "machine-loops",
                     "Machine Natural Loop Construction", true, true)
 
-char &llvm::MachineLoopInfoID = MachineLoopInfoWrapperPass::ID;
+const char &llvm::MachineLoopInfoID = MachineLoopInfoWrapperPass::ID;
 
 bool MachineLoopInfoWrapperPass::runOnMachineFunction(MachineFunction &) {
   LI.calculate(getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree());

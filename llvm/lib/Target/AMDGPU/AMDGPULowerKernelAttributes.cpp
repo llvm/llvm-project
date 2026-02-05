@@ -61,7 +61,7 @@ enum ImplicitArgOffsets {
 
 class AMDGPULowerKernelAttributes : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPULowerKernelAttributes() : ModulePass(ID) {}
 
@@ -415,7 +415,7 @@ INITIALIZE_PASS_BEGIN(AMDGPULowerKernelAttributes, DEBUG_TYPE,
 INITIALIZE_PASS_END(AMDGPULowerKernelAttributes, DEBUG_TYPE,
                     "AMDGPU Kernel Attributes", false, false)
 
-char AMDGPULowerKernelAttributes::ID = 0;
+const char AMDGPULowerKernelAttributes::ID = 0;
 
 ModulePass *llvm::createAMDGPULowerKernelAttributesPass() {
   return new AMDGPULowerKernelAttributes();

@@ -1109,7 +1109,7 @@ class SPIRVStructurizer : public FunctionPass {
   }
 
 public:
-  static char ID;
+  static const char ID;
 
   SPIRVStructurizer() : FunctionPass(ID) {}
 
@@ -1209,7 +1209,7 @@ public:
 };
 } // anonymous namespace
 
-char SPIRVStructurizer::ID = 0;
+const char SPIRVStructurizer::ID = 0;
 
 INITIALIZE_PASS_BEGIN(SPIRVStructurizer, "spirv-structurizer",
                       "structurize SPIRV", false, false)

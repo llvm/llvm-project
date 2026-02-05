@@ -33,7 +33,7 @@ class RecycledInstErr : public ErrorInfo<RecycledInstErr> {
   Instruction *RecycledInst;
 
 public:
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
 
   explicit RecycledInstErr(Instruction *Inst) : RecycledInst(Inst) {}
   // Always need to carry an Instruction

@@ -48,7 +48,7 @@ namespace {
 
   class HexagonGenExtract : public FunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     HexagonGenExtract() : FunctionPass(ID) {}
 
@@ -74,7 +74,7 @@ namespace {
 
 } // end anonymous namespace
 
-char HexagonGenExtract::ID = 0;
+const char HexagonGenExtract::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonGenExtract, "hextract", "Hexagon generate "
   "\"extract\" instructions", false, false)

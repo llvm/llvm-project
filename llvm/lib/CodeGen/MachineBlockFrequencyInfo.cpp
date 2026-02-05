@@ -184,7 +184,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_END(MachineBlockFrequencyInfoWrapperPass, DEBUG_TYPE,
                     "Machine Block Frequency Analysis", true, true)
 
-char MachineBlockFrequencyInfoWrapperPass::ID = 0;
+const char MachineBlockFrequencyInfoWrapperPass::ID = 0;
 
 MachineBlockFrequencyInfoWrapperPass::MachineBlockFrequencyInfoWrapperPass()
     : MachineFunctionPass(ID) {}

@@ -132,103 +132,103 @@ LLVM_ABI FunctionPass *createComplexDeinterleavingPass(const TargetMachine *TM);
 
 /// AtomicExpandID -- Lowers atomic operations in terms of either cmpxchg
 /// load-linked/store-conditional loops.
-LLVM_ABI extern char &AtomicExpandID;
+LLVM_ABI extern const char &AtomicExpandID;
 
 /// MachineLoopInfo - This pass is a loop analysis pass.
-LLVM_ABI extern char &MachineLoopInfoID;
+LLVM_ABI extern const char &MachineLoopInfoID;
 
 /// MachineDominators - This pass is a machine dominators analysis pass.
-LLVM_ABI extern char &MachineDominatorsID;
+LLVM_ABI extern const char &MachineDominatorsID;
 
 /// MachineDominanaceFrontier - This pass is a machine dominators analysis.
-LLVM_ABI extern char &MachineDominanceFrontierID;
+LLVM_ABI extern const char &MachineDominanceFrontierID;
 
 /// MachineRegionInfo - This pass computes SESE regions for machine functions.
-LLVM_ABI extern char &MachineRegionInfoPassID;
+LLVM_ABI extern const char &MachineRegionInfoPassID;
 
 /// EdgeBundles analysis - Bundle machine CFG edges.
-LLVM_ABI extern char &EdgeBundlesWrapperLegacyID;
+LLVM_ABI extern const char &EdgeBundlesWrapperLegacyID;
 
 /// LiveVariables pass - This pass computes the set of blocks in which each
 /// variable is life and sets machine operand kill flags.
-LLVM_ABI extern char &LiveVariablesID;
+LLVM_ABI extern const char &LiveVariablesID;
 
 /// PHIElimination - This pass eliminates machine instruction PHI nodes
 /// by inserting copy instructions.  This destroys SSA information, but is the
 /// desired input for some register allocators.  This pass is "required" by
 /// these register allocator like this: AU.addRequiredID(PHIEliminationID);
-LLVM_ABI extern char &PHIEliminationID;
+LLVM_ABI extern const char &PHIEliminationID;
 
 /// LiveIntervals - This analysis keeps track of the live ranges of virtual
 /// and physical registers.
-LLVM_ABI extern char &LiveIntervalsID;
+LLVM_ABI extern const char &LiveIntervalsID;
 
 /// LiveStacks pass. An analysis keeping track of the liveness of stack slots.
-LLVM_ABI extern char &LiveStacksID;
+LLVM_ABI extern const char &LiveStacksID;
 
 /// TwoAddressInstruction - This pass reduces two-address instructions to
 /// use two operands. This destroys SSA information but it is desired by
 /// register allocators.
-LLVM_ABI extern char &TwoAddressInstructionPassID;
+LLVM_ABI extern const char &TwoAddressInstructionPassID;
 
 /// ProcessImpicitDefs pass - This pass removes IMPLICIT_DEFs.
-LLVM_ABI extern char &ProcessImplicitDefsID;
+LLVM_ABI extern const char &ProcessImplicitDefsID;
 
 /// RegisterCoalescer - This pass merges live ranges to eliminate copies.
-LLVM_ABI extern char &RegisterCoalescerID;
+LLVM_ABI extern const char &RegisterCoalescerID;
 
 /// MachineScheduler - This pass schedules machine instructions.
-LLVM_ABI extern char &MachineSchedulerID;
+LLVM_ABI extern const char &MachineSchedulerID;
 
 /// PostMachineScheduler - This pass schedules machine instructions postRA.
-LLVM_ABI extern char &PostMachineSchedulerID;
+LLVM_ABI extern const char &PostMachineSchedulerID;
 
 /// SpillPlacement analysis. Suggest optimal placement of spill code between
 /// basic blocks.
-LLVM_ABI extern char &SpillPlacementID;
+LLVM_ABI extern const char &SpillPlacementID;
 
 /// ShrinkWrap pass. Look for the best place to insert save and restore
 // instruction and update the MachineFunctionInfo with that information.
-LLVM_ABI extern char &ShrinkWrapID;
+LLVM_ABI extern const char &ShrinkWrapID;
 
 /// LiveRangeShrink pass. Move instruction close to its definition to shrink
 /// the definition's live range.
-LLVM_ABI extern char &LiveRangeShrinkID;
+LLVM_ABI extern const char &LiveRangeShrinkID;
 
 /// Greedy register allocator.
-LLVM_ABI extern char &RAGreedyLegacyID;
+LLVM_ABI extern const char &RAGreedyLegacyID;
 
 /// Basic register allocator.
-LLVM_ABI extern char &RABasicID;
+LLVM_ABI extern const char &RABasicID;
 
 /// VirtRegRewriter pass. Rewrite virtual registers to physical registers as
 /// assigned in VirtRegMap.
-LLVM_ABI extern char &VirtRegRewriterID;
+LLVM_ABI extern const char &VirtRegRewriterID;
 LLVM_ABI FunctionPass *createVirtRegRewriter(bool ClearVirtRegs = true);
 
 /// UnreachableMachineBlockElimination - This pass removes unreachable
 /// machine basic blocks.
-LLVM_ABI extern char &UnreachableMachineBlockElimID;
+LLVM_ABI extern const char &UnreachableMachineBlockElimID;
 
 /// DeadMachineInstructionElim - This pass removes dead machine instructions.
-LLVM_ABI extern char &DeadMachineInstructionElimID;
+LLVM_ABI extern const char &DeadMachineInstructionElimID;
 
 /// This pass adds dead/undef flags after analyzing subregister lanes.
-LLVM_ABI extern char &DetectDeadLanesID;
+LLVM_ABI extern const char &DetectDeadLanesID;
 
 /// This pass perform post-ra machine sink for COPY instructions.
-LLVM_ABI extern char &PostRAMachineSinkingID;
+LLVM_ABI extern const char &PostRAMachineSinkingID;
 
 /// This pass adds flow sensitive discriminators.
-LLVM_ABI extern char &MIRAddFSDiscriminatorsID;
+LLVM_ABI extern const char &MIRAddFSDiscriminatorsID;
 
 /// This pass reads flow sensitive profile.
-LLVM_ABI extern char &MIRProfileLoaderPassID;
+LLVM_ABI extern const char &MIRProfileLoaderPassID;
 
 // This pass gives undef values a Pseudo Instruction definition for
 // Instructions to ensure early-clobber is followed when using the greedy
 // register allocator.
-LLVM_ABI extern char &InitUndefID;
+LLVM_ABI extern const char &InitUndefID;
 
 /// FastRegisterAllocation Pass - This pass register allocates as fast as
 /// possible. It is best suited for debug code where live ranges are short.
@@ -256,84 +256,84 @@ LLVM_ABI FunctionPass *createDefaultPBQPRegisterAllocator();
 
 /// PrologEpilogCodeInserter - This pass inserts prolog and epilog code,
 /// and eliminates abstract frame references.
-LLVM_ABI extern char &PrologEpilogCodeInserterID;
+LLVM_ABI extern const char &PrologEpilogCodeInserterID;
 LLVM_ABI MachineFunctionPass *createPrologEpilogInserterPass();
 
 /// ExpandPostRAPseudos - This pass expands pseudo instructions after
 /// register allocation.
-LLVM_ABI extern char &ExpandPostRAPseudosID;
+LLVM_ABI extern const char &ExpandPostRAPseudosID;
 
 /// PostRAHazardRecognizer - This pass runs the post-ra hazard
 /// recognizer.
-LLVM_ABI extern char &PostRAHazardRecognizerID;
+LLVM_ABI extern const char &PostRAHazardRecognizerID;
 
 /// PostRAScheduler - This pass performs post register allocation
 /// scheduling.
-LLVM_ABI extern char &PostRASchedulerID;
+LLVM_ABI extern const char &PostRASchedulerID;
 
 /// BranchFolding - This pass performs machine code CFG based
 /// optimizations to delete branches to branches, eliminate branches to
 /// successor blocks (creating fall throughs), and eliminating branches over
 /// branches.
-LLVM_ABI extern char &BranchFolderPassID;
+LLVM_ABI extern const char &BranchFolderPassID;
 
 /// BranchRelaxation - This pass replaces branches that need to jump further
 /// than is supported by a branch instruction.
-LLVM_ABI extern char &BranchRelaxationPassID;
+LLVM_ABI extern const char &BranchRelaxationPassID;
 
 /// MachineFunctionPrinterPass - This pass prints out MachineInstr's.
-LLVM_ABI extern char &MachineFunctionPrinterPassID;
+LLVM_ABI extern const char &MachineFunctionPrinterPassID;
 
 /// MIRPrintingPass - this pass prints out the LLVM IR using the MIR
 /// serialization format.
-LLVM_ABI extern char &MIRPrintingPassID;
+LLVM_ABI extern const char &MIRPrintingPassID;
 
 /// TailDuplicate - Duplicate blocks with unconditional branches
 /// into tails of their predecessors.
-LLVM_ABI extern char &TailDuplicateLegacyID;
+LLVM_ABI extern const char &TailDuplicateLegacyID;
 
 /// Duplicate blocks with unconditional branches into tails of their
 /// predecessors. Variant that works before register allocation.
-LLVM_ABI extern char &EarlyTailDuplicateLegacyID;
+LLVM_ABI extern const char &EarlyTailDuplicateLegacyID;
 
 /// MachineTraceMetrics - This pass computes critical path and CPU resource
 /// usage in an ensemble of traces.
-LLVM_ABI extern char &MachineTraceMetricsID;
+LLVM_ABI extern const char &MachineTraceMetricsID;
 
 /// EarlyIfConverter - This pass performs if-conversion on SSA form by
 /// inserting cmov instructions.
-LLVM_ABI extern char &EarlyIfConverterLegacyID;
+LLVM_ABI extern const char &EarlyIfConverterLegacyID;
 
 /// EarlyIfPredicator - This pass performs if-conversion on SSA form by
 /// predicating if/else block and insert select at the join point.
-LLVM_ABI extern char &EarlyIfPredicatorID;
+LLVM_ABI extern const char &EarlyIfPredicatorID;
 
 /// This pass performs instruction combining using trace metrics to estimate
 /// critical-path and resource depth.
-LLVM_ABI extern char &MachineCombinerID;
+LLVM_ABI extern const char &MachineCombinerID;
 
 /// StackSlotColoring - This pass performs stack coloring and merging.
 /// It merges disjoint allocas to reduce the stack size.
-LLVM_ABI extern char &StackColoringLegacyID;
+LLVM_ABI extern const char &StackColoringLegacyID;
 
 /// StackFramePrinter - This pass prints the stack frame layout and variable
 /// mappings.
-LLVM_ABI extern char &StackFrameLayoutAnalysisPassID;
+LLVM_ABI extern const char &StackFrameLayoutAnalysisPassID;
 
 /// IfConverter - This pass performs machine code if conversion.
-LLVM_ABI extern char &IfConverterID;
+LLVM_ABI extern const char &IfConverterID;
 
 LLVM_ABI FunctionPass *
 createIfConverter(std::function<bool(const MachineFunction &)> Ftor);
 
 /// MachineBlockPlacement - This pass places basic blocks based on branch
 /// probabilities.
-LLVM_ABI extern char &MachineBlockPlacementID;
+LLVM_ABI extern const char &MachineBlockPlacementID;
 
 /// MachineBlockPlacementStats - This pass collects statistics about the
 /// basic block placement using branch probabilities and block frequency
 /// information.
-LLVM_ABI extern char &MachineBlockPlacementStatsID;
+LLVM_ABI extern const char &MachineBlockPlacementStatsID;
 
 /// GCLowering Pass - Used by gc.root to perform its default lowering
 /// operations.
@@ -341,7 +341,7 @@ LLVM_ABI FunctionPass *createGCLoweringPass();
 
 /// GCLowering Pass - Used by gc.root to perform its default lowering
 /// operations.
-LLVM_ABI extern char &GCLoweringID;
+LLVM_ABI extern const char &GCLoweringID;
 
 /// ShadowStackGCLowering - Implements the custom lowering mechanism
 /// used by the shadow stack GC.  Only runs on functions which opt in to
@@ -350,70 +350,70 @@ LLVM_ABI FunctionPass *createShadowStackGCLoweringPass();
 
 /// ShadowStackGCLowering - Implements the custom lowering mechanism
 /// used by the shadow stack GC.
-LLVM_ABI extern char &ShadowStackGCLoweringID;
+LLVM_ABI extern const char &ShadowStackGCLoweringID;
 
 /// GCMachineCodeAnalysis - Target-independent pass to mark safe points
 /// in machine code. Must be added very late during code generation, just
 /// prior to output, and importantly after all CFG transformations (such as
 /// branch folding).
-LLVM_ABI extern char &GCMachineCodeAnalysisID;
+LLVM_ABI extern const char &GCMachineCodeAnalysisID;
 
 /// MachineCSE - This pass performs global CSE on machine instructions.
-LLVM_ABI extern char &MachineCSELegacyID;
+LLVM_ABI extern const char &MachineCSELegacyID;
 
 /// MIRCanonicalizer - This pass canonicalizes MIR by renaming vregs
 /// according to the semantics of the instruction as well as hoists
 /// code.
-LLVM_ABI extern char &MIRCanonicalizerID;
+LLVM_ABI extern const char &MIRCanonicalizerID;
 
 /// ImplicitNullChecks - This pass folds null pointer checks into nearby
 /// memory operations.
-LLVM_ABI extern char &ImplicitNullChecksID;
+LLVM_ABI extern const char &ImplicitNullChecksID;
 
 /// This pass performs loop invariant code motion on machine instructions.
-LLVM_ABI extern char &MachineLICMID;
+LLVM_ABI extern const char &MachineLICMID;
 
 /// This pass performs loop invariant code motion on machine instructions.
 /// This variant works before register allocation. \see MachineLICMID.
-LLVM_ABI extern char &EarlyMachineLICMID;
+LLVM_ABI extern const char &EarlyMachineLICMID;
 
 /// MachineSinking - This pass performs sinking on machine instructions.
-LLVM_ABI extern char &MachineSinkingLegacyID;
+LLVM_ABI extern const char &MachineSinkingLegacyID;
 
 /// MachineCopyPropagation - This pass performs copy propagation on
 /// machine instructions.
-LLVM_ABI extern char &MachineCopyPropagationID;
+LLVM_ABI extern const char &MachineCopyPropagationID;
 
 LLVM_ABI MachineFunctionPass *
 createMachineCopyPropagationPass(bool UseCopyInstr);
 
 /// MachineLateInstrsCleanup - This pass removes redundant identical
 /// instructions after register allocation and rematerialization.
-LLVM_ABI extern char &MachineLateInstrsCleanupID;
+LLVM_ABI extern const char &MachineLateInstrsCleanupID;
 
 /// PeepholeOptimizer - This pass performs peephole optimizations -
 /// like extension and comparison eliminations.
-LLVM_ABI extern char &PeepholeOptimizerLegacyID;
+LLVM_ABI extern const char &PeepholeOptimizerLegacyID;
 
 /// OptimizePHIs - This pass optimizes machine instruction PHIs
 /// to take advantage of opportunities created during DAG legalization.
-LLVM_ABI extern char &OptimizePHIsLegacyID;
+LLVM_ABI extern const char &OptimizePHIsLegacyID;
 
 /// StackSlotColoring - This pass performs stack slot coloring.
-LLVM_ABI extern char &StackSlotColoringID;
+LLVM_ABI extern const char &StackSlotColoringID;
 
 /// This pass lays out funclets contiguously.
-LLVM_ABI extern char &FuncletLayoutID;
+LLVM_ABI extern const char &FuncletLayoutID;
 
 /// This pass inserts the XRay instrumentation sleds if they are supported by
 /// the target platform.
-LLVM_ABI extern char &XRayInstrumentationID;
+LLVM_ABI extern const char &XRayInstrumentationID;
 
 /// This pass inserts FEntry calls
-LLVM_ABI extern char &FEntryInserterID;
+LLVM_ABI extern const char &FEntryInserterID;
 
 /// This pass implements the "patchable-function" attribute.
-LLVM_ABI extern char &PatchableFunctionID;
+LLVM_ABI extern const char &PatchableFunctionID;
 
 /// createStackProtectorPass - This pass adds stack protectors to functions.
 ///
@@ -445,14 +445,14 @@ LLVM_ABI FunctionPass *createWasmEHPass();
 /// slots relative to one another and allocates base registers to access them
 /// when it is estimated by the target to be out of range of normal frame
 /// pointer or stack pointer index addressing.
-LLVM_ABI extern char &LocalStackSlotAllocationID;
+LLVM_ABI extern const char &LocalStackSlotAllocationID;
 
 /// This pass expands pseudo-instructions, reserves registers and adjusts
 /// machine frame information.
-LLVM_ABI extern char &FinalizeISelID;
+LLVM_ABI extern const char &FinalizeISelID;
 
 /// UnpackMachineBundles - This pass unpack machine instruction bundles.
-LLVM_ABI extern char &UnpackMachineBundlesID;
+LLVM_ABI extern const char &UnpackMachineBundlesID;
 
 LLVM_ABI FunctionPass *
 createUnpackMachineBundles(std::function<bool(const MachineFunction &)> Ftor);
@@ -460,23 +460,23 @@ createUnpackMachineBundles(std::function<bool(const MachineFunction &)> Ftor);
 /// StackMapLiveness - This pass analyses the register live-out set of
 /// stackmap/patchpoint intrinsics and attaches the calculated information to
 /// the intrinsic for later emission to the StackMap.
-LLVM_ABI extern char &StackMapLivenessID;
+LLVM_ABI extern const char &StackMapLivenessID;
 
 // MachineSanitizerBinaryMetadata - appends/finalizes sanitizer binary
 // metadata after llvm SanitizerBinaryMetadata pass.
-LLVM_ABI extern char &MachineSanitizerBinaryMetadataID;
+LLVM_ABI extern const char &MachineSanitizerBinaryMetadataID;
 
 /// RemoveLoadsIntoFakeUses pass.
-LLVM_ABI extern char &RemoveLoadsIntoFakeUsesID;
+LLVM_ABI extern const char &RemoveLoadsIntoFakeUsesID;
 
 /// RemoveRedundantDebugValues pass.
-LLVM_ABI extern char &RemoveRedundantDebugValuesID;
+LLVM_ABI extern const char &RemoveRedundantDebugValuesID;
 
 /// MachineCFGPrinter pass.
-LLVM_ABI extern char &MachineCFGPrinterID;
+LLVM_ABI extern const char &MachineCFGPrinterID;
 
 /// LiveDebugValues pass
-LLVM_ABI extern char &LiveDebugValuesID;
+LLVM_ABI extern const char &LiveDebugValuesID;
 
 /// InterleavedAccess Pass - This pass identifies and matches interleaved
 /// memory accesses to target specific intrinsics.
@@ -519,7 +519,7 @@ LLVM_ABI FunctionPass *createSafeStackPass();
 /// This pass detects subregister lanes in a virtual register that are used
 /// independently of other lanes and splits them into separate virtual
 /// registers.
-LLVM_ABI extern char &RenameIndependentSubregsID;
+LLVM_ABI extern const char &RenameIndependentSubregsID;
 
 /// This pass is executed POST-RA to collect which physical registers are
 /// preserved by given machine function.
@@ -531,7 +531,7 @@ LLVM_ABI FunctionPass *createRegUsageInfoCollector();
 LLVM_ABI FunctionPass *createRegUsageInfoPropPass();
 
 /// This pass performs software pipelining on machine instructions.
-LLVM_ABI extern char &MachinePipelinerID;
+LLVM_ABI extern const char &MachinePipelinerID;
 
 /// This pass frees the memory occupied by the MachineFunction.
 LLVM_ABI FunctionPass *createFreeMachineFunctionPass();
@@ -610,7 +610,7 @@ LLVM_ABI ModulePass *createCheckDebugMachineModulePass();
 
 /// The pass fixups statepoint machine instruction to replace usage of
 /// caller saved registers with stack slots.
-LLVM_ABI extern char &FixupStatepointCallerSavedID;
+LLVM_ABI extern const char &FixupStatepointCallerSavedID;
 
 /// When learning an eviction policy, extract score(reward) information,
 /// otherwise this does nothing

@@ -144,7 +144,7 @@ using namespace llvm;
 
 namespace {
 struct FixIrreducible : public FunctionPass {
-  static char ID;
+  static const char ID;
   FixIrreducible() : FunctionPass(ID) {
     initializeFixIrreduciblePass(*PassRegistry::getPassRegistry());
   }
@@ -161,7 +161,7 @@ struct FixIrreducible : public FunctionPass {
 };
 } // namespace
 
-char FixIrreducible::ID = 0;
+const char FixIrreducible::ID = 0;
 
 FunctionPass *llvm::createFixIrreduciblePass() { return new FixIrreducible(); }
 

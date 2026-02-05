@@ -29,7 +29,7 @@ namespace {
 
 class AMDGPUReserveWWMRegsLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUReserveWWMRegsLegacy() : MachineFunctionPass(ID) {}
 
@@ -55,9 +55,9 @@ public:
 INITIALIZE_PASS(AMDGPUReserveWWMRegsLegacy, DEBUG_TYPE,
                 "AMDGPU Reserve WWM Registers", false, false)
 
-char AMDGPUReserveWWMRegsLegacy::ID = 0;
+const char AMDGPUReserveWWMRegsLegacy::ID = 0;
 
-char &llvm::AMDGPUReserveWWMRegsLegacyID = AMDGPUReserveWWMRegsLegacy::ID;
+const char &llvm::AMDGPUReserveWWMRegsLegacyID = AMDGPUReserveWWMRegsLegacy::ID;
 
 bool AMDGPUReserveWWMRegsLegacy::runOnMachineFunction(MachineFunction &MF) {
   return AMDGPUReserveWWMRegs().run(MF);

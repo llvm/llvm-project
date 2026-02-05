@@ -69,7 +69,7 @@ HexagonDAGToDAGISelLegacy::HexagonDAGToDAGISelLegacy(HexagonTargetMachine &tm,
     : SelectionDAGISelLegacy(
           ID, std::make_unique<HexagonDAGToDAGISel>(tm, OptLevel)) {}
 
-char HexagonDAGToDAGISelLegacy::ID = 0;
+const char HexagonDAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(HexagonDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 

@@ -118,10 +118,10 @@ public:
   }
 
   // Used by ErrorInfo::classID.
-  static char ID;
+  static const char ID;
 };
 
-char PreviouslyReportedError::ID = 0;
+const char PreviouslyReportedError::ID = 0;
 
 /*
  * Custom class for processing linear clause for omp.wsloop

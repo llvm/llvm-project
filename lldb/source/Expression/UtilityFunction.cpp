@@ -26,7 +26,7 @@
 using namespace lldb_private;
 using namespace lldb;
 
-char UtilityFunction::ID;
+const char UtilityFunction::ID = 0;
 
 /// Constructor
 ///

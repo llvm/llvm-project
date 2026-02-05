@@ -35,7 +35,7 @@ class RISCVZacasABIFix : public FunctionPass,
   const RISCVSubtarget *ST;
 
 public:
-  static char ID;
+  static const char ID;
 
   RISCVZacasABIFix() : FunctionPass(ID) {}
 
@@ -87,7 +87,7 @@ INITIALIZE_PASS_BEGIN(RISCVZacasABIFix, DEBUG_TYPE, PASS_NAME, false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(RISCVZacasABIFix, DEBUG_TYPE, PASS_NAME, false, false)
 
-char RISCVZacasABIFix::ID = 0;
+const char RISCVZacasABIFix::ID = 0;
 
 FunctionPass *llvm::createRISCVZacasABIFixPass() {
   return new RISCVZacasABIFix();

@@ -46,7 +46,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 // LLVM RTTI support.
-char StackFrame::ID;
+const char StackFrame::ID = 0;
 
 // The first bits in the flags are reserved for the SymbolContext::Scope bits
 // so we know if we have tried to look up information in our internal symbol

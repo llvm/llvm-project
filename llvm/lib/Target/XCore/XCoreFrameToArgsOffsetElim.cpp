@@ -20,7 +20,7 @@ using namespace llvm;
 
 namespace {
   struct XCoreFTAOElim : public MachineFunctionPass {
-    static char ID;
+    static const char ID;
     XCoreFTAOElim() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &Fn) override;
@@ -32,7 +32,7 @@ namespace {
       return "XCore FRAME_TO_ARGS_OFFSET Elimination";
     }
   };
-  char XCoreFTAOElim::ID = 0;
+  const char XCoreFTAOElim::ID = 0;
 }
 
 /// createXCoreFrameToArgsOffsetEliminationPass - returns an instance of the

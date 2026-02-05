@@ -27,7 +27,7 @@ STATISTIC(NumDeadDefsReplaced, "Number of dead definitions replaced");
 namespace {
 class LoongArchDeadRegisterDefinitions : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   LoongArchDeadRegisterDefinitions() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -46,7 +46,7 @@ public:
 };
 } // end anonymous namespace
 
-char LoongArchDeadRegisterDefinitions::ID = 0;
+const char LoongArchDeadRegisterDefinitions::ID = 0;
 INITIALIZE_PASS(LoongArchDeadRegisterDefinitions, DEBUG_TYPE,
                 LoongArch_DEAD_REG_DEF_NAME, false, false)
 

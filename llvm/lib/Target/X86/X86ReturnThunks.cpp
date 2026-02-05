@@ -48,14 +48,14 @@ constexpr StringRef X86ReturnThunksPassName = "X86 Return Thunks";
 
 namespace {
 struct X86ReturnThunksLegacy final : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
   X86ReturnThunksLegacy() : MachineFunctionPass(ID) {}
   StringRef getPassName() const override { return X86ReturnThunksPassName; }
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 } // namespace
 
-char X86ReturnThunksLegacy::ID = 0;
+const char X86ReturnThunksLegacy::ID = 0;
 
 static bool runX86ReturnThunks(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << X86ReturnThunksPassName << "\n");

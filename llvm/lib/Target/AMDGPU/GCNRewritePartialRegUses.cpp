@@ -129,7 +129,7 @@ public:
 
 class GCNRewritePartialRegUsesLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   GCNRewritePartialRegUsesLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
@@ -465,9 +465,10 @@ GCNRewritePartialRegUsesPass::run(MachineFunction &MF,
   return PA;
 }
 
-char GCNRewritePartialRegUsesLegacy::ID;
+const char GCNRewritePartialRegUsesLegacy::ID = 0;
 
-char &llvm::GCNRewritePartialRegUsesID = GCNRewritePartialRegUsesLegacy::ID;
+const char &llvm::GCNRewritePartialRegUsesID =
+    GCNRewritePartialRegUsesLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(GCNRewritePartialRegUsesLegacy, DEBUG_TYPE,
                       "Rewrite Partial Register Uses", false, false)

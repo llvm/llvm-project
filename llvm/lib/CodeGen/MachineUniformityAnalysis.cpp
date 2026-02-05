@@ -171,7 +171,7 @@ namespace {
 
 class MachineUniformityInfoPrinterPass : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   MachineUniformityInfoPrinterPass();
 
@@ -207,7 +207,7 @@ MachineUniformityPrinterPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-char MachineUniformityAnalysisPass::ID = 0;
+const char MachineUniformityAnalysisPass::ID = 0;
 
 MachineUniformityAnalysisPass::MachineUniformityAnalysisPass()
     : MachineFunctionPass(ID) {}
@@ -243,7 +243,7 @@ void MachineUniformityAnalysisPass::print(raw_ostream &OS,
   UI.print(OS);
 }
 
-char MachineUniformityInfoPrinterPass::ID = 0;
+const char MachineUniformityInfoPrinterPass::ID = 0;
 
 MachineUniformityInfoPrinterPass::MachineUniformityInfoPrinterPass()
     : MachineFunctionPass(ID) {}

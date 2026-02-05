@@ -157,7 +157,7 @@ namespace {
 
   class Thumb2SizeReduce : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     const Thumb2InstrInfo *TII;
     const ARMSubtarget *STI;
@@ -232,7 +232,7 @@ namespace {
     std::function<bool(const Function &)> PredicateFtor;
   };
 
-  char Thumb2SizeReduce::ID = 0;
+  const char Thumb2SizeReduce::ID = 0;
 
 } // end anonymous namespace
 

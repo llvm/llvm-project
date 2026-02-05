@@ -36,7 +36,7 @@ class MIRAddFSDiscriminators : public MachineFunctionPass {
   unsigned HighBit;
 
 public:
-  static char ID;
+  static const char ID;
   /// PassNum is the sequence number this pass is called, start from 1.
   MIRAddFSDiscriminators(FSDiscriminatorPass P = FSDiscriminatorPass::Pass1)
       : MachineFunctionPass(ID), Pass(P) {

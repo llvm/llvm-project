@@ -56,7 +56,7 @@ public:
   using ParentT::isA;
   using ParentT::ParentT;
 
-  static char ID;
+  static const char ID;
 
   static const void *classID() noexcept { return &ThisT::ID; }
 
@@ -78,7 +78,7 @@ public:
 };
 
 template <typename ThisT, typename ParentT>
-char ErrorExtends<ThisT, ParentT>::ID = 0;
+const char ErrorExtends<ThisT, ParentT>::ID = 0;
 
 /// Represents an environmental error.
 class ORC_RT_NODISCARD Error {

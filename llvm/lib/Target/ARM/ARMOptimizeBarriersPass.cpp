@@ -20,7 +20,7 @@ STATISTIC(NumDMBsRemoved, "Number of DMBs removed");
 namespace {
 class ARMOptimizeBarriersPass : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   ARMOptimizeBarriersPass() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
@@ -31,7 +31,7 @@ public:
 
   StringRef getPassName() const override { return "optimise barriers pass"; }
 };
-char ARMOptimizeBarriersPass::ID = 0;
+const char ARMOptimizeBarriersPass::ID = 0;
 }
 
 // Returns whether the instruction can safely move past a DMB instruction

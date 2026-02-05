@@ -13,8 +13,8 @@
 
 using namespace lldb_protocol::mcp;
 
-char MCPError::ID;
-char UnsupportedURI::ID;
+const char MCPError::ID = 0;
+const char UnsupportedURI::ID = 0;
 
 MCPError::MCPError(std::string message, int64_t error_code)
     : m_message(message), m_error_code(error_code) {}

@@ -111,7 +111,7 @@ class AArch64A57FPLoadBalancing : public MachineFunctionPass {
   RegisterClassInfo RCI;
 
 public:
-  static char ID;
+  static const char ID;
   explicit AArch64A57FPLoadBalancing() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
@@ -145,7 +145,7 @@ private:
 };
 }
 
-char AArch64A57FPLoadBalancing::ID = 0;
+const char AArch64A57FPLoadBalancing::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AArch64A57FPLoadBalancing, DEBUG_TYPE,
                       "AArch64 A57 FP Load-Balancing", false, false)

@@ -20,14 +20,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "livestacks"
 
-char LiveStacksWrapperLegacy::ID = 0;
+const char LiveStacksWrapperLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(LiveStacksWrapperLegacy, DEBUG_TYPE,
                       "Live Stack Slot Analysis", false, false)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_END(LiveStacksWrapperLegacy, DEBUG_TYPE,
                     "Live Stack Slot Analysis", false, true)
 
-char &llvm::LiveStacksID = LiveStacksWrapperLegacy::ID;
+const char &llvm::LiveStacksID = LiveStacksWrapperLegacy::ID;
 
 void LiveStacksWrapperLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();

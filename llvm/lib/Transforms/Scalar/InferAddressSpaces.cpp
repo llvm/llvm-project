@@ -161,7 +161,7 @@ class InferAddressSpaces : public FunctionPass {
   unsigned FlatAddrSpace = 0;
 
 public:
-  static char ID;
+  static const char ID;
 
   InferAddressSpaces()
       : FunctionPass(ID), FlatAddrSpace(UninitializedAddressSpace) {
@@ -261,7 +261,7 @@ public:
 
 } // end anonymous namespace
 
-char InferAddressSpaces::ID = 0;
+const char InferAddressSpaces::ID = 0;
 
 INITIALIZE_PASS_BEGIN(InferAddressSpaces, DEBUG_TYPE, "Infer address spaces",
                       false, false)

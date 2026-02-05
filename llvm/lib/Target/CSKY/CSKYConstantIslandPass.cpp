@@ -208,7 +208,7 @@ class CSKYConstantIslands : public MachineFunctionPass {
   unsigned createPICLabelUId() { return PICLabelUId++; }
 
 public:
-  static char ID;
+  static const char ID;
 
   CSKYConstantIslands() : MachineFunctionPass(ID) {}
 
@@ -258,7 +258,7 @@ public:
 };
 } // end anonymous namespace
 
-char CSKYConstantIslands::ID = 0;
+const char CSKYConstantIslands::ID = 0;
 
 bool CSKYConstantIslands::isOffsetInRange(unsigned UserOffset,
                                           unsigned TrialOffset,

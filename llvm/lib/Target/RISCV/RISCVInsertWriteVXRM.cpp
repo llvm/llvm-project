@@ -198,7 +198,7 @@ class RISCVInsertWriteVXRM : public MachineFunctionPass {
   std::queue<const MachineBasicBlock *> WorkList;
 
 public:
-  static char ID;
+  static const char ID;
 
   RISCVInsertWriteVXRM() : MachineFunctionPass(ID) {}
 
@@ -222,7 +222,7 @@ private:
 
 } // end anonymous namespace
 
-char RISCVInsertWriteVXRM::ID = 0;
+const char RISCVInsertWriteVXRM::ID = 0;
 
 INITIALIZE_PASS(RISCVInsertWriteVXRM, DEBUG_TYPE, RISCV_INSERT_WRITE_VXRM_NAME,
                 false, false)

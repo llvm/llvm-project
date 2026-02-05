@@ -27,7 +27,7 @@ namespace mca {
 template <typename T>
 class InstructionError : public ErrorInfo<InstructionError<T>> {
 public:
-  static char ID;
+  static const char ID;
   std::string Message;
   const T &Inst;
 
@@ -41,7 +41,7 @@ public:
   }
 };
 
-template <typename T> char InstructionError<T>::ID;
+template <typename T> const char InstructionError<T>::ID = 0;
 
 /// This class represents the number of cycles per resource (fractions of
 /// cycles).  That quantity is managed here as a ratio, and accessed via the

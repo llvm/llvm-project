@@ -17,7 +17,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-char SymbolFileOnDemand::ID;
+const char SymbolFileOnDemand::ID = 0;
 
 SymbolFileOnDemand::SymbolFileOnDemand(
     std::unique_ptr<SymbolFile> &&symbol_file)

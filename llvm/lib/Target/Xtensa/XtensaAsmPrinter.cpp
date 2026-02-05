@@ -311,7 +311,7 @@ void XtensaAsmPrinter::lowerToMCInst(const MachineInstr *MI,
   }
 }
 
-char XtensaAsmPrinter::ID = 0;
+const char XtensaAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(XtensaAsmPrinter, "xtensa-asm-printer",
                 "Xtensa Assembly Printer", false, false)

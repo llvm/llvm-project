@@ -27,7 +27,7 @@ public:
 /// passes which run through the legacy pass manager.
 class DXILTranslateMetadataLegacy : public ModulePass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   explicit DXILTranslateMetadataLegacy() : ModulePass(ID) {}
 
   StringRef getPassName() const override { return "DXIL Translate Metadata"; }

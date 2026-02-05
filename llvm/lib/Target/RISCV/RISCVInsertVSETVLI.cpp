@@ -100,7 +100,7 @@ class RISCVInsertVSETVLI : public MachineFunctionPass {
   std::queue<const MachineBasicBlock *> WorkList;
 
 public:
-  static char ID;
+  static const char ID;
 
   RISCVInsertVSETVLI() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -145,8 +145,8 @@ private:
 
 } // end anonymous namespace
 
-char RISCVInsertVSETVLI::ID = 0;
-char &llvm::RISCVInsertVSETVLIID = RISCVInsertVSETVLI::ID;
+const char RISCVInsertVSETVLI::ID = 0;
+const char &llvm::RISCVInsertVSETVLIID = RISCVInsertVSETVLI::ID;
 
 INITIALIZE_PASS(RISCVInsertVSETVLI, DEBUG_TYPE, RISCV_INSERT_VSETVLI_NAME,
                 false, false)

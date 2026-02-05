@@ -48,7 +48,7 @@ struct InstrumentationOptions {
 };
 
 struct XRayInstrumentationLegacy : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
 
   XRayInstrumentationLegacy() : MachineFunctionPass(ID) {}
 
@@ -324,8 +324,8 @@ bool XRayInstrumentation::run(MachineFunction &MF) {
   return true;
 }
 
-char XRayInstrumentationLegacy::ID = 0;
-char &llvm::XRayInstrumentationID = XRayInstrumentationLegacy::ID;
+const char XRayInstrumentationLegacy::ID = 0;
+const char &llvm::XRayInstrumentationID = XRayInstrumentationLegacy::ID;
 INITIALIZE_PASS_BEGIN(XRayInstrumentationLegacy, "xray-instrumentation",
                       "Insert XRay ops", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)

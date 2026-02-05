@@ -33,7 +33,7 @@ namespace {
 // (Altivec and scalar floating-point registers), we need to transform the
 // copies into subregister copies with other restrictions.
 struct PPCVSXWACCCopy : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
   PPCVSXWACCCopy() : MachineFunctionPass(ID) {}
 
   const TargetInstrInfo *TII;
@@ -176,5 +176,5 @@ public:
 INITIALIZE_PASS(PPCVSXWACCCopy, DEBUG_TYPE, "PowerPC VSX Copy Legalization",
                 false, false)
 
-char PPCVSXWACCCopy::ID = 0;
+const char PPCVSXWACCCopy::ID = 0;
 FunctionPass *llvm::createPPCVSXWACCCopyPass() { return new PPCVSXWACCCopy(); }

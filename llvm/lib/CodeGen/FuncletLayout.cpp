@@ -22,7 +22,7 @@ using namespace llvm;
 namespace {
 class FuncletLayout : public MachineFunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   FuncletLayout() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
@@ -32,8 +32,8 @@ public:
 };
 }
 
-char FuncletLayout::ID = 0;
-char &llvm::FuncletLayoutID = FuncletLayout::ID;
+const char FuncletLayout::ID = 0;
+const char &llvm::FuncletLayoutID = FuncletLayout::ID;
 INITIALIZE_PASS(FuncletLayout, DEBUG_TYPE,
                 "Contiguously Lay Out Funclets", false, false)
 

@@ -66,7 +66,7 @@ class PhysicalRegisterUsageInfoWrapperLegacy : public ImmutablePass {
   std::unique_ptr<PhysicalRegisterUsageInfo> PRUI;
 
 public:
-  static char ID;
+  static const char ID;
   PhysicalRegisterUsageInfoWrapperLegacy() : ImmutablePass(ID) {}
 
   PhysicalRegisterUsageInfo &getPRUI() { return *PRUI; }

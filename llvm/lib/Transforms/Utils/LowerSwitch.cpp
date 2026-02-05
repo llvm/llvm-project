@@ -561,7 +561,7 @@ bool LowerSwitch(Function &F, LazyValueInfo *LVI, AssumptionCache *AC) {
 class LowerSwitchLegacyPass : public FunctionPass {
 public:
   // Pass identification, replacement for typeid
-  static char ID;
+  static const char ID;
 
   LowerSwitchLegacyPass() : FunctionPass(ID) {
     initializeLowerSwitchLegacyPassPass(*PassRegistry::getPassRegistry());
@@ -576,10 +576,10 @@ public:
 
 } // end anonymous namespace
 
-char LowerSwitchLegacyPass::ID = 0;
+const char LowerSwitchLegacyPass::ID = 0;
 
 // Publicly exposed interface to pass...
-char &llvm::LowerSwitchID = LowerSwitchLegacyPass::ID;
+const char &llvm::LowerSwitchID = LowerSwitchLegacyPass::ID;
 
 INITIALIZE_PASS_BEGIN(LowerSwitchLegacyPass, "lowerswitch",
                       "Lower SwitchInst's to branches", false, false)

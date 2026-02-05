@@ -157,4 +157,4 @@ void DXILMetadataAnalysisWrapperPass::dump() const { print(dbgs(), nullptr); }
 
 INITIALIZE_PASS(DXILMetadataAnalysisWrapperPass, "dxil-metadata-analysis",
                 "DXIL Module Metadata analysis", false, true)
-char DXILMetadataAnalysisWrapperPass::ID = 0;
+const char DXILMetadataAnalysisWrapperPass::ID = 0;

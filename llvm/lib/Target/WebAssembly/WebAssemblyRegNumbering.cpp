@@ -40,12 +40,12 @@ class WebAssemblyRegNumbering final : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyRegNumbering() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyRegNumbering::ID = 0;
+const char WebAssemblyRegNumbering::ID = 0;
 INITIALIZE_PASS(WebAssemblyRegNumbering, DEBUG_TYPE,
                 "Assigns WebAssembly register numbers for virtual registers",
                 false, false)

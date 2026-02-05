@@ -51,7 +51,7 @@ static cl::opt<std::string>
 static const std::string CoveragePrefix;
 #endif
 
-char InstructionSelect::ID = 0;
+const char InstructionSelect::ID = 0;
 INITIALIZE_PASS_BEGIN(InstructionSelect, DEBUG_TYPE,
                       "Select target instructions out of generic instructions",
                       false, false)
@@ -63,7 +63,7 @@ INITIALIZE_PASS_END(InstructionSelect, DEBUG_TYPE,
                     "Select target instructions out of generic instructions",
                     false, false)
 
-InstructionSelect::InstructionSelect(CodeGenOptLevel OL, char &PassID)
+InstructionSelect::InstructionSelect(CodeGenOptLevel OL, const char &PassID)
     : MachineFunctionPass(PassID), OptLevel(OL) {}
 
 /// This class observes instruction insertions/removals.

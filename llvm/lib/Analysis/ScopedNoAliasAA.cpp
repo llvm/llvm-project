@@ -161,7 +161,7 @@ ScopedNoAliasAAResult ScopedNoAliasAA::run(Function &F,
   return ScopedNoAliasAAResult();
 }
 
-char ScopedNoAliasAAWrapperPass::ID = 0;
+const char ScopedNoAliasAAWrapperPass::ID = 0;
 
 INITIALIZE_PASS(ScopedNoAliasAAWrapperPass, "scoped-noalias-aa",
                 "Scoped NoAlias Alias Analysis", false, true)

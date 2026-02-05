@@ -388,7 +388,7 @@ public:
 
 class SystemZDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   explicit SystemZDAGToDAGISelLegacy(SystemZTargetMachine &TM,
                                      CodeGenOptLevel OptLevel)
       : SelectionDAGISelLegacy(
@@ -396,7 +396,7 @@ public:
 };
 } // end anonymous namespace
 
-char SystemZDAGToDAGISelLegacy::ID = 0;
+const char SystemZDAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(SystemZDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 

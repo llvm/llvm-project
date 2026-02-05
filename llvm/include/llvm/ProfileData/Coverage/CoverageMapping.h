@@ -96,7 +96,7 @@ public:
   coveragemap_error get() const { return Err; }
   const std::string &getMessage() const { return Msg; }
 
-  static char ID;
+  static const char ID;
 
 private:
   coveragemap_error Err;

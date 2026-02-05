@@ -60,7 +60,7 @@ class HexagonLoopAlign : public MachineFunctionPass {
   const HexagonInstrInfo *HII = nullptr;
 
 public:
-  static char ID;
+  static const char ID;
   HexagonLoopAlign() : MachineFunctionPass(ID) {}
   bool shouldBalignLoop(MachineBasicBlock &BB, bool AboveThres);
   bool isSingleLoop(MachineBasicBlock &MBB);
@@ -76,7 +76,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
-char HexagonLoopAlign::ID = 0;
+const char HexagonLoopAlign::ID = 0;
 
 bool HexagonLoopAlign::shouldBalignLoop(MachineBasicBlock &BB,
                                         bool AboveThres) {

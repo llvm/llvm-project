@@ -61,12 +61,12 @@ struct X86TileConfigLegacy : public MachineFunctionPass {
     return MachineFunctionProperties().setNoPHIs();
   }
 
-  static char ID;
+  static const char ID;
 };
 
 } // end anonymous namespace
 
-char X86TileConfigLegacy::ID = 0;
+const char X86TileConfigLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(X86TileConfigLegacy, DEBUG_TYPE,
                       "Tile Register Configure", false, false)

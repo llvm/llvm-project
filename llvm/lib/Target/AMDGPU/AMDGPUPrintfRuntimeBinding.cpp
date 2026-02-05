@@ -40,7 +40,7 @@ namespace {
 class AMDGPUPrintfRuntimeBinding final : public ModulePass {
 
 public:
-  static char ID;
+  static const char ID;
 
   explicit AMDGPUPrintfRuntimeBinding() : ModulePass(ID) {}
 
@@ -64,7 +64,7 @@ private:
 };
 } // namespace
 
-char AMDGPUPrintfRuntimeBinding::ID = 0;
+const char AMDGPUPrintfRuntimeBinding::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AMDGPUPrintfRuntimeBinding,
                       "amdgpu-printf-runtime-binding", "AMDGPU Printf lowering",
@@ -74,7 +74,7 @@ INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_END(AMDGPUPrintfRuntimeBinding, "amdgpu-printf-runtime-binding",
                     "AMDGPU Printf lowering", false, false)
 
-char &llvm::AMDGPUPrintfRuntimeBindingID = AMDGPUPrintfRuntimeBinding::ID;
+const char &llvm::AMDGPUPrintfRuntimeBindingID = AMDGPUPrintfRuntimeBinding::ID;
 
 ModulePass *llvm::createAMDGPUPrintfRuntimeBinding() {
   return new AMDGPUPrintfRuntimeBinding();

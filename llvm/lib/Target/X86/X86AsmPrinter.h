@@ -26,7 +26,7 @@ class TargetMachine;
 
 class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
 public:
-  static char ID;
+  static const char ID;
 
 private:
   const X86Subtarget *Subtarget = nullptr;

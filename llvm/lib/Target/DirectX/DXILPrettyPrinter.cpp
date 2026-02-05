@@ -264,7 +264,7 @@ class DXILPrettyPrinterLegacy : public llvm::ModulePass {
   raw_ostream &OS; // raw_ostream to print to.
 
 public:
-  static char ID;
+  static const char ID;
 
   explicit DXILPrettyPrinterLegacy(raw_ostream &O) : ModulePass(ID), OS(O) {}
 
@@ -281,7 +281,7 @@ public:
 };
 } // namespace
 
-char DXILPrettyPrinterLegacy::ID = 0;
+const char DXILPrettyPrinterLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
                       "DXIL Metadata Pretty Printer", true, true)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)

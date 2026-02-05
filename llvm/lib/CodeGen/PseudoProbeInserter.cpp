@@ -30,7 +30,7 @@ using namespace llvm;
 namespace {
 class PseudoProbeInserter : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   PseudoProbeInserter() : MachineFunctionPass(ID) {}
 
@@ -139,7 +139,7 @@ private:
 };
 } // namespace
 
-char PseudoProbeInserter::ID = 0;
+const char PseudoProbeInserter::ID = 0;
 INITIALIZE_PASS_BEGIN(PseudoProbeInserter, DEBUG_TYPE,
                       "Insert pseudo probe annotations for value profiling",
                       false, false)

@@ -261,7 +261,7 @@ class CoalesceFeaturesAndStripAtomics final : public ModulePass {
   // function individually, since having multiple feature sets in one module
   // currently does not make sense for WebAssembly. If atomics are not enabled,
   // also strip atomic operations and thread local storage.
-  static char ID;
+  static const char ID;
   WebAssemblyTargetMachine *WasmTM;
 
 public:
@@ -414,7 +414,7 @@ private:
     }
   }
 };
-char CoalesceFeaturesAndStripAtomics::ID = 0;
+const char CoalesceFeaturesAndStripAtomics::ID = 0;
 
 /// WebAssembly Code Generator Pass Configuration Options.
 class WebAssemblyPassConfig final : public TargetPassConfig {

@@ -304,7 +304,7 @@ bool LoongArchAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-char LoongArchAsmPrinter::ID = 0;
+const char LoongArchAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(LoongArchAsmPrinter, "loongarch-asm-printer",
                 "LoongArch Assembly Printer", false, false)

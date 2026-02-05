@@ -41,7 +41,7 @@ class ClangExpressionParser;
 /// the Clang parser to produce LLVM IR from the expression.
 class ClangUserExpression : public LLVMUserExpression {
   // LLVM RTTI support
-  static char ID;
+  static const char ID;
 
 public:
   bool isA(const void *ClassID) const override {
@@ -56,7 +56,7 @@ public:
                                  ClangExpressionHelper> {
   public:
     // LLVM RTTI support
-    static char ID;
+    static const char ID;
 
     ClangUserExpressionHelper(Target &target, bool top_level)
         : m_target(target), m_top_level(top_level) {}

@@ -164,7 +164,7 @@ class LLVM_ABI GISelValueTrackingAnalysisLegacy : public MachineFunctionPass {
   std::unique_ptr<GISelValueTracking> Info;
 
 public:
-  static char ID;
+  static const char ID;
   GISelValueTrackingAnalysisLegacy() : MachineFunctionPass(ID) {}
   GISelValueTracking &get(MachineFunction &MF);
   void getAnalysisUsage(AnalysisUsage &AU) const override;

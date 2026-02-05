@@ -396,7 +396,7 @@ protected:
   std::unique_ptr<MIR2VecVocabProvider> Provider;
 
 public:
-  static char ID;
+  static const char ID;
   MIR2VecVocabLegacyAnalysis() : ImmutablePass(ID) {}
 
   Expected<mir2vec::MIRVocabulary> getMIR2VecVocabulary(const Module &M) {
@@ -418,7 +418,7 @@ class MIR2VecVocabPrinterLegacyPass : public MachineFunctionPass {
   raw_ostream &OS;
 
 public:
-  static char ID;
+  static const char ID;
   explicit MIR2VecVocabPrinterLegacyPass(raw_ostream &OS)
       : MachineFunctionPass(ID), OS(OS) {}
 
@@ -441,7 +441,7 @@ class MIR2VecPrinterLegacyPass : public MachineFunctionPass {
   raw_ostream &OS;
 
 public:
-  static char ID;
+  static const char ID;
   explicit MIR2VecPrinterLegacyPass(raw_ostream &OS)
       : MachineFunctionPass(ID), OS(OS) {}
 

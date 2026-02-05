@@ -31,7 +31,7 @@ static cl::opt<std::string> Mips32FunctionMask(
 namespace {
   class MipsOs16 : public ModulePass {
   public:
-    static char ID;
+    static const char ID;
 
     MipsOs16() : ModulePass(ID) {}
 
@@ -40,7 +40,7 @@ namespace {
     bool runOnModule(Module &M) override;
   };
 
-  char MipsOs16::ID = 0;
+  const char MipsOs16::ID = 0;
 }
 
 // Figure out if we need float point based on the function signature.

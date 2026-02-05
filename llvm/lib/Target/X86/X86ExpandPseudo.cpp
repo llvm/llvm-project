@@ -68,7 +68,7 @@ private:
 
 class X86ExpandPseudoLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   X86ExpandPseudoLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -94,7 +94,7 @@ public:
     return "X86 pseudo instruction expansion pass";
   }
 };
-char X86ExpandPseudoLegacy::ID = 0;
+const char X86ExpandPseudoLegacy::ID = 0;
 } // End anonymous namespace.
 
 INITIALIZE_PASS(X86ExpandPseudoLegacy, DEBUG_TYPE, X86_EXPAND_PSEUDO_NAME,

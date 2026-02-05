@@ -224,9 +224,9 @@ public:
   bool runOnModule(Module &M) override { return eliminateMemIntrinsics(M); }
   DXILMemIntrinsicsLegacy() : ModulePass(ID) {}
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 };
-char DXILMemIntrinsicsLegacy::ID = 0;
+const char DXILMemIntrinsicsLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(DXILMemIntrinsicsLegacy, DEBUG_TYPE,
                       "DXIL Memory Intrinsic Elimination", false, false)

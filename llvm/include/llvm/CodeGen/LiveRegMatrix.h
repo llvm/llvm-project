@@ -189,7 +189,7 @@ class LiveRegMatrixWrapperLegacy : public MachineFunctionPass {
   LiveRegMatrix LRM;
 
 public:
-  static char ID;
+  static const char ID;
 
   LiveRegMatrixWrapperLegacy() : MachineFunctionPass(ID) {}
 

@@ -14,7 +14,7 @@
 
 namespace llvm::orc {
 
-char ObjectLinkingLayer::ID;
+const char ObjectLinkingLayer::ID = 0;
 
 void ObjectLinkingLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
                               std::unique_ptr<MemoryBuffer> O) {

@@ -59,7 +59,7 @@ namespace {
 
 class LoongArchOptWInstrs : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   LoongArchOptWInstrs() : MachineFunctionPass(ID) {}
 
@@ -84,7 +84,7 @@ public:
 
 } // end anonymous namespace
 
-char LoongArchOptWInstrs::ID = 0;
+const char LoongArchOptWInstrs::ID = 0;
 INITIALIZE_PASS(LoongArchOptWInstrs, DEBUG_TYPE, LOONGARCH_OPT_W_INSTRS_NAME,
                 false, false)
 

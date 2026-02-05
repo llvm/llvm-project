@@ -768,7 +768,7 @@ class AArch64ConditionalCompares : public MachineFunctionPass {
   SSACCmpConv CmpConv;
 
 public:
-  static char ID;
+  static const char ID;
   AArch64ConditionalCompares() : MachineFunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -785,7 +785,7 @@ private:
 };
 } // end anonymous namespace
 
-char AArch64ConditionalCompares::ID = 0;
+const char AArch64ConditionalCompares::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AArch64ConditionalCompares, "aarch64-ccmp",
                       "AArch64 CCMP Pass", false, false)

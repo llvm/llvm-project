@@ -147,7 +147,7 @@ class LLVM_ABI GlobalsAAWrapperPass : public ModulePass {
   std::unique_ptr<GlobalsAAResult> Result;
 
 public:
-  static char ID;
+  static const char ID;
 
   GlobalsAAWrapperPass();
 

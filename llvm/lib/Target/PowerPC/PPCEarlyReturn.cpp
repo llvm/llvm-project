@@ -32,7 +32,7 @@ namespace {
   // returns up, and create conditional returns, to avoid unnecessary
   // branch-to-blr sequences.
   struct PPCEarlyReturn : public MachineFunctionPass {
-    static char ID;
+    static const char ID;
     PPCEarlyReturn() : MachineFunctionPass(ID) {}
 
     const TargetInstrInfo *TII;
@@ -193,6 +193,6 @@ public:
 INITIALIZE_PASS(PPCEarlyReturn, DEBUG_TYPE,
                 "PowerPC Early-Return Creation", false, false)
 
-char PPCEarlyReturn::ID = 0;
+const char PPCEarlyReturn::ID = 0;
 FunctionPass*
 llvm::createPPCEarlyReturnPass() { return new PPCEarlyReturn(); }

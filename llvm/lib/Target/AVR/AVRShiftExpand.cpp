@@ -24,7 +24,7 @@ namespace {
 
 class AVRShiftExpand : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AVRShiftExpand() : FunctionPass(ID) {}
 
@@ -38,7 +38,7 @@ private:
 
 } // end of anonymous namespace
 
-char AVRShiftExpand::ID = 0;
+const char AVRShiftExpand::ID = 0;
 
 INITIALIZE_PASS(AVRShiftExpand, "avr-shift-expand", "AVR Shift Expansion",
                 false, false)

@@ -42,7 +42,7 @@ void ArgDescriptor::print(raw_ostream &OS,
   OS << '\n';
 }
 
-char AMDGPUArgumentUsageInfoWrapperLegacy::ID = 0;
+const char AMDGPUArgumentUsageInfoWrapperLegacy::ID = 0;
 
 const AMDGPUFunctionArgInfo AMDGPUArgumentUsageInfo::ExternFunctionInfo{};
 

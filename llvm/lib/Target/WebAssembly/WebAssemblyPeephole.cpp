@@ -45,12 +45,12 @@ class WebAssemblyPeephole final : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 public:
-  static char ID;
+  static const char ID;
   WebAssemblyPeephole() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyPeephole::ID = 0;
+const char WebAssemblyPeephole::ID = 0;
 INITIALIZE_PASS(WebAssemblyPeephole, DEBUG_TYPE,
                 "WebAssembly peephole optimizations", false, false)
 

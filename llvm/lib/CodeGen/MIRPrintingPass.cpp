@@ -39,7 +39,7 @@ namespace {
 /// This pass prints out the LLVM IR to an output stream using the MIR
 /// serialization format.
 struct MIRPrintingPass : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
   raw_ostream &OS;
   std::string MachineFunctions;
 
@@ -72,11 +72,11 @@ struct MIRPrintingPass : public MachineFunctionPass {
   }
 };
 
-char MIRPrintingPass::ID = 0;
+const char MIRPrintingPass::ID = 0;
 
 } // end anonymous namespace
 
-char &llvm::MIRPrintingPassID = MIRPrintingPass::ID;
+const char &llvm::MIRPrintingPassID = MIRPrintingPass::ID;
 INITIALIZE_PASS(MIRPrintingPass, "mir-printer", "MIR Printer", false, false)
 
 MachineFunctionPass *llvm::createPrintMIRPass(raw_ostream &OS) {

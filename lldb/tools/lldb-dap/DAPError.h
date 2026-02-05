@@ -20,7 +20,7 @@ namespace lldb_dap {
 /// the user.
 class DAPError : public llvm::ErrorInfo<DAPError> {
 public:
-  static char ID;
+  static const char ID;
 
   DAPError(std::string message,
            std::error_code EC = llvm::inconvertibleErrorCode(),
@@ -47,7 +47,7 @@ private:
 /// the process is not stopped.
 class NotStoppedError : public llvm::ErrorInfo<NotStoppedError> {
 public:
-  static char ID;
+  static const char ID;
   void log(llvm::raw_ostream &OS) const override;
   std::error_code convertToErrorCode() const override;
 };

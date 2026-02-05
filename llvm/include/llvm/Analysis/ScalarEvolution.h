@@ -2413,7 +2413,7 @@ class LLVM_ABI ScalarEvolutionWrapperPass : public FunctionPass {
   std::unique_ptr<ScalarEvolution> SE;
 
 public:
-  static char ID;
+  static const char ID;
 
   ScalarEvolutionWrapperPass();
 

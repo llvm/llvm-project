@@ -41,12 +41,12 @@ class WebAssemblyDebugFixup final : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyDebugFixup() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyDebugFixup::ID = 0;
+const char WebAssemblyDebugFixup::ID = 0;
 INITIALIZE_PASS(
     WebAssemblyDebugFixup, DEBUG_TYPE,
     "Ensures debug_value's that have been stackified become stack relative",

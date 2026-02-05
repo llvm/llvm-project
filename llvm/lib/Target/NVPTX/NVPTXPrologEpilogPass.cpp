@@ -31,7 +31,7 @@ using namespace llvm;
 namespace {
 class NVPTXPrologEpilogPass : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   NVPTXPrologEpilogPass() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -47,7 +47,7 @@ MachineFunctionPass *llvm::createNVPTXPrologEpilogPass() {
   return new NVPTXPrologEpilogPass();
 }
 
-char NVPTXPrologEpilogPass::ID = 0;
+const char NVPTXPrologEpilogPass::ID = 0;
 
 INITIALIZE_PASS(NVPTXPrologEpilogPass, DEBUG_TYPE,
                 "NVPTX Prologue/Epilogue Insertion", false, false)

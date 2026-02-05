@@ -62,7 +62,7 @@ class AMDGPUAAWrapperPass : public ImmutablePass {
   std::unique_ptr<AMDGPUAAResult> Result;
 
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUAAWrapperPass();
 
@@ -86,7 +86,7 @@ public:
 // callback.
 class AMDGPUExternalAAWrapper : public ExternalAAWrapperPass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUExternalAAWrapper() : ExternalAAWrapperPass(
     [](Pass &P, Function &, AAResults &AAR) {

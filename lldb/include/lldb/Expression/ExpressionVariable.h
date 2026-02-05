@@ -27,7 +27,7 @@ class ExpressionVariable
       public llvm::RTTIExtends<ExpressionVariable, llvm::RTTIRoot> {
 public:
   /// LLVM RTTI support
-  static char ID;
+  static const char ID;
 
   ExpressionVariable();
 
@@ -214,7 +214,7 @@ class PersistentExpressionState
       public llvm::RTTIExtends<PersistentExpressionState, llvm::RTTIRoot> {
 public:
   /// LLVM RTTI support
-  static char ID;
+  static const char ID;
 
   PersistentExpressionState();
 

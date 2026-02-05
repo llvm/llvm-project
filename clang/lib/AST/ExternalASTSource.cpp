@@ -24,7 +24,7 @@
 
 using namespace clang;
 
-char ExternalASTSource::ID;
+const char ExternalASTSource::ID = 0;
 
 ExternalASTSource::~ExternalASTSource() = default;
 

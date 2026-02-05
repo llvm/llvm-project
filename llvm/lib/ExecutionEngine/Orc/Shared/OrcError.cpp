@@ -78,8 +78,8 @@ OrcErrorCategory &getOrcErrCat() {
 namespace llvm {
 namespace orc {
 
-char DuplicateDefinition::ID = 0;
-char JITSymbolNotFound::ID = 0;
+const char DuplicateDefinition::ID = 0;
+const char JITSymbolNotFound::ID = 0;
 
 std::error_code orcError(OrcErrorCode ErrCode) {
   typedef std::underlying_type_t<OrcErrorCode> UT;

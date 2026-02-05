@@ -41,7 +41,7 @@ enum : unsigned {
 
 class AArch64BranchTargets : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   AArch64BranchTargets() : MachineFunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -56,7 +56,7 @@ private:
 
 } // end anonymous namespace
 
-char AArch64BranchTargets::ID = 0;
+const char AArch64BranchTargets::ID = 0;
 
 INITIALIZE_PASS(AArch64BranchTargets, "aarch64-branch-targets",
                 AARCH64_BRANCH_TARGETS_NAME, false, false)

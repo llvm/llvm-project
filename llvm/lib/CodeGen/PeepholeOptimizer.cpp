@@ -556,7 +556,7 @@ private:
 
 class PeepholeOptimizerLegacy : public MachineFunctionPass {
 public:
-  static char ID; // Pass identification
+  static const char ID; // Pass identification
 
   PeepholeOptimizerLegacy() : MachineFunctionPass(ID) {}
 
@@ -753,9 +753,9 @@ public:
 
 } // end anonymous namespace
 
-char PeepholeOptimizerLegacy::ID = 0;
+const char PeepholeOptimizerLegacy::ID = 0;
 
-char &llvm::PeepholeOptimizerLegacyID = PeepholeOptimizerLegacy::ID;
+const char &llvm::PeepholeOptimizerLegacyID = PeepholeOptimizerLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(PeepholeOptimizerLegacy, DEBUG_TYPE,
                       "Peephole Optimizations", false, false)

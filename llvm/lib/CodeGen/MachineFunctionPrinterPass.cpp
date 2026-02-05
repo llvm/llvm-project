@@ -26,7 +26,7 @@ namespace {
 /// MachineFunction.
 ///
 struct MachineFunctionPrinterPass : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
 
   raw_ostream &OS;
   const std::string Banner;
@@ -53,10 +53,10 @@ struct MachineFunctionPrinterPass : public MachineFunctionPass {
   }
 };
 
-char MachineFunctionPrinterPass::ID = 0;
+const char MachineFunctionPrinterPass::ID = 0;
 }
 
-char &llvm::MachineFunctionPrinterPassID = MachineFunctionPrinterPass::ID;
+const char &llvm::MachineFunctionPrinterPassID = MachineFunctionPrinterPass::ID;
 INITIALIZE_PASS(MachineFunctionPrinterPass, "machineinstr-printer",
                 "Machine Function Printer", false, false)
 

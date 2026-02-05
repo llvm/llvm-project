@@ -47,7 +47,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 private:
-  static char ID;
+  static const char ID;
 
   /// Machine instruction info used throughout the class.
   const X86InstrInfo *TII = nullptr;
@@ -64,7 +64,7 @@ private:
 
 } // end anonymous namespace
 
-char X86IndirectBranchTrackingPass::ID = 0;
+const char X86IndirectBranchTrackingPass::ID = 0;
 
 FunctionPass *llvm::createX86IndirectBranchTrackingPass() {
   return new X86IndirectBranchTrackingPass();

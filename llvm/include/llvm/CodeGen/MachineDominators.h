@@ -129,7 +129,7 @@ class LLVM_ABI MachineDominatorTreeWrapperPass : public MachineFunctionPass {
   std::optional<MachineDominatorTree> DT;
 
 public:
-  static char ID;
+  static const char ID;
 
   MachineDominatorTreeWrapperPass();
 

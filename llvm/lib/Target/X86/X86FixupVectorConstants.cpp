@@ -44,7 +44,7 @@ private:
 
 class X86FixupVectorConstantsLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   X86FixupVectorConstantsLegacy() : MachineFunctionPass(ID) {}
 
@@ -61,7 +61,7 @@ public:
 };
 } // end anonymous namespace
 
-char X86FixupVectorConstantsLegacy::ID = 0;
+const char X86FixupVectorConstantsLegacy::ID = 0;
 
 INITIALIZE_PASS(X86FixupVectorConstantsLegacy, DEBUG_TYPE, DEBUG_TYPE, false,
                 false)

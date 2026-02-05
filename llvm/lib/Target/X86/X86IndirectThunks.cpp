@@ -101,7 +101,7 @@ struct LVIThunkInserter : ThunkInserter<LVIThunkInserter> {
 class X86IndirectThunks
     : public ThunkInserterPass<RetpolineThunkInserter, LVIThunkInserter> {
 public:
-  static char ID;
+  static const char ID;
 
   X86IndirectThunks() : ThunkInserterPass(ID) {}
 
@@ -239,4 +239,4 @@ FunctionPass *llvm::createX86IndirectThunksPass() {
   return new X86IndirectThunks();
 }
 
-char X86IndirectThunks::ID = 0;
+const char X86IndirectThunks::ID = 0;

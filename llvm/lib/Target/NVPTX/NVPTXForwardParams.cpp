@@ -129,7 +129,7 @@ static bool forwardDeviceParams(MachineFunction &MF) {
 
 namespace {
 struct NVPTXForwardParamsPass : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
   NVPTXForwardParamsPass() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -140,7 +140,7 @@ struct NVPTXForwardParamsPass : public MachineFunctionPass {
 };
 } // namespace
 
-char NVPTXForwardParamsPass::ID = 0;
+const char NVPTXForwardParamsPass::ID = 0;
 
 INITIALIZE_PASS(NVPTXForwardParamsPass, "nvptx-forward-params",
                 "NVPTX Forward Params", false, false)

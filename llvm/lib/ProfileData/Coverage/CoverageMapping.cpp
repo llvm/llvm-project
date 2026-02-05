@@ -1670,4 +1670,4 @@ const std::error_category &llvm::coverage::coveragemap_category() {
   return ErrorCategory;
 }
 
-char CoverageMapError::ID = 0;
+const char CoverageMapError::ID = 0;

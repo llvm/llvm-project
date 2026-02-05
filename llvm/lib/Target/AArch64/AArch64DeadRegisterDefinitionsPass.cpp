@@ -39,7 +39,7 @@ private:
   bool Changed;
   void processMachineBasicBlock(MachineBasicBlock &MBB);
 public:
-  static char ID; // Pass identification, replacement for typeid.
+  static const char ID; // Pass identification, replacement for typeid.
   AArch64DeadRegisterDefinitions() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
@@ -51,7 +51,7 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
-char AArch64DeadRegisterDefinitions::ID = 0;
+const char AArch64DeadRegisterDefinitions::ID = 0;
 } // end anonymous namespace
 
 INITIALIZE_PASS(AArch64DeadRegisterDefinitions, "aarch64-dead-defs",

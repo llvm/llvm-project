@@ -46,7 +46,7 @@ namespace {
 
 class ScalarizeMaskedMemIntrinLegacyPass : public FunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   explicit ScalarizeMaskedMemIntrinLegacyPass() : FunctionPass(ID) {
     initializeScalarizeMaskedMemIntrinLegacyPassPass(
@@ -75,7 +75,7 @@ static bool optimizeCallInst(CallInst *CI, bool &ModifiedDT,
                              const DataLayout &DL, bool HasBranchDivergence,
                              DomTreeUpdater *DTU);
 
-char ScalarizeMaskedMemIntrinLegacyPass::ID = 0;
+const char ScalarizeMaskedMemIntrinLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ScalarizeMaskedMemIntrinLegacyPass, DEBUG_TYPE,
                       "Scalarize unsupported masked memory intrinsics", false,

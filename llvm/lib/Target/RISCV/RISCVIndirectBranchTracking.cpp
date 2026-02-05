@@ -33,7 +33,7 @@ cl::opt<uint32_t> PreferredLandingPadLabel(
 namespace {
 class RISCVIndirectBranchTracking : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   RISCVIndirectBranchTracking() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return PASS_NAME; }
@@ -49,7 +49,7 @@ private:
 INITIALIZE_PASS(RISCVIndirectBranchTracking, DEBUG_TYPE, PASS_NAME, false,
                 false)
 
-char RISCVIndirectBranchTracking::ID = 0;
+const char RISCVIndirectBranchTracking::ID = 0;
 
 FunctionPass *llvm::createRISCVIndirectBranchTrackingPass() {
   return new RISCVIndirectBranchTracking();

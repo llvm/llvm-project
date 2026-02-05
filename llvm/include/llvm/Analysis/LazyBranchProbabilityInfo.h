@@ -83,7 +83,7 @@ class LazyBranchProbabilityInfoPass : public FunctionPass {
   std::unique_ptr<LazyBranchProbabilityInfo> LBPI;
 
 public:
-  static char ID;
+  static const char ID;
 
   LazyBranchProbabilityInfoPass();
 

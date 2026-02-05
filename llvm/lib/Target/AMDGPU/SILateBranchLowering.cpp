@@ -51,7 +51,7 @@ public:
 
 class SILateBranchLoweringLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   SILateBranchLoweringLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -76,7 +76,7 @@ public:
 
 } // end anonymous namespace
 
-char SILateBranchLoweringLegacy::ID = 0;
+const char SILateBranchLoweringLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(SILateBranchLoweringLegacy, DEBUG_TYPE,
                       "SI insert s_cbranch_execz instructions", false, false)
@@ -84,7 +84,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(SILateBranchLoweringLegacy, DEBUG_TYPE,
                     "SI insert s_cbranch_execz instructions", false, false)
 
-char &llvm::SILateBranchLoweringPassID = SILateBranchLoweringLegacy::ID;
+const char &llvm::SILateBranchLoweringPassID = SILateBranchLoweringLegacy::ID;
 
 static void generateEndPgm(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator I, DebugLoc DL,

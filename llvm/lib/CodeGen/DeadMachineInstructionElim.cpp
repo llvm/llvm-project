@@ -43,7 +43,7 @@ private:
 
 class DeadMachineInstructionElim : public MachineFunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   DeadMachineInstructionElim() : MachineFunctionPass(ID) {}
 
@@ -70,8 +70,8 @@ DeadMachineInstructionElimPass::run(MachineFunction &MF,
   return PA;
 }
 
-char DeadMachineInstructionElim::ID = 0;
-char &llvm::DeadMachineInstructionElimID = DeadMachineInstructionElim::ID;
+const char DeadMachineInstructionElim::ID = 0;
+const char &llvm::DeadMachineInstructionElimID = DeadMachineInstructionElim::ID;
 
 INITIALIZE_PASS(DeadMachineInstructionElim, DEBUG_TYPE,
                 "Remove dead machine instructions", false, false)

@@ -27,7 +27,7 @@ namespace {
 
 class SystemZCopyPhysRegs : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   SystemZCopyPhysRegs() : MachineFunctionPass(ID), TII(nullptr), MRI(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -41,7 +41,7 @@ private:
   MachineRegisterInfo *MRI;
 };
 
-char SystemZCopyPhysRegs::ID = 0;
+const char SystemZCopyPhysRegs::ID = 0;
 
 } // end anonymous namespace
 

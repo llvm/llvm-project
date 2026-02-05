@@ -1468,4 +1468,4 @@ DiagStorageAllocator::~DiagStorageAllocator() {
          "A partial is on the lam");
 }
 
-char DiagnosticError::ID;
+const char DiagnosticError::ID = 0;

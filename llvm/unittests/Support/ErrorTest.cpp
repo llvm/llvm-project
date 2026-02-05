@@ -42,7 +42,7 @@ public:
   }
 
   // Used by ErrorInfo::classID.
-  static char ID;
+  static const char ID;
 
 protected:
   // This error is subclassed below, but we can't use inheriting constructors
@@ -54,7 +54,7 @@ protected:
   int Info;
 };
 
-char CustomError::ID = 0;
+const char CustomError::ID = 0;
 
 // Custom error class with a custom base class and some additional random
 // 'info'.
@@ -78,13 +78,13 @@ public:
   }
 
   // Used by ErrorInfo::classID.
-  static char ID;
+  static const char ID;
 
 protected:
   int ExtraInfo;
 };
 
-char CustomSubError::ID = 0;
+const char CustomSubError::ID = 0;
 
 static Error handleCustomError(const CustomError &CE) {
   return Error::success();
@@ -1063,7 +1063,7 @@ class TestDebugError : public ErrorInfo<TestDebugError, StringError> {
 public:
     using ErrorInfo<TestDebugError, StringError >::ErrorInfo; // inherit constructors
     TestDebugError(const Twine &S) : ErrorInfo(S, test_error_code::unspecified) {}
-    static char ID;
+    static const char ID;
 };
 
 class TestErrorCategory : public std::error_category {
@@ -1087,7 +1087,7 @@ const std::error_category &TErrorCategory() {
   return TestErrCategory;
 }
 
-char TestDebugError::ID;
+const char TestDebugError::ID = 0;
 
 TEST(Error, SubtypeStringErrorTest) {
   auto E1 = make_error<TestDebugError>(test_error_code::error_1);

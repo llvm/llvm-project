@@ -258,9 +258,9 @@ public:
     AU.addPreserved<RootSignatureAnalysisWrapper>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
   }
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 };
-char DXILPrepareModule::ID = 0;
+const char DXILPrepareModule::ID = 0;
 
 } // end anonymous namespace
 

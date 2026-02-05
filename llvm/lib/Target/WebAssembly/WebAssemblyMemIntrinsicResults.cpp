@@ -45,7 +45,7 @@ using namespace llvm;
 namespace {
 class WebAssemblyMemIntrinsicResults final : public MachineFunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyMemIntrinsicResults() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
@@ -80,7 +80,7 @@ private:
 };
 } // end anonymous namespace
 
-char WebAssemblyMemIntrinsicResults::ID = 0;
+const char WebAssemblyMemIntrinsicResults::ID = 0;
 INITIALIZE_PASS(WebAssemblyMemIntrinsicResults, DEBUG_TYPE,
                 "Optimize memory intrinsic result values for WebAssembly",
                 false, false)

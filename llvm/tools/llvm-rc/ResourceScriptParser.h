@@ -44,7 +44,7 @@ public:
     }
     const std::string &getMessage() const { return CurMessage; }
 
-    static char ID; // Keep llvm::Error happy.
+    static const char ID; // Keep llvm::Error happy.
 
   private:
     std::string CurMessage;

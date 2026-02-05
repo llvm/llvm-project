@@ -860,7 +860,7 @@ class SafeStackLegacyPass : public FunctionPass {
   const TargetMachine *TM = nullptr;
 
 public:
-  static char ID; // Pass identification, replacement for typeid..
+  static const char ID; // Pass identification, replacement for typeid..
 
   SafeStackLegacyPass() : FunctionPass(ID) {}
 
@@ -986,7 +986,7 @@ PreservedAnalyses SafeStackPass::run(Function &F,
   return PA;
 }
 
-char SafeStackLegacyPass::ID = 0;
+const char SafeStackLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(SafeStackLegacyPass, DEBUG_TYPE,
                       "Safe Stack instrumentation pass", false, false)

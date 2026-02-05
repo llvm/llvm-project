@@ -52,13 +52,13 @@ protected:
 
 class R600DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   explicit R600DAGToDAGISelLegacy(TargetMachine &TM, CodeGenOptLevel OptLevel)
       : SelectionDAGISelLegacy(
             ID, std::make_unique<R600DAGToDAGISel>(TM, OptLevel)) {}
 };
 
-char R600DAGToDAGISelLegacy::ID = 0;
+const char R600DAGToDAGISelLegacy::ID = 0;
 
 } // namespace
 

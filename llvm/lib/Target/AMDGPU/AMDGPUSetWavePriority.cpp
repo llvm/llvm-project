@@ -55,7 +55,7 @@ private:
 
 class AMDGPUSetWavePriorityLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUSetWavePriorityLegacy() : MachineFunctionPass(ID) {}
 
@@ -74,7 +74,7 @@ public:
 INITIALIZE_PASS(AMDGPUSetWavePriorityLegacy, DEBUG_TYPE, "Set wave priority",
                 false, false)
 
-char AMDGPUSetWavePriorityLegacy::ID = 0;
+const char AMDGPUSetWavePriorityLegacy::ID = 0;
 
 FunctionPass *llvm::createAMDGPUSetWavePriorityPass() {
   return new AMDGPUSetWavePriorityLegacy();

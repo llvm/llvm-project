@@ -72,7 +72,7 @@ class LiveDebugVariablesWrapperLegacy : public MachineFunctionPass {
   std::unique_ptr<LiveDebugVariables> Impl;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   LiveDebugVariablesWrapperLegacy();
 

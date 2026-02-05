@@ -430,7 +430,7 @@ LLVM_ABI extern RegisterDependenciesFunction NoDependenciesToRegister;
 class LLVM_ABI ResourceTrackerDefunct
     : public ErrorInfo<ResourceTrackerDefunct> {
 public:
-  static char ID;
+  static const char ID;
 
   ResourceTrackerDefunct(ResourceTrackerSP RT);
   std::error_code convertToErrorCode() const override;
@@ -443,7 +443,7 @@ private:
 /// Returned by operations that fail because a JITDylib has been closed.
 class LLVM_ABI JITDylibDefunct : public ErrorInfo<JITDylibDefunct> {
 public:
-  static char ID;
+  static const char ID;
 
   JITDylibDefunct(JITDylibSP JD) : JD(std::move(JD)) {}
   std::error_code convertToErrorCode() const override;
@@ -457,7 +457,7 @@ private:
 /// materialize.
 class LLVM_ABI FailedToMaterialize : public ErrorInfo<FailedToMaterialize> {
 public:
-  static char ID;
+  static const char ID;
 
   FailedToMaterialize(std::shared_ptr<SymbolStringPool> SSP,
                       std::shared_ptr<SymbolDependenceMap> Symbols);
@@ -475,7 +475,7 @@ private:
 class LLVM_ABI UnsatisfiedSymbolDependencies
     : public ErrorInfo<UnsatisfiedSymbolDependencies> {
 public:
-  static char ID;
+  static const char ID;
 
   UnsatisfiedSymbolDependencies(std::shared_ptr<SymbolStringPool> SSP,
                                 JITDylibSP JD, SymbolNameSet FailedSymbols,
@@ -495,7 +495,7 @@ private:
 /// Used to notify clients when symbols can not be found during a lookup.
 class LLVM_ABI SymbolsNotFound : public ErrorInfo<SymbolsNotFound> {
 public:
-  static char ID;
+  static const char ID;
 
   SymbolsNotFound(std::shared_ptr<SymbolStringPool> SSP, SymbolNameSet Symbols);
   SymbolsNotFound(std::shared_ptr<SymbolStringPool> SSP,
@@ -514,7 +514,7 @@ private:
 class LLVM_ABI SymbolsCouldNotBeRemoved
     : public ErrorInfo<SymbolsCouldNotBeRemoved> {
 public:
-  static char ID;
+  static const char ID;
 
   SymbolsCouldNotBeRemoved(std::shared_ptr<SymbolStringPool> SSP,
                            SymbolNameSet Symbols);
@@ -535,7 +535,7 @@ private:
 class LLVM_ABI MissingSymbolDefinitions
     : public ErrorInfo<MissingSymbolDefinitions> {
 public:
-  static char ID;
+  static const char ID;
 
   MissingSymbolDefinitions(std::shared_ptr<SymbolStringPool> SSP,
                            std::string ModuleName, SymbolNameVector Symbols)
@@ -559,7 +559,7 @@ private:
 class LLVM_ABI UnexpectedSymbolDefinitions
     : public ErrorInfo<UnexpectedSymbolDefinitions> {
 public:
-  static char ID;
+  static const char ID;
 
   UnexpectedSymbolDefinitions(std::shared_ptr<SymbolStringPool> SSP,
                               std::string ModuleName, SymbolNameVector Symbols)
@@ -1322,7 +1322,7 @@ public:
 class LLVM_ABI MaterializationTask
     : public RTTIExtends<MaterializationTask, Task> {
 public:
-  static char ID;
+  static const char ID;
 
   MaterializationTask(std::unique_ptr<MaterializationUnit> MU,
                       std::unique_ptr<MaterializationResponsibility> MR)
@@ -1341,7 +1341,7 @@ private:
 /// state.
 class LLVM_ABI LookupTask : public RTTIExtends<LookupTask, Task> {
 public:
-  static char ID;
+  static const char ID;
 
   LookupTask(LookupState LS) : LS(std::move(LS)) {}
   void printDescription(raw_ostream &OS) override;

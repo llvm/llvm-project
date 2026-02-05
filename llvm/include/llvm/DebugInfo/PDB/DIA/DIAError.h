@@ -43,7 +43,7 @@ class DIAError : public ErrorInfo<DIAError, StringError> {
 public:
   using ErrorInfo<DIAError, StringError>::ErrorInfo;
   DIAError(const Twine &S) : ErrorInfo(S, dia_error_code::unspecified) {}
-  static char ID;
+  static const char ID;
 };
 } // namespace pdb
 } // namespace llvm

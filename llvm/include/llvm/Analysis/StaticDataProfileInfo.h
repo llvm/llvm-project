@@ -92,7 +92,7 @@ public:
 /// backend pass to operate on.
 class LLVM_ABI StaticDataProfileInfoWrapperPass : public ImmutablePass {
 public:
-  static char ID;
+  static const char ID;
   StaticDataProfileInfoWrapperPass();
   bool doInitialization(Module &M) override;
   bool doFinalization(Module &M) override;

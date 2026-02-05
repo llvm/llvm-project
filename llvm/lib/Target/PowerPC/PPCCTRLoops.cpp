@@ -54,7 +54,7 @@ STATISTIC(NumNormalLoops, "Number of normal compare + branch loops generated");
 namespace {
 class PPCCTRLoops : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   PPCCTRLoops() : MachineFunctionPass(ID) {}
 
@@ -77,7 +77,7 @@ private:
 };
 } // namespace
 
-char PPCCTRLoops::ID = 0;
+const char PPCCTRLoops::ID = 0;
 
 INITIALIZE_PASS_BEGIN(PPCCTRLoops, DEBUG_TYPE, "PowerPC CTR loops generation",
                       false, false)

@@ -739,7 +739,7 @@ TypeBasedAAResult TypeBasedAA::run(Function &F, FunctionAnalysisManager &AM) {
   return TypeBasedAAResult(F.hasFnAttribute(Attribute::SanitizeType));
 }
 
-char TypeBasedAAWrapperPass::ID = 0;
+const char TypeBasedAAWrapperPass::ID = 0;
 INITIALIZE_PASS(TypeBasedAAWrapperPass, "tbaa", "Type-Based Alias Analysis",
                 false, true)
 

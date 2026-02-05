@@ -30,7 +30,7 @@ class RISCVMergeBaseOffsetOpt : public MachineFunctionPass {
   MachineRegisterInfo *MRI;
 
 public:
-  static char ID;
+  static const char ID;
   bool runOnMachineFunction(MachineFunction &Fn) override;
   bool detectFoldable(MachineInstr &Hi, MachineInstr *&Lo);
 
@@ -61,7 +61,7 @@ public:
 };
 } // end anonymous namespace
 
-char RISCVMergeBaseOffsetOpt::ID = 0;
+const char RISCVMergeBaseOffsetOpt::ID = 0;
 INITIALIZE_PASS(RISCVMergeBaseOffsetOpt, DEBUG_TYPE,
                 RISCV_MERGE_BASE_OFFSET_NAME, false, false)
 

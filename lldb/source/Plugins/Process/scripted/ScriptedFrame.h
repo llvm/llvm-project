@@ -104,7 +104,7 @@ private:
   lldb_private::StructuredData::GenericSP m_script_object_sp;
   lldb::VariableListSP m_variable_list_sp;
 
-  static char ID;
+  static const char ID;
 };
 
 } // namespace lldb_private

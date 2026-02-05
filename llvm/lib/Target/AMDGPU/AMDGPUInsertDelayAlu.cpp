@@ -502,7 +502,7 @@ public:
 
 class AMDGPUInsertDelayAluLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUInsertDelayAluLegacy() : MachineFunctionPass(ID) {}
 
@@ -530,9 +530,9 @@ AMDGPUInsertDelayAluPass::run(MachineFunction &MF,
   return PA;
 } // end namespace llvm
 
-char AMDGPUInsertDelayAluLegacy::ID = 0;
+const char AMDGPUInsertDelayAluLegacy::ID = 0;
 
-char &llvm::AMDGPUInsertDelayAluID = AMDGPUInsertDelayAluLegacy::ID;
+const char &llvm::AMDGPUInsertDelayAluID = AMDGPUInsertDelayAluLegacy::ID;
 
 INITIALIZE_PASS(AMDGPUInsertDelayAluLegacy, DEBUG_TYPE,
                 "AMDGPU Insert Delay ALU", false, false)

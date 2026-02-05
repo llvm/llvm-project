@@ -456,7 +456,7 @@ class LLVM_ABI BranchProbabilityInfoWrapperPass : public FunctionPass {
   BranchProbabilityInfo BPI;
 
 public:
-  static char ID;
+  static const char ID;
 
   BranchProbabilityInfoWrapperPass();
 

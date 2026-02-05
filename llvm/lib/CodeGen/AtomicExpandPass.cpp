@@ -140,7 +140,7 @@ public:
 
 class AtomicExpandLegacy : public FunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   AtomicExpandLegacy() : FunctionPass(ID) {}
 
@@ -179,9 +179,9 @@ struct ReplacementIRBuilder
 
 } // end anonymous namespace
 
-char AtomicExpandLegacy::ID = 0;
+const char AtomicExpandLegacy::ID = 0;
 
-char &llvm::AtomicExpandID = AtomicExpandLegacy::ID;
+const char &llvm::AtomicExpandID = AtomicExpandLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(AtomicExpandLegacy, DEBUG_TYPE,
                       "Expand Atomic instructions", false, false)

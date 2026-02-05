@@ -124,14 +124,14 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  static char ID;
+  static const char ID;
 
 private:
   StringRef getPassName() const override { return "X86 Optimize Call Frame"; }
 };
 
 } // end anonymous namespace
-char X86CallFrameOptimizationLegacy::ID = 0;
+const char X86CallFrameOptimizationLegacy::ID = 0;
 INITIALIZE_PASS(X86CallFrameOptimizationLegacy, DEBUG_TYPE,
                 "X86 Call Frame Optimization", false, false)
 

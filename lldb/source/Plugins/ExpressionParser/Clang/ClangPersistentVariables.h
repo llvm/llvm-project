@@ -36,7 +36,7 @@ class ClangPersistentVariables
                                PersistentExpressionState> {
 public:
   // LLVM RTTI support
-  static char ID;
+  static const char ID;
 
   ClangPersistentVariables(std::shared_ptr<Target> target_sp);
 

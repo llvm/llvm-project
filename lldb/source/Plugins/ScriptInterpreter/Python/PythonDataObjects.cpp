@@ -1000,7 +1000,7 @@ std::string PythonException::ReadBacktrace() const {
   return std::move(backtrace.get());
 }
 
-char PythonException::ID = 0;
+const char PythonException::ID = 0;
 
 llvm::Expected<File::OpenOptions>
 GetOptionsForPyObject(const PythonObject &obj) {
@@ -1093,13 +1093,13 @@ public:
                    File::OpenOptions options)
       : OwnedPythonFile(file, borrowed, fd, options, false) {}
 
-  static char ID;
+  static const char ID;
   bool isA(const void *classID) const override {
     return classID == &ID || NativeFile::isA(classID);
   }
   static bool classof(const File *file) { return file->isA(&ID); }
 };
-char SimplePythonFile::ID = 0;
+const char SimplePythonFile::ID = 0;
 } // namespace
 
 // Shared methods between TextPythonFile and BinaryPythonFile
@@ -1139,13 +1139,13 @@ public:
     return GetOptionsForPyObject(m_py_obj);
   }
 
-  static char ID;
+  static const char ID;
   bool isA(const void *classID) const override {
     return classID == &ID || File::isA(classID);
   }
   static bool classof(const File *file) { return file->isA(&ID); }
 };
-char PythonIOFile::ID = 0;
+const char PythonIOFile::ID = 0;
 } // namespace
 
 namespace {

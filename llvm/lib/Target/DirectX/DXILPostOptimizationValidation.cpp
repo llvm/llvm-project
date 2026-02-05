@@ -363,7 +363,7 @@ public:
   }
   DXILPostOptimizationValidationLegacy() : ModulePass(ID) {}
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.addRequired<DXILResourceWrapperPass>();
     AU.addRequired<DXILResourceBindingWrapperPass>();
@@ -377,7 +377,7 @@ public:
     AU.addPreserved<RootSignatureAnalysisWrapper>();
   }
 };
-char DXILPostOptimizationValidationLegacy::ID = 0;
+const char DXILPostOptimizationValidationLegacy::ID = 0;
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(DXILPostOptimizationValidationLegacy, DEBUG_TYPE,

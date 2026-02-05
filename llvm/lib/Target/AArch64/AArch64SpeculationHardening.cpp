@@ -124,7 +124,7 @@ public:
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
 
-  static char ID;
+  static const char ID;
 
   AArch64SpeculationHardening() : MachineFunctionPass(ID) {}
 
@@ -173,7 +173,7 @@ private:
 
 } // end anonymous namespace
 
-char AArch64SpeculationHardening::ID = 0;
+const char AArch64SpeculationHardening::ID = 0;
 
 INITIALIZE_PASS(AArch64SpeculationHardening, "aarch64-speculation-hardening",
                 AARCH64_SPECULATION_HARDENING_NAME, false, false)

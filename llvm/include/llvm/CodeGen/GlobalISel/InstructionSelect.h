@@ -35,7 +35,7 @@ class ProfileSummaryInfo;
 /// \post for all inst in MF: not isPreISelGenericOpcode(inst.opcode)
 class LLVM_ABI InstructionSelect : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   StringRef getPassName() const override { return "InstructionSelect"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -52,7 +52,7 @@ public:
   }
 
   InstructionSelect(CodeGenOptLevel OL = CodeGenOptLevel::Default,
-                    char &PassID = ID);
+                    const char &PassID = ID);
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   bool selectMachineFunction(MachineFunction &MF);

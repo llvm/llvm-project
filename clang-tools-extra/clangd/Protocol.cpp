@@ -41,7 +41,7 @@ bool mapOptOrNull(const llvm::json::Value &Params, llvm::StringLiteral Prop,
 }
 } // namespace
 
-char LSPError::ID;
+const char LSPError::ID = 0;
 
 URIForFile URIForFile::canonicalize(llvm::StringRef AbsPath,
                                     llvm::StringRef TUPath) {

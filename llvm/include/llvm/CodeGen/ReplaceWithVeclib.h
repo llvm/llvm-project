@@ -27,7 +27,7 @@ struct ReplaceWithVeclib : public PassInfoMixin<ReplaceWithVeclib> {
 
 // Legacy pass
 struct LLVM_ABI ReplaceWithVeclibLegacy : public FunctionPass {
-  static char ID;
+  static const char ID;
   ReplaceWithVeclibLegacy() : FunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;

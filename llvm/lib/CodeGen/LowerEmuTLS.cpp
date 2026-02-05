@@ -34,7 +34,7 @@ namespace {
 
 class LowerEmuTLS : public ModulePass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   LowerEmuTLS() : ModulePass(ID) {}
 
   bool runOnModule(Module &M) override;
@@ -73,7 +73,7 @@ PreservedAnalyses LowerEmuTLSPass::run(Module &M, ModuleAnalysisManager &MAM) {
   return PA;
 }
 
-char LowerEmuTLS::ID = 0;
+const char LowerEmuTLS::ID = 0;
 
 INITIALIZE_PASS(LowerEmuTLS, DEBUG_TYPE,
                 "Add __emutls_[vt]. variables for emultated TLS model", false,

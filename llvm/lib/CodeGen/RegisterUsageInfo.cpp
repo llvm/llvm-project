@@ -37,7 +37,7 @@ extern cl::opt<bool> PrintRegUsage;
 INITIALIZE_PASS(PhysicalRegisterUsageInfoWrapperLegacy, "reg-usage-info",
                 "Register Usage Information Storage", false, true)
 
-char PhysicalRegisterUsageInfoWrapperLegacy::ID = 0;
+const char PhysicalRegisterUsageInfoWrapperLegacy::ID = 0;
 
 void PhysicalRegisterUsageInfo::setTargetMachine(const TargetMachine &TM) {
   this->TM = &TM;

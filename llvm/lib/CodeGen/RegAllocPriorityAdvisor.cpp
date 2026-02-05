@@ -35,7 +35,7 @@ static cl::opt<RegAllocPriorityAdvisorProvider::AdvisorMode> Mode(
             RegAllocPriorityAdvisorProvider::AdvisorMode::Dummy, "dummy",
             "prioritize low virtual register numbers for test and debug")));
 
-char RegAllocPriorityAdvisorAnalysisLegacy::ID = 0;
+const char RegAllocPriorityAdvisorAnalysisLegacy::ID = 0;
 INITIALIZE_PASS(RegAllocPriorityAdvisorAnalysisLegacy, "regalloc-priority",
                 "Regalloc priority policy", false, true)
 

@@ -64,21 +64,21 @@ struct LLVMRemarkSetupErrorInfo : public ErrorInfo<ThisError> {
 
 struct LLVMRemarkSetupFileError
     : LLVMRemarkSetupErrorInfo<LLVMRemarkSetupFileError> {
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
   using LLVMRemarkSetupErrorInfo<
       LLVMRemarkSetupFileError>::LLVMRemarkSetupErrorInfo;
 };
 
 struct LLVMRemarkSetupPatternError
     : LLVMRemarkSetupErrorInfo<LLVMRemarkSetupPatternError> {
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
   using LLVMRemarkSetupErrorInfo<
       LLVMRemarkSetupPatternError>::LLVMRemarkSetupErrorInfo;
 };
 
 struct LLVMRemarkSetupFormatError
     : LLVMRemarkSetupErrorInfo<LLVMRemarkSetupFormatError> {
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
   using LLVMRemarkSetupErrorInfo<
       LLVMRemarkSetupFormatError>::LLVMRemarkSetupErrorInfo;
 };

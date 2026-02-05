@@ -39,14 +39,14 @@ class OptimizeReturned final : public FunctionPass,
   DominatorTree *DT = nullptr;
 
 public:
-  static char ID;
+  static const char ID;
   OptimizeReturned() : FunctionPass(ID) {}
 
   void visitCallBase(CallBase &CB);
 };
 } // End anonymous namespace
 
-char OptimizeReturned::ID = 0;
+const char OptimizeReturned::ID = 0;
 INITIALIZE_PASS(OptimizeReturned, DEBUG_TYPE,
                 "Optimize calls with \"returned\" attributes for WebAssembly",
                 false, false)

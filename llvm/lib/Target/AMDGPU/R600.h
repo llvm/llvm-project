@@ -31,19 +31,19 @@ FunctionPass *createR600ISelDag(TargetMachine &TM, CodeGenOptLevel OptLevel);
 ModulePass *createR600OpenCLImageTypeLoweringPass();
 
 void initializeR600ClauseMergePassPass(PassRegistry &);
-extern char &R600ClauseMergePassID;
+extern const char &R600ClauseMergePassID;
 
 void initializeR600ControlFlowFinalizerPass(PassRegistry &);
-extern char &R600ControlFlowFinalizerID;
+extern const char &R600ControlFlowFinalizerID;
 
 void initializeR600ExpandSpecialInstrsPassPass(PassRegistry &);
-extern char &R600ExpandSpecialInstrsPassID;
+extern const char &R600ExpandSpecialInstrsPassID;
 
 void initializeR600VectorRegMergerPass(PassRegistry &);
-extern char &R600VectorRegMergerID;
+extern const char &R600VectorRegMergerID;
 
 void initializeR600PacketizerPass(PassRegistry &);
-extern char &R600PacketizerID;
+extern const char &R600PacketizerID;
 
 void initializeR600EmitClauseMarkersPass(PassRegistry &);
 void initializeR600MachineCFGStructurizerPass(PassRegistry &);

@@ -113,7 +113,7 @@ class StackSafetyInfoWrapperPass : public FunctionPass {
   StackSafetyInfo SSI;
 
 public:
-  static char ID;
+  static const char ID;
   StackSafetyInfoWrapperPass();
 
   const StackSafetyInfo &getResult() const { return SSI; }
@@ -153,7 +153,7 @@ class StackSafetyGlobalInfoWrapperPass : public ModulePass {
   StackSafetyGlobalInfo SSGI;
 
 public:
-  static char ID;
+  static const char ID;
 
   StackSafetyGlobalInfoWrapperPass();
   ~StackSafetyGlobalInfoWrapperPass() override;

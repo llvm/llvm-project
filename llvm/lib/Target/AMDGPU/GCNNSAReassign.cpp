@@ -79,7 +79,7 @@ private:
 
 class GCNNSAReassignLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   GCNNSAReassignLegacy() : MachineFunctionPass(ID) {
     initializeGCNNSAReassignLegacyPass(*PassRegistry::getPassRegistry());
@@ -108,9 +108,9 @@ INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
 INITIALIZE_PASS_END(GCNNSAReassignLegacy, DEBUG_TYPE, "GCN NSA Reassign", false,
                     false)
 
-char GCNNSAReassignLegacy::ID = 0;
+const char GCNNSAReassignLegacy::ID = 0;
 
-char &llvm::GCNNSAReassignID = GCNNSAReassignLegacy::ID;
+const char &llvm::GCNNSAReassignID = GCNNSAReassignLegacy::ID;
 
 bool GCNNSAReassignImpl::tryAssignRegisters(
     SmallVectorImpl<LiveInterval *> &Intervals, unsigned StartReg) const {

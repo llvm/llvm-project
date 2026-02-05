@@ -85,7 +85,7 @@ public:
 
 class GCNDPPCombineLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   GCNDPPCombineLegacy() : MachineFunctionPass(ID) {}
 
@@ -108,9 +108,9 @@ public:
 INITIALIZE_PASS(GCNDPPCombineLegacy, DEBUG_TYPE, "GCN DPP Combine", false,
                 false)
 
-char GCNDPPCombineLegacy::ID = 0;
+const char GCNDPPCombineLegacy::ID = 0;
 
-char &llvm::GCNDPPCombineLegacyID = GCNDPPCombineLegacy::ID;
+const char &llvm::GCNDPPCombineLegacyID = GCNDPPCombineLegacy::ID;
 
 FunctionPass *llvm::createGCNDPPCombinePass() {
   return new GCNDPPCombineLegacy();

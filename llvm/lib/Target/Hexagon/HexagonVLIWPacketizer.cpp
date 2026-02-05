@@ -81,7 +81,7 @@ namespace {
 
   class HexagonPacketizer : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     HexagonPacketizer(bool Min = false)
       : MachineFunctionPass(ID), Minimal(Min) {}
@@ -112,7 +112,7 @@ namespace {
 
 } // end anonymous namespace
 
-char HexagonPacketizer::ID = 0;
+const char HexagonPacketizer::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonPacketizer, "hexagon-packetizer",
                       "Hexagon Packetizer", false, false)

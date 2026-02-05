@@ -44,7 +44,7 @@ public:
   OffloadError(const llvm::Twine &S) : ErrorInfo(S, ErrorCode::UNKNOWN) {}
 
   // The definition for this resides in the plugin static library
-  static char ID;
+  static const char ID;
 };
 
 /// Create an Offload error.

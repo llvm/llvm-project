@@ -464,7 +464,7 @@ static bool formLCSSAOnAllLoops(const LoopInfo *LI, const DominatorTree &DT,
 
 namespace {
 struct LCSSAWrapperPass : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   LCSSAWrapperPass() : FunctionPass(ID) {
     initializeLCSSAWrapperPassPass(*PassRegistry::getPassRegistry());
   }
@@ -513,7 +513,7 @@ struct LCSSAWrapperPass : public FunctionPass {
 };
 }
 
-char LCSSAWrapperPass::ID = 0;
+const char LCSSAWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LCSSAWrapperPass, "lcssa", "Loop-Closed SSA Form Pass",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
@@ -523,7 +523,7 @@ INITIALIZE_PASS_END(LCSSAWrapperPass, "lcssa", "Loop-Closed SSA Form Pass",
                     false, false)
 
 Pass *llvm::createLCSSAPass() { return new LCSSAWrapperPass(); }
-char &llvm::LCSSAID = LCSSAWrapperPass::ID;
+const char &llvm::LCSSAID = LCSSAWrapperPass::ID;
 
 /// Transform \p F into loop-closed SSA form.
 bool LCSSAWrapperPass::runOnFunction(Function &F) {

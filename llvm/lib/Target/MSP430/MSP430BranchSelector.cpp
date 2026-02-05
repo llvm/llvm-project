@@ -47,7 +47,7 @@ class MSP430BSel : public MachineFunctionPass {
   bool expandBranches(OffsetVector &BlockOffsets);
 
 public:
-  static char ID;
+  static const char ID;
   MSP430BSel() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -58,7 +58,7 @@ public:
 
   StringRef getPassName() const override { return "MSP430 Branch Selector"; }
 };
-char MSP430BSel::ID = 0;
+const char MSP430BSel::ID = 0;
 }
 
 static bool isInRage(int DistanceInBytes) {

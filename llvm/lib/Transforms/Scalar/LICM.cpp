@@ -243,7 +243,7 @@ private:
 };
 
 struct LegacyLICMPass : public LoopPass {
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   LegacyLICMPass(
       unsigned LicmMssaOptCap = SetLicmMssaOptCap,
       unsigned LicmMssaNoAccForPromotionCap = SetLicmMssaNoAccForPromotionCap,
@@ -372,7 +372,7 @@ void LNICMPass::printPipeline(
   OS << '>';
 }
 
-char LegacyLICMPass::ID = 0;
+const char LegacyLICMPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LegacyLICMPass, "licm", "Loop Invariant Code Motion",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopPass)

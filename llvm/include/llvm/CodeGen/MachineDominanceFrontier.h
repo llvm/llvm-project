@@ -47,7 +47,7 @@ public:
   MachineDominanceFrontierWrapperPass &
   operator=(const MachineDominanceFrontierWrapperPass &) = delete;
 
-  static char ID;
+  static const char ID;
 
   bool runOnMachineFunction(MachineFunction &F) override;
 

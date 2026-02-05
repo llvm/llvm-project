@@ -41,7 +41,7 @@ static ConstString g_this = ConstString("this");
 static ConstString g_promise = ConstString("__promise");
 static ConstString g_coro_frame = ConstString("__coro_frame");
 
-char CPPLanguageRuntime::ID = 0;
+const char CPPLanguageRuntime::ID = 0;
 
 /// A frame recognizer that is installed to hide libc++ implementation
 /// details from the backtrace.

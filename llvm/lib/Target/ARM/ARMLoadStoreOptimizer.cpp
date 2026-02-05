@@ -99,7 +99,7 @@ namespace {
   /// Post- register allocation pass the combine load / store instructions to
   /// form ldm / stm instructions.
   struct ARMLoadStoreOpt : public MachineFunctionPass {
-    static char ID;
+    static const char ID;
 
     const MachineFunction *MF;
     const TargetInstrInfo *TII;
@@ -196,7 +196,7 @@ namespace {
 
 } // end anonymous namespace
 
-char ARMLoadStoreOpt::ID = 0;
+const char ARMLoadStoreOpt::ID = 0;
 
 INITIALIZE_PASS(ARMLoadStoreOpt, "arm-ldst-opt", ARM_LOAD_STORE_OPT_NAME, false,
                 false)
@@ -2137,7 +2137,7 @@ namespace {
   /// Pre- register allocation pass that move load / stores from consecutive
   /// locations close to make it more likely they will be combined later.
   struct ARMPreAllocLoadStoreOpt : public MachineFunctionPass{
-    static char ID;
+    static const char ID;
 
     AliasAnalysis *AA;
     const DataLayout *TD;
@@ -2179,7 +2179,7 @@ namespace {
 
 } // end anonymous namespace
 
-char ARMPreAllocLoadStoreOpt::ID = 0;
+const char ARMPreAllocLoadStoreOpt::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ARMPreAllocLoadStoreOpt, "arm-prera-ldst-opt",
                       ARM_PREALLOC_LOAD_STORE_OPT_NAME, false, false)

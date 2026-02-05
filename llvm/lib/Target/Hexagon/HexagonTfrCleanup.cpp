@@ -42,7 +42,7 @@ using namespace llvm;
 namespace {
 class HexagonTfrCleanup : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   HexagonTfrCleanup() : MachineFunctionPass(ID) {}
   StringRef getPassName() const override { return "Hexagon TFR Cleanup"; }
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -66,10 +66,10 @@ private:
 };
 } // namespace
 
-char HexagonTfrCleanup::ID = 0;
+const char HexagonTfrCleanup::ID = 0;
 
 namespace llvm {
-char &HexagonTfrCleanupID = HexagonTfrCleanup::ID;
+const char &HexagonTfrCleanupID = HexagonTfrCleanup::ID;
 }
 
 bool HexagonTfrCleanup::isIntReg(unsigned Reg, bool &Is32) {

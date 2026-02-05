@@ -244,7 +244,7 @@ class WebAssemblyFixIrreducibleControlFlow final : public MachineFunctionPass {
                            MachineFunction &MF, const ReachabilityGraph &Graph);
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyFixIrreducibleControlFlow() : MachineFunctionPass(ID) {}
 };
 
@@ -482,7 +482,7 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
 
 } // end anonymous namespace
 
-char WebAssemblyFixIrreducibleControlFlow::ID = 0;
+const char WebAssemblyFixIrreducibleControlFlow::ID = 0;
 INITIALIZE_PASS(WebAssemblyFixIrreducibleControlFlow, DEBUG_TYPE,
                 "Removes irreducible control flow", false, false)
 

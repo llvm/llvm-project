@@ -1886,7 +1886,7 @@ namespace {
 
   class HexagonConstPropagation : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     HexagonConstPropagation() : MachineFunctionPass(ID) {}
 
@@ -1906,7 +1906,7 @@ namespace {
 
 } // end anonymous namespace
 
-char HexagonConstPropagation::ID = 0;
+const char HexagonConstPropagation::ID = 0;
 
 INITIALIZE_PASS(HexagonConstPropagation, "hexagon-constp",
   "Hexagon Constant Propagation", false, false)

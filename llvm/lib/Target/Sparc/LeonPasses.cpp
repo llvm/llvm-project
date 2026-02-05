@@ -19,7 +19,7 @@
 
 using namespace llvm;
 
-char ErrataWorkaround::ID = 0;
+const char ErrataWorkaround::ID = 0;
 
 ErrataWorkaround::ErrataWorkaround() : MachineFunctionPass(ID) {
   initializeErrataWorkaroundPass(*PassRegistry::getPassRegistry());
@@ -323,7 +323,7 @@ bool ErrataWorkaround::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-LEONMachineFunctionPass::LEONMachineFunctionPass(char &ID)
+LEONMachineFunctionPass::LEONMachineFunctionPass(const char &ID)
     : MachineFunctionPass(ID) {}
 
 //*****************************************************************************
@@ -336,7 +336,7 @@ LEONMachineFunctionPass::LEONMachineFunctionPass(char &ID)
 //
 // This pass inserts a NOP after any LD or LDF instruction.
 //
-char InsertNOPLoad::ID = 0;
+const char InsertNOPLoad::ID = 0;
 
 InsertNOPLoad::InsertNOPLoad() : LEONMachineFunctionPass(ID) {}
 
@@ -375,7 +375,7 @@ bool InsertNOPLoad::runOnMachineFunction(MachineFunction &MF) {
 //
 // Detects an erratum in UT699 LEON 3 processor
 
-char DetectRoundChange::ID = 0;
+const char DetectRoundChange::ID = 0;
 
 DetectRoundChange::DetectRoundChange() : LEONMachineFunctionPass(ID) {}
 
@@ -425,7 +425,7 @@ bool DetectRoundChange::runOnMachineFunction(MachineFunction &MF) {
 // with the changes that still need implementing for the "double" versions
 // of these instructions.
 //
-char FixAllFDIVSQRT::ID = 0;
+const char FixAllFDIVSQRT::ID = 0;
 
 FixAllFDIVSQRT::FixAllFDIVSQRT() : LEONMachineFunctionPass(ID) {}
 

@@ -107,7 +107,7 @@ class AArch64AsmPrinter : public AsmPrinter {
   unsigned PAuthIFuncNextUniqueID = 1;
 
 public:
-  static char ID;
+  static const char ID;
 
   AArch64AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
       : AsmPrinter(TM, std::move(Streamer), ID),
@@ -4014,7 +4014,7 @@ const MCExpr *AArch64AsmPrinter::lowerConstant(const Constant *CV,
   return AsmPrinter::lowerConstant(CV, BaseCV, Offset);
 }
 
-char AArch64AsmPrinter::ID = 0;
+const char AArch64AsmPrinter::ID = 0;
 
 INITIALIZE_PASS(AArch64AsmPrinter, "aarch64-asm-printer",
                 "AArch64 Assembly Printer", false, false)

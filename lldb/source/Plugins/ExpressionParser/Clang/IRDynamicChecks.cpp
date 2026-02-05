@@ -31,7 +31,7 @@
 using namespace llvm;
 using namespace lldb_private;
 
-static char ID;
+static const char ID;
 
 #define VALID_OBJC_OBJECT_CHECK_NAME "$__lldb_objc_object_check"
 

@@ -847,7 +847,7 @@ private:
 
 class EarlyIfConverterLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   EarlyIfConverterLegacy() : MachineFunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -855,8 +855,8 @@ public:
 };
 } // end anonymous namespace
 
-char EarlyIfConverterLegacy::ID = 0;
-char &llvm::EarlyIfConverterLegacyID = EarlyIfConverterLegacy::ID;
+const char EarlyIfConverterLegacy::ID = 0;
+const char &llvm::EarlyIfConverterLegacyID = EarlyIfConverterLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(EarlyIfConverterLegacy, DEBUG_TYPE, "Early If Converter",
                       false, false)
@@ -1357,7 +1357,7 @@ class EarlyIfPredicator : public MachineFunctionPass {
   SSAIfConv IfConv;
 
 public:
-  static char ID;
+  static const char ID;
   EarlyIfPredicator() : MachineFunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -1372,8 +1372,8 @@ protected:
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "early-if-predicator"
 
-char EarlyIfPredicator::ID = 0;
-char &llvm::EarlyIfPredicatorID = EarlyIfPredicator::ID;
+const char EarlyIfPredicator::ID = 0;
+const char &llvm::EarlyIfPredicatorID = EarlyIfPredicator::ID;
 
 INITIALIZE_PASS_BEGIN(EarlyIfPredicator, DEBUG_TYPE, "Early If Predicator",
                       false, false)

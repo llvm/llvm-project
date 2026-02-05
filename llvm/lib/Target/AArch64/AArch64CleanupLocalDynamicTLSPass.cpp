@@ -34,7 +34,7 @@ using namespace llvm;
 
 namespace {
 struct LDTLSCleanup : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
   LDTLSCleanup() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -145,7 +145,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
 INITIALIZE_PASS(LDTLSCleanup, "aarch64-local-dynamic-tls-cleanup",
                 TLSCLEANUP_PASS_NAME, false, false)
 
-char LDTLSCleanup::ID = 0;
+const char LDTLSCleanup::ID = 0;
 FunctionPass *llvm::createAArch64CleanupLocalDynamicTLSPass() {
   return new LDTLSCleanup();
 }

@@ -801,7 +801,7 @@ private:
 /// Legacy pass manager pass to access dependence information
 class LLVM_ABI DependenceAnalysisWrapperPass : public FunctionPass {
 public:
-  static char ID; // Class identification, replacement for typeinfo
+  static const char ID; // Class identification, replacement for typeinfo
   DependenceAnalysisWrapperPass();
 
   bool runOnFunction(Function &F) override;

@@ -506,7 +506,7 @@ private:
 
 class StackColoringLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   StackColoringLegacy() : MachineFunctionPass(ID) {}
 
@@ -516,9 +516,9 @@ public:
 
 } // end anonymous namespace
 
-char StackColoringLegacy::ID = 0;
+const char StackColoringLegacy::ID = 0;
 
-char &llvm::StackColoringLegacyID = StackColoringLegacy::ID;
+const char &llvm::StackColoringLegacyID = StackColoringLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(StackColoringLegacy, DEBUG_TYPE,
                       "Merge disjoint stack slots", false, false)

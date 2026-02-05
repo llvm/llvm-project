@@ -171,7 +171,7 @@ public:
 
   replacement_error get() const { return Err; }
 
-  static char ID;
+  static const char ID;
 
   const std::optional<Replacement> &getNewReplacement() const {
     return NewReplacement;

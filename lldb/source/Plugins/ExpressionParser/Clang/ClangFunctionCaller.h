@@ -62,7 +62,7 @@ class ClangFunctionCaller : public FunctionCaller {
                                  ClangExpressionHelper> {
   public:
     // LLVM RTTI support
-    static char ID;
+    static const char ID;
 
     ClangFunctionCallerHelper(ClangFunctionCaller &owner) : m_owner(owner) {}
 
@@ -88,7 +88,7 @@ class ClangFunctionCaller : public FunctionCaller {
   };
 
   // LLVM RTTI support
-  static char ID;
+  static const char ID;
 
 public:
   bool isA(const void *ClassID) const override {

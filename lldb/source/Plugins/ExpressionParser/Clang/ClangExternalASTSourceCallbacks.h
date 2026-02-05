@@ -23,7 +23,7 @@ namespace lldb_private {
 
 class ClangExternalASTSourceCallbacks : public clang::ExternalASTSource {
   /// LLVM RTTI support.
-  static char ID;
+  static const char ID;
 
 public:
   /// LLVM RTTI support.

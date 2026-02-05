@@ -392,13 +392,13 @@ public:
 
 class X86ExecutionDomainFix : public ExecutionDomainFix {
 public:
-  static char ID;
+  static const char ID;
   X86ExecutionDomainFix() : ExecutionDomainFix(ID, X86::VR128XRegClass) {}
   StringRef getPassName() const override {
     return "X86 Execution Dependency Fix";
   }
 };
-char X86ExecutionDomainFix::ID;
+const char X86ExecutionDomainFix::ID = 0;
 
 } // end anonymous namespace
 

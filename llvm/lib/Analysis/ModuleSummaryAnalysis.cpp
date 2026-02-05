@@ -1169,7 +1169,7 @@ ModuleSummaryIndexAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
       });
 }
 
-char ModuleSummaryIndexWrapperPass::ID = 0;
+const char ModuleSummaryIndexWrapperPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ModuleSummaryIndexWrapperPass, "module-summary-analysis",
                       "Module Summary Analysis", false, true)
@@ -1218,7 +1218,7 @@ void ModuleSummaryIndexWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<StackSafetyInfoWrapperPass>();
 }
 
-char ImmutableModuleSummaryIndexWrapperPass::ID = 0;
+const char ImmutableModuleSummaryIndexWrapperPass::ID = 0;
 
 ImmutableModuleSummaryIndexWrapperPass::ImmutableModuleSummaryIndexWrapperPass(
     const ModuleSummaryIndex *Index)

@@ -148,7 +148,7 @@ private:
 
 class MipsDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   MipsDAGToDAGISelLegacy(std::unique_ptr<SelectionDAGISel> S);
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };

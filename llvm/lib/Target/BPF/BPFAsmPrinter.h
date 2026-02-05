@@ -34,7 +34,7 @@ public:
   MCSymbol *getJTPublicSymbol(unsigned JTI);
   void emitJumpTableInfo() override;
 
-  static char ID;
+  static const char ID;
 
 private:
   BTFDebug *BTF;

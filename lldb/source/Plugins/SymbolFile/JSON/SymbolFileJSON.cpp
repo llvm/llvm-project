@@ -33,7 +33,7 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(SymbolFileJSON)
 
-char SymbolFileJSON::ID;
+const char SymbolFileJSON::ID = 0;
 
 SymbolFileJSON::SymbolFileJSON(lldb::ObjectFileSP objfile_sp)
     : SymbolFileCommon(std::move(objfile_sp)) {}

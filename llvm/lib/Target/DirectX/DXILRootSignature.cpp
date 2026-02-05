@@ -249,7 +249,7 @@ void RootSignatureAnalysisWrapper::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
 }
 
-char RootSignatureAnalysisWrapper::ID = 0;
+const char RootSignatureAnalysisWrapper::ID = 0;
 
 INITIALIZE_PASS_BEGIN(RootSignatureAnalysisWrapper,
                       "dxil-root-signature-analysis",

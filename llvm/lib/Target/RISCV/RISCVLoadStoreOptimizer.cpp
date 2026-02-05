@@ -49,7 +49,7 @@ STATISTIC(NumSD2SW, "Number of SD instructions split back to SW");
 namespace {
 
 struct RISCVLoadStoreOpt : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
   RISCVLoadStoreOpt() : MachineFunctionPass(ID) {}
@@ -106,7 +106,7 @@ private:
 };
 } // end anonymous namespace
 
-char RISCVLoadStoreOpt::ID = 0;
+const char RISCVLoadStoreOpt::ID = 0;
 INITIALIZE_PASS(RISCVLoadStoreOpt, DEBUG_TYPE, RISCV_LOAD_STORE_OPT_NAME, false,
                 false)
 

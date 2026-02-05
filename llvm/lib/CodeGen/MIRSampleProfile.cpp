@@ -63,7 +63,7 @@ static cl::opt<bool> ViewBFIAfter("fs-viewbfi-after", cl::Hidden,
                                   cl::init(false),
                                   cl::desc("View BFI after MIR loader"));
 
-char MIRProfileLoaderPass::ID = 0;
+const char MIRProfileLoaderPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(MIRProfileLoaderPass, DEBUG_TYPE,
                       "Load MIR Sample Profile",
@@ -76,7 +76,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineOptimizationRemarkEmitterPass)
 INITIALIZE_PASS_END(MIRProfileLoaderPass, DEBUG_TYPE, "Load MIR Sample Profile",
                     /* cfg = */ false, /* is_analysis = */ false)
 
-char &llvm::MIRProfileLoaderPassID = MIRProfileLoaderPass::ID;
+const char &llvm::MIRProfileLoaderPassID = MIRProfileLoaderPass::ID;
 
 FunctionPass *
 llvm::createMIRProfileLoaderPass(std::string File, std::string RemappingFile,

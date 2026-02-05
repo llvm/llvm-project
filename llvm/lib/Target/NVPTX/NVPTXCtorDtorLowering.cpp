@@ -243,7 +243,7 @@ static bool lowerCtorsAndDtors(Module &M) {
 
 class NVPTXCtorDtorLoweringLegacy final : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
   NVPTXCtorDtorLoweringLegacy() : ModulePass(ID) {}
   bool runOnModule(Module &M) override { return lowerCtorsAndDtors(M); }
 };
@@ -256,7 +256,7 @@ PreservedAnalyses NVPTXCtorDtorLoweringPass::run(Module &M,
                                : PreservedAnalyses::all();
 }
 
-char NVPTXCtorDtorLoweringLegacy::ID = 0;
+const char NVPTXCtorDtorLoweringLegacy::ID = 0;
 INITIALIZE_PASS(NVPTXCtorDtorLoweringLegacy, DEBUG_TYPE,
                 "Lower ctors and dtors for NVPTX", false, false)
 

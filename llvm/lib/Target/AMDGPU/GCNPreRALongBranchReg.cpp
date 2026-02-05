@@ -56,7 +56,7 @@ public:
 
 class GCNPreRALongBranchRegLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   GCNPreRALongBranchRegLegacy() : MachineFunctionPass(ID) {
     initializeGCNPreRALongBranchRegLegacyPass(*PassRegistry::getPassRegistry());
   }
@@ -76,12 +76,12 @@ public:
 };
 } // End anonymous namespace.
 
-char GCNPreRALongBranchRegLegacy::ID = 0;
+const char GCNPreRALongBranchRegLegacy::ID = 0;
 
 INITIALIZE_PASS(GCNPreRALongBranchRegLegacy, DEBUG_TYPE,
                 "AMDGPU Pre-RA Long Branch Reg", false, false)
 
-char &llvm::GCNPreRALongBranchRegID = GCNPreRALongBranchRegLegacy::ID;
+const char &llvm::GCNPreRALongBranchRegID = GCNPreRALongBranchRegLegacy::ID;
 void GCNPreRALongBranchReg::generateBlockInfo(
     MachineFunction &MF, SmallVectorImpl<BasicBlockInfo> &BlockInfo) {
 

@@ -35,7 +35,7 @@ public:
   bool runOnModule(Module &M) override;
   DXILDataScalarizationLegacy() : ModulePass(ID) {}
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 };
 
 static bool findAndReplaceVectors(Module &M);
@@ -462,7 +462,7 @@ bool DXILDataScalarizationLegacy::runOnModule(Module &M) {
   return findAndReplaceVectors(M);
 }
 
-char DXILDataScalarizationLegacy::ID = 0;
+const char DXILDataScalarizationLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(DXILDataScalarizationLegacy, DEBUG_TYPE,
                       "DXIL Data Scalarization", false, false)

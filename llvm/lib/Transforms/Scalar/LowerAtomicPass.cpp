@@ -73,7 +73,7 @@ PreservedAnalyses LowerAtomicPass::run(Function &F, FunctionAnalysisManager &) {
 namespace {
 class LowerAtomicLegacyPass : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   LowerAtomicLegacyPass() : FunctionPass(ID) {
     initializeLowerAtomicLegacyPassPass(*PassRegistry::getPassRegistry());
@@ -91,7 +91,7 @@ private:
   };
 }
 
-char LowerAtomicLegacyPass::ID = 0;
+const char LowerAtomicLegacyPass::ID = 0;
 INITIALIZE_PASS(LowerAtomicLegacyPass, "loweratomic",
                 "Lower atomic intrinsics to non-atomic form", false, false)
 

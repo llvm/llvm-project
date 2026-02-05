@@ -351,14 +351,14 @@ private:
 
 class ARMDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   ARMDAGToDAGISelLegacy(ARMBaseTargetMachine &tm, CodeGenOptLevel OptLevel)
       : SelectionDAGISelLegacy(
             ID, std::make_unique<ARMDAGToDAGISel>(tm, OptLevel)) {}
 };
 }
 
-char ARMDAGToDAGISelLegacy::ID = 0;
+const char ARMDAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(ARMDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 

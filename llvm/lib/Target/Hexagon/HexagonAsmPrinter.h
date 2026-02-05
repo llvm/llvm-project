@@ -28,7 +28,7 @@ class TargetMachine;
 
   class HexagonAsmPrinter : public AsmPrinter {
   public:
-    static char ID;
+    static const char ID;
 
   private:
     const HexagonSubtarget *Subtarget = nullptr;

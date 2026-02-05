@@ -56,4 +56,4 @@ const std::error_category &llvm::msf::MSFErrCategory() {
   return MSFCategory;
 }
 
-char MSFError::ID;
+const char MSFError::ID = 0;

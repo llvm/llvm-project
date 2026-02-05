@@ -48,7 +48,7 @@ struct PostRAHazardRecognizer {
 class PostRAHazardRecognizerLegacy : public MachineFunctionPass {
 
 public:
-  static char ID;
+  static const char ID;
   PostRAHazardRecognizerLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -60,11 +60,11 @@ public:
     return PostRAHazardRecognizer().run(Fn);
   }
 };
-char PostRAHazardRecognizerLegacy::ID = 0;
+const char PostRAHazardRecognizerLegacy::ID = 0;
 
 } // namespace
 
-char &llvm::PostRAHazardRecognizerID = PostRAHazardRecognizerLegacy::ID;
+const char &llvm::PostRAHazardRecognizerID = PostRAHazardRecognizerLegacy::ID;
 
 INITIALIZE_PASS(PostRAHazardRecognizerLegacy, DEBUG_TYPE,
                 "Post RA hazard recognizer", false, false)

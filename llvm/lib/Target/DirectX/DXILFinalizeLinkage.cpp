@@ -68,7 +68,7 @@ bool DXILFinalizeLinkageLegacy::runOnModule(Module &M) {
   return finalizeLinkage(M);
 }
 
-char DXILFinalizeLinkageLegacy::ID = 0;
+const char DXILFinalizeLinkageLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(DXILFinalizeLinkageLegacy, DEBUG_TYPE,
                       "DXIL Finalize Linkage", false, false)

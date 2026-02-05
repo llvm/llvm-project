@@ -26,7 +26,7 @@ using namespace llvm;
 namespace {
 class HexagonMask : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   HexagonMask() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
@@ -40,7 +40,7 @@ private:
 };
 } // end anonymous namespace
 
-char HexagonMask::ID = 0;
+const char HexagonMask::ID = 0;
 
 void HexagonMask::replaceConstExtTransferImmWithMask(MachineFunction &MF) {
   for (auto &MBB : MF) {

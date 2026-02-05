@@ -26,7 +26,7 @@ namespace {
 
 class SIPostRABundlerLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
 public:
   SIPostRABundlerLegacy() : MachineFunctionPass(ID) {
@@ -72,9 +72,9 @@ constexpr uint64_t MemFlags = SIInstrFlags::MTBUF | SIInstrFlags::MUBUF |
 INITIALIZE_PASS(SIPostRABundlerLegacy, DEBUG_TYPE, "SI post-RA bundler", false,
                 false)
 
-char SIPostRABundlerLegacy::ID = 0;
+const char SIPostRABundlerLegacy::ID = 0;
 
-char &llvm::SIPostRABundlerLegacyID = SIPostRABundlerLegacy::ID;
+const char &llvm::SIPostRABundlerLegacyID = SIPostRABundlerLegacy::ID;
 
 FunctionPass *llvm::createSIPostRABundlerPass() {
   return new SIPostRABundlerLegacy();

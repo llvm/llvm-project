@@ -288,7 +288,7 @@ public:
   static bool classof(const LogHandler *obj) { return obj->isA(&ID); }
 
 private:
-  static char ID;
+  static const char ID;
 };
 
 } // namespace lldb_private

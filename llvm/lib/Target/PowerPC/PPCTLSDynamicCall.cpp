@@ -37,7 +37,7 @@ using namespace llvm;
 
 namespace {
   struct PPCTLSDynamicCall : public MachineFunctionPass {
-    static char ID;
+    static const char ID;
     PPCTLSDynamicCall() : MachineFunctionPass(ID) {}
 
     const PPCInstrInfo *TII;
@@ -336,6 +336,6 @@ INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_END(PPCTLSDynamicCall, DEBUG_TYPE,
                     "PowerPC TLS Dynamic Call Fixup", false, false)
 
-char PPCTLSDynamicCall::ID = 0;
+const char PPCTLSDynamicCall::ID = 0;
 FunctionPass*
 llvm::createPPCTLSDynamicCallPass() { return new PPCTLSDynamicCall(); }

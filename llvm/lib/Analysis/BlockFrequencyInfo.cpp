@@ -299,7 +299,7 @@ INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(BlockFrequencyInfoWrapperPass, "block-freq",
                     "Block Frequency Analysis", true, true)
 
-char BlockFrequencyInfoWrapperPass::ID = 0;
+const char BlockFrequencyInfoWrapperPass::ID = 0;
 
 BlockFrequencyInfoWrapperPass::BlockFrequencyInfoWrapperPass()
     : FunctionPass(ID) {}

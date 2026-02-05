@@ -269,7 +269,7 @@ Value *GenericToNVVM::remapConstantExpr(Module *M, Function *F, ConstantExpr *C,
 namespace {
 class GenericToNVVMLegacyPass : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
 
   GenericToNVVMLegacyPass() : ModulePass(ID) {}
 
@@ -277,7 +277,7 @@ public:
 };
 } // namespace
 
-char GenericToNVVMLegacyPass::ID = 0;
+const char GenericToNVVMLegacyPass::ID = 0;
 
 ModulePass *llvm::createGenericToNVVMLegacyPass() {
   return new GenericToNVVMLegacyPass();

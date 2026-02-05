@@ -478,7 +478,7 @@ public:
     return {Err, Msg};
   }
 
-  static char ID;
+  static const char ID;
 
 private:
   instrprof_error Err;

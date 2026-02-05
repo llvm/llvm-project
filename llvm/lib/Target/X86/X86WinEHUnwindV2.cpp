@@ -66,7 +66,7 @@ struct FrameInfo {
 
 class X86WinEHUnwindV2Legacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   X86WinEHUnwindV2Legacy() : MachineFunctionPass(ID) {
     initializeX86WinEHUnwindV2LegacyPass(*PassRegistry::getPassRegistry());
@@ -99,7 +99,7 @@ enum class FunctionState {
 
 } // end anonymous namespace
 
-char X86WinEHUnwindV2Legacy::ID = 0;
+const char X86WinEHUnwindV2Legacy::ID = 0;
 
 INITIALIZE_PASS(X86WinEHUnwindV2Legacy, "x86-wineh-unwindv2",
                 "Analyze and emit instructions for Win64 Unwind v2", false,

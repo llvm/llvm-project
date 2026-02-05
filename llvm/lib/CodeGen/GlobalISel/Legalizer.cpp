@@ -69,7 +69,7 @@ static cl::opt<DebugLocVerifyLevel> VerifyDebugLocs(
 static const DebugLocVerifyLevel VerifyDebugLocs = DebugLocVerifyLevel::None;
 #endif
 
-char Legalizer::ID = 0;
+const char Legalizer::ID = 0;
 INITIALIZE_PASS_BEGIN(Legalizer, DEBUG_TYPE,
                       "Legalize the Machine IR a function's Machine IR", false,
                       false)

@@ -19,7 +19,7 @@ using namespace llvm;
 namespace {
 
 struct AArch64PostCoalescer : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
 
   AArch64PostCoalescer() : MachineFunctionPass(ID) {}
 
@@ -39,7 +39,7 @@ struct AArch64PostCoalescer : public MachineFunctionPass {
   }
 };
 
-char AArch64PostCoalescer::ID = 0;
+const char AArch64PostCoalescer::ID = 0;
 
 } // end anonymous namespace
 

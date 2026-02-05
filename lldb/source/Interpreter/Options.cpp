@@ -54,10 +54,10 @@ public:
   llvm::ArrayRef<DiagnosticDetail> GetDetails() const override {
     return m_details;
   }
-  static char ID;
+  static const char ID;
 };
 
-char OptionParseError::ID;
+const char OptionParseError::ID = 0;
 
 } // namespace lldb_private
 

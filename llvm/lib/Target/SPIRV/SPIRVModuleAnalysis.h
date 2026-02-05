@@ -219,7 +219,7 @@ using InstrTraces = std::set<InstrSignature>;
 using InstrGRegsMap = std::map<SmallVector<size_t>, unsigned>;
 
 struct SPIRVModuleAnalysis : public ModulePass {
-  static char ID;
+  static const char ID;
 
 public:
   SPIRVModuleAnalysis()

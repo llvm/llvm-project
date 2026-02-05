@@ -918,7 +918,7 @@ static bool runImpl(Function &F, const TargetLibraryInfo &TLI,
 namespace {
 class MergeICmpsLegacyPass : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   MergeICmpsLegacyPass() : FunctionPass(ID) {
     initializeMergeICmpsLegacyPassPass(*PassRegistry::getPassRegistry());
@@ -947,7 +947,7 @@ public:
 
 } // namespace
 
-char MergeICmpsLegacyPass::ID = 0;
+const char MergeICmpsLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(MergeICmpsLegacyPass, "mergeicmps",
                       "Merge contiguous icmps into a memcmp", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)

@@ -44,7 +44,7 @@ namespace {
 
 class RISCVVMV0Elimination : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   RISCVVMV0Elimination() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -64,7 +64,7 @@ public:
 
 } // namespace
 
-char RISCVVMV0Elimination::ID = 0;
+const char RISCVVMV0Elimination::ID = 0;
 
 INITIALIZE_PASS(RISCVVMV0Elimination, DEBUG_TYPE, "RISC-V VMV0 Elimination",
                 false, false)

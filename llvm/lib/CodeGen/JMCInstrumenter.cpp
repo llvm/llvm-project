@@ -45,11 +45,11 @@ using namespace llvm;
 static bool runImpl(Module &M);
 namespace {
 struct JMCInstrumenter : public ModulePass {
-  static char ID;
+  static const char ID;
   JMCInstrumenter() : ModulePass(ID) {}
   bool runOnModule(Module &M) override { return runImpl(M); }
 };
-char JMCInstrumenter::ID = 0;
+const char JMCInstrumenter::ID = 0;
 } // namespace
 
 PreservedAnalyses JMCInstrumenterPass::run(Module &M, ModuleAnalysisManager &) {

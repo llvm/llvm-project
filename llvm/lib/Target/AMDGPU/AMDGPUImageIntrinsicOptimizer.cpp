@@ -80,7 +80,7 @@ class AMDGPUImageIntrinsicOptimizer : public FunctionPass {
   const TargetMachine *TM;
 
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUImageIntrinsicOptimizer(const TargetMachine *TM = nullptr)
       : FunctionPass(ID), TM(TM) {}
@@ -93,7 +93,7 @@ public:
 INITIALIZE_PASS(AMDGPUImageIntrinsicOptimizer, DEBUG_TYPE,
                 "AMDGPU Image Intrinsic Optimizer", false, false)
 
-char AMDGPUImageIntrinsicOptimizer::ID = 0;
+const char AMDGPUImageIntrinsicOptimizer::ID = 0;
 
 void addInstToMergeableList(
     IntrinsicInst *II,

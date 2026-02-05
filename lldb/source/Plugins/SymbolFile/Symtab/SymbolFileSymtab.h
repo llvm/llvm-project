@@ -18,7 +18,7 @@
 
 class SymbolFileSymtab : public lldb_private::SymbolFileCommon {
   /// LLVM RTTI support.
-  static char ID;
+  static const char ID;
 
 public:
   /// LLVM RTTI support.

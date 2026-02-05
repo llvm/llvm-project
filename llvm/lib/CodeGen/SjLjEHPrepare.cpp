@@ -73,7 +73,7 @@ class SjLjEHPrepare : public FunctionPass {
   SjLjEHPrepareImpl Impl;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   explicit SjLjEHPrepare(const TargetMachine *TM = nullptr)
       : FunctionPass(ID), Impl(TM) {}
   bool doInitialization(Module &M) override { return Impl.doInitialization(M); }
@@ -94,7 +94,7 @@ PreservedAnalyses SjLjEHPreparePass::run(Function &F,
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
-char SjLjEHPrepare::ID = 0;
+const char SjLjEHPrepare::ID = 0;
 INITIALIZE_PASS(SjLjEHPrepare, DEBUG_TYPE, "Prepare SjLj exceptions",
                 false, false)
 

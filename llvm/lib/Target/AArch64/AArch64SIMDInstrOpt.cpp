@@ -66,7 +66,7 @@ STATISTIC(NumModifiedInstr,
 namespace {
 
 struct AArch64SIMDInstrOpt : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
 
   const AArch64InstrInfo *TII;
   MachineRegisterInfo *MRI;
@@ -203,7 +203,7 @@ struct AArch64SIMDInstrOpt : public MachineFunctionPass {
   }
 };
 
-char AArch64SIMDInstrOpt::ID = 0;
+const char AArch64SIMDInstrOpt::ID = 0;
 
 } // end anonymous namespace
 

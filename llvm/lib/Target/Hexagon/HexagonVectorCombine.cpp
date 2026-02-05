@@ -4056,7 +4056,7 @@ auto HexagonVectorCombine::getElementRange(IRBuilderBase &Builder, Value *Lo,
 namespace {
 class HexagonVectorCombineLegacy : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   HexagonVectorCombineLegacy() : FunctionPass(ID) {}
 
@@ -4090,7 +4090,7 @@ public:
 };
 } // namespace
 
-char HexagonVectorCombineLegacy::ID = 0;
+const char HexagonVectorCombineLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonVectorCombineLegacy, DEBUG_TYPE,
                       "Hexagon Vector Combine", false, false)

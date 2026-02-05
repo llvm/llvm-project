@@ -45,7 +45,7 @@ namespace {
 
   struct PPCCTRLoopsVerify : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     PPCCTRLoopsVerify() : MachineFunctionPass(ID) {
       initializePPCCTRLoopsVerifyPass(*PassRegistry::getPassRegistry());
@@ -62,7 +62,7 @@ namespace {
     MachineDominatorTree *MDT;
   };
 
-  char PPCCTRLoopsVerify::ID = 0;
+  const char PPCCTRLoopsVerify::ID = 0;
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(PPCCTRLoopsVerify, "ppc-ctr-loops-verify",

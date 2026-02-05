@@ -59,7 +59,7 @@ class UniformityInfoWrapperPass : public FunctionPass {
   UniformityInfo m_uniformityInfo;
 
 public:
-  static char ID;
+  static const char ID;
 
   UniformityInfoWrapperPass();
 

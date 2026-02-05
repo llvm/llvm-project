@@ -22,7 +22,7 @@ using namespace llvm;
 #define DEBUG_TYPE "loongarch-isel"
 #define PASS_NAME "LoongArch DAG->DAG Pattern Instruction Selection"
 
-char LoongArchDAGToDAGISelLegacy::ID;
+const char LoongArchDAGToDAGISelLegacy::ID = 0;
 
 LoongArchDAGToDAGISelLegacy::LoongArchDAGToDAGISelLegacy(
     LoongArchTargetMachine &TM, CodeGenOptLevel OptLevel)

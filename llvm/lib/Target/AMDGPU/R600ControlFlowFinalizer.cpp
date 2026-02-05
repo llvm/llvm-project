@@ -466,7 +466,7 @@ private:
   }
 
 public:
-  static char ID;
+  static const char ID;
 
   R600ControlFlowFinalizer() : MachineFunctionPass(ID) {}
 
@@ -678,9 +678,9 @@ INITIALIZE_PASS_BEGIN(R600ControlFlowFinalizer, DEBUG_TYPE,
 INITIALIZE_PASS_END(R600ControlFlowFinalizer, DEBUG_TYPE,
                     "R600 Control Flow Finalizer", false, false)
 
-char R600ControlFlowFinalizer::ID = 0;
+const char R600ControlFlowFinalizer::ID = 0;
 
-char &llvm::R600ControlFlowFinalizerID = R600ControlFlowFinalizer::ID;
+const char &llvm::R600ControlFlowFinalizerID = R600ControlFlowFinalizer::ID;
 
 FunctionPass *llvm::createR600ControlFlowFinalizer() {
   return new R600ControlFlowFinalizer();

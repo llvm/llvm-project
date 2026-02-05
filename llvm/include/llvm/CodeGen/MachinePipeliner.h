@@ -93,7 +93,7 @@ public:
   };
   LoopInfo LI;
 
-  static char ID;
+  static const char ID;
 
   MachinePipeliner() : MachineFunctionPass(ID) {}
 

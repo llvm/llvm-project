@@ -20,7 +20,7 @@
 namespace llvm {
 class CFIFixup : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   CFIFixup() : MachineFunctionPass(ID) {}
 

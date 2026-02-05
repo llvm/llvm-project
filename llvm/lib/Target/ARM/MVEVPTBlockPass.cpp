@@ -32,7 +32,7 @@ using namespace llvm;
 namespace {
 class MVEVPTBlock : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   const Thumb2InstrInfo *TII;
   const TargetRegisterInfo *TRI;
 
@@ -52,7 +52,7 @@ private:
   bool InsertVPTBlocks(MachineBasicBlock &MBB);
 };
 
-char MVEVPTBlock::ID = 0;
+const char MVEVPTBlock::ID = 0;
 
 } // end anonymous namespace
 

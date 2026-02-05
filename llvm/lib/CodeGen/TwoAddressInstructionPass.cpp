@@ -199,7 +199,7 @@ public:
 
 class TwoAddressInstructionLegacyPass : public MachineFunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   TwoAddressInstructionLegacyPass() : MachineFunctionPass(ID) {}
 
@@ -257,9 +257,10 @@ TwoAddressInstructionPass::run(MachineFunction &MF,
   return PA;
 }
 
-char TwoAddressInstructionLegacyPass::ID = 0;
+const char TwoAddressInstructionLegacyPass::ID = 0;
 
-char &llvm::TwoAddressInstructionPassID = TwoAddressInstructionLegacyPass::ID;
+const char &llvm::TwoAddressInstructionPassID =
+    TwoAddressInstructionLegacyPass::ID;
 
 INITIALIZE_PASS(TwoAddressInstructionLegacyPass, DEBUG_TYPE,
                 "Two-Address instruction pass", false, false)

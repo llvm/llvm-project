@@ -508,7 +508,7 @@ bool SLSHardeningInserter::hardenBLRs(MachineModuleInfo &MMI,
 namespace {
 class AArch64SLSHardening : public ThunkInserterPass<SLSHardeningInserter> {
 public:
-  static char ID;
+  static const char ID;
 
   AArch64SLSHardening() : ThunkInserterPass(ID) {}
 
@@ -517,7 +517,7 @@ public:
 
 } // end anonymous namespace
 
-char AArch64SLSHardening::ID = 0;
+const char AArch64SLSHardening::ID = 0;
 
 INITIALIZE_PASS(AArch64SLSHardening, "aarch64-sls-hardening",
                 AARCH64_SLS_HARDENING_NAME, false, false)

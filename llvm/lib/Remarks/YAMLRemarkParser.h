@@ -28,7 +28,7 @@ namespace remarks {
 
 class YAMLParseError : public ErrorInfo<YAMLParseError> {
 public:
-  static char ID;
+  static const char ID;
 
   YAMLParseError(StringRef Message, SourceMgr &SM, yaml::Stream &Stream,
                  yaml::Node &Node);

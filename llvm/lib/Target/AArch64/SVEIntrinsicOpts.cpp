@@ -43,7 +43,7 @@ using namespace llvm::PatternMatch;
 
 namespace {
 struct SVEIntrinsicOpts : public ModulePass {
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   SVEIntrinsicOpts() : ModulePass(ID) {}
 
   bool runOnModule(Module &M) override;
@@ -69,7 +69,7 @@ void SVEIntrinsicOpts::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
 }
 
-char SVEIntrinsicOpts::ID = 0;
+const char SVEIntrinsicOpts::ID = 0;
 static const char *name = "SVE intrinsics optimizations";
 INITIALIZE_PASS_BEGIN(SVEIntrinsicOpts, DEBUG_TYPE, name, false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass);

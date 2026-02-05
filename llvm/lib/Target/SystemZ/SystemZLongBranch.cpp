@@ -133,7 +133,7 @@ struct BlockPosition {
 
 class SystemZLongBranch : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SystemZLongBranch() : MachineFunctionPass(ID) {}
 
@@ -163,7 +163,7 @@ private:
   SmallVector<TerminatorInfo, 16> Terminators;
 };
 
-char SystemZLongBranch::ID = 0;
+const char SystemZLongBranch::ID = 0;
 
 const uint64_t MaxBackwardRange = 0x10000;
 const uint64_t MaxForwardRange = 0xfffe;

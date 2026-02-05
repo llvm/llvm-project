@@ -45,7 +45,7 @@ uint16_t fold_64_to_16(const uint64_t Value) {
 INITIALIZE_PASS(MachineBlockHashInfo, "machine-block-hash",
                 "Machine Block Hash Analysis", true, true)
 
-char MachineBlockHashInfo::ID = 0;
+const char MachineBlockHashInfo::ID = 0;
 
 MachineBlockHashInfo::MachineBlockHashInfo() : MachineFunctionPass(ID) {}
 

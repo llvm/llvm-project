@@ -200,7 +200,7 @@ namespace {
 
   class HexagonCallFrameInformation : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     HexagonCallFrameInformation() : MachineFunctionPass(ID) {}
 
@@ -211,7 +211,7 @@ namespace {
     }
   };
 
-  char HexagonCallFrameInformation::ID = 0;
+  const char HexagonCallFrameInformation::ID = 0;
 
 } // end anonymous namespace
 

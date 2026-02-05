@@ -44,7 +44,7 @@ class TestModuleFileExtension
   };
 
 public:
-  static char ID;
+  static const char ID;
 
   TestModuleFileExtension(StringRef BlockName, unsigned MajorVersion,
                           unsigned MinorVersion, bool Hashed,

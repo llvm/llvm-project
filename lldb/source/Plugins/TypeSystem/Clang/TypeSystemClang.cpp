@@ -363,7 +363,7 @@ static void SetMemberOwningModule(clang::Decl *member,
     }
 }
 
-char TypeSystemClang::ID;
+const char TypeSystemClang::ID = 0;
 
 bool TypeSystemClang::IsOperator(llvm::StringRef name,
                                  clang::OverloadedOperatorKind &op_kind) {
@@ -9732,7 +9732,7 @@ public:
 };
 } // namespace
 
-char ScratchTypeSystemClang::ID;
+const char ScratchTypeSystemClang::ID = 0;
 const std::nullopt_t ScratchTypeSystemClang::DefaultAST = std::nullopt;
 
 ScratchTypeSystemClang::ScratchTypeSystemClang(Target &target,

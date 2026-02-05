@@ -267,7 +267,7 @@ public:
 
 class AMDGPUCodeGenPrepare : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
   AMDGPUCodeGenPrepare() : FunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
@@ -2293,7 +2293,7 @@ bool AMDGPUCodeGenPrepareImpl::visitMbcntHi(IntrinsicInst &I) const {
   return tryReplaceWithWorkitemId(I, Wave);
 }
 
-char AMDGPUCodeGenPrepare::ID = 0;
+const char AMDGPUCodeGenPrepare::ID = 0;
 
 FunctionPass *llvm::createAMDGPUCodeGenPreparePass() {
   return new AMDGPUCodeGenPrepare();

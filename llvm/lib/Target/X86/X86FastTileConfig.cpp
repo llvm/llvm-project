@@ -71,12 +71,12 @@ public:
     return MachineFunctionProperties().setNoPHIs();
   }
 
-  static char ID;
+  static const char ID;
 };
 
 } // end anonymous namespace
 
-char X86FastTileConfigLegacy::ID = 0;
+const char X86FastTileConfigLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(X86FastTileConfigLegacy, DEBUG_TYPE,
                       "Fast Tile Register Configure", false, false)

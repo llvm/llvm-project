@@ -165,7 +165,7 @@ public:
     return false;
   }
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceBindingWrapperPass>();
@@ -174,7 +174,7 @@ public:
   }
 };
 
-char DXILResourceImplicitBindingLegacy::ID = 0;
+const char DXILResourceImplicitBindingLegacy::ID = 0;
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(DXILResourceImplicitBindingLegacy, DEBUG_TYPE,

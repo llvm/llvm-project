@@ -159,7 +159,7 @@ private:
 
 class StackSlotColoringLegacy : public MachineFunctionPass {
 public:
-  static char ID; // Pass identification
+  static const char ID; // Pass identification
 
   StackSlotColoringLegacy() : MachineFunctionPass(ID) {}
 
@@ -187,9 +187,9 @@ public:
 
 } // end anonymous namespace
 
-char StackSlotColoringLegacy::ID = 0;
+const char StackSlotColoringLegacy::ID = 0;
 
-char &llvm::StackSlotColoringID = StackSlotColoringLegacy::ID;
+const char &llvm::StackSlotColoringID = StackSlotColoringLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(StackSlotColoringLegacy, DEBUG_TYPE,
                       "Stack Slot Coloring", false, false)

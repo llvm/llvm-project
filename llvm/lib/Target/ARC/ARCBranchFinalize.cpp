@@ -37,7 +37,7 @@ namespace {
 
 class ARCBranchFinalize : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   ARCBranchFinalize() : MachineFunctionPass(ID) {
     initializeARCBranchFinalizePass(*PassRegistry::getPassRegistry());
@@ -55,7 +55,7 @@ private:
   const ARCInstrInfo *TII{nullptr};
 };
 
-char ARCBranchFinalize::ID = 0;
+const char ARCBranchFinalize::ID = 0;
 
 } // end anonymous namespace
 

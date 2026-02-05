@@ -341,7 +341,7 @@ class ReachingDefInfoWrapperPass : public MachineFunctionPass {
   ReachingDefInfo RDI;
 
 public:
-  static char ID;
+  static const char ID;
 
   ReachingDefInfoWrapperPass();
 

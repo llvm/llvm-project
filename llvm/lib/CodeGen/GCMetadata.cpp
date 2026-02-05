@@ -86,7 +86,7 @@ bool GCFunctionInfo::invalidate(Function &F, const PreservedAnalyses &PA,
 
 // -----------------------------------------------------------------------------
 
-char GCModuleInfo::ID = 0;
+const char GCModuleInfo::ID = 0;
 
 GCModuleInfo::GCModuleInfo() : ImmutablePass(ID) {}
 

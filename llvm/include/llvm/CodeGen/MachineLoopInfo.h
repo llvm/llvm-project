@@ -162,7 +162,7 @@ class LLVM_ABI MachineLoopInfoWrapperPass : public MachineFunctionPass {
   MachineLoopInfo LI;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   MachineLoopInfoWrapperPass();
 

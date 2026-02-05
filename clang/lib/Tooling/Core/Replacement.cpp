@@ -186,7 +186,7 @@ std::string ReplacementError::message() const {
   return Message;
 }
 
-char ReplacementError::ID = 0;
+const char ReplacementError::ID = 0;
 
 Replacements Replacements::getCanonicalReplacements() const {
   std::vector<Replacement> NewReplaces;

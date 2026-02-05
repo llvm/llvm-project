@@ -30,7 +30,7 @@ class PPCExpandAtomicPseudo : public MachineFunctionPass {
 public:
   const PPCInstrInfo *TII;
   const PPCRegisterInfo *TRI;
-  static char ID;
+  static const char ID;
 
   PPCExpandAtomicPseudo() : MachineFunctionPass(ID) {}
 
@@ -293,7 +293,7 @@ bool PPCExpandAtomicPseudo::expandAtomicCmpSwap128(
 INITIALIZE_PASS(PPCExpandAtomicPseudo, DEBUG_TYPE, "PowerPC Expand Atomic",
                 false, false)
 
-char PPCExpandAtomicPseudo::ID = 0;
+const char PPCExpandAtomicPseudo::ID = 0;
 FunctionPass *llvm::createPPCExpandAtomicPseudoPass() {
   return new PPCExpandAtomicPseudo();
 }

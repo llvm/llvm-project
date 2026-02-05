@@ -27,7 +27,7 @@ class GCNTargetMachine;
 
 struct AMDGPUResourceUsageAnalysisImpl {
 public:
-  static char ID;
+  static const char ID;
   // Track resource usage for callee functions.
   struct SIFunctionResourceInfo {
     // Track the number of explicitly used VGPRs. Special registers reserved at
@@ -58,7 +58,7 @@ struct AMDGPUResourceUsageAnalysisWrapperPass : public MachineFunctionPass {
   FunctionResourceInfo ResourceInfo;
 
 public:
-  static char ID;
+  static const char ID;
   AMDGPUResourceUsageAnalysisWrapperPass() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;

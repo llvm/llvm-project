@@ -242,7 +242,7 @@ void BPFAsmPrinter::emitJumpTableInfo() {
   }
 }
 
-char BPFAsmPrinter::ID = 0;
+const char BPFAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(BPFAsmPrinter, "bpf-asm-printer", "BPF Assembly Printer", false,
                 false)

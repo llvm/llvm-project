@@ -34,7 +34,7 @@ static cl::opt<unsigned> VExtractThreshold(
 namespace {
   class HexagonVExtract : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
     HexagonVExtract() : MachineFunctionPass(ID) {}
 
     StringRef getPassName() const override {
@@ -53,7 +53,7 @@ namespace {
                          MachineRegisterInfo &MRI);
   };
 
-  char HexagonVExtract::ID = 0;
+  const char HexagonVExtract::ID = 0;
 }
 
 INITIALIZE_PASS(HexagonVExtract, "hexagon-vextract",

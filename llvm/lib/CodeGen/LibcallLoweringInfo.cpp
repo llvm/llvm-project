@@ -55,7 +55,7 @@ INITIALIZE_PASS_DEPENDENCY(RuntimeLibraryInfoWrapper)
 INITIALIZE_PASS_END(LibcallLoweringInfoWrapper, "libcall-lowering-info",
                     "Library Function Lowering Analysis", false, true)
 
-char LibcallLoweringInfoWrapper::ID = 0;
+const char LibcallLoweringInfoWrapper::ID = 0;
 
 LibcallLoweringInfoWrapper::LibcallLoweringInfoWrapper() : ImmutablePass(ID) {}
 

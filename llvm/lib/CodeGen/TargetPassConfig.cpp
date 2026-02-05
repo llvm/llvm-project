@@ -386,7 +386,7 @@ static std::string getFSRemappingFile(const TargetMachine *TM) {
 
 INITIALIZE_PASS(TargetPassConfig, "targetpassconfig",
                 "Target Pass Configuration", false, false)
-char TargetPassConfig::ID = 0;
+const char TargetPassConfig::ID = 0;
 
 namespace {
 

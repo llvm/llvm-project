@@ -202,7 +202,7 @@ public:
 
   RegAllocEvictionAdvisorAnalysisLegacy(AdvisorMode Mode)
       : ImmutablePass(ID), Mode(Mode) {};
-  static char ID;
+  static const char ID;
 
   /// Get an advisor for the given context (i.e. machine function, etc)
   RegAllocEvictionAdvisorProvider &getProvider() { return *Provider; }

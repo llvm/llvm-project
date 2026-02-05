@@ -28,7 +28,7 @@ namespace {
 
 struct BPFMIPreEmitChecking : public MachineFunctionPass {
 
-  static char ID;
+  static const char ID;
   MachineFunction *MF;
   const TargetRegisterInfo *TRI;
 
@@ -173,7 +173,7 @@ void BPFMIPreEmitChecking::processAtomicInsts() {
 INITIALIZE_PASS(BPFMIPreEmitChecking, "bpf-mi-pemit-checking",
                 "BPF PreEmit Checking", false, false)
 
-char BPFMIPreEmitChecking::ID = 0;
+const char BPFMIPreEmitChecking::ID = 0;
 FunctionPass *llvm::createBPFMIPreEmitCheckingPass() {
   return new BPFMIPreEmitChecking();
 }

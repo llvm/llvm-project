@@ -43,7 +43,7 @@ public:
   void log(raw_ostream &OS) const override;
 
   // Used by ErrorInfo::classID.
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
 
   OutputError(const Twine &OutputPath, std::error_code EC)
       : ErrorInfo<OutputError, ECError>(EC), OutputPath(OutputPath.str()) {
@@ -78,7 +78,7 @@ public:
   void log(raw_ostream &OS) const override;
 
   // Used by ErrorInfo::classID.
-  static char ID;
+  static const char ID;
 
   OutputConfigError(OutputConfig Config, const Twine &OutputPath)
       : ErrorInfo<OutputConfigError, OutputError>(
@@ -99,7 +99,7 @@ public:
   void log(raw_ostream &OS) const override;
 
   // Used by ErrorInfo::classID.
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
 
   TempFileOutputError(const Twine &TempPath, const Twine &OutputPath,
                       std::error_code EC)

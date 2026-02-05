@@ -194,9 +194,9 @@ struct DebugifyMachineModule : public ModulePass {
     AU.setPreservesCFG();
   }
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 };
-char DebugifyMachineModule::ID = 0;
+const char DebugifyMachineModule::ID = 0;
 
 } // end anonymous namespace
 

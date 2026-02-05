@@ -30,7 +30,7 @@ namespace ARM {
 
 class LLVM_LIBRARY_VISIBILITY ARMAsmPrinter : public AsmPrinter {
 public:
-  static char ID;
+  static const char ID;
 
 private:
   /// AFI - Keep a pointer to ARMFunctionInfo for the current

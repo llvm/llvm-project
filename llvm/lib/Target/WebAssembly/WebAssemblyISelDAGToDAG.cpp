@@ -84,7 +84,7 @@ private:
 
 class WebAssemblyDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   explicit WebAssemblyDAGToDAGISelLegacy(WebAssemblyTargetMachine &TM,
                                          CodeGenOptLevel OptLevel)
       : SelectionDAGISelLegacy(
@@ -92,7 +92,7 @@ public:
 };
 } // end anonymous namespace
 
-char WebAssemblyDAGToDAGISelLegacy::ID;
+const char WebAssemblyDAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(WebAssemblyDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false,
                 false)

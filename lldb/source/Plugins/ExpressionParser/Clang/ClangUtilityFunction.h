@@ -33,7 +33,7 @@ namespace lldb_private {
 /// to call later on.
 class ClangUtilityFunction : public UtilityFunction {
   // LLVM RTTI support
-  static char ID;
+  static const char ID;
 
 public:
   bool isA(const void *ClassID) const override {
@@ -77,7 +77,7 @@ private:
                                  ClangExpressionHelper> {
   public:
     // LLVM RTTI support
-    static char ID;
+    static const char ID;
 
     /// Return the object that the parser should use when resolving external
     /// values.  May be NULL if everything should be self-contained.

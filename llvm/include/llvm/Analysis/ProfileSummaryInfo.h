@@ -359,7 +359,7 @@ class LLVM_ABI ProfileSummaryInfoWrapperPass : public ImmutablePass {
   std::unique_ptr<ProfileSummaryInfo> PSI;
 
 public:
-  static char ID;
+  static const char ID;
   ProfileSummaryInfoWrapperPass();
 
   ProfileSummaryInfo &getPSI() { return *PSI; }

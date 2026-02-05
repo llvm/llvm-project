@@ -49,7 +49,7 @@ struct ExternalVTableUse {
 /// analysis.
 class ExternalSemaSource : public ExternalASTSource {
   /// LLVM-style RTTI.
-  static char ID;
+  static const char ID;
 
 public:
   ExternalSemaSource() = default;

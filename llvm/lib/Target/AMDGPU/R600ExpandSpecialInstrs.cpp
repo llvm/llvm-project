@@ -34,7 +34,7 @@ private:
                       R600::OpName Op);
 
 public:
-  static char ID;
+  static const char ID;
 
   R600ExpandSpecialInstrsPass() : MachineFunctionPass(ID) {}
 
@@ -52,9 +52,10 @@ INITIALIZE_PASS_BEGIN(R600ExpandSpecialInstrsPass, DEBUG_TYPE,
 INITIALIZE_PASS_END(R600ExpandSpecialInstrsPass, DEBUG_TYPE,
                     "R600ExpandSpecialInstrs", false, false)
 
-char R600ExpandSpecialInstrsPass::ID = 0;
+const char R600ExpandSpecialInstrsPass::ID = 0;
 
-char &llvm::R600ExpandSpecialInstrsPassID = R600ExpandSpecialInstrsPass::ID;
+const char &llvm::R600ExpandSpecialInstrsPassID =
+    R600ExpandSpecialInstrsPass::ID;
 
 FunctionPass *llvm::createR600ExpandSpecialInstrsPass() {
   return new R600ExpandSpecialInstrsPass();

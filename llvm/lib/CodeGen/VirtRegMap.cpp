@@ -57,7 +57,7 @@ STATISTIC(NumIdCopies,   "Number of identity moves eliminated after rewriting");
 //  VirtRegMap implementation
 //===----------------------------------------------------------------------===//
 
-char VirtRegMapWrapperLegacy::ID = 0;
+const char VirtRegMapWrapperLegacy::ID = 0;
 
 INITIALIZE_PASS(VirtRegMapWrapperLegacy, "virtregmap", "Virtual Register Map",
                 false, true)
@@ -233,7 +233,7 @@ public:
 
 class VirtRegRewriterLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   bool ClearVirtRegs;
   VirtRegRewriterLegacy(bool ClearVirtRegs = true)
       : MachineFunctionPass(ID), ClearVirtRegs(ClearVirtRegs) {}
@@ -253,9 +253,9 @@ public:
 
 } // end anonymous namespace
 
-char VirtRegRewriterLegacy::ID = 0;
+const char VirtRegRewriterLegacy::ID = 0;
 
-char &llvm::VirtRegRewriterID = VirtRegRewriterLegacy::ID;
+const char &llvm::VirtRegRewriterID = VirtRegRewriterLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(VirtRegRewriterLegacy, "virtregrewriter",
                       "Virtual Register Rewriter", false, false)

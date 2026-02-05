@@ -195,7 +195,7 @@ class VirtRegMapWrapperLegacy : public MachineFunctionPass {
   VirtRegMap VRM;
 
 public:
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
 
   VirtRegMapWrapperLegacy() : MachineFunctionPass(ID) {}
 

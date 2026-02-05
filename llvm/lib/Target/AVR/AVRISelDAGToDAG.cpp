@@ -60,7 +60,7 @@ private:
 
 class AVRDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   AVRDAGToDAGISelLegacy(AVRTargetMachine &TM, CodeGenOptLevel OptLevel)
       : SelectionDAGISelLegacy(
             ID, std::make_unique<AVRDAGToDAGISel>(TM, OptLevel)) {}
@@ -68,7 +68,7 @@ public:
 
 } // namespace
 
-char AVRDAGToDAGISelLegacy::ID = 0;
+const char AVRDAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(AVRDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 

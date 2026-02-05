@@ -59,8 +59,8 @@ std::string _object_error_category::message(int EV) const {
 }
 
 void BinaryError::anchor() {}
-char BinaryError::ID = 0;
-char GenericBinaryError::ID = 0;
+const char BinaryError::ID = 0;
+const char GenericBinaryError::ID = 0;
 
 GenericBinaryError::GenericBinaryError(const Twine &Msg) : Msg(Msg.str()) {}
 

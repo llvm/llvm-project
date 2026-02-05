@@ -35,7 +35,7 @@ namespace orc {
 /// Represents an abstract task for ORC to run.
 class LLVM_ABI Task : public RTTIExtends<Task, RTTIRoot> {
 public:
-  static char ID;
+  static const char ID;
 
   ~Task() override = default;
 
@@ -52,7 +52,7 @@ private:
 /// Base class for generic tasks.
 class GenericNamedTask : public RTTIExtends<GenericNamedTask, Task> {
 public:
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
   LLVM_ABI static const char *DefaultDescription;
 };
 
@@ -97,7 +97,7 @@ makeGenericNamedTask(FnT &&Fn, const char *Desc = nullptr) {
 /// lookup.
 class LLVM_ABI IdleTask : public RTTIExtends<IdleTask, Task> {
 public:
-  static char ID;
+  static const char ID;
 
 private:
   void anchor() override;

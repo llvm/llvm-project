@@ -66,7 +66,7 @@ private:
 
 class RegUsageInfoPropagationLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   RegUsageInfoPropagationLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return RUIP_NAME; }
@@ -88,7 +88,7 @@ INITIALIZE_PASS_DEPENDENCY(PhysicalRegisterUsageInfoWrapperLegacy)
 INITIALIZE_PASS_END(RegUsageInfoPropagationLegacy, "reg-usage-propagation",
                     RUIP_NAME, false, false)
 
-char RegUsageInfoPropagationLegacy::ID = 0;
+const char RegUsageInfoPropagationLegacy::ID = 0;
 
 // Assumes call instructions have a single reference to a function.
 static const Function *findCalledFunction(const Module &M,

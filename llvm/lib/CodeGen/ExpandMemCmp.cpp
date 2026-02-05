@@ -907,7 +907,7 @@ static PreservedAnalyses runImpl(Function &F, const TargetLibraryInfo *TLI,
 
 class ExpandMemCmpLegacyPass : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   ExpandMemCmpLegacyPass() : FunctionPass(ID) {}
 
@@ -1013,7 +1013,7 @@ PreservedAnalyses ExpandMemCmpPass::run(Function &F,
   return runImpl(F, &TLI, &TTI, TL, PSI, BFI, DT);
 }
 
-char ExpandMemCmpLegacyPass::ID = 0;
+const char ExpandMemCmpLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ExpandMemCmpLegacyPass, DEBUG_TYPE,
                       "Expand memcmp() to load/stores", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)

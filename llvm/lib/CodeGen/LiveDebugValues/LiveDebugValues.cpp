@@ -66,7 +66,7 @@ namespace {
 /// base class.
 class LiveDebugValuesLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   LiveDebugValuesLegacy();
   ~LiveDebugValuesLegacy() override = default;
@@ -93,9 +93,9 @@ private:
 };
 } // namespace
 
-char LiveDebugValuesLegacy::ID = 0;
+const char LiveDebugValuesLegacy::ID = 0;
 
-char &llvm::LiveDebugValuesID = LiveDebugValuesLegacy::ID;
+const char &llvm::LiveDebugValuesID = LiveDebugValuesLegacy::ID;
 
 INITIALIZE_PASS(LiveDebugValuesLegacy, DEBUG_TYPE, "Live DEBUG_VALUE analysis",
                 false, false)

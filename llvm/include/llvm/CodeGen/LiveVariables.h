@@ -324,7 +324,7 @@ class LLVM_ABI LiveVariablesWrapperPass : public MachineFunctionPass {
   LiveVariables LV;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   LiveVariablesWrapperPass() : MachineFunctionPass(ID) {}
 

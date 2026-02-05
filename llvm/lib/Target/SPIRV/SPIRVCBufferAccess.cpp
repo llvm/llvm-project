@@ -138,9 +138,9 @@ public:
   StringRef getPassName() const override { return "SPIRV CBuffer Access"; }
   SPIRVCBufferAccessLegacy() : ModulePass(ID) {}
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 };
-char SPIRVCBufferAccessLegacy::ID = 0;
+const char SPIRVCBufferAccessLegacy::ID = 0;
 } // end anonymous namespace
 
 INITIALIZE_PASS(SPIRVCBufferAccessLegacy, DEBUG_TYPE, "SPIRV CBuffer Access",

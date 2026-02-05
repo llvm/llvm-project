@@ -42,7 +42,7 @@ template <typename T> class OwningBinary;
 /// support.
 class LLVM_ABI RuntimeDyldError : public ErrorInfo<RuntimeDyldError> {
 public:
-  static char ID;
+  static const char ID;
 
   RuntimeDyldError(std::string ErrMsg) : ErrMsg(std::move(ErrMsg)) {}
 

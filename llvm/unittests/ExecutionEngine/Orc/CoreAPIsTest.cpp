@@ -26,11 +26,11 @@ namespace {
 
 class CustomError : public ErrorInfo<CustomError> {
 public:
-  static char ID;
+  static const char ID;
   void log(raw_ostream &OS) const override { OS << "CustomError"; }
   std::error_code convertToErrorCode() const override { return {}; }
 };
-char CustomError::ID = 0;
+const char CustomError::ID = 0;
 
 TEST_F(CoreAPIsStandardTest, ErrorReporter) {
   // Check that errors reported via ExecutionSession::reportError are sent to

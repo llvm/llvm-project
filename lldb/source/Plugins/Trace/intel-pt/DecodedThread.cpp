@@ -17,7 +17,7 @@ using namespace lldb_private;
 using namespace lldb_private::trace_intel_pt;
 using namespace llvm;
 
-char IntelPTError::ID;
+const char IntelPTError::ID = 0;
 
 IntelPTError::IntelPTError(int libipt_error_code, lldb::addr_t address)
     : m_libipt_error_code(libipt_error_code), m_address(address) {

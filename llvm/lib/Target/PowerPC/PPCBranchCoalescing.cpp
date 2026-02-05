@@ -158,7 +158,7 @@ class PPCBranchCoalescing : public MachineFunctionPass {
                           CoalescingCandidateInfo &TargetRegion) const;
 
 public:
-  static char ID;
+  static const char ID;
 
   PPCBranchCoalescing() : MachineFunctionPass(ID) {}
 
@@ -184,7 +184,7 @@ public:
 };
 } // End anonymous namespace.
 
-char PPCBranchCoalescing::ID = 0;
+const char PPCBranchCoalescing::ID = 0;
 /// createPPCBranchCoalescingPass - returns an instance of the Branch Coalescing
 /// Pass
 FunctionPass *llvm::createPPCBranchCoalescingPass() {

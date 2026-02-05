@@ -42,7 +42,7 @@ RuntimeLibraryInfoWrapper::RuntimeLibraryInfoWrapper(
     : ImmutablePass(ID), RTLCI(std::in_place, TT, ExceptionModel, FloatABI,
                                EABIVersion, ABIName, VecLib) {}
 
-char RuntimeLibraryInfoWrapper::ID = 0;
+const char RuntimeLibraryInfoWrapper::ID = 0;
 
 ModulePass *llvm::createRuntimeLibraryInfoWrapperPass() {
   return new RuntimeLibraryInfoWrapper();

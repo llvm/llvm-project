@@ -32,7 +32,7 @@ namespace {
 /// actual AVR instructions.
 class AVRExpandPseudo : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AVRExpandPseudo() : MachineFunctionPass(ID) {}
 
@@ -103,7 +103,7 @@ private:
   bool expandROLBRd(Block &MBB, BlockIt MBBI);
 };
 
-char AVRExpandPseudo::ID = 0;
+const char AVRExpandPseudo::ID = 0;
 
 bool AVRExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
   bool Modified = false;

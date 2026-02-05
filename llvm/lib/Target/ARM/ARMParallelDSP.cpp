@@ -233,7 +233,7 @@ namespace {
     bool MatchSMLAD(Function &F);
 
   public:
-    static char ID;
+    static const char ID;
 
     ARMParallelDSP() : FunctionPass(ID) { }
 
@@ -809,7 +809,7 @@ Pass *llvm::createARMParallelDSPPass() {
   return new ARMParallelDSP();
 }
 
-char ARMParallelDSP::ID = 0;
+const char ARMParallelDSP::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ARMParallelDSP, "arm-parallel-dsp",
                 "Transform functions to use DSP intrinsics", false, false)

@@ -1661,7 +1661,7 @@ void ASTReader::Error(unsigned DiagID, StringRef Arg1, StringRef Arg2,
 namespace {
 struct AlreadyReportedDiagnosticError
     : llvm::ErrorInfo<AlreadyReportedDiagnosticError> {
-  static char ID;
+  static const char ID;
 
   void log(raw_ostream &OS) const override {
     llvm_unreachable("reporting an already-reported diagnostic error");
@@ -1672,7 +1672,7 @@ struct AlreadyReportedDiagnosticError
   }
 };
 
-char AlreadyReportedDiagnosticError::ID = 0;
+const char AlreadyReportedDiagnosticError::ID = 0;
 } // namespace
 
 void ASTReader::Error(llvm::Error &&Err) const {

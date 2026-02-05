@@ -169,14 +169,14 @@ class WebAssemblyCFGStackify final : public MachineFunctionPass {
   void unregisterScope(MachineInstr *Begin);
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyCFGStackify() : MachineFunctionPass(ID) {}
   ~WebAssemblyCFGStackify() override { releaseMemory(); }
   void releaseMemory() override;
 };
 } // end anonymous namespace
 
-char WebAssemblyCFGStackify::ID = 0;
+const char WebAssemblyCFGStackify::ID = 0;
 INITIALIZE_PASS(
     WebAssemblyCFGStackify, DEBUG_TYPE,
     "Insert BLOCK/LOOP/TRY/TRY_TABLE markers for WebAssembly scopes", false,

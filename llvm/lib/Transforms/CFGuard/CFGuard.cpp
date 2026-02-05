@@ -159,7 +159,7 @@ class CFGuard : public FunctionPass {
   CFGuardImpl Impl;
 
 public:
-  static char ID;
+  static const char ID;
 
   // Default constructor required for the INITIALIZE_PASS macro.
   CFGuard(CFGuardImpl::Mechanism M) : FunctionPass(ID), Impl(M) {}
@@ -300,7 +300,7 @@ PreservedAnalyses CFGuardPass::run(Function &F, FunctionAnalysisManager &FAM) {
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
-char CFGuard::ID = 0;
+const char CFGuard::ID = 0;
 INITIALIZE_PASS(CFGuard, "CFGuard", "CFGuard", false, false)
 
 FunctionPass *llvm::createCFGuardCheckPass() {

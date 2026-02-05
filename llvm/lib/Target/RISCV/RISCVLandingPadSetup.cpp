@@ -28,7 +28,7 @@ namespace {
 
 class RISCVLandingPadSetup : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   RISCVLandingPadSetup() : MachineFunctionPass(ID) {}
 
@@ -81,7 +81,7 @@ bool RISCVLandingPadSetup::runOnMachineFunction(MachineFunction &MF) {
 
 INITIALIZE_PASS(RISCVLandingPadSetup, DEBUG_TYPE, PASS_NAME, false, false)
 
-char RISCVLandingPadSetup::ID = 0;
+const char RISCVLandingPadSetup::ID = 0;
 
 FunctionPass *llvm::createRISCVLandingPadSetupPass() {
   return new RISCVLandingPadSetup();

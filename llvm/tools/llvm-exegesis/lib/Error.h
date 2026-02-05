@@ -25,7 +25,7 @@ public:
 // A class representing failures that happened during clustering calculations.
 class ClusteringError : public ErrorInfo<ClusteringError> {
 public:
-  static char ID;
+  static const char ID;
   ClusteringError(const Twine &S) : Msg(S.str()) {}
 
   void log(raw_ostream &OS) const override;
@@ -42,7 +42,7 @@ private:
 // halting the program, the errors are reported in the output.
 class SnippetExecutionFailure : public ErrorInfo<SnippetExecutionFailure> {
 public:
-  static char ID;
+  static const char ID;
 
   std::error_code convertToErrorCode() const override;
 };
@@ -51,7 +51,7 @@ public:
 // snippet execution.
 class SnippetSegmentationFault : public SnippetExecutionFailure {
 public:
-  static char ID;
+  static const char ID;
   SnippetSegmentationFault(uintptr_t SegFaultAddress)
       : Address(SegFaultAddress) {};
 
@@ -67,7 +67,7 @@ private:
 // snippet execution.
 class SnippetSignal : public SnippetExecutionFailure {
 public:
-  static char ID;
+  static const char ID;
   SnippetSignal(int Signal) : SignalNumber(Signal){};
 
   void log(raw_ostream &OS) const override;
@@ -80,7 +80,7 @@ private:
 // scheduled, most likely due to perf counter contention.
 struct PerfCounterNotFullyEnabled
     : public ErrorInfo<PerfCounterNotFullyEnabled> {
-  static char ID;
+  static const char ID;
   PerfCounterNotFullyEnabled() = default;
 
   void log(raw_ostream &OS) const override;

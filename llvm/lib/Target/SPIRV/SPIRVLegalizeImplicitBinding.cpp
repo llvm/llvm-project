@@ -30,7 +30,7 @@ using namespace llvm;
 namespace {
 class SPIRVLegalizeImplicitBinding : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
   SPIRVLegalizeImplicitBinding() : ModulePass(ID) {}
   StringRef getPassName() const override {
     return "SPIRV Legalize Implicit Binding";
@@ -214,7 +214,7 @@ bool SPIRVLegalizeImplicitBinding::runOnModule(Module &M) {
 }
 } // namespace
 
-char SPIRVLegalizeImplicitBinding::ID = 0;
+const char SPIRVLegalizeImplicitBinding::ID = 0;
 
 INITIALIZE_PASS(SPIRVLegalizeImplicitBinding, "legalize-spirv-implicit-binding",
                 "Legalize SPIR-V implicit bindings", false, false)

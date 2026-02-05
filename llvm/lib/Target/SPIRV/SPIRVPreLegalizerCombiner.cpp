@@ -93,7 +93,7 @@ bool SPIRVPreLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
 
 class SPIRVPreLegalizerCombiner : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SPIRVPreLegalizerCombiner();
 
@@ -155,7 +155,7 @@ bool SPIRVPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   return Impl.combineMachineInstrs();
 }
 
-char SPIRVPreLegalizerCombiner::ID = 0;
+const char SPIRVPreLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(SPIRVPreLegalizerCombiner, DEBUG_TYPE,
                       "Combine SPIRV machine instrs before legalization", false,
                       false)

@@ -141,7 +141,7 @@ struct AlwaysInlinerLegacyPass : public ModulePass {
                             GetAssumptionCache, GetAAR);
   }
 
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
@@ -152,7 +152,7 @@ struct AlwaysInlinerLegacyPass : public ModulePass {
 
 } // namespace
 
-char AlwaysInlinerLegacyPass::ID = 0;
+const char AlwaysInlinerLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(AlwaysInlinerLegacyPass, "always-inline",
                       "Inliner for always_inline functions", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)

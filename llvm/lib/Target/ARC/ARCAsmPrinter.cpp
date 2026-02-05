@@ -35,7 +35,7 @@ class ARCAsmPrinter : public AsmPrinter {
   ARCMCInstLower MCInstLowering;
 
 public:
-  static char ID;
+  static const char ID;
 
   explicit ARCAsmPrinter(TargetMachine &TM,
                          std::unique_ptr<MCStreamer> Streamer)
@@ -74,7 +74,7 @@ bool ARCAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   return AsmPrinter::runOnMachineFunction(MF);
 }
 
-char ARCAsmPrinter::ID = 0;
+const char ARCAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(ARCAsmPrinter, "arc-asm-printer", "ARC Assmebly Printer", false,
                 false)

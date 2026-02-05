@@ -157,12 +157,12 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   /// Pass identification, replacement for typeid.
-  static char ID;
+  static const char ID;
 };
 
 } // end anonymous namespace
 
-char X86CmovConversionLegacy::ID = 0;
+const char X86CmovConversionLegacy::ID = 0;
 
 void X86CmovConversionLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);

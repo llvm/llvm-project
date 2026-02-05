@@ -1960,7 +1960,7 @@ void NVPTXAsmPrinter::printMemOperand(const MachineInstr *MI, unsigned OpNum,
   }
 }
 
-char NVPTXAsmPrinter::ID = 0;
+const char NVPTXAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(NVPTXAsmPrinter, "nvptx-asm-printer", "NVPTX Assembly Printer",
                 false, false)

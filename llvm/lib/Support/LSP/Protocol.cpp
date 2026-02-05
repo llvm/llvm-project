@@ -41,7 +41,7 @@ static bool mapOptOrNull(const llvm::json::Value &Params,
 // LSPError
 //===----------------------------------------------------------------------===//
 
-char LSPError::ID;
+const char LSPError::ID = 0;
 
 //===----------------------------------------------------------------------===//
 // URIForFile

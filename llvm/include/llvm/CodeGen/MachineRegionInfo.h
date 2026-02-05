@@ -86,7 +86,7 @@ class MachineRegionInfoPass : public MachineFunctionPass {
   MachineRegionInfo RI;
 
 public:
-  static char ID;
+  static const char ID;
 
   explicit MachineRegionInfoPass();
   ~MachineRegionInfoPass() override;

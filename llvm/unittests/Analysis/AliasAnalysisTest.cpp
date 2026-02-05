@@ -32,7 +32,7 @@ void initializeTestCustomAAWrapperPassPass(PassRegistry&);
 
 namespace {
 struct AATestPass : FunctionPass {
-  static char ID;
+  static const char ID;
   AATestPass() : FunctionPass(ID) {
     initializeAATestPassPass(*PassRegistry::getPassRegistry());
   }
@@ -63,7 +63,7 @@ struct AATestPass : FunctionPass {
 };
 }
 
-char AATestPass::ID = 0;
+const char AATestPass::ID = 0;
 INITIALIZE_PASS_BEGIN(AATestPass, "aa-test-pas", "Alias Analysis Test Pass",
                       false, true)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
@@ -100,7 +100,7 @@ class TestCustomAAWrapperPass : public ImmutablePass {
   std::unique_ptr<TestCustomAAResult> Result;
 
 public:
-  static char ID;
+  static const char ID;
 
   explicit TestCustomAAWrapperPass(
       std::function<void()> CB = std::function<void()>())
@@ -128,7 +128,7 @@ public:
 };
 }
 
-char TestCustomAAWrapperPass::ID = 0;
+const char TestCustomAAWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(TestCustomAAWrapperPass, "test-custom-aa",
                 "Test Custom AA Wrapper Pass", false, true)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)

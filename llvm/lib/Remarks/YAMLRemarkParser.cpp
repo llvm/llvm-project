@@ -21,7 +21,7 @@
 using namespace llvm;
 using namespace llvm::remarks;
 
-char YAMLParseError::ID = 0;
+const char YAMLParseError::ID = 0;
 
 static void handleDiagnostic(const SMDiagnostic &Diag, void *Ctx) {
   assert(Ctx && "Expected non-null Ctx in diagnostic handler.");

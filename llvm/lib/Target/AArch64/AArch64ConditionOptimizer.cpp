@@ -110,7 +110,7 @@ public:
   // order) of adjusted comparison.
   using CmpInfo = std::tuple<int, unsigned, AArch64CC::CondCode>;
 
-  static char ID;
+  static const char ID;
 
   AArch64ConditionOptimizer() : MachineFunctionPass(ID) {}
 
@@ -132,7 +132,7 @@ public:
 
 } // end anonymous namespace
 
-char AArch64ConditionOptimizer::ID = 0;
+const char AArch64ConditionOptimizer::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AArch64ConditionOptimizer, "aarch64-condopt",
                       "AArch64 CondOpt Pass", false, false)

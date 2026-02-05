@@ -324,13 +324,13 @@ public:
 
 class ARMExecutionDomainFix : public ExecutionDomainFix {
 public:
-  static char ID;
+  static const char ID;
   ARMExecutionDomainFix() : ExecutionDomainFix(ID, ARM::DPRRegClass) {}
   StringRef getPassName() const override {
     return "ARM Execution Domain Fix";
   }
 };
-char ARMExecutionDomainFix::ID;
+const char ARMExecutionDomainFix::ID = 0;
 
 } // end anonymous namespace
 

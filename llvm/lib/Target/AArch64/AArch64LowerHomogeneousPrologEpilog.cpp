@@ -71,7 +71,7 @@ private:
 
 class AArch64LowerHomogeneousPrologEpilog : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
 
   AArch64LowerHomogeneousPrologEpilog() : ModulePass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -89,7 +89,7 @@ public:
 
 } // end anonymous namespace
 
-char AArch64LowerHomogeneousPrologEpilog::ID = 0;
+const char AArch64LowerHomogeneousPrologEpilog::ID = 0;
 
 INITIALIZE_PASS(AArch64LowerHomogeneousPrologEpilog,
                 "aarch64-lower-homogeneous-prolog-epilog",

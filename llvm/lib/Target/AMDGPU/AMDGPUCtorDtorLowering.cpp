@@ -172,7 +172,7 @@ static bool lowerCtorsAndDtors(Module &M) {
 
 class AMDGPUCtorDtorLoweringLegacy final : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
   AMDGPUCtorDtorLoweringLegacy() : ModulePass(ID) {}
   bool runOnModule(Module &M) override { return lowerCtorsAndDtors(M); }
 };
@@ -185,8 +185,8 @@ PreservedAnalyses AMDGPUCtorDtorLoweringPass::run(Module &M,
                                : PreservedAnalyses::all();
 }
 
-char AMDGPUCtorDtorLoweringLegacy::ID = 0;
-char &llvm::AMDGPUCtorDtorLoweringLegacyPassID =
+const char AMDGPUCtorDtorLoweringLegacy::ID = 0;
+char const &llvm::AMDGPUCtorDtorLoweringLegacyPassID =
     AMDGPUCtorDtorLoweringLegacy::ID;
 INITIALIZE_PASS(AMDGPUCtorDtorLoweringLegacy, DEBUG_TYPE,
                 "Lower ctors and dtors for AMDGPU", false, false)

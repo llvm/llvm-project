@@ -2628,7 +2628,7 @@ void Sema::ActOnComment(SourceRange Comment) {
 
 // Pin this vtable to this file.
 ExternalSemaSource::~ExternalSemaSource() {}
-char ExternalSemaSource::ID;
+const char ExternalSemaSource::ID = 0;
 
 void ExternalSemaSource::ReadMethodPool(Selector Sel) { }
 void ExternalSemaSource::updateOutOfDateSelector(Selector Sel) { }

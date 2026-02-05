@@ -322,7 +322,7 @@ class LLVM_ABI DominatorTreeWrapperPass : public FunctionPass {
   DominatorTree DT;
 
 public:
-  static char ID;
+  static const char ID;
 
   DominatorTreeWrapperPass();
 

@@ -21,8 +21,8 @@ using namespace llvm;
 AnalysisKey AMDGPUAA::Key;
 
 // Register this pass...
-char AMDGPUAAWrapperPass::ID = 0;
-char AMDGPUExternalAAWrapper::ID = 0;
+const char AMDGPUAAWrapperPass::ID = 0;
+const char AMDGPUExternalAAWrapper::ID = 0;
 
 INITIALIZE_PASS(AMDGPUAAWrapperPass, "amdgpu-aa",
                 "AMDGPU Address space based Alias Analysis", false, true)

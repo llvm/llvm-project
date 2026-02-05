@@ -271,7 +271,7 @@ struct StackFrameLayoutAnalysis {
 
 class StackFrameLayoutAnalysisLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   StackFrameLayoutAnalysisLegacy() : MachineFunctionPass(ID) {}
 
@@ -291,7 +291,7 @@ public:
   }
 };
 
-char StackFrameLayoutAnalysisLegacy::ID = 0;
+const char StackFrameLayoutAnalysisLegacy::ID = 0;
 } // namespace
 
 PreservedAnalyses
@@ -302,7 +302,8 @@ llvm::StackFrameLayoutAnalysisPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-char &llvm::StackFrameLayoutAnalysisPassID = StackFrameLayoutAnalysisLegacy::ID;
+const char &llvm::StackFrameLayoutAnalysisPassID =
+    StackFrameLayoutAnalysisLegacy::ID;
 INITIALIZE_PASS(StackFrameLayoutAnalysisLegacy, "stack-frame-layout",
                 "Stack Frame Layout", false, false)
 

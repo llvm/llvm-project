@@ -118,7 +118,7 @@ namespace {
 
   class HardwareLoopsLegacy : public FunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     HardwareLoopsLegacy() : FunctionPass(ID) {}
 
@@ -218,7 +218,7 @@ namespace {
   };
 }
 
-char HardwareLoopsLegacy::ID = 0;
+const char HardwareLoopsLegacy::ID = 0;
 
 bool HardwareLoopsLegacy::runOnFunction(Function &F) {
   if (skipFunction(F))

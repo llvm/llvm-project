@@ -45,7 +45,7 @@ class RISCVRedundantCopyElimination : public MachineFunctionPass {
   const TargetInstrInfo *TII;
 
 public:
-  static char ID;
+  static const char ID;
   RISCVRedundantCopyElimination() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -63,7 +63,7 @@ private:
 
 } // end anonymous namespace
 
-char RISCVRedundantCopyElimination::ID = 0;
+const char RISCVRedundantCopyElimination::ID = 0;
 
 INITIALIZE_PASS(RISCVRedundantCopyElimination, "riscv-copyelim",
                 "RISC-V Redundant Copy Elimination", false, false)

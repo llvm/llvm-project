@@ -1051,7 +1051,7 @@ public:
   StringRef getPassName() const override { return "DXIL Op Lowering"; }
   DXILOpLoweringLegacy() : ModulePass(ID) {}
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
   void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceWrapperPass>();
@@ -1062,7 +1062,7 @@ public:
     AU.addPreserved<RootSignatureAnalysisWrapper>();
   }
 };
-char DXILOpLoweringLegacy::ID = 0;
+const char DXILOpLoweringLegacy::ID = 0;
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(DXILOpLoweringLegacy, DEBUG_TYPE, "DXIL Op Lowering",

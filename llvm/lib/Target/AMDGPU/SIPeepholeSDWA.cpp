@@ -73,7 +73,7 @@ public:
 
 class SIPeepholeSDWALegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SIPeepholeSDWALegacy() : MachineFunctionPass(ID) {}
 
@@ -212,9 +212,9 @@ public:
 INITIALIZE_PASS(SIPeepholeSDWALegacy, DEBUG_TYPE, "SI Peephole SDWA", false,
                 false)
 
-char SIPeepholeSDWALegacy::ID = 0;
+const char SIPeepholeSDWALegacy::ID = 0;
 
-char &llvm::SIPeepholeSDWALegacyID = SIPeepholeSDWALegacy::ID;
+const char &llvm::SIPeepholeSDWALegacyID = SIPeepholeSDWALegacy::ID;
 
 FunctionPass *llvm::createSIPeepholeSDWALegacyPass() {
   return new SIPeepholeSDWALegacy();

@@ -16,7 +16,7 @@
 using namespace llvm;
 using namespace lldb_private::transport;
 
-char TransportUnhandledContentsError::ID;
+const char TransportUnhandledContentsError::ID = 0;
 
 TransportUnhandledContentsError::TransportUnhandledContentsError(
     std::string unhandled_contents)
@@ -30,7 +30,7 @@ std::error_code TransportUnhandledContentsError::convertToErrorCode() const {
   return std::make_error_code(std::errc::bad_message);
 }
 
-char InvalidParams::ID;
+const char InvalidParams::ID = 0;
 
 void InvalidParams::log(raw_ostream &OS) const {
   OS << "invalid parameters for method '" << m_method << "': '" << m_context
@@ -40,7 +40,7 @@ std::error_code InvalidParams::convertToErrorCode() const {
   return std::make_error_code(std::errc::invalid_argument);
 }
 
-char MethodNotFound::ID;
+const char MethodNotFound::ID = 0;
 
 void MethodNotFound::log(raw_ostream &OS) const {
   OS << "method not found: '" << m_method << "'";

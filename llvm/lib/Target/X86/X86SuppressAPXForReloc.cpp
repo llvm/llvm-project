@@ -48,11 +48,11 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  static char ID;
+  static const char ID;
 };
 } // namespace
 
-char X86SuppressAPXForRelocationLegacy::ID = 0;
+const char X86SuppressAPXForRelocationLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(X86SuppressAPXForRelocationLegacy, DEBUG_TYPE,
                       "X86 Suppress APX features for relocation", false, false)

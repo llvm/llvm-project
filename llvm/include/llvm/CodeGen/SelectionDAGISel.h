@@ -560,7 +560,7 @@ class SelectionDAGISelLegacy : public MachineFunctionPass {
   std::unique_ptr<SelectionDAGISel> Selector;
 
 public:
-  SelectionDAGISelLegacy(char &ID, std::unique_ptr<SelectionDAGISel> S);
+  SelectionDAGISelLegacy(const char &ID, std::unique_ptr<SelectionDAGISel> S);
 
   ~SelectionDAGISelLegacy() override = default;
 

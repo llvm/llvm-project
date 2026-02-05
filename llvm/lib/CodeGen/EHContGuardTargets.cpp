@@ -35,7 +35,7 @@ namespace {
 /// and store these in the MachineFunction's CatchRetTargets vector.
 class EHContGuardTargets : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   EHContGuardTargets() : MachineFunctionPass(ID) {}
 
@@ -48,7 +48,7 @@ public:
 
 } // end anonymous namespace
 
-char EHContGuardTargets::ID = 0;
+const char EHContGuardTargets::ID = 0;
 
 INITIALIZE_PASS(EHContGuardTargets, "EHContGuardTargets",
                 "Insert symbols at valid targets for /guard:ehcont", false,

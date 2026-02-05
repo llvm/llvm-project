@@ -19,7 +19,7 @@
 
 using namespace llvm;
 
-char SymbolRemappingParseError::ID;
+const char SymbolRemappingParseError::ID = 0;
 
 /// Load a set of name remappings from a text file.
 ///

@@ -18,7 +18,7 @@
 
 namespace orc_rt {
 
-char RTTIRoot::ID = 0;
+const char RTTIRoot::ID = 0;
 void RTTIRoot::anchor() {}
 
 } // namespace orc_rt

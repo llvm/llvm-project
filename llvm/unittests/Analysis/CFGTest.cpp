@@ -67,7 +67,7 @@ protected:
   }
 
   void ExpectPath(bool ExpectedResult) {
-    static char ID;
+    static const char ID = 0;
     class IsPotentiallyReachableTestPass : public FunctionPass {
      public:
        IsPotentiallyReachableTestPass(bool ExpectedResult, Instruction *A,

@@ -48,7 +48,7 @@ class AMDGPUPreloadKernelArgumentsLegacy : public ModulePass {
   const GCNTargetMachine *TM;
 
 public:
-  static char ID;
+  static const char ID;
   explicit AMDGPUPreloadKernelArgumentsLegacy(
       const GCNTargetMachine *TM = nullptr);
 
@@ -264,7 +264,7 @@ public:
 
 } // end anonymous namespace
 
-char AMDGPUPreloadKernelArgumentsLegacy::ID = 0;
+const char AMDGPUPreloadKernelArgumentsLegacy::ID = 0;
 
 INITIALIZE_PASS(AMDGPUPreloadKernelArgumentsLegacy, DEBUG_TYPE,
                 "AMDGPU Preload Kernel Arguments", false, false)

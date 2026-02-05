@@ -80,7 +80,7 @@ class AArch64A53Fix835769 : public MachineFunctionPass {
   const TargetInstrInfo *TII;
 
 public:
-  static char ID;
+  static const char ID;
   explicit AArch64A53Fix835769() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
@@ -101,7 +101,7 @@ public:
 private:
   bool runOnBasicBlock(MachineBasicBlock &MBB);
 };
-char AArch64A53Fix835769::ID = 0;
+const char AArch64A53Fix835769::ID = 0;
 
 } // end anonymous namespace
 

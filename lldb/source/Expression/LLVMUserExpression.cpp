@@ -37,7 +37,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-char LLVMUserExpression::ID;
+const char LLVMUserExpression::ID = 0;
 
 LLVMUserExpression::LLVMUserExpression(ExecutionContextScope &exe_scope,
                                        llvm::StringRef expr,

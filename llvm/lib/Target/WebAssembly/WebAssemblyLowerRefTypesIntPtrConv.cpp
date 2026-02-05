@@ -34,12 +34,12 @@ class WebAssemblyLowerRefTypesIntPtrConv final : public FunctionPass {
   bool runOnFunction(Function &MF) override;
 
 public:
-  static char ID; // Pass identification
+  static const char ID; // Pass identification
   WebAssemblyLowerRefTypesIntPtrConv() : FunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyLowerRefTypesIntPtrConv::ID = 0;
+const char WebAssemblyLowerRefTypesIntPtrConv::ID = 0;
 INITIALIZE_PASS(WebAssemblyLowerRefTypesIntPtrConv, DEBUG_TYPE,
                 "WebAssembly Lower RefTypes Int-Ptr Conversions", false, false)
 

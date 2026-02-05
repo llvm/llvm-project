@@ -79,8 +79,8 @@ LiveIntervalsPrinterPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-char LiveIntervalsWrapperPass::ID = 0;
-char &llvm::LiveIntervalsID = LiveIntervalsWrapperPass::ID;
+const char LiveIntervalsWrapperPass::ID = 0;
+const char &llvm::LiveIntervalsID = LiveIntervalsWrapperPass::ID;
 INITIALIZE_PASS_BEGIN(LiveIntervalsWrapperPass, "liveintervals",
                       "Live Interval Analysis", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)

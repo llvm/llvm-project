@@ -39,10 +39,10 @@ class raw_ostream;
 using namespace lldb;
 using namespace lldb_private;
 
-char CloneableError::ID;
-char CloneableECError::ID;
-char MachKernelError::ID;
-char Win32Error::ID;
+const char CloneableError::ID = 0;
+const char CloneableECError::ID = 0;
+const char MachKernelError::ID = 0;
+const char Win32Error::ID = 0;
 
 namespace {
 /// A std::error_code category for eErrorTypeGeneric.

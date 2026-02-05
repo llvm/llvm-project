@@ -54,7 +54,7 @@ public:
   static bool classof(const LogHandler *obj) { return obj->isA(&ID); }
 
 private:
-  static char ID;
+  static const char ID;
 };
 
 class StreamLogHandler : public LogHandler {
@@ -71,7 +71,7 @@ public:
 private:
   std::mutex m_mutex;
   llvm::raw_fd_ostream m_stream;
-  static char ID;
+  static const char ID;
 };
 
 class CallbackLogHandler : public LogHandler {
@@ -86,7 +86,7 @@ public:
 private:
   lldb::LogOutputCallback m_callback;
   void *m_baton;
-  static char ID;
+  static const char ID;
 };
 
 class RotatingLogHandler : public LogHandler {
@@ -109,7 +109,7 @@ private:
   const size_t m_size = 0;
   size_t m_next_index = 0;
   size_t m_total_count = 0;
-  static char ID;
+  static const char ID;
 };
 
 /// A T-style log handler that multiplexes messages to two log handlers.
@@ -126,7 +126,7 @@ public:
 private:
   std::shared_ptr<LogHandler> m_first_log_handler;
   std::shared_ptr<LogHandler> m_second_log_handler;
-  static char ID;
+  static const char ID;
 };
 
 class Log final {

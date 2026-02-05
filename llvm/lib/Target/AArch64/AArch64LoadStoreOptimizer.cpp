@@ -121,7 +121,7 @@ using LdStPairFlags = struct LdStPairFlags {
 };
 
 struct AArch64LoadStoreOpt : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
 
   AArch64LoadStoreOpt() : MachineFunctionPass(ID) {}
 
@@ -238,7 +238,7 @@ struct AArch64LoadStoreOpt : public MachineFunctionPass {
   StringRef getPassName() const override { return AARCH64_LOAD_STORE_OPT_NAME; }
 };
 
-char AArch64LoadStoreOpt::ID = 0;
+const char AArch64LoadStoreOpt::ID = 0;
 
 } // end anonymous namespace
 

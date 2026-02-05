@@ -9,7 +9,7 @@
 
 using namespace clang;
 
-char ModuleFileExtension::ID = 0;
+const char ModuleFileExtension::ID = 0;
 
 ModuleFileExtension::~ModuleFileExtension() {}
 

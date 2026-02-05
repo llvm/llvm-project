@@ -38,7 +38,7 @@ struct Filler : public MachineFunctionPass {
   const TargetRegisterInfo *TRI;
   MachineBasicBlock::instr_iterator LastFiller;
 
-  static char ID;
+  static const char ID;
   explicit Filler() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "Lanai Delay Slot Filler"; }
@@ -74,7 +74,7 @@ struct Filler : public MachineFunctionPass {
                       MachineBasicBlock::instr_iterator Slot,
                       MachineBasicBlock::instr_iterator &Filler);
 };
-char Filler::ID = 0;
+const char Filler::ID = 0;
 } // end of anonymous namespace
 
 // createLanaiDelaySlotFillerPass - Returns a pass that fills in delay

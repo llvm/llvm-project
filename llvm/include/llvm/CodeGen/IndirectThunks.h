@@ -190,7 +190,7 @@ class ThunkInserterPass : public MachineFunctionPass {
 protected:
   std::tuple<Inserters...> TIs;
 
-  ThunkInserterPass(char &ID) : MachineFunctionPass(ID) {}
+  ThunkInserterPass(const char &ID) : MachineFunctionPass(ID) {}
 
 public:
   bool doInitialization(Module &M) override {

@@ -66,10 +66,10 @@ namespace {
 class DAE : public ModulePass {
 protected:
   // DAH uses this to specify a different ID.
-  explicit DAE(char &ID) : ModulePass(ID) {}
+  explicit DAE(const char &ID) : ModulePass(ID) {}
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   DAE() : ModulePass(ID) {
     initializeDAEPass(*PassRegistry::getPassRegistry());
@@ -89,7 +89,7 @@ public:
 
 } // end anonymous namespace
 
-char DAE::ID = 0;
+const char DAE::ID = 0;
 
 INITIALIZE_PASS(DAE, "deadargelim", "Dead Argument Elimination", false, false)
 
@@ -98,7 +98,7 @@ namespace {
 /// The DeadArgumentHacking pass, same as dead argument elimination, but deletes
 /// arguments to functions which are external. This is only for use by bugpoint.
 struct DAH : public DAE {
-  static char ID;
+  static const char ID;
 
   DAH() : DAE(ID) {}
 
@@ -107,7 +107,7 @@ struct DAH : public DAE {
 
 } // end anonymous namespace
 
-char DAH::ID = 0;
+const char DAH::ID = 0;
 
 INITIALIZE_PASS(DAH, "deadarghaX0r",
                 "Dead Argument Hacking (BUGPOINT USE ONLY; DO NOT USE)", false,

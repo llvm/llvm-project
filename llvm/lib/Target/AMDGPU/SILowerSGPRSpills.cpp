@@ -68,7 +68,7 @@ public:
 
 class SILowerSGPRSpillsLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SILowerSGPRSpillsLegacy() : MachineFunctionPass(ID) {}
 
@@ -88,7 +88,7 @@ public:
 
 } // end anonymous namespace
 
-char SILowerSGPRSpillsLegacy::ID = 0;
+const char SILowerSGPRSpillsLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(SILowerSGPRSpillsLegacy, DEBUG_TYPE,
                       "SI lower SGPR spill instructions", false, false)
@@ -98,7 +98,7 @@ INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_END(SILowerSGPRSpillsLegacy, DEBUG_TYPE,
                     "SI lower SGPR spill instructions", false, false)
 
-char &llvm::SILowerSGPRSpillsLegacyID = SILowerSGPRSpillsLegacy::ID;
+const char &llvm::SILowerSGPRSpillsLegacyID = SILowerSGPRSpillsLegacy::ID;
 
 static bool isLiveIntoMBB(MCRegister Reg, MachineBasicBlock &MBB,
                           const TargetRegisterInfo *TRI) {

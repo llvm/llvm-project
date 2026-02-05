@@ -34,7 +34,7 @@ class AMDGPUAlwaysInline : public ModulePass {
   bool GlobalOpt;
 
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUAlwaysInline(bool GlobalOpt = false) :
     ModulePass(ID), GlobalOpt(GlobalOpt) { }
@@ -50,7 +50,7 @@ public:
 INITIALIZE_PASS(AMDGPUAlwaysInline, "amdgpu-always-inline",
                 "AMDGPU Inline All Functions", false, false)
 
-char AMDGPUAlwaysInline::ID = 0;
+const char AMDGPUAlwaysInline::ID = 0;
 
 static void
 recursivelyVisitUsers(GlobalValue &GV,

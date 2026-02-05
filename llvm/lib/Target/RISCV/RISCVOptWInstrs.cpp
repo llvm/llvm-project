@@ -62,7 +62,7 @@ namespace {
 
 class RISCVOptWInstrs : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   RISCVOptWInstrs() : MachineFunctionPass(ID) {}
 
@@ -83,7 +83,7 @@ public:
 
 } // end anonymous namespace
 
-char RISCVOptWInstrs::ID = 0;
+const char RISCVOptWInstrs::ID = 0;
 INITIALIZE_PASS(RISCVOptWInstrs, DEBUG_TYPE, RISCV_OPT_W_INSTRS_NAME, false,
                 false)
 

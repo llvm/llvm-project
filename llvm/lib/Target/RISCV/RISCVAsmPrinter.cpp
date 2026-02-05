@@ -58,7 +58,7 @@ extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
 namespace {
 class RISCVAsmPrinter : public AsmPrinter {
 public:
-  static char ID;
+  static const char ID;
 
 private:
   const RISCVSubtarget *STI;
@@ -1221,7 +1221,7 @@ void RISCVAsmPrinter::emitMachineConstantPoolValue(
   OutStreamer->emitValue(Expr, Size);
 }
 
-char RISCVAsmPrinter::ID = 0;
+const char RISCVAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(RISCVAsmPrinter, "riscv-asm-printer", "RISC-V Assembly Printer",
                 false, false)

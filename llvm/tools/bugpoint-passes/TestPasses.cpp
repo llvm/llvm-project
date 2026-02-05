@@ -29,7 +29,7 @@ namespace {
 /// crashes on any call instructions.
 class CrashOnCalls : public FunctionPass {
 public:
-  static char ID; // Pass ID, replacement for typeid
+  static const char ID; // Pass ID, replacement for typeid
   CrashOnCalls() : FunctionPass(ID) {}
 
 private:
@@ -48,7 +48,7 @@ private:
 };
 }
 
-char CrashOnCalls::ID = 0;
+const char CrashOnCalls::ID = 0;
 static RegisterPass<CrashOnCalls>
   X("bugpoint-crashcalls",
     "BugPoint Test Pass - Intentionally crash on CallInsts");
@@ -58,7 +58,7 @@ namespace {
 /// deletes some call instructions, "misoptimizing" the program.
 class DeleteCalls : public FunctionPass {
 public:
-  static char ID; // Pass ID, replacement for typeid
+  static const char ID; // Pass ID, replacement for typeid
   DeleteCalls() : FunctionPass(ID) {}
 
 private:
@@ -76,7 +76,7 @@ private:
 };
 }
 
-char DeleteCalls::ID = 0;
+const char DeleteCalls::ID = 0;
 static RegisterPass<DeleteCalls>
   Y("bugpoint-deletecalls",
     "BugPoint Test Pass - Intentionally 'misoptimize' CallInsts");
@@ -87,7 +87,7 @@ namespace {
 /// defined in an external module).
 class CrashOnDeclFunc : public ModulePass {
 public:
-  static char ID; // Pass ID, replacement for typeid
+  static const char ID; // Pass ID, replacement for typeid
   CrashOnDeclFunc() : ModulePass(ID) {}
 
 private:
@@ -101,7 +101,7 @@ private:
   };
 }
 
-char CrashOnDeclFunc::ID = 0;
+const char CrashOnDeclFunc::ID = 0;
 static RegisterPass<CrashOnDeclFunc>
   Z("bugpoint-crash-decl-funcs",
     "BugPoint Test Pass - Intentionally crash on declared functions");
@@ -111,7 +111,7 @@ namespace {
 /// crashes if the Module has two or more compile units
 class CrashOnTooManyCUs : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
   CrashOnTooManyCUs() : ModulePass(ID) {}
 
 private:
@@ -126,7 +126,7 @@ private:
 };
 }
 
-char CrashOnTooManyCUs::ID = 0;
+const char CrashOnTooManyCUs::ID = 0;
 static RegisterPass<CrashOnTooManyCUs>
     A("bugpoint-crash-too-many-cus",
       "BugPoint Test Pass - Intentionally crash on too many CUs");
@@ -134,7 +134,7 @@ static RegisterPass<CrashOnTooManyCUs>
 namespace {
 class CrashOnFunctionAttribute : public FunctionPass {
 public:
-  static char ID; // Pass ID, replacement for typeid
+  static const char ID; // Pass ID, replacement for typeid
   CrashOnFunctionAttribute() : FunctionPass(ID) {}
 
 private:
@@ -151,7 +151,7 @@ private:
 };
 } // namespace
 
-char CrashOnFunctionAttribute::ID = 0;
+const char CrashOnFunctionAttribute::ID = 0;
 static RegisterPass<CrashOnFunctionAttribute>
     B("bugpoint-crashfuncattr", "BugPoint Test Pass - Intentionally crash on "
                                 "function attribute 'bugpoint-crash'");
@@ -159,7 +159,7 @@ static RegisterPass<CrashOnFunctionAttribute>
 namespace {
 class CrashOnMetadata : public FunctionPass {
 public:
-  static char ID; // Pass ID, replacement for typeid
+  static const char ID; // Pass ID, replacement for typeid
   CrashOnMetadata() : FunctionPass(ID) {}
 
 private:
@@ -180,7 +180,7 @@ private:
 };
 } // namespace
 
-char CrashOnMetadata::ID = 0;
+const char CrashOnMetadata::ID = 0;
 static RegisterPass<CrashOnMetadata>
     C("bugpoint-crashmetadata",
       "BugPoint Test Pass - Intentionally crash on "

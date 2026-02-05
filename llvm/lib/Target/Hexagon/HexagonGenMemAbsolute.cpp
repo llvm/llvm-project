@@ -39,7 +39,7 @@ class HexagonGenMemAbsolute : public MachineFunctionPass {
   const TargetRegisterInfo *TRI = nullptr;
 
 public:
-  static char ID;
+  static const char ID;
   HexagonGenMemAbsolute() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
@@ -60,7 +60,7 @@ private:
 };
 } // namespace
 
-char HexagonGenMemAbsolute::ID = 0;
+const char HexagonGenMemAbsolute::ID = 0;
 
 INITIALIZE_PASS(HexagonGenMemAbsolute, "hexagon-gen-load-absolute",
                 "Hexagon Generate Load/Store Set Absolute Address Instruction",

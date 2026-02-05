@@ -166,7 +166,7 @@ static bool runOnFunction(Function &F, bool PostInlining) {
 
 namespace {
 struct PostInlineEntryExitInstrumenter : public FunctionPass {
-  static char ID;
+  static const char ID;
   PostInlineEntryExitInstrumenter() : FunctionPass(ID) {
     initializePostInlineEntryExitInstrumenterPass(
         *PassRegistry::getPassRegistry());
@@ -177,7 +177,7 @@ struct PostInlineEntryExitInstrumenter : public FunctionPass {
   }
   bool runOnFunction(Function &F) override { return ::runOnFunction(F, true); }
 };
-char PostInlineEntryExitInstrumenter::ID = 0;
+const char PostInlineEntryExitInstrumenter::ID = 0;
 }
 
 INITIALIZE_PASS_BEGIN(

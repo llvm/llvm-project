@@ -29,12 +29,12 @@ class WebAssemblyNullifyDebugValueLists final : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyNullifyDebugValueLists() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyNullifyDebugValueLists::ID = 0;
+const char WebAssemblyNullifyDebugValueLists::ID = 0;
 INITIALIZE_PASS(WebAssemblyNullifyDebugValueLists, DEBUG_TYPE,
                 "WebAssembly Nullify DBG_VALUE_LISTs", false, false)
 

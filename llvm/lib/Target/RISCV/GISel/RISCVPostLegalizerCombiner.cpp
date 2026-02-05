@@ -138,7 +138,7 @@ RISCVPostLegalizerCombinerImpl::RISCVPostLegalizerCombinerImpl(
 
 class RISCVPostLegalizerCombiner : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   RISCVPostLegalizerCombiner();
 
@@ -201,7 +201,7 @@ bool RISCVPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   return Impl.combineMachineInstrs();
 }
 
-char RISCVPostLegalizerCombiner::ID = 0;
+const char RISCVPostLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(RISCVPostLegalizerCombiner, DEBUG_TYPE,
                       "Combine RISC-V MachineInstrs after legalization", false,
                       false)

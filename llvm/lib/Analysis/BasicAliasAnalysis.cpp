@@ -2023,7 +2023,7 @@ BasicAAResult BasicAA::run(Function &F, FunctionAnalysisManager &AM) {
 
 BasicAAWrapperPass::BasicAAWrapperPass() : FunctionPass(ID) {}
 
-char BasicAAWrapperPass::ID = 0;
+const char BasicAAWrapperPass::ID = 0;
 
 void BasicAAWrapperPass::anchor() {}
 

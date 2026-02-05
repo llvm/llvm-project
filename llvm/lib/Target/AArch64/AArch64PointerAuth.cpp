@@ -26,7 +26,7 @@ namespace {
 
 class AArch64PointerAuth : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AArch64PointerAuth() : MachineFunctionPass(ID) {}
 
@@ -55,7 +55,7 @@ FunctionPass *llvm::createAArch64PointerAuthPass() {
   return new AArch64PointerAuth();
 }
 
-char AArch64PointerAuth::ID = 0;
+const char AArch64PointerAuth::ID = 0;
 
 static void emitPACSymOffsetIntoX16(const TargetInstrInfo &TII,
                                     MachineBasicBlock &MBB,

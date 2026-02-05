@@ -32,7 +32,7 @@ class RegionInfo;
 /// RegionPass is managed by RGPassManager.
 class LLVM_ABI RegionPass : public Pass {
 public:
-  explicit RegionPass(char &pid) : Pass(PT_Region, pid) {}
+  explicit RegionPass(const char &pid) : Pass(PT_Region, pid) {}
 
   //===--------------------------------------------------------------------===//
   /// @name To be implemented by every RegionPass
@@ -91,7 +91,7 @@ class LLVM_ABI RGPassManager : public FunctionPass, public PMDataManager {
   Region *CurrentRegion;
 
 public:
-  static char ID;
+  static const char ID;
   explicit RGPassManager();
 
   /// Execute all of the passes scheduled for execution.

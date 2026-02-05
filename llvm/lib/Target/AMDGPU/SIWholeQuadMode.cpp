@@ -233,7 +233,7 @@ private:
 
 class SIWholeQuadModeLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SIWholeQuadModeLegacy() : MachineFunctionPass(ID) {}
 
@@ -256,7 +256,7 @@ public:
 };
 } // end anonymous namespace
 
-char SIWholeQuadModeLegacy::ID = 0;
+const char SIWholeQuadModeLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(SIWholeQuadModeLegacy, DEBUG_TYPE, "SI Whole Quad Mode",
                       false, false)
@@ -266,7 +266,7 @@ INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(SIWholeQuadModeLegacy, DEBUG_TYPE, "SI Whole Quad Mode",
                     false, false)
 
-char &llvm::SIWholeQuadModeID = SIWholeQuadModeLegacy::ID;
+const char &llvm::SIWholeQuadModeID = SIWholeQuadModeLegacy::ID;
 
 FunctionPass *llvm::createSIWholeQuadModeLegacyPass() {
   return new SIWholeQuadModeLegacy;

@@ -27,7 +27,7 @@ using namespace llvm;
 namespace {
 class AArch64RedundantCondBranch : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   AArch64RedundantCondBranch() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -39,7 +39,7 @@ public:
     return "AArch64 Redundant Conditional Branch Elimination";
   }
 };
-char AArch64RedundantCondBranch::ID = 0;
+const char AArch64RedundantCondBranch::ID = 0;
 } // namespace
 
 INITIALIZE_PASS(AArch64RedundantCondBranch, "aarch64-redundantcondbranch",

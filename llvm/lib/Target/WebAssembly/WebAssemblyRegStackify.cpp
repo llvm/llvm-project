@@ -64,14 +64,14 @@ class WebAssemblyRegStackify final : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyRegStackify(CodeGenOptLevel OptLevel)
       : MachineFunctionPass(ID), Optimize(OptLevel != CodeGenOptLevel::None) {}
   WebAssemblyRegStackify() : WebAssemblyRegStackify(CodeGenOptLevel::Default) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyRegStackify::ID = 0;
+const char WebAssemblyRegStackify::ID = 0;
 INITIALIZE_PASS(WebAssemblyRegStackify, DEBUG_TYPE,
                 "Reorder instructions to use the WebAssembly value stack",
                 false, false)

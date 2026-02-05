@@ -25,7 +25,7 @@ using namespace llvm;
 namespace {
 
 struct SPIRVPrepareGlobals : public ModulePass {
-  static char ID;
+  static const char ID;
   SPIRVPrepareGlobals() : ModulePass(ID) {}
 
   StringRef getPassName() const override {
@@ -80,7 +80,7 @@ bool SPIRVPrepareGlobals::runOnModule(Module &M) {
 
   return Changed;
 }
-char SPIRVPrepareGlobals::ID = 0;
+const char SPIRVPrepareGlobals::ID = 0;
 
 } // namespace
 

@@ -148,7 +148,7 @@ class LLVM_ABI BlockFrequencyInfoWrapperPass : public FunctionPass {
   BlockFrequencyInfo BFI;
 
 public:
-  static char ID;
+  static const char ID;
 
   BlockFrequencyInfoWrapperPass();
   ~BlockFrequencyInfoWrapperPass() override;

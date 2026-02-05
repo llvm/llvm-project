@@ -29,7 +29,7 @@ public:
 
   ErrorKind Error;
 
-  static char ID;
+  static const char ID;
 
   ASTImportError() : Error(Unknown) {}
   ASTImportError(const ASTImportError &Other) : Error(Other.Error) {}

@@ -318,7 +318,7 @@ private:
 /// constant offset may inspect other basic blocks.
 class SeparateConstOffsetFromGEPLegacyPass : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SeparateConstOffsetFromGEPLegacyPass(bool LowerGEP = false)
       : FunctionPass(ID), LowerGEP(LowerGEP) {
@@ -454,7 +454,7 @@ private:
 
 } // end anonymous namespace
 
-char SeparateConstOffsetFromGEPLegacyPass::ID = 0;
+const char SeparateConstOffsetFromGEPLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(
     SeparateConstOffsetFromGEPLegacyPass, "separate-const-offset-from-gep",

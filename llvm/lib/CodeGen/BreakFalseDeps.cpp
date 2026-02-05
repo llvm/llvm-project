@@ -49,7 +49,7 @@ private:
   ReachingDefInfo *RDI = nullptr;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   BreakFalseDeps() : MachineFunctionPass(ID) {}
 
@@ -97,7 +97,7 @@ private:
 
 #define DEBUG_TYPE "break-false-deps"
 
-char BreakFalseDeps::ID = 0;
+const char BreakFalseDeps::ID = 0;
 INITIALIZE_PASS_BEGIN(BreakFalseDeps, DEBUG_TYPE, "BreakFalseDeps", false, false)
 INITIALIZE_PASS_DEPENDENCY(ReachingDefInfoWrapperPass)
 INITIALIZE_PASS_END(BreakFalseDeps, DEBUG_TYPE, "BreakFalseDeps", false, false)

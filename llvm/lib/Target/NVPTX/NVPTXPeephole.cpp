@@ -47,13 +47,13 @@ using namespace llvm;
 namespace {
 struct NVPTXPeephole : public MachineFunctionPass {
  public:
-  static char ID;
-  NVPTXPeephole() : MachineFunctionPass(ID) {}
+   static const char ID;
+   NVPTXPeephole() : MachineFunctionPass(ID) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  StringRef getPassName() const override {
-    return "NVPTX optimize redundant cvta.to.local instruction";
+   StringRef getPassName() const override {
+     return "NVPTX optimize redundant cvta.to.local instruction";
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -62,7 +62,7 @@ struct NVPTXPeephole : public MachineFunctionPass {
 };
 }
 
-char NVPTXPeephole::ID = 0;
+const char NVPTXPeephole::ID = 0;
 
 INITIALIZE_PASS(NVPTXPeephole, "nvptx-peephole", "NVPTX Peephole", false, false)
 

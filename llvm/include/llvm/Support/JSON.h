@@ -915,7 +915,7 @@ class ParseError : public llvm::ErrorInfo<ParseError> {
   unsigned Line, Column, Offset;
 
 public:
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
   ParseError(const char *Msg, unsigned Line, unsigned Column, unsigned Offset)
       : Msg(Msg), Line(Line), Column(Column), Offset(Offset) {}
   void log(llvm::raw_ostream &OS) const override {

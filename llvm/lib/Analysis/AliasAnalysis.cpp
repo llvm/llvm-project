@@ -708,7 +708,7 @@ ExternalAAWrapperPass::ExternalAAWrapperPass() : ImmutablePass(ID) {}
 ExternalAAWrapperPass::ExternalAAWrapperPass(CallbackT CB, bool RunEarly)
     : ImmutablePass(ID), CB(std::move(CB)), RunEarly(RunEarly) {}
 
-char ExternalAAWrapperPass::ID = 0;
+const char ExternalAAWrapperPass::ID = 0;
 
 INITIALIZE_PASS(ExternalAAWrapperPass, "external-aa", "External Alias Analysis",
                 false, true)
@@ -720,7 +720,7 @@ llvm::createExternalAAWrapperPass(ExternalAAWrapperPass::CallbackT Callback) {
 
 AAResultsWrapperPass::AAResultsWrapperPass() : FunctionPass(ID) {}
 
-char AAResultsWrapperPass::ID = 0;
+const char AAResultsWrapperPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AAResultsWrapperPass, "aa",
                       "Function Alias Analysis Results", false, true)

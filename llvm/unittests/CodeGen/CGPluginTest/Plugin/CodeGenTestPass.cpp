@@ -28,7 +28,7 @@ bool CodeGenTest::runOnMachineFunction(MachineFunction &MF) {
 
 StringRef CodeGenTest::getPassName() const { return CODEGEN_TEST_NAME; }
 
-char CodeGenTest::ID = 0;
+const char CodeGenTest::ID = 0;
 std::function<void()> CodeGenTest::RunCallback;
 
 INITIALIZE_PASS(CodeGenTest, DEBUG_TYPE, CODEGEN_TEST_NAME, false, false)

@@ -73,7 +73,7 @@ namespace {
 
 class CompressEVEXLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   CompressEVEXLegacy() : MachineFunctionPass(ID) {}
   StringRef getPassName() const override { return COMP_EVEX_DESC; }
 
@@ -87,7 +87,7 @@ public:
 
 } // end anonymous namespace
 
-char CompressEVEXLegacy::ID = 0;
+const char CompressEVEXLegacy::ID = 0;
 
 static bool usesExtendedRegister(const MachineInstr &MI) {
   auto isHiRegIdx = [](MCRegister Reg) {

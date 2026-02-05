@@ -522,7 +522,7 @@ uint8_t DirectX::PSVRuntimeInfo::getSigPatchOrPrimCount() const {
 
 class DXNotSupportedError : public ErrorInfo<DXNotSupportedError> {
 public:
-  static char ID;
+  static const char ID;
 
   DXNotSupportedError(StringRef S) : FeatureString(S) {}
 
@@ -538,7 +538,7 @@ private:
   StringRef FeatureString;
 };
 
-char DXNotSupportedError::ID = 0;
+const char DXNotSupportedError::ID = 0;
 
 Expected<section_iterator>
 DXContainerObjectFile::getSymbolSection(DataRefImpl Symb) const {

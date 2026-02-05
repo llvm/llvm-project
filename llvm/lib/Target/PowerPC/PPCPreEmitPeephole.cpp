@@ -94,7 +94,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
 
   class PPCPreEmitPeephole : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
     PPCPreEmitPeephole() : MachineFunctionPass(ID) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -597,7 +597,7 @@ static bool hasPCRelativeForm(MachineInstr &Use) {
 
 INITIALIZE_PASS(PPCPreEmitPeephole, DEBUG_TYPE, "PowerPC Pre-Emit Peephole",
                 false, false)
-char PPCPreEmitPeephole::ID = 0;
+const char PPCPreEmitPeephole::ID = 0;
 
 FunctionPass *llvm::createPPCPreEmitPeepholePass() {
   return new PPCPreEmitPeephole();

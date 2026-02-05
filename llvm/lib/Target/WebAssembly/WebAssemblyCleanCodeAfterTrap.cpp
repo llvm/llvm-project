@@ -28,7 +28,7 @@ using namespace llvm;
 namespace {
 class WebAssemblyCleanCodeAfterTrap final : public MachineFunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyCleanCodeAfterTrap() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
@@ -39,7 +39,7 @@ public:
 };
 } // end anonymous namespace
 
-char WebAssemblyCleanCodeAfterTrap::ID = 0;
+const char WebAssemblyCleanCodeAfterTrap::ID = 0;
 INITIALIZE_PASS(WebAssemblyCleanCodeAfterTrap, DEBUG_TYPE,
                 "WebAssembly Clean Code After Trap", false, false)
 

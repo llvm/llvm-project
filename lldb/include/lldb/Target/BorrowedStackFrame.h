@@ -135,7 +135,7 @@ private:
   lldb::StackFrameSP m_borrowed_frame_sp;
   uint32_t m_new_frame_index;
   uint32_t m_new_concrete_frame_index;
-  static char ID;
+  static const char ID;
 
   BorrowedStackFrame(const BorrowedStackFrame &) = delete;
   const BorrowedStackFrame &operator=(const BorrowedStackFrame &) = delete;

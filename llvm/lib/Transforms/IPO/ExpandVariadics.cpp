@@ -144,7 +144,7 @@ class ExpandVariadics : public ModulePass {
   // clang that has no variadic function calls remaining in the binary.
 
 public:
-  static char ID;
+  static const char ID;
   const ExpandVariadicsMode Mode;
   std::unique_ptr<VariadicABIInfo> ABI;
 
@@ -1052,7 +1052,7 @@ std::unique_ptr<VariadicABIInfo> VariadicABIInfo::create(const Triple &T) {
 
 } // namespace
 
-char ExpandVariadics::ID = 0;
+const char ExpandVariadics::ID = 0;
 
 INITIALIZE_PASS(ExpandVariadics, DEBUG_TYPE, "Expand variadic functions", false,
                 false)

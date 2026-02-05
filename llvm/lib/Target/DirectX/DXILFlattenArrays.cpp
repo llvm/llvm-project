@@ -38,7 +38,7 @@ public:
   bool runOnModule(Module &M) override;
   DXILFlattenArraysLegacy() : ModulePass(ID) {}
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 };
 
 struct GEPInfo {
@@ -503,7 +503,7 @@ bool DXILFlattenArraysLegacy::runOnModule(Module &M) {
   return flattenArrays(M);
 }
 
-char DXILFlattenArraysLegacy::ID = 0;
+const char DXILFlattenArraysLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(DXILFlattenArraysLegacy, DEBUG_TYPE,
                       "DXIL Array Flattener", false, false)

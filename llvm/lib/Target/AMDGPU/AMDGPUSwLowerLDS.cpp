@@ -1298,7 +1298,7 @@ bool AMDGPUSwLowerLDS::run() {
 class AMDGPUSwLowerLDSLegacy : public ModulePass {
 public:
   const AMDGPUTargetMachine *AMDGPUTM;
-  static char ID;
+  static const char ID;
   AMDGPUSwLowerLDSLegacy(const AMDGPUTargetMachine *TM)
       : ModulePass(ID), AMDGPUTM(TM) {}
   bool runOnModule(Module &M) override;
@@ -1308,8 +1308,8 @@ public:
 };
 } // namespace
 
-char AMDGPUSwLowerLDSLegacy::ID = 0;
-char &llvm::AMDGPUSwLowerLDSLegacyPassID = AMDGPUSwLowerLDSLegacy::ID;
+const char AMDGPUSwLowerLDSLegacy::ID = 0;
+const char &llvm::AMDGPUSwLowerLDSLegacyPassID = AMDGPUSwLowerLDSLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(AMDGPUSwLowerLDSLegacy, "amdgpu-sw-lower-lds",
                       "AMDGPU Software lowering of LDS", false, false)

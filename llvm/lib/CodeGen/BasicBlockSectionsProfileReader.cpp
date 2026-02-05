@@ -31,7 +31,7 @@
 
 using namespace llvm;
 
-char BasicBlockSectionsProfileReaderWrapperPass::ID = 0;
+const char BasicBlockSectionsProfileReaderWrapperPass::ID = 0;
 INITIALIZE_PASS(BasicBlockSectionsProfileReaderWrapperPass,
                 "bbsections-profile-reader",
                 "Reads and parses a basic block sections profile.", false,

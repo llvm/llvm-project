@@ -941,7 +941,7 @@ class RegionInfoPass : public FunctionPass {
   RegionInfo RI;
 
 public:
-  static char ID;
+  static const char ID;
 
   explicit RegionInfoPass();
   ~RegionInfoPass() override;

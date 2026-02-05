@@ -61,7 +61,7 @@ public:
 
 class SIPreAllocateWWMRegsLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SIPreAllocateWWMRegsLegacy() : MachineFunctionPass(ID) {}
 
@@ -86,9 +86,9 @@ INITIALIZE_PASS_DEPENDENCY(LiveRegMatrixWrapperLegacy)
 INITIALIZE_PASS_END(SIPreAllocateWWMRegsLegacy, DEBUG_TYPE,
                     "SI Pre-allocate WWM Registers", false, false)
 
-char SIPreAllocateWWMRegsLegacy::ID = 0;
+const char SIPreAllocateWWMRegsLegacy::ID = 0;
 
-char &llvm::SIPreAllocateWWMRegsLegacyID = SIPreAllocateWWMRegsLegacy::ID;
+const char &llvm::SIPreAllocateWWMRegsLegacyID = SIPreAllocateWWMRegsLegacy::ID;
 
 FunctionPass *llvm::createSIPreAllocateWWMRegsLegacyPass() {
   return new SIPreAllocateWWMRegsLegacy();

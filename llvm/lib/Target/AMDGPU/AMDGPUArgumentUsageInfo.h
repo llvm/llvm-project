@@ -198,7 +198,7 @@ class AMDGPUArgumentUsageInfoWrapperLegacy : public ImmutablePass {
   std::unique_ptr<AMDGPUArgumentUsageInfo> AUIP;
 
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUArgumentUsageInfoWrapperLegacy() : ImmutablePass(ID) {
     initializeAMDGPUArgumentUsageInfoWrapperLegacyPass(

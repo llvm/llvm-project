@@ -106,7 +106,7 @@ public:
         : C(C), User(User), Op(Op) {}
   };
 
-  static char ID;
+  static const char ID;
 
   AArch64PromoteConstant() : ModulePass(ID) {}
 
@@ -220,7 +220,7 @@ private:
 
 } // end anonymous namespace
 
-char AArch64PromoteConstant::ID = 0;
+const char AArch64PromoteConstant::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AArch64PromoteConstant, "aarch64-promote-const",
                       "AArch64 Promote Constant Pass", false, false)

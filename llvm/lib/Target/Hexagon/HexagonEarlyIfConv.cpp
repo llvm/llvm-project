@@ -144,7 +144,7 @@ namespace {
 
   class HexagonEarlyIfConversion : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     HexagonEarlyIfConversion() : MachineFunctionPass(ID) {}
 
@@ -214,7 +214,7 @@ namespace {
 
 } // end anonymous namespace
 
-char HexagonEarlyIfConversion::ID = 0;
+const char HexagonEarlyIfConversion::ID = 0;
 
 INITIALIZE_PASS(HexagonEarlyIfConversion, "hexagon-early-if",
   "Hexagon early if conversion", false, false)

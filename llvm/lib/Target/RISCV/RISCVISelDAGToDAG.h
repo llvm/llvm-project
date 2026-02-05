@@ -206,7 +206,7 @@ private:
 
 class RISCVDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   explicit RISCVDAGToDAGISelLegacy(RISCVTargetMachine &TargetMachine,
                                    CodeGenOptLevel OptLevel);
 };

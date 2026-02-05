@@ -68,7 +68,7 @@ void DataBufferHeap::Clear() {
   m_data.swap(empty);
 }
 
-char DataBuffer::ID;
-char WritableDataBuffer::ID;
-char DataBufferUnowned::ID;
-char DataBufferHeap::ID;
+const char DataBuffer::ID = 0;
+const char WritableDataBuffer::ID = 0;
+const char DataBufferUnowned::ID = 0;
+const char DataBufferHeap::ID = 0;

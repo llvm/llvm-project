@@ -32,7 +32,7 @@ private:
   bool isOnFallThroughPath(MachineBasicBlock *MBB);
 
 public:
-  static char ID;
+  static const char ID;
 
   HexagonCFGOptimizer() : MachineFunctionPass(ID) {}
 
@@ -46,7 +46,7 @@ public:
 
 } // end anonymous namespace
 
-char HexagonCFGOptimizer::ID = 0;
+const char HexagonCFGOptimizer::ID = 0;
 
 static bool IsConditionalBranch(int Opc) {
   switch (Opc) {

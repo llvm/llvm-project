@@ -102,7 +102,7 @@ namespace {
 #endif
 
   public:
-    static char ID;
+    static const char ID;
 
     HexagonHardwareLoops() : MachineFunctionPass(ID) {}
 
@@ -295,7 +295,7 @@ namespace {
     MachineBasicBlock *createPreheaderForLoop(MachineLoop *L);
   };
 
-  char HexagonHardwareLoops::ID = 0;
+  const char HexagonHardwareLoops::ID = 0;
 #ifndef NDEBUG
   int HexagonHardwareLoops::Counter = 0;
 #endif

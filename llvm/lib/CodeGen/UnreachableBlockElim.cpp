@@ -45,7 +45,7 @@ class UnreachableBlockElimLegacyPass : public FunctionPass {
   }
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   UnreachableBlockElimLegacyPass() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -54,7 +54,7 @@ public:
   }
 };
 }
-char UnreachableBlockElimLegacyPass::ID = 0;
+const char UnreachableBlockElimLegacyPass::ID = 0;
 INITIALIZE_PASS(UnreachableBlockElimLegacyPass, "unreachableblockelim",
                 "Remove unreachable blocks from the CFG", false, false)
 
@@ -92,18 +92,18 @@ class UnreachableMachineBlockElimLegacy : public MachineFunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   UnreachableMachineBlockElimLegacy() : MachineFunctionPass(ID) {}
 };
 } // namespace
 
-char UnreachableMachineBlockElimLegacy::ID = 0;
+const char UnreachableMachineBlockElimLegacy::ID = 0;
 
 INITIALIZE_PASS(UnreachableMachineBlockElimLegacy,
                 "unreachable-mbb-elimination",
                 "Remove unreachable machine basic blocks", false, false)
 
-char &llvm::UnreachableMachineBlockElimID =
+const char &llvm::UnreachableMachineBlockElimID =
     UnreachableMachineBlockElimLegacy::ID;
 
 void UnreachableMachineBlockElimLegacy::getAnalysisUsage(

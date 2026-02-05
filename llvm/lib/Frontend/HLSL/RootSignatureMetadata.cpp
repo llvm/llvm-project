@@ -24,7 +24,7 @@ namespace llvm {
 namespace hlsl {
 namespace rootsig {
 
-char RootSignatureValidationError::ID;
+const char RootSignatureValidationError::ID = 0;
 
 static std::optional<uint32_t> extractMdIntValue(MDNode *Node,
                                                  unsigned int OpId) {

@@ -409,7 +409,7 @@ PreservedAnalyses SIAnnotateControlFlowPass::run(Function &F,
 
 class SIAnnotateControlFlowLegacy : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SIAnnotateControlFlowLegacy() : FunctionPass(ID) {}
 
@@ -447,7 +447,7 @@ INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(SIAnnotateControlFlowLegacy, DEBUG_TYPE,
                     "Annotate SI Control Flow", false, false)
 
-char SIAnnotateControlFlowLegacy::ID = 0;
+const char SIAnnotateControlFlowLegacy::ID = 0;
 
 /// Create the annotation pass
 FunctionPass *llvm::createSIAnnotateControlFlowLegacyPass() {

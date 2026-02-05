@@ -569,7 +569,7 @@ namespace {
 class GlobalMergeFuncPassWrapper : public ModulePass {
 
 public:
-  static char ID;
+  static const char ID;
 
   GlobalMergeFuncPassWrapper();
 
@@ -586,7 +586,7 @@ public:
 
 } // namespace
 
-char GlobalMergeFuncPassWrapper::ID = 0;
+const char GlobalMergeFuncPassWrapper::ID = 0;
 INITIALIZE_PASS(GlobalMergeFuncPassWrapper, "global-merge-func",
                 "Global merge function pass", false, false)
 

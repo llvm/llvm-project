@@ -29,14 +29,14 @@ namespace {
 /// NVPTXAssignValidGlobalNames
 class NVPTXAssignValidGlobalNames : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
   NVPTXAssignValidGlobalNames() : ModulePass(ID) {}
 
   bool runOnModule(Module &M) override;
 };
 } // namespace
 
-char NVPTXAssignValidGlobalNames::ID = 0;
+const char NVPTXAssignValidGlobalNames::ID = 0;
 
 INITIALIZE_PASS(NVPTXAssignValidGlobalNames, "nvptx-assign-valid-global-names",
                 "Assign valid PTX names to globals", false, false)

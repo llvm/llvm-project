@@ -688,7 +688,7 @@ Expected<Value> parse(StringRef JSON) {
         return std::move(E);
   return P.takeError();
 }
-char ParseError::ID = 0;
+const char ParseError::ID = 0;
 
 bool isUTF8(llvm::StringRef S, size_t *ErrOffset) {
   // Fast-path for ASCII, which is valid UTF-8.

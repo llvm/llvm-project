@@ -37,7 +37,7 @@ namespace clang {
 /// analysis.
 class MultiplexExternalSemaSource : public ExternalSemaSource {
   /// LLVM-style RTTI.
-  static char ID;
+  static const char ID;
 
 private:
   SmallVector<llvm::IntrusiveRefCntPtr<ExternalSemaSource>, 2> Sources;

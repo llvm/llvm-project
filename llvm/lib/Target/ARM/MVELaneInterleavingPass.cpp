@@ -78,7 +78,7 @@ namespace {
 
 class MVELaneInterleaving : public FunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   explicit MVELaneInterleaving() : FunctionPass(ID) {
     initializeMVELaneInterleavingPass(*PassRegistry::getPassRegistry());
@@ -97,7 +97,7 @@ public:
 
 } // end anonymous namespace
 
-char MVELaneInterleaving::ID = 0;
+const char MVELaneInterleaving::ID = 0;
 
 INITIALIZE_PASS(MVELaneInterleaving, DEBUG_TYPE, "MVE lane interleaving", false,
                 false)

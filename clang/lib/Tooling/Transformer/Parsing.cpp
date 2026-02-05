@@ -52,7 +52,7 @@ template <typename T> using ParseFunction = ExpectedProgress<T> (*)(ParseState);
 class ParseError : public llvm::ErrorInfo<ParseError> {
 public:
   // Required field for all ErrorInfo derivatives.
-  static char ID;
+  static const char ID;
 
   ParseError(size_t Pos, std::string ErrorMsg, std::string InputExcerpt)
       : Pos(Pos), ErrorMsg(std::move(ErrorMsg)),
@@ -74,7 +74,7 @@ public:
   std::string Excerpt;
 };
 
-char ParseError::ID;
+const char ParseError::ID = 0;
 } // namespace
 
 static const llvm::StringMap<RangeSelectorOp<std::string>> &

@@ -101,7 +101,7 @@ private:
       LBFI;
 
 public:
-  static char ID;
+  static const char ID;
 
   LazyBlockFrequencyInfoPass();
 

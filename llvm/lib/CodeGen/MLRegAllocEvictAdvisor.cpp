@@ -95,7 +95,7 @@ extern cl::opt<unsigned> EvictInterferenceCutoff;
 namespace {
 class RegAllocScoring : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   RegAllocScoring() : MachineFunctionPass(ID) {}
 
@@ -119,7 +119,7 @@ public:
 };
 } // namespace
 
-char RegAllocScoring::ID = 0;
+const char RegAllocScoring::ID = 0;
 FunctionPass *llvm::createRegAllocScoringPass() {
   return new RegAllocScoring();
 }

@@ -128,7 +128,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   /// Pass identification, replacement for typeid.
-  static char ID;
+  static const char ID;
 };
 
 class X86SpeculativeLoadHardeningImpl {
@@ -227,7 +227,7 @@ bool X86SpeculativeLoadHardeningLegacy::runOnMachineFunction(
   return Changed;
 }
 
-char X86SpeculativeLoadHardeningLegacy::ID = 0;
+const char X86SpeculativeLoadHardeningLegacy::ID = 0;
 
 void X86SpeculativeLoadHardeningLegacy::getAnalysisUsage(
     AnalysisUsage &AU) const {

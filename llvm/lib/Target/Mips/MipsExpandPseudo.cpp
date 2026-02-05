@@ -32,7 +32,7 @@ using namespace llvm;
 namespace {
   class MipsExpandPseudo : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
     MipsExpandPseudo() : MachineFunctionPass(ID) {}
 
     const MipsInstrInfo *TII;
@@ -67,7 +67,7 @@ namespace {
                   MachineBasicBlock::iterator &NMBB);
     bool expandMBB(MachineBasicBlock &MBB);
    };
-  char MipsExpandPseudo::ID = 0;
+   const char MipsExpandPseudo::ID = 0;
 }
 
 bool MipsExpandPseudo::expandAtomicCmpSwapSubword(

@@ -27,7 +27,7 @@ using namespace llvm;
 namespace {
 struct SPIRVRegularizer : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
   SPIRVRegularizer() : FunctionPass(ID) {}
   bool runOnFunction(Function &F) override;
   StringRef getPassName() const override { return "SPIR-V Regularizer"; }
@@ -42,7 +42,7 @@ private:
 };
 } // namespace
 
-char SPIRVRegularizer::ID = 0;
+const char SPIRVRegularizer::ID = 0;
 
 INITIALIZE_PASS(SPIRVRegularizer, DEBUG_TYPE, "SPIR-V Regularizer", false,
                 false)

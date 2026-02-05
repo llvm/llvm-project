@@ -79,9 +79,9 @@ public:
   StringRef getPassName() const override { return "DXIL CBuffer Access"; }
   DXILCBufferAccessLegacy() : ModulePass(ID) {}
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 };
-char DXILCBufferAccessLegacy::ID = 0;
+const char DXILCBufferAccessLegacy::ID = 0;
 } // end anonymous namespace
 
 INITIALIZE_PASS(DXILCBufferAccessLegacy, DEBUG_TYPE, "DXIL CBuffer Access",

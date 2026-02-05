@@ -27,7 +27,7 @@ namespace {
 
   class Mips16HardFloat : public ModulePass {
   public:
-    static char ID;
+    static const char ID;
 
     Mips16HardFloat() : ModulePass(ID) {}
 
@@ -54,7 +54,7 @@ static void emitInlineAsm(LLVMContext &C, BasicBlock *BB, StringRef AsmText) {
   CallInst::Create(IA, AsmArgs, "", BB);
 }
 
-char Mips16HardFloat::ID = 0;
+const char Mips16HardFloat::ID = 0;
 
 //
 // Return types that matter for hard float are:

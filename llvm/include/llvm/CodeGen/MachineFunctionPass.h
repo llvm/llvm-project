@@ -39,7 +39,7 @@ public:
     return false;
   }
 protected:
-  explicit MachineFunctionPass(char &ID) : FunctionPass(ID) {}
+  explicit MachineFunctionPass(const char &ID) : FunctionPass(ID) {}
 
   /// runOnMachineFunction - This method must be overloaded to perform the
   /// desired machine code transformation or analysis.

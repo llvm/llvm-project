@@ -45,7 +45,7 @@ STATISTIC(NumFakeUsesDeleted, "Number of FAKE_USE instructions deleted");
 
 class RemoveLoadsIntoFakeUsesLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   RemoveLoadsIntoFakeUsesLegacy() : MachineFunctionPass(ID) {}
 
@@ -69,8 +69,8 @@ struct RemoveLoadsIntoFakeUses {
   bool run(MachineFunction &MF);
 };
 
-char RemoveLoadsIntoFakeUsesLegacy::ID = 0;
-char &llvm::RemoveLoadsIntoFakeUsesID = RemoveLoadsIntoFakeUsesLegacy::ID;
+const char RemoveLoadsIntoFakeUsesLegacy::ID = 0;
+const char &llvm::RemoveLoadsIntoFakeUsesID = RemoveLoadsIntoFakeUsesLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(RemoveLoadsIntoFakeUsesLegacy, DEBUG_TYPE,
                       "Remove Loads Into Fake Uses", false, false)

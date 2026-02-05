@@ -30,7 +30,7 @@ INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(LazyBranchProbabilityInfoPass, DEBUG_TYPE,
                     "Lazy Branch Probability Analysis", true, true)
 
-char LazyBranchProbabilityInfoPass::ID = 0;
+const char LazyBranchProbabilityInfoPass::ID = 0;
 
 LazyBranchProbabilityInfoPass::LazyBranchProbabilityInfoPass()
     : FunctionPass(ID) {}

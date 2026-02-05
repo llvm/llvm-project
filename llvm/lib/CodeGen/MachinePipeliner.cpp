@@ -227,11 +227,11 @@ static cl::opt<WindowSchedulingFlag> WindowSchedulingOption(
                           "Use window algorithm instead of SMS algorithm.")));
 
 unsigned SwingSchedulerDAG::Circuits::MaxPaths = 5;
-char MachinePipeliner::ID = 0;
+const char MachinePipeliner::ID = 0;
 #ifndef NDEBUG
 int MachinePipeliner::NumTries = 0;
 #endif
-char &llvm::MachinePipelinerID = MachinePipeliner::ID;
+const char &llvm::MachinePipelinerID = MachinePipeliner::ID;
 
 INITIALIZE_PASS_BEGIN(MachinePipeliner, DEBUG_TYPE,
                       "Modulo Software Pipelining", false, false)

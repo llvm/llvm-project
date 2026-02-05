@@ -47,7 +47,7 @@ STATISTIC(NumStoresMerged, "Number of stores merged");
 
 const unsigned MaxStoreSizeToForm = 128;
 
-char LoadStoreOpt::ID = 0;
+const char LoadStoreOpt::ID = 0;
 INITIALIZE_PASS_BEGIN(LoadStoreOpt, DEBUG_TYPE, "Generic memory optimizations",
                       false, false)
 INITIALIZE_PASS_END(LoadStoreOpt, DEBUG_TYPE, "Generic memory optimizations",

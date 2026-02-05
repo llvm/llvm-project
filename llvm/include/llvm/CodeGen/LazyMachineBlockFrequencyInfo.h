@@ -53,7 +53,7 @@ private:
   MachineBlockFrequencyInfo &calculateIfNotAvailable() const;
 
 public:
-  static char ID;
+  static const char ID;
 
   LazyMachineBlockFrequencyInfoPass();
 

@@ -46,7 +46,7 @@ private:
   using BaseObjectLayer = RTTIExtends<ObjectLinkingLayer, ObjectLayer>;
 
 public:
-  static char ID;
+  static const char ID;
 
   using ReturnObjectBufferFunction =
       std::function<void(std::unique_ptr<MemoryBuffer>)>;

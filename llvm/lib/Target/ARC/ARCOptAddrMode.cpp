@@ -51,7 +51,7 @@ void initializeARCOptAddrModePass(PassRegistry &);
 namespace {
 class ARCOptAddrMode : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   ARCOptAddrMode() : MachineFunctionPass(ID) {}
 
@@ -116,7 +116,7 @@ private:
 
 } // end anonymous namespace
 
-char ARCOptAddrMode::ID = 0;
+const char ARCOptAddrMode::ID = 0;
 INITIALIZE_PASS_BEGIN(ARCOptAddrMode, OPTADDRMODE_NAME, OPTADDRMODE_DESC, false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)

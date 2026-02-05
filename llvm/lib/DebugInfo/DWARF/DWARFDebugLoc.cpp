@@ -410,4 +410,4 @@ void llvm::ResolverError::log(raw_ostream &OS) const {
                dwarf::LocListEncodingString(Kind).data());
 }
 
-char llvm::ResolverError::ID;
+const char llvm::ResolverError::ID = 0;

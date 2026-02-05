@@ -1143,7 +1143,7 @@ class ExpandIRInstsLegacyPass : public FunctionPass {
   CodeGenOptLevel OptLevel;
 
 public:
-  static char ID;
+  static const char ID;
 
   ExpandIRInstsLegacyPass(CodeGenOptLevel OptLevel)
       : FunctionPass(ID), OptLevel(OptLevel) {}
@@ -1216,7 +1216,7 @@ PreservedAnalyses ExpandIRInstsPass::run(Function &F,
                                        : PreservedAnalyses::all();
 }
 
-char ExpandIRInstsLegacyPass::ID = 0;
+const char ExpandIRInstsLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(ExpandIRInstsLegacyPass, "expand-ir-insts",
                       "Expand certain fp instructions", false, false)
 INITIALIZE_PASS_DEPENDENCY(LibcallLoweringInfoWrapper)

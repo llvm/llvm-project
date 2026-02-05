@@ -33,7 +33,7 @@ public:
 
   /// LLVM RTTI support.
   /// {
-  static char ID;
+  static const char ID;
   bool isA(const void *ClassID) const override {
     return ClassID == &ID || DataBuffer::isA(ClassID);
   }
@@ -59,7 +59,7 @@ public:
 
   /// LLVM RTTI support.
   /// {
-  static char ID;
+  static const char ID;
   bool isA(const void *ClassID) const override {
     return ClassID == &ID || WritableDataBuffer::isA(ClassID);
   }

@@ -44,9 +44,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "spill-code-placement"
 
-char SpillPlacementWrapperLegacy::ID = 0;
+const char SpillPlacementWrapperLegacy::ID = 0;
 
-char &llvm::SpillPlacementID = SpillPlacementWrapperLegacy::ID;
+const char &llvm::SpillPlacementID = SpillPlacementWrapperLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(SpillPlacementWrapperLegacy, DEBUG_TYPE,
                       "Spill Code Placement Analysis", true, true)

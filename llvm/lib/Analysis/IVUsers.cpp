@@ -38,7 +38,7 @@ IVUsers IVUsersAnalysis::run(Loop &L, LoopAnalysisManager &AM,
   return IVUsers(&L, &AR.AC, &AR.LI, &AR.DT, &AR.SE);
 }
 
-char IVUsersWrapperPass::ID = 0;
+const char IVUsersWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(IVUsersWrapperPass, "iv-users",
                       "Induction Variable Users", false, true)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)

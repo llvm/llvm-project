@@ -144,7 +144,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  static char ID;
+  static const char ID = 0;
 };
 
 class X86LoadValueInjectionLoadHardeningImpl {
@@ -237,7 +237,7 @@ struct DOTGraphTraits<MachineGadgetGraph *> : DefaultDOTGraphTraits {
 
 } // end namespace llvm
 
-char X86LoadValueInjectionLoadHardeningLegacy::ID = 0;
+const char X86LoadValueInjectionLoadHardeningLegacy::ID;
 
 void X86LoadValueInjectionLoadHardeningLegacy::getAnalysisUsage(
     AnalysisUsage &AU) const {

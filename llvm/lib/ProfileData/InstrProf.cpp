@@ -259,7 +259,7 @@ std::string InstrProfError::message() const {
   return getInstrProfErrString(Err, Msg);
 }
 
-char InstrProfError::ID = 0;
+const char InstrProfError::ID = 0;
 
 ProfOStream::ProfOStream(raw_fd_ostream &FD)
     : IsFDOStream(true), OS(FD), LE(FD, llvm::endianness::little) {}

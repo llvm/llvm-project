@@ -388,7 +388,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction&) override;
 
-  static char ID; // Class identification, replacement for typeinfo
+  static const char ID; // Class identification, replacement for typeinfo
 };
 
 /// PostMachineScheduler runs after shortly before code emission.
@@ -400,14 +400,14 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &) override;
 
-  static char ID; // Class identification, replacement for typeinfo
+  static const char ID; // Class identification, replacement for typeinfo
 };
 
 } // end anonymous namespace
 
-char MachineSchedulerLegacy::ID = 0;
+const char MachineSchedulerLegacy::ID = 0;
 
-char &llvm::MachineSchedulerID = MachineSchedulerLegacy::ID;
+const char &llvm::MachineSchedulerID = MachineSchedulerLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(MachineSchedulerLegacy, DEBUG_TYPE,
                       "Machine Instruction Scheduler", false, false)
@@ -436,9 +436,9 @@ void MachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-char PostMachineSchedulerLegacy::ID = 0;
+const char PostMachineSchedulerLegacy::ID = 0;
 
-char &llvm::PostMachineSchedulerID = PostMachineSchedulerLegacy::ID;
+const char &llvm::PostMachineSchedulerID = PostMachineSchedulerLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(PostMachineSchedulerLegacy, "postmisched",
                       "PostRA Machine Instruction Scheduler", false, false)

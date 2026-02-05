@@ -43,7 +43,7 @@ namespace {
 
 class RISCVPromoteConstant : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
   RISCVPromoteConstant() : ModulePass(ID) {}
 
   StringRef getPassName() const override { return RISCV_PROMOTE_CONSTANT_NAME; }
@@ -75,7 +75,7 @@ private:
 };
 } // end anonymous namespace
 
-char RISCVPromoteConstant::ID = 0;
+const char RISCVPromoteConstant::ID = 0;
 
 INITIALIZE_PASS(RISCVPromoteConstant, DEBUG_TYPE, RISCV_PROMOTE_CONSTANT_NAME,
                 false, false)

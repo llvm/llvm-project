@@ -29,7 +29,7 @@ namespace {
 /// for each use. Add isUndef marker to implicit_def defs and their uses.
 class ProcessImplicitDefsLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   ProcessImplicitDefsLegacy() : MachineFunctionPass(ID) {}
 
@@ -57,8 +57,8 @@ public:
 };
 } // end anonymous namespace
 
-char ProcessImplicitDefsLegacy::ID = 0;
-char &llvm::ProcessImplicitDefsID = ProcessImplicitDefsLegacy::ID;
+const char ProcessImplicitDefsLegacy::ID = 0;
+const char &llvm::ProcessImplicitDefsID = ProcessImplicitDefsLegacy::ID;
 
 INITIALIZE_PASS(ProcessImplicitDefsLegacy, DEBUG_TYPE,
                 "Process Implicit Definitions", false, false)

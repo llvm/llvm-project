@@ -43,7 +43,7 @@ static cl::opt<unsigned> MaxBooleansInControlFlowHub(
 
 namespace {
 struct UnifyLoopExitsLegacyPass : public FunctionPass {
-  static char ID;
+  static const char ID;
   UnifyLoopExitsLegacyPass() : FunctionPass(ID) {
     initializeUnifyLoopExitsLegacyPassPass(*PassRegistry::getPassRegistry());
   }
@@ -59,7 +59,7 @@ struct UnifyLoopExitsLegacyPass : public FunctionPass {
 };
 } // namespace
 
-char UnifyLoopExitsLegacyPass::ID = 0;
+const char UnifyLoopExitsLegacyPass::ID = 0;
 
 FunctionPass *llvm::createUnifyLoopExitsPass() {
   return new UnifyLoopExitsLegacyPass();

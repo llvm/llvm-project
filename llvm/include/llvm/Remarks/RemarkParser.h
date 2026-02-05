@@ -27,7 +27,7 @@ struct Remark;
 
 class EndOfFileError : public ErrorInfo<EndOfFileError> {
 public:
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
 
   EndOfFileError() = default;
 

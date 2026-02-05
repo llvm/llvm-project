@@ -25,16 +25,16 @@
 namespace llvm {
 namespace orc {
 
-char ResourceTrackerDefunct::ID = 0;
-char JITDylibDefunct::ID = 0;
-char FailedToMaterialize::ID = 0;
-char SymbolsNotFound::ID = 0;
-char SymbolsCouldNotBeRemoved::ID = 0;
-char MissingSymbolDefinitions::ID = 0;
-char UnexpectedSymbolDefinitions::ID = 0;
-char UnsatisfiedSymbolDependencies::ID = 0;
-char MaterializationTask::ID = 0;
-char LookupTask::ID = 0;
+const char ResourceTrackerDefunct::ID = 0;
+const char JITDylibDefunct::ID = 0;
+const char FailedToMaterialize::ID = 0;
+const char SymbolsNotFound::ID = 0;
+const char SymbolsCouldNotBeRemoved::ID = 0;
+const char MissingSymbolDefinitions::ID = 0;
+const char UnexpectedSymbolDefinitions::ID = 0;
+const char UnsatisfiedSymbolDependencies::ID = 0;
+const char MaterializationTask::ID = 0;
+const char LookupTask::ID = 0;
 
 RegisterDependenciesFunction NoDependenciesToRegister =
     RegisterDependenciesFunction();

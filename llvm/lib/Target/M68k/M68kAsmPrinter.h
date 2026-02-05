@@ -49,7 +49,7 @@ class LLVM_LIBRARY_VISIBILITY M68kAsmPrinter
   void printAbsMem(const MachineInstr *MI, unsigned OpNum, raw_ostream &OS);
 
 public:
-  static char ID;
+  static const char ID;
 
   const M68kSubtarget *Subtarget;
   const M68kMachineFunctionInfo *MMFI;

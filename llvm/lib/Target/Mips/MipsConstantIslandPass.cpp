@@ -354,7 +354,7 @@ namespace {
   }
 
   public:
-    static char ID;
+    static const char ID;
 
     MipsConstantIslands() : MachineFunctionPass(ID) {}
 
@@ -408,7 +408,7 @@ namespace {
 
 } // end anonymous namespace
 
-char MipsConstantIslands::ID = 0;
+const char MipsConstantIslands::ID = 0;
 
 bool MipsConstantIslands::isOffsetInRange
   (unsigned UserOffset, unsigned TrialOffset,

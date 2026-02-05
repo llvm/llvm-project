@@ -59,7 +59,7 @@ class LLVM_ABI ModuleSummaryIndexWrapperPass : public ModulePass {
   std::optional<ModuleSummaryIndex> Index;
 
 public:
-  static char ID;
+  static const char ID;
 
   ModuleSummaryIndexWrapperPass();
 
@@ -84,7 +84,7 @@ class LLVM_ABI ImmutableModuleSummaryIndexWrapperPass : public ImmutablePass {
   const ModuleSummaryIndex *Index;
 
 public:
-  static char ID;
+  static const char ID;
 
   ImmutableModuleSummaryIndexWrapperPass(
       const ModuleSummaryIndex *Index = nullptr);

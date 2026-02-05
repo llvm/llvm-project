@@ -45,7 +45,7 @@ std::optional<Header> Header::parse(llvm::StringRef text) {
   return Header{ArchSpec(triple), std::move(uuid)};
 }
 
-char ObjectFileBreakpad::ID;
+const char ObjectFileBreakpad::ID = 0;
 
 void ObjectFileBreakpad::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),

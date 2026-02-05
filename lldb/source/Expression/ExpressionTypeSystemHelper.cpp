@@ -10,4 +10,4 @@
 
 using namespace lldb_private;
 
-char ExpressionTypeSystemHelper::ID;
+const char ExpressionTypeSystemHelper::ID = 0;

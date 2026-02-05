@@ -1304,7 +1304,7 @@ namespace {
 /// This pass combines interleaved loads into a pattern detectable by
 /// InterleavedAccessPass.
 struct InterleavedLoadCombine : public FunctionPass {
-  static char ID;
+  static const char ID;
 
   InterleavedLoadCombine() : FunctionPass(ID) {}
 
@@ -1352,7 +1352,7 @@ InterleavedLoadCombinePass::run(Function &F, FunctionAnalysisManager &FAM) {
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
-char InterleavedLoadCombine::ID = 0;
+const char InterleavedLoadCombine::ID = 0;
 
 INITIALIZE_PASS_BEGIN(
     InterleavedLoadCombine, DEBUG_TYPE,

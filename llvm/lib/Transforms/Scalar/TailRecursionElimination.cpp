@@ -933,7 +933,7 @@ bool TailRecursionEliminator::eliminate(Function &F,
 
 namespace {
 struct TailCallElim : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   TailCallElim() : FunctionPass(ID) {
     initializeTailCallElimPass(*PassRegistry::getPassRegistry());
   }
@@ -969,7 +969,7 @@ struct TailCallElim : public FunctionPass {
 };
 } // namespace
 
-char TailCallElim::ID = 0;
+const char TailCallElim::ID = 0;
 INITIALIZE_PASS_BEGIN(TailCallElim, "tailcallelim", "Tail Call Elimination",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)

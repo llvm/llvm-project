@@ -27,7 +27,7 @@ namespace {
 class RISCVPostRAExpandPseudo : public MachineFunctionPass {
 public:
   const RISCVInstrInfo *TII;
-  static char ID;
+  static const char ID;
 
   RISCVPostRAExpandPseudo() : MachineFunctionPass(ID) {}
 
@@ -45,7 +45,7 @@ private:
   bool expandMovAddr(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
 };
 
-char RISCVPostRAExpandPseudo::ID = 0;
+const char RISCVPostRAExpandPseudo::ID = 0;
 
 bool RISCVPostRAExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   TII = static_cast<const RISCVInstrInfo *>(MF.getSubtarget().getInstrInfo());

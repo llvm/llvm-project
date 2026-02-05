@@ -82,7 +82,7 @@ static bool tagInvariantLoads(Function &F) {
 namespace {
 
 struct NVPTXTagInvariantLoadLegacyPass : public FunctionPass {
-  static char ID;
+  static const char ID;
 
   NVPTXTagInvariantLoadLegacyPass() : FunctionPass(ID) {}
   bool runOnFunction(Function &F) override;
@@ -97,7 +97,7 @@ bool NVPTXTagInvariantLoadLegacyPass::runOnFunction(Function &F) {
   return tagInvariantLoads(F);
 }
 
-char NVPTXTagInvariantLoadLegacyPass::ID = 0;
+const char NVPTXTagInvariantLoadLegacyPass::ID = 0;
 
 FunctionPass *llvm::createNVPTXTagInvariantLoadsPass() {
   return new NVPTXTagInvariantLoadLegacyPass();

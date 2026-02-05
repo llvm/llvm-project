@@ -304,7 +304,7 @@ public:
   /// been calculated by LEA. Also, remove redundant LEAs.
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  static char ID;
+  static const char ID;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
@@ -315,7 +315,7 @@ public:
 
 } // end anonymous namespace
 
-char X86OptimizeLEAsLegacy::ID = 0;
+const char X86OptimizeLEAsLegacy::ID = 0;
 
 FunctionPass *llvm::createX86OptimizeLEAsLegacyPass() {
   return new X86OptimizeLEAsLegacy();

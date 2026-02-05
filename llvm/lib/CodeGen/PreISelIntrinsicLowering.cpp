@@ -767,7 +767,7 @@ namespace {
 
 class PreISelIntrinsicLoweringLegacyPass : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
 
   PreISelIntrinsicLoweringLegacyPass() : ModulePass(ID) {}
 
@@ -797,7 +797,7 @@ public:
 
 } // end anonymous namespace
 
-char PreISelIntrinsicLoweringLegacyPass::ID;
+const char PreISelIntrinsicLoweringLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(PreISelIntrinsicLoweringLegacyPass,
                       "pre-isel-intrinsic-lowering",

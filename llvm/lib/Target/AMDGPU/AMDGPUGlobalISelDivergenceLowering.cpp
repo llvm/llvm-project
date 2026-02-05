@@ -31,7 +31,7 @@ namespace {
 
 class AMDGPUGlobalISelDivergenceLowering : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
 public:
   AMDGPUGlobalISelDivergenceLowering() : MachineFunctionPass(ID) {}
@@ -293,9 +293,9 @@ INITIALIZE_PASS_DEPENDENCY(MachineUniformityAnalysisPass)
 INITIALIZE_PASS_END(AMDGPUGlobalISelDivergenceLowering, DEBUG_TYPE,
                     "AMDGPU GlobalISel divergence lowering", false, false)
 
-char AMDGPUGlobalISelDivergenceLowering::ID = 0;
+const char AMDGPUGlobalISelDivergenceLowering::ID = 0;
 
-char &llvm::AMDGPUGlobalISelDivergenceLoweringID =
+const char &llvm::AMDGPUGlobalISelDivergenceLoweringID =
     AMDGPUGlobalISelDivergenceLowering::ID;
 
 FunctionPass *llvm::createAMDGPUGlobalISelDivergenceLoweringPass() {

@@ -46,7 +46,7 @@ class AArch64CompressJumpTables : public MachineFunctionPass {
   bool compressJumpTable(MachineInstr &MI, int Offset);
 
 public:
-  static char ID;
+  static const char ID;
   AArch64CompressJumpTables() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -58,7 +58,7 @@ public:
     return "AArch64 Compress Jump Tables";
   }
 };
-char AArch64CompressJumpTables::ID = 0;
+const char AArch64CompressJumpTables::ID = 0;
 } // namespace
 
 INITIALIZE_PASS(AArch64CompressJumpTables, DEBUG_TYPE,

@@ -37,7 +37,7 @@ public:
 
   static llvm::StringRef GetPluginNameStatic() { return "itanium"; }
 
-  static char ID;
+  static const char ID;
 
   bool isA(const void *ClassID) const override {
     return ClassID == &ID || CPPLanguageRuntime::isA(ClassID);

@@ -2810,7 +2810,7 @@ bool AssignmentTrackingAnalysis::runOnFunction(Function &F) {
 AssignmentTrackingAnalysis::AssignmentTrackingAnalysis()
     : FunctionPass(ID), Results(std::make_unique<FunctionVarLocs>()) {}
 
-char AssignmentTrackingAnalysis::ID = 0;
+const char AssignmentTrackingAnalysis::ID = 0;
 
 INITIALIZE_PASS(AssignmentTrackingAnalysis, DEBUG_TYPE,
                 "Assignment Tracking Analysis", false, true)

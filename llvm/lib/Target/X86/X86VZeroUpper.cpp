@@ -105,12 +105,12 @@ namespace {
     bool IsX86INTR;
     const TargetInstrInfo *TII;
 
-    static char ID;
+    static const char ID;
   };
 
 } // end anonymous namespace
 
-char VZeroUpperInserter::ID = 0;
+const char VZeroUpperInserter::ID = 0;
 
 FunctionPass *llvm::createX86IssueVZeroUpperPass() {
   return new VZeroUpperInserter();

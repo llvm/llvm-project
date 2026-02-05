@@ -54,14 +54,14 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  static char ID;
+  static const char ID;
 
 private:
   StringRef getPassName() const override { return AVOIDCALL_DESC; }
 };
 } // end anonymous namespace
 
-char X86AvoidTrailingCallLegacyPass::ID = 0;
+const char X86AvoidTrailingCallLegacyPass::ID = 0;
 
 FunctionPass *llvm::createX86AvoidTrailingCallLegacyPass() {
   return new X86AvoidTrailingCallLegacyPass();

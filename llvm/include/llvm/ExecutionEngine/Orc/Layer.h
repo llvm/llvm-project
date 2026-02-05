@@ -133,7 +133,7 @@ private:
 /// Interface for Layers that accept object files.
 class LLVM_ABI ObjectLayer : public RTTIExtends<ObjectLayer, RTTIRoot> {
 public:
-  static char ID;
+  static const char ID;
 
   ObjectLayer(ExecutionSession &ES);
   ~ObjectLayer() override;

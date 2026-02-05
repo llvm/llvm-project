@@ -131,7 +131,7 @@ class WebAssemblyExceptionInfo final : public MachineFunctionPass {
   WebAssemblyException *getOutermostException(MachineBasicBlock *MBB) const;
 
 public:
-  static char ID;
+  static const char ID;
   WebAssemblyExceptionInfo() : MachineFunctionPass(ID) {}
   ~WebAssemblyExceptionInfo() override { releaseMemory(); }
   WebAssemblyExceptionInfo(const WebAssemblyExceptionInfo &) = delete;

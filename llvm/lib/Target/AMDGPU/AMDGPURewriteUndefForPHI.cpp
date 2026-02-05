@@ -71,7 +71,7 @@ namespace {
 
 class AMDGPURewriteUndefForPHILegacy : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
   AMDGPURewriteUndefForPHILegacy() : FunctionPass(ID) {}
   bool runOnFunction(Function &F) override;
   StringRef getPassName() const override {
@@ -88,7 +88,7 @@ public:
 };
 
 } // end anonymous namespace
-char AMDGPURewriteUndefForPHILegacy::ID = 0;
+const char AMDGPURewriteUndefForPHILegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AMDGPURewriteUndefForPHILegacy, DEBUG_TYPE,
                       "Rewrite undef for PHI", false, false)

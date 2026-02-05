@@ -45,7 +45,7 @@ class LLVM_ABI RuntimeLibraryInfoWrapper : public ImmutablePass {
   std::optional<RTLIB::RuntimeLibcallsInfo> RTLCI;
 
 public:
-  static char ID;
+  static const char ID;
   RuntimeLibraryInfoWrapper();
   RuntimeLibraryInfoWrapper(
       const Triple &TT,

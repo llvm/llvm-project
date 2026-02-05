@@ -29,7 +29,7 @@ public:
   // because
   // you can't make an instance of this generic runtime.
 
-  static char ID;
+  static const char ID;
 
   static void Initialize();
 

@@ -58,7 +58,7 @@ raw_ostream &operator<<(raw_ostream &OS, const PrintRegister &PR) {
 
   class HexagonGenPredicate : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     HexagonGenPredicate() : MachineFunctionPass(ID) {}
 
@@ -100,7 +100,7 @@ raw_ostream &operator<<(raw_ostream &OS, const PrintRegister &PR) {
 
 } // end anonymous namespace
 
-char HexagonGenPredicate::ID = 0;
+const char HexagonGenPredicate::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonGenPredicate, "hexagon-gen-pred-pass",
                       "Hexagon generate predicate operations", false, false)

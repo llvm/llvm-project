@@ -2141,7 +2141,7 @@ class LLVM_ABI TargetTransformInfoWrapperPass : public ImmutablePass {
   virtual void anchor();
 
 public:
-  static char ID;
+  static const char ID;
 
   /// We must provide a default constructor for the pass but it should
   /// never be used.

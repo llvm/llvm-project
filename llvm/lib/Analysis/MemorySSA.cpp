@@ -2412,7 +2412,7 @@ PreservedAnalyses MemorySSAVerifierPass::run(Function &F,
   return PreservedAnalyses::all();
 }
 
-char MemorySSAWrapperPass::ID = 0;
+const char MemorySSAWrapperPass::ID = 0;
 
 MemorySSAWrapperPass::MemorySSAWrapperPass() : FunctionPass(ID) {}
 

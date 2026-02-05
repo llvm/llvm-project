@@ -35,11 +35,11 @@
 
 using namespace lldb_private;
 
-char LogHandler::ID;
-char StreamLogHandler::ID;
-char CallbackLogHandler::ID;
-char RotatingLogHandler::ID;
-char TeeLogHandler::ID;
+const char LogHandler::ID = 0;
+const char StreamLogHandler::ID = 0;
+const char CallbackLogHandler::ID = 0;
+const char RotatingLogHandler::ID = 0;
+const char TeeLogHandler::ID = 0;
 
 llvm::ManagedStatic<Log::ChannelMap> Log::g_channel_map;
 

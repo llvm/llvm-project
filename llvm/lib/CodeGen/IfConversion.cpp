@@ -207,7 +207,7 @@ namespace {
     std::function<bool(const MachineFunction &)> PredicateFtor;
 
   public:
-    static char ID;
+    static const char ID;
 
     IfConverter(std::function<bool(const MachineFunction &)> Ftor = nullptr)
         : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {}
@@ -444,9 +444,9 @@ namespace {
 
 } // end anonymous namespace
 
-char IfConverter::ID = 0;
+const char IfConverter::ID = 0;
 
-char &llvm::IfConverterID = IfConverter::ID;
+const char &llvm::IfConverterID = IfConverter::ID;
 
 INITIALIZE_PASS_BEGIN(IfConverter, DEBUG_TYPE, "If Converter", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfoWrapperPass)

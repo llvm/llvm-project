@@ -79,7 +79,7 @@ private:
 
 class FalkorMarkStridedAccessesLegacy : public FunctionPass {
 public:
-  static char ID; // Pass ID, replacement for typeid
+  static const char ID; // Pass ID, replacement for typeid
 
   FalkorMarkStridedAccessesLegacy() : FunctionPass(ID) {}
 
@@ -97,7 +97,7 @@ public:
 
 } // end anonymous namespace
 
-char FalkorMarkStridedAccessesLegacy::ID = 0;
+const char FalkorMarkStridedAccessesLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(FalkorMarkStridedAccessesLegacy, DEBUG_TYPE,
                       "Falkor HW Prefetch Fix", false, false)
@@ -175,7 +175,7 @@ namespace {
 
 class FalkorHWPFFix : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   FalkorHWPFFix() : MachineFunctionPass(ID) {}
 
@@ -213,7 +213,7 @@ struct LoadInfo {
 
 } // end anonymous namespace
 
-char FalkorHWPFFix::ID = 0;
+const char FalkorHWPFFix::ID = 0;
 
 INITIALIZE_PASS_BEGIN(FalkorHWPFFix, "aarch64-falkor-hwpf-fix-late",
                       "Falkor HW Prefetch Fix Late Phase", false, false)

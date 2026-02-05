@@ -14,7 +14,7 @@
 using namespace llvm;
 using namespace llvm::cas;
 
-char NamedValuesSchema::ID = 0;
+const char NamedValuesSchema::ID = 0;
 constexpr StringLiteral NamedValuesSchema::SchemaName;
 
 void NamedValuesSchema::anchor() {}

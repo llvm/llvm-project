@@ -16,7 +16,7 @@
 #define DEBUG_TYPE "cseinfo"
 
 using namespace llvm;
-char llvm::GISelCSEAnalysisWrapperPass::ID = 0;
+const char llvm::GISelCSEAnalysisWrapperPass::ID = 0;
 GISelCSEAnalysisWrapperPass::GISelCSEAnalysisWrapperPass()
     : MachineFunctionPass(ID) {}
 INITIALIZE_PASS(GISelCSEAnalysisWrapperPass, DEBUG_TYPE,

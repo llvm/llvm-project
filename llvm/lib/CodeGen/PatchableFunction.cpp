@@ -29,7 +29,7 @@ struct PatchableFunction {
 };
 
 struct PatchableFunctionLegacy : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
   PatchableFunctionLegacy() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &F) override {
     return PatchableFunction().run(F);
@@ -76,7 +76,7 @@ bool PatchableFunction::run(MachineFunction &MF) {
   return false;
 }
 
-char PatchableFunctionLegacy::ID = 0;
-char &llvm::PatchableFunctionID = PatchableFunctionLegacy::ID;
+const char PatchableFunctionLegacy::ID = 0;
+const char &llvm::PatchableFunctionID = PatchableFunctionLegacy::ID;
 INITIALIZE_PASS(PatchableFunctionLegacy, "patchable-function",
                 "Implement the 'patchable-function' attribute", false, false)

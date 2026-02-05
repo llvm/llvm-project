@@ -91,7 +91,7 @@ public:
 
 class PostRASchedulerLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   PostRASchedulerLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -111,7 +111,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
 };
-char PostRASchedulerLegacy::ID = 0;
+const char PostRASchedulerLegacy::ID = 0;
 
 class SchedulePostRATDList : public ScheduleDAGInstrs {
   /// AvailableQueue - The priority queue to use for the available SUnits.
@@ -199,7 +199,7 @@ private:
 };
 } // namespace
 
-char &llvm::PostRASchedulerID = PostRASchedulerLegacy::ID;
+const char &llvm::PostRASchedulerID = PostRASchedulerLegacy::ID;
 
 INITIALIZE_PASS(PostRASchedulerLegacy, DEBUG_TYPE,
                 "Post RA top-down list latency scheduler", false, false)

@@ -746,7 +746,7 @@ DWARF:
 }
 
 class CustomSymbolFileDWARF : public SymbolFileDWARF {
-  static char ID;
+  static const char ID;
 
 public:
   using SymbolFileDWARF::SymbolFileDWARF;
@@ -829,7 +829,7 @@ public:
   }
 };
 
-char CustomSymbolFileDWARF::ID;
+const char CustomSymbolFileDWARF::ID = 0;
 
 static auto testExpressionVendorExtensions(lldb::ModuleSP module_sp,
                                            DWARFUnit &dwarf_unit,

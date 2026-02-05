@@ -53,7 +53,7 @@ inline std::error_code make_error_code(object_error e) {
 class LLVM_ABI BinaryError : public ErrorInfo<BinaryError, ECError> {
   void anchor() override;
 public:
-  static char ID;
+  static const char ID;
   BinaryError() {
     // Default to parse_failed, can be overridden with setErrorCode.
     setErrorCode(make_error_code(object_error::parse_failed));
@@ -67,7 +67,7 @@ public:
 class LLVM_ABI GenericBinaryError
     : public ErrorInfo<GenericBinaryError, BinaryError> {
 public:
-  static char ID;
+  static const char ID;
   GenericBinaryError(const Twine &Msg);
   GenericBinaryError(const Twine &Msg, object_error ECOverride);
   const std::string &getMessage() const { return Msg; }

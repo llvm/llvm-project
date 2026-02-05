@@ -1161,7 +1161,7 @@ class LLVM_ABI IRSimilarityIdentifierWrapperPass : public ModulePass {
   std::unique_ptr<IRSimilarity::IRSimilarityIdentifier> IRSI;
 
 public:
-  static char ID;
+  static const char ID;
   IRSimilarityIdentifierWrapperPass();
 
   IRSimilarity::IRSimilarityIdentifier &getIRSI() { return *IRSI; }

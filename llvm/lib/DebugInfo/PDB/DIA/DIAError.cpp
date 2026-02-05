@@ -35,4 +35,4 @@ const std::error_category &llvm::pdb::DIAErrCategory() {
   return DIACategory;
 }
 
-char DIAError::ID;
+const char DIAError::ID = 0;

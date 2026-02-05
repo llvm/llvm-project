@@ -144,7 +144,7 @@ OptimizationRemarkEmitterAnalysis::run(Function &F,
   return OptimizationRemarkEmitter(&F, BFI);
 }
 
-char OptimizationRemarkEmitterWrapperPass::ID = 0;
+const char OptimizationRemarkEmitterWrapperPass::ID = 0;
 static const char ore_name[] = "Optimization Remark Emitter";
 #define ORE_NAME "opt-remark-emitter"
 

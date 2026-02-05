@@ -36,11 +36,11 @@ class WebAssemblyFixBrTableDefaults final : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyFixBrTableDefaults() : MachineFunctionPass(ID) {}
 };
 
-char WebAssemblyFixBrTableDefaults::ID = 0;
+const char WebAssemblyFixBrTableDefaults::ID = 0;
 
 // Target independent selection dag assumes that it is ok to use PointerTy
 // as the index for a "switch", whereas Wasm so far only has a 32-bit br_table.

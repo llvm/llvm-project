@@ -37,7 +37,7 @@ public:
   const TargetInstrInfo *TII;
   const ARMSubtarget *ST;
 
-  static char ID;
+  static const char ID;
 
   ARMSLSHardening() : MachineFunctionPass(ID) {
     initializeARMSLSHardeningPass(*PassRegistry::getPassRegistry());
@@ -62,7 +62,7 @@ private:
 
 } // end anonymous namespace
 
-char ARMSLSHardening::ID = 0;
+const char ARMSLSHardening::ID = 0;
 
 INITIALIZE_PASS(ARMSLSHardening, "arm-sls-hardening",
                 ARM_SLS_HARDENING_NAME, false, false)
@@ -387,7 +387,7 @@ FunctionPass *llvm::createARMSLSHardeningPass() {
 namespace {
 class ARMIndirectThunks : public ThunkInserterPass<SLSBLRThunkInserter> {
 public:
-  static char ID;
+  static const char ID;
 
   ARMIndirectThunks() : ThunkInserterPass(ID) {}
 
@@ -395,7 +395,7 @@ public:
 };
 } // end anonymous namespace
 
-char ARMIndirectThunks::ID = 0;
+const char ARMIndirectThunks::ID = 0;
 
 FunctionPass *llvm::createARMIndirectThunks() {
   return new ARMIndirectThunks();

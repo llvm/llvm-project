@@ -37,13 +37,13 @@ static cl::opt<bool> VerifyCFI("verify-cfiinstrs",
 namespace {
 class CFIInstrInserter : public MachineFunctionPass {
  public:
-  static char ID;
+   static const char ID;
 
-  CFIInstrInserter() : MachineFunctionPass(ID) {}
+   CFIInstrInserter() : MachineFunctionPass(ID) {}
 
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    MachineFunctionPass::getAnalysisUsage(AU);
+   void getAnalysisUsage(AnalysisUsage &AU) const override {
+     AU.setPreservesAll();
+     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -197,7 +197,7 @@ private:
 };
 }  // namespace
 
-char CFIInstrInserter::ID = 0;
+const char CFIInstrInserter::ID = 0;
 INITIALIZE_PASS(CFIInstrInserter, "cfi-instr-inserter",
                 "Check CFA info and insert CFI instructions if needed", false,
                 false)

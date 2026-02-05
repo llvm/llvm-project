@@ -499,7 +499,7 @@ that inherits from the ``ErrorInfo`` utility, E.g.:
 
   class BadFileFormat : public ErrorInfo<BadFileFormat> {
   public:
-    static char ID;
+    static const char ID;
     std::string Path;
 
     BadFileFormat(StringRef Path) : Path(Path.str()) {}

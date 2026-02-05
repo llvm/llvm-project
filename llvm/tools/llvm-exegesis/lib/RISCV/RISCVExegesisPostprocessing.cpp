@@ -23,7 +23,7 @@ using namespace llvm;
 
 namespace {
 struct RISCVExegesisPostprocessing : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
 
   RISCVExegesisPostprocessing() : MachineFunctionPass(ID) {}
 
@@ -45,7 +45,7 @@ private:
 };
 } // anonymous namespace
 
-char RISCVExegesisPostprocessing::ID = 0;
+const char RISCVExegesisPostprocessing::ID = 0;
 
 bool RISCVExegesisPostprocessing::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;

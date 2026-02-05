@@ -89,12 +89,12 @@ struct StripDebugMachineModule : public ModulePass {
     AU.setPreservesCFG();
   }
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 
 protected:
   bool OnlyDebugified;
 };
-char StripDebugMachineModule::ID = 0;
+const char StripDebugMachineModule::ID = 0;
 
 } // end anonymous namespace
 

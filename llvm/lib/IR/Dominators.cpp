@@ -417,7 +417,7 @@ PreservedAnalyses DominatorTreeVerifierPass::run(Function &F,
 //
 //===----------------------------------------------------------------------===//
 
-char DominatorTreeWrapperPass::ID = 0;
+const char DominatorTreeWrapperPass::ID = 0;
 
 DominatorTreeWrapperPass::DominatorTreeWrapperPass() : FunctionPass(ID) {
   initializeDominatorTreeWrapperPassPass(*PassRegistry::getPassRegistry());

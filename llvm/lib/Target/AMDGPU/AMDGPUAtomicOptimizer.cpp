@@ -49,7 +49,7 @@ struct ReplacementInfo {
 
 class AMDGPUAtomicOptimizer : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
   ScanOptions ScanImpl;
   AMDGPUAtomicOptimizer(ScanOptions ScanImpl)
       : FunctionPass(ID), ScanImpl(ScanImpl) {}
@@ -107,9 +107,9 @@ public:
 
 } // namespace
 
-char AMDGPUAtomicOptimizer::ID = 0;
+const char AMDGPUAtomicOptimizer::ID = 0;
 
-char &llvm::AMDGPUAtomicOptimizerID = AMDGPUAtomicOptimizer::ID;
+const char &llvm::AMDGPUAtomicOptimizerID = AMDGPUAtomicOptimizer::ID;
 
 bool AMDGPUAtomicOptimizer::runOnFunction(Function &F) {
   if (skipFunction(F)) {

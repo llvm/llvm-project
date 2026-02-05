@@ -240,7 +240,7 @@ PreservedAnalyses SinkingPass::run(Function &F, FunctionAnalysisManager &AM) {
 namespace {
   class SinkingLegacyPass : public FunctionPass {
   public:
-    static char ID; // Pass identification
+    static const char ID; // Pass identification
     SinkingLegacyPass() : FunctionPass(ID) {
       initializeSinkingLegacyPassPass(*PassRegistry::getPassRegistry());
     }
@@ -265,7 +265,7 @@ namespace {
   };
 } // end anonymous namespace
 
-char SinkingLegacyPass::ID = 0;
+const char SinkingLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(SinkingLegacyPass, "sink", "Code sinking", false, false)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)

@@ -37,7 +37,7 @@ class AArch64StorePairSuppress : public MachineFunctionPass {
   MachineTraceMetrics::Ensemble *MinInstr;
 
 public:
-  static char ID;
+  static const char ID;
   AArch64StorePairSuppress() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return STPSUPPRESS_PASS_NAME; }
@@ -56,7 +56,7 @@ private:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
-char AArch64StorePairSuppress::ID = 0;
+const char AArch64StorePairSuppress::ID = 0;
 } // anonymous
 
 INITIALIZE_PASS(AArch64StorePairSuppress, "aarch64-stp-suppress",

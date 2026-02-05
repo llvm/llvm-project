@@ -52,7 +52,7 @@ class Section;
 /// support.
 class LLVM_ABI JITLinkError : public ErrorInfo<JITLinkError> {
 public:
-  static char ID;
+  static const char ID;
 
   JITLinkError(Twine ErrMsg) : ErrMsg(ErrMsg.str()) {}
 

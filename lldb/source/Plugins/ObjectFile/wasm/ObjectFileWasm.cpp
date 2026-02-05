@@ -126,7 +126,7 @@ static bool ValidateModuleHeader(llvm::ArrayRef<uint8_t> data) {
   return version == llvm::wasm::WasmVersion;
 }
 
-char ObjectFileWasm::ID;
+const char ObjectFileWasm::ID = 0;
 
 void ObjectFileWasm::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),

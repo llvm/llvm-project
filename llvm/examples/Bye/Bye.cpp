@@ -25,7 +25,7 @@ bool runBye(Function &F) {
 }
 
 struct LegacyBye : public FunctionPass {
-  static char ID;
+  static const char ID;
   LegacyBye() : FunctionPass(ID) {}
   bool runOnFunction(Function &F) override { return runBye(F); }
 };
@@ -71,7 +71,7 @@ bool preCodeGenCallback(Module &M, TargetMachine &, CodeGenFileType CGFT,
 
 } // namespace
 
-char LegacyBye::ID = 0;
+const char LegacyBye::ID = 0;
 
 static RegisterPass<LegacyBye> X("goodbye", "Good Bye World Pass",
                                  false /* Only looks at CFG */,

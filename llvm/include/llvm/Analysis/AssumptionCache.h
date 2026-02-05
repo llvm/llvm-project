@@ -257,7 +257,7 @@ public:
     return false;
   }
 
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 };
 
 template<> struct simplify_type<AssumptionCache::ResultElem> {

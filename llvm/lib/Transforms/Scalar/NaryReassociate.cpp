@@ -120,7 +120,7 @@ namespace {
 
 class NaryReassociateLegacyPass : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   NaryReassociateLegacyPass() : FunctionPass(ID) {
     initializeNaryReassociateLegacyPassPass(*PassRegistry::getPassRegistry());
@@ -150,7 +150,7 @@ private:
 
 } // end anonymous namespace
 
-char NaryReassociateLegacyPass::ID = 0;
+const char NaryReassociateLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(NaryReassociateLegacyPass, "nary-reassociate",
                       "Nary reassociation", false, false)

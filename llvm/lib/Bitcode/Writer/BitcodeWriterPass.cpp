@@ -35,7 +35,7 @@ namespace {
     bool ShouldPreserveUseListOrder;
 
   public:
-    static char ID; // Pass identification, replacement for typeid
+    static const char ID; // Pass identification, replacement for typeid
     WriteBitcodePass() : ModulePass(ID), OS(dbgs()) {
       initializeWriteBitcodePassPass(*PassRegistry::getPassRegistry());
     }
@@ -62,7 +62,7 @@ namespace {
   };
 }
 
-char WriteBitcodePass::ID = 0;
+const char WriteBitcodePass::ID = 0;
 INITIALIZE_PASS_BEGIN(WriteBitcodePass, "write-bitcode", "Write Bitcode", false,
                       true)
 INITIALIZE_PASS_DEPENDENCY(ModuleSummaryIndexWrapperPass)

@@ -13,7 +13,7 @@
 
 namespace lldb_dap {
 
-char DAPError::ID;
+const char DAPError::ID = 0;
 
 DAPError::DAPError(std::string message, std::error_code EC, bool show_user,
                    std::optional<std::string> url,
@@ -25,7 +25,7 @@ void DAPError::log(llvm::raw_ostream &OS) const { OS << m_message; }
 
 std::error_code DAPError::convertToErrorCode() const { return m_ec; }
 
-char NotStoppedError::ID;
+const char NotStoppedError::ID = 0;
 
 void NotStoppedError::log(llvm::raw_ostream &OS) const { OS << "not stopped"; }
 

@@ -40,14 +40,14 @@ class WebAssemblyRefTypeMem2Local final
   bool Changed = false;
 
 public:
-  static char ID;
+  static const char ID;
   WebAssemblyRefTypeMem2Local() : FunctionPass(ID) {}
 
   void visitAllocaInst(AllocaInst &AI);
 };
 } // End anonymous namespace
 
-char WebAssemblyRefTypeMem2Local::ID = 0;
+const char WebAssemblyRefTypeMem2Local::ID = 0;
 INITIALIZE_PASS(WebAssemblyRefTypeMem2Local, DEBUG_TYPE,
                 "Assign reference type allocas to local address space", true,
                 false)

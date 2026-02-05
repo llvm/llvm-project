@@ -134,7 +134,7 @@ typedef llvm::SmallVector<ReduceEntry, 32> ReduceEntryVector;
 
 class MicroMipsSizeReduce : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   MicroMipsSizeReduce();
 
   static const MipsInstrInfo *MipsII;
@@ -201,7 +201,7 @@ private:
   static ReduceEntryVector ReduceTable;
 };
 
-char MicroMipsSizeReduce::ID = 0;
+const char MicroMipsSizeReduce::ID = 0;
 const MipsInstrInfo *MicroMipsSizeReduce::MipsII;
 
 // This table must be sorted by WideOpc as a main criterion and

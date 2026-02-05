@@ -1889,7 +1889,7 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
   AsmPrinter::emitFunctionEntryLabel();
 }
 
-char SystemZAsmPrinter::ID = 0;
+const char SystemZAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(SystemZAsmPrinter, "systemz-asm-printer",
                 "SystemZ Assembly Printer", false, false)

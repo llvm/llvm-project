@@ -42,7 +42,7 @@ namespace {
 
 class LiveRangeShrink : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   LiveRangeShrink() : MachineFunctionPass(ID) {}
 
@@ -58,9 +58,9 @@ public:
 
 } // end anonymous namespace
 
-char LiveRangeShrink::ID = 0;
+const char LiveRangeShrink::ID = 0;
 
-char &llvm::LiveRangeShrinkID = LiveRangeShrink::ID;
+const char &llvm::LiveRangeShrinkID = LiveRangeShrink::ID;
 
 INITIALIZE_PASS(LiveRangeShrink, "lrshrink", "Live Range Shrink Pass", false,
                 false)

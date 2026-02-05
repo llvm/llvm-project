@@ -90,7 +90,7 @@ class TargetRegisterInfo;
 /// pipeline. At the end of this pass, all register operands have been assigned
 class RegBankSelect : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   /// List of the modes supported by the RegBankSelect pass.
   enum Mode {

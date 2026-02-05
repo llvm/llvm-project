@@ -66,13 +66,13 @@ private:
 
 class SparcDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   explicit SparcDAGToDAGISelLegacy(SparcTargetMachine &tm)
       : SelectionDAGISelLegacy(ID, std::make_unique<SparcDAGToDAGISel>(tm)) {}
 };
 }  // end anonymous namespace
 
-char SparcDAGToDAGISelLegacy::ID = 0;
+const char SparcDAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(SparcDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 

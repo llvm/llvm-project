@@ -46,7 +46,7 @@ public:
 
 private:
   /// LLVM RTTI support.
-  static char ID;
+  static const char ID;
 
   static SymbolFile *CreateInstance(ObjectFileSP objfile_sp) {
     return new FakeSymbolFile(std::move(objfile_sp));
@@ -148,7 +148,7 @@ private:
 
 } // namespace
 
-char FakeSymbolFile::ID;
+const char FakeSymbolFile::ID = 0;
 
 static llvm::Expected<FakeModuleFixture>
 CreateFakeModule(std::vector<LineTable::Sequence> line_sequences) {

@@ -497,7 +497,7 @@ namespace {
 /// This is used in for testing.
 class ScavengerTest : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   ScavengerTest() : MachineFunctionPass(ID) {}
 
@@ -521,7 +521,7 @@ public:
 
 } // end anonymous namespace
 
-char ScavengerTest::ID;
+const char ScavengerTest::ID = 0;
 
 INITIALIZE_PASS(ScavengerTest, "scavenger-test",
                 "Scavenge virtual registers inside basic blocks", false, false)

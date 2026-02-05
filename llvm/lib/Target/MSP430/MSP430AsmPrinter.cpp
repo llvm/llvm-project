@@ -56,7 +56,7 @@ namespace {
 
     void EmitInterruptVectorSection(MachineFunction &ISR);
 
-    static char ID;
+    static const char ID;
   };
 } // end of anonymous namespace
 
@@ -184,7 +184,7 @@ bool MSP430AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   return false;
 }
 
-char MSP430AsmPrinter::ID = 0;
+const char MSP430AsmPrinter::ID = 0;
 
 INITIALIZE_PASS(MSP430AsmPrinter, "msp430-asm-printer",
                 "MSP430 Assembly Printer", false, false)

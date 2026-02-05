@@ -402,12 +402,12 @@ private:
 
 class M68kDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   explicit M68kDAGToDAGISelLegacy(M68kTargetMachine &TM)
       : SelectionDAGISelLegacy(ID, std::make_unique<M68kDAGToDAGISel>(TM)) {}
 };
 
-char M68kDAGToDAGISelLegacy::ID;
+const char M68kDAGToDAGISelLegacy::ID = 0;
 
 } // namespace
 

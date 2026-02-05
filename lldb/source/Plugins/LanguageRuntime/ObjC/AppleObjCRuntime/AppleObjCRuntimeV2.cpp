@@ -69,7 +69,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-char AppleObjCRuntimeV2::ID = 0;
+const char AppleObjCRuntimeV2::ID = 0;
 
 static const char *g_get_dynamic_class_info_name =
     "__lldb_apple_objc_v2_get_dynamic_class_info";

@@ -73,7 +73,7 @@ namespace {
 
 struct PromoteLegacyPass : public FunctionPass {
   // Pass identification, replacement for typeid
-  static char ID;
+  static const char ID;
 
   PromoteLegacyPass() : FunctionPass(ID) {
     initializePromoteLegacyPassPass(*PassRegistry::getPassRegistry());
@@ -100,7 +100,7 @@ struct PromoteLegacyPass : public FunctionPass {
 
 } // end anonymous namespace
 
-char PromoteLegacyPass::ID = 0;
+const char PromoteLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(PromoteLegacyPass, "mem2reg", "Promote Memory to "
                                                     "Register",

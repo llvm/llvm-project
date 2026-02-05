@@ -29,7 +29,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-char ObjectFile::ID;
+const char ObjectFile::ID = 0;
 size_t ObjectFile::g_initial_bytes_to_read = 512;
 
 static ObjectFileSP

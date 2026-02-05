@@ -22,7 +22,7 @@ class LLVM_ABI NodeSchema : public RTTIExtends<NodeSchema, RTTIRoot> {
   void anchor() override;
 
 public:
-  static char ID;
+  static const char ID;
 
   /// Check if \a Node is a root (entry node) for the schema. This is a strong
   /// check, since it requires that the first reference matches a complete

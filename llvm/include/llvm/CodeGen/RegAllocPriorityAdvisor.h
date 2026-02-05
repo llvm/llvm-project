@@ -129,7 +129,7 @@ public:
   using AdvisorMode = RegAllocPriorityAdvisorProvider::AdvisorMode;
   RegAllocPriorityAdvisorAnalysisLegacy(AdvisorMode Mode)
       : ImmutablePass(ID), Mode(Mode) {};
-  static char ID;
+  static const char ID;
 
   /// Get an advisor for the given context (i.e. machine function, etc)
   RegAllocPriorityAdvisorProvider &getProvider() { return *Provider; }

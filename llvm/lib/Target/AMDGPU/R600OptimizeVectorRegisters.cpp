@@ -97,7 +97,7 @@ private:
   void trackRSI(const RegSeqInfo &RSI);
 
 public:
-  static char ID;
+  static const char ID;
 
   R600VectorRegMerger() : MachineFunctionPass(ID) {}
 
@@ -128,9 +128,9 @@ INITIALIZE_PASS_BEGIN(R600VectorRegMerger, DEBUG_TYPE,
 INITIALIZE_PASS_END(R600VectorRegMerger, DEBUG_TYPE,
                     "R600 Vector Reg Merger", false, false)
 
-char R600VectorRegMerger::ID = 0;
+const char R600VectorRegMerger::ID = 0;
 
-char &llvm::R600VectorRegMergerID = R600VectorRegMerger::ID;
+const char &llvm::R600VectorRegMergerID = R600VectorRegMerger::ID;
 
 bool R600VectorRegMerger::canSwizzle(const MachineInstr &MI)
     const {

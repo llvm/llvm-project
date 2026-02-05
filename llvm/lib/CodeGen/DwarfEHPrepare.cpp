@@ -336,7 +336,7 @@ class DwarfEHPrepareLegacyPass : public FunctionPass {
   CodeGenOptLevel OptLevel;
 
 public:
-  static char ID; // Pass identification, replacement for typeid.
+  static const char ID; // Pass identification, replacement for typeid.
 
   DwarfEHPrepareLegacyPass(CodeGenOptLevel OptLevel = CodeGenOptLevel::Default)
       : FunctionPass(ID), OptLevel(OptLevel) {}
@@ -417,7 +417,7 @@ PreservedAnalyses DwarfEHPreparePass::run(Function &F,
   return PA;
 }
 
-char DwarfEHPrepareLegacyPass::ID = 0;
+const char DwarfEHPrepareLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(DwarfEHPrepareLegacyPass, DEBUG_TYPE,
                       "Prepare DWARF exceptions", false, false)

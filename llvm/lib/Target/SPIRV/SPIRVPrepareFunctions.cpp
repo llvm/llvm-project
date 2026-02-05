@@ -47,7 +47,7 @@ class SPIRVPrepareFunctions : public ModulePass {
   bool removeAggregateTypesFromCalls(Function *F);
 
 public:
-  static char ID;
+  static const char ID;
   SPIRVPrepareFunctions(const SPIRVTargetMachine &TM)
       : ModulePass(ID), TM(TM) {}
 
@@ -69,7 +69,7 @@ static cl::list<std::string> SPVAllowUnknownIntrinsics(
     cl::value_desc("intrinsic_prefix_0,intrinsic_prefix_1"), cl::ValueOptional);
 } // namespace
 
-char SPIRVPrepareFunctions::ID = 0;
+const char SPIRVPrepareFunctions::ID = 0;
 
 INITIALIZE_PASS(SPIRVPrepareFunctions, "prepare-functions",
                 "SPIRV prepare functions", false, false)

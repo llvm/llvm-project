@@ -139,7 +139,7 @@ private:
 
 class FixupLEAsLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   StringRef getPassName() const override { return FIXUPLEA_DESC; }
 
@@ -160,7 +160,7 @@ public:
 };
 }
 
-char FixupLEAsLegacy::ID = 0;
+const char FixupLEAsLegacy::ID = 0;
 
 INITIALIZE_PASS(FixupLEAsLegacy, FIXUPLEA_NAME, FIXUPLEA_DESC, false, false)
 

@@ -27,7 +27,7 @@ namespace {
 
 class SystemZLDCleanup : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   SystemZLDCleanup() : MachineFunctionPass(ID), TII(nullptr), MF(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -42,7 +42,7 @@ private:
   MachineFunction *MF;
 };
 
-char SystemZLDCleanup::ID = 0;
+const char SystemZLDCleanup::ID = 0;
 
 } // end anonymous namespace
 

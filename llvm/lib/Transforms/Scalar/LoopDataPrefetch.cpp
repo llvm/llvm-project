@@ -113,7 +113,7 @@ private:
 /// Legacy class for inserting loop data prefetches.
 class LoopDataPrefetchLegacyPass : public FunctionPass {
 public:
-  static char ID; // Pass ID, replacement for typeid
+  static const char ID; // Pass ID, replacement for typeid
   LoopDataPrefetchLegacyPass() : FunctionPass(ID) {
     initializeLoopDataPrefetchLegacyPassPass(*PassRegistry::getPassRegistry());
   }
@@ -136,7 +136,7 @@ public:
   };
 }
 
-char LoopDataPrefetchLegacyPass::ID = 0;
+const char LoopDataPrefetchLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopDataPrefetchLegacyPass, "loop-data-prefetch",
                       "Loop Data Prefetch", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)

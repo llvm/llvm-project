@@ -126,7 +126,7 @@ STATISTIC(NumADRSimpleCandidate, "Number of simplifiable ADRP + ADD");
 namespace {
 
 struct AArch64CollectLOH : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
   AArch64CollectLOH() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -143,7 +143,7 @@ struct AArch64CollectLOH : public MachineFunctionPass {
   }
 };
 
-char AArch64CollectLOH::ID = 0;
+const char AArch64CollectLOH::ID = 0;
 
 } // end anonymous namespace.
 

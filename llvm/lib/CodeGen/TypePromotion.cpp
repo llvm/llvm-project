@@ -179,7 +179,7 @@ public:
 
 class TypePromotionLegacy : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   TypePromotionLegacy() : FunctionPass(ID) {}
 
@@ -1027,7 +1027,7 @@ INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(TypePromotionLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
-char TypePromotionLegacy::ID = 0;
+const char TypePromotionLegacy::ID = 0;
 
 bool TypePromotionLegacy::runOnFunction(Function &F) {
   if (skipFunction(F))

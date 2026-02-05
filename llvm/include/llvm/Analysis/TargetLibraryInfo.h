@@ -631,7 +631,7 @@ class LLVM_ABI TargetLibraryInfoWrapperPass : public ImmutablePass {
   virtual void anchor();
 
 public:
-  static char ID;
+  static const char ID;
 
   /// The default constructor should not be used and is only for pass manager
   /// initialization purposes.

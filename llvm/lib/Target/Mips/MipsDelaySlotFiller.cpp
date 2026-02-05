@@ -218,7 +218,7 @@ namespace {
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
-    static char ID;
+    static const char ID;
 
   private:
     bool runOnMachineBasicBlock(MachineBasicBlock &MBB);
@@ -274,7 +274,7 @@ namespace {
 
 } // end anonymous namespace
 
-char MipsDelaySlotFiller::ID = 0;
+const char MipsDelaySlotFiller::ID = 0;
 
 static bool hasUnoccupiedSlot(const MachineInstr *MI) {
   return MI->hasDelaySlot() && !MI->isBundledWithSucc();

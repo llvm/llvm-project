@@ -45,7 +45,7 @@ public:
     return Result;
   }
 
-  static char ID;
+  static const char ID;
 
 private:
   // Users are not expected to use error_code.

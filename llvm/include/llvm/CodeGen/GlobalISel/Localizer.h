@@ -42,7 +42,7 @@ class TargetTransformInfo;
 /// related predecessor.
 class Localizer : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
 private:
   /// An input function to decide if the pass should run or not

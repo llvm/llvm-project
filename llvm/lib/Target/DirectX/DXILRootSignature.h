@@ -71,7 +71,7 @@ private:
   std::unique_ptr<RootSignatureBindingInfo> FuncToRsMap;
 
 public:
-  static char ID;
+  static const char ID;
   RootSignatureAnalysisWrapper() : ModulePass(ID) {}
 
   RootSignatureBindingInfo &getRSInfo() { return *FuncToRsMap; }

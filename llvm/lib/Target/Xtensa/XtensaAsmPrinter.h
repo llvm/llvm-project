@@ -29,7 +29,7 @@ class LLVM_LIBRARY_VISIBILITY XtensaAsmPrinter : public AsmPrinter {
   const MCSubtargetInfo *STI;
 
 public:
-  static char ID;
+  static const char ID;
 
   explicit XtensaAsmPrinter(TargetMachine &TM,
                             std::unique_ptr<MCStreamer> Streamer)

@@ -484,7 +484,7 @@ class LLVM_ABI DXILResourceTypeWrapperPass : public ImmutablePass {
   virtual void anchor();
 
 public:
-  static char ID;
+  static const char ID;
   DXILResourceTypeWrapperPass();
 
   DXILResourceTypeMap &getResourceTypeMap() { return DRTM; }
@@ -633,7 +633,7 @@ class LLVM_ABI DXILResourceWrapperPass : public ModulePass {
   DXILResourceTypeMap *DRTM;
 
 public:
-  static char ID; // Class identification, replacement for typeinfo
+  static const char ID; // Class identification, replacement for typeinfo
 
   DXILResourceWrapperPass();
   ~DXILResourceWrapperPass() override;
@@ -704,7 +704,7 @@ class LLVM_ABI DXILResourceBindingWrapperPass : public ModulePass {
   std::unique_ptr<DXILResourceBindingInfo> BindingInfo;
 
 public:
-  static char ID;
+  static const char ID;
 
   DXILResourceBindingWrapperPass();
   ~DXILResourceBindingWrapperPass() override;

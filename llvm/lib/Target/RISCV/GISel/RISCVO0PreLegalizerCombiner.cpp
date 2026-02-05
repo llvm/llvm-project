@@ -82,7 +82,7 @@ RISCVO0PreLegalizerCombinerImpl::RISCVO0PreLegalizerCombinerImpl(
 
 class RISCVO0PreLegalizerCombiner : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   RISCVO0PreLegalizerCombiner();
 
@@ -137,7 +137,7 @@ bool RISCVO0PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   return Impl.combineMachineInstrs();
 }
 
-char RISCVO0PreLegalizerCombiner::ID = 0;
+const char RISCVO0PreLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(RISCVO0PreLegalizerCombiner, DEBUG_TYPE,
                       "Combine RISC-V machine instrs before legalization",
                       false, false)

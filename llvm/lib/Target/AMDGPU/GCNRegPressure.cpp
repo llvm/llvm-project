@@ -842,8 +842,8 @@ static cl::opt<bool> UseDownwardTracker(
     cl::desc("Use GCNDownwardRPTracker for GCNRegPressurePrinter pass"),
     cl::init(false), cl::Hidden);
 
-char llvm::GCNRegPressurePrinter::ID = 0;
-char &llvm::GCNRegPressurePrinterID = GCNRegPressurePrinter::ID;
+const char llvm::GCNRegPressurePrinter::ID = 0;
+const char &llvm::GCNRegPressurePrinterID = GCNRegPressurePrinter::ID;
 
 INITIALIZE_PASS(GCNRegPressurePrinter, "amdgpu-print-rp", "", true, true)
 

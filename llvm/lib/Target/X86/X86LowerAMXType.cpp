@@ -1334,7 +1334,7 @@ namespace {
 
 class X86LowerAMXTypeLegacyPass : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   X86LowerAMXTypeLegacyPass() : FunctionPass(ID) {}
 
@@ -1355,7 +1355,7 @@ public:
 } // anonymous namespace
 
 static const char PassName[] = "Lower AMX type for load/store";
-char X86LowerAMXTypeLegacyPass::ID = 0;
+const char X86LowerAMXTypeLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(X86LowerAMXTypeLegacyPass, DEBUG_TYPE, PassName, false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)

@@ -1561,7 +1561,7 @@ TargetIRAnalysis::Result TargetIRAnalysis::getDefaultTTI(const Function &F) {
 // Register the basic pass.
 INITIALIZE_PASS(TargetTransformInfoWrapperPass, "tti",
                 "Target Transform Information", false, true)
-char TargetTransformInfoWrapperPass::ID = 0;
+const char TargetTransformInfoWrapperPass::ID = 0;
 
 void TargetTransformInfoWrapperPass::anchor() {}
 

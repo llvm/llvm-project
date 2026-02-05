@@ -31,7 +31,7 @@ namespace {
 class LoongArchExpandAtomicPseudo : public MachineFunctionPass {
 public:
   const LoongArchInstrInfo *TII;
-  static char ID;
+  static const char ID;
 
   LoongArchExpandAtomicPseudo() : MachineFunctionPass(ID) {}
 
@@ -61,7 +61,7 @@ private:
                               MachineBasicBlock::iterator &NextMBBI);
 };
 
-char LoongArchExpandAtomicPseudo::ID = 0;
+const char LoongArchExpandAtomicPseudo::ID = 0;
 
 bool LoongArchExpandAtomicPseudo::runOnMachineFunction(MachineFunction &MF) {
   TII =

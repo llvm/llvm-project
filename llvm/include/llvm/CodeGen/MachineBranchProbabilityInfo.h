@@ -83,7 +83,7 @@ class MachineBranchProbabilityInfoWrapperPass : public ImmutablePass {
   MachineBranchProbabilityInfo MBPI;
 
 public:
-  static char ID;
+  static const char ID;
 
   MachineBranchProbabilityInfoWrapperPass();
 

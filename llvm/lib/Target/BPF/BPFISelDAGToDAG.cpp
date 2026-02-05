@@ -91,13 +91,13 @@ private:
 
 class BPFDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   BPFDAGToDAGISelLegacy(BPFTargetMachine &TM)
       : SelectionDAGISelLegacy(ID, std::make_unique<BPFDAGToDAGISel>(TM)) {}
 };
 } // namespace
 
-char BPFDAGToDAGISelLegacy::ID = 0;
+const char BPFDAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(BPFDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 

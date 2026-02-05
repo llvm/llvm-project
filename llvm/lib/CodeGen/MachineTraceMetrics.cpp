@@ -51,9 +51,9 @@ MachineTraceMetricsVerifierPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-char MachineTraceMetricsWrapperPass::ID = 0;
+const char MachineTraceMetricsWrapperPass::ID = 0;
 
-char &llvm::MachineTraceMetricsID = MachineTraceMetricsWrapperPass::ID;
+const char &llvm::MachineTraceMetricsID = MachineTraceMetricsWrapperPass::ID;
 
 INITIALIZE_PASS_BEGIN(MachineTraceMetricsWrapperPass, DEBUG_TYPE,
                       "Machine Trace Metrics", false, true)

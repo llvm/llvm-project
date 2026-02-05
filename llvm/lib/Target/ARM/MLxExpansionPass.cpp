@@ -37,7 +37,7 @@ STATISTIC(NumExpand, "Number of fp MLA / MLS instructions expanded");
 
 namespace {
   struct MLxExpansion : public MachineFunctionPass {
-    static char ID;
+    static const char ID;
     MLxExpansion() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &Fn) override;
@@ -69,7 +69,7 @@ namespace {
                                 bool NegAcc, bool HasLane);
     bool ExpandFPMLxInstructions(MachineBasicBlock &MBB);
   };
-  char MLxExpansion::ID = 0;
+  const char MLxExpansion::ID = 0;
 }
 
 void MLxExpansion::clearStack() {

@@ -42,7 +42,7 @@ namespace {
 
 class RISCVVectorPeephole : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   const TargetInstrInfo *TII;
   MachineRegisterInfo *MRI;
   const TargetRegisterInfo *TRI;
@@ -80,7 +80,7 @@ private:
 
 } // namespace
 
-char RISCVVectorPeephole::ID = 0;
+const char RISCVVectorPeephole::ID = 0;
 
 INITIALIZE_PASS(RISCVVectorPeephole, DEBUG_TYPE, "RISC-V Fold Masks", false,
                 false)

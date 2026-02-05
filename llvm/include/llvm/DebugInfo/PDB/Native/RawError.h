@@ -50,7 +50,7 @@ class RawError : public ErrorInfo<RawError, StringError> {
 public:
   using ErrorInfo<RawError, StringError>::ErrorInfo; // inherit constructors
   RawError(const Twine &S) : ErrorInfo(S, raw_error_code::unspecified) {}
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
 };
 } // namespace pdb
 } // namespace llvm

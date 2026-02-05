@@ -34,7 +34,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-char ScriptedFrame::ID;
+const char ScriptedFrame::ID = 0;
 
 void ScriptedFrame::CheckInterpreterAndScriptObject() const {
   lldbassert(m_script_object_sp && "Invalid Script Object.");

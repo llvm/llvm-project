@@ -10,4 +10,4 @@
 
 using namespace lldb_private;
 
-char ClangExpressionHelper::ID;
+const char ClangExpressionHelper::ID = 0;

@@ -71,7 +71,7 @@ class LLVM_ABI ScopedNoAliasAAWrapperPass : public ImmutablePass {
   std::unique_ptr<ScopedNoAliasAAResult> Result;
 
 public:
-  static char ID;
+  static const char ID;
 
   ScopedNoAliasAAWrapperPass();
 

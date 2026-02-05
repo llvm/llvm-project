@@ -191,7 +191,7 @@ void M68kAsmPrinter::emitFunctionBodyEnd() {}
 
 void M68kAsmPrinter::emitEndOfAsmFile(Module &M) {}
 
-char M68kAsmPrinter::ID = 0;
+const char M68kAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(M68kAsmPrinter, "m68k-asm-printer", "M68k Assembly Printer",
                 false, false)

@@ -194,7 +194,7 @@ class GlobalMerge : public FunctionPass {
   GlobalMergeOptions Opt;
 
 public:
-  static char ID; // Pass identification, replacement for typeid.
+  static const char ID; // Pass identification, replacement for typeid.
 
   explicit GlobalMerge() : FunctionPass(ID) {
     Opt.MaxOffset = GlobalMergeMaxOffset;
@@ -253,7 +253,7 @@ PreservedAnalyses GlobalMergePass::run(Module &M, ModuleAnalysisManager &) {
   return PA;
 }
 
-char GlobalMerge::ID = 0;
+const char GlobalMerge::ID = 0;
 
 INITIALIZE_PASS(GlobalMerge, DEBUG_TYPE, "Merge global variables", false, false)
 

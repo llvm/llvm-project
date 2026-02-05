@@ -33,7 +33,7 @@ class DWARFDeclContext;
 
 class SymbolFileDWARFDebugMap : public SymbolFileCommon {
   /// LLVM RTTI support.
-  static char ID;
+  static const char ID;
 
 public:
   /// LLVM RTTI support.

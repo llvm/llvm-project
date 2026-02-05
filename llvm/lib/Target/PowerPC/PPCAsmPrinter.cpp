@@ -176,7 +176,7 @@ protected:
 
 public:
   explicit PPCAsmPrinter(TargetMachine &TM,
-                         std::unique_ptr<MCStreamer> Streamer, char &ID)
+                         std::unique_ptr<MCStreamer> Streamer, const char &ID)
       : AsmPrinter(TM, std::move(Streamer), ID) {}
 
   StringRef getPassName() const override { return "PowerPC Assembly Printer"; }
@@ -232,7 +232,7 @@ public:
 /// PPCLinuxAsmPrinter - PowerPC assembly printer, customized for Linux
 class PPCLinuxAsmPrinter : public PPCAsmPrinter {
 public:
-  static char ID;
+  static const char ID;
 
   explicit PPCLinuxAsmPrinter(TargetMachine &TM,
                               std::unique_ptr<MCStreamer> Streamer)
@@ -280,7 +280,7 @@ private:
   uint64_t getAliasOffset(const Constant *C);
 
 public:
-  static char ID;
+  static const char ID;
 
   PPCAIXAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
       : PPCAsmPrinter(TM, std::move(Streamer), ID) {
@@ -2265,7 +2265,7 @@ void PPCLinuxAsmPrinter::emitFunctionBodyEnd() {
   }
 }
 
-char PPCLinuxAsmPrinter::ID = 0;
+const char PPCLinuxAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(PPCLinuxAsmPrinter, "ppc-linux-asm-printer",
                 "Linux PPC Assembly Printer", false, false)
@@ -3672,7 +3672,7 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
                                *Subtarget);
 }
 
-char PPCAIXAsmPrinter::ID = 0;
+const char PPCAIXAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(PPCAIXAsmPrinter, "ppc-aix-asm-printer",
                 "AIX PPC Assembly Printer", false, false)

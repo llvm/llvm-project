@@ -114,7 +114,7 @@ namespace {
 /// Programming problems.
 class RegAllocPBQP : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   /// Construct a PBQP register allocator.
   RegAllocPBQP(char *cPassID = nullptr)
@@ -176,7 +176,7 @@ private:
   void postOptimization(Spiller &VRegSpiller, LiveIntervals &LIS);
 };
 
-char RegAllocPBQP::ID = 0;
+const char RegAllocPBQP::ID = 0;
 
 /// Set spill costs for each node in the PBQP reg-alloc graph.
 class SpillCosts : public PBQPRAConstraint {

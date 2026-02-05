@@ -291,7 +291,7 @@ namespace {
     bool PreRegAlloc;
 
   public:
-    MachineLICMBase(char &ID, bool PreRegAlloc)
+    MachineLICMBase(const char &ID, bool PreRegAlloc)
         : MachineFunctionPass(ID), PreRegAlloc(PreRegAlloc) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
@@ -309,23 +309,23 @@ namespace {
 
   class MachineLICM : public MachineLICMBase {
   public:
-    static char ID;
+    static const char ID;
     MachineLICM() : MachineLICMBase(ID, false) {}
   };
 
   class EarlyMachineLICM : public MachineLICMBase {
   public:
-    static char ID;
+    static const char ID;
     EarlyMachineLICM() : MachineLICMBase(ID, true) {}
   };
 
 } // end anonymous namespace
 
-char MachineLICM::ID;
-char EarlyMachineLICM::ID;
+const char MachineLICM::ID = 0;
+const char EarlyMachineLICM::ID = 0;
 
-char &llvm::MachineLICMID = MachineLICM::ID;
-char &llvm::EarlyMachineLICMID = EarlyMachineLICM::ID;
+const char &llvm::MachineLICMID = MachineLICM::ID;
+const char &llvm::EarlyMachineLICMID = EarlyMachineLICM::ID;
 
 INITIALIZE_PASS_BEGIN(MachineLICM, DEBUG_TYPE,
                       "Machine Loop Invariant Code Motion", false, false)

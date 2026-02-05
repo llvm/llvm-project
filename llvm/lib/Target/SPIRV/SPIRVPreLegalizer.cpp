@@ -29,7 +29,7 @@ using namespace llvm;
 namespace {
 class SPIRVPreLegalizer : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   SPIRVPreLegalizer() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -1054,7 +1054,7 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
 INITIALIZE_PASS(SPIRVPreLegalizer, DEBUG_TYPE, "SPIRV pre legalizer", false,
                 false)
 
-char SPIRVPreLegalizer::ID = 0;
+const char SPIRVPreLegalizer::ID = 0;
 
 FunctionPass *llvm::createSPIRVPreLegalizerPass() {
   return new SPIRVPreLegalizer();

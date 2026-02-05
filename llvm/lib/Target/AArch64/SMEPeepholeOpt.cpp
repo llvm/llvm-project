@@ -26,7 +26,7 @@ using namespace llvm;
 namespace {
 
 struct SMEPeepholeOpt : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
 
   SMEPeepholeOpt() : MachineFunctionPass(ID) {}
 
@@ -46,7 +46,7 @@ struct SMEPeepholeOpt : public MachineFunctionPass {
   bool visitRegSequence(MachineInstr &MI);
 };
 
-char SMEPeepholeOpt::ID = 0;
+const char SMEPeepholeOpt::ID = 0;
 
 } // end anonymous namespace
 

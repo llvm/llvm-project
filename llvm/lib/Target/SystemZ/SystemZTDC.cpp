@@ -63,7 +63,7 @@ namespace {
 
 class SystemZTDCPass : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
   SystemZTDCPass() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override;
@@ -111,7 +111,7 @@ private:
 
 } // end anonymous namespace
 
-char SystemZTDCPass::ID = 0;
+const char SystemZTDCPass::ID = 0;
 INITIALIZE_PASS(SystemZTDCPass, "systemz-tdc",
                 "SystemZ Test Data Class optimization", false, false)
 

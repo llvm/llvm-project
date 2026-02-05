@@ -142,7 +142,7 @@ class LLVM_ABI MachineBlockFrequencyInfoWrapperPass
   MachineBlockFrequencyInfo MBFI;
 
 public:
-  static char ID;
+  static const char ID;
 
   MachineBlockFrequencyInfoWrapperPass();
 

@@ -1487,7 +1487,7 @@ AnalysisKey TargetLibraryAnalysis::Key;
 // Register the basic pass.
 INITIALIZE_PASS(TargetLibraryInfoWrapperPass, "targetlibinfo",
                 "Target Library Information", false, true)
-char TargetLibraryInfoWrapperPass::ID = 0;
+const char TargetLibraryInfoWrapperPass::ID = 0;
 
 void TargetLibraryInfoWrapperPass::anchor() {}
 

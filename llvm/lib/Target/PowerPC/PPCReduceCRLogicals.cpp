@@ -360,7 +360,7 @@ namespace {
 
 class PPCReduceCRLogicals : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   struct CRLogicalOpInfo {
     MachineInstr *MI;
     // FIXME: If chains of copies are to be handled, this should be a vector.
@@ -735,6 +735,6 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(PPCReduceCRLogicals, DEBUG_TYPE,
                     "PowerPC Reduce CR logical Operation", false, false)
 
-char PPCReduceCRLogicals::ID = 0;
+const char PPCReduceCRLogicals::ID = 0;
 FunctionPass*
 llvm::createPPCReduceCRLogicalsPass() { return new PPCReduceCRLogicals(); }

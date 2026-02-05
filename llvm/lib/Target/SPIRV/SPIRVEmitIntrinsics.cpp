@@ -246,7 +246,7 @@ class SPIRVEmitIntrinsics
   Instruction *buildLogicalAccessChainFromGEP(GetElementPtrInst &GEP);
 
 public:
-  static char ID;
+  static const char ID;
   SPIRVEmitIntrinsics(SPIRVTargetMachine *TM = nullptr)
       : ModulePass(ID), TM(TM) {}
   Instruction *visitInstruction(Instruction &I) { return &I; }
@@ -310,7 +310,7 @@ Value *getPointerRoot(Value *I) {
 
 } // namespace
 
-char SPIRVEmitIntrinsics::ID = 0;
+const char SPIRVEmitIntrinsics::ID = 0;
 
 INITIALIZE_PASS(SPIRVEmitIntrinsics, "emit-intrinsics", "SPIRV emit intrinsics",
                 false, false)

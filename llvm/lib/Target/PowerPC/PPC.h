@@ -83,15 +83,15 @@ class ModulePass;
   void initializePPCLinuxAsmPrinterPass(PassRegistry &);
   void initializePPCAIXAsmPrinterPass(PassRegistry &);
 
-  extern char &PPCVSXFMAMutateID;
+  extern const char &PPCVSXFMAMutateID;
 
   ModulePass *createPPCLowerMASSVEntriesPass();
   void initializePPCLowerMASSVEntriesPass(PassRegistry &);
-  extern char &PPCLowerMASSVEntriesID;
+  extern const char &PPCLowerMASSVEntriesID;
 
   ModulePass *createPPCGenScalarMASSEntriesPass();
   void initializePPCGenScalarMASSEntriesPass(PassRegistry &);
-  extern char &PPCGenScalarMASSEntriesID;
+  extern const char &PPCGenScalarMASSEntriesID;
 
   InstructionSelector *
   createPPCInstructionSelector(const PPCTargetMachine &, const PPCSubtarget &,

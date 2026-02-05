@@ -29,7 +29,7 @@ public:
   //  PluginManager, PluginInterface and LLVM RTTI implementation
   //
 
-  static char ID;
+  static const char ID;
 
   static void Initialize();
 

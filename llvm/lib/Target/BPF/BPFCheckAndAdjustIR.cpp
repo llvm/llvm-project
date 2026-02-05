@@ -44,7 +44,7 @@ class BPFCheckAndAdjustIR final : public ModulePass {
   bool runOnModule(Module &F) override;
 
 public:
-  static char ID;
+  static const char ID;
   BPFCheckAndAdjustIR() : ModulePass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
@@ -59,7 +59,7 @@ private:
 };
 } // End anonymous namespace
 
-char BPFCheckAndAdjustIR::ID = 0;
+const char BPFCheckAndAdjustIR::ID = 0;
 INITIALIZE_PASS(BPFCheckAndAdjustIR, DEBUG_TYPE, "BPF Check And Adjust IR",
                 false, false)
 

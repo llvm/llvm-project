@@ -72,7 +72,7 @@ namespace {
       return MachineFunctionProperties().setNoVRegs();
     }
 
-    static char ID;
+    static const char ID;
 
   private:
     MachineDominatorTree *MDT;
@@ -97,7 +97,7 @@ struct HexagonDCE : public DeadCodeElimination {
 
 } // end anonymous namespace
 
-char HexagonRDFOpt::ID = 0;
+const char HexagonRDFOpt::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonRDFOpt, "hexagon-rdf-opt",
       "Hexagon RDF optimizations", false, false)

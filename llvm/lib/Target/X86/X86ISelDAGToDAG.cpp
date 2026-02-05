@@ -606,7 +606,7 @@ namespace {
 
   class X86DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
   public:
-    static char ID;
+    static const char ID;
     explicit X86DAGToDAGISelLegacy(X86TargetMachine &tm,
                                    CodeGenOptLevel OptLevel)
         : SelectionDAGISelLegacy(
@@ -614,7 +614,7 @@ namespace {
   };
 }
 
-char X86DAGToDAGISelLegacy::ID = 0;
+const char X86DAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(X86DAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 

@@ -74,7 +74,7 @@ private:
 
 class SIOptimizeExecMaskingLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SIOptimizeExecMaskingLegacy() : MachineFunctionPass(ID) {
     initializeSIOptimizeExecMaskingLegacyPass(*PassRegistry::getPassRegistry());
@@ -113,9 +113,10 @@ INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_END(SIOptimizeExecMaskingLegacy, DEBUG_TYPE,
                     "SI optimize exec mask operations", false, false)
 
-char SIOptimizeExecMaskingLegacy::ID = 0;
+const char SIOptimizeExecMaskingLegacy::ID = 0;
 
-char &llvm::SIOptimizeExecMaskingLegacyID = SIOptimizeExecMaskingLegacy::ID;
+const char &llvm::SIOptimizeExecMaskingLegacyID =
+    SIOptimizeExecMaskingLegacy::ID;
 
 /// If \p MI is a copy from exec, return the register copied to.
 Register SIOptimizeExecMasking::isCopyFromExec(const MachineInstr &MI) const {

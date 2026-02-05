@@ -82,7 +82,7 @@ public:
 private:
   virtual void anchor();
 
-  static char ID;
+  static const char ID;
 };
 
 /// Lightweight error class with error context and mandatory checking.
@@ -391,7 +391,7 @@ public:
   std::error_code convertToErrorCode() const override;
 
   // Used by ErrorInfo::classID.
-  static char ID;
+  static const char ID;
 
 private:
   ErrorList(std::unique_ptr<ErrorInfoBase> Payload1,
@@ -1201,7 +1201,7 @@ public:
   void log(raw_ostream &OS) const override { OS << EC.message(); }
 
   // Used by ErrorInfo::classID.
-  static char ID;
+  static const char ID;
 
 protected:
   ECError() = default;
@@ -1281,7 +1281,7 @@ template <typename T> ErrorOr<T> expectedToErrorOr(Expected<T> &&E) {
 ///
 class LLVM_ABI StringError : public ErrorInfo<StringError> {
 public:
-  static char ID;
+  static const char ID;
 
   StringError(std::string &&S, std::error_code EC, bool PrintMsgOnly);
   /// Prints EC + S and converts to EC.
@@ -1367,7 +1367,7 @@ public:
   std::error_code convertToErrorCode() const override;
 
   // Used by ErrorInfo::classID.
-  static char ID;
+  static const char ID;
 
 private:
   FileError(const Twine &F, std::optional<size_t> LineNum,

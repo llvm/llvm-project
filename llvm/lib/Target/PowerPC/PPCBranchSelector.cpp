@@ -36,7 +36,7 @@ STATISTIC(NumPrefixedAligned,
 
 namespace {
   struct PPCBSel : public MachineFunctionPass {
-    static char ID;
+    static const char ID;
     PPCBSel() : MachineFunctionPass(ID) {}
 
     // The sizes of the basic blocks in the function (the first
@@ -63,7 +63,7 @@ namespace {
 
     StringRef getPassName() const override { return "PowerPC Branch Selector"; }
   };
-  char PPCBSel::ID = 0;
+  const char PPCBSel::ID = 0;
 }
 
 INITIALIZE_PASS(PPCBSel, "ppc-branch-select", "PowerPC Branch Selector",

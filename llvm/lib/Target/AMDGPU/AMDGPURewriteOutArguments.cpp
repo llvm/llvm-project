@@ -87,7 +87,7 @@ private:
   Type *getOutArgumentType(Argument &Arg) const;
 
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPURewriteOutArguments() : FunctionPass(ID) {}
 
@@ -108,7 +108,7 @@ INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
 INITIALIZE_PASS_END(AMDGPURewriteOutArguments, DEBUG_TYPE,
                     "AMDGPU Rewrite Out Arguments", false, false)
 
-char AMDGPURewriteOutArguments::ID = 0;
+const char AMDGPURewriteOutArguments::ID = 0;
 
 Type *AMDGPURewriteOutArguments::getStoredType(Value &Arg) const {
   const int MaxUses = 10;

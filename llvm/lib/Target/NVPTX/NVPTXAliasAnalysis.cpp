@@ -28,8 +28,8 @@ static cl::opt<unsigned> TraverseAddressSpacesLimit(
 
 AnalysisKey NVPTXAA::Key;
 
-char NVPTXAAWrapperPass::ID = 0;
-char NVPTXExternalAAWrapper::ID = 0;
+const char NVPTXAAWrapperPass::ID = 0;
+const char NVPTXExternalAAWrapper::ID = 0;
 
 INITIALIZE_PASS(NVPTXAAWrapperPass, "nvptx-aa",
                 "NVPTX Address space based Alias Analysis", false, true)

@@ -34,7 +34,7 @@ struct SharedCacheImageInfo {
 
 namespace {
 struct HostInfoError : public llvm::ErrorInfo<HostInfoError> {
-  static char ID;
+  static const char ID;
   const std::string message_;
 
   HostInfoError(const std::string message) : message_(std::move(message)) {}
@@ -46,7 +46,7 @@ struct HostInfoError : public llvm::ErrorInfo<HostInfoError> {
   }
 };
 
-char HostInfoError::ID = 0;
+const char HostInfoError::ID = 0;
 } // namespace
 
 class HostInfoBase {

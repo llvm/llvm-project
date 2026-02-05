@@ -25,7 +25,7 @@ namespace orc {
 class LLVM_ABI ObjectTransformLayer
     : public RTTIExtends<ObjectTransformLayer, ObjectLayer> {
 public:
-  static char ID;
+  static const char ID;
 
   using TransformFunction =
       std::function<Expected<std::unique_ptr<MemoryBuffer>>(

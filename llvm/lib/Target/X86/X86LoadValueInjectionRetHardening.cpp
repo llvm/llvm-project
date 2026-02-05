@@ -49,12 +49,12 @@ public:
   StringRef getPassName() const override { return X86LVIRetPassName; }
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  static char ID;
+  static const char ID;
 };
 
 } // end anonymous namespace
 
-char X86LoadValueInjectionRetHardeningLegacy::ID = 0;
+const char X86LoadValueInjectionRetHardeningLegacy::ID = 0;
 
 static bool runX86LoadValueInjectionRetHardening(MachineFunction &MF) {
   const X86Subtarget *Subtarget = &MF.getSubtarget<X86Subtarget>();

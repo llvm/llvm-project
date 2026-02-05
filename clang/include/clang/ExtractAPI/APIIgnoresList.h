@@ -32,7 +32,7 @@ namespace extractapi {
 
 struct IgnoresFileNotFound : public llvm::ErrorInfo<IgnoresFileNotFound> {
   std::string Path;
-  static char ID;
+  static const char ID;
 
   explicit IgnoresFileNotFound(StringRef Path) : Path(Path) {}
 

@@ -40,7 +40,7 @@ struct RemoveRedundantDebugValuesImpl {
 
 class RemoveRedundantDebugValuesLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   RemoveRedundantDebugValuesLegacy();
   /// Remove redundant debug value MIs for the given machine function.
@@ -58,9 +58,10 @@ public:
 //            Implementation
 //===----------------------------------------------------------------------===//
 
-char RemoveRedundantDebugValuesLegacy::ID = 0;
+const char RemoveRedundantDebugValuesLegacy::ID = 0;
 
-char &llvm::RemoveRedundantDebugValuesID = RemoveRedundantDebugValuesLegacy::ID;
+const char &llvm::RemoveRedundantDebugValuesID =
+    RemoveRedundantDebugValuesLegacy::ID;
 
 INITIALIZE_PASS(RemoveRedundantDebugValuesLegacy, DEBUG_TYPE,
                 "Remove Redundant DEBUG_VALUE analysis", false, false)

@@ -2933,7 +2933,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
-char ARMAsmPrinter::ID = 0;
+const char ARMAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(ARMAsmPrinter, "arm-asm-printer", "ARM Assembly Printer", false,
                 false)

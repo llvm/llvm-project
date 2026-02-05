@@ -58,7 +58,7 @@ namespace {
 
 class MachineCFGPrinter : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   MachineCFGPrinter();
 
@@ -72,9 +72,9 @@ public:
 
 } // namespace
 
-char MachineCFGPrinter::ID = 0;
+const char MachineCFGPrinter::ID = 0;
 
-char &llvm::MachineCFGPrinterID = MachineCFGPrinter::ID;
+const char &llvm::MachineCFGPrinterID = MachineCFGPrinter::ID;
 
 INITIALIZE_PASS(MachineCFGPrinter, DEBUG_TYPE, "Machine CFG Printer Pass",
                 false, true)

@@ -14,7 +14,7 @@
 
 using namespace clang;
 
-char MultiplexExternalSemaSource::ID;
+const char MultiplexExternalSemaSource::ID = 0;
 
 /// Constructs a new multiplexing external sema source and appends the
 /// given element to it.

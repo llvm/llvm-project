@@ -26,7 +26,7 @@ using namespace llvm;
 namespace {
 class WebAssemblySetP2AlignOperands final : public MachineFunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblySetP2AlignOperands() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
@@ -44,7 +44,7 @@ public:
 };
 } // end anonymous namespace
 
-char WebAssemblySetP2AlignOperands::ID = 0;
+const char WebAssemblySetP2AlignOperands::ID = 0;
 INITIALIZE_PASS(WebAssemblySetP2AlignOperands, DEBUG_TYPE,
                 "Set the p2align operands for WebAssembly loads and stores",
                 false, false)

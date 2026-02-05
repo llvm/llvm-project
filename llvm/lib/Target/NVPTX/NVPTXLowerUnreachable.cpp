@@ -85,7 +85,7 @@ class NVPTXLowerUnreachable : public FunctionPass {
   bool isLoweredToTrap(const UnreachableInst &I) const;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   NVPTXLowerUnreachable(bool TrapUnreachable, bool NoTrapAfterNoreturn)
       : FunctionPass(ID), TrapUnreachable(TrapUnreachable),
         NoTrapAfterNoreturn(NoTrapAfterNoreturn) {}
@@ -96,7 +96,7 @@ private:
 };
 } // namespace
 
-char NVPTXLowerUnreachable::ID = 1;
+const char NVPTXLowerUnreachable::ID = 1;
 
 INITIALIZE_PASS(NVPTXLowerUnreachable, "nvptx-lower-unreachable",
                 "Lower Unreachable", false, false)

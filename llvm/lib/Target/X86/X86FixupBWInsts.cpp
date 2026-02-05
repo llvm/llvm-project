@@ -130,7 +130,7 @@ private:
 
 class X86FixupBWInstLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   StringRef getPassName() const override { return FIXUPBW_DESC; }
 
@@ -152,7 +152,7 @@ public:
   }
 };
 
-char X86FixupBWInstLegacy::ID = 0;
+const char X86FixupBWInstLegacy::ID = 0;
 
 } // namespace
 

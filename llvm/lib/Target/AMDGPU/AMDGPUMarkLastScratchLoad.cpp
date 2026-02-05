@@ -40,7 +40,7 @@ public:
 
 class AMDGPUMarkLastScratchLoadLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUMarkLastScratchLoadLegacy() : MachineFunctionPass(ID) {}
 
@@ -152,9 +152,10 @@ bool AMDGPUMarkLastScratchLoad::run(MachineFunction &MF) {
   return Changed;
 }
 
-char AMDGPUMarkLastScratchLoadLegacy::ID = 0;
+const char AMDGPUMarkLastScratchLoadLegacy::ID = 0;
 
-char &llvm::AMDGPUMarkLastScratchLoadID = AMDGPUMarkLastScratchLoadLegacy::ID;
+const char &llvm::AMDGPUMarkLastScratchLoadID =
+    AMDGPUMarkLastScratchLoadLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(AMDGPUMarkLastScratchLoadLegacy, DEBUG_TYPE,
                       "AMDGPU Mark last scratch load", false, false)

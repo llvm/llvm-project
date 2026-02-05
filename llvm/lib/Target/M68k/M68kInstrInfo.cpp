@@ -910,7 +910,7 @@ M68kInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
 namespace {
 /// This initializes the PIC global base register
 struct M68kGlobalBaseReg : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
   M68kGlobalBaseReg() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -941,7 +941,7 @@ struct M68kGlobalBaseReg : public MachineFunctionPass {
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
-char M68kGlobalBaseReg::ID = 0;
+const char M68kGlobalBaseReg::ID = 0;
 } // namespace
 
 INITIALIZE_PASS(M68kGlobalBaseReg, DEBUG_TYPE, PASS_NAME, false, false)

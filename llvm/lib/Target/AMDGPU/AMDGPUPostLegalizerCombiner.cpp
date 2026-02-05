@@ -440,7 +440,7 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCombine_s_mul_u64(
 
 class AMDGPUPostLegalizerCombiner : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUPostLegalizerCombiner(bool IsOptNone = false);
 
@@ -507,7 +507,7 @@ bool AMDGPUPostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   return Impl.combineMachineInstrs();
 }
 
-char AMDGPUPostLegalizerCombiner::ID = 0;
+const char AMDGPUPostLegalizerCombiner::ID = 0;
 INITIALIZE_PASS_BEGIN(AMDGPUPostLegalizerCombiner, DEBUG_TYPE,
                       "Combine AMDGPU machine instrs after legalization", false,
                       false)

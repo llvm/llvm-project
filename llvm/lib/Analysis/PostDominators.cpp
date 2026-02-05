@@ -32,7 +32,7 @@ static constexpr bool ExpensiveChecksEnabled = false;
 //  PostDominatorTree Implementation
 //===----------------------------------------------------------------------===//
 
-char PostDominatorTreeWrapperPass::ID = 0;
+const char PostDominatorTreeWrapperPass::ID = 0;
 
 PostDominatorTreeWrapperPass::PostDominatorTreeWrapperPass()
     : FunctionPass(ID) {}

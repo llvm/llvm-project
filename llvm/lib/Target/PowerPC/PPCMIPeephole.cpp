@@ -107,7 +107,7 @@ namespace {
 
 struct PPCMIPeephole : public MachineFunctionPass {
 
-  static char ID;
+  static const char ID;
   const PPCInstrInfo *TII;
   MachineFunction *MF;
   MachineRegisterInfo *MRI;
@@ -2080,6 +2080,6 @@ INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
 INITIALIZE_PASS_END(PPCMIPeephole, DEBUG_TYPE,
                     "PowerPC MI Peephole Optimization", false, false)
 
-char PPCMIPeephole::ID = 0;
+const char PPCMIPeephole::ID = 0;
 FunctionPass*
 llvm::createPPCMIPeepholePass() { return new PPCMIPeephole(); }

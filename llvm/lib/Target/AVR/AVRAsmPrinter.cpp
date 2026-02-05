@@ -71,7 +71,7 @@ public:
 
   void emitStartOfAsmFile(Module &M) override;
 
-  static char ID;
+  static const char ID;
 
 private:
   const MCRegisterInfo &MRI;
@@ -331,7 +331,7 @@ void AVRAsmPrinter::emitStartOfAsmFile(Module &M) {
         MCConstantExpr::create(SubTM->getIORegRAMPZ(), MMI->getContext()));
 }
 
-char AVRAsmPrinter::ID = 0;
+const char AVRAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(AVRAsmPrinter, "avr-asm-printer", "AVR Assembly Printer", false,
                 false)

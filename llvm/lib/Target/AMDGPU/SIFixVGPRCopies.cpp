@@ -25,7 +25,7 @@ namespace {
 
 class SIFixVGPRCopiesLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SIFixVGPRCopiesLegacy() : MachineFunctionPass(ID) {
     initializeSIFixVGPRCopiesLegacyPass(*PassRegistry::getPassRegistry());
@@ -51,9 +51,9 @@ public:
 INITIALIZE_PASS(SIFixVGPRCopiesLegacy, DEBUG_TYPE, "SI Fix VGPR copies", false,
                 false)
 
-char SIFixVGPRCopiesLegacy::ID = 0;
+const char SIFixVGPRCopiesLegacy::ID = 0;
 
-char &llvm::SIFixVGPRCopiesID = SIFixVGPRCopiesLegacy::ID;
+const char &llvm::SIFixVGPRCopiesID = SIFixVGPRCopiesLegacy::ID;
 
 PreservedAnalyses SIFixVGPRCopiesPass::run(MachineFunction &MF,
                                            MachineFunctionAnalysisManager &) {

@@ -54,7 +54,7 @@ MachineBranchProbabilityPrinterPass::run(MachineFunction &MF,
   return PreservedAnalyses::all();
 }
 
-char MachineBranchProbabilityInfoWrapperPass::ID = 0;
+const char MachineBranchProbabilityInfoWrapperPass::ID = 0;
 
 MachineBranchProbabilityInfoWrapperPass::
     MachineBranchProbabilityInfoWrapperPass()

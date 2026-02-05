@@ -161,7 +161,7 @@ public:
 /// redundant `MOVEM` instructions.
 class M68kCollapseMOVEM : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   const M68kSubtarget *STI;
   const M68kInstrInfo *TII;
@@ -302,7 +302,7 @@ public:
   }
 };
 
-char M68kCollapseMOVEM::ID = 0;
+const char M68kCollapseMOVEM::ID = 0;
 } // anonymous namespace.
 
 INITIALIZE_PASS(M68kCollapseMOVEM, DEBUG_TYPE, PASS_NAME, false, false)

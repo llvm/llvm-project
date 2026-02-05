@@ -1116,7 +1116,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
   }
 }
 
-char X86AsmPrinter::ID = 0;
+const char X86AsmPrinter::ID = 0;
 
 INITIALIZE_PASS(X86AsmPrinter, "x86-asm-printer", "X86 Assembly Printer", false,
                 false)

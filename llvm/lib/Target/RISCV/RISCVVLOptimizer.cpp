@@ -67,7 +67,7 @@ class RISCVVLOptimizer : public MachineFunctionPass {
   const TargetInstrInfo *TII;
 
 public:
-  static char ID;
+  static const char ID;
 
   RISCVVLOptimizer() : MachineFunctionPass(ID) {}
 
@@ -147,7 +147,7 @@ struct OperandInfo {
 
 } // end anonymous namespace
 
-char RISCVVLOptimizer::ID = 0;
+const char RISCVVLOptimizer::ID = 0;
 INITIALIZE_PASS_BEGIN(RISCVVLOptimizer, DEBUG_TYPE, PASS_NAME, false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(RISCVVLOptimizer, DEBUG_TYPE, PASS_NAME, false, false)

@@ -37,7 +37,7 @@ ConstantOrScalableBound::getSize() const {
   return failure();
 }
 
-char ScalableValueBoundsConstraintSet::ID = 0;
+const char ScalableValueBoundsConstraintSet::ID = 0;
 
 FailureOr<ConstantOrScalableBound>
 ScalableValueBoundsConstraintSet::computeScalableBound(

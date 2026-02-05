@@ -56,12 +56,12 @@ class WebAssemblyOptimizeLiveIntervals final : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyOptimizeLiveIntervals() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyOptimizeLiveIntervals::ID = 0;
+const char WebAssemblyOptimizeLiveIntervals::ID = 0;
 INITIALIZE_PASS(WebAssemblyOptimizeLiveIntervals, DEBUG_TYPE,
                 "Optimize LiveIntervals for WebAssembly", false, false)
 

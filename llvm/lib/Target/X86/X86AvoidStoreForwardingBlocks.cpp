@@ -106,7 +106,7 @@ private:
 
 class X86AvoidSFBLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   X86AvoidSFBLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
@@ -123,7 +123,7 @@ public:
 
 } // end anonymous namespace
 
-char X86AvoidSFBLegacy::ID = 0;
+const char X86AvoidSFBLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(X86AvoidSFBLegacy, DEBUG_TYPE, "Machine code sinking",
                       false, false)

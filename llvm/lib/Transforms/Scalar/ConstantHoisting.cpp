@@ -96,7 +96,7 @@ namespace {
 /// The constant hoisting pass.
 class ConstantHoistingLegacyPass : public FunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   ConstantHoistingLegacyPass() : FunctionPass(ID) {
     initializeConstantHoistingLegacyPassPass(*PassRegistry::getPassRegistry());
@@ -121,7 +121,7 @@ private:
 
 } // end anonymous namespace
 
-char ConstantHoistingLegacyPass::ID = 0;
+const char ConstantHoistingLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ConstantHoistingLegacyPass, "consthoist",
                       "Constant Hoisting", false, false)

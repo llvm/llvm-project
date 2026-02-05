@@ -100,7 +100,7 @@ std::string CGDataError::message() const {
   return getCGDataErrString(Err, Msg);
 }
 
-char CGDataError::ID = 0;
+const char CGDataError::ID = 0;
 
 namespace {
 

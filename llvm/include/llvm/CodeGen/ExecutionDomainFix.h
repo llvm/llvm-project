@@ -136,7 +136,7 @@ class ExecutionDomainFix : public MachineFunctionPass {
   ReachingDefInfo *RDI = nullptr;
 
 public:
-  ExecutionDomainFix(char &PassID, const TargetRegisterClass &RC)
+  ExecutionDomainFix(const char &PassID, const TargetRegisterClass &RC)
       : MachineFunctionPass(PassID), RC(&RC), NumRegs(RC.getNumRegs()) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {

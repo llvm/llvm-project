@@ -73,7 +73,7 @@ private:
 
 class AMDGPUPreloadKernArgPrologLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUPreloadKernArgPrologLegacy() : MachineFunctionPass(ID) {}
 
@@ -86,12 +86,12 @@ public:
 
 } // end anonymous namespace
 
-char AMDGPUPreloadKernArgPrologLegacy::ID = 0;
+const char AMDGPUPreloadKernArgPrologLegacy::ID = 0;
 
 INITIALIZE_PASS(AMDGPUPreloadKernArgPrologLegacy, DEBUG_TYPE,
                 "AMDGPU Preload Kernel Arguments Prolog", false, false)
 
-char &llvm::AMDGPUPreloadKernArgPrologLegacyID =
+const char &llvm::AMDGPUPreloadKernArgPrologLegacyID =
     AMDGPUPreloadKernArgPrologLegacy::ID;
 
 FunctionPass *llvm::createAMDGPUPreloadKernArgPrologLegacyPass() {

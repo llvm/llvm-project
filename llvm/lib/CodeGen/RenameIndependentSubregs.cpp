@@ -95,7 +95,7 @@ private:
 
 class RenameIndependentSubregsLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   RenameIndependentSubregsLegacy() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
   StringRef getPassName() const override {
@@ -114,9 +114,10 @@ public:
 
 } // end anonymous namespace
 
-char RenameIndependentSubregsLegacy::ID;
+const char RenameIndependentSubregsLegacy::ID = 0;
 
-char &llvm::RenameIndependentSubregsID = RenameIndependentSubregsLegacy::ID;
+const char &llvm::RenameIndependentSubregsID =
+    RenameIndependentSubregsLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(RenameIndependentSubregsLegacy, DEBUG_TYPE,
                       "Rename Independent Subregisters", false, false)

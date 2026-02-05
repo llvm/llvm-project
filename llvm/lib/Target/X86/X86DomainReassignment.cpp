@@ -399,7 +399,7 @@ private:
 
 class X86DomainReassignmentLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   X86DomainReassignmentLegacy() : MachineFunctionPass(ID) {}
 
@@ -415,7 +415,7 @@ public:
   }
 };
 
-char X86DomainReassignmentLegacy::ID = 0;
+const char X86DomainReassignmentLegacy::ID = 0;
 
 } // End anonymous namespace.
 

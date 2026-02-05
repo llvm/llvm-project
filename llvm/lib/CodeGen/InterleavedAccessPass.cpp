@@ -139,7 +139,7 @@ class InterleavedAccess : public FunctionPass {
   InterleavedAccessImpl Impl;
 
 public:
-  static char ID;
+  static const char ID;
 
   InterleavedAccess() : FunctionPass(ID) {}
 
@@ -170,7 +170,7 @@ PreservedAnalyses InterleavedAccessPass::run(Function &F,
   return PA;
 }
 
-char InterleavedAccess::ID = 0;
+const char InterleavedAccess::ID = 0;
 
 bool InterleavedAccess::runOnFunction(Function &F) {
   if (skipFunction(F))

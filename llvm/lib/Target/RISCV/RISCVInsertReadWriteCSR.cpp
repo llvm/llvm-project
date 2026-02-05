@@ -34,7 +34,7 @@ class RISCVInsertReadWriteCSR : public MachineFunctionPass {
   const TargetInstrInfo *TII;
 
 public:
-  static char ID;
+  static const char ID;
 
   RISCVInsertReadWriteCSR() : MachineFunctionPass(ID) {}
 
@@ -56,7 +56,7 @@ private:
 
 } // end anonymous namespace
 
-char RISCVInsertReadWriteCSR::ID = 0;
+const char RISCVInsertReadWriteCSR::ID = 0;
 
 INITIALIZE_PASS(RISCVInsertReadWriteCSR, DEBUG_TYPE,
                 RISCV_INSERT_READ_WRITE_CSR_NAME, false, false)

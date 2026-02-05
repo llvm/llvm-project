@@ -203,9 +203,9 @@ public:
 
   DXILForwardHandleAccessesLegacy() : FunctionPass(ID) {}
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 };
-char DXILForwardHandleAccessesLegacy::ID = 0;
+const char DXILForwardHandleAccessesLegacy::ID = 0;
 } // end anonymous namespace
 
 INITIALIZE_PASS_BEGIN(DXILForwardHandleAccessesLegacy, DEBUG_TYPE,

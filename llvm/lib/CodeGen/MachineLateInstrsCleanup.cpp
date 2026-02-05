@@ -66,7 +66,7 @@ public:
 
 class MachineLateInstrsCleanupLegacy : public MachineFunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   MachineLateInstrsCleanupLegacy() : MachineFunctionPass(ID) {}
 
@@ -84,9 +84,10 @@ public:
 
 } // end anonymous namespace
 
-char MachineLateInstrsCleanupLegacy::ID = 0;
+const char MachineLateInstrsCleanupLegacy::ID = 0;
 
-char &llvm::MachineLateInstrsCleanupID = MachineLateInstrsCleanupLegacy::ID;
+const char &llvm::MachineLateInstrsCleanupID =
+    MachineLateInstrsCleanupLegacy::ID;
 
 INITIALIZE_PASS(MachineLateInstrsCleanupLegacy, DEBUG_TYPE,
                 "Machine Late Instructions Cleanup Pass", false, false)

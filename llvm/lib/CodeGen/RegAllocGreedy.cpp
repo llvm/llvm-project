@@ -154,7 +154,7 @@ class RAGreedyLegacy : public MachineFunctionPass {
 public:
   RAGreedyLegacy(const RegAllocFilterFunc F = nullptr);
 
-  static char ID;
+  static const char ID;
   /// Return the pass name.
   StringRef getPassName() const override { return "Greedy Register Allocator"; }
 
@@ -292,8 +292,8 @@ bool RAGreedyLegacy::runOnMachineFunction(MachineFunction &MF) {
   return Impl.run(MF);
 }
 
-char RAGreedyLegacy::ID = 0;
-char &llvm::RAGreedyLegacyID = RAGreedyLegacy::ID;
+const char RAGreedyLegacy::ID = 0;
+const char &llvm::RAGreedyLegacyID = RAGreedyLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(RAGreedyLegacy, "greedy", "Greedy Register Allocator",
                       false, false)

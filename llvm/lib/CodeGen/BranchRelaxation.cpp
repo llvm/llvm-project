@@ -124,7 +124,7 @@ public:
 
 class BranchRelaxationLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   BranchRelaxationLegacy() : MachineFunctionPass(ID) {}
 
@@ -137,9 +137,9 @@ public:
 
 } // end anonymous namespace
 
-char BranchRelaxationLegacy::ID = 0;
+const char BranchRelaxationLegacy::ID = 0;
 
-char &llvm::BranchRelaxationPassID = BranchRelaxationLegacy::ID;
+const char &llvm::BranchRelaxationPassID = BranchRelaxationLegacy::ID;
 
 INITIALIZE_PASS(BranchRelaxationLegacy, DEBUG_TYPE, BRANCH_RELAX_NAME, false,
                 false)

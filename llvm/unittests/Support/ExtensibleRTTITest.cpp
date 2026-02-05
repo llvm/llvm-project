@@ -17,36 +17,36 @@ namespace {
 
 class MyBaseType : public RTTIExtends<MyBaseType, RTTIRoot> {
 public:
-  static char ID;
+  static const char ID;
 };
 
 class MyDerivedType : public RTTIExtends<MyDerivedType, MyBaseType> {
 public:
-  static char ID;
+  static const char ID;
 };
 
 class MyOtherDerivedType : public RTTIExtends<MyOtherDerivedType, MyBaseType> {
 public:
-  static char ID;
+  static const char ID;
 };
 
 class MyDeeperDerivedType
     : public RTTIExtends<MyDeeperDerivedType, MyDerivedType> {
 public:
-  static char ID;
+  static const char ID;
 };
 
 class MyMultipleInheritanceType
     : public RTTIExtends<MyMultipleInheritanceType, MyDerivedType,
                          MyOtherDerivedType> {
 public:
-  static char ID;
+  static const char ID;
 };
 
 class MyTypeWithConstructor
     : public RTTIExtends<MyTypeWithConstructor, MyBaseType> {
 public:
-  static char ID;
+  static const char ID;
 
   MyTypeWithConstructor(int) {}
 };
@@ -54,18 +54,18 @@ public:
 class MyDerivedTypeWithConstructor
     : public RTTIExtends<MyDerivedTypeWithConstructor, MyTypeWithConstructor> {
 public:
-  static char ID;
+  static const char ID;
 
   MyDerivedTypeWithConstructor(int x) : RTTIExtends(x) {}
 };
 
-char MyBaseType::ID = 0;
-char MyDerivedType::ID = 0;
-char MyOtherDerivedType::ID = 0;
-char MyDeeperDerivedType::ID = 0;
-char MyMultipleInheritanceType::ID = 0;
-char MyTypeWithConstructor::ID = 0;
-char MyDerivedTypeWithConstructor::ID = 0;
+const char MyBaseType::ID = 0;
+const char MyDerivedType::ID = 0;
+const char MyOtherDerivedType::ID = 0;
+const char MyDeeperDerivedType::ID = 0;
+const char MyMultipleInheritanceType::ID = 0;
+const char MyTypeWithConstructor::ID = 0;
+const char MyDerivedTypeWithConstructor::ID = 0;
 
 TEST(ExtensibleRTTI, isa) {
   MyBaseType B;

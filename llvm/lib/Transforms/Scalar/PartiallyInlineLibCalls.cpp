@@ -186,7 +186,7 @@ PartiallyInlineLibCallsPass::run(Function &F, FunctionAnalysisManager &AM) {
 namespace {
 class PartiallyInlineLibCallsLegacyPass : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   PartiallyInlineLibCallsLegacyPass() : FunctionPass(ID) {
     initializePartiallyInlineLibCallsLegacyPassPass(
@@ -218,7 +218,7 @@ public:
 };
 }
 
-char PartiallyInlineLibCallsLegacyPass::ID = 0;
+const char PartiallyInlineLibCallsLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(PartiallyInlineLibCallsLegacyPass,
                       "partially-inline-libcalls",
                       "Partially inline calls to library functions", false,

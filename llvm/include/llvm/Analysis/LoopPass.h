@@ -28,7 +28,7 @@ class Function;
 
 class LLVM_ABI LoopPass : public Pass {
 public:
-  explicit LoopPass(char &pid) : Pass(PT_Loop, pid) {}
+  explicit LoopPass(const char &pid) : Pass(PT_Loop, pid) {}
 
   /// getPrinterPass - Get a pass to print the function corresponding
   /// to a Loop.
@@ -76,7 +76,7 @@ protected:
 
 class LLVM_ABI LPPassManager : public FunctionPass, public PMDataManager {
 public:
-  static char ID;
+  static const char ID;
   explicit LPPassManager();
 
   /// run - Execute all of the passes scheduled for execution.  Keep track of
@@ -123,7 +123,7 @@ private:
 // LPPassManager to check if current pass preserves LCSSA form, and if it does
 // pass manager calls lcssa verification for the current loop.
 struct LCSSAVerificationPass : public FunctionPass {
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
   LLVM_ABI LCSSAVerificationPass();
 
   bool runOnFunction(Function &F) override { return false; }

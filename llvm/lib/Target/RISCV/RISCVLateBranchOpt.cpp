@@ -22,7 +22,7 @@ using namespace llvm;
 namespace {
 
 struct RISCVLateBranchOpt : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
 
   RISCVLateBranchOpt() : MachineFunctionPass(ID) {}
 
@@ -41,7 +41,7 @@ private:
 };
 } // namespace
 
-char RISCVLateBranchOpt::ID = 0;
+const char RISCVLateBranchOpt::ID = 0;
 INITIALIZE_PASS(RISCVLateBranchOpt, "riscv-late-branch-opt",
                 RISCV_LATE_BRANCH_OPT_NAME, false, false)
 

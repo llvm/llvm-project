@@ -44,7 +44,7 @@ using namespace llvm;
 /// their section prefixes based on profile-driven analysis.
 class StaticDataAnnotator : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
 
   StaticDataProfileInfo *SDPI = nullptr;
   const ProfileSummaryInfo *PSI = nullptr;
@@ -84,7 +84,7 @@ bool StaticDataAnnotator::runOnModule(Module &M) {
   return Changed;
 }
 
-char StaticDataAnnotator::ID = 0;
+const char StaticDataAnnotator::ID = 0;
 
 INITIALIZE_PASS(StaticDataAnnotator, DEBUG_TYPE, "Static Data Annotator", false,
                 false)

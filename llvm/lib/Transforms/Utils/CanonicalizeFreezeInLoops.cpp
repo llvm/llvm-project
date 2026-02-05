@@ -52,7 +52,7 @@ namespace {
 
 class CanonicalizeFreezeInLoops : public LoopPass {
 public:
-  static char ID;
+  static const char ID;
 
   CanonicalizeFreezeInLoops();
 
@@ -269,4 +269,4 @@ Pass *llvm::createCanonicalizeFreezeInLoopsPass() {
   return new CanonicalizeFreezeInLoops();
 }
 
-char CanonicalizeFreezeInLoops::ID = 0;
+const char CanonicalizeFreezeInLoops::ID = 0;

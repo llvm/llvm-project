@@ -438,7 +438,7 @@ struct InstructionMapper {
 /// function.
 struct MachineOutliner : public ModulePass {
 
-  static char ID;
+  static const char ID;
 
   MachineModuleInfo *MMI = nullptr;
   const TargetMachine *TM = nullptr;
@@ -589,7 +589,7 @@ struct MachineOutliner : public ModulePass {
 };
 } // Anonymous namespace.
 
-char MachineOutliner::ID = 0;
+const char MachineOutliner::ID = 0;
 
 ModulePass *llvm::createMachineOutlinerPass(RunOutliner RunOutlinerMode) {
   MachineOutliner *OL = new MachineOutliner();

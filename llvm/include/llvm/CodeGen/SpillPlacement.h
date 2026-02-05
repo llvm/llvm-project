@@ -178,7 +178,7 @@ private:
 
 class SpillPlacementWrapperLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   SpillPlacementWrapperLegacy() : MachineFunctionPass(ID) {}
 
   SpillPlacement &getResult() { return Impl; }

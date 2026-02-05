@@ -28,7 +28,7 @@ using namespace lldb_private;
 
 LLDB_PLUGIN_DEFINE(SymbolFileSymtab)
 
-char SymbolFileSymtab::ID;
+const char SymbolFileSymtab::ID = 0;
 
 void SymbolFileSymtab::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),

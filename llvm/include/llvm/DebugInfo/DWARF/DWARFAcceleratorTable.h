@@ -526,7 +526,7 @@ public:
   /// the entry list.
   class LLVM_ABI SentinelError : public ErrorInfo<SentinelError> {
   public:
-    static char ID;
+    static const char ID;
 
     void log(raw_ostream &OS) const override { OS << "Sentinel"; }
     std::error_code convertToErrorCode() const override;

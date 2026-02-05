@@ -1265,7 +1265,7 @@ bool MipsAsmPrinter::isLongBranchPseudo(int Opcode) const {
           || Opcode == Mips::LONG_BRANCH_DADDiu2Op);
 }
 
-char MipsAsmPrinter::ID = 0;
+const char MipsAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(MipsAsmPrinter, "mips-asm-printer", "Mips Assembly Printer",
                 false, false)

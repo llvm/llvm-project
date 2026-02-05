@@ -161,7 +161,7 @@ public:
     return *ORE;
   }
 
-  static char ID;
+  static const char ID;
 };
 
 class OptimizationRemarkEmitterAnalysis

@@ -32,7 +32,7 @@ namespace lldb_private {
 /// SymbolFile via SymbolFile::SetLoadDebugInfoEnabled().
 class SymbolFileOnDemand : public lldb_private::SymbolFile {
   /// LLVM RTTI support.
-  static char ID;
+  static const char ID;
 
 public:
   /// LLVM RTTI support.

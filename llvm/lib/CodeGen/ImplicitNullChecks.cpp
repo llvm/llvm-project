@@ -212,7 +212,7 @@ class ImplicitNullChecks : public MachineFunctionPass {
                     MachineBasicBlock *NullSucc, MachineInstr *&Dependence);
 
 public:
-  static char ID;
+  static const char ID;
 
   ImplicitNullChecks() : MachineFunctionPass(ID) {}
 
@@ -801,9 +801,9 @@ void ImplicitNullChecks::rewriteNullChecks(
   }
 }
 
-char ImplicitNullChecks::ID = 0;
+const char ImplicitNullChecks::ID = 0;
 
-char &llvm::ImplicitNullChecksID = ImplicitNullChecks::ID;
+const char &llvm::ImplicitNullChecksID = ImplicitNullChecks::ID;
 
 INITIALIZE_PASS_BEGIN(ImplicitNullChecks, DEBUG_TYPE,
                       "Implicit null checks", false, false)

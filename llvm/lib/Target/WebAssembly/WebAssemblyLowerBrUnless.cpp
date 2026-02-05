@@ -40,12 +40,12 @@ class WebAssemblyLowerBrUnless final : public MachineFunctionPass {
   bool runOnMachineFunction(MachineFunction &MF) override;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyLowerBrUnless() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyLowerBrUnless::ID = 0;
+const char WebAssemblyLowerBrUnless::ID = 0;
 INITIALIZE_PASS(WebAssemblyLowerBrUnless, DEBUG_TYPE,
                 "Lowers br_unless into inverted br_if", false, false)
 

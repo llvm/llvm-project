@@ -61,13 +61,13 @@ public:
 
 class ARCDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   explicit ARCDAGToDAGISelLegacy(ARCTargetMachine &TM, CodeGenOptLevel OptLevel)
       : SelectionDAGISelLegacy(
             ID, std::make_unique<ARCDAGToDAGISel>(TM, OptLevel)) {}
 };
 
-char ARCDAGToDAGISelLegacy::ID;
+const char ARCDAGToDAGISelLegacy::ID = 0;
 
 } // end anonymous namespace
 

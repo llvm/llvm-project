@@ -174,7 +174,7 @@ class LLVM_ABI MachineModuleInfoWrapperPass : public ImmutablePass {
   MachineModuleInfo MMI;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   explicit MachineModuleInfoWrapperPass(const TargetMachine *TM = nullptr);
 
   explicit MachineModuleInfoWrapperPass(const TargetMachine *TM,

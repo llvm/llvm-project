@@ -25,7 +25,7 @@ namespace trace_intel_pt {
 /// Class for representing a libipt decoding error.
 class IntelPTError : public llvm::ErrorInfo<IntelPTError> {
 public:
-  static char ID;
+  static const char ID;
 
   /// \param[in] libipt_error_code
   ///     Negative number returned by libipt when decoding the trace and

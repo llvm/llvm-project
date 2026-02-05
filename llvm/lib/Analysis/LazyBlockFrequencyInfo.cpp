@@ -30,7 +30,7 @@ INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(LazyBlockFrequencyInfoPass, DEBUG_TYPE,
                     "Lazy Block Frequency Analysis", true, true)
 
-char LazyBlockFrequencyInfoPass::ID = 0;
+const char LazyBlockFrequencyInfoPass::ID = 0;
 
 LazyBlockFrequencyInfoPass::LazyBlockFrequencyInfoPass() : FunctionPass(ID) {}
 

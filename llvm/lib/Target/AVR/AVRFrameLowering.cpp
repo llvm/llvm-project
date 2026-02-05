@@ -430,7 +430,7 @@ void AVRFrameLowering::determineCalleeSaves(MachineFunction &MF,
 /// Scans the function for allocas and used arguments
 /// that are passed through the stack.
 struct AVRFrameAnalyzer : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
   AVRFrameAnalyzer() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -489,7 +489,7 @@ struct AVRFrameAnalyzer : public MachineFunctionPass {
   StringRef getPassName() const override { return "AVR Frame Analyzer"; }
 };
 
-char AVRFrameAnalyzer::ID = 0;
+const char AVRFrameAnalyzer::ID = 0;
 
 /// Creates instance of the frame analyzer pass.
 FunctionPass *createAVRFrameAnalyzerPass() { return new AVRFrameAnalyzer(); }

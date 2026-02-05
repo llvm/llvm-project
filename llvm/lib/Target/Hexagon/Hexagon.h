@@ -23,9 +23,9 @@ class PassRegistry;
 class FunctionPass;
 class Pass;
 
-extern char &HexagonCopyHoistingID;
-extern char &HexagonExpandCondsetsID;
-extern char &HexagonTfrCleanupID;
+extern const char &HexagonCopyHoistingID;
+extern const char &HexagonExpandCondsetsID;
+extern const char &HexagonTfrCleanupID;
 void initializeHexagonAsmPrinterPass(PassRegistry &);
 void initializeHexagonBitSimplifyPass(PassRegistry &);
 void initializeHexagonBranchRelaxationPass(PassRegistry &);

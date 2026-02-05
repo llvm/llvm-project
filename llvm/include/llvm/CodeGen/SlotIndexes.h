@@ -676,7 +676,7 @@ class raw_ostream;
     SlotIndexes SI;
 
   public:
-    static char ID;
+    static const char ID;
 
     SlotIndexesWrapperPass();
 

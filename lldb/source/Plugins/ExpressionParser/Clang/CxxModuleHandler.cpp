@@ -98,7 +98,7 @@ emulateLookupInCtxt(Sema &sema, llvm::StringRef name, DeclContext *ctxt) {
 /// Error class for handling problems when finding a certain DeclContext.
 struct MissingDeclContext : public llvm::ErrorInfo<MissingDeclContext> {
 
-  static char ID;
+  static const char ID;
 
   MissingDeclContext(DeclContext *context, std::string error)
       : m_context(context), m_error(error) {}
@@ -116,7 +116,7 @@ struct MissingDeclContext : public llvm::ErrorInfo<MissingDeclContext> {
   }
 };
 
-char MissingDeclContext::ID = 0;
+const char MissingDeclContext::ID = 0;
 
 /// Given a foreign decl context, this function finds the equivalent local
 /// decl context in the ASTContext of the given Sema. Potentially deserializes

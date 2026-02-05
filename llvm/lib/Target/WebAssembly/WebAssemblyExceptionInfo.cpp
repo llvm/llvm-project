@@ -27,7 +27,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm-exception-info"
 
-char WebAssemblyExceptionInfo::ID = 0;
+const char WebAssemblyExceptionInfo::ID = 0;
 
 INITIALIZE_PASS_BEGIN(WebAssemblyExceptionInfo, DEBUG_TYPE,
                       "WebAssembly Exception Information", true, true)

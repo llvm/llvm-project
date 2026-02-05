@@ -3335,7 +3335,7 @@ void GVNPass::assignValNumForDeadCode() {
 
 class llvm::gvn::GVNLegacyPass : public FunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid.
+  static const char ID; // Pass identification, replacement for typeid.
 
   explicit GVNLegacyPass(bool MemDepAnalysis = GVNEnableMemDep,
                          bool MemSSAAnalysis = GVNEnableMemorySSA)
@@ -3388,7 +3388,7 @@ private:
   GVNPass Impl;
 };
 
-char GVNLegacyPass::ID = 0;
+const char GVNLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(GVNLegacyPass, "gvn", "Global Value Numbering", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)

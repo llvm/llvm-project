@@ -50,7 +50,7 @@ PreservedAnalyses CycleInfoVerifierPass::run(Function &F,
 //
 //===----------------------------------------------------------------------===//
 
-char CycleInfoWrapperPass::ID = 0;
+const char CycleInfoWrapperPass::ID = 0;
 
 CycleInfoWrapperPass::CycleInfoWrapperPass() : FunctionPass(ID) {}
 

@@ -747,7 +747,7 @@ bool WebAssemblyAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return AsmPrinter::PrintAsmMemoryOperand(MI, OpNo, ExtraCode, OS);
 }
 
-char WebAssemblyAsmPrinter::ID = 0;
+const char WebAssemblyAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(WebAssemblyAsmPrinter, "webassembly-asm-printer",
                 "WebAssembly Assmebly Printer", false, false)

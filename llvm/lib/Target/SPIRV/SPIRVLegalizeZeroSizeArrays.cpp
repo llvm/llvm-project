@@ -86,7 +86,7 @@ private:
 
 class SPIRVLegalizeZeroSizeArraysLegacy : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
   SPIRVLegalizeZeroSizeArraysLegacy(const SPIRVTargetMachine &TM)
       : ModulePass(ID), TM(TM) {}
   StringRef getPassName() const override {
@@ -346,7 +346,7 @@ PreservedAnalyses SPIRVLegalizeZeroSizeArrays::run(Module &M,
   return PreservedAnalyses::all();
 }
 
-char SPIRVLegalizeZeroSizeArraysLegacy::ID = 0;
+const char SPIRVLegalizeZeroSizeArraysLegacy::ID = 0;
 
 INITIALIZE_PASS(SPIRVLegalizeZeroSizeArraysLegacy,
                 "spirv-legalize-zero-size-arrays",

@@ -52,7 +52,7 @@ class StackMapLiveness : public MachineFunctionPass {
   LivePhysRegs LiveRegs;
 
 public:
-  static char ID;
+  static const char ID;
 
   /// Default construct and initialize the pass.
   StackMapLiveness();
@@ -81,8 +81,8 @@ private:
 };
 } // namespace
 
-char StackMapLiveness::ID = 0;
-char &llvm::StackMapLivenessID = StackMapLiveness::ID;
+const char StackMapLiveness::ID = 0;
+const char &llvm::StackMapLivenessID = StackMapLiveness::ID;
 INITIALIZE_PASS(StackMapLiveness, "stackmap-liveness",
                 "StackMap Liveness Analysis", false, false)
 

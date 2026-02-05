@@ -265,7 +265,7 @@ private:
 public:
   using iterator = SmallVector<std::unique_ptr<GCStrategy>, 1>::const_iterator;
 
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
 
   LLVM_ABI GCModuleInfo();
 

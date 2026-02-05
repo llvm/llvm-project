@@ -50,7 +50,7 @@ namespace lldb_private {
 /// SymbolFile implementation.
 class SymbolFile : public PluginInterface {
   /// LLVM RTTI support.
-  static char ID;
+  static const char ID;
 
 public:
   /// LLVM RTTI support.
@@ -540,7 +540,7 @@ private:
 /// Most actual SymbolFile implementations should inherit from this class.
 class SymbolFileCommon : public SymbolFile {
   /// LLVM RTTI support.
-  static char ID;
+  static const char ID;
 
 public:
   /// LLVM RTTI support.

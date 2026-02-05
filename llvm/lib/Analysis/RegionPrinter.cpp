@@ -137,45 +137,45 @@ struct RegionInfoPassGraphTraits {
 struct RegionPrinter
     : public DOTGraphTraitsPrinterWrapperPass<
           RegionInfoPass, false, RegionInfo *, RegionInfoPassGraphTraits> {
-  static char ID;
+  static const char ID;
   RegionPrinter()
       : DOTGraphTraitsPrinterWrapperPass<RegionInfoPass, false, RegionInfo *,
                                          RegionInfoPassGraphTraits>("reg", ID) {
   }
 };
-char RegionPrinter::ID = 0;
+const char RegionPrinter::ID = 0;
 
 struct RegionOnlyPrinter
     : public DOTGraphTraitsPrinterWrapperPass<
           RegionInfoPass, true, RegionInfo *, RegionInfoPassGraphTraits> {
-  static char ID;
+  static const char ID;
   RegionOnlyPrinter()
       : DOTGraphTraitsPrinterWrapperPass<RegionInfoPass, true, RegionInfo *,
                                          RegionInfoPassGraphTraits>("reg", ID) {
   }
 };
-char RegionOnlyPrinter::ID = 0;
+const char RegionOnlyPrinter::ID = 0;
 
 struct RegionViewer
     : public DOTGraphTraitsViewerWrapperPass<
           RegionInfoPass, false, RegionInfo *, RegionInfoPassGraphTraits> {
-  static char ID;
+  static const char ID;
   RegionViewer()
       : DOTGraphTraitsViewerWrapperPass<RegionInfoPass, false, RegionInfo *,
                                         RegionInfoPassGraphTraits>("reg", ID) {}
 };
-char RegionViewer::ID = 0;
+const char RegionViewer::ID = 0;
 
 struct RegionOnlyViewer
     : public DOTGraphTraitsViewerWrapperPass<RegionInfoPass, true, RegionInfo *,
                                              RegionInfoPassGraphTraits> {
-  static char ID;
+  static const char ID;
   RegionOnlyViewer()
       : DOTGraphTraitsViewerWrapperPass<RegionInfoPass, true, RegionInfo *,
                                         RegionInfoPassGraphTraits>("regonly",
                                                                    ID) {}
 };
-char RegionOnlyViewer::ID = 0;
+const char RegionOnlyViewer::ID = 0;
 
 } //end anonymous namespace
 

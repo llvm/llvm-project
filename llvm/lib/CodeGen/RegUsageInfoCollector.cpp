@@ -53,7 +53,7 @@ public:
 
 class RegUsageInfoCollectorLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   RegUsageInfoCollectorLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
@@ -70,7 +70,7 @@ public:
 };
 } // end of anonymous namespace
 
-char RegUsageInfoCollectorLegacy::ID = 0;
+const char RegUsageInfoCollectorLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(RegUsageInfoCollectorLegacy, "RegUsageInfoCollector",
                       "Register Usage Information Collector", false, false)

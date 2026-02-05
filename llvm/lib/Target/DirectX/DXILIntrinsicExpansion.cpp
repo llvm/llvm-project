@@ -40,7 +40,7 @@ public:
   bool runOnModule(Module &M) override;
   DXILIntrinsicExpansionLegacy() : ModulePass(ID) {}
 
-  static char ID; // Pass identification.
+  static const char ID; // Pass identification.
 };
 
 static bool resourceAccessNeeds64BitExpansion(Module *M, Type *OverloadTy,
@@ -1181,7 +1181,7 @@ bool DXILIntrinsicExpansionLegacy::runOnModule(Module &M) {
   return expansionIntrinsics(M);
 }
 
-char DXILIntrinsicExpansionLegacy::ID = 0;
+const char DXILIntrinsicExpansionLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(DXILIntrinsicExpansionLegacy, DEBUG_TYPE,
                       "DXIL Intrinsic Expansion", false, false)

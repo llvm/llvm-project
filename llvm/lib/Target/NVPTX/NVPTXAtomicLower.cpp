@@ -26,7 +26,7 @@ namespace {
 // block.
 class NVPTXAtomicLower : public FunctionPass {
 public:
-  static char ID; // Pass ID
+  static const char ID; // Pass ID
   NVPTXAtomicLower() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -54,7 +54,7 @@ bool NVPTXAtomicLower::runOnFunction(Function &F) {
   return Changed;
 }
 
-char NVPTXAtomicLower::ID = 0;
+const char NVPTXAtomicLower::ID = 0;
 
 INITIALIZE_PASS(NVPTXAtomicLower, "nvptx-atomic-lower",
                 "Lower atomics of local memory to simple load/stores", false,

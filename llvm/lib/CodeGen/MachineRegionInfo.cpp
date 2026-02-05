@@ -125,8 +125,8 @@ LLVM_DUMP_METHOD void MachineRegionInfoPass::dump() const {
 }
 #endif
 
-char MachineRegionInfoPass::ID = 0;
-char &llvm::MachineRegionInfoPassID = MachineRegionInfoPass::ID;
+const char MachineRegionInfoPass::ID = 0;
+const char &llvm::MachineRegionInfoPassID = MachineRegionInfoPass::ID;
 
 INITIALIZE_PASS_BEGIN(MachineRegionInfoPass, DEBUG_TYPE,
                       "Detect single entry single exit regions", true, true)

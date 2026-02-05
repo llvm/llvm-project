@@ -54,7 +54,7 @@ namespace {
 
 class MVEGatherScatterLowering : public FunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   explicit MVEGatherScatterLowering() : FunctionPass(ID) {
     initializeMVEGatherScatterLoweringPass(*PassRegistry::getPassRegistry());
@@ -158,7 +158,7 @@ private:
 
 } // end anonymous namespace
 
-char MVEGatherScatterLowering::ID = 0;
+const char MVEGatherScatterLowering::ID = 0;
 
 INITIALIZE_PASS(MVEGatherScatterLowering, DEBUG_TYPE,
                 "MVE gather/scattering lowering pass", false, false)

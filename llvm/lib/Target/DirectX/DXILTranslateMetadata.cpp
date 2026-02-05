@@ -631,7 +631,7 @@ bool DXILTranslateMetadataLegacy::runOnModule(Module &M) {
   return true;
 }
 
-char DXILTranslateMetadataLegacy::ID = 0;
+const char DXILTranslateMetadataLegacy::ID = 0;
 
 ModulePass *llvm::createDXILTranslateMetadataLegacyPass() {
   return new DXILTranslateMetadataLegacy();

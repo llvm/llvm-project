@@ -96,7 +96,7 @@ class LLVM_ABI MachinePostDominatorTreeWrapperPass
   std::optional<MachinePostDominatorTree> PDT;
 
 public:
-  static char ID;
+  static const char ID;
 
   MachinePostDominatorTreeWrapperPass();
 

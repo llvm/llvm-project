@@ -46,7 +46,7 @@ namespace {
 
 class MIRCanonicalizer : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   MIRCanonicalizer() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
@@ -63,9 +63,9 @@ public:
 
 } // end anonymous namespace
 
-char MIRCanonicalizer::ID;
+const char MIRCanonicalizer::ID = 0;
 
-char &llvm::MIRCanonicalizerID = MIRCanonicalizer::ID;
+const char &llvm::MIRCanonicalizerID = MIRCanonicalizer::ID;
 
 INITIALIZE_PASS_BEGIN(MIRCanonicalizer, "mir-canonicalizer",
                       "Rename Register Operands Canonically", false, false)

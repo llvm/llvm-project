@@ -35,7 +35,7 @@ class LLVM_ABI MaterializationUnit {
   friend class JITDylib;
 
 public:
-  static char ID;
+  static const char ID;
 
   struct Interface {
     Interface() = default;

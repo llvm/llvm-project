@@ -41,7 +41,7 @@ STATISTIC(NumSubstZexts, "Number of setcc + zext pairs substituted");
 namespace {
 class X86FixupSetCCLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   X86FixupSetCCLegacy() : MachineFunctionPass(ID) {}
 
@@ -51,7 +51,7 @@ public:
 };
 } // end anonymous namespace
 
-char X86FixupSetCCLegacy::ID = 0;
+const char X86FixupSetCCLegacy::ID = 0;
 
 INITIALIZE_PASS(X86FixupSetCCLegacy, DEBUG_TYPE, DEBUG_TYPE, false, false)
 

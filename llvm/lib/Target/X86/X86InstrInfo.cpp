@@ -10408,7 +10408,7 @@ namespace {
 /// Create Global Base Reg pass. This initializes the PIC
 /// global base register for x86-32.
 struct CGBR : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
   CGBR() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -10504,12 +10504,12 @@ struct CGBR : public MachineFunctionPass {
 };
 } // namespace
 
-char CGBR::ID = 0;
+const char CGBR::ID = 0;
 FunctionPass *llvm::createX86GlobalBaseRegPass() { return new CGBR(); }
 
 namespace {
 struct LDTLSCleanup : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
   LDTLSCleanup() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -10615,7 +10615,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
 };
 } // namespace
 
-char LDTLSCleanup::ID = 0;
+const char LDTLSCleanup::ID = 0;
 FunctionPass *llvm::createCleanupLocalDynamicTLSPass() {
   return new LDTLSCleanup();
 }

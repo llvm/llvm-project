@@ -23,7 +23,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::plugin::dwarf;
 
-char SymbolFileDWARFDwo::ID;
+const char SymbolFileDWARFDwo::ID = 0;
 
 SymbolFileDWARFDwo::SymbolFileDWARFDwo(SymbolFileDWARF &base_symbol_file,
                                        ObjectFileSP objfile, uint32_t id)

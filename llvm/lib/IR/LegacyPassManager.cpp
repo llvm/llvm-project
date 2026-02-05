@@ -246,7 +246,7 @@ class FunctionPassManagerImpl : public Pass,
 private:
   bool wasRun;
 public:
-  static char ID;
+  static const char ID;
   explicit FunctionPassManagerImpl()
       : Pass(PT_PassManager, ID), PMTopLevelManager(new FPPassManager()),
         wasRun(false) {}
@@ -304,7 +304,7 @@ public:
 
 void FunctionPassManagerImpl::anchor() {}
 
-char FunctionPassManagerImpl::ID = 0;
+const char FunctionPassManagerImpl::ID = 0;
 
 //===----------------------------------------------------------------------===//
 // FunctionPassManagerImpl implementation
@@ -377,7 +377,7 @@ namespace {
 /// sequences them to process one module.
 class MPPassManager : public Pass, public PMDataManager {
 public:
-  static char ID;
+  static const char ID;
   explicit MPPassManager() : Pass(PT_PassManager, ID) {}
 
   // Delete on the fly managers.
@@ -451,7 +451,7 @@ public:
    MapVector<Pass *, legacy::FunctionPassManagerImpl *> OnTheFlyManagers;
 };
 
-char MPPassManager::ID = 0;
+const char MPPassManager::ID = 0;
 } // End anonymous namespace
 
 namespace llvm {
@@ -467,7 +467,7 @@ class PassManagerImpl : public Pass,
   virtual void anchor();
 
 public:
-  static char ID;
+  static const char ID;
   explicit PassManagerImpl()
       : Pass(PT_PassManager, ID), PMTopLevelManager(new MPPassManager()) {}
 
@@ -509,7 +509,7 @@ public:
 
 void PassManagerImpl::anchor() {}
 
-char PassManagerImpl::ID = 0;
+const char PassManagerImpl::ID = 0;
 
 //===----------------------------------------------------------------------===//
 // PassManagerImpl implementation
@@ -1339,7 +1339,7 @@ void FPPassManager::cleanup() {
 //===----------------------------------------------------------------------===//
 // FPPassManager implementation
 
-char FPPassManager::ID = 0;
+const char FPPassManager::ID = 0;
 /// Print passes managed by this manager
 void FPPassManager::dumpPassStructure(unsigned Offset) {
   dbgs().indent(Offset*2) << "FunctionPass Manager\n";

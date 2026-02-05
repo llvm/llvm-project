@@ -48,7 +48,7 @@ class AArch64ExpandPseudo : public MachineFunctionPass {
 public:
   const AArch64InstrInfo *TII;
 
-  static char ID;
+  static const char ID;
 
   AArch64ExpandPseudo() : MachineFunctionPass(ID) {}
 
@@ -110,7 +110,7 @@ private:
 
 } // end anonymous namespace
 
-char AArch64ExpandPseudo::ID = 0;
+const char AArch64ExpandPseudo::ID = 0;
 
 INITIALIZE_PASS(AArch64ExpandPseudo, "aarch64-expand-pseudo",
                 AARCH64_EXPAND_PSEUDO_NAME, false, false)

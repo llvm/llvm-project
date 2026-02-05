@@ -161,7 +161,7 @@ public:
 /// as the error is checked.
 class BOLTError : public ErrorInfo<BOLTError> {
 public:
-  static char ID;
+  static const char ID;
 
   BOLTError(bool IsFatal, const Twine &S = Twine());
   void log(raw_ostream &OS) const override;

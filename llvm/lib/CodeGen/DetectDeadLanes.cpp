@@ -398,7 +398,7 @@ private:
 };
 
 struct DetectDeadLanesLegacy : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
   DetectDeadLanesLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "Detect Dead Lanes"; }
@@ -415,8 +415,8 @@ struct DetectDeadLanesLegacy : public MachineFunctionPass {
 
 } // end anonymous namespace
 
-char DetectDeadLanesLegacy::ID = 0;
-char &llvm::DetectDeadLanesID = DetectDeadLanesLegacy::ID;
+const char DetectDeadLanesLegacy::ID = 0;
+const char &llvm::DetectDeadLanesID = DetectDeadLanesLegacy::ID;
 
 INITIALIZE_PASS(DetectDeadLanesLegacy, DEBUG_TYPE, "Detect Dead Lanes", false,
                 false)

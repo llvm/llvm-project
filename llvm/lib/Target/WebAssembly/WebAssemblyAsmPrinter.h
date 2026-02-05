@@ -20,7 +20,7 @@ class WebAssemblyTargetStreamer;
 
 class LLVM_LIBRARY_VISIBILITY WebAssemblyAsmPrinter final : public AsmPrinter {
 public:
-  static char ID;
+  static const char ID;
 
 private:
   const WebAssemblySubtarget *Subtarget;

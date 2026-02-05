@@ -501,7 +501,7 @@ class MachineCopyPropagationLegacy : public MachineFunctionPass {
   bool UseCopyInstr;
 
 public:
-  static char ID; // pass identification
+  static const char ID; // pass identification
 
   MachineCopyPropagationLegacy(bool UseCopyInstr = false)
       : MachineFunctionPass(ID), UseCopyInstr(UseCopyInstr) {}
@@ -520,9 +520,9 @@ public:
 
 } // end anonymous namespace
 
-char MachineCopyPropagationLegacy::ID = 0;
+const char MachineCopyPropagationLegacy::ID = 0;
 
-char &llvm::MachineCopyPropagationID = MachineCopyPropagationLegacy::ID;
+const char &llvm::MachineCopyPropagationID = MachineCopyPropagationLegacy::ID;
 
 INITIALIZE_PASS(MachineCopyPropagationLegacy, DEBUG_TYPE,
                 "Machine Copy Propagation Pass", false, false)

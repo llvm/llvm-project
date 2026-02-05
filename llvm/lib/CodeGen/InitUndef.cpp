@@ -62,7 +62,7 @@ namespace {
 
 class InitUndefLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   InitUndefLegacy() : MachineFunctionPass(ID) {}
 
@@ -100,9 +100,9 @@ private:
 
 } // end anonymous namespace
 
-char InitUndefLegacy::ID = 0;
+const char InitUndefLegacy::ID = 0;
 INITIALIZE_PASS(InitUndefLegacy, DEBUG_TYPE, INIT_UNDEF_NAME, false, false)
-char &llvm::InitUndefID = InitUndefLegacy::ID;
+const char &llvm::InitUndefID = InitUndefLegacy::ID;
 
 static bool isEarlyClobberMI(MachineInstr &MI) {
   return llvm::any_of(MI.all_defs(), [](const MachineOperand &DefMO) {

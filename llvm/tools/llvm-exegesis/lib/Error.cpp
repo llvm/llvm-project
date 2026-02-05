@@ -16,7 +16,7 @@
 namespace llvm {
 namespace exegesis {
 
-char ClusteringError::ID;
+const char ClusteringError::ID = 0;
 
 void ClusteringError::log(raw_ostream &OS) const { OS << Msg; }
 
@@ -24,20 +24,20 @@ std::error_code ClusteringError::convertToErrorCode() const {
   return inconvertibleErrorCode();
 }
 
-char SnippetExecutionFailure::ID;
+const char SnippetExecutionFailure::ID = 0;
 
 std::error_code SnippetExecutionFailure::convertToErrorCode() const {
   return inconvertibleErrorCode();
 }
 
-char SnippetSegmentationFault::ID;
+const char SnippetSegmentationFault::ID = 0;
 
 void SnippetSegmentationFault::log(raw_ostream &OS) const {
   OS << "The snippet encountered a segmentation fault at address "
      << Twine::utohexstr(Address);
 }
 
-char SnippetSignal::ID;
+const char SnippetSignal::ID = 0;
 
 void SnippetSignal::log(raw_ostream &OS) const {
   OS << "snippet crashed while running";
@@ -48,7 +48,7 @@ void SnippetSignal::log(raw_ostream &OS) const {
 #endif // LLVM_ON_UNIX
 }
 
-char PerfCounterNotFullyEnabled::ID;
+const char PerfCounterNotFullyEnabled::ID = 0;
 
 std::error_code PerfCounterNotFullyEnabled::convertToErrorCode() const {
   return inconvertibleErrorCode();

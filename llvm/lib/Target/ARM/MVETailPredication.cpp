@@ -86,7 +86,7 @@ class MVETailPredication : public LoopPass {
   const ARMSubtarget *ST = nullptr;
 
 public:
-  static char ID;
+  static const char ID;
 
   MVETailPredication() : LoopPass(ID) { }
 
@@ -454,6 +454,6 @@ Pass *llvm::createMVETailPredicationPass() {
   return new MVETailPredication();
 }
 
-char MVETailPredication::ID = 0;
+const char MVETailPredication::ID = 0;
 
 INITIALIZE_PASS(MVETailPredication, DEBUG_TYPE, DESC, false, false)

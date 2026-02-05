@@ -75,7 +75,7 @@ namespace {
     const MachineRegisterInfo *MRI;
 
   public:
-    static char ID;
+    static const char ID;
     HexagonPeephole() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
@@ -90,7 +90,7 @@ namespace {
   };
 }
 
-char HexagonPeephole::ID = 0;
+const char HexagonPeephole::ID = 0;
 
 INITIALIZE_PASS(HexagonPeephole, "hexagon-peephole", "Hexagon Peephole",
                 false, false)

@@ -31,7 +31,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-char ObjCLanguageRuntime::ID = 0;
+const char ObjCLanguageRuntime::ID = 0;
 
 // Destructor
 ObjCLanguageRuntime::~ObjCLanguageRuntime() = default;

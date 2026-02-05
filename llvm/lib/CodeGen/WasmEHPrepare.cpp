@@ -128,7 +128,7 @@ class WasmEHPrepare : public FunctionPass {
   WasmEHPrepareImpl P;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   WasmEHPrepare() : FunctionPass(ID) {}
   bool doInitialization(Module &M) override;
@@ -153,7 +153,7 @@ PreservedAnalyses WasmEHPreparePass::run(Function &F,
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses ::all();
 }
 
-char WasmEHPrepare::ID = 0;
+const char WasmEHPrepare::ID = 0;
 INITIALIZE_PASS_BEGIN(WasmEHPrepare, DEBUG_TYPE,
                       "Prepare WebAssembly exceptions", false, false)
 INITIALIZE_PASS_END(WasmEHPrepare, DEBUG_TYPE, "Prepare WebAssembly exceptions",

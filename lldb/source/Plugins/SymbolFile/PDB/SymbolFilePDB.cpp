@@ -69,7 +69,7 @@ using namespace llvm::pdb;
 
 LLDB_PLUGIN_DEFINE(SymbolFilePDB)
 
-char SymbolFilePDB::ID;
+const char SymbolFilePDB::ID = 0;
 
 namespace {
 

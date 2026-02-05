@@ -174,7 +174,7 @@ class LLVM_ABI BasicAAWrapperPass : public FunctionPass {
   virtual void anchor();
 
 public:
-  static char ID;
+  static const char ID;
 
   BasicAAWrapperPass();
 

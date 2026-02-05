@@ -155,7 +155,7 @@ bool expandReductions(Function &F, const TargetTransformInfo *TTI) {
 
 class ExpandReductions : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
   ExpandReductions() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
@@ -170,7 +170,7 @@ public:
 };
 }
 
-char ExpandReductions::ID;
+const char ExpandReductions::ID = 0;
 INITIALIZE_PASS_BEGIN(ExpandReductions, "expand-reductions",
                       "Expand reduction intrinsics", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)

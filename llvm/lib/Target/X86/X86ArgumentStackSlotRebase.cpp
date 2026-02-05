@@ -37,7 +37,7 @@ namespace {
 class X86ArgumentStackSlotLegacy : public MachineFunctionPass {
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   explicit X86ArgumentStackSlotLegacy() : MachineFunctionPass(ID) {}
 
@@ -51,7 +51,7 @@ public:
 
 } // end anonymous namespace
 
-char X86ArgumentStackSlotLegacy::ID = 0;
+const char X86ArgumentStackSlotLegacy::ID = 0;
 
 INITIALIZE_PASS(X86ArgumentStackSlotLegacy, DEBUG_TYPE, "Argument Stack Rebase",
                 false, false)

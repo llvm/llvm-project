@@ -205,7 +205,7 @@ namespace {
   };
 
   struct HexagonConstExtenders : public MachineFunctionPass {
-    static char ID;
+    static const char ID;
     HexagonConstExtenders() : MachineFunctionPass(ID) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -562,7 +562,7 @@ INITIALIZE_PASS_END(HexagonConstExtenders, "hexagon-cext-opt",
 
 static unsigned ReplaceCounter = 0;
 
-char HCE::ID = 0;
+const char HCE::ID = 0;
 
 #ifndef NDEBUG
 LLVM_DUMP_METHOD void RangeTree::dump() const {

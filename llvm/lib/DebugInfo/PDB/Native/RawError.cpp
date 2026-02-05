@@ -51,4 +51,4 @@ const std::error_category &llvm::pdb::RawErrCategory() {
   return RawCategory;
 }
 
-char RawError::ID;
+const char RawError::ID = 0;

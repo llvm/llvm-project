@@ -89,7 +89,7 @@ struct ScalableValueBoundsConstraintSet
   /// The maximum possible value of vscale.
   unsigned getVscaleMax() const { return vscaleMax; }
 
-  static char ID;
+  static const char ID;
 
 private:
   const unsigned vscaleMin;

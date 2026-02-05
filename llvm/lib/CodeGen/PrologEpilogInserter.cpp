@@ -126,7 +126,7 @@ public:
 
 class PEILegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   PEILegacy() : MachineFunctionPass(ID) {}
 
@@ -139,9 +139,9 @@ public:
 
 } // end anonymous namespace
 
-char PEILegacy::ID = 0;
+const char PEILegacy::ID = 0;
 
-char &llvm::PrologEpilogCodeInserterID = PEILegacy::ID;
+const char &llvm::PrologEpilogCodeInserterID = PEILegacy::ID;
 
 INITIALIZE_PASS_BEGIN(PEILegacy, DEBUG_TYPE, "Prologue/Epilogue Insertion",
                       false, false)

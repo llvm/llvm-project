@@ -115,7 +115,7 @@ const std::map<unsigned short, unsigned short> QFPInstMap{
 namespace {
 struct HexagonQFPOptimizer : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   HexagonQFPOptimizer() : MachineFunctionPass(ID) {}
 
@@ -140,7 +140,7 @@ private:
   const MachineRegisterInfo *MRI = nullptr;
 };
 
-char HexagonQFPOptimizer::ID = 0;
+const char HexagonQFPOptimizer::ID = 0;
 } // namespace
 
 INITIALIZE_PASS(HexagonQFPOptimizer, "hexagon-qfp-optimizer",

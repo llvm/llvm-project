@@ -73,7 +73,7 @@ class StaticDataSplitter : public MachineFunctionPass {
   void annotateStaticDataWithoutProfiles(const MachineFunction &MF);
 
 public:
-  static char ID;
+  static const char ID;
 
   StaticDataSplitter() : MachineFunctionPass(ID) {}
 
@@ -253,7 +253,7 @@ void StaticDataSplitter::updateStatsWithoutProfiles(const MachineFunction &MF) {
   }
 }
 
-char StaticDataSplitter::ID = 0;
+const char StaticDataSplitter::ID = 0;
 
 INITIALIZE_PASS_BEGIN(StaticDataSplitter, DEBUG_TYPE, "Split static data",
                       false, false)

@@ -31,7 +31,7 @@ using namespace llvm;
 namespace {
 class WebAssemblyRegColoring final : public MachineFunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyRegColoring() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
@@ -53,7 +53,7 @@ private:
 };
 } // end anonymous namespace
 
-char WebAssemblyRegColoring::ID = 0;
+const char WebAssemblyRegColoring::ID = 0;
 INITIALIZE_PASS(WebAssemblyRegColoring, DEBUG_TYPE,
                 "Minimize number of registers used", false, false)
 

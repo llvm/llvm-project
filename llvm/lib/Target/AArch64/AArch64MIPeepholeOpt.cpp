@@ -82,7 +82,7 @@ using namespace llvm;
 namespace {
 
 struct AArch64MIPeepholeOpt : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
 
   AArch64MIPeepholeOpt() : MachineFunctionPass(ID) {}
 
@@ -154,7 +154,7 @@ struct AArch64MIPeepholeOpt : public MachineFunctionPass {
   }
 };
 
-char AArch64MIPeepholeOpt::ID = 0;
+const char AArch64MIPeepholeOpt::ID = 0;
 
 } // end anonymous namespace
 

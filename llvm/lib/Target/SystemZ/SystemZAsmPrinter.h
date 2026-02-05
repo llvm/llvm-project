@@ -25,7 +25,7 @@ class raw_ostream;
 
 class LLVM_LIBRARY_VISIBILITY SystemZAsmPrinter : public AsmPrinter {
 public:
-  static char ID;
+  static const char ID;
 
 private:
   MCSymbol *CurrentFnPPA1Sym;     // PPA1 Symbol.

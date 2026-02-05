@@ -40,7 +40,7 @@ namespace {
 
   class Thumb2ITBlock : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     bool restrictIT;
     const Thumb2InstrInfo *TII;
@@ -66,7 +66,7 @@ namespace {
     bool InsertITInstructions(MachineBasicBlock &Block);
   };
 
-  char Thumb2ITBlock::ID = 0;
+  const char Thumb2ITBlock::ID = 0;
 
 } // end anonymous namespace
 

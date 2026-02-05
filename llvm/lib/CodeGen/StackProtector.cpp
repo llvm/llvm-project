@@ -165,7 +165,7 @@ PreservedAnalyses StackProtectorPass::run(Function &F,
   return PA;
 }
 
-char StackProtector::ID = 0;
+const char StackProtector::ID = 0;
 
 StackProtector::StackProtector() : FunctionPass(ID) {}
 

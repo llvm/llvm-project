@@ -17,7 +17,7 @@ namespace lldb_private::plugin {
 namespace dwarf {
 class SymbolFileDWARFDwo : public SymbolFileDWARF {
   /// LLVM RTTI support.
-  static char ID;
+  static const char ID;
 
 public:
   /// LLVM RTTI support.

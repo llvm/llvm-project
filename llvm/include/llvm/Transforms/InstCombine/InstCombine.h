@@ -50,7 +50,7 @@ class InstCombinePass : public PassInfoMixin<InstCombinePass> {
 private:
   InstructionWorklist Worklist;
   InstCombineOptions Options;
-  static char ID;
+  static const char ID;
 
 public:
   LLVM_ABI explicit InstCombinePass(InstCombineOptions Opts = {});
@@ -69,7 +69,7 @@ class LLVM_ABI InstructionCombiningPass : public FunctionPass {
   InstructionWorklist Worklist;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   explicit InstructionCombiningPass();
 

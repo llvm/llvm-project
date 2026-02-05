@@ -115,7 +115,7 @@ public:
 
 class XtensaDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
 
   XtensaDAGToDAGISelLegacy(XtensaTargetMachine &TM, CodeGenOptLevel OptLevel)
       : SelectionDAGISelLegacy(
@@ -127,7 +127,7 @@ public:
 };
 } // end anonymous namespace
 
-char XtensaDAGToDAGISelLegacy::ID = 0;
+const char XtensaDAGToDAGISelLegacy::ID = 0;
 
 FunctionPass *llvm::createXtensaISelDag(XtensaTargetMachine &TM,
                                         CodeGenOptLevel OptLevel) {

@@ -35,7 +35,7 @@ namespace {
 
 // actual analysis class, which is a functionpass
 struct NVPTXLowerAggrCopies : public FunctionPass {
-  static char ID;
+  static const char ID;
 
   NVPTXLowerAggrCopies() : FunctionPass(ID) {}
 
@@ -53,7 +53,7 @@ struct NVPTXLowerAggrCopies : public FunctionPass {
   }
 };
 
-char NVPTXLowerAggrCopies::ID = 0;
+const char NVPTXLowerAggrCopies::ID = 0;
 
 bool NVPTXLowerAggrCopies::runOnFunction(Function &F) {
   SmallVector<LoadInst *, 4> AggrLoads;

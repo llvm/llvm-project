@@ -2777,7 +2777,7 @@ bool ModuloScheduleExpanderMVE::canApply(MachineLoop &L) {
 namespace {
 class ModuloScheduleTest : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   ModuloScheduleTest() : MachineFunctionPass(ID) {}
 
@@ -2792,7 +2792,7 @@ public:
 };
 } // namespace
 
-char ModuloScheduleTest::ID = 0;
+const char ModuloScheduleTest::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ModuloScheduleTest, "modulo-schedule-test",
                       "Modulo Schedule test pass", false, false)

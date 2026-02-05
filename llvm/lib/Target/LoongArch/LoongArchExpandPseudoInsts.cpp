@@ -39,7 +39,7 @@ namespace {
 class LoongArchPreRAExpandPseudo : public MachineFunctionPass {
 public:
   const LoongArchInstrInfo *TII;
-  static char ID;
+  static const char ID;
 
   LoongArchPreRAExpandPseudo() : MachineFunctionPass(ID) {}
 
@@ -107,7 +107,7 @@ private:
                          MachineBasicBlock::iterator MBBI);
 };
 
-char LoongArchPreRAExpandPseudo::ID = 0;
+const char LoongArchPreRAExpandPseudo::ID = 0;
 
 bool LoongArchPreRAExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   TII =
@@ -752,7 +752,7 @@ void LoongArchPreRAExpandPseudo::annotateTableJump(
 class LoongArchExpandPseudo : public MachineFunctionPass {
 public:
   const LoongArchInstrInfo *TII;
-  static char ID;
+  static const char ID;
 
   LoongArchExpandPseudo() : MachineFunctionPass(ID) {}
 
@@ -774,7 +774,7 @@ private:
                           bool IsTailCall);
 };
 
-char LoongArchExpandPseudo::ID = 0;
+const char LoongArchExpandPseudo::ID = 0;
 
 bool LoongArchExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   TII =

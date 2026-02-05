@@ -48,7 +48,7 @@ m_GAMDGPUReadAnyLane(const SrcTy &Src) {
 
 class AMDGPURegBankLegalize : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
 public:
   AMDGPURegBankLegalize() : MachineFunctionPass(ID) {}
@@ -83,9 +83,9 @@ INITIALIZE_PASS_DEPENDENCY(MachineUniformityAnalysisPass)
 INITIALIZE_PASS_END(AMDGPURegBankLegalize, DEBUG_TYPE,
                     "AMDGPU Register Bank Legalize", false, false)
 
-char AMDGPURegBankLegalize::ID = 0;
+const char AMDGPURegBankLegalize::ID = 0;
 
-char &llvm::AMDGPURegBankLegalizeID = AMDGPURegBankLegalize::ID;
+const char &llvm::AMDGPURegBankLegalizeID = AMDGPURegBankLegalize::ID;
 
 FunctionPass *llvm::createAMDGPURegBankLegalizePass() {
   return new AMDGPURegBankLegalize();

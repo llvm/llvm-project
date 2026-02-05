@@ -46,7 +46,7 @@ namespace {
 
 struct BPFMISimplifyPatchable : public MachineFunctionPass {
 
-  static char ID;
+  static const char ID;
   const BPFInstrInfo *TII;
   MachineFunction *MF;
 
@@ -370,7 +370,7 @@ bool BPFMISimplifyPatchable::removeLD() {
 INITIALIZE_PASS(BPFMISimplifyPatchable, DEBUG_TYPE,
                 "BPF PreEmit SimplifyPatchable", false, false)
 
-char BPFMISimplifyPatchable::ID = 0;
+const char BPFMISimplifyPatchable::ID = 0;
 FunctionPass *llvm::createBPFMISimplifyPatchablePass() {
   return new BPFMISimplifyPatchable();
 }

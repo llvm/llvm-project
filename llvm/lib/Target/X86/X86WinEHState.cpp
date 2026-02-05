@@ -40,7 +40,7 @@ const int OverdefinedState = INT_MIN;
 
 class WinEHStatePass : public FunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid.
+  static const char ID; // Pass identification, replacement for typeid.
 
   WinEHStatePass() : FunctionPass(ID) {}
 
@@ -119,7 +119,7 @@ private:
 
 FunctionPass *llvm::createX86WinEHStatePass() { return new WinEHStatePass(); }
 
-char WinEHStatePass::ID = 0;
+const char WinEHStatePass::ID = 0;
 
 INITIALIZE_PASS(WinEHStatePass, "x86-winehstate",
                 "Insert stores for EH state numbers", false, false)

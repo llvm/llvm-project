@@ -34,7 +34,7 @@ using namespace llvm;
 namespace {
 class WebAssemblyReplacePhysRegs final : public MachineFunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyReplacePhysRegs() : MachineFunctionPass(ID) {}
 
 private:
@@ -51,7 +51,7 @@ private:
 };
 } // end anonymous namespace
 
-char WebAssemblyReplacePhysRegs::ID = 0;
+const char WebAssemblyReplacePhysRegs::ID = 0;
 INITIALIZE_PASS(WebAssemblyReplacePhysRegs, DEBUG_TYPE,
                 "Replace physical registers with virtual registers", false,
                 false)

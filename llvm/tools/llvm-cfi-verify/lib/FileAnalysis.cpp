@@ -591,7 +591,7 @@ Error FileAnalysis::parseSymbolTable() {
 UnsupportedDisassembly::UnsupportedDisassembly(StringRef Text)
     : Text(std::string(Text)) {}
 
-char UnsupportedDisassembly::ID;
+const char UnsupportedDisassembly::ID = 0;
 void UnsupportedDisassembly::log(raw_ostream &OS) const {
   OS << "Could not initialise disassembler: " << Text;
 }

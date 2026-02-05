@@ -38,7 +38,7 @@ class MachineUniformityAnalysisPass : public MachineFunctionPass {
   MachineUniformityInfo UI;
 
 public:
-  static char ID;
+  static const char ID;
 
   MachineUniformityAnalysisPass();
 

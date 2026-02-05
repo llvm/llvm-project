@@ -105,7 +105,7 @@ private:
   SSPLayoutInfo LayoutInfo;
 
 public:
-  static char ID; // Pass identification, replacement for typeid.
+  static const char ID; // Pass identification, replacement for typeid.
 
   StackProtector();
 

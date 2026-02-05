@@ -68,7 +68,7 @@ public:
   CallBrPrepare() : FunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
-  static char ID;
+  static const char ID;
 };
 
 } // end anonymous namespace
@@ -93,7 +93,7 @@ PreservedAnalyses CallBrPreparePass::run(Function &F,
   return PA;
 }
 
-char CallBrPrepare::ID = 0;
+const char CallBrPrepare::ID = 0;
 INITIALIZE_PASS_BEGIN(CallBrPrepare, "callbrprepare", "Prepare callbr", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)

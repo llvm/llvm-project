@@ -126,7 +126,7 @@ class StraightLineStrengthReduceLegacyPass : public FunctionPass {
   const DataLayout *DL = nullptr;
 
 public:
-  static char ID;
+  static const char ID;
 
   StraightLineStrengthReduceLegacyPass() : FunctionPass(ID) {
     initializeStraightLineStrengthReduceLegacyPassPass(
@@ -613,7 +613,7 @@ operator<<(raw_ostream &OS, const StraightLineStrengthReduce::DeltaInfo &DI) {
 
 } // end anonymous namespace
 
-char StraightLineStrengthReduceLegacyPass::ID = 0;
+const char StraightLineStrengthReduceLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(StraightLineStrengthReduceLegacyPass, "slsr",
                       "Straight line strength reduction", false, false)

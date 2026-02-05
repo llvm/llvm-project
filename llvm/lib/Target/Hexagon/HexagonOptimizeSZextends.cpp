@@ -26,7 +26,7 @@ using namespace llvm;
 namespace {
   struct HexagonOptimizeSZextends : public FunctionPass {
   public:
-    static char ID;
+    static const char ID;
     HexagonOptimizeSZextends() : FunctionPass(ID) {}
     bool runOnFunction(Function &F) override;
 
@@ -41,7 +41,7 @@ namespace {
   };
 }
 
-char HexagonOptimizeSZextends::ID = 0;
+const char HexagonOptimizeSZextends::ID = 0;
 
 INITIALIZE_PASS(HexagonOptimizeSZextends, "reargs",
                 "Remove Sign and Zero Extends for Args", false, false)

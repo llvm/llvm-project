@@ -17,7 +17,7 @@ namespace lldb_private {
 class ClangREPL : public llvm::RTTIExtends<ClangREPL, REPL> {
 public:
   // LLVM RTTI support
-  static char ID;
+  static const char ID;
 
   ClangREPL(lldb::LanguageType language, Target &target);
 

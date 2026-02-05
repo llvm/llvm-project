@@ -84,7 +84,7 @@ public:
   int64_t getLineNum() const { return Line; }
   StringRef getMessage() const { return Message; }
 
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
 
 private:
   std::string File;

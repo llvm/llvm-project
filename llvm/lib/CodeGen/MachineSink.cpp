@@ -291,7 +291,7 @@ private:
 
 class MachineSinkingLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   MachineSinkingLegacy() : MachineFunctionPass(ID) {}
 
@@ -317,9 +317,9 @@ public:
 
 } // end anonymous namespace
 
-char MachineSinkingLegacy::ID = 0;
+const char MachineSinkingLegacy::ID = 0;
 
-char &llvm::MachineSinkingLegacyID = MachineSinkingLegacy::ID;
+const char &llvm::MachineSinkingLegacyID = MachineSinkingLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(MachineSinkingLegacy, DEBUG_TYPE, "Machine code sinking",
                       false, false)
@@ -2094,7 +2094,7 @@ class PostRAMachineSinkingLegacy : public MachineFunctionPass {
 public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  static char ID;
+  static const char ID;
   PostRAMachineSinkingLegacy() : MachineFunctionPass(ID) {}
   StringRef getPassName() const override { return "PostRA Machine Sink"; }
 
@@ -2110,8 +2110,8 @@ public:
 
 } // namespace
 
-char PostRAMachineSinkingLegacy::ID = 0;
-char &llvm::PostRAMachineSinkingID = PostRAMachineSinkingLegacy::ID;
+const char PostRAMachineSinkingLegacy::ID = 0;
+const char &llvm::PostRAMachineSinkingID = PostRAMachineSinkingLegacy::ID;
 
 INITIALIZE_PASS(PostRAMachineSinkingLegacy, "postra-machine-sink",
                 "PostRA Machine Sink", false, false)

@@ -138,7 +138,7 @@ private:
 
 class HexagonLoopIdiomRecognizeLegacyPass : public LoopPass {
 public:
-  static char ID;
+  static const char ID;
 
   explicit HexagonLoopIdiomRecognizeLegacyPass() : LoopPass(ID) {}
 
@@ -255,7 +255,7 @@ public:
 
 } // end anonymous namespace
 
-char HexagonLoopIdiomRecognizeLegacyPass::ID = 0;
+const char HexagonLoopIdiomRecognizeLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonLoopIdiomRecognizeLegacyPass, "hexagon-loop-idiom",
                       "Recognize Hexagon-specific loop idioms", false, false)

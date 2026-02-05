@@ -271,7 +271,7 @@ void ReplaceWithVeclibLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
 ////////////////////////////////////////////////////////////////////////////////
 // Legacy Pass manager initialization
 ////////////////////////////////////////////////////////////////////////////////
-char ReplaceWithVeclibLegacy::ID = 0;
+const char ReplaceWithVeclibLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ReplaceWithVeclibLegacy, DEBUG_TYPE,
                       "Replace intrinsics with calls to vector library", false,

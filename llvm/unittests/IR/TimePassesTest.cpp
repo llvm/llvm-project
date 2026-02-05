@@ -30,7 +30,7 @@ void initializePass2Pass(PassRegistry &);
 
 namespace {
 struct Pass1 : public ModulePass {
-  static char ID;
+  static const char ID;
 
 public:
   Pass1() : ModulePass(ID) {}
@@ -40,10 +40,10 @@ public:
   }
   StringRef getPassName() const override { return "Pass1"; }
 };
-char Pass1::ID;
+const char Pass1::ID = 0;
 
 struct Pass2 : public ModulePass {
-  static char ID;
+  static const char ID;
 
 public:
   Pass2() : ModulePass(ID) {}
@@ -53,7 +53,7 @@ public:
   }
   StringRef getPassName() const override { return "Pass2"; }
 };
-char Pass2::ID;
+const char Pass2::ID = 0;
 } // namespace
 } // namespace llvm
 

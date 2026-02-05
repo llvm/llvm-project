@@ -55,7 +55,7 @@ private:
   void emitCallInstruction(const MachineInstr *MI);
 
 public:
-  static char ID;
+  static const char ID;
 };
 } // end of anonymous namespace
 
@@ -237,7 +237,7 @@ bool LanaiAsmPrinter::isBlockOnlyReachableByFallthrough(
   return !I->isBarrier();
 }
 
-char LanaiAsmPrinter::ID = 0;
+const char LanaiAsmPrinter::ID = 0;
 
 INITIALIZE_PASS(LanaiAsmPrinter, "lanai-asm-printer", "Lanai Assembly Printer",
                 false, false)

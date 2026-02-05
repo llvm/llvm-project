@@ -286,7 +286,7 @@ namespace {
 // Viewer
 class CallGraphViewer : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
   CallGraphViewer() : ModulePass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -313,7 +313,7 @@ bool CallGraphViewer::runOnModule(Module &M) {
 
 class CallGraphDOTPrinter : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
   CallGraphDOTPrinter() : ModulePass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -338,11 +338,11 @@ bool CallGraphDOTPrinter::runOnModule(Module &M) {
 
 } // end anonymous namespace
 
-char CallGraphViewer::ID = 0;
+const char CallGraphViewer::ID = 0;
 INITIALIZE_PASS(CallGraphViewer, "view-callgraph", "View call graph", false,
                 false)
 
-char CallGraphDOTPrinter::ID = 0;
+const char CallGraphDOTPrinter::ID = 0;
 INITIALIZE_PASS(CallGraphDOTPrinter, "dot-callgraph",
                 "Print call graph to 'dot' file", false, false)
 

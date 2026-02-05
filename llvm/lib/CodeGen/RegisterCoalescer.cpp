@@ -390,7 +390,7 @@ public:
 
 class RegisterCoalescerLegacy : public MachineFunctionPass {
 public:
-  static char ID; ///< Class identification, replacement for typeinfo
+  static const char ID; ///< Class identification, replacement for typeinfo
 
   RegisterCoalescerLegacy() : MachineFunctionPass(ID) {}
 
@@ -406,9 +406,9 @@ public:
 
 } // end anonymous namespace
 
-char RegisterCoalescerLegacy::ID = 0;
+const char RegisterCoalescerLegacy::ID = 0;
 
-char &llvm::RegisterCoalescerID = RegisterCoalescerLegacy::ID;
+const char &llvm::RegisterCoalescerID = RegisterCoalescerLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(RegisterCoalescerLegacy, "register-coalescer",
                       "Register Coalescer", false, false)

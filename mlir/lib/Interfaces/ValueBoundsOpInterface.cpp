@@ -162,7 +162,7 @@ ValueBoundsConstraintSet::ValueBoundsConstraintSet(
   assert(stopCondition && "expected non-null stop condition");
 }
 
-char ValueBoundsConstraintSet::ID = 0;
+const char ValueBoundsConstraintSet::ID = 0;
 
 #ifndef NDEBUG
 static void assertValidValueDim(Value value, std::optional<int64_t> dim) {

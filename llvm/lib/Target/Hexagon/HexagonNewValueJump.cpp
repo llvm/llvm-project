@@ -66,7 +66,7 @@ static cl::opt<bool> DisableNewValueJumps("disable-nvjump", cl::Hidden,
 namespace {
 
   struct HexagonNewValueJump : public MachineFunctionPass {
-    static char ID;
+    static const char ID;
 
     HexagonNewValueJump() : MachineFunctionPass(ID) {}
 
@@ -95,7 +95,7 @@ namespace {
 
 } // end anonymous namespace
 
-char HexagonNewValueJump::ID = 0;
+const char HexagonNewValueJump::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonNewValueJump, "hexagon-nvj",
                       "Hexagon NewValueJump", false, false)

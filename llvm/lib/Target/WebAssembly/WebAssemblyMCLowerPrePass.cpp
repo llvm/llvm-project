@@ -40,12 +40,12 @@ class WebAssemblyMCLowerPrePass final : public ModulePass {
   bool runOnModule(Module &M) override;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WebAssemblyMCLowerPrePass() : ModulePass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyMCLowerPrePass::ID = 0;
+const char WebAssemblyMCLowerPrePass::ID = 0;
 INITIALIZE_PASS(
     WebAssemblyMCLowerPrePass, DEBUG_TYPE,
     "Collects information ahead of time for MC lowering",

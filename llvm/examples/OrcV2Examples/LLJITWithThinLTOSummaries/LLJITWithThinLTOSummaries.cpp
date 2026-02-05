@@ -65,7 +65,7 @@ static cl::opt<std::string> IndexFile{cl::desc("<module summary index>"),
 class DuplicateDefinitionInSummary
     : public ErrorInfo<DuplicateDefinitionInSummary> {
 public:
-  static char ID;
+  static const char ID;
 
   DuplicateDefinitionInSummary(std::string GlobalValueName, ValueInfo VI)
       : GlobalValueName(std::move(GlobalValueName)) {
@@ -100,7 +100,7 @@ private:
 class DefinitionNotFoundInSummary
     : public ErrorInfo<DefinitionNotFoundInSummary> {
 public:
-  static char ID;
+  static const char ID;
 
   DefinitionNotFoundInSummary(std::string GlobalValueName,
                               ModuleSummaryIndex &Index)
@@ -129,8 +129,8 @@ private:
   std::vector<std::string> ModulePaths;
 };
 
-char DuplicateDefinitionInSummary::ID = 0;
-char DefinitionNotFoundInSummary::ID = 0;
+const char DuplicateDefinitionInSummary::ID = 0;
+const char DefinitionNotFoundInSummary::ID = 0;
 
 // Lookup the a function in the ModuleSummaryIndex and return the path of the
 // module that defines it. Paths in the ModuleSummaryIndex are relative to the

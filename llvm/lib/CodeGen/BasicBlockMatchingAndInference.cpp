@@ -82,7 +82,7 @@ INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReaderWrapperPass)
 INITIALIZE_PASS_END(BasicBlockMatchingAndInference, "machine-block-match-infer",
                     "Machine Block Matching and Inference Analysis", true, true)
 
-char BasicBlockMatchingAndInference::ID = 0;
+const char BasicBlockMatchingAndInference::ID = 0;
 
 BasicBlockMatchingAndInference::BasicBlockMatchingAndInference()
     : MachineFunctionPass(ID) {}

@@ -994,7 +994,7 @@ class LLVM_ABI MemorySSAWrapperPass : public FunctionPass {
 public:
   MemorySSAWrapperPass();
 
-  static char ID;
+  static const char ID;
 
   bool runOnFunction(Function &) override;
   void releaseMemory() override;

@@ -58,7 +58,7 @@ static cl::opt<RegBankSelect::Mode> RegBankSelectMode(
                clEnumValN(RegBankSelect::Mode::Greedy, "regbankselect-greedy",
                           "Use the Greedy mode (best local mapping)")));
 
-char RegBankSelect::ID = 0;
+const char RegBankSelect::ID = 0;
 
 INITIALIZE_PASS_BEGIN(RegBankSelect, DEBUG_TYPE,
                       "Assign register bank of generic virtual registers",

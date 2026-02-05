@@ -474,7 +474,7 @@ namespace {
     std::unique_ptr<ARMBasicBlockUtils> BBUtils = nullptr;
 
   public:
-    static char ID;
+    static const char ID;
 
     ARMLowOverheadLoops() : MachineFunctionPass(ID) { }
 
@@ -519,7 +519,7 @@ namespace {
   };
 }
 
-char ARMLowOverheadLoops::ID = 0;
+const char ARMLowOverheadLoops::ID = 0;
 
 INITIALIZE_PASS(ARMLowOverheadLoops, DEBUG_TYPE, ARM_LOW_OVERHEAD_LOOPS_NAME,
                 false, false)

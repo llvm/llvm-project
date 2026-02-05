@@ -44,7 +44,7 @@ namespace {
 /// and custom intrinsic lowering.
 class LowerIntrinsics : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   LowerIntrinsics();
   StringRef getPassName() const override;
@@ -70,7 +70,7 @@ class GCMachineCodeAnalysis : public MachineFunctionPass {
   void FindStackOffsets(MachineFunction &MF);
 
 public:
-  static char ID;
+  static const char ID;
 
   GCMachineCodeAnalysis();
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -104,8 +104,8 @@ INITIALIZE_PASS_END(LowerIntrinsics, "gc-lowering", "GC Lowering", false, false)
 
 FunctionPass *llvm::createGCLoweringPass() { return new LowerIntrinsics(); }
 
-char LowerIntrinsics::ID = 0;
-char &llvm::GCLoweringID = LowerIntrinsics::ID;
+const char LowerIntrinsics::ID = 0;
+const char &llvm::GCLoweringID = LowerIntrinsics::ID;
 
 LowerIntrinsics::LowerIntrinsics() : FunctionPass(ID) {}
 
@@ -249,8 +249,8 @@ bool DoLowering(Function &F, GCStrategy &S) {
 
 // -----------------------------------------------------------------------------
 
-char GCMachineCodeAnalysis::ID = 0;
-char &llvm::GCMachineCodeAnalysisID = GCMachineCodeAnalysis::ID;
+const char GCMachineCodeAnalysis::ID = 0;
+const char &llvm::GCMachineCodeAnalysisID = GCMachineCodeAnalysis::ID;
 
 INITIALIZE_PASS(GCMachineCodeAnalysis, "gc-analysis",
                 "Analyze Machine Code For Garbage Collection", false, false)

@@ -525,7 +525,7 @@ private:
 
 class AArch64DAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
-  static char ID;
+  static const char ID;
   explicit AArch64DAGToDAGISelLegacy(AArch64TargetMachine &tm,
                                      CodeGenOptLevel OptLevel)
       : SelectionDAGISelLegacy(
@@ -533,7 +533,7 @@ public:
 };
 } // end anonymous namespace
 
-char AArch64DAGToDAGISelLegacy::ID = 0;
+const char AArch64DAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(AArch64DAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 

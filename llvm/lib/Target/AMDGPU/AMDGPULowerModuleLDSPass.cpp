@@ -1406,7 +1406,7 @@ private:
 class AMDGPULowerModuleLDSLegacy : public ModulePass {
 public:
   const AMDGPUTargetMachine *TM;
-  static char ID;
+  static const char ID;
 
   AMDGPULowerModuleLDSLegacy(const AMDGPUTargetMachine *TM = nullptr)
       : ModulePass(ID), TM(TM) {}
@@ -1427,9 +1427,10 @@ public:
 };
 
 } // namespace
-char AMDGPULowerModuleLDSLegacy::ID = 0;
+const char AMDGPULowerModuleLDSLegacy::ID = 0;
 
-char &llvm::AMDGPULowerModuleLDSLegacyPassID = AMDGPULowerModuleLDSLegacy::ID;
+const char &llvm::AMDGPULowerModuleLDSLegacyPassID =
+    AMDGPULowerModuleLDSLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(AMDGPULowerModuleLDSLegacy, DEBUG_TYPE,
                       "Lower uses of LDS variables from non-kernel functions",

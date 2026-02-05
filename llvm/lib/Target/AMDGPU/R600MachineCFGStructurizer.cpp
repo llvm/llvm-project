@@ -96,7 +96,7 @@ public:
     SinglePath_NotInPath = 2
   };
 
-  static char ID;
+  static const char ID;
 
   R600MachineCFGStructurizer() : MachineFunctionPass(ID) {}
 
@@ -309,7 +309,7 @@ private:
 
 } // end anonymous namespace
 
-char R600MachineCFGStructurizer::ID = 0;
+const char R600MachineCFGStructurizer::ID = 0;
 
 int R600MachineCFGStructurizer::getSCCNum(MachineBasicBlock *MBB) const {
   MBBInfoMap::const_iterator It = BlockInfoMap.find(MBB);

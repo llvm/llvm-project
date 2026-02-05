@@ -153,7 +153,7 @@ public:
 
   ~TargetPassConfig() override;
 
-  static char ID;
+  static const char ID;
 
   /// Get the right type of TargetMachine for this target.
   template<typename TMC> TMC &getTM() const {

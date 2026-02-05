@@ -28,7 +28,7 @@ enum class TextAPIErrorCode {
 
 class LLVM_ABI TextAPIError : public llvm::ErrorInfo<TextAPIError> {
 public:
-  static char ID;
+  static const char ID;
   TextAPIErrorCode EC;
   std::string Msg;
 

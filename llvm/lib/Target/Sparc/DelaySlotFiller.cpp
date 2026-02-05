@@ -38,7 +38,7 @@ namespace {
   struct Filler : public MachineFunctionPass {
     const SparcSubtarget *Subtarget = nullptr;
 
-    static char ID;
+    static const char ID;
     Filler() : MachineFunctionPass(ID) {}
 
     StringRef getPassName() const override { return "SPARC Delay Slot Filler"; }
@@ -86,7 +86,7 @@ namespace {
                                        MachineBasicBlock::iterator MBBI);
 
   };
-  char Filler::ID = 0;
+  const char Filler::ID = 0;
 } // end of anonymous namespace
 
 /// createSparcDelaySlotFillerPass - Returns a pass that fills in delay

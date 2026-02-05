@@ -33,7 +33,7 @@ using namespace llvm;
 
 namespace {
 struct SMEABI : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   SMEABI() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override;
@@ -48,7 +48,7 @@ private:
 };
 } // end anonymous namespace
 
-char SMEABI::ID = 0;
+const char SMEABI::ID = 0;
 static const char *name = "SME ABI Pass";
 INITIALIZE_PASS(SMEABI, DEBUG_TYPE, name, false, false)
 

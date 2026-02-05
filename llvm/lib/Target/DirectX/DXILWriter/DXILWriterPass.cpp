@@ -37,7 +37,7 @@ class WriteDXILPass : public llvm::ModulePass {
   raw_ostream &OS; // raw_ostream to print on
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   WriteDXILPass() : ModulePass(ID), OS(dbgs()) {
     initializeWriteDXILPassPass(*PassRegistry::getPassRegistry());
   }
@@ -138,7 +138,7 @@ static void removeLifetimeIntrinsics(Module &M) {
 
 class EmbedDXILPass : public llvm::ModulePass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   EmbedDXILPass() : ModulePass(ID) {
     initializeEmbedDXILPassPass(*PassRegistry::getPassRegistry());
   }
@@ -177,7 +177,7 @@ public:
 };
 } // namespace
 
-char WriteDXILPass::ID = 0;
+const char WriteDXILPass::ID = 0;
 INITIALIZE_PASS_BEGIN(WriteDXILPass, "dxil-write-bitcode", "Write Bitcode",
                       false, true)
 INITIALIZE_PASS_DEPENDENCY(ModuleSummaryIndexWrapperPass)
@@ -188,7 +188,7 @@ ModulePass *llvm::createDXILWriterPass(raw_ostream &Str) {
   return new WriteDXILPass(Str);
 }
 
-char EmbedDXILPass::ID = 0;
+const char EmbedDXILPass::ID = 0;
 INITIALIZE_PASS(EmbedDXILPass, "dxil-embed", "Embed DXIL", false, true)
 
 ModulePass *llvm::createDXILEmbedderPass() { return new EmbedDXILPass(); }

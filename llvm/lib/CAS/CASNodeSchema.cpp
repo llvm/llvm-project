@@ -11,5 +11,5 @@
 using namespace llvm;
 using namespace llvm::cas;
 
-char NodeSchema::ID = 0;
+const char NodeSchema::ID = 0;
 void NodeSchema::anchor() {}

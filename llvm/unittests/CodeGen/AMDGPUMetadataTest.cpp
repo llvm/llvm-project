@@ -28,7 +28,7 @@ struct AddMetadataPass : public ModulePass {
   std::string PalMDString;
 
 public:
-  static char ID;
+  static const char ID;
   AddMetadataPass(std::string PalMDString)
       : ModulePass(ID), PalMDString(PalMDString) {}
   bool runOnModule(Module &M) override {
@@ -40,7 +40,7 @@ public:
     return true;
   }
 };
-char AddMetadataPass::ID = 0;
+const char AddMetadataPass::ID = 0;
 } // end anonymous namespace
 
 class AMDGPUSelectionDAGTest : public testing::Test {

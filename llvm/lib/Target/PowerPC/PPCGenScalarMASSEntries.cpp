@@ -29,7 +29,7 @@ namespace {
 
 class PPCGenScalarMASSEntries : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
 
   PPCGenScalarMASSEntries() : ModulePass(ID) {
     ScalarMASSFuncs = {
@@ -134,9 +134,9 @@ bool PPCGenScalarMASSEntries::runOnModule(Module &M) {
   return Changed;
 }
 
-char PPCGenScalarMASSEntries::ID = 0;
+const char PPCGenScalarMASSEntries::ID = 0;
 
-char &llvm::PPCGenScalarMASSEntriesID = PPCGenScalarMASSEntries::ID;
+const char &llvm::PPCGenScalarMASSEntriesID = PPCGenScalarMASSEntries::ID;
 
 INITIALIZE_PASS(PPCGenScalarMASSEntries, DEBUG_TYPE,
                 "Generate Scalar MASS entries", false, false)

@@ -9,4 +9,4 @@
 #include "llvm/Support/ExtensibleRTTI.h"
 
 void llvm::RTTIRoot::anchor() {}
-char llvm::RTTIRoot::ID = 0;
+const char llvm::RTTIRoot::ID = 0;

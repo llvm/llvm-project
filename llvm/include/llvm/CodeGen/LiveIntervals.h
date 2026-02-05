@@ -536,7 +536,7 @@ class LLVM_ABI LiveIntervalsWrapperPass : public MachineFunctionPass {
   LiveIntervals LIS;
 
 public:
-  static char ID;
+  static const char ID;
 
   LiveIntervalsWrapperPass();
 

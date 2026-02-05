@@ -76,7 +76,7 @@ static bool runImpl(Function &F, const SimplifyQuery &SQ) {
 
 namespace {
 struct InstSimplifyLegacyPass : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   InstSimplifyLegacyPass() : FunctionPass(ID) {
     initializeInstSimplifyLegacyPassPass(*PassRegistry::getPassRegistry());
   }
@@ -106,7 +106,7 @@ struct InstSimplifyLegacyPass : public FunctionPass {
 };
 } // namespace
 
-char InstSimplifyLegacyPass::ID = 0;
+const char InstSimplifyLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(InstSimplifyLegacyPass, "instsimplify",
                       "Remove redundant instructions", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)

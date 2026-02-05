@@ -155,7 +155,7 @@ std::optional<T> findCommonBetweenCollections(IterT A, IterT B) {
 
 class ComplexDeinterleavingLegacyPass : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   ComplexDeinterleavingLegacyPass(const TargetMachine *TM = nullptr)
       : FunctionPass(ID), TM(TM) {}
@@ -521,7 +521,7 @@ private:
 
 } // namespace
 
-char ComplexDeinterleavingLegacyPass::ID = 0;
+const char ComplexDeinterleavingLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ComplexDeinterleavingLegacyPass, DEBUG_TYPE,
                       "Complex Deinterleaving", false, false)

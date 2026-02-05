@@ -603,7 +603,7 @@ public:
 
 class SIMemoryLegalizerLegacy final : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SIMemoryLegalizerLegacy() : MachineFunctionPass(ID) {}
 
@@ -2479,8 +2479,8 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
 
 INITIALIZE_PASS(SIMemoryLegalizerLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
-char SIMemoryLegalizerLegacy::ID = 0;
-char &llvm::SIMemoryLegalizerID = SIMemoryLegalizerLegacy::ID;
+const char SIMemoryLegalizerLegacy::ID = 0;
+const char &llvm::SIMemoryLegalizerID = SIMemoryLegalizerLegacy::ID;
 
 FunctionPass *llvm::createSIMemoryLegalizerPass() {
   return new SIMemoryLegalizerLegacy();

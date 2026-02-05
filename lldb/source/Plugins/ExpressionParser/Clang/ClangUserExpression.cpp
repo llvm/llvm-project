@@ -62,7 +62,7 @@
 
 using namespace lldb_private;
 
-char ClangUserExpression::ID;
+const char ClangUserExpression::ID = 0;
 
 ClangUserExpression::ClangUserExpression(
     ExecutionContextScope &exe_scope, llvm::StringRef expr,
@@ -993,7 +993,7 @@ void ClangUserExpression::FixupParseErrorDiagnostics(
   FixupCVRParseErrorDiagnostics(diagnostic_manager);
 }
 
-char ClangUserExpression::ClangUserExpressionHelper::ID;
+const char ClangUserExpression::ClangUserExpressionHelper::ID = 0;
 
 void ClangUserExpression::ClangUserExpressionHelper::ResetDeclMap(
     ExecutionContext &exe_ctx,

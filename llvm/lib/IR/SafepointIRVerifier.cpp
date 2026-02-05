@@ -208,7 +208,7 @@ PreservedAnalyses SafepointIRVerifierPass::run(Function &F,
 namespace {
 
 struct SafepointIRVerifier : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   SafepointIRVerifier() : FunctionPass(ID) {
     initializeSafepointIRVerifierPass(*PassRegistry::getPassRegistry());
   }
@@ -235,7 +235,7 @@ void llvm::verifySafepointIR(Function &F) {
   pass.runOnFunction(F);
 }
 
-char SafepointIRVerifier::ID = 0;
+const char SafepointIRVerifier::ID = 0;
 
 FunctionPass *llvm::createSafepointIRVerifierPass() {
   return new SafepointIRVerifier();

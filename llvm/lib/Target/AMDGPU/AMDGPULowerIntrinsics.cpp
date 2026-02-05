@@ -42,7 +42,7 @@ private:
 
 class AMDGPULowerIntrinsicsLegacy : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPULowerIntrinsicsLegacy() : ModulePass(ID) {}
 
@@ -206,7 +206,7 @@ INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_END(AMDGPULowerIntrinsicsLegacy, DEBUG_TYPE, PASS_DESC, false,
                     false)
 
-char AMDGPULowerIntrinsicsLegacy::ID = 0;
+const char AMDGPULowerIntrinsicsLegacy::ID = 0;
 
 ModulePass *llvm::createAMDGPULowerIntrinsicsLegacyPass() {
   return new AMDGPULowerIntrinsicsLegacy;

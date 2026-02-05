@@ -25,7 +25,7 @@ using namespace llvm;
 namespace {
 class SystemZShortenInst : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   SystemZShortenInst();
 
   bool processBlock(MachineBasicBlock &MBB);
@@ -48,7 +48,7 @@ private:
   LiveRegUnits LiveRegs;
 };
 
-char SystemZShortenInst::ID = 0;
+const char SystemZShortenInst::ID = 0;
 } // end anonymous namespace
 
 INITIALIZE_PASS(SystemZShortenInst, DEBUG_TYPE,

@@ -103,7 +103,7 @@ AMDGPUAnnotateUniformValuesPass::run(Function &F,
 
 class AMDGPUAnnotateUniformValuesLegacy : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   AMDGPUAnnotateUniformValuesLegacy() : FunctionPass(ID) {}
 
@@ -144,7 +144,7 @@ INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(AMDGPUAnnotateUniformValuesLegacy, DEBUG_TYPE,
                     "Add AMDGPU uniform metadata", false, false)
 
-char AMDGPUAnnotateUniformValuesLegacy::ID = 0;
+const char AMDGPUAnnotateUniformValuesLegacy::ID = 0;
 
 FunctionPass *llvm::createAMDGPUAnnotateUniformValuesLegacy() {
   return new AMDGPUAnnotateUniformValuesLegacy();

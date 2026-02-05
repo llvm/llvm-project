@@ -27,7 +27,7 @@ STATISTIC(NumDeadDefsReplaced, "Number of dead definitions replaced");
 namespace {
 class RISCVDeadRegisterDefinitions : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   RISCVDeadRegisterDefinitions() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -46,7 +46,7 @@ public:
 };
 } // end anonymous namespace
 
-char RISCVDeadRegisterDefinitions::ID = 0;
+const char RISCVDeadRegisterDefinitions::ID = 0;
 INITIALIZE_PASS(RISCVDeadRegisterDefinitions, DEBUG_TYPE,
                 RISCV_DEAD_REG_DEF_NAME, false, false)
 

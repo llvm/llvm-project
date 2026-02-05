@@ -94,7 +94,7 @@ public:
   static lldb::SymbolType MapSymbolType(uint16_t coff_symbol_type);
 
   // LLVM RTTI support
-  static char ID;
+  static const char ID;
   bool isA(const void *ClassID) const override {
     return ClassID == &ID || ObjectFile::isA(ClassID);
   }

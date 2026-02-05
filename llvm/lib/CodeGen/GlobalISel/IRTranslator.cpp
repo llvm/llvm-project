@@ -98,7 +98,7 @@ static cl::opt<bool>
     EnableCSEInIRTranslator("enable-cse-in-irtranslator",
                             cl::desc("Should enable CSE in irtranslator"),
                             cl::Optional, cl::init(false));
-char IRTranslator::ID = 0;
+const char IRTranslator::ID = 0;
 
 INITIALIZE_PASS_BEGIN(IRTranslator, DEBUG_TYPE, "IRTranslator LLVM IR -> MI",
                 false, false)

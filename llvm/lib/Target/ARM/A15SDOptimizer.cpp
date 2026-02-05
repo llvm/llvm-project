@@ -46,7 +46,7 @@ using namespace llvm;
 
 namespace {
   struct A15SDOptimizer : public MachineFunctionPass {
-    static char ID;
+    static const char ID;
     A15SDOptimizer() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &Fn) override;
@@ -125,7 +125,7 @@ namespace {
     std::map<MachineInstr*, unsigned> Replacements;
     std::set<MachineInstr *> DeadInstr;
   };
-  char A15SDOptimizer::ID = 0;
+  const char A15SDOptimizer::ID = 0;
 } // end anonymous namespace
 
 // Returns true if this is a use of a SPR register.

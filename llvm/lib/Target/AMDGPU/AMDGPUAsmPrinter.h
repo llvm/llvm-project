@@ -37,7 +37,7 @@ class MetadataStreamer;
 
 class AMDGPUAsmPrinter final : public AsmPrinter {
 public:
-  static char ID;
+  static const char ID;
 
 private:
   unsigned CodeObjectVersion;

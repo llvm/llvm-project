@@ -470,7 +470,7 @@ struct MachineTraceMetricsVerifierPass
 
 class MachineTraceMetricsWrapperPass : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   MachineTraceMetrics MTM;
 
   MachineTraceMetricsWrapperPass();

@@ -89,7 +89,7 @@ public:
 private:
   virtual void anchor();
 
-  static char ID;
+  static const char ID;
 };
 
 /// Inheritance utility for extensible RTTI.
@@ -119,7 +119,7 @@ public:
   using ParentT::isA;
   using ParentT::ParentT;
 
-  static char ID;
+  static const char ID;
 
   static const void *classID() noexcept { return &ThisT::ID; }
 
@@ -133,7 +133,7 @@ public:
 };
 
 template <typename ThisT, typename ParentT>
-char RTTIExtends<ThisT, ParentT>::ID = 0;
+const char RTTIExtends<ThisT, ParentT>::ID = 0;
 
 /// Returns true if the given value is an instance of the template type
 /// parameter.

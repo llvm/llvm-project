@@ -94,7 +94,7 @@ enum SHValues {
 
 struct PPCVSXSwapRemoval : public MachineFunctionPass {
 
-  static char ID;
+  static const char ID;
   const PPCInstrInfo *TII;
   MachineFunction *MF;
   MachineRegisterInfo *MRI;
@@ -1061,6 +1061,6 @@ INITIALIZE_PASS_BEGIN(PPCVSXSwapRemoval, DEBUG_TYPE,
 INITIALIZE_PASS_END(PPCVSXSwapRemoval, DEBUG_TYPE,
                     "PowerPC VSX Swap Removal", false, false)
 
-char PPCVSXSwapRemoval::ID = 0;
+const char PPCVSXSwapRemoval::ID = 0;
 FunctionPass*
 llvm::createPPCVSXSwapRemovalPass() { return new PPCVSXSwapRemoval(); }

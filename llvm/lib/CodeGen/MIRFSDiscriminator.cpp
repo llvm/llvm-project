@@ -40,13 +40,13 @@ cl::opt<bool> llvm::ImprovedFSDiscriminator(
     "improved-fs-discriminator", cl::Hidden, cl::init(false),
     cl::desc("New FS discriminators encoding (incompatible with the original "
              "encoding)"));
-char MIRAddFSDiscriminators::ID = 0;
+const char MIRAddFSDiscriminators::ID = 0;
 
 INITIALIZE_PASS(MIRAddFSDiscriminators, DEBUG_TYPE,
                 "Add MIR Flow Sensitive Discriminators",
                 /* cfg = */ false, /* is_analysis = */ false)
 
-char &llvm::MIRAddFSDiscriminatorsID = MIRAddFSDiscriminators::ID;
+const char &llvm::MIRAddFSDiscriminatorsID = MIRAddFSDiscriminators::ID;
 
 FunctionPass *llvm::createMIRAddFSDiscriminatorsPass(FSDiscriminatorPass P) {
   return new MIRAddFSDiscriminators(P);

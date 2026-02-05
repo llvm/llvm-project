@@ -175,7 +175,7 @@ struct GlobalVariableUse {
 
 class WindowsSecureHotPatching : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
 
   WindowsSecureHotPatching() : ModulePass(ID) {}
 
@@ -194,7 +194,7 @@ private:
 
 } // end anonymous namespace
 
-char WindowsSecureHotPatching::ID = 0;
+const char WindowsSecureHotPatching::ID = 0;
 
 INITIALIZE_PASS(WindowsSecureHotPatching, "windows-secure-hot-patch",
                 "Mark functions for Windows hot patch support", false, false)

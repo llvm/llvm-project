@@ -47,7 +47,7 @@ namespace {
   };
 
   struct PadShortFunc : public MachineFunctionPass {
-    static char ID;
+    static const char ID;
     PadShortFunc() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
@@ -90,7 +90,7 @@ namespace {
     TargetSchedModel TSM;
   };
 
-  char PadShortFunc::ID = 0;
+  const char PadShortFunc::ID = 0;
 }
 
 FunctionPass *llvm::createX86PadShortFunctions() {

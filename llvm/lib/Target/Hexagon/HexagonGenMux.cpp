@@ -57,7 +57,7 @@ namespace {
 
   class HexagonGenMux : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     HexagonGenMux() : MachineFunctionPass(ID) {}
 
@@ -129,7 +129,7 @@ namespace {
 
 } // end anonymous namespace
 
-char HexagonGenMux::ID = 0;
+const char HexagonGenMux::ID = 0;
 
 INITIALIZE_PASS(HexagonGenMux, "hexagon-gen-mux",
   "Hexagon generate mux instructions", false, false)

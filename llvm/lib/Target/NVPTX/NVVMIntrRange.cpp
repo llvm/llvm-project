@@ -28,7 +28,7 @@ using namespace llvm;
 namespace {
 class NVVMIntrRange : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
   NVVMIntrRange() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &) override;
@@ -37,7 +37,7 @@ public:
 
 FunctionPass *llvm::createNVVMIntrRangePass() { return new NVVMIntrRange(); }
 
-char NVVMIntrRange::ID = 0;
+const char NVVMIntrRange::ID = 0;
 INITIALIZE_PASS(NVVMIntrRange, "nvvm-intr-range",
                 "Add !range metadata to NVVM intrinsics.", false, false)
 

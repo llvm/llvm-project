@@ -597,7 +597,7 @@ class LLVM_ABI LoopInfoWrapperPass : public FunctionPass {
   LoopInfo LI;
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
 
   LoopInfoWrapperPass();
 

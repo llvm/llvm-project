@@ -103,7 +103,7 @@ namespace {
 /// the function which require a safepoint poll to be inserted.
 class PlaceBackedgeSafepointsLegacyPass : public FunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   /// The output of the pass - gives a list of each backedge (described by
   /// pointing at the branch) which need a poll inserted.
@@ -161,7 +161,7 @@ static cl::opt<bool> NoEntry("spp-no-entry", cl::Hidden, cl::init(false));
 static cl::opt<bool> NoCall("spp-no-call", cl::Hidden, cl::init(false));
 static cl::opt<bool> NoBackedge("spp-no-backedge", cl::Hidden, cl::init(false));
 
-char PlaceBackedgeSafepointsLegacyPass::ID = 0;
+const char PlaceBackedgeSafepointsLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(PlaceBackedgeSafepointsLegacyPass,
                       "place-backedge-safepoints-impl",

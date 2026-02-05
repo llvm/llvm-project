@@ -103,7 +103,7 @@ MachineOptimizationRemarkEmitterAnalysis::run(
   return Result(MF, MBFI);
 }
 
-char MachineOptimizationRemarkEmitterPass::ID = 0;
+const char MachineOptimizationRemarkEmitterPass::ID = 0;
 static const char ore_name[] = "Machine Optimization Remark Emitter";
 #define ORE_NAME "machine-opt-remark-emitter"
 

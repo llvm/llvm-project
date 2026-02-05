@@ -65,14 +65,14 @@ public:
   X86SpeculativeExecutionSideEffectSuppressionLegacy()
       : MachineFunctionPass(ID) {}
 
-  static char ID;
+  static const char ID;
   StringRef getPassName() const override { return X86SESESPassName; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 } // namespace
 
-char X86SpeculativeExecutionSideEffectSuppressionLegacy::ID = 0;
+const char X86SpeculativeExecutionSideEffectSuppressionLegacy::ID = 0;
 
 // This function returns whether the passed instruction uses a memory addressing
 // mode that is constant. We treat all memory addressing modes that read

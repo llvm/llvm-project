@@ -12,7 +12,7 @@
 namespace llvm {
 namespace orc {
 
-char ObjectTransformLayer::ID;
+const char ObjectTransformLayer::ID = 0;
 
 using BaseT = RTTIExtends<ObjectTransformLayer, ObjectLayer>;
 

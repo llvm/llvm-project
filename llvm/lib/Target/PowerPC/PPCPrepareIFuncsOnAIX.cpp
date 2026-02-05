@@ -30,7 +30,7 @@ STATISTIC(NumIFuncs, "Number of IFuncs prepared");
 namespace {
 class PPCPrepareIFuncsOnAIX : public ModulePass {
 public:
-  static char ID;
+  static const char ID;
 
   PPCPrepareIFuncsOnAIX() : ModulePass(ID) {}
 
@@ -42,7 +42,7 @@ public:
 };
 } // namespace
 
-char PPCPrepareIFuncsOnAIX::ID = 0;
+const char PPCPrepareIFuncsOnAIX::ID = 0;
 
 INITIALIZE_PASS(PPCPrepareIFuncsOnAIX, DEBUG_TYPE,
                 "PPC Prepare for AIX IFunc lowering", false, false)

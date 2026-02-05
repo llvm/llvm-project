@@ -29,7 +29,7 @@ namespace {
 
 class RISCVFoldMemOffset : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   RISCVFoldMemOffset() : MachineFunctionPass(ID) {}
 
@@ -72,7 +72,7 @@ public:
 
 } // end anonymous namespace
 
-char RISCVFoldMemOffset::ID = 0;
+const char RISCVFoldMemOffset::ID = 0;
 INITIALIZE_PASS(RISCVFoldMemOffset, DEBUG_TYPE, RISCV_FOLD_MEM_OFFSET_NAME,
                 false, false)
 

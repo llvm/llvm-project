@@ -40,7 +40,7 @@ public:
   virtual std::unique_ptr<CloneableError> Clone() const = 0;
   virtual lldb::ErrorType GetErrorType() const = 0;
   virtual StructuredData::ObjectSP GetAsStructuredData() const = 0;
-  static char ID;
+  static const char ID;
 };
 
 /// Common base class for all error-code errors.
@@ -52,7 +52,7 @@ public:
   void log(llvm::raw_ostream &OS) const override { OS << EC.message(); }
   lldb::ErrorType GetErrorType() const override;
   virtual StructuredData::ObjectSP GetAsStructuredData() const override;
-  static char ID;
+  static const char ID;
 
 protected:
   CloneableECError() = delete;
@@ -68,7 +68,7 @@ public:
   std::string message() const override;
   std::unique_ptr<CloneableError> Clone() const override;
   lldb::ErrorType GetErrorType() const override;
-  static char ID;
+  static const char ID;
 };
 
 class Win32Error : public llvm::ErrorInfo<Win32Error, CloneableECError> {
@@ -78,7 +78,7 @@ public:
   std::string message() const override;
   std::unique_ptr<CloneableError> Clone() const override;
   lldb::ErrorType GetErrorType() const override;
-  static char ID;
+  static const char ID;
 };
 
 /// \class Status Status.h "lldb/Utility/Status.h" An error handling class.

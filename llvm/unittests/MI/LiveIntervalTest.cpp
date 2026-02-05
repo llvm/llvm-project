@@ -79,7 +79,7 @@ std::unique_ptr<Module> parseMIR(LLVMContext &Context,
 }
 
 struct TestPass : public MachineFunctionPass {
-  static char ID;
+  static const char ID;
   TestPass() : MachineFunctionPass(ID) {}
 };
 
@@ -256,7 +256,7 @@ body: |
 
 } // End of anonymous namespace.
 
-char TestPass::ID = 0;
+const char TestPass::ID = 0;
 INITIALIZE_PASS(TestPass, "testpass", "testpass", false, false)
 
 TEST(LiveIntervalTest, MoveUpDef) {

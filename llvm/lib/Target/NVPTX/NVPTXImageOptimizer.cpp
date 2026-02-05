@@ -26,7 +26,7 @@ using namespace llvm;
 namespace {
 class NVPTXImageOptimizer : public FunctionPass {
 private:
-  static char ID;
+  static const char ID;
   SmallVector<Instruction*, 4> InstrToDelete;
 
 public:
@@ -45,7 +45,7 @@ private:
 };
 }
 
-char NVPTXImageOptimizer::ID = 0;
+const char NVPTXImageOptimizer::ID = 0;
 
 NVPTXImageOptimizer::NVPTXImageOptimizer()
   : FunctionPass(ID) {}

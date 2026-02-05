@@ -276,4 +276,4 @@ PreservedAnalyses ProfileSummaryPrinterPass::run(Module &M,
   return PreservedAnalyses::all();
 }
 
-char ProfileSummaryInfoWrapperPass::ID = 0;
+const char ProfileSummaryInfoWrapperPass::ID = 0;

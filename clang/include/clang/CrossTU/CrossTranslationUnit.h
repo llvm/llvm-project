@@ -60,7 +60,7 @@ enum class index_error_code {
 
 class IndexError : public llvm::ErrorInfo<IndexError> {
 public:
-  static char ID;
+  static const char ID;
   IndexError(index_error_code C) : Code(C), LineNo(0) {}
   IndexError(index_error_code C, std::string FileName, int LineNo = 0)
       : Code(C), FileName(std::move(FileName)), LineNo(LineNo) {}

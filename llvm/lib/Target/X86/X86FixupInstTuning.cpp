@@ -55,7 +55,7 @@ private:
 
 class X86FixupInstTuningLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   X86FixupInstTuningLegacy() : MachineFunctionPass(ID) {}
 
@@ -72,7 +72,7 @@ public:
 };
 } // end anonymous namespace
 
-char X86FixupInstTuningLegacy ::ID = 0;
+const char X86FixupInstTuningLegacy ::ID = 0;
 
 INITIALIZE_PASS(X86FixupInstTuningLegacy, DEBUG_TYPE, DEBUG_TYPE, false, false)
 

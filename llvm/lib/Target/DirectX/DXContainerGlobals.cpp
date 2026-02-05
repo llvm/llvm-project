@@ -50,7 +50,7 @@ class DXContainerGlobals : public llvm::ModulePass {
                                       SmallVector<GlobalValue *> &Globals);
 
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   DXContainerGlobals() : ModulePass(ID) {}
 
   StringRef getPassName() const override {
@@ -307,7 +307,7 @@ void DXContainerGlobals::addPipelineStateValidationInfo(
   Globals.emplace_back(buildContainerGlobal(M, Constant, "dx.psv0", "PSV0"));
 }
 
-char DXContainerGlobals::ID = 0;
+const char DXContainerGlobals::ID = 0;
 INITIALIZE_PASS_BEGIN(DXContainerGlobals, "dxil-globals",
                       "DXContainer Global Emitter", false, true)
 INITIALIZE_PASS_DEPENDENCY(ShaderFlagsAnalysisWrapper)

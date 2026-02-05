@@ -29,7 +29,7 @@ STATISTIC(NumInvokes, "Number of invokes replaced");
 namespace {
 class LowerInvokeLegacyPass : public FunctionPass {
 public:
-  static char ID; // Pass identification, replacement for typeid
+  static const char ID; // Pass identification, replacement for typeid
   explicit LowerInvokeLegacyPass() : FunctionPass(ID) {
     initializeLowerInvokeLegacyPassPass(*PassRegistry::getPassRegistry());
   }
@@ -37,7 +37,7 @@ public:
 };
 } // namespace
 
-char LowerInvokeLegacyPass::ID = 0;
+const char LowerInvokeLegacyPass::ID = 0;
 INITIALIZE_PASS(LowerInvokeLegacyPass, "lowerinvoke",
                 "Lower invoke and unwind, for unwindless code generators",
                 false, false)
@@ -78,7 +78,7 @@ bool LowerInvokeLegacyPass::runOnFunction(Function &F) {
   return runImpl(F);
 }
 
-char &llvm::LowerInvokePassID = LowerInvokeLegacyPass::ID;
+const char &llvm::LowerInvokePassID = LowerInvokeLegacyPass::ID;
 
 // Public Interface To the LowerInvoke pass.
 FunctionPass *llvm::createLowerInvokePass() {

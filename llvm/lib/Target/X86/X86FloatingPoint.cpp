@@ -285,7 +285,7 @@ class X86FPStackifierLegacy : public MachineFunctionPass {
 public:
   X86FPStackifierLegacy() : MachineFunctionPass(ID) {}
 
-  static char ID;
+  static const char ID;
 
 private:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -306,7 +306,7 @@ private:
 };
 } // namespace
 
-char X86FPStackifierLegacy::ID = 0;
+const char X86FPStackifierLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(X86FPStackifierLegacy, DEBUG_TYPE, "X86 FP Stackifier",
                       false, false)

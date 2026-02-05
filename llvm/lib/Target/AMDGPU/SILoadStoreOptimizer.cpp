@@ -319,7 +319,7 @@ public:
 
 class SILoadStoreOptimizerLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SILoadStoreOptimizerLegacy() : MachineFunctionPass(ID) {}
 
@@ -944,9 +944,9 @@ INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(SILoadStoreOptimizerLegacy, DEBUG_TYPE,
                     "SI Load Store Optimizer", false, false)
 
-char SILoadStoreOptimizerLegacy::ID = 0;
+const char SILoadStoreOptimizerLegacy::ID = 0;
 
-char &llvm::SILoadStoreOptimizerLegacyID = SILoadStoreOptimizerLegacy::ID;
+const char &llvm::SILoadStoreOptimizerLegacyID = SILoadStoreOptimizerLegacy::ID;
 
 FunctionPass *llvm::createSILoadStoreOptimizerLegacyPass() {
   return new SILoadStoreOptimizerLegacy();

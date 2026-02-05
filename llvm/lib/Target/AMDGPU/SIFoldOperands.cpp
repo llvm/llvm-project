@@ -270,7 +270,7 @@ public:
 
 class SIFoldOperandsLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   SIFoldOperandsLegacy() : MachineFunctionPass(ID) {}
 
@@ -297,9 +297,9 @@ public:
 INITIALIZE_PASS(SIFoldOperandsLegacy, DEBUG_TYPE, "SI Fold Operands", false,
                 false)
 
-char SIFoldOperandsLegacy::ID = 0;
+const char SIFoldOperandsLegacy::ID = 0;
 
-char &llvm::SIFoldOperandsLegacyID = SIFoldOperandsLegacy::ID;
+const char &llvm::SIFoldOperandsLegacyID = SIFoldOperandsLegacy::ID;
 
 static const TargetRegisterClass *getRegOpRC(const MachineRegisterInfo &MRI,
                                              const TargetRegisterInfo &TRI,

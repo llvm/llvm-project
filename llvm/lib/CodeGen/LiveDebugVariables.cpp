@@ -75,7 +75,7 @@ EnableLDV("live-debug-variables", cl::init(true),
 STATISTIC(NumInsertedDebugValues, "Number of DBG_VALUEs inserted");
 STATISTIC(NumInsertedDebugLabels, "Number of DBG_LABELs inserted");
 
-char LiveDebugVariablesWrapperLegacy::ID = 0;
+const char LiveDebugVariablesWrapperLegacy::ID = 0;
 
 INITIALIZE_PASS_BEGIN(LiveDebugVariablesWrapperLegacy, DEBUG_TYPE,
                       "Debug Variable Analysis", false, false)

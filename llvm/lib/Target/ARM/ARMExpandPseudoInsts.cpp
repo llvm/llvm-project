@@ -42,7 +42,7 @@ VerifyARMPseudo("verify-arm-pseudo-expand", cl::Hidden,
 namespace {
   class ARMExpandPseudo : public MachineFunctionPass {
   public:
-    static char ID;
+    static const char ID;
     ARMExpandPseudo() : MachineFunctionPass(ID) {}
 
     const ARMBaseInstrInfo *TII;
@@ -116,7 +116,7 @@ namespace {
                            MachineBasicBlock::iterator MBBI,
                            MachineBasicBlock::iterator &NextMBBI);
   };
-  char ARMExpandPseudo::ID = 0;
+  const char ARMExpandPseudo::ID = 0;
 }
 
 INITIALIZE_PASS(ARMExpandPseudo, DEBUG_TYPE, ARM_EXPAND_PSEUDO_NAME, false,

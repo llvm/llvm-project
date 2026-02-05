@@ -29,7 +29,7 @@ static bool IsCOFFObjectFile(const llvm::ArrayRef<uint8_t> data) {
 
 LLDB_PLUGIN_DEFINE(ObjectFileCOFF)
 
-char ObjectFileCOFF::ID;
+const char ObjectFileCOFF::ID = 0;
 
 ObjectFileCOFF::~ObjectFileCOFF() = default;
 

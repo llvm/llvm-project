@@ -65,7 +65,7 @@ struct FixupStatepointCallerSavedImpl {
 
 class FixupStatepointCallerSavedLegacy : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   FixupStatepointCallerSavedLegacy() : MachineFunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -82,8 +82,9 @@ public:
 
 } // End anonymous namespace.
 
-char FixupStatepointCallerSavedLegacy::ID = 0;
-char &llvm::FixupStatepointCallerSavedID = FixupStatepointCallerSavedLegacy::ID;
+const char FixupStatepointCallerSavedLegacy::ID = 0;
+const char &llvm::FixupStatepointCallerSavedID =
+    FixupStatepointCallerSavedLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(FixupStatepointCallerSavedLegacy, DEBUG_TYPE,
                       "Fixup Statepoint Caller Saved", false, false)

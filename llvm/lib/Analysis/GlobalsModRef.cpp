@@ -1036,7 +1036,7 @@ PreservedAnalyses RecomputeGlobalsAAPass::run(Module &M,
   return PreservedAnalyses::all();
 }
 
-char GlobalsAAWrapperPass::ID = 0;
+const char GlobalsAAWrapperPass::ID = 0;
 INITIALIZE_PASS_BEGIN(GlobalsAAWrapperPass, "globals-aa",
                       "Globals Alias Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(CallGraphWrapperPass)

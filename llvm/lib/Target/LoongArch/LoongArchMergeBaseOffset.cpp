@@ -32,7 +32,7 @@ class LoongArchMergeBaseOffsetOpt : public MachineFunctionPass {
   MachineRegisterInfo *MRI;
 
 public:
-  static char ID;
+  static const char ID;
   bool runOnMachineFunction(MachineFunction &Fn) override;
   bool detectFoldable(MachineInstr &Hi20, MachineInstr *&Lo12,
                       MachineInstr *&Lo20, MachineInstr *&Hi12,
@@ -72,7 +72,7 @@ public:
 };
 } // end anonymous namespace
 
-char LoongArchMergeBaseOffsetOpt::ID = 0;
+const char LoongArchMergeBaseOffsetOpt::ID = 0;
 INITIALIZE_PASS(LoongArchMergeBaseOffsetOpt, DEBUG_TYPE,
                 LoongArch_MERGE_BASE_OFFSET_NAME, false, false)
 

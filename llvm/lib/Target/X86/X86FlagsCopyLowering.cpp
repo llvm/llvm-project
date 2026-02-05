@@ -120,7 +120,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   /// Pass identification, replacement for typeid.
-  static char ID;
+  static const char ID;
 };
 
 } // end anonymous namespace
@@ -134,7 +134,7 @@ FunctionPass *llvm::createX86FlagsCopyLoweringLegacyPass() {
   return new X86FlagsCopyLoweringLegacy();
 }
 
-char X86FlagsCopyLoweringLegacy::ID = 0;
+const char X86FlagsCopyLoweringLegacy::ID = 0;
 
 void X86FlagsCopyLoweringLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addUsedIfAvailable<MachineDominatorTreeWrapperPass>();

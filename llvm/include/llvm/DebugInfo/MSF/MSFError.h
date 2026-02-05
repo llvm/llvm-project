@@ -68,7 +68,7 @@ public:
     llvm_unreachable("msf error code not implemented");
   }
 
-  LLVM_ABI static char ID;
+  LLVM_ABI static const char ID;
 };
 } // namespace msf
 } // namespace llvm

@@ -38,9 +38,9 @@ using namespace llvm;
 static RegisterRegAlloc basicRegAlloc("basic", "basic register allocator",
                                       createBasicRegisterAllocator);
 
-char RABasic::ID = 0;
+const char RABasic::ID = 0;
 
-char &llvm::RABasicID = RABasic::ID;
+const char &llvm::RABasicID = RABasic::ID;
 
 INITIALIZE_PASS_BEGIN(RABasic, "regallocbasic", "Basic Register Allocator",
                       false, false)

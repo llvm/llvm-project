@@ -37,7 +37,7 @@ namespace {
 /// this in the MachineFunction's LongjmpTargets vector.
 class CFGuardLongjmp : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
   CFGuardLongjmp() : MachineFunctionPass(ID) {}
 
@@ -50,7 +50,7 @@ public:
 
 } // end anonymous namespace
 
-char CFGuardLongjmp::ID = 0;
+const char CFGuardLongjmp::ID = 0;
 
 INITIALIZE_PASS(CFGuardLongjmp, "CFGuardLongjmp",
                 "Insert symbols at valid longjmp targets for /guard:cf", false,

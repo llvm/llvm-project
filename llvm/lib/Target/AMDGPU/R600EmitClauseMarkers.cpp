@@ -281,7 +281,7 @@ private:
   }
 
 public:
-  static char ID;
+  static const char ID;
 
   R600EmitClauseMarkers() : MachineFunctionPass(ID) {}
 
@@ -310,7 +310,7 @@ public:
   }
 };
 
-char R600EmitClauseMarkers::ID = 0;
+const char R600EmitClauseMarkers::ID = 0;
 
 } // end anonymous namespace
 

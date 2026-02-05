@@ -32,7 +32,7 @@ class RISCVExpandPseudo : public MachineFunctionPass {
 public:
   const RISCVSubtarget *STI;
   const RISCVInstrInfo *TII;
-  static char ID;
+  static const char ID;
 
   RISCVExpandPseudo() : MachineFunctionPass(ID) {}
 
@@ -71,7 +71,7 @@ private:
 #endif
 };
 
-char RISCVExpandPseudo::ID = 0;
+const char RISCVExpandPseudo::ID = 0;
 
 bool RISCVExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<RISCVSubtarget>();
@@ -586,7 +586,7 @@ class RISCVPreRAExpandPseudo : public MachineFunctionPass {
 public:
   const RISCVSubtarget *STI;
   const RISCVInstrInfo *TII;
-  static char ID;
+  static const char ID;
 
   RISCVPreRAExpandPseudo() : MachineFunctionPass(ID) {}
 
@@ -635,7 +635,7 @@ private:
 #endif
 };
 
-char RISCVPreRAExpandPseudo::ID = 0;
+const char RISCVPreRAExpandPseudo::ID = 0;
 
 bool RISCVPreRAExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<RISCVSubtarget>();

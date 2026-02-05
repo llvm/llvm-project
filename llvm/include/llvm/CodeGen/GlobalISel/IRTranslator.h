@@ -65,7 +65,7 @@ class Value;
 // by the LLVM IR as soon as the translation is over.
 class IRTranslator : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
 
 private:
   /// Interface used to lower the everything related to calls.

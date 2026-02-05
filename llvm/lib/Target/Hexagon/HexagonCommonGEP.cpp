@@ -91,7 +91,7 @@ namespace {
 
   class HexagonCommonGEP : public FunctionPass {
   public:
-    static char ID;
+    static const char ID;
 
     HexagonCommonGEP() : FunctionPass(ID) {}
 
@@ -154,7 +154,7 @@ namespace {
 
 } // end anonymous namespace
 
-char HexagonCommonGEP::ID = 0;
+const char HexagonCommonGEP::ID = 0;
 
 INITIALIZE_PASS_BEGIN(HexagonCommonGEP, "hcommgep", "Hexagon Common GEP",
       false, false)

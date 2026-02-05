@@ -51,7 +51,7 @@ typedef MachineFunction::iterator MfIterator;
 
 class LanaiMemAluCombiner : public MachineFunctionPass {
 public:
-  static char ID;
+  static const char ID;
   explicit LanaiMemAluCombiner() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
@@ -79,7 +79,7 @@ private:
 };
 } // namespace
 
-char LanaiMemAluCombiner::ID = 0;
+const char LanaiMemAluCombiner::ID = 0;
 
 INITIALIZE_PASS(LanaiMemAluCombiner, DEBUG_TYPE,
                 "Lanai memory ALU combiner pass", false, false)
