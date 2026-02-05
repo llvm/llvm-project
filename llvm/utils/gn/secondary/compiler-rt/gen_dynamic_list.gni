@@ -1,0 +1,40 @@
+import("//compiler-rt/target.gni")
+
+template("gen_dynamic_list") {
+  if (current_os != "mac" && current_os != "win") {
+    lib_path = "$crt_current_out_dir/libclang_rt.${invoker.lib_name}$crt_current_target_suffix.a"
+    nm = "//llvm/tools/llvm-nm($host_toolchain)"
+    action(target_name) {
+      script = "//compiler-rt/lib/sanitizer_common/scripts/gen_dynamic_list.py"
+      deps = [
+        invoker.lib,
+        nm,
+      ]
+      outputs = [ "$lib_path.syms" ]
+      args = [ rebase_path(lib_path, root_build_dir) ]
+      args += [
+        "--nm-executable",
+        rebase_path(get_label_info(nm, "root_out_dir") + "/bin/llvm-nm",
+                    root_build_dir),
+        "-o",
+        rebase_path("$lib_path.syms", root_build_dir),
+      ]
+      if (defined(invoker.extra)) {
+        sources = [ invoker.extra ]
+        args += [
+          "--extra",
+          rebase_path(invoker.extra, root_build_dir),
+        ]
+      }
+    }
+  } else {
+    source_set(target_name) {
+    }
+    not_needed(invoker,
+               [
+                 "extra",
+                 "lib_name",
+                 "lib",
+               ])
+  }
+}

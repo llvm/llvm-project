@@ -3550,8 +3550,8 @@ private:
       uint64_t Size = NewEndOffset - NewBeginOffset;
       V = getIntegerSplat(II.getValue(), Size);
 
-      if (IntTy && (BeginOffset != NewAllocaBeginOffset ||
-                    EndOffset != NewAllocaBeginOffset)) {
+      if (IntTy && (NewBeginOffset != NewAllocaBeginOffset ||
+                    NewEndOffset != NewAllocaEndOffset)) {
         Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI,
                                            NewAI.getAlign(), "oldload");
         Old = IRB.CreateBitPreservingCastChain(DL, Old, IntTy);
