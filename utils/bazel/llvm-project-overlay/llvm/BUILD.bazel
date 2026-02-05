@@ -3430,6 +3430,13 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/X86/X86GenPreLegalizeGICombiner.inc",
             ),
             (
+                [
+                    "-gen-global-isel-combiner",
+                    "-combiners=X86PostLegalizerCombiner",
+                ],
+                "lib/Target/X86/X86GenPostLegalizeGICombiner.inc",
+            ),
+            (
                 ["-gen-callingconv"],
                 "lib/Target/X86/X86GenCallingConv.inc",
             ),
@@ -5867,6 +5874,7 @@ cc_binary(
         ":AllTargetsDisassemblers",
         ":Core",
         ":DebugInfoDWARF",
+        ":DebugInfoPDB",
         ":Demangle",
         ":IPO",
         ":MC",

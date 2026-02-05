@@ -267,9 +267,8 @@ main_body:
 define amdgpu_ps void @buffer_load_lds_dword_volatile(ptr addrspace(7) nocapture inreg %gptr, i32 %off, ptr addrspace(3) inreg %lptr) {
 ; GFX90A-LABEL: buffer_load_lds_dword_volatile:
 ; GFX90A:       ; %bb.0: ; %main_body
-; GFX90A-NEXT:    v_add_u32_e32 v0, s4, v0
 ; GFX90A-NEXT:    s_mov_b32 m0, s5
-; GFX90A-NEXT:    s_nop 0
+; GFX90A-NEXT:    v_add_u32_e32 v0, s4, v0
 ; GFX90A-NEXT:    buffer_load_dword v0, s[0:3], 0 offen glc lds
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    buffer_load_dword v0, s[0:3], 0 offen offset:256 lds
@@ -278,9 +277,8 @@ define amdgpu_ps void @buffer_load_lds_dword_volatile(ptr addrspace(7) nocapture
 ;
 ; GFX942-LABEL: buffer_load_lds_dword_volatile:
 ; GFX942:       ; %bb.0: ; %main_body
-; GFX942-NEXT:    v_add_u32_e32 v0, s4, v0
 ; GFX942-NEXT:    s_mov_b32 m0, s5
-; GFX942-NEXT:    s_nop 0
+; GFX942-NEXT:    v_add_u32_e32 v0, s4, v0
 ; GFX942-NEXT:    buffer_load_dword v0, s[0:3], 0 offen sc0 sc1 lds
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    buffer_load_dword v0, s[0:3], 0 offen offset:256 lds

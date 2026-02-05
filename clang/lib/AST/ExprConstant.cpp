@@ -16059,7 +16059,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
-    if (Val.getBitWidth() == 8)
+    if (Val.getBitWidth() == 8 || Val.getBitWidth() == 1)
       return Success(Val, E);
 
     return Success(Val.byteSwap(), E);
@@ -21666,6 +21666,10 @@ bool Expr::tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
 
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
+  if (Info.EnableNewConstInterp) {
+    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(Info, this, Type,
+                                                             Result);
+  }
   return tryEvaluateBuiltinObjectSize(this, Type, Info, Result);
 }
 

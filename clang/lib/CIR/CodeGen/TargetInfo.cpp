@@ -56,6 +56,25 @@ public:
 
 } // namespace
 
+namespace {
+
+class NVPTXABIInfo : public ABIInfo {
+public:
+  NVPTXABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
+};
+
+class NVPTXTargetCIRGenInfo : public TargetCIRGenInfo {
+public:
+  NVPTXTargetCIRGenInfo(CIRGenTypes &cgt)
+      : TargetCIRGenInfo(std::make_unique<NVPTXABIInfo>(cgt)) {}
+};
+} // namespace
+
+std::unique_ptr<TargetCIRGenInfo>
+clang::CIRGen::createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt) {
+  return std::make_unique<NVPTXTargetCIRGenInfo>(cgt);
+}
+
 std::unique_ptr<TargetCIRGenInfo>
 clang::CIRGen::createX8664TargetCIRGenInfo(CIRGenTypes &cgt) {
   return std::make_unique<X8664TargetCIRGenInfo>(cgt);
