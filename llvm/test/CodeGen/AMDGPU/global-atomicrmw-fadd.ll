@@ -28004,6 +28004,6 @@ define void @global_agent_atomic_fadd_noret_v2bf16__maybe_remote(ptr addrspace(1
 }
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #1 = { nounwind denormal_fpenv(float: preservesign) }
 
 !0 = !{}
