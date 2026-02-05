@@ -38,10 +38,7 @@ define i1 @can_load_speculatively_64(ptr %ptr) {
 ; Test with address space
 define i1 @can_load_speculatively_addrspace1(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: @can_load_speculatively_addrspace1(
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 15
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 0
-; CHECK-NEXT:    ret i1 [[TMP3]]
+; CHECK-NEXT:    ret i1 false
 ;
   %can_load = call i1 @llvm.can.load.speculatively.p1(ptr addrspace(1) %ptr, i64 16)
   ret i1 %can_load

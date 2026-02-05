@@ -27705,10 +27705,10 @@ Overview:
 """""""""
 
 The '``llvm.speculative.load``' intrinsic loads a value from memory. Unlike a
-regular load, the memory access may
-extend beyond the bounds of the allocated object, provided the pointer has been
-verified by :ref:`llvm.can.load.speculatively <int_can_load_speculatively>` to
-ensure the access cannot fault.
+regular load, the memory access may extend beyond the bounds of the allocated
+object, provided the pointer has been verified by
+:ref:`llvm.can.load.speculatively <int_can_load_speculatively>` to ensure the
+access cannot fault.
 
 Arguments:
 """"""""""
@@ -27726,12 +27726,12 @@ the access cannot fault.
 
 For bytes that are within the bounds of the allocated object, the intrinsic
 returns the stored value. For bytes that are beyond the bounds of the
-allocated object, the intrinsic returns ``undef`` for those bytes. At least the
+allocated object, the intrinsic returns ``poison`` for those bytes. At least the
 first accessed byte must be within the bounds of an allocated object the pointer is
 based on.
 
 The behavior is undefined if this intrinsic is used to load from a pointer
-for which ``llvm.can.load.speculatively`` returns false.
+for which ``llvm.can.load.speculatively`` would return false.
 
 .. _int_can_load_speculatively:
 
@@ -27767,8 +27767,8 @@ Semantics:
 """"""""""
 
 This intrinsic has **target-dependent** semantics. It returns ``true`` if
-loading ``num_bytes`` bytes from ``ptr`` is guaranteed not to trap,
-even if the memory is beyond the bounds of an allocated object. It returns
+``num_bytes`` bytes starting at ``ptr`` can be loaded speculatively, even
+if the memory is beyond the bounds of an allocated object. It returns
 ``false`` otherwise.
 
 The specific conditions under which this intrinsic returns ``true`` are
