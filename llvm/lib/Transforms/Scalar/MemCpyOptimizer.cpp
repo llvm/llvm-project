@@ -1632,10 +1632,10 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return true;
   };
 
-  // Check that dest has no Mod/Ref, from the alloca to the Store. And collect
-  // modref inst for the reachability check.
+  // Check that dest alloca has no Mod/Ref, from the alloca to the Store. And
+  // collect modref inst for the reachability check.
   ModRefInfo DestModRef = ModRefInfo::NoModRef;
-  MemoryLocation DestLoc(DestAlloca, LocationSize::precise(Size));
+  MemoryLocation DestLoc(DestAlloca, LocationSize::precise(*DestSize));
   SmallVector<BasicBlock *, 8> ReachabilityWorklist;
   auto DestModRefCallback = [&](Instruction *UI) -> bool {
     // We don't care about the store itself.
@@ -1684,8 +1684,13 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
 
   // Check that, from after the Load to the end of the BB,
   //   - if the dest has any Mod, src has no Ref, and
-  //   - if the dest has any Ref, src has no Mod except full-sized lifetimes.
-  MemoryLocation SrcLoc(SrcAlloca, LocationSize::precise(Size));
+  //   - if the dest has any Ref, src has no Mod except full-sized lifetimes
+  //   - from SrcPtr minus DestOffset to min(DestSize, SrcSize minus SrcOffset)
+  //   - where DestOffset and DestSize could be computed by DestModRefCallback
+  //     to be the bounds of the first and last mod region, which is at least
+  //     DestOffset to DestSize.
+  // Currently DestOffset==0 and DestSize==Size, so this math is simplified.
+  MemoryLocation SrcLoc(SrcPtr, LocationSize::precise(Size));
 
   auto SrcModRefCallback = [&](Instruction *UI) -> bool {
     // Any ModRef post-dominated by Load doesn't matter, also Load and Store

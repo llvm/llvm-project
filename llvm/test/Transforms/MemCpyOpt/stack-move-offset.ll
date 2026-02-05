@@ -246,17 +246,20 @@ define void @no_optimize_alignment_mismatch() {
 define void @no_optimize_clobbering_store_to_src_offset(ptr noalias %dst) {
 ; CHECK-LABEL: define void @no_optimize_clobbering_store_to_src_offset
 ; CHECK-SAME: (ptr noalias [[DST:%.*]]) {
-; CHECK-NEXT:    [[LOCAL:%.*]] = alloca { [48 x i8], { i64, i64 }, ptr }, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[LOCAL]], i64 48
+; CHECK-NEXT:    [[TEMP2:%.*]] = alloca { i64, i64 }, align 8
 ; CHECK-NEXT:    [[TEMP1:%.*]] = alloca { i64, i64 }, align 8
+; CHECK-NEXT:    [[LOCAL:%.*]] = alloca { [48 x i8], { i64, i64 }, ptr }, align 8
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TEMP1]])
 ; CHECK-NEXT:    [[DST_BUF:%.*]] = getelementptr i8, ptr [[DST]], i64 48
 ; CHECK-NEXT:    [[LOCAL_BUF:%.*]] = getelementptr inbounds i8, ptr [[LOCAL]], i64 48
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[LOCAL_BUF]], ptr align 8 [[DST_BUF]], i64 16, i1 false)
 ; CHECK-NEXT:    store i8 0, ptr [[DST_BUF]], align 1
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TEMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TEMP2]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TEMP2]], ptr align 8 [[LOCAL_BUF]], i64 16, i1 false)
 ; CHECK-NEXT:    store i8 0, ptr [[LOCAL_BUF]], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST_BUF]], ptr align 8 [[TMP1]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST_BUF]], ptr align 8 [[TEMP2]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TEMP2]])
 ; CHECK-NEXT:    ret void
 ;
   %temp2 = alloca { i64, i64 }, align 8
