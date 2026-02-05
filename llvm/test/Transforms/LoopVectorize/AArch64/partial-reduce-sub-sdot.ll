@@ -1,14 +1,23 @@
 ; REQUIRES: asserts
-; RUN: opt -passes=loop-vectorize                                          \
-; RUN:     -enable-epilogue-vectorization=false -debug-only=loop-vectorize \
-; RUN:     -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize                                                \
+; RUN:     -scalable-vectorization=on -mattr=+sve2                               \
+; RUN:     -enable-epilogue-vectorization=false -debug-only=loop-vectorize       \
+; RUN:     -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=COMMON,SVE
 
-; CHECK: LV: Checking a loop in 'sub_reduction'
-; CHECK: Cost of 1 for VF 16: EXPRESSION vp<{{.*}}> = ir<%acc> + partial.reduce.add (mul (ir<%load1> sext to i32), (ir<%load2> sext to i32))
+; RUN: opt -passes=loop-vectorize                                                \
+; RUN:     -scalable-vectorization=off -mattr=+neon,+dotprod                     \
+; RUN:     -enable-epilogue-vectorization=false -debug-only=loop-vectorize       \
+; RUN:     -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=COMMON,NEON
 
-; CHECK: LV: Checking a loop in 'add_sub_chained_reduction'
-; CHECK: Cost of 1 for VF 16: EXPRESSION vp<{{.*}}> = ir<%acc> + partial.reduce.add (mul (ir<%load1> sext to i32), (ir<%load2> sext to i32))
-; CHECK: Cost of 9 for VF 16: EXPRESSION vp<{{.*}}> = vp<%9> + partial.reduce.add (sub (0, mul (ir<%load2> sext to i32), (ir<%load3> sext to i32)))
+; COMMON: LV: Checking a loop in 'sub_reduction'
+; SVE:  Cost of 1 for VF vscale x 16: EXPRESSION vp<{{.*}}> = ir<%acc> + partial.reduce.add (mul (ir<%load1> sext to i32), (ir<%load2> sext to i32))
+; NEON: Cost of 1 for VF 16: EXPRESSION vp<{{.*}}> = ir<%acc> + partial.reduce.add (mul (ir<%load1> sext to i32), (ir<%load2> sext to i32))
+
+; COMMON: LV: Checking a loop in 'add_sub_chained_reduction'
+; SVE:  Cost of 1 for VF vscale x 16: EXPRESSION vp<{{.*}}> = ir<%acc> + partial.reduce.add (mul (ir<%load1> sext to i32), (ir<%load2> sext to i32))
+; SVE:  Cost of 9 for VF vscale x 16: EXPRESSION vp<{{.*}}> = vp<%9> + partial.reduce.add (sub (0, mul (ir<%load2> sext to i32), (ir<%load3> sext to i32)))
+; NEON: Cost of 1 for VF 16: EXPRESSION vp<{{.*}}> = ir<%acc> + partial.reduce.add (mul (ir<%load1> sext to i32), (ir<%load2> sext to i32))
+; NEON: Cost of 9 for VF 16: EXPRESSION vp<{{.*}}> = vp<%9> + partial.reduce.add (sub (0, mul (ir<%load2> sext to i32), (ir<%load3> sext to i32)))
 
 target triple = "aarch64"
 
@@ -68,9 +77,8 @@ exit:
   ret i32 %sub
 }
 
-attributes #0 = { vscale_range(1,16) "target-features"="+sve2" }
+attributes #0 = { vscale_range(1,16) }
 
-!0 = distinct !{!0, !1, !2, !3}
-!1 = !{!"llvm.loop.scalable.enable", i1 true}
-!2 = !{!"llvm.loop.interleave.count", i32 1}
-!3 = !{!"llvm.loop.vectorize.width", i32 16}
+!0 = distinct !{!0, !1, !2}
+!1 = !{!"llvm.loop.interleave.count", i32 1}
+!2 = !{!"llvm.loop.vectorize.width", i32 16}
