@@ -2428,8 +2428,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// Sometimes the comparison result is known even if some of the bits of the
   /// arguments are not.
-  Value* propagateEqualityComparison(IRBuilder<> &IRB, Value* A, Value* B,
-                                     Value* Sa, Value *Sb) {
+  Value *propagateEqualityComparison(IRBuilder<> &IRB, Value *A, Value *B,
+                                     Value *Sa, Value *Sb) {
     assert(getShadowTy(A) == Sa->getType());
     assert(getShadowTy(B) == Sb->getType());
 
@@ -2482,21 +2482,20 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitSwitchInst(SwitchInst &SI) {
     IRBuilder<> IRB(&SI);
 
-    Value* Val = SI.getCondition();
-    Value* ShadowVal = getShadow(Val);
-    Value* ShadowAgg = IRB.CreateICmpNE(ShadowVal, getCleanShadow(Val));
+    Value *Val = SI.getCondition();
+    Value *ShadowVal = getShadow(Val);
+    Value *ShadowAgg = IRB.CreateICmpNE(ShadowVal, getCleanShadow(Val));
 
-    Value* ShadowCases = nullptr;
+    Value *ShadowCases = nullptr;
     for (auto Case : SI.cases()) {
-       Value *Comparator = Case.getCaseValue();
-       Value *ComparisonShadow
-         = propagateEqualityComparison(IRB, Val, Comparator,
-                                       ShadowVal, getShadow(Comparator));
+      Value *Comparator = Case.getCaseValue();
+      Value *ComparisonShadow = propagateEqualityComparison(
+          IRB, Val, Comparator, ShadowVal, getShadow(Comparator));
 
-       if (ShadowCases)
-         ShadowCases = IRB.CreateOr(ShadowCases, ComparisonShadow);
-       else
-         ShadowCases = ComparisonShadow;
+      if (ShadowCases)
+        ShadowCases = IRB.CreateOr(ShadowCases, ComparisonShadow);
+      else
+        ShadowCases = ComparisonShadow;
     }
 
     ShadowAgg = IRB.CreateAnd(ShadowAgg, ShadowCases);
