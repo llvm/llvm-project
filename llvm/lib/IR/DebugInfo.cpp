@@ -295,16 +295,16 @@ void DebugInfoFinder::processMacroNode(DIMacroNode *Macro,
     return;
   }
 
-  if (auto *MF = dyn_cast<DIMacroFile>(Macro)) {
-    // Check if we've already seen this macro file to avoid infinite recursion
-    if (!NodesSeen.insert(MF).second)
-      return;
+  auto *MF = dyn_cast<DIMacroFile>(Macro);
+  assert(MF && "Expected a DIMacroFile (it can't be any other type at this point)");
 
-    // Recursively process nested macros in the macro file
-    for (auto *Element : MF->getElements()) {
-      if (auto *ChildMacro = dyn_cast_or_null<DIMacroNode>(Element))
-        processMacroNode(ChildMacro, MF);
-    }
+  // Check if we've already seen this macro file to avoid infinite recursion
+  if (!NodesSeen.insert(MF).second)
+    return;
+
+  // Recursively process nested macros in the macro file
+  for (auto *Element : MF->getElements()) {
+      processMacroNode(Element, MF);
   }
 }
 
