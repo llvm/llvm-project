@@ -111,6 +111,29 @@ static std::optional<llvm::StringRef> IsNumber(llvm::StringRef &remainder,
   return std::nullopt;
 }
 
+static llvm::Error IsNotAllowedByMode(llvm::StringRef expr, Token token,
+                                      lldb::DILMode mode) {
+  if (mode == lldb::eDILModeSimple &&
+      !token.IsOneOf({Token::identifier, Token::period, Token::eof})) {
+    std::string errMsg =
+        llvm::formatv("token '{0}' is not allowed in DIL simple mode",
+                      Token::GetTokenName(token.GetKind()));
+    return llvm::make_error<DILDiagnosticError>(expr, errMsg,
+                                                token.GetLocation());
+  } else if (mode == lldb::eDILModeLegacy &&
+             !token.IsOneOf({Token::identifier, Token::integer_constant,
+                             Token::period, Token::arrow, Token::star,
+                             Token::amp, Token::l_square, Token::r_square,
+                             Token::eof})) {
+    std::string errMsg =
+        llvm::formatv("token '{0}' is not allowed in DIL legacy mode",
+                      Token::GetTokenName(token.GetKind()));
+    return llvm::make_error<DILDiagnosticError>(expr, errMsg,
+                                                token.GetLocation());
+  }
+  return llvm::Error::success();
+}
+
 llvm::Expected<DILLexer> DILLexer::Create(llvm::StringRef expr,
                                           lldb::DILMode mode) {
   std::vector<Token> tokens;
@@ -118,24 +141,8 @@ llvm::Expected<DILLexer> DILLexer::Create(llvm::StringRef expr,
   do {
     if (llvm::Expected<Token> t = Lex(expr, remainder)) {
       Token token = *t;
-      if (mode == lldb::eDILModeSimple &&
-          !token.IsOneOf({Token::identifier, Token::period, Token::eof})) {
-        std::string errMsg =
-            llvm::formatv("token '{0}' is not allowed in DIL simple mode",
-                          Token::GetTokenName(token.GetKind()));
-        return llvm::make_error<DILDiagnosticError>(expr, errMsg,
-                                                    token.GetLocation());
-      } else if (mode == lldb::eDILModeLegacy &&
-                 !token.IsOneOf({Token::identifier, Token::integer_constant,
-                                 Token::period, Token::arrow, Token::star,
-                                 Token::amp, Token::l_square, Token::r_square,
-                                 Token::eof})) {
-        std::string errMsg =
-            llvm::formatv("token '{0}' is not allowed in DIL legacy mode",
-                          Token::GetTokenName(token.GetKind()));
-        return llvm::make_error<DILDiagnosticError>(expr, errMsg,
-                                                    token.GetLocation());
-      }
+      if (llvm::Error error = IsNotAllowedByMode(expr, token, mode))
+        return error;
       tokens.push_back(std::move(token));
     } else {
       return t.takeError();
