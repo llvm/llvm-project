@@ -195,8 +195,12 @@ defm u16imm : UnsignedImmediate<i32,
   [{ return isUInt<16>(Imm); }], NOOP_SDNodeXForm,
   "U16Imm", 16, "PPC::fixup_ppc_half16">;
 
-// Special handing for target matching.
+// s16imm64 uses imm64SExt16 pattern to match the operand type.
 def s16imm64 : ImmediateOp<i64, "S16Imm", 16, 1, "PPC::fixup_ppc_half16">;
+
+// u16imm64 uses two different patterns depending on the instruction context:
+// * immZExt16 - For low 16-bit immediates
+// * imm16ShiftedZExt - For high 16-bit immediates (shifted)
 def u16imm64 : ImmediateOp<i64, "U16Imm", 16, 0, "PPC::fixup_ppc_half16">;
 
 // Special case: s17imm uses S16Imm print method but accepts wider range.
