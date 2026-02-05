@@ -948,7 +948,7 @@ lldb::ExpressionVariableSP ClangUserExpression::GetResultAfterDematerialization(
   return m_result_delegate.GetVariable();
 }
 
-void ClangUserExpression::FixupParseErrorDiagnostics(
+void ClangUserExpression::FixupCVRParseErrorDiagnostics(
     DiagnosticManager &diagnostic_manager) const {
   const bool is_fixable_cvr_error = llvm::any_of(
       diagnostic_manager.Diagnostics(),
@@ -986,6 +986,11 @@ void ClangUserExpression::FixupParseErrorDiagnostics(
       "running the expression with: expression --c++-ignore-context-qualifiers "
       "-- %s",
       !m_fixed_text.empty() ? m_fixed_text.c_str() : m_expr_text.c_str());
+}
+
+void ClangUserExpression::FixupParseErrorDiagnostics(
+    DiagnosticManager &diagnostic_manager) const {
+  FixupCVRParseErrorDiagnostics(diagnostic_manager);
 }
 
 char ClangUserExpression::ClangUserExpressionHelper::ID;
