@@ -259,7 +259,8 @@ OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
       return std::move(Err);
 
     Binaries.emplace_back(new OffloadBinary(Buf, TheHeader, TheEntry, *Index));
-    return Binaries;
+    // Explicit move for compatibility with GCC7.
+    return std::move(Binaries);
   }
 
   uint64_t EntriesCount = TheHeader->Version == 1 ? 1 : TheHeader->EntriesCount;
@@ -271,7 +272,8 @@ OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
     Binaries.emplace_back(new OffloadBinary(Buf, TheHeader, TheEntry, I));
   }
 
-  return Binaries;
+  // Explicit move for compatibility with GCC7.
+  return std::move(Binaries);
 }
 
 SmallString<0> OffloadBinary::write(ArrayRef<OffloadingImage> OffloadingData) {
