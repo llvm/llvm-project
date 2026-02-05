@@ -48,6 +48,8 @@
 //  - if the 8 exponent bits of the output are not all 1, then there are
 //    definitely no NaNs, so a fast path can handle most non-NaN cases.
 
+// clang-format off
+
   // First diverge control for the negative-numbers case.
   orrs    r12, op0, op1
   bmi     LOCAL_LABEL(negative)         // high bit set => at least one negative input
