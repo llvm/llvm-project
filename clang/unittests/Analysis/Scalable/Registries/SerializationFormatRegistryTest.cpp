@@ -58,15 +58,11 @@ TEST(SerializationFormatRegistryTest, EnumeratingRegistryEntries) {
 }
 
 TEST(SerializationFormatRegistryTest, Roundtrip) {
-  StringLiteral FancyAnalysisFileData = "FancyAnalysisData{\n"
-                                        "  SomeInternalList: zed, vayne, lux\n"
-                                        "}\n";
-
   auto Inputs = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
   Inputs->addFile("input/analyses.txt", /*ModificationTime=*/{},
                   MemoryBuffer::getMemBufferCopy("FancyAnalysis\n"));
   Inputs->addFile("input/FancyAnalysis.special", /*ModificationTime=*/{},
-                  MemoryBuffer::getMemBufferCopy(FancyAnalysisFileData));
+                  MemoryBuffer::getMemBufferCopy("Some FancyAnalysisData..."));
 
   std::unique_ptr<SerializationFormat> Format =
       makeFormat(Inputs, "MockSerializationFormat");
@@ -86,7 +82,7 @@ TEST(SerializationFormatRegistryTest, Roundtrip) {
   EXPECT_EQ(readFilesFromDir(OutputDir),
             (std::map<std::string, std::string>{
                 {"analyses.txt", "FancyAnalysis\n"},
-                {"FancyAnalysis.special", FancyAnalysisFileData.str()},
+                {"FancyAnalysis.special", "Some FancyAnalysisData..."},
             }));
 }
 
