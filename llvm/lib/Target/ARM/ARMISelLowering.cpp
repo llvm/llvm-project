@@ -952,6 +952,11 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::SSUBO, MVT::i32, Custom);
   setOperationAction(ISD::USUBO, MVT::i32, Custom);
 
+  if (!Subtarget->isThumb1Only()) {
+    setOperationAction(ISD::UMULO, MVT::i32, Custom);
+    setOperationAction(ISD::SMULO, MVT::i32, Custom);
+  }
+
   setOperationAction(ISD::UADDO_CARRY, MVT::i32, Custom);
   setOperationAction(ISD::USUBO_CARRY, MVT::i32, Custom);
   if (Subtarget->hasDSP()) {
@@ -4658,7 +4663,7 @@ ARMTargetLowering::getARMXALUOOp(SDValue Op, SelectionDAG &DAG,
     break;
   case ISD::UADDO:
     ARMcc = DAG.getConstant(ARMCC::HS, dl, MVT::i32);
-    // We use ADDC here to correspond to its use in LowerUnsignedALUO.
+    // We use ADDC here to correspond to its use in LowerALUO.
     // We do not use it in the USUBO case as Value may not be used.
     Value = DAG.getNode(ARMISD::ADDC, dl,
                         DAG.getVTList(Op.getValueType(), MVT::i32), LHS, RHS)
@@ -4681,7 +4686,7 @@ ARMTargetLowering::getARMXALUOOp(SDValue Op, SelectionDAG &DAG,
     Value = DAG.getNode(ISD::UMUL_LOHI, dl,
                         DAG.getVTList(Op.getValueType(), Op.getValueType()),
                         LHS, RHS);
-    OverflowCmp = DAG.getNode(ARMISD::CMP, dl, FlagsVT, Value.getValue(1),
+    OverflowCmp = DAG.getNode(ARMISD::CMPZ, dl, FlagsVT, Value.getValue(1),
                               DAG.getConstant(0, dl, MVT::i32));
     Value = Value.getValue(0); // We only want the low 32 bits for the result.
     break;
@@ -4692,7 +4697,7 @@ ARMTargetLowering::getARMXALUOOp(SDValue Op, SelectionDAG &DAG,
     Value = DAG.getNode(ISD::SMUL_LOHI, dl,
                         DAG.getVTList(Op.getValueType(), Op.getValueType()),
                         LHS, RHS);
-    OverflowCmp = DAG.getNode(ARMISD::CMP, dl, FlagsVT, Value.getValue(1),
+    OverflowCmp = DAG.getNode(ARMISD::CMPZ, dl, FlagsVT, Value.getValue(1),
                               DAG.getNode(ISD::SRA, dl, Op.getValueType(),
                                           Value.getValue(0),
                                           DAG.getConstant(31, dl, MVT::i32)));
@@ -4701,28 +4706,6 @@ ARMTargetLowering::getARMXALUOOp(SDValue Op, SelectionDAG &DAG,
   } // switch (...)
 
   return std::make_pair(Value, OverflowCmp);
-}
-
-SDValue
-ARMTargetLowering::LowerSignedALUO(SDValue Op, SelectionDAG &DAG) const {
-  // Let legalize expand this if it isn't a legal type yet.
-  if (!isTypeLegal(Op.getValueType()))
-    return SDValue();
-
-  SDValue Value, OverflowCmp;
-  SDValue ARMcc;
-  std::tie(Value, OverflowCmp) = getARMXALUOOp(Op, DAG, ARMcc);
-  SDLoc dl(Op);
-  // We use 0 and 1 as false and true values.
-  SDValue TVal = DAG.getConstant(1, dl, MVT::i32);
-  SDValue FVal = DAG.getConstant(0, dl, MVT::i32);
-  EVT VT = Op.getValueType();
-
-  SDValue Overflow =
-      DAG.getNode(ARMISD::CMOV, dl, VT, TVal, FVal, ARMcc, OverflowCmp);
-
-  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
-  return DAG.getNode(ISD::MERGE_VALUES, dl, VTs, Value, Overflow);
 }
 
 static SDValue ConvertBooleanCarryToCarryFlag(SDValue BoolCarry,
@@ -4749,8 +4732,7 @@ static SDValue ConvertCarryFlagToBooleanCarry(SDValue Flags, EVT VT,
                      DAG.getConstant(0, DL, MVT::i32), Flags);
 }
 
-SDValue ARMTargetLowering::LowerUnsignedALUO(SDValue Op,
-                                             SelectionDAG &DAG) const {
+SDValue ARMTargetLowering::LowerALUO(SDValue Op, SelectionDAG &DAG) const {
   // Let legalize expand this if it isn't a legal type yet.
   if (!isTypeLegal(Op.getValueType()))
     return SDValue();
@@ -4764,14 +4746,12 @@ SDValue ARMTargetLowering::LowerUnsignedALUO(SDValue Op,
   SDValue Value;
   SDValue Overflow;
   switch (Op.getOpcode()) {
-  default:
-    llvm_unreachable("Unknown overflow instruction!");
   case ISD::UADDO:
     Value = DAG.getNode(ARMISD::ADDC, dl, VTs, LHS, RHS);
     // Convert the carry flag into a boolean value.
     Overflow = ConvertCarryFlagToBooleanCarry(Value.getValue(1), VT, DAG);
     break;
-  case ISD::USUBO: {
+  case ISD::USUBO:
     Value = DAG.getNode(ARMISD::SUBC, dl, VTs, LHS, RHS);
     // Convert the carry flag into a boolean value.
     Overflow = ConvertCarryFlagToBooleanCarry(Value.getValue(1), VT, DAG);
@@ -4779,6 +4759,20 @@ SDValue ARMTargetLowering::LowerUnsignedALUO(SDValue Op,
     // value. So compute 1 - C.
     Overflow = DAG.getNode(ISD::SUB, dl, MVT::i32,
                            DAG.getConstant(1, dl, MVT::i32), Overflow);
+    break;
+  default: {
+    // Handle other operations with getARMXALUOOp
+    SDValue OverflowCmp, ARMcc;
+    std::tie(Value, OverflowCmp) = getARMXALUOOp(Op, DAG, ARMcc);
+    // We use 0 and 1 as false and true values.
+    // ARMcc represents the "no overflow" condition (e.g., VC for signed ops).
+    // CMOV operand order is (FalseVal, TrueVal), so we put 1 in FalseVal
+    // position to get Overflow=1 when the "no overflow" condition is false.
+    Overflow =
+        DAG.getNode(ARMISD::CMOV, dl, MVT::i32,
+                    DAG.getConstant(1, dl, MVT::i32), // FalseVal: overflow
+                    DAG.getConstant(0, dl, MVT::i32), // TrueVal: no overflow
+                    ARMcc, OverflowCmp);
     break;
   }
   }
@@ -10493,12 +10487,13 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UADDO_CARRY:
   case ISD::USUBO_CARRY:
     return LowerUADDSUBO_CARRY(Op, DAG);
-  case ISD::SADDO:
-  case ISD::SSUBO:
-    return LowerSignedALUO(Op, DAG);
   case ISD::UADDO:
   case ISD::USUBO:
-    return LowerUnsignedALUO(Op, DAG);
+  case ISD::UMULO:
+  case ISD::SADDO:
+  case ISD::SSUBO:
+  case ISD::SMULO:
+    return LowerALUO(Op, DAG);
   case ISD::SADDSAT:
   case ISD::SSUBSAT:
   case ISD::UADDSAT:

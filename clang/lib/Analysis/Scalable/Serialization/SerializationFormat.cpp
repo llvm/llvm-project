@@ -14,6 +14,10 @@
 
 using namespace clang::ssaf;
 
+SerializationFormat::SerializationFormat(
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
+    : FS(FS) {}
+
 EntityIdTable &SerializationFormat::getIdTableForDeserialization(TUSummary &S) {
   return S.IdTable;
 }
@@ -58,4 +62,13 @@ SerializationFormat::getEntityNameSuffix(const EntityName &EN) {
 const NestedBuildNamespace &
 SerializationFormat::getEntityNameNamespace(const EntityName &EN) {
   return EN.Namespace;
+}
+
+const decltype(TUSummary::Data) &
+SerializationFormat::getData(const TUSummary &S) {
+  return S.Data;
+}
+
+decltype(TUSummary::Data) &SerializationFormat::getData(TUSummary &S) {
+  return S.Data;
 }
