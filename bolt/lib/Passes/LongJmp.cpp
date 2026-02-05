@@ -71,8 +71,9 @@ static BinaryBasicBlock *getBBAtHotColdSplitPoint(BinaryFunction &Func) {
 static bool mayNeedStub(const BinaryContext &BC, const MCInst &Inst) {
   if (BC.isAArch64() && BC.MIB->isShortRangeBranch(Inst) &&
       !opts::CompactCodeModel) {
-    BC.errs() << "Short range branch " << Inst
-              << " not supported outside compact code model\n";
+    BC.errs() << "BOLT-ERROR: short range branch not supported"
+              << " outside compact code model\n";
+    BC.printInstruction(BC.errs(), Inst);
     exit(1);
   }
   return (BC.MIB->isBranch(Inst) || BC.MIB->isCall(Inst)) &&
