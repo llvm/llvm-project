@@ -12,12 +12,15 @@
 
 #include "Value.h"
 #include "Context.h"
+#include "llvm/ADT/SmallString.h"
 
 namespace llvm::ubi {
 
 void Pointer::print(raw_ostream &OS) const {
   // TODO: print information about the underlying memory object
-  OS << "ptr " << Address;
+  SmallString<32> AddrStr;
+  Address.toStringUnsigned(AddrStr, 16);
+  OS << "ptr 0x" << AddrStr;
 }
 
 AnyValue Pointer::null(unsigned BitWidth) {
