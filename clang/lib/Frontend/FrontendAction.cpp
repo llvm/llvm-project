@@ -1018,13 +1018,22 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     return true;
   }
 
-  // If the implicit PCH include is actually a directory, rather than
-  // a single file, search for a suitable PCH file in that directory.
   if (!CI.getPreprocessorOpts().ImplicitPCHInclude.empty()) {
     FileManager &FileMgr = CI.getFileManager();
     PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
+
+    // Canonicalize ImplicitPCHInclude. This way, all the downstream code,
+    // including the ASTWriter, will receive the absolute path to the included
+    // PCH. This way we can avoid reasoning about absolute path or relative
+    // paths later on during serialization.
+    SmallString<128> PCHIncludePath(PPOpts.ImplicitPCHInclude);
+    FileMgr.makeAbsolutePath(PCHIncludePath);
+    llvm::sys::path::remove_dots(PCHIncludePath, true);
+    PPOpts.ImplicitPCHInclude = PCHIncludePath.str();
     StringRef PCHInclude = PPOpts.ImplicitPCHInclude;
-    std::string SpecificModuleCachePath = CI.getSpecificModuleCachePath();
+
+    // If the implicit PCH include is actually a directory, rather than
+    // a single file, search for a suitable PCH file in that directory.
     if (auto PCHDir = FileMgr.getOptionalDirectoryRef(PCHInclude)) {
       std::error_code EC;
       SmallString<128> DirNative;
@@ -1040,7 +1049,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
                 CI.getPCHContainerReader(), CI.getLangOpts(),
                 CI.getCodeGenOpts(), CI.getTargetOpts(),
                 CI.getPreprocessorOpts(), CI.getHeaderSearchOpts(),
-                SpecificModuleCachePath,
+                CI.getSpecificModuleCachePath(),
                 /*RequireStrictOptionMatches=*/true)) {
           PPOpts.ImplicitPCHInclude = std::string(Dir->path());
           Found = true;
