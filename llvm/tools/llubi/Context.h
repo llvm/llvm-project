@@ -1,0 +1,165 @@
+//===--- Context.h - State Tracking for llubi -------------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_TOOLS_LLUBI_CONTEXT_H
+#define LLVM_TOOLS_LLUBI_CONTEXT_H
+
+#include "Value.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/Module.h"
+#include <map>
+
+namespace llvm::ubi {
+
+class Frame;
+
+enum class MemInitKind {
+  Zeroed,
+  Uninitialized,
+  Poisoned,
+};
+
+class MemoryObject : public RefCountedBase<MemoryObject> {
+  uint64_t Address;
+  uint64_t Size;
+  SmallVector<Byte, 8> Bytes;
+  StringRef Name;
+  unsigned AS;
+
+  bool IsAlive = false;
+  bool IsConstant = false;
+  bool IsFreed = false;
+
+public:
+  MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name, unsigned AS,
+               MemInitKind InitKind);
+  MemoryObject(const MemoryObject &) = delete;
+  MemoryObject(MemoryObject &&) = delete;
+  MemoryObject &operator=(const MemoryObject &) = delete;
+  MemoryObject &operator=(MemoryObject &&) = delete;
+  ~MemoryObject();
+
+  uint64_t getAddress() const { return Address; }
+  uint64_t getSize() const { return Size; }
+  StringRef getName() const { return Name; }
+  unsigned getAddressSpace() const { return AS; }
+  bool isAlive() const { return IsAlive; }
+  bool isFreed() const { return IsFreed; }
+  bool isConstant() const { return IsConstant; }
+  void setIsConstant(bool C) { IsConstant = C; }
+
+  Byte &operator[](uint64_t Offset) {
+    assert(Offset < Size && "Offset out of bounds");
+    return Bytes[Offset];
+  }
+  void writeRawBytes(uint64_t Offset, const void *Data, uint64_t Length);
+  void writeInteger(uint64_t Offset, const APInt &Int, const DataLayout &DL);
+  void writeFloat(uint64_t Offset, const APFloat &Float, const DataLayout &DL);
+  void writePointer(uint64_t Offset, const Pointer &Ptr, const DataLayout &DL);
+
+  void markAsFreed();
+};
+
+/// An interface for handling events and managing outputs during interpretation.
+/// If the handler returns false from any of the methods, the interpreter will
+/// stop execution immediately.
+class EventHandler {
+public:
+  virtual ~EventHandler() = default;
+
+  virtual bool onInstructionExecuted(Instruction &I, const AnyValue &Result) {
+    return true;
+  }
+  virtual void onUnrecognizedInstruction(Instruction &I) {}
+  virtual void onImmediateUB(StringRef Msg) {}
+  virtual bool onBBJump(Instruction &I, BasicBlock &To) { return true; }
+  virtual bool onFunctionEntry(Function &F, ArrayRef<AnyValue> Args,
+                               CallBase *CallSite) {
+    return true;
+  }
+  virtual bool onFunctionExit(Function &F, const AnyValue &RetVal) {
+    return true;
+  }
+  virtual bool onPrint(StringRef Msg) {
+    outs() << Msg;
+    return true;
+  }
+};
+
+class Context {
+  // Module
+  LLVMContext &Ctx;
+  Module &M;
+  const DataLayout &DL;
+  const TargetLibraryInfoImpl TLIImpl;
+
+  // Configuration
+  uint64_t MaxMem = 0;
+  uint32_t VScale = 4;
+  uint32_t MaxSteps = 0;
+  uint32_t MaxStackDepth = 256;
+
+  // Memory
+  uint64_t UsedMem = 0;
+  // The addresses of memory objects are monotonically increasing.
+  // For now we don't model the behavior of address reuse, which is common
+  // with stack coloring.
+  uint64_t AllocationBase = 8;
+  std::map<uint64_t, IntrusiveRefCntPtr<MemoryObject>> MemoryObjects;
+
+  // Constants
+  // Use std::map to avoid iterator/reference invalidation.
+  std::map<Constant *, AnyValue> ConstCache;
+  AnyValue getConstantValueImpl(Constant *C);
+
+  // TODO: errno and fpenv
+
+public:
+  explicit Context(Module &M);
+  Context(const Context &) = delete;
+  Context(Context &&) = delete;
+  Context &operator=(const Context &) = delete;
+  Context &operator=(Context &&) = delete;
+  ~Context();
+
+  void setMemoryLimit(uint64_t Max) { MaxMem = Max; }
+  void setVScale(uint32_t VS) { VScale = VS; }
+  void setMaxSteps(uint32_t MS) { MaxSteps = MS; }
+  void setMaxStackDepth(uint32_t Depth) { MaxStackDepth = Depth; }
+  uint64_t getMemoryLimit() const { return MaxMem; }
+  uint32_t getVScale() const { return VScale; }
+  uint32_t getMaxSteps() const { return MaxSteps; }
+  uint32_t getMaxStackDepth() const { return MaxStackDepth; }
+
+  LLVMContext &getContext() const { return Ctx; }
+  const DataLayout &getDataLayout() const { return DL; }
+  const TargetLibraryInfoImpl &getTLIImpl() const { return TLIImpl; }
+  uint32_t getEVL(ElementCount EC) const {
+    if (EC.isScalable())
+      return VScale * EC.getKnownMinValue();
+    return EC.getFixedValue();
+  }
+
+  const AnyValue &getConstantValue(Constant *C);
+  IntrusiveRefCntPtr<MemoryObject> allocate(uint64_t Size, uint64_t Align,
+                                            StringRef Name, unsigned AS,
+                                            MemInitKind InitKind);
+  bool free(uint64_t Address);
+
+  /// Execute the function \p F with arguments \p Args, and store the return
+  /// value in \p RetVal if the function is not void.
+  /// Returns true if the function executed successfully. False indicates an
+  /// error occurred during execution.
+  bool runFunction(Function &F, ArrayRef<AnyValue> Args, AnyValue &RetVal,
+                   EventHandler &Handler);
+};
+
+} // namespace llvm::ubi
+
+#endif
