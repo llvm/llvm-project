@@ -15,8 +15,8 @@ class TestDAP_stopped_events(lldbdap_testcase.DAPTestCaseBase):
     ANY_THREAD = {}
 
     def matches(self, a: dict, b: dict) -> bool:
-        """Returns true if 'a' is a subset of 'b', otherwise false."""
-        return b | a == b
+        """Returns true if 'b' is a subset of 'a', otherwise false."""
+        return a | b == a
 
     def verify_threads(self, expected_threads):
         threads_resp = self.dap_server.request_threads()
