@@ -139,6 +139,15 @@ void storeCoarrayHandle(fir::FirOpBuilder &builder, mlir::Location loc,
   fir::StoreOp::create(builder, loc, coarrayHandle, addrOf);
 }
 
+std::int64_t getCorankFromAttr(fir::FirOpBuilder &builder, mlir::Location loc,
+                               mlir::Value coarray) {
+  std::int64_t corank = 0;
+  if (auto intAttr = coarray.getDefiningOp()->getAttrOfType<mlir::IntegerAttr>(
+          fir::getCorankAttrName()))
+    corank = intAttr.getInt();
+  return corank;
+}
+
 static int computeElementByteSize(mlir::Location loc, mlir::Type type,
                                   fir::KindMapping &kindMap,
                                   bool emitErrorOnFailure = true) {
@@ -430,27 +439,74 @@ struct MIFThisImageOpConversion
     fir::FirOpBuilder builder(rewriter, mod);
     mlir::Location loc = op.getLoc();
 
-    if (op.getCoarray())
-      TODO(loc, "coarray: mif.this_image op with coarray argument");
-    else {
-      mlir::Type i32Ty = builder.getI32Type();
-      mlir::Type boxTy = fir::BoxType::get(rewriter.getNoneType());
+    mlir::Type i64Ty = builder.getI64Type();
+    mlir::Type i32Ty = builder.getI32Type();
+    mlir::Type boxTy = fir::BoxType::get(rewriter.getNoneType());
+
+    mlir::Value teamArg = op.getTeam();
+    if (!op.getTeam())
+      teamArg = fir::AbsentOp::create(builder, loc, boxTy);
+    else
+      teamArg = builder.createBox(loc, teamArg);
+
+    if (op.getCoarray()) {
+      llvm::SmallVector<mlir::Value> args;
+      mlir::FunctionType ftype;
+      mlir::func::FuncOp funcOp;
+      mlir::Value result;
+      mlir::Value coarrayHandle =
+          getCoarrayHandle(builder, loc, op.getCoarray());
+      if (mlir::Value d = op.getDim()) {
+        mlir::Value dim = builder.createTemporary(loc, i32Ty);
+        if (d.getType() != i32Ty)
+          d = fir::ConvertOp::create(builder, loc, i32Ty, d);
+        fir::StoreOp::create(builder, loc, d, dim);
+        result = builder.createTemporary(loc, i64Ty);
+        ftype = mlir::FunctionType::get(builder.getContext(),
+                                        /*inputs*/
+                                        {boxTy, builder.getRefType(i32Ty),
+                                         boxTy, builder.getRefType(i64Ty)},
+                                        /*results*/ {});
+        funcOp = builder.createFunction(
+            loc, getPRIFProcName("this_image_with_dim"), ftype);
+        args = fir::runtime::createArguments(builder, loc, ftype, coarrayHandle,
+                                             dim, teamArg, result);
+        fir::CallOp::create(builder, loc, funcOp, args);
+        result = fir::LoadOp::create(builder, loc, result).getResult();
+        if (result.getType() != op.getType())
+          result = builder.createConvert(loc, op.getType(), result);
+      } else {
+        std::int64_t corank = getCorankFromAttr(builder, loc, op.getCoarray());
+        mlir::Type resTy = fir::SequenceType::get({corank}, i64Ty);
+        // Need to embox the array
+        result = builder.createBox(loc, builder.createTemporary(loc, resTy));
+        ftype = mlir::FunctionType::get(
+            builder.getContext(),
+            /*inputs*/ {boxTy, boxTy, fir::BoxType::get(resTy)},
+            /*results*/ {});
+        funcOp = builder.createFunction(
+            loc, getPRIFProcName("this_image_with_coarray"), ftype);
+        args = fir::runtime::createArguments(builder, loc, ftype, coarrayHandle,
+                                             teamArg, result);
+        fir::CallOp::create(builder, loc, funcOp, args);
+        result = fir::ConvertOp::create(builder, loc,
+                                        genBoxedSequenceType(i64Ty), result);
+      }
+      rewriter.replaceOp(op, result);
+    } else {
       mlir::Value result = builder.createTemporary(loc, i32Ty);
       mlir::FunctionType ftype = mlir::FunctionType::get(
           builder.getContext(),
           /*inputs*/ {boxTy, builder.getRefType(i32Ty)}, /*results*/ {});
-      mlir::Value teamArg = op.getTeam();
-      if (!op.getTeam())
-        teamArg = fir::AbsentOp::create(builder, loc, boxTy);
-
       mlir::func::FuncOp funcOp = builder.createFunction(
           loc, getPRIFProcName("this_image_no_coarray"), ftype);
+
       llvm::SmallVector<mlir::Value> args =
           fir::runtime::createArguments(builder, loc, ftype, teamArg, result);
       fir::CallOp::create(builder, loc, funcOp, args);
       rewriter.replaceOpWithNewOp<fir::LoadOp>(op, result);
-      return mlir::success();
     }
+    return mlir::success();
   }
 };
 
@@ -1114,6 +1170,182 @@ struct MIFDeallocCoarrayOpConversion
   }
 };
 
+/// Convert mif.coshape operation to runtime call of 'prif_coshape'
+struct MIFCoshapeOpConversion : public mlir::OpRewritePattern<mif::CoshapeOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mif::CoshapeOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, mod);
+    mlir::Location loc = op.getLoc();
+    mlir::Type i64Ty = builder.getI64Type();
+    mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
+
+    mlir::FunctionType ftype =
+        mlir::FunctionType::get(builder.getContext(),
+                                /*inputs*/ {boxTy, genBoxedSequenceType(i64Ty)},
+                                /*results*/ {});
+    mlir::func::FuncOp funcOp =
+        builder.createFunction(loc, getPRIFProcName("coshape"), ftype);
+
+    mlir::Value coarrayHandle = getCoarrayHandle(builder, loc, op.getCoarray());
+    std::int64_t corank = getCorankFromAttr(builder, loc, op.getCoarray());
+    mlir::Type resultType = fir::SequenceType::get(
+        static_cast<fir::SequenceType::Extent>(corank), i64Ty);
+    mlir::Value result =
+        builder.createBox(loc, builder.createTemporary(loc, resultType));
+
+    llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+        builder, loc, ftype, coarrayHandle, result);
+    fir::CallOp::create(builder, loc, funcOp, args);
+    result = fir::ConvertOp::create(builder, loc, genBoxedSequenceType(i64Ty),
+                                    result);
+    rewriter.replaceOp(op, result);
+    return mlir::success();
+  }
+};
+
+template <class T>
+mlir::LogicalResult CoboundOpConversion(T op, mlir::PatternRewriter &rewriter,
+                                        const std::string &prefix) {
+  auto mod = op->template getParentOfType<mlir::ModuleOp>();
+  fir::FirOpBuilder builder(rewriter, mod);
+  mlir::Location loc = op.getLoc();
+  mlir::Type i64Ty = builder.getI64Type();
+  mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
+
+  mlir::Value coarrayHandle = getCoarrayHandle(builder, loc, op.getCoarray());
+  if (mlir::Value d = op.getDim()) {
+    mlir::Type i32Ty = builder.getI32Type();
+    mlir::FunctionType ftype = mlir::FunctionType::get(
+        builder.getContext(),
+        /*inputs*/
+        {boxTy, builder.getRefType(i32Ty), builder.getRefType(i64Ty)},
+        /*results*/ {});
+    mlir::func::FuncOp funcOp = builder.createFunction(
+        loc, getPRIFProcName(prefix + "_with_dim"), ftype);
+
+    mlir::Value result = builder.createTemporary(loc, i64Ty);
+    mlir::Value dim = builder.createTemporary(loc, i32Ty);
+    if (d.getType() != i32Ty)
+      d = fir::ConvertOp::create(builder, loc, i32Ty, d);
+    fir::StoreOp::create(builder, loc, d, dim);
+
+    llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+        builder, loc, ftype, coarrayHandle, dim, result);
+    fir::CallOp::create(builder, loc, funcOp, args);
+    result = fir::LoadOp::create(builder, loc, result).getResult();
+    if (result.getType() != op.getType())
+      result = builder.createConvert(loc, op.getType(), result);
+    rewriter.replaceOp(op, result);
+  } else {
+    mlir::FunctionType ftype =
+        mlir::FunctionType::get(builder.getContext(),
+                                /*inputs*/ {boxTy, genBoxedSequenceType(i64Ty)},
+                                /*results*/ {});
+    mlir::func::FuncOp funcOp =
+        builder.createFunction(loc, getPRIFProcName(prefix + "_no_dim"), ftype);
+
+    std::int64_t corank = getCorankFromAttr(builder, loc, op.getCoarray());
+    mlir::Type resultType = fir::SequenceType::get(
+        static_cast<fir::SequenceType::Extent>(corank), i64Ty);
+    mlir::Value result =
+        builder.createBox(loc, builder.createTemporary(loc, resultType));
+    llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+        builder, loc, ftype, coarrayHandle, result);
+    fir::CallOp::create(builder, loc, funcOp, args);
+    result = fir::ConvertOp::create(builder, loc, genBoxedSequenceType(i64Ty),
+                                    result);
+    rewriter.replaceOp(op, result);
+  }
+  return mlir::success();
+}
+
+/// Convert mif.lcobound operation to runtime call of
+/// 'prif_lcobound_{with|no}_dim'
+struct MIFLcoboundOpConversion
+    : public mlir::OpRewritePattern<mif::LcoboundOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mif::LcoboundOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    return CoboundOpConversion(op, rewriter, "lcobound");
+  }
+};
+
+/// Convert mif.ucobound operation to runtime call of
+/// 'prif_ucobound_{with|no}_dim'
+struct MIFUcoboundOpConversion
+    : public mlir::OpRewritePattern<mif::UcoboundOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mif::UcoboundOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    return CoboundOpConversion(op, rewriter, "ucobound");
+  }
+};
+
+/// Convert mif.image_index operation to runtime call of
+/// 'prif_image_index[_with_team[_number]]'
+struct MIFImageIndexOpConversion
+    : public mlir::OpRewritePattern<mif::ImageIndexOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mif::ImageIndexOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, mod);
+    mlir::Location loc = op.getLoc();
+    mlir::Type i64Ty = builder.getI64Type();
+    mlir::Type i32Ty = builder.getI32Type();
+    mlir::Type resTy = builder.getRefType(i32Ty);
+    mlir::Type boxTy = fir::BoxType::get(builder.getNoneType());
+    mlir::Value result = builder.createTemporary(loc, i32Ty);
+
+    mlir::func::FuncOp funcOp;
+    mlir::FunctionType ftype;
+    llvm::SmallVector<mlir::Value> args;
+    mlir::Value coarrayHandle = getCoarrayHandle(builder, loc, op.getCoarray());
+    if (!op.getTeam()) {
+      mlir::FunctionType ftype = mlir::FunctionType::get(
+          builder.getContext(),
+          /*inputs*/ {boxTy, genBoxedSequenceType(i64Ty), resTy},
+          /*results*/ {});
+      funcOp =
+          builder.createFunction(loc, getPRIFProcName("image_index"), ftype);
+      args = fir::runtime::createArguments(builder, loc, ftype, coarrayHandle,
+                                           op.getSub(), result);
+    } else {
+      mlir::Value team = op.getTeam();
+      std::string imageIndexName =
+          fir::unwrapPassByRefType(team.getType()).isInteger()
+              ? getPRIFProcName("image_index_with_team")
+              : getPRIFProcName("image_index_with_team_number");
+      mlir::Type teamTy = fir::unwrapPassByRefType(team.getType()).isInteger()
+                              ? builder.getRefType(i64Ty)
+                              : boxTy;
+      mlir::FunctionType ftype = mlir::FunctionType::get(
+          builder.getContext(),
+          /*inputs*/ {boxTy, genBoxedSequenceType(i64Ty), teamTy, resTy},
+          /*results*/ {});
+      funcOp = builder.createFunction(loc, imageIndexName, ftype);
+
+      if (fir::isa_ref_type(team.getType()))
+        team = builder.createBox(loc, team);
+      args = fir::runtime::createArguments(builder, loc, ftype, coarrayHandle,
+                                           op.getSub(), team, result);
+    }
+    fir::CallOp::create(builder, loc, funcOp, args);
+    rewriter.replaceOpWithNewOp<fir::LoadOp>(op, result);
+    return mlir::success();
+  }
+};
+
 class MIFOpConversion : public fir::impl::MIFOpConversionBase<MIFOpConversion> {
 public:
   void runOnOperation() override {
@@ -1158,13 +1390,14 @@ void mif::populateMIFOpConversionPatterns(
     mlir::RewritePatternSet &patterns) {
   patterns.insert<MIFAllocCoarrayOpConversion>(patterns.getContext(), &dl,
                                                &converter);
-  patterns.insert<MIFInitOpConversion, MIFThisImageOpConversion,
-                  MIFNumImagesOpConversion, MIFSyncAllOpConversion,
-                  MIFSyncImagesOpConversion, MIFSyncMemoryOpConversion,
-                  MIFSyncTeamOpConversion, MIFCoBroadcastOpConversion,
-                  MIFCoMaxOpConversion, MIFCoMinOpConversion,
-                  MIFCoSumOpConversion, MIFFormTeamOpConversion,
-                  MIFChangeTeamOpConversion, MIFGetTeamOpConversion,
-                  MIFTeamNumberOpConversion, MIFDeallocCoarrayOpConversion>(
-      patterns.getContext());
+  patterns.insert<
+      MIFInitOpConversion, MIFThisImageOpConversion, MIFNumImagesOpConversion,
+      MIFSyncAllOpConversion, MIFSyncImagesOpConversion,
+      MIFSyncMemoryOpConversion, MIFSyncTeamOpConversion,
+      MIFCoBroadcastOpConversion, MIFCoMaxOpConversion, MIFCoMinOpConversion,
+      MIFCoSumOpConversion, MIFFormTeamOpConversion, MIFChangeTeamOpConversion,
+      MIFGetTeamOpConversion, MIFTeamNumberOpConversion,
+      MIFDeallocCoarrayOpConversion, MIFCoshapeOpConversion,
+      MIFLcoboundOpConversion, MIFUcoboundOpConversion,
+      MIFImageIndexOpConversion>(patterns.getContext());
 }

@@ -2143,6 +2143,22 @@ static std::optional<hlfir::EntityWithAttributes> genCustomIntrinsicRefCore(
       loc, builder, result, ".tmp.custom_intrinsic_result")}};
 }
 
+static mlir::IntegerAttr
+getCorankFromExpr(fir::FirOpBuilder &builder,
+                  const Fortran::lower::SomeExpr &expr) {
+  mlir::IntegerAttr corankAttr;
+  if (auto dataRef{Fortran::evaluate::ExtractDataRef(expr)}) {
+    const Fortran::semantics::Symbol sym = dataRef->GetLastSymbol();
+    if (const auto *object =
+            sym.GetUltimate()
+                .detailsIf<Fortran::semantics::ObjectEntityDetails>())
+      if (object->coshape().size())
+        corankAttr = builder.getIntegerAttr(builder.getI32Type(),
+                                            object->coshape().size());
+  }
+  return corankAttr;
+}
+
 /// Lower calls to intrinsic procedures with actual arguments that have been
 /// pre-lowered but have not yet been prepared according to the interface.
 static std::optional<hlfir::EntityWithAttributes>
@@ -2166,6 +2182,11 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
   const fir::IntrinsicArgumentLoweringRules *argLowering =
       intrinsicEntry.getArgumentLoweringRules();
   for (auto arg : llvm::enumerate(loweredActuals)) {
+    // Trying to retrieve the corank of a variable if this is a coarray
+    mlir::IntegerAttr corankAttr;
+    if (const Fortran::lower::SomeExpr *expr =
+            callContext.procRef.UnwrapArgExpr(arg.index()))
+      corankAttr = getCorankFromExpr(builder, *expr);
     if (!arg.value()) {
       operands.emplace_back(fir::getAbsentIntrinsicArgument());
       continue;
@@ -2215,6 +2236,9 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
             genOptionalValue(builder, loc, getActualFortranElementType(),
                              getActualCb, isPresent);
         addToCleanups(std::move(cleanup));
+        if (corankAttr)
+          fir::getBase(exv).getDefiningOp()->setAttr(fir::getCorankAttrName(),
+                                                     corankAttr);
         operands.emplace_back(exv);
         continue;
       }
@@ -2222,6 +2246,9 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
         hlfir::Entity actual = arg.value()->getActual(loc, builder);
         auto [exv, cleanup] = genOptionalAddr(builder, loc, actual, isPresent);
         addToCleanups(std::move(cleanup));
+        if (corankAttr)
+          fir::getBase(exv).getDefiningOp()->setAttr(fir::getCorankAttrName(),
+                                                     corankAttr);
         operands.emplace_back(exv);
         continue;
       }
@@ -2229,6 +2256,9 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
         hlfir::Entity actual = arg.value()->getActual(loc, builder);
         auto [exv, cleanup] = genOptionalBox(builder, loc, actual, isPresent);
         addToCleanups(std::move(cleanup));
+        if (corankAttr)
+          fir::getBase(exv).getDefiningOp()->setAttr(fir::getCorankAttrName(),
+                                                     corankAttr);
         operands.emplace_back(exv);
         continue;
       }
@@ -2244,19 +2274,31 @@ genIntrinsicRefCore(Fortran::lower::PreparedActualArguments &loweredActuals,
       llvm_unreachable("bad switch");
     }
 
+    fir::ExtendedValue exv;
     hlfir::Entity actual = arg.value()->getActual(loc, builder);
     switch (argRules.lowerAs) {
     case fir::LowerIntrinsicArgAs::Value:
-      operands.emplace_back(
-          Fortran::lower::convertToValue(loc, converter, actual, stmtCtx));
+      exv = Fortran::lower::convertToValue(loc, converter, actual, stmtCtx);
+      if (corankAttr)
+        fir::getBase(exv).getDefiningOp()->setAttr(fir::getCorankAttrName(),
+                                                   corankAttr);
+      operands.emplace_back(exv);
       continue;
     case fir::LowerIntrinsicArgAs::Addr:
-      operands.emplace_back(Fortran::lower::convertToAddress(
-          loc, converter, actual, stmtCtx, getActualFortranElementType()));
+      exv = Fortran::lower::convertToAddress(loc, converter, actual, stmtCtx,
+                                             getActualFortranElementType());
+      if (corankAttr)
+        fir::getBase(exv).getDefiningOp()->setAttr(fir::getCorankAttrName(),
+                                                   corankAttr);
+      operands.emplace_back(exv);
       continue;
     case fir::LowerIntrinsicArgAs::Box:
-      operands.emplace_back(Fortran::lower::convertToBox(
-          loc, converter, actual, stmtCtx, getActualFortranElementType()));
+      exv = Fortran::lower::convertToBox(loc, converter, actual, stmtCtx,
+                                         getActualFortranElementType());
+      if (corankAttr)
+        fir::getBase(exv).getDefiningOp()->setAttr(fir::getCorankAttrName(),
+                                                   corankAttr);
+      operands.emplace_back(exv);
       continue;
     case fir::LowerIntrinsicArgAs::Inquired:
       if (const Fortran::lower::SomeExpr *expr =
@@ -2980,6 +3022,9 @@ genCustomIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
     }
     if (!exv)
       llvm_unreachable("bad switch");
+    if (mlir::IntegerAttr corankAttr = getCorankFromExpr(builder, expr))
+      fir::getBase(*exv).getDefiningOp()->setAttr(fir::getCorankAttrName(),
+                                                  corankAttr);
     actual = extendedValueToHlfirEntity(loc, builder, exv.value(),
                                         "tmp.custom_intrinsic_arg");
     loweredActuals.emplace_back(Fortran::lower::PreparedActualArgument{
