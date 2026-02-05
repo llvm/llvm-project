@@ -13,9 +13,9 @@ void fun() {}
 
 // GNU-LABEL:  define{{.*}} void @_Z6callerPFvvE(ptr noundef %f)
 // MSVC-LABEL: define{{.*}} void @"?caller@@YAXP6AXXZ@Z"(ptr noundef %f)
-// ARM:   ptrtoint ptr {{.*}} to i32, !nosanitize !5
-// ARM:   and i32 {{.*}}, -2, !nosanitize !5
-// ARM:   inttoptr i32 {{.*}} to ptr, !nosanitize !5
+// ARM:   ptrtoint ptr {{.*}} to i32, !nosanitize !7
+// ARM:   and i32 {{.*}}, -2, !nosanitize !7
+// ARM:   inttoptr i32 {{.*}} to ptr, !nosanitize !7
 // AUTH:  %[[STRIPPED:.*]] = ptrtoint ptr {{.*}} to i64, !nosanitize
 // AUTH:  call i64 @llvm.ptrauth.auth(i64 %[[STRIPPED]], i32 0, i64 0), !nosanitize
 // CHECK: getelementptr <{ i32, i32 }>, ptr {{.*}}, i32 -1, i32 0, !nosanitize
