@@ -663,7 +663,7 @@ define float @fdiv_constant_numerator_fmul(float %x) {
 
 define float @fdiv_constant_numerator_fmul_mixed(float %x) {
 ; CHECK-LABEL: @fdiv_constant_numerator_fmul_mixed(
-; CHECK-NEXT:    [[T3:%.*]] = fdiv reassoc nnan float 1.200000e+07, [[X:%.*]]
+; CHECK-NEXT:    [[T3:%.*]] = fdiv reassoc float 1.200000e+07, [[X:%.*]]
 ; CHECK-NEXT:    ret float [[T3]]
 ;
   %t1 = fdiv reassoc float 2.0e+3, %x
