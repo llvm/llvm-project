@@ -7147,6 +7147,39 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call, Op);
     break;
   }
+  case Intrinsic::amdgcn_image_load_1d:
+  case Intrinsic::amdgcn_image_load_1darray:
+  case Intrinsic::amdgcn_image_load_2d:
+  case Intrinsic::amdgcn_image_load_2darray:
+  case Intrinsic::amdgcn_image_load_2darraymsaa:
+  case Intrinsic::amdgcn_image_load_2dmsaa:
+  case Intrinsic::amdgcn_image_load_3d:
+  case Intrinsic::amdgcn_image_load_cube:
+  case Intrinsic::amdgcn_image_load_mip_1d:
+  case Intrinsic::amdgcn_image_load_mip_1darray:
+  case Intrinsic::amdgcn_image_load_mip_2d:
+  case Intrinsic::amdgcn_image_load_mip_2darray:
+  case Intrinsic::amdgcn_image_load_mip_3d:
+  case Intrinsic::amdgcn_image_load_mip_cube: {
+    // LLVM IR definition of those intrinsics says that they can return any
+    // type. The logic below is based on what is covered by the
+    // llvm/test/CodeGen/AMDGPU/llvm.amdgcn.image.dim.ll test.
+    Type *T = Call.getType();
+    if (auto *ST = dyn_cast<StructType>(Call.getType()))
+      T = ST->getElementType(0);
+
+    unsigned VWidth = 1;
+    if (auto *FVT = dyn_cast<FixedVectorType>(T))
+      VWidth = FVT->getNumElements();
+
+    Value *V = Call.getArgOperand(0);
+    unsigned DMask = cast<ConstantInt>(V)->getZExtValue();
+    unsigned NumActiveBits = popcount(DMask);
+    Check(NumActiveBits <= VWidth,
+          "llvm.amdgcn.image.load.* intrinsic mask cannot have more active "
+          "bits than there are elements in the return type");
+    break;
+  }
   case Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32:
   case Intrinsic::nvvm_setmaxnreg_dec_sync_aligned_u32: {
     Value *V = Call.getArgOperand(0);
