@@ -134,7 +134,7 @@ struct VectorMaskedStoreOpConverter final
     Value mask = maskedStoreOp.getMask();
     Value base = maskedStoreOp.getBase();
     Value value = maskedStoreOp.getValueToStore();
-    bool nontemporal = false;\
+    bool nontemporal = false;
     bool volatile_ = false;
     auto indices = llvm::to_vector_of<Value>(maskedStoreOp.getIndices());
     Value one = arith::ConstantOp::create(rewriter, loc, indexType,
@@ -146,8 +146,7 @@ struct VectorMaskedStoreOpConverter final
       rewriter.setInsertionPointToStart(&ifOp.getThenRegion().front());
       auto extractedValue = vector::ExtractOp::create(rewriter, loc, value, i);
       memref::StoreOp::create(
-          rewriter, loc, extractedValue, base, indices, nontemporal,
-          volatile_,
+          rewriter, loc, extractedValue, base, indices, nontemporal, volatile_,
           llvm::MaybeAlign(maskedStoreOp.getAlignment().value_or(0)));
 
       rewriter.setInsertionPointAfter(ifOp);

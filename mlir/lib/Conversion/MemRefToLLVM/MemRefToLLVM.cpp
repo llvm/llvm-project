@@ -1157,7 +1157,7 @@ public:
         LLVM::GEPOp::create(rewriter, loc, targetBasePtr.getType(), elementType,
                             targetBasePtr, targetOffset);
     LLVM::MemcpyOp::create(rewriter, loc, targetPtr, srcPtr, totalSize,
-                           op.getVolatile_());
+                           /*isVolatile=*/false);
     rewriter.eraseOp(op);
 
     return success();
@@ -1351,7 +1351,7 @@ struct MemorySpaceCastOpLowering
           LLVM::SubOp::create(rewriter, loc, getIndexType(),
                               resultUnderlyingSize, bytesToSkipConst);
       LLVM::MemcpyOp::create(rewriter, loc, resultIndexVals, sourceIndexVals,
-                             copySize, op.getVolatile_());
+                             copySize, /*isVolatile=*/false);
 
       rewriter.replaceOp(op, ValueRange{result});
       return success();

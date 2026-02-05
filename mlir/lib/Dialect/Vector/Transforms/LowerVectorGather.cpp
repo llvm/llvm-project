@@ -201,8 +201,8 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
     Value lastBaseOffset = baseOffsets.back();
 
     Value result = op.getPassThru();
-    BoolAttr nontemporalAttr = nullptr;
-    BoolAttr volatileAttr = nullptr;
+    bool nontemporal = false;
+    bool volatile_ = false;
     IntegerAttr alignmentAttr = op.getAlignmentAttr();
 
     // Emit a conditional access for each vector element.
@@ -221,7 +221,7 @@ struct Gather1DToConditionalLoads : OpRewritePattern<vector::GatherOp> {
           // and extract the single result instead.
           Value load =
               vector::LoadOp::create(b, loc, elemVecTy, base, baseOffsets,
-                                     nontemporalAttr, volatileAttr, alignmentAttr);
+                                     nontemporal, volatile_, alignmentAttr);
           int64_t zeroIdx[1] = {0};
           extracted = vector::ExtractOp::create(b, loc, load, zeroIdx);
         } else {
