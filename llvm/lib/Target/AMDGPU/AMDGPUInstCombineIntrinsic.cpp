@@ -1861,8 +1861,6 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
     for (unsigned SrcIdx = 0; SrcIdx < 4; ++SrcIdx) {
       const unsigned Bit = 1 << SrcIdx;
       if (!!(DMaskVal & Bit)) {
-        if (OrigLdStIdx >= DemandedElts.getBitWidth())
-          break;
         if (!!DemandedElts[OrigLdStIdx])
           NewDMaskVal |= Bit;
         OrigLdStIdx++;
