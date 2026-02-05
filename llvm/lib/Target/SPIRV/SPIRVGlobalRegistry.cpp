@@ -88,8 +88,8 @@ storageClassRequiresExplictLayout(SPIRV::StorageClass::StorageClass SC) {
   llvm_unreachable("Unknown SPIRV::StorageClass enum");
 }
 
-SPIRVGlobalRegistry::SPIRVGlobalRegistry(unsigned PointerSize)
-    : PointerSize(PointerSize), Bound(0), CurMF(nullptr) {}
+SPIRVGlobalRegistry::SPIRVGlobalRegistry(DataLayout DL)
+    : DL(DL), Bound(0), CurMF(nullptr) {}
 
 SPIRVType *SPIRVGlobalRegistry::assignIntTypeToVReg(unsigned BitWidth,
                                                     Register VReg,
@@ -725,7 +725,7 @@ SPIRVGlobalRegistry::getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
   if (Res.isValid())
     return Res;
 
-  LLT LLTy = LLT::pointer(AddressSpace, PointerSize);
+  LLT LLTy = LLT::pointer(AddressSpace, getPointerSize());
   Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
   CurMF->getRegInfo().setRegClass(Res, &SPIRV::pIDRegClass);
   assignSPIRVTypeToVReg(SpvType, Res, *CurMF);
@@ -2207,7 +2207,6 @@ void SPIRVGlobalRegistry::updateAssignType(CallInst *AssignCI, Value *Arg,
 
 void SPIRVGlobalRegistry::addStructOffsetDecorations(
     Register Reg, StructType *Ty, MachineIRBuilder &MIRBuilder) {
-  DataLayout DL;
   ArrayRef<TypeSize> Offsets = DL.getStructLayout(Ty)->getMemberOffsets();
   for (uint32_t I = 0; I < Ty->getNumElements(); ++I) {
     buildOpMemberDecorate(Reg, MIRBuilder, SPIRV::Decoration::Offset, I,
@@ -2217,7 +2216,7 @@ void SPIRVGlobalRegistry::addStructOffsetDecorations(
 
 void SPIRVGlobalRegistry::addArrayStrideDecorations(
     Register Reg, Type *ElementType, MachineIRBuilder &MIRBuilder) {
-  uint32_t SizeInBytes = DataLayout().getTypeSizeInBits(ElementType) / 8;
+  uint32_t SizeInBytes = DL.getTypeSizeInBits(ElementType) / 8;
   buildOpDecorate(Reg, MIRBuilder, SPIRV::Decoration::ArrayStride,
                   {SizeInBytes});
 }
