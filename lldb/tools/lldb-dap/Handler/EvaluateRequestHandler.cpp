@@ -45,9 +45,9 @@ static bool RunExpressionAsLLDBCommand(DAP &dap, lldb::SBFrame &frame,
 
 static lldb::SBValue EvaluateVariableExpression(lldb::SBTarget &target,
                                                 lldb::SBFrame &frame,
-                                                llvm::StringRef expression,
+                                                const std::string &expression,
                                                 bool run_as_expression) {
-  const char *expression_cstr = expression.data();
+  const char *expression_cstr = expression.c_str();
 
   lldb::SBValue value;
   if (frame) {
@@ -76,7 +76,7 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
 
   EvaluateResponseBody body;
   lldb::SBFrame frame = dap.GetLLDBFrame(arguments.frameId);
-  std::string expression = arguments.expression;
+  std::string expression = llvm::StringRef(arguments.expression).trim().str();
   const EvaluateContext evaluate_context = arguments.context;
   const bool is_repl_context = evaluate_context == eEvaluateContextRepl;
 
