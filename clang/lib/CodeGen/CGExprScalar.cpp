@@ -4039,14 +4039,14 @@ LValue ScalarExprEmitter::EmitCompoundAssignLValue(
     Previous = Result;
     Result = EmitScalarConversion(Result, PromotionTypeCR, LHSTy, Loc);
   } else if (const auto *atomicTy = LHSTy->getAs<AtomicType>()) {
-    Result = EmitScalarConversion(Result, PromotionTypeCR,
-                                  atomicTy->getValueType(), Loc,
-                                  ScalarConversionOpts(CGF.SanOpts));
+    Result =
+        EmitScalarConversion(Result, PromotionTypeCR, atomicTy->getValueType(),
+                             Loc, ScalarConversionOpts(CGF.SanOpts));
   } else {
     Result = EmitScalarConversion(Result, PromotionTypeCR, LHSTy, Loc,
                                   ScalarConversionOpts(CGF.SanOpts));
   }
-  
+
   if (atomicPHI) {
     llvm::BasicBlock *curBlock = Builder.GetInsertBlock();
     llvm::BasicBlock *contBB = CGF.createBasicBlock("atomic_cont", CGF.CurFn);
