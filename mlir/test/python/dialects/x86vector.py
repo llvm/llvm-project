@@ -21,7 +21,9 @@ def testAvxOp():
 
         @func.FuncOp.from_py_func(MemRefType.get((1,), BF16Type.get()))
         def avx_op(arg):
-            return x86vector.BcstToPackedF32Op(a=arg, dst=VectorType.get((8,), F32Type.get()))
+            return x86vector.BcstToPackedF32Op(
+                a=arg, dst=VectorType.get((8,), F32Type.get())
+            )
 
     # CHECK-LABEL: func @avx_op(
     # CHECK-SAME:      %[[ARG:.+]]: memref<1xbf16>) -> vector<8xf32> {
@@ -29,6 +31,7 @@ def testAvxOp():
     #       CHECK:   return %[[VAL]] : vector<8xf32>
     #       CHECK: }
     print(module)
+
 
 # CHECK-LABEL: TEST: testAvx512Op
 @run
@@ -38,7 +41,9 @@ def testAvx512Op():
 
         @func.FuncOp.from_py_func(VectorType.get((8,), F32Type.get()))
         def avx512_op(arg):
-            return x86vector.CvtPackedF32ToBF16Op(a=arg, dst=VectorType.get((8,), BF16Type.get()))
+            return x86vector.CvtPackedF32ToBF16Op(
+                a=arg, dst=VectorType.get((8,), BF16Type.get())
+            )
 
     # CHECK-LABEL: func @avx512_op(
     # CHECK-SAME:      %[[ARG:.+]]: vector<8xf32>) -> vector<8xbf16> {
@@ -46,6 +51,7 @@ def testAvx512Op():
     #       CHECK:   return %[[VAL]] : vector<8xbf16>
     #       CHECK: }
     print(module)
+
 
 # CHECK-LABEL: TEST: testAvx10Op
 @run
@@ -59,9 +65,7 @@ def testAvx10Op():
             VectorType.get((64,), IntegerType.get(8)),
         )
         def avx10_op(*args):
-            return x86vector.AVX10DotInt8Op(
-                w=args[0], a=args[1], b=args[2]
-            )
+            return x86vector.AVX10DotInt8Op(w=args[0], a=args[1], b=args[2])
 
     # CHECK-LABEL: func @avx10_op(
     # CHECK-SAME:      %[[W:.+]]: vector<16xi32>, %[[A:.+]]: vector<64xi8>,
