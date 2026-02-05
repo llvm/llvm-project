@@ -18,6 +18,7 @@ unittest("ClangScalableAnalysisTests") {
     "EntityIdTableTest.cpp",
     "EntityIdTest.cpp",
     "EntityNameTest.cpp",
+    "Registries/FancyAnalysisData.cpp",
     "Registries/MockSerializationFormat.cpp",
     "Registries/MockSummaryExtractor1.cpp",
     "Registries/MockSummaryExtractor2.cpp",
