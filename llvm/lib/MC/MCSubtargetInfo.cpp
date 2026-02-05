@@ -269,14 +269,14 @@ const FeatureBitset &MCSubtargetInfo::ToggleFeature(const FeatureBitset &FB) {
   return FeatureBits;
 }
 
-const FeatureBitset &MCSubtargetInfo::SetFeatureBitsTransitively(
-  const FeatureBitset &FB) {
+const FeatureBitset &
+MCSubtargetInfo::SetFeatureBitsTransitively(const FeatureBitset &FB) {
   SetImpliedBits(FeatureBits, FB, ProcFeatures);
   return FeatureBits;
 }
 
-const FeatureBitset &MCSubtargetInfo::ClearFeatureBitsTransitively(
-  const FeatureBitset &FB) {
+const FeatureBitset &
+MCSubtargetInfo::ClearFeatureBitsTransitively(const FeatureBitset &FB) {
   for (unsigned I = 0, E = FB.size(); I < E; I++) {
     if (FB[I]) {
       FeatureBits.reset(I);

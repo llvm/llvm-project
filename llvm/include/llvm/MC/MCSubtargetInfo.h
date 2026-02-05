@@ -141,7 +141,7 @@ public:
 
   /// Toggle a feature and return the re-computed feature bits.
   /// This version does not change the implied bits.
-  const FeatureBitset &ToggleFeature(const FeatureBitset& FB);
+  const FeatureBitset &ToggleFeature(const FeatureBitset &FB);
 
   /// Toggle a set of features and return the re-computed feature bits.
   /// This version will also change all implied bits.
@@ -152,7 +152,7 @@ public:
   const FeatureBitset &ApplyFeatureFlag(StringRef FS);
 
   /// Set/clear additional feature bits, including all other bits they imply.
-  const FeatureBitset &SetFeatureBitsTransitively(const FeatureBitset& FB);
+  const FeatureBitset &SetFeatureBitsTransitively(const FeatureBitset &FB);
   const FeatureBitset &ClearFeatureBitsTransitively(const FeatureBitset &FB);
 
   /// Check whether the subtarget features are enabled/disabled as per
