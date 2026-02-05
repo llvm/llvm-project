@@ -18,6 +18,7 @@
 #include "llvm/Support/DataTypes.h"
 
 #include <fstream>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <type_traits>
@@ -160,6 +161,17 @@ struct PyPrintAccumulator {
 /// or binary. The file may be a Python file-like object or a path to a file.
 class PyFileAccumulator {
 public:
+  struct MlirLlvmRawFdOStreamDeleter {
+    void operator()(MlirLlvmRawFdOStream *stream) const {
+      if (!stream)
+        return;
+      mlirLlvmRawFdOStreamDestroy(*stream);
+      delete stream;
+    }
+  };
+  using MlirLlvmRawFdOStreamPtr =
+      std::unique_ptr<MlirLlvmRawFdOStream, MlirLlvmRawFdOStreamDeleter>;
+
   PyFileAccumulator(const nanobind::object &fileOrStringObject, bool binary)
       : binary(binary) {
     std::string filePath;
@@ -176,15 +188,11 @@ public:
             (std::string("Unable to open file for writing: ") + errorMessage)
                 .c_str());
       }
-      writeTarget.emplace<MlirLlvmRawFdOStream>(stream);
+      writeTarget.emplace<MlirLlvmRawFdOStreamPtr>(
+          new MlirLlvmRawFdOStream(stream));
     } else {
       writeTarget.emplace<nanobind::object>(fileOrStringObject.attr("write"));
     }
-  }
-
-  ~PyFileAccumulator() {
-    if (writeTarget.index() == 1)
-      mlirLlvmRawFdOStreamDestroy(std::get<MlirLlvmRawFdOStream>(writeTarget));
   }
 
   MlirStringCallback getCallback() {
@@ -215,11 +223,11 @@ private:
     return [](MlirStringRef part, void *userData) {
       PyFileAccumulator *accum = static_cast<PyFileAccumulator *>(userData);
       mlirLlvmRawFdOStreamWrite(
-          std::get<MlirLlvmRawFdOStream>(accum->writeTarget), part);
+          *std::get<MlirLlvmRawFdOStreamPtr>(accum->writeTarget), part);
     };
   }
 
-  std::variant<nanobind::object, MlirLlvmRawFdOStream> writeTarget;
+  std::variant<nanobind::object, MlirLlvmRawFdOStreamPtr> writeTarget;
   bool binary;
 };
 
