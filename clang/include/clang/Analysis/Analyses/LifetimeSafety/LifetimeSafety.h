@@ -135,9 +135,9 @@ public:
   FactManager &getFactManager() { return *FactMgr; }
 
 private:
-  const LifetimeSafetyOpts LSOpts;
   AnalysisDeclContext &AC;
   LifetimeSafetySemaHelper *SemaHelper;
+  const LifetimeSafetyOpts LSOpts;
   LifetimeFactory Factory;
   std::unique_ptr<FactManager> FactMgr;
   std::unique_ptr<LiveOriginsAnalysis> LiveOrigins;

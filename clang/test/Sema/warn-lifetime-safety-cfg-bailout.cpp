@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety -Wlifetime-safety -lifetime-safety-max-cfg-blocks=3 -Wno-dangling -verify=CHECK-BAILOUT %s
-// RUN: %clang_cc1 -fsyntax-only -flifetime-safety -Wlifetime-safety -Wno-dangling -verify=CHECK-BAILOUT -verify=CHECK-NOBAILOUT %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -lifetime-safety-max-cfg-blocks=3 -Wno-dangling -verify=CHECK-BAILOUT %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=CHECK-BAILOUT -verify=CHECK-NOBAILOUT %s
 
 struct MyObj {
   int id;
