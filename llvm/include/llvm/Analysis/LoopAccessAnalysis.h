@@ -951,8 +951,8 @@ LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
     DominatorTree *DT, AssumptionCache *AC,
     std::optional<ScalarEvolution::LoopGuards> &LoopGuards);
 LLVM_ABI std::pair<const SCEV *, const SCEV *> getStartAndEndForAccess(
-    const Loop *Lp, const SCEV *PtrExpr, const SCEV *EltSizeSCEV, const SCEV *BTC,
-    const SCEV *MaxBTC, ScalarEvolution *SE,
+    const Loop *Lp, const SCEV *PtrExpr, const SCEV *EltSizeSCEV,
+    const SCEV *BTC, const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, const SCEV *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
     DominatorTree *DT, AssumptionCache *AC,

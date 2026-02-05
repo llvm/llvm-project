@@ -147,9 +147,14 @@ struct VPlanTransforms {
       VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
       ElementCount MinVF);
 
-  /// Update \p Plan to account for all early exits.
-  LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,
-                                                 bool HasUncountableExit);
+  /// Update \p Plan to account for all early exits. If \p HasUncountableExit
+  /// is true, handles uncountable early exits and replaces non-dereferenceable
+  /// loads with speculative load intrinsics. Returns false if a
+  /// non-dereferenceable load is found past all early exits.
+  LLVM_ABI_FOR_TEST static bool
+  handleEarlyExits(VPlan &Plan, bool HasUncountableExit, Loop *TheLoop,
+                   PredicatedScalarEvolution &PSE, DominatorTree &DT,
+                   AssumptionCache *AC);
 
   /// If a check is needed to guard executing the scalar epilogue loop, it will
   /// be added to the middle block.
@@ -182,6 +187,13 @@ struct VPlanTransforms {
   /// condition.
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
+
+  /// Scan the plan for speculative load intrinsics and attach runtime checks
+  /// using VPInstruction::CanLoadSpeculatively to verify the loads are safe. If
+  /// checks fail, the plan bypasses to the scalar loop.
+  static void attachSpeculativeLoadChecks(VPlan &Plan, ElementCount VF,
+                                          PredicatedScalarEvolution &PSE,
+                                          Loop *TheLoop, bool AddBranchWeights);
 
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
@@ -324,9 +336,21 @@ struct VPlanTransforms {
   /// appropriate branching logic in the latch that handles early exits and the
   /// latch exit condition. Multiple exits are handled with a dispatch block
   /// that determines which exit to take based on lane-by-lane semantics.
-  static void handleUncountableEarlyExits(VPlan &Plan, VPBasicBlock *HeaderVPBB,
-                                          VPBasicBlock *LatchVPBB,
-                                          VPBasicBlock *MiddleVPBB);
+  /// Returns the last early exiting block in dominance order.
+  static VPBasicBlock *
+  handleUncountableEarlyExits(VPlan &Plan, VPBasicBlock *HeaderVPBB,
+                              VPBasicBlock *LatchVPBB, VPBasicBlock *MiddleVPBB,
+                              Loop *TheLoop, PredicatedScalarEvolution &PSE,
+                              DominatorTree &DT, AssumptionCache *AC);
+
+  /// Replace loads that may not be dereferenceable with speculative load
+  /// intrinsics. Returns false if any non-dereferenceable load is found in a
+  /// block past all early exits (i.e. dominated by \p LastEarlyExitingVPBB),
+  /// since such loads cannot be safely speculated.
+  static bool replaceUnsafeLoadsWithSpeculative(
+      VPlan &Plan, VPBasicBlock *HeaderVPBB, VPBasicBlock *MiddleVPBB,
+      VPBasicBlock *LastEarlyExitingVPBB, Loop *TheLoop,
+      PredicatedScalarEvolution &PSE, DominatorTree &DT, AssumptionCache *AC);
 
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)

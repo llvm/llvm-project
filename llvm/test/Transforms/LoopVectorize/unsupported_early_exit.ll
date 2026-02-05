@@ -120,7 +120,7 @@ define i64 @loop_contains_unsafe_call() {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 3, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[LD1:%.*]] = load i32, ptr [[ARRAYIDX]], align 1
-; CHECK-NEXT:    [[BAD_CALL:%.*]] = call i32 @foo(i32 [[LD1]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[BAD_CALL:%.*]] = call i32 @foo(i32 [[LD1]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[BAD_CALL]], 34
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_INC]], label [[LOOP_END:%.*]]
 ; CHECK:       loop.inc:
@@ -660,12 +660,51 @@ define i64 @multi_exit_load_in_nonexiting_block(ptr %src) {
 ; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
 ; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       spec.load.check:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.can.load.speculatively.p0(ptr [[SRC]], i64 32)
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[TMP0]], true
+; CHECK-NEXT:    br i1 [[TMP1]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT3:%.*]], [[VECTOR_BODY_INTERIM:%.*]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX1]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], splat (i8 42)
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[INDEX1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i64> @llvm.speculative.load.v4i64.p0(ptr [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX1]]
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], [[WIDE_LOAD2]]
+; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX1]], 4
+; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> splat (i1 true), <4 x i1> [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = freeze <4 x i1> [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP9]])
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT3]], 64
+; CHECK-NEXT:    br i1 [[TMP10]], label [[VECTOR_EARLY_EXIT_CHECK:%.*]], label [[VECTOR_BODY_INTERIM]]
+; CHECK:       vector.body.interim:
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK4:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       middle.block4:
+; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK:       vector.early.exit.check:
+; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP8]], i1 false)
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP3]], i64 [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[VECTOR_EARLY_EXIT_0:%.*]], label [[VECTOR_EARLY_EXIT_1:%.*]]
+; CHECK:       vector.early.exit.1:
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP5]], i64 [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    br label [[LOOP_END:%.*]]
+; CHECK:       vector.early.exit.0:
+; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX1]], [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    br label [[LOOP_END]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 64, [[MIDDLE_BLOCK4]] ], [ 0, [[LOOP_HEADER]] ]
+; CHECK-NEXT:    br label [[LOOP_HEADER1:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[GEP1]], align 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[LD1]], 42
-; CHECK-NEXT:    br i1 [[CMP1]], label [[LOOP_END:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[LOOP_END]], label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[LD_OUT:%.*]] = load i64, ptr [[GEP_SRC]], align 4
@@ -678,9 +717,9 @@ define i64 @multi_exit_load_in_nonexiting_block(ptr %src) {
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP_HEADER]], label [[LOOP_END]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP_HEADER1]], label [[LOOP_END]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP_HEADER]] ], [ [[LD_OUT]], [[EARLY_EXIT_2]] ], [ 67, [[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP_HEADER1]] ], [ [[LD_OUT]], [[EARLY_EXIT_2]] ], [ 67, [[LOOP_LATCH]] ], [ [[TMP14]], [[VECTOR_EARLY_EXIT_0]] ], [ [[TMP13]], [[VECTOR_EARLY_EXIT_1]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -722,4 +761,117 @@ loop.end:
 declare i32 @foo(i32) readonly
 declare <vscale x 4 x i32> @foo_vec(<vscale x 4 x i32>)
 
+; Non-dereferenceable load in the latch (past all early exits) used as live-out.
+; Cannot be safely speculated, so the loop should not be vectorized.
+define i64 @load_in_latch_past_all_exits(ptr %src, ptr %p1) {
+; CHECK-LABEL: define i64 @load_in_latch_past_all_exits(
+; CHECK-SAME: ptr [[SRC:%.*]], ptr [[P1:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[GEP1]], align 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[LD1]], 42
+; CHECK-NEXT:    br i1 [[CMP1]], label [[LOOP_END:%.*]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD_OUT:%.*]] = load i64, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP_HEADER]], label [[LOOP_END]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ 0, [[LOOP_HEADER]] ], [ [[LD_OUT]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  call void @init_mem(ptr %p1, i64 1024)
+  br label %loop.header
+
+loop.header:
+  %index = phi i64 [ %index.next, %loop.latch ], [ 0, %entry ]
+  %gep1 = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %gep1, align 1
+  %cmp1 = icmp eq i8 %ld1, 42
+  br i1 %cmp1, label %loop.end, label %loop.latch
+
+loop.latch:
+  %gep.src = getelementptr inbounds i64, ptr %src, i64 %index
+  %ld.out = load i64, ptr %gep.src, align 4
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop.header, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ 0, %loop.header ], [ %ld.out, %loop.latch ]
+  ret i64 %retval
+}
+
+; Two early exits with a non-dereferenceable load in the latch (past all exits).
+; Cannot be safely speculated, so the loop should not be vectorized.
+define i64 @two_exits_load_in_latch_past_all_exits(ptr %src, ptr %p1, ptr %p2) {
+; CHECK-LABEL: define i64 @two_exits_load_in_latch_past_all_exits(
+; CHECK-SAME: ptr [[SRC:%.*]], ptr [[P1:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[GEP1]], align 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[LD1]], 42
+; CHECK-NEXT:    br i1 [[CMP1]], label [[LOOP_END:%.*]], label [[LOOP_MID:%.*]]
+; CHECK:       loop.mid:
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD2:%.*]] = load i8, ptr [[GEP2]], align 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[LD1]], [[LD2]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP_END]], label [[LOOP_LATCH]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD_OUT:%.*]] = load i64, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP_HEADER]], label [[LOOP_END]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ 0, [[LOOP_HEADER]] ], [ 0, [[LOOP_MID]] ], [ [[LD_OUT]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop.header
+
+loop.header:
+  %index = phi i64 [ %index.next, %loop.latch ], [ 0, %entry ]
+  %gep1 = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %gep1, align 1
+  %cmp1 = icmp eq i8 %ld1, 42
+  br i1 %cmp1, label %loop.end, label %loop.mid
+
+loop.mid:
+  %gep2 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %gep2, align 1
+  %cmp2 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp2, label %loop.end, label %loop.latch
+
+loop.latch:
+  %gep.src = getelementptr inbounds i64, ptr %src, i64 %index
+  %ld.out = load i64, ptr %gep.src, align 4
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop.header, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ 0, %loop.header ], [ 0, %loop.mid ], [ %ld.out, %loop.latch ]
+  ret i64 %retval
+}
+
 attributes #0 = { "vector-function-abi-variant"="_ZGVsNxv_foo(foo_vec)" }
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+;.

@@ -203,12 +203,13 @@ loop.end:
 }
 
 
-; == SOME ILLEGAL EXAMPLES ==
+; Loops using speculative loads for early exits with potentially unsafe loads
+; are now legal.
 
 
 define i64 @same_exit_block_pre_inc_use1_too_small_allocas() {
 ; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_too_small_allocas'
-; CHECK:       LV: Not vectorizing: Auto-vectorization of loops with potentially faulting load is not supported.
+; CHECK:       LV: We can vectorize this loop!
 entry:
   %p1 = alloca [42 x i8]
   %p2 = alloca [42 x i8]
@@ -238,7 +239,7 @@ loop.end:
 
 define i64 @same_exit_block_pre_inc_use1_too_small_deref_ptrs(ptr dereferenceable(42) %p1, ptr dereferenceable(42) %p2) {
 ; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_too_small_deref_ptrs'
-; CHECK:       LV: Not vectorizing: Auto-vectorization of loops with potentially faulting load is not supported.
+; CHECK:       LV: We can vectorize this loop!
 entry:
   br label %loop
 
@@ -264,7 +265,7 @@ loop.end:
 
 define i64 @same_exit_block_pre_inc_use1_unknown_ptrs(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_unknown_ptrs'
-; CHECK:       LV: Not vectorizing: Auto-vectorization of loops with potentially faulting load is not supported.
+; CHECK:       LV: We can vectorize this loop!
 entry:
   br label %loop
 
@@ -286,6 +287,10 @@ loop.end:
   %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
   ret i64 %retval
 }
+
+
+; == SOME ILLEGAL EXAMPLES ==
+
 
 define ptr @same_exit_block_strided_unknown_ptr(ptr %first, ptr %last, i32 %value) {
 ; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_strided_unknown_ptr'

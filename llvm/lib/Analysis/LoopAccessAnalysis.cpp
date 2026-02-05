@@ -332,8 +332,8 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
 }
 
 std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
-    const Loop *Lp, const SCEV *PtrExpr, const SCEV *EltSizeSCEV, const SCEV *BTC,
-    const SCEV *MaxBTC, ScalarEvolution *SE,
+    const Loop *Lp, const SCEV *PtrExpr, const SCEV *EltSizeSCEV,
+    const SCEV *BTC, const SCEV *MaxBTC, ScalarEvolution *SE,
     DenseMap<std::pair<const SCEV *, const SCEV *>,
              std::pair<const SCEV *, const SCEV *>> *PointerBounds,
     DominatorTree *DT, AssumptionCache *AC,
