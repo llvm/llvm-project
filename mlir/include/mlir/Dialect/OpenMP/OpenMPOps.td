@@ -554,29 +554,25 @@ def TileOp : OpenMPTransformBase_Op<"tile",
 // OpenMP fuse operation
 //===----------------------------------------------------------------------===//
 
-def FuseOp : OpenMPTransformBase_Op<"fuse"> {
+def FuseOp
+    : OpenMPTransformBase_Op<"fuse", clauses = [OpenMP_LooprangeClause]> {
   let summary = "OpenMP fuse operation";
   let description = [{
     Represents the OpenMP fuse directive introduced in OpenMP 6.0.
     
-    The construct takes a loop sequence and merges the loops specifed by the 
-    first and count attributes and generates a loop sequence with the loops
-    before the first attribute untouched, the generated fused loop, and the loops
-    after the the first + count attribute untouched mantaining the orignal
-    order. If no attributes are specified all the loops in the sequence are 
-    fused generating a single loop.
+    The construct takes a loop sequence and merges the loops specifed by the
+    `looprange` clause and generates a loop sequence with the loops before the
+    `first` attribute untouched, the generated fused loop, and the loops after
+    the the `first` + `count` attributes untouched mantaining the orignal
+    order. If the `looprange` clause is not present all the loops in the
+    sequence are fused generating a single loop.
     Each logical iteration of the fused loop executes a logical iteration of
     each affected loop. The fused loop has the number of logical iterations 
     equal to the affected loop with most logical iterations.
 
-    The first and count attributes are constant and known beforehand.
-  }] # clausesDescription;
-
-  let arguments =
-      !con((ins Variadic<CanonicalLoopInfoType>:$generatees,
-               Variadic<CanonicalLoopInfoType>:$applyees,
-               OptionalAttr<I64Attr>:$first, OptionalAttr<I64Attr>:$count),
-           clausesArgs);
+    The `first` and `count` attributes of the `looprange` clause are constant
+    and known beforehand if present.
+  }]#clausesDescription;
 
   let hasVerifier = 1;
 }

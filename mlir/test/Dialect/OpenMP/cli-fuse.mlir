@@ -107,8 +107,8 @@ func.func @omp_fuse_looprange(%tc1 : i32, %tc2 : i32, %tc3 : i32) -> () {
       omp.terminator
   }
   // CHECK: omp.fuse (%canonloop_fuse, %fused) <- (%canonloop_s0,
-  // %canonloop_s1, %canonloop_s2) {count = 2 : i64, first = 1 : i64}
-  omp.fuse(%fused, %canonloop_fuse) <- (%canonloop_s0, %canonloop_s1, %canonloop_s2) {count = 2 : i64, first = 1 : i64}
+  // %canonloop_s1, %canonloop_s2) looprange(first = 1, count = 2)
+  omp.fuse(%fused, %canonloop_fuse) <- (%canonloop_s0, %canonloop_s1, %canonloop_s2) looprange(first = 1, count = 2)
   return
 }
 

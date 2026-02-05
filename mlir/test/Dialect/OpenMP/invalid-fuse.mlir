@@ -71,7 +71,7 @@ func.func @wrong_generatees2(%tc1 : i32, %tc2 : i32, %tc3 : i32) {
 
   %fused = omp.new_cli
   // expected-error@+1 {{'omp.fuse' op the number of generatees must be the number of aplyees plus one minus count}} 
-  omp.fuse (%fused) <-(%canonloop1, %canonloop2, %canonloop3) {first = 1 : i64, count = 2 : i64}
+  omp.fuse (%fused) <-(%canonloop1, %canonloop2, %canonloop3) looprange(first = 1, count = 2)
 
   llvm.return
 }
@@ -95,7 +95,7 @@ func.func @wrong_applyees(%tc1 : i32, %tc2 : i32, %tc3 : i32) {
   %fused = omp.new_cli
   %canonloop_fuse = omp.new_cli
   // expected-error@+1 {{'omp.fuse' op the numbers of applyees must be at least first minus one plus count attributes}}
-  omp.fuse (%fused, %canonloop_fuse) <-(%canonloop1, %canonloop2, %canonloop3) {first = 1 : i64, count = 5 : i64}
+  omp.fuse (%fused, %canonloop_fuse) <-(%canonloop1, %canonloop2, %canonloop3) looprange(first = 1, count = 5)
 
   llvm.return
 }

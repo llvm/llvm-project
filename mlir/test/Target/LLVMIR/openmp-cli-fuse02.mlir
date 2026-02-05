@@ -23,7 +23,7 @@ llvm.func @fuse_looprange_loops(%baseptr: !llvm.ptr, %tc1: i32, %tc2: i32, %tc3:
     llvm.store %val, %ptr : f32, !llvm.ptr
     omp.terminator
   }
-  omp.fuse <- (%literal_cli1, %literal_cli2, %literal_cli3) {first = 1 : i64, count = 2 : i64}
+  omp.fuse <- (%literal_cli1, %literal_cli2, %literal_cli3) looprange(first = 1, count = 2)
   llvm.return
 }
 

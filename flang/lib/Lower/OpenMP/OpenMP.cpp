@@ -2305,15 +2305,10 @@ static void genFuseOp(Fortran::lower::AbstractConverter &converter,
                       ConstructQueue::const_iterator item) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  int64_t first;
-  int64_t count;
-  const Clause *looprangeClause = llvm::find_singleton<const Clause>(
-      item->clauses, [](const Clause &clause, bool) { return &clause; }, false);
-  if (looprangeClause) {
-    const auto &looprange = std::get<clause::Looprange>(looprangeClause->u);
-    first = evaluate::ToInt64(std::get<0>(looprange.t)).value();
-    count = evaluate::ToInt64(std::get<1>(looprange.t)).value();
-  }
+  int64_t count = 0;
+  mlir::omp::LooprangeClauseOps looprangeClause;
+  ClauseProcessor cp(converter, semaCtx, item->clauses);
+  bool looprange = cp.processLooprange(stmtCtx, looprangeClause, count);
 
   llvm::SmallVector<mlir::Value> applyees;
   for (auto &child : eval.getNestedEvaluations()) {
@@ -2335,20 +2330,14 @@ static void genFuseOp(Fortran::lower::AbstractConverter &converter,
   // One generated loop + one for each loop not inside the specified looprange
   // if present
   llvm::SmallVector<mlir::Value> generatees;
-  int64_t numGeneratees = !looprangeClause ? 1 : applyees.size() - count + 1;
+  int64_t numGeneratees = !looprange ? 1 : applyees.size() - count + 1;
   for (int i = 0; i < numGeneratees; i++) {
     auto fusedCLI = mlir::omp::NewCliOp::create(firOpBuilder, loc);
     generatees.push_back(fusedCLI);
   }
 
-  mlir::IntegerAttr firstAttr;
-  mlir::IntegerAttr countAttr;
-  if (looprangeClause) {
-    firstAttr = firOpBuilder.getI64IntegerAttr(first);
-    countAttr = firOpBuilder.getI64IntegerAttr(count);
-  }
-  mlir::omp::FuseOp::create(firOpBuilder, loc, generatees, applyees, firstAttr,
-                            countAttr);
+  mlir::omp::FuseOp::create(firOpBuilder, loc, generatees, applyees,
+                            looprangeClause.first, looprangeClause.count);
 }
 
 static void genUnrollOp(Fortran::lower::AbstractConverter &converter,

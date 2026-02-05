@@ -493,6 +493,21 @@ bool ClauseProcessor::processSizes(StatementContext &stmtCtx,
   return false;
 }
 
+bool ClauseProcessor::processLooprange(StatementContext &stmtCtx,
+                                       mlir::omp::LooprangeClauseOps &result,
+                                       int64_t &count) const {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  if (auto *clause = findUniqueClause<omp::clause::Looprange>()) {
+    int64_t first = evaluate::ToInt64(std::get<0>(clause->t)).value();
+    count = evaluate::ToInt64(std::get<1>(clause->t)).value();
+    result.first = firOpBuilder.getI64IntegerAttr(first);
+    result.count = firOpBuilder.getI64IntegerAttr(count);
+    return true;
+  }
+
+  return false;
+}
+
 bool ClauseProcessor::processNumTeams(
     lower::StatementContext &stmtCtx,
     mlir::omp::NumTeamsClauseOps &result) const {
