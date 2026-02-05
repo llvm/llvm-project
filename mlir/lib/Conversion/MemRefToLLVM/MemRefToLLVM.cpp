@@ -940,7 +940,8 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
 
     // Bail out if volatile flag is set.
     if (loadOp.getVolatile_())
-      return rewriter.notifyMatchFailure(loadOp, "volatile loads not supported");
+      return rewriter.notifyMatchFailure(loadOp,
+                                         "volatile loads not supported");
 
     // Per memref.load spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
@@ -967,7 +968,8 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
 
     // Bail out if volatile flag is set.
     if (op.getVolatile_())
-      return rewriter.notifyMatchFailure(op, "volatile stores not supported");
+      return rewriter.notifyMatchFailure(op,
+                                         "volatile stores not supported");
 
     // Per memref.store spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
