@@ -157,21 +157,23 @@ defm LoadStoreF128 : MVCLoadStore<load, f128, MVCImm, 15>;
 //===----------------------------------------------------------------------===//
 
 let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
-  let isCodeGenOnly = 1 in
-    // Reload f16 from 4-byte spill slot.
-    defm LE16 : UnaryRXPair<"le", 0x78, 0xED64, z_load, FP16, 4>;
-  defm LE : UnaryRXPair<"le", 0x78, 0xED64, z_load, FP32, 4>;
-  defm LD : UnaryRXPair<"ld", 0x68, 0xED65, z_load, FP64, 8>;
+  let isReMaterializable = 1 in {
+    let isCodeGenOnly = 1 in
+      // Reload f16 from 4-byte spill slot.
+      defm LE16 : UnaryRXPair<"le", 0x78, 0xED64, z_load, FP16, 4>;
+    defm LE : UnaryRXPair<"le", 0x78, 0xED64, z_load, FP32, 4>;
+    defm LD : UnaryRXPair<"ld", 0x68, 0xED65, z_load, FP64, 8>;
 
-  // For z13 we prefer LDE over LE to avoid partial register dependencies.
-  let isCodeGenOnly = 1 in
-    def LDE32 : UnaryRXE<"lde", 0xED24, null_frag, FP32, 4>;
+    // For z13 we prefer LDE over LE to avoid partial register dependencies.
+    let isCodeGenOnly = 1 in
+      def LDE32 : UnaryRXE<"lde", 0xED24, null_frag, FP32, 4>;
 
-  // These instructions are split after register allocation, so we don't
-  // want a custom inserter.
-  let Has20BitOffset = 1, HasIndex = 1, Is128Bit = 1 in {
-    def LX : Pseudo<(outs FP128:$dst), (ins bdxaddr20only128:$src),
-                     [(set FP128:$dst, (load bdxaddr20only128:$src))]>;
+    // These instructions are split after register allocation, so we don't
+    // want a custom inserter.
+    let Has20BitOffset = 1, HasIndex = 1, Is128Bit = 1 in {
+      def LX : Pseudo<(outs FP128:$dst), (ins bdxaddr20only128:$src),
+                       [(set FP128:$dst, (load bdxaddr20only128:$src))]>;
+    }
   }
 }
 
