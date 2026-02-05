@@ -71,8 +71,8 @@ public:
 
     void ResetDeclMap(ExecutionContext &exe_ctx,
                       Materializer::PersistentVariableDelegate &result_delegate,
-                      bool keep_result_in_memory,
-                      ValueObject *ctx_obj);
+                      bool keep_result_in_memory, ValueObject *ctx_obj,
+                      bool ignore_context_qualifiers);
 
     /// Return the object that the parser should allow to access ASTs. May be
     /// NULL if the ASTs do not need to be transformed.
@@ -166,9 +166,9 @@ public:
   void ResetDeclMap(ExecutionContext &exe_ctx,
                     Materializer::PersistentVariableDelegate &result_delegate,
                     bool keep_result_in_memory) {
-    m_type_system_helper.ResetDeclMap(exe_ctx, result_delegate,
-                                      keep_result_in_memory,
-                                      m_ctx_obj);
+    m_type_system_helper.ResetDeclMap(
+        exe_ctx, result_delegate, keep_result_in_memory, m_ctx_obj,
+        m_options.GetCppIgnoreContextQualifiers());
   }
 
   lldb::ExpressionVariableSP
