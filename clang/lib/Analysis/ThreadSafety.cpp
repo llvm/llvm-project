@@ -2277,7 +2277,6 @@ void BuildLockset::VisitUnaryOperator(const UnaryOperator *UO) {
 void BuildLockset::VisitBinaryOperator(const BinaryOperator *BO) {
   if (!BO->isAssignmentOp())
     return;
-  
   checkAccess(BO->getLHS(), AK_Written);
   updateLocalVarMapCtx(BO);
 }
