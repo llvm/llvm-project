@@ -387,6 +387,20 @@ Register SPIRVGlobalRegistry::getOrCreateConstInt(uint64_t Val, MachineInstr &I,
   return createConstInt(CI, I, SpvType, TII, ZeroAsNull);
 }
 
+Register SPIRVGlobalRegistry::getOrCreateConstInt(const APInt &Val,
+                                                  MachineInstr &I,
+                                                  SPIRVType *SpvType,
+                                                  const SPIRVInstrInfo &TII,
+                                                  bool ZeroAsNull) {
+  auto *const CI = ConstantInt::get(
+      cast<IntegerType>(getTypeForSPIRVType(SpvType))->getContext(), Val);
+  const MachineInstr *MI = findMI(CI, CurMF);
+  if (MI && (MI->getOpcode() == SPIRV::OpConstantNull ||
+             MI->getOpcode() == SPIRV::OpConstantI))
+    return MI->getOperand(0).getReg();
+  return createConstInt(CI, I, SpvType, TII, ZeroAsNull);
+}
+
 Register SPIRVGlobalRegistry::createConstInt(const ConstantInt *CI,
                                              MachineInstr &I,
                                              SPIRVType *SpvType,
@@ -525,8 +539,8 @@ Register SPIRVGlobalRegistry::getOrCreateBaseRegister(
   }
   assert(Type->getOpcode() == SPIRV::OpTypeInt);
   SPIRVType *SpvBaseType = getOrCreateSPIRVIntegerType(BitWidth, I, TII);
-  return getOrCreateConstInt(Val->getUniqueInteger().getZExtValue(), I,
-                             SpvBaseType, TII, ZeroAsNull);
+  return getOrCreateConstInt(Val->getUniqueInteger(), I, SpvBaseType, TII,
+                             ZeroAsNull);
 }
 
 Register SPIRVGlobalRegistry::getOrCreateCompositeOrNull(
@@ -584,6 +598,27 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(uint64_t Val,
   Type *LLVMBaseTy = LLVMVecTy->getElementType();
   assert(LLVMBaseTy->isIntegerTy());
   auto *ConstVal = ConstantInt::get(LLVMBaseTy, Val);
+  auto *ConstVec =
+      ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstVal);
+  unsigned BW = getScalarOrVectorBitWidth(SpvType);
+  return getOrCreateCompositeOrNull(ConstVal, I, SpvType, TII, ConstVec, BW,
+                                    SpvType->getOperand(2).getImm(),
+                                    ZeroAsNull);
+}
+
+Register SPIRVGlobalRegistry::getOrCreateConstVector(const APInt &Val,
+                                                     MachineInstr &I,
+                                                     SPIRVType *SpvType,
+                                                     const SPIRVInstrInfo &TII,
+                                                     bool ZeroAsNull) {
+  const Type *LLVMTy = getTypeForSPIRVType(SpvType);
+  assert(LLVMTy->isVectorTy() &&
+         "Expected vector type for constant vector creation");
+  const FixedVectorType *LLVMVecTy = cast<FixedVectorType>(LLVMTy);
+  Type *LLVMBaseTy = LLVMVecTy->getElementType();
+  assert(LLVMBaseTy->isIntegerTy() &&
+         "Expected integer element type for APInt constant vector");
+  auto *ConstVal = cast<ConstantInt>(ConstantInt::get(LLVMBaseTy, Val));
   auto *ConstVec =
       ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstVal);
   unsigned BW = getScalarOrVectorBitWidth(SpvType);
