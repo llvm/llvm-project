@@ -2792,7 +2792,20 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                 if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
                         converter.genType(*typeSpec)))
                   mapperId = getOrGenImplicitDefaultDeclareMapper(
-                      converter, loc, recordType, mapperIdName);
+                      converter.getFirOpBuilder(), loc, recordType,
+                      mapperIdName,
+                      [&](std::string &mapperIdName,
+                          llvm::StringRef memberName) {
+                        if (auto *sym = converter.getCurrentScope().FindSymbol(
+                                mapperIdName))
+                          mapperIdName =
+                              converter.mangleName(mapperIdName, sym->owner());
+                        else if (auto *memberSym =
+                                     converter.getCurrentScope().FindSymbol(
+                                         memberName.str()))
+                          mapperIdName = converter.mangleName(
+                              mapperIdName, memberSym->owner());
+                      });
               } else {
                 mapperId = mlir::FlatSymbolRefAttr::get(
                     &converter.getMLIRContext(), mapperIdName);
