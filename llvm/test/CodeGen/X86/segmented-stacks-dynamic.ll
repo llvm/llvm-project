@@ -61,8 +61,8 @@ define i32 @test_basic(i32 %l) #0 {
 ; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl
 ; X86-NEXT:  .LBB0_1:
-; X86-NEXT:    .cfi_restore %ebp
 ; X86-NEXT:    .cfi_restore %esi
+; X86-NEXT:    .cfi_restore %ebp
 ; X86-NEXT:    pushl $4
 ; X86-NEXT:    pushl $12
 ; X86-NEXT:    calll __morestack
