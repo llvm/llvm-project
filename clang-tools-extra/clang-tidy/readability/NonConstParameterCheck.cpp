@@ -225,8 +225,8 @@ void NonConstParameterCheck::markCanNotBeConst(const Expr *E,
     for (unsigned I = 0U; I < ILE->getNumInits(); ++I)
       markCanNotBeConst(ILE->getInit(I), true);
   } else if (const auto *UCE = dyn_cast<CXXUnresolvedConstructExpr>(E)) {
-    for (const auto *Arg : UCE->arguments())
-      markCanNotBeConst(Arg->IgnoreParenCasts(), true);
+    // Skip template-dependent constructors
+    return;
   } else if (CanNotBeConst) {
     // Referencing parameter.
     if (const auto *D = dyn_cast<DeclRefExpr>(E)) {
