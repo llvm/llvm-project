@@ -9,7 +9,7 @@
 #ifndef __OMPX_H
 #define __OMPX_H
 
-#if (defined(__NVPTX__) || defined(__AMDGPU__))
+#if (defined(__NVPTX__) || defined(__AMDGPU__) || defined(__SPIRV__))
 #include <gpuintrin.h>
 #define __OMPX_TARGET_IS_GPU
 #endif
