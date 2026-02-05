@@ -49,6 +49,8 @@
 //  - if the 11 exponent bits of the output are not all 1, then there are
 //    definitely no NaNs, so a fast path can handle most non-NaN cases.
 
+// clang-format off
+
   push    {r4,r5,r6,lr}
 
   // Set up the constant 1 << 20 in a register, which we'll need on all
