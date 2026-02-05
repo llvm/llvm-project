@@ -32,7 +32,8 @@ class TestCase(TestBase):
             "expression x = 7.0",
             error=True,
             substrs=[
-                "cannot assign to non-static data member within const member function"
+                "cannot assign to non-static data member within const member function",
+                "note: Possibly trying to mutate object in a const context. Try running the expression with",
             ],
         )
 
