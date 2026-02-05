@@ -258,7 +258,7 @@ void X86CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW,
 
 } // namespace
 
-void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
+void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "X86PassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 }

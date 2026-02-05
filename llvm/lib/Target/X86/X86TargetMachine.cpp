@@ -80,7 +80,6 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86FPStackifierLegacyPass(PR);
   initializeX86FixupSetCCLegacyPass(PR);
   initializeX86CallFrameOptimizationLegacyPass(PR);
-  initializeX86CleanupLocalDynamicTLSLegacyPass(PR);
   initializeX86CmovConversionLegacyPass(PR);
   initializeX86TileConfigLegacyPass(PR);
   initializeX86FastPreTileConfigLegacyPass(PR);

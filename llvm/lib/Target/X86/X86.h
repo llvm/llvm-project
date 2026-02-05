@@ -273,8 +273,8 @@ public:
 
 FunctionPass *createX86DomainReassignmentLegacyPass();
 
-/// This pass compress instructions from EVEX space to legacy/VEX/EVEX space
-/// when possible in order to reduce code size or facilitate HW decoding.
+/// This pass compress instructions from EVEX space to legacy/VEX/EVEX space when
+/// possible in order to reduce code size or facilitate HW decoding.
 class X86CompressEVEXPass : public PassInfoMixin<X86CompressEVEXPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,

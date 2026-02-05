@@ -49,12 +49,6 @@ public:
 
 char X86CleanupLocalDynamicTLSLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(X86CleanupLocalDynamicTLSLegacy, DEBUG_TYPE,
-                      "Local Dynamic TLS Access Clean-up", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(X86CleanupLocalDynamicTLSLegacy, DEBUG_TYPE,
-                    "Local Dynamic TLS Access Clean-up", false, false)
-
 FunctionPass *llvm::createCleanupLocalDynamicTLSLegacyPass() {
   return new X86CleanupLocalDynamicTLSLegacy();
 }
@@ -160,11 +154,5 @@ PreservedAnalyses
 X86CleanupLocalDynamicTLSPass::run(MachineFunction &MF,
                                    MachineFunctionAnalysisManager &MFAM) {
   MachineDominatorTree &DT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  bool Changed = cleanupLocalDynamicTLS(MF, DT);
-  if (!Changed)
-    return PreservedAnalyses::all();
-  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  PA.preserveSet<CFGAnalyses>();
-  return PA;
+  return cleanupLocalDynamicTLS(MF, DT)? getMachineFunctionPassPreservedAnalyses().preserve<CFGAnalyses>(): PreservedAnalyses::all();
 }
