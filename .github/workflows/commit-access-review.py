@@ -233,13 +233,13 @@ def count_prs(gh: github.Github, triage_list: dict, start_date: datetime.datetim
 
     query = """
         query ($query: String!, $after: String) {
-          search(query: $query, type: ISSUE, first: 100, after: $after) {
           rateLimit {
             cost
             remaining
             resetAt
             limit
           }
+          search(query: $query, type: ISSUE, first: 100, after: $after) {
             issueCount,
             nodes {
               ... on PullRequest {
