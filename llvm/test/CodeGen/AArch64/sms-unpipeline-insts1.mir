@@ -59,7 +59,7 @@ body:             |
 
   bb.1.for.body.preheader:
     %11:gpr32 = ORRWrs $wzr, %9, 0
-    %0:gpr64all = SUBREG_TO_REG 0, killed %11, %subreg.sub_32
+    %0:gpr64all = SUBREG_TO_REG killed %11, %subreg.sub_32
     %14:fpr32 = FMOVSi 0
     %15:fpr32 = FMOVSi 112
     B %bb.3

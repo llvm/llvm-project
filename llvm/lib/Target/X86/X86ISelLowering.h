@@ -1508,12 +1508,12 @@ namespace llvm {
                                               unsigned SelectOpcode, SDValue X,
                                               SDValue Y) const override;
 
-    /// Given an intrinsic, checks if on the target the intrinsic will need to map
-    /// to a MemIntrinsicNode (touches memory). If this is the case, it returns
-    /// true and stores the intrinsic information into the IntrinsicInfo that was
-    /// passed to the function.
-    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                            MachineFunction &MF,
+    /// Given an intrinsic, checks if on the target the intrinsic will need to
+    /// map to a MemIntrinsicNode (touches memory). If this is the case, it
+    /// returns true and stores the intrinsic information into the IntrinsicInfo
+    /// that was passed to the function.
+    void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                            const CallBase &I, MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
     /// Returns true if the target can instruction select the

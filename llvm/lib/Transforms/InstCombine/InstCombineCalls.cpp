@@ -3699,7 +3699,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           /// TODO: we can generate a GEP instead of merging the alignment with
           /// the offset.
           RetainedKnowledge RK{Attribute::Alignment,
-                               (unsigned)MinAlign(Offset, AlignMask + 1), A};
+                               MinAlign(Offset, AlignMask + 1), A};
           if (auto *Replacement =
                   buildAssumeFromKnowledge(RK, Next, &AC, &DT)) {
 
