@@ -138,6 +138,35 @@ void bad_pointers() {
     // *a and_eq *b;
 }
 
+void bad_compound_pointers_as_lhs() {
+    bool a = true, b = false;
+    bool *pa = &a;
+    *pa or_eq b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: *pa = *pa or b;
+    *pa and_eq b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: *pa = *pa and b;
+}
+
+class BoolWrapper {
+    bool value;
+public:
+    BoolWrapper(bool v) : value(v) {}
+    bool& operator*() { return value; }
+};
+
+void bad_compound_user_defined_dereference_as_lhs() {
+    bool b = false;
+    BoolWrapper wrapper(true);
+    *wrapper or_eq b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+    *wrapper and_eq b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+}
+
 void bad_side_effects_volatile() {
     bool a = true;
     volatile bool b = false;

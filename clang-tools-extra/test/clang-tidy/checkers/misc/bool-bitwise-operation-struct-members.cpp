@@ -141,3 +141,46 @@ void bad_no_fixit() {
     // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
 }
+
+struct A_with_ptrs {
+    int* first;
+    bool* second;
+};
+
+void bad_pointers() {
+    int first = -1;
+    bool second = true;
+    A_with_ptrs a {&first, &second};
+    bool b = false;
+
+    *a.second |= b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: *a.second = *a.second || b;
+    *a.second &= b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-FIXES: *a.second = *a.second && b;
+}
+
+struct BoolWrapper {
+    bool value;
+    bool& operator*() { return value; }
+};
+
+struct A_with_wrapper {
+    int first;
+    BoolWrapper second;
+};
+
+void bad_user_defined_deref() {
+    int first = -1;
+    BoolWrapper second {true};
+    A_with_wrapper a {first, second};
+    bool b = false;
+
+    *a.second |= b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+    *a.second &= b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
+    // CHECK-MESSAGES-NOT: :[[@LINE-2]]:{{.*}}: note: FIX-IT applied suggested code changes
+}

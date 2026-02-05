@@ -180,6 +180,7 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   auto CompoundOperator = hasAnyOperatorName("|=", "&=");
   auto ExprWithSideEffects = traverse(
       TK_AsIs, expr(hasSideEffects(/*IncludePossibleEffects=*/!UnsafeMode)));
+  auto SimpleLhs = anyOf(declRefExpr(), memberExpr());
 
   auto FixItMatcher = binaryOperator(
       // Both operands must be non-volatile at the top level.
@@ -191,7 +192,10 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
           hasAnyOperatorName("|", "&"),
           // Compound assignments ('|=' / '&='): require a simple
           // LHS so that we can safely duplicate it on the RHS.
-          allOf(CompoundOperator, hasLHS(anyOf(declRefExpr(), memberExpr())))));
+          allOf(CompoundOperator,
+                hasLHS(anyOf(SimpleLhs,
+                             unaryOperator(hasOperatorName("*"),
+                                           hasUnaryOperand(SimpleLhs)))))));
 
   auto LhsOfCompoundMatcher = traverse(TK_AsIs, expr().bind("lhsOfCompound"));
 
