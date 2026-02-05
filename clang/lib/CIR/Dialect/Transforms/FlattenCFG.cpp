@@ -217,8 +217,7 @@ public:
         rewriter, op.getLoc(), uIntType, CastKind::integral, rangeLength);
 
     cir::CmpOp cmpResult = cir::CmpOp::create(
-        rewriter, op.getLoc(), cir::BoolType::get(op.getContext()),
-        cir::CmpOpKind::le, uDiffValue, uRangeLength);
+        rewriter, op.getLoc(), cir::CmpOpKind::le, uDiffValue, uRangeLength);
     cir::BrCondOp::create(rewriter, op.getLoc(), cmpResult, rangeDestination,
                           defaultDestination);
     return resBlock;
@@ -663,9 +662,6 @@ void CIRFlattenCFGPass::runOnOperation() {
   // Collect operations to apply patterns.
   llvm::SmallVector<Operation *, 16> ops;
   getOperation()->walk<mlir::WalkOrder::PostOrder>([&](Operation *op) {
-    assert(!cir::MissingFeatures::ifOp());
-    assert(!cir::MissingFeatures::switchOp());
-    assert(!cir::MissingFeatures::tryOp());
     if (isa<IfOp, ScopeOp, SwitchOp, LoopOpInterface, TernaryOp, TryOp>(op))
       ops.push_back(op);
   });

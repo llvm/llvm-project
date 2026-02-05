@@ -104,18 +104,24 @@ ModuleDependencyScanner::scan(PathRef FilePath,
   if (Mangler)
     Mangler(Cmd, FilePath);
 
-  using namespace clang::tooling::dependencies;
+  using namespace clang::tooling;
 
   llvm::SmallString<128> FilePathDir(FilePath);
   llvm::sys::path::remove_filename(FilePathDir);
   DependencyScanningTool ScanningTool(Service, TFS.view(FilePathDir));
 
-  llvm::Expected<P1689Rule> ScanningResult =
-      ScanningTool.getP1689ModuleDependencyFile(Cmd, Cmd.Directory);
+  std::string S;
+  llvm::raw_string_ostream OS(S);
+  DiagnosticOptions DiagOpts;
+  DiagOpts.ShowCarets = false;
+  TextDiagnosticPrinter DiagConsumer(OS, DiagOpts);
 
-  if (auto E = ScanningResult.takeError()) {
-    elog("Scanning modules dependencies for {0} failed: {1}", FilePath,
-         llvm::toString(std::move(E)));
+  std::optional<P1689Rule> ScanningResult =
+      ScanningTool.getP1689ModuleDependencyFile(Cmd, Cmd.Directory,
+                                                DiagConsumer);
+
+  if (!ScanningResult) {
+    elog("Scanning modules dependencies for {0} failed: {1}", FilePath, S);
     return std::nullopt;
   }
 

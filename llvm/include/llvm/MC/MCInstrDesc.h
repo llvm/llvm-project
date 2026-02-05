@@ -211,7 +211,7 @@ public:
   unsigned char NumImplicitUses; // Num of regs implicitly used
   unsigned char NumImplicitDefs; // Num of regs implicitly defined
   unsigned short OpInfoOffset;   // Offset to info about operands
-  unsigned int ImplicitOffset;   // Offset to start of implicit op list
+  unsigned short ImplicitOffset; // Offset to start of implicit op list
   uint64_t Flags;                // Flags identifying machine instr class
   uint64_t TSFlags;              // Target Specific Flag values
 

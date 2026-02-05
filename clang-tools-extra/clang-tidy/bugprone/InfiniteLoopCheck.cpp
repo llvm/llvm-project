@@ -130,9 +130,8 @@ static std::string getCondVarNames(const Stmt *Cond) {
     if (const auto *Var = dyn_cast<VarDecl>(DRE->getDecl()))
       return std::string(Var->getName());
 
-    if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl())) {
+    if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl()))
       return std::string(BD->getName());
-    }
   }
 
   std::string Result;
@@ -204,7 +203,7 @@ static bool populateCallees(const Stmt *StmtNode,
   return true;
 }
 
-/// returns true iff `SCC` contains `Func` and its' function set overlaps with
+/// returns true iff `SCC` contains `Func` and its function set overlaps with
 /// `Callees`
 static bool overlap(ArrayRef<CallGraphNode *> SCC,
                     const llvm::SmallPtrSet<const Decl *, 16> &Callees,

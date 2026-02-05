@@ -36,8 +36,8 @@ VPTypeAnalysis::VPTypeAnalysis(const VPlan &Plan) : Ctx(Plan.getContext()) {
   // If there's no canonical IV, retrieve the type from the trip count
   // expression.
   auto *TC = Plan.getTripCount();
-  if (TC->isLiveIn()) {
-    CanonicalIVTy = TC->getLiveInIRValue()->getType();
+  if (auto *TCIRV = dyn_cast<VPIRValue>(TC)) {
+    CanonicalIVTy = TCIRV->getType();
     return;
   }
   CanonicalIVTy = cast<VPExpandSCEVRecipe>(TC)->getSCEV()->getType();
@@ -75,8 +75,18 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::Freeze:
+  case Instruction::PHI:
+  case VPInstruction::Broadcast:
+  case VPInstruction::ComputeReductionResult:
+  case VPInstruction::ExtractLastLane:
+  case VPInstruction::ExtractPenultimateElement:
+  case VPInstruction::ExtractLastPart:
+  case VPInstruction::ExtractLastActive:
+  case VPInstruction::PtrAdd:
+  case VPInstruction::WidePtrAdd:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::ResumeForEpilogue:
+  case VPInstruction::Reverse:
     return inferScalarType(R->getOperand(0));
   case Instruction::Select: {
     Type *ResTy = inferScalarType(R->getOperand(1));
@@ -95,16 +105,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return IntegerType::get(Ctx, 1);
   case VPInstruction::ComputeAnyOfResult:
     return inferScalarType(R->getOperand(1));
-  case VPInstruction::ComputeFindIVResult:
-  case VPInstruction::ComputeReductionResult: {
-    return inferScalarType(R->getOperand(0));
-  }
   case VPInstruction::ExplicitVectorLength:
     return Type::getIntNTy(Ctx, 32);
-  case Instruction::PHI:
-    // Infer the type of first operand only, as other operands of header phi's
-    // may lead to infinite recursion.
-    return inferScalarType(R->getOperand(0));
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::Not:
   case VPInstruction::CalculateTripCountMinusVF:
@@ -119,25 +121,13 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
     return Type::getIntNTy(Ctx, 64);
-  case VPInstruction::ExtractLastElement:
-  case VPInstruction::ExtractLastLanePerPart:
-  case VPInstruction::ExtractPenultimateElement: {
-    Type *BaseTy = inferScalarType(R->getOperand(0));
-    if (auto *VecTy = dyn_cast<VectorType>(BaseTy))
-      return VecTy->getElementType();
-    return BaseTy;
-  }
   case VPInstruction::LogicalAnd:
     assert(inferScalarType(R->getOperand(0))->isIntegerTy(1) &&
            inferScalarType(R->getOperand(1))->isIntegerTy(1) &&
            "LogicalAnd operands should be bool");
     return IntegerType::get(Ctx, 1);
-  case VPInstruction::Broadcast:
-  case VPInstruction::PtrAdd:
-  case VPInstruction::WidePtrAdd:
-    // Return the type based on first operand.
-    return inferScalarType(R->getOperand(0));
   case VPInstruction::BranchOnCond:
+  case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
     return Type::getVoidTy(Ctx);
   default:
@@ -172,8 +162,16 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
   case Instruction::ExtractValue: {
     assert(R->getNumOperands() == 2 && "expected single level extractvalue");
     auto *StructTy = cast<StructType>(inferScalarType(R->getOperand(0)));
-    auto *CI = cast<ConstantInt>(R->getOperand(1)->getLiveInIRValue());
-    return StructTy->getTypeAtIndex(CI->getZExtValue());
+    return StructTy->getTypeAtIndex(
+        cast<VPConstantInt>(R->getOperand(1))->getZExtValue());
+  }
+  case Instruction::Select: {
+    Type *ResTy = inferScalarType(R->getOperand(1));
+    VPValue *OtherV = R->getOperand(2);
+    assert(inferScalarType(OtherV) == ResTy &&
+           "different types inferred for different operands");
+    CachedTypes[OtherV] = ResTy;
+    return ResTy;
   }
   default:
     break;
@@ -196,15 +194,6 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenMemoryRecipe *R) {
   assert((isa<VPWidenLoadRecipe, VPWidenLoadEVLRecipe>(R)) &&
          "Store recipes should not define any values");
   return cast<LoadInst>(&R->getIngredient())->getType();
-}
-
-Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenSelectRecipe *R) {
-  Type *ResTy = inferScalarType(R->getOperand(1));
-  VPValue *OtherV = R->getOperand(2);
-  assert(inferScalarType(OtherV) == ResTy &&
-         "different types inferred for different operands");
-  CachedTypes[OtherV] = ResTy;
-  return ResTy;
 }
 
 Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPReplicateRecipe *R) {
@@ -267,9 +256,10 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
   if (Type *CachedTy = CachedTypes.lookup(V))
     return CachedTy;
 
-  if (V->isLiveIn()) {
-    if (auto *IRValue = V->getLiveInIRValue())
-      return IRValue->getType();
+  if (auto *IRV = dyn_cast<VPIRValue>(V))
+    return IRV->getType();
+
+  if (isa<VPSymbolicValue>(V)) {
     // All VPValues without any underlying IR value (like the vector trip count
     // or the backedge-taken count) have the same type as the canonical IV.
     return CanonicalIVTy;
@@ -300,19 +290,19 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
                 VPWidenCastRecipe>(
               [](const auto *R) { return R->getResultType(); })
           .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
-                VPWidenCallRecipe, VPWidenMemoryRecipe, VPWidenSelectRecipe>(
+                VPWidenCallRecipe, VPWidenMemoryRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
-          .Case<VPInterleaveBase>([V](const auto *R) {
+          .Case([V](const VPInterleaveBase *R) {
             // TODO: Use info from interleave group.
             return V->getUnderlyingValue()->getType();
           })
-          .Case<VPExpandSCEVRecipe>([](const VPExpandSCEVRecipe *R) {
+          .Case([](const VPExpandSCEVRecipe *R) {
             return R->getSCEV()->getType();
           })
-          .Case<VPReductionRecipe>([this](const auto *R) {
+          .Case([this](const VPReductionRecipe *R) {
             return inferScalarType(R->getChainOp());
           })
-          .Case<VPExpressionRecipe>([this](const auto *R) {
+          .Case([this](const VPExpressionRecipe *R) {
             return inferScalarType(R->getOperandOfResultType());
           });
 
@@ -450,8 +440,8 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
         // FIXME: Might need some motivation why these values are ignored. If
         // for example an argument is used inside the loop it will increase the
         // register pressure (so shouldn't we add it to LoopInvariants).
-        if (!DefR && (!U->getLiveInIRValue() ||
-                      !isa<Instruction>(U->getLiveInIRValue())))
+        auto *IRV = dyn_cast<VPIRValue>(U);
+        if (!DefR && (!IRV || !isa<Instruction>(IRV->getValue())))
           continue;
 
         // If this recipe is outside the loop then record it and continue.
@@ -540,11 +530,14 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
       SmallMapVector<unsigned, unsigned, 4> RegUsage;
 
       for (auto *VPV : OpenIntervals) {
-        // Skip values that weren't present in the original loop.
-        // TODO: Remove after removing the legacy
+        // Skip artificial values or values that weren't present in the original
+        // loop.
+        // TODO: Remove skipping values that weren't present in the original
+        // loop after removing the legacy
         // LoopVectorizationCostModel::calculateRegisterUsage
         if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe,
-                VPBranchOnMaskRecipe>(VPV))
+                VPBranchOnMaskRecipe>(VPV) ||
+            match(VPV, m_ExtractLastPart(m_VPValue())))
           continue;
 
         if (VFs[J].isScalar() ||

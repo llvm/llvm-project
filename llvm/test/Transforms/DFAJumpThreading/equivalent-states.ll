@@ -233,7 +233,7 @@ define void @equivalent_both_case_and_default(i1 %c1, i1 %c2) {
 ; CHECK-NEXT:    call void @do_something()
 ; CHECK-NEXT:    br label [[SWITCH_BB]]
 ; CHECK:       case2end.jt4:
-; CHECK-NEXT:    [[PHI_CASE2_JT3]] = phi i32 [ 4, [[CASE2THEN2]] ], [ 5, [[CASE2THEN3]] ]
+; CHECK-NEXT:    [[PHI_CASE2_JT3]] = phi i32 [ 5, [[CASE2THEN3]] ], [ 4, [[CASE2THEN2]] ]
 ; CHECK-NEXT:    call void @do_something()
 ; CHECK-NEXT:    br label [[SWITCH_BB_JT3:%.*]]
 ; CHECK:       case2end.jt2:

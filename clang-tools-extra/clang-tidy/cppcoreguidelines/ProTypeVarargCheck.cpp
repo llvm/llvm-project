@@ -120,9 +120,8 @@ public:
 
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
                     SourceRange Range, const MacroArgs *Args) override {
-    if (MacroNameTok.getIdentifierInfo()->getName() == "va_arg") {
+    if (MacroNameTok.getIdentifierInfo()->getName() == "va_arg")
       Check->diag(MacroNameTok.getLocation(), VaArgWarningMessage);
-    }
   }
 
 private:
@@ -179,12 +178,21 @@ void ProTypeVarargCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Matched = Result.Nodes.getNodeAs<CallExpr>("callvararg")) {
     if (hasSingleVariadicArgumentWithValue(Matched, 0))
       return;
+
+    // Skip builtins with custom type checking - they use variadics as an
+    // implementation detail to accept multiple types, not for C-style varargs.
+    // TODO: Remove some of the entries from the `AllowedVariadics` list.
+    if (const auto *FD = Matched->getDirectCallee())
+      if (const unsigned BuiltinID = FD->getBuiltinID();
+          BuiltinID &&
+          Result.Context->BuiltinInfo.hasCustomTypechecking(BuiltinID))
+        return;
+
     diag(Matched->getExprLoc(), "do not call c-style vararg functions");
   }
 
-  if (const auto *Matched = Result.Nodes.getNodeAs<Expr>("va_use")) {
+  if (const auto *Matched = Result.Nodes.getNodeAs<Expr>("va_use"))
     diag(Matched->getExprLoc(), VaArgWarningMessage);
-  }
 
   if (const auto *Matched = Result.Nodes.getNodeAs<VarDecl>("va_list")) {
     auto SR = Matched->getSourceRange();

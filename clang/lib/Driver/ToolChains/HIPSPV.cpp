@@ -69,11 +69,8 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
       "generic"; // SPIR-V is generic, no specific target ID like -mcpu
   tools::AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkArgs, Arch,
                                     Target, /*IsBitCodeSDL=*/true);
-  LinkArgs.append({"-o", TempFile});
-  const char *LlvmLink =
-      Args.MakeArgString(getToolChain().GetProgramPath("llvm-link"));
-  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
-                                         LlvmLink, LinkArgs, Inputs, Output));
+  tools::constructLLVMLinkCommand(C, *this, JA, Inputs, LinkArgs, Output, Args,
+                                  TempFile);
 
   // Post-link HIP lowering.
 
@@ -134,7 +131,7 @@ void HIPSPVToolChain::addClangTargetOptions(
          "Only HIP offloading kinds are supported for GPUs.");
 
   CC1Args.append(
-      {"-fcuda-is-device", "-fcuda-allow-variadic-functions",
+      {"-fcuda-is-device",
        // A crude workaround for llvm-spirv which does not handle the
        // autovectorized code well (vector reductions, non-i{8,16,32,64} types).
        // TODO: Allow autovectorization when SPIR-V backend arrives.

@@ -991,7 +991,7 @@ void RecursiveSearchSplitting::run() {
   {
     SplitModuleTimer SMT("recursive_search_pick", "partitioning");
     SplitProposal SP(SG, NumParts);
-    pickPartition(/*BranchDepth=*/0, /*Idx=*/0, SP);
+    pickPartition(/*BranchDepth=*/0, /*Idx=*/0, std::move(SP));
   }
 }
 
@@ -1138,7 +1138,7 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
       LLVM_DEBUG(dbgs().indent(Depth)
                  << " [lb] " << Idx << "=P" << CheapestPID << "? ");
       BranchSP.add(CheapestPID, Cluster);
-      pickPartition(Depth + 1, Idx + 1, BranchSP);
+      pickPartition(Depth + 1, Idx + 1, std::move(BranchSP));
     }
 
     // ms = most similar = put in partition with the most in common
@@ -1147,7 +1147,7 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
       LLVM_DEBUG(dbgs().indent(Depth)
                  << " [ms] " << Idx << "=P" << MostSimilarPID << "? ");
       BranchSP.add(MostSimilarPID, Cluster);
-      pickPartition(Depth + 1, Idx + 1, BranchSP);
+      pickPartition(Depth + 1, Idx + 1, std::move(BranchSP));
     }
 
     return;
@@ -1161,7 +1161,7 @@ void RecursiveSearchSplitting::pickPartition(unsigned Depth, unsigned Idx,
   SP.setName("recursive_search (depth=" + std::to_string(Depth) + ") #" +
              std::to_string(NumProposalsSubmitted++));
   LLVM_DEBUG(dbgs() << '\n');
-  SubmitProposal(SP);
+  SubmitProposal(std::move(SP));
 }
 
 std::pair<unsigned, CostType>

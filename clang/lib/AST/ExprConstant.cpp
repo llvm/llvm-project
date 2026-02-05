@@ -794,13 +794,8 @@ namespace {
   /// rules.  For example, the RHS of (0 && foo()) is not evaluated.  We can
   /// evaluate the expression regardless of what the RHS is, but C only allows
   /// certain things in certain situations.
-  class EvalInfo : public interp::State {
+  class EvalInfo final : public interp::State {
   public:
-    ASTContext &Ctx;
-
-    /// EvalStatus - Contains information about the evaluation.
-    Expr::EvalStatus &EvalStatus;
-
     /// CurrentCall - The top of the constexpr call stack.
     CallStackFrame *CurrentCall;
 
@@ -919,16 +914,8 @@ namespace {
     /// initialization.
     uint64_t ArrayInitIndex = -1;
 
-    /// HasActiveDiagnostic - Was the previous diagnostic stored? If so, further
-    /// notes attached to it will also be stored, otherwise they will not be.
-    bool HasActiveDiagnostic;
-
-    /// Have we emitted a diagnostic explaining why we couldn't constant
-    /// fold (not just why it's not strictly a constant expression)?
-    bool HasFoldFailureDiagnostic;
-
     EvalInfo(const ASTContext &C, Expr::EvalStatus &S, EvaluationMode Mode)
-        : Ctx(const_cast<ASTContext &>(C)), EvalStatus(S), CurrentCall(nullptr),
+        : State(const_cast<ASTContext &>(C), S), CurrentCall(nullptr),
           CallStackDepth(0), NextCallIndex(1),
           StepsLeft(C.getLangOpts().ConstexprStepLimit),
           EnableNewConstInterp(C.getLangOpts().EnableNewConstInterp),
@@ -936,17 +923,13 @@ namespace {
                       /*This=*/nullptr,
                       /*CallExpr=*/nullptr, CallRef()),
           EvaluatingDecl((const ValueDecl *)nullptr),
-          EvaluatingDeclValue(nullptr), HasActiveDiagnostic(false),
-          HasFoldFailureDiagnostic(false) {
+          EvaluatingDeclValue(nullptr) {
       EvalMode = Mode;
     }
 
     ~EvalInfo() {
       discardCleanups();
     }
-
-    ASTContext &getASTContext() const override { return Ctx; }
-    const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
 
     void setEvaluatingDecl(APValue::LValueBase Base, APValue &Value,
                            EvaluatingDeclKind EDK = EvaluatingDeclKind::Ctor) {
@@ -990,7 +973,7 @@ namespace {
       // We use the number of constexpr steps as a proxy for the maximum size
       // of arrays to avoid exhausting the system resources, as initialization
       // of each element is likely to take some number of steps anyway.
-      uint64_t Limit = Ctx.getLangOpts().ConstexprStepLimit;
+      uint64_t Limit = getLangOpts().ConstexprStepLimit;
       if (Limit != 0 && ElemCount > Limit) {
         if (Diag)
           FFDiag(Loc, diag::note_constexpr_new_exceeds_limits)
@@ -1017,7 +1000,7 @@ namespace {
     }
 
     bool nextStep(const Stmt *S) {
-      if (Ctx.getLangOpts().ConstexprStepLimit == 0)
+      if (getLangOpts().ConstexprStepLimit == 0)
         return true;
 
       if (!StepsLeft) {
@@ -1101,110 +1084,13 @@ namespace {
     }
 
   private:
-    interp::Frame *getCurrentFrame() override { return CurrentCall; }
+    const interp::Frame *getCurrentFrame() override { return CurrentCall; }
     const interp::Frame *getBottomFrame() const override { return &BottomFrame; }
 
-    bool hasActiveDiagnostic() override { return HasActiveDiagnostic; }
-    void setActiveDiagnostic(bool Flag) override { HasActiveDiagnostic = Flag; }
-
-    void setFoldFailureDiagnostic(bool Flag) override {
-      HasFoldFailureDiagnostic = Flag;
-    }
-
-    Expr::EvalStatus &getEvalStatus() const override { return EvalStatus; }
-
-    // If we have a prior diagnostic, it will be noting that the expression
-    // isn't a constant expression. This diagnostic is more important,
-    // unless we require this evaluation to produce a constant expression.
-    //
-    // FIXME: We might want to show both diagnostics to the user in
-    // EvaluationMode::ConstantFold mode.
-    bool hasPriorDiagnostic() override {
-      if (!EvalStatus.Diag->empty()) {
-        switch (EvalMode) {
-        case EvaluationMode::ConstantFold:
-        case EvaluationMode::IgnoreSideEffects:
-          if (!HasFoldFailureDiagnostic)
-            break;
-          // We've already failed to fold something. Keep that diagnostic.
-          [[fallthrough]];
-        case EvaluationMode::ConstantExpression:
-        case EvaluationMode::ConstantExpressionUnevaluated:
-          setActiveDiagnostic(false);
-          return true;
-        }
-      }
-      return false;
-    }
-
     unsigned getCallStackDepth() override { return CallStackDepth; }
+    bool stepsLeft() const override { return StepsLeft > 0; }
 
   public:
-    /// Should we continue evaluation after encountering a side-effect that we
-    /// couldn't model?
-    bool keepEvaluatingAfterSideEffect() const override {
-      switch (EvalMode) {
-      case EvaluationMode::IgnoreSideEffects:
-        return true;
-
-      case EvaluationMode::ConstantExpression:
-      case EvaluationMode::ConstantExpressionUnevaluated:
-      case EvaluationMode::ConstantFold:
-        // By default, assume any side effect might be valid in some other
-        // evaluation of this expression from a different context.
-        return checkingPotentialConstantExpression() ||
-               checkingForUndefinedBehavior();
-      }
-      llvm_unreachable("Missed EvalMode case");
-    }
-
-    /// Note that we have had a side-effect, and determine whether we should
-    /// keep evaluating.
-    bool noteSideEffect() override {
-      EvalStatus.HasSideEffects = true;
-      return keepEvaluatingAfterSideEffect();
-    }
-
-    /// Should we continue evaluation after encountering undefined behavior?
-    bool keepEvaluatingAfterUndefinedBehavior() {
-      switch (EvalMode) {
-      case EvaluationMode::IgnoreSideEffects:
-      case EvaluationMode::ConstantFold:
-        return true;
-
-      case EvaluationMode::ConstantExpression:
-      case EvaluationMode::ConstantExpressionUnevaluated:
-        return checkingForUndefinedBehavior();
-      }
-      llvm_unreachable("Missed EvalMode case");
-    }
-
-    /// Note that we hit something that was technically undefined behavior, but
-    /// that we can evaluate past it (such as signed overflow or floating-point
-    /// division by zero.)
-    bool noteUndefinedBehavior() override {
-      EvalStatus.HasUndefinedBehavior = true;
-      return keepEvaluatingAfterUndefinedBehavior();
-    }
-
-    /// Should we continue evaluation as much as possible after encountering a
-    /// construct which can't be reduced to a value?
-    bool keepEvaluatingAfterFailure() const override {
-      uint64_t Limit = Ctx.getLangOpts().ConstexprStepLimit;
-      if (Limit != 0 && !StepsLeft)
-        return false;
-
-      switch (EvalMode) {
-      case EvaluationMode::ConstantExpression:
-      case EvaluationMode::ConstantExpressionUnevaluated:
-      case EvaluationMode::ConstantFold:
-      case EvaluationMode::IgnoreSideEffects:
-        return checkingPotentialConstantExpression() ||
-               checkingForUndefinedBehavior();
-      }
-      llvm_unreachable("Missed EvalMode case");
-    }
-
     /// Notes that we failed to evaluate an expression that other expressions
     /// directly depend on, and determine if we should keep evaluating. This
     /// should only be called if we actually intend to keep evaluating.
@@ -1973,10 +1859,12 @@ APValue *EvalInfo::createHeapAlloc(const Expr *E, QualType T, LValue &LV) {
 
 /// Produce a string describing the given constexpr call.
 void CallStackFrame::describe(raw_ostream &Out) const {
-  unsigned ArgIndex = 0;
-  bool IsMemberCall =
-      isa<CXXMethodDecl>(Callee) && !isa<CXXConstructorDecl>(Callee) &&
-      cast<CXXMethodDecl>(Callee)->isImplicitObjectMemberFunction();
+  bool IsMemberCall = false;
+  bool ExplicitInstanceParam = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(Callee)) {
+    IsMemberCall = !isa<CXXConstructorDecl>(MD) && !MD->isStatic();
+    ExplicitInstanceParam = MD->isExplicitObjectMemberFunction();
+  }
 
   if (!IsMemberCall)
     Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
@@ -2007,25 +1895,19 @@ void CallStackFrame::describe(raw_ostream &Out) const {
     }
     Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
                                  /*Qualified=*/false);
-    IsMemberCall = false;
   }
 
   Out << '(';
 
-  for (FunctionDecl::param_const_iterator I = Callee->param_begin(),
-       E = Callee->param_end(); I != E; ++I, ++ArgIndex) {
-    if (ArgIndex > (unsigned)IsMemberCall)
-      Out << ", ";
-
-    const ParmVarDecl *Param = *I;
-    APValue *V = Info.getParamSlot(Arguments, Param);
+  llvm::ListSeparator Comma;
+  for (const ParmVarDecl *Param :
+       Callee->parameters().slice(ExplicitInstanceParam)) {
+    Out << Comma;
+    const APValue *V = Info.getParamSlot(Arguments, Param);
     if (V)
       V->printPretty(Out, Info.Ctx, Param->getType());
     else
       Out << "<...>";
-
-    if (ArgIndex == 0 && IsMemberCall)
-      Out << "->" << *Callee << '(';
   }
 
   Out << ')';
@@ -2407,16 +2289,17 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
         return false;
 
       // A dllimport variable never acts like a constant, unless we're
-      // evaluating a value for use only in name mangling.
-      if (!isForManglingOnly(Kind) && Var->hasAttr<DLLImportAttr>())
-        // FIXME: Diagnostic!
+      // evaluating a value for use only in name mangling, and unless it's a
+      // static local. For the latter case, we'd still need to evaluate the
+      // constant expression in case we're inside a (inlined) function.
+      if (!isForManglingOnly(Kind) && Var->hasAttr<DLLImportAttr>() &&
+          !Var->isStaticLocal())
         return false;
 
       // In CUDA/HIP device compilation, only device side variables have
       // constant addresses.
-      if (Info.getASTContext().getLangOpts().CUDA &&
-          Info.getASTContext().getLangOpts().CUDAIsDevice &&
-          Info.getASTContext().CUDAConstantEvalCtx.NoWrongSidedVars) {
+      if (Info.getLangOpts().CUDA && Info.getLangOpts().CUDAIsDevice &&
+          Info.Ctx.CUDAConstantEvalCtx.NoWrongSidedVars) {
         if ((!Var->hasAttr<CUDADeviceAttr>() &&
              !Var->hasAttr<CUDAConstantAttr>() &&
              !Var->getType()->isCUDADeviceBuiltinSurfaceType() &&
@@ -2769,7 +2652,7 @@ static bool HandleFloatToIntCast(EvalInfo &Info, const Expr *E,
 /// So return "tonearest" mode instead of "dynamic".
 static llvm::RoundingMode getActiveRoundingMode(EvalInfo &Info, const Expr *E) {
   llvm::RoundingMode RM =
-      E->getFPFeaturesInEffect(Info.Ctx.getLangOpts()).getRoundingMode();
+      E->getFPFeaturesInEffect(Info.getLangOpts()).getRoundingMode();
   if (RM == llvm::RoundingMode::Dynamic)
     RM = llvm::RoundingMode::NearestTiesToEven;
   return RM;
@@ -2783,7 +2666,7 @@ static bool checkFloatingPointResult(EvalInfo &Info, const Expr *E,
   if (Info.InConstantContext)
     return true;
 
-  FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+  FPOptions FPO = E->getFPFeaturesInEffect(Info.getLangOpts());
   if ((St & APFloat::opInexact) &&
       FPO.getRoundingMode() == llvm::RoundingMode::Dynamic) {
     // Inexact result means that it depends on rounding mode. If the requested
@@ -4633,8 +4516,8 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     std::tie(Frame, Depth) =
         Info.getCallFrameAndDepth(LVal.getLValueCallIndex());
     if (!Frame) {
-      Info.FFDiag(E, diag::note_constexpr_lifetime_ended, 1)
-        << AK << LVal.Base.is<const ValueDecl*>();
+      Info.FFDiag(E, diag::note_constexpr_access_uninit, 1)
+          << AK << /*Indeterminate=*/false << E->getSourceRange();
       NoteLValueLocation(Info, LVal.Base);
       return CompleteObject();
     }
@@ -6328,7 +6211,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         *Info.CurrentCall, hasSpecificAttr<MSConstexprAttr>(AS->getAttrs()) &&
                                isa<ReturnStmt>(SS));
 
-    auto LO = Info.getASTContext().getLangOpts();
+    auto LO = Info.Ctx.getLangOpts();
     if (LO.CXXAssumptions && !LO.MSVCCompat) {
       for (auto *Attr : AS->getAttrs()) {
         auto *AA = dyn_cast<CXXAssumeAttr>(Attr);
@@ -6339,7 +6222,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         if (Assumption->isValueDependent())
           return ESR_Failed;
 
-        if (Assumption->HasSideEffects(Info.getASTContext()))
+        if (Assumption->HasSideEffects(Info.Ctx))
           continue;
 
         bool Value;
@@ -9327,8 +9210,8 @@ public:
   bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   bool VisitMemberExpr(const MemberExpr *E);
   bool VisitStringLiteral(const StringLiteral *E) {
-    return Success(APValue::LValueBase(
-        E, 0, Info.getASTContext().getNextStringLiteralVersion()));
+    return Success(
+        APValue::LValueBase(E, 0, Info.Ctx.getNextStringLiteralVersion()));
   }
   bool VisitObjCEncodeExpr(const ObjCEncodeExpr *E) { return Success(E); }
   bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
@@ -12278,6 +12161,42 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         return Success(APValue(ResultElements.data(), SourceLen), E);
       };
 
+  auto EvaluateFpBinOpExpr =
+      [&](llvm::function_ref<std::optional<APFloat>(
+              const APFloat &, const APFloat &, std::optional<APSInt>)>
+              Fn) {
+        assert(E->getNumArgs() == 2 || E->getNumArgs() == 3);
+        APValue A, B;
+        if (!EvaluateAsRValue(Info, E->getArg(0), A) ||
+            !EvaluateAsRValue(Info, E->getArg(1), B))
+          return false;
+
+        assert(A.isVector() && B.isVector());
+        assert(A.getVectorLength() == B.getVectorLength());
+
+        std::optional<APSInt> RoundingMode;
+        if (E->getNumArgs() == 3) {
+          APSInt Imm;
+          if (!EvaluateInteger(E->getArg(2), Imm, Info))
+            return false;
+          RoundingMode = Imm;
+        }
+
+        unsigned NumElems = A.getVectorLength();
+        SmallVector<APValue, 4> ResultElements;
+        ResultElements.reserve(NumElems);
+
+        for (unsigned EltNum = 0; EltNum < NumElems; ++EltNum) {
+          const APFloat &EltA = A.getVectorElt(EltNum).getFloat();
+          const APFloat &EltB = B.getVectorElt(EltNum).getFloat();
+          std::optional<APFloat> Result = Fn(EltA, EltB, RoundingMode);
+          if (!Result)
+            return false;
+          ResultElements.push_back(APValue(*Result));
+        }
+        return Success(APValue(ResultElements.data(), NumElems), E);
+      };
+
   auto EvalSelectScalar = [&](unsigned Len) -> bool {
     APSInt Mask;
     APValue AVal, WVal;
@@ -12384,6 +12303,41 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       ResultElements.push_back(SourceVec.getVectorElt(Idx * RetLen + I));
 
     return Success(APValue(ResultElements.data(), RetLen), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_cvtmask2b128:
+  case clang::X86::BI__builtin_ia32_cvtmask2b256:
+  case clang::X86::BI__builtin_ia32_cvtmask2b512:
+  case clang::X86::BI__builtin_ia32_cvtmask2w128:
+  case clang::X86::BI__builtin_ia32_cvtmask2w256:
+  case clang::X86::BI__builtin_ia32_cvtmask2w512:
+  case clang::X86::BI__builtin_ia32_cvtmask2d128:
+  case clang::X86::BI__builtin_ia32_cvtmask2d256:
+  case clang::X86::BI__builtin_ia32_cvtmask2d512:
+  case clang::X86::BI__builtin_ia32_cvtmask2q128:
+  case clang::X86::BI__builtin_ia32_cvtmask2q256:
+  case clang::X86::BI__builtin_ia32_cvtmask2q512: {
+    assert(E->getNumArgs() == 1);
+    APSInt Mask;
+    if (!EvaluateInteger(E->getArg(0), Mask, Info))
+      return false;
+
+    QualType VecTy = E->getType();
+    const VectorType *VT = VecTy->castAs<VectorType>();
+    unsigned VectorLen = VT->getNumElements();
+    QualType ElemTy = VT->getElementType();
+    unsigned ElemWidth = Info.Ctx.getTypeSize(ElemTy);
+
+    SmallVector<APValue, 16> Elems;
+    for (unsigned I = 0; I != VectorLen; ++I) {
+      bool BitSet = Mask[I];
+      APSInt ElemVal(ElemWidth, /*isUnsigned=*/false);
+      if (BitSet) {
+        ElemVal.setAllBits();
+      }
+      Elems.push_back(APValue(ElemVal));
+    }
+    return Success(APValue(Elems.data(), VectorLen), E);
   }
 
   case X86::BI__builtin_ia32_extracti32x4_256_mask:
@@ -12592,12 +12546,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_packuswb256:
   case X86::BI__builtin_ia32_packuswb512:
     return evalPackBuiltin(E, Info, Result, [](const APSInt &Src) {
-      unsigned DstBits = Src.getBitWidth() / 2;
-      if (Src.isNegative())
-        return APInt::getZero(DstBits);
-      if (Src.isIntN(DstBits))
-        return APInt((Src).trunc(DstBits));
-      return APInt::getAllOnes(DstBits);
+      return APSInt(Src).truncSSatU(Src.getBitWidth() / 2);
     });
   case clang::X86::BI__builtin_ia32_selectss_128:
     return EvalSelectScalar(4);
@@ -13785,6 +13734,61 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+  case clang::X86::BI__builtin_ia32_pclmulqdq128:
+  case clang::X86::BI__builtin_ia32_pclmulqdq256:
+  case clang::X86::BI__builtin_ia32_pclmulqdq512: {
+    // PCLMULQDQ: carry-less multiplication of selected 64-bit halves
+    // imm8 bit 0: selects lower (0) or upper (1) 64 bits of first operand
+    // imm8 bit 4: selects lower (0) or upper (1) 64 bits of second operand
+    APValue SourceLHS, SourceRHS;
+    if (!EvaluateAsRValue(Info, E->getArg(0), SourceLHS) ||
+        !EvaluateAsRValue(Info, E->getArg(1), SourceRHS))
+      return false;
+
+    APSInt Imm8;
+    if (!EvaluateInteger(E->getArg(2), Imm8, Info))
+      return false;
+
+    // Extract bits 0 and 4 from imm8
+    bool SelectUpperA = (Imm8 & 0x01) != 0;
+    bool SelectUpperB = (Imm8 & 0x10) != 0;
+
+    unsigned NumElems = SourceLHS.getVectorLength();
+    SmallVector<APValue, 8> ResultElements;
+    ResultElements.reserve(NumElems);
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+
+    // Process each 128-bit lane
+    for (unsigned Lane = 0; Lane < NumElems; Lane += 2) {
+      // Get the two 64-bit halves of the first operand
+      APSInt A0 = SourceLHS.getVectorElt(Lane + 0).getInt();
+      APSInt A1 = SourceLHS.getVectorElt(Lane + 1).getInt();
+      // Get the two 64-bit halves of the second operand
+      APSInt B0 = SourceRHS.getVectorElt(Lane + 0).getInt();
+      APSInt B1 = SourceRHS.getVectorElt(Lane + 1).getInt();
+
+      // Select the appropriate 64-bit values based on imm8
+      APInt A = SelectUpperA ? A1 : A0;
+      APInt B = SelectUpperB ? B1 : B0;
+
+      // Extend both operands to 128 bits for carry-less multiplication
+      APInt A128 = A.zext(128);
+      APInt B128 = B.zext(128);
+
+      // Use APIntOps::clmul for carry-less multiplication
+      APInt Result = llvm::APIntOps::clmul(A128, B128);
+
+      // Split the 128-bit result into two 64-bit halves
+      APSInt ResultLow(Result.extractBits(64, 0), DestUnsigned);
+      APSInt ResultHigh(Result.extractBits(64, 64), DestUnsigned);
+
+      ResultElements.push_back(APValue(ResultLow));
+      ResultElements.push_back(APValue(ResultHigh));
+    }
+
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
   case Builtin::BI__builtin_elementwise_fshl:
   case Builtin::BI__builtin_elementwise_fshr: {
     APValue SourceHi, SourceLo, SourceShift;
@@ -13867,6 +13871,89 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
             }))
       return false;
     return Success(R, E);
+  }
+
+  case X86::BI__builtin_ia32_vgf2p8affineinvqb_v16qi:
+  case X86::BI__builtin_ia32_vgf2p8affineinvqb_v32qi:
+  case X86::BI__builtin_ia32_vgf2p8affineinvqb_v64qi:
+  case X86::BI__builtin_ia32_vgf2p8affineqb_v16qi:
+  case X86::BI__builtin_ia32_vgf2p8affineqb_v32qi:
+  case X86::BI__builtin_ia32_vgf2p8affineqb_v64qi: {
+
+    APValue X, A;
+    APSInt Imm;
+    if (!EvaluateAsRValue(Info, E->getArg(0), X) ||
+        !EvaluateAsRValue(Info, E->getArg(1), A) ||
+        !EvaluateInteger(E->getArg(2), Imm, Info))
+      return false;
+
+    assert(X.isVector() && A.isVector());
+    assert(X.getVectorLength() == A.getVectorLength());
+
+    bool IsInverse = false;
+    switch (E->getBuiltinCallee()) {
+    case X86::BI__builtin_ia32_vgf2p8affineinvqb_v16qi:
+    case X86::BI__builtin_ia32_vgf2p8affineinvqb_v32qi:
+    case X86::BI__builtin_ia32_vgf2p8affineinvqb_v64qi: {
+      IsInverse = true;
+    }
+    }
+
+    unsigned NumBitsInByte = 8;
+    unsigned NumBytesInQWord = 8;
+    unsigned NumBitsInQWord = 64;
+    unsigned NumBytes = A.getVectorLength();
+    unsigned NumQWords = NumBytes / NumBytesInQWord;
+    SmallVector<APValue, 64> Result;
+    Result.reserve(NumBytes);
+
+    // computing A*X + Imm
+    for (unsigned QWordIdx = 0; QWordIdx != NumQWords; ++QWordIdx) {
+      // Extract the QWords from X, A
+      APInt XQWord(NumBitsInQWord, 0);
+      APInt AQWord(NumBitsInQWord, 0);
+      for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+        unsigned Idx = QWordIdx * NumBytesInQWord + ByteIdx;
+        APInt XByte = X.getVectorElt(Idx).getInt();
+        APInt AByte = A.getVectorElt(Idx).getInt();
+        XQWord.insertBits(XByte, ByteIdx * NumBitsInByte);
+        AQWord.insertBits(AByte, ByteIdx * NumBitsInByte);
+      }
+
+      for (unsigned ByteIdx = 0; ByteIdx != NumBytesInQWord; ++ByteIdx) {
+        uint8_t XByte =
+            XQWord.lshr(ByteIdx * NumBitsInByte).getLoBits(8).getZExtValue();
+        Result.push_back(APValue(APSInt(
+            APInt(8, GFNIAffine(XByte, AQWord, Imm, IsInverse)), false)));
+      }
+    }
+
+    return Success(APValue(Result.data(), Result.size()), E);
+  }
+
+  case X86::BI__builtin_ia32_vgf2p8mulb_v16qi:
+  case X86::BI__builtin_ia32_vgf2p8mulb_v32qi:
+  case X86::BI__builtin_ia32_vgf2p8mulb_v64qi: {
+    APValue A, B;
+    if (!EvaluateAsRValue(Info, E->getArg(0), A) ||
+        !EvaluateAsRValue(Info, E->getArg(1), B))
+      return false;
+
+    assert(A.isVector() && B.isVector());
+    assert(A.getVectorLength() == B.getVectorLength());
+
+    unsigned NumBytes = A.getVectorLength();
+    SmallVector<APValue, 64> Result;
+    Result.reserve(NumBytes);
+
+    for (unsigned ByteIdx = 0; ByteIdx != NumBytes; ++ByteIdx) {
+      uint8_t AByte = A.getVectorElt(ByteIdx).getInt().getZExtValue();
+      uint8_t BByte = B.getVectorElt(ByteIdx).getInt().getZExtValue();
+      Result.push_back(APValue(
+          APSInt(APInt(8, GFNIMul(AByte, BByte)), /*IsUnsigned=*/false)));
+    }
+
+    return Success(APValue(Result.data(), Result.size()), E);
   }
 
   case X86::BI__builtin_ia32_insertf32x4_256:
@@ -14173,6 +14260,46 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(R, E);
   }
 
+  case clang::X86::BI__builtin_ia32_minps:
+  case clang::X86::BI__builtin_ia32_minpd:
+  case clang::X86::BI__builtin_ia32_minps256:
+  case clang::X86::BI__builtin_ia32_minpd256:
+  case clang::X86::BI__builtin_ia32_minps512:
+  case clang::X86::BI__builtin_ia32_minpd512:
+  case clang::X86::BI__builtin_ia32_minph128:
+  case clang::X86::BI__builtin_ia32_minph256:
+  case clang::X86::BI__builtin_ia32_minph512:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::minimum(A, B);
+        });
+
+  case clang::X86::BI__builtin_ia32_maxps:
+  case clang::X86::BI__builtin_ia32_maxpd:
+  case clang::X86::BI__builtin_ia32_maxps256:
+  case clang::X86::BI__builtin_ia32_maxpd256:
+  case clang::X86::BI__builtin_ia32_maxps512:
+  case clang::X86::BI__builtin_ia32_maxpd512:
+  case clang::X86::BI__builtin_ia32_maxph128:
+  case clang::X86::BI__builtin_ia32_maxph256:
+  case clang::X86::BI__builtin_ia32_maxph512:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::maximum(A, B);
+        });
+
   case clang::X86::BI__builtin_ia32_vcvtps2ph:
   case clang::X86::BI__builtin_ia32_vcvtps2ph256: {
     APValue SrcVec;
@@ -14246,6 +14373,32 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
 
     return Success(ResultElements, E);
+  }
+  case X86::BI__builtin_ia32_vperm2f128_pd256:
+  case X86::BI__builtin_ia32_vperm2f128_ps256:
+  case X86::BI__builtin_ia32_vperm2f128_si256:
+  case X86::BI__builtin_ia32_permti256: {
+    unsigned NumElements =
+        E->getArg(0)->getType()->getAs<VectorType>()->getNumElements();
+    unsigned PreservedBitsCnt = NumElements >> 2;
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [PreservedBitsCnt](unsigned DstIdx, unsigned ShuffleMask) {
+              unsigned ControlBitsCnt = DstIdx >> PreservedBitsCnt << 2;
+              unsigned ControlBits = ShuffleMask >> ControlBitsCnt;
+
+              if (ControlBits & 0b1000)
+                return std::make_pair(0u, -1);
+
+              unsigned SrcVecIdx = (ControlBits & 0b10) >> 1;
+              unsigned PreservedBitsMask = (1 << PreservedBitsCnt) - 1;
+              int SrcIdx = ((ControlBits & 0b1) << PreservedBitsCnt) |
+                           (DstIdx & PreservedBitsMask);
+              return std::make_pair(SrcVecIdx, SrcIdx);
+            }))
+      return false;
+    return Success(R, E);
   }
   }
 }
@@ -15754,9 +15907,43 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(APValue(ResultInt), E);
   };
 
+  auto HandleCRC32 = [&](unsigned DataBytes) -> bool {
+    APSInt CRC, Data;
+    if (!EvaluateInteger(E->getArg(0), CRC, Info) ||
+        !EvaluateInteger(E->getArg(1), Data, Info))
+      return false;
+
+    uint64_t CRCVal = CRC.getZExtValue();
+    uint64_t DataVal = Data.getZExtValue();
+
+    // CRC32C polynomial (iSCSI polynomial, bit-reversed)
+    static const uint32_t CRC32C_POLY = 0x82F63B78;
+
+    // Process each byte
+    uint32_t Result = static_cast<uint32_t>(CRCVal);
+    for (unsigned I = 0; I != DataBytes; ++I) {
+      uint8_t Byte = static_cast<uint8_t>((DataVal >> (I * 8)) & 0xFF);
+      Result ^= Byte;
+      for (int J = 0; J != 8; ++J) {
+        Result = (Result >> 1) ^ ((Result & 1) ? CRC32C_POLY : 0);
+      }
+    }
+
+    return Success(Result, E);
+  };
+
   switch (BuiltinOp) {
   default:
     return false;
+
+  case X86::BI__builtin_ia32_crc32qi:
+    return HandleCRC32(1);
+  case X86::BI__builtin_ia32_crc32hi:
+    return HandleCRC32(2);
+  case X86::BI__builtin_ia32_crc32si:
+    return HandleCRC32(4);
+  case X86::BI__builtin_ia32_crc32di:
+    return HandleCRC32(8);
 
   case Builtin::BI__builtin_dynamic_object_size:
   case Builtin::BI__builtin_object_size: {
@@ -15872,7 +16059,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
-    if (Val.getBitWidth() == 8)
+    if (Val.getBitWidth() == 8 || Val.getBitWidth() == 1)
       return Success(Val, E);
 
     return Success(Val.byteSwap(), E);
@@ -16253,34 +16440,46 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_rotateleft16:
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
-  case Builtin::BI_rotl8: // Microsoft variants of rotate right
-  case Builtin::BI_rotl16:
-  case Builtin::BI_rotl:
-  case Builtin::BI_lrotl:
-  case Builtin::BI_rotl64: {
-    APSInt Val, Amt;
-    if (!EvaluateInteger(E->getArg(0), Val, Info) ||
-        !EvaluateInteger(E->getArg(1), Amt, Info))
-      return false;
-
-    return Success(Val.rotl(Amt), E);
-  }
-
   case Builtin::BI__builtin_rotateright8:
   case Builtin::BI__builtin_rotateright16:
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI__builtin_stdc_rotate_left:
+  case Builtin::BI__builtin_stdc_rotate_right:
+  case Builtin::BI_rotl8: // Microsoft variants of rotate left
+  case Builtin::BI_rotl16:
+  case Builtin::BI_rotl:
+  case Builtin::BI_lrotl:
+  case Builtin::BI_rotl64:
   case Builtin::BI_rotr8: // Microsoft variants of rotate right
   case Builtin::BI_rotr16:
   case Builtin::BI_rotr:
   case Builtin::BI_lrotr:
   case Builtin::BI_rotr64: {
-    APSInt Val, Amt;
-    if (!EvaluateInteger(E->getArg(0), Val, Info) ||
-        !EvaluateInteger(E->getArg(1), Amt, Info))
+    APSInt Value, Amount;
+    if (!EvaluateInteger(E->getArg(0), Value, Info) ||
+        !EvaluateInteger(E->getArg(1), Amount, Info))
       return false;
 
-    return Success(Val.rotr(Amt), E);
+    Amount = NormalizeRotateAmount(Value, Amount);
+
+    switch (BuiltinOp) {
+    case Builtin::BI__builtin_rotateright8:
+    case Builtin::BI__builtin_rotateright16:
+    case Builtin::BI__builtin_rotateright32:
+    case Builtin::BI__builtin_rotateright64:
+    case Builtin::BI__builtin_stdc_rotate_right:
+    case Builtin::BI_rotr8:
+    case Builtin::BI_rotr16:
+    case Builtin::BI_rotr:
+    case Builtin::BI_lrotr:
+    case Builtin::BI_rotr64:
+      return Success(
+          APSInt(Value.rotr(Amount.getZExtValue()), Value.isUnsigned()), E);
+    default:
+      return Success(
+          APSInt(Value.rotl(Amount.getZExtValue()), Value.isUnsigned()), E);
+    }
   }
 
   case Builtin::BI__builtin_elementwise_add_sat: {
@@ -18523,12 +18722,15 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
 
     if (!Result.isInt()) {
       // Allow casts of address-of-label differences if they are no-ops
-      // or narrowing.  (The narrowing case isn't actually guaranteed to
+      // or narrowing, if the result is at least 32 bits wide.
+      // (The narrowing case isn't actually guaranteed to
       // be constant-evaluatable except in some narrow cases which are hard
       // to detect here.  We let it through on the assumption the user knows
       // what they are doing.)
-      if (Result.isAddrLabelDiff())
-        return Info.Ctx.getTypeSize(DestType) <= Info.Ctx.getTypeSize(SrcType);
+      if (Result.isAddrLabelDiff()) {
+        unsigned DestBits = Info.Ctx.getTypeSize(DestType);
+        return DestBits >= 32 && DestBits <= Info.Ctx.getTypeSize(SrcType);
+      }
       // Only allow casts of lvalues if they are lossless.
       return Info.Ctx.getTypeSize(DestType) == Info.Ctx.getTypeSize(SrcType);
     }
@@ -19478,6 +19680,88 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   llvm_unreachable("unknown cast resulting in complex value");
 }
 
+uint8_t GFNIMultiplicativeInverse(uint8_t Byte) {
+  // Lookup Table for Multiplicative Inverse in GF(2^8)
+  const uint8_t GFInv[256] = {
+      0x00, 0x01, 0x8d, 0xf6, 0xcb, 0x52, 0x7b, 0xd1, 0xe8, 0x4f, 0x29, 0xc0,
+      0xb0, 0xe1, 0xe5, 0xc7, 0x74, 0xb4, 0xaa, 0x4b, 0x99, 0x2b, 0x60, 0x5f,
+      0x58, 0x3f, 0xfd, 0xcc, 0xff, 0x40, 0xee, 0xb2, 0x3a, 0x6e, 0x5a, 0xf1,
+      0x55, 0x4d, 0xa8, 0xc9, 0xc1, 0x0a, 0x98, 0x15, 0x30, 0x44, 0xa2, 0xc2,
+      0x2c, 0x45, 0x92, 0x6c, 0xf3, 0x39, 0x66, 0x42, 0xf2, 0x35, 0x20, 0x6f,
+      0x77, 0xbb, 0x59, 0x19, 0x1d, 0xfe, 0x37, 0x67, 0x2d, 0x31, 0xf5, 0x69,
+      0xa7, 0x64, 0xab, 0x13, 0x54, 0x25, 0xe9, 0x09, 0xed, 0x5c, 0x05, 0xca,
+      0x4c, 0x24, 0x87, 0xbf, 0x18, 0x3e, 0x22, 0xf0, 0x51, 0xec, 0x61, 0x17,
+      0x16, 0x5e, 0xaf, 0xd3, 0x49, 0xa6, 0x36, 0x43, 0xf4, 0x47, 0x91, 0xdf,
+      0x33, 0x93, 0x21, 0x3b, 0x79, 0xb7, 0x97, 0x85, 0x10, 0xb5, 0xba, 0x3c,
+      0xb6, 0x70, 0xd0, 0x06, 0xa1, 0xfa, 0x81, 0x82, 0x83, 0x7e, 0x7f, 0x80,
+      0x96, 0x73, 0xbe, 0x56, 0x9b, 0x9e, 0x95, 0xd9, 0xf7, 0x02, 0xb9, 0xa4,
+      0xde, 0x6a, 0x32, 0x6d, 0xd8, 0x8a, 0x84, 0x72, 0x2a, 0x14, 0x9f, 0x88,
+      0xf9, 0xdc, 0x89, 0x9a, 0xfb, 0x7c, 0x2e, 0xc3, 0x8f, 0xb8, 0x65, 0x48,
+      0x26, 0xc8, 0x12, 0x4a, 0xce, 0xe7, 0xd2, 0x62, 0x0c, 0xe0, 0x1f, 0xef,
+      0x11, 0x75, 0x78, 0x71, 0xa5, 0x8e, 0x76, 0x3d, 0xbd, 0xbc, 0x86, 0x57,
+      0x0b, 0x28, 0x2f, 0xa3, 0xda, 0xd4, 0xe4, 0x0f, 0xa9, 0x27, 0x53, 0x04,
+      0x1b, 0xfc, 0xac, 0xe6, 0x7a, 0x07, 0xae, 0x63, 0xc5, 0xdb, 0xe2, 0xea,
+      0x94, 0x8b, 0xc4, 0xd5, 0x9d, 0xf8, 0x90, 0x6b, 0xb1, 0x0d, 0xd6, 0xeb,
+      0xc6, 0x0e, 0xcf, 0xad, 0x08, 0x4e, 0xd7, 0xe3, 0x5d, 0x50, 0x1e, 0xb3,
+      0x5b, 0x23, 0x38, 0x34, 0x68, 0x46, 0x03, 0x8c, 0xdd, 0x9c, 0x7d, 0xa0,
+      0xcd, 0x1a, 0x41, 0x1c};
+
+  return GFInv[Byte];
+}
+
+uint8_t GFNIAffine(uint8_t XByte, const APInt &AQword, const APSInt &Imm,
+                   bool Inverse) {
+  unsigned NumBitsInByte = 8;
+  // Computing the affine transformation
+  uint8_t RetByte = 0;
+  for (uint32_t BitIdx = 0; BitIdx != NumBitsInByte; ++BitIdx) {
+    uint8_t AByte =
+        AQword.lshr((7 - static_cast<int32_t>(BitIdx)) * NumBitsInByte)
+            .getLoBits(8)
+            .getZExtValue();
+    uint8_t Product;
+    if (Inverse) {
+      Product = AByte & GFNIMultiplicativeInverse(XByte);
+    } else {
+      Product = AByte & XByte;
+    }
+    uint8_t Parity = 0;
+
+    // Dot product in GF(2) uses XOR instead of addition
+    for (unsigned PBitIdx = 0; PBitIdx != NumBitsInByte; ++PBitIdx) {
+      Parity = Parity ^ ((Product >> PBitIdx) & 0x1);
+    }
+
+    uint8_t Temp = Imm[BitIdx] ? 1 : 0;
+    RetByte |= (Temp ^ Parity) << BitIdx;
+  }
+  return RetByte;
+}
+
+uint8_t GFNIMul(uint8_t AByte, uint8_t BByte) {
+  // Multiplying two polynomials of degree 7
+  // Polynomial of degree 7
+  // x^7 + x^6 + x^5 + x^4 + x^3 + x^2 + x + 1
+  uint16_t TWord = 0;
+  unsigned NumBitsInByte = 8;
+  for (unsigned BitIdx = 0; BitIdx != NumBitsInByte; ++BitIdx) {
+    if ((BByte >> BitIdx) & 0x1) {
+      TWord = TWord ^ (AByte << BitIdx);
+    }
+  }
+
+  // When multiplying two polynomials of degree 7
+  // results in a polynomial of degree 14
+  // so the result has to be reduced to 7
+  // Reduction polynomial is x^8 + x^4 + x^3 + x + 1 i.e. 0x11B
+  for (int32_t BitIdx = 14; BitIdx > 7; --BitIdx) {
+    if ((TWord >> BitIdx) & 0x1) {
+      TWord = TWord ^ (0x11B << (BitIdx - 8));
+    }
+  }
+  return (TWord & 0xFF);
+}
+
 void HandleComplexComplexMul(APFloat A, APFloat B, APFloat C, APFloat D,
                              APFloat &ResR, APFloat &ResI) {
   // This is an implementation of complex multiplication according to the
@@ -19574,6 +19858,46 @@ void HandleComplexComplexDiv(APFloat A, APFloat B, APFloat C, APFloat D,
       ResI = APFloat::getZero(ResI.getSemantics()) * (B * C - A * D);
     }
   }
+}
+
+APSInt NormalizeRotateAmount(const APSInt &Value, const APSInt &Amount) {
+  // Normalize shift amount to [0, BitWidth) range to match runtime behavior
+  APSInt NormAmt = Amount;
+  unsigned BitWidth = Value.getBitWidth();
+  unsigned AmtBitWidth = NormAmt.getBitWidth();
+  if (BitWidth == 1) {
+    // Rotating a 1-bit value is always a no-op
+    NormAmt = APSInt(APInt(AmtBitWidth, 0), NormAmt.isUnsigned());
+  } else if (BitWidth == 2) {
+    // For 2-bit values: rotation amount is 0 or 1 based on
+    // whether the amount is even or odd. We can't use srem here because
+    // the divisor (2) would be misinterpreted as -2 in 2-bit signed arithmetic.
+    NormAmt =
+        APSInt(APInt(AmtBitWidth, NormAmt[0] ? 1 : 0), NormAmt.isUnsigned());
+  } else {
+    APInt Divisor;
+    if (AmtBitWidth > BitWidth) {
+      Divisor = llvm::APInt(AmtBitWidth, BitWidth);
+    } else {
+      Divisor = llvm::APInt(BitWidth, BitWidth);
+      if (AmtBitWidth < BitWidth) {
+        NormAmt = NormAmt.extend(BitWidth);
+      }
+    }
+
+    // Normalize to [0, BitWidth)
+    if (NormAmt.isSigned()) {
+      NormAmt = APSInt(NormAmt.srem(Divisor), /*isUnsigned=*/false);
+      if (NormAmt.isNegative()) {
+        APSInt SignedDivisor(Divisor, /*isUnsigned=*/false);
+        NormAmt += SignedDivisor;
+      }
+    } else {
+      NormAmt = APSInt(NormAmt.urem(Divisor), /*isUnsigned=*/true);
+    }
+  }
+
+  return NormAmt;
 }
 
 bool ComplexExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
@@ -20667,6 +20991,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::ImaginaryLiteralClass:
   case Expr::StringLiteralClass:
   case Expr::ArraySubscriptExprClass:
+  case Expr::MatrixSingleSubscriptExprClass:
   case Expr::MatrixSubscriptExprClass:
   case Expr::ArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:
@@ -21341,6 +21666,10 @@ bool Expr::tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
 
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
+  if (Info.EnableNewConstInterp) {
+    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(Info, this, Type,
+                                                             Result);
+  }
   return tryEvaluateBuiltinObjectSize(this, Type, Info, Result);
 }
 

@@ -72,6 +72,7 @@
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -1874,6 +1875,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::NullStmtClass:
     case Stmt::SwitchStmtClass:
     case Stmt::WhileStmtClass:
+    case Stmt::DeferStmtClass:
     case Expr::MSDependentExistsStmtClass:
       llvm_unreachable("Stmt should not be in analyzer evaluation loop");
     case Stmt::ImplicitValueInitExprClass:
@@ -2080,6 +2082,11 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       Bldr.takeNodes(Pred);
       VisitArraySubscriptExpr(cast<ArraySubscriptExpr>(S), Pred, Dst);
       Bldr.addNodes(Dst);
+      break;
+
+    case Stmt::MatrixSingleSubscriptExprClass:
+      llvm_unreachable(
+          "Support for MatrixSingleSubscriptExprClass is not implemented.");
       break;
 
     case Stmt::MatrixSubscriptExprClass:
@@ -3100,37 +3107,34 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
 
 /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
 ///  nodes by processing the 'effects' of a switch statement.
-void ExprEngine::processSwitch(SwitchNodeBuilder& builder) {
-  using iterator = SwitchNodeBuilder::iterator;
+void ExprEngine::processSwitch(const SwitchStmt *Switch, CoreEngine &CoreEng,
+                               const CFGBlock *B, ExplodedNode *Pred) {
+  const Expr *Condition = Switch->getCond();
 
-  ProgramStateRef state = builder.getState();
-  const Expr *CondE = builder.getCondition();
-  SVal  CondV_untested = state->getSVal(CondE, builder.getLocationContext());
+  SwitchNodeBuilder Builder(Pred, B, CoreEng);
 
-  if (CondV_untested.isUndef()) {
-    //ExplodedNode* N = builder.generateDefaultCaseNode(state, true);
-    // FIXME: add checker
-    //UndefBranches.insert(N);
+  ProgramStateRef State = Pred->getState();
+  SVal CondV = State->getSVal(Condition, Pred->getLocationContext());
 
+  if (CondV.isUndef()) {
+    // ExplodedNode* N = builder.generateDefaultCaseNode(state, true);
+    //  FIXME: add checker
+    // UndefBranches.insert(N);
     return;
   }
-  DefinedOrUnknownSVal CondV = CondV_untested.castAs<DefinedOrUnknownSVal>();
 
-  ProgramStateRef DefaultSt = state;
+  std::optional<NonLoc> CondNL = CondV.getAs<NonLoc>();
 
-  iterator I = builder.begin(), EI = builder.end();
-  bool defaultIsFeasible = I == EI;
-
-  for ( ; I != EI; ++I) {
+  for (const CFGBlock *Block : Builder) {
     // Successor may be pruned out during CFG construction.
-    if (!I.getBlock())
+    if (!Block)
       continue;
 
-    const CaseStmt *Case = I.getCase();
+    const CaseStmt *Case = cast<CaseStmt>(Block->getLabel());
 
     // Evaluate the LHS of the case value.
     llvm::APSInt V1 = Case->getLHS()->EvaluateKnownConstInt(getContext());
-    assert(V1.getBitWidth() == getContext().getIntWidth(CondE->getType()));
+    assert(V1.getBitWidth() == getContext().getIntWidth(Condition->getType()));
 
     // Get the RHS of the case, if it exists.
     llvm::APSInt V2;
@@ -3139,29 +3143,25 @@ void ExprEngine::processSwitch(SwitchNodeBuilder& builder) {
     else
       V2 = V1;
 
-    ProgramStateRef StateCase;
-    if (std::optional<NonLoc> NL = CondV.getAs<NonLoc>())
-      std::tie(StateCase, DefaultSt) =
-          DefaultSt->assumeInclusiveRange(*NL, V1, V2);
-    else // UnknownVal
-      StateCase = DefaultSt;
-
-    if (StateCase)
-      builder.generateCaseStmtNode(I, StateCase);
-
-    // Now "assume" that the case doesn't match.  Add this state
-    // to the default state (if it is feasible).
-    if (DefaultSt)
-      defaultIsFeasible = true;
-    else {
-      defaultIsFeasible = false;
-      break;
+    ProgramStateRef StateMatching;
+    if (CondNL) {
+      // Split the state: this "case:" matches / does not match.
+      std::tie(StateMatching, State) =
+          State->assumeInclusiveRange(*CondNL, V1, V2);
+    } else {
+      // The switch condition is UnknownVal, so we enter each "case:" without
+      // any state update.
+      StateMatching = State;
     }
+
+    if (StateMatching)
+      Builder.generateCaseStmtNode(Block, StateMatching);
+
+    // If _not_ entering the current case is infeasible, we are done with
+    // processing this branch.
+    if (!State)
+      return;
   }
-
-  if (!defaultIsFeasible)
-    return;
-
   // If we have switch(enum value), the default branch is not
   // feasible if all of the enum constants not covered by 'case:' statements
   // are not feasible values for the switch condition.
@@ -3169,14 +3169,12 @@ void ExprEngine::processSwitch(SwitchNodeBuilder& builder) {
   // Note that this isn't as accurate as it could be.  Even if there isn't
   // a case for a particular enum value as long as that enum value isn't
   // feasible then it shouldn't be considered for making 'default:' reachable.
-  const SwitchStmt *SS = builder.getSwitch();
-  const Expr *CondExpr = SS->getCond()->IgnoreParenImpCasts();
-  if (CondExpr->getType()->isEnumeralType()) {
-    if (SS->isAllEnumCasesCovered())
+  if (Condition->IgnoreParenImpCasts()->getType()->isEnumeralType()) {
+    if (Switch->isAllEnumCasesCovered())
       return;
   }
 
-  builder.generateDefaultCaseNode(DefaultSt);
+  Builder.generateDefaultCaseNode(State);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4103,6 +4101,8 @@ std::string ExprEngine::DumpGraph(bool trim, StringRef Filename) {
     return DumpGraph(Src, Filename);
   }
 
+  // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
   return llvm::WriteGraph(&G, "ExprEngine", /*ShortNames=*/false,
                           /*Title=*/"Exploded Graph",
                           /*Filename=*/std::string(Filename));
@@ -4117,6 +4117,8 @@ std::string ExprEngine::DumpGraph(ArrayRef<const ExplodedNode *> Nodes,
     return "";
   }
 
+  // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
   return llvm::WriteGraph(TrimmedG.get(), "TrimmedExprEngine",
                           /*ShortNames=*/false,
                           /*Title=*/"Trimmed Exploded Graph",

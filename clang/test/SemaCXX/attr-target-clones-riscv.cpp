@@ -51,3 +51,10 @@ void lambda() {
   auto y = []() __attribute__((target_clones("arch=+v", "default"))){};
   y();
 }
+
+namespace GH173684 {
+  // expected-error@+1 {{'target_clones' multiversioning requires a default target}}
+  void __attribute__((target_clones())) withoutDefault() {}
+  // expected-error@+1 {{'target_clones' multiversioning requires a default target}}
+  void __attribute__((target_clones)) withoutDefault2() {}
+}

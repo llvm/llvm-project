@@ -16,6 +16,16 @@ let diagnostic_handler _ = ()
 
 let test x = if not x then exit 1 else ()
 
+(* TODO: Replace with Fun.protect when the minimum OCaml version supports it. *)
+let protect ~finally f =
+  try
+    let r = f () in
+    finally ();
+    r
+  with x ->
+    finally ();
+    raise x
+
 let _ =
   Llvm.set_diagnostic_handler context (Some diagnostic_handler);
 
@@ -29,13 +39,9 @@ let _ =
   (* parse_bitcode *)
   begin
     let mb = Llvm.MemoryBuffer.of_file fn in
-    begin try
-      let m = Llvm_bitreader.parse_bitcode context mb in
-      Llvm.dispose_module m
-    with x ->
-      Llvm.MemoryBuffer.dispose mb;
-      raise x
-    end
+    let m = protect ~finally:(fun () -> Llvm.MemoryBuffer.dispose mb)
+              (fun () -> Llvm_bitreader.parse_bitcode context mb) in
+    Llvm.dispose_module m
   end;
 
   (* MemoryBuffer.of_file *)

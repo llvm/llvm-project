@@ -338,7 +338,7 @@ public:
   /// \return
   ///     A lldb::SBModule object that represents the found module, or an
   ///     invalid SBModule object if no module was found.
-  lldb::SBModule FindModule(const lldb::SBModuleSpec &module_spec);
+  lldb::SBModule FindModule(const lldb::SBModuleSpec &module_spec) const;
 
   /// Find compile units related to *this target and passed source
   /// file.
@@ -359,7 +359,7 @@ public:
 
   const char *GetTriple();
 
-  const char *GetArchName();
+  const char *GetArchName() const;
 
   const char *GetABIName();
 

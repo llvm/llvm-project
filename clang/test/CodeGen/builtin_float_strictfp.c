@@ -18,7 +18,8 @@ void test_half(__fp16 *H, __fp16 *H2) {
   (void)__builtin_isinf(*H);
   // NOFP16:       [[LDADDR:%.*]] = load ptr, ptr %{{.*}}, align 8
   // NOFP16-NEXT:  [[IHALF:%.*]]  = load i16, ptr [[LDADDR]], align 2
-  // NOFP16-NEXT:  [[CONV:%.*]]   = call float @llvm.convert.from.fp16.f32(i16 [[IHALF]])
+  // NOFP16-NEXT:  [[BITCAST:%.*]] = bitcast i16 [[IHALF]] to half
+  // NOFP16-NEXT:  [[CONV:%.*]]   = call float @llvm.experimental.constrained.fpext.f32.f16(half [[BITCAST]], metadata !"fpexcept.strict")
   // NOFP16-NEXT:  [[RES1:%.*]]   = call i1 @llvm.is.fpclass.f32(float [[CONV]], i32 516)
   // NOFP16-NEXT:                   zext i1 [[RES1]] to i32
   // FP16:         [[LDADDR:%.*]] = load ptr, ptr %{{.*}}, align 8

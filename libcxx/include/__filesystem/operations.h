@@ -68,10 +68,14 @@ _LIBCPP_EXPORTED_FROM_ABI bool __fs_is_empty(const path& __p, error_code* __ec =
 _LIBCPP_EXPORTED_FROM_ABI void __permissions(const path&, perms, perm_options, error_code* = nullptr);
 _LIBCPP_EXPORTED_FROM_ABI space_info __space(const path&, error_code* __ec = nullptr);
 
-inline _LIBCPP_HIDE_FROM_ABI path absolute(const path& __p) { return __absolute(__p); }
-inline _LIBCPP_HIDE_FROM_ABI path absolute(const path& __p, error_code& __ec) { return __absolute(__p, &__ec); }
-inline _LIBCPP_HIDE_FROM_ABI path canonical(const path& __p) { return __canonical(__p); }
-inline _LIBCPP_HIDE_FROM_ABI path canonical(const path& __p, error_code& __ec) { return __canonical(__p, &__ec); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path absolute(const path& __p) { return __absolute(__p); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path absolute(const path& __p, error_code& __ec) {
+  return __absolute(__p, &__ec);
+}
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path canonical(const path& __p) { return __canonical(__p); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path canonical(const path& __p, error_code& __ec) {
+  return __canonical(__p, &__ec);
+}
 inline _LIBCPP_HIDE_FROM_ABI bool copy_file(const path& __from, const path& __to) {
   return __copy_file(__from, __to, copy_options::none);
 }
@@ -135,85 +139,112 @@ inline _LIBCPP_HIDE_FROM_ABI void create_symlink(const path& __target, const pat
 inline _LIBCPP_HIDE_FROM_ABI void create_symlink(const path& __target, const path& __link, error_code& __ec) noexcept {
   return __create_symlink(__target, __link, &__ec);
 }
-inline _LIBCPP_HIDE_FROM_ABI path current_path() { return __current_path(); }
-inline _LIBCPP_HIDE_FROM_ABI path current_path(error_code& __ec) { return __current_path(&__ec); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path current_path() { return __current_path(); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path current_path(error_code& __ec) { return __current_path(&__ec); }
 inline _LIBCPP_HIDE_FROM_ABI void current_path(const path& __p) { __current_path(__p); }
 inline _LIBCPP_HIDE_FROM_ABI void current_path(const path& __p, error_code& __ec) noexcept {
   __current_path(__p, &__ec);
 }
-inline _LIBCPP_HIDE_FROM_ABI bool equivalent(const path& __p1, const path& __p2) { return __equivalent(__p1, __p2); }
-inline _LIBCPP_HIDE_FROM_ABI bool equivalent(const path& __p1, const path& __p2, error_code& __ec) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool equivalent(const path& __p1, const path& __p2) {
+  return __equivalent(__p1, __p2);
+}
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool
+equivalent(const path& __p1, const path& __p2, error_code& __ec) noexcept {
   return __equivalent(__p1, __p2, &__ec);
 }
-inline _LIBCPP_HIDE_FROM_ABI bool status_known(file_status __s) noexcept { return __s.type() != file_type::none; }
-inline _LIBCPP_HIDE_FROM_ABI bool exists(file_status __s) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool status_known(file_status __s) noexcept {
+  return __s.type() != file_type::none;
+}
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool exists(file_status __s) noexcept {
   return status_known(__s) && __s.type() != file_type::not_found;
 }
-inline _LIBCPP_HIDE_FROM_ABI bool exists(const path& __p) { return exists(__status(__p)); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool exists(const path& __p) { return exists(__status(__p)); }
 
-inline _LIBCPP_HIDE_FROM_ABI bool exists(const path& __p, error_code& __ec) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool exists(const path& __p, error_code& __ec) noexcept {
   auto __s = __status(__p, &__ec);
   if (status_known(__s))
     __ec.clear();
   return exists(__s);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI uintmax_t file_size(const path& __p) { return __file_size(__p); }
-inline _LIBCPP_HIDE_FROM_ABI uintmax_t file_size(const path& __p, error_code& __ec) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI uintmax_t file_size(const path& __p) { return __file_size(__p); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI uintmax_t file_size(const path& __p, error_code& __ec) noexcept {
   return __file_size(__p, &__ec);
 }
-inline _LIBCPP_HIDE_FROM_ABI uintmax_t hard_link_count(const path& __p) { return __hard_link_count(__p); }
-inline _LIBCPP_HIDE_FROM_ABI uintmax_t hard_link_count(const path& __p, error_code& __ec) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI uintmax_t hard_link_count(const path& __p) { return __hard_link_count(__p); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI uintmax_t hard_link_count(const path& __p, error_code& __ec) noexcept {
   return __hard_link_count(__p, &__ec);
 }
-inline _LIBCPP_HIDE_FROM_ABI bool is_block_file(file_status __s) noexcept { return __s.type() == file_type::block; }
-inline _LIBCPP_HIDE_FROM_ABI bool is_block_file(const path& __p) { return is_block_file(__status(__p)); }
-inline _LIBCPP_HIDE_FROM_ABI bool is_block_file(const path& __p, error_code& __ec) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_block_file(file_status __s) noexcept {
+  return __s.type() == file_type::block;
+}
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_block_file(const path& __p) { return is_block_file(__status(__p)); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_block_file(const path& __p, error_code& __ec) noexcept {
   return is_block_file(__status(__p, &__ec));
 }
-inline _LIBCPP_HIDE_FROM_ABI bool is_character_file(file_status __s) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_character_file(file_status __s) noexcept {
   return __s.type() == file_type::character;
 }
-inline _LIBCPP_HIDE_FROM_ABI bool is_character_file(const path& __p) { return is_character_file(__status(__p)); }
-inline _LIBCPP_HIDE_FROM_ABI bool is_character_file(const path& __p, error_code& __ec) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_character_file(const path& __p) {
+  return is_character_file(__status(__p));
+}
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_character_file(const path& __p, error_code& __ec) noexcept {
   return is_character_file(__status(__p, &__ec));
 }
-inline _LIBCPP_HIDE_FROM_ABI bool is_directory(file_status __s) noexcept { return __s.type() == file_type::directory; }
-inline _LIBCPP_HIDE_FROM_ABI bool is_directory(const path& __p) { return is_directory(__status(__p)); }
-inline _LIBCPP_HIDE_FROM_ABI bool is_directory(const path& __p, error_code& __ec) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_directory(file_status __s) noexcept {
+  return __s.type() == file_type::directory;
+}
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_directory(const path& __p) { return is_directory(__status(__p)); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_directory(const path& __p, error_code& __ec) noexcept {
   return is_directory(__status(__p, &__ec));
 }
-inline _LIBCPP_HIDE_FROM_ABI bool is_empty(const path& __p) { return __fs_is_empty(__p); }
-inline _LIBCPP_HIDE_FROM_ABI bool is_empty(const path& __p, error_code& __ec) { return __fs_is_empty(__p, &__ec); }
-inline _LIBCPP_HIDE_FROM_ABI bool is_fifo(file_status __s) noexcept { return __s.type() == file_type::fifo; }
-inline _LIBCPP_HIDE_FROM_ABI bool is_fifo(const path& __p) { return is_fifo(__status(__p)); }
-inline _LIBCPP_HIDE_FROM_ABI bool is_fifo(const path& __p, error_code& __ec) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_empty(const path& __p) { return __fs_is_empty(__p); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_empty(const path& __p, error_code& __ec) {
+  return __fs_is_empty(__p, &__ec);
+}
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_fifo(file_status __s) noexcept {
+  return __s.type() == file_type::fifo;
+}
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_fifo(const path& __p) { return is_fifo(__status(__p)); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_fifo(const path& __p, error_code& __ec) noexcept {
   return is_fifo(__status(__p, &__ec));
 }
-inline _LIBCPP_HIDE_FROM_ABI bool is_regular_file(file_status __s) noexcept { return __s.type() == file_type::regular; }
-inline _LIBCPP_HIDE_FROM_ABI bool is_regular_file(const path& __p) { return is_regular_file(__status(__p)); }
-inline _LIBCPP_HIDE_FROM_ABI bool is_regular_file(const path& __p, error_code& __ec) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_regular_file(file_status __s) noexcept {
+  return __s.type() == file_type::regular;
+}
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_regular_file(const path& __p) {
+  return is_regular_file(__status(__p));
+}
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_regular_file(const path& __p, error_code& __ec) noexcept {
   return is_regular_file(__status(__p, &__ec));
 }
-inline _LIBCPP_HIDE_FROM_ABI bool is_symlink(file_status __s) noexcept { return __s.type() == file_type::symlink; }
-inline _LIBCPP_HIDE_FROM_ABI bool is_symlink(const path& __p) { return is_symlink(__symlink_status(__p)); }
-inline _LIBCPP_HIDE_FROM_ABI bool is_symlink(const path& __p, error_code& __ec) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_symlink(file_status __s) noexcept {
+  return __s.type() == file_type::symlink;
+}
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_symlink(const path& __p) {
+  return is_symlink(__symlink_status(__p));
+}
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_symlink(const path& __p, error_code& __ec) noexcept {
   return is_symlink(__symlink_status(__p, &__ec));
 }
-inline _LIBCPP_HIDE_FROM_ABI bool is_other(file_status __s) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_other(file_status __s) noexcept {
   return exists(__s) && !is_regular_file(__s) && !is_directory(__s) && !is_symlink(__s);
 }
-inline _LIBCPP_HIDE_FROM_ABI bool is_other(const path& __p) { return is_other(__status(__p)); }
-inline _LIBCPP_HIDE_FROM_ABI bool is_other(const path& __p, error_code& __ec) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_other(const path& __p) { return is_other(__status(__p)); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_other(const path& __p, error_code& __ec) noexcept {
   return is_other(__status(__p, &__ec));
 }
-inline _LIBCPP_HIDE_FROM_ABI bool is_socket(file_status __s) noexcept { return __s.type() == file_type::socket; }
-inline _LIBCPP_HIDE_FROM_ABI bool is_socket(const path& __p) { return is_socket(__status(__p)); }
-inline _LIBCPP_HIDE_FROM_ABI bool is_socket(const path& __p, error_code& __ec) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_socket(file_status __s) noexcept {
+  return __s.type() == file_type::socket;
+}
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_socket(const path& __p) { return is_socket(__status(__p)); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI bool is_socket(const path& __p, error_code& __ec) noexcept {
   return is_socket(__status(__p, &__ec));
 }
-inline _LIBCPP_HIDE_FROM_ABI file_time_type last_write_time(const path& __p) { return __last_write_time(__p); }
-inline _LIBCPP_HIDE_FROM_ABI file_time_type last_write_time(const path& __p, error_code& __ec) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI file_time_type last_write_time(const path& __p) {
+  return __last_write_time(__p);
+}
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI file_time_type last_write_time(const path& __p, error_code& __ec) noexcept {
   return __last_write_time(__p, &__ec);
 }
 inline _LIBCPP_HIDE_FROM_ABI void last_write_time(const path& __p, file_time_type __t) { __last_write_time(__p, __t); }
@@ -231,7 +262,7 @@ inline _LIBCPP_HIDE_FROM_ABI void permissions(const path& __p, perms __prms, per
   __permissions(__p, __prms, __opts, &__ec);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI path proximate(const path& __p, const path& __base, error_code& __ec) {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path proximate(const path& __p, const path& __base, error_code& __ec) {
   path __tmp = __weakly_canonical(__p, &__ec);
   if (__ec)
     return {};
@@ -241,16 +272,18 @@ inline _LIBCPP_HIDE_FROM_ABI path proximate(const path& __p, const path& __base,
   return __tmp.lexically_proximate(__tmp_base);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI path proximate(const path& __p, error_code& __ec) {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path proximate(const path& __p, error_code& __ec) {
   return proximate(__p, current_path(), __ec);
 }
-inline _LIBCPP_HIDE_FROM_ABI path proximate(const path& __p, const path& __base = current_path()) {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path proximate(const path& __p, const path& __base = current_path()) {
   return __weakly_canonical(__p).lexically_proximate(__weakly_canonical(__base));
 }
-inline _LIBCPP_HIDE_FROM_ABI path read_symlink(const path& __p) { return __read_symlink(__p); }
-inline _LIBCPP_HIDE_FROM_ABI path read_symlink(const path& __p, error_code& __ec) { return __read_symlink(__p, &__ec); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path read_symlink(const path& __p) { return __read_symlink(__p); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path read_symlink(const path& __p, error_code& __ec) {
+  return __read_symlink(__p, &__ec);
+}
 
-inline _LIBCPP_HIDE_FROM_ABI path relative(const path& __p, const path& __base, error_code& __ec) {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path relative(const path& __p, const path& __base, error_code& __ec) {
   path __tmp = __weakly_canonical(__p, &__ec);
   if (__ec)
     return path();
@@ -260,10 +293,10 @@ inline _LIBCPP_HIDE_FROM_ABI path relative(const path& __p, const path& __base, 
   return __tmp.lexically_relative(__tmpbase);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI path relative(const path& __p, error_code& __ec) {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path relative(const path& __p, error_code& __ec) {
   return relative(__p, current_path(), __ec);
 }
-inline _LIBCPP_HIDE_FROM_ABI path relative(const path& __p, const path& __base = current_path()) {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path relative(const path& __p, const path& __base = current_path()) {
   return __weakly_canonical(__p).lexically_relative(__weakly_canonical(__base));
 }
 inline _LIBCPP_HIDE_FROM_ABI uintmax_t remove_all(const path& __p) { return __remove_all(__p); }
@@ -280,22 +313,24 @@ inline _LIBCPP_HIDE_FROM_ABI void resize_file(const path& __p, uintmax_t __ns) {
 inline _LIBCPP_HIDE_FROM_ABI void resize_file(const path& __p, uintmax_t __ns, error_code& __ec) noexcept {
   return __resize_file(__p, __ns, &__ec);
 }
-inline _LIBCPP_HIDE_FROM_ABI space_info space(const path& __p) { return __space(__p); }
-inline _LIBCPP_HIDE_FROM_ABI space_info space(const path& __p, error_code& __ec) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI space_info space(const path& __p) { return __space(__p); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI space_info space(const path& __p, error_code& __ec) noexcept {
   return __space(__p, &__ec);
 }
-inline _LIBCPP_HIDE_FROM_ABI file_status status(const path& __p) { return __status(__p); }
-inline _LIBCPP_HIDE_FROM_ABI file_status status(const path& __p, error_code& __ec) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI file_status status(const path& __p) { return __status(__p); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI file_status status(const path& __p, error_code& __ec) noexcept {
   return __status(__p, &__ec);
 }
-inline _LIBCPP_HIDE_FROM_ABI file_status symlink_status(const path& __p) { return __symlink_status(__p); }
-inline _LIBCPP_HIDE_FROM_ABI file_status symlink_status(const path& __p, error_code& __ec) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI file_status symlink_status(const path& __p) { return __symlink_status(__p); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI file_status symlink_status(const path& __p, error_code& __ec) noexcept {
   return __symlink_status(__p, &__ec);
 }
-inline _LIBCPP_HIDE_FROM_ABI path temp_directory_path() { return __temp_directory_path(); }
-inline _LIBCPP_HIDE_FROM_ABI path temp_directory_path(error_code& __ec) { return __temp_directory_path(&__ec); }
-inline _LIBCPP_HIDE_FROM_ABI path weakly_canonical(path const& __p) { return __weakly_canonical(__p); }
-inline _LIBCPP_HIDE_FROM_ABI path weakly_canonical(path const& __p, error_code& __ec) {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path temp_directory_path() { return __temp_directory_path(); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path temp_directory_path(error_code& __ec) {
+  return __temp_directory_path(&__ec);
+}
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path weakly_canonical(path const& __p) { return __weakly_canonical(__p); }
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI path weakly_canonical(path const& __p, error_code& __ec) {
   return __weakly_canonical(__p, &__ec);
 }
 

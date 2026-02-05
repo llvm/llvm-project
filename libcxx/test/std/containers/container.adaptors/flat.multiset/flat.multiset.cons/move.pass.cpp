@@ -145,7 +145,6 @@ void test_move_noexcept() {
     C c;
     C d = std::move(c);
   }
-#endif // _LIBCPP_VERSION
   {
     // Comparator fails to be nothrow-move-constructible
     using C = std::flat_multiset<int, ThrowingMoveComp>;
@@ -153,12 +152,15 @@ void test_move_noexcept() {
     C c;
     C d = std::move(c);
   }
+#endif // _LIBCPP_VERSION
 }
 
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
 static int countdown = 0;
 
 struct EvilContainer : std::vector<int> {
+  using std::vector<int>::vector;
+
   EvilContainer() = default;
   EvilContainer(EvilContainer&& rhs) {
     // Throw on move-construction.
@@ -167,6 +169,11 @@ struct EvilContainer : std::vector<int> {
       rhs.insert(rhs.end(), 0);
       throw 42;
     }
+  }
+
+  EvilContainer& operator=(std::initializer_list<int> il) {
+    std::vector<int>::operator=(il);
+    return *this;
   }
 };
 

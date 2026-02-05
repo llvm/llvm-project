@@ -308,7 +308,7 @@ protected:
         return;
       }
 
-      auto on_error = llvm::make_scope_exit(
+      llvm::scope_exit on_error(
           [&target_list = debugger.GetTargetList(), &target_sp]() {
             target_list.DeleteTarget(target_sp);
           });
@@ -1589,7 +1589,7 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
         name, interpreter.GetDebugger().GetRegexMatchAnsiPrefix(),
         interpreter.GetDebugger().GetRegexMatchAnsiSuffix());
     for (uint32_t i = 0; i < num_matches; ++i) {
-      Symbol *symbol = symtab->SymbolAtIndex(match_indexes[i]);
+      const Symbol *symbol = symtab->SymbolAtIndex(match_indexes[i]);
       if (symbol) {
         if (symbol->ValueIsAddress()) {
           DumpAddress(
@@ -5420,8 +5420,6 @@ public:
     m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
                          LLDB_OPT_SET_ALL);
     m_all_options.Finalize();
-
-    AddSimpleArgumentList(eArgTypeRunArgs, eArgRepeatOptional);
   }
 
   ~CommandObjectTargetFrameProviderRegister() override = default;
@@ -5434,7 +5432,7 @@ public:
   }
 
 protected:
-  void DoExecute(Args &launch_args, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     ScriptedMetadataSP metadata_sp = std::make_shared<ScriptedMetadata>(
         m_class_options.GetName(), m_class_options.GetStructuredData());
 

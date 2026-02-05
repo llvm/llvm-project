@@ -201,9 +201,9 @@ bool ExternalFileUnit::OpenAnonymousUnit(common::optional<OpenStatus> status,
   // I/O to an unconnected unit reads/creates a local file, e.g. fort.7
   std::size_t pathMaxLen{32};
   auto path{SizedNew<char>{handler}(pathMaxLen)};
-  std::snprintf(path.get(), pathMaxLen, "fort.%d", unitNumber_);
+  int len = std::snprintf(path.get(), pathMaxLen, "fort.%d", unitNumber_);
   OpenUnit(status, action, position, std::move(path),
-      runtime::strlen(path.get()), convert, handler);
+      len >= 0 ? static_cast<std::size_t>(len) : 0, convert, handler);
   return IsConnected();
 }
 

@@ -6,10 +6,18 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
+// This file defines a fallback implementation to compute the locations of
+// profile data sections, for targets that don't have linker support.  No
+// commonly used targets use this codepath.
+//
+// This implementation expects the compiler instrumentation pass to define a
+// constructor in each file which calls into this file.
+
 #if !defined(__APPLE__) && !defined(__linux__) && !defined(__FreeBSD__) &&     \
     !defined(__Fuchsia__) && !(defined(__sun__) && defined(__svr4__)) &&       \
     !defined(__NetBSD__) && !defined(_WIN32) && !defined(_AIX) &&              \
-    !defined(__wasm__) && !defined(__HAIKU__)
+    !defined(__wasm__) && !defined(__HAIKU__) &&                               \
+    !defined(COMPILER_RT_PROFILE_BAREMETAL)
 
 #include <stdlib.h>
 #include <stdio.h>

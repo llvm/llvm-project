@@ -11,7 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/MissingFeatures.h"
 
 // TODO(cir): once all builtins are covered, decide whether we still
@@ -24,27 +26,230 @@
 #include "mlir/IR/Value.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/TargetBuiltins.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 using namespace llvm;
 
-mlir::Value CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
-                                                      const CallExpr *expr) {
+// Generate vscale * scalingFactor
+static mlir::Value genVscaleTimesFactor(mlir::Location loc,
+                                        CIRGenBuilderTy builder,
+                                        mlir::Type cirTy,
+                                        int32_t scalingFactor) {
+  mlir::Value vscale = builder.emitIntrinsicCallOp(loc, "vscale", cirTy);
+  return builder.createNUWAMul(loc, vscale,
+                               builder.getUInt64(scalingFactor, loc));
+}
+
+static bool aarch64SVEIntrinsicsProvenSorted = false;
+
+namespace {
+struct AArch64BuiltinInfo {
+  unsigned builtinID;
+  unsigned llvmIntrinsic;
+  uint64_t typeModifier;
+
+  bool operator<(unsigned rhsBuiltinID) const {
+    return builtinID < rhsBuiltinID;
+  }
+  bool operator<(const AArch64BuiltinInfo &te) const {
+    return builtinID < te.builtinID;
+  }
+};
+} // end anonymous namespace
+
+#define SVEMAP1(NameBase, llvmIntrinsic, TypeModifier)                         \
+  {SVE::BI__builtin_sve_##NameBase, Intrinsic::llvmIntrinsic, TypeModifier}
+
+#define SVEMAP2(NameBase, TypeModifier)                                        \
+  {SVE::BI__builtin_sve_##NameBase, 0, TypeModifier}
+static const AArch64BuiltinInfo aarch64SVEIntrinsicMap[] = {
+#define GET_SVE_LLVM_INTRINSIC_MAP
+#include "clang/Basic/arm_sve_builtin_cg.inc"
+#undef GET_SVE_LLVM_INTRINSIC_MAP
+};
+
+static const AArch64BuiltinInfo *
+findARMVectorIntrinsicInMap(ArrayRef<AArch64BuiltinInfo> intrinsicMap,
+                            unsigned builtinID, bool &mapProvenSorted) {
+
+#ifndef NDEBUG
+  if (!mapProvenSorted) {
+    assert(llvm::is_sorted(intrinsicMap));
+    mapProvenSorted = true;
+  }
+#endif
+
+  const AArch64BuiltinInfo *info = llvm::lower_bound(intrinsicMap, builtinID);
+
+  if (info != intrinsicMap.end() && info->builtinID == builtinID)
+    return info;
+
+  return nullptr;
+}
+
+bool CIRGenFunction::getAArch64SVEProcessedOperands(
+    unsigned builtinID, const CallExpr *expr, SmallVectorImpl<mlir::Value> &ops,
+    SVETypeFlags typeFlags) {
+  // Find out if any arguments are required to be integer constant expressions.
+  unsigned iceArguments = 0;
+  ASTContext::GetBuiltinTypeError error;
+  getContext().GetBuiltinType(builtinID, error, &iceArguments);
+  assert(error == ASTContext::GE_None && "Should not codegen an error");
+
+  for (unsigned i = 0, e = expr->getNumArgs(); i != e; i++) {
+    bool isIce = iceArguments & (1 << i);
+    mlir::Value arg = emitScalarExpr(expr->getArg(i));
+
+    if (isIce) {
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+    }
+
+    // FIXME: Handle types like svint16x2_t, which are currently incorrectly
+    // converted to i32. These should be treated as structs and unpacked.
+
+    ops.push_back(arg);
+  }
+  return true;
+}
+
+std::optional<mlir::Value>
+CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
+                                          const CallExpr *expr) {
   if (builtinID >= SVE::BI__builtin_sve_reinterpret_s8_s8 &&
       builtinID <= SVE::BI__builtin_sve_reinterpret_f64_f64_x4) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   assert(!cir::MissingFeatures::aarch64SVEIntrinsics());
 
+  auto *builtinIntrInfo = findARMVectorIntrinsicInMap(
+      aarch64SVEIntrinsicMap, builtinID, aarch64SVEIntrinsicsProvenSorted);
+
+  // The operands of the builtin call
+  llvm::SmallVector<mlir::Value> ops;
+
+  SVETypeFlags typeFlags(builtinIntrInfo->typeModifier);
+  if (!CIRGenFunction::getAArch64SVEProcessedOperands(builtinID, expr, ops,
+                                                      typeFlags))
+    return mlir::Value{};
+
+  if (typeFlags.isLoad() || typeFlags.isStore() || typeFlags.isGatherLoad() ||
+      typeFlags.isScatterStore() || typeFlags.isPrefetch() ||
+      typeFlags.isGatherPrefetch() || typeFlags.isStructLoad() ||
+      typeFlags.isStructStore() || typeFlags.isTupleSet() ||
+      typeFlags.isTupleGet() || typeFlags.isTupleCreate() ||
+      typeFlags.isUndef())
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+
+  mlir::Location loc = getLoc(expr->getExprLoc());
+
+  // Handle built-ins for which there is a corresponding LLVM Intrinsic.
+  // -------------------------------------------------------------------
+  if (builtinIntrInfo->llvmIntrinsic != 0) {
+    // Emit set FPMR for intrinsics that require it.
+    if (typeFlags.setsFPMR())
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+
+    if (typeFlags.getMergeType() == SVETypeFlags::MergeZeroExp)
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+
+    if (typeFlags.getMergeType() == SVETypeFlags::MergeAnyExp)
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+
+    // Some ACLE builtins leave out the argument to specify the predicate
+    // pattern, which is expected to be expanded to an SV_ALL pattern.
+    if (typeFlags.isAppendSVALL())
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+    if (typeFlags.isInsertOp1SVALL())
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+
+    // Predicates must match the main datatype.
+    for (mlir::Value &op : ops)
+      if (auto predTy = dyn_cast<mlir::VectorType>(op.getType()))
+        if (predTy.getElementType().isInteger(1))
+          cgm.errorNYI(expr->getSourceRange(),
+                       std::string("unimplemented AArch64 builtin call: ") +
+                           getContext().BuiltinInfo.getName(builtinID));
+
+    // Splat scalar operand to vector (intrinsics with _n infix)
+    if (typeFlags.hasSplatOperand()) {
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+    }
+
+    if (typeFlags.isReverseCompare())
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+    if (typeFlags.isReverseUSDOT())
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+    if (typeFlags.isReverseMergeAnyBinOp() &&
+        typeFlags.getMergeType() == SVETypeFlags::MergeAny)
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+    if (typeFlags.isReverseMergeAnyAccOp() &&
+        typeFlags.getMergeType() == SVETypeFlags::MergeAny)
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+
+    // Predicated intrinsics with _z suffix.
+    if (typeFlags.getMergeType() == SVETypeFlags::MergeZero) {
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+    }
+
+    std::string llvmIntrName(Intrinsic::getBaseName(
+        (llvm::Intrinsic::ID)builtinIntrInfo->llvmIntrinsic));
+
+    llvmIntrName.erase(0, /*std::strlen(".llvm")=*/5);
+
+    auto retTy = convertType(expr->getType());
+
+    auto call = builder.emitIntrinsicCallOp(loc, llvmIntrName, retTy,
+                                            mlir::ValueRange{ops});
+    if (call.getType() == retTy)
+      return call;
+
+    // Predicate results must be converted to svbool_t.
+    if (isa<mlir::VectorType>(retTy) &&
+        cast<mlir::VectorType>(retTy).isScalable())
+      cgm.errorNYI(expr->getSourceRange(),
+                   std::string("unimplemented AArch64 builtin call: ") +
+                       getContext().BuiltinInfo.getName(builtinID));
+    // TODO Handle struct types, e.g. svint8x2_t (update the converter first).
+
+    llvm_unreachable("unsupported element count!");
+  }
+
+  // Handle the remaining built-ins.
+  // -------------------------------
   switch (builtinID) {
   default:
-    return {};
+    return std::nullopt;
 
   case SVE::BI__builtin_sve_svreinterpret_b:
   case SVE::BI__builtin_sve_svreinterpret_c:
@@ -78,10 +283,12 @@ mlir::Value CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
   case SVE::BI__builtin_sve_svpmullb_u64:
   case SVE::BI__builtin_sve_svpmullb_n_u16:
   case SVE::BI__builtin_sve_svpmullb_n_u64:
+
   case SVE::BI__builtin_sve_svdup_n_b8:
   case SVE::BI__builtin_sve_svdup_n_b16:
   case SVE::BI__builtin_sve_svdup_n_b32:
   case SVE::BI__builtin_sve_svdup_n_b64:
+
   case SVE::BI__builtin_sve_svdupq_n_b8:
   case SVE::BI__builtin_sve_svdupq_n_b16:
   case SVE::BI__builtin_sve_svdupq_n_b32:
@@ -100,18 +307,31 @@ mlir::Value CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
   case SVE::BI__builtin_sve_svdupq_n_s32:
   case SVE::BI__builtin_sve_svpfalse_b:
   case SVE::BI__builtin_sve_svpfalse_c:
-  case SVE::BI__builtin_sve_svlen_bf16:
-  case SVE::BI__builtin_sve_svlen_f16:
-  case SVE::BI__builtin_sve_svlen_f32:
-  case SVE::BI__builtin_sve_svlen_f64:
-  case SVE::BI__builtin_sve_svlen_s8:
-  case SVE::BI__builtin_sve_svlen_s16:
-  case SVE::BI__builtin_sve_svlen_s32:
-  case SVE::BI__builtin_sve_svlen_s64:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+
   case SVE::BI__builtin_sve_svlen_u8:
+  case SVE::BI__builtin_sve_svlen_s8:
+    return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 16);
+
   case SVE::BI__builtin_sve_svlen_u16:
+  case SVE::BI__builtin_sve_svlen_s16:
+  case SVE::BI__builtin_sve_svlen_f16:
+  case SVE::BI__builtin_sve_svlen_bf16:
+    return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 8);
+
   case SVE::BI__builtin_sve_svlen_u32:
+  case SVE::BI__builtin_sve_svlen_s32:
+  case SVE::BI__builtin_sve_svlen_f32:
+    return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 4);
+
   case SVE::BI__builtin_sve_svlen_u64:
+  case SVE::BI__builtin_sve_svlen_s64:
+  case SVE::BI__builtin_sve_svlen_f64:
+    return genVscaleTimesFactor(loc, builder, convertType(expr->getType()), 2);
+
   case SVE::BI__builtin_sve_svtbl2_u8:
   case SVE::BI__builtin_sve_svtbl2_s8:
   case SVE::BI__builtin_sve_svtbl2_u16:
@@ -163,20 +383,21 @@ mlir::Value CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   // Unreachable: All cases in the switch above return.
 }
 
-mlir::Value CIRGenFunction::emitAArch64SMEBuiltinExpr(unsigned builtinID,
-                                                      const CallExpr *expr) {
+std::optional<mlir::Value>
+CIRGenFunction::emitAArch64SMEBuiltinExpr(unsigned builtinID,
+                                          const CallExpr *expr) {
   assert(!cir::MissingFeatures::aarch64SMEIntrinsics());
 
   cgm.errorNYI(expr->getSourceRange(),
                std::string("unimplemented AArch64 builtin call: ") +
                    getContext().BuiltinInfo.getName(builtinID));
-  return {};
+  return mlir::Value{};
 }
 
 // Some intrinsics are equivalent for codegen.
@@ -574,7 +795,7 @@ static const std::pair<unsigned, unsigned> neonEquivalentIntrinsicMap[] = {
      NEON::BI__builtin_neon_vstl1q_lane_s64},
 };
 
-mlir::Value
+std::optional<mlir::Value>
 CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                                        ReturnValueSlot returnValue,
                                        llvm::Triple::ArchType arch) {
@@ -590,7 +811,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   switch (builtinID) {
@@ -610,34 +831,34 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__builtin_arm_trap) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__builtin_arm_get_sme_state) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__builtin_arm_rbit) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
   if (builtinID == clang::AArch64::BI__builtin_arm_rbit64) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__builtin_arm_clz ||
@@ -645,20 +866,20 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__builtin_arm_cls) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
   if (builtinID == clang::AArch64::BI__builtin_arm_cls64) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__builtin_arm_rint32zf ||
@@ -666,7 +887,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__builtin_arm_rint64zf ||
@@ -674,7 +895,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__builtin_arm_rint32xf ||
@@ -682,7 +903,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__builtin_arm_rint64xf ||
@@ -690,14 +911,14 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__builtin_arm_jcvt) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__builtin_arm_ld64b ||
@@ -707,7 +928,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__builtin_arm_rndr ||
@@ -715,14 +936,14 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__clear_cache) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if ((builtinID == clang::AArch64::BI__builtin_arm_ldrex ||
@@ -731,14 +952,14 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
   if (builtinID == clang::AArch64::BI__builtin_arm_ldrex ||
       builtinID == clang::AArch64::BI__builtin_arm_ldaex) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if ((builtinID == clang::AArch64::BI__builtin_arm_strex ||
@@ -747,7 +968,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__builtin_arm_strex ||
@@ -755,35 +976,35 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__getReg) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__break) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__builtin_arm_clrex) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI_ReadWriteBarrier) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   // CRC32
@@ -819,7 +1040,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   // Memory Operations (MOPS)
@@ -827,7 +1048,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   // Memory Tagging Extensions (MTE) Intrinsics
@@ -857,7 +1078,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__builtin_arm_rsr ||
@@ -871,7 +1092,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI_ReadStatusReg ||
@@ -880,21 +1101,21 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI_AddressOfReturnAddress) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__builtin_sponentry) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == clang::AArch64::BI__mulh ||
@@ -902,7 +1123,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == AArch64::BI__writex18byte ||
@@ -912,7 +1133,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == AArch64::BI__readx18byte ||
@@ -922,7 +1143,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == AArch64::BI__addx18byte ||
@@ -936,7 +1157,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == AArch64::BI_CopyDoubleFromInt64 ||
@@ -946,7 +1167,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == AArch64::BI_CountLeadingOnes ||
@@ -956,7 +1177,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == AArch64::BI_CountLeadingSigns ||
@@ -964,7 +1185,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == AArch64::BI_CountOneBits ||
@@ -972,28 +1193,28 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == AArch64::BI__prefetch) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == AArch64::BI__hlt) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   if (builtinID == NEON::BI__builtin_neon_vcvth_bf16_f32) {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   // Handle MSVC intrinsics before argument evaluation to prevent double
@@ -1013,11 +1234,17 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
 
   assert(!cir::MissingFeatures::neonSISDIntrinsics());
 
+  llvm::SmallVector<mlir::Value> ops;
+  mlir::Location loc = getLoc(expr->getExprLoc());
+
   // Handle non-overloaded intrinsics first.
   switch (builtinID) {
   default:
     break;
-  case NEON::BI__builtin_neon_vabsh_f16:
+  case NEON::BI__builtin_neon_vabsh_f16: {
+    ops.push_back(emitScalarExpr(expr->getArg(0)));
+    return cir::FAbsOp::create(builder, loc, ops);
+  }
   case NEON::BI__builtin_neon_vaddq_p128:
   case NEON::BI__builtin_neon_vldrq_p128:
   case NEON::BI__builtin_neon_vstrq_p128:
@@ -1199,7 +1426,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   // Not all intrinsics handled by the common case work for AArch64 yet, so only
@@ -1210,7 +1437,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
 
   switch (builtinID) {
   default:
-    return {};
+    return std::nullopt;
   case NEON::BI__builtin_neon_vbsl_v:
   case NEON::BI__builtin_neon_vbslq_v:
   case NEON::BI__builtin_neon_vfma_lane_v:
@@ -1576,7 +1803,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AArch64 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
-    return {};
+    return mlir::Value{};
   }
 
   // Unreachable: All cases in the switch above return.
