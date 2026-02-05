@@ -350,6 +350,10 @@ private:
                                  const SUnitWithMemInfo &Dst);
 
   void computeDependenciesAux();
+
+  void setLoopCarriedDep(const SUnit *Src, const SUnit *Dst) {
+    LoopCarried[Src->NodeNum].set(Dst->NodeNum);
+  }
 };
 
 } // end anonymous namespace
@@ -1138,7 +1142,7 @@ void LoopCarriedOrderDepsTracker::addDependenciesBetweenSUs(
     return;
 
   if (hasLoopCarriedMemDep(Src, Dst, *BAA, TII, TRI, DAG))
-    LoopCarried[Src.SU->NodeNum].set(Dst.SU->NodeNum);
+    setLoopCarriedDep(Src.SU, Dst.SU);
 }
 
 void LoopCarriedOrderDepsTracker::addLoopCarriedDepenenciesForChunks(
@@ -1161,11 +1165,16 @@ void LoopCarriedOrderDepsTracker::addLoopCarriedDepenenciesForChunks(
 
 void LoopCarriedOrderDepsTracker::computeDependenciesAux() {
   SmallVector<LoadStoreChunk, 2> Chunks(1);
+  SUnit *FirstBarrier = nullptr;
+  SUnit *LastBarrier = nullptr;
   for (const auto &TSU : TaggedSUnits) {
     InstrTag Tag = TSU.getTag();
     SUnit *SU = TSU.getPointer();
     switch (Tag) {
     case InstrTag::Barrier:
+      if (!FirstBarrier)
+        FirstBarrier = SU;
+      LastBarrier = SU;
       Chunks.emplace_back();
       break;
     case InstrTag::LoadOrStore:
@@ -1183,9 +1192,47 @@ void LoopCarriedOrderDepsTracker::computeDependenciesAux() {
   for (const LoadStoreChunk &Chunk : Chunks)
     addLoopCarriedDepenenciesForChunks(Chunk, Chunk);
 
-  // TODO: If there are multiple barrier instructions, dependencies from the
-  // last barrier instruction (or load/store below it) to the first barrier
-  // instruction (or load/store above it).
+  // There is no barrier instruction between load/store instructions in the same
+  // LoadStoreChunk. If there are one or more barrier instructions, the
+  // instructions sequence is as follows:
+  //
+  //   Loads/Stores (Chunks.front())
+  //   Barrier (FirstBarrier)
+  //   Loads/Stores
+  //   Barrier
+  //   ...
+  //   Loads/Stores
+  //   Barrier (LastBarrier)
+  //   Loads/Stores (Chunks.back())
+  //
+  // Since loads/stores must not be reordered across barrier instructions, and
+  // the order of barrier instructions must be preserved, add the following
+  // loop-carried dependences:
+  //
+  //       Loads/Stores (Chunks.front()) <-----+
+  //  +--> Barrier (FirstBarrier) <---------+  |
+  //  |    Loads/Stores                     |  |
+  //  |    Barrier                          |  |
+  //  |    ...                              |  |
+  //  |    Loads/Stores                     |  |
+  //  |    Barrier (LastBarrier) -----------+--+
+  //  +--- Loads/Stores (Chunks.back())
+  //
+  if (FirstBarrier) {
+    assert(LastBarrier && "Both barriers should be set.");
+    for (const SUnitWithMemInfo &Dst : Chunks.front().Loads)
+      setLoopCarriedDep(LastBarrier, Dst.SU);
+    for (const SUnitWithMemInfo &Dst : Chunks.front().Stores)
+      setLoopCarriedDep(LastBarrier, Dst.SU);
+
+    for (const SUnitWithMemInfo &Src : Chunks.back().Loads)
+      setLoopCarriedDep(Src.SU, FirstBarrier);
+    for (const SUnitWithMemInfo &Src : Chunks.back().Stores)
+      setLoopCarriedDep(Src.SU, FirstBarrier);
+
+    if (FirstBarrier != LastBarrier)
+      setLoopCarriedDep(LastBarrier, FirstBarrier);
+  }
 }
 
 /// Add a chain edge between a load and store if the store can be an
