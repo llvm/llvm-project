@@ -4597,6 +4597,10 @@ bool VectorCombine::foldEquivalentReductionCmp(Instruction &I) {
     return false;
 
   const auto IsValidOrUmaxCmp = [&]() {
+    // or === umax for i1
+    if (CmpVal->getBitWidth() == 1)
+      return true;
+
     // Cases a and e
     bool IsEquality =
         (CmpVal->isZero() || CmpVal->isOne()) && ICmpInst::isEquality(Pred);
@@ -4609,6 +4613,10 @@ bool VectorCombine::foldEquivalentReductionCmp(Instruction &I) {
   };
 
   const auto IsValidAndUminCmp = [&]() {
+    // and === umin for i1
+    if (CmpVal->getBitWidth() == 1)
+      return true;
+
     const auto LeadingOnes = CmpVal->countl_one();
 
     // Cases g and k
