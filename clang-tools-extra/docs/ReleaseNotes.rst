@@ -100,7 +100,8 @@ New checks
 - New :doc:`avoid-passing-mlir-op-as-ref
   <clang-tidy/checks/llvm/avoid-passing-mlir-op-as-ref>` check.
 
-  Finds cases where ``mlir::Op`` derived classes are passed by reference.
+  Flags function parameters of a type derived from ``mlir::Op`` that are passed
+  by reference.
 
 - New :doc:`llvm-type-switch-case-types
   <clang-tidy/checks/llvm/type-switch-case-types>` check.
