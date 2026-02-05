@@ -488,9 +488,7 @@ define float @reduce_precision_multi_use_2(float %x, float %y, ptr %p, ptr %p2) 
 
 define float @reduce_precision_const(float %x) {
 ; CHECK-LABEL: @reduce_precision_const(
-; CHECK-NEXT:    [[X_EXT:%.*]] = fpext float [[X:%.*]] to double
-; CHECK-NEXT:    [[MINNUM:%.*]] = call double @llvm.minnum.f64(double [[X_EXT]], double 1.000000e+00)
-; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[MINNUM]] to float
+; CHECK-NEXT:    [[TRUNC:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float 1.000000e+00)
 ; CHECK-NEXT:    ret float [[TRUNC]]
 ;
   %x.ext = fpext float %x to double
