@@ -23,6 +23,7 @@ LLUBI_LIKE_TOOLS = [
     "llubi",
 ]
 
+
 # Invoke the tool that is being tested.
 def invoke_tool(exe, cmd_args, ir, check_rc):
     with open(ir) as ir_file:
@@ -33,10 +34,11 @@ def invoke_tool(exe, cmd_args, ir, check_rc):
             stdin=ir_file,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
-            check=check_rc
+            check=check_rc,
         ).stdout.decode()
     # Fix line endings to unix CR style.
     return stdout.replace("\r\n", "\n")
+
 
 def update_test(ti: common.TestInfo):
     if len(ti.run_lines) == 0:
@@ -94,9 +96,7 @@ def update_test(ti: common.TestInfo):
 
     output_lines = []
     common.dump_input_lines(output_lines, ti, prefix_set, ";")
-    output_lines.extend(
-        ["; CHECK: " + line for line in raw_tool_output.splitlines()]
-    )
+    output_lines.extend(["; CHECK: " + line for line in raw_tool_output.splitlines()])
 
     common.debug("Writing %d lines to %s..." % (len(output_lines), ti.path))
     with open(ti.path, "wb") as f:
