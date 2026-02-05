@@ -25,7 +25,7 @@ config.python_root_dir = "@Python3_ROOT_DIR@"
 config.swiftc = "@LLDB_SWIFTC@"
 config.swift_libs_dir = '@LLDB_SWIFT_LIBS@'
 # BEGIN SWIFT
-_swift_driver_flags = lit_config.substitute("@LLDB_SWIFT_DRIVER_EXTRA_FLAGS@")
+_swift_driver_flags = lit_config.substitute("@LLDB_TEST_SWIFT_DRIVER_EXTRA_FLAGS@")
 config.swift_driver_extra_args = [flag.strip() for flag in _swift_driver_flags.split(";") if flag.strip()]
 # END SWIFT
 config.lldb_enable_swift = @LLDB_ENABLE_SWIFT_SUPPORT@

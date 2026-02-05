@@ -291,7 +291,7 @@ llvm_canonicalize_cmake_booleans(
   LLDB_ENABLE_SWIFT_SUPPORT
 )
 
-set(LLDB_SWIFT_DRIVER_EXTRA_FLAGS "" CACHE STRING
+set(LLDB_TEST_SWIFT_DRIVER_EXTRA_FLAGS "" CACHE STRING
     "Additional swift driver arguments for LLDB shell tests")
 # END SWIFT
 
