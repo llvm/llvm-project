@@ -365,9 +365,20 @@ using VPInstruction_match = Recipe_match<std::tuple<OpTys...>, Opcode,
                                          /*Commutative*/ false, VPInstruction>;
 
 template <unsigned Opcode, typename... OpTys>
+using VPInstruction_commutative_match =
+    Recipe_match<std::tuple<OpTys...>, Opcode,
+                 /*Commutative*/ true, VPInstruction>;
+
+template <unsigned Opcode, typename... OpTys>
 inline VPInstruction_match<Opcode, OpTys...>
 m_VPInstruction(const OpTys &...Ops) {
   return VPInstruction_match<Opcode, OpTys...>(Ops...);
+}
+
+template <unsigned Opcode, typename Op0_t, typename Op1_t>
+inline VPInstruction_commutative_match<Opcode, Op0_t, Op1_t>
+m_c_VPInstruction(const Op0_t &Op0, const Op1_t &Op1) {
+  return VPInstruction_commutative_match<Opcode, Op0_t, Op1_t>(Op0, Op1);
 }
 
 /// BuildVector is matches only its opcode, w/o matching its operands as the
@@ -791,12 +802,25 @@ m_Select(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
 }
 
 template <typename Op0_t>
-inline match_combine_or<VPInstruction_match<VPInstruction::Not, Op0_t>,
-                        AllRecipe_commutative_match<
-                            Instruction::Xor, int_pred_ty<is_all_ones>, Op0_t>>
-m_Not(const Op0_t &Op0) {
+using Not_match =
+    match_combine_or<VPInstruction_match<VPInstruction::Not, Op0_t>,
+                     AllRecipe_commutative_match<
+                         Instruction::Xor, int_pred_ty<is_all_ones>, Op0_t>>;
+
+template <typename Op0_t> inline Not_match<Op0_t> m_Not(const Op0_t &Op0) {
   return m_CombineOr(m_VPInstruction<VPInstruction::Not>(Op0),
                      m_c_Binary<Instruction::Xor>(m_AllOnes(), Op0));
+}
+
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+using Select_commutative_match = match_combine_or<
+    AllRecipe_match<Instruction::Select, Op0_t, Op1_t, Op2_t>,
+    AllRecipe_match<Instruction::Select, Not_match<Op0_t>, Op2_t, Op1_t>>;
+
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline Select_commutative_match<Op0_t, Op1_t, Op2_t>
+m_c_Select(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return m_CombineOr(m_Select(Op0, Op1, Op2), m_Select(m_Not(Op0), Op2, Op1));
 }
 
 template <typename Op0_t, typename Op1_t>
@@ -810,9 +834,25 @@ m_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
+inline match_combine_or<
+    VPInstruction_commutative_match<VPInstruction::LogicalAnd, Op0_t, Op1_t>,
+    Select_commutative_match<Op0_t, Op1_t, specific_intval<1>>>
+m_c_LogicalAnd(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_CombineOr(
+      m_c_VPInstruction<VPInstruction::LogicalAnd, Op0_t, Op1_t>(Op0, Op1),
+      m_c_Select(Op0, Op1, m_False()));
+}
+
+template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::Select, Op0_t, specific_intval<1>, Op1_t>
 m_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Select(Op0, m_True(), Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline Select_commutative_match<Op0_t, specific_intval<1>, Op1_t>
+m_c_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_c_Select(Op0, m_True(), Op1);
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
