@@ -2575,6 +2575,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   if (!ShuffleDstTy || !BinResTy || !BinOpTy || X->getType() != Z->getType())
     return false;
 
+  bool SameBinOp = LHS == RHS;
   unsigned NumSrcElts = BinOpTy->getNumElements();
 
   // If we have something like "add X, Y" and "add Z, X", swap ops to match.
@@ -2605,14 +2606,17 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   }
 
   // Try to replace a binop with a shuffle if the shuffle is not costly.
-  // When LHS == RHS, only count the binop cost once.
-  InstructionCost OldCost =
-      TTI.getInstructionCost(LHS, CostKind) +
-      (LHS != RHS ? TTI.getInstructionCost(RHS, CostKind)
-                  : InstructionCost(0)) +
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleDstTy,
-                         BinResTy, OldMask, CostKind, 0, nullptr, {LHS, RHS},
-                         &I);
+  // When SameBinOp, only count the binop cost once.
+  InstructionCost LHSCost = TTI.getInstructionCost(LHS, CostKind);
+  InstructionCost RHSCost = TTI.getInstructionCost(RHS, CostKind);
+
+  InstructionCost OldCost = LHSCost;
+  if (!SameBinOp) {
+    OldCost += RHSCost;
+  }
+  OldCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc,
+                                ShuffleDstTy, BinResTy, OldMask, CostKind, 0,
+                                nullptr, {LHS, RHS}, &I);
 
   // Handle shuffle(binop(shuffle(x),y),binop(z,shuffle(w))) style patterns
   // where one use shuffles have gotten split across the binop/cmp. These
@@ -2646,8 +2650,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   bool SingleSrcBinOp = (X == Y) && (Z == W) && (NewMask0 == NewMask1);
   // SingleSrcBinOp only reduces instruction count if we also eliminate the
   // original binop(s). If binops have multiple uses, they won't be eliminated.
-  ReducedInstCount |=
-      SingleSrcBinOp && LHS->hasOneUse() && (LHS == RHS || RHS->hasOneUse());
+  ReducedInstCount |= SingleSrcBinOp && LHS->hasOneUse() && RHS->hasOneUse();
 
   auto *ShuffleCmpTy =
       FixedVectorType::get(BinOpTy->getElementType(), ShuffleDstTy);
@@ -2665,13 +2668,12 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
         TTI.getCmpSelInstrCost(LHS->getOpcode(), ShuffleCmpTy, ShuffleDstTy,
                                PredLHS, CostKind, Op0Info, Op1Info);
   }
-
   // If LHS/RHS have other uses, we need to account for the cost of keeping
-  // the original instructions. When LHS == RHS, only add the cost once.
+  // the original instructions. When SameBinOp, only add the cost once.
   if (!LHS->hasOneUse())
-    NewCost += TTI.getInstructionCost(LHS, CostKind);
-  if (LHS != RHS && !RHS->hasOneUse())
-    NewCost += TTI.getInstructionCost(RHS, CostKind);
+    NewCost += LHSCost;
+  if (!SameBinOp && !RHS->hasOneUse())
+    NewCost += RHSCost;
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two binops: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
