@@ -3318,54 +3318,6 @@ bool SMSchedule::insert(SUnit *SU, int StartCycle, int EndCycle, int II) {
   return false;
 }
 
-// Return the cycle of the earliest scheduled instruction in the chain.
-int SMSchedule::earliestCycleInChain(const SwingSchedulerDDGEdge &Dep,
-                                     const SwingSchedulerDDG *DDG) {
-  SmallPtrSet<SUnit *, 8> Visited;
-  SmallVector<SwingSchedulerDDGEdge, 8> Worklist;
-  Worklist.push_back(Dep);
-  int EarlyCycle = INT_MAX;
-  while (!Worklist.empty()) {
-    const SwingSchedulerDDGEdge &Cur = Worklist.pop_back_val();
-    SUnit *PrevSU = Cur.getSrc();
-    if (Visited.count(PrevSU))
-      continue;
-    std::map<SUnit *, int>::const_iterator it = InstrToCycle.find(PrevSU);
-    if (it == InstrToCycle.end())
-      continue;
-    EarlyCycle = std::min(EarlyCycle, it->second);
-    for (const auto &IE : DDG->getInEdges(PrevSU))
-      if (IE.isOrderDep() || IE.isOutputDep())
-        Worklist.push_back(IE);
-    Visited.insert(PrevSU);
-  }
-  return EarlyCycle;
-}
-
-// Return the cycle of the latest scheduled instruction in the chain.
-int SMSchedule::latestCycleInChain(const SwingSchedulerDDGEdge &Dep,
-                                   const SwingSchedulerDDG *DDG) {
-  SmallPtrSet<SUnit *, 8> Visited;
-  SmallVector<SwingSchedulerDDGEdge, 8> Worklist;
-  Worklist.push_back(Dep);
-  int LateCycle = INT_MIN;
-  while (!Worklist.empty()) {
-    const SwingSchedulerDDGEdge &Cur = Worklist.pop_back_val();
-    SUnit *SuccSU = Cur.getDst();
-    if (Visited.count(SuccSU) || SuccSU->isBoundaryNode())
-      continue;
-    std::map<SUnit *, int>::const_iterator it = InstrToCycle.find(SuccSU);
-    if (it == InstrToCycle.end())
-      continue;
-    LateCycle = std::max(LateCycle, it->second);
-    for (const auto &OE : DDG->getOutEdges(SuccSU))
-      if (OE.isOrderDep() || OE.isOutputDep())
-        Worklist.push_back(OE);
-    Visited.insert(SuccSU);
-  }
-  return LateCycle;
-}
-
 /// If an instruction has a use that spans multiple iterations, then
 /// return true. These instructions are characterized by having a back-ege
 /// to a Phi, which contains a reference to another Phi.
@@ -3391,12 +3343,6 @@ void SMSchedule::computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
     for (SUnit *I : getInstructions(cycle)) {
       for (const auto &IE : DDG->getInEdges(SU)) {
         if (IE.getSrc() == I) {
-          // FIXME: Add reverse edge to `DDG` instead of calling
-          // `isLoopCarriedDep`
-          if (DAG->isLoopCarriedDep(IE)) {
-            int End = earliestCycleInChain(IE, DDG) + (II - 1);
-            *MinLateStart = std::min(*MinLateStart, End);
-          }
           int EarlyStart = cycle + IE.getLatency() - IE.getDistance() * II;
           *MaxEarlyStart = std::max(*MaxEarlyStart, EarlyStart);
         }
@@ -3404,12 +3350,6 @@ void SMSchedule::computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
 
       for (const auto &OE : DDG->getOutEdges(SU)) {
         if (OE.getDst() == I) {
-          // FIXME: Add reverse edge to `DDG` instead of calling
-          // `isLoopCarriedDep`
-          if (DAG->isLoopCarriedDep(OE)) {
-            int Start = latestCycleInChain(OE, DDG) + 1 - II;
-            *MaxEarlyStart = std::max(*MaxEarlyStart, Start);
-          }
           int LateStart = cycle - OE.getLatency() + OE.getDistance() * II;
           *MinLateStart = std::min(*MinLateStart, LateStart);
         }
