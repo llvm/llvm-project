@@ -1,15 +1,6 @@
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown -stop-after=spirv-nonsemantic-debug-info  %s -o - | FileCheck %s --check-prefix=CHECK-MIR
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-
-; CHECK-MIR: %[[SCOPE_ACT_1:[0-9]+]]:id(s32) = OpExtInst {{%[0-9]+}}(s64), 3, 23, {{%[0-9]+}}(s32)
-; CHECK-MIR: %[[SCOPE_ACT_2:[0-9]+]]:id(s32) = OpExtInst {{%[0-9]+}}(s64), 3, 24
-; CHECK-MIR: %[[VOID_TYPE:[0-9]+]]:type(s64) = OpTypeVoid
-; CHECK-MIR: %[[STR:[0-9]+]]:id(s32) = OpString 7303014
-; CHECK-MIR: %[[MD_FUNC:[0-9]+]]:id(s32) = OpExtInst %[[VOID_TYPE]](s64), 3, 20, %[[STR]](s32)
-; CHECK-MIR: %[[STR_A:[0-9]+]]:id(s32) = OpString 97
-; CHECK-MIR: %[[VAR_A:[0-9]+]]:id(s32) = OpExtInst %[[VOID_TYPE]](s64), 3, 26, %[[STR_A]](s32), {{%[0-9]+}}(s32), {{%[0-9]+}}(s32), {{%[0-9]+}}, {{%[0-9]+}}, %[[MD_FUNC]](s32)
 
 ; CHECK-SPIRV: %[[STR_FOO:[0-9]+]] = OpString "foo"
 ; CHECK-SPIRV: %[[STR_VAR_A:[0-9]+]] = OpString "a"

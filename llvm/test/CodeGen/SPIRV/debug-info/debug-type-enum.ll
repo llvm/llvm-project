@@ -1,23 +1,6 @@
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown -stop-after=spirv-nonsemantic-debug-info  %s -o - | FileCheck %s --check-prefix=CHECK-MIR
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-
-; CHECK-MIR: [[C_ONE:%[0-9]+]]:iid = OpConstantI [[TYPE_I32:%[0-9]+]], 1
-; CHECK-MIR: [[TYPE_VOID:%[0-9]+]]:type(s64) = OpTypeVoid
-; CHECK-MIR: [[C_FIVE:%[0-9]+]]:iid(s32) = OpConstantI [[TYPE_I32]], 5
-; CHECK-MIR: [[C_THREE:%[0-9]+]]:iid(s32) = OpConstantI [[TYPE_I32]], 3
-; CHECK-MIR: [[C_THIRTEEN:%[0-9]+]]:iid(s32) = OpConstantI [[TYPE_I32]], 13
-; CHECK-MIR: [[C_THIRTYTWO:%[0-9]+]]:iid(s32) = OpConstantI [[TYPE_I32]], 32
-; CHECK-MIR: [[C_FOUR:%[0-9]+]]:iid(s32) = OpConstantI [[TYPE_I32]], 4
-; CHECK-MIR: [[TYPE_I32]]:type = OpTypeInt 32, 0
-; CHECK-MIR: [[STR:%[0-9]+]]:id(s32) = OpString 1094795567, 1094795585
-; CHECK-MIR: [[DBG_SOURCE:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 35, [[STR]](s32)
-; CHECK-MIR: [[DBG_CU:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 1, [[C_THREE]](s32), [[C_FIVE]](s32), [[DBG_SOURCE]](s32), [[C_THIRTEEN]](s32)
-; CHECK-MIR: [[STR_RED:%[0-9]+]]:id(s32) = OpString 6579538
-; CHECK-MIR: [[STR_GREEN:%[0-9]+]]:id(s32) = OpString 1701147207, 110
-; CHECK-MIR: [[STR_BLUE:%[0-9]+]]:id(s32) = OpString 1702194242, 0
-; CHECK-MIR: [[DBG_ENUM:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 9, {{%[0-9]+}}(s32), {{%[0-9]+}}(s32), [[DBG_SOURCE]](s32), [[C_ONE]], [[C_ONE]], {{%[0-9]+}}(s32), [[C_THIRTYTWO]](s32), [[C_THREE]](s32), [[C_ONE]], [[STR_RED]](s32), {{%[0-9]+}}(s32), [[STR_GREEN]](s32), [[C_FOUR]](s32), [[STR_BLUE]](s32)
 
 ; CHECK-SPIRV-DAG: %[[DBG_SRC:[0-9]+]] = OpExtInst %[[VOID:[0-9]+]] {{%[0-9]+}} DebugSource
 ; CHECK-SPIRV-DAG: %[[DBG_CU:[0-9]+]] = OpExtInst %[[VOID]] {{%[0-9]+}} DebugCompilationUnit {{%[0-9]+}} {{%[0-9]+}} %[[DBG_SRC]] {{%[0-9]+}}

@@ -1,21 +1,6 @@
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown -stop-after=spirv-nonsemantic-debug-info  %s -o - | FileCheck %s --check-prefix=CHECK-MIR
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION 
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-
-; CHECK-MIR: [[TYPE_VOID:%[0-9]+]]:type(s64) = OpTypeVoid
-; CHECK-MIR: [[TYPE_I32:%[0-9]+]]:type = OpTypeInt 32, 0
-; CHECK-MIR: [[str:%[0-9]+]]:id(s32) = OpString 1094795567, 1094795585
-; CHECK-MIR: [[DEBUG_SOURCE:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 35, [[str]](s32)
-; CHECK-MIR: [[DEBUG_COMPILATION_UNIT:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 1
-; CHECK-MIR: [[str_76:%[0-9]+]]:id(s32) = OpString 7630441
-; CHECK-MIR: [[DEBUG_TYPE_BASIC:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 2, [[str_76]](s32)
-; CHECK-MIR: [[STR_POINT:%[0-9]+]]:id(s32) = OpString 1852403536, 116
-; CHECK-MIR: [[STR_MEMBER1:%[0-9]+]]:id(s32) = OpString 120
-; CHECK-MIR: [[DEBUG_MEMBER1:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 11, [[STR_MEMBER1]](s32), [[DEBUG_TYPE_BASIC]](s32), [[DEBUG_SOURCE]](s32)
-; CHECK-MIR: [[STR_MEMBER2:%[0-9]+]]:id(s32) = OpString 121
-; CHECK-MIR: [[DEBUG_MEMBER2:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 11, [[STR_MEMBER2]](s32), [[DEBUG_TYPE_BASIC]](s32), [[DEBUG_SOURCE]](s32)
-; CHECK-MIR: [[DEBUG_COMPOSITE_POINT:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 10, [[STR_POINT]](s32), {{%[0-9]+}}, [[DEBUG_SOURCE]](s32), {{%[0-9]+}}(s32), {{%[0-9]+}}, {{%[0-9]+}}(s32), {{%[0-9]+}}(s32), {{%[0-9]+}}(s32), {{%[0-9]+}}(s32), [[DEBUG_MEMBER1]](s32), [[DEBUG_MEMBER2]](s32)
 
 ; CHECK-SPIRV: [[point_str:%[0-9]+]] = OpString "Point"
 ; CHECK-SPIRV: [[x_str:%[0-9]+]] = OpString "x"

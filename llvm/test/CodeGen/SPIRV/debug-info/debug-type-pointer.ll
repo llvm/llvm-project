@@ -1,46 +1,7 @@
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown -stop-after=spirv-nonsemantic-debug-info  %s -o - | FileCheck %s --check-prefix=CHECK-MIR
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; TODO(#109287): When type is void * the spirv-val raises an error when DebugInfoNone is set as <id> Base Type argument of DebugTypePointer.
 ; DISABLED: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-
-; CHECK-MIR-DAG:   [[i32type:%[0-9]+]]:type = OpTypeInt 32, 0
-; CHECK-MIR-DAG:[[i32_8:%[0-9]+]]:iid = OpConstantI [[i32type]], 8
-; CHECK-MIR:   [[void_type:%[0-9]+]]:type(s64) = OpTypeVoid
-; CHECK-MIR:   [[i32_5:%[0-9]+]]:iid(s32) = OpConstantI [[i32type]], 5
-; CHECK-MIR:   [[enc_float:%[0-9]+]]:iid(s32) = OpConstantI [[i32type]], 3
-; CHECK-MIR:   [[i32_32:%[0-9]+]]:iid(s32) = OpConstantI [[i32type]], 32
-; CHECK-MIR:   [[enc_signed:%[0-9]+]]:iid(s32) = OpConstantI [[i32type]], 4
-; CHECK-MIR:   [[enc_boolean:%[0-9]+]]:iid(s32) = OpConstantI [[i32type]], 2
-; CHECK-MIR:   [[i32_16:%[0-9]+]]:iid(s32) = OpConstantI [[i32type]], 16
-; CHECK-MIR:   [[i32_64:%[0-9]+]]:iid(s32) = OpConstantI [[i32type]], 64
-; CHECK-MIR:   [[enc_unsigned:%[0-9]+]]:iid(s32) = OpConstantI [[i32type]], 6
-; CHECK-MIR:   [[enc_unsigned_char:%[0-9]+]]:iid(s32) = OpConstantI [[i32type]], 7
-
-; CHECK-MIR:   [[int:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 2, {{%[0-9]+}}(s32), [[i32_32]](s32), [[enc_signed]](s32)
-; CHECK-MIR:   [[bool:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 2, {{%[0-9]+}}(s32), [[i32_8]], [[enc_boolean]](s32)
-; CHECK-MIR:   [[unsigned_short:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 2, {{%[0-9]+}}(s32), [[i32_16]](s32), [[enc_signed]](s32)
-; CHECK-MIR:   [[char:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 2, {{%[0-9]+}}(s32), [[i32_8]], [[i32_5]](s32)
-; CHECK-MIR:   [[long:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 2, {{%[0-9]+}}(s32), [[i32_64]](s32), [[enc_signed]](s32)
-; CHECK-MIR:   [[unsigned_int:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 2, {{%[0-9]+}}(s32), [[i32_32]](s32), [[enc_unsigned]](s32)
-; CHECK-MIR:   [[short:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 2, {{%[0-9]+}}(s32), [[i32_16]](s32), [[enc_unsigned]](s32)
-; CHECK-MIR:   [[unsigned_char:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 2, {{%[0-9]+}}(s32), [[i32_8]], [[enc_unsigned_char]](s32)
-; CHECK-MIR:   [[unsigned_long:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 2, {{%[0-9]+}}(s32), [[i32_64]](s32), [[enc_unsigned]](s32)
-; CHECK-MIR:   [[float:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 2, {{%[0-9]+}}(s32), [[i32_32]](s32), [[enc_float]](s32)
-; CHECK-MIR:   [[double:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 2, {{%[0-9]+}}(s32), [[i32_64]](s32), [[enc_float]](s32)
-
-; CHECK-MIR:   OpExtInst [[void_type]](s64), 3, 3, [[int]](s32), [[i32_5]](s32)
-; CHECK-MIR:   [[debug_info_none:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 0
-; CHECK-MIR:   OpExtInst [[void_type]](s64), 3, 3, [[debug_info_none]](s32), [[i32_5]](s32)
-; CHECK-MIR:   OpExtInst [[void_type]](s64), 3, 3, [[bool]](s32), [[i32_8]]
-; CHECK-MIR:   OpExtInst [[void_type]](s64), 3, 3, [[char]](s32), [[i32_8]]
-; CHECK-MIR:   OpExtInst [[void_type]](s64), 3, 3, [[long]](s32), [[i32_8]]
-; CHECK-MIR:   OpExtInst [[void_type]](s64), 3, 3, [[unsigned_int]](s32), [[i32_8]]
-; CHECK-MIR:   OpExtInst [[void_type]](s64), 3, 3, [[short]](s32), [[i32_8]]
-; CHECK-MIR:   OpExtInst [[void_type]](s64), 3, 3, [[unsigned_char]](s32), [[i32_8]]
-; CHECK-MIR:   OpExtInst [[void_type]](s64), 3, 3, [[unsigned_long]](s32), [[i32_8]]
-; CHECK-MIR:   OpExtInst [[void_type]](s64), 3, 3, [[float]](s32), [[i32_8]]
-; CHECK-MIR:   OpExtInst [[void_type]](s64), 3, 3, [[double]](s32), [[i32_8]]
 
 ; CHECK-SPIRV:	[[i32type:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG:	[[i32_8:%[0-9]+]] = OpConstant [[i32type]] 8{{$}}

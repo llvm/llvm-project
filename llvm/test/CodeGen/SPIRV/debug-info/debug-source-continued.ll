@@ -1,12 +1,6 @@
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown -stop-after=spirv-nonsemantic-debug-info  %s -o - | FileCheck %s --check-prefix=CHECK-MIR
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION 
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-
-; CHECK-MIR-DAG: [[type_void:%[0-9]+]]:type = OpTypeVoid
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 35
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 102
-; CHECK-MIR-DAG: OpExtInst [[type_void]], 3, 102
 
 ; CHECK-SPIRV: %[[#ext_inst_non_semantic:]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 

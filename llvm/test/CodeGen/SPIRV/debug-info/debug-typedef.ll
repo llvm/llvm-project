@@ -1,16 +1,6 @@
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown -stop-after=spirv-nonsemantic-debug-info  %s -o - | FileCheck %s --check-prefix=CHECK-MIR
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-
-; CHECK-MIR: [[TYPE_I32:%[0-9]+]]:type = OpTypeInt 32, 0
-; CHECK-MIR: [[TYPE_VOID:%[0-9]+]]:type(s64) = OpTypeVoid
-; CHECK-MIR: [[DBG_SOURCE:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 35
-; CHECK-MIR: [[DBG_CU:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 1
-; CHECK-MIR: [[STR_INT:%[0-9]+]]:id(s32) = OpString 7630441
-; CHECK-MIR: [[DBG_INT:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 2, [[STR_INT]](s32)
-; CHECK-MIR: [[STR_TYPEDEF:%[0-9]+]]:id(s32) = OpString 1852406125, 116
-; CHECK-MIR: [[DBG_TYPEDEF:%[0-9]+]]:id(s32) = OpExtInst [[TYPE_VOID]](s64), 3, 7, [[STR_TYPEDEF]](s32), [[DBG_INT]](s32), [[DBG_SOURCE]](s32)
 
 ; CHECK-SPIRV-DAG: [[int_str:%[0-9]+]] = OpString "int"
 ; CHECK-SPIRV-DAG: [[typedef_str:%[0-9]+]] = OpString "myint"

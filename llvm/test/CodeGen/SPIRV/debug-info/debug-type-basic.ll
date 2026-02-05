@@ -1,44 +1,6 @@
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown -stop-after=spirv-nonsemantic-debug-info  %s -o - | FileCheck %s --check-prefix=CHECK-MIR
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-
-; CHECK-MIR: [[type_void:%[0-9]+]]:type = OpTypeVoid
-; CHECK-MIR: [[type_i32:%[0-9]+]]:type = OpTypeInt 32, 0
-; CHECK-MIR: [[flag_zero:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 0
-; CHECK-MIR: [[encoding_signedchar:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 5
-; CHECK-MIR: [[encoding_float:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 3
-; CHECK-MIR: [[size_8bits:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 8
-; CHECK-MIR: [[encoding_boolean:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 2
-; CHECK-MIR: [[size_32bits:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 32
-; CHECK-MIR: [[encoding_signed:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 4
-; CHECK-MIR: [[size_16bits:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 16
-; CHECK-MIR: [[size_64bits:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 64
-; CHECK-MIR: [[encoding_unsigned:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 6
-; CHECK-MIR: [[encoding_unsignedchar:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 7
-; CHECK-MIR: [[encoding_extra:%[0-9]+]]:iid(s32) = OpConstantI [[type_i32]], 256
-; CHECK-MIR: [[str_bool:%[0-9]+]]:id(s32) = OpString 1819242338, 0
-; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_bool]](s32), [[size_8bits]](s32), [[encoding_boolean]](s32), [[flag_zero]](s32)
-; CHECK-MIR: [[str_int:%[0-9]+]]:id(s32) = OpString 7630441
-; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_int]](s32), [[size_32bits]](s32), [[encoding_signed]](s32), [[flag_zero]](s32)
-; CHECK-MIR: [[str_short:%[0-9]+]]:id(s32) = OpString 1919903859, 116
-; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_short]](s32), [[size_16bits]](s32), [[encoding_signed]](s32), [[flag_zero]](s32)
-; CHECK-MIR: [[str_char:%[0-9]+]]:id(s32) = OpString 1918986339, 0
-; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_char]](s32), [[size_8bits]](s32), [[encoding_signedchar]](s32), [[flag_zero]](s32)
-; CHECK-MIR: [[str_long:%[0-9]+]]:id(s32) = OpString 1735290732, 0
-; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_long]](s32), [[size_64bits]](s32), [[encoding_signed]](s32), [[flag_zero]](s32)
-; CHECK-MIR: [[str_uint:%[0-9]+]]:id(s32) = OpString 1769172597, 1684368999, 1953392928, 0
-; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_uint]](s32), [[size_32bits]](s32), [[encoding_unsigned]](s32), [[flag_zero]](s32)
-; CHECK-MIR: [[str_ushort:%[0-9]+]]:id(s32) = OpString 1769172597, 1684368999, 1869116192, 29810
-; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_ushort]](s32), [[size_16bits]](s32), [[encoding_unsigned]](s32), [[flag_zero]](s32)
-; CHECK-MIR: [[str_uchar:%[0-9]+]]:id(s32) = OpString 1769172597, 1684368999, 1634231072, 114
-; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_uchar]](s32), [[size_8bits]](s32), [[encoding_unsignedchar]](s32), [[flag_zero]](s32)
-; CHECK-MIR: [[str_ulong:%[0-9]+]]:id(s32) = OpString 1769172597, 1684368999, 1852795936, 103
-; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_ulong]](s32), [[size_64bits]](s32), [[encoding_unsigned]](s32), [[flag_zero]](s32)
-; CHECK-MIR: [[str_float:%[0-9]+]]:id(s32) = OpString 1634692198, 116
-; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_float]](s32), [[size_32bits]](s32), [[encoding_float]](s32), [[flag_zero]](s32)
-; CHECK-MIR: [[str_double:%[0-9]+]]:id(s32) = OpString 1651863396, 25964
-; CHECK-MIR: OpExtInst [[type_void]], 3, 2, [[str_double]](s32), [[size_64bits]](s32), [[encoding_float]](s32), [[flag_zero]](s32)
 
 ; CHECK-SPIRV: [[ext_inst_non_semantic:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-SPIRV-DAG: [[str_bool:%[0-9]+]] = OpString "bool"

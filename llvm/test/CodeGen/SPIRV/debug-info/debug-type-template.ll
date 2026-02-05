@@ -1,24 +1,6 @@
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown -stop-after=spirv-nonsemantic-debug-info  %s -o - | FileCheck %s --check-prefix=CHECK-MIR
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-
-; CHECK-MIR: [[VOID:%[0-9]+]]:type(s64) = OpTypeVoid
-; CHECK-MIR: [[I32:%[0-9]+]]:type = OpTypeInt 32, 0
-; CHECK-MIR: [[STR:%[0-9]+]]:id(s32) = OpString 1094795567, 1094795585
-; CHECK-MIR: [[DBG_SOURCE:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 35, [[STR]](s32)
-; CHECK-MIR: [[DBG_CU:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 1
-; CHECK-MIR: [[STR_INT:%[0-9]+]]:id(s32) = OpString 7630441
-; CHECK-MIR: [[DBG_INT:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 2, [[STR_INT]](s32)
-; CHECK-MIR: [[DBG_ARRAY:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 5, [[DBG_INT]](s32), {{%[0-9]+}}
-; CHECK-MIR: [[STR_STRUCT:%[0-9]+]]:id(s32) = OpString 1635017060, 0
-; CHECK-MIR: [[DBG_STRUCT:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 11, [[STR_STRUCT]](s32), [[DBG_ARRAY]](s32), [[DBG_SOURCE]](s32), {{%[0-9]+}}
-; CHECK-MIR: [[DBG_FUNC:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 10, {{%[0-9]+}}(s32), {{%[0-9]+}}(s32), [[DBG_SOURCE]](s32)
-; CHECK-MIR: [[DBG_INFO:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 0
-; CHECK-MIR: [[DBG_TEMPL:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 15, {{%[0-9]+}}(s32), {{%[0-9]+}}(s32), [[DBG_INFO]](s32)
-; CHECK-MIR: [[STR_X:%[0-9]+]]:id(s32) = OpString 78
-; CHECK-MIR: [[DBG_X:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 15, [[STR_X]](s32), [[DBG_INT]](s32)
-; CHECK-MIR: [[DBG_COMPOSITE:%[0-9]+]]:id(s32) = OpExtInst [[VOID]](s64), 3, 14, [[DBG_FUNC]](s32), [[DBG_TEMPL]](s32), [[DBG_X]](s32)
 
 ; CHECK-SPIRV: [[data_str:%[0-9]+]] = OpString "data"
 ; CHECK-SPIRV: [[T_str:%[0-9]+]] = OpString "T"

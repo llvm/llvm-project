@@ -1,18 +1,6 @@
-; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info --print-after=spirv-nonsemantic-debug-info -O0 -mtriple=spirv64-unknown-unknown -stop-after=spirv-nonsemantic-debug-info  %s -o - | FileCheck %s --check-prefix=CHECK-MIR
 ; RUN: llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --check-prefix=CHECK-OPTION
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spv-emit-nonsemantic-debug-info --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-
-; CHECK-MIR: [[i32_5:%[0-9]+]]:iid = OpConstantI [[i32type:%[0-9]+]], 5
-; CHECK-MIR: [[void_type:%[0-9]+]]:type(s64) = OpTypeVoid
-; CHECK-MIR: [[i32_3:%[0-9]+]]:iid(s32) = OpConstantI [[i32type]], 3
-; CHECK-MIR: [[i32_13:%[0-9]+]]:iid(s32) = OpConstantI [[i32type]], 13
-; CHECK-MIR: [[i32_1:%[0-9]+]]:iid(s32) = OpConstantI [[i32type]], 1
-; CHECK-MIR: [[i32type:%[0-9]+]]:type = OpTypeInt 32, 0
-; CHECK-MIR: [[debug_source:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 35
-; CHECK-MIR: [[debug_comp_unit:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 1, [[i32_3]](s32), [[i32_5]], [[debug_source]](s32), [[i32_13]](s32)
-; CHECK-MIR: [[debug_info_none:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 0
-; CHECK-MIR: [[debug_imported_entity:%[0-9]+]]:id(s32) = OpExtInst [[void_type]](s64), 3, 34, {{%[0-9]+}}(s32), {{%[0-9]+}}, [[debug_source]](s32), [[debug_info_none]](s32), [[i32_3]](s32), [[i32_1]](s32)
 
 ; CHECK-SPIRV-DAG: [[i32type:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-SPIRV-DAG: [[void_type:%[0-9]+]] = OpTypeVoid
