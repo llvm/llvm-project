@@ -40,6 +40,7 @@
 /clang/tools/cir-* @lanza @bcardosolopes @xlauko @andykaylor
 
 /lldb/ @JDevlieghere
+/lldb/**/*FreeBSD* @mchoo7
 
 # MLIR Interfaces.
 /mlir/include/mlir/Interfaces/TilingInterface.* @MaheshRavishankar @nicolasvasilache
