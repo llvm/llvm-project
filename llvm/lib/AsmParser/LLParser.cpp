@@ -752,7 +752,9 @@ bool LLParser::parseDeclare() {
 ///   ::= 'define' FunctionHeader (!dbg !56)* '{' ...
 bool LLParser::parseDefine() {
   assert(Lex.getKind() == lltok::kw_define);
-  FileLoc FunctionStart(Lex.getTokLineColumnPos());
+
+  FileLoc FunctionStart(ParserContext ? Lex.getTokLineColumnPos()
+                                      : std::pair{0u, 0u});
   Lex.Lex();
 
   Function *F;
@@ -3428,18 +3430,22 @@ bool LLParser::parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
       bool Unnamed = false;
       if (Lex.getKind() == lltok::LocalVar) {
         Name = Lex.getStrVal();
-        IdentStart = Lex.getTokLineColumnPos();
+        if (ParserContext)
+          IdentStart = Lex.getTokLineColumnPos();
         Lex.Lex();
-        IdentEnd = Lex.getPrevTokEndLineColumnPos();
+        if (ParserContext)
+          IdentEnd = Lex.getPrevTokEndLineColumnPos();
       } else {
         unsigned ArgID;
         if (Lex.getKind() == lltok::LocalVarID) {
           ArgID = Lex.getUIntVal();
-          IdentStart = Lex.getTokLineColumnPos();
+          if (ParserContext)
+            IdentStart = Lex.getTokLineColumnPos();
           if (checkValueID(TypeLoc, "argument", "%", CurValID, ArgID))
             return true;
           Lex.Lex();
-          IdentEnd = Lex.getPrevTokEndLineColumnPos();
+          if (ParserContext)
+            IdentEnd = Lex.getPrevTokEndLineColumnPos();
         } else {
           ArgID = CurValID;
           Unnamed = true;
@@ -7091,7 +7097,8 @@ bool LLParser::parseFunctionBody(Function &Fn, unsigned FunctionNumber,
 /// parseBasicBlock
 ///   ::= (LabelStr|LabelID)? Instruction*
 bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
-  FileLoc BBStart(Lex.getTokLineColumnPos());
+  FileLoc BBStart(ParserContext ? Lex.getTokLineColumnPos()
+                                : std::pair{0u, 0u});
 
   // If this basic block starts out with a name, remember it.
   std::string Name;
@@ -7134,7 +7141,8 @@ bool LLParser::parseBasicBlock(PerFunctionState &PFS) {
       TrailingDbgRecord.emplace_back(DR, DeleteDbgRecord);
     }
 
-    FileLoc InstStart(Lex.getTokLineColumnPos());
+    FileLoc InstStart(ParserContext ? Lex.getTokLineColumnPos()
+                                    : std::pair{0u, 0u});
     // This instruction may have three possibilities for a name: a) none
     // specified, b) name specified "%foo =", c) number specified: "%4 =".
     LocTy NameLoc = Lex.getLoc();
