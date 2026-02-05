@@ -1425,7 +1425,8 @@ private:
                            std::string &CollectString);
 
   bool AddNextRegisterToList(MCRegister &Reg, unsigned &RegWidth,
-                             RegisterKind RegKind, MCRegister Reg1, SMLoc Loc);
+                             RegisterKind RegKind, MCRegister Reg1,
+                             RegisterKind RegKind1, SMLoc Loc);
   bool ParseAMDGPURegister(RegisterKind &RegKind, MCRegister &Reg,
                            unsigned &RegNum, unsigned &RegWidth,
                            bool RestoreOnFailure = false);
@@ -2791,7 +2792,23 @@ ParseStatus AMDGPUAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
 
 bool AMDGPUAsmParser::AddNextRegisterToList(MCRegister &Reg, unsigned &RegWidth,
                                             RegisterKind RegKind,
-                                            MCRegister Reg1, SMLoc Loc) {
+                                            MCRegister Reg1,
+                                            RegisterKind RegKind1, SMLoc Loc) {
+  // Allow VCC_LO/HI at the end of SGPR lists.
+  if (RegKind == IS_SGPR) {
+    unsigned RegIdx = (Reg - AMDGPU::SGPR0) + RegWidth / 32;
+    if ((RegIdx == 106 && Reg1 == AMDGPU::VCC_LO) ||
+        (RegIdx == 107 && Reg1 == AMDGPU::VCC_HI)) {
+      RegWidth += 32;
+      return true;
+    }
+  }
+
+  if (RegKind != RegKind1) {
+    Error(Loc, "registers in a list must be of the same kind");
+    return MCRegister();
+  }
+
   switch (RegKind) {
   case IS_SPECIAL:
     if (Reg == AMDGPU::EXEC_LO && Reg1 == AMDGPU::EXEC_HI) {
@@ -3053,6 +3070,7 @@ MCRegister AMDGPUAsmParser::ParseRegularReg(RegisterKind &RegKind,
   RegKind = RI->Kind;
   StringRef RegSuffix = RegName.substr(RI->Name.size());
   unsigned SubReg = NoSubRegister;
+  bool IsRange = false;
   if (!RegSuffix.empty()) {
     if (RegSuffix.consume_back(".l"))
       SubReg = AMDGPU::lo16;
@@ -3067,11 +3085,22 @@ MCRegister AMDGPUAsmParser::ParseRegularReg(RegisterKind &RegKind,
     RegWidth = 32;
   } else {
     // Range of registers: v[XX:YY]. ":YY" is optional.
+    IsRange = true;
     if (!ParseRegRange(RegNum, RegWidth, SubReg))
       return MCRegister();
   }
 
-  return getRegularReg(RegKind, RegNum, SubReg, RegWidth, Loc);
+  // Do not allow vcc_lo/hi be referred as s106/107.
+  MCRegister Reg = getRegularReg(RegKind, RegNum, SubReg, RegWidth, Loc);
+  const MCRegisterInfo &TRI = *getContext().getRegisterInfo();
+  if (RegKind == IS_SGPR && IsRange
+          ? (TRI.isSubRegister(Reg, VCC_LO) || TRI.isSubRegister(Reg, VCC_HI))
+          : (Reg == VCC_LO || Reg == VCC_HI)) {
+    Error(Loc, "register index is out of range");
+    return MCRegister();
+  }
+
+  return Reg;
 }
 
 MCRegister AMDGPUAsmParser::ParseRegList(RegisterKind &RegKind,
@@ -3110,11 +3139,8 @@ MCRegister AMDGPUAsmParser::ParseRegList(RegisterKind &RegKind,
       Error(Loc, "expected a single 32-bit register");
       return MCRegister();
     }
-    if (NextRegKind != RegKind) {
-      Error(Loc, "registers in a list must be of the same kind");
-      return MCRegister();
-    }
-    if (!AddNextRegisterToList(Reg, RegWidth, RegKind, NextReg, Loc))
+    if (!AddNextRegisterToList(Reg, RegWidth, RegKind, NextReg, NextRegKind,
+                               Loc))
       return MCRegister();
   }
 
