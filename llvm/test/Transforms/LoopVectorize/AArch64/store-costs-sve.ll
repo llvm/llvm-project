@@ -140,10 +140,13 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i16> poison, i16 [[X]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i16> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP5:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META6:![0-9]+]]
-; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 16 x i64> poison, i64 [[TMP5]], i64 0
-; DEFAULT-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <vscale x 16 x i64> [[BROADCAST_SPLATINSERT2]], <vscale x 16 x i64> poison, <vscale x 16 x i32> zeroinitializer
-; DEFAULT-NEXT:    [[TMP6:%.*]] = trunc <vscale x 16 x i64> [[BROADCAST_SPLAT3]] to <vscale x 16 x i8>
-; DEFAULT-NEXT:    [[TMP13:%.*]] = trunc <vscale x 16 x i16> [[BROADCAST_SPLAT]] to <vscale x 16 x i8>
+; DEFAULT-NEXT:    [[TMP19:%.*]] = trunc i64 [[TMP5]] to i8
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[TMP19]], i64 0
+; DEFAULT-NEXT:    [[TMP6:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT2]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[TMP20:%.*]] = extractelement <vscale x 16 x i16> [[BROADCAST_SPLAT]], i32 0
+; DEFAULT-NEXT:    [[TMP8:%.*]] = trunc i16 [[TMP20]] to i8
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[TMP8]], i64 0
+; DEFAULT-NEXT:    [[TMP13:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT5]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP14:%.*]] = and <vscale x 16 x i8> [[TMP6]], [[TMP13]]
 ; DEFAULT-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; DEFAULT:       vector.body:
@@ -165,11 +168,14 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; DEFAULT-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <8 x i16> poison, i16 [[X]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT5:%.*]] = shufflevector <8 x i16> [[BROADCAST_SPLATINSERT4]], <8 x i16> poison, <8 x i32> zeroinitializer
-; DEFAULT-NEXT:    [[TMP8:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META13:![0-9]+]]
-; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <8 x i64> poison, i64 [[TMP8]], i64 0
-; DEFAULT-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <8 x i64> [[BROADCAST_SPLATINSERT7]], <8 x i64> poison, <8 x i32> zeroinitializer
-; DEFAULT-NEXT:    [[TMP9:%.*]] = trunc <8 x i64> [[BROADCAST_SPLAT8]] to <8 x i8>
-; DEFAULT-NEXT:    [[TMP7:%.*]] = trunc <8 x i16> [[BROADCAST_SPLAT5]] to <8 x i8>
+; DEFAULT-NEXT:    [[TMP21:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META13:![0-9]+]]
+; DEFAULT-NEXT:    [[TMP22:%.*]] = trunc i64 [[TMP21]] to i8
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <8 x i8> poison, i8 [[TMP22]], i64 0
+; DEFAULT-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT8]], <8 x i8> poison, <8 x i32> zeroinitializer
+; DEFAULT-NEXT:    [[TMP15:%.*]] = extractelement <8 x i16> [[BROADCAST_SPLAT5]], i32 0
+; DEFAULT-NEXT:    [[TMP23:%.*]] = trunc i16 [[TMP15]] to i8
+; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <8 x i8> poison, i8 [[TMP23]], i64 0
+; DEFAULT-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i8> [[BROADCAST_SPLATINSERT10]], <8 x i8> poison, <8 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP10:%.*]] = and <8 x i8> [[TMP9]], [[TMP7]]
 ; DEFAULT-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; DEFAULT:       vec.epilog.vector.body:
@@ -214,12 +220,15 @@ define void @trunc_store(ptr %dst, ptr %src, i16 %x) #1 {
 ; PRED-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i16> poison, i16 [[X]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i16> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer
-; PRED-NEXT:    [[TMP4:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META3:![0-9]+]]
-; PRED-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 16 x i64> poison, i64 [[TMP4]], i64 0
-; PRED-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <vscale x 16 x i64> [[BROADCAST_SPLATINSERT2]], <vscale x 16 x i64> poison, <vscale x 16 x i32> zeroinitializer
+; PRED-NEXT:    [[TMP9:%.*]] = load i64, ptr [[SRC]], align 8, !alias.scope [[META3:![0-9]+]]
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 1000)
-; PRED-NEXT:    [[TMP3:%.*]] = trunc <vscale x 16 x i64> [[BROADCAST_SPLAT3]] to <vscale x 16 x i8>
-; PRED-NEXT:    [[TMP2:%.*]] = trunc <vscale x 16 x i16> [[BROADCAST_SPLAT]] to <vscale x 16 x i8>
+; PRED-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP9]] to i8
+; PRED-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[TMP10]], i64 0
+; PRED-NEXT:    [[TMP3:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT2]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
+; PRED-NEXT:    [[TMP4:%.*]] = extractelement <vscale x 16 x i16> [[BROADCAST_SPLAT]], i32 0
+; PRED-NEXT:    [[TMP11:%.*]] = trunc i16 [[TMP4]] to i8
+; PRED-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[TMP11]], i64 0
+; PRED-NEXT:    [[TMP2:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT4]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
 ; PRED-NEXT:    [[TMP5:%.*]] = and <vscale x 16 x i8> [[TMP3]], [[TMP2]]
 ; PRED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; PRED:       vector.body:

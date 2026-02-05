@@ -1557,6 +1557,16 @@ void VPInstructionWithType::execute(VPTransformState &State) {
   }
 }
 
+InstructionCost VPInstructionWithType::computeCost(ElementCount VF,
+                                                   VPCostContext &Ctx) const {
+  // TODO: Compute accurate cost after retiring the legacy cost model.
+  if (!getUnderlyingValue() || !isScalarCast())
+    return 0;
+
+  return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
+                                    Ctx);
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
                                         VPSlotTracker &SlotTracker) const {

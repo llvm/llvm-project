@@ -82,15 +82,14 @@ define i16 @test_incomplete_chain_without_mul(ptr noalias %dst, ptr %A, ptr %B) 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i16> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[A]], align 1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i8> poison, i8 [[TMP0]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT]], <16 x i8> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <16 x i8> [[BROADCAST_SPLAT]] to <16 x i16>
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x i16> [[TMP1]], i32 15
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP0]] to i16
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i16> poison, i16 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i16> [[BROADCAST_SPLATINSERT1]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    store i16 [[TMP2]], ptr [[DST]], align 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[B]], align 1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <16 x i8> poison, i8 [[TMP3]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <16 x i8> [[BROADCAST_SPLATINSERT1]], <16 x i8> poison, <16 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i8> [[BROADCAST_SPLAT2]] to <16 x i16>
+; CHECK-NEXT:    [[TMP10:%.*]] = zext i8 [[TMP3]] to i16
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i16> poison, i16 [[TMP10]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i16> [[BROADCAST_SPLATINSERT]], <16 x i16> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <16 x i16> [[VEC_PHI]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <16 x i16> [[TMP5]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP7]] = add <16 x i16> [[TMP6]], [[TMP4]]

@@ -81,8 +81,14 @@ define i40 @partial_reduce_not_known_factor(i32 %a, i32 %b, i16 %N) {
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i32> poison, i32 [[A]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[N_VEC]] to i16
-; CHECK-NEXT:    [[TMP3:%.*]] = sext <2 x i32> [[BROADCAST_SPLAT2]] to <2 x i40>
-; CHECK-NEXT:    [[TMP4:%.*]] = sext <2 x i32> [[BROADCAST_SPLAT]] to <2 x i40>
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[BROADCAST_SPLAT2]], i32 0
+; CHECK-NEXT:    [[TMP11:%.*]] = sext i32 [[TMP10]] to i40
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT5:%.*]] = insertelement <2 x i40> poison, i40 [[TMP11]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i40> [[BROADCAST_SPLATINSERT5]], <2 x i40> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i32> [[BROADCAST_SPLAT]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = sext i32 [[TMP12]] to i40
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <2 x i40> poison, i40 [[TMP13]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i40> [[BROADCAST_SPLATINSERT3]], <2 x i40> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = or <2 x i40> [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:

@@ -115,7 +115,7 @@ define void @sink_replicate_region_2(i32 %x, i8 %y, ptr %ptr, i32 %z) optsize {
 ; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
-; CHECK-NEXT:   WIDEN-CAST ir<%recur.next> = sext ir<%y> to i32
+; CHECK-NEXT:   EMIT-SCALAR ir<%recur.next> = sext ir<%y> to i32
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -199,7 +199,7 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
 ; CHECK-NEXT:   EMIT vp<[[RDX_START:%.+]]> = reduction-start-vector ir<1234>, ir<-1>, ir<1>
-; CHECK-NEXT:   WIDEN-CAST ir<%recur.next> = sext ir<%y> to i32
+; CHECK-NEXT:   EMIT-SCALAR ir<%recur.next> = sext ir<%y> to i32
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -402,7 +402,7 @@ define void @sink_replicate_region_after_replicate_region(ptr %ptr, ptr noalias 
 ; CHECK-NEXT: Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
-; CHECK-NEXT:   WIDEN-CAST ir<%recur.next> = sext ir<%y> to i32
+; CHECK-NEXT:   EMIT-SCALAR ir<%recur.next> = sext ir<%y> to i32
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {

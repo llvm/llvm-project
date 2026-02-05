@@ -103,15 +103,18 @@ define void @dotp_small_epilogue_vf(i64 %idx.neg, i8 %a) #1 {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT6]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i64 [[IDX_NEG]], [[N_VEC5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = sext <4 x i8> [[BROADCAST_SPLAT7]] to <4 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i8> [[BROADCAST_SPLAT7]], i32 0
+; CHECK-NEXT:    [[TMP17:%.*]] = sext i8 [[TMP16]] to i32
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT12:%.*]] = insertelement <4 x i32> poison, i32 [[TMP17]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT12]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VEC_EPILOG_VECTOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX9:%.*]] = phi i64 [ [[IV]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT14:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI9:%.*]] = phi <4 x i32> [ [[TMP10]], [[VEC_EPILOG_PH]] ], [ [[TMP13:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr null, align 1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <4 x i8> poison, i8 [[TMP9]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT11:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT10]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = sext <4 x i8> [[BROADCAST_SPLAT11]] to <4 x i32>
+; CHECK-NEXT:    [[TMP18:%.*]] = sext i8 [[TMP9]] to i32
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT10:%.*]] = insertelement <4 x i32> poison, i32 [[TMP18]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT10]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul <4 x i32> [[TMP11]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP13]] = add <4 x i32> [[TMP14]], [[VEC_PHI9]]
 ; CHECK-NEXT:    [[INDEX_NEXT14]] = add nuw i64 [[INDEX9]], 4

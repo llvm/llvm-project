@@ -51,10 +51,10 @@ define i32 @mul_used_outside_vpexpression(ptr %src.0, ptr %src.1) {
 ; CHECK-NEXT:    [[NEXT_GEP6:%.*]] = getelementptr i8, ptr [[SRC_0]], i64 [[INDEX3]]
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i8>, ptr [[NEXT_GEP6]], align 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i8, ptr [[TMP11]], align 1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i8> poison, i8 [[TMP12]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT8]], <4 x i8> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext <4 x i8> [[WIDE_LOAD7]] to <4 x i32>
-; CHECK-NEXT:    [[TMP14:%.*]] = zext <4 x i8> [[BROADCAST_SPLAT9]] to <4 x i32>
+; CHECK-NEXT:    [[TMP21:%.*]] = zext i8 [[TMP12]] to i32
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> poison, i32 [[TMP21]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT8]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul <4 x i32> [[TMP13]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP15]])
 ; CHECK-NEXT:    [[TMP17]] = add i32 [[VEC_PHI4]], [[TMP16]]
