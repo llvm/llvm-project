@@ -60,7 +60,37 @@ private:
     AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
   }
 #endif
-}; // end of struct Hello
+};
+
+inline bool canCombineStore(const memtag::AllocaInfo &Info, AllocaInst *AI,
+                            DominatorTree *DT) {
+  // Must have exactly one lifetime interval.
+  if (Info.LifetimeStart.size() != 1 || Info.LifetimeEnd.size() != 1)
+    return false;
+
+  IntrinsicInst *Start = Info.LifetimeStart.front();
+
+  // Check dominance and instruction order for every use.
+  for (User *U : AI->users()) {
+    auto *I = dyn_cast<Instruction>(U);
+    if (!I)
+      continue;
+
+    // Lifetime intrinsics are not rewritten and do not matter.
+    if (isa<LifetimeIntrinsic>(I))
+      continue;
+
+    // If Start does not dominate the use, combined tagging is unsafe.
+    if (!DT->dominates(Start, I))
+      return false;
+
+    // If in the same block, Start must come before the use.
+    if (Start->getParent() == I->getParent() && !Start->comesBefore(I))
+      return false;
+  }
+
+  return true;
+}
 
 static const inline Align kTagGranuleSize = Align(16);
 
@@ -188,10 +218,10 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
                                    3) &&
         !SInfo.CallsReturnTwice;
     if (StandardLifetime) {
-      bool combineStore{Info.LifetimeStart.size() == 1 &&
-                        Info.LifetimeEnd.size() == 1};
+      bool combineStore{canCombineStore(Info, AI, DT)};
       Function *StoreTagDecl = nullptr;
       Intrinsic::ID SelectedIntrinsicID;
+
       if (combineStore) {
         SelectedIntrinsicID = usehint ? Intrinsic::wasm_memtag_hintstore
                                       : Intrinsic::wasm_memtag_randomstore;
@@ -234,7 +264,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
 
         Info.AI->replaceUsesWithIf(TagPCall, [&](const Use &U) {
           return U.getUser() != TagPCall &&
-                !isa<LifetimeIntrinsic>(U.getUser());
+                 !isa<LifetimeIntrinsic>(U.getUser());
         });
         TagPCall->setOperand(1, Info.AI);
         IntrinsicInst *End = Info.LifetimeEnd.front();
