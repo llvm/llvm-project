@@ -156,21 +156,21 @@ struct PyPrintAccumulator {
   }
 };
 
+/// RAII wrapper for MlirLlvmRawFdOStream that ensures destruction on scope
+/// exit.
+struct RAIIMlirLlvmRawFdOStream : MlirLlvmRawFdOStream {
+  RAIIMlirLlvmRawFdOStream(MlirLlvmRawFdOStream stream)
+      : MlirLlvmRawFdOStream(stream) {}
+  RAIIMlirLlvmRawFdOStream(const RAIIMlirLlvmRawFdOStream &) = delete;
+  RAIIMlirLlvmRawFdOStream &
+  operator=(const RAIIMlirLlvmRawFdOStream &) = delete;
+  ~RAIIMlirLlvmRawFdOStream() { mlirLlvmRawFdOStreamDestroy(*this); }
+};
+
 /// Accumulates into a file, either writing text (default)
 /// or binary. The file may be a Python file-like object or a path to a file.
 class PyFileAccumulator {
 public:
-  /// RAII wrapper for MlirLlvmRawFdOStream that ensures destruction on scope
-  /// exit.
-  struct RAIIMlirLlvmRawFdOStream : MlirLlvmRawFdOStream {
-    RAIIMlirLlvmRawFdOStream(MlirLlvmRawFdOStream stream)
-        : MlirLlvmRawFdOStream(stream) {}
-    RAIIMlirLlvmRawFdOStream(const RAIIMlirLlvmRawFdOStream &) = delete;
-    RAIIMlirLlvmRawFdOStream &
-    operator=(const RAIIMlirLlvmRawFdOStream &) = delete;
-    ~RAIIMlirLlvmRawFdOStream() { mlirLlvmRawFdOStreamDestroy(*this); }
-  };
-
   PyFileAccumulator(const nanobind::object &fileOrStringObject, bool binary)
       : binary(binary) {
     std::string filePath;
