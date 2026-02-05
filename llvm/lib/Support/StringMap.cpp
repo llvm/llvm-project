@@ -14,15 +14,8 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ReverseIteration.h"
 #include "llvm/Support/xxhash.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
-
-cl::opt<bool> tonytest(
-    "tonytest", cl::init(false), cl::Hidden,
-    cl::desc("The maximum nesting depth allowed for assembly macros."));
 
 /// Returns the number of buckets to allocate to ensure that the DenseMap can
 /// accommodate \p NumEntries without need to grow().
@@ -41,8 +34,6 @@ static inline StringMapEntryBase **createTable(unsigned NewNumBuckets) {
 
   // Allocate one extra bucket, set it to look filled so the iterators stop at
   // end.
-  if (tonytest)
-  llvm::dbgs() << "TONY table" << Table << "\n";
   Table[NewNumBuckets] = (StringMapEntryBase *)2;
   return Table;
 }
@@ -73,11 +64,7 @@ void StringMapImpl::init(unsigned InitSize) {
   NumItems = 0;
   NumTombstones = 0;
 
-  if (tonytest)
-  llvm::dbgs() << "TONY a\n";
   TheTable = createTable(NewNumBuckets);
-  if (tonytest)
-  llvm::dbgs() << "TONY b\n";
 
   // Set the member only if TheTable was successfully allocated
   NumBuckets = NewNumBuckets;
@@ -90,20 +77,12 @@ void StringMapImpl::init(unsigned InitSize) {
 /// of the string.
 unsigned StringMapImpl::LookupBucketFor(StringRef Name,
                                         uint32_t FullHashValue) {
-                                        if (tonytest)
-  llvm::dbgs() << "TONY lookup bucket " << Name << " " << FullHashValue << "\n";
 #ifdef EXPENSIVE_CHECKS
   assert(FullHashValue == hash(Name));
 #endif
   // Hash table unallocated so far?
-  if (NumBuckets == 0) {
-  if (tonytest)
-  llvm::dbgs() << "TONY 1\n";
+  if (NumBuckets == 0)
     init(16);
-  if (tonytest)
-  llvm::dbgs() << "TONY 2\n";
-  }
-
   if constexpr (shouldReverseIterate())
     FullHashValue = ~FullHashValue;
   unsigned BucketNo = FullHashValue & (NumBuckets - 1);
