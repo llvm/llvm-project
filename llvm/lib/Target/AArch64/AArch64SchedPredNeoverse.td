@@ -24,6 +24,14 @@ def NeoverseHQForm : MCSchedPredicate<
                          CheckAny<[CheckHForm, CheckQForm]>,
                          CheckImmOperand<4, 1>]>>;
 
+// Identify LDR/STR Q-form scaled (and potentially extended) FP instructions
+def NeoverseQForm : MCSchedPredicate<
+                       CheckAll<[
+                         CheckAny<[CheckQForm]>,
+                         CheckImmOperand<4, 1>]>>;
+
+
+
 // Check if <Pd> == <Pg>
 def NeoversePdIsPgFn : TIIPredicate<
                          "isNeoversePdSameAsPg",
