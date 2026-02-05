@@ -10,7 +10,11 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/DataFormatters/DataVisualization.h"
+#include "lldb/DataFormatters/FormatterBytecode.h"
+#include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include <memory>
 
 using namespace lldb;
 
@@ -133,6 +137,7 @@ void LoadFormattersForModule(ModuleSP module_sp) {
   ForEachFormatterInModule(
       *module_sp, eSectionTypeLLDBFormatters,
       [&](llvm::DataExtractor extractor, llvm::StringRef type_name) {
+        // * Flags (ULEB128)
         // * Function signature (1 byte)
         // * Length of the program (ULEB128)
         // * The program bytecode
@@ -141,31 +146,54 @@ void LoadFormattersForModule(ModuleSP module_sp) {
                                                    category);
         llvm::DataExtractor::Cursor cursor(0);
         uint64_t flags = extractor.getULEB128(cursor);
+
+        FormatterBytecode::BytecodeBytes summary;
+        FormatterBytecode::SyntheticProviderDefinition synthetic;
+        using Signatures = FormatterBytecode::Signatures;
         while (cursor && cursor.tell() < extractor.size()) {
-          uint8_t signature = extractor.getU8(cursor);
+          auto signature = static_cast<Signatures>(extractor.getU8(cursor));
           uint64_t size = extractor.getULEB128(cursor);
           llvm::StringRef bytecode = extractor.getBytes(cursor, size);
           if (!cursor) {
             LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), cursor.takeError(),
                            "{0}");
-            return;
+            break;
           }
-          if (signature == 0) {
-            auto summary_sp = std::make_shared<BytecodeSummaryFormat>(
-                TypeSummaryImpl::Flags(flags),
-                llvm::MemoryBuffer::getMemBufferCopy(bytecode));
-            FormatterMatchType match_type = eFormatterMatchExact;
-            if (type_name.front() == '^')
-              match_type = eFormatterMatchRegex;
-            category->AddTypeSummary(type_name, match_type, summary_sp);
-            LLDB_LOG(GetLog(LLDBLog::DataFormatters),
-                     "Loaded embedded type summary for '{0}' from {1}.",
-                     type_name, module_sp->GetFileSpec());
-          } else
+          auto buffer_up = llvm::MemoryBuffer::getMemBufferCopy(bytecode);
+          if (signature == Signatures::sig_summary) {
+            summary = std::move(buffer_up);
+            continue;
+          }
+
+          bool supported =
+              synthetic.SetBytecode(signature, std::move(buffer_up));
+          if (!supported)
             LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                      "Unsupported formatter signature {0} for '{1}' in {2}",
                      signature, type_name, module_sp->GetFileSpec());
         }
+
+        FormatterMatchType match_type = eFormatterMatchExact;
+        if (type_name.front() == '^')
+          match_type = eFormatterMatchRegex;
+
+        // First, handle a summary provider.
+        if (summary) {
+          auto summary_sp = std::make_shared<BytecodeSummaryFormat>(
+              TypeSummaryImpl::Flags(flags), std::move(summary));
+          category->AddTypeSummary(type_name, match_type, summary_sp);
+          LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+                   "Loaded embedded type summary for '{0}' from {1}.",
+                   type_name, module_sp->GetFileSpec());
+          return;
+        }
+
+        auto synthetic_sp =
+            std::make_shared<BytecodeSyntheticChildren>(std::move(synthetic));
+        category->AddTypeSynthetic(type_name, match_type, synthetic_sp);
+        LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+                 "Loaded embedded type synthetic for '{0}' from {1}.",
+                 type_name, module_sp->GetFileSpec());
       });
 }
 } // namespace lldb_private

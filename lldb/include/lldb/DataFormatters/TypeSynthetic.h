@@ -20,6 +20,7 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
+#include "lldb/DataFormatters/FormatterBytecode.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/ValueObject/ValueObject.h"
 
@@ -474,6 +475,42 @@ private:
   const ScriptedSyntheticChildren &
   operator=(const ScriptedSyntheticChildren &) = delete;
 };
+
+class BytecodeSyntheticChildren : public SyntheticChildren {
+  class FrontEnd : public SyntheticChildrenFrontEnd {
+  public:
+    FrontEnd(ValueObject &backend,
+             FormatterBytecode::SyntheticProviderDefinition &definition);
+
+    lldb::ChildCacheState Update() override;
+    llvm::Expected<uint32_t> CalculateNumChildren() override;
+    lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
+    llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+
+  private:
+    const FormatterBytecode::SyntheticProviderDefinition &m_definition;
+    FormatterBytecode::DataStack m_self;
+  };
+
+public:
+  BytecodeSyntheticChildren(
+      FormatterBytecode::SyntheticProviderDefinition &&definition)
+      : SyntheticChildren({}), m_definition(std::move(definition)) {}
+
+  bool IsScripted() override { return false; }
+
+  std::string GetDescription() override;
+
+  SyntheticChildrenFrontEnd::UniquePointer
+  GetFrontEnd(ValueObject &backend) override {
+    return SyntheticChildrenFrontEnd::UniquePointer(
+        new FrontEnd(backend, m_definition));
+  }
+
+private:
+  FormatterBytecode::SyntheticProviderDefinition m_definition;
+};
+
 } // namespace lldb_private
 
 #endif // LLDB_DATAFORMATTERS_TYPESYNTHETIC_H

@@ -96,6 +96,7 @@ DEFINE_SIGNATURE(2, get_num_children)
 DEFINE_SIGNATURE(3, get_child_index)
 DEFINE_SIGNATURE(4, get_child_at_index)
 DEFINE_SIGNATURE(5, get_value)
+DEFINE_SIGNATURE(6, update)
 
 #undef DEFINE_OPCODE
 #undef DEFINE_SELECTOR
