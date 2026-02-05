@@ -3193,6 +3193,91 @@ struct InsertSliceOpSourceCastInserter final
     return success();
   }
 };
+
+/// If the destination tensor of the insertion of a slice has the same
+/// number of elements as the slice, but with a shape that only
+/// differs by a prefix of unit-sized dimensions, and if the insertion
+/// happens at zero offsets, unit strides and with a size matching the
+/// size of the destination, the insertion covers all elements of the
+/// destination. The result of such an insertion is equivalent to the
+/// slice, with its shape expanded to the type of the destination.
+///
+/// Example:
+/// ```mlir
+///   %0 = tensor.insert_slice %slice into
+///           %x[0, 0, 0, 0, 0][1, 1, 1, 16, 32][1, 1, 1, 1, 1] :
+///           tensor<16x32xf32> into tensor<1x1x1x16x32xf32>
+/// ```
+///
+/// folds into:
+///
+/// ```mlir
+///   %0 = tensor.expand_shape %slice[[0,1,2,3], [4]] :
+///           tensor<16x32xf32> into tensor<1x1x1x16x32xf32>
+/// ```
+struct InsertSliceOpFullRewriteCanonicalizer final
+    : public OpRewritePattern<InsertSliceOp> {
+  using OpRewritePattern<InsertSliceOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(InsertSliceOp insertSliceOp,
+                                PatternRewriter &rewriter) const override {
+    RankedTensorType sourceType = insertSliceOp.getSourceType();
+    RankedTensorType resultType = insertSliceOp.getType();
+
+    if (sourceType != resultType && sourceType.hasStaticShape() &&
+        resultType.hasStaticShape() &&
+        isSameSizedSuffixShape(resultType.getShape(), sourceType.getShape()) &&
+        succeeded(foldIdentityOffsetSizeAndStrideOpInterface(insertSliceOp,
+                                                             resultType))) {
+      SmallVector<ReassociationIndices> reassocIndices;
+
+      // Number of leading dimensions with unit size that are not
+      // shared with the source type
+      size_t unitPrefixLength =
+          resultType.getShape().size() - sourceType.getShape().size();
+
+      // Compose mapping of leading dimensions with unit size and the
+      // fist common dimension to the first dimension of the source
+      // tensor
+      ReassociationIndices unitPrefixExpansion;
+
+      size_t dim;
+      for (dim = 0; dim < unitPrefixLength; dim++)
+        unitPrefixExpansion.push_back(dim);
+
+      unitPrefixExpansion.push_back(unitPrefixLength);
+      reassocIndices.push_back(unitPrefixExpansion);
+
+      // Map remaining common dimensions of the source to the target
+      for (dim = dim + 1; dim < resultType.getShape().size(); dim++) {
+        reassocIndices.push_back({static_cast<int64_t>(dim)});
+      }
+
+      rewriter.replaceOpWithNewOp<ExpandShapeOp>(
+          insertSliceOp, insertSliceOp.getType(), insertSliceOp.getSource(),
+          reassocIndices);
+
+      return mlir::success();
+    }
+
+    return mlir::failure();
+  }
+
+private:
+  /// Checks if `suffix` is a suffix of `shape` and all preceding
+  /// elements in `shape` are ones.
+  static bool isSameSizedSuffixShape(ArrayRef<int64_t> shape,
+                                     ArrayRef<int64_t> suffix) {
+    if (shape.size() >= suffix.size()) {
+      ArrayRef<int64_t> prefix = shape.take_front(shape.size() - suffix.size());
+      ArrayRef<int64_t> remainder = shape.take_back(suffix.size());
+
+      return llvm::all_of(prefix, [](int64_t d) { return d == 1; }) &&
+             remainder == suffix;
+    }
+
+    return false;
+  }
+};
 } // namespace
 
 llvm::SmallBitVector InsertSliceOp::getDroppedDims() {
@@ -3203,7 +3288,8 @@ void InsertSliceOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
   results.add<InsertSliceOpConstantArgumentFolder<InsertSliceOp>,
               InsertSliceOpCastFolder<InsertSliceOp>,
-              InsertSliceOpSourceCastInserter<InsertSliceOp>>(context);
+              InsertSliceOpSourceCastInserter<InsertSliceOp>,
+              InsertSliceOpFullRewriteCanonicalizer>(context);
 }
 
 Value mlir::tensor::createCanonicalRankReducingInsertSliceOp(OpBuilder &b,
