@@ -17,11 +17,11 @@ define <4 x float> @nearbyint_v4f32(<4 x float> %x) #0 {
 define <4 x float> @rint_v4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: rint_v4f32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrintx.f32 s7, s3
-; CHECK-NEXT:    vrintx.f32 s6, s2
-; CHECK-NEXT:    vrintx.f32 s5, s1
-; CHECK-NEXT:    vrintx.f32 s4, s0
-; CHECK-NEXT:    vorr q0, q1, q1
+; CHECK-NEXT:    vmov d17, r2, r3
+; CHECK-NEXT:    vmov d16, r0, r1
+; CHECK-NEXT:    vrintx.f32 q8, q8
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    bx lr
   %val = call <4 x float> @llvm.experimental.constrained.rint.v4f32(<4 x float> %x, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <4 x float> %val
@@ -30,11 +30,11 @@ define <4 x float> @rint_v4f32(<4 x float> %x) #0 {
 define <4 x float> @round_v4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: round_v4f32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrinta.f32 s7, s3
-; CHECK-NEXT:    vrinta.f32 s6, s2
-; CHECK-NEXT:    vrinta.f32 s5, s1
-; CHECK-NEXT:    vrinta.f32 s4, s0
-; CHECK-NEXT:    vorr q0, q1, q1
+; CHECK-NEXT:    vmov d17, r2, r3
+; CHECK-NEXT:    vmov d16, r0, r1
+; CHECK-NEXT:    vrinta.f32 q8, q8
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    bx lr
   %val = call <4 x float> @llvm.experimental.constrained.round.v4f32(<4 x float> %x, metadata !"fpexcept.strict")
   ret <4 x float> %val
@@ -43,11 +43,11 @@ define <4 x float> @round_v4f32(<4 x float> %x) #0 {
 define <4 x float> @roundeven_v4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: roundeven_v4f32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrintn.f32 s7, s3
-; CHECK-NEXT:    vrintn.f32 s6, s2
-; CHECK-NEXT:    vrintn.f32 s5, s1
-; CHECK-NEXT:    vrintn.f32 s4, s0
-; CHECK-NEXT:    vorr q0, q1, q1
+; CHECK-NEXT:    vmov d17, r2, r3
+; CHECK-NEXT:    vmov d16, r0, r1
+; CHECK-NEXT:    vrintn.f32 q8, q8
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    bx lr
   %val = call <4 x float> @llvm.experimental.constrained.roundeven.v4f32(<4 x float> %x, metadata !"fpexcept.strict")
   ret <4 x float> %val
@@ -56,11 +56,11 @@ define <4 x float> @roundeven_v4f32(<4 x float> %x) #0 {
 define <4 x float> @floor_v4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: floor_v4f32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrintm.f32 s7, s3
-; CHECK-NEXT:    vrintm.f32 s6, s2
-; CHECK-NEXT:    vrintm.f32 s5, s1
-; CHECK-NEXT:    vrintm.f32 s4, s0
-; CHECK-NEXT:    vorr q0, q1, q1
+; CHECK-NEXT:    vmov d17, r2, r3
+; CHECK-NEXT:    vmov d16, r0, r1
+; CHECK-NEXT:    vrintm.f32 q8, q8
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    bx lr
   %val = call <4 x float> @llvm.experimental.constrained.floor.v4f32(<4 x float> %x, metadata !"fpexcept.strict")
   ret <4 x float> %val
@@ -69,11 +69,11 @@ define <4 x float> @floor_v4f32(<4 x float> %x) #0 {
 define <4 x float> @ceil_v4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: ceil_v4f32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vrintp.f32 s7, s3
-; CHECK-NEXT:    vrintp.f32 s6, s2
-; CHECK-NEXT:    vrintp.f32 s5, s1
-; CHECK-NEXT:    vrintp.f32 s4, s0
-; CHECK-NEXT:    vorr q0, q1, q1
+; CHECK-NEXT:    vmov d17, r2, r3
+; CHECK-NEXT:    vmov d16, r0, r1
+; CHECK-NEXT:    vrintp.f32 q8, q8
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    bx lr
   %val = call <4 x float> @llvm.experimental.constrained.ceil.v4f32(<4 x float> %x, metadata !"fpexcept.strict")
   ret <4 x float> %val

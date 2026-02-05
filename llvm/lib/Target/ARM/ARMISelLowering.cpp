@@ -379,6 +379,13 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
       setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
 
+      setOperationAction(ISD::STRICT_FROUND, VT, Legal);
+      setOperationAction(ISD::STRICT_FROUNDEVEN, VT, Legal);
+      setOperationAction(ISD::STRICT_FRINT, VT, Legal);
+      setOperationAction(ISD::STRICT_FTRUNC, VT, Legal);
+      setOperationAction(ISD::STRICT_FFLOOR, VT, Legal);
+      setOperationAction(ISD::STRICT_FCEIL, VT, Legal);
+
       // No native support for these.
       setOperationAction(ISD::FDIV, VT, Expand);
       setOperationAction(ISD::FREM, VT, Expand);
@@ -1361,6 +1368,19 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       setOperationAction(ISD::FTRUNC, MVT::v4f32, Legal);
       setOperationAction(ISD::FRINT, MVT::v2f32, Legal);
       setOperationAction(ISD::FRINT, MVT::v4f32, Legal);
+
+      setOperationAction(ISD::STRICT_FFLOOR, MVT::v2f32, Legal);
+      setOperationAction(ISD::STRICT_FFLOOR, MVT::v4f32, Legal);
+      setOperationAction(ISD::STRICT_FROUND, MVT::v2f32, Legal);
+      setOperationAction(ISD::STRICT_FROUND, MVT::v4f32, Legal);
+      setOperationAction(ISD::STRICT_FROUNDEVEN, MVT::v2f32, Legal);
+      setOperationAction(ISD::STRICT_FROUNDEVEN, MVT::v4f32, Legal);
+      setOperationAction(ISD::STRICT_FCEIL, MVT::v2f32, Legal);
+      setOperationAction(ISD::STRICT_FCEIL, MVT::v4f32, Legal);
+      setOperationAction(ISD::STRICT_FTRUNC, MVT::v2f32, Legal);
+      setOperationAction(ISD::STRICT_FTRUNC, MVT::v4f32, Legal);
+      setOperationAction(ISD::STRICT_FRINT, MVT::v2f32, Legal);
+      setOperationAction(ISD::STRICT_FRINT, MVT::v4f32, Legal);
     }
 
     if (Subtarget->hasFullFP16()) {
