@@ -375,7 +375,7 @@ private:
   TargetMachine &TM;
 
 public:
-  AMDGPUAttributorCGSCCPass(GCNTargetMachine &TM) : TM(TM) {}
+  AMDGPUAttributorCGSCCPass(TargetMachine &TM) : TM(TM) {}
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
 };
