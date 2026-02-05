@@ -291,10 +291,12 @@ class LoopCarriedOrderDepsTracker {
     InstrTag getTag() const { return InstrTag(getInt()); }
   };
 
-  /// Holds loads and stores with memory related information.
-  struct LoadStoreChunk {
+  /// Holds instructions that may form loop-carried order-dependencies, but not
+  /// global barriers.
+  struct NoBarrierInstsChunk {
     SmallVector<SUnitWithMemInfo, 4> Loads;
     SmallVector<SUnitWithMemInfo, 4> Stores;
+    SmallVector<SUnitWithMemInfo, 1> FPExceptions;
 
     void append(SUnit *SU);
   };
@@ -341,8 +343,8 @@ private:
   /// Tags to \p SU if the instruction may affect the order-dependencies.
   std::optional<InstrTag> getInstrTag(SUnit *SU) const;
 
-  void addLoopCarriedDepenenciesForChunks(const LoadStoreChunk &From,
-                                          const LoadStoreChunk &To);
+  void addLoopCarriedDepenenciesForChunks(const NoBarrierInstsChunk &From,
+                                          const NoBarrierInstsChunk &To);
 
   /// Add a loop-carried order dependency between \p Src and \p Dst if we
   /// cannot prove they are independent.
@@ -1092,11 +1094,16 @@ static bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
   return false;
 }
 
-void LoopCarriedOrderDepsTracker::LoadStoreChunk::append(SUnit *SU) {
+void LoopCarriedOrderDepsTracker::NoBarrierInstsChunk::append(SUnit *SU) {
   const MachineInstr *MI = SU->getInstr();
-  if (!MI->mayLoadOrStore())
-    return;
-  (MI->mayStore() ? Stores : Loads).emplace_back(SU);
+  if (MI->mayStore())
+    Stores.emplace_back(SU);
+  else if (MI->mayLoad())
+    Loads.emplace_back(SU);
+  else if (MI->mayRaiseFPException())
+    FPExceptions.emplace_back(SU);
+  else
+    llvm_unreachable("Unexpected instruction type.");
 }
 
 LoopCarriedOrderDepsTracker::LoopCarriedOrderDepsTracker(
@@ -1146,7 +1153,7 @@ void LoopCarriedOrderDepsTracker::addDependenciesBetweenSUs(
 }
 
 void LoopCarriedOrderDepsTracker::addLoopCarriedDepenenciesForChunks(
-    const LoadStoreChunk &From, const LoadStoreChunk &To) {
+    const NoBarrierInstsChunk &From, const NoBarrierInstsChunk &To) {
   // Add load-to-store dependencies (WAR).
   for (const SUnitWithMemInfo &Src : From.Loads)
     for (const SUnitWithMemInfo &Dst : To.Stores)
@@ -1164,7 +1171,7 @@ void LoopCarriedOrderDepsTracker::addLoopCarriedDepenenciesForChunks(
 }
 
 void LoopCarriedOrderDepsTracker::computeDependenciesAux() {
-  SmallVector<LoadStoreChunk, 2> Chunks(1);
+  SmallVector<NoBarrierInstsChunk, 2> Chunks(1);
   SUnit *FirstBarrier = nullptr;
   SUnit *LastBarrier = nullptr;
   for (const auto &TSU : TaggedSUnits) {
@@ -1178,10 +1185,8 @@ void LoopCarriedOrderDepsTracker::computeDependenciesAux() {
       Chunks.emplace_back();
       break;
     case InstrTag::LoadOrStore:
-      Chunks.back().append(SU);
-      break;
     case InstrTag::FPExceptions:
-      // TODO: Handle this properly.
+      Chunks.back().append(SU);
       break;
     }
   }
@@ -1189,47 +1194,55 @@ void LoopCarriedOrderDepsTracker::computeDependenciesAux() {
   // Add dependencies between memory operations. If there are one or more
   // barrier events between two memory instructions, we don't add a
   // loop-carried dependence for them.
-  for (const LoadStoreChunk &Chunk : Chunks)
+  for (const NoBarrierInstsChunk &Chunk : Chunks)
     addLoopCarriedDepenenciesForChunks(Chunk, Chunk);
 
-  // There is no barrier instruction between load/store instructions in the same
-  // LoadStoreChunk. If there are one or more barrier instructions, the
-  // instructions sequence is as follows:
+  // There is no barrier instruction between load/store/fp-exception
+  // instructions in the same chunk. If there are one or more barrier
+  // instructions, the instructions sequence is as follows:
   //
-  //   Loads/Stores (Chunks.front())
+  //   Loads/Stores/FPExceptions (Chunks.front())
   //   Barrier (FirstBarrier)
-  //   Loads/Stores
+  //   Loads/Stores/FPExceptions
   //   Barrier
   //   ...
-  //   Loads/Stores
+  //   Loads/Stores/FPExceptions
   //   Barrier (LastBarrier)
-  //   Loads/Stores (Chunks.back())
+  //   Loads/Stores/FPExceptions (Chunks.back())
   //
-  // Since loads/stores must not be reordered across barrier instructions, and
-  // the order of barrier instructions must be preserved, add the following
-  // loop-carried dependences:
+  // Since loads/stores/fp-exceptions must not be reordered across barrier
+  // instructions, and the order of barrier instructions must be preserved, add
+  // the following loop-carried dependences:
   //
-  //       Loads/Stores (Chunks.front()) <-----+
-  //  +--> Barrier (FirstBarrier) <---------+  |
-  //  |    Loads/Stores                     |  |
-  //  |    Barrier                          |  |
-  //  |    ...                              |  |
-  //  |    Loads/Stores                     |  |
-  //  |    Barrier (LastBarrier) -----------+--+
-  //  +--- Loads/Stores (Chunks.back())
+  //       Loads/Stores/FPExceptions (Chunks.front()) <-----+
+  //  +--> Barrier (FirstBarrier) <----------------------+  |
+  //  |    Loads/Stores/FPExceptions                     |  |
+  //  |    Barrier                                       |  |
+  //  |    ...                                           |  |
+  //  |    Loads/Stores/FPExceptions                     |  |
+  //  |    Barrier (LastBarrier) ------------------------+--+
+  //  +--- Loads/Stores/FPExceptions (Chunks.back())
   //
   if (FirstBarrier) {
     assert(LastBarrier && "Both barriers should be set.");
+
+    // LastBarrier -> Loads/Stores/FPExceptions in Chunks.front()
     for (const SUnitWithMemInfo &Dst : Chunks.front().Loads)
       setLoopCarriedDep(LastBarrier, Dst.SU);
     for (const SUnitWithMemInfo &Dst : Chunks.front().Stores)
       setLoopCarriedDep(LastBarrier, Dst.SU);
+    for (const SUnitWithMemInfo &Dst : Chunks.front().FPExceptions)
+      setLoopCarriedDep(LastBarrier, Dst.SU);
 
+    // Loads/Stores/FPExceptions in Chunks.back() -> FirstBarrier
     for (const SUnitWithMemInfo &Src : Chunks.back().Loads)
       setLoopCarriedDep(Src.SU, FirstBarrier);
     for (const SUnitWithMemInfo &Src : Chunks.back().Stores)
       setLoopCarriedDep(Src.SU, FirstBarrier);
+    for (const SUnitWithMemInfo &Src : Chunks.back().FPExceptions)
+      setLoopCarriedDep(Src.SU, FirstBarrier);
 
+    // LastBarrier -> FirstBarrier (if they are different)
     if (FirstBarrier != LastBarrier)
       setLoopCarriedDep(LastBarrier, FirstBarrier);
   }
