@@ -68,7 +68,9 @@ TEST(SerializationFormatRegistryTest, Roundtrip) {
       makeFormat(Inputs, "MockSerializationFormat");
   ASSERT_TRUE(Format);
 
-  TUSummary LoadedSummary = Format->readTUSummary("input");
+  auto LoadedSummaryOrErr = Format->readTUSummary("input");
+  ASSERT_TRUE(!!LoadedSummaryOrErr);
+  TUSummary LoadedSummary = std::move(*LoadedSummaryOrErr);
 
   // Create a temporary output directory
   SmallString<128> OutputDir;
@@ -77,7 +79,8 @@ TEST(SerializationFormatRegistryTest, Roundtrip) {
   llvm::scope_exit CleanupOnExit(
       [&] { sys::fs::remove_directories(OutputDir); });
 
-  Format->writeTUSummary(LoadedSummary, OutputDir);
+  auto WriteErr = Format->writeTUSummary(LoadedSummary, OutputDir);
+  ASSERT_FALSE(!!WriteErr);
 
   EXPECT_EQ(readFilesFromDir(OutputDir),
             (std::map<std::string, std::string>{

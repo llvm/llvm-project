@@ -38,8 +38,8 @@ llvm::Error wrapError(llvm::Error E, const char *Fmt, Args &&...Vals) {
 // JSON Reader and Writer
 //----------------------------------------------------------------------------
 
-llvm::Error isJSONFile(llvm::StringRef Path) {
-  if (!llvm::sys::fs::exists(Path))
+llvm::Error isJSONFile(llvm::vfs::FileSystem &FS, llvm::StringRef Path) {
+  if (!FS.exists(Path))
     return llvm::createStringError(std::errc::no_such_file_or_directory,
                                    "file does not exist: '%s'",
                                    Path.str().c_str());
@@ -51,12 +51,13 @@ llvm::Error isJSONFile(llvm::StringRef Path) {
   return llvm::Error::success();
 }
 
-llvm::Expected<llvm::json::Value> readJSON(llvm::StringRef Path) {
-  if (llvm::Error Err = isJSONFile(Path))
+llvm::Expected<llvm::json::Value> readJSON(llvm::vfs::FileSystem &FS,
+                                           llvm::StringRef Path) {
+  if (llvm::Error Err = isJSONFile(FS, Path))
     return wrapError(std::move(Err), "failed to validate JSON file '%s'",
                      Path.str().c_str());
 
-  auto BufferOrError = llvm::MemoryBuffer::getFile(Path);
+  auto BufferOrError = FS.getBufferForFile(Path);
   if (!BufferOrError) {
     return llvm::createStringError(BufferOrError.getError(),
                                    "failed to read file '%s'",
@@ -66,8 +67,9 @@ llvm::Expected<llvm::json::Value> readJSON(llvm::StringRef Path) {
   return llvm::json::parse(BufferOrError.get()->getBuffer());
 }
 
-llvm::Expected<llvm::json::Object> readJSONObject(llvm::StringRef Path) {
-  auto ExpectedJSON = readJSON(Path);
+llvm::Expected<llvm::json::Object> readJSONObject(llvm::vfs::FileSystem &FS,
+                                                  llvm::StringRef Path) {
+  auto ExpectedJSON = readJSON(FS, Path);
   if (!ExpectedJSON)
     return wrapError(ExpectedJSON.takeError(),
                      "failed to read JSON from file '%s'", Path.str().c_str());
@@ -81,8 +83,9 @@ llvm::Expected<llvm::json::Object> readJSONObject(llvm::StringRef Path) {
   return std::move(*Object);
 }
 
-llvm::Expected<llvm::json::Array> readJSONArray(llvm::StringRef Path) {
-  auto ExpectedJSON = readJSON(Path);
+llvm::Expected<llvm::json::Array> readJSONArray(llvm::vfs::FileSystem &FS,
+                                                llvm::StringRef Path) {
+  auto ExpectedJSON = readJSON(FS, Path);
   if (!ExpectedJSON)
     return wrapError(ExpectedJSON.takeError(),
                      "failed to read JSON from file '%s'", Path.str().c_str());
@@ -96,19 +99,28 @@ llvm::Expected<llvm::json::Array> readJSONArray(llvm::StringRef Path) {
   return std::move(*Array);
 }
 
-llvm::Error writeJSON(llvm::json::Value &&Value, llvm::StringRef Path) {
+llvm::Error writeJSON(llvm::vfs::FileSystem &FS, llvm::json::Value &&Value,
+                      llvm::StringRef Path) {
+  std::string Content;
+  llvm::raw_string_ostream OS(Content);
+  OS << llvm::formatv("{0:2}\n", Value);
+  OS.flush();
+
   std::error_code EC;
-  llvm::raw_fd_ostream OS(Path, EC);
+
+  // For real file system, we can use the atomic file approach
+  // For VFS, we need to write the content directly
+  llvm::raw_fd_ostream OutStream(Path, EC, llvm::sys::fs::OF_Text);
   if (EC) {
     return llvm::createStringError(EC, "failed to open '%s'",
                                    Path.str().c_str());
   }
 
-  OS << llvm::formatv("{0:2}\n", Value);
+  OutStream << Content;
+  OutStream.flush();
 
-  OS.flush();
-  if (OS.has_error()) {
-    return llvm::createStringError(OS.error(), "write failed");
+  if (OutStream.has_error()) {
+    return llvm::createStringError(OutStream.error(), "write failed");
   }
 
   return llvm::Error::success();
@@ -365,8 +377,7 @@ JSONFormat::entityIdTableFromJSON(const llvm::json::Array &EntityIdTableArray,
   const size_t EntityCount = EntityIdTableArray.size();
 
   EntityIdTable IdTable;
-  std::map<EntityName, EntityId> &Entities =
-      getEntitiesForDeserialization(IdTable);
+  std::map<EntityName, EntityId> &Entities = getEntities(IdTable);
 
   for (size_t Index = 0; Index < EntityCount; ++Index) {
     const llvm::json::Value &EntityIdTableEntryValue =
@@ -596,14 +607,22 @@ llvm::json::Object JSONFormat::summaryDataMapEntryToJSON(
 llvm::Expected<
     std::map<SummaryName, std::map<EntityId, std::unique_ptr<EntitySummary>>>>
 JSONFormat::readTUSummaryData(llvm::StringRef Path) {
-  if (!llvm::sys::fs::exists(Path)) {
+  if (!FS->exists(Path)) {
     return llvm::createStringError(
         std::errc::no_such_file_or_directory,
         "failed to read TUSummary data: directory does not exist: '%s'",
         Path.str().c_str());
   }
 
-  if (!llvm::sys::fs::is_directory(Path)) {
+  auto StatusOrErr = FS->status(Path);
+  if (!StatusOrErr) {
+    return llvm::createStringError(
+        StatusOrErr.getError(),
+        "failed to read TUSummary data: cannot get status of '%s'",
+        Path.str().c_str());
+  }
+
+  if (!StatusOrErr->isDirectory()) {
     return llvm::createStringError(
         std::errc::not_a_directory,
         "failed to read TUSummary data: path is not a directory: '%s'",
@@ -614,18 +633,19 @@ JSONFormat::readTUSummaryData(llvm::StringRef Path) {
       Data;
   std::error_code EC;
 
-  llvm::sys::fs::directory_iterator Dir(Path, EC);
+  auto DirIter = FS->dir_begin(Path, EC);
   if (EC) {
     return llvm::createStringError(
         EC, "failed to read TUSummary data: cannot iterate directory '%s'",
         Path.str().c_str());
   }
 
-  for (llvm::sys::fs::directory_iterator End; Dir != End && !EC;
-       Dir.increment(EC)) {
-    std::string SummaryPath = Dir->path();
+  for (llvm::vfs::directory_iterator End; DirIter != End && !EC;
+       DirIter.increment(EC)) {
+    llvm::StringRef SummaryPathRef = DirIter->path();
+    std::string SummaryPath = SummaryPathRef.str();
 
-    auto ExpectedObject = readJSONObject(SummaryPath);
+    auto ExpectedObject = readJSONObject(*FS, SummaryPath);
     if (!ExpectedObject)
       return wrapError(ExpectedObject.takeError(),
                        "failed to read TUSummary data from file '%s'",
@@ -680,14 +700,22 @@ llvm::Error JSONFormat::writeTUSummaryData(
     const std::map<SummaryName,
                    std::map<EntityId, std::unique_ptr<EntitySummary>>> &Data,
     llvm::StringRef Path) {
-  if (!llvm::sys::fs::exists(Path)) {
+  if (!FS->exists(Path)) {
     return llvm::createStringError(
         std::errc::no_such_file_or_directory,
         "failed to write TUSummary data: directory does not exist: '%s'",
         Path.str().c_str());
   }
 
-  if (!llvm::sys::fs::is_directory(Path)) {
+  auto StatusOrErr = FS->status(Path);
+  if (!StatusOrErr) {
+    return llvm::createStringError(
+        StatusOrErr.getError(),
+        "failed to write TUSummary data: cannot get status of '%s'",
+        Path.str().c_str());
+  }
+
+  if (!StatusOrErr->isDirectory()) {
     return llvm::createStringError(
         std::errc::not_a_directory,
         "failed to write TUSummary data: path is not a directory: '%s'",
@@ -702,7 +730,7 @@ llvm::Error JSONFormat::writeTUSummaryData(
     llvm::sys::path::replace_extension(SummaryPath, ".json");
 
     llvm::json::Object Result = summaryDataMapEntryToJSON(SummaryName, DataMap);
-    if (auto Error = writeJSON(std::move(Result), SummaryPath)) {
+    if (auto Error = writeJSON(*FS, std::move(Result), SummaryPath)) {
       return wrapError(
           std::move(Error), std::errc::io_error,
           "failed to write TUSummary data to directory '%s': cannot write "
@@ -727,7 +755,7 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
   llvm::SmallString<kPathBufferSize> TUNamespacePath(Path);
   llvm::sys::path::append(TUNamespacePath, TUSummaryTUNamespaceFilename);
 
-  auto ExpectedObject = readJSONObject(TUNamespacePath);
+  auto ExpectedObject = readJSONObject(*FS, TUNamespacePath);
   if (!ExpectedObject)
     return wrapError(ExpectedObject.takeError(),
                      "failed to read TUSummary from '%s'", Path.str().c_str());
@@ -745,7 +773,7 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
     llvm::SmallString<kPathBufferSize> IdTablePath(Path);
     llvm::sys::path::append(IdTablePath, TUSummaryIdTableFilename);
 
-    auto ExpectedArray = readJSONArray(IdTablePath);
+    auto ExpectedArray = readJSONArray(*FS, IdTablePath);
     if (!ExpectedArray)
       return wrapError(ExpectedArray.takeError(),
                        "failed to read TUSummary from '%s'",
@@ -757,7 +785,7 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
                        "failed to read TUSummary from '%s'",
                        Path.str().c_str());
 
-    getIdTableForDeserialization(Summary) = std::move(*ExpectedIdTable);
+    getIdTable(Summary) = std::move(*ExpectedIdTable);
   }
 
   // Populate Data field.
@@ -765,14 +793,22 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
     llvm::SmallString<kPathBufferSize> DataPath(Path);
     llvm::sys::path::append(DataPath, TUSummaryDataDirname);
 
-    if (!llvm::sys::fs::exists(DataPath)) {
+    if (!FS->exists(DataPath)) {
       return llvm::createStringError(std::errc::no_such_file_or_directory,
                                      "failed to read TUSummary from '%s': "
                                      "data directory does not exist: '%s'",
                                      Path.str().c_str(), DataPath.str().data());
     }
 
-    if (!llvm::sys::fs::is_directory(DataPath)) {
+    auto StatusOrErr = FS->status(DataPath);
+    if (!StatusOrErr) {
+      return llvm::createStringError(StatusOrErr.getError(),
+                                     "failed to read TUSummary from '%s': "
+                                     "cannot get status of data path: '%s'",
+                                     Path.str().c_str(), DataPath.str().data());
+    }
+
+    if (!StatusOrErr->isDirectory()) {
       return llvm::createStringError(std::errc::not_a_directory,
                                      "failed to read TUSummary from '%s': "
                                      "data path is not a directory: '%s'",
@@ -785,7 +821,7 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
                        "failed to read TUSummary from '%s'",
                        Path.str().c_str());
 
-    getDataForDeserialization(Summary) = std::move(*ExpectedData);
+    getData(Summary) = std::move(*ExpectedData);
   }
 
   return Summary;
@@ -800,7 +836,8 @@ llvm::Error JSONFormat::writeTUSummary(const TUSummary &S,
 
     llvm::json::Object BuildNamespaceObj =
         buildNamespaceToJSON(getTUNamespace(S));
-    if (auto Error = writeJSON(std::move(BuildNamespaceObj), TUNamespacePath)) {
+    if (auto Error =
+            writeJSON(*FS, std::move(BuildNamespaceObj), TUNamespacePath)) {
       return wrapError(std::move(Error), std::errc::io_error,
                        "failed to write TUSummary to '%s': "
                        "cannot write TUNamespace file '%s'",
@@ -814,7 +851,7 @@ llvm::Error JSONFormat::writeTUSummary(const TUSummary &S,
     llvm::sys::path::append(IdTablePath, TUSummaryIdTableFilename);
 
     llvm::json::Array IdTableObj = entityIdTableToJSON(getIdTable(S));
-    if (auto Error = writeJSON(std::move(IdTableObj), IdTablePath)) {
+    if (auto Error = writeJSON(*FS, std::move(IdTableObj), IdTablePath)) {
       return wrapError(std::move(Error), std::errc::io_error,
                        "failed to write TUSummary to '%s': "
                        "cannot write IdTable file '%s'",
@@ -828,6 +865,8 @@ llvm::Error JSONFormat::writeTUSummary(const TUSummary &S,
     llvm::sys::path::append(DataPath, TUSummaryDataDirname);
 
     // Create the data directory if it doesn't exist
+    // Use the real filesystem for directory creation as VFS doesn't always
+    // support this
     if (std::error_code EC = llvm::sys::fs::create_directory(DataPath)) {
       // If error is not "already exists", return error
       if (EC != std::errc::file_exists) {
@@ -840,13 +879,22 @@ llvm::Error JSONFormat::writeTUSummary(const TUSummary &S,
     }
 
     // Verify it's a directory (could be a file with the same name)
-    if (llvm::sys::fs::exists(DataPath) &&
-        !llvm::sys::fs::is_directory(DataPath)) {
-      return llvm::createStringError(
-          std::errc::not_a_directory,
-          "failed to write TUSummary to '%s': data path exists but is not a "
-          "directory: '%s'",
-          Dir.str().c_str(), DataPath.str().data());
+    if (FS->exists(DataPath)) {
+      auto StatusOrErr = FS->status(DataPath);
+      if (!StatusOrErr) {
+        return llvm::createStringError(StatusOrErr.getError(),
+                                       "failed to write TUSummary to '%s': "
+                                       "cannot get status of data path '%s'",
+                                       Dir.str().c_str(),
+                                       DataPath.str().data());
+      }
+      if (!StatusOrErr->isDirectory()) {
+        return llvm::createStringError(
+            std::errc::not_a_directory,
+            "failed to write TUSummary to '%s': data path exists but is not a "
+            "directory: '%s'",
+            Dir.str().c_str(), DataPath.str().data());
+      }
     }
 
     if (auto Error = writeTUSummaryData(getData(S), DataPath)) {

@@ -26,31 +26,21 @@ EntityId SerializationFormat::makeEntityId(const size_t Index) {
   return EntityId(Index);
 }
 
-const std::map<EntityName, EntityId> &
+const decltype(EntityIdTable::Entities) &
 SerializationFormat::getEntities(const EntityIdTable &EIT) {
   return EIT.Entities;
 }
 
-std::map<EntityName, EntityId> &
-SerializationFormat::getEntitiesForDeserialization(EntityIdTable &EIT) {
+decltype(EntityIdTable::Entities) &
+SerializationFormat::getEntities(EntityIdTable &EIT) {
   return EIT.Entities;
 }
 
-EntityIdTable &SerializationFormat::getIdTableForDeserialization(TUSummary &S) {
+const EntityIdTable &SerializationFormat::getIdTable(const TUSummary &S) {
   return S.IdTable;
 }
 
-BuildNamespace &
-SerializationFormat::getTUNamespaceForDeserialization(TUSummary &S) {
-  return S.TUNamespace;
-}
-
-std::map<SummaryName, std::map<EntityId, std::unique_ptr<EntitySummary>>> &
-SerializationFormat::getDataForDeserialization(TUSummary &S) {
-  return S.Data;
-}
-
-const EntityIdTable &SerializationFormat::getIdTable(const TUSummary &S) {
+EntityIdTable &SerializationFormat::getIdTable(TUSummary &S) {
   return S.IdTable;
 }
 
@@ -58,9 +48,16 @@ const BuildNamespace &SerializationFormat::getTUNamespace(const TUSummary &S) {
   return S.TUNamespace;
 }
 
-const std::map<SummaryName,
-               std::map<EntityId, std::unique_ptr<EntitySummary>>> &
+BuildNamespace &SerializationFormat::getTUNamespace(TUSummary &S) {
+  return S.TUNamespace;
+}
+
+const decltype(TUSummary::Data) &
 SerializationFormat::getData(const TUSummary &S) {
+  return S.Data;
+}
+
+decltype(TUSummary::Data) &SerializationFormat::getData(TUSummary &S) {
   return S.Data;
 }
 
@@ -91,13 +88,4 @@ SerializationFormat::getEntityNameSuffix(const EntityName &EN) {
 const NestedBuildNamespace &
 SerializationFormat::getEntityNameNamespace(const EntityName &EN) {
   return EN.Namespace;
-}
-
-const decltype(TUSummary::Data) &
-SerializationFormat::getData(const TUSummary &S) {
-  return S.Data;
-}
-
-decltype(TUSummary::Data) &SerializationFormat::getData(TUSummary &S) {
-  return S.Data;
 }

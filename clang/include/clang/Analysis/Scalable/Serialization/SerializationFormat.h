@@ -42,21 +42,16 @@ protected:
   static size_t getEntityIdIndex(const EntityId &EI);
   static EntityId makeEntityId(const size_t Index);
 
-  static const std::map<EntityName, EntityId> &
+  static const decltype(EntityIdTable::Entities) &
   getEntities(const EntityIdTable &EIT);
-  static std::map<EntityName, EntityId> &
-  getEntitiesForDeserialization(EntityIdTable &EIT);
+  static decltype(EntityIdTable::Entities) &getEntities(EntityIdTable &EIT);
 
-  static EntityIdTable &getIdTableForDeserialization(TUSummary &S);
-  static BuildNamespace &getTUNamespaceForDeserialization(TUSummary &S);
-  static std::map<SummaryName,
-                  std::map<EntityId, std::unique_ptr<EntitySummary>>> &
-  getDataForDeserialization(TUSummary &S);
   static const EntityIdTable &getIdTable(const TUSummary &S);
+  static EntityIdTable &getIdTable(TUSummary &S);
   static const BuildNamespace &getTUNamespace(const TUSummary &S);
-  static const std::map<SummaryName,
-                        std::map<EntityId, std::unique_ptr<EntitySummary>>> &
-  getData(const TUSummary &S);
+  static BuildNamespace &getTUNamespace(TUSummary &S);
+  static const decltype(TUSummary::Data) &getData(const TUSummary &S);
+  static decltype(TUSummary::Data) &getData(TUSummary &S);
 
   static BuildNamespaceKind getBuildNamespaceKind(const BuildNamespace &BN);
   static llvm::StringRef getBuildNamespaceName(const BuildNamespace &BN);
@@ -67,8 +62,6 @@ protected:
   static const llvm::SmallString<16> &getEntityNameSuffix(const EntityName &EN);
   static const NestedBuildNamespace &
   getEntityNameNamespace(const EntityName &EN);
-  static decltype(TUSummary::Data) &getData(TUSummary &S);
-  static const decltype(TUSummary::Data) &getData(const TUSummary &S);
 
 public:
   explicit SerializationFormat(

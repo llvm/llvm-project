@@ -78,7 +78,7 @@ void createDir(llvm::StringRef Path) {
 // Base test fixture for JSONFormat tests
 class JSONFormatTestBase : public ::testing::Test {
 protected:
-  JSONFormat Format;
+  JSONFormat Format{llvm::vfs::getRealFileSystem()};
 };
 
 //===----------------------------------------------------------------------===//

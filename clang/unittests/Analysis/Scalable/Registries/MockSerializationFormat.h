@@ -21,10 +21,10 @@ public:
   explicit MockSerializationFormat(
       llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
-  TUSummary readTUSummary(llvm::StringRef Path) override;
+  llvm::Expected<TUSummary> readTUSummary(llvm::StringRef Path) override;
 
-  void writeTUSummary(const TUSummary &Summary,
-                      llvm::StringRef OutputDir) override;
+  llvm::Error writeTUSummary(const TUSummary &Summary,
+                             llvm::StringRef OutputDir) override;
 
   struct SpecialFileRepresentation {
     std::string MockRepresentation;

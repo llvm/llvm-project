@@ -23,7 +23,8 @@ class SummaryName;
 
 class JSONFormat : public SerializationFormat {
 public:
-  JSONFormat() = default;
+  explicit JSONFormat(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
+      : SerializationFormat(FS) {}
 
   ~JSONFormat() = default;
 
