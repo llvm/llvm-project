@@ -278,13 +278,13 @@ void DebugInfoFinder::processImportedEntity(const DIImportedEntity *Import) {
     processScope(M->getScope());
 }
 
-// Process a macro debug info node (DIMacroNode).
-//
-// A DIMacroNode is one of two types:
-//   - DIMacro: A single macro definition. Add it to the Macros list along with
-//     its containing DIMacroFile.
-//   - DIMacroFile: A file containing macros. Recursively process all nested
-//     macro nodes within it (avoiding duplicates by tracking visited nodes).
+/// Process a macro debug info node (DIMacroNode).
+///
+/// A DIMacroNode is one of two types:
+///   - DIMacro: A single macro definition. Add it to the Macros list along with
+///     its containing DIMacroFile.
+///   - DIMacroFile: A file containing macros. Recursively process all nested
+///     macro nodes within it (avoiding duplicates by tracking visited nodes).
 void DebugInfoFinder::processMacroNode(DIMacroNode *Macro,
                                        DIMacroFile *CurrentMacroFile) {
   if (!Macro)
