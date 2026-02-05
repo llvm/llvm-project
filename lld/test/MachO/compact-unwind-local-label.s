@@ -1,19 +1,20 @@
 # REQUIRES: aarch64
 
-## Test that ld64.lld handles compact unwind entries for functions with
-## temporary label names (L-prefixed symbols that are not in the symbol table).
+## Test that ld64.lld handles compact unwind entries that reference function
+## addresses with no matching symbol in the symbol table (e.g. temporary local
+## labels).
 
-# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o %t.o %s
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o test.o test.s
 # RUN: %no-arg-lld -arch arm64 -platform_version macos 11.0 11.0 \
-# RUN:   -syslibroot %S/Inputs/MacOSX.sdk -lSystem -o %t %t.o
-# RUN: llvm-objdump --macho --unwind-info %t | FileCheck %s --check-prefix=UNWIND
+# RUN:   -syslibroot %S/Inputs/MacOSX.sdk -lSystem -o test test.o
+# RUN: llvm-objdump --macho --unwind-info test | FileCheck %s
 
-# UNWIND: Contents of __unwind_info section:
-# UNWIND: Second level indices:
-# UNWIND: [0]: function offset=0x{{[0-9A-Fa-f]+}}
-# UNWIND: [1]: function offset=0x{{[0-9A-Fa-f]+}}
+# CHECK: Contents of __unwind_info section:
+# CHECK: Second level indices:
+# CHECK: [0]: function offset=0x{{[0-9A-Fa-f]+}}
+# CHECK: [1]: function offset=0x{{[0-9A-Fa-f]+}}
 
-.ifdef GEN
 #--- test.c
 #include <stdint.h>
 
@@ -34,7 +35,7 @@ int main(void) {
 }
 #--- gen
 clang -target arm64-apple-macos11.0 -S -O2 -fno-omit-frame-pointer -o - test.c
-.endif
+#--- test.s
 	.section	__TEXT,__text,regular,pure_instructions
 	.build_version macos, 11, 0	sdk_version 15, 4
 	.globl	_main                           ; -- Begin function main
