@@ -118,6 +118,16 @@ SymbolDownload ModuleListProperties::GetSymbolAutoDownload() const {
                g_modulelist_properties[idx].default_uint_value));
 }
 
+bool ModuleListProperties::GetSharedCacheSegmentLoads() const {
+  const uint32_t idx = ePropertySharedCacheSegmentLoads;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
+bool ModuleListProperties::SetSharedCacheSegmentLoads(bool new_value) {
+  return SetPropertyAtIndex(ePropertySharedCacheSegmentLoads, new_value);
+}
+
 FileSpec ModuleListProperties::GetClangModulesCachePath() const {
   const uint32_t idx = ePropertyClangModulesCachePath;
   return GetPropertyAtIndexAs<FileSpec>(idx, {});
