@@ -141,9 +141,6 @@ static bool lowerLoadRelative(Function &F) {
 /// TargetLowering::emitCanLoadSpeculatively.
 /// The default expansion returns false (conservative).
 static bool lowerCanLoadSpeculatively(Function &F, const TargetMachine *TM) {
-  if (F.use_empty())
-    return false;
-
   bool Changed = false;
 
   for (Use &U : llvm::make_early_inc_range(F.uses())) {
