@@ -70,6 +70,7 @@ LLVMInitializeDirectXTarget() {
   initializeDXContainerGlobalsPass(*PR);
   initializeGlobalDCELegacyPassPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
+  initializeSROALegacyPassPass(*PR);
   initializeDXILResourceAccessLegacyPass(*PR);
   initializeDXILResourceImplicitBindingLegacyPass(*PR);
   initializeDXILTranslateMetadataLegacyPass(*PR);
@@ -121,6 +122,7 @@ public:
     DxilScalarOptions.ScalarizeLoadStore = true;
     addPass(createScalarizerPass(DxilScalarOptions));
     addPass(createDXILFlattenArraysLegacyPass());
+    addPass(createSROAPass());
     addPass(createDXILForwardHandleAccessesLegacyPass());
     addPass(createDeadStoreEliminationPass());
     addPass(createDXILLegalizeLegacyPass());
@@ -147,7 +149,7 @@ DirectXTargetMachine::DirectXTargetMachine(const Target &T, const Triple &TT,
 
 DirectXTargetMachine::~DirectXTargetMachine() {}
 
-void DirectXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void DirectXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "DirectXPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 }
