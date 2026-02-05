@@ -650,7 +650,6 @@ bool MachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  return false;
   if (EnableMachineSched.getNumOccurrences()) {
     if (!EnableMachineSched)
       return false;
