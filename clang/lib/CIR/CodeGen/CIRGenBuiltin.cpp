@@ -779,6 +779,8 @@ static mlir::Value getCorrectedPtr(mlir::Value argValue, mlir::Type expectedTy,
   assert(ptrType != expectedPtrType && "types should not match");
 
   if (ptrType.getAddrSpace() != expectedPtrType.getAddrSpace()) {
+    assert(!cir::MissingFeatures::addressSpace() &&
+           "address space handling not yet implemented");
     auto newPtrType = cir::PointerType::get(ptrType.getPointee(),
                                             expectedPtrType.getAddrSpace());
     return builder.createAddrSpaceCast(argValue, newPtrType);
