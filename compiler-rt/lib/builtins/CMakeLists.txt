@@ -526,8 +526,8 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP)
     arm/funder.c
     ${thumb1_base_SOURCES}
   )
-  set_property(SOURCE arm/thumb1/cmpdf2.S PROPERTY crt_supersedes comparedf2.c)
-  set_property(SOURCE arm/thumb1/cmpdf2.S DIRECTORY ${COMPILER_RT_SOURCE_DIR} PROPERTY crt_provides comparedf2)
+  set_special_properties(arm/thumb1/cmpdf2.S
+    SUPERSEDES comparedf2.c PROVIDES comparedf2)
 endif()
 
 set(arm_EABI_RT_SOURCES
