@@ -13,6 +13,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllTranslations.h"
@@ -105,7 +106,8 @@ llvm::LogicalResult prepareCIRModuleDataLayout(mlir::ModuleOp mod,
   std::string layoutString = targetInfo->getDataLayoutString();
 
   // Registered dialects may not be loaded yet, ensure they are.
-  context->loadDialect<mlir::DLTIDialect, mlir::LLVM::LLVMDialect>();
+  context->loadDialect<mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
+                       mlir::omp::OpenMPDialect>();
 
   mlir::DataLayoutSpecInterface dlSpec =
       mlir::translateDataLayout(llvm::DataLayout(layoutString), context);

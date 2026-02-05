@@ -482,6 +482,12 @@ private:
 
   ComplexRendererFns selectExtractHigh(MachineOperand &Root) const;
 
+  ComplexRendererFns selectCVTFixedPointVec(MachineOperand &Root) const;
+  ComplexRendererFns
+  selectCVTFixedPointVecBase(const MachineOperand &Root) const;
+  void renderFixedPointXForm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                             int OpIdx = -1) const;
+
   void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx = -1) const;
   void renderLogicalImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
@@ -7891,6 +7897,62 @@ AArch64InstructionSelector::selectExtractHigh(MachineOperand &Root) const {
   }
 
   return std::nullopt;
+}
+
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectCVTFixedPointVecBase(
+    const MachineOperand &Root) const {
+  if (!Root.isReg())
+    return std::nullopt;
+  const MachineRegisterInfo &MRI =
+      Root.getParent()->getParent()->getParent()->getRegInfo();
+
+  MachineInstr *Dup = getDefIgnoringCopies(Root.getReg(), MRI);
+  if (Dup->getOpcode() != AArch64::G_DUP)
+    return std::nullopt;
+  std::optional<ValueAndVReg> CstVal =
+      getAnyConstantVRegValWithLookThrough(Dup->getOperand(1).getReg(), MRI);
+  if (!CstVal)
+    return std::nullopt;
+
+  unsigned RegWidth = MRI.getType(Root.getReg()).getScalarSizeInBits();
+  APFloat FVal(0.0);
+  switch (RegWidth) {
+  case 16:
+    FVal = APFloat(APFloat::IEEEhalf(), CstVal->Value);
+    break;
+  case 32:
+    FVal = APFloat(APFloat::IEEEsingle(), CstVal->Value);
+    break;
+  case 64:
+    FVal = APFloat(APFloat::IEEEdouble(), CstVal->Value);
+    break;
+  default:
+    return std::nullopt;
+  };
+  if (unsigned FBits = CheckFixedPointOperandConstant(FVal, RegWidth,
+                                                      /*isReciprocal*/ false))
+    return {{[=](MachineInstrBuilder &MIB) { MIB.addImm(FBits); }}};
+
+  return std::nullopt;
+}
+
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectCVTFixedPointVec(MachineOperand &Root) const {
+  return selectCVTFixedPointVecBase(Root);
+}
+
+void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,
+                                                       const MachineInstr &MI,
+                                                       int OpIdx) const {
+  // FIXME: This is only needed to satisfy the type checking in tablegen, and
+  // should be able to reuse the Renderers already calculated by
+  // selectCVTFixedPointVecBase.
+  InstructionSelector::ComplexRendererFns Renderer =
+      selectCVTFixedPointVecBase(MI.getOperand(2));
+  assert((Renderer && Renderer->size() == 1) &&
+         "Expected selectCVTFixedPointVec to provide a function\n");
+  (Renderer->front())(MIB);
 }
 
 void AArch64InstructionSelector::renderTruncImm(MachineInstrBuilder &MIB,
