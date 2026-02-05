@@ -897,6 +897,26 @@ public:
     return getNode(ISD::BUILD_VECTOR, DL, VT, Ops);
   }
 
+  /// Return a BUILD_VECTOR of constants from an array of APInt values.
+  ///
+  /// \p VT must be a fixed-width integer vector type. \p Ops contains the
+  /// constant value for each element (sized to VT's scalar size in bits).
+  /// Bits set in \p UndefElts indicate elements that should be UNDEF.
+  ///
+  /// When NewNodesMustHaveLegalTypes is true (i.e., after type legalization),
+  /// the element constants are created using a promoted legal type, relying
+  /// on BUILD_VECTOR's implicit truncation semantics. This avoids creating
+  /// nodes with illegal scalar types that would otherwise trigger assertions.
+  LLVM_ABI SDValue getConstantBuildVector(EVT VT, const SDLoc &DL,
+                                          ArrayRef<APInt> Ops,
+                                          const APInt &UndefElts);
+
+  /// Convenience overload with no undef elements.
+  SDValue getConstantBuildVector(EVT VT, const SDLoc &DL,
+                                 ArrayRef<APInt> Ops) {
+    return getConstantBuildVector(VT, DL, Ops, APInt::getZero(Ops.size()));
+  }
+
   /// Return a splat ISD::BUILD_VECTOR node, consisting of Op splatted to all
   /// elements. VT must be a vector type. Op's type must be the same as (or,
   /// for integers, a type wider than) VT's element type.

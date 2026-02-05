@@ -14256,37 +14256,36 @@ static SDValue tryToFoldExtendOfConstant(SDNode *N, const SDLoc &DL,
   // fold (zext (build_vector AllConstants) -> (build_vector AllConstants)
   // fold (aext (build_vector AllConstants) -> (build_vector AllConstants)
   EVT SVT = VT.getScalarType();
-  if (!(VT.isVector() && (!LegalTypes || TLI.isTypeLegal(SVT)) &&
-      ISD::isBuildVectorOfConstantSDNodes(N0.getNode())))
+  if (!(VT.isVector() &&
+        ISD::isBuildVectorOfConstantSDNodes(N0.getNode())))
     return SDValue();
 
   // We can fold this node into a build_vector.
   unsigned VTBits = SVT.getSizeInBits();
   unsigned EVTBits = N0->getValueType(0).getScalarSizeInBits();
-  SmallVector<SDValue, 8> Elts;
   unsigned NumElts = VT.getVectorNumElements();
+  SmallVector<APInt, 8> Constants;
+  APInt UndefElts = APInt::getZero(NumElts);
 
   for (unsigned i = 0; i != NumElts; ++i) {
     SDValue Op = N0.getOperand(i);
     if (Op.isUndef()) {
       if (Opcode == ISD::ANY_EXTEND || Opcode == ISD::ANY_EXTEND_VECTOR_INREG)
-        Elts.push_back(DAG.getUNDEF(SVT));
-      else
-        Elts.push_back(DAG.getConstant(0, DL, SVT));
+        UndefElts.setBit(i);
+      // For sext/zext, undef -> 0 (matching previous behavior).
+      Constants.push_back(APInt::getZero(VTBits));
       continue;
     }
-
-    SDLoc DL(Op);
     // Get the constant value and if needed trunc it to the size of the type.
     // Nodes like build_vector might have constants wider than the scalar type.
     APInt C = Op->getAsAPIntVal().zextOrTrunc(EVTBits);
     if (Opcode == ISD::SIGN_EXTEND || Opcode == ISD::SIGN_EXTEND_VECTOR_INREG)
-      Elts.push_back(DAG.getConstant(C.sext(VTBits), DL, SVT));
+      Constants.push_back(C.sext(VTBits));
     else
-      Elts.push_back(DAG.getConstant(C.zext(VTBits), DL, SVT));
+      Constants.push_back(C.zext(VTBits));
   }
 
-  return DAG.getBuildVector(VT, DL, Elts);
+  return DAG.getConstantBuildVector(VT, DL, Constants, UndefElts);
 }
 
 // ExtendUsesToFormExtLoad - Trying to extend uses of a load to enable this:
