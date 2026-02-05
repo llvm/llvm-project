@@ -10,6 +10,8 @@
 #define LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_SUMMARYNAME_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Path.h"
+#include <cassert>
 #include <string>
 
 namespace clang::ssaf {

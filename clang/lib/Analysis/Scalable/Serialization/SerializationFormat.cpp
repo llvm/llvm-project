@@ -14,6 +14,24 @@
 
 using namespace clang::ssaf;
 
+size_t SerializationFormat::getEntityIdIndex(const EntityId &EI) {
+  return EI.Index;
+}
+
+EntityId SerializationFormat::makeEntityId(const size_t Index) {
+  return EntityId(Index);
+}
+
+const std::map<EntityName, EntityId> &
+SerializationFormat::getEntities(const EntityIdTable &EIT) {
+  return EIT.Entities;
+}
+
+std::map<EntityName, EntityId> &
+SerializationFormat::getEntitiesForDeserialization(EntityIdTable &EIT) {
+  return EIT.Entities;
+}
+
 EntityIdTable &SerializationFormat::getIdTableForDeserialization(TUSummary &S) {
   return S.IdTable;
 }
@@ -23,12 +41,23 @@ SerializationFormat::getTUNamespaceForDeserialization(TUSummary &S) {
   return S.TUNamespace;
 }
 
+std::map<SummaryName, std::map<EntityId, std::unique_ptr<EntitySummary>>> &
+SerializationFormat::getDataForDeserialization(TUSummary &S) {
+  return S.Data;
+}
+
 const EntityIdTable &SerializationFormat::getIdTable(const TUSummary &S) {
   return S.IdTable;
 }
 
 const BuildNamespace &SerializationFormat::getTUNamespace(const TUSummary &S) {
   return S.TUNamespace;
+}
+
+const std::map<SummaryName,
+               std::map<EntityId, std::unique_ptr<EntitySummary>>> &
+SerializationFormat::getData(const TUSummary &S) {
+  return S.Data;
 }
 
 BuildNamespaceKind
