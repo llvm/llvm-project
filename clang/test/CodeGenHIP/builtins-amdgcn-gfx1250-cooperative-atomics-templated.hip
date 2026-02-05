@@ -78,9 +78,7 @@ __device__ void test_amdgcn_cooperative_atomic_load_32x4B(int* addr, int *out)
 // CHECK-LABEL: define linkonce_odr noundef i32 @_Z38template_cooperative_atomic_load_32x4BILj5EEiPi(
 // CHECK-SAME: ptr noundef [[GADDR:%.*]]) #[[ATTR0]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[GADDR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[GADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[GADDR_ADDR]] to ptr
 // CHECK-NEXT:    store ptr [[GADDR]], ptr [[GADDR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[GADDR_ADDR_ASCAST]], align 8

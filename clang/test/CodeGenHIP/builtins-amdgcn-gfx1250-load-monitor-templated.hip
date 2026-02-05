@@ -36,9 +36,7 @@ __device__ void test_amdgcn_flat_load_monitor_b128_from_template(v4i* inptr, v4i
 // CHECK-LABEL: define linkonce_odr noundef <4 x i32> @_Z39templated_amdgcn_flat_load_monitor_b128ILj5ELj0EEDv4_iPS0_(
 // CHECK-SAME: ptr noundef [[INPTR:%.*]]) #[[ATTR0]] comdat {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x i32>, align 16, addrspace(5)
 // CHECK-NEXT:    [[INPTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[INPTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[INPTR_ADDR]] to ptr
 // CHECK-NEXT:    store ptr [[INPTR]], ptr [[INPTR_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[INPTR_ADDR_ASCAST]], align 8
