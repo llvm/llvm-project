@@ -2708,8 +2708,8 @@ For example:
    ``denormal_fpenv(preservesign)``
    ``denormal_fpenv(float: preservesign)``
    ``denormal_fpenv(dynamic, float: preservesign|ieee)``
-   ``denormal_fpenv(ieee|ieee, float:preservesign|preservesign)``
-   ``denormal_fpenv(ieee|dynamic, float:preservesign|ieee)``
+   ``denormal_fpenv(ieee|ieee, float: preservesign|preservesign)``
+   ``denormal_fpenv(ieee|dynamic, float: preservesign|ieee)``
 
 ``"thunk"``
     This attribute indicates that the function will delegate to some other
