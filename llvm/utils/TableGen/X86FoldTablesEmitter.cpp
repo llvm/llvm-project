@@ -89,6 +89,8 @@ static bool isNoFoldMaskedInstruction(const CodeGenInstruction *Inst) {
     Name = Name.drop_back(4);
   else if (Name.ends_with("Z"))
     Name = Name.drop_back(1);
+  else
+    return false; // Not a AVX512 instruction
 
   return NoFoldSameMaskPrefixSet.count(Name);
 }
