@@ -29,6 +29,7 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
@@ -713,7 +714,22 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
   if (const auto *MO = dyn_cast<object::MachOObjectFile>(&O)) {
     findMachOIndirectCovFunctions(*MO, &Result);
   }
+  if (const auto *XO = dyn_cast<object::XCOFFObjectFile>(&O)) {
+    for (const object::SymbolRef &Symbol : XO->symbols()) {
+      Expected<uint64_t> AddressOrErr = Symbol.getAddress();
+      failIfError(AddressOrErr);
+      uint64_t Address = AddressOrErr.get();
 
+      Expected<StringRef> NameOrErr = Symbol.getName();
+      failIfError(NameOrErr);
+      StringRef Name = NameOrErr.get();
+
+      if (isCoveragePointSymbol(Name) || 
+         (Name.starts_with(".") && isCoveragePointSymbol(Name.drop_front(1)))) {
+        Result.insert(Address);
+      }
+    }
+  }
   return Result;
 }
 
