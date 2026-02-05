@@ -844,6 +844,12 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
 
     QualType class_qual_type = m_ast_context->getCanonicalTagType(class_decl);
 
+    // The synthesized __lldb_expr will adopt the qualifiers from this class
+    // type. Make sure we use the qualifiers of the method that we're currently
+    // stopped in.
+    class_qual_type.addFastQualifiers(
+        method_decl->getMethodQualifiers().getFastQualifiers());
+
     TypeFromUser class_user_type(
         class_qual_type.getAsOpaquePtr(),
         function_decl_ctx.GetTypeSystem()->weak_from_this());
@@ -1991,7 +1997,7 @@ void ClangExpressionDeclMap::AddContextClassType(NameSearchContext &context,
     std::array<CompilerType, 1> args{void_clang_type.GetPointerType()};
 
     CompilerType method_type = m_clang_ast_context->CreateFunctionType(
-        void_clang_type, args, false, 0);
+        void_clang_type, args, false, ut.GetTypeQualifiers());
 
     const bool is_virtual = false;
     const bool is_static = false;
