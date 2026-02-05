@@ -11236,6 +11236,124 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   return false;
 }
 
+static bool evaluateCompare(const MachineInstr *CmpInstr, bool &SCCIsSet) {
+  const MachineRegisterInfo &MRI =
+      CmpInstr->getParent()->getParent()->getRegInfo();
+  const MachineOperand &Op0 = CmpInstr->getOperand(0);
+  const MachineOperand &Op1 = CmpInstr->getOperand(1);
+  int64_t Cmp0Value, Cmp1Value;
+
+  if (!Op0.isReg() || Op0.getSubReg() ||
+      !getFoldableImm(Op0.getReg(), MRI, Cmp0Value))
+    return false;
+  if (Op1.isImm())
+    Cmp1Value = Op1.getImm();
+  else if (!Op1.isReg() || Op1.getSubReg() ||
+           !getFoldableImm(Op1.getReg(), MRI, Cmp1Value))
+    return false;
+
+  switch (CmpInstr->getOpcode()) {
+  default:
+    return false;
+  case AMDGPU::S_CMP_EQ_U32:
+  case AMDGPU::S_CMP_EQ_I32:
+  case AMDGPU::S_CMP_EQ_U64:
+    SCCIsSet = Cmp0Value == Cmp1Value;
+    break;
+  case AMDGPU::S_CMP_LG_U32:
+  case AMDGPU::S_CMP_LG_I32:
+  case AMDGPU::S_CMP_LG_U64:
+    SCCIsSet = Cmp0Value != Cmp1Value;
+    break;
+  case AMDGPU::S_CMP_LT_U32:
+    SCCIsSet =
+        static_cast<uint64_t>(Cmp0Value) < static_cast<uint64_t>(Cmp1Value);
+    break;
+  case AMDGPU::S_CMP_LE_U32:
+    SCCIsSet =
+        static_cast<uint64_t>(Cmp0Value) <= static_cast<uint64_t>(Cmp1Value);
+    break;
+  case AMDGPU::S_CMP_GT_U32:
+    SCCIsSet =
+        static_cast<uint64_t>(Cmp0Value) > static_cast<uint64_t>(Cmp1Value);
+    break;
+  case AMDGPU::S_CMP_GE_U32:
+    SCCIsSet =
+        static_cast<uint64_t>(Cmp0Value) >= static_cast<uint64_t>(Cmp1Value);
+    break;
+  case AMDGPU::S_CMP_LT_I32:
+    SCCIsSet = Cmp0Value < Cmp1Value;
+    break;
+  case AMDGPU::S_CMP_LE_I32:
+    SCCIsSet = Cmp0Value <= Cmp1Value;
+    break;
+  case AMDGPU::S_CMP_GT_I32:
+    SCCIsSet = Cmp0Value > Cmp1Value;
+    break;
+  case AMDGPU::S_CMP_GE_I32:
+    SCCIsSet = Cmp0Value >= Cmp1Value;
+    break;
+  }
+  return true;
+}
+
+bool SIInstrInfo::optimizeCondBranch(MachineInstr &CBI) const {
+  if (CBI.getOpcode() != AMDGPU::S_CBRANCH_SCC0 &&
+      CBI.getOpcode() != AMDGPU::S_CBRANCH_SCC1)
+    return false;
+
+  // Search backward for compare.
+  MachineBasicBlock *Parent = CBI.getParent();
+  MachineInstr *CompareInst = nullptr;
+  constexpr unsigned ScanLimit = 8;
+  unsigned Count = 0;
+  for (MachineInstr &MI :
+       make_range(std::next(MachineBasicBlock::reverse_iterator(CBI)),
+                  Parent->rend())) {
+    if (MI.isCompare()) {
+      CompareInst = &MI;
+      break;
+    }
+    if (++Count > ScanLimit || MI.definesRegister(AMDGPU::SCC, &RI))
+      return false;
+  }
+
+  // If compare can be evaluated simplify the conditional branch.
+  bool SCCIsSet;
+  if (!CompareInst || !evaluateCompare(CompareInst, SCCIsSet))
+    return false;
+
+  MachineInstr &LastInst = Parent->back();
+  MachineBasicBlock *TargetBB = CBI.getOperand(0).getMBB();
+  if (SCCIsSet == (CBI.getOpcode() == AMDGPU::S_CBRANCH_SCC1)) {
+    // S_CBRANCH_SCC? will always branch to target.
+
+    // Only handle the case where the block ends with:
+    //
+    //   S_CBRANCH_SCC? <target>
+    //   S_BRANCH       <alt>
+    //
+    // Convert this to:
+    //
+    //   <erased>
+    //   S_BRANCH       <target>
+    //
+    // This is by far the most common case and is easy to convert.
+    if (std::next(CBI.getIterator()) != LastInst.getIterator() ||
+        LastInst.getOpcode() != AMDGPU::S_BRANCH)
+      return false;
+    MachineBasicBlock *AltBB = LastInst.getOperand(0).getMBB();
+    Parent->removeSuccessor(AltBB);
+    LastInst.getOperand(0).setMBB(TargetBB);
+  } else {
+    // S_CBRANCH_SCC? will never branch to target.
+    // Instruction will be erased.
+    Parent->removeSuccessor(TargetBB);
+  }
+  CBI.eraseFromParent();
+  return true;
+}
+
 void SIInstrInfo::enforceOperandRCAlignment(MachineInstr &MI,
                                             AMDGPU::OpName OpName) const {
   if (!ST.needsAlignedVGPRs())
