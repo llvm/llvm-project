@@ -123,6 +123,10 @@ template <typename Int> inline bool isValidCIRAtomicOrderingCABI(Int value) {
          value <= static_cast<Int>(cir::MemOrder::SequentiallyConsistent);
 }
 
+[[maybe_unused]] static bool isFpCompare(CmpOpKind kind) {
+  return kind >= CmpOpKind::fcmp_first;
+}
+
 } // namespace cir
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPSENUMS_H
