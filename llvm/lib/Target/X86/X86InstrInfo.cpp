@@ -10507,7 +10507,6 @@ struct CGBR : public MachineFunctionPass {
 char CGBR::ID = 0;
 FunctionPass *llvm::createX86GlobalBaseRegPass() { return new CGBR(); }
 
-
 /// Constants defining how certain sequences should be outlined.
 ///
 /// \p MachineOutlinerDefault implies that the function is called with a call
