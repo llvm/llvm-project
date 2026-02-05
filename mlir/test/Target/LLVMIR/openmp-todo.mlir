@@ -52,17 +52,6 @@ llvm.func @distribute_order(%lb : i32, %ub : i32, %step : i32) {
 
 // -----
 
-llvm.func @ordered_region_par_level_simd() {
-  // expected-error@below {{not yet implemented: Unhandled clause parallelization-level in omp.ordered.region operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.ordered.region}}
-  omp.ordered.region par_level_simd {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 llvm.func @parallel_allocate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.parallel operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
