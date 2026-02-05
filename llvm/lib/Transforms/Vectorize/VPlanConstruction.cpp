@@ -1344,7 +1344,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
       auto *Blend = dyn_cast<VPBlendRecipe>(R);
       if (!Blend)
         return false;
-      assert(!Blend->isNormalized());
+      assert(!Blend->isNormalized() && "must run before blend normalizaion");
       unsigned NumIncomingDataValues = 0;
       for (unsigned I = 0; I < Blend->getNumIncomingValues(); ++I) {
         VPValue *Incoming = Blend->getIncomingValue(I);

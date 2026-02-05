@@ -327,7 +327,8 @@ bool RecurrenceDescriptor::AddReductionVar(
   // To recognize find-lasts of conditional operations (such as loads or
   // divides), that need masking, we track non-phi users and if we've found a
   // "find-last-like" phi (see isFindLastLikePhi). We currently only support
-  // loops with a single "find-last-phi" and do not allow any other operations.
+  // loops with a single "find-last-like" phi and do not allow any other
+  // operations.
   unsigned NumNonPHIUsers = 0;
   bool FoundFindLastLikePhi = false;
 
@@ -496,6 +497,8 @@ bool RecurrenceDescriptor::AddReductionVar(
         !isAnyOfRecurrenceKind(Kind) && hasMultipleUsesOf(Cur, VisitedInsts, 1))
       return false;
 
+    // All inputs to a PHI node must be a reduction value, unless the phi is a
+    // "FindLast-like" phi (described below).
     if (IsAPhi && Cur != Phi) {
       if (!areAllUsesIn(Cur, VisitedInsts)) {
         // A "FindLast-like" phi acts like a conditional select between the
@@ -506,7 +509,7 @@ bool RecurrenceDescriptor::AddReductionVar(
             Kind == RecurKind::FindLast && !FoundFindLastLikePhi &&
             isFindLastLikePhi(cast<PHINode>(Cur), Phi, VisitedInsts);
         if (!FoundFindLastLikePhi)
-          return false; // All inputs to a PHI node must be a reduction value.
+          return false;
       }
     }
 
@@ -592,6 +595,8 @@ bool RecurrenceDescriptor::AddReductionVar(
     Worklist.append(NonPHIs.begin(), NonPHIs.end());
   }
 
+  // Cautiously exit if any non-phi users were found with a
+  // FoundFindLastLikePhi.
   if (FoundFindLastLikePhi &&
       (NumNonPHIUsers != 0 || Kind != RecurKind::FindLast))
     return false;
