@@ -54,4 +54,4 @@ struct FancyAnalysisFormatInfo : FormatInfo {
 static llvm::Registry<FormatInfo>::Add<FancyAnalysisFormatInfo>
     RegisterFormatInfo("FancyAnalysisData",
                        "Format info for FancyAnalysisData for the "
-                       "MockSerializationFormat1 format");
+                       "MockSerializationFormat format");
