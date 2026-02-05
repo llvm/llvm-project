@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: opt -passes=vector-combine -debug-only=vector-combine -disable-output < %s 2>&1 | FileCheck %s
 target triple = "x86_64-unknown-linux-gnu"
 

@@ -6954,12 +6954,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                /*BCols=*/2);
       break;
 
-    // <2 x i32> @llvm.aarch64.neon.[us]dot.v2i32.v8i8
+    // <2 x i32> @llvm.aarch64.neon.{u,s,us}dot.v2i32.v8i8
     //               (<2 x i32> %acc, <8 x i8> %a, <8 x i8> %b)
-    // <4 x i32> @llvm.aarch64.neon.[us]dot.v4i32.v16i8
+    // <4 x i32> @llvm.aarch64.neon.{u,s,us}dot.v4i32.v16i8
     //               (<4 x i32> %acc, <16 x i8> %a, <16 x i8> %b)
     case Intrinsic::aarch64_neon_sdot:
     case Intrinsic::aarch64_neon_udot:
+    case Intrinsic::aarch64_neon_usdot:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/4,
                                       /*ZeroPurifies=*/true,
                                       /*EltSizeInBits=*/0,
@@ -7492,11 +7493,51 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void dumpInst(Instruction &I) {
+    // Instruction name only
+    // For intrinsics, the full/overloaded name is used
+    //
+    // e.g., "call llvm.aarch64.neon.uqsub.v16i8"
     if (CallInst *CI = dyn_cast<CallInst>(&I)) {
       errs() << "ZZZ call " << CI->getCalledFunction()->getName() << "\n";
     } else {
       errs() << "ZZZ " << I.getOpcodeName() << "\n";
     }
+
+    // Instruction prototype (including return type and parameter types)
+    // For intrinsics, we use the base/non-overloaded name
+    //
+    // e.g., "call <16 x i8> @llvm.aarch64.neon.uqsub(<16 x i8>, <16 x i8>)"
+    unsigned NumOperands = I.getNumOperands();
+    if (CallInst *CI = dyn_cast<CallInst>(&I)) {
+      errs() << "YYY call " << *I.getType() << " @";
+
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI))
+        errs() << Intrinsic::getBaseName(II->getIntrinsicID());
+      else
+        errs() << CI->getCalledFunction()->getName();
+
+      errs() << "(";
+
+      // The last operand of a CallInst is the function itself.
+      NumOperands--;
+    } else
+      errs() << "YYY " << *I.getType() << " " << I.getOpcodeName() << "(";
+
+    for (size_t i = 0; i < NumOperands; i++) {
+      if (i > 0)
+        errs() << ", ";
+
+      errs() << *(I.getOperand(i)->getType());
+    }
+
+    errs() << ")\n";
+
+    // Full instruction, including types and operand values
+    // For intrinsics, the full/overloaded name is used
+    //
+    // e.g., "%vqsubq_v.i15 = call noundef <16 x i8>
+    //            @llvm.aarch64.neon.uqsub.v16i8(<16 x i8> %vext21.i,
+    //            <16 x i8> splat (i8 1)), !dbg !66"
     errs() << "QQQ " << I << "\n";
   }
 
