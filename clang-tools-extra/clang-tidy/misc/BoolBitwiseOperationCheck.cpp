@@ -160,18 +160,21 @@ BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name,
     : ClangTidyCheck(Name, Context),
       UnsafeMode(Options.get("UnsafeMode", false)),
       IgnoreMacros(Options.get("IgnoreMacros", false)),
-      StrictMode(Options.get("StrictMode", true)) {}
+      StrictMode(Options.get("StrictMode", true)),
+      BraceCompound(Options.get("BraceCompound", true)) {}
 
 void BoolBitwiseOperationCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "UnsafeMode", UnsafeMode);
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
   Options.store(Opts, "StrictMode", StrictMode);
+  Options.store(Opts, "BraceCompound", BraceCompound);
 }
 
 void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   auto BooleanLeaves = hasAllLeavesOfBitwiseSatisfying(hasType(booleanType()));
   auto NonVolatile = unless(hasType(isVolatileQualified()));
+  auto CompoundOperator = hasAnyOperatorName("|=", "&=");
   auto ExprWithSideEffects = traverse(
       TK_AsIs, expr(hasSideEffects(/*IncludePossibleEffects=*/!UnsafeMode)));
 
@@ -185,7 +188,7 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
           hasAnyOperatorName("|", "&"),
           // Compound assignments ('|=' / '&='): require a simple
           // LHS so that we can safely duplicate it on the RHS.
-          allOf(hasAnyOperatorName("|=", "&="),
+          allOf(CompoundOperator,
                 hasLHS(anyOf(declRefExpr(), memberExpr())))));
 
   auto LhsOfCompoundMatcher = traverse(TK_AsIs, expr().bind("lhsOfCompound"));
@@ -231,14 +234,20 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
       hasRHS(allOf(binaryOperator(hasOperatorName("||")).bind("parensExpr"),
                    NotAlreadyInParenExpr)));
 
+  // Case 4: `BraceCompound` option enabled and two different operators
+  auto ParensCaseOpt = allOf(
+      CompoundOperator,
+      hasRHS(allOf(binaryOperator(/*operators checking later*/).bind("parensExprOpt"),
+                   NotAlreadyInParenExpr)));
+
   auto BaseMatcher = binaryOperator(
       hasAnyOperatorName("|", "&", "|=", "&="), hasLHS(BooleanLeaves),
       hasRHS(BooleanLeaves),
       optionally(
-          allOf(hasAnyOperatorName("|=", "&="), hasLHS(LhsOfCompoundMatcher))),
+          allOf(CompoundOperator, hasLHS(LhsOfCompoundMatcher))),
       optionally(FixItMatcher.bind("fixit")),
       optionally(hasRHS(ExprWithSideEffects.bind("rhsWithSideEffects"))),
-      optionally(anyOf(ParensCase1, ParensCase2, ParensCase3)));
+      optionally(anyOf(ParensCase1, ParensCase2, ParensCase3, ParensCaseOpt)));
 
   Finder->addMatcher(BaseMatcher.bind("binOp"), this);
 }
@@ -261,8 +270,11 @@ BoolBitwiseOperationCheck::createDiagBuilder(
 }
 
 void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
-    const BinaryOperator *BinOp, const Expr *ParensExpr,
-    const Expr *LhsOfCompound, const Expr *RhsWithSideEffects,
+    const BinaryOperator *BinOp, const BinaryOperator *ParensExpr,
+    const BinaryOperator *ParensExprOpt,
+    const Expr *LhsOfCompound,
+    // TODO: remove it
+    const Expr *RhsWithSideEffects,
     const clang::SourceManager &SM, clang::ASTContext &Ctx,
     bool CanApplyFixIt) {
   // Early exit: the matcher proved that no fix-it possible
@@ -311,6 +323,17 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     }
   }
 
+  // Handle the case which might lead to -WParens warning
+  if (CanBuildFixIts && ParensExprOpt && !ParensExpr && BraceCompound) {
+    const StringRef RHSOpStr = ParensExprOpt->getOpcodeStr();
+    const StringRef CompoundOpStr = BinOp->getOpcodeStr();
+    const StringRef RHSLogicalOpStr = translate(RHSOpStr);
+    const StringRef LogicalOpStr = translate(CompoundOpStr);
+    const bool ShouldSkipRHSBrace = (RHSOpStr == LogicalOpStr || 
+        (!RHSLogicalOpStr.empty() && RHSLogicalOpStr == LogicalOpStr));
+    ParensExpr = ShouldSkipRHSBrace ? nullptr : ParensExprOpt;
+  }
+
   FixItHint InsertBrace1, InsertBrace2;
 
   // Insert parentheses if it's needed
@@ -338,7 +361,8 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binOp");
   const auto *FixItBinOp = Result.Nodes.getNodeAs<BinaryOperator>("fixit");
-  const auto *ParensExpr = Result.Nodes.getNodeAs<Expr>("parensExpr");
+  const auto *ParensExpr = Result.Nodes.getNodeAs<BinaryOperator>("parensExpr");
+  const auto *ParensExprOpt = Result.Nodes.getNodeAs<BinaryOperator>("parensExprOpt");
   const auto *LhsOfCompound = Result.Nodes.getNodeAs<Expr>("lhsOfCompound");
   const auto *RhsWithSideEffects =
       Result.Nodes.getNodeAs<Expr>("rhsWithSideEffects");
@@ -348,7 +372,7 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   ASTContext &Ctx = *Result.Context;
 
   const bool CanApplyFixIt = (FixItBinOp != nullptr && FixItBinOp == BinOp);
-  emitWarningAndChangeOperatorsIfPossible(BinOp, ParensExpr, LhsOfCompound,
+  emitWarningAndChangeOperatorsIfPossible(BinOp, ParensExpr, ParensExprOpt, LhsOfCompound,
                                           RhsWithSideEffects, SM, Ctx,
                                           CanApplyFixIt);
 

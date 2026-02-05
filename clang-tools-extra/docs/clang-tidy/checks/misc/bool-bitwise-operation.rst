@@ -15,16 +15,16 @@ to implicit integer conversions and missed short-circuit evaluation.
   bool invalid = false;
   invalid |= x > limit.x; // warning: use logical operator '||' for boolean semantics instead of bitwise operator '|='
                           //   400 |     invalid |= x > limit.x;
-                          //       |             ^~
-                          //       |             = invalid ||
+                          //       |             ^~~~~~~~~~~~~~
+                          //       |             = invalid || (x > limit.x)
   invalid |= y > limit.y; // warning: use logical operator '||' for boolean semantics instead of bitwise operator '|='
                           //   401 |     invalid |= y > limit.y;
-                          //       |             ^~
-                          //       |             = invalid ||
+                          //       |             ^~~~~~~~~~~~~~
+                          //       |             = invalid || (y > limit.y)
   invalid |= z > limit.z; // warning: use logical operator '||' for boolean semantics instead of bitwise operator '|='
                           //   402 |     invalid |= z > limit.z;
-                          //       |             ^~
-                          //       |             = invalid ||
+                          //       |             ^~~~~~~~~~~~~~
+                          //       |             = invalid || (z > limit.z)
   if (invalid) {
     // error handling
   }
@@ -35,9 +35,9 @@ instead of using the ``|=`` operator:
 .. code-block:: c++
 
   bool invalid = false;
-  invalid = invalid || x > limit.x;
-  invalid = invalid || y > limit.x;
-  invalid = invalid || z > limit.z;
+  invalid = invalid || (x > limit.x);
+  invalid = invalid || (y > limit.x);
+  invalid = invalid || (z > limit.z);
   if (invalid) {
     // error handling
   }
@@ -81,3 +81,22 @@ Options
     (e.g., for volatile operands or expressions with side effects). When
     disabled, only show warnings when fix-it hints are available. Default
     value is `true`.
+
+.. option:: BraceCompound
+
+    When enabled, add parentheses around the right-hand side (RHS) of compound
+    operators (``&=``, ``|=``) when transforming them to logical operators,
+    except when the RHS already uses the same logical operator or is already
+    parenthesized. This helps improve readability, avoid potential
+    misunderstandings of precedence, and prevent `-WParens` warnings from
+    compilers. Default value is `true`.
+
+    .. code-block:: c++
+
+      bool a, b, c;
+      a &= b | c;  // With BraceCompound=true:  a = a && (b || c);
+                   // With BraceCompound=false: a = a && b || c;
+      
+      a &= b && c; // Always: a = a && b && c; (no parentheses needed)
+      
+      a &= b || c; // Always: a = a && (b || c); (parentheses for precedence)

@@ -34,7 +34,8 @@ public:
   }
 
   void emitWarningAndChangeOperatorsIfPossible(const BinaryOperator *BinOp,
-                                               const Expr *ParensExpr,
+                                               const BinaryOperator *ParensExpr,
+                                               const BinaryOperator *ParensExprOpt,
                                                const Expr *LhsOfCompound,
                                                const Expr *RhsWithSideEffects,
                                                const clang::SourceManager &SM,
@@ -50,6 +51,7 @@ private:
   bool UnsafeMode;
   bool IgnoreMacros;
   bool StrictMode;
+  bool BraceCompound;
 };
 
 } // namespace clang::tidy::misc

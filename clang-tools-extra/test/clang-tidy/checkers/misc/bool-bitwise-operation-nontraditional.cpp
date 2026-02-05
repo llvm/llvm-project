@@ -345,9 +345,10 @@ void bad_with_priors_compound() {
     a and_eq b and c;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '&&' for boolean semantics instead of bitwise operator '&=' [misc-bool-bitwise-operation]
     // CHECK-FIXES: a = a and b and c;
+    // Braces added because `BraceCompound` enabled by default
     a or_eq b and c;
     // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use logical operator '||' for boolean semantics instead of bitwise operator '|=' [misc-bool-bitwise-operation]
-    // CHECK-FIXES: a = a or b and c;
+    // CHECK-FIXES: a = a or (b and c);
 }
 
 void bad_with_priors_compound_already_braced() {
