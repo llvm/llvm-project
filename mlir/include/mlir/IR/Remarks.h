@@ -89,9 +89,10 @@ class Remark {
 public:
   Remark(RemarkKind remarkKind, DiagnosticSeverity severity, Location loc,
          RemarkOpts opts)
-      : remarkKind(remarkKind), functionName(opts.functionName), loc(loc),
-        categoryName(opts.categoryName), subCategoryName(opts.subCategoryName),
-        remarkName(opts.remarkName) {
+      : remarkKind(remarkKind), functionName(opts.functionName.str()), loc(loc),
+        categoryName(opts.categoryName.str()),
+        subCategoryName(opts.subCategoryName.str()),
+        remarkName(opts.remarkName.str()) {
     if (!categoryName.empty() && !subCategoryName.empty()) {
       (llvm::Twine(categoryName) + ":" + subCategoryName)
           .toStringRef(fullCategoryName);
@@ -183,21 +184,25 @@ protected:
   /// Keeps the MLIR diagnostic kind, which is used to determine the
   /// diagnostic kind in the LLVM remark streamer.
   RemarkKind remarkKind;
-  /// Name of the convering function like interface
-  StringRef functionName;
+  /// Name of the covering function like interface.
+  /// Stored as std::string to ensure the Remark owns its data.
+  std::string functionName;
 
   Location loc;
-  /// Sub category passname e.g., "Unroll" or "UnrollAndJam"
-  StringRef categoryName;
+  /// Category name e.g., "Unroll" or "UnrollAndJam".
+  /// Stored as std::string to ensure the Remark owns its data.
+  std::string categoryName;
 
-  /// Sub category name "Loop Optimizer"
-  StringRef subCategoryName;
+  /// Sub category name e.g., "Loop Optimizer".
+  /// Stored as std::string to ensure the Remark owns its data.
+  std::string subCategoryName;
 
   /// Combined name for category and sub-category
   SmallString<64> fullCategoryName;
 
-  /// Remark identifier
-  StringRef remarkName;
+  /// Remark identifier.
+  /// Stored as std::string to ensure the Remark owns its data.
+  std::string remarkName;
 
   /// Args collected via the streaming interface.
   SmallVector<Arg, 4> args;
