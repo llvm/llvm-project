@@ -1118,6 +1118,7 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
   case transitionFrom(ZAState::LOCAL_COMMITTED).to(ZAState::ACTIVE):
   case transitionFrom(ZAState::LOCAL_COMMITTED).to(ZAState::ACTIVE_ZT0_SAVED):
   case transitionFrom(ZAState::LOCAL_SAVED).to(ZAState::ACTIVE):
+  case transitionFrom(ZAState::LOCAL_SAVED).to(ZAState::ACTIVE_ZT0_SAVED):
     if (HasZAState)
       emitZARestore(Context, MBB, InsertPt, PhysLiveRegs);
     else
