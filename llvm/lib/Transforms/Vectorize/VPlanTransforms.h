@@ -453,6 +453,7 @@ struct VPlanTransforms {
   ///                      |                          |
   ///                      v                          |
   /// +-------------------------------------------+   |
+  /// |<phis> = phi [..., ...], [poison, header]  |
   /// |%iv.next = add %iv, vfxuf                  |<--+
   /// |branch-on-count %iv.next, vector-trip-count|
   /// +-------------------------------------------+
