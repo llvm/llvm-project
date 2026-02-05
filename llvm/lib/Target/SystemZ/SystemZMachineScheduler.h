@@ -8,8 +8,9 @@
 
 // -------------------------- Pre RA scheduling ----------------------------- //
 //
-// SystemZPreRASchedStrategy tries to reduce register pressure by applying
-// OOO heuristics and then also in certain regions reduces scheduled latency.
+// SystemZPreRASchedStrategy performs latency scheduling in certain types of
+// regions where this is beneficial, and also helps copy coalescing and
+// comparison elimination.
 //
 // -------------------------- Post RA scheduling ---------------------------- //
 //
@@ -33,11 +34,6 @@ namespace llvm {
 
 /// A MachineSchedStrategy implementation for SystemZ pre RA scheduling.
 class SystemZPreRASchedStrategy : public GenericScheduler {
-  // Number of instructions left to schedule (above).
-  unsigned NumLeft;
-
-  void initializeLivenessReduction();
-  void initializeStoresGroup();
   void initializeLatencyReduction();
 
   Register Cmp0SrcReg;
@@ -45,34 +41,9 @@ class SystemZPreRASchedStrategy : public GenericScheduler {
   // compare with 0. If CCDef is true MI must also have an implicit def of CC.
   bool definesCmp0Src(const MachineInstr *MI, bool CCDef = true) const;
 
-  // The highest SUs that are not to be scheduled "low" to reduce liveness.
-  struct : SmallPtrSet<const SUnit *, 12> {
-    bool count(const SUnit *SU) const {
-      return empty() || SmallPtrSet::count(SU);
-    }
-  } HighSUs;
-
-  // Make sure a large group of stores do not all end up at the bottom.
-  std::set<const SUnit *> StoresGroup;
-  bool FirstStoreInGroupScheduled;
-
-  // True if there are many more SUs than the overall height of the DAG.
-  bool IsWideDAG;
-
   // True if the region has many instructions in def-use sequences and would
   // likely benefit from latency reduction.
   bool HasDataSequences;
-
-  // Return true if the instruction defines a register while all use operands
-  // are already live.
-  bool isSchedLowCand(const SUnit *SU, ScheduleDAGMILive *DAG) const;
-
-  // Return true if the scheduled latency should be minimized.
-  bool shouldReduceLatency(SchedBoundary *Zone) const;
-
-  // Only call computeRemLatency() once before each scheduled node.
-  mutable unsigned RemLat;
-  unsigned getRemLat(SchedBoundary *Zone) const;
 
 protected:
   bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
