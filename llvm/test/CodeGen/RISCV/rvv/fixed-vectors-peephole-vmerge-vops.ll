@@ -303,10 +303,8 @@ define <8 x i32> @vpselect_vpload2(<8 x i32> %passthru, ptr %p, <8 x i32> %x, <8
 define <8 x i32> @vpmerge_add(<8 x i32> %passthru, <8 x i32> %x, <8 x i32> %y, <8 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_add:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v9, v9, v10
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
-; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = add <8 x i32> %x, %y
   %b = call <8 x i32> @llvm.vp.merge.v8i32(<8 x i1> %m, <8 x i32> %a, <8 x i32> %passthru, i32 %vl)

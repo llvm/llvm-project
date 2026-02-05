@@ -219,8 +219,7 @@ body: |
     ; CHECK: %passthru:vrnov0 = COPY $v8
     ; CHECK-NEXT: %avl:gprnox0 = COPY $x8
     ; CHECK-NEXT: %mask:vmv0 = COPY $v0
-    ; CHECK-NEXT: %add:vrnov0 = PseudoVADD_VV_M1 $noreg, %x:vr, %y:vr, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
-    ; CHECK-NEXT: %merge:vrnov0 = PseudoVMERGE_VVM_M1 %passthru, %passthru, %add, %mask, %avl /* vl */, 5 /* e32 */
+    ; CHECK-NEXT: %merge:vrnov0 = PseudoVADD_VV_M1_MASK %passthru, %x:vr, %y:vr, %mask, %avl /* vl */, 5 /* e32 */, 0 /* tu, mu */
     %passthru:vrnov0 = COPY $v8
     %avl:gprnox0 = COPY $x8
     %mask:vmv0 = COPY $v0
