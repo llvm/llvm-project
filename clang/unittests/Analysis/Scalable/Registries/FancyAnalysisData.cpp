@@ -22,7 +22,7 @@ namespace {
 struct FancyAnalysisData : EntitySummary {
   FancyAnalysisData() : EntitySummary(SummaryName("FancyAnalysis")) {}
 
-  std::vector<std::string> SomeInternalList;
+  std::string Text;
 };
 } // namespace
 
@@ -30,43 +30,14 @@ static SpecialFileRepresentation
 serializeFancyAnalysis(const EntitySummary &Data,
                        MockSerializationFormat &Format) {
   const auto &FancyAnalysis = static_cast<const FancyAnalysisData &>(Data);
-
-  std::string Buffer;
-  llvm::raw_string_ostream OS(Buffer);
-  OS << "FancyAnalysisData{\n";
-  OS << "  SomeInternalList: ";
-  llvm::interleaveComma(FancyAnalysis.SomeInternalList, OS);
-  OS << "\n";
-  OS << "}\n";
-
-  return SpecialFileRepresentation{/*MockRepresentation=*/std::move(Buffer)};
+  return SpecialFileRepresentation{/*MockRepresentation=*/FancyAnalysis.Text};
 }
 
 static std::unique_ptr<EntitySummary>
-deserializeFancyAnalysis(const SpecialFileRepresentation &Obj,
-                         EntityIdTable &Table) {
+deserializeFancyAnalysis(const SpecialFileRepresentation &File,
+                         EntityIdTable &) {
   auto Result = std::make_unique<FancyAnalysisData>();
-
-  llvm::StringRef Cursor = Obj.MockRepresentation;
-  if (!Cursor.consume_front("FancyAnalysisData{\n  SomeInternalList: "))
-    return nullptr;
-
-  auto IsNewLine = [](char C) { return C == '\n'; };
-  llvm::StringRef SomeInternalListStr = Cursor.take_until(IsNewLine);
-  llvm::SmallVector<llvm::StringRef> Parts;
-  SomeInternalListStr.split(Parts, ", ");
-  for (llvm::StringRef Part : Parts) {
-    Result->SomeInternalList.push_back(Part.str());
-  }
-
-  Cursor = Cursor.drop_front(SomeInternalListStr.size());
-
-  if (!Cursor.consume_front("\n}\n"))
-    return nullptr;
-
-  if (!Cursor.empty())
-    return nullptr;
-
+  Result->Text = File.MockRepresentation;
   return std::move(Result);
 }
 
