@@ -10,6 +10,7 @@
 
 #include "ClangExpressionUtil.h"
 
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
@@ -187,6 +188,28 @@ static void AddMacros(const DebugMacros *dm, CompileUnit *comp_unit,
       break;
     }
   }
+}
+
+/// Return qualifers of the current C++ method.
+static clang::Qualifiers GetFrameCVQualifiers(StackFrame *frame) {
+  if (!frame)
+    return {};
+
+  auto this_sp = frame->FindVariable(ConstString("this"));
+  if (!this_sp)
+    return {};
+
+  // Lambdas that capture 'this' have a member variable called 'this'. The class
+  // context of __lldb_expr for a lambda is the class type of the 'this' capture
+  // (not the anonymous lambda structure). So use the qualifiers of the captured
+  // 'this'.
+  if (auto this_this_sp = this_sp->GetChildMemberWithName("this"))
+    return clang::Qualifiers::fromCVRMask(
+        this_this_sp->GetCompilerType().GetPointeeType().GetTypeQualifiers());
+
+  // Not in a lambda. Return 'this' qualifiers.
+  return clang::Qualifiers::fromCVRMask(
+      this_sp->GetCompilerType().GetPointeeType().GetTypeQualifiers());
 }
 
 lldb_private::ClangExpressionSourceCode::ClangExpressionSourceCode(
@@ -463,15 +486,17 @@ bool ClangExpressionSourceCode::GetText(
                          lldb_local_var_decls.GetData(), tagged_body.c_str());
       break;
     case WrapKind::CppMemberFunction:
-      wrap_stream.Printf("%s"
-                         "void                                   \n"
-                         "$__lldb_class::%s(void *$__lldb_arg)   \n"
-                         "{                                      \n"
-                         "    %s;                                \n"
-                         "%s"
-                         "}                                      \n",
-                         module_imports.c_str(), m_name.c_str(),
-                         lldb_local_var_decls.GetData(), tagged_body.c_str());
+      wrap_stream.Printf(
+          "%s"
+          "void                                    \n"
+          "$__lldb_class::%s(void *$__lldb_arg) %s \n"
+          "{                                       \n"
+          "    %s;                                 \n"
+          "%s"
+          "}                                       \n",
+          module_imports.c_str(), m_name.c_str(),
+          GetFrameCVQualifiers(exe_ctx.GetFramePtr()).getAsString().c_str(),
+          lldb_local_var_decls.GetData(), tagged_body.c_str());
       break;
     case WrapKind::ObjCInstanceMethod:
       wrap_stream.Printf(
