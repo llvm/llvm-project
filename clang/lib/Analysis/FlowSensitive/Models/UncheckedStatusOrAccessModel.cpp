@@ -872,7 +872,7 @@ static void transferStatusOrReturningCall(const CallExpr *Expr,
     initializeStatusOr(*StatusOrLoc, State.Env);
 }
 
-static bool doHandleConstStatusOrAccessorMemberCall(
+static bool doHandleConstAccessorMemberCall(
     const CallExpr *Expr, RecordStorageLocation *RecordLoc,
     const MatchFinder::MatchResult &Result, LatticeTransferState &State) {
   if (RecordLoc == nullptr)
@@ -898,8 +898,7 @@ static bool doHandleConstStatusOrAccessorMemberCall(
 static void handleConstAccessorMemberCall(
     const CallExpr *Expr, RecordStorageLocation *RecordLoc,
     const MatchFinder::MatchResult &Result, LatticeTransferState &State) {
-  if (!doHandleConstStatusOrAccessorMemberCall(Expr, RecordLoc, Result,
-                                               State) &&
+  if (!doHandleConstAccessorMemberCall(Expr, RecordLoc, Result, State) &&
       isStatusOrType(Expr->getType()))
     transferStatusOrReturningCall(Expr, State);
 }
