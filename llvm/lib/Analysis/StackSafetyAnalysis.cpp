@@ -920,11 +920,7 @@ const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
         ++NumAllocaTotal;
         const AllocaInst *AI = KV.first;
         auto AIRange = getStaticAllocaSizeRange(*AI);
-        // An alloca is safe if all accesses are in-bounds AND the address
-        // doesn't escape to other functions. If the address is passed to
-        // another function, ASan may instrument accesses in the callee, which
-        // requires the caller to properly initialize shadow memory.
-        if (AIRange.contains(KV.second.Range) && KV.second.Calls.empty()) {
+        if (AIRange.contains(KV.second.Range)) {
           Info->SafeAllocas.insert(AI);
           ++NumAllocaStackSafe;
         }
@@ -1000,6 +996,18 @@ StackSafetyGlobalInfo::~StackSafetyGlobalInfo() = default;
 bool StackSafetyGlobalInfo::isSafe(const AllocaInst &AI) const {
   const auto &Info = getInfo();
   return Info.SafeAllocas.count(&AI);
+}
+
+bool StackSafetyGlobalInfo::addressEscapesToCall(const AllocaInst &AI) const {
+  const auto &Info = getInfo();
+  const Function *F = AI.getFunction();
+  auto FnIt = Info.Info.find(F);
+  if (FnIt == Info.Info.end())
+    return true; // Conservative: assume escapes if we don't have info
+  auto AllocaIt = FnIt->second.Allocas.find(&AI);
+  if (AllocaIt == FnIt->second.Allocas.end())
+    return true; // Conservative: assume escapes if we don't have info
+  return !AllocaIt->second.Calls.empty();
 }
 
 bool StackSafetyGlobalInfo::stackAccessIsSafe(const Instruction &I) const {

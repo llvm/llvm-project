@@ -79,6 +79,11 @@ public:
   // during its lifetime.
   bool isSafe(const AllocaInst &AI) const;
 
+  // Returns true if the alloca's address is passed to a function call.
+  // This is relevant for ASan which needs the caller to initialize shadow
+  // memory when addresses escape to callees.
+  bool addressEscapesToCall(const AllocaInst &AI) const;
+
   // Returns true if the instruction can be proven to do only two types of
   // memory accesses:
   //  (1) live stack locations in-bounds or
