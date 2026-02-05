@@ -1582,6 +1582,12 @@ Fortran::lower::CallInterface<T>::getProcedureAttrs(
            !sym->attrs().test(Fortran::semantics::Attr::RECURSIVE))) {
         flags = flags | fir::FortranProcedureFlagsEnum::non_recursive;
       }
+      // Set RECURSIVE if the attribute is explicitly present.  This is only
+      // used for debug info generation to maintain consistency with pre-F2018
+      // compilers.
+      if (sym->attrs().test(Fortran::semantics::Attr::RECURSIVE)) {
+        flags = flags | fir::FortranProcedureFlagsEnum::recursive;
+      }
     }
   }
   if (flags != fir::FortranProcedureFlagsEnum::none)
