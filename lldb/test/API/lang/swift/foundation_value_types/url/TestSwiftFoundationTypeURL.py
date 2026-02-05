@@ -12,6 +12,61 @@
 import lldbsuite.test.lldbinline as lldbinline
 from lldbsuite.test.decorators import *
 
-lldbinline.MakeInlineTest(__file__, globals(),
-                          decorators=[swiftTest,skipUnlessDarwin,
-                            expectedFailureAll(archs=['arm64_32'], bugnumber="<rdar://problem/58065423>")])
+class TestCase(TestBase):
+    @expectedFailureAll(archs=["arm64_32"], bugnumber="<rdar://problem/58065423>")
+    @skipUnlessFoundation
+    @swiftTest
+    def test_swift_url_formatters(self):
+        """Test URL summary strings."""
+        self.build()
+
+        foundation = "Foundation" if sys.platform == "darwin" else "FoundationEssentials"
+
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.swift")
+        )
+
+        self.expect(
+            "frame var url",
+            substrs=[
+                f"({foundation}.URL?)",
+                "url",
+                'https://www.example.com/path?query#fragment',
+            ],
+        )
+        self.expect(
+            "expression -d run -- url",
+            substrs=[
+                f"({foundation}.URL?)",
+                "https://www.example.com/path?query#fragment",
+            ],
+        )
+
+        self.expect(
+            "frame var relativeURL",
+            substrs=[
+                f"({foundation}.URL?)",
+                "relativeURL",
+                "relative",
+                "--",
+                "https://www.example.com/",
+            ],
+        )
+        self.expect(
+            "expression -d run -- relativeURL",
+            substrs=[
+                f"({foundation}.URL?)",
+                "relative",
+                "--",
+                "https://www.example.com/",
+            ],
+        )
+
+        self.expect(
+            "frame var g_url",
+            substrs=[f"({foundation}.URL)", "g_url", "http://www.apple.com"],
+        )
+        self.expect(
+            "expression -d run -- g_url",
+            substrs=[f"({foundation}.URL)", "http://www.apple.com"],
+        )
