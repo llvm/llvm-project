@@ -48,6 +48,13 @@ public:
   /// Returns ABI info helper for the target.
   const ABIInfo &getABIInfo() const { return *info; }
 
+  /// Get target favored AST address space of a global variable for languages
+  /// other than OpenCL and CUDA.
+  /// If \p D is nullptr, returns the default target favored address space
+  /// for global variable.
+  virtual clang::LangAS getGlobalVarAddressSpace(CIRGenModule &CGM,
+                                                 const clang::VarDecl *D) const;
+
   /// Get the address space for alloca.
   virtual mlir::ptr::MemorySpaceAttrInterface getCIRAllocaAddressSpace() const {
     return {};

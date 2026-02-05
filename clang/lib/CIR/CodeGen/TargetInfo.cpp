@@ -92,6 +92,15 @@ bool TargetCIRGenInfo::isNoProtoCallVariadic(
   return false;
 }
 
+clang::LangAS
+TargetCIRGenInfo::getGlobalVarAddressSpace(CIRGenModule &CGM,
+                                           const clang::VarDecl *D) const {
+  assert(!CGM.getLangOpts().OpenCL &&
+         !(CGM.getLangOpts().CUDA && CGM.getLangOpts().CUDAIsDevice) &&
+         "Address space agnostic languages only");
+  return D ? D->getType().getAddressSpace() : LangAS::Default;
+}
+
 mlir::Value TargetCIRGenInfo::performAddrSpaceCast(
     CIRGenFunction &cgf, mlir::Value v,
     mlir::ptr::MemorySpaceAttrInterface srcAS, mlir::Type destTy,
