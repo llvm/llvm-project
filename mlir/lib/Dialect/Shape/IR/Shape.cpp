@@ -652,18 +652,18 @@ OpFoldResult BroadcastOp::fold(FoldAdaptor adaptor) {
     return getShapes().front();
   }
 
-  if (!adaptor.getShapes().front())
+  auto firstAttr =
+      llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getShapes().front());
+  if (!firstAttr)
     return nullptr;
 
-  SmallVector<int64_t, 6> resultShape(
-      llvm::cast<DenseIntElementsAttr>(adaptor.getShapes().front())
-          .getValues<int64_t>());
+  SmallVector<int64_t, 6> resultShape(firstAttr.getValues<int64_t>());
 
   for (auto next : adaptor.getShapes().drop_front()) {
-    if (!next)
+    auto nextAttr = llvm::dyn_cast_if_present<DenseIntElementsAttr>(next);
+    if (!nextAttr)
       return nullptr;
-    auto nextShape = llvm::to_vector<6>(
-        llvm::cast<DenseIntElementsAttr>(next).getValues<int64_t>());
+    auto nextShape = llvm::to_vector<6>(nextAttr.getValues<int64_t>());
 
     SmallVector<int64_t, 6> tmpShape;
     // If the shapes are not compatible, we can't fold it.
@@ -978,7 +978,8 @@ void CstrBroadcastableOp::getCanonicalizationPatterns(
 static bool hasAtMostSingleNonScalar(ArrayRef<Attribute> attributes) {
   bool nonScalarSeen = false;
   for (Attribute a : attributes) {
-    if (!a || llvm::cast<DenseIntElementsAttr>(a).getNumElements() != 0) {
+    auto denseAttr = llvm::dyn_cast_if_present<DenseIntElementsAttr>(a);
+    if (!denseAttr || denseAttr.getNumElements() != 0) {
       if (nonScalarSeen)
         return false;
       nonScalarSeen = true;
@@ -995,10 +996,10 @@ OpFoldResult CstrBroadcastableOp::fold(FoldAdaptor adaptor) {
   if ([&] {
         SmallVector<SmallVector<int64_t, 6>, 6> extents;
         for (const auto &operand : adaptor.getShapes()) {
-          if (!operand)
+          auto denseAttr = llvm::dyn_cast_if_present<DenseIntElementsAttr>(operand);
+          if (!denseAttr)
             return false;
-          extents.push_back(llvm::to_vector<6>(
-              llvm::cast<DenseIntElementsAttr>(operand).getValues<int64_t>()));
+          extents.push_back(llvm::to_vector<6>(denseAttr.getValues<int64_t>()));
         }
         return OpTrait::util::staticallyKnownBroadcastable(extents);
       }())
