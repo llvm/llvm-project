@@ -12907,16 +12907,6 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
   if (const auto *MatTy = dyn_cast<ConstantMatrixType>(Target))
     Target = MatTy->getElementType().getTypePtr();
 
-  // Helper to select the appropriate DiagID based on whether the source is a
-  // matrix type.
-  // TODO: add VectorDiagID for vectors
-  auto SelectDiagID = [&](unsigned ScalarDiagID,
-                          unsigned MatrixDiagID) -> unsigned {
-    if (SourceIsAMatrixTy)
-      return MatrixDiagID;
-    return ScalarDiagID;
-  };
-
   // Strip complex types.
   if (isa<ComplexType>(Source)) {
     if (!isa<ComplexType>(Target)) {
@@ -12983,9 +12973,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
         if (SourceMgr.isInSystemMacro(CC))
           return;
 
-        DiagnoseImpCast(*this, E, T, CC,
-                        SelectDiagID(diag::warn_impcast_float_precision,
-                                     diag::warn_impcast_matrix_float_precision));
+        unsigned DiagID = diag::warn_impcast_float_precision;
+        if (SourceIsAMatrixTy)
+          DiagID = diag::warn_impcast_matrix_float_precision;
+        DiagnoseImpCast(*this, E, T, CC, DiagID);
       }
       // ... or possibly if we're increasing rank, too
       else if (Order < 0) {
@@ -13002,9 +12993,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       if (SourceMgr.isInSystemMacro(CC))
         return;
 
-      DiagnoseFloatingImpCast(*this, E, T, CC,
-                              SelectDiagID(diag::warn_impcast_float_integer,
-                                           diag::warn_impcast_matrix_float_integer));
+      unsigned DiagID = diag::warn_impcast_float_integer;
+      if (SourceIsAMatrixTy)
+        DiagID = diag::warn_impcast_matrix_float_integer;
+      DiagnoseFloatingImpCast(*this, E, T, CC, DiagID);
     }
 
     // Detect the case where a call result is converted from floating-point to
