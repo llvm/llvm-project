@@ -1423,8 +1423,10 @@ FindSubSectionOffsetByName(const DataExtractor &data, lldb::offset_t offset,
     section_length = data.GetU32(&tmp_offset);
     section_name = data.GetCStr(&tmp_offset);
   } while (section_name != name && offset + section_length < length);
+
   if (section_name == name)
     return offset;
+
   return std::nullopt;
 }
 
@@ -1433,9 +1435,9 @@ FindSubSubSectionOffsetByTag(const DataExtractor &data, lldb::offset_t offset,
                              unsigned tag) {
   // Consume a sub-section size and name to shift the offset at the beginning of
   // the sub-sub-sections list.
-  auto upper_section_length = data.GetU32(&offset);
+  auto parent_section_length = data.GetU32(&offset);
   data.GetCStr(&offset);
-  auto upper_section_end_offset = offset + upper_section_length;
+  auto parent_section_end_offset = offset + parent_section_length;
 
   uint32_t section_length = 0;
   unsigned section_tag = 0;
@@ -1447,35 +1449,39 @@ FindSubSubSectionOffsetByTag(const DataExtractor &data, lldb::offset_t offset,
     section_tag = data.GetULEB128(&tmp_offset);
     section_length = data.GetU32(&tmp_offset);
   } while (section_tag != tag &&
-           offset + section_length < upper_section_end_offset);
+           offset + section_length < parent_section_end_offset);
+
   if (section_tag == tag)
     return offset;
+
   return std::nullopt;
 }
 
 static std::optional<std::variant<uint64_t, llvm::StringRef>>
-GetSubSubSubSectionValue(const DataExtractor &data, lldb::offset_t offset,
-                         unsigned tag) {
+GetAttributeValueByTag(const DataExtractor &data, lldb::offset_t offset,
+                       unsigned tag) {
   // Consume a sub-sub-section tag and size to shift the offset at the beginning
-  // of the sub-sub-sub-sections list.
+  // of the attribute list.
   data.GetULEB128(&offset);
-  auto upper_section_length = data.GetU32(&offset);
-  auto upper_section_end_offset = offset + upper_section_length;
+  auto parent_section_length = data.GetU32(&offset);
+  auto parent_section_end_offset = offset + parent_section_length;
 
   std::variant<uint64_t, llvm::StringRef> result;
-  unsigned section_tag = 0;
+  unsigned attribute_tag = 0;
   do {
-    section_tag = data.GetULEB128(&offset);
+    attribute_tag = data.GetULEB128(&offset);
     // From the riscv psABI document:
     // RISC-V attributes have a string value if the tag number is odd and an
     // integer value if the tag number is even.
-    if (section_tag % 2)
+    if (attribute_tag % 2)
       result = data.GetCStr(&offset);
     else
       result = data.GetULEB128(&offset);
-  } while (section_tag != tag && offset < upper_section_end_offset);
-  if (section_tag == tag)
+  } while (attribute_tag != tag && offset < parent_section_end_offset);
+
+  if (attribute_tag == tag)
     return result;
+
   return std::nullopt;
 }
 
@@ -1484,6 +1490,47 @@ void ObjectFileELF::ParseRISCVAttributes(DataExtractor &data, uint64_t length,
   Log *log = GetLog(LLDBLog::Modules);
 
   lldb::offset_t offset = 0;
+
+  // According to the riscv psABI, the .riscv.attributes section has the
+  // following hierarchical structure:
+  //
+  // Section:
+  //   .riscv.attributes {
+  //       - (uint8_t) format
+  //       - Sub-Section 1 {
+  //           * (uint32_t) length
+  //           * (c_str) name
+  //           * Sub-Sub-Section 1.1 {
+  //               > (uleb128_t) tag
+  //               > (uint32_t) length
+  //               > (uleb128_t) attribute_tag_1.1.1
+  //                   $ (c_str or uleb128_t) value
+  //               > (uleb128_t) attribute_tag_1.1.2
+  //                   $ (c_str or uleb128_t) value
+  //               ...
+  //               Other attributes...
+  //               ...
+  //               > (uleb128_t) attribute_tag_1.1.N
+  //                   $ (c_str or uleb128_t) value
+  //           }
+  //           * Sub-Sub-Section 1.2 {
+  //               ...
+  //               Sub-Sub-Section structure...
+  //               ...
+  //           }
+  //           ...
+  //           Other sub-sub-sections...
+  //           ...
+  //       }
+  //       - Sub-Section 2 {
+  //           ...
+  //           Sub-Section structure...
+  //           ...
+  //       }
+  //       ...
+  //       Other sub-sections...
+  //       ...
+  //   }
 
   uint8_t format_version = data.GetU8(&offset);
   if (format_version != llvm::ELFAttrs::Format_Version)
@@ -1504,8 +1551,8 @@ void ObjectFileELF::ParseRISCVAttributes(DataExtractor &data, uint64_t length,
   if (!subsubsection_or_opt)
     return;
 
-  auto value_or_opt = GetSubSubSubSectionValue(data, *subsubsection_or_opt,
-                                               llvm::RISCVAttrs::ARCH);
+  auto value_or_opt = GetAttributeValueByTag(data, *subsubsection_or_opt,
+                                             llvm::RISCVAttrs::ARCH);
   if (!value_or_opt)
     return;
 
