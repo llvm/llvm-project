@@ -13873,7 +13873,7 @@ void BoUpSLP::transformNodes() {
       break;
     }
     case Instruction::Shl: {
-      if (E.Idx != 0)
+      if (E.Idx != 0 || DL->isBigEndian())
         break;
       if (!UserIgnoreList)
         break;

@@ -311,14 +311,14 @@ void SetOfRulesForOpcode::addFastRuleDivergent(UniformityLLTOpPredicateID Ty,
                                                RegBankLLTMapping RuleApplyIDs) {
   int Slot = getFastPredicateSlot(Ty);
   assert(Slot != -1 && "Ty unsupported in this FastRulesTypes");
-  Div[Slot] = RuleApplyIDs;
+  Div[Slot] = std::move(RuleApplyIDs);
 }
 
 void SetOfRulesForOpcode::addFastRuleUniform(UniformityLLTOpPredicateID Ty,
                                              RegBankLLTMapping RuleApplyIDs) {
   int Slot = getFastPredicateSlot(Ty);
   assert(Slot != -1 && "Ty unsupported in this FastRulesTypes");
-  Uni[Slot] = RuleApplyIDs;
+  Uni[Slot] = std::move(RuleApplyIDs);
 }
 
 int SetOfRulesForOpcode::getFastPredicateSlot(
@@ -510,7 +510,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{Sgpr32, Sgpr32Trunc}, {Sgpr32, Sgpr32}})
       .Div(S32, {{Vgpr32, Vcc}, {Vgpr32, Vgpr32}});
 
-  addRulesForGOpcs({G_UADDE, G_USUBE}, Standard)
+  addRulesForGOpcs({G_UADDE, G_USUBE, G_SADDE, G_SSUBE}, Standard)
       .Uni(S32, {{Sgpr32, Sgpr32Trunc}, {Sgpr32, Sgpr32, Sgpr32AExtBoolInReg}})
       .Div(S32, {{Vgpr32, Vcc}, {Vgpr32, Vgpr32, Vcc}});
 
@@ -1015,9 +1015,17 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(B32, {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
       .Uni(B32, {{UniInVgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
 
+  addRulesForGOpcs(
+      {G_AMDGPU_BUFFER_LOAD_FORMAT_D16, G_AMDGPU_TBUFFER_LOAD_FORMAT_D16})
+      .Any({{DivB32}, {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB64}, {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any(
+          {{DivB128}, {{VgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}});
+
   addRulesForGOpcs({G_AMDGPU_BUFFER_STORE, G_AMDGPU_BUFFER_STORE_FORMAT,
                     G_AMDGPU_BUFFER_STORE_FORMAT_D16,
-                    G_AMDGPU_TBUFFER_STORE_FORMAT})
+                    G_AMDGPU_TBUFFER_STORE_FORMAT,
+                    G_AMDGPU_TBUFFER_STORE_FORMAT_D16})
       .Any({{B32}, {{}, {VgprB32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
       .Any({{B64}, {{}, {VgprB64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
       .Any({{B128}, {{}, {VgprB128, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
@@ -1182,14 +1190,29 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniV2S32}, {{UniInVgprV2S32}, {VgprV2S32}}})
       .Any({{DivV2S32}, {{VgprV2S32}, {VgprV2S32}}});
 
-  addRulesForGOpcs({G_FPTOUI})
+  addRulesForGOpcs({G_FPTOUI, G_FPTOSI})
+      .Any({{UniS16, S16}, {{UniInVgprS16}, {Vgpr16}}})
+      .Any({{DivS16, S16}, {{Vgpr16}, {Vgpr16}}})
+      .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}}, hasSALUFloat)
+      .Any({{UniS32, S16}, {{UniInVgprS32}, {Vgpr16}}}, !hasSALUFloat)
+      .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}})
       .Any({{UniS32, S32}, {{Sgpr32}, {Sgpr32}}}, hasSALUFloat)
-      .Any({{UniS32, S32}, {{UniInVgprS32}, {Vgpr32}}}, !hasSALUFloat);
-
-  addRulesForGOpcs({G_UITOFP})
+      .Any({{UniS32, S32}, {{UniInVgprS32}, {Vgpr32}}}, !hasSALUFloat)
       .Any({{DivS32, S32}, {{Vgpr32}, {Vgpr32}}})
+      .Any({{UniS32, S64}, {{UniInVgprS32}, {Vgpr64}}})
+      .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}}});
+
+  addRulesForGOpcs({G_UITOFP, G_SITOFP})
+      .Any({{UniS16, S16}, {{UniInVgprS16}, {Vgpr16}}})
+      .Any({{DivS16, S16}, {{Vgpr16}, {Vgpr16}}})
+      .Any({{UniS16, S32}, {{Sgpr16}, {Sgpr32}}}, hasSALUFloat)
+      .Any({{UniS16, S32}, {{UniInVgprS16}, {Vgpr32}}}, !hasSALUFloat)
+      .Any({{DivS16, S32}, {{Vgpr16}, {Vgpr32}}})
       .Any({{UniS32, S32}, {{Sgpr32}, {Sgpr32}}}, hasSALUFloat)
-      .Any({{UniS32, S32}, {{UniInVgprS32}, {Vgpr32}}}, !hasSALUFloat);
+      .Any({{UniS32, S32}, {{UniInVgprS32}, {Vgpr32}}}, !hasSALUFloat)
+      .Any({{DivS32, S32}, {{Vgpr32}, {Vgpr32}}})
+      .Any({{UniS64, S32}, {{UniInVgprS64}, {Vgpr32}}})
+      .Any({{DivS64, S32}, {{Vgpr64}, {Vgpr32}}});
 
   addRulesForGOpcs({G_FPEXT})
       .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}})

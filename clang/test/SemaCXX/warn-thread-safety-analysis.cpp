@@ -7484,6 +7484,16 @@ void testPointerAliasEscapeAndReset(Foo *f) {
   ptr->mu.Unlock();
 }
 
+// A function that may do anything to the objects referred to by the inputs.
+void escapeAliasMultiple(void *, void *, void *);
+void testPointerAliasEscapeMultiple(Foo *F) {
+    Foo *L;
+    F->mu.Lock(); // expected-note{{mutex acquired here}}
+    Foo *Fp = F;
+    escapeAliasMultiple(&L, &L, &Fp);
+    Fp->mu.Unlock(); // expected-warning{{releasing mutex 'Fp->mu' that was not held}}
+} // expected-warning{{mutex 'F->mu' is still held at the end of function}}
+  
 void testPointerAliasTryLock1() {
   Foo *ptr = returnsFoo();
   if (ptr->mu.TryLock()) {
@@ -7584,6 +7594,19 @@ void testNestedAccess(Container *c) {
 void testNestedAcquire(Container *c) EXCLUSIVE_LOCK_FUNCTION(&c->foo.mu) {
   Foo *buf = &c->foo;
   buf->mu.Lock();
+}
+
+void testArrayOfContainers() {
+  Container array[10];
+
+  Foo *ptr1 = &array[0].foo;
+  Foo *ptr2 = &array[1].foo;
+  ptr1->mu.Lock();
+  ptr2->mu.Lock();
+  array[0].foo.data = 0;
+  array[1].foo.data = 1;
+  ptr2->mu.Unlock();
+  ptr1->mu.Unlock();
 }
 
 struct ContainerOfPtr {

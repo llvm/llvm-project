@@ -1602,19 +1602,20 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
     }
   }
 
-  // Accumulate the allocated size.
   if (I.isStaticAlloca()) {
-    Type *Ty = I.getAllocatedType();
-    AllocatedSize = SaturatingAdd(DL.getTypeAllocSize(Ty).getKnownMinValue(),
-                                  AllocatedSize);
-  }
-
-  // FIXME: This is overly conservative. Dynamic allocas are inefficient for
-  // a variety of reasons, and so we would like to not inline them into
-  // functions which don't currently have a dynamic alloca. This simply
-  // disables inlining altogether in the presence of a dynamic alloca.
-  if (!I.isStaticAlloca())
+    // Accumulate the allocated size if constant and executed once.
+    // Note: if AllocSize is a vscale value, this is an underestimate of the
+    // allocated size, and it also requires some of the cost of a dynamic
+    // alloca, but is recorded here as a constant size alloca.
+    TypeSize AllocSize = I.getAllocationSize(DL).value_or(TypeSize::getZero());
+    AllocatedSize = SaturatingAdd(AllocSize.getKnownMinValue(), AllocatedSize);
+  } else {
+    // FIXME: This is overly conservative. Dynamic allocas are inefficient for
+    // a variety of reasons, and so we would like to not inline them into
+    // functions which don't currently have a dynamic alloca. This simply
+    // disables inlining altogether in the presence of a dynamic alloca.
     HasDynamicAlloca = true;
+  }
 
   return false;
 }

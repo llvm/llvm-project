@@ -1548,19 +1548,6 @@ struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
           warpOp,
           "the source or result of shape_cast op lacks distribution layout");
 
-    // For rank reducing or increasing shape_cast ops, the lower rank layout
-    // must be a slice of higher rank layout.
-    int64_t sourceRank = shapeCastOp.getSourceVectorType().getRank();
-    int64_t resultRank = shapeCastOp.getResultVectorType().getRank();
-    if (sourceRank < resultRank && !sourceLayout.isSliceOf(resultLayout))
-      return rewriter.notifyMatchFailure(
-          warpOp, "shape_cast is rank reducing but source layout is not a "
-                  "slice of result layout");
-    if (sourceRank > resultRank && !resultLayout.isSliceOf(sourceLayout))
-      return rewriter.notifyMatchFailure(
-          warpOp, "shape_cast is rank increasing but result layout is not a "
-                  "slice of source layout");
-
     FailureOr<VectorType> sourceDistTypeOrFailure =
         getDistVecTypeBasedOnLaneLayout(sourceLayout,
                                         shapeCastOp.getSourceVectorType());
@@ -1839,8 +1826,8 @@ struct MemrefExtractAlignedPointerAsIndexDistribution final
     auto newExtractOp = memref::ExtractAlignedPointerAsIndexOp::create(
         rewriter, newWarpOp.getLoc(), extractOp.getType(),
         newWarpOp.getResult(newRetIndices[0]));
-    Value distributedVal = newWarpOp.getResult(operandIdx);
-    rewriter.replaceAllUsesWith(distributedVal, newExtractOp.getResult());
+    Value resultVal = newWarpOp.getResult(operandIdx);
+    rewriter.replaceAllUsesWith(resultVal, newExtractOp.getResult());
     return success();
   }
 };
