@@ -262,15 +262,15 @@ def AArch64fmaxnm_p_nnan : PatFrag<(ops node:$op1, node:$op2, node:$op3),
 
 def SDT_AArch64Arith_Imm : SDTypeProfile<1, 3, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVT<3,i32>,
-  SDTCVecEltisVT<1,i1>, SDTCisSameAs<0,2>
+  SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>, SDTCisSameAs<0,2>
 ]>;
 
 def AArch64asrd_m1 : SDNode<"AArch64ISD::ASRD_MERGE_OP1", SDT_AArch64Arith_Imm>;
-def AArch64urshri_p_node : SDNode<"AArch64ISD::URSHR_I_PRED", SDT_AArch64Arith_Imm>;
+def AArch64urshri_p : SDNode<"AArch64ISD::URSHR_I_PRED", SDT_AArch64Arith_Imm>;
 
-def AArch64urshri_p : PatFrags<(ops node:$op1, node:$op2, node:$op3),
-                           [(int_aarch64_sve_urshr node:$op1, node:$op2, node:$op3),
-                            (AArch64urshri_p_node node:$op1, node:$op2, node:$op3)]>;
+def AArch64urshr : PatFrags<(ops node:$op1, node:$op2, node:$op3),
+                            [(int_aarch64_sve_urshr node:$op1, node:$op2, node:$op3),
+                             (AArch64urshri_p node:$op1, node:$op2, node:$op3)]>;
 
 def SDT_AArch64IntExtend : SDTypeProfile<1, 4, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVT<3, OtherVT>, SDTCisVec<4>,
@@ -358,6 +358,10 @@ def AArch64usra : PatFrags<(ops node:$op1, node:$op2, node:$op3),
 def AArch64ssra : PatFrags<(ops node:$op1, node:$op2, node:$op3),
                            [(int_aarch64_sve_ssra node:$op1, node:$op2, node:$op3),
                             (add node:$op1, (AArch64asr_p (SVEAnyPredicate), node:$op2, (SVEShiftSplatImmR (i32 node:$op3))))]>;
+
+def AArch64ursra : PatFrags<(ops node:$op1, node:$op2, node:$op3),
+                            [(int_aarch64_sve_ursra node:$op1, node:$op2, node:$op3),
+                             (add node:$op1, (AArch64urshri_p (SVEAllActive), node:$op2, node:$op3))]>;
 
 // Replace pattern min(max(v1,v2),v3) by clamp
 def AArch64sclamp : PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
@@ -3638,9 +3642,9 @@ let Predicates = [HasSVE_or_SME] in {
   def : Pat<(i32 (and (vector_extract nxv8i16:$vec, VectorIndexH:$index), 0xffff)),
             (UMOVvi16 (v8i16 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexH:$index)>;
   def : Pat<(i64 (and (i64 (anyext (i32 (vector_extract nxv16i8:$vec, VectorIndexB:$index)))), (i64 0xff))),
-            (SUBREG_TO_REG (i64 0), (i32 (UMOVvi8 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index)), sub_32)>;
+            (SUBREG_TO_REG (i32 (UMOVvi8 (v16i8 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexB:$index)), sub_32)>;
   def : Pat<(i64 (and (i64 (anyext (i32 (vector_extract nxv8i16:$vec, VectorIndexH:$index)))), (i64 0xffff))),
-            (SUBREG_TO_REG (i64 0), (i32 (UMOVvi16 (v8i16 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexH:$index)), sub_32)>;
+            (SUBREG_TO_REG (i32 (UMOVvi16 (v8i16 (EXTRACT_SUBREG ZPR:$vec, zsub)), VectorIndexH:$index)), sub_32)>;
   } // End HasNEON
 
   // Extract first element from vector.
@@ -3936,7 +3940,7 @@ let Predicates = [HasSVE2_or_SME] in {
   defm SQSHL_ZPmI  : sve_int_bin_pred_shift_imm_left_dup<0b0110, "sqshl",  "SQSHL_ZPZI",  int_aarch64_sve_sqshl>;
   defm UQSHL_ZPmI  : sve_int_bin_pred_shift_imm_left_dup<0b0111, "uqshl",  "UQSHL_ZPZI",  int_aarch64_sve_uqshl>;
   defm SRSHR_ZPmI  : sve_int_bin_pred_shift_imm_right<   0b1100, "srshr",  "SRSHR_ZPZI",  int_aarch64_sve_srshr>;
-  defm URSHR_ZPmI  : sve_int_bin_pred_shift_imm_right<   0b1101, "urshr",  "URSHR_ZPZI",  AArch64urshri_p>;
+  defm URSHR_ZPmI  : sve_int_bin_pred_shift_imm_right<   0b1101, "urshr",  "URSHR_ZPZI",  AArch64urshr>;
   defm SQSHLU_ZPmI : sve_int_bin_pred_shift_imm_left<    0b1111, "sqshlu", "SQSHLU_ZPZI", int_aarch64_sve_sqshlu>;
 
   defm SQSHL_ZPZI : sve_int_shift_pred_bhsd<int_aarch64_sve_sqshl_u, SVEShiftImmL8, SVEShiftImmL16, SVEShiftImmL32, SVEShiftImmL64>;
@@ -3997,7 +4001,7 @@ let Predicates = [HasSVE2_or_SME] in {
   defm SSRA_ZZI  : sve2_int_bin_accum_shift_imm_right<0b00, "ssra",  AArch64ssra>;
   defm USRA_ZZI  : sve2_int_bin_accum_shift_imm_right<0b01, "usra",  AArch64usra>;
   defm SRSRA_ZZI : sve2_int_bin_accum_shift_imm_right<0b10, "srsra", int_aarch64_sve_srsra, int_aarch64_sve_srshr>;
-  defm URSRA_ZZI : sve2_int_bin_accum_shift_imm_right<0b11, "ursra", int_aarch64_sve_ursra, AArch64urshri_p>;
+  defm URSRA_ZZI : sve2_int_bin_accum_shift_imm_right<0b11, "ursra", AArch64ursra, int_aarch64_sve_urshr>;
 
   // SVE2 complex integer add
   defm CADD_ZZI   : sve2_int_cadd<0b0, "cadd",   int_aarch64_sve_cadd_x>;

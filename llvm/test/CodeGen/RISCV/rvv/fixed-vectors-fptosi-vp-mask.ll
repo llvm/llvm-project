@@ -9,8 +9,7 @@ define <4 x i1> @vfptosi_v4i1_v4f16(<4 x half> %va, <4 x i1> %m, i32 zeroext %ev
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; ZVFH-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; ZVFH-NEXT:    vand.vi v8, v9, 1
-; ZVFH-NEXT:    vmsne.vi v0, v8, 0
+; ZVFH-NEXT:    vmsne.vi v0, v9, 0
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfptosi_v4i1_v4f16:
@@ -18,7 +17,6 @@ define <4 x i1> @vfptosi_v4i1_v4f16(<4 x half> %va, <4 x i1> %m, i32 zeroext %ev
 ; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
 ; ZVFHMIN-NEXT:    vfncvt.rtz.x.f.w v8, v9
-; ZVFHMIN-NEXT:    vand.vi v8, v8, 1
 ; ZVFHMIN-NEXT:    vmsne.vi v0, v8, 0
 ; ZVFHMIN-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.fptosi.v4i1.v4f16(<4 x half> %va, <4 x i1> %m, i32 %evl)
@@ -30,8 +28,7 @@ define <4 x i1> @vfptosi_v4i1_v4f16_unmasked(<4 x half> %va, i32 zeroext %evl) {
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; ZVFH-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; ZVFH-NEXT:    vand.vi v8, v9, 1
-; ZVFH-NEXT:    vmsne.vi v0, v8, 0
+; ZVFH-NEXT:    vmsne.vi v0, v9, 0
 ; ZVFH-NEXT:    ret
 ;
 ; ZVFHMIN-LABEL: vfptosi_v4i1_v4f16_unmasked:
@@ -39,7 +36,6 @@ define <4 x i1> @vfptosi_v4i1_v4f16_unmasked(<4 x half> %va, i32 zeroext %evl) {
 ; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
 ; ZVFHMIN-NEXT:    vfncvt.rtz.x.f.w v8, v9
-; ZVFHMIN-NEXT:    vand.vi v8, v8, 1
 ; ZVFHMIN-NEXT:    vmsne.vi v0, v8, 0
 ; ZVFHMIN-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.fptosi.v4i1.v4f16(<4 x half> %va, <4 x i1> splat (i1 true), i32 %evl)
@@ -51,8 +47,7 @@ define <4 x i1> @vfptosi_v4i1_v4f32(<4 x float> %va, <4 x i1> %m, i32 zeroext %e
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; CHECK-NEXT:    vand.vi v8, v9, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.fptosi.v4i1.v4f32(<4 x float> %va, <4 x i1> %m, i32 %evl)
   ret <4 x i1> %v
@@ -63,8 +58,7 @@ define <4 x i1> @vfptosi_v4i1_v4f32_unmasked(<4 x float> %va, i32 zeroext %evl) 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v9, v8
-; CHECK-NEXT:    vand.vi v8, v9, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vmsne.vi v0, v9, 0
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.fptosi.v4i1.v4f32(<4 x float> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i1> %v
@@ -75,8 +69,7 @@ define <4 x i1> @vfptosi_v4i1_v4f64(<4 x double> %va, <4 x i1> %m, i32 zeroext %
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v10, v8
-; CHECK-NEXT:    vand.vi v8, v10, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vmsne.vi v0, v10, 0
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.fptosi.v4i1.v4f64(<4 x double> %va, <4 x i1> %m, i32 %evl)
   ret <4 x i1> %v
@@ -87,8 +80,7 @@ define <4 x i1> @vfptosi_v4i1_v4f64_unmasked(<4 x double> %va, i32 zeroext %evl)
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v10, v8
-; CHECK-NEXT:    vand.vi v8, v10, 1
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
+; CHECK-NEXT:    vmsne.vi v0, v10, 0
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.fptosi.v4i1.v4f64(<4 x double> %va, <4 x i1> splat (i1 true), i32 %evl)
   ret <4 x i1> %v

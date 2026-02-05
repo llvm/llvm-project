@@ -269,7 +269,8 @@ UniformityLLTOpPredicateID LLTToBId(LLT Ty) {
     return B64;
   if (Ty == LLT::fixed_vector(3, 32))
     return B96;
-  if (Ty == LLT::fixed_vector(4, 32) || isAnyPtr(Ty, 128))
+  if (Ty == LLT::fixed_vector(4, 32) || Ty == LLT::fixed_vector(2, 64) ||
+      Ty == LLT::fixed_vector(8, 16) || isAnyPtr(Ty, 128))
     return B128;
   return _;
 }
@@ -510,7 +511,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{Sgpr32, Sgpr32Trunc}, {Sgpr32, Sgpr32}})
       .Div(S32, {{Vgpr32, Vcc}, {Vgpr32, Vgpr32}});
 
-  addRulesForGOpcs({G_UADDE, G_USUBE}, Standard)
+  addRulesForGOpcs({G_UADDE, G_USUBE, G_SADDE, G_SSUBE}, Standard)
       .Uni(S32, {{Sgpr32, Sgpr32Trunc}, {Sgpr32, Sgpr32, Sgpr32AExtBoolInReg}})
       .Div(S32, {{Vgpr32, Vcc}, {Vgpr32, Vgpr32, Vcc}});
 
@@ -1015,7 +1016,15 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(B32, {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
       .Uni(B32, {{UniInVgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
 
-  addRulesForGOpcs({G_AMDGPU_BUFFER_STORE, G_AMDGPU_BUFFER_STORE_FORMAT,
+  addRulesForGOpcs(
+      {G_AMDGPU_BUFFER_LOAD_FORMAT_D16, G_AMDGPU_TBUFFER_LOAD_FORMAT_D16})
+      .Any({{DivB32}, {{VgprB32}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any({{DivB64}, {{VgprB64}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
+      .Any(
+          {{DivB128}, {{VgprB128}, {SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}});
+
+  addRulesForGOpcs({G_AMDGPU_BUFFER_STORE, G_AMDGPU_BUFFER_STORE_BYTE,
+                    G_AMDGPU_BUFFER_STORE_SHORT, G_AMDGPU_BUFFER_STORE_FORMAT,
                     G_AMDGPU_BUFFER_STORE_FORMAT_D16,
                     G_AMDGPU_TBUFFER_STORE_FORMAT,
                     G_AMDGPU_TBUFFER_STORE_FORMAT_D16})

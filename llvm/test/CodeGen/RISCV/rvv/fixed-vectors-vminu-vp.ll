@@ -951,10 +951,30 @@ define <16 x i64> @vminu_vx_v16i64_unmasked(<16 x i64> %va, i64 %b, i32 zeroext 
 
 ; Test that split-legalization works as expected.
 
-define <32 x i64> @vminu_vx_v32i64(<32 x i64> %va, <32 x i1> %m, i32 zeroext %evl) {
-; CHECK-LABEL: vminu_vx_v32i64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret
-  %v = call <32 x i64> @llvm.vp.umin.v32i64(<32 x i64> %va, <32 x i64> splat (i64 -1), <32 x i1> %m, i32 %evl)
+define <32 x i64> @vminu_vx_v32i64(<32 x i64> %va, <32 x i1> %m, i64 %x, i32 zeroext %evl) {
+; RV32-LABEL: vminu_vx_v32i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV32-NEXT:    vlse64.v v24, (a0), zero
+; RV32-NEXT:    vminu.vv v8, v8, v24
+; RV32-NEXT:    vminu.vv v16, v16, v24
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vminu_vx_v32i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV64-NEXT:    vminu.vx v8, v8, a0
+; RV64-NEXT:    vminu.vx v16, v16, a0
+; RV64-NEXT:    ret
+  %elt.head = insertelement <32 x i64> poison, i64 %x, i32 0
+  %vb = shufflevector <32 x i64> %elt.head, <32 x i64> poison, <32 x i32> zeroinitializer
+  %v = call <32 x i64> @llvm.vp.umin.v32i64(<32 x i64> %va, <32 x i64> %vb, <32 x i1> %m, i32 %evl)
   ret <32 x i64> %v
 }
