@@ -1,3 +1,10 @@
+// RUN: %clang_cc1 -std=c++98 -pedantic-errors %s -verify=expected,cxx98-14
+// RUN: %clang_cc1 -std=c++11 -pedantic-errors %s -verify=expected,cxx98-14
+// RUN: %clang_cc1 -std=c++14 -pedantic-errors %s -verify=expected,cxx98-14
+// RUN: %clang_cc1 -std=c++17 -pedantic-errors %s -verify=expected,since-cxx17
+// RUN: %clang_cc1 -std=c++20 -pedantic-errors %s -verify=expected,since-cxx20,since-cxx17
+// RUN: %clang_cc1 -std=c++23 -pedantic-errors %s -verify=expected,since-cxx20,since-cxx17
+// RUN: %clang_cc1 -std=c++2c -pedantic-errors %s -verify=expected,since-cxx20,since-cxx17
 
 // cwg2406 is in cwg2406.cpp
 
