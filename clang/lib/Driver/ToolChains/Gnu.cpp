@@ -1633,7 +1633,7 @@ selectRISCVMultilib(const Driver &D, const MultilibSet &RISCVMultilibSet,
 
   // Collect all flags except march=*
   for (StringRef Flag : Flags) {
-    if (Flag.starts_with("!march=") || Flag.starts_with("-march="))
+    if (Flag.starts_with("-march="))
       continue;
 
     NewFlags.push_back(Flag.str());
@@ -1759,15 +1759,8 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
   llvm::StringSet<> Added_ABIs;
   StringRef ABIName = tools::riscv::getRISCVABI(Args, TargetTriple);
   std::string MArch = tools::riscv::getRISCVArch(Args, TargetTriple);
-  for (auto Element : RISCVMultilibSet) {
-    addMultilibFlag(MArch == Element.march,
-                    Twine("-march=", Element.march).str(), Flags);
-    if (!Added_ABIs.count(Element.mabi)) {
-      Added_ABIs.insert(Element.mabi);
-      addMultilibFlag(ABIName == Element.mabi,
-                      Twine("-mabi=", Element.mabi).str(), Flags);
-    }
-  }
+  Flags.push_back("-march=" + MArch);
+  Flags.push_back("-mabi=" + ABIName.str());
 
   if (selectRISCVMultilib(D, RISCVMultilibs, MArch, Flags,
                           Result.SelectedMultilibs))
