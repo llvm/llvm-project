@@ -1,5 +1,5 @@
 llubi - LLVM UB-aware Interpreter
-=================================================
+=================================
 
 .. program:: llubi
 
@@ -48,7 +48,7 @@ GENERAL OPTIONS
  Print out the version of :program:`llubi` and exit without doing anything else.
 
 INTERPRETER OPTIONS
---------------
+-------------------
 
 .. option:: -max-mem=N
 
