@@ -4,13 +4,9 @@
 // correctly handle the conversion from integer to boolean, by comparing
 // with zero rather than truncating.
 
-#include <stdatomic.h>
-#include <stdbool.h>
-
-
 // CHECK: @compund_assign_add
 int compund_assign_add(void) {
-    atomic_bool b;
+    _Atomic _Bool b;
 
     b += 2;
     // CHECK: add
@@ -22,7 +18,7 @@ int compund_assign_add(void) {
 
 // CHECK: @compund_assign_minus
 int compund_assign_minus(void) {
-    atomic_bool b;
+    _Atomic _Bool b;
 
     b -= 2;
     // CHECK: sub
