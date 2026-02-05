@@ -8,6 +8,8 @@
 
 #include "InefficientCopyAssignCheck.h"
 
+#include "../utils/DeclRefExprUtils.h"
+
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -19,6 +21,8 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
+using utils::decl_ref_expr::allDeclRefExprs;
+
 void InefficientCopyAssignCheck::registerMatchers(MatchFinder *Finder) {
   auto AssignOperatorExpr =
       cxxOperatorCallExpr(
@@ -26,8 +30,10 @@ void InefficientCopyAssignCheck::registerMatchers(MatchFinder *Finder) {
           hasArgument(
               0, hasType(cxxRecordDecl(hasMethod(isMoveAssignmentOperator()))
                              .bind("assign-target-type"))),
-          hasArgument(1, declRefExpr(to(varDecl().bind("assign-value-decl")))
-                             .bind("assign-value")),
+          hasArgument(
+              1, declRefExpr(
+                     to(varDecl(hasLocalStorage()).bind("assign-value-decl")))
+                     .bind("assign-value")),
           hasAncestor(functionDecl().bind("within-func")))
           .bind("assign");
   Finder->addMatcher(AssignOperatorExpr, this);
@@ -59,11 +65,7 @@ void InefficientCopyAssignCheck::check(const MatchFinder::MatchResult &Result) {
 
   const QualType AssignValueQual = AssignValueDecl->getType();
   if (AssignValueQual->isLValueReferenceType() ||
-      AssignValueQual.isConstQualified() || AssignValueQual->isPointerType() ||
-      AssignValueQual->isScalarType())
-    return;
-
-  if (!AssignValueDecl->hasLocalStorage())
+      AssignValueQual.isConstQualified() || AssignValueQual->isScalarType())
     return;
 
   if (AssignTargetType->hasTrivialMoveAssignment())
@@ -85,9 +87,8 @@ void InefficientCopyAssignCheck::check(const MatchFinder::MatchResult &Result) {
             break;
           }
           // The reference is being referenced before the assignment, bail out.
-          auto DeclRefMatcher =
-              declRefExpr(hasDeclaration(equalsNode(AssignValue->getDecl())));
-          if (!match(findAll(DeclRefMatcher), *EltStmt, *Result.Context)
+          if (!allDeclRefExprs(*cast<VarDecl>(AssignValue->getDecl()), *EltStmt,
+                               *Result.Context)
                    .empty())
             break;
         }
