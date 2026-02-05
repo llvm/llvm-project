@@ -240,7 +240,9 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     // be duplications since this is a simple recursive scan, but future
     // optimizations will clean it up.
 
-    if (all_equal(PhiR->incoming_values())) {
+    if (all_equal(
+            make_filter_range(PhiR->incoming_values(),
+                              std::not_fn(match_fn<VPValue>(m_Poison()))))) {
       PhiR->replaceAllUsesWith(PhiR->getIncomingValue(0));
       PhiR->eraseFromParent();
       continue;
