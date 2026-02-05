@@ -1475,8 +1475,11 @@ let Predicates = [HasStdExtP, IsRV32] in {
 def riscv_absw : RVSDNode<"ABSW", SDT_RISCVIntUnaryOpW>;
 def riscv_clsw : RVSDNode<"CLSW", SDT_RISCVIntUnaryOpW>;
 
+// Averaging subtraction, (a - b) >> 2
 def riscv_asub : RVSDNode<"ASUB", SDTIntBinOp>;
 def riscv_asubu : RVSDNode<"ASUBU", SDTIntBinOp>;
+
+// MULH/MULHU/MULHSU with rounding.
 def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp>;
 def riscv_mulhru : RVSDNode<"MULHRU", SDTIntBinOp>;
 def riscv_mulhrsu : RVSDNode<"MULHRSU", SDTIntBinOp>;
