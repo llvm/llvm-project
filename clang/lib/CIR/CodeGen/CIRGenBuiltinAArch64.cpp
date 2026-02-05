@@ -153,8 +153,8 @@ mlir::Value CIRGenFunction::emitSVEPredicateCast(mlir::Value pred,
   }
 
   llvm::StringRef llvmIntrName = getLLVMIntrNameNoPrefix(intID);
-  auto call = emitIntrinsicCallOp(builder, loc, llvmIntrName, retTy,
-                                  mlir::ValueRange{pred});
+  auto call = builder.emitIntrinsicCallOp(loc, llvmIntrName, retTy,
+                                          mlir::ValueRange{pred});
   assert(call.getType() == retTy && "Unexpected return type!");
   return call;
 }
