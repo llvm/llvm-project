@@ -240,7 +240,7 @@ private:
     for (auto *Looper : Loopers) {
       unsigned LoopScc = SccId[getIndex(Looper)];
       for (auto *Pred : Looper->predecessors()) {
-        if (SccId[getIndex(Pred)] != LoopScc) {
+        if (getSCCId(Pred) != LoopScc) {
           LoopEntries.insert(Looper);
           LoopEnterers[Looper].insert(Pred);
         }
