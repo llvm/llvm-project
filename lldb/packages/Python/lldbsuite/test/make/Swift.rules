@@ -132,14 +132,33 @@ ifeq "$(SWIFT_CXX_INTEROP)" "1"
 endif
 
 #----------------------------------------------------------------------
+# SWIFT_EMBEDDED_CONCURRENCY implies SWIFT_EMBEDDED_MODE
+#----------------------------------------------------------------------
+ifeq "$(SWIFT_EMBEDDED_CONCURRENCY)" "1"
+	SWIFT_EMBEDDED_MODE = 1
+endif
+
+#----------------------------------------------------------------------
 # Check if we should compile in Swift embedded mode
 #----------------------------------------------------------------------
 ifeq "$(SWIFT_EMBEDDED_MODE)" "1"
 	SWIFTFLAGS += -gdwarf-types -enable-experimental-feature Embedded -enable-experimental-feature ValueGenerics -Xfrontend -disable-objc-interop -runtime-compatibility-version none
 	ifeq "$(OS)" "Darwin"
 		SWIFTFLAGS += -target $(ARCH)-apple-macos14
+		SWIFT_EMBEDDED_TRIPLE = $(ARCH)-apple-macos
 	endif
 	SWIFT_WMO = 1
+endif
+
+#----------------------------------------------------------------------
+# Check if we need embedded Swift concurrency support
+#----------------------------------------------------------------------
+ifeq "$(SWIFT_EMBEDDED_CONCURRENCY)" "1"
+	SWIFT_EMBEDDED_LIB_DIR = $(shell dirname $(SWIFTC))/../lib/swift/embedded/$(SWIFT_EMBEDDED_TRIPLE)
+	LD_EXTRAS +=  -Xlinker $(SWIFT_EMBEDDED_LIB_DIR)/libswift_Concurrency.a
+	LD_EXTRAS +=  -Xlinker $(SWIFT_EMBEDDED_LIB_DIR)/libswift_ConcurrencyDefaultExecutor.a
+	LD_EXTRAS += -lc++
+	LD_EXTRAS += -Xlinker -dead_strip
 endif
 
 #----------------------------------------------------------------------
