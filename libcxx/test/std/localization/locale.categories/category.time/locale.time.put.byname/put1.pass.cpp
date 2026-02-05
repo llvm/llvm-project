@@ -52,7 +52,7 @@ public:
 int main(int, char**)
 {
     char str[200];
-    tm t;
+    std::tm t;
     t.tm_sec = 6;
     t.tm_min = 3;
     t.tm_hour = 13;

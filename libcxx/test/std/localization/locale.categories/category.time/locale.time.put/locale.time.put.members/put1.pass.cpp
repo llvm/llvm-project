@@ -35,7 +35,7 @@ int main(int, char**)
 {
     const my_facet f(1);
     char str[200];
-    tm t;
+    std::tm t;
     t.tm_sec = 6;
     t.tm_min = 3;
     t.tm_hour = 13;
