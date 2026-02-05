@@ -944,6 +944,14 @@ exit:
   ret i32 %select.data
 }
 
+; This test is derived from the following loop:
+;   int simple_csa_int_divide(int* a, int* b, int default_val, int N, int threshold) {
+;     int result = default_val;
+;     for (int i = 0; i < N; ++i)
+;       if (a[i] > threshold)
+;         result = 42 / a[i]
+;     return result;
+;   }
 define i32 @simple_csa_int_divide(ptr noalias %a, ptr noalias %b, i32 %default_val, i64 %N, i32 %threshold) {
 ; NEON-LABEL: define i32 @simple_csa_int_divide(
 ; NEON-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) {
@@ -1588,7 +1596,7 @@ exit:
 }
 
 ; This test is based on the following loop:
-;  int lastsum = 0, sum = 0;
+;  int lastsum = 0;
 ;  for (int i=0; i<N; ++i) {
 ;    if (mask[i])
 ;      lastsum = i + b[i];
