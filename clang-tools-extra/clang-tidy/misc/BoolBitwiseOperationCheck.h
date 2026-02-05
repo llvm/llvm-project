@@ -49,6 +49,7 @@ private:
   bool IgnoreMacros;
   bool StrictMode;
   bool BraceCompound;
+  bool IgnoreWarningsWithFixIt;
 };
 
 } // namespace clang::tidy::misc

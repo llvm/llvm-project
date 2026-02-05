@@ -161,7 +161,9 @@ BoolBitwiseOperationCheck::BoolBitwiseOperationCheck(StringRef Name,
       UnsafeMode(Options.get("UnsafeMode", false)),
       IgnoreMacros(Options.get("IgnoreMacros", false)),
       StrictMode(Options.get("StrictMode", true)),
-      BraceCompound(Options.get("BraceCompound", true)) {}
+      BraceCompound(Options.get("BraceCompound", true)),
+      // Undocumented option for debugging purposes
+      IgnoreWarningsWithFixIt(Options.get("IgnoreWarningsWithFixIt", false)) {}
 
 void BoolBitwiseOperationCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -169,6 +171,7 @@ void BoolBitwiseOperationCheck::storeOptions(
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
   Options.store(Opts, "StrictMode", StrictMode);
   Options.store(Opts, "BraceCompound", BraceCompound);
+  Options.store(Opts, "IgnoreWarningsWithFixIt", IgnoreWarningsWithFixIt);
 }
 
 void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
@@ -278,6 +281,9 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     createDiagBuilder(RespectStrictMode, BinOp);
     return;
   }
+
+  if (IgnoreWarningsWithFixIt)
+    return;
 
   // Try to build fix-its, but fall back to warning-only if any step fails
   bool CanBuildFixIts = true;
