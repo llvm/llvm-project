@@ -165,8 +165,8 @@ LIBC_INLINE static constexpr float16 cbrtf16(float16 x) {
       r_m &= 0xffff'ffe0;
     else
       r_m = (r_m & 0xffff'ffe0) + 0x20; // Round up to next multiple of 0x20
-    fputil::clear_except_if_required(
-        FE_INEXACT); // TODO: investigate this "hack"
+    fputil::clear_except_if_required(FE_INEXACT);
+    // TODO: investigate this "hack"
   } else if (LIBC_UNLIKELY(fputil::fenv_is_round_up()) &&
              x_bits.get_mantissa() == 0x0253U) {
     r_m -= 1 + x_bits.is_neg();

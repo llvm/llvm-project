@@ -4188,7 +4188,7 @@ libc_math_function(
 
 libc_math_function(
     name = "cbrtf16",
-    additional_deps =[
+    additional_deps = [
         ":__support_math_cbrtf16",
     ],
 )
