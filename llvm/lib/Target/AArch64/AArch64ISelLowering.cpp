@@ -3566,6 +3566,8 @@ static SDValue convertFixedMaskToScalableVector(SDValue Mask,
 static SDValue getPredicateForVector(SelectionDAG &DAG, SDLoc &DL, EVT VT);
 static SDValue getPredicateForScalableVector(SelectionDAG &DAG, SDLoc &DL,
                                              EVT VT);
+static SDValue getPredicateForFixedLengthVector(SelectionDAG &DAG, SDLoc &DL,
+                                                EVT VT);
 
 /// isZerosVector - Check whether SDNode N is a zero-filled vector.
 static bool isZerosVector(const SDNode *N) {
@@ -6051,9 +6053,8 @@ static SDValue optimizeBrk(SDNode *N, SelectionDAG &DAG) {
   if (Upper.getOpcode() != AArch64ISD::CTTZ_ELTS || !VT.isScalableVector())
     return SDValue();
 
-  SDValue Mask = Upper->getOperand(0);
-  const APInt &PgPattern = Upper.getConstantOperandAPInt(1);
-  SDValue Pg = getPTrue(DAG, DL, VT, PgPattern.getZExtValue());
+  SDValue Pg = Upper->getOperand(0);
+  SDValue Mask = Upper->getOperand(1);
 
   // brk{a,b} only support .b forms, so cast to make sure all our p regs match.
   Pg = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, Pg);
@@ -6947,7 +6948,7 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     assert(VT.getVectorElementType() == MVT::i1 && "Expected MVT::i1");
 
     // Default to all for scalable vectors
-    unsigned PgPattern = AArch64SVEPredPattern::all;
+    SDValue Pg;
     if (VT.isFixedLengthVector()) {
       // We can use SVE instructions to lower this intrinsic by first creating
       // an SVE predicate register mask from the fixed-width vector.
@@ -6955,12 +6956,12 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDValue Mask = DAG.getNode(ISD::SIGN_EXTEND, DL, NewVT, CttzOp);
       CttzOp = convertFixedMaskToScalableVector(Mask, DAG);
       // Override with a VLx.
-      PgPattern = *getSVEPredPatternFromNumElements(VT.getVectorNumElements());
-    }
+      Pg = getPredicateForFixedLengthVector(DAG, DL, NewVT);
+    } else
+      Pg = DAG.getConstant(1, DL, VT);
 
-    SDValue Pattern = DAG.getTargetConstant(PgPattern, DL, MVT::i32);
     SDValue NewCttzElts =
-        DAG.getNode(AArch64ISD::CTTZ_ELTS, DL, MVT::i64, CttzOp, Pattern);
+        DAG.getNode(AArch64ISD::CTTZ_ELTS, DL, MVT::i64, Pg, CttzOp);
     return DAG.getZExtOrTrunc(NewCttzElts, DL, Op.getValueType());
   }
   case Intrinsic::experimental_vector_match: {

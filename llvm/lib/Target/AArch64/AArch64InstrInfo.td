@@ -1225,7 +1225,7 @@ def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
                             (int_aarch64_sve_rshrnb node:$rs, node:$i)]>;
 
 def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 2,
-                             [SDTCisInt<0>, SDTCisVec<1>, SDTCisInt<2>]>, []>;
+                             [SDTCisInt<0>, SDTCisVec<1>, SDTCisVec<2>]>, []>;
 
 // NEON Load/Store with post-increment base updates.
 // TODO: Complete SDTypeProfile constraints.
