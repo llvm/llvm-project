@@ -5455,8 +5455,8 @@ static SDValue compressShuffleOfShuffles(ShuffleVectorSDNode *SVN, SDValue V1,
   unsigned NumElts = Mask.size();
   auto *SVN1 = cast<ShuffleVectorSDNode>(V1.getNode());
   auto *SVN2 = cast<ShuffleVectorSDNode>(V2.getNode());
-  auto V1Mask = SVN1->getMask();
-  auto V2Mask = SVN2->getMask();
+  ArrayRef<int> V1Mask = SVN1->getMask();
+  ArrayRef<int> V2Mask = SVN2->getMask();
   SmallVector<int> NewMask(NumElts, -1);
   for (unsigned Idx : seq<unsigned>(NumElts)) {
     int Lane = Mask[Idx];
