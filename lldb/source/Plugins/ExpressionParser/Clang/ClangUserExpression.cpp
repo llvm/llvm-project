@@ -27,6 +27,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
@@ -55,6 +56,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 
@@ -416,7 +418,8 @@ void ClangUserExpression::CreateSourceCode(
         m_filename, prefix, m_expr_text, GetWrapKind()));
 
     if (!m_source_code->GetText(m_transformed_text, exe_ctx, !m_ctx_obj,
-                                for_completion, modules_to_import)) {
+                                for_completion, modules_to_import,
+                                m_options.GetCppIgnoreContextQualifiers())) {
       diagnostic_manager.PutString(lldb::eSeverityError,
                                    "couldn't construct expression body");
       return;
@@ -945,13 +948,53 @@ lldb::ExpressionVariableSP ClangUserExpression::GetResultAfterDematerialization(
   return m_result_delegate.GetVariable();
 }
 
+void ClangUserExpression::FixupParseErrorDiagnostics(
+    DiagnosticManager &diagnostic_manager) const {
+  const bool is_fixable_cvr_error = llvm::any_of(
+      diagnostic_manager.Diagnostics(),
+      [](std::unique_ptr<Diagnostic> const &diag) {
+        switch (diag->GetCompilerID()) {
+        case clang::diag::err_member_function_call_bad_cvr:
+          return true;
+        case clang::diag::err_typecheck_assign_const:
+          // FIXME: can we split this particular error into a separate
+          // diagnostic ID so we don't need to scan the error message?
+          return diag->GetDetail().message.find(
+                     "within const member function") != std::string::npos;
+        default:
+          return false;
+        }
+      });
+
+  // Nothing to report.
+  if (!is_fixable_cvr_error)
+    return;
+
+  // If the user already tried ignoring function qualifiers but
+  // the expression still failed, we don't want to suggest the hint again.
+  if (m_options.GetCppIgnoreContextQualifiers()) {
+    // Hard to prove that we don't get here so don't emit a diagnostic n
+    // non-asserts builds. But we do want a signal in asserts builds.
+    assert(false &&
+           "CppIgnoreContextQualifiers didn't resolve compiler diagnostic.");
+    return;
+  }
+
+  diagnostic_manager.Printf(
+      lldb::eSeverityInfo,
+      "Possibly trying to mutate object in a const context. Try "
+      "running the expression with: expression --c++-ignore-context-qualifiers "
+      "-- %s",
+      !m_fixed_text.empty() ? m_fixed_text.c_str() : m_expr_text.c_str());
+}
+
 char ClangUserExpression::ClangUserExpressionHelper::ID;
 
 void ClangUserExpression::ClangUserExpressionHelper::ResetDeclMap(
     ExecutionContext &exe_ctx,
     Materializer::PersistentVariableDelegate &delegate,
-    bool keep_result_in_memory,
-    ValueObject *ctx_obj) {
+    bool keep_result_in_memory, ValueObject *ctx_obj,
+    bool ignore_context_qualifiers) {
   std::shared_ptr<ClangASTImporter> ast_importer;
   auto *state = exe_ctx.GetTargetSP()->GetPersistentExpressionStateForLanguage(
       lldb::eLanguageTypeC);
@@ -961,7 +1004,7 @@ void ClangUserExpression::ClangUserExpressionHelper::ResetDeclMap(
   }
   m_expr_decl_map_up = std::make_unique<ClangExpressionDeclMap>(
       keep_result_in_memory, &delegate, exe_ctx.GetTargetSP(), ast_importer,
-      ctx_obj);
+      ctx_obj, ignore_context_qualifiers);
 }
 
 clang::ASTConsumer *

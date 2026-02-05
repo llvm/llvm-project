@@ -35,3 +35,7 @@
     // gi = ObjectSize2(&t[1].t[1]);
   }
 
+/// Used to crash due to the void-typed ArraySubscriptExpr.
+void foo(void *p) {
+  int i = __builtin_object_size(&p[2], 3);
+}
