@@ -7,11 +7,8 @@ declare i32 @get_int(i16 %arg)
 
 define i32 @func_1(i16 %arg1 , i32 %arg2) #0 {
 ; CHECK-LABEL: func_1:
-; CHECK:         i32.const $push1=, 16
-; CHECK-NEXT:    i32.shl $push2=, $0, $pop1
-; CHECK-NEXT:    i32.const $push4=, 16
-; CHECK-NEXT:    i32.shr_s $push3=, $pop2, $pop4
-; CHECK-NEXT:    call $push0=, get_int, $pop3
+; CHECK:         i32.extend16_s $push1=, $0
+; CHECK-NEXT:    call $push0=, get_int, $pop1
 ; CHECK-NEXT:    end_function
 entry:
   %retval = call i32 @get_int(i16 signext %arg1)

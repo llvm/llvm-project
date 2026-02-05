@@ -120,11 +120,8 @@ define i32 @load_i8_s_with_folded_offset(ptr %p) {
 ; CHECK-LABEL: load_i8_s_with_folded_offset:
 ; CHECK:         .functype load_i8_s_with_folded_offset (i32) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.load8_u $push3=, 24($0)
-; CHECK-NEXT:    i32.const $push0=, 24
-; CHECK-NEXT:    i32.shl $push1=, $pop3, $pop0
-; CHECK-NEXT:    i32.const $push4=, 24
-; CHECK-NEXT:    i32.shr_s $push2=, $pop1, $pop4
+; CHECK-NEXT:    i32.load8_u $push1=, 24($0)
+; CHECK-NEXT:    i32.extend8_s $push0=, $pop1
 ; CHECK-NEXT:    # fallthrough-return
   %q = ptrtoint ptr %p to i32
   %r = add nuw i32 %q, 24
