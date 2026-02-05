@@ -25967,11 +25967,6 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
         !isa<ReturnInst>(&Inst))
       return true;
 
-  if (const AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
-    if (AI->getAllocatedType()->isScalableTy())
-      return true;
-  }
-
   return false;
 }
 
