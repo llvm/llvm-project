@@ -2546,7 +2546,7 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
 Status ProcessGDBRemote::DoHalt(bool &caused_stop) {
   Status error;
 
-  if (m_public_state.GetValue() == eStateAttaching) {
+  if (GetPublicState() == eStateAttaching) {
     // We are being asked to halt during an attach. We used to just close our
     // file handle and debugserver will go away, but with remote proxies, it
     // is better to send a positive signal, so let's send the interrupt first...
@@ -2595,7 +2595,7 @@ Status ProcessGDBRemote::DoDestroy() {
   std::string exit_string;
 
   if (m_gdb_comm.IsConnected()) {
-    if (m_public_state.GetValue() != eStateAttaching) {
+    if (GetPublicState() != eStateAttaching) {
       llvm::Expected<int> kill_res = m_gdb_comm.KillProcess(GetID());
 
       if (kill_res) {

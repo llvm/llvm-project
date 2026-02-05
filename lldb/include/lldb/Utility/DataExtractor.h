@@ -281,7 +281,7 @@ public:
   ///
   /// \return
   ///     The total number of bytes of data this object refers to.
-  uint64_t GetByteSize() const { return m_end - m_start; }
+  virtual uint64_t GetByteSize() const { return m_end - m_start; }
 
   /// Extract a C string from \a *offset_ptr.
   ///
@@ -858,7 +858,7 @@ public:
     return GetSubsetExtractorSP(0);
   }
 
-  lldb::DataBufferSP &GetSharedDataBuffer() { return m_data_sp; }
+  lldb::DataBufferSP GetSharedDataBuffer() const { return m_data_sp; }
 
   bool HasData() { return m_start && m_end && m_end - m_start > 0; }
 
@@ -922,8 +922,8 @@ public:
   ///
   /// \return
   ///     The number of bytes that this object now contains.
-  lldb::offset_t SetData(const void *bytes, lldb::offset_t length,
-                         lldb::ByteOrder byte_order);
+  virtual lldb::offset_t SetData(const void *bytes, lldb::offset_t length,
+                                 lldb::ByteOrder byte_order);
 
   /// Adopt a subset of \a data.
   ///
@@ -947,8 +947,8 @@ public:
   ///
   /// \return
   ///     The number of bytes that this object now contains.
-  lldb::offset_t SetData(const DataExtractor &data, lldb::offset_t offset,
-                         lldb::offset_t length);
+  virtual lldb::offset_t SetData(const DataExtractor &data,
+                                 lldb::offset_t offset, lldb::offset_t length);
 
   /// Adopt a subset of shared data in \a data_sp.
   ///
@@ -972,9 +972,9 @@ public:
   ///
   /// \return
   ///     The number of bytes that this object now contains.
-  lldb::offset_t SetData(const lldb::DataBufferSP &data_sp,
-                         lldb::offset_t offset = 0,
-                         lldb::offset_t length = LLDB_INVALID_OFFSET);
+  virtual lldb::offset_t SetData(const lldb::DataBufferSP &data_sp,
+                                 lldb::offset_t offset = 0,
+                                 lldb::offset_t length = LLDB_INVALID_OFFSET);
 
   /// Set the byte_order value.
   ///
@@ -1028,7 +1028,7 @@ public:
 
   bool Append(void *bytes, lldb::offset_t length);
 
-  lldb::offset_t BytesLeft(lldb::offset_t offset) const {
+  virtual lldb::offset_t BytesLeft(lldb::offset_t offset) const {
     const lldb::offset_t size = GetByteSize();
     if (size > offset)
       return size - offset;

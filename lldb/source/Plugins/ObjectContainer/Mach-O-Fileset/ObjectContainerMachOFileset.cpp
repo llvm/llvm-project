@@ -227,8 +227,8 @@ size_t ObjectContainerMachOFileset::GetModuleSpecifications(
   if (!extractor_sp)
     return initial_count;
 
-  DataExtractorSP data_extractor_sp = extractor_sp->GetSubsetExtractorSP(
-      data_offset, extractor_sp->GetByteSize());
+  DataExtractorSP data_extractor_sp =
+      extractor_sp->GetSubsetExtractorSP(data_offset);
   if (!data_extractor_sp)
     return initial_count;
   if (MagicBytesMatch(*data_extractor_sp)) {

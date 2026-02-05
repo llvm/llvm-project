@@ -21,8 +21,7 @@ llvm::Expected<protocol::ReadMemoryResponseBody>
 ReadMemoryRequestHandler::Run(const protocol::ReadMemoryArguments &args) const {
   const lldb::addr_t raw_address = args.memoryReference + args.offset;
 
-  lldb::SBProcess process = dap.target.GetProcess();
-  if (!lldb::SBDebugger::StateIsStoppedState(process.GetState()))
+  if (dap.ProcessIsNotStopped())
     return llvm::make_error<NotStoppedError>();
 
   const uint64_t count_read = std::max<uint64_t>(args.count, 1);

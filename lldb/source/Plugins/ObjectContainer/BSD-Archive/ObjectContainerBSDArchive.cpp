@@ -441,9 +441,8 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
   if (!file || !extractor_sp)
     return 0;
 
-  DataExtractorSP data_extractor_sp = extractor_sp->GetSubsetExtractorSP(
-      data_offset,
-      extractor_sp->GetSharedDataBuffer()->GetByteSize() - data_offset);
+  DataExtractorSP data_extractor_sp =
+      extractor_sp->GetSubsetExtractorSP(data_offset);
   // We have data, which means this is the first 512 bytes of the file Check to
   // see if the magic bytes match and if they do, read the entire table of
   // contents for the archive and cache it

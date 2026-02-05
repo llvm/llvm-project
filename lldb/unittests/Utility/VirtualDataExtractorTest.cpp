@@ -652,4 +652,12 @@ TEST(VirtualDataExtractorTest, SubsetExtractorGetU32) {
   lldb::DataExtractorSP middle_contiguous_subset =
       extractor->GetSubsetExtractorSP(4 * sizeof(uint32_t));
   EXPECT_EQ(middle_contiguous_subset->GetByteSize(), 4 * sizeof(uint32_t));
+
+  // Set the data source of extractor to its current data source
+  // with offset 0 and same size -- this should be a no-op.
+  extractor->SetData(extractor->GetSharedDataBuffer(), 0,
+                     extractor->GetByteSize());
+  virtual_offset = 0;
+  // Entry(0x0, 4*sizeof(uint32_t), 12*sizeof(uint32_t))
+  EXPECT_EQ(extractor->GetU32(&virtual_offset), 0xccccccccU);
 }
