@@ -175,10 +175,6 @@ public:
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
 
-  bool analyzeSelect(const MachineInstr &MI,
-                     SmallVectorImpl<MachineOperand> &Cond, unsigned &TrueOp,
-                     unsigned &FalseOp, bool &Optimizable) const override;
-
   MachineInstr *optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
                                bool) const override;
