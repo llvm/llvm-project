@@ -37,12 +37,12 @@ define <8 x i32> @speculative_load_v8i32(ptr %ptr) {
 define <2 x i64> @speculative_load_v2i64(ptr %ptr) {
 ; SSE-LABEL: speculative_load_v2i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps (%rdi), %xmm0
+; SSE-NEXT:    movups (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: speculative_load_v2i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps (%rdi), %xmm0
+; AVX-NEXT:    vmovups (%rdi), %xmm0
 ; AVX-NEXT:    retq
   %load = call <2 x i64> @llvm.speculative.load.v2i64.p0(ptr %ptr)
   ret <2 x i64> %load
@@ -51,12 +51,12 @@ define <2 x i64> @speculative_load_v2i64(ptr %ptr) {
 define <4 x float> @speculative_load_v4f32(ptr %ptr) {
 ; SSE-LABEL: speculative_load_v4f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps (%rdi), %xmm0
+; SSE-NEXT:    movups (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: speculative_load_v4f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovaps (%rdi), %xmm0
+; AVX-NEXT:    vmovups (%rdi), %xmm0
 ; AVX-NEXT:    retq
   %load = call <4 x float> @llvm.speculative.load.v4f32.p0(ptr align 8 %ptr)
   ret <4 x float> %load
