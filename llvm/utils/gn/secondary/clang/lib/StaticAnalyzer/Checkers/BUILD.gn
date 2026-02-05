@@ -95,6 +95,7 @@ static_library("Checkers") {
     "ObjCSelfInitChecker.cpp",
     "ObjCSuperDeallocChecker.cpp",
     "ObjCUnusedIVarsChecker.cpp",
+    "OpaqueSTLFunctionsModeling.cpp",
     "PaddingChecker.cpp",
     "PointerArithChecker.cpp",
     "PointerSubChecker.cpp",
