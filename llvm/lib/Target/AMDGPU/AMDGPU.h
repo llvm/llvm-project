@@ -372,7 +372,7 @@ public:
 class AMDGPUAttributorCGSCCPass
     : public PassInfoMixin<AMDGPUAttributorCGSCCPass> {
 private:
-  GCNTargetMachine &TM;
+  TargetMachine &TM;
 
 public:
   AMDGPUAttributorCGSCCPass(GCNTargetMachine &TM) : TM(TM) {}
