@@ -28,6 +28,9 @@ class VPPredicator {
   /// Builder to construct recipes to compute masks.
   VPBuilder Builder;
 
+  /// Post-dominator tree for the VPlan.
+  VPPostDominatorTree VPPDT;
+
   /// When we if-convert we need to create edge masks. We have to cache values
   /// so that we don't end up with exponential recursion/IR.
   using EdgeMaskCacheTy =
@@ -44,6 +47,9 @@ class VPPredicator {
   /// Computes and return the predicate of the edge between \p Src and \p Dst,
   /// possibly inserting new recipes at \p Dst (using Builder's insertion point)
   VPValue *createEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst);
+
+  /// Compute the edge masks for all incoming edges to \p VPBB.
+  void createIncomingEdgeMasks(VPBasicBlock *VPBB);
 
   /// Record \p Mask as the *entry* mask of \p VPBB, which is expected to not
   /// already have a mask.
@@ -64,6 +70,8 @@ class VPPredicator {
   }
 
 public:
+  VPPredicator(VPlan &Plan) : VPPDT(Plan) {}
+
   /// Returns the *entry* mask for \p VPBB.
   VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
     return BlockMaskCache.lookup(VPBB);
@@ -74,17 +82,8 @@ public:
     return EdgeMaskCache.lookup({Src, Dst});
   }
 
-  /// Copy the entry mask of block \p From to block \p To.
-  void copyBlockInMask(VPBasicBlock *To, VPBasicBlock *From) {
-    assert(BlockMaskCache.count(From) && "Source block mask not set");
-    setBlockInMask(To, getBlockInMask(From));
-  }
-
   /// Compute and return the mask for the vector loop header block.
   void createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail);
-
-  /// Compute the edge masks for all incoming edges to \p VPBB.
-  void createIncomingEdgeMasks(VPBasicBlock *VPBB);
 
   /// Compute the predicate of \p VPBB, assuming that the header block of the
   /// loop is set to True, or to the loop mask when tail folding.
@@ -145,9 +144,24 @@ void VPPredicator::createIncomingEdgeMasks(VPBasicBlock *VPBB) {
 }
 
 void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
+  // TODO: Skip creating edge masks for blocks that are control-flow equivalent
+  // to header and have no phis.
+  createIncomingEdgeMasks(VPBB);
+
+  // Reuse the mask of header block if VPBB is control-flow equivalent to
+  // header.
+  // TODO: Generalize to reuse mask of immediate dominator.
+  VPBasicBlock *Header =
+      VPBB->getPlan()->getVectorLoopRegion()->getEntryBasicBlock();
+  if (VPPDT.properlyDominates(VPBB, Header)) {
+    setBlockInMask(VPBB, getBlockInMask(Header));
+    return;
+  }
+
   // All-one mask is modelled as no-mask following the convention for masked
   // load/store/gather/scatter. Initialize BlockMask to no-mask.
   VPValue *BlockMask = nullptr;
+
   // This is the block mask. We OR all unique incoming edges.
   for (auto *Predecessor : SetVector<VPBlockBase *>(
            VPBB->getPredecessors().begin(), VPBB->getPredecessors().end())) {
@@ -286,8 +300,7 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Header);
-  VPPostDominatorTree VPPDT(Plan);
-  VPPredicator Predicator;
+  VPPredicator Predicator(Plan);
   for (VPBlockBase *VPB : RPOT) {
     // Non-outer regions with VPBBs only are supported at the moment.
     auto *VPBB = cast<VPBasicBlock>(VPB);
@@ -297,13 +310,7 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
     if (VPBB == Header) {
       Predicator.createHeaderMask(Header, FoldTail);
     } else {
-      Predicator.createIncomingEdgeMasks(VPBB);
-      // Reuse the mask of header block if VPBB is control-flow equivalant to
-      // header.
-      if (VPPDT.properlyDominates(VPBB, Header))
-        Predicator.copyBlockInMask(VPBB, Header);
-      else
-        Predicator.createBlockInMask(VPBB);
+      Predicator.createBlockInMask(VPBB);
       Predicator.convertPhisToBlends(VPBB);
     }
 
