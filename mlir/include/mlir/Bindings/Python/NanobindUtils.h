@@ -18,7 +18,6 @@
 #include "llvm/Support/DataTypes.h"
 
 #include <fstream>
-#include <memory>
 #include <sstream>
 #include <string>
 #include <type_traits>
@@ -161,16 +160,16 @@ struct PyPrintAccumulator {
 /// or binary. The file may be a Python file-like object or a path to a file.
 class PyFileAccumulator {
 public:
-  struct MlirLlvmRawFdOStreamDeleter {
-    void operator()(MlirLlvmRawFdOStream *stream) const {
-      if (!stream)
-        return;
-      mlirLlvmRawFdOStreamDestroy(*stream);
-      delete stream;
-    }
+  /// RAII wrapper for MlirLlvmRawFdOStream that ensures destruction on scope
+  /// exit.
+  struct RAIIMlirLlvmRawFdOStream : MlirLlvmRawFdOStream {
+    RAIIMlirLlvmRawFdOStream(MlirLlvmRawFdOStream stream)
+        : MlirLlvmRawFdOStream(stream) {}
+    RAIIMlirLlvmRawFdOStream(const RAIIMlirLlvmRawFdOStream &) = delete;
+    RAIIMlirLlvmRawFdOStream &
+    operator=(const RAIIMlirLlvmRawFdOStream &) = delete;
+    ~RAIIMlirLlvmRawFdOStream() { mlirLlvmRawFdOStreamDestroy(*this); }
   };
-  using MlirLlvmRawFdOStreamPtr =
-      std::unique_ptr<MlirLlvmRawFdOStream, MlirLlvmRawFdOStreamDeleter>;
 
   PyFileAccumulator(const nanobind::object &fileOrStringObject, bool binary)
       : binary(binary) {
@@ -188,8 +187,7 @@ public:
             (std::string("Unable to open file for writing: ") + errorMessage)
                 .c_str());
       }
-      writeTarget.emplace<MlirLlvmRawFdOStreamPtr>(
-          new MlirLlvmRawFdOStream(stream));
+      writeTarget.emplace<RAIIMlirLlvmRawFdOStream>(stream);
     } else {
       writeTarget.emplace<nanobind::object>(fileOrStringObject.attr("write"));
     }
@@ -223,11 +221,11 @@ private:
     return [](MlirStringRef part, void *userData) {
       PyFileAccumulator *accum = static_cast<PyFileAccumulator *>(userData);
       mlirLlvmRawFdOStreamWrite(
-          *std::get<MlirLlvmRawFdOStreamPtr>(accum->writeTarget), part);
+          std::get<RAIIMlirLlvmRawFdOStream>(accum->writeTarget), part);
     };
   }
 
-  std::variant<nanobind::object, MlirLlvmRawFdOStreamPtr> writeTarget;
+  std::variant<nanobind::object, RAIIMlirLlvmRawFdOStream> writeTarget;
   bool binary;
 };
 
