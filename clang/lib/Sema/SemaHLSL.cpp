@@ -3389,27 +3389,23 @@ static bool CheckSamplingBuiltin(Sema &S, CallExpr *TheCall, SampleKind Kind) {
     }
     NextIdx++;
   } else if (Kind == SampleKind::Grad) {
-    if (ExpectedDim != 0) {
-      if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx)->getType(),
-                                  S.Context.FloatTy, ExpectedDim,
-                                  TheCall->getArg(NextIdx)->getBeginLoc()))
-        return true;
-      if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx + 1)->getType(),
-                                  S.Context.FloatTy, ExpectedDim,
-                                  TheCall->getArg(NextIdx + 1)->getBeginLoc()))
-        return true;
-    }
+    if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx)->getType(),
+                                S.Context.FloatTy, ExpectedDim,
+                                TheCall->getArg(NextIdx)->getBeginLoc()))
+      return true;
+    if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx + 1)->getType(),
+                                S.Context.FloatTy, ExpectedDim,
+                                TheCall->getArg(NextIdx + 1)->getBeginLoc()))
+      return true;
     NextIdx += 2;
   }
 
   // Offset
   if (TheCall->getNumArgs() > NextIdx) {
-    if (ExpectedDim != 0) {
-      if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx)->getType(),
-                                  S.Context.IntTy, ExpectedDim,
-                                  TheCall->getArg(NextIdx)->getBeginLoc()))
-        return true;
-    }
+    if (CheckVectorElementCount(&S, TheCall->getArg(NextIdx)->getType(),
+                                S.Context.IntTy, ExpectedDim,
+                                TheCall->getArg(NextIdx)->getBeginLoc()))
+      return true;
     NextIdx++;
   }
 
