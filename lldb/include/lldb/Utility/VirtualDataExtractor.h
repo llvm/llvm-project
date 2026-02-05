@@ -59,8 +59,13 @@ public:
 
   llvm::ArrayRef<uint8_t> GetData() const override;
 
+  /// GetByteSize is called by external users often, and we want to
+  /// return the virtual buffer size that the user expects to see.
   uint64_t GetByteSize() const override { return GetVirtualByteSize(); }
 
+  /// BytesLeft is mostly called by DataExtractor internal methods, to
+  /// ensure we don't read past the end of the DataBuffer.  Use the
+  /// physical buffer size.
   lldb::offset_t BytesLeft(lldb::offset_t offset) const override {
     return PhysicalBytesLeft(offset);
   }
@@ -96,6 +101,8 @@ protected:
   uint64_t GetPhysicalByteSize() const;
   lldb::offset_t VirtualBytesLeft(lldb::offset_t virtual_offset) const;
   lldb::offset_t PhysicalBytesLeft(lldb::offset_t physical_offset) const;
+
+  void ResetLookupTableToMatchPhysical();
 
 private:
   LookupTable m_lookup_table;

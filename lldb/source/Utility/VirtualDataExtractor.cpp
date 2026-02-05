@@ -99,17 +99,8 @@ offset_t VirtualDataExtractor::SetData(const void *bytes, lldb::offset_t length,
   assert("SetData(1) called on VirtualDataExtractor that already had data" &&
          false);
 
-  // FIXME calling SetData on a VirtualDataExtractor that already has a
-  // data buffer means the LookupTable needs to be either replaced, or
-  // if we assume the buffer is a subset of the original, we need to
-  // update all the entries to have correct new offsets into the buffer
-  // and remove entries that are outside the new range.
-  // For now, zero out the LookupTable and behave as if this is a simple
-  // DataExtractor.
   DataExtractor::SetData(bytes, length, byte_order);
-  m_lookup_table.Clear();
-  m_lookup_table.Append(
-      VirtualDataExtractor::LookupTable::Entry{0, GetPhysicalByteSize(), 0});
+  ResetLookupTableToMatchPhysical();
 
   return GetVirtualByteSize();
 }
@@ -128,17 +119,8 @@ offset_t VirtualDataExtractor::SetData(const DataExtractor &data,
   assert("SetData(2) called on VirtualDataExtractor that already had data" &&
          false);
 
-  // FIXME calling SetData on a VirtualDataExtractor that already has a
-  // data buffer means the LookupTable needs to be either replaced, or
-  // if we assume the buffer is a subset of the original, we need to
-  // update all the entries to have correct new offsets into the buffer
-  // and remove entries that are outside the new range.
-  // For now, zero out the LookupTable and behave as if this is a simple
-  // DataExtractor.
   DataExtractor::SetData(data, offset, length);
-  m_lookup_table.Clear();
-  m_lookup_table.Append(
-      VirtualDataExtractor::LookupTable::Entry{0, GetPhysicalByteSize(), 0});
+  ResetLookupTableToMatchPhysical();
 
   return GetVirtualByteSize();
 }
@@ -158,19 +140,23 @@ offset_t VirtualDataExtractor::SetData(const lldb::DataBufferSP &data_sp,
   assert("SetData(3) called on VirtualDataExtractor that already had data" &&
          false);
 
-  // FIXME calling SetData on a VirtualDataExtractor that already has a
+  DataExtractor::SetData(data_sp, offset, length);
+  ResetLookupTableToMatchPhysical();
+
+  return GetVirtualByteSize();
+}
+
+void VirtualDataExtractor::ResetLookupTableToMatchPhysical() {
+  // calling SetData on a VirtualDataExtractor that already has a
   // data buffer means the LookupTable needs to be either replaced, or
   // if we assume the buffer is a subset of the original, we need to
   // update all the entries to have correct new offsets into the buffer
   // and remove entries that are outside the new range.
   // For now, zero out the LookupTable and behave as if this is a simple
   // DataExtractor.
-  DataExtractor::SetData(data_sp, offset, length);
   m_lookup_table.Clear();
   m_lookup_table.Append(
       VirtualDataExtractor::LookupTable::Entry{0, GetPhysicalByteSize(), 0});
-
-  return GetVirtualByteSize();
 }
 
 uint64_t VirtualDataExtractor::GetVirtualByteSize() const {

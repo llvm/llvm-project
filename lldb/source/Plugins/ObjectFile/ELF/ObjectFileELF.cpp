@@ -481,7 +481,7 @@ ObjectFile *ObjectFileELF::CreateMemoryInstance(
   return nullptr;
 }
 
-bool ObjectFileELF::MagicBytesMatch(const DataBufferSP &data_sp,
+bool ObjectFileELF::MagicBytesMatch(DataBufferSP data_sp,
                                     lldb::addr_t data_offset,
                                     lldb::addr_t data_length) {
   if (data_sp &&
@@ -2768,7 +2768,7 @@ static void ApplyELF64ABS64Relocation(Symtab *symtab, ELFRelocation &rel,
       symtab->FindSymbolByID(ELFRelocation::RelocSymbol64(rel));
   if (symbol) {
     addr_t value = symbol->GetAddressRef().GetFileAddress();
-    const DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
+    DataBufferSP data_buffer_sp = debug_data.GetSharedDataBuffer();
     // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
     WritableDataBuffer *data_buffer =
         llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
@@ -2795,7 +2795,7 @@ static void ApplyELF64ABS32Relocation(Symtab *symtab, ELFRelocation &rel,
       return;
     }
     uint32_t truncated_addr = (value & 0xFFFFFFFF);
-    const DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
+    DataBufferSP data_buffer_sp = debug_data.GetSharedDataBuffer();
     // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
     WritableDataBuffer *data_buffer =
         llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
@@ -2819,7 +2819,7 @@ static void ApplyELF32ABS32RelRelocation(Symtab *symtab, ELFRelocation &rel,
       return;
     }
     assert(llvm::isUInt<32>(value) && "Valid addresses are 32-bit");
-    const DataBufferSP &data_buffer_sp = debug_data.GetSharedDataBuffer();
+    DataBufferSP data_buffer_sp = debug_data.GetSharedDataBuffer();
     // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
     WritableDataBuffer *data_buffer =
         llvm::cast<WritableDataBuffer>(data_buffer_sp.get());
@@ -2896,8 +2896,7 @@ unsigned ObjectFileELF::ApplyRelocations(
           if (symbol) {
             addr_t f_offset =
                 rel_section->GetFileOffset() + ELFRelocation::RelocOffset32(rel);
-            const DataBufferSP &data_buffer_sp =
-                debug_data.GetSharedDataBuffer();
+            DataBufferSP data_buffer_sp = debug_data.GetSharedDataBuffer();
             // ObjectFileELF creates a WritableDataBuffer in CreateInstance.
             WritableDataBuffer *data_buffer =
                 llvm::cast<WritableDataBuffer>(data_buffer_sp.get());

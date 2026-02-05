@@ -858,7 +858,7 @@ public:
     return GetSubsetExtractorSP(0);
   }
 
-  const lldb::DataBufferSP &GetSharedDataBuffer() const { return m_data_sp; }
+  lldb::DataBufferSP GetSharedDataBuffer() const { return m_data_sp; }
 
   bool HasData() { return m_start && m_end && m_end - m_start > 0; }
 
