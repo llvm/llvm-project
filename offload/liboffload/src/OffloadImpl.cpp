@@ -457,6 +457,11 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     return Info.write<uint64_t>(Mem);
   } break;
 
+  case OL_DEVICE_INFO_ID:
+    return Info.write<int32_t>(Device->DeviceNum);
+  case OL_DEVICE_INFO_USE_AUTO_ZERO_COPY:
+    return Info.write<bool>(Device->Device->useAutoZeroCopy());
+
   default:
     break;
   }
@@ -607,6 +612,10 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
   case OL_DEVICE_INFO_GLOBAL_MEM_SIZE:
   case OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE:
     return Info.write<uint64_t>(0);
+  case OL_DEVICE_INFO_ID:
+    return Info.write<int32_t>(Device->DeviceNum);
+  case OL_DEVICE_INFO_USE_AUTO_ZERO_COPY:
+    return Info.write<bool>(Device->Device->useAutoZeroCopy());
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getDeviceInfo enum '%i' is invalid", PropName);
