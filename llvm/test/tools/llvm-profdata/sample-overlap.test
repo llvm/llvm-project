@@ -40,7 +40,7 @@
 ; OVERLAP1:    hot blocks unique in base profile: 0
 ; OVERLAP1:    hot blocks unique in test profile: 0
 
-; RUN: llvm-profdata overlap --sample --similarity-cutoff=800000 %S/Inputs/sample-overlap-0.proftext %S/Inputs/sample-overlap-2.proftext | FileCheck %s --check-prefix=OVERLAP2  --match-full-lines --strict-whitespace
+; RUN: llvm-profdata overlap --sample --similarity-cutoff 800000 %S/Inputs/sample-overlap-0.proftext %S/Inputs/sample-overlap-2.proftext | FileCheck %s --check-prefix=OVERLAP2  --match-full-lines --strict-whitespace
 ; OVERLAP2:Program level:
 ; OVERLAP2:  Whole program profile similarity: 63.720%
 ; OVERLAP2:  Whole program sample overlap: 29.649%
@@ -65,7 +65,7 @@
 ; OVERLAP2:78.15%         26.29%         48.09%       9.98%     0.00%         0.00%         10896          1087           main
 ; OVERLAP2:10.31%         34.76%         75.55%       100.00%   0.00%         0.00%         1437           1437           _Z3bari
 
-; RUN: llvm-profdata overlap --sample --value-cutoff=1000 %S/Inputs/sample-overlap-0.proftext %S/Inputs/sample-overlap-3.proftext | FileCheck %s --check-prefix=OVERLAP3  --match-full-lines --strict-whitespace
+; RUN: llvm-profdata overlap --sample --value-cutoff 1000 %S/Inputs/sample-overlap-0.proftext %S/Inputs/sample-overlap-3.proftext | FileCheck %s --check-prefix=OVERLAP3  --match-full-lines --strict-whitespace
 ; OVERLAP3:Program level:
 ; OVERLAP3:  Whole program profile similarity: 14.301%
 ; OVERLAP3:  Whole program sample overlap: 6.040%
@@ -90,7 +90,7 @@
 ; OVERLAP3:10.31%         11.02%         99.29%       100.00%   0.00%         0.00%         1437           1437           _Z3bari
 ; OVERLAP3:0.00%          83.54%         0.00%        0.00%     0.00%         100.00%       0              10896          main2
 
-; RUN: llvm-profdata overlap --sample --function=main %S/Inputs/sample-overlap-0.proftext %S/Inputs/sample-overlap-4.proftext | FileCheck %s --check-prefix=OVERLAP4  --match-full-lines --strict-whitespace
+; RUN: llvm-profdata overlap --sample --function main %S/Inputs/sample-overlap-0.proftext %S/Inputs/sample-overlap-4.proftext | FileCheck %s --check-prefix=OVERLAP4  --match-full-lines --strict-whitespace
 ; OVERLAP4:Program level:
 ; OVERLAP4:  Whole program profile similarity: 17.302%
 ; OVERLAP4:  Whole program sample overlap: 8.134%

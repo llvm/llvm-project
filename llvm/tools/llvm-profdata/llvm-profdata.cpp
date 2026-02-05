@@ -58,8 +58,6 @@
 #include <limits>
 #include <optional>
 
-#include "Opts.inc"
-
 using namespace llvm;
 using namespace llvm::opt;
 using ProfCorrelatorKind = InstrProfCorrelator::ProfCorrelatorKind;
@@ -609,11 +607,13 @@ getFuncName(const StringMap<InstrProfWriter::ProfilingData>::value_type &Val) {
   return Val.first();
 }
 
-static std::string getFuncName(const SampleProfileMap::value_type &Val) {
+static std::string
+getFuncName(const SampleProfileMap::value_type &Val) {
   return Val.second.getContext().toString();
 }
 
-template <typename T> static void filterFunctions(T &ProfileMap) {
+template <typename T>
+static void filterFunctions(T &ProfileMap) {
   bool hasFilter = !FuncNameFilter.empty();
   bool hasNegativeFilter = !FuncNameNegativeFilter.empty();
   if (!hasFilter && !hasNegativeFilter)
@@ -1201,8 +1201,8 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
                           BodySample.second.getSamples());
     for (const auto &Target : BodySample.second.getCallTargets()) {
       Result.addCalledTargetSamples(BodySample.first.LineOffset,
-                                    MaskedDiscriminator, Remapper(Target.first),
-                                    Target.second);
+                                    MaskedDiscriminator,
+                                    Remapper(Target.first), Target.second);
     }
   }
   for (const auto &CallsiteSamples : Samples.getCallsiteSamples()) {
@@ -1219,8 +1219,12 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
 }
 
 static sampleprof::SampleProfileFormat FormatMap[] = {
-    sampleprof::SPF_None,       sampleprof::SPF_Text, sampleprof::SPF_None,
-    sampleprof::SPF_Ext_Binary, sampleprof::SPF_GCC,  sampleprof::SPF_Binary};
+    sampleprof::SPF_None,
+    sampleprof::SPF_Text,
+    sampleprof::SPF_None,
+    sampleprof::SPF_Ext_Binary,
+    sampleprof::SPF_GCC,
+    sampleprof::SPF_Binary};
 
 static std::unique_ptr<MemoryBuffer>
 getInputFileBuf(const StringRef &InputFile) {
@@ -1479,7 +1483,8 @@ static int merge_main(StringRef ProgName) {
   parseInputFilenamesFile(Buffer.get(), WeightedInputs);
 
   if (WeightedInputs.empty())
-    exitWithError("no input files specified. See " + ProgName + " merge -help");
+    exitWithError("no input files specified. See " + ProgName +
+                  " merge --help");
 
   if (DumpInputFileList) {
     for (auto &WF : WeightedInputs)
@@ -3068,8 +3073,9 @@ static int showDebugInfoCorrelation(const std::string &Filename,
 
 static int show_main(StringRef ProgName) {
   if (Filename.empty() && DebugInfoFilename.empty())
-    exitWithError("the positional argument '<profdata-file>' is required "
-                  "unless '--debug-info' is provided");
+    exitWithError(
+        "the positional argument '<profdata-file>' is required unless "
+        "'--debug-info' is provided");
 
   if (Filename == OutputFilename) {
     errs() << ProgName
@@ -3086,8 +3092,7 @@ static int show_main(StringRef ProgName) {
     exitWithErrorCode(EC, OutputFilename);
 
   if (ShowAllFunctions && !FuncNameFilter.empty())
-    WithColor::warning()
-        << "-function argument ignored: showing all functions\n";
+    WithColor::warning() << "-function argument ignored: showing all functions\n";
 
   if (!DebugInfoFilename.empty())
     return showDebugInfoCorrelation(DebugInfoFilename, SFormat, OS);
@@ -3168,56 +3173,11 @@ static void reportCmdLineError(const Twine &Message) {
   WithColor::error(errs(), ProgramName) << Message << "\n";
 }
 
-static StringRef getOptionValue(const opt::Arg *A) {
-  if (A->getNumValues() == 0)
-    return StringRef();
-  StringRef V = A->getValue();
-  V.consume_front("=");
-  return V;
-}
-
-static std::string getLastArgValueClean(const opt::InputArgList &Args,
-                                        unsigned OptionID,
-                                        StringRef Default = "") {
-  if (const opt::Arg *A = Args.getLastArg(OptionID))
-    return getOptionValue(A).str();
-  return Default.str();
-}
-
-static std::vector<std::string>
-getAllArgValuesClean(const opt::InputArgList &Args, unsigned OptionID) {
-  std::vector<std::string> Values;
-  for (const opt::Arg *A : Args.filtered(OptionID))
-    Values.push_back(getOptionValue(A).str());
-  return Values;
-}
-
-static bool parseBooleanOption(const opt::Arg *A, bool &Value) {
-  if (!A)
-    return true;
-  StringRef V = getOptionValue(A);
-  if (V.empty()) {
-    Value = true;
-    return true;
-  }
-  if (V.equals_insensitive("true") || V == "1") {
-    Value = true;
-    return true;
-  }
-  if (V.equals_insensitive("false") || V == "0") {
-    Value = false;
-    return true;
-  }
-  reportCmdLineError(Twine("invalid argument '") + V + "' for option '" +
-                     A->getSpelling() + "'");
-  return false;
-}
-
 template <typename T>
 static bool parseNumericOption(const opt::Arg *A, T &Value) {
   if (!A)
     return true;
-  StringRef V = getOptionValue(A);
+  StringRef V = A->getValue();
   T Parsed{};
   if (!llvm::to_integer(V, Parsed, 0)) {
     if (!std::numeric_limits<T>::is_signed && V == "-1") {
@@ -3232,19 +3192,13 @@ static bool parseNumericOption(const opt::Arg *A, T &Value) {
   return true;
 }
 
-static bool applyLibraryOptionsWithCL(const opt::InputArgList &Args) {
+static bool applyLibraryOptions(const opt::InputArgList &Args) {
   SmallVector<std::string, 16> CLStrings;
   CLStrings.push_back(ProgramName);
 
-  auto AddBool = [&](unsigned OptID, StringRef Spelling) -> bool {
-    if (const opt::Arg *A = Args.getLastArg(OptID)) {
-      bool Value = true;
-      if (!parseBooleanOption(A, Value))
-        return false;
-      CLStrings.push_back(
-          (Spelling + Twine("=") + (Value ? "true" : "false")).str());
-    }
-    return true;
+  auto AddFlag = [&](unsigned OptID, StringRef Spelling) {
+    if (Args.hasArg(OptID))
+      CLStrings.push_back(Spelling.str());
   };
   auto AddUInt = [&](unsigned OptID, StringRef Spelling) -> bool {
     if (const opt::Arg *A = Args.getLastArg(OptID)) {
@@ -3265,20 +3219,14 @@ static bool applyLibraryOptionsWithCL(const opt::InputArgList &Args) {
     return true;
   };
 
-  if (!AddBool(OPT_profile_isfs, "--profile-isfs"))
-    return false;
-  if (!AddBool(OPT_generate_merged_base_profiles,
-               "--generate-merged-base-profiles"))
-    return false;
+  AddFlag(OPT_profile_isfs, "--profile-isfs");
+  AddFlag(OPT_generate_merged_base_profiles, "--generate-merged-base-profiles");
   if (!AddUInt(OPT_profile_symbol_list_cutoff, "--profile-symbol-list-cutoff"))
     return false;
-  if (!AddBool(OPT_extbinary_write_vtable_type_prof,
-               "--extbinary-write-vtable-type-prof"))
-    return false;
+  AddFlag(OPT_extbinary_write_vtable_type_prof,
+          "--extbinary-write-vtable-type-prof");
 
-  if (!AddBool(OPT_profile_summary_contextless,
-               "--profile-summary-contextless"))
-    return false;
+  AddFlag(OPT_profile_summary_contextless, "--profile-summary-contextless");
   if (!AddInt(OPT_profile_summary_cutoff_hot, "--profile-summary-cutoff-hot"))
     return false;
   if (!AddInt(OPT_profile_summary_cutoff_cold, "--profile-summary-cutoff-cold"))
@@ -3311,7 +3259,7 @@ static bool applyLibraryOptionsWithCL(const opt::InputArgList &Args) {
 static bool parseFloatOption(const opt::Arg *A, float &Value) {
   if (!A)
     return true;
-  StringRef V = getOptionValue(A);
+  StringRef V = A->getValue();
   double Parsed;
   if (V.getAsDouble(Parsed)) {
     reportCmdLineError(Twine("invalid argument '") + V + "' for option '" +
@@ -3327,17 +3275,9 @@ static bool parseCutoffValues(const opt::InputArgList &Args,
   Cutoffs.clear();
   for (const opt::Arg *A : Args.filtered(OPT_detailed_summary_cutoffs)) {
     SmallVector<StringRef, 4> Parts;
-    if (A->getNumValues() <= 1) {
-      getOptionValue(A).split(Parts, ',', /*MaxSplit=*/-1,
-                              /*KeepEmpty=*/false);
-    } else {
-      for (unsigned I = 0, E = A->getNumValues(); I != E; ++I) {
-        StringRef Part = A->getValue(I);
-        if (!Part.empty() && Part.front() == '=')
-          Part = Part.drop_front();
-        Parts.push_back(Part);
-      }
-    }
+    StringRef(A->getValue())
+        .split(Parts, ',', /*MaxSplit=*/-1,
+               /*KeepEmpty=*/false);
     for (StringRef Part : Parts) {
       uint32_t Parsed;
       if (!llvm::to_integer(Part, Parsed, 0)) {
@@ -3356,7 +3296,7 @@ static bool parseFSDiscriminatorPassArg(const opt::InputArgList &Args) {
   if (!A)
     return true;
 
-  StringRef Value = getOptionValue(A);
+  StringRef Value = A->getValue();
   auto Parsed = StringSwitch<std::optional<FSDiscriminatorPass>>(Value)
                     .Case("Base", FSDiscriminatorPass::Base)
                     .Case("base", FSDiscriminatorPass::Base)
@@ -3386,6 +3326,9 @@ static bool validateSubcommandOptions(const opt::InputArgList &Args,
     if (A->getOption().matches(OPT_UNKNOWN) ||
         A->getOption().matches(OPT_INPUT))
       continue;
+    // Options without an explicit subcommand are available everywhere.
+    if (A->getOption().matches(OPT_help) || A->getOption().matches(OPT_version))
+      continue;
     if (A->getOption().isRegisteredSC(Subcommand))
       continue;
     reportCmdLineError(Twine("unknown command line argument '") +
@@ -3399,24 +3342,24 @@ static bool validateSubcommandOptions(const opt::InputArgList &Args,
 
 static bool parseMergeOptions(const opt::InputArgList &Args,
                               ArrayRef<StringRef> Positionals) {
-  OutputFilename = getLastArgValueClean(Args, OPT_output, "-");
+  OutputFilename = Args.getLastArgValue(OPT_output, "-").str();
   if (const opt::Arg *A = Args.getLastArg(OPT_sample, OPT_instr))
     ProfileKind = A->getOption().matches(OPT_sample) ? sample : instr;
-  if (!applyLibraryOptionsWithCL(Args))
+  if (!applyLibraryOptions(Args))
     return false;
 
   if (!parseNumericOption(
           Args.getLastArg(OPT_max_debug_info_correlation_warnings),
           MaxDbgCorrelationWarnings))
     return false;
-  ProfiledBinary = getLastArgValueClean(Args, OPT_profiled_binary);
-  DebugInfoFilename = getLastArgValueClean(Args, OPT_debug_info);
-  BinaryFilename = getLastArgValueClean(Args, OPT_binary_file);
-  DebugFileDirectory = getAllArgValuesClean(Args, OPT_debug_file_directory);
+  ProfiledBinary = Args.getLastArgValue(OPT_profiled_binary).str();
+  DebugInfoFilename = Args.getLastArgValue(OPT_debug_info).str();
+  BinaryFilename = Args.getLastArgValue(OPT_binary_file).str();
+  DebugFileDirectory = Args.getAllArgValues(OPT_debug_file_directory);
   DebugInfod = Args.hasArg(OPT_debuginfod);
 
   if (const opt::Arg *A = Args.getLastArg(OPT_correlate)) {
-    StringRef V = getOptionValue(A);
+    StringRef V = A->getValue();
     auto Parsed = StringSwitch<std::optional<ProfCorrelatorKind>>(V)
                       .Case("", InstrProfCorrelator::NONE)
                       .Case("debug-info", InstrProfCorrelator::DEBUG_INFO)
@@ -3430,12 +3373,12 @@ static bool parseMergeOptions(const opt::InputArgList &Args,
     BIDFetcherProfileCorrelate = *Parsed;
   }
 
-  FuncNameFilter = getLastArgValueClean(Args, OPT_function);
+  FuncNameFilter = Args.getLastArgValue(OPT_function).str();
   InputFilenames.clear();
   InputFilenames.reserve(Positionals.size());
   for (StringRef Pos : Positionals)
     InputFilenames.emplace_back(Pos.str());
-  WeightedInputFilenames = getAllArgValuesClean(Args, OPT_weighted_input);
+  WeightedInputFilenames = Args.getAllArgValues(OPT_weighted_input);
 
   OutputFormat = PF_Ext_Binary;
   if (const opt::Arg *Fmt =
@@ -3450,15 +3393,11 @@ static bool parseMergeOptions(const opt::InputArgList &Args,
       OutputFormat = PF_Ext_Binary;
   }
 
-  InputFilenamesFile = getLastArgValueClean(Args, OPT_input_files);
+  InputFilenamesFile = Args.getLastArgValue(OPT_input_files).str();
   DumpInputFileList = Args.hasArg(OPT_dump_input_file_list);
-  RemappingFile = getLastArgValueClean(Args, OPT_remapping_file);
+  RemappingFile = Args.getLastArgValue(OPT_remapping_file).str();
   UseMD5 = Args.hasArg(OPT_use_md5);
-  const opt::Arg *CompressArg =
-      Args.getLastArg(OPT_compress_all_sections, OPT_compress_all_sections_EQ);
-  CompressAllSections = CompressArg != nullptr;
-  if (!parseBooleanOption(CompressArg, CompressAllSections))
-    return false;
+  CompressAllSections = Args.hasArg(OPT_compress_all_sections);
   SampleMergeColdContext = Args.hasArg(OPT_sample_merge_cold_context);
   SampleTrimColdContext = Args.hasArg(OPT_sample_trim_cold_context);
   if (!parseNumericOption(
@@ -3471,7 +3410,7 @@ static bool parseMergeOptions(const opt::InputArgList &Args,
   GenPartialProfile = Args.hasArg(OPT_gen_partial_profile);
   SplitLayout = Args.hasArg(OPT_split_layout);
   SupplInstrWithSample =
-      getLastArgValueClean(Args, OPT_supplement_instr_with_sample);
+      Args.getLastArgValue(OPT_supplement_instr_with_sample).str();
   if (!parseFloatOption(Args.getLastArg(OPT_zero_counter_threshold),
                         ZeroCounterThreshold))
     return false;
@@ -3489,12 +3428,9 @@ static bool parseMergeOptions(const opt::InputArgList &Args,
           Args.getLastArg(OPT_temporal_profile_max_trace_length),
           TemporalProfMaxTraceLength))
     return false;
-  FuncNameNegativeFilter = getLastArgValueClean(Args, OPT_no_function);
+  FuncNameNegativeFilter = Args.getLastArgValue(OPT_no_function).str();
 
-  StringRef FailureModeValue =
-      Args.getLastArg(OPT_failure_mode)
-          ? getOptionValue(Args.getLastArg(OPT_failure_mode))
-          : StringRef("any");
+  StringRef FailureModeValue = Args.getLastArgValue(OPT_failure_mode, "any");
   auto ParsedFailMode =
       StringSwitch<std::optional<FailureMode>>(FailureModeValue)
           .Case("warn", warnOnly)
@@ -3508,16 +3444,13 @@ static bool parseMergeOptions(const opt::InputArgList &Args,
   }
   FailMode = *ParsedFailMode;
 
-  const opt::Arg *SparseArg = Args.getLastArg(OPT_sparse, OPT_sparse_EQ);
-  OutputSparse = SparseArg != nullptr;
-  if (!parseBooleanOption(SparseArg, OutputSparse))
-    return false;
+  OutputSparse = Args.hasArg(OPT_sparse);
   if (!parseNumericOption(Args.getLastArg(OPT_num_threads), NumThreads))
     return false;
-  ProfileSymbolListFile = getLastArgValueClean(Args, OPT_prof_sym_list);
+  ProfileSymbolListFile = Args.getLastArgValue(OPT_prof_sym_list).str();
 
   if (const opt::Arg *A = Args.getLastArg(OPT_convert_sample_profile_layout)) {
-    StringRef Layout = getOptionValue(A);
+    StringRef Layout = A->getValue();
     auto ParsedLayout = StringSwitch<std::optional<SampleProfileLayout>>(Layout)
                             .Case("nest", SPL_Nest)
                             .Case("flat", SPL_Flat)
@@ -3535,7 +3468,7 @@ static bool parseMergeOptions(const opt::InputArgList &Args,
   DoWritePrevVersion = Args.hasArg(OPT_write_prev_version);
 
   if (const opt::Arg *A = Args.getLastArg(OPT_memprof_version)) {
-    StringRef Version = getOptionValue(A);
+    StringRef Version = A->getValue();
     auto ParsedVersion =
         StringSwitch<std::optional<memprof::IndexedVersion>>(Version)
             .Case("2", memprof::Version2)
@@ -3564,7 +3497,10 @@ static bool parseMergeOptions(const opt::InputArgList &Args,
 
 static bool parseShowOptions(const opt::InputArgList &Args,
                              ArrayRef<StringRef> Positionals) {
-  OutputFilename = getLastArgValueClean(Args, OPT_output, "-");
+  OutputFilename = Args.getLastArgValue(OPT_output, "-").str();
+  DebugInfoFilename = Args.getLastArgValue(OPT_debug_info).str();
+  ProfiledBinary = Args.getLastArgValue(OPT_profiled_binary).str();
+  FuncNameFilter = Args.getLastArgValue(OPT_function).str();
   if (!Positionals.empty()) {
     Filename = Positionals.front().str();
     if (Positionals.size() > 1) {
@@ -3572,20 +3508,28 @@ static bool parseShowOptions(const opt::InputArgList &Args,
       return false;
     }
   }
+  if (Filename.empty() && DebugInfoFilename.empty()) {
+    reportCmdLineError(
+        "the positional argument '<profdata-file>' is required unless "
+        "'--debug-info' is provided");
+    return false;
+  }
+  if (!Filename.empty() && OutputFilename == Filename) {
+    reportCmdLineError("show: Input file name cannot be the same as the "
+                       "output file name!");
+    return false;
+  }
 
   if (!parseNumericOption(
           Args.getLastArg(OPT_max_debug_info_correlation_warnings),
           MaxDbgCorrelationWarnings))
     return false;
-  if (!applyLibraryOptionsWithCL(Args))
+  if (!applyLibraryOptions(Args))
     return false;
-  ProfiledBinary = getLastArgValueClean(Args, OPT_profiled_binary);
-  DebugInfoFilename = getLastArgValueClean(Args, OPT_debug_info);
-  FuncNameFilter = getLastArgValueClean(Args, OPT_function);
 
   ShowCounts = Args.hasArg(OPT_counts);
   if (const opt::Arg *A = Args.getLastArg(OPT_show_format)) {
-    StringRef Value = getOptionValue(A);
+    StringRef Value = A->getValue();
     auto Parsed = StringSwitch<std::optional<ShowFormat>>(Value)
                       .Case("text", ShowFormat::Text)
                       .Case("json", ShowFormat::Json)
@@ -3638,7 +3582,7 @@ static bool parseShowOptions(const opt::InputArgList &Args,
 
 static bool parseOverlapOptions(const opt::InputArgList &Args,
                                 ArrayRef<StringRef> Positionals) {
-  OutputFilename = getLastArgValueClean(Args, OPT_output, "-");
+  OutputFilename = Args.getLastArgValue(OPT_output, "-").str();
   if (Positionals.size() != 2) {
     reportCmdLineError("overlap requires two positional profile filenames");
     return false;
@@ -3649,7 +3593,7 @@ static bool parseOverlapOptions(const opt::InputArgList &Args,
   if (const opt::Arg *A = Args.getLastArg(OPT_sample, OPT_instr))
     ProfileKind = A->getOption().matches(OPT_sample) ? sample : instr;
 
-  FuncNameFilter = getLastArgValueClean(Args, OPT_function);
+  FuncNameFilter = Args.getLastArgValue(OPT_function).str();
   if (!parseNumericOption(Args.getLastArg(OPT_similarity_cutoff),
                           SimilarityCutoff))
     return false;
@@ -3666,7 +3610,7 @@ static bool parseOverlapOptions(const opt::InputArgList &Args,
 
 static bool parseOrderOptions(const opt::InputArgList &Args,
                               ArrayRef<StringRef> Positionals) {
-  OutputFilename = getLastArgValueClean(Args, OPT_output, "-");
+  OutputFilename = Args.getLastArgValue(OPT_output, "-").str();
   if (!Positionals.empty()) {
     Filename = Positionals.front().str();
     if (Positionals.size() > 1) {
@@ -3686,47 +3630,8 @@ int llvm_profdata_main(int argc, char **argv, const llvm::ToolContext &) {
   ProgramName = sys::path::stem(argv[0]).str();
 
   ProfdataOptTable Tbl;
-  ArrayRef<opt::OptTable::SubCommand> KnownSubcommands = Tbl.getSubCommands();
-  auto IsKnownSubcommand = [&](StringRef Name) {
-    return llvm::any_of(
-        KnownSubcommands,
-        [&](const opt::OptTable::SubCommand &SC) { return Name == SC.Name; });
-  };
-  ArrayRef<const char *> RawArgs(argv + 1, argv + argc);
-  SmallVector<StringRef, 4> RawSubcommands;
-  for (const char *Arg : RawArgs) {
-    StringRef ArgRef(Arg);
-    if (!ArgRef.starts_with("-") && IsKnownSubcommand(ArgRef))
-      RawSubcommands.push_back(ArgRef);
-  }
-  auto HasFlag = [&](StringRef Flag) {
-    return llvm::is_contained(RawArgs, Flag);
-  };
-  auto HasAnySubcommand = [&]() { return !RawSubcommands.empty(); };
 
-  if (!HasAnySubcommand()) {
-    if (HasFlag("--help") || HasFlag("-help") || HasFlag("-h")) {
-      std::string Usage = ProgramName + " [subcommand] [options]";
-      Tbl.printHelp(outs(), Usage.c_str(), "LLVM profile data",
-                    /*ShowHidden=*/false, /*ShowAllAliases=*/false,
-                    Visibility(), /*Subcommand=*/{});
-      return 0;
-    }
-    if (HasFlag("--help-hidden")) {
-      std::string Usage = ProgramName + " [subcommand] [options]";
-      Tbl.printHelp(outs(), Usage.c_str(), "LLVM profile data",
-                    /*ShowHidden=*/true, /*ShowAllAliases=*/false, Visibility(),
-                    /*Subcommand=*/{});
-      return 0;
-    }
-    if (HasFlag("--version") || HasFlag("-version")) {
-      outs() << ProgramName << '\n';
-      cl::PrintVersionMessage();
-      return 0;
-    }
-  }
-
-  if (argc <= 1) {
+  if (argc == 1) {
     errs() << ProgramName << ": No subcommand specified! Run " << ProgramName
            << " --help for usage.\n";
     return 1;
@@ -3734,7 +3639,7 @@ int llvm_profdata_main(int argc, char **argv, const llvm::ToolContext &) {
 
   bool HadParseError = false;
   opt::InputArgList Args =
-      Tbl.parseArgs(argc - 1, argv + 1, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
+      Tbl.parseArgs(argc, argv, OPT_UNKNOWN, Saver, [&](StringRef Msg) {
         WithColor::error(errs(), ProgramName) << Msg << "\n";
         HadParseError = true;
       });
@@ -3748,82 +3653,63 @@ int llvm_profdata_main(int argc, char **argv, const llvm::ToolContext &) {
     WithColor::error(errs(), ProgramName) << "multiple subcommands specified:";
     for (StringRef SC : SubCommands)
       errs() << " '" << SC << "'";
-    errs() << ".\n";
+    errs() << "\n";
   };
   auto HandleOtherPositionals = [&](ArrayRef<StringRef> Positionals) {
     OtherPositionals.append(Positionals.begin(), Positionals.end());
   };
+
+  auto IsKnownSubcommand = [&](StringRef Name) {
+    return llvm::any_of(
+        Tbl.getSubCommands(),
+        [&](const opt::OptTable::SubCommand &SC) { return Name == SC.Name; });
+  };
+
+  StringRef RawFirstArg = argc > 1 ? StringRef(argv[1]) : StringRef();
+  StringRef RawSubcommand =
+      IsKnownSubcommand(RawFirstArg) ? RawFirstArg : StringRef();
 
   StringRef Subcommand = Args.getSubCommand(
       Tbl.getSubCommands(), HandleMultipleSubcommands, HandleOtherPositionals);
   if (HadSubcommandError)
     return 1;
 
-  if (Subcommand.empty() && RawSubcommands.size() > 1) {
-    HadSubcommandError = true;
-    HandleMultipleSubcommands(RawSubcommands);
-  }
-  if (HadSubcommandError)
-    return 1;
-
-  if (Subcommand.empty() && argc > 1 && IsKnownSubcommand(argv[1]))
-    Subcommand = argv[1];
   if (Subcommand.empty() && !OtherPositionals.empty() &&
       IsKnownSubcommand(OtherPositionals.front())) {
     Subcommand = OtherPositionals.front();
     OtherPositionals.erase(OtherPositionals.begin());
   }
-  if (Subcommand.empty() && RawSubcommands.size() == 1)
-    Subcommand = RawSubcommands.front();
-  if (!Subcommand.empty()) {
+  if (Subcommand.empty() && !RawSubcommand.empty()) {
+    Subcommand = RawSubcommand;
     auto It = llvm::find(OtherPositionals, Subcommand);
     if (It != OtherPositionals.end())
       OtherPositionals.erase(It);
   }
 
-  ArrayRef<StringRef> Positionals = OtherPositionals;
-
-  bool ShowHidden = Args.hasArg(OPT_help_hidden);
-  if (Args.hasArg(OPT_help) || ShowHidden) {
+  if (Args.hasArg(OPT_help)) {
     std::string Usage = ProgramName + " [subcommand] [options]";
     Tbl.printHelp(outs(), Usage.c_str(), "LLVM profile data",
-                  /*ShowHidden=*/ShowHidden, /*ShowAllAliases=*/false,
-                  Visibility(), Subcommand);
+                  /*ShowHidden=*/false, /*ShowAllAliases=*/false, Visibility(),
+                  Subcommand);
     return 0;
   }
-
-  if (Subcommand.empty()) {
-    if (Args.hasArg(OPT_version)) {
-      outs() << ProgramName << '\n';
-      cl::PrintVersionMessage();
-      return 0;
-    }
-    if (!OtherPositionals.empty()) {
-      WithColor::error(errs(), ProgramName) << "Unknown command";
-      if (OtherPositionals.size() != 1)
-        errs() << "s";
-      errs() << " ";
-      for (size_t I = 0; I < OtherPositionals.size(); ++I) {
-        if (I)
-          errs() << ", ";
-        errs() << "'" << OtherPositionals[I] << "'";
-      }
-      errs() << ". Run " << ProgramName << " --help for usage.\n";
-    } else {
-      errs() << ProgramName << ": No subcommand specified! Run " << ProgramName
-             << " --help for usage.\n";
-    }
-    return 1;
-  }
-
-  if (!validateSubcommandOptions(Args, Subcommand))
-    return 1;
 
   if (Args.hasArg(OPT_version)) {
     outs() << ProgramName << '\n';
     cl::PrintVersionMessage();
     return 0;
   }
+
+  if (Subcommand.empty()) {
+    errs() << ProgramName << ": No subcommand specified! Run " << ProgramName
+           << " --help for usage.\n";
+    return 1;
+  }
+
+  ArrayRef<StringRef> Positionals = OtherPositionals;
+
+  if (!validateSubcommandOptions(Args, Subcommand))
+    return 1;
 
   if (Subcommand == "merge") {
     if (!parseMergeOptions(Args, Positionals))

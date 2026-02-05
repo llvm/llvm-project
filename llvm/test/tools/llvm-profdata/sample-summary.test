@@ -1,4 +1,4 @@
-; RUN: llvm-profdata show -sample -detailed-summary %S/Inputs/sample-profile.proftext | FileCheck %s
+; RUN: llvm-profdata show --sample --detailed-summary %S/Inputs/sample-profile.proftext | FileCheck %s
 
 ; CHECK: Total functions: 3
 ; CHECK-NEXT: Maximum function count: 1437

@@ -1,14 +1,14 @@
-; RUN: opt < %s -passes=pseudo-probe,sample-profile  -sample-profile-file=%S/Inputs/pseudo-probe-inline.prof -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t.opt.yaml 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=pseudo-probe,sample-profile  -sample-profile-file=%S/Inputs/pseudo-probe-inline.prof -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output %t.opt.yaml 2>&1 | FileCheck %s
 ; RUN: FileCheck %s -check-prefixes=YAML,YAML-NO-ANNOTATE < %t.opt.yaml
 
 ; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/pseudo-probe-inline.prof -o %t2
-; RUN: opt < %s -passes=pseudo-probe,sample-profile  -sample-profile-file=%t2 -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t2.opt.yaml 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=pseudo-probe,sample-profile  -sample-profile-file=%t2 -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output %t2.opt.yaml 2>&1 | FileCheck %s
 ; RUN: FileCheck %s -check-prefixes=YAML,YAML-NO-ANNOTATE < %t2.opt.yaml
 
-; RUN: opt < %s -passes=pseudo-probe,sample-profile -annotate-sample-profile-inline-phase=true -sample-profile-file=%S/Inputs/pseudo-probe-inline.prof -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t3.opt.yaml 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=pseudo-probe,sample-profile -annotate-sample-profile-inline-phase=true -sample-profile-file=%S/Inputs/pseudo-probe-inline.prof -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output %t3.opt.yaml 2>&1 | FileCheck %s
 ; RUN: FileCheck %s -check-prefixes=YAML,YAML-ANNOTATE < %t3.opt.yaml
 
-; RUN: opt < %s -passes=pseudo-probe,sample-profile -annotate-sample-profile-inline-phase=true -sample-profile-file=%t2 -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output=%t4.opt.yaml 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=pseudo-probe,sample-profile -annotate-sample-profile-inline-phase=true -sample-profile-file=%t2 -S -pass-remarks=sample-profile -sample-profile-prioritized-inline=0 -pass-remarks-output %t4.opt.yaml 2>&1 | FileCheck %s
 ; RUN: FileCheck %s -check-prefixes=YAML,YAML-ANNOTATE < %t4.opt.yaml
 
 @factor = dso_local global i32 3, align 4

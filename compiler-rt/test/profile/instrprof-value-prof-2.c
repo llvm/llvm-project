@@ -1,7 +1,7 @@
 // RUN: %clang_profgen -mllvm -enable-value-profiling -O2 -o %t %s
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
-// RUN: llvm-profdata show --all-functions -ic-targets  %t.profdata > %t.out
+// RUN: llvm-profdata show --all-functions --ic-targets  %t.profdata > %t.out
 // RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-1 < %t.out
 // RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-2 < %t.out
 // RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-3 < %t.out

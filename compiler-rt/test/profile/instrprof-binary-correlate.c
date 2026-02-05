@@ -9,7 +9,7 @@
 // With -profile-correlate=binary flag
 // RUN: %clang -o %t-1.exe -fprofile-instr-generate -fcoverage-mapping -mllvm -profile-correlate=binary %S/Inputs/instrprof-debug-info-correlate-main.cpp %S/Inputs/instrprof-debug-info-correlate-foo.cpp
 // RUN: env LLVM_PROFILE_FILE=%t-1.profraw %run %t-1.exe
-// RUN: llvm-profdata merge -o %t-1.profdata --binary-file=%t-1.exe %t-1.profraw
+// RUN: llvm-profdata merge -o %t-1.profdata --binary-file %t-1.exe %t-1.profraw
 // RUN: llvm-cov report --instr-profile=%t-1.profdata %t-1.exe > %t-1.report
 // RUN: llvm-cov show --instr-profile=%t-1.profdata %t-1.exe > %t-1.show
 // RUN: llvm-profdata show --all-functions --counts %t.normal.profdata > %t.normal.profdata.show
@@ -21,7 +21,7 @@
 // Strip above binary and run
 // RUN: llvm-strip %t-1.exe -o %t-2.exe
 // RUN: env LLVM_PROFILE_FILE=%t-2.profraw %run %t-2.exe
-// RUN: llvm-profdata merge -o %t-2.profdata --binary-file=%t-1.exe %t-2.profraw
+// RUN: llvm-profdata merge -o %t-2.profdata --binary-file %t-1.exe %t-2.profraw
 // RUN: llvm-cov report --instr-profile=%t-2.profdata %t-1.exe > %t-2.report
 // RUN: llvm-cov show --instr-profile=%t-2.profdata %t-1.exe > %t-2.show
 // RUN: llvm-profdata show --all-functions --counts %t-2.profdata > %t-2.profdata.show
@@ -39,7 +39,7 @@
 // RUN: rm -rf %t.profdir && mkdir %t.profdir
 // RUN: env LLVM_PROFILE_FILE=%t.profdir/%m-4.profraw %run %t-2.exe
 // RUN: env LLVM_PROFILE_FILE=%t.profdir/%m-4.profraw %run %t-2.exe
-// RUN: llvm-profdata merge -o %t-4.profdata --binary-file=%t-1.exe  %t.profdir
+// RUN: llvm-profdata merge -o %t-4.profdata --binary-file %t-1.exe  %t.profdir
 // RUN: llvm-cov report --instr-profile=%t-4.profdata %t-1.exe > %t-4.report
 // RUN: llvm-cov show --instr-profile=%t-4.profdata %t-1.exe > %t-4.show
 // RUN: llvm-profdata show --all-functions --counts %t.normal.merged.profdata > %t.normal.merged.profdata.show

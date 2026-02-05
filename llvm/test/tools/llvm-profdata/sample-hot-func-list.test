@@ -21,7 +21,7 @@
 ; CS-NEXT: 500853 (25.44%)        74946             20              main:3.1 @ _Z5funcBi:1 @ _Z8funcLeafi
 
 
-; RUN: llvm-profdata show --sample --topn=2 %S/Inputs/sample-hot-func-list.proftext | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=TOPN
+; RUN: llvm-profdata show --sample --topn 2 %S/Inputs/sample-hot-func-list.proftext | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=TOPN
 
 ;      TOPN:8 out of 10 functions with profile (80.00%) are considered hot functions (max sample >= 470).
 ; TOPN-NEXT:355251 out of 356026 profile counts (99.78%) are from hot functions.
@@ -29,7 +29,7 @@
 ; TOPN-NEXT: 184019 (51.69%)        2300              534             main
 ; TOPN-NEXT: 97401 (27.36%)         10640             3035            Func3
 
-; RUN: llvm-profdata show --sample --topn=1 %S/Inputs/cs-sample.proftext | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=CS-TOPN
+; RUN: llvm-profdata show --sample --topn 1 %S/Inputs/cs-sample.proftext | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=CS-TOPN
 
 ;      CS-TOPN:2 out of 8 functions with profile (25.00%) are considered hot functions (max sample >= 23324).
 ; CS-TOPN-NEXT:1968152 out of 1968919 profile counts (99.96%) are from hot functions.

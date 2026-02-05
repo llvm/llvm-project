@@ -29,15 +29,15 @@
 // RUN: llvm-profdata merge main.profraw -o main.profdata
 
 // The function counters are not scaled up.
-// RUN: llvm-profdata show -all-functions -counts main.profdata | FileCheck %s --check-prefix=INSTR
+// RUN: llvm-profdata show --all-functions --counts main.profdata | FileCheck %s --check-prefix=INSTR
 
 // The instrPGO profile counter of function foo should be scaled up. Note the
 // scaling factor of a function is computed based on instrPGO profiles and
 // invariant to samplePGO profile counters.
-// RUN: llvm-profdata merge -supplement-instr-with-sample=sampleprof.proftext \
-// RUN:               -suppl-min-size-threshold=0 -instr-prof-cold-threshold=1 \
+// RUN: llvm-profdata merge --supplement-instr-with-sample sampleprof.proftext \
+// RUN:               --suppl-min-size-threshold 0 --instr-prof-cold-threshold 1 \
 // RUN:               main.profdata -o merge.profdata
-// RUN: llvm-profdata show -all-functions -counts merge.profdata | FileCheck %s --check-prefix=SUPPL
+// RUN: llvm-profdata show --all-functions --counts merge.profdata | FileCheck %s --check-prefix=SUPPL
 
 // INSTR: Counters:
 // INSTR:   main:

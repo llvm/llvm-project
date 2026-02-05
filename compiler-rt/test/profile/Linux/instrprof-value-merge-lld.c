@@ -12,4 +12,4 @@
 // RUN: env LLVM_PROFILE_FILE=%t.profdir/default_%m.profraw %run %t
 // RUN: env LLVM_PROFILE_FILE=%t.profdir/default_%m.profraw %run %t 1
 // RUN: env LLVM_PROFILE_FILE=%t.profdir/default_%m.profraw %run %t 1
-// RUN: llvm-profdata show -counts -function=main -ic-targets -memop-sizes %t.profdir/default_*.profraw | FileCheck %S/Inputs/instrprof-value-merge.c
+// RUN: llvm-profdata show --counts --function main --ic-targets --memop-sizes %t.profdir/default_*.profraw | FileCheck %S/Inputs/instrprof-value-merge.c

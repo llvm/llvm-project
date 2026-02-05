@@ -1,11 +1,11 @@
-RUN: llvm-profdata merge --sample --text -output=%t.proftext %S/Inputs/cs-sample.proftext
+RUN: llvm-profdata merge --sample --text -o %t.proftext %S/Inputs/cs-sample.proftext
 RUN: diff -b %t.proftext %S/Inputs/cs-sample.proftext
 
-RUN: llvm-profdata merge --sample --text -output=%t.proftext %S/Inputs/cs-sample.proftext -sample-merge-cold-context -profile-summary-cold-count=500
+RUN: llvm-profdata merge --sample --text -o %t.proftext %S/Inputs/cs-sample.proftext --sample-merge-cold-context --profile-summary-cold-count 500
 RUN: FileCheck %s --input-file %t.proftext --check-prefixes=CHECK-TRIM,CHECK-MERGE
-RUN: llvm-profdata merge --sample --text -output=%t.proftext %S/Inputs/cs-sample.proftext -sample-merge-cold-context -sample-trim-cold-context -profile-summary-cold-count=500
+RUN: llvm-profdata merge --sample --text -o %t.proftext %S/Inputs/cs-sample.proftext --sample-merge-cold-context --sample-trim-cold-context --profile-summary-cold-count 500
 RUN: FileCheck %s --input-file %t.proftext --check-prefixes=CHECK-TRIM,CHECK-END
-RUN: llvm-profdata merge --sample --text -output=%t.proftext %S/Inputs/cs-sample.proftext -sample-merge-cold-context -sample-trim-cold-context -profile-summary-cutoff-cold=990000
+RUN: llvm-profdata merge --sample --text -o %t.proftext %S/Inputs/cs-sample.proftext --sample-merge-cold-context --sample-trim-cold-context --profile-summary-cutoff-cold 990000
 RUN: FileCheck %s --input-file %t.proftext --check-prefixes=CHECK-TRIM,CHECK-END
 
 CHECK-TRIM:      [main:3 @ _Z5funcAi:1 @ _Z8funcLeafi]:1467299:11

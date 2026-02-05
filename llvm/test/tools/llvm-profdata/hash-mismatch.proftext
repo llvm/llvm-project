@@ -2,7 +2,7 @@
 # sure we keep both.
 
 # RUN: llvm-profdata merge %s -o %t 2>&1
-# RUN: llvm-profdata show %t -all-functions -counts > %t.out
+# RUN: llvm-profdata show %t --all-functions --counts > %t.out
 
 # The function ordering is non-deterministic, so we need to do our
 # checks in multiple runs.

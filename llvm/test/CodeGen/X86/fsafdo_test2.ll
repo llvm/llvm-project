@@ -1,9 +1,9 @@
 ; REQUIRES: asserts
 ; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=false < %s | FileCheck %s --check-prefixes=V0,V01
-; RUN: llvm-profdata merge --sample -profile-isfs -o %t0.afdo %S/Inputs/fsloader.afdo
+; RUN: llvm-profdata merge --sample --profile-isfs -o %t0.afdo %S/Inputs/fsloader.afdo
 ; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=false -fs-profile-file=%t0.afdo -show-fs-branchprob -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false < %s 2>&1 | FileCheck %s --check-prefixes=LOADERV0,LOADER
 ; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true < %s | FileCheck %s --check-prefixes=V1,V01
-; RUN: llvm-profdata merge --sample -profile-isfs -o %t1.afdo %S/Inputs/fsloader_v1.afdo
+; RUN: llvm-profdata merge --sample --profile-isfs -o %t1.afdo %S/Inputs/fsloader_v1.afdo
 ; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true -fs-profile-file=%t1.afdo -show-fs-branchprob -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false < %s 2>&1 | FileCheck %s --check-prefixes=LOADERV1,LOADER
 ; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true -fs-profile-file=%S/Inputs/fsloader_v1.afdo -profile-isfs -show-fs-branchprob -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false < %s 2>&1 | FileCheck %s --check-prefixes=LOADERV1,LOADER
 ; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true -fs-profile-file=%S/Inputs/fsloader_v1.afdo -show-fs-branchprob -disable-ra-fsprofile-loader=false -disable-layout-fsprofile-loader=false < %s 2>&1 | FileCheck %s --check-prefixes=NOLOAD

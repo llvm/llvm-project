@@ -5,7 +5,7 @@ RUN: not llvm-profdata show %p/Inputs/invalid-count-later.proftext 2>&1 | FileCh
 INVALID-COUNT-LATER-SHOW: error: {{.*}}invalid-count-later.proftext: malformed instrumentation profile data
 
 RUN: not llvm-profdata merge %p/Inputs/invalid-count-later.proftext %p/Inputs/invalid-count-later.proftext -o %t.out 2>&1 | FileCheck %s --check-prefix=INVALID-COUNT-LATER-MERGE
-RUN: not llvm-profdata merge -failure-mode=all %p/Inputs/invalid-count-later.proftext %p/Inputs/invalid-count-later.proftext -o %t.out 2>&1 | FileCheck %s --check-prefix=INVALID-COUNT-LATER-MERGE
+RUN: not llvm-profdata merge --failure-mode all %p/Inputs/invalid-count-later.proftext %p/Inputs/invalid-count-later.proftext -o %t.out 2>&1 | FileCheck %s --check-prefix=INVALID-COUNT-LATER-MERGE
 INVALID-COUNT-LATER-MERGE: warning: {{.*}}invalid-count-later.proftext: malformed instrumentation profile data
 INVALID-COUNT-LATER-MERGE-NEXT: warning: {{.*}}invalid-count-later.proftext: malformed instrumentation profile data
 INVALID-COUNT-LATER-MERGE-NEXT: error: no profile can be merged

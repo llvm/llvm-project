@@ -1,9 +1,9 @@
 // RUN: %clang_pgogen -o %t -g -mllvm --profile-correlate=debug-info -mllvm --disable-vp=true %s
-// RUN: llvm-profdata show --debug-info=%t --detailed-summary --show-prof-sym-list | FileCheck %s
-// RUN: llvm-profdata show --debug-info=%t --show-format=yaml | FileCheck %s --match-full-lines --check-prefix YAML
+// RUN: llvm-profdata show --debug-info %t --detailed-summary --show-prof-sym-list | FileCheck %s
+// RUN: llvm-profdata show --debug-info %t --show-format yaml | FileCheck %s --match-full-lines --check-prefix YAML
 
 // RUN: %clang_pgogen -o %t.no.dbg -mllvm --profile-correlate=debug-info -mllvm --disable-vp=true %s
-// RUN: not llvm-profdata show --debug-info=%t.no.dbg 2>&1 | FileCheck %s --check-prefix NO-DBG
+// RUN: not llvm-profdata show --debug-info %t.no.dbg 2>&1 | FileCheck %s --check-prefix NO-DBG
 // NO-DBG: unable to correlate profile: could not find any profile data metadata in correlated file
 
 // YAML: Probes:

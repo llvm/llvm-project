@@ -9,7 +9,7 @@
 // RUN: llvm-profdata merge \
 // RUN:     %S/Inputs/optimization-remark-with-hotness.proftext \
 // RUN:     -o %t.profdata
-// RUN: llvm-profdata merge -sample \
+// RUN: llvm-profdata merge --sample \
 // RUN:     %S/Inputs/optimization-remark-with-hotness-sample.proftext \
 // RUN:     -o %t-sample.profdata
 //

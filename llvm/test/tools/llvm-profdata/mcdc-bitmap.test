@@ -3,10 +3,10 @@
 # Merge as profdata.
 RUN: split-file %s %t
 RUN: llvm-profdata merge %t/mcdc-1.proftext %t/mcdc-2.proftext -o %t.profdata
-RUN: llvm-profdata show %t.profdata --text -all-functions | FileCheck %s --check-prefix=MCDC
+RUN: llvm-profdata show %t.profdata --text --all-functions | FileCheck %s --check-prefix=MCDC
 # Merge as proftext.
 RUN: llvm-profdata merge %t/mcdc-1.proftext %t/mcdc-2.proftext -o %t.proftext
-RUN: llvm-profdata show %t.proftext --text -all-functions | FileCheck %s --check-prefix=MCDC
+RUN: llvm-profdata show %t.proftext --text --all-functions | FileCheck %s --check-prefix=MCDC
 
 MCDC: # Num Bitmap Bytes:
 MCDC-NEXT: $1
@@ -20,10 +20,10 @@ MCDC-NEXT: 0x0
 
 # Merge as profdata.
 RUN: llvm-profdata merge %t/mcdc-3.proftext %t/mcdc-4.proftext -o %t.profdata
-RUN: llvm-profdata show %t.profdata --text -all-functions | FileCheck %s --check-prefix=MCDC2
+RUN: llvm-profdata show %t.profdata --text --all-functions | FileCheck %s --check-prefix=MCDC2
 # Merge as proftext.
 RUN: llvm-profdata merge %t/mcdc-3.proftext %t/mcdc-4.proftext -o %t.proftext
-RUN: llvm-profdata show %t.proftext --text -all-functions | FileCheck %s --check-prefix=MCDC2
+RUN: llvm-profdata show %t.proftext --text --all-functions | FileCheck %s --check-prefix=MCDC2
 
 MCDC2: # Num Bitmap Bytes:
 MCDC2-NEXT: $8

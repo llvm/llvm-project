@@ -44,8 +44,8 @@ RUN: printf '\0\0\0\0\0\0\0\101' >> %t
 RUN: printf '\125\125\125\052' >> %t
 RUN: printf '\7\0foo\1bar\0\0\0\0\0\0\0' >> %t
 
-RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s
-RUN: llvm-profdata show %t -all-functions -text | FileCheck %s -check-prefix=MCDC
+RUN: llvm-profdata show %t --all-functions --counts | FileCheck %s
+RUN: llvm-profdata show %t --all-functions --text | FileCheck %s -check-prefix=MCDC
 
 CHECK: Counters:
 CHECK:   foo:

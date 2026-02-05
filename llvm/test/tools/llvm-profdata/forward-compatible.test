@@ -1,8 +1,8 @@
 REQUIRES: zlib
-RUN: llvm-profdata show -sample %S/Inputs/unknown.section.extbin.profdata | FileCheck %s
-RUN: llvm-profdata show -sample %S/Inputs/unknown.section.compressed.extbin.profdata | FileCheck %s
-RUN: llvm-profdata show -sample -show-sec-info-only %S/Inputs/unknown.section.extbin.profdata | FileCheck %s -check-prefix=HDR
-RUN: llvm-profdata show -sample -show-sec-info-only %S/Inputs/unknown.section.compressed.extbin.profdata | FileCheck %s -check-prefix=HDR-COMPRESS
+RUN: llvm-profdata show --sample %S/Inputs/unknown.section.extbin.profdata | FileCheck %s
+RUN: llvm-profdata show --sample %S/Inputs/unknown.section.compressed.extbin.profdata | FileCheck %s
+RUN: llvm-profdata show --sample --show-sec-info-only %S/Inputs/unknown.section.extbin.profdata | FileCheck %s -check-prefix=HDR
+RUN: llvm-profdata show --sample --show-sec-info-only %S/Inputs/unknown.section.compressed.extbin.profdata | FileCheck %s -check-prefix=HDR-COMPRESS
 
 # The input unknown.section.extbin.profdata contains an unknown section type
 # which uses an enum value which won't be used in the near future. Check

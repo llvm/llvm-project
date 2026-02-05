@@ -1,13 +1,13 @@
 ; Supplement instr profile suppl-profile.proftext with sample profile
 ; sample-profile.proftext.
 ; For hot functions:
-; RUN: llvm-profdata merge -instr -suppl-min-size-threshold=0 \
-; RUN:   -supplement-instr-with-sample=%p/Inputs/sample-profile-hot.proftext \
+; RUN: llvm-profdata merge --instr --suppl-min-size-threshold 0 \
+; RUN:   --supplement-instr-with-sample %p/Inputs/sample-profile-hot.proftext \
 ; RUN:   %S/Inputs/suppl-profile.proftext -o %t.profdata
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t.profdata -S | FileCheck %s --check-prefix=HOT
 ; For warm functions:
-; RUN: llvm-profdata merge -instr -suppl-min-size-threshold=0 \
-; RUN:   -supplement-instr-with-sample=%p/Inputs/sample-profile-warm.proftext \
+; RUN: llvm-profdata merge --instr --suppl-min-size-threshold 0 \
+; RUN:   --supplement-instr-with-sample %p/Inputs/sample-profile-warm.proftext \
 ; RUN:   %S/Inputs/suppl-profile.proftext -o %t1.profdata
 ; RUN: opt < %s -passes=pgo-instr-use -pgo-test-profile-file=%t1.profdata -S | FileCheck %s --check-prefix=WARM
 

@@ -50,12 +50,12 @@ RUN: not llvm-profdata merge -o %t-no-instr1-no-instr1.profdata %t-no-instr1-no-
 RUN: not llvm-profdata merge -o %t-no-instr2-no-instr1.profdata %t-no-instr2-no-instr1.profraw 2>&1 | FileCheck %s --check-prefix=MISSING-FILE
 MISSING-FILE: profraw
 
-RUN: llvm-profdata show -counts --function main %t-instr-instr.profdata | grep -v 'Total\|Maximum' > %t-main-1
-RUN: llvm-profdata show -counts --function main %t-instr-no-instr1.profdata | grep -v 'Total\|Maximum' > %t-main-2
-RUN: llvm-profdata show -counts --function main %t-instr-no-instr2.profdata | grep -v 'Total\|Maximum' > %t-main-3
-RUN: llvm-profdata show -counts --function foo %t-instr-instr.profdata | grep -v 'Total\|Maximum' > %t-foo-1
-RUN: llvm-profdata show -counts --function foo %t-no-instr1-instr.profdata | grep -v 'Total\|Maximum' > %t-foo-2
-RUN: llvm-profdata show -counts --function foo %t-no-instr2-instr.profdata | grep -v 'Total\|Maximum'  > %t-foo-3
+RUN: llvm-profdata show --counts --function main %t-instr-instr.profdata | grep -v 'Total\|Maximum' > %t-main-1
+RUN: llvm-profdata show --counts --function main %t-instr-no-instr1.profdata | grep -v 'Total\|Maximum' > %t-main-2
+RUN: llvm-profdata show --counts --function main %t-instr-no-instr2.profdata | grep -v 'Total\|Maximum' > %t-main-3
+RUN: llvm-profdata show --counts --function foo %t-instr-instr.profdata | grep -v 'Total\|Maximum' > %t-foo-1
+RUN: llvm-profdata show --counts --function foo %t-no-instr1-instr.profdata | grep -v 'Total\|Maximum' > %t-foo-2
+RUN: llvm-profdata show --counts --function foo %t-no-instr2-instr.profdata | grep -v 'Total\|Maximum'  > %t-foo-3
 
 RUN: %clang_profuse=%t-instr-instr.profdata -o %t-main-instr-instr.ll -S -emit-llvm %S/../Inputs/instrprof-shared-main.c
 RUN: %clang_profuse=%t-instr-no-instr1.profdata -o %t-main-instr-no-instr1.ll -S -emit-llvm %S/../Inputs/instrprof-shared-main.c
