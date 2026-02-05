@@ -29,8 +29,11 @@
 //     ~time_put_byname();
 // };
 
-#include <locale>
 #include <cassert>
+#include <ctime>
+#include <ios>
+#include <locale>
+
 #include "test_macros.h"
 #include "test_iterators.h"
 
