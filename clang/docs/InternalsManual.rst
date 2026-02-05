@@ -3788,7 +3788,7 @@ prefixes:
 - ``cxxNN-MM`` (e.g. ``cxx98-14``) for diagnostics that appear in all language
   modes within a certain range.
 
-Second, parts of tests that test features not univerally available in all
+Second, parts of tests that test features not universally available in all
 language modes are guarded with ``#if __cplusplus``. Prefixes of directives
 in such parts need to reflect the latest ``#if __cplusplus`` guard to make
 tests require less context to understand, even though this is not strictly
