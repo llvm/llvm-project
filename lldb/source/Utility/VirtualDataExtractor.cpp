@@ -92,7 +92,7 @@ offset_t VirtualDataExtractor::SetData(const void *bytes, lldb::offset_t length,
   if (!m_data_sp || m_start == nullptr)
     return DataExtractor::SetData(bytes, length, byte_order);
 
-  // A no-op SetData that is setting the same data buffer again
+  // A no-op SetData that is setting the same data buffer again.
   if (!m_data_sp && m_start == bytes && length == GetVirtualByteSize())
     return GetVirtualByteSize();
 
