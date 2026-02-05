@@ -3378,7 +3378,7 @@ static const MachineInstr *stripVRegCopies(const MachineRegisterInfo &MRI,
       continue;
     }
     if (Opcode == AArch64::SUBREG_TO_REG) {
-      Reg = DefMI->getOperand(2).getReg();
+      Reg = DefMI->getOperand(1).getReg();
       continue;
     }
 
@@ -6908,16 +6908,21 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     EVT VT = CttzOp.getValueType();
     assert(VT.getVectorElementType() == MVT::i1 && "Expected MVT::i1");
 
+    // Default to all for scalable vectors
+    unsigned PgPattern = AArch64SVEPredPattern::all;
     if (VT.isFixedLengthVector()) {
       // We can use SVE instructions to lower this intrinsic by first creating
       // an SVE predicate register mask from the fixed-width vector.
       EVT NewVT = getTypeToTransformTo(*DAG.getContext(), VT);
       SDValue Mask = DAG.getNode(ISD::SIGN_EXTEND, DL, NewVT, CttzOp);
       CttzOp = convertFixedMaskToScalableVector(Mask, DAG);
+      // Override with a VLx.
+      PgPattern = *getSVEPredPatternFromNumElements(VT.getVectorNumElements());
     }
 
+    SDValue Pattern = DAG.getTargetConstant(PgPattern, DL, MVT::i32);
     SDValue NewCttzElts =
-        DAG.getNode(AArch64ISD::CTTZ_ELTS, DL, MVT::i64, CttzOp);
+        DAG.getNode(AArch64ISD::CTTZ_ELTS, DL, MVT::i64, CttzOp, Pattern);
     return DAG.getZExtOrTrunc(NewCttzElts, DL, Op.getValueType());
   }
   case Intrinsic::experimental_vector_match: {

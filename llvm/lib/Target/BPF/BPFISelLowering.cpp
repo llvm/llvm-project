@@ -812,7 +812,7 @@ SDValue BPFTargetLowering::LowerTRAP(SDValue Op, SelectionDAG &DAG) const {
   CLI.IsTailCall = false;
   CLI.CallConv = CallingConv::C;
   CLI.IsVarArg = false;
-  CLI.DL = DL;
+  CLI.DL = std::move(DL);
   CLI.NoMerge = false;
   CLI.DoesNotReturn = true;
   return LowerCall(CLI, InVals);
