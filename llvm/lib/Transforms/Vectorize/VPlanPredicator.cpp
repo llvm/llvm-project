@@ -225,6 +225,10 @@ void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
     DefaultMask = Builder.createNot(DefaultMask);
     if (SrcMask)
       DefaultMask = Builder.createLogicalAnd(SrcMask, DefaultMask);
+  } else {
+    // There are no destinations other than the default destination, so this is
+    // an unconditional branch.
+    DefaultMask = SrcMask;
   }
   setEdgeMask(Src, DefaultDst, DefaultMask);
 }

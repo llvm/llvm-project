@@ -179,6 +179,10 @@ public:
 
   llvm::StringRef GetFilename() const { return m_filename; }
 
+protected:
+  void FixupParseErrorDiagnostics(
+      DiagnosticManager &diagnostic_manager) const override;
+
 private:
   /// Populate m_in_cplusplus_method and m_in_objectivec_method based on the
   /// environment.

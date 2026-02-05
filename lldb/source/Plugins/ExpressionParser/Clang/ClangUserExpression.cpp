@@ -27,6 +27,7 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
@@ -55,6 +56,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 
@@ -944,6 +946,46 @@ bool ClangUserExpression::AddArguments(ExecutionContext &exe_ctx,
 lldb::ExpressionVariableSP ClangUserExpression::GetResultAfterDematerialization(
     ExecutionContextScope *exe_scope) {
   return m_result_delegate.GetVariable();
+}
+
+void ClangUserExpression::FixupParseErrorDiagnostics(
+    DiagnosticManager &diagnostic_manager) const {
+  const bool is_fixable_cvr_error = llvm::any_of(
+      diagnostic_manager.Diagnostics(),
+      [](std::unique_ptr<Diagnostic> const &diag) {
+        switch (diag->GetCompilerID()) {
+        case clang::diag::err_member_function_call_bad_cvr:
+          return true;
+        case clang::diag::err_typecheck_assign_const:
+          // FIXME: can we split this particular error into a separate
+          // diagnostic ID so we don't need to scan the error message?
+          return diag->GetDetail().message.find(
+                     "within const member function") != std::string::npos;
+        default:
+          return false;
+        }
+      });
+
+  // Nothing to report.
+  if (!is_fixable_cvr_error)
+    return;
+
+  // If the user already tried ignoring function qualifiers but
+  // the expression still failed, we don't want to suggest the hint again.
+  if (m_options.GetCppIgnoreContextQualifiers()) {
+    // Hard to prove that we don't get here so don't emit a diagnostic n
+    // non-asserts builds. But we do want a signal in asserts builds.
+    assert(false &&
+           "CppIgnoreContextQualifiers didn't resolve compiler diagnostic.");
+    return;
+  }
+
+  diagnostic_manager.Printf(
+      lldb::eSeverityInfo,
+      "Possibly trying to mutate object in a const context. Try "
+      "running the expression with: expression --c++-ignore-context-qualifiers "
+      "-- %s",
+      !m_fixed_text.empty() ? m_fixed_text.c_str() : m_expr_text.c_str());
 }
 
 char ClangUserExpression::ClangUserExpressionHelper::ID;

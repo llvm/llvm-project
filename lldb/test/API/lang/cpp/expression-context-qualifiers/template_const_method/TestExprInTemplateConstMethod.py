@@ -24,7 +24,8 @@ class TestCase(TestBase):
             "expression m_mem = 2.0",
             error=True,
             substrs=[
-                "cannot assign to non-static data member within const member function"
+                "cannot assign to non-static data member within const member function",
+                "note: Possibly trying to mutate object in a const context. Try running the expression with",
             ],
         )
         self.expect_expr("((Foo*)this)->bar()", result_type="double", result_value="5")
@@ -44,7 +45,8 @@ class TestCase(TestBase):
             "expression x = 7.0",
             error=True,
             substrs=[
-                "cannot assign to non-static data member within const member function"
+                "cannot assign to non-static data member within const member function",
+                "note: Possibly trying to mutate object in a const context. Try running the expression with",
             ],
         )
         self.expect_expr("x = -7.0; x", options=options, result_value="-7")
@@ -77,7 +79,8 @@ class TestCase(TestBase):
             "expression m_mem = 2.0",
             error=True,
             substrs=[
-                "cannot assign to non-static data member within const member function"
+                "cannot assign to non-static data member within const member function",
+                "note: Possibly trying to mutate object in a const context. Try running the expression with",
             ],
         )
         self.expect_expr("m_mem", result_value="-2")
@@ -105,7 +108,8 @@ class TestCase(TestBase):
             "expression m_mem = 2.0",
             error=True,
             substrs=[
-                "cannot assign to non-static data member within const member function"
+                "cannot assign to non-static data member within const member function",
+                "note: Possibly trying to mutate object in a const context. Try running the expression with",
             ],
         )
         self.expect_expr("m_mem = -11.0; m_mem", options=options, result_value="-11")

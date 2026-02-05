@@ -766,7 +766,7 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
       if (!checkCompatible(aOffset, bOffset))
         return false;
       for (const auto &[index, aStride] : enumerate(aStrides)) {
-        if (aT.getDimSize(index) == 1)
+        if (aT.getDimSize(index) == 1 || bT.getDimSize(index) == 1)
           continue;
         if (!checkCompatible(aStride, bStrides[index]))
           return false;

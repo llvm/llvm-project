@@ -323,6 +323,9 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
     }
 
     if (!parse_success) {
+      if (user_expression_sp)
+        user_expression_sp->FixupParseErrorDiagnostics(diagnostic_manager);
+
       if (target->GetEnableNotifyAboutFixIts() && fixed_expression &&
           !fixed_expression->empty()) {
         std::string fixit =
