@@ -252,18 +252,16 @@ static auto isConstStatusOrAccessorMemberOperatorCall() {
                            returns(possiblyReferencedStatusOrType()))));
 }
 
-static auto isConstStatusOrPointerAccessorMemberCall() {
+static auto isConstPointerAccessorMemberCall() {
   using namespace ::clang::ast_matchers; // NOLINT: Too many names
-  return cxxMemberCallExpr(callee(cxxMethodDecl(
-      parameterCountIs(0), isConst(),
-      returns(pointerType(pointee(possiblyReferencedStatusOrType()))))));
+  return cxxMemberCallExpr(callee(
+      cxxMethodDecl(parameterCountIs(0), isConst(), returns(pointerType()))));
 }
 
-static auto isConstStatusOrPointerAccessorMemberOperatorCall() {
+static auto isConstPointerAccessorMemberOperatorCall() {
   using namespace ::clang::ast_matchers; // NOLINT: Too many names
-  return cxxOperatorCallExpr(callee(cxxMethodDecl(
-      parameterCountIs(0), isConst(),
-      returns(pointerType(pointee(possiblyReferencedStatusOrType()))))));
+  return cxxOperatorCallExpr(callee(
+      cxxMethodDecl(parameterCountIs(0), isConst(), returns(pointerType()))));
 }
 
 static auto isNonConstMemberCall() {
@@ -903,7 +901,7 @@ static void handleConstStatusOrAccessorMemberCall(
   if (!doHandleConstStatusOrAccessorMemberCall(Expr, RecordLoc, Result, State))
     transferStatusOrReturningCall(Expr, State);
 }
-static void handleConstStatusOrPointerAccessorMemberCall(
+static void handleConstPointerAccessorMemberCall(
     const CallExpr *Expr, RecordStorageLocation *RecordLoc,
     const MatchFinder::MatchResult &Result, LatticeTransferState &State) {
   if (RecordLoc == nullptr)
@@ -929,19 +927,20 @@ static void transferConstStatusOrAccessorMemberOperatorCall(
   handleConstStatusOrAccessorMemberCall(Expr, RecordLoc, Result, State);
 }
 
-static void transferConstStatusOrPointerAccessorMemberCall(
-    const CXXMemberCallExpr *Expr, const MatchFinder::MatchResult &Result,
-    LatticeTransferState &State) {
-  handleConstStatusOrPointerAccessorMemberCall(
+static void
+transferConstPointerAccessorMemberCall(const CXXMemberCallExpr *Expr,
+                                       const MatchFinder::MatchResult &Result,
+                                       LatticeTransferState &State) {
+  handleConstPointerAccessorMemberCall(
       Expr, getImplicitObjectLocation(*Expr, State.Env), Result, State);
 }
 
-static void transferConstStatusOrPointerAccessorMemberOperatorCall(
+static void transferConstPointerAccessorMemberOperatorCall(
     const CXXOperatorCallExpr *Expr, const MatchFinder::MatchResult &Result,
     LatticeTransferState &State) {
   auto *RecordLoc = cast_or_null<RecordStorageLocation>(
       State.Env.getStorageLocation(*Expr->getArg(0)));
-  handleConstStatusOrPointerAccessorMemberCall(Expr, RecordLoc, Result, State);
+  handleConstPointerAccessorMemberCall(Expr, RecordLoc, Result, State);
 }
 
 static void handleNonConstMemberCall(const CallExpr *Expr,
@@ -1270,12 +1269,11 @@ buildTransferMatchSwitch(ASTContext &Ctx,
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
           isConstStatusOrAccessorMemberOperatorCall(),
           transferConstStatusOrAccessorMemberOperatorCall)
-      .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isConstStatusOrPointerAccessorMemberCall(),
-          transferConstStatusOrPointerAccessorMemberCall)
+      .CaseOfCFGStmt<CXXMemberCallExpr>(isConstPointerAccessorMemberCall(),
+                                        transferConstPointerAccessorMemberCall)
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
-          isConstStatusOrPointerAccessorMemberOperatorCall(),
-          transferConstStatusOrPointerAccessorMemberOperatorCall)
+          isConstPointerAccessorMemberOperatorCall(),
+          transferConstPointerAccessorMemberOperatorCall)
       // non-const member calls that may modify the state of an object.
       .CaseOfCFGStmt<CXXMemberCallExpr>(isNonConstMemberCall(),
                                         transferNonConstMemberCall)
