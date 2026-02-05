@@ -241,9 +241,6 @@ FunctionPass *llvm::createX86IndirectThunksLegacyPass() {
 
 char X86IndirectThunksLegacy::ID = 0;
 
-INITIALIZE_PASS(X86IndirectThunksLegacy, DEBUG_TYPE, "X86 Indirect Thunks",
-                false, false)
-
 struct X86IndirectThunksPass::Impl {
   std::tuple<RetpolineThunkInserter, LVIThunkInserter> TIs;
   const Module *M = nullptr;
@@ -274,7 +271,7 @@ X86IndirectThunksPass::run(MachineFunction &MF,
   Changed |= std::get<0>(PImpl->TIs).run(MMI, MF);
   Changed |= std::get<1>(PImpl->TIs).run(MMI, MF);
 
-  // Return none() if changed to ensure we don't accidentally preserve invalid
-  // analyses
-  return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                       .preserveSet<CFGAnalyses>()
+                 : PreservedAnalyses::all();
 }
