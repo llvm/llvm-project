@@ -5855,8 +5855,14 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
                 TII.isLegalFLATOffset(RHSValReg->Value.getSExtValue(),
                                       AMDGPUAS::GLOBAL_ADDRESS,
                                       SIInstrFlags::FlatGlobal)) {
-              VOffset = VOffsetDef->getOperand(1).getReg();
-              ImmOffset = RHSValReg->Value.getSExtValue();
+              // If the MSB of the first operand of the addition is known to be
+              // zero, which is followed by zext, we are sure overflow would not
+              // happen for the addition.
+              if (matchZeroExtendFromS32OrS32(PtrBaseOffset) &&
+                  VT->signBitIsZero(VOffsetDef->getOperand(1).getReg())) {
+                VOffset = VOffsetDef->getOperand(1).getReg();
+                ImmOffset = RHSValReg->Value.getSExtValue();
+              }
             }
           }
         }

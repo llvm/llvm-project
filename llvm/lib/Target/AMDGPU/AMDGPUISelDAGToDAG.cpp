@@ -2046,13 +2046,20 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
         VOffset = ExtRHS;
         if (NeedIOffset && !ImmOffset &&
             CurDAG->isBaseWithConstantOffset(ExtRHS)) {
-          // add (i64 sgpr), (*_extend (add (scale (i32 vgpr)), (i32 imm)))
+          // add (i64 sgpr), (zero_extend (add (scale (i32 vgpr)), (i32 imm)))
           int64_t COffset =
               cast<ConstantSDNode>(ExtRHS.getOperand(1))->getSExtValue();
+
           if (TII->isLegalFLATOffset(COffset, AMDGPUAS::GLOBAL_ADDRESS,
                                      SIInstrFlags::FlatGlobal)) {
-            VOffset = ExtRHS.getOperand(0);
-            ImmOffset = COffset;
+            // If the MSB of the first operand of the addition is known to be
+            // zero, which is followed by zext, we are sure overflow would not
+            // happen during addition.
+            if (RHS.getOpcode() == ISD::ZERO_EXTEND &&
+                CurDAG->SignBitIsZero(ExtRHS.getOperand(0))) {
+              VOffset = ExtRHS.getOperand(0);
+              ImmOffset = COffset;
+            }
           }
         }
 
