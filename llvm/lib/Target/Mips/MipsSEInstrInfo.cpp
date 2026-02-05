@@ -242,7 +242,7 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Opc = Mips::FMOV_D64;
       unsigned DestRegOff = DestReg.id() - Mips::D0_64;
       unsigned SrcRegOff = SrcReg.id() - Mips::F0;
-      if (SrcRegOff == DestRegOff && SrcRegOff >= 0 && SrcRegOff <= 31)
+      if (SrcRegOff == DestRegOff && SrcRegOff <= 31)
         return;
     }
   } else if (Opc == 0 && Mips::FGR32RegClass.contains(DestReg) &&
@@ -253,7 +253,7 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       Opc = Mips::FMOV_D32;
       unsigned DestRegOff = DestReg.id() - Mips::F0;
       unsigned SrcRegOff = SrcReg.id() - Mips::D0_64;
-      if (SrcRegOff == DestRegOff && SrcRegOff >= 0 && SrcRegOff <= 31)
+      if (SrcRegOff == DestRegOff && SrcRegOff <= 31)
         return;
     }
   }
@@ -822,7 +822,7 @@ void MipsSEInstrInfo::expandCvtFPInt(MachineBasicBlock &MBB,
   const MCInstrDesc &CvtDesc = get(CvtOpc), &MovDesc = get(MovOpc);
   const MachineOperand &Dst = I->getOperand(0), &Src = I->getOperand(1);
   unsigned DstReg = Dst.getReg(), SrcReg = Src.getReg(), TmpReg = DstReg;
-  unsigned KillSrc =  getKillRegState(Src.isKill());
+  RegState KillSrc = getKillRegState(Src.isKill());
   DebugLoc DL = I->getDebugLoc();
   bool DstIsLarger, SrcIsLarger;
 

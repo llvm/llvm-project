@@ -75,14 +75,18 @@ define i32 @caller_double_in_gpr_exhausted_fprs() nounwind {
 ; CHECK-NEXT:    lu12i.w $a0, 262400
 ; CHECK-NEXT:    fmov.d $fa3, $fa7
 ; CHECK-NEXT:    movgr2frh.w $fa3, $a0
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_0)
-; CHECK-NEXT:    fld.d $fa2, $a0, %pc_lo12(.LCPI3_0)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_1)
-; CHECK-NEXT:    fld.d $fa4, $a0, %pc_lo12(.LCPI3_1)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_2)
-; CHECK-NEXT:    fld.d $fa5, $a0, %pc_lo12(.LCPI3_2)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI3_3)
-; CHECK-NEXT:    fld.d $fa6, $a0, %pc_lo12(.LCPI3_3)
+; CHECK-NEXT:  .Lpcadd_hi0:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_0)
+; CHECK-NEXT:    fld.d $fa2, $a0, %pcadd_lo12(.Lpcadd_hi0)
+; CHECK-NEXT:  .Lpcadd_hi1:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_1)
+; CHECK-NEXT:    fld.d $fa4, $a0, %pcadd_lo12(.Lpcadd_hi1)
+; CHECK-NEXT:  .Lpcadd_hi2:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_2)
+; CHECK-NEXT:    fld.d $fa5, $a0, %pcadd_lo12(.Lpcadd_hi2)
+; CHECK-NEXT:  .Lpcadd_hi3:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI3_3)
+; CHECK-NEXT:    fld.d $fa6, $a0, %pcadd_lo12(.Lpcadd_hi3)
 ; CHECK-NEXT:    lu12i.w $a0, 262656
 ; CHECK-NEXT:    movgr2frh.w $fa7, $a0
 ; CHECK-NEXT:    lu12i.w $a1, 262688
@@ -139,14 +143,18 @@ define i32 @caller_double_on_stack_exhausted_fprs_gprs() nounwind {
 ; CHECK-NEXT:    movgr2frh.w $fa3, $a0
 ; CHECK-NEXT:    lu12i.w $a0, 262656
 ; CHECK-NEXT:    movgr2frh.w $fa7, $a0
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; CHECK-NEXT:    fld.d $fa2, $a0, %pc_lo12(.LCPI5_0)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_1)
-; CHECK-NEXT:    fld.d $fa4, $a0, %pc_lo12(.LCPI5_1)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_2)
-; CHECK-NEXT:    fld.d $fa5, $a0, %pc_lo12(.LCPI5_2)
-; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_3)
-; CHECK-NEXT:    fld.d $fa6, $a0, %pc_lo12(.LCPI5_3)
+; CHECK-NEXT:  .Lpcadd_hi4:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_0)
+; CHECK-NEXT:    fld.d $fa2, $a0, %pcadd_lo12(.Lpcadd_hi4)
+; CHECK-NEXT:  .Lpcadd_hi5:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_1)
+; CHECK-NEXT:    fld.d $fa4, $a0, %pcadd_lo12(.Lpcadd_hi5)
+; CHECK-NEXT:  .Lpcadd_hi6:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_2)
+; CHECK-NEXT:    fld.d $fa5, $a0, %pcadd_lo12(.Lpcadd_hi6)
+; CHECK-NEXT:  .Lpcadd_hi7:
+; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_3)
+; CHECK-NEXT:    fld.d $fa6, $a0, %pcadd_lo12(.Lpcadd_hi7)
 ; CHECK-NEXT:    lu12i.w $a1, 262688
 ; CHECK-NEXT:    lu12i.w $a3, 262720
 ; CHECK-NEXT:    lu12i.w $a5, 262752

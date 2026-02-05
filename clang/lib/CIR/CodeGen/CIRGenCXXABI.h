@@ -61,6 +61,9 @@ public:
                                       cir::PointerType destCIRTy,
                                       bool isRefCast, Address src) = 0;
 
+  virtual cir::MethodAttr buildVirtualMethodAttr(cir::MethodType methodTy,
+                                                 const CXXMethodDecl *md) = 0;
+
 public:
   /// Similar to AddedStructorArgs, but only notes the number of additional
   /// arguments.

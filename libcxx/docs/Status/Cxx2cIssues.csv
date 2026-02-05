@@ -164,7 +164,7 @@
 "`LWG4256 <https://wg21.link/LWG4256>`__","Incorrect constrains for ``function_ref`` constructors from ``nontype_t``","2025-11 (Kona)","","","`#171321 <https://github.com/llvm/llvm-project/issues/171321>`__",""
 "`LWG4257 <https://wg21.link/LWG4257>`__","Stream insertion for ``chrono::local_time`` should be constrained","2025-11 (Kona)","","","`#171322 <https://github.com/llvm/llvm-project/issues/171322>`__",""
 "`LWG4260 <https://wg21.link/LWG4260>`__","Query objects must be default constructible","2025-11 (Kona)","","","`#171323 <https://github.com/llvm/llvm-project/issues/171323>`__",""
-"`LWG4265 <https://wg21.link/LWG4265>`__","``std::midpoint`` should not accept ``const bool``","2025-11 (Kona)","","","`#171324 <https://github.com/llvm/llvm-project/issues/171324>`__",""
+"`LWG4265 <https://wg21.link/LWG4265>`__","``std::midpoint`` should not accept ``const bool``","2025-11 (Kona)","|Complete|","22","`#171324 <https://github.com/llvm/llvm-project/issues/171324>`__",""
 "`LWG4266 <https://wg21.link/LWG4266>`__","``layout_stride::mapping`` should treat empty mappings as exhaustive","2025-11 (Kona)","","","`#171325 <https://github.com/llvm/llvm-project/issues/171325>`__",""
 "`LWG4269 <https://wg21.link/LWG4269>`__","``unique_copy`` passes arguments to its predicate backwards","2025-11 (Kona)","","","`#171326 <https://github.com/llvm/llvm-project/issues/171326>`__",""
 "`LWG4272 <https://wg21.link/LWG4272>`__","For ``rank == 0``, ``layout_stride`` is atypically convertible","2025-11 (Kona)","","","`#171327 <https://github.com/llvm/llvm-project/issues/171327>`__",""
