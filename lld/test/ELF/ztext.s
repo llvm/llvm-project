@@ -1,20 +1,30 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/ztext.s -o %t2.o
-# RUN: ld.lld %t2.o -o %t2.so -shared -soname=so
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o a.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 %p/Inputs/ztext.s -o b.o
+# RUN: ld.lld b.o -o b.so -shared -soname=so
 
-# RUN: ld.lld -z notext %t.o %t2.so -o %t -shared
-# RUN: llvm-readobj  --dynamic-table -r %t | FileCheck %s
-# RUN: ld.lld -z notext %t.o %t2.so -o %t2 -pie
-# RUN: llvm-readobj  --dynamic-table -r %t2 | FileCheck %s
-# RUN: ld.lld -z notext %t.o %t2.so -o %t3
-# RUN: llvm-readobj  --dynamic-table -r %t3 | FileCheck --check-prefix=STATIC %s
+# RUN: ld.lld -z notext a.o b.so -o out -shared
+# RUN: llvm-readobj --dynamic-table -r out | FileCheck %s
+# RUN: ld.lld -z notext a.o b.so -o out.pie -pie
+# RUN: llvm-readobj --dynamic-table -r out.pie | FileCheck %s
+# RUN: ld.lld -z notext a.o b.so -o out.exe
+# RUN: llvm-readobj --dynamic-table -r out.exe | FileCheck --check-prefix=STATIC %s
 
-# RUN: not ld.lld %t.o %t2.so -o /dev/null -shared 2>&1 | FileCheck --check-prefix=ERR %s
-# RUN: not ld.lld -z text %t.o %t2.so -o /dev/null -shared 2>&1 | FileCheck --check-prefix=ERR %s
-# ERR: error: relocation R_X86_64_64 cannot be used against symbol 'bar'; recompile with -fPIC
+# RUN: not ld.lld a.o b.so -shared 2>&1 | FileCheck --check-prefix=ERR %s --implicit-check-not=error:
+# RUN: not ld.lld -z text a.o b.so -shared 2>&1 | FileCheck --check-prefix=ERR %s --implicit-check-not=error:
 
-# If the preference is to have text relocations, don't create plt of copy relocations.
+# ERR:      error: relocation R_X86_64_64 cannot be used against local symbol; recompile with -fPIC
+# ERR-NEXT: >>> defined in a.o
+# ERR-NEXT: >>> referenced by a.o:(.text+0x0)
+# ERR:      error: relocation R_X86_64_64 cannot be used against symbol 'bar'; recompile with -fPIC
+# ERR-NEXT: >>> defined in b.so
+# ERR-NEXT: >>> referenced by a.o:(.text+0x8)
+# ERR:      error: relocation R_X86_64_PC64 cannot be used against symbol 'zed'; recompile with -fPIC
+# ERR-NEXT: >>> defined in b.so
+# ERR-NEXT: >>> referenced by a.o:(.text+0x10)
+
+## If the preference is to have text relocations, don't create plt of copy relocations.
 
 # CHECK: DynamicSection [
 # CHECK:   FLAGS TEXTREL
