@@ -1,4 +1,4 @@
-// REQUIRES: clang-cc1daemon, ansi-escape-sequences
+// REQUIRES: clang-cc1daemon
 
 // RUN: rm -rf %t && mkdir -p %t
 

@@ -1,6 +1,6 @@
 // Test running -fdepscan.
 //
-// REQUIRES: system-darwin, clang-cc1daemon
+// REQUIRES: clang-cc1daemon
 
 // RUN: rm -rf %t-*.d %t.cas
 // RUN: %clang -cc1depscand -execute %{clang-daemon-dir}/%basename_t -cas-args -fcas-path %t.cas -- \
