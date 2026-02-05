@@ -1167,12 +1167,16 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
              Invocation->computeContextHash() &&
          "Module hash mismatch!");
 
-  // Construct a compiler instance that will be used to actually create the
-  // module.  Since we're sharing an in-memory module cache,
-  // CompilerInstance::CompilerInstance is responsible for finalizing the
-  // buffers to prevent use-after-frees.
+  std::shared_ptr<ModuleCache> ModCache;
+  if (ThreadSafeConfig) {
+    ModCache = ThreadSafeConfig->getModuleCache();
+  } else {
+    ModCache = this->ModCache;
+  }
+
+  // Construct a compiler instance that will be used to create the module.
   auto InstancePtr = std::make_unique<CompilerInstance>(
-      std::move(Invocation), getPCHContainerOperations(), ModCache);
+      std::move(Invocation), getPCHContainerOperations(), std::move(ModCache));
   auto &Instance = *InstancePtr;
 
   auto &Inv = Instance.getInvocation();
@@ -1232,10 +1236,26 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   return InstancePtr;
 }
 
+namespace {
+class PrettyStackTraceBuildModule : public llvm::PrettyStackTraceEntry {
+  StringRef ModuleName;
+  StringRef ModuleFileName;
+
+public:
+  PrettyStackTraceBuildModule(StringRef ModuleName, StringRef ModuleFileName)
+      : ModuleName(ModuleName), ModuleFileName(ModuleFileName) {}
+  void print(raw_ostream &OS) const override {
+    OS << "Building module '" << ModuleName << "' as '" << ModuleFileName
+       << "'\n";
+  }
+};
+} // namespace
+
 bool CompilerInstance::compileModule(SourceLocation ImportLoc,
                                      StringRef ModuleName,
                                      StringRef ModuleFileName,
                                      CompilerInstance &Instance) {
+  PrettyStackTraceBuildModule CrashInfo(ModuleName, ModuleFileName);
   llvm::TimeTraceScope TimeScope("Module Compile", ModuleName);
 
   // Never compile a module that's already finalized - this would cause the

@@ -778,12 +778,12 @@ void BlockGenerator::generateScalarStores(
 
           Val = getNewValue(Stmt, Val, BBMap, LTS, L);
           assert((!isa<Instruction>(Val) ||
-                  DT.dominates(cast<Instruction>(Val)->getParent(),
-                               Builder.GetInsertBlock())) &&
+                  GenDT->dominates(cast<Instruction>(Val)->getParent(),
+                                   Builder.GetInsertBlock())) &&
                  "Domination violation");
           assert((!isa<Instruction>(Address) ||
-                  DT.dominates(cast<Instruction>(Address)->getParent(),
-                               Builder.GetInsertBlock())) &&
+                  GenDT->dominates(cast<Instruction>(Address)->getParent(),
+                                   Builder.GetInsertBlock())) &&
                  "Domination violation");
 
           Builder.CreateStore(Val, Address);

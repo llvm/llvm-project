@@ -1,0 +1,38 @@
+# RUN: llc -march=hexagon -run-pass=livedebugvalues -verify-machineinstrs %s -o - | FileCheck %s
+# CHECK: BUNDLE
+--- |
+
+  define void @foo() !dbg !5 {
+    ret void
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "t.c", directory: "/")
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = !{i32 1, !"PIC Level", i32 2}
+  !5 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !6, isDefinition: true, unit: !0)
+  !6 = !DISubroutineType(types: !7)
+  !7 = !{null}
+  !8 = !DILocalVariable(name: "x", scope: !5, file: !1, line: 1, type: !9)
+  !9 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !10 = !DILocation(line: 1, column: 1, scope: !5)
+
+...
+---
+name:            foo
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 4, alignment: 4 }
+body:             |
+  bb.0:
+    liveins: $r29, $r31
+    
+    DBG_VALUE $r29, $noreg, !8, !DIExpression(), debug-location !10
+    
+    BUNDLE implicit-def $pc, implicit killed $r29, implicit $r31, debug-location !10 :: (store (s32) into %stack.0) {
+      S2_storeri_io %stack.0, 0, killed $r29 :: (store (s32) into %stack.0)
+      PS_jmpret $r31, implicit-def $pc
+    }
+...

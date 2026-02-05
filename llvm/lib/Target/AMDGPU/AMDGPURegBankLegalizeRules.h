@@ -119,6 +119,7 @@ enum UniformityLLTOpPredicateID {
   UniB128,
   UniB256,
   UniB512,
+  UniBRC,
 
   DivB32,
   DivB64,
@@ -126,6 +127,7 @@ enum UniformityLLTOpPredicateID {
   DivB128,
   DivB256,
   DivB512,
+  DivBRC
 };
 
 // How to apply register bank on register operand.
@@ -180,6 +182,7 @@ enum RegBankLLTMappingApplyID {
   VgprPtr128,
   VgprV2S16,
   VgprV2S32,
+  VgprV3S32,
   VgprB32,
   VgprB64,
   VgprB96,
@@ -248,7 +251,10 @@ enum LoweringMethodID {
   SplitLoad,
   WidenLoad,
   WidenMMOToS32,
-  UnpackAExt
+  UnpackAExt,
+  VerifyAllSgpr,
+  ApplyAllVgpr,
+  UnmergeToShiftTrunc
 };
 
 enum FastRulesTypes {
