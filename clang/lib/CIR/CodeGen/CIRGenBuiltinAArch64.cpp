@@ -115,9 +115,15 @@ bool CIRGenFunction::getAArch64SVEProcessedOperands(
   return true;
 }
 
+static llvm::StringRef getLLVMIntrNameNoPrefix(llvm::Intrinsic::ID intrID) {
+  llvm::StringRef llvmIntrName = llvm::Intrinsic::getBaseName(intrID);
+  assert(llvmIntrName.starts_with("llvm.") && "Not an LLVM intrinsic!");
+  return llvmIntrName.drop_front(/*strlen("llvm.")=*/5);
+}
+
 // Reinterpret the input predicate so that it can be used to correctly isolate
 // the elements of the specified datatype.
-mlir::Value CIRGenFunction::emitSVEpredicateCast(mlir::Value *pred,
+mlir::Value CIRGenFunction::emitSVEPredicateCast(mlir::Value pred,
                                                  unsigned minNumElts,
                                                  mlir::Location loc) {
 
@@ -125,8 +131,8 @@ mlir::Value CIRGenFunction::emitSVEpredicateCast(mlir::Value *pred,
 
   auto retTy = cir::VectorType::get(builder.getUIntNTy(1), minNumElts,
                                     /*is_scalable=*/true);
-  if (pred->getType() == retTy)
-    return *pred;
+  if (pred.getType() == retTy)
+    return pred;
 
   unsigned intID;
   mlir::Type intrinsicTy;
@@ -142,14 +148,13 @@ mlir::Value CIRGenFunction::emitSVEpredicateCast(mlir::Value *pred,
     break;
   case 16:
     intID = Intrinsic::aarch64_sve_convert_to_svbool;
-    intrinsicTy = pred->getType();
+    intrinsicTy = pred.getType();
     break;
   }
 
-  std::string llvmIntrName(Intrinsic::getBaseName(intID));
-  llvmIntrName.erase(0, /*std::strlen(".llvm")=*/5);
+  llvm::StringRef llvmIntrName = getLLVMIntrNameNoPrefix(intID);
   auto call = emitIntrinsicCallOp(builder, loc, llvmIntrName, retTy,
-                                  mlir::ValueRange{*pred});
+                                  mlir::ValueRange{pred});
   assert(call.getType() == retTy && "Unexpected return type!");
   return call;
 }
@@ -263,8 +268,8 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
       if (auto predTy = dyn_cast<cir::VectorType>(op.getType()))
         if (auto cirInt = dyn_cast<cir::IntType>(predTy.getElementType()))
           if (cirInt.getWidth() == 1)
-            op = emitSVEpredicateCast(
-                &op, getSVEMinEltCount(typeFlags.getEltType()), loc);
+            op = emitSVEPredicateCast(
+                op, getSVEMinEltCount(typeFlags.getEltType()), loc);
 
     // Splat scalar operand to vector (intrinsics with _n infix)
     if (typeFlags.hasSplatOperand()) {
@@ -299,11 +304,8 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
                        getContext().BuiltinInfo.getName(builtinID));
     }
 
-    std::string llvmIntrName(Intrinsic::getBaseName(
-        (llvm::Intrinsic::ID)builtinIntrInfo->llvmIntrinsic));
-
-    llvmIntrName.erase(0, /*std::strlen(".llvm")=*/5);
-
+    llvm::StringRef llvmIntrName = getLLVMIntrNameNoPrefix(
+        (llvm::Intrinsic::ID)builtinIntrInfo->llvmIntrinsic);
     auto retTy = convertType(expr->getType());
 
     auto call = builder.emitIntrinsicCallOp(loc, llvmIntrName, retTy,
