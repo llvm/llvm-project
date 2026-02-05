@@ -154,5 +154,5 @@ PreservedAnalyses
 X86CleanupLocalDynamicTLSPass::run(MachineFunction &MF,
                                    MachineFunctionAnalysisManager &MFAM) {
   MachineDominatorTree &DT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  return cleanupLocalDynamicTLS(MF, DT)? getMachineFunctionPassPreservedAnalyses().preserve<CFGAnalyses>(): PreservedAnalyses::all();
+  return cleanupLocalDynamicTLS(MF, DT)? getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>(): PreservedAnalyses::all();
 }
