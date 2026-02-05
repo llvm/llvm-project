@@ -1082,24 +1082,27 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
 
   // Do the operation and optionally transform to
   // result pointer type.
-  if (Op == BO_Add) {
+  switch (Op) {
+  case BO_Add:
     if (!this->emitAddOffset(OffsetType, E))
       return false;
-
-    if (classifyPrim(E) != PT_Ptr)
-      return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
-    return true;
-  }
-  if (Op == BO_Sub) {
+    break;
+  case BO_Sub:
     if (!this->emitSubOffset(OffsetType, E))
       return false;
-
-    if (classifyPrim(E) != PT_Ptr)
-      return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
-    return true;
+    break;
+  default:
+    return false;
   }
 
-  return false;
+  if (classifyPrim(E) != PT_Ptr) {
+    if (!this->emitDecayPtr(PT_Ptr, classifyPrim(E), E))
+      return false;
+  }
+
+  if (DiscardResult)
+    return this->emitPop(classifyPrim(E), E);
+  return true;
 }
 
 template <class Emitter>
@@ -1780,6 +1783,9 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+  if (E->getType()->isVoidType())
+    return false;
+
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
   const Expr *Index = E->getIdx();
@@ -3598,6 +3604,9 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
   const Expr *PlacementDest = nullptr;
   bool IsNoThrow = false;
 
+  if (E->containsErrors())
+    return false;
+
   if (PlacementArgs != 0) {
     // FIXME: There is no restriction on this, but it's not clear that any
     // other form makes any sense. We get here for cases such as:
@@ -4501,6 +4510,8 @@ bool Compiler<Emitter>::visitZeroArrayInitializer(QualType T, const Expr *E) {
   }
   if (ElemType->isRecordType()) {
     const Record *R = getRecord(ElemType);
+    if (!R)
+      return false;
 
     for (size_t I = 0; I != NumElems; ++I) {
       if (!this->emitConstUint32(I, E))
@@ -5164,6 +5175,15 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_assume:
     // Argument is not evaluated.
     break;
+  case Builtin::BI__atomic_is_lock_free:
+  case Builtin::BI__atomic_always_lock_free: {
+    assert(E->getNumArgs() == 2);
+    if (!this->visit(E->getArg(0)))
+      return false;
+    if (!this->visitAsLValue(E->getArg(1)))
+      return false;
+  } break;
+
   default:
     if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
       // Put arguments on the stack.
@@ -7580,8 +7600,6 @@ bool Compiler<Emitter>::emitDummyPtr(const DeclTy &D, const Expr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::emitFloat(const APFloat &F, const Expr *E) {
-  assert(!DiscardResult && "Should've been checked before");
-
   if (Floating::singleWord(F.getSemantics()))
     return this->emitConstFloat(Floating(F), E);
 

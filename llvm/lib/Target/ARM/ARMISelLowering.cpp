@@ -940,7 +940,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   }
 
   // Custom loads/stores to possible use __aeabi_uread/write*
-  if (Subtarget->isTargetAEABI() && !Subtarget->allowsUnalignedMem()) {
+  if (TT.isTargetAEABI() && !Subtarget->allowsUnalignedMem()) {
     setOperationAction(ISD::STORE, MVT::i32, Custom);
     setOperationAction(ISD::STORE, MVT::i64, Custom);
     setOperationAction(ISD::LOAD, MVT::i32, Custom);
@@ -2437,17 +2437,18 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool isDirect = false;
 
   const TargetMachine &TM = getTargetMachine();
+  const Triple &TT = TM.getTargetTriple();
   const GlobalValue *GVal = nullptr;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
     GVal = G->getGlobal();
-  bool isStub = !TM.shouldAssumeDSOLocal(GVal) && Subtarget->isTargetMachO();
+  bool isStub = !TM.shouldAssumeDSOLocal(GVal) && TT.isOSBinFormatMachO();
 
   bool isARMFunc = !Subtarget->isThumb() || (isStub && !Subtarget->isMClass());
   bool isLocalARMFunc = false;
   auto PtrVt = getPointerTy(DAG.getDataLayout());
 
   if (Subtarget->genLongCalls()) {
-    assert((!isPositionIndependent() || Subtarget->isTargetWindows()) &&
+    assert((!isPositionIndependent() || TT.isOSWindows()) &&
            "long-calls codegen is not position independent!");
     // Handle a global address or an external symbol. If it's not one of
     // those, the target's already in a register, so we don't need to do
@@ -2502,7 +2503,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       isLocalARMFunc = !Subtarget->isThumb() && (isDef || !ARMInterworking);
       // tBX takes a register source operand.
       if (isStub && Subtarget->isThumb1Only() && !Subtarget->hasV5TOps()) {
-        assert(Subtarget->isTargetMachO() && "WrapperPIC use on non-MachO?");
+        assert(TT.isOSBinFormatMachO() && "WrapperPIC use on non-MachO?");
         Callee = DAG.getNode(
             ARMISD::WrapperPIC, dl, PtrVt,
             DAG.getTargetGlobalAddress(GVal, dl, PtrVt, 0, ARMII::MO_NONLAZY));
@@ -3294,7 +3295,7 @@ SDValue ARMTargetLowering::LowerBlockAddress(SDValue Op,
 SDValue
 ARMTargetLowering::LowerGlobalTLSAddressDarwin(SDValue Op,
                                                SelectionDAG &DAG) const {
-  assert(Subtarget->isTargetDarwin() &&
+  assert(getTargetMachine().getTargetTriple().isOSDarwin() &&
          "This function expects a Darwin target");
   SDLoc DL(Op);
 
@@ -3338,7 +3339,8 @@ ARMTargetLowering::LowerGlobalTLSAddressDarwin(SDValue Op,
 SDValue
 ARMTargetLowering::LowerGlobalTLSAddressWindows(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  assert(Subtarget->isTargetWindows() && "Windows specific TLS lowering");
+  assert(getTargetMachine().getTargetTriple().isOSWindows() &&
+         "Windows specific TLS lowering");
 
   SDValue Chain = DAG.getEntryNode();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
@@ -3488,14 +3490,15 @@ ARMTargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
   if (DAG.getTarget().useEmulatedTLS())
     return LowerToTLSEmulatedModel(GA, DAG);
 
-  if (Subtarget->isTargetDarwin())
+  const Triple &TT = getTargetMachine().getTargetTriple();
+  if (TT.isOSDarwin())
     return LowerGlobalTLSAddressDarwin(Op, DAG);
 
-  if (Subtarget->isTargetWindows())
+  if (TT.isOSWindows())
     return LowerGlobalTLSAddressWindows(Op, DAG);
 
   // TODO: implement the "local dynamic" model
-  assert(Subtarget->isTargetELF() && "Only ELF implemented here");
+  assert(TT.isOSBinFormatELF() && "Only ELF implemented here");
   TLSModel::Model model = getTargetMachine().getTLSModel(GA->getGlobal());
 
   switch (model) {
@@ -3739,7 +3742,8 @@ SDValue ARMTargetLowering::LowerGlobalAddressDarwin(SDValue Op,
 
 SDValue ARMTargetLowering::LowerGlobalAddressWindows(SDValue Op,
                                                      SelectionDAG &DAG) const {
-  assert(Subtarget->isTargetWindows() && "non-Windows COFF is not supported");
+  assert(getTargetMachine().getTargetTriple().isOSWindows() &&
+         "non-Windows COFF is not supported");
   assert(Subtarget->useMovt() &&
          "Windows on ARM expects to use movw/movt");
   assert(!Subtarget->isROPI() && !Subtarget->isRWPI() &&
@@ -10477,11 +10481,13 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerRESET_FPMODE(Op, DAG);
   case ISD::MUL:           return LowerMUL(Op, DAG);
   case ISD::SDIV:
-    if (Subtarget->isTargetWindows() && !Op.getValueType().isVector())
+    if (getTargetMachine().getTargetTriple().isOSWindows() &&
+        !Op.getValueType().isVector())
       return LowerDIV_Windows(Op, DAG, /* Signed */ true);
     return LowerSDIV(Op, DAG, Subtarget);
   case ISD::UDIV:
-    if (Subtarget->isTargetWindows() && !Op.getValueType().isVector())
+    if (getTargetMachine().getTargetTriple().isOSWindows() &&
+        !Op.getValueType().isVector())
       return LowerDIV_Windows(Op, DAG, /* Signed */ false);
     return LowerUDIV(Op, DAG, Subtarget);
   case ISD::UADDO_CARRY:
@@ -10536,7 +10542,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SDIVREM:
   case ISD::UDIVREM:       return LowerDivRem(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
-    if (Subtarget->isTargetWindows())
+    if (getTargetMachine().getTargetTriple().isOSWindows())
       return LowerDYNAMIC_STACKALLOC(Op, DAG);
     llvm_unreachable("Don't know how to custom lower this!");
   case ISD::STRICT_FP_ROUND:
@@ -10640,7 +10646,8 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   case ISD::UDIV:
   case ISD::SDIV:
-    assert(Subtarget->isTargetWindows() && "can only expand DIV on Windows");
+    assert(getTargetMachine().getTargetTriple().isOSWindows() &&
+           "can only expand DIV on Windows");
     return ExpandDIV_Windows(SDValue(N, 0), DAG, N->getOpcode() == ISD::SDIV,
                              Results);
   case ISD::ATOMIC_CMP_SWAP:
@@ -11583,7 +11590,7 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
   const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
-  assert(Subtarget->isTargetWindows() &&
+  assert(TM.getTargetTriple().isOSWindows() &&
          "__chkstk is only supported on Windows");
   assert(Subtarget->isThumb2() && "Windows on ARM requires Thumb-2 mode");
 
@@ -20502,7 +20509,7 @@ static TargetLowering::ArgListTy getDivRemArgList(
     Entry.IsZExt = !isSigned;
     Args.push_back(Entry);
   }
-  if (Subtarget->isTargetWindows() && Args.size() >= 2)
+  if (Subtarget->getTargetTriple().isOSWindows() && Args.size() >= 2)
     std::swap(Args[0], Args[1]);
   return Args;
 }
@@ -20568,7 +20575,7 @@ SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
 
   Type *RetTy = StructType::get(Ty, Ty);
 
-  if (Subtarget->isTargetWindows())
+  if (getTM().getTargetTriple().isOSWindows())
     InChain = WinDBZCheckDenominator(DAG, Op.getNode(), InChain);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
@@ -20624,7 +20631,7 @@ SDValue ARMTargetLowering::LowerREM(SDNode *N, SelectionDAG &DAG) const {
   SDValue Callee =
       DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
 
-  if (Subtarget->isTargetWindows())
+  if (getTM().getTargetTriple().isOSWindows())
     InChain = WinDBZCheckDenominator(DAG, N, InChain);
 
   // Lower call
@@ -20645,7 +20652,8 @@ SDValue ARMTargetLowering::LowerREM(SDNode *N, SelectionDAG &DAG) const {
 
 SDValue
 ARMTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const {
-  assert(Subtarget->isTargetWindows() && "unsupported target platform");
+  assert(getTM().getTargetTriple().isOSWindows() &&
+         "unsupported target platform");
   SDLoc DL(Op);
 
   // Get the inputs.
@@ -21342,7 +21350,7 @@ bool ARMTargetLowering::isMaskAndCmp0FoldingBeneficial(
 TargetLowering::ShiftLegalizationStrategy
 ARMTargetLowering::preferredShiftLegalizationStrategy(
     SelectionDAG &DAG, SDNode *N, unsigned ExpansionFactor) const {
-  if (Subtarget->hasMinSize() && !Subtarget->isTargetWindows())
+  if (Subtarget->hasMinSize() && !getTM().getTargetTriple().isOSWindows())
     return ShiftLegalizationStrategy::LowerToLibcall;
   return TargetLowering::preferredShiftLegalizationStrategy(DAG, N,
                                                             ExpansionFactor);
