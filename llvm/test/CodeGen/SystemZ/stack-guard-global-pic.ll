@@ -153,7 +153,8 @@ declare void @foo3(ptr)
 attributes #0 = { sspstrong "mstackprotector-guard-record" }
 
 
-!llvm.module.flags = !{!0, !1, !2}
+!llvm.module.flags = !{!0, !1, !2, !3}
 !0 = !{i32 1, !"stack-protector-guard", !"global"}
-!1 = !{i32 8, !"PIC Level", i32 2}
-!2 = !{i32 7, !"PIE Level", i32 2}
+!1 = !{i32 7, !"stack-protector-guard-record", i32 1}
+!2 = !{i32 8, !"PIC Level", i32 2}
+!3 = !{i32 7, !"PIE Level", i32 2}

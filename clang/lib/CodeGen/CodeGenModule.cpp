@@ -1605,6 +1605,14 @@ void CodeGenModule::Release() {
   if (getCodeGenOpts().StackProtectorGuardOffset != INT_MAX)
     getModule().setStackProtectorGuardOffset(
         getCodeGenOpts().StackProtectorGuardOffset);
+  if (getCodeGenOpts().StackProtectorGuardRecord) {
+    if (getModule().getStackProtectorGuard() != "global") {
+        Diags.Report(diag::err_opt_not_valid_without_opt)
+          << "-mstack-protector-guard-record"
+          << "-mstack-protector-guard=global";
+    }
+    getModule().setStackProtectorGuardRecord(true);
+  }
   if (getCodeGenOpts().StackAlignment)
     getModule().setOverrideStackAlignment(getCodeGenOpts().StackAlignment);
   if (getCodeGenOpts().SkipRaxSetup)
