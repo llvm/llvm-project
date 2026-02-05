@@ -910,15 +910,10 @@ SIMemOpAccess::getLDSDMAInfo(const MachineBasicBlock::iterator &MI) const {
 /// constant address space, are accessing a known invariant memory location, or
 /// that they are marked with the non-volatile metadata/MMO flag.
 static bool isNonVolatileMemoryAccess(const MachineInstr &MI) {
-  static constexpr unsigned NVFlags =
-      (MOThreadPrivate | MachineMemOperand::MOInvariant);
   if (MI.getNumMemOperands() == 0)
     return false;
   return all_of(MI.memoperands(), [&](const MachineMemOperand *MMO) {
-    unsigned AS = MMO->getAddrSpace();
-    return AS == AMDGPUAS::CONSTANT_ADDRESS ||
-           AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-           (MMO->getFlags() & NVFlags);
+    return MMO->getFlags() & (MOThreadPrivate | MachineMemOperand::MOInvariant);
   });
 }
 
