@@ -12983,9 +12983,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
         if (SourceMgr.isInSystemMacro(CC))
           return;
 
-        DiagnoseImpCast(*this, E, T, CC,
-                        SelectDiagID(diag::warn_impcast_float_precision,
-                                     diag::warn_impcast_matrix_float_precision));
+        DiagnoseImpCast(
+            *this, E, T, CC,
+            SelectDiagID(diag::warn_impcast_float_precision,
+                         diag::warn_impcast_matrix_float_precision));
       }
       // ... or possibly if we're increasing rank, too
       else if (Order < 0) {
@@ -13002,9 +13003,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       if (SourceMgr.isInSystemMacro(CC))
         return;
 
-      DiagnoseFloatingImpCast(*this, E, T, CC,
-                              SelectDiagID(diag::warn_impcast_float_integer,
-                                           diag::warn_impcast_matrix_float_integer));
+      DiagnoseFloatingImpCast(
+          *this, E, T, CC,
+          SelectDiagID(diag::warn_impcast_float_integer,
+                       diag::warn_impcast_matrix_float_integer));
     }
 
     // Detect the case where a call result is converted from floating-point to
