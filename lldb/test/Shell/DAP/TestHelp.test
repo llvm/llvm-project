@@ -1,4 +1,4 @@
-# RUN: lldb-dap --help | FileCheck %s
+# RUN: %lldb-dap --help | FileCheck %s
 # CHECK: --connection
 # CHECK: -g
 # CHECK: --help
