@@ -1007,10 +1007,200 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
   }
 }
 
+/// Create a Value of \p DstType that consists of a sequence of copies of
+/// \p SetValue, using bitcasts and a vector splat.
+static Value *createMemSetSplat(const DataLayout &DL, IRBuilderBase &B,
+                                Value *SetValue, Type *DstType) {
+  TypeSize DstSize = DL.getTypeStoreSize(DstType);
+  Type *SetValueType = SetValue->getType();
+  TypeSize SetValueSize = DL.getTypeStoreSize(SetValueType);
+  assert(SetValueSize == DL.getTypeAllocSize(SetValueType) &&
+         "Store size and alloc size of SetValue's type must match");
+  assert(SetValueSize != 0 && DstSize % SetValueSize == 0 &&
+         "DstType size must be a multiple of SetValue size");
+
+  Value *Result = SetValue;
+  if (DstSize != SetValueSize) {
+    if (!SetValueType->isIntegerTy() && !SetValueType->isFloatingPointTy()) {
+      // If the type cannot be put into a vector, bitcast to iN first.
+      LLVMContext &Ctx = SetValue->getContext();
+      Result = B.CreateBitCast(Result, Type::getIntNTy(Ctx, SetValueSize * 8),
+                               "setvalue.toint");
+    }
+    // Form a sufficiently large vector consisting of SetValue, repeated.
+    Result =
+        B.CreateVectorSplat(DstSize / SetValueSize, Result, "setvalue.splat");
+  }
+
+  // The value has the right size, but we might have to bitcast it to the right
+  // type.
+  Result = B.CreateBitCast(Result, DstType, "setvalue.splat.cast");
+  return Result;
+}
+
+static void
+createMemSetLoopKnownSize(Instruction *InsertBefore, Value *DstAddr,
+                          ConstantInt *Len, Value *SetValue, Align DstAlign,
+                          bool IsVolatile, const TargetTransformInfo *TTI,
+                          std::optional<uint64_t> AverageTripCount) {
+  // No need to expand zero length memsets.
+  if (Len->isZero())
+    return;
+
+  BasicBlock *PreLoopBB = InsertBefore->getParent();
+  Function *ParentFunc = PreLoopBB->getParent();
+  const DataLayout &DL = ParentFunc->getDataLayout();
+  LLVMContext &Ctx = PreLoopBB->getContext();
+
+  unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
+
+  Type *TypeOfLen = Len->getType();
+  Type *Int8Type = Type::getInt8Ty(Ctx);
+  assert(SetValue->getType() == Int8Type && "Can only set bytes");
+
+  Type *LoopOpType = Int8Type;
+  if (TTI) {
+    // Use the same memory access type as for a memcpy with the same Dst and Src
+    // alignment and address space.
+    LoopOpType = TTI->getMemcpyLoopLoweringType(
+        Ctx, Len, DstAS, DstAS, DstAlign, DstAlign, std::nullopt);
+  }
+  TypeSize LoopOpSize = DL.getTypeStoreSize(LoopOpType);
+  assert(LoopOpSize.isFixed() && "LoopOpType cannot be a scalable vector type");
+
+  uint64_t LoopEndCount =
+      alignDown(Len->getZExtValue(), LoopOpSize.getFixedValue());
+
+  if (LoopEndCount != 0) {
+    Value *SplatSetValue = nullptr;
+    {
+      IRBuilder<> PreLoopBuilder(InsertBefore);
+      SplatSetValue =
+          createMemSetSplat(DL, PreLoopBuilder, SetValue, LoopOpType);
+    }
+
+    // Don't generate a residual loop, the remaining bytes are set with
+    // straight-line code.
+    LoopExpansionInfo LEI = insertLoopExpansion(
+        InsertBefore, Len, LoopOpSize, 0, "static-memset", AverageTripCount);
+
+    // Fill MainLoopBB
+    IRBuilder<> MainLoopBuilder(LEI.MainLoopIP);
+    Align PartDstAlign(commonAlignment(DstAlign, LoopOpSize));
+
+    Value *DstGEP =
+        MainLoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr, LEI.MainLoopIndex);
+
+    MainLoopBuilder.CreateAlignedStore(SplatSetValue, DstGEP, PartDstAlign,
+                                       IsVolatile);
+
+    assert(!LEI.ResidualLoopIP && !LEI.ResidualLoopIndex &&
+           "No residual loop was requested");
+  }
+
+  uint64_t BytesSet = LoopEndCount;
+  uint64_t RemainingBytes = Len->getZExtValue() - BytesSet;
+  if (RemainingBytes == 0)
+    return;
+
+  IRBuilder<> RBuilder(InsertBefore);
+
+  assert(TTI && "there cannot be a residual loop without TTI");
+  SmallVector<Type *, 5> RemainingOps;
+  TTI->getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
+                                         DstAS, DstAS, DstAlign, DstAlign,
+                                         std::nullopt);
+
+  Type *PreviousOpTy = nullptr;
+  Value *SplatSetValue = nullptr;
+  for (auto *OpTy : RemainingOps) {
+    TypeSize OperandSize = DL.getTypeStoreSize(OpTy);
+    assert(OperandSize.isFixed() &&
+           "Operand types cannot be scalable vector types");
+    Align PartDstAlign(commonAlignment(DstAlign, BytesSet));
+
+    // Avoid recomputing the splat SetValue if it's the same as for the last
+    // iteration.
+    if (OpTy != PreviousOpTy)
+      SplatSetValue = createMemSetSplat(DL, RBuilder, SetValue, OpTy);
+
+    Value *DstGEP = RBuilder.CreateInBoundsGEP(
+        Int8Type, DstAddr, ConstantInt::get(TypeOfLen, BytesSet));
+    RBuilder.CreateAlignedStore(SplatSetValue, DstGEP, PartDstAlign,
+                                IsVolatile);
+    BytesSet += OperandSize;
+    PreviousOpTy = OpTy;
+  }
+  assert(BytesSet == Len->getZExtValue() &&
+         "Bytes set should match size in the call!");
+}
+
+static void
+createMemSetLoopUnknownSize(Instruction *InsertBefore, Value *DstAddr,
+                            Value *Len, Value *SetValue, Align DstAlign,
+                            bool IsVolatile, const TargetTransformInfo *TTI,
+                            std::optional<uint64_t> AverageTripCount) {
+  BasicBlock *PreLoopBB = InsertBefore->getParent();
+  Function *ParentFunc = PreLoopBB->getParent();
+  const DataLayout &DL = ParentFunc->getDataLayout();
+  LLVMContext &Ctx = PreLoopBB->getContext();
+
+  unsigned DstAS = cast<PointerType>(DstAddr->getType())->getAddressSpace();
+
+  Type *Int8Type = Type::getInt8Ty(Ctx);
+  assert(SetValue->getType() == Int8Type && "Can only set bytes");
+
+  Type *LoopOpType = Int8Type;
+  if (TTI) {
+    LoopOpType = TTI->getMemcpyLoopLoweringType(
+        Ctx, Len, DstAS, DstAS, DstAlign, DstAlign, std::nullopt);
+  }
+  TypeSize LoopOpSize = DL.getTypeStoreSize(LoopOpType);
+  assert(LoopOpSize.isFixed() && "LoopOpType cannot be a scalable vector type");
+
+  Type *ResidualLoopOpType = Int8Type;
+  TypeSize ResidualLoopOpSize = DL.getTypeStoreSize(ResidualLoopOpType);
+
+  Value *SplatSetValue = SetValue;
+  {
+    IRBuilder<> PreLoopBuilder(InsertBefore);
+    SplatSetValue = createMemSetSplat(DL, PreLoopBuilder, SetValue, LoopOpType);
+  }
+
+  LoopExpansionInfo LEI =
+      insertLoopExpansion(InsertBefore, Len, LoopOpSize, ResidualLoopOpSize,
+                          "dynamic-memset", AverageTripCount);
+
+  // Fill MainLoopBB
+  IRBuilder<> MainLoopBuilder(LEI.MainLoopIP);
+  Align PartDstAlign(commonAlignment(DstAlign, LoopOpSize));
+
+  Value *DstGEP =
+      MainLoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr, LEI.MainLoopIndex);
+  MainLoopBuilder.CreateAlignedStore(SplatSetValue, DstGEP, PartDstAlign,
+                                     IsVolatile);
+
+  // Fill ResidualLoopBB
+  if (!LEI.ResidualLoopIP)
+    return;
+
+  Align ResDstAlign(commonAlignment(PartDstAlign, ResidualLoopOpSize));
+
+  IRBuilder<> ResLoopBuilder(LEI.ResidualLoopIP);
+
+  Value *ResDstGEP = ResLoopBuilder.CreateInBoundsGEP(Int8Type, DstAddr,
+                                                      LEI.ResidualLoopIndex);
+  ResLoopBuilder.CreateAlignedStore(SetValue, ResDstGEP, ResDstAlign,
+                                    IsVolatile);
+}
+
 static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
                              Value *CopyLen, Value *SetValue, Align DstAlign,
                              std::optional<uint64_t> AverageTripCount,
                              bool IsVolatile) {
+  // Currently no longer used for memset, only for memset.pattern.
+  // TODO: Update the memset.pattern lowering to also use the loop expansion
+  //       framework and remove this function.
   Type *TypeOfCopyLen = CopyLen->getType();
   BasicBlock *OrigBB = InsertBefore->getParent();
   Function *F = OrigBB->getParent();
@@ -1036,7 +1226,7 @@ static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
 
   OrigBB->getTerminator()->eraseFromParent();
 
-  unsigned PartSize = DL.getTypeStoreSize(SetValue->getType());
+  TypeSize PartSize = DL.getTypeStoreSize(SetValue->getType());
   Align PartAlign(commonAlignment(DstAlign, PartSize));
 
   IRBuilder<> LoopBuilder(LoopBB);
@@ -1080,32 +1270,32 @@ void llvm::expandMemCpyAsLoop(MemCpyInst *Memcpy,
   auto TripCount = getAverageMemOpLoopTripCount(*Memcpy);
   if (ConstantInt *CI = dyn_cast<ConstantInt>(Memcpy->getLength())) {
     createMemCpyLoopKnownSize(
-        /* InsertBefore */ Memcpy,
-        /* SrcAddr */ Memcpy->getRawSource(),
-        /* DstAddr */ Memcpy->getRawDest(),
-        /* CopyLen */ CI,
-        /* SrcAlign */ Memcpy->getSourceAlign().valueOrOne(),
-        /* DestAlign */ Memcpy->getDestAlign().valueOrOne(),
-        /* SrcIsVolatile */ Memcpy->isVolatile(),
-        /* DstIsVolatile */ Memcpy->isVolatile(),
-        /* CanOverlap */ CanOverlap,
-        /* TargetTransformInfo */ TTI,
-        /* AtomicElementSize */ std::nullopt,
-        /* AverageTripCount */ TripCount);
+        /*InsertBefore=*/Memcpy,
+        /*SrcAddr=*/Memcpy->getRawSource(),
+        /*DstAddr=*/Memcpy->getRawDest(),
+        /*CopyLen=*/CI,
+        /*SrcAlign=*/Memcpy->getSourceAlign().valueOrOne(),
+        /*DstAlign=*/Memcpy->getDestAlign().valueOrOne(),
+        /*SrcIsVolatile=*/Memcpy->isVolatile(),
+        /*DstIsVolatile=*/Memcpy->isVolatile(),
+        /*CanOverlap=*/CanOverlap,
+        /*TTI=*/TTI,
+        /*AtomicElementSize=*/std::nullopt,
+        /*AverageTripCount=*/TripCount);
   } else {
     createMemCpyLoopUnknownSize(
-        /* InsertBefore */ Memcpy,
-        /* SrcAddr */ Memcpy->getRawSource(),
-        /* DstAddr */ Memcpy->getRawDest(),
-        /* CopyLen */ Memcpy->getLength(),
-        /* SrcAlign */ Memcpy->getSourceAlign().valueOrOne(),
-        /* DestAlign */ Memcpy->getDestAlign().valueOrOne(),
-        /* SrcIsVolatile */ Memcpy->isVolatile(),
-        /* DstIsVolatile */ Memcpy->isVolatile(),
-        /* CanOverlap */ CanOverlap,
-        /* TargetTransformInfo */ TTI,
-        /* AtomicElementSize */ std::nullopt,
-        /* AverageTripCount */ TripCount);
+        /*InsertBefore=*/Memcpy,
+        /*SrcAddr=*/Memcpy->getRawSource(),
+        /*DstAddr=*/Memcpy->getRawDest(),
+        /*CopyLen=*/Memcpy->getLength(),
+        /*SrcAlign=*/Memcpy->getSourceAlign().valueOrOne(),
+        /*DstAlign=*/Memcpy->getDestAlign().valueOrOne(),
+        /*SrcIsVolatile=*/Memcpy->isVolatile(),
+        /*DstIsVolatile=*/Memcpy->isVolatile(),
+        /*CanOverlap=*/CanOverlap,
+        /*TTI=*/TTI,
+        /*AtomicElementSize=*/std::nullopt,
+        /*AverageTripCount=*/TripCount);
   }
 }
 
@@ -1167,24 +1357,45 @@ bool llvm::expandMemMoveAsLoop(MemMoveInst *Memmove,
   return true;
 }
 
-void llvm::expandMemSetAsLoop(MemSetInst *Memset) {
-  createMemSetLoop(/* InsertBefore */ Memset,
-                   /* DstAddr */ Memset->getRawDest(),
-                   /* CopyLen */ Memset->getLength(),
-                   /* SetValue */ Memset->getValue(),
-                   /* Alignment */ Memset->getDestAlign().valueOrOne(),
-                   /* AverageTripCount */ getAverageMemOpLoopTripCount(*Memset),
-                   /* IsVolatile */ Memset->isVolatile());
+void llvm::expandMemSetAsLoop(MemSetInst *Memset,
+                              const TargetTransformInfo *TTI) {
+  auto AverageTripCount = getAverageMemOpLoopTripCount(*Memset);
+  if (ConstantInt *CI = dyn_cast<ConstantInt>(Memset->getLength())) {
+    createMemSetLoopKnownSize(
+        /*InsertBefore=*/Memset,
+        /*DstAddr=*/Memset->getRawDest(),
+        /*Len=*/CI,
+        /*SetValue=*/Memset->getValue(),
+        /*DstAlign=*/Memset->getDestAlign().valueOrOne(),
+        /*IsVolatile=*/Memset->isVolatile(),
+        /*TTI=*/TTI,
+        /*AverageTripCount=*/AverageTripCount);
+  } else {
+    createMemSetLoopUnknownSize(
+        /*InsertBefore=*/Memset,
+        /*DstAddr=*/Memset->getRawDest(),
+        /*Len=*/Memset->getLength(),
+        /*SetValue=*/Memset->getValue(),
+        /*DstAlign=*/Memset->getDestAlign().valueOrOne(),
+        /*IsVolatile=*/Memset->isVolatile(),
+        /*TTI=*/TTI,
+        /*AverageTripCount=*/AverageTripCount);
+  }
+}
+
+void llvm::expandMemSetAsLoop(MemSetInst *MemSet,
+                              const TargetTransformInfo &TTI) {
+  expandMemSetAsLoop(MemSet, &TTI);
 }
 
 void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset) {
-  createMemSetLoop(/* InsertBefore=*/Memset,
-                   /* DstAddr=*/Memset->getRawDest(),
-                   /* CopyLen=*/Memset->getLength(),
-                   /* SetValue=*/Memset->getValue(),
-                   /* Alignment=*/Memset->getDestAlign().valueOrOne(),
-                   /* AverageTripCount */ getAverageMemOpLoopTripCount(*Memset),
-                   /* IsVolatile */ Memset->isVolatile());
+  createMemSetLoop(/*InsertBefore=*/Memset,
+                   /*DstAddr=*/Memset->getRawDest(),
+                   /*CopyLen=*/Memset->getLength(),
+                   /*SetValue=*/Memset->getValue(),
+                   /*DstAlign=*/Memset->getDestAlign().valueOrOne(),
+                   /*AverageTripCount=*/getAverageMemOpLoopTripCount(*Memset),
+                   /*IsVolatile=*/Memset->isVolatile());
 }
 
 void llvm::expandAtomicMemCpyAsLoop(AnyMemCpyInst *AtomicMemcpy,
@@ -1193,29 +1404,29 @@ void llvm::expandAtomicMemCpyAsLoop(AnyMemCpyInst *AtomicMemcpy,
   assert(AtomicMemcpy->isAtomic());
   if (ConstantInt *CI = dyn_cast<ConstantInt>(AtomicMemcpy->getLength())) {
     createMemCpyLoopKnownSize(
-        /* InsertBefore */ AtomicMemcpy,
-        /* SrcAddr */ AtomicMemcpy->getRawSource(),
-        /* DstAddr */ AtomicMemcpy->getRawDest(),
-        /* CopyLen */ CI,
-        /* SrcAlign */ AtomicMemcpy->getSourceAlign().valueOrOne(),
-        /* DestAlign */ AtomicMemcpy->getDestAlign().valueOrOne(),
-        /* SrcIsVolatile */ AtomicMemcpy->isVolatile(),
-        /* DstIsVolatile */ AtomicMemcpy->isVolatile(),
-        /* CanOverlap */ false, // SrcAddr & DstAddr may not overlap by spec.
-        /* TargetTransformInfo */ TTI,
-        /* AtomicElementSize */ AtomicMemcpy->getElementSizeInBytes());
+        /*InsertBefore=*/AtomicMemcpy,
+        /*SrcAddr=*/AtomicMemcpy->getRawSource(),
+        /*DstAddr=*/AtomicMemcpy->getRawDest(),
+        /*CopyLen=*/CI,
+        /*SrcAlign=*/AtomicMemcpy->getSourceAlign().valueOrOne(),
+        /*DstAlign=*/AtomicMemcpy->getDestAlign().valueOrOne(),
+        /*SrcIsVolatile=*/AtomicMemcpy->isVolatile(),
+        /*DstIsVolatile=*/AtomicMemcpy->isVolatile(),
+        /*CanOverlap=*/false, // SrcAddr & DstAddr may not overlap by spec.
+        /*TTI=*/TTI,
+        /*AtomicElementSize=*/AtomicMemcpy->getElementSizeInBytes());
   } else {
     createMemCpyLoopUnknownSize(
-        /* InsertBefore */ AtomicMemcpy,
-        /* SrcAddr */ AtomicMemcpy->getRawSource(),
-        /* DstAddr */ AtomicMemcpy->getRawDest(),
-        /* CopyLen */ AtomicMemcpy->getLength(),
-        /* SrcAlign */ AtomicMemcpy->getSourceAlign().valueOrOne(),
-        /* DestAlign */ AtomicMemcpy->getDestAlign().valueOrOne(),
-        /* SrcIsVolatile */ AtomicMemcpy->isVolatile(),
-        /* DstIsVolatile */ AtomicMemcpy->isVolatile(),
-        /* CanOverlap */ false, // SrcAddr & DstAddr may not overlap by spec.
-        /* TargetTransformInfo */ TTI,
-        /* AtomicElementSize */ AtomicMemcpy->getElementSizeInBytes());
+        /*InsertBefore=*/AtomicMemcpy,
+        /*SrcAddr=*/AtomicMemcpy->getRawSource(),
+        /*DstAddr=*/AtomicMemcpy->getRawDest(),
+        /*CopyLen=*/AtomicMemcpy->getLength(),
+        /*SrcAlign=*/AtomicMemcpy->getSourceAlign().valueOrOne(),
+        /*DstAlign=*/AtomicMemcpy->getDestAlign().valueOrOne(),
+        /*SrcIsVolatile=*/AtomicMemcpy->isVolatile(),
+        /*DstIsVolatile=*/AtomicMemcpy->isVolatile(),
+        /*CanOverlap=*/false, // SrcAddr & DstAddr may not overlap by spec.
+        /*TargetTransformInfo=*/TTI,
+        /*AtomicElementSize=*/AtomicMemcpy->getElementSizeInBytes());
   }
 }

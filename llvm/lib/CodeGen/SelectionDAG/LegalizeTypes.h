@@ -273,27 +273,6 @@ private:
     return DAG.getZeroExtendInReg(Op, dl, OldVT);
   }
 
-  /// Get a promoted operand and zero extend it to the final size.
-  SDValue VPSExtPromotedInteger(SDValue Op, SDValue Mask, SDValue EVL) {
-    EVT OldVT = Op.getValueType();
-    SDLoc dl(Op);
-    Op = GetPromotedInteger(Op);
-    // FIXME: Add VP_SIGN_EXTEND_INREG.
-    EVT VT = Op.getValueType();
-    unsigned BitsDiff = VT.getScalarSizeInBits() - OldVT.getScalarSizeInBits();
-    SDValue ShiftCst = DAG.getShiftAmountConstant(BitsDiff, VT, dl);
-    SDValue Shl = DAG.getNode(ISD::VP_SHL, dl, VT, Op, ShiftCst, Mask, EVL);
-    return DAG.getNode(ISD::VP_SRA, dl, VT, Shl, ShiftCst, Mask, EVL);
-  }
-
-  /// Get a promoted operand and zero extend it to the final size.
-  SDValue VPZExtPromotedInteger(SDValue Op, SDValue Mask, SDValue EVL) {
-    EVT OldVT = Op.getValueType();
-    SDLoc dl(Op);
-    Op = GetPromotedInteger(Op);
-    return DAG.getVPZeroExtendInReg(Op, Mask, EVL, dl, OldVT);
-  }
-
   // Promote the given operand V (vector or scalar) according to N's specific
   // reduction kind. N must be an integer VECREDUCE_* or VP_REDUCE_*. Returns
   // the nominal extension opcode (ISD::(ANY|ZERO|SIGN)_EXTEND) and the
@@ -389,6 +368,7 @@ private:
   // Integer Operand Promotion.
   bool PromoteIntegerOperand(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_ANY_EXTEND(SDNode *N);
+  SDValue PromoteIntOp_ANY_EXTEND_VECTOR_INREG(SDNode *N);
   SDValue PromoteIntOp_ATOMIC_STORE(AtomicSDNode *N);
   SDValue PromoteIntOp_BITCAST(SDNode *N);
   SDValue PromoteIntOp_BUILD_PAIR(SDNode *N);
@@ -1189,7 +1169,8 @@ private:
   // Generic Result Splitting.
   void SplitRes_MERGE_VALUES(SDNode *N, unsigned ResNo,
                              SDValue &Lo, SDValue &Hi);
-  void SplitVecRes_AssertZext  (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_AssertZext(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_AssertSext(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_ARITH_FENCE (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_Select      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_SELECT_CC   (SDNode *N, SDValue &Lo, SDValue &Hi);

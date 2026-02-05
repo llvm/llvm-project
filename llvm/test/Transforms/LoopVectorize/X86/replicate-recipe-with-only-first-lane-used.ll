@@ -207,7 +207,6 @@ define float @uniform_load_replicating_select(ptr %A, ptr %B, i64 %1) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = select i1 [[TMP10]], ptr [[A]], ptr [[TMP16]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = select i1 [[TMP10]], ptr [[A]], ptr [[TMP17]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = select i1 [[TMP10]], ptr [[A]], ptr [[TMP18]]
-; CHECK-NEXT:    [[TMP23:%.*]] = select i1 [[TMP10]], <4 x float> splat (float 1.000000e+01), <4 x float> splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP24:%.*]] = load float, ptr [[TMP19]], align 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = load float, ptr [[TMP20]], align 4
 ; CHECK-NEXT:    [[TMP26:%.*]] = load float, ptr [[TMP21]], align 4
@@ -216,12 +215,13 @@ define float @uniform_load_replicating_select(ptr %A, ptr %B, i64 %1) {
 ; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <4 x float> [[TMP28]], float [[TMP25]], i32 1
 ; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x float> [[TMP29]], float [[TMP26]], i32 2
 ; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <4 x float> [[TMP30]], float [[TMP27]], i32 3
-; CHECK-NEXT:    [[TMP32:%.*]] = fdiv <4 x float> splat (float 4.000000e+00), [[TMP31]]
-; CHECK-NEXT:    [[TMP33:%.*]] = call <4 x float> @llvm.pow.v4f32(<4 x float> [[TMP23]], <4 x float> [[TMP32]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP34]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP32:%.*]] = select i1 [[TMP10]], <4 x float> splat (float 1.000000e+01), <4 x float> splat (float 1.000000e+00)
+; CHECK-NEXT:    [[TMP36:%.*]] = fdiv <4 x float> splat (float 4.000000e+00), [[TMP31]]
+; CHECK-NEXT:    [[TMP33:%.*]] = call <4 x float> @llvm.pow.v4f32(<4 x float> [[TMP32]], <4 x float> [[TMP36]])
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <4 x float> [[TMP33]], i32 3
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP1]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]

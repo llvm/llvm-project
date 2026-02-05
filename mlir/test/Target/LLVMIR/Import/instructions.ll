@@ -713,6 +713,139 @@ define void @call_noreturn() {
 ; CHECK: llvm.func @f()
 declare void @f()
 
+; CHECK-LABEL: @call_returnstwice
+define void @call_returnstwice() {
+; CHECK: llvm.call @f() {returns_twice}
+  call void @f() returns_twice
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_hot
+define void @call_hot() {
+; CHECK: llvm.call @f() {hot}
+  call void @f() hot
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_cold
+define void @call_cold() {
+; CHECK: llvm.call @f() {cold}
+  call void @f() cold
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_noduplicate
+define void @call_noduplicate() {
+; CHECK: llvm.call @f() {noduplicate}
+  call void @f() noduplicate
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_no_caller_saved_registers
+define void @call_no_caller_saved_registers() {
+; CHECK: llvm.call @f() {no_caller_saved_registers}
+  call void @f() "no_caller_saved_registers"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_nocallback
+define void @call_nocallback() {
+; CHECK: llvm.call @f() {nocallback}
+  call void @f() nocallback
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f(i32)
+declare void @f(i32)
+
+; CHECK-LABEL: @call_modular_format
+define void @call_modular_format() {
+; CHECK: llvm.call @f({{.*}}) {modular_format = "ident,1,1,foo,bar"}
+  %arg = alloca i32
+  call void @f(i32 0) "modular-format" = "ident,1,1,foo,bar"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_nobuiltins_all
+define void @call_nobuiltins_all() {
+; CHECK: llvm.call @f() {nobuiltins = []}
+  call void @f() "no-builtins"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_nobuiltins_2
+define void @call_nobuiltins_2() {
+; CHECK: llvm.call @f() {nobuiltins = ["asdf", "ghij"]}
+  call void @f() "no-builtin-asdf" "no-builtin-ghij"
+  ret void
+}
+
+
+; // -----
+
+; CHECK: llvm.func @f(i32, i32)
+declare void @f(i32, i32)
+
+; CHECK-LABEL: @call_alloc_size_1
+define void @call_alloc_size_1() {
+; CHECK: llvm.call @f({{.*}}) {allocsize = array<i32: 0>}
+  call void @f(i32 0, i32 0) allocsize(0)
+  ret void
+}
+; // -----
+
+; CHECK: llvm.func @f(i32, i32)
+declare void @f(i32, i32)
+
+; CHECK-LABEL: @call_alloc_size_2
+define void @call_alloc_size_2() {
+; CHECK: llvm.call @f({{.*}}) {allocsize = array<i32: 1, 0>}
+  call void @f(i32 0, i32 0) allocsize(1, 0)
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
 ; CHECK-LABEL: @call_memory_effects
 define void @call_memory_effects() {
 ; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>}
