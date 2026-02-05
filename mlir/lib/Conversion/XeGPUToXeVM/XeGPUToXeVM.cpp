@@ -177,7 +177,6 @@ class CreateNdDescToXeVMPattern
   matchAndRewrite(xegpu::CreateNdDescOp op,
                   xegpu::CreateNdDescOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // CreateNdDescOp no longer supports offsets (version 1 removed)
     auto loc = op.getLoc();
     auto source = op.getSource();
     // Op is lowered to a code sequence that populates payload.

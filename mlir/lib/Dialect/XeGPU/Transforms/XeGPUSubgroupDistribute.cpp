@@ -251,7 +251,6 @@ struct CreateNdDescDistribution final : public gpu::WarpDistributionPattern {
     if (!layout)
       return rewriter.notifyMatchFailure(
           descOp, "the tensor descriptor lacks layout attribute");
-    // CreateNdDescOp no longer supports offsets (version 1 removed)
 
     SmallVector<size_t> newRetIndices;
     rewriter.setInsertionPoint(warpOp);
