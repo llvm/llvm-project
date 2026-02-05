@@ -469,11 +469,11 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
                                              "no-builtins"));
 
-      moduleTranslation.convertFunctionArrayAttr(
+      moduleTranslation.convertFunctionAttrCollection(
           noBuiltins, call, ModuleTranslation::convertNoBuiltin);
     }
 
-    moduleTranslation.convertFunctionArrayAttr(
+    moduleTranslation.convertFunctionAttrCollection(
         callOp.getDefaultFuncAttrsAttr(), call,
         ModuleTranslation::convertDefaultFuncAttr);
 

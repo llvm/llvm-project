@@ -1727,12 +1727,12 @@ static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
     if (noBuiltins.empty())
       llvmFunc->addFnAttr("no-builtins");
 
-    mod.convertFunctionArrayAttr(noBuiltins, llvmFunc,
-                                 ModuleTranslation::convertNoBuiltin);
+    mod.convertFunctionAttrCollection(noBuiltins, llvmFunc,
+                                      ModuleTranslation::convertNoBuiltin);
   }
 
-  mod.convertFunctionArrayAttr(func.getDefaultFuncAttrsAttr(), llvmFunc,
-                               ModuleTranslation::convertDefaultFuncAttr);
+  mod.convertFunctionAttrCollection(func.getDefaultFuncAttrsAttr(), llvmFunc,
+                                    ModuleTranslation::convertDefaultFuncAttr);
 
   if (llvm::Attribute attr = mod.convertAllocsizeAttr(func.getAllocsizeAttr());
       attr.isValid())

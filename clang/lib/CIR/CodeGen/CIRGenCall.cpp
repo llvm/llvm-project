@@ -161,13 +161,13 @@ static void addDenormalModeAttrs(llvm::DenormalMode fpDenormalMode,
 /// -mlink-builtin-bitcode and should not simply overwrite any existing
 /// attributes in the linked library.
 static void
-addMergeableDefaultFunctionAttributes(const CodeGenOptions &CodeGenOpts,
+addMergeableDefaultFunctionAttributes(const CodeGenOptions &codeGenOpts,
                                       mlir::NamedAttrList &attrs) {
-  addDenormalModeAttrs(CodeGenOpts.FPDenormalMode, CodeGenOpts.FP32DenormalMode,
+  addDenormalModeAttrs(codeGenOpts.FPDenormalMode, codeGenOpts.FP32DenormalMode,
                        attrs);
 }
 
-llvm::StringLiteral
+static llvm::StringLiteral
 getZeroCallUsedRegsKindStr(llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind k) {
   switch (k) {
   case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Skip:

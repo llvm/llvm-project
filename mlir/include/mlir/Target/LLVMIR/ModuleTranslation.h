@@ -358,15 +358,15 @@ public:
   convertDefaultFuncAttr(llvm::LLVMContext &ctx,
                          mlir::NamedAttribute namedAttr);
 
-  /// A template that takes an ArrayAttr, converts it via a user provided
-  /// callback, then adds each element to as function attributes to the provided
-  /// operation.
-  template <typename ArrayTy, typename Operation, typename Converter>
-  void convertFunctionArrayAttr(ArrayTy arrayAttr, Operation *op,
-                                const Converter &conv) {
-    if (!arrayAttr)
+  /// A template that takes a collection-like attribute, and converts it via a
+  /// user provided callback, then adds each element as function attributes to
+  /// the provided operation.
+  template <typename AttrsTy, typename Operation, typename Converter>
+  void convertFunctionAttrCollection(AttrsTy attrs, Operation *op,
+                                     const Converter &conv) {
+    if (!attrs)
       return;
-    for (auto elt : arrayAttr) {
+    for (auto elt : attrs) {
       std::optional<llvm::Attribute> result = conv(getLLVMContext(), elt);
       if (result)
         op->addFnAttr(*result);
