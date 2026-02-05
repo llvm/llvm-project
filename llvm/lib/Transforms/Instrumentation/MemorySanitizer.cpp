@@ -5134,8 +5134,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
 
     // All-or-nothing shadow
-    DataShadow = IRB.CreateSExt(IRB.CreateICmpNE(DataShadow, getCleanShadow(DataShadow)),
-                             DataShadow->getType());
+    DataShadow =
+        IRB.CreateSExt(IRB.CreateICmpNE(DataShadow, getCleanShadow(DataShadow)),
+                       DataShadow->getType());
 
     Value *WriteThruShadow = getShadow(WriteThru);
 
@@ -6633,7 +6634,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512fp16_mask_rsqrt_ph_512:
     case Intrinsic::x86_avx512fp16_mask_rsqrt_ph_256:
     case Intrinsic::x86_avx512fp16_mask_rsqrt_ph_128:
-      handleAVX512VectorGenericMaskedFP(I, /*DataIndices=*/{0}, /*WriteThruIndex=*/1,
+      handleAVX512VectorGenericMaskedFP(I, /*DataIndices=*/{0},
+                                        /*WriteThruIndex=*/1,
                                         /*MaskIndex=*/2);
       break;
 
@@ -6685,7 +6687,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512fp16_mask_rcp_ph_512:
     case Intrinsic::x86_avx512fp16_mask_rcp_ph_256:
     case Intrinsic::x86_avx512fp16_mask_rcp_ph_128:
-      handleAVX512VectorGenericMaskedFP(I, /*DataIndices=*/{0}, /*WriteThruIndex=*/1,
+      handleAVX512VectorGenericMaskedFP(I, /*DataIndices=*/{0},
+                                        /*WriteThruIndex=*/1,
                                         /*MaskIndex=*/2);
       break;
 
@@ -6741,7 +6744,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx10_mask_rndscale_bf16_512:
     case Intrinsic::x86_avx10_mask_rndscale_bf16_256:
     case Intrinsic::x86_avx10_mask_rndscale_bf16_128:
-      handleAVX512VectorGenericMaskedFP(I, /*DataIndices=*/{0}, /*WriteThruIndex=*/2,
+      handleAVX512VectorGenericMaskedFP(I, /*DataIndices=*/{0},
+                                        /*WriteThruIndex=*/2,
                                         /*MaskIndex=*/3);
       break;
 
