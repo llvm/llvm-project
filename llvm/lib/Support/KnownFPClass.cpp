@@ -677,9 +677,12 @@ KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,
   if (ExponentKnownBits.isZero()) {
     // powi(QNaN, 0) returns 1.0, and powi(SNaN, 0) may non-deterministically
     // return 1.0 or a NaN.
-    FPClassTest PossibleVals =
-        KnownSrc.isKnownNever(fcSNan) ? fcPosNormal | fcNan : fcPosNormal;
-    Known.knownNot(~PossibleVals);
+    if (KnownSrc.isKnownNever(fcSNan)) {
+      Known.knownNot(~fcPosNormal);
+      return Known;
+    }
+
+    Known.knownNot(~(fcPosNormal | fcNan));
     return Known;
   }
 
