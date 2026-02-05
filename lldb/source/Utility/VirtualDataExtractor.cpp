@@ -88,7 +88,7 @@ const void *VirtualDataExtractor::GetData(offset_t *offset_ptr,
 
 offset_t VirtualDataExtractor::SetData(const void *bytes, lldb::offset_t length,
                                        lldb::ByteOrder byte_order) {
-  // Invoked from the base class ctor
+  // Invoked from the base class ctor.
   if (!m_data_sp || m_start == nullptr)
     return DataExtractor::SetData(bytes, length, byte_order);
 
