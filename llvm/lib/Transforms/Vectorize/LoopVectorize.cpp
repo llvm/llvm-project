@@ -7417,6 +7417,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // compactness.
   attachRuntimeChecks(BestVPlan, ILV.RTChecks, HasBranchWeights);
 
+  // Attach runtime checks for speculative loads in early exit loops.
+  VPlanTransforms::attachSpeculativeLoadChecks(BestVPlan, BestVF, PSE, OrigLoop,
+                                               HasBranchWeights);
+
   // Retrieving VectorPH now when it's easier while VPlan still has Regions.
   VPBasicBlock *VectorPH = cast<VPBasicBlock>(BestVPlan.getVectorPreheader());
 
@@ -8163,7 +8167,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
-  VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit());
+  VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit(),
+                                    OrigLoop, PSE, *DT,
+                                    Legal->getAssumptionCache());
   VPlanTransforms::addMiddleCheck(*Plan, RequiresScalarEpilogueCheck,
                                   CM.foldTailByMasking());
 
@@ -8257,8 +8263,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     // Convert input VPInstructions to widened recipes.
     for (VPRecipeBase &R : make_early_inc_range(
              make_range(VPBB->getFirstNonPhi(), VPBB->end()))) {
-      // Skip recipes that do not need transforming.
-      if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe>(&R))
+      // Skip recipes that do not need transforming. VPWidenIntrinsicRecipe
+      // is added for speculative loads in early exit loops.
+      if (isa<VPWidenCanonicalIVRecipe, VPBlendRecipe, VPReductionRecipe,
+              VPWidenIntrinsicRecipe>(&R))
         continue;
       auto *VPI = cast<VPInstruction>(&R);
       if (!VPI->getUnderlyingValue())
@@ -8428,7 +8436,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
       SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
       /*AllowReordering=*/false);
   VPlanTransforms::handleEarlyExits(*Plan,
-                                    /*HasUncountableExit*/ false);
+                                    /*HasUncountableExit*/ false, OrigLoop, PSE,
+                                    *DT, Legal->getAssumptionCache());
   VPlanTransforms::addMiddleCheck(*Plan, /*RequiresScalarEpilogue*/ true,
                                   /*TailFolded*/ false);
 
@@ -9516,13 +9525,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                  "MultipleUncountableEarlyExits", ORE, L);
       return false;
     }
-  }
-
-  if (!LVL.getPotentiallyFaultingLoads().empty()) {
-    reportVectorizationFailure("Auto-vectorization of loops with potentially "
-                               "faulting load is not supported",
-                               "PotentiallyFaultingLoadsNotSupported", ORE, L);
-    return false;
   }
 
   // Entrance to the VPlan-native vectorization path. Outer loops are processed

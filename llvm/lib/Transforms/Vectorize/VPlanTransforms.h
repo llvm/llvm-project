@@ -134,9 +134,13 @@ struct VPlanTransforms {
       const DenseSet<BasicBlock *> &BlocksNeedingPredication,
       ElementCount MinVF);
 
-  /// Update \p Plan to account for all early exits.
-  LLVM_ABI_FOR_TEST static void handleEarlyExits(VPlan &Plan,
-                                                 bool HasUncountableExit);
+  /// Update \p Plan to account for all early exits. If \p HasUncountableExit
+  /// is true, any loop load that's not provably dereferenceable will be
+  /// converted to a speculative load intrinsic.
+  LLVM_ABI_FOR_TEST static void
+  handleEarlyExits(VPlan &Plan, bool HasUncountableExit, Loop *TheLoop,
+                   PredicatedScalarEvolution &PSE, DominatorTree &DT,
+                   AssumptionCache *AC);
 
   /// If a check is needed to guard executing the scalar epilogue loop, it will
   /// be added to the middle block.
@@ -169,6 +173,13 @@ struct VPlanTransforms {
   /// condition.
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
+
+  /// Scan the plan for speculative load intrinsics and attach runtime checks
+  /// using VPInstruction::CanLoadSpeculatively to verify the loads are safe. If
+  /// checks fail, the plan bypasses to the scalar loop.
+  static void attachSpeculativeLoadChecks(VPlan &Plan, ElementCount VF,
+                                          PredicatedScalarEvolution &PSE,
+                                          Loop *TheLoop, bool AddBranchWeights);
 
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
@@ -305,13 +316,15 @@ struct VPlanTransforms {
   static void removeDeadRecipes(VPlan &Plan);
 
   /// Update \p Plan to account for the uncountable early exit from \p
-  /// EarlyExitingVPBB to \p EarlyExitVPBB by introducing a BranchOnTwoConds
-  /// terminator in the latch that handles the early exit and the latch exit
-  /// condition.
-  static void handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
-                                         VPBasicBlock *EarlyExitVPBB,
-                                         VPlan &Plan, VPBasicBlock *HeaderVPBB,
-                                         VPBasicBlock *LatchVPBB);
+  /// EarlyExitingVPBB to \p EarlyExitVPBB by updating the latch's exit
+  /// condition to include the early exit condition and splitting the original
+  /// middle block to branch to the early exit block conditionally according to
+  /// the early exit condition. Any load in the loop that is not provably
+  /// dereferenceable will be converted to a speculative load intrinsic.
+  static void handleUncountableEarlyExit(
+      VPBasicBlock *EarlyExitingVPBB, VPBasicBlock *EarlyExitVPBB, VPlan &Plan,
+      VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB, Loop *TheLoop,
+      PredicatedScalarEvolution &PSE, DominatorTree &DT, AssumptionCache *AC);
 
   /// Replaces the exit condition from
   ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)

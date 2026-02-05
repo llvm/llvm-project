@@ -102,6 +102,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     assert(inferScalarType(R->getOperand(0)) ==
                inferScalarType(R->getOperand(1)) &&
            "different types inferred for different operands");
+    [[fallthrough]];
+  case VPInstruction::CanLoadSpeculatively:
     return IntegerType::get(Ctx, 1);
   case VPInstruction::ComputeAnyOfResult:
     return inferScalarType(R->getOperand(1));

@@ -46,7 +46,14 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   if (U && !isa<Instruction>(U->getValue()))
     return Plan.getOrAddLiveIn(U->getValue());
   auto *Expanded = new VPExpandSCEVRecipe(Expr);
-  Plan.getEntry()->appendRecipe(Expanded);
+  // Insert the VPExpandSCEVRecipe at the correct position in the entry block:
+  // after VPIRInstructions and existing VPExpandSCEVRecipes, but before other
+  // recipes. This ensures expandSCEVs can find and process all SCEV recipes.
+  VPBasicBlock *Entry = Plan.getEntry();
+  auto InsertPt = llvm::find_if_not(*Entry, [](VPRecipeBase &R) {
+    return isa<VPIRInstruction, VPIRPhi, VPExpandSCEVRecipe>(&R);
+  });
+  Expanded->insertBefore(*Entry, InsertPt);
   return Expanded;
 }
 
@@ -164,6 +171,9 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
   };
 
   VPValue *LHSVal, *RHSVal;
+  // Broadcast just replicates a scalar, so the SCEV is the same as its operand.
+  if (match(V, m_Broadcast(m_VPValue(LHSVal))))
+    return getSCEVExprForVPValue(LHSVal, PSE, L);
   if (match(V, m_Add(m_VPValue(LHSVal), m_VPValue(RHSVal))))
     return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
       return SE.getAddExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
@@ -554,6 +564,13 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
         return std::nullopt;
 
       Recipes.push_back(Load);
+      Recipes.push_back(GEP->getDefiningRecipe());
+      GEPs.push_back(GEP->getDefiningRecipe());
+    } else if (match(V, m_Intrinsic<Intrinsic::speculative_load>(
+                            m_GetElementPtr(m_LiveIn(), m_VPValue())))) {
+      // Handle speculative loads created for early-exit vectorization.
+      VPValue *GEP = V->getDefiningRecipe()->getOperand(0);
+      Recipes.push_back(V->getDefiningRecipe());
       Recipes.push_back(GEP->getDefiningRecipe());
       GEPs.push_back(GEP->getDefiningRecipe());
     } else

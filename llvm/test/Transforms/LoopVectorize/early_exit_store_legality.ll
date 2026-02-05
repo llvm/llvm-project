@@ -135,7 +135,7 @@ exit:
 
 define void @loop_contains_store_unsafe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(80) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_unsafe_dependency'
-; CHECK:       LV: Not vectorizing: Loop may fault.
+; CHECK:       LV: Not vectorizing: Cannot determine whether critical uncountable exit load address does not alias with a memory write.
 entry:
   %unknown.offset = call i64 @get_an_unknown_offset()
   %unknown.cmp = icmp ult i64 %unknown.offset, 20
@@ -167,7 +167,7 @@ exit:
 
 define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly %pred, i32 %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_assumed_bounds'
-; CHECK:       LV: Not vectorizing: Loop may fault.
+; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
 entry:
   %n_bytes = mul nuw nsw i32 %n, 2
   call void @llvm.assume(i1 true) [ "align"(ptr %pred, i64 2), "dereferenceable"(ptr %pred, i32 %n_bytes) ]
@@ -223,7 +223,7 @@ exit:
 
 define void @loop_contains_store_unknown_bounds(ptr align 2 dereferenceable(100) noalias %array, ptr align 2 dereferenceable(100) readonly %pred, i64 %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_unknown_bounds'
-; CHECK:       LV: Not vectorizing: Loop may fault.
+; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
 entry:
   br label %for.body
 
