@@ -14,12 +14,14 @@
 
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Module.h"
 
 #define DEBUG_TYPE "riscv-indirect-branch-tracking"
 #define PASS_NAME "RISC-V Indirect Branch Tracking"
@@ -77,7 +79,8 @@ static bool isCallReturnTwice(const MachineOperand &MOp) {
 bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
   const auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
-  if (!Subtarget.hasStdExtZicfilp())
+
+  if (!MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch())
     return false;
 
   uint32_t FixedLabel = 0;
