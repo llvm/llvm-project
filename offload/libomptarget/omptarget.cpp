@@ -1246,11 +1246,13 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         void *DeletePtr = DeleteEntry.first;
         int64_t DeleteSize = DeleteEntry.second;
         if (HstPtrBegin >= DeletePtr &&
-            HstPtrBegin < static_cast<void *>(static_cast<char *>(DeletePtr) + DeleteSize)) {
+            HstPtrBegin < static_cast<void *>(static_cast<char *>(DeletePtr) +
+                                              DeleteSize)) {
           ODBG(ODT_Mapping)
               << "Pointer HstPtr=" << HstPtrBegin
               << " falls within a range previously marked for deletion ["
-              << DeletePtr << ", " << static_cast<char *>(DeletePtr) + DeleteSize
+              << DeletePtr << ", "
+              << static_cast<char *>(DeletePtr) + DeleteSize
               << ") with size=" << DeleteSize;
           return true;
         }
@@ -1280,8 +1282,9 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                                  TPR.getEntry());
       if (Ret != OFFLOAD_SUCCESS)
         return OFFLOAD_FAIL;
-    } else if (!FromCopyBackAlreadyDone && (IsMapFromOnNonHostNonZeroData &&
-               !IsLastOrHasAlwaysOrWasForceDeleted())) {
+    } else if (!FromCopyBackAlreadyDone &&
+               (IsMapFromOnNonHostNonZeroData &&
+                !IsLastOrHasAlwaysOrWasForceDeleted())) {
       // We can have cases like the following:
       //   p1 = p2 = &x;
       //  ... map(storage: p1[:]) map(from: p2[1:1])
@@ -1327,16 +1330,18 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
           ODBG(ODT_Mapping)
               << "Found skipped FROM entry: HstPtr=" << FromBeginPtr
               << " size=" << FromDataSize << " within region being deleted ["
-              << reinterpret_cast<void*>(DeleteBeginPtrInt) << ", " << reinterpret_cast<void*>(DeleteEndPtrInt) << ")";
+              << reinterpret_cast<void *>(DeleteBeginPtrInt) << ", "
+              << reinterpret_cast<void *>(DeleteEndPtrInt) << ")";
 
           // Calculate offset within the target pointer
           int64_t Offset = FromBeginPtrInt - DeleteBeginPtrInt;
-          void *FromTgtBeginPtr = static_cast<void *>(static_cast<char *>(TgtPtrBegin) + Offset);
+          void *FromTgtBeginPtr =
+              static_cast<void *>(static_cast<char *>(TgtPtrBegin) + Offset);
 
           // Perform the retrieval for this skipped entry
-          int Ret =
-              PerformFromRetrieval(reinterpret_cast<void *>(FromBeginPtrInt), FromTgtBeginPtr,
-                                   FromDataSize, TPR.getEntry());
+          int Ret = PerformFromRetrieval(
+              reinterpret_cast<void *>(FromBeginPtrInt), FromTgtBeginPtr,
+              FromDataSize, TPR.getEntry());
           if (Ret != OFFLOAD_SUCCESS)
             return OFFLOAD_FAIL;
 

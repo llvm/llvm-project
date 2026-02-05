@@ -11,9 +11,8 @@
 // However, there should be a "from" transfer at the end of (2) because of the
 // "delete" on the mapper.
 
-// FIXME: This currently fails, but should start passing once ATTACH-style maps are
-// enabled for mappers (#166874).
-// UNSUPPORTED: true
+// FIXME: This currently fails, but should start passing once ATTACH-style maps
+// are enabled for mappers (#166874). UNSUPPORTED: true
 
 #include <stdio.h>
 
@@ -42,8 +41,8 @@ int main() {
     }
     printf("%d\n", s1.p[1]); // CHECK: 222
   }
-// clang-format off
-// DEBUG: omptarget --> Found skipped FROM entry: HstPtr=0x[[#%x,HOST_ADDR:]] size=[[#%u,SIZE:]] within region being deleted
-// DEBUG: omptarget --> Moving [[#SIZE]] bytes (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDR]])
-// clang-format on
+  // clang-format off
+  // DEBUG: omptarget --> Found skipped FROM entry: HstPtr=0x[[#%x,HOST_ADDR:]] size=[[#%u,SIZE:]] within region being deleted
+  // DEBUG: omptarget --> Moving [[#SIZE]] bytes (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDR]])
+  // clang-format on
 }

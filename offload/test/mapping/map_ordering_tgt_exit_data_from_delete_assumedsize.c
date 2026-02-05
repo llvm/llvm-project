@@ -29,11 +29,13 @@ int main() {
       printf("In tgt: %d\n", x[1]); // CHECK-NOT: In tgt: 111
       x[1] = 222;
     }
-// clang-format off
-// DEBUG: omptarget --> Pointer HstPtr=0x[[#%x,HOST_ADDR:]] falls within a range previously marked for deletion
-// DEBUG: omptarget --> Moving {{.*}} bytes (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDR]])
-// clang-format on
+
 #pragma omp target exit data map(from : p2x[0]) map(delete : p1x[ : ])
+    // clang-format off
+    // DEBUG: omptarget --> Pointer HstPtr=0x[[#%x,HOST_ADDR:]] falls within a range previously marked for deletion
+    // DEBUG: omptarget --> Moving {{.*}} bytes (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDR]])
+    // clang-format on
+
     printf("%d\n", x[1]); // CHECK: 222
   }
 }
