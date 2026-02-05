@@ -956,11 +956,8 @@ void ClangUserExpression::FixupParseErrorDiagnostics(
         switch (diag->GetCompilerID()) {
         case clang::diag::err_member_function_call_bad_cvr:
           return true;
-        case clang::diag::err_typecheck_assign_const:
-          // FIXME: can we split this particular error into a separate
-          // diagnostic ID so we don't need to scan the error message?
-          return diag->GetDetail().message.find(
-                     "within const member function") != std::string::npos;
+        case clang::diag::err_typecheck_assign_const_method:
+          return true;
         default:
           return false;
         }
