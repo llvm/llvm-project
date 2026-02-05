@@ -67,9 +67,8 @@ class InstExecutor : public InstVisitor<InstExecutor, bool> {
 
   void reportImmediateUB(StringRef Msg) {
     // Check if we have already reported an immediate UB.
-    if (!Status) {
+    if (!Status)
       return;
-    }
     Status = false;
     // TODO: Provide stack trace information.
     Handler.onImmediateUB(Msg);
