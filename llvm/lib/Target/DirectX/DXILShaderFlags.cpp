@@ -104,6 +104,13 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   }
 }
 
+static bool isOptimizationDisabled(const Module &M) {
+  const StringRef Key = "dx.disable_optimizations";
+  if (auto *Flag = mdconst::extract_or_null<ConstantInt>(M.getModuleFlag(Key)))
+    return Flag->getValue().getBoolValue();
+  return false;
+}
+
 // Checks to see if the status bit from a load with status
 // instruction is ever extracted. If it is, the module needs
 // to have the TiledResources shader flag set.
@@ -249,18 +256,7 @@ ModuleShaderFlags::gatherGlobalModuleFlags(const Module &M,
 
   ComputedShaderFlags CSF;
 
-  // Set DisableOptimizations flag based on the presence of OptimizeNone
-  // attribute of entry functions.
-  if (MMDI.EntryPropertyVec.size() > 0) {
-    CSF.DisableOptimizations = MMDI.EntryPropertyVec[0].Entry->hasFnAttribute(
-        llvm::Attribute::OptimizeNone);
-    // Ensure all entry functions have the same optimization attribute
-    for (const auto &EntryFunProps : MMDI.EntryPropertyVec)
-      if (CSF.DisableOptimizations !=
-          EntryFunProps.Entry->hasFnAttribute(llvm::Attribute::OptimizeNone))
-        EntryFunProps.Entry->getContext().diagnose(DiagnosticInfoUnsupported(
-            *(EntryFunProps.Entry), "Inconsistent optnone attribute "));
-  }
+  CSF.DisableOptimizations = isOptimizationDisabled(M);
 
   CSF.UAVsAtEveryStage = hasUAVsAtEveryStage(DRM, MMDI);
 
