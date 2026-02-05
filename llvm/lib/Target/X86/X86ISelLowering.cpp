@@ -18347,6 +18347,16 @@ static SDValue lower1BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
           DAG.getVectorShuffle(OpVT, DL, Op1, DAG.getUNDEF(OpVT), Mask), CC);
   }
 
+  // If this is a sequential shuffle with zero'd elements - then lower to AND.
+  bool IsBlendWithZero = all_of(enumerate(Mask), [&Zeroable](auto M) {
+    return Zeroable[M.index()] || (M.value() == (int)M.index());
+  });
+  if (IsBlendWithZero) {
+    EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
+    SDValue BlendMask = DAG.getConstant(~Zeroable, DL, IntVT);
+    return DAG.getNode(ISD::AND, DL, VT, V1, DAG.getBitcast(VT, BlendMask));
+  }
+
   MVT ExtVT;
   switch (VT.SimpleTy) {
   default:
@@ -36586,7 +36596,6 @@ X86TargetLowering::EmitVAARGWithCustomInserter(MachineInstr &MI,
       // Zero-extend the offset
       Register OffsetReg64 = MRI.createVirtualRegister(AddrRegClass);
       BuildMI(offsetMBB, MIMD, TII->get(X86::SUBREG_TO_REG), OffsetReg64)
-          .addImm(0)
           .addReg(OffsetReg)
           .addImm(X86::sub_32bit);
 
@@ -37849,9 +37858,8 @@ X86TargetLowering::emitLongJmpShadowStackFix(MachineInstr &MI,
   if (PVT == MVT::i64) {
     Register TmpZReg = MRI.createVirtualRegister(PtrRC);
     BuildMI(checkSspMBB, MIMD, TII->get(X86::SUBREG_TO_REG), TmpZReg)
-      .addImm(0)
-      .addReg(ZReg)
-      .addImm(X86::sub_32bit);
+        .addReg(ZReg)
+        .addImm(X86::sub_32bit);
     ZReg = TmpZReg;
   }
 
@@ -38225,7 +38233,6 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
         .addReg(0);
     // movzx IReg64, IReg
     BuildMI(DispContBB, MIMD, TII->get(TargetOpcode::SUBREG_TO_REG), IReg64)
-        .addImm(0)
         .addReg(IReg)
         .addImm(X86::sub_32bit);
 
