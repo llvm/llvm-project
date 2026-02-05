@@ -79,12 +79,9 @@ __attribute__((noinline)) void test_nested_member_plain_deref_ptr(struct Contain
 
 // ============================================================================
 // ARRAY BOUNDS CHECKING
-// Tests for array out-of-bounds access, including past-the-end pointer cases.
-// Currently, bounds checking triggers for invalid indices but the planned fix
-// will also trigger when indexing generates a past-the-end pointer.
 // ============================================================================
 
-// --- In-bounds access (index 0 of array[4]) - should NOT trigger bounds error ---
+// --- In-bounds access ---
 
 // SHARED-LABEL: define {{[^@]*}}@test_bounds_inbounds_idx0
 // SHARED: call void @llvm.memcpy.p0.p0.i64
@@ -92,17 +89,13 @@ __attribute__((noinline)) void test_bounds_inbounds_idx0(struct Small *dest, str
   *dest = arr[0];
 }
 
-// --- In-bounds access (index 3, last valid element of array[4]) ---
-
 // SHARED-LABEL: define {{[^@]*}}@test_bounds_inbounds_idx3
 // SHARED: call void @llvm.memcpy.p0.p0.i64
 __attribute__((noinline)) void test_bounds_inbounds_idx3(struct Small *dest, struct Small arr[4]) {
   *dest = arr[3];
 }
 
-// --- Out-of-bounds access (index 4, past-the-end of array[4]) ---
-// This generates the past-the-end pointer. Currently no bounds check is emitted
-// for this case; the planned fix will add checking for past-the-end access.
+// --- Past-the-end and out-of-bounds access ---
 
 // SHARED-LABEL: define {{[^@]*}}@test_bounds_oob_past_end
 // SHARED: call void @llvm.memcpy.p0.p0.i64
@@ -110,15 +103,13 @@ __attribute__((noinline)) void test_bounds_oob_past_end(struct Small *dest, stru
   *dest = arr[4];
 }
 
-// --- Out-of-bounds access (index 5, clearly beyond array[4]) ---
-
 // SHARED-LABEL: define {{[^@]*}}@test_bounds_oob_beyond
 // SHARED: call void @llvm.memcpy.p0.p0.i64
 __attribute__((noinline)) void test_bounds_oob_beyond(struct Small *dest, struct Small arr[4]) {
   *dest = arr[5];
 }
 
-// --- Dynamic index bounds checking ---
+// --- Dynamic index ---
 
 // SHARED-LABEL: define {{[^@]*}}@test_bounds_dynamic_idx
 // SHARED: call void @llvm.memcpy.p0.p0.i64
@@ -126,7 +117,7 @@ __attribute__((noinline)) void test_bounds_dynamic_idx(struct Small *dest, struc
   *dest = arr[idx];
 }
 
-// --- Bounds checking with initialization ---
+// --- Past-the-end in various contexts ---
 
 // SHARED-LABEL: define {{[^@]*}}@test_bounds_init_past_end
 // SHARED: call void @llvm.memcpy.p0.p0.i64
@@ -134,23 +125,17 @@ __attribute__((noinline)) void test_bounds_init_past_end(struct Small arr[4]) {
   struct Small a = arr[4];
 }
 
-// --- Bounds checking with nested member assignment ---
-
 // SHARED-LABEL: define {{[^@]*}}@test_bounds_nested_past_end
 // SHARED: call void @llvm.memcpy.p0.p0.i64
 __attribute__((noinline)) void test_bounds_nested_past_end(struct Container *c, struct Small arr[4]) {
   c->inner = arr[4];
 }
 
-// --- Bounds checking in initializer list ---
-
 // SHARED-LABEL: define {{[^@]*}}@test_bounds_init_list_past_end
 // SHARED: call void @llvm.memcpy.p0.p0.i64
 __attribute__((noinline)) void test_bounds_init_list_past_end(struct Small arr[4]) {
   struct Small a[] = {arr[4]};
 }
-
-// --- Bounds checking with variadic function ---
 
 // SHARED-LABEL: define {{[^@]*}}@test_bounds_variadic_past_end
 __attribute__((noinline)) void test_bounds_variadic_past_end(struct Small arr[4]) {
@@ -362,7 +347,7 @@ __attribute__((noinline)) void test_init_list_designate_plain_deref_ptr(struct S
 #endif // !__cplusplus
 
 // ============================================================================
-// C++ ONLY: Additional initialization and operation forms
+// C++ ONLY
 // ============================================================================
 
 #ifdef __cplusplus
@@ -497,7 +482,7 @@ __attribute__((noinline)) void test_cxx_member_init_plain_deref_ptr(struct Small
   (void)new SmallWrapper{*ap};
 }
 
-// --- VARIADIC with plain type ---
+// --- Variadic ---
 
 // CXX-LABEL: define {{[^@]*}}@test_cxx_variadic_plain_arr_idx
 __attribute__((noinline)) void test_cxx_variadic_plain_arr_idx(struct Small arr[4]) {
@@ -509,7 +494,7 @@ __attribute__((noinline)) void test_cxx_variadic_plain_deref_ptr(struct Small *a
   variadic_func(0, *ap);
 }
 
-// --- Explicit operator= calls ---
+// --- Explicit operator= ---
 
 // CXX-LABEL: define {{[^@]*}}@test_cxx_operator_assign_lhs_arr_idx
 // CXX: call void @llvm.memcpy.p0.p0.i64
@@ -537,7 +522,7 @@ __attribute__((noinline)) void test_cxx_operator_assign_obj_deref_ptr(struct Sma
   a.operator=(*ap);
 }
 
-// --- C++ bounds checking with past-the-end access ---
+// --- Past-the-end access ---
 
 // CXX-LABEL: define {{[^@]*}}@test_cxx_bounds_init_direct_past_end
 // CXX: call void @llvm.memcpy.p0.p0.i64
@@ -560,8 +545,7 @@ __attribute__((noinline)) void test_cxx_bounds_new_past_end(struct Small arr[4])
 
 } // extern "C"
 
-// --- Virtual base initialization (cannot be extern "C") ---
-// Use a simple struct to ensure memcpy is used for the copy
+// --- Virtual base initialization (can't be extern "C") ---
 
 struct VirtualBaseSimple {
   int x;
@@ -575,9 +559,8 @@ struct DerivedVirtualPtrSimple : virtual VirtualBaseSimple {
   __attribute__((noinline)) DerivedVirtualPtrSimple(VirtualBaseSimple *ap) : VirtualBaseSimple(*ap) {}
 };
 
-// Force instantiation of constructors
-// The constructors are emitted inline after their first use, so we check them
-// in the order they appear: ArrSimple constructor, then wrapper for Ptr, then PtrSimple constructor
+// Constructors are emitted after their first use, so we check them
+// in order: ArrSimple ctor, then PtrSimple ctor.
 
 extern "C" {
 
@@ -588,7 +571,6 @@ __attribute__((noinline)) void test_cxx_virtual_base_init_arr_idx(VirtualBaseSim
 
 }
 
-// Check the first constructor (DerivedVirtualArrSimple) - emitted after test_cxx_virtual_base_init_arr_idx
 // CXX-LABEL: define {{[^@]*}}@_ZN23DerivedVirtualArrSimpleC1EP17VirtualBaseSimple
 // CXX: call void @llvm.memcpy.p0.p0.i64
 
@@ -601,7 +583,6 @@ __attribute__((noinline)) void test_cxx_virtual_base_init_deref_ptr(VirtualBaseS
 
 }
 
-// Check the second constructor (DerivedVirtualPtrSimple) - emitted after test_cxx_virtual_base_init_deref_ptr
 // CXX-LABEL: define {{[^@]*}}@_ZN23DerivedVirtualPtrSimpleC1EP17VirtualBaseSimple
 // CXX: call void @llvm.memcpy.p0.p0.i64
 
