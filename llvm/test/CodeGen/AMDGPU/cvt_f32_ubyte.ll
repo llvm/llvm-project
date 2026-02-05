@@ -1875,27 +1875,29 @@ define amdgpu_kernel void @load_v7i8_to_v7f32(ptr addrspace(1) noalias %out, ptr
 ; VI-NEXT:    v_addc_u32_e32 v9, vcc, 0, v1, vcc
 ; VI-NEXT:    v_add_u32_e32 v10, vcc, 3, v0
 ; VI-NEXT:    v_addc_u32_e32 v11, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_ubyte v12, v[2:3]
-; VI-NEXT:    flat_load_ubyte v2, v[8:9]
-; VI-NEXT:    flat_load_ubyte v3, v[10:11]
+; VI-NEXT:    flat_load_ubyte v6, v[6:7]
 ; VI-NEXT:    flat_load_ubyte v4, v[4:5]
 ; VI-NEXT:    flat_load_ubyte v5, v[0:1]
-; VI-NEXT:    flat_load_ubyte v6, v[6:7]
+; VI-NEXT:    flat_load_ubyte v12, v[2:3]
+; VI-NEXT:    flat_load_ubyte v3, v[10:11]
+; VI-NEXT:    flat_load_ubyte v2, v[8:9]
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 4, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    flat_load_ubyte v7, v[0:1]
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    s_waitcnt vmcnt(5)
-; VI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v2
-; VI-NEXT:    s_waitcnt vmcnt(4)
-; VI-NEXT:    v_cvt_f32_ubyte0_e32 v3, v3
-; VI-NEXT:    s_waitcnt vmcnt(2)
-; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v5
-; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    s_waitcnt vmcnt(6)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v1, v6
+; VI-NEXT:    s_waitcnt vmcnt(5)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v6, v4
+; VI-NEXT:    s_waitcnt vmcnt(4)
+; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v5
+; VI-NEXT:    s_waitcnt vmcnt(3)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v5, v12
+; VI-NEXT:    s_waitcnt vmcnt(2)
+; VI-NEXT:    v_cvt_f32_ubyte0_e32 v3, v3
+; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    v_cvt_f32_ubyte0_e32 v2, v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cvt_f32_ubyte0_e32 v4, v7
 ; VI-NEXT:    buffer_store_dwordx3 v[4:6], off, s[0:3], 0 offset:16
@@ -1909,20 +1911,20 @@ define amdgpu_kernel void @load_v7i8_to_v7f32(ptr addrspace(1) noalias %out, ptr
 ; GFX10-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_clause 0x5
-; GFX10-NEXT:    global_load_ubyte v4, v0, s[2:3] offset:6
 ; GFX10-NEXT:    global_load_ubyte v1, v0, s[2:3] offset:3
 ; GFX10-NEXT:    global_load_ubyte v2, v0, s[2:3] offset:2
 ; GFX10-NEXT:    global_load_ubyte v5, v0, s[2:3] offset:1
+; GFX10-NEXT:    global_load_ubyte v4, v0, s[2:3] offset:6
 ; GFX10-NEXT:    global_load_short_d16 v7, v0, s[2:3] offset:4
 ; GFX10-NEXT:    global_load_ubyte v0, v0, s[2:3]
 ; GFX10-NEXT:    s_waitcnt vmcnt(5)
-; GFX10-NEXT:    v_cvt_f32_ubyte0_e32 v6, v4
-; GFX10-NEXT:    s_waitcnt vmcnt(4)
 ; GFX10-NEXT:    v_cvt_f32_ubyte0_e32 v3, v1
-; GFX10-NEXT:    s_waitcnt vmcnt(3)
+; GFX10-NEXT:    s_waitcnt vmcnt(4)
 ; GFX10-NEXT:    v_cvt_f32_ubyte0_e32 v2, v2
-; GFX10-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-NEXT:    s_waitcnt vmcnt(3)
 ; GFX10-NEXT:    v_cvt_f32_ubyte0_e32 v1, v5
+; GFX10-NEXT:    s_waitcnt vmcnt(2)
+; GFX10-NEXT:    v_cvt_f32_ubyte0_e32 v6, v4
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-NEXT:    v_cvt_f32_ubyte1_e32 v5, v7
 ; GFX10-NEXT:    v_cvt_f32_ubyte0_e32 v4, v7
@@ -1970,20 +1972,20 @@ define amdgpu_kernel void @load_v7i8_to_v7f32(ptr addrspace(1) noalias %out, ptr
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x5
-; GFX11-NEXT:    global_load_u8 v4, v0, s[2:3] offset:6
 ; GFX11-NEXT:    global_load_u8 v1, v0, s[2:3] offset:3
 ; GFX11-NEXT:    global_load_u8 v2, v0, s[2:3] offset:2
 ; GFX11-NEXT:    global_load_u8 v5, v0, s[2:3] offset:1
+; GFX11-NEXT:    global_load_u8 v4, v0, s[2:3] offset:6
 ; GFX11-NEXT:    global_load_d16_b16 v7, v0, s[2:3] offset:4
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(5)
-; GFX11-NEXT:    v_cvt_f32_ubyte0_e32 v6, v4
-; GFX11-NEXT:    s_waitcnt vmcnt(4)
 ; GFX11-NEXT:    v_cvt_f32_ubyte0_e32 v3, v1
-; GFX11-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-NEXT:    s_waitcnt vmcnt(4)
 ; GFX11-NEXT:    v_cvt_f32_ubyte0_e32 v2, v2
-; GFX11-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-NEXT:    s_waitcnt vmcnt(3)
 ; GFX11-NEXT:    v_cvt_f32_ubyte0_e32 v1, v5
+; GFX11-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-NEXT:    v_cvt_f32_ubyte0_e32 v6, v4
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    v_cvt_f32_ubyte1_e32 v5, v7
 ; GFX11-NEXT:    v_cvt_f32_ubyte0_e32 v4, v7

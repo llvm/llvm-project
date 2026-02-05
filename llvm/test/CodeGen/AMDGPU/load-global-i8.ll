@@ -7527,16 +7527,17 @@ define amdgpu_kernel void @global_zextload_v32i8_to_v32i64(ptr addrspace(1) %out
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dword v15, off, s[12:15], 0 offset:52 ; 4-byte Folded Spill
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dword v16, off, s[12:15], 0 offset:56 ; 4-byte Folded Spill
 ; GCN-NOHSA-SI-NEXT:    buffer_store_dword v17, off, s[12:15], 0 offset:60 ; 4-byte Folded Spill
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v12, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
-; GCN-NOHSA-SI-NEXT:    buffer_load_dword v13, off, s[12:15], 0 offset:20 ; 4-byte Folded Reload
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt expcnt(3)
 ; GCN-NOHSA-SI-NEXT:    buffer_load_dword v14, off, s[12:15], 0 offset:24 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v12, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
 ; GCN-NOHSA-SI-NEXT:    s_waitcnt expcnt(2)
 ; GCN-NOHSA-SI-NEXT:    buffer_load_dword v15, off, s[12:15], 0 offset:28 ; 4-byte Folded Reload
-; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(1) expcnt(1)
+; GCN-NOHSA-SI-NEXT:    buffer_load_dword v13, off, s[12:15], 0 offset:20 ; 4-byte Folded Reload
+; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(3) expcnt(1)
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v16, v14
+; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(2)
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v14, v12
-; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NOHSA-SI-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NOHSA-SI-NEXT:    v_mov_b32_e32 v15, v9
 ; GCN-NOHSA-SI-NEXT:    buffer_load_dword v53, off, s[12:15], 0 ; 4-byte Folded Reload
 ; GCN-NOHSA-SI-NEXT:    buffer_load_dword v54, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload

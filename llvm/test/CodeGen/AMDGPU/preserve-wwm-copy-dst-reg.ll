@@ -306,38 +306,38 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX906-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX906-NEXT:    buffer_load_dword v2, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
 ; GFX906-NEXT:    buffer_load_dword v3, off, s[0:3], s33 offset:16 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v4, off, s[0:3], s33 offset:20 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v5, off, s[0:3], s33 offset:24 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v6, off, s[0:3], s33 offset:28 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v7, off, s[0:3], s33 offset:32 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v8, off, s[0:3], s33 offset:36 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v9, off, s[0:3], s33 offset:40 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v10, off, s[0:3], s33 offset:44 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v11, off, s[0:3], s33 offset:48 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v12, off, s[0:3], s33 offset:52 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v13, off, s[0:3], s33 offset:56 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v14, off, s[0:3], s33 offset:60 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v15, off, s[0:3], s33 offset:64 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v16, off, s[0:3], s33 offset:68 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v17, off, s[0:3], s33 offset:72 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v18, off, s[0:3], s33 offset:76 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v19, off, s[0:3], s33 offset:80 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v20, off, s[0:3], s33 offset:84 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v21, off, s[0:3], s33 offset:88 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v22, off, s[0:3], s33 offset:92 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v23, off, s[0:3], s33 offset:96 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v24, off, s[0:3], s33 offset:100 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v25, off, s[0:3], s33 offset:104 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v26, off, s[0:3], s33 offset:108 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:112 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v28, off, s[0:3], s33 offset:116 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v29, off, s[0:3], s33 offset:120 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v30, off, s[0:3], s33 offset:124 ; 4-byte Folded Reload
-; GFX906-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:128 ; 4-byte Folded Reload
 ; GFX906-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:132 ; 4-byte Folded Reload
 ; GFX906-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:136 ; 4-byte Folded Reload
 ; GFX906-NEXT:    buffer_load_dword v34, off, s[0:3], s33 offset:140 ; 4-byte Folded Reload
 ; GFX906-NEXT:    buffer_load_dword v35, off, s[0:3], s33 offset:144 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v28, off, s[0:3], s33 offset:116 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v29, off, s[0:3], s33 offset:120 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v30, off, s[0:3], s33 offset:124 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:128 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v24, off, s[0:3], s33 offset:100 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v25, off, s[0:3], s33 offset:104 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v26, off, s[0:3], s33 offset:108 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:112 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v20, off, s[0:3], s33 offset:84 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v21, off, s[0:3], s33 offset:88 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v22, off, s[0:3], s33 offset:92 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v23, off, s[0:3], s33 offset:96 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v16, off, s[0:3], s33 offset:68 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v17, off, s[0:3], s33 offset:72 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v18, off, s[0:3], s33 offset:76 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v19, off, s[0:3], s33 offset:80 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v12, off, s[0:3], s33 offset:52 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v13, off, s[0:3], s33 offset:56 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v14, off, s[0:3], s33 offset:60 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v15, off, s[0:3], s33 offset:64 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v8, off, s[0:3], s33 offset:36 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v9, off, s[0:3], s33 offset:40 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v10, off, s[0:3], s33 offset:44 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v11, off, s[0:3], s33 offset:48 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v4, off, s[0:3], s33 offset:20 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v5, off, s[0:3], s33 offset:24 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v6, off, s[0:3], s33 offset:28 ; 4-byte Folded Reload
+; GFX906-NEXT:    buffer_load_dword v7, off, s[0:3], s33 offset:32 ; 4-byte Folded Reload
 ; GFX906-NEXT:    v_readlane_b32 s31, v41, 1
 ; GFX906-NEXT:    v_readlane_b32 s30, v41, 0
 ; GFX906-NEXT:    s_mov_b32 s32, s33
@@ -348,7 +348,7 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX906-NEXT:    v_add_co_u32_e32 v0, vcc, 0x70, v2
 ; GFX906-NEXT:    s_waitcnt vmcnt(32)
 ; GFX906-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX906-NEXT:    s_waitcnt vmcnt(0)
+; GFX906-NEXT:    s_waitcnt vmcnt(28)
 ; GFX906-NEXT:    flat_store_dwordx4 v[0:1], v[32:35]
 ; GFX906-NEXT:    s_waitcnt vmcnt(0)
 ; GFX906-NEXT:    v_add_co_u32_e32 v0, vcc, 0x60, v2
@@ -695,44 +695,44 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX908-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX908-NEXT:    buffer_load_dword v2, off, s[0:3], s33 offset:20 ; 4-byte Folded Reload
 ; GFX908-NEXT:    buffer_load_dword v3, off, s[0:3], s33 offset:24 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v4, off, s[0:3], s33 offset:28 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v5, off, s[0:3], s33 offset:32 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v6, off, s[0:3], s33 offset:36 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v7, off, s[0:3], s33 offset:40 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v8, off, s[0:3], s33 offset:44 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v9, off, s[0:3], s33 offset:48 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v10, off, s[0:3], s33 offset:52 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v11, off, s[0:3], s33 offset:56 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v12, off, s[0:3], s33 offset:60 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v13, off, s[0:3], s33 offset:64 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v14, off, s[0:3], s33 offset:68 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v15, off, s[0:3], s33 offset:72 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v16, off, s[0:3], s33 offset:76 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v17, off, s[0:3], s33 offset:80 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v18, off, s[0:3], s33 offset:84 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v19, off, s[0:3], s33 offset:88 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v20, off, s[0:3], s33 offset:92 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v21, off, s[0:3], s33 offset:96 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v22, off, s[0:3], s33 offset:100 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v23, off, s[0:3], s33 offset:104 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v24, off, s[0:3], s33 offset:108 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v25, off, s[0:3], s33 offset:112 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v26, off, s[0:3], s33 offset:116 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:120 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v28, off, s[0:3], s33 offset:124 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v29, off, s[0:3], s33 offset:128 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v30, off, s[0:3], s33 offset:132 ; 4-byte Folded Reload
-; GFX908-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:136 ; 4-byte Folded Reload
 ; GFX908-NEXT:    buffer_load_dword v32, off, s[0:3], s33 offset:140 ; 4-byte Folded Reload
 ; GFX908-NEXT:    buffer_load_dword v33, off, s[0:3], s33 offset:144 ; 4-byte Folded Reload
 ; GFX908-NEXT:    buffer_load_dword v34, off, s[0:3], s33 offset:148 ; 4-byte Folded Reload
 ; GFX908-NEXT:    buffer_load_dword v35, off, s[0:3], s33 offset:152 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v28, off, s[0:3], s33 offset:124 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v29, off, s[0:3], s33 offset:128 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v30, off, s[0:3], s33 offset:132 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:136 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v24, off, s[0:3], s33 offset:108 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v25, off, s[0:3], s33 offset:112 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v26, off, s[0:3], s33 offset:116 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v27, off, s[0:3], s33 offset:120 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v20, off, s[0:3], s33 offset:92 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v21, off, s[0:3], s33 offset:96 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v22, off, s[0:3], s33 offset:100 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v23, off, s[0:3], s33 offset:104 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v16, off, s[0:3], s33 offset:76 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v17, off, s[0:3], s33 offset:80 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v18, off, s[0:3], s33 offset:84 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v19, off, s[0:3], s33 offset:88 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v12, off, s[0:3], s33 offset:60 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v13, off, s[0:3], s33 offset:64 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v14, off, s[0:3], s33 offset:68 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v15, off, s[0:3], s33 offset:72 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v8, off, s[0:3], s33 offset:44 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v9, off, s[0:3], s33 offset:48 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v10, off, s[0:3], s33 offset:52 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v11, off, s[0:3], s33 offset:56 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v4, off, s[0:3], s33 offset:28 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v5, off, s[0:3], s33 offset:32 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v6, off, s[0:3], s33 offset:36 ; 4-byte Folded Reload
+; GFX908-NEXT:    buffer_load_dword v7, off, s[0:3], s33 offset:40 ; 4-byte Folded Reload
 ; GFX908-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX908-NEXT:    s_waitcnt vmcnt(33)
 ; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, 0x70, v2
 ; GFX908-NEXT:    s_waitcnt vmcnt(32)
 ; GFX908-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v3, vcc
-; GFX908-NEXT:    s_waitcnt vmcnt(0)
+; GFX908-NEXT:    s_waitcnt vmcnt(28)
 ; GFX908-NEXT:    flat_store_dwordx4 v[0:1], v[32:35]
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_add_co_u32_e32 v0, vcc, 0x60, v2
