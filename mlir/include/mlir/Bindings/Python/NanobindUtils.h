@@ -165,7 +165,7 @@ public:
     std::string filePath;
     if (nanobind::try_cast<std::string>(fileOrStringObject, filePath)) {
       std::string errorMessage;
-      auto errorCallback = [](MlirStringRef message, void *userData) {
+      auto errorCallback = +[](MlirStringRef message, void *userData) {
         auto *storage = static_cast<std::string *>(userData);
         storage->assign(message.data, message.length);
       };
