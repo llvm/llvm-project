@@ -129,30 +129,37 @@ static bool VisitNode(MachineDomTreeNode *Node, Register TLSBaseAddrReg) {
   return Changed;
 }
 
-static bool cleanupLocalDynamicTLS(MachineFunction &MF,
-                                   MachineDominatorTree &DT) {
+static bool cleanupLocalDynamicTLS(MachineDominatorTree &DT) {
+  return VisitNode(DT.getRootNode(), Register());
+}
+
+static bool shouldSkipLocalDynamicTLS(MachineFunction &MF) {
   X86MachineFunctionInfo *MFI = MF.getInfo<X86MachineFunctionInfo>();
   if (MFI->getNumLocalDynamicTLSAccesses() < 2) {
     // No point folding accesses if there isn't at least two.
-    return false;
+    return true;
   }
-
-  return VisitNode(DT.getRootNode(), Register());
+  return false;
 }
 
 bool X86CleanupLocalDynamicTLSLegacy::runOnMachineFunction(
     MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
+  if (skipFunction(MF.getFunction()) || shouldSkipLocalDynamicTLS(MF))
     return false;
 
   MachineDominatorTree &DT =
       getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  return cleanupLocalDynamicTLS(MF, DT);
+  return cleanupLocalDynamicTLS(DT);
 }
 
 PreservedAnalyses
 X86CleanupLocalDynamicTLSPass::run(MachineFunction &MF,
                                    MachineFunctionAnalysisManager &MFAM) {
+  if (shouldSkipLocalDynamicTLS(MF))
+    return PreservedAnalyses::all();
+
   MachineDominatorTree &DT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  return cleanupLocalDynamicTLS(MF, DT)? getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>(): PreservedAnalyses::all();
+  return cleanupLocalDynamicTLS(DT) ? getMachineFunctionPassPreservedAnalyses()
+                                          .preserveSet<CFGAnalyses>()
+                                    : PreservedAnalyses::all();
 }
