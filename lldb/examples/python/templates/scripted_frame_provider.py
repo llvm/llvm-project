@@ -172,19 +172,20 @@ class ScriptedFrameProvider(metaclass=ABCMeta):
             index (int): The frame index to retrieve (0 for youngest/top frame).
 
         Returns:
-            Dict or None: A frame dictionary describing the stack frame, or None
-                if no frame exists at this index. The dictionary should contain:
+            ScriptedFrame, integer, Dict or None: An object describing the stack
+               stack frame, or None if no frame exists at this index.
 
-            Required fields:
+            An integer represents the corresponding input frame index to reuse,
+            in case you want to just forward an frame from the ``input_frames``.
+
+            Returning a ScriptedFrame object injects artificial frames giving
+            you full control over the frame behavior.
+
+            Returning a dictionary also injects an artificial frame, but with
+            less control over the frame behavior. The dictionary must contain:
 
             - idx (int): The synthetic frame index (0 for youngest/top frame)
             - pc (int): The program counter address for the synthetic frame
-
-            Alternatively, you can return:
-
-            - A ScriptedFrame object for full control over frame behavior
-            - An integer representing an input frame index to reuse
-            - None to indicate no more frames exist
 
         Example:
 
