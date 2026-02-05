@@ -71,6 +71,5 @@ DUMMY_MACHINE_FUNCTION_PASS("x86-indirect-thunks", X86IndirectThunks())
 DUMMY_MACHINE_FUNCTION_PASS("x86-insert-x87-wait", X86InsertX87WaitPass())
 DUMMY_MACHINE_FUNCTION_PASS("x86-issue-vzero-upper", X86IssueVZeroUpperPass())
 DUMMY_MACHINE_FUNCTION_PASS("x86-lvi-load", X86LoadValueInjectionLoadHardeningPass())
-DUMMY_MACHINE_FUNCTION_PASS("x86-pad-short-functions",
-                            X86PadShortFunctionsPass())
+DUMMY_MACHINE_FUNCTION_PASS("x86-pad-short-functions", X86PadShortFunctionsPass())
 #undef DUMMY_MACHINE_FUNCTION_PASS
