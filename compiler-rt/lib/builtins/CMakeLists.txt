@@ -458,6 +458,7 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
 
   if(implicit_it_flag)
     set(assembly_files
+      arm/addsf3.S
       arm/mulsf3.S
       arm/divsf3.S
       arm/adddf3.S
@@ -531,14 +532,16 @@ set(thumb1_base_SOURCES
   arm/divsi3.S
   arm/udivsi3.S
   arm/comparesf2.S
-  arm/addsf3.S
   ${GENERIC_SOURCES}
 )
+# arm/addsf3.S implements both addition and subtraction via cross-branching
+set_special_properties(arm/addsf3.S SUPERSEDES subsf3.c PROVIDES subsf3)
 set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c PROVIDES subdf3)
 
 if(COMPILER_RT_ARM_OPTIMIZED_FP)
   set(thumb1_base_SOURCES
     arm/thumb1/mulsf3.S
+    arm/thumb1/addsf3.S
     arm/thumb1/cmpdf2.S
     arm/thumb1/cmpsf2.S
     arm/thumb1/gedf2.S
@@ -550,6 +553,8 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP)
     arm/funder.c
     ${thumb1_base_SOURCES}
   )
+  set_special_properties(arm/thumb1/addsf3.S
+    SUPERSEDES subsf3.c PROVIDES subsf3)
   set_special_properties(arm/thumb1/cmpdf2.S
     SUPERSEDES comparedf2.c PROVIDES comparedf2)
   set_special_properties(arm/thumb1/cmpsf2.S
