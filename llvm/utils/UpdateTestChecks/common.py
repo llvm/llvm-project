@@ -597,6 +597,10 @@ LOOP_PASS_DEBUG_RE = re.compile(
     r"^\s*\'(?P<func>[\w.$-]+?)\'[^\n]*" r"\s*\n(?P<body>.*)$", flags=(re.X | re.S)
 )
 
+VPLAN_RE = re.compile(
+    r"\'(?P<func>[\w.$-]+?)\'[^\n]*\n(?P<body>.*)\n$", flags=(re.X | re.S)
+)
+
 IR_FUNCTION_RE = re.compile(r'^\s*define\s+(?:internal\s+)?[^@]*@"?([\w.$-]+)"?\s*\(')
 IR_FUNCTION_LABEL_RE = re.compile(
     r'^\s*(?:define\s+(?:internal\s+)?[^@]*)?@"?([\w.$-]+)"?\s*\('
