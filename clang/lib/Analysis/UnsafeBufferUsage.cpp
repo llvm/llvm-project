@@ -570,9 +570,8 @@ static bool isPtrBufferSafe(const Expr *Ptr, const Expr *Size,
     }
 
     // Pattern 3:
-    if (ER.Val.getInt().isOne() && getSubExprInAddressOfExpr(*Ptr) != nullptr) {
+    if (ER.Val.getInt().isOne() && getSubExprInAddressOfExpr(*Ptr) != nullptr)
       return true;
-    }
 
     // Pattern 4:
     if (ER.Val.getInt().isZero())
