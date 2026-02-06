@@ -10373,9 +10373,9 @@ bool Sema::CheckSizeofMemaccessArgument(const Expr *LenExpr, const Expr *Dest,
     unsigned ActionIdx = 0; // Default is to suggest dereferencing.
     StringRef ReadableName = FnName->getName();
 
-    if (const UnaryOperator *UnaryOp = dyn_cast<UnaryOperator>(Dest))
-      if (UnaryOp->getOpcode() == UO_AddrOf)
-        ActionIdx = 1; // If its an address-of operator, just remove it.
+    if (const UnaryOperator *UnaryOp = dyn_cast<UnaryOperator>(Dest);
+        UnaryOp && UnaryOp->getOpcode() == UO_AddrOf)
+      ActionIdx = 1; // If its an address-of operator, just remove it.
     if (!PointeeTy->isIncompleteType() &&
         (Context.getTypeSize(PointeeTy) == Context.getCharWidth()))
       ActionIdx = 2; // If the pointee's size is sizeof(char),
