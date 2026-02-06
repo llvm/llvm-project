@@ -2427,13 +2427,13 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__readfsqword:
   case X86::BI__readgsbyte:
   case X86::BI__readgsword:
-  case X86::BI__readgsdword: {
+  case X86::BI__readgsdword:
+  case X86::BI__readgsqword: {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented X86 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   }
-  case X86::BI__readgsqword:
   case X86::BI__builtin_ia32_encodekey128_u32: {
     return emitEncodeKey(&getMLIRContext(), builder, getLoc(expr->getExprLoc()),
                          {ops[0], ops[1]}, ops[2], 6, "x86.encodekey128", 3);
