@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -25,14 +26,12 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 
 namespace nb = nanobind;
 using namespace mlir;
 using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
 using llvm::SmallVector;
-using llvm::StringRef;
 
 static const char kDumpDocstring[] =
     R"(Dumps a debug representation of the object to stderr.)";
@@ -44,21 +43,21 @@ static const char kDumpDocstring[] =
 template <typename PyType, typename CType>
 static void pyListToVector(const nb::list &list,
                            llvm::SmallVectorImpl<CType> &result,
-                           StringRef action) {
+                           std::string_view action) {
   result.reserve(nb::len(list));
   for (nb::handle item : list) {
     try {
       result.push_back(nb::cast<PyType>(item));
     } catch (nb::cast_error &err) {
       std::string msg = nanobind::detail::join(
-                             "Invalid expression when ", action.str(), " (",
+                             "Invalid expression when ", action, " (",
                              err.what(), ")")
                              .c_str();
       throw std::runtime_error(msg.c_str());
     } catch (std::runtime_error &err) {
       std::string msg = nanobind::detail::join(
-                             "Invalid expression (None?) when ", action.str(),
-                             " (", err.what(), ")")
+                             "Invalid expression (None?) when ", action, " (",
+                             err.what(), ")")
                              .c_str();
       throw std::runtime_error(msg.c_str());
     }
