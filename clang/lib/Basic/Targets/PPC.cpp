@@ -708,6 +708,8 @@ ParsedTargetAttr PPCTargetInfo::parseTargetAttr(StringRef Features) const {
     else
       Ret.Features.push_back("+" + Feature.str());
   }
+  Ret.CPU = llvm::PPC::normalizeCPUName(Ret.CPU);
+  Ret.Tune = llvm::PPC::normalizeCPUName(Ret.Tune);
   return Ret;
 }
 
