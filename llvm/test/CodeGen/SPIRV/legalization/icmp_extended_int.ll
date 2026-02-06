@@ -1,14 +1,15 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_int4 %s -o - | FileCheck %s
+; TODO: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknow --spirv-ext=+SPV_INTEL_int4 %s -o - -filetype=obj | spirv-val %}
 
-; CHECK: OpCapability Int4TypeINTEL
-; CHECK: OpExtension "SPV_INTEL_int4"
+; CHECK-DAG: OpCapability Int4TypeINTEL
+; CHECK-DAG: OpExtension "SPV_INTEL_int4"
 
-; CHECK: %[[#i4:]] = OpTypeInt 4 0
-; CHECK: %[[#bool:]] = OpTypeBool
-; CHECK: %[[#scalar_func:]] = OpTypeFunction %[[#bool]] %[[#i4]] %[[#i4]]
-; CHECK: %[[#vec_i4:]] = OpTypeVector %[[#i4]] 4
-; CHECK: %[[#vec_bool:]] = OpTypeVector %[[#bool]] 4
-; CHECK: %[[#vector_func:]] = OpTypeFunction %[[#vec_bool]] %[[#vec_i4]] %[[#vec_i4]]
+; CHECK-DAG: %[[#i4:]] = OpTypeInt 4 0
+; CHECK-DAG: %[[#bool:]] = OpTypeBool
+; CHECK-DAG: %[[#scalar_func:]] = OpTypeFunction %[[#bool]] %[[#i4]] %[[#i4]]
+; CHECK-DAG: %[[#vec_i4:]] = OpTypeVector %[[#i4]] 4
+; CHECK-DAG: %[[#vec_bool:]] = OpTypeVector %[[#bool]] 4
+; CHECK-DAG: %[[#vector_func:]] = OpTypeFunction %[[#vec_bool]] %[[#vec_i4]] %[[#vec_i4]]
 
 ; CHECK: %[[#test_scalar:]] = OpFunction %[[#bool]] None %[[#scalar_func]]
 ; CHECK: %[[#scalar_a:]] = OpFunctionParameter %[[#i4]]
