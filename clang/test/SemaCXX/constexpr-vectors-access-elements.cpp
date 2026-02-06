@@ -46,3 +46,19 @@ static_assert(&b[1]); // expected-error {{address of vector element requested}}
 constexpr const FourIntsExtVec *p = &b;
 static_assert(p->x == 1);
 }
+
+namespace GH180044 {
+template <typename T> constexpr T test(char c) {
+  T v;
+  for (int i = 0; i < sizeof(T); ++i)
+    v[i] = c;
+  return v;
+}
+
+using T = char __attribute__((vector_size(16)));
+T t1 = test<T>(~1);
+
+constexpr T t2 = test<T>(~1);
+static_assert(t2[0] == -2);
+static_assert(t2[15] == -2);
+}

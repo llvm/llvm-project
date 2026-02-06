@@ -3599,6 +3599,11 @@ static void expandArray(APValue &Array, unsigned Index) {
   Array.swap(NewValue);
 }
 
+static void expandVector(APValue &Vec, unsigned NumElements) {
+  SmallVector<APValue, 4> Elts(NumElements, APValue::IndeterminateValue());
+  Vec = APValue(Elts.data(), Elts.size());
+}
+
 /// Determine whether a type would actually be read by an lvalue-to-rvalue
 /// conversion. If it's of class type, we may assume that the copy operation
 /// is trivial. Note that this is never true for a union type with fields
@@ -4291,7 +4296,20 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
 
       ObjType = VT->getElementType();
       assert(I == N - 1 && "extracting subobject of scalar?");
-      return handler.found(O->getVectorElt(Index), ObjType);
+
+      if (O->isIndeterminate() || O->isAbsent()) {
+        if (isRead(handler.AccessKind)) {
+          Info.FFDiag(E);
+          return handler.failed();
+        }
+        expandVector(*O, NumElements);
+      }
+
+      if (O->isVector())
+        return handler.found(O->getVectorElt(Index), ObjType);
+
+      Info.FFDiag(E);
+      return handler.failed();
     } else if (const FieldDecl *Field = getAsField(Sub.Entries[I])) {
       if (Field->isMutable() &&
           !Obj.mayAccessMutableMembers(Info, handler.AccessKind)) {
