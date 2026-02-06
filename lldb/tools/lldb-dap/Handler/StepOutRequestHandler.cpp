@@ -30,7 +30,7 @@ namespace lldb_dap {
 /// The debug adapter first sends the response and then a `stopped` event (with
 /// reason `step`) after the step has completed."
 Error StepOutRequestHandler::Run(const StepOutArguments &arguments) const {
-  if (!SBDebugger::StateIsStoppedState(dap.target.GetProcess().GetState()))
+  if (dap.ProcessIsNotStopped())
     return make_error<NotStoppedError>();
 
   lldb::SBThread thread = dap.GetLLDBThread(arguments.threadId);
