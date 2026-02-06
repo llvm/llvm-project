@@ -2637,9 +2637,9 @@ struct DsBarrierInitOpLowering
                                      adaptor.getBase(), adaptor.getIndices());
 
     // Note: We give participants as the number of arrivals that have to occur
-    // before the phase changes. Hardware changes the phase when the count
-    // actually wraps around, so we subtract 1 to get the behavior we're looking
-    // for.
+    // before the phase changes. Hardware changes the phase when updating the
+    // pending count would underflow, so we subtract 1 to get the behavior we're
+    // looking for.
     Value initCount =
         LLVM::SubOp::create(rewriter, loc, adaptor.getParticipants(),
                             createI32Constant(rewriter, loc, 1));
