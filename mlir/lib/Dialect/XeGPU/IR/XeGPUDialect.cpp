@@ -511,14 +511,13 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
   SmallVector<int64_t> instData = getEffectiveInstDataAsInt();
   SmallVector<int64_t> laneLayout = getEffectiveLaneLayoutAsInt();
   SmallVector<int64_t> laneData = getEffectiveLaneDataAsInt();
-  int64_t rank = getRank();
 
   DenseI32ArrayAttr orderAttr = getOrder();
-  SmallVector<int64_t> orderVec;
+  SmallVector<int32_t> orderVec;
   if (orderAttr && !orderAttr.empty()) {
     orderVec = llvm::to_vector(
         llvm::map_range(orderAttr.asArrayRef(),
-                        [](int32_t idx) { return static_cast<int64_t>(idx); }));
+                        [](int32_t idx) { return static_cast<int32_t>(idx); }));
   }
 
   SmallVector<int64_t> sortedDimGroup = dimGroup;
@@ -544,91 +543,96 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
     dimBeforeCurrent = dimIdx;
   }
 
-  SmallVector<int64_t> collapsedSgLayout;
-  SmallVector<int64_t> collapsedSgData;
-  SmallVector<int64_t> collapsedInstData;
-  SmallVector<int64_t> collapsedLaneLayout;
-  SmallVector<int64_t> collapsedLaneData;
-  SmallVector<int64_t> collapsedOrder;
-  SetVector<int64_t> coveredDims;
+  int firstDim = sortedDimGroup.front();
 
-  // Collapse by multiplying values across dimension group
-  int64_t collapsedSg = 1, collapsedSgD = 1, collapsedInst = 1;
-  int64_t collapsedLaneL = 1, collapsedLaneD = 1;
-  int64_t collapsedOrderValue = -1;
+  // collapse the dimensions in dimGroup into one dimension by multiplying their
+  // sizes together
 
-  for (int64_t dimIdx = 0; dimIdx < rank; ++dimIdx) {
-    if (llvm::is_contained(dimGroup, dimIdx)) {
-      collapsedSg *= sgLayout[dimIdx];
-      collapsedSgD *= sgData[dimIdx];
-      collapsedInst *= instData[dimIdx];
-      collapsedLaneL *= laneLayout[dimIdx];
-      collapsedLaneD *= laneData[dimIdx];
-      collapsedOrderValue = orderVec[dimIdx]; // take the last one's order
-      if (dimIdx == dimGroup.back()) {
-        collapsedSgLayout.push_back(collapsedSg);
-        collapsedSgData.push_back(collapsedSgD);
-        collapsedInstData.push_back(collapsedInst);
-        collapsedLaneLayout.push_back(collapsedLaneL);
-        collapsedLaneData.push_back(collapsedLaneD);
-        if (!orderVec.empty())
-          collapsedOrder.push_back(collapsedOrderValue);
-      }
-    } else {
-      collapsedSgLayout.push_back(sgLayout[dimIdx]);
-      collapsedSgData.push_back(sgData[dimIdx]);
-      collapsedInstData.push_back(instData[dimIdx]);
-      collapsedLaneLayout.push_back(laneLayout[dimIdx]);
-      collapsedLaneData.push_back(laneData[dimIdx]);
-      if (!orderVec.empty())
-        collapsedOrder.push_back(orderVec[dimIdx]);
+  if (!sgLayout.empty()) {
+    int64_t collapsedSglayout = 1, collapsedSgData = 1;
+    for (auto dimIdx : dimGroup) {
+      collapsedSglayout *= sgLayout[dimIdx];
+      collapsedSgData *= sgData[dimIdx];
     }
+    for (auto dimIdx : llvm::reverse(sortedDimGroup)) {
+      sgLayout.erase(sgLayout.begin() + dimIdx, sgLayout.begin() + dimIdx + 1);
+      sgData.erase(sgData.begin() + dimIdx, sgData.begin() + dimIdx + 1);
+    }
+    sgLayout.insert(sgLayout.begin() + firstDim, collapsedSglayout);
+    sgData.insert(sgData.begin() + firstDim, collapsedSgData);
   }
 
-  // Create collapsed layout
-  SmallVector<int32_t> collapsedSgLayout32(collapsedSgLayout.begin(),
-                                           collapsedSgLayout.end());
-  SmallVector<int32_t> collapsedSgData32(collapsedSgData.begin(),
-                                         collapsedSgData.end());
-  SmallVector<int32_t> collapsedInstData32(collapsedInstData.begin(),
-                                           collapsedInstData.end());
-  SmallVector<int32_t> collapsedLaneLayout32(collapsedLaneLayout.begin(),
-                                             collapsedLaneLayout.end());
-  SmallVector<int32_t> collapsedLaneData32(collapsedLaneData.begin(),
-                                           collapsedLaneData.end());
+  if (!instData.empty()) {
+    int64_t collapsedInstData = 1;
+    for (auto dimIdx : dimGroup)
+      collapsedInstData *= instData[dimIdx];
+    for (auto dimIdx : llvm::reverse(sortedDimGroup))
+      instData.erase(instData.begin() + dimIdx, instData.begin() + dimIdx + 1);
+    instData.insert(instData.begin() + firstDim, collapsedInstData);
+  }
+
+  if (!laneLayout.empty()) {
+    int64_t collapsedLaneLayout = 1, collapsedLaneData = 1;
+    for (auto dimIdx : dimGroup) {
+      collapsedLaneLayout *= laneLayout[dimIdx];
+      collapsedLaneData *= laneData[dimIdx];
+    }
+    for (auto dimIdx : llvm::reverse(sortedDimGroup)) {
+      laneLayout.erase(laneLayout.begin() + dimIdx,
+                       laneLayout.begin() + dimIdx + 1);
+      laneData.erase(laneData.begin() + dimIdx, laneData.begin() + dimIdx + 1);
+    }
+    laneLayout.insert(laneLayout.begin() + firstDim, collapsedLaneLayout);
+    laneData.insert(laneData.begin() + firstDim, collapsedLaneData);
+  }
 
   // go through the values inside collapsedOrder, and re-map the order values
   // to be in range of [0, N-1] where N is the number of dimensions in
   // collapsed shape for exmaple, collapse dim group {2, 3} of order[1, 2, 3,
   // 4] to new order[1, 3, 4]. the loop below remaps it to [1, 2, 3].
-  SmallVector<int32_t> remappedOrder32;
+  SmallVector<int32_t> collapsedOrder;
   if (!orderVec.empty()) {
-    int64_t orderSize = static_cast<int64_t>(collapsedOrder.size());
-    SmallVector<int64_t> remappedOrder(orderSize, -1);
-    for (int64_t i = 0; i < orderSize; ++i) {
-      int64_t originalOrderValue = collapsedOrder[i];
-      // count how many values in collapsedOrder are less than
-      // originalOrderValue
-      int64_t count = 0;
-      for (int64_t j = 0; j < orderSize; ++j) {
-        if (collapsedOrder[j] < originalOrderValue)
-          count++;
-      }
-      remappedOrder[i] = count;
+
+    for (auto dimIdx : llvm::reverse(sortedDimGroup)) {
+      if (dimIdx != firstDim)
+        orderVec.erase(orderVec.begin() + dimIdx,
+                       orderVec.begin() + dimIdx + 1);
     }
-    remappedOrder32 =
-        SmallVector<int32_t>(remappedOrder.begin(), remappedOrder.end());
+
+    // say we have orderVec = {5, 3, 2, 1, 0}
+    // Create indices [0, 1, 2, 3, 4]
+    SmallVector<size_t> indices =
+        llvm::to_vector(llvm::seq<size_t>(0, orderVec.size()));
+
+    // Sort indices based on corresponding values
+    llvm::sort(indices,
+               [&](size_t a, size_t b) { return orderVec[a] < orderVec[b]; });
+    collapsedOrder = llvm::to_vector(llvm::map_range(
+        indices, [&](size_t i) { return static_cast<int32_t>(i); }));
   }
 
+  // Create collapsed layout
+  SmallVector<int32_t> sgLayout32(sgLayout.begin(), sgLayout.end());
+  SmallVector<int32_t> sgData32(sgData.begin(), sgData.end());
+  SmallVector<int32_t> instData32(instData.begin(), instData.end());
+  SmallVector<int32_t> laneLayout32(laneLayout.begin(), laneLayout.end());
+  SmallVector<int32_t> laneData32(laneData.begin(), laneData.end());
+
   auto collapsedLayout = xegpu::LayoutAttr::get(
-      getContext(), DenseI32ArrayAttr::get(getContext(), collapsedSgLayout32),
-      DenseI32ArrayAttr::get(getContext(), collapsedSgData32),
-      DenseI32ArrayAttr::get(getContext(), collapsedInstData32),
-      DenseI32ArrayAttr::get(getContext(), collapsedLaneLayout32),
-      DenseI32ArrayAttr::get(getContext(), collapsedLaneData32),
-      remappedOrder32.empty()
-          ? nullptr
-          : DenseI32ArrayAttr::get(getContext(), remappedOrder32));
+      getContext(),
+      sgLayout32.empty() ? DenseI32ArrayAttr()
+                         : DenseI32ArrayAttr::get(getContext(), sgLayout32),
+      sgData32.empty() ? DenseI32ArrayAttr()
+                       : DenseI32ArrayAttr::get(getContext(), sgData32),
+      instData32.empty() ? DenseI32ArrayAttr()
+                         : DenseI32ArrayAttr::get(getContext(), instData32),
+      laneLayout32.empty() ? DenseI32ArrayAttr()
+                           : DenseI32ArrayAttr::get(getContext(), laneLayout32),
+      laneData32.empty() ? DenseI32ArrayAttr()
+                         : DenseI32ArrayAttr::get(getContext(), laneData32),
+      collapsedOrder.empty()
+          ? DenseI32ArrayAttr()
+          : DenseI32ArrayAttr::get(getContext(), collapsedOrder));
   return collapsedLayout;
 }
 

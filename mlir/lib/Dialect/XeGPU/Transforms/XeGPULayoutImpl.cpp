@@ -347,7 +347,7 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
       }
       SmallVector<int> inferredInstData(srcShapeSize, 1);
       inferredInstData[srcShapeSize - 1] =
-          std::min(resLaneData[resShapeSize - 1], srcShape[srcShapeSize - 1]);
+          std::min(resInstData[resShapeSize - 1], srcShape[srcShapeSize - 1]);
       return xegpu::LayoutAttr::get(context, inferredInstData);
     }
 
@@ -367,7 +367,7 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
                                     inferredLaneData);
     }
   }
-  assert("running into unsupported shape cast scenarios");
+  llvm_unreachable("running into unsupported shape cast scenarios");
   return nullptr;
 }
 
@@ -395,7 +395,7 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 ///      workgroupSize=32
 ///      Consumer Layout:
 ///      #xegpu.slice<#xegpu.layout<sg_layout=[4, 8], sg_data=[8, 8]>, dims =
-///      [0]>} Result: srcLayout with sgLayout=[4, 8], sgData=[8, 8] (matches
+///      [1]>} Result: srcLayout with sgLayout=[4, 8], sgData=[8, 8] (matches
 ///      consumer on non-reduction dim, minimizing data redistribution on
 ///      reduction dim)
 ///   2. Subgroup layout - Same example above but consumer has different layout:

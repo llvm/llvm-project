@@ -126,9 +126,9 @@ gpu.module @test {
 
 // -----
 gpu.module @test {
-// CHECK-LABEL: vector_row_reduction_1
+// CHECK-LABEL: vector_row_reduction
 // CHECK: %[[REDUCE:.*]] = vector.multi_reduction <add>, %{{.*}}, %{{.*}} {layout_result_0 = #xegpu.slice<#xegpu.layout<sg_layout = [32, 1], sg_data = [1, 64]>, dims = [1]>}
-  gpu.func @vector_row_reduction_1(%src: memref<32x64xf32>, %dst: memref<32xf32>) kernel attributes
+  gpu.func @vector_row_reduction(%src: memref<32x64xf32>, %dst: memref<32xf32>) kernel attributes
       {known_block_size = array<i32: 1, 32, 1>} {
     %cst = arith.constant dense<0.000000e+00> : vector<32xf32>
     %tdesc_src = xegpu.create_nd_tdesc %src : memref<32x64xf32> -> !xegpu.tensor_desc<32x64xf32>
@@ -143,8 +143,8 @@ gpu.module @test {
 
 // -----
 gpu.module @test {
-// CHECK-LABEL: vector_row_reduction_2
-  gpu.func @vector_row_reduction_2(%src: memref<32x128xf32>, %dst: memref<32xf32>) kernel attributes
+// CHECK-LABEL: vector_nest_reduction
+  gpu.func @vector_nest_reduction(%src: memref<32x128xf32>, %dst: memref<32xf32>) kernel attributes
       {known_block_size = array<i32: 1, 32, 1>} {
     %cst = arith.constant dense<0.000000e+00> : vector<32xf32>
     %cst1 = arith.constant dense<0.000000e+00> : vector<32x128xf32>

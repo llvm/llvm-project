@@ -47,8 +47,8 @@ LogicalResult resolveLayoutConflicts(Operation *target);
 void recoverTemporaryLayoutsDeprecated(Operation *op);
 
 /// Attach layout attributes to all vector-type operands of operations within
-/// the given operation's region. Reports an error if any vector operand lacks
-/// a layout attribute.
+/// the given operation's nested region. Reports an error if any vector operand
+/// lacks a layout attribute.
 bool recoverTemporaryLayouts(Operation *rootOp);
 
 /// Removes the LayoutAttr for a given OpOperand or OpResult if it exists.

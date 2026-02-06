@@ -652,10 +652,8 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   if (!resLayoutInfo.isAssigned())
     return;
 
-  VectorType sourceTy =
-      llvm::dyn_cast<VectorType>(reduction.getSourceVectorType());
-  SmallVector<int64_t> reductionDims(reduction.getReductionDims().begin(),
-                                     reduction.getReductionDims().end());
+  VectorType sourceTy = reduction.getSourceVectorType();
+  SmallVector<int64_t> reductionDims(reduction.getReductionDims());
 
   auto uArch = getUArch(xegpu::getChipStr(reduction).value_or(""));
   auto consumerLayoutAttr =
@@ -668,7 +666,7 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   // converting the required result layout to the consumer layout
   auto requiredResLayoutAttr = xegpu::setupMultiReductionResultLayout(
       layoutKind, sourceTy, consumerLayoutAttr, reductionDims, uArch);
-  // resLayoutInfo.set(requiredResLayoutAttr);
+
   xegpu::setTemporaryLayout(reduction->getResult(0), requiredResLayoutAttr);
 
   // derive the source layout from the dominant layout and reduction dims
