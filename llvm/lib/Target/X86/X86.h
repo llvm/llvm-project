@@ -40,7 +40,14 @@ FunctionPass *createX86GlobalBaseRegPass();
 /// This pass combines multiple accesses to local-dynamic TLS variables so that
 /// the TLS base address for the module is only fetched once per execution path
 /// through the function.
-FunctionPass *createCleanupLocalDynamicTLSPass();
+class X86CleanupLocalDynamicTLSPass
+    : public PassInfoMixin<X86CleanupLocalDynamicTLSPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createCleanupLocalDynamicTLSLegacyPass();
 
 /// This function returns a pass which converts floating-point register
 /// references and pseudo instructions into floating-point stack references and
@@ -307,7 +314,14 @@ public:
 FunctionPass *createX86PartialReductionLegacyPass();
 
 /// // Analyzes and emits pseudos to support Win x64 Unwind V2.
-FunctionPass *createX86WinEHUnwindV2Pass();
+class X86WinEHUnwindV2Pass : public PassInfoMixin<X86WinEHUnwindV2Pass> {
+public:
+  X86WinEHUnwindV2Pass() = default;
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86WinEHUnwindV2LegacyPass();
 
 /// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
 /// or split the data to two <128 x i32>.
@@ -354,7 +368,15 @@ InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
 
 FunctionPass *createX86PostLegalizerCombiner();
 FunctionPass *createX86PreLegalizerCombiner();
-FunctionPass *createX86LoadValueInjectionLoadHardeningPass();
+
+class X86LoadValueInjectionLoadHardeningPass
+    : public PassInfoMixin<X86LoadValueInjectionLoadHardeningPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86LoadValueInjectionLoadHardeningLegacyPass();
 
 class X86LoadValueInjectionRetHardeningPass
     : public PassInfoMixin<X86LoadValueInjectionRetHardeningPass> {
@@ -403,6 +425,7 @@ void initializeWinEHStatePassPass(PassRegistry &);
 void initializeX86AvoidSFBLegacyPass(PassRegistry &);
 void initializeX86AvoidTrailingCallLegacyPassPass(PassRegistry &);
 void initializeX86CallFrameOptimizationLegacyPass(PassRegistry &);
+void initializeX86CleanupLocalDynamicTLSLegacyPass(PassRegistry &);
 void initializeX86CmovConversionLegacyPass(PassRegistry &);
 void initializeX86DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeX86DomainReassignmentLegacyPass(PassRegistry &);
@@ -414,7 +437,7 @@ void initializeX86FastPreTileConfigLegacyPass(PassRegistry &);
 void initializeX86FastTileConfigLegacyPass(PassRegistry &);
 void initializeX86FixupSetCCLegacyPass(PassRegistry &);
 void initializeX86FlagsCopyLoweringLegacyPass(PassRegistry &);
-void initializeX86LoadValueInjectionLoadHardeningPassPass(PassRegistry &);
+void initializeX86LoadValueInjectionLoadHardeningLegacyPass(PassRegistry &);
 void initializeX86LoadValueInjectionRetHardeningLegacyPass(PassRegistry &);
 void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);
 void initializeX86LowerAMXTypeLegacyPassPass(PassRegistry &);
@@ -428,7 +451,7 @@ void initializeX86SpeculativeExecutionSideEffectSuppressionLegacyPass(
 void initializeX86SpeculativeLoadHardeningLegacyPass(PassRegistry &);
 void initializeX86SuppressAPXForRelocationLegacyPass(PassRegistry &);
 void initializeX86TileConfigLegacyPass(PassRegistry &);
-void initializeX86WinEHUnwindV2Pass(PassRegistry &);
+void initializeX86WinEHUnwindV2LegacyPass(PassRegistry &);
 void initializeX86PreLegalizerCombinerPass(PassRegistry &);
 void initializeX86PostLegalizerCombinerPass(PassRegistry &);
 

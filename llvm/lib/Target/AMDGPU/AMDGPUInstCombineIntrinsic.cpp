@@ -1459,30 +1459,30 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (isa<PoisonValue>(Src) || isa<PoisonValue>(Segment))
       return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
 
-    if (isa<UndefValue>(Src)) {
-      auto *QNaN = ConstantFP::get(
-          II.getType(), APFloat::getQNaN(II.getType()->getFltSemantics()));
-      return IC.replaceInstUsesWith(II, QNaN);
-    }
-
-    const ConstantFP *Csrc = dyn_cast<ConstantFP>(Src);
-    if (!Csrc)
-      break;
+    if (isa<UndefValue>(Segment))
+      return IC.replaceInstUsesWith(II, ConstantFP::getZero(II.getType()));
 
     if (II.isStrictFP())
       break;
 
-    const APFloat &Fsrc = Csrc->getValueAPF();
-    if (Fsrc.isNaN()) {
-      auto *Quieted = ConstantFP::get(II.getType(), Fsrc.makeQuiet());
-      return IC.replaceInstUsesWith(II, Quieted);
-    }
-
-    const ConstantInt *Cseg = dyn_cast<ConstantInt>(Segment);
-    if (!Cseg)
+    const ConstantFP *CSrc = dyn_cast<ConstantFP>(Src);
+    if (!CSrc && !isa<UndefValue>(Src))
       break;
 
-    unsigned Exponent = Fsrc.bitcastToAPInt().extractBitsAsZExtValue(11, 52);
+    // The instruction ignores special cases, and literally just extracts the
+    // exponents. Fold undef to nan, and index the table as normal.
+    APInt FSrcInt = CSrc ? CSrc->getValueAPF().bitcastToAPInt()
+                         : APFloat::getQNaN(II.getType()->getFltSemantics())
+                               .bitcastToAPInt();
+
+    const ConstantInt *Cseg = dyn_cast<ConstantInt>(Segment);
+    if (!Cseg) {
+      if (isa<UndefValue>(Src))
+        return IC.replaceInstUsesWith(II, ConstantFP::getZero(II.getType()));
+      break;
+    }
+
+    unsigned Exponent = FSrcInt.extractBitsAsZExtValue(11, 52);
     unsigned SegmentVal = Cseg->getValue().trunc(5).getZExtValue();
     unsigned Shift = SegmentVal * 53;
     if (Exponent > 1077)

@@ -1105,8 +1105,6 @@ protected:
 
   bool SetArchitecture(const ArchSpec &new_arch);
 
-  void SetUUID(const lldb_private::UUID &uuid);
-
   SectionList *GetUnifiedSectionList();
 
   friend class ModuleList;

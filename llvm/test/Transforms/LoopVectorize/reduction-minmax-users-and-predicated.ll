@@ -94,11 +94,11 @@ define i32 @chained_smax(i32 %x, ptr %src) {
 ; CHECK:       [[PRED_LOAD_CONTINUE6]]:
 ; CHECK-NEXT:    [[TMP25:%.*]] = phi <4 x i32> [ [[TMP19]], %[[PRED_LOAD_CONTINUE4]] ], [ [[TMP24]], %[[PRED_LOAD_IF5]] ]
 ; CHECK-NEXT:    [[TMP26]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[TMP25]], <4 x i32> [[TMP1]])
-; CHECK-NEXT:    [[TMP27:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[TMP26]], <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
 ; CHECK-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP27:%.*]] = select <4 x i1> [[TMP0]], <4 x i32> [[TMP26]], <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = call i32 @llvm.vector.reduce.smax.v4i32(<4 x i32> [[TMP27]])
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
