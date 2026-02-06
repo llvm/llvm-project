@@ -177,6 +177,10 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------
 
+* Support for FreeBSD on MIPS64 has been removed.
+* The minimum assumed version of FreeBSD is now 14. The effect of which is that watchpoints are
+  assumed to be supported.
+
 Changes to BOLT
 ---------------
 
