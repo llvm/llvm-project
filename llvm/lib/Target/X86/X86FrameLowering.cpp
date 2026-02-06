@@ -3211,6 +3211,14 @@ void X86FrameLowering::determineCalleeSaves(MachineFunction &MF,
       BasePtr = getX86SubSuperRegister(BasePtr, 64);
     SavedRegs.set(BasePtr);
   }
+  if (STI.is64Bit()) {
+    for (int Reg = SavedRegs.find_first(); Reg != -1;
+         Reg = SavedRegs.find_next(Reg)) {
+      if (STI.isRegisterReservedByUser(Reg)) {
+        SavedRegs.reset(Reg);
+      }
+    }
+  }
 }
 
 static bool HasNestArgument(const MachineFunction *MF) {
