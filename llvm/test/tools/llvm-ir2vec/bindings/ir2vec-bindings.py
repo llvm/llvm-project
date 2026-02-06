@@ -22,6 +22,15 @@ if tool is not None:
         print(f"Function: {func_name}")
         print(f"  Embedding: {emb.tolist()}")
 
+    # Test getFuncEmb for individual functions
+    print("\n=== Single Function Embeddings ===")
+
+    # Test valid function names
+    for func_name in ["add", "multiply", "conditional"]:
+        func_emb = tool.getFuncEmb(func_name)
+        print(f"Function: {func_name}")
+        print(f"  Embedding: {func_emb.tolist()}")
+
 # CHECK: SUCCESS: Tool initialized
 # CHECK: Tool type: IR2VecTool
 # CHECK: === Function Embeddings ===
@@ -31,3 +40,10 @@ if tool is not None:
 # CHECK-NEXT:   Embedding: [413.20000000298023, 421.20000000298023, 429.20000000298023]
 # CHECK: Function: multiply
 # CHECK-NEXT:   Embedding: [50.0, 52.0, 54.0]
+# CHECK: === Single Function Embeddings ===
+# CHECK: Function: add
+# CHECK-NEXT:   Embedding: [38.0, 40.0, 42.0]
+# CHECK: Function: multiply
+# CHECK-NEXT:   Embedding: [50.0, 52.0, 54.0]
+# CHECK: Function: conditional
+# CHECK-NEXT:   Embedding: [413.20000000298023, 421.20000000298023, 429.20000000298023]
