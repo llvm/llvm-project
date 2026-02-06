@@ -275,6 +275,20 @@ static bool isInInlineFunction(const DeclContext *DC) {
   return false;
 }
 
+// See discussion in https://github.com/itanium-cxx-abi/cxx-abi/issues/186
+//
+// zygoloid:
+//    Yeah, I think the only cases left where lambdas don't need a
+//    mangling are when they have (effectively) internal linkage or
+//    appear in a non-inline function in a non-module translation unit.
+static bool isNonInlineInModulePurview(const Decl *ManglingContextDecl,
+                                       const DeclContext *DC) {
+  auto *ND = dyn_cast<NamedDecl>(ManglingContextDecl ? ManglingContextDecl
+                                                     : cast<Decl>(DC));
+  return ND && ((ND->isInNamedModule() || ND->isFromGlobalModule()) &&
+                ND->isExternallyVisible());
+}
+
 std::tuple<MangleNumberingContext *, Decl *>
 Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   // Compute the context for allocating mangling numbers in the current
@@ -288,7 +302,6 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     InlineVariable,
     TemplatedVariable,
     Concept,
-    NonInlineInModulePurview
   } Kind = Normal;
 
   bool IsInNonspecializedTemplate =
@@ -298,33 +311,6 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   // definition, as well as the initializers of data members, receive special
   // treatment. Identify them.
   Kind = [&]() {
-    // See discussion in https://github.com/itanium-cxx-abi/cxx-abi/issues/186
-    //
-    // zygoloid:
-    //    Yeah, I think the only cases left where lambdas don't need a
-    //    mangling are when they have (effectively) internal linkage or appear
-    //    in a non-inline function in a non-module translation unit.
-
-    Decl *ManglingContextDeclForModule = [&]() {
-      if (!ManglingContextDecl || [&]() {
-            // If we must allocate mangling numbers but the
-            // `ManglingContextDecl` is a local variable, use the `DeclContext`
-            // containing the lambda expression instead.
-            VarDecl *Var = dyn_cast<VarDecl>(ManglingContextDecl);
-            return Var && Var->isLocalVarDecl();
-          }())
-        return const_cast<Decl *>(cast<Decl>(DC));
-
-      return ManglingContextDecl;
-    }();
-
-    if (auto *ND = dyn_cast<NamedDecl>(ManglingContextDeclForModule);
-        ND && (ND->isInNamedModule() || ND->isFromGlobalModule()) &&
-        ND->isExternallyVisible()) {
-      ManglingContextDecl = ND;
-      return NonInlineInModulePurview;
-    }
-
     if (!ManglingContextDecl)
       return Normal;
 
@@ -364,7 +350,8 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     //  -- the bodies of inline or templated functions
     if ((IsInNonspecializedTemplate &&
          !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
-        isInInlineFunction(CurContext)) {
+        isInInlineFunction(CurContext) ||
+        isNonInlineInModulePurview(ManglingContextDecl, DC)) {
       while (auto *CD = dyn_cast<CapturedDecl>(DC))
         DC = CD->getParent();
       return std::make_tuple(&Context.getManglingNumberContext(DC), nullptr);
@@ -373,7 +360,6 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     return std::make_tuple(nullptr, nullptr);
   }
 
-  case NonInlineInModulePurview:
   case Concept:
     // Concept definitions aren't code generated and thus aren't mangled,
     // however the ManglingContextDecl is important for the purposes of
