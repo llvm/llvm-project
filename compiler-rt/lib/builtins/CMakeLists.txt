@@ -461,6 +461,8 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
       arm/mulsf3.S
       arm/divsf3.S
       arm/adddf3.S
+      arm/muldf3.S
+      arm/divdf3.S
       )
     set_source_files_properties(${assembly_files}
       PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
