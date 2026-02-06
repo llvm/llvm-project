@@ -400,6 +400,10 @@ CompilerType TypeSystemSwiftTypeRef::GetTypeFromTypeMetadataNode(
   NodePointer type = swift_demangle::NodeAtPath(
       node, {Node::Kind::Global, Node::Kind::TypeMetadata, Node::Kind::Type});
   if (!type)
+    type = swift_demangle::NodeAtPath(
+        node,
+        {Node::Kind::Global, Node::Kind::FullTypeMetadata, Node::Kind::Type});
+  if (!type)
     return {};
   auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
   return RemangleAsType(dem, type, flavor);
@@ -2722,29 +2726,22 @@ plugin::dwarf::DWARFASTParser *TypeSystemSwiftTypeRef::GetDWARFParser() {
 }
 
 TypeSP
-TypeSystemSwiftTypeRef::FindTypeInModule(opaque_compiler_type_t opaque_type) {
+TypeSystemSwiftTypeRef::FindTypeInModule(std::vector<CompilerContext> context) {
   auto *M = GetModule();
   if (!M)
-    return {};
-
-  swift::Demangle::Demangler dem;
-  auto context = BuildDeclContext(AsMangledName(opaque_type), dem);
-  if (!context)
     return {};
   // DW_AT_linkage_name is not part of the accelerator table, so
   // we need to search by decl context.
   auto options =
       TypeQueryOptions::e_find_one | TypeQueryOptions::e_module_search;
-
   // FIXME: It would be nice to not need this.
-  if (context->size() == 2 &&
-      context->front().kind == CompilerContextKind::Module &&
-      context->front().name == "Builtin") {
+  if (context.size() == 2 && context[0].kind == CompilerContextKind::Module &&
+      context[0].name == "Builtin") {
     // LLVM cannot nest basic types inside a module.
-    context->erase(context->begin());
+    context.erase(context.begin());
     options = TypeQueryOptions::e_find_one;
   }
-  TypeQuery query(*context, options);
+  TypeQuery query(context, options);
   query.SetLanguages(TypeSystemSwift::GetSupportedLanguagesForTypes());
 
   TypeResults results;
@@ -2752,6 +2749,27 @@ TypeSystemSwiftTypeRef::FindTypeInModule(opaque_compiler_type_t opaque_type) {
   if (results.Done(query))
     return results.GetFirstType();
   return {};
+}
+
+TypeSP
+TypeSystemSwiftTypeRef::FindTypeInModule(opaque_compiler_type_t opaque_type) {
+
+  swift::Demangle::Demangler dem;
+  auto maybe_context = BuildDeclContext(AsMangledName(opaque_type), dem);
+  if (!maybe_context || maybe_context->empty())
+    return {};
+
+  auto context = *maybe_context;
+  if (auto result = FindTypeInModule(context))
+    return result;
+
+  // Types with "Swift" as their module might actually belong to the
+  // _Concurrency module, so look there too.
+  if (context[0].name != "Swift" ||
+      context[0].kind != CompilerContextKind::Module)
+    return {};
+  context[0].name = ConstString("_Concurrency");
+  return FindTypeInModule(context);
 }
 
 // Tests

@@ -493,6 +493,9 @@ protected:
   void DiagnoseSwiftASTContextFallback(const char *func_name,
                                        lldb::opaque_compiler_type_t type);
 
+  /// Looks for the type using the provided compiler context.
+  lldb::TypeSP FindTypeInModule(std::vector<CompilerContext> context);
+
   /// Helper that creates an AST type from \p type.
   ///
   /// FIXME: This API is dangerous, it would be better to return a
