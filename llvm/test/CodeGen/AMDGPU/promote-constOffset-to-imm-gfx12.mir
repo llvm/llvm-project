@@ -85,7 +85,7 @@ body:             |
     ; GFX1250-LABEL: name: promote_async_load_u64
     ; GFX1250: liveins: $vgpr0, $sgpr4_sgpr5
     ; GFX1250-NEXT: {{  $}}
-    ; GFX1250-NEXT: early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 0 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
+    ; GFX1250-NEXT: early-clobber renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM_ec killed renamable $sgpr4_sgpr5, 36, 32 :: (dereferenceable invariant load (s64), align 4, addrspace 4)
     ; GFX1250-NEXT: renamable $vgpr1 = V_MOV_B32_e32 0, implicit $exec
     ; GFX1250-NEXT: renamable $vgpr0 = V_AND_B32_e32 1023, killed $vgpr0, implicit $exec
     ; GFX1250-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B128_SADDR $vgpr1, $sgpr0_sgpr1, $vgpr0, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
