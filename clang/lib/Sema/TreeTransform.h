@@ -3098,14 +3098,15 @@ public:
                                               Init);
   }
 
-  /// Build a new extended vector element access expression.
+  /// Build a new extended vector or matrix element access expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
-  ExprResult RebuildExtVectorElementExpr(Expr *Base, SourceLocation OpLoc,
-                                         bool IsArrow,
-                                         SourceLocation AccessorLoc,
-                                         IdentifierInfo &Accessor) {
+  ExprResult RebuildExtVectorOrMatrixElementExpr(Expr *Base,
+                                                 SourceLocation OpLoc,
+                                                 bool IsArrow,
+                                                 SourceLocation AccessorLoc,
+                                                 IdentifierInfo &Accessor) {
 
     CXXScopeSpec SS;
     DeclarationNameInfo NameInfo(&Accessor, AccessorLoc);
@@ -13971,8 +13972,26 @@ TreeTransform<Derived>::TransformExtVectorElementExpr(ExtVectorElementExpr *E) {
   // FIXME: Bad source location
   SourceLocation FakeOperatorLoc =
       SemaRef.getLocForEndOfToken(E->getBase()->getEndLoc());
-  return getDerived().RebuildExtVectorElementExpr(
+  return getDerived().RebuildExtVectorOrMatrixElementExpr(
       Base.get(), FakeOperatorLoc, E->isArrow(), E->getAccessorLoc(),
+      E->getAccessor());
+}
+
+template <typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformMatrixElementExpr(MatrixElementExpr *E) {
+  ExprResult Base = getDerived().TransformExpr(E->getBase());
+  if (Base.isInvalid())
+    return ExprError();
+
+  if (!getDerived().AlwaysRebuild() && Base.get() == E->getBase())
+    return E;
+
+  // FIXME: Bad source location
+  SourceLocation FakeOperatorLoc =
+      SemaRef.getLocForEndOfToken(E->getBase()->getEndLoc());
+  return getDerived().RebuildExtVectorOrMatrixElementExpr(
+      Base.get(), FakeOperatorLoc, /*isArrow*/ false, E->getAccessorLoc(),
       E->getAccessor());
 }
 
