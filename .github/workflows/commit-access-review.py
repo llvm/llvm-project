@@ -328,6 +328,7 @@ def main():
 
     # Step 2 check for reviews
     for user in list(triage_list.keys()):
+        print(f"checking {user}")
         review_count = get_review_count(gh, user, one_year_ago)
         triage_list[user].add_reviewed(review_count)
 
@@ -338,6 +339,7 @@ def main():
 
     # Step 3 check for number of commits
     for user in list(triage_list.keys()):
+        print(f"Checking commits for {user}")
         num_commits = get_num_commits(gh, user, one_year_ago)
         # Override the total number of commits to not double count commits and
         # authored PRs.
