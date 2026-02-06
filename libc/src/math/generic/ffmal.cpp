@@ -11,7 +11,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float, ffmal,(long double x, long double y, long double z)) {
+LLVM_LIBC_FUNCTION(float, ffmal,
+                   (long double x, long double y, long double z)) {
   return math::ffmal(x, y, z);
 }
 
