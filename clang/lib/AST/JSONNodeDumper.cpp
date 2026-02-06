@@ -611,6 +611,8 @@ void JSONNodeDumper::VisitAvailabilityAttr(const AvailabilityAttr *AA) {
   attributeOnlyIfTrue("strict", AA->getStrict());
   if (!AA->getReplacement().empty())
     JOS.attribute("replacement", AA->getReplacement());
+  if (AA->getPriority() != 0)
+    JOS.attribute("priority", AA->getPriority());
   if (const IdentifierInfo *Env = AA->getEnvironment())
     JOS.attribute("environment", Env->getName());
 }
