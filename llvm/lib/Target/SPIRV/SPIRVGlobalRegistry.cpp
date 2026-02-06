@@ -378,13 +378,9 @@ Register SPIRVGlobalRegistry::getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                                   SPIRVType *SpvType,
                                                   const SPIRVInstrInfo &TII,
                                                   bool ZeroAsNull) {
-  const IntegerType *Ty = cast<IntegerType>(getTypeForSPIRVType(SpvType));
-  auto *const CI = ConstantInt::get(const_cast<IntegerType *>(Ty), Val);
-  const MachineInstr *MI = findMI(CI, CurMF);
-  if (MI && (MI->getOpcode() == SPIRV::OpConstantNull ||
-             MI->getOpcode() == SPIRV::OpConstantI))
-    return MI->getOperand(0).getReg();
-  return createConstInt(CI, I, SpvType, TII, ZeroAsNull);
+  return getOrCreateConstInt(
+      APInt(getScalarOrVectorBitWidth(SpvType), Val), I, SpvType, TII,
+      ZeroAsNull);
 }
 
 Register SPIRVGlobalRegistry::getOrCreateConstInt(const APInt &Val,
@@ -592,18 +588,9 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(uint64_t Val,
                                                      SPIRVType *SpvType,
                                                      const SPIRVInstrInfo &TII,
                                                      bool ZeroAsNull) {
-  const Type *LLVMTy = getTypeForSPIRVType(SpvType);
-  assert(LLVMTy->isVectorTy());
-  const FixedVectorType *LLVMVecTy = cast<FixedVectorType>(LLVMTy);
-  Type *LLVMBaseTy = LLVMVecTy->getElementType();
-  assert(LLVMBaseTy->isIntegerTy());
-  auto *ConstVal = ConstantInt::get(LLVMBaseTy, Val);
-  auto *ConstVec =
-      ConstantVector::getSplat(LLVMVecTy->getElementCount(), ConstVal);
-  unsigned BW = getScalarOrVectorBitWidth(SpvType);
-  return getOrCreateCompositeOrNull(ConstVal, I, SpvType, TII, ConstVec, BW,
-                                    SpvType->getOperand(2).getImm(),
-                                    ZeroAsNull);
+  return getOrCreateConstVector(
+      APInt(getScalarOrVectorBitWidth(SpvType), Val), I, SpvType, TII,
+      ZeroAsNull);
 }
 
 Register SPIRVGlobalRegistry::getOrCreateConstVector(const APInt &Val,
