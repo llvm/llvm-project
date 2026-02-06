@@ -207,8 +207,8 @@ define i64 @lshl_add_u64_vvv_urem(i64 %v, i64 %a, i64 %s) {
   ret i64 %add
 }
 
-define <4 x i64> @lshl_add_v4u64_vvv_and_2(<4 x i64> %v, <4 x i64> %a, <4 x i64> %s) {
-; GCN-LABEL: lshl_add_v4u64_vvv_and_2:
+define <4 x i64> @lshl_add_u64_vvv_and_2_v4(<4 x i64> %v, <4 x i64> %a, <4 x i64> %s) {
+; GCN-LABEL: lshl_add_u64_vvv_and_2_v4:
 ; GCN-DAG: v_and_b32_e32 [[AND5:v[0-9:]+]], 5, v{{[0-9:]+}}
 ; GCN-DAG: v_and_b32_e32 [[AND3:v[0-9:]+]], 1, v{{[0-9:]+}}
 ; GCN-DAG: v_and_b32_e32 [[AND2:v[0-9:]+]], 2, v{{[0-9:]+}}
@@ -218,7 +218,7 @@ define <4 x i64> @lshl_add_v4u64_vvv_and_2(<4 x i64> %v, <4 x i64> %a, <4 x i64>
 ; GCN-DAG: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[AND3]], v[{{[0-9:]+}}]
 ; GFX1250: v_add_nc_u64_e32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
 ; GFX942: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], 0, v[{{[0-9:]+}}]
-; GISEL-LABEL: lshl_add_v4u64_vvv_and_2:
+; GISEL-LABEL: lshl_add_u64_vvv_and_2_v4:
 ; GFX942-GISEL: v_add_co_u32_e32 v{{[0-9:]+}}, vcc, v{{[0-9:]+}}, v{{[0-9:]+}}
 ; GFX1250-GISEL-DAG: v_and_b32_e32 [[AND5:v[0-9:]+]], 5, v{{[0-9:]+}}
 ; GFX1250-GISEL-DAG: v_and_b32_e32 [[AND3:v[0-9:]+]], 1, v{{[0-9:]+}}
