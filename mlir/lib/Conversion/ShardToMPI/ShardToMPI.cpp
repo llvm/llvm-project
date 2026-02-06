@@ -30,6 +30,7 @@
 #include "mlir/Dialect/Shard/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -620,6 +621,13 @@ struct ConvertAllReduceOp : public CommOpPattern<AllReduceOp> {
 struct ConvertAllGatherOp : public CommOpPattern<AllGatherOp> {
   using CommOpPattern::CommOpPattern;
 
+  // shard.allgather concatenates along a specified gather-axis.
+  // mpi.allgather always concatenates along the first dimension and
+  // there is no MPI operation that allows gathering along an arbitrary axis.
+  // Hence, if gather-axis!=0, we need to create a temporary buffer
+  // where we gather along the first dimension and then copy from that
+  // buffer to the final output along the specified gather-axis.
+
   LogicalResult
   matchAndRewrite(AllGatherOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -637,19 +645,95 @@ struct ConvertAllGatherOp : public CommOpPattern<AllGatherOp> {
     if (!memref::isStaticShapeAndContiguousRowMajor(outType))
       return op.emitError(
           "Expected static shaped memref in contiguous row-major layout.");
+    int64_t gatherAxis = adaptor.getGatherAxisAttr().getInt();
+    auto ctx = op->getContext();
 
     // Get the right communicator
     Value comm = getComm(*gridOp, adaptor.getGridAxes(), iBuilder);
-    // Allocate output buffer
-    Value output = memref::AllocOp::create(iBuilder, outType);
+
+    Value nRanks =
+        mpi::CommSizeOp::create(iBuilder, iBuilder.getI32Type(), comm)
+            .getSize();
+    nRanks =
+        arith::IndexCastOp::create(iBuilder, iBuilder.getIndexType(), nRanks);
+
+    Value tmpOutput, gatherDimSz;
+    if (gatherAxis == 0) {
+      tmpOutput = memref::AllocOp::create(iBuilder, outType);
+    } else {
+      // MPI's allgather always concatenates along the first dimension.
+      // Create a memref type for the output buffer with adjusted (expanded)
+      // shape.
+      SmallVector<int64_t> gatherShape(1, ShapedType::kDynamic);
+      llvm::append_range(gatherShape, outType.getShape());
+      gatherShape[gatherAxis + 1] = ShapedType::kDynamic;
+      MemRefType gatherType =
+          MemRefType::get(gatherShape, outType.getElementType());
+      gatherDimSz = arith::ConstantIndexOp::create(
+          iBuilder, outType.getDimSize(gatherAxis));
+      gatherDimSz = arith::DivSIOp::create(iBuilder, iBuilder.getIndexType(),
+                                           gatherDimSz, nRanks);
+      // Allocate output buffer
+      tmpOutput =
+          memref::AllocOp::create(iBuilder, gatherType, {nRanks, gatherDimSz});
+    }
     // Create the MPI AllGather operation.
-    mpi::AllGatherOp::create(iBuilder, TypeRange(), input, output, comm);
+    mpi::AllGatherOp::create(iBuilder, TypeRange(), input, tmpOutput, comm);
+
+    // If gather-axis!=0, copy from gathered buffer to output with the right
+    // layout.
+    Value finalOutput = tmpOutput;
+    if (gatherAxis != 0) {
+      int64_t nSrcDims = cast<ShapedType>(tmpOutput.getType()).getRank();
+      assert(nSrcDims == outType.getRank() + 1 &&
+             "Expected gathered type to have rank one more than output type.");
+
+      // Create affine map for copying from gathered buffer to output.
+      SmallVector<AffineExpr> dims;
+      dims.reserve(nSrcDims);
+      for (unsigned i = 0; i < nSrcDims; ++i)
+        dims.emplace_back(getAffineDimExpr(i, ctx));
+      AffineExpr s = getAffineSymbolExpr(0, ctx);
+      SmallVector<AffineExpr> results;
+      results.reserve(nSrcDims);
+      for (unsigned i = 0; i < nSrcDims - 1; ++i) {
+        if (i == gatherAxis)
+          results.emplace_back(dims[0] * s + dims[gatherAxis + 1]);
+        else
+          results.emplace_back(dims[i + 1]);
+      }
+      auto affineMap = AffineMap::get(nSrcDims, /*symbols=*/1, results, ctx);
+
+      finalOutput = memref::AllocOp::create(iBuilder, outType);
+
+      // Now build a loop nest to copy from gathered buffer to finalOutput
+      // It would be nicer to just use a memref.transpose/collapse_shape op but
+      // these currently only support simpler cases.
+      Value zero = arith::ConstantIndexOp::create(iBuilder, 0);
+      SmallVector<Value> lbs(nSrcDims, zero);
+      SmallVector<Value> ubs;
+      for (int64_t d = 0; d < nSrcDims; ++d)
+        ubs.emplace_back(memref::DimOp::create(iBuilder, tmpOutput, d));
+      SmallVector<int64_t> steps(nSrcDims, 1);
+      auto emitCopy = [&](OpBuilder &builder, Location loc, ValueRange ivs) {
+        Value v = memref::LoadOp::create(iBuilder, tmpOutput, ivs);
+        // set symbol value
+        SmallVector<Value> ivss(ivs.begin(), ivs.end());
+        ivss.emplace_back(gatherDimSz);
+        affine::AffineStoreOp::create(iBuilder, v, finalOutput, affineMap,
+                                      ivss);
+      };
+      affine::buildAffineLoopNest(iBuilder, op->getLoc(), lbs, ubs, steps,
+                                  emitCopy);
+
+      memref::DeallocOp::create(iBuilder, tmpOutput);
+    }
 
     // If the destination is a tensor, cast it to a tensor
     if (isa<RankedTensorType>(op.getType()))
-      output = bufferization::ToTensorOp::create(iBuilder, op.getType(), output,
-                                                 true);
-    rewriter.replaceOp(op, output);
+      finalOutput = bufferization::ToTensorOp::create(iBuilder, op.getType(),
+                                                      finalOutput, true);
+    rewriter.replaceOp(op, finalOutput);
     return success();
   }
 };

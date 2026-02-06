@@ -2548,7 +2548,7 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
 
   ReductionStyle Style;
 
-  /// The phi is part of a multi-use reduction (e.g., used in FindLastIV
+  /// The phi is part of a multi-use reduction (e.g., used in FindIV
   /// patterns for argmin/argmax).
   /// TODO: Also support cases where the phi itself has a single use, but its
   /// compare has multiple uses.

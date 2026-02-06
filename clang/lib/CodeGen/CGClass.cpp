@@ -2278,8 +2278,7 @@ void CodeGenFunction::EmitCXXConstructorCall(
     unsigned TargetThisAS = getContext().getTargetAddressSpace(ThisAS);
     llvm::Type *NewType =
         llvm::PointerType::get(getLLVMContext(), TargetThisAS);
-    ThisPtr =
-        getTargetHooks().performAddrSpaceCast(*this, ThisPtr, ThisAS, NewType);
+    ThisPtr = performAddrSpaceCast(ThisPtr, NewType);
   }
 
   // Push the this ptr.
@@ -2495,7 +2494,7 @@ void CodeGenFunction::EmitInlinedInheritingCXXConstructorCall(
   // FIXME: This is dumb, we should ask the ABI not to try to set the return
   // value instead.
   if (!RetType->isVoidType())
-    ReturnValue = CreateIRTemp(RetType, "retval.inhctor");
+    ReturnValue = CreateIRTempWithoutCast(RetType, "retval.inhctor");
 
   CGM.getCXXABI().EmitInstanceFunctionProlog(*this);
   CXXThisValue = CXXABIThisValue;

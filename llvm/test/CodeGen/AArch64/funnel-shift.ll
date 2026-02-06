@@ -256,6 +256,34 @@ define i8 @fshl_i8_const_fold() {
   ret i8 %f
 }
 
+define i32 @fshl_scalar_undef_shift() {
+; CHECK-SD-LABEL: fshl_scalar_undef_shift:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w0, #1 // =0x1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fshl_scalar_undef_shift:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w0, #-1 // =0xffffffff
+; CHECK-GI-NEXT:    ret
+  %1 = call i32 @llvm.fshl.i32(i32 1, i32 2, i32 undef)
+  ret i32 %1
+}
+
+define <2 x i32> @fshl_vector_undef_shift() {
+; CHECK-SD-LABEL: fshl_vector_undef_shift:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2s, #1
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fshl_vector_undef_shift:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi d0, #0xffffffffffffffff
+; CHECK-GI-NEXT:    ret
+  %1 = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> <i32 1, i32 1>, <2 x i32> <i32 2, i32 2>, <2 x i32> undef)
+  ret <2 x i32> %1
+}
+
 ; Repeat everything for funnel shift right.
 
 ; General case - all operands can be variables.
@@ -446,6 +474,34 @@ define i8 @fshr_i8_const_fold() {
 ; CHECK-GI-NEXT:    ret
   %f = call i8 @llvm.fshr.i8(i8 255, i8 0, i8 7)
   ret i8 %f
+}
+
+define i32 @fshr_scalar_undef_shift() {
+; CHECK-SD-LABEL: fshr_scalar_undef_shift:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w0, #2 // =0x2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fshr_scalar_undef_shift:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w0, #-1 // =0xffffffff
+; CHECK-GI-NEXT:    ret
+  %1 = call i32 @llvm.fshr.i32(i32 1, i32 2, i32 undef)
+  ret i32 %1
+}
+
+define <2 x i32> @fshr_vector_undef_shift() {
+; CHECK-SD-LABEL: fshr_vector_undef_shift:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v0.2s, #2
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: fshr_vector_undef_shift:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    movi d0, #0xffffffffffffffff
+; CHECK-GI-NEXT:    ret
+  %1 = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> <i32 1, i32 1>, <2 x i32> <i32 2, i32 2>, <2 x i32> undef)
+  ret <2 x i32> %1
 }
 
 define i32 @fshl_i32_shift_by_bitwidth(i32 %x, i32 %y) {
