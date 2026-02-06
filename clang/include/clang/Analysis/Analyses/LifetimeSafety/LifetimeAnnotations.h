@@ -66,6 +66,10 @@ bool isGslPointerType(QualType QT);
 // Tells whether the type is annotated with [[gsl::Owner]].
 bool isGslOwnerType(QualType QT);
 
+// Returns true if the given method invalidates iterators or references to
+// container elements (e.g. vector::push_back).
+bool isContainerInvalidationMethod(const CXXMethodDecl &MD);
+
 } // namespace clang::lifetimes
 
 #endif // LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMEANNOTATIONS_H

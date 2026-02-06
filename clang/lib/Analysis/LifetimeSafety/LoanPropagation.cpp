@@ -67,6 +67,7 @@ static llvm::BitVector computePersistentOrigins(const FactManager &FactMgr,
       case Fact::Kind::OriginEscapes:
       case Fact::Kind::Expire:
       case Fact::Kind::TestPoint:
+      case Fact::Kind::InvalidateOrigin:
         break;
       }
     }
