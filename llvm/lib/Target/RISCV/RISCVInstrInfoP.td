@@ -854,8 +854,14 @@ let Predicates = [HasStdExtP] in {
   def PPAIRO_B    : RVPBinary_rr<0b0110, 0b00, 0b100, "ppairo.b">;
   def PPAIRO_H    : RVPBinary_rr<0b0110, 0b01, 0b100, "ppairo.h">;
 } // Predicates = [HasStdExtP]
+let Predicates = [HasStdExtP, IsRV32] in {
+  // This should be a MnemonicAlias, but InstAlias produces better errors.
+  def : InstAlias<"ppaire.h $rd, $rs1, $rs2", (PACK GPR:$rd, GPR:$rs1, GPR:$rs2), 0>;
+}
 let Predicates = [HasStdExtP, IsRV64] in {
   def PPAIRE_H    : RVPBinary_rr<0b0000, 0b01, 0b100, "ppaire.h">;
+  // This should be a MnemonicAlias, but InstAlias produces better errors.
+  def : InstAlias<"ppaire.w $rd, $rs1, $rs2", (PACK GPR:$rd, GPR:$rs1, GPR:$rs2), 0>;
 
   def PPAIREO_W   : RVPBinary_rr<0b0010, 0b11, 0b100, "ppaireo.w">;
 
