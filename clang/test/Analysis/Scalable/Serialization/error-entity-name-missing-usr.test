@@ -3,7 +3,7 @@
 // Test that EntityName must have 'usr' field
 
 // CHECK: failed to read TUSummary
-// CHECK: failed to deserialize EntityIdTable entry from file
-// CHECK: failed to deserialize EntityName from file
+// CHECK: failed to deserialize EntityIdTable entry
+// CHECK: failed to deserialize EntityName
 // CHECK: missing required field 'usr'
 // CHECK: Unified Symbol Resolution string

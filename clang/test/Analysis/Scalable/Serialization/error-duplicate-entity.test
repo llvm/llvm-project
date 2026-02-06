@@ -3,6 +3,6 @@
 // Test that duplicate EntityName in id_table is detected
 
 // CHECK: failed to read TUSummary
-// CHECK: failed to deserialize EntityIdTable from file
+// CHECK: failed to deserialize EntityIdTable
 // CHECK: duplicate EntityName found at index 1
 // CHECK: EntityId=0 already exists in table

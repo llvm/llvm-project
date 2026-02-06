@@ -3,6 +3,6 @@
 // Test that id_table entry 'id' field must be a valid uint64
 
 // CHECK: failed to read TUSummary
-// CHECK: failed to deserialize EntityIdTable entry from file
+// CHECK: failed to deserialize EntityIdTable entry
 // CHECK: field 'id' is not a valid unsigned 64-bit integer
 // CHECK: expected non-negative EntityId value

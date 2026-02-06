@@ -3,5 +3,5 @@
 // Test that invalid kind value is detected
 
 // CHECK: failed to read TUSummary
-// CHECK: failed to deserialize BuildNamespace from file
+// CHECK: failed to deserialize BuildNamespace
 // CHECK: invalid 'kind' BuildNamespaceKind value 'InvalidKind'

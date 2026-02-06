@@ -3,5 +3,5 @@
 // Test that EntitySummary deserialization requires registered FormatInfo
 
 // CHECK: failed to read TUSummary
-// CHECK: failed to deserialize EntitySummary from file
+// CHECK: failed to deserialize EntitySummary
 // CHECK: no FormatInfo was registered for summary name

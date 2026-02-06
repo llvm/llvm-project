@@ -3,8 +3,8 @@
 // Test that namespace array elements must be objects
 
 // CHECK: failed to read TUSummary
-// CHECK: failed to deserialize EntityIdTable entry from file
-// CHECK: failed to deserialize EntityName from file
-// CHECK: failed to deserialize NestedBuildNamespace from file
+// CHECK: failed to deserialize EntityIdTable entry
+// CHECK: failed to deserialize EntityName
+// CHECK: failed to deserialize NestedBuildNamespace
 // CHECK: element at index 0 is not a JSON object
 // CHECK: expected BuildNamespace object

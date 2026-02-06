@@ -3,4 +3,4 @@
 // Test that invalid JSON syntax is detected
 
 // CHECK: failed to read TUSummary
-// CHECK: failed to read JSON object from file
+// CHECK: failed to read JSON object

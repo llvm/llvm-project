@@ -3,4 +3,4 @@
 // Test that JSON array (not object) is rejected
 
 // CHECK: failed to read TUSummary
-// CHECK: failed to read JSON object from file
+// CHECK: failed to read JSON object

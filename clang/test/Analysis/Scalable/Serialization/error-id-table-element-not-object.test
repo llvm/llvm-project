@@ -3,6 +3,6 @@
 // Test that id_table elements must be objects
 
 // CHECK: failed to read TUSummary
-// CHECK: failed to deserialize EntityIdTable from file
+// CHECK: failed to deserialize EntityIdTable
 // CHECK: element at index 0 is not a JSON object
 // CHECK: expected EntityIdTable entry with 'id' and 'name' fields

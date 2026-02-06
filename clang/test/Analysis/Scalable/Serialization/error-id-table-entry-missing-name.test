@@ -3,6 +3,6 @@
 // Test that id_table entries must have 'name' field
 
 // CHECK: failed to read TUSummary
-// CHECK: failed to deserialize EntityIdTable entry from file
+// CHECK: failed to deserialize EntityIdTable entry
 // CHECK: missing or invalid field 'name'
 // CHECK: expected EntityName JSON object

@@ -3,6 +3,6 @@
 // Test that entity data elements must be objects
 
 // CHECK: failed to read TUSummary
-// CHECK: failed to deserialize entity data map from file
+// CHECK: failed to deserialize entity data map
 // CHECK: element at index 0 is not a JSON object
 // CHECK: expected object with 'entity_id' and 'entity_summary' fields

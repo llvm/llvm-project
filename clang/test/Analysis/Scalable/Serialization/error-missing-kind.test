@@ -3,6 +3,6 @@
 // Test that missing kind field in tu_namespace is detected
 
 // CHECK: failed to read TUSummary
-// CHECK: failed to deserialize BuildNamespace from file
+// CHECK: failed to deserialize BuildNamespace
 // CHECK: missing required field 'kind'
 // CHECK: expected BuildNamespaceKind

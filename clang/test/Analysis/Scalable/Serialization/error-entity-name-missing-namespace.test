@@ -3,7 +3,7 @@
 // Test that EntityName must have 'namespace' field
 
 // CHECK: failed to read TUSummary
-// CHECK: failed to deserialize EntityIdTable entry from file
-// CHECK: failed to deserialize EntityName from file
+// CHECK: failed to deserialize EntityIdTable entry
+// CHECK: failed to deserialize EntityName
 // CHECK: missing or invalid field 'namespace'
 // CHECK: expected JSON array of BuildNamespace objects
