@@ -4482,6 +4482,21 @@ static Value *simplifyWithOpsReplaced(Value *V,
       if (NewOps.size() == 2 && match(NewOps[1], m_Zero()))
         return NewOps[0];
     }
+
+    if (SelectInst *SI = dyn_cast<SelectInst>(I)) {
+      if (SI->hasPoisonGeneratingAnnotations()) {
+        if (!DropFlags)
+          return nullptr;
+
+        DropFlags->push_back(SI);
+      }
+
+      // If both of the arm give the same value and that value isn't poison we
+      // can simplify the select to that value.
+      if (isGuaranteedNotToBePoison(NewOps[1]) && NewOps[1] == NewOps[2])
+        return NewOps[1];
+    }
+
   } else {
     // The simplification queries below may return the original value. Consider:
     //   %div = udiv i32 %arg, %arg2
@@ -5140,6 +5155,18 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
     }
     if (NewC.size() == NumElts)
       return ConstantVector::get(NewC);
+  }
+
+  CmpPredicate Pred1, Pred2;
+  Value *V1, *V2, *EQV;
+  if (match(Cond, m_And(m_ICmp(Pred1, m_Value(V1), m_Value(EQV)),
+                        m_ICmp(Pred2, m_Value(V2), m_Deferred(EQV))))) {
+    if (Pred1 == ICmpInst::ICMP_EQ && Pred2 == ICmpInst::ICMP_EQ) {
+      if (Value *V = simplifySelectWithEquivalence(
+              {{V2, EQV}, {V1, EQV}}, TrueVal, FalseVal, Q, MaxRecurse)) {
+        return V;
+      }
+    }
   }
 
   if (Value *V =

@@ -5,12 +5,10 @@ define i32 @foo(i32 %6, i32 %44) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP1:%.*]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP0:%.*]], 4
-; CHECK-NEXT:    [[OR_COND_I:%.*]] = and i1 [[TMP4]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i1 [[TMP4]], true
 ; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[TMP6]], i32 [[TMP0]], i32 [[TMP1]]
-; CHECK-NEXT:    [[DOT0_I8:%.*]] = select i1 [[OR_COND_I]], i32 4, i32 [[SPEC_SELECT_I]]
-; CHECK-NEXT:    ret i32 [[DOT0_I8]]
+; CHECK-NEXT:    ret i32 [[SPEC_SELECT_I]]
 ;
   %46 = icmp eq i32 %44, 4
   %47 = icmp eq i32 %6, 4
@@ -31,9 +29,8 @@ define i32 @fooAndUsed(i32 %6, i32 %44) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = xor i1 [[TMP4]], true
 ; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[TMP6]], i32 [[TMP0]], i32 [[TMP1]]
-; CHECK-NEXT:    [[DOT0_I8:%.*]] = select i1 [[OR_COND_I]], i32 4, i32 [[SPEC_SELECT_I]]
 ; CHECK-NEXT:    call void @use32(i1 [[OR_COND_I]])
-; CHECK-NEXT:    ret i32 [[DOT0_I8]]
+; CHECK-NEXT:    ret i32 [[SPEC_SELECT_I]]
 ;
   %46 = icmp eq i32 %44, 4
   %47 = icmp eq i32 %6, 4
