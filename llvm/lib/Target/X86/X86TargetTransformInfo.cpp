@@ -213,7 +213,7 @@ X86TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(ST->is64Bit() ? 64 : 32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    if (ST->hasAVX512() && ST->hasEVEX512() && PreferVectorWidth >= 512)
+    if (ST->hasAVX512() && PreferVectorWidth >= 512)
       return TypeSize::getFixed(512);
     if (ST->hasAVX() && PreferVectorWidth >= 256)
       return TypeSize::getFixed(256);
@@ -1206,6 +1206,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::MUL,     MVT::v4i32,   {  2,  5,  1,  3 } }, // pmulld
     { ISD::MUL,     MVT::v4i64,   { 12, 15, 19, 20 } },
 
+    { X86ISD::PMULUDQ, MVT::v4i64, { 3,  5, 5, 6 } }, // pmuludq + split
+
     { ISD::AND,     MVT::v32i8,   {  1,  1, 1, 2 } }, // vandps
     { ISD::AND,     MVT::v16i16,  {  1,  1, 1, 2 } }, // vandps
     { ISD::AND,     MVT::v8i32,   {  1,  1, 1, 2 } }, // vandps
@@ -1797,7 +1799,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                 return;
               }
               if (SrcReg != DestReg &&
-                  any_of(RegMask, [](int I) { return I != PoisonMaskElem; })) {
+                  any_of(RegMask, not_equal_to(PoisonMaskElem))) {
                 // Just a copy of the source register.
                 Cost += TTI::TCC_Free;
               }
@@ -4801,10 +4803,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 }
 
-InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                               TTI::TargetCostKind CostKind,
-                                               unsigned Index, const Value *Op0,
-                                               const Value *Op1) const {
+InstructionCost X86TTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   static const CostTblEntry SLMCostTbl[] = {
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i8,      4 },
      { ISD::EXTRACT_VECTOR_ELT,       MVT::i16,     4 },
@@ -4813,6 +4814,10 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
    };
 
   assert(Val->isVectorTy() && "This must be a vector type");
+  auto *VT = cast<VectorType>(Val);
+  if (VT->isScalableTy())
+    return InstructionCost::getInvalid();
+
   Type *ScalarType = Val->getScalarType();
   InstructionCost RegisterFileMoveCost = 0;
 
@@ -4946,14 +4951,15 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     return ShuffleCost + IntOrFpCost + RegisterFileMoveCost;
   }
 
-  return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1) +
+  return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1,
+                                   VIC) +
          RegisterFileMoveCost;
 }
 
 InstructionCost X86TTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
-    ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc, ArrayRef<Value *> VL,
+    TTI::VectorInstrContext VIC) const {
   assert(DemandedElts.getBitWidth() ==
              cast<FixedVectorType>(Ty)->getNumElements() &&
          "Vector size mismatch");
@@ -4985,7 +4991,8 @@ InstructionCost X86TTIImpl::getScalarizationOverhead(
         continue;
       Cost += getVectorInstrCost(Instruction::InsertElement, Ty, CostKind, I,
                                  Constant::getNullValue(Ty),
-                                 VL.empty() ? nullptr : VL[I]);
+                                 VL.empty() ? nullptr : VL[I],
+                                 TTI::VectorInstrContext::None);
     }
     return Cost;
   }
@@ -5409,9 +5416,28 @@ InstructionCost X86TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 InstructionCost
-X86TTIImpl::getMaskedMemoryOpCost(unsigned Opcode, Type *SrcTy, Align Alignment,
-                                  unsigned AddressSpace,
+X86TTIImpl::getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                                     TTI::TargetCostKind CostKind) const {
+  switch (MICA.getID()) {
+  case Intrinsic::masked_scatter:
+  case Intrinsic::masked_gather:
+    return getGatherScatterOpCost(MICA, CostKind);
+  case Intrinsic::masked_load:
+  case Intrinsic::masked_store:
+    return getMaskedMemoryOpCost(MICA, CostKind);
+  }
+  return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
+}
+
+InstructionCost
+X86TTIImpl::getMaskedMemoryOpCost(const MemIntrinsicCostAttributes &MICA,
                                   TTI::TargetCostKind CostKind) const {
+  unsigned Opcode = MICA.getID() == Intrinsic::masked_load ? Instruction::Load
+                                                           : Instruction::Store;
+  Type *SrcTy = MICA.getDataType();
+  Align Alignment = MICA.getAlignment();
+  unsigned AddressSpace = MICA.getAddressSpace();
+
   bool IsLoad = (Instruction::Load == Opcode);
   bool IsStore = (Instruction::Store == Opcode);
 
@@ -5674,6 +5700,17 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
   // Handle bool allof/anyof patterns.
   if (ValVTy->getElementType()->isIntegerTy(1)) {
+    if (ISD == ISD::ADD) {
+      // vXi1 addition reduction will bitcast to scalar and perform a popcount.
+      auto *IntTy = IntegerType::getIntNTy(ValVTy->getContext(),
+                                           ValVTy->getNumElements());
+      IntrinsicCostAttributes ICA(Intrinsic::ctpop, IntTy, {IntTy});
+      return getCastInstrCost(Instruction::BitCast, IntTy, ValVTy,
+                              TargetTransformInfo::CastContextHint::None,
+                              CostKind) +
+             getIntrinsicInstrCost(ICA, CostKind);
+    }
+
     InstructionCost ArithmeticCost = 0;
     if (LT.first != 1 && MTy.isVector() &&
         MTy.getVectorNumElements() < ValVTy->getNumElements()) {
@@ -5771,7 +5808,8 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
   // Add the final extract element to the cost.
   return ReductionCost + getVectorInstrCost(Instruction::ExtractElement, Ty,
-                                            CostKind, 0, nullptr, nullptr);
+                                            CostKind, 0, nullptr, nullptr,
+                                            TTI::VectorInstrContext::None);
 }
 
 InstructionCost X86TTIImpl::getMinMaxCost(Intrinsic::ID IID, Type *Ty,
@@ -5950,7 +5988,8 @@ X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
 
   // Add the final extract element to the cost.
   return MinMaxCost + getVectorInstrCost(Instruction::ExtractElement, Ty,
-                                         CostKind, 0, nullptr, nullptr);
+                                         CostKind, 0, nullptr, nullptr,
+                                         TTI::VectorInstrContext::None);
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper
@@ -6251,10 +6290,15 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
 }
 
 /// Calculate the cost of Gather / Scatter operation
-InstructionCost X86TTIImpl::getGatherScatterOpCost(
-    unsigned Opcode, Type *SrcVTy, const Value *Ptr, bool VariableMask,
-    Align Alignment, TTI::TargetCostKind CostKind,
-    const Instruction *I = nullptr) const {
+InstructionCost
+X86TTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
+                                   TTI::TargetCostKind CostKind) const {
+  bool IsLoad = MICA.getID() == Intrinsic::masked_gather ||
+                MICA.getID() == Intrinsic::vp_gather;
+  unsigned Opcode = IsLoad ? Instruction::Load : Instruction::Store;
+  Type *SrcVTy = MICA.getDataType();
+  const Value *Ptr = MICA.getPointer();
+  Align Alignment = MICA.getAlignment();
   if ((Opcode == Instruction::Load &&
        (!isLegalMaskedGather(SrcVTy, Align(Alignment)) ||
         forceScalarizeMaskedGather(cast<VectorType>(SrcVTy),
@@ -6263,8 +6307,7 @@ InstructionCost X86TTIImpl::getGatherScatterOpCost(
        (!isLegalMaskedScatter(SrcVTy, Align(Alignment)) ||
         forceScalarizeMaskedScatter(cast<VectorType>(SrcVTy),
                                     Align(Alignment)))))
-    return BaseT::getGatherScatterOpCost(Opcode, SrcVTy, Ptr, VariableMask,
-                                         Alignment, CostKind, I);
+    return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
   assert(SrcVTy->isVectorTy() && "Unexpected data type for Gather/Scatter");
   PointerType *PtrTy = dyn_cast<PointerType>(Ptr->getType());
@@ -6315,7 +6358,8 @@ static bool isLegalMaskedLoadStore(Type *ScalarTy, const X86Subtarget *ST) {
 }
 
 bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
-                                   unsigned AddressSpace) const {
+                                   unsigned AddressSpace,
+                                   TTI::MaskKind MaskKind) const {
   Type *ScalarTy = DataTy->getScalarType();
 
   // The backend can't handle a single element vector w/o CFCMOV.
@@ -6328,7 +6372,8 @@ bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
 }
 
 bool X86TTIImpl::isLegalMaskedStore(Type *DataTy, Align Alignment,
-                                    unsigned AddressSpace) const {
+                                    unsigned AddressSpace,
+                                    TTI::MaskKind MaskKind) const {
   Type *ScalarTy = DataTy->getScalarType();
 
   // The backend can't handle a single element vector w/o CFCMOV.
@@ -6560,7 +6605,7 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
 
 bool X86TTIImpl::areTypesABICompatible(const Function *Caller,
                                        const Function *Callee,
-                                       const ArrayRef<Type *> &Types) const {
+                                       ArrayRef<Type *> Types) const {
   if (!BaseT::areTypesABICompatible(Caller, Callee, Types))
     return false;
 
@@ -6591,7 +6636,7 @@ X86TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
     // Only enable vector loads for equality comparison. Right now the vector
     // version is not as fast for three way compare (see #33329).
     const unsigned PreferredWidth = ST->getPreferVectorWidth();
-    if (PreferredWidth >= 512 && ST->hasAVX512() && ST->hasEVEX512())
+    if (PreferredWidth >= 512 && ST->hasAVX512())
       Options.LoadSizes.push_back(64);
     if (PreferredWidth >= 256 && ST->hasAVX()) Options.LoadSizes.push_back(32);
     if (PreferredWidth >= 128 && ST->hasSSE2()) Options.LoadSizes.push_back(16);
@@ -6645,10 +6690,12 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCostAVX512(
                                              LegalVT.getVectorNumElements());
   InstructionCost MemOpCost;
   bool UseMaskedMemOp = UseMaskForCond || UseMaskForGaps;
-  if (UseMaskedMemOp)
-    MemOpCost = getMaskedMemoryOpCost(Opcode, SingleMemOpTy, Alignment,
-                                      AddressSpace, CostKind);
-  else
+  if (UseMaskedMemOp) {
+    unsigned IID = Opcode == Instruction::Load ? Intrinsic::masked_load
+                                               : Intrinsic::masked_store;
+    MemOpCost = getMaskedMemoryOpCost(
+        {IID, SingleMemOpTy, Alignment, AddressSpace}, CostKind);
+  } else
     MemOpCost = getMemoryOpCost(Opcode, SingleMemOpTy, Alignment, AddressSpace,
                                 CostKind);
 
@@ -7220,4 +7267,20 @@ bool X86TTIImpl::isProfitableToSinkOperands(Instruction *I,
   }
 
   return false;
+}
+
+bool X86TTIImpl::useFastCCForInternalCall(Function &F) const {
+  bool HasEGPR = ST->hasEGPR();
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+
+  for (User *U : F.users()) {
+    CallBase *CB = dyn_cast<CallBase>(U);
+    if (!CB || CB->getCalledOperand() != &F)
+      continue;
+    Function *CallerFunc = CB->getFunction();
+    if (TM.getSubtarget<X86Subtarget>(*CallerFunc).hasEGPR() != HasEGPR)
+      return false;
+  }
+
+  return true;
 }

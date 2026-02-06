@@ -42,6 +42,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -103,9 +104,6 @@ static cl::opt<bool> HexagonVolatileMemcpy(
 
 static cl::opt<unsigned> SimplifyLimit("hlir-simplify-limit", cl::init(10000),
   cl::Hidden, cl::desc("Maximum number of simplification steps in HLIR"));
-
-static const char *HexagonVolatileMemcpyName
-  = "hexagon_memcpy_forward_vp4cp4n2";
 
 namespace {
 
@@ -2023,7 +2021,7 @@ bool HexagonLoopIdiomRecognize::processCopyingStore(Loop *CurLoop,
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
   Instruction *ExpPt = Preheader->getTerminator();
   IRBuilder<> Builder(ExpPt);
-  SCEVExpander Expander(*SE, *DL, "hexagon-loop-idiom");
+  SCEVExpander Expander(*SE, "hexagon-loop-idiom");
 
   Type *IntPtrTy = Builder.getIntPtrTy(*DL, SI->getPointerAddressSpace());
 
@@ -2246,6 +2244,11 @@ CleanupAndExit:
       Type *PtrTy = PointerType::get(Ctx, 0);
       Type *VoidTy = Type::getVoidTy(Ctx);
       Module *M = Func->getParent();
+
+      // FIXME: This should check if the call is supported
+      StringRef HexagonVolatileMemcpyName =
+          RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+              RTLIB::impl_hexagon_memcpy_forward_vp4cp4n2);
       FunctionCallee Fn = M->getOrInsertFunction(
           HexagonVolatileMemcpyName, VoidTy, PtrTy, PtrTy, Int32Ty);
 

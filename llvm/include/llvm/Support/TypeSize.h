@@ -16,10 +16,10 @@
 #define LLVM_SUPPORT_TYPESIZE_H
 
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <type_traits>
@@ -178,7 +178,7 @@ public:
   /// This function tells the caller whether the element count is known at
   /// compile time to be a multiple of the scalar value RHS.
   constexpr bool isKnownMultipleOf(ScalarTy RHS) const {
-    return getKnownMinValue() % RHS == 0;
+    return RHS != 0 && getKnownMinValue() % RHS == 0;
   }
 
   /// Returns whether or not the callee is known to be a multiple of RHS.
@@ -190,7 +190,8 @@ public:
     // x % y == 0 !=> x % (vscale * y) == 0
     if (!isScalable() && RHS.isScalable())
       return false;
-    return getKnownMinValue() % RHS.getKnownMinValue() == 0;
+    return RHS.getKnownMinValue() != 0 &&
+           getKnownMinValue() % RHS.getKnownMinValue() == 0;
   }
 
   // Return the minimum value with the assumption that the count is exact.
@@ -371,7 +372,14 @@ public:
   //     else
   //       bail out early for scalable vectors and use getFixedValue()
   //   }
-  LLVM_ABI operator ScalarTy() const;
+  operator ScalarTy() const {
+    if (isScalable()) {
+      reportFatalInternalError(
+          "Cannot implicitly convert a scalable size to a fixed-width size in "
+          "`TypeSize::operator ScalarTy()`");
+    }
+    return getFixedValue();
+  }
 
   // Additional operators needed to avoid ambiguous parses
   // because of the implicit conversion hack.

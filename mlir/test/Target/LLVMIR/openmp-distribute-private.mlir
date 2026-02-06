@@ -34,11 +34,6 @@ llvm.func @_QQmain() {
 // CHECK:       }
 
 // CHECK:       define internal void @[[TEAMS_FUNC]]({{.*}}) {
-// CHECK:         call void @[[DIST_FUNC:.*]]()
-// CHECK-NEXT:    br label %distribute.exit
-// CHECK:       }
-
-// CHECK:       define internal void @[[DIST_FUNC]]() {
 // CHECK:         %[[PRIV_VAR_ALLOC:.*]] = alloca float, align 4
 // CHECK:         %[[IV_ALLOC:.*]] = alloca i32, align 4
 
@@ -78,29 +73,22 @@ llvm.func @_QQmain() {
 
 // CHECK-LABEL: define void @_QQmain() {
 // CHECK:         %[[SHARED_VAR_ALLOC:.*]] = alloca float, i64 1, align 4
-// CHECK:         %[[SHARED_VAR_PTR:.*]] = getelementptr { ptr }, ptr %[[DIST_PARAM:.*]], i32 0, i32 0
-// CHECK:         store ptr %[[SHARED_VAR_ALLOC]], ptr %[[SHARED_VAR_PTR]], align 8
-// CHECK:         call void @[[DIST_FUNC:.*]](ptr %[[DIST_PARAM]])
-// CHECK-NEXT:    br label %distribute.exit
-// CHECK:       }
 
-// CHECK:       define internal void @[[DIST_FUNC]](ptr %[[DIST_ARG:.*]]) {
-// CHECK:         %[[SHARED_VAR_GEP:.*]] = getelementptr { ptr }, ptr %[[DIST_ARG]], i32 0, i32 0
-// CHECK:         %[[SHARED_VAR_PTR2:.*]] = load ptr, ptr %[[SHARED_VAR_GEP]], align 8
+// CHECK:       distribute.alloca:
 // CHECK:         %[[PRIV_VAR_ALLOC:.*]] = alloca float, align 4
 
 // CHECK:       omp.private.copy:
-// CHECK-NEXT:    %[[SHARED_VAR_VAL:.*]] = load float, ptr %[[SHARED_VAR_PTR2]], align 4
+// CHECK-NEXT:    %[[SHARED_VAR_VAL:.*]] = load float, ptr %[[SHARED_VAR_ALLOC]], align 4
 // CHECK-NEXT:    store float %[[SHARED_VAR_VAL]], ptr %[[PRIV_VAR_ALLOC]], align 4
+
+// CHECK:       omp.loop_nest.region:
+// CHECK-NEXT:    store float 0x40091EB860000000, ptr %[[PRIV_VAR_ALLOC]], align 4
 
 // CHECK:       omp_loop.after:
 // CHECK-NEXT:    br label %omp.region.cont
 
 // CHECK:       omp.region.cont:
 // CHECK-NEXT:   call void @foo_free(ptr %[[PRIV_VAR_ALLOC]])
-
-// CHECK:       omp.loop_nest.region:
-// CHECK-NEXT:    store float 0x40091EB860000000, ptr %[[PRIV_VAR_ALLOC]], align 4
 // CHECK:       }
 
 

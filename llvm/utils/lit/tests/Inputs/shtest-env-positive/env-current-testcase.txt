@@ -1,0 +1,6 @@
+## Tests that the LIT_CURRENT_TESTCASE variable is set to the name of the currently executing testcase
+
+## Check default environment.
+# RUN: bash -c 'echo $LIT_CURRENT_TESTCASE' | FileCheck --match-full-lines %s
+#
+# CHECK: shtest-env :: env-current-testcase.txt

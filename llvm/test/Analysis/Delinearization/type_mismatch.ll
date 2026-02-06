@@ -12,7 +12,6 @@ target datalayout = "e-m:e-p:32:32-i64:64-a:0-v32:32-n16:32"
 define fastcc void @test(i1 %arg, ptr %x) {
 ; CHECK-LABEL: 'test'
 ; CHECK-NEXT:  Inst: store i8 42, ptr %arrayidx.phi, align 1
-; CHECK-NEXT:  In Loop with Header: for.body11
 ; CHECK-NEXT:  AccessFunction: 0
 ; CHECK-NEXT:  failed to delinearize
 ;

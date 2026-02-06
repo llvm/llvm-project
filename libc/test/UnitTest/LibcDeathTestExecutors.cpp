@@ -22,7 +22,8 @@ namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 bool Test::testProcessKilled(testutils::FunctionCaller *Func, int Signal,
-                             const char *LHSStr, const char *RHSStr,
+                             const char *LHSStr,
+                             [[maybe_unused]] const char *RHSStr,
                              internal::Location Loc) {
   testutils::ProcessStatus Result =
       testutils::invoke_in_subprocess(Func, TIMEOUT_MS);

@@ -30,6 +30,10 @@
   }
 
 namespace lldb_private {
+
+/// Returns a pretty printed json string of a `llvm::json::Value`.
+std::string PrettyPrint(const llvm::json::Value &E);
+
 std::string GetInputFilePath(const llvm::Twine &name);
 
 class TestUtilities {
@@ -43,7 +47,8 @@ public:
   static llvm::Expected<TestFile> fromYamlFile(const llvm::Twine &Name);
 
   ModuleSpec moduleSpec() {
-    return ModuleSpec(FileSpec(), UUID(), dataBuffer());
+    return ModuleSpec(FileSpec(), UUID(),
+                      std::make_shared<DataExtractor>(dataBuffer()));
   }
 
   llvm::Expected<llvm::sys::fs::TempFile> writeToTemporaryFile();

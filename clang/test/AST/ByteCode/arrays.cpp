@@ -731,6 +731,10 @@ namespace ZeroSizeTypes {
                              // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
                              // both-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
 
+  constexpr int k2 = p1 - p1; // both-error {{constexpr variable 'k2' must be initialized by a constant expression}} \
+                              // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
+                              // both-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
+
   int arr[5][0];
   constexpr int f() { // both-error {{never produces a constant expression}}
     return &arr[3] - &arr[0]; // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
@@ -819,4 +823,15 @@ namespace FAM {
     struct B b = {0, {{1, {2, 3}}, {4, {5, 6}}}}; // both-error {{initialization of flexible array member is not allowed}}
     return 1;
   }
+}
+
+namespace MultiDimConstructExpr {
+  struct a {
+    a *p = this;
+  };
+  struct b {
+    a m[3][3];
+  };
+  constexpr b d;
+  static_assert(d.m[2][1].p == &d.m[2][1]);
 }

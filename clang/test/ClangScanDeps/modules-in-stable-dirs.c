@@ -1,3 +1,6 @@
+// Most likely platform specific sed differences
+// UNSUPPORTED: system-windows
+
 // This test verifies modules that are entirely comprised from stable directory inputs are captured in
 // dependency information.
 
@@ -5,7 +8,6 @@
 // The second compilation verifies that external paths are resolved when a 
 // vfsoverlay for determining is-in-stable-directories.
 
-// REQUIRES: shell
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/compile-commands.json.in > %t/compile-commands.json

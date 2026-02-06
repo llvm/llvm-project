@@ -674,6 +674,36 @@ define void @foo22(i1 zeroext %0) nounwind !prof !14 !section_prefix !15 {
   ret void
 }
 
+define i32 @foo23(i1 zeroext %0) personality ptr @__gxx_personality_v0 !prof !14 {
+;; Check that nop is inserted just before the EH pad if it is the first
+;; instruction in a section (but is preceeded by another empty block).
+; MFS-DEFAULTS-LABEL:         foo23
+; MFS-DEFAULTS-X86-LABEL:     callq   baz
+; MFS-DEFAULTS-X86:           .section        .text.split.foo23,"ax",@progbits
+; MFS-DEFAULTS-X86-NEXT:      foo23.cold:
+; MFS-DEFAULTS-X86:           nop
+; MFS-DEFAULTS-X86:           callq   _Unwind_Resume@PLT
+entry:
+  br i1 %0, label %try, label %unreachable, !prof !17
+
+try:
+  invoke void @_Z1fv()
+          to label %try.cont unwind label %lpad, !prof !17
+
+try.cont:
+  %1 = call i32 @baz()
+  ret i32 %1
+
+unreachable:
+  unreachable
+
+lpad:
+  %2 = landingpad { ptr, i32 }
+          cleanup
+          catch ptr @_ZTIi
+  resume { ptr, i32 } %2
+}
+
 declare i32 @bar()
 declare i32 @baz()
 declare i32 @bam()

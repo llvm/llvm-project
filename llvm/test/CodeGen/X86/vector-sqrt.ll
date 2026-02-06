@@ -63,6 +63,6 @@ entry:
 ; Function Attrs: nounwind readnone
 declare float @sqrtf(float) local_unnamed_addr #1
 
-attributes #0 = { nounwind readonly uwtable "target-features"="+avx" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone  "target-features"="+avx2" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind readonly uwtable "target-features"="+avx" "use-soft-float"="false" }
+attributes #1 = { nounwind readnone  "target-features"="+avx2" "use-soft-float"="false" }
 attributes #2 = { nounwind readnone }

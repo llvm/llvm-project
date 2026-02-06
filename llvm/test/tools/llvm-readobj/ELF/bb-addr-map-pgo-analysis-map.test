@@ -15,7 +15,7 @@
 
 ## Check that a malformed section can be handled.
 # RUN: yaml2obj %s -DBITS=32 -DSIZE=24 -o %t2.o
-# RUN: llvm-readobj %t2.o --bb-addr-map 2>&1 | FileCheck --match-full-lines %s -DOFFSET=0x00000018 -DFILE=%t2.o --check-prefix=TRUNCATED
+# RUN: llvm-readobj %t2.o --bb-addr-map 2>&1 | FileCheck --match-full-lines %s -DOFFSET=0x00000015 -DFILE=%t2.o --check-prefix=TRUNCATED
 
 ## Check that missing features can be handled.
 # RUN: yaml2obj %s -DBITS=32 -DFEATURE=0x2 -o %t3.o
@@ -59,17 +59,20 @@
 # CHECK-NEXT:         {
 # RAW-NEXT:             Frequency: 100
 # PRETTY-NEXT:          Frequency: 1.0
+# CHECK-NEXT:           PostLink Frequency: 10
 # CHECK-NEXT:           Successors [
 # CHECK-NEXT:             {
 # CHECK-NEXT:               ID: 2
 # RAW-NEXT:                 Probability: 0x80000000
 # PRETTY-NEXT:              Probability: 0x80000000 / 0x80000000 = 100.00%
+# CHECK-NEXT:               PostLink Probability: 7
 # CHECK-NEXT:             }
 # CHECK-NEXT:           ]
 # CHECK-NEXT:         }
 # CHECK-NEXT:         {
 # RAW-NEXT:             Frequency: 100
 # PRETTY-NEXT:          Frequency: 1.0
+# CHECK-NEXT:           PostLink Frequency: 0
 # CHECK-NEXT:           Successors [
 # CHECK-NEXT:           ]
 # CHECK-NEXT:         }
@@ -172,8 +175,8 @@ Sections:
     ShSize: [[SIZE=<none>]]
     Link:   .text
     Entries:
-      - Version: 2
-        Feature: 0x7
+      - Version: 5
+        Feature: 0x87
         BBRanges:
           - BaseAddress: [[ADDR=0x11111]]
             BBEntries:
@@ -197,10 +200,12 @@ Sections:
     PGOAnalyses:
       - FuncEntryCount: 100
         PGOBBEntries:
-          - BBFreq:        100
+          - BBFreq:          100
+            PostLinkBBFreq: 10
             Successors:
-              - ID:        2
-                BrProb:    0x80000000
+              - ID:              2
+                BrProb:          0x80000000
+                PostLinkBrFreq: 7
           - BBFreq:        100
             Successors:    []
       - FuncEntryCount: 8888

@@ -1,4 +1,4 @@
-//===--- ProTypeStaticCastDowncastCheck.cpp - clang-tidy-------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::cppcoreguidelines {
 ProTypeStaticCastDowncastCheck::ProTypeStaticCastDowncastCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", true)) {}
+      StrictMode(Options.get("StrictMode", true)) {}
 
 void ProTypeStaticCastDowncastCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
@@ -33,7 +33,7 @@ void ProTypeStaticCastDowncastCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedCast = Result.Nodes.getNodeAs<CXXStaticCastExpr>("cast");
 
-  QualType SourceType = MatchedCast->getSubExpr()->getType();
+  const QualType SourceType = MatchedCast->getSubExpr()->getType();
   const auto *SourceDecl = SourceType->getPointeeCXXRecordDecl();
   if (!SourceDecl) // The cast is from object to reference
     SourceDecl = SourceType->getAsCXXRecordDecl();

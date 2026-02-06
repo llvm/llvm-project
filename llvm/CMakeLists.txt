@@ -79,15 +79,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS NO)
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
-  message(FATAL_ERROR "
-No build type selected. You need to pass -DCMAKE_BUILD_TYPE=<type> in order to configure LLVM.
-Available options are:
-  * -DCMAKE_BUILD_TYPE=Release - For an optimized build with no assertions or debug info.
-  * -DCMAKE_BUILD_TYPE=Debug - For an unoptimized build with assertions and debug info.
-  * -DCMAKE_BUILD_TYPE=RelWithDebInfo - For an optimized build with no assertions but with debug info.
-  * -DCMAKE_BUILD_TYPE=MinSizeRel - For a build optimized for size instead of speed.
-Learn more about these options in our documentation at https://llvm.org/docs/CMake.html#cmake-build-type
+  message(WARNING "No build type selected. Defaulted CMAKE_BUILD_TYPE=Release.
+Learn more about the options in our documentation at https://llvm.org/docs/CMake.html#cmake-build-type
 ")
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel" FORCE)
 endif()
 
 # Set default build type for cmake's try_compile module.
@@ -109,19 +104,13 @@ endif()
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
 # These projects will be included when "all" is included in LLVM_ENABLE_PROJECTS.
-set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libclc;lld;lldb;mlir;openmp;polly")
-if ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
-  # Disallow 'openmp' as a LLVM PROJECT on AIX as the supported way is to use
-  # LLVM_ENABLE_RUNTIMES.
-  list(REMOVE_ITEM LLVM_ALL_PROJECTS openmp)
-endif()
+set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;cross-project-tests;lld;lldb;mlir;polly")
 
-# The "libc" project, which is not part of "all" projects, could be included in
-# LLVM_ENABLE_PROJECTS.  It is preferred to include "libc" in
-# LLVM_ENABLE_RUNTIMES instead of LLVM_ENABLE_PROJECTS.
+# The libc and compiler-rt projects are not part of LLVM_ALL_PROJECTS, because
+# it is preferred to use LLVM_ENABLE_RUNTIMES for them instead.
 #
 # The flang project is not yet part of "all" projects (see C++ requirements).
-set(LLVM_EXTRA_PROJECTS "flang" "libc")
+set(LLVM_EXTRA_PROJECTS "flang" "libc" "compiler-rt")
 # List of all known projects in the mono repo
 set(LLVM_KNOWN_PROJECTS "${LLVM_ALL_PROJECTS};${LLVM_EXTRA_PROJECTS}")
 set(LLVM_ENABLE_PROJECTS "" CACHE STRING
@@ -131,11 +120,13 @@ if( LLVM_ENABLE_PROJECTS STREQUAL "all" )
   set( LLVM_ENABLE_PROJECTS ${LLVM_ALL_PROJECTS})
 endif()
 
-# The pstl project was removed. Ignore it to pacify certain buildbots.
-list(FIND LLVM_ENABLE_PROJECTS "pstl" FOUND_INDEX)
-if(NOT "${FOUND_INDEX}" STREQUAL "-1")
-  message(WARNING "The pstl project has been removed and will not be built")
-  list(REMOVE_ITEM LLVM_ENABLE_PROJECTS "pstl")
+if ("openmp" IN_LIST LLVM_ENABLE_PROJECTS)
+  message(FATAL_ERROR "
+Support for the LLVM_ENABLE_PROJECTS=openmp build mode has been removed. Please switch to the bootstrapping build
+    cmake -S <llvm-project>/llvm -B build -DLLVM_ENABLE_PROJECTS=clang -DLLVM_ENABLE_RUNTIMES=openmp
+or to the runtimes default build
+    cmake -S <llvm-project>/runtimes -B build -DLLVM_ENABLE_RUNTIMES=openmp
+")
 endif()
 
 foreach(proj ${LLVM_ENABLE_PROJECTS})
@@ -148,7 +139,7 @@ endforeach()
 #
 # As we migrate runtimes to using the bootstrapping build, the set of default runtimes
 # should grow as we remove those runtimes from LLVM_ENABLE_PROJECTS above.
-set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind")
+set(LLVM_DEFAULT_RUNTIMES "libcxx;libcxxabi;libunwind;libclc;compiler-rt;openmp")
 set(LLVM_SUPPORTED_RUNTIMES "libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp;llvm-libgcc;offload;flang-rt;libclc;libsycl;orc-rt")
 set(LLVM_ENABLE_RUNTIMES "" CACHE STRING
   "Semicolon-separated list of runtimes to build, or \"all\" (${LLVM_DEFAULT_RUNTIMES}). Supported runtimes are ${LLVM_SUPPORTED_RUNTIMES}.")
@@ -204,13 +195,6 @@ if ("offload" IN_LIST LLVM_ENABLE_PROJECTS)
   message(WARNING "Using LLVM_ENABLE_PROJECTS=offload is deprecated now, and will "
     "become a fatal error in a future release.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=offload or see the instructions at "
-    "https://openmp.llvm.org/ for building the runtimes.")
-endif()
-
-if ("openmp" IN_LIST LLVM_ENABLE_PROJECTS)
-  message(WARNING "Using LLVM_ENABLE_PROJECTS=openmp is deprecated now, and will "
-    "become a fatal error in a future release.  Please use "
-    "-DLLVM_ENABLE_RUNTIMES=openmp or see the instructions at "
     "https://openmp.llvm.org/ for building the runtimes.")
 endif()
 
@@ -609,12 +593,7 @@ option(LLVM_ENABLE_LIBEDIT "Use libedit if available." ON)
 
 option(LLVM_ENABLE_LIBPFM "Use libpfm for performance counters if available." ON)
 
-# On z/OS, threads cannot be used because TLS is not supported.
-if (CMAKE_SYSTEM_NAME MATCHES "OS390")
-  option(LLVM_ENABLE_THREADS "Use threads if available." OFF)
-else()
-  option(LLVM_ENABLE_THREADS "Use threads if available." ON)
-endif()
+option(LLVM_ENABLE_THREADS "Use threads if available." ON)
 
 set(LLVM_ENABLE_ICU "OFF" CACHE STRING "Use ICU for text encoding conversion support if available. Can be ON, OFF, or FORCE_ON")
 
@@ -666,7 +645,7 @@ if(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD STREQUAL "all")
   set(LLVM_EXPERIMENTAL_TARGETS_TO_BUILD ${LLVM_ALL_EXPERIMENTAL_TARGETS})
 endif()
 
-if("flang" IN_LIST LLVM_ENABLE_PROJECTS AND 
+if("flang" IN_LIST LLVM_ENABLE_PROJECTS AND
    "AArch64" IN_LIST LLVM_TARGETS_TO_BUILD AND
    NOT ("compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES OR "compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS))
   message(STATUS "Enabling compiler-rt as a dependency of Flang")
@@ -704,6 +683,7 @@ else()
   option(LLVM_ENABLE_ASSERTIONS "Enable assertions" ON)
 endif()
 
+option(LLVM_ENABLE_IO_SANDBOX "Enable IO sandboxing in supported tools" OFF)
 option(LLVM_ENABLE_EXPENSIVE_CHECKS "Enable expensive checks" OFF)
 
 set(LLVM_ABI_BREAKING_CHECKS "WITH_ASSERTS" CACHE STRING
@@ -873,11 +853,12 @@ option(LLVM_INCLUDE_BENCHMARKS "Generate benchmark targets. If OFF, benchmarks c
 
 option (LLVM_BUILD_DOCS "Build the llvm documentation." OFF)
 option (LLVM_INCLUDE_DOCS "Generate build targets for llvm documentation." ON)
-option (LLVM_ENABLE_DOXYGEN "Use doxygen to generate llvm API documentation." OFF)
 option (LLVM_ENABLE_SPHINX "Use Sphinx to generate llvm documentation." OFF)
 option (LLVM_ENABLE_OCAMLDOC "Build OCaml bindings documentation." ON)
 option (LLVM_ENABLE_BINDINGS "Build bindings." ON)
 option (LLVM_ENABLE_TELEMETRY "Enable the telemetry library. If set to OFF, library cannot be enabled after build (eg., at runtime)" ON)
+
+include(HandleDoxygen)
 
 set(LLVM_INSTALL_DOXYGEN_HTML_DIR "${CMAKE_INSTALL_DOCDIR}/llvm/doxygen-html"
     CACHE STRING "Doxygen-generated HTML documentation install directory")
@@ -944,7 +925,8 @@ if (LLVM_LINK_LLVM_DYLIB AND BUILD_SHARED_LIBS)
 endif()
 
 option(LLVM_OPTIMIZED_TABLEGEN "Force TableGen to be built with optimization" OFF)
-if(CMAKE_CROSSCOMPILING OR (LLVM_OPTIMIZED_TABLEGEN AND (LLVM_ENABLE_ASSERTIONS OR CMAKE_CONFIGURATION_TYPES)))
+if(CMAKE_CROSSCOMPILING OR (LLVM_OPTIMIZED_TABLEGEN AND (LLVM_ENABLE_ASSERTIONS
+  OR CMAKE_CONFIGURATION_TYPES OR LLVM_USE_SANITIZER)))
   set(LLVM_USE_HOST_TOOLS ON)
 endif()
 
@@ -1009,6 +991,9 @@ set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_defa
 
 set(LLVM_PROFDATA_FILE "" CACHE FILEPATH
   "Profiling data file to use when compiling in order to improve runtime performance.")
+
+set(LLVM_SPROFDATA_FILE "" CACHE FILEPATH
+  "Sampling profiling data file to use when compiling in order to improve runtime performance.")
 
 if(LLVM_INCLUDE_TESTS)
   # All LLVM Python files should be compatible down to this minimum version.
@@ -1260,10 +1245,10 @@ endif()
 # Build with _XOPEN_SOURCE on z/OS.
 if (CMAKE_SYSTEM_NAME MATCHES "OS390")
   add_compile_definitions(_XOPEN_SOURCE=600)
+  add_compile_definitions(_XPLATFORM_SOURCE) # Needed e.g. for O_CLOEXEC.
   add_compile_definitions(_OPEN_SYS) # Needed for process information.
   add_compile_definitions(_OPEN_SYS_FILE_EXT) # Needed for EBCDIC I/O.
   add_compile_definitions(_EXT) # Needed for file data.
-  add_compile_definitions(_UNIX03_THREADS) # Multithreading support.
   # Need to build LLVM as ASCII application.
   # This can't be a global setting because other projects may
   # need to be built in EBCDIC mode.
@@ -1288,6 +1273,11 @@ endif(LLVM_USE_HOST_TOOLS)
 if(LLVM_TARGET_IS_CROSSCOMPILE_HOST)
 # Dummy use to avoid CMake Warning: Manually-specified variables were not used
 # (this is a variable that CrossCompile sets on recursive invocations)
+endif()
+
+# Special hack for z/OS for missing POSIX functions
+if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+  include_directories(SYSTEM "${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/SystemZ/zos_wrappers" )
 endif()
 
 if( "${CMAKE_SYSTEM_NAME}" MATCHES SunOS )
@@ -1336,9 +1326,7 @@ if( LLVM_INCLUDE_UTILS )
   add_subdirectory(utils/mlgo-utils)
   add_subdirectory(utils/llvm-test-mustache-spec)
   if( LLVM_INCLUDE_TESTS )
-    set(LLVM_SUBPROJECT_TITLE "Third-Party/Google Test")
     add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest ${CMAKE_CURRENT_BINARY_DIR}/third-party/unittest)
-    set(LLVM_SUBPROJECT_TITLE)
   endif()
 else()
   if ( LLVM_INCLUDE_TESTS )

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly "-passes=scop(print<polly-simplify>)" -disable-output -aa-pipeline=basic-aa < %s | FileCheck %s -match-full-lines
+; RUN: opt %loadNPMPolly '-passes=polly-custom<simplify>' -polly-print-simplify -disable-output -aa-pipeline=basic-aa < %s | FileCheck %s -match-full-lines
 ;
 ; Do not remove dependencies of a phi node within a region statement (%phi).
 ;

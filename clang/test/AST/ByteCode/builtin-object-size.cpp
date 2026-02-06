@@ -17,7 +17,8 @@ static_assert(__builtin_object_size(&arrf, 0) == (sizeof(float)*2), "");
 static_assert(__builtin_object_size(&arrf[1], 0) == sizeof(float), "");
 static_assert(__builtin_object_size(&arrf[2], 0) == 0, "");
 
-
+constexpr struct { int a; int b; } F{};
+static_assert(__builtin_object_size(&F.a, 3) == sizeof(int));
 
 struct S {
   int a;

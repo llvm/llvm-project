@@ -47,9 +47,11 @@ static RT_API_ATTRS common::optional<bool> DefinedFormattedIo(
     const typeInfo::DerivedType &derived,
     const typeInfo::SpecialBinding &special,
     const SubscriptValue subscripts[]) {
-  // Look at the next data edit descriptor.  If this is list-directed I/O, the
-  // "maxRepeat=0" argument will prevent the input from advancing over an
+  // Look at the next data edit descriptor.  If this is list-directed input,
+  // the "maxRepeat=0" argument will prevent the input from advancing over an
   // initial '(' that shouldn't be consumed now as the start of a real part.
+  // It also allows reaching EOF without crashing, since the EOF only matters
+  // if a child READ is actually performed.
   common::optional<DataEdit> peek{io.GetNextDataEdit(/*maxRepeat=*/0)};
   if (peek &&
       (peek->descriptor == DataEdit::DefinedDerivedType ||
@@ -62,10 +64,11 @@ static RT_API_ATTRS common::optional<bool> DefinedFormattedIo(
             : *io.GetNextDataEdit(1)};
     char ioType[2 + edit.maxIoTypeChars];
     auto ioTypeLen{std::size_t{2} /*"DT"*/ + edit.ioTypeChars};
+    auto &definedIoArgs{*io.get_if<DefinedIoArgs>()};
     if (edit.descriptor == DataEdit::DefinedDerivedType) {
       ioType[0] = 'D';
       ioType[1] = 'T';
-      runtime::memcpy(ioType + 2, edit.ioType, edit.ioTypeChars);
+      runtime::memcpy(ioType + 2, definedIoArgs.ioType, edit.ioTypeChars);
     } else {
       runtime::strcpy(
           ioType, io.mutableModes().inNamelist ? "NAMELIST" : "LISTDIRECTED");
@@ -79,7 +82,7 @@ static RT_API_ATTRS common::optional<bool> DefinedFormattedIo(
     if (integer8) {
       // Convert v_list values to INTEGER(8)
       for (int j{0}; j < edit.vListEntries; ++j) {
-        vList64[j] = edit.vList[j];
+        vList64[j] = definedIoArgs.vList[j];
       }
       vListDesc.Establish(
           TypeCategory::Integer, sizeof(std::int64_t), nullptr, 1);
@@ -89,7 +92,7 @@ static RT_API_ATTRS common::optional<bool> DefinedFormattedIo(
           static_cast<SubscriptValue>(sizeof(std::int64_t)));
     } else {
       vListDesc.Establish(TypeCategory::Integer, sizeof(int), nullptr, 1);
-      vListDesc.set_base_addr(edit.vList);
+      vListDesc.set_base_addr(definedIoArgs.vList);
       vListDesc.GetDimension(0).SetBounds(1, edit.vListEntries);
       vListDesc.GetDimension(0).SetByteStride(
           static_cast<SubscriptValue>(sizeof(int)));

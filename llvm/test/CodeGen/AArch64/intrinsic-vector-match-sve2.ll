@@ -35,7 +35,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v4i8(<vscale x 16 x i8> %op1, <4 x i8> 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
@@ -54,7 +54,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v4i8(<vscale x 16 x i8> %op1, <4 x i8> 
 ; CHECK-NEXT:    cmpeq p1.b, p1/z, z0.b, z2.b
 ; CHECK-NEXT:    mov p2.b, p3/m, p3.b
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov p1.b, p2/m, p2.b
 ; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NEXT:    addvl sp, sp, #1
@@ -142,7 +142,6 @@ define <16 x i1> @match_v16i8_v8i8(<16 x i8> %op1, <8 x i8> %op2, <16 x i1> %mas
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    mov z1.d, d1
-; CHECK-NEXT:    cmlt v2.16b, v2.16b, #0
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
@@ -159,7 +158,6 @@ define <16 x i1> @match_v16i8_v16i8(<16 x i8> %op1, <16 x i8> %op2, <16 x i1> %m
 ; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    cmlt v2.16b, v2.16b, #0
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
@@ -177,7 +175,6 @@ define <8 x i1> @match_v8i8_v8i8(<8 x i8> %op1, <8 x i8> %op2, <8 x i1> %mask) #
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z1.d, d1
-; CHECK-NEXT:    cmlt v2.8b, v2.8b, #0
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
@@ -206,7 +203,6 @@ define <8 x i1> @match_v8i16(<8 x i16> %op1, <8 x i16> %op2, <8 x i1> %mask) #0 
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    shl v2.8h, v2.8h, #15
-; CHECK-NEXT:    cmlt v2.8h, v2.8h, #0
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z2.h, #0
 ; CHECK-NEXT:    match p0.h, p0/z, z0.h, z1.h
 ; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
@@ -225,7 +221,6 @@ define <8 x i1> @match_v8i8_v16i8(<8 x i8> %op1, <16 x i8> %op2, <8 x i1> %mask)
 ; CHECK-NEXT:    ptrue p0.b, vl8
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    cmlt v2.8b, v2.8b, #0
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z2.b, #0
 ; CHECK-NEXT:    match p0.b, p0/z, z0.b, z1.b
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
@@ -240,7 +235,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
@@ -340,7 +335,7 @@ define <vscale x 16 x i1> @match_nxv16i8_v32i8(<vscale x 16 x i8> %op1, <32 x i8
 ; CHECK-NEXT:    cmpeq p1.b, p1/z, z0.b, z1.b
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p3.b
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov p1.b, p2/m, p2.b
 ; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NEXT:    addvl sp, sp, #1
@@ -462,7 +457,7 @@ define <vscale x 4 x i1> @match_nxv4xi32_v4i32(<vscale x 4 x i32> %op1, <4 x i32
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
@@ -477,7 +472,7 @@ define <vscale x 4 x i1> @match_nxv4xi32_v4i32(<vscale x 4 x i32> %op1, <4 x i32
 ; CHECK-NEXT:    cmpeq p1.s, p1/z, z0.s, z1.s
 ; CHECK-NEXT:    mov p2.b, p3/m, p3.b
 ; CHECK-NEXT:    sel p2.b, p2, p2.b, p4.b
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    mov p1.b, p2/m, p2.b
 ; CHECK-NEXT:    and p0.b, p1/z, p1.b, p0.b
 ; CHECK-NEXT:    addvl sp, sp, #1

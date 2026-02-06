@@ -956,4 +956,3 @@ define <vscale x 1 x i8> @vsra_vv_nxv1i8_sext_zext_mixed_trunc(<vscale x 1 x i8>
   %vd = call <vscale x 1 x i8> @llvm.vp.trunc.nxv1i8.nxvi16(<vscale x 1 x i16> %vc, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i8> %vd
 }
-declare <vscale x 1 x i8> @llvm.vp.trunc.nxv1i8.nxvi16(<vscale x 1 x i16>, <vscale x 1 x i1>, i32)

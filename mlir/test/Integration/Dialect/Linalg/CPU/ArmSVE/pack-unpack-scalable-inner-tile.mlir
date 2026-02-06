@@ -1,32 +1,64 @@
-// DEFINE: %{compile} =  mlir-opt %s \
-// DEFINE:  -transform-interpreter -test-transform-dialect-erase-schedule \
-// DEFINE:    --lower-vector-mask |\
-// DEFINE: mlir-opt -arm-sve-legalize-vector-storage -convert-vector-to-llvm="enable-arm-sve"\
-// DEFINE:  -test-lower-to-llvm -o %t
+// DEFINE: %{td_entry_point} =
+
+// DEFINE: %{compile} = mlir-opt %s \
+// DEFINE:    -transform-preload-library='transform-library-paths=%p/td/pack-unpack.mlir' \
+// DEFINE:    -transform-interpreter=entry-point=%{td_entry_point} \
+// DEFINE:    -lower-vector-mask -convert-vector-to-scf="full-unroll target-rank=0" \
+// DEFINE:    -arm-sve-legalize-vector-storage -convert-vector-to-llvm="enable-arm-sve"\
+// DEFINE:    -test-lower-to-llvm -o %t
 // DEFINE: %{entry_point} = main
 // DEFINE: %{run} = %mcr_aarch64_cmd %t -e %{entry_point} -entry-point-result=void  --march=aarch64 --mattr="+sve"\
 // DEFINE:    -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils,%native_mlir_arm_runner_utils
 
+/// Run _without_ vectorization
+// REDEFINE: %{td_entry_point} = __transform_main_basic
 // RUN: rm -f %t && %{compile} && %{run} | FileCheck %s
 
-/// End-to-end test for linalg.pack + linalg.unpack where one of the inner tile sizes is
-/// scalable.
-/// NOTE: Vectorization has not been enabled yet!
+/// Run _with_ vectorization
+// REDEFINE: %{td_entry_point} = __transform_main_vectorized
+// RUN: rm -f %t && %{compile} && %{run} | FileCheck %s
 
+//===----------------------------------------------------------------------===//
+/// HIGH-LEVEL OVERVIEW
+///
+/// End-to-end test for linalg.pack + linalg.unpack where one of the inner tile
+/// sizes is scalable.
+///
+/// Two versions of the transform IR are tested:
+///   * without vectorization (see @__transform_main_basic in pack-unpack.mlir)
+///   * with vectorization (see @__transform_main_vectorized in pack-unpack.mlir)
+///
+/// With the payload IR fixed, the runtime output is identical. Note - in both
+/// cases the tile sizes are scalable.
+///
+/// TODO: ATM only linalg.unpack is vectorized. Add linalg.pack vectorization.
+//===----------------------------------------------------------------------===//
 
-/// The main entry point
+//===----------------------------------------------------------------------===//
+// @main
+//
+// Thin wrapper over the main test function to allow changing the runtime
+// vector length via @setArmVLBits (calling setArmVLBits() in a function that
+// uses SVE vectors is UB).
+//===----------------------------------------------------------------------===//
 func.func @main() {
   // Set vscale to 2 (vector width = 256). This will have identical effect to:
   //  * qemu-aarch64 -cpu max,sve-max-vq=2 (...)
   // (If your platform supports it, you can play with other values as well)
   %c256 = arith.constant 256 : i32
   func.call @setArmVLBits(%c256) : (i32) -> ()
-  func.call @test_pack_unpack_scalable_inner_tile() : () -> ()
+  func.call @pack_unpack_with_scalable_inner_tile() : () -> ()
 
   return
 }
 
-func.func @test_pack_unpack_scalable_inner_tile() attributes {no_inline} {
+//===----------------------------------------------------------------------===//
+// @pack_unpack_with_scalable_inner_tile
+//
+// The main test function that initilaises the matrices an calls pack/unpack
+// hooks.
+//===----------------------------------------------------------------------===//
+func.func @pack_unpack_with_scalable_inner_tile() attributes {no_inline} {
   // Dynamic/scalable tile size (vscale x 4)
   %c4 = arith.constant 4 : index
   %vs = vector.vscale
@@ -95,7 +127,11 @@ func.func @test_pack_unpack_scalable_inner_tile() attributes {no_inline} {
   return
 }
 
-/// Takes the unpacked matrix + inner tile size to use and return the packed matrix.
+//===----------------------------------------------------------------------===//
+// @pack_main
+//
+// Takes the unpacked matrix + inner tile size to use and return the packed matrix.
+//===----------------------------------------------------------------------===//
 func.func private @pack_main(%A: tensor<7x12xi32>, %inner_tile_size: index) -> (tensor<2x?x4x?xi32>) {
   // Get the size of dim (we could skip tensor.dim, but this way we can keep it generic)
   %c1 = arith.constant 1 : index
@@ -122,7 +158,11 @@ func.func private @pack_main(%A: tensor<7x12xi32>, %inner_tile_size: index) -> (
   return %A_pack : tensor<2x?x4x?xi32>
 }
 
+//===----------------------------------------------------------------------===//
+// @unpack_main
+//
 /// Takes the packed matrix, unpacks it and returns the result.
+//===----------------------------------------------------------------------===//
 func.func private @unpack_main(%A_pack : tensor<2x?x4x?xi32>, %inner_tile_size: index) -> tensor<7x12xi32> {
   %A_unpack_empty = tensor.empty() : tensor<7x12xi32>
 
@@ -132,58 +172,6 @@ func.func private @unpack_main(%A_pack : tensor<2x?x4x?xi32>, %inner_tile_size: 
     into %A_unpack_empty : tensor<2x?x4x?xi32> -> tensor<7x12xi32>
 
   return %A_unpack : tensor<7x12xi32>
-}
-
-module @transforms attributes { transform.with_named_sequence } {
-  transform.named_sequence @__transform_main(%module: !transform.any_op {transform.consume}) {
-    %pack = transform.structured.match ops{["linalg.pack"]} in %module : (!transform.any_op) -> !transform.any_op
-    %unpack = transform.structured.match ops{["linalg.unpack"]} in %module : (!transform.any_op) -> !transform.any_op
-
-    // 1.1 Tile the linalg.pack Op so that we can decompose it into e.g. tensor.pad
-    //    and other lower-level Ops (see step 2.1)
-    %tiled_pack_op_p, %loops_pack:2 = transform.structured.tile_using_for %pack tile_sizes [1, 1]
-       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
-
-    // 1.2 Tile the linalg.unpack Op so that we can decompose it into e.g. tensor.pad
-    //    and other lower-level Ops (see step 2)
-    %tiled_unpack_op_p, %loops_unpack:2 = transform.structured.tile_using_for %unpack tile_sizes [4, 1]
-       : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
-
-    // 2.1. Decompose tiled PackOp into lower-level Ops
-    %func_op_pack = transform.get_parent_op %tiled_pack_op_p {isolated_from_above} : (!transform.any_op) -> !transform.op<"func.func">
-    transform.apply_patterns to %func_op_pack {
-      transform.apply_patterns.linalg.decompose_pack_unpack
-      transform.apply_patterns.linalg.decompose_pad
-    } : !transform.op<"func.func">
-
-    transform.apply_patterns to %func_op_pack {
-      transform.apply_patterns.tensor.fold_tensor_subset_ops
-      transform.apply_patterns.canonicalization
-    } : !transform.op<"func.func">
-
-    // 2.1. Decompose tiled UnpackOp into lower-level Ops
-    %func_op_unpack = transform.get_parent_op %tiled_unpack_op_p {isolated_from_above} : (!transform.any_op) -> !transform.op<"func.func">
-    transform.apply_patterns to %func_op_unpack {
-      transform.apply_patterns.linalg.decompose_pack_unpack
-    } : !transform.op<"func.func">
-
-    transform.apply_patterns to %func_op_unpack {
-      transform.apply_patterns.tensor.fold_tensor_subset_ops
-      transform.apply_patterns.canonicalization
-    } : !transform.op<"func.func">
-
-   // 3. Bufferize before lowering to LLVM
-   %bufferize = transform.bufferization.one_shot_bufferize %module
-     {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
-
-   // 4. Canonicalize
-   %func_op_bufferized = transform.structured.match ops{["func.func"]} in %bufferize : (!transform.any_op) -> !transform.op<"func.func">
-   transform.apply_patterns to %func_op_bufferized {
-     transform.apply_patterns.canonicalization
-   } : !transform.op<"func.func">
-
-    transform.yield
-  }
 }
 
 func.func private @printMemrefI32(%ptr : tensor<*xi32>)

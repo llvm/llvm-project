@@ -112,6 +112,7 @@ struct A {
 
 SomeObj* make_obj();
 CFMutableArrayRef make_cf();
+dispatch_queue_t make_os();
 
 void someFunction();
 template <typename Callback> void call(Callback callback) {
@@ -161,6 +162,25 @@ void raw_ptr() {
     // expected-warning@-1{{Implicitly captured reference 'cf' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   };
 
+  auto os = make_os();
+  auto baz1 = [os](){
+    // expected-warning@-1{{Captured reference 'os' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    dispatch_queue_get_label(os);
+  };
+  auto baz2 = [&os](){
+    // expected-warning@-1{{Captured reference 'os' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    dispatch_queue_get_label(os);
+  };
+  auto baz3 = [&](){
+    dispatch_queue_get_label(os);
+    // expected-warning@-1{{Implicitly captured reference 'os' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    os = nullptr;
+  };
+  auto baz4 = [=](){
+    dispatch_queue_get_label(os);
+    // expected-warning@-1{{Implicitly captured reference 'os' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+  };
+
   call(foo1);
   call(foo2);
   call(foo3);
@@ -171,8 +191,13 @@ void raw_ptr() {
   call(bar3);
   call(bar4);
 
+  call(baz1);
+  call(baz2);
+  call(baz3);
+  call(baz4);
+
   // Confirm that the checker respects [[clang::suppress]].
-  SomeObj* suppressed_obj = nullptr;
+  SomeObj* suppressed_obj = make_obj();
   [[clang::suppress]] auto foo5 = [suppressed_obj](){
     [suppressed_obj doWork];
   };
@@ -180,12 +205,20 @@ void raw_ptr() {
   call(foo5);
 
   // Confirm that the checker respects [[clang::suppress]].
-  CFMutableArrayRef suppressed_cf = nullptr;
+  CFMutableArrayRef suppressed_cf = make_cf();
   [[clang::suppress]] auto bar5 = [suppressed_cf](){
     CFArrayAppendValue(suppressed_cf, nullptr);
   };
   // no warning.
   call(bar5);
+
+  // Confirm that the checker respects [[clang::suppress]].
+  dispatch_queue_t suppressed_os = make_os();
+  [[clang::suppress]] auto baz5 = [suppressed_os](){
+    dispatch_queue_get_label(suppressed_os);
+  };
+  // no warning.
+  call(baz5);
 }
 
 void quiet() {
@@ -228,6 +261,14 @@ void get_count_cf(CFArrayRef array, [[clang::noescape]] Callback1&& callback1, C
   callback2(count);
 }
 
+template <typename Callback1, typename Callback2>
+void get_count_os(dispatch_queue_t queue, [[clang::noescape]] Callback1&& callback1, Callback2&& callback2)
+{
+  auto* label = dispatch_queue_get_label(queue);
+  callback1(label);
+  callback2(label);
+}
+
 void noescape_lambda() {
   SomeObj* someObj = make_obj();
   SomeObj* otherObj = make_obj();
@@ -251,6 +292,14 @@ void noescape_lambda() {
     CFArrayAppendValue(someCF, nullptr);
     // expected-warning@-1{{Implicitly captured reference 'someCF' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   });
+
+  dispatch_queue_t someOS = make_os();
+  get_count_os(make_os(), [&](const char* label) {
+    dispatch_queue_get_label(someOS);
+  }, [&](const char* label) {
+    dispatch_queue_get_label(someOS);
+    // expected-warning@-1{{Implicitly captured reference 'someOS' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+  });
 }
 
 void callFunctionOpaque(WTF::Function<void()>&&);
@@ -259,24 +308,29 @@ void callFunction(WTF::Function<void()>&& function) {
   function();
 }
 
-void lambda_converted_to_function(SomeObj* obj, CFMutableArrayRef cf)
+void lambda_converted_to_function(SomeObj* obj, CFMutableArrayRef cf, dispatch_queue_t os)
 {
   callFunction([&]() {
     [obj doWork];
     // expected-warning@-1{{Implicitly captured raw-pointer 'obj' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     CFArrayAppendValue(cf, nullptr);
     // expected-warning@-1{{Implicitly captured reference 'cf' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    dispatch_queue_get_label(os);
+    // expected-warning@-1{{Implicitly captured reference 'os' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   });
   callFunctionOpaque([&]() {
     [obj doWork];
     // expected-warning@-1{{Implicitly captured raw-pointer 'obj' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
     CFArrayAppendValue(cf, nullptr);
     // expected-warning@-1{{Implicitly captured reference 'cf' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+    dispatch_queue_get_label(os);
+    // expected-warning@-1{{Implicitly captured reference 'os' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
   });
 }
 
 @interface ObjWithSelf : NSObject {
   RetainPtr<id> delegate;
+  OSObjectPtr<dispatch_queue_t> queue;
 }
 -(void)doWork;
 -(void)doMoreWork;
@@ -299,9 +353,16 @@ void lambda_converted_to_function(SomeObj* obj, CFMutableArrayRef cf)
     someFunction();
     [delegate doWork];
   };
+  auto* queuePtr = queue.get();
+  auto doAdditionalWork = [&] {
+    someFunction();
+    dispatch_queue_get_label(queuePtr);
+    // expected-warning@-1{{Implicitly captured raw-pointer 'queuePtr' to unretained type is unsafe [alpha.webkit.UnretainedLambdaCapturesChecker]}}
+  };
   callFunctionOpaque(doWork);
   callFunctionOpaque(doMoreWork);
   callFunctionOpaque(doExtraWork);
+  callFunctionOpaque(doAdditionalWork);
 }
 
 -(void)doMoreWork {

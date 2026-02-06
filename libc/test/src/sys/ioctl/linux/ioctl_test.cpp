@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/sys/ioctl/ioctl.h"
 #include "src/unistd/close.h"
 #include "src/unistd/read.h"
 #include "src/unistd/write.h"
-
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -20,11 +19,10 @@
 
 #include "hdr/sys_ioctl_macros.h"
 
+using LlvmLibcSysIoctlTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 
-TEST(LlvmLibcSysIoctlTest, InvalidCommandAndFIONREAD) {
-  LIBC_NAMESPACE::libc_errno = 0;
-
+TEST_F(LlvmLibcSysIoctlTest, InvalidCommandAndFIONREAD) {
   // Setup the test file
   constexpr const char *TEST_FILE_NAME = "ioctl.test";
   constexpr const char TEST_MSG[] = "ioctl test";

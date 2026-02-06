@@ -15,9 +15,9 @@
 # POSTCHECK:          Types CU list offset = 0x38, has 0 entries
 # POSTCHECK:          Address area offset = 0x38, has 2 entries
 # POSTCHECK-NEXT:         Low/High address = [0x[[#%.4x,ADDR:]],
-# POSTCHECK-SAME:           0x[[#ADDR + 0xf]]) (Size: 0xf), CU id = 1
+# POSTCHECK-SAME:           0x[[#ADDR + 0xf]]) (Size: 0xf), CU id = 0
 # POSTCHECK-NEXT:         Low/High address = [0x[[#%.4x,ADDR1:]],
-# POSTCHECK-SAME:           0x[[#ADDR1 + 0xd]]) (Size: 0xd), CU id = 3
+# POSTCHECK-SAME:           0x[[#ADDR1 + 0xd]]) (Size: 0xd), CU id = 1
 # POSTCHECK:          Symbol table offset = 0x60, size = 1024, filled slots
 # POSTCHECK-NEXT:         2: Name offset = 0x38, CU vector offset = 0x0
 # POSTCHECK-NEXT:             String name: S, CU vector index: 0

@@ -87,21 +87,30 @@ void llvm::dumpOffloadBundleFatBinary(const ObjectFile &O, StringRef ArchName) {
   if (Error Err = llvm::object::extractOffloadBundleFatBinary(O, FoundBundles))
     reportError(O.getFileName(), "while extracting offload FatBin bundles: " +
                                      toString(std::move(Err)));
-
   for (const auto &[BundleNum, Bundle] : llvm::enumerate(FoundBundles)) {
     for (OffloadBundleEntry &Entry : Bundle.getEntries()) {
-      if (!ArchName.empty() && !Entry.ID.contains(ArchName))
+      if (!ArchName.empty() && Entry.ID.find(ArchName) != std::string::npos)
         continue;
 
       // create file name for this object file:  <source-filename>.<Bundle
       // Number>.<EntryID>
-      std::string str = Bundle.getFileName().str() + "." + itostr(BundleNum) +
-                        "." + Entry.ID.str();
-      if (Error Err = object::extractCodeObject(O, Entry.Offset, Entry.Size,
-                                                StringRef(str)))
-        reportError(O.getFileName(),
-                    "while extracting offload Bundle Entries: " +
-                        toString(std::move(Err)));
+      std::string str =
+          Bundle.getFileName().str() + "." + itostr(BundleNum) + "." + Entry.ID;
+
+      if (Bundle.isDecompressed()) {
+        if (Error Err = object::extractCodeObject(
+                Bundle.DecompressedBuffer->getMemBufferRef(), Entry.Offset,
+                Entry.Size, StringRef(str)))
+          reportError(O.getFileName(),
+                      "while extracting offload Bundle Entries: " +
+                          toString(std::move(Err)));
+      } else {
+        if (Error Err = object::extractCodeObject(O, Entry.Offset, Entry.Size,
+                                                  StringRef(str)))
+          reportError(O.getFileName(),
+                      "while extracting offload Bundle Entries: " +
+                          toString(std::move(Err)));
+      }
       outs() << "Extracting offload bundle: " << str << "\n";
     }
   }

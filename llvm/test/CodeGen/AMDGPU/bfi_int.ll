@@ -582,15 +582,15 @@ define <2 x i32> @v_bitselect_v2i32_pat1(<2 x i32> %a, <2 x i32> %b, <2 x i32> %
 ; GFX7-LABEL: v_bitselect_v2i32_pat1:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_bfi_b32 v0, v2, v0, v4
 ; GFX7-NEXT:    v_bfi_b32 v1, v3, v1, v5
+; GFX7-NEXT:    v_bfi_b32 v0, v2, v0, v4
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: v_bitselect_v2i32_pat1:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_bfi_b32 v0, v2, v0, v4
 ; GFX8-NEXT:    v_bfi_b32 v1, v3, v1, v5
+; GFX8-NEXT:    v_bfi_b32 v0, v2, v0, v4
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_bitselect_v2i32_pat1:

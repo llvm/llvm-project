@@ -33,6 +33,9 @@ extern "C" {
 MLIR_CAPI_EXPORTED LLVMModuleRef
 mlirTranslateModuleToLLVMIR(MlirOperation module, LLVMContextRef context);
 
+MLIR_CAPI_EXPORTED char *
+mlirTranslateModuleToLLVMIRToString(MlirOperation module);
+
 struct MlirTypeFromLLVMIRTranslator {
   void *ptr;
 };

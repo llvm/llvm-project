@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=inline -S | FileCheck %s
-; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 
 ; Test that the inliner correctly handles inlining into invoke sites
 ; by appending selectors and forwarding _Unwind_Resume directly to the
@@ -194,8 +193,8 @@ eh.resume:
 ; CHECK:      ret void
 
 ; CHECK:    [[LPAD]]:
-; CHECK-NEXT: [[X:%.*]] = phi i32 [ 0, %entry ], [ 0, {{%.*}} ], [ 1, %cont ], [ 1, {{%.*}} ]
-; CHECK-NEXT: [[Y:%.*]] = phi i32 [ 1, %entry ], [ 1, {{%.*}} ], [ 4, %cont ], [ 4, {{%.*}} ]
+; CHECK-NEXT: [[X:%.*]] = phi i32 [ 0, {{%.*}} ], [ 1, {{%.*}} ], [ 0, %entry ], [ 1, %cont ]
+; CHECK-NEXT: [[Y:%.*]] = phi i32 [ 1, {{%.*}} ], [ 4, {{%.*}} ], [ 1, %entry ], [ 4, %cont ]
 ; CHECK-NEXT: [[LPADVAL:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:   catch ptr @_ZTIi
 ; CHECK-NEXT: br label %[[LPAD_JOIN2]]
