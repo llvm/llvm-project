@@ -3986,9 +3986,13 @@ def fno_openmp_assume_threads_oversubscription : Flag<["-"], "fno-openmp-assume-
 def fopenmp_assume_no_thread_state : Flag<["-"], "fopenmp-assume-no-thread-state">,
   HelpText<"Assert no thread in a parallel region modifies an ICV">,
   MarshallingInfoFlag<LangOpts<"OpenMPNoThreadState">>;
+def fno_openmp_assume_no_thread_state : Flag<["-"], "fno-openmp-assume-no-thread-state">,
+  HelpText<"Assert that a thread in a parallel region may modify an ICV">;
 def fopenmp_assume_no_nested_parallelism : Flag<["-"], "fopenmp-assume-no-nested-parallelism">,
   HelpText<"Assert no nested parallel regions in the GPU">,
   MarshallingInfoFlag<LangOpts<"OpenMPNoNestedParallelism">>;
+def fno_openmp_assume_no_nested_parallelism : Flag<["-"], "fno-openmp-assume-no-nested-parallelism">,
+  HelpText<"Assert that a nested parallel region may be used in the GPU">;
 
 } // let Group = f_Group
 } // let Visibility = [ClangOption, CC1Option, FC1Option]
