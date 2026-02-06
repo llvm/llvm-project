@@ -7,9 +7,8 @@
 define <2 x half> @vfma_vv_v2f16(<2 x half> %va, <2 x half> %b, <2 x half> %c, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vfmadd.vv v9, v8, v10, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %v = call <2 x half> @llvm.vp.fmuladd.v2f16(<2 x half> %va, <2 x half> %b, <2 x half> %c, <2 x i1> %m, i32 %evl)
   ret <2 x half> %v
@@ -18,7 +17,7 @@ define <2 x half> @vfma_vv_v2f16(<2 x half> %va, <2 x half> %b, <2 x half> %c, <
 define <2 x half> @vfma_vv_v2f16_unmasked(<2 x half> %va, <2 x half> %b, <2 x half> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v2f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %v = call <2 x half> @llvm.vp.fmuladd.v2f16(<2 x half> %va, <2 x half> %b, <2 x half> %c, <2 x i1> splat (i1 true), i32 %evl)
@@ -28,8 +27,8 @@ define <2 x half> @vfma_vv_v2f16_unmasked(<2 x half> %va, <2 x half> %b, <2 x ha
 define <2 x half> @vfma_vf_v2f16(<2 x half> %va, half %b, <2 x half> %vc, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vfmadd.vf v8, fa0, v9, v0.t
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vfmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x half> poison, half %b, i32 0
   %vb = shufflevector <2 x half> %elt.head, <2 x half> poison, <2 x i32> zeroinitializer
@@ -40,7 +39,7 @@ define <2 x half> @vfma_vf_v2f16(<2 x half> %va, half %b, <2 x half> %vc, <2 x i
 define <2 x half> @vfma_vf_v2f16_unmasked(<2 x half> %va, half %b, <2 x half> %vc, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v2f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x half> poison, half %b, i32 0
@@ -52,9 +51,8 @@ define <2 x half> @vfma_vf_v2f16_unmasked(<2 x half> %va, half %b, <2 x half> %v
 define <4 x half> @vfma_vv_v4f16(<4 x half> %va, <4 x half> %b, <4 x half> %c, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfmadd.vv v9, v8, v10, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %v = call <4 x half> @llvm.vp.fmuladd.v4f16(<4 x half> %va, <4 x half> %b, <4 x half> %c, <4 x i1> %m, i32 %evl)
   ret <4 x half> %v
@@ -63,7 +61,7 @@ define <4 x half> @vfma_vv_v4f16(<4 x half> %va, <4 x half> %b, <4 x half> %c, <
 define <4 x half> @vfma_vv_v4f16_unmasked(<4 x half> %va, <4 x half> %b, <4 x half> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v4f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %v = call <4 x half> @llvm.vp.fmuladd.v4f16(<4 x half> %va, <4 x half> %b, <4 x half> %c, <4 x i1> splat (i1 true), i32 %evl)
@@ -73,8 +71,8 @@ define <4 x half> @vfma_vv_v4f16_unmasked(<4 x half> %va, <4 x half> %b, <4 x ha
 define <4 x half> @vfma_vf_v4f16(<4 x half> %va, half %b, <4 x half> %vc, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
-; CHECK-NEXT:    vfmadd.vf v8, fa0, v9, v0.t
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vfmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x half> poison, half %b, i32 0
   %vb = shufflevector <4 x half> %elt.head, <4 x half> poison, <4 x i32> zeroinitializer
@@ -85,7 +83,7 @@ define <4 x half> @vfma_vf_v4f16(<4 x half> %va, half %b, <4 x half> %vc, <4 x i
 define <4 x half> @vfma_vf_v4f16_unmasked(<4 x half> %va, half %b, <4 x half> %vc, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v4f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x half> poison, half %b, i32 0
@@ -97,9 +95,8 @@ define <4 x half> @vfma_vf_v4f16_unmasked(<4 x half> %va, half %b, <4 x half> %v
 define <8 x half> @vfma_vv_v8f16(<8 x half> %va, <8 x half> %b, <8 x half> %c, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vv v9, v8, v10, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %v = call <8 x half> @llvm.vp.fmuladd.v8f16(<8 x half> %va, <8 x half> %b, <8 x half> %c, <8 x i1> %m, i32 %evl)
   ret <8 x half> %v
@@ -108,7 +105,7 @@ define <8 x half> @vfma_vv_v8f16(<8 x half> %va, <8 x half> %b, <8 x half> %c, <
 define <8 x half> @vfma_vv_v8f16_unmasked(<8 x half> %va, <8 x half> %b, <8 x half> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v8f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %v = call <8 x half> @llvm.vp.fmuladd.v8f16(<8 x half> %va, <8 x half> %b, <8 x half> %c, <8 x i1> splat (i1 true), i32 %evl)
@@ -118,8 +115,8 @@ define <8 x half> @vfma_vv_v8f16_unmasked(<8 x half> %va, <8 x half> %b, <8 x ha
 define <8 x half> @vfma_vf_v8f16(<8 x half> %va, half %b, <8 x half> %vc, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vf v8, fa0, v9, v0.t
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vfmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x half> poison, half %b, i32 0
   %vb = shufflevector <8 x half> %elt.head, <8 x half> poison, <8 x i32> zeroinitializer
@@ -130,7 +127,7 @@ define <8 x half> @vfma_vf_v8f16(<8 x half> %va, half %b, <8 x half> %vc, <8 x i
 define <8 x half> @vfma_vf_v8f16_unmasked(<8 x half> %va, half %b, <8 x half> %vc, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v8f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x half> poison, half %b, i32 0
@@ -142,9 +139,8 @@ define <8 x half> @vfma_vf_v8f16_unmasked(<8 x half> %va, half %b, <8 x half> %v
 define <16 x half> @vfma_vv_v16f16(<16 x half> %va, <16 x half> %b, <16 x half> %c, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v16f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; CHECK-NEXT:    vfmadd.vv v10, v8, v12, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vfmadd.vv v8, v10, v12
 ; CHECK-NEXT:    ret
   %v = call <16 x half> @llvm.vp.fmuladd.v16f16(<16 x half> %va, <16 x half> %b, <16 x half> %c, <16 x i1> %m, i32 %evl)
   ret <16 x half> %v
@@ -153,7 +149,7 @@ define <16 x half> @vfma_vv_v16f16(<16 x half> %va, <16 x half> %b, <16 x half> 
 define <16 x half> @vfma_vv_v16f16_unmasked(<16 x half> %va, <16 x half> %b, <16 x half> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v16f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v10, v12
 ; CHECK-NEXT:    ret
   %v = call <16 x half> @llvm.vp.fmuladd.v16f16(<16 x half> %va, <16 x half> %b, <16 x half> %c, <16 x i1> splat (i1 true), i32 %evl)
@@ -163,8 +159,8 @@ define <16 x half> @vfma_vv_v16f16_unmasked(<16 x half> %va, <16 x half> %b, <16
 define <16 x half> @vfma_vf_v16f16(<16 x half> %va, half %b, <16 x half> %vc, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v16f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
-; CHECK-NEXT:    vfmadd.vf v8, fa0, v10, v0.t
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vfmadd.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x half> poison, half %b, i32 0
   %vb = shufflevector <16 x half> %elt.head, <16 x half> poison, <16 x i32> zeroinitializer
@@ -175,7 +171,7 @@ define <16 x half> @vfma_vf_v16f16(<16 x half> %va, half %b, <16 x half> %vc, <1
 define <16 x half> @vfma_vf_v16f16_unmasked(<16 x half> %va, half %b, <16 x half> %vc, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v16f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfmadd.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x half> poison, half %b, i32 0
@@ -187,9 +183,8 @@ define <16 x half> @vfma_vf_v16f16_unmasked(<16 x half> %va, half %b, <16 x half
 define <2 x float> @vfma_vv_v2f32(<2 x float> %va, <2 x float> %b, <2 x float> %c, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vfmadd.vv v9, v8, v10, v0.t
-; CHECK-NEXT:    vmv1r.v v8, v9
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %v = call <2 x float> @llvm.vp.fmuladd.v2f32(<2 x float> %va, <2 x float> %b, <2 x float> %c, <2 x i1> %m, i32 %evl)
   ret <2 x float> %v
@@ -198,7 +193,7 @@ define <2 x float> @vfma_vv_v2f32(<2 x float> %va, <2 x float> %b, <2 x float> %
 define <2 x float> @vfma_vv_v2f32_unmasked(<2 x float> %va, <2 x float> %b, <2 x float> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v2f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %v = call <2 x float> @llvm.vp.fmuladd.v2f32(<2 x float> %va, <2 x float> %b, <2 x float> %c, <2 x i1> splat (i1 true), i32 %evl)
@@ -208,8 +203,8 @@ define <2 x float> @vfma_vv_v2f32_unmasked(<2 x float> %va, <2 x float> %b, <2 x
 define <2 x float> @vfma_vf_v2f32(<2 x float> %va, float %b, <2 x float> %vc, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
-; CHECK-NEXT:    vfmadd.vf v8, fa0, v9, v0.t
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vfmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x float> poison, float %b, i32 0
   %vb = shufflevector <2 x float> %elt.head, <2 x float> poison, <2 x i32> zeroinitializer
@@ -220,7 +215,7 @@ define <2 x float> @vfma_vf_v2f32(<2 x float> %va, float %b, <2 x float> %vc, <2
 define <2 x float> @vfma_vf_v2f32_unmasked(<2 x float> %va, float %b, <2 x float> %vc, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v2f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x float> poison, float %b, i32 0
@@ -232,9 +227,8 @@ define <2 x float> @vfma_vf_v2f32_unmasked(<2 x float> %va, float %b, <2 x float
 define <4 x float> @vfma_vv_v4f32(<4 x float> %va, <4 x float> %b, <4 x float> %c, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vv v9, v8, v10, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %v = call <4 x float> @llvm.vp.fmuladd.v4f32(<4 x float> %va, <4 x float> %b, <4 x float> %c, <4 x i1> %m, i32 %evl)
   ret <4 x float> %v
@@ -243,7 +237,7 @@ define <4 x float> @vfma_vv_v4f32(<4 x float> %va, <4 x float> %b, <4 x float> %
 define <4 x float> @vfma_vv_v4f32_unmasked(<4 x float> %va, <4 x float> %b, <4 x float> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v4f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %v = call <4 x float> @llvm.vp.fmuladd.v4f32(<4 x float> %va, <4 x float> %b, <4 x float> %c, <4 x i1> splat (i1 true), i32 %evl)
@@ -253,8 +247,8 @@ define <4 x float> @vfma_vv_v4f32_unmasked(<4 x float> %va, <4 x float> %b, <4 x
 define <4 x float> @vfma_vf_v4f32(<4 x float> %va, float %b, <4 x float> %vc, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vf v8, fa0, v9, v0.t
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x float> poison, float %b, i32 0
   %vb = shufflevector <4 x float> %elt.head, <4 x float> poison, <4 x i32> zeroinitializer
@@ -265,7 +259,7 @@ define <4 x float> @vfma_vf_v4f32(<4 x float> %va, float %b, <4 x float> %vc, <4
 define <4 x float> @vfma_vf_v4f32_unmasked(<4 x float> %va, float %b, <4 x float> %vc, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v4f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x float> poison, float %b, i32 0
@@ -277,9 +271,8 @@ define <4 x float> @vfma_vf_v4f32_unmasked(<4 x float> %va, float %b, <4 x float
 define <8 x float> @vfma_vv_v8f32(<8 x float> %va, <8 x float> %b, <8 x float> %c, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vfmadd.vv v10, v8, v12, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vfmadd.vv v8, v10, v12
 ; CHECK-NEXT:    ret
   %v = call <8 x float> @llvm.vp.fmuladd.v8f32(<8 x float> %va, <8 x float> %b, <8 x float> %c, <8 x i1> %m, i32 %evl)
   ret <8 x float> %v
@@ -288,7 +281,7 @@ define <8 x float> @vfma_vv_v8f32(<8 x float> %va, <8 x float> %b, <8 x float> %
 define <8 x float> @vfma_vv_v8f32_unmasked(<8 x float> %va, <8 x float> %b, <8 x float> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v8f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v10, v12
 ; CHECK-NEXT:    ret
   %v = call <8 x float> @llvm.vp.fmuladd.v8f32(<8 x float> %va, <8 x float> %b, <8 x float> %c, <8 x i1> splat (i1 true), i32 %evl)
@@ -298,8 +291,8 @@ define <8 x float> @vfma_vv_v8f32_unmasked(<8 x float> %va, <8 x float> %b, <8 x
 define <8 x float> @vfma_vf_v8f32(<8 x float> %va, float %b, <8 x float> %vc, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
-; CHECK-NEXT:    vfmadd.vf v8, fa0, v10, v0.t
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vfmadd.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x float> poison, float %b, i32 0
   %vb = shufflevector <8 x float> %elt.head, <8 x float> poison, <8 x i32> zeroinitializer
@@ -310,7 +303,7 @@ define <8 x float> @vfma_vf_v8f32(<8 x float> %va, float %b, <8 x float> %vc, <8
 define <8 x float> @vfma_vf_v8f32_unmasked(<8 x float> %va, float %b, <8 x float> %vc, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v8f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfmadd.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x float> poison, float %b, i32 0
@@ -322,9 +315,8 @@ define <8 x float> @vfma_vf_v8f32_unmasked(<8 x float> %va, float %b, <8 x float
 define <16 x float> @vfma_vv_v16f32(<16 x float> %va, <16 x float> %b, <16 x float> %c, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; CHECK-NEXT:    vfmadd.vv v12, v8, v16, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vfmadd.vv v8, v12, v16
 ; CHECK-NEXT:    ret
   %v = call <16 x float> @llvm.vp.fmuladd.v16f32(<16 x float> %va, <16 x float> %b, <16 x float> %c, <16 x i1> %m, i32 %evl)
   ret <16 x float> %v
@@ -333,7 +325,7 @@ define <16 x float> @vfma_vv_v16f32(<16 x float> %va, <16 x float> %b, <16 x flo
 define <16 x float> @vfma_vv_v16f32_unmasked(<16 x float> %va, <16 x float> %b, <16 x float> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v16f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v12, v16
 ; CHECK-NEXT:    ret
   %v = call <16 x float> @llvm.vp.fmuladd.v16f32(<16 x float> %va, <16 x float> %b, <16 x float> %c, <16 x i1> splat (i1 true), i32 %evl)
@@ -343,8 +335,8 @@ define <16 x float> @vfma_vv_v16f32_unmasked(<16 x float> %va, <16 x float> %b, 
 define <16 x float> @vfma_vf_v16f32(<16 x float> %va, float %b, <16 x float> %vc, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
-; CHECK-NEXT:    vfmadd.vf v8, fa0, v12, v0.t
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; CHECK-NEXT:    vfmadd.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x float> poison, float %b, i32 0
   %vb = shufflevector <16 x float> %elt.head, <16 x float> poison, <16 x i32> zeroinitializer
@@ -355,7 +347,7 @@ define <16 x float> @vfma_vf_v16f32(<16 x float> %va, float %b, <16 x float> %vc
 define <16 x float> @vfma_vf_v16f32_unmasked(<16 x float> %va, float %b, <16 x float> %vc, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v16f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vfmadd.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x float> poison, float %b, i32 0
@@ -367,9 +359,8 @@ define <16 x float> @vfma_vf_v16f32_unmasked(<16 x float> %va, float %b, <16 x f
 define <2 x double> @vfma_vv_v2f64(<2 x double> %va, <2 x double> %b, <2 x double> %c, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vv v9, v8, v10, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %v = call <2 x double> @llvm.vp.fmuladd.v2f64(<2 x double> %va, <2 x double> %b, <2 x double> %c, <2 x i1> %m, i32 %evl)
   ret <2 x double> %v
@@ -378,7 +369,7 @@ define <2 x double> @vfma_vv_v2f64(<2 x double> %va, <2 x double> %b, <2 x doubl
 define <2 x double> @vfma_vv_v2f64_unmasked(<2 x double> %va, <2 x double> %b, <2 x double> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v2f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %v = call <2 x double> @llvm.vp.fmuladd.v2f64(<2 x double> %va, <2 x double> %b, <2 x double> %c, <2 x i1> splat (i1 true), i32 %evl)
@@ -388,8 +379,8 @@ define <2 x double> @vfma_vv_v2f64_unmasked(<2 x double> %va, <2 x double> %b, <
 define <2 x double> @vfma_vf_v2f64(<2 x double> %va, double %b, <2 x double> %vc, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
-; CHECK-NEXT:    vfmadd.vf v8, fa0, v9, v0.t
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vfmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x double> poison, double %b, i32 0
   %vb = shufflevector <2 x double> %elt.head, <2 x double> poison, <2 x i32> zeroinitializer
@@ -400,7 +391,7 @@ define <2 x double> @vfma_vf_v2f64(<2 x double> %va, double %b, <2 x double> %vc
 define <2 x double> @vfma_vf_v2f64_unmasked(<2 x double> %va, double %b, <2 x double> %vc, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v2f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmadd.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x double> poison, double %b, i32 0
@@ -412,9 +403,8 @@ define <2 x double> @vfma_vf_v2f64_unmasked(<2 x double> %va, double %b, <2 x do
 define <4 x double> @vfma_vv_v4f64(<4 x double> %va, <4 x double> %b, <4 x double> %c, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vfmadd.vv v10, v8, v12, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vfmadd.vv v8, v10, v12
 ; CHECK-NEXT:    ret
   %v = call <4 x double> @llvm.vp.fmuladd.v4f64(<4 x double> %va, <4 x double> %b, <4 x double> %c, <4 x i1> %m, i32 %evl)
   ret <4 x double> %v
@@ -423,7 +413,7 @@ define <4 x double> @vfma_vv_v4f64(<4 x double> %va, <4 x double> %b, <4 x doubl
 define <4 x double> @vfma_vv_v4f64_unmasked(<4 x double> %va, <4 x double> %b, <4 x double> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v4f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v10, v12
 ; CHECK-NEXT:    ret
   %v = call <4 x double> @llvm.vp.fmuladd.v4f64(<4 x double> %va, <4 x double> %b, <4 x double> %c, <4 x i1> splat (i1 true), i32 %evl)
@@ -433,8 +423,8 @@ define <4 x double> @vfma_vv_v4f64_unmasked(<4 x double> %va, <4 x double> %b, <
 define <4 x double> @vfma_vf_v4f64(<4 x double> %va, double %b, <4 x double> %vc, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
-; CHECK-NEXT:    vfmadd.vf v8, fa0, v10, v0.t
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vfmadd.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x double> poison, double %b, i32 0
   %vb = shufflevector <4 x double> %elt.head, <4 x double> poison, <4 x i32> zeroinitializer
@@ -445,7 +435,7 @@ define <4 x double> @vfma_vf_v4f64(<4 x double> %va, double %b, <4 x double> %vc
 define <4 x double> @vfma_vf_v4f64_unmasked(<4 x double> %va, double %b, <4 x double> %vc, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v4f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vfmadd.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x double> poison, double %b, i32 0
@@ -457,9 +447,8 @@ define <4 x double> @vfma_vf_v4f64_unmasked(<4 x double> %va, double %b, <4 x do
 define <8 x double> @vfma_vv_v8f64(<8 x double> %va, <8 x double> %b, <8 x double> %c, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; CHECK-NEXT:    vfmadd.vv v12, v8, v16, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; CHECK-NEXT:    vfmadd.vv v8, v12, v16
 ; CHECK-NEXT:    ret
   %v = call <8 x double> @llvm.vp.fmuladd.v8f64(<8 x double> %va, <8 x double> %b, <8 x double> %c, <8 x i1> %m, i32 %evl)
   ret <8 x double> %v
@@ -468,7 +457,7 @@ define <8 x double> @vfma_vv_v8f64(<8 x double> %va, <8 x double> %b, <8 x doubl
 define <8 x double> @vfma_vv_v8f64_unmasked(<8 x double> %va, <8 x double> %b, <8 x double> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vv_v8f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v12, v16
 ; CHECK-NEXT:    ret
   %v = call <8 x double> @llvm.vp.fmuladd.v8f64(<8 x double> %va, <8 x double> %b, <8 x double> %c, <8 x i1> splat (i1 true), i32 %evl)
@@ -478,8 +467,8 @@ define <8 x double> @vfma_vv_v8f64_unmasked(<8 x double> %va, <8 x double> %b, <
 define <8 x double> @vfma_vf_v8f64(<8 x double> %va, double %b, <8 x double> %vc, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
-; CHECK-NEXT:    vfmadd.vf v8, fa0, v12, v0.t
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; CHECK-NEXT:    vfmadd.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x double> poison, double %b, i32 0
   %vb = shufflevector <8 x double> %elt.head, <8 x double> poison, <8 x i32> zeroinitializer
@@ -490,7 +479,7 @@ define <8 x double> @vfma_vf_v8f64(<8 x double> %va, double %b, <8 x double> %vc
 define <8 x double> @vfma_vf_v8f64_unmasked(<8 x double> %va, double %b, <8 x double> %vc, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v8f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vfmadd.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x double> poison, double %b, i32 0
@@ -504,9 +493,7 @@ define <15 x double> @vfma_vv_v15f64(<15 x double> %va, <15 x double> %b, <15 x 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; CHECK-NEXT:    vfmadd.vv v16, v8, v24, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v16
+; CHECK-NEXT:    vfmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %v = call <15 x double> @llvm.vp.fmuladd.v15f64(<15 x double> %va, <15 x double> %b, <15 x double> %c, <15 x i1> %m, i32 %evl)
   ret <15 x double> %v
@@ -517,7 +504,6 @@ define <15 x double> @vfma_vv_v15f64_unmasked(<15 x double> %va, <15 x double> %
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %v = call <15 x double> @llvm.vp.fmuladd.v15f64(<15 x double> %va, <15 x double> %b, <15 x double> %c, <15 x i1> splat (i1 true), i32 %evl)
@@ -529,9 +515,7 @@ define <16 x double> @vfma_vv_v16f64(<16 x double> %va, <16 x double> %b, <16 x 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
-; CHECK-NEXT:    vfmadd.vv v16, v8, v24, v0.t
-; CHECK-NEXT:    vmv.v.v v8, v16
+; CHECK-NEXT:    vfmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %v = call <16 x double> @llvm.vp.fmuladd.v16f64(<16 x double> %va, <16 x double> %b, <16 x double> %c, <16 x i1> %m, i32 %evl)
   ret <16 x double> %v
@@ -542,7 +526,6 @@ define <16 x double> @vfma_vv_v16f64_unmasked(<16 x double> %va, <16 x double> %
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmadd.vv v8, v16, v24
 ; CHECK-NEXT:    ret
   %v = call <16 x double> @llvm.vp.fmuladd.v16f64(<16 x double> %va, <16 x double> %b, <16 x double> %c, <16 x i1> splat (i1 true), i32 %evl)
@@ -552,8 +535,8 @@ define <16 x double> @vfma_vv_v16f64_unmasked(<16 x double> %va, <16 x double> %
 define <16 x double> @vfma_vf_v16f64(<16 x double> %va, double %b, <16 x double> %vc, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v16f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vfmadd.vf v8, fa0, v16, v0.t
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; CHECK-NEXT:    vfmadd.vf v8, fa0, v16
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x double> poison, double %b, i32 0
   %vb = shufflevector <16 x double> %elt.head, <16 x double> poison, <16 x i32> zeroinitializer
@@ -564,7 +547,7 @@ define <16 x double> @vfma_vf_v16f64(<16 x double> %va, double %b, <16 x double>
 define <16 x double> @vfma_vf_v16f64_unmasked(<16 x double> %va, double %b, <16 x double> %vc, i32 zeroext %evl) {
 ; CHECK-LABEL: vfma_vf_v16f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmadd.vf v8, fa0, v16
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x double> poison, double %b, i32 0
@@ -579,82 +562,46 @@ define <32 x double> @vfma_vv_v32f64(<32 x double> %va, <32 x double> %b, <32 x 
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 5
-; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 32 * vlenb
-; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    li a3, 24
 ; CHECK-NEXT:    mul a1, a1, a3
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 4
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, a1
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 24 * vlenb
 ; CHECK-NEXT:    addi a1, a2, 128
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a2)
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 4
+; CHECK-NEXT:    add a2, sp, a2
+; CHECK-NEXT:    addi a2, a2, 16
+; CHECK-NEXT:    vs8r.v v24, (a2) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    addi a2, a0, 128
-; CHECK-NEXT:    vle64.v v8, (a1)
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vle64.v v8, (a2)
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    li a1, 16
-; CHECK-NEXT:    mv a0, a4
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v7, v0, 2
-; CHECK-NEXT:    bltu a4, a1, .LBB50_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:  .LBB50_2:
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 4
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vfmadd.vv v8, v16, v24, v0.t
+; CHECK-NEXT:    vle64.v v0, (a0)
+; CHECK-NEXT:    vle64.v v24, (a1)
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add a0, sp, a0
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vle64.v v24, (a2)
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vs8r.v v8, (a0) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    addi a0, a4, -16
-; CHECK-NEXT:    sltu a1, a4, a0
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    vmv1r.v v0, v7
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    li a2, 24
-; CHECK-NEXT:    mul a1, a1, a2
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8r.v v24, (a1) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vfmadd.vv v8, v16, v24, v0.t
-; CHECK-NEXT:    vmv.v.v v16, v8
+; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vfmadd.vv v8, v0, v24
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 4
+; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vl8r.v v0, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vfmadd.vv v16, v0, v24
 ; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    slli a0, a0, 5
+; CHECK-NEXT:    li a1, 24
+; CHECK-NEXT:    mul a0, a0, a1
 ; CHECK-NEXT:    add sp, sp, a0
 ; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -674,53 +621,39 @@ define <32 x double> @vfma_vv_v32f64_unmasked(<32 x double> %va, <32 x double> %
 ; CHECK-NEXT:    mul a1, a1, a3
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x18, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 24 * vlenb
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 4
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    addi a1, a2, 128
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; CHECK-NEXT:    vle64.v v16, (a2)
-; CHECK-NEXT:    addi a2, a0, 128
-; CHECK-NEXT:    vle64.v v8, (a1)
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vle64.v v24, (a2)
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a2, a2, 4
+; CHECK-NEXT:    add a2, sp, a2
+; CHECK-NEXT:    addi a2, a2, 16
+; CHECK-NEXT:    vs8r.v v24, (a2) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    addi a2, a0, 128
 ; CHECK-NEXT:    vle64.v v0, (a0)
-; CHECK-NEXT:    li a1, 16
-; CHECK-NEXT:    mv a0, a4
-; CHECK-NEXT:    bltu a4, a1, .LBB51_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:  .LBB51_2:
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vfmadd.vv v0, v8, v16
-; CHECK-NEXT:    addi a0, a4, -16
-; CHECK-NEXT:    sltu a1, a4, a0
-; CHECK-NEXT:    addi a1, a1, -1
-; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 4
-; CHECK-NEXT:    add a1, sp, a1
-; CHECK-NEXT:    addi a1, a1, 16
-; CHECK-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
-; CHECK-NEXT:    vfmadd.vv v24, v16, v8
-; CHECK-NEXT:    vmv8r.v v8, v0
-; CHECK-NEXT:    vmv.v.v v16, v24
+; CHECK-NEXT:    vle64.v v24, (a1)
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add a0, sp, a0
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    vle64.v v24, (a2)
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 4
+; CHECK-NEXT:    add a0, sp, a0
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vfmadd.vv v8, v0, v24
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    add a0, sp, a0
+; CHECK-NEXT:    addi a0, a0, 16
+; CHECK-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    addi a0, sp, 16
+; CHECK-NEXT:    vl8r.v v0, (a0) # vscale x 64-byte Folded Reload
+; CHECK-NEXT:    vfmadd.vv v16, v0, v24
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    li a1, 24
 ; CHECK-NEXT:    mul a0, a0, a1

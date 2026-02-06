@@ -373,6 +373,40 @@ public:
                  ->getElementType()
                  ->getIntegerBitWidth() != 1))
       return VPLegalization(VPLegalization::Discard, VPLegalization::Convert);
+    static const Intrinsic::ID Supported[] = {
+        Intrinsic::vp_load,
+        Intrinsic::vp_gather,
+        Intrinsic::experimental_vp_strided_load,
+        Intrinsic::vp_load_ff,
+        Intrinsic::vp_store,
+        Intrinsic::vp_scatter,
+        Intrinsic::experimental_vp_strided_store,
+        Intrinsic::vp_udiv,
+        Intrinsic::vp_sdiv,
+        Intrinsic::vp_udiv,
+        Intrinsic::vp_srem,
+        Intrinsic::vp_urem,
+        Intrinsic::vp_reduce_add,
+        Intrinsic::vp_reduce_and,
+        Intrinsic::vp_reduce_mul,
+        Intrinsic::vp_reduce_or,
+        Intrinsic::vp_reduce_xor,
+        Intrinsic::vp_reduce_smax,
+        Intrinsic::vp_reduce_smin,
+        Intrinsic::vp_reduce_umax,
+        Intrinsic::vp_reduce_umin,
+        Intrinsic::vp_reduce_fadd,
+        Intrinsic::vp_reduce_fmul,
+        Intrinsic::vp_reduce_fmax,
+        Intrinsic::vp_reduce_fmin,
+        Intrinsic::vp_reduce_fmaximum,
+        Intrinsic::vp_reduce_fminimum,
+        Intrinsic::vp_merge,
+        Intrinsic::experimental_vp_reverse,
+        Intrinsic::experimental_vp_splice,
+        Intrinsic::vp_cttz_elts};
+    if (!is_contained(Supported, PI.getIntrinsicID()))
+      return VPLegalization(VPLegalization::Discard, VPLegalization::Convert);
     return VPLegalization(VPLegalization::Legal, VPLegalization::Legal);
   }
 
