@@ -1,4 +1,4 @@
-// UNSUPPORTED: target=riscv64{{.*}
+// UNSUPPORTED: target=riscv64{{.*}}
 // RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-linalg-to-loops,lower-affine,convert-scf-to-cf,convert-arith-to-llvm),convert-vector-to-llvm,finalize-memref-to-llvm,convert-func-to-llvm,convert-cf-to-llvm,reconcile-unrealized-casts)" %s | mlir-runner -O3 -e main -entry-point-result=void -shared-libs=%mlir_c_runner_utils | FileCheck %s
 
 func.func @main() {

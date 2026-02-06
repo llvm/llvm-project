@@ -1,4 +1,4 @@
-// UNSUPPORTED: target=riscv64{{.*}
+// UNSUPPORTED: target=riscv64{{.*}}
 // RUN:   mlir-opt %s -pass-pipeline="builtin.module(func.func(math-expand-ops),convert-vector-to-scf,convert-scf-to-cf,convert-vector-to-llvm,convert-to-llvm,reconcile-unrealized-casts)" \
 // RUN: | mlir-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \
