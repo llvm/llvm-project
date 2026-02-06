@@ -41,7 +41,7 @@ int test__truncdfsf2(int line, uint64_t a_rep, uint32_t expected_rep) {
   return ret;
 }
 
-#define test__truncdfsf2(a,x) test__truncdfsf2(__LINE__,a,x)
+#define test__truncdfsf2(a, x) test__truncdfsf2(__LINE__, a, x)
 
 int main(void) {
   int status = 0;

@@ -41,7 +41,7 @@ int test__extendsfdf2(int line, uint32_t a_rep, uint64_t expected_rep) {
   return ret;
 }
 
-#define test__extendsfdf2(a,x) test__extendsfdf2(__LINE__,a,x)
+#define test__extendsfdf2(a, x) test__extendsfdf2(__LINE__, a, x)
 
 int main(void) {
   int status = 0;

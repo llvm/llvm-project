@@ -57,6 +57,19 @@ if (COMPILER_RT_STANDALONE_BUILD)
     ON)
 endif()
 
+function(set_special_properties source_file)
+  cmake_parse_arguments(ARG "" "SUPERSEDES;PROVIDES" "" ${ARGN})
+  if(ARG_SUPERSEDES)
+    set_property(SOURCE ${source_file}
+      PROPERTY crt_supersedes ${ARG_SUPERSEDES})
+  endif()
+  if(ARG_PROVIDES AND NOT COMPILER_RT_BUILTINS_STANDALONE_BUILD)
+    set_property(SOURCE ${source_file}
+      DIRECTORY ${COMPILER_RT_SOURCE_DIR}
+      PROPERTY crt_provides ${ARG_PROVIDES})
+  endif()
+endfunction()
+
 include(builtin-config-ix)
 include(CMakeDependentOption)
 include(CMakePushCheckState)
@@ -521,8 +534,7 @@ set(thumb1_base_SOURCES
   arm/addsf3.S
   ${GENERIC_SOURCES}
 )
-set_property(SOURCE arm/adddf3.S PROPERTY crt_supersedes subdf3.c)
-set_property(SOURCE arm/adddf3.S DIRECTORY ${COMPILER_RT_SOURCE_DIR} PROPERTY crt_provides subdf3)
+set_special_properties(arm/adddf3.S SUPERSEDES subdf3.c PROVIDES subdf3)
 
 if(COMPILER_RT_ARM_OPTIMIZED_FP)
   set(thumb1_base_SOURCES
@@ -538,11 +550,12 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP)
     arm/funder.c
     ${thumb1_base_SOURCES}
   )
-  set_property(SOURCE arm/thumb1/cmpdf2.S PROPERTY crt_supersedes comparedf2.c)
-  set_property(SOURCE arm/thumb1/cmpdf2.S DIRECTORY ${COMPILER_RT_SOURCE_DIR} PROPERTY crt_provides comparedf2)
-  set_property(SOURCE arm/thumb1/cmpsf2.S PROPERTY crt_supersedes comparesf2.S)
-  # We don't need to set 'crt_provides' for cmpsf2.S, because the
-  # superseded comparesf2.S will already have enabled the comparesf2 tests.
+  set_special_properties(arm/thumb1/cmpdf2.S
+    SUPERSEDES comparedf2.c PROVIDES comparedf2)
+  set_special_properties(arm/thumb1/cmpsf2.S
+    SUPERSEDES comparesf2.S)
+  # We don't need to set PROVIDES for cmpsf2.S, because the superseded
+  # comparesf2.S will already have enabled the comparesf2 tests.
 endif()
 
 set(arm_EABI_RT_SOURCES
