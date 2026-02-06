@@ -101,13 +101,16 @@ public:
 #endif
 
   void analyze(DomTreeT &DT) {
-    for (auto *R : DT.roots()) {
-      Roots.push_back(R);
-    }
-    calculate(DT);
+    assert(IsPostDom || DT.root_size() == 1 &&
+                            "Only one entry block for forward domfronts!");
+    assert(DT.root_size() == 1 &&
+           "Support for post-dom frontiers with multiple roots hasn't been "
+           "implemented yet!");
+    this->Roots = {DT.getRoot()};
+    calculate(DT, DT[this->Roots[0]]);
   }
 
-  void calculate(const DomTreeT &DT);
+  void calculate(const DomTreeT &DT, const DomTreeNodeT *Node);
 };
 
 class DominanceFrontier : public DominanceFrontierBase<BasicBlock, false> {
