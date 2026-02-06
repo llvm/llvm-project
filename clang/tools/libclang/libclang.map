@@ -612,6 +612,7 @@ LLVM_21 {
 LLVM_22 {
   global:
     clang_experimental_DependencyScannerServiceOptions_setCacheNegativeStats;
+    clang_experimental_DependencyScannerReproducerOptions_setCASOptions;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol

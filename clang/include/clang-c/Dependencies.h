@@ -727,6 +727,14 @@ CINDEX_LINKAGE void
         CXDependencyScannerReproducerOptions);
 
 /**
+ * Specify the object store and action cache databases, and CAS options for
+ * generating a reproducer. Should be used if the original compilation uses CAS.
+ */
+CINDEX_LINKAGE void
+clang_experimental_DependencyScannerReproducerOptions_setCASOptions(
+    CXDependencyScannerReproducerOptions, CXCASDatabases, CXCASOptions);
+
+/**
  * Generates a reproducer to compile a requested file with required modules.
  *
  * Here the reproducer means the required input data with the commands to
