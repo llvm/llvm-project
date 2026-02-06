@@ -580,3 +580,28 @@ define i32 @mulhu_i32(i32 %x, i32 %y) {
   %e = trunc i64 %d to i32
   ret i32 %e
 }
+
+define i64 @add_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: add_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    add a1, a1, a3
+; CHECK-NEXT:    add a2, a0, a2
+; CHECK-NEXT:    sltu a0, a2, a0
+; CHECK-NEXT:    add a1, a1, a0
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    ret
+  %a = add i64 %x, %y
+  ret i64 %a
+}
+
+define i64 @usb_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: usb_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sltu a4, a0, a2
+; CHECK-NEXT:    sub a1, a1, a3
+; CHECK-NEXT:    sub a1, a1, a4
+; CHECK-NEXT:    sub a0, a0, a2
+; CHECK-NEXT:    ret
+  %a = sub i64 %x, %y
+  ret i64 %a
+}
