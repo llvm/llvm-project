@@ -1207,7 +1207,6 @@ class TemplateDiff {
                  ToQual = ToType.getQualifiers();
       // FromQual -= QualType(FromArgTST, 0).getQualifiers();
       // ToQual -= QualType(ToArgTST, 0).getQualifiers();
-      // ... your commented out lines ...
       bool Same = false;
       if (FromArgTST->getTemplateName().getAsTemplateDecl() == 
           ToArgTST->getTemplateName().getAsTemplateDecl()) {
