@@ -3787,6 +3787,7 @@ TEST(TransferTest, StaticCastBaseToDerived) {
 }
 
 TEST(TransferTest, StaticCastBaseToDerivedUnknown) {
+  // This code used to crash.
   std::string Code = R"(
     struct Base {};
     struct Derived: Base {};
