@@ -3916,7 +3916,7 @@ bool Process::PrivateStateThread::StartupThread() {
       ThreadLauncher::LaunchThread(
           m_thread_name,
           [this] {
-            return m_process.RunPrivateStateThread(m_is_secondary_thread);
+            return m_process.RunPrivateStateThread();
           },
           8 * 1024 * 1024);
   if (!private_state_thread) {
@@ -4196,7 +4196,7 @@ Status Process::HaltPrivate() {
   return error;
 }
 
-thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
+thread_result_t Process::RunPrivateStateThread() {
   bool control_only = true;
 
   Log *log = GetLog(LLDBLog::Process);
