@@ -30,6 +30,29 @@ define <2 x float> @fma_non_coalescable(
   ret <2 x float> %res
 }
 
+define <2 x float> @fma_shufflevector_non_coalescable(
+; CHECK-LABEL: fma_shufflevector_non_coalescable(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<11>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [fma_shufflevector_non_coalescable_param_0];
+; CHECK-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    ld.param.v2.b32 {%r5, %r6}, [fma_shufflevector_non_coalescable_param_1];
+; CHECK-NEXT:    ld.param.v2.b32 {%r7, %r8}, [fma_shufflevector_non_coalescable_param_2];
+; CHECK-NEXT:    fma.rn.f32 %r9, %r6, %r3, %r8;
+; CHECK-NEXT:    fma.rn.f32 %r10, %r5, %r1, %r7;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r10, %r9};
+; CHECK-NEXT:    ret;
+    ptr addrspace(3) %p, <2 x float> %a, <2 x float> %c) {
+  %ld  = load <4 x float>, ptr addrspace(3) %p, align 16
+  %bv  = shufflevector <4 x float> %ld, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %mul = fmul <2 x float> %a, %bv
+  %res = fadd <2 x float> %mul, %c
+  ret <2 x float> %res
+}
+
 define <2 x float> @fadd_non_coalescable(
 ; CHECK-LABEL: fadd_non_coalescable(
 ; CHECK:       {
@@ -133,6 +156,27 @@ define <4 x float> @fma_adjacent_elements(
   %res_hi = fadd <2 x float> %mul_hi, %c
   %out = shufflevector <2 x float> %res_lo, <2 x float> %res_hi, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x float> %out
+}
+
+define <2 x float> @fma_shufflevector_adjacent_elements(
+; CHECK-LABEL: fma_shufflevector_adjacent_elements(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [fma_shufflevector_adjacent_elements_param_0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [fma_shufflevector_adjacent_elements_param_1];
+; CHECK-NEXT:    ld.shared.b64 %rd3, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd4, [fma_shufflevector_adjacent_elements_param_2];
+; CHECK-NEXT:    fma.rn.f32x2 %rd5, %rd2, %rd3, %rd4;
+; CHECK-NEXT:    st.param.b64 [func_retval0], %rd5;
+; CHECK-NEXT:    ret;
+    ptr addrspace(3) %p, <2 x float> %a, <2 x float> %c) {
+  %ld  = load <4 x float>, ptr addrspace(3) %p, align 16
+  %bv  = shufflevector <4 x float> %ld, <4 x float> poison, <2 x i32> <i32 0, i32 1>
+  %mul = fmul <2 x float> %a, %bv
+  %res = fadd <2 x float> %mul, %c
+  ret <2 x float> %res
 }
 
 define <2 x float> @fma_naturally_paired(
