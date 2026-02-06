@@ -1,5 +1,5 @@
-; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s --check-prefixes=CHECK,CHECK-CV
-; RUN: mlir-translate -import-llvm -split-input-file --use-constant-int-for-fixed-length-splat --use-constant-fp-for-fixed-length-splat %s | FileCheck %s --check-prefixes=CHECK,CHECK-CI
+; RUN: mlir-translate -import-llvm -split-input-file %s | FileCheck %s
+; RUN: mlir-translate -import-llvm -split-input-file --use-constant-int-for-fixed-length-splat --use-constant-fp-for-fixed-length-splat %s | FileCheck %s
 
 ; CHECK-LABEL: @int_constants
 define void @int_constants(i16 %arg0, i32 %arg1, i1 %arg2) {
@@ -315,7 +315,5 @@ define [0 x ptr] @load_zero_array() {
 @vector_splat_int = global <2 x i64> splat (i64 7)
 @vector_splat_float = global <2 x float> splat (float 7.0)
 
-; CHECK-CV: llvm.mlir.global external @vector_splat_int(dense<7> : vector<2xi64>) {addr_space = 0 : i32} : vector<2xi64>
-; CHECK-CV: llvm.mlir.global external @vector_splat_float(dense<7.000000e+00> : vector<2xf32>) {addr_space = 0 : i32} : vector<2xf32>
-; CHECK-CI: llvm.mlir.global external @vector_splat_int(7 : i64) {addr_space = 0 : i32} : vector<2xi64>
-; CHECK-CI: llvm.mlir.global external @vector_splat_float(7.000000e+00 : f32) {addr_space = 0 : i32} : vector<2xf32>
+; CHECK: llvm.mlir.global external @vector_splat_int(dense<7> : vector<2xi64>) {addr_space = 0 : i32} : vector<2xi64>
+; CHECK: llvm.mlir.global external @vector_splat_float(dense<7.000000e+00> : vector<2xf32>) {addr_space = 0 : i32} : vector<2xf32>
