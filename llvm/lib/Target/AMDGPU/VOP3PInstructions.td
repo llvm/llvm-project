@@ -223,12 +223,6 @@ multiclass MadFmaMixFP32Pats<SDPatternOperator fma_like,
                (f32 (VOP3PMadMixModsNegPat f32:$src1, i32:$src1_mods)))),
     (mix_inst $src0_mods, $src0, (i32 8), (i32 OneImm), $src1_mods, $src1,
               DSTCLAMP.NONE)>;
-
-  def : GCNPat <
-    (f32 (fsub (f32 (VOP3PMadMixModsNegPat f32:$src0, i32:$src0_mods)),
-               (f32 (VOP3PMadMixModsExtPat VT:$src1, i32:$src1_mods)))),
-    (mix_inst $src0_mods, $src0, (i32 8), (i32 OneImm), $src1_mods, $src1,
-              DSTCLAMP.NONE)>;
 }
 
 multiclass MadFmaMixFP16Pats<SDPatternOperator fma_like,

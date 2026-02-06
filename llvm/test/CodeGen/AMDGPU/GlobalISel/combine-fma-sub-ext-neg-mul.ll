@@ -146,10 +146,14 @@ define amdgpu_vs <4 x float> @test_v4f16_to_v4f32_sub_ext_neg_mul2(<4 x float> %
 ; GFX9-DENORM:       ; %bb.0: ; %entry
 ; GFX9-DENORM-NEXT:    v_pk_mul_f16 v4, v4, v6 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX9-DENORM-NEXT:    v_pk_mul_f16 v5, v5, v7 neg_lo:[0,1] neg_hi:[0,1]
-; GFX9-DENORM-NEXT:    v_mad_mix_f32 v0, -v0, 1.0, v4 op_sel_hi:[0,1,1]
-; GFX9-DENORM-NEXT:    v_mad_mix_f32 v1, -v1, 1.0, v4 op_sel:[0,0,1] op_sel_hi:[0,1,1]
-; GFX9-DENORM-NEXT:    v_mad_mix_f32 v2, -v2, 1.0, v5 op_sel_hi:[0,1,1]
-; GFX9-DENORM-NEXT:    v_mad_mix_f32 v3, -v3, 1.0, v5 op_sel:[0,0,1] op_sel_hi:[0,1,1]
+; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v6, v4
+; GFX9-DENORM-NEXT:    v_cvt_f32_f16_sdwa v4, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v7, v5
+; GFX9-DENORM-NEXT:    v_cvt_f32_f16_sdwa v5, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX9-DENORM-NEXT:    v_sub_f32_e32 v0, v0, v6
+; GFX9-DENORM-NEXT:    v_sub_f32_e32 v1, v1, v4
+; GFX9-DENORM-NEXT:    v_sub_f32_e32 v2, v2, v7
+; GFX9-DENORM-NEXT:    v_sub_f32_e32 v3, v3, v5
 ; GFX9-DENORM-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-DENORM-LABEL: test_v4f16_to_v4f32_sub_ext_neg_mul2:
@@ -175,10 +179,14 @@ define amdgpu_vs <4 x float> @test_v4f16_to_v4f32_sub_neg_ext_mul2(<4 x float> %
 ; GFX9-DENORM:       ; %bb.0: ; %entry
 ; GFX9-DENORM-NEXT:    v_pk_mul_f16 v4, v4, v6 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX9-DENORM-NEXT:    v_pk_mul_f16 v5, v5, v7 neg_lo:[0,1] neg_hi:[0,1]
-; GFX9-DENORM-NEXT:    v_mad_mix_f32 v0, -v0, 1.0, v4 op_sel_hi:[0,1,1]
-; GFX9-DENORM-NEXT:    v_mad_mix_f32 v1, -v1, 1.0, v4 op_sel:[0,0,1] op_sel_hi:[0,1,1]
-; GFX9-DENORM-NEXT:    v_mad_mix_f32 v2, -v2, 1.0, v5 op_sel_hi:[0,1,1]
-; GFX9-DENORM-NEXT:    v_mad_mix_f32 v3, -v3, 1.0, v5 op_sel:[0,0,1] op_sel_hi:[0,1,1]
+; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v6, v4
+; GFX9-DENORM-NEXT:    v_cvt_f32_f16_sdwa v4, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX9-DENORM-NEXT:    v_cvt_f32_f16_e32 v7, v5
+; GFX9-DENORM-NEXT:    v_cvt_f32_f16_sdwa v5, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
+; GFX9-DENORM-NEXT:    v_sub_f32_e32 v0, v0, v6
+; GFX9-DENORM-NEXT:    v_sub_f32_e32 v1, v1, v4
+; GFX9-DENORM-NEXT:    v_sub_f32_e32 v2, v2, v7
+; GFX9-DENORM-NEXT:    v_sub_f32_e32 v3, v3, v5
 ; GFX9-DENORM-NEXT:    ; return to shader part epilog
 ;
 ; GFX10-DENORM-LABEL: test_v4f16_to_v4f32_sub_neg_ext_mul2:
