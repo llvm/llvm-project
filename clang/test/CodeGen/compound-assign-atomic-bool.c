@@ -1,4 +1,6 @@
-// RUN: %clang_cc1 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple riscv64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 // When performing compound assignment on atomic_bool, ensure that we
 // correctly handle the conversion from integer to boolean, by comparing
