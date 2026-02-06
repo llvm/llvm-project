@@ -10656,6 +10656,10 @@ ValueUniformity SIInstrInfo::getGenericValueUniformity(const MachineInstr &MI,
         //             active). Inherits divergence from the input condition.
         //   DefIdx=1: Saved exec mask (i64) - always uniform as all active
         //             lanes observe the same mask value.
+        assert(DefIdx < 2 && "amdgcn_if/amdgcn_else have exactly 2 defs");
+        assert(MI.getOperand(DefIdx).isReg() &&
+               MI.getOperand(DefIdx).getReg().isVirtual() &&
+               "Expected virtual register def");
         return DefIdx == 1 ? ValueUniformity::AlwaysUniform
                            : ValueUniformity::Default;
       default:
