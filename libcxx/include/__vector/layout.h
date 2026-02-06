@@ -159,7 +159,11 @@ public:
   ///
   /// `__begin_ptr()` is not called `data()` because `vector::data()` returns `T*`, but `__begin_`
   /// is allowed to be a fancy pointer.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __begin_ptr() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __begin_ptr() _NOEXCEPT {
+    return __begin_;
+  }
+
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __begin_ptr() const _NOEXCEPT {
     return __begin_;
   }
 
@@ -232,7 +236,8 @@ public:
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT;
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _Tp& back() _NOEXCEPT;
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _Tp const& back() const _NOEXCEPT;
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __end_ptr() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __end_ptr() _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __end_ptr() const _NOEXCEPT;
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __invariants() const _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_boundary(size_type __size) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_boundary(pointer __end) _NOEXCEPT;
@@ -285,6 +290,12 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp const& __vector_layout<_Tp, _Alloc>::back() co
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
+__vector_layout<_Tp, _Alloc>::__end_ptr() _NOEXCEPT {
+  return __begin_ + __boundary_;
+}
+
+template <class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::const_pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() const _NOEXCEPT {
   return __begin_ + __boundary_;
 }
@@ -351,6 +362,12 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp const& __vector_layout<_Tp, _Alloc>::back() co
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
+__vector_layout<_Tp, _Alloc>::__end_ptr() _NOEXCEPT {
+  return __boundary_;
+}
+
+template <class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::const_pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() const _NOEXCEPT {
   return __boundary_;
 }
