@@ -863,7 +863,7 @@ bool SharedCacheInfo::CreateHostSharedCacheImageList() {
   dyld_shared_cache_for_file(host_shared_cache_file.c_str(), ^(void *cache) {
     uuid_t sc_uuid;
     dyld_shared_cache_copy_uuid(cache, &sc_uuid);
-    host_sc_uuid = UUID{sc_uuid, sizeof(uuid_t)};
+    host_sc_uuid = UUID(sc_uuid, sizeof(uuid_t));
   });
 
   if (host_sc_uuid.IsValid())
