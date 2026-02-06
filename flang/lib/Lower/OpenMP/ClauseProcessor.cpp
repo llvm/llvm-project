@@ -710,6 +710,23 @@ static llvm::StringMap<bool> getTargetFeatures(mlir::ModuleOp module) {
   return featuresMap;
 }
 
+bool ClauseProcessor::processAffinity(
+    mlir::omp::AffinityClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Affinity>(
+      [&](const omp::clause::Affinity &clause, const parser::CharBlock &) {
+        if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
+          TODO(converter.getCurrentLocation(),
+               "Support for iterator modifiers is not implemented yet");
+        }
+
+        const auto &objects = std::get<omp::ObjectList>(clause.t);
+        if (!objects.empty())
+          genObjectList(objects, converter, result.affinityVars);
+
+        return true;
+      });
+}
+
 static void
 addAlignedClause(lower::AbstractConverter &converter,
                  const omp::clause::Aligned &clause,

@@ -372,6 +372,30 @@ module {
     llvm.return
   }
 
+  llvm.func @no_builtins_all() attributes { nobuiltins = [] } {
+    // CHECK: @no_builtins_all
+    // CHECK-SAME: attributes {nobuiltins = []}
+    llvm.return
+  }
+
+  llvm.func @no_builtins_2() attributes { nobuiltins = ["foo", "bar"] } {
+    // CHECK: @no_builtins_2
+    // CHECK-SAME: attributes {nobuiltins = ["foo", "bar"]}
+    llvm.return
+  }
+
+  llvm.func @alloc_size_one(%arg: i32, %arg2: i32, %arg3: i32, %args4: i32) attributes { allocsize = array<i32: 3>} {
+    // CHECK: @alloc_size_one
+    // CHECK-SAME: attributes {allocsize = array<i32: 3>}
+    llvm.return
+  }
+
+  llvm.func @alloc_size_two(%arg: i32, %arg2: i32, %arg3: i32, %args4: i32) attributes { allocsize = array<i32:3, 1> } {
+    // CHECK: @alloc_size_two
+    // CHECK-SAME: attributes {allocsize = array<i32: 3, 1>}
+    llvm.return
+  }
+
 }
 
 // -----
