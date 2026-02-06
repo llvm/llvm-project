@@ -339,6 +339,7 @@ def __builtin_amdgcn_image_bvh_intersect_ray_lh : AMDGPUBuiltin<"_ExtVector<4, u
 // TODO: This is a no-op in wave32. Should the builtin require wavefrontsize64?
 def __builtin_amdgcn_permlane64 : AMDGPUBuiltin<"unsigned int(unsigned int)", [Const], "gfx11-insts">;
 def __builtin_amdgcn_s_wait_event_export_ready : AMDGPUBuiltin<"void()", [], "gfx11-insts">;
+def __builtin_amdgcn_s_wait_event : AMDGPUBuiltin<"void(_Constant short)", [], "gfx11-insts">;
 
 //===----------------------------------------------------------------------===//
 // WMMA builtins.
