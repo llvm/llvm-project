@@ -586,6 +586,20 @@ define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_drop_noundef(float 
   ret float %canon
 }
 
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #1 = { "denormal-fp-math"="dynamic,dynamic" }
-attributes #2 = { "denormal-fp-math"="positive-zero,positive-zero" }
+define nofpclass(snan) float @qnan_result_demands_snan_src(i1 %cond, float %unknown) {
+; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_src(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %snan = call float @returns_snan()
+  %select = select i1 %cond, float %snan, float %unknown
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+attributes #0 = { denormal_fpenv(preservesign) }
+attributes #1 = { denormal_fpenv(dynamic) }
+attributes #2 = { denormal_fpenv(positivezero|positivezero) }

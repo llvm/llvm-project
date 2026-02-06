@@ -52,6 +52,13 @@ AST Dumping Potentially Breaking Changes
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 
+- HIPSPV toolchain: `--offload-targets=spirv{32,64}` option is
+  deprecated and will be removed when the new offload driver becomes
+  default. The replacement for the option is
+  `--offload-targets=spirv{32,64}-unknown-chipstar` when using the new
+  offload driver (`--offload-new-driver`).
+
+
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
 - Remove ``CompletionString.Availability``. No libclang interfaces returned instances of it.
@@ -121,6 +128,9 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
+- New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
+  to enable or disable Microsoft's anonymous struct/union extension without
+  enabling other ``-fms-extensions`` features (#GH177607).
 
 Deprecated Compiler Flags
 -------------------------
@@ -199,12 +209,15 @@ Improvements to Clang's diagnostics
       DanglingView(std::string s) : view(s) {}  // warning: address of stack memory escapes to a field
     };
 
+- Improved ``-Wassign-enum`` performance by caching enum enumerator values. (#GH176454)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
 Improvements to Coverage Mapping
 --------------------------------
 
+- [MC/DC] Nested expressions are handled as individual MC/DC expressions.
 - "Single byte coverage" now supports branch coverage and can be used
   together with ``-fcoverage-mcdc``.
 
@@ -216,6 +229,8 @@ Bug Fixes in This Version
 - Fixed a preprocessor crash in ``__has_cpp_attribute`` on incomplete scoped attributes. (#GH178098)
 - Fixes an assertion failure when evaluating ``__underlying_type`` on enum redeclarations. (#GH177943)
 
+- Clang now outputs relative paths of embeds for dependency output. (#GH161950)
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -226,6 +241,7 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a crash when instantiating ``requires`` expressions involving substitution failures in C++ concepts. (#GH176402)
+- Fixed a crash when a default argument is passed to an explicit object parameter. (#GH176639)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 
 Bug Fixes to AST Handling
@@ -233,6 +249,7 @@ Bug Fixes to AST Handling
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed the arguments of the format attribute on ``__builtin_os_log_format``.  Previously, they were off by 1.
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -356,6 +373,12 @@ Python Binding Changes
 
   Affected methods: ``isKindOptional``, ``isKindTypedText``, ``isKindPlaceHolder``,
   ``isKindInformative`` and ``isKindResultType``.
+- Add a deprecation warning to ``CodeCompletionResults.results``.
+  This property will become an implementation detail with changed behavior in a 
+  future release and should not be used directly.. Existing uses of 
+  ``CodeCompletionResults.results`` should be changed to directly use
+  ``CodeCompletionResults``: it nows supports ``__len__`` and ``__getitem__``,
+  so it can be used the same as ``CodeCompletionResults.results``.
 
 OpenMP Support
 --------------

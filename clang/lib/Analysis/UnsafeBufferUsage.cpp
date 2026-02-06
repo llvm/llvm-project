@@ -833,14 +833,13 @@ static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
   return false;
 }
 
-namespace libc_func_matchers {
 // Under `libc_func_matchers`, define a set of matchers that match unsafe
 // functions in libc and unsafe calls to them.
-
+namespace libc_func_matchers {
 //  A tiny parser to strip off common prefix and suffix of libc function names
 //  in real code.
 //
-//  Given a function name, `matchName` returns `CoreName` according to the
+//  Given a function name, `matchName()` returns `CoreName` according to the
 //  following grammar:
 //
 //  LibcName     := CoreName | CoreName + "_s"
@@ -848,35 +847,33 @@ namespace libc_func_matchers {
 //                  "__builtin___" + LibcName + "_chk"   |
 //                  "__asan_" + LibcName
 //
-struct LibcFunNamePrefixSuffixParser {
-  StringRef matchName(StringRef FunName, bool isBuiltin) {
-    // Try to match __builtin_:
-    if (isBuiltin && FunName.starts_with("__builtin_"))
-      // Then either it is __builtin_LibcName or __builtin___LibcName_chk or
-      // no match:
-      return matchLibcNameOrBuiltinChk(
-          FunName.drop_front(10 /* truncate "__builtin_" */));
-    // Try to match __asan_:
-    if (FunName.starts_with("__asan_"))
-      return matchLibcName(FunName.drop_front(7 /* truncate of "__asan_" */));
-    return matchLibcName(FunName);
-  }
+static StringRef matchLibcName(StringRef Name) {
+  if (Name.ends_with("_s"))
+    return Name.drop_back(2 /* truncate "_s" */);
+  return Name;
+}
 
-  // Parameter `Name` is the substring after stripping off the prefix
-  // "__builtin_".
-  StringRef matchLibcNameOrBuiltinChk(StringRef Name) {
-    if (Name.starts_with("__") && Name.ends_with("_chk"))
-      return matchLibcName(
-          Name.drop_front(2).drop_back(4) /* truncate "__" and "_chk" */);
-    return matchLibcName(Name);
-  }
+// Parameter `Name` is the substring after stripping off the prefix
+// "__builtin_".
+static StringRef matchLibcNameOrBuiltinChk(StringRef Name) {
+  if (Name.starts_with("__") && Name.ends_with("_chk"))
+    return matchLibcName(
+        Name.drop_front(2).drop_back(4) /* truncate "__" and "_chk" */);
+  return matchLibcName(Name);
+}
 
-  StringRef matchLibcName(StringRef Name) {
-    if (Name.ends_with("_s"))
-      return Name.drop_back(2 /* truncate "_s" */);
-    return Name;
-  }
-};
+static StringRef matchName(StringRef FunName, bool isBuiltin) {
+  // Try to match __builtin_:
+  if (isBuiltin && FunName.starts_with("__builtin_"))
+    // Then either it is __builtin_LibcName or __builtin___LibcName_chk or no
+    // match:
+    return matchLibcNameOrBuiltinChk(
+        FunName.drop_front(10 /* truncate "__builtin_" */));
+  // Try to match __asan_:
+  if (FunName.starts_with("__asan_"))
+    return matchLibcName(FunName.drop_front(7 /* truncate of "__asan_" */));
+  return matchLibcName(FunName);
+}
 
 // Return true iff at least one of following cases holds:
 //  1. Format string is a literal and there is an unsafe pointer argument
@@ -1031,7 +1028,7 @@ hasUnsafeFormatOrSArg(ASTContext &Ctx, const CallExpr *Call,
 //  2. `CoreName` or `CoreName[str/wcs]` is one of the `PredefinedNames`, which
 //     is a set of libc function names.
 //
-//  Note: For predefined prefix and suffix, see `LibcFunNamePrefixSuffixParser`.
+//  Note: For predefined prefix and suffix, see `matchName()`.
 //  The notation `CoreName[str/wcs]` means a new name obtained from replace
 //  string "wcs" with "str" in `CoreName`.
 static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
@@ -1114,8 +1111,7 @@ static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
   if (!II)
     return false;
 
-  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
-      II->getName(), Node.getBuiltinID());
+  StringRef Name = matchName(II->getName(), Node.getBuiltinID());
 
   // Match predefined names:
   if (PredefinedNames->find(Name) != PredefinedNames->end())
@@ -1148,8 +1144,7 @@ static bool isUnsafeMemset(const CallExpr &Node, ASTContext &Ctx) {
   if (!II)
     return false;
 
-  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
-      II->getName(), FD->getBuiltinID());
+  StringRef Name = matchName(II->getName(), FD->getBuiltinID());
   if (Name != "memset")
     return false;
 
@@ -1184,12 +1179,9 @@ static bool isUnsafeVaListPrintfFunc(const FunctionDecl &Node) {
   if (!II)
     return false;
 
-  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
-      II->getName(), Node.getBuiltinID());
+  StringRef Name = matchName(II->getName(), Node.getBuiltinID());
 
-  if (!Name.ends_with("printf"))
-    return false; // neither printf nor scanf
-  return Name.starts_with("v");
+  return Name.starts_with("v") && Name.ends_with("printf");
 }
 
 // Matches a call to one of the `sprintf` functions as they are always unsafe
@@ -1200,19 +1192,9 @@ static bool isUnsafeSprintfFunc(const FunctionDecl &Node) {
   if (!II)
     return false;
 
-  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
-      II->getName(), Node.getBuiltinID());
+  StringRef Name = matchName(II->getName(), Node.getBuiltinID());
 
-  if (!Name.ends_with("printf") ||
-      // Let `isUnsafeVaListPrintfFunc` check for cases with va-list:
-      Name.starts_with("v"))
-    return false;
-
-  StringRef Prefix = Name.drop_back(6);
-
-  if (Prefix.ends_with("w"))
-    Prefix = Prefix.drop_back(1);
-  return Prefix == "s";
+  return Name == "sprintf" || Name == "swprintf";
 }
 
 // Match function declarations of `printf`, `fprintf`, `snprintf` and their wide
@@ -1224,10 +1206,9 @@ static bool isNormalPrintfFunc(const FunctionDecl &Node) {
   if (!II)
     return false;
 
-  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
-      II->getName(), Node.getBuiltinID());
+  StringRef Name = matchName(II->getName(), Node.getBuiltinID());
 
-  if (!Name.ends_with("printf") || Name.starts_with("v"))
+  if (!Name.ends_with("printf"))
     return false;
 
   StringRef Prefix = Name.drop_back(6);

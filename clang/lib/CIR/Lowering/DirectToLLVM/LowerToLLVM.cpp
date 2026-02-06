@@ -29,6 +29,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
@@ -192,6 +193,15 @@ mlir::LogicalResult CIRToLLVMMemCpyOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   rewriter.replaceOpWithNewOp<mlir::LLVM::MemcpyOp>(
       op, adaptor.getDst(), adaptor.getSrc(), adaptor.getLen(),
+      /*isVolatile=*/false);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMMemSetOpLowering::matchAndRewrite(
+    cir::MemSetOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  rewriter.replaceOpWithNewOp<mlir::LLVM::MemsetOp>(
+      op, adaptor.getDst(), adaptor.getVal(), adaptor.getLen(),
       /*isVolatile=*/false);
   return mlir::success();
 }
@@ -705,6 +715,8 @@ struct ConvertCIRToLLVMPass
   void runOnOperation() final;
 
   void processCIRAttrs(mlir::ModuleOp module);
+
+  void resolveBlockAddressOp(LLVMBlockAddressInfo &blockInfoAddr);
 
   StringRef getDescription() const override {
     return "Convert the prepared CIR dialect module to LLVM dialect";
@@ -1775,10 +1787,8 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
   // TODO: nontemporal.
   assert(!cir::MissingFeatures::opLoadStoreNontemporal());
 
-  std::optional<std::string> llvmSyncScope;
-  if (std::optional<cir::SyncScopeKind> syncScope = op.getSyncScope())
-    llvmSyncScope =
-        lowerMod->getTargetLoweringInfo().getLLVMSyncScope(*syncScope);
+  std::optional<llvm::StringRef> llvmSyncScope =
+      getLLVMSyncScope(op.getSyncScope());
 
   mlir::LLVM::LoadOp newLoad = mlir::LLVM::LoadOp::create(
       rewriter, op->getLoc(), llvmTy, adaptor.getAddr(), alignment,
@@ -1813,10 +1823,8 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
   assert(!cir::MissingFeatures::opLoadStoreNontemporal());
   assert(!cir::MissingFeatures::opLoadStoreTbaa());
 
-  std::optional<std::string> llvmSyncScope;
-  if (std::optional<cir::SyncScopeKind> syncScope = op.getSyncScope())
-    llvmSyncScope =
-        lowerMod->getTargetLoweringInfo().getLLVMSyncScope(*syncScope);
+  std::optional<llvm::StringRef> llvmSyncScope =
+      getLLVMSyncScope(op.getSyncScope());
 
   mlir::LLVM::StoreOp storeOp = mlir::LLVM::StoreOp::create(
       rewriter, op->getLoc(), value, adaptor.getAddr(), alignment,
@@ -3017,17 +3025,6 @@ mlir::LogicalResult CIRToLLVMSelectOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
-std::unique_ptr<cir::LowerModule> prepareLowerModule(mlir::ModuleOp module) {
-  mlir::PatternRewriter rewriter{module->getContext()};
-  // If the triple is not present, e.g. CIR modules parsed from text, we
-  // cannot init LowerModule properly. This happens in some lowering tests,
-  // but it should not happen in real compilation.
-  assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
-  if (!module->hasAttr(cir::CIRDialect::getTripleAttrName()))
-    return {};
-  return cir::createLowerModule(module, rewriter);
-}
-
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
                                  mlir::DataLayout &dataLayout,
                                  cir::LowerModule *lowerModule) {
@@ -3291,6 +3288,24 @@ mlir::LogicalResult CIRToLLVMObjSizeOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+void ConvertCIRToLLVMPass::resolveBlockAddressOp(
+    LLVMBlockAddressInfo &blockInfoAddr) {
+
+  mlir::ModuleOp module = getOperation();
+  mlir::OpBuilder opBuilder(module.getContext());
+  for (auto &[blockAddOp, blockInfo] :
+       blockInfoAddr.getUnresolvedBlockAddress()) {
+    mlir::LLVM::BlockTagOp resolvedLabel =
+        blockInfoAddr.lookupBlockTag(blockInfo);
+    assert(resolvedLabel && "expected BlockTagOp to already be emitted");
+    mlir::FlatSymbolRefAttr fnSym = blockInfo.getFunc();
+    auto blkAddTag = mlir::LLVM::BlockAddressAttr::get(
+        opBuilder.getContext(), fnSym, resolvedLabel.getTagAttr());
+    blockAddOp.setBlockAddrAttr(blkAddTag);
+  }
+  blockInfoAddr.clearUnresolvedMap();
+}
+
 void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
   // Lower the module attributes to LLVM equivalents.
   if (mlir::Attribute tripleAttr =
@@ -3310,7 +3325,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   mlir::ModuleOp module = getOperation();
   mlir::DataLayout dl(module);
   mlir::LLVMTypeConverter converter(&getContext());
-  std::unique_ptr<cir::LowerModule> lowerModule = prepareLowerModule(module);
+  std::unique_ptr<cir::LowerModule> lowerModule =
+      cir::createLowerModule(module);
   prepareTypeConverter(converter, dl, lowerModule.get());
 
   /// Tracks the state required to lower CIR `LabelOp` and `BlockAddressOp`.
@@ -3357,6 +3373,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                       return std::make_pair(dtorAttr.getName(),
                                             dtorAttr.getPriority());
                     });
+  resolveBlockAddressOp(blockInfoAddr);
 }
 
 mlir::LogicalResult CIRToLLVMBrOpLowering::matchAndRewrite(
@@ -4390,19 +4407,89 @@ mlir::LogicalResult CIRToLLVMVAArgOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMLabelOpLowering::matchAndRewrite(
     cir::LabelOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  return mlir::failure();
+  mlir::MLIRContext *ctx = rewriter.getContext();
+  mlir::Block *block = op->getBlock();
+  // A BlockTagOp cannot reside in the entry block. The address of the entry
+  // block cannot be taken
+  if (block->isEntryBlock()) {
+    mlir::Block *newBlock =
+        rewriter.splitBlock(op->getBlock(), mlir::Block::iterator(op));
+    rewriter.setInsertionPointToEnd(block);
+    mlir::LLVM::BrOp::create(rewriter, op.getLoc(), newBlock);
+  }
+  auto tagAttr =
+      mlir::LLVM::BlockTagAttr::get(ctx, blockInfoAddr.getTagIndex());
+  rewriter.setInsertionPoint(op);
+
+  auto blockTagOp =
+      mlir::LLVM::BlockTagOp::create(rewriter, op->getLoc(), tagAttr);
+  mlir::LLVM::LLVMFuncOp func = op->getParentOfType<mlir::LLVM::LLVMFuncOp>();
+  auto blockInfoAttr =
+      cir::BlockAddrInfoAttr::get(ctx, func.getSymName(), op.getLabel());
+  blockInfoAddr.mapBlockTag(blockInfoAttr, blockTagOp);
+  rewriter.eraseOp(op);
+
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMBlockAddressOpLowering::matchAndRewrite(
     cir::BlockAddressOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  return mlir::failure();
+  mlir::MLIRContext *ctx = rewriter.getContext();
+
+  mlir::LLVM::BlockTagOp matchLabel =
+      blockInfoAddr.lookupBlockTag(op.getBlockAddrInfoAttr());
+  mlir::LLVM::BlockTagAttr tagAttr;
+  if (!matchLabel)
+    // If the BlockTagOp has not been emitted yet, use  a placeholder.
+    // This will later be replaced with the correct tag index during
+    // `resolveBlockAddressOp`.
+    tagAttr = {};
+  else
+    tagAttr = matchLabel.getTag();
+
+  auto blkAddr = mlir::LLVM::BlockAddressAttr::get(
+      rewriter.getContext(), op.getBlockAddrInfoAttr().getFunc(), tagAttr);
+  rewriter.setInsertionPoint(op);
+  auto newOp = mlir::LLVM::BlockAddressOp::create(
+      rewriter, op.getLoc(), mlir::LLVM::LLVMPointerType::get(ctx), blkAddr);
+  if (!matchLabel)
+    blockInfoAddr.addUnresolvedBlockAddress(newOp, op.getBlockAddrInfoAttr());
+  rewriter.replaceOp(op, newOp);
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMIndirectBrOpLowering::matchAndRewrite(
     cir::IndirectBrOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  return mlir::failure();
+
+  llvm::SmallVector<mlir::Block *, 8> successors;
+  llvm::SmallVector<mlir::ValueRange, 8> succOperands;
+  bool poison = op.getPoison();
+  for (mlir::Block *succ : op->getSuccessors())
+    successors.push_back(succ);
+
+  for (mlir::ValueRange operand : op.getSuccOperands()) {
+    succOperands.push_back(operand);
+  }
+
+  auto llvmPtrType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  mlir::Value targetAddr;
+  if (!poison) {
+    targetAddr = mlir::LLVM::BitcastOp::create(rewriter, op.getLoc(),
+                                               llvmPtrType, adaptor.getAddr());
+  } else {
+    targetAddr =
+        mlir::LLVM::PoisonOp::create(rewriter, op->getLoc(), llvmPtrType);
+    // Remove the block argument to avoid generating an empty PHI during
+    // lowering.
+    op->getBlock()->eraseArgument(0);
+  }
+
+  auto newOp = mlir::LLVM::IndirectBrOp::create(
+      rewriter, op.getLoc(), targetAddr, succOperands, successors);
+  rewriter.replaceOp(op, newOp);
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMAwaitOpLowering::matchAndRewrite(
@@ -4524,6 +4611,7 @@ lowerDirectlyFromCIRToLLVMIR(mlir::ModuleOp mlirModule, LLVMContext &llvmCtx) {
 
   mlir::registerBuiltinDialectTranslation(*mlirCtx);
   mlir::registerLLVMDialectTranslation(*mlirCtx);
+  mlir::registerOpenMPDialectTranslation(*mlirCtx);
   mlir::registerCIRDialectTranslation(*mlirCtx);
 
   llvm::TimeTraceScope translateScope("translateModuleToLLVMIR");
