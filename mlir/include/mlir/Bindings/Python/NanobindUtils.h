@@ -12,10 +12,6 @@
 
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Support/DataTypes.h"
 
 #include <fstream>
 #include <sstream>
