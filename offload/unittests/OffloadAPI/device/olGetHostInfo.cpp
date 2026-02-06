@@ -146,7 +146,7 @@ OL_DEVICE_INFO_TEST_HOST_VALUE_GT(NativeVectorWidthFloat, uint32_t,
 OL_DEVICE_INFO_TEST_HOST_VALUE_GT(NativeVectorWidthDouble, uint32_t,
                                   OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE, 0);
 OL_DEVICE_INFO_TEST_HOST_SUCCESS(NativeVectorWidthHalf, uint32_t,
-                                  OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF);
+                                 OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF);
 OL_DEVICE_INFO_TEST_HOST_VALUE_GT(MaxClockFrequency, uint32_t,
                                   OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY, 0);
 OL_DEVICE_INFO_TEST_HOST_VALUE_GT(MemoryClockRate, uint32_t,
