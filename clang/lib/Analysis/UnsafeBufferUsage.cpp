@@ -458,6 +458,46 @@ static bool areEqualIntegers(const Expr *E1, const Expr *E2, ASTContext &Ctx) {
   }
 }
 
+// Given an expression like `&X` or `std::addressof(X)`, returns the `Expr`
+// corresponding to `X` (after removing parens and implicit casts).
+// Returns null if the input expression `E` is not an address-of expression.
+static const Expr *getSubExprInAddressOfExpr(const Expr &E) {
+  if (!E.getType()->isPointerType())
+    return nullptr;
+  const Expr *Ptr = E.IgnoreParenImpCasts();
+
+  // `&X` where `X` is an `Expr`.
+  if (const auto *UO = dyn_cast<UnaryOperator>(Ptr)) {
+    if (UO->getOpcode() != UnaryOperator::Opcode::UO_AddrOf)
+      return nullptr;
+    return UO->getSubExpr()->IgnoreParenImpCasts();
+  }
+
+  // `std::addressof(X)` where `X` is an `Expr`.
+  if (const auto *CE = dyn_cast<CallExpr>(Ptr)) {
+    const FunctionDecl *FnDecl = CE->getDirectCallee();
+    if (!FnDecl || !FnDecl->isInStdNamespace() ||
+        FnDecl->getNameAsString() != "addressof" || CE->getNumArgs() != 1)
+      return nullptr;
+    return CE->getArg(0)->IgnoreParenImpCasts();
+  }
+
+  return nullptr;
+}
+
+// Given an expression like `sizeof(X)`, returns the `Expr` corresponding to `X`
+// (after removing parens and implicit casts). Returns null if the expression
+// `E` is not a `sizeof` expression or is `sizeof(T)` for a type `T`.
+static const Expr *getSubExprInSizeOfExpr(const Expr &E) {
+  const auto *SizeOfExpr =
+      dyn_cast<UnaryExprOrTypeTraitExpr>(E.IgnoreParenImpCasts());
+  if (!SizeOfExpr || SizeOfExpr->getKind() != UETT_SizeOf)
+    return nullptr;
+  if (SizeOfExpr->isArgumentType())
+    return nullptr;
+  return SizeOfExpr->getArgumentExpr()->IgnoreParenImpCasts();
+}
+
 // Providing that `Ptr` is a pointer and `Size` is an unsigned-integral
 // expression, returns true iff they follow one of the following safe
 // patterns:
@@ -530,21 +570,14 @@ static bool isPtrBufferSafe(const Expr *Ptr, const Expr *Size,
     }
 
     // Pattern 3:
-    if (ER.Val.getInt().isOne()) {
-      if (auto *UO = dyn_cast<UnaryOperator>(Ptr->IgnoreParenImpCasts()))
-        return UO && UO->getOpcode() == UnaryOperator::Opcode::UO_AddrOf;
-      if (auto *CE = dyn_cast<CallExpr>(Ptr->IgnoreParenImpCasts())) {
-        auto *FnDecl = CE->getDirectCallee();
+    if (ER.Val.getInt().isOne() && getSubExprInAddressOfExpr(*Ptr) != nullptr)
+      return true;
 
-        return FnDecl && FnDecl->getNameAsString() == "addressof" &&
-               FnDecl->isInStdNamespace();
-      }
-      return false;
-    }
     // Pattern 4:
     if (ER.Val.getInt().isZero())
       return true;
   }
+
   return false;
 }
 
@@ -798,46 +831,6 @@ static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
       return true;
   }
   return false;
-}
-
-// Given an expression like `&X` or `std::addressof(X)`, returns the `Expr`
-// corresponding to `X` (after removing parens and implicit casts).
-// Returns null if the input expression `E` is not an address-of expression.
-static const Expr *getSubExprInAddressOfExpr(const Expr *E) {
-  if (!E->getType()->isPointerType())
-    return nullptr;
-  const Expr *Ptr = E->IgnoreParenImpCasts();
-
-  // `&X` where `X` is an `Expr`.
-  if (const auto *UO = dyn_cast<UnaryOperator>(Ptr)) {
-    if (UO->getOpcode() != UnaryOperator::Opcode::UO_AddrOf)
-      return nullptr;
-    return UO->getSubExpr()->IgnoreParenImpCasts();
-  }
-
-  // `std::addressof(X)` where `X` is an `Expr`.
-  if (const auto *CE = dyn_cast<CallExpr>(Ptr)) {
-    const FunctionDecl *FnDecl = CE->getDirectCallee();
-    if (!FnDecl || !FnDecl->isInStdNamespace() ||
-        FnDecl->getNameAsString() != "addressof" || CE->getNumArgs() != 1)
-      return nullptr;
-    return CE->getArg(0)->IgnoreParenImpCasts();
-  }
-
-  return nullptr;
-}
-
-// Given an expression like `sizeof(X)`, returns the `Expr` corresponding to `X`
-// (after removing parens and implicit casts). Returns null if the expression
-// `E` is not a `sizeof` expression or is `sizeof(T)` for a type `T`.
-static const Expr *getSubExprInSizeOfExpr(const Expr *E) {
-  const auto *SizeOfExpr =
-      dyn_cast<UnaryExprOrTypeTraitExpr>(E->IgnoreParenImpCasts());
-  if (!SizeOfExpr || SizeOfExpr->getKind() != UETT_SizeOf)
-    return nullptr;
-  if (SizeOfExpr->isArgumentType())
-    return nullptr;
-  return SizeOfExpr->getArgumentExpr()->IgnoreParenImpCasts();
 }
 
 // Under `libc_func_matchers`, define a set of matchers that match unsafe
@@ -1165,12 +1158,12 @@ static bool isUnsafeMemset(const CallExpr &Node, ASTContext &Ctx) {
   // Now we have a known version of `memset`, consider it unsafe unless it's in
   // the form `memset(&x, 0, sizeof(x))`.
   const auto *AddressOfVar = dyn_cast_if_present<DeclRefExpr>(
-      getSubExprInAddressOfExpr(Node.getArg(0)));
+      getSubExprInAddressOfExpr(*Node.getArg(0)));
   if (!AddressOfVar)
     return true;
 
   const auto *SizeOfVar =
-      dyn_cast_if_present<DeclRefExpr>(getSubExprInSizeOfExpr(Node.getArg(2)));
+      dyn_cast_if_present<DeclRefExpr>(getSubExprInSizeOfExpr(*Node.getArg(2)));
   if (!SizeOfVar)
     return true;
 
