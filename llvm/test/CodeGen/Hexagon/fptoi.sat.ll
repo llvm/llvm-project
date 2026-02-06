@@ -38,27 +38,17 @@ define i16 @fptoui.sat.i16.f32(float %x) {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = convert_sf2uw(r0):chop
-; CHECK-NEXT:     r3:2 = combine(##1199570688,#0)
+; CHECK-NEXT:     r2 = ##1199570688
+; CHECK-NEXT:     r1 = #0
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = sfcmp.gt(r2,r0)
-; CHECK-NEXT:     p1 = sfcmp.uo(r2,r0)
+; CHECK-NEXT:     r0 = sfmax(r0,r1)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = or(p1,p0)
-; CHECK-NEXT:     p2 = sfcmp.uo(r0,r3)
+; CHECK-NEXT:     r0 = sfmin(r0,r2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p3 = sfcmp.gt(r0,r3)
-; CHECK-NEXT:     if (p0) r1 = #0
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     p1 = and(p3,!p2)
-; CHECK-NEXT:     if (p1.new) r1 = ##65535
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = r1
+; CHECK-NEXT:     r0 = convert_sf2uw(r0):chop
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %res = call i16 @llvm.fptoui.sat(float %x)
@@ -110,23 +100,13 @@ define i32 @fptoui.sat.i32.f64(double %x) {
 ; CHECK-NEXT:     r5:4 = CONST64(#4751297606873776128)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p1 = dfcmp.gt(r3:2,r1:0)
-; CHECK-NEXT:     p2 = dfcmp.uo(r3:2,r1:0)
+; CHECK-NEXT:     r1:0 = dfmax(r1:0,r3:2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p1 = or(p2,p1)
-; CHECK-NEXT:     p0 = dfcmp.uo(r1:0,r5:4)
+; CHECK-NEXT:     r1:0 = dfmin(r1:0,r5:4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p2 = dfcmp.gt(r1:0,r5:4)
 ; CHECK-NEXT:     r0 = convert_df2uw(r1:0):chop
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = and(p2,!p0)
-; CHECK-NEXT:     if (p1) r0 = #0
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     if (p0) r0 = #-1
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %res = call i32 @llvm.fptoui.sat(double %x)
@@ -177,34 +157,21 @@ define i16 @fptosi.sat.i16.f32(float %x) {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = ##-956301312
-; CHECK-NEXT:     r3 = ##1191181824
+; CHECK-NEXT:     r1 = ##-956301312
+; CHECK-NEXT:     r2 = ##1191181824
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = convert_sf2w(r0):chop
-; CHECK-NEXT:     p1 = sfcmp.gt(r2,r0)
+; CHECK-NEXT:     r1 = sfmax(r0,r1)
+; CHECK-NEXT:     p0 = sfcmp.uo(r0,r0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p2 = sfcmp.uo(r2,r0)
+; CHECK-NEXT:     r1 = sfmin(r1,r2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p1 = or(p2,p1)
-; CHECK-NEXT:     p0 = sfcmp.uo(r0,r3)
+; CHECK-NEXT:     r0 = convert_sf2w(r1):chop
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p2 = sfcmp.gt(r0,r3)
-; CHECK-NEXT:     p1 = sfcmp.uo(r0,r0)
-; CHECK-NEXT:     if (p1) r1 = ##-32768
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = and(p2,!p0)
-; CHECK-NEXT:     if (p0.new) r1 = ##32767
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     if (p1) r1 = #0
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = r1
+; CHECK-NEXT:     if (p0) r0 = #0
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %res = call i16 @llvm.fptosi.sat(float %x)
@@ -258,32 +225,21 @@ define i32 @fptosi.sat.i32.f64(double %x) {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    {
+; CHECK-NEXT:     p0 = dfcmp.uo(r1:0,r1:0)
 ; CHECK-NEXT:     r3:2 = CONST64(#-4476578029606273024)
 ; CHECK-NEXT:     r5:4 = CONST64(#4746794007244308480)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p1 = dfcmp.gt(r3:2,r1:0)
-; CHECK-NEXT:     p2 = dfcmp.uo(r3:2,r1:0)
+; CHECK-NEXT:     r3:2 = dfmax(r1:0,r3:2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p1 = or(p2,p1)
-; CHECK-NEXT:     r2 = convert_df2w(r1:0):chop
+; CHECK-NEXT:     r3:2 = dfmin(r3:2,r5:4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = dfcmp.uo(r1:0,r5:4)
-; CHECK-NEXT:     p2 = dfcmp.gt(r1:0,r5:4)
-; CHECK-NEXT:     if (p1) r2 = ##-2147483648
+; CHECK-NEXT:     r0 = convert_df2w(r3:2):chop
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     p0 = and(p2,!p0)
-; CHECK-NEXT:     p1 = dfcmp.uo(r1:0,r1:0)
-; CHECK-NEXT:     if (p0.new) r2 = ##2147483647
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     if (p1) r2 = #0
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r0 = r2
+; CHECK-NEXT:     if (p0) r0 = #0
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
   %res = call i32 @llvm.fptosi.sat(double %x)
