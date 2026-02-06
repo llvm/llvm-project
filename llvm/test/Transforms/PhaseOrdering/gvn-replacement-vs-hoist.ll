@@ -5,9 +5,9 @@ define void @test(ptr noundef %a, i32 noundef %beam) {
 ; CHECK-LABEL: define void @test
 ; CHECK-SAME: (ptr noundef writeonly captures(none) [[A:%.*]], i32 noundef [[BEAM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[BEAM]], 1
-; CHECK-NEXT:    [[IDXPROM:%.*]] = zext nneg i32 [[MUL]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[BEAM]], 3
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[MUL]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
@@ -19,9 +19,9 @@ define void @test(ptr noundef %a, i32 noundef %beam) {
 ; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[MUL2:%.*]] = shl nuw nsw i32 [[I_06]], 1
-; CHECK-NEXT:    [[IDXPROM3:%.*]] = zext nneg i32 [[MUL2]] to i64
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[IDXPROM3]]
+; CHECK-NEXT:    [[MUL2:%.*]] = shl nuw nsw i32 [[I_06]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[MUL2]] to i64
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    store i32 1, ptr [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:

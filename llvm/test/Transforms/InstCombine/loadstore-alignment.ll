@@ -20,7 +20,8 @@ define <2 x i64> @static_hem() {
 define <2 x i64> @hem(i32 %i) {
 ; CHECK-LABEL: @hem(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
-; CHECK-NEXT:    [[T:%.*]] = getelementptr <2 x i64>, ptr @x, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP1]], 4
+; CHECK-NEXT:    [[T:%.*]] = getelementptr i8, ptr @x, i64 [[TMP2]]
 ; CHECK-NEXT:    [[L:%.*]] = load <2 x i64>, ptr [[T]], align 1
 ; CHECK-NEXT:    ret <2 x i64> [[L]]
 ;
@@ -33,8 +34,10 @@ define <2 x i64> @hem_2d(i32 %i, i32 %j) {
 ; CHECK-LABEL: @hem_2d(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[J:%.*]] to i64
-; CHECK-NEXT:    [[T_SPLIT:%.*]] = getelementptr [13 x <2 x i64>], ptr @xx, i64 [[TMP1]]
-; CHECK-NEXT:    [[T:%.*]] = getelementptr <2 x i64>, ptr [[T_SPLIT]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw i64 [[TMP1]], 208
+; CHECK-NEXT:    [[T_SPLIT:%.*]] = getelementptr i8, ptr @xx, i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nsw i64 [[TMP2]], 4
+; CHECK-NEXT:    [[T:%.*]] = getelementptr i8, ptr [[T_SPLIT]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[L:%.*]] = load <2 x i64>, ptr [[T]], align 1
 ; CHECK-NEXT:    ret <2 x i64> [[L]]
 ;
@@ -78,7 +81,8 @@ define void @static_hem_store(<2 x i64> %y) {
 define void @hem_store(i32 %i, <2 x i64> %y) {
 ; CHECK-LABEL: @hem_store(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
-; CHECK-NEXT:    [[T:%.*]] = getelementptr <2 x i64>, ptr @x, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP1]], 4
+; CHECK-NEXT:    [[T:%.*]] = getelementptr i8, ptr @x, i64 [[TMP2]]
 ; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr [[T]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -91,8 +95,10 @@ define void @hem_2d_store(i32 %i, i32 %j, <2 x i64> %y) {
 ; CHECK-LABEL: @hem_2d_store(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[J:%.*]] to i64
-; CHECK-NEXT:    [[T_SPLIT:%.*]] = getelementptr [13 x <2 x i64>], ptr @xx, i64 [[TMP1]]
-; CHECK-NEXT:    [[T:%.*]] = getelementptr <2 x i64>, ptr [[T_SPLIT]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw i64 [[TMP1]], 208
+; CHECK-NEXT:    [[T_SPLIT:%.*]] = getelementptr i8, ptr @xx, i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nsw i64 [[TMP2]], 4
+; CHECK-NEXT:    [[T:%.*]] = getelementptr i8, ptr [[T_SPLIT]], i64 [[TMP4]]
 ; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr [[T]], align 1
 ; CHECK-NEXT:    ret void
 ;

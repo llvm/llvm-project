@@ -90,7 +90,8 @@ define i32 @test3(ptr nocapture readonly %P, i32 %i) {
 ; CHECK-NEXT:    ]
 ; CHECK:       sw.bb:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[IDXPROM]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[I]]
 ; CHECK-NEXT:    br label [[SW_EPILOG]]
@@ -148,7 +149,8 @@ define i32 @test5(ptr nocapture readonly %P, i32 %i, i1 %cond) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I:%.*]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[IDXPROM]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[DISPATCHBB:%.*]], label [[SW_EPILOG:%.*]]
 ; CHECK:       dispatchBB:
@@ -186,7 +188,8 @@ define i32 @test6(ptr nocapture readonly %P, i32 %i, i1 %cond) {
 ; CHECK-NEXT:    br label [[DISPATCHBB:%.*]]
 ; CHECK:       dispatchBB:
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[IDXPROM]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    switch i32 [[I]], label [[SW_BB:%.*]] [
 ; CHECK-NEXT:      i32 5, label [[SW_EPILOG:%.*]]

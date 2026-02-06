@@ -88,10 +88,9 @@ define <2 x ptr> @src_splat_scalar_ptr(i32 %arg0, ptr %arg1) {
 ; Fail 1: Different GEP type
 define ptr @src_fail_different_type(i32 %arg0, ptr %arg1) {
 ; CHECK-LABEL: @src_fail_different_type(
-; CHECK-NEXT:    [[V0:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG1:%.*]], i64 8148
 ; CHECK-NEXT:    [[V1:%.*]] = icmp sgt i32 [[ARG0:%.*]], 3
-; CHECK-NEXT:    [[V2:%.*]] = select i1 [[V1]], i64 55104, i64 21304
-; CHECK-NEXT:    [[V3:%.*]] = getelementptr i16, ptr [[V0]], i64 [[V2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[V1]], i64 118356, i64 50756
+; CHECK-NEXT:    [[V3:%.*]] = getelementptr i8, ptr [[ARG1:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    ret ptr [[V3]]
 ;
   %v0 = getelementptr inbounds nuw i8, ptr %arg1, i64 8148

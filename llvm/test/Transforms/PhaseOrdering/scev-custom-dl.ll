@@ -13,23 +13,263 @@ target datalayout = "e-m:m-p:40:64:64:32-i32:32-i16:16-i8:8-n32"
 define void @test1(i32 %d, ptr %p) nounwind uwtable ssp {
 ; CHECK-LABEL: 'test1'
 ; CHECK-NEXT:  Classifying expressions for: @test1
-; CHECK-NEXT:    %div1 = lshr i32 %d, 2
-; CHECK-NEXT:    --> (%d /u 4) U: [0,1073741824) S: [0,1073741824)
-; CHECK-NEXT:    %i.03 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,64) S: [0,64) Exits: 63 LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:    %p.addr.02 = phi ptr [ %p, %entry ], [ %add.ptr1, %for.body ]
-; CHECK-NEXT:    --> {%p,+,(8 * (%d /u 4))}<%for.body> U: full-set S: full-set Exits: ((504 * (%d /u 4)) + %p) LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:    %add.ptr = getelementptr inbounds nuw i32, ptr %p.addr.02, i32 %div1
-; CHECK-NEXT:    --> {((4 * (%d /u 4))<nuw><nsw> + %p)<nuw>,+,(8 * (%d /u 4))}<%for.body> U: full-set S: full-set Exits: ((508 * (%d /u 4)) + %p) LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:    %add.ptr1 = getelementptr inbounds nuw i32, ptr %add.ptr, i32 %div1
-; CHECK-NEXT:    --> {((8 * (%d /u 4)) + %p),+,(8 * (%d /u 4))}<%for.body> U: full-set S: full-set Exits: ((512 * (%d /u 4)) + %p) LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:    %inc = add nuw nsw i32 %i.03, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,65) S: [1,65) Exits: 64 LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    %div1 = and i32 %d, -4
+; CHECK-NEXT:    --> (4 * (%d /u 4))<nuw> U: [0,-3) S: [-2147483648,2147483645)
+; CHECK-NEXT:    %add.ptr = getelementptr inbounds nuw i8, ptr %p, i32 %div1
+; CHECK-NEXT:    --> ((4 * (%d /u 4))<nuw> + %p)<nuw> U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1 = getelementptr inbounds nuw i8, ptr %add.ptr, i32 %div1
+; CHECK-NEXT:    --> ((8 * (%d /u 4)) + %p)<nuw> U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.1 = getelementptr inbounds nuw i8, ptr %add.ptr1, i32 %div1
+; CHECK-NEXT:    --> ((12 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.1 = getelementptr inbounds nuw i8, ptr %add.ptr.1, i32 %div1
+; CHECK-NEXT:    --> ((16 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.2 = getelementptr inbounds nuw i8, ptr %add.ptr1.1, i32 %div1
+; CHECK-NEXT:    --> ((20 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.2 = getelementptr inbounds nuw i8, ptr %add.ptr.2, i32 %div1
+; CHECK-NEXT:    --> ((24 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.3 = getelementptr inbounds nuw i8, ptr %add.ptr1.2, i32 %div1
+; CHECK-NEXT:    --> ((28 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.3 = getelementptr inbounds nuw i8, ptr %add.ptr.3, i32 %div1
+; CHECK-NEXT:    --> ((32 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.4 = getelementptr inbounds nuw i8, ptr %add.ptr1.3, i32 %div1
+; CHECK-NEXT:    --> ((36 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.4 = getelementptr inbounds nuw i8, ptr %add.ptr.4, i32 %div1
+; CHECK-NEXT:    --> ((40 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.5 = getelementptr inbounds nuw i8, ptr %add.ptr1.4, i32 %div1
+; CHECK-NEXT:    --> ((44 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.5 = getelementptr inbounds nuw i8, ptr %add.ptr.5, i32 %div1
+; CHECK-NEXT:    --> ((48 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.6 = getelementptr inbounds nuw i8, ptr %add.ptr1.5, i32 %div1
+; CHECK-NEXT:    --> ((52 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.6 = getelementptr inbounds nuw i8, ptr %add.ptr.6, i32 %div1
+; CHECK-NEXT:    --> ((56 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.7 = getelementptr inbounds nuw i8, ptr %add.ptr1.6, i32 %div1
+; CHECK-NEXT:    --> ((60 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.7 = getelementptr inbounds nuw i8, ptr %add.ptr.7, i32 %div1
+; CHECK-NEXT:    --> ((64 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.8 = getelementptr inbounds nuw i8, ptr %add.ptr1.7, i32 %div1
+; CHECK-NEXT:    --> ((68 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.8 = getelementptr inbounds nuw i8, ptr %add.ptr.8, i32 %div1
+; CHECK-NEXT:    --> ((72 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.9 = getelementptr inbounds nuw i8, ptr %add.ptr1.8, i32 %div1
+; CHECK-NEXT:    --> ((76 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.9 = getelementptr inbounds nuw i8, ptr %add.ptr.9, i32 %div1
+; CHECK-NEXT:    --> ((80 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.10 = getelementptr inbounds nuw i8, ptr %add.ptr1.9, i32 %div1
+; CHECK-NEXT:    --> ((84 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.10 = getelementptr inbounds nuw i8, ptr %add.ptr.10, i32 %div1
+; CHECK-NEXT:    --> ((88 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.11 = getelementptr inbounds nuw i8, ptr %add.ptr1.10, i32 %div1
+; CHECK-NEXT:    --> ((92 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.11 = getelementptr inbounds nuw i8, ptr %add.ptr.11, i32 %div1
+; CHECK-NEXT:    --> ((96 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.12 = getelementptr inbounds nuw i8, ptr %add.ptr1.11, i32 %div1
+; CHECK-NEXT:    --> ((100 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.12 = getelementptr inbounds nuw i8, ptr %add.ptr.12, i32 %div1
+; CHECK-NEXT:    --> ((104 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.13 = getelementptr inbounds nuw i8, ptr %add.ptr1.12, i32 %div1
+; CHECK-NEXT:    --> ((108 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.13 = getelementptr inbounds nuw i8, ptr %add.ptr.13, i32 %div1
+; CHECK-NEXT:    --> ((112 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.14 = getelementptr inbounds nuw i8, ptr %add.ptr1.13, i32 %div1
+; CHECK-NEXT:    --> ((116 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.14 = getelementptr inbounds nuw i8, ptr %add.ptr.14, i32 %div1
+; CHECK-NEXT:    --> ((120 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.15 = getelementptr inbounds nuw i8, ptr %add.ptr1.14, i32 %div1
+; CHECK-NEXT:    --> ((124 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.15 = getelementptr inbounds nuw i8, ptr %add.ptr.15, i32 %div1
+; CHECK-NEXT:    --> ((128 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.16 = getelementptr inbounds nuw i8, ptr %add.ptr1.15, i32 %div1
+; CHECK-NEXT:    --> ((132 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.16 = getelementptr inbounds nuw i8, ptr %add.ptr.16, i32 %div1
+; CHECK-NEXT:    --> ((136 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.17 = getelementptr inbounds nuw i8, ptr %add.ptr1.16, i32 %div1
+; CHECK-NEXT:    --> ((140 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.17 = getelementptr inbounds nuw i8, ptr %add.ptr.17, i32 %div1
+; CHECK-NEXT:    --> ((144 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.18 = getelementptr inbounds nuw i8, ptr %add.ptr1.17, i32 %div1
+; CHECK-NEXT:    --> ((148 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.18 = getelementptr inbounds nuw i8, ptr %add.ptr.18, i32 %div1
+; CHECK-NEXT:    --> ((152 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.19 = getelementptr inbounds nuw i8, ptr %add.ptr1.18, i32 %div1
+; CHECK-NEXT:    --> ((156 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.19 = getelementptr inbounds nuw i8, ptr %add.ptr.19, i32 %div1
+; CHECK-NEXT:    --> ((160 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.20 = getelementptr inbounds nuw i8, ptr %add.ptr1.19, i32 %div1
+; CHECK-NEXT:    --> ((164 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.20 = getelementptr inbounds nuw i8, ptr %add.ptr.20, i32 %div1
+; CHECK-NEXT:    --> ((168 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.21 = getelementptr inbounds nuw i8, ptr %add.ptr1.20, i32 %div1
+; CHECK-NEXT:    --> ((172 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.21 = getelementptr inbounds nuw i8, ptr %add.ptr.21, i32 %div1
+; CHECK-NEXT:    --> ((176 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.22 = getelementptr inbounds nuw i8, ptr %add.ptr1.21, i32 %div1
+; CHECK-NEXT:    --> ((180 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.22 = getelementptr inbounds nuw i8, ptr %add.ptr.22, i32 %div1
+; CHECK-NEXT:    --> ((184 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.23 = getelementptr inbounds nuw i8, ptr %add.ptr1.22, i32 %div1
+; CHECK-NEXT:    --> ((188 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.23 = getelementptr inbounds nuw i8, ptr %add.ptr.23, i32 %div1
+; CHECK-NEXT:    --> ((192 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.24 = getelementptr inbounds nuw i8, ptr %add.ptr1.23, i32 %div1
+; CHECK-NEXT:    --> ((196 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.24 = getelementptr inbounds nuw i8, ptr %add.ptr.24, i32 %div1
+; CHECK-NEXT:    --> ((200 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.25 = getelementptr inbounds nuw i8, ptr %add.ptr1.24, i32 %div1
+; CHECK-NEXT:    --> ((204 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.25 = getelementptr inbounds nuw i8, ptr %add.ptr.25, i32 %div1
+; CHECK-NEXT:    --> ((208 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.26 = getelementptr inbounds nuw i8, ptr %add.ptr1.25, i32 %div1
+; CHECK-NEXT:    --> ((212 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.26 = getelementptr inbounds nuw i8, ptr %add.ptr.26, i32 %div1
+; CHECK-NEXT:    --> ((216 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.27 = getelementptr inbounds nuw i8, ptr %add.ptr1.26, i32 %div1
+; CHECK-NEXT:    --> ((220 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.27 = getelementptr inbounds nuw i8, ptr %add.ptr.27, i32 %div1
+; CHECK-NEXT:    --> ((224 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.28 = getelementptr inbounds nuw i8, ptr %add.ptr1.27, i32 %div1
+; CHECK-NEXT:    --> ((228 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.28 = getelementptr inbounds nuw i8, ptr %add.ptr.28, i32 %div1
+; CHECK-NEXT:    --> ((232 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.29 = getelementptr inbounds nuw i8, ptr %add.ptr1.28, i32 %div1
+; CHECK-NEXT:    --> ((236 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.29 = getelementptr inbounds nuw i8, ptr %add.ptr.29, i32 %div1
+; CHECK-NEXT:    --> ((240 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.30 = getelementptr inbounds nuw i8, ptr %add.ptr1.29, i32 %div1
+; CHECK-NEXT:    --> ((244 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.30 = getelementptr inbounds nuw i8, ptr %add.ptr.30, i32 %div1
+; CHECK-NEXT:    --> ((248 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.31 = getelementptr inbounds nuw i8, ptr %add.ptr1.30, i32 %div1
+; CHECK-NEXT:    --> ((252 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.31 = getelementptr inbounds nuw i8, ptr %add.ptr.31, i32 %div1
+; CHECK-NEXT:    --> ((256 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.32 = getelementptr inbounds nuw i8, ptr %add.ptr1.31, i32 %div1
+; CHECK-NEXT:    --> ((260 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.32 = getelementptr inbounds nuw i8, ptr %add.ptr.32, i32 %div1
+; CHECK-NEXT:    --> ((264 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.33 = getelementptr inbounds nuw i8, ptr %add.ptr1.32, i32 %div1
+; CHECK-NEXT:    --> ((268 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.33 = getelementptr inbounds nuw i8, ptr %add.ptr.33, i32 %div1
+; CHECK-NEXT:    --> ((272 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.34 = getelementptr inbounds nuw i8, ptr %add.ptr1.33, i32 %div1
+; CHECK-NEXT:    --> ((276 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.34 = getelementptr inbounds nuw i8, ptr %add.ptr.34, i32 %div1
+; CHECK-NEXT:    --> ((280 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.35 = getelementptr inbounds nuw i8, ptr %add.ptr1.34, i32 %div1
+; CHECK-NEXT:    --> ((284 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.35 = getelementptr inbounds nuw i8, ptr %add.ptr.35, i32 %div1
+; CHECK-NEXT:    --> ((288 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.36 = getelementptr inbounds nuw i8, ptr %add.ptr1.35, i32 %div1
+; CHECK-NEXT:    --> ((292 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.36 = getelementptr inbounds nuw i8, ptr %add.ptr.36, i32 %div1
+; CHECK-NEXT:    --> ((296 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.37 = getelementptr inbounds nuw i8, ptr %add.ptr1.36, i32 %div1
+; CHECK-NEXT:    --> ((300 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.37 = getelementptr inbounds nuw i8, ptr %add.ptr.37, i32 %div1
+; CHECK-NEXT:    --> ((304 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.38 = getelementptr inbounds nuw i8, ptr %add.ptr1.37, i32 %div1
+; CHECK-NEXT:    --> ((308 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.38 = getelementptr inbounds nuw i8, ptr %add.ptr.38, i32 %div1
+; CHECK-NEXT:    --> ((312 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.39 = getelementptr inbounds nuw i8, ptr %add.ptr1.38, i32 %div1
+; CHECK-NEXT:    --> ((316 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.39 = getelementptr inbounds nuw i8, ptr %add.ptr.39, i32 %div1
+; CHECK-NEXT:    --> ((320 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.40 = getelementptr inbounds nuw i8, ptr %add.ptr1.39, i32 %div1
+; CHECK-NEXT:    --> ((324 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.40 = getelementptr inbounds nuw i8, ptr %add.ptr.40, i32 %div1
+; CHECK-NEXT:    --> ((328 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.41 = getelementptr inbounds nuw i8, ptr %add.ptr1.40, i32 %div1
+; CHECK-NEXT:    --> ((332 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.41 = getelementptr inbounds nuw i8, ptr %add.ptr.41, i32 %div1
+; CHECK-NEXT:    --> ((336 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.42 = getelementptr inbounds nuw i8, ptr %add.ptr1.41, i32 %div1
+; CHECK-NEXT:    --> ((340 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.42 = getelementptr inbounds nuw i8, ptr %add.ptr.42, i32 %div1
+; CHECK-NEXT:    --> ((344 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.43 = getelementptr inbounds nuw i8, ptr %add.ptr1.42, i32 %div1
+; CHECK-NEXT:    --> ((348 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.43 = getelementptr inbounds nuw i8, ptr %add.ptr.43, i32 %div1
+; CHECK-NEXT:    --> ((352 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.44 = getelementptr inbounds nuw i8, ptr %add.ptr1.43, i32 %div1
+; CHECK-NEXT:    --> ((356 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.44 = getelementptr inbounds nuw i8, ptr %add.ptr.44, i32 %div1
+; CHECK-NEXT:    --> ((360 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.45 = getelementptr inbounds nuw i8, ptr %add.ptr1.44, i32 %div1
+; CHECK-NEXT:    --> ((364 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.45 = getelementptr inbounds nuw i8, ptr %add.ptr.45, i32 %div1
+; CHECK-NEXT:    --> ((368 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.46 = getelementptr inbounds nuw i8, ptr %add.ptr1.45, i32 %div1
+; CHECK-NEXT:    --> ((372 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.46 = getelementptr inbounds nuw i8, ptr %add.ptr.46, i32 %div1
+; CHECK-NEXT:    --> ((376 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.47 = getelementptr inbounds nuw i8, ptr %add.ptr1.46, i32 %div1
+; CHECK-NEXT:    --> ((380 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.47 = getelementptr inbounds nuw i8, ptr %add.ptr.47, i32 %div1
+; CHECK-NEXT:    --> ((384 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.48 = getelementptr inbounds nuw i8, ptr %add.ptr1.47, i32 %div1
+; CHECK-NEXT:    --> ((388 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.48 = getelementptr inbounds nuw i8, ptr %add.ptr.48, i32 %div1
+; CHECK-NEXT:    --> ((392 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.49 = getelementptr inbounds nuw i8, ptr %add.ptr1.48, i32 %div1
+; CHECK-NEXT:    --> ((396 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.49 = getelementptr inbounds nuw i8, ptr %add.ptr.49, i32 %div1
+; CHECK-NEXT:    --> ((400 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.50 = getelementptr inbounds nuw i8, ptr %add.ptr1.49, i32 %div1
+; CHECK-NEXT:    --> ((404 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.50 = getelementptr inbounds nuw i8, ptr %add.ptr.50, i32 %div1
+; CHECK-NEXT:    --> ((408 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.51 = getelementptr inbounds nuw i8, ptr %add.ptr1.50, i32 %div1
+; CHECK-NEXT:    --> ((412 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.51 = getelementptr inbounds nuw i8, ptr %add.ptr.51, i32 %div1
+; CHECK-NEXT:    --> ((416 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.52 = getelementptr inbounds nuw i8, ptr %add.ptr1.51, i32 %div1
+; CHECK-NEXT:    --> ((420 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.52 = getelementptr inbounds nuw i8, ptr %add.ptr.52, i32 %div1
+; CHECK-NEXT:    --> ((424 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.53 = getelementptr inbounds nuw i8, ptr %add.ptr1.52, i32 %div1
+; CHECK-NEXT:    --> ((428 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.53 = getelementptr inbounds nuw i8, ptr %add.ptr.53, i32 %div1
+; CHECK-NEXT:    --> ((432 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.54 = getelementptr inbounds nuw i8, ptr %add.ptr1.53, i32 %div1
+; CHECK-NEXT:    --> ((436 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.54 = getelementptr inbounds nuw i8, ptr %add.ptr.54, i32 %div1
+; CHECK-NEXT:    --> ((440 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.55 = getelementptr inbounds nuw i8, ptr %add.ptr1.54, i32 %div1
+; CHECK-NEXT:    --> ((444 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.55 = getelementptr inbounds nuw i8, ptr %add.ptr.55, i32 %div1
+; CHECK-NEXT:    --> ((448 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.56 = getelementptr inbounds nuw i8, ptr %add.ptr1.55, i32 %div1
+; CHECK-NEXT:    --> ((452 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.56 = getelementptr inbounds nuw i8, ptr %add.ptr.56, i32 %div1
+; CHECK-NEXT:    --> ((456 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.57 = getelementptr inbounds nuw i8, ptr %add.ptr1.56, i32 %div1
+; CHECK-NEXT:    --> ((460 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.57 = getelementptr inbounds nuw i8, ptr %add.ptr.57, i32 %div1
+; CHECK-NEXT:    --> ((464 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.58 = getelementptr inbounds nuw i8, ptr %add.ptr1.57, i32 %div1
+; CHECK-NEXT:    --> ((468 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.58 = getelementptr inbounds nuw i8, ptr %add.ptr.58, i32 %div1
+; CHECK-NEXT:    --> ((472 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.59 = getelementptr inbounds nuw i8, ptr %add.ptr1.58, i32 %div1
+; CHECK-NEXT:    --> ((476 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.59 = getelementptr inbounds nuw i8, ptr %add.ptr.59, i32 %div1
+; CHECK-NEXT:    --> ((480 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.60 = getelementptr inbounds nuw i8, ptr %add.ptr1.59, i32 %div1
+; CHECK-NEXT:    --> ((484 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.60 = getelementptr inbounds nuw i8, ptr %add.ptr.60, i32 %div1
+; CHECK-NEXT:    --> ((488 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.61 = getelementptr inbounds nuw i8, ptr %add.ptr1.60, i32 %div1
+; CHECK-NEXT:    --> ((492 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.61 = getelementptr inbounds nuw i8, ptr %add.ptr.61, i32 %div1
+; CHECK-NEXT:    --> ((496 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.62 = getelementptr inbounds nuw i8, ptr %add.ptr1.61, i32 %div1
+; CHECK-NEXT:    --> ((500 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.62 = getelementptr inbounds nuw i8, ptr %add.ptr.62, i32 %div1
+; CHECK-NEXT:    --> ((504 * (%d /u 4)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.63 = getelementptr inbounds nuw i8, ptr %add.ptr1.62, i32 %div1
+; CHECK-NEXT:    --> ((508 * (%d /u 4)) + %p) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @test1
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is i32 63
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 63
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i32 63
-; CHECK-NEXT:  Loop %for.body: Trip multiple is 64
 ;
 entry:
   %div = udiv i32 %d, 4
@@ -60,23 +300,265 @@ for.end:                                          ; preds = %for.cond
 define void @test1a(i32 %d, ptr %p) nounwind uwtable ssp {
 ; CHECK-LABEL: 'test1a'
 ; CHECK-NEXT:  Classifying expressions for: @test1a
-; CHECK-NEXT:    %div1 = lshr i32 %d, 1
-; CHECK-NEXT:    --> (%d /u 2) U: [0,-2147483648) S: [0,-2147483648)
-; CHECK-NEXT:    %i.03 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,64) S: [0,64) Exits: 63 LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:    %p.addr.02 = phi ptr [ %p, %entry ], [ %add.ptr1, %for.body ]
-; CHECK-NEXT:    --> {%p,+,(8 * (%d /u 2))}<%for.body> U: full-set S: full-set Exits: ((504 * (%d /u 2)) + %p) LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:    %add.ptr = getelementptr inbounds nuw i32, ptr %p.addr.02, i32 %div1
-; CHECK-NEXT:    --> {((4 * (%d /u 2))<nuw><nsw> + %p)<nuw>,+,(8 * (%d /u 2))}<%for.body> U: full-set S: full-set Exits: ((508 * (%d /u 2)) + %p) LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:    %add.ptr1 = getelementptr inbounds nuw i32, ptr %add.ptr, i32 %div1
-; CHECK-NEXT:    --> {((8 * (%d /u 2)) + %p),+,(8 * (%d /u 2))}<%for.body> U: full-set S: full-set Exits: ((512 * (%d /u 2)) + %p) LoopDispositions: { %for.body: Computable }
-; CHECK-NEXT:    %inc = add nuw nsw i32 %i.03, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%for.body> U: [1,65) S: [1,65) Exits: 64 LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    %0 = shl nuw nsw i32 %d, 1
+; CHECK-NEXT:    --> (2 * %d)<nuw><nsw> U: [0,-1) S: [-2147483648,2147483647)
+; CHECK-NEXT:    %1 = and i32 %0, 2147483644
+; CHECK-NEXT:    --> (4 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32))<nuw><nsw> U: [0,2147483645) S: [0,2147483645)
+; CHECK-NEXT:    %add.ptr = getelementptr inbounds nuw i8, ptr %p, i32 %1
+; CHECK-NEXT:    --> ((4 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32))<nuw><nsw> + %p)<nuw> U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1 = getelementptr inbounds nuw i8, ptr %add.ptr, i32 %1
+; CHECK-NEXT:    --> ((8 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32))<nuw> + %p)<nuw> U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.1 = getelementptr inbounds nuw i8, ptr %add.ptr1, i32 %1
+; CHECK-NEXT:    --> ((12 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.1 = getelementptr inbounds nuw i8, ptr %add.ptr.1, i32 %1
+; CHECK-NEXT:    --> ((16 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.2 = getelementptr inbounds nuw i8, ptr %add.ptr1.1, i32 %1
+; CHECK-NEXT:    --> ((20 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.2 = getelementptr inbounds nuw i8, ptr %add.ptr.2, i32 %1
+; CHECK-NEXT:    --> ((24 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.3 = getelementptr inbounds nuw i8, ptr %add.ptr1.2, i32 %1
+; CHECK-NEXT:    --> ((28 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.3 = getelementptr inbounds nuw i8, ptr %add.ptr.3, i32 %1
+; CHECK-NEXT:    --> ((32 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.4 = getelementptr inbounds nuw i8, ptr %add.ptr1.3, i32 %1
+; CHECK-NEXT:    --> ((36 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.4 = getelementptr inbounds nuw i8, ptr %add.ptr.4, i32 %1
+; CHECK-NEXT:    --> ((40 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.5 = getelementptr inbounds nuw i8, ptr %add.ptr1.4, i32 %1
+; CHECK-NEXT:    --> ((44 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.5 = getelementptr inbounds nuw i8, ptr %add.ptr.5, i32 %1
+; CHECK-NEXT:    --> ((48 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.6 = getelementptr inbounds nuw i8, ptr %add.ptr1.5, i32 %1
+; CHECK-NEXT:    --> ((52 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.6 = getelementptr inbounds nuw i8, ptr %add.ptr.6, i32 %1
+; CHECK-NEXT:    --> ((56 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.7 = getelementptr inbounds nuw i8, ptr %add.ptr1.6, i32 %1
+; CHECK-NEXT:    --> ((60 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.7 = getelementptr inbounds nuw i8, ptr %add.ptr.7, i32 %1
+; CHECK-NEXT:    --> ((64 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.8 = getelementptr inbounds nuw i8, ptr %add.ptr1.7, i32 %1
+; CHECK-NEXT:    --> ((68 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.8 = getelementptr inbounds nuw i8, ptr %add.ptr.8, i32 %1
+; CHECK-NEXT:    --> ((72 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.9 = getelementptr inbounds nuw i8, ptr %add.ptr1.8, i32 %1
+; CHECK-NEXT:    --> ((76 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.9 = getelementptr inbounds nuw i8, ptr %add.ptr.9, i32 %1
+; CHECK-NEXT:    --> ((80 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.10 = getelementptr inbounds nuw i8, ptr %add.ptr1.9, i32 %1
+; CHECK-NEXT:    --> ((84 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.10 = getelementptr inbounds nuw i8, ptr %add.ptr.10, i32 %1
+; CHECK-NEXT:    --> ((88 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.11 = getelementptr inbounds nuw i8, ptr %add.ptr1.10, i32 %1
+; CHECK-NEXT:    --> ((92 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.11 = getelementptr inbounds nuw i8, ptr %add.ptr.11, i32 %1
+; CHECK-NEXT:    --> ((96 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.12 = getelementptr inbounds nuw i8, ptr %add.ptr1.11, i32 %1
+; CHECK-NEXT:    --> ((100 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.12 = getelementptr inbounds nuw i8, ptr %add.ptr.12, i32 %1
+; CHECK-NEXT:    --> ((104 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.13 = getelementptr inbounds nuw i8, ptr %add.ptr1.12, i32 %1
+; CHECK-NEXT:    --> ((108 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.13 = getelementptr inbounds nuw i8, ptr %add.ptr.13, i32 %1
+; CHECK-NEXT:    --> ((112 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.14 = getelementptr inbounds nuw i8, ptr %add.ptr1.13, i32 %1
+; CHECK-NEXT:    --> ((116 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.14 = getelementptr inbounds nuw i8, ptr %add.ptr.14, i32 %1
+; CHECK-NEXT:    --> ((120 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.15 = getelementptr inbounds nuw i8, ptr %add.ptr1.14, i32 %1
+; CHECK-NEXT:    --> ((124 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.15 = getelementptr inbounds nuw i8, ptr %add.ptr.15, i32 %1
+; CHECK-NEXT:    --> ((128 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.16 = getelementptr inbounds nuw i8, ptr %add.ptr1.15, i32 %1
+; CHECK-NEXT:    --> ((132 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.16 = getelementptr inbounds nuw i8, ptr %add.ptr.16, i32 %1
+; CHECK-NEXT:    --> ((136 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.17 = getelementptr inbounds nuw i8, ptr %add.ptr1.16, i32 %1
+; CHECK-NEXT:    --> ((140 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.17 = getelementptr inbounds nuw i8, ptr %add.ptr.17, i32 %1
+; CHECK-NEXT:    --> ((144 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.18 = getelementptr inbounds nuw i8, ptr %add.ptr1.17, i32 %1
+; CHECK-NEXT:    --> ((148 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.18 = getelementptr inbounds nuw i8, ptr %add.ptr.18, i32 %1
+; CHECK-NEXT:    --> ((152 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.19 = getelementptr inbounds nuw i8, ptr %add.ptr1.18, i32 %1
+; CHECK-NEXT:    --> ((156 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.19 = getelementptr inbounds nuw i8, ptr %add.ptr.19, i32 %1
+; CHECK-NEXT:    --> ((160 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.20 = getelementptr inbounds nuw i8, ptr %add.ptr1.19, i32 %1
+; CHECK-NEXT:    --> ((164 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.20 = getelementptr inbounds nuw i8, ptr %add.ptr.20, i32 %1
+; CHECK-NEXT:    --> ((168 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.21 = getelementptr inbounds nuw i8, ptr %add.ptr1.20, i32 %1
+; CHECK-NEXT:    --> ((172 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.21 = getelementptr inbounds nuw i8, ptr %add.ptr.21, i32 %1
+; CHECK-NEXT:    --> ((176 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.22 = getelementptr inbounds nuw i8, ptr %add.ptr1.21, i32 %1
+; CHECK-NEXT:    --> ((180 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.22 = getelementptr inbounds nuw i8, ptr %add.ptr.22, i32 %1
+; CHECK-NEXT:    --> ((184 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.23 = getelementptr inbounds nuw i8, ptr %add.ptr1.22, i32 %1
+; CHECK-NEXT:    --> ((188 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.23 = getelementptr inbounds nuw i8, ptr %add.ptr.23, i32 %1
+; CHECK-NEXT:    --> ((192 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.24 = getelementptr inbounds nuw i8, ptr %add.ptr1.23, i32 %1
+; CHECK-NEXT:    --> ((196 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.24 = getelementptr inbounds nuw i8, ptr %add.ptr.24, i32 %1
+; CHECK-NEXT:    --> ((200 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.25 = getelementptr inbounds nuw i8, ptr %add.ptr1.24, i32 %1
+; CHECK-NEXT:    --> ((204 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.25 = getelementptr inbounds nuw i8, ptr %add.ptr.25, i32 %1
+; CHECK-NEXT:    --> ((208 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.26 = getelementptr inbounds nuw i8, ptr %add.ptr1.25, i32 %1
+; CHECK-NEXT:    --> ((212 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.26 = getelementptr inbounds nuw i8, ptr %add.ptr.26, i32 %1
+; CHECK-NEXT:    --> ((216 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.27 = getelementptr inbounds nuw i8, ptr %add.ptr1.26, i32 %1
+; CHECK-NEXT:    --> ((220 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.27 = getelementptr inbounds nuw i8, ptr %add.ptr.27, i32 %1
+; CHECK-NEXT:    --> ((224 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.28 = getelementptr inbounds nuw i8, ptr %add.ptr1.27, i32 %1
+; CHECK-NEXT:    --> ((228 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.28 = getelementptr inbounds nuw i8, ptr %add.ptr.28, i32 %1
+; CHECK-NEXT:    --> ((232 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.29 = getelementptr inbounds nuw i8, ptr %add.ptr1.28, i32 %1
+; CHECK-NEXT:    --> ((236 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.29 = getelementptr inbounds nuw i8, ptr %add.ptr.29, i32 %1
+; CHECK-NEXT:    --> ((240 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.30 = getelementptr inbounds nuw i8, ptr %add.ptr1.29, i32 %1
+; CHECK-NEXT:    --> ((244 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.30 = getelementptr inbounds nuw i8, ptr %add.ptr.30, i32 %1
+; CHECK-NEXT:    --> ((248 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.31 = getelementptr inbounds nuw i8, ptr %add.ptr1.30, i32 %1
+; CHECK-NEXT:    --> ((252 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.31 = getelementptr inbounds nuw i8, ptr %add.ptr.31, i32 %1
+; CHECK-NEXT:    --> ((256 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.32 = getelementptr inbounds nuw i8, ptr %add.ptr1.31, i32 %1
+; CHECK-NEXT:    --> ((260 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.32 = getelementptr inbounds nuw i8, ptr %add.ptr.32, i32 %1
+; CHECK-NEXT:    --> ((264 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.33 = getelementptr inbounds nuw i8, ptr %add.ptr1.32, i32 %1
+; CHECK-NEXT:    --> ((268 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.33 = getelementptr inbounds nuw i8, ptr %add.ptr.33, i32 %1
+; CHECK-NEXT:    --> ((272 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.34 = getelementptr inbounds nuw i8, ptr %add.ptr1.33, i32 %1
+; CHECK-NEXT:    --> ((276 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.34 = getelementptr inbounds nuw i8, ptr %add.ptr.34, i32 %1
+; CHECK-NEXT:    --> ((280 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.35 = getelementptr inbounds nuw i8, ptr %add.ptr1.34, i32 %1
+; CHECK-NEXT:    --> ((284 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.35 = getelementptr inbounds nuw i8, ptr %add.ptr.35, i32 %1
+; CHECK-NEXT:    --> ((288 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.36 = getelementptr inbounds nuw i8, ptr %add.ptr1.35, i32 %1
+; CHECK-NEXT:    --> ((292 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.36 = getelementptr inbounds nuw i8, ptr %add.ptr.36, i32 %1
+; CHECK-NEXT:    --> ((296 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.37 = getelementptr inbounds nuw i8, ptr %add.ptr1.36, i32 %1
+; CHECK-NEXT:    --> ((300 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.37 = getelementptr inbounds nuw i8, ptr %add.ptr.37, i32 %1
+; CHECK-NEXT:    --> ((304 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.38 = getelementptr inbounds nuw i8, ptr %add.ptr1.37, i32 %1
+; CHECK-NEXT:    --> ((308 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.38 = getelementptr inbounds nuw i8, ptr %add.ptr.38, i32 %1
+; CHECK-NEXT:    --> ((312 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.39 = getelementptr inbounds nuw i8, ptr %add.ptr1.38, i32 %1
+; CHECK-NEXT:    --> ((316 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.39 = getelementptr inbounds nuw i8, ptr %add.ptr.39, i32 %1
+; CHECK-NEXT:    --> ((320 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.40 = getelementptr inbounds nuw i8, ptr %add.ptr1.39, i32 %1
+; CHECK-NEXT:    --> ((324 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.40 = getelementptr inbounds nuw i8, ptr %add.ptr.40, i32 %1
+; CHECK-NEXT:    --> ((328 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.41 = getelementptr inbounds nuw i8, ptr %add.ptr1.40, i32 %1
+; CHECK-NEXT:    --> ((332 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.41 = getelementptr inbounds nuw i8, ptr %add.ptr.41, i32 %1
+; CHECK-NEXT:    --> ((336 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.42 = getelementptr inbounds nuw i8, ptr %add.ptr1.41, i32 %1
+; CHECK-NEXT:    --> ((340 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.42 = getelementptr inbounds nuw i8, ptr %add.ptr.42, i32 %1
+; CHECK-NEXT:    --> ((344 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.43 = getelementptr inbounds nuw i8, ptr %add.ptr1.42, i32 %1
+; CHECK-NEXT:    --> ((348 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.43 = getelementptr inbounds nuw i8, ptr %add.ptr.43, i32 %1
+; CHECK-NEXT:    --> ((352 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.44 = getelementptr inbounds nuw i8, ptr %add.ptr1.43, i32 %1
+; CHECK-NEXT:    --> ((356 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.44 = getelementptr inbounds nuw i8, ptr %add.ptr.44, i32 %1
+; CHECK-NEXT:    --> ((360 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.45 = getelementptr inbounds nuw i8, ptr %add.ptr1.44, i32 %1
+; CHECK-NEXT:    --> ((364 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.45 = getelementptr inbounds nuw i8, ptr %add.ptr.45, i32 %1
+; CHECK-NEXT:    --> ((368 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.46 = getelementptr inbounds nuw i8, ptr %add.ptr1.45, i32 %1
+; CHECK-NEXT:    --> ((372 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.46 = getelementptr inbounds nuw i8, ptr %add.ptr.46, i32 %1
+; CHECK-NEXT:    --> ((376 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.47 = getelementptr inbounds nuw i8, ptr %add.ptr1.46, i32 %1
+; CHECK-NEXT:    --> ((380 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.47 = getelementptr inbounds nuw i8, ptr %add.ptr.47, i32 %1
+; CHECK-NEXT:    --> ((384 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.48 = getelementptr inbounds nuw i8, ptr %add.ptr1.47, i32 %1
+; CHECK-NEXT:    --> ((388 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.48 = getelementptr inbounds nuw i8, ptr %add.ptr.48, i32 %1
+; CHECK-NEXT:    --> ((392 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.49 = getelementptr inbounds nuw i8, ptr %add.ptr1.48, i32 %1
+; CHECK-NEXT:    --> ((396 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.49 = getelementptr inbounds nuw i8, ptr %add.ptr.49, i32 %1
+; CHECK-NEXT:    --> ((400 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.50 = getelementptr inbounds nuw i8, ptr %add.ptr1.49, i32 %1
+; CHECK-NEXT:    --> ((404 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.50 = getelementptr inbounds nuw i8, ptr %add.ptr.50, i32 %1
+; CHECK-NEXT:    --> ((408 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.51 = getelementptr inbounds nuw i8, ptr %add.ptr1.50, i32 %1
+; CHECK-NEXT:    --> ((412 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.51 = getelementptr inbounds nuw i8, ptr %add.ptr.51, i32 %1
+; CHECK-NEXT:    --> ((416 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.52 = getelementptr inbounds nuw i8, ptr %add.ptr1.51, i32 %1
+; CHECK-NEXT:    --> ((420 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.52 = getelementptr inbounds nuw i8, ptr %add.ptr.52, i32 %1
+; CHECK-NEXT:    --> ((424 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.53 = getelementptr inbounds nuw i8, ptr %add.ptr1.52, i32 %1
+; CHECK-NEXT:    --> ((428 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.53 = getelementptr inbounds nuw i8, ptr %add.ptr.53, i32 %1
+; CHECK-NEXT:    --> ((432 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.54 = getelementptr inbounds nuw i8, ptr %add.ptr1.53, i32 %1
+; CHECK-NEXT:    --> ((436 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.54 = getelementptr inbounds nuw i8, ptr %add.ptr.54, i32 %1
+; CHECK-NEXT:    --> ((440 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.55 = getelementptr inbounds nuw i8, ptr %add.ptr1.54, i32 %1
+; CHECK-NEXT:    --> ((444 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.55 = getelementptr inbounds nuw i8, ptr %add.ptr.55, i32 %1
+; CHECK-NEXT:    --> ((448 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.56 = getelementptr inbounds nuw i8, ptr %add.ptr1.55, i32 %1
+; CHECK-NEXT:    --> ((452 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.56 = getelementptr inbounds nuw i8, ptr %add.ptr.56, i32 %1
+; CHECK-NEXT:    --> ((456 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.57 = getelementptr inbounds nuw i8, ptr %add.ptr1.56, i32 %1
+; CHECK-NEXT:    --> ((460 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.57 = getelementptr inbounds nuw i8, ptr %add.ptr.57, i32 %1
+; CHECK-NEXT:    --> ((464 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.58 = getelementptr inbounds nuw i8, ptr %add.ptr1.57, i32 %1
+; CHECK-NEXT:    --> ((468 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.58 = getelementptr inbounds nuw i8, ptr %add.ptr.58, i32 %1
+; CHECK-NEXT:    --> ((472 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.59 = getelementptr inbounds nuw i8, ptr %add.ptr1.58, i32 %1
+; CHECK-NEXT:    --> ((476 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.59 = getelementptr inbounds nuw i8, ptr %add.ptr.59, i32 %1
+; CHECK-NEXT:    --> ((480 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.60 = getelementptr inbounds nuw i8, ptr %add.ptr1.59, i32 %1
+; CHECK-NEXT:    --> ((484 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.60 = getelementptr inbounds nuw i8, ptr %add.ptr.60, i32 %1
+; CHECK-NEXT:    --> ((488 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.61 = getelementptr inbounds nuw i8, ptr %add.ptr1.60, i32 %1
+; CHECK-NEXT:    --> ((492 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.61 = getelementptr inbounds nuw i8, ptr %add.ptr.61, i32 %1
+; CHECK-NEXT:    --> ((496 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.62 = getelementptr inbounds nuw i8, ptr %add.ptr1.61, i32 %1
+; CHECK-NEXT:    --> ((500 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr1.62 = getelementptr inbounds nuw i8, ptr %add.ptr.62, i32 %1
+; CHECK-NEXT:    --> ((504 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
+; CHECK-NEXT:    %add.ptr.63 = getelementptr inbounds nuw i8, ptr %add.ptr1.62, i32 %1
+; CHECK-NEXT:    --> ((508 * (zext i29 (trunc i32 (%d /u 2) to i29) to i32)) + %p) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @test1a
-; CHECK-NEXT:  Loop %for.body: backedge-taken count is i32 63
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 63
-; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is i32 63
-; CHECK-NEXT:  Loop %for.body: Trip multiple is 64
 ;
 entry:
   %div = udiv i32 %d, 2
@@ -111,7 +593,9 @@ define void @test_range_ref1a(i32 %x) {
 ; CHECK-NEXT:  Classifying expressions for: @test_range_ref1a
 ; CHECK-NEXT:    %i.01.0 = phi i32 [ 100, %entry ], [ %tmp4, %bb ]
 ; CHECK-NEXT:    --> {100,+,-1}<nsw><%bb> U: [0,101) S: [0,101) Exits: 0 LoopDispositions: { %bb: Computable }
-; CHECK-NEXT:    %tmp1 = getelementptr i32, ptr @array, i32 %i.01.0
+; CHECK-NEXT:    %0 = shl i32 %i.01.0, 2
+; CHECK-NEXT:    --> {400,+,-4}<nsw><%bb> U: [0,401) S: [0,401) Exits: 0 LoopDispositions: { %bb: Computable }
+; CHECK-NEXT:    %tmp1 = getelementptr i8, ptr @array, i32 %0
 ; CHECK-NEXT:    --> {(400 + @array)<nuw>,+,-4}<nw><%bb> U: [0,-3) S: [-2147483648,2147483645) Exits: @array LoopDispositions: { %bb: Computable }
 ; CHECK-NEXT:    %tmp4 = add nsw i32 %i.01.0, -1
 ; CHECK-NEXT:    --> {99,+,-1}<nsw><%bb> U: [-1,100) S: [-1,100) Exits: -1 LoopDispositions: { %bb: Computable }
@@ -141,13 +625,15 @@ define i32 @test_loop_idiom_recogize(i32 %x, i32 %y, ptr %lam, ptr %alp) nounwin
 ; CHECK-NEXT:  Classifying expressions for: @test_loop_idiom_recogize
 ; CHECK-NEXT:    %indvar = phi i32 [ 0, %bb1.thread ], [ %indvar.next, %bb1 ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%bb1> U: [0,256) S: [0,256) Exits: 255 LoopDispositions: { %bb1: Computable }
-; CHECK-NEXT:    %i.0.reg2mem.0 = sub nuw nsw i32 255, %indvar
-; CHECK-NEXT:    --> {255,+,-1}<nsw><%bb1> U: [0,256) S: [0,256) Exits: 0 LoopDispositions: { %bb1: Computable }
-; CHECK-NEXT:    %0 = getelementptr i32, ptr %alp, i32 %i.0.reg2mem.0
+; CHECK-NEXT:    %0 = shl i32 %indvar, 2
+; CHECK-NEXT:    --> {0,+,4}<nuw><nsw><%bb1> U: [0,1021) S: [0,1021) Exits: 1020 LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    %1 = sub nuw nsw i32 1020, %0
+; CHECK-NEXT:    --> {1020,+,-4}<nsw><%bb1> U: [0,1021) S: [0,1021) Exits: 0 LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    %2 = getelementptr i8, ptr %alp, i32 %1
 ; CHECK-NEXT:    --> {(1020 + %alp),+,-4}<nw><%bb1> U: full-set S: full-set Exits: %alp LoopDispositions: { %bb1: Computable }
-; CHECK-NEXT:    %1 = load i32, ptr %0, align 4
-; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb1: Variant }
-; CHECK-NEXT:    %2 = getelementptr i32, ptr %lam, i32 %i.0.reg2mem.0
+; CHECK-NEXT:    %3 = load i32, ptr %2, align 4
+; CHECK-NEXT:    --> %3 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb1: Variant }
+; CHECK-NEXT:    %4 = getelementptr i8, ptr %lam, i32 %1
 ; CHECK-NEXT:    --> {(1020 + %lam),+,-4}<nw><%bb1> U: full-set S: full-set Exits: %lam LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %indvar.next = add nuw nsw i32 %indvar, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%bb1> U: [1,257) S: [1,257) Exits: 256 LoopDispositions: { %bb1: Computable }
@@ -155,7 +641,7 @@ define i32 @test_loop_idiom_recogize(i32 %x, i32 %y, ptr %lam, ptr %alp) nounwin
 ; CHECK-NEXT:    --> (255 * %x) U: full-set S: full-set
 ; CHECK-NEXT:    %z.0.reg2mem.0 = add i32 %y, %x
 ; CHECK-NEXT:    --> (%x + %y) U: full-set S: full-set
-; CHECK-NEXT:    %3 = add i32 %z.0.reg2mem.0, %tmp10
+; CHECK-NEXT:    %5 = add i32 %z.0.reg2mem.0, %tmp10
 ; CHECK-NEXT:    --> ((256 * %x) + %y) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @test_loop_idiom_recogize
 ; CHECK-NEXT:  Loop %bb1: backedge-taken count is i32 255

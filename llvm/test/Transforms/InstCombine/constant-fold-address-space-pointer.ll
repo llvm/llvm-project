@@ -266,7 +266,8 @@ define i32 @constant_through_array_as_ptrs() {
 
 define float @canonicalize_addrspacecast(i32 %i) {
 ; CHECK-LABEL: @canonicalize_addrspacecast(
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds float, ptr addrspacecast (ptr addrspace(3) @shared_mem to ptr), i32 [[I:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i32 [[I:%.*]], 2
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, ptr addrspacecast (ptr addrspace(3) @shared_mem to ptr), i32 [[TMP1]]
 ; CHECK-NEXT:    [[V:%.*]] = load float, ptr [[P]], align 4
 ; CHECK-NEXT:    ret float [[V]]
 ;

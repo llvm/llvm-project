@@ -329,7 +329,8 @@ define i64 @test25(ptr %P, i64 %A){
 define i64 @zext_ptrtoint_sub_ptrtoint(ptr %p, i32 %offset) {
 ; CHECK-LABEL: @zext_ptrtoint_sub_ptrtoint(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[OFFSET:%.*]] to i64
-; CHECK-NEXT:    [[A:%.*]] = getelementptr bfloat, ptr @Arr, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i8, ptr @Arr, i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = and i64 [[TMP2]], 4294967294
 ; CHECK-NEXT:    [[D:%.*]] = sub i64 [[C]], ptrtoint (ptr @Arr to i64)
@@ -345,7 +346,8 @@ define i64 @zext_ptrtoint_sub_ptrtoint(ptr %p, i32 %offset) {
 define i64 @ptrtoint_sub_zext_ptrtoint(ptr %p, i32 %offset) {
 ; CHECK-LABEL: @ptrtoint_sub_zext_ptrtoint(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[OFFSET:%.*]] to i64
-; CHECK-NEXT:    [[A:%.*]] = getelementptr bfloat, ptr @Arr, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i8, ptr @Arr, i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = and i64 [[TMP2]], 4294967294
 ; CHECK-NEXT:    [[D:%.*]] = sub i64 ptrtoint (ptr @Arr to i64), [[C]]
@@ -361,7 +363,8 @@ define i64 @ptrtoint_sub_zext_ptrtoint(ptr %p, i32 %offset) {
 define i64 @negative_zext_ptrtoint_sub_ptrtoint(ptr %p, i32 %offset) {
 ; CHECK-LABEL: @negative_zext_ptrtoint_sub_ptrtoint(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[OFFSET:%.*]] to i64
-; CHECK-NEXT:    [[A:%.*]] = getelementptr bfloat, ptr @Arr, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i8, ptr @Arr, i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = and i64 [[TMP2]], 65534
 ; CHECK-NEXT:    [[D:%.*]] = sub i64 [[C]], ptrtoint (ptr @Arr to i64)
@@ -377,7 +380,8 @@ define i64 @negative_zext_ptrtoint_sub_ptrtoint(ptr %p, i32 %offset) {
 define i64 @negative_ptrtoint_sub_zext_ptrtoint(ptr %p, i32 %offset) {
 ; CHECK-LABEL: @negative_ptrtoint_sub_zext_ptrtoint(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[OFFSET:%.*]] to i64
-; CHECK-NEXT:    [[A:%.*]] = getelementptr bfloat, ptr @Arr, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[A:%.*]] = getelementptr i8, ptr @Arr, i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = and i64 [[TMP2]], 65534
 ; CHECK-NEXT:    [[D:%.*]] = sub i64 ptrtoint (ptr @Arr to i64), [[C]]
@@ -409,7 +413,8 @@ define i16 @test25_as1(ptr addrspace(1) %P, i64 %A) {
 
 define i64 @ptrtoint_sub_zext_ptrtoint_as2_inbounds(i32 %offset) {
 ; CHECK-LABEL: @ptrtoint_sub_zext_ptrtoint_as2_inbounds(
-; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds bfloat, ptr addrspace(2) @Arr_as2, i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i32 [[OFFSET:%.*]], 1
+; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds i8, ptr addrspace(2) @Arr_as2, i32 [[TMP1]]
 ; CHECK-NEXT:    [[B:%.*]] = ptrtoint ptr addrspace(2) [[A]] to i32
 ; CHECK-NEXT:    [[C:%.*]] = zext i32 [[B]] to i64
 ; CHECK-NEXT:    [[D:%.*]] = sub nsw i64 ptrtoint (ptr addrspace(2) @Arr_as2 to i64), [[C]]
@@ -491,7 +496,8 @@ define i64 @zext_ptrtoint_sub_zext_ptrtoint_as2_nuw(i32 %offset) {
 
 define i64 @negative_zext_ptrtoint_sub_ptrtoint_as2_nuw(i32 %offset) {
 ; CHECK-LABEL: @negative_zext_ptrtoint_sub_ptrtoint_as2_nuw(
-; CHECK-NEXT:    [[A:%.*]] = getelementptr nuw bfloat, ptr addrspace(2) @Arr_as2, i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 [[OFFSET:%.*]], 1
+; CHECK-NEXT:    [[A:%.*]] = getelementptr nuw i8, ptr addrspace(2) @Arr_as2, i32 [[TMP2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(2) [[A]] to i32
 ; CHECK-NEXT:    [[B_MASK:%.*]] = and i32 [[TMP1]], 65534
 ; CHECK-NEXT:    [[C:%.*]] = zext nneg i32 [[B_MASK]] to i64
@@ -507,7 +513,8 @@ define i64 @negative_zext_ptrtoint_sub_ptrtoint_as2_nuw(i32 %offset) {
 
 define i64 @negative_zext_ptrtoint_sub_zext_ptrtoint_as2_nuw_truncating(i32 %offset) {
 ; CHECK-LABEL: @negative_zext_ptrtoint_sub_zext_ptrtoint_as2_nuw_truncating(
-; CHECK-NEXT:    [[A:%.*]] = getelementptr nuw bfloat, ptr addrspace(2) @Arr_as2, i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[OFFSET:%.*]], 1
+; CHECK-NEXT:    [[A:%.*]] = getelementptr nuw i8, ptr addrspace(2) @Arr_as2, i32 [[TMP1]]
 ; CHECK-NEXT:    [[A_IDX:%.*]] = ptrtoint ptr addrspace(2) [[A]] to i32
 ; CHECK-NEXT:    [[E:%.*]] = zext i32 [[A_IDX]] to i64
 ; CHECK-NEXT:    [[D:%.*]] = zext i16 ptrtoint (ptr addrspace(2) @Arr_as2 to i16) to i64
@@ -524,7 +531,8 @@ define i64 @negative_zext_ptrtoint_sub_zext_ptrtoint_as2_nuw_truncating(i32 %off
 
 define i64 @ptrtoint_sub_zext_ptrtoint_as2_inbounds_local(ptr addrspace(2) %p, i32 %offset) {
 ; CHECK-LABEL: @ptrtoint_sub_zext_ptrtoint_as2_inbounds_local(
-; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds bfloat, ptr addrspace(2) [[P:%.*]], i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i32 [[OFFSET:%.*]], 1
+; CHECK-NEXT:    [[A:%.*]] = getelementptr inbounds i8, ptr addrspace(2) [[P:%.*]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[B:%.*]] = ptrtoint ptr addrspace(2) [[A]] to i32
 ; CHECK-NEXT:    [[C:%.*]] = zext i32 [[B]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(2) [[P]] to i32
@@ -614,7 +622,8 @@ define i64 @zext_ptrtoint_sub_zext_ptrtoint_as2_nuw_local(ptr addrspace(2) %p, i
 
 define i64 @negative_zext_ptrtoint_sub_ptrtoint_as2_nuw_local(ptr addrspace(2) %p, i32 %offset) {
 ; CHECK-LABEL: @negative_zext_ptrtoint_sub_ptrtoint_as2_nuw_local(
-; CHECK-NEXT:    [[A:%.*]] = getelementptr nuw bfloat, ptr addrspace(2) [[P:%.*]], i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i32 [[OFFSET:%.*]], 1
+; CHECK-NEXT:    [[A:%.*]] = getelementptr nuw i8, ptr addrspace(2) [[P:%.*]], i32 [[TMP3]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(2) [[A]] to i32
 ; CHECK-NEXT:    [[B_MASK:%.*]] = and i32 [[TMP1]], 65535
 ; CHECK-NEXT:    [[C:%.*]] = zext nneg i32 [[B_MASK]] to i64
@@ -955,7 +964,8 @@ declare void @use(ptr)
 
 define i64 @multiple_geps_two_chains_gep_base(ptr %base, i64 %base.idx, i64 %idx, i64 %idx2, i64 %idx3) {
 ; CHECK-LABEL: @multiple_geps_two_chains_gep_base(
-; CHECK-NEXT:    [[GEP_BASE:%.*]] = getelementptr inbounds i32, ptr [[BASE:%.*]], i64 [[BASE_IDX:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[BASE_IDX:%.*]], 2
+; CHECK-NEXT:    [[GEP_BASE:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    call void @use(ptr [[GEP_BASE]])
 ; CHECK-NEXT:    [[P2_IDX1:%.*]] = add i64 [[IDX:%.*]], [[IDX2:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[P2_IDX1]], [[IDX3:%.*]]

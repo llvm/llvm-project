@@ -11,13 +11,14 @@ define void @foo(ptr noalias noundef %0, ptr noalias noundef %1) optsize {
 ; CHECK-NEXT:    br label [[TMP4:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[TMP2:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[TMP4]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = sub nuw nsw i64 255, [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP0]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = sub nuw nsw i64 1020, [[TMP8]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[TMP7]], i64 -28
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = load <8 x i32>, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <8 x i32> [[WIDE_MASKED_GATHER]], splat (i32 5)
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i32, ptr [[TMP1]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 [[TMP8]]
 ; CHECK-NEXT:    store <8 x i32> [[TMP6]], ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw i64 [[INDVARS_IV]], 8
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 256

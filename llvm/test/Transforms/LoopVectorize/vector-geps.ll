@@ -16,8 +16,10 @@ define void @vector_gep_stored(ptr %a, ptr %b, i64 %n) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], <4 x i64> [[VEC_IND]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[A:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw <4 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[B:%.*]], <4 x i64> [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nsw i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP4]]
 ; CHECK-NEXT:    store <4 x ptr> [[TMP0]], ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -31,8 +33,10 @@ define void @vector_gep_stored(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[I]]
-; CHECK-NEXT:    [[VAR1:%.*]] = getelementptr inbounds nuw ptr, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shl nsw i64 [[I]], 2
+; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shl nsw i64 [[I]], 3
+; CHECK-NEXT:    [[VAR1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    store ptr [[VAR0]], ptr [[VAR1]], align 8
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
@@ -71,7 +75,8 @@ define void @uniform_vector_gep_stored(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds ptr, ptr [[A:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP3]]
 ; CHECK-NEXT:    store <4 x ptr> [[DOTSPLAT]], ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -85,7 +90,8 @@ define void @uniform_vector_gep_stored(ptr %a, ptr %b, i64 %n) {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[VAR0:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 4
-; CHECK-NEXT:    [[VAR1:%.*]] = getelementptr inbounds nuw ptr, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nsw i64 [[I]], 3
+; CHECK-NEXT:    [[VAR1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 [[TMP4]]
 ; CHECK-NEXT:    store ptr [[VAR0]], ptr [[VAR1]], align 8
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]

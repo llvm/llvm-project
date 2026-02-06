@@ -6,9 +6,11 @@
 define void @test_load(ptr addrspace(1) %out, i64 %x) {
 ; CHECK-LABEL: @test_load(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr addrspace(2) @test.data, i64 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[X:%.*]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr addrspace(2) @test.data, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(2) [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[X]], 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -26,9 +28,11 @@ entry:
 define void @test_load_gep_nusw_nuw(ptr addrspace(1) %out, i64 %x) {
 ; CHECK-LABEL: @test_load_gep_nusw_nuw(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr nusw nuw i32, ptr addrspace(2) @test.data, i64 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[X:%.*]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr nusw nuw i8, ptr addrspace(2) @test.data, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(2) [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr nusw nuw i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[X]], 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr nusw nuw i8, ptr addrspace(1) [[OUT:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -45,9 +49,11 @@ entry:
 define void @test_load_bitcast_chain(ptr addrspace(1) %out, i64 %x) {
 ; CHECK-LABEL: @test_load_bitcast_chain(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr addrspace(2) @test.data, i64 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[X:%.*]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr addrspace(2) @test.data, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(2) [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[X]], 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -66,9 +72,11 @@ define void @test_call(ptr addrspace(1) %out, i64 %x) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA:%.*]] = alloca [8 x i32], align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p2.i64(ptr noundef nonnull align 4 dereferenceable(32) [[DATA]], ptr addrspace(2) noundef align 4 dereferenceable(32) @test.data, i64 32, i1 false)
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[X:%.*]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @foo(ptr nonnull [[ARRAYIDX]])
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[X]], 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -87,9 +95,11 @@ define void @test_call_no_null_opt(ptr addrspace(1) %out, i64 %x) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA:%.*]] = alloca [8 x i32], align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p2.i64(ptr noundef nonnull align 4 dereferenceable(32) [[DATA]], ptr addrspace(2) noundef align 4 dereferenceable(32) @test.data, i64 32, i1 false)
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[X:%.*]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @foo(ptr [[ARRAYIDX]])
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[X]], 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -108,12 +118,15 @@ define void @test_load_and_call(ptr addrspace(1) %out, i64 %x, i64 %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA:%.*]] = alloca [8 x i32], align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p2.i64(ptr noundef nonnull align 4 dereferenceable(32) [[DATA]], ptr addrspace(2) noundef align 4 dereferenceable(32) @test.data, i64 32, i1 false)
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[X:%.*]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[X]], 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @foo(ptr nonnull [[ARRAYIDX]])
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nsw i64 [[Y:%.*]], 2
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT]], i64 [[TMP4]]
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -135,12 +148,15 @@ define void @test_load_and_call_no_null_opt(ptr addrspace(1) %out, i64 %x, i64 %
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DATA:%.*]] = alloca [8 x i32], align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p2.i64(ptr noundef nonnull align 4 dereferenceable(32) [[DATA]], ptr addrspace(2) noundef align 4 dereferenceable(32) @test.data, i64 32, i1 false)
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nsw i64 [[X:%.*]], 2
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[DATA]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT:%.*]], i64 [[X]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[X]], 2
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr addrspace(1) [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @foo(ptr [[ARRAYIDX]])
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[OUT]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nsw i64 [[Y:%.*]], 2
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[OUT]], i64 [[TMP4]]
 ; CHECK-NEXT:    store i32 [[TMP1]], ptr addrspace(1) [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    ret void
 ;

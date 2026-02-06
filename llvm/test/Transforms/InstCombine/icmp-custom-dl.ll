@@ -116,7 +116,8 @@ define i1 @test60_addrspacecast_larger(ptr addrspace(1) %foo, i32 %i, i16 %j) {
 define i1 @test61(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test61(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[I:%.*]] to i32
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[FOO:%.*]], i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP1]], 2
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i32 [[TMP3]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[J:%.*]] to i32
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[FOO]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
@@ -131,9 +132,10 @@ define i1 @test61(ptr %foo, i64 %i, i64 %j) {
 
 define i1 @test61_as1(ptr addrspace(1) %foo, i16 %i, i16 %j) {
 ; CHECK-LABEL: @test61_as1(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr addrspace(1) [[FOO:%.*]], i16 [[I:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr addrspace(1) [[FOO]], i16 [[J:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr addrspace(1) [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    [[J:%.*]] = shl i16 [[I:%.*]], 2
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr addrspace(1) [[FOO:%.*]], i16 [[J]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr addrspace(1) [[FOO]], i16 [[J1:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr addrspace(1) [[GEP2]], [[GEP3]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep1 = getelementptr i32, ptr addrspace(1) %foo, i16 %i

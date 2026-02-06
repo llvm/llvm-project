@@ -111,7 +111,9 @@ define i64 @test_simplify9(i1 %x) {
 define i64 @test_simplify10(i16 %x) {
 ; CHECK-LABEL: @test_simplify10(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[X:%.*]] to i64
-; CHECK-NEXT:    [[HELLO_L:%.*]] = sub nsw i64 5, [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds i8, ptr @hello, i64 [[TMP2]]
+; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
   %hello_p = getelementptr inbounds [6 x i16], ptr @hello, i16 0, i16 %x
@@ -123,10 +125,12 @@ define i64 @test_simplify10(i16 %x) {
 
 define i64 @test_simplify11(i16 %x) {
 ; CHECK-LABEL: @test_simplify11(
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X:%.*]], 7
-; CHECK-NEXT:    [[NARROW:%.*]] = sub nuw nsw i16 9, [[AND]]
+; CHECK-NEXT:    [[AND:%.*]] = shl i16 [[X:%.*]], 1
+; CHECK-NEXT:    [[NARROW:%.*]] = and i16 [[AND]], 14
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = zext nneg i16 [[NARROW]] to i64
-; CHECK-NEXT:    ret i64 [[HELLO_L]]
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds nuw i8, ptr @null_hello_mid, i64 [[HELLO_L]]
+; CHECK-NEXT:    [[HELLO_L1:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
+; CHECK-NEXT:    ret i64 [[HELLO_L1]]
 ;
   %and = and i16 %x, 7
   %hello_p = getelementptr inbounds [13 x i16], ptr @null_hello_mid, i16 0, i16 %and
@@ -150,7 +154,8 @@ define i64 @test_no_simplify1() {
 define i64 @test_no_simplify2(i16 %x) {
 ; CHECK-LABEL: @test_no_simplify2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[X:%.*]] to i64
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds i16, ptr @null_hello, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP1]], 1
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds i8, ptr @null_hello, i64 [[TMP2]]
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
@@ -163,9 +168,10 @@ define i64 @test_no_simplify2(i16 %x) {
 
 define i64 @test_no_simplify3(i16 %x) {
 ; CHECK-LABEL: @test_no_simplify3(
-; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X:%.*]], 15
+; CHECK-NEXT:    [[AND1:%.*]] = shl i16 [[X:%.*]], 1
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[AND1]], 30
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i16 [[AND]] to i64
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds nuw i16, ptr @null_hello_mid, i64 [[TMP1]]
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds nuw i8, ptr @null_hello_mid, i64 [[TMP1]]
 ; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;

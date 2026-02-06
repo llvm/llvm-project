@@ -46,11 +46,12 @@ define i64 @sum_2_at_with_int_conversion(ptr %A, ptr %B, i64 %N) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP14:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI13:%.*]] = phi <2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP15:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[START_I]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP18:%.*]] = shl i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[START_I]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <2 x i64>, ptr [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i64, ptr [[START_I1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[START_I1]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP10]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD15:%.*]] = load <2 x i64>, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD16:%.*]] = load <2 x i64>, ptr [[TMP11]], align 8
@@ -73,9 +74,10 @@ define i64 @sum_2_at_with_int_conversion(ptr %A, ptr %B, i64 %N) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ [[IV_PH]], [[LOOP_PREHEADER17]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ [[SUM_NEXT:%.*]], [[LOOP]] ], [ [[SUM_PH]], [[LOOP_PREHEADER17]] ]
-; CHECK-NEXT:    [[GEP_IDX_I:%.*]] = getelementptr i64, ptr [[START_I]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP19:%.*]] = shl i64 [[IV]], 3
+; CHECK-NEXT:    [[GEP_IDX_I:%.*]] = getelementptr i8, ptr [[START_I]], i64 [[TMP19]]
 ; CHECK-NEXT:    [[LV_I:%.*]] = load i64, ptr [[GEP_IDX_I]], align 8
-; CHECK-NEXT:    [[GEP_IDX_I8:%.*]] = getelementptr i64, ptr [[START_I1]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_IDX_I8:%.*]] = getelementptr i8, ptr [[START_I1]], i64 [[TMP19]]
 ; CHECK-NEXT:    [[LV_I9:%.*]] = load i64, ptr [[GEP_IDX_I8]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[LV_I]], [[SUM]]
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i64 [[ADD]], [[LV_I9]]
@@ -161,15 +163,16 @@ define i64 @sum_3_at_with_int_conversion(ptr %A, ptr %B, ptr %C, i64 %N) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP21:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI25:%.*]] = phi <2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP22:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i64, ptr [[START_I]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP25:%.*]] = shl i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[START_I]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP11]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD26:%.*]] = load <2 x i64>, ptr [[TMP12]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[START_I1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[START_I1]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD27:%.*]] = load <2 x i64>, ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD28:%.*]] = load <2 x i64>, ptr [[TMP14]], align 8
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[START_I12]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[START_I12]], i64 [[TMP25]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP15]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD29:%.*]] = load <2 x i64>, ptr [[TMP15]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD30:%.*]] = load <2 x i64>, ptr [[TMP16]], align 8
@@ -194,11 +197,12 @@ define i64 @sum_3_at_with_int_conversion(ptr %A, ptr %B, ptr %C, i64 %N) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ [[IV_PH]], [[LOOP_PREHEADER31]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ [[SUM_NEXT:%.*]], [[LOOP]] ], [ [[SUM_PH]], [[LOOP_PREHEADER31]] ]
-; CHECK-NEXT:    [[GEP_IDX_I:%.*]] = getelementptr i64, ptr [[START_I]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP26:%.*]] = shl i64 [[IV]], 3
+; CHECK-NEXT:    [[GEP_IDX_I:%.*]] = getelementptr i8, ptr [[START_I]], i64 [[TMP26]]
 ; CHECK-NEXT:    [[LV_I:%.*]] = load i64, ptr [[GEP_IDX_I]], align 8
-; CHECK-NEXT:    [[GEP_IDX_I8:%.*]] = getelementptr i64, ptr [[START_I1]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_IDX_I8:%.*]] = getelementptr i8, ptr [[START_I1]], i64 [[TMP26]]
 ; CHECK-NEXT:    [[LV_I9:%.*]] = load i64, ptr [[GEP_IDX_I8]], align 8
-; CHECK-NEXT:    [[GEP_IDX_I19:%.*]] = getelementptr i64, ptr [[START_I12]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_IDX_I19:%.*]] = getelementptr i8, ptr [[START_I12]], i64 [[TMP26]]
 ; CHECK-NEXT:    [[LV_I20:%.*]] = load i64, ptr [[GEP_IDX_I19]], align 8
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add i64 [[LV_I]], [[SUM]]
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add i64 [[ADD_1]], [[LV_I9]]
@@ -251,7 +255,8 @@ define i64 @at_with_int_conversion(ptr %ptr, i64 %idx) {
 ; CHECK-NEXT:    [[INRANGE:%.*]] = icmp ugt i64 [[IDX:%.*]], [[SUB]]
 ; CHECK-NEXT:    br i1 [[INRANGE]], label [[ERROR:%.*]], label [[EXIT:%.*]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[GEP_IDX:%.*]] = getelementptr i64, ptr [[START]], i64 [[IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[IDX]], 3
+; CHECK-NEXT:    [[GEP_IDX:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[LV:%.*]] = load i64, ptr [[GEP_IDX]], align 8
 ; CHECK-NEXT:    ret i64 [[LV]]
 ; CHECK:       error:

@@ -410,7 +410,8 @@ define i1 @test60_nusw_nuw(ptr %foo, i64 %i, i64 %j) {
 
 define i1 @test60_nusw_nuw_mix(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60_nusw_nuw_mix(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i32, ptr [[FOO:%.*]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[I:%.*]], 2
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i8, ptr [[FOO:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nusw i8, ptr [[FOO]], i64 [[J:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -423,9 +424,10 @@ define i1 @test60_nusw_nuw_mix(ptr %foo, i64 %i, i64 %j) {
 
 define i1 @test_gep_ult_no_inbounds(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test_gep_ult_no_inbounds(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[FOO:%.*]], i64 [[I:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[FOO]], i64 [[J:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    [[J:%.*]] = shl i64 [[I:%.*]], 2
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i64 [[J]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[FOO]], i64 [[J1:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP2]], [[GEP3]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep1 = getelementptr i32, ptr %foo, i64 %i
@@ -508,9 +510,10 @@ define i1 @test60_addrspacecast_larger(ptr addrspace(1) %foo, i32 %i, i16 %j) {
 
 define i1 @test61(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test61(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[FOO:%.*]], i64 [[I:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[FOO]], i64 [[J:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    [[J:%.*]] = shl i64 [[I:%.*]], 2
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[FOO:%.*]], i64 [[J]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[FOO]], i64 [[J1:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP2]], [[GEP3]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep1 = getelementptr i32, ptr %foo, i64 %i
@@ -522,9 +525,10 @@ define i1 @test61(ptr %foo, i64 %i, i64 %j) {
 
 define i1 @test61_as1(ptr addrspace(1) %foo, i16 %i, i16 %j) {
 ; CHECK-LABEL: @test61_as1(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr addrspace(1) [[FOO:%.*]], i16 [[I:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr addrspace(1) [[FOO]], i16 [[J:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr addrspace(1) [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    [[J:%.*]] = shl i16 [[I:%.*]], 2
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr addrspace(1) [[FOO:%.*]], i16 [[J]]
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr addrspace(1) [[FOO]], i16 [[J1:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr addrspace(1) [[GEP2]], [[GEP3]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep1 = getelementptr i32, ptr addrspace(1) %foo, i16 %i
@@ -813,8 +817,8 @@ define i1 @gep_multiple_eq_commuted(ptr %base, i64 %idx, i64 %idx2) {
 
 define i1 @gep_mugtiple_ugt_nuw(ptr %base, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @gep_mugtiple_ugt_nuw(
-; CHECK-NEXT:    [[GEP1_IDX1:%.*]] = sub i64 0, [[IDX2:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IDX:%.*]], [[GEP1_IDX1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 0, [[IDX2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[IDX:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep1 = getelementptr nuw i32, ptr %base, i64 %idx
@@ -825,8 +829,10 @@ define i1 @gep_mugtiple_ugt_nuw(ptr %base, i64 %idx, i64 %idx2) {
 
 define i1 @gep_mugtiple_ugt_not_all_nuw(ptr %base, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @gep_mugtiple_ugt_not_all_nuw(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i32, ptr [[GEP1]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[IDX:%.*]], 2
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i8, ptr [[BASE:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[IDX2:%.*]], 2
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[GEP1]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[GEP2]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -838,8 +844,10 @@ define i1 @gep_mugtiple_ugt_not_all_nuw(ptr %base, i64 %idx, i64 %idx2) {
 
 define i1 @gep_mugtiple_ugt_inbounds_nusw(ptr %base, i64 %idx, i64 %idx2) {
 ; CHECK-LABEL: @gep_mugtiple_ugt_inbounds_nusw(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[BASE:%.*]], i64 [[IDX:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nusw i32, ptr [[GEP1]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[IDX:%.*]], 2
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[IDX2:%.*]], 2
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nusw i8, ptr [[GEP1]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt ptr [[GEP2]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -935,11 +943,13 @@ define i1 @gep_multiple_multi_above_below_limit_consts(ptr %base, i64 %idx1, i64
 ; CHECK-LABEL: @gep_multiple_multi_above_below_limit_consts(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 16
 ; CHECK-NEXT:    call void @use(ptr [[GEP1]])
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i32, ptr [[GEP1]], i64 [[IDX1:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[IDX1:%.*]], 2
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[GEP1]], i64 [[TMP1]]
 ; CHECK-NEXT:    call void @use(ptr [[GEP2]])
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[GEP2]], i64 16
 ; CHECK-NEXT:    call void @use(ptr [[GEP3]])
-; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr i32, ptr [[GEP3]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[IDX2:%.*]], 2
+; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr i8, ptr [[GEP3]], i64 [[TMP2]]
 ; CHECK-NEXT:    call void @use(ptr [[GEP4]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP4]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -958,13 +968,17 @@ define i1 @gep_multiple_multi_above_below_limit_consts(ptr %base, i64 %idx1, i64
 
 define i1 @gep_multiple_multi_use_above_limit(ptr %base, i64 %idx1, i64 %idx2, i64 %idx3, i64 %idx4) {
 ; CHECK-LABEL: @gep_multiple_multi_use_above_limit(
-; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr i32, ptr [[BASE:%.*]], i64 [[IDX1:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[IDX1:%.*]], 2
+; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    call void @use(ptr [[GEP4]])
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i32, ptr [[GEP4]], i64 [[IDX2:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[IDX2:%.*]], 2
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[GEP4]], i64 [[TMP2]]
 ; CHECK-NEXT:    call void @use(ptr [[GEP3]])
-; CHECK-NEXT:    [[GEP5:%.*]] = getelementptr i32, ptr [[GEP3]], i64 [[IDX3:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[IDX3:%.*]], 2
+; CHECK-NEXT:    [[GEP5:%.*]] = getelementptr i8, ptr [[GEP3]], i64 [[TMP3]]
 ; CHECK-NEXT:    call void @use(ptr [[GEP5]])
-; CHECK-NEXT:    [[GEP6:%.*]] = getelementptr i32, ptr [[GEP5]], i64 [[IDX4:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[IDX4:%.*]], 2
+; CHECK-NEXT:    [[GEP6:%.*]] = getelementptr i8, ptr [[GEP5]], i64 [[TMP4]]
 ; CHECK-NEXT:    call void @use(ptr [[GEP6]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP6]], [[BASE]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
@@ -1087,10 +1101,14 @@ define i1 @gep_gep_multiple_ult_nuw(ptr %base, i64 %idx1, i64 %idx2, i64 %idx3, 
 
 define i1 @gep_gep_multiple_ult_missing_nuw(ptr %base, i64 %idx1, i64 %idx2, i64 %idx3, i64 %idx4) {
 ; CHECK-LABEL: @gep_gep_multiple_ult_missing_nuw(
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i32, ptr [[BASE:%.*]], i64 [[IDX1:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nuw i32, ptr [[GEP1]], i64 [[IDX2:%.*]]
-; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr nuw i32, ptr [[BASE]], i64 [[IDX3:%.*]]
-; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr i32, ptr [[GEP3]], i64 [[IDX4:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[IDX1:%.*]], 2
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr nuw i8, ptr [[BASE:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[IDX2:%.*]], 2
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr nuw i8, ptr [[GEP1]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[IDX3:%.*]], 2
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr nuw i8, ptr [[BASE]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[IDX4:%.*]], 2
+; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr i8, ptr [[GEP3]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP2]], [[GEP4]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

@@ -25,10 +25,12 @@ define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices, i64 %
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP10:%.*]] = shl nsw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[INDICES]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 4 x i32>, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = zext <vscale x 4 x i32> [[WIDE_LOAD1]] to <vscale x 4 x i64>
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], <vscale x 4 x i64> [[TMP14]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shl nuw nsw <vscale x 4 x i64> [[TMP14]], splat (i64 2)
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[BUCKETS]], <vscale x 4 x i64> [[TMP9]]
 ; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> [[TMP15]], i32 1, <vscale x 4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -38,7 +40,7 @@ define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices, i64 %
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_EXIT:%.*]], label [[VEC_EPILOG_ITER_CHECK:%.*]]
 ; CHECK:       vec.epilog.iter.check:
 ; CHECK-NEXT:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF]], [[TMP1]]
-; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[SCALAR_PH]], label [[VEC_EPILOG_PH]]
+; CHECK-NEXT:    br i1 [[MIN_EPILOG_ITERS_CHECK]], label [[SCALAR_PH]], label [[VEC_EPILOG_PH]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       vec.epilog.ph:
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ 0, [[VECTOR_PH]] ]
 ; CHECK-NEXT:    [[TMP24:%.*]] = call i64 @llvm.vscale.i64()
@@ -48,14 +50,16 @@ define void @simple_histogram(ptr noalias %buckets, ptr readonly %indices, i64 %
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX4:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT6:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[INDEX4]]
+; CHECK-NEXT:    [[TMP16:%.*]] = shl nsw i64 [[INDEX4]], 2
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[INDICES]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <vscale x 2 x i32>, ptr [[TMP18]], align 4
 ; CHECK-NEXT:    [[TMP19:%.*]] = zext <vscale x 2 x i32> [[WIDE_LOAD5]] to <vscale x 2 x i64>
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], <vscale x 2 x i64> [[TMP19]]
+; CHECK-NEXT:    [[TMP17:%.*]] = shl nuw nsw <vscale x 2 x i64> [[TMP19]], splat (i64 2)
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[BUCKETS]], <vscale x 2 x i64> [[TMP17]]
 ; CHECK-NEXT:    call void @llvm.experimental.vector.histogram.add.nxv2p0.i32(<vscale x 2 x ptr> [[TMP20]], i32 1, <vscale x 2 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT6]] = add nuw i64 [[INDEX4]], [[TMP25]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT6]], [[N_VEC3]]
-; CHECK-NEXT:    br i1 [[TMP21]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP21]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       vec.epilog.middle.block:
 ; CHECK-NEXT:    [[CMP_N7:%.*]] = icmp eq i64 [[N_MOD_VF2]], 0
 ; CHECK-NEXT:    br i1 [[CMP_N7]], label [[FOR_EXIT]], label [[SCALAR_PH]]

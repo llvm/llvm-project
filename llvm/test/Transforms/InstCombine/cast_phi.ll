@@ -9,9 +9,11 @@ define void @MainKernel(i32 %iNumSteps, i32 %tid, i32 %base) {
 ; CHECK-NEXT:    [[CALLB:%.*]] = alloca [258 x float], align 4
 ; CHECK-NEXT:    [[CONV_I:%.*]] = uitofp i32 [[INUMSTEPS:%.*]] to float
 ; CHECK-NEXT:    [[CONV_I12:%.*]] = zext i32 [[TID:%.*]] to i64
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw float, ptr [[CALLA]], i64 [[CONV_I12]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shl nuw nsw i64 [[CONV_I12]], 2
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLA]], i64 [[TMP12]]
 ; CHECK-NEXT:    store float [[CONV_I]], ptr [[ARRAYIDX3]], align 4
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw float, ptr [[CALLB]], i64 [[CONV_I12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[CONV_I12]], 2
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw i8, ptr [[CALLB]], i64 [[TMP13]]
 ; CHECK-NEXT:    store float [[CONV_I]], ptr [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[CMP7:%.*]] = icmp eq i32 [[TID]], 0
 ; CHECK-NEXT:    br i1 [[CMP7]], label [[DOTBB1:%.*]], label [[DOTBB2:%.*]]
@@ -31,8 +33,10 @@ define void @MainKernel(i32 %iNumSteps, i32 %tid, i32 %base) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[I12_06]], [[BASE:%.*]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i32 [[I12_06]], 1
 ; CHECK-NEXT:    [[CONV_I9:%.*]] = sext i32 [[ADD]] to i64
-; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds float, ptr [[CALLA]], i64 [[CONV_I9]]
-; CHECK-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds float, ptr [[CALLB]], i64 [[CONV_I9]]
+; CHECK-NEXT:    [[TMP14:%.*]] = shl nsw i64 [[CONV_I9]], 2
+; CHECK-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i8, ptr [[CALLA]], i64 [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = shl nsw i64 [[CONV_I9]], 2
+; CHECK-NEXT:    [[ARRAYIDX24:%.*]] = getelementptr inbounds i8, ptr [[CALLB]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[CMP40:%.*]] = icmp ult i32 [[I12_06]], [[BASE]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[DOTBB4:%.*]], label [[DOTBB5:%.*]]
 ; CHECK:       .bb4:

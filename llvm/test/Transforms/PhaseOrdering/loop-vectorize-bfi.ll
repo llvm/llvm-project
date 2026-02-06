@@ -19,7 +19,8 @@ define void @f(i1 %x) !prof !0 {
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 65, %[[ENTRY]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr null, i64 [[EVL_BASED_IV]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[EVL_BASED_IV]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr null, i64 [[TMP7]]
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> poison, ptr align 8 [[TMP4]], <vscale x 2 x i1> [[TMP2]], i32 [[TMP3]])
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> poison, ptr align 8 [[TMP4]], <vscale x 2 x i1> [[TMP2]], i32 [[TMP3]])
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext nneg i32 [[TMP3]] to i64

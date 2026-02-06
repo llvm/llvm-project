@@ -36,7 +36,8 @@ define i8 @memcpy_constant_arg_ptr_to_alloca_load_metadata(ptr addrspace(4) noal
 define i64 @memcpy_constant_arg_ptr_to_alloca_load_alignment(ptr addrspace(4) noalias readonly align 4 dereferenceable(256) %arg, i32 %idx) {
 ; CHECK-LABEL: @memcpy_constant_arg_ptr_to_alloca_load_alignment(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[IDX:%.*]] to i64
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr addrspace(4) [[ARG:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[TMP1]], 3
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[ARG:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr addrspace(4) [[GEP]], align 16
 ; CHECK-NEXT:    ret i64 [[LOAD]]
 ;
@@ -51,7 +52,8 @@ define i64 @memcpy_constant_arg_ptr_to_alloca_load_atomic(ptr addrspace(4) noali
 ; CHECK-LABEL: @memcpy_constant_arg_ptr_to_alloca_load_atomic(
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i64], align 8, addrspace(5)
 ; CHECK-NEXT:    call void @llvm.memcpy.p5.p4.i64(ptr addrspace(5) noundef align 8 dereferenceable(256) [[ALLOCA]], ptr addrspace(4) noundef align 8 dereferenceable(256) [[ARG:%.*]], i64 256, i1 false)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr addrspace(5) [[ALLOCA]], i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nsw i32 [[IDX:%.*]], 3
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[ALLOCA]], i32 [[TMP1]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load atomic i64, ptr addrspace(5) [[GEP]] syncscope("somescope") acquire, align 8
 ; CHECK-NEXT:    ret i64 [[LOAD]]
 ;

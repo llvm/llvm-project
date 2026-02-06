@@ -14,7 +14,8 @@ define <8 x ptr> @test_vector_gep(ptr %arg1, <8 x i64> %arg2) {
 ; CHECK-LABEL: define <8 x ptr> @test_vector_gep(
 ; CHECK-SAME: ptr [[ARG1:%.*]], <8 x i64> [[ARG2:%.*]]) {
 ; CHECK-NEXT:  [[TOP:.*:]]
-; CHECK-NEXT:    [[VECTORGEP14_SPLIT:%.*]] = getelementptr inbounds [[DUAL:%.*]], ptr [[ARG1]], <8 x i64> [[ARG2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw <8 x i64> [[ARG2]], splat (i64 72)
+; CHECK-NEXT:    [[VECTORGEP14_SPLIT:%.*]] = getelementptr inbounds i8, ptr [[ARG1]], <8 x i64> [[TMP0]]
 ; CHECK-NEXT:    [[VECTORGEP14:%.*]] = getelementptr inbounds i8, <8 x ptr> [[VECTORGEP14_SPLIT]], i64 32
 ; CHECK-NEXT:    ret <8 x ptr> [[VECTORGEP14]]
 ;
@@ -32,7 +33,7 @@ top:
 define <16 x ptr> @test() {
 ; CHECK-LABEL: define <16 x ptr> @test() {
 ; CHECK-NEXT:  [[VECTOR_BODY:.*:]]
-; CHECK-NEXT:    ret <16 x ptr> getelementptr ([65 x %struct.A], ptr @G, <16 x i64> zeroinitializer, <16 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16>, i32 0)
+; CHECK-NEXT:    ret <16 x ptr> getelementptr ([65 x [[STRUCT_A:%.*]]], ptr @G, <16 x i64> zeroinitializer, <16 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16>, i32 0)
 ;
 vector.body:
   %VectorGep = getelementptr [65 x %struct.A], ptr @G, <16 x i64> zeroinitializer, <16 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16>, <16 x i32> zeroinitializer
@@ -42,7 +43,7 @@ vector.body:
 define <16 x ptr> @test2() {
 ; CHECK-LABEL: define <16 x ptr> @test2() {
 ; CHECK-NEXT:  [[VECTOR_BODY:.*:]]
-; CHECK-NEXT:    ret <16 x ptr> getelementptr ([65 x %struct.A], ptr @G, <16 x i64> zeroinitializer, <16 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16>, i32 0)
+; CHECK-NEXT:    ret <16 x ptr> getelementptr ([65 x [[STRUCT_A:%.*]]], ptr @G, <16 x i64> zeroinitializer, <16 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16>, i32 0)
 ;
 vector.body:
   %VectorGep = getelementptr [65 x %struct.A], ptr @G, <16 x i32> zeroinitializer, <16 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16>, <16 x i32> zeroinitializer

@@ -131,7 +131,8 @@ bb2:
 define ptr @test3_no_inbounds1(ptr %A, i32 %Offset) {
 ; CHECK-LABEL: @test3_no_inbounds1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr i32, ptr [[A:%.*]], i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i32 [[OFFSET:%.*]], 2
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr i8, ptr [[A:%.*]], i32 [[TMP0]]
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[RHS:%.*]] = phi ptr [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]
@@ -160,7 +161,8 @@ bb2:
 define ptr @test3_no_inbounds2(ptr %A, i32 %Offset) {
 ; CHECK-LABEL: @test3_no_inbounds2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i32 [[OFFSET:%.*]], 2
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[TMP0]]
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[RHS:%.*]] = phi ptr [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]
@@ -189,7 +191,8 @@ bb2:
 define ptr @test3_no_inbounds3(ptr %A, i32 %Offset) {
 ; CHECK-LABEL: @test3_no_inbounds3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nsw i32 [[OFFSET:%.*]], 2
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i32 [[TMP0]]
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[RHS:%.*]] = phi ptr [ [[RHS_NEXT:%.*]], [[BB]] ], [ [[TMP]], [[ENTRY:%.*]] ]

@@ -23,35 +23,39 @@ define dso_local void @foo(i32 noundef %arg, ptr noundef nonnull align 4 derefer
 ; CHECK-LABEL: define dso_local void @foo(
 ; CHECK-SAME: i32 noundef [[ARG:%.*]], ptr noundef nonnull writeonly align 4 captures(none) dereferenceable(8) [[ARG1:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[BB:.*]]:
+; CHECK-NEXT:    [[I3:%.*]] = alloca [[T0:%.*]], align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[I3]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    store i64 180388626456, ptr [[I3]], align 8
 ; CHECK-NEXT:    [[I9:%.*]] = sdiv i32 [[ARG]], 128
 ; CHECK-NEXT:    [[I10:%.*]] = shl nsw i32 [[I9]], 7
 ; CHECK-NEXT:    [[ARG_OFF:%.*]] = add i32 [[ARG]], 127
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[ARG_OFF]], 255
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[BB12:.*]], label %[[BB13:.*]]
+; CHECK:       [[BB13]]:
+; CHECK-NEXT:    [[I5_I_I_1:%.*]] = getelementptr inbounds nuw i8, ptr [[I3]], i64 4
+; CHECK-NEXT:    [[I3_PROMOTED:%.*]] = load i32, ptr [[I3]], align 8, !tbaa [[INT_TBAA5:![0-9]+]]
+; CHECK-NEXT:    [[I5_I_I_1_PROMOTED:%.*]] = load i32, ptr [[I5_I_I_1]], align 4, !tbaa [[INT_TBAA5]]
+; CHECK-NEXT:    br label %[[BB14:.*]]
 ; CHECK:       [[BB12_LOOPEXIT:.*]]:
-; CHECK-NEXT:    [[I3_SROA_8_0_INSERT_EXT:%.*]] = zext i32 [[I21_3:%.*]] to i64
-; CHECK-NEXT:    [[I3_SROA_8_0_INSERT_SHIFT:%.*]] = shl nuw i64 [[I3_SROA_8_0_INSERT_EXT]], 32
-; CHECK-NEXT:    [[I3_SROA_0_0_INSERT_EXT:%.*]] = zext i32 [[I21_2:%.*]] to i64
-; CHECK-NEXT:    [[I3_SROA_0_0_INSERT_INSERT:%.*]] = or disjoint i64 [[I3_SROA_8_0_INSERT_SHIFT]], [[I3_SROA_0_0_INSERT_EXT]]
+; CHECK-NEXT:    store i32 [[I21:%.*]], ptr [[I3]], align 8, !tbaa [[INT_TBAA5]]
+; CHECK-NEXT:    store i32 [[I21_1:%.*]], ptr [[I5_I_I_1]], align 4, !tbaa [[INT_TBAA5]]
+; CHECK-NEXT:    [[DOTPRE:%.*]] = load i64, ptr [[I3]], align 8, !tbaa [[CHAR_TBAA9:![0-9]+]]
 ; CHECK-NEXT:    br label %[[BB12]]
 ; CHECK:       [[BB12]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ [[I3_SROA_0_0_INSERT_INSERT]], %[[BB12_LOOPEXIT]] ], [ 180388626456, %[[BB]] ]
-; CHECK-NEXT:    store i64 [[TMP1]], ptr [[ARG1]], align 4, !tbaa [[CHAR_TBAA5:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ [[DOTPRE]], %[[BB12_LOOPEXIT]] ], [ 180388626456, %[[BB]] ]
+; CHECK-NEXT:    store i64 [[TMP1]], ptr [[ARG1]], align 4, !tbaa [[CHAR_TBAA9]]
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[I3]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
-; CHECK:       [[BB13]]:
-; CHECK-NEXT:    [[I3_SROA_8_0:%.*]] = phi i32 [ [[I21_3]], %[[BB13]] ], [ 42, %[[BB]] ]
-; CHECK-NEXT:    [[I3_SROA_0_0:%.*]] = phi i32 [ [[I21_2]], %[[BB13]] ], [ 24, %[[BB]] ]
-; CHECK-NEXT:    [[I4_05:%.*]] = phi i32 [ [[I24_3:%.*]], %[[BB13]] ], [ 0, %[[BB]] ]
-; CHECK-NEXT:    [[I21:%.*]] = mul nsw i32 [[I3_SROA_0_0]], [[I4_05]]
+; CHECK:       [[BB14]]:
+; CHECK-NEXT:    [[I3_SROA_8_0:%.*]] = phi i32 [ [[I5_I_I_1_PROMOTED]], %[[BB13]] ], [ [[I21_1]], %[[BB14]] ]
+; CHECK-NEXT:    [[I3_SROA_0_0:%.*]] = phi i32 [ [[I3_PROMOTED]], %[[BB13]] ], [ [[I21]], %[[BB14]] ]
+; CHECK-NEXT:    [[I4_05:%.*]] = phi i32 [ 0, %[[BB13]] ], [ [[I24_3:%.*]], %[[BB14]] ]
+; CHECK-NEXT:    [[I21]] = mul nsw i32 [[I3_SROA_0_0]], [[I4_05]]
 ; CHECK-NEXT:    [[I24:%.*]] = or disjoint i32 [[I4_05]], 1
-; CHECK-NEXT:    [[I21_1:%.*]] = mul nsw i32 [[I3_SROA_8_0]], [[I24]]
-; CHECK-NEXT:    [[I24_1:%.*]] = or disjoint i32 [[I4_05]], 2
-; CHECK-NEXT:    [[I21_2]] = mul nsw i32 [[I21]], [[I24_1]]
-; CHECK-NEXT:    [[I24_2:%.*]] = or disjoint i32 [[I4_05]], 3
-; CHECK-NEXT:    [[I21_3]] = mul nsw i32 [[I21_1]], [[I24_2]]
-; CHECK-NEXT:    [[I24_3]] = add nuw nsw i32 [[I4_05]], 4
+; CHECK-NEXT:    [[I21_1]] = mul nsw i32 [[I3_SROA_8_0]], [[I24]]
+; CHECK-NEXT:    [[I24_3]] = add nuw nsw i32 [[I4_05]], 2
 ; CHECK-NEXT:    [[I11_NOT_3:%.*]] = icmp eq i32 [[I24_3]], [[I10]]
-; CHECK-NEXT:    br i1 [[I11_NOT_3]], label %[[BB12_LOOPEXIT]], label %[[BB13]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK-NEXT:    br i1 [[I11_NOT_3]], label %[[BB12_LOOPEXIT]], label %[[BB14]], !llvm.loop [[LOOP10:![0-9]+]]
 ;
 bb:
   %i = alloca i32, align 4
@@ -168,10 +172,11 @@ attributes #3 = { nounwind }
 !15 = !{!16, !16, i64 0}
 !16 = !{!"long", !7, i64 0}
 ;.
-; CHECK: [[CHAR_TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
-; CHECK: [[META6]] = !{!"omnipotent char", [[META7:![0-9]+]], i64 0}
-; CHECK: [[META7]] = !{!"Simple C++ TBAA"}
-; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META9:![0-9]+]], [[META10:![0-9]+]]}
-; CHECK: [[META9]] = !{!"llvm.loop.mustprogress"}
-; CHECK: [[META10]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[INT_TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
+; CHECK: [[META6]] = !{!"int", [[META7:![0-9]+]], i64 0}
+; CHECK: [[META7]] = !{!"omnipotent char", [[META8:![0-9]+]], i64 0}
+; CHECK: [[META8]] = !{!"Simple C++ TBAA"}
+; CHECK: [[CHAR_TBAA9]] = !{[[META7]], [[META7]], i64 0}
+; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META11:![0-9]+]]}
+; CHECK: [[META11]] = !{!"llvm.loop.mustprogress"}
 ;.

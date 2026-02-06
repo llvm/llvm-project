@@ -42,7 +42,8 @@ define void @loop_or(ptr noalias %pIn, ptr noalias %pOut, i32 %s) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw <4 x i32> [[TMP3]], splat (i32 65793)
 ; CHECK-NEXT:    [[TMP6:%.*]] = or disjoint <4 x i32> [[TMP4]], splat (i32 -16777216)
 ; CHECK-NEXT:    [[TMP7:%.*]] = or disjoint <4 x i32> [[TMP5]], splat (i32 -16777216)
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i32, ptr [[POUT:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shl nuw nsw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[POUT:%.*]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i64 16
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP7]], ptr [[TMP9]], align 4
@@ -62,7 +63,8 @@ define void @loop_or(ptr noalias %pIn, ptr noalias %pOut, i32 %s) {
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP11]] to i32
 ; CHECK-NEXT:    [[OR2:%.*]] = mul nuw nsw i32 [[CONV]], 65793
 ; CHECK-NEXT:    [[OR3:%.*]] = or disjoint i32 [[OR2]], -16777216
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i32, ptr [[POUT]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[INDVARS_IV]], 2
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[POUT]], i64 [[TMP13]]
 ; CHECK-NEXT:    store i32 [[OR3]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
