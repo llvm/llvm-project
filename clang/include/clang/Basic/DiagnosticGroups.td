@@ -547,10 +547,18 @@ def LifetimeSafetyDanglingFieldStrict : DiagGroup<"lifetime-safety-dangling-fiel
   }];
 }
 
+
+def LifetimeSafetyInvalidation : DiagGroup<"lifetime-safety-invalidation"> {
+  code Documentation = [{
+    Warning to detect invalidation of references.
+  }];
+}
+
 def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
                                          [LifetimeSafetyDanglingField]>;
 def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
-                                    [LifetimeSafetyDanglingFieldStrict]>;
+                                    [LifetimeSafetyDanglingFieldStrict,
+                                    LifetimeSafetyInvalidation]>;
 
 def LifetimeSafety : DiagGroup<"lifetime-safety",
                                [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
