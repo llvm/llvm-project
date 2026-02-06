@@ -3347,27 +3347,22 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     }
   }
 
-  // srem -> (and/urem) for inbounds+nuw GEP ---
-  if (Indices.size() == 1 && GEP.isInBounds() &&
-      GEP.getNoWrapFlags().hasNoUnsignedWrap()) {
-    Value *X = nullptr;
-    Value *Y = nullptr;
+  // srem -> (and/urem) for inbounds+nuw GEP
+  if (Indices.size() == 1 && GEP.isInBounds() && GEP.hasNoUnsignedWrap()) {
+    Value *X, *Y;
 
     // Match: idx = srem X, Y -- where Y is a power-of-two value.
-    if (match(Indices[0], m_SRem(m_Value(X), m_Value(Y)))) {
-      if (isKnownToBeAPowerOfTwo(Y, false, &GEP)) {
+    if (match(Indices[0], m_OneUse(m_SRem(m_Value(X), m_Value(Y))))) {
+      if (isKnownToBeAPowerOfTwo(Y, /*OrZero=*/true, &GEP)) {
         // If GEP is inbounds+nuw, the offset cannot be negative
         // -> srem by power-of-two can be treated as urem,
         // and urem by power-of-two folds to 'and' later.
+        // OrZero=true is fine here because division by zero is UB.
         Instruction *OldIdxI = dyn_cast<Instruction>(Indices[0]);
         Value *NewIdx = Builder.CreateURem(X, Y, OldIdxI->getName());
 
-        auto *NewGEP = GetElementPtrInst::Create(
-            GEPEltType, PtrOp, {NewIdx}, GEP.getNoWrapFlags(), GEP.getName(),
-            GEP.getIterator());
-        NewGEP->setDebugLoc(GEP.getDebugLoc());
-
-        return replaceInstUsesWith(GEP, NewGEP);
+        return GetElementPtrInst::Create(GEPEltType, PtrOp, {NewIdx},
+                                         GEP.getNoWrapFlags(), GEP.getName());
       }
     }
   }

@@ -49,23 +49,6 @@ define ptr @pos_not_i8(ptr %foo, i64 %x) {
   ret ptr %p
 }
 
-declare void @use(i8)
-
-define ptr @pos_multi_use(ptr %foo, i64 %x) {
-; CHECK-LABEL: define ptr @pos_multi_use(
-; CHECK-SAME: ptr [[FOO:%.*]], i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[IDX:%.*]] = srem i64 [[X]], 4
-; CHECK-NEXT:    call void @use(i64 [[IDX]])
-; CHECK-NEXT:    [[IDX1:%.*]] = and i64 [[X]], 3
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[FOO]], i64 [[IDX1]]
-; CHECK-NEXT:    ret ptr [[P2]]
-;
-  %idx = srem i64 %x, 4
-  call void @use(i64 %idx)
-  %p = getelementptr inbounds nuw i8, ptr %foo, i64 %idx
-  ret ptr %p
-}
-
 ; srem x, 1 is always 0, and mask is 0. GEP should be folded to %foo.
 define ptr @pos_pow2_1(ptr %foo, i64 %x) {
 ; CHECK-LABEL: define ptr @pos_pow2_1(
@@ -124,6 +107,22 @@ define ptr @neg_nonconst_divisor(ptr %foo, i64 %x, i64 %d) {
 ; CHECK-NEXT:    ret ptr [[P]]
 ;
   %idx = srem i64 %x, %d
+  %p = getelementptr inbounds nuw i8, ptr %foo, i64 %idx
+  ret ptr %p
+}
+
+declare void @use(i8)
+
+define ptr @neg_multi_use(ptr %foo, i64 %x) {
+; CHECK-LABEL: define ptr @neg_multi_use(
+; CHECK-SAME: ptr [[FOO:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:    [[IDX:%.*]] = srem i64 [[X]], 4
+; CHECK-NEXT:    call void @use(i64 [[IDX]])
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds nuw i8, ptr [[FOO]], i64 [[IDX]]
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  %idx = srem i64 %x, 4
+  call void @use(i64 %idx)
   %p = getelementptr inbounds nuw i8, ptr %foo, i64 %idx
   ret ptr %p
 }
