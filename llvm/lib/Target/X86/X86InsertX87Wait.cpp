@@ -92,7 +92,7 @@ static bool isX87NonWaitingControlInstruction(MachineInstr &MI) {
   }
 }
 
-bool X86InsertX87WaitLegacy::runOnMachineFunction(MachineFunction &MF) {
+static bool insertWaitInstruction(MachineFunction &MF) {
   if (!MF.getFunction().hasFnAttribute(Attribute::StrictFP))
     return false;
 
@@ -128,7 +128,13 @@ bool X86InsertX87WaitLegacy::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-PreservedAnalyses X86InsertX87WaitPass::run(MachineFunction &MF,
-                                        MachineFunctionAnalysisManager &MFAM) {
+bool X86InsertX87WaitLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return insertWaitInstruction(MF);
 }
 
+PreservedAnalyses
+X86InsertX87WaitPass::run(MachineFunction &MF, MachineFunctionAnalysisManager &) {
+  return insertWaitInstruction(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                         .preserveSet<CFGAnalyses>()
+                                   : PreservedAnalyses::all();
+}
