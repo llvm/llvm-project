@@ -6055,8 +6055,6 @@ static SDValue optimizeBrk(SDNode *N, SelectionDAG &DAG) {
 
   SDValue Pg = Upper->getOperand(0);
   SDValue Mask = Upper->getOperand(1);
-  assert(Pg.getValueType() == Mask.getValueType() &&
-         "predicate types must match");
 
   // brk{a,b} only support .b forms, so cast to make sure all our p regs match.
   Pg = getSVEPredicateBitCast(MVT::nxv16i1, Pg, DAG);
