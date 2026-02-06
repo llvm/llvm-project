@@ -130,14 +130,14 @@ ArrayRef<GFXVersion> getGFXVersions();
 namespace WMMAMods {
 // These should match enum values in SIDefines.h
 
-inline constexpr const char *const ModMatrixFmt[] = {
+constexpr const char *const ModMatrixFmt[] = {
     "MATRIX_FMT_FP8", "MATRIX_FMT_BF8", "MATRIX_FMT_FP6", "MATRIX_FMT_BF6",
     "MATRIX_FMT_FP4"};
 
-inline constexpr const char *const ModMatrixScale[] = {"MATRIX_SCALE_ROW0",
+constexpr const char *const ModMatrixScale[] = {"MATRIX_SCALE_ROW0",
                                                        "MATRIX_SCALE_ROW1"};
 
-inline constexpr const char *const ModMatrixScaleFmt[] = {
+constexpr const char *const ModMatrixScaleFmt[] = {
     "MATRIX_SCALE_FMT_E8", "MATRIX_SCALE_FMT_E5M3", "MATRIX_SCALE_FMT_E4M3"};
 } // namespace WMMAMods
 
