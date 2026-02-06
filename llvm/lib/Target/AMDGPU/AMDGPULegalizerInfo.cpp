@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -1188,6 +1189,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
        .scalarize(0)
        .lower();
 
+  // clang-format off
+  auto &FPToISat = getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
+    .legalFor({{S32, S32}, {S32, S64}})
+    .narrowScalarFor({{S64, S16}}, changeTo(0, S32));
+  FPToISat.minScalar(1, S32);
+  FPToISat.minScalar(0, S32)
+       .widenScalarToNextPow2(0, 32)
+       .scalarize(0)
+       .lower();
+  // clang-format on
+
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
       .clampScalar(0, S16, S64)
       .scalarize(0)
@@ -1358,12 +1370,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0)
       .widenScalarToNextPow2(0, 32)
       .widenScalarToNextPow2(1, 32);
-
-  getActionDefinitionsBuilder(G_CTLS)
-      .legalFor({{S32, S32}})
-      .clampScalar(0, S32, S32)
-      .clampScalar(1, S32, S32)
-      .scalarize(0);
 
   // S64 is only legal on SALU, and needs to be broken into 32-bit elements in
   // RegBankSelect.
@@ -2768,7 +2774,8 @@ bool AMDGPULegalizerInfo::legalizeITOFP(
     auto X = B.buildXor(S32, Unmerge.getReg(0), Unmerge.getReg(1));
     auto OppositeSign = B.buildAShr(S32, X, ThirtyOne);
     auto MaxShAmt = B.buildAdd(S32, ThirtyTwo, OppositeSign);
-    auto LS = B.buildCTLS(S32, Unmerge.getReg(1));
+    auto LS = B.buildIntrinsic(Intrinsic::amdgcn_sffbh, {S32})
+                  .addUse(Unmerge.getReg(1));
     auto LS2 = B.buildSub(S32, LS, One);
     ShAmt = B.buildUMin(S32, LS2, MaxShAmt);
   } else
@@ -7753,6 +7760,24 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   // Replace the use G_BRCOND with the exec manipulate and branch pseudos.
   auto IntrID = cast<GIntrinsic>(MI).getIntrinsicID();
   switch (IntrID) {
+  case Intrinsic::sponentry:
+    if (B.getMF().getInfo<SIMachineFunctionInfo>()->isBottomOfStack()) {
+      // FIXME: The imported pattern checks for i32 instead of p5; if we fix
+      // that we can remove this cast.
+      const LLT S32 = LLT::scalar(32);
+      Register TmpReg = MRI.createGenericVirtualRegister(S32);
+      B.buildInstr(AMDGPU::G_AMDGPU_SPONENTRY).addDef(TmpReg);
+
+      Register DstReg = MI.getOperand(0).getReg();
+      B.buildIntToPtr(DstReg, TmpReg);
+      MI.eraseFromParent();
+    } else {
+      int FI = B.getMF().getFrameInfo().CreateFixedObject(
+          1, 0, /*IsImmutable=*/false);
+      B.buildFrameIndex(MI.getOperand(0), FI);
+      MI.eraseFromParent();
+    }
+    return true;
   case Intrinsic::amdgcn_if:
   case Intrinsic::amdgcn_else: {
     MachineInstr *Br = nullptr;
