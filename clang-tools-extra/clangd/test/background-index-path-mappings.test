@@ -1,0 +1,87 @@
+# Use a copy of inputs, as we'll mutate it (as will the background index).
+# RUN: rm -rf %/t
+# RUN: cp -r %/S/Inputs/background-index %/t
+# Need to embed the correct temp path in the actual JSON-RPC requests.
+# RUN: sed -e "s|DIRECTORY|%/t|" %/t/definition.jsonrpc.tmpl > %/t/definition.jsonrpc.1
+# RUN: sed -e "s|DIRECTORY|%/t|" %/t/compile_commands.json.tmpl > %/t/compile_commands.json
+# On Windows, we need the URI in didOpen to look like "uri":"file:///C:/..."
+# (with the extra slash in the front), so we add it here
+# RUN: sed -E -e 's|"file://([A-Z]):/|"file:///\1:/|g' %/t/definition.jsonrpc.1 > %/t/definition.jsonrpc
+
+# Create the background index files with path mappings
+# RUN: clangd -background-index --background-index-path-mappings=%/t=/MAPPED_ROOT -lit-test < %/t/definition.jsonrpc | FileCheck %/t/definition.jsonrpc
+
+###############################################################################
+# 1. Validate shard filenames use the mapped path (not actual path) for hashing
+###############################################################################
+
+# The hash of "file:///MAPPED_ROOT/foo.cpp" is deterministic
+# RUN: ls %/t/.cache/clangd/index/foo.cpp.*.idx | FileCheck --check-prefix=MAPPED-HASH %s
+# MAPPED-HASH: foo.cpp.BE43CE222BC6EF16.idx
+
+###############################################################################
+# 2. Validate shard on-disk contents contain mapped paths, not actual paths
+###############################################################################
+
+# Copy the index file to a known location so we can pass it to dexp
+# RUN: cp %/t/.cache/clangd/index/foo.cpp.*.idx %/t/foo.cpp.idx
+
+# Export the shard to YAML format to validate its contents
+# RUN: dexp %/t/foo.cpp.idx -c "export %/t/foo.yaml -format=yaml"
+
+# RUN: FileCheck --check-prefix=SHARD-CONTENT %s < %/t/foo.yaml
+
+# Verify that the symbol 'foo' has URIs with /MAPPED_ROOT prefix
+# SHARD-CONTENT: --- !Symbol
+# SHARD-CONTENT: Name:{{.*}}foo
+# SHARD-CONTENT: CanonicalDeclaration:
+# SHARD-CONTENT:   FileURI:{{.*}}/MAPPED_ROOT/sub_dir/foo.h
+# SHARD-CONTENT: Definition:
+# SHARD-CONTENT:   FileURI:{{.*}}/MAPPED_ROOT/foo.cpp
+
+# Verify that IncludeHeaders also uses the mapped path
+# SHARD-CONTENT: IncludeHeaders:
+# SHARD-CONTENT:   - Header:{{.*}}/MAPPED_ROOT/sub_dir/foo.h
+
+# Verify that Refs use the mapped path
+# SHARD-CONTENT: --- !Refs
+# SHARD-CONTENT: References:
+# SHARD-CONTENT:   FileURI:{{.*}}/MAPPED_ROOT/foo.cpp
+
+# Verify that Sources use the mapped path
+# SHARD-CONTENT: --- !Source
+# SHARD-CONTENT: URI:{{.*}}/MAPPED_ROOT/
+
+# Verify that the Cmd section keeps original paths (not mapped), since compile
+# commands are machine-specific
+# SHARD-CONTENT: --- !Cmd
+# SHARD-CONTENT: Directory:
+# SHARD-CONTENT-NOT: MAPPED_ROOT
+
+###############################################################################
+# 3. Validate loading shards reverses the path mapping to the local path
+###############################################################################
+
+# Create "Client B" directory with a different path but same source content
+# RUN: rm -rf %/t2
+# RUN: mkdir -p %/t2
+# RUN: cp -r %/S/Inputs/background-index/* %/t2/
+
+# Copy "Client A" index data to "Client B" cache directory
+# RUN: mkdir -p %/t2/.cache/clangd/index
+# RUN: cp %/t/.cache/clangd/index/*.idx %/t2/.cache/clangd/index/
+# RUN: mkdir -p %/t2/sub_dir/.cache/clangd/index
+# RUN: cp %/t/sub_dir/.cache/clangd/index/*.idx %/t2/sub_dir/.cache/clangd/index/
+
+# Set up "Client B" compile_commands.json and request file
+# RUN: sed -e "s|DIRECTORY|%/t2|" %/S/Inputs/background-index/compile_commands.json.tmpl > %/t2/compile_commands.json
+# RUN: sed -e "s|DIRECTORY|%/t2|" %/S/Inputs/background-index/definition.jsonrpc.tmpl > %/t2/definition.jsonrpc.1
+# RUN: sed -E -e 's|"file://([A-Z]):/|"file:///\1:/|g' %/t2/definition.jsonrpc.1 > %/t2/definition.jsonrpc
+
+# clangd should load "Client A" shards, mapping data to "Client B" local paths.
+# Verify both that go-to-definition works (in definition.jsonrpc) and that the
+# returned URI points to a "Client B" path.
+# RUN: clangd -background-index --background-index-path-mappings=%/t2=/MAPPED_ROOT -lit-test < %/t2/definition.jsonrpc > %/t2/clangd-output.json
+# RUN: FileCheck %/t2/definition.jsonrpc < %/t2/clangd-output.json
+# RUN: FileCheck --check-prefix=ROUNDTRIP %s -DDIR=%/t2 < %/t2/clangd-output.json
+# ROUNDTRIP: "uri": "file://[[DIR]]/foo.cpp"
