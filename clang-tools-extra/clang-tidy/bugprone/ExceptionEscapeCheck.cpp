@@ -42,20 +42,13 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
       CheckDestructors(Options.get("CheckDestructors", true)),
       CheckMoveMemberFunctions(Options.get("CheckMoveMemberFunctions", true)),
       CheckMain(Options.get("CheckMain", true)),
-      CheckNothrowFunctions(Options.get("CheckNothrowFunctions", true)) {
-  llvm::SmallVector<StringRef, 8> FunctionsThatShouldNotThrowVec,
-      IgnoredExceptionsVec, CheckedSwapFunctionsVec;
-  RawFunctionsThatShouldNotThrow.split(FunctionsThatShouldNotThrowVec, ",", -1,
-                                       false);
-  FunctionsThatShouldNotThrow.insert_range(FunctionsThatShouldNotThrowVec);
-
-  RawCheckedSwapFunctions.split(CheckedSwapFunctionsVec, ",", -1, false);
-  CheckedSwapFunctions.insert_range(CheckedSwapFunctionsVec);
-
-  llvm::StringSet<> IgnoredExceptions;
-  RawIgnoredExceptions.split(IgnoredExceptionsVec, ",", -1, false);
-  IgnoredExceptions.insert_range(IgnoredExceptionsVec);
-  Tracer.ignoreExceptions(std::move(IgnoredExceptions));
+      CheckNothrowFunctions(Options.get("CheckNothrowFunctions", true)),
+      FunctionsThatShouldNotThrow(
+          llvm::from_range, llvm::split(RawFunctionsThatShouldNotThrow, ',')),
+      CheckedSwapFunctions(llvm::from_range,
+                           llvm::split(RawCheckedSwapFunctions, ',')) {
+  Tracer.ignoreExceptions(
+      {llvm::from_range, llvm::split(RawIgnoredExceptions, ',')});
   Tracer.ignoreBadAlloc(true);
 }
 

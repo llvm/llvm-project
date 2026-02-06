@@ -102,9 +102,7 @@ template <int Indirections> void RunTest(StringRef Snippet) {
     )";
 
   std::string Code = (CommonCode + Snippet).str();
-
-  llvm::SmallVector<StringRef, 1> Parts;
-  StringRef(Code).split(Parts, "/*const*/");
+  llvm::SmallVector<StringRef, 1> Parts(llvm::split(Code, "/*const*/"));
 
   EXPECT_EQ(Code,
             runCheckOnCode<ConstReferenceDeclRefExprsTransform<Indirections>>(
