@@ -53,6 +53,32 @@ define <2 x float> @fma_shufflevector_non_coalescable(
   ret <2 x float> %res
 }
 
+define <2 x float> @fma_mixed_extract_and_scalar(
+; CHECK-LABEL: fma_mixed_extract_and_scalar(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<12>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [fma_mixed_extract_and_scalar_param_0];
+; CHECK-NEXT:    ld.shared.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    ld.param.b32 %r5, [fma_mixed_extract_and_scalar_param_1];
+; CHECK-NEXT:    ld.param.v2.b32 {%r6, %r7}, [fma_mixed_extract_and_scalar_param_2];
+; CHECK-NEXT:    ld.param.v2.b32 {%r8, %r9}, [fma_mixed_extract_and_scalar_param_3];
+; CHECK-NEXT:    fma.rn.f32 %r10, %r7, %r5, %r9;
+; CHECK-NEXT:    fma.rn.f32 %r11, %r6, %r3, %r8;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r11, %r10};
+; CHECK-NEXT:    ret;
+    ptr addrspace(3) %p, float %s, <2 x float> %a, <2 x float> %c) {
+  %ld  = load <4 x float>, ptr addrspace(3) %p, align 16
+  %e2  = extractelement <4 x float> %ld, i32 2
+  %bv0 = insertelement <2 x float> poison, float %e2, i32 0
+  %bv  = insertelement <2 x float> %bv0,  float %s,  i32 1
+  %mul = fmul <2 x float> %a, %bv
+  %res = fadd <2 x float> %mul, %c
+  ret <2 x float> %res
+}
+
 define <2 x float> @fadd_non_coalescable(
 ; CHECK-LABEL: fadd_non_coalescable(
 ; CHECK:       {

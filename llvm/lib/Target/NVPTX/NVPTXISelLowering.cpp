@@ -6146,17 +6146,23 @@ static bool isNonCoalescableBuildVector(SDValue BV) {
   SDValue Elt0 = BV.getOperand(0);
   SDValue Elt1 = BV.getOperand(1);
 
-  // Both elements must be EXTRACT_VECTOR_ELT. If they are free-standing
-  // scalars the register allocator can still place them into the same pair.
-  if (Elt0.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
-      Elt1.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+  bool IsExt0 = Elt0.getOpcode() == ISD::EXTRACT_VECTOR_ELT;
+  bool IsExt1 = Elt1.getOpcode() == ISD::EXTRACT_VECTOR_ELT;
+
+  // If neither element is an EXTRACT_VECTOR_ELT they are free-standing
+  // scalars and the register allocator can still place them side-by-side.
+  if (!IsExt0 && !IsExt1)
     return false;
 
-  SDValue Src0 = Elt0.getOperand(0);
-  SDValue Src1 = Elt1.getOperand(0);
+  // If exactly one element is an EXTRACT_VECTOR_ELT, the other is a scalar
+  // that cannot generally occupy the adjacent register slot.
+  if (IsExt0 != IsExt1)
+    return true;
 
   // At this point both sources are extracting from vectors. If they are from
   // different vectors, then the BUILD_VECTOR is non-coalescable.
+  SDValue Src0 = Elt0.getOperand(0);
+  SDValue Src1 = Elt1.getOperand(0);
   if (Src0 != Src1)
     return true;
 
