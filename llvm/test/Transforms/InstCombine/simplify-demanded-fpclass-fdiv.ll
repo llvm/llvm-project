@@ -2300,7 +2300,8 @@ define nofpclass(snan) half @qnan_result_demands_snan_src_lhs(i1 %cond, half %un
 ; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_src_lhs(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
-; CHECK-NEXT:    [[MUL:%.*]] = fdiv half [[UNKNOWN0]], [[UNKNOWN1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fdiv half [[SELECT]], [[UNKNOWN1]]
 ; CHECK-NEXT:    ret half [[MUL]]
 ;
   %snan = call half @returns_snan()
@@ -2313,7 +2314,8 @@ define nofpclass(snan) half @qnan_result_demands_snan_src_rhs(i1 %cond, half %un
 ; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_src_rhs(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
-; CHECK-NEXT:    [[MUL:%.*]] = fdiv half [[UNKNOWN1]], [[UNKNOWN0]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fdiv half [[UNKNOWN1]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[MUL]]
 ;
   %snan = call half @returns_snan()
@@ -2322,17 +2324,17 @@ define nofpclass(snan) half @qnan_result_demands_snan_src_rhs(i1 %cond, half %un
   ret half %div
 }
 
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #1 = { "denormal-fp-math"="dynamic,dynamic" }
-attributes #2 = { "denormal-fp-math"="ieee,preserve-sign" }
-attributes #3 = { "denormal-fp-math"="ieee,dynamic" }
+attributes #0 = { denormal_fpenv(preservesign) }
+attributes #1 = { denormal_fpenv(dynamic) }
+attributes #2 = { denormal_fpenv(ieee|preservesign) }
+attributes #3 = { denormal_fpenv(ieee|dynamic) }
 
 !0 = !{!"function_entry_count", i64 1000}
 ;.
-; CHECK: attributes #[[ATTR0]] = { "denormal-fp-math"="ieee,preserve-sign" }
-; CHECK: attributes #[[ATTR1]] = { "denormal-fp-math"="preserve-sign,preserve-sign" }
-; CHECK: attributes #[[ATTR2]] = { "denormal-fp-math"="dynamic,dynamic" }
-; CHECK: attributes #[[ATTR3]] = { "denormal-fp-math"="ieee,dynamic" }
+; CHECK: attributes #[[ATTR0]] = { denormal_fpenv(ieee|preservesign) }
+; CHECK: attributes #[[ATTR1]] = { denormal_fpenv(preservesign) }
+; CHECK: attributes #[[ATTR2]] = { denormal_fpenv(dynamic) }
+; CHECK: attributes #[[ATTR3]] = { denormal_fpenv(ieee|dynamic) }
 ; CHECK: attributes #[[ATTR4:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i64 1000}

@@ -140,6 +140,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-argument-comment
+  <clang-tidy/checks/bugprone/argument-comment>` to also check for C++11
+  inherited constructors.
+
 - Improved :doc:`bugprone-macro-parentheses
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
@@ -153,6 +157,12 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/use-after-move>` check by including the name of
   the invalidating function in the warning message when a custom invalidation
   function is used (via the `InvalidationFunctions` option).
+
+- Improved :doc:`cppcoreguidelines-pro-type-vararg
+  <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer
+  warning on builtins with custom type checking (e.g., type-generic builtins
+  like ``__builtin_clzg``) that use variadic declarations as an implementation
+  detail.
 
 - Improved :doc:`llvm-use-ranges
   <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following

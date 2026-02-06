@@ -80,7 +80,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $h0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG 0, $h0, %subreg.hsub
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG $h0, %subreg.hsub
   ; CHECK-NEXT:   %copy:gpr32all = COPY [[SUBREG_TO_REG]]
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY %copy
   ; CHECK-NEXT:   TBNZW [[COPY]], 3, %bb.1
@@ -117,7 +117,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %copy:gpr32 = COPY $w0
   ; CHECK-NEXT:   [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %copy, 0
-  ; CHECK-NEXT:   %zext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
+  ; CHECK-NEXT:   %zext:gpr64 = SUBREG_TO_REG [[ORRWrs]], %subreg.sub_32
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32all = COPY %zext.sub_32
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
   ; CHECK-NEXT:   TBNZW [[COPY1]], 3, %bb.1

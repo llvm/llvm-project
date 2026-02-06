@@ -92,13 +92,19 @@ public:
 
   // Builtin types methods
   BuiltinTypeDeclBuilder &addLoadMethods();
+  BuiltinTypeDeclBuilder &addByteAddressBufferLoadMethods();
+  BuiltinTypeDeclBuilder &addByteAddressBufferStoreMethods();
   BuiltinTypeDeclBuilder &addSampleMethods(ResourceDimension Dim);
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();
   BuiltinTypeDeclBuilder &addDecrementCounterMethod();
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
-                                                  bool IsConst, bool IsRef);
-  BuiltinTypeDeclBuilder &addLoadWithStatusFunction(DeclarationName &Name,
-                                                    bool IsConst);
+                                                  bool IsConst, bool IsRef,
+                                                  QualType ElemTy = QualType());
+  BuiltinTypeDeclBuilder &
+  addLoadWithStatusFunction(DeclarationName &Name, bool IsConst,
+                            QualType ReturnTy = QualType());
+  BuiltinTypeDeclBuilder &addStoreFunction(DeclarationName &Name, bool IsConst,
+                                           QualType ValueType);
   BuiltinTypeDeclBuilder &addAppendMethod();
   BuiltinTypeDeclBuilder &addConsumeMethod();
 

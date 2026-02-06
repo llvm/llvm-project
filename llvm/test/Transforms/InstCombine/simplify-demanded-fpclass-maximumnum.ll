@@ -2108,7 +2108,7 @@ define nofpclass(snan) float @nsz_fold_negative_or_zero__positive_or_zero_0__mul
 ; CHECK-NEXT:    [[MUST_BE_POSITIVE_OR_ZERO:%.*]] = call float @returns_positive_or_zero()
 ; CHECK-NEXT:    [[RESULT:%.*]] = call nsz float @llvm.maximumnum.f32(float [[MUST_BE_NEGATIVE_OR_ZERO]], float [[MUST_BE_POSITIVE_OR_ZERO]])
 ; CHECK-NEXT:    store float [[RESULT]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[MUST_BE_POSITIVE_OR_ZERO]]
+; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %must.be.negative.or.zero = call float @returns_negative_or_zero()
   %must.be.positive.or.zero = call float @returns_positive_or_zero()
@@ -2124,7 +2124,7 @@ define nofpclass(snan) float @nsz_fold_negative_or_zero__positive_or_zero_1__mul
 ; CHECK-NEXT:    [[MUST_BE_POSITIVE_OR_ZERO:%.*]] = call float @returns_positive_or_zero()
 ; CHECK-NEXT:    [[RESULT:%.*]] = call nsz float @llvm.maximumnum.f32(float [[MUST_BE_POSITIVE_OR_ZERO]], float [[MUST_BE_NEGATIVE_OR_ZERO]])
 ; CHECK-NEXT:    store float [[RESULT]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[MUST_BE_POSITIVE_OR_ZERO]]
+; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %must.be.negative.or.zero = call float @returns_negative_or_zero()
   %must.be.positive.or.zero = call float @returns_positive_or_zero()
@@ -2195,5 +2195,5 @@ define nofpclass(snan) float @qnan_result_demands_snan_rhs(i1 %cond, float %unkn
 
 !0 = !{}
 
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #1 = { "denormal-fp-math"="dynamic,dynamic" }
+attributes #0 = { denormal_fpenv(preservesign) }
+attributes #1 = { denormal_fpenv(dynamic) }

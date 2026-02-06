@@ -29,6 +29,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/InferAlloc.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/ParentMapContext.h"
@@ -129,9 +130,7 @@ RawAddress CodeGenFunction::MaybeCastStackAddressSpace(RawAddress Alloca,
     // builder.
     if (!ArraySize)
       Builder.SetInsertPoint(getPostAllocaInsertPoint());
-    V = getTargetHooks().performAddrSpaceCast(
-        *this, V, getASTAllocaAddressSpace(), Builder.getPtrTy(DestAddrSpace),
-        /*IsNonNull=*/true);
+    V = performAddrSpaceCast(V, Builder.getPtrTy(DestAddrSpace));
   }
 
   return RawAddress(V, Alloca.getElementType(), Alloca.getAlignment(),
@@ -181,9 +180,10 @@ RawAddress CodeGenFunction::CreateDefaultAlignTempAlloca(llvm::Type *Ty,
   return CreateTempAlloca(Ty, Align, Name);
 }
 
-RawAddress CodeGenFunction::CreateIRTemp(QualType Ty, const Twine &Name) {
+RawAddress CodeGenFunction::CreateIRTempWithoutCast(QualType Ty,
+                                                    const Twine &Name) {
   CharUnits Align = getContext().getTypeAlignInChars(Ty);
-  return CreateTempAlloca(ConvertType(Ty), Align, Name);
+  return CreateTempAllocaWithoutCast(ConvertType(Ty), Align, Name, nullptr);
 }
 
 RawAddress CodeGenFunction::CreateMemTemp(QualType Ty, const Twine &Name,
@@ -200,8 +200,14 @@ RawAddress CodeGenFunction::CreateMemTemp(QualType Ty, CharUnits Align,
 
   if (Ty->isConstantMatrixType()) {
     auto *ArrayTy = cast<llvm::ArrayType>(Result.getElementType());
-    auto *VectorTy = llvm::FixedVectorType::get(ArrayTy->getElementType(),
-                                                ArrayTy->getNumElements());
+    auto *ArrayElementTy = ArrayTy->getElementType();
+    auto ArrayElements = ArrayTy->getNumElements();
+    if (getContext().getLangOpts().HLSL) {
+      auto *VectorTy = cast<llvm::FixedVectorType>(ArrayElementTy);
+      ArrayElementTy = VectorTy->getElementType();
+      ArrayElements *= VectorTy->getNumElements();
+    }
+    auto *VectorTy = llvm::FixedVectorType::get(ArrayElementTy, ArrayElements);
 
     Result = Address(Result.getPointer(), VectorTy, Result.getAlignment(),
                      KnownNonNull);
@@ -459,7 +465,6 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
                                            const MaterializeTemporaryExpr *M,
                                            const Expr *Inner,
                                            RawAddress *Alloca = nullptr) {
-  auto &TCG = CGF.getTargetHooks();
   switch (M->getStorageDuration()) {
   case SD_FullExpression:
   case SD_Automatic: {
@@ -482,11 +487,10 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
         GV->setAlignment(alignment.getAsAlign());
         llvm::Constant *C = GV;
         if (AS != LangAS::Default)
-          C = TCG.performAddrSpaceCast(
-              CGF.CGM, GV, AS,
-              llvm::PointerType::get(
-                  CGF.getLLVMContext(),
-                  CGF.getContext().getTargetAddressSpace(LangAS::Default)));
+          C = CGF.CGM.performAddrSpaceCast(
+              GV, llvm::PointerType::get(
+                      CGF.getLLVMContext(),
+                      CGF.getContext().getTargetAddressSpace(LangAS::Default)));
         // FIXME: Should we put the new global into a COMDAT?
         return RawAddress(C, GV->getValueType(), alignment);
       }
@@ -1828,6 +1832,8 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitArraySectionExpr(cast<ArraySectionExpr>(E));
   case Expr::ExtVectorElementExprClass:
     return EmitExtVectorElementExpr(cast<ExtVectorElementExpr>(E));
+  case Expr::MatrixElementExprClass:
+    return EmitMatrixElementExpr(cast<MatrixElementExpr>(E));
   case Expr::CXXThisExprClass:
     return MakeAddrLValue(LoadCXXThisAddress(), E->getType());
   case Expr::MemberExprClass:
@@ -2279,8 +2285,14 @@ static RawAddress MaybeConvertMatrixAddress(RawAddress Addr,
                                             bool IsVector = true) {
   auto *ArrayTy = dyn_cast<llvm::ArrayType>(Addr.getElementType());
   if (ArrayTy && IsVector) {
-    auto *VectorTy = llvm::FixedVectorType::get(ArrayTy->getElementType(),
-                                                ArrayTy->getNumElements());
+    auto ArrayElements = ArrayTy->getNumElements();
+    auto *ArrayElementTy = ArrayTy->getElementType();
+    if (CGF.getContext().getLangOpts().HLSL) {
+      auto *VectorTy = cast<llvm::FixedVectorType>(ArrayElementTy);
+      ArrayElementTy = VectorTy->getElementType();
+      ArrayElements *= VectorTy->getNumElements();
+    }
+    auto *VectorTy = llvm::FixedVectorType::get(ArrayElementTy, ArrayElements);
 
     return Addr.withElementType(VectorTy);
   }
@@ -2294,6 +2306,49 @@ static RawAddress MaybeConvertMatrixAddress(RawAddress Addr,
   }
 
   return Addr;
+}
+
+LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
+  LValue Base;
+  if (E->getBase()->isGLValue())
+    Base = EmitLValue(E->getBase());
+  else {
+    assert(E->getBase()->getType()->isConstantMatrixType() &&
+           "Result must be a Constant Matrix");
+    llvm::Value *Mat = EmitScalarExpr(E->getBase());
+    Address MatMem = CreateMemTemp(E->getBase()->getType());
+    QualType Ty = E->getBase()->getType();
+    llvm::Type *LTy = convertTypeForLoadStore(Ty, Mat->getType());
+    if (LTy->getScalarSizeInBits() > Mat->getType()->getScalarSizeInBits())
+      Mat = Builder.CreateZExt(Mat, LTy);
+    Builder.CreateStore(Mat, MatMem);
+    Base = MakeAddrLValue(MatMem, Ty, AlignmentSource::Decl);
+  }
+  QualType ResultType =
+      E->getType().withCVRQualifiers(Base.getQuals().getCVRQualifiers());
+
+  // Encode the element access list into a vector of unsigned indices.
+  SmallVector<uint32_t, 4> Indices;
+  E->getEncodedElementAccess(Indices);
+
+  if (Base.isSimple()) {
+    llvm::Constant *CV =
+        llvm::ConstantDataVector::get(getLLVMContext(), Indices);
+    return LValue::MakeExtVectorElt(
+        MaybeConvertMatrixAddress(Base.getAddress(), *this), CV, ResultType,
+        Base.getBaseInfo(), TBAAAccessInfo());
+  }
+  assert(Base.isExtVectorElt() && "Can only subscript lvalue vec elts here!");
+
+  llvm::Constant *BaseElts = Base.getExtVectorElts();
+  SmallVector<llvm::Constant *, 4> CElts;
+
+  for (unsigned Index : Indices)
+    CElts.push_back(BaseElts->getAggregateElement(Index));
+  llvm::Constant *CV = llvm::ConstantVector::get(CElts);
+  return LValue::MakeExtVectorElt(
+      MaybeConvertMatrixAddress(Base.getExtVectorAddress(), *this), CV,
+      ResultType, Base.getBaseInfo(), TBAAAccessInfo());
 }
 
 // Emit a store of a matrix LValue. This may require casting the original
@@ -3659,14 +3714,14 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
                           AlignmentSource::Decl);
 
   if (const auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
-    auto ATPO = CGM.GetAddrOfTemplateParamObject(TPO);
+    ConstantAddress ATPO = CGM.GetAddrOfTemplateParamObject(TPO);
     auto AS = getLangASFromTargetAS(ATPO.getAddressSpace());
 
     if (AS != T.getAddressSpace()) {
       auto TargetAS = getContext().getTargetAddressSpace(T.getAddressSpace());
-      auto PtrTy = llvm::PointerType::get(CGM.getLLVMContext(), TargetAS);
-      auto ASC = getTargetHooks().performAddrSpaceCast(CGM, ATPO.getPointer(),
-                                                       AS, PtrTy);
+      llvm::Type *PtrTy =
+          llvm::PointerType::get(CGM.getLLVMContext(), TargetAS);
+      llvm::Constant *ASC = CGM.performAddrSpaceCast(ATPO.getPointer(), PtrTy);
       ATPO = ConstantAddress(ASC, ATPO.getElementType(), ATPO.getAlignment());
     }
 
@@ -6117,9 +6172,8 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_AddressSpaceConversion: {
     LValue LV = EmitLValue(E->getSubExpr());
     QualType DestTy = getContext().getPointerType(E->getType());
-    llvm::Value *V = getTargetHooks().performAddrSpaceCast(
-        *this, LV.getPointer(*this),
-        E->getSubExpr()->getType().getAddressSpace(), ConvertType(DestTy));
+    llvm::Value *V =
+        performAddrSpaceCast(LV.getPointer(*this), ConvertType(DestTy));
     return MakeAddrLValue(Address(V, ConvertTypeForMem(E->getType()),
                                   LV.getAddress().getAlignment()),
                           E->getType(), LV.getBaseInfo(), LV.getTBAAInfo());
@@ -6156,7 +6210,7 @@ CodeGenFunction::EmitHLSLOutArgLValues(const HLSLOutArgExpr *E, QualType Ty) {
   OpaqueValueMappingData::bind(*this, E->getOpaqueArgLValue(), BaseLV);
 
   QualType ExprTy = E->getType();
-  Address OutTemp = CreateIRTemp(ExprTy);
+  Address OutTemp = CreateIRTempWithoutCast(ExprTy);
   LValue TempLV = MakeAddrLValue(OutTemp, ExprTy);
 
   if (E->isInOut())
@@ -6979,14 +7033,15 @@ void CodeGenFunction::SetFPAccuracy(llvm::Value *Val, float Accuracy) {
 
 void CodeGenFunction::SetSqrtFPAccuracy(llvm::Value *Val) {
   llvm::Type *EltTy = Val->getType()->getScalarType();
-  if (!EltTy->isFloatTy())
+  if (!EltTy->isFloatTy() && !EltTy->isHalfTy())
     return;
 
   if ((getLangOpts().OpenCL &&
        !CGM.getCodeGenOpts().OpenCLCorrectlyRoundedDivSqrt) ||
       (getLangOpts().HIP && getLangOpts().CUDAIsDevice &&
        !CGM.getCodeGenOpts().HIPCorrectlyRoundedDivSqrt)) {
-    // OpenCL v1.1 s7.4: minimum accuracy of single precision / is 3ulp
+    // OpenCL v1.1 s7.4: minimum accuracy of single precision sqrt is 3 ulp.
+    // OpenCL v3.0 s7.4: minimum accuracy of half precision sqrt is 1.5 ulp.
     //
     // OpenCL v1.2 s5.6.4.2: The -cl-fp32-correctly-rounded-divide-sqrt
     // build option allows an application to specify that single precision
@@ -6994,20 +7049,21 @@ void CodeGenFunction::SetSqrtFPAccuracy(llvm::Value *Val) {
     // source are correctly rounded.
     //
     // TODO: CUDA has a prec-sqrt flag
-    SetFPAccuracy(Val, 3.0f);
+    SetFPAccuracy(Val, EltTy->isFloatTy() ? 3.0f : 1.5f);
   }
 }
 
 void CodeGenFunction::SetDivFPAccuracy(llvm::Value *Val) {
   llvm::Type *EltTy = Val->getType()->getScalarType();
-  if (!EltTy->isFloatTy())
+  if (!EltTy->isFloatTy() && !EltTy->isHalfTy())
     return;
 
   if ((getLangOpts().OpenCL &&
        !CGM.getCodeGenOpts().OpenCLCorrectlyRoundedDivSqrt) ||
       (getLangOpts().HIP && getLangOpts().CUDAIsDevice &&
        !CGM.getCodeGenOpts().HIPCorrectlyRoundedDivSqrt)) {
-    // OpenCL v1.1 s7.4: minimum accuracy of single precision / is 2.5ulp
+    // OpenCL v1.1 s7.4: minimum accuracy of single precision / is 2.5 ulp.
+    // OpenCL v3.0 s7.4: minimum accuracy of half precision / is 1 ulp.
     //
     // OpenCL v1.2 s5.6.4.2: The -cl-fp32-correctly-rounded-divide-sqrt
     // build option allows an application to specify that single precision
@@ -7015,7 +7071,7 @@ void CodeGenFunction::SetDivFPAccuracy(llvm::Value *Val) {
     // source are correctly rounded.
     //
     // TODO: CUDA has a prec-div flag
-    SetFPAccuracy(Val, 2.5f);
+    SetFPAccuracy(Val, EltTy->isFloatTy() ? 2.5f : 1.f);
   }
 }
 

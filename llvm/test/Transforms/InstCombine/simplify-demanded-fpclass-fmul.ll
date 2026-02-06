@@ -1407,7 +1407,8 @@ define nofpclass(snan) float @qnan_result_square_demands_snan(i1 noundef %cond, 
 ; CHECK-LABEL: define nofpclass(snan) float @qnan_result_square_demands_snan(
 ; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN0:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call noundef float @returns_snan()
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN0]], [[UNKNOWN0]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %snan = call noundef float @returns_snan()
@@ -1420,7 +1421,8 @@ define nofpclass(snan) float @qnan_result_demands_snan_lhs(i1 %cond, float %unkn
 ; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_lhs(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN0]], [[UNKNOWN1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SELECT]], [[UNKNOWN1]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %snan = call float @returns_snan()
@@ -1433,7 +1435,8 @@ define nofpclass(snan) float @qnan_result_demands_snan_rhs(i1 %cond, float %unkn
 ; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_rhs(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
-; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN1]], [[UNKNOWN0]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN1]], [[SELECT]]
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %snan = call float @returns_snan()
@@ -1442,5 +1445,5 @@ define nofpclass(snan) float @qnan_result_demands_snan_rhs(i1 %cond, float %unkn
   ret float %mul
 }
 
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #1 = { "denormal-fp-math"="dynamic,dynamic" }
+attributes #0 = { denormal_fpenv(preservesign) }
+attributes #1 = { denormal_fpenv(dynamic) }
