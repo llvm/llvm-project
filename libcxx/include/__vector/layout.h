@@ -238,6 +238,8 @@ public:
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _Tp const& back() const _NOEXCEPT;
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __end_ptr() _NOEXCEPT;
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __end_ptr() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __capacity_ptr() _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __capacity_ptr() const _NOEXCEPT;
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __invariants() const _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_boundary(size_type __size) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_boundary(pointer __end) _NOEXCEPT;
@@ -298,6 +300,18 @@ template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::const_pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() const _NOEXCEPT {
   return __begin_ + __boundary_;
+}
+
+template <class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
+__vector_layout<_Tp, _Alloc>::__capacity_ptr() _NOEXCEPT {
+  return __begin_ + __capacity_;
+}
+
+template <class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::const_pointer
+__vector_layout<_Tp, _Alloc>::__capacity_ptr() const _NOEXCEPT {
+  return __begin_ + __capacity_;
 }
 
 template <class _Tp, class _Alloc>
@@ -370,6 +384,18 @@ template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::const_pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() const _NOEXCEPT {
   return __boundary_;
+}
+
+template <class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
+__vector_layout<_Tp, _Alloc>::__capacity_ptr() _NOEXCEPT {
+  return __capacity_;
+}
+
+template <class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::const_pointer
+__vector_layout<_Tp, _Alloc>::__capacity_ptr() const _NOEXCEPT {
+  return __capacity_;
 }
 
 template <class _Tp, class _Alloc>
