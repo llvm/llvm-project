@@ -182,6 +182,8 @@ multiclass MadFmaMixFP32Pats<SDPatternOperator fma_like,
                              ValueType VT = f16> {
   defvar VOP3PMadMixModsPat = !if (!eq(VT, bf16), VOP3PMadMixBF16Mods, VOP3PMadMixMods);
   defvar VOP3PMadMixModsExtPat = !if (!eq(VT, bf16), VOP3PMadMixBF16ModsExt, VOP3PMadMixModsExt);
+  defvar OneImm = !if (!eq(VT, bf16), CONST.BF16_ONE, CONST.FP16_ONE);
+  defvar NegOneImm = !if (!eq(VT, bf16), CONST.BF16_NEG_ONE, CONST.FP16_NEG_ONE);
   // At least one of the operands needs to be an fpextend of an f16
   // for this to be worthwhile, so we need three patterns here.
   // TODO: Could we use a predicate to inspect src1/2/3 instead?
@@ -202,6 +204,35 @@ multiclass MadFmaMixFP32Pats<SDPatternOperator fma_like,
                    (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_mods)),
                    (f32 (VOP3PMadMixModsExtPat VT:$src2, i32:$src2_mods)))),
     (mix_inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
+              DSTCLAMP.NONE)>;
+
+  // (fadd x, y) -> (fma x, 1.0, y)
+  def : GCNPat <
+    (f32 (fadd (f32 (VOP3PMadMixModsExtPat VT:$src0, i32:$src0_mods)),
+               (f32 (VOP3PMadMixModsPat  f32:$src1, i32:$src1_mods)))),
+    (mix_inst $src0_mods, $src0, (i32 8), (i32 OneImm), $src1_mods, $src1,
+              DSTCLAMP.NONE)>;
+
+  // (fmul x, y) -> (fma x, y, 0.0)
+  // FIXME: This is only valid with nsz.
+  def : GCNPat <
+    (f32 (fmul (f32 (VOP3PMadMixModsExtPat VT:$src0, i32:$src0_mods)),
+               (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_mods)))),
+    (mix_inst $src0_mods, $src0, $src1_mods, $src1, (i32 0), (i32 0),
+              DSTCLAMP.NONE)>;
+
+  // (fsub x, y) -> (fma y, -1.0, x)
+  def : GCNPat <
+    (f32 (fsub (f32 (VOP3PMadMixModsExtPat VT:$src0, i32:$src0_mods)),
+               (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_mods)))),
+    (mix_inst $src1_mods, $src1, (i32 8), (i32 NegOneImm), $src0_mods, $src0,
+              DSTCLAMP.NONE)>;
+
+  // (fsub x, y) -> (fma y, -1.0, x)
+  def : GCNPat <
+    (f32 (fsub (f32 (VOP3PMadMixModsPat f32:$src0, i32:$src0_mods)),
+               (f32 (VOP3PMadMixModsExtPat VT:$src1, i32:$src1_mods)))),
+    (mix_inst $src1_mods, $src1, (i32 8), (i32 NegOneImm), $src0_mods, $src0,
               DSTCLAMP.NONE)>;
 }
 

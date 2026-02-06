@@ -1360,15 +1360,44 @@ TEST_F(TestTypeSystemClang, TestIsRealFloatingPointType) {
   EXPECT_FALSE(
       m_ast->GetType(ast.getVectorType(ast.FloatTy, 1, VectorKind::Generic))
           .IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.HalfTy).IsRealFloatingPointType());
   EXPECT_TRUE(m_ast->GetType(ast.FloatTy).IsRealFloatingPointType());
   EXPECT_TRUE(m_ast->GetType(ast.DoubleTy).IsRealFloatingPointType());
   EXPECT_TRUE(m_ast->GetType(ast.LongDoubleTy).IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.Float128Ty).IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.BFloat16Ty).IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.Ibm128Ty).IsRealFloatingPointType());
+}
 
-  // FIXME: these should be true
-  EXPECT_FALSE(m_ast->GetType(ast.HalfTy).IsRealFloatingPointType());
-  EXPECT_FALSE(m_ast->GetType(ast.Float128Ty).IsRealFloatingPointType());
-  EXPECT_FALSE(m_ast->GetType(ast.BFloat16Ty).IsRealFloatingPointType());
-  EXPECT_FALSE(m_ast->GetType(ast.Ibm128Ty).IsRealFloatingPointType());
+TEST_F(TestTypeSystemClang, TestIsFloatingPointType) {
+  // Tests CompilerType::IsFloatingPointType
+
+  const ASTContext &ast = m_ast->getASTContext();
+
+  // Vectors of floats
+  EXPECT_FALSE(
+      m_ast->GetType(ast.getVectorType(ast.FloatTy, 1, VectorKind::Generic))
+          .IsFloatingPointType());
+  EXPECT_FALSE(
+      m_ast->GetType(ast.getVectorType(ast.DoubleTy, 1, VectorKind::Generic))
+          .IsFloatingPointType());
+
+  // Complex floats
+  EXPECT_TRUE(
+      m_ast->GetType(ast.getComplexType(ast.FloatTy)).IsFloatingPointType());
+  EXPECT_TRUE(
+      m_ast->GetType(ast.getComplexType(ast.DoubleTy)).IsFloatingPointType());
+  EXPECT_FALSE(
+      m_ast->GetType(ast.getComplexType(ast.IntTy)).IsFloatingPointType());
+
+  // Builtin floats
+  EXPECT_TRUE(m_ast->GetType(ast.HalfTy).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.FloatTy).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.DoubleTy).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.LongDoubleTy).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.Float128Ty).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.BFloat16Ty).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.Ibm128Ty).IsFloatingPointType());
 }
 
 TEST_F(TestTypeSystemClang, TestGetIsComplexType) {

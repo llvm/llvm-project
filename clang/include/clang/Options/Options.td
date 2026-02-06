@@ -3986,9 +3986,13 @@ def fno_openmp_assume_threads_oversubscription : Flag<["-"], "fno-openmp-assume-
 def fopenmp_assume_no_thread_state : Flag<["-"], "fopenmp-assume-no-thread-state">,
   HelpText<"Assert no thread in a parallel region modifies an ICV">,
   MarshallingInfoFlag<LangOpts<"OpenMPNoThreadState">>;
+def fno_openmp_assume_no_thread_state : Flag<["-"], "fno-openmp-assume-no-thread-state">,
+  HelpText<"Assert that a thread in a parallel region may modify an ICV">;
 def fopenmp_assume_no_nested_parallelism : Flag<["-"], "fopenmp-assume-no-nested-parallelism">,
   HelpText<"Assert no nested parallel regions in the GPU">,
   MarshallingInfoFlag<LangOpts<"OpenMPNoNestedParallelism">>;
+def fno_openmp_assume_no_nested_parallelism : Flag<["-"], "fno-openmp-assume-no-nested-parallelism">,
+  HelpText<"Assert that a nested parallel region may be used in the GPU">;
 
 } // let Group = f_Group
 } // let Visibility = [ClangOption, CC1Option, FC1Option]
@@ -4012,6 +4016,13 @@ def fopenmp_target_new_runtime : Flag<["-"], "fopenmp-target-new-runtime">,
   Group<f_Group>, Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fno_openmp_target_new_runtime : Flag<["-"], "fno-openmp-target-new-runtime">,
   Group<f_Group>, Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
+def fopenmp_target_fast : Flag<["-"], "fopenmp-target-fast">,
+  Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,
+  Visibility<[ClangOption]>,
+  HelpText<"Assert common GPU usage patterns to enable OpenMP runtime optimizations">;
+def fno_openmp_target_fast : Flag<["-"], "fno-openmp-target-fast">,
+  Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,
+  Visibility<[ClangOption]>;
 defm openmp_optimistic_collapse : BoolFOption<"openmp-optimistic-collapse",
   LangOpts<"OpenMPOptimisticCollapse">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option]>,

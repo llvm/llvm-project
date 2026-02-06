@@ -1523,7 +1523,6 @@ td_library(
     deps = [":OpBaseTdFiles"],
 )
 
-
 td_library(
     name = "LoopLikeInterfaceTdFiles",
     srcs = ["include/mlir/Interfaces/LoopLikeInterface.td"],
@@ -3962,6 +3961,7 @@ cc_library(
         ":ArithUtils",
         ":ControlFlowInterfaces",
         ":DialectUtils",
+        ":FuncDialect",
         ":FunctionInterfaces",
         ":GPUDialect",
         ":GPUUtils",
@@ -3982,6 +3982,7 @@ cc_library(
         ":XeGPUPassIncGen",
         ":XeGPUUtils",
         ":XeGPUuArch",
+        ":XeVMDialect",
         "//llvm:Support",
     ],
 )
@@ -4659,7 +4660,6 @@ cc_library(
         "//llvm:Support",
     ],
 )
-
 
 cc_library(
     name = "MemorySlotInterfaces",
@@ -8061,7 +8061,6 @@ gentbl_cc_library(
     td_file = "include/mlir/Interfaces/LoopLikeInterface.td",
     deps = [":LoopLikeInterfaceTdFiles"],
 )
-
 
 gentbl_cc_library(
     name = "MemorySlotInterfacesIncGen",
@@ -13759,6 +13758,7 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/MPI/IR/*.h"]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":BytecodeOpInterface",
         ":DLTIDialect",
         ":IR",

@@ -476,7 +476,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                          "hlsl.AddUint64");
     return Result;
   }
-  case Builtin::BI__builtin_hlsl_resource_getpointer: {
+  case Builtin::BI__builtin_hlsl_resource_getpointer:
+  case Builtin::BI__builtin_hlsl_resource_getpointer_typed: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *IndexOp = EmitScalarExpr(E->getArg(1));
 
@@ -524,7 +525,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getSampleClampIntrinsic(), Args);
   }
-  case Builtin::BI__builtin_hlsl_resource_load_with_status: {
+  case Builtin::BI__builtin_hlsl_resource_load_with_status:
+  case Builtin::BI__builtin_hlsl_resource_load_with_status_typed: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *IndexOp = EmitScalarExpr(E->getArg(1));
 
@@ -550,8 +552,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Args.push_back(HandleOp);
     Args.push_back(IndexOp);
 
-    if (RT->getAttrs().RawBuffer) {
+    if (RT->isRaw()) {
       Value *Offset = Builder.getInt32(0);
+      // The offset parameter needs to be poison for ByteAddressBuffer
+      if (!RT->isStructured())
+        Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
       Args.push_back(Offset);
     }
 

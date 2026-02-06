@@ -705,6 +705,7 @@ public:
 private:
   struct ExactFlagsTy {
     char IsExact : 1;
+    ExactFlagsTy(bool Exact) : IsExact(Exact) {}
   };
   struct FastMathFlagsTy {
     char AllowReassoc : 1;
@@ -815,6 +816,9 @@ public:
 
   VPIRFlags(NonNegFlagsTy NonNegFlags)
       : OpType(OperationType::NonNegOp), NonNegFlags(NonNegFlags) {}
+
+  VPIRFlags(ExactFlagsTy ExactFlags)
+      : OpType(OperationType::PossiblyExactOp), ExactFlags(ExactFlags) {}
 
   VPIRFlags(GEPNoWrapFlags GEPFlags)
       : OpType(OperationType::GEPOp), GEPFlags(GEPFlags) {}
@@ -1015,9 +1019,17 @@ private:
   }
 
 public:
+  /// Returns default flags for \p Opcode for opcodes that support it, asserts
+  /// otherwise. Opcodes not supporting default flags include compares and
+  /// ComputeReductionResult.
+  static VPIRFlags getDefaultFlags(unsigned Opcode);
+
 #if !defined(NDEBUG)
   /// Returns true if the set flags are valid for \p Opcode.
   LLVM_ABI_FOR_TEST bool flagsValidForOpcode(unsigned Opcode) const;
+
+  /// Returns true if \p Opcode has its required flags set.
+  LLVM_ABI_FOR_TEST bool hasRequiredFlagsForOpcode(unsigned Opcode) const;
 #endif
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1250,7 +1262,12 @@ public:
 
     /// Returns the value for vscale.
     VScale,
-    OpsEnd = VScale,
+    /// Compute the exiting value of a wide induction after vectorization, that
+    /// is the value of the last lane of the induction increment (i.e. its
+    /// backedge value). Takes the wide induction recipe and the original
+    /// backedge value as operands.
+    ExitingIVValue,
+    OpsEnd = ExitingIVValue,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
@@ -1700,6 +1717,8 @@ public:
         VPIRMetadata(Metadata), Opcode(Opcode), ResultTy(ResultTy) {
     assert(flagsValidForOpcode(Opcode) &&
            "Set flags not supported for the provided opcode");
+    assert(hasRequiredFlagsForOpcode(Opcode) &&
+           "Opcode requires specific flags to be set");
     setUnderlyingValue(CI);
   }
 
@@ -2534,7 +2553,7 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
 
   ReductionStyle Style;
 
-  /// The phi is part of a multi-use reduction (e.g., used in FindLastIV
+  /// The phi is part of a multi-use reduction (e.g., used in FindIV
   /// patterns for argmin/argmax).
   /// TODO: Also support cases where the phi itself has a single use, but its
   /// compare has multiple uses.
