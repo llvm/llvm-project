@@ -2475,16 +2475,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // if the switch input value does not match *any* of the cases (matching any
   // of the cases requires an exact, fully initialized match).
   //
-  //     ShadowAgg =   (ShadowVal != 0)
-  //                 & (  propagateEqualityComparison(Val, 0)
-  //                    | propagateEqualityComparison(Val, 1)
-  //                    | propagateEqualityComparison(Val, 2))
+  //     ShadowCases =   0
+  //                   | propagateEqualityComparison(Val, 0)
+  //                   | propagateEqualityComparison(Val, 1)
+  //                   | propagateEqualityComparison(Val, 2))
   void visitSwitchInst(SwitchInst &SI) {
     IRBuilder<> IRB(&SI);
 
     Value *Val = SI.getCondition();
     Value *ShadowVal = getShadow(Val);
-    Value *ShadowAgg = IRB.CreateICmpNE(ShadowVal, getCleanShadow(Val));
 
     Value *ShadowCases = nullptr;
     for (auto Case : SI.cases()) {
@@ -2498,9 +2497,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         ShadowCases = ComparisonShadow;
     }
 
-    ShadowAgg = IRB.CreateAnd(ShadowAgg, ShadowCases);
+    if (!ShadowCases)
+      ShadowCases = IRB.getInt1(false);
 
-    insertCheckShadow(ShadowAgg, getOrigin(Val), &SI);
+    insertCheckShadow(ShadowCases, getOrigin(Val), &SI);
   }
 
   // Vector manipulation.
