@@ -136,7 +136,7 @@ add_subdirectory(src)
 add_subdirectory(tools)
 
 if(LLVM_INCLUDE_TESTS)
-  add_subdirectory(test_e2e)
+  add_subdirectory(test)
 endif()
 
 add_custom_target(libsycl-toolchain ALL

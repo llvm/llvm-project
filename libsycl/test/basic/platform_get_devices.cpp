@@ -1,3 +1,4 @@
+// REQUIRES: any-device
 // RUN: %clangxx %sycl_options %s -o %t.out
 // RUN: %t.out
 //

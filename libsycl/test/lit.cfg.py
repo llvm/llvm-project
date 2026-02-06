@@ -176,14 +176,6 @@ with test_env():
         devices.add("{}:{}".format(backend, device))
     libsycl_devices = list(devices)
 
-if len(libsycl_devices) == 0:
-    lit_config.error("No sycl devices available.")
-
-if len(libsycl_devices) > 1:
-    lit_config.note(
-        "Running on multiple devices, XFAIL-marked tests will be skipped on corresponding devices."
-    )
-
 available_devices = {
     "level_zero": "gpu",
 }
@@ -193,6 +185,9 @@ for d in libsycl_devices:
         lit_config.error("Unsupported device {}".format(d))
     if dev not in available_devices[be]:
         lit_config.error("Unsupported device {}".format(d))
+
+if len(libsycl_devices) > 0:
+    config.available_features.add("any-device")
 
 for sycl_device in libsycl_devices:
     be, dev = sycl_device.split(":")

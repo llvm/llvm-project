@@ -6,10 +6,10 @@ import site
 site.addsitedir("@CMAKE_CURRENT_SOURCE_DIR@")
 
 config.libsycl_compiler = lit_config.params.get("libsycl_compiler", "@LIBSYCL_CXX_COMPILER@")
-config.libsycl_root_dir= os.path.dirname(os.path.dirname(config.libsycl_compiler))
-config.libsycl_bin_dir = os.path.join(config.libsycl_root_dir, 'bin')
+config.libsycl_bin_dir  = os.path.dirname(config.libsycl_compiler)
+config.libsycl_root_dir = os.path.dirname(config.libsycl_bin_dir)
 
-config.cxx_flags = lit_config.params.get("cxx_flags", "@LIBSYCL_E2E_CLANG_CXX_FLAGS@")
+config.cxx_flags = lit_config.params.get("cxx_flags", "@LIBSYCL_TEST_CLANG_CXX_FLAGS@")
 
 config.extra_environment = lit_config.params.get("extra_environment", "@LIT_EXTRA_ENVIRONMENT@")
 config.extra_system_environment = lit_config.params.get("extra_system_environment", "@LIT_EXTRA_SYSTEM_ENVIRONMENT@")
