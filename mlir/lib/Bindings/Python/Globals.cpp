@@ -89,8 +89,7 @@ void PyGlobals::registerAttributeBuilder(const std::string &attributeKind,
     throw std::runtime_error(
         nanobind::detail::join("Attribute builder for '", attributeKind,
                                "' is already registered with func: ",
-                               nb::cast<std::string>(nb::str(found)))
-            .c_str());
+                               nb::cast<std::string>(nb::str(found))));
   }
   found = std::move(pyFunc);
 }
@@ -120,10 +119,8 @@ void PyGlobals::registerDialectImpl(const std::string &dialectNamespace,
   nb::ft_lock_guard lock(mutex);
   nb::object &found = dialectClassMap[dialectNamespace];
   if (found) {
-    throw std::runtime_error(nanobind::detail::join("Dialect namespace '",
-                                                    dialectNamespace,
-                                                    "' is already registered.")
-                                 .c_str());
+    throw std::runtime_error(nanobind::detail::join(
+        "Dialect namespace '", dialectNamespace, "' is already registered."));
   }
   found = std::move(pyClass);
 }
@@ -133,10 +130,8 @@ void PyGlobals::registerOperationImpl(const std::string &operationName,
   nb::ft_lock_guard lock(mutex);
   nb::object &found = operationClassMap[operationName];
   if (found && !replace) {
-    throw std::runtime_error(nanobind::detail::join("Operation '",
-                                                    operationName,
-                                                    "' is already registered.")
-                                 .c_str());
+    throw std::runtime_error(nanobind::detail::join(
+        "Operation '", operationName, "' is already registered."));
   }
   found = std::move(pyClass);
 }
@@ -146,10 +141,8 @@ void PyGlobals::registerOpAdaptorImpl(const std::string &operationName,
   nb::ft_lock_guard lock(mutex);
   nb::object &found = opAdaptorClassMap[operationName];
   if (found && !replace) {
-    throw std::runtime_error(nanobind::detail::join("Operation adaptor of '",
-                                                    operationName,
-                                                    "' is already registered.")
-                                 .c_str());
+    throw std::runtime_error(nanobind::detail::join(
+        "Operation adaptor of '", operationName, "' is already registered."));
   }
   found = std::move(pyClass);
 }
