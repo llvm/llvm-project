@@ -545,6 +545,70 @@ define i32 @test_extract_vector_32_elem1(<2 x i32> %a) {
   ret i32 %extracted
 }
 
+define <4 x i16> @test_insert_vector_16(<4 x i16> %a, i16 %val) {
+; CHECK-LABEL: test_insert_vector_16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a2, 16
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    mvm a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = insertelement <4 x i16> %a, i16 %val, i32 0
+  ret <4 x i16> %res
+}
+
+define <4 x i16> @test_insert_vector_16_elem2(<4 x i16> %a, i16 %val) {
+; CHECK-LABEL: test_insert_vector_16_elem2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 32
+; CHECK-NEXT:    lui a2, 65535
+; CHECK-NEXT:    slli a2, a2, 20
+; CHECK-NEXT:    mvm a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = insertelement <4 x i16> %a, i16 %val, i32 2
+  ret <4 x i16> %res
+}
+
+define <8 x i8> @test_insert_vector_8(<8 x i8> %a, i8 %val) {
+; CHECK-LABEL: test_insert_vector_8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a2, 255
+; CHECK-NEXT:    mvm a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = insertelement <8 x i8> %a, i8 %val, i32 0
+  ret <8 x i8> %res
+}
+
+define <8 x i8> @test_insert_vector_8_elem3(<8 x i8> %a, i8 %val) {
+; CHECK-LABEL: test_insert_vector_8_elem3:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a1, a1, 24
+; CHECK-NEXT:    li a2, 255
+; CHECK-NEXT:    slli a2, a2, 24
+; CHECK-NEXT:    mvm a0, a1, a2
+; CHECK-NEXT:    ret
+  %res = insertelement <8 x i8> %a, i8 %val, i32 3
+  ret <8 x i8> %res
+}
+
+define <2 x i32> @test_insert_vector_32(<2 x i32> %a, i32 %val) {
+; CHECK-LABEL: test_insert_vector_32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srli a0, a0, 32
+; CHECK-NEXT:    pack a0, a1, a0
+; CHECK-NEXT:    ret
+  %res = insertelement <2 x i32> %a, i32 %val, i32 0
+  ret <2 x i32> %res
+}
+
+define <2 x i32> @test_insert_vector_32_elem1(<2 x i32> %a, i32 %val) {
+; CHECK-LABEL: test_insert_vector_32_elem1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pack a0, a0, a1
+; CHECK-NEXT:    ret
+  %res = insertelement <2 x i32> %a, i32 %val, i32 1
+  ret <2 x i32> %res
+}
+
 ; Test basic add/sub operations for v2i32 (RV64 only)
 define <2 x i32> @test_padd_w(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: test_padd_w:
@@ -1941,10 +2005,10 @@ define <4 x i16> @test_select_v4i16(i1 %cond, <4 x i16> %a, <4 x i16> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB155_2
+; CHECK-NEXT:    bnez a3, .LBB161_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB155_2:
+; CHECK-NEXT:  .LBB161_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <4 x i16> %a, <4 x i16> %b
   ret <4 x i16> %res
@@ -1955,10 +2019,10 @@ define <8 x i8> @test_select_v8i8(i1 %cond, <8 x i8> %a, <8 x i8> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB156_2
+; CHECK-NEXT:    bnez a3, .LBB162_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB156_2:
+; CHECK-NEXT:  .LBB162_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <8 x i8> %a, <8 x i8> %b
   ret <8 x i8> %res
@@ -1969,10 +2033,10 @@ define <2 x i32> @test_select_v2i32(i1 %cond, <2 x i32> %a, <2 x i32> %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a0, 1
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    bnez a3, .LBB157_2
+; CHECK-NEXT:    bnez a3, .LBB163_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a2
-; CHECK-NEXT:  .LBB157_2:
+; CHECK-NEXT:  .LBB163_2:
 ; CHECK-NEXT:    ret
   %res = select i1 %cond, <2 x i32> %a, <2 x i32> %b
   ret <2 x i32> %res
