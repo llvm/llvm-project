@@ -807,7 +807,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateLogicalAnd(A, B, Name);
   }
   case VPInstruction::PtrAdd: {
-    assert(vputils::onlyFirstLaneUsed(this) &&
+    assert((State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
            "can only generate first lane for PtrAdd");
     Value *Ptr = State.get(getOperand(0), VPLane(0));
     Value *Addend = State.get(getOperand(1), VPLane(0));
@@ -1353,9 +1353,6 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   switch (getOpcode()) {
   default:
     return false;
-  case VPInstruction::FirstOrderRecurrenceSplice:
-    // If this is for VF=1 then we must only use the first lane.
-    return vputils::onlyFirstLaneUsed(this);
   case Instruction::ExtractElement:
     return Op == getOperand(1);
   case Instruction::PHI:

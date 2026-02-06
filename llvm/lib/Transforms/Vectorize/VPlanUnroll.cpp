@@ -587,6 +587,9 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
 }
 
 void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
   Type *IdxTy = IntegerType::get(
       Plan.getScalarHeader()->getIRBasicBlock()->getContext(), 32);
 

@@ -243,8 +243,9 @@ define void @first_order_recurrence_using_induction(i32 %n, ptr %dst) {
 ; CHECK-LABEL: @first_order_recurrence_using_induction(
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
-; CHECK-NEXT:    [[INDUCTION:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[INDUCTION1:%.*]] = add i32 [[INDUCTION]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[INDEX]] to i32
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add i32 [[TMP3]], 0
+; CHECK-NEXT:    [[INDUCTION1:%.*]] = add i32 [[TMP3]], 1
 ; CHECK-NEXT:    store i32 [[INDUCTION]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], %n.vec
@@ -379,3 +380,58 @@ exit:
   ret void
 }
 
+define void @pr179671(ptr align 8 dereferenceable(120) %p, ptr %a, i32 %b, i1 %flag) {
+; CHECK-LABEL: define void @pr179671(
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi ptr [ %a, %vector.ph ], [ [[NEXT_GEP3:%.*]], %vector.body ]
+; CHECK-NEXT:    [[DOTCAST1:%.*]] = trunc i64 [[INDEX]] to i32
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i32 [[DOTCAST1]], 3
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 %b, [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[OFFSET_IDX]], 3
+; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = mul i64 [[INDEX]], 128
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[OFFSET_IDX2]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[OFFSET_IDX2]], 128
+; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr null, i64 [[TMP15]]
+; CHECK-NEXT:    [[NEXT_GEP3]] = getelementptr i8, ptr null, i64 [[TMP12]]
+; CHECK-NEXT:    store ptr [[VECTOR_RECUR]], ptr [[NEXT_GEP]], align 8
+; CHECK-NEXT:    store ptr [[NEXT_GEP]], ptr [[NEXT_GEP3]], align 8
+; CHECK-NEXT:    store ptr [[NEXT_GEP3]], ptr [[INV_PTR:%.*]], align 8
+; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[TMP11]], 3
+; CHECK-NEXT:    store i32 [[TMP13]], ptr [[INV_PTR2:%.*]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC:%.*]]
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[LOOP_1:.*]], label %vector.body
+entry:
+  br i1 %flag, label %loop.1.ph, label %exit
+
+loop.1.ph:
+  %inv_ptr = getelementptr inbounds nuw i8, ptr %p, i64 24
+  %inv_ptr2 = getelementptr inbounds nuw i8, ptr %p, i64 40
+  br label %loop.1
+
+loop.1:
+  %load23 = phi i32 [ %b, %loop.1.ph ], [ %sadd_val, %loop.5 ]
+  %load12 = phi ptr [ %a, %loop.1.ph ], [ %phi_ptr1, %loop.5 ]
+  %phi_ptr1 = phi ptr [ null, %loop.1.ph ], [ %phi_ptr_next, %loop.5 ]
+  %phi_ptr_next = getelementptr i8, ptr %phi_ptr1, i64 128
+  store ptr %load12, ptr %phi_ptr1, align 8
+  br label %loop.3
+
+loop.3:
+  store ptr %phi_ptr1, ptr %inv_ptr, align 8
+  %sadd_val = add i32 %load23, 3
+  %sadd_ov = icmp eq i32 %sadd_val, 8
+  br i1 %sadd_ov, label %loop.4, label %loop.5
+
+loop.4:
+  store i32 0, ptr %p, align 4
+  ret void
+
+loop.5:
+  store i32 %sadd_val, ptr %inv_ptr2, align 8
+  br label %loop.1
+
+exit:
+  ret void
+}
