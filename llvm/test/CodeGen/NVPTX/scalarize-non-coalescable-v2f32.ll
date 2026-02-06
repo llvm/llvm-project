@@ -103,29 +103,36 @@ define <2 x float> @fsub_non_coalescable(
 }
 
 ; Should remain vectorized
-
-define <2 x float> @fma_adjacent_elements(
+define <4 x float> @fma_adjacent_elements(
 ; CHECK-LABEL: fma_adjacent_elements(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-NEXT:    .reg .b64 %rd<8>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [fma_adjacent_elements_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [fma_adjacent_elements_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd3, [fma_adjacent_elements_param_2];
-; CHECK-NEXT:    ld.shared.b64 %rd4, [%rd1];
-; CHECK-NEXT:    fma.rn.f32x2 %rd5, %rd2, %rd4, %rd3;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd5;
+; CHECK-NEXT:    ld.shared.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    ld.param.b64 %rd4, [fma_adjacent_elements_param_1];
+; CHECK-NEXT:    ld.param.b64 %rd5, [fma_adjacent_elements_param_2];
+; CHECK-NEXT:    fma.rn.f32x2 %rd6, %rd4, %rd2, %rd5;
+; CHECK-NEXT:    fma.rn.f32x2 %rd7, %rd4, %rd3, %rd5;
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd6, %rd7};
 ; CHECK-NEXT:    ret;
     ptr addrspace(3) %p, <2 x float> %a, <2 x float> %c) {
   %ld  = load <4 x float>, ptr addrspace(3) %p, align 16
   %e0  = extractelement <4 x float> %ld, i32 0
   %e1  = extractelement <4 x float> %ld, i32 1
-  %bv0 = insertelement <2 x float> poison, float %e0, i32 0
-  %bv  = insertelement <2 x float> %bv0,  float %e1, i32 1
-  %mul = fmul <2 x float> %a, %bv
-  %res = fadd <2 x float> %mul, %c
-  ret <2 x float> %res
+  %e2  = extractelement <4 x float> %ld, i32 2
+  %e3  = extractelement <4 x float> %ld, i32 3
+  %lo0 = insertelement <2 x float> poison, float %e0, i32 0
+  %lo  = insertelement <2 x float> %lo0,  float %e1, i32 1
+  %hi0 = insertelement <2 x float> poison, float %e2, i32 0
+  %hi  = insertelement <2 x float> %hi0,  float %e3, i32 1
+  %mul_lo = fmul <2 x float> %a, %lo
+  %res_lo = fadd <2 x float> %mul_lo, %c
+  %mul_hi = fmul <2 x float> %a, %hi
+  %res_hi = fadd <2 x float> %mul_hi, %c
+  %out = shufflevector <2 x float> %res_lo, <2 x float> %res_hi, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x float> %out
 }
 
 define <2 x float> @fma_naturally_paired(

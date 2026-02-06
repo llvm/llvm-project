@@ -6137,26 +6137,6 @@ static SDValue PerformADDCombine(SDNode *N,
   return PerformADDCombineWithOperands(N, N1, N0, DCI);
 }
 
-/// PerformFADDCombine - Target-specific dag combine xforms for ISD::FADD.
-///
-static SDValue PerformFADDCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 CodeGenOptLevel OptLevel) {
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
-
-  EVT VT = N0.getValueType();
-  if (VT.isVector() || !(VT == MVT::f32 || VT == MVT::f64))
-    return SDValue();
-
-  // First try with the default operand order.
-  if (SDValue Result = PerformFADDCombineWithOperands(N, N0, N1, DCI, OptLevel))
-    return Result;
-
-  // If that didn't work, try again with the operands commuted.
-  return PerformFADDCombineWithOperands(N, N1, N0, DCI, OptLevel);
-}
-
 /// Check if a v2f32 BUILD_VECTOR provably packs values from non-adjacent
 /// register pairs (non-coalescable).
 static bool isNonCoalescableBuildVector(SDValue BV) {
@@ -6175,20 +6155,19 @@ static bool isNonCoalescableBuildVector(SDValue BV) {
   SDValue Src0 = Elt0.getOperand(0);
   SDValue Src1 = Elt1.getOperand(0);
 
-  // SDValue comparison checks both the node pointer and the result number,
-  // so different results of a multi-output node (e.g. LoadV2 :0 vs :1)
-  // correctly compare as unequal.
+  // At this point both sources are extracting from vectors. If they are from
+  // different vectors, then the BUILD_VECTOR is non-coalescable.
   if (Src0 != Src1)
     return true;
 
-  // Same source vector -- only the identity extraction (0, 1) keeps the
-  // original register pair.  Anything else (swap, splat, ...) needs a repack.
+  // Even adjacent index pairs such as {0, 1} and {2, 3} are coalescable
   auto *Idx0 = dyn_cast<ConstantSDNode>(Elt0.getOperand(1));
   auto *Idx1 = dyn_cast<ConstantSDNode>(Elt1.getOperand(1));
   if (!Idx0 || !Idx1)
     return false;
 
-  return Idx0->getZExtValue() != 0 || Idx1->getZExtValue() != 1;
+  return !((Idx0->getZExtValue() % 2 == 0) &&
+           (Idx0->getZExtValue() + 1 == Idx1->getZExtValue()));
 }
 
 /// Scalarize a v2f32 arithmetic node (FADD, FMUL, FSUB, FMA) when at least
@@ -6222,15 +6201,9 @@ static SDValue PerformScalarizeV2F32Op(SDNode *N,
 
   // Only scalarize when at least one operand is a BUILD_VECTOR whose elements
   // are guaranteed to reside in different register pairs.
-  bool HasNonCoalescable = false;
-  for (const SDValue &Op : N->ops()) {
-    if (isNonCoalescableBuildVector(Op)) {
-      HasNonCoalescable = true;
-      break;
-    }
-  }
-
-  if (!HasNonCoalescable)
+  if (!any_of(N->ops(), [](const SDValue &Op) {
+        return isNonCoalescableBuildVector(Op);
+      }))
     return SDValue();
 
   SelectionDAG &DAG = DCI.DAG;
@@ -6259,6 +6232,29 @@ static SDValue PerformScalarizeV2F32Op(SDNode *N,
   SDValue Res1 = DAG.getNode(Opc, DL, EltVT, Ops1, N->getFlags());
 
   return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Res0, Res1);
+}
+
+/// PerformFADDCombine - Target-specific dag combine xforms for ISD::FADD.
+///
+static SDValue PerformFADDCombine(SDNode *N,
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  CodeGenOptLevel OptLevel) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  if (SDValue Result = PerformScalarizeV2F32Op(N, DCI))
+    return Result;
+
+  EVT VT = N0.getValueType();
+  if (VT.isVector() || !(VT == MVT::f32 || VT == MVT::f64))
+    return SDValue();
+
+  // First try with the default operand order.
+  if (SDValue Result = PerformFADDCombineWithOperands(N, N0, N1, DCI, OptLevel))
+    return Result;
+
+  // If that didn't work, try again with the operands commuted.
+  return PerformFADDCombineWithOperands(N, N1, N0, DCI, OptLevel);
 }
 
 /// Get 3-input version of a 2-input min/max opcode
@@ -7098,9 +7094,7 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::EXTRACT_VECTOR_ELT:
     return PerformEXTRACTCombine(N, DCI);
   case ISD::FADD:
-    if (SDValue V = PerformFADDCombine(N, DCI, OptLevel))
-      return V;
-    return PerformScalarizeV2F32Op(N, DCI);
+    return PerformFADDCombine(N, DCI, OptLevel);
   case ISD::FMA:
   case ISD::FMUL:
   case ISD::FSUB:
