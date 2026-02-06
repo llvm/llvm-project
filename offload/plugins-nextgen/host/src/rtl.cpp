@@ -30,6 +30,8 @@
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 
 #if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) ||           \
     !defined(__ORDER_BIG_ENDIAN__)
@@ -198,37 +200,30 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     GenELF64DeviceImageTy *Image = Plugin.allocate<GenELF64DeviceImageTy>();
     new (Image) GenELF64DeviceImageTy(ImageId, *this, std::move(TgtImage));
 
-    // Create a temporary file.
-    char TmpFileName[] = "/tmp/tmpfile_XXXXXX";
-    int TmpFileFd = mkstemp(TmpFileName);
-    if (TmpFileFd == -1)
-      return Plugin::error(ErrorCode::HOST_IO,
-                           "failed to create tmpfile for loading target image");
-
-    // Open the temporary file.
-    FILE *TmpFile = fdopen(TmpFileFd, "wb");
-    if (!TmpFile)
-      return Plugin::error(ErrorCode::HOST_IO,
-                           "failed to open tmpfile %s for loading target image",
-                           TmpFileName);
+    SmallString<128> TmpFileName;
+    int TmpFileFd;
+    if (auto EC = llvm::sys::fs::createTemporaryFile("tmpfile", "tmp",
+                                                     TmpFileFd, TmpFileName))
+      return Plugin::error(
+          ErrorCode::HOST_IO,
+          "failed to create tmpfile for loading target image: %s",
+          EC.message().c_str());
 
     // Write the image into the temporary file.
-    size_t Written = fwrite(Image->getStart(), Image->getSize(), 1, TmpFile);
-    if (Written != 1)
+    llvm::raw_fd_ostream TmpFile(TmpFileFd, /*shouldClose=*/true);
+    TmpFile.write(static_cast<const char *>(Image->getStart()),
+                  Image->getSize());
+    TmpFile.close();
+
+    if (TmpFile.has_error())
       return Plugin::error(ErrorCode::HOST_IO,
                            "failed to write target image to tmpfile %s",
-                           TmpFileName);
-
-    // Close the temporary file.
-    int Ret = fclose(TmpFile);
-    if (Ret)
-      return Plugin::error(ErrorCode::HOST_IO,
-                           "failed to close tmpfile %s with the target image",
-                           TmpFileName);
+                           TmpFileName.c_str());
 
     // Load the temporary file as a dynamic library.
     std::string ErrMsg;
-    DynamicLibrary DynLib = DynamicLibrary::getLibrary(TmpFileName, &ErrMsg);
+    DynamicLibrary DynLib =
+        DynamicLibrary::getLibrary(TmpFileName.c_str(), &ErrMsg);
 
     // Check if the loaded library is valid.
     if (!DynLib.isValid())
