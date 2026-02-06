@@ -144,7 +144,7 @@ MCPBinderUP Server::Bind(MCPTransport &transport) {
   return binder_up;
 }
 
-llvm::Error Server::Accept(MainLoop &loop, MCPTransportUP transport) {
+llvm::Error Server::Accept(MCPTransportUP transport) {
   MCPBinderUP binder = Bind(*transport);
   MCPTransport *transport_ptr = transport.get();
   binder->OnDisconnect([this, transport_ptr]() {
