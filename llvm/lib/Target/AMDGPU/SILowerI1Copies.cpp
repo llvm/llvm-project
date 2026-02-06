@@ -572,10 +572,9 @@ void PhiLoweringHelper::insertMask(const Incoming &Incoming, Register DstReg) {
   curRegDefPos.value()++;
 
   /// store SCC
-  Register SavedSCC = MRI->createVirtualRegister(
-      ST->getWavefrontSize() == 32 ? &AMDGPU::SReg_32RegClass
-                                   : &AMDGPU::SReg_64RegClass);
-  BuildMI(MBB, curRegDefPos.value(), {}, TII->get(LMC.CSelectOpc), SavedSCC)
+  Register SavedSCC = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+  BuildMI(MBB, curRegDefPos.value(), {}, TII->get(AMDGPU::S_CSELECT_B32),
+        SavedSCC)
       .addImm(1)
       .addImm(0);
 
@@ -583,7 +582,7 @@ void PhiLoweringHelper::insertMask(const Incoming &Incoming, Register DstReg) {
                       DstReg, Incoming.Reg);
 
   /// restore SCC
-  BuildMI(MBB, curRegDefPos.value(), {}, TII->get(LMC.CmpLGOp))
+  BuildMI(MBB, curRegDefPos.value(), {}, TII->get(AMDGPU::S_CMP_LG_U32))
       .addReg(SavedSCC)
       .addImm(0)
       .addReg(AMDGPU::SCC, RegState::ImplicitDefine);
@@ -938,7 +937,7 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg)
         .addReg(PrevMaskedReg);
   } else if (PrevConstant && PrevVal) {
-    BuildMI(MBB, I, DL, TII->get(LMC.OrN2Op), DstReg)
+    BuildMI(MBB, I, DL, TII->get(LMC.OrN2Opc), DstReg)
         .addReg(CurMaskedReg)
         .addReg(LMC.ExecReg);
   } else {
