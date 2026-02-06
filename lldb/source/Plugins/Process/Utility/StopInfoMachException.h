@@ -9,6 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_STOPINFOMACHEXCEPTION_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_STOPINFOMACHEXCEPTION_H
 
+#include <algorithm>
 #include <optional>
 #include <string>
 
@@ -47,6 +48,33 @@ public:
   }
 
   const char *GetDescription() override;
+
+  uint32_t GetStopReasonDataCount() const override {
+    // We return the Exception Type as the first element, then the code and
+    // subcode.  But we don't store any further exception data, so we can't
+    // return more than these three elements regardless of the data count.
+    // Not many exceptions we deal with have more than code & subcode, however
+    // so fixing that isn't urgent.
+    return std::min((uint32_t)3, m_exc_data_count + 1);
+  }
+
+  uint64_t GetStopReasonDataAtIndex(uint32_t idx) override {
+    // FIXME: We really should return all the exception data, but for now we
+    // just cheese out and return only the exception type.
+    if (idx >= GetStopReasonDataCount())
+      return 0;
+
+    switch (idx) {
+    case 0:
+      return GetValue();
+    case 1:
+      return m_exc_code;
+    case 2:
+      return m_exc_subcode;
+    default:
+      return 0;
+    }
+  }
 
   // Returns the fault address, iff this is a EXC_ARM_MTE_TAG_FAULT.
   std::optional<lldb::addr_t> GetTagFaultAddress() const;
