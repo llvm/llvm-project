@@ -142,7 +142,6 @@ export class DebugSessionTracker
     session: vscode.DebugSession,
     message: DebugProtocol.Request,
   ) {
-    this.logger.info(`Received message: ${JSON.stringify(message)}`);
     if (message.command === "configurationDone") {
       const androidComponentTracker =
         AndroidSessionTracker.getFromSession(session);
