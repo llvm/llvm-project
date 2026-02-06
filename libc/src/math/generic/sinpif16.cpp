@@ -18,7 +18,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float16, sinpif16, (float16 x)) {
-  using namespace sincosf16_internal;
+  using namespace math::sincosf16_internal;
   using FPBits = typename fputil::FPBits<float16>;
   FPBits xbits(x);
 

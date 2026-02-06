@@ -282,9 +282,14 @@ Status ProcessElfCore::DoLoadCore() {
               break;
             }
           }
-          if (exe_header_addr.has_value())
-            exe_module_sp = ReadModuleFromMemory(exe_module_spec.GetFileSpec(),
-                                                 *exe_header_addr);
+          if (exe_header_addr) {
+            if (llvm::Expected<lldb::ModuleSP> module_sp_or_err =
+                    ReadModuleFromMemory(exe_module_spec.GetFileSpec(),
+                                         *exe_header_addr))
+              exe_module_sp = *module_sp_or_err;
+            else
+              llvm::consumeError(module_sp_or_err.takeError());
+          }
         }
         if (exe_module_sp)
           GetTarget().SetExecutableModule(exe_module_sp, eLoadDependentsNo);
