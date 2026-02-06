@@ -589,14 +589,14 @@ define i32 @test_sdot_v5i8_double(<5 x i8> %a, <5 x i8> %b, <5 x i8> %c, <5 x i8
 ; CHECK-GI-LABEL: test_sdot_v5i8_double:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    mov b17, v0.b[1]
+; CHECK-GI-NEXT:    mov b16, v0.b[1]
 ; CHECK-GI-NEXT:    fmov w8, s0
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-GI-NEXT:    fmov w11, s1
 ; CHECK-GI-NEXT:    mov b25, v1.b[1]
-; CHECK-GI-NEXT:    mov b16, v1.b[2]
+; CHECK-GI-NEXT:    mov b17, v1.b[2]
 ; CHECK-GI-NEXT:    mov b7, v1.b[3]
 ; CHECK-GI-NEXT:    mov b5, v1.b[4]
 ; CHECK-GI-NEXT:    mov b22, v2.b[1]
@@ -604,7 +604,7 @@ define i32 @test_sdot_v5i8_double(<5 x i8> %a, <5 x i8> %b, <5 x i8> %c, <5 x i8
 ; CHECK-GI-NEXT:    sxtb w9, w8
 ; CHECK-GI-NEXT:    sxtb w11, w11
 ; CHECK-GI-NEXT:    mov b24, v0.b[2]
-; CHECK-GI-NEXT:    fmov w8, s17
+; CHECK-GI-NEXT:    fmov w8, s16
 ; CHECK-GI-NEXT:    mov b6, v0.b[3]
 ; CHECK-GI-NEXT:    mov b4, v0.b[4]
 ; CHECK-GI-NEXT:    fmov s1, w9
@@ -617,7 +617,7 @@ define i32 @test_sdot_v5i8_double(<5 x i8> %a, <5 x i8> %b, <5 x i8> %c, <5 x i8
 ; CHECK-GI-NEXT:    mov b21, v3.b[2]
 ; CHECK-GI-NEXT:    fmov w13, s23
 ; CHECK-GI-NEXT:    mov b20, v3.b[3]
-; CHECK-GI-NEXT:    mov b17, v3.b[4]
+; CHECK-GI-NEXT:    mov b16, v3.b[4]
 ; CHECK-GI-NEXT:    fmov w8, s24
 ; CHECK-GI-NEXT:    sxtb w9, w9
 ; CHECK-GI-NEXT:    sxtb w12, w12
@@ -629,7 +629,7 @@ define i32 @test_sdot_v5i8_double(<5 x i8> %a, <5 x i8> %b, <5 x i8> %c, <5 x i8
 ; CHECK-GI-NEXT:    fmov w11, s3
 ; CHECK-GI-NEXT:    sxtb w10, w10
 ; CHECK-GI-NEXT:    mov v2.h[1], w9
-; CHECK-GI-NEXT:    fmov w9, s16
+; CHECK-GI-NEXT:    fmov w9, s17
 ; CHECK-GI-NEXT:    sxtb w11, w11
 ; CHECK-GI-NEXT:    mov v1.h[2], w8
 ; CHECK-GI-NEXT:    fmov w8, s7
@@ -660,7 +660,7 @@ define i32 @test_sdot_v5i8_double(<5 x i8> %a, <5 x i8> %b, <5 x i8> %c, <5 x i8
 ; CHECK-GI-NEXT:    fmov w9, s0
 ; CHECK-GI-NEXT:    sxtb w11, w11
 ; CHECK-GI-NEXT:    mov v22.h[3], w10
-; CHECK-GI-NEXT:    fmov w10, s17
+; CHECK-GI-NEXT:    fmov w10, s16
 ; CHECK-GI-NEXT:    sxtb w8, w8
 ; CHECK-GI-NEXT:    sxtb w9, w9
 ; CHECK-GI-NEXT:    mov v1.h[4], w11
