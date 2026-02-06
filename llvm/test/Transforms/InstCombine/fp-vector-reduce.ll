@@ -5,30 +5,7 @@ define half @fp16_reduce(<8 x half> %a) {
 ; CHECK-LABEL: define half @fp16_reduce(
 ; CHECK-SAME: <8 x half> [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <8 x half> [[A]], i64 0
-; CHECK-NEXT:    [[CONV:%.*]] = fpext half [[VECEXT]] to float
-; CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <8 x half> [[A]], i64 1
-; CHECK-NEXT:    [[CONV2:%.*]] = fpext half [[VECEXT1]] to float
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[CONV]], [[CONV2]]
-; CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <8 x half> [[A]], i64 2
-; CHECK-NEXT:    [[CONV4:%.*]] = fpext half [[VECEXT3]] to float
-; CHECK-NEXT:    [[ADD5:%.*]] = fadd float [[ADD]], [[CONV4]]
-; CHECK-NEXT:    [[VECEXT6:%.*]] = extractelement <8 x half> [[A]], i64 3
-; CHECK-NEXT:    [[CONV7:%.*]] = fpext half [[VECEXT6]] to float
-; CHECK-NEXT:    [[ADD8:%.*]] = fadd float [[ADD5]], [[CONV7]]
-; CHECK-NEXT:    [[VECEXT9:%.*]] = extractelement <8 x half> [[A]], i64 4
-; CHECK-NEXT:    [[CONV10:%.*]] = fpext half [[VECEXT9]] to float
-; CHECK-NEXT:    [[ADD11:%.*]] = fadd float [[ADD8]], [[CONV10]]
-; CHECK-NEXT:    [[VECEXT12:%.*]] = extractelement <8 x half> [[A]], i64 5
-; CHECK-NEXT:    [[CONV13:%.*]] = fpext half [[VECEXT12]] to float
-; CHECK-NEXT:    [[ADD14:%.*]] = fadd float [[ADD11]], [[CONV13]]
-; CHECK-NEXT:    [[VECEXT15:%.*]] = extractelement <8 x half> [[A]], i64 6
-; CHECK-NEXT:    [[CONV16:%.*]] = fpext half [[VECEXT15]] to float
-; CHECK-NEXT:    [[ADD17:%.*]] = fadd float [[ADD14]], [[CONV16]]
-; CHECK-NEXT:    [[VECEXT18:%.*]] = extractelement <8 x half> [[A]], i64 7
-; CHECK-NEXT:    [[CONV19:%.*]] = fpext half [[VECEXT18]] to float
-; CHECK-NEXT:    [[ADD20:%.*]] = fadd float [[ADD17]], [[CONV19]]
-; CHECK-NEXT:    [[CONV21:%.*]] = fptrunc float [[ADD20]] to half
+; CHECK-NEXT:    [[CONV21:%.*]] = call half @llvm.vector.reduce.fadd.v8f16(half 0xH8000, <8 x half> [[A]])
 ; CHECK-NEXT:    ret half [[CONV21]]
 ;
 entry:
@@ -62,13 +39,7 @@ entry:
 define float @fp32_reduce(<4 x float> %a) {
 ; CHECK-LABEL: define float @fp32_reduce(
 ; CHECK-SAME: <4 x float> [[A:%.*]]) {
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[A]], i64 0
-; CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x float> [[A]], i64 1
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[VECEXT]], [[VECEXT1]]
-; CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <4 x float> [[A]], i64 2
-; CHECK-NEXT:    [[ADD5:%.*]] = fadd float [[ADD]], [[VECEXT3]]
-; CHECK-NEXT:    [[VECEXT6:%.*]] = extractelement <4 x float> [[A]], i64 3
-; CHECK-NEXT:    [[ADD8:%.*]] = fadd float [[ADD5]], [[VECEXT6]]
+; CHECK-NEXT:    [[ADD8:%.*]] = call float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[A]])
 ; CHECK-NEXT:    ret float [[ADD8]]
 ;
   %vecext = extractelement <4 x float> %a, i64 0
@@ -84,9 +55,7 @@ define float @fp32_reduce(<4 x float> %a) {
 define double @float64_reduce(<2 x double> %a) {
 ; CHECK-LABEL: define double @float64_reduce(
 ; CHECK-SAME: <2 x double> [[A:%.*]]) {
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x double> [[A]], i64 0
-; CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <2 x double> [[A]], i64 1
-; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[VECEXT]], [[VECEXT1]]
+; CHECK-NEXT:    [[ADD:%.*]] = call double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[A]])
 ; CHECK-NEXT:    ret double [[ADD]]
 ;
   %vecext = extractelement <2 x double> %a, i64 0
@@ -98,13 +67,7 @@ define double @float64_reduce(<2 x double> %a) {
 define float @fp32_reduce_fast(<4 x float> %a) {
 ; CHECK-LABEL: define float @fp32_reduce_fast(
 ; CHECK-SAME: <4 x float> [[A:%.*]]) {
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[A]], i64 0
-; CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x float> [[A]], i64 1
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[VECEXT]], [[VECEXT1]]
-; CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <4 x float> [[A]], i64 2
-; CHECK-NEXT:    [[ADD5:%.*]] = fadd fast float [[ADD]], [[VECEXT3]]
-; CHECK-NEXT:    [[VECEXT6:%.*]] = extractelement <4 x float> [[A]], i64 3
-; CHECK-NEXT:    [[ADD8:%.*]] = fadd fast float [[ADD5]], [[VECEXT6]]
+; CHECK-NEXT:    [[ADD8:%.*]] = call fast float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[A]])
 ; CHECK-NEXT:    ret float [[ADD8]]
 ;
   %vecext = extractelement <4 x float> %a, i64 0
@@ -120,13 +83,7 @@ define float @fp32_reduce_fast(<4 x float> %a) {
 define float @fp32_reduce_mixed_fmf(<4 x float> %a) {
 ; CHECK-LABEL: define float @fp32_reduce_mixed_fmf(
 ; CHECK-SAME: <4 x float> [[A:%.*]]) {
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <4 x float> [[A]], i64 0
-; CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <4 x float> [[A]], i64 1
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[VECEXT]], [[VECEXT1]]
-; CHECK-NEXT:    [[VECEXT3:%.*]] = extractelement <4 x float> [[A]], i64 2
-; CHECK-NEXT:    [[ADD5:%.*]] = fadd nsz float [[ADD]], [[VECEXT3]]
-; CHECK-NEXT:    [[VECEXT6:%.*]] = extractelement <4 x float> [[A]], i64 3
-; CHECK-NEXT:    [[ADD8:%.*]] = fadd fast float [[ADD5]], [[VECEXT6]]
+; CHECK-NEXT:    [[ADD8:%.*]] = call nsz float @llvm.vector.reduce.fadd.v4f32(float -0.000000e+00, <4 x float> [[A]])
 ; CHECK-NEXT:    ret float [[ADD8]]
 ;
   %vecext = extractelement <4 x float> %a, i64 0
@@ -165,9 +122,7 @@ define float @fp32_reduce_out_of_order(<4 x float> %a) {
 define double @float64_reduce_multiple_use_of_last_add(<2 x double> %a) {
 ; CHECK-LABEL: define double @float64_reduce_multiple_use_of_last_add(
 ; CHECK-SAME: <2 x double> [[A:%.*]]) {
-; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x double> [[A]], i64 0
-; CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <2 x double> [[A]], i64 1
-; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[VECEXT]], [[VECEXT1]]
+; CHECK-NEXT:    [[ADD:%.*]] = call double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[A]])
 ; CHECK-NEXT:    [[SUB:%.*]] = fadd double [[ADD]], -1.000000e+00
 ; CHECK-NEXT:    ret double [[SUB]]
 ;
@@ -200,5 +155,27 @@ define float @fp32_reduce_multiple_use_of_intermediate_value(<4 x float> %a) {
   %vecext6 = extractelement <4 x float> %a, i64 3
   %add8 = fadd float %add5, %vecext6
   %res = fadd float %add8, %add5
+  ret float %res
+}
+
+; Negative test: final fptrunc does not match element type
+define float @fp16_reduce_mismatched_fptruc(<8 x half> %a) {
+; CHECK-LABEL: define float @fp16_reduce_mismatched_fptruc(
+; CHECK-SAME: <8 x half> [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <8 x half> [[A]], i64 0
+; CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <8 x half> [[A]], i64 1
+; CHECK-NEXT:    [[TMP0:%.*]] = fpext half [[VECEXT]] to float
+; CHECK-NEXT:    [[TMP1:%.*]] = fpext half [[VECEXT1]] to float
+; CHECK-NEXT:    [[RES:%.*]] = fadd float [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    ret float [[RES]]
+;
+entry:
+  %vecext = extractelement <8 x half> %a, i64 0
+  %conv = fpext half %vecext to double
+  %vecext1 = extractelement <8 x half> %a, i64 1
+  %conv2 = fpext half %vecext1 to double
+  %add = fadd double %conv, %conv2
+  %res = fptrunc double %add to float
   ret float %res
 }
