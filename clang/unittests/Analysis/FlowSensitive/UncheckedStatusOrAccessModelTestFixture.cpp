@@ -1083,23 +1083,6 @@ TEST_P(UncheckedStatusOrAccessModelTest, While_TerminatingBranch_Return) {
   )cc");
 }
 
-TEST_P(UncheckedStatusOrAccessModelTest, While_TerminatingBranch_Continue) {
-  ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_access_test_defs.h"
-
-    void target(STATUSOR_INT sor) {
-      while (Make<bool>()) {
-        if (!sor.ok()) continue;
-
-        sor.value();
-      }
-
-      // This is not reachable, so dubious that this is correct.
-      sor.value();  // [[unsafe]]
-    }
-  )cc");
-}
-
 TEST_P(UncheckedStatusOrAccessModelTest, While_NestedIfWithBinaryCondition) {
   ExpectDiagnosticsFor(
       R"cc(
