@@ -101,6 +101,14 @@ def fmed3_intrinsic_to_clamp : GICombineRule<
          [{ return matchFPMed3ToClamp(*${fmed3}, ${matchinfo}); }]),
   (apply [{ applyClamp(*${fmed3}, ${matchinfo}); }])>;
 
+def copy_scc_vcc_matchdata : GIDefMatchData<"CopySccVccMatchInfo">;
+
+def copy_scc_vcc : GICombineRule<
+  (defs root:$copy, copy_scc_vcc_matchdata:$matchinfo),
+  (match (wip_match_opcode COPY):$copy,
+         [{ return matchCopySccVcc(*${copy}, ${matchinfo}); }]),
+  (apply [{ applyCopySccVcc(*${copy}, ${matchinfo}); }])>;
+
 def remove_fcanonicalize : GICombineRule<
   (defs root:$fcanonicalize, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_FCANONICALIZE):$fcanonicalize,
@@ -239,5 +247,5 @@ def AMDGPURegBankCombiner : GICombiner<
    fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp,
    identity_combines, redundant_and, constant_fold_cast_op,
    cast_of_cast_combines, sext_trunc, zext_of_shift_amount_combines,
-   d16_load]> {
+   d16_load, copy_scc_vcc]> {
 }

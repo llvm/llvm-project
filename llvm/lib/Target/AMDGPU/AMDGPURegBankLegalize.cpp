@@ -46,12 +46,6 @@ m_GAMDGPUReadAnyLane(const SrcTy &Src) {
   return UnaryOp_match<SrcTy, AMDGPU::G_AMDGPU_READANYLANE>(Src);
 }
 
-template <typename SrcTy>
-inline UnaryOp_match<SrcTy, AMDGPU::G_AMDGPU_COPY_SCC_VCC>
-m_GAMDGPUCopySccVcc(const SrcTy &Src) {
-  return UnaryOp_match<SrcTy, AMDGPU::G_AMDGPU_COPY_SCC_VCC>(Src);
-}
-
 class AMDGPURegBankLegalize : public MachineFunctionPass {
 public:
   static char ID;
@@ -142,7 +136,6 @@ public:
   bool tryEliminateReadAnyLane(MachineInstr &Copy);
   void tryCombineCopy(MachineInstr &MI);
   void tryCombineS1AnyExt(MachineInstr &MI);
-  bool tryEliminateCopySccVcc(MachineInstr &MI);
 };
 
 bool AMDGPURegBankLegalizeCombiner::isLaneMask(Register Reg) {
@@ -403,57 +396,6 @@ void AMDGPURegBankLegalizeCombiner::tryCombineS1AnyExt(MachineInstr &MI) {
   llvm_unreachable("missing anyext + trunc combine");
 }
 
-bool AMDGPURegBankLegalizeCombiner::tryEliminateCopySccVcc(MachineInstr &MI) {
-  // Eliminate VCC->SGPR->VGPR bounce for uniform boolean extensions. This is
-  // caused by UniInVcc which creates G_AMDGPU_COPY_SCC_VCC forcing the result
-  // to SGPR which in turn is forced back to VGPR by a subsequent instruction.
-  //
-  // %vcc:vcc(s1) = ...
-  // %sgpr:sgpr(s32) = G_AMDGPU_COPY_SCC_VCC %vcc
-  // %and:sgpr(s32) = G_AND %sgpr, 1
-  // %sel:sgpr(s32) = G_SELECT %and, {-1|1}, 0
-  // %vgpr:vgpr(s32) = COPY %sel
-  // ->
-  // %vgpr:vgpr(s32) = G_SELECT %vcc, {-1|1}, 0
-
-  Register VgprDst = MI.getOperand(0).getReg();
-  Register SgprSrc = MI.getOperand(1).getReg();
-
-  if (!VgprDst.isVirtual() || !SgprSrc.isVirtual())
-    return false;
-
-  if (MRI.getRegBankOrNull(VgprDst) != VgprRB ||
-      MRI.getRegBankOrNull(SgprSrc) != SgprRB)
-    return false;
-
-  // Match: G_SELECT (G_AND (G_AMDGPU_COPY_SCC_VCC %vcc), 1), SelTrueReg, 0
-  Register VccReg, SelTrueReg;
-  if (!mi_match(SgprSrc, MRI,
-                m_GISelect(m_GAnd(m_GAMDGPUCopySccVcc(m_Reg(VccReg)),
-                                  m_SpecificICst(1)),
-                           m_Reg(SelTrueReg), m_ZeroInt())))
-    return false;
-
-  if (MRI.getRegBankOrNull(VccReg) != VccRB)
-    return false;
-
-  // SelTrueReg must be constant -1 (SEXT) or 1 (ZEXT).
-  auto SelTrueConst = getIConstantVRegValWithLookThrough(SelTrueReg, MRI);
-  if (!SelTrueConst)
-    return false;
-  int64_t SelTrueVal = SelTrueConst->Value.getSExtValue();
-  if (SelTrueVal != -1 && SelTrueVal != 1)
-    return false;
-
-  B.setInstrAndDebugLoc(MI);
-  LLT Ty = MRI.getType(VgprDst);
-  B.buildSelect(VgprDst, VccReg, B.buildConstant({VgprRB, Ty}, SelTrueVal),
-                B.buildConstant({VgprRB, Ty}, 0));
-
-  eraseInstr(MI, MRI);
-  return true;
-}
-
 // Search through MRI for virtual registers with sgpr register bank and S1 LLT.
 [[maybe_unused]] static Register getAnySgprS1(const MachineRegisterInfo &MRI) {
   const LLT S1 = LLT::scalar(1);
@@ -576,8 +518,6 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : make_early_inc_range(MBB)) {
       if (MI.getOpcode() == AMDGPU::COPY) {
-        if (Combiner.tryEliminateCopySccVcc(MI))
-          continue;
         Combiner.tryCombineCopy(MI);
         continue;
       }
