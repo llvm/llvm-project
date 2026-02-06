@@ -1155,7 +1155,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 }
 
 int SIInstrInfo::commuteOpcode(unsigned Opcode) const {
-  int NewOpc;
+  int64_t NewOpc;
 
   // Try to map original to commuted opcode
   NewOpc = AMDGPU::getCommuteRev(Opcode);
@@ -2567,6 +2567,38 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     Op1->setImm(Op1->getImm() | SISrcMods::OP_SEL_1);
     break;
   }
+
+  case AMDGPU::GET_STACK_BASE:
+    // The stack starts at offset 0 unless we need to reserve some space at the
+    // bottom.
+    if (ST.getFrameLowering()->mayReserveScratchForCWSR(*MBB.getParent())) {
+      // When CWSR is used in dynamic VGPR mode, the trap handler needs to save
+      // some of the VGPRs. The size of the required scratch space has already
+      // been computed by prolog epilog insertion.
+      const SIMachineFunctionInfo *MFI =
+          MBB.getParent()->getInfo<SIMachineFunctionInfo>();
+      unsigned VGPRSize = MFI->getScratchReservedForDynamicVGPRs();
+      Register DestReg = MI.getOperand(0).getReg();
+      BuildMI(MBB, MI, DL, get(AMDGPU::S_GETREG_B32), DestReg)
+          .addImm(AMDGPU::Hwreg::HwregEncoding::encode(
+              AMDGPU::Hwreg::ID_HW_ID2, AMDGPU::Hwreg::OFFSET_ME_ID, 2));
+      // The MicroEngine ID is 0 for the graphics queue, and 1 or 2 for compute
+      // (3 is unused, so we ignore it). Unfortunately, S_GETREG doesn't set
+      // SCC, so we need to check for 0 manually.
+      BuildMI(MBB, MI, DL, get(AMDGPU::S_CMP_LG_U32)).addImm(0).addReg(DestReg);
+      // Change the implicif-def of SCC to an explicit use (but first remove
+      // the dead flag if present).
+      MI.getOperand(MI.getNumExplicitOperands()).setIsDead(false);
+      MI.getOperand(MI.getNumExplicitOperands()).setIsUse();
+      MI.setDesc(get(AMDGPU::S_CMOVK_I32));
+      MI.addOperand(MachineOperand::CreateImm(VGPRSize));
+    } else {
+      MI.setDesc(get(AMDGPU::S_MOV_B32));
+      MI.addOperand(MachineOperand::CreateImm(0));
+      MI.removeOperand(
+          MI.getNumExplicitOperands()); // Drop implicit def of SCC.
+    }
+    break;
   }
 
   return true;
@@ -4478,7 +4510,7 @@ bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
          changesVGPRIndexingMode(MI);
 }
 
-bool SIInstrInfo::isAlwaysGDS(uint16_t Opcode) const {
+bool SIInstrInfo::isAlwaysGDS(uint32_t Opcode) const {
   return Opcode == AMDGPU::DS_ORDERED_COUNT ||
          Opcode == AMDGPU::DS_ADD_GS_REG_RTN ||
          Opcode == AMDGPU::DS_SUB_GS_REG_RTN || isGWS(Opcode);
@@ -5106,7 +5138,7 @@ bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
 
 bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
                                     StringRef &ErrInfo) const {
-  uint16_t Opcode = MI.getOpcode();
+  uint32_t Opcode = MI.getOpcode();
   const MachineFunction *MF = MI.getMF();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
 
@@ -5363,7 +5395,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       }
     }
 
-    uint16_t BasicOpcode = AMDGPU::getBasicFromSDWAOp(Opcode);
+    uint32_t BasicOpcode = AMDGPU::getBasicFromSDWAOp(Opcode);
     if (isVOPC(BasicOpcode)) {
       if (!ST.hasSDWASdst() && DstIdx != -1) {
         // Only vcc allowed as dst on VI for VOPC
@@ -9897,6 +9929,7 @@ SIInstrInfo::getSerializableMachineMemOperandTargetFlags() const {
           {MONoClobber, "amdgpu-noclobber"},
           {MOLastUse, "amdgpu-last-use"},
           {MOCooperative, "amdgpu-cooperative"},
+          {MOThreadPrivate, "amdgpu-thread-private"},
       };
 
   return ArrayRef(TargetFlags);
@@ -9913,7 +9946,7 @@ unsigned SIInstrInfo::getLiveRangeSplitOpcode(Register SrcReg,
 }
 
 bool SIInstrInfo::canAddToBBProlog(const MachineInstr &MI) const {
-  uint16_t Opcode = MI.getOpcode();
+  uint32_t Opcode = MI.getOpcode();
   // Check if it is SGPR spill or wwm-register spill Opcode.
   if (isSGPRSpill(Opcode) || isWWMRegSpillOpcode(Opcode))
     return true;
@@ -10314,9 +10347,9 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
       Opcode = MFMAOp;
   }
 
-  int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
+  int64_t MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
 
-  if (MCOp == (uint16_t)-1 && ST.hasGFX1250Insts())
+  if (MCOp == (uint32_t)-1 && ST.hasGFX1250Insts())
     MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX12);
 
   // -1 means that Opcode is already a native instruction.
@@ -10324,20 +10357,20 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
     return Opcode;
 
   if (ST.hasGFX90AInsts()) {
-    uint16_t NMCOp = (uint16_t)-1;
+    uint32_t NMCOp = (uint32_t)-1;
     if (ST.hasGFX940Insts())
       NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX940);
-    if (NMCOp == (uint16_t)-1)
+    if (NMCOp == (uint32_t)-1)
       NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX90A);
-    if (NMCOp == (uint16_t)-1)
+    if (NMCOp == (uint32_t)-1)
       NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX9);
-    if (NMCOp != (uint16_t)-1)
+    if (NMCOp != (uint32_t)-1)
       MCOp = NMCOp;
   }
 
-  // (uint16_t)-1 means that Opcode is a pseudo instruction that has
+  // (uint32_t)-1 means that Opcode is a pseudo instruction that has
   // no encoding in the given subtarget generation.
-  if (MCOp == (uint16_t)-1)
+  if (MCOp == (uint32_t)-1)
     return -1;
 
   if (isAsmOnlyOpcode(MCOp))

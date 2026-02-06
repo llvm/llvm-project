@@ -1,4 +1,6 @@
 .. title:: clang-tidy - cert-flp30-c
+.. meta::
+   :http-equiv=refresh: 5;URL=../bugprone/float-loop-counter.html
 
 cert-flp30-c
 ============
