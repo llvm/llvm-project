@@ -1097,11 +1097,15 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
       match(&I,
             m_c_FMul(m_OneUse(m_Intrinsic<Intrinsic::tan>(m_Value(X))),
                      m_OneUse(m_Intrinsic<Intrinsic::cos>(m_Deferred(X)))))) {
-    auto *Sin = Builder.CreateUnaryIntrinsic(Intrinsic::sin, X, &I);
-    if (auto *Metadata = I.getMetadata(LLVMContext::MD_fpmath)) {
-      Sin->setMetadata(LLVMContext::MD_fpmath, Metadata);
+    Instruction *I1 = dyn_cast<Instruction>(I.getOperand(0));
+    Instruction *I2 = dyn_cast<Instruction>(I.getOperand(1));
+    if (I1 && I2 && I1->hasAllowContract() && I2->hasAllowContract()) {
+      auto *Sin = Builder.CreateUnaryIntrinsic(Intrinsic::sin, X, &I);
+      if (auto *Metadata = I.getMetadata(LLVMContext::MD_fpmath)) {
+        Sin->setMetadata(LLVMContext::MD_fpmath, Metadata);
+      }
+      return replaceInstUsesWith(I, Sin);
     }
-    return replaceInstUsesWith(I, Sin);
   }
 
   return nullptr;
