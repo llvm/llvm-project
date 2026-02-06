@@ -146,7 +146,8 @@ public:
   //
   // [vector.cons], construct/copy/destroy
   //
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector() = default;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector()
+    _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value) {}
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit vector(const allocator_type& __a)
 #if _LIBCPP_STD_VER <= 14
       _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
