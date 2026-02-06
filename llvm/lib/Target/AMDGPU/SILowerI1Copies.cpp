@@ -574,7 +574,7 @@ void PhiLoweringHelper::insertMask(const Incoming &Incoming, Register DstReg) {
   /// store SCC
   Register SavedSCC = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
   BuildMI(MBB, curRegDefPos.value(), {}, TII->get(AMDGPU::S_CSELECT_B32),
-        SavedSCC)
+          SavedSCC)
       .addImm(1)
       .addImm(0);
 
