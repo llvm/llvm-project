@@ -61,3 +61,32 @@ gpu.module @materializecast {
   }
 }
 
+// -----
+gpu.module @materializecast [#xevm.target<chip = "pvc">]{
+  // CHECK-LABEL: gpu.func @materialize_element_to_2D_single_element_vector
+  gpu.func @materialize_element_to_2D_single_element_vector(%dst: memref<128xf32>) kernel {
+    %c0 = arith.constant 0 : index
+    %alloca_11 = memref.alloca() : memref<512xi8, 3>
+    %49 = xegpu.create_mem_desc %alloca_11 : memref<512xi8, 3> -> !xegpu.mem_desc<8x16xf32>
+    // CHECK: %[[LOAD:.*]] = llvm.load %{{.+}} : !llvm.ptr<3> -> f32
+    // CHECK: %[[BCST:.*]] = vector.broadcast %[[LOAD]] : f32 to vector<1x1xf32>
+    %50 = xegpu.load_matrix %49[%c0, %c0] : !xegpu.mem_desc<8x16xf32>, index, index -> vector<1x1xf32>
+    %51 = vector.shape_cast %50 : vector<1x1xf32> to vector<1xf32>
+    vector.store %51, %dst[%c0] : memref<128xf32>, vector<1xf32>
+    gpu.return
+  }
+}
+
+// -----
+gpu.module @materializecast [#xevm.target<chip = "pvc">]{
+  // CHECK-LABEL: gpu.func @materialize_2D_single_element_vector_to_element
+  gpu.func @materialize_2D_single_element_vector_to_element(%dst: memref<512xi8, 3>) kernel {
+    %c0 = arith.constant 0 : index
+    %c0_f32 = arith.constant dense<0.0> : vector<1x1xf32>
+    %49 = xegpu.create_mem_desc %dst : memref<512xi8, 3> -> !xegpu.mem_desc<8x16xf32>
+    // CHECK: %[[EXTR:.*]] = vector.extract %{{.+}}[0, 0] : f32 from vector<1x1xf32>
+    // CHECK: llvm.store %[[EXTR]], %{{.+}} : f32, !llvm.ptr<3>
+    xegpu.store_matrix %c0_f32, %49[%c0, %c0] : vector<1x1xf32>, !xegpu.mem_desc<8x16xf32>, index, index
+    gpu.return
+  }
+}
