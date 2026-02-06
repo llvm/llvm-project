@@ -707,6 +707,8 @@ public:
 
   // Settings accessors
 
+  static void AppendGlobalPropertiesTo(Debugger &debugger);
+
   static TargetProperties &GetGlobalProperties();
 
   std::recursive_mutex &GetAPIMutex();

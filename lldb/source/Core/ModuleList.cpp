@@ -1018,6 +1018,13 @@ static SharedModuleList &GetSharedModuleList() {
   return GetSharedModuleListInfo().module_list;
 }
 
+void ModuleList::AppendGlobalModuleListPropertiesTo(Debugger &debugger) {
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_modulelist_properties_def.expected_path,
+      GetGlobalModuleListProperties().GetValueProperties(),
+      "Symbol lookup and cache settings.", /*is_global_property=*/true);
+}
+
 ModuleListProperties &ModuleList::GetGlobalModuleListProperties() {
   return GetSharedModuleListInfo().module_list_properties;
 }

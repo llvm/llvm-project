@@ -5249,6 +5249,13 @@ void TargetProperties::SetDebugUtilityExpression(bool debug) {
   SetPropertyAtIndex(idx, debug);
 }
 
+void Target::AppendGlobalPropertiesTo(Debugger &debugger) {
+  debugger.SetPropertiesAtPathIfNotExists(
+      g_target_properties_def.expected_path,
+      GetGlobalProperties().GetValueProperties(),
+      "Settings specify to debugging targets.", /*is_global_property=*/true);
+}
+
 // Target::TargetEventData
 
 Target::TargetEventData::TargetEventData(const lldb::TargetSP &target_sp)
