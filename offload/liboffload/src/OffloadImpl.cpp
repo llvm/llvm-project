@@ -237,7 +237,6 @@ struct OffloadContext {
   // key in AllocInfoMap
   SmallVector<void *> AllocBases{};
   SmallVector<std::unique_ptr<ol_platform_impl_t>, 4> Platforms{};
-  ol_device_handle_t HostDevice;
   size_t RefCount;
 
   static OffloadContext &get() {
@@ -293,17 +292,6 @@ Error initPlugins(OffloadContext &Context) {
     if (Error Err = Platform->init())
       return Err;
   }
-
-  // Add the special host device.
-  auto &HostPlatform = Context.Platforms.emplace_back(
-      std::make_unique<ol_platform_impl_t>(nullptr, OL_PLATFORM_BACKEND_HOST));
-  Context.HostDevice = HostPlatform->Devices
-                           .emplace_back(std::make_unique<ol_device_impl_t>(
-                               -1, nullptr, *HostPlatform, InfoTreeNode{}))
-                           .get();
-  if (!Context.HostDevice)
-    return createOffloadError(ErrorCode::INVALID_NULL_HANDLE,
-                              "Host Device is invalid");
 
   Context.TracingEnabled = std::getenv("OFFLOAD_TRACE");
   Context.ValidationEnabled = !std::getenv("OFFLOAD_DISABLE_VALIDATION");
@@ -404,7 +392,6 @@ Error olPlatformRegisterRPCCallback_impl(ol_platform_handle_t Platform,
 Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
                                 ol_device_info_t PropName, size_t PropSize,
                                 void *PropValue, size_t *PropSizeRet) {
-  assert(Device != OffloadContext::get().HostDevice);
   InfoWriter Info(PropSize, PropValue, PropSizeRet);
 
   auto makeError = [&](ErrorCode Code, StringRef Err) {
@@ -412,14 +399,17 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     raw_string_ostream(ErrBuffer) << PropName << ": " << Err;
     return Plugin::error(ErrorCode::UNIMPLEMENTED, ErrBuffer.c_str());
   };
-
+  bool IsHost = Device->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
   // These are not implemented by the plugin interface
   switch (PropName) {
   case OL_DEVICE_INFO_PLATFORM:
     return Info.write<void *>(&Device->Platform);
 
   case OL_DEVICE_INFO_TYPE:
-    return Info.write<ol_device_type_t>(OL_DEVICE_TYPE_GPU);
+    if (IsHost)
+      return Info.write<ol_device_type_t>(OL_DEVICE_TYPE_HOST);
+    else
+      return Info.write<ol_device_type_t>(OL_DEVICE_TYPE_GPU);
 
   case OL_DEVICE_INFO_SINGLE_FP_CONFIG:
   case OL_DEVICE_INFO_DOUBLE_FP_CONFIG: {
@@ -547,92 +537,14 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   }
 }
 
-Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
-                                    ol_device_info_t PropName, size_t PropSize,
-                                    void *PropValue, size_t *PropSizeRet) {
-  assert(Device == OffloadContext::get().HostDevice);
-  InfoWriter Info(PropSize, PropValue, PropSizeRet);
-
-  constexpr auto uint32_max = std::numeric_limits<uint32_t>::max();
-
-  switch (PropName) {
-  case OL_DEVICE_INFO_PLATFORM:
-    return Info.write<void *>(&Device->Platform);
-  case OL_DEVICE_INFO_TYPE:
-    return Info.write<ol_device_type_t>(OL_DEVICE_TYPE_HOST);
-  case OL_DEVICE_INFO_NAME:
-    return Info.writeString("Virtual Host Device");
-  case OL_DEVICE_INFO_PRODUCT_NAME:
-    return Info.writeString("Virtual Host Device");
-  case OL_DEVICE_INFO_UID:
-    return Info.writeString(GenericPluginTy::getHostDeviceUid());
-  case OL_DEVICE_INFO_VENDOR:
-    return Info.writeString("Liboffload");
-  case OL_DEVICE_INFO_DRIVER_VERSION:
-    return Info.writeString(LLVM_VERSION_STRING);
-  case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE:
-    return Info.write<uint32_t>(1);
-  case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION:
-    return Info.write<ol_dimensions_t>(ol_dimensions_t{1, 1, 1});
-  case OL_DEVICE_INFO_MAX_WORK_SIZE:
-    return Info.write<uint32_t>(uint32_max);
-  case OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION:
-    return Info.write<ol_dimensions_t>(
-        ol_dimensions_t{uint32_max, uint32_max, uint32_max});
-  case OL_DEVICE_INFO_VENDOR_ID:
-    return Info.write<uint32_t>(0);
-  case OL_DEVICE_INFO_NUM_COMPUTE_UNITS:
-    return Info.write<uint32_t>(1);
-  case OL_DEVICE_INFO_SINGLE_FP_CONFIG:
-  case OL_DEVICE_INFO_DOUBLE_FP_CONFIG:
-    return Info.write<ol_device_fp_capability_flags_t>(
-        OL_DEVICE_FP_CAPABILITY_FLAG_CORRECTLY_ROUNDED_DIVIDE_SQRT |
-        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_NEAREST |
-        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_ZERO |
-        OL_DEVICE_FP_CAPABILITY_FLAG_ROUND_TO_INF |
-        OL_DEVICE_FP_CAPABILITY_FLAG_INF_NAN |
-        OL_DEVICE_FP_CAPABILITY_FLAG_DENORM | OL_DEVICE_FP_CAPABILITY_FLAG_FMA);
-  case OL_DEVICE_INFO_HALF_FP_CONFIG:
-    return Info.write<ol_device_fp_capability_flags_t>(0);
-  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_CHAR:
-  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_SHORT:
-  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_INT:
-  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_LONG:
-  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_FLOAT:
-  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE:
-    return Info.write<uint32_t>(1);
-  case OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF:
-    return Info.write<uint32_t>(0);
-  case OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY:
-  case OL_DEVICE_INFO_MEMORY_CLOCK_RATE:
-  case OL_DEVICE_INFO_ADDRESS_BITS:
-    return Info.write<uint32_t>(std::numeric_limits<uintptr_t>::digits);
-  case OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE:
-  case OL_DEVICE_INFO_GLOBAL_MEM_SIZE:
-  case OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE:
-    return Info.write<uint64_t>(0);
-  default:
-    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
-                              "getDeviceInfo enum '%i' is invalid", PropName);
-  }
-
-  return Error::success();
-}
-
 Error olGetDeviceInfo_impl(ol_device_handle_t Device, ol_device_info_t PropName,
                            size_t PropSize, void *PropValue) {
-  if (Device == OffloadContext::get().HostDevice)
-    return olGetDeviceInfoImplDetailHost(Device, PropName, PropSize, PropValue,
-                                         nullptr);
   return olGetDeviceInfoImplDetail(Device, PropName, PropSize, PropValue,
                                    nullptr);
 }
 
 Error olGetDeviceInfoSize_impl(ol_device_handle_t Device,
                                ol_device_info_t PropName, size_t *PropSizeRet) {
-  if (Device == OffloadContext::get().HostDevice)
-    return olGetDeviceInfoImplDetailHost(Device, PropName, 0, nullptr,
-                                         PropSizeRet);
   return olGetDeviceInfoImplDetail(Device, PropName, 0, nullptr, PropSizeRet);
 }
 
@@ -991,8 +903,10 @@ Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_handle_t *EventOut) {
 Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
                     ol_device_handle_t DstDevice, const void *SrcPtr,
                     ol_device_handle_t SrcDevice, size_t Size) {
-  auto Host = OffloadContext::get().HostDevice;
-  if (DstDevice == Host && SrcDevice == Host) {
+  bool IsDstHost = DstDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
+  bool IsSrcHost = SrcDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
+
+  if (IsDstHost && IsSrcHost) {
     if (!Queue) {
       std::memcpy(DstPtr, SrcPtr, Size);
       return Error::success();
@@ -1007,11 +921,11 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
   // If no queue is given the memcpy will be synchronous
   auto QueueImpl = Queue ? Queue->AsyncInfo : nullptr;
 
-  if (DstDevice == Host) {
+  if (IsDstHost) {
     if (auto Res =
             SrcDevice->Device->dataRetrieve(DstPtr, SrcPtr, Size, QueueImpl))
       return Res;
-  } else if (SrcDevice == Host) {
+  } else if (IsSrcHost) {
     if (auto Res =
             DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size, QueueImpl))
       return Res;
@@ -1242,11 +1156,6 @@ Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
                                 void *UserData) {
   return Queue->Device->Device->enqueueHostCall(Callback, UserData,
                                                 Queue->AsyncInfo);
-}
-
-Error olGetHostDevice_impl(ol_device_handle_t *Device) {
-  *Device = OffloadContext::get().HostDevice;
-  return Error::success();
 }
 
 Error olMemRegister_impl(ol_device_handle_t Device, void *Ptr, size_t Size,
