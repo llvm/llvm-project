@@ -7105,9 +7105,9 @@ static SDValue PromoteMaskArithmetic(SDValue N, const SDLoc &DL,
   }
 }
 
-static SDValue performANY_EXTENDCombine(SDNode *N, SelectionDAG &DAG,
-                                        TargetLowering::DAGCombinerInfo &DCI,
-                                        const LoongArchSubtarget &Subtarget) {
+static SDValue performEXTENDCombine(SDNode *N, SelectionDAG &DAG,
+                                    TargetLowering::DAGCombinerInfo &DCI,
+                                    const LoongArchSubtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
 
@@ -7137,7 +7137,7 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::ANY_EXTEND:
   case ISD::ZERO_EXTEND:
   case ISD::SIGN_EXTEND:
-    return performANY_EXTENDCombine(N, DAG, DCI, Subtarget);
+    return performEXTENDCombine(N, DAG, DCI, Subtarget);
   case ISD::SINT_TO_FP:
     return performSINT_TO_FPCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BITREV_W:
