@@ -30211,6 +30211,56 @@ Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
   return CI;
 }
 
+Value *AArch64TargetLowering::emitCanLoadSpeculatively(IRBuilderBase &Builder,
+                                                       Value *Ptr,
+                                                       Value *Size) const {
+  unsigned AS = cast<PointerType>(Ptr->getType())->getAddressSpace();
+  // Conservatively only allow speculation for address space 0.
+  if (AS != 0)
+    return nullptr;
+  // For power-of-2 sizes <= 16, emit alignment check: (ptr & (size - 1)) == 0.
+  // If the pointer is aligned to at least 'size' bytes, loading 'size' bytes
+  // cannot cross a page boundary, so it's safe to speculate.
+  // The 16-byte limit ensures correctness with MTE (memory tagging), since
+  // MTE uses 16-byte tag granules.
+  //
+  // The alignment check only works for power-of-2 sizes. For non-power-of-2
+  // sizes, we conservatively return false.
+  const DataLayout &DL = Builder.GetInsertBlock()->getModule()->getDataLayout();
+
+  unsigned PtrBits = DL.getPointerSizeInBits(AS);
+  Type *IntPtrTy = Builder.getIntNTy(PtrBits);
+  if (auto *CI = dyn_cast<ConstantInt>(Size)) {
+    uint64_t SizeVal = CI->getZExtValue();
+    assert(isPowerOf2_64(SizeVal) && "size must be power-of-two");
+    // For constant sizes > 16, return nullptr (default false).
+    if (SizeVal > 16)
+      return nullptr;
+
+    // Power-of-2 constant size <= 16: use fast alignment check.
+    Value *PtrInt = Builder.CreatePtrToInt(Ptr, IntPtrTy);
+    Value *Mask = ConstantInt::get(IntPtrTy, SizeVal - 1);
+    Value *Masked = Builder.CreateAnd(PtrInt, Mask);
+    return Builder.CreateICmpEQ(Masked, ConstantInt::get(IntPtrTy, 0));
+  }
+
+  // Check power-of-2 size <= 16 and alignment.
+  Value *PtrInt = Builder.CreatePtrToInt(Ptr, IntPtrTy);
+  Value *SizeExt = Builder.CreateZExtOrTrunc(Size, IntPtrTy);
+
+  Value *SizeLE16 =
+      Builder.CreateICmpULE(SizeExt, ConstantInt::get(IntPtrTy, 16));
+
+  // alignment check: (ptr & (size - 1)) == 0
+  Value *SizeMinusOne =
+      Builder.CreateSub(SizeExt, ConstantInt::get(IntPtrTy, 1));
+  Value *Masked = Builder.CreateAnd(PtrInt, SizeMinusOne);
+  Value *AlignCheck =
+      Builder.CreateICmpEQ(Masked, ConstantInt::get(IntPtrTy, 0));
+
+  return Builder.CreateAnd(SizeLE16, AlignCheck);
+}
+
 bool AArch64TargetLowering::functionArgumentNeedsConsecutiveRegisters(
     Type *Ty, CallingConv::ID CallConv, bool isVarArg,
     const DataLayout &DL) const {

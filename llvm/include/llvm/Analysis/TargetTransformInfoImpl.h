@@ -905,6 +905,8 @@ public:
     switch (ICA.getID()) {
     default:
       break;
+    case Intrinsic::speculative_load:
+      return InstructionCost::getInvalid();
     case Intrinsic::allow_runtime_check:
     case Intrinsic::allow_ubsan_check:
     case Intrinsic::annotation:

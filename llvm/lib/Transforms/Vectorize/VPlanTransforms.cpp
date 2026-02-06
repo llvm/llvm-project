@@ -30,8 +30,10 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -4029,11 +4031,55 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
     R->eraseFromParent();
 }
 
-void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
-                                                 VPBasicBlock *EarlyExitVPBB,
-                                                 VPlan &Plan,
-                                                 VPBasicBlock *HeaderVPBB,
-                                                 VPBasicBlock *LatchVPBB) {
+/// Replace loads that may not be dereferenceable with speculative load
+/// intrinsics. Iterates over all blocks reachable from \p HeaderVPBB, skipping
+/// \p MiddleVPBB and \p EarlyExitVPBB.
+static void replaceUnsafeLoadsWithSpeculative(
+    VPBasicBlock *HeaderVPBB, VPBasicBlock *MiddleVPBB,
+    VPBasicBlock *EarlyExitVPBB, Loop *TheLoop, PredicatedScalarEvolution &PSE,
+    DominatorTree &DT, AssumptionCache *AC) {
+  ScalarEvolution &SE = *PSE.getSE();
+  const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(HeaderVPBB))) {
+    // Skip blocks outside the loop (exit blocks and their successors).
+    if (VPBB == MiddleVPBB || VPBB == EarlyExitVPBB)
+      continue;
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (!VPI || VPI->getOpcode() != Instruction::Load)
+        continue;
+      auto *Load = cast<LoadInst>(VPI->getUnderlyingValue());
+
+      // Get the pointer SCEV for dereferenceability checking.
+      VPValue *Ptr = VPI->getOperand(0);
+      const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, TheLoop);
+
+      // Check dereferenceability using the SCEV-based version.
+      TypeSize TS = DL.getTypeStoreSize(Load->getType());
+      assert(!TS.isScalable() && "expected fixed-size scalar load type");
+      const SCEV *SizeSCEV = SE.getConstant(APInt(64, TS.getFixedValue()));
+      SmallVector<const SCEVPredicate *> Preds;
+      if (!isa<SCEVCouldNotCompute>(PtrSCEV) &&
+          isDereferenceableAndAlignedInLoop(PtrSCEV, Load->getAlign(), SizeSCEV,
+                                            TheLoop, SE, DT, AC, &Preds))
+        continue;
+
+      // Replace the load with a speculative load intrinsic.
+      auto *SpeculativeLoad = new VPWidenIntrinsicRecipe(
+          Intrinsic::speculative_load, {Ptr}, Load->getType(), VPIRFlags{},
+          VPIRMetadata(), VPI->getDebugLoc());
+      SpeculativeLoad->insertBefore(VPI);
+      VPI->replaceAllUsesWith(SpeculativeLoad);
+      VPI->eraseFromParent();
+    }
+  }
+}
+
+void VPlanTransforms::handleUncountableEarlyExit(
+    VPBasicBlock *EarlyExitingVPBB, VPBasicBlock *EarlyExitVPBB, VPlan &Plan,
+    VPBasicBlock *HeaderVPBB, VPBasicBlock *LatchVPBB, Loop *TheLoop,
+    PredicatedScalarEvolution &PSE, DominatorTree &DT, AssumptionCache *AC) {
   auto *MiddleVPBB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[0]);
   if (!EarlyExitVPBB->getSinglePredecessor() &&
       EarlyExitVPBB->getPredecessors()[1] == MiddleVPBB) {
@@ -4050,9 +4096,14 @@ void VPlanTransforms::handleUncountableEarlyExit(VPBasicBlock *EarlyExitingVPBB,
   VPBuilder Builder(LatchVPBB->getTerminator());
   VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
   assert(match(EarlyExitingVPBB->getTerminator(), m_BranchOnCond()) &&
-         "Terminator must be be BranchOnCond");
+         "Terminator must be BranchOnCond");
   VPValue *CondOfEarlyExitingVPBB =
       EarlyExitingVPBB->getTerminator()->getOperand(0);
+
+  // Replace loads that may not be dereferenceable with speculative loads.
+  replaceUnsafeLoadsWithSpeculative(HeaderVPBB, MiddleVPBB, EarlyExitVPBB,
+                                    TheLoop, PSE, DT, AC);
+
   auto *CondToEarlyExit = TrueSucc == EarlyExitVPBB
                               ? CondOfEarlyExitingVPBB
                               : Builder.createNot(CondOfEarlyExitingVPBB);

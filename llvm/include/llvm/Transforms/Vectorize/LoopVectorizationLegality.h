@@ -457,12 +457,6 @@ public:
   /// Returns a list of all known histogram operations in the loop.
   bool hasHistograms() const { return !Histograms.empty(); }
 
-  /// Returns potentially faulting loads.
-  const SmallPtrSetImpl<const Instruction *> &
-  getPotentiallyFaultingLoads() const {
-    return PotentiallyFaultingLoads;
-  }
-
   PredicatedScalarEvolution *getPredicatedScalarEvolution() const {
     return &PSE;
   }
@@ -717,9 +711,6 @@ private:
   /// load -> update -> store instructions where multiple lanes in a vector
   /// may work on the same memory location.
   SmallVector<HistogramInfo, 1> Histograms;
-
-  /// Hold potentially faulting loads.
-  SmallPtrSet<const Instruction *, 4> PotentiallyFaultingLoads;
 
   /// Whether or not creating SCEV predicates is allowed.
   bool AllowRuntimeSCEVChecks;

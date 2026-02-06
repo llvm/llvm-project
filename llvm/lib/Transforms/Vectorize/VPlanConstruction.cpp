@@ -25,6 +25,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -873,7 +874,10 @@ void VPlanTransforms::createInLoopReductionRecipes(
 }
 
 void VPlanTransforms::handleEarlyExits(VPlan &Plan,
-                                       bool HasUncountableEarlyExit) {
+                                       bool HasUncountableEarlyExit,
+                                       Loop *TheLoop,
+                                       PredicatedScalarEvolution &PSE,
+                                       DominatorTree &DT, AssumptionCache *AC) {
   auto *MiddleVPBB = cast<VPBasicBlock>(
       Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
   auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
@@ -893,7 +897,8 @@ void VPlanTransforms::handleEarlyExits(VPlan &Plan,
         assert(!HandledUncountableEarlyExit &&
                "can handle exactly one uncountable early exit");
         handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
-                                   cast<VPBasicBlock>(HeaderVPB), LatchVPBB);
+                                   cast<VPBasicBlock>(HeaderVPB), LatchVPBB,
+                                   TheLoop, PSE, DT, AC);
         HandledUncountableEarlyExit = true;
       } else {
         for (VPRecipeBase &R : EB->phis())
@@ -1010,6 +1015,65 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
   VPBasicBlock *CheckBlockVPBB = Plan.createVPIRBasicBlock(CheckBlock);
   insertCheckBlockBeforeVectorLoop(Plan, CheckBlockVPBB);
   addBypassBranch(Plan, CheckBlockVPBB, CondVPV, AddBranchWeights);
+}
+
+void VPlanTransforms::attachSpeculativeLoadChecks(
+    VPlan &Plan, ElementCount VF, PredicatedScalarEvolution &PSE, Loop *TheLoop,
+    bool AddBranchWeights) {
+  VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
+  assert(VectorRegion && "Expected VPlan to have a vector loop region");
+
+  // Scan the plan for speculative load intrinsics and collect the base pointer
+  // and vector type for each.
+  SmallVector<std::pair<VPValue *, Type *>> SpeculativeLoads;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(VectorRegion->getEntry()))) {
+    for (VPRecipeBase &R : *VPBB) {
+      VPValue *Ptr;
+      if (!match(&R, m_Intrinsic<Intrinsic::speculative_load>(m_VPValue(Ptr))))
+        continue;
+      Type *ResultTy = cast<VPWidenIntrinsicRecipe>(&R)->getResultType();
+
+      // Get the loop-invariant base pointer via SCEV.
+      const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, TheLoop);
+      assert(!isa<SCEVCouldNotCompute>(PtrSCEV) &&
+             "speculative load has non-computable pointer SCEV");
+      const SCEV *BaseSCEV = PSE.getSE()->getPointerBase(PtrSCEV);
+      assert(!isa<SCEVCouldNotCompute>(BaseSCEV) &&
+             "speculative load has non-computable pointer base");
+      VPValue *BasePtr = vputils::getOrCreateVPValueForSCEVExpr(Plan, BaseSCEV);
+      SpeculativeLoads.push_back({BasePtr, VectorType::get(ResultTy, VF)});
+    }
+  }
+
+  if (SpeculativeLoads.empty())
+    return;
+
+  // Create a check block that verifies the speculative loads are safe
+  // using @llvm.can.load.speculatively intrinsic. Insert the block into the
+  // plan first so VPBuilder can access the plan.
+  VPBasicBlock *CheckBlockVPBB = Plan.createVPBasicBlock("spec.load.check");
+  insertCheckBlockBeforeVectorLoop(Plan, CheckBlockVPBB);
+
+  VPBuilder Builder(CheckBlockVPBB);
+  const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
+  Type *I64Ty = Type::getInt64Ty(Plan.getContext());
+
+  // Build a combined check for all speculative loads.
+  VPValue *AllChecksPassed = nullptr;
+  for (const auto &[StartPtr, VecTy] : SpeculativeLoads) {
+    TypeSize SizeInBytes = DL.getTypeStoreSize(VecTy);
+    VPValue *SizeVal = Builder.createElementCount(
+        I64Ty, ElementCount::get(SizeInBytes.getKnownMinValue(),
+                                 SizeInBytes.isScalable()));
+    VPValue *IsSafe = Builder.createNaryOp(VPInstruction::CanLoadSpeculatively,
+                                           {StartPtr, SizeVal});
+    AllChecksPassed =
+        AllChecksPassed ? Builder.createAnd(AllChecksPassed, IsSafe) : IsSafe;
+  }
+
+  VPValue *Cond = Builder.createNot(AllChecksPassed);
+  addBypassBranch(Plan, CheckBlockVPBB, Cond, AddBranchWeights);
 }
 
 void VPlanTransforms::addMinimumIterationCheck(

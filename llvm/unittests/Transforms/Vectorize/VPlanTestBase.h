@@ -75,7 +75,8 @@ protected:
     auto Plan = VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
                                              {}, PSE);
 
-    VPlanTransforms::handleEarlyExits(*Plan, HasUncountableExit);
+    VPlanTransforms::handleEarlyExits(*Plan, HasUncountableExit, L, PSE, *DT,
+                                      AC.get());
     VPlanTransforms::addMiddleCheck(*Plan, true, false);
 
     VPlanTransforms::createLoopRegions(*Plan);

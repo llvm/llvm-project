@@ -444,6 +444,8 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case VPInstruction::StepVector:
   case VPInstruction::VScale:
     return 0;
+  case VPInstruction::CanLoadSpeculatively:
+    return 2;
   case Instruction::Alloca:
   case Instruction::ExtractValue:
   case Instruction::Freeze:
@@ -651,6 +653,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *Step = createStepForVF(Builder, IV->getType(), State.VF, Part);
     return Builder.CreateAdd(IV, Step, Name, hasNoUnsignedWrap(),
                              hasNoSignedWrap());
+  }
+  case VPInstruction::CanLoadSpeculatively: {
+    Value *Ptr = State.get(getOperand(0), /*IsScalar=*/true);
+    Value *Size = State.get(getOperand(1), /*IsScalar=*/true);
+    return Builder.CreateIntrinsic(Intrinsic::can_load_speculatively,
+                                   {Ptr->getType()}, {Ptr, Size});
   }
   case VPInstruction::BranchOnCond: {
     Value *Cond = State.get(getOperand(0), VPLane(0));
@@ -1263,6 +1271,7 @@ bool VPInstruction::isVectorToScalar() const {
 bool VPInstruction::isSingleScalar() const {
   switch (getOpcode()) {
   case Instruction::PHI:
+  case VPInstruction::CanLoadSpeculatively:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::VScale:
@@ -1336,6 +1345,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ReductionStartVector:
   case VPInstruction::Reverse:
   case VPInstruction::VScale:
+  case VPInstruction::CanLoadSpeculatively:
   case VPInstruction::Unpack:
     return false;
   default:
@@ -1520,6 +1530,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractLastActive:
     O << "extract-last-active";
+    break;
+  case VPInstruction::CanLoadSpeculatively:
+    O << "can-load-speculatively";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
@@ -1901,10 +1914,11 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
   Type *ScalarRetTy = Ctx.Types.inferScalarType(&R);
   Type *RetTy = VF.isVector() ? toVectorizedTy(ScalarRetTy, VF) : ScalarRetTy;
   SmallVector<Type *> ParamTys;
-  for (const VPValue *Op : Operands) {
-    ParamTys.push_back(VF.isVector()
-                           ? toVectorTy(Ctx.Types.inferScalarType(Op), VF)
-                           : Ctx.Types.inferScalarType(Op));
+  for (const auto &[Idx, Op] : enumerate(Operands)) {
+    Type *ScalarTy = Ctx.Types.inferScalarType(Op);
+    bool Vectorize =
+        VF.isVector() && !isVectorIntrinsicWithScalarOpAtArg(ID, Idx, nullptr);
+    ParamTys.push_back(Vectorize ? toVectorTy(ScalarTy, VF) : ScalarTy);
   }
 
   // TODO: Rework TTI interface to avoid reliance on underlying IntrinsicInst.
