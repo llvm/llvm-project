@@ -43,16 +43,16 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 /// **Pointer-based layout**
 ///
 /// The pointer-based layout uses two more pointers in addition to `__begin_`. The second pointer
-/// (called `__end_`) past the end of the part of the buffer that holds valid elements. The pointer
-/// (called `__capacity_`) points past the end of the allocated buffer. This is the default
-/// representation for libc++ due to historical reasons.
+/// (called `__end_`) points past the end of the part of the buffer that holds valid elements.
+/// Another pointer (called `__capacity_`) points past the end of the allocated buffer. This is the
+/// default representation for libc++ due to historical reasons.
 ///
-/// The second pointer has three primary use-cases:
+/// The `__end_` pointer has three primary use-cases:
 ///   * to compute the size of the vector; and
 ///   * to construct the past-the-end iterator; and
 ///   * to indicate where the next element should be appended.
 ///
-/// The third pointer is used to compute the capacity of the vector, which lets the vector know how
+/// The `__capacity_` is used to compute the capacity of the vector, which lets the vector know how
 /// many elements can be added to the vector before a reallocation is necessary.
 ///
 ///    __begin_ = 0xE4FD0, __end_ = 0xE4FF0, __capacity_ = 0xE5000
@@ -65,16 +65,20 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 ///                __begin_                             __end_          __capacity_
 ///
 ///    Figure 1: A visual representation of a pointer-based `std::vector<short>`. This vector has
-///    four elements, with the capacity to store six.
+///    four elements, with the capacity to store six. Boxes with numbers are valid elements within
+///    the vector, and boxes with `xx` have been allocated, but aren't being used as elements right
+///    now.
 ///
 /// This is the default layout for libc++.
 ///
 /// **Size-based layout**
 ///
 /// The size-based layout uses integers to track its size and capacity, and computes pointers to
-/// past-the-end of the valid range and the whole buffer only when it's necessary. This layout is
-/// opt-in, but yields a significant performance boost relative to the pointer-based layout (see
-/// below).
+/// past-the-end of the valid range and the whole buffer only when it's necessary. Programs using
+/// the size-based layout have been measured to yield improved compute and memory performance over
+/// the pointer-based layout. Despite these promising measurements, the size-based layout is opt-in,
+/// to preserve ABI compatibility with prebuilt binaries. Given the improved performance, we
+/// recommend preferring the size-based layout in the absence of such ABI constraints.
 ///
 ///    __begin_ = 0xE4FD0, __size_ = 4, __capacity_ = 6
 ///                 0xE4FD0
@@ -85,9 +89,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 ///                    ^
 ///                __begin_
 ///
-///    Figure 2: A visual representation of this a pointer-based layout. Blank boxes are not a part
-///    of the vector's allocated buffer. Boxes with numbers are valid elements within the vector,
-///    and boxes with `xx` have been allocated, but aren't being used as elements right now.
+///    Figure 2: A visual representation of this a size-based layout. Blank boxes are not a part
+///    of the vector's allocated buffer.
 //
 /// We conducted an extensive A/B test on production software to confirm that the size-based layout
 /// improves compute performance by 0.5%, and decreases system memory usage by up to 0.33%.
@@ -149,7 +152,6 @@ public:
     return __alloc_;
   }
 
-  /// Returns a reference to the stored allocator.
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI allocator_type const&
   __alloc() const _NOEXCEPT {
     return __alloc_;
