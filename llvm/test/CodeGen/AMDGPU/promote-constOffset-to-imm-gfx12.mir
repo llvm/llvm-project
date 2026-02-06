@@ -110,6 +110,9 @@ body:             |
     S_ENDPGM 0
 ...
 
+# Same as promote_async_load_offset above, but for async stores. The LDS address
+# is in vdata instead of vdst, so this tests that updateAsyncLDSAddress corrects
+# the right operand.
 ---
 name: promote_async_store_offset
 machineFunctionInfo:

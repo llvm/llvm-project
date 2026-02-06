@@ -96,7 +96,9 @@ entry:
   ret void
 }
 
-; Test async_store_from_lds
+; Same as promote_async_load_offset_negative above, but for async stores. The
+; LDS address is in vdata instead of vdst, so this tests that
+; updateAsyncLDSAddress corrects the right operand.
 define amdgpu_kernel void @promote_async_store_offset_negative(ptr addrspace(1) %dst) {
 ; GFX1250-LABEL: promote_async_store_offset_negative:
 ; GFX1250:       ; %bb.0: ; %entry
