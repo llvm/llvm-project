@@ -85,8 +85,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class vector {
-  template <class _Up, class _Alloc>
-  using _SplitBuffer _LIBCPP_NODEBUG = std::__split_buffer<_Up, _Alloc, __split_buffer_pointer_layout>;
+  using _SplitBuffer _LIBCPP_NODEBUG = std::__split_buffer<_Tp, _Allocator, __split_buffer_pointer_layout>;
 
 public:
   //
@@ -1304,7 +1303,7 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
   if (__first == __last)
     (void)std::rotate(__p, __old_last, this->__end_);
   else {
-    SplitBuffer __v(__alloc_);
+    _SplitBuffer __v(__alloc_);
     auto __guard = std::__make_exception_guard(
         _AllocatorDestroyRangeReverse<allocator_type, pointer>(__alloc_, __old_last, this->__end_));
     __v.__construct_at_end_with_sentinel(std::move(__first), std::move(__last));
