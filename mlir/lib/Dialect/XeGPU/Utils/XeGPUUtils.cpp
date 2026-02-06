@@ -366,111 +366,6 @@ template void xegpu::setTemporaryLayout<mlir::OpOperand>(
     const mlir::OpOperand &operand,
     const mlir::xegpu::DistributeLayoutAttr layout);
 
-void xegpu::recoverTemporaryLayoutsDeprecated(Operation *op) {
-  op->walk([&](Operation *nestOp) {
-    for (OpOperand &opr : nestOp->getOpOperands()) {
-      auto layout = getDistributeLayoutAttr(opr.get());
-      setDistributeLayoutAttr(opr, layout);
-    }
-
-    for (OpResult result : nestOp->getOpResults()) {
-      auto layout = getDistributeLayoutAttr(result);
-      setDistributeLayoutAttr(result, layout);
-    }
-  });
-}
-
-/// Attach layout attributes to all vector-type operands of operations within
-/// the given operation's region. Reports an error if any vector operand lacks
-/// a layout attribute.
-bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
-  auto result = rootOp->walk([&](Operation *op) {
-    for (OpOperand &operand : op->getOpOperands()) {
-      // Layouts are needed for vector type only.
-      if (!isa<VectorType>(operand.get().getType()))
-        continue;
-      auto layout = xegpu::getDistributeLayoutAttr(operand.get());
-      if (!layout) {
-        op->emitWarning("Could not find layout attribute for operand ")
-            << operand.getOperandNumber() << " of operation " << op->getName();
-        continue;
-      }
-      xegpu::setDistributeLayoutAttr(operand, layout);
-    }
-    return WalkResult::advance();
-  });
-  return !result.wasInterrupted();
-}
-
-template <typename T, typename>
-void xegpu::removeLayoutAttr(const T &operandOrResult) {
-  Operation *owner = operandOrResult.getOwner();
-  std::string name = xegpu::getTemporaryLayoutName(operandOrResult);
-  if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
-    owner->removeAttr(name);
-}
-
-SmallVector<NamedAttribute>
-xegpu::dropSgLayoutAndDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
-  SmallVector<NamedAttribute> out;
-  out.reserve(attrs.size());
-
-  for (auto attr : attrs) {
-    if (auto dist = dyn_cast<xegpu::DistributeLayoutAttr>(attr.getValue())) {
-      auto newLayout = dist.dropSgLayoutAndData();
-      if (newLayout)
-        out.emplace_back(attr.getName(), newLayout);
-    } else {
-      out.push_back(attr);
-    }
-  }
-
-  return out;
-}
-
-SmallVector<NamedAttribute>
-xegpu::dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
-  SmallVector<NamedAttribute> out;
-  out.reserve(attrs.size());
-
-  for (auto attr : attrs) {
-    if (auto dist = dyn_cast<xegpu::DistributeLayoutAttr>(attr.getValue())) {
-      auto newLayout = dist.dropInstData();
-      if (newLayout)
-        out.emplace_back(attr.getName(), newLayout);
-    } else {
-      out.push_back(attr);
-    }
-  }
-
-  return out;
-}
-
-// Explicit instantiation for OpResult
-template void
-xegpu::removeLayoutAttr<mlir::OpResult>(const mlir::OpResult &result);
-
-// Explicit instantiation for OpOperand
-template void
-xegpu::removeLayoutAttr<mlir::OpOperand>(const mlir::OpOperand &operand);
-
-void xegpu::removeLayoutAttrs(Operation *op) {
-  op->walk([&](Operation *nestOp) {
-    for (OpOperand &opr : nestOp->getOpOperands())
-      removeLayoutAttr(opr);
-    for (OpResult result : nestOp->getOpResults())
-      removeLayoutAttr(result);
-    if (op->hasAttrOfType<DistributeLayoutAttr>("layout"))
-      op->removeAttr("layout");
-    if (op->hasAttrOfType<DistributeLayoutAttr>("layout_a"))
-      op->removeAttr("layout_a");
-    if (op->hasAttrOfType<DistributeLayoutAttr>("layout_b"))
-      op->removeAttr("layout_b");
-    if (op->hasAttrOfType<DistributeLayoutAttr>("layout_cd"))
-      op->removeAttr("layout_cd");
-  });
-}
-
 SmallVector<Value>
 xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
                                         Value value, ArrayRef<int64_t> shape) {
@@ -785,4 +680,59 @@ bool xegpu::requireTranspose(const xegpu::LayoutAttr layout,
   if (laneLayout.size() != 2)
     return false;
   return laneLayout[0] == uArch->getSubgroupSize() && laneLayout[1] == 1;
+}
+
+// Check if dst shape is an expansion of src shape by inserting unit dimensions.
+// Returns true if all dimensions in src match corresponding dimensions in dst
+// (after skipping unit dimensions), and populates expandedUnitDims with the
+// indices of the unit dimensions in dst that were added (not present in src).
+// Example: src=[2,3], dst=[1,2,3,1] -> true, expandedUnitDims=[0,3]
+bool xegpu::matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+                                  SmallVector<int64_t> &expandedUnitDims) {
+  // All unit dimensions in dst that don't appear in src are the expanded
+  // unit dimensions
+  size_t srcIdx = 0;
+  for (size_t dstIdx = 0; dstIdx < dst.size(); ++dstIdx)
+    if (srcIdx < src.size() && src[srcIdx] == dst[dstIdx])
+      srcIdx++;
+    else if (dst[dstIdx] == 1)
+      expandedUnitDims.push_back(dstIdx);
+    else
+      return false;
+  return srcIdx == src.size();
+}
+
+// Checks if dst shape is an expansion of src shape where each dimension in src
+// is split into one or more consecutive dimensions in dst whose product equals
+// the original dimension. Populates splitDimGroups with groups of dst indices
+// that correspond to each src dimension. Example: src=[6,4], dst=[2,3,2,2] ->
+// true
+bool xegpu::matchSplitDimExpansion(
+    ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+    SmallVector<SmallVector<int64_t>> &splitDimGroups) {
+  // each dim in src can be mapped to one or more dims in dst whose product
+  // equals to the src dim
+  size_t srcIdx = 0;
+  int64_t accumulatedSize = 1;
+  SmallVector<int64_t> currentDstDims;
+
+  splitDimGroups.clear();
+  for (size_t dstIdx = 0; dstIdx < dst.size(); ++dstIdx) {
+    if (srcIdx >= src.size())
+      return false;
+    accumulatedSize *= dst[dstIdx];
+    currentDstDims.push_back(dstIdx);
+
+    if (accumulatedSize == src[srcIdx]) {
+      // Record the mapping: srcIdx -> currentDstDims
+      splitDimGroups.push_back(currentDstDims);
+      // move to next src dim
+      srcIdx++;
+      accumulatedSize = 1;
+      currentDstDims.clear();
+    } else if (accumulatedSize > src[srcIdx]) {
+      return false;
+    }
+  }
+  return srcIdx == src.size();
 }
