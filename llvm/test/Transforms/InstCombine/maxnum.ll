@@ -430,6 +430,25 @@ define float @reduce_precision_multi_use_1(float %x, float %y, ptr %p) {
   ret float %trunc
 }
 
+define float @reduce_precision_multi_use_2(float %x, float %y, ptr %p, ptr %p2) {
+; CHECK-LABEL: @reduce_precision_multi_use_2(
+; CHECK-NEXT:    [[X_EXT:%.*]] = fpext float [[X:%.*]] to double
+; CHECK-NEXT:    [[Y_EXT:%.*]] = fpext float [[Y:%.*]] to double
+; CHECK-NEXT:    store double [[X_EXT]], ptr [[P:%.*]], align 8
+; CHECK-NEXT:    store double [[Y_EXT]], ptr [[P2:%.*]], align 8
+; CHECK-NEXT:    [[MAXNUM:%.*]] = call double @llvm.maxnum.f64(double [[X_EXT]], double [[Y_EXT]])
+; CHECK-NEXT:    [[MAXNUM1:%.*]] = fptrunc double [[MAXNUM]] to float
+; CHECK-NEXT:    ret float [[MAXNUM1]]
+;
+  %x.ext = fpext float %x to double
+  %y.ext = fpext float %y to double
+  store double %x.ext, ptr %p
+  store double %y.ext, ptr %p2
+  %maxnum = call double @llvm.maxnum.f64(double %x.ext, double %y.ext)
+  %trunc = fptrunc double %maxnum to float
+  ret float %trunc
+}
+
 define float @negated_op(float %x) {
 ; CHECK-LABEL: @negated_op(
 ; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
