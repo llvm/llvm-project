@@ -337,7 +337,6 @@ export class LLDBDapDescriptorFactory
         `Session "${session.name}" is an Android debug session for component ${session.configuration.androidComponent}.`,
       );
       const tracker = new AndroidSessionTracker(session);
-      // TODO: handled exceptions
       await tracker.startDebugSession();
     }
 

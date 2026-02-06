@@ -37,6 +37,7 @@ export class AndroidSessionTracker {
   }
 
   async startDebugSession() {
+    // TODO: Do we want some exceptions to be reported as ErrorWithNotification?
     await this.apkDebugSession.start(true);
   }
 

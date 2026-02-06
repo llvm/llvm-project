@@ -68,7 +68,7 @@ export class ApkDebugSession {
     await this.startApk(adb, this.componentName, wfd);
 
     const abortController = new AbortController();
-    const endPromise = this.startLldbServer(adb, addId, abortController.signal);
+    const endPromise = this.runLldbServer(adb, addId, abortController.signal);
     this.runningSession = {
       adb,
       addId,
@@ -179,16 +179,13 @@ export class ApkDebugSession {
     );
   }
 
-  private startLldbServer(adb: AdbClient, addId: string, abort: AbortSignal) {
+  private runLldbServer(adb: AdbClient, addId: string, abort: AbortSignal) {
     const command =
       `run-as ${addId} /data/data/${addId}/lldb-stuff/lldb-server` +
       ` platform --server --listen unix-abstract:///${addId}/lldb-platform.sock` +
       ` --log-channels "lldb process:gdb-remote packets"`;
-    // TODO: open log file
     const writer = async () => {};
-    return adb.shellCommandToStream(command, writer, abort).then(() => {
-      // TODO: close log file
-    });
+    return adb.shellCommandToStream(command, writer, abort);
   }
 
   private async waitLldbServerReachable(adb: AdbClient, addId: string) {

@@ -261,7 +261,7 @@ export class AdbConnection extends Connection {
     }
 
     const mtime = Math.floor(Date.now() / 1000);
-    await this.writeSyncHeader("DONE", mtime); // TODO: year 2038 bug
+    await this.writeSyncHeader("DONE", mtime); // TODO: Year 2038 bug?
 
     const { responseId, dataLen } = await this.readSyncHeader();
     if (responseId === "FAIL") {
