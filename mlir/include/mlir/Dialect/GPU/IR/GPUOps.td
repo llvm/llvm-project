@@ -1215,7 +1215,7 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
 def AnyIntegerOrFloatOr1DVector :
   AnyTypeOf<[AnyIntegerOrFloat, FixedVectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
 
-def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType]> {
+def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce", [SameOperandsAndResultType, NoMemoryEffect]> {
   let summary = "Reduce values among subgroup.";
   let description = [{
     The `subgroup_reduce` op reduces the values of lanes (work items) across a
