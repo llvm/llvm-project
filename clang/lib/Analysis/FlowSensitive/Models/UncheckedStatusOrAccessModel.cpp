@@ -372,7 +372,7 @@ static auto isNonConstStatusOrType() {
 static auto isNonConstStatusOrPtrArgumentCall() {
   using namespace ::clang::ast_matchers; // NOLINT: Too many names
   return callExpr(hasAnyArgument(
-      hasType(hasCanonicalType((pointsTo(isNonConstStatusOrType()))))));
+      hasType(hasCanonicalType(pointsTo(isNonConstStatusOrType())))));
 }
 
 static auto
