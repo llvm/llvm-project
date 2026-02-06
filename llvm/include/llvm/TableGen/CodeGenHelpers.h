@@ -106,7 +106,18 @@ private:
     Name.consume_front("::");
     return Name;
   }
+
   std::string Name;
+  raw_ostream &OS;
+};
+
+// Simple RAII helper for emitting anonymous namespace scope.
+class AnonNamespaceEmitter {
+public:
+  AnonNamespaceEmitter(raw_ostream &OS) : OS(OS) { OS << "namespace {\n\n"; }
+  ~AnonNamespaceEmitter() { OS << "} // namespace\n"; }
+
+private:
   raw_ostream &OS;
 };
 

@@ -395,6 +395,12 @@ Error olGetPlatformInfoSize_impl(ol_platform_handle_t Platform,
                                      PropSizeRet);
 }
 
+Error olPlatformRegisterRPCCallback_impl(ol_platform_handle_t Platform,
+                                         ol_platform_rpc_cb_t Callback) {
+  Platform->Plugin->getRPCServer().registerCallback(Callback);
+  return Error::success();
+}
+
 Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
                                 ol_device_info_t PropName, size_t PropSize,
                                 void *PropValue, size_t *PropSizeRet) {

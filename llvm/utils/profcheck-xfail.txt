@@ -129,6 +129,8 @@ Transforms/ExpandIRInsts/X86/srem129.ll
 Transforms/ExpandIRInsts/X86/udiv129.ll
 Transforms/ExpandIRInsts/X86/urem129.ll
 Transforms/ExpandIRInsts/X86/vector.ll
+Transforms/ExpandIRInsts/X86/expand-fp-convert-small.ll
+Transforms/ExpandIRInsts/X86/expand-int-convert-small.ll
 Transforms/ExpandIRInsts/X86/expand-large-fp-convert-fptosi129.ll
 Transforms/ExpandIRInsts/X86/expand-large-fp-convert-fptoui129.ll
 Transforms/ExpandIRInsts/X86/expand-large-fp-convert-si129tofp.ll

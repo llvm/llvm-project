@@ -800,6 +800,46 @@ static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
   return false;
 }
 
+// Given an expression like `&X` or `std::addressof(X)`, returns the `Expr`
+// corresponding to `X` (after removing parens and implicit casts).
+// Returns null if the input expression `E` is not an address-of expression.
+static const Expr *getSubExprInAddressOfExpr(const Expr *E) {
+  if (!E->getType()->isPointerType())
+    return nullptr;
+  const Expr *Ptr = E->IgnoreParenImpCasts();
+
+  // `&X` where `X` is an `Expr`.
+  if (const auto *UO = dyn_cast<UnaryOperator>(Ptr)) {
+    if (UO->getOpcode() != UnaryOperator::Opcode::UO_AddrOf)
+      return nullptr;
+    return UO->getSubExpr()->IgnoreParenImpCasts();
+  }
+
+  // `std::addressof(X)` where `X` is an `Expr`.
+  if (const auto *CE = dyn_cast<CallExpr>(Ptr)) {
+    const FunctionDecl *FnDecl = CE->getDirectCallee();
+    if (!FnDecl || !FnDecl->isInStdNamespace() ||
+        FnDecl->getNameAsString() != "addressof" || CE->getNumArgs() != 1)
+      return nullptr;
+    return CE->getArg(0)->IgnoreParenImpCasts();
+  }
+
+  return nullptr;
+}
+
+// Given an expression like `sizeof(X)`, returns the `Expr` corresponding to `X`
+// (after removing parens and implicit casts). Returns null if the expression
+// `E` is not a `sizeof` expression or is `sizeof(T)` for a type `T`.
+static const Expr *getSubExprInSizeOfExpr(const Expr *E) {
+  const auto *SizeOfExpr =
+      dyn_cast<UnaryExprOrTypeTraitExpr>(E->IgnoreParenImpCasts());
+  if (!SizeOfExpr || SizeOfExpr->getKind() != UETT_SizeOf)
+    return nullptr;
+  if (SizeOfExpr->isArgumentType())
+    return nullptr;
+  return SizeOfExpr->getArgumentExpr()->IgnoreParenImpCasts();
+}
+
 namespace libc_func_matchers {
 // Under `libc_func_matchers`, define a set of matchers that match unsafe
 // functions in libc and unsafe calls to them.
@@ -1057,7 +1097,6 @@ static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
             "wmemcpy",
             "memmove",
             "wmemmove",
-            "memset",
             "wmemset",
             // IO:
             "fread",
@@ -1105,6 +1144,44 @@ static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
   return Name.ends_with("scanf");
 }
 
+// Returns true if this is an unsafe call to `memset`.
+// The only call we currently consider safe is of the form
+// `memset(&x, 0, sizeof(x))`, with possible variations in parentheses.
+static bool isUnsafeMemset(const CallExpr &Node, ASTContext &Ctx) {
+  const FunctionDecl *FD = Node.getDirectCallee();
+  assert(FD && "It should have been checked that FD is non-null.");
+
+  const IdentifierInfo *II = FD->getIdentifier();
+  if (!II)
+    return false;
+
+  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
+      II->getName(), FD->getBuiltinID());
+  if (Name != "memset")
+    return false;
+
+  // We currently only handle the basic forms of `memset` with 3 parameters.
+  // There is also `__builtin___memset_chk()` which takes a 4th `destlen`
+  // parameter for bounds checking, but we don't consider its safe forms yet.
+  // https://refspecs.linuxbase.org/LSB_4.1.0/LSB-Core-generic/LSB-Core-generic/libc---memset-chk-1.html
+  if (FD->getNumParams() != 3)
+    return true;
+
+  // Now we have a known version of `memset`, consider it unsafe unless it's in
+  // the form `memset(&x, 0, sizeof(x))`.
+  const auto *AddressOfVar = dyn_cast_if_present<DeclRefExpr>(
+      getSubExprInAddressOfExpr(Node.getArg(0)));
+  if (!AddressOfVar)
+    return true;
+
+  const auto *SizeOfVar =
+      dyn_cast_if_present<DeclRefExpr>(getSubExprInSizeOfExpr(Node.getArg(2)));
+  if (!SizeOfVar)
+    return true;
+
+  return AddressOfVar->getDecl() != SizeOfVar->getDecl();
+}
+
 // Match a call to one of the `v*printf` functions taking `va_list`.  We cannot
 // check safety for these functions so they should be changed to their
 // non-va_list versions.
@@ -1117,9 +1194,7 @@ static bool isUnsafeVaListPrintfFunc(const FunctionDecl &Node) {
   StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
       II->getName(), Node.getBuiltinID());
 
-  if (!Name.ends_with("printf"))
-    return false; // neither printf nor scanf
-  return Name.starts_with("v");
+  return Name.starts_with("v") && Name.ends_with("printf");
 }
 
 // Matches a call to one of the `sprintf` functions as they are always unsafe
@@ -1133,16 +1208,7 @@ static bool isUnsafeSprintfFunc(const FunctionDecl &Node) {
   StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
       II->getName(), Node.getBuiltinID());
 
-  if (!Name.ends_with("printf") ||
-      // Let `isUnsafeVaListPrintfFunc` check for cases with va-list:
-      Name.starts_with("v"))
-    return false;
-
-  StringRef Prefix = Name.drop_back(6);
-
-  if (Prefix.ends_with("w"))
-    Prefix = Prefix.drop_back(1);
-  return Prefix == "s";
+  return Name == "sprintf" || Name == "swprintf";
 }
 
 // Match function declarations of `printf`, `fprintf`, `snprintf` and their wide
@@ -1157,7 +1223,7 @@ static bool isNormalPrintfFunc(const FunctionDecl &Node) {
   StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
       II->getName(), Node.getBuiltinID());
 
-  if (!Name.ends_with("printf") || Name.starts_with("v"))
+  if (!Name.ends_with("printf"))
     return false;
 
   StringRef Prefix = Name.drop_back(6);
@@ -2168,6 +2234,10 @@ public:
     if (!isSingleStringLiteralArg) {
       // (unless the call has a sole string literal argument):
       if (libc_func_matchers::isPredefinedUnsafeLibcFunc(*FD)) {
+        Result.addNode(Tag, DynTypedNode::create(*CE));
+        return true;
+      }
+      if (libc_func_matchers::isUnsafeMemset(*CE, Ctx)) {
         Result.addNode(Tag, DynTypedNode::create(*CE));
         return true;
       }

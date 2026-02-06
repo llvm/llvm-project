@@ -25,18 +25,18 @@ big_switch
 1
 1
 1
-1
-1
-1
-1
-1
+0
+0
+0
+0
+0
 1
 
 boolean_operators
 # Func Hash:
 1245693242827665
 # Num Counters:
-14
+26
 # Counter Values:
 1
 1
@@ -52,12 +52,24 @@ boolean_operators
 1
 1
 1
+1
+1
+1
+0
+1
+1
+1
+1
+1
+1
+1
+0
 
 boolop_loops
 # Func Hash:
 873389568252105055
 # Num Counters:
-13
+21
 # Counter Values:
 1
 1
@@ -69,6 +81,14 @@ boolop_loops
 1
 1
 1
+1
+1
+1
+0
+1
+1
+1
+0
 1
 1
 1
@@ -98,38 +118,39 @@ conditionals
 # Func Hash:
 293081517422662482
 # Num Counters:
-22
+24
 # Counter Values:
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
+1
 1
 1
 1
 0
 1
+0
 1
 1
+0
 1
 1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
+0
 1
 
 do_fallthrough
 # Func Hash:
 644163604256451218
 # Num Counters:
-7
+6
 # Counter Values:
-1
 1
 1
 1
@@ -141,7 +162,7 @@ early_exits
 # Func Hash:
 574511640547777597
 # Num Counters:
-18
+17
 # Counter Values:
 1
 0
@@ -151,14 +172,13 @@ early_exits
 1
 1
 1
-1
-1
-1
+0
 1
 1
 1
 0
 0
+1
 0
 0
 
@@ -171,15 +191,11 @@ jumps
 1
 1
 0
+1
+0
 0
 1
 0
-1
-0
-1
-0
-1
-1
 1
 1
 1
@@ -192,7 +208,11 @@ jumps
 1
 1
 0
+1
+1
 0
+0
+1
 1
 1
 1
@@ -240,6 +260,7 @@ switches
 1
 1
 1
+0
 1
 1
 1
@@ -247,12 +268,11 @@ switches
 0
 1
 1
-1
-1
-1
-1
 0
 0
+0
+0
+1
 0
 0
 

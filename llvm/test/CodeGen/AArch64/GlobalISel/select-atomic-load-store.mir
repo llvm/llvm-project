@@ -51,7 +51,7 @@ body:             |
     ; CHECK-LABEL: name: anyext_load_monotonic_i32
     ; CHECK: [[COPY:%[0-9]+]]:gpr64common = COPY $xzr
     ; CHECK-NEXT: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load monotonic (s32) from `ptr null`)
-    ; CHECK-NEXT: %ld:gpr64all = SUBREG_TO_REG 0, [[LDRWui]], %subreg.sub_32
+    ; CHECK-NEXT: %ld:gpr64all = SUBREG_TO_REG [[LDRWui]], %subreg.sub_32
     ; CHECK-NEXT: $x0 = COPY %ld
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %1:gpr(p0) = G_CONSTANT i64 0
