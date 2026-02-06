@@ -1205,8 +1205,16 @@ class TemplateDiff {
              "Both template specializations need to be valid.");
       Qualifiers FromQual = FromType.getQualifiers(),
                  ToQual = ToType.getQualifiers();
-      FromQual -= QualType(FromArgTST, 0).getQualifiers();
-      ToQual -= QualType(ToArgTST, 0).getQualifiers();
+      // FromQual -= QualType(FromArgTST, 0).getQualifiers();
+      // ToQual -= QualType(ToArgTST, 0).getQualifiers();
+      // ... your commented out lines ...
+      bool Same = false;
+      if (FromArgTST->getTemplateName().getAsTemplateDecl() == 
+          ToArgTST->getTemplateName().getAsTemplateDecl()) {
+        // If the names match, the ONLY thing that makes them different is the Qualifiers
+        Same = (FromQual == ToQual); 
+      }
+      Tree.SetSame(Same);
       Tree.SetTemplateDiff(FromArgTST->getTemplateName().getAsTemplateDecl(),
                            ToArgTST->getTemplateName().getAsTemplateDecl(),
                            FromQual, ToQual, FromDefault, ToDefault);
