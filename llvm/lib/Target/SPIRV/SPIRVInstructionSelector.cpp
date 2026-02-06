@@ -4390,14 +4390,8 @@ bool SPIRVInstructionSelector::generateSampleImage(
     if (isConstReg(MRI, *ImOps.Offset))
       ImageOperands |= SPIRV::ImageOperand::ConstOffset;
     else {
-      std::string DiagMsg;
-      raw_string_ostream OS(DiagMsg);
-      OS << "Non-constant offsets are not supported in sample instructions: ";
-      Loc.print(OS);
-      OS << " ";
-      Pos.print(OS);
-      OS.flush();
-      report_fatal_error(DiagMsg.c_str(), false);
+      Pos.emitGenericError(
+          "Non-constant offsets are not supported in sample instructions.");
     }
   }
   if (ImOps.MinLod)

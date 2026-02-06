@@ -1,6 +1,6 @@
-; RUN: not llc -O0 -mtriple=spirv-vulkan-compute %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+; RUN: not llc -O0 -mtriple=spirv-vulkan-compute %s -o /dev/null 2>&1 | FileCheck %s
 
-; CHECK-ERROR: LLVM ERROR: Non-constant offsets are not supported in sample instructions: {{.*}} G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.resource.sample)
+; CHECK: error: {{.*}} Non-constant offsets are not supported in sample instructions.
 
 @.str = private unnamed_addr constant [4 x i8] c"img\00", align 1
 @.str.1 = private unnamed_addr constant [5 x i8] c"samp\00", align 1
