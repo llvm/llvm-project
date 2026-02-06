@@ -114,10 +114,9 @@ class DominanceFrontier : public DominanceFrontierBase<BasicBlock, false> {
 public:
   using DomTreeT = DomTreeBase<BasicBlock>;
   using DomTreeNodeT = DomTreeNodeBase<BasicBlock>;
-  using DomSetType = DominanceFrontierBase<BasicBlock, false>::DomSetType;
-  using iterator = DominanceFrontierBase<BasicBlock, false>::iterator;
-  using const_iterator =
-      DominanceFrontierBase<BasicBlock, false>::const_iterator;
+  using DomSetType = DominanceFrontier::DomSetType;
+  using iterator = DominanceFrontier::iterator;
+  using const_iterator = DominanceFrontier::const_iterator;
 
   /// Handle invalidation explicitly.
   bool invalidate(Function &F, const PreservedAnalyses &PA,
