@@ -1,6 +1,8 @@
 ; RUN: llvm-as %s -o %t.o
-; RUN: llvm-lto2 run -mattr=+zcmp -filetype=asm -o %t.s %t.o -r=%t.o,func
+; RUN: llvm-lto2 run -mattr=+zcmp -save-temps -filetype=asm -o %t.s %t.o -r=%t.o,func,p
 ; RUN: llvm-nm %t.o | FileCheck %s --check-prefix NM
+; RUN: llvm-nm %t.s.0.5.precodegen.bc | FileCheck %s --check-prefix NM
+; RUN: FileCheck %s --input-file %t.s.0
 
 ; NM: T func
 

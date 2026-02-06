@@ -1,0 +1,139 @@
+Link modules:
+
+- asm-foo.ll: symbol foo (defined).
+- asm-foo-ver-undef.ll: symbol foo (undefined), symver foo@VER
+  (undefined, because foo is undefined).
+
+The result should be a module with foo and foo@VER both defined.
+
+RUN: llvm-link %p/Inputs/asm-foo.ll %p/Inputs/asm-foo-ver-undef.ll -o %t1.bc
+RUN: llvm-dis %t1.bc -o - | FileCheck %s --check-prefix CHECK-1
+RUN: llvm-nm %t1.bc | FileCheck %s --check-prefix NM-1
+
+CHECK-1: module asm ".do.not.parse"
+CHECK-1: module asm ".do.not.parse"
+CHECK-1: !llvm.module.flags = !{![[SYMBOLS_FLAG:[0-9]+]], ![[SYMVERS_FLAG:[0-9]+]]}
+CHECK-1: ![[SYMBOLS_FLAG]] = distinct !{i32 6, !"global-asm-symbols", ![[SYMBOLS:[0-9]+]]}
+CHECK-1: ![[SYMBOLS]] = distinct !{![[SYM_DEF:[0-9]+]], ![[SYM_UNDEF:[0-9]+]], ![[SYM_SYMVER:[0-9]+]]}
+CHECK-1: ![[SYM_DEF:[0-9]+]] = !{!"foo", i32 2050}
+CHECK-1: ![[SYM_UNDEF:[0-9]+]] = !{!"foo", i32 2051}
+CHECK-1: ![[SYM_SYMVER:[0-9]+]] = !{!"foo@VER", i32 2051}
+CHECK-1: ![[SYMVERS_FLAG]] = distinct !{i32 6, !"global-asm-symvers", ![[SYMVERS:[0-9]+]]}
+CHECK-1: ![[SYMVERS]] = distinct !{![[SYMVER:[0-9]+]]}
+CHECK-1: ![[SYMVER]] = !{!"foo", !"foo@VER"}
+
+NM-1-NOT: foo
+NM-1: T foo
+NM-1: T foo@VER
+NM-1-NOT: foo
+
+
+Link two identical modules: symbol foo (undefined), symver foo@VER
+(undefined, because foo is undefined).
+
+The result should have them foo and foo@VER undefined as well.
+
+RUN: llvm-link %p/Inputs/asm-foo-ver-undef.ll %p/Inputs/asm-foo-ver-undef.ll -o %t2.bc
+RUN: llvm-dis %t2.bc -o - | FileCheck %s --check-prefix CHECK-2
+RUN: llvm-nm %t2.bc | FileCheck %s --check-prefix NM-2
+
+CHECK-2: module asm ".do.not.parse"
+CHECK-2: module asm ".do.not.parse"
+CHECK-2: !llvm.module.flags = !{![[SYMBOLS_FLAG:[0-9]+]], ![[SYMVERS_FLAG:[0-9]+]]}
+CHECK-2: ![[SYMBOLS_FLAG]] = distinct !{i32 6, !"global-asm-symbols", ![[SYMBOLS:[0-9]+]]}
+CHECK-2: ![[SYMBOLS]] = distinct !{![[SYM_UNDEF:[0-9]+]], ![[SYM_SYMVER:[0-9]+]]}
+CHECK-2: ![[SYM_UNDEF:[0-9]+]] = !{!"foo", i32 2051}
+CHECK-2: ![[SYM_SYMVER:[0-9]+]] = !{!"foo@VER", i32 2051}
+CHECK-2: ![[SYMVERS_FLAG]] = distinct !{i32 6, !"global-asm-symvers", ![[SYMVERS:[0-9]+]]}
+CHECK-2: ![[SYMVERS]] = distinct !{![[SYMVER:[0-9]+]]}
+CHECK-2: ![[SYMVER]] = !{!"foo", !"foo@VER"}
+
+NM-2-NOT: foo
+NM-2: U foo
+NM-2: U foo@VER
+NM-2-NOT: foo
+
+Link two identical modules: symbol foo (defined), symver foo@VER (defined).
+The result should have them defined as well.
+
+RUN: llvm-link %p/Inputs/asm-foo-ver-def.ll %p/Inputs/asm-foo-ver-def.ll -o %t3.bc
+RUN: llvm-dis %t3.bc -o - | FileCheck %s --check-prefix CHECK-3
+RUN: llvm-nm %t3.bc | FileCheck %s --check-prefix NM-3
+
+CHECK-3: module asm ".do.not.parse"
+CHECK-3: module asm ".do.not.parse"
+CHECK-3: !llvm.module.flags = !{![[SYMBOLS_FLAG:[0-9]+]], ![[SYMVERS_FLAG:[0-9]+]]}
+CHECK-3: ![[SYMBOLS_FLAG]] = distinct !{i32 6, !"global-asm-symbols", ![[SYMBOLS:[0-9]+]]}
+CHECK-3: ![[SYMBOLS]] = distinct !{![[SYM_DEF:[0-9]+]], ![[SYM_SYMVER:[0-9]+]]}
+CHECK-3: ![[SYM_DEF:[0-9]+]] = !{!"foo", i32 2050}
+CHECK-3: ![[SYM_SYMVER:[0-9]+]] = !{!"foo@VER", i32 2050}
+CHECK-3: ![[SYMVERS_FLAG]] = distinct !{i32 6, !"global-asm-symvers", ![[SYMVERS:[0-9]+]]}
+CHECK-3: ![[SYMVERS]] = distinct !{![[SYMVER:[0-9]+]]}
+CHECK-3: ![[SYMVER]] = !{!"foo", !"foo@VER"}
+
+NM-3-NOT: foo
+NM-3: T foo
+NM-3: T foo@VER
+NM-3-NOT: foo
+
+Link modules:
+- asm-bar-ver-def.ll: symbol bar (defined), symver bar@VER (defined).
+- asm-foo.ll: symbol foo (defined).
+- asm-foo-undef.ll: symbol foo (undefined), symver foo@VER (undefined).
+
+The result should have all symbols and symvers defined.
+
+RUN: llvm-link %p/Inputs/asm-bar-ver-def.ll %p/Inputs/asm-foo.ll %p/Inputs/asm-foo-ver-undef.ll -o %t4.bc
+RUN: llvm-dis %t4.bc -o - | FileCheck %s --check-prefix CHECK-4
+RUN: llvm-nm %t4.bc | FileCheck %s --check-prefix NM-4
+
+CHECK-4: module asm ".do.not.parse"
+CHECK-4: module asm ".do.not.parse"
+CHECK-4: module asm ".do.not.parse"
+CHECK-4: !llvm.module.flags = !{![[SYMBOLS_FLAG:[0-9]+]], ![[SYMVERS_FLAG:[0-9]+]]}
+CHECK-4: ![[SYMBOLS_FLAG]] = distinct !{i32 6, !"global-asm-symbols", ![[SYMBOLS:[0-9]+]]}
+CHECK-4: ![[SYMBOLS]] = distinct !{![[SYM_BAR_DEF:[0-9]+]], ![[SYM_BAR_SYMVER_DEF:[0-9]+]], ![[SYM_FOO_DEF:[0-9]+]], ![[SYM_FOO_UNDEF:[0-9]+]], ![[SYM_FOO_SYMVER_UNDEF:[0-9]+]]}
+CHECK-4: ![[SYM_BAR_DEF]] = !{!"bar", i32 2050}
+CHECK-4: ![[SYM_BAR_SYMVER_DEF]] = !{!"bar@VER", i32 2050}
+CHECK-4: ![[SYM_FOO_DEF]] = !{!"foo", i32 2050}
+CHECK-4: ![[SYM_FOO_UNDEF]] = !{!"foo", i32 2051}
+CHECK-4: ![[SYM_FOO_SYMVER_UNDEF]] = !{!"foo@VER", i32 2051}
+CHECK-4: ![[SYMVERS_FLAG]] = distinct !{i32 6, !"global-asm-symvers", ![[SYMVERS:[0-9]+]]}
+CHECK-4: ![[SYMVERS]] = distinct !{![[SYMVER_BAR:[0-9]+]], ![[SYMVER_FOO:[0-9]+]]}
+CHECK-4: ![[SYMVER_BAR]] = !{!"bar", !"bar@VER"}
+CHECK-4: ![[SYMVER_FOO]] = !{!"foo", !"foo@VER"}
+
+NM-4-NOT: foo
+NM-4-NOT: bar
+NM-4: T bar
+NM-4: T bar@VER
+NM-4: T foo
+NM-4: T foo@VER
+NM-4-NOT: foo
+NM-4-NOT: bar
+
+Link modules:
+- asm-foo-ver-undef.ll: symbol foo (undefined), symver foo@VER (undefined).
+- asm-foo-def-ir.ll: symbol foo is defined as a function in IR.
+
+The result should have foo and foo@VER defined. Symbols in IR define
+symvers in assembly.
+
+RUN: llvm-link %p/Inputs/asm-foo-def-ir.ll %p/Inputs/asm-foo-ver-undef.ll -o %t5.bc
+RUN: llvm-dis %t5.bc -o - | FileCheck %s --check-prefix CHECK-5
+RUN: llvm-nm %t5.bc | FileCheck %s --check-prefix NM-5
+
+CHECK-5: module asm ".do.not.parse"
+CHECK-5: !llvm.module.flags = !{![[SYMBOLS_FLAG:[0-9]+]], ![[SYMVERS_FLAG:[0-9]+]]}
+CHECK-5: ![[SYMBOLS_FLAG]] = !{i32 6, !"global-asm-symbols", ![[SYMBOLS:[0-9]+]]}
+CHECK-5: ![[SYMBOLS]] = !{![[SYM_UNDEF:[0-9]+]], ![[SYM_SYMVER:[0-9]+]]}
+CHECK-5: ![[SYM_UNDEF:[0-9]+]] = !{!"foo", i32 2051}
+CHECK-5: ![[SYM_SYMVER:[0-9]+]] = !{!"foo@VER", i32 2051}
+CHECK-5: ![[SYMVERS_FLAG]] = !{i32 6, !"global-asm-symvers", ![[SYMVERS:[0-9]+]]}
+CHECK-5: ![[SYMVERS]] = !{![[SYMVER:[0-9]+]]}
+CHECK-5: ![[SYMVER]] = !{!"foo", !"foo@VER"}
+
+NM-5-NOT: foo
+NM-5: T foo
+NM-5: T foo@VER
+NM-5-NOT: foo

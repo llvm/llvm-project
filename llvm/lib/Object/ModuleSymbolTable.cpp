@@ -14,6 +14,8 @@
 
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "RecordStreamer.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -42,6 +44,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <memory>
@@ -205,6 +208,95 @@ addSymbols(RecordStreamer &Streamer,
   }
 }
 
+static void collectAsmSymbolsFromMetadata(
+    const Module &M, MDTuple *SymbolsMD, MDTuple *SymversMD,
+    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol) {
+
+  // Extract all symbols from global-asm-symbols module flag. With AppendUnique
+  // ModFlagBehavior there may only be symbols with unique Name and Flags
+  // combination.
+  MapVector<StringRef, SmallVector<BasicSymbolRef::Flags, 2>> Symbols;
+  for (const Metadata *MD : SymbolsMD->operands()) {
+    const MDTuple *SymMD = cast<MDTuple>(MD);
+    const MDString *Name = cast<MDString>(SymMD->getOperand(0));
+    const ConstantInt *Flags =
+        mdconst::extract<ConstantInt>(SymMD->getOperand(1));
+
+    // Collect symbols with the same name, but different flags.
+    Symbols[Name->getString()].push_back(
+        static_cast<BasicSymbolRef::Flags>(Flags->getZExtValue()));
+  }
+
+  // If the same symbol is duplicated with different flags, assume that it can
+  // be redefined and select the most accurate set of flags. If it actually
+  // cannot be redefined, AsmParser will diagnose this later.
+  auto LessFn = [](const BasicSymbolRef::Flags &LHS,
+                   const BasicSymbolRef::Flags &RHS) {
+    // Select defined symbols instead of undefined ones.
+    if (LHS & BasicSymbolRef::SF_Undefined)
+      return false;
+
+    // Return true if LHS is "better" (more defined) than RHS.
+    return true;
+  };
+  // Find the "best" set of flags and put it to the front. Ignore the rest.
+  for (auto &[Name, Flags] : Symbols) {
+    auto FlagsIt = std::min_element(Flags.begin(), Flags.end(), LessFn);
+    Flags[0] = *FlagsIt;
+  }
+
+  // Promote symver symbols from SF_Undefined when the corresponding aliasee
+  // symbol is defined either in assembly, or in IR.
+  MapVector<StringRef, StringRef> SymverToSym;
+  for (const Metadata *MD : SymversMD->operands()) {
+    const MDTuple *SymverMD = cast<MDTuple>(MD);
+
+    StringRef AliaseeName =
+        cast<MDString>(SymverMD->getOperand(0))->getString();
+    auto AliaseeIt = Symbols.find(AliaseeName);
+
+    // Aliasee symbols should normally be emitted along with its symver. Bail
+    // out if it was dropped for some reason.
+    if (AliaseeIt == Symbols.end())
+      continue;
+
+    BasicSymbolRef::Flags AliaseeFlag = AliaseeIt->second[0];
+
+    // Iterate over symvers (aliases) of the aliasee.
+    for (size_t Idx = 1, End = SymverMD->getNumOperands(); Idx < End; ++Idx) {
+      StringRef SymverName =
+          cast<MDString>(SymverMD->getOperand(Idx))->getString();
+
+      auto SymverIt = Symbols.find(SymverName);
+      if (SymverIt == Symbols.end())
+        continue;
+
+      BasicSymbolRef::Flags SymverFlag = SymverIt->second[0];
+      BasicSymbolRef::Flags SymverFlagDefined =
+          static_cast<BasicSymbolRef::Flags>(SymverFlag &
+                                             (~BasicSymbolRef::SF_Undefined));
+
+      if (SymverFlag == SymverFlagDefined)
+        continue;
+
+      // If the aliasee is defined - define the symver.
+      if (!(AliaseeFlag & BasicSymbolRef::SF_Undefined)) {
+        SymverIt->second[0] = SymverFlagDefined;
+        continue;
+      }
+
+      // If aliasee is defined in IR - define the symver.
+      if (const GlobalValue *GV = M.getNamedValue(AliaseeName)) {
+        if (!GV->isDeclarationForLinker())
+          SymverIt->second[0] = SymverFlagDefined;
+      }
+    }
+  }
+
+  for (auto &[Name, Flags] : Symbols)
+    AsmSymbol(Name, Flags[0]);
+}
+
 void ModuleSymbolTable::CollectAsmSymbols(
     const Module &M,
     function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmSymbol) {
@@ -213,14 +305,8 @@ void ModuleSymbolTable::CollectAsmSymbols(
       dyn_cast_if_present<MDTuple>(M.getModuleFlag("global-asm-symbols"));
 
   if (SymbolsMD) {
-    for (const Metadata *MD : SymbolsMD->operands()) {
-      const MDTuple *SymMD = cast<MDTuple>(MD);
-      const MDString *Name = cast<MDString>(SymMD->getOperand(0));
-      const ConstantInt *Flags =
-          mdconst::extract<ConstantInt>(SymMD->getOperand(1));
-      AsmSymbol(Name->getString(),
-                static_cast<BasicSymbolRef::Flags>(Flags->getZExtValue()));
-    }
+    MDTuple *SymversMD = cast<MDTuple>(M.getModuleFlag("global-asm-symvers"));
+    collectAsmSymbolsFromMetadata(M, SymbolsMD, SymversMD, AsmSymbol);
     addSpecialSymbols(M, AsmSymbol);
     return;
   }
@@ -240,26 +326,43 @@ static void addSymvers(RecordStreamer &Streamer,
       AsmSymver(Name->getName(), Alias);
 }
 
+static void collectAsmSymversFromMetadata(
+    MDTuple *SymversMD, function_ref<void(StringRef, StringRef)> AsmSymver) {
+
+  // Extract all symvers from global-asm-symvers module flag. These are stored
+  // as lists of [symbol, symver1, ..., symverN], so they may not be fully
+  // uniqued by AppendUnique ModFlagBehavior.
+  MapVector<StringRef, SmallSet<StringRef, 4>> Symvers;
+  for (const Metadata *MD : SymversMD->operands()) {
+    const MDTuple *SymverMD = cast<MDTuple>(MD);
+    StringRef Name = cast<MDString>(SymverMD->getOperand(0))->getString();
+    for (size_t Idx = 1, End = SymverMD->getNumOperands(); Idx < End; ++Idx) {
+      Symvers[Name].insert(
+          cast<MDString>(SymverMD->getOperand(Idx))->getString());
+    }
+  }
+
+  for (const auto &[Name, Aliases] : Symvers) {
+    for (StringRef Alias : Aliases)
+      AsmSymver(Name, Alias);
+  }
+}
+
 void ModuleSymbolTable::CollectAsmSymvers(
     const Module &M, function_ref<void(StringRef, StringRef)> AsmSymver) {
 
   MDTuple *SymversMD =
       dyn_cast_if_present<MDTuple>(M.getModuleFlag("global-asm-symvers"));
 
-  if (!SymversMD) {
-    initializeRecordStreamer(
-        M, /*CPU=*/"", /*Features=*/"",
-        [&](RecordStreamer &Streamer) { addSymvers(Streamer, AsmSymver); },
-        /*DiagHandler=*/nullptr);
+  if (SymversMD) {
+    collectAsmSymversFromMetadata(SymversMD, AsmSymver);
     return;
   }
 
-  for (const Metadata *MD : SymversMD->operands()) {
-    const MDTuple *SymverMD = cast<MDTuple>(MD);
-    StringRef Name = cast<MDString>(SymverMD->getOperand(0))->getString();
-    for (size_t Idx = 1, End = SymverMD->getNumOperands(); Idx < End; ++Idx)
-      AsmSymver(Name, cast<MDString>(SymverMD->getOperand(Idx))->getString());
-  }
+  initializeRecordStreamer(
+      M, /*CPU=*/"", /*Features=*/"",
+      [&](RecordStreamer &Streamer) { addSymvers(Streamer, AsmSymver); },
+      /*DiagHandler=*/nullptr);
 }
 
 bool ModuleSymbolTable::EmitModuleFlags(Module &M, StringRef CPU,
