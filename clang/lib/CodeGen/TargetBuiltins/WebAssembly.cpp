@@ -633,8 +633,8 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
     Function *Callee;
     if (E->getArg(1)->getType().isWebAssemblyExternrefType())
       Callee = CGM.getIntrinsic(Intrinsic::wasm_table_grow_externref);
-    else if (E->getArg(2)->getType().isWebAssemblyFuncrefType())
-      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_fill_funcref);
+    else if (E->getArg(1)->getType().isWebAssemblyFuncrefType())
+      Callee = CGM.getIntrinsic(Intrinsic::wasm_table_grow_funcref);
     else
       llvm_unreachable(
           "Unexpected reference type for __builtin_wasm_table_grow");

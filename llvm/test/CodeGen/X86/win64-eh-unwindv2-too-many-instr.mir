@@ -3,10 +3,17 @@
 # RUN:    -x86-wineh-unwindv2-instruction-count-threshold=4 \
 # RUN:    -run-pass=x86-wineh-unwindv2 | FileCheck %s \
 # RUN:    -check-prefixes=ALLOWLESS,CHECK
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %s \
+# RUN:    -x86-wineh-unwindv2-instruction-count-threshold=4 \
+# RUN:    -passes=x86-wineh-unwindv2 | FileCheck %s \
+# RUN:    -check-prefixes=ALLOWLESS,CHECK
 
 # Allow the default number of instructions per info
 # RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %s \
 # RUN:    -run-pass=x86-wineh-unwindv2 | FileCheck %s \
+# RUN:    -check-prefixes=ALLOWMORE,CHECK
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -o - %s \
+# RUN:    -passes=x86-wineh-unwindv2 | FileCheck %s \
 # RUN:    -check-prefixes=ALLOWMORE,CHECK
 
 --- |
@@ -63,29 +70,27 @@ body:             |
 
 # CHECK-LABEL: too_many_instr
 # CHECK-LABEL:   bb.0.entry:
+# bb.1 + bb.2 have enough instructions that bb.0 has its own info.
+# ALLOWLESS:      SEH_SplitChainedAtEndOfBlock
+# ALLOWMORE-NOT:  SEH_SplitChainedAtEndOfBlock
 # CHECK:          SEH_UnwindV2Start
 # CHECK:          RET64 debug-location !10
-# bb.1 + bb.2 have enough instructions that bb.0 has its own info.
-# ALLOWLESS-NEXT: SEH_SplitChained
-# ALLOWLESS-NEXT: SEH_EndPrologue
-# ALLOWMORE-NOT:  SEH_SplitChained
 
 # CHECK-LABEL:   bb.1
+# bb.2 doesn't fill the current info, so bb.1 gets added as well.
+# CHECK-NOT:      SEH_SplitChainedAtEndOfBlock
 # CHECK:          SEH_UnwindV2Start
 # CHECK:          RET64 debug-location !DILocation(line: 3, column: 1, scope: !6)
-# bb.2 doesn't fill the current info, so bb.1 gets added as well.
-# CHECK-NOT:      SEH_SplitChained
 
 # CHECK-LABEL:   bb.2
+# bb.3 has enough instructions by itself that bb.2 needs to split.
+# ALLOWLESS-NEXT: SEH_SplitChainedAtEndOfBlock
+# ALLOWMORE-NOT:  SEH_SplitChainedAtEndOfBlock
 # CHECK:          SEH_UnwindV2Start
 # CHECK:          RET64 debug-location !DILocation(line: 4, column: 1, scope: !6)
-# bb.3 has enough instructions by itself that bb.2 needs to split.
-# ALLOWLESS-NEXT: SEH_SplitChained
-# ALLOWLESS-NEXT: SEH_EndPrologue
-# ALLOWMORE-NOT:  SEH_SplitChained
 
 # CHECK-LABEL:   bb.3
+# Never split at the end.
+# CHECK-NOT:      SEH_SplitChainedAtEndOfBlock
 # CHECK:          SEH_UnwindV2Start
 # CHECK:          RET64 debug-location !DILocation(line: 5, column: 1, scope: !6)
-# Never split at the end.
-# CHECK-NOT:      SEH_SplitChained

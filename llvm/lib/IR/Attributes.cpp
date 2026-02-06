@@ -288,6 +288,11 @@ Attribute Attribute::getWithNoFPClass(LLVMContext &Context,
   return get(Context, NoFPClass, ClassMask);
 }
 
+Attribute Attribute::getWithDeadOnReturnInfo(LLVMContext &Context,
+                                             DeadOnReturnInfo DI) {
+  return get(Context, DeadOnReturn, DI.toIntValue());
+}
+
 Attribute Attribute::getWithCaptureInfo(LLVMContext &Context, CaptureInfo CI) {
   return get(Context, Captures, CI.toIntValue());
 }
@@ -508,6 +513,10 @@ CaptureInfo Attribute::getCaptureInfo() const {
   return CaptureInfo::createFromIntValue(pImpl->getValueAsInt());
 }
 
+DenormalFPEnv Attribute::getDenormalFPEnv() const {
+  return DenormalFPEnv::createFromIntValue(pImpl->getValueAsInt());
+}
+
 FPClassTest Attribute::getNoFPClass() const {
   assert(hasAttribute(Attribute::NoFPClass) &&
          "Can only call getNoFPClass() on nofpclass attribute");
@@ -685,6 +694,17 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
   if (hasAttribute(Attribute::Captures)) {
     std::string Result;
     raw_string_ostream(Result) << getCaptureInfo();
+    return Result;
+  }
+
+  if (hasAttribute(Attribute::DenormalFPEnv)) {
+    std::string Result = "denormal_fpenv(";
+    raw_string_ostream OS(Result);
+
+    struct DenormalFPEnv FPEnv = getDenormalFPEnv();
+    FPEnv.print(OS, /*OmitIfSame=*/true);
+
+    OS << ')';
     return Result;
   }
 
@@ -2280,6 +2300,10 @@ AttrBuilder &AttrBuilder::addCapturesAttr(CaptureInfo CI) {
   return addRawIntAttr(Attribute::Captures, CI.toIntValue());
 }
 
+AttrBuilder &AttrBuilder::addDenormalFPEnvAttr(DenormalFPEnv FPEnv) {
+  return addRawIntAttr(Attribute::DenormalFPEnv, FPEnv.toIntValue());
+}
+
 AttrBuilder &AttrBuilder::addNoFPClassAttr(FPClassTest Mask) {
   if (Mask == fcNone)
     return *this;
@@ -2371,6 +2395,11 @@ AttrBuilder &AttrBuilder::addFromEquivalentMetadata(const Instruction &I) {
 
   if (const MDNode *Range = I.getMetadata(LLVMContext::MD_range))
     addRangeAttr(getConstantRangeFromMetadata(*Range));
+
+  if (const MDNode *NoFPClass = I.getMetadata(LLVMContext::MD_nofpclass)) {
+    ConstantInt *CI = mdconst::extract<ConstantInt>(NoFPClass->getOperand(0));
+    addNoFPClassAttr(static_cast<FPClassTest>(CI->getZExtValue()));
+  }
 
   return *this;
 }
@@ -2533,16 +2562,16 @@ static bool denormModeCompatible(DenormalMode CallerMode,
 }
 
 static bool checkDenormMode(const Function &Caller, const Function &Callee) {
-  DenormalMode CallerMode = Caller.getDenormalModeRaw();
-  DenormalMode CalleeMode = Callee.getDenormalModeRaw();
+  DenormalFPEnv CallerEnv = Caller.getDenormalFPEnv();
+  DenormalFPEnv CalleeEnv = Callee.getDenormalFPEnv();
 
-  if (denormModeCompatible(CallerMode, CalleeMode)) {
-    DenormalMode CallerModeF32 = Caller.getDenormalModeF32Raw();
-    DenormalMode CalleeModeF32 = Callee.getDenormalModeF32Raw();
+  if (denormModeCompatible(CallerEnv.DefaultMode, CalleeEnv.DefaultMode)) {
+    DenormalMode CallerModeF32 = CallerEnv.F32Mode;
+    DenormalMode CalleeModeF32 = CalleeEnv.F32Mode;
     if (CallerModeF32 == DenormalMode::getInvalid())
-      CallerModeF32 = CallerMode;
+      CallerModeF32 = CallerEnv.DefaultMode;
     if (CalleeModeF32 == DenormalMode::getInvalid())
-      CalleeModeF32 = CalleeMode;
+      CalleeModeF32 = CalleeEnv.DefaultMode;
     return denormModeCompatible(CallerModeF32, CalleeModeF32);
   }
 
