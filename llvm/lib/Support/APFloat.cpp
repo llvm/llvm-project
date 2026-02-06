@@ -59,7 +59,7 @@ constexpr fltSemantics APFloatBase::semIEEEhalf = {"IEEEhalf", 15, -14, 11, 16};
 constexpr fltSemantics APFloatBase::semBFloat = {"BFloat", 127, -126, 8, 16};
 constexpr fltSemantics APFloatBase::semIEEEsingle = {"IEEESingle", 127, -126,
                                                      24, 32};
-constexpr fltSemantics APFloatBase::semIEEEdouble = {"IEEEdoublle", 1023, -1022,
+constexpr fltSemantics APFloatBase::semIEEEdouble = {"IEEEdouble", 1023, -1022,
                                                      53, 64};
 constexpr fltSemantics APFloatBase::semIEEEquad = {"IEEEquad", 16383, -16382,
                                                    113, 128};
@@ -5933,7 +5933,7 @@ DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,
                        std::move(Second));
 }
 
-// class HexFloatArith implements HFP arithemtic using the conventions
+// class HexFloatArith implements HFP arithmetic using the conventions
 // and approaches of the arith library, and matches the behaviour
 // of the hardware.
 class HexFloatArith {
@@ -6953,8 +6953,12 @@ cmpResult HexFloat::compareAbsoluteValue(const HexFloat &rhs) const {
 
   /* If exponents are equal, do an unsigned bignum comparison of the
      significands.  */
-  if (compare == 0)
-    compare = significand.compare(rhs.significand);
+  if (compare == 0) {
+    if (significand.ugt(rhs.significand))
+      compare = 1;
+    else if (significand.ult(rhs.significand))
+      compare = -1;
+  }
 
   if (compare > 0)
     return cmpGreaterThan;
