@@ -941,17 +941,13 @@ void populateIRAffine(nb::module_ &m) {
               throw nb::value_error("Expected non-empty list of constraints");
 
             // std::vector<bool> does not expose a bool* data pointer.
-            std::unique_ptr<bool[]> flags =
-                std::make_unique<bool[]>(eqFlags.size());
-            for (size_t i = 0, e = eqFlags.size(); i < e; ++i)
-              flags[i] = eqFlags[i];
-
+            std::vector<char> flags(eqFlags.begin(), eqFlags.end());
             std::vector<MlirAffineExpr> affineExprs;
             pyListToVector<PyAffineExpr>(exprs, affineExprs,
                                          "attempting to create an IntegerSet");
             MlirIntegerSet set = mlirIntegerSetGet(
                 context->get(), numDims, numSymbols, exprs.size(),
-                affineExprs.data(), flags.get());
+                affineExprs.data(), reinterpret_cast<bool *>(flags.data()));
             return PyIntegerSet(context->getRef(), set);
           },
           nb::arg("num_dims"), nb::arg("num_symbols"), nb::arg("exprs"),
