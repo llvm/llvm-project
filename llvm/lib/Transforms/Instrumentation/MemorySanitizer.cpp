@@ -4117,6 +4117,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //                 (<2 x float> %A, <2 x float>)
   // - <2 x i32> @llvm.aarch64.neon.facgt.v2i32.v2f32
   //                 (<2 x float> %A, <2 x float>)
+  //
+  // Bonus: this also handles scalar cases e.g.,
+  // - i32 @llvm.aarch64.neon.facgt.i32.f32(float %A, float %B)
   void handleVectorComparePackedIntrinsic(IntrinsicInst &I,
                                           bool PredicateAsOperand) {
     if (PredicateAsOperand) {
