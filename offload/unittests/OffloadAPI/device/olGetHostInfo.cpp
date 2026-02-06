@@ -14,7 +14,7 @@ using olGetHostInfoTest = OffloadTest;
 
 #define OL_DEVICE_INFO_TEST_SUCCESS_CHECK(TestName, PropType, PropName, Dev,   \
                                           Expr)                                \
-  TEST_F(olGetHostInfoTest, Test##Dev##TestName) {                           \
+  TEST_F(olGetHostInfoTest, Test##Dev##TestName) {                             \
     PropType Value;                                                            \
     ASSERT_SUCCESS(olGetDeviceInfo(Dev, PropName, sizeof(Value), &Value));     \
     Expr;                                                                      \
@@ -97,7 +97,7 @@ TEST_F(olGetHostInfoTest, SuccessHostDriverVersion) {
 }
 
 OL_DEVICE_INFO_TEST_HOST_VALUE_GT(MaxWorkGroupSize, uint32_t,
-                             OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE, 0);
+                                  OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE, 0);
 
 TEST_F(olGetHostInfoTest, SuccessHostMaxWorkGroupSizePerDimension) {
   ol_dimensions_t Value{0, 0, 0};
@@ -110,55 +110,55 @@ TEST_F(olGetHostInfoTest, SuccessHostMaxWorkGroupSizePerDimension) {
 }
 
 OL_DEVICE_INFO_TEST_HOST_VALUE_GT(MaxWorkSize, uint32_t,
-                             OL_DEVICE_INFO_MAX_WORK_SIZE, 0);
+                                  OL_DEVICE_INFO_MAX_WORK_SIZE, 0);
 
 TEST_F(olGetHostInfoTest, SuccessHostMaxWorkSizePerDimension) {
   ol_dimensions_t Value{0, 0, 0};
-  ASSERT_SUCCESS(olGetDeviceInfo(Host,
-                                 OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION,
-                                 sizeof(Value), &Value));
+  ASSERT_SUCCESS(olGetDeviceInfo(
+      Host, OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION, sizeof(Value), &Value));
   ASSERT_GT(Value.x, 0u);
   ASSERT_GT(Value.y, 0u);
   ASSERT_GT(Value.z, 0u);
 }
 
-OL_DEVICE_INFO_TEST_HOST_VALUE_GT(VendorId, uint32_t,
-                                    OL_DEVICE_INFO_VENDOR_ID, 0);
+OL_DEVICE_INFO_TEST_HOST_VALUE_GT(VendorId, uint32_t, OL_DEVICE_INFO_VENDOR_ID,
+                                  0);
 OL_DEVICE_INFO_TEST_HOST_VALUE_GT(NumComputeUnits, uint32_t,
-                             OL_DEVICE_INFO_NUM_COMPUTE_UNITS, 0);
-OL_DEVICE_INFO_TEST_HOST_VALUE_GT(SingleFPConfig, ol_device_fp_capability_flags_t,
-                             OL_DEVICE_INFO_SINGLE_FP_CONFIG, 0);
+                                  OL_DEVICE_INFO_NUM_COMPUTE_UNITS, 0);
+OL_DEVICE_INFO_TEST_HOST_VALUE_GT(SingleFPConfig,
+                                  ol_device_fp_capability_flags_t,
+                                  OL_DEVICE_INFO_SINGLE_FP_CONFIG, 0);
 OL_DEVICE_INFO_TEST_HOST_SUCCESS(HalfFPConfig, ol_device_fp_capability_flags_t,
-                            OL_DEVICE_INFO_HALF_FP_CONFIG);
-OL_DEVICE_INFO_TEST_HOST_VALUE_GT(DoubleFPConfig, ol_device_fp_capability_flags_t,
-                             OL_DEVICE_INFO_DOUBLE_FP_CONFIG, 0);
+                                 OL_DEVICE_INFO_HALF_FP_CONFIG);
+OL_DEVICE_INFO_TEST_HOST_VALUE_GT(DoubleFPConfig,
+                                  ol_device_fp_capability_flags_t,
+                                  OL_DEVICE_INFO_DOUBLE_FP_CONFIG, 0);
 OL_DEVICE_INFO_TEST_HOST_VALUE_GT(NativeVectorWidthChar, uint32_t,
-                             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_CHAR, 0);
+                                  OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_CHAR, 0);
 OL_DEVICE_INFO_TEST_HOST_VALUE_GT(NativeVectorWidthShort, uint32_t,
-                             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_SHORT, 0);
+                                  OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_SHORT, 0);
 OL_DEVICE_INFO_TEST_HOST_VALUE_GT(NativeVectorWidthInt, uint32_t,
-                             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_INT, 0);
+                                  OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_INT, 0);
 OL_DEVICE_INFO_TEST_HOST_VALUE_GT(NativeVectorWidthLong, uint32_t,
-                             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_LONG, 0);
+                                  OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_LONG, 0);
 OL_DEVICE_INFO_TEST_HOST_VALUE_GT(NativeVectorWidthFloat, uint32_t,
-                             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_FLOAT, 0);
+                                  OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_FLOAT, 0);
 OL_DEVICE_INFO_TEST_HOST_VALUE_GT(NativeVectorWidthDouble, uint32_t,
-                             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE, 0);
+                                  OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE, 0);
 OL_DEVICE_INFO_TEST_HOST_SUCCESS(NativeVectorWidthHalf, uint32_t,
-                            OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF);
+                                  OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_HALF);
 OL_DEVICE_INFO_TEST_HOST_VALUE_GT(MaxClockFrequency, uint32_t,
-                             OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY, 0);
+                                  OL_DEVICE_INFO_MAX_CLOCK_FREQUENCY, 0);
 OL_DEVICE_INFO_TEST_HOST_VALUE_GT(MemoryClockRate, uint32_t,
-                             OL_DEVICE_INFO_MEMORY_CLOCK_RATE, 0);
-OL_DEVICE_INFO_TEST_HOST_VALUE_GT(AddressBits, uint32_t, OL_DEVICE_INFO_ADDRESS_BITS,
-                             0);
+                                  OL_DEVICE_INFO_MEMORY_CLOCK_RATE, 0);
+OL_DEVICE_INFO_TEST_HOST_VALUE_GT(AddressBits, uint32_t,
+                                  OL_DEVICE_INFO_ADDRESS_BITS, 0);
 OL_DEVICE_INFO_TEST_HOST_VALUE_GT(MaxMemAllocSize, uint64_t,
-                                    OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE, 0);
+                                  OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE, 0);
 OL_DEVICE_INFO_TEST_HOST_VALUE_GT(GlobalMemSize, uint64_t,
-                                    OL_DEVICE_INFO_GLOBAL_MEM_SIZE, 0);
+                                  OL_DEVICE_INFO_GLOBAL_MEM_SIZE, 0);
 OL_DEVICE_INFO_TEST_HOST_VALUE_GT(SharedMemSize, uint64_t,
-                                    OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE,
-                                    0);
+                                  OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE, 0);
 
 TEST_F(olGetHostInfoTest, InvalidNullHandleDevice) {
   ol_device_type_t DeviceType;
@@ -189,7 +189,7 @@ TEST_F(olGetHostInfoTest, InvalidSizePropSizeSmall) {
 
 TEST_F(olGetHostInfoTest, InvalidNullPointerPropValue) {
   ol_device_type_t DeviceType;
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
-               olGetDeviceInfo(Host, OL_DEVICE_INFO_TYPE, sizeof(DeviceType),
-                               nullptr));
+  ASSERT_ERROR(
+      OL_ERRC_INVALID_NULL_POINTER,
+      olGetDeviceInfo(Host, OL_DEVICE_INFO_TYPE, sizeof(DeviceType), nullptr));
 }
