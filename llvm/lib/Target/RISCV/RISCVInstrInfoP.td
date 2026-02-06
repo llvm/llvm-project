@@ -1477,6 +1477,16 @@ let Predicates = [HasStdExtP, IsRV32] in {
 def riscv_absw : RVSDNode<"ABSW", SDT_RISCVIntUnaryOpW>;
 def riscv_clsw : RVSDNode<"CLSW", SDT_RISCVIntUnaryOpW>;
 
+def SDT_RISCVIntBinOpD : SDTypeProfile<2, 4, [SDTCisVT<0, i32>,
+                                              SDTCisVT<1, i32>,
+                                              SDTCisSameAs<0, 2>,
+                                              SDTCisSameAs<1, 3>,
+                                              SDTCisSameAs<0, 4>,
+                                              SDTCisSameAs<1, 5>]>;
+def riscv_addd : RVSDNode<"ADDD", SDT_RISCVIntBinOpD,
+                          [SDNPCommutative, SDNPAssociative]>;
+def riscv_subd : RVSDNode<"SUBD", SDT_RISCVIntBinOpD>;
+
 // Averaging subtraction, (a - b) >> 2
 def riscv_asub : RVSDNode<"ASUB", SDTIntBinOp>;
 def riscv_asubu : RVSDNode<"ASUBU", SDTIntBinOp>;
