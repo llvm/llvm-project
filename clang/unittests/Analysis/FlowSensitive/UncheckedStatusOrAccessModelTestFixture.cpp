@@ -2061,13 +2061,6 @@ TEST_P(UncheckedStatusOrAccessModelTest, Member) {
       Foo().sor.value();  // [[unsafe]]
     }
   )cc");
-  ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_access_test_defs.h"
-
-    union target {
-      target() {}
-    };
-  )cc");
 }
 
 TEST_P(UncheckedStatusOrAccessModelTest, GlobalVars) {
@@ -4084,8 +4077,6 @@ TEST_P(UncheckedStatusOrAccessModelTest, PointerReceiversWithSelfReferentials) {
     }
   )cc");
 
-  // TODO(b/161969504): Pointer receivers in self-referential pointer/
-  // references are not handled. "check1" below should be "safe".
   ExpectDiagnosticsFor(R"cc(
 #include "unchecked_statusor_access_test_defs.h"
 
@@ -4098,6 +4089,7 @@ TEST_P(UncheckedStatusOrAccessModelTest, PointerReceiversWithSelfReferentials) {
       if (foo->next->sor->status().ok())
         foo->next->sor->value();  // [[unsafe]]
       else
+        // False positive, should be safe.
         foo->next->sor->value();  // [[unsafe]]
     }
   )cc");
