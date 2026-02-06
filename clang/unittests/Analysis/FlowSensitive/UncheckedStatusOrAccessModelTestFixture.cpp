@@ -3992,6 +3992,33 @@ TEST_P(UncheckedStatusOrAccessModelTest, PairIteratorRef) {
 )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, CallFunctionPointer) {
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        void fn(STATUSOR_INT* x);
+        void target() {
+          auto sor = Make<STATUSOR_INT>();
+          CHECK_OK(sor);
+          fn(&sor);
+          *sor; // [[unsafe]]
+        }
+      )cc");
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        void fn(const STATUSOR_INT* x);
+        void target() {
+          auto sor = Make<STATUSOR_INT>();
+          CHECK_OK(sor);
+          fn(&sor);
+          *sor;
+        }
+      )cc");
+}
+
 } // namespace
 
 std::string
