@@ -400,7 +400,10 @@ public:
 
   mlir::Value VisitExtVectorElementExpr(Expr *e) { return emitLoadOfLValue(e); }
 
-  mlir::Value VisitMatrixElementExpr(Expr *e) { return emitLoadOfLValue(e); }
+  mlir::Value VisitMatrixElementExpr(Expr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: matrix element");
+    return {};
+  }
 
   mlir::Value VisitMemberExpr(MemberExpr *e);
 
