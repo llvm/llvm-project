@@ -17,6 +17,7 @@
 #include "GlobalCompilationDatabase.h"
 #include "Hover.h"
 #include "ModulesBuilder.h"
+#include "PathMapping.h"
 #include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "TUScheduler.h"
@@ -198,6 +199,11 @@ public:
     /// Whether to collect and publish information about inactive preprocessor
     /// regions in the document.
     bool PublishInactiveRegions = false;
+
+    /// Path mappings applied to background index files on disk. Used to enable
+    /// sharing of indexes when the client path differs from the path of index
+    /// generation.
+    PathMappings BackgroundIndexPathMappings;
 
     explicit operator TUScheduler::Options() const;
   };
