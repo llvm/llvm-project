@@ -206,6 +206,16 @@ struct bind_const_int {
   }
 };
 
+struct match_poison {
+  bool match(VPValue *V) const {
+    return isa<VPIRValue>(V) &&
+           isa<PoisonValue>(cast<VPIRValue>(V)->getValue());
+  }
+};
+
+/// Match a VPIRValue that's poison.
+inline match_poison m_Poison() { return match_poison(); }
+
 /// Match a plain integer constant no wider than 64-bits, capturing it if we
 /// match.
 inline bind_const_int m_ConstantInt(uint64_t &C) { return C; }
