@@ -148,7 +148,7 @@ LangAS TargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
   return D ? D->getType().getAddressSpace() : LangAS::Default;
 }
 
-std::string
+StringRef
 TargetCodeGenInfo::getLLVMSyncScopeStr(const LangOptions &LangOpts,
                                        SyncScope Scope,
                                        llvm::AtomicOrdering Ordering) const {

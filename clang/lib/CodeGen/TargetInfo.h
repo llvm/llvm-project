@@ -327,9 +327,9 @@ public:
   }
 
   /// Get the syncscope used in LLVM IR as a string
-  virtual std::string getLLVMSyncScopeStr(const LangOptions &LangOpts,
-                                          SyncScope Scope,
-                                          llvm::AtomicOrdering Ordering) const;
+  virtual StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts,
+                                        SyncScope Scope,
+                                        llvm::AtomicOrdering Ordering) const;
 
   /// Get the syncscope used in LLVM IR as a SyncScope ID.
   llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,

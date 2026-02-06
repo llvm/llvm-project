@@ -830,7 +830,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     auto Scope = static_cast<SyncScope>(ScopeExpr->getZExtValue());
     llvm::AtomicOrdering AO = mapCABIAtomicOrdering(AOExpr->getZExtValue());
 
-    std::string ScopeStr = CGM.getTargetCodeGenInfo().getLLVMSyncScopeStr(
+    StringRef ScopeStr = CGM.getTargetCodeGenInfo().getLLVMSyncScopeStr(
         CGM.getLangOpts(), Scope, AO);
 
     llvm::MDNode *MD =

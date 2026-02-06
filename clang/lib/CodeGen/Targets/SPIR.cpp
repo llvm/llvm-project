@@ -131,8 +131,8 @@ public:
                                   const VarDecl *D) const override;
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
-  std::string getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
-                                  llvm::AtomicOrdering Ordering) const override;
+  StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
+                                llvm::AtomicOrdering Ordering) const override;
   bool supportsLibCall() const override {
     return getABIInfo().getTarget().getTriple().getVendor() !=
            llvm::Triple::AMD;
@@ -534,7 +534,7 @@ void SPIRVTargetCodeGenInfo::setTargetAttributes(
                  llvm::MDNode::get(M.getLLVMContext(), AttrMDArgs));
 }
 
-std::string SPIRVTargetCodeGenInfo::getLLVMSyncScopeStr(
+StringRef SPIRVTargetCodeGenInfo::getLLVMSyncScopeStr(
     const LangOptions &, SyncScope Scope, llvm::AtomicOrdering) const {
   switch (Scope) {
   case SyncScope::HIPSingleThread:

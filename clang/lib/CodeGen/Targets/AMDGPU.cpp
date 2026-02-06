@@ -310,8 +310,8 @@ public:
   }
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override;
-  std::string getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
-                                  llvm::AtomicOrdering Ordering) const override;
+  StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
+                                llvm::AtomicOrdering Ordering) const override;
   void setTargetAtomicMetadata(CodeGenFunction &CGF,
                                llvm::Instruction &AtomicInst,
                                const AtomicExpr *Expr = nullptr) const override;
@@ -491,53 +491,40 @@ AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
   return DefaultGlobalAS;
 }
 
-std::string AMDGPUTargetCodeGenInfo::getLLVMSyncScopeStr(
+StringRef AMDGPUTargetCodeGenInfo::getLLVMSyncScopeStr(
     const LangOptions &LangOpts, SyncScope Scope,
     llvm::AtomicOrdering Ordering) const {
-  std::string Name;
-  switch (Scope) {
-  case SyncScope::HIPSingleThread:
-  case SyncScope::SingleScope:
-    Name = "singlethread";
-    break;
-  case SyncScope::HIPWavefront:
-  case SyncScope::OpenCLSubGroup:
-  case SyncScope::WavefrontScope:
-    Name = "wavefront";
-    break;
-  case SyncScope::HIPCluster:
-  case SyncScope::ClusterScope:
-    Name = "cluster";
-    break;
-  case SyncScope::HIPWorkgroup:
-  case SyncScope::OpenCLWorkGroup:
-  case SyncScope::WorkgroupScope:
-    Name = "workgroup";
-    break;
-  case SyncScope::HIPAgent:
-  case SyncScope::OpenCLDevice:
-  case SyncScope::DeviceScope:
-    Name = "agent";
-    break;
-  case SyncScope::SystemScope:
-  case SyncScope::HIPSystem:
-  case SyncScope::OpenCLAllSVMDevices:
-    Name = "";
-    break;
-  }
 
   // OpenCL assumes by default that atomic scopes are per-address space for
   // non-sequentially consistent operations.
-  if (Scope >= SyncScope::OpenCLWorkGroup &&
-      Scope <= SyncScope::OpenCLSubGroup &&
-      Ordering != llvm::AtomicOrdering::SequentiallyConsistent) {
-    if (!Name.empty())
-      Name = Twine(Twine(Name) + Twine("-")).str();
+  bool IsOneAs = (Scope >= SyncScope::OpenCLWorkGroup &&
+                  Scope <= SyncScope::OpenCLSubGroup &&
+                  Ordering != llvm::AtomicOrdering::SequentiallyConsistent);
 
-    Name = Twine(Twine(Name) + Twine("one-as")).str();
+  switch (Scope) {
+  case SyncScope::HIPSingleThread:
+  case SyncScope::SingleScope:
+    return IsOneAs ? "singlethread-one-as" : "singlethread";
+  case SyncScope::HIPWavefront:
+  case SyncScope::OpenCLSubGroup:
+  case SyncScope::WavefrontScope:
+    return IsOneAs ? "wavefront-one-as" : "wavefront";
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
+    return IsOneAs ? "cluster-one-as" : "cluster";
+  case SyncScope::HIPWorkgroup:
+  case SyncScope::OpenCLWorkGroup:
+  case SyncScope::WorkgroupScope:
+    return IsOneAs ? "workgroup-one-as" : "workgroup";
+  case SyncScope::HIPAgent:
+  case SyncScope::OpenCLDevice:
+  case SyncScope::DeviceScope:
+    return IsOneAs ? "agent-one-as" : "agent";
+  case SyncScope::SystemScope:
+  case SyncScope::HIPSystem:
+  case SyncScope::OpenCLAllSVMDevices:
+    return IsOneAs ? "one-as" : "";
   }
-
-  return Name;
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
