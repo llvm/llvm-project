@@ -608,9 +608,9 @@ void JSONNodeDumper::VisitAvailabilityAttr(const AvailabilityAttr *AA) {
   attributeOnlyIfTrue("unavailable", AA->getUnavailable());
   if (!AA->getMessage().empty())
     JOS.attribute("message", AA->getMessage());
+  attributeOnlyIfTrue("strict", AA->getStrict());
   if (!AA->getReplacement().empty())
     JOS.attribute("replacement", AA->getReplacement());
-  attributeOnlyIfTrue("strict", AA->getStrict());
   if (const IdentifierInfo *Env = AA->getEnvironment())
     JOS.attribute("environment", Env->getName());
 }
