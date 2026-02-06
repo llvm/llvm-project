@@ -69,25 +69,6 @@ static int blockIndexInPredecessor(const CFGBlock &Pred,
   return BlockPos - Pred.succ_begin();
 }
 
-// Given a backedge from B1 to B2, B1 is a "backedge node" in a CFG.
-// It can be:
-// - A block introduced in the CFG exclusively to indicate a structured loop's
-//   backedge. They are exactly identified by the presence of a non-null
-//   pointer to the entry block of the loop condition. Note that this is not
-//   necessarily the block with the loop statement as terminator, because
-//   short-circuit operators will result in multiple blocks encoding the loop
-//   condition, only one of which will contain the loop statement as terminator.
-// - A block that is part of a backedge in a CFG with unstructured loops
-//   (e.g., a CFG with a `goto` statement). Note that this is not necessarily
-//   the block with the goto statement as terminator. The choice depends on how
-//   blocks and edges are ordered.
-static bool isBackedgeNode(
-    const CFGBlock &B,
-    const llvm::SmallDenseSet<const CFGBlock *> &NonStructLoopBackedgeNodes) {
-  return B.getLoopTarget() != nullptr ||
-         NonStructLoopBackedgeNodes.contains(&B);
-}
-
 namespace {
 
 /// Extracts the terminator's condition expression.
@@ -498,36 +479,6 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
   return State;
 }
 
-// Returns true if the CFG contains any goto statements (direct or indirect).
-static bool hasGotoInCFG(const clang::CFG &CFG) {
-  for (const CFGBlock *Block : CFG) {
-    const Stmt *Term = Block->getTerminatorStmt();
-    if (Term == nullptr)
-      continue;
-    if (isa<GotoStmt>(Term) || isa<IndirectGotoStmt>(Term))
-      return true;
-  }
-  return false;
-}
-
-// Returns a set of CFG blocks that is the source of a backedge and is not
-// tracked as part of a structured loop (with `CFGBlock::getLoopTarget`).
-static llvm::SmallDenseSet<const CFGBlock *>
-findNonStructuredLoopBackedgeNodes(const clang::CFG &CFG) {
-  llvm::SmallDenseSet<const CFGBlock *> NonStructLoopBackedgeNodes;
-  // We should only need this if the function has gotos.
-  if (!hasGotoInCFG(CFG))
-    return NonStructLoopBackedgeNodes;
-
-  llvm::DenseMap<const CFGBlock *, const CFGBlock *> Backedges =
-      findCFGBackEdges(CFG);
-  for (const auto &[From, To] : Backedges) {
-    if (From->getLoopTarget() == nullptr)
-      NonStructLoopBackedgeNodes.insert(From);
-  }
-  return NonStructLoopBackedgeNodes;
-}
-
 llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
     const AdornedCFG &ACFG, TypeErasedDataflowAnalysis &Analysis,
@@ -583,7 +534,7 @@ runTypeErasedDataflowAnalysis(
         llvm::errs() << "Old Env:\n";
         OldBlockState->Env.dump();
       });
-      if (isBackedgeNode(*Block, NonStructLoopBackedgeNodes)) {
+      if (isBackedgeCFGNode(*Block, NonStructLoopBackedgeNodes)) {
         LatticeJoinEffect Effect1 = Analysis.widenTypeErased(
             NewBlockState.Lattice, OldBlockState->Lattice);
         LatticeJoinEffect Effect2 =

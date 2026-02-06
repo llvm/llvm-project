@@ -34,6 +34,7 @@ TEST(CFGBackEdgesTest, NoBackedgesLinear) {
   BuildResult Result = BuildCFG(Code);
   EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
   CFG *Cfg = Result.getCFG();
+  ASSERT_THAT(Cfg, NotNull());
 
   auto BackEdges = findCFGBackEdges(*Cfg);
   EXPECT_TRUE(BackEdges.empty());
@@ -51,6 +52,7 @@ TEST(CFGBackEdgesTest, NoBackedgesOnlyCrossEdge) {
   BuildResult Result = BuildCFG(Code);
   EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
   CFG *Cfg = Result.getCFG();
+  ASSERT_THAT(Cfg, NotNull());
 
   auto BackEdges = findCFGBackEdges(*Cfg);
   EXPECT_TRUE(BackEdges.empty());
@@ -70,6 +72,7 @@ TEST(CFGBackEdgesTest, NoBackedgesWithUnreachableSuccessorForSwitch) {
   BuildResult Result = BuildCFG(Code);
   EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
   CFG *Cfg = Result.getCFG();
+  ASSERT_THAT(Cfg, NotNull());
 
   auto BackEdges = findCFGBackEdges(*Cfg);
   EXPECT_TRUE(BackEdges.empty());
@@ -83,6 +86,7 @@ TEST(CFGBackEdgesTest, ForLoop) {
   BuildResult Result = BuildCFG(Code);
   EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
   CFG *Cfg = Result.getCFG();
+  ASSERT_THAT(Cfg, NotNull());
 
   // Finds one backedge, which is the one looping back to the loop header
   // (has a loop target).
@@ -100,6 +104,7 @@ TEST(CFGBackEdgesTest, WhileLoop) {
   BuildResult Result = BuildCFG(Code);
   EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
   CFG *Cfg = Result.getCFG();
+  ASSERT_THAT(Cfg, NotNull());
 
   auto BackEdges = findCFGBackEdges(*Cfg);
   EXPECT_THAT(BackEdges, SizeIs(1));
@@ -115,6 +120,7 @@ TEST(CFGBackEdgesTest, DoWhileLoop) {
   BuildResult Result = BuildCFG(Code);
   EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
   CFG *Cfg = Result.getCFG();
+  ASSERT_THAT(Cfg, NotNull());
 
   auto BackEdges = findCFGBackEdges(*Cfg);
   EXPECT_THAT(BackEdges, SizeIs(1));
@@ -134,6 +140,7 @@ TEST(CFGBackEdgesTest, GotoLoop) {
   BuildResult Result = BuildCFG(Code);
   EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
   CFG *Cfg = Result.getCFG();
+  ASSERT_THAT(Cfg, NotNull());
 
   // Finds one backedge, but since it's an unstructured loop, the loop target is
   // null. Instead, the node has a goto terminator.
@@ -157,6 +164,7 @@ TEST(CFGBackEdgesTest, WhileWithContinueLoop) {
   BuildResult Result = BuildCFG(Code);
   EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
   CFG *Cfg = Result.getCFG();
+  ASSERT_THAT(Cfg, NotNull());
 
   auto BackEdges = findCFGBackEdges(*Cfg);
   EXPECT_THAT(BackEdges, SizeIs(testing::Gt(0)));
@@ -174,15 +182,17 @@ TEST(CFGBackEdgesTest, NestedForLoop) {
   BuildResult Result = BuildCFG(Code);
   EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
   CFG *Cfg = Result.getCFG();
+  ASSERT_THAT(Cfg, NotNull());
 
-  // Finds one backedge, which is the one looping back to the loop header
-  // (has a loop target).
   auto BackEdges = findCFGBackEdges(*Cfg);
   EXPECT_THAT(BackEdges, SizeIs(2));
-  auto it = BackEdges.begin();
-  EXPECT_THAT(it->first->getLoopTarget(), NotNull());
-  ++it;
-  EXPECT_THAT(it->first->getLoopTarget(), NotNull());
+  auto It = BackEdges.begin();
+  auto* FirstLoopTarget = It->first->getLoopTarget();
+  EXPECT_THAT(FirstLoopTarget, NotNull());
+  ++It;
+  auto* SecondLoopTarget = It->first->getLoopTarget();
+  EXPECT_THAT(SecondLoopTarget, NotNull());
+  EXPECT_NE(FirstLoopTarget, SecondLoopTarget);
 }
 
 TEST(CFGBackEdgesTest, IrreducibleCFG) {
@@ -197,6 +207,7 @@ TEST(CFGBackEdgesTest, IrreducibleCFG) {
   BuildResult Result = BuildCFG(Code);
   EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
   CFG *Cfg = Result.getCFG();
+  ASSERT_THAT(Cfg, NotNull());
 
   auto BackEdges = findCFGBackEdges(*Cfg);
   // In an irreducible CFG, we still expect to find a back edge.
@@ -232,6 +243,68 @@ TEST(CFGBackEdgesTest, FirstBackedgeIsNotGoto) {
   //          \--else--> B2: ... (the `if`'s else is a backedge from B3 to B2!)
   //   \--else--> B3: ...
   EXPECT_FALSE(isa<GotoStmt>(BackEdges.begin()->first->getTerminatorStmt()));
+}
+
+TEST(CFGBackEdgesTest, FindNonStructuredLoopBackedgeNodes) {
+  const char *Code = R"cc(
+    void f(int n) {
+      for (int i = 0; i < n; ++i) {
+        int j = 0;
+        inner_loop:
+        if (j < n) {
+          ++j;
+          goto inner_loop;
+        }
+      }
+    })cc";
+  BuildResult Result = BuildCFG(Code);
+  EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
+  CFG *Cfg = Result.getCFG();
+  ASSERT_THAT(Cfg, NotNull());
+
+  // Finds just the goto backedge, and not the for-loop backedge.
+  auto BackEdgeNodes = findNonStructuredLoopBackedgeNodes(*Cfg);
+  EXPECT_THAT(BackEdgeNodes, SizeIs(1));
+  const CFGBlock* Node = *BackEdgeNodes.begin();
+  EXPECT_EQ(Node->getLoopTarget(), nullptr);
+  EXPECT_TRUE(isa<GotoStmt>(Node->getTerminatorStmt()));
+}
+
+TEST(CFGBackEdgesTest, IsBackedgeCFGNode) {
+  const char *Code = R"cc(
+    void f(int n) {
+      for (int i = 0; i < n; ++i) {
+        int j = 0;
+        inner_loop:
+        if (j < n) {
+          ++j;
+          goto inner_loop;
+        }
+      }
+    })cc";
+  BuildResult Result = BuildCFG(Code);
+  EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
+  CFG *Cfg = Result.getCFG();
+  ASSERT_THAT(Cfg, NotNull());
+
+  auto BackEdgeNodes = findNonStructuredLoopBackedgeNodes(*Cfg);
+
+  // `isBackedgeCFGNode` should be true for both the for-loop backedge node and
+  // goto backedge nodes.
+  const CFGBlock *ForLoopBackedgeNode = nullptr;
+  const CFGBlock *GotoBackedgeNode = nullptr;
+  for (const CFGBlock *Block : *Cfg) {
+    if (Block->getLoopTarget() != nullptr) {
+      ForLoopBackedgeNode = Block;
+    } else if (Block->getTerminatorStmt() != nullptr &&
+               isa<GotoStmt>(Block->getTerminatorStmt())) {
+      GotoBackedgeNode = Block;
+    }
+  }
+  ASSERT_THAT(ForLoopBackedgeNode, NotNull());
+  ASSERT_THAT(GotoBackedgeNode, NotNull());
+  EXPECT_TRUE(isBackedgeCFGNode(*ForLoopBackedgeNode, BackEdgeNodes));
+  EXPECT_TRUE(isBackedgeCFGNode(*GotoBackedgeNode, BackEdgeNodes));
 }
 
 } // namespace

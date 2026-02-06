@@ -1281,18 +1281,20 @@ TEST_F(FlowConditionTest, WhileStmt) {
 }
 
 TEST_F(FlowConditionTest, WhileStmtWithAssignmentInCondition) {
-  std::string Code = R"(
+  std::string Code = R"cc(
+    bool getBool();
+
     void target(bool Foo) {
       // This test checks whether the analysis preserves the connection between
       // the value of `Foo` and the assignment expression, despite widening.
-      // The equality operator generates a fresh boolean variable on each
-      // interpretation, which forces use of widening.
-      while ((Foo = (3 == 4))) {
+      // The return value of getBool() should have a fresh boolean variable on
+      // each interpretation, which forces use of widening.
+      while (Foo = getBool()) {
         (void)0;
         /*[[p]]*/
       }
     }
-  )";
+  )cc";
   runDataflow(
       Code,
       [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
@@ -1305,13 +1307,15 @@ TEST_F(FlowConditionTest, WhileStmtWithAssignmentInCondition) {
 
 TEST_F(FlowConditionTest, GotoLoopWithAssignmentInCondition) {
   std::string Code = R"cc(
+    bool getBool();
+
     void target(bool Foo) {
       // This test checks whether the analysis preserves the connection between
       // the value of `Foo` and the assignment expression, despite widening.
-      // The equality operator generates a fresh boolean variable on each
-      // interpretation, which forces use of widening.
+      // The return value of getBool() should have a fresh boolean variable on
+      // each interpretation, which forces use of widening.
       start:
-      if ((Foo = (3 == 4))) {
+      if (Foo = getBool()) {
         (void)0;
         /*[[p]]*/
         goto start;

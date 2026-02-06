@@ -25,8 +25,20 @@ struct VisitClockTimes {
 };
 } // namespace
 
+// Returns true if the CFG contains any goto statements (direct or indirect).
+static bool hasGotoInCFG(const CFG &CFG) {
+  for (const CFGBlock *Block : CFG) {
+    const Stmt *Term = Block->getTerminatorStmt();
+    if (Term == nullptr)
+      continue;
+    if (isa<GotoStmt>(Term) || isa<IndirectGotoStmt>(Term))
+      return true;
+  }
+  return false;
+}
+
 llvm::DenseMap<const CFGBlock *, const CFGBlock *>
-findCFGBackEdges(const clang::CFG &CFG) {
+findCFGBackEdges(const CFG &CFG) {
   // Do a simple textbook DFS with pre and post numberings to find back edges.
   llvm::DenseMap<const CFGBlock *, const CFGBlock *> BackEdges;
 
@@ -63,6 +75,31 @@ findCFGBackEdges(const clang::CFG &CFG) {
     }
   }
   return BackEdges;
+}
+
+// Returns a set of CFG blocks that is the source of a backedge and is not
+// tracked as part of a structured loop (with `CFGBlock::getLoopTarget`).
+llvm::SmallDenseSet<const CFGBlock *>
+findNonStructuredLoopBackedgeNodes(const CFG &CFG) {
+  llvm::SmallDenseSet<const CFGBlock *> NonStructLoopBackedgeNodes;
+  // We should only need this if the function has gotos.
+  if (!hasGotoInCFG(CFG))
+    return NonStructLoopBackedgeNodes;
+
+  llvm::DenseMap<const CFGBlock *, const CFGBlock *> Backedges =
+      findCFGBackEdges(CFG);
+  for (const auto &[From, To] : Backedges) {
+    if (From->getLoopTarget() == nullptr)
+      NonStructLoopBackedgeNodes.insert(From);
+  }
+  return NonStructLoopBackedgeNodes;
+}
+
+bool isBackedgeCFGNode(
+    const CFGBlock &B,
+    const llvm::SmallDenseSet<const CFGBlock *> &NonStructLoopBackedgeNodes) {
+  return B.getLoopTarget() != nullptr ||
+         NonStructLoopBackedgeNodes.contains(&B);
 }
 
 } // namespace clang
