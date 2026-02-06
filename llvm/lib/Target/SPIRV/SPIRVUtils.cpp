@@ -1197,11 +1197,17 @@ Type *reconstitutePeeledArrayType(Type *Ty) {
 
 std::optional<SPIRV::LinkageType::LinkageType>
 getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
+  // Declarations must always get Import linkage so they can be resolved at
+  // link time, even if they have hidden visibility (e.g. from
+  // -fapply-global-visibility-to-externs used by the HIPSPV toolchain).
+  if (GV.isDeclarationForLinker()) {
+    if (GV.hasLocalLinkage())
+      return std::nullopt;
+    return SPIRV::LinkageType::Import;
+  }
+
   if (GV.hasLocalLinkage() || GV.hasHiddenVisibility())
     return std::nullopt;
-
-  if (GV.isDeclarationForLinker())
-    return SPIRV::LinkageType::Import;
 
   if (GV.hasLinkOnceODRLinkage() &&
       ST.canUseExtension(SPIRV::Extension::SPV_KHR_linkonce_odr))

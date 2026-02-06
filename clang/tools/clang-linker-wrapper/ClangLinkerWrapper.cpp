@@ -131,6 +131,8 @@ static StringRef ExecutableName;
 /// Binary path for the CUDA installation.
 static std::string CudaBinaryPath;
 
+/// HIP installation path.
+static std::string HipPath;
 /// Mutex lock to protect writes to shared TempFiles in parallel.
 static std::mutex TempFilesMutex;
 
@@ -409,19 +411,8 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
 } // namespace nvptx
 
 namespace amdgcn {
-
-// Constructs a triple string for clang offload bundler.
-// NOTE: copied from HIPUtility.cpp.
-static std::string normalizeForBundler(const llvm::Triple &T,
-                                       bool HasTargetID) {
-  return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
-                        T.getOSName() + "-" + T.getEnvironmentName())
-                           .str()
-                     : T.normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
-}
-
 Expected<StringRef>
-fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
+fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFilesWithTriple,
           const ArgList &Args) {
   llvm::TimeTraceScope TimeScope("AMDGPU Fatbinary");
 
@@ -452,10 +443,24 @@ fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
         Args.MakeArgString(Twine("-compression-level=") + Arg->getValue()));
 
   SmallVector<StringRef> Targets = {"-targets=host-x86_64-unknown-linux-gnu"};
-  for (const auto &[File, TripleRef, Arch] : InputFiles) {
-    std::string NormalizedTriple =
-        normalizeForBundler(Triple(TripleRef), !Arch.empty());
-    Targets.push_back(Saver.save("hip-" + NormalizedTriple + "-" + Arch));
+  for (const auto &[File, Arch, TripleStr] : InputFilesWithTriple) {
+    llvm::Triple Triple(TripleStr);
+    // For SPIR-V targets, derive arch from triple if not provided
+    StringRef EffectiveArch = Arch;
+    if (EffectiveArch.empty() && Triple.isSPIRV()) {
+      EffectiveArch = Triple.getArchName();
+    }
+    StringRef BundleID;
+    if (EffectiveArch == "amdgcnspirv") {
+      BundleID = Saver.save("hip-spirv64-amd-amdhsa--" + EffectiveArch);
+    } else if (Triple.isSPIRV()) {
+      // ChipStar and other SPIR-V HIP targets: use hip-spirv64-<vendor>-<os>--<arch>
+      BundleID = Saver.save("hip-spirv64-" + Triple.getVendorName() + "-" +
+                            Triple.getOSName() + "--" + EffectiveArch);
+    } else {
+      BundleID = Saver.save("hip-amdgcn-amd-amdhsa--" + EffectiveArch);
+    }
+    Targets.push_back(BundleID);
   }
   CmdArgs.push_back(Saver.save(llvm::join(Targets, ",")));
 
@@ -464,7 +469,7 @@ fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
 #else
   CmdArgs.push_back("-input=/dev/null");
 #endif
-  for (const auto &[File, Triple, Arch] : InputFiles)
+  for (const auto &[File, Arch, TripleStr] : InputFilesWithTriple)
     CmdArgs.push_back(Saver.save("-input=" + File));
 
   CmdArgs.push_back(Saver.save("-output=" + *TempFileOrErr));
@@ -528,7 +533,107 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   if (!Triple.isNVPTX() && !Triple.isSPIRV())
     CmdArgs.push_back("-Wl,--no-undefined");
 
-  for (StringRef InputFile : InputFiles)
+  // For non-chipStar SPIR-V targets, pass the HIP path to clang so it can
+  // find resources. For chipStar, passes are run via opt separately, so the
+  // inner clang doesn't need --hip-path (it just compiles IR to SPIR-V).
+  if (Triple.isSPIRV() && !HipPath.empty() &&
+      Triple.getOS() != llvm::Triple::ChipStar)
+    CmdArgs.push_back(Args.MakeArgString("--hip-path=" + HipPath));
+
+  // For chipStar targets: llvm-link (merge) → opt (HipSpvPasses) → clang
+  // (SPIR-V backend). The passes must operate on LLVM IR before the backend
+  // lowers to MIR, and all TU bitcode must be merged first for RDC support.
+  SmallVector<StringRef, 16> ProcessedInputFiles;
+  if (Triple.isSPIRV() && Triple.getOS() == llvm::Triple::ChipStar) {
+    // Step 1: Merge all input bitcode files with llvm-link (needed for RDC
+    // where functions can be defined accross translation units).
+    StringRef MergedFile;
+    if (InputFiles.size() > 1) {
+      Expected<std::string> LinkPath =
+          findProgram("llvm-link", {getMainExecutable("llvm-link")});
+      if (!LinkPath)
+        return LinkPath.takeError();
+
+      auto LinkOutOrErr = createOutputFile(
+          sys::path::filename(ExecutableName) + ".merged", "bc");
+      if (!LinkOutOrErr)
+        return LinkOutOrErr.takeError();
+
+      SmallVector<StringRef, 16> LinkArgs{*LinkPath};
+      for (StringRef F : InputFiles)
+        LinkArgs.push_back(F);
+      LinkArgs.push_back("-o");
+      LinkArgs.push_back(*LinkOutOrErr);
+
+      if (Error Err = executeCommands(*LinkPath, LinkArgs))
+        return std::move(Err);
+
+      MergedFile = *LinkOutOrErr;
+    } else {
+      MergedFile = InputFiles[0];
+    }
+
+    // Step 2: Run HipSpvPasses via opt on the merged bitcode.
+    SmallString<128> PluginPath;
+    if (!HipPath.empty()) {
+      PluginPath.assign(HipPath);
+      sys::path::append(PluginPath, "lib", "libLLVMHipSpvPasses.so");
+      if (!sys::fs::exists(PluginPath)) {
+        PluginPath.assign(HipPath);
+        sys::path::append(PluginPath, "lib", "llvm",
+                          "libLLVMHipSpvPasses.so");
+      }
+      if (!sys::fs::exists(PluginPath))
+        PluginPath.clear();
+    }
+
+    StringRef OptOutputFile = MergedFile;
+    if (!PluginPath.empty()) {
+      Expected<std::string> OptPath =
+          findProgram("opt", {getMainExecutable("opt")});
+      if (!OptPath)
+        return OptPath.takeError();
+
+      auto OptOutOrErr = createOutputFile(
+          sys::path::filename(ExecutableName) + ".lowered", "bc");
+      if (!OptOutOrErr)
+        return OptOutOrErr.takeError();
+
+      SmallVector<StringRef, 16> OptArgs{
+          *OptPath,
+          MergedFile,
+          "-load-pass-plugin",
+          Args.MakeArgString(PluginPath),
+          "-passes=hip-post-link-passes",
+          "-o",
+          *OptOutOrErr,
+      };
+
+      if (Error Err = executeCommands(*OptPath, OptArgs))
+        return std::move(Err);
+
+      OptOutputFile = *OptOutOrErr;
+    }
+
+    ProcessedInputFiles.push_back(OptOutputFile);
+
+    // Step 3: Configure the inner clang for SPIR-V backend codegen.
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-spirv-ext=+SPV_INTEL_function_pointers"
+                      ",+SPV_INTEL_subgroups"
+                      ",+SPV_EXT_relaxed_printf_string_address_space"
+                      ",+SPV_KHR_bit_instructions"
+                      ",+SPV_EXT_shader_atomic_float_add");
+    // The extracted bitcode files have a .o extension which causes the driver
+    // to treat them as pre-compiled objects, skipping the Backend compilation
+    // step. Force the input language to LLVM IR so the SPIR-V backend runs.
+    CmdArgs.push_back("-x");
+    CmdArgs.push_back("ir");
+  } else {
+    ProcessedInputFiles.append(InputFiles.begin(), InputFiles.end());
+  }
+
+  for (StringRef InputFile : ProcessedInputFiles)
     CmdArgs.push_back(InputFile);
 
   // If this is CPU offloading we copy the input libraries.
@@ -587,8 +692,14 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
     CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});
-  for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ))
+  for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ)) {
+    // For chipStar, --hip-path is already handled by opt step above;
+    // passing it to the inner clang (which just does IR→SPIR-V) is unused.
+    if (Triple.isSPIRV() && Triple.getOS() == llvm::Triple::ChipStar &&
+        Arg.starts_with("--hip-path="))
+      continue;
     CmdArgs.push_back(Args.MakeArgString(Arg));
+  }
 
   if (Error Err = executeCommands(*ClangPath, CmdArgs))
     return std::move(Err);
@@ -827,13 +938,14 @@ bundleCuda(ArrayRef<OffloadingImage> Images, const ArgList &Args) {
 
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
 bundleHIP(ArrayRef<OffloadingImage> Images, const ArgList &Args) {
-  SmallVector<std::tuple<StringRef, StringRef, StringRef>, 4> InputFiles;
+  // Collect (file, arch, triple) tuples for bundling
+  SmallVector<std::tuple<StringRef, StringRef, StringRef>, 4> InputFilesWithTriple;
   for (const OffloadingImage &Image : Images)
-    InputFiles.emplace_back(std::make_tuple(Image.Image->getBufferIdentifier(),
-                                            Image.StringData.lookup("triple"),
-                                            Image.StringData.lookup("arch")));
+    InputFilesWithTriple.emplace_back(Image.Image->getBufferIdentifier(),
+                                      Image.StringData.lookup("arch"),
+                                      Image.StringData.lookup("triple"));
 
-  auto FileOrErr = amdgcn::fatbinary(InputFiles, Args);
+  auto FileOrErr = amdgcn::fatbinary(InputFilesWithTriple, Args);
   if (!FileOrErr)
     return FileOrErr.takeError();
 
@@ -1322,6 +1434,19 @@ int main(int Argc, char **Argv) {
   DryRun = Args.hasArg(OPT_dry_run);
   SaveTemps = Args.hasArg(OPT_save_temps);
   CudaBinaryPath = Args.getLastArgValue(OPT_cuda_path_EQ).str();
+  HipPath = Args.getLastArgValue(OPT_hip_path_EQ).str();
+
+  // Also extract --hip-path= from --device-compiler= args, since the outer
+  // driver passes it that way for HIP/SPIR-V targets.
+  if (HipPath.empty()) {
+    for (StringRef Arg : Args.getAllArgValues(OPT_device_compiler_args_EQ)) {
+      auto [Triple, Value] = Arg.split('=');
+      if (Value.starts_with("--hip-path=")) {
+        HipPath = Value.substr(strlen("--hip-path=")).str();
+        break;
+      }
+    }
+  }
 
   llvm::Triple Triple(
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
