@@ -2,10 +2,14 @@
 // RUN: FileCheck -check-prefix=A -check-prefix=BOTH -input-file %s %s
 // RUN: FileCheck -check-prefixes=B,BOTH -input-file %s %s
 // RUN: FileCheck -check-prefixes=A,BOTH -input-file %s %s
+// RUN: FileCheck -check-prefix=B,BOTH -input-file %s %s
+// RUN: FileCheck -check-prefix=A,BOTH -input-file %s %s
+// RUN: FileCheck -check-prefix=A,B -check-prefix=BOTH,C -input-file %s %s
 
 ; A: {{a}}aaaaa
 ; B: {{b}}bbbb
 ; BOTH: {{q}}qqqqq
+; C: {{c}}cccc
 aaaaaa
 bbbbb
 qqqqqq

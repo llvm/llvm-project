@@ -446,6 +446,9 @@ def warn_ignored_clang_option : Warning<"the flag '%0' has been deprecated and w
 def warn_drv_unsupported_opt_for_target : Warning<
   "optimization flag '%0' is not supported for target '%1'">,
   InGroup<IgnoredOptimizationArgument>;
+def warn_drv_riscv_be_experimental : Warning<
+  "big-endian RISC-V target support is experimental">,
+  InGroup<RISCVBEExperimental>;
 def warn_drv_unsupported_debug_info_opt_for_target : Warning<
   "debug information option '%0' is not supported for target '%1'">,
   InGroup<UnsupportedTargetOpt>;
@@ -491,7 +494,7 @@ def warn_drv_deprecated_arg_ofast : Warning<
   " or '-O3' to enable only conforming optimizations">,
   InGroup<DeprecatedOFast>;
 def warn_drv_deprecated_arg_ofast_for_flang : Warning<
-  "argument '-Ofast' is deprecated; use '-O3 -ffast-math -fstack-arrays' for the same behavior,"
+  "argument '-Ofast' is deprecated; use '-O3 -ffast-math -fstack-arrays -fno-protect-parens' for the same behavior,"
   " or '-O3 -fstack-arrays' to enable only conforming optimizations">,
   InGroup<DeprecatedOFast>;
 def warn_drv_deprecated_custom : Warning<

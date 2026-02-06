@@ -436,13 +436,15 @@ static MoveType determineMoveType(const FunctionDecl *FuncDecl) {
 
 static void emitDiagnostic(const Expr *MovingCall, const DeclRefExpr *MoveArg,
                            const UseAfterMove &Use, ClangTidyCheck *Check,
-                           ASTContext *Context, MoveType Type) {
+                           ASTContext *Context, MoveType Type,
+                           const FunctionDecl *MoveDecl) {
   const SourceLocation UseLoc = Use.DeclRef->getExprLoc();
   const SourceLocation MoveLoc = MovingCall->getExprLoc();
 
-  Check->diag(UseLoc,
-              "'%0' used after it was %select{forwarded|moved|invalidated}1")
-      << MoveArg->getDecl()->getName() << Type;
+  Check->diag(
+      UseLoc,
+      "'%0' used after it was %select{forwarded|moved|invalidated by %2}1")
+      << MoveArg->getDecl()->getName() << Type << MoveDecl;
   Check->diag(MoveLoc, "%select{forward|move|invalidation}0 occurred here",
               DiagnosticIDs::Note)
       << Type;
@@ -573,7 +575,7 @@ void UseAfterMoveCheck::check(const MatchFinder::MatchResult &Result) {
                               ReinitializationFunctions);
     if (auto Use = Finder.find(CodeBlock, MovingCall, Arg))
       emitDiagnostic(MovingCall, Arg, *Use, this, Result.Context,
-                     determineMoveType(MoveDecl));
+                     determineMoveType(MoveDecl), MoveDecl);
   }
 }
 

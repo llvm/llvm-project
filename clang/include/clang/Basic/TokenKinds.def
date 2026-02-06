@@ -133,6 +133,11 @@ PPKEYWORD(pragma)
 // C23 & C++26 #embed
 PPKEYWORD(embed)
 
+// C++20 Module Directive
+PPKEYWORD(module)
+PPKEYWORD(__preprocessed_module)
+PPKEYWORD(__preprocessed_import)
+
 // GNU Extensions.
 PPKEYWORD(import)
 PPKEYWORD(include_next)
@@ -1022,6 +1027,9 @@ PRAGMA_ANNOTATION(pragma_fp)
 // Annotation for the attribute pragma directives - #pragma clang attribute ...
 PRAGMA_ANNOTATION(pragma_attribute)
 
+// Annotation for C/C++ #pragma export(ident)
+PRAGMA_ANNOTATION(pragma_export)
+
 // Annotation for the riscv pragma directives - #pragma clang riscv intrinsic ...
 PRAGMA_ANNOTATION(pragma_riscv)
 
@@ -1029,6 +1037,9 @@ PRAGMA_ANNOTATION(pragma_riscv)
 ANNOTATION(module_include)
 ANNOTATION(module_begin)
 ANNOTATION(module_end)
+
+// Annotations for C++, Clang and Objective-C named modules.
+ANNOTATION(module_name)
 
 // Annotation for a header_name token that has been looked up and transformed
 // into the name of a header unit.

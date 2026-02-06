@@ -75,6 +75,10 @@ def GlobalVariableOpInterface : OpInterface<"GlobalVariableOpInterface"> {
       }]>,
     InterfaceMethod<"Get the initialization region (returns nullptr if none)",
       "::mlir::Region*", "getInitRegion", (ins)>,
+    InterfaceMethod<"Check if the global variable is device data",
+      "bool", "isDeviceData", (ins), [{
+        return false;
+      }]>,
   ];
 }
 
@@ -131,6 +135,14 @@ def OffloadRegionOpInterface : OpInterface<"OffloadRegionOpInterface"> {
     their regions will be extracted and compiled separately (e.g., as
     device kernels or outlined functions).
   }];
+
+  let methods = [
+    InterfaceMethod<"Get the offload region", "::mlir::Region&",
+      "getOffloadRegion",
+      (ins), [{
+        return $_op.getRegion();
+      }]>,
+  ];
 }
 
 #endif // OPENACC_OPS_INTERFACES

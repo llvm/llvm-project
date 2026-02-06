@@ -42,40 +42,18 @@ public:
     GFX10 = 9,
     GFX11 = 10,
     GFX12 = 11,
+    GFX13 = 12,
   };
 
 private:
   Triple TargetTriple;
 
 protected:
-  bool GCN3Encoding = false;
-  bool Has16BitInsts = false;
-  bool HasTrue16BitInsts = false;
-  bool HasFP8ConversionScaleInsts = false;
-  bool HasBF8ConversionScaleInsts = false;
-  bool HasFP4ConversionScaleInsts = false;
-  bool HasFP6BF6ConversionScaleInsts = false;
-  bool HasF16BF16ToFP6BF6ConversionScaleInsts = false;
-  bool HasCvtPkF16F32Inst = false;
-  bool HasF32ToF16BF16ConversionSRInsts = false;
-  bool EnableRealTrue16Insts = false;
-  bool EnableD16Writes32BitVgpr = false;
-  bool HasBF16TransInsts = false;
-  bool HasBF16ConversionInsts = false;
-  bool HasBF16PackedInsts = false;
-  bool HasMadMixInsts = false;
-  bool HasMadMacF32Insts = false;
-  bool HasDsSrc2Insts = false;
-  bool HasSDWA = false;
-  bool HasVOP3PInsts = false;
   bool HasMulI24 = true;
   bool HasMulU24 = true;
   bool HasSMulHi = false;
-  bool HasInv2PiInlineImm = false;
   bool HasFminFmaxLegacy = true;
-  bool EnablePromoteAlloca = false;
-  bool HasTrigReducedRange = false;
-  bool FastFMAF32 = false;
+
   unsigned EUsPerCU = 4;
   unsigned MaxWavesPerEU = 10;
   unsigned LocalMemorySize = 0;
@@ -83,7 +61,7 @@ protected:
   char WavefrontSizeLog2 = 0;
 
 public:
-  AMDGPUSubtarget(Triple TT);
+  AMDGPUSubtarget(Triple TT) : TargetTriple(std::move(TT)) {}
 
   static const AMDGPUSubtarget &get(const MachineFunction &MF);
   static const AMDGPUSubtarget &get(const TargetMachine &TM,
@@ -206,16 +184,13 @@ public:
 
   bool isGCN() const { return TargetTriple.isAMDGCN(); }
 
-  bool isGCN3Encoding() const {
-    return GCN3Encoding;
-  }
-
-  bool has16BitInsts() const {
-    return Has16BitInsts;
-  }
-
-  /// Return true if the subtarget supports True16 instructions.
-  bool hasTrue16BitInsts() const { return HasTrue16BitInsts; }
+  //==---------------------------------------------------------------------===//
+  // TableGen-generated feature getters.
+  //==---------------------------------------------------------------------===//
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
+  virtual bool GETTER() const { return false; }
+#include "AMDGPUGenSubtargetInfo.inc"
+  //==---------------------------------------------------------------------===//
 
   /// Return true if real (non-fake) variants of True16 instructions using
   /// 16-bit registers should be code-generated. Fake True16 instructions are
@@ -223,56 +198,8 @@ public:
   /// operands and always use their low halves.
   // TODO: Remove and use hasTrue16BitInsts() instead once True16 is fully
   // supported and the support for fake True16 instructions is removed.
-  bool useRealTrue16Insts() const;
-
-  bool hasD16Writes32BitVgpr() const;
-
-  bool hasBF16TransInsts() const { return HasBF16TransInsts; }
-
-  bool hasBF16ConversionInsts() const {
-    return HasBF16ConversionInsts;
-  }
-
-  bool hasBF16PackedInsts() const { return HasBF16PackedInsts; }
-
-  bool hasMadMixInsts() const {
-    return HasMadMixInsts;
-  }
-
-  bool hasFP8ConversionScaleInsts() const { return HasFP8ConversionScaleInsts; }
-
-  bool hasBF8ConversionScaleInsts() const { return HasBF8ConversionScaleInsts; }
-
-  bool hasFP4ConversionScaleInsts() const { return HasFP4ConversionScaleInsts; }
-
-  bool hasFP6BF6ConversionScaleInsts() const {
-    return HasFP6BF6ConversionScaleInsts;
-  }
-
-  bool hasF16BF16ToFP6BF6ConversionScaleInsts() const {
-    return HasF16BF16ToFP6BF6ConversionScaleInsts;
-  }
-
-  bool hasCvtPkF16F32Inst() const { return HasCvtPkF16F32Inst; }
-
-  bool hasF32ToF16BF16ConversionSRInsts() const {
-    return HasF32ToF16BF16ConversionSRInsts;
-  }
-
-  bool hasMadMacF32Insts() const {
-    return HasMadMacF32Insts || !isGCN();
-  }
-
-  bool hasDsSrc2Insts() const {
-    return HasDsSrc2Insts;
-  }
-
-  bool hasSDWA() const {
-    return HasSDWA;
-  }
-
-  bool hasVOP3PInsts() const {
-    return HasVOP3PInsts;
+  bool useRealTrue16Insts() const {
+    return hasTrue16BitInsts() && enableRealTrue16Insts();
   }
 
   bool hasMulI24() const {
@@ -287,24 +214,8 @@ public:
     return HasSMulHi;
   }
 
-  bool hasInv2PiInlineImm() const {
-    return HasInv2PiInlineImm;
-  }
-
   bool hasFminFmaxLegacy() const {
     return HasFminFmaxLegacy;
-  }
-
-  bool hasTrigReducedRange() const {
-    return HasTrigReducedRange;
-  }
-
-  bool hasFastFMAF32() const {
-    return FastFMAF32;
-  }
-
-  bool isPromoteAllocaEnabled() const {
-    return EnablePromoteAlloca;
   }
 
   unsigned getWavefrontSize() const {

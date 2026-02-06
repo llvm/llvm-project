@@ -1065,10 +1065,6 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     A->render(Args, CmdArgs);
   }
 
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_D, options::OPT_U, options::OPT_I_Group,
-                   options::OPT_F, options::OPT_embed_dir_EQ});
-
   if (C.isOffloadingHostKind(Action::OFK_Cuda) ||
       JA.isDeviceOffloading(Action::OFK_Cuda)) {
     // Collect all enabled NVPTX architectures.
@@ -1090,6 +1086,10 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString("-D__CUDA_ARCH_LIST__=" + List));
     }
   }
+
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_D, options::OPT_U, options::OPT_I_Group,
+                   options::OPT_F, options::OPT_embed_dir_EQ});
 
   // Add -Wp, and -Xpreprocessor if using the preprocessor.
 
@@ -1218,6 +1218,8 @@ static bool isSignedCharDefault(const llvm::Triple &Triple) {
   case llvm::Triple::ppc64le:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
   case llvm::Triple::systemz:
   case llvm::Triple::xcore:
   case llvm::Triple::xtensa:
@@ -1564,6 +1566,8 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
 
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     AddRISCVTargetArgs(Args, CmdArgs);
     break;
 
@@ -4967,13 +4971,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           CmdArgs.push_back(Args.MakeArgString(
               Twine("-target-sdk-version=") +
               CudaVersionToString(CTC->CudaInstallation.version())));
-        // Unsized function arguments used for variadics were introduced in
-        // CUDA-9.0. We still do not support generating code that actually uses
-        // variadic arguments yet, but we do need to allow parsing them as
-        // recent CUDA headers rely on that.
-        // https://github.com/llvm/llvm-project/issues/58410
-        if (CTC->CudaInstallation.version() >= CudaVersion::CUDA_90)
-          CmdArgs.push_back("-fcuda-allow-variadic-functions");
       }
     }
     CmdArgs.push_back("-aux-triple");
@@ -5666,8 +5663,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
             << Name << Triple.getArchName();
     } else if (Name == "SLEEF" || Name == "ArmPL") {
       if (Triple.getArch() != llvm::Triple::aarch64 &&
-          Triple.getArch() != llvm::Triple::aarch64_be &&
-          Triple.getArch() != llvm::Triple::riscv64)
+          Triple.getArch() != llvm::Triple::aarch64_be && !Triple.isRISCV64())
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << Name << Triple.getArchName();
     }
@@ -6777,7 +6773,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     StringRef S0 = A->getValue(), S = S0;
     unsigned Size, Offset = 0;
     if (!Triple.isAArch64() && !Triple.isLoongArch() && !Triple.isRISCV() &&
-        !Triple.isX86() &&
+        !Triple.isX86() && !Triple.isSystemZ() &&
         !(!Triple.isOSAIX() && (Triple.getArch() == llvm::Triple::ppc ||
                                 Triple.getArch() == llvm::Triple::ppc64 ||
                                 Triple.getArch() == llvm::Triple::ppc64le)))
@@ -7171,6 +7167,60 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fms-define-stdc");
   }
 
+  // -fms-anonymous-structs is disabled by default.
+  // Determine whether to enable Microsoft named anonymous struct/union support.
+  // This implements "last flag wins" semantics for -fms-anonymous-structs,
+  // where the feature can be:
+  // - Explicitly enabled via -fms-anonymous-structs.
+  // - Explicitly disabled via fno-ms-anonymous-structs
+  // - Implicitly enabled via -fms-extensions or -fms-compatibility
+  // - Implicitly disabled via -fno-ms-extensions or -fno-ms-compatibility
+  //
+  // When multiple relevent options are present, the last option on the command
+  // line takes precedence. This allows users to selectively override implicit
+  // enablement. Examples:
+  //   -fms-extensions -fno-ms-anonymous-structs -> disabled (explicit override)
+  //   -fno-ms-anonymous-structs -fms-extensions -> enabled (last flag wins)
+  auto MSAnonymousStructsOptionToUseOrNull =
+      [](const ArgList &Args) -> const char * {
+    const char *Option = nullptr;
+    constexpr const char *Enable = "-fms-anonymous-structs";
+    constexpr const char *Disable = "-fno-ms-anonymous-structs";
+
+    // Iterate through all arguments in order to implement "last flag wins".
+    for (const Arg *A : Args) {
+      switch (A->getOption().getID()) {
+      case options::OPT_fms_anonymous_structs:
+        A->claim();
+        Option = Enable;
+        break;
+      case options::OPT_fno_ms_anonymous_structs:
+        A->claim();
+        Option = Disable;
+        break;
+      // Each of -fms-extensions and -fms-compatibility implicitly enables the
+      // feature.
+      case options::OPT_fms_extensions:
+      case options::OPT_fms_compatibility:
+        Option = Enable;
+        break;
+      // Each of -fno-ms-extensions and -fno-ms-compatibility implicitly
+      // disables the feature.
+      case options::OPT_fno_ms_extensions:
+      case options::OPT_fno_ms_compatibility:
+        Option = Disable;
+        break;
+      default:
+        break;
+      }
+    }
+    return Option;
+  };
+
+  // Only pass a flag to CC1 if a relevant option was seen
+  if (auto MSAnonOpt = MSAnonymousStructsOptionToUseOrNull(Args))
+    CmdArgs.push_back(MSAnonOpt);
+
   if (Triple.isWindowsMSVCEnvironment() && !D.IsCLMode() &&
       Args.hasArg(options::OPT_fms_runtime_lib_EQ))
     ProcessVSRuntimeLibrary(getToolChain(), Args, CmdArgs);
@@ -7211,6 +7261,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       LanguageStandard = llvm::StringSwitch<StringRef>(StdArg->getValue())
                              .Case("c11", "-std=c11")
                              .Case("c17", "-std=c17")
+                             // If you add cases below for spellings that are
+                             // not in LangStandards.def, update
+                             // TransferableCommand::tryParseStdArg() in
+                             // lib/Tooling/InterpolatingCompilationDatabase.cpp
+                             // to match.
                              // TODO: add c23 when MSVC supports it.
                              .Case("clatest", "-std=c23")
                              .Default("");
@@ -7228,6 +7283,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                              .Case("c++14", "-std=c++14")
                              .Case("c++17", "-std=c++17")
                              .Case("c++20", "-std=c++20")
+                             // If you add cases below for spellings that are
+                             // not in LangStandards.def, update
+                             // TransferableCommand::tryParseStdArg() in
+                             // lib/Tooling/InterpolatingCompilationDatabase.cpp
+                             // to match.
                              // TODO add c++23 and c++26 when MSVC supports it.
                              .Case("c++23preview", "-std=c++23")
                              .Case("c++latest", "-std=c++26")
@@ -7930,36 +7990,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
-                               options::OPT_fno_global_isel)) {
-    CmdArgs.push_back("-mllvm");
-    if (A->getOption().matches(options::OPT_fglobal_isel)) {
-      CmdArgs.push_back("-global-isel=1");
-
-      // GISel is on by default on AArch64 -O0, so don't bother adding
-      // the fallback remarks for it. Other combinations will add a warning of
-      // some kind.
-      bool IsArchSupported = Triple.getArch() == llvm::Triple::aarch64;
-      bool IsOptLevelSupported = false;
-
-      Arg *A = Args.getLastArg(options::OPT_O_Group);
-      if (Triple.getArch() == llvm::Triple::aarch64) {
-        if (!A || A->getOption().matches(options::OPT_O0))
-          IsOptLevelSupported = true;
-      }
-      if (!IsArchSupported || !IsOptLevelSupported) {
-        CmdArgs.push_back("-mllvm");
-        CmdArgs.push_back("-global-isel-abort=2");
-
-        if (!IsArchSupported)
-          D.Diag(diag::warn_drv_global_isel_incomplete) << Triple.getArchName();
-        else
-          D.Diag(diag::warn_drv_global_isel_incomplete_opt);
-      }
-    } else {
-      CmdArgs.push_back("-global-isel=0");
-    }
-  }
+  renderGlobalISelOptions(D, Args, CmdArgs, Triple);
 
   if (Arg *A = Args.getLastArg(options::OPT_fforce_enable_int128,
                                options::OPT_fno_force_enable_int128)) {
@@ -8829,6 +8860,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
 
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     AddRISCVTargetArgs(Args, CmdArgs);
     break;
 
@@ -9175,6 +9208,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_v,
       OPT_cuda_path_EQ,
       OPT_rocm_path_EQ,
+      OPT_hip_path_EQ,
       OPT_O_Group,
       OPT_g_Group,
       OPT_g_flags_Group,
@@ -9304,18 +9338,23 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
   const auto &LinkCommand = C.getJobs().getJobs().back();
 
-  // Forward -Xoffload-linker<-triple> arguments to the device link job.
-  for (Arg *A : Args.filtered(options::OPT_Xoffload_linker)) {
+  // Forward -Xoffload-{compiler,linker}<-triple> arguments to the linker
+  // wrapper.
+  for (Arg *A :
+       Args.filtered(options::OPT_Xoffload_compiler, OPT_Xoffload_linker)) {
     StringRef Val = A->getValue(0);
+    bool IsLinkJob = A->getOption().getID() == OPT_Xoffload_linker;
+    auto WrapperOption =
+        IsLinkJob ? Twine("--device-linker=") : Twine("--device-compiler=");
     if (Val.empty())
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine("--device-linker=") + A->getValue(1)));
+      CmdArgs.push_back(Args.MakeArgString(WrapperOption + A->getValue(1)));
     else
       CmdArgs.push_back(Args.MakeArgString(
-          "--device-linker=" +
+          WrapperOption +
           ToolChain::getOpenMPTriple(Val.drop_front()).getTriple() + "=" +
           A->getValue(1)));
   }
+  Args.ClaimAllArgs(options::OPT_Xoffload_compiler);
   Args.ClaimAllArgs(options::OPT_Xoffload_linker);
 
   // Embed bitcode instead of an object in JIT mode.

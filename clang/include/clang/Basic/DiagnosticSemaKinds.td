@@ -1222,6 +1222,16 @@ def err_pragma_pop_visibility_mismatch : Error<
   "#pragma visibility pop with no matching #pragma visibility push">;
 def note_surrounding_namespace_starts_here : Note<
   "surrounding namespace with visibility attribute starts here">;
+def warn_failed_to_resolve_pragma : Warning<
+  "failed to resolve '#pragma %0' to a declaration">,
+  InGroup<IgnoredPragmas>;
+def warn_pragma_not_applied : Warning<
+  "#pragma %0 is applicable to symbols with external linkage only; "
+  "not applied to %1">,
+  InGroup<IgnoredPragmas>;
+def warn_pragma_not_applied_to_defined_symbol : Warning<
+  "#pragma %0 can only applied before a symbol is defined">,
+  InGroup<IgnoredPragmas>;
 def err_pragma_loop_invalid_argument_type : Error<
   "invalid argument of type %0; expected an integer type">;
 def err_pragma_loop_compatibility : Error<
@@ -10806,33 +10816,70 @@ def warn_lifetime_safety_loan_expires_permissive : Warning<
 def warn_lifetime_safety_loan_expires_strict : Warning<
    "object whose reference is captured may not live long enough">,
    InGroup<LifetimeSafetyStrict>, DefaultIgnore;
+def warn_lifetime_safety_loan_expires_moved_strict : Warning<
+   "object whose reference is captured may not live long enough. "
+   "This could be false positive as the storage may have been moved later">,
+   InGroup<LifetimeSafetyStrict>, DefaultIgnore;
 
 def warn_lifetime_safety_return_stack_addr_permissive
     : Warning<"address of stack memory is returned later">,
       InGroup<LifetimeSafetyPermissive>,
       DefaultIgnore;
-def warn_lifetime_safety_return_stack_addr_strict
-    : Warning<"address of stack memory may be returned later">,
+def warn_lifetime_safety_return_stack_addr_moved_strict
+    : Warning<"address of stack memory may be returned later. "
+      "This could be false positive as the storage may have been moved. "
+      "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyStrict>,
+      DefaultIgnore;
+
+def warn_lifetime_safety_dangling_field
+    : Warning<"address of stack memory escapes to a field">,
+      InGroup<LifetimeSafetyDanglingField>,
+      DefaultIgnore;
+def warn_lifetime_safety_dangling_field_moved
+    : Warning<"address of stack memory escapes to a field. "
+      "This could be a false positive as the storage may have been moved. "
+      "Consider moving first and then aliasing later to resolve the issue">,
+      InGroup<LifetimeSafetyDanglingFieldStrict>,
       DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
+def note_lifetime_safety_moved_here : Note<"potentially moved here">;
+def note_lifetime_safety_dangling_field_here: Note<"this field dangles">;
+def note_lifetime_safety_escapes_to_field_here: Note<"escapes to this field">;
 
-def warn_lifetime_safety_intra_tu_suggestion
+def warn_lifetime_safety_intra_tu_param_suggestion
     : Warning<"parameter in intra-TU function should be marked "
               "[[clang::lifetimebound]]">,
       InGroup<LifetimeSafetyIntraTUSuggestions>,
       DefaultIgnore;
 
-def warn_lifetime_safety_cross_tu_suggestion
+def warn_lifetime_safety_cross_tu_param_suggestion
     : Warning<"parameter in cross-TU function should be marked "
               "[[clang::lifetimebound]]">,
       InGroup<LifetimeSafetyCrossTUSuggestions>,
       DefaultIgnore;
 
+def warn_lifetime_safety_intra_tu_this_suggestion
+    : Warning<"implicit this in intra-TU function should be marked "
+              "[[clang::lifetimebound]]">,
+      InGroup<LifetimeSafetyIntraTUSuggestions>,
+      DefaultIgnore;
+
+def warn_lifetime_safety_cross_tu_this_suggestion
+    : Warning<"implicit this in cross-TU function should be marked "
+              "[[clang::lifetimebound]]">,
+      InGroup<LifetimeSafetyCrossTUSuggestions>,
+      DefaultIgnore;
+
 def note_lifetime_safety_suggestion_returned_here : Note<"param returned here">;
+
+def warn_lifetime_safety_noescape_escapes
+    : Warning<"parameter is marked [[clang::noescape]] but escapes">,
+      InGroup<LifetimeSafetyNoescape>,
+      DefaultIgnore;
 
 // For non-floating point, expressions of the form x == x or x != x
 // should result in a warning, since these always evaluate to a constant.
@@ -11259,6 +11306,8 @@ def err_ppc_invalid_use_mma_type : Error<
   "invalid use of PPC MMA type">;
 def err_ppc_invalid_test_data_class_type : Error<
   "expected a 'float', 'double' or '__float128' for the first argument">;
+def err_ppc_invalid_arg_type : Error<
+  "argument %0 must be of type %1">;
 def err_x86_builtin_invalid_rounding : Error<
   "invalid rounding argument">;
 def err_x86_builtin_invalid_scale : Error<
@@ -11281,6 +11330,8 @@ def err_builtin_requires_language : Error<"'%0' is only available in %1">;
 
 def err_constant_integer_arg_type : Error<
   "argument to %0 must be a constant integer">;
+def err_constant_integer_last_arg_type
+    : Error<"last argument to %0 must be a constant integer">;
 
 def ext_mixed_decls_code : Extension<
   "mixing declarations and code is a C99 extension">,
@@ -12477,6 +12528,10 @@ def err_ompx_bare_no_grid : Error<
   "'ompx_bare' clauses requires explicit grid size via 'num_teams' and 'thread_limit' clauses">;
 def err_omp_multi_expr_not_allowed: Error<"only one expression allowed in '%0' clause">;
 def err_ompx_more_than_three_expr_not_allowed: Error<"at most three expressions are allowed in '%0' clause in 'target teams ompx_bare' construct">;
+def err_omp_transparent_invalid_value : Error<"invalid value for transparent clause,"
+  " expected one of: omp_not_impex, omp_import, omp_export, omp_impex">;
+def err_omp_transparent_invalid_type : Error<
+  "transparent clause cannot be applied to type: %0">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
@@ -13450,6 +13505,10 @@ def warn_unsafe_buffer_operation : Warning<
 def warn_unsafe_buffer_libc_call : Warning<
   "function %0 is unsafe">,
   InGroup<UnsafeBufferUsageInLibcCall>, DefaultIgnore;
+def warn_unsafe_buffer_format_attr_call : Warning<
+  "formatting function %0 is unsafe">,
+  InGroup<UnsafeBufferUsageInFormatAttrCall>, DefaultIgnore;
+
 def note_unsafe_buffer_printf_call : Note<
   "%select{|change to 'snprintf' for explicit bounds checking | buffer pointer and size may not match"
           "|string argument is not guaranteed to be null-terminated"
@@ -13468,6 +13527,8 @@ def warn_unsafe_buffer_usage_in_container : Warning<
   InGroup<UnsafeBufferUsageInContainer>, DefaultIgnore;
 def warn_unsafe_buffer_usage_unique_ptr_array_access : Warning<"direct access using operator[] on std::unique_ptr<T[]> is unsafe due to lack of bounds checking">,
   InGroup<UnsafeBufferUsageInUniquePtrArrayAccess>, DefaultIgnore;
+def warn_unsafe_buffer_usage_in_static_sized_array : Warning<"direct access on T[N] is unsafe due to the lack of bounds checking">,
+  InGroup<UnsafeBufferUsageInStaticSizedArray>, DefaultIgnore;
 #ifndef NDEBUG
 // Not a user-facing diagnostic. Useful for debugging false negatives in
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).

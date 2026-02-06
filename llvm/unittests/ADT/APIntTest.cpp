@@ -14,7 +14,6 @@
 #include "llvm/Support/Alignment.h"
 #include "gtest/gtest.h"
 #include <array>
-#include <climits>
 #include <limits>
 #include <optional>
 
@@ -27,6 +26,28 @@ TEST(APIntTest, ValueInit) {
   EXPECT_TRUE(!Zero);
   EXPECT_TRUE(!Zero.zext(64));
   EXPECT_TRUE(!Zero.sext(64));
+}
+
+TEST(APIntTest, IsSameValue) {
+  APInt One8(8, 1, /*isSigned=*/false);
+  APInt Three4(4, 3, /*isSigned=*/false);
+  EXPECT_FALSE(APInt::isSameValue(One8, Three4, /*SignedCompare=*/false));
+  EXPECT_FALSE(APInt::isSameValue(One8, Three4, /*SignedCompare=*/true));
+
+  APInt Two8(8, 2, /*isSigned=*/false);
+  APInt Two4(4, 2, /*isSigned=*/false);
+  EXPECT_TRUE(APInt::isSameValue(Two8, Two4, /*SignedCompare=*/false));
+  EXPECT_TRUE(APInt::isSameValue(Two8, Two4, /*SignedCompare=*/true));
+
+  APInt Seven8(8, 7, /*isSigned=*/false);
+  APInt Seven3(3, 7, /*isSigned=*/false);
+  EXPECT_TRUE(APInt::isSameValue(Seven8, Seven3, /*SignedCompare=*/false));
+  EXPECT_FALSE(APInt::isSameValue(Seven8, Seven3, /*SignedCompare=*/true));
+
+  APInt Ones8 = APInt::getAllOnes(8);
+  APInt Ones4 = APInt::getAllOnes(4);
+  EXPECT_FALSE(APInt::isSameValue(Ones8, Ones4, /*SignedCompare=*/false));
+  EXPECT_TRUE(APInt::isSameValue(Ones8, Ones4, /*SignedCompare=*/true));
 }
 
 // Test that 0^5 == 0
