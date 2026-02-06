@@ -2060,7 +2060,7 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   if (all_of(Header->phis(), [](VPRecipeBase &Phi) {
         if (auto *R = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi))
           return R->isCanonical();
-        return isa<VPCanonicalIVPHIRecipe, VPCurrentIterationRecipe,
+        return isa<VPCanonicalIVPHIRecipe, VPCurrentIterationPHIRecipe,
                    VPFirstOrderRecurrencePHIRecipe, VPPhi>(&Phi);
       })) {
     for (VPRecipeBase &HeaderR : make_early_inc_range(Header->phis())) {
@@ -3203,7 +3203,7 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
 /// VPInstruction::ExplicitVectorLength elements instead of VF elements each
 /// iteration.
 ///
-/// - Add a VPCurrentIterationRecipe and related recipes to \p Plan and
+/// - Add a VPCurrentIterationPHIRecipe and related recipes to \p Plan and
 ///   replaces all uses except the canonical IV increment of
 ///   VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe.
 ///   VPCanonicalIVPHIRecipe is used only for loop iterations counting after
@@ -3266,7 +3266,7 @@ void VPlanTransforms::addExplicitVectorLength(
 
   // Create the CurrentIteration recipe in the main loop.
   auto *CurrentIteration =
-      new VPCurrentIterationRecipe(StartV, DebugLoc::getUnknown());
+      new VPCurrentIterationPHIRecipe(StartV, DebugLoc::getUnknown());
   CurrentIteration->insertAfter(CanonicalIVPHI);
   VPBuilder Builder(Header, Header->getFirstNonPhi());
   // Create the AVL (application vector length), starting from TC -> 0 in steps
@@ -3310,7 +3310,7 @@ void VPlanTransforms::addExplicitVectorLength(
   removeDeadRecipes(Plan);
 
   // Replace all uses of VPCanonicalIVPHIRecipe by
-  // VPCurrentIterationRecipe except for the canonical IV increment.
+  // VPCurrentIterationPHIRecipe except for the canonical IV increment.
   CanonicalIVPHI->replaceAllUsesWith(CurrentIteration);
   CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
   // TODO: support unroll factor > 1.
@@ -3318,14 +3318,14 @@ void VPlanTransforms::addExplicitVectorLength(
 }
 
 void VPlanTransforms::convertToVariableLengthStep(VPlan &Plan) {
-  // Find the vector loop entry by locating VPCurrentIterationRecipe.
+  // Find the vector loop entry by locating VPCurrentIterationPHIRecipe.
   // There should be only one VPCurrentIteration in the entire plan.
-  VPCurrentIterationRecipe *CurrentIteration = nullptr;
+  VPCurrentIterationPHIRecipe *CurrentIteration = nullptr;
 
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry())))
     for (VPRecipeBase &R : VPBB->phis())
-      if (auto *PhiR = dyn_cast<VPCurrentIterationRecipe>(&R)) {
+      if (auto *PhiR = dyn_cast<VPCurrentIterationPHIRecipe>(&R)) {
         assert(!CurrentIteration &&
                "Found multiple CurrentIteration. Only one expected");
         CurrentIteration = PhiR;
@@ -3371,7 +3371,7 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
   if (std::next(CanIV->getIterator()) == CanIV->getParent()->end())
     return;
   // The EVL IV is always immediately after the canonical IV.
-  auto *EVLPhi = dyn_cast_or_null<VPCurrentIterationRecipe>(
+  auto *EVLPhi = dyn_cast_or_null<VPCurrentIterationPHIRecipe>(
       std::next(CanIV->getIterator()));
   if (!EVLPhi)
     return;

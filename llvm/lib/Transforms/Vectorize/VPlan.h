@@ -435,7 +435,7 @@ public:
     // START: SubclassID for recipes that inherit VPHeaderPHIRecipe.
     // VPHeaderPHIRecipe need to be kept together.
     VPCanonicalIVPHISC,
-    VPCurrentIterationSC,
+    VPCurrentIterationPHISC,
     VPActiveLaneMaskPHISC,
     VPFirstOrderRecurrencePHISC,
     VPWidenIntOrFpInductionSC,
@@ -616,7 +616,7 @@ public:
     case VPRecipeBase::VPBlendSC:
     case VPRecipeBase::VPPredInstPHISC:
     case VPRecipeBase::VPCanonicalIVPHISC:
-    case VPRecipeBase::VPCurrentIterationSC:
+    case VPRecipeBase::VPCurrentIterationPHISC:
     case VPRecipeBase::VPActiveLaneMaskPHISC:
     case VPRecipeBase::VPFirstOrderRecurrencePHISC:
     case VPRecipeBase::VPWidenPHISC:
@@ -3756,29 +3756,29 @@ protected:
 #endif
 };
 
-/// A recipe for generating the phi node for the current index of elements.
+/// A recipe for generating the phi node tracking the current scalar iteration index.
 /// It starts at the start value of the canonical induction and gets incremented
-/// by the number of elements processed in each iteration of the vector loop.
-class VPCurrentIterationRecipe : public VPHeaderPHIRecipe {
+/// by the number of scalar iterations processed per vector loop iteration.
+class VPCurrentIterationPHIRecipe : public VPHeaderPHIRecipe {
 public:
-  VPCurrentIterationRecipe(VPValue *StartIV, DebugLoc DL)
-      : VPHeaderPHIRecipe(VPRecipeBase::VPCurrentIterationSC, nullptr, StartIV,
+  VPCurrentIterationPHIRecipe(VPValue *StartIV, DebugLoc DL)
+      : VPHeaderPHIRecipe(VPRecipeBase::VPCurrentIterationPHISC, nullptr, StartIV,
                           DL) {}
 
-  ~VPCurrentIterationRecipe() override = default;
+  ~VPCurrentIterationPHIRecipe() override = default;
 
-  VPCurrentIterationRecipe *clone() override {
+  VPCurrentIterationPHIRecipe *clone() override {
     llvm_unreachable("cloning not implemented yet");
   }
 
-  VP_CLASSOF_IMPL(VPRecipeBase::VPCurrentIterationSC)
+  VP_CLASSOF_IMPL(VPRecipeBase::VPCurrentIterationPHISC)
 
   void execute(VPTransformState &State) override {
     llvm_unreachable("cannot execute this recipe, should be replaced by a "
                      "scalar phi recipe");
   }
 
-  /// Return the cost of this VPCurrentIterationRecipe.
+  /// Return the cost of this VPCurrentIterationPHIRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override {
     // For now, match the behavior of the legacy cost model.

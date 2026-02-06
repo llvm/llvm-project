@@ -75,7 +75,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
   case VPActiveLaneMaskPHISC:
   case VPCanonicalIVPHISC:
-  case VPCurrentIterationSC:
+  case VPCurrentIterationPHISC:
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
@@ -4607,7 +4607,7 @@ void VPActiveLaneMaskPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 #endif
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPCurrentIterationRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
+void VPCurrentIterationPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                            VPSlotTracker &SlotTracker) const {
   O << Indent << "CURRENT-ITERATION-PHI ";
 

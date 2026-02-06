@@ -4130,7 +4130,7 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPRecipeBase::VPReplicateSC:
       case VPRecipeBase::VPInstructionSC:
       case VPRecipeBase::VPCanonicalIVPHISC:
-      case VPRecipeBase::VPCurrentIterationSC:
+      case VPRecipeBase::VPCurrentIterationPHISC:
       case VPRecipeBase::VPVectorPointerSC:
       case VPRecipeBase::VPVectorEndPointerSC:
       case VPRecipeBase::VPExpandSCEVSC:
@@ -4663,7 +4663,7 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     return 1;
 
   if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
-             IsaPred<VPCurrentIterationRecipe>)) {
+             IsaPred<VPCurrentIterationPHIRecipe>)) {
     LLVM_DEBUG(dbgs() << "LV: Loop requires variable-length step. "
                          "Unroll factor forced to be 1.\n");
     return 1;

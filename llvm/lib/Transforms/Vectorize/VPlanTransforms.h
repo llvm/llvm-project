@@ -274,7 +274,7 @@ struct VPlanTransforms {
       VPlan &Plan,
       const std::function<bool(BasicBlock *)> &BlockNeedsPredication);
 
-  /// Add a VPCurrentIterationRecipe and related recipes to \p Plan and
+  /// Add a VPCurrentIterationPHIRecipe and related recipes to \p Plan and
   /// replaces all uses except the canonical IV increment of
   /// VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe.
   /// VPCanonicalIVPHIRecipe is only used to control the loop after
