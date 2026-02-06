@@ -9,10 +9,6 @@
 namespace llvm {
 namespace VNCoercion {
 
-static bool isFirstClassAggregateOrScalableType(Type *Ty) {
-  return Ty->isStructTy() || Ty->isArrayTy() || isa<ScalableVectorType>(Ty);
-}
-
 /// Return true if coerceAvailableValueToLoadType will succeed.
 bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
                                      Function *F) {
@@ -40,28 +36,35 @@ bool canCoerceMustAliasedValueToLoad(Value *StoredVal, Type *LoadTy,
     unsigned MinVScale = Attrs.getVScaleRangeMin();
     MinStoreSize =
         TypeSize::getFixed(MinStoreSize.getKnownMinValue() * MinVScale);
-  } else if (isFirstClassAggregateOrScalableType(LoadTy) ||
-             isFirstClassAggregateOrScalableType(StoredTy)) {
+  } else if (isa<ScalableVectorType>(StoredTy) ||
+             isa<ScalableVectorType>(LoadTy)) {
     return false;
   }
 
   // The store size must be byte-aligned to support future type casts.
-  if (llvm::alignTo(MinStoreSize, 8) != MinStoreSize)
+  if (!MinStoreSize.isKnownMultipleOf(8))
     return false;
 
   // The store has to be at least as big as the load.
   if (!TypeSize::isKnownGE(MinStoreSize, LoadSize))
     return false;
 
+  // As a special case, allow coercion of memset used to initialize
+  // an array w/null. Despite non-integral pointers not generally having a
+  // specific bit pattern, we do assume null is zero.
+  if (StoredVal) {
+    Constant *CI = dyn_cast<Constant>(StoredVal);
+    if (CI && CI->isNullValue())
+      return true;
+  }
+
+  if (LoadTy->isAggregateType() || StoredTy->isAggregateType())
+    return false;
+
   bool StoredNI = DL.isNonIntegralPointerType(StoredTy->getScalarType());
   bool LoadNI = DL.isNonIntegralPointerType(LoadTy->getScalarType());
   // Don't coerce non-integral pointers to integers or vice versa.
   if (StoredNI != LoadNI) {
-    // As a special case, allow coercion of memset used to initialize
-    // an array w/null.  Despite non-integral pointers not generally having a
-    // specific bit pattern, we do assume null is zero.
-    if (auto *CI = dyn_cast<Constant>(StoredVal))
-      return CI->isNullValue();
     return false;
   } else if (StoredNI && LoadNI &&
              StoredTy->getPointerAddressSpace() !=
@@ -197,11 +200,6 @@ static int analyzeLoadFromClobberingWrite(Type *LoadTy, Value *LoadPtr,
                                           Value *WritePtr,
                                           uint64_t WriteSizeInBits,
                                           const DataLayout &DL) {
-  // If the loaded/stored value is a first class array/struct, or scalable type,
-  // don't try to transform them. We need to be able to bitcast to integer.
-  if (isFirstClassAggregateOrScalableType(LoadTy))
-    return -1;
-
   int64_t StoreOffset = 0, LoadOffset = 0;
   Value *StoreBase =
       GetPointerBaseWithConstantOffset(WritePtr, StoreOffset, DL);
@@ -235,8 +233,8 @@ int analyzeLoadFromClobberingStore(Type *LoadTy, Value *LoadPtr,
                                    StoreInst *DepSI, const DataLayout &DL) {
   auto *StoredVal = DepSI->getValueOperand();
 
-  // Cannot handle reading from store of first-class aggregate or scalable type.
-  if (isFirstClassAggregateOrScalableType(StoredVal->getType()))
+  // Cannot handle reading from store of scalable type.
+  if (isa<ScalableVectorType>(StoredVal->getType()))
     return -1;
 
   if (!canCoerceMustAliasedValueToLoad(StoredVal, LoadTy, DepSI->getFunction()))
@@ -244,7 +242,7 @@ int analyzeLoadFromClobberingStore(Type *LoadTy, Value *LoadPtr,
 
   Value *StorePtr = DepSI->getPointerOperand();
   uint64_t StoreSize =
-      DL.getTypeSizeInBits(DepSI->getValueOperand()->getType()).getFixedValue();
+      DL.getTypeSizeInBits(StoredVal->getType()).getFixedValue();
   return analyzeLoadFromClobberingWrite(LoadTy, LoadPtr, StorePtr, StoreSize,
                                         DL);
 }
@@ -254,8 +252,7 @@ int analyzeLoadFromClobberingStore(Type *LoadTy, Value *LoadPtr,
 /// the other load can feed into the second load.
 int analyzeLoadFromClobberingLoad(Type *LoadTy, Value *LoadPtr, LoadInst *DepLI,
                                   const DataLayout &DL) {
-  // Cannot handle reading from store of first-class aggregate or scalable type.
-  if (isFirstClassAggregateOrScalableType(DepLI->getType()))
+  if (isa<ScalableVectorType>(DepLI->getType()))
     return -1;
 
   if (!canCoerceMustAliasedValueToLoad(DepLI, LoadTy, DepLI->getFunction()))
@@ -274,8 +271,12 @@ int analyzeLoadFromClobberingMemInst(Type *LoadTy, Value *LoadPtr,
     return -1;
   uint64_t MemSizeInBits = SizeCst->getZExtValue() * 8;
 
+  // Cannot handle reading scalable type with unknown size.
+  if (isa<ScalableVectorType>(LoadTy))
+    return -1;
+
   // If this is memset, we just need to see if the offset is valid in the size
-  // of the memset..
+  // of the memset, since the src is a byte.
   if (const auto *memset_inst = dyn_cast<MemSetInst>(MI)) {
     if (DL.isNonIntegralPointerType(LoadTy->getScalarType())) {
       auto *CI = dyn_cast<ConstantInt>(memset_inst->getValue());
@@ -317,6 +318,13 @@ static Value *getStoreValueForLoadHelper(Value *SrcVal, unsigned Offset,
                                          Type *LoadTy, IRBuilderBase &Builder,
                                          const DataLayout &DL) {
   LLVMContext &Ctx = SrcVal->getType()->getContext();
+  // If CI is a null value, the intermediate code formed later might be invalid
+  // (e.g. creating a ptrtoint on NI addrspace), since it is a special case in
+  // canCoerceMustAliasedValueToLoad, so instead form the NullValue for the load
+  // directly
+  if (auto *CI = dyn_cast<Constant>(SrcVal))
+    if (CI->isNullValue())
+      return Constant::getNullValue(LoadTy);
 
   // If two pointers are in the same address space, they have the same size,
   // so we don't need to do any truncation, etc. This avoids introducing
@@ -418,6 +426,13 @@ Value *getMemInstValueForLoad(MemIntrinsic *SrcInst, unsigned Offset,
     // memset(P, 'x', 1234) -> splat('x'), even if x is a variable, and
     // independently of what the offset is.
     Value *Val = MSI->getValue();
+    if (auto *CI = dyn_cast<Constant>(Val)) {
+      // memset(P, '\0', 1234) -> just directly create the null value for *P,
+      // by-passing any later validity checks (coerceAvailableValueToLoadType
+      // might try to insert an invalid CreateIntToPtr)
+      if (CI->isNullValue())
+        return Constant::getNullValue(LoadTy);
+    }
     if (LoadSize != 1)
       Val =
           Builder.CreateZExtOrBitCast(Val, IntegerType::get(Ctx, LoadSize * 8));
