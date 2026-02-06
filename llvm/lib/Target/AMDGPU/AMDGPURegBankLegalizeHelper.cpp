@@ -650,13 +650,8 @@ bool RegBankLegalizeHelper::lowerS_BFE(MachineInstr &MI) {
   // copies from reg class to reg bank.
   auto S_BFE = B.buildInstr(Opc, {{SgprRB, Ty}},
                             {B.buildCopy(Ty, Src), B.buildCopy(S32, Src1)});
-  if (!constrainSelectedInstRegOperands(*S_BFE, *ST.getInstrInfo(),
-                                        *ST.getRegisterInfo(), RBI)) {
-    reportGISelFailure(
-        MF, MORE, "amdgpu-regbanklegalize",
-        "AMDGPU RegBankLegalize: lowerS_BFE, failed to constrain BFE", MI);
-    return false;
-  }
+  constrainSelectedInstRegOperands(*S_BFE, *ST.getInstrInfo(),
+                                   *ST.getRegisterInfo(), RBI);
 
   B.buildCopy(DstReg, S_BFE->getOperand(0).getReg());
   MI.eraseFromParent();
@@ -1044,9 +1039,11 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
 
     B.setInstrAndDebugLoc(MI);
     if (Ty.getSizeInBits() > 32) {
-      auto Unmerge32 = B.buildUnmerge(SgprRB_S32, Unmerge->getSourceReg());
-      for (unsigned i = 0; i < Unmerge32->getNumDefs(); ++i) {
-        auto [Dst0S32, Dst1S32] = unpackAExt(Unmerge32->getOperand(i).getReg());
+      auto UnmergeV2S16 =
+          B.buildUnmerge({SgprRB, V2S16}, Unmerge->getSourceReg());
+      for (unsigned i = 0; i < UnmergeV2S16->getNumDefs(); ++i) {
+        auto [Dst0S32, Dst1S32] =
+            unpackAExt(UnmergeV2S16->getOperand(i).getReg());
         B.buildTrunc(MI.getOperand(i * 2).getReg(), Dst0S32);
         B.buildTrunc(MI.getOperand(i * 2 + 1).getReg(), Dst1S32);
       }
@@ -1181,6 +1178,11 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
         isAnyPtr(Ty, 128))
       return Ty;
     return LLT();
+  case VgprB160:
+  case UniInVgprB160:
+    if (Ty.getSizeInBits() == 160)
+      return Ty;
+    return LLT();
   case SgprB256:
   case VgprB256:
   case UniInVgprB256:
@@ -1242,6 +1244,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case UniInVgprB64:
   case UniInVgprB96:
   case UniInVgprB128:
+  case UniInVgprB160:
   case UniInVgprB256:
   case UniInVgprB512:
   case Sgpr32Trunc:
@@ -1272,6 +1275,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprB64:
   case VgprB96:
   case VgprB128:
+  case VgprB160:
   case VgprB256:
   case VgprB512:
   case Vgpr32AExt:
@@ -1344,6 +1348,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case VgprB64:
     case VgprB96:
     case VgprB128:
+    case VgprB160:
     case VgprB256:
     case VgprB512:
     case VgprPtr32:
@@ -1395,6 +1400,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case UniInVgprB64:
     case UniInVgprB96:
     case UniInVgprB128:
+    case UniInVgprB160:
     case UniInVgprB256:
     case UniInVgprB512: {
       assert(Ty == getBTyFromID(MethodIDs[OpIdx], Ty));
@@ -1516,6 +1522,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case VgprB64:
     case VgprB96:
     case VgprB128:
+    case VgprB160:
     case VgprB256:
     case VgprB512:
     case VgprPtr32:
