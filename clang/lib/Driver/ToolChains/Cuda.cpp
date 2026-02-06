@@ -705,6 +705,9 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     CASE_CUDA_VERSION(92, 61);
     CASE_CUDA_VERSION(91, 61);
     CASE_CUDA_VERSION(90, 60);
+    CASE_CUDA_VERSION(80, 50);
+    CASE_CUDA_VERSION(75, 43);
+    CASE_CUDA_VERSION(70, 42);
 #undef CASE_CUDA_VERSION
   // TODO: Use specific CUDA version once it's public.
   case clang::CudaVersion::NEW:
