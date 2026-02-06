@@ -2497,10 +2497,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         ShadowCases = ComparisonShadow;
     }
 
-    if (!ShadowCases)
-      ShadowCases = IRB.getInt1(false);
-
-    insertCheckShadow(ShadowCases, getOrigin(Val), &SI);
+    if (ShadowCases)
+      insertCheckShadow(ShadowCases, getOrigin(Val), &SI);
   }
 
   // Vector manipulation.
