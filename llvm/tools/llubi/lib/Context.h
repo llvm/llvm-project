@@ -106,6 +106,9 @@ public:
   }
 };
 
+/// The global context for the interpreter.
+/// It tracks global state such as heap memory objects and floating point
+/// environment.
 class Context {
   // Module
   LLVMContext &Ctx;

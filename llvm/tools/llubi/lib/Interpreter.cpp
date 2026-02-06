@@ -35,6 +35,10 @@ enum class FrameState {
   Exit,
 };
 
+/// Context for a function call.
+/// This struct maintains the state during the execution of a function,
+/// including the control flow, values of executed instructions, and stack
+/// objects.
 struct Frame {
   Function &Func;
   Frame *LastFrame;
