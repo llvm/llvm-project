@@ -2791,9 +2791,34 @@ void RISCVTTIImpl::getUnrollingPreferences(
   // TODO: More tuning on benchmarks and metrics with changes as needed
   //       would apply to all settings below to enable performance.
 
+  if (ST->enableDefaultUnroll()) {
+    BasicTTIImplBase::getUnrollingPreferences(L, SE, UP, ORE);
 
-  if (ST->enableDefaultUnroll())
-    return BasicTTIImplBase::getUnrollingPreferences(L, SE, UP, ORE);
+    // Enable a conservative form of partial unrolling when not optimizing for
+    // size and when the loop only has a single block.
+    if (L->getNumBlocks() > 1)
+      return;
+    for (auto *BB : L->getBlocks()) {
+      for (auto &I : *BB) {
+        // Don't partially unroll loops containing vectorized instructions.
+        if (I.getType()->isVectorTy())
+          return;
+        if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
+          if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
+            if (!isLoweredToCall(F))
+              continue;
+          }
+          return;
+        }
+      }
+    }
+    UP.Partial = UP.UpperBound = true;
+    UP.PartialThreshold = 30;
+    // Avoid unrolling when optimizing for size.
+    UP.OptSizeThreshold = 0;
+    UP.PartialOptSizeThreshold = 0;
+    return;
+  }
 
   // Enable Upper bound unrolling universally, not dependent upon the conditions
   // below.
