@@ -116,6 +116,18 @@ public:
     if (!op || !op.getIsTargetDevice())
       return;
 
+    // Record unused functions upfront before any other processing. This
+    // ensures we have accurate usage information even if the parent functions
+    // get deleted later.
+    llvm::DenseSet<func::FuncOp> unusedFunctions;
+    op->walk<WalkOrder::PreOrder>([&](func::FuncOp funcOp) {
+      SymbolTable::UseRange funcUses = *funcOp.getSymbolUses(op);
+      if (funcUses.empty())
+        unusedFunctions.insert(funcOp);
+
+      return WalkResult::advance();
+    });
+
     op->walk<WalkOrder::PreOrder>([&](func::FuncOp funcOp) {
       // Do not filter functions with target regions inside, because they have
       // to be available for both host and device so that regular and reverse
@@ -166,7 +178,20 @@ public:
           callOp->erase();
         }
 
-        if (!hasTargetRegion) {
+        // Delete function if:
+        // 1. It has no target region, OR
+        // 2. It's an uncalled internal procedure with a target region.
+        bool hasInternalLinkage = false;
+        if (auto linkage =
+                funcOp->getAttrOfType<mlir::LLVM::LinkageAttr>("llvm.linkage"))
+          hasInternalLinkage =
+              (linkage.getLinkage() == mlir::LLVM::Linkage::Internal);
+
+        bool shouldDelete =
+            !hasTargetRegion ||
+            (unusedFunctions.contains(funcOp) && hasInternalLinkage);
+
+        if (shouldDelete) {
           funcOp.erase();
           return WalkResult::skip();
         }
