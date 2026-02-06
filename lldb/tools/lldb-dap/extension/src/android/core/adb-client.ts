@@ -162,25 +162,39 @@ export class AdbClient {
 
   async dismissWaitingForDebuggerDialog(pid: number): Promise<void> {
     const port = await this.addPortForwarding(`jdwp:${pid}`);
-    try {
-      const connection = new Connection();
-      await connection.connect("127.0.0.1", port);
+    let connection: Connection | undefined = undefined;
+    const cleanup = async () => {
       try {
-        await Jdwp.handshake(connection);
-        // Dalvik is able to reply to handshake and DDM commands (command set 199)
-        // without loading the JDWP agent.
-        // By sending a version command, we force it to load the JDWP agent, which
-        // causes the "waiting for debugger" popup to be dismissed.
-        const version = await Jdwp.getVersion(connection);
-        console.log("JDWP Version:", JSON.stringify(version));
-        // TODO: understand why we need to keep the connection active for a while
-        await new Promise((resolve) => setTimeout(resolve, 200));
-      } finally {
-        connection.close();
-      }
-    } finally {
-      await this.removePortForwarding(port);
+        connection?.close();
+      } catch {}
+      try {
+        await this.removePortForwarding(port);
+      } catch {}
+    };
+    try {
+      connection = new Connection();
+      await connection.connect("127.0.0.1", port);
+      await Jdwp.handshake(connection);
+
+      // ART is able to reply to handshake and DDM commands (command set 199)
+      // without loading the JDWP agent.
+      // By sending a version command, we force it to load the JDWP agent, which
+      // causes the "waiting for debugger" popup to be dismissed.
+      const version = await Jdwp.getVersion(connection);
+      console.log("JDWP Version:", JSON.stringify(version));
+    } catch (error) {
+      await cleanup();
+      throw error;
     }
+
+    // When ART is in waiting-for-debugger mode, it actually runs in a loop,
+    // polling for a debugger agent every 100ms. Therefore, the agent must run
+    // for at least 100ms in order for the polling loop to detect it.
+    // Once detected, the loop exits, the dialog is dismissed and the app
+    // finally starts.
+    // To keep the agent running, we have to keep the connection open. We do
+    // that for 1 second, in background, i.e. without suspending this method.
+    setTimeout(cleanup, 1000);
   }
 
   async pushData(data: Uint8Array, remoteFilePath: string): Promise<void> {
