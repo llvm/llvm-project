@@ -4408,7 +4408,7 @@ bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
   // with vectorization factors larger than a certain value.
 
   // Allow the target to opt out.
-  if (!TTI.preferEpilogueVectorization(VF))
+  if (!TTI.preferEpilogueVectorization(VF * IC))
     return false;
 
   unsigned MinVFThreshold = EpilogueVectorizationMinVF.getNumOccurrences() > 0

@@ -2,22 +2,16 @@
 ; RUN: opt -S -mtriple=s390x-unknown-linux -mcpu=z16 -passes=loop-vectorize < %s \
 ; RUN:   | FileCheck %s
 ;
-; Test that loop vectorizer generates a vectorized epilogue loop after a VF16
-; vectorization.
+; Test that loop vectorizer generates a vectorized epilogue loop after
+; vectorizing the main loop with VF = 16.
 
-define void @fun(ptr %Src, ptr %Dst, i64 %wide.trip.count) {
+define void @fun(ptr noalias %Src, ptr noalias %Dst, i64 %N) {
 ; CHECK-LABEL: define void @fun(
-; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]], i64 [[WIDE_TRIP_COUNT:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[DST:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
-; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
-; CHECK-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[WIDE_TRIP_COUNT]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
-; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[DST1]], [[SRC2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 16
-; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[VEC_EPILOG_SCALAR_PH]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
 ; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK3:%.*]] = icmp ult i64 [[TMP0]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK3]], label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -58,7 +52,7 @@ define void @fun(ptr %Src, ptr %Dst, i64 %wide.trip.count) {
 ; CHECK-NEXT:    [[CMP_N9:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC5]]
 ; CHECK-NEXT:    br i1 [[CMP_N9]], label %[[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC5]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC5]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
@@ -67,7 +61,7 @@ define void @fun(ptr %Src, ptr %Dst, i64 %wide.trip.count) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[ARRAYIDX0]], align 1
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    store i8 [[TMP8]], ptr [[ARRAYIDX1]], align 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[FOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -76,13 +70,13 @@ entry:
   br label %for.body
 
 for.body:
-  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %indvars.iv.next = add i64 %indvars.iv, 1
-  %arrayidx0 = getelementptr i8, ptr %Src, i64 %indvars.iv
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %iv.next = add i64 %iv, 1
+  %arrayidx0 = getelementptr i8, ptr %Src, i64 %iv
   %0 = load i8, ptr %arrayidx0
-  %arrayidx1 = getelementptr i8, ptr %Dst, i64 %indvars.iv
+  %arrayidx1 = getelementptr i8, ptr %Dst, i64 %iv
   store i8 %0, ptr %arrayidx1
-  %exitcond.not = icmp eq i64 %indvars.iv, %wide.trip.count
+  %exitcond.not = icmp eq i64 %iv, %N
   br i1 %exitcond.not, label %exit, label %for.body
 
 exit:
@@ -94,5 +88,5 @@ exit:
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[PROF3]] = !{!"branch_weights", i32 4, i32 12}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ;.

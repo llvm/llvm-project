@@ -82,8 +82,6 @@ public:
                                 bool HasCall) const override;
   bool enableWritePrefetching() const override { return true; }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
-
   bool hasDivRemOp(Type *DataType, bool IsSigned) const override;
   bool prefersVectorizedAddressing() const override { return false; }
   bool LSRWithInstrQueries() const override { return true; }
@@ -153,7 +151,7 @@ public:
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const override;
 
-  bool preferEpilogueVectorization(ElementCount VF) const override {
+  bool preferEpilogueVectorization(ElementCount Iters) const override {
     return true;
   }
 
