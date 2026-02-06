@@ -1898,29 +1898,6 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
   return MI;
 }
 
-bool RISCVInstrInfo::analyzeSelect(const MachineInstr &MI,
-                                   SmallVectorImpl<MachineOperand> &Cond,
-                                   unsigned &TrueOp, unsigned &FalseOp,
-                                   bool &Optimizable) const {
-  assert(MI.getOpcode() == RISCV::PseudoCCMOVGPR &&
-         "Unknown select instruction");
-  // CCMOV operands:
-  // 0: Def.
-  // 1: LHS of compare.
-  // 2: RHS of compare.
-  // 3: Condition code.
-  // 4: False use.
-  // 5: True use.
-  TrueOp = 5;
-  FalseOp = 4;
-  Cond.push_back(MI.getOperand(1));
-  Cond.push_back(MI.getOperand(2));
-  Cond.push_back(MI.getOperand(3));
-  // We can only fold when we support short forward branch opt.
-  Optimizable = STI.hasShortForwardBranchIALU();
-  return false;
-}
-
 MachineInstr *
 RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
@@ -3849,10 +3826,6 @@ std::string RISCVInstrInfo::createMIROperandComment(
   if (!GenericComment.empty())
     return GenericComment;
 
-  // If not, we must have an immediate operand.
-  if (!Op.isImm())
-    return std::string();
-
   const MCInstrDesc &Desc = MI.getDesc();
   if (OpIdx >= Desc.getNumOperands())
     return std::string();
@@ -3889,12 +3862,30 @@ std::string RISCVInstrInfo::createMIROperandComment(
     OS << "e" << SEW;
     break;
   }
-  case RISCVOp::OPERAND_VEC_POLICY:
+  case RISCVOp::OPERAND_VEC_POLICY: {
     unsigned Policy = Op.getImm();
     assert(Policy <= (RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC) &&
            "Invalid Policy Value");
     OS << (Policy & RISCVVType::TAIL_AGNOSTIC ? "ta" : "tu") << ", "
        << (Policy & RISCVVType::MASK_AGNOSTIC ? "ma" : "mu");
+    break;
+  }
+  case RISCVOp::OPERAND_AVL:
+    if (Op.isImm() && Op.getImm() == -1)
+      OS << "vl=VLMAX";
+    else
+      OS << "vl";
+    break;
+  case RISCVOp::OPERAND_VEC_RM:
+    if (RISCVII::usesVXRM(Desc.TSFlags)) {
+      assert(RISCVVXRndMode::isValidRoundingMode(Op.getImm()));
+      auto VXRM = static_cast<RISCVVXRndMode::RoundingMode>(Op.getImm());
+      OS << "vxrm=" << RISCVVXRndMode::roundingModeToString(VXRM);
+    } else {
+      assert(RISCVFPRndMode::isValidRoundingMode(Op.getImm()));
+      auto FRM = static_cast<RISCVFPRndMode::RoundingMode>(Op.getImm());
+      OS << "frm=" << RISCVFPRndMode::roundingModeToString(FRM);
+    }
     break;
   }
 

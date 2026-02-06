@@ -610,3 +610,17 @@ define nofpclass(inf) half @multiple_extract_uses(i1 %cond, half %unknown, ptr n
   store half %frexp.mant2, ptr %ptr
   ret half %frexp.mant
 }
+
+define nofpclass(snan) half @qnan_result_demands_snan_src(i1 %cond, half %unknown, half nofpclass(qnan inf norm sub zero) %only.snan) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_src(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN:%.*]], half nofpclass(qnan inf zero sub norm) [[ONLY_SNAN:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[UNKNOWN]], half [[ONLY_SNAN]]
+; CHECK-NEXT:    [[FREXP:%.*]] = call { half, i32 } @llvm.frexp.f16.i32(half [[SELECT]])
+; CHECK-NEXT:    [[FREXP_MANT:%.*]] = extractvalue { half, i32 } [[FREXP]], 0
+; CHECK-NEXT:    ret half [[FREXP_MANT]]
+;
+  %select = select i1 %cond, half %unknown, half %only.snan
+  %frexp = call { half, i32 } @llvm.frexp.f16.i32(half %select)
+  %frexp.mant = extractvalue { half, i32 } %frexp, 0
+  ret half %frexp.mant
+}

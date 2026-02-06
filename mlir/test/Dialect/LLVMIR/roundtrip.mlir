@@ -1,4 +1,4 @@
-// RUN: mlir-opt -verify-roundtrip %s
+// RUN: mlir-opt -verify-roundtrip %s | FileCheck %s
 
 
 // CHECK-LABEL: func @baz
@@ -148,6 +148,18 @@ func.func @ops(%arg0: i32, %arg1: f32,
 
 // CHECK: llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write, errnoMem = none, targetMem0 = none, targetMem1 = none>} : () -> ()
   llvm.call @baz() {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = write, errnoMem = none, targetMem0 = none, targetMem1 = none>} : () -> ()
+
+// CHECK: llvm.call @baz() {nobuiltins = []} : () -> ()
+  llvm.call @baz() {nobuiltins = []} : () -> ()
+
+// CHECK: llvm.call @baz() {nobuiltins = ["asdf", "defg"]} : () -> ()
+  llvm.call @baz() {nobuiltins = ["asdf", "defg"]} : () -> ()
+
+// CHECK: llvm.call @baz() {allocsize = array<i32: 5>} : () -> ()
+  llvm.call @baz() {allocsize = array<i32: 5>} : () -> ()
+
+// CHECK: llvm.call @baz() {allocsize = array<i32: 3, 5>} : () -> ()
+  llvm.call @baz() {allocsize = array<i32: 3, 5>} : () -> ()
 
 // Terminator operations and their successors.
 //
