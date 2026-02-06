@@ -130,10 +130,9 @@ bool Argument::hasByValAttr() const {
   return hasAttribute(Attribute::ByVal);
 }
 
-bool Argument::hasDeadOnReturnAttr() const {
-  if (!getType()->isPointerTy())
-    return false;
-  return hasAttribute(Attribute::DeadOnReturn);
+DeadOnReturnInfo Argument::getDeadOnReturnInfo() const {
+  assert(getType()->isPointerTy() && "Only pointers have dead_on_return bytes");
+  return getParent()->getDeadOnReturnInfo(getArgNo());
 }
 
 bool Argument::hasByRefAttr() const {
@@ -804,31 +803,17 @@ void Function::addRangeRetAttr(const ConstantRange &CR) {
 }
 
 DenormalMode Function::getDenormalMode(const fltSemantics &FPType) const {
-  if (&FPType == &APFloat::IEEEsingle()) {
-    DenormalMode Mode = getDenormalModeF32Raw();
-    // If the f32 variant of the attribute isn't specified, try to use the
-    // generic one.
-    if (Mode.isValid())
-      return Mode;
-  }
+  Attribute Attr = getFnAttribute(Attribute::DenormalFPEnv);
+  if (!Attr.isValid())
+    return DenormalMode::getDefault();
 
-  return getDenormalModeRaw();
+  DenormalFPEnv FPEnv = Attr.getDenormalFPEnv();
+  return &FPType == &APFloat::IEEEsingle() ? FPEnv.F32Mode : FPEnv.DefaultMode;
 }
 
-DenormalMode Function::getDenormalModeRaw() const {
-  Attribute Attr = getFnAttribute("denormal-fp-math");
-  StringRef Val = Attr.getValueAsString();
-  return parseDenormalFPAttribute(Val);
-}
-
-DenormalMode Function::getDenormalModeF32Raw() const {
-  Attribute Attr = getFnAttribute("denormal-fp-math-f32");
-  if (Attr.isValid()) {
-    StringRef Val = Attr.getValueAsString();
-    return parseDenormalFPAttribute(Val);
-  }
-
-  return DenormalMode::getInvalid();
+DenormalFPEnv Function::getDenormalFPEnv() const {
+  Attribute Attr = getFnAttribute(Attribute::DenormalFPEnv);
+  return Attr.isValid() ? Attr.getDenormalFPEnv() : DenormalFPEnv::getDefault();
 }
 
 const std::string &Function::getGC() const {

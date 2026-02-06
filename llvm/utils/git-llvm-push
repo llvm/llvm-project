@@ -21,6 +21,8 @@ BASE_BRANCH = "main"
 GITHUB_REMOTE_NAME = "origin"
 UPSTREAM_REMOTE_NAME = "upstream"
 
+DEFAULT_LABEL = "skip-precommit-approval"
+
 LLVM_GITHUB_TOKEN_VAR = "LLVM_GITHUB_TOKEN"
 LLVM_REPO = "llvm/llvm-project"
 GITHUB_API = "https://api.github.com"
@@ -44,6 +46,7 @@ class PRAutomatorConfig:
     upstream_remote: str
     prefix: str
     draft: bool
+    labels: List[str]
     no_merge: bool
     auto_merge: bool
 
@@ -216,6 +219,22 @@ class GitHubAPI:
             "GET", f"/repos/{LLVM_REPO}/pulls/{pr_number}"
         )
 
+    def add_labels(
+        self,
+        pr_number: int,
+        labels: List[str],
+    ) -> None:
+        if self.runner.dry_run:
+            self.runner.print(f"[Dry Run] Would set labels for #{pr_number}: {' '.join(labels)}")
+            return None
+
+        self.runner.print(f"Setting labels for #{pr_number}: {' '.join(labels)}")
+
+        self._request_and_parse_json(
+            "POST", f"/repos/{LLVM_REPO}/issues/{pr_number}/labels",
+            json_payload={"labels": labels},
+        )
+
     def _attempt_squash_merge(self, pr_number: str) -> bool:
         """Attempts to squash merge a PR, returning True on success."""
         try:
@@ -346,10 +365,11 @@ class LLVMPRAutomator:
             text=True,
             read_only=True,
         )
-        if result.stdout.strip():
-            raise LlvmPrError(
-                "Your working tree is dirty. Please stash or commit your changes."
-            )
+        for file_path in [line.strip() for line in result.stdout.split("\n")[:-1]]:
+            if not file_path.startswith("?"):
+                raise LlvmPrError(
+                    "Your working tree is dirty. Please stash or commit your changes."
+                )
 
     def _rebase_current_branch(self) -> None:
         self._check_work_tree()
@@ -475,6 +495,13 @@ class LLVMPRAutomator:
             draft=self.config.draft,
         )
 
+        # TODO: There's a possibility of a race with PR labelers workflow.
+        # To avoid it, we could create the PR as a draft, set the labels
+        # and change the status, but that requires the use of GraphQL API.
+
+        if self.config.labels:
+            self.github_api.add_labels(pr_number, self.config.labels)
+
         if self.config.no_merge:
             return
 
@@ -586,6 +613,12 @@ def main() -> None:
     parser.add_argument(
         "--draft", action="store_true", help="Create pull requests as drafts."
     )
+    parser.add_argument(
+        "--labels",
+        nargs='*',
+        default=[DEFAULT_LABEL],
+        help=f"Set the PR labels (default: {DEFAULT_LABEL})."
+    )
     merging = parser.add_mutually_exclusive_group()
     merging.add_argument(
         "--no-merge", action="store_true", help="Create PRs but do not merge them."
@@ -637,6 +670,7 @@ def main() -> None:
             upstream_remote=args.upstream_remote,
             prefix=args.prefix,
             draft=args.draft,
+            labels=args.labels,
             no_merge=args.no_merge,
             auto_merge=args.auto_merge,
         )

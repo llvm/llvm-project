@@ -5,7 +5,7 @@ typedef float v8f32 __attribute__((vector_size(32), aligned(32)));
 typedef double v4f64 __attribute__((vector_size(32), aligned(32)));
 
 // CHECK-LABEL: define dso_local void @xvfrecipe_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6:![0-9]+]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x float> @llvm.loongarch.lasx.xvfrecipe.s(<8 x float> [[_1]])
@@ -14,7 +14,7 @@ typedef double v4f64 __attribute__((vector_size(32), aligned(32)));
 //
 v8f32 xvfrecipe_s(v8f32 _1) { return __builtin_lasx_xvfrecipe_s(_1); }
 // CHECK-LABEL: define dso_local void @xvfrecipe_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvfrecipe.d(<4 x double> [[_1]])
@@ -23,7 +23,7 @@ v8f32 xvfrecipe_s(v8f32 _1) { return __builtin_lasx_xvfrecipe_s(_1); }
 //
 v4f64 xvfrecipe_d(v4f64 _1) { return __builtin_lasx_xvfrecipe_d(_1); }
 // CHECK-LABEL: define dso_local void @xvfrsqrte_s(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<8 x float>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <8 x float>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <8 x float> @llvm.loongarch.lasx.xvfrsqrte.s(<8 x float> [[_1]])
@@ -32,7 +32,7 @@ v4f64 xvfrecipe_d(v4f64 _1) { return __builtin_lasx_xvfrecipe_d(_1); }
 //
 v8f32 xvfrsqrte_s(v8f32 _1) { return __builtin_lasx_xvfrsqrte_s(_1); }
 // CHECK-LABEL: define dso_local void @xvfrsqrte_d(
-// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr dead_on_return noundef readonly captures(none) [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr dead_on_unwind noalias writable writeonly sret(<4 x double>) align 32 captures(none) initializes((0, 32)) [[AGG_RESULT:%.*]], ptr noundef readonly captures(none) dead_on_return [[TMP0:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[_1:%.*]] = load <4 x double>, ptr [[TMP0]], align 32, !tbaa [[CHAR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <4 x double> @llvm.loongarch.lasx.xvfrsqrte.d(<4 x double> [[_1]])

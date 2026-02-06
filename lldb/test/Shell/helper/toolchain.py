@@ -167,7 +167,9 @@ def use_lldb_substitutions(config):
             unresolved="ignore",
         ),
         "lldb-test",
-        "lldb-dap",
+        ToolSubst(
+            "%lldb-dap", command=FindTool("lldb-dap"), extra_args=[], unresolved="fatal"
+        ),
         ToolSubst(
             "%build", command="'" + sys.executable + "'", extra_args=build_script_args
         ),
@@ -241,6 +243,11 @@ def use_support_substitutions(config):
 
     # The clang module cache is used for building inferiors.
     host_flags += ["-fmodules-cache-path={}".format(config.clang_module_cache)]
+
+    # Our files use x86 AT&T assembly throughout.
+    # Enable it explicitly so any local Clang preference for Intel syntax gets overriden.
+    if "x86-registered-target" in config.available_features:
+        host_flags += ["-mllvm", "-x86-asm-syntax=att"]
 
     if config.cmake_sysroot:
         host_flags += ["--sysroot={}".format(config.cmake_sysroot)]
