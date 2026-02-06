@@ -28,6 +28,15 @@ void NamelistChecker::Leave(const parser::NamelistStmt &nmlStmt) {
                 "PUBLIC namelist"_err_en_US,
                 nmlObjSymbol->name());
           }
+          // `namelist-group-object` may only contain variables.
+          if (nmlObjSymbol->attrs().test(Attr::PARAMETER)) {
+            if (context_.ShouldWarn(common::UsageWarning::NamelistParameter)) {
+              context_.Say(nmlObjName.source,
+                  "A namelist group object '%s' must not be a "
+                  "PARAMETER"_warn_en_US,
+                  nmlObjSymbol->name());
+            }
+          }
         }
       }
     }

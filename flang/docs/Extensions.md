@@ -481,6 +481,18 @@ end
 * A data object can be initialized multiple times by `DATA` statements
   and default component initialization, but only when all initializations
   are to the same value.  Distinct initializations remain errors.
+* A named constant (`PARAMETER`) may appear as a `namelist-group-object` in a
+  `NAMELIST` statement.  The Fortran standard requires namelist group objects
+  to be variables, but this usage is accepted by Flang as an extension.
+  When `-pedantic` is enabled, Flang emits a warning for this case.
+  For example:
+```
+program p
+  implicit none
+  integer, parameter :: k = 3
+  namelist /g/ k
+end program
+```
 
 ### Extensions supported when enabled by options
 
