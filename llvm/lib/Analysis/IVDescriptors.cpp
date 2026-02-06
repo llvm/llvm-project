@@ -327,8 +327,8 @@ bool RecurrenceDescriptor::AddReductionVar(
   // To recognize find-lasts of conditional operations (such as loads or
   // divides), that need masking, we track non-phi users and if we've found a
   // "find-last-like" phi (see isFindLastLikePhi). We currently only support
-  // loops with a single "find-last-like" phi and do not allow any other
-  // operations.
+  // find-last reduction chains with a single "find-last-like" phi and do not
+  // allow any other operations.
   unsigned NumNonPHIUsers = 0;
   bool FoundFindLastLikePhi = false;
 
@@ -595,11 +595,11 @@ bool RecurrenceDescriptor::AddReductionVar(
     Worklist.append(NonPHIs.begin(), NonPHIs.end());
   }
 
-  // Cautiously exit if any non-phi users were found with a
-  // FoundFindLastLikePhi.
-  if (FoundFindLastLikePhi &&
-      (NumNonPHIUsers != 0 || Kind != RecurKind::FindLast))
-    return false;
+  // We only expect to match a single "find-last-like" per find-last reduction,
+  // with no non-phi operations in the reduction use chain.
+  assert((!FoundFindLastLikePhi ||
+          (Kind == RecurKind::FindLast && NumNonPHIUsers == 0)) &&
+         "Unexpectedly matched a 'find-last-like' phi");
 
   // This means we have seen one but not the other instruction of the
   // pattern or more than just a select and cmp. Zero implies that we saw a
