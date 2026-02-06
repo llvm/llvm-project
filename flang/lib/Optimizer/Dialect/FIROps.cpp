@@ -1922,6 +1922,15 @@ std::optional<std::int64_t> fir::CoordinateOp::getViewOffset(mlir::OpResult) {
   return std::nullopt;
 }
 
+mlir::Speculation::Speculatability fir::CoordinateOp::getSpeculatability() {
+  const mlir::Type refTy = getRef().getType();
+  if (fir::isa_ref_type(refTy))
+    return mlir::Speculation::Speculatable;
+
+  return mayBeAbsentBox(getRef()) ? mlir::Speculation::NotSpeculatable
+                                  : mlir::Speculation::Speculatable;
+}
+
 //===----------------------------------------------------------------------===//
 // DispatchOp
 //===----------------------------------------------------------------------===//

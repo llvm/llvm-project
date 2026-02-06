@@ -77,10 +77,11 @@ static std::pair<bool, bool> readsWritesFloatRegister(MachineInstr &MI,
                                                       Register Reg) {
   bool Reads = false;
   bool Writes = false;
-  unsigned Idx = 0;
+  int Idx = -1;
   Register RegF32 = getFloatRegFromFReg(Reg);
   assert(RegF32 != Mips::NoRegister && "Reg is not a Float Register");
   for (llvm::MachineOperand &MO : MI.operands()) {
+    Idx++;
     if (!MO.isReg())
       continue;
     Register MORegF32 = getFloatRegFromFReg(MO.getReg());
@@ -92,7 +93,6 @@ static std::pair<bool, bool> readsWritesFloatRegister(MachineInstr &MI,
       else
         Reads = true;
     }
-    Idx++;
   }
   return std::make_pair(Reads, Writes);
 }
