@@ -1,0 +1,9 @@
+// RUN: not ssaf-serialization-format-test %S/Inputs/entity-data-missing-entity-id.json 2>&1 | FileCheck %s
+
+// Test that entity data entries must have 'entity_id' field
+
+// CHECK: failed to read TUSummary
+// CHECK: failed to deserialize entity data map entry from file
+// CHECK: at index 0
+// CHECK: missing required field 'entity_id'
+// CHECK: expected unsigned integer EntityId

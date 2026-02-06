@@ -1,0 +1,6 @@
+// RUN: not ssaf-serialization-format-test %S/Inputs/invalid-syntax.json 2>&1 | FileCheck %s
+
+// Test that invalid JSON syntax is detected
+
+// CHECK: failed to read TUSummary
+// CHECK: failed to read JSON object from file

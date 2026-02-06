@@ -1,0 +1,8 @@
+// RUN: not ssaf-serialization-format-test %S/Inputs/id-table-entry-missing-name.json 2>&1 | FileCheck %s
+
+// Test that id_table entries must have 'name' field
+
+// CHECK: failed to read TUSummary
+// CHECK: failed to deserialize EntityIdTable entry from file
+// CHECK: missing or invalid field 'name'
+// CHECK: expected EntityName JSON object

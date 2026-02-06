@@ -1,0 +1,6 @@
+// RUN: not ssaf-serialization-format-test %S/Inputs/data-element-not-object.json 2>&1 | FileCheck %s
+
+// Test that 'data' array elements must be objects
+
+// CHECK: failed to read TUSummary
+// CHECK: data array contains non-object element

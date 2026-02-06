@@ -1,0 +1,8 @@
+// RUN: not ssaf-serialization-format-test %S/Inputs/entity-id-not-uint64.json 2>&1 | FileCheck %s
+
+// Test that entity_id field must be a valid uint64
+
+// CHECK: failed to read TUSummary
+// CHECK: failed to deserialize entity data map entry from file
+// CHECK: at index 0
+// CHECK: field 'entity_id' is not a valid unsigned 64-bit integer

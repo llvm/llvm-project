@@ -1,0 +1,8 @@
+// RUN: not ssaf-serialization-format-test %S/Inputs/entity-name-missing-suffix.json 2>&1 | FileCheck %s
+
+// Test that EntityName must have 'suffix' field
+
+// CHECK: failed to read TUSummary
+// CHECK: failed to deserialize EntityIdTable entry from file
+// CHECK: failed to deserialize EntityName from file
+// CHECK: missing required field 'suffix'

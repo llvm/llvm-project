@@ -1,0 +1,7 @@
+// RUN: not ssaf-serialization-format-test %S/Inputs/invalid-kind.json 2>&1 | FileCheck %s
+
+// Test that invalid kind value is detected
+
+// CHECK: failed to read TUSummary
+// CHECK: failed to deserialize BuildNamespace from file
+// CHECK: invalid 'kind' BuildNamespaceKind value 'InvalidKind'

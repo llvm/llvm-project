@@ -1,0 +1,4 @@
+// RUN: ssaf-serialization-format-test %S/Inputs/valid-empty.json -q -o %t.json
+// RUN: diff %t.json %S/Inputs/valid-empty-expected.json
+
+// Test that an empty valid TUSummary can be read and written back

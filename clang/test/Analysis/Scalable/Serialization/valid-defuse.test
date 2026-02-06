@@ -1,0 +1,10 @@
+// RUN: ssaf-serialization-format-test %S/Inputs/valid-defuse.json -q -o %t.json
+// RUN: diff %t.json %S/Inputs/valid-defuse-expected.json
+
+// Test DefUse analysis round-trip serialization
+// This test verifies that:
+// - DefUse analysis data can be read from JSON
+// - The def-use chain structure (variable -> definitions -> uses) is preserved
+// - Nested maps and sets are correctly serialized/deserialized
+// - EntityId references are correctly converted using EntityIdConverter
+// - Output matches expected format with alphabetically sorted fields

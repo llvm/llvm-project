@@ -1,0 +1,8 @@
+// RUN: not ssaf-serialization-format-test %S/Inputs/defuse-invalid-use.json 2>&1 | FileCheck %s
+
+// Test that DefUse analysis validates use value types
+
+// CHECK: failed to read TUSummary
+// CHECK: failed to deserialize entity data map entry at index 0
+// CHECK: failed to deserialize EntitySummary
+// CHECK: DefUse: use at index 0,0,0 is not a valid uint64

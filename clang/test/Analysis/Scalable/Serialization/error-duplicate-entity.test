@@ -1,0 +1,8 @@
+// RUN: not ssaf-serialization-format-test %S/Inputs/duplicate-entity.json 2>&1 | FileCheck %s
+
+// Test that duplicate EntityName in id_table is detected
+
+// CHECK: failed to read TUSummary
+// CHECK: failed to deserialize EntityIdTable from file
+// CHECK: duplicate EntityName found at index 1
+// CHECK: EntityId=0 already exists in table

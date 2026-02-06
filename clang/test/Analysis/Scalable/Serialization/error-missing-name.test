@@ -1,0 +1,7 @@
+// RUN: not ssaf-serialization-format-test %S/Inputs/missing-name.json 2>&1 | FileCheck %s
+
+// Test that missing name field in tu_namespace is detected
+
+// CHECK: failed to read TUSummary
+// CHECK: failed to deserialize BuildNamespace from file
+// CHECK: missing required field 'name'

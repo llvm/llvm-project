@@ -1,0 +1,9 @@
+// RUN: ssaf-serialization-format-test %S/Inputs/valid-callgraph.json -q -o %t.json
+// RUN: diff %t.json %S/Inputs/valid-callgraph-expected.json
+
+// Test CallGraph analysis round-trip serialization
+// This test verifies that:
+// - CallGraph analysis data can be read from JSON
+// - The call graph structure (caller -> callees) is preserved
+// - EntityId references are correctly serialized/deserialized
+// - Output matches expected format with alphabetically sorted fields

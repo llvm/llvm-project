@@ -1,0 +1,7 @@
+// RUN: not ssaf-serialization-format-test %S/Inputs/entity-summary-no-format-info.json 2>&1 | FileCheck %s
+
+// Test that EntitySummary deserialization requires registered FormatInfo
+
+// CHECK: failed to read TUSummary
+// CHECK: failed to deserialize EntitySummary from file
+// CHECK: no FormatInfo was registered for summary name
