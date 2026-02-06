@@ -221,15 +221,14 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   if (isTypeLegal(MVT::bf16)) {
     for (unsigned Opc :
-         {ISD::FADD,     ISD::FSUB,       ISD::FMUL,    ISD::FDIV,
-          ISD::FREM,     ISD::FMA,        ISD::FMINNUM, ISD::FMAXNUM,
-          ISD::FMINIMUM, ISD::FMAXIMUM,   ISD::FSQRT,   ISD::FCBRT,
-          ISD::FSIN,     ISD::FCOS,       ISD::FPOW,    ISD::FPOWI,
-          ISD::FLDEXP,   ISD::FFREXP,     ISD::FLOG,    ISD::FLOG2,
-          ISD::FLOG10,   ISD::FEXP,       ISD::FEXP2,   ISD::FEXP10,
-          ISD::FCEIL,    ISD::FTRUNC,     ISD::FRINT,   ISD::FNEARBYINT,
-          ISD::FROUND,   ISD::FROUNDEVEN, ISD::FFLOOR,  ISD::FCANONICALIZE,
-          ISD::SETCC}) {
+         {ISD::FADD,       ISD::FSUB,     ISD::FMUL,          ISD::FDIV,
+          ISD::FREM,       ISD::FMA,      ISD::FMINNUM,       ISD::FMAXNUM,
+          ISD::FMINIMUM,   ISD::FMAXIMUM, ISD::FCBRT,         ISD::FSIN,
+          ISD::FCOS,       ISD::FPOW,     ISD::FPOWI,         ISD::FLDEXP,
+          ISD::FFREXP,     ISD::FLOG,     ISD::FLOG2,         ISD::FLOG10,
+          ISD::FEXP,       ISD::FEXP2,    ISD::FEXP10,        ISD::FCEIL,
+          ISD::FTRUNC,     ISD::FRINT,    ISD::FNEARBYINT,    ISD::FROUND,
+          ISD::FROUNDEVEN, ISD::FFLOOR,   ISD::FCANONICALIZE, ISD::SETCC}) {
       setOperationAction(Opc, MVT::bf16, Promote);
     }
 
@@ -246,6 +245,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     // sources.
     setOperationAction(ISD::FP_TO_SINT, MVT::i32, Custom);
     setOperationAction(ISD::FP_TO_UINT, MVT::i32, Custom);
+
+    setOperationAction(ISD::FSQRT, MVT::bf16, Custom);
   }
 
   setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
@@ -7046,6 +7047,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
       return lowerFSQRTF32(Op, DAG);
     if (VT == MVT::f64)
       return lowerFSQRTF64(Op, DAG);
+    if (VT == MVT::bf16)
+      return lowerFSQRTBF16(Op, DAG);
     return SDValue();
   }
   case ISD::FSIN:
@@ -13182,6 +13185,21 @@ SDValue SITargetLowering::lowerFSQRTF64(SDValue Op, SelectionDAG &DAG) const {
   // If x is +INF, +0, or -0, use its original value
   return DAG.getNode(ISD::SELECT, DL, MVT::f64, IsZeroOrInf, SqrtX, SqrtRet,
                      Flags);
+}
+
+SDValue SITargetLowering::lowerFSQRTBF16(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  assert(!Subtarget->hasBF16TransInsts());
+  SDNodeFlags Flags = Op->getFlags();
+  SDValue Ext =
+      DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Op.getOperand(0), Flags);
+
+  SDValue SqrtID = DAG.getTargetConstant(Intrinsic::amdgcn_sqrt, SL, MVT::i32);
+  SDValue Sqrt =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::f32, SqrtID, Ext, Flags);
+
+  return DAG.getNode(ISD::FP_ROUND, SL, MVT::bf16, Sqrt,
+                     DAG.getTargetConstant(0, SL, MVT::i32), Flags);
 }
 
 SDValue SITargetLowering::LowerTrig(SDValue Op, SelectionDAG &DAG) const {
