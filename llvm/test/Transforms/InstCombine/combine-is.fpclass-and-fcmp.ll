@@ -435,5 +435,5 @@ declare i1 @llvm.is.fpclass.f16(half, i32 immarg) #0
 declare <2 x i1> @llvm.is.fpclass.v2f16(<2 x half>, i32 immarg) #0
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-attributes #1 = { "denormal-fp-math"="ieee,preserve-sign" }
-attributes #2 = { "denormal-fp-math"="ieee,dynamic" }
+attributes #1 = { denormal_fpenv(ieee|preservesign) }
+attributes #2 = { denormal_fpenv(ieee|dynamic) }

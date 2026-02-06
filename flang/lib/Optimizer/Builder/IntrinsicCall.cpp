@@ -15,6 +15,7 @@
 
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Common/static-multimap-view.h"
+#include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/CUDAIntrinsicCall.h"
 #include "flang/Optimizer/Builder/CUFCommon.h"
@@ -3851,9 +3852,6 @@ void IntrinsicLibrary::genExit(llvm::ArrayRef<fir::ExtendedValue> args) {
           ? builder.createIntegerConstant(loc, builder.getDefaultIntegerType(),
                                           EXIT_SUCCESS)
           : fir::getBase(args[0]);
-
-  assert(status.getType() == builder.getDefaultIntegerType() &&
-         "STATUS parameter must be an INTEGER of default kind");
 
   fir::runtime::genExit(builder, loc, status);
 }

@@ -102,15 +102,14 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
   func.func @allreduce_tensor(
     // CHECK-SAME: [[varg0:%.*]]: tensor<3x4xf32>
     %arg0 : tensor<3x4xf32>) -> tensor<3x4xf32> {
-    // CHECK-DAG: [[vc4_i32:%.*]] = arith.constant 4 : i32
+    // CHECK-DAG: [[vc1_i32:%.*]] = arith.constant 1 : i32
     // CHECK-DAG: [[vc2_i32:%.*]] = arith.constant 2 : i32
     // CHECK: [[v0:%.*]] = bufferization.to_buffer [[varg0]] : tensor<3x4xf32> to memref<3x4xf32>
     // CHECK: [[valloc:%.*]] = memref.alloc() : memref<3x4xf32>
     // CHECK: linalg.copy ins([[v0]] : memref<3x4xf32>) outs([[valloc]] : memref<3x4xf32>)
     // CHECK: [[v1:%.*]] = mpi.comm_world : !mpi.comm
-    // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v1]], [[vc2_i32]], [[vc4_i32]]) : !mpi.comm
-    // CHECK: [[vcollapse_shape:%.*]] = memref.collapse_shape [[valloc]] {{\[\[}}0, 1]] : memref<3x4xf32> into memref<12xf32>
-    // CHECK: mpi.allreduce([[vcollapse_shape]], [[vcollapse_shape]], MPI_MAX, [[vnewcomm]]) : memref<12xf32>, memref<12xf32>
+    // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v1]], [[vc2_i32]], [[vc1_i32]]) : !mpi.comm
+    // CHECK: mpi.allreduce([[valloc]], [[valloc]], MPI_MAX, [[vnewcomm]]) : memref<3x4xf32>, memref<3x4xf32>
     // CHECK: [[v2:%.*]] = bufferization.to_tensor [[valloc]] restrict : memref<3x4xf32> to tensor<3x4xf32>
     %0 = shard.all_reduce %arg0 on @grid0 grid_axes = [0, 1] reduction = max : tensor<3x4xf32> -> tensor<3x4xf32>
     // CHECK: return [[v2]] : tensor<3x4xf32>
@@ -121,14 +120,13 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
   func.func @allreduce_memref(
     // CHECK-SAME: [[varg0:%.*]]: memref<3x4xf32>
     %arg0 : memref<3x4xf32>) -> memref<3x4xf32> {
-    // CHECK: [[vc4_i32:%.*]] = arith.constant 4 : i32
-    // CHECK: [[vc2_i32:%.*]] = arith.constant 2 : i32
+    // CHECK-DAG: [[vc1_i32:%.*]] = arith.constant 1 : i32
+    // CHECK-DAG: [[vc2_i32:%.*]] = arith.constant 2 : i32
     // CHECK: [[valloc:%.*]] = memref.alloc() : memref<3x4xf32>
     // CHECK: linalg.copy ins([[varg0]] : memref<3x4xf32>) outs([[valloc]] : memref<3x4xf32>)
     // CHECK: [[v0:%.*]] = mpi.comm_world : !mpi.comm
-    // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v0]], [[vc2_i32]], [[vc4_i32]]) : !mpi.comm
-    // CHECK: [[vcollapse_shape:%.*]] = memref.collapse_shape [[valloc]] {{\[\[}}0, 1]] : memref<3x4xf32> into memref<12xf32>
-    // CHECK: mpi.allreduce([[vcollapse_shape]], [[vcollapse_shape]], MPI_MAX, [[vnewcomm]]) : memref<12xf32>, memref<12xf32>
+    // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v0]], [[vc2_i32]], [[vc1_i32]]) : !mpi.comm
+    // CHECK: mpi.allreduce([[valloc]], [[valloc]], MPI_MAX, [[vnewcomm]]) : memref<3x4xf32>, memref<3x4xf32>
     %0 = shard.all_reduce %arg0 on @grid0 grid_axes = [0, 1] reduction = max : memref<3x4xf32> -> memref<3x4xf32>
     // CHECK: return [[valloc]] : memref<3x4xf32>
     return %0 : memref<3x4xf32>
@@ -138,17 +136,78 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
   func.func @allreduce_new_type(
     // CHECK-SAME: [[varg0:%.*]]: memref<3x4xf32>
     %arg0 : memref<3x4xf32>) -> memref<3x4xf64> {
-    // CHECK: [[vc4_i32:%.*]] = arith.constant 4 : i32
-    // CHECK: [[vc2_i32:%.*]] = arith.constant 2 : i32
+    // CHECK-DAG: [[vc1_i32:%.*]] = arith.constant 1 : i32
+    // CHECK-DAG: [[vc2_i32:%.*]] = arith.constant 2 : i32
     // CHECK: [[valloc:%.*]] = memref.alloc() : memref<3x4xf64>
     // CHECK: linalg.copy ins([[varg0]] : memref<3x4xf32>) outs([[valloc]] : memref<3x4xf64>)
     // CHECK: [[v0:%.*]] = mpi.comm_world : !mpi.comm
-    // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v0]], [[vc2_i32]], [[vc4_i32]]) : !mpi.comm
-    // CHECK: [[vcollapse_shape:%.*]] = memref.collapse_shape [[valloc]] {{\[\[}}0, 1]] : memref<3x4xf64> into memref<12xf64>
-    // CHECK: mpi.allreduce([[vcollapse_shape]], [[vcollapse_shape]], MPI_MAX, [[vnewcomm]]) : memref<12xf64>, memref<12xf64>
+    // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v0]], [[vc2_i32]], [[vc1_i32]]) : !mpi.comm
+    // CHECK: mpi.allreduce([[valloc]], [[valloc]], MPI_MAX, [[vnewcomm]]) : memref<3x4xf64>, memref<3x4xf64>
     %0 = shard.all_reduce %arg0 on @grid0 grid_axes = [0, 1] reduction = max : memref<3x4xf32> -> memref<3x4xf64>
     // CHECK: return [[valloc]] : memref<3x4xf64>
     return %0 : memref<3x4xf64>
+  }
+
+  // CHECK-LABEL: func @allgather_tensor
+  func.func @allgather_tensor(
+      // CHECK-SAME: [[varg0:%.*]]: tensor<3x4xf32>
+      // CHECK-SAME: -> tensor<3x20xf32>
+      %arg0 : tensor<3x4xf32>) -> tensor<3x20xf32> {
+    // CHECK-DAG: [[vc2_i32:%.*]] = arith.constant 2 : i32
+    // CHECK-DAG: [[vc1_i32:%.*]] = arith.constant 1 : i32
+    // CHECK-DAG: [[vc20:%.*]] = arith.constant 20 : index
+    // CHECK: [[v0:%.*]] = bufferization.to_buffer [[varg0]] : tensor<3x4xf32> to memref<3x4xf32>
+    // CHECK: [[v1:%.*]] = mpi.comm_world : !mpi.comm
+    // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v1]], [[vc1_i32]], [[vc2_i32]]) : !mpi.comm
+    // CHECK: [[vsize:%.*]] = mpi.comm_size([[vnewcomm]]) : i32
+    // CHECK: [[v2:%.*]] = arith.index_cast [[vsize]] : i32 to index
+    // CHECK: [[v3:%.*]] = arith.divsi [[vc20]], [[v2]] : index
+    // CHECK: [[valloc:%.*]] = memref.alloc([[v2]], [[v3]]) : memref<?x3x?xf32>
+    // CHECK: mpi.allgather([[v0]], [[valloc]], [[vnewcomm]]) : memref<3x4xf32>, memref<?x3x?xf32>
+    // CHECK: [[valloc_0:%.*]] = memref.alloc() : memref<3x20xf32>
+    // CHECK: affine.for [[varg1:%.*]] = 0 to [[v2]] {
+      // CHECK: affine.for [[varg2:%.*]] = 0 to 3 {
+        // CHECK: affine.for [[varg3:%.*]] = 0 to [[v3]] {
+          // CHECK: [[v5:%.*]] = memref.load [[valloc]][[[varg1]], [[varg2]], [[varg3]]] : memref<?x3x?xf32>
+          // CHECK: affine.store [[v5]], [[valloc_0]][[[varg2]], [[varg1]] * symbol([[v3]]) + [[varg3]]] : memref<3x20xf32>
+        // CHECK: }
+      // CHECK: }
+    // CHECK: }
+    // CHECK: memref.dealloc [[valloc]] : memref<?x3x?xf32>
+    // CHECK: [[v4:%.*]] = bufferization.to_tensor [[valloc_0]] restrict : memref<3x20xf32> to tensor<3x20xf32>
+    %0 = shard.all_gather %arg0 on @grid0 grid_axes = [2] gather_axis = 1 : tensor<3x4xf32> -> tensor<3x20xf32>
+    // CHECK: return [[v4]] : tensor<3x20xf32>
+    return %0 : tensor<3x20xf32>
+  }
+
+  // CHECK-LABEL: func @allgather_memref
+  func.func @allgather_memref(
+      // CHECK-SAME: [[varg0:%.*]]: memref<3x4xf32>
+      // CHECK-SAME: -> memref<3x20xf32>
+      %arg0 : memref<3x4xf32>) -> memref<3x20xf32> {
+    // CHECK-DAG: [[vc1_i32:%.*]] = arith.constant 1 : i32
+    // CHECK-DAG: [[vc2_i32:%.*]] = arith.constant 2 : i32
+    // CHECK-DAG: [[vc20:%.*]] = arith.constant 20 : index
+    // CHECK: [[v0:%.*]] = mpi.comm_world : !mpi.comm
+    // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v0]], [[vc1_i32]], [[vc2_i32]]) : !mpi.comm
+    // CHECK: [[vsize:%.*]] = mpi.comm_size([[vnewcomm]]) : i32
+    // CHECK: [[v1:%.*]] = arith.index_cast [[vsize]] : i32 to index
+    // CHECK: [[v2:%.*]] = arith.divsi [[vc20]], [[v1]] : index
+    // CHECK: [[valloc:%.*]] = memref.alloc([[v1]], [[v2]]) : memref<?x3x?xf32>
+    // CHECK: mpi.allgather([[varg0]], [[valloc]], [[vnewcomm]]) : memref<3x4xf32>, memref<?x3x?xf32>
+    // CHECK: [[valloc_0:%.*]] = memref.alloc() : memref<3x20xf32>
+    // CHECK: affine.for [[varg1:%.*]] = 0 to [[v1]] {
+      // CHECK: affine.for [[varg2:%.*]] = 0 to 3 {
+        // CHECK: affine.for [[varg3:%.*]] = 0 to [[v2]] {
+          // CHECK: [[v3:%.*]] = memref.load [[valloc]][[[varg1]], [[varg2]], [[varg3]]] : memref<?x3x?xf32>
+          // CHECK: affine.store [[v3]], [[valloc_0]][[[varg2]], [[varg1]] * symbol([[v2]]) + [[varg3]]] : memref<3x20xf32>
+        // CHECK: }
+      // CHECK: }
+    // CHECK: }
+    // CHECK: memref.dealloc [[valloc]] : memref<?x3x?xf32>
+    %0 = shard.all_gather %arg0 on @grid0 grid_axes = [2] gather_axis = 1 : memref<3x4xf32> -> memref<3x20xf32>
+    // CHECK: return [[valloc_0]] : memref<3x20xf32>
+    return %0 : memref<3x20xf32>
   }
 }
 
@@ -378,4 +437,62 @@ func.func @return_sharding_offs(%arg0: tensor<?x?xf32>) -> (tensor<?x?xf32>, !sh
   // CHECK: [[vcast_7:%.*]] = tensor.cast [[vinserted_slice_5]] : tensor<2x5xi64> to tensor<?x?xi64>
   // CHECK: return [[varg0]], [[vcast]], [[vcast_6]], [[vcast_7]] : tensor<?x?xf32>, tensor<?x?xi16>, tensor<?x?xi64>, tensor<?x?xi64>
   return %arg0, %sharding : tensor<?x?xf32>, !shard.sharding
+}
+
+// -----
+shard.grid @grid_1d_4(shape = 4)
+// CHECK-LABEL: func.func @mlp_1dgrid(
+// CHECK-SAME: [[varg0:%.*]]: tensor<512x512xf32>, [[varg1:%.*]]: tensor<2048x256xf32>, [[varg2:%.*]]: tensor<256x2048xf32>) -> tensor<512x2048xf32>
+func.func @mlp_1dgrid(%arg0: tensor<512x512xf32>, %arg1: tensor<2048x256xf32>, %arg2: tensor<256x2048xf32>) -> tensor<512x2048xf32> attributes {llvm.emit_c_interface} {
+  // CHECK: [[vcst:%.*]] = arith.constant 0.000000e+00 : f32
+  %cst = arith.constant 0.000000e+00 : f32
+  %c0 = arith.constant 0 : index
+  // CHECK: [[v0:%.*]] = bufferization.to_buffer [[varg0]] : tensor<512x512xf32> to memref<512x512xf32>
+  // CHECK: [[v1:%.*]] = mpi.comm_world : !mpi.comm
+  // CHECK: [[vsize:%.*]] = mpi.comm_size
+  // CHECK: [[v2:%.*]] = arith.index_cast [[vsize]] : i32 to index
+  // CHECK: [[v3:%.*]] = arith.divsi
+  // CHECK: [[valloc:%.*]] = memref.alloc([[v2]], [[v3]]) : memref<?x512x?xf32>
+  // CHECK: mpi.allgather([[v0]], [[valloc]], [[v1]]) : memref<512x512xf32>, memref<?x512x?xf32>
+  // CHECK: [[valloc_0:%.*]] = memref.alloc() : memref<512x2048xf32>
+  // CHECK: affine.for [[varg3:%.*]] = 0 to [[v2]] {
+    // CHECK: affine.for [[varg4:%.*]] = 0 to 512 {
+      // CHECK: affine.for [[varg5:%.*]] = 0 to [[v3]] {
+        // CHECK: [[v19:%.*]] = memref.load [[valloc]][[[varg3]], [[varg4]], [[varg5]]] : memref<?x512x?xf32>
+        // CHECK: affine.store [[v19]], [[valloc_0]][[[varg4]], [[varg3]] * symbol([[v3]]) + [[varg5]]] : memref<512x2048xf32>
+  // CHECK: memref.dealloc [[valloc]] : memref<?x512x?xf32>
+  // CHECK: [[v4:%.*]] = bufferization.to_tensor [[valloc_0]] restrict : memref<512x2048xf32> to tensor<512x2048xf32>
+  %all_gather = shard.all_gather %arg0 on @grid_1d_4 grid_axes = [0] gather_axis = 1 : tensor<512x512xf32> -> tensor<512x2048xf32>
+  // CHECK: [[v5:%.*]] = tensor.empty() : tensor<512x256xf32>
+  %0 = tensor.empty() : tensor<512x256xf32>
+  // CHECK: [[v6:%.*]] = linalg.fill ins([[vcst]] : f32) outs([[v5]] : tensor<512x256xf32>) -> tensor<512x256xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<512x256xf32>) -> tensor<512x256xf32>
+  // CHECK: [[v7:%.*]] = linalg.matmul ins([[v4]], [[varg1]] : tensor<512x2048xf32>, tensor<2048x256xf32>) outs([[v6]] : tensor<512x256xf32>) -> tensor<512x256xf32>
+  %2 = linalg.matmul ins(%all_gather, %arg1 : tensor<512x2048xf32>, tensor<2048x256xf32>) outs(%1 : tensor<512x256xf32>) -> tensor<512x256xf32>
+  // CHECK: [[v8:%.*]] = tosa.sigmoid [[v7]] : (tensor<512x256xf32>) -> tensor<512x256xf32>
+  %3 = tosa.sigmoid %2 : (tensor<512x256xf32>) -> tensor<512x256xf32>
+  %4 = tensor.empty() : tensor<512x2048xf32>
+  %5 = linalg.fill ins(%cst : f32) outs(%4 : tensor<512x2048xf32>) -> tensor<512x2048xf32>
+  %proc_linear_idx = shard.process_multi_index on @grid_1d_4 axes = [0] : index
+  %grid_shape = shard.grid_shape @grid_1d_4 axes = [0] : index
+  %6 = arith.cmpi eq, %proc_linear_idx, %c0 : index
+  // CHECK: [[v14:%.*]] = scf.if
+  %7 = scf.if %6 -> (tensor<512x2048xf32>) {
+    scf.yield %5 : tensor<512x2048xf32>
+  } else {
+    %9 = tensor.empty() : tensor<512x2048xf32>
+    %10 = linalg.fill ins(%cst : f32) outs(%9 : tensor<512x2048xf32>) -> tensor<512x2048xf32>
+    scf.yield %10 : tensor<512x2048xf32>
+  }
+  // CHECK: [[v15:%.*]] = linalg.matmul ins([[v8]], [[varg2]] : tensor<512x256xf32>, tensor<256x2048xf32>) outs([[v14]] : tensor<512x2048xf32>) -> tensor<512x2048xf32>
+  %8 = linalg.matmul ins(%3, %arg2 : tensor<512x256xf32>, tensor<256x2048xf32>) outs(%7 : tensor<512x2048xf32>) -> tensor<512x2048xf32>
+  // CHECK: [[v16:%.*]] = bufferization.to_buffer
+  // CHECK: [[valloc_1:%.*]] = memref.alloc() : memref<512x2048xf32>
+  // CHECK: linalg.copy ins([[v16]] : memref<512x2048xf32>) outs([[valloc_1]] : memref<512x2048xf32>)
+  // CHECK: [[v17:%.*]] = mpi.comm_world : !mpi.comm
+  // CHECK: mpi.allreduce([[valloc_1]], [[valloc_1]], MPI_SUM, [[v17]]) : memref<512x2048xf32>, memref<512x2048xf32>
+  // CHECK: [[v18:%.*]] = bufferization.to_tensor [[valloc_1]] restrict : memref<512x2048xf32> to tensor<512x2048xf32>
+  %all_reduce = shard.all_reduce %8 on @grid_1d_4 grid_axes = [0] : tensor<512x2048xf32> -> tensor<512x2048xf32>
+  // CHECK: return [[v18]] : tensor<512x2048xf32>
+  return %all_reduce : tensor<512x2048xf32>
 }
