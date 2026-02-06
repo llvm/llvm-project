@@ -74,6 +74,11 @@ public:
     Register Val0, Val1, Val2;
   };
 
+  struct CopySccVccMatchInfo {
+    Register VccReg;
+    int64_t TrueVal; // -1 for SEXT, 1 for ZEXT
+  };
+
   MinMaxMedOpc getMinMaxPair(unsigned Opc) const;
 
   template <class m_Cst, typename CstTy>
@@ -92,6 +97,9 @@ public:
   bool combineD16Load(MachineInstr &MI) const;
   bool applyD16Load(unsigned D16Opc, MachineInstr &DstMI,
                     MachineInstr *SmallLoad, Register ToOverwriteD16) const;
+
+  bool matchCopySccVcc(MachineInstr &MI, CopySccVccMatchInfo &MatchInfo) const;
+  void applyCopySccVcc(MachineInstr &MI, CopySccVccMatchInfo &MatchInfo) const;
 
 private:
   SIModeRegisterDefaults getMode() const;
@@ -476,6 +484,65 @@ bool AMDGPURegBankCombinerImpl::applyD16Load(
       .setMemRefs(SmallLoad->memoperands());
   DstMI.eraseFromParent();
   return true;
+}
+
+// Eliminate VCC->SGPR->VGPR register bounce for uniform boolean extensions.
+// Match: COPY (G_SELECT (G_AND (G_AMDGPU_COPY_SCC_VCC %vcc), 1), {-1|1}, 0)
+// Replace with: G_SELECT %vcc, {-1|1}, 0
+bool AMDGPURegBankCombinerImpl::matchCopySccVcc(
+    MachineInstr &MI, CopySccVccMatchInfo &MatchInfo) const {
+  assert(MI.getOpcode() == AMDGPU::COPY);
+
+  Register VgprDst = MI.getOperand(0).getReg();
+  Register SgprSrc = MI.getOperand(1).getReg();
+
+  if (!VgprDst.isVirtual() || !SgprSrc.isVirtual())
+    return false;
+
+  if (!isVgprRegBank(VgprDst))
+    return false;
+
+  // Match: G_SELECT (G_AND (G_AMDGPU_COPY_SCC_VCC %vcc), 1), TrueReg, 0
+  MachineInstr *CopySccVcc;
+  Register TrueReg;
+  if (!mi_match(SgprSrc, MRI,
+                m_GISelect(m_GAnd(m_MInstr(CopySccVcc), m_SpecificICst(1)),
+                           m_Reg(TrueReg), m_ZeroInt())))
+    return false;
+
+  if (CopySccVcc->getOpcode() != AMDGPU::G_AMDGPU_COPY_SCC_VCC)
+    return false;
+
+  Register VccReg = CopySccVcc->getOperand(1).getReg();
+
+  // TrueReg must be constant -1 (SEXT) or 1 (ZEXT)
+  auto TrueConst = getIConstantVRegValWithLookThrough(TrueReg, MRI);
+  if (!TrueConst)
+    return false;
+
+  int64_t TrueVal = TrueConst->Value.getSExtValue();
+  if (TrueVal != -1 && TrueVal != 1)
+    return false;
+
+  MatchInfo.VccReg = VccReg;
+  MatchInfo.TrueVal = TrueVal;
+  return true;
+}
+
+void AMDGPURegBankCombinerImpl::applyCopySccVcc(
+    MachineInstr &MI, CopySccVccMatchInfo &MatchInfo) const {
+  Register VgprDst = MI.getOperand(0).getReg();
+  LLT Ty = MRI.getType(VgprDst);
+  const RegisterBank &VgprRB = RBI.getRegBank(AMDGPU::VGPRRegBankID);
+
+  auto TrueVal = B.buildConstant(Ty, MatchInfo.TrueVal);
+  MRI.setRegBank(TrueVal.getReg(0), VgprRB);
+
+  auto FalseVal = B.buildConstant(Ty, 0);
+  MRI.setRegBank(FalseVal.getReg(0), VgprRB);
+
+  B.buildSelect(VgprDst, MatchInfo.VccReg, TrueVal, FalseVal);
+  MI.eraseFromParent();
 }
 
 SIModeRegisterDefaults AMDGPURegBankCombinerImpl::getMode() const {
