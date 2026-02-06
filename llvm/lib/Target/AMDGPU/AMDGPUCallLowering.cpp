@@ -101,7 +101,7 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
   AMDGPUIncomingArgHandler(
       MachineIRBuilder &B, MachineRegisterInfo &MRI,
       const SmallVector<CallLowering::ArgInfo, 32> *SpArgs = nullptr)
-      : SplitArgs(SpArgs), IncomingValueHandler(B, MRI) {}
+      : IncomingValueHandler(B, MRI), SplitArgs(SpArgs) {}
 
   const SmallVector<CallLowering::ArgInfo, 32> *SplitArgs;
 
