@@ -1,13 +1,13 @@
 # Xqciint - Qualcomm uC Interrupts extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqciint -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqciint -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqciint < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqciint -M no-aliases --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqciint < %s \
+# RUN:     | llvm-objdump --mattr=+xqciint -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqciint -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqciint -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqciint < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqciint --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqciint < %s \
+# RUN:     | llvm-objdump --mattr=+xqciint --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 # CHECK-INST: qc.setinti      500

@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Remarks.h"
@@ -21,7 +23,6 @@
 #include "gtest/gtest.h"
 #include <optional>
 
-using namespace llvm;
 using namespace mlir;
 using namespace testing;
 namespace {
@@ -33,9 +34,9 @@ TEST(Remark, TestOutputOptimizationRemark) {
   std::string categoryInliner("Inliner");
   std::string categoryReroller("Reroller");
   std::string myPassname1("myPass1");
-  SmallString<64> tmpPathStorage;
-  sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
-                            /*MakeAbsolute=*/true);
+  llvm::SmallString<64> tmpPathStorage;
+  llvm::sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
+                                  /*MakeAbsolute=*/true);
   std::string yamlFile =
       std::string(tmpPathStorage.data(), tmpPathStorage.size());
   ASSERT_FALSE(yamlFile.empty());
@@ -48,14 +49,17 @@ TEST(Remark, TestOutputOptimizationRemark) {
     context.printStackTraceOnDiagnostic(true);
 
     // Setup the remark engine
-    mlir::remark::RemarkCategories cats{/*passed=*/categoryVectorizer,
+    mlir::remark::RemarkCategories cats{/*all=*/"",
+                                        /*passed=*/categoryVectorizer,
                                         /*missed=*/categoryUnroll,
                                         /*analysis=*/categoryRegister,
                                         /*failed=*/categoryInliner};
-
+    std::unique_ptr<remark::RemarkEmittingPolicyAll> policy =
+        std::make_unique<remark::RemarkEmittingPolicyAll>();
     LogicalResult isEnabled =
         mlir::remark::enableOptimizationRemarksWithLLVMStreamer(
-            context, yamlFile, llvm::remarks::Format::YAML, cats);
+            context, yamlFile, llvm::remarks::Format::YAML, std::move(policy),
+            cats);
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
     // PASS: something succeeded
@@ -91,7 +95,7 @@ TEST(Remark, TestOutputOptimizationRemark) {
   }
 
   // Read the file
-  auto bufferOrErr = MemoryBuffer::getFile(yamlFile);
+  auto bufferOrErr = llvm::MemoryBuffer::getFile(yamlFile);
   ASSERT_TRUE(static_cast<bool>(bufferOrErr)) << "Failed to open remarks file";
   std::string content = bufferOrErr.get()->getBuffer().str();
 
@@ -148,10 +152,9 @@ TEST(Remark, TestNoOutputOptimizationRemark) {
 
   std::string categoryFailName("myImportantCategory");
   std::string myPassname1("myPass1");
-  std::string funcName("myFunc");
   SmallString<64> tmpPathStorage;
-  sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
-                            /*MakeAbsolute=*/true);
+  llvm::sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
+                                  /*MakeAbsolute=*/true);
   std::string yamlFile =
       std::string(tmpPathStorage.data(), tmpPathStorage.size());
   ASSERT_FALSE(yamlFile.empty());
@@ -197,13 +200,15 @@ TEST(Remark, TestOutputOptimizationRemarkDiagnostic) {
     });
 
     // Setup the remark engine
-    mlir::remark::RemarkCategories cats{/*passed=*/categoryVectorizer,
+    mlir::remark::RemarkCategories cats{/*all=*/"",
+                                        /*passed=*/categoryVectorizer,
                                         /*missed=*/categoryUnroll,
                                         /*analysis=*/categoryRegister,
                                         /*failed=*/categoryUnroll};
-
-    LogicalResult isEnabled =
-        remark::enableOptimizationRemarks(context, nullptr, cats, true);
+    std::unique_ptr<remark::RemarkEmittingPolicyAll> policy =
+        std::make_unique<remark::RemarkEmittingPolicyAll>();
+    LogicalResult isEnabled = remark::enableOptimizationRemarks(
+        context, nullptr, std::move(policy), cats, true);
 
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
@@ -269,22 +274,23 @@ TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
   std::string categoryInline("Inliner");
   std::string myPassname1("myPass1");
   std::string myPassname2("myPass2");
-  std::string funcName("myFunc");
-
-  std::string seenMsg = "";
 
   {
     MLIRContext context;
     Location loc = UnknownLoc::get(&context);
 
     // Setup the remark engine
-    mlir::remark::RemarkCategories cats{/*passed=*/categoryLoopunroll,
+    mlir::remark::RemarkCategories cats{/*all=*/"",
+                                        /*passed=*/categoryLoopunroll,
                                         /*missed=*/std::nullopt,
                                         /*analysis=*/std::nullopt,
                                         /*failed=*/categoryLoopunroll};
 
+    std::unique_ptr<remark::RemarkEmittingPolicyAll> policy =
+        std::make_unique<remark::RemarkEmittingPolicyAll>();
     LogicalResult isEnabled = remark::enableOptimizationRemarks(
-        context, std::make_unique<MyCustomStreamer>(), cats, true);
+        context, std::make_unique<MyCustomStreamer>(), std::move(policy), cats,
+        true);
     ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
 
     // Remark 1: pass, category LoopUnroll
@@ -311,5 +317,175 @@ TEST(Remark, TestCustomOptimizationRemarkDiagnostic) {
   EXPECT_NE(errOut.find(pass1Msg), std::string::npos); // printed
   EXPECT_NE(errOut.find(pass2Msg), std::string::npos); // printed
   EXPECT_EQ(errOut.find(pass3Msg), std::string::npos); // filtered out
+}
+
+TEST(Remark, TestRemarkFinal) {
+  testing::internal::CaptureStderr();
+  const auto *pass1Msg = "I failed";
+  const auto *pass2Msg = "I failed too";
+  const auto *pass3Msg = "I succeeded";
+  const auto *pass4Msg = "I succeeded too";
+
+  std::string categoryLoopunroll("LoopUnroll");
+
+  {
+    MLIRContext context;
+    Location loc = FileLineColLoc::get(&context, "test.cpp", 1, 5);
+    Location locOther = FileLineColLoc::get(&context, "test.cpp", 55, 5);
+
+    // Setup the remark engine
+    mlir::remark::RemarkCategories cats{/*all=*/"",
+                                        /*passed=*/categoryLoopunroll,
+                                        /*missed=*/categoryLoopunroll,
+                                        /*analysis=*/categoryLoopunroll,
+                                        /*failed=*/categoryLoopunroll};
+
+    std::unique_ptr<remark::RemarkEmittingPolicyFinal> policy =
+        std::make_unique<remark::RemarkEmittingPolicyFinal>();
+    LogicalResult isEnabled = remark::enableOptimizationRemarks(
+        context, std::make_unique<MyCustomStreamer>(), std::move(policy), cats,
+        true);
+    ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
+
+    // Remark 1: failure
+    remark::failed(
+        loc, remark::RemarkOpts::name("Unroller").category(categoryLoopunroll))
+        << pass1Msg;
+
+    // Remark 2: failure
+    remark::missed(
+        loc, remark::RemarkOpts::name("Unroller").category(categoryLoopunroll))
+        << remark::reason(pass2Msg);
+
+    // Remark 3: pass
+    remark::passed(
+        loc, remark::RemarkOpts::name("Unroller").category(categoryLoopunroll))
+        << pass3Msg;
+
+    // Remark 4: pass
+    remark::passed(
+        locOther,
+        remark::RemarkOpts::name("Unroller").category(categoryLoopunroll))
+        << pass4Msg;
+  }
+
+  llvm::errs().flush();
+  std::string errOut = ::testing::internal::GetCapturedStderr();
+
+  // Containment checks for messages.
+  EXPECT_EQ(errOut.find(pass1Msg), std::string::npos); // dropped
+  EXPECT_EQ(errOut.find(pass2Msg), std::string::npos); // dropped
+  EXPECT_NE(errOut.find(pass3Msg), std::string::npos); // shown
+  EXPECT_NE(errOut.find(pass4Msg), std::string::npos); // shown
+}
+
+TEST(Remark, TestArgWithAttribute) {
+  MLIRContext context;
+
+  llvm::SmallVector<Attribute> elements;
+  elements.push_back(IntegerAttr::get(IntegerType::get(&context, 32), 1));
+  elements.push_back(IntegerAttr::get(IntegerType::get(&context, 32), 2));
+  elements.push_back(IntegerAttr::get(IntegerType::get(&context, 32), 3));
+  ArrayAttr arrayAttr = ArrayAttr::get(&context, elements);
+  remark::detail::Remark::Arg argWithArray("Values", arrayAttr);
+
+  // Verify the attribute is stored
+  EXPECT_TRUE(argWithArray.hasAttribute());
+  EXPECT_EQ(argWithArray.getAttribute(), arrayAttr);
+
+  // Ensure it can be retrieved as an ArrayAttr.
+  auto retrievedAttr = dyn_cast<ArrayAttr>(argWithArray.getAttribute());
+  EXPECT_TRUE(retrievedAttr);
+  EXPECT_EQ(retrievedAttr.size(), 3u);
+  EXPECT_EQ(cast<IntegerAttr>(retrievedAttr[0]).getInt(), 1);
+  EXPECT_EQ(cast<IntegerAttr>(retrievedAttr[1]).getInt(), 2);
+  EXPECT_EQ(cast<IntegerAttr>(retrievedAttr[2]).getInt(), 3);
+
+  // Create an Arg without an Attribute (string-based)
+  remark::detail::Remark::Arg argWithoutAttr("Key", "Value");
+
+  // Verify no attribute is stored
+  EXPECT_FALSE(argWithoutAttr.hasAttribute());
+  EXPECT_FALSE(argWithoutAttr.getAttribute()); // Returns null Attribute
+  EXPECT_EQ(argWithoutAttr.val, "Value");
+}
+
+// Test that Remark correctly owns its string data and doesn't have
+// use-after-free issues when the original strings go out of scope.
+// This is particularly important for RemarkEmittingPolicyFinal which
+// stores remarks and emits them later during finalize().
+TEST(Remark, TestRemarkOwnsStringData) {
+  testing::internal::CaptureStderr();
+
+  // These are the expected values we'll check for in the output.
+  // They must match what we create in the inner scope below.
+  const char *expectedCategory = "DynamicCategory";
+  const char *expectedName = "DynamicRemarkName";
+  const char *expectedFunction = "dynamicFunction";
+  const char *expectedMessage = "Dynamic message content";
+
+  {
+    MLIRContext context;
+    Location loc = FileLineColLoc::get(&context, "test.cpp", 42, 10);
+
+    // Setup with RemarkEmittingPolicyFinal - this stores remarks and emits
+    // them only when the engine is destroyed (during finalize).
+    // Note: The 'passed' filter must be set for remark::passed() to emit.
+    mlir::remark::RemarkCategories cats{
+        /*all=*/std::nullopt,
+        /*passed=*/expectedCategory, // Enable passed remarks for this category
+        /*missed=*/std::nullopt,
+        /*analysis=*/std::nullopt,
+        /*failed=*/std::nullopt};
+
+    std::unique_ptr<remark::RemarkEmittingPolicyFinal> policy =
+        std::make_unique<remark::RemarkEmittingPolicyFinal>();
+    LogicalResult isEnabled = remark::enableOptimizationRemarks(
+        context, std::make_unique<MyCustomStreamer>(), std::move(policy), cats,
+        /*printAsEmitRemarks=*/true);
+    ASSERT_TRUE(succeeded(isEnabled)) << "Failed to enable remark engine";
+
+    // Create dynamic strings in an inner scope that will go out of scope
+    // BEFORE the RemarkEngine is destroyed and finalize() is called.
+    {
+      std::string dynamicCategory(expectedCategory);
+      std::string dynamicName(expectedName);
+      std::string dynamicFunction(expectedFunction);
+      std::string dynamicSubCategory("DynamicSubCategory");
+      std::string dynamicMessage(expectedMessage);
+
+      // Emit a remark with all dynamic strings
+      remark::passed(loc, remark::RemarkOpts::name(dynamicName)
+                              .category(dynamicCategory)
+                              .subCategory(dynamicSubCategory)
+                              .function(dynamicFunction))
+          << dynamicMessage;
+
+      // dynamicCategory, dynamicName, dynamicFunction, dynamicSubCategory,
+      // and dynamicMessage all go out of scope here!
+    }
+
+    // At this point, all the dynamic strings have been destroyed.
+    // The Remark stored in RemarkEmittingPolicyFinal must have its own
+    // copies of the string data, otherwise we'd have dangling pointers.
+
+    // Context destruction triggers RemarkEngine destruction, which calls
+    // finalize() on the policy, which then emits the stored remarks.
+    // If Remark doesn't own its strings, this would crash or produce garbage.
+  }
+
+  llvm::errs().flush();
+  std::string errOut = ::testing::internal::GetCapturedStderr();
+
+  // Verify the output contains our expected strings - this proves the
+  // Remark correctly copied and owns the string data.
+  EXPECT_NE(errOut.find(expectedCategory), std::string::npos)
+      << "Expected category not found in output. Got: " << errOut;
+  EXPECT_NE(errOut.find(expectedName), std::string::npos)
+      << "Expected name not found in output. Got: " << errOut;
+  EXPECT_NE(errOut.find(expectedFunction), std::string::npos)
+      << "Expected function not found in output. Got: " << errOut;
+  EXPECT_NE(errOut.find(expectedMessage), std::string::npos)
+      << "Expected message not found in output. Got: " << errOut;
 }
 } // namespace

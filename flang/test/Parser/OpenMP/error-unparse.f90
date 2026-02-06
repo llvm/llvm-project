@@ -5,7 +5,7 @@ program main
   !CHECK: !$OMP ERROR AT(COMPILATION) SEVERITY(WARNING) MESSAGE("some message here")
   !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPUtilityConstruct -> OmpErrorDirective
   !PARSE-TREE: OmpClauseList -> OmpClause -> At -> OmpAtClause -> ActionTime = Compilation
-  !PARSE-TREE: OmpClause -> Severity -> OmpSeverityClause -> Severity = Warning
+  !PARSE-TREE: OmpClause -> Severity -> OmpSeverityClause -> SevLevel = Warning
   !PARSE-TREE:  OmpClause -> Message -> OmpMessageClause -> Expr = '"some message here"'
   !PARSE-TREE:  LiteralConstant -> CharLiteralConstant
   !PARSE-TREE:  string = 'some message here'
@@ -13,14 +13,14 @@ program main
   !CHECK: !$OMP ERROR AT(COMPILATION) SEVERITY(FATAL) MESSAGE("This is an error")
   !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPUtilityConstruct -> OmpErrorDirective
   !PARSE-TREE: OmpClauseList -> OmpClause -> At -> OmpAtClause -> ActionTime = Compilation
-  !PARSE-TREE: OmpClause -> Severity -> OmpSeverityClause -> Severity = Fatal
+  !PARSE-TREE: OmpClause -> Severity -> OmpSeverityClause -> SevLevel = Fatal
   !PARSE-TREE:  OmpClause -> Message -> OmpMessageClause -> Expr = '"This is an error"'
   !PARSE-TREE:  Designator -> DataRef -> Name = 'message'
   !$omp error at(compilation) severity(fatal) message(message)
   !CHECK: !$OMP ERROR AT(EXECUTION) SEVERITY(FATAL) MESSAGE("This is an error")
   !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPUtilityConstruct -> OmpErrorDirective
   !PARSE-TREE: OmpClauseList -> OmpClause -> At -> OmpAtClause -> ActionTime = Execution
-  !PARSE-TREE: OmpClause -> Severity -> OmpSeverityClause -> Severity = Fatal
+  !PARSE-TREE: OmpClause -> Severity -> OmpSeverityClause -> SevLevel = Fatal
   !PARSE-TREE:  OmpClause -> Message -> OmpMessageClause -> Expr = '"This is an error"'
   !PARSE-TREE:  Designator ->  DataRef -> Name = 'message'
   !$omp error at(EXECUTION) severity(fatal) message(message)

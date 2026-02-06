@@ -16,8 +16,9 @@
 
 include "flang/Optimizer/Dialect/CUF/CUFDialect.td"
 include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.td"
-include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
+include "flang/Optimizer/Dialect/FIROperationMoveOpInterface.td"
+include "flang/Optimizer/Dialect/FIRTypes.td"
 include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
@@ -26,8 +27,7 @@ include "mlir/IR/BuiltinAttributes.td"
 class cuf_Op<string mnemonic, list<Trait> traits>
     : Op<CUFDialect, mnemonic, traits>;
 
-def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments,
-    MemoryEffects<[MemAlloc]>]> {
+def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments]> {
   let summary = "Allocate an object on device";
 
   let description = [{
@@ -47,7 +47,9 @@ def cuf_AllocOp : cuf_Op<"alloc", [AttrSizedOperandSegments,
     cuf_DataAttributeAttr:$data_attr
   );
 
-  let results = (outs fir_ReferenceType:$ptr);
+  // Value-scoped Allocate on the returned reference
+  let results =
+      (outs Res<fir_ReferenceType, "", [MemAlloc<DefaultResource>]>:$ptr);
 
   let assemblyFormat = [{
     $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
@@ -99,7 +101,9 @@ def cuf_AllocateOp : cuf_Op<"allocate", [AttrSizedOperandSegments,
       Optional<fir_ReferenceType>:$stream,
       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$pinned,
       Arg<Optional<AnyRefOrBoxType>, "", [MemRead]>:$source,
-      cuf_DataAttributeAttr:$data_attr, UnitAttr:$hasStat);
+      OptionalAttr<cuf_DataAttributeAttr>:$data_attr, UnitAttr:$hasStat,
+      UnitAttr:$hasDoubleDescriptor, UnitAttr:$pointer,
+      UnitAttr:$device_source);
 
   let results = (outs AnyIntegerType:$stat);
 
@@ -125,9 +129,9 @@ def cuf_DeallocateOp : cuf_Op<"deallocate",
   }];
 
   let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
-                       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
-                       cuf_DataAttributeAttr:$data_attr,
-                       UnitAttr:$hasStat);
+      Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg,
+      cuf_DataAttributeAttr:$data_attr, UnitAttr:$hasStat,
+      UnitAttr:$hasDoubleDescriptor, UnitAttr:$pointer);
 
   let results = (outs AnyIntegerType:$stat);
 
@@ -240,8 +244,10 @@ def cuf_KernelLaunchOp : cuf_Op<"kernel_launch", [CallOpInterface,
   let hasVerifier = 1;
 }
 
-def cuf_KernelOp : cuf_Op<"kernel", [AttrSizedOperandSegments,
-    DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
+def cuf_KernelOp
+    : cuf_Op<"kernel", [AttrSizedOperandSegments,
+                        DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+                        DeclareOpInterfaceMethods<OperationMoveOpInterface>]> {
 
   let description = [{
     Represent the CUDA Fortran kernel directive. The operation is a loop like
@@ -349,15 +355,15 @@ def cuf_SharedMemoryOp
   let arguments = (ins TypeAttr:$in_type, OptionalAttr<StrAttr>:$uniq_name,
       OptionalAttr<StrAttr>:$bindc_name, Variadic<AnyIntegerType>:$typeparams,
       Variadic<AnyIntegerType>:$shape,
-      Optional<AnyIntegerType>:$offset // offset in bytes from the shared memory
-                                       // base address.
-  );
+      // offset in bytes from the shared memory base address.
+      Optional<AnyIntegerType>:$offset, OptionalAttr<I64Attr>:$alignment,
+      UnitAttr:$isStatic);
 
   let results = (outs fir_ReferenceType:$ptr);
 
   let assemblyFormat = [{
       (`[` $offset^ `:` type($offset) `]`)? $in_type (`(` $typeparams^ `:` type($typeparams) `)`)?
-        (`,` $shape^ `:` type($shape) )?  attr-dict `->` qualified(type($ptr))
+        (`,` $shape^ `:` type($shape) )?  (`align` $alignment^ )? attr-dict `->` qualified(type($ptr))
   }];
 
   let builders = [OpBuilder<(ins "mlir::Type":$inType,
@@ -383,27 +389,6 @@ def cuf_StreamCastOp : cuf_Op<"stream_cast", [NoMemoryEffect]> {
 
   let assemblyFormat = [{
     $stream attr-dict `:` type($stream)
-  }];
-
-  let hasVerifier = 1;
-}
-
-def cuf_SetAllocatorIndexOp : cuf_Op<"set_allocator_idx", []> {
-  let summary = "Set the allocator index in a descriptor";
-
-  let description = [{
-    Allocator index in the Fortran descriptor is used to retrived the correct
-    CUDA allocator to allocate the memory on the device.
-    In many cases the allocator index is set when the descriptor is created. For
-    device components, the descriptor is part of the derived-type itself and
-    needs to be set after the derived-type is allocated in managed memory.
-  }];
-
-  let arguments = (ins Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
-      cuf_DataAttributeAttr:$data_attr);
-
-  let assemblyFormat = [{
-    $box `:` qualified(type($box)) attr-dict
   }];
 
   let hasVerifier = 1;

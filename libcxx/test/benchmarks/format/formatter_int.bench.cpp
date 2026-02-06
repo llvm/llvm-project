@@ -12,7 +12,6 @@
 #include <format>
 #include <random>
 
-#include "../CartesianBenchmarks.h"
 #include "benchmark/benchmark.h"
 #include "test_macros.h"
 
@@ -60,154 +59,90 @@ BENCHMARK(BM_Basic<__uint128_t>);
 BENCHMARK(BM_Basic<__int128_t>);
 #endif
 
-// *** Localization ***
-enum class LocalizationE { False, True };
-struct AllLocalizations : EnumValuesAsTuple<AllLocalizations, LocalizationE, 2> {
-  static constexpr const char* Names[] = {"LocFalse", "LocTrue"};
-};
-
-template <LocalizationE E>
-struct Localization {};
+template <class>
+inline constexpr std::string to_string = "";
 
 template <>
-struct Localization<LocalizationE::False> {
-  static constexpr const char* fmt = "";
-};
+inline constexpr std::string to_string<int64_t> = "int64_t";
 
 template <>
-struct Localization<LocalizationE::True> {
-  static constexpr const char* fmt = "L";
-};
-
-// *** Base ***
-enum class BaseE {
-  Binary,
-  Octal,
-  Decimal,
-  Hex,
-  HexUpper,
-};
-struct AllBases : EnumValuesAsTuple<AllBases, BaseE, 5> {
-  static constexpr const char* Names[] = {"BaseBin", "BaseOct", "BaseDec", "BaseHex", "BaseHexUpper"};
-};
-
-template <BaseE E>
-struct Base {};
-
-template <>
-struct Base<BaseE::Binary> {
-  static constexpr const char* fmt = "b";
-};
-
-template <>
-struct Base<BaseE::Octal> {
-  static constexpr const char* fmt = "o";
-};
-
-template <>
-struct Base<BaseE::Decimal> {
-  static constexpr const char* fmt = "d";
-};
-
-template <>
-struct Base<BaseE::Hex> {
-  static constexpr const char* fmt = "x";
-};
-
-template <>
-struct Base<BaseE::HexUpper> {
-  static constexpr const char* fmt = "X";
-};
-
-// *** Types ***
-enum class TypeE { Int64, Uint64 };
-struct AllTypes : EnumValuesAsTuple<AllTypes, TypeE, 2> {
-  static constexpr const char* Names[] = {"Int64", "Uint64"};
-};
-
-template <TypeE E>
-struct Type {};
-
-template <>
-struct Type<TypeE::Int64> {
-  using type = int64_t;
-
-  static std::array<type, 1000> make_data() { return generate<type>(); }
-};
-
-template <>
-struct Type<TypeE::Uint64> {
-  using type = uint64_t;
-
-  static std::array<type, 1000> make_data() { return generate<type>(); }
-};
-
-// *** Alignment ***
-enum class AlignmentE { None, Left, Center, Right, ZeroPadding };
-struct AllAlignments : EnumValuesAsTuple<AllAlignments, AlignmentE, 5> {
-  static constexpr const char* Names[] = {
-      "AlignNone", "AlignmentLeft", "AlignmentCenter", "AlignmentRight", "ZeroPadding"};
-};
-
-template <AlignmentE E>
-struct Alignment {};
-
-template <>
-struct Alignment<AlignmentE::None> {
-  static constexpr const char* fmt = "";
-};
-
-template <>
-struct Alignment<AlignmentE::Left> {
-  static constexpr const char* fmt = "0<512";
-};
-
-template <>
-struct Alignment<AlignmentE::Center> {
-  static constexpr const char* fmt = "0^512";
-};
-
-template <>
-struct Alignment<AlignmentE::Right> {
-  static constexpr const char* fmt = "0>512";
-};
-
-template <>
-struct Alignment<AlignmentE::ZeroPadding> {
-  static constexpr const char* fmt = "0512";
-};
-
-template <class L, class B, class T, class A>
-struct Integral {
-  void run(benchmark::State& state) const {
-    std::array data{Type<T::value>::make_data()};
-    std::array<char, 512> output;
-
-    while (state.KeepRunningBatch(data.size()))
-      for (auto value : data)
-        benchmark::DoNotOptimize(std::format_to(output.begin(), std::string_view{fmt.data(), fmt.size()}, value));
-  }
-
-  std::string name() const { return "Integral" + L::name() + B::name() + A::name() + T::name(); }
-
-  static constexpr std::string make_fmt() {
-    return std::string("{:") + Alignment<A::value>::fmt + Localization<L::value>::fmt + Base<B::value>::fmt + "}";
-  }
-
-  static constexpr auto fmt = []() {
-    constexpr size_t s = make_fmt().size();
-    std::array<char, s> r;
-    std::ranges::copy(make_fmt(), r.begin());
-    return r;
-  }();
-};
+inline constexpr std::string to_string<uint64_t> = "uint64_t";
 
 int main(int argc, char** argv) {
+  auto bm = []<class IntT>(std::type_identity<IntT>, std::string fmt) {
+    benchmark::RegisterBenchmark(
+        "std::format(" + to_string<IntT> + ") (fmt: " + fmt + ")", [fmt](benchmark::State& state) {
+          std::array data = generate<IntT>();
+          std::array<char, 512> output;
+
+          while (state.KeepRunningBatch(data.size()))
+            for (auto value : data)
+              benchmark::DoNotOptimize(std::vformat_to(output.begin(), fmt, std::make_format_args(value)));
+        });
+  };
+
+  bm(std::type_identity<int64_t>(), "{:b}");
+  bm(std::type_identity<int64_t>(), "{:0<512b}");
+  bm(std::type_identity<int64_t>(), "{:0^512b}");
+  bm(std::type_identity<int64_t>(), "{:0>512b}");
+  bm(std::type_identity<int64_t>(), "{:0512b}");
+
+  bm(std::type_identity<int64_t>(), "{:Lb}");
+  bm(std::type_identity<int64_t>(), "{:0<512Lb}");
+  bm(std::type_identity<int64_t>(), "{:0^512Lb}");
+  bm(std::type_identity<int64_t>(), "{:0>512Lb}");
+  bm(std::type_identity<int64_t>(), "{:0512Lb}");
+
+  bm(std::type_identity<int64_t>(), "{:o}");
+  bm(std::type_identity<int64_t>(), "{:0<512o}");
+  bm(std::type_identity<int64_t>(), "{:0^512o}");
+  bm(std::type_identity<int64_t>(), "{:0>512o}");
+  bm(std::type_identity<int64_t>(), "{:0512o}");
+
+  bm(std::type_identity<int64_t>(), "{:Lo}");
+  bm(std::type_identity<int64_t>(), "{:0<512Lo}");
+  bm(std::type_identity<int64_t>(), "{:0^512Lo}");
+  bm(std::type_identity<int64_t>(), "{:0>512Lo}");
+  bm(std::type_identity<int64_t>(), "{:0512Lo}");
+
+  bm(std::type_identity<int64_t>(), "{:d}");
+  bm(std::type_identity<int64_t>(), "{:0<512d}");
+  bm(std::type_identity<int64_t>(), "{:0^512d}");
+  bm(std::type_identity<int64_t>(), "{:0>512d}");
+  bm(std::type_identity<int64_t>(), "{:0512d}");
+
+  bm(std::type_identity<int64_t>(), "{:Ld}");
+  bm(std::type_identity<int64_t>(), "{:0<512Ld}");
+  bm(std::type_identity<int64_t>(), "{:0^512Ld}");
+  bm(std::type_identity<int64_t>(), "{:0>512Ld}");
+  bm(std::type_identity<int64_t>(), "{:0512Ld}");
+
+  bm(std::type_identity<int64_t>(), "{:x}");
+  bm(std::type_identity<int64_t>(), "{:0<512x}");
+  bm(std::type_identity<int64_t>(), "{:0^512x}");
+  bm(std::type_identity<int64_t>(), "{:0>512x}");
+  bm(std::type_identity<int64_t>(), "{:0512x}");
+
+  bm(std::type_identity<int64_t>(), "{:Lx}");
+  bm(std::type_identity<int64_t>(), "{:0<512Lx}");
+  bm(std::type_identity<int64_t>(), "{:0^512Lx}");
+  bm(std::type_identity<int64_t>(), "{:0>512Lx}");
+  bm(std::type_identity<int64_t>(), "{:0512Lx}");
+
+  bm(std::type_identity<int64_t>(), "{:X}");
+  bm(std::type_identity<int64_t>(), "{:0<512X}");
+  bm(std::type_identity<int64_t>(), "{:0^512X}");
+  bm(std::type_identity<int64_t>(), "{:0>512X}");
+  bm(std::type_identity<int64_t>(), "{:0512X}");
+
+  bm(std::type_identity<int64_t>(), "{:LX}");
+  bm(std::type_identity<int64_t>(), "{:0<512LX}");
+  bm(std::type_identity<int64_t>(), "{:0^512LX}");
+  bm(std::type_identity<int64_t>(), "{:0>512LX}");
+  bm(std::type_identity<int64_t>(), "{:0512LX}");
+
   benchmark::Initialize(&argc, argv);
-  if (benchmark::ReportUnrecognizedArguments(argc, argv))
-    return 1;
-
-  makeCartesianProductBenchmark<Integral, AllLocalizations, AllBases, AllTypes, AllAlignments>();
-
   benchmark::RunSpecifiedBenchmarks();
+  benchmark::Shutdown();
+  return 0;
 }

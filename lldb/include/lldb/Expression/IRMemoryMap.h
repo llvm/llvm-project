@@ -65,7 +65,7 @@ public:
                    size_t size, Status &error);
   void WriteScalarToMemory(lldb::addr_t process_address, Scalar &scalar,
                            size_t size, Status &error);
-  void WritePointerToMemory(lldb::addr_t process_address, lldb::addr_t address,
+  void WritePointerToMemory(lldb::addr_t process_address, lldb::addr_t pointer,
                             Status &error);
   void ReadMemory(uint8_t *bytes, lldb::addr_t process_address, size_t size,
                   Status &error);

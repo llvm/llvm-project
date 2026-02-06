@@ -303,9 +303,6 @@ public:
   /// nest would extend.
   SmallVector<llvm::CanonicalLoopInfo *, 4> OMPLoopNestStack;
 
-  /// Stack to track the Logical Operator recursion nest for MC/DC.
-  SmallVector<const BinaryOperator *, 16> MCDCLogOpStack;
-
   /// Stack to track the controlled convergence tokens.
   SmallVector<llvm::ConvergenceControlInst *, 4> ConvergenceTokenStack;
 
@@ -345,6 +342,10 @@ public:
   const CGFunctionInfo *CurFnInfo = nullptr;
   QualType FnRetTy;
   llvm::Function *CurFn = nullptr;
+
+  /// If a cast expression is being visited, this holds the current cast's
+  /// expression.
+  const CastExpr *CurCast = nullptr;
 
   /// Save Parameter Decl for coroutine.
   llvm::SmallVector<const ParmVarDecl *, 4> FnArgs;
@@ -444,6 +445,12 @@ public:
     }
 
     return PostAllocaInsertPt;
+  }
+
+  // Try to preserve the source's name to make IR more readable.
+  llvm::Value *performAddrSpaceCast(llvm::Value *Src, llvm::Type *DestTy) {
+    return Builder.CreateAddrSpaceCast(
+        Src, DestTy, Src->hasName() ? Src->getName() + ".ascast" : "");
   }
 
   /// API for captured statement code generation.
@@ -1643,9 +1650,6 @@ private:
 
   std::unique_ptr<CodeGenPGO> PGO;
 
-  /// Bitmap used by MC/DC to track condition outcomes of a boolean expression.
-  Address MCDCCondBitmapAddr = Address::invalid();
-
   /// Calculate branch weights appropriate for PGO data
   llvm::MDNode *createProfileWeights(uint64_t TrueCount,
                                      uint64_t FalseCount) const;
@@ -1654,13 +1658,36 @@ private:
                                             uint64_t LoopCount) const;
 
 public:
-  std::pair<bool, bool> getIsCounterPair(const Stmt *S) const;
+  bool hasSkipCounter(const Stmt *S) const;
+
   void markStmtAsUsed(bool Skipped, const Stmt *S);
   void markStmtMaybeUsed(const Stmt *S);
 
+  /// Used to specify which counter in a pair shall be incremented.
+  /// For non-binary counters, a skip counter is derived as (Parent - Exec).
+  /// In contrast for binary counters, a skip counter cannot be computed from
+  /// the Parent counter. In such cases, dedicated SkipPath counters must be
+  /// allocated and marked (incremented as binary counters). (Parent can be
+  /// synthesized with (Exec + Skip) in simple cases)
+  enum CounterForIncrement {
+    UseExecPath = 0, ///< Exec (true)
+    UseSkipPath,     ///< Skip (false)
+  };
+
   /// Increment the profiler's counter for the given statement by \p StepV.
   /// If \p StepV is null, the default increment is 1.
-  void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr);
+  void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr) {
+    incrementProfileCounter(UseExecPath, S, false, StepV);
+  }
+
+  /// Emit increment of Counter.
+  /// \param ExecSkip Use `Skipped` Counter if UseSkipPath is specified.
+  /// \param S The Stmt that Counter is associated.
+  /// \param UseBoth Mark both Exec/Skip as used. (for verification)
+  /// \param StepV The offset Value for adding to Counter.
+  void incrementProfileCounter(CounterForIncrement ExecSkip, const Stmt *S,
+                               bool UseBoth = false,
+                               llvm::Value *StepV = nullptr);
 
   bool isMCDCCoverageEnabled() const {
     return (CGM.getCodeGenOpts().hasProfileClangInstr() &&
@@ -1676,6 +1703,9 @@ public:
     const BinaryOperator *BOp = dyn_cast<BinaryOperator>(E->IgnoreParens());
     return (BOp && BOp->isLogicalOp());
   }
+
+  bool isMCDCDecisionExpr(const Expr *E) const;
+  bool isMCDCBranchExpr(const Expr *E) const;
 
   /// Zero-init the MCDC temp value.
   void maybeResetMCDCCondBitmap(const Expr *E);
@@ -2880,15 +2910,15 @@ public:
   RawAddress CreateDefaultAlignTempAlloca(llvm::Type *Ty,
                                           const Twine &Name = "tmp");
 
-  /// CreateIRTemp - Create a temporary IR object of the given type, with
-  /// appropriate alignment. This routine should only be used when an temporary
-  /// value needs to be stored into an alloca (for example, to avoid explicit
-  /// PHI construction), but the type is the IR type, not the type appropriate
-  /// for storing in memory.
+  /// CreateIRTempWithoutCast - Create a temporary IR object of the given type,
+  /// with appropriate alignment. This routine should only be used when an
+  /// temporary value needs to be stored into an alloca (for example, to avoid
+  /// explicit PHI construction), but the type is the IR type, not the type
+  /// appropriate for storing in memory.
   ///
   /// That is, this is exactly equivalent to CreateMemTemp, but calling
   /// ConvertType instead of ConvertTypeForMem.
-  RawAddress CreateIRTemp(QualType T, const Twine &Name = "tmp");
+  RawAddress CreateIRTempWithoutCast(QualType T, const Twine &Name = "tmp");
 
   /// CreateMemTemp - Create a temporary memory object of the given type, with
   /// appropriate alignmen and cast it to the default address space. Returns
@@ -3335,11 +3365,12 @@ public:
   /// Emit a check that \p Base points into an array object, which
   /// we can access at index \p Index. \p Accessed should be \c false if we
   /// this expression is used as an lvalue, for instance in "&Arr[Idx]".
-  void EmitBoundsCheck(const Expr *E, const Expr *Base, llvm::Value *Index,
-                       QualType IndexType, bool Accessed);
-  void EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
-                           llvm::Value *Index, QualType IndexType,
-                           QualType IndexedType, bool Accessed);
+  void EmitBoundsCheck(const Expr *ArrayExpr, const Expr *ArrayExprBase,
+                       llvm::Value *Index, QualType IndexType, bool Accessed);
+  void EmitBoundsCheckImpl(const Expr *ArrayExpr, QualType ArrayBaseType,
+                           llvm::Value *IndexVal, QualType IndexType,
+                           llvm::Value *BoundsVal, QualType BoundsType,
+                           bool Accessed);
 
   /// Returns debug info, with additional annotation if
   /// CGM.getCodeGenOpts().SanitizeAnnotateDebugInfo[Ordinal] is enabled for
@@ -3347,6 +3378,17 @@ public:
   llvm::DILocation *
   SanitizerAnnotateDebugInfo(ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
                              SanitizerHandler Handler);
+
+  /// Build metadata used by the AllocToken instrumentation.
+  llvm::MDNode *buildAllocToken(QualType AllocType);
+  /// Emit and set additional metadata used by the AllocToken instrumentation.
+  void EmitAllocToken(llvm::CallBase *CB, QualType AllocType);
+  /// Build additional metadata used by the AllocToken instrumentation,
+  /// inferring the type from an allocation call expression.
+  llvm::MDNode *buildAllocToken(const CallExpr *E);
+  /// Emit and set additional metadata used by the AllocToken instrumentation,
+  /// inferring the type from an allocation call expression.
+  void EmitAllocToken(llvm::CallBase *CB, const CallExpr *E);
 
   llvm::Value *GetCountedByFieldExprGEP(const Expr *Base, const FieldDecl *FD,
                                         const FieldDecl *CountDecl);
@@ -3357,9 +3399,9 @@ public:
 
   // Emit bounds checking for flexible array and pointer members with the
   // counted_by attribute.
-  void EmitCountedByBoundsChecking(const Expr *E, llvm::Value *Idx,
-                                   Address Addr, QualType IdxTy,
-                                   QualType ArrayTy, bool Accessed,
+  void EmitCountedByBoundsChecking(const Expr *ArrayExpr, QualType ArrayType,
+                                   Address ArrayInst, QualType IndexType,
+                                   llvm::Value *IndexVal, bool Accessed,
                                    bool FlexibleArray);
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
@@ -3606,6 +3648,7 @@ public:
   void EmitDefaultStmt(const DefaultStmt &S, ArrayRef<const Attr *> Attrs);
   void EmitCaseStmt(const CaseStmt &S, ArrayRef<const Attr *> Attrs);
   void EmitCaseStmtRange(const CaseStmt &S, ArrayRef<const Attr *> Attrs);
+  void EmitDeferStmt(const DeferStmt &S);
   void EmitAsmStmt(const AsmStmt &S);
 
   const BreakContinue *GetDestForLoopControlStmt(const LoopControlStmt &S);
@@ -3694,8 +3737,9 @@ public:
   llvm::Function *EmitCapturedStmt(const CapturedStmt &S, CapturedRegionKind K);
   llvm::Function *GenerateCapturedStmtFunction(const CapturedStmt &S);
   Address GenerateCapturedStmtArgument(const CapturedStmt &S);
-  llvm::Function *GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
-                                                     SourceLocation Loc);
+  llvm::Function *
+  GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S,
+                                     const OMPExecutableDirective &D);
   void GenerateOpenMPCapturedVars(const CapturedStmt &S,
                                   SmallVectorImpl<llvm::Value *> &CapturedVars);
   void emitOMPSimpleStore(LValue LVal, RValue RVal, QualType RValTy,
@@ -3860,6 +3904,7 @@ public:
   void EmitOMPUnrollDirective(const OMPUnrollDirective &S);
   void EmitOMPReverseDirective(const OMPReverseDirective &S);
   void EmitOMPInterchangeDirective(const OMPInterchangeDirective &S);
+  void EmitOMPFuseDirective(const OMPFuseDirective &S);
   void EmitOMPForDirective(const OMPForDirective &S);
   void EmitOMPForSimdDirective(const OMPForSimdDirective &S);
   void EmitOMPScopeDirective(const OMPScopeDirective &S);
@@ -4395,6 +4440,7 @@ public:
   LValue EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
                                 bool Accessed = false);
   llvm::Value *EmitMatrixIndexExpr(const Expr *E);
+  LValue EmitMatrixSingleSubscriptExpr(const MatrixSingleSubscriptExpr *E);
   LValue EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E);
   LValue EmitArraySectionExpr(const ArraySectionExpr *E,
                               bool IsLowerBound = true);
@@ -4462,10 +4508,8 @@ public:
                                 AggValueSlot slot = AggValueSlot::ignored());
   LValue EmitPseudoObjectLValue(const PseudoObjectExpr *e);
 
-  void FlattenAccessAndType(
-      Address Addr, QualType AddrTy,
-      SmallVectorImpl<std::pair<Address, llvm::Value *>> &AccessList,
-      SmallVectorImpl<QualType> &FlatTypes);
+  void FlattenAccessAndTypeLValue(LValue LVal,
+                                  SmallVectorImpl<LValue> &AccessList);
 
   llvm::Value *EmitIvarOffset(const ObjCInterfaceDecl *Interface,
                               const ObjCIvarDecl *Ivar);

@@ -8,8 +8,8 @@ define ptr @test_gep_i8(ptr%arr, i8 %ind) {
 ; X64_GISEL-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64_GISEL-NEXT:    shlq $56, %rsi
 ; X64_GISEL-NEXT:    sarq $56, %rsi
-; X64_GISEL-NEXT:    imulq $4, %rsi, %rax
-; X64_GISEL-NEXT:    addq %rdi, %rax
+; X64_GISEL-NEXT:    shlq $2, %rsi
+; X64_GISEL-NEXT:    leaq (%rdi,%rsi), %rax
 ; X64_GISEL-NEXT:    retq
 ;
 ; X64-LABEL: test_gep_i8:
@@ -43,8 +43,8 @@ define ptr @test_gep_i16(ptr%arr, i16 %ind) {
 ; X64_GISEL-NEXT:    # kill: def $esi killed $esi def $rsi
 ; X64_GISEL-NEXT:    shlq $48, %rsi
 ; X64_GISEL-NEXT:    sarq $48, %rsi
-; X64_GISEL-NEXT:    imulq $4, %rsi, %rax
-; X64_GISEL-NEXT:    addq %rdi, %rax
+; X64_GISEL-NEXT:    shlq $2, %rsi
+; X64_GISEL-NEXT:    leaq (%rdi,%rsi), %rax
 ; X64_GISEL-NEXT:    retq
 ;
 ; X64-LABEL: test_gep_i16:
@@ -76,7 +76,7 @@ define ptr @test_gep_i32(ptr%arr, i32 %ind) {
 ; X64_GISEL-LABEL: test_gep_i32:
 ; X64_GISEL:       # %bb.0:
 ; X64_GISEL-NEXT:    movslq %esi, %rax
-; X64_GISEL-NEXT:    imulq $4, %rax, %rax
+; X64_GISEL-NEXT:    shlq $2, %rax
 ; X64_GISEL-NEXT:    addq %rdi, %rax
 ; X64_GISEL-NEXT:    retq
 ;
@@ -107,8 +107,8 @@ define ptr @test_gep_i32_const(ptr%arr) {
 define ptr @test_gep_i64(ptr%arr, i64 %ind) {
 ; X64_GISEL-LABEL: test_gep_i64:
 ; X64_GISEL:       # %bb.0:
-; X64_GISEL-NEXT:    imulq $4, %rsi, %rax
-; X64_GISEL-NEXT:    addq %rdi, %rax
+; X64_GISEL-NEXT:    shlq $2, %rsi
+; X64_GISEL-NEXT:    leaq (%rdi,%rsi), %rax
 ; X64_GISEL-NEXT:    retq
 ;
 ; X64-LABEL: test_gep_i64:

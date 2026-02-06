@@ -30,7 +30,7 @@ namespace bolt {
 /// 64-bit range, we guarantee it can reach any code location.
 ///
 class LongJmpPass : public BinaryFunctionPass {
-  /// Used to implement stub grouping (re-using a stub from one function into
+  /// Used to implement stub grouping (reusing a stub from one function into
   /// another)
   using StubTy = std::pair<uint64_t, BinaryBasicBlock *>;
   using StubGroupTy = SmallVector<StubTy, 4>;
@@ -82,15 +82,13 @@ class LongJmpPass : public BinaryFunctionPass {
   /// purposes, we need to do a size worst-case estimation. Real layout is done
   /// by RewriteInstance::mapFileSections()
   void tentativeLayout(const BinaryContext &BC,
-                       std::vector<BinaryFunction *> &SortedFunctions);
-  uint64_t
-  tentativeLayoutRelocMode(const BinaryContext &BC,
-                           std::vector<BinaryFunction *> &SortedFunctions,
-                           uint64_t DotAddress);
-  uint64_t
-  tentativeLayoutRelocColdPart(const BinaryContext &BC,
-                               std::vector<BinaryFunction *> &SortedFunctions,
-                               uint64_t DotAddress);
+                       BinaryFunctionListType &SortedFunctions);
+  uint64_t tentativeLayoutRelocMode(const BinaryContext &BC,
+                                    BinaryFunctionListType &SortedFunctions,
+                                    uint64_t DotAddress);
+  uint64_t tentativeLayoutRelocColdPart(const BinaryContext &BC,
+                                        BinaryFunctionListType &SortedFunctions,
+                                        uint64_t DotAddress);
   void tentativeBBLayout(const BinaryFunction &Func);
 
   /// Update stubs addresses with their exact address after a round of stub

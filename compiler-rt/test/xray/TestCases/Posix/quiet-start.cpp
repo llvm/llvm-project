@@ -2,11 +2,11 @@
 // instrumentation sleds.
 //
 // RUN: %clangxx -std=c++11 %s -o %t %xraylib
-// RUN: XRAY_OPTIONS="patch_premain=true verbosity=1" %run %t 2>&1 | \
+// RUN: env XRAY_OPTIONS="patch_premain=true verbosity=1" %run %t 2>&1 | \
 // RUN:    FileCheck %s --check-prefix NOISY
-// RUN: XRAY_OPTIONS="patch_premain=true verbosity=0" %run %t 2>&1 | \
+// RUN: env XRAY_OPTIONS="patch_premain=true verbosity=0" %run %t 2>&1 | \
 // RUN:    FileCheck %s --check-prefix QUIET
-// RUN: XRAY_OPTIONS="" %run %t 2>&1 | FileCheck %s --check-prefix DEFAULT
+// RUN: env XRAY_OPTIONS="" %run %t 2>&1 | FileCheck %s --check-prefix DEFAULT
 
 // REQUIRES: built-in-llvm-tree
 

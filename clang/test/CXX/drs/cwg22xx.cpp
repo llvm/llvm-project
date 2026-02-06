@@ -108,7 +108,7 @@ namespace MultilevelSpecialization {
   template<> template<int a, int b>
     void B<int, int>::f(int i, int (&arr1)[a], int (&arr2)[b]) {}
     // since-cxx11-error@-1 {{out-of-line definition of 'f' does not match any declaration in 'cwg2233::MultilevelSpecialization::B<int, int>'}}
-    //   since-cxx11-note@#cwg2233-B {{defined here}}
+    //   since-cxx11-note@#cwg2233-B {{B defined here}}
   template<> template<>
     void B<int, int>::f<1, 1>(int i, int (&arr1a)[1], int (&arr2a)[1]) {}
 }
@@ -202,7 +202,7 @@ namespace cwg2285 { // cwg2285: 4
   void test() {
     using T = int[1];
     auto [a] = T{a};
-    // since-cxx17-error@-1 {{binding 'a' cannot appear in the initializer of its own decomposition declaration}}
+    // since-cxx17-error@-1 {{binding 'a' cannot appear in the initializer of its own structured binding declaration}}
   }
 #endif
 } // namespace cwg2285

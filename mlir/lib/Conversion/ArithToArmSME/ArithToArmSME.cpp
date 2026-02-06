@@ -44,7 +44,7 @@ namespace {
 
 /// Conversion pattern for dense arith.constant.
 struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
-  using OpRewritePattern<arith::ConstantOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::ConstantOp constantOp,
                                 PatternRewriter &rewriter) const final {

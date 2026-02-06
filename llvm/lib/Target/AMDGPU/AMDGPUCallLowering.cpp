@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 
 #define DEBUG_TYPE "amdgpu-call-lowering"
@@ -209,7 +210,7 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
 
     if (!SPReg) {
       const GCNSubtarget &ST = MIRBuilder.getMF().getSubtarget<GCNSubtarget>();
-      if (ST.enableFlatScratch()) {
+      if (ST.hasFlatScratchEnabled()) {
         // The stack is accessed unswizzled, so we can use a regular copy.
         SPReg = MIRBuilder.buildCopy(PtrTy,
                                      MFI->getStackPtrOffsetReg()).getReg(0);
@@ -414,12 +415,13 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &OrigArg,
   MachineFunction &MF = B.getMF();
   const Function &F = MF.getFunction();
   const DataLayout &DL = F.getDataLayout();
-  MachinePointerInfo PtrInfo(AMDGPUAS::CONSTANT_ADDRESS);
+  const SITargetLowering &TLI = *getTLI<SITargetLowering>();
+  MachinePointerInfo PtrInfo = TLI.getKernargSegmentPtrInfo(MF);
 
   LLT PtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
 
   SmallVector<ArgInfo, 32> SplitArgs;
-  SmallVector<uint64_t> FieldOffsets;
+  SmallVector<TypeSize> FieldOffsets;
   splitToValueTypes(OrigArg, SplitArgs, DL, F.getCallingConv(), &FieldOffsets);
 
   unsigned Idx = 0;
@@ -737,7 +739,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
     // For the fixed ABI, pass workitem IDs in the last argument register.
     TLI.allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
 
-    if (!Subtarget.enableFlatScratch())
+    if (!Subtarget.hasFlatScratchEnabled())
       CCInfo.AllocateReg(Info->getScratchRSrcReg());
     TLI.allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
   }
@@ -809,15 +811,15 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     AMDGPUFunctionArgInfo::LDS_KERNEL_ID,
   };
 
-  static constexpr StringLiteral ImplicitAttrNames[] = {
-    "amdgpu-no-dispatch-ptr",
-    "amdgpu-no-queue-ptr",
-    "amdgpu-no-implicitarg-ptr",
-    "amdgpu-no-dispatch-id",
-    "amdgpu-no-workgroup-id-x",
-    "amdgpu-no-workgroup-id-y",
-    "amdgpu-no-workgroup-id-z",
-    "amdgpu-no-lds-kernel-id",
+  static constexpr StringLiteral ImplicitAttrNames[][2] = {
+      {"amdgpu-no-dispatch-ptr", ""},
+      {"amdgpu-no-queue-ptr", ""},
+      {"amdgpu-no-implicitarg-ptr", ""},
+      {"amdgpu-no-dispatch-id", ""},
+      {"amdgpu-no-workgroup-id-x", "amdgpu-no-cluster-id-x"},
+      {"amdgpu-no-workgroup-id-y", "amdgpu-no-cluster-id-y"},
+      {"amdgpu-no-workgroup-id-z", "amdgpu-no-cluster-id-z"},
+      {"amdgpu-no-lds-kernel-id", ""},
   };
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -833,7 +835,9 @@ bool AMDGPUCallLowering::passSpecialInputs(MachineIRBuilder &MIRBuilder,
     LLT ArgTy;
 
     // If the callee does not use the attribute value, skip copying the value.
-    if (Info.CB->hasFnAttr(ImplicitAttrNames[I++]))
+    if (all_of(ImplicitAttrNames[I++], [&](StringRef AttrName) {
+          return AttrName.empty() || Info.CB->hasFnAttr(AttrName);
+        }))
       continue;
 
     std::tie(OutgoingArg, ArgRC, ArgTy) =
@@ -1194,7 +1198,7 @@ void AMDGPUCallLowering::handleImplicitCallArguments(
     const GCNSubtarget &ST, const SIMachineFunctionInfo &FuncInfo,
     CallingConv::ID CalleeCC,
     ArrayRef<std::pair<MCRegister, Register>> ImplicitArgRegs) const {
-  if (!ST.enableFlatScratch()) {
+  if (!ST.hasFlatScratchEnabled()) {
     // Insert copies for the SRD. In the HSA case, this should be an identity
     // copy.
     auto ScratchRSrcReg = MIRBuilder.buildCopy(LLT::fixed_vector(4, 32),

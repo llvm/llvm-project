@@ -3,7 +3,7 @@
 
 // REQUIRES: lld, zlib
 
-// RUN: %clang -c -o %t.o --target=x86_64-pc-linux -gdwarf-5 -gpubnames %s
+// RUN: %clangxx -c -o %t.o --target=x86_64-pc-linux -gdwarf-5 -gpubnames %s
 // RUN: ld.lld %t.o -o %t --compress-debug-sections=zlib
 // RUN: llvm-readobj --sections %t | FileCheck %s --check-prefix NAMES
 // RUN: lldb-test symbols --find=variable --name=foo %t | FileCheck %s

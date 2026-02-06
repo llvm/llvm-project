@@ -1,0 +1,54 @@
+## Tests the case where we fail to import modules from @import
+## statements that are part of the expression being run.
+#
+# REQUIRES: system-darwin
+#
+# RUN: split-file %s %t/sources
+# RUN: %clang_host -g %t/sources/main.m -fmodules -fcxx-modules \
+# RUN:             -fmodule-map-file=%t/sources/module.modulemap \
+# RUN:             -fmodules-cache-path=%t/ModuleCache -o %t.out
+#
+# RUN: sed -i '' -e 's/foo\.h/baz\.h/' %t/sources/module.modulemap
+#
+# RUN: %lldb -x -o "settings set interpreter.stop-command-source-on-error false" \
+# RUN:       -s %t/sources/commands.input %t.out -o exit 2>&1 | FileCheck %s
+
+#--- main.m
+@import foo;
+@import bar;
+
+int main() { __builtin_debugtrap(); }
+
+#--- foo.h
+struct foo {};
+
+#--- bar.h
+struct bar {};
+
+#--- module.modulemap
+module foo {
+    header "foo.h"
+    export *
+}
+
+module bar {
+    header "bar.h"
+    export *
+}
+
+#--- commands.input
+run
+## Make sure expression fails so the 'note' diagnostics get printed.
+expr @import Foo; @import Bar
+expr @import foo
+
+# CHECK: error: while importing modules:
+# CHECK-NEXT: header search couldn't locate module 'Foo'
+# CHECK-NEXT: header search couldn't locate module 'Bar'
+#
+# CHECK: expr @import foo
+# CHECK: error: while importing modules:
+# CHECK-NEXT: couldn't load top-level module foo
+## No mention of the previous import errors.
+# CHECK-NOT: Foo
+# CHECK-NOT: Bar

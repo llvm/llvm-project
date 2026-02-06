@@ -10,13 +10,6 @@
 
 ; CHECK-ERROR: LLVM ERROR: SEW=64 needs Zvknhb to be enabled.
 
-declare <vscale x 4 x i32> @llvm.riscv.vsha2ms.nxv4i32.nxv4i32(
-  <vscale x 4 x i32>,
-  <vscale x 4 x i32>,
-  <vscale x 4 x i32>,
-  iXLen,
-  iXLen)
-
 define <vscale x 4 x i32> @intrinsic_vsha2ms_vv_nxv4i32_nxv4i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, <vscale x 4 x i32> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsha2ms_vv_nxv4i32_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
@@ -34,13 +27,6 @@ entry:
   ret <vscale x 4 x i32> %a
 }
 
-declare <vscale x 8 x i32> @llvm.riscv.vsha2ms.nxv8i32.nxv8i32(
-  <vscale x 8 x i32>,
-  <vscale x 8 x i32>,
-  <vscale x 8 x i32>,
-  iXLen,
-  iXLen)
-
 define <vscale x 8 x i32> @intrinsic_vsha2ms_vv_nxv8i32_nxv8i32(<vscale x 8 x i32> %0, <vscale x 8 x i32> %1, <vscale x 8 x i32> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsha2ms_vv_nxv8i32_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
@@ -57,13 +43,6 @@ entry:
 
   ret <vscale x 8 x i32> %a
 }
-
-declare <vscale x 16 x i32> @llvm.riscv.vsha2ms.nxv16i32.nxv16i32(
-  <vscale x 16 x i32>,
-  <vscale x 16 x i32>,
-  <vscale x 16 x i32>,
-  iXLen,
-  iXLen)
 
 define <vscale x 16 x i32> @intrinsic_vsha2ms_vv_nxv16i32_nxv16i32(<vscale x 16 x i32> %0, <vscale x 16 x i32> %1, <vscale x 16 x i32> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsha2ms_vv_nxv16i32_nxv16i32:
@@ -83,13 +62,6 @@ entry:
   ret <vscale x 16 x i32> %a
 }
 
-declare <vscale x 4 x i64> @llvm.riscv.vsha2ms.nxv4i64.nxv4i64(
-  <vscale x 4 x i64>,
-  <vscale x 4 x i64>,
-  <vscale x 4 x i64>,
-  iXLen,
-  iXLen)
-
 define <vscale x 4 x i64> @intrinsic_vsha2ms_vv_nxv4i64_nxv4i64(<vscale x 4 x i64> %0, <vscale x 4 x i64> %1, <vscale x 4 x i64> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsha2ms_vv_nxv4i64_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
@@ -106,13 +78,6 @@ entry:
 
   ret <vscale x 4 x i64> %a
 }
-
-declare <vscale x 8 x i64> @llvm.riscv.vsha2ms.nxv8i64.nxv8i64(
-  <vscale x 8 x i64>,
-  <vscale x 8 x i64>,
-  <vscale x 8 x i64>,
-  iXLen,
-  iXLen)
 
 define <vscale x 8 x i64> @intrinsic_vsha2ms_vv_nxv8i64_nxv8i64(<vscale x 8 x i64> %0, <vscale x 8 x i64> %1, <vscale x 8 x i64> %2, iXLen %3) nounwind {
 ; CHECK-LABEL: intrinsic_vsha2ms_vv_nxv8i64_nxv8i64:

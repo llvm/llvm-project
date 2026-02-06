@@ -210,8 +210,8 @@ module {
   }
 
   // CHECK-LABEL: llvm.func @memory_attr
-  // CHECK-SAME: attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite>} {
-  llvm.func @memory_attr() attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite>} {
+  // CHECK-SAME: attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>} {
+  llvm.func @memory_attr() attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>} {
     llvm.return
   }
 
@@ -255,12 +255,6 @@ module {
   // CHECK-LABEL: @frame_pointer_roundtrip()
   // CHECK-SAME: attributes {frame_pointer = #llvm.framePointerKind<"non-leaf">}
   llvm.func @frame_pointer_roundtrip() attributes {frame_pointer = #llvm.framePointerKind<"non-leaf">} {
-    llvm.return
-  }
-
-  llvm.func @unsafe_fp_math_roundtrip() attributes {unsafe_fp_math = true} {
-    // CHECK: @unsafe_fp_math_roundtrip
-    // CHECK-SAME: attributes {unsafe_fp_math = true}
     llvm.return
   }
 
@@ -330,6 +324,77 @@ module {
     llvm.return
   }
 
+  llvm.func @noreturn_function() attributes {noreturn} {
+    // CHECK: @noreturn_function
+    // CHECK-SAME: attributes {noreturn}
+    llvm.return
+  }
+
+  llvm.func @returnstwice_function() attributes {returnstwice} {
+    // CHECK: @returnstwice_function
+    // CHECK-SAME: attributes {returnstwice}
+    llvm.return
+  }
+
+  llvm.func @hot_function() attributes {hot} {
+    // CHECK: @hot_function
+    // CHECK-SAME: attributes {hot}
+    llvm.return
+  }
+
+  llvm.func @cold_function() attributes {cold} {
+    // CHECK: @cold_function
+    // CHECK-SAME: attributes {cold}
+    llvm.return
+  }
+
+  llvm.func @noduplicate_function() attributes {noduplicate} {
+    // CHECK: @noduplicate_function
+    // CHECK-SAME: attributes {noduplicate}
+    llvm.return
+  }
+
+  llvm.func @no_caller_saved_registers_function() attributes {no_caller_saved_registers} {
+    // CHECK: @no_caller_saved_registers_function
+    // CHECK-SAME: attributes {no_caller_saved_registers}
+    llvm.return
+  }
+
+  llvm.func @nocallback_function() attributes {nocallback} {
+    // CHECK: @nocallback_function
+    // CHECK-SAME: attributes {nocallback}
+    llvm.return
+  }
+
+  llvm.func @modular_format_function(%arg: i32) attributes {modular_format = "ident,1,1,foo,bar"} {
+    // CHECK: @modular_format_function
+    // CHECK-SAME: attributes {modular_format = "ident,1,1,foo,bar"}
+    llvm.return
+  }
+
+  llvm.func @no_builtins_all() attributes { nobuiltins = [] } {
+    // CHECK: @no_builtins_all
+    // CHECK-SAME: attributes {nobuiltins = []}
+    llvm.return
+  }
+
+  llvm.func @no_builtins_2() attributes { nobuiltins = ["foo", "bar"] } {
+    // CHECK: @no_builtins_2
+    // CHECK-SAME: attributes {nobuiltins = ["foo", "bar"]}
+    llvm.return
+  }
+
+  llvm.func @alloc_size_one(%arg: i32, %arg2: i32, %arg3: i32, %args4: i32) attributes { allocsize = array<i32: 3>} {
+    // CHECK: @alloc_size_one
+    // CHECK-SAME: attributes {allocsize = array<i32: 3>}
+    llvm.return
+  }
+
+  llvm.func @alloc_size_two(%arg: i32, %arg2: i32, %arg3: i32, %args4: i32) attributes { allocsize = array<i32:3, 1> } {
+    // CHECK: @alloc_size_two
+    // CHECK-SAME: attributes {allocsize = array<i32: 3, 1>}
+    llvm.return
+  }
 
 }
 

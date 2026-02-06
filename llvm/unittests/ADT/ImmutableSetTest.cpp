@@ -164,4 +164,35 @@ TEST_F(ImmutableSetTest, IterLongSetTest) {
   ASSERT_EQ(6, i);
 }
 
+TEST_F(ImmutableSetTest, AddIfNotFoundTest) {
+  ImmutableSet<long>::Factory f(/*canonicalize=*/false);
+  ImmutableSet<long> S = f.getEmptySet();
+  S = f.add(S, 1);
+  S = f.add(S, 2);
+  S = f.add(S, 3);
+
+  ImmutableSet<long> T1 = f.add(S, 1);
+  ImmutableSet<long> T2 = f.add(S, 2);
+  ImmutableSet<long> T3 = f.add(S, 3);
+  EXPECT_EQ(S.getRoot(), T1.getRoot());
+  EXPECT_EQ(S.getRoot(), T2.getRoot());
+  EXPECT_EQ(S.getRoot(), T3.getRoot());
+
+  ImmutableSet<long> U = f.add(S, 4);
+  EXPECT_NE(S.getRoot(), U.getRoot());
 }
+
+TEST_F(ImmutableSetTest, RemoveIfNotFoundTest) {
+  ImmutableSet<long>::Factory f(/*canonicalize=*/false);
+  ImmutableSet<long> S = f.getEmptySet();
+  S = f.add(S, 1);
+  S = f.add(S, 2);
+  S = f.add(S, 3);
+
+  ImmutableSet<long> T = f.remove(S, 4);
+  EXPECT_EQ(S.getRoot(), T.getRoot());
+
+  ImmutableSet<long> U = f.remove(S, 3);
+  EXPECT_NE(S.getRoot(), U.getRoot());
+}
+} // namespace

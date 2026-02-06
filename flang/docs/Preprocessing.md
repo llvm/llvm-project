@@ -1,9 +1,9 @@
-<!--===- docs/Preprocessing.md 
-  
+<!--===- docs/Preprocessing.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Fortran Preprocessing
@@ -163,7 +163,7 @@ The first block of tests (`pp0*.F`) are all fixed-form source files;
 the second block (`pp1*.F90`) are free-form source files.
 
 ```
-f18
+flang
 | pgfortran
 | | ifort
 | | | gfortran

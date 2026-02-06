@@ -158,11 +158,10 @@ class MTBUF_Real <MTBUF_Pseudo ps, string real_name = ps.Mnemonic> :
   bits<1> acc = !if(ps.has_vdata, vdata{9}, 0);
 }
 
-class getMTBUFInsDA<list<RegisterClass> vdataList,
+class getMTBUFInsDA<list<RegisterOperand> vdataList,
                     list<RegisterClass> vaddrList=[], bit hasRestrictedSOffset> {
-  RegisterClass vdataClass = !if(!empty(vdataList), ?, !head(vdataList));
+  RegisterOperand vdata_op = !if(!empty(vdataList), ?, !head(vdataList));
   RegisterClass vaddrClass = !if(!empty(vaddrList), ?, !head(vaddrList));
-  RegisterOperand vdata_op = getLdStRegisterOperand<vdataClass>.ret;
 
   dag SOffset = !if(hasRestrictedSOffset, (ins SReg_32:$soffset),
                                  (ins SCSrc_b32:$soffset));
@@ -178,7 +177,7 @@ class getMTBUFInsDA<list<RegisterClass> vdataList,
                 !con((ins vdata_op:$vdata), Inputs));
 }
 
-class getMTBUFIns<int addrKind, list<RegisterClass> vdataList=[], bit hasRestrictedSOffset> {
+class getMTBUFIns<int addrKind, list<RegisterOperand> vdataList=[], bit hasRestrictedSOffset> {
   dag ret =
     !if(!eq(addrKind, BUFAddrKind.Offset), getMTBUFInsDA<vdataList, [], hasRestrictedSOffset>.ret,
     !if(!eq(addrKind, BUFAddrKind.OffEn),  getMTBUFInsDA<vdataList, [VGPR_32], hasRestrictedSOffset>.ret,
@@ -217,25 +216,23 @@ class MTBUF_SetupAddr<int addrKind> {
 
 class MTBUF_Load_Pseudo <string opName,
                          int addrKind,
-                         RegisterClass vdataClass,
+                         RegisterOperand vdataClass,
                          int elems,
                          bit hasRestrictedSOffset = 0,
-                         list<dag> pattern=[],
-                         // Workaround bug bz30254
-                         int addrKindCopy = addrKind>
+                         list<dag> pattern=[]>
   : MTBUF_Pseudo<opName,
-                 (outs getLdStRegisterOperand<vdataClass>.ret:$vdata),
-                 getMTBUFIns<addrKindCopy, [], hasRestrictedSOffset>.ret,
-                 getMTBUFAsmOps<addrKindCopy>.ret,
+                 (outs vdataClass:$vdata),
+                 getMTBUFIns<addrKind, [], hasRestrictedSOffset>.ret,
+                 getMTBUFAsmOps<addrKind>.ret,
                  pattern>,
-    MTBUF_SetupAddr<addrKindCopy> {
-  let PseudoInstr = opName # "_" # getAddrName<addrKindCopy>.ret;
+    MTBUF_SetupAddr<addrKind> {
+  let PseudoInstr = opName # "_" # getAddrName<addrKind>.ret;
   let mayLoad = 1;
   let mayStore = 0;
   let elements = elems;
 }
 
-multiclass MTBUF_Pseudo_Loads_Helper<string opName, RegisterClass vdataClass,
+multiclass MTBUF_Pseudo_Loads_Helper<string opName, RegisterOperand vdataClass,
                               int elems, bit hasRestrictedSOffset> {
 
   def _OFFSET : MTBUF_Load_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems, hasRestrictedSOffset>,
@@ -256,7 +253,7 @@ multiclass MTBUF_Pseudo_Loads_Helper<string opName, RegisterClass vdataClass,
   }
 }
 
-multiclass MTBUF_Pseudo_Loads<string opName, RegisterClass vdataClass,
+multiclass MTBUF_Pseudo_Loads<string opName, RegisterOperand vdataClass,
                               int elems> {
   defm NAME : MTBUF_Pseudo_Loads_Helper<opName, vdataClass, elems, 0>;
   defm _VBUFFER : MTBUF_Pseudo_Loads_Helper<opName, vdataClass, elems, 1>;
@@ -264,26 +261,23 @@ multiclass MTBUF_Pseudo_Loads<string opName, RegisterClass vdataClass,
 
 class MTBUF_Store_Pseudo <string opName,
                           int addrKind,
-                          RegisterClass vdataClass,
+                          RegisterOperand vdataClass,
                           int elems,
                           bit hasRestrictedSOffset = 0,
-                          list<dag> pattern=[],
-                          // Workaround bug bz30254
-                          int addrKindCopy = addrKind,
-                          RegisterClass vdataClassCopy = vdataClass>
+                          list<dag> pattern=[]>
   : MTBUF_Pseudo<opName,
                  (outs),
-                 getMTBUFIns<addrKindCopy, [vdataClassCopy], hasRestrictedSOffset>.ret,
-                 getMTBUFAsmOps<addrKindCopy>.ret,
+                 getMTBUFIns<addrKind, [vdataClass], hasRestrictedSOffset>.ret,
+                 getMTBUFAsmOps<addrKind>.ret,
                  pattern>,
-    MTBUF_SetupAddr<addrKindCopy> {
-  let PseudoInstr = opName # "_" # getAddrName<addrKindCopy>.ret;
+    MTBUF_SetupAddr<addrKind> {
+  let PseudoInstr = opName # "_" # getAddrName<addrKind>.ret;
   let mayLoad = 0;
   let mayStore = 1;
   let elements = elems;
 }
 
-multiclass MTBUF_Pseudo_Stores_Helper<string opName, RegisterClass vdataClass,
+multiclass MTBUF_Pseudo_Stores_Helper<string opName, RegisterOperand vdataClass,
                                int elems, bit hasRestrictedSOffset> {
 
   def _OFFSET : MTBUF_Store_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems, hasRestrictedSOffset>,
@@ -304,7 +298,7 @@ multiclass MTBUF_Pseudo_Stores_Helper<string opName, RegisterClass vdataClass,
   }
 }
 
-multiclass MTBUF_Pseudo_Stores<string opName, RegisterClass vdataClass,
+multiclass MTBUF_Pseudo_Stores<string opName, RegisterOperand vdataClass,
                                int elems> {
   defm NAME : MTBUF_Pseudo_Stores_Helper<opName, vdataClass, elems, 0>;
   defm _VBUFFER : MTBUF_Pseudo_Stores_Helper<opName, vdataClass, elems, 1>;
@@ -399,21 +393,34 @@ class MUBUF_Invalidate <string opName, SDPatternOperator node = null_frag> :
   let sccb_value  = 0;
 }
 
-class getLdStVDataRegisterOperand<RegisterClass RC, bit isTFE> {
-  RegisterOperand tfeVDataOp =
-    !cond(!eq(RC.Size, 32)  : AVLdSt_64,
-          !eq(RC.Size, 64)  : AVLdSt_96,
-          !eq(RC.Size, 96)  : AVLdSt_128,
-          !eq(RC.Size, 128) : AVLdSt_160);
+class getBUFVDataRegisterOperand<int Size, bit isTFE, bit isTrue16 = false> {
+  defvar tfeVDataOp =
+    !cond(!eq(Size, 16)  : AVLdSt_64,
+          !eq(Size, 32)  : AVLdSt_64,
+          !eq(Size, 64)  : AVLdSt_96,
+          !eq(Size, 96)  : AVLdSt_128,
+          !eq(Size, 128) : AVLdSt_160);
 
-  RegisterOperand ret = !if(isTFE, tfeVDataOp, getLdStRegisterOperand<RC>.ret);
+  defvar VDataOp =
+    !cond(!eq(Size, 16)   : !if(isTrue16, VGPROp_16, AVLdSt_32),
+          !eq(Size, 32)   : AVLdSt_32,
+          !eq(Size, 64)   : AVLdSt_64,
+          !eq(Size, 96)   : AVLdSt_96,
+          !eq(Size, 128)  : AVLdSt_128);
+
+  RegisterOperand ret = !if(isTFE, tfeVDataOp, VDataOp);
 }
 
-class getMUBUFInsDA<list<RegisterClass> vdataList,
-                    list<RegisterClass> vaddrList, bit isTFE, bit hasRestrictedSOffset> {
-  RegisterClass vdataClass = !if(!empty(vdataList), ?, !head(vdataList));
-  RegisterClass vaddrClass = !if(!empty(vaddrList), ?, !head(vaddrList));
-  RegisterOperand vdata_op = getLdStVDataRegisterOperand<vdataClass, isTFE>.ret;
+class getBUFVDataRegisterOperandForOp<RegisterOperand Op, bit isTFE> {
+  defvar Size = !cast<RegisterClass>(Op.RegClass).Size;
+  RegisterOperand ret = getBUFVDataRegisterOperand<Size, isTFE>.ret;
+}
+
+class getMUBUFInsDA<list<RegisterOperand> vdataList,
+                    list<RegisterClassLike> vaddrList, bit isTFE, bit hasRestrictedSOffset, bit isTrue16 = false> {
+  RegisterOperand vdataClass = !if(!empty(vdataList), ?, !head(vdataList));
+  RegisterClassLike vaddrClass = !if(!empty(vaddrList), ?, !head(vaddrList));
+  RegisterOperand vdata_op = getBUFVDataRegisterOperand<!cast<SIRegisterClassLike>(vdataClass.RegClass).Size, isTFE, isTrue16>.ret;
 
   dag SOffset = !if(hasRestrictedSOffset, (ins SReg_32:$soffset), (ins SCSrc_b32:$soffset));
   dag NonVaddrInputs = !con((ins SReg_128_XNULL:$srsrc), SOffset, (ins Offset:$offset, CPol_0:$cpol, i1imm_0:$swz));
@@ -441,13 +448,13 @@ class getMUBUFElements<ValueType vt> {
     );
 }
 
-class getMUBUFIns<int addrKind, list<RegisterClass> vdataList, bit isTFE, bit hasRestrictedSOffset> {
+class getMUBUFIns<int addrKind, list<RegisterOperand> vdataList, bit isTFE, bit hasRestrictedSOffset, bit isTrue16 = false> {
   dag ret =
-    !if(!eq(addrKind, BUFAddrKind.Offset), getMUBUFInsDA<vdataList, [], isTFE, hasRestrictedSOffset>.ret,
-    !if(!eq(addrKind, BUFAddrKind.OffEn),  getMUBUFInsDA<vdataList, [VGPR_32], isTFE, hasRestrictedSOffset>.ret,
-    !if(!eq(addrKind, BUFAddrKind.IdxEn),  getMUBUFInsDA<vdataList, [VGPR_32], isTFE, hasRestrictedSOffset>.ret,
-    !if(!eq(addrKind, BUFAddrKind.BothEn), getMUBUFInsDA<vdataList, [VReg_64], isTFE, hasRestrictedSOffset>.ret,
-    !if(!eq(addrKind, BUFAddrKind.Addr64), getMUBUFInsDA<vdataList, [VReg_64], isTFE, hasRestrictedSOffset>.ret,
+    !if(!eq(addrKind, BUFAddrKind.Offset), getMUBUFInsDA<vdataList, [], isTFE, hasRestrictedSOffset, isTrue16>.ret,
+    !if(!eq(addrKind, BUFAddrKind.OffEn),  getMUBUFInsDA<vdataList, [VGPR_32], isTFE, hasRestrictedSOffset, isTrue16>.ret,
+    !if(!eq(addrKind, BUFAddrKind.IdxEn),  getMUBUFInsDA<vdataList, [VGPR_32], isTFE, hasRestrictedSOffset, isTrue16>.ret,
+    !if(!eq(addrKind, BUFAddrKind.BothEn), getMUBUFInsDA<vdataList, [VReg_64_AlignTarget], isTFE, hasRestrictedSOffset, isTrue16>.ret,
+    !if(!eq(addrKind, BUFAddrKind.Addr64), getMUBUFInsDA<vdataList, [VReg_64_AlignTarget], isTFE, hasRestrictedSOffset, isTrue16>.ret,
     (ins))))));
 }
 
@@ -489,23 +496,20 @@ class MUBUF_Load_Pseudo <string opName,
                          bit isTFE = 0,
                          bit hasRestrictedSOffset = 0,
                          list<dag> pattern=[],
-                         // Workaround bug bz30254
-                         int addrKindCopy = addrKind,
-                         RegisterClass vdata_rc = getVregSrcForVT<vdata_vt>.ret.RegClass,
-                         RegisterOperand vdata_op = getLdStVDataRegisterOperand<vdata_rc, isTFE>.ret>
+                         RegisterOperand vdata_op = getBUFVDataRegisterOperand<vdata_vt.Size, isTFE>.ret>
   : MUBUF_Pseudo<opName,
                  !if(!or(isLds, isLdsOpc), (outs), (outs vdata_op:$vdata)),
-                 !con(getMUBUFIns<addrKindCopy, [], isTFE, hasRestrictedSOffset>.ret,
+                 !con(getMUBUFIns<addrKind, [], isTFE, hasRestrictedSOffset>.ret,
                       !if(HasTiedDest, (ins vdata_op:$vdata_in), (ins))),
-                 getMUBUFAsmOps<addrKindCopy, !or(isLds, isLdsOpc), isLds, isTFE>.ret,
+                 getMUBUFAsmOps<addrKind, !or(isLds, isLdsOpc), isLds, isTFE>.ret,
                  pattern>,
-    MUBUF_SetupAddr<addrKindCopy> {
+    MUBUF_SetupAddr<addrKind> {
   let PseudoInstr = opName # !if(isLds, "_lds", "") # !if(isTFE, "_tfe", "") #
-                    "_" # getAddrName<addrKindCopy>.ret;
+                    "_" # getAddrName<addrKind>.ret;
   let AsmMatchConverter = "cvtMubuf";
 
   let Constraints = !if(HasTiedDest, "$vdata = $vdata_in", "");
-  let LGKM_CNT = isLds;
+  let LGKM_CNT = 0;
   let has_vdata = !not(!or(isLds, isLdsOpc));
   let mayLoad = 1;
   let mayStore = isLds;
@@ -562,11 +566,55 @@ multiclass MUBUF_Pseudo_Loads_Helper<string opName, ValueType load_vt,
   }
 }
 
+multiclass MUBUF_Pseudo_Loads_Helper_t16<string opName, string Hi16Name, string Lo16Name, ValueType load_vt,
+                                     bit TiedDest, bit isLds, bit isTFE, bit hasRestrictedSOffset> {
+  def _OFFSET : MUBUF_Load_Pseudo <opName, BUFAddrKind.Offset, load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, [], VGPROp_16>,
+    MUBUFAddr64Table<0, NAME # !if(isLds, "_LDS", "")>, True16D16Table<Hi16Name#"_OFFSET", Lo16Name#"_OFFSET">;
+
+  def _ADDR64 : MUBUF_Load_Pseudo <opName, BUFAddrKind.Addr64, load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, [], VGPROp_16>,
+    MUBUFAddr64Table<1, NAME # !if(isLds, "_LDS", "")>, True16D16Table<Hi16Name#"_ADDR64", Lo16Name#"_ADDR64">;
+
+  def _OFFEN  : MUBUF_Load_Pseudo <opName, BUFAddrKind.OffEn, load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, [], VGPROp_16>,
+    True16D16Table<Hi16Name#"_OFFEN", Lo16Name#"_OFFEN">;
+  def _IDXEN  : MUBUF_Load_Pseudo <opName, BUFAddrKind.IdxEn, load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, [], VGPROp_16>,
+    True16D16Table<Hi16Name#"_IDXEN", Lo16Name#"_IDXEN">;
+  def _BOTHEN : MUBUF_Load_Pseudo <opName, BUFAddrKind.BothEn, load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, [], VGPROp_16>,
+    True16D16Table<Hi16Name#"_BOTHEN", Lo16Name#"_BOTHEN">;
+
+  let DisableWQM = 1 in {
+    def _OFFSET_exact : MUBUF_Load_Pseudo <opName, BUFAddrKind.Offset, load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, [], VGPROp_16>,
+      True16D16Table<Hi16Name#"_OFFSET_exact", Lo16Name#"_OFFSET_exact">;
+    def _OFFEN_exact  : MUBUF_Load_Pseudo <opName, BUFAddrKind.OffEn, load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, [], VGPROp_16>,
+      True16D16Table<Hi16Name#"_OFFEN_exact", Lo16Name#"_OFFEN_exact">;
+    def _IDXEN_exact  : MUBUF_Load_Pseudo <opName, BUFAddrKind.IdxEn, load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, [], VGPROp_16>,
+      True16D16Table<Hi16Name#"_IDXEN_exact", Lo16Name#"_IDXEN_exact">;
+    def _BOTHEN_exact : MUBUF_Load_Pseudo <opName, BUFAddrKind.BothEn, load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, [], VGPROp_16>,
+      True16D16Table<Hi16Name#"_BOTHEN_exact", Lo16Name#"_BOTHEN_exact">;
+  }
+}
+
 multiclass MUBUF_Pseudo_Loads<string opName, ValueType load_vt = i32,
                               bit TiedDest = 0, bit isLds = 0> {
   defm NAME : MUBUF_Pseudo_Loads_Helper<opName, load_vt, TiedDest, isLds, 0, 0>;
   defm _VBUFFER : MUBUF_Pseudo_Loads_Helper<opName, load_vt, TiedDest, isLds, 0, 1>;
 
+  if !not(isLds) then {
+    defm _TFE : MUBUF_Pseudo_Loads_Helper<opName, load_vt, TiedDest, isLds, 1, 0>;
+    defm _TFE_VBUFFER : MUBUF_Pseudo_Loads_Helper<opName, load_vt, TiedDest, isLds, 1, 1>;
+  }
+}
+
+multiclass MUBUF_Pseudo_Loads_t16<string opName, ValueType load_vt = i32,
+                                  bit TiedDest = 0, bit isLds = 0, string hiOpName = NAME#"_HI"> {
+  let True16Predicate = NotUseRealTrue16Insts in {
+    defm NAME : MUBUF_Pseudo_Loads_Helper<opName, load_vt, TiedDest, isLds, 0, 0>;
+    defm _VBUFFER : MUBUF_Pseudo_Loads_Helper<opName, load_vt, TiedDest, isLds, 0, 1>;
+  }
+  let True16Predicate = UseRealTrue16Insts in {
+    defvar NAME16 = opName#"_t16";
+    defm _t16 : MUBUF_Pseudo_Loads_Helper_t16<NAME16, hiOpName, NAME, i16, 0, isLds, 0, 0>;
+    defm _t16_VBUFFER : MUBUF_Pseudo_Loads_Helper_t16<NAME16, hiOpName#"_VBUFFER", NAME#"_VBUFFER", i16, 0, isLds, 0, 1>;
+  }
   if !not(isLds) then {
     defm _TFE : MUBUF_Pseudo_Loads_Helper<opName, load_vt, TiedDest, isLds, 1, 0>;
     defm _TFE_VBUFFER : MUBUF_Pseudo_Loads_Helper<opName, load_vt, TiedDest, isLds, 1, 1>;
@@ -592,16 +640,15 @@ class MUBUF_Store_Pseudo <string opName,
                           bit isTFE = 0,
                           bit hasRestrictedSOffset = 0,
                           list<dag> pattern=[],
-                          // Workaround bug bz30254
-                          int addrKindCopy = addrKind>
+                          bit isTrue16 = false>
   : MUBUF_Pseudo<opName,
                  (outs),
-                 getMUBUFIns<addrKindCopy, [getVregSrcForVT<store_vt>.ret.RegClass], isTFE, hasRestrictedSOffset>.ret,
-                 getMUBUFAsmOps<addrKindCopy, 0, 0, isTFE>.ret,
+                 getMUBUFIns<addrKind, [getVregSrcForVT<store_vt, isTrue16, 0>.ret], isTFE, hasRestrictedSOffset, isTrue16>.ret,
+                 getMUBUFAsmOps<addrKind, 0, 0, isTFE>.ret,
                  pattern>,
-    MUBUF_SetupAddr<addrKindCopy> {
+    MUBUF_SetupAddr<addrKind> {
   let PseudoInstr = opName # "_" # !if(isTFE, "_tfe", "") #
-                    getAddrName<addrKindCopy>.ret;
+                    getAddrName<addrKind>.ret;
   let mayLoad = 0;
   let mayStore = 1;
   let elements = getMUBUFElements<store_vt>.ret;
@@ -648,12 +695,55 @@ multiclass MUBUF_Pseudo_Stores_Helper<string opName, ValueType store_vt,
   }
 }
 
+multiclass MUBUF_Pseudo_Stores_Helper_t16<string opName, string Hi16Name, string Lo16Name, ValueType store_vt,
+                                          bit isTFE, bit hasRestrictedSOffset> {
+  def _OFFSET : MUBUF_Store_Pseudo <opName, BUFAddrKind.Offset, store_vt, isTFE, hasRestrictedSOffset, [], 1/*isTrue16*/>,
+    MUBUFAddr64Table<0, NAME>, True16D16Table<Hi16Name#"_OFFSET", Lo16Name#"_OFFSET">;
+
+  def _ADDR64 : MUBUF_Store_Pseudo <opName, BUFAddrKind.Addr64, store_vt, isTFE, hasRestrictedSOffset, [], 1/*isTrue16*/>,
+    MUBUFAddr64Table<1, NAME>, True16D16Table<Hi16Name#"_ADDR64", Lo16Name#"_ADDR64">;
+
+  def _OFFEN  : MUBUF_Store_Pseudo <opName, BUFAddrKind.OffEn, store_vt, isTFE, hasRestrictedSOffset, [], 1/*isTrue16*/>,
+    True16D16Table<Hi16Name#"_OFFEN", Lo16Name#"_OFFEN">;
+  def _IDXEN  : MUBUF_Store_Pseudo <opName, BUFAddrKind.IdxEn, store_vt, isTFE, hasRestrictedSOffset, [], 1/*isTrue16*/>,
+    True16D16Table<Hi16Name#"_IDXEN", Lo16Name#"_IDXEN">;
+  def _BOTHEN : MUBUF_Store_Pseudo <opName, BUFAddrKind.BothEn, store_vt, isTFE, hasRestrictedSOffset, [], 1/*isTrue16*/>,
+    True16D16Table<Hi16Name#"_BOTHEN", Lo16Name#"_BOTHEN">;
+
+  let DisableWQM = 1 in {
+    def _OFFSET_exact : MUBUF_Store_Pseudo <opName, BUFAddrKind.Offset, store_vt, isTFE, hasRestrictedSOffset, [], 1/*isTrue16*/>,
+      True16D16Table<Hi16Name#"_OFFSET_exact", Lo16Name#"_OFFSET_exact">;
+    def _OFFEN_exact  : MUBUF_Store_Pseudo <opName, BUFAddrKind.OffEn, store_vt, isTFE, hasRestrictedSOffset, [], 1/*isTrue16*/>,
+      True16D16Table<Hi16Name#"_OFFEN_exact", Lo16Name#"_OFFEN_exact">;
+    def _IDXEN_exact  : MUBUF_Store_Pseudo <opName, BUFAddrKind.IdxEn, store_vt, isTFE, hasRestrictedSOffset, [], 1/*isTrue16*/>,
+      True16D16Table<Hi16Name#"_IDXEN_exact", Lo16Name#"_IDXEN_exact">;
+    def _BOTHEN_exact : MUBUF_Store_Pseudo <opName, BUFAddrKind.BothEn, store_vt, isTFE, hasRestrictedSOffset, [], 1/*isTrue16*/>,
+      True16D16Table<Hi16Name#"_BOTHEN_exact", Lo16Name#"_BOTHEN_exact">;
+  }
+}
+
 multiclass MUBUF_Pseudo_Stores<string opName, ValueType store_vt = i32> {
   defm NAME : MUBUF_Pseudo_Stores_Helper<opName, store_vt, 0, 0>;
   defm _TFE : MUBUF_Pseudo_Stores_Helper<opName, store_vt, 1, 0>;
 
   defm _VBUFFER : MUBUF_Pseudo_Stores_Helper<opName, store_vt, 0, 1>;
   defm _TFE_VBUFFER : MUBUF_Pseudo_Stores_Helper<opName, store_vt, 1, 1>;
+}
+
+multiclass MUBUF_Pseudo_Stores_t16<string opName, ValueType store_vt = i32> {
+  defm _TFE : MUBUF_Pseudo_Stores_Helper<opName, store_vt, 1, 0>;
+  defm _TFE_VBUFFER : MUBUF_Pseudo_Stores_Helper<opName, store_vt, 1, 1>;
+
+  let True16Predicate = NotUseRealTrue16Insts in {
+    defm NAME : MUBUF_Pseudo_Stores_Helper<opName, store_vt, 0, 0>;
+
+    defm _VBUFFER : MUBUF_Pseudo_Stores_Helper<opName, store_vt, 0, 1>;
+  }
+  let True16Predicate = UseRealTrue16Insts, SubtargetPredicate = HasD16LoadStore in {
+    defvar NAME16 = opName#"_t16";
+    defm _t16 : MUBUF_Pseudo_Stores_Helper_t16<NAME16, NAME#"_D16_HI", NAME, i16, 0, 0>;
+    defm _t16_VBUFFER : MUBUF_Pseudo_Stores_Helper_t16<NAME16, NAME#"_D16_HI_VBUFFER", NAME#"_VBUFFER", i16, 0, 1>;
+  }
 }
 
 class MUBUF_Pseudo_Store_Lds<string opName>
@@ -674,10 +764,9 @@ class MUBUF_Pseudo_Store_Lds<string opName>
   let AsmMatchConverter = "cvtMubuf";
 }
 
-class getMUBUFAtomicInsDA<RegisterClass vdataClass, bit vdata_in, bit hasRestrictedSOffset,
-                          list<RegisterClass> vaddrList=[]> {
-  RegisterClass vaddrClass = !if(!empty(vaddrList), ?, !head(vaddrList));
-  RegisterOperand vdata_op = getLdStRegisterOperand<vdataClass>.ret;
+class getMUBUFAtomicInsDA<RegisterOperand vdata_op, bit vdata_in, bit hasRestrictedSOffset,
+                          list<RegisterClassLike> vaddrList=[]> {
+  RegisterClassLike vaddrClass = !if(!empty(vaddrList), ?, !head(vaddrList));
 
   dag VData = !if(vdata_in, (ins vdata_op:$vdata_in), (ins vdata_op:$vdata));
   dag Data = !if(!empty(vaddrList), VData, !con(VData, (ins vaddrClass:$vaddr)));
@@ -690,22 +779,20 @@ class getMUBUFAtomicInsDA<RegisterClass vdataClass, bit vdata_in, bit hasRestric
 }
 
 class getMUBUFAtomicIns<int addrKind,
-                        RegisterClass vdataClass,
+                        RegisterOperand vdataClass,
                         bit vdata_in,
-                        bit hasRestrictedSOffset,
-                        // Workaround bug bz30254
-                        RegisterClass vdataClassCopy=vdataClass> {
+                        bit hasRestrictedSOffset> {
   dag ret =
     !if(!eq(addrKind, BUFAddrKind.Offset),
-            getMUBUFAtomicInsDA<vdataClassCopy, vdata_in, hasRestrictedSOffset>.ret,
+            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset>.ret,
     !if(!eq(addrKind, BUFAddrKind.OffEn),
-            getMUBUFAtomicInsDA<vdataClassCopy, vdata_in, hasRestrictedSOffset, [VGPR_32]>.ret,
+            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset, [VGPR_32]>.ret,
     !if(!eq(addrKind, BUFAddrKind.IdxEn),
-            getMUBUFAtomicInsDA<vdataClassCopy, vdata_in, hasRestrictedSOffset, [VGPR_32]>.ret,
+            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset, [VGPR_32]>.ret,
     !if(!eq(addrKind, BUFAddrKind.BothEn),
-            getMUBUFAtomicInsDA<vdataClassCopy, vdata_in, hasRestrictedSOffset, [VReg_64]>.ret,
+            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset, [VReg_64_AlignTarget]>.ret,
     !if(!eq(addrKind, BUFAddrKind.Addr64),
-            getMUBUFAtomicInsDA<vdataClassCopy, vdata_in, hasRestrictedSOffset, [VReg_64]>.ret,
+            getMUBUFAtomicInsDA<vdataClass, vdata_in, hasRestrictedSOffset, [VReg_64_AlignTarget]>.ret,
     (ins))))));
 }
 
@@ -714,11 +801,9 @@ class MUBUF_Atomic_Pseudo<string opName,
                           dag outs,
                           dag ins,
                           string asmOps,
-                          list<dag> pattern=[],
-                          // Workaround bug bz30254
-                          int addrKindCopy = addrKind>
+                          list<dag> pattern=[]>
   : MUBUF_Pseudo<opName, outs, ins, asmOps, pattern>,
-    MUBUF_SetupAddr<addrKindCopy> {
+    MUBUF_SetupAddr<addrKind> {
   let mayStore = 1;
   let mayLoad = 1;
   let hasSideEffects = 1;
@@ -730,18 +815,15 @@ class MUBUF_Atomic_Pseudo<string opName,
 }
 
 class MUBUF_AtomicNoRet_Pseudo<string opName, int addrKind,
-                               RegisterClass vdataClass,
+                               RegisterOperand vdataClass,
                                bit hasRestrictedSOffset = 0,
-                               list<dag> pattern=[],
-                               // Workaround bug bz30254
-                               int addrKindCopy = addrKind,
-                               RegisterClass vdataClassCopy = vdataClass>
-  : MUBUF_Atomic_Pseudo<opName, addrKindCopy,
+                               list<dag> pattern=[]>
+  : MUBUF_Atomic_Pseudo<opName, addrKind,
                         (outs),
-                        getMUBUFAtomicIns<addrKindCopy, vdataClassCopy, 0, hasRestrictedSOffset>.ret,
-                        getMUBUFAsmOps<addrKindCopy>.ret,
+                        getMUBUFAtomicIns<addrKind, vdataClass, 0, hasRestrictedSOffset>.ret,
+                        getMUBUFAsmOps<addrKind>.ret,
                         pattern> {
-  let PseudoInstr = opName # "_" # getAddrName<addrKindCopy>.ret;
+  let PseudoInstr = opName # "_" # getAddrName<addrKind>.ret;
   let glc_value = 0;
   let dlc_value = 0;
   let sccb_value = 0;
@@ -749,19 +831,15 @@ class MUBUF_AtomicNoRet_Pseudo<string opName, int addrKind,
 }
 
 class MUBUF_AtomicRet_Pseudo<string opName, int addrKind,
-                             RegisterClass vdataClass,
+                             RegisterOperand vdata_op,
                              bit hasRestrictedSOffset = 0,
-                             list<dag> pattern=[],
-                             // Workaround bug bz30254
-                             int addrKindCopy = addrKind,
-                             RegisterClass vdataClassCopy = vdataClass,
-                             RegisterOperand vdata_op = getLdStRegisterOperand<vdataClass>.ret>
-  : MUBUF_Atomic_Pseudo<opName, addrKindCopy,
+                             list<dag> pattern=[]>
+  : MUBUF_Atomic_Pseudo<opName, addrKind,
                         (outs vdata_op:$vdata),
-                        getMUBUFAtomicIns<addrKindCopy, vdataClassCopy, 1, hasRestrictedSOffset>.ret,
-                        getMUBUFAsmOps<addrKindCopy>.ret,
+                        getMUBUFAtomicIns<addrKind, vdata_op, 1, hasRestrictedSOffset>.ret,
+                        getMUBUFAsmOps<addrKind>.ret,
                         pattern> {
-  let PseudoInstr = opName # "_rtn_" # getAddrName<addrKindCopy>.ret;
+  let PseudoInstr = opName # "_rtn_" # getAddrName<addrKind>.ret;
   let glc_value = 1;
   let dlc_value = 0;
   let sccb_value = 0;
@@ -770,7 +848,7 @@ class MUBUF_AtomicRet_Pseudo<string opName, int addrKind,
 }
 
 multiclass MUBUF_Pseudo_Atomics_NO_RTN <string opName,
-                                        RegisterClass vdataClass,
+                                        RegisterOperand vdataClass,
                                         ValueType vdataType> {
   let FPAtomic = vdataType.isFP in {
     def _OFFSET : MUBUF_AtomicNoRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0>,
@@ -792,38 +870,21 @@ multiclass MUBUF_Pseudo_Atomics_NO_RTN <string opName,
 }
 
 multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
-                                     RegisterClass vdataClass,
-                                     ValueType vdataType,
-                                     SDPatternOperator atomic> {
+                                     RegisterOperand vdataClass,
+                                     ValueType vdataType> {
   let FPAtomic = vdataType.isFP in {
-    def _OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0,
-      [(set vdataType:$vdata,
-       (atomic (MUBUFOffset v4i32:$srsrc, i32:$soffset, i32:$offset),
-               vdataType:$vdata_in))]>,
-      MUBUFAddr64Table <0, NAME # "_RTN">;
-
-    def _ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, 0,
-      [(set vdataType:$vdata,
-       (atomic (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i32:$offset),
-                vdataType:$vdata_in))]>,
-      MUBUFAddr64Table <1, NAME # "_RTN">;
-
+    def _OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Offset, vdataClass, 0>,
+                      MUBUFAddr64Table <0, NAME # "_RTN">;
+    def _ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.Addr64, vdataClass, 0>,
+                      MUBUFAddr64Table <1, NAME # "_RTN">;
     def _OFFEN_RTN  : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.OffEn,  vdataClass, 0>;
     def _IDXEN_RTN  : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.IdxEn,  vdataClass, 0>;
     def _BOTHEN_RTN : MUBUF_AtomicRet_Pseudo <opName, BUFAddrKind.BothEn, vdataClass, 0>;
 
-    def _VBUFFER_OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Offset, vdataClass, 1,
-      [(set vdataType:$vdata,
-       (atomic (MUBUFOffset v4i32:$srsrc, i32:$soffset, i32:$offset),
-               vdataType:$vdata_in))]>,
-      MUBUFAddr64Table <0, NAME # "_VBUFFER_RTN">;
-
-    def _VBUFFER_ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Addr64, vdataClass, 1,
-      [(set vdataType:$vdata,
-       (atomic (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i32:$offset),
-                vdataType:$vdata_in))]>,
-      MUBUFAddr64Table <1, NAME # "_VBUFFER_RTN">;
-
+    def _VBUFFER_OFFSET_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Offset, vdataClass, 1>,
+                      MUBUFAddr64Table <0, NAME # "_VBUFFER_RTN">;
+    def _VBUFFER_ADDR64_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.Addr64, vdataClass, 1>,
+                      MUBUFAddr64Table <1, NAME # "_VBUFFER_RTN">;
     def _VBUFFER_OFFEN_RTN  : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.OffEn,  vdataClass, 1>;
     def _VBUFFER_IDXEN_RTN  : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.IdxEn,  vdataClass, 1>;
     def _VBUFFER_BOTHEN_RTN : MUBUF_AtomicRet_Pseudo <opName #_vbuffer, BUFAddrKind.BothEn, vdataClass, 1>;
@@ -831,11 +892,10 @@ multiclass MUBUF_Pseudo_Atomics_RTN <string opName,
 }
 
 multiclass MUBUF_Pseudo_Atomics <string opName,
-                                 RegisterClass vdataClass,
-                                 ValueType vdataType,
-                                 SDPatternOperator atomic = null_frag> :
+                                 RegisterOperand vdataClass,
+                                 ValueType vdataType> :
   MUBUF_Pseudo_Atomics_NO_RTN<opName, vdataClass, vdataType>,
-  MUBUF_Pseudo_Atomics_RTN<opName, vdataClass, vdataType, atomic>;
+  MUBUF_Pseudo_Atomics_RTN<opName, vdataClass, vdataType>;
 
 
 //===----------------------------------------------------------------------===//
@@ -899,10 +959,16 @@ let TiedSourceNotRead = 1 in {
   >;
 } // End OtherPredicates = [HasUnpackedD16VMem], D16Buf = 1.
 
+
+let TiedSourceNotRead = 1, SubtargetPredicate = HasD16LoadStore, OtherPredicates = [HasFormattedMUBUFInsts] in
+defm BUFFER_LOAD_FORMAT_D16_HI_X : MUBUF_Pseudo_Loads <
+  "buffer_load_format_d16_hi_x", i32
+>;
+
 let OtherPredicates = [HasPackedD16VMem], D16Buf = 1 in {
 let TiedSourceNotRead = 1 in {
-  defm BUFFER_LOAD_FORMAT_D16_X : MUBUF_Pseudo_Loads <
-    "buffer_load_format_d16_x", f16
+  defm BUFFER_LOAD_FORMAT_D16_X : MUBUF_Pseudo_Loads_t16 <
+    "buffer_load_format_d16_x", f16, 0, 0, "BUFFER_LOAD_FORMAT_D16_HI_X"
   >;
   defm BUFFER_LOAD_FORMAT_D16_XY : MUBUF_Pseudo_Loads <
     "buffer_load_format_d16_xy", v2f16
@@ -958,9 +1024,6 @@ defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, atomic_load_aext_8_globa
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, atomic_load_zext_8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i32, atomic_load_aext_16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i32, atomic_load_zext_16_global>;
-defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i16, atomic_load_aext_8_global>;
-defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i16, atomic_load_zext_8_global>;
-defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i16, atomic_load_nonext_16_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, extloadi8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i32, zextloadi8_global>;
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SBYTE", i32, sextloadi8_global>;
@@ -987,12 +1050,23 @@ foreach vt = VReg_128.RegTypes in {
 defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_DWORDX4", vt, load_global>;
 }
 
-defm BUFFER_STORE_BYTE : MUBUF_Pseudo_Stores <
+let SubtargetPredicate = HasD16LoadStore in {
+defm BUFFER_STORE_BYTE_D16_HI : MUBUF_Pseudo_Stores <
+  "buffer_store_byte_d16_hi", i32
+>;
+
+defm BUFFER_STORE_SHORT_D16_HI : MUBUF_Pseudo_Stores <
+  "buffer_store_short_d16_hi", i32
+>;
+}
+
+defm BUFFER_STORE_BYTE : MUBUF_Pseudo_Stores_t16 <
   "buffer_store_byte", i32
 >;
-defm BUFFER_STORE_SHORT : MUBUF_Pseudo_Stores <
+defm BUFFER_STORE_SHORT : MUBUF_Pseudo_Stores_t16 <
   "buffer_store_short", i32
 >;
+
 defm BUFFER_STORE_DWORD : MUBUF_Pseudo_Stores <
   "buffer_store_dword", i32
 >;
@@ -1026,87 +1100,87 @@ defm : MUBUF_Pseudo_Store_Pats<"BUFFER_STORE_DWORDX4", vt, store_global>;
 }
 
 defm BUFFER_ATOMIC_SWAP : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_swap", VGPR_32, i32
+  "buffer_atomic_swap", AVLdSt_32, i32
 >;
 defm BUFFER_ATOMIC_CMPSWAP : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_cmpswap", VReg_64, v2i32
+  "buffer_atomic_cmpswap", AVLdSt_64, v2i32
 >;
 defm BUFFER_ATOMIC_ADD : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_add", VGPR_32, i32
+  "buffer_atomic_add", AVLdSt_32, i32
 >;
 defm BUFFER_ATOMIC_SUB : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_sub", VGPR_32, i32
+  "buffer_atomic_sub", AVLdSt_32, i32
 >;
 defm BUFFER_ATOMIC_SMIN : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_smin", VGPR_32, i32
+  "buffer_atomic_smin", AVLdSt_32, i32
 >;
 defm BUFFER_ATOMIC_UMIN : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_umin", VGPR_32, i32
+  "buffer_atomic_umin", AVLdSt_32, i32
 >;
 defm BUFFER_ATOMIC_SMAX : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_smax", VGPR_32, i32
+  "buffer_atomic_smax", AVLdSt_32, i32
 >;
 defm BUFFER_ATOMIC_UMAX : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_umax", VGPR_32, i32
+  "buffer_atomic_umax", AVLdSt_32, i32
 >;
 defm BUFFER_ATOMIC_AND : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_and", VGPR_32, i32
+  "buffer_atomic_and", AVLdSt_32, i32
 >;
 defm BUFFER_ATOMIC_OR : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_or", VGPR_32, i32
+  "buffer_atomic_or", AVLdSt_32, i32
 >;
 defm BUFFER_ATOMIC_XOR : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_xor", VGPR_32, i32
+  "buffer_atomic_xor", AVLdSt_32, i32
 >;
 defm BUFFER_ATOMIC_INC : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_inc", VGPR_32, i32
+  "buffer_atomic_inc", AVLdSt_32, i32
 >;
 defm BUFFER_ATOMIC_DEC : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_dec", VGPR_32, i32
+  "buffer_atomic_dec", AVLdSt_32, i32
 >;
 defm BUFFER_ATOMIC_SWAP_X2 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_swap_x2", VReg_64, i64
+  "buffer_atomic_swap_x2", AVLdSt_64, i64
 >;
 defm BUFFER_ATOMIC_CMPSWAP_X2 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_cmpswap_x2", VReg_128, v2i64
+  "buffer_atomic_cmpswap_x2", AVLdSt_128, v2i64
 >;
 defm BUFFER_ATOMIC_ADD_X2 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_add_x2", VReg_64, i64
+  "buffer_atomic_add_x2", AVLdSt_64, i64
 >;
 defm BUFFER_ATOMIC_SUB_X2 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_sub_x2", VReg_64, i64
+  "buffer_atomic_sub_x2", AVLdSt_64, i64
 >;
 defm BUFFER_ATOMIC_SMIN_X2 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_smin_x2", VReg_64, i64
+  "buffer_atomic_smin_x2", AVLdSt_64, i64
 >;
 defm BUFFER_ATOMIC_UMIN_X2 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_umin_x2", VReg_64, i64
+  "buffer_atomic_umin_x2", AVLdSt_64, i64
 >;
 defm BUFFER_ATOMIC_SMAX_X2 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_smax_x2", VReg_64, i64
+  "buffer_atomic_smax_x2", AVLdSt_64, i64
 >;
 defm BUFFER_ATOMIC_UMAX_X2 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_umax_x2", VReg_64, i64
+  "buffer_atomic_umax_x2", AVLdSt_64, i64
 >;
 defm BUFFER_ATOMIC_AND_X2 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_and_x2", VReg_64, i64
+  "buffer_atomic_and_x2", AVLdSt_64, i64
 >;
 defm BUFFER_ATOMIC_OR_X2 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_or_x2", VReg_64, i64
+  "buffer_atomic_or_x2", AVLdSt_64, i64
 >;
 defm BUFFER_ATOMIC_XOR_X2 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_xor_x2", VReg_64, i64
+  "buffer_atomic_xor_x2", AVLdSt_64, i64
 >;
 defm BUFFER_ATOMIC_INC_X2 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_inc_x2", VReg_64, i64
+  "buffer_atomic_inc_x2", AVLdSt_64, i64
 >;
 defm BUFFER_ATOMIC_DEC_X2 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_dec_x2", VReg_64, i64
+  "buffer_atomic_dec_x2", AVLdSt_64, i64
 >;
 
 let OtherPredicates = [HasGFX10_BEncoding] in {
   defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics <
-    "buffer_atomic_csub", VGPR_32, i32, int_amdgcn_global_atomic_csub
+    "buffer_atomic_csub", VGPROp_32, i32
   >;
 }
 
@@ -1127,65 +1201,52 @@ def BUFFER_WBINVL1_SC : MUBUF_Invalidate <"buffer_wbinvl1_sc",
 let SubtargetPredicate = isGFX6GFX7GFX10Plus in {
 
 defm BUFFER_ATOMIC_FCMPSWAP : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_fcmpswap", VReg_64, v2f32, null_frag
+  "buffer_atomic_fcmpswap", AVLdSt_64, v2f32
 >;
 }
 
 let SubtargetPredicate = HasAtomicFMinFMaxF32GlobalInsts in {
 defm BUFFER_ATOMIC_FMIN : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_fmin", VGPR_32, f32, null_frag
+  "buffer_atomic_fmin", AVLdSt_32, f32
 >;
 defm BUFFER_ATOMIC_FMAX : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_fmax", VGPR_32, f32, null_frag
+  "buffer_atomic_fmax", AVLdSt_32, f32
 >;
 }
 
 let SubtargetPredicate = isGFX6GFX7GFX10 in {
 defm BUFFER_ATOMIC_FCMPSWAP_X2 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_fcmpswap_x2", VReg_128, v2f64, null_frag
+  "buffer_atomic_fcmpswap_x2", VGPROp_128, v2f64
 >;
 }
 
 let SubtargetPredicate = HasD16LoadStore in {
 let TiedSourceNotRead = 1 in {
 
-defm BUFFER_LOAD_UBYTE_D16 : MUBUF_Pseudo_Loads <
-  "buffer_load_ubyte_d16", i32, 1
->;
-
 defm BUFFER_LOAD_UBYTE_D16_HI : MUBUF_Pseudo_Loads <
   "buffer_load_ubyte_d16_hi", i32, 1
->;
-
-defm BUFFER_LOAD_SBYTE_D16 : MUBUF_Pseudo_Loads <
-  "buffer_load_sbyte_d16", i32, 1
 >;
 
 defm BUFFER_LOAD_SBYTE_D16_HI : MUBUF_Pseudo_Loads <
   "buffer_load_sbyte_d16_hi", i32, 1
 >;
 
-defm BUFFER_LOAD_SHORT_D16 : MUBUF_Pseudo_Loads <
-  "buffer_load_short_d16", i32, 1
->;
-
 defm BUFFER_LOAD_SHORT_D16_HI : MUBUF_Pseudo_Loads <
   "buffer_load_short_d16_hi", i32, 1
 >;
 
-let OtherPredicates = [HasFormattedMUBUFInsts] in
-defm BUFFER_LOAD_FORMAT_D16_HI_X : MUBUF_Pseudo_Loads <
-  "buffer_load_format_d16_hi_x", i32
+defm BUFFER_LOAD_UBYTE_D16 : MUBUF_Pseudo_Loads_t16 <
+  "buffer_load_ubyte_d16", i32, 1
+>;
+
+defm BUFFER_LOAD_SBYTE_D16 : MUBUF_Pseudo_Loads_t16 <
+  "buffer_load_sbyte_d16", i32, 1
+>;
+
+defm BUFFER_LOAD_SHORT_D16 : MUBUF_Pseudo_Loads_t16 <
+  "buffer_load_short_d16", i32, 1
 >;
 } // End TiedSourceNotRead
-
-defm BUFFER_STORE_BYTE_D16_HI : MUBUF_Pseudo_Stores <
-  "buffer_store_byte_d16_hi", i32
->;
-
-defm BUFFER_STORE_SHORT_D16_HI : MUBUF_Pseudo_Stores <
-  "buffer_store_short_d16_hi", i32
->;
 
 let OtherPredicates = [HasFormattedMUBUFInsts] in
 defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Pseudo_Stores <
@@ -1194,6 +1255,18 @@ defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Pseudo_Stores <
 
 } // End HasD16LoadStore
 
+let True16Predicate = NotUseRealTrue16Insts in {
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i16, atomic_load_aext_8_global>;
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE", i16, atomic_load_zext_8_global>;
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_USHORT", i16, atomic_load_nonext_16_global>;
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE_D16_t16", i16, atomic_load_aext_8_global>;
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_UBYTE_D16_t16", i16, atomic_load_zext_8_global>;
+defm : MUBUF_Pseudo_Load_Pats<"BUFFER_LOAD_SHORT_D16_t16", i16, atomic_load_nonext_16_global>;
+}
+
 let SubtargetPredicate = isNotGFX940Plus in
 def BUFFER_WBINVL1 : MUBUF_Invalidate <
   "buffer_wbinvl1", int_amdgcn_buffer_wbinvl1
@@ -1201,34 +1274,34 @@ def BUFFER_WBINVL1 : MUBUF_Invalidate <
 
 let SubtargetPredicate = HasAtomicFaddNoRtnInsts in
 defm BUFFER_ATOMIC_ADD_F32 : MUBUF_Pseudo_Atomics_NO_RTN<
-  "buffer_atomic_add_f32", VGPR_32, f32
+  "buffer_atomic_add_f32", AVLdSt_32, f32
 >;
 
 let SubtargetPredicate = HasAtomicBufferGlobalPkAddF16NoRtnInsts in
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Pseudo_Atomics_NO_RTN <
-  "buffer_atomic_pk_add_f16", VGPR_32, v2f16
+  "buffer_atomic_pk_add_f16", AVLdSt_32, v2f16
 >;
 
 let SubtargetPredicate = HasAtomicFaddRtnInsts in
 defm BUFFER_ATOMIC_ADD_F32 : MUBUF_Pseudo_Atomics_RTN<
-  "buffer_atomic_add_f32", VGPR_32, f32, null_frag
+  "buffer_atomic_add_f32", AVLdSt_32, f32
 >;
 
 let SubtargetPredicate = HasAtomicBufferGlobalPkAddF16Insts in
 defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Pseudo_Atomics_RTN <
-  "buffer_atomic_pk_add_f16", VGPR_32, v2f16, null_frag
+  "buffer_atomic_pk_add_f16", AVLdSt_32, v2f16
 >;
 
 let SubtargetPredicate = isGFX12Plus in {
 defm BUFFER_ATOMIC_COND_SUB_U32 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_cond_sub_u32", VGPR_32, i32
+  "buffer_atomic_cond_sub_u32", VGPROp_32, i32
 >;
 }
 
 let SubtargetPredicate = HasAtomicBufferPkAddBF16Inst in {
 let FPAtomic = 1 in
 defm BUFFER_ATOMIC_PK_ADD_BF16 : MUBUF_Pseudo_Atomics <
-  "buffer_atomic_pk_add_bf16", VGPR_32, v2bf16
+  "buffer_atomic_pk_add_bf16", AVLdSt_32, v2bf16
 >;
 }
 
@@ -1236,39 +1309,39 @@ defm BUFFER_ATOMIC_PK_ADD_BF16 : MUBUF_Pseudo_Atomics <
 // MTBUF Instructions
 //===----------------------------------------------------------------------===//
 let OtherPredicates = [HasMTBUFInsts] in {
-defm TBUFFER_LOAD_FORMAT_X     : MTBUF_Pseudo_Loads  <"tbuffer_load_format_x",     VGPR_32,  1>;
-defm TBUFFER_LOAD_FORMAT_XY    : MTBUF_Pseudo_Loads  <"tbuffer_load_format_xy",    VReg_64,  2>;
-defm TBUFFER_LOAD_FORMAT_XYZ   : MTBUF_Pseudo_Loads  <"tbuffer_load_format_xyz",   VReg_96,  3>;
-defm TBUFFER_LOAD_FORMAT_XYZW  : MTBUF_Pseudo_Loads  <"tbuffer_load_format_xyzw",  VReg_128, 4>;
-defm TBUFFER_STORE_FORMAT_X    : MTBUF_Pseudo_Stores <"tbuffer_store_format_x",    VGPR_32,  1>;
-defm TBUFFER_STORE_FORMAT_XY   : MTBUF_Pseudo_Stores <"tbuffer_store_format_xy",   VReg_64,  2>;
-defm TBUFFER_STORE_FORMAT_XYZ  : MTBUF_Pseudo_Stores <"tbuffer_store_format_xyz",  VReg_96,  3>;
-defm TBUFFER_STORE_FORMAT_XYZW : MTBUF_Pseudo_Stores <"tbuffer_store_format_xyzw", VReg_128, 4>;
+defm TBUFFER_LOAD_FORMAT_X     : MTBUF_Pseudo_Loads  <"tbuffer_load_format_x",     AVLdSt_32,  1>;
+defm TBUFFER_LOAD_FORMAT_XY    : MTBUF_Pseudo_Loads  <"tbuffer_load_format_xy",    AVLdSt_64,  2>;
+defm TBUFFER_LOAD_FORMAT_XYZ   : MTBUF_Pseudo_Loads  <"tbuffer_load_format_xyz",   AVLdSt_96,  3>;
+defm TBUFFER_LOAD_FORMAT_XYZW  : MTBUF_Pseudo_Loads  <"tbuffer_load_format_xyzw",  AVLdSt_128, 4>;
+defm TBUFFER_STORE_FORMAT_X    : MTBUF_Pseudo_Stores <"tbuffer_store_format_x",    AVLdSt_32,  1>;
+defm TBUFFER_STORE_FORMAT_XY   : MTBUF_Pseudo_Stores <"tbuffer_store_format_xy",   AVLdSt_64,  2>;
+defm TBUFFER_STORE_FORMAT_XYZ  : MTBUF_Pseudo_Stores <"tbuffer_store_format_xyz",  AVLdSt_96,  3>;
+defm TBUFFER_STORE_FORMAT_XYZW : MTBUF_Pseudo_Stores <"tbuffer_store_format_xyzw", AVLdSt_128, 4>;
 
 let SubtargetPredicate = HasUnpackedD16VMem, D16Buf = 1 in {
 let TiedSourceNotRead = 1 in {
-  defm TBUFFER_LOAD_FORMAT_D16_X_gfx80     : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_x",     VGPR_32,  1>;
-  defm TBUFFER_LOAD_FORMAT_D16_XY_gfx80    : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xy",    VReg_64,  2>;
-  defm TBUFFER_LOAD_FORMAT_D16_XYZ_gfx80   : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xyz",   VReg_96,  3>;
-  defm TBUFFER_LOAD_FORMAT_D16_XYZW_gfx80  : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xyzw",  VReg_128, 4>;
+  defm TBUFFER_LOAD_FORMAT_D16_X_gfx80     : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_x",     AVLdSt_32,  1>;
+  defm TBUFFER_LOAD_FORMAT_D16_XY_gfx80    : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xy",    AVLdSt_64,  2>;
+  defm TBUFFER_LOAD_FORMAT_D16_XYZ_gfx80   : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xyz",   AVLdSt_96,  3>;
+  defm TBUFFER_LOAD_FORMAT_D16_XYZW_gfx80  : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xyzw",  AVLdSt_128, 4>;
 }
-  defm TBUFFER_STORE_FORMAT_D16_X_gfx80    : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_x",    VGPR_32,  1>;
-  defm TBUFFER_STORE_FORMAT_D16_XY_gfx80   : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xy",   VReg_64,  2>;
-  defm TBUFFER_STORE_FORMAT_D16_XYZ_gfx80  : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xyz",  VReg_96,  3>;
-  defm TBUFFER_STORE_FORMAT_D16_XYZW_gfx80 : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xyzw", VReg_128, 4>;
+  defm TBUFFER_STORE_FORMAT_D16_X_gfx80    : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_x",    AVLdSt_32,  1>;
+  defm TBUFFER_STORE_FORMAT_D16_XY_gfx80   : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xy",   AVLdSt_64,  2>;
+  defm TBUFFER_STORE_FORMAT_D16_XYZ_gfx80  : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xyz",  AVLdSt_96,  3>;
+  defm TBUFFER_STORE_FORMAT_D16_XYZW_gfx80 : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xyzw", AVLdSt_128, 4>;
 } // End HasUnpackedD16VMem.
 
 let SubtargetPredicate = HasPackedD16VMem, D16Buf = 1 in {
 let TiedSourceNotRead = 1 in {
-  defm TBUFFER_LOAD_FORMAT_D16_X     : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_x",     VGPR_32, 1>;
-  defm TBUFFER_LOAD_FORMAT_D16_XY    : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xy",    VGPR_32, 2>;
-  defm TBUFFER_LOAD_FORMAT_D16_XYZ   : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xyz",   VReg_64, 3>;
-  defm TBUFFER_LOAD_FORMAT_D16_XYZW  : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xyzw",  VReg_64, 4>;
+  defm TBUFFER_LOAD_FORMAT_D16_X     : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_x",     AVLdSt_32, 1>;
+  defm TBUFFER_LOAD_FORMAT_D16_XY    : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xy",    AVLdSt_32, 2>;
+  defm TBUFFER_LOAD_FORMAT_D16_XYZ   : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xyz",   AVLdSt_64, 3>;
+  defm TBUFFER_LOAD_FORMAT_D16_XYZW  : MTBUF_Pseudo_Loads  <"tbuffer_load_format_d16_xyzw",  AVLdSt_64, 4>;
 }
-  defm TBUFFER_STORE_FORMAT_D16_X    : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_x",    VGPR_32, 1>;
-  defm TBUFFER_STORE_FORMAT_D16_XY   : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xy",   VGPR_32, 2>;
-  defm TBUFFER_STORE_FORMAT_D16_XYZ  : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xyz",  VReg_64, 3>;
-  defm TBUFFER_STORE_FORMAT_D16_XYZW : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xyzw", VReg_64, 4>;
+  defm TBUFFER_STORE_FORMAT_D16_X    : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_x",    AVLdSt_32, 1>;
+  defm TBUFFER_STORE_FORMAT_D16_XY   : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xy",   AVLdSt_32, 2>;
+  defm TBUFFER_STORE_FORMAT_D16_XYZ  : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xyz",  AVLdSt_64, 3>;
+  defm TBUFFER_STORE_FORMAT_D16_XYZW : MTBUF_Pseudo_Stores <"tbuffer_store_format_d16_xyzw", AVLdSt_64, 4>;
 } // End HasPackedD16VMem.
 } // End HasMTBUFInsts.
 
@@ -1297,14 +1370,14 @@ let SubtargetPredicate = isGFX90APlus in {
 } // End SubtargetPredicate = isGFX90APlus
 
 let SubtargetPredicate = HasFlatBufferGlobalAtomicFaddF64Inst in {
-  defm BUFFER_ATOMIC_ADD_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_add_f64", VReg_64, f64>;
+  defm BUFFER_ATOMIC_ADD_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_add_f64", AVLdSt_64, f64>;
 } // End SubtargetPredicate = HasFlatBufferGlobalAtomicFaddF64Inst
 
 let SubtargetPredicate = HasAtomicFMinFMaxF64GlobalInsts in {
   // Note the names can be buffer_atomic_fmin_x2/buffer_atomic_fmax_x2
   // depending on some subtargets.
-  defm BUFFER_ATOMIC_MIN_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_min_f64", VReg_64, f64>;
-  defm BUFFER_ATOMIC_MAX_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_max_f64", VReg_64, f64>;
+  defm BUFFER_ATOMIC_MIN_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_min_f64", AVLdSt_64, f64>;
+  defm BUFFER_ATOMIC_MAX_F64 : MUBUF_Pseudo_Atomics<"buffer_atomic_max_f64", AVLdSt_64, f64>;
 }
 
 def BUFFER_INV : MUBUF_Invalidate<"buffer_inv"> {
@@ -1395,8 +1468,14 @@ let OtherPredicates = [HasUnpackedD16VMem, HasFormattedMUBUFInsts] in {
 } // End OtherPredicates = [HasUnpackedD16VMem, HasFormattedMUBUFInsts].
 
 let OtherPredicates = [HasPackedD16VMem, HasFormattedMUBUFInsts] in {
+let True16Predicate = NotUseRealTrue16Insts in {
   defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_format_d16, f16, "BUFFER_LOAD_FORMAT_D16_X">;
   defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_format_d16, i16, "BUFFER_LOAD_FORMAT_D16_X">;
+}
+let True16Predicate = UseRealTrue16Insts in {
+  defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_format_d16, f16, "BUFFER_LOAD_FORMAT_D16_X_t16">;
+  defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_format_d16, i16, "BUFFER_LOAD_FORMAT_D16_X_t16">;
+}
   defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_format_d16, i32, "BUFFER_LOAD_FORMAT_D16_X">;
   defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_format_d16, v2f16, "BUFFER_LOAD_FORMAT_D16_XY">;
   defm : MUBUF_LoadIntrinsicPat<SIbuffer_load_format_d16, v2i16, "BUFFER_LOAD_FORMAT_D16_XY">;
@@ -1578,11 +1657,12 @@ multiclass BufferAtomicCmpSwapPat_Common<ValueType vt, ValueType data_vt, string
                                        # !if(!eq(RtnMode, "ret"), "", "_noret")
                                        # "_" # vt);
   defvar InstSuffix = !if(!eq(RtnMode, "ret"), "_RTN", "");
-  defvar data_vt_RC = getVregSrcForVT<data_vt>.ret.RegClass;
+  defvar data_op = getVregSrcForVT<data_vt>.ret;
+  defvar data_vt_RC = getVregClassForVT<data_vt>.ret;
 
   let AddedComplexity = !if(!eq(RtnMode, "ret"), 0, 1) in {
   defvar OffsetResDag = (!cast<MUBUF_Pseudo>(Inst # "_OFFSET" # InstSuffix)
-    data_vt_RC:$vdata_in, SReg_128:$srsrc, SCSrc_b32:$soffset,
+    data_op:$vdata_in, SReg_128:$srsrc, SCSrc_b32:$soffset,
     Offset:$offset);
   def : GCNPat<
     (vt (Op (MUBUFOffset v4i32:$srsrc, i32:$soffset, i32:$offset), data_vt:$vdata_in)),
@@ -1593,7 +1673,7 @@ multiclass BufferAtomicCmpSwapPat_Common<ValueType vt, ValueType data_vt, string
   >;
 
   defvar Addr64ResDag = (!cast<MUBUF_Pseudo>(Inst # "_ADDR64" # InstSuffix)
-    data_vt_RC:$vdata_in, VReg_64:$vaddr, SReg_128:$srsrc,
+    data_op:$vdata_in, VReg_64:$vaddr, SReg_128:$srsrc,
     SCSrc_b32:$soffset, Offset:$offset);
   def : GCNPat<
     (vt (Op (MUBUFAddr64 v4i32:$srsrc, i64:$vaddr, i32:$soffset, i32:$offset),
@@ -1842,7 +1922,7 @@ multiclass SIBufferAtomicCmpSwapPat_Common<ValueType vt, ValueType data_vt, stri
       (extract_cpol_set_glc $auxiliary),
       (extract_cpol $auxiliary));
     defvar SrcRC = getVregSrcForVT<vt>.ret;
-    defvar DataRC = getVregSrcForVT<data_vt>.ret.RegClass;
+    defvar DataRC = getVregClassForVT<data_vt>.ret;
     defvar SubLo = !if(!eq(vt, i32), sub0, sub0_sub1);
     defvar SubHi = !if(!eq(vt, i32), sub1, sub2_sub3);
 
@@ -1961,15 +2041,26 @@ multiclass MUBUFLoad_PatternOffset <string Instr, ValueType vt,
 }
 
 let OtherPredicates = [Has16BitInsts] in {
-
+let True16Predicate = NotUseRealTrue16Insts in {
 defm : MUBUFLoad_PatternOffset <"BUFFER_LOAD_SBYTE", i16, sextloadi8_constant>;
 defm : MUBUFLoad_PatternOffset <"BUFFER_LOAD_UBYTE", i16, extloadi8_constant>;
 defm : MUBUFLoad_PatternOffset <"BUFFER_LOAD_UBYTE", i16, zextloadi8_constant>;
 defm : MUBUFLoad_PatternOffset <"BUFFER_LOAD_SBYTE", i16, sextloadi8_global>;
 defm : MUBUFLoad_PatternOffset <"BUFFER_LOAD_UBYTE", i16, extloadi8_global>;
 defm : MUBUFLoad_PatternOffset <"BUFFER_LOAD_UBYTE", i16, zextloadi8_global>;
-
 defm : MUBUFLoad_PatternOffset <"BUFFER_LOAD_USHORT", i16, load_global>;
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+defm : MUBUFLoad_PatternOffset <"BUFFER_LOAD_SBYTE_D16_t16", i16, sextloadi8_constant>;
+defm : MUBUFLoad_PatternOffset <"BUFFER_LOAD_UBYTE_D16_t16", i16, extloadi8_constant>;
+defm : MUBUFLoad_PatternOffset <"BUFFER_LOAD_UBYTE_D16_t16", i16, zextloadi8_constant>;
+defm : MUBUFLoad_PatternOffset <"BUFFER_LOAD_SBYTE_D16_t16", i16, sextloadi8_global>;
+defm : MUBUFLoad_PatternOffset <"BUFFER_LOAD_UBYTE_D16_t16", i16, extloadi8_global>;
+defm : MUBUFLoad_PatternOffset <"BUFFER_LOAD_UBYTE_D16_t16", i16, zextloadi8_global>;
+defm : MUBUFLoad_PatternOffset <"BUFFER_LOAD_SHORT_D16_t16", i16, load_global>;
+}
+
 
 } // End OtherPredicates = [Has16BitInsts]
 
@@ -2009,6 +2100,19 @@ multiclass MUBUFScratchLoadPat_D16_Common <string Instr,
   >;
 }
 
+multiclass MUBUFScratchLoadPat_D16_Common_t16 <string Instr, ValueType vt, PatFrag ld_frag> {
+  def : GCNPat <
+    (vt (ld_frag (MUBUFScratchOffen v4i32:$srsrc, i32:$vaddr, i32:$soffset, i32:$offset))),
+    (!cast<MUBUF_Pseudo>(Instr # _OFFEN) $vaddr, $srsrc, $soffset, $offset)
+  >;
+
+  def : GCNPat <
+    (vt (ld_frag (MUBUFScratchOffset v4i32:$srsrc, i32:$soffset, i32:$offset))),
+    (!cast<MUBUF_Pseudo>(Instr # _OFFSET) $srsrc, $soffset, $offset)
+  >;
+}
+
+
 multiclass MUBUFScratchLoadPat_D16 <string Instr,
                                 ValueType vt, PatFrag ld_frag> {
   let SubtargetPredicate = HasUnrestrictedSOffset in {
@@ -2017,17 +2121,35 @@ multiclass MUBUFScratchLoadPat_D16 <string Instr,
   defm : MUBUFScratchLoadPat_D16_Common<Instr # "_VBUFFER", vt, ld_frag>;
 }
 
-let OtherPredicates = [DisableFlatScratch] in {
+multiclass MUBUFScratchLoadPat_D16_t16 <string Instr,
+                                ValueType vt, PatFrag ld_frag> {
+  let SubtargetPredicate = HasUnrestrictedSOffset in {
+    defm : MUBUFScratchLoadPat_D16_Common_t16<Instr, vt, ld_frag>;
+  }
+  defm : MUBUFScratchLoadPat_D16_Common_t16<Instr # "_VBUFFER", vt, ld_frag>;
+}
+
+let OtherPredicates = [NotHasFlatScratchEnabled] in {
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_SBYTE", i32, sextloadi8_private>;
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_UBYTE", i32, extloadi8_private>;
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_UBYTE", i32, zextloadi8_private>;
-defm : MUBUFScratchLoadPat <"BUFFER_LOAD_SBYTE", i16, sextloadi8_private>;
-defm : MUBUFScratchLoadPat <"BUFFER_LOAD_UBYTE", i16, extloadi8_private>;
-defm : MUBUFScratchLoadPat <"BUFFER_LOAD_UBYTE", i16, zextloadi8_private>;
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_SSHORT", i32, sextloadi16_private>;
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_USHORT", i32, extloadi16_private>;
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_USHORT", i32, zextloadi16_private>;
+
+let True16Predicate = NotUseRealTrue16Insts in {
+defm : MUBUFScratchLoadPat <"BUFFER_LOAD_SBYTE", i16, sextloadi8_private>;
+defm : MUBUFScratchLoadPat <"BUFFER_LOAD_UBYTE", i16, extloadi8_private>;
+defm : MUBUFScratchLoadPat <"BUFFER_LOAD_UBYTE", i16, zextloadi8_private>;
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_USHORT", i16, load_private>;
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+defm : MUBUFScratchLoadPat_D16_t16 <"BUFFER_LOAD_SBYTE_D16_t16", i16, sextloadi8_private>;
+defm : MUBUFScratchLoadPat_D16_t16 <"BUFFER_LOAD_UBYTE_D16_t16", i16, extloadi8_private>;
+defm : MUBUFScratchLoadPat_D16_t16 <"BUFFER_LOAD_UBYTE_D16_t16", i16, zextloadi8_private>;
+defm : MUBUFScratchLoadPat_D16_t16 <"BUFFER_LOAD_SHORT_D16_t16", i16, load_private>;
+}
 
 foreach vt = Reg32Types.types in {
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_DWORD", vt, load_private>;
@@ -2036,7 +2158,7 @@ defm : MUBUFScratchLoadPat <"BUFFER_LOAD_DWORDX2", v2i32, load_private>;
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_DWORDX3", v3i32, load_private>;
 defm : MUBUFScratchLoadPat <"BUFFER_LOAD_DWORDX4", v4i32, load_private>;
 
-let OtherPredicates = [D16PreservesUnusedBits, DisableFlatScratch] in {
+let OtherPredicates = [D16PreservesUnusedBits, NotHasFlatScratchEnabled] in {
 defm : MUBUFScratchLoadPat_D16<"BUFFER_LOAD_SHORT_D16_HI", v2i16, load_d16_hi_private>;
 defm : MUBUFScratchLoadPat_D16<"BUFFER_LOAD_UBYTE_D16_HI", v2i16, az_extloadi8_d16_hi_private>;
 defm : MUBUFScratchLoadPat_D16<"BUFFER_LOAD_SBYTE_D16_HI", v2i16, sextloadi8_d16_hi_private>;
@@ -2052,7 +2174,7 @@ defm : MUBUFScratchLoadPat_D16<"BUFFER_LOAD_UBYTE_D16", v2f16, az_extloadi8_d16_
 defm : MUBUFScratchLoadPat_D16<"BUFFER_LOAD_SBYTE_D16", v2f16, sextloadi8_d16_lo_private>;
 }
 
-} // End OtherPredicates = [DisableFlatScratch]
+} // End OtherPredicates = [NotHasFlatScratchEnabled]
 
 multiclass MUBUFStore_Atomic_Pattern <MUBUF_Pseudo Instr_ADDR64, MUBUF_Pseudo Instr_OFFSET,
                                       ValueType vt, PatFrag atomic_st> {
@@ -2093,12 +2215,19 @@ multiclass MUBUFStore_PatternOffset <string Instr, ValueType vt,
   defm : MUBUFStore_PatternOffset_Common<Instr # "_VBUFFER", vt, st>;
 }
 
+let True16Predicate = NotUseRealTrue16Insts in {
 defm : MUBUFStore_PatternOffset <"BUFFER_STORE_BYTE", i16, truncstorei8_global>;
 defm : MUBUFStore_PatternOffset <"BUFFER_STORE_SHORT", i16, store_global>;
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+defm : MUBUFStore_PatternOffset <"BUFFER_STORE_BYTE_t16", i16, truncstorei8_global>;
+defm : MUBUFStore_PatternOffset <"BUFFER_STORE_SHORT_t16", i16, store_global>;
+}
 
 multiclass MUBUFScratchStorePat_Common <string Instr,
                                  ValueType vt, PatFrag st,
-                                 RegisterClass rc = VGPR_32> {
+                                 RegisterClassLike rc = VGPR_32> {
   def : GCNPat <
     (st vt:$value, (MUBUFScratchOffen v4i32:$srsrc, i32:$vaddr,
                                       i32:$soffset, i32:$offset)),
@@ -2114,18 +2243,26 @@ multiclass MUBUFScratchStorePat_Common <string Instr,
 
 multiclass MUBUFScratchStorePat <string Instr,
                                  ValueType vt, PatFrag st,
-                                 RegisterClass rc = VGPR_32> {
+                                 RegisterClassLike rc = VGPR_32> {
   let SubtargetPredicate = HasUnrestrictedSOffset in {
     defm : MUBUFScratchStorePat_Common<Instr, vt, st, rc>;
   }
   defm : MUBUFScratchStorePat_Common<Instr # "_VBUFFER", vt, st, rc>;
 }
 
-let OtherPredicates = [DisableFlatScratch] in {
+let OtherPredicates = [NotHasFlatScratchEnabled] in {
 defm : MUBUFScratchStorePat <"BUFFER_STORE_BYTE", i32, truncstorei8_private>;
 defm : MUBUFScratchStorePat <"BUFFER_STORE_SHORT", i32, truncstorei16_private>;
+
+let True16Predicate = NotUseRealTrue16Insts in {
 defm : MUBUFScratchStorePat <"BUFFER_STORE_BYTE", i16, truncstorei8_private>;
 defm : MUBUFScratchStorePat <"BUFFER_STORE_SHORT", i16, store_private>;
+}
+
+let True16Predicate = UseRealTrue16Insts in {
+defm : MUBUFScratchStorePat <"BUFFER_STORE_BYTE_t16", i16, truncstorei8_private, VGPR_16>;
+defm : MUBUFScratchStorePat <"BUFFER_STORE_SHORT_t16", i16, store_private, VGPR_16>;
+}
 
 foreach vt = Reg32Types.types in {
 defm : MUBUFScratchStorePat <"BUFFER_STORE_DWORD", vt, store_private>;
@@ -2136,7 +2273,7 @@ defm : MUBUFScratchStorePat <"BUFFER_STORE_DWORDX3", v3i32, store_private, VReg_
 defm : MUBUFScratchStorePat <"BUFFER_STORE_DWORDX4", v4i32, store_private, VReg_128>;
 
 
-let OtherPredicates = [HasD16LoadStore, DisableFlatScratch] in {
+let OtherPredicates = [HasD16LoadStore, NotHasFlatScratchEnabled] in {
  // Hiding the extract high pattern in the PatFrag seems to not
  // automatically increase the complexity.
 let AddedComplexity = 1 in {
@@ -2144,7 +2281,7 @@ defm : MUBUFScratchStorePat <"BUFFER_STORE_SHORT_D16_HI", i32, store_hi16_privat
 defm : MUBUFScratchStorePat <"BUFFER_STORE_BYTE_D16_HI", i32, truncstorei8_hi16_private>;
 }
 }
-} // End OtherPredicates = [DisableFlatScratch]
+} // End OtherPredicates = [NotHasFlatScratchEnabled]
 
 //===----------------------------------------------------------------------===//
 // MTBUF Patterns

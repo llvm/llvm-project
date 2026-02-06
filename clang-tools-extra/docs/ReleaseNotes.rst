@@ -46,6 +46,9 @@ infrastructure are described first, followed by tool-specific sections.
 Major New Features
 ------------------
 
+Potentially Breaking Changes
+----------------------------
+
 Improvements to clangd
 ----------------------
 
@@ -70,14 +73,6 @@ Code completion
 Code actions
 ^^^^^^^^^^^^
 
-- New ``Override pure virtual methods`` code action. When invoked on a class
-  definition, this action automatically generates C++ ``override`` declarations
-  for all pure virtual methods inherited from its base classes that have not yet
-  been implemented. The generated method stubs prompts the user for the actual
-  implementation. The overrides are intelligently grouped under their original
-  access specifiers (e.g., ``public``, ``protected``), creating new access
-  specifier blocks if necessary.
-
 Signature help
 ^^^^^^^^^^^^^^
 
@@ -96,63 +91,48 @@ Improvements to clang-doc
 Improvements to clang-query
 ---------------------------
 
-- Matcher queries interpreted by clang-query are now support trailing comma (,)
-  in matcher arguments. Note that C++ still doesn't allow this in function
-  arguments. So when porting a query to C++, remove all instances of trailing
-  comma (otherwise C++ compiler will just complain about "expected expression").
-
 Improvements to clang-tidy
 --------------------------
-
-- The :program:`check_clang_tidy.py` tool now recognizes the ``-std`` argument
-  when run over C files. If ``-std`` is not specified, it defaults to
-  ``c99-or-later``.
-
-- :program:`clang-tidy` no longer attemps to analyze code from system headers
-  by default, greatly improving performance. This behavior is disabled if the
-  `SystemHeaders` option is enabled.
-
-- The :program:`run-clang-tidy.py` and :program:`clang-tidy-diff.py` scripts
-  now run checks in parallel by default using all available hardware threads.
-  Both scripts display the number of threads being used in their output.
-
-- Improved :program:`run-clang-tidy.py` by adding a new option
-  `enable-check-profile` to enable per-check timing profiles and print a
-  report based on all analyzed files.
-
-- Improved documentation of the `-line-filter` command-line flag of
-  :program:`clang-tidy` and :program:`run-clang-tidy.py`.
-
-- Improved :program:`clang-tidy` option `-quiet` by suppressing diagnostic
-  count messages.
 
 New checks
 ^^^^^^^^^^
 
-- New :doc:`bugprone-invalid-enum-default-initialization
-  <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` check.
+- New :doc:`llvm-type-switch-case-types
+  <clang-tidy/checks/llvm/type-switch-case-types>` check.
 
-  Detects default initialization (to 0) of variables with ``enum`` type where
-  the enum has no enumerator with value of 0.
+  Finds ``llvm::TypeSwitch::Case`` calls with redundant explicit template
+  arguments that can be inferred from the lambda parameter type.
 
-- New :doc:`cppcoreguidelines-pro-bounds-avoid-unchecked-container-access
-  <clang-tidy/checks/cppcoreguidelines/pro-bounds-avoid-unchecked-container-access>`
-  check.
+- New :doc:`llvm-use-vector-utils
+  <clang-tidy/checks/llvm/use-vector-utils>` check.
 
-  Finds calls to ``operator[]`` in STL containers and suggests replacing them
-  with safe alternatives.
+  Finds calls to ``llvm::to_vector(llvm::map_range(...))`` and
+  ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
+  ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
-- New :doc:`llvm-mlir-op-builder
-  <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
+- New :doc:`modernize-use-string-view
+  <clang-tidy/checks/modernize/use-string-view>` check.
 
-  Checks for uses of MLIR's old/to be deprecated ``OpBuilder::create<T>`` form
-  and suggests using ``T::create`` instead.
+  Looks for functions returning ``std::[w|u8|u16|u32]string`` and suggests to
+  change it to ``std::[...]string_view`` for performance reasons if possible.
+  
+- New :doc:`modernize-use-structured-binding
+  <clang-tidy/checks/modernize/use-structured-binding>` check.
 
-- New :doc:`misc-override-with-different-visibility
-  <clang-tidy/checks/misc/override-with-different-visibility>` check.
+  Finds places where structured bindings could be used to decompose pairs and
+  suggests replacing them.
 
-  Finds virtual function overrides with different visibility than the function
-  in the base class.
+- New :doc:`performance-string-view-conversions
+  <clang-tidy/checks/performance/string-view-conversions>` check.
+
+  Finds and removes redundant conversions from ``std::[w|u8|u16|u32]string_view`` to
+  ``std::[...]string`` in call expressions expecting ``std::[...]string_view``.
+
+- New :doc:`readability-trailing-comma
+  <clang-tidy/checks/readability/trailing-comma>` check.
+
+  Checks for presence or absence of trailing commas in enum definitions and
+  initializer lists.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
@@ -160,94 +140,68 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Improved :doc:`bugprone-infinite-loop
-  <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
-  variables introduced by structured bindings.
+- Improved :doc:`bugprone-argument-comment
+  <clang-tidy/checks/bugprone/argument-comment>` to also check for C++11
+  inherited constructors.
 
-- Improved :doc:`bugprone-narrowing-conversions
-  <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing
-  false positive from analysis of a conditional expression in C.
+- Improved :doc:`bugprone-macro-parentheses
+  <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
+  definition in the warning message if the macro is defined on command line.
 
-- Improved :doc:`bugprone-reserved-identifier
-  <clang-tidy/checks/bugprone/reserved-identifier>` check by ignoring
-  declarations and macros in system headers.
+- Improved :doc:`bugprone-unsafe-functions
+  <clang-tidy/checks/bugprone/unsafe-functions>` check by adding the function
+  ``std::get_temporary_buffer`` to the default list of unsafe functions. (This
+  function is unsafe, useless, deprecated in C++17 and removed in C++20).
 
-- Improved :doc:`bugprone-signed-char-misuse
-  <clang-tidy/checks/bugprone/signed-char-misuse>` check by fixing
-  false positives on C23 enums with the fixed underlying type of signed char.
+- Improved :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` check by including the name of
+  the invalidating function in the warning message when a custom invalidation
+  function is used (via the `InvalidationFunctions` option).
 
-- Improved :doc:`bugprone-tagged-union-member-count
-  <clang-tidy/checks/bugprone/tagged-union-member-count>` by fixing a false
-  positive when enums or unions from system header files or the ``std``
-  namespace are treated as the tag or the data part of a user-defined
-  tagged union respectively.
+- Improved :doc:`cppcoreguidelines-pro-type-vararg
+  <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer
+  warning on builtins with custom type checking (e.g., type-generic builtins
+  like ``__builtin_clzg``) that use variadic declarations as an implementation
+  detail.
 
-- Improved :doc:`bugprone-unhandled-self-assignment
-  <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
-  an additional matcher that generalizes the copy-and-swap idiom pattern
-  detection.
+- Improved :doc:`llvm-use-ranges
+  <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following
+  algorithms: ``std::accumulate``, ``std::replace_copy``, and
+  ``std::replace_copy_if``.
 
-- Improved :doc:`cppcoreguidelines-prefer-member-initializer
-  <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
-  avoid false positives on inherited members in class templates.
+- Improved :doc:`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check:
 
-- Improved :doc:`cppcoreguidelines-pro-bounds-pointer-arithmetic
-  <clang-tidy/checks/cppcoreguidelines/pro-bounds-pointer-arithmetic>` check
-  adding an option to allow pointer arithmetic via prefix/postfix increment or
-  decrement operators.
-
-- Improved :doc:`misc-header-include-cycle
-  <clang-tidy/checks/misc/header-include-cycle>` check performance.
-
-- Improved :doc:`modernize-use-constraints
-  <clang-tidy/checks/modernize/use-constraints>` check by fixing a crash on
-  uses of non-standard ``enable_if`` with a signature different from
-  ``std::enable_if`` (such as ``boost::enable_if``).
-
-- Improved :doc:`modernize-use-designated-initializers
-  <clang-tidy/checks/modernize/use-designated-initializers>` check to
-  suggest using designated initializers for aliased aggregate types.
+  - Added support for analyzing function parameters with the `AnalyzeParameters`
+    option.
 
 - Improved :doc:`modernize-use-std-format
-  <clang-tidy/checks/modernize/use-std-format>` check to correctly match
-  when the format string is converted to a different type by an implicit
-  constructor call.
+  <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash
+  when an argument is part of a macro expansion.
 
-- Improved :doc:`modernize-use-std-print
-  <clang-tidy/checks/modernize/use-std-print>` check to correctly match
-  when the format string is converted to a different type by an implicit
-  constructor call.
+- Improved :doc:`modernize-use-using
+  <clang-tidy/checks/modernize/use-using>` check by avoiding the generation
+  of invalid code for function types with redundant parentheses.
 
-- Improved :doc:`performance-unnecessary-copy-initialization
-  <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
-  the type of the diagnosed variable.
+- Improved :doc:`performance-enum-size
+  <clang-tidy/checks/performance/enum-size>` check:
 
-- Improved :doc:`performance-unnecessary-value-param
-  <clang-tidy/checks/performance/unnecessary-value-param>` by printing
-  the type of the diagnosed variable.
+  - Exclude ``enum`` in ``extern "C"`` blocks.
 
-- Improved :doc:`portability-template-virtual-member-function
-  <clang-tidy/checks/portability/template-virtual-member-function>` check to
-  avoid false positives on pure virtual member functions.
+  - Improved the ignore list to correctly handle ``typedef`` and  ``enum``.
 
-- Improved :doc:`readability-container-size-empty
-  <clang-tidy/checks/readability/container-size-empty>` check by correctly
-  generating fix-it hints when size method is called from implicit ``this``,
-  ignoring default constructors with user provided arguments and adding
-  detection in container's method except ``empty``.
+- Improved :doc:`performance-move-const-arg
+  <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
+  positives on trivially copyable types with a non-public copy constructor.
 
-- Improved :doc:`readability-identifier-naming
-  <clang-tidy/checks/readability/identifier-naming>` check by ignoring
-  declarations and macros in system headers. The documentation is also improved
-  to differentiate the general options from the specific ones.
+- Improved :doc:`readability-enum-initial-value
+  <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
+  now uses separate note diagnostics for each uninitialized enumerator, making
+  it easier to see which specific enumerators need explicit initialization.
 
-- Improved :doc:`readability-qualified-auto
-  <clang-tidy/checks/readability/qualified-auto>` check by adding the option
-  `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
-
-- Improved :doc:`readability-uppercase-literal-suffix
-  <clang-tidy/checks/readability/uppercase-literal-suffix>` check to recognize
-  literal suffixes added in C++23 and C23.
+- Improved :doc:`readability-non-const-parameter
+  <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
+  positives on parameters used in dependent expressions.
 
 Removed checks
 ^^^^^^^^^^^^^^
@@ -258,17 +212,11 @@ Miscellaneous
 Improvements to include-fixer
 -----------------------------
 
-The improvements are...
-
 Improvements to clang-include-fixer
 -----------------------------------
 
-The improvements are...
-
 Improvements to modularize
 --------------------------
-
-The improvements are...
 
 Improvements to pp-trace
 ------------------------

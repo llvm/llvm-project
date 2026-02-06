@@ -249,7 +249,7 @@ G g = {1};
 // CHECK-LABEL: Dumping <deduction guide for G>:
 // CHECK: FunctionTemplateDecl
 // CHECK: |-CXXDeductionGuideDecl {{.*}} implicit <deduction guide for G> 'auto (T) -> G<T>' aggregate
-// CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for G> 'auto (int) -> G<int>' implicit_instantiation aggregate
+// CHECK: `-CXXDeductionGuideDecl {{.*}} implicit used <deduction guide for G> 'auto (int) -> G<int>' implicit_instantiation instantiated_from 0x{{.+}} aggregate
 
 template<typename X>
 using AG = G<X>;
@@ -350,7 +350,7 @@ X x = {{1, 2}};
 // CHECK-NEXT: |-TemplateTypeParmDecl {{.+}} <col:11, col:17> col:17 referenced class depth 0 index 0 T
 // CHECK:      |-CXXDeductionGuideDecl {{.+}} <col:27> col:27 implicit <deduction guide for X> 'auto (T (&&)[2]) -> GH64625::X<T>' aggregate
 // CHECK-NEXT: | `-ParmVarDecl {{.+}} <col:27> col:27 'T (&&)[2]'
-// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} <col:27> col:27 implicit used <deduction guide for X> 'auto (int (&&)[2]) -> GH64625::X<int>' implicit_instantiation aggregate
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} <col:27> col:27 implicit used <deduction guide for X> 'auto (int (&&)[2]) -> GH64625::X<int>' implicit_instantiation instantiated_from 0x{{.+}} aggregate
 // CHECK-NEXT:  |-TemplateArgument type 'int'
 // CHECK-NEXT:  | `-BuiltinType {{.+}} 'int'
 // CHECK-NEXT:  `-ParmVarDecl {{.+}} <col:27> col:27 'int (&&)[2]'
@@ -375,7 +375,7 @@ TwoArrays ta = {{1, 2}, {3, 4, 5}};
 // CHECK:      |-CXXDeductionGuideDecl {{.+}} <col:36> col:36 implicit <deduction guide for TwoArrays> 'auto (T (&&)[2], U (&&)[3]) -> GH64625::TwoArrays<T, U>' aggregate
 // CHECK-NEXT: | |-ParmVarDecl {{.+}} <col:36> col:36 'T (&&)[2]'
 // CHECK-NEXT: | `-ParmVarDecl {{.+}} <col:36> col:36 'U (&&)[3]'
-// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} <col:36> col:36 implicit used <deduction guide for TwoArrays> 'auto (int (&&)[2], int (&&)[3]) -> GH64625::TwoArrays<int, int>' implicit_instantiation aggregate
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} <col:36> col:36 implicit used <deduction guide for TwoArrays> 'auto (int (&&)[2], int (&&)[3]) -> GH64625::TwoArrays<int, int>' implicit_instantiation instantiated_from 0x{{.+}} aggregate
 // CHECK-NEXT:   |-TemplateArgument type 'int'
 // CHECK-NEXT:   | `-BuiltinType {{.+}} 'int'
 // CHECK-NEXT:   |-TemplateArgument type 'int'
@@ -399,7 +399,7 @@ TwoArrays tb = {1, 2, {3, 4, 5}};
 // CHECK-NEXT: | |-ParmVarDecl {{.+}} <col:36> col:36 'T'
 // CHECK-NEXT: | |-ParmVarDecl {{.+}} <col:36> col:36 'T'
 // CHECK-NEXT: | `-ParmVarDecl {{.+}} <col:36> col:36 'U (&&)[3]'
-// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} <col:36> col:36 implicit used <deduction guide for TwoArrays> 'auto (int, int, int (&&)[3]) -> GH64625::TwoArrays<int, int>' implicit_instantiation aggregate
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} <col:36> col:36 implicit used <deduction guide for TwoArrays> 'auto (int, int, int (&&)[3]) -> GH64625::TwoArrays<int, int>' implicit_instantiation instantiated_from 0x{{.+}} aggregate
 // CHECK-NEXT:   |-TemplateArgument type 'int'
 // CHECK-NEXT:   | `-BuiltinType {{.+}} 'int'
 // CHECK-NEXT:   |-TemplateArgument type 'int'
@@ -425,7 +425,7 @@ TwoArrays tc = {{1, 2}, 3, 4, 5};
 // CHECK-NEXT: | |-ParmVarDecl {{.+}} <col:36> col:36 'U'
 // CHECK-NEXT: | |-ParmVarDecl {{.+}} <col:36> col:36 'U'
 // CHECK-NEXT: | `-ParmVarDecl {{.+}} <col:36> col:36 'U'
-// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} <col:36> col:36 implicit used <deduction guide for TwoArrays> 'auto (int (&&)[2], int, int, int) -> GH64625::TwoArrays<int, int>' implicit_instantiation aggregate
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} <col:36> col:36 implicit used <deduction guide for TwoArrays> 'auto (int (&&)[2], int, int, int) -> GH64625::TwoArrays<int, int>' implicit_instantiation instantiated_from 0x{{.+}} aggregate
 // CHECK-NEXT:   |-TemplateArgument type 'int'
 // CHECK-NEXT:   | `-BuiltinType {{.+}} 'int'
 // CHECK-NEXT:   |-TemplateArgument type 'int'
@@ -463,7 +463,7 @@ A a{.f1 = {1}};
 // CHECK-NEXT: |-NonTypeTemplateParmDecl {{.+}} <col:11, col:15> col:15 referenced 'int' depth 0 index 0 N
 // CHECK:      |-CXXDeductionGuideDecl {{.+}} <col:25> col:25 implicit <deduction guide for A> 'auto (int (&&)[N]) -> GH83368::A<N>' aggregate
 // CHECK-NEXT: | `-ParmVarDecl {{.+}} <col:25> col:25 'int (&&)[N]'
-// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} <col:25> col:25 implicit used <deduction guide for A> 'auto (int (&&)[1]) -> GH83368::A<1>' implicit_instantiation aggregate
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} <col:25> col:25 implicit used <deduction guide for A> 'auto (int (&&)[1]) -> GH83368::A<1>' implicit_instantiation instantiated_from 0x{{.+}} aggregate
 // CHECK-NEXT:   |-TemplateArgument integral '1'
 // CHECK-NEXT:   `-ParmVarDecl {{.+}} <col:25> col:25 'int (&&)[1]'
 // CHECK-NEXT: FunctionProtoType {{.+}} 'auto (int (&&)[N]) -> GH83368::A<N>' dependent trailing_return
@@ -574,8 +574,9 @@ static_assert(x.size == 4);
 // CHECK-NEXT: | |-ParmVarDecl 0x{{.+}} <col:18, col:24> col:21 'U (&)[3]'
 // CHECK-NEXT: | `-ConceptSpecializationExpr 0x{{.+}} <col:36, col:42> 'bool' Concept 0x{{.+}} 'True'
 // CHECK-NEXT: |   |-ImplicitConceptSpecializationDecl 0x{{.+}} <{{.+}}> col:28
-// CHECK-NEXT: |   | `-TemplateArgument type 'type-parameter-0-0'
-// CHECK-NEXT: |   |   `-TemplateTypeParmType 0x{{.+}} 'type-parameter-0-0' dependent depth 0 index 0
+// CHECK-NEXT: |   | `-TemplateArgument type 'T'
+// CHECK-NEXT: |   |   `-TemplateTypeParmType 0x{{.+}} 'T' dependent depth 0 index 0
+// CHECK-NEXT: |   |     `-TemplateTypeParm 0x{{.+}} 'T'
 // CHECK-NEXT: |   `-TemplateArgument <{{.+}}> type 'T':'type-parameter-0-0'
 // CHECK-NEXT: |     `-TemplateTypeParmType 0x{{.+}} 'T' dependent depth 0 index 0
 // CHECK-NEXT: |       `-TemplateTypeParm 0x{{.+}} 'T'
@@ -588,8 +589,9 @@ static_assert(x.size == 4);
 // CHECK-NEXT:   |-ParmVarDecl 0x{{.+}} <col:18, col:24> col:21 'double (&)[3]'
 // CHECK-NEXT:   `-ConceptSpecializationExpr 0x{{.+}} <col:36, col:42> 'bool' Concept 0x{{.+}} 'True'
 // CHECK-NEXT:     |-ImplicitConceptSpecializationDecl 0x{{.+}} <{{.+}}> col:28
-// CHECK-NEXT:     | `-TemplateArgument type 'type-parameter-0-0'
-// CHECK-NEXT:     |   `-TemplateTypeParmType 0x{{.+}} 'type-parameter-0-0' dependent depth 0 index 0
+// CHECK-NEXT:     | `-TemplateArgument type 'T'
+// CHECK-NEXT:     |   `-TemplateTypeParmType 0x{{.+}} 'T' dependent depth 0 index 0
+// CHECK-NEXT:     |     `-TemplateTypeParm 0x{{.+}} 'T'
 // CHECK-NEXT:     `-TemplateArgument <{{.+}}> type 'T':'type-parameter-0-0'
 // CHECK-NEXT:       `-TemplateTypeParmType 0x{{.+}} 'T' dependent depth 0 index 0
 // CHECK-NEXT:         `-TemplateTypeParm 0x{{.+}} 'T'
@@ -660,8 +662,9 @@ Test test(42);
 // CHECK-NEXT: |-TemplateTypeParmDecl {{.*}} Concept {{.*}} 'Constraint' depth 0 index 1 auto:1
 // CHECK-NEXT: | `-ConceptSpecializationExpr {{.*}} 'bool' Concept {{.*}} 'Constraint'
 // CHECK-NEXT: |   |-ImplicitConceptSpecializationDecl {{.*}}
-// CHECK-NEXT: |   | |-TemplateArgument type 'type-parameter-0-1'
-// CHECK-NEXT: |   | | `-TemplateTypeParmType {{.*}} 'type-parameter-0-1' dependent depth 0 index 1
+// CHECK-NEXT: |   | |-TemplateArgument type 'auto:1'
+// CHECK-NEXT: |   | | `-TemplateTypeParmType {{.*}} 'auto:1' dependent depth 0 index 1
+// CHECK-NEXT: |   | |   `-TemplateTypeParm {{.*}} 'auto:1'
 // CHECK-NEXT: |   | `-TemplateArgument type 'int'
 // CHECK-NEXT: |   |   `-BuiltinType {{.*}} 'int'
 // CHECK-NEXT: |   |-TemplateArgument {{.*}} type 'auto:1':'type-parameter-0-1'
@@ -902,7 +905,7 @@ void f() {
 // CHECK:      |-CXXDeductionGuideDecl {{.+}} implicit <deduction guide for Vec2d> 'auto (T, T) -> GH67173::Vec2d<T>' aggregate
 // CHECK-NEXT: | |-ParmVarDecl {{.+}} col:27 'T'
 // CHECK-NEXT: | `-ParmVarDecl {{.+}} col:27 'T'
-// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} implicit used <deduction guide for Vec2d> 'auto (int, int) -> GH67173::Vec2d<int>' implicit_instantiation aggregate
+// CHECK-NEXT: `-CXXDeductionGuideDecl {{.+}} implicit used <deduction guide for Vec2d> 'auto (int, int) -> GH67173::Vec2d<int>' implicit_instantiation instantiated_from 0x{{.+}} aggregate
 // CHECK-NEXT:   |-TemplateArgument type 'int'
 // CHECK-NEXT:   | `-BuiltinType {{.+}} 'int'
 // CHECK-NEXT:   |-ParmVarDecl {{.+}} 'int'

@@ -39,3 +39,37 @@ libc_test(
         "//libc/test/src/string:memory_check_utils",
     ],
 )
+
+libc_test(
+    name = "index_test",
+    srcs = ["index_test.cpp"],
+    deps = [
+        "//libc:index",
+        "//libc/test/src/string:strchr_test_helper",
+    ],
+)
+
+libc_test(
+    name = "rindex_test",
+    srcs = ["rindex_test.cpp"],
+    deps = [
+        "//libc:rindex",
+        "//libc/test/src/string:strchr_test_helper",
+    ],
+)
+
+libc_test(
+    name = "strcasecmp_test",
+    srcs = ["strcasecmp_test.cpp"],
+    deps = [
+        "//libc:strcasecmp",
+    ],
+)
+
+libc_test(
+    name = "strncasecmp_test",
+    srcs = ["strncasecmp_test.cpp"],
+    deps = [
+        "//libc:strncasecmp",
+    ],
+)

@@ -41,6 +41,18 @@ class MemoryReadTestCase(TestBase):
             " Consider increasing the maximum read length.",
         )
 
+    @skipIf(archs=no_match("^(riscv|aarch64).*"))
+    def test_memory_read_instruction_decode_failure(self):
+        """Test the 'memory read' command with instruction format."""
+        self.build_run_stop()
+
+        # assume that 0xffffff is invalid instruction in RISC-V and AArch64,
+        # so decoding it will fail
+        self.expect(
+            "memory read --format instruction `&my_insns[0]` `&my_insns[3]`",
+            substrs=["failed to decode instructions at"],
+        )
+
     def test_memory_read(self):
         """Test the 'memory read' command with plain and vector formats."""
         self.build_run_stop()

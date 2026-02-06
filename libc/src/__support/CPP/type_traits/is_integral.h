@@ -26,13 +26,18 @@ private:
   }
 
 public:
-  LIBC_INLINE_VAR static constexpr bool value = __is_unqualified_any_of<
-      T,
+  LIBC_INLINE_VAR static constexpr bool value =
+      __is_unqualified_any_of<T,
 #ifdef LIBC_TYPES_HAS_INT128
-      __int128_t, __uint128_t,
+                              __int128_t, __uint128_t,
 #endif
-      char, signed char, unsigned char, short, unsigned short, int,
-      unsigned int, long, unsigned long, long long, unsigned long long, bool>();
+#ifdef __cpp_char8_t
+                              char8_t,
+#endif
+                              char16_t, char32_t, char, signed char,
+                              unsigned char, short, unsigned short, int,
+                              unsigned int, long, unsigned long, long long,
+                              unsigned long long, bool>();
 };
 template <typename T>
 LIBC_INLINE_VAR constexpr bool is_integral_v = is_integral<T>::value;
