@@ -18,17 +18,14 @@ void free( void *ptr );
 char *fgets(char *str, int n, FILE *stream);
 extern FILE *stdin;
 
-// In an untrusted environment the cmd line arguments
-// are assumed to be tainted.
-int main(int argc, char * argv[]) {// expected-note {{Taint originated in 'argv'}}
-   if (argc < 1)// expected-note {{'argc' is >= 1}}
-                // expected-note@-1 {{Taking false branch}}
-     return 1;
+
+// invalid main function
+// expected-no-diagnostics
+
+int main(void) {   
    char cmd[2048] = "/bin/cat ";
-   char filename[1024];
-   strncpy(filename, argv[1], sizeof(filename)-1); // expected-note {{Taint propagated to the 1st argument}}
-   strncat(cmd, filename, sizeof(cmd) - strlen(cmd)-1);// expected-note {{Taint propagated to the 1st argument}}
-   system(cmd);// expected-warning {{Untrusted data is passed to a system call}}
-               // expected-note@-1 {{Untrusted data is passed to a system call}}
+   char filename[1024];   
+   strncat(cmd, filename, sizeof(cmd) - strlen(cmd)-1);
+   system(cmd);               
    return 0;
- }
+}

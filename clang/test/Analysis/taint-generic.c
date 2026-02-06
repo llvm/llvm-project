@@ -1402,7 +1402,6 @@ int main(int argc, char * argv[]) {
    if (argc < 1)
      return 1;
    char cmd[2048] = "/bin/cat ";
-   char filename[1024];
    clang_analyzer_isTainted_char(*argv[1]); // expected-warning{{YES}}
    strncat(cmd, argv[1], sizeof(cmd) - strlen(cmd)-1);
    system(cmd);// expected-warning {{Untrusted data is passed to a system call}}

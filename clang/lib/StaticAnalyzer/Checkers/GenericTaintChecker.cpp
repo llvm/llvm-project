@@ -63,8 +63,6 @@ constexpr llvm::StringLiteral MsgSanitizeSystemArgs =
 constexpr llvm::StringLiteral MsgCustomSink =
     "Untrusted data is passed to a user-defined sink";
 
-const std::string MsgTaintOrigin = "Taint originated here";
-
 using ArgIdxTy = int;
 using ArgVecTy = llvm::SmallVector<ArgIdxTy, 2>;
 
@@ -161,7 +159,7 @@ const NoteTag *taintOriginTrackerTag(CheckerContext &C,
       return "";
     }
     if (TaintedSymbols.empty())
-      return MsgTaintOrigin;
+      return "Taint originated here";
 
     for (auto Sym : TaintedSymbols) {
       BR.markInteresting(Sym);
@@ -846,18 +844,38 @@ void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   const MemRegion *ArgvReg =
       State->getRegion(FD->parameters()[1], C.getLocationContext());
-  SVal ArgvSval = State->getSVal(ArgvReg);
-  // Add taintedness to argv**
-  State = addTaint(State, ArgvSval);
+  SVal ArgvSVal = State->getSVal(ArgvReg);
+  State = addTaint(State, ArgvSVal);
+  StringRef ArgvName = FD->parameters()[1]->getName();
+
+  const MemRegion *ArgcReg =
+      State->getRegion(FD->parameters()[0], C.getLocationContext());
+  SVal ArgcSVal = State->getSVal(ArgcReg);
+  State = addTaint(State, ArgcSVal);
+  StringRef ArgcName = FD->parameters()[0]->getName();
+  if (auto N = ArgcSVal.getAs<NonLoc>()) {
+    ConstraintManager &CM = C.getConstraintManager();
+    // The upper bound is the ARG_MAX on an arbitrary Linux
+    // to model that is is typically smaller than INT_MAX.
+    State = CM.assumeInclusiveRange(State, *N, llvm::APSInt::getUnsigned(1),
+                                    llvm::APSInt::getUnsigned(2097152), true);
+  }
 
   const NoteTag *OriginatingTag =
-      C.getNoteTag([ArgvSval](PathSensitiveBugReport &BR) -> std::string {
+      C.getNoteTag([ArgvSVal, ArgcSVal, ArgcName,
+                    ArgvName](PathSensitiveBugReport &BR) -> std::string {
         // We give diagnostics only for taint related reports
-        if (!BR.isInteresting(ArgvSval) ||
+        if ((!BR.isInteresting(ArgcSVal) && !BR.isInteresting(ArgvSVal)) ||
             BR.getBugType().getCategory() != categories::TaintedData)
           return "";
-
-        return MsgTaintOrigin;
+        std::string Message = "Taint originated in ";
+        if (BR.isInteresting(ArgvSVal) && BR.isInteresting(ArgcSVal))
+          Message += "'" + ArgvName.str() + "' and '" + ArgcName.str() + "'";
+        else if (BR.isInteresting(ArgvSVal))
+          Message += "'" + ArgvName.str() + "'";
+        else
+          Message += "'" + ArgcName.str() + "'";
+        return Message;
       });
   C.addTransition(State, OriginatingTag);
 }
