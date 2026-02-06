@@ -98,7 +98,7 @@ def check_manual_requests(
               hasNextPage
               endCursor
             }
-          }
+      }
         }
         """
     formatted_start_date = start_date.strftime("%Y-%m-%dT%H:%M:%S")
@@ -231,6 +231,14 @@ def count_prs(gh: github.Github, triage_list: dict, start_date: datetime.datetim
     ``triage_list`` with the number of PRs merged for each user.
     """
 
+    # We check for reviewers (commentors) for each PR here beacuase it is
+    # cheap.  The check is not perfect, because we only consider merged PRs
+    # and we only look at the first 100 comments.
+    # We do a more accurate query for reviewers later, but doing it here helps
+    # us to cheaply identify people who meet the requirements giving us less
+    # users to process with the more expensive query later.
+    # We only process 25 PRs at a time to cut down on the risk of one of the
+    # queries taking too long and crashing the script.
     query = """
         query ($query: String!, $after: String) {
           rateLimit {
@@ -239,7 +247,7 @@ def count_prs(gh: github.Github, triage_list: dict, start_date: datetime.datetim
             resetAt
             limit
           }
-          search(query: $query, type: ISSUE, first: 100, after: $after) {
+          search(query: $query, type: ISSUE, first: 25, after: $after) {
             issueCount,
             nodes {
               ... on PullRequest {
@@ -248,6 +256,13 @@ def count_prs(gh: github.Github, triage_list: dict, start_date: datetime.datetim
                  }
                  mergedBy {
                    login
+                 }
+                 comments(first: 100) {
+                   nodes {
+                     author {
+                       login
+                     }
+                   }
                  }
               }
             }
@@ -279,8 +294,26 @@ def count_prs(gh: github.Github, triage_list: dict, start_date: datetime.datetim
             for pr in data["search"]["nodes"]:
                 # Users can be None if the user has been deleted.
                 if not pr["author"]:
+                    author = None
+                else:
+                    author = pr["author"]["login"]
+
+                # Check for reviewers
+                #print(f"There are {len(pr['comments']['nodes'])} comments")
+                for comment in pr["comments"]["nodes"]:
+                    # Users can be NULL if they are deleted.
+                    if not comment["author"]:
+                        continue
+                    reviewer = comment["author"]["login"]
+                    # Can't review your own PR
+                    if reviewer == author:
+                        continue
+                    if reviewer in triage_list:
+                        triage_list[reviewer].add_reviewed(1)
+
+                # Check for authors
+                if not author:
                     continue
-                author = pr["author"]["login"]
                 if author in triage_list:
                     triage_list[author].add_authored()
 
@@ -306,6 +339,7 @@ def main():
     org = gh.get_organization("llvm")
     repo = org.get_repo("llvm-project")
     one_year_ago = datetime.datetime.now() - datetime.timedelta(days=365)
+    one_week_ago = datetime.datetime.now() - datetime.timedelta(days=7)
     triage_list = {}
     for collaborator in repo.get_collaborators(permission="push"):
         triage_list[collaborator.login] = User(collaborator.login, triage_list)
