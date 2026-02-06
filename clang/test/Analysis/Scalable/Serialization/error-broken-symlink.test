@@ -1,0 +1,14 @@
+## Test that broken symlinks with .json extension are rejected.
+## Unsupported on Windows as symlinks behave differently there.
+
+# UNSUPPORTED: system-windows
+
+# RUN: ln -sf non-existent-file.json %t-broken-symlink.json
+# RUN: not ssaf-serialization-format-test %t-broken-symlink.json 2>&1 | FileCheck %s
+# RUN: rm %t-broken-symlink.json
+
+## Test that broken symlinks are detected as non-existent files
+
+# CHECK: failed to read TUSummary
+# CHECK: failed to validate JSON file
+# CHECK: file does not exist
