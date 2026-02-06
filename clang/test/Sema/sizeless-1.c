@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-strict-prototypes -triple arm64-linux-gnu -target-feature +sve -std=c11 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-strict-prototypes -triple arm64-linux-gnu -target-feature +sve -std=gnu11 %s
 
+// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-comment -Wno-strict-prototypes -triple arm64-linux-gnu -target-feature +sve -std=c90 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-strict-prototypes -triple arm64-linux-gnu -target-feature +sve -std=c11 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-strict-prototypes -triple arm64-linux-gnu -target-feature +sve -std=gnu11 %s -fexperimental-new-constant-interpreter
+
 typedef __SVInt8_t svint8_t;
 typedef __SVInt16_t svint16_t;
 

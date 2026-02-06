@@ -16,7 +16,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include <fstream>
 #include <sstream>
@@ -157,6 +156,17 @@ struct PyPrintAccumulator {
   }
 };
 
+/// RAII wrapper for MlirLlvmRawFdOStream that ensures destruction on scope
+/// exit.
+struct RAIIMlirLlvmRawFdOStream : MlirLlvmRawFdOStream {
+  RAIIMlirLlvmRawFdOStream(MlirLlvmRawFdOStream stream)
+      : MlirLlvmRawFdOStream(stream) {}
+  RAIIMlirLlvmRawFdOStream(const RAIIMlirLlvmRawFdOStream &) = delete;
+  RAIIMlirLlvmRawFdOStream &
+  operator=(const RAIIMlirLlvmRawFdOStream &) = delete;
+  ~RAIIMlirLlvmRawFdOStream() { mlirLlvmRawFdOStreamDestroy(*this); }
+};
+
 /// Accumulates into a file, either writing text (default)
 /// or binary. The file may be a Python file-like object or a path to a file.
 class PyFileAccumulator {
@@ -165,13 +175,19 @@ public:
       : binary(binary) {
     std::string filePath;
     if (nanobind::try_cast<std::string>(fileOrStringObject, filePath)) {
-      std::error_code ec;
-      writeTarget.emplace<llvm::raw_fd_ostream>(filePath, ec);
-      if (ec) {
+      std::string errorMessage;
+      auto errorCallback = +[](MlirStringRef message, void *userData) {
+        auto *storage = static_cast<std::string *>(userData);
+        storage->assign(message.data, message.length);
+      };
+      MlirLlvmRawFdOStream stream = mlirLlvmRawFdOStreamCreate(
+          filePath.c_str(), binary, errorCallback, &errorMessage);
+      if (mlirLlvmRawFdOStreamIsNull(stream)) {
         throw nanobind::value_error(
-            (std::string("Unable to open file for writing: ") + ec.message())
+            (std::string("Unable to open file for writing: ") + errorMessage)
                 .c_str());
       }
+      writeTarget.emplace<RAIIMlirLlvmRawFdOStream>(stream);
     } else {
       writeTarget.emplace<nanobind::object>(fileOrStringObject.attr("write"));
     }
@@ -179,7 +195,7 @@ public:
 
   MlirStringCallback getCallback() {
     return writeTarget.index() == 0 ? getPyWriteCallback()
-                                    : getOstreamCallback();
+                                    : getOStreamCallback();
   }
 
   void *getUserData() { return this; }
@@ -201,15 +217,15 @@ private:
     };
   }
 
-  MlirStringCallback getOstreamCallback() {
+  MlirStringCallback getOStreamCallback() {
     return [](MlirStringRef part, void *userData) {
       PyFileAccumulator *accum = static_cast<PyFileAccumulator *>(userData);
-      std::get<llvm::raw_fd_ostream>(accum->writeTarget)
-          .write(part.data, part.length);
+      mlirLlvmRawFdOStreamWrite(
+          std::get<RAIIMlirLlvmRawFdOStream>(accum->writeTarget), part);
     };
   }
 
-  std::variant<nanobind::object, llvm::raw_fd_ostream> writeTarget;
+  std::variant<nanobind::object, RAIIMlirLlvmRawFdOStream> writeTarget;
   bool binary;
 };
 

@@ -2810,6 +2810,11 @@ void TargetLoweringObjectFileGOFF::getModuleMetadata(Module &M) {
   ADAPR->setBeginSymbol(ADASym);
 }
 
+bool TargetLoweringObjectFileGOFF::shouldPutJumpTableInFunctionSection(
+    bool UsesLabelDifference, const Function &F) const {
+  return true;
+}
+
 MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
   return SelectSectionForGlobal(GO, Kind, TM);

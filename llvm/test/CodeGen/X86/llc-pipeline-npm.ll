@@ -103,6 +103,7 @@
 ; O2-NEXT: stack-protector
 ; O2-NEXT: verify)
 ; O2-NEXT: function(machine-function(x86-isel
+; O2-NEXT: x86-cleanup-local-dynamic-tls
 ; O2-NEXT: x86-argument-stack-slot
 ; O2-NEXT: finalize-isel
 ; O2-NEXT: early-tailduplication
@@ -145,6 +146,7 @@
 ; O2-NEXT: machinelicm
 ; O2-NEXT: x86-lower-tile-copy
 ; O2-NEXT: x86-fp-stackifier
+; O2-NEXT: x86-lvi-load
 ; O2-NEXT: remove-redundant-debug-values
 ; O2-NEXT: fixup-statepoint-caller-saved
 ; O2-NEXT: postra-machine-sink
@@ -320,6 +322,7 @@
 ; O3-WINDOWS-NEXT: machinelicm
 ; O3-WINDOWS-NEXT: x86-lower-tile-copy
 ; O3-WINDOWS-NEXT: x86-fp-stackifier
+; O3-WINDOWS-NEXT: x86-lvi-load
 ; O3-WINDOWS-NEXT: remove-redundant-debug-values
 ; O3-WINDOWS-NEXT: fixup-statepoint-caller-saved
 ; O3-WINDOWS-NEXT: postra-machine-sink
