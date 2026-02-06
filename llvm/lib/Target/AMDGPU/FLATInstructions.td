@@ -398,7 +398,7 @@ class FLAT_Global_Load_LDS_Pseudo <string opName, bit EnableSaddr = 0, bit IsAsy
        !if(EnableSaddr, (ins SReg_64:$saddr, VGPR_32:$vaddr), (ins VReg_64_AlignTarget:$vaddr)),
        (ins flat_offset:$offset, CPol_0:$cpol)),
   !if(IsAsync, " $vdst,", "")#" $vaddr"#!if(EnableSaddr, ", $saddr", ", off")#"$offset$cpol"> {
-  let LGKM_CNT = !not(IsAsync);
+  let LGKM_CNT = 0;
   let VM_CNT = !not(IsAsync);
   let ASYNC_CNT = IsAsync;
   let is_flat_global = 1;
