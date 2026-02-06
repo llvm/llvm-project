@@ -141,15 +141,13 @@ public:
 
   ExceptionAnalyzer() = default;
 
-  enum class UnknownHandlingBehavior { Ignore, TreatAsThrowing };
-
-  void setUnannotatedFunctionsBehavior(UnknownHandlingBehavior Behavior) {
-    AssumeUnannotatedFunctionsAsThrowing =
-        Behavior == UnknownHandlingBehavior::TreatAsThrowing;
+  void assumeUnannotatedFunctionsAsThrowing(bool AssumeUnannotatedAsThrowing) {
+    AssumeUnannotatedFunctionsAsThrowing = AssumeUnannotatedAsThrowing;
   }
-  void setMissingDefinitionsBehavior(UnknownHandlingBehavior Behavior) {
+  void assumeMissingDefinitionsFunctionsAsThrowing(
+      bool AssumeMissingDefinitionsAsThrowing) {
     AssumeMissingDefinitionsFunctionsAsThrowing =
-        Behavior == UnknownHandlingBehavior::TreatAsThrowing;
+        AssumeMissingDefinitionsAsThrowing;
   }
 
   void ignoreBadAlloc(bool ShallIgnore) { IgnoreBadAlloc = ShallIgnore; }

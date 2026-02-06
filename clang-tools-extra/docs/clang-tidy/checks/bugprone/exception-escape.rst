@@ -78,16 +78,15 @@ Options
    an explicit exception specification. It can be set to the following values:
 
    - `None`
-      The check will not consider functions without explicitly declared exception
-      specification as throwing, unless they have a body which is visible to the
-      check and the check can deduce that the function throws.
+      The check will consider functions without an explicit exception
+      specification as throwing only if they have a visible definition which
+      can be deduced to throw.
    - `OnlyUndefined`
-      The check will consider functions without visible definitions as throwing.
+      The check will consider functions with only a declaration available as
+      throwing.
    - `All`
-      The check will consider functions without visible definitions as throwing,
-      and will also consider calls to functions with visible definitions that
-      are not explicitly declared as non-throwing (i.e. lack ``noexcept`` or
-      ``throw()``) as throwing, even if their bodies are visible and no explicit
-      throw is found.
+      The check will consider all functions without an explicit exception
+      specification (such as ``noexcept``) as throwing, even if they have a
+      visible definition and do not contain any throwing statements.
 
    Default value is `None`.

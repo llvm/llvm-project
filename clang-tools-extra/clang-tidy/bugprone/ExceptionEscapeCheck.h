@@ -32,7 +32,7 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
-  enum class FunctionsThatShouldNotThrowPolicy {
+  enum class TreatFunctionsWithoutSpecification {
     None,
     OnlyUndefined,
     All,
@@ -48,7 +48,7 @@ private:
   const bool CheckMain;
   const bool CheckNothrowFunctions;
 
-  const FunctionsThatShouldNotThrowPolicy
+  const TreatFunctionsWithoutSpecification
       TreatFunctionsWithoutSpecificationAsThrowing;
 
   llvm::StringSet<> FunctionsThatShouldNotThrow;

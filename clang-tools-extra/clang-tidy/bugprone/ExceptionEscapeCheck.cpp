@@ -17,17 +17,19 @@ namespace clang::tidy {
 
 template <>
 struct OptionEnumMapping<
-    bugprone::ExceptionEscapeCheck::FunctionsThatShouldNotThrowPolicy> {
-  using FunctionsThatShouldNotThrowPolicy =
-      bugprone::ExceptionEscapeCheck::FunctionsThatShouldNotThrowPolicy;
+    bugprone::ExceptionEscapeCheck::TreatFunctionsWithoutSpecification> {
+  using TreatFunctionsWithoutSpecification =
+      bugprone::ExceptionEscapeCheck::TreatFunctionsWithoutSpecification;
 
-  static llvm::ArrayRef<std::pair<FunctionsThatShouldNotThrowPolicy, StringRef>>
+  static llvm::ArrayRef<
+      std::pair<TreatFunctionsWithoutSpecification, StringRef>>
   getEnumMapping() {
-    static constexpr std::pair<FunctionsThatShouldNotThrowPolicy, StringRef>
+    static constexpr std::pair<TreatFunctionsWithoutSpecification, StringRef>
         Mapping[] = {
-            {FunctionsThatShouldNotThrowPolicy::None, "None"},
-            {FunctionsThatShouldNotThrowPolicy::OnlyUndefined, "OnlyUndefined"},
-            {FunctionsThatShouldNotThrowPolicy::All, "All"},
+            {TreatFunctionsWithoutSpecification::None, "None"},
+            {TreatFunctionsWithoutSpecification::OnlyUndefined,
+             "OnlyUndefined"},
+            {TreatFunctionsWithoutSpecification::All, "All"},
         };
     return {Mapping};
   }
@@ -65,7 +67,7 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
       CheckNothrowFunctions(Options.get("CheckNothrowFunctions", true)),
       TreatFunctionsWithoutSpecificationAsThrowing(
           Options.get("TreatFunctionsWithoutSpecificationAsThrowing",
-                      FunctionsThatShouldNotThrowPolicy::None)) {
+                      TreatFunctionsWithoutSpecification::None)) {
   llvm::SmallVector<StringRef, 8> FunctionsThatShouldNotThrowVec,
       IgnoredExceptionsVec, CheckedSwapFunctionsVec;
   RawFunctionsThatShouldNotThrow.split(FunctionsThatShouldNotThrowVec, ",", -1,
@@ -81,19 +83,13 @@ ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
   Tracer.ignoreExceptions(std::move(IgnoredExceptions));
   Tracer.ignoreBadAlloc(true);
 
-  const auto MissingDefinitionsBehavior =
+  Tracer.assumeMissingDefinitionsFunctionsAsThrowing(
       TreatFunctionsWithoutSpecificationAsThrowing !=
-              FunctionsThatShouldNotThrowPolicy::None
-          ? utils::ExceptionAnalyzer::UnknownHandlingBehavior::TreatAsThrowing
-          : utils::ExceptionAnalyzer::UnknownHandlingBehavior::Ignore;
-  Tracer.setMissingDefinitionsBehavior(MissingDefinitionsBehavior);
+      TreatFunctionsWithoutSpecification::None);
 
-  const auto UnannotatedFunctionsBehavior =
+  Tracer.assumeUnannotatedFunctionsAsThrowing(
       TreatFunctionsWithoutSpecificationAsThrowing ==
-              FunctionsThatShouldNotThrowPolicy::All
-          ? utils::ExceptionAnalyzer::UnknownHandlingBehavior::TreatAsThrowing
-          : utils::ExceptionAnalyzer::UnknownHandlingBehavior::Ignore;
-  Tracer.setUnannotatedFunctionsBehavior(UnannotatedFunctionsBehavior);
+      TreatFunctionsWithoutSpecification::All);
 }
 
 void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
