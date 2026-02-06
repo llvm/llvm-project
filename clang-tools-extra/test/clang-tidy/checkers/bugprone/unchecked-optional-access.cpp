@@ -370,3 +370,38 @@ void foo() {
   if (!vec.empty())
     vec[0].x = 0;
 }
+
+namespace std {
+template <typename T>
+struct vector_iterator {
+  T& operator*();
+  vector_iterator& operator++();
+  bool operator!=(const vector_iterator&);
+};
+
+template <typename T>
+struct vector_with_iter {
+  vector_iterator<T> begin();
+  vector_iterator<T> end();
+};
+
+} // namespace std
+
+void nested_loops() {
+  std::vector_with_iter<absl::optional<int>> optionals;
+  for (const auto &opt : optionals) {
+    if (opt.has_value()) {
+      for (int i = 0; i < 10; ++i) {
+        opt.value(); // no-warning
+      }
+    }
+  }
+
+  for (const auto &opt : optionals) {
+    if (opt.has_value()) {
+      for (;;) {
+        opt.value(); // no-warning
+      }
+    }
+  }
+}

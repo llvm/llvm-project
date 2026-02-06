@@ -338,8 +338,9 @@ auto isValueOrNotEqX() {
 }
 
 auto isZeroParamConstMemberCall() {
-  return cxxMemberCallExpr(
-      callee(cxxMethodDecl(parameterCountIs(0), isConst())));
+  return cxxMemberCallExpr(callee(cxxMethodDecl(
+      parameterCountIs(0), isConst(),
+      unless(hasAnyName("value", "has_value", "hasValue", "operator bool")))));
 }
 
 auto isZeroParamConstMemberOperatorCall() {
