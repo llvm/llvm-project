@@ -498,12 +498,12 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
     if (!ModOrErr)
       return ModOrErr.takeError();
 
-    SmallVector<StringRef> Symbols;
+    std::string SymbolData;
     for (Function &F : **ModOrErr) {
       if (isKernel(F))
-        Symbols.push_back(F.getName());
+        SymbolData.append(F.getName().data(), F.getName().size() + 1);
     }
-    SymbolTable.emplace_back(llvm::join(Symbols.begin(), Symbols.end(), "\n"));
+    SymbolTable.emplace_back(std::move(SymbolData));
   }
 
   bool IsAOTCompileNeeded = IsIntelOffloadArch(
