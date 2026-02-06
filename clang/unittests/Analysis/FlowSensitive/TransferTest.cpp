@@ -1009,6 +1009,54 @@ TEST(TransferTest, BinaryOperatorAssignUnknown) {
       });
 }
 
+TEST(TransferTest, BinaryOperatorAssignFloat) {
+  using ast_matchers::binaryOperator;
+  using ast_matchers::hasOperatorName;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+
+  // This was crashing.
+  std::string Code = R"(
+    void target() {
+      double Foo = 0.0f;
+      double FooAtA = Foo;
+      Foo = 1.0f;
+      double FooAtB = Foo;
+      bool check = (FooAtA == FooAtB);
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p"));
+
+        const Environment &EnvP = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *FooAtADecl = findValueDecl(ASTCtx, "FooAtA");
+        ASSERT_THAT(FooAtADecl, NotNull());
+        const Value *FooAtAVal = EnvP.getValue(*FooAtADecl);
+        // FIXME: Should be non-null. Floats aren't modeled at all.
+        EXPECT_THAT(FooAtAVal, IsNull());
+
+        const ValueDecl *FooAtBDecl = findValueDecl(ASTCtx, "FooAtB");
+        ASSERT_THAT(FooAtBDecl, NotNull());
+        const Value *FooAtBVal = EnvP.getValue(*FooAtBDecl);
+        // FIXME: Should be non-null. Floats aren't modeled at all.
+        EXPECT_THAT(FooAtBVal, IsNull());
+
+        // See if the storage location is correctly propagated.
+        auto MatchResult =
+            match(binaryOperator(hasOperatorName("=")).bind("bo"), ASTCtx);
+        const auto *BO = selectFirst<BinaryOperator>("bo", MatchResult);
+        ASSERT_THAT(BO, NotNull());
+        const StorageLocation *BOLoc = EnvP.getStorageLocation(*BO);
+        // FIXME: Should be non-null.
+        EXPECT_THAT(BOLoc, IsNull());
+      });
+}
+
 TEST(TransferTest, VarDeclInitAssign) {
   std::string Code = R"(
     void target() {
