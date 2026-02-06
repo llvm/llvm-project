@@ -832,7 +832,8 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
                                    ConversionPatternRewriter &rewriter) const {
   // Bail out if volatile flag is set.
   if (storeOp.getVolatile_())
-    return rewriter.notifyMatchFailure(storeOp, "volatile stores not supported");
+    return rewriter.notifyMatchFailure(storeOp, 
+                                       "volatile stores not supported");
 
   auto memrefType = cast<MemRefType>(storeOp.getMemref().getType());
   if (!memrefType.getElementType().isSignlessInteger())
@@ -1036,7 +1037,8 @@ StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
                                 ConversionPatternRewriter &rewriter) const {
   // Bail out if volatile flag is set.
   if (storeOp.getVolatile_())
-    return rewriter.notifyMatchFailure(storeOp, "volatile stores not supported");
+    return rewriter.notifyMatchFailure(storeOp, 
+                                       "volatile stores not supported");
 
   auto memrefType = cast<MemRefType>(storeOp.getMemref().getType());
   if (memrefType.getElementType().isSignlessInteger())
