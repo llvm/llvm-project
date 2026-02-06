@@ -14256,8 +14256,7 @@ static SDValue tryToFoldExtendOfConstant(SDNode *N, const SDLoc &DL,
   // fold (zext (build_vector AllConstants) -> (build_vector AllConstants)
   // fold (aext (build_vector AllConstants) -> (build_vector AllConstants)
   EVT SVT = VT.getScalarType();
-  if (!(VT.isVector() &&
-        ISD::isBuildVectorOfConstantSDNodes(N0.getNode())))
+  if (!(VT.isVector() && ISD::isBuildVectorOfConstantSDNodes(N0.getNode())))
     return SDValue();
 
   // We can fold this node into a build_vector.

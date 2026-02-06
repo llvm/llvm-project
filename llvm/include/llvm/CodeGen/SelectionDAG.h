@@ -912,8 +912,7 @@ public:
                                           const APInt &UndefElts);
 
   /// Convenience overload with no undef elements.
-  SDValue getConstantBuildVector(EVT VT, const SDLoc &DL,
-                                 ArrayRef<APInt> Ops) {
+  SDValue getConstantBuildVector(EVT VT, const SDLoc &DL, ArrayRef<APInt> Ops) {
     return getConstantBuildVector(VT, DL, Ops, APInt::getZero(Ops.size()));
   }
 
