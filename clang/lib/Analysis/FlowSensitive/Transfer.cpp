@@ -163,6 +163,9 @@ public:
       if (LHSLoc == nullptr)
         return;
 
+      // Assign a storage location for the whole expression.
+      Env.setStorageLocation(*S, *LHSLoc);
+
       // Compound assignments involve arithmetic we don't model yet.
       Value *RHSVal =
           S->isCompoundAssignmentOp() ? nullptr : Env.getValue(*RHS);
@@ -179,9 +182,6 @@ public:
 
       // Assign a value to the storage location of the left-hand side.
       Env.setValue(*LHSLoc, *RHSVal);
-
-      // Assign a storage location for the whole expression.
-      Env.setStorageLocation(*S, *LHSLoc);
       return;
     }
 
