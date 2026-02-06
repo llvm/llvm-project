@@ -549,6 +549,7 @@ LIBC_INLINE constexpr bool isprint(wchar_t wch) {
 }
 
 LIBC_INLINE constexpr bool isxdigit(wchar_t wch) {
+  // Hexadecimal digits are the same in C.UTF8 as in ASCII
   return ascii::isxdigit(wch);
 }
 
