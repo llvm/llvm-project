@@ -4603,7 +4603,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     if (VT != MVT::v4i8)
       return SDValue();
 
-    // <4 x i8> BUILD_VECTOR a, b, c, d -> PACK(PPACK.DH pair(a, b), pair(c, d))
+    // <4 x i8> BUILD_VECTOR a, b, c, d -> PACK(PPACK.DH pair(a, c), pair(b, d))
     SDValue Val0 =
         DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(0));
     SDValue Val1 =
@@ -4612,17 +4612,17 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
         DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(2));
     SDValue Val3 =
         DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(3));
-    SDValue PackDH =
-        DAG.getNode(RISCVISD::PPAIRE_DB, DL, {MVT::v2i16, MVT::v2i16},
-                    {Val0, Val1, Val2, Val3});
+    SDValue PPairDB =
+        DAG.getNode(RISCVISD::PPAIRE_DB, DL, {MVT::v4i8, MVT::v4i8},
+                    {Val0, Val2, Val1, Val3});
 
     return DAG.getNode(
         ISD::BITCAST, DL, MVT::v4i8,
         SDValue(
             DAG.getMachineNode(
                 RISCV::PACK, DL, MVT::i32,
-                {DAG.getNode(ISD::BITCAST, DL, MVT::i32, PackDH.getValue(0)),
-                 DAG.getNode(ISD::BITCAST, DL, MVT::i32, PackDH.getValue(1))}),
+                {DAG.getNode(ISD::BITCAST, DL, MVT::i32, PPairDB.getValue(0)),
+                 DAG.getNode(ISD::BITCAST, DL, MVT::i32, PPairDB.getValue(1))}),
             0));
   }
 
