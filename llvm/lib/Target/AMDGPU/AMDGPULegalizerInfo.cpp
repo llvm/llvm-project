@@ -1059,9 +1059,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
 
     getActionDefinitionsBuilder(G_FMODF)
-      .lowerFor({S16, S32, S64})
-      .scalarize(0)
-      .lower();
+        .lowerFor({S16, S32, S64})
+        .scalarize(0)
+        .lower();
   } else {
     getActionDefinitionsBuilder(G_FSQRT)
       .customFor({S32, S64, S16})
@@ -1097,9 +1097,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .lower();
 
     getActionDefinitionsBuilder(G_FMODF)
-      .lowerFor({S32, S64})
-      .scalarize(0)
-      .lower();
+        .lowerFor({S32, S64})
+        .scalarize(0)
+        .lower();
   }
 
   auto &FPTruncActions = getActionDefinitionsBuilder(G_FPTRUNC);
