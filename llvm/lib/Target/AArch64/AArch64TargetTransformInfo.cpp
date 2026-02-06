@@ -1075,10 +1075,9 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
           VecVT.getVectorMinNumElements() != (16 / EltSizeInBytes))
         break;
       InstructionCost Cost = 1;
-      // For fixed-vector types at least a MOV and XTN are needed to convert
-      // from the predicate to a fixed-length mask.
+      // For fixed-vector types we need to AND the mask with a ptrue vl<N>.
       if (isa<FixedVectorType>(RetTy))
-        Cost += 2;
+        Cost += 1;
       return Cost;
     }
     break;
