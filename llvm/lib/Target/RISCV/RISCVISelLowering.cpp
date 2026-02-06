@@ -995,7 +995,16 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX}, VT,
                          Legal);
 
-      setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
+      if (Subtarget.hasStdExtZvabd()) {
+        setOperationAction(ISD::ABS, VT, Legal);
+        // Only SEW=8/16 are supported in Zvabd.
+        if (VT.getVectorElementType() == MVT::i8 ||
+            VT.getVectorElementType() == MVT::i16)
+          setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Legal);
+        else
+          setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
+      } else
+        setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Custom);
 
       // Custom-lower extensions and truncations from/to mask types.
       setOperationAction({ISD::ANY_EXTEND, ISD::SIGN_EXTEND, ISD::ZERO_EXTEND},
@@ -7526,6 +7535,8 @@ static unsigned getRISCVVLOp(SDValue Op) {
   OP_CASE(SMAX)
   OP_CASE(UMIN)
   OP_CASE(UMAX)
+  OP_CASE(ABDS)
+  OP_CASE(ABDU)
   OP_CASE(STRICT_FADD)
   OP_CASE(STRICT_FSUB)
   OP_CASE(STRICT_FMUL)
@@ -8814,8 +8825,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerToScalableOp(Op, DAG);
   case ISD::ABDS:
   case ISD::ABDU: {
-    SDLoc dl(Op);
     EVT VT = Op->getValueType(0);
+    // Only SEW=8/16 are supported in Zvabd.
+    if (Subtarget.hasStdExtZvabd() && VT.isVector() &&
+        (VT.getVectorElementType() == MVT::i8 ||
+         VT.getVectorElementType() == MVT::i16))
+      return lowerToScalableOp(Op, DAG);
+
+    SDLoc dl(Op);
     SDValue LHS = DAG.getFreeze(Op->getOperand(0));
     SDValue RHS = DAG.getFreeze(Op->getOperand(1));
     bool IsSigned = Op->getOpcode() == ISD::ABDS;
@@ -13694,17 +13711,22 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
   } else
     std::tie(Mask, VL) = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
-  SDValue SplatZero = DAG.getNode(
-      RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-      DAG.getConstant(0, DL, Subtarget.getXLenVT()), VL);
-  SDValue NegX = DAG.getNode(RISCVISD::SUB_VL, DL, ContainerVT, SplatZero, X,
-                             DAG.getUNDEF(ContainerVT), Mask, VL);
-  SDValue Max = DAG.getNode(RISCVISD::SMAX_VL, DL, ContainerVT, X, NegX,
-                            DAG.getUNDEF(ContainerVT), Mask, VL);
-
+  SDValue Result;
+  if (Subtarget.hasStdExtZvabd()) {
+    Result = DAG.getNode(RISCVISD::ABS_VL, DL, ContainerVT, X,
+                         DAG.getUNDEF(ContainerVT), Mask, VL);
+  } else {
+    SDValue SplatZero = DAG.getNode(
+        RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
+        DAG.getConstant(0, DL, Subtarget.getXLenVT()), VL);
+    SDValue NegX = DAG.getNode(RISCVISD::SUB_VL, DL, ContainerVT, SplatZero, X,
+                               DAG.getUNDEF(ContainerVT), Mask, VL);
+    Result = DAG.getNode(RISCVISD::SMAX_VL, DL, ContainerVT, X, NegX,
+                         DAG.getUNDEF(ContainerVT), Mask, VL);
+  }
   if (VT.isFixedLengthVector())
-    Max = convertFromScalableVector(VT, Max, DAG, Subtarget);
-  return Max;
+    Result = convertFromScalableVector(VT, Result, DAG, Subtarget);
+  return Result;
 }
 
 SDValue RISCVTargetLowering::lowerToScalableOp(SDValue Op,
@@ -18748,6 +18770,48 @@ static SDValue combineVWADDSUBWSelect(SDNode *N, SelectionDAG &DAG) {
                      N->getFlags());
 }
 
+// vwaddu C (vabd A B) -> vwabda(A B C)
+// vwaddu C (vabdu A B) -> vwabdau(A B C)
+static SDValue performVWABDACombine(SDNode *N, SelectionDAG &DAG,
+                                    const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasStdExtZvabd())
+    return SDValue();
+
+  MVT VT = N->getSimpleValueType(0);
+  if (VT.getVectorElementType() != MVT::i8 &&
+      VT.getVectorElementType() != MVT::i16)
+    return SDValue();
+
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  SDValue Passthru = N->getOperand(2);
+  if (!Passthru->isUndef())
+    return SDValue();
+
+  SDValue Mask = N->getOperand(3);
+  SDValue VL = N->getOperand(4);
+  auto IsABD = [](SDValue Op) {
+    if (Op->getOpcode() != RISCVISD::ABDS_VL &&
+        Op->getOpcode() != RISCVISD::ABDU_VL)
+      return SDValue();
+    return Op;
+  };
+
+  SDValue Diff = IsABD(Op0);
+  Diff = Diff ? Diff : IsABD(Op1);
+  if (!Diff)
+    return SDValue();
+  SDValue Acc = Diff == Op0 ? Op1 : Op0;
+
+  SDLoc DL(N);
+  Acc = DAG.getNode(RISCVISD::VZEXT_VL, DL, VT, Acc, Mask, VL);
+  SDValue Result = DAG.getNode(
+      Diff.getOpcode() == RISCVISD::ABDS_VL ? RISCVISD::VWABDA_VL
+                                            : RISCVISD::VWABDAU_VL,
+      DL, VT, Diff.getOperand(0), Diff.getOperand(1), Acc, Mask, VL);
+  return Result;
+}
+
 static SDValue performVWADDSUBW_VLCombine(SDNode *N,
                                           TargetLowering::DAGCombinerInfo &DCI,
                                           const RISCVSubtarget &Subtarget) {
@@ -21659,6 +21723,8 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (SDValue V = combineVqdotAccum(N, DAG, Subtarget))
       return V;
     return combineToVWMACC(N, DAG, Subtarget);
+  case RISCVISD::VWADDU_VL:
+    return performVWABDACombine(N, DAG, Subtarget);
   case RISCVISD::VWADD_W_VL:
   case RISCVISD::VWADDU_W_VL:
   case RISCVISD::VWSUB_W_VL:
