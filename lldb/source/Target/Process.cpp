@@ -3914,10 +3914,7 @@ bool Process::ShouldBroadcastEvent(Event *event_ptr) {
 bool Process::PrivateStateThread::StartupThread() {
   llvm::Expected<HostThread> private_state_thread =
       ThreadLauncher::LaunchThread(
-          m_thread_name,
-          [this] {
-            return m_process.RunPrivateStateThread();
-          },
+          m_thread_name, [this] { return m_process.RunPrivateStateThread(); },
           8 * 1024 * 1024);
   if (!private_state_thread) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Host), private_state_thread.takeError(),
