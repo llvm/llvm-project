@@ -20,9 +20,7 @@
 # vim swap files
 .*.sw?
 .sw?
-#OS X specific files.
-.DS_store
-#macOS case-sensitive version of above
+#macOS specific
 .DS_Store
 
 # Ignore the user specified CMake presets in subproject directories.
