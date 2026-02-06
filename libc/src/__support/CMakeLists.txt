@@ -156,22 +156,12 @@ add_header_library(
     ctype_utils.h
 )
 
-list(APPEND wctype_utils_deps
-  libc.hdr.types.wchar_t
-)
-
-if ("${LIBC_CONF_WCTYPE_MODE}" STREQUAL "LIBC_WCTYPE_MODE_UTF8")
-  list(APPEND wctype_utils_deps
-      libc.src.__support.wctype.wctype_classification_utils
-  )
-endif()
-
 add_header_library(
   wctype_utils
   HDRS
     wctype_utils.h
   DEPENDS
-    ${wctype_utils_deps}
+    libc.hdr.types.wchar_t
 )
 
 add_header_library(
