@@ -99,6 +99,10 @@ struct GenELF64KernelTy : public GenericKernelTy {
                    uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
                    KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
+#if _WIN32
+    return Plugin::error(ErrorCode::UNSUPPORTED,
+                         "kernel launching is not supported on Windows");
+#else
     // Create a vector of ffi_types, one per argument.
     SmallVector<ffi_type *, 16> ArgTypes(KernelArgs.NumArgs, &ffi_type_pointer);
     ffi_type **ArgTypesPtr = (ArgTypes.size()) ? &ArgTypes[0] : nullptr;
@@ -116,6 +120,7 @@ struct GenELF64KernelTy : public GenericKernelTy {
     ffi_call(&Cif, Func, &Return, (void **)LaunchParams.Ptrs);
 
     return Plugin::success();
+#endif
   }
 
   /// Return maximum block size for maximum occupancy
