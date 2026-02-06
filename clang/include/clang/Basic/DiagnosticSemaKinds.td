@@ -10832,6 +10832,11 @@ def warn_lifetime_safety_return_stack_addr_moved_strict
       InGroup<LifetimeSafetyStrict>,
       DefaultIgnore;
 
+def warn_lifetime_safety_invalidation
+    : Warning<"%select{object whose reference is captured|parameter}0 is later invalidated">,
+      InGroup<LifetimeSafetyInvalidation>,
+      DefaultIgnore;
+
 def warn_lifetime_safety_dangling_field
     : Warning<"address of stack memory escapes to a field">,
       InGroup<LifetimeSafetyDanglingField>,
@@ -10844,6 +10849,7 @@ def warn_lifetime_safety_dangling_field_moved
       DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
+def note_lifetime_safety_invalidated_here : Note<"invalidated here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
 def note_lifetime_safety_moved_here : Note<"potentially moved here">;

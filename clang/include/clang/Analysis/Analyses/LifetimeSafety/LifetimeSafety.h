@@ -20,6 +20,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_H
 
+#include "clang/AST/Decl.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
@@ -73,6 +74,15 @@ public:
                                    const FieldDecl *Field,
                                    const Expr *MovedExpr,
                                    SourceLocation ExpiryLoc) {}
+
+  // Reports when a reference/iterator is used after the container operation
+  // that invalidated it.
+  virtual void reportUseAfterInvalidation(const Expr *IssueExpr,
+                                          const Expr *UseExpr,
+                                          const Expr *InvalidationExpr) {}
+  virtual void reportUseAfterInvalidation(const ParmVarDecl *PVD,
+                                          const Expr *UseExpr,
+                                          const Expr *InvalidationExpr) {}
 
   // Suggests lifetime bound annotations for function paramters.
   virtual void suggestLifetimeboundToParmVar(SuggestionScope Scope,
