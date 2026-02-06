@@ -7922,7 +7922,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
       VPValue *Mask = getBlockInMask(Builder.getInsertBlock());
       VPValue *One = Plan.getConstantInt(I->getType(), 1u);
       auto *SafeRHS =
-          Builder.createSelect(Mask, Ops[1], One, {}, VPI->getDebugLoc());
+          Builder.createSelect(Mask, Ops[1], One, VPI->getDebugLoc());
       Ops[1] = SafeRHS;
       return new VPWidenRecipe(*I, Ops, *VPI, *VPI, VPI->getDebugLoc());
     }
@@ -8486,7 +8486,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
                             ? VPIRFlags(RdxDesc.getFastMathFlags())
                             : VPIRFlags();
       NewExitingVPV =
-          Builder.createSelect(Cond, OrigExitingVPV, PhiR, Flags, {}, "");
+          Builder.createSelect(Cond, OrigExitingVPV, PhiR, {}, "", Flags);
       OrigExitingVPV->replaceUsesWithIf(NewExitingVPV, [](VPUser &U, unsigned) {
         using namespace VPlanPatternMatch;
         return match(
@@ -9081,7 +9081,7 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
     ResumePhi = ScalarPHBuilder.createScalarPhi(
         {VectorTC,
          MainPlan.getVectorLoopRegion()->getCanonicalIV()->getStartValue()},
-        {}, {}, "vec.epilog.resume.val");
+        {}, "vec.epilog.resume.val");
   } else {
     ResumePhi = cast<VPPhi>(&*ResumePhiIter);
     if (MainScalarPH->begin() == MainScalarPH->end())

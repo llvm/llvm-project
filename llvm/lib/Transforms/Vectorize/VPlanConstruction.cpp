@@ -222,7 +222,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       // an empty VPInstruction that we will fix once the whole plain CFG has
       // been built.
       NewR =
-          VPIRBuilder.createScalarPhi({}, *Phi, Phi->getDebugLoc(), "vec.phi");
+          VPIRBuilder.createScalarPhi({}, Phi->getDebugLoc(), "vec.phi", *Phi);
       NewR->setUnderlyingValue(Phi);
       if (isHeaderBB(Phi->getParent(), LI->getLoopFor(Phi->getParent()))) {
         // Header phis need to be fixed after the VPBB for the latch has been
@@ -567,7 +567,7 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
            drop_begin(HeaderVPBB->phis()), Plan.getScalarHeader()->phis())) {
     auto *VectorPhiR = cast<VPPhi>(&PhiR);
     auto *ResumePhiR = ScalarPHBuilder.createScalarPhi(
-        {VectorPhiR, VectorPhiR->getOperand(0)}, {}, VectorPhiR->getDebugLoc());
+        {VectorPhiR, VectorPhiR->getOperand(0)}, VectorPhiR->getDebugLoc());
     cast<VPIRPhi>(&ScalarPhiR)->addOperand(ResumePhiR);
   }
 }
@@ -1409,7 +1409,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
 
     // Replace select for data.
     VPValue *DataSelect =
-        Builder.createSelect(AnyOf, Op1, Op2, {}, SelectR->getDebugLoc());
+        Builder.createSelect(AnyOf, Op1, Op2, SelectR->getDebugLoc());
     SelectR->replaceAllUsesWith(DataSelect);
     SelectR->eraseFromParent();
 

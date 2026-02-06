@@ -233,11 +233,11 @@ public:
     return createNaryOp(VPInstruction::LogicalAnd, {LHS, RHS}, DL, Name);
   }
 
-  VPInstruction *
-  createSelect(VPValue *Cond, VPValue *TrueVal, VPValue *FalseVal,
-               const VPIRFlags &Flags = {},
-               DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "",
-               std::optional<FastMathFlags> FMFs = std::nullopt) {
+  VPInstruction *createSelect(VPValue *Cond, VPValue *TrueVal,
+                              VPValue *FalseVal,
+                              DebugLoc DL = DebugLoc::getUnknown(),
+                              const Twine &Name = "",
+                              const VPIRFlags &Flags = {}) {
     return tryInsertInstruction(new VPInstruction(
         Instruction::Select, {Cond, TrueVal, FalseVal}, Flags, {}, DL, Name));
   }
@@ -290,9 +290,8 @@ public:
   }
 
   VPPhi *createScalarPhi(ArrayRef<VPValue *> IncomingValues,
-                         const VPIRFlags &Flags = {},
                          DebugLoc DL = DebugLoc::getUnknown(),
-                         const Twine &Name = "") {
+                         const Twine &Name = "", const VPIRFlags &Flags = {}) {
     return tryInsertInstruction(new VPPhi(IncomingValues, Flags, DL, Name));
   }
 
