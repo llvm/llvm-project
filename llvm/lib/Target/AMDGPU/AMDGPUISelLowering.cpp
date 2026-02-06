@@ -2778,14 +2778,19 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
 
   const auto &Options = getTargetMachine().Options;
   if (VT == MVT::f16 || Flags.hasApproximateFuncs()) {
+    // TODO: The direct f16 path is 1.79 ulp for f16. This should be used
+    // depending on !fpmath metadata.
 
-    if (VT == MVT::f16 && !isTypeLegal(MVT::f16)) {
-      // Log and multiply in f32 is good enough for f16.
+    bool PromoteToF32 = VT == MVT::f16 && (!Flags.hasApproximateFuncs() ||
+                                           !isTypeLegal(MVT::f16));
+
+    if (PromoteToF32) {
+      // Log and multiply in f32 is always good enough for f16.
       X = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, X, Flags);
     }
 
     SDValue Lowered = LowerFLOGUnsafe(X, DL, DAG, IsLog10, Flags);
-    if (VT == MVT::f16 && !isTypeLegal(MVT::f16)) {
+    if (PromoteToF32) {
       return DAG.getNode(ISD::FP_ROUND, DL, VT, Lowered,
                          DAG.getTargetConstant(0, DL, MVT::i32), Flags);
     }
@@ -2793,9 +2798,14 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
     return Lowered;
   }
 
-  auto [ScaledInput, IsScaled] = getScaledLogInput(DAG, DL, X, Flags);
-  if (ScaledInput)
-    X = ScaledInput;
+  SDValue ScaledInput, IsScaled;
+  if (VT == MVT::f16)
+    X = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, X, Flags);
+  else {
+    std::tie(ScaledInput, IsScaled) = getScaledLogInput(DAG, DL, X, Flags);
+    if (ScaledInput)
+      X = ScaledInput;
+  }
 
   SDValue Y = DAG.getNode(AMDGPUISD::LOG, DL, VT, X, Flags);
 
