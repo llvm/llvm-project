@@ -187,10 +187,10 @@ TEST(CFGBackEdgesTest, NestedForLoop) {
   auto BackEdges = findCFGBackEdges(*Cfg);
   EXPECT_THAT(BackEdges, SizeIs(2));
   auto It = BackEdges.begin();
-  auto* FirstLoopTarget = It->first->getLoopTarget();
+  auto *FirstLoopTarget = It->first->getLoopTarget();
   EXPECT_THAT(FirstLoopTarget, NotNull());
   ++It;
-  auto* SecondLoopTarget = It->first->getLoopTarget();
+  auto *SecondLoopTarget = It->first->getLoopTarget();
   EXPECT_THAT(SecondLoopTarget, NotNull());
   EXPECT_NE(FirstLoopTarget, SecondLoopTarget);
 }
@@ -265,7 +265,7 @@ TEST(CFGBackEdgesTest, FindNonStructuredLoopBackedgeNodes) {
   // Finds just the goto backedge, and not the for-loop backedge.
   auto BackEdgeNodes = findNonStructuredLoopBackedgeNodes(*Cfg);
   EXPECT_THAT(BackEdgeNodes, SizeIs(1));
-  const CFGBlock* Node = *BackEdgeNodes.begin();
+  const CFGBlock *Node = *BackEdgeNodes.begin();
   EXPECT_EQ(Node->getLoopTarget(), nullptr);
   EXPECT_TRUE(isa<GotoStmt>(Node->getTerminatorStmt()));
 }
