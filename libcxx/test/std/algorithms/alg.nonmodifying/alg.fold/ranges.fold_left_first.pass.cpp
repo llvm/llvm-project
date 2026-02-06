@@ -39,6 +39,7 @@
 #include <functional>
 #include <iterator>
 #include <list>
+#include <optional>
 #include <ranges>
 #include <set>
 #include <string_view>
