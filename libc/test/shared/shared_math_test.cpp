@@ -173,6 +173,10 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                         float128(0.0), float128(0.0), float128(0.0)));
 
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogbf128(float128(1.0)));
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+  EXPECT_FP_EQ(2.0f16, LIBC_NAMESPACE::shared::f16sqrtf128(float128(4.0)));
+#endif // LIBC_TYPES_HAS_FLOAT16
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128

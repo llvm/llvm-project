@@ -1122,6 +1122,12 @@ add_header_library(
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.common
     libc.src.__support.macros.config
+  f16sqrtf128
+  HDRS
+    f16sqrtf128.h
+  DEPENDS
+    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.sqrt
 )
 
 add_header_library(
