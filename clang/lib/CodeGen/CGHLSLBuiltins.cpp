@@ -547,10 +547,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Args.push_back(emitHlslOffset(*this, E, 4));
 
     llvm::Type *RetTy = ConvertType(E->getType());
-    if (E->getNumArgs() <= 5) {
+    if (E->getNumArgs() <= 5)
       return Builder.CreateIntrinsic(
           RetTy, CGM.getHLSLRuntime().getSampleBiasIntrinsic(), Args);
-    }
 
     Args.push_back(emitHlslClamp(*this, E, 5));
     return Builder.CreateIntrinsic(
