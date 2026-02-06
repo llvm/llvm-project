@@ -373,8 +373,7 @@ cl::opt<bool> llvm::PrintAfterEachVPlanPass(
 
 cl::list<std::string> llvm::PrintAfterVPlanPasses(
     "vplan-print-after", cl::Hidden,
-    cl::desc("Print after specified VPlan transformations (substring match "
-             "suffices)."));
+    cl::desc("Print after specified VPlan transformations (regexp)."));
 #endif
 
 // This flag enables the stress testing of the VPlan H-CFG construction in the

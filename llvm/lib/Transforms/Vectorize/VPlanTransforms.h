@@ -19,6 +19,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Regex.h"
 
 namespace llvm {
 
@@ -56,7 +57,7 @@ struct VPlanTransforms {
       if (PrintAfterEachVPlanPass ||
           (PrintAfterVPlanPasses.getNumOccurrences() > 0 &&
            any_of(PrintAfterVPlanPasses, [PassName](StringRef Entry) {
-             return PassName.contains(Entry);
+             return Regex(Entry).match(PassName);
            }))) {
         dbgs() << "VPlan after " << PassName << '\n';
         dbgs() << Plan << '\n';
