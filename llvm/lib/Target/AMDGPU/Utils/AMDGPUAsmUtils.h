@@ -135,7 +135,7 @@ constexpr const char *const ModMatrixFmt[] = {
     "MATRIX_FMT_FP4"};
 
 constexpr const char *const ModMatrixScale[] = {"MATRIX_SCALE_ROW0",
-                                                       "MATRIX_SCALE_ROW1"};
+                                                "MATRIX_SCALE_ROW1"};
 
 constexpr const char *const ModMatrixScaleFmt[] = {
     "MATRIX_SCALE_FMT_E8", "MATRIX_SCALE_FMT_E5M3", "MATRIX_SCALE_FMT_E4M3"};
