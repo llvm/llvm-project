@@ -332,17 +332,6 @@ public:
     return isVGPR(MRI, Reg) || isAGPR(MRI, Reg);
   }
 
-  /// Returns true if the register is a special-purpose/reserved register that
-  /// appears in getReservedRegs(). These registers don't contribute to general
-  /// register pressure (e.g., VCC, EXEC, M0, trap handler registers, etc.).
-  static bool isReservedSpecialRegister(Register Reg);
-
-  /// Returns true if the register should contribute to register pressure
-  /// tracking for scheduling purposes. Filters out special-purpose registers
-  /// that don't count toward SGPR/VGPR/AGPR limits (e.g., VCC, EXEC, M0).
-  bool shouldTrackRegisterForPressure(const MachineRegisterInfo &MRI,
-                                      Register Reg) const;
-
   // FIXME: SGPRs are assumed to be uniform, but this is not true for i1 SGPRs
   // (such as VCC) which hold a wave-wide vector of boolean values. Examining
   // just the register class is not suffcient; it needs to be combined with a

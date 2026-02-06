@@ -329,7 +329,6 @@ protected:
   LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
   // Helper methods for physical register tracking
-  Register getPhysRegFromUnit(MCRegUnit Unit) const;
   bool isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const;
 
   // Check if all register units of Reg are currently live in PhysLiveRegs.
@@ -351,8 +350,8 @@ protected:
 
 public:
   // Initialize PhysLiveRegs capacity. Must be called before first use.
-  void initPhysLiveRegs(const MachineRegisterInfo &MRI_) {
-    PhysLiveRegs.init(MRI_);
+  void initPhysLiveRegs(const MachineRegisterInfo &MRI) {
+    PhysLiveRegs.init(MRI);
   }
 
   // Enable physical register tracking. Should only be called when GCNTrackers
