@@ -203,8 +203,7 @@ static void replaceLoadOrStoreOp(vector::MaskedLoadOp loadOp,
                                  VectorType vectorTy, Value ptr, unsigned align,
                                  ConversionPatternRewriter &rewriter) {
   rewriter.replaceOpWithNewOp<LLVM::MaskedLoadOp>(
-      loadOp, vectorTy, ptr, adaptor.getMask(), adaptor.getPassThru(), align,
-      loadOp.getNontemporal());
+      loadOp, vectorTy, ptr, adaptor.getMask(), adaptor.getPassThru(), align);
 }
 
 static void replaceLoadOrStoreOp(vector::StoreOp storeOp,
