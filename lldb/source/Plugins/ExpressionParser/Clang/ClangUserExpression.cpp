@@ -1007,7 +1007,8 @@ void ClangUserExpression::FixupTemplateLookupDiagnostics(
 
   diagnostic_manager.AddDiagnostic(
       "Naming template instantiation not yet supported. Template functions "
-      "can be invoked via their mangled name. E.g., expression _Z3fooIiEvi(5)",
+      "can be invoked via their mangled name. For example, using "
+      "`_Z3fooIiEvi(123)` for `foo<int>(123)`",
       lldb::eSeverityInfo, eDiagnosticOriginLLDB);
 }
 

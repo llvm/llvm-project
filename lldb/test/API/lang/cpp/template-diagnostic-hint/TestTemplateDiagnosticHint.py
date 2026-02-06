@@ -17,7 +17,7 @@ class TestCase(TestBase):
             substrs=[
                 "does not name a template but is followed by template arguments",
                 "note: Naming template instantiation not yet supported.",
-                "Template functions can be invoked via their mangled name. E.g., expression _Z3fooIiEvi(5)",
+                "Template functions can be invoked via their mangled name.",
             ],
         )
 
@@ -43,6 +43,6 @@ class TestCase(TestBase):
             substrs=[
                 "no template named 'Foo'",
                 "note: Naming template instantiation not yet supported.",
-                "Template functions can be invoked via their mangled name. E.g., expression _Z3fooIiEvi(5)",
+                "Template functions can be invoked via their mangled name.",
             ],
         )
