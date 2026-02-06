@@ -3347,12 +3347,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     }
   }
 
-  // srem -> (and/urem) for inbounds+nuw byte GEP ---
-  if (GEPEltType->isIntegerTy(8) && Indices.size() == 1 && GEP.isInBounds() &&
+  // srem -> (and/urem) for inbounds+nuw GEP ---
+  if (Indices.size() == 1 && GEP.isInBounds() &&
       GEP.getNoWrapFlags().hasNoUnsignedWrap()) {
-
-    using namespace llvm::PatternMatch;
-
     Value *X = nullptr;
     Value *Y = nullptr;
 
@@ -3363,20 +3360,14 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         // -> srem by power-of-two can be treated as urem,
         // and urem by power-of-two folds to 'and' later.
         Instruction *OldIdxI = dyn_cast<Instruction>(Indices[0]);
-        Builder.SetInsertPoint(&GEP);
         Value *NewIdx = Builder.CreateURem(X, Y, OldIdxI->getName());
 
         auto *NewGEP = GetElementPtrInst::Create(
-            GEPEltType, PtrOp, {NewIdx}, GEP.getName(), GEP.getIterator());
-        NewGEP->setIsInBounds(GEP.isInBounds());
-        NewGEP->setNoWrapFlags(GEP.getNoWrapFlags());
+            GEPEltType, PtrOp, {NewIdx}, GEP.getNoWrapFlags(), GEP.getName(),
+            GEP.getIterator());
         NewGEP->setDebugLoc(GEP.getDebugLoc());
 
-        Instruction *Res = replaceInstUsesWith(GEP, NewGEP);
-        if (OldIdxI && OldIdxI->use_empty())
-          eraseInstFromFunction(*OldIdxI);
-
-        return Res;
+        return replaceInstUsesWith(GEP, NewGEP);
       }
     }
   }
