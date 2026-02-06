@@ -101,7 +101,7 @@ int bar(int n){
 // CHECK1-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
 // CHECK1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
 // CHECK1-NEXT:    store ptr [[I]], ptr [[TMP8]], align 8
-// CHECK1-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l16_omp_outlined_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l16_omp_outlined_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 1)
+// CHECK1-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l16_omp_outlined_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l16_omp_outlined_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 1, i32 0)
 // CHECK1-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK1:       omp.body.continue:
 // CHECK1-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
@@ -221,7 +221,7 @@ int bar(int n){
 // CHECK2-NEXT:    store i32 [[ADD]], ptr [[I]], align 4
 // CHECK2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i32 0, i32 0
 // CHECK2-NEXT:    store ptr [[I]], ptr [[TMP8]], align 4
-// CHECK2-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l16_omp_outlined_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l16_omp_outlined_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i32 1)
+// CHECK2-NEXT:    call void @__kmpc_parallel_60(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l16_omp_outlined_omp_outlined, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z9ftemplateIcET_i_l16_omp_outlined_omp_outlined_wrapper, ptr [[CAPTURED_VARS_ADDRS]], i32 1, i32 0)
 // CHECK2-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK2:       omp.body.continue:
 // CHECK2-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]

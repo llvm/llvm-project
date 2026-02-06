@@ -2534,7 +2534,7 @@ protected:
     if (lang_type != lldb::eLanguageTypeUnknown)
       return lang_type;
 
-    Symbol *s = frame->GetSymbolContext(eSymbolContextSymbol).symbol;
+    const Symbol *s = frame->GetSymbolContext(eSymbolContextSymbol).symbol;
     if (s)
       lang_type = s->GetMangled().GuessLanguage();
 
@@ -2610,7 +2610,7 @@ public:
     Language::ForEach([&](Language *lang) {
       if (const char *help = lang->GetLanguageSpecificTypeLookupHelp())
         stream.Printf("%s\n", help);
-      return true;
+      return IterationAction::Continue;
     });
 
     m_cmd_help_long = std::string(stream.GetString());
@@ -2649,7 +2649,7 @@ public:
              (m_command_options.m_language == eLanguageTypeUnknown))) {
       Language::ForEach([&](Language *lang) {
         languages.push_back(lang);
-        return true;
+        return IterationAction::Continue;
       });
     } else {
       languages.push_back(Language::FindPlugin(m_command_options.m_language));

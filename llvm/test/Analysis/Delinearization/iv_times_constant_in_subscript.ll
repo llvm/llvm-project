@@ -12,11 +12,11 @@
 define void @foo(i64 %n, i64 %m, i64 %b, ptr %A) {
 ; CHECK-LABEL: 'foo'
 ; CHECK-NEXT:  Inst: store double 1.000000e+00, ptr %arrayidx, align 8
-; CHECK-NEXT:  In Loop with Header: for.j
 ; CHECK-NEXT:  AccessFunction: {{\{\{}}(8 * %m * %b),+,(16 * %m)}<%for.i>,+,16}<%for.j>
 ; CHECK-NEXT:  Base offset: %A
 ; CHECK-NEXT:  ArrayDecl[UnknownSize][%m] with elements of 8 bytes.
 ; CHECK-NEXT:  ArrayRef[{%b,+,2}<nsw><%for.i>][{0,+,2}<nuw><%for.j>]
+; CHECK-NEXT:  Delinearization validation: Failed
 ;
 entry:
   br label %for.i

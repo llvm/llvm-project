@@ -28,7 +28,7 @@ A bundled code object may also be used to bundle just the offloaded code
 objects, and embedded as data into the host code object. The host compilation
 includes an ``init`` function that will use the runtime corresponding to the
 offload kind (see :ref:`clang-offload-kind-table`) to load the offload code
-objects appropriate to the devices present when the host program is executed.
+objects appropriate for the devices present when the host program is executed.
 
 :program:`clang-offload-bundler` is located in
 `clang/tools/clang-offload-bundler`.
@@ -147,7 +147,7 @@ bundle file is:
   <end>     ::== OFFLOAD_BUNDLER_MAGIC_STR__END__
 
 **comment**
-  The symbol used for starting single-line comment in the file type of
+  The symbol used for starting a single-line comment in the file type of
   constituting bundles. E.g. it is ";" for ll ``File Type`` and "#" for "s"
   ``File Type``.
 
@@ -155,13 +155,13 @@ bundle file is:
   The :ref:`clang-bundle-entry-id` for the enclosing bundle.
 
 **eol**
-  The end of line character.
+  The end-of-line character.
 
 **bundle**
   The code object stored in one of the supported text file formats.
 
 **OFFLOAD_BUNDLER_MAGIC_STR__**
-  Magic string that marks the existence of offloading data i.e.
+  The magic string that marks the existence of offloading data i.e.
   "__CLANG_OFFLOAD_BUNDLE__".
 
 .. _clang-bundled-code-object-layout:
@@ -231,7 +231,7 @@ Where:
       ============= ==============================================================
       host          Host code object. ``clang-offload-bundler`` always includes
                     this entry as the first bundled code object entry. For an
-                    embedded bundled code object this entry is not used by the
+                    embedded bundled code object, this entry is not used by the
                     runtime and so is generally an empty code object.
 
       hip           Offload code object for the HIP language. Used for all
@@ -272,7 +272,7 @@ without differentiation based on offload kind.
     ``<arch><sub>-<vendor>-<sys>-<env>``
 
     However, in order to standardize outputs for tools that consume bitcode bundles
-    and to parse target ID containing dashes, the bundler only accepts target
+    and to parse a target ID containing dashes, the bundler only accepts target
     triples in the 4-field format:
 
     ``<arch><sub>-<vendor>-<sys>-<env>``
@@ -292,7 +292,7 @@ Bundled Code Object Composition
   * If there is an entry with a target feature specified as *Any*, then all
     entries must specify that target feature as *Any* for the same processor.
 
-There may be additional target specific restrictions.
+There may be additional target-specific restrictions.
 
 .. _compatibility-bundle-entry-id:
 
@@ -300,9 +300,9 @@ Compatibility Rules for Bundle Entry ID
 ---------------------------------------
 
   A code object, specified using its Bundle Entry ID, can be loaded and
-  executed on a target processor, if:
+  executed on a target processor if:
 
-  * Their offload kinds are the same or comptible.
+  * Their offload kinds are the same or compatible.
   * Their target triples are compatible.
   * Their Target IDs are compatible as defined in :ref:`compatibility-target-id`.
 
@@ -331,7 +331,7 @@ Target ID syntax is defined by the following BNF syntax:
 Where:
 
 **processor**
-  Is a the target specific processor or any alternative processor name.
+  Is the target-specific processor or any alternative processor name.
 
 **target-feature**
   Is a target feature name that is supported by the processor. Each target
@@ -350,7 +350,7 @@ Where:
     can only be loaded on a processor configured with the target feature on.
 
   *Off*
-    specified by ``-``, indicating the target feature is disabled. A code
+    Specified by ``-``, indicating the target feature is disabled. A code
     object compiled with a target ID specifying a target feature off
     can only be loaded on a processor configured with the target feature off.
 
@@ -360,9 +360,9 @@ Compatibility Rules for Target ID
 ---------------------------------
 
   A code object compiled for a Target ID is considered compatible for a
-  target, if:
+  target if:
 
-  * Their processor is same.
+  * Their processor is the same.
   * Their feature set is compatible as defined above.
 
 There are two forms of target ID:
@@ -380,10 +380,10 @@ There are two forms of target ID:
   alphabetic order. Command line tools convert non-canonical form to canonical
   form.
 
-Target Specific information
+Target-Specific information
 ===========================
 
-Target specific information is available for the following:
+Target-specific information is available for the following:
 
 *AMD GPU*
   AMD GPU supports target ID and target features. See `User Guide for AMDGPU Backend
@@ -397,7 +397,7 @@ Most other targets do not support target IDs.
 Archive Unbundling
 ==================
 
-Unbundling of a heterogeneous device archive (HDA) is done to create device specific
+Unbundling of a heterogeneous device archive (HDA) is done to create device-specific
 archives. HDA is in a format compatible with GNU ``ar`` utility and contains a
 collection of bundled device binaries where each bundle file will contain
 device binaries for a host and one or more targets. The output device-specific
@@ -469,7 +469,7 @@ compatible with that particular offload target. Compatibility between a
 device binary in HDA and a target is based on the compatibility between their
 bundle entry IDs as defined in :ref:`compatibility-bundle-entry-id`.
 
-Following cases may arise during compatibility testing:
+The following cases may arise during compatibility testing:
 
 * A binary is compatible with one or more targets: Insert the binary into the
   device-specific archive of each compatible target.
@@ -517,7 +517,7 @@ Compression and Decompression
 
 ``clang-offload-bundler`` provides features to compress and decompress the full
 bundle, leveraging inherent redundancies within the bundle entries. Use the
-`-compress` command-line option to enable this compression capability.
+``-compress`` command-line option to enable this compression capability.
 
 The compressed offload bundle begins with a header followed by the compressed binary data:
 
@@ -542,4 +542,4 @@ The compressed offload bundle begins with a header followed by the compressed bi
 - **Compressed Data**:
     The actual compressed binary data follows the header. Its size can be inferred from the total size of the file minus the header size.
 
-    > **Note**: Version 3 is now the default format. For backward compatibility with older HIP runtimes that support version 2 only, set the environment variable `COMPRESSED_BUNDLE_FORMAT_VERSION=2`.
+    > **Note**: Version 3 is now the default format. For backward compatibility with older HIP runtimes that support version 2 only, set the environment variable ``COMPRESSED_BUNDLE_FORMAT_VERSION=2``.

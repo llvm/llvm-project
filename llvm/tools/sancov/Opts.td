@@ -22,6 +22,10 @@ def : Flag<["-"], "v">, Alias<version>, HelpText<"Alias for --version">, Group<g
 def action_grp : OptionGroup<"Action">, HelpText<"Action (required)">;
 def print : F<"print", "Print coverage addresses">,
   Group<action_grp>;
+def diff : F<"diff", "Compute difference between two sancov files (A - B) and write to the new output sancov file">,
+  Group<action_grp>;
+def union_files : F<"union", "Compute union of multiple sancov files and write to the new output sancov file">,
+  Group<action_grp>;
 def printCoveragePcs : F<"print-coverage-pcs", "Print coverage instrumentation points addresses.">,
   Group<action_grp>;
 def coveredFunctions : F<"covered-functions", "Print all covered funcions.">,
@@ -55,4 +59,8 @@ defm stripPathPrefix
 
 defm ignorelist
     : Eq<"ignorelist", "Ignorelist file (sanitizer ignorelist format)">,
+      MetaVarName<"<string>">;
+
+defm output
+    : Eq<"output", "Output file for diff and union actions">,
       MetaVarName<"<string>">;

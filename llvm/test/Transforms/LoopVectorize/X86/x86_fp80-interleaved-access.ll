@@ -15,7 +15,7 @@ for.cond.cleanup:
 
 for.body:
   %i.09 = phi i16 [ 0, %entry ], [ %add3, %for.body ]
-  %res.08 = phi x86_fp80 [ undef, %entry ], [ %3, %for.body ]
+  %res.08 = phi x86_fp80 [ zeroinitializer, %entry ], [ %3, %for.body ]
   %arrayidx = getelementptr inbounds x86_fp80, ptr %a, i16 %i.09
   %0 = load x86_fp80, ptr %arrayidx, align 1
   %add = or i16 %i.09, 1

@@ -56,7 +56,7 @@ func.func private @printMemrefF32(memref<*xf32>) attributes { llvm.emit_c_interf
 func.func @vector_splat_2d() {
   %c0 = arith.constant 0 : index
   %f10 = arith.constant 10.0 : f32
-  %vf10 = vector.splat %f10: !vector_type_C
+  %vf10 = vector.broadcast %f10: f32 to !vector_type_C
   %C = memref.alloc() : !matrix_type_CC
   memref.store %vf10, %C[%c0, %c0]: !matrix_type_CC
 

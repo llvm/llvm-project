@@ -34,7 +34,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <limits>
-#include <utility>
 
 using namespace llvm;
 using namespace rdf;
@@ -58,7 +57,7 @@ namespace {
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addRequired<MachineDominanceFrontier>();
+      AU.addRequired<MachineDominanceFrontierWrapperPass>();
       AU.setPreservesAll();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
@@ -103,7 +102,7 @@ char HexagonRDFOpt::ID = 0;
 INITIALIZE_PASS_BEGIN(HexagonRDFOpt, "hexagon-rdf-opt",
       "Hexagon RDF optimizations", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
+INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontierWrapperPass)
 INITIALIZE_PASS_END(HexagonRDFOpt, "hexagon-rdf-opt",
       "Hexagon RDF optimizations", false, false)
 
@@ -296,7 +295,7 @@ bool HexagonRDFOpt::runOnMachineFunction(MachineFunction &MF) {
   }
 
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  const auto &MDF = getAnalysis<MachineDominanceFrontier>();
+  const auto &MDF = getAnalysis<MachineDominanceFrontierWrapperPass>().getMDF();
   const auto &HII = *MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
   const auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   MRI = &MF.getRegInfo();

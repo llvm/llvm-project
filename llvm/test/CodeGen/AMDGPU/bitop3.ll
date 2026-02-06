@@ -9,10 +9,16 @@
 ; ========= Single bit functions =========
 
 define amdgpu_ps float @not_and_not_and_not_and(i32 %a, i32 %b, i32 %c) {
-; GCN-LABEL: not_and_not_and_not_and:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:1
-; GCN-NEXT:    ; return to shader part epilog
+; GFX950-LABEL: not_and_not_and_not_and:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:1
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: not_and_not_and_not_and:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:1
+; GFX1250-NEXT:    ; return to shader part epilog
   %nota = xor i32 %a, -1
   %notb = xor i32 %b, -1
   %notc = xor i32 %c, -1
@@ -23,10 +29,16 @@ define amdgpu_ps float @not_and_not_and_not_and(i32 %a, i32 %b, i32 %c) {
 }
 
 define amdgpu_ps float @not_and_not_and_and(i32 %a, i32 %b, i32 %c) {
-; GCN-LABEL: not_and_not_and_and:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:2
-; GCN-NEXT:    ; return to shader part epilog
+; GFX950-LABEL: not_and_not_and_and:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:2
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: not_and_not_and_and:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:2
+; GFX1250-NEXT:    ; return to shader part epilog
   %nota = xor i32 %a, -1
   %notb = xor i32 %b, -1
   %and1 = and i32 %nota, %c
@@ -36,10 +48,16 @@ define amdgpu_ps float @not_and_not_and_and(i32 %a, i32 %b, i32 %c) {
 }
 
 define amdgpu_ps float @not_and_and_not_and(i32 %a, i32 %b, i32 %c) {
-; GCN-LABEL: not_and_and_not_and:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:4
-; GCN-NEXT:    ; return to shader part epilog
+; GFX950-LABEL: not_and_and_not_and:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:4
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: not_and_and_not_and:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:4
+; GFX1250-NEXT:    ; return to shader part epilog
   %nota = xor i32 %a, -1
   %notc = xor i32 %c, -1
   %and1 = and i32 %nota, %notc
@@ -62,11 +80,13 @@ define amdgpu_ps float @not_and_and_and(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX1250-SDAG-LABEL: not_and_and_and:
 ; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:8
 ; GFX1250-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-LABEL: not_and_and_and:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    v_bitop3_b32 v0, v0, v2, v0 bitop3:0xc
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
@@ -79,10 +99,16 @@ define amdgpu_ps float @not_and_and_and(i32 %a, i32 %b, i32 %c) {
 }
 
 define amdgpu_ps float @and_not_and_not_and(i32 %a, i32 %b, i32 %c) {
-; GCN-LABEL: and_not_and_not_and:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x10
-; GCN-NEXT:    ; return to shader part epilog
+; GFX950-LABEL: and_not_and_not_and:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x10
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: and_not_and_not_and:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x10
+; GFX1250-NEXT:    ; return to shader part epilog
   %notb = xor i32 %b, -1
   %notc = xor i32 %c, -1
   %and1 = and i32 %a, %notc
@@ -105,11 +131,13 @@ define amdgpu_ps float @and_not_and_and(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX1250-SDAG-LABEL: and_not_and_and:
 ; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x20
 ; GFX1250-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-LABEL: and_not_and_and:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, v0, v2
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_bfi_b32 v0, v1, 0, v0
@@ -135,11 +163,13 @@ define amdgpu_ps float @and_and_not_and(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX1250-SDAG-LABEL: and_and_not_and:
 ; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x40
 ; GFX1250-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-LABEL: and_and_not_and:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    v_bitop3_b32 v0, v0, v2, v0 bitop3:0x30
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, v0, v1
@@ -152,10 +182,16 @@ define amdgpu_ps float @and_and_not_and(i32 %a, i32 %b, i32 %c) {
 }
 
 define amdgpu_ps float @and_and_and(i32 %a, i32 %b, i32 %c) {
-; GCN-LABEL: and_and_and:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x80
-; GCN-NEXT:    ; return to shader part epilog
+; GFX950-LABEL: and_and_and:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x80
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: and_and_and:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x80
+; GFX1250-NEXT:    ; return to shader part epilog
   %and1 = and i32 %a, %c
   %and2 = and i32 %and1, %b
   %ret_cast = bitcast i32 %and2 to float
@@ -165,10 +201,16 @@ define amdgpu_ps float @and_and_and(i32 %a, i32 %b, i32 %c) {
 ; ========= Multi bit functions =========
 
 define amdgpu_ps float @test_12(i32 %a, i32 %b) {
-; GCN-LABEL: test_12:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_bitop3_b32 v0, v0, v1, v0 bitop3:0xc
-; GCN-NEXT:    ; return to shader part epilog
+; GFX950-LABEL: test_12:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_bitop3_b32 v0, v0, v1, v0 bitop3:0xc
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: test_12:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    v_bitop3_b32 v0, v0, v1, v0 bitop3:0xc
+; GFX1250-NEXT:    ; return to shader part epilog
   %nota = xor i32 %a, -1
   %and1 = and i32 %nota, %b
   %ret_cast = bitcast i32 %and1 to float
@@ -189,11 +231,13 @@ define amdgpu_ps float @test_63(i32 %a, i32 %b) {
 ;
 ; GFX1250-SDAG-LABEL: test_63:
 ; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-NEXT:    v_bitop3_b32 v0, v0, v1, v0 bitop3:0x3f
 ; GFX1250-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-LABEL: test_63:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    v_not_b32_e32 v1, v1
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-GISEL-NEXT:    v_bfi_b32 v0, v0, v1, -1
@@ -206,10 +250,16 @@ define amdgpu_ps float @test_63(i32 %a, i32 %b) {
 }
 
 define amdgpu_ps float @test_59(i32 %a, i32 %b, i32 %c) {
-; GCN-LABEL: test_59:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x3b
-; GCN-NEXT:    ; return to shader part epilog
+; GFX950-LABEL: test_59:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x3b
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: test_59:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    v_bitop3_b32 v0, v0, v1, v2 bitop3:0x3b
+; GFX1250-NEXT:    ; return to shader part epilog
   %nota = xor i32 %a, -1
   %notb = xor i32 %b, -1
   %and1 = and i32 %nota, %c
@@ -233,11 +283,13 @@ define amdgpu_ps float @test_126(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX1250-SDAG-LABEL: test_126:
 ; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-NEXT:    v_bitop3_b32 v0, v0, v2, v1 bitop3:0x7e
 ; GFX1250-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-LABEL: test_126:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v1, v0, v1
 ; GFX1250-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -271,11 +323,13 @@ define amdgpu_ps float @test_12_src_overflow(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX1250-SDAG-LABEL: test_12_src_overflow:
 ; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-NEXT:    v_bitop3_b32 v0, v0, v1, v0 bitop3:0xc
 ; GFX1250-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-LABEL: test_12_src_overflow:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    v_not_b32_e32 v3, v0
 ; GFX1250-GISEL-NEXT:    v_bitop3_b32 v0, v0, v2, v0 bitop3:0xc
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -317,6 +371,7 @@ define amdgpu_ps float @test_100_src_overflow(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX1250-SDAG-LABEL: test_100_src_overflow:
 ; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-NEXT:    v_bitop3_b32 v3, v1, v2, v0 bitop3:0x10
 ; GFX1250-SDAG-NEXT:    v_bitop3_b32 v4, v0, v2, v1 bitop3:0x40
 ; GFX1250-SDAG-NEXT:    v_bitop3_b32 v0, v1, v2, v0 bitop3:0x20
@@ -326,6 +381,7 @@ define amdgpu_ps float @test_100_src_overflow(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX1250-GISEL-LABEL: test_100_src_overflow:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    v_or_b32_e32 v3, v2, v0
 ; GFX1250-GISEL-NEXT:    v_bitop3_b32 v4, v0, v1, v0 bitop3:0x30
 ; GFX1250-GISEL-NEXT:    v_and_b32_e32 v0, v1, v0
@@ -362,6 +418,7 @@ define amdgpu_ps float @test_xor3(i32 %a, i32 %b, i32 %c) {
 ;
 ; GFX1250-LABEL: test_xor3:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    v_xor3_b32 v0, v0, v1, v2
 ; GFX1250-NEXT:    ; return to shader part epilog
   %xor1 = xor i32 %a, %b
@@ -371,10 +428,16 @@ define amdgpu_ps float @test_xor3(i32 %a, i32 %b, i32 %c) {
 }
 
 define amdgpu_ps float @test_or3(i32 %a, i32 %b, i32 %c) {
-; GCN-LABEL: test_or3:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_or3_b32 v0, v0, v1, v2
-; GCN-NEXT:    ; return to shader part epilog
+; GFX950-LABEL: test_or3:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_or3_b32 v0, v0, v1, v2
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: test_or3:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    v_or3_b32 v0, v0, v1, v2
+; GFX1250-NEXT:    ; return to shader part epilog
   %or1 = or i32 %a, %b
   %or2 = or i32 %or1, %c
   %ret_cast = bitcast i32 %or2 to float
@@ -382,10 +445,16 @@ define amdgpu_ps float @test_or3(i32 %a, i32 %b, i32 %c) {
 }
 
 define amdgpu_ps float @test_and_or(i32 %a, i32 %b, i32 %c) {
-; GCN-LABEL: test_and_or:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_and_or_b32 v0, v0, v1, v2
-; GCN-NEXT:    ; return to shader part epilog
+; GFX950-LABEL: test_and_or:
+; GFX950:       ; %bb.0:
+; GFX950-NEXT:    v_and_or_b32 v0, v0, v1, v2
+; GFX950-NEXT:    ; return to shader part epilog
+;
+; GFX1250-LABEL: test_and_or:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    v_and_or_b32 v0, v0, v1, v2
+; GFX1250-NEXT:    ; return to shader part epilog
   %and1 = and i32 %a, %b
   %or1 = or i32 %and1, %c
   %ret_cast = bitcast i32 %or1 to float
@@ -404,6 +473,7 @@ define amdgpu_ps float @uniform_3_op(i32 inreg %a, i32 inreg %b, i32 inreg %c) {
 ;
 ; GFX1250-LABEL: uniform_3_op:
 ; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_and_not1_b32 s0, s2, s0
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_and_b32 s0, s0, s1
@@ -433,6 +503,7 @@ define amdgpu_ps float @uniform_4_op(i32 inreg %a, i32 inreg %b, i32 inreg %c) {
 ;
 ; GFX1250-SDAG-LABEL: uniform_4_op:
 ; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    v_bitop3_b32 v0, s0, s1, v0 bitop3:2
@@ -440,6 +511,7 @@ define amdgpu_ps float @uniform_4_op(i32 inreg %a, i32 inreg %b, i32 inreg %c) {
 ;
 ; GFX1250-GISEL-LABEL: uniform_4_op:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    s_and_not1_b32 s0, s2, s0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    s_and_not1_b32 s0, s0, s1
@@ -463,21 +535,25 @@ define amdgpu_ps half @not_and_not_and_not_and_b16(i16 %a, i16 %b, i16 %c) {
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: not_and_not_and_not_and_b16:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-FAKE16-NEXT:    v_bitop3_b16 v0, v0, v1, v2 bitop3:1
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-TRUE16-LABEL: not_and_not_and_not_and_b16:
 ; GFX1250-SDAG-TRUE16:       ; %bb.0:
+; GFX1250-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v1.l, v2.l bitop3:1
 ; GFX1250-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: not_and_not_and_not_and_b16:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-FAKE16-NEXT:    v_bitop3_b16 v0, v0, v1, v2 bitop3:1
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-TRUE16-LABEL: not_and_not_and_not_and_b16:
 ; GFX1250-GISEL-TRUE16:       ; %bb.0:
+; GFX1250-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v1.l, v2.l bitop3:1
 ; GFX1250-GISEL-TRUE16-NEXT:    ; return to shader part epilog
   %nota = xor i16 %a, -1
@@ -497,21 +573,25 @@ define amdgpu_ps half @not_and_not_and_and_b16(i16 %a, i16 %b, i16 %c) {
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: not_and_not_and_and_b16:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-FAKE16-NEXT:    v_bitop3_b16 v0, v0, v1, v2 bitop3:2
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-TRUE16-LABEL: not_and_not_and_and_b16:
 ; GFX1250-SDAG-TRUE16:       ; %bb.0:
+; GFX1250-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v1.l, v2.l bitop3:2
 ; GFX1250-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: not_and_not_and_and_b16:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-FAKE16-NEXT:    v_bitop3_b16 v0, v0, v1, v2 bitop3:2
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-TRUE16-LABEL: not_and_not_and_and_b16:
 ; GFX1250-GISEL-TRUE16:       ; %bb.0:
+; GFX1250-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v1.l, v2.l bitop3:2
 ; GFX1250-GISEL-TRUE16-NEXT:    ; return to shader part epilog
   %nota = xor i16 %a, -1
@@ -530,21 +610,25 @@ define amdgpu_ps half @not_and_and_not_and_b16(i16 %a, i16 %b, i16 %c) {
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: not_and_and_not_and_b16:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-FAKE16-NEXT:    v_bitop3_b16 v0, v0, v1, v2 bitop3:4
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-TRUE16-LABEL: not_and_and_not_and_b16:
 ; GFX1250-SDAG-TRUE16:       ; %bb.0:
+; GFX1250-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v1.l, v2.l bitop3:4
 ; GFX1250-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: not_and_and_not_and_b16:
 ; GFX1250-GISEL-FAKE16:       ; %bb.0:
+; GFX1250-GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-FAKE16-NEXT:    v_bitop3_b16 v0, v0, v1, v2 bitop3:4
 ; GFX1250-GISEL-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-TRUE16-LABEL: not_and_and_not_and_b16:
 ; GFX1250-GISEL-TRUE16:       ; %bb.0:
+; GFX1250-GISEL-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v1.l, v2.l bitop3:4
 ; GFX1250-GISEL-TRUE16-NEXT:    ; return to shader part epilog
   %nota = xor i16 %a, -1
@@ -569,16 +653,19 @@ define amdgpu_ps half @test_xor3_b16(i16 %a, i16 %b, i16 %c) {
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_xor3_b16:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-FAKE16-NEXT:    v_bitop3_b16 v0, v0, v2, v1 bitop3:0x96
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-TRUE16-LABEL: test_xor3_b16:
 ; GFX1250-SDAG-TRUE16:       ; %bb.0:
+; GFX1250-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v2.l, v1.l bitop3:0x96
 ; GFX1250-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-LABEL: test_xor3_b16:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    v_xor3_b32 v0, v0, v1, v2
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %xor1 = xor i16 %a, %b
@@ -600,16 +687,19 @@ define amdgpu_ps half @test_or3_b16(i16 %a, i16 %b, i16 %c) {
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_or3_b16:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-FAKE16-NEXT:    v_bitop3_b16 v0, v0, v2, v1 bitop3:0xfe
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-TRUE16-LABEL: test_or3_b16:
 ; GFX1250-SDAG-TRUE16:       ; %bb.0:
+; GFX1250-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v2.l, v1.l bitop3:0xfe
 ; GFX1250-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-LABEL: test_or3_b16:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    v_or3_b32 v0, v0, v1, v2
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %or1 = or i16 %a, %b
@@ -631,16 +721,19 @@ define amdgpu_ps half @test_and_or_b16(i16 %a, i16 %b, i16 %c) {
 ;
 ; GFX1250-SDAG-FAKE16-LABEL: test_and_or_b16:
 ; GFX1250-SDAG-FAKE16:       ; %bb.0:
+; GFX1250-SDAG-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-FAKE16-NEXT:    v_bitop3_b16 v0, v0, v2, v1 bitop3:0xec
 ; GFX1250-SDAG-FAKE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDAG-TRUE16-LABEL: test_and_or_b16:
 ; GFX1250-SDAG-TRUE16:       ; %bb.0:
+; GFX1250-SDAG-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-SDAG-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v2.l, v1.l bitop3:0xec
 ; GFX1250-SDAG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-LABEL: test_and_or_b16:
 ; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-GISEL-NEXT:    v_and_or_b32 v0, v0, v1, v2
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %and1 = and i16 %a, %b
@@ -649,5 +742,6 @@ define amdgpu_ps half @test_and_or_b16(i16 %a, i16 %b, i16 %c) {
   ret half %ret_cast
 }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GCN: {{.*}}
 ; GFX1250-FAKE16: {{.*}}
 ; GFX1250-TRUE16: {{.*}}

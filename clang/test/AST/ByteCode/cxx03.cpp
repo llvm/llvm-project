@@ -40,3 +40,21 @@ struct B2 : B {
 };
 _Static_assert(&(B2().a) == &p, ""); // both-error {{taking the address of a temporary object of type 'int'}} \
                                      // both-error {{not an integral constant expression}}
+
+typedef __attribute__((ext_vector_type(4))) int vi4b;
+struct S {
+  vi4b w;
+};
+const int s = S().w[1];
+
+#if __LP64__
+namespace NullRecord {
+  struct S {
+    int arr[1024 * 1024 * 1024];
+    s = {1, {2}}; // both-error {{a type specifier is required for all declarations}} \
+                  // both-warning {{default member initializer for non-static data member is a C++11 extension}}
+  };
+
+  S s[2] = {};
+}
+#endif

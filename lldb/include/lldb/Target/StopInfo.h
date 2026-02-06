@@ -97,6 +97,12 @@ public:
   /// and silently continue again one more time.
   virtual bool WasContinueInterrupted(Thread &thread) { return false; }
 
+  virtual uint32_t GetStopReasonDataCount() const { return 0; }
+  virtual uint64_t GetStopReasonDataAtIndex(uint32_t idx) {
+    // Handle all the common cases that have no data.
+    return 0;
+  }
+
   // Sometimes the thread plan logic will know that it wants a given stop to
   // stop or not, regardless of what the ordinary logic for that StopInfo would
   // dictate.  The main example of this is the ThreadPlanCallFunction, which

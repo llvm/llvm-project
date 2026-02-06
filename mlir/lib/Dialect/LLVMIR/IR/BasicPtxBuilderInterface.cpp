@@ -130,7 +130,7 @@ static SmallVector<Value> extractStructElements(PatternRewriter &rewriter,
 
   SmallVector<Value> elems;
   for (unsigned i : llvm::seq<unsigned>(0, structTy.getBody().size()))
-    elems.push_back(rewriter.create<LLVM::ExtractValueOp>(loc, structVal, i));
+    elems.push_back(LLVM::ExtractValueOp::create(rewriter, loc, structVal, i));
 
   return elems;
 }

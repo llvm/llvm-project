@@ -8,7 +8,7 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 define void @trunc_not_allowed_different_vec_elemns(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, ptr noalias nocapture %D) #0 {
 ; CHECK-LABEL: @trunc_not_allowed_different_vec_elemns(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -28,14 +28,13 @@ define void @trunc_not_allowed_different_vec_elemns(ptr noalias nocapture %A, pt
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 428
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 428, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_021:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD9:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_021:%.*]] = phi i32 [ 428, [[SCALAR_PH]] ], [ [[ADD9:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[I_021]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[C]], i32 [[I_021]]
@@ -117,7 +116,7 @@ for.body:
 define void @narrowing_load_not_allowed(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL: @narrowing_load_not_allowed(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -134,14 +133,13 @@ define void @narrowing_load_not_allowed(ptr noalias nocapture %A, ptr noalias no
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], 424
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 424, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_012:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD6:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_012:%.*]] = phi i32 [ 424, [[SCALAR_PH]] ], [ [[ADD6:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[C]], i32 [[I_012]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i16, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[B]], i32 [[I_012]]
@@ -183,7 +181,7 @@ for.body:                                         ; preds = %for.body, %entry
 define void @trunc_not_allowed(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL: @trunc_not_allowed(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -199,14 +197,13 @@ define void @trunc_not_allowed(ptr noalias nocapture %A, ptr noalias nocapture r
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 428
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 428, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_09:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD3:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_09:%.*]] = phi i32 [ 428, [[SCALAR_PH]] ], [ [[ADD3:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[I_09]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[C]], i32 [[I_09]]
@@ -248,7 +245,7 @@ for.body:
 define void @strides_different_direction(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, i32 %N) #0 {
 ; CHECK-LABEL: @strides_different_direction(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -268,14 +265,13 @@ define void @strides_different_direction(ptr noalias nocapture %A, ptr noalias n
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], 428
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 428, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_09:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD3:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_09:%.*]] = phi i32 [ 428, [[SCALAR_PH]] ], [ [[ADD3:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[I_09]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[N]], [[I_09]]
@@ -312,7 +308,7 @@ for.body:
 define void @too_many_loop_blocks(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C) #0 {
 ; CHECK-LABEL: @too_many_loop_blocks(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -328,14 +324,13 @@ define void @too_many_loop_blocks(ptr noalias nocapture %A, ptr noalias nocaptur
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 428
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 428, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_09:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD3:%.*]], [[LOOPINCR:%.*]] ]
+; CHECK-NEXT:    [[I_09:%.*]] = phi i32 [ 428, [[SCALAR_PH]] ], [ [[ADD3:%.*]], [[LOOPINCR:%.*]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[I_09]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[C]], i32 [[I_09]]
@@ -414,7 +409,7 @@ for.body:
 define void @fptrunc_not_allowed(ptr noalias nocapture %A, ptr noalias nocapture readonly %B, ptr noalias nocapture readonly %C, ptr noalias nocapture %D) #0 {
 ; CHECK-LABEL: @fptrunc_not_allowed(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -434,14 +429,13 @@ define void @fptrunc_not_allowed(ptr noalias nocapture %A, ptr noalias nocapture
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 428
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    br label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 428, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_017:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD6:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_017:%.*]] = phi i32 [ 428, [[SCALAR_PH]] ], [ [[ADD6:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[B]], i32 [[I_017]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds float, ptr [[C]], i32 [[I_017]]
@@ -510,11 +504,11 @@ define dso_local void @select_not_allowed(ptr noalias nocapture %A, ptr noalias 
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[TMP3]], <4 x ptr> [[BROADCAST_SPLAT]], <4 x ptr> [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, <4 x ptr> [[TMP4]], <4 x i32> [[VEC_IND]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> [[TMP5]], i32 4, <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[TMP5]], <4 x i1> splat (i1 true), <4 x i32> poison)
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[WIDE_MASKED_GATHER]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i32> [[VEC_IND]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       middle.block:

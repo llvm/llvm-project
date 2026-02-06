@@ -180,7 +180,8 @@ public:
     return *this;
   }
 
-  raw_ostream &changeColor(enum Colors Color, bool Bold, bool BG) override {
+  raw_ostream &changeColor(enum Colors Color, bool Bold = false,
+                           bool BG = false) override {
     if (colors_enabled()) {
       DisableScanScope S(this);
       raw_ostream::changeColor(Color, Bold, BG);

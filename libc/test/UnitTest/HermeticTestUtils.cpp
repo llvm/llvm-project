@@ -29,7 +29,9 @@ int atexit(void (*func)(void));
 // add_libc_hermetic_test properly. Such that they won't get correct linkage
 // against the object containing this function. We create a dummy function that
 // always returns 0 to indicate a failure.
-[[gnu::weak]] unsigned long getauxval(unsigned long id) { return 0; }
+[[gnu::weak]] unsigned long getauxval([[maybe_unused]] unsigned long id) {
+  return 0;
+}
 
 } // namespace LIBC_NAMESPACE_DECL
 
@@ -124,7 +126,7 @@ unsigned long __getauxval(unsigned long id) {
 
 } // extern "C"
 
-void *operator new(size_t size, void *ptr) { return ptr; }
+void *operator new([[maybe_unused]] size_t size, void *ptr) { return ptr; }
 
 void *operator new(size_t size) { return malloc(size); }
 
@@ -136,7 +138,9 @@ void operator delete(void *) {
   __builtin_trap();
 }
 
-void operator delete(void *ptr, size_t size) { __builtin_trap(); }
+void operator delete([[maybe_unused]] void *ptr, [[maybe_unused]] size_t size) {
+  __builtin_trap();
+}
 
 // Defining members in the std namespace is not preferred. But, we do it here
 // so that we can use it to define the operator new which takes std::align_val_t
@@ -145,8 +149,11 @@ namespace std {
 enum class align_val_t : size_t {};
 } // namespace std
 
-void operator delete(void *mem, std::align_val_t) noexcept { __builtin_trap(); }
+void operator delete([[maybe_unused]] void *mem, std::align_val_t) noexcept {
+  __builtin_trap();
+}
 
-void operator delete(void *mem, unsigned int, std::align_val_t) noexcept {
+void operator delete([[maybe_unused]] void *mem, unsigned int,
+                     std::align_val_t) noexcept {
   __builtin_trap();
 }

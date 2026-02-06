@@ -34,7 +34,6 @@
 #include <cassert>
 #include <iomanip>
 #include <limits>
-#include <memory>
 #include <sstream>
 
 using namespace llvm;

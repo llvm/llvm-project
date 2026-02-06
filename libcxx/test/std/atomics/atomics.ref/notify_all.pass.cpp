@@ -7,7 +7,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-threads
-// XFAIL: availability-synchronization_library-missing
 // XFAIL: !has-64-bit-atomics
 // XFAIL: !has-1024-bit-atomics
 
@@ -26,7 +25,7 @@
 template <typename T>
 struct TestNotifyAll {
   void operator()() const {
-    T x(T(1));
+    alignas(std::atomic_ref<T>::required_alignment) T x(T(1));
     std::atomic_ref<T> const a(x);
 
     bool done                      = false;

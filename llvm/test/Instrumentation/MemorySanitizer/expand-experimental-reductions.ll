@@ -134,7 +134,7 @@ define float @fadd_f32_accum(float %accum, <4 x float> %vec) #0 {
 ; CHECK-SAME: float [[ACCUM:%.*]], <4 x float> [[VEC:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP0]], [[TMP2]]
@@ -152,7 +152,7 @@ define float @fadd_f32_strict(float %param, <4 x float> %vec) #0 {
 ; CHECK-SAME: float [[PARAM:%.*]], <4 x float> [[VEC:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP3]], [[TMP1]]
@@ -170,7 +170,7 @@ define float @fadd_f32_strict_accum(float %accum, <4 x float> %vec) #0 {
 ; CHECK-SAME: float [[ACCUM:%.*]], <4 x float> [[VEC:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP0]], [[TMP2]]
@@ -205,7 +205,7 @@ define float @fmul_f32_accum(float %accum, <4 x float> %vec) #0 {
 ; CHECK-SAME: float [[ACCUM:%.*]], <4 x float> [[VEC:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP0]], [[TMP2]]
@@ -223,7 +223,7 @@ define float @fmul_f32_strict(float %param, <4 x float> %vec) #0 {
 ; CHECK-SAME: float [[PARAM:%.*]], <4 x float> [[VEC:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP3]], [[TMP1]]
@@ -241,7 +241,7 @@ define float @fmul_f32_strict_accum(float %accum, <4 x float> %vec) #0 {
 ; CHECK-SAME: float [[ACCUM:%.*]], <4 x float> [[VEC:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @__msan_param_tls, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i32 [[TMP0]], [[TMP2]]

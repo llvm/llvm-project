@@ -1,3 +1,8 @@
+// AIX does not support env -u.
+// TODO(boomanaiden154): Reenable AIX support once we use the internal shell by
+// default.
+// UNSUPPORTED: system-aix
+
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 // RUN: cd %t
@@ -12,8 +17,7 @@
 // RUN: llvm-profdata show ./raw2.profraw | FileCheck %s -check-prefix TMPDIR
 //
 // Check that we fall back to the default path if TMPDIR is missing.
-// RUN: %if system-aix %{ unset TMPDIR %}
-// RUN: env %if !system-aix %{ -u TMPDIR %} LLVM_PROFILE_FILE="%%t/raw3.profraw" %run %t/binary 2>&1 | FileCheck %s -check-prefix MISSING
+// RUN: env -u TMPDIR LLVM_PROFILE_FILE="%%t/raw3.profraw" %run %t/binary 2>&1 | FileCheck %s -check-prefix MISSING
 // RUN: llvm-profdata show ./default.profraw | FileCheck %s -check-prefix TMPDIR
 
 // TMPDIR: Maximum function count: 1

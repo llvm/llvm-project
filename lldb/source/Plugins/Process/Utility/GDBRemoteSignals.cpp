@@ -47,7 +47,7 @@ void GDBRemoteSignals::Reset() {
   AddSignal(25,     "SIGXFSZ",      false,    true,   true,   "file size limit exceeded");
   AddSignal(26,     "SIGVTALRM",    false,    true,   true,   "virtual time alarm");
   AddSignal(27,     "SIGPROF",      false,    false,  false,  "profiling time alarm");
-  AddSignal(28,     "SIGWINCH",     false,    true,   true,   "window size changes");
+  AddSignal(28,     "SIGWINCH",     false,    false,   false,   "window size changes");
   AddSignal(29,     "SIGLOST",      false,    true,   true,   "resource lost");
   AddSignal(30,     "SIGUSR1",      false,    true,   true,   "user defined signal 1");
   AddSignal(31,     "SIGUSR2",      false,    true,   true,   "user defined signal 2");

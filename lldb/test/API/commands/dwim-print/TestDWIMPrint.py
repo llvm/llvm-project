@@ -16,7 +16,7 @@ class TestCase(TestBase):
         self.ci.HandleCommand(cmd, result)
         return result.GetOutput().rstrip()
 
-    VAR_IDENT = re.compile(r"(?:\$\d+|[\w.]+) = ")
+    VAR_IDENT = re.compile(r"(?:\$\d+|(?:::)?[\w.]+) = ")
 
     def _strip_result_var(self, string: str) -> str:
         """
@@ -185,3 +185,11 @@ class TestCase(TestBase):
             self, "break inside", lldb.SBFileSpec("main.cpp")
         )
         self._expect_cmd("dwim-print number", "frame variable")
+
+    def test_global_variables(self):
+        """Test dwim-print supports global variables."""
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, "break here", lldb.SBFileSpec("main.cpp")
+        )
+        self._expect_cmd("dwim-print gGlobal", "frame variable")

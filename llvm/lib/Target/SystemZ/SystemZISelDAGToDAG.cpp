@@ -1851,7 +1851,7 @@ bool SystemZDAGToDAGISel::SelectInlineAsmMemoryOperand(
 
   if (selectBDXAddr(Form, DispRange, Op, Base, Disp, Index)) {
     const TargetRegisterClass *TRC =
-      Subtarget->getRegisterInfo()->getPointerRegClass(*MF);
+        Subtarget->getRegisterInfo()->getPointerRegClass();
     SDLoc DL(Base);
     SDValue RC = CurDAG->getTargetConstant(TRC->getID(), DL, MVT::i32);
 

@@ -156,7 +156,7 @@ void test_move_assign_no_except() {
   // This tests a conforming extension
 
   {
-    using C = std::flat_multiset<int, int>;
+    using C [[maybe_unused]] = std::flat_multiset<int, int>;
     LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable_v<C>);
   }
   {
@@ -168,16 +168,17 @@ void test_move_assign_no_except() {
     static_assert(!std::is_nothrow_move_assignable_v<C>);
   }
   {
-    using C = std::flat_multiset<MoveOnly, std::less<MoveOnly>, std::vector<MoveOnly, other_allocator<MoveOnly>>>;
+    using C [[maybe_unused]] =
+        std::flat_multiset<MoveOnly, std::less<MoveOnly>, std::vector<MoveOnly, other_allocator<MoveOnly>>>;
     LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable_v<C>);
   }
   {
-    using C = std::flat_multiset<int, std::less<int>, std::vector<int, other_allocator<int>>>;
+    using C [[maybe_unused]] = std::flat_multiset<int, std::less<int>, std::vector<int, other_allocator<int>>>;
     LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable_v<C>);
   }
   {
     // Test with a comparator that throws on move-assignment.
-    using C = std::flat_multiset<int, MoveThrowsComp>;
+    using C [[maybe_unused]] = std::flat_multiset<int, MoveThrowsComp>;
     LIBCPP_STATIC_ASSERT(!std::is_nothrow_move_assignable_v<C>);
   }
   {
@@ -187,25 +188,12 @@ void test_move_assign_no_except() {
   }
 }
 
-void test() {
-  {
-    using C                           = test_less<int>;
-    using A1                          = test_allocator<int>;
-    using M                           = std::flat_multiset<int, C, std::vector<int, A1>>;
-    M mo                              = M({1, 1, 2, 3}, C(5), A1(7));
-    M m                               = M({}, C(3), A1(7));
-    std::same_as<M&> decltype(auto) r = m = std::move(mo);
-    assert(&r == &m);
-    assert((m == M{1, 1, 2, 3}));
-    assert(m.key_comp() == C(5));
-    auto ks = std::move(m).extract();
-    assert(ks.get_allocator() == A1(7));
-    assert(mo.empty());
-  }
+template <template <class...> class KeyContainer>
+constexpr void test() {
   {
     using C                           = test_less<int>;
     using A1                          = other_allocator<int>;
-    using M                           = std::flat_multiset<int, C, std::deque<int, A1>>;
+    using M                           = std::flat_multiset<int, C, KeyContainer<int, A1>>;
     M mo                              = M({4, 4, 5}, C(5), A1(7));
     M m                               = M({1, 1, 2, 3, 4}, C(3), A1(7));
     std::same_as<M&> decltype(auto) r = m = std::move(mo);
@@ -218,7 +206,7 @@ void test() {
   }
   {
     using A                           = min_allocator<int>;
-    using M                           = std::flat_multiset<int, std::greater<int>, std::vector<int, A>>;
+    using M                           = std::flat_multiset<int, std::greater<int>, KeyContainer<int, A>>;
     M mo                              = M({5, 3, 4, 3}, A());
     M m                               = M({4, 1, 3, 2, 1}, A());
     std::same_as<M&> decltype(auto) r = m = std::move(mo);
@@ -228,10 +216,37 @@ void test() {
     assert(ks.get_allocator() == A());
     assert(mo.empty());
   }
+  {
+    using C                           = test_less<int>;
+    using A1                          = test_allocator<int>;
+    using M                           = std::flat_multiset<int, C, KeyContainer<int, A1>>;
+    M mo                              = M({1, 1, 2, 3}, C(5), A1(7));
+    M m                               = M({}, C(3), A1(7));
+    std::same_as<M&> decltype(auto) r = m = std::move(mo);
+    assert(&r == &m);
+    assert((m == M{1, 1, 2, 3}));
+    assert(m.key_comp() == C(5));
+    auto ks = std::move(m).extract();
+    assert(ks.get_allocator() == A1(7));
+    assert(mo.empty());
+  }
+}
+
+constexpr bool test() {
+  test<std::vector>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+    test<std::deque>();
+
+  return true;
 }
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   test_move_assign_clears();
   test_move_assign_no_except();
 

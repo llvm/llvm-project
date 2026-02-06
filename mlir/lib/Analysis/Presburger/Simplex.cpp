@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -34,7 +35,7 @@ using Direction = Simplex::Direction;
 const int nullIndex = std::numeric_limits<int>::max();
 
 // Return a + scale*b;
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 static SmallVector<DynamicAPInt, 8>
 scaleAndAddForAssert(ArrayRef<DynamicAPInt> a, const DynamicAPInt &scale,
                      ArrayRef<DynamicAPInt> b) {
@@ -329,8 +330,7 @@ MaybeOptimum<SmallVector<DynamicAPInt, 8>> LexSimplex::findIntegerLexMin() {
   assert(!sample.isEmpty() && "If we reached here the sample should exist!");
   if (sample.isUnbounded())
     return OptimumKind::Unbounded;
-  return llvm::to_vector<8>(
-      llvm::map_range(*sample, std::mem_fn(&Fraction::getAsInteger)));
+  return llvm::map_to_vector<8>(*sample, std::mem_fn(&Fraction::getAsInteger));
 }
 
 bool LexSimplex::isSeparateInequality(ArrayRef<DynamicAPInt> coeffs) {

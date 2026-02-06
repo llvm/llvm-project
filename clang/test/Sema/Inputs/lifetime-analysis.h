@@ -16,6 +16,9 @@ template<typename T> struct remove_reference       { typedef T type; };
 template<typename T> struct remove_reference<T &>  { typedef T type; };
 template<typename T> struct remove_reference<T &&> { typedef T type; };
 
+template< class InputIt, class T >
+InputIt find( InputIt first, InputIt last, const T& value );
+
 template<typename T>
 typename remove_reference<T>::type &&move(T &&t) noexcept;
 
@@ -42,18 +45,26 @@ struct vector {
   iterator end();
   const T *data() const;
   vector();
+  ~vector();
   vector(initializer_list<T> __l,
          const Alloc& alloc = Alloc());
 
   template<typename InputIterator>
 	vector(InputIterator first, InputIterator __last);
 
-  T &at(int n);
+  T &  at(int n) &;
+  T && at(int n) &&;
 
   void push_back(const T&);
   void push_back(T&&);
   const T& back() const;
   void insert(iterator, T&&);
+};
+
+template<typename A, typename B>
+struct pair {
+  A first;
+  B second;
 };
 
 template<typename T>
@@ -77,7 +88,10 @@ template<class _Mystr> struct iter {
 template<typename T>
 struct basic_string {
   basic_string();
+  basic_string(const basic_string<T> &);
+  basic_string(basic_string<T> &&);
   basic_string(const T *);
+  ~basic_string();
   const T *c_str() const;
   operator basic_string_view<T> () const;
   using const_iterator = iter<T>;
@@ -87,6 +101,9 @@ using string = basic_string<char>;
 
 template<typename T>
 struct unique_ptr {
+  unique_ptr();
+  unique_ptr(unique_ptr<T>&&);
+  ~unique_ptr();
   T &operator*();
   T *get() const;
 };
@@ -95,6 +112,8 @@ template<typename T>
 struct optional {
   optional();
   optional(const T&);
+
+  ~optional();
 
   template<typename U = T>
   optional(U&& t);
@@ -116,7 +135,11 @@ struct stack {
   T &top();
 };
 
-struct any {};
+struct any {
+  // FIXME: CFG based analysis should be able to catch bugs without need of ctor and dtor.
+  any();
+  ~any();
+};
 
 template<typename T>
 T any_cast(const any& operand);

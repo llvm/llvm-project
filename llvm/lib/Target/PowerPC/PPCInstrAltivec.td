@@ -30,6 +30,11 @@
 // Altivec transformation functions and pattern fragments.
 //
 
+// fneg is not legal, and desugared as an xor.
+def desugared_fneg : PatFrag<(ops node:$x), (v4f32 (bitconvert (xor (bitconvert $x), 
+                             (int_ppc_altivec_vslw (bitconvert (v16i8 immAllOnesV)), 
+                             (bitconvert (v16i8 immAllOnesV))))))>; 
+
 def vpkuhum_shuffle : PatFrag<(ops node:$lhs, node:$rhs),
                               (vector_shuffle node:$lhs, node:$rhs), [{
   return PPC::isVPKUHUMShuffleMask(cast<ShuffleVectorSDNode>(N), 0, *CurDAG);
@@ -343,7 +348,6 @@ class VXCR_Int_Ty<bits<11> xo, string opc, Intrinsic IntID, ValueType Ty>
 //===----------------------------------------------------------------------===//
 // Instruction Definitions.
 
-def HasAltivec : Predicate<"Subtarget->hasAltivec()">;
 let Predicates = [HasAltivec] in {
 
 def DSS      : DSS_Form<0, 822, (outs), (ins u5imm:$STRM),
@@ -468,11 +472,12 @@ def VMADDFP : VAForm_1<46, (outs vrrc:$RT), (ins vrrc:$RA, vrrc:$RC, vrrc:$RB),
                        [(set v4f32:$RT,
                         (fma v4f32:$RA, v4f32:$RC, v4f32:$RB))]>;
 
-// FIXME: The fma+fneg pattern won't match because fneg is not legal.
+// fneg is not legal, hence we have to match on the desugared version. 
 def VNMSUBFP: VAForm_1<47, (outs vrrc:$RT), (ins vrrc:$RA, vrrc:$RC, vrrc:$RB),
                        "vnmsubfp $RT, $RA, $RC, $RB", IIC_VecFP,
-                       [(set v4f32:$RT, (fneg (fma v4f32:$RA, v4f32:$RC,
-                                                  (fneg v4f32:$RB))))]>;
+                       [(set v4f32:$RT, (desugared_fneg (fma v4f32:$RA, v4f32:$RC,
+                                                  (desugared_fneg v4f32:$RB))))]>;
+
 let hasSideEffects = 1 in {
   def VMHADDSHS  : VA1a_Int_Ty<32, "vmhaddshs", int_ppc_altivec_vmhaddshs, v8i16>;
   def VMHRADDSHS : VA1a_Int_Ty<33, "vmhraddshs", int_ppc_altivec_vmhraddshs,
@@ -884,6 +889,7 @@ def : Pat<(v16i8 (rotl v16i8:$vA, v16i8:$vB)),
           (v16i8 (VRLB v16i8:$vA, v16i8:$vB))>;
 def : Pat<(v8i16 (rotl v8i16:$vA, v8i16:$vB)),
           (v8i16 (VRLH v8i16:$vA, v8i16:$vB))>;
+let Predicates = [IsNotISAFuture] in
 def : Pat<(v4i32 (rotl v4i32:$vA, v4i32:$vB)),
           (v4i32 (VRLW v4i32:$vA, v4i32:$vB))>;
 
@@ -892,6 +898,13 @@ def : Pat<(mul v8i16:$vA, v8i16:$vB), (VMLADDUHM $vA, $vB, (v8i16(V_SET0H)))>;
 
 // Add
 def : Pat<(add (mul v8i16:$vA, v8i16:$vB), v8i16:$vC), (VMLADDUHM $vA, $vB, $vC)>;
+
+
+// Fused negated multiply-subtract
+def : Pat<(v4f32 (desugared_fneg
+                    (int_ppc_altivec_vmaddfp v4f32:$RA, v4f32:$RC,
+                         (desugared_fneg v4f32:$RB)))),
+          (VNMSUBFP $RA, $RC, $RB)>;
 
 // Saturating adds/subtracts.
 def : Pat<(v16i8 (saddsat v16i8:$vA, v16i8:$vB)), (v16i8 (VADDSBS $vA, $vB))>;
@@ -1155,18 +1168,18 @@ def : Pat<(v1i128 (vselect v1i128:$vA, v1i128:$vB, v1i128:$vC)),
           (VSEL $vC, $vB, $vA)>;
 
 // Vector Integer Average Instructions
-def : Pat<(v4i32 (sra (sub v4i32:$vA, (vnot v4i32:$vB)),
-          (v4i32 (immEQOneV)))), (v4i32 (VAVGSW $vA, $vB))>;
-def : Pat<(v8i16 (sra (sub v8i16:$vA, (v8i16 (bitconvert(vnot v4i32:$vB)))),
-          (v8i16 (immEQOneV)))), (v8i16 (VAVGSH $vA, $vB))>;
-def : Pat<(v16i8 (sra (sub v16i8:$vA, (v16i8 (bitconvert(vnot v4i32:$vB)))),
-          (v16i8 (immEQOneV)))), (v16i8 (VAVGSB $vA, $vB))>;
-def : Pat<(v4i32 (srl (sub v4i32:$vA, (vnot v4i32:$vB)),
-          (v4i32 (immEQOneV)))), (v4i32 (VAVGUW $vA, $vB))>;
-def : Pat<(v8i16 (srl (sub v8i16:$vA, (v8i16 (bitconvert(vnot v4i32:$vB)))),
-          (v8i16 (immEQOneV)))), (v8i16 (VAVGUH $vA, $vB))>;
-def : Pat<(v16i8 (srl (sub v16i8:$vA, (v16i8 (bitconvert(vnot v4i32:$vB)))),
-          (v16i8 (immEQOneV)))), (v16i8 (VAVGUB $vA, $vB))>;
+def : Pat<(v4i32 (avgceils v4i32:$src1, v4i32:$src2)),
+          (v4i32 (VAVGSW $src1, $src2))>;
+def : Pat<(v8i16 (avgceils v8i16:$src1, v8i16:$src2)),
+          (v8i16 (VAVGSH $src1, $src2))>;
+def : Pat<(v16i8 (avgceils v16i8:$src1, v16i8:$src2)),
+          (v16i8 (VAVGSB $src1, $src2))>;
+def : Pat<(v4i32 (avgceilu v4i32:$src1, v4i32:$src2)),
+          (v4i32 (VAVGUW $src1, $src2))>;
+def : Pat<(v8i16 (avgceilu v8i16:$src1, v8i16:$src2)),
+          (v8i16 (VAVGUH $src1, $src2))>;
+def : Pat<(v16i8 (avgceilu v16i8:$src1, v16i8:$src2)),
+          (v16i8 (VAVGUB $src1, $src2))>;
 
 def : Pat<(v16i8 (shl v16i8:$vA, (v16i8 (immEQOneV)))),
           (v16i8 (VADDUBM $vA, $vA))>;
@@ -1193,8 +1206,6 @@ class VX_VT5_VA5_VB5_XO9_o<bits<9> xo, string opc, list<dag> pattern>
   let PS = 0;
 }
 
-def HasP8Altivec : Predicate<"Subtarget->hasP8Altivec()">;
-def HasP8Crypto : Predicate<"Subtarget->hasP8Crypto()">;
 let Predicates = [HasP8Altivec] in {
 
 let isCommutable = 1 in {
@@ -1420,7 +1431,6 @@ def VSBOX : VXBX_Int_Ty<1480, "vsbox", int_ppc_altivec_crypto_vsbox, v2i64>;
 } // HasP8Crypto
 
 // The following altivec instructions were introduced in Power ISA 3.0
-def HasP9Altivec : Predicate<"Subtarget->hasP9Altivec()">;
 let Predicates = [HasP9Altivec] in {
 
 // Vector Multiply-Sum
@@ -1651,6 +1661,22 @@ def BCDSR_rec : VX_VT5_VA5_VB5_PS1_XO9_o<449, "bcdsr.", []>;
 // Decimal (Unsigned) Truncate
 def BCDTRUNC_rec :  VX_VT5_VA5_VB5_PS1_XO9_o<257, "bcdtrunc." , []>;
 def BCDUTRUNC_rec : VX_VT5_VA5_VB5_XO9_o    <321, "bcdutrunc.", []>;
+
+// Patterns mapping BCD PPCISD nodes to machine instructions
+def : Pat<(PPCbcds v4i32:$Shift, v16i8:$Src, i32:$PS),
+          (BCDS_rec $Shift, $Src, $PS)>;
+
+def : Pat<(PPCbcdsr v4i32:$ShiftRound, v16i8:$Src, i32:$PS),
+          (BCDSR_rec $ShiftRound, $Src, $PS)>;
+
+def : Pat<(PPCbcdtrunc v4i32:$Trunc, v16i8:$Src, i32:$PS),
+          (BCDTRUNC_rec $Trunc, $Src, $PS)>;
+
+def : Pat<(PPCbcdutrunc v4i32:$Trunc, v16i8:$Src),
+          (BCDUTRUNC_rec $Trunc, $Src)>;
+
+def : Pat<(PPCbcdus v4i32:$Shift, v16i8:$Src),
+          (BCDUS_rec $Shift, $Src)>;
 
 // Absolute Difference
 def VABSDUB : VXForm_1<1027, (outs vrrc:$VD), (ins vrrc:$VA, vrrc:$VB),

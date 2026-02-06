@@ -12,6 +12,27 @@
 //
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+// PowerPC ISA Future specific type constraints.
+//
+
+def SDT_PPCInst512 : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v512i1>, SDTCisVT<1, v256i1>, SDTCisVT<2, v256i1>
+]>;
+def SDT_PPCInst256 : SDTypeProfile<1, 2, [
+  SDTCisVT<0, v256i1>, SDTCisVT<1, v256i1>, SDTCisVT<2, i32>
+]>;
+
+//===----------------------------------------------------------------------===//
+// ISA Future specific PPCISD nodes.
+//
+
+def PPCInst512   : SDNode<"PPCISD::INST512", SDT_PPCInst512, []>;
+def PPCInst512Hi : SDNode<"PPCISD::INST512HI", SDT_PPCInst512, []>;
+def PPCInst256   : SDNode<"PPCISD::INST256", SDT_PPCInst256, []>;
+
+//===----------------------------------------------------------------------===//
+
 class XX3Form_AT3_XABp5_P1<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
                            string asmstr, list<dag> pattern>
     : I<opcode, OOL, IOL, asmstr, NoItinerary> {
@@ -22,13 +43,13 @@ class XX3Form_AT3_XABp5_P1<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
 
   let Pattern = pattern;
 
-  let Inst{6 -8} = AT{2 -0};
-  let Inst{9 -10} = 0;
-  let Inst{11 -14} = XAp{3 -0};
+  let Inst{6...8} = AT{2...0};
+  let Inst{9...10} = 0;
+  let Inst{11...14} = XAp{3...0};
   let Inst{15} = P;
-  let Inst{16 -19} = XBp{3 -0};
+  let Inst{16...19} = XBp{3...0};
   let Inst{20} = 0;
-  let Inst{21 -28} = xo;
+  let Inst{21...28} = xo;
   let Inst{29} = XAp{4};
   let Inst{30} = XBp{4};
   let Inst{31} = 0;
@@ -43,12 +64,12 @@ class XX2Form_AT3_XBp5_P2<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
 
   let Pattern = pattern;
 
-  let Inst{6 -8} = AT{2 -0};
-  let Inst{9 -14} = 0;
+  let Inst{6...8} = AT{2...0};
+  let Inst{9...14} = 0;
   let Inst{15} = P{0};
-  let Inst{16 -19} = XBp{3 -0};
+  let Inst{16...19} = XBp{3...0};
   let Inst{20} = P{1};
-  let Inst{21 -29} = xo;
+  let Inst{21...29} = xo;
   let Inst{30} = XBp{4};
   let Inst{31} = 0;
 }
@@ -61,12 +82,12 @@ class XForm_ATB3<bits<6> opcode, bits<5> o, bits<10> xo, dag OOL, dag IOL,
 
   let Pattern = pattern;
 
-  let Inst{6 -8} = AT{2 -0};
-  let Inst{9 -10} = 0;
-  let Inst{11 -15} = o;
-  let Inst{16 -18} = AB{2 -0};
-  let Inst{19 -20} = 0;
-  let Inst{21 -30} = xo;
+  let Inst{6...8} = AT{2...0};
+  let Inst{9...10} = 0;
+  let Inst{11...15} = o;
+  let Inst{16...18} = AB{2...0};
+  let Inst{19...20} = 0;
+  let Inst{21...30} = xo;
   let Inst{31} = 0;
 }
 
@@ -79,12 +100,12 @@ class XX3Form_AT3_XAp5B6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
 
   let Pattern = pattern;
 
-  let Inst{6 -8} = AT;
-  let Inst{9 -10} = 0;
-  let Inst{11 -14} = XAp{3 -0};
+  let Inst{6...8} = AT;
+  let Inst{9...10} = 0;
+  let Inst{11...14} = XAp{3...0};
   let Inst{15} = 0;
-  let Inst{16 -20} = XB{4 -0};
-  let Inst{21 -28} = xo;
+  let Inst{16...20} = XB{4...0};
+  let Inst{21...28} = xo;
   let Inst{29} = XAp{4};
   let Inst{30} = XB{5};
   let Inst{31} = 0;
@@ -104,20 +125,20 @@ class MMIRR_XX3Form_X8YP4_XAp5B6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6 -7} = 3;
-  let Inst{8 -11} = 9;
-  let Inst{12 -15} = 0;
-  let Inst{16 -19} = PMSK;
-  let Inst{20 -27} = XMSK;
-  let Inst{28 -31} = YMSK;
+  let Inst{6...7} = 3;
+  let Inst{8...11} = 9;
+  let Inst{12...15} = 0;
+  let Inst{16...19} = PMSK;
+  let Inst{20...27} = XMSK;
+  let Inst{28...31} = YMSK;
 
   // The instruction.
-  let Inst{38 -40} = AT;
-  let Inst{41 -42} = 0;
-  let Inst{43 -46} = XAp{3 -0};
+  let Inst{38...40} = AT;
+  let Inst{41...42} = 0;
+  let Inst{43...46} = XAp{3...0};
   let Inst{47} = 0;
-  let Inst{48 -52} = XB{4 -0};
-  let Inst{53 -60} = xo;
+  let Inst{48...52} = XB{4...0};
+  let Inst{53...60} = xo;
   let Inst{61} = XAp{4};
   let Inst{62} = XB{5};
   let Inst{63} = 0;
@@ -137,21 +158,21 @@ class MMIRR_XX3Form_X8Y4P2_XAp5B6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
   let Pattern = pattern;
 
   // The prefix.
-  let Inst{6 -7} = 3;
-  let Inst{8 -11} = 9;
-  let Inst{12 -15} = 0;
-  let Inst{16 -17} = PMSK;
-  let Inst{18 -19} = 0;
-  let Inst{20 -27} = XMSK;
-  let Inst{28 -31} = YMSK;
+  let Inst{6...7} = 3;
+  let Inst{8...11} = 9;
+  let Inst{12...15} = 0;
+  let Inst{16...17} = PMSK;
+  let Inst{18...19} = 0;
+  let Inst{20...27} = XMSK;
+  let Inst{28...31} = YMSK;
 
   // The instruction.
-  let Inst{38 -40} = AT;
-  let Inst{41 -42} = 0;
-  let Inst{43 -46} = XAp{3 -0};
+  let Inst{38...40} = AT;
+  let Inst{41...42} = 0;
+  let Inst{43...46} = XAp{3...0};
   let Inst{47} = 0;
-  let Inst{48 -52} = XB{4 -0};
-  let Inst{53 -60} = xo;
+  let Inst{48...52} = XB{4...0};
+  let Inst{53...60} = xo;
   let Inst{61} = XAp{4};
   let Inst{62} = XB{5};
   let Inst{63} = 0;
@@ -358,13 +379,13 @@ class XForm_AT3_T1_AB3<bits<6> opcode, bits<5> o, bits<10> xo, dag OOL, dag IOL,
 
   let Pattern = pattern;
 
-  let Inst{6 -8} = AT{2 -0};
+  let Inst{6...8} = AT{2...0};
   let Inst{9} = 0;
   let Inst{10} = T;
-  let Inst{11 -15} = o;
-  let Inst{16 -18} = AB{2 -0};
-  let Inst{19 -20} = 0;
-  let Inst{21 -30} = xo;
+  let Inst{11...15} = o;
+  let Inst{16...18} = AB{2...0};
+  let Inst{19...20} = 0;
+  let Inst{21...30} = xo;
   let Inst{31} = 0;
 }
 
@@ -376,11 +397,11 @@ class XForm_ATp2_SR5<bits<6> opcode, bits<5> o, bits<10> xo, dag OOL, dag IOL,
 
   let Pattern = pattern;
 
-  let Inst{6 -7} = ATp{1 -0};
-  let Inst{8 -10} = 0;
-  let Inst{11 -15} = o;
-  let Inst{16 -20} = SR{4 -0};
-  let Inst{21 -30} = xo;
+  let Inst{6...7} = ATp{1...0};
+  let Inst{8...10} = 0;
+  let Inst{11...15} = o;
+  let Inst{16...20} = SR{4...0};
+  let Inst{21...30} = xo;
   let Inst{31} = 0;
 }
 
@@ -395,13 +416,13 @@ class XX2Form_AT3_XB6_ID2_E1_BL2<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
 
   let Pattern = pattern;
 
-  let Inst{6 -8} = AT{2 -0};
-  let Inst{9 -10} = 0;
-  let Inst{11 -12} = ID{1 -0};
+  let Inst{6...8} = AT{2...0};
+  let Inst{9...10} = 0;
+  let Inst{11...12} = ID{1...0};
   let Inst{13} = E;
-  let Inst{14 -15} = BL{1 -0};
-  let Inst{16 -20} = XB{4 -0};
-  let Inst{21 -29} = xo;
+  let Inst{14...15} = BL{1...0};
+  let Inst{16...20} = XB{4...0};
+  let Inst{21...29} = xo;
   let Inst{30} = XB{5};
   let Inst{31} = 0;
 }
@@ -429,14 +450,18 @@ let Predicates = [MMA, IsISAFuture] in {
   def DMXXINSTDMR512
       : XX3Form_AT3_XABp5_P1<60, 234, (outs wacc:$AT),
                              (ins vsrprc:$XAp, vsrprc:$XBp),
-                             "dmxxinstdmr512 $AT, $XAp, $XBp, 0", []> {
+                             "dmxxinstdmr512 $AT, $XAp, $XBp, 0",
+                             [(set v512i1:$AT, (PPCInst512 v256i1:$XAp,
+                                                v256i1:$XBp))]> {
     let P = 0;
   }
 
   def DMXXINSTDMR512_HI
       : XX3Form_AT3_XABp5_P1<60, 234, (outs wacc_hi:$AT),
                              (ins vsrprc:$XAp, vsrprc:$XBp),
-                             "dmxxinstdmr512 $AT, $XAp, $XBp, 1", []> {
+                             "dmxxinstdmr512 $AT, $XAp, $XBp, 1",
+                             [(set v512i1:$AT, (PPCInst512Hi v256i1:$XAp,
+                                                v256i1:$XBp))]> {
     let P = 1;
   }
 
@@ -446,7 +471,8 @@ let Predicates = [MMA, IsISAFuture] in {
 
   def DMXXINSTDMR256 : XX2Form_AT3_XBp5_P2<60, 485, (outs dmrrowp:$AT),
                                            (ins vsrprc:$XBp, u2imm:$P),
-                                           "dmxxinstdmr256 $AT, $XBp, $P", []>;
+                                           "dmxxinstdmr256 $AT, $XBp, $P",
+                                           [(set v256i1:$AT, (PPCInst256 v256i1:$XBp, timm:$P))]>;
 
   def DMMR
       : XForm_ATB3<31, 6, 177, (outs dmr:$AT), (ins dmr:$AB), "dmmr $AT, $AB",

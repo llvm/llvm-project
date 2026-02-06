@@ -40,12 +40,20 @@ template <typename BitVectorT> class const_set_bits_iterator_impl {
     Current = Parent.find_next(Current);
   }
 
+  void retreat() {
+    if (Current == -1) {
+      Current = Parent.find_last();
+    } else {
+      Current = Parent.find_prev(Current);
+    }
+  }
+
 public:
-  using iterator_category = std::forward_iterator_tag;
-  using difference_type   = std::ptrdiff_t;
-  using value_type        = int;
-  using pointer           = value_type*;
-  using reference         = value_type&;
+  using iterator_category = std::bidirectional_iterator_tag;
+  using difference_type = std::ptrdiff_t;
+  using value_type = unsigned;
+  using pointer = const value_type *;
+  using reference = value_type;
 
   const_set_bits_iterator_impl(const BitVectorT &Parent, int Current)
       : Parent(Parent), Current(Current) {}
@@ -61,6 +69,17 @@ public:
 
   const_set_bits_iterator_impl &operator++() {
     advance();
+    return *this;
+  }
+
+  const_set_bits_iterator_impl operator--(int) {
+    auto Prev = *this;
+    retreat();
+    return Prev;
+  }
+
+  const_set_bits_iterator_impl &operator--() {
+    retreat();
     return *this;
   }
 
@@ -80,7 +99,7 @@ public:
 };
 
 class BitVector {
-  typedef uintptr_t BitWord;
+  using BitWord = uintptr_t;
 
   enum { BITWORD_SIZE = (unsigned)sizeof(BitWord) * CHAR_BIT };
 
@@ -128,8 +147,8 @@ public:
     }
   };
 
-  typedef const_set_bits_iterator_impl<BitVector> const_set_bits_iterator;
-  typedef const_set_bits_iterator set_iterator;
+  using const_set_bits_iterator = const_set_bits_iterator_impl<BitVector>;
+  using set_iterator = const_set_bits_iterator;
 
   const_set_bits_iterator set_bits_begin() const {
     return const_set_bits_iterator(*this);
@@ -531,7 +550,7 @@ public:
     return *this;
   }
 
-  /// test - Check if (This - RHS) is zero.
+  /// test - Check if (This - RHS) is non-zero.
   /// This is the same as reset(RHS) and any().
   bool test(const BitVector &RHS) const {
     unsigned ThisWords = Bits.size();
@@ -548,13 +567,13 @@ public:
     return false;
   }
 
+  /// subsetOf - Check if This is a subset of RHS.
+  bool subsetOf(const BitVector &RHS) const { return !test(RHS); }
+
   template <class F, class... ArgTys>
   static BitVector &apply(F &&f, BitVector &Out, BitVector const &Arg,
                           ArgTys const &...Args) {
-    assert(llvm::all_of(
-               std::initializer_list<unsigned>{Args.size()...},
-               [&Arg](auto const &BV) { return Arg.size() == BV; }) &&
-           "consistent sizes");
+    assert(((Arg.size() == Args.size()) && ...) && "consistent sizes");
     Out.resize(Arg.size());
     for (size_type I = 0, E = Arg.Bits.size(); I != E; ++I)
       Out.Bits[I] = f(Arg.Bits[I], Args.Bits[I]...);

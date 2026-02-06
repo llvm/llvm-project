@@ -279,7 +279,7 @@ copy. The net effect is that instance variables can be mutated.
 
 The :block-term:`Block_copy` operator retains all objects held in
 variables of automatic storage referenced within the Block expression
-(or form strong references if running under garbage collection).
+(or forms strong references if running under garbage collection).
 Object variables of ``__block`` storage type are assumed to hold
 normal pointers with no provision for retain and release messages.
 

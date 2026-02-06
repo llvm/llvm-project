@@ -20,24 +20,23 @@
 
 namespace llvm{
 namespace exegesis {
-
-void InitializePowerPCExegesisTarget();
-
 namespace {
 
 using testing::NotNull;
 using testing::IsEmpty;
 using testing::Not;
 
-constexpr const char kTriple[] = "powerpc64le-unknown-linux";
+constexpr char kTriple[] = "powerpc64le-unknown-linux";
 
 class PowerPCTargetTest : public PPCTestBase {
 protected:
+  const Triple TT;
+
   PowerPCTargetTest()
-      : ExegesisTarget_(ExegesisTarget::lookup(Triple(kTriple))) {
+      : TT(kTriple), ExegesisTarget_(ExegesisTarget::lookup(TT)) {
     EXPECT_THAT(ExegesisTarget_, NotNull());
     std::string error;
-    Target_ = TargetRegistry::lookupTarget(kTriple, error);
+    Target_ = TargetRegistry::lookupTarget(TT, error);
     EXPECT_THAT(Target_, NotNull());
   }
 
@@ -47,7 +46,7 @@ protected:
 
 TEST_F(PowerPCTargetTest, SetRegToConstant) {
   const std::unique_ptr<MCSubtargetInfo> STI(
-      Target_->createMCSubtargetInfo(kTriple, "generic", ""));
+      Target_->createMCSubtargetInfo(TT, "generic", ""));
   const auto Insts = ExegesisTarget_->setRegTo(*STI, PPC::X0, APInt());
   EXPECT_THAT(Insts, Not(IsEmpty()));
 }

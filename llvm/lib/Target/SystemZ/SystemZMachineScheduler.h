@@ -111,7 +111,7 @@ class SystemZPostRASchedStrategy : public MachineSchedStrategy {
 
 public:
   SystemZPostRASchedStrategy(const MachineSchedContext *C);
-  virtual ~SystemZPostRASchedStrategy();
+  ~SystemZPostRASchedStrategy() override;
 
   /// Called for a region before scheduling.
   void initPolicy(MachineBasicBlock::iterator Begin,

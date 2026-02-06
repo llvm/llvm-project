@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
-
 // <string>
 
 // This test ensures that the correct max_size() is returned depending on the platform.
@@ -114,9 +112,6 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
 int main(int, char**) {
   test();
-#if TEST_STD_VER > 17
-  static_assert(test());
-#endif
 
   return 0;
 }

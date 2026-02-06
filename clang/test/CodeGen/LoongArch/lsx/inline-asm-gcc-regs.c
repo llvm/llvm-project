@@ -4,7 +4,7 @@
 typedef signed char v16i8 __attribute__((vector_size(16), aligned(16)));
 
 // CHECK-LABEL: @test_vr0(
-// CHECK:    tail call void asm sideeffect "", "{$vr0}"(<16 x i8> undef) #[[ATTR1:[0-9]+]], !srcloc !2
+// CHECK:    tail call void asm sideeffect "", "{$vr0}"(<16 x i8> undef) #[[ATTR1:[0-9]+]], !srcloc [[META6:![0-9]+]]
 //
 void test_vr0() {
     register v16i8 a asm ("$vr0");
@@ -12,7 +12,7 @@ void test_vr0() {
 }
 
 // CHECK-LABEL: @test_vr7(
-// CHECK:    tail call void asm sideeffect "", "{$vr7}"(<16 x i8> undef) #[[ATTR1]], !srcloc !3
+// CHECK:    tail call void asm sideeffect "", "{$vr7}"(<16 x i8> undef) #[[ATTR1]], !srcloc [[META7:![0-9]+]]
 //
 void test_vr7() {
     register v16i8 a asm ("$vr7");
@@ -20,7 +20,7 @@ void test_vr7() {
 }
 
 // CHECK-LABEL: @test_vr15(
-// CHECK:    tail call void asm sideeffect "", "{$vr15}"(<16 x i8> undef) #[[ATTR1]], !srcloc !4
+// CHECK:    tail call void asm sideeffect "", "{$vr15}"(<16 x i8> undef) #[[ATTR1]], !srcloc [[META8:![0-9]+]]
 //
 void test_vr15() {
     register v16i8 a asm ("$vr15");
@@ -28,7 +28,7 @@ void test_vr15() {
 }
 
 // CHECK-LABEL: @test_vr31(
-// CHECK:    tail call void asm sideeffect "", "{$vr31}"(<16 x i8> undef) #[[ATTR1]], !srcloc !5
+// CHECK:    tail call void asm sideeffect "", "{$vr31}"(<16 x i8> undef) #[[ATTR1]], !srcloc [[META9:![0-9]+]]
 //
 void test_vr31() {
     register v16i8 a asm ("$vr31");

@@ -6,7 +6,7 @@ define double @test01() {
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr null, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr double, <2 x ptr> zeroinitializer, <2 x i32> [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> [[TMP2]], i32 8, <2 x i1> splat (i1 true), <2 x double> poison)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> align 8 [[TMP2]], <2 x i1> splat (i1 true), <2 x double> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> <double 0.000000e+00, double poison>, <2 x i32> <i32 2, i32 0>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP4]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP3]], [[TMP5]]

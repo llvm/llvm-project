@@ -8,8 +8,10 @@
 //
 // The HashRecognize analysis recognizes unoptimized polynomial hash functions
 // with operations over a Galois field of characteristic 2, also called binary
-// fields, or GF(2^n): this class of hash functions can be optimized using a
-// lookup-table-driven implementation, or with target-specific instructions.
+// fields, or GF(2^n). 2^n is termed the order of the Galois field. This class
+// of hash functions can be optimized using a lookup-table-driven
+// implementation, or with target-specific instructions.
+//
 // Examples:
 //
 //  1. Cyclic redundancy check (CRC), which is a polynomial division in GF(2).
@@ -24,12 +26,10 @@
 //
 //    c_m * x^m + c_(m-1) * x^(m-1) + ... + c_0 * x^0
 //
-// where each coefficient c is can take values in GF(2^n), where 2^n is termed
-// the order of the Galois field. For GF(2), each coefficient can take values
-// either 0 or 1, and the polynomial is simply represented by m+1 bits,
-// corresponding to the coefficients. The different variants of CRC are named by
-// degree of generating polynomial used: so CRC-32 would use a polynomial of
-// degree 32.
+// where each coefficient c is can take values 0 or 1. The polynomial is simply
+// represented by m+1 bits, corresponding to the coefficients. The different
+// variants of CRC are named by degree of generating polynomial used: so CRC-32
+// would use a polynomial of degree 32.
 //
 // The reason algorithms on GF(2^n) can be optimized with a lookup-table is the
 // following: in such fields, polynomial addition and subtraction are identical
@@ -97,7 +97,7 @@ static bool containsUnreachable(const Loop &L,
       }
     }
   }
-  return std::distance(Latch->begin(), Latch->end()) != Visited.size();
+  return Latch->size() != Visited.size();
 }
 
 /// A structure that can hold either a Simple Recurrence or a Conditional
@@ -446,7 +446,7 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
   if (!Latch || !Exit || !IndVar || L.getNumBlocks() != 1)
     return "Loop not in canonical form";
   unsigned TC = SE.getSmallConstantTripCount(&L);
-  if (!TC || TC > 256 || TC % 8)
+  if (!TC || TC % 8)
     return "Unable to find a small constant byte-multiple trip count";
 
   auto R = getRecurrences(Latch, IndVar, L);
@@ -468,8 +468,11 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
 
     // Ensure that the PHIs have exactly two uses:
     // the bit-shift, and the XOR (or a cast feeding into the XOR).
+    // Also ensure that the SimpleRecurrence's evolution doesn't have stray
+    // users.
     if (!ConditionalRecurrence.Phi->hasNUses(2) ||
-        !SimpleRecurrence.Phi->hasNUses(2))
+        !SimpleRecurrence.Phi->hasNUses(2) ||
+        SimpleRecurrence.BO->getUniqueUndroppableUser() != SimpleRecurrence.Phi)
       return "Recurrences have stray uses";
 
     // Check that the SelectInst ConditionalRecurrence.Step is conditional on

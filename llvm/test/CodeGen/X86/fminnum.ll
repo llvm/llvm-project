@@ -22,41 +22,14 @@ declare <8 x double> @llvm.minnum.v8f64(<8 x double>, <8 x double>)
 ; FIXME: As the vector tests show, the SSE run shouldn't need this many moves.
 
 define float @test_fminf(float %x, float %y) {
-; SSE2-LABEL: test_fminf:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movaps %xmm0, %xmm2
-; SSE2-NEXT:    cmpunordss %xmm0, %xmm2
-; SSE2-NEXT:    movaps %xmm2, %xmm3
-; SSE2-NEXT:    andps %xmm1, %xmm3
-; SSE2-NEXT:    minss %xmm0, %xmm1
-; SSE2-NEXT:    andnps %xmm1, %xmm2
-; SSE2-NEXT:    orps %xmm3, %xmm2
-; SSE2-NEXT:    movaps %xmm2, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSE4-LABEL: test_fminf:
-; SSE4:       # %bb.0:
-; SSE4-NEXT:    movaps %xmm1, %xmm2
-; SSE4-NEXT:    minss %xmm0, %xmm2
-; SSE4-NEXT:    cmpunordss %xmm0, %xmm0
-; SSE4-NEXT:    blendvps %xmm0, %xmm1, %xmm2
-; SSE4-NEXT:    movaps %xmm2, %xmm0
-; SSE4-NEXT:    retq
-;
-; AVX1-LABEL: test_fminf:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vminss %xmm0, %xmm1, %xmm2
-; AVX1-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX512-LABEL: test_fminf:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vminss %xmm0, %xmm1, %xmm2
-; AVX512-NEXT:    vcmpunordss %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovss %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512-NEXT:    vmovaps %xmm2, %xmm0
-; AVX512-NEXT:    retq
+; CHECK-LABEL: test_fminf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq fminf@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
   %z = call float @fminf(float %x, float %y) readnone
   ret float %z
 }
@@ -64,7 +37,12 @@ define float @test_fminf(float %x, float %y) {
 define float @test_fminf_minsize(float %x, float %y) minsize {
 ; CHECK-LABEL: test_fminf_minsize:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    jmp fminf@PLT # TAILCALL
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq fminf@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
   %z = call float @fminf(float %x, float %y) readnone
   ret float %z
 }
@@ -72,41 +50,14 @@ define float @test_fminf_minsize(float %x, float %y) minsize {
 ; FIXME: As the vector tests show, the SSE run shouldn't need this many moves.
 
 define double @test_fmin(double %x, double %y) {
-; SSE2-LABEL: test_fmin:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movapd %xmm0, %xmm2
-; SSE2-NEXT:    cmpunordsd %xmm0, %xmm2
-; SSE2-NEXT:    movapd %xmm2, %xmm3
-; SSE2-NEXT:    andpd %xmm1, %xmm3
-; SSE2-NEXT:    minsd %xmm0, %xmm1
-; SSE2-NEXT:    andnpd %xmm1, %xmm2
-; SSE2-NEXT:    orpd %xmm3, %xmm2
-; SSE2-NEXT:    movapd %xmm2, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSE4-LABEL: test_fmin:
-; SSE4:       # %bb.0:
-; SSE4-NEXT:    movapd %xmm1, %xmm2
-; SSE4-NEXT:    minsd %xmm0, %xmm2
-; SSE4-NEXT:    cmpunordsd %xmm0, %xmm0
-; SSE4-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
-; SSE4-NEXT:    movapd %xmm2, %xmm0
-; SSE4-NEXT:    retq
-;
-; AVX1-LABEL: test_fmin:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vminsd %xmm0, %xmm1, %xmm2
-; AVX1-NEXT:    vcmpunordsd %xmm0, %xmm0, %xmm0
-; AVX1-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX512-LABEL: test_fmin:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vminsd %xmm0, %xmm1, %xmm2
-; AVX512-NEXT:    vcmpunordsd %xmm0, %xmm0, %k1
-; AVX512-NEXT:    vmovsd %xmm1, %xmm2, %xmm2 {%k1}
-; AVX512-NEXT:    vmovapd %xmm2, %xmm0
-; AVX512-NEXT:    retq
+; CHECK-LABEL: test_fmin:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    callq fmin@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    retq
   %z = call double @fmin(double %x, double %y) readnone
   ret double %z
 }
@@ -645,11 +596,76 @@ define float @test_minnum_const_op2(float %x) {
   ret float %r
 }
 
-define float @test_minnum_const_nan(float %x) {
-; CHECK-LABEL: test_minnum_const_nan:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    retq
-  %r = call float @llvm.minnum.f32(float %x, float 0x7fff000000000000)
+define float @test_minnum_const_nan(float %x, float %y) {
+; SSE-LABEL: test_minnum_const_nan:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_minnum_const_nan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %r = call float @llvm.minnum.f32(float %y, float 0x7fff000000000000)
+  ret float %r
+}
+
+; nnan minnum(Y, +inf) -> Y
+define float @test_minnum_inf_nnan(float %x, float %y) nounwind {
+; SSE-LABEL: test_minnum_inf_nnan:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_minnum_inf_nnan:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %r = call nnan float @llvm.minnum.f32(float %y, float 0x7ff0000000000000)
+  ret float %r
+}
+
+; Test SNaN quieting
+define float @test_minnum_snan(float %x) {
+; SSE2-LABEL: test_minnum_snan:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movss {{.*#+}} xmm2 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSE2-NEXT:    movaps %xmm0, %xmm1
+; SSE2-NEXT:    cmpunordss %xmm0, %xmm1
+; SSE2-NEXT:    movaps %xmm1, %xmm3
+; SSE2-NEXT:    andps %xmm2, %xmm3
+; SSE2-NEXT:    minss %xmm0, %xmm2
+; SSE2-NEXT:    andnps %xmm2, %xmm1
+; SSE2-NEXT:    orps %xmm3, %xmm1
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE4-LABEL: test_minnum_snan:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    movss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSE4-NEXT:    minss %xmm0, %xmm1
+; SSE4-NEXT:    cmpunordss %xmm0, %xmm0
+; SSE4-NEXT:    blendvps %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE4-NEXT:    movaps %xmm1, %xmm0
+; SSE4-NEXT:    retq
+;
+; AVX1-LABEL: test_minnum_snan:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; AVX1-NEXT:    vminss %xmm0, %xmm1, %xmm1
+; AVX1-NEXT:    vcmpunordss %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vblendvps %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: test_minnum_snan:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovss {{.*#+}} xmm2 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; AVX512-NEXT:    vminss %xmm0, %xmm2, %xmm1
+; AVX512-NEXT:    vcmpunordss %xmm0, %xmm0, %k1
+; AVX512-NEXT:    vmovss %xmm2, %xmm1, %xmm1 {%k1}
+; AVX512-NEXT:    vmovaps %xmm1, %xmm0
+; AVX512-NEXT:    retq
+  %r = call float @llvm.minnum.f32(float 0x7ff4000000000000, float %x)
   ret float %r
 }
 
