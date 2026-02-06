@@ -244,7 +244,9 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     // be duplications since this is a simple recursive scan, but future
     // optimizations will clean it up.
 
-    if (all_equal(PhiR->incoming_values())) {
+    if (all_equal(
+            make_filter_range(PhiR->incoming_values(),
+                              std::not_fn(match_fn<VPValue>(m_Poison()))))) {
       PhiR->replaceAllUsesWith(PhiR->getIncomingValue(0));
       PhiR->eraseFromParent();
       continue;
@@ -319,7 +321,9 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
     VPBuilder B(Plan.getMiddleBlock()->getTerminator());
     for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
       VPValue *Op;
-      if (!match(&R, m_ExtractLastLane(m_ExtractLastPart(m_VPValue(Op)))))
+      if (!match(&R, m_CombineOr(
+                         m_ExitingIVValue(m_VPValue(), m_VPValue(Op)),
+                         m_ExtractLastLane(m_ExtractLastPart(m_VPValue(Op))))))
         continue;
 
       // Compute the index of the last active lane.

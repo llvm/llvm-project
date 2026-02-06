@@ -1413,7 +1413,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SMUL_LOHI, VT, Expand);
       setOperationAction(ISD::UMUL_LOHI, VT, Expand);
 
-      setOperationAction(ISD::BSWAP, VT, Expand);
+      if (VT == MVT::v4i16 || VT == MVT::v8i16 || VT == MVT::v2i32 ||
+          VT == MVT::v4i32 || VT == MVT::v2i64)
+        setOperationAction(ISD::BSWAP, VT, Legal);
+      else
+        setOperationAction(ISD::BSWAP, VT, Expand);
       setOperationAction(ISD::CTTZ, VT, Expand);
 
       for (MVT InnerVT : MVT::fixedlen_vector_valuetypes()) {
@@ -3566,6 +3570,7 @@ static SDValue convertFixedMaskToScalableVector(SDValue Mask,
 static SDValue getPredicateForVector(SelectionDAG &DAG, SDLoc &DL, EVT VT);
 static SDValue getPredicateForScalableVector(SelectionDAG &DAG, SDLoc &DL,
                                              EVT VT);
+static SDValue getSVEPredicateBitCast(EVT VT, SDValue Op, SelectionDAG &DAG);
 
 /// isZerosVector - Check whether SDNode N is a zero-filled vector.
 static bool isZerosVector(const SDNode *N) {
@@ -6051,12 +6056,11 @@ static SDValue optimizeBrk(SDNode *N, SelectionDAG &DAG) {
   if (Upper.getOpcode() != AArch64ISD::CTTZ_ELTS || !VT.isScalableVector())
     return SDValue();
 
-  SDValue Mask = Upper->getOperand(0);
-  const APInt &PgPattern = Upper.getConstantOperandAPInt(1);
-  SDValue Pg = getPTrue(DAG, DL, VT, PgPattern.getZExtValue());
+  SDValue Pg = Upper->getOperand(0);
+  SDValue Mask = Upper->getOperand(1);
 
   // brk{a,b} only support .b forms, so cast to make sure all our p regs match.
-  Pg = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, Pg);
+  Pg = getSVEPredicateBitCast(MVT::nxv16i1, Pg, DAG);
   SDValue MaskR =
       DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, Mask);
   SDValue ID = DAG.getTargetConstant(BrkID, DL, MVT::i64);
@@ -6946,21 +6950,17 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     EVT VT = CttzOp.getValueType();
     assert(VT.getVectorElementType() == MVT::i1 && "Expected MVT::i1");
 
-    // Default to all for scalable vectors
-    unsigned PgPattern = AArch64SVEPredPattern::all;
     if (VT.isFixedLengthVector()) {
       // We can use SVE instructions to lower this intrinsic by first creating
       // an SVE predicate register mask from the fixed-width vector.
-      EVT NewVT = getTypeToTransformTo(*DAG.getContext(), VT);
-      SDValue Mask = DAG.getNode(ISD::SIGN_EXTEND, DL, NewVT, CttzOp);
+      VT = getTypeToTransformTo(*DAG.getContext(), VT);
+      SDValue Mask = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, CttzOp);
       CttzOp = convertFixedMaskToScalableVector(Mask, DAG);
-      // Override with a VLx.
-      PgPattern = *getSVEPredPatternFromNumElements(VT.getVectorNumElements());
     }
 
-    SDValue Pattern = DAG.getTargetConstant(PgPattern, DL, MVT::i32);
+    SDValue Pg = getPredicateForVector(DAG, DL, VT);
     SDValue NewCttzElts =
-        DAG.getNode(AArch64ISD::CTTZ_ELTS, DL, MVT::i64, CttzOp, Pattern);
+        DAG.getNode(AArch64ISD::CTTZ_ELTS, DL, MVT::i64, Pg, CttzOp);
     return DAG.getZExtOrTrunc(NewCttzElts, DL, Op.getValueType());
   }
   case Intrinsic::experimental_vector_match: {
