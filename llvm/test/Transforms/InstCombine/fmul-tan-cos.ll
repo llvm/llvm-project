@@ -32,7 +32,9 @@ define double @fmul_strict_tan_strict_cos_contract(double %a) {
 define double @fmul_contract_tan_strict_cos_strict(double %a) {
 ; CHECK-LABEL: define double @fmul_contract_tan_strict_cos_strict(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call contract double @llvm.sin.f64(double [[A]])
+; CHECK-NEXT:    [[TAN:%.*]] = call double @llvm.tan.f64(double [[A]])
+; CHECK-NEXT:    [[COS:%.*]] = call double @llvm.cos.f64(double [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = fmul contract double [[TAN]], [[COS]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %tan = call double @llvm.tan.f64(double %a)
@@ -44,7 +46,9 @@ define double @fmul_contract_tan_strict_cos_strict(double %a) {
 define double @fmul_contract_tan_contract_cos_strict(double %a) {
 ; CHECK-LABEL: define double @fmul_contract_tan_contract_cos_strict(
 ; CHECK-SAME: double [[A:%.*]]) {
-; CHECK-NEXT:    [[RES:%.*]] = call contract double @llvm.sin.f64(double [[A]])
+; CHECK-NEXT:    [[TAN:%.*]] = call contract double @llvm.tan.f64(double [[A]])
+; CHECK-NEXT:    [[COS:%.*]] = call double @llvm.cos.f64(double [[A]])
+; CHECK-NEXT:    [[RES:%.*]] = fmul contract double [[TAN]], [[COS]]
 ; CHECK-NEXT:    ret double [[RES]]
 ;
   %tan = call contract double @llvm.tan.f64(double %a)
