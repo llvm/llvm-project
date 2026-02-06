@@ -43,9 +43,9 @@ bool RegisterContextFreeBSDKernel_arm64::ReadRegister(
     return false;
 
   struct {
-    llvm::support::ulittle64_t x[30];
-    llvm::support::ulittle64_t lr;
-    llvm::support::ulittle64_t _reserved;
+#define PCB_FP 10
+#define PCB_LR 11
+    llvm::support::ulittle64_t x[12];
     llvm::support::ulittle64_t sp;
   } pcb;
 
@@ -57,25 +57,6 @@ bool RegisterContextFreeBSDKernel_arm64::ReadRegister(
 
   uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
   switch (reg) {
-  case gpr_x0_arm64:
-  case gpr_x1_arm64:
-  case gpr_x2_arm64:
-  case gpr_x3_arm64:
-  case gpr_x4_arm64:
-  case gpr_x5_arm64:
-  case gpr_x6_arm64:
-  case gpr_x7_arm64:
-  case gpr_x8_arm64:
-  case gpr_x9_arm64:
-  case gpr_x10_arm64:
-  case gpr_x11_arm64:
-  case gpr_x12_arm64:
-  case gpr_x13_arm64:
-  case gpr_x14_arm64:
-  case gpr_x15_arm64:
-  case gpr_x16_arm64:
-  case gpr_x17_arm64:
-  case gpr_x18_arm64:
   case gpr_x19_arm64:
   case gpr_x20_arm64:
   case gpr_x21_arm64:
@@ -87,16 +68,19 @@ bool RegisterContextFreeBSDKernel_arm64::ReadRegister(
   case gpr_x27_arm64:
   case gpr_x28_arm64:
   case gpr_fp_arm64:
-    static_assert(gpr_fp_arm64 - gpr_x0_arm64 == 29,
+    static_assert(gpr_fp_arm64 - gpr_x19_arm64 == PCB_FP,
                   "nonconsecutive arm64 register numbers");
-    value = pcb.x[reg - gpr_x0_arm64];
+    value = pcb.x[reg - gpr_x19_arm64];
+    break;
+  case gpr_lr_arm64:
+  case gpr_pc_arm64:
+    // The pc of crashing thread is stored in lr.
+    static_assert(gpr_lr_arm64 - gpr_x19_arm64 == PCB_LR,
+                  "nonconsecutive arm64 register numbers");
+    value = pcb.x[reg - gpr_x19_arm64];
     break;
   case gpr_sp_arm64:
     value = pcb.sp;
-    break;
-  case gpr_pc_arm64:
-    // The pc of crashing thread is stored in lr.
-    value = pcb.lr;
     break;
   default:
     return false;
