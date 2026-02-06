@@ -12200,7 +12200,7 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
   case ISD::SETGE:
   case ISD::SETUGT:
   case ISD::SETUGE: {
-    if (Opcode == 0) {
+    if (Opcode == ISD::DELETED_NODE) {
       // Since it's known never nan to get here already, either fminimumnum,
       // fminimum, fminnum, or fminnum_ieee are OK. Try Legal first and then
       // Custom.
