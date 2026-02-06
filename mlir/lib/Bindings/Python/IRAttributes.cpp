@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <optional>
@@ -1299,7 +1300,7 @@ void PyStridedLayoutAttribute::bindDerived(ClassTy &c) {
       [](int64_t rank, DefaultingPyMlirContext ctx) {
         auto dynamic = mlirShapedTypeGetDynamicStrideOrOffset();
         std::vector<int64_t> strides(rank);
-        llvm::fill(strides, dynamic);
+        std::fill(strides.begin(), strides.end(), dynamic);
         MlirAttribute attr = mlirStridedLayoutAttrGet(
             ctx->get(), dynamic, strides.size(), strides.data());
         return PyStridedLayoutAttribute(ctx->getRef(), attr);
