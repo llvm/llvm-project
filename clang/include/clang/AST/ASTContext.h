@@ -2883,6 +2883,8 @@ public:
   /// (from the AuxTargetInfo) is a an itanium target.
   MangleContext *createDeviceMangleContext(const TargetInfo &T);
 
+  MangleContext *cudaNVInitDeviceMC();
+
   void DeepCollectObjCIvars(const ObjCInterfaceDecl *OI, bool leafClass,
                             SmallVectorImpl<const ObjCIvarDecl*> &Ivars) const;
 

@@ -196,19 +196,19 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64> } @multi_vec_sat_double_mulh_mul
 define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @multi_vec_sat_double_mulh_multi_x4_s8(<vscale x 16 x i8> %unused, <vscale x 16 x i8> %zdn1, <vscale x 16 x i8> %zdn2, <vscale x 16 x i8> %zdn3, <vscale x 16 x i8> %zdn4,
 ; CHECK-LABEL: multi_vec_sat_double_mulh_multi_x4_s8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    sqdmulh { z24.b - z27.b }, { z24.b - z27.b }, { z28.b - z31.b }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    sqdmulh { z4.b - z7.b }, { z4.b - z7.b }, { z24.b - z27.b }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
                                        <vscale x 16 x i8> %zm1, <vscale x 16 x i8> %zm2, <vscale x 16 x i8> %zm3, <vscale x 16 x i8> %zm4) {
   %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> }
@@ -220,19 +220,19 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @multi_vec_sat_double_mulh_multi_x4_s16(<vscale x 8 x i16> %unused, <vscale x 8 x i16> %zdn1, <vscale x 8 x i16> %zdn2, <vscale x 8 x i16> %zdn3, <vscale x 8 x i16> %zdn4,
 ; CHECK-LABEL: multi_vec_sat_double_mulh_multi_x4_s16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    sqdmulh { z24.h - z27.h }, { z24.h - z27.h }, { z28.h - z31.h }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    sqdmulh { z4.h - z7.h }, { z4.h - z7.h }, { z24.h - z27.h }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
                                         <vscale x 8 x i16> %zm1, <vscale x 8 x i16> %zm2, <vscale x 8 x i16> %zm3, <vscale x 8 x i16> %zm4) {
   %res = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> }
@@ -244,19 +244,19 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @multi_vec_sat_double_mulh_multi_x4_s32(<vscale x 4 x i32> %unused, <vscale x 4 x i32> %zdn1, <vscale x 4 x i32> %zdn2, <vscale x 4 x i32> %zdn3, <vscale x 4 x i32> %zdn4,
 ; CHECK-LABEL: multi_vec_sat_double_mulh_multi_x4_s32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    sqdmulh { z24.s - z27.s }, { z24.s - z27.s }, { z28.s - z31.s }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    sqdmulh { z4.s - z7.s }, { z4.s - z7.s }, { z24.s - z27.s }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
                                         <vscale x 4 x i32> %zm1, <vscale x 4 x i32> %zm2, <vscale x 4 x i32> %zm3, <vscale x 4 x i32> %zm4) {
   %res = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }
@@ -268,19 +268,19 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @multi_vec_sat_double_mulh_multi_x4_s64(<vscale x 2 x i64> %unused, <vscale x 2 x i64> %zdn1, <vscale x 2 x i64> %zdn2, <vscale x 2 x i64> %zdn3, <vscale x 2 x i64> %zdn4,
 ; CHECK-LABEL: multi_vec_sat_double_mulh_multi_x4_s64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z30.d, z7.d
-; CHECK-NEXT:    mov z27.d, z4.d
-; CHECK-NEXT:    mov z29.d, z6.d
-; CHECK-NEXT:    mov z26.d, z3.d
-; CHECK-NEXT:    mov z28.d, z5.d
-; CHECK-NEXT:    mov z25.d, z2.d
-; CHECK-NEXT:    ldr z31, [x0]
-; CHECK-NEXT:    mov z24.d, z1.d
-; CHECK-NEXT:    sqdmulh { z24.d - z27.d }, { z24.d - z27.d }, { z28.d - z31.d }
-; CHECK-NEXT:    mov z0.d, z24.d
-; CHECK-NEXT:    mov z1.d, z25.d
-; CHECK-NEXT:    mov z2.d, z26.d
-; CHECK-NEXT:    mov z3.d, z27.d
+; CHECK-NEXT:    mov z26.d, z7.d
+; CHECK-NEXT:    mov z25.d, z6.d
+; CHECK-NEXT:    ldr z27, [x0]
+; CHECK-NEXT:    mov z7.d, z4.d
+; CHECK-NEXT:    mov z24.d, z5.d
+; CHECK-NEXT:    mov z6.d, z3.d
+; CHECK-NEXT:    mov z5.d, z2.d
+; CHECK-NEXT:    mov z4.d, z1.d
+; CHECK-NEXT:    sqdmulh { z4.d - z7.d }, { z4.d - z7.d }, { z24.d - z27.d }
+; CHECK-NEXT:    mov z0.d, z4.d
+; CHECK-NEXT:    mov z1.d, z5.d
+; CHECK-NEXT:    mov z2.d, z6.d
+; CHECK-NEXT:    mov z3.d, z7.d
 ; CHECK-NEXT:    ret
                                         <vscale x 2 x i64> %zm1, <vscale x 2 x i64> %zm2, <vscale x 2 x i64> %zm3, <vscale x 2 x i64> %zm4) {
   %res = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> }

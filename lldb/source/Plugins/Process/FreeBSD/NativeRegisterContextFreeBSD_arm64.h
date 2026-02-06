@@ -24,7 +24,7 @@
 #include <array>
 
 #if __FreeBSD_version >= 1300139
-#  define LLDB_HAS_FREEBSD_WATCHPOINT 1
+#define LLDB_HAS_FREEBSD_WATCHPOINT 1
 #endif
 
 namespace lldb_private {

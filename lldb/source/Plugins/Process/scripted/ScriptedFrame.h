@@ -63,6 +63,21 @@ public:
 
   lldb::RegisterContextSP GetRegisterContext() override;
 
+  VariableList *GetVariableList(bool get_file_globals,
+                                lldb_private::Status *error_ptr) override;
+
+  lldb::VariableListSP
+  GetInScopeVariableList(bool get_file_globals,
+                         bool must_have_valid_location = false) override;
+
+  lldb::ValueObjectSP
+  GetValueObjectForFrameVariable(const lldb::VariableSP &variable_sp,
+                                 lldb::DynamicValueType use_dynamic) override;
+
+  lldb::ValueObjectSP GetValueForVariableExpressionPath(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error) override;
+
   bool isA(const void *ClassID) const override {
     return ClassID == &ID || StackFrame::isA(ClassID);
   }
@@ -75,6 +90,11 @@ private:
   CreateRegisterContext(ScriptedFrameInterface &interface, Thread &thread,
                         lldb::user_id_t frame_id);
 
+  // Populate m_variable_list_sp from the scripted frame interface. Right now
+  // this doesn't take any options because the implementation can't really do
+  // anything with those options anyway, so there's no point.
+  void PopulateVariableListFromInterface();
+
   ScriptedFrame(const ScriptedFrame &) = delete;
   const ScriptedFrame &operator=(const ScriptedFrame &) = delete;
 
@@ -82,6 +102,7 @@ private:
 
   lldb::ScriptedFrameInterfaceSP m_scripted_frame_interface_sp;
   lldb_private::StructuredData::GenericSP m_script_object_sp;
+  lldb::VariableListSP m_variable_list_sp;
 
   static char ID;
 };

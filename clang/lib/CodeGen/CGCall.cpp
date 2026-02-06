@@ -31,6 +31,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Assumptions.h"
@@ -1941,11 +1942,9 @@ static bool HasStrictReturn(const CodeGenModule &Module, QualType RetTy,
 static void addDenormalModeAttrs(llvm::DenormalMode FPDenormalMode,
                                  llvm::DenormalMode FP32DenormalMode,
                                  llvm::AttrBuilder &FuncAttrs) {
-  if (FPDenormalMode != llvm::DenormalMode::getDefault())
-    FuncAttrs.addAttribute("denormal-fp-math", FPDenormalMode.str());
-
-  if (FP32DenormalMode != FPDenormalMode && FP32DenormalMode.isValid())
-    FuncAttrs.addAttribute("denormal-fp-math-f32", FP32DenormalMode.str());
+  llvm::DenormalFPEnv FPEnv(FPDenormalMode, FP32DenormalMode);
+  if (FPEnv != llvm::DenormalFPEnv::getDefault())
+    FuncAttrs.addDenormalFPEnvAttr(FPEnv);
 }
 
 /// Add default attributes to a function, which have merge semantics under
@@ -2167,35 +2166,19 @@ void CodeGen::mergeDefaultFunctionDefinitionAttributes(
 
   llvm::AttributeMask AttrsToRemove;
 
-  llvm::DenormalMode DenormModeToMerge = F.getDenormalModeRaw();
-  llvm::DenormalMode DenormModeToMergeF32 = F.getDenormalModeF32Raw();
-  llvm::DenormalMode Merged =
-      CodeGenOpts.FPDenormalMode.mergeCalleeMode(DenormModeToMerge);
-  llvm::DenormalMode MergedF32 = CodeGenOpts.FP32DenormalMode;
+  llvm::DenormalFPEnv OptsFPEnv(CodeGenOpts.FPDenormalMode,
+                                CodeGenOpts.FP32DenormalMode);
+  llvm::DenormalFPEnv MergedFPEnv =
+      OptsFPEnv.mergeCalleeMode(F.getDenormalFPEnv());
 
-  if (DenormModeToMergeF32.isValid()) {
-    MergedF32 =
-        CodeGenOpts.FP32DenormalMode.mergeCalleeMode(DenormModeToMergeF32);
-  }
-
-  if (Merged == llvm::DenormalMode::getDefault()) {
-    AttrsToRemove.addAttribute("denormal-fp-math");
-  } else if (Merged != DenormModeToMerge) {
+  if (MergedFPEnv == llvm::DenormalFPEnv::getDefault()) {
+    AttrsToRemove.addAttribute(llvm::Attribute::DenormalFPEnv);
+  } else {
     // Overwrite existing attribute
-    FuncAttrs.addAttribute("denormal-fp-math",
-                           CodeGenOpts.FPDenormalMode.str());
-  }
-
-  if (MergedF32 == llvm::DenormalMode::getDefault()) {
-    AttrsToRemove.addAttribute("denormal-fp-math-f32");
-  } else if (MergedF32 != DenormModeToMergeF32) {
-    // Overwrite existing attribute
-    FuncAttrs.addAttribute("denormal-fp-math-f32",
-                           CodeGenOpts.FP32DenormalMode.str());
+    FuncAttrs.addDenormalFPEnvAttr(MergedFPEnv);
   }
 
   F.removeFnAttrs(AttrsToRemove);
-  addDenormalModeAttrs(Merged, MergedF32, FuncAttrs);
 
   overrideFunctionFeaturesWithTargetFeatures(FuncAttrs, F, TargetOpts);
 
@@ -2884,7 +2867,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
           // (e.g., Obj-C ARC-managed structs, MSVC callee-destroyed objects).
           if (!ParamType.isDestructedType() || !ParamType->isRecordType() ||
               ParamType->castAsRecordDecl()->isParamDestroyedInCallee())
-            Attrs.addAttribute(llvm::Attribute::DeadOnReturn);
+            Attrs.addDeadOnReturnAttr(llvm::DeadOnReturnInfo());
         }
       }
 
@@ -5340,13 +5323,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // here, symmetrically with the handling we have for normal pointer args.
       if (SRetPtr.getAddressSpace() != RetAI.getIndirectAddrSpace()) {
         llvm::Value *V = SRetPtr.getBasePointer();
-        LangAS SAS = getLangASFromTargetAS(SRetPtr.getAddressSpace());
         llvm::Type *Ty = llvm::PointerType::get(getLLVMContext(),
                                                 RetAI.getIndirectAddrSpace());
 
-        SRetPtr = SRetPtr.withPointer(
-            getTargetHooks().performAddrSpaceCast(*this, V, SAS, Ty, true),
-            SRetPtr.isKnownNonNull());
+        SRetPtr = SRetPtr.withPointer(performAddrSpaceCast(V, Ty),
+                                      SRetPtr.isKnownNonNull());
       }
       IRCallArgs[IRFunctionArgs.getSRetArgNo()] =
           getAsNaturalPointerTo(SRetPtr, RetTy);
@@ -5489,8 +5470,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           // only the contextual values. If the address space mismatches, see if
           // we can look through a cast to a compatible address space value,
           // otherwise emit a copy.
-          llvm::Value *Val = getTargetHooks().performAddrSpaceCast(
-              *this, V, I->Ty.getAddressSpace(), T, true);
+          llvm::Value *Val = performAddrSpaceCast(V, T);
           if (ArgHasMaybeUndefAttr)
             Val = Builder.CreateFreeze(Val);
           IRCallArgs[FirstIRArg] = Val;
@@ -5574,9 +5554,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         if (FirstIRArg < IRFuncTy->getNumParams() &&
             V->getType() != IRFuncTy->getParamType(FirstIRArg)) {
           assert(V->getType()->isPointerTy() && "Only pointers can mismatch!");
-          auto ActualAS = I->Ty.getAddressSpace();
-          V = getTargetHooks().performAddrSpaceCast(
-              *this, V, ActualAS, IRFuncTy->getParamType(FirstIRArg));
+          V = performAddrSpaceCast(V, IRFuncTy->getParamType(FirstIRArg));
         }
 
         if (ArgHasMaybeUndefAttr)
@@ -6010,11 +5988,20 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     AddObjCARCExceptionMetadata(CI);
 
   // Set tail call kind if necessary.
+  bool IsPPC = getTarget().getTriple().isPPC();
+  bool IsMIPS = getTarget().getTriple().isMIPS();
+  bool HasMips16 = false;
+  if (IsMIPS) {
+    const TargetOptions &TargetOpts = getTarget().getTargetOpts();
+    HasMips16 = TargetOpts.FeatureMap.lookup("mips16");
+    if (!HasMips16)
+      HasMips16 = llvm::is_contained(TargetOpts.Features, "+mips16");
+  }
   if (llvm::CallInst *Call = dyn_cast<llvm::CallInst>(CI)) {
     if (TargetDecl && TargetDecl->hasAttr<NotTailCalledAttr>())
       Call->setTailCallKind(llvm::CallInst::TCK_NoTail);
     else if (IsMustTail) {
-      if (getTarget().getTriple().isPPC()) {
+      if (IsPPC) {
         if (getTarget().getTriple().isOSAIX())
           CGM.getDiags().Report(Loc, diag::err_aix_musttail_unsupported);
         else if (!getTarget().hasFeature("pcrelative-memops")) {
@@ -6039,6 +6026,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             }
           }
         }
+      }
+      if (IsMIPS) {
+        if (HasMips16)
+          CGM.getDiags().Report(Loc, diag::err_mips_impossible_musttail) << 0;
+        else if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl))
+          CGM.addUndefinedGlobalForTailCall({FD, Loc});
       }
       Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
     }

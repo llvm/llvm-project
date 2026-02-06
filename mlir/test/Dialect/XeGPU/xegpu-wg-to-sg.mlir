@@ -203,8 +203,8 @@ gpu.module @test_1_1_assignment {
     // CHECK: %[[SCF:.*]]:3 = scf.for %[[ARG3:.*]] = %[[C0]] to %[[C1024]] step %[[C128]]
     // CHECK-SAME: iter_args(%[[ARG4:.*]] = {{.*}}, %[[ARG5:.*]] = {{.*}}, %[[ARG6:.*]] = {{.*}}) ->
     // CHECK-SAME: (!xegpu.tensor_desc<16x128xf16>, !xegpu.tensor_desc<128x16xf16>, vector<16x16xf32>)
-    // CHECK: %[[A:.*]] = xegpu.load_nd %[[ARG4]] <{layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128]>}> : !xegpu.tensor_desc<16x128xf16> -> vector<16x128xf16>
-    // CHECK: %[[B:.*]] = xegpu.load_nd %[[ARG5]] <{layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16]>}> : !xegpu.tensor_desc<128x16xf16> -> vector<128x16xf16>
+    // CHECK: %[[A:.*]] = xegpu.load_nd %[[ARG4]] : !xegpu.tensor_desc<16x128xf16> -> vector<16x128xf16>
+    // CHECK: %[[B:.*]] = xegpu.load_nd %[[ARG5]] : !xegpu.tensor_desc<128x16xf16> -> vector<128x16xf16>
     // CHECK: %[[C:.*]] = xegpu.dpas %[[A]], %[[B]], %[[ARG6]] : vector<16x128xf16>, vector<128x16xf16>, vector<16x16xf32> -> vector<16x16xf32>
     // CHECK: %[[AT:.*]] = xegpu.update_nd_offset %[[ARG4]], [%[[C0]], %[[C128]]] : !xegpu.tensor_desc<16x128xf16>
     // CHECK: %[[BT:.*]] = xegpu.update_nd_offset %[[ARG5]], [%[[C128]], %[[C0]]] : !xegpu.tensor_desc<128x16xf16>

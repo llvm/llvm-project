@@ -159,7 +159,7 @@ void XtensaInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator MBBI,
                                            Register DestReg, int FrameIdx,
                                            const TargetRegisterClass *RC,
-                                           Register VReg,
+                                           Register VReg, unsigned SubReg,
                                            MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
   unsigned LoadOpcode, StoreOpcode;

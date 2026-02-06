@@ -119,8 +119,8 @@ let Predicates = [HasVendorXRivosVisni], DecoderNamespace = "XRivos",
 
 let vm = 0, vs2=0, Inst<6-0> = OPC_CUSTOM_2.Value,
     isReMaterializable = 1, isAsCheapAsAMove = 1 in
-def RI_VZERO : RVInstV<0b000000, 0b00000, OPCFG, (outs VR:$vd),
-                     (ins), "ri.vzero.v", "$vd">;
+def RI_VZERO : RVInstVUnary<0b000000, 0b00000, OPCFG, (outs VR:$vd),
+                            (ins), "ri.vzero.v", "$vd">;
 
 def RI_VINSERT : CustomRivosVXI<0b010000, OPMVX, (outs VR:$vd_wb),
                                 (ins VR:$vd, GPR:$rs1, uimm5:$imm),
