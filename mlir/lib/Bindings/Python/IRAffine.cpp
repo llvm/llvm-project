@@ -26,7 +26,6 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Twine.h"
 
 namespace nb = nanobind;
 using namespace mlir;
@@ -34,7 +33,6 @@ using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
 using llvm::SmallVector;
 using llvm::StringRef;
-using llvm::Twine;
 
 static const char kDumpDocstring[] =
     R"(Dumps a debug representation of the object to stderr.)";
@@ -52,14 +50,16 @@ static void pyListToVector(const nb::list &list,
     try {
       result.push_back(nb::cast<PyType>(item));
     } catch (nb::cast_error &err) {
-      std::string msg = (llvm::Twine("Invalid expression when ") + action +
-                         " (" + err.what() + ")")
-                            .str();
+      std::string msg = nanobind::detail::join(
+                             "Invalid expression when ", action.str(), " (",
+                             err.what(), ")")
+                             .c_str();
       throw std::runtime_error(msg.c_str());
     } catch (std::runtime_error &err) {
-      std::string msg = (llvm::Twine("Invalid expression (None?) when ") +
-                         action + " (" + err.what() + ")")
-                            .str();
+      std::string msg = nanobind::detail::join(
+                             "Invalid expression (None?) when ", action.str(),
+                             " (", err.what(), ")")
+                             .c_str();
       throw std::runtime_error(msg.c_str());
     }
   }
@@ -106,11 +106,9 @@ public:
   static MlirAffineExpr castFrom(PyAffineExpr &orig) {
     if (!DerivedTy::isaFunction(orig)) {
       auto origRepr = nb::cast<std::string>(nb::repr(nb::cast(orig)));
-      throw nb::value_error((Twine("Cannot cast affine expression to ") +
-                             DerivedTy::pyClassName + " (from " + origRepr +
-                             ")")
-                                .str()
-                                .c_str());
+      throw nb::value_error(nanobind::detail::join(
+          "Cannot cast affine expression to ", DerivedTy::pyClassName,
+          " (from ", origRepr, ")").c_str());
     }
     return orig;
   }

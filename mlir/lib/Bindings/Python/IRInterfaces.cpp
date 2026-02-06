@@ -19,7 +19,6 @@
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 
 namespace nb = nanobind;
 
@@ -48,10 +47,10 @@ its return shaped type components. Raises ValueError on failure.)";
 
 namespace {
 
-/// Takes in an optional ist of operands and converts them into a SmallVector
-/// of MlirVlaues. Returns an empty SmallVector if the list is empty.
-llvm::SmallVector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
-  llvm::SmallVector<MlirValue> mlirOperands;
+/// Takes in an optional ist of operands and converts them into a std::vector
+/// of MlirVlaues. Returns an empty std::vector if the list is empty.
+std::vector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
+  std::vector<MlirValue> mlirOperands;
 
   if (!operandList || operandList->size() == 0) {
     return mlirOperands;
@@ -84,20 +83,17 @@ llvm::SmallVector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
             throw nb::cast_error();
           mlirOperands.push_back(val->get());
         } catch (nb::cast_error &err) {
-          throw nb::value_error(
-              (llvm::Twine("Operand ") + llvm::Twine(it.index()) +
-               " must be a Value or Sequence of Values (" + err.what() + ")")
-                  .str()
-                  .c_str());
+          throw nb::value_error(nanobind::detail::join(
+              "Operand ", it.index(),
+              " must be a Value or Sequence of Values (", err.what(), ")")
+                                    .c_str());
         }
       }
       continue;
     } catch (nb::cast_error &err) {
-      throw nb::value_error((llvm::Twine("Operand ") + llvm::Twine(it.index()) +
-                             " must be a Value or Sequence of Values (" +
-                             err.what() + ")")
-                                .str()
-                                .c_str());
+      throw nb::value_error(nanobind::detail::join(
+          "Operand ", it.index(), " must be a Value or Sequence of Values (",
+          err.what(), ")").c_str());
     }
 
     throw nb::cast_error();
@@ -106,11 +102,11 @@ llvm::SmallVector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
   return mlirOperands;
 }
 
-/// Takes in an optional vector of PyRegions and returns a SmallVector of
-/// MlirRegion. Returns an empty SmallVector if the list is empty.
-llvm::SmallVector<MlirRegion>
+/// Takes in an optional vector of PyRegions and returns a std::vector of
+/// MlirRegion. Returns an empty std::vector if the list is empty.
+std::vector<MlirRegion>
 wrapRegions(std::optional<std::vector<PyRegion>> regions) {
-  llvm::SmallVector<MlirRegion> mlirRegions;
+  std::vector<MlirRegion> mlirRegions;
 
   if (regions) {
     mlirRegions.reserve(regions->size());
@@ -273,9 +269,9 @@ public:
                    std::optional<std::vector<PyRegion>> regions,
                    DefaultingPyMlirContext context,
                    DefaultingPyLocation location) {
-    llvm::SmallVector<MlirValue> mlirOperands =
+    std::vector<MlirValue> mlirOperands =
         wrapOperands(std::move(operandList));
-    llvm::SmallVector<MlirRegion> mlirRegions = wrapRegions(std::move(regions));
+    std::vector<MlirRegion> mlirRegions = wrapRegions(std::move(regions));
 
     std::vector<PyType> inferredTypes;
     PyMlirContext &pyContext = context.resolve();
@@ -430,9 +426,9 @@ public:
       std::optional<PyAttribute> attributes, void *properties,
       std::optional<std::vector<PyRegion>> regions,
       DefaultingPyMlirContext context, DefaultingPyLocation location) {
-    llvm::SmallVector<MlirValue> mlirOperands =
+    std::vector<MlirValue> mlirOperands =
         wrapOperands(std::move(operandList));
-    llvm::SmallVector<MlirRegion> mlirRegions = wrapRegions(std::move(regions));
+    std::vector<MlirRegion> mlirRegions = wrapRegions(std::move(regions));
 
     std::vector<PyShapedTypeComponents> inferredShapedTypeComponents;
     PyMlirContext &pyContext = context.resolve();
