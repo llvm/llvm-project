@@ -4,7 +4,7 @@
 
 target triple = "nvptx64-nvidia-cuda"
 
-define <2 x float> @fma_non_coalescable(
+define <2 x float> @fma_non_coalescable(ptr addrspace(3) %p, <2 x float> %a, <2 x float> %c) {
 ; CHECK-LABEL: fma_non_coalescable(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<11>;
@@ -19,7 +19,6 @@ define <2 x float> @fma_non_coalescable(
 ; CHECK-NEXT:    fma.rn.f32 %r10, %r5, %r1, %r7;
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r10, %r9};
 ; CHECK-NEXT:    ret;
-    ptr addrspace(3) %p, <2 x float> %a, <2 x float> %c) {
   %ld  = load <4 x float>, ptr addrspace(3) %p, align 16
   %e0  = extractelement <4 x float> %ld, i32 0
   %e2  = extractelement <4 x float> %ld, i32 2
@@ -30,7 +29,7 @@ define <2 x float> @fma_non_coalescable(
   ret <2 x float> %res
 }
 
-define <2 x float> @fma_shufflevector_non_coalescable(
+define <2 x float> @fma_shufflevector_non_coalescable(ptr addrspace(3) %p, <2 x float> %a, <2 x float> %c) {
 ; CHECK-LABEL: fma_shufflevector_non_coalescable(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<11>;
@@ -45,7 +44,6 @@ define <2 x float> @fma_shufflevector_non_coalescable(
 ; CHECK-NEXT:    fma.rn.f32 %r10, %r5, %r1, %r7;
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r10, %r9};
 ; CHECK-NEXT:    ret;
-    ptr addrspace(3) %p, <2 x float> %a, <2 x float> %c) {
   %ld  = load <4 x float>, ptr addrspace(3) %p, align 16
   %bv  = shufflevector <4 x float> %ld, <4 x float> poison, <2 x i32> <i32 0, i32 2>
   %mul = fmul <2 x float> %a, %bv
@@ -53,7 +51,7 @@ define <2 x float> @fma_shufflevector_non_coalescable(
   ret <2 x float> %res
 }
 
-define <2 x float> @fma_mixed_extract_and_scalar(
+define <2 x float> @fma_mixed_extract_and_scalar(ptr addrspace(3) %p, float %s, <2 x float> %a, <2 x float> %c) {
 ; CHECK-LABEL: fma_mixed_extract_and_scalar(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<12>;
@@ -69,7 +67,6 @@ define <2 x float> @fma_mixed_extract_and_scalar(
 ; CHECK-NEXT:    fma.rn.f32 %r11, %r6, %r3, %r8;
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r11, %r10};
 ; CHECK-NEXT:    ret;
-    ptr addrspace(3) %p, float %s, <2 x float> %a, <2 x float> %c) {
   %ld  = load <4 x float>, ptr addrspace(3) %p, align 16
   %e2  = extractelement <4 x float> %ld, i32 2
   %bv0 = insertelement <2 x float> poison, float %e2, i32 0
@@ -79,7 +76,7 @@ define <2 x float> @fma_mixed_extract_and_scalar(
   ret <2 x float> %res
 }
 
-define <2 x float> @fadd_non_coalescable(
+define <2 x float> @fadd_non_coalescable(ptr addrspace(3) %p, <2 x float> %a) {
 ; CHECK-LABEL: fadd_non_coalescable(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<9>;
@@ -93,7 +90,6 @@ define <2 x float> @fadd_non_coalescable(
 ; CHECK-NEXT:    add.f32 %r8, %r5, %r1;
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r8, %r7};
 ; CHECK-NEXT:    ret;
-    ptr addrspace(3) %p, <2 x float> %a) {
   %ld  = load <4 x float>, ptr addrspace(3) %p, align 16
   %e0  = extractelement <4 x float> %ld, i32 0
   %e2  = extractelement <4 x float> %ld, i32 2
@@ -103,7 +99,7 @@ define <2 x float> @fadd_non_coalescable(
   ret <2 x float> %add
 }
 
-define <2 x float> @fmul_non_coalescable(
+define <2 x float> @fmul_non_coalescable(ptr addrspace(3) %p, <2 x float> %a) {
 ; CHECK-LABEL: fmul_non_coalescable(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<9>;
@@ -117,7 +113,6 @@ define <2 x float> @fmul_non_coalescable(
 ; CHECK-NEXT:    mul.f32 %r8, %r5, %r1;
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r8, %r7};
 ; CHECK-NEXT:    ret;
-    ptr addrspace(3) %p, <2 x float> %a) {
   %ld  = load <4 x float>, ptr addrspace(3) %p, align 16
   %e0  = extractelement <4 x float> %ld, i32 0
   %e2  = extractelement <4 x float> %ld, i32 2
@@ -127,7 +122,7 @@ define <2 x float> @fmul_non_coalescable(
   ret <2 x float> %mul
 }
 
-define <2 x float> @fsub_non_coalescable(
+define <2 x float> @fsub_non_coalescable(ptr addrspace(3) %p, <2 x float> %a) {
 ; CHECK-LABEL: fsub_non_coalescable(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<9>;
@@ -141,7 +136,6 @@ define <2 x float> @fsub_non_coalescable(
 ; CHECK-NEXT:    sub.f32 %r8, %r5, %r1;
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r8, %r7};
 ; CHECK-NEXT:    ret;
-    ptr addrspace(3) %p, <2 x float> %a) {
   %ld  = load <4 x float>, ptr addrspace(3) %p, align 16
   %e0  = extractelement <4 x float> %ld, i32 0
   %e2  = extractelement <4 x float> %ld, i32 2
@@ -152,7 +146,7 @@ define <2 x float> @fsub_non_coalescable(
 }
 
 ; Should remain vectorized
-define <4 x float> @fma_adjacent_elements(
+define <4 x float> @fma_adjacent_elements(ptr addrspace(3) %p, <2 x float> %a, <2 x float> %c) {
 ; CHECK-LABEL: fma_adjacent_elements(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<8>;
@@ -166,7 +160,6 @@ define <4 x float> @fma_adjacent_elements(
 ; CHECK-NEXT:    fma.rn.f32x2 %rd7, %rd4, %rd3, %rd5;
 ; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd6, %rd7};
 ; CHECK-NEXT:    ret;
-    ptr addrspace(3) %p, <2 x float> %a, <2 x float> %c) {
   %ld  = load <4 x float>, ptr addrspace(3) %p, align 16
   %e0  = extractelement <4 x float> %ld, i32 0
   %e1  = extractelement <4 x float> %ld, i32 1
@@ -184,7 +177,7 @@ define <4 x float> @fma_adjacent_elements(
   ret <4 x float> %out
 }
 
-define <2 x float> @fma_shufflevector_adjacent_elements(
+define <2 x float> @fma_shufflevector_adjacent_elements(ptr addrspace(3) %p, <2 x float> %a, <2 x float> %c) {
 ; CHECK-LABEL: fma_shufflevector_adjacent_elements(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
@@ -197,7 +190,6 @@ define <2 x float> @fma_shufflevector_adjacent_elements(
 ; CHECK-NEXT:    fma.rn.f32x2 %rd5, %rd2, %rd3, %rd4;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd5;
 ; CHECK-NEXT:    ret;
-    ptr addrspace(3) %p, <2 x float> %a, <2 x float> %c) {
   %ld  = load <4 x float>, ptr addrspace(3) %p, align 16
   %bv  = shufflevector <4 x float> %ld, <4 x float> poison, <2 x i32> <i32 0, i32 1>
   %mul = fmul <2 x float> %a, %bv
@@ -205,7 +197,7 @@ define <2 x float> @fma_shufflevector_adjacent_elements(
   ret <2 x float> %res
 }
 
-define <2 x float> @fma_naturally_paired(
+define <2 x float> @fma_naturally_paired(<2 x float> %a, <2 x float> %b, <2 x float> %c) {
 ; CHECK-LABEL: fma_naturally_paired(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
@@ -217,13 +209,12 @@ define <2 x float> @fma_naturally_paired(
 ; CHECK-NEXT:    fma.rn.f32x2 %rd4, %rd1, %rd2, %rd3;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
-    <2 x float> %a, <2 x float> %b, <2 x float> %c) {
   %mul = fmul <2 x float> %a, %b
   %res = fadd <2 x float> %mul, %c
   ret <2 x float> %res
 }
 
-define <2 x float> @fma_coalescable_scalars(
+define <2 x float> @fma_coalescable_scalars(float %x, float %y, <2 x float> %b, <2 x float> %c) {
 ; CHECK-LABEL: fma_coalescable_scalars(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -238,8 +229,6 @@ define <2 x float> @fma_coalescable_scalars(
 ; CHECK-NEXT:    fma.rn.f32x2 %rd4, %rd1, %rd2, %rd3;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; CHECK-NEXT:    ret;
-    float %x, float %y,
-    <2 x float> %b, <2 x float> %c) {
   %v0  = insertelement <2 x float> poison, float %x, i32 0
   %v   = insertelement <2 x float> %v0,  float %y, i32 1
   %mul = fmul <2 x float> %v, %b
