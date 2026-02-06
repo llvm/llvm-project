@@ -50,12 +50,12 @@ public:
   const char *GetDescription() override;
 
   uint32_t GetStopReasonDataCount() const override {
-    // We return the Exception Type as the first element, then the code and 
+    // We return the Exception Type as the first element, then the code and
     // subcode.  But we don't store any further exception data, so we can't
     // return more than these three elements regardless of the data count.
     // Not many exceptions we deal with have more than code & subcode, however
     // so fixing that isn't urgent.
-    return std::min((uint32_t) 3, m_exc_data_count + 1); 
+    return std::min((uint32_t)3, m_exc_data_count + 1);
   }
 
   uint64_t GetStopReasonDataAtIndex(uint32_t idx) override {
@@ -75,7 +75,7 @@ public:
       return 0;
     }
   }
-  
+
   // Returns the fault address, iff this is a EXC_ARM_MTE_TAG_FAULT.
   std::optional<lldb::addr_t> GetTagFaultAddress() const;
 
