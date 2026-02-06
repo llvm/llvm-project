@@ -1314,11 +1314,11 @@ Register SIInstrInfo::insertNE(MachineBasicBlock *MBB,
 }
 
 std::pair<MachineInstr *, unsigned>
-SIInstrInfo::pierceThroughRegSequence(const MachineInstr &MI) const {
+SIInstrInfo::pierceThroughRegSequence(const MachineInstr &MI,
+                                      const MachineRegisterInfo &MRI) const {
   if (MI.getOpcode() != AMDGPU::REG_SEQUENCE || MI.getNumOperands() != 5)
     return std::make_pair(nullptr,0);
 
-  const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   int64_t SubRegValues[2];
   bool SubRegIsConst[2];
   MachineInstr *RealDefs[2];
@@ -11018,7 +11018,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     MachineInstr *Src2Def = MRI->getVRegDef(SrcReg2);
     if (!Src2Def ||
         !(Src2Def =
-              (RegSequence2 = pierceThroughRegSequence(*Src2Def)).first) ||
+          (RegSequence2 = pierceThroughRegSequence(*Src2Def,*MRI)).first) ||
         !getFoldableImm(Src2Def->getOperand(0).getReg(), *MRI, CmpValue))
       return false;
     else if(RegSequence2.second)
@@ -11062,7 +11062,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (!Def)
       return false;
 
-    auto RegSequence = pierceThroughRegSequence(*Def);
+    auto RegSequence = pierceThroughRegSequence(*Def,*MRI);
     if (!RegSequence.first)
       return false;
 
