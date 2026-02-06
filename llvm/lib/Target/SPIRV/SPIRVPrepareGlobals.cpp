@@ -87,15 +87,14 @@ bool tryAssignPredicateSpecConstIDs(Module &M, Function *F) {
   // Replace placeholder Specialisation Constant IDs with unique IDs associated
   // with the predicate being evaluated, which is encoded in the call name.
   for (auto &&U : F->users()) {
-    if (!isa<CallInst>(U))
+    auto* CI = dyn_cast<CallInst>(U);
+    if (!CI)
+      continue;
+    auto* Arg0 = dyn_cast<ConstantInt>(CI->getArgOperand(0));
+    if (!Arg0)
       continue;
 
-    auto *CI = cast<CallInst>(U);
-
-    if (!isa<ConstantInt>(CI->getArgOperand(0)))
-      continue;
-
-    unsigned ID = cast<ConstantInt>(CI->getArgOperand(0))->getZExtValue();
+    unsigned ID = Arg0->getZExtValue();
 
     if (ID != UINT32_MAX)
       continue;
