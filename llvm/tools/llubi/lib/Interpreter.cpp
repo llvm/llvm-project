@@ -46,8 +46,11 @@ struct Frame {
   BasicBlock *BB;
   BasicBlock::iterator PC;
   FrameState State = FrameState::Entry;
-  SmallVector<MemoryObject *> Allocas;
-  DenseMap<Instruction *, AnyValue> ValueMap;
+  // Stack objects allocated in this frame. They will be automatically freed
+  // when the function returns.
+  SmallVector<IntrusiveRefCntPtr<MemoryObject>> Allocas;
+  // Values of arguments and executed instructions in this function.
+  DenseMap<Value *, AnyValue> ValueMap;
 
   // Reserved for in-flight subroutines.
   SmallVector<AnyValue> CalleeArgs;
@@ -58,8 +61,13 @@ struct Frame {
         const TargetLibraryInfoImpl &TLIImpl)
       : Func(F), LastFrame(LastFrame), CallSite(CallSite), Args(Args),
         RetVal(RetVal), TLI(TLIImpl, &F) {
+    assert((Args.size() == F.arg_size() ||
+            (F.isVarArg() && Args.size() >= F.arg_size())) &&
+           "Expected enough arguments to call the function.");
     BB = &Func.getEntryBlock();
     PC = BB->begin();
+    for (Argument &Arg : F.args())
+      ValueMap[&Arg] = Args[Arg.getArgNo()];
   }
 };
 
@@ -88,7 +96,7 @@ class InstExecutor : public InstVisitor<InstExecutor, bool> {
   const AnyValue &getValue(Value *V) {
     if (auto *C = dyn_cast<Constant>(V))
       return Ctx.getConstantValue(C);
-    return CurrentFrame->ValueMap.at(cast<Instruction>(V));
+    return CurrentFrame->ValueMap.at(V);
   }
 
 public:

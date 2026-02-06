@@ -17,8 +17,6 @@
 
 namespace llvm::ubi {
 
-class Frame;
-
 enum class MemInitKind {
   Zeroed,
   Uninitialized,

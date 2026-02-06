@@ -56,8 +56,6 @@ MemoryObject::MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name,
   case MemInitKind::Poisoned:
     Bytes.resize(Size, Byte{0, ByteKind::Poison});
     break;
-  default:
-    llvm_unreachable("Unknown MemInitKind");
   }
 }
 

@@ -17,10 +17,17 @@
 namespace llvm::ubi {
 
 void Pointer::print(raw_ostream &OS) const {
-  // TODO: print information about the underlying memory object
   SmallString<32> AddrStr;
   Address.toStringUnsigned(AddrStr, 16);
-  OS << "ptr 0x" << AddrStr;
+  OS << "ptr 0x" << AddrStr << " [";
+  if (Obj) {
+    OS << Obj->getName();
+    if (Offset)
+      OS << " + " << Offset;
+  } else {
+    OS << "dangling";
+  }
+  OS << "]";
 }
 
 AnyValue Pointer::null(unsigned BitWidth) {
