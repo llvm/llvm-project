@@ -957,7 +957,8 @@ macro(add_llvm_library name)
               ${export_to_llvmexports}
               LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT ${name}
               ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT ${name}
-              RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT ${name})
+              RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT ${name}
+              INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
       if (NOT LLVM_ENABLE_IDE)
         add_llvm_install_targets(install-${name}
