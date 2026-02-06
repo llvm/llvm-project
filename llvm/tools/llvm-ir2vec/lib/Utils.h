@@ -74,6 +74,7 @@ struct TripletResult {
 /// Entity mappings: [entity_name]
 using EntityList = std::vector<std::string>;
 using FuncEmbMap = DenseMap<const Function *, ir2vec::Embedding>;
+using FuncBBEmbMap = DenseMap<const Function *, ir2vec::BBEmbeddingsMap>;
 
 namespace ir2vec {
 
@@ -120,6 +121,13 @@ public:
 
   /// Get embeddings for all functions in the module
   Expected<FuncEmbMap> getFunctionEmbeddingsMap(IR2VecKind Kind) const;
+
+  /// Get embeddings for all basic blocks in a function
+  Expected<BBEmbeddingsMap> getBBEmbMap(const Function &F,
+                                        IR2VecKind Kind) const;
+
+  /// Get embeddings for all basic blocks in the module, organized by function
+  Expected<FuncBBEmbMap> getFuncBBEmbMap(IR2VecKind Kind) const;
 
   /// Dump entity ID to string mappings
   static void writeEntitiesToStream(raw_ostream &OS);
