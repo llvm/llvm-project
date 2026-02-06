@@ -1297,6 +1297,29 @@ TEST_P(UncheckedStatusOrAccessModelTest, CopyAssignment) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, MoveAssignment) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_INT sor1(42);
+      STATUSOR_INT sor2;
+      sor2 = std::move(sor1);
+      sor2.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_INT sor1 = Make<STATUSOR_INT>();
+      STATUSOR_INT sor2;
+      sor2 = std::move(sor1);
+      sor2.value();  // [[unsafe]]
+    }
+  )cc");
+}
+
 TEST_P(UncheckedStatusOrAccessModelTest, ShortCircuitingBinaryOperators) {
   ExpectDiagnosticsFor(R"cc(
 #include "unchecked_statusor_access_test_defs.h"
@@ -2323,6 +2346,26 @@ TEST_P(UncheckedStatusOrAccessModelTest, Status) {
     void target() {
       STATUS s = Make<STATUSOR_INT>().status();
       if (s.ok()) foo();
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, StatusBranches) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_VOIDPTR sor;
+      STATUS s;
+      if (Make<bool>()) {
+        s = absl::InvalidArgumentError("foo");
+      } else {
+        sor = Make<STATUSOR_VOIDPTR>();
+        if (!sor.ok()) {
+          s = sor.status();
+        }
+      }
+      if (s.ok()) *sor;
     }
   )cc");
 }
