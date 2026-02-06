@@ -1899,6 +1899,13 @@ public:
   }
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
+  llvm::Constant *performAddrSpaceCast(llvm::Constant *Src,
+                                       llvm::Type *DestTy) {
+    // Since target may map different address spaces in AST to the same address
+    // space, an address space conversion may end up as a bitcast.
+    return llvm::ConstantExpr::getPointerCast(Src, DestTy);
+  }
+
   std::optional<llvm::Attribute::AttrKind>
   StackProtectorAttribute(const Decl *D) const;
 
