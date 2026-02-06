@@ -42,9 +42,7 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   assert((TargetPointerWidth == 32 || TargetPointerWidth == 64) &&
          "NVPTX only supports 32- and 64-bit modes.");
 
-  // PTXVersion is 0 by default, meaning "use the minimum for the SM target".
-  // Only set it if the user explicitly requested a PTX version.
-  PTXVersion = 0;
+  PTXVersion = 32;
   for (const StringRef Feature : Opts.FeaturesAsWritten) {
     int PTXV;
     if (!Feature.starts_with("+ptx") ||

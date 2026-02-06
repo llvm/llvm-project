@@ -5236,12 +5236,16 @@ SDValue DAGCombiner::visitSDIVLike(SDValue N0, SDValue N1, SDNode *N) {
   EVT VT = N->getValueType(0);
   EVT CCVT = getSetCCResultType(VT);
   unsigned BitWidth = VT.getScalarSizeInBits();
+  unsigned MaxLegalDivRemBitWidth = TLI.getMaxDivRemBitWidthSupported();
 
   // fold (sdiv X, pow2) -> simple ops after legalize
   // FIXME: We check for the exact bit here because the generic lowering gives
   // better results in that case. The target-specific lowering should learn how
-  // to handle exact sdivs efficiently.
-  if (!N->getFlags().hasExact() && isDivisorPowerOfTwo(N1)) {
+  // to handle exact sdivs efficiently. An exception is made for large bitwidths
+  // exceeding what the target can natively support, as division expansion was
+  // skipped in favor of this optimization.
+  if ((!N->getFlags().hasExact() || BitWidth > MaxLegalDivRemBitWidth) &&
+      isDivisorPowerOfTwo(N1)) {
     // Target-specific implementation of sdiv x, pow2.
     if (SDValue Res = BuildSDIVPow2(N))
       return Res;
@@ -14629,27 +14633,39 @@ static SDValue tryToFoldExtOfExtload(SelectionDAG &DAG, DAGCombiner &Combiner,
                                      const TargetLowering &TLI, EVT VT,
                                      bool LegalOperations, SDNode *N,
                                      SDValue N0, ISD::LoadExtType ExtLoadType) {
-  SDNode *N0Node = N0.getNode();
-  bool isAExtLoad = (ExtLoadType == ISD::SEXTLOAD) ? ISD::isSEXTLoad(N0Node)
-                                                   : ISD::isZEXTLoad(N0Node);
-  if ((!isAExtLoad && !ISD::isEXTLoad(N0Node)) ||
-      !ISD::isUNINDEXEDLoad(N0Node) || !N0.hasOneUse())
+  bool Frozen = N0.getOpcode() == ISD::FREEZE;
+  auto *OldExtLoad = dyn_cast<LoadSDNode>(Frozen ? N0.getOperand(0) : N0);
+  if (!OldExtLoad)
     return SDValue();
 
-  LoadSDNode *LN0 = cast<LoadSDNode>(N0);
-  EVT MemVT = LN0->getMemoryVT();
-  if ((LegalOperations || !LN0->isSimple() ||
-       VT.isVector()) &&
+  bool isAExtLoad = (ExtLoadType == ISD::SEXTLOAD)
+                        ? ISD::isSEXTLoad(OldExtLoad)
+                        : ISD::isZEXTLoad(OldExtLoad);
+  if ((!isAExtLoad && !ISD::isEXTLoad(OldExtLoad)) ||
+      !ISD::isUNINDEXEDLoad(OldExtLoad) || !OldExtLoad->hasNUsesOfValue(1, 0))
+    return SDValue();
+
+  EVT MemVT = OldExtLoad->getMemoryVT();
+  if ((LegalOperations || !OldExtLoad->isSimple() || VT.isVector()) &&
       !TLI.isLoadExtLegal(ExtLoadType, VT, MemVT))
     return SDValue();
 
-  SDValue ExtLoad =
-      DAG.getExtLoad(ExtLoadType, SDLoc(LN0), VT, LN0->getChain(),
-                     LN0->getBasePtr(), MemVT, LN0->getMemOperand());
-  Combiner.CombineTo(N, ExtLoad);
-  DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ExtLoad.getValue(1));
-  if (LN0->use_empty())
-    Combiner.recursivelyDeleteUnusedNodes(LN0);
+  SDLoc DL(OldExtLoad);
+  SDValue ExtLoad = DAG.getExtLoad(ExtLoadType, DL, VT, OldExtLoad->getChain(),
+                                   OldExtLoad->getBasePtr(), MemVT,
+                                   OldExtLoad->getMemOperand());
+  SDValue Res = ExtLoad;
+  if (Frozen) {
+    Res = DAG.getFreeze(ExtLoad);
+    Res = DAG.getNode(
+        ExtLoadType == ISD::SEXTLOAD ? ISD::AssertSext : ISD::AssertZext, DL,
+        Res.getValueType(), Res,
+        DAG.getValueType(OldExtLoad->getValueType(0).getScalarType()));
+  }
+  Combiner.CombineTo(N, Res);
+  DAG.ReplaceAllUsesOfValueWith(SDValue(OldExtLoad, 1), ExtLoad.getValue(1));
+  if (N0->use_empty())
+    Combiner.recursivelyDeleteUnusedNodes(N0.getNode());
   return SDValue(N, 0); // Return N so it doesn't get rechecked!
 }
 

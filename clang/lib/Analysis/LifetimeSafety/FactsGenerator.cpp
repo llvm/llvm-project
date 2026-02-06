@@ -10,6 +10,7 @@
 #include <string>
 
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
@@ -542,6 +543,23 @@ void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
   }
 }
 
+void FactsGenerator::handleInvalidatingCall(const Expr *Call,
+                                            const FunctionDecl *FD,
+                                            ArrayRef<const Expr *> Args) {
+  const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  if (!MD || !MD->isInstance() || !isContainerInvalidationMethod(*MD))
+    return;
+  // Heuristics to turn-down false positives.
+  auto *DRE = dyn_cast<DeclRefExpr>(Args[0]);
+  if (!DRE || DRE->getDecl()->getType()->isReferenceType())
+    return;
+
+  OriginList *ThisList = getOriginsList(*Args[0]);
+  if (ThisList)
+    CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
+        ThisList->getOuterOriginID(), Call));
+}
+
 void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         const FunctionDecl *FD,
                                         ArrayRef<const Expr *> Args,
@@ -551,6 +569,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   if (!FD)
     return;
+
+  handleInvalidatingCall(Call, FD, Args);
   handleMovedArgsInCall(FD, Args);
   if (!CallList)
     return;
