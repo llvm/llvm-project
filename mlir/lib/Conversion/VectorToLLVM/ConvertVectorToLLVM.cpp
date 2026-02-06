@@ -2247,4 +2247,3 @@ void mlir::vector::registerConvertVectorToLLVMInterface(
     dialect->addInterfaces<VectorToLLVMDialectInterface>();
   });
 }
-

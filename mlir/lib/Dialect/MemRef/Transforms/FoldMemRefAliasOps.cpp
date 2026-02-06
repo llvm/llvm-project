@@ -615,4 +615,3 @@ void FoldMemRefAliasOpsPass::runOnOperation() {
   memref::populateFoldMemRefAliasOpPatterns(patterns);
   (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }
-

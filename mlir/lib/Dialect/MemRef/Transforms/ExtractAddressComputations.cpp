@@ -307,4 +307,3 @@ void memref::populateExtractAddressComputationsPatterns(
           /*rebuildOpFromAddressAndIndices=*/rebuildTransferWriteOp>>(
       patterns.getContext());
 }
-

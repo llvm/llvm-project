@@ -164,4 +164,3 @@ void memref::populateMemRefWideIntEmulationConversions(
         return ty.cloneWith(std::nullopt, newElemTy);
       });
 }
-
