@@ -22,7 +22,6 @@
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace nb = nanobind;
 using namespace nanobind::literals;
@@ -565,10 +564,9 @@ PyDenseElementsAttribute::getFromList(const nb::list &attributes,
     if ((!mlirTypeIsAShaped(*explicitType) ||
          !mlirShapedTypeHasStaticShape(*explicitType))) {
 
-      std::string message;
-      llvm::raw_string_ostream os(message);
-      os << "Expected a static ShapedType for the shaped_type parameter: "
-         << nb::cast<std::string>(nb::repr(nb::cast(*explicitType)));
+      std::string message = nanobind::detail::join(
+          "Expected a static ShapedType for the shaped_type parameter: ",
+          nb::cast<std::string>(nb::repr(nb::cast(*explicitType))));
       throw nb::value_error(message.c_str());
     }
     shapedType = *explicitType;
@@ -588,12 +586,11 @@ PyDenseElementsAttribute::getFromList(const nb::list &attributes,
     mlirAttributes.push_back(mlirAttribute);
 
     if (!mlirTypeEqual(mlirShapedTypeGetElementType(shapedType), attrType)) {
-      std::string message;
-      llvm::raw_string_ostream os(message);
-      os << "All attributes must be of the same type and match "
-         << "the type parameter: expected="
-         << nb::cast<std::string>(nb::repr(nb::cast(shapedType)))
-         << ", but got=" << nb::cast<std::string>(nb::repr(nb::cast(attrType)));
+      std::string message = nanobind::detail::join(
+          "All attributes must be of the same type and match the type "
+          "parameter: expected=",
+          nb::cast<std::string>(nb::repr(nb::cast(shapedType))),
+          ", but got=", nb::cast<std::string>(nb::repr(nb::cast(attrType))));
       throw nb::value_error(message.c_str());
     }
   }
