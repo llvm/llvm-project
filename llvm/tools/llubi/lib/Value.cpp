@@ -27,14 +27,6 @@ AnyValue Pointer::null(unsigned BitWidth) {
   return AnyValue(Pointer(nullptr, APInt::getZero(BitWidth), 0));
 }
 
-MemoryObject *Pointer::getMemoryObject() const {
-  if (!Obj)
-    return nullptr;
-  if (Obj->getState() == MemoryObjectState::Freed)
-    Obj.reset();
-  return Obj.get();
-}
-
 void AnyValue::print(raw_ostream &OS) const {
   switch (Kind) {
   case StorageKind::Integer:

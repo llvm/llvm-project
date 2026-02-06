@@ -57,7 +57,7 @@ enum class StorageKind {
 class Pointer {
   // The underlying memory object. It can be null for invalid or dangling
   // pointers.
-  mutable IntrusiveRefCntPtr<MemoryObject> Obj;
+  IntrusiveRefCntPtr<MemoryObject> Obj;
   // The address of the pointer. The bit width is determined by
   // DataLayout::getPointerSizeInBits.
   APInt Address;
@@ -72,7 +72,7 @@ public:
   static AnyValue null(unsigned BitWidth);
   void print(raw_ostream &OS) const;
   const APInt &address() const { return Address; }
-  MemoryObject *getMemoryObject() const;
+  MemoryObject *getMemoryObject() const { return Obj.get(); }
 };
 
 // Value representation for actual values of LLVM values.

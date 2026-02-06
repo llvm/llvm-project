@@ -96,7 +96,6 @@ Pointer Context::deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj) {
 
 void MemoryObject::markAsFreed() {
   State = MemoryObjectState::Freed;
-  Size = 0;
   Bytes.clear();
 }
 
