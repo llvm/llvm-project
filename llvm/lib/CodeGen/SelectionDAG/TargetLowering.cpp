@@ -134,6 +134,9 @@ void TargetLoweringBase::ArgListEntry::setAttributes(const CallBase *Call,
   IsSwiftError = Call->paramHasAttr(ArgIdx, Attribute::SwiftError);
   Alignment = Call->getParamStackAlign(ArgIdx);
   IndirectType = nullptr;
+  Value *Op = Call->getArgOperand(ArgIdx);
+  if (const Argument *Arg = dyn_cast<Argument>(Op))
+    IsArgInReg = Arg->hasInRegAttr();
   assert(IsByVal + IsPreallocated + IsInAlloca + IsSRet <= 1 &&
          "multiple ABI attributes?");
   if (IsByVal) {

@@ -30,6 +30,7 @@ namespace ISD {
     unsigned IsSExt : 1;     ///< Sign extended
     unsigned IsNoExt : 1;    ///< No extension
     unsigned IsInReg : 1;    ///< Passed in register
+    unsigned IsArgInReg : 1; ///< Is caller function's 'inreg' argument
     unsigned IsSRet : 1;     ///< Hidden struct-ret ptr
     unsigned IsByVal : 1;    ///< Struct passed by value
     unsigned IsByRef : 1;    ///< Passed in memory
@@ -63,11 +64,11 @@ namespace ISD {
 
   public:
     ArgFlagsTy()
-        : IsZExt(0), IsSExt(0), IsNoExt(0), IsInReg(0), IsSRet(0), IsByVal(0),
-          IsByRef(0), IsNest(0), IsReturned(0), IsSplit(0), IsInAlloca(0),
-          IsPreallocated(0), IsSplitEnd(0), IsSwiftSelf(0), IsSwiftAsync(0),
-          IsSwiftError(0), IsCFGuardTarget(0), IsHva(0), IsHvaStart(0),
-          IsSecArgPass(0), MemAlign(0), OrigAlign(0),
+        : IsZExt(0), IsSExt(0), IsNoExt(0), IsInReg(0), IsArgInReg(0),
+          IsSRet(0), IsByVal(0), IsByRef(0), IsNest(0), IsReturned(0),
+          IsSplit(0), IsInAlloca(0), IsPreallocated(0), IsSplitEnd(0),
+          IsSwiftSelf(0), IsSwiftAsync(0), IsSwiftError(0), IsCFGuardTarget(0),
+          IsHva(0), IsHvaStart(0), IsSecArgPass(0), MemAlign(0), OrigAlign(0),
           IsInConsecutiveRegsLast(0), IsInConsecutiveRegs(0),
           IsCopyElisionCandidate(0), IsPointer(0), IsVarArg(0) {
       static_assert(sizeof(*this) == 4 * sizeof(unsigned), "flags are too big");
@@ -84,6 +85,9 @@ namespace ISD {
 
     bool isInReg() const { return IsInReg; }
     void setInReg() { IsInReg = 1; }
+
+    bool isArgInReg() const { return IsArgInReg; }
+    void setArgInReg() { IsArgInReg = 1; }
 
     bool isSRet() const { return IsSRet; }
     void setSRet() { IsSRet = 1; }

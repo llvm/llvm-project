@@ -924,12 +924,18 @@ bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
 
       if (!MRI->constrainRegClass(SrcReg, ConstrainRC))
         llvm_unreachable("failed to constrain register");
-    } else if (tryMoveVGPRConstToSGPR(MI.getOperand(1), DstReg, MI.getParent(),
-                                      MI, MI.getDebugLoc())) {
+      return true;
+    }
+
+    if (tryMoveVGPRConstToSGPR(MI.getOperand(1), DstReg, MI.getParent(), MI,
+                               MI.getDebugLoc())) {
       I = std::next(I);
       MI.eraseFromParent();
+      return true;
     }
-    return true;
+
+    if (!SrcReg.isVirtual())
+      return true;
   }
   if (!SrcReg.isVirtual() || TRI->isAGPR(*MRI, SrcReg)) {
     SIInstrWorklist worklist;
@@ -955,7 +961,7 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
   if (PHISources.contains(MI))
     return;
   Register DstReg = MI->getOperand(0).getReg();
-  const TargetRegisterClass *DstRC = MRI->getRegClass(DstReg);
+  const TargetRegisterClass *DstRC = TRI->getRegClassForReg(*MRI, DstReg);
 
   V2SCopyInfo Info(getNextVGPRToSGPRCopyId(), MI,
                    TRI->getRegSizeInBits(*DstRC));

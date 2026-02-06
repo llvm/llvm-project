@@ -52,6 +52,13 @@ static const MachineMemOperand::Flags MOLastUse =
 static const MachineMemOperand::Flags MOCooperative =
     MachineMemOperand::MOTargetFlag3;
 
+struct V2PhysSCopyInfo {
+  // Operands that need to replaced by waterfall
+  SmallVector<MachineOperand *> MOs;
+  // Target physical registers replacing the MOs
+  SmallVector<Register> SGPRs;
+};
+
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
   SIInstrWorklist() = default;
@@ -78,6 +85,9 @@ struct SIInstrWorklist {
   bool isDeferred(MachineInstr *MI);
 
   SetVector<MachineInstr *> &getDeferredList() { return DeferredList; }
+
+  DenseMap<MachineInstr *, V2PhysSCopyInfo> WaterFalls;
+  DenseMap<MachineInstr *, bool> V2SPhyCopiesToErase;
 
 private:
   /// InstrList contains the MachineInstrs.
@@ -1495,6 +1505,12 @@ public:
 
   void moveToVALUImpl(SIInstrWorklist &Worklist, MachineDominatorTree *MDT,
                       MachineInstr &Inst) const;
+  /// Wrapper function for generating waterfall for instruction \p MI
+  /// This function take into consideration of related pre & succ instructions
+  /// (e.g. calling process) into consideratioin
+  void createWaterFallForCall(MachineInstr *MI, MachineDominatorTree *MDT,
+                              ArrayRef<MachineOperand *> ScalarOps,
+                              ArrayRef<Register> PhySGPRs = {}) const;
 
   void insertNoop(MachineBasicBlock &MBB,
                   MachineBasicBlock::iterator MI) const override;
@@ -1678,6 +1694,14 @@ public:
   static unsigned getDSShaderTypeValue(const MachineFunction &MF);
 
   const TargetSchedModel &getSchedModel() const { return SchedModel; }
+
+  void createReadFirstLaneFromCopyToPhysReg(MachineRegisterInfo &MRI,
+                                            Register DstReg,
+                                            MachineInstr &Inst) const;
+
+  void handleCopyToPhysHelper(SIInstrWorklist &Worklist, Register DstReg,
+                              MachineInstr &Inst,
+                              MachineRegisterInfo &MRI) const;
 
   // FIXME: This should be removed
   // Enforce operand's \p OpName even alignment if required by target.
