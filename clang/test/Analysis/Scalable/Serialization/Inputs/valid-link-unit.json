@@ -1,0 +1,8 @@
+{
+  "tu_namespace": {
+    "kind": "link_unit",
+    "name": "libtest.so"
+  },
+  "id_table": [],
+  "data": []
+}

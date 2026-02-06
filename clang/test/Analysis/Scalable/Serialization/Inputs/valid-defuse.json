@@ -1,0 +1,100 @@
+{
+  "tu_namespace": {
+    "kind": "compilation_unit",
+    "name": "defuse_test.cpp"
+  },
+  "id_table": [
+    {
+      "id": 0,
+      "name": {
+        "usr": "c:@V@x",
+        "suffix": "",
+        "namespace": []
+      }
+    },
+    {
+      "id": 1,
+      "name": {
+        "usr": "c:@V@y",
+        "suffix": "",
+        "namespace": []
+      }
+    },
+    {
+      "id": 10,
+      "name": {
+        "usr": "c:@Stmt@line5",
+        "suffix": "",
+        "namespace": []
+      }
+    },
+    {
+      "id": 11,
+      "name": {
+        "usr": "c:@Stmt@line8",
+        "suffix": "",
+        "namespace": []
+      }
+    },
+    {
+      "id": 12,
+      "name": {
+        "usr": "c:@Stmt@line10",
+        "suffix": "",
+        "namespace": []
+      }
+    },
+    {
+      "id": 13,
+      "name": {
+        "usr": "c:@Stmt@line12",
+        "suffix": "",
+        "namespace": []
+      }
+    },
+    {
+      "id": 14,
+      "name": {
+        "usr": "c:@Stmt@line15",
+        "suffix": "",
+        "namespace": []
+      }
+    }
+  ],
+  "data": [
+    {
+      "summary_name": "DefUse",
+      "data": [
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "def_use_chains": [
+              {
+                "variable": 0,
+                "definitions": [
+                  {
+                    "definition": 10,
+                    "uses": [12, 13]
+                  },
+                  {
+                    "definition": 14,
+                    "uses": [13]
+                  }
+                ]
+              },
+              {
+                "variable": 1,
+                "definitions": [
+                  {
+                    "definition": 11,
+                    "uses": [12, 14]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

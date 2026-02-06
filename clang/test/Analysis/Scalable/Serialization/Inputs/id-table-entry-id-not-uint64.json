@@ -1,0 +1,22 @@
+{
+  "tu_namespace": {
+    "kind": "compilation_unit",
+    "name": "test.cpp"
+  },
+  "id_table": [
+    {
+      "id": -1,
+      "name": {
+        "usr": "c:@F@foo",
+        "suffix": "",
+        "namespace": [
+          {
+            "kind": "compilation_unit",
+            "name": "test.cpp"
+          }
+        ]
+      }
+    }
+  ],
+  "data": []
+}

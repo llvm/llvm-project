@@ -1,0 +1,13 @@
+{
+  "data": [
+    {
+      "data": [],
+      "summary_name": "test"
+    }
+  ],
+  "id_table": [],
+  "tu_namespace": {
+    "kind": "compilation_unit",
+    "name": "test.cpp"
+  }
+}

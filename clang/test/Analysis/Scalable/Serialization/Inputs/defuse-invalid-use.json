@@ -1,0 +1,30 @@
+{
+  "tu_namespace": {
+    "kind": "compilation_unit",
+    "name": "test.cpp"
+  },
+  "id_table": [],
+  "data": [
+    {
+      "summary_name": "DefUse",
+      "data": [
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "def_use_chains": [
+              {
+                "variable": 0,
+                "definitions": [
+                  {
+                    "definition": 10,
+                    "uses": ["invalid"]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

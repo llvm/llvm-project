@@ -1,0 +1,108 @@
+{
+  "data": [
+    {
+      "data": [
+        {
+          "entity_id": 0,
+          "entity_summary": {
+            "def_use_chains": [
+              {
+                "definitions": [
+                  {
+                    "definition": 10,
+                    "uses": [
+                      12,
+                      13
+                    ]
+                  },
+                  {
+                    "definition": 14,
+                    "uses": [
+                      13
+                    ]
+                  }
+                ],
+                "variable": 0
+              },
+              {
+                "definitions": [
+                  {
+                    "definition": 11,
+                    "uses": [
+                      12,
+                      14
+                    ]
+                  }
+                ],
+                "variable": 1
+              }
+            ]
+          }
+        }
+      ],
+      "summary_name": "DefUse"
+    }
+  ],
+  "id_table": [
+    {
+      "id": 12,
+      "name": {
+        "namespace": [],
+        "suffix": "",
+        "usr": "c:@Stmt@line10"
+      }
+    },
+    {
+      "id": 13,
+      "name": {
+        "namespace": [],
+        "suffix": "",
+        "usr": "c:@Stmt@line12"
+      }
+    },
+    {
+      "id": 14,
+      "name": {
+        "namespace": [],
+        "suffix": "",
+        "usr": "c:@Stmt@line15"
+      }
+    },
+    {
+      "id": 10,
+      "name": {
+        "namespace": [],
+        "suffix": "",
+        "usr": "c:@Stmt@line5"
+      }
+    },
+    {
+      "id": 11,
+      "name": {
+        "namespace": [],
+        "suffix": "",
+        "usr": "c:@Stmt@line8"
+      }
+    },
+    {
+      "id": 0,
+      "name": {
+        "namespace": [],
+        "suffix": "",
+        "usr": "c:@V@x"
+      }
+    },
+    {
+      "id": 1,
+      "name": {
+        "namespace": [],
+        "suffix": "",
+        "usr": "c:@V@y"
+      }
+    }
+  ],
+  "tu_namespace": {
+    "kind": "compilation_unit",
+    "name": "defuse_test.cpp"
+  }
+}

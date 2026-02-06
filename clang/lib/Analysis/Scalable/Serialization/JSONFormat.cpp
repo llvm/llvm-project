@@ -40,6 +40,11 @@ llvm::Error isJSONFile(llvm::StringRef Path) {
                                    "file does not exist: '%s'",
                                    Path.str().c_str());
 
+  if (llvm::sys::fs::is_directory(Path))
+    return llvm::createStringError(std::errc::is_a_directory,
+                                   "path is a directory, not a file: '%s'",
+                                   Path.str().c_str());
+
   if (!Path.ends_with_insensitive(".json"))
     return llvm::createStringError(std::errc::invalid_argument,
                                    "not a JSON file: '%s'", Path.str().c_str());

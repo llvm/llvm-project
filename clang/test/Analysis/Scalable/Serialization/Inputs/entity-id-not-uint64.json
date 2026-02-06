@@ -1,0 +1,18 @@
+{
+  "tu_namespace": {
+    "kind": "compilation_unit",
+    "name": "test.cpp"
+  },
+  "id_table": [],
+  "data": [
+    {
+      "summary_name": "test",
+      "data": [
+        {
+          "entity_id": "not a number",
+          "entity_summary": {}
+        }
+      ]
+    }
+  ]
+}
