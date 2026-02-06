@@ -7,6 +7,80 @@ define half @uitofp_i32_f16(i32 %x) {
 ; CHECK-LABEL: define half @uitofp_i32_f16(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ITOFP_ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = freeze i32 [[X]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[TMP8]], 0
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[ITOFP_RETURN:.*]], label %[[ITOFP_IF_END:.*]]
+; CHECK:       [[ITOFP_IF_END]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[TMP8]], 31
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], [[TMP8]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP8]], i1 true)
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 32, [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 31, [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt i32 [[TMP5]], 24
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[ITOFP_IF_THEN4:.*]], label %[[ITOFP_IF_ELSE:.*]]
+; CHECK:       [[ITOFP_IF_THEN4]]:
+; CHECK-NEXT:    switch i32 [[TMP5]], label %[[ITOFP_SW_DEFAULT:.*]] [
+; CHECK-NEXT:      i32 25, label %[[ITOFP_SW_BB:.*]]
+; CHECK-NEXT:      i32 26, label %[[ITOFP_SW_EPILOG:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[ITOFP_SW_BB]]:
+; CHECK-NEXT:    [[TMP41:%.*]] = shl i32 [[TMP8]], 1
+; CHECK-NEXT:    br label %[[ITOFP_SW_EPILOG]]
+; CHECK:       [[ITOFP_SW_DEFAULT]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i32 6, [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = lshr i32 [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[TMP4]], 26
+; CHECK-NEXT:    [[TMP12:%.*]] = lshr i32 -1, [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = and i32 [[TMP12]], [[TMP8]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp ne i32 [[TMP13]], 0
+; CHECK-NEXT:    [[TMP15:%.*]] = zext i1 [[TMP14]] to i32
+; CHECK-NEXT:    [[TMP16:%.*]] = or i32 [[TMP10]], [[TMP15]]
+; CHECK-NEXT:    br label %[[ITOFP_SW_EPILOG]]
+; CHECK:       [[ITOFP_SW_EPILOG]]:
+; CHECK-NEXT:    [[TMP17:%.*]] = phi i32 [ [[TMP16]], %[[ITOFP_SW_DEFAULT]] ], [ [[TMP8]], %[[ITOFP_IF_THEN4]] ], [ [[TMP41]], %[[ITOFP_SW_BB]] ]
+; CHECK-NEXT:    [[TMP18:%.*]] = lshr i32 [[TMP17]], 2
+; CHECK-NEXT:    [[TMP19:%.*]] = and i32 [[TMP18]], 1
+; CHECK-NEXT:    [[TMP20:%.*]] = or i32 [[TMP17]], [[TMP19]]
+; CHECK-NEXT:    [[TMP21:%.*]] = add i32 [[TMP20]], 1
+; CHECK-NEXT:    [[TMP22:%.*]] = lshr i32 [[TMP21]], 2
+; CHECK-NEXT:    [[A3:%.*]] = and i32 [[TMP21]], 67108864
+; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i32 [[A3]], 0
+; CHECK-NEXT:    [[TMP24:%.*]] = lshr i32 [[TMP22]], 32
+; CHECK-NEXT:    br i1 [[TMP23]], label %[[ITOFP_IF_END26:.*]], label %[[ITOFP_IF_THEN20:.*]]
+; CHECK:       [[ITOFP_IF_THEN20]]:
+; CHECK-NEXT:    [[TMP25:%.*]] = lshr i32 [[TMP21]], 3
+; CHECK-NEXT:    [[TMP26:%.*]] = lshr i32 [[TMP25]], 32
+; CHECK-NEXT:    br label %[[ITOFP_IF_END26]]
+; CHECK:       [[ITOFP_IF_ELSE]]:
+; CHECK-NEXT:    [[TMP27:%.*]] = add i32 [[TMP4]], -8
+; CHECK-NEXT:    [[TMP28:%.*]] = shl i32 [[TMP8]], [[TMP27]]
+; CHECK-NEXT:    [[TMP29:%.*]] = lshr i32 [[TMP28]], 32
+; CHECK-NEXT:    br label %[[ITOFP_IF_END26]]
+; CHECK:       [[ITOFP_IF_END26]]:
+; CHECK-NEXT:    [[TMP30:%.*]] = phi i32 [ [[TMP25]], %[[ITOFP_IF_THEN20]] ], [ [[TMP22]], %[[ITOFP_SW_EPILOG]] ], [ [[TMP28]], %[[ITOFP_IF_ELSE]] ]
+; CHECK-NEXT:    [[TMP31:%.*]] = phi i32 [ [[TMP5]], %[[ITOFP_IF_THEN20]] ], [ [[TMP6]], %[[ITOFP_SW_EPILOG]] ], [ [[TMP6]], %[[ITOFP_IF_ELSE]] ]
+; CHECK-NEXT:    [[TMP32:%.*]] = and i32 [[TMP1]], -2147483648
+; CHECK-NEXT:    [[TMP33:%.*]] = shl i32 [[TMP31]], 23
+; CHECK-NEXT:    [[TMP34:%.*]] = add i32 [[TMP33]], 1065353216
+; CHECK-NEXT:    [[TMP35:%.*]] = and i32 [[TMP30]], 8388607
+; CHECK-NEXT:    [[TMP36:%.*]] = or i32 [[TMP35]], [[TMP32]]
+; CHECK-NEXT:    [[TMP37:%.*]] = or i32 [[TMP35]], [[TMP34]]
+; CHECK-NEXT:    [[TMP38:%.*]] = bitcast i32 [[TMP37]] to float
+; CHECK-NEXT:    [[TMP39:%.*]] = fptrunc float [[TMP38]] to half
+; CHECK-NEXT:    br label %[[ITOFP_RETURN]]
+; CHECK:       [[ITOFP_RETURN]]:
+; CHECK-NEXT:    [[TMP40:%.*]] = phi half [ [[TMP39]], %[[ITOFP_IF_END26]] ], [ 0xH0000, %[[ITOFP_ENTRY]] ]
+; CHECK-NEXT:    ret half [[TMP40]]
+;
+  %res = uitofp i32 %x to half
+  ret half %res
+}
+
+define half @uitofp_i32_f16_noundef(i32 noundef %x) {
+; CHECK-LABEL: define half @uitofp_i32_f16_noundef(
+; CHECK-SAME: i32 noundef [[X:%.*]]) {
+; CHECK-NEXT:  [[ITOFP_ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[ITOFP_RETURN:.*]], label %[[ITOFP_IF_END:.*]]
 ; CHECK:       [[ITOFP_IF_END]]:
@@ -80,7 +154,8 @@ define half @uitofp_i16_f16(i16 %x) {
 ; CHECK-LABEL: define half @uitofp_i16_f16(
 ; CHECK-SAME: i16 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ITOFP_ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[X]] to i32
+; CHECK-NEXT:    [[TMP42:%.*]] = freeze i16 [[X]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i16 [[TMP42]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[ITOFP_RETURN:.*]], label %[[ITOFP_IF_END:.*]]
 ; CHECK:       [[ITOFP_IF_END]]:
@@ -154,11 +229,12 @@ define half @sitofp_i32_f16(i32 %x) {
 ; CHECK-LABEL: define half @sitofp_i32_f16(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ITOFP_ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[TMP41:%.*]] = freeze i32 [[X]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[TMP41]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[ITOFP_RETURN:.*]], label %[[ITOFP_IF_END:.*]]
 ; CHECK:       [[ITOFP_IF_END]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[X]], 31
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr i32 [[TMP41]], 31
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], [[TMP41]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.ctlz.i32(i32 [[TMP3]], i1 true)
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 32, [[TMP4]]
@@ -227,7 +303,8 @@ define half @sitofp_i16_f16(i16 %x) {
 ; CHECK-LABEL: define half @sitofp_i16_f16(
 ; CHECK-SAME: i16 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ITOFP_ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[X]] to i32
+; CHECK-NEXT:    [[TMP42:%.*]] = freeze i16 [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[TMP42]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label %[[ITOFP_RETURN:.*]], label %[[ITOFP_IF_END:.*]]
 ; CHECK:       [[ITOFP_IF_END]]:
