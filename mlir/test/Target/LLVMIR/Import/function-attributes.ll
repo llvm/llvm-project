@@ -488,5 +488,37 @@ declare void @alloc_size_2(i32, i32) allocsize(0, 1)
 
 // -----
 
+; CHECK-LABEL: @minsize
+; CHECK-SAME: attributes {minsize}
+declare void @minsize() minsize
+
+// -----
+
+; CHECK-LABEL: @optsize
+; CHECK-SAME: attributes {optsize}
+declare void @optsize() optsize
+
+// -----
+
+; CHECK-LABEL: @save_reg_params
+; CHECK-SAME: attributes {save_reg_params}
+declare void @save_reg_params() "save-reg-params"
+
+// -----
+
+; CHECK-LABEL: @zero_call_used_regs
+; CHECK-SAME: attributes {zero_call_used_regs = "skip"}
+declare void @zero_call_used_regs() "zero-call-used-regs"="skip"
+
+// -----
+
+; Note: the 'default-func-attrs' aren't recoverable due to the way they lower
+; to LLVM-IR, so they are handled on import as passthrough attributes.
+; CHECK-LABEL: @default_func_attrs
+; CHECK-SAME: attributes {passthrough = {{\[}}["key", "value"], "keyOnly"]}
+declare void @default_func_attrs() "key"="value" "keyOnly"
+
+// -----
+
 ; expected-warning @unknown {{'preallocated' attribute is invalid on current operation, skipping it}}
 declare void @test() preallocated(i32)

@@ -10,7 +10,7 @@ double test_mm512_reduce_add_pd(__m512d __W, double ExtraAddOp){
   // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd" %[[R:.*]], %[[V:.*]] : (!cir.double, !cir.vector<8 x !cir.double>) -> !cir.double
 
   // CIR-LABEL: test_mm512_reduce_add_pd
-  // CIR: cir.call @_mm512_reduce_add_pd(%[[VEC:.*]]) {nobuiltins = [{{.*}}]} : (!cir.vector<8 x !cir.double>) -> !cir.double
+  // CIR: cir.call @_mm512_reduce_add_pd(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<8 x !cir.double>) -> !cir.double
 
   // LLVM-LABEL: test_mm512_reduce_add_pd
   // LLVM: call double @llvm.vector.reduce.fadd.v8f64(double -0.000000e+00, <8 x double> %{{.*}})
@@ -27,7 +27,7 @@ double test_mm512_reduce_mul_pd(__m512d __W, double ExtraMulOp){
   // CIR: cir.call_llvm_intrinsic "vector.reduce.fmul" %[[R:.*]], %[[V:.*]] : (!cir.double, !cir.vector<8 x !cir.double>) -> !cir.double
 
   // CIR-LABEL: test_mm512_reduce_mul_pd
-  // CIR: cir.call @_mm512_reduce_mul_pd(%[[VEC:.*]]) {nobuiltins = [{{.*}}]} : (!cir.vector<8 x !cir.double>) -> !cir.double
+  // CIR: cir.call @_mm512_reduce_mul_pd(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<8 x !cir.double>) -> !cir.double
 
   // LLVM-LABEL: test_mm512_reduce_mul_pd
   // LLVM: call double @llvm.vector.reduce.fmul.v8f64(double 1.000000e+00, <8 x double> %{{.*}})
@@ -45,7 +45,7 @@ float test_mm512_reduce_add_ps(__m512 __W){
   // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd" %[[R:.*]], %[[V:.*]] : (!cir.float, !cir.vector<16 x !cir.float>) -> !cir.float
 
   // CIR-LABEL: test_mm512_reduce_add_ps
-  // CIR: cir.call @_mm512_reduce_add_ps(%[[VEC:.*]]) {nobuiltins = [{{.*}}]} : (!cir.vector<16 x !cir.float>) -> !cir.float
+  // CIR: cir.call @_mm512_reduce_add_ps(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<16 x !cir.float>) -> !cir.float
 
   // LLVM-LABEL: test_mm512_reduce_add_ps
   // LLVM: call float @llvm.vector.reduce.fadd.v16f32(float -0.000000e+00, <16 x float> %{{.*}})
@@ -60,7 +60,7 @@ float test_mm512_reduce_mul_ps(__m512 __W){
   // CIR: cir.call_llvm_intrinsic "vector.reduce.fmul" %[[R:.*]], %[[V:.*]] : (!cir.float, !cir.vector<16 x !cir.float>) -> !cir.float
 
   // CIR-LABEL: test_mm512_reduce_mul_ps
-  // CIR: cir.call @_mm512_reduce_mul_ps(%[[VEC:.*]]) {nobuiltins = [{{.*}}]} : (!cir.vector<16 x !cir.float>) -> !cir.float
+  // CIR: cir.call @_mm512_reduce_mul_ps(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<16 x !cir.float>) -> !cir.float
 
   // LLVM-LABEL: test_mm512_reduce_mul_ps
   // LLVM: call float @llvm.vector.reduce.fmul.v16f32(float 1.000000e+00, <16 x float> %{{.*}})

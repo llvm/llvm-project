@@ -83,7 +83,10 @@ endfunction(add_sycl_rt_library)
 set(LIBSYCL_SOURCES
     "exception.cpp"
     "exception_list.cpp"
+    "device.cpp"
+    "device_selector.cpp"
     "platform.cpp"
+    "detail/device_impl.cpp"
     "detail/global_objects.cpp"
     "detail/platform_impl.cpp"
     "detail/offload/offload_utils.cpp"
