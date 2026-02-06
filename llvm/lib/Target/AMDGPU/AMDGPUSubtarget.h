@@ -19,47 +19,6 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/TargetParser/Triple.h"
 
-//===----------------------------------------------------------------------===//
-// X-Macros for simple subtarget features.
-//
-// AMDGPU_SUBTARGET_HAS_FEATURE: Features with both member and getter
-//   bool HasXXX = false;                      // member declaration
-//   bool hasXXX() const { return HasXXX; }    // getter
-//
-// AMDGPU_SUBTARGET_HAS_FEATURE_MEMBER_ONLY: Features with member only
-//   bool HasXXX = false;                      // member declaration only
-//
-// AMDGPU_SUBTARGET_ENABLE_FEATURE_MEMBER_ONLY: Features with member only
-//   bool EnableXXX = false;                   // member declaration only
-//
-// To add a new simple feature:
-//   1. Add X(FeatureName) to the appropriate macro below
-//   2. Remove the manual bool HasFeatureName declaration from protected section
-//   3. If using AMDGPU_SUBTARGET_HAS_FEATURE, also remove the manual getter
-//   4. If using AMDGPU_SUBTARGET_ENABLE_FEATURE_MEMBER_ONLY, also remove the
-//      manual getter
-//
-// Note: The features are ordered alphabetically for convenience. Unlike
-// GCNSubtarget.h, we do not use TableGen-generated features here. We
-// intentionally keep the feature set here minimal. For any new feature, unless
-// it needs to be queried via an AMDGPUSubtarget reference, it should be added
-// to GCNSubtarget.h instead.
-//===----------------------------------------------------------------------===//
-
-#define AMDGPU_SUBTARGET_HAS_FEATURE_MEMBER_ONLY(X) X(MadMacF32Insts)
-
-#define AMDGPU_SUBTARGET_HAS_FEATURE(X)                                        \
-  X(16BitInsts)                                                                \
-  X(FastFMAF32)                                                                \
-  X(Inv2PiInlineImm)                                                           \
-  X(SDWA)                                                                      \
-  X(True16BitInsts)                                                            \
-  X(VOP3PInsts)
-
-#define AMDGPU_SUBTARGET_ENABLE_FEATURE_MEMBER_ONLY(X)                         \
-  X(RealTrue16Insts)                                                           \
-  X(D16Writes32BitVgpr)
-
 namespace llvm {
 
 enum AMDGPUDwarfFlavour : unsigned;
@@ -83,6 +42,7 @@ public:
     GFX10 = 9,
     GFX11 = 10,
     GFX12 = 11,
+    GFX13 = 12,
   };
 
 private:
@@ -92,19 +52,7 @@ protected:
   bool HasMulI24 = true;
   bool HasMulU24 = true;
   bool HasSMulHi = false;
-  bool EnablePromoteAlloca = false;
   bool HasFminFmaxLegacy = true;
-
-#define DECL_HAS_MEMBER(Name) bool Has##Name = false;
-  AMDGPU_SUBTARGET_HAS_FEATURE(DECL_HAS_MEMBER)
-  AMDGPU_SUBTARGET_HAS_FEATURE_MEMBER_ONLY(DECL_HAS_MEMBER)
-#undef DECL_HAS_MEMBER
-#undef AMDGPU_SUBTARGET_HAS_FEATURE_MEMBER_ONLY
-
-#define DECL_ENABLE_MEMBER(Name) bool Enable##Name = false;
-  AMDGPU_SUBTARGET_ENABLE_FEATURE_MEMBER_ONLY(DECL_ENABLE_MEMBER)
-#undef DECL_ENABLE_MEMBER
-#undef AMDGPU_SUBTARGET_ENABLE_FEATURE_MEMBER_ONLY
 
   unsigned EUsPerCU = 4;
   unsigned MaxWavesPerEU = 10;
@@ -113,7 +61,7 @@ protected:
   char WavefrontSizeLog2 = 0;
 
 public:
-  AMDGPUSubtarget(Triple TT);
+  AMDGPUSubtarget(Triple TT) : TargetTriple(std::move(TT)) {}
 
   static const AMDGPUSubtarget &get(const MachineFunction &MF);
   static const AMDGPUSubtarget &get(const TargetMachine &TM,
@@ -180,9 +128,7 @@ public:
   /// Returns the target minimum/maximum number of waves per EU. This is based
   /// on the minimum/maximum number of \p RequestedWavesPerEU and further
   /// limited by the maximum achievable occupancy derived from the range of \p
-  /// FlatWorkGroupSizes and number of \p LDSBytes per workgroup. A minimum
-  /// requested waves/EU value of 0 indicates an intent to not restrict the
-  /// minimum target occupancy.
+  /// FlatWorkGroupSizes and number of \p LDSBytes per workgroup.
   std::pair<unsigned, unsigned>
   getEffectiveWavesPerEU(std::pair<unsigned, unsigned> RequestedWavesPerEU,
                          std::pair<unsigned, unsigned> FlatWorkGroupSizes,
@@ -238,12 +184,13 @@ public:
 
   bool isGCN() const { return TargetTriple.isAMDGCN(); }
 
-  // Simple subtarget feature getters - auto-generated from X-macro.
-#define DECL_HAS_GETTER(Name)                                                  \
-  bool has##Name() const { return Has##Name; }
-  AMDGPU_SUBTARGET_HAS_FEATURE(DECL_HAS_GETTER)
-#undef DECL_HAS_GETTER
-#undef AMDGPU_SUBTARGET_HAS_FEATURE
+  //==---------------------------------------------------------------------===//
+  // TableGen-generated feature getters.
+  //==---------------------------------------------------------------------===//
+#define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
+  virtual bool GETTER() const { return false; }
+#include "AMDGPUGenSubtargetInfo.inc"
+  //==---------------------------------------------------------------------===//
 
   /// Return true if real (non-fake) variants of True16 instructions using
   /// 16-bit registers should be code-generated. Fake True16 instructions are
@@ -251,12 +198,8 @@ public:
   /// operands and always use their low halves.
   // TODO: Remove and use hasTrue16BitInsts() instead once True16 is fully
   // supported and the support for fake True16 instructions is removed.
-  bool useRealTrue16Insts() const;
-
-  bool hasD16Writes32BitVgpr() const;
-
-  bool hasMadMacF32Insts() const {
-    return HasMadMacF32Insts || !isGCN();
+  bool useRealTrue16Insts() const {
+    return hasTrue16BitInsts() && enableRealTrue16Insts();
   }
 
   bool hasMulI24() const {
@@ -273,10 +216,6 @@ public:
 
   bool hasFminFmaxLegacy() const {
     return HasFminFmaxLegacy;
-  }
-
-  bool isPromoteAllocaEnabled() const {
-    return EnablePromoteAlloca;
   }
 
   unsigned getWavefrontSize() const {

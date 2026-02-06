@@ -443,6 +443,24 @@ RegionBranchOpInterface::getSuccessorOperands(RegionBranchPoint src,
   return src.getTerminatorPredecessorOrNull().getSuccessorOperands(dest);
 }
 
+SmallVector<Value>
+RegionBranchOpInterface::getNonSuccessorInputs(RegionSuccessor successor) {
+  SmallVector<Value> results = llvm::to_vector(
+      successor.isParent()
+          ? ValueRange(getOperation()->getResults())
+          : ValueRange(successor.getSuccessor()->getArguments()));
+  ValueRange successorInputs = getSuccessorInputs(successor);
+  if (!successorInputs.empty()) {
+    unsigned inputBegin =
+        successor.isParent()
+            ? cast<OpResult>(successorInputs.front()).getResultNumber()
+            : cast<BlockArgument>(successorInputs.front()).getArgNumber();
+    results.erase(results.begin() + inputBegin,
+                  results.begin() + inputBegin + successorInputs.size());
+  }
+  return results;
+}
+
 static MutableArrayRef<OpOperand> operandsToOpOperands(OperandRange &operands) {
   return MutableArrayRef<OpOperand>(operands.getBase(), operands.size());
 }
@@ -1182,8 +1200,8 @@ struct InlineRegionBranchOp : public RewritePattern {
     // Inline all regions on the path into the enclosing block.
     rewriter.setInsertionPoint(op);
     ArrayRef remainingPath = path;
-    OperandRange successorOperands =
-        regionBranchOp.getEntrySuccessorOperands(remainingPath.front());
+    SmallVector<Value> successorOperands = llvm::to_vector(
+        regionBranchOp.getEntrySuccessorOperands(remainingPath.front()));
     while (!remainingPath.empty()) {
       RegionSuccessor nextSuccessor = remainingPath.consume_front();
       ValueRange successorInputs =
@@ -1239,8 +1257,8 @@ struct InlineRegionBranchOp : public RewritePattern {
       rewriter.inlineBlockBefore(&nextSuccessor.getSuccessor()->front(),
                                  op->getBlock(), op->getIterator(),
                                  replacements);
-      successorOperands =
-          terminator.getSuccessorOperands(remainingPath.front());
+      successorOperands = llvm::to_vector(
+          terminator.getSuccessorOperands(remainingPath.front()));
       rewriter.eraseOp(terminator);
     }
 

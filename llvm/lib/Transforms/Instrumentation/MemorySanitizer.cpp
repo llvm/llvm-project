@@ -580,6 +580,8 @@ static const PlatformMemoryMapParams NetBSD_X86_MemoryMapParams = {
     &NetBSD_X86_64_MemoryMapParams,
 };
 
+enum OddOrEvenLanes { kBothLanes, kEvenLanes, kOddLanes };
+
 namespace {
 
 /// Instrument functions of a module to detect uninitialized reads.
@@ -3961,7 +3963,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleVectorDotProductIntrinsic(IntrinsicInst &I,
                                        unsigned ReductionFactor,
                                        bool ZeroPurifies,
-                                       unsigned EltSizeInBits = 0) {
+                                       unsigned EltSizeInBits,
+                                       enum OddOrEvenLanes Lanes) {
     IRBuilder<> IRB(&I);
 
     [[maybe_unused]] FixedVectorType *ReturnType =
@@ -3976,6 +3979,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     assert(I.arg_size() == 2 || I.arg_size() == 3);
     if (I.arg_size() == 2) {
+      assert(Lanes == kBothLanes);
+
       Va = I.getOperand(0);
       Vb = I.getOperand(1);
 
@@ -3988,6 +3993,26 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
       Sa = getShadow(&I, 1);
       Sb = getShadow(&I, 2);
+
+      if (Lanes == kEvenLanes || Lanes == kOddLanes) {
+        // Convert < S0, S1, S2, S3, S4, S5, S6, S7 >
+        //      to < S0, S0, S2, S2, S4, S4, S6, S6 > (if even)
+        //      to < S1, S1, S3, S3, S5, S5, S7, S7 > (if odd)
+        //
+        // Note: for aarch64.neon.bfmlalb/t, the odd/even-indexed values are
+        //       zeroed, not duplicated. However, for shadow propagation, this
+        //       distinction is unimportant because Step 1 below will squeeze
+        //       each pair of elements (e.g., [S0, S0]) into a single bit, and
+        //       we only care if it is fully initialized.
+
+        FixedVectorType *InputShadowType = cast<FixedVectorType>(Sa->getType());
+        unsigned Width = InputShadowType->getNumElements();
+
+        Sa = IRB.CreateShuffleVector(
+            Sa, getPclmulMask(Width, /*OddElements=*/Lanes == kOddLanes));
+        Sb = IRB.CreateShuffleVector(
+            Sb, getPclmulMask(Width, /*OddElements=*/Lanes == kOddLanes));
+      }
     }
 
     FixedVectorType *ParamType = cast<FixedVectorType>(Va->getType());
@@ -5011,7 +5036,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // Handle llvm.x86.avx512.* instructions that take a vector of floating-point
+  // Handle llvm.x86.avx512.* instructions that take vector(s) of floating-point
   // values and perform an operation whose shadow propagation should be handled
   // as all-or-nothing [*], with masking provided by a vector and a mask
   // supplied as an integer.
@@ -5025,44 +5050,63 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //
   //       <2 x double> @llvm.x86.avx512.rcp14.pd.128
   //                        (<2 x double>, <2 x double>, i8)
+  //                         A             WriteThru     Mask
   //
   //       <8 x double> @llvm.x86.avx512.mask.rndscale.pd.512
   //                        (<8 x double>, i32, <8 x double>, i8,  i32)
   //                         A             Imm  WriteThru     Mask Rounding
   //
-  // All operands other than A and WriteThru (e.g., Mask, Imm, Rounding) must
-  // be fully initialized.
+  //       <16 x float> @llvm.x86.avx512.mask.scalef.ps.512
+  //                       (<16 x float>, <16 x float>, <16 x float>, i16, i32)
+  //                        WriteThru     A             B             Mask Rnd
   //
-  // Dst[i]        = Mask[i] ? some_op(A[i]) : WriteThru[i]
-  // Dst_shadow[i] = Mask[i] ? all_or_nothing(A_shadow[i]) : WriteThru_shadow[i]
-  void handleAVX512VectorGenericMaskedFP(IntrinsicInst &I, unsigned AIndex,
+  // All operands other than A, B, ..., and WriteThru (e.g., Mask, Imm,
+  // Rounding) must be fully initialized.
+  //
+  // Dst[i]        = Mask[i] ? some_op(A[i], B[i], ...)
+  //                         : WriteThru[i]
+  // Dst_shadow[i] = Mask[i] ? all_or_nothing(A_shadow[i] | B_shadow[i] | ...)
+  //                         : WriteThru_shadow[i]
+  void handleAVX512VectorGenericMaskedFP(IntrinsicInst &I,
+                                         SmallVector<unsigned, 4> DataIndices,
                                          unsigned WriteThruIndex,
                                          unsigned MaskIndex) {
     IRBuilder<> IRB(&I);
 
     unsigned NumArgs = I.arg_size();
-    assert(AIndex < NumArgs);
+
     assert(WriteThruIndex < NumArgs);
     assert(MaskIndex < NumArgs);
-    assert(AIndex != WriteThruIndex);
-    assert(AIndex != MaskIndex);
     assert(WriteThruIndex != MaskIndex);
-
-    Value *A = I.getOperand(AIndex);
     Value *WriteThru = I.getOperand(WriteThruIndex);
-    Value *Mask = I.getOperand(MaskIndex);
 
-    assert(isFixedFPVector(A));
-    assert(isFixedFPVector(WriteThru));
-
-    [[maybe_unused]] unsigned ANumElements =
-        cast<FixedVectorType>(A->getType())->getNumElements();
     unsigned OutputNumElements =
         cast<FixedVectorType>(WriteThru->getType())->getNumElements();
-    assert(ANumElements == OutputNumElements);
+
+    assert(DataIndices.size() > 0);
+
+    bool isData[16] = {false};
+    assert(NumArgs <= 16);
+    for (unsigned i : DataIndices) {
+      assert(i < NumArgs);
+      assert(i != WriteThruIndex);
+      assert(i != MaskIndex);
+
+      isData[i] = true;
+
+      Value *A = I.getOperand(i);
+      assert(isFixedFPVector(A));
+      [[maybe_unused]] unsigned ANumElements =
+          cast<FixedVectorType>(A->getType())->getNumElements();
+      assert(ANumElements == OutputNumElements);
+    }
+
+    Value *Mask = I.getOperand(MaskIndex);
+
+    assert(isFixedFPVector(WriteThru));
 
     for (unsigned i = 0; i < NumArgs; ++i) {
-      if (i != AIndex && i != WriteThruIndex) {
+      if (!isData[i] && i != WriteThruIndex) {
         // Imm, Mask, Rounding etc. are "control" data, hence we require that
         // they be fully initialized.
         assert(I.getOperand(i)->getType()->isIntegerTy());
@@ -5071,24 +5115,32 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
 
     // The mask has 1 bit per element of A, but a minimum of 8 bits.
-    if (Mask->getType()->getScalarSizeInBits() == 8 && ANumElements < 8)
-      Mask = IRB.CreateTrunc(Mask, Type::getIntNTy(*MS.C, ANumElements));
-    assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
+    if (Mask->getType()->getScalarSizeInBits() == 8 && OutputNumElements < 8)
+      Mask = IRB.CreateTrunc(Mask, Type::getIntNTy(*MS.C, OutputNumElements));
+    assert(Mask->getType()->getScalarSizeInBits() == OutputNumElements);
 
     assert(I.getType() == WriteThru->getType());
 
     Mask = IRB.CreateBitCast(
         Mask, FixedVectorType::get(IRB.getInt1Ty(), OutputNumElements));
 
-    Value *AShadow = getShadow(A);
+    Value *DataShadow = nullptr;
+    for (unsigned i : DataIndices) {
+      Value *A = I.getOperand(i);
+      if (DataShadow)
+        DataShadow = IRB.CreateOr(DataShadow, getShadow(A));
+      else
+        DataShadow = getShadow(A);
+    }
 
     // All-or-nothing shadow
-    AShadow = IRB.CreateSExt(IRB.CreateICmpNE(AShadow, getCleanShadow(AShadow)),
-                             AShadow->getType());
+    DataShadow =
+        IRB.CreateSExt(IRB.CreateICmpNE(DataShadow, getCleanShadow(DataShadow)),
+                       DataShadow->getType());
 
     Value *WriteThruShadow = getShadow(WriteThru);
 
-    Value *Shadow = IRB.CreateSelect(Mask, AShadow, WriteThruShadow);
+    Value *Shadow = IRB.CreateSelect(Mask, DataShadow, WriteThruShadow);
     setShadow(&I, Shadow);
 
     setOriginForNaryOp(I);
@@ -5925,21 +5977,44 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_pmadd_ub_sw:
     case Intrinsic::x86_avx512_pmaddubs_w_512:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
-                                      /*ZeroPurifies=*/true);
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     // <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_ssse3_pmadd_ub_sw:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
                                       /*ZeroPurifies=*/true,
-                                      /*EltSizeInBits=*/8);
+                                      /*EltSizeInBits=*/8,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     // <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_mmx_pmadd_wd:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
                                       /*ZeroPurifies=*/true,
-                                      /*EltSizeInBits=*/16);
+                                      /*EltSizeInBits=*/16,
+                                      /*Lanes=*/kBothLanes);
+      break;
+
+    // BFloat16 multiply-add to single-precision
+    // <4 x float> llvm.aarch64.neon.bfmlalt
+    //                 (<4 x float>, <8 x bfloat>, <8 x bfloat>)
+    case Intrinsic::aarch64_neon_bfmlalt:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kOddLanes);
+      break;
+
+    // <4 x float> llvm.aarch64.neon.bfmlalb
+    //                 (<4 x float>, <8 x bfloat>, <8 x bfloat>)
+    case Intrinsic::aarch64_neon_bfmlalb:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kEvenLanes);
       break;
 
     // AVX Vector Neural Network Instructions: bytes
@@ -6059,7 +6134,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_vpdpbuuds_256:
     case Intrinsic::x86_avx10_vpdpbuuds_512:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/4,
-                                      /*ZeroPurifies=*/true);
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     // AVX Vector Neural Network Instructions: words
@@ -6179,7 +6256,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_vpdpwuuds_256:
     case Intrinsic::x86_avx10_vpdpwuuds_512:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
-                                      /*ZeroPurifies=*/true);
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     // Dot Product of BF16 Pairs Accumulated Into Packed Single
@@ -6194,7 +6273,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512bf16_dpbf16ps_256:
     case Intrinsic::x86_avx512bf16_dpbf16ps_512:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
-                                      /*ZeroPurifies=*/false);
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     case Intrinsic::x86_sse_cmp_ss:
@@ -6553,7 +6634,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512fp16_mask_rsqrt_ph_512:
     case Intrinsic::x86_avx512fp16_mask_rsqrt_ph_256:
     case Intrinsic::x86_avx512fp16_mask_rsqrt_ph_128:
-      handleAVX512VectorGenericMaskedFP(I, /*AIndex=*/0, /*WriteThruIndex=*/1,
+      handleAVX512VectorGenericMaskedFP(I, /*DataIndices=*/{0},
+                                        /*WriteThruIndex=*/1,
                                         /*MaskIndex=*/2);
       break;
 
@@ -6605,7 +6687,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512fp16_mask_rcp_ph_512:
     case Intrinsic::x86_avx512fp16_mask_rcp_ph_256:
     case Intrinsic::x86_avx512fp16_mask_rcp_ph_128:
-      handleAVX512VectorGenericMaskedFP(I, /*AIndex=*/0, /*WriteThruIndex=*/1,
+      handleAVX512VectorGenericMaskedFP(I, /*DataIndices=*/{0},
+                                        /*WriteThruIndex=*/1,
                                         /*MaskIndex=*/2);
       break;
 
@@ -6661,7 +6744,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx10_mask_rndscale_bf16_512:
     case Intrinsic::x86_avx10_mask_rndscale_bf16_256:
     case Intrinsic::x86_avx10_mask_rndscale_bf16_128:
-      handleAVX512VectorGenericMaskedFP(I, /*AIndex=*/0, /*WriteThruIndex=*/2,
+      handleAVX512VectorGenericMaskedFP(I, /*DataIndices=*/{0},
+                                        /*WriteThruIndex=*/2,
                                         /*MaskIndex=*/3);
       break;
 
@@ -6900,14 +6984,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                /*BCols=*/2);
       break;
 
-    // <2 x i32> @llvm.aarch64.neon.[us]dot.v2i32.v8i8
+    // <2 x i32> @llvm.aarch64.neon.{u,s,us}dot.v2i32.v8i8
     //               (<2 x i32> %acc, <8 x i8> %a, <8 x i8> %b)
-    // <4 x i32> @llvm.aarch64.neon.[us]dot.v4i32.v16i8
+    // <4 x i32> @llvm.aarch64.neon.{u,s,us}dot.v4i32.v16i8
     //               (<4 x i32> %acc, <16 x i8> %a, <16 x i8> %b)
     case Intrinsic::aarch64_neon_sdot:
     case Intrinsic::aarch64_neon_udot:
+    case Intrinsic::aarch64_neon_usdot:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/4,
-                                      /*ZeroPurifies=*/true);
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     // <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v4bf16
@@ -6916,7 +7003,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //               (<4 x float> %acc, <8 x bfloat> %a, <8 x bfloat> %b)
     case Intrinsic::aarch64_neon_bfdot:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
-                                      /*ZeroPurifies=*/false);
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     default:
@@ -7308,12 +7397,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (!InsPoint)
       InsPoint = &I;
     NextNodeIRBuilder IRB(InsPoint);
-    const DataLayout &DL = F.getDataLayout();
-    TypeSize TS = DL.getTypeAllocSize(I.getAllocatedType());
-    Value *Len = IRB.CreateTypeSize(MS.IntptrTy, TS);
-    if (I.isArrayAllocation())
-      Len = IRB.CreateMul(Len,
-                          IRB.CreateZExtOrTrunc(I.getArraySize(), MS.IntptrTy));
+    Value *Len = IRB.CreateAllocationSize(MS.IntptrTy, &I);
 
     if (MS.CompileKernel)
       poisonAllocaKmsan(I, IRB, Len);
@@ -7439,11 +7523,51 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void dumpInst(Instruction &I) {
+    // Instruction name only
+    // For intrinsics, the full/overloaded name is used
+    //
+    // e.g., "call llvm.aarch64.neon.uqsub.v16i8"
     if (CallInst *CI = dyn_cast<CallInst>(&I)) {
       errs() << "ZZZ call " << CI->getCalledFunction()->getName() << "\n";
     } else {
       errs() << "ZZZ " << I.getOpcodeName() << "\n";
     }
+
+    // Instruction prototype (including return type and parameter types)
+    // For intrinsics, we use the base/non-overloaded name
+    //
+    // e.g., "call <16 x i8> @llvm.aarch64.neon.uqsub(<16 x i8>, <16 x i8>)"
+    unsigned NumOperands = I.getNumOperands();
+    if (CallInst *CI = dyn_cast<CallInst>(&I)) {
+      errs() << "YYY call " << *I.getType() << " @";
+
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI))
+        errs() << Intrinsic::getBaseName(II->getIntrinsicID());
+      else
+        errs() << CI->getCalledFunction()->getName();
+
+      errs() << "(";
+
+      // The last operand of a CallInst is the function itself.
+      NumOperands--;
+    } else
+      errs() << "YYY " << *I.getType() << " " << I.getOpcodeName() << "(";
+
+    for (size_t i = 0; i < NumOperands; i++) {
+      if (i > 0)
+        errs() << ", ";
+
+      errs() << *(I.getOperand(i)->getType());
+    }
+
+    errs() << ")\n";
+
+    // Full instruction, including types and operand values
+    // For intrinsics, the full/overloaded name is used
+    //
+    // e.g., "%vqsubq_v.i15 = call noundef <16 x i8>
+    //            @llvm.aarch64.neon.uqsub.v16i8(<16 x i8> %vext21.i,
+    //            <16 x i8> splat (i8 1)), !dbg !66"
     errs() << "QQQ " << I << "\n";
   }
 
