@@ -454,6 +454,11 @@ struct VPlanTransforms {
   /// LCSSA phi.
   static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range);
 
+  /// Optimize FindLast reductions selecting IVs by converting them to FindIV
+  /// reductions, if their IV range excludes a suitable sentinel value.
+  static void optimizeFindIVReductions(VPlan &Plan,
+                                       PredicatedScalarEvolution &PSE, Loop &L);
+
   /// Detect and create partial reduction recipes for scaled reductions in
   /// \p Plan. Must be called after recipe construction. If partial reductions
   /// are only valid for a subset of VFs in Range, Range.End is updated.
