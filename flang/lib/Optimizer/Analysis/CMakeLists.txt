@@ -10,7 +10,6 @@ add_flang_library(FIRAnalysis
 
   LINK_LIBS
   CUFDialect
-  FIRBuilder
   FIRDialect
   FIRSupport
   HLFIRDialect
