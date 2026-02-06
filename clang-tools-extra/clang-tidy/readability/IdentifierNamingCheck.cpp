@@ -634,7 +634,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getDataTypePrefix(
   return PrefixStr;
 }
 
-std::string IdentifierNamingCheck::HungarianNotation::getClassPrefix(
+llvm::StringRef IdentifierNamingCheck::HungarianNotation::getClassPrefix(
     const CXXRecordDecl *CRD,
     const IdentifierNamingCheck::HungarianNotationOption &HNOption) const {
   if (CRD->isUnion())

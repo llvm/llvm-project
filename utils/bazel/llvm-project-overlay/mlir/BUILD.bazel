@@ -1524,13 +1524,6 @@ td_library(
 )
 
 td_library(
-    name = "ExecutionProgressOpInterfaceTdFiles",
-    srcs = ["include/mlir/Interfaces/ExecutionProgressOpInterface.td"],
-    includes = ["include"],
-    deps = [":OpBaseTdFiles"],
-)
-
-td_library(
     name = "LoopLikeInterfaceTdFiles",
     srcs = ["include/mlir/Interfaces/LoopLikeInterface.td"],
     includes = ["include"],
@@ -1726,6 +1719,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":BuiltinDialectTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -2893,7 +2887,6 @@ td_library(
     deps = [
         ":ControlFlowInterfacesTdFiles",
         ":DestinationStyleOpInterfaceTdFiles",
-        ":ExecutionProgressOpInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":ParallelCombiningOpInterfaceTdFiles",
@@ -3969,6 +3962,7 @@ cc_library(
         ":ArithUtils",
         ":ControlFlowInterfaces",
         ":DialectUtils",
+        ":FuncDialect",
         ":FunctionInterfaces",
         ":GPUDialect",
         ":GPUUtils",
@@ -3989,6 +3983,7 @@ cc_library(
         ":XeGPUPassIncGen",
         ":XeGPUUtils",
         ":XeGPUuArch",
+        ":XeVMDialect",
         "//llvm:Support",
     ],
 )
@@ -4565,7 +4560,6 @@ cc_library(
         ":ControlFlowInterfaces",
         ":ConvertToEmitCInterface",
         ":DestinationStyleOpInterface",
-        ":ExecutionProgressOpInterface",
         ":FunctionInterfaces",
         ":IR",
         ":InferTypeOpInterface",
@@ -4664,18 +4658,6 @@ cc_library(
         ":FunctionInterfaces",
         ":IR",
         ":LoopLikeInterfaceIncGen",
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
-    name = "ExecutionProgressOpInterface",
-    srcs = ["lib/Interfaces/ExecutionProgressOpInterface.cpp"],
-    hdrs = ["include/mlir/Interfaces/ExecutionProgressOpInterface.h"],
-    includes = ["include"],
-    deps = [
-        ":ExecutionProgressOpInterfaceIncGen",
-        ":IR",
         "//llvm:Support",
     ],
 )
@@ -8079,17 +8061,6 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Interfaces/LoopLikeInterface.td",
     deps = [":LoopLikeInterfaceTdFiles"],
-)
-
-gentbl_cc_library(
-    name = "ExecutionProgressOpInterfaceIncGen",
-    tbl_outs = {
-        "include/mlir/Interfaces/ExecutionProgressOpInterface.h.inc": ["-gen-op-interface-decls"],
-        "include/mlir/Interfaces/ExecutionProgressOpInterface.cpp.inc": ["-gen-op-interface-defs"],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Interfaces/ExecutionProgressOpInterface.td",
-    deps = [":ExecutionProgressOpInterfaceTdFiles"],
 )
 
 gentbl_cc_library(
@@ -13788,6 +13759,7 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/MPI/IR/*.h"]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":BytecodeOpInterface",
         ":DLTIDialect",
         ":IR",
@@ -14501,7 +14473,6 @@ td_library(
     ],
     includes = ["include"],
     deps = [
-        ":ExecutionProgressOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -14550,7 +14521,6 @@ cc_library(
         ":BytecodeOpInterface",
         ":ControlFlowInterfaces",
         ":ConvertToLLVMInterface",
-        ":ExecutionProgressOpInterface",
         ":IR",
         ":InliningUtils",
         ":SideEffectInterfaces",

@@ -60,6 +60,10 @@ struct SymbolUsesPass
         symbolUse.getUser()->emitRemark()
             << "found use of symbol : " << symbolUse.getSymbolRef() << " : "
             << symbol.getNameAttr();
+      } else {
+        symbolUse.getUser()->emitRemark()
+            << "failed to resolve use of symbol : " << symbolUse.getSymbolRef()
+            << " : " << symbol.getNameAttr();
       }
     }
     symbol->emitRemark() << "symbol has " << llvm::size(*symbolUses) << " uses";
