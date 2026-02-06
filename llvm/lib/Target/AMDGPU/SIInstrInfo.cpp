@@ -1317,7 +1317,7 @@ std::pair<MachineInstr *, unsigned>
 SIInstrInfo::pierceThroughRegSequence(const MachineInstr &MI,
                                       const MachineRegisterInfo &MRI) const {
   if (MI.getOpcode() != AMDGPU::REG_SEQUENCE || MI.getNumOperands() != 5)
-    return std::make_pair(nullptr,0);
+    return std::make_pair(nullptr, 0);
 
   int64_t SubRegValues[2];
   bool SubRegIsConst[2];
@@ -1336,9 +1336,9 @@ SIInstrInfo::pierceThroughRegSequence(const MachineInstr &MI,
                     ->MC->getSizeInBits() *
                 2 ==
             MRI.getRegClass(MI.getOperand(0).getReg())->MC->getSizeInBits())
-      return std::make_pair(RealDefs[(I + 1) % 2],(I+1)%2);
+      return std::make_pair(RealDefs[(I + 1) % 2], (I + 1) % 2);
 
-  return std::make_pair(nullptr,0);
+  return std::make_pair(nullptr, 0);
 }
 
 bool SIInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
@@ -11017,38 +11017,39 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     std::pair<MachineInstr *, unsigned> RegSequence2;
     MachineInstr *Src2Def = MRI->getVRegDef(SrcReg2);
     if (!Src2Def ||
-        !(Src2Def =
-          (RegSequence2 = pierceThroughRegSequence(*Src2Def,*MRI)).first) ||
+        !(Src2Def = (RegSequence2 = pierceThroughRegSequence(*Src2Def, *MRI))
+                        .first) ||
         !getFoldableImm(Src2Def->getOperand(0).getReg(), *MRI, CmpValue))
       return false;
-    else if(RegSequence2.second)
+    else if (RegSequence2.second)
       CmpValue <<= 32;
   }
 
-  const auto replaceSourceReg = [](MachineInstr &MI, Register Old, Register New) {
+  const auto replaceSourceReg = [](MachineInstr &MI, Register Old,
+                                   Register New) {
     for (unsigned I = 0; I < MI.getNumOperands(); I++)
-      if (MI.getOperand(I).isReg() && MI.getOperand(I).getReg() == Old)
-      {
+      if (MI.getOperand(I).isReg() && MI.getOperand(I).getReg() == Old) {
         MI.getOperand(I).setReg(New);
         return true;
       }
     return false;
   };
 
-  const auto replaceSourceImm = [](MachineInstr &MI, uint64_t Old, uint64_t New) {
+  const auto replaceSourceImm = [](MachineInstr &MI, uint64_t Old,
+                                   uint64_t New) {
     for (unsigned I = 0; I < MI.getNumOperands(); I++)
-      if (MI.getOperand(I).isImm() && (uint64_t)MI.getOperand(I).getImm() == Old)
-      {
+      if (MI.getOperand(I).isImm() &&
+          (uint64_t)MI.getOperand(I).getImm() == Old) {
         MI.getOperand(I).setImm(New);
         return true;
       }
     return false;
   };
 
-  const auto replaceSourceRegWithImm = [](MachineInstr &MI, Register Old, uint64_t New) {
+  const auto replaceSourceRegWithImm = [](MachineInstr &MI, Register Old,
+                                          uint64_t New) {
     for (unsigned I = 0; I < MI.getNumOperands(); I++)
-      if (MI.getOperand(I).isReg() && MI.getOperand(I).getReg() == Old)
-      {
+      if (MI.getOperand(I).isReg() && MI.getOperand(I).getReg() == Old) {
         MI.getOperand(I).ChangeToImmediate(New);
         return true;
       }
@@ -11062,7 +11063,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     if (!Def)
       return false;
 
-    auto RegSequence = pierceThroughRegSequence(*Def,*MRI);
+    auto RegSequence = pierceThroughRegSequence(*Def, *MRI);
     if (!RegSequence.first)
       return false;
 
@@ -11071,14 +11072,17 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         OrigOpcode != AMDGPU::S_CMP_LG_U64)
       return false;
 
-    if(!RegSequence.second) //Lower 32 bits nonzero
+    if (!RegSequence.second) // Lower 32 bits nonzero
       if ((uint64_t)CmpValue > UINT32_MAX + 1UL) {
         // Hard-code EQ ? 0 : 1
         CmpInstr.setDesc(get(AMDGPU::S_CMP_EQ_U32));
         CmpInstr.getOperand(0).ChangeToImmediate(0);
-        CmpInstr.getOperand(1).ChangeToImmediate(OrigOpcode==AMDGPU::S_CMP_EQ_U64);
+        CmpInstr.getOperand(1).ChangeToImmediate(OrigOpcode ==
+                                                 AMDGPU::S_CMP_EQ_U64);
       } else {
-        CmpInstr.setDesc(get(OrigOpcode==AMDGPU::S_CMP_EQ_U64 ? AMDGPU::S_CMP_EQ_U32 : AMDGPU::S_CMP_LG_U32));
+        CmpInstr.setDesc(get(OrigOpcode == AMDGPU::S_CMP_EQ_U64
+                                 ? AMDGPU::S_CMP_EQ_U32
+                                 : AMDGPU::S_CMP_LG_U32));
         replaceSourceReg(CmpInstr, SrcReg,
                          RegSequence.first->getOperand(0).getReg());
         SrcReg = RegSequence.first->getOperand(0).getReg();
@@ -11088,10 +11092,14 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         // Hard-code EQ ? 0 : 1
         CmpInstr.setDesc(get(AMDGPU::S_CMP_EQ_U32));
         CmpInstr.getOperand(0).ChangeToImmediate(0);
-        CmpInstr.getOperand(1).ChangeToImmediate(OrigOpcode==AMDGPU::S_CMP_EQ_U64);
+        CmpInstr.getOperand(1).ChangeToImmediate(OrigOpcode ==
+                                                 AMDGPU::S_CMP_EQ_U64);
       } else {
-        CmpInstr.setDesc(get(OrigOpcode==AMDGPU::S_CMP_EQ_U64 ? AMDGPU::S_CMP_EQ_U32 : AMDGPU::S_CMP_LG_U32));
-        replaceSourceReg(CmpInstr,SrcReg,RegSequence.first->getOperand(0).getReg());
+        CmpInstr.setDesc(get(OrigOpcode == AMDGPU::S_CMP_EQ_U64
+                                 ? AMDGPU::S_CMP_EQ_U32
+                                 : AMDGPU::S_CMP_LG_U32));
+        replaceSourceReg(CmpInstr, SrcReg,
+                         RegSequence.first->getOperand(0).getReg());
         if (!replaceSourceImm(CmpInstr, CmpValue, (uint64_t)CmpValue >> 32))
           replaceSourceRegWithImm(CmpInstr, SrcReg2, (uint64_t)CmpValue >> 32);
         SrcReg = RegSequence.first->getOperand(0).getReg();
