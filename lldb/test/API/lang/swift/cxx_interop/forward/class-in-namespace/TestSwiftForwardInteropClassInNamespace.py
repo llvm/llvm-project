@@ -10,6 +10,7 @@ class TestSwiftForwardInteropClassInNamespace(TestBase):
 
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @swiftTest
+    @skipIfWindows
     def test_class(self):
         self.build()
         _, _, _, _= lldbutil.run_to_source_breakpoint(

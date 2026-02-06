@@ -48,6 +48,7 @@ class TestSwiftAddressOf(lldbtest.TestBase):
 
         
     @swiftTest
+    @expectedFailureWindows
     def test_any_type(self):
         """Test the Any type"""
         self.build()

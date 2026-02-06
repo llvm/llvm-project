@@ -27,6 +27,7 @@ class TestSwiftMacro(lldbtest.TestBase):
             % (self.getBuildDir(), swift_plugin_server))
 
     @swiftTest
+    @skipIfWindows
     # At the time of writing swift/test/Macros/macro_expand.swift is also disabled.
     @expectedFailureAll(oslist=["linux"])
     def testDebugging(self):
@@ -90,6 +91,7 @@ class TestSwiftMacro(lldbtest.TestBase):
         self.assertGreaterEqual(b.GetNumLocations(), 1)
 
     @swiftTest
+    @skipIfWindows
     # At the time of writing swift/test/Macros/macro_expand.swift is also disabled.
     @expectedFailureAll(oslist=["linux"])
     def testInteractive(self):

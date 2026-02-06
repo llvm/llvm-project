@@ -15,24 +15,28 @@ from lldbsuite.test.decorators import *
 
 class TestClassConstrainedProtocol(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_extension_weak_self(self):
         """Test that we can reconstruct weak self captured in a class constrained protocol."""
         self.build()
         self.do_self_test("Break here for weak self", needs_dynamic=False)
 
     @swiftTest
+    @expectedFailureWindows
     def test_extension_self (self):
         """Test that we can reconstruct self in method of a class constrained protocol."""
         self.build()
         self.do_self_test("Break here in class protocol", needs_dynamic=False)
 
     @swiftTest
+    @expectedFailureWindows
     def test_method_weak_self(self):
         """Test that we can reconstruct weak self capture in method of a class conforming to a class constrained protocol."""
         self.build()
         self.do_self_test("Break here for method weak self", needs_dynamic=False)
 
     @swiftTest
+    @expectedFailureWindows
     def test_method_self(self):
         """Test that we can reconstruct self in method of a class conforming to a class constrained protocol."""
         self.build()

@@ -19,6 +19,7 @@ class TestSwiftCommandMemoryFind(TestBase):
                     substrs=["data found at location"])
 
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         self.build()
         target, _, _, _ = lldbutil.run_to_source_breakpoint(

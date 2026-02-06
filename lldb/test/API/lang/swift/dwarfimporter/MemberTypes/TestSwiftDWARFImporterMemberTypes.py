@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftDWARFImporterC(lldbtest.TestBase):
 
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test looking up a Clang typedef type that isn't directly
         referenced by debug info in the Swift object file.

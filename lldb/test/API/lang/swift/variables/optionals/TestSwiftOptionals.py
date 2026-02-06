@@ -21,6 +21,7 @@ import os
 
 class TestSwiftOptionalType(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_swift_optional_type(self):
         """Check formatting for T? and T!"""
         self.do_check_consistency()

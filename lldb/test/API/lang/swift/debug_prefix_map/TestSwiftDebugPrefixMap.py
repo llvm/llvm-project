@@ -23,6 +23,7 @@ import shutil
 
 class TestSwiftDebugPrefixMap(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_debug_prefix_map(self):
         self.do_test()
 

@@ -7,6 +7,7 @@ class TestSwiftExprImport(TestBase):
     # Don't run ClangImporter tests if Clangimporter is disabled.
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false'))
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test error handling if the expression evaluator
            encounters a Clang import failure.

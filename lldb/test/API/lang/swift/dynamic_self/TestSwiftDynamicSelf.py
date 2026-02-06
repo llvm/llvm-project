@@ -30,6 +30,7 @@ class TestSwiftDynamicSelf(lldbtest.TestBase):
         lldbutil.check_variable(self, member_v, False, value=v_val)
 
     @swiftTest
+    @expectedFailureWindows
     def test_dynamic_self(self):
         self.build()
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(

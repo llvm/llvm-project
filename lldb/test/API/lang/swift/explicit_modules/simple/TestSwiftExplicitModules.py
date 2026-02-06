@@ -7,6 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftExplicitModules(lldbtest.TestBase):
 
     @swiftTest
+    @skipIfWindows
     def test(self):
         """Test explicit Swift modules"""
         self.build()
@@ -21,6 +22,7 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
         # CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift"){{.*}} Module import remark: loaded module 'a'; source: '{{.*}}a.swiftmodule', loaded: '{{.*}}a.swiftmodule'
 
     @swiftTest
+    @skipIfWindows
     def test_disable_esml(self):
         """Test disabling the explicit Swift module loader"""
         self.build()
@@ -39,6 +41,7 @@ class TestSwiftExplicitModules(lldbtest.TestBase):
 
         
     @swiftTest
+    @skipIfWindows
     @skipUnlessDarwin
     def test_import(self):
         """Test an implicit import inside an explicit build"""

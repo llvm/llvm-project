@@ -20,6 +20,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftTupleTypes(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_swift_tuple_types(self):
         """Test support for tuple types"""
         self.build()

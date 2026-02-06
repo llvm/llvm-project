@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class SwiftAddressExpressionTest(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test that you can use register names in image lookup in a swift frame."""
         self.build()

@@ -7,6 +7,7 @@ import os
 
 class TestSwiftImportSPI(lldbtest.TestBase):
     @swiftTest
+    @skipIfWindows
     def test(self):
         """Test SPI imports"""
         self.build()

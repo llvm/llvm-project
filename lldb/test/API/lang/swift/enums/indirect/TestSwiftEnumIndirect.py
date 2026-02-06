@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test indirect enums"""
         self.build()

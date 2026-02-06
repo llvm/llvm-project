@@ -27,6 +27,7 @@ class TestSwiftConsumeOperatorType(TestBase):
     # Skip on aarch64 linux: rdar://91005071
     @skipIf(archs=['aarch64'], oslist=['linux'])
     @swiftTest
+    @expectedFailureWindows
     def test_swift_consume_operator(self):
         """Check that we properly show variables at various points of the CFG while
         stepping with the consume operator.

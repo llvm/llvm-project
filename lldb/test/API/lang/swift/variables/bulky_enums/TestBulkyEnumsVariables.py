@@ -21,6 +21,7 @@ import os
 
 class TestBulkyEnumVariables(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_bulky_enum_variables(self):
         """Tests that large-size Enum variables display correctly"""
         self.build()

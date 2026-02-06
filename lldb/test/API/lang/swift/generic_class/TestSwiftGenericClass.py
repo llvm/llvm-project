@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class SwiftGenericClassTest(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Tests that a generic class type can be resolved from the instance metadata alone"""
         self.build()

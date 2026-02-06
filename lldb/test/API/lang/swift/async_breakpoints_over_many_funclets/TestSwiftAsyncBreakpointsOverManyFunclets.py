@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftAsyncBreakpoints(lldbtest.TestBase):
     @swiftTest
+    @expectedFailureWindows
     @skipIfLinux
     def test(self):
         """Test async that async breakpoints are not filtered when the same

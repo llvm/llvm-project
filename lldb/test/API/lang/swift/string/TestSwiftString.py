@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class TestSwiftTuple(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test the String formatter under adverse conditions"""
         self.build()

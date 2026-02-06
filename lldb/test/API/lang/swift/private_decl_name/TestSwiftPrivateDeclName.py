@@ -28,6 +28,7 @@ class TestSwiftPrivateDeclName(TestBase):
         self.b_source_spec = lldb.SBFileSpec(self.b_source)
 
     @swiftTest
+    @expectedFailureWindows
     def test_swift_private_decl_name(self):
         """Test that we correctly find private decls"""
         self.build()

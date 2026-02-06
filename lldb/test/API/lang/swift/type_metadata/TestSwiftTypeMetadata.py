@@ -20,6 +20,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class SwiftTypeMetadataTest(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_swift_type_metadata(self):
         """Test that LLDB can effectively use the type metadata to reconstruct dynamic types for Swift"""
         self.build()

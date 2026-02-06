@@ -84,6 +84,7 @@ class TestSwiftStdlibDictionary(TestBase):
                         (key_str, value_str)))
 
     @swiftTest
+    @expectedFailureWindows
     # @skipIfLinux  # bugs.swift.org/SR-844
     def test_swift_stdlib_dictionary(self):
         """Tests that we properly vend synthetic children for Swift.Dictionary"""

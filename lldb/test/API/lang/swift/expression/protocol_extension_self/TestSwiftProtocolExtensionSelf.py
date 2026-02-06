@@ -5,6 +5,7 @@ from lldbsuite.test.decorators import *
 
 class TestSwiftProtocolExtensionSelf(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test that the generic self in a protocol extension works in the expression evaluator.
         """

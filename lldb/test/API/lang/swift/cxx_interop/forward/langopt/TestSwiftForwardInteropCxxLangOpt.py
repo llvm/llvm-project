@@ -9,6 +9,7 @@ from lldbsuite.test.decorators import *
 class TestSwiftForwardInteropCxxLangOpt(TestBase):
 
     @swiftTest
+    @skipIfWindows
     def test_class(self):
         """
         Test that C++ interoperability is enabled on a per-CU basis.

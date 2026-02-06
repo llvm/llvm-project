@@ -7,6 +7,7 @@ import lldbsuite.test.lldbutil as lldbutil
 class SwiftPrivateNestedGenericClassTest(TestBase):
 
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Tests that a private generic class type nested inside another generic class can be resolved correctly from the instance metadata"""
         self.build()

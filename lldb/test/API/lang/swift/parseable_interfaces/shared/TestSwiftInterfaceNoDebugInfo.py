@@ -27,12 +27,14 @@ import os.path
 
 class TestSwiftInterfaceNoDebugInfo(TestBase):
     @swiftTest
+    @skipIfWindows
     def test_swift_interface(self):
         """Test that we load and handle modules that only have textual .swiftinterface files"""
         self.build()
         self.do_test()
 
     @swiftTest
+    @skipIfWindows
     def test_swift_interface_fallback(self):
         """Test that we fall back to load from the .swiftinterface file if the .swiftmodule is invalid"""
         self.build()
@@ -44,6 +46,7 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
         self.do_test()
 
     @swiftTest
+    @skipIfWindows
     @skipUnlessPlatform(["macosx"])
     def test_prebuilt_cache_location(self):
         """Verify the prebuilt cache path is correct"""

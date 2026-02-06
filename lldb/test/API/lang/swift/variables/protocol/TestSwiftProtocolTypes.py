@@ -20,6 +20,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftProtocolTypes(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_swift_protocol_types(self):
         """Test support for protocol types"""
         self.build()

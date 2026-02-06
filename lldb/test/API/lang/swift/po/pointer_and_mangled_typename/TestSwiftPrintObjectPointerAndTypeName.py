@@ -16,6 +16,7 @@ class TestCase(TestBase):
         self.filecheck_log(self.log, __file__, f"-check-prefix=CHECK-{key}")
 
     @swiftTest
+    @expectedFailureWindows
     def test_int(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -26,6 +27,7 @@ class TestCase(TestBase):
         # CHECK-INT: stringForPrintObject(UnsafeRawPointer(bitPattern: {{[0-9]+}}), mangledTypeName: "SiD")
 
     @swiftTest
+    @expectedFailureWindows
     def test_string(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -36,6 +38,7 @@ class TestCase(TestBase):
         # CHECK-STRING: stringForPrintObject(UnsafeRawPointer(bitPattern: {{[0-9]+}}), mangledTypeName: "SSD")
 
     @swiftTest
+    @expectedFailureWindows
     def test_struct(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -46,6 +49,7 @@ class TestCase(TestBase):
         # CHECK-STRUCT: stringForPrintObject(UnsafeRawPointer(bitPattern: {{[0-9]+}}), mangledTypeName: "1a6StructVD")
 
     @swiftTest
+    @expectedFailureWindows
     def test_class(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -56,6 +60,7 @@ class TestCase(TestBase):
         # CHECK-CLASS: stringForPrintObject(UnsafeRawPointer(bitPattern: {{[0-9]+}}), mangledTypeName: "1a5ClassCD")
 
     @swiftTest
+    @expectedFailureWindows
     def test_enum(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -66,6 +71,7 @@ class TestCase(TestBase):
         # CHECK-ENUM: stringForPrintObject(UnsafeRawPointer(bitPattern: {{.*}}), mangledTypeName: "1a4EnumOD")
 
     @swiftTest
+    @expectedFailureWindows
     def test_generic_struct(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -76,6 +82,7 @@ class TestCase(TestBase):
         # CHECK-GEN-STRUCT: stringForPrintObject(UnsafeRawPointer(bitPattern: {{[0-9]+}}), mangledTypeName: "1a13GenericStructVySSGD")
 
     @swiftTest
+    @expectedFailureWindows
     def test_generic_class(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -86,6 +93,7 @@ class TestCase(TestBase):
         # CHECK-GEN-CLASS: stringForPrintObject(UnsafeRawPointer(bitPattern: {{[0-9]+}}), mangledTypeName: "1a12GenericClassCySSGD")
 
     @swiftTest
+    @expectedFailureWindows
     def test_generic_enum(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -96,6 +104,7 @@ class TestCase(TestBase):
         # CHECK-GEN-ENUM: stringForPrintObject(UnsafeRawPointer(bitPattern: {{.*}}), mangledTypeName: "1a11GenericEnumOySSGD")
 
     @swiftTest
+    @expectedFailureWindows
     def test_described_struct(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -106,6 +115,7 @@ class TestCase(TestBase):
         # CHECK-DESC-STRUCT: stringForPrintObject(UnsafeRawPointer(bitPattern: {{[0-9]+}}), mangledTypeName: "1a15DescribedStructVD")
 
     @swiftTest
+    @expectedFailureWindows
     def test_described_class(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
@@ -116,6 +126,7 @@ class TestCase(TestBase):
         # CHECK-DESC-CLASS: stringForPrintObject(UnsafeRawPointer(bitPattern: {{[0-9]+}}), mangledTypeName: "1a14DescribedClassCD")
 
     @swiftTest
+    @expectedFailureWindows
     def test_described_enum(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

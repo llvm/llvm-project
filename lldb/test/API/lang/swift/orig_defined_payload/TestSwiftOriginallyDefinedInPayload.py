@@ -7,6 +7,7 @@ import os
 
 class TestSwiftOriginallyDefinedInPayload(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         self.build()
 

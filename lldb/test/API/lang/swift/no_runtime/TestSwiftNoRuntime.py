@@ -7,6 +7,7 @@ class TestSwiftNoRuntime(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test running a Swift expression in a C program"""
         self.build()

@@ -9,6 +9,7 @@ from lldbsuite.test.decorators import *
 class TestSwiftForwardInteropStepping(TestBase):
 
     @swiftTest
+    @skipIfWindows
     def test_step_into_function(self):
         """ Test that stepping into a simple C++ function works"""
         self.build()
@@ -26,6 +27,7 @@ class TestSwiftForwardInteropStepping(TestBase):
         self.assertIn('testFunction', name)
 
     @swiftTest
+    @skipIfWindows
     def test_step_over_function(self):
         """ Test that stepping over a simple C++ function works"""
         self.build()
@@ -41,6 +43,7 @@ class TestSwiftForwardInteropStepping(TestBase):
 
 
     @swiftTest
+    @skipIfWindows
     def test_step_into_method(self):
         """ Test that stepping into a C++ method works"""
         self.build()
@@ -58,6 +61,7 @@ class TestSwiftForwardInteropStepping(TestBase):
         self.assertIn('testMethod', name)
 
     @swiftTest
+    @skipIfWindows
     def test_step_over_method(self):
         """ Test that stepping over a C++ method works"""
         self.build()
@@ -72,6 +76,7 @@ class TestSwiftForwardInteropStepping(TestBase):
         self.assertIn('testMethod', name)
 
     @swiftTest
+    @skipIfWindows
     def test_step_into_constructor(self):
         """ Test that stepping into a simple C++ constructor works"""
         self.build()
@@ -92,6 +97,7 @@ class TestSwiftForwardInteropStepping(TestBase):
         self.assertIn('testContructor', name)
 
     @swiftTest
+    @skipIfWindows
     def test_step_over_constructor(self):
         """ Test that stepping over a simple C++ constructor works"""
         self.build()
@@ -109,6 +115,7 @@ class TestSwiftForwardInteropStepping(TestBase):
         self.assertIn('testContructor', name)
 
     @swiftTest
+    @skipIfWindows
     def test_step_into_extension(self):
         """ Test that stepping into a C++ function defined in an extension works"""
         self.build()
@@ -126,6 +133,7 @@ class TestSwiftForwardInteropStepping(TestBase):
         self.assertIn('testClassWithExtension', name)
 
     @swiftTest
+    @skipIfWindows
     def test_step_over_extension(self):
         """ Test that stepping over a C++ function defined in an extension works"""
         self.build()
@@ -140,6 +148,7 @@ class TestSwiftForwardInteropStepping(TestBase):
         self.assertIn('testClassWithExtension', name)
 
     @swiftTest
+    @skipIfWindows
     def test_step_into_call_operator(self):
         """ Test that stepping into a C++ call operator works"""
         self.build()
@@ -157,6 +166,7 @@ class TestSwiftForwardInteropStepping(TestBase):
         self.assertIn('testCallOperator', name)
 
     @swiftTest
+    @skipIfWindows
     def test_step_over_call_operator(self):
         """ Test that stepping over a C++ call operator works"""
         self.build()

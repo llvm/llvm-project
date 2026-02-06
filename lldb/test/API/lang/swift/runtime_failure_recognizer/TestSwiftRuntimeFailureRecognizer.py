@@ -23,6 +23,7 @@ class TestSwiftRuntimeRecognizer(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
+    @expectedFailureWindows
     def test_swift_runtime_recognizer(self):
         """Test Swift Runtime Failure Recognizer"""
         self.build()

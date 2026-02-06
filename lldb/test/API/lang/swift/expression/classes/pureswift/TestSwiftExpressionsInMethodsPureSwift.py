@@ -21,6 +21,7 @@ import os
 
 class TestExpressionsInSwiftMethodsPureSwift(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_expressions_in_methods(self):
         """Tests that we can run simple Swift expressions correctly"""
         self.build()

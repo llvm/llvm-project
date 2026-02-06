@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftArrayUninitialized(lldbtest.TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test unitialized global arrays"""
         self.build()

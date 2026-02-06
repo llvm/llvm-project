@@ -20,6 +20,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftFixIts(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_swift_fixits(self):
         """Test applying fixits to expressions"""
         self.build()

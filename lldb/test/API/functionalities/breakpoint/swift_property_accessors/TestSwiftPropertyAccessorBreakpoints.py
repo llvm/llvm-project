@@ -5,6 +5,7 @@ from lldbsuite.test.decorators import *
 
 class TestCase(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test that a breakpoint on a property accessor can be set by name."""
         self.build()

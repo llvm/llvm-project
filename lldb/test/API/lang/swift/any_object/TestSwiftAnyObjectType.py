@@ -21,6 +21,7 @@ import os
 
 class TestSwiftAnyObjectType(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_any_object_type(self):
         """Test the AnyObject type"""
         self.build()

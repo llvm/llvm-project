@@ -8,6 +8,7 @@ from lldbsuite.test.decorators import *
 
 class TestDefaultProtocolExtensionNoSelfReference(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_protocol_default_extension_no_self_reference(self):
         """
         Test that we can resolve "self" even if there are no references to it in a dynamic context

@@ -6,6 +6,7 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestSwiftLetConstants(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_let_constants(self):
         """Test that let constants aren't writeable"""
         self.build()

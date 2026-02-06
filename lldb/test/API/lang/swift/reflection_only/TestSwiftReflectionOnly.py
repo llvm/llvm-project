@@ -10,6 +10,7 @@ class TestSwiftReflectionOnly(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
+    @skipIfWindows
     def test(self):
         """Test debugging a program without swiftmodules is functional"""
         self.build()

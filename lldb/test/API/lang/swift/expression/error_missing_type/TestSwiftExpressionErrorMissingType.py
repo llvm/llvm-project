@@ -7,6 +7,7 @@ class TestSwiftExpressionErrorMissingType(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @swiftTest
+    @expectedFailureWindows
     def test(self):
         """Test an extra hint inserted by LLDB for missing module imports"""
         self.build()

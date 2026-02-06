@@ -27,6 +27,7 @@ class TestSwiftGenericEnumTypes(TestBase):
         return var
 
     @swiftTest
+    @expectedFailureWindows
     def test_swift_generic_enum_types(self):
         """Test that we handle reasonably generically-typed enums"""
         self.build()

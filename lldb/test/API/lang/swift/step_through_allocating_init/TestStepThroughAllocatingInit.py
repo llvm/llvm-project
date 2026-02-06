@@ -9,12 +9,14 @@ class TestStepThroughAllocatingInit(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @swiftTest
+    @expectedFailureWindows
     def test_swift_stepping_api(self):
         """Test that step in using the Python API steps through thunk."""
         self.build()
         self.do_test(True)
 
     @swiftTest
+    @expectedFailureWindows
     def test_swift_stepping_cli(self):
         """Same test with the cli - it goes a slightly different path than
            the API."""

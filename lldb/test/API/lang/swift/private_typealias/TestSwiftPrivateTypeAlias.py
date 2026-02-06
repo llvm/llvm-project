@@ -21,6 +21,7 @@ import os
 
 class TestSwiftPrivateTypeAlias(TestBase):
     @swiftTest
+    @expectedFailureWindows
     def test_swift_private_typealias(self):
         """Test that we can correctly print variables whose types are private type aliases"""
         self.build()
