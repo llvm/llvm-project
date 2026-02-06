@@ -284,7 +284,13 @@ public:
 FunctionPass *createX86CompressEVEXLegacyPass();
 
 /// This pass creates the thunks for the retpoline feature.
-FunctionPass *createX86IndirectThunksPass();
+class X86IndirectThunksPass : public PassInfoMixin<X86IndirectThunksPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86IndirectThunksLegacyPass();
 
 /// This pass replaces ret instructions with jmp's to __x86_return thunk.
 class X86ReturnThunksPass : public PassInfoMixin<X86ReturnThunksPass> {

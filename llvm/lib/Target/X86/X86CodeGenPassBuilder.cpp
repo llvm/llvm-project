@@ -205,8 +205,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   // hand inspection of the codegen output.
   addMachineFunctionPass(X86SpeculativeExecutionSideEffectSuppressionPass(),
                          PMW);
-  // TODO(boomanaiden154): Add X86IndirectThunksPass here
-  // once it has been ported.
+  addMachineFunctionPass(X86IndirectThunksPass(), PMW);
   addMachineFunctionPass(X86ReturnThunksPass(), PMW);
 
   // Insert extra int3 instructions after trailing call instructions to avoid

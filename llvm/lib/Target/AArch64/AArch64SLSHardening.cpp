@@ -135,7 +135,7 @@ private:
   }
 };
 
-struct SLSHardeningInserter : ThunkInserter<SLSHardeningInserter, ThunksSet> {
+struct SLSHardeningInserter : ThunkInserter<SLSHardeningInserter> {
 public:
   const char *getThunkPrefix() { return CommonNamePrefix.data(); }
   bool mayUseThunk(const MachineFunction &MF) {
@@ -145,20 +145,17 @@ public:
     return MF.getSubtarget<AArch64Subtarget>().hardenSlsBlr() ||
            MF.getSubtarget<AArch64Subtarget>().hardenSlsRetBr();
   }
-  ThunksSet insertThunks(MachineModuleInfo &MMI, MachineFunction &MF,
-                         ThunksSet ExistingThunks);
+  bool insertThunks(MachineModuleInfo &MMI, MachineFunction &MF);
   void populateThunk(MachineFunction &MF);
 
 private:
   bool ComdatThunks = true;
 
   bool hardenReturnsAndBRs(MachineModuleInfo &MMI, MachineBasicBlock &MBB);
-  bool hardenBLRs(MachineModuleInfo &MMI, MachineBasicBlock &MBB,
-                  ThunksSet &Thunks);
+  bool hardenBLRs(MachineModuleInfo &MMI, MachineBasicBlock &MBB);
 
   void convertBLRToBL(MachineModuleInfo &MMI, MachineBasicBlock &MBB,
-                      MachineBasicBlock::instr_iterator MBBI,
-                      ThunksSet &Thunks);
+                      MachineBasicBlock::instr_iterator MBBI);
 };
 
 } // end anonymous namespace
@@ -240,18 +237,18 @@ static void insertSpeculationBarrier(const AArch64Subtarget *ST,
     BuildMI(MBB, MBBI, DL, TII->get(BarrierOpc));
 }
 
-ThunksSet SLSHardeningInserter::insertThunks(MachineModuleInfo &MMI,
-                                             MachineFunction &MF,
-                                             ThunksSet ExistingThunks) {
+bool SLSHardeningInserter::insertThunks(MachineModuleInfo &MMI,
+                                        MachineFunction &MF) {
   const AArch64Subtarget *ST = &MF.getSubtarget<AArch64Subtarget>();
+  bool Modified = false;
 
   for (auto &MBB : MF) {
     if (ST->hardenSlsRetBr())
-      hardenReturnsAndBRs(MMI, MBB);
+      Modified |= hardenReturnsAndBRs(MMI, MBB);
     if (ST->hardenSlsBlr())
-      hardenBLRs(MMI, MBB, ExistingThunks);
+      Modified |= hardenBLRs(MMI, MBB);
   }
-  return ExistingThunks;
+  return Modified;
 }
 
 bool SLSHardeningInserter::hardenReturnsAndBRs(MachineModuleInfo &MMI,
@@ -382,7 +379,7 @@ void SLSHardeningInserter::populateThunk(MachineFunction &MF) {
 
 void SLSHardeningInserter::convertBLRToBL(
     MachineModuleInfo &MMI, MachineBasicBlock &MBB,
-    MachineBasicBlock::instr_iterator MBBI, ThunksSet &Thunks) {
+    MachineBasicBlock::instr_iterator MBBI) {
   // Transform a BLR* instruction (one of BLR, BLRAA/BLRAB or BLRAAZ/BLRABZ) to
   // a BL to the thunk containing BR, BRAA/BRAB or BRAAZ/BRABZ, respectively.
   //
@@ -439,11 +436,9 @@ void SLSHardeningInserter::convertBLRToBL(
   auto ThunkName = createThunkName(Kind, Xn, Xm);
   MCSymbol *Sym = Context.getOrCreateSymbol(ThunkName);
 
-  if (!Thunks.get(Kind.Id, Xn, Xm)) {
-    StringRef TargetAttrs = Kind.NeedsPAuth ? "+pauth" : "";
-    Thunks.set(Kind.Id, Xn, Xm);
-    createThunkFunction(MMI, ThunkName, ComdatThunks, TargetAttrs);
-  }
+  const AArch64Subtarget *ST =
+      &MBB.getParent()->getSubtarget<AArch64Subtarget>();
+  createThunkFunction(MMI, ThunkName, ComdatThunks, ST->hasBTI() ? "+bti" : "");
 
   MachineInstr *BL = BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL)).addSym(Sym);
 
@@ -488,8 +483,7 @@ void SLSHardeningInserter::convertBLRToBL(
 }
 
 bool SLSHardeningInserter::hardenBLRs(MachineModuleInfo &MMI,
-                                      MachineBasicBlock &MBB,
-                                      ThunksSet &Thunks) {
+                                      MachineBasicBlock &MBB) {
   bool Modified = false;
   MachineBasicBlock::instr_iterator MBBI = MBB.instr_begin(),
                                     E = MBB.instr_end();
@@ -498,7 +492,7 @@ bool SLSHardeningInserter::hardenBLRs(MachineModuleInfo &MMI,
     MachineInstr &MI = *MBBI;
     NextMBBI = std::next(MBBI);
     if (isBLR(MI)) {
-      convertBLRToBL(MMI, MBB, MBBI, Thunks);
+      convertBLRToBL(MMI, MBB, MBBI);
       Modified = true;
     }
   }
@@ -506,11 +500,12 @@ bool SLSHardeningInserter::hardenBLRs(MachineModuleInfo &MMI,
 }
 
 namespace {
-class AArch64SLSHardening : public ThunkInserterPass<SLSHardeningInserter> {
+class AArch64SLSHardening
+    : public ThunkInserterLegacyPass<SLSHardeningInserter> {
 public:
   static char ID;
 
-  AArch64SLSHardening() : ThunkInserterPass(ID) {}
+  AArch64SLSHardening() : ThunkInserterLegacyPass(ID) {}
 
   StringRef getPassName() const override { return AARCH64_SLS_HARDENING_NAME; }
 };
