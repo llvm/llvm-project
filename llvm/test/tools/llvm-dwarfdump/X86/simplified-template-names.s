@@ -12,8 +12,8 @@
 clang --target=x86_64-linux -g -Xclang -gsimple-template-names=mangled -Xclang -debug-forward-template-params -S -std=c++20 -fdebug-prefix-map="$LLVM_SRC_ROOT"=/proc/self/cwd "$LLVM_SRC_ROOT"/cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/Inputs/simplified_template_names.cpp -o -
 .endif
 	.file	"simplified_template_names.cpp"
-	.file	0 "/proc/self/cwd" "/proc/self/cwd/cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/Inputs/simplified_template_names.cpp" md5 0x6c4ca5225fdfcf633948c0fdf3b1beb0
-	.file	1 "cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/Inputs" "simplified_template_names.cpp" md5 0x6c4ca5225fdfcf633948c0fdf3b1beb0
+	.file	0 "/proc/self/cwd" "/proc/self/cwd/cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/Inputs/simplified_template_names.cpp" md5 0xaf88d5278ad7b2df17933c22083c1f2e
+	.file	1 "cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/Inputs" "simplified_template_names.cpp" md5 0xaf88d5278ad7b2df17933c22083c1f2e
 	.text
 	.globl	_Zli5_suffy                     # -- Begin function _Zli5_suffy
 	.p2align	4
@@ -3812,9 +3812,9 @@ _ZN18ptr_to_member_test4testEv:         # @_ZN18ptr_to_member_test4testEv
 	movq	%rsp, %rbp
 	.cfi_def_cfa_register %rbp
 .Ltmp280:
-	.loc	1 285 3 prologue_end            # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/Inputs/simplified_template_names.cpp:285:3
+	.loc	1 284 15 prologue_end           # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/Inputs/simplified_template_names.cpp:284:15
 	callq	_ZN18ptr_to_member_test1fIXadL_ZNS_1S8data_memEEEEEvv
-	.loc	1 286 1 epilogue_begin          # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/Inputs/simplified_template_names.cpp:286:1
+	.loc	1 284 34 epilogue_begin is_stmt 0 # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/Inputs/simplified_template_names.cpp:284:34
 	popq	%rbp
 	.cfi_def_cfa %rsp, 8
 	retq
@@ -3829,7 +3829,7 @@ _ZN18ptr_to_member_test4testEv:         # @_ZN18ptr_to_member_test4testEv
 	.type	_ZN18ptr_to_member_test1fIXadL_ZNS_1S8data_memEEEEEvv,@function
 _ZN18ptr_to_member_test1fIXadL_ZNS_1S8data_memEEEEEvv: # @_ZN18ptr_to_member_test1fIXadL_ZNS_1S8data_memEEEEEvv
 .Lfunc_begin144:
-	.loc	1 283 0                         # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/Inputs/simplified_template_names.cpp:283:0
+	.loc	1 283 0 is_stmt 1               # cross-project-tests/debuginfo-tests/clang_llvm_roundtrip/Inputs/simplified_template_names.cpp:283:0
 	.cfi_startproc
 # %bb.0:
 	pushq	%rbp
