@@ -1346,7 +1346,8 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
       continue;
     }
 
-    // Check for zero-cost InsertElement/ExtractElement instructions
+    // Check for zero-cost multiple use InsertElement/ExtractElement
+    // instructions
     if (Instruction *OpInst = dyn_cast<Instruction>(Op.get())) {
       if (OpInst->getType()->isVectorTy() && OpInst->getNumOperands() > 1) {
         Instruction *VecOpInst = dyn_cast<Instruction>(OpInst->getOperand(0));
@@ -1370,7 +1371,6 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
 
       // For i32 (or greater) shufflevectors, these will be lowered into a
       // series of insert / extract elements, which will be coalesced away.
-
       if (EltSize < 16 || !ST->has16BitInsts())
         continue;
 
