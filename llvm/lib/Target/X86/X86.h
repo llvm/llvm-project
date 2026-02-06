@@ -66,7 +66,14 @@ FunctionPass *createX86IssueVZeroUpperPass();
 
 /// This pass inserts ENDBR instructions before indirect jump/call
 /// destinations as part of CET IBT mechanism.
-FunctionPass *createX86IndirectBranchTrackingPass();
+class X86IndirectBranchTrackingPass
+    : public PassInfoMixin<X86IndirectBranchTrackingPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86IndirectBranchTrackingLegacyPass();
 
 /// Return a pass that pads short functions with NOOPs.
 /// This will prevent a stall when returning on the Atom.
@@ -430,7 +437,6 @@ void initializeWinEHStatePassPass(PassRegistry &);
 void initializeX86AvoidSFBLegacyPass(PassRegistry &);
 void initializeX86AvoidTrailingCallLegacyPassPass(PassRegistry &);
 void initializeX86CallFrameOptimizationLegacyPass(PassRegistry &);
-void initializeX86CleanupLocalDynamicTLSLegacyPass(PassRegistry &);
 void initializeX86CmovConversionLegacyPass(PassRegistry &);
 void initializeX86DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeX86DomainReassignmentLegacyPass(PassRegistry &);
@@ -442,6 +448,7 @@ void initializeX86FastPreTileConfigLegacyPass(PassRegistry &);
 void initializeX86FastTileConfigLegacyPass(PassRegistry &);
 void initializeX86FixupSetCCLegacyPass(PassRegistry &);
 void initializeX86FlagsCopyLoweringLegacyPass(PassRegistry &);
+void initializeX86IndirectBranchTrackingLegacyPass(PassRegistry &);
 void initializeX86LoadValueInjectionLoadHardeningLegacyPass(PassRegistry &);
 void initializeX86LoadValueInjectionRetHardeningLegacyPass(PassRegistry &);
 void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);

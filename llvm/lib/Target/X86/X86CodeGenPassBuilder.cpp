@@ -173,8 +173,7 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
     addMachineFunctionPass(BreakFalseDepsPass(), PMW);
   }
 
-  // TODO(boomanaiden154): Add X86IndirectBranchTrackingPass here once it has
-  // been ported.
+  addMachineFunctionPass(X86IndirectBranchTrackingPass(), PMW);
   // TODO(boomanaiden154): Add X86IssueVZeroUpperPass here once it has been
   // ported.
 
