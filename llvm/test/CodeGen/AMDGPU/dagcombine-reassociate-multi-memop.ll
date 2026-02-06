@@ -10,10 +10,10 @@ declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1), i
 declare void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8), ptr addrspace(3) nocapture, i32, i32, i32, i32, i32)
 declare i32 @llvm.amdgcn.workitem.id.x()
 
-; CHECK-LABEL: triton_mm_minimal:
-; CHECK: buffer_load_dwordx4
-; CHECK: buffer_load_dwordx4
-define amdgpu_kernel void @triton_mm_minimal(ptr addrspace(1) inreg %ptr) {
+; CHECK-LABEL: buffer_load_lds_reassociate_offsets:
+; CHECK: buffer_load_dwordx4 v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, 0 offen lds
+; CHECK: buffer_load_dwordx4 v{{[0-9]+}}, s{{\[[0-9]+:[0-9]+\]}}, 0 offen lds
+define amdgpu_kernel void @buffer_load_lds_reassociate_offsets(ptr addrspace(1) inreg %ptr) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   ; Create a pattern that will be reassociated: (add (add base, 1024), 32)
   ; where base comes from mul, creating nested adds
