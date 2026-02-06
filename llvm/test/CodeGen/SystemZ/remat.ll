@@ -109,19 +109,16 @@ define i32 @constglobal_load() nounwind {
 ; CHECK-LABEL: constglobal_load:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stmg %r6, %r15, 48(%r15)
-; CHECK-NEXT:    aghi %r15, -168
-; CHECK-NEXT:    lgrl %r1, const@GOT
-; CHECK-NEXT:    lhi %r0, 1
-; CHECK-NEXT:    a %r0, 0(%r1)
-; CHECK-NEXT:    st %r0, 164(%r15) # 4-byte Spill
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    l %r2, 164(%r15) # 4-byte Reload
-; CHECK-NEXT:    lmg %r6, %r15, 216(%r15)
+; CHECK-NEXT:    lhi %r2, 1
+; CHECK-NEXT:    lgrl %r1, const@GOT
+; CHECK-NEXT:    a %r2, 0(%r1)
+; CHECK-NEXT:    lmg %r6, %r15, 48(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
   %global = load i32, ptr @const
-  tail call void asm sideeffect "", "~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14} ~{r15}"()
+  tail call void asm sideeffect "", "~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15}"()
   %a = add i32 %global, 1
   ret i32 %a
 }
