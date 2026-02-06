@@ -305,7 +305,7 @@ cc_library(
         "@platforms//cpu:aarch64": [
             "lib/Support/BLAKE3/blake3_neon.c",
         ],
-        "@platforms//cpu:x86_64": ":blake3_x86_64_asm",
+        "@platforms//cpu:x86_64": [":blake3_x86_64_asm"],
         "//conditions:default": [
         ],
     }),
