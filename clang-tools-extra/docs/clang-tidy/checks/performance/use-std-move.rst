@@ -1,7 +1,7 @@
-.. title:: clang-tidy - performance-inefficient-copy-assign
+.. title:: clang-tidy - performance-use-std-move
 
-performance-inefficient-copy-assign
-===================================
+performance-use-std-move
+========================
 
 Suggests insertion of ``std::move(...)`` to turn copy assignment operator calls
 into move assignment ones, when deemed valid and profitable.

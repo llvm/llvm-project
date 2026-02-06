@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_INEFFICIENTCOPYASSIGNCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_INEFFICIENTCOPYASSIGNCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_USESTDMOVECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_USESTDMOVECHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -15,20 +15,21 @@
 
 namespace clang::tidy::performance {
 
-class InefficientCopyAssignCheck : public ClangTidyCheck {
-  llvm::DenseMap<const FunctionDecl *, std::unique_ptr<CFG>> CFGCache;
-  CFG *getCFG(const FunctionDecl *, ASTContext *);
-
+class UseStdMoveCheck : public ClangTidyCheck {
 public:
-  InefficientCopyAssignCheck(StringRef Name, ClangTidyContext *Context)
+  UseStdMoveCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context) {}
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus11;
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  llvm::DenseMap<const FunctionDecl *, std::unique_ptr<CFG>> CFGCache;
+  const CFG *getCFG(const FunctionDecl *, ASTContext *);
 };
 
 } // namespace clang::tidy::performance
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_INEFFICIENTCOPYASSIGNCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_USESTDMOVECHECK_H

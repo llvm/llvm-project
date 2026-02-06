@@ -354,7 +354,6 @@ Clang-Tidy Checks
    :doc:`performance-for-range-copy <performance/for-range-copy>`, "Yes"
    :doc:`performance-implicit-conversion-in-loop <performance/implicit-conversion-in-loop>`,
    :doc:`performance-inefficient-algorithm <performance/inefficient-algorithm>`, "Yes"
-   :doc:`performance-inefficient-copy-assign <performance/inefficient-copy-assign>`,
    :doc:`performance-inefficient-string-concatenation <performance/inefficient-string-concatenation>`,
    :doc:`performance-inefficient-vector-operation <performance/inefficient-vector-operation>`, "Yes"
    :doc:`performance-move-const-arg <performance/move-const-arg>`, "Yes"
@@ -369,6 +368,7 @@ Clang-Tidy Checks
    :doc:`performance-type-promotion-in-math-fn <performance/type-promotion-in-math-fn>`, "Yes"
    :doc:`performance-unnecessary-copy-initialization <performance/unnecessary-copy-initialization>`, "Yes"
    :doc:`performance-unnecessary-value-param <performance/unnecessary-value-param>`, "Yes"
+   :doc:`performance-use-std-move <performance/use-std-move>`,
    :doc:`portability-avoid-pragma-once <portability/avoid-pragma-once>`,
    :doc:`portability-restrict-system-includes <portability/restrict-system-includes>`, "Yes"
    :doc:`portability-simd-intrinsics <portability/simd-intrinsics>`,

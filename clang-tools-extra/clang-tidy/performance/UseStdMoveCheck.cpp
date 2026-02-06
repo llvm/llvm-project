@@ -1,4 +1,4 @@
-//===--- InefficientCopyAssignCheck.cpp - clang-tidy ----------------------===//
+//===--- UseStdMoveCheck.cpp - clang-tidy ---------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "InefficientCopyAssignCheck.h"
+#include "UseStdMoveCheck.h"
 
 #include "../utils/DeclRefExprUtils.h"
 
@@ -21,26 +21,38 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::performance {
 
+namespace {
+AST_MATCHER(CXXRecordDecl, hasTrivialMoveAssignment) {
+  return Node.hasTrivialMoveAssignment();
+}
+
+// Ignore nodes inside macros.
+AST_POLYMORPHIC_MATCHER(isInMacro,
+                        AST_POLYMORPHIC_SUPPORTED_TYPES(Stmt, Decl)) {
+  return Node.getBeginLoc().isMacroID() || Node.getEndLoc().isMacroID();
+}
+} // namespace
+
 using utils::decl_ref_expr::allDeclRefExprs;
 
-void InefficientCopyAssignCheck::registerMatchers(MatchFinder *Finder) {
+void UseStdMoveCheck::registerMatchers(MatchFinder *Finder) {
   auto AssignOperatorExpr =
       cxxOperatorCallExpr(
           hasOperatorName("="),
           hasArgument(
-              0, hasType(cxxRecordDecl(hasMethod(isMoveAssignmentOperator()))
-                             .bind("assign-target-type"))),
+              0, hasType(cxxRecordDecl(hasMethod(isMoveAssignmentOperator()),
+                                       unless(hasTrivialMoveAssignment())))),
           hasArgument(
               1, declRefExpr(
                      to(varDecl(hasLocalStorage()).bind("assign-value-decl")))
                      .bind("assign-value")),
-          hasAncestor(functionDecl().bind("within-func")))
+          hasAncestor(functionDecl().bind("within-func")), unless(isInMacro()))
           .bind("assign");
   Finder->addMatcher(AssignOperatorExpr, this);
 }
 
-CFG *InefficientCopyAssignCheck::getCFG(const FunctionDecl *FD,
-                                        ASTContext *Context) {
+const CFG *UseStdMoveCheck::getCFG(const FunctionDecl *FD,
+                                   ASTContext *Context) {
   std::unique_ptr<CFG> &TheCFG = CFGCache[FD];
   if (!TheCFG) {
     const CFG::BuildOptions Options;
@@ -53,13 +65,11 @@ CFG *InefficientCopyAssignCheck::getCFG(const FunctionDecl *FD,
   return TheCFG.get();
 }
 
-void InefficientCopyAssignCheck::check(const MatchFinder::MatchResult &Result) {
+void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *AssignExpr = Result.Nodes.getNodeAs<Expr>("assign");
   const auto *AssignValue = Result.Nodes.getNodeAs<DeclRefExpr>("assign-value");
   const auto *AssignValueDecl =
       Result.Nodes.getNodeAs<VarDecl>("assign-value-decl");
-  const auto *AssignTargetType =
-      Result.Nodes.getNodeAs<CXXRecordDecl>("assign-target-type");
   const auto *WithinFunctionDecl =
       Result.Nodes.getNodeAs<FunctionDecl>("within-func");
 
@@ -68,30 +78,29 @@ void InefficientCopyAssignCheck::check(const MatchFinder::MatchResult &Result) {
       AssignValueQual.isConstQualified() || AssignValueQual->isScalarType())
     return;
 
-  if (AssignTargetType->hasTrivialMoveAssignment())
+  const CFG *TheCFG = getCFG(WithinFunctionDecl, Result.Context);
+  if (!TheCFG)
     return;
 
-  if (CFG *TheCFG = getCFG(WithinFunctionDecl, Result.Context)) {
-    // Walk the CFG bottom-up, starting with the exit node.
-    // TODO: traverse the whole CFG instead of only considering terminator
-    // nodes.
+  // Walk the CFG bottom-up, starting with the exit node.
+  // TODO: traverse the whole CFG instead of only considering terminator
+  // nodes.
 
-    CFGBlock &TheExit = TheCFG->getExit();
-    for (auto &Pred : TheExit.preds()) {
-      for (const CFGElement &Elt : llvm::reverse(*Pred)) {
-        if (Elt.getKind() == CFGElement::Kind::Statement) {
-          const Stmt *EltStmt = Elt.castAs<CFGStmt>().getStmt();
-          if (EltStmt == AssignExpr) {
-            diag(AssignValue->getBeginLoc(), "'%0' could be moved here")
-                << AssignValue->getDecl()->getName();
-            break;
-          }
-          // The reference is being referenced before the assignment, bail out.
-          if (!allDeclRefExprs(*cast<VarDecl>(AssignValue->getDecl()), *EltStmt,
-                               *Result.Context)
-                   .empty())
-            break;
+  const CFGBlock &TheExit = TheCFG->getExit();
+  for (auto &Pred : TheExit.preds()) {
+    for (const CFGElement &Elt : llvm::reverse(*Pred)) {
+      if (Elt.getKind() == CFGElement::Kind::Statement) {
+        const Stmt *EltStmt = Elt.castAs<CFGStmt>().getStmt();
+        if (EltStmt == AssignExpr) {
+          diag(AssignValue->getBeginLoc(), "'%0' could be moved here")
+              << AssignValue->getDecl()->getName();
+          break;
         }
+        // The reference is being referenced before the assignment, bail out.
+        if (!allDeclRefExprs(*cast<VarDecl>(AssignValue->getDecl()), *EltStmt,
+                             *Result.Context)
+                 .empty())
+          break;
       }
     }
   }

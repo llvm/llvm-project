@@ -14,7 +14,6 @@
 #include "ForRangeCopyCheck.h"
 #include "ImplicitConversionInLoopCheck.h"
 #include "InefficientAlgorithmCheck.h"
-#include "InefficientCopyAssignCheck.h"
 #include "InefficientStringConcatenationCheck.h"
 #include "InefficientVectorOperationCheck.h"
 #include "MoveConstArgCheck.h"
@@ -29,6 +28,7 @@
 #include "TypePromotionInMathFnCheck.h"
 #include "UnnecessaryCopyInitializationCheck.h"
 #include "UnnecessaryValueParamCheck.h"
+#include "UseStdMoveCheck.h"
 
 namespace clang::tidy {
 namespace performance {
@@ -47,8 +47,6 @@ public:
         "performance-implicit-conversion-in-loop");
     CheckFactories.registerCheck<InefficientAlgorithmCheck>(
         "performance-inefficient-algorithm");
-    CheckFactories.registerCheck<InefficientCopyAssignCheck>(
-        "performance-inefficient-copy-assign");
     CheckFactories.registerCheck<InefficientStringConcatenationCheck>(
         "performance-inefficient-string-concatenation");
     CheckFactories.registerCheck<InefficientVectorOperationCheck>(
@@ -76,6 +74,7 @@ public:
         "performance-unnecessary-copy-initialization");
     CheckFactories.registerCheck<UnnecessaryValueParamCheck>(
         "performance-unnecessary-value-param");
+    CheckFactories.registerCheck<UseStdMoveCheck>("performance-use-std-move");
   }
 };
 

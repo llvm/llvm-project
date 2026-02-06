@@ -1,11 +1,15 @@
-// RUN: %check_clang_tidy %s performance-inefficient-copy-assign %t
+// RUN: %check_clang_tidy %s performance-use-std-move %t
 
 // Definitions used in the tests
 // -----------------------------
 
 struct NonTrivialMoveAssign {
+  NonTrivialMoveAssign() = default;
+  NonTrivialMoveAssign(const NonTrivialMoveAssign&) = default;
+
   NonTrivialMoveAssign& operator=(const NonTrivialMoveAssign&);
   NonTrivialMoveAssign& operator=(NonTrivialMoveAssign&&);
+
   NonTrivialMoveAssign& operator+=(const NonTrivialMoveAssign&);
   NonTrivialMoveAssign& operator+=(NonTrivialMoveAssign&&);
   void stuff();
@@ -28,7 +32,7 @@ void use(T&) {}
 // ------------------------------------------------
 
 void ConvertibleNonTrivialMoveAssign(NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
-  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
   target = source;
 }
 
@@ -38,7 +42,76 @@ void NonProfitableNonTrivialMoveAssignPointer(NonTrivialMoveAssign*& target, Non
 }
 
 void ConvertibleNonTrivialMoveAssignFromLValue(NonTrivialMoveAssign& target, NonTrivialMoveAssign&& source) {
-  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
+  target = source;
+}
+
+// Check moving within different context
+// -------------------------------------
+
+struct SomeRecord {
+void ConvertibleNonTrivialMoveAssignWithinMethod(NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
+  target = source;
+}
+};
+
+auto ConvertibleNonTrivialMoveAssignWithinLambda = [](NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
+  target = source;
+};
+
+#if 0
+void SomeFunction(NonTrivialMoveAssign source0, NonTrivialMoveAssign const &source1) {
+
+auto NonConvertibleNonTrivialMoveAssignWithinLambdaAsCaptureByRef = [&](NonTrivialMoveAssign& target) {
+  // No message expected, cannot move a non-local variable.
+  target = source0;
+  // No message expected, cannot move a non-local variable.
+  target = source1;
+};
+
+auto ConvertibleNonTrivialMoveAssignWithinLambdaAsCapture = [=](NonTrivialMoveAssign& target) {
+  // No message expected, cannot move a non-local variable.
+  target = source0;
+  // No message expected, cannot move a non-local variable.
+  target = source1;
+};
+
+}
+#endif
+
+void ConvertibleNonTrivialMoveAssignShadowing(NonTrivialMoveAssign& target, NoMoveAssign source) {
+  {
+    NonTrivialMoveAssign source;
+    // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-use-std-move]
+    target = source;
+  }
+}
+
+void ConvertibleNonTrivialMoveAssignShadowed(NoMoveAssign& target, NonTrivialMoveAssign source) {
+  {
+    NoMoveAssign source;
+    // No message expected, `source' refers to a non-movable variable.
+    target = source;
+  }
+}
+
+#define ASSIGN(x, y) x = y
+void ConvertibleNonTrivialMoveAssignWithinMacro(NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  // No message expected, assignment within a macro.
+  ASSIGN(target, source);
+}
+
+template<class T>
+void ConvertibleNonTrivialMoveAssignWithTemplateSource(NonTrivialMoveAssign& target, T source) {
+  // No message expected, type of source cannot be matched against `target's type.
+  target = source;
+}
+
+template<class T>
+void ConvertibleNonTrivialMoveAssignWithTemplateTarget(T& target, NonTrivialMoveAssign source) {
+  // No message expected, type of target cannot be matched against `source's type.
   target = source;
 }
 
@@ -53,7 +126,7 @@ void NonConvertibleNonTrivialMoveAssignFromLocal(NonTrivialMoveAssign& target) {
 
 void NonConvertibleNonTrivialMoveAssignFromConst(NonTrivialMoveAssign& target) {
   NonTrivialMoveAssign source;
-  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
   target = source;
 }
 
@@ -62,6 +135,14 @@ void NonConvertibleNonTrivialMoveAssignFromStatic(NonTrivialMoveAssign& target) 
   // No message, the lifetime of `source' does not end with the scope of the function.
   target = source;
 }
+
+struct NonConvertibleNonTrivialMoveAssignFromMember {
+  NonTrivialMoveAssign source;
+  void NonConvertibleNonTrivialMoveAssignFromStatic(NonTrivialMoveAssign& target) {
+    // No message, `source' is not a local variable.
+    target = source;
+  }
+};
 
 void NonConvertibleNonTrivialMoveAssignFromExtern(NonTrivialMoveAssign& target) {
   extern NonTrivialMoveAssign source;
@@ -87,25 +168,33 @@ void NonConvertibleNonTrivialMoveAssignToGlobal(NonTrivialMoveAssign& target) {
 
 void ConvertibleNonTrivialMoveAssignToStatic(NonTrivialMoveAssign source) {
   static NonTrivialMoveAssign target;
-  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
   target = source;
 }
 
+struct ConvertibleNonTrivialMoveAssignToMember {
+  NonTrivialMoveAssign target;
+  void NonConvertibleNonTrivialMoveAssignFromStatic(NonTrivialMoveAssign source) {
+    // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-use-std-move]
+    target = source;
+  }
+};
+
 void ConvertibleNonTrivialMoveAssignToExtern(NonTrivialMoveAssign source) {
   extern NonTrivialMoveAssign target;
-  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
   target = source;
 }
 
 void ConvertibleNonTrivialMoveAssignToTLS(NonTrivialMoveAssign source) {
   thread_local NonTrivialMoveAssign target;
-  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
   target = source;
 }
 
 NonTrivialMoveAssign global_target;
 void ConvertibleNonTrivialMoveAssignToGlobal(NonTrivialMoveAssign source) {
-  // CHECK-MESSAGES: [[@LINE+1]]:19: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+  // CHECK-MESSAGES: [[@LINE+1]]:19: warning: 'source' could be moved here [performance-use-std-move]
   global_target = source;
 }
 
@@ -124,7 +213,7 @@ void NonProfitableTrivialMoveAssign(TrivialMoveAssign& target, TrivialMoveAssign
 
 void ConvertibleNonTrivialMoveAssignWithBranching(bool cond, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
   if(cond) {
-    // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+    // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-use-std-move]
     target = source;
   }
 }
@@ -139,12 +228,12 @@ void NonConvertibleNonTrivialMoveAssignWithBranchingAndUse(bool cond, NonTrivial
 
 void ConvertibleNonTrivialMoveAssignBothBranches(bool cond, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
   if(cond) {
-    // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+    // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-use-std-move]
     target = source;
   }
   else {
     source.stuff();
-    // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+    // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-use-std-move]
     target = source;
   }
 }

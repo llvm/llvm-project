@@ -10,7 +10,6 @@ add_clang_library(clangTidyPerformanceModule STATIC
   ForRangeCopyCheck.cpp
   ImplicitConversionInLoopCheck.cpp
   InefficientAlgorithmCheck.cpp
-  InefficientCopyAssignCheck.cpp
   InefficientStringConcatenationCheck.cpp
   InefficientVectorOperationCheck.cpp
   MoveConstArgCheck.cpp
@@ -27,6 +26,7 @@ add_clang_library(clangTidyPerformanceModule STATIC
   TypePromotionInMathFnCheck.cpp
   UnnecessaryCopyInitializationCheck.cpp
   UnnecessaryValueParamCheck.cpp
+  UseStdMoveCheck.cpp
 
   LINK_LIBS
   clangTidy
