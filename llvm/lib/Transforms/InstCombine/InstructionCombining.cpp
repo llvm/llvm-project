@@ -3375,7 +3375,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
         Value *NewIdx = Builder.CreateURem(X, DivC, OldIdxI->getName());
 
         auto *NewGEP = GetElementPtrInst::Create(GEPEltType, PtrOp, {NewIdx},
-                                                 GEP.getName(), &GEP);
+                                                 GEP.getName(), GEP.getIterator());
         NewGEP->setIsInBounds(GEP.isInBounds());
         NewGEP->setNoWrapFlags(GEP.getNoWrapFlags());
         NewGEP->setDebugLoc(GEP.getDebugLoc());
