@@ -46,10 +46,10 @@ protected:
   getEntities(const EntityIdTable &EIT);
   static decltype(EntityIdTable::Entities) &getEntities(EntityIdTable &EIT);
 
-  static const EntityIdTable &getIdTable(const TUSummary &S);
-  static EntityIdTable &getIdTable(TUSummary &S);
   static const BuildNamespace &getTUNamespace(const TUSummary &S);
   static BuildNamespace &getTUNamespace(TUSummary &S);
+  static const EntityIdTable &getIdTable(const TUSummary &S);
+  static EntityIdTable &getIdTable(TUSummary &S);
   static const decltype(TUSummary::Data) &getData(const TUSummary &S);
   static decltype(TUSummary::Data) &getData(TUSummary &S);
 
@@ -71,7 +71,7 @@ public:
   virtual llvm::Expected<TUSummary> readTUSummary(llvm::StringRef Path) = 0;
 
   virtual llvm::Error writeTUSummary(const TUSummary &Summary,
-                                     llvm::StringRef OutputDir) = 0;
+                                     llvm::StringRef Path) = 0;
 
 protected:
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;

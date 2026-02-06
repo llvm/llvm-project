@@ -48,7 +48,7 @@ public:
   llvm::Expected<TUSummary> readTUSummary(llvm::StringRef Path) override;
 
   llvm::Error writeTUSummary(const TUSummary &Summary,
-                             llvm::StringRef OutputDir) override;
+                             llvm::StringRef Path) override;
 
   using SerializerFn = llvm::function_ref<llvm::json::Object(
       const EntitySummary &, const EntityIdConverter &)>;
