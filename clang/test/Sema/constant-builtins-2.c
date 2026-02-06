@@ -502,6 +502,8 @@ int h21 = __builtin_bswapg((_BitInt(64))0x0000000000001234) == (_BitInt(64))0x34
 int h22 = __builtin_bswapg(~(_BitInt(128))0) == (~(_BitInt(128))0) ? 1 : f();
 int h23 = __builtin_bswapg((_BitInt(24))0x1234) == (_BitInt(24))0x3412 ? 1 : f();
 // expected-error@-1 {{_BitInt type '_BitInt(24)' (24 bits) must be a multiple of 16 bits for byte swapping}}
+int h23a = __builtin_bswapg((_BitInt(3))0x3) == (_BitInt(3))0x3 ? 1 : f();
+// expected-error@-1 {{_BitInt type '_BitInt(3)' (3 bits) must be a multiple of 16 bits for byte swapping}}
 
 char h24[__builtin_bitreverseg((char)0x01) == (char)0x80 ? 1 : -1];
 char h25[__builtin_bitreverseg((short)0x3C48) == (short)0x123C ? 1 : -1];
