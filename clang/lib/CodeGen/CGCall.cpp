@@ -2800,7 +2800,13 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     const auto *DD = dyn_cast_if_present<CXXDestructorDecl>(
         CalleeInfo.getCalleeDecl().getDecl());
-    if (DD && CodeGenOpts.StrictLifetimes) {
+    // Do not annotate vector deleting destructors with dead_on_return as the
+    // this pointer in that case points to an array which we cannot
+    // statically know the size of.
+    if (DD &&
+        CalleeInfo.getCalleeDecl().getDtorType() !=
+            CXXDtorType::Dtor_VectorDeleting &&
+        CodeGenOpts.StrictLifetimes) {
       const CXXRecordDecl *ClassDecl =
           dyn_cast<CXXRecordDecl>(DD->getDeclContext());
       // TODO(boomanaiden154): We are being intentionally conservative here

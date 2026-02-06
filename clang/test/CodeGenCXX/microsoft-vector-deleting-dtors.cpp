@@ -111,8 +111,8 @@ void bar() {
 // CHECK-NEXT:   %[[VTABLE:.*]] = load ptr, ptr %[[LPTR]]
 // CHECK-NEXT:   %[[FPGEP:.*]] = getelementptr inbounds ptr, ptr %[[VTABLE]], i64 0
 // CHECK-NEXT:   %[[FPLOAD:.*]]  = load ptr, ptr %[[FPGEP]]
-// X64-NEXT:   %[[CALL:.*]] = call noundef ptr %[[FPLOAD]](ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %[[LPTR]], i32 noundef 3)
-// X86-NEXT:   %[[CALL:.*]] = call x86_thiscallcc noundef ptr %[[FPLOAD]](ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %[[LPTR]], i32 noundef 3)
+// X64-NEXT:   %[[CALL:.*]] = call noundef ptr %[[FPLOAD]](ptr noundef nonnull align 8 dereferenceable(8) %[[LPTR]], i32 noundef 3)
+// X86-NEXT:   %[[CALL:.*]] = call x86_thiscallcc noundef ptr %[[FPLOAD]](ptr noundef nonnull align 4 dereferenceable(4) %[[LPTR]], i32 noundef 3)
 // CHECK-NEXT:   br label %delete.end
 // CHECK: delete.end:
 // CHECK-NEXT:   ret void
@@ -239,10 +239,10 @@ void bar() {
 // CHECK-NEXT:   ret ptr %[[LOADRET]]
 
 // X64: define weak dso_local noundef ptr @"??_EJustAWeirdBird@@UEAAPEAXI@Z"(
-// X64-SAME: ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %this, i32 noundef %should_call_delete)
+// X64-SAME: ptr noundef nonnull align 8 dereferenceable(8) %this, i32 noundef %should_call_delete)
 // CLANG21: define linkonce_odr dso_local noundef ptr @"??_GJustAWeirdBird@@UEAAPEAXI@Z"(
 // X86: define weak dso_local x86_thiscallcc noundef ptr @"??_EJustAWeirdBird@@UAEPAXI@Z"(
-// X86-SAME: ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %this, i32 noundef %should_call_delete) unnamed_addr
+// X86-SAME: ptr noundef nonnull align 4 dereferenceable(4) %this, i32 noundef %should_call_delete) unnamed_addr
 
 // X64-LABEL: define weak dso_local noundef ptr @"??_EHasOperatorDelete@@UEAAPEAXI@Z"
 // X86-LABEL: define weak dso_local x86_thiscallcc noundef ptr @"??_EHasOperatorDelete@@UAEPAXI@Z"

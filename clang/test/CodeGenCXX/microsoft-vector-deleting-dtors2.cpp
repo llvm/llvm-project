@@ -75,8 +75,8 @@ void TesttheTest() {
 // X86: call void @"??3@YAXPAXI@Z"(ptr noundef %this1, i32 noundef {{.*}})
 
 
-// X64: define weak dso_local noundef ptr @"??_ETest@@UEAAPEAXI@Z"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %this, i32 noundef %should_call_delete)
-// X86: define weak dso_local x86_thiscallcc noundef ptr @"??_ETest@@UAEPAXI@Z"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %this, i32 noundef %should_call_delete)
+// X64: define weak dso_local noundef ptr @"??_ETest@@UEAAPEAXI@Z"(ptr noundef nonnull align 8 dereferenceable(8) %this, i32 noundef %should_call_delete)
+// X86: define weak dso_local x86_thiscallcc noundef ptr @"??_ETest@@UAEPAXI@Z"(ptr noundef nonnull align 4 dereferenceable(4) %this, i32 noundef %should_call_delete)
 // CHECK: dtor.call_delete_after_array_destroy:
 // CHECK-NEXT:  call void @llvm.trap()
 // CHECK-NEXT:  unreachable
