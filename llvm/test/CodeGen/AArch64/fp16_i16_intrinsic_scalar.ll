@@ -8,15 +8,6 @@
 
 ; CHECK-GI:    warning: Instruction selection used fallback path for fcvtzs_intrinsic_i16
 ; CHECK-GI NEXT:    warning: Instruction selection used fallback path for fcvtzu_intrinsic_i16
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for fcvtas_intrinsic_i16
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for fcvtau_intrinsic_i16
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for fcvtms_intrinsic_i16
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for fcvtmu_intrinsic_i16
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for fcvtns_intrinsic_i16
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for fcvtnu_intrinsic_i16
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for fcvtps_intrinsic_i16
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for fcvtpu_intrinsic_i16
-
 
 declare i16 @llvm.aarch64.neon.fcvtzs.i16.f16(half)
 declare i16 @llvm.aarch64.neon.fcvtzu.i16.f16(half)
