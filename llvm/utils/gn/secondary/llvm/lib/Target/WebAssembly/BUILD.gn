@@ -37,7 +37,10 @@ tablegen("WebAssemblyGenPreLegalizeGICombiner") {
 }
 
 tablegen("WebAssemblyGenRegisterBank") {
-  visibility = [ ":LLVMWebAssemblyCodeGen" ]
+  visibility = [
+    ":LLVMWebAssemblyCodeGen",
+    "//llvm/unittests/Target/WebAssembly:WebAssemblyTests",
+  ]
   args = [ "-gen-register-bank" ]
   td_file = "WebAssembly.td"
 }
