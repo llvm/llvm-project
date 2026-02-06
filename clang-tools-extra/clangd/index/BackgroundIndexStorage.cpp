@@ -8,6 +8,7 @@
 
 #include "GlobalCompilationDatabase.h"
 #include "PathMapping.h"
+#include "URI.h"
 #include "index/Background.h"
 #include "support/Logger.h"
 #include "support/Path.h"
@@ -35,11 +36,22 @@ std::string applyPathMappingToURI(llvm::StringRef URI,
 }
 
 std::string getShardPathFromFilePath(llvm::StringRef ShardRoot,
-                                     llvm::StringRef FilePath) {
+                                     llvm::StringRef FilePath,
+                                     const PathMappings &Mappings) {
+  std::string HashInput;
+  if (Mappings.empty()) {
+    HashInput = FilePath.str();
+  } else {
+    // Hash the mapped URI so that shards are consistently named regardless of
+    // the path of the generating client
+    std::string FileURI = URI::createFile(FilePath).toString();
+    HashInput = applyPathMappingToURI(
+        FileURI, PathMapping::Direction::ClientToServer, Mappings);
+  }
   llvm::SmallString<128> ShardRootSS(ShardRoot);
-  llvm::sys::path::append(ShardRootSS, llvm::sys::path::filename(FilePath) +
-                                           "." + llvm::toHex(digest(FilePath)) +
-                                           ".idx");
+  llvm::sys::path::append(ShardRootSS,
+                          llvm::sys::path::filename(FilePath) + "." +
+                              llvm::toHex(digest(HashInput)) + ".idx");
   return std::string(ShardRootSS);
 }
 
@@ -85,7 +97,7 @@ public:
   std::unique_ptr<IndexFileIn>
   loadShard(llvm::StringRef ShardIdentifier) const override {
     const std::string ShardPath =
-        getShardPathFromFilePath(DiskShardRoot, ShardIdentifier);
+        getShardPathFromFilePath(DiskShardRoot, ShardIdentifier, Mappings);
     auto Buffer = llvm::MemoryBuffer::getFile(ShardPath);
     if (!Buffer)
       return nullptr;
@@ -100,7 +112,8 @@ public:
 
   llvm::Error storeShard(llvm::StringRef ShardIdentifier,
                          IndexFileOut Shard) const override {
-    auto ShardPath = getShardPathFromFilePath(DiskShardRoot, ShardIdentifier);
+    auto ShardPath =
+        getShardPathFromFilePath(DiskShardRoot, ShardIdentifier, Mappings);
     return llvm::writeToOutput(ShardPath, [&Shard](llvm::raw_ostream &OS) {
       OS << Shard;
       return llvm::Error::success();
