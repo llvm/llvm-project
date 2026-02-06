@@ -770,26 +770,6 @@ void NativeProcessLinux::MonitorSIGTRAP(const siginfo_t &info,
   }
 
   case SI_KERNEL:
-#if defined __mips__
-    // For mips there is no special signal for watchpoint So we check for
-    // watchpoint in kernel trap
-    {
-      // If a watchpoint was hit, report it
-      uint32_t wp_index;
-      Status error = thread.GetRegisterContext().GetWatchpointHitIndex(
-          wp_index, LLDB_INVALID_ADDRESS);
-      if (error.Fail())
-        LLDB_LOG(log,
-                 "received error while checking for watchpoint hits, pid = "
-                 "{0}, error = {1}",
-                 thread.GetID(), error);
-      if (wp_index != LLDB_INVALID_INDEX32) {
-        MonitorWatchpoint(thread, wp_index);
-        break;
-      }
-    }
-// NO BREAK
-#endif
   case TRAP_BRKPT:
     MonitorBreakpoint(thread);
     break;
@@ -1000,7 +980,7 @@ bool NativeProcessLinux::MonitorClone(NativeThreadLinux &parent,
 }
 
 bool NativeProcessLinux::SupportHardwareSingleStepping() const {
-  if (m_arch.IsMIPS() || m_arch.GetMachine() == llvm::Triple::arm ||
+  if (m_arch.GetMachine() == llvm::Triple::arm ||
       m_arch.GetTriple().isRISCV() || m_arch.GetTriple().isLoongArch())
     return false;
   return true;

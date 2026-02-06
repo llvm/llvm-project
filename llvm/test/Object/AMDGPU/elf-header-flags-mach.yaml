@@ -234,6 +234,10 @@
 # RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1153 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1153 %s
 # RUN: obj2yaml %t.o.AMDGCN_GFX1153 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1153 %s
 
+# RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1170/' %s | yaml2obj -o %t.o.AMDGCN_GFX1170
+# RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1170 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1170 %s
+# RUN: obj2yaml %t.o.AMDGCN_GFX1170 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1170 %s
+
 # RUN: sed -e 's/<BITS>/64/' -e 's/<MACH>/AMDGCN_GFX1200/' %s | yaml2obj -o %t.o.AMDGCN_GFX1200
 # RUN: llvm-readobj -S --file-headers %t.o.AMDGCN_GFX1200 | FileCheck --check-prefixes=ELF-AMDGCN-ALL,ELF-AMDGCN-GFX1200 %s
 # RUN: obj2yaml %t.o.AMDGCN_GFX1200 | FileCheck --check-prefixes=YAML-AMDGCN-ALL,YAML-AMDGCN-GFX1200 %s
@@ -472,6 +476,9 @@
 
 # ELF-AMDGCN-GFX1153:   EF_AMDGPU_MACH_AMDGCN_GFX1153 (0x58)
 # YAML-AMDGCN-GFX1153:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1153 ]
+
+# ELF-AMDGCN-GFX1170:   EF_AMDGPU_MACH_AMDGCN_GFX1170 (0x5D)
+# YAML-AMDGCN-GFX1170:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1170 ]
 
 # ELF-AMDGCN-GFX1200:   EF_AMDGPU_MACH_AMDGCN_GFX1200 (0x48)
 # YAML-AMDGCN-GFX1200:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1200 ]
