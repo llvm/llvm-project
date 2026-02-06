@@ -18,7 +18,6 @@
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "llvm/ADT/STLExtras.h"
 
 namespace nb = nanobind;
 
@@ -58,13 +57,15 @@ std::vector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
 
   // Note: as the list may contain other lists this may not be final size.
   mlirOperands.reserve(operandList->size());
-  for (const auto &&it : llvm::enumerate(*operandList)) {
-    if (it.value().is_none())
+  for (size_t i = 0, e = operandList->size(); i < e; ++i) {
+    nb::handle operand = (*operandList)[i];
+    intptr_t index = static_cast<intptr_t>(i);
+    if (operand.is_none())
       continue;
 
     PyValue *val;
     try {
-      val = nb::cast<PyValue *>(it.value());
+      val = nb::cast<PyValue *>(operand);
       if (!val)
         throw nb::cast_error();
       mlirOperands.push_back(val->get());
@@ -75,7 +76,7 @@ std::vector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
     }
 
     try {
-      auto vals = nb::cast<nb::sequence>(it.value());
+      auto vals = nb::cast<nb::sequence>(operand);
       for (nb::handle v : vals) {
         try {
           val = nb::cast<PyValue *>(v);
@@ -84,7 +85,7 @@ std::vector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
           mlirOperands.push_back(val->get());
         } catch (nb::cast_error &err) {
           throw nb::value_error(nanobind::detail::join(
-              "Operand ", it.index(),
+              "Operand ", index,
               " must be a Value or Sequence of Values (", err.what(), ")")
                                     .c_str());
         }
@@ -92,7 +93,7 @@ std::vector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
       continue;
     } catch (nb::cast_error &err) {
       throw nb::value_error(nanobind::detail::join(
-          "Operand ", it.index(), " must be a Value or Sequence of Values (",
+          "Operand ", index, " must be a Value or Sequence of Values (",
           err.what(), ")").c_str());
     }
 
