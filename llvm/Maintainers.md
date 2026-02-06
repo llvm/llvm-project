@@ -245,6 +245,11 @@ mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
 
 #### Hexagon backend
 
+Brian Cain \
+brian.cain@oss.qualcomm.com (email), [androm3da](https://github.com/androm3da) (GitHub) \
+Ikhlas Ajbar \
+iajbar@qti.qualcomm.com (email), [iajbar](https://github.com/iajbar)
+
 #### Lanai backend
 
 Jacques Pienaar \
