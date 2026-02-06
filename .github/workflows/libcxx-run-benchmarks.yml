@@ -37,15 +37,18 @@ jobs:
         with:
           python-version: '3.14'
 
-      - name: Extract information from the PR
-        id: vars
-        env:
-          COMMENT_BODY: ${{ github.event.comment.body }}
+      - name: Setup virtual environment
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
           python -m pip install pygithub
 
+      - name: Extract information from the PR
+        id: vars
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          source .venv/bin/activate
           cat <<EOF | python >> ${GITHUB_OUTPUT}
           import github
           repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
@@ -58,7 +61,7 @@ jobs:
 
       - name: Update comment with link to the job
         run: |
-          source .venv/bin/activate && cd repo
+          source .venv/bin/activate
           cat <<EOF | python
           import github
           repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
