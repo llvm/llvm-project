@@ -59,9 +59,8 @@ private:
       State = Invalid;
   }
 
-  // 120 chosen since least common factor of 2, 3, 4, 5, 6, 8
-  // which are realistic issue widths
-  static constexpr CostType ScalingFactor = 120;
+  // Matches GCC, can use shift rather than multiply/divide to scale
+  static constexpr CostType ScalingFactor = 4;
 
   static constexpr CostType MaxValue = std::numeric_limits<CostType>::max();
   static constexpr CostType MinValue = std::numeric_limits<CostType>::min();
