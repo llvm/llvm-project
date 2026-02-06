@@ -954,12 +954,12 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
       } else if (i == 0 && !ThisReturnRegs.empty() &&
                  Handler.isIncomingArgumentHandler() &&
                  isTypeIsValidForThisReturn(ValVT)) {
-        Handler.assignValueToReg(ArgReg, ThisReturnRegs[Part], VA, Flags);
+        Handler.assignValueToReg(ArgReg, ThisReturnRegs[Part], VA);
       } else if (Handler.isIncomingArgumentHandler()) {
-        Handler.assignValueToReg(ArgReg, VA.getLocReg(), VA, Flags);
+        Handler.assignValueToReg(ArgReg, VA.getLocReg(), VA);
       } else {
         DelayedOutgoingRegAssignments.emplace_back([=, &Handler]() {
-          Handler.assignValueToReg(ArgReg, VA.getLocReg(), VA, Flags);
+          Handler.assignValueToReg(ArgReg, VA.getLocReg(), VA);
         });
       }
 

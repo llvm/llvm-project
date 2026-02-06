@@ -282,15 +282,6 @@ public:
     virtual void assignValueToReg(Register ValVReg, Register PhysReg,
                                   const CCValAssign &VA) = 0;
 
-    /// An overload which also provides argument flags. Targets can override
-    /// this to handle special cases like inreg arguments that need additional
-    /// processing.
-    virtual void assignValueToReg(Register ValVReg, Register PhysReg,
-                                  const CCValAssign &VA,
-                                  const ISD::ArgFlagsTy &Flags) {
-      assignValueToReg(ValVReg, PhysReg, VA);
-    }
-
     /// The specified value has been assigned to a stack
     /// location. Load or store it there, with appropriate extension
     /// if necessary.
