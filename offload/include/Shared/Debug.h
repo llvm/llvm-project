@@ -45,6 +45,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 
 /// 32-Bit field data attributes controlling information presented to the user.
@@ -365,10 +366,7 @@ shouldPrintDebug(const char *Component, const char *Type, uint32_t &Level) {
 /// "Component --> "
 [[maybe_unused]] static std::string computePrefix(StringRef Component,
                                                   StringRef DebugType) {
-  std::string Prefix;
-  raw_string_ostream OsPrefix(Prefix);
-  OsPrefix << Component << " --> ";
-  return OsPrefix.str();
+  return llvm::formatv("[ {0,15} / {1,-15} ] ", Component, DebugType);
 }
 
 static inline raw_ostream &operator<<(raw_ostream &Os,
@@ -385,20 +383,20 @@ static inline raw_ostream &operator<<(raw_ostream &Os,
   return Dbg;
 }
 
-#define ODBG_BASE(Stream, Component, Prefix, Type, Level)                      \
+#define ODBG_BASE(Stream, Component, Type, Level)                              \
   for (uint32_t RealLevel = (Level),                                           \
                 _c = llvm::offload::debug::isDebugEnabled() &&                 \
                      llvm::offload::debug::shouldPrintDebug(                   \
                          (Component), (Type), RealLevel);                      \
        _c; _c = 0)                                                             \
   ::llvm::offload::debug::odbg_ostream{                                        \
-      ::llvm::offload::debug::computePrefix((Prefix), (Type)), (Stream),       \
+      ::llvm::offload::debug::computePrefix((Component), (Type)), (Stream),    \
       RealLevel, /*ShouldPrefixNextString=*/true,                              \
       /*ShouldEmitNewLineOnDestruction=*/true}                                 \
       .asLvalue()
 
 #define ODBG_STREAM(Stream, Type, Level)                                       \
-  ODBG_BASE(Stream, GETNAME(TARGET_NAME), DEBUG_PREFIX, Type, Level)
+  ODBG_BASE(Stream, GETNAME(TARGET_NAME), Type, Level)
 
 #define ODBG_0() ODBG_2("default", 1)
 #define ODBG_1(Type) ODBG_2(Type, 1)
@@ -462,14 +460,14 @@ template <typename LambdaTy> struct LambdaOs : public LambdaHelper<LambdaTy> {
   }
 };
 
-#define ODBG_OS_BASE(Stream, Component, Prefix, Type, Level, Callback)         \
+#define ODBG_OS_BASE(Stream, Component, Type, Level, Callback)                 \
   if (::llvm::offload::debug::isDebugEnabled()) {                              \
     uint32_t RealLevel = (Level);                                              \
     if (::llvm::offload::debug::shouldPrintDebug((Component), (Type),          \
                                                  RealLevel)) {                 \
       ::llvm::offload::debug::odbg_ostream OS{                                 \
-          ::llvm::offload::debug::computePrefix((Prefix), (Type)), (Stream),   \
-          RealLevel, /*ShouldPrefixNextString=*/true,                          \
+          ::llvm::offload::debug::computePrefix((Component), (Type)),          \
+          (Stream), RealLevel, /*ShouldPrefixNextString=*/true,                \
           /*ShouldEmitNewLineOnDestruction=*/true};                            \
       auto F = Callback;                                                       \
       ::llvm::offload::debug::LambdaOs<decltype(F)>::dispatch(F, OS,           \
@@ -478,8 +476,7 @@ template <typename LambdaTy> struct LambdaOs : public LambdaHelper<LambdaTy> {
   }
 
 #define ODBG_OS_STREAM(Stream, Type, Level, Callback)                          \
-  ODBG_OS_BASE(Stream, GETNAME(TARGET_NAME), DEBUG_PREFIX, Type, Level,        \
-               Callback)
+  ODBG_OS_BASE(Stream, GETNAME(TARGET_NAME), Type, Level, Callback)
 #define ODBG_OS_3(Type, Level, Callback)                                       \
   ODBG_OS_STREAM(llvm::offload::debug::dbgs(), Type, Level, Callback)
 #define ODBG_OS_2(Type, Callback) ODBG_OS_3(Type, 1, Callback)
@@ -597,9 +594,9 @@ static inline odbg_ostream reportErrorStream() {
     uint32_t RealLevel = ODL_Error;
     if (::llvm::offload::debug::shouldPrintDebug(GETNAME(TARGET_NAME),
                                                  (ODT_Error), RealLevel))
-      return odbg_ostream{
-          ::llvm::offload::debug::computePrefix(DEBUG_PREFIX, ODT_Error),
-          ::llvm::offload::debug::dbgs(), RealLevel};
+      return odbg_ostream{::llvm::offload::debug::computePrefix(
+                              GETNAME(TARGET_NAME), ODT_Error),
+                          ::llvm::offload::debug::dbgs(), RealLevel};
     else
       return odbg_ostream{"", ::llvm::nulls(), 1};
   }
