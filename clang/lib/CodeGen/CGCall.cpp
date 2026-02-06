@@ -27,7 +27,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
@@ -2764,8 +2763,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   }
 
   // Apply `nonnull`, `dereferenceable(N)` and `align N` to the `this` argument,
-  // unless this is a thunk function. Add dead_on_return to the `this` argument
-  // in base class destructors to aid in DSE.
+  // unless this is a thunk function.
   // FIXME: fix this properly, https://reviews.llvm.org/D100388
   if (FI.isInstanceMethod() && !IRFunctionArgs.hasInallocaArg() &&
       !FI.arg_begin()->type->isVoidPointerType() && !IsThunk) {
@@ -2797,27 +2795,6 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                 /*TBAAInfo=*/nullptr, /*forPointeeType=*/true)
             .getAsAlign();
     Attrs.addAlignmentAttr(Alignment);
-
-    const auto *DD = dyn_cast_if_present<CXXDestructorDecl>(
-        CalleeInfo.getCalleeDecl().getDecl());
-    // Do not annotate vector deleting destructors with dead_on_return as the
-    // this pointer in that case points to an array which we cannot
-    // statically know the size of.
-    if (DD &&
-        CalleeInfo.getCalleeDecl().getDtorType() !=
-            CXXDtorType::Dtor_VectorDeleting &&
-        CodeGenOpts.StrictLifetimes) {
-      const CXXRecordDecl *ClassDecl =
-          dyn_cast<CXXRecordDecl>(DD->getDeclContext());
-      // TODO(boomanaiden154): We are being intentionally conservative here
-      // as we gain experience with this optimization. We should remove the
-      // condition for non-virtual bases after more testing. We cannot add
-      // dead_on_return if we have virtual base classes because they will
-      // generally still be live after the base object destructor.
-      if (ClassDecl->getNumBases() == 0 && ClassDecl->getNumVBases() == 0)
-        Attrs.addDeadOnReturnAttr(llvm::DeadOnReturnInfo(
-            Context.getASTRecordLayout(ClassDecl).getDataSize().getQuantity()));
-    }
 
     ArgAttrs[IRArgs.first] = llvm::AttributeSet::get(getLLVMContext(), Attrs);
   }
