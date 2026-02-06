@@ -117,10 +117,9 @@ class TestSwiftEmbeddedFrameVariable(TestBase):
         second = one.GetChildAtIndex(1).GetChildMemberWithName("supField")
         third = one.GetChildAtIndex(2).GetChildMemberWithName("supField")
 
-        if False: # FIXME!
-            lldbutil.check_variable(self, first, False, value="42")
-            lldbutil.check_variable(self, second, False, value="43")
-            lldbutil.check_variable(self, third, False, value="44")
+        lldbutil.check_variable(self, first, False, value="42")
+        lldbutil.check_variable(self, second, False, value="43")
+        lldbutil.check_variable(self, third, False, value="44")
 
         fullMultipayloadEnum1 = frame.FindVariable("fullMultipayloadEnum1")
         one = fullMultipayloadEnum1.GetChildMemberWithName("one")
