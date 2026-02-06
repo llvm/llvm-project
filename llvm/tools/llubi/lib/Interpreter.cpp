@@ -120,7 +120,7 @@ public:
       CurrentFrame = &Top;
       if (Top.State == FrameState::Entry) {
         Handler.onFunctionEntry(Top.Func, Top.Args, Top.CallSite);
-        // TODO:Handle arg attributes
+        // TODO: Handle arg attributes
       } else {
         assert(Top.State == FrameState::Pending &&
                "Expected to return from a callee.");

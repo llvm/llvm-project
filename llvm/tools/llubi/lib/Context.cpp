@@ -80,8 +80,8 @@ bool Context::free(uint64_t Address) {
   auto It = MemoryObjects.find(Address);
   if (It == MemoryObjects.end())
     return false;
-  It->second->markAsFreed();
   UsedMem -= It->second->getSize();
+  It->second->markAsFreed();
   MemoryObjects.erase(It);
   return true;
 }

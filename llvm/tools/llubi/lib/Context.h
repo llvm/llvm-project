@@ -27,11 +27,19 @@ enum class MemInitKind {
 
 enum class MemoryObjectState {
   // This memory object is accessible.
+  // Valid transitions:
+  //   -> Dead (after the end of lifetime of an alloca)
+  //   -> Freed (after free is called on a heap object)
   Alive,
   // This memory object is out of lifetime. It is OK to perform
   // operations that do not access its content, e.g., getelementptr.
   // Otherwise, an immediate UB occurs.
+  // Valid transition:
+  //   -> Alive (after the start of lifetime of an alloca)
   Dead,
+  // This heap memory object has been freed. Any access to it
+  // causes immediate UB. Like dead objects, it is still possible to
+  // perform operations that do not access its content.
   Freed,
 };
 

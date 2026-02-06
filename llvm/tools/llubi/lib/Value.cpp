@@ -38,8 +38,10 @@ MemoryObject *Pointer::getMemoryObject() const {
 void AnyValue::print(raw_ostream &OS) const {
   switch (Kind) {
   case StorageKind::Integer:
-    if (IntVal.getBitWidth() == 1)
+    if (IntVal.getBitWidth() == 1) {
       OS << (IntVal.getBoolValue() ? "T" : "F");
+      break;
+    }
     OS << "i" << IntVal.getBitWidth() << ' ' << IntVal;
     break;
   case StorageKind::Float:

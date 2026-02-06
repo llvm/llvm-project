@@ -126,8 +126,7 @@ int main(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "llvm ub-aware interpreter\n");
 
   if (EntryFunc.empty()) {
-    WithColor::error(errs(), argv[0])
-        << "--entry-function name cannot be empty\n";
+    WithColor::error() << "--entry-function name cannot be empty\n";
     return 1;
   }
 
@@ -168,8 +167,8 @@ int main(int argc, char **argv) {
   // using the contents of Args to determine argc & argv
   Function *EntryFn = Mod->getFunction(EntryFunc);
   if (!EntryFn) {
-    WithColor::error(errs(), argv[0])
-        << '\'' << EntryFunc << "\' function not found in module.\n";
+    WithColor::error() << '\'' << EntryFunc
+                       << "\' function not found in module.\n";
     return 1;
   }
   TargetLibraryInfo TLI(Ctx.getTLIImpl());
@@ -186,8 +185,7 @@ int main(int argc, char **argv) {
     auto ArgvPtrsMem = Ctx.allocate(PtrsSize, 8, "argv",
                                     /*AS=*/0, ubi::MemInitKind::Zeroed);
     if (!ArgvPtrsMem) {
-      WithColor::error(errs(), argv[0])
-          << "Failed to allocate memory for argv pointers.\n";
+      WithColor::error() << "Failed to allocate memory for argv pointers.\n";
       return 1;
     }
     for (const auto &[Idx, Arg] : enumerate(InputArgv)) {
@@ -195,8 +193,7 @@ int main(int argc, char **argv) {
       auto ArgvStrMem = Ctx.allocate(Size, 8, "argv_str",
                                      /*AS=*/0, ubi::MemInitKind::Zeroed);
       if (!ArgvStrMem) {
-        WithColor::error(errs(), argv[0])
-            << "Failed to allocate memory for argv strings.\n";
+        WithColor::error() << "Failed to allocate memory for argv strings.\n";
         return 1;
       }
       ubi::Pointer ArgPtr = Ctx.deriveFromMemoryObject(ArgvStrMem);
@@ -207,7 +204,7 @@ int main(int argc, char **argv) {
   } else {
     // If the signature does not match (e.g., llvm-reduce change the signature
     // of main), it will pass null values for all arguments.
-    WithColor::warning(errs(), argv[0])
+    WithColor::warning()
         << "The signature of function '" << EntryFunc
         << "' does not match 'int main(int, char**)', passing null values for "
            "all arguments.\n";
@@ -221,8 +218,8 @@ int main(int argc, char **argv) {
   ubi::AnyValue RetVal;
   if (!Ctx.runFunction(*EntryFn, Args, RetVal,
                        Verbose ? VerboseHandler : NoopHandler)) {
-    WithColor::error(errs(), argv[0])
-        << "Execution of function '" << EntryFunc << "' failed.\n";
+    WithColor::error() << "Execution of function '" << EntryFunc
+                       << "' failed.\n";
     return 1;
   }
 
@@ -230,9 +227,8 @@ int main(int argc, char **argv) {
   if (EntryFn->getReturnType()->isIntegerTy()) {
     assert(!RetVal.isNone() && "Expected a return value from entry function");
     if (RetVal.isPoison()) {
-      WithColor::error(errs(), argv[0])
-          << "Execution of function '" << EntryFunc
-          << "' resulted in poison return value.\n";
+      WithColor::error() << "Execution of function '" << EntryFunc
+                         << "' resulted in poison return value.\n";
       return 1;
     }
     APInt Result = RetVal.asInteger();
