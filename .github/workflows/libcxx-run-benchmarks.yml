@@ -56,6 +56,18 @@ jobs:
           BENCHMARKS=$(echo "$COMMENT_BODY" | sed -nE 's/\/libcxx-bot benchmark (.+)/\1/p')
           echo "benchmarks=${BENCHMARKS}" >> ${GITHUB_OUTPUT}
 
+      - name: Update comment with link to the job
+        run: |
+          source .venv/bin/activate && cd repo
+          cat <<EOF | python
+          import github
+          repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
+          pr = repo.get_pull(${{ github.event.issue.number }})
+          comment = pr.get_issue_comment(${{ github.event.comment.id }})
+          add_text = "> _Running benchmarks in ${{ env.GITHUB_SERVER_URL }}/${{ env.GITHUB_REPOSITORY }}/actions/runs/${{ env.GITHUB_RUN_ID }}/job/${{ env.GITHUB_JOB }}_"
+          comment.edit('\n\n'.join([comment.body, add_text]))
+          EOF
+
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           ref: ${{ steps.vars.outputs.pr_head }}
