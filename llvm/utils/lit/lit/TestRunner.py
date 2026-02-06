@@ -1525,11 +1525,25 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     substitutions.append(("%{s:basename}", sourceBaseName))
     substitutions.append(("%{t:stem}", tmpBaseName))
 
+    fs_sep = os.path.sep
+    if normalize_slashes:
+        fs_sep = "/"
+
     substitutions.extend(
         [
-            ("%{fs-src-root}", pathlib.Path(sourcedir).anchor),
-            ("%{fs-tmp-root}", pathlib.Path(tmpBase).anchor),
-            ("%{fs-sep}", os.path.sep),
+            (
+                "%{fs-src-root}",
+                pathlib.Path(sourcedir).anchor.replace("\\", "/")
+                if normalize_slashes
+                else pathlib.Path(sourcedir).anchor,
+            ),
+            (
+                "%{fs-tmp-root}",
+                pathlib.Path(tmpBase).anchor.replace("\\", "/")
+                if normalize_slashes
+                else pathlib.Path(tmpBase).anchor,
+            ),
+            ("%{fs-sep}", fs_sep),
         ]
     )
 
