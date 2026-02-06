@@ -24,7 +24,8 @@
 // Returns: a - b
 COMPILER_RT_ABI double __subdf3(double a, double b);
 
-int test__subdf3(int line, uint64_t a_rep, uint64_t b_rep, uint64_t expected_rep) {
+int test__subdf3(int line, uint64_t a_rep, uint64_t b_rep,
+                 uint64_t expected_rep) {
   double a = fromRep64(a_rep), b = fromRep64(b_rep);
   double x = __subdf3(a, b);
 #ifdef EXPECT_EXACT_RESULTS
@@ -34,273 +35,528 @@ int test__subdf3(int line, uint64_t a_rep, uint64_t b_rep, uint64_t expected_rep
 #endif
 
   if (ret) {
-    printf("error at line %d: __subdf3(%016" PRIx64 ", %016" PRIx64 ") = %016" PRIx64
-           ", expected %016" PRIx64 "\n",
+    printf("error at line %d: __subdf3(%016" PRIx64 ", %016" PRIx64
+           ") = %016" PRIx64 ", expected %016" PRIx64 "\n",
            line, a_rep, b_rep, toRep64(x), expected_rep);
   }
   return ret;
 }
 
-#define test__subdf3(a,b,x) test__subdf3(__LINE__,a,b,x)
+#define test__subdf3(a, b, x) test__subdf3(__LINE__, a, b, x)
 
 int main(void) {
   int status = 0;
 
-  status |= test__subdf3(0x0000000000000000, 0x0000000000000000, 0x0000000000000000);
-  status |= test__subdf3(0x0000000000000000, 0x000fffffffffffff, 0x800fffffffffffff);
-  status |= test__subdf3(0x0000000000000000, 0x0010000000000000, 0x8010000000000000);
-  status |= test__subdf3(0x0000000000000000, 0x7ff0000000000000, 0xfff0000000000000);
-  status |= test__subdf3(0x0000000000000000, 0x8000000000000000, 0x0000000000000000);
-  status |= test__subdf3(0x0000000000000000, 0x800fffffffffffff, 0x000fffffffffffff);
-  status |= test__subdf3(0x0000000000000000, 0xbff0000000000000, 0x3ff0000000000000);
-  status |= test__subdf3(0x0000000000000000, 0xffe0000000000000, 0x7fe0000000000000);
-  status |= test__subdf3(0x0000000000000000, 0xfff0000000000000, 0x7ff0000000000000);
-  status |= test__subdf3(0x0000000000000001, 0x0000000000000001, 0x0000000000000000);
-  status |= test__subdf3(0x0000000000000001, 0x8000000000000001, 0x0000000000000002);
-  status |= test__subdf3(0x0000000000000001, 0xbfefffffffffffff, 0x3fefffffffffffff);
-  status |= test__subdf3(0x0000000000000001, 0xbff0000000000000, 0x3ff0000000000000);
-  status |= test__subdf3(0x0000000000000001, 0xbffffffffffffffe, 0x3ffffffffffffffe);
-  status |= test__subdf3(0x0000000000000001, 0xbfffffffffffffff, 0x3fffffffffffffff);
-  status |= test__subdf3(0x0000000000000001, 0xffdfffffffffffff, 0x7fdfffffffffffff);
-  status |= test__subdf3(0x0000000000000001, 0xffe0000000000000, 0x7fe0000000000000);
-  status |= test__subdf3(0x0000000000000001, 0xffeffffffffffffe, 0x7feffffffffffffe);
-  status |= test__subdf3(0x0000000000000001, 0xffefffffffffffff, 0x7fefffffffffffff);
-  status |= test__subdf3(0x0000000000000002, 0x0000000000000001, 0x0000000000000001);
-  status |= test__subdf3(0x0000000000000003, 0x0000000000000000, 0x0000000000000003);
-  status |= test__subdf3(0x0000000000000003, 0x0000000000000002, 0x0000000000000001);
-  status |= test__subdf3(0x0000000000000003, 0x4014000000000000, 0xc014000000000000);
-  status |= test__subdf3(0x0000000000000003, 0x7fe0000000000000, 0xffe0000000000000);
-  status |= test__subdf3(0x0000000000000003, 0x7ff0000000000000, 0xfff0000000000000);
-  status |= test__subdf3(0x0000000000000003, 0x8000000000000000, 0x0000000000000003);
-  status |= test__subdf3(0x0000000000000003, 0xfff0000000000000, 0x7ff0000000000000);
-  status |= test__subdf3(0x0000000000000004, 0x8000000000000004, 0x0000000000000008);
-  status |= test__subdf3(0x000ffffffffffffc, 0x000ffffffffffffc, 0x0000000000000000);
-  status |= test__subdf3(0x000ffffffffffffd, 0x000ffffffffffffe, 0x8000000000000001);
-  status |= test__subdf3(0x000fffffffffffff, 0x000ffffffffffffe, 0x0000000000000001);
-  status |= test__subdf3(0x000fffffffffffff, 0x0010000000000000, 0x8000000000000001);
-  status |= test__subdf3(0x000fffffffffffff, 0x800fffffffffffff, 0x001ffffffffffffe);
-  status |= test__subdf3(0x0010000000000000, 0x0010000000000000, 0x0000000000000000);
-  status |= test__subdf3(0x0010000000000000, 0x8000000000000000, 0x0010000000000000);
-  status |= test__subdf3(0x0010000000000000, 0x8010000000000000, 0x0020000000000000);
-  status |= test__subdf3(0x0010000000000001, 0x0010000000000000, 0x0000000000000001);
-  status |= test__subdf3(0x0010000000000001, 0x0010000000000002, 0x8000000000000001);
-  status |= test__subdf3(0x001fffffffffffff, 0x0020000000000000, 0x8000000000000001);
-  status |= test__subdf3(0x001fffffffffffff, 0x0020000000000002, 0x8000000000000005);
-  status |= test__subdf3(0x001fffffffffffff, 0x0020000000000004, 0x8000000000000009);
-  status |= test__subdf3(0x0020000000000000, 0x001fffffffffffff, 0x0000000000000001);
-  status |= test__subdf3(0x0020000000000001, 0x0010000000000001, 0x0010000000000001);
-  status |= test__subdf3(0x0020000000000001, 0x001fffffffffffff, 0x0000000000000003);
-  status |= test__subdf3(0x0020000000000002, 0x0010000000000001, 0x0010000000000003);
-  status |= test__subdf3(0x002fffffffffffff, 0x0030000000000000, 0x8000000000000002);
-  status |= test__subdf3(0x0030000000000000, 0x002fffffffffffff, 0x0000000000000002);
-  status |= test__subdf3(0x0030000000000001, 0x002fffffffffffff, 0x0000000000000006);
-  status |= test__subdf3(0x0030000000000002, 0x0020000000000003, 0x0020000000000001);
-  status |= test__subdf3(0x3fefffffffffffff, 0x0000000000000001, 0x3fefffffffffffff);
-  status |= test__subdf3(0x3ff0000000000000, 0x0000000000000000, 0x3ff0000000000000);
-  status |= test__subdf3(0x3ff0000000000000, 0x3ff0000000000000, 0x0000000000000000);
-  status |= test__subdf3(0x3ff0000000000000, 0xbff0000000000000, 0x4000000000000000);
-  status |= test__subdf3(0x3ff0000000000000, 0xbff0000000000003, 0x4000000000000002);
-  status |= test__subdf3(0x3ff0000000000000, 0xc000000000000000, 0x4008000000000000);
-  status |= test__subdf3(0x3ff0000000000000, 0xc01c000000000000, 0x4020000000000000);
-  status |= test__subdf3(0x3ff0000000000001, 0x3ff0000000000000, 0x3cb0000000000000);
-  status |= test__subdf3(0x3ff0000000000001, 0x3ff0000000000002, 0xbcb0000000000000);
-  status |= test__subdf3(0x3ff0000000000001, 0xbff0000000000000, 0x4000000000000000);
-  status |= test__subdf3(0x3ffffffffffffffc, 0x3ffffffffffffffd, 0xbcb0000000000000);
-  status |= test__subdf3(0x3fffffffffffffff, 0x4000000000000000, 0xbcb0000000000000);
-  status |= test__subdf3(0x4000000000000000, 0x3fffffffffffffff, 0x3cb0000000000000);
-  status |= test__subdf3(0x4000000000000000, 0x4000000000000000, 0x0000000000000000);
-  status |= test__subdf3(0x4000000000000000, 0x4000000000000001, 0xbcc0000000000000);
-  status |= test__subdf3(0x4000000000000000, 0x4014000000000000, 0xc008000000000000);
-  status |= test__subdf3(0x4000000000000000, 0xbcb0000000000000, 0x4000000000000000);
-  status |= test__subdf3(0x4000000000000000, 0xbff0000000000000, 0x4008000000000000);
-  status |= test__subdf3(0x4000000000000000, 0xc000000000000000, 0x4010000000000000);
-  status |= test__subdf3(0x4000000000000000, 0xc000000000000001, 0x4010000000000000);
-  status |= test__subdf3(0x4000000000000001, 0x3ff0000000000001, 0x3ff0000000000001);
-  status |= test__subdf3(0x4000000000000001, 0xbcb0000000000000, 0x4000000000000002);
-  status |= test__subdf3(0x4000000000000001, 0xc000000000000002, 0x4010000000000002);
-  status |= test__subdf3(0x4000000000000002, 0x3ff0000000000001, 0x3ff0000000000003);
-  status |= test__subdf3(0x4000000000000002, 0x3ff0000000000003, 0x3ff0000000000001);
-  status |= test__subdf3(0x4000000000000004, 0x4000000000000003, 0x3cc0000000000000);
-  status |= test__subdf3(0x4008000000000000, 0xc008000000000000, 0x4018000000000000);
-  status |= test__subdf3(0x400fffffffffffff, 0x400ffffffffffffe, 0x3cc0000000000000);
-  status |= test__subdf3(0x400fffffffffffff, 0x4010000000000002, 0xbce4000000000000);
-  status |= test__subdf3(0x400fffffffffffff, 0xbcafffffffffffff, 0x400fffffffffffff);
-  status |= test__subdf3(0x400fffffffffffff, 0xbcb0000000000000, 0x4010000000000000);
-  status |= test__subdf3(0x4010000000000001, 0x400fffffffffffff, 0x3cd8000000000000);
-  status |= test__subdf3(0x4014000000000000, 0x0000000000000000, 0x4014000000000000);
-  status |= test__subdf3(0x4014000000000000, 0x3ff0000000000000, 0x4010000000000000);
-  status |= test__subdf3(0x4014000000000000, 0x4014000000000000, 0x0000000000000000);
-  status |= test__subdf3(0x4014000000000000, 0x8000000000000000, 0x4014000000000000);
-  status |= test__subdf3(0x4280000000000001, 0x3ff0017fffffffff, 0x427ffffffffff001);
-  status |= test__subdf3(0x7fb0000000000001, 0x7fafffffffffffff, 0x7c78000000000000);
-  status |= test__subdf3(0x7fcfffffffffffff, 0x7fcffffffffffffe, 0x7c80000000000000);
-  status |= test__subdf3(0x7fcfffffffffffff, 0x7fd0000000000002, 0xfca4000000000000);
-  status |= test__subdf3(0x7fd0000000000000, 0x7fcfffffffffffff, 0x7c80000000000000);
-  status |= test__subdf3(0x7fd0000000000000, 0x7fd0000000000001, 0xfc90000000000000);
-  status |= test__subdf3(0x7fd0000000000000, 0xffd0000000000000, 0x7fe0000000000000);
-  status |= test__subdf3(0x7fd0000000000001, 0x7fe0000000000001, 0xffd0000000000001);
-  status |= test__subdf3(0x7fd0000000000001, 0xffd0000000000000, 0x7fe0000000000000);
-  status |= test__subdf3(0x7fd0000000000002, 0x7fc0000000000003, 0x7fc0000000000001);
-  status |= test__subdf3(0x7fd0000000000004, 0x7fd0000000000003, 0x7c90000000000000);
-  status |= test__subdf3(0x7fdffffffffffffe, 0xffdffffffffffffe, 0x7feffffffffffffe);
-  status |= test__subdf3(0x7fdffffffffffffe, 0xffdfffffffffffff, 0x7feffffffffffffe);
-  status |= test__subdf3(0x7fdfffffffffffff, 0x3ff0000000000000, 0x7fdfffffffffffff);
-  status |= test__subdf3(0x7fdfffffffffffff, 0x7fe0000000000000, 0xfc90000000000000);
-  status |= test__subdf3(0x7fdfffffffffffff, 0xbff0000000000000, 0x7fdfffffffffffff);
-  status |= test__subdf3(0x7fdfffffffffffff, 0xffe0000000000000, 0x7ff0000000000000);
-  status |= test__subdf3(0x7fe0000000000000, 0x3ff0000000000000, 0x7fe0000000000000);
-  status |= test__subdf3(0x7fe0000000000000, 0x7fe0000000000000, 0x0000000000000000);
-  status |= test__subdf3(0x7fe0000000000000, 0x7ff0000000000000, 0xfff0000000000000);
-  status |= test__subdf3(0x7fe0000000000000, 0xbff0000000000000, 0x7fe0000000000000);
-  status |= test__subdf3(0x7fe0000000000000, 0xffe0000000000000, 0x7ff0000000000000);
-  status |= test__subdf3(0x7fe0000000000000, 0xfff0000000000000, 0x7ff0000000000000);
-  status |= test__subdf3(0x7fe0000000000001, 0x7fe0000000000000, 0x7ca0000000000000);
-  status |= test__subdf3(0x7fe0000000000001, 0x7fe0000000000002, 0xfca0000000000000);
-  status |= test__subdf3(0x7fe0000000000001, 0xffe0000000000000, 0x7ff0000000000000);
-  status |= test__subdf3(0x7fe0000000000002, 0x7fd0000000000001, 0x7fd0000000000003);
-  status |= test__subdf3(0x7feffffffffffffe, 0x3ff0000000000000, 0x7feffffffffffffe);
-  status |= test__subdf3(0x7feffffffffffffe, 0x7fefffffffffffff, 0xfca0000000000000);
-  status |= test__subdf3(0x7feffffffffffffe, 0xbff0000000000000, 0x7feffffffffffffe);
-  status |= test__subdf3(0x7feffffffffffffe, 0xffeffffffffffffe, 0x7ff0000000000000);
-  status |= test__subdf3(0x7feffffffffffffe, 0xffefffffffffffff, 0x7ff0000000000000);
-  status |= test__subdf3(0x7fefffffffffffff, 0x0000000000000001, 0x7fefffffffffffff);
-  status |= test__subdf3(0x7fefffffffffffff, 0x3ff0000000000000, 0x7fefffffffffffff);
-  status |= test__subdf3(0x7fefffffffffffff, 0x7fefffffffffffff, 0x0000000000000000);
-  status |= test__subdf3(0x7fefffffffffffff, 0xbff0000000000000, 0x7fefffffffffffff);
-  status |= test__subdf3(0x7ff0000000000000, 0x0000000000000000, 0x7ff0000000000000);
-  status |= test__subdf3(0x7ff0000000000000, 0x000fffffffffffff, 0x7ff0000000000000);
-  status |= test__subdf3(0x7ff0000000000000, 0x7fe0000000000000, 0x7ff0000000000000);
-  status |= test__subdf3(0x7ff0000000000000, 0x8000000000000000, 0x7ff0000000000000);
-  status |= test__subdf3(0x7ff0000000000000, 0x800fffffffffffff, 0x7ff0000000000000);
-  status |= test__subdf3(0x7ff0000000000000, 0xffe0000000000000, 0x7ff0000000000000);
-  status |= test__subdf3(0x7ff0000000000000, 0xfff0000000000000, 0x7ff0000000000000);
-  status |= test__subdf3(0x8000000000000000, 0x0000000000000000, 0x8000000000000000);
-  status |= test__subdf3(0x8000000000000000, 0x000fffffffffffff, 0x800fffffffffffff);
-  status |= test__subdf3(0x8000000000000000, 0x0010000000000000, 0x8010000000000000);
-  status |= test__subdf3(0x8000000000000000, 0x3ff0000000000000, 0xbff0000000000000);
-  status |= test__subdf3(0x8000000000000000, 0x7ff0000000000000, 0xfff0000000000000);
-  status |= test__subdf3(0x8000000000000000, 0x8000000000000000, 0x0000000000000000);
-  status |= test__subdf3(0x8000000000000000, 0x800fffffffffffff, 0x000fffffffffffff);
-  status |= test__subdf3(0x8000000000000000, 0xffe0000000000000, 0x7fe0000000000000);
-  status |= test__subdf3(0x8000000000000000, 0xfff0000000000000, 0x7ff0000000000000);
-  status |= test__subdf3(0x8000000000000001, 0x0000000000000001, 0x8000000000000002);
-  status |= test__subdf3(0x8000000000000001, 0x3fefffffffffffff, 0xbfefffffffffffff);
-  status |= test__subdf3(0x8000000000000001, 0x3ff0000000000000, 0xbff0000000000000);
-  status |= test__subdf3(0x8000000000000001, 0x3ffffffffffffffe, 0xbffffffffffffffe);
-  status |= test__subdf3(0x8000000000000001, 0x3fffffffffffffff, 0xbfffffffffffffff);
-  status |= test__subdf3(0x8000000000000001, 0x7fdfffffffffffff, 0xffdfffffffffffff);
-  status |= test__subdf3(0x8000000000000001, 0x7fe0000000000000, 0xffe0000000000000);
-  status |= test__subdf3(0x8000000000000001, 0x7feffffffffffffe, 0xffeffffffffffffe);
-  status |= test__subdf3(0x8000000000000001, 0x7fefffffffffffff, 0xffefffffffffffff);
-  status |= test__subdf3(0x8000000000000001, 0x8000000000000001, 0x0000000000000000);
-  status |= test__subdf3(0x8000000000000002, 0x8000000000000001, 0x8000000000000001);
-  status |= test__subdf3(0x8000000000000003, 0x0000000000000000, 0x8000000000000003);
-  status |= test__subdf3(0x8000000000000003, 0x7ff0000000000000, 0xfff0000000000000);
-  status |= test__subdf3(0x8000000000000003, 0x8000000000000000, 0x8000000000000003);
-  status |= test__subdf3(0x8000000000000003, 0x8000000000000002, 0x8000000000000001);
-  status |= test__subdf3(0x8000000000000003, 0xc008000000000000, 0x4008000000000000);
-  status |= test__subdf3(0x8000000000000003, 0xffe0000000000000, 0x7fe0000000000000);
-  status |= test__subdf3(0x8000000000000003, 0xfff0000000000000, 0x7ff0000000000000);
-  status |= test__subdf3(0x8000000000000004, 0x0000000000000004, 0x8000000000000008);
-  status |= test__subdf3(0x800ffffffffffffd, 0x800ffffffffffffe, 0x0000000000000001);
-  status |= test__subdf3(0x800fffffffffffff, 0x000fffffffffffff, 0x801ffffffffffffe);
-  status |= test__subdf3(0x800fffffffffffff, 0x800ffffffffffffe, 0x8000000000000001);
-  status |= test__subdf3(0x800fffffffffffff, 0x800fffffffffffff, 0x0000000000000000);
-  status |= test__subdf3(0x800fffffffffffff, 0x8010000000000000, 0x0000000000000001);
-  status |= test__subdf3(0x8010000000000000, 0x8000000000000000, 0x8010000000000000);
-  status |= test__subdf3(0x8010000000000000, 0x8010000000000000, 0x0000000000000000);
-  status |= test__subdf3(0x8010000000000001, 0x8010000000000000, 0x8000000000000001);
-  status |= test__subdf3(0x8010000000000001, 0x8010000000000002, 0x0000000000000001);
-  status |= test__subdf3(0x801fffffffffffff, 0x8020000000000000, 0x0000000000000001);
-  status |= test__subdf3(0x801fffffffffffff, 0x8020000000000002, 0x0000000000000005);
-  status |= test__subdf3(0x801fffffffffffff, 0x8020000000000004, 0x0000000000000009);
-  status |= test__subdf3(0x8020000000000000, 0x801fffffffffffff, 0x8000000000000001);
-  status |= test__subdf3(0x8020000000000001, 0x8010000000000001, 0x8010000000000001);
-  status |= test__subdf3(0x8020000000000001, 0x801fffffffffffff, 0x8000000000000003);
-  status |= test__subdf3(0x8020000000000002, 0x8010000000000001, 0x8010000000000003);
-  status |= test__subdf3(0x802fffffffffffff, 0x8030000000000000, 0x0000000000000002);
-  status |= test__subdf3(0x8030000000000000, 0x802fffffffffffff, 0x8000000000000002);
-  status |= test__subdf3(0x8030000000000001, 0x802fffffffffffff, 0x8000000000000006);
-  status |= test__subdf3(0x8030000000000002, 0x8020000000000003, 0x8020000000000001);
-  status |= test__subdf3(0xbff0000000000000, 0x0000000000000000, 0xbff0000000000000);
-  status |= test__subdf3(0xbff0000000000000, 0x3ff0000000000003, 0xc000000000000002);
-  status |= test__subdf3(0xbff0000000000001, 0x3ff0000000000000, 0xc000000000000000);
-  status |= test__subdf3(0xbff0000000000001, 0xbff0000000000000, 0xbcb0000000000000);
-  status |= test__subdf3(0xbff0000000000001, 0xbff0000000000002, 0x3cb0000000000000);
-  status |= test__subdf3(0xbffffffffffffffc, 0xbffffffffffffffd, 0x3cb0000000000000);
-  status |= test__subdf3(0xbfffffffffffffff, 0x8000000000000001, 0xbfffffffffffffff);
-  status |= test__subdf3(0xbfffffffffffffff, 0xc000000000000000, 0x3cb0000000000000);
-  status |= test__subdf3(0xc000000000000000, 0x4000000000000001, 0xc010000000000000);
-  status |= test__subdf3(0xc000000000000000, 0xbfffffffffffffff, 0xbcb0000000000000);
-  status |= test__subdf3(0xc000000000000000, 0xc000000000000001, 0x3cc0000000000000);
-  status |= test__subdf3(0xc000000000000001, 0x4000000000000002, 0xc010000000000002);
-  status |= test__subdf3(0xc000000000000001, 0xbff0000000000001, 0xbff0000000000001);
-  status |= test__subdf3(0xc000000000000002, 0xbff0000000000001, 0xbff0000000000003);
-  status |= test__subdf3(0xc000000000000002, 0xbff0000000000003, 0xbff0000000000001);
-  status |= test__subdf3(0xc000000000000004, 0xc000000000000003, 0xbcc0000000000000);
-  status |= test__subdf3(0xc008000000000000, 0xc008000000000000, 0x0000000000000000);
-  status |= test__subdf3(0xc00fffffffffffff, 0x3cafffffffffffff, 0xc00fffffffffffff);
-  status |= test__subdf3(0xc00fffffffffffff, 0x3cb0000000000000, 0xc010000000000000);
-  status |= test__subdf3(0xc00fffffffffffff, 0xc00ffffffffffffe, 0xbcc0000000000000);
-  status |= test__subdf3(0xc00fffffffffffff, 0xc010000000000002, 0x3ce4000000000000);
-  status |= test__subdf3(0xc010000000000001, 0xc00fffffffffffff, 0xbcd8000000000000);
-  status |= test__subdf3(0xffb0000000000001, 0xffafffffffffffff, 0xfc78000000000000);
-  status |= test__subdf3(0xffcfffffffffffff, 0xffcffffffffffffe, 0xfc80000000000000);
-  status |= test__subdf3(0xffcfffffffffffff, 0xffd0000000000002, 0x7ca4000000000000);
-  status |= test__subdf3(0xffd0000000000000, 0xffcfffffffffffff, 0xfc80000000000000);
-  status |= test__subdf3(0xffd0000000000000, 0xffd0000000000001, 0x7c90000000000000);
-  status |= test__subdf3(0xffd0000000000001, 0x7fd0000000000000, 0xffe0000000000000);
-  status |= test__subdf3(0xffd0000000000001, 0xffe0000000000001, 0x7fd0000000000001);
-  status |= test__subdf3(0xffd0000000000002, 0xffc0000000000003, 0xffc0000000000001);
-  status |= test__subdf3(0xffd0000000000004, 0xffd0000000000003, 0xfc90000000000000);
-  status |= test__subdf3(0xffdffffffffffffe, 0x7fdffffffffffffe, 0xffeffffffffffffe);
-  status |= test__subdf3(0xffdffffffffffffe, 0x7fdfffffffffffff, 0xffeffffffffffffe);
-  status |= test__subdf3(0xffdffffffffffffe, 0xffdffffffffffffe, 0x0000000000000000);
-  status |= test__subdf3(0xffdfffffffffffff, 0x3ff0000000000000, 0xffdfffffffffffff);
-  status |= test__subdf3(0xffdfffffffffffff, 0x7fe0000000000000, 0xfff0000000000000);
-  status |= test__subdf3(0xffdfffffffffffff, 0xbff0000000000000, 0xffdfffffffffffff);
-  status |= test__subdf3(0xffdfffffffffffff, 0xffe0000000000000, 0x7c90000000000000);
-  status |= test__subdf3(0xffe0000000000000, 0x0000000000000000, 0xffe0000000000000);
-  status |= test__subdf3(0xffe0000000000000, 0x3ff0000000000000, 0xffe0000000000000);
-  status |= test__subdf3(0xffe0000000000000, 0x7fe0000000000000, 0xfff0000000000000);
-  status |= test__subdf3(0xffe0000000000000, 0x7ff0000000000000, 0xfff0000000000000);
-  status |= test__subdf3(0xffe0000000000000, 0x8000000000000000, 0xffe0000000000000);
-  status |= test__subdf3(0xffe0000000000000, 0xbff0000000000000, 0xffe0000000000000);
-  status |= test__subdf3(0xffe0000000000000, 0xfff0000000000000, 0x7ff0000000000000);
-  status |= test__subdf3(0xffe0000000000001, 0x7fe0000000000000, 0xfff0000000000000);
-  status |= test__subdf3(0xffe0000000000001, 0xffe0000000000000, 0xfca0000000000000);
-  status |= test__subdf3(0xffe0000000000001, 0xffe0000000000002, 0x7ca0000000000000);
-  status |= test__subdf3(0xffe0000000000002, 0xffd0000000000001, 0xffd0000000000003);
-  status |= test__subdf3(0xffeffffffffffffe, 0x3ff0000000000000, 0xffeffffffffffffe);
-  status |= test__subdf3(0xffeffffffffffffe, 0x7feffffffffffffe, 0xfff0000000000000);
-  status |= test__subdf3(0xffeffffffffffffe, 0x7fefffffffffffff, 0xfff0000000000000);
-  status |= test__subdf3(0xffeffffffffffffe, 0xbff0000000000000, 0xffeffffffffffffe);
-  status |= test__subdf3(0xffeffffffffffffe, 0xffefffffffffffff, 0x7ca0000000000000);
-  status |= test__subdf3(0xffefffffffffffff, 0x3ff0000000000000, 0xffefffffffffffff);
-  status |= test__subdf3(0xffefffffffffffff, 0x8000000000000001, 0xffefffffffffffff);
-  status |= test__subdf3(0xffefffffffffffff, 0xbff0000000000000, 0xffefffffffffffff);
-  status |= test__subdf3(0xfff0000000000000, 0x0000000000000000, 0xfff0000000000000);
-  status |= test__subdf3(0xfff0000000000000, 0x000fffffffffffff, 0xfff0000000000000);
-  status |= test__subdf3(0xfff0000000000000, 0x7fe0000000000000, 0xfff0000000000000);
-  status |= test__subdf3(0xfff0000000000000, 0x7ff0000000000000, 0xfff0000000000000);
-  status |= test__subdf3(0xfff0000000000000, 0x8000000000000000, 0xfff0000000000000);
-  status |= test__subdf3(0xfff0000000000000, 0x800fffffffffffff, 0xfff0000000000000);
-  status |= test__subdf3(0xfff0000000000000, 0xffe0000000000000, 0xfff0000000000000);
-  status |= test__subdf3(0x004caed458edc883, 0x004f7fc23eeef153, 0x8016876f30094680);
-  status |= test__subdf3(0x0028000000000000, 0x0010000000000001, 0x001fffffffffffff);
-  status |= test__subdf3(0x0028000000000000, 0x0010000000000000, 0x0020000000000000);
-  status |= test__subdf3(0x001fffffffffffff, 0x0010000000000000, 0x000fffffffffffff);
-  status |= test__subdf3(0x001fffffffffffff, 0x000fffffffffffff, 0x0010000000000000);
-  status |= test__subdf3(0x0020000000000000, 0x0010000000000000, 0x0010000000000000);
-  status |= test__subdf3(0x0038000000000000, 0x0034000000000001, 0x000ffffffffffffc);
-  status |= test__subdf3(0x0038000000000000, 0x0034000000000000, 0x0010000000000000);
-  status |= test__subdf3(0x0038000000000000, 0x0030000000000001, 0x001ffffffffffffc);
-  status |= test__subdf3(0x0038000000000000, 0x0030000000000000, 0x0020000000000000);
-  status |= test__subdf3(0x000fffffffe00000, 0x801000000007ffff, 0x001fffffffe7ffff);
-  status |= test__subdf3(0x0010000000004000, 0x800effffffffffff, 0x001f000000003fff);
-  status |= test__subdf3(0x800000000fffffff, 0x001ffff000000000, 0x801ffff00fffffff);
-  status |= test__subdf3(0x800fffff80000000, 0x001000000fffffff, 0x801fffff8fffffff);
-  status |= test__subdf3(0x80100000001fffff, 0x000ffffeffffffff, 0x801fffff001ffffe);
+  status |=
+      test__subdf3(0x0000000000000000, 0x0000000000000000, 0x0000000000000000);
+  status |=
+      test__subdf3(0x0000000000000000, 0x000fffffffffffff, 0x800fffffffffffff);
+  status |=
+      test__subdf3(0x0000000000000000, 0x0010000000000000, 0x8010000000000000);
+  status |=
+      test__subdf3(0x0000000000000000, 0x7ff0000000000000, 0xfff0000000000000);
+  status |=
+      test__subdf3(0x0000000000000000, 0x8000000000000000, 0x0000000000000000);
+  status |=
+      test__subdf3(0x0000000000000000, 0x800fffffffffffff, 0x000fffffffffffff);
+  status |=
+      test__subdf3(0x0000000000000000, 0xbff0000000000000, 0x3ff0000000000000);
+  status |=
+      test__subdf3(0x0000000000000000, 0xffe0000000000000, 0x7fe0000000000000);
+  status |=
+      test__subdf3(0x0000000000000000, 0xfff0000000000000, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0x0000000000000001, 0x0000000000000001, 0x0000000000000000);
+  status |=
+      test__subdf3(0x0000000000000001, 0x8000000000000001, 0x0000000000000002);
+  status |=
+      test__subdf3(0x0000000000000001, 0xbfefffffffffffff, 0x3fefffffffffffff);
+  status |=
+      test__subdf3(0x0000000000000001, 0xbff0000000000000, 0x3ff0000000000000);
+  status |=
+      test__subdf3(0x0000000000000001, 0xbffffffffffffffe, 0x3ffffffffffffffe);
+  status |=
+      test__subdf3(0x0000000000000001, 0xbfffffffffffffff, 0x3fffffffffffffff);
+  status |=
+      test__subdf3(0x0000000000000001, 0xffdfffffffffffff, 0x7fdfffffffffffff);
+  status |=
+      test__subdf3(0x0000000000000001, 0xffe0000000000000, 0x7fe0000000000000);
+  status |=
+      test__subdf3(0x0000000000000001, 0xffeffffffffffffe, 0x7feffffffffffffe);
+  status |=
+      test__subdf3(0x0000000000000001, 0xffefffffffffffff, 0x7fefffffffffffff);
+  status |=
+      test__subdf3(0x0000000000000002, 0x0000000000000001, 0x0000000000000001);
+  status |=
+      test__subdf3(0x0000000000000003, 0x0000000000000000, 0x0000000000000003);
+  status |=
+      test__subdf3(0x0000000000000003, 0x0000000000000002, 0x0000000000000001);
+  status |=
+      test__subdf3(0x0000000000000003, 0x4014000000000000, 0xc014000000000000);
+  status |=
+      test__subdf3(0x0000000000000003, 0x7fe0000000000000, 0xffe0000000000000);
+  status |=
+      test__subdf3(0x0000000000000003, 0x7ff0000000000000, 0xfff0000000000000);
+  status |=
+      test__subdf3(0x0000000000000003, 0x8000000000000000, 0x0000000000000003);
+  status |=
+      test__subdf3(0x0000000000000003, 0xfff0000000000000, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0x0000000000000004, 0x8000000000000004, 0x0000000000000008);
+  status |=
+      test__subdf3(0x000ffffffffffffc, 0x000ffffffffffffc, 0x0000000000000000);
+  status |=
+      test__subdf3(0x000ffffffffffffd, 0x000ffffffffffffe, 0x8000000000000001);
+  status |=
+      test__subdf3(0x000fffffffffffff, 0x000ffffffffffffe, 0x0000000000000001);
+  status |=
+      test__subdf3(0x000fffffffffffff, 0x0010000000000000, 0x8000000000000001);
+  status |=
+      test__subdf3(0x000fffffffffffff, 0x800fffffffffffff, 0x001ffffffffffffe);
+  status |=
+      test__subdf3(0x0010000000000000, 0x0010000000000000, 0x0000000000000000);
+  status |=
+      test__subdf3(0x0010000000000000, 0x8000000000000000, 0x0010000000000000);
+  status |=
+      test__subdf3(0x0010000000000000, 0x8010000000000000, 0x0020000000000000);
+  status |=
+      test__subdf3(0x0010000000000001, 0x0010000000000000, 0x0000000000000001);
+  status |=
+      test__subdf3(0x0010000000000001, 0x0010000000000002, 0x8000000000000001);
+  status |=
+      test__subdf3(0x001fffffffffffff, 0x0020000000000000, 0x8000000000000001);
+  status |=
+      test__subdf3(0x001fffffffffffff, 0x0020000000000002, 0x8000000000000005);
+  status |=
+      test__subdf3(0x001fffffffffffff, 0x0020000000000004, 0x8000000000000009);
+  status |=
+      test__subdf3(0x0020000000000000, 0x001fffffffffffff, 0x0000000000000001);
+  status |=
+      test__subdf3(0x0020000000000001, 0x0010000000000001, 0x0010000000000001);
+  status |=
+      test__subdf3(0x0020000000000001, 0x001fffffffffffff, 0x0000000000000003);
+  status |=
+      test__subdf3(0x0020000000000002, 0x0010000000000001, 0x0010000000000003);
+  status |=
+      test__subdf3(0x002fffffffffffff, 0x0030000000000000, 0x8000000000000002);
+  status |=
+      test__subdf3(0x0030000000000000, 0x002fffffffffffff, 0x0000000000000002);
+  status |=
+      test__subdf3(0x0030000000000001, 0x002fffffffffffff, 0x0000000000000006);
+  status |=
+      test__subdf3(0x0030000000000002, 0x0020000000000003, 0x0020000000000001);
+  status |=
+      test__subdf3(0x3fefffffffffffff, 0x0000000000000001, 0x3fefffffffffffff);
+  status |=
+      test__subdf3(0x3ff0000000000000, 0x0000000000000000, 0x3ff0000000000000);
+  status |=
+      test__subdf3(0x3ff0000000000000, 0x3ff0000000000000, 0x0000000000000000);
+  status |=
+      test__subdf3(0x3ff0000000000000, 0xbff0000000000000, 0x4000000000000000);
+  status |=
+      test__subdf3(0x3ff0000000000000, 0xbff0000000000003, 0x4000000000000002);
+  status |=
+      test__subdf3(0x3ff0000000000000, 0xc000000000000000, 0x4008000000000000);
+  status |=
+      test__subdf3(0x3ff0000000000000, 0xc01c000000000000, 0x4020000000000000);
+  status |=
+      test__subdf3(0x3ff0000000000001, 0x3ff0000000000000, 0x3cb0000000000000);
+  status |=
+      test__subdf3(0x3ff0000000000001, 0x3ff0000000000002, 0xbcb0000000000000);
+  status |=
+      test__subdf3(0x3ff0000000000001, 0xbff0000000000000, 0x4000000000000000);
+  status |=
+      test__subdf3(0x3ffffffffffffffc, 0x3ffffffffffffffd, 0xbcb0000000000000);
+  status |=
+      test__subdf3(0x3fffffffffffffff, 0x4000000000000000, 0xbcb0000000000000);
+  status |=
+      test__subdf3(0x4000000000000000, 0x3fffffffffffffff, 0x3cb0000000000000);
+  status |=
+      test__subdf3(0x4000000000000000, 0x4000000000000000, 0x0000000000000000);
+  status |=
+      test__subdf3(0x4000000000000000, 0x4000000000000001, 0xbcc0000000000000);
+  status |=
+      test__subdf3(0x4000000000000000, 0x4014000000000000, 0xc008000000000000);
+  status |=
+      test__subdf3(0x4000000000000000, 0xbcb0000000000000, 0x4000000000000000);
+  status |=
+      test__subdf3(0x4000000000000000, 0xbff0000000000000, 0x4008000000000000);
+  status |=
+      test__subdf3(0x4000000000000000, 0xc000000000000000, 0x4010000000000000);
+  status |=
+      test__subdf3(0x4000000000000000, 0xc000000000000001, 0x4010000000000000);
+  status |=
+      test__subdf3(0x4000000000000001, 0x3ff0000000000001, 0x3ff0000000000001);
+  status |=
+      test__subdf3(0x4000000000000001, 0xbcb0000000000000, 0x4000000000000002);
+  status |=
+      test__subdf3(0x4000000000000001, 0xc000000000000002, 0x4010000000000002);
+  status |=
+      test__subdf3(0x4000000000000002, 0x3ff0000000000001, 0x3ff0000000000003);
+  status |=
+      test__subdf3(0x4000000000000002, 0x3ff0000000000003, 0x3ff0000000000001);
+  status |=
+      test__subdf3(0x4000000000000004, 0x4000000000000003, 0x3cc0000000000000);
+  status |=
+      test__subdf3(0x4008000000000000, 0xc008000000000000, 0x4018000000000000);
+  status |=
+      test__subdf3(0x400fffffffffffff, 0x400ffffffffffffe, 0x3cc0000000000000);
+  status |=
+      test__subdf3(0x400fffffffffffff, 0x4010000000000002, 0xbce4000000000000);
+  status |=
+      test__subdf3(0x400fffffffffffff, 0xbcafffffffffffff, 0x400fffffffffffff);
+  status |=
+      test__subdf3(0x400fffffffffffff, 0xbcb0000000000000, 0x4010000000000000);
+  status |=
+      test__subdf3(0x4010000000000001, 0x400fffffffffffff, 0x3cd8000000000000);
+  status |=
+      test__subdf3(0x4014000000000000, 0x0000000000000000, 0x4014000000000000);
+  status |=
+      test__subdf3(0x4014000000000000, 0x3ff0000000000000, 0x4010000000000000);
+  status |=
+      test__subdf3(0x4014000000000000, 0x4014000000000000, 0x0000000000000000);
+  status |=
+      test__subdf3(0x4014000000000000, 0x8000000000000000, 0x4014000000000000);
+  status |=
+      test__subdf3(0x4280000000000001, 0x3ff0017fffffffff, 0x427ffffffffff001);
+  status |=
+      test__subdf3(0x7fb0000000000001, 0x7fafffffffffffff, 0x7c78000000000000);
+  status |=
+      test__subdf3(0x7fcfffffffffffff, 0x7fcffffffffffffe, 0x7c80000000000000);
+  status |=
+      test__subdf3(0x7fcfffffffffffff, 0x7fd0000000000002, 0xfca4000000000000);
+  status |=
+      test__subdf3(0x7fd0000000000000, 0x7fcfffffffffffff, 0x7c80000000000000);
+  status |=
+      test__subdf3(0x7fd0000000000000, 0x7fd0000000000001, 0xfc90000000000000);
+  status |=
+      test__subdf3(0x7fd0000000000000, 0xffd0000000000000, 0x7fe0000000000000);
+  status |=
+      test__subdf3(0x7fd0000000000001, 0x7fe0000000000001, 0xffd0000000000001);
+  status |=
+      test__subdf3(0x7fd0000000000001, 0xffd0000000000000, 0x7fe0000000000000);
+  status |=
+      test__subdf3(0x7fd0000000000002, 0x7fc0000000000003, 0x7fc0000000000001);
+  status |=
+      test__subdf3(0x7fd0000000000004, 0x7fd0000000000003, 0x7c90000000000000);
+  status |=
+      test__subdf3(0x7fdffffffffffffe, 0xffdffffffffffffe, 0x7feffffffffffffe);
+  status |=
+      test__subdf3(0x7fdffffffffffffe, 0xffdfffffffffffff, 0x7feffffffffffffe);
+  status |=
+      test__subdf3(0x7fdfffffffffffff, 0x3ff0000000000000, 0x7fdfffffffffffff);
+  status |=
+      test__subdf3(0x7fdfffffffffffff, 0x7fe0000000000000, 0xfc90000000000000);
+  status |=
+      test__subdf3(0x7fdfffffffffffff, 0xbff0000000000000, 0x7fdfffffffffffff);
+  status |=
+      test__subdf3(0x7fdfffffffffffff, 0xffe0000000000000, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0x7fe0000000000000, 0x3ff0000000000000, 0x7fe0000000000000);
+  status |=
+      test__subdf3(0x7fe0000000000000, 0x7fe0000000000000, 0x0000000000000000);
+  status |=
+      test__subdf3(0x7fe0000000000000, 0x7ff0000000000000, 0xfff0000000000000);
+  status |=
+      test__subdf3(0x7fe0000000000000, 0xbff0000000000000, 0x7fe0000000000000);
+  status |=
+      test__subdf3(0x7fe0000000000000, 0xffe0000000000000, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0x7fe0000000000000, 0xfff0000000000000, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0x7fe0000000000001, 0x7fe0000000000000, 0x7ca0000000000000);
+  status |=
+      test__subdf3(0x7fe0000000000001, 0x7fe0000000000002, 0xfca0000000000000);
+  status |=
+      test__subdf3(0x7fe0000000000001, 0xffe0000000000000, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0x7fe0000000000002, 0x7fd0000000000001, 0x7fd0000000000003);
+  status |=
+      test__subdf3(0x7feffffffffffffe, 0x3ff0000000000000, 0x7feffffffffffffe);
+  status |=
+      test__subdf3(0x7feffffffffffffe, 0x7fefffffffffffff, 0xfca0000000000000);
+  status |=
+      test__subdf3(0x7feffffffffffffe, 0xbff0000000000000, 0x7feffffffffffffe);
+  status |=
+      test__subdf3(0x7feffffffffffffe, 0xffeffffffffffffe, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0x7feffffffffffffe, 0xffefffffffffffff, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0x7fefffffffffffff, 0x0000000000000001, 0x7fefffffffffffff);
+  status |=
+      test__subdf3(0x7fefffffffffffff, 0x3ff0000000000000, 0x7fefffffffffffff);
+  status |=
+      test__subdf3(0x7fefffffffffffff, 0x7fefffffffffffff, 0x0000000000000000);
+  status |=
+      test__subdf3(0x7fefffffffffffff, 0xbff0000000000000, 0x7fefffffffffffff);
+  status |=
+      test__subdf3(0x7ff0000000000000, 0x0000000000000000, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0x7ff0000000000000, 0x000fffffffffffff, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0x7ff0000000000000, 0x7fe0000000000000, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0x7ff0000000000000, 0x8000000000000000, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0x7ff0000000000000, 0x800fffffffffffff, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0x7ff0000000000000, 0xffe0000000000000, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0x7ff0000000000000, 0xfff0000000000000, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0x8000000000000000, 0x0000000000000000, 0x8000000000000000);
+  status |=
+      test__subdf3(0x8000000000000000, 0x000fffffffffffff, 0x800fffffffffffff);
+  status |=
+      test__subdf3(0x8000000000000000, 0x0010000000000000, 0x8010000000000000);
+  status |=
+      test__subdf3(0x8000000000000000, 0x3ff0000000000000, 0xbff0000000000000);
+  status |=
+      test__subdf3(0x8000000000000000, 0x7ff0000000000000, 0xfff0000000000000);
+  status |=
+      test__subdf3(0x8000000000000000, 0x8000000000000000, 0x0000000000000000);
+  status |=
+      test__subdf3(0x8000000000000000, 0x800fffffffffffff, 0x000fffffffffffff);
+  status |=
+      test__subdf3(0x8000000000000000, 0xffe0000000000000, 0x7fe0000000000000);
+  status |=
+      test__subdf3(0x8000000000000000, 0xfff0000000000000, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0x8000000000000001, 0x0000000000000001, 0x8000000000000002);
+  status |=
+      test__subdf3(0x8000000000000001, 0x3fefffffffffffff, 0xbfefffffffffffff);
+  status |=
+      test__subdf3(0x8000000000000001, 0x3ff0000000000000, 0xbff0000000000000);
+  status |=
+      test__subdf3(0x8000000000000001, 0x3ffffffffffffffe, 0xbffffffffffffffe);
+  status |=
+      test__subdf3(0x8000000000000001, 0x3fffffffffffffff, 0xbfffffffffffffff);
+  status |=
+      test__subdf3(0x8000000000000001, 0x7fdfffffffffffff, 0xffdfffffffffffff);
+  status |=
+      test__subdf3(0x8000000000000001, 0x7fe0000000000000, 0xffe0000000000000);
+  status |=
+      test__subdf3(0x8000000000000001, 0x7feffffffffffffe, 0xffeffffffffffffe);
+  status |=
+      test__subdf3(0x8000000000000001, 0x7fefffffffffffff, 0xffefffffffffffff);
+  status |=
+      test__subdf3(0x8000000000000001, 0x8000000000000001, 0x0000000000000000);
+  status |=
+      test__subdf3(0x8000000000000002, 0x8000000000000001, 0x8000000000000001);
+  status |=
+      test__subdf3(0x8000000000000003, 0x0000000000000000, 0x8000000000000003);
+  status |=
+      test__subdf3(0x8000000000000003, 0x7ff0000000000000, 0xfff0000000000000);
+  status |=
+      test__subdf3(0x8000000000000003, 0x8000000000000000, 0x8000000000000003);
+  status |=
+      test__subdf3(0x8000000000000003, 0x8000000000000002, 0x8000000000000001);
+  status |=
+      test__subdf3(0x8000000000000003, 0xc008000000000000, 0x4008000000000000);
+  status |=
+      test__subdf3(0x8000000000000003, 0xffe0000000000000, 0x7fe0000000000000);
+  status |=
+      test__subdf3(0x8000000000000003, 0xfff0000000000000, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0x8000000000000004, 0x0000000000000004, 0x8000000000000008);
+  status |=
+      test__subdf3(0x800ffffffffffffd, 0x800ffffffffffffe, 0x0000000000000001);
+  status |=
+      test__subdf3(0x800fffffffffffff, 0x000fffffffffffff, 0x801ffffffffffffe);
+  status |=
+      test__subdf3(0x800fffffffffffff, 0x800ffffffffffffe, 0x8000000000000001);
+  status |=
+      test__subdf3(0x800fffffffffffff, 0x800fffffffffffff, 0x0000000000000000);
+  status |=
+      test__subdf3(0x800fffffffffffff, 0x8010000000000000, 0x0000000000000001);
+  status |=
+      test__subdf3(0x8010000000000000, 0x8000000000000000, 0x8010000000000000);
+  status |=
+      test__subdf3(0x8010000000000000, 0x8010000000000000, 0x0000000000000000);
+  status |=
+      test__subdf3(0x8010000000000001, 0x8010000000000000, 0x8000000000000001);
+  status |=
+      test__subdf3(0x8010000000000001, 0x8010000000000002, 0x0000000000000001);
+  status |=
+      test__subdf3(0x801fffffffffffff, 0x8020000000000000, 0x0000000000000001);
+  status |=
+      test__subdf3(0x801fffffffffffff, 0x8020000000000002, 0x0000000000000005);
+  status |=
+      test__subdf3(0x801fffffffffffff, 0x8020000000000004, 0x0000000000000009);
+  status |=
+      test__subdf3(0x8020000000000000, 0x801fffffffffffff, 0x8000000000000001);
+  status |=
+      test__subdf3(0x8020000000000001, 0x8010000000000001, 0x8010000000000001);
+  status |=
+      test__subdf3(0x8020000000000001, 0x801fffffffffffff, 0x8000000000000003);
+  status |=
+      test__subdf3(0x8020000000000002, 0x8010000000000001, 0x8010000000000003);
+  status |=
+      test__subdf3(0x802fffffffffffff, 0x8030000000000000, 0x0000000000000002);
+  status |=
+      test__subdf3(0x8030000000000000, 0x802fffffffffffff, 0x8000000000000002);
+  status |=
+      test__subdf3(0x8030000000000001, 0x802fffffffffffff, 0x8000000000000006);
+  status |=
+      test__subdf3(0x8030000000000002, 0x8020000000000003, 0x8020000000000001);
+  status |=
+      test__subdf3(0xbff0000000000000, 0x0000000000000000, 0xbff0000000000000);
+  status |=
+      test__subdf3(0xbff0000000000000, 0x3ff0000000000003, 0xc000000000000002);
+  status |=
+      test__subdf3(0xbff0000000000001, 0x3ff0000000000000, 0xc000000000000000);
+  status |=
+      test__subdf3(0xbff0000000000001, 0xbff0000000000000, 0xbcb0000000000000);
+  status |=
+      test__subdf3(0xbff0000000000001, 0xbff0000000000002, 0x3cb0000000000000);
+  status |=
+      test__subdf3(0xbffffffffffffffc, 0xbffffffffffffffd, 0x3cb0000000000000);
+  status |=
+      test__subdf3(0xbfffffffffffffff, 0x8000000000000001, 0xbfffffffffffffff);
+  status |=
+      test__subdf3(0xbfffffffffffffff, 0xc000000000000000, 0x3cb0000000000000);
+  status |=
+      test__subdf3(0xc000000000000000, 0x4000000000000001, 0xc010000000000000);
+  status |=
+      test__subdf3(0xc000000000000000, 0xbfffffffffffffff, 0xbcb0000000000000);
+  status |=
+      test__subdf3(0xc000000000000000, 0xc000000000000001, 0x3cc0000000000000);
+  status |=
+      test__subdf3(0xc000000000000001, 0x4000000000000002, 0xc010000000000002);
+  status |=
+      test__subdf3(0xc000000000000001, 0xbff0000000000001, 0xbff0000000000001);
+  status |=
+      test__subdf3(0xc000000000000002, 0xbff0000000000001, 0xbff0000000000003);
+  status |=
+      test__subdf3(0xc000000000000002, 0xbff0000000000003, 0xbff0000000000001);
+  status |=
+      test__subdf3(0xc000000000000004, 0xc000000000000003, 0xbcc0000000000000);
+  status |=
+      test__subdf3(0xc008000000000000, 0xc008000000000000, 0x0000000000000000);
+  status |=
+      test__subdf3(0xc00fffffffffffff, 0x3cafffffffffffff, 0xc00fffffffffffff);
+  status |=
+      test__subdf3(0xc00fffffffffffff, 0x3cb0000000000000, 0xc010000000000000);
+  status |=
+      test__subdf3(0xc00fffffffffffff, 0xc00ffffffffffffe, 0xbcc0000000000000);
+  status |=
+      test__subdf3(0xc00fffffffffffff, 0xc010000000000002, 0x3ce4000000000000);
+  status |=
+      test__subdf3(0xc010000000000001, 0xc00fffffffffffff, 0xbcd8000000000000);
+  status |=
+      test__subdf3(0xffb0000000000001, 0xffafffffffffffff, 0xfc78000000000000);
+  status |=
+      test__subdf3(0xffcfffffffffffff, 0xffcffffffffffffe, 0xfc80000000000000);
+  status |=
+      test__subdf3(0xffcfffffffffffff, 0xffd0000000000002, 0x7ca4000000000000);
+  status |=
+      test__subdf3(0xffd0000000000000, 0xffcfffffffffffff, 0xfc80000000000000);
+  status |=
+      test__subdf3(0xffd0000000000000, 0xffd0000000000001, 0x7c90000000000000);
+  status |=
+      test__subdf3(0xffd0000000000001, 0x7fd0000000000000, 0xffe0000000000000);
+  status |=
+      test__subdf3(0xffd0000000000001, 0xffe0000000000001, 0x7fd0000000000001);
+  status |=
+      test__subdf3(0xffd0000000000002, 0xffc0000000000003, 0xffc0000000000001);
+  status |=
+      test__subdf3(0xffd0000000000004, 0xffd0000000000003, 0xfc90000000000000);
+  status |=
+      test__subdf3(0xffdffffffffffffe, 0x7fdffffffffffffe, 0xffeffffffffffffe);
+  status |=
+      test__subdf3(0xffdffffffffffffe, 0x7fdfffffffffffff, 0xffeffffffffffffe);
+  status |=
+      test__subdf3(0xffdffffffffffffe, 0xffdffffffffffffe, 0x0000000000000000);
+  status |=
+      test__subdf3(0xffdfffffffffffff, 0x3ff0000000000000, 0xffdfffffffffffff);
+  status |=
+      test__subdf3(0xffdfffffffffffff, 0x7fe0000000000000, 0xfff0000000000000);
+  status |=
+      test__subdf3(0xffdfffffffffffff, 0xbff0000000000000, 0xffdfffffffffffff);
+  status |=
+      test__subdf3(0xffdfffffffffffff, 0xffe0000000000000, 0x7c90000000000000);
+  status |=
+      test__subdf3(0xffe0000000000000, 0x0000000000000000, 0xffe0000000000000);
+  status |=
+      test__subdf3(0xffe0000000000000, 0x3ff0000000000000, 0xffe0000000000000);
+  status |=
+      test__subdf3(0xffe0000000000000, 0x7fe0000000000000, 0xfff0000000000000);
+  status |=
+      test__subdf3(0xffe0000000000000, 0x7ff0000000000000, 0xfff0000000000000);
+  status |=
+      test__subdf3(0xffe0000000000000, 0x8000000000000000, 0xffe0000000000000);
+  status |=
+      test__subdf3(0xffe0000000000000, 0xbff0000000000000, 0xffe0000000000000);
+  status |=
+      test__subdf3(0xffe0000000000000, 0xfff0000000000000, 0x7ff0000000000000);
+  status |=
+      test__subdf3(0xffe0000000000001, 0x7fe0000000000000, 0xfff0000000000000);
+  status |=
+      test__subdf3(0xffe0000000000001, 0xffe0000000000000, 0xfca0000000000000);
+  status |=
+      test__subdf3(0xffe0000000000001, 0xffe0000000000002, 0x7ca0000000000000);
+  status |=
+      test__subdf3(0xffe0000000000002, 0xffd0000000000001, 0xffd0000000000003);
+  status |=
+      test__subdf3(0xffeffffffffffffe, 0x3ff0000000000000, 0xffeffffffffffffe);
+  status |=
+      test__subdf3(0xffeffffffffffffe, 0x7feffffffffffffe, 0xfff0000000000000);
+  status |=
+      test__subdf3(0xffeffffffffffffe, 0x7fefffffffffffff, 0xfff0000000000000);
+  status |=
+      test__subdf3(0xffeffffffffffffe, 0xbff0000000000000, 0xffeffffffffffffe);
+  status |=
+      test__subdf3(0xffeffffffffffffe, 0xffefffffffffffff, 0x7ca0000000000000);
+  status |=
+      test__subdf3(0xffefffffffffffff, 0x3ff0000000000000, 0xffefffffffffffff);
+  status |=
+      test__subdf3(0xffefffffffffffff, 0x8000000000000001, 0xffefffffffffffff);
+  status |=
+      test__subdf3(0xffefffffffffffff, 0xbff0000000000000, 0xffefffffffffffff);
+  status |=
+      test__subdf3(0xfff0000000000000, 0x0000000000000000, 0xfff0000000000000);
+  status |=
+      test__subdf3(0xfff0000000000000, 0x000fffffffffffff, 0xfff0000000000000);
+  status |=
+      test__subdf3(0xfff0000000000000, 0x7fe0000000000000, 0xfff0000000000000);
+  status |=
+      test__subdf3(0xfff0000000000000, 0x7ff0000000000000, 0xfff0000000000000);
+  status |=
+      test__subdf3(0xfff0000000000000, 0x8000000000000000, 0xfff0000000000000);
+  status |=
+      test__subdf3(0xfff0000000000000, 0x800fffffffffffff, 0xfff0000000000000);
+  status |=
+      test__subdf3(0xfff0000000000000, 0xffe0000000000000, 0xfff0000000000000);
+  status |=
+      test__subdf3(0x004caed458edc883, 0x004f7fc23eeef153, 0x8016876f30094680);
+  status |=
+      test__subdf3(0x0028000000000000, 0x0010000000000001, 0x001fffffffffffff);
+  status |=
+      test__subdf3(0x0028000000000000, 0x0010000000000000, 0x0020000000000000);
+  status |=
+      test__subdf3(0x001fffffffffffff, 0x0010000000000000, 0x000fffffffffffff);
+  status |=
+      test__subdf3(0x001fffffffffffff, 0x000fffffffffffff, 0x0010000000000000);
+  status |=
+      test__subdf3(0x0020000000000000, 0x0010000000000000, 0x0010000000000000);
+  status |=
+      test__subdf3(0x0038000000000000, 0x0034000000000001, 0x000ffffffffffffc);
+  status |=
+      test__subdf3(0x0038000000000000, 0x0034000000000000, 0x0010000000000000);
+  status |=
+      test__subdf3(0x0038000000000000, 0x0030000000000001, 0x001ffffffffffffc);
+  status |=
+      test__subdf3(0x0038000000000000, 0x0030000000000000, 0x0020000000000000);
+  status |=
+      test__subdf3(0x000fffffffe00000, 0x801000000007ffff, 0x001fffffffe7ffff);
+  status |=
+      test__subdf3(0x0010000000004000, 0x800effffffffffff, 0x001f000000003fff);
+  status |=
+      test__subdf3(0x800000000fffffff, 0x001ffff000000000, 0x801ffff00fffffff);
+  status |=
+      test__subdf3(0x800fffff80000000, 0x001000000fffffff, 0x801fffff8fffffff);
+  status |=
+      test__subdf3(0x80100000001fffff, 0x000ffffeffffffff, 0x801fffff001ffffe);
 
   // Test that the result of an operation is a NaN at all when it should be.
   //
@@ -310,11 +566,16 @@ int main(void) {
   // encoding. We also use the same value as the input NaN in tests that have
   // one, so that even in EXPECT_EXACT_RESULTS mode these tests should pass,
   // because 0x7ff8000000000000 is still the exact expected NaN.
-  status |= test__subdf3(0x7ff0000000000000, 0x7ff0000000000000, 0x7ff8000000000000);
-  status |= test__subdf3(0xfff0000000000000, 0xfff0000000000000, 0x7ff8000000000000);
-  status |= test__subdf3(0x3ff0000000000000, 0x7ff8000000000000, 0x7ff8000000000000);
-  status |= test__subdf3(0x7ff8000000000000, 0x3ff0000000000000, 0x7ff8000000000000);
-  status |= test__subdf3(0x7ff8000000000000, 0x7ff8000000000000, 0x7ff8000000000000);
+  status |=
+      test__subdf3(0x7ff0000000000000, 0x7ff0000000000000, 0x7ff8000000000000);
+  status |=
+      test__subdf3(0xfff0000000000000, 0xfff0000000000000, 0x7ff8000000000000);
+  status |=
+      test__subdf3(0x3ff0000000000000, 0x7ff8000000000000, 0x7ff8000000000000);
+  status |=
+      test__subdf3(0x7ff8000000000000, 0x3ff0000000000000, 0x7ff8000000000000);
+  status |=
+      test__subdf3(0x7ff8000000000000, 0x7ff8000000000000, 0x7ff8000000000000);
 
 #ifdef ARM_NAN_HANDLING
   // Tests specific to the NaN handling of Arm hardware, mimicked by
@@ -334,58 +595,110 @@ int main(void) {
   //
   //  - invalid operations not involving an input NaN return the quiet
   //    NaN with fewest bits set, 0x7ff8000000000000.
-  status |= test__subdf3(0x0000000000000000, 0x7ff3758244400801, 0x7ffb758244400801);
-  status |= test__subdf3(0x0000000000000000, 0x7fff44d3f65148af, 0x7fff44d3f65148af);
-  status |= test__subdf3(0x0000000000000001, 0x7ff48607b4b37057, 0x7ffc8607b4b37057);
-  status |= test__subdf3(0x0000000000000001, 0x7ff855f2d435b33d, 0x7ff855f2d435b33d);
-  status |= test__subdf3(0x000fffffffffffff, 0x7ff169269a674e13, 0x7ff969269a674e13);
-  status |= test__subdf3(0x000fffffffffffff, 0x7ffc80978b2ef0da, 0x7ffc80978b2ef0da);
-  status |= test__subdf3(0x3ff0000000000000, 0x7ff3458ad034593d, 0x7ffb458ad034593d);
-  status |= test__subdf3(0x3ff0000000000000, 0x7ffdd8bb98c9f13a, 0x7ffdd8bb98c9f13a);
-  status |= test__subdf3(0x7fefffffffffffff, 0x7ff79a8b96250a98, 0x7fff9a8b96250a98);
-  status |= test__subdf3(0x7fefffffffffffff, 0x7ffdcc675b63bb94, 0x7ffdcc675b63bb94);
-  status |= test__subdf3(0x7ff0000000000000, 0x7ff018cfaf4d0fff, 0x7ff818cfaf4d0fff);
-  status |= test__subdf3(0x7ff0000000000000, 0x7ff83ad1ab4dfd24, 0x7ff83ad1ab4dfd24);
-  status |= test__subdf3(0x7ff48ce6c0cdd5ac, 0x0000000000000000, 0x7ffc8ce6c0cdd5ac);
-  status |= test__subdf3(0x7ff08a34f3d5385b, 0x0000000000000001, 0x7ff88a34f3d5385b);
-  status |= test__subdf3(0x7ff0a264c1c96281, 0x000fffffffffffff, 0x7ff8a264c1c96281);
-  status |= test__subdf3(0x7ff77ce629e61f0e, 0x3ff0000000000000, 0x7fff7ce629e61f0e);
-  status |= test__subdf3(0x7ff715e2d147fd76, 0x7fefffffffffffff, 0x7fff15e2d147fd76);
-  status |= test__subdf3(0x7ff689a2031f1781, 0x7ff0000000000000, 0x7ffe89a2031f1781);
-  status |= test__subdf3(0x7ff5dfb4a0c8cd05, 0x7ff11c1fe9793a33, 0x7ffddfb4a0c8cd05);
-  status |= test__subdf3(0x7ff5826283ffb5d7, 0x7fff609b83884e81, 0x7ffd826283ffb5d7);
-  status |= test__subdf3(0x7ff7cb03f2e61d42, 0x8000000000000000, 0x7fffcb03f2e61d42);
-  status |= test__subdf3(0x7ff2adc8dfe72c96, 0x8000000000000001, 0x7ffaadc8dfe72c96);
-  status |= test__subdf3(0x7ff4fc0bacc707f2, 0x800fffffffffffff, 0x7ffcfc0bacc707f2);
-  status |= test__subdf3(0x7ff76248c8c9a619, 0xbff0000000000000, 0x7fff6248c8c9a619);
-  status |= test__subdf3(0x7ff367972fce131b, 0xffefffffffffffff, 0x7ffb67972fce131b);
-  status |= test__subdf3(0x7ff188f5ac284e92, 0xfff0000000000000, 0x7ff988f5ac284e92);
-  status |= test__subdf3(0x7ffed4c22e4e569d, 0x0000000000000000, 0x7ffed4c22e4e569d);
-  status |= test__subdf3(0x7ffe95105fa3f339, 0x0000000000000001, 0x7ffe95105fa3f339);
-  status |= test__subdf3(0x7ffb8d33dbb9ecfb, 0x000fffffffffffff, 0x7ffb8d33dbb9ecfb);
-  status |= test__subdf3(0x7ff874e41dc63e07, 0x3ff0000000000000, 0x7ff874e41dc63e07);
-  status |= test__subdf3(0x7ffe27594515ecdf, 0x7fefffffffffffff, 0x7ffe27594515ecdf);
-  status |= test__subdf3(0x7ffeac86d5c69bdf, 0x7ff0000000000000, 0x7ffeac86d5c69bdf);
-  status |= test__subdf3(0x7ff97d657b99f76f, 0x7ff7e4149862a796, 0x7fffe4149862a796);
-  status |= test__subdf3(0x7ffad17c6aa33fad, 0x7ffd898893ad4d28, 0x7ffad17c6aa33fad);
-  status |= test__subdf3(0x7ff96e04e9c3d173, 0x8000000000000000, 0x7ff96e04e9c3d173);
-  status |= test__subdf3(0x7ffec01ad8da3abb, 0x8000000000000001, 0x7ffec01ad8da3abb);
-  status |= test__subdf3(0x7ffd1d565c495941, 0x800fffffffffffff, 0x7ffd1d565c495941);
-  status |= test__subdf3(0x7ffe3d24f1e474a7, 0xbff0000000000000, 0x7ffe3d24f1e474a7);
-  status |= test__subdf3(0x7ffc206f2bb8c8ce, 0xffefffffffffffff, 0x7ffc206f2bb8c8ce);
-  status |= test__subdf3(0x7ff93efdecfb7d3b, 0xfff0000000000000, 0x7ff93efdecfb7d3b);
-  status |= test__subdf3(0x8000000000000000, 0x7ff2ee725d143ac5, 0x7ffaee725d143ac5);
-  status |= test__subdf3(0x8000000000000000, 0x7ffbba26e5c5fe98, 0x7ffbba26e5c5fe98);
-  status |= test__subdf3(0x8000000000000001, 0x7ff7818a1cd26df9, 0x7fff818a1cd26df9);
-  status |= test__subdf3(0x8000000000000001, 0x7ffaee6cc63b5292, 0x7ffaee6cc63b5292);
-  status |= test__subdf3(0x800fffffffffffff, 0x7ff401096edaf79d, 0x7ffc01096edaf79d);
-  status |= test__subdf3(0x800fffffffffffff, 0x7ffbf1778c7a2e59, 0x7ffbf1778c7a2e59);
-  status |= test__subdf3(0xbff0000000000000, 0x7ff2e8fb0201c496, 0x7ffae8fb0201c496);
-  status |= test__subdf3(0xbff0000000000000, 0x7ffcb6a5adb2e154, 0x7ffcb6a5adb2e154);
-  status |= test__subdf3(0xffefffffffffffff, 0x7ff1ea1bfc15d71d, 0x7ff9ea1bfc15d71d);
-  status |= test__subdf3(0xffefffffffffffff, 0x7ffae0766e21efc0, 0x7ffae0766e21efc0);
-  status |= test__subdf3(0xfff0000000000000, 0x7ff3b364cffbdfe6, 0x7ffbb364cffbdfe6);
-  status |= test__subdf3(0xfff0000000000000, 0x7ffd0d3223334ae3, 0x7ffd0d3223334ae3);
+  status |=
+      test__subdf3(0x0000000000000000, 0x7ff3758244400801, 0x7ffb758244400801);
+  status |=
+      test__subdf3(0x0000000000000000, 0x7fff44d3f65148af, 0x7fff44d3f65148af);
+  status |=
+      test__subdf3(0x0000000000000001, 0x7ff48607b4b37057, 0x7ffc8607b4b37057);
+  status |=
+      test__subdf3(0x0000000000000001, 0x7ff855f2d435b33d, 0x7ff855f2d435b33d);
+  status |=
+      test__subdf3(0x000fffffffffffff, 0x7ff169269a674e13, 0x7ff969269a674e13);
+  status |=
+      test__subdf3(0x000fffffffffffff, 0x7ffc80978b2ef0da, 0x7ffc80978b2ef0da);
+  status |=
+      test__subdf3(0x3ff0000000000000, 0x7ff3458ad034593d, 0x7ffb458ad034593d);
+  status |=
+      test__subdf3(0x3ff0000000000000, 0x7ffdd8bb98c9f13a, 0x7ffdd8bb98c9f13a);
+  status |=
+      test__subdf3(0x7fefffffffffffff, 0x7ff79a8b96250a98, 0x7fff9a8b96250a98);
+  status |=
+      test__subdf3(0x7fefffffffffffff, 0x7ffdcc675b63bb94, 0x7ffdcc675b63bb94);
+  status |=
+      test__subdf3(0x7ff0000000000000, 0x7ff018cfaf4d0fff, 0x7ff818cfaf4d0fff);
+  status |=
+      test__subdf3(0x7ff0000000000000, 0x7ff83ad1ab4dfd24, 0x7ff83ad1ab4dfd24);
+  status |=
+      test__subdf3(0x7ff48ce6c0cdd5ac, 0x0000000000000000, 0x7ffc8ce6c0cdd5ac);
+  status |=
+      test__subdf3(0x7ff08a34f3d5385b, 0x0000000000000001, 0x7ff88a34f3d5385b);
+  status |=
+      test__subdf3(0x7ff0a264c1c96281, 0x000fffffffffffff, 0x7ff8a264c1c96281);
+  status |=
+      test__subdf3(0x7ff77ce629e61f0e, 0x3ff0000000000000, 0x7fff7ce629e61f0e);
+  status |=
+      test__subdf3(0x7ff715e2d147fd76, 0x7fefffffffffffff, 0x7fff15e2d147fd76);
+  status |=
+      test__subdf3(0x7ff689a2031f1781, 0x7ff0000000000000, 0x7ffe89a2031f1781);
+  status |=
+      test__subdf3(0x7ff5dfb4a0c8cd05, 0x7ff11c1fe9793a33, 0x7ffddfb4a0c8cd05);
+  status |=
+      test__subdf3(0x7ff5826283ffb5d7, 0x7fff609b83884e81, 0x7ffd826283ffb5d7);
+  status |=
+      test__subdf3(0x7ff7cb03f2e61d42, 0x8000000000000000, 0x7fffcb03f2e61d42);
+  status |=
+      test__subdf3(0x7ff2adc8dfe72c96, 0x8000000000000001, 0x7ffaadc8dfe72c96);
+  status |=
+      test__subdf3(0x7ff4fc0bacc707f2, 0x800fffffffffffff, 0x7ffcfc0bacc707f2);
+  status |=
+      test__subdf3(0x7ff76248c8c9a619, 0xbff0000000000000, 0x7fff6248c8c9a619);
+  status |=
+      test__subdf3(0x7ff367972fce131b, 0xffefffffffffffff, 0x7ffb67972fce131b);
+  status |=
+      test__subdf3(0x7ff188f5ac284e92, 0xfff0000000000000, 0x7ff988f5ac284e92);
+  status |=
+      test__subdf3(0x7ffed4c22e4e569d, 0x0000000000000000, 0x7ffed4c22e4e569d);
+  status |=
+      test__subdf3(0x7ffe95105fa3f339, 0x0000000000000001, 0x7ffe95105fa3f339);
+  status |=
+      test__subdf3(0x7ffb8d33dbb9ecfb, 0x000fffffffffffff, 0x7ffb8d33dbb9ecfb);
+  status |=
+      test__subdf3(0x7ff874e41dc63e07, 0x3ff0000000000000, 0x7ff874e41dc63e07);
+  status |=
+      test__subdf3(0x7ffe27594515ecdf, 0x7fefffffffffffff, 0x7ffe27594515ecdf);
+  status |=
+      test__subdf3(0x7ffeac86d5c69bdf, 0x7ff0000000000000, 0x7ffeac86d5c69bdf);
+  status |=
+      test__subdf3(0x7ff97d657b99f76f, 0x7ff7e4149862a796, 0x7fffe4149862a796);
+  status |=
+      test__subdf3(0x7ffad17c6aa33fad, 0x7ffd898893ad4d28, 0x7ffad17c6aa33fad);
+  status |=
+      test__subdf3(0x7ff96e04e9c3d173, 0x8000000000000000, 0x7ff96e04e9c3d173);
+  status |=
+      test__subdf3(0x7ffec01ad8da3abb, 0x8000000000000001, 0x7ffec01ad8da3abb);
+  status |=
+      test__subdf3(0x7ffd1d565c495941, 0x800fffffffffffff, 0x7ffd1d565c495941);
+  status |=
+      test__subdf3(0x7ffe3d24f1e474a7, 0xbff0000000000000, 0x7ffe3d24f1e474a7);
+  status |=
+      test__subdf3(0x7ffc206f2bb8c8ce, 0xffefffffffffffff, 0x7ffc206f2bb8c8ce);
+  status |=
+      test__subdf3(0x7ff93efdecfb7d3b, 0xfff0000000000000, 0x7ff93efdecfb7d3b);
+  status |=
+      test__subdf3(0x8000000000000000, 0x7ff2ee725d143ac5, 0x7ffaee725d143ac5);
+  status |=
+      test__subdf3(0x8000000000000000, 0x7ffbba26e5c5fe98, 0x7ffbba26e5c5fe98);
+  status |=
+      test__subdf3(0x8000000000000001, 0x7ff7818a1cd26df9, 0x7fff818a1cd26df9);
+  status |=
+      test__subdf3(0x8000000000000001, 0x7ffaee6cc63b5292, 0x7ffaee6cc63b5292);
+  status |=
+      test__subdf3(0x800fffffffffffff, 0x7ff401096edaf79d, 0x7ffc01096edaf79d);
+  status |=
+      test__subdf3(0x800fffffffffffff, 0x7ffbf1778c7a2e59, 0x7ffbf1778c7a2e59);
+  status |=
+      test__subdf3(0xbff0000000000000, 0x7ff2e8fb0201c496, 0x7ffae8fb0201c496);
+  status |=
+      test__subdf3(0xbff0000000000000, 0x7ffcb6a5adb2e154, 0x7ffcb6a5adb2e154);
+  status |=
+      test__subdf3(0xffefffffffffffff, 0x7ff1ea1bfc15d71d, 0x7ff9ea1bfc15d71d);
+  status |=
+      test__subdf3(0xffefffffffffffff, 0x7ffae0766e21efc0, 0x7ffae0766e21efc0);
+  status |=
+      test__subdf3(0xfff0000000000000, 0x7ff3b364cffbdfe6, 0x7ffbb364cffbdfe6);
+  status |=
+      test__subdf3(0xfff0000000000000, 0x7ffd0d3223334ae3, 0x7ffd0d3223334ae3);
 
 #endif // ARM_NAN_HANDLING
 

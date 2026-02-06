@@ -20,6 +20,8 @@
 #ifndef COMPILER_RT_ARM_FP_ENDIAN_H
 #define COMPILER_RT_ARM_FP_ENDIAN_H
 
+// clang-format off
+
 #ifdef __BIG_ENDIAN__
 // Big-endian: high words are in lower-numbered registers.
 xh .req r0

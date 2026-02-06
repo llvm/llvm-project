@@ -48,6 +48,8 @@
 //  - if the 8 exponent bits of the output are not all 1, then there are
 //    definitely no NaNs, so a fast path can handle most non-NaN cases.
 
+// clang-format off
+
   // Set up the constant 1 << 23 in a register, which we'll need on all
   // branches.
   movs    r3, #1
