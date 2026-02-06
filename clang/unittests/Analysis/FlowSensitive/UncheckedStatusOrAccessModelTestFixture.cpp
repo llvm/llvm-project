@@ -2207,6 +2207,26 @@ TEST_P(UncheckedStatusOrAccessModelTest, Status) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, StatusBranches) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_VOIDPTR sor;
+      STATUS s;
+      if (Make<bool>()) {
+        s = absl::InvalidArgumentError("foo");
+      } else {
+        sor = Make<STATUSOR_VOIDPTR>();
+        if (!sor.ok()) {
+          s = sor.status();
+        }
+      }
+      if (s.ok()) *sor;
+    }
+  )cc");
+}
+
 TEST_P(UncheckedStatusOrAccessModelTest, ExpectThatMacro) {
   ExpectDiagnosticsFor(R"cc(
 #include "unchecked_statusor_access_test_defs.h"
