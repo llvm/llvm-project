@@ -260,8 +260,10 @@ public:
 
   swift::SerializationOptions &GetSerializationOptions();
 
-  void InitializeSearchPathOptions(
-      llvm::ArrayRef<std::pair<std::string, bool>> module_search_paths,
+  void InitializeSearchPathOptions();
+  void AddModuleSearchPaths(
+      llvm::ArrayRef<std::pair<std::string, bool>> module_search_paths);
+  void AddFrameworkSearchPaths(
       llvm::ArrayRef<std::pair<std::string, bool>> framework_search_paths);
 
   swift::ClangImporterOptions &GetClangImporterOptions();

@@ -2696,8 +2696,10 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   swift_ast_sp->FilterClangImporterOptions(
       swift_ast_sp->GetClangImporterOptions().ExtraArgs, swift_ast_sp.get());
 
-  swift_ast_sp->InitializeSearchPathOptions(module_search_paths,
-                                            framework_search_paths);
+  swift_ast_sp->InitializeSearchPathOptions();
+  swift_ast_sp->AddModuleSearchPaths(module_search_paths);
+  swift_ast_sp->AddFrameworkSearchPaths(framework_search_paths);
+
   if (!swift_ast_sp->GetClangImporter()) {
     LOG_PRINTF(
         GetLog(LLDBLog::Types),
@@ -3235,8 +3237,9 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
 
   // This needs to happen once all the import paths are set, or
   // otherwise no modules will be found.
-  swift_ast_sp->InitializeSearchPathOptions(module_search_paths,
-                                            framework_search_paths);
+  swift_ast_sp->InitializeSearchPathOptions();
+  swift_ast_sp->AddModuleSearchPaths(module_search_paths);
+  swift_ast_sp->AddFrameworkSearchPaths(framework_search_paths);
   swift_ast_sp->SetCompilerInvocationLLDBOverrides();
 
   // Initialize the compiler plugin search paths.
@@ -3646,9 +3649,7 @@ swift::SearchPathOptions &SwiftASTContext::GetSearchPathOptions() {
   return GetCompilerInvocation().getSearchPathOptions();
 }
 
-void SwiftASTContext::InitializeSearchPathOptions(
-    llvm::ArrayRef<std::pair<std::string, bool>> extra_module_search_paths,
-    llvm::ArrayRef<std::pair<std::string, bool>> extra_framework_search_paths) {
+void SwiftASTContext::InitializeSearchPathOptions() {
   swift::CompilerInvocation &invocation = GetCompilerInvocation();
 
   assert(!m_initialized_search_path_options);
@@ -3723,7 +3724,11 @@ void SwiftASTContext::InitializeSearchPathOptions(
           swift::PluginSearchOption::ExternalPluginPath{plugin_path.str().str(),
                                                         server});
   }
+}
 
+void SwiftASTContext::AddModuleSearchPaths(
+    llvm::ArrayRef<std::pair<std::string, bool>> extra_module_search_paths) {
+  swift::CompilerInvocation &invocation = GetCompilerInvocation();
   llvm::StringMap<bool> processed;
   std::vector<swift::SearchPathOptions::SearchPath> invocation_import_paths(
       invocation.getSearchPathOptions().getImportSearchPaths());
@@ -3739,9 +3744,13 @@ void SwiftASTContext::InitializeSearchPathOptions(
   }
   invocation.getSearchPathOptions().setImportSearchPaths(
       invocation_import_paths);
+}
 
+void SwiftASTContext::AddFrameworkSearchPaths(
+    llvm::ArrayRef<std::pair<std::string, bool>> extra_framework_search_paths) {
+  swift::CompilerInvocation &invocation = GetCompilerInvocation();
+  llvm::StringMap<bool> processed;
   // This preserves the IsSystem bit, but deduplicates entries ignoring it.
-  processed.clear();
   std::vector<swift::SearchPathOptions::SearchPath>
       invocation_framework_paths(
           invocation.getSearchPathOptions().getFrameworkSearchPaths());
