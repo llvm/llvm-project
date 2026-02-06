@@ -2355,6 +2355,63 @@ TEST_P(UncheckedStatusOrAccessModelTest, AssertTrueMacro) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, ExpectTrueMacro) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      EXPECT_TRUE(sor.ok());
+
+      sor.value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      EXPECT_TRUE(sor.status().ok());
+
+      sor.value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      EXPECT_TRUE(!sor.ok());
+
+      sor.value();  // [[unsafe]]
+    }
+  )cc");
+}
+
+TEST_P(UncheckedStatusOrAccessModelTest, AssertFalseMacro) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_FALSE(!sor.ok());
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_FALSE(!sor.status().ok());
+      sor.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target(STATUSOR_INT sor) {
+      ASSERT_FALSE(sor.ok());
+      sor.value();  // [[unsafe]]
+    }
+  )cc");
+}
+
 TEST_P(UncheckedStatusOrAccessModelTest, AssertOkMacro) {
   ExpectDiagnosticsFor(R"cc(
 #include "unchecked_statusor_access_test_defs.h"
