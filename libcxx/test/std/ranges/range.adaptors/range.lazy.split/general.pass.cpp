@@ -213,6 +213,22 @@ constexpr bool test_string_literals() {
     assert(test_with_piping("", long_sep, expected));
   }
 
+  // Splitting an empty `string_view` should result in one (empty) range.
+  // See LWG issue 4017.
+  {
+    std::array expected = {std::string_view()};
+
+    assert(test_function_call(std::string_view(), short_sep, expected));
+    assert(test_with_piping(std::string_view(), short_sep, expected));
+    assert(test_function_call(std::string_view(), long_sep, expected));
+    assert(test_with_piping(std::string_view(), long_sep, expected));
+
+    assert(test_function_call(std::string_view(""), short_sep, expected));
+    assert(test_with_piping(std::string_view(""), short_sep, expected));
+    assert(test_function_call(std::string_view(""), long_sep, expected));
+    assert(test_with_piping(std::string_view(""), long_sep, expected));
+  }
+
   // Terminating null in the separator -- the character literal `' '` and the seemingly equivalent string literal `" "`
   // are treated differently due to the presence of an implicit `\0` in the latter.
   {
@@ -376,7 +392,7 @@ constexpr bool main_test() {
 
   // Empty input.
   {
-    std::array<std::string_view, 0> expected = {};
+    std::array expected = {""sv};
     test_one(""sv, short_sep, expected);
     test_one(""sv, long_sep, expected);
   }

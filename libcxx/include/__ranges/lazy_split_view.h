@@ -104,7 +104,9 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto begin() {
     if constexpr (forward_range<_View>) {
-      return __outer_iterator < __simple_view<_View> && __simple_view < _Pattern >> {*this, ranges::begin(__base_)};
+      // clang-format off
+      return __outer_iterator<__simple_view<_View> && __simple_view<_Pattern>>{*this, ranges::begin(__base_)};
+      // clang-format on
     } else {
       __current_.__emplace(ranges::begin(__base_));
       return __outer_iterator<false>{*this};
@@ -120,12 +122,15 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto end()
     requires forward_range<_View> && common_range<_View>
   {
-    return __outer_iterator < __simple_view<_View> && __simple_view < _Pattern >> {*this, ranges::end(__base_)};
+    // clang-format off
+    return __outer_iterator<__simple_view<_View> &&
+                            __simple_view<_Pattern>>{*this, __outer_iterator_at_end{}, ranges::end(__base_)};
+    // clang-format on
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto end() const {
     if constexpr (forward_range<_View> && forward_range<const _View> && common_range<const _View>) {
-      return __outer_iterator<true>{*this, ranges::end(__base_)};
+      return __outer_iterator<true>{*this, __outer_iterator_at_end{}, ranges::end(__base_)};
     } else {
       return default_sentinel;
     }
@@ -138,6 +143,10 @@ private:
   template <forward_range _Tp>
   struct __outer_iterator_category<_Tp> {
     using iterator_category = input_iterator_tag;
+  };
+
+  struct __outer_iterator_at_end {
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __outer_iterator_at_end() = default;
   };
 
   template <bool _Const>
@@ -153,8 +162,9 @@ private:
     _Parent* __parent_                                 = nullptr;
     using _MaybeCurrent _LIBCPP_NODEBUG                = _If<forward_range<_View>, iterator_t<_Base>, __empty_cache>;
     _LIBCPP_NO_UNIQUE_ADDRESS _MaybeCurrent __current_ = _MaybeCurrent();
-    bool __trailing_empty_                             = false;
+    bool __has_more_                                   = false;
 
+    // precondition: `__has_more_`
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto& __current() noexcept {
       if constexpr (forward_range<_View>) {
         return __current_;
@@ -163,6 +173,7 @@ private:
       }
     }
 
+    // precondition: `__has_more_`
     [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const auto& __current() const noexcept {
       if constexpr (forward_range<_View>) {
         return __current_;
@@ -196,29 +207,39 @@ private:
 
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __outer_iterator(_Parent& __parent)
       requires(!forward_range<_Base>)
-        : __parent_(std::addressof(__parent)) {}
+        : __parent_(std::addressof(__parent)), __has_more_(true) {}
 
     _LIBCPP_HIDE_FROM_ABI constexpr __outer_iterator(_Parent& __parent, iterator_t<_Base> __current)
       requires forward_range<_Base>
-        : __parent_(std::addressof(__parent)), __current_(std::move(__current)) {}
+        : __parent_(std::addressof(__parent)), __current_(std::move(__current)), __has_more_(true) {}
+
+    // libc++ extension: constructs an `__outer_iterator` that is at the end of
+    // the `lazy_split_view`. Needs to be called with the end iterator of the
+    // underlying range.
+    _LIBCPP_HIDE_FROM_ABI constexpr __outer_iterator(
+        _Parent& __parent, __outer_iterator_at_end, iterator_t<_Base> __current)
+      requires forward_range<_Base>
+        : __parent_(std::addressof(__parent)), __current_(std::move(__current)), __has_more_(false) {}
 
     _LIBCPP_HIDE_FROM_ABI constexpr __outer_iterator(__outer_iterator<!_Const> __i)
       requires _Const && convertible_to<iterator_t<_View>, iterator_t<_Base>>
-        : __parent_(__i.__parent_), __current_(std::move(__i.__current_)) {}
+        : __parent_(__i.__parent_), __current_(std::move(__i.__current_)), __has_more_(__i.__has_more_) {}
 
     _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const { return value_type{*this}; }
 
     _LIBCPP_HIDE_FROM_ABI constexpr __outer_iterator& operator++() {
       const auto __end = ranges::end(__parent_->__base_);
       if (__current() == __end) {
-        __trailing_empty_ = false;
+        __has_more_ = false;
         return *this;
       }
 
       const auto [__pbegin, __pend] = ranges::subrange{__parent_->__pattern_};
       if (__pbegin == __pend) {
         // Empty pattern: split on every element in the input range
-        ++__current();
+        if (++__current() == __end) {
+          __has_more_ = false;
+        }
 
       } else if constexpr (__tiny_range<_Pattern>) {
         // One-element pattern: we can use `ranges::find`.
@@ -226,8 +247,8 @@ private:
         if (__current() != __end) {
           // Make sure we point to after the separator we just found.
           ++__current();
-          if (__current() == __end)
-            __trailing_empty_ = true;
+        } else {
+          __has_more_ = false;
         }
 
       } else {
@@ -236,12 +257,14 @@ private:
           const auto [__b, __p] = ranges::mismatch(__current(), __end, __pbegin, __pend);
           if (__p == __pend) {
             __current() = __b;
-            if (__current() == __end) {
-              __trailing_empty_ = true;
-            }
-            break; // The pattern matched; skip it.
+            // The pattern matched; skip it.
+            return *this;
           }
         } while (++__current() != __end);
+
+        // We arrived at the end of the range without matching the pattern,
+        // so we are done.
+        __has_more_ = false;
       }
 
       return *this;
@@ -261,12 +284,12 @@ private:
     _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __outer_iterator& __x, const __outer_iterator& __y)
       requires forward_range<_Base>
     {
-      return __x.__current_ == __y.__current_ && __x.__trailing_empty_ == __y.__trailing_empty_;
+      return __x.__current_ == __y.__current_ && __x.__has_more_ == __y.__has_more_;
     }
 
     _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __outer_iterator& __x, default_sentinel_t) {
       _LIBCPP_ASSERT_NON_NULL(__x.__parent_ != nullptr, "Cannot call comparison on a default-constructed iterator.");
-      return __x.__current() == ranges::end(__x.__parent_base()) && !__x.__trailing_empty_;
+      return __x.__current() == ranges::end(__x.__parent_base()) && !__x.__has_more_;
     }
   };
 

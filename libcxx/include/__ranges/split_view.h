@@ -55,6 +55,10 @@ private:
   using _Cache _LIBCPP_NODEBUG                  = __non_propagating_cache<subrange<iterator_t<_View>>>;
   _Cache __cached_begin_                        = _Cache();
 
+  struct __iterator_at_end {
+    _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator_at_end() = default;
+  };
+
   template <class, class>
   friend struct __iterator;
 
@@ -105,7 +109,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
     if constexpr (common_range<_View>) {
-      return __iterator{*this, ranges::end(__base_), {}};
+      return __iterator{*this, __iterator_at_end{}, ranges::end(__base_)};
     } else {
       return __sentinel{*this};
     }
@@ -126,7 +130,7 @@ private:
   split_view* __parent_                                         = nullptr;
   _LIBCPP_NO_UNIQUE_ADDRESS iterator_t<_View> __cur_            = iterator_t<_View>();
   _LIBCPP_NO_UNIQUE_ADDRESS subrange<iterator_t<_View>> __next_ = subrange<iterator_t<_View>>();
-  bool __trailing_empty_                                        = false;
+  bool __has_more_                                              = false;
 
   friend struct __sentinel;
 
@@ -140,7 +144,17 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(
       split_view<_View, _Pattern>& __parent, iterator_t<_View> __current, subrange<iterator_t<_View>> __next)
-      : __parent_(std::addressof(__parent)), __cur_(std::move(__current)), __next_(std::move(__next)) {}
+      : __parent_(std::addressof(__parent)),
+        __cur_(std::move(__current)),
+        __next_(std::move(__next)),
+        __has_more_(true) {}
+
+  // libc++ extension: constructs an `__iterator` that is at the end of
+  // the `split_view`. Needs to be called with the end iterator of the
+  // underlying range.
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(
+      split_view<_View, _Pattern>& __parent, __iterator_at_end, iterator_t<_View> __current)
+      : __parent_(std::addressof(__parent)), __cur_(std::move(__current)), __has_more_(false) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> base() const { return __cur_; }
 
@@ -149,15 +163,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
     __cur_ = __next_.begin();
     if (__cur_ != ranges::end(__parent_->__base_)) {
-      __cur_ = __next_.end();
-      if (__cur_ == ranges::end(__parent_->__base_)) {
-        __trailing_empty_ = true;
-        __next_           = {__cur_, __cur_};
-      } else {
-        __next_ = __parent_->__find_next(__cur_);
-      }
+      __cur_  = __next_.end();
+      __next_ = __parent_->__find_next(__cur_);
     } else {
-      __trailing_empty_ = false;
+      __has_more_ = false;
     }
     return *this;
   }
@@ -169,7 +178,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y) {
-    return __x.__cur_ == __y.__cur_ && __x.__trailing_empty_ == __y.__trailing_empty_;
+    return __x.__cur_ == __y.__cur_ && __x.__has_more_ == __y.__has_more_;
   }
 };
 
@@ -181,7 +190,7 @@ private:
   _LIBCPP_NO_UNIQUE_ADDRESS sentinel_t<_View> __end_ = sentinel_t<_View>();
 
   _LIBCPP_HIDE_FROM_ABI static constexpr bool __equals(const __iterator& __x, const __sentinel& __y) {
-    return __x.__cur_ == __y.__end_ && !__x.__trailing_empty_;
+    return __x.__cur_ == __y.__end_ && !__x.__has_more_;
   }
 
 public:
