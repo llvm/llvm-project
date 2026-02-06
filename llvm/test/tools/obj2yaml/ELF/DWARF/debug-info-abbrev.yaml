@@ -1,0 +1,121 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+# CHECK:  debug_abbrev:
+# CHECK:    - ID:              0
+# CHECK:      Table:
+# CHECK:        - Code:            0x1
+# CHECK:          Tag:             DW_TAG_compile_unit
+# CHECK:          Children:        DW_CHILDREN_no
+# CHECK:          Attributes:
+# CHECK:            - Attribute:       DW_AT_low_pc
+# CHECK:              Form:            DW_FORM_addr
+# CHECK:    - ID:              1
+# CHECK:      Table:
+# CHECK:        - Code:            0x1
+# CHECK:          Tag:             DW_TAG_compile_unit
+# CHECK:          Children:        DW_CHILDREN_no
+# CHECK:          Attributes:
+# CHECK:            - Attribute:       DW_AT_low_pc
+# CHECK:              Form:            DW_FORM_data4
+# CHECK:    - ID:              2
+# CHECK:      Table:
+# CHECK:        - Code:            0x1
+# CHECK:          Tag:             DW_TAG_compile_unit
+# CHECK:          Children:        DW_CHILDREN_no
+# CHECK:          Attributes:
+# CHECK:            - Attribute:       DW_AT_low_pc
+# CHECK:              Form:            DW_FORM_udata
+#
+# CHECK:  debug_info:
+# CHECK:    - Length:          0xC
+# CHECK:      Version:         4
+# CHECK:      AbbrevTableID:   1
+# CHECK:      AbbrOffset:      0x8
+# CHECK:      AddrSize:        8
+# CHECK:      Entries:
+# CHECK:        - AbbrCode:        0x1
+# CHECK:          Values:
+# CHECK:            - Value:           0x1234
+# CHECK:    - Length:          0xC
+# CHECK:      Version:         4
+# CHECK:      AbbrevTableID:   1
+# CHECK:      AbbrOffset:      0x8
+# CHECK:      AddrSize:        8
+# CHECK:      Entries:
+# CHECK:        - AbbrCode:        0x1
+# CHECK:          Values:
+# CHECK:            - Value:           0x4321
+# CHECK:    - Length:          0x10
+# CHECK:      Version:         4
+# CHECK:      AbbrevTableID:   0
+# CHECK:      AbbrOffset:      0x0
+# CHECK:      AddrSize:        8
+# CHECK:      Entries:
+# CHECK:        - AbbrCode:        0x1
+# CHECK:          Values:
+# CHECK:            - Value:           0x5678
+# CHECK:    - Length:          0xB
+# CHECK:      Version:         4
+# CHECK:      AbbrevTableID:   2
+# CHECK:      AbbrOffset:      0x10
+# CHECK:      AddrSize:        8
+# CHECK:      Entries:
+# CHECK:        - AbbrCode:        0x1
+# CHECK:          Values:
+# CHECK:            - Value:           0x8765
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+DWARF:
+  debug_abbrev:
+    - Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_addr
+    - ID: 2
+      Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_data4
+    - ID: 1
+      Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_udata
+  debug_info:
+    - Version:       4
+      AbbrevTableID: 2
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x1234
+    - Version:       4
+      AbbrevTableID: 2
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x4321
+    - Version:       4
+      AbbrevTableID: 0
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x5678
+    - Version:       4
+      AbbrevTableID: 1
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - Value: 0x8765
