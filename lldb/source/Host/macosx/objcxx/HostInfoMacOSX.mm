@@ -778,8 +778,9 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
     return {};
 
   Log *log = GetLog(LLDBLog::Modules);
-  for (segment seg : segments) {
-    if (log && log->GetVerbose())
+  bool log_verbosely = log && log->GetVerbose();
+  for (const segment &seg : segments) {
+    if (log_verbosely)
       LLDB_LOGF(
           log,
           "image %p %s vmaddr 0x%llx vmsize 0x%zx mapped to lldb vm addr %p",
@@ -796,7 +797,7 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
   // A __DATA segment which is at the __TEXT vm addr + 0x1000 needs to be
   // listed as offset 0x1000.
   uint64_t min_file_vm_addr = UINT64_MAX;
-  for (segment seg : segments) {
+  for (const segment &seg : segments) {
     min_lldb_vm_addr = std::min(min_lldb_vm_addr, (uint64_t)seg.data);
     max_lldb_vm_addr =
         std::max(max_lldb_vm_addr, (uint64_t)seg.data + seg.vmsize);
@@ -805,7 +806,7 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
   DataBufferSP data_sp = std::make_shared<DataBufferUnowned>(
       (uint8_t *)min_lldb_vm_addr, max_lldb_vm_addr - min_lldb_vm_addr);
   VirtualDataExtractor::LookupTable remap_table;
-  for (segment seg : segments)
+  for (const segment &seg : segments)
     remap_table.Append(VirtualDataExtractor::LookupTable::Entry(
         (uint64_t)seg.vmaddr - min_file_vm_addr, (uint64_t)seg.vmsize,
         (uint64_t)seg.data - (uint64_t)min_lldb_vm_addr));
