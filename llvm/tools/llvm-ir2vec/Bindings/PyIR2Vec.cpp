@@ -102,8 +102,7 @@ public:
       throw nb::value_error(
           ("Function '" + FuncName + "' not found in module").c_str());
 
-    auto ToolFuncEmb =
-        Tool->getFunctionEmbedding(*F, OutputEmbeddingMode);
+    auto ToolFuncEmb = Tool->getFunctionEmbedding(*F, OutputEmbeddingMode);
 
     if (!ToolFuncEmb)
       throw nb::value_error(toString(ToolFuncEmb.takeError()).c_str());
