@@ -20,21 +20,19 @@ COMPILER_RT_ABI int __ltsf2(float, float);
 COMPILER_RT_ABI int __cmpsf2(float, float);
 COMPILER_RT_ABI int __unordsf2(float, float);
 
-enum Result {
-  RESULT_LT,
-  RESULT_GT,
-  RESULT_EQ,
-  RESULT_UN
-};
+enum Result { RESULT_LT, RESULT_GT, RESULT_EQ, RESULT_UN };
 
-int expect(int line, uint32_t a_rep, uint32_t b_rep, const char *name, int result, int ok, const char *expected) {
+int expect(int line, uint32_t a_rep, uint32_t b_rep, const char *name,
+           int result, int ok, const char *expected) {
   if (!ok)
-    printf("error at line %d: %s(%08" PRIx32 ", %08" PRIx32 ") = %d, expected %s\n",
+    printf("error at line %d: %s(%08" PRIx32 ", %08" PRIx32
+           ") = %d, expected %s\n",
            line, name, a_rep, b_rep, result, expected);
   return !ok;
 }
 
-int test__comparesf2(int line, uint32_t a_rep, uint32_t b_rep, enum Result result) {
+int test__comparesf2(int line, uint32_t a_rep, uint32_t b_rep,
+                     enum Result result) {
   float a = fromRep32(a_rep), b = fromRep32(b_rep);
 
   int eq = __eqsf2(a, b);
@@ -94,7 +92,7 @@ int test__comparesf2(int line, uint32_t a_rep, uint32_t b_rep, enum Result resul
   return ret;
 }
 
-#define test__comparesf2(a,b,x) test__comparesf2(__LINE__,a,b,x)
+#define test__comparesf2(a, b, x) test__comparesf2(__LINE__, a, b, x)
 
 int main(void) {
   int status = 0;
