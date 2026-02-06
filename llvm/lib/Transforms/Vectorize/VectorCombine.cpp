@@ -1655,7 +1655,13 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
     }
 
     // Create the vector select and bitcast once for this condition.
-    Builder.SetInsertPoint(BC->getNextNode());
+    auto InsertPt = std::next(BC->getIterator());
+
+    if (auto *CondInst = dyn_cast<Instruction>(Cond))
+      if (DT.dominates(BC, CondInst))
+        InsertPt = std::next(CondInst->getIterator());
+
+    Builder.SetInsertPoint(InsertPt);
     Value *VecSel =
         Builder.CreateSelect(Cond, SrcVec, Constant::getNullValue(SrcVecTy));
     Value *NewBC = Builder.CreateBitCast(VecSel, DstVecTy);
@@ -2490,7 +2496,7 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   }
   if (Match1) {
     InstructionCost Shuf1Cost = TTI.getShuffleCost(
-        TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy, Op0Ty, Mask0, CostKind,
+        TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy, Op1Ty, Mask1, CostKind,
         0, nullptr, {Op10, Op11}, cast<Instruction>(BinOp->getOperand(1)));
     OldCost += Shuf1Cost;
     if (!BinOp->hasOneUse() || !BinOp->getOperand(1)->hasOneUse())
@@ -4597,6 +4603,10 @@ bool VectorCombine::foldEquivalentReductionCmp(Instruction &I) {
     return false;
 
   const auto IsValidOrUmaxCmp = [&]() {
+    // or === umax for i1
+    if (CmpVal->getBitWidth() == 1)
+      return true;
+
     // Cases a and e
     bool IsEquality =
         (CmpVal->isZero() || CmpVal->isOne()) && ICmpInst::isEquality(Pred);
@@ -4609,6 +4619,10 @@ bool VectorCombine::foldEquivalentReductionCmp(Instruction &I) {
   };
 
   const auto IsValidAndUminCmp = [&]() {
+    // and === umin for i1
+    if (CmpVal->getBitWidth() == 1)
+      return true;
+
     const auto LeadingOnes = CmpVal->countl_one();
 
     // Cases g and k

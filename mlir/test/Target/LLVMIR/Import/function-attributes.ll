@@ -339,15 +339,20 @@ declare void @func_attr_no_signed_zeros_fp_math_false() "no-signed-zeros-fp-math
 
 ; // -----
 
-; CHECK-LABEL: @func_attr_denormal_fp_math_ieee
-; CHECK-SAME: attributes {denormal_fp_math = "ieee"}
-declare void @func_attr_denormal_fp_math_ieee() "denormal-fp-math"="ieee"
+; CHECK-LABEL: @func_attr_denormal_fp_math_ieee(){{$}}
+declare void @func_attr_denormal_fp_math_ieee() denormal_fpenv(ieee)
 
 ; // -----
 
 ; CHECK-LABEL: @func_attr_denormal_fp_math_f32_preserve_sign
-; CHECK-SAME: attributes {denormal_fp_math_f32 = "preserve-sign"}
-declare void @func_attr_denormal_fp_math_f32_preserve_sign() "denormal-fp-math-f32"="preserve-sign"
+; CHECK-SAME: attributes {denormal_fpenv = #llvm.denormal_fpenv<default_output_mode = ieee, default_input_mode = ieee, float_output_mode = preservesign, float_input_mode = preservesign>}
+declare void @func_attr_denormal_fp_math_f32_preserve_sign() denormal_fpenv(float: preservesign)
+
+; // -----
+
+; CHECK-LABEL: @func_attr_mixed_denormal_modes
+; CHECK: attributes {denormal_fpenv = #llvm.denormal_fpenv<default_output_mode = dynamic, default_input_mode = preservesign, float_output_mode = preservesign, float_input_mode = dynamic>}
+declare void @func_attr_mixed_denormal_modes() denormal_fpenv(dynamic|preservesign, float: preservesign|dynamic)
 
 ; // -----
 
@@ -414,6 +419,72 @@ declare void @willreturn_attribute() willreturn
 ; CHECK-LABEL: @noreturn_attribute
 ; CHECK-SAME: attributes {noreturn}
 declare void @noreturn_attribute() noreturn
+
+// -----
+
+; CHECK-LABEL: @returnstwice_attribute
+; CHECK-SAME: attributes {returns_twice}
+declare void @returnstwice_attribute() returns_twice
+
+// -----
+
+; CHECK-LABEL: @hot_attribute
+; CHECK-SAME: attributes {hot}
+declare void @hot_attribute() hot
+
+// -----
+
+; CHECK-LABEL: @cold_attribute
+; CHECK-SAME: attributes {cold}
+declare void @cold_attribute() cold
+
+// -----
+
+; CHECK-LABEL: @noduplicate_attribute
+; CHECK-SAME: attributes {noduplicate}
+declare void @noduplicate_attribute() noduplicate
+
+// -----
+
+; CHECK-LABEL: @no_caller_saved_registers_attribute
+; CHECK-SAME: attributes {no_caller_saved_registers}
+declare void @no_caller_saved_registers_attribute () "no_caller_saved_registers"
+
+// -----
+
+; CHECK-LABEL: @nocallback_attribute
+; CHECK-SAME: attributes {nocallback}
+declare void @nocallback_attribute() nocallback
+
+// -----
+
+; CHECK-LABEL: @modular_format_attribute
+; CHECK-SAME: attributes {modular_format = "Ident,1,1,Foo,Bar"}
+declare void @modular_format_attribute(i32) "modular-format" = "Ident,1,1,Foo,Bar"
+
+// -----
+
+; CHECK-LABEL: @no_builtins_all
+; CHECK-SAME: attributes {nobuiltins = []}
+declare void @no_builtins_all() "no-builtins"
+
+// -----
+
+; CHECK-LABEL: @no_builtins_2
+; CHECK-SAME: attributes {nobuiltins = ["asdf", "defg"]}
+declare void @no_builtins_2() "no-builtin-asdf" "no-builtin-defg"
+
+// -----
+
+; CHECK-LABEL: @alloc_size_1
+; CHECK-SAME: attributes {allocsize = array<i32: 0>}
+declare void @alloc_size_1(i32) allocsize(0)
+
+// -----
+
+; CHECK-LABEL: @alloc_size_2
+; CHECK-SAME: attributes {allocsize = array<i32: 0, 1>}
+declare void @alloc_size_2(i32, i32) allocsize(0, 1)
 
 // -----
 

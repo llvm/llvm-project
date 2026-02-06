@@ -650,13 +650,8 @@ bool RegBankLegalizeHelper::lowerS_BFE(MachineInstr &MI) {
   // copies from reg class to reg bank.
   auto S_BFE = B.buildInstr(Opc, {{SgprRB, Ty}},
                             {B.buildCopy(Ty, Src), B.buildCopy(S32, Src1)});
-  if (!constrainSelectedInstRegOperands(*S_BFE, *ST.getInstrInfo(),
-                                        *ST.getRegisterInfo(), RBI)) {
-    reportGISelFailure(
-        MF, MORE, "amdgpu-regbanklegalize",
-        "AMDGPU RegBankLegalize: lowerS_BFE, failed to constrain BFE", MI);
-    return false;
-  }
+  constrainSelectedInstRegOperands(*S_BFE, *ST.getInstrInfo(),
+                                   *ST.getRegisterInfo(), RBI);
 
   B.buildCopy(DstReg, S_BFE->getOperand(0).getReg());
   MI.eraseFromParent();
@@ -1012,6 +1007,55 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     return lowerUnpackAExt(MI);
   case WidenMMOToS32:
     return widenMMOToS32(cast<GAnyLoad>(MI));
+  case VerifyAllSgpr: {
+    assert(llvm::all_of(MI.operands(), [&](const MachineOperand &Op) {
+      return MRI.getRegBankOrNull(Op.getReg()) == SgprRB;
+    }));
+    return true;
+  }
+  case ApplyAllVgpr: {
+    assert(llvm::all_of(MI.defs(), [&](const MachineOperand &Op) {
+      return MRI.getRegBankOrNull(Op.getReg()) == VgprRB;
+    }));
+    B.setInstrAndDebugLoc(MI);
+    for (unsigned i = MI.getNumDefs(); i < MI.getNumOperands(); ++i) {
+      Register Reg = MI.getOperand(i).getReg();
+      if (MRI.getRegBank(Reg) != VgprRB) {
+        auto Copy = B.buildCopy({VgprRB, MRI.getType(Reg)}, Reg);
+        MI.getOperand(i).setReg(Copy.getReg(0));
+      }
+    }
+    return true;
+  }
+  case UnmergeToShiftTrunc: {
+    GUnmerge *Unmerge = dyn_cast<GUnmerge>(&MI);
+    LLT Ty = MRI.getType(Unmerge->getSourceReg());
+    if (Ty.getSizeInBits() % 32 != 0) {
+      reportGISelFailure(MF, MORE, "amdgpu-regbanklegalize",
+                         "AMDGPU RegBankLegalize: unmerge not multiple of 32",
+                         MI);
+      return false;
+    }
+
+    B.setInstrAndDebugLoc(MI);
+    if (Ty.getSizeInBits() > 32) {
+      auto UnmergeV2S16 =
+          B.buildUnmerge({SgprRB, V2S16}, Unmerge->getSourceReg());
+      for (unsigned i = 0; i < UnmergeV2S16->getNumDefs(); ++i) {
+        auto [Dst0S32, Dst1S32] =
+            unpackAExt(UnmergeV2S16->getOperand(i).getReg());
+        B.buildTrunc(MI.getOperand(i * 2).getReg(), Dst0S32);
+        B.buildTrunc(MI.getOperand(i * 2 + 1).getReg(), Dst1S32);
+      }
+    } else {
+      auto [Dst0S32, Dst1S32] = unpackAExt(MI.getOperand(2).getReg());
+      B.buildTrunc(MI.getOperand(0).getReg(), Dst0S32);
+      B.buildTrunc(MI.getOperand(1).getReg(), Dst1S32);
+    }
+
+    MI.eraseFromParent();
+    return true;
+  }
   }
 
   if (!WaterfallSgprs.empty()) {
@@ -1079,6 +1123,8 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case VgprV2S32:
   case UniInVgprV2S32:
     return LLT::fixed_vector(2, 32);
+  case VgprV3S32:
+    return LLT::fixed_vector(3, 32);
   case SgprV4S32:
   case SgprV4S32_WF:
   case VgprV4S32:
@@ -1128,7 +1174,13 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
   case VgprB128:
   case UniInVgprB128:
     if (Ty == LLT::scalar(128) || Ty == LLT::fixed_vector(4, 32) ||
-        Ty == LLT::fixed_vector(2, 64) || isAnyPtr(Ty, 128))
+        Ty == LLT::fixed_vector(2, 64) || Ty == LLT::fixed_vector(8, 16) ||
+        isAnyPtr(Ty, 128))
+      return Ty;
+    return LLT();
+  case VgprB160:
+  case UniInVgprB160:
+    if (Ty.getSizeInBits() == 160)
       return Ty;
     return LLT();
   case SgprB256:
@@ -1192,6 +1244,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case UniInVgprB64:
   case UniInVgprB96:
   case UniInVgprB128:
+  case UniInVgprB160:
   case UniInVgprB256:
   case UniInVgprB512:
   case Sgpr32Trunc:
@@ -1215,12 +1268,14 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprPtr128:
   case VgprV2S16:
   case VgprV2S32:
-  case VgprV4S32:
   case VgprV2S64:
+  case VgprV3S32:
+  case VgprV4S32:
   case VgprB32:
   case VgprB64:
   case VgprB96:
   case VgprB128:
+  case VgprB160:
   case VgprB256:
   case VgprB512:
   case Vgpr32AExt:
@@ -1272,8 +1327,9 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case VgprP5:
     case VgprV2S16:
     case VgprV2S32:
-    case VgprV4S32:
-    case VgprV2S64: {
+    case VgprV2S64:
+    case VgprV3S32:
+    case VgprV4S32: {
       assert(Ty == getTyFromID(MethodIDs[OpIdx]));
       assert(RB == getRegBankFromID(MethodIDs[OpIdx]));
       break;
@@ -1292,6 +1348,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case VgprB64:
     case VgprB96:
     case VgprB128:
+    case VgprB160:
     case VgprB256:
     case VgprB512:
     case VgprPtr32:
@@ -1343,6 +1400,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case UniInVgprB64:
     case UniInVgprB96:
     case UniInVgprB128:
+    case UniInVgprB160:
     case UniInVgprB256:
     case UniInVgprB512: {
       assert(Ty == getBTyFromID(MethodIDs[OpIdx], Ty));
@@ -1449,8 +1507,9 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case VgprP5:
     case VgprV2S16:
     case VgprV2S32:
-    case VgprV4S32:
-    case VgprV2S64: {
+    case VgprV2S64:
+    case VgprV3S32:
+    case VgprV4S32: {
       assert(Ty == getTyFromID(MethodIDs[i]));
       if (RB != VgprRB) {
         auto CopyToVgpr = B.buildCopy({VgprRB, Ty}, Reg);
@@ -1463,6 +1522,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case VgprB64:
     case VgprB96:
     case VgprB128:
+    case VgprB160:
     case VgprB256:
     case VgprB512:
     case VgprPtr32:

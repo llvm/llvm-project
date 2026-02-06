@@ -120,17 +120,28 @@ void test_char_reference(char& a) {
 // CHECK-NOT: call i8 @llvm.bswap.i8
 // CHECK: ret void
 
-void test_bitint() {
-  _BitInt(8) a = 0x12;
+void test_bool_reference(bool& a) {
   __builtin_bswapg(a);
-  _BitInt(16) b = 0x1234;
+}
+// CHECK-LABEL: @_Z19test_bool_referenceRb
+// CHECK: store ptr %a, ptr
+// CHECK: load ptr, ptr
+// CHECK-NOT: call i8 @llvm.bswap.i8
+// CHECK: ret void
+
+void test_bitint() {
+  bool a = true;
+  __builtin_bswapg(a);
+  _BitInt(8) b = 0x12;
   __builtin_bswapg(b);
-  _BitInt(32) c = 0x00001234;
+  _BitInt(16) c = 0x1234;
   __builtin_bswapg(c);
-  _BitInt(64) d = 0x0000000000001234;
+  _BitInt(32) d = 0x00001234;
   __builtin_bswapg(d);
-  _BitInt(128) e = ~(_BitInt(128))0;
+  _BitInt(64) e = 0x0000000000001234;
   __builtin_bswapg(e);
+  _BitInt(128) f = ~(_BitInt(128))0;
+  __builtin_bswapg(f);
 }
 // CHECK-LABEL: @_Z11test_bitintv
 // CHECK-NOT: call i8 @llvm.bswap.i8
