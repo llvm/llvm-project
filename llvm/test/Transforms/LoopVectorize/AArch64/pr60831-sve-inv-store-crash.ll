@@ -288,7 +288,7 @@ define void @test_invar_gep_var_start_step_2(i64 %start, ptr %dst) #0 {
 ; IC2-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 2
 ; IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[TMP6]], i64 0
 ; IC2-NEXT:    [[BROADCAST_SPLAT1:%.*]] = shufflevector <vscale x 4 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
-; IC2-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP6]], 1
+; IC2-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 1
 ; IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], [[TMP7]]
 ; IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; IC2-NEXT:    [[TMP10:%.*]] = mul i64 [[N_VEC]], 2
