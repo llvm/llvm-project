@@ -666,8 +666,7 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                                    const llvm::opt::ArgList &Args,
                                    std::vector<StringRef> &Features) {
   if (Args.hasArg(options::OPT_cuda_feature_EQ)) {
-    StringRef PtxFeature =
-        Args.getLastArgValue(options::OPT_cuda_feature_EQ, "+ptx42");
+    StringRef PtxFeature = Args.getLastArgValue(options::OPT_cuda_feature_EQ);
     Features.push_back(Args.MakeArgString(PtxFeature));
     return;
   }
@@ -712,9 +711,11 @@ void NVPTX::getNVPTXTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     PtxFeature = "+ptx86";
     break;
   default:
-    PtxFeature = "+ptx42";
+    // No PTX feature specified; let the backend choose based on the target SM.
+    break;
   }
-  Features.push_back(PtxFeature);
+  if (PtxFeature)
+    Features.push_back(PtxFeature);
 }
 
 /// NVPTX toolchain. Our assembler is ptxas, and our linker is nvlink. This
