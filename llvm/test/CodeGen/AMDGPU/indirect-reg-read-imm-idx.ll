@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -O1 -global-isel=true < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx90a -O1 -global-isel < %s | FileCheck %s
 
 ; Test that V_INDIRECT_REG_READ_GPR_IDX expansion handles immediate index operands.
 ; The wave.reduce.umin with constant arguments folds to 0, which becomes an
