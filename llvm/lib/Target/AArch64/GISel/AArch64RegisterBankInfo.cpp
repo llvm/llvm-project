@@ -1240,12 +1240,13 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       }
       TypeSize DstSize = getSizeInBits(MI.getOperand(0).getReg(), MRI, TRI);
       TypeSize SrcSize = getSizeInBits(MI.getOperand(2).getReg(), MRI, TRI);
-      if (((DstSize == SrcSize) || STI.hasFeature(AArch64::FeatureFPRCVT)) &&
-          all_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
-                 [&](const MachineInstr &UseMI) {
-                   return onlyUsesFP(UseMI, MRI, TRI) ||
-                          prefersFPUse(UseMI, MRI, TRI);
-                 }))
+      if ((DstSize == 16) ||
+          (((DstSize == SrcSize) || STI.hasFeature(AArch64::FeatureFPRCVT)) &&
+           all_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
+                  [&](const MachineInstr &UseMI) {
+                    return onlyUsesFP(UseMI, MRI, TRI) ||
+                           prefersFPUse(UseMI, MRI, TRI);
+                  })))
         OpRegBankIdx[0] = PMI_FirstFPR;
       else
         OpRegBankIdx[0] = PMI_FirstGPR;
