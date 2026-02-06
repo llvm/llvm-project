@@ -50,6 +50,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LastRunTrackingAnalysis.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -3344,6 +3345,48 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       if (V != &GEP)
         return replaceInstUsesWith(GEP, V);
       return &GEP;
+    }
+  }
+
+  // srem -> (and/urem) for inbounds+nuw byte GEP with dereferenceable base ---
+  if (GEPEltType->isIntegerTy(8) && Indices.size() == 1 && GEP.isInBounds() &&
+      GEP.getNoWrapFlags().hasNoUnsignedWrap()) {
+
+    using namespace llvm::PatternMatch;
+
+    Value *X = nullptr;
+    ConstantInt *DivC = nullptr;
+
+    // Match: idx = srem X, C -- where C is a positive power-of-two constant.
+    if (match(Indices[0], m_SRem(m_Value(X), m_ConstantInt(DivC))) &&
+        DivC->getValue().isStrictlyPositive() &&
+        DivC->getValue().isPowerOf2()) {
+
+      uint64_t Div = DivC->getZExtValue();
+      APInt Size(DL.getIndexTypeSizeInBits(GEP.getType()), Div);
+
+      if (isDereferenceableAndAlignedPointer(PtrOp, Align(1), Size, DL, &GEP,
+                                             &AC, &DT, &TLI)) {
+        // If base is at least Div bytes dereferenceable and GEP is
+        // inbounds+nuw, index cannot be negative -> srem by power-of-two can be
+        // treated as urem, and urem by power-of-two folds to 'and'.
+        Instruction *OldIdxI = dyn_cast<Instruction>(Indices[0]);
+        Builder.SetInsertPoint(&GEP);
+        Value *Mask = ConstantInt::get(X->getType(), Div - 1);
+        Value *NewIdx = Builder.CreateAnd(X, Mask, "idx.mask");
+
+        auto *NewGEP = GetElementPtrInst::Create(GEPEltType, PtrOp, {NewIdx},
+                                                 GEP.getName(), &GEP);
+        NewGEP->setIsInBounds(GEP.isInBounds());
+        NewGEP->setNoWrapFlags(GEP.getNoWrapFlags());
+        NewGEP->setDebugLoc(GEP.getDebugLoc());
+
+        Instruction *Res = replaceInstUsesWith(GEP, NewGEP);
+        if (OldIdxI && OldIdxI->use_empty())
+          eraseInstFromFunction(*OldIdxI);
+
+        return Res;
+      }
     }
   }
 
