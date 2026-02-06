@@ -839,6 +839,8 @@ public:
   virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                  unsigned MaxBytesToEmit = 0);
 
+  virtual void emitPrefAlign(Align A);
+
   /// Emit some number of copies of \p Value until the byte offset \p
   /// Offset is reached.
   ///
@@ -901,6 +903,14 @@ public:
                                      unsigned Isa, unsigned Discriminator,
                                      StringRef FileName,
                                      StringRef Comment = {});
+
+  /// This is same as emitDwarfLocDirective, except it has the capability to
+  /// add inlined_at information.
+  virtual void emitDwarfLocDirectiveWithInlinedAt(
+      unsigned FileNo, unsigned Line, unsigned Column, unsigned FileIA,
+      unsigned LineIA, unsigned ColumnIA, const MCSymbol *Sym, unsigned Flags,
+      unsigned Isa, unsigned Discriminator, StringRef FileName,
+      StringRef Comment = {}) {}
 
   /// This implements the '.loc_label Name' directive.
   virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name);
@@ -1054,7 +1064,7 @@ public:
   /// Get the .xdata section used for the given section.
   MCSection *getAssociatedXDataSection(const MCSection *TextSec);
 
-  virtual void emitSyntaxDirective();
+  virtual void emitSyntaxDirective(StringRef Syntax, StringRef Options);
 
   /// Record a relocation described by the .reloc directive.
   virtual void emitRelocDirective(const MCExpr &Offset, StringRef Name,

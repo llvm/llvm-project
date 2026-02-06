@@ -2783,7 +2783,7 @@ DEF_TRAVERSE_STMT(CXXNewExpr, {
 DEF_TRAVERSE_STMT(OffsetOfExpr, {
   // The child-iterator will pick up the expression representing
   // the field.
-  // FIMXE: for code like offsetof(Foo, a.b.c), should we get
+  // FIXME: for code like offsetof(Foo, a.b.c), should we get
   // making a MemberExpr callbacks for Foo.a, Foo.a.b, and Foo.a.b.c?
   TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
 })
@@ -2883,6 +2883,8 @@ DEF_TRAVERSE_STMT(CXXUnresolvedConstructExpr, {
   // This is called for code like 'T()', where T is a template argument.
   TRY_TO(TraverseTypeLoc(S->getTypeSourceInfo()->getTypeLoc()));
 })
+
+DEF_TRAVERSE_STMT(CXXReflectExpr, {/*TODO*/})
 
 // These expressions all might take explicit template arguments.
 // We traverse those if so.  FIXME: implement these.

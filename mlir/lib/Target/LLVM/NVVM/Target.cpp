@@ -59,12 +59,12 @@ namespace {
 class NVVMTargetAttrImpl
     : public gpu::TargetAttrInterface::FallbackModel<NVVMTargetAttrImpl> {
 public:
-  std::optional<SmallVector<char, 0>>
+  std::optional<mlir::gpu::SerializedObject>
   serializeToObject(Attribute attribute, Operation *module,
                     const gpu::TargetOptions &options) const;
 
   Attribute createObject(Attribute attribute, Operation *module,
-                         const SmallVector<char, 0> &object,
+                         const mlir::gpu::SerializedObject &object,
                          const gpu::TargetOptions &options) const;
 };
 } // namespace
@@ -232,6 +232,9 @@ public:
   /// is LLVMIR or ISA.
   std::optional<int64_t> getISAToBinaryTimeInMs();
 
+  /// Get the compiler log from ISA compiler.
+  StringRef getISACompilerLog() const;
+
 private:
   using TmpFile = std::pair<llvm::SmallString<128>, llvm::FileRemover>;
 
@@ -253,6 +256,9 @@ private:
 
   /// ISA->Binary perf result.
   std::optional<int64_t> isaToBinaryTimeInMs;
+
+  /// Compiler log from ptxas or libnvptxcompiler.
+  std::string isaCompilerLog;
 };
 } // namespace
 
@@ -284,6 +290,8 @@ std::optional<int64_t> NVPTXSerializer::getLLVMIRToISATimeInMs() {
 std::optional<int64_t> NVPTXSerializer::getISAToBinaryTimeInMs() {
   return isaToBinaryTimeInMs;
 }
+
+StringRef NVPTXSerializer::getISACompilerLog() const { return isaCompilerLog; }
 
 gpu::GPUModuleOp NVPTXSerializer::getOperation() {
   return dyn_cast<gpu::GPUModuleOp>(&SerializeGPUModuleBase::getOperation());
@@ -484,6 +492,11 @@ NVPTXSerializer::compileToBinary(StringRef ptxCode) {
                                 /*MemoryLimit=*/0,
                                 /*ErrMsg=*/&message))
     return emitLogError("`ptxas`");
+
+  if (target.hasFlag("collect-compiler-diagnostics")) {
+    if (auto logBuffer = llvm::MemoryBuffer::getFile(logFile->first))
+      isaCompilerLog = (*logBuffer)->getBuffer().str();
+  }
 #define DEBUG_TYPE "dump-sass"
   LLVM_DEBUG({
     std::optional<std::string> nvdisasm = findTool("nvdisasm");
@@ -547,7 +560,7 @@ NVPTXSerializer::compileToBinary(StringRef ptxCode) {
     if (auto status = (expr)) {                                                \
       emitError(loc) << llvm::Twine(#expr).concat(" failed with error code ")  \
                      << status;                                                \
-      return std::nullopt;                                                     \
+      return failure();                                                        \
     }                                                                          \
   } while (false)
 
@@ -559,7 +572,7 @@ NVPTXSerializer::compileToBinary(StringRef ptxCode) {
     if (result != nvFatbinResult::NVFATBIN_SUCCESS) {                          \
       emitError(loc) << llvm::Twine(#expr).concat(" failed with error: ")      \
                      << nvFatbinGetErrorString(result);                        \
-      return std::nullopt;                                                     \
+      return failure();                                                        \
     }                                                                          \
   } while (false)
 
@@ -581,7 +594,7 @@ NVPTXSerializer::compileToBinaryNVPTX(StringRef ptxCode) {
   setOptionalCommandlineArguments(getTarget(), cmdOpts.second);
   // Create the compiler handle.
   RETURN_ON_NVPTXCOMPILER_ERROR(
-      nvPTXCompilerCreate(&compiler, ptxCode.size(), ptxCode.c_str()));
+      nvPTXCompilerCreate(&compiler, ptxCode.size(), ptxCode.str().c_str()));
 
   // Try to compile the binary.
   status = nvPTXCompilerCompile(compiler, cmdOpts.second.size(),
@@ -611,21 +624,32 @@ NVPTXSerializer::compileToBinaryNVPTX(StringRef ptxCode) {
   RETURN_ON_NVPTXCOMPILER_ERROR(
       nvPTXCompilerGetCompiledProgram(compiler, (void *)binary.data()));
 
+  // Lambda to fetch info log; returns empty vector on failure or no log.
+  auto fetchInfoLog = [&]() -> SmallVector<char> {
+    size_t size = 0;
+    if (nvPTXCompilerGetInfoLogSize(compiler, &size) != NVPTXCOMPILE_SUCCESS ||
+        size == 0)
+      return {};
+    SmallVector<char> log(size + 1, 0);
+    if (nvPTXCompilerGetInfoLog(compiler, log.data()) != NVPTXCOMPILE_SUCCESS)
+      return {};
+    return log;
+  };
+
+  if (target.hasFlag("collect-compiler-diagnostics")) {
+    if (auto log = fetchInfoLog(); !log.empty())
+      isaCompilerLog = log.data();
+  }
+
 // Dump the log of the compiler, helpful if the verbose flag was passed.
 #define DEBUG_TYPE "serialize-to-binary"
   LLVM_DEBUG({
-    RETURN_ON_NVPTXCOMPILER_ERROR(
-        nvPTXCompilerGetInfoLogSize(compiler, &logSize));
-    if (logSize != 0) {
-      SmallVector<char> log(logSize + 1, 0);
-      RETURN_ON_NVPTXCOMPILER_ERROR(
-          nvPTXCompilerGetInfoLog(compiler, log.data()));
+    if (auto log = fetchInfoLog(); !log.empty())
       LDBG() << "NVPTX compiler invocation for module: "
              << getOperation().getNameAttr()
              << "\nArguments: " << llvm::interleaved(cmdOpts.second, " ")
              << "\nOutput\n"
              << log.data();
-    }
   });
 #undef DEBUG_TYPE
   RETURN_ON_NVPTXCOMPILER_ERROR(nvPTXCompilerDestroy(&compiler));
@@ -725,7 +749,7 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
   return result;
 }
 
-std::optional<SmallVector<char, 0>>
+std::optional<mlir::gpu::SerializedObject>
 NVVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
                                       const gpu::TargetOptions &options) const {
   Builder builder(attribute.getContext());
@@ -739,26 +763,38 @@ NVVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
   NVPTXSerializer serializer(*module, cast<NVVMTargetAttr>(attribute), options);
   serializer.init();
   std::optional<SmallVector<char, 0>> result = serializer.run();
+  if (!result)
+    return std::nullopt;
+
+  SmallVector<NamedAttribute, 4> properties;
   auto llvmToISATimeInMs = serializer.getLLVMIRToISATimeInMs();
   if (llvmToISATimeInMs.has_value())
-    module->setAttr("LLVMIRToISATimeInMs",
-                    builder.getI64IntegerAttr(*llvmToISATimeInMs));
+    properties.push_back(builder.getNamedAttr(
+        "LLVMIRToISATimeInMs", builder.getI64IntegerAttr(*llvmToISATimeInMs)));
   auto isaToBinaryTimeInMs = serializer.getISAToBinaryTimeInMs();
   if (isaToBinaryTimeInMs.has_value())
-    module->setAttr("ISAToBinaryTimeInMs",
-                    builder.getI64IntegerAttr(*isaToBinaryTimeInMs));
-  return result;
+    properties.push_back(
+        builder.getNamedAttr("ISAToBinaryTimeInMs",
+                             builder.getI64IntegerAttr(*isaToBinaryTimeInMs)));
+  StringRef isaCompilerLog = serializer.getISACompilerLog();
+  if (!isaCompilerLog.empty())
+    properties.push_back(builder.getNamedAttr(
+        "ISACompilerLog", builder.getStringAttr(isaCompilerLog)));
+
+  return gpu::SerializedObject{std::move(*result),
+                               builder.getDictionaryAttr(properties)};
 }
 
 Attribute
 NVVMTargetAttrImpl::createObject(Attribute attribute, Operation *module,
-                                 const SmallVector<char, 0> &object,
+                                 const mlir::gpu::SerializedObject &object,
                                  const gpu::TargetOptions &options) const {
   auto target = cast<NVVMTargetAttr>(attribute);
   gpu::CompilationTarget format = options.getCompilationTarget();
   DictionaryAttr objectProps;
   Builder builder(attribute.getContext());
-  SmallVector<NamedAttribute, 4> properties;
+  SmallVector<NamedAttribute> properties =
+      llvm::to_vector(object.getMetadata().getValue());
   if (format == gpu::CompilationTarget::Assembly)
     properties.push_back(
         builder.getNamedAttr("O", builder.getI32IntegerAttr(target.getO())));
@@ -767,19 +803,12 @@ NVVMTargetAttrImpl::createObject(Attribute attribute, Operation *module,
     properties.push_back(builder.getNamedAttr(gpu::elfSectionName,
                                               builder.getStringAttr(section)));
 
-  for (const auto *perfName : {"LLVMIRToISATimeInMs", "ISAToBinaryTimeInMs"}) {
-    if (module->hasAttr(perfName)) {
-      IntegerAttr attr = llvm::dyn_cast<IntegerAttr>(module->getAttr(perfName));
-      properties.push_back(builder.getNamedAttr(
-          perfName, builder.getI64IntegerAttr(attr.getInt())));
-    }
-  }
-
   if (!properties.empty())
     objectProps = builder.getDictionaryAttr(properties);
 
   return builder.getAttr<gpu::ObjectAttr>(
       attribute, format,
-      builder.getStringAttr(StringRef(object.data(), object.size())),
+      builder.getStringAttr(
+          StringRef(object.getObject().data(), object.getObject().size())),
       objectProps, /*kernels=*/nullptr);
 }

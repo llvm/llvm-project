@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include <optional>
@@ -607,20 +608,20 @@ struct WgToSgConvertLayoutOp
   LogicalResult
   matchAndRewrite(xegpu::ConvertLayoutOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // TODO: currently, we only support LayoutAttr
-    auto input = dyn_cast<xegpu::LayoutAttr>(op.getInputLayout());
-    auto target = dyn_cast<xegpu::LayoutAttr>(op.getTargetLayout());
+
+    auto input = op.getInputLayout();
+    auto target = op.getTargetLayout();
 
     if (!input || !target || !input.isForWorkgroup() ||
         !target.isForWorkgroup())
       return rewriter.notifyMatchFailure(
           op, "Input and target layouts must have subgroup layout");
 
-    DenseI32ArrayAttr inputSgLayout = input.getSgLayout();
-    DenseI32ArrayAttr inputSgData = input.getSgData();
+    SmallVector<int64_t> inputSgLayout = input.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> inputSgData = input.getEffectiveSgDataAsInt();
     DenseI32ArrayAttr inputOrder = input.getOrder();
-    DenseI32ArrayAttr targetSgLayout = target.getSgLayout();
-    DenseI32ArrayAttr targetSgData = target.getSgData();
+    SmallVector<int64_t> targetSgLayout = target.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> targetSgData = target.getEffectiveSgDataAsInt();
     DenseI32ArrayAttr targetOrder = target.getOrder();
 
     // TODO: currently we only support for optimal case, where input and
@@ -1113,30 +1114,12 @@ struct WgToSgVectorShapeCastOp
       return failure();
 
     ArrayRef<int64_t> srcShape = srcType.getShape();
-    llvm::SetVector<int64_t> expandedUnitDims;
-
-    // Check if shapes only differ by expanding unit dimensions (like
-    // expand_dims)
-    auto checkOnlyExpandUnitDims = [&](ArrayRef<int64_t> src,
-                                       ArrayRef<int64_t> dst) -> bool {
-      // All unit dimensions in dst that don't appear in src are the expanded
-      // unit dimensions
-      size_t srcIdx = 0;
-      for (size_t dstIdx = 0; dstIdx < dst.size(); ++dstIdx)
-        if (srcIdx < src.size() && src[srcIdx] == dst[dstIdx])
-          srcIdx++;
-        else if (dst[dstIdx] == 1)
-          expandedUnitDims.insert(dstIdx);
-        else
-          return false;
-      return srcIdx == src.size();
-    };
 
     xegpu::DistributeLayoutAttr layoutToDistribute = layout;
-
-    if (checkOnlyExpandUnitDims(srcShape, wgShape)) {
+    SmallVector<int64_t> expandedUnitDims;
+    if (xegpu::matchUnitDimExpansion(srcShape, wgShape, expandedUnitDims)) {
       xegpu::DistributeLayoutAttr sourceLayout =
-          xegpu::getDistributeLayoutAttr(op.getSource());
+          xegpu::getTemporaryLayout(op->getOpOperand(0));
 
       auto usedByBroadcastOp = [](vector::ShapeCastOp op) {
         return llvm::all_of(op.getResult().getUsers(), [](Operation *user) {
@@ -1489,15 +1472,8 @@ struct WgToSgMultiDimReductionOp
 
     SmallVector<OpFoldResult> storeOffsets2D = {rowOffsetStore, colOffset};
 
-    auto storeMatrixLayout = xegpu::SliceAttr::get(
-        rewriter.getContext(),
-        xegpu::LayoutAttr::get(rewriter.getContext(), /*sg_layout =*/nullptr,
-                               /*sg_data =*/nullptr,
-                               /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
-                               /*lane_data =*/nullptr, /*order =*/nullptr),
-        dyn_cast<xegpu::SliceAttr>(layout).getDims());
     xegpu::StoreMatrixOp::create(rewriter, loc, storeData, memDesc.getResult(),
-                                 storeOffsets2D, /*layout=*/storeMatrixLayout);
+                                 storeOffsets2D, /*layout=*/nullptr);
 
     gpu::BarrierOp::create(rewriter, loc);
 
