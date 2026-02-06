@@ -4609,7 +4609,7 @@ void VPActiveLaneMaskPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPCurrentIterationRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                            VPSlotTracker &SlotTracker) const {
-  O << Indent << "Current-Iteration-PHI ";
+  O << Indent << "CURRENT-ITERATION-PHI ";
 
   printAsOperand(O, SlotTracker);
   O << " = phi ";
