@@ -15,6 +15,7 @@ static_library("Analysis") {
     "AnnexKDetection.cpp",
     "BodyFarm.cpp",
     "CFG.cpp",
+    "CFGBackEdges.cpp",
     "CFGReachabilityAnalysis.cpp",
     "CFGStmtMap.cpp",
     "CallGraph.cpp",

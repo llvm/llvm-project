@@ -46,6 +46,21 @@ inline HashType digest(StringRef Data) {
   return HasherT::hash(arrayRefFromStringRef(Data));
 }
 
+inline HashType digestFile(StringRef FilePath) {
+  std::optional<HashType> Digest;
+  EXPECT_THAT_ERROR(
+      BuiltinObjectHasher<HasherT>::hashFile(FilePath).moveInto(Digest),
+      Succeeded());
+  return *Digest;
+}
+
+inline ObjectID digestFile(OnDiskGraphDB &DB, StringRef FilePath) {
+  HashType Digest = digestFile(FilePath);
+  std::optional<ObjectID> ID;
+  EXPECT_THAT_ERROR(DB.getReference(Digest).moveInto(ID), Succeeded());
+  return *ID;
+}
+
 inline ValueType valueFromString(StringRef S) {
   ValueType Val = {};
   llvm::copy(S.substr(0, sizeof(Val)), Val.data());

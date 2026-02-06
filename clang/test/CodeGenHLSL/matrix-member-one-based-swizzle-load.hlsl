@@ -6,7 +6,7 @@
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z17ReturnOnesSwizzleu11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [16 x i32], align 4
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -19,7 +19,7 @@ int4 ReturnOnesSwizzle(int4x4 A) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z18ReturnOnesSwizzle2u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [16 x i32], align 4
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
@@ -32,7 +32,7 @@ int4 ReturnOnesSwizzle2(int4x4 A) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z17ReturnTwosSwizzleu11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [16 x i32], align 4
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
@@ -45,7 +45,7 @@ int4 ReturnTwosSwizzle(int4x4 A) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z18ReturnTwosSwizzle2u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [16 x i32], align 4
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
@@ -58,7 +58,7 @@ int4 ReturnTwosSwizzle2(int4x4 A) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z19ReturnThreesSwizzleu11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [16 x i32], align 4
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
@@ -71,7 +71,7 @@ int4 ReturnThreesSwizzle(int4x4 A) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z20ReturnThreesSwizzle2u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [16 x i32], align 4
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
@@ -84,7 +84,7 @@ int4 ReturnThreesSwizzle2(int4x4 A) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z18ReturnFoursSwizzleu11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [16 x i32], align 4
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
@@ -97,7 +97,7 @@ int4 ReturnFoursSwizzle(int4x4 A) {
 // CHECK-LABEL: define hidden noundef <4 x i32> @_Z19ReturnFoursSwizzle2u11matrix_typeILm4ELm4EiE(
 // CHECK-SAME: <16 x i32> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [16 x i32], align 4
+// CHECK-NEXT:    [[A_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store <16 x i32> [[A]], ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[A_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <16 x i32> [[TMP0]], <16 x i32> poison, <4 x i32> <i32 3, i32 7, i32 11, i32 15>

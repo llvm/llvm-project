@@ -200,8 +200,14 @@ RawAddress CodeGenFunction::CreateMemTemp(QualType Ty, CharUnits Align,
 
   if (Ty->isConstantMatrixType()) {
     auto *ArrayTy = cast<llvm::ArrayType>(Result.getElementType());
-    auto *VectorTy = llvm::FixedVectorType::get(ArrayTy->getElementType(),
-                                                ArrayTy->getNumElements());
+    auto *ArrayElementTy = ArrayTy->getElementType();
+    auto ArrayElements = ArrayTy->getNumElements();
+    if (getContext().getLangOpts().HLSL) {
+      auto *VectorTy = cast<llvm::FixedVectorType>(ArrayElementTy);
+      ArrayElementTy = VectorTy->getElementType();
+      ArrayElements *= VectorTy->getNumElements();
+    }
+    auto *VectorTy = llvm::FixedVectorType::get(ArrayElementTy, ArrayElements);
 
     Result = Address(Result.getPointer(), VectorTy, Result.getAlignment(),
                      KnownNonNull);
@@ -2279,8 +2285,14 @@ static RawAddress MaybeConvertMatrixAddress(RawAddress Addr,
                                             bool IsVector = true) {
   auto *ArrayTy = dyn_cast<llvm::ArrayType>(Addr.getElementType());
   if (ArrayTy && IsVector) {
-    auto *VectorTy = llvm::FixedVectorType::get(ArrayTy->getElementType(),
-                                                ArrayTy->getNumElements());
+    auto ArrayElements = ArrayTy->getNumElements();
+    auto *ArrayElementTy = ArrayTy->getElementType();
+    if (CGF.getContext().getLangOpts().HLSL) {
+      auto *VectorTy = cast<llvm::FixedVectorType>(ArrayElementTy);
+      ArrayElementTy = VectorTy->getElementType();
+      ArrayElements *= VectorTy->getNumElements();
+    }
+    auto *VectorTy = llvm::FixedVectorType::get(ArrayElementTy, ArrayElements);
 
     return Addr.withElementType(VectorTy);
   }

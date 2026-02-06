@@ -11,7 +11,7 @@ struct S {
 // CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i1, align 4
-// CHECK-NEXT:    [[B:%.*]] = alloca [4 x i32], align 4
+// CHECK-NEXT:    [[B:%.*]] = alloca [2 x <2 x i32>], align 4
 // CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[B]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[B]], align 4
 // CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
@@ -29,7 +29,7 @@ bool fn1() {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca <4 x i1>, align 4
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    [[A:%.*]] = alloca [4 x i32], align 4
+// CHECK-NEXT:    [[A:%.*]] = alloca [2 x <2 x i32>], align 4
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[V]] to i32
 // CHECK-NEXT:    store i32 [[STOREDV]], ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[V_ADDR]], align 4
@@ -77,11 +77,11 @@ bool fn3() {
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i1, align 4
-// CHECK-NEXT:    [[ARR:%.*]] = alloca [2 x [4 x i32]], align 4
+// CHECK-NEXT:    [[ARR:%.*]] = alloca [2 x [2 x <2 x i32>]], align 4
 // CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[ARR]], align 4
-// CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [4 x i32], ptr [[ARR]], i32 1
+// CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [2 x <2 x i32>], ptr [[ARR]], i32 1
 // CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[ARRAYINIT_ELEMENT]], align 4
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x [4 x i32]], ptr [[ARR]], i32 0, i32 0
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x [2 x <2 x i32>]], ptr [[ARR]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[ARRAYIDX]], align 4
 // CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 1
 // CHECK-NEXT:    store i32 [[MATRIXEXT]], ptr [[RETVAL]], align 4
@@ -96,7 +96,7 @@ bool fn4() {
 // CHECK-LABEL: define hidden void @_Z3fn5v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[M:%.*]] = alloca [4 x i32], align 4
+// CHECK-NEXT:    [[M:%.*]] = alloca [2 x <2 x i32>], align 4
 // CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[M]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <4 x i32>, ptr [[M]], i32 0, i32 3
 // CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4
@@ -134,11 +134,11 @@ void fn6() {
 // CHECK-LABEL: define hidden void @_Z3fn7v(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[ARR:%.*]] = alloca [2 x [4 x i32]], align 4
+// CHECK-NEXT:    [[ARR:%.*]] = alloca [2 x [2 x <2 x i32>]], align 4
 // CHECK-NEXT:    store <4 x i32> splat (i32 1), ptr [[ARR]], align 4
-// CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [4 x i32], ptr [[ARR]], i32 1
+// CHECK-NEXT:    [[ARRAYINIT_ELEMENT:%.*]] = getelementptr inbounds [2 x <2 x i32>], ptr [[ARR]], i32 1
 // CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[ARRAYINIT_ELEMENT]], align 4
-// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x [4 x i32]], ptr [[ARR]], i32 0, i32 0
+// CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x [2 x <2 x i32>]], ptr [[ARR]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr <4 x i32>, ptr [[ARRAYIDX]], i32 0, i32 1
 // CHECK-NEXT:    store i32 0, ptr [[TMP0]], align 4
 // CHECK-NEXT:    ret void
@@ -152,7 +152,7 @@ void fn7() {
 // CHECK-SAME: <16 x i1> noundef [[M:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca <16 x i1>, align 4
-// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [16 x i32], align 4
+// CHECK-NEXT:    [[M_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <16 x i1> [[M]] to <16 x i32>
 // CHECK-NEXT:    store <16 x i32> [[TMP0]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i32>, ptr [[M_ADDR]], align 4
