@@ -2557,19 +2557,23 @@ static const LocationContext *getInlinedLocationContext(ExplodedNode *Node,
 }
 
 /// Block entrance.  (Update counters).
+/// FIXME: `BlockEdge &L` is only used for debug statistics, consider removing
+/// it and using `BlockEntrance &BE` (where `BlockEntrance` is a subtype of
+/// `ProgramPoint`) for statistical purposes.
 void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
-                                         NodeBuilderWithSinks &nodeBuilder,
+                                         const BlockEntrance &BE,
+                                         NodeBuilder &Builder,
                                          ExplodedNode *Pred) {
   // If we reach a loop which has a known bound (and meets
   // other constraints) then consider completely unrolling it.
   if(AMgr.options.ShouldUnrollLoops) {
     unsigned maxBlockVisitOnPath = AMgr.options.maxBlockVisitOnPath;
-    const Stmt *Term = nodeBuilder.getContext().getBlock()->getTerminatorStmt();
+    const Stmt *Term = Builder.getContext().getBlock()->getTerminatorStmt();
     if (Term) {
       ProgramStateRef NewState = updateLoopStack(Term, AMgr.getASTContext(),
                                                  Pred, maxBlockVisitOnPath);
       if (NewState != Pred->getState()) {
-        ExplodedNode *UpdatedNode = nodeBuilder.generateNode(NewState, Pred);
+        ExplodedNode *UpdatedNode = Builder.generateNode(BE, NewState, Pred);
         if (!UpdatedNode)
           return;
         Pred = UpdatedNode;
@@ -2582,10 +2586,10 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
 
   // If this block is terminated by a loop and it has already been visited the
   // maximum number of times, widen the loop.
-  unsigned int BlockCount = nodeBuilder.getContext().blockCount();
+  unsigned int BlockCount = Builder.getContext().blockCount();
   if (BlockCount == AMgr.options.maxBlockVisitOnPath - 1 &&
       AMgr.options.ShouldWidenLoops) {
-    const Stmt *Term = nodeBuilder.getContext().getBlock()->getTerminatorStmt();
+    const Stmt *Term = Builder.getContext().getBlock()->getTerminatorStmt();
     if (!isa_and_nonnull<ForStmt, WhileStmt, DoStmt, CXXForRangeStmt>(Term))
       return;
 
@@ -2600,16 +2604,17 @@ void ExprEngine::processCFGBlockEntrance(const BlockEdge &L,
     // Here we just pass the the first CFG element in the block.
     ProgramStateRef WidenedState =
         getWidenedLoopState(Pred->getState(), LCtx, BlockCount,
-                            *nodeBuilder.getContext().getBlock()->ref_begin());
-    nodeBuilder.generateNode(WidenedState, Pred);
+                            *Builder.getContext().getBlock()->ref_begin());
+    Builder.generateNode(BE, WidenedState, Pred);
     return;
   }
 
   // FIXME: Refactor this into a checker.
   if (BlockCount >= AMgr.options.maxBlockVisitOnPath) {
-    static SimpleProgramPointTag tag(TagProviderName, "Block count exceeded");
+    static SimpleProgramPointTag Tag(TagProviderName, "Block count exceeded");
+    const ProgramPoint TaggedLoc = BE.withTag(&Tag);
     const ExplodedNode *Sink =
-                   nodeBuilder.generateSink(Pred->getState(), Pred, &tag);
+        Builder.generateSink(TaggedLoc, Pred->getState(), Pred);
 
     if (const LocationContext *LC = getInlinedLocationContext(Pred, G)) {
       // FIXME: This will unconditionally prevent inlining this function (even
@@ -2996,13 +3001,11 @@ void ExprEngine::processIndirectGoto(IndirectGotoNodeBuilder &builder) {
   //   (3) We have no clue about the label.  Dispatch to all targets.
   //
 
-  using iterator = IndirectGotoNodeBuilder::iterator;
-
   if (std::optional<loc::GotoLabel> LV = V.getAs<loc::GotoLabel>()) {
     const LabelDecl *L = LV->getLabel();
 
-    for (iterator Succ : builder) {
-      if (Succ.getLabel() == L) {
+    for (const CFGBlock *Succ : builder) {
+      if (cast<LabelStmt>(Succ->getLabel())->getDecl() == L) {
         builder.generateNode(Succ, state);
         return;
       }
@@ -3022,7 +3025,7 @@ void ExprEngine::processIndirectGoto(IndirectGotoNodeBuilder &builder) {
   // This is really a catch-all.  We don't support symbolics yet.
   // FIXME: Implement dispatch for symbolic pointers.
 
-  for (iterator Succ : builder)
+  for (const CFGBlock *Succ : builder)
     builder.generateNode(Succ, state);
 }
 
@@ -3107,37 +3110,34 @@ void ExprEngine::processEndOfFunction(NodeBuilderContext& BC,
 
 /// ProcessSwitch - Called by CoreEngine.  Used to generate successor
 ///  nodes by processing the 'effects' of a switch statement.
-void ExprEngine::processSwitch(SwitchNodeBuilder& builder) {
-  using iterator = SwitchNodeBuilder::iterator;
+void ExprEngine::processSwitch(const SwitchStmt *Switch, CoreEngine &CoreEng,
+                               const CFGBlock *B, ExplodedNode *Pred) {
+  const Expr *Condition = Switch->getCond();
 
-  ProgramStateRef state = builder.getState();
-  const Expr *CondE = builder.getCondition();
-  SVal  CondV_untested = state->getSVal(CondE, builder.getLocationContext());
+  SwitchNodeBuilder Builder(Pred, B, CoreEng);
 
-  if (CondV_untested.isUndef()) {
-    //ExplodedNode* N = builder.generateDefaultCaseNode(state, true);
-    // FIXME: add checker
-    //UndefBranches.insert(N);
+  ProgramStateRef State = Pred->getState();
+  SVal CondV = State->getSVal(Condition, Pred->getLocationContext());
 
+  if (CondV.isUndef()) {
+    // ExplodedNode* N = builder.generateDefaultCaseNode(state, true);
+    //  FIXME: add checker
+    // UndefBranches.insert(N);
     return;
   }
-  DefinedOrUnknownSVal CondV = CondV_untested.castAs<DefinedOrUnknownSVal>();
 
-  ProgramStateRef DefaultSt = state;
+  std::optional<NonLoc> CondNL = CondV.getAs<NonLoc>();
 
-  iterator I = builder.begin(), EI = builder.end();
-  bool defaultIsFeasible = I == EI;
-
-  for ( ; I != EI; ++I) {
+  for (const CFGBlock *Block : Builder) {
     // Successor may be pruned out during CFG construction.
-    if (!I.getBlock())
+    if (!Block)
       continue;
 
-    const CaseStmt *Case = I.getCase();
+    const CaseStmt *Case = cast<CaseStmt>(Block->getLabel());
 
     // Evaluate the LHS of the case value.
     llvm::APSInt V1 = Case->getLHS()->EvaluateKnownConstInt(getContext());
-    assert(V1.getBitWidth() == getContext().getIntWidth(CondE->getType()));
+    assert(V1.getBitWidth() == getContext().getIntWidth(Condition->getType()));
 
     // Get the RHS of the case, if it exists.
     llvm::APSInt V2;
@@ -3146,29 +3146,25 @@ void ExprEngine::processSwitch(SwitchNodeBuilder& builder) {
     else
       V2 = V1;
 
-    ProgramStateRef StateCase;
-    if (std::optional<NonLoc> NL = CondV.getAs<NonLoc>())
-      std::tie(StateCase, DefaultSt) =
-          DefaultSt->assumeInclusiveRange(*NL, V1, V2);
-    else // UnknownVal
-      StateCase = DefaultSt;
-
-    if (StateCase)
-      builder.generateCaseStmtNode(I, StateCase);
-
-    // Now "assume" that the case doesn't match.  Add this state
-    // to the default state (if it is feasible).
-    if (DefaultSt)
-      defaultIsFeasible = true;
-    else {
-      defaultIsFeasible = false;
-      break;
+    ProgramStateRef StateMatching;
+    if (CondNL) {
+      // Split the state: this "case:" matches / does not match.
+      std::tie(StateMatching, State) =
+          State->assumeInclusiveRange(*CondNL, V1, V2);
+    } else {
+      // The switch condition is UnknownVal, so we enter each "case:" without
+      // any state update.
+      StateMatching = State;
     }
+
+    if (StateMatching)
+      Builder.generateCaseStmtNode(Block, StateMatching);
+
+    // If _not_ entering the current case is infeasible, we are done with
+    // processing this branch.
+    if (!State)
+      return;
   }
-
-  if (!defaultIsFeasible)
-    return;
-
   // If we have switch(enum value), the default branch is not
   // feasible if all of the enum constants not covered by 'case:' statements
   // are not feasible values for the switch condition.
@@ -3176,14 +3172,12 @@ void ExprEngine::processSwitch(SwitchNodeBuilder& builder) {
   // Note that this isn't as accurate as it could be.  Even if there isn't
   // a case for a particular enum value as long as that enum value isn't
   // feasible then it shouldn't be considered for making 'default:' reachable.
-  const SwitchStmt *SS = builder.getSwitch();
-  const Expr *CondExpr = SS->getCond()->IgnoreParenImpCasts();
-  if (CondExpr->getType()->isEnumeralType()) {
-    if (SS->isAllEnumCasesCovered())
+  if (Condition->IgnoreParenImpCasts()->getType()->isEnumeralType()) {
+    if (Switch->isAllEnumCasesCovered())
       return;
   }
 
-  builder.generateDefaultCaseNode(DefaultSt);
+  Builder.generateDefaultCaseNode(State);
 }
 
 //===----------------------------------------------------------------------===//

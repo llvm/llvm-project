@@ -34,6 +34,18 @@
 # CHECK-NEXT:      "uri": "file://{{.*}}/clangd-test/main.cpp"
 # CHECK-NEXT:    }
 ---
-{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+{"jsonrpc":"2.0","id":3,"method":"callHierarchy/incomingCalls","params":[]}
+#      CHECK: "error": {
+# CHECK-NEXT:   "code": -32602,
+# CHECK-NEXT:   "message": "failed to decode callHierarchy/incomingCalls request: expected object"
+# CHECK-NEXT:  }
+---
+{"jsonrpc":"2.0","id":4,"method":"callHierarchy/outgoingCalls","params":4}
+#      CHECK: "error": {
+# CHECK-NEXT:   "code": -32602,
+# CHECK-NEXT:   "message": "failed to decode callHierarchy/outgoingCalls request: expected object"
+# CHECK-NEXT:  }
+---
+{"jsonrpc":"2.0","id":5,"method":"shutdown"}
 ---
 {"jsonrpc":"2.0","method":"exit"}
