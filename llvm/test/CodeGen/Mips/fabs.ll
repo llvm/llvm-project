@@ -80,11 +80,11 @@ entry:
 ; CHECK-ABSLEGACY: {{(ori|ins)}}
 ; CHECK-ABSLEGACY-NOT: abs.s
 
-  %call = tail call float @fabsf(float %a) nounwind readnone
+  %call = tail call float @llvm.fabs.f32(float %a) nounwind readnone
   ret float %call
 }
 
-declare float @fabsf(float) nounwind readnone
+declare float @llvm.fabs.f32(float) nounwind readnone
 
 define double @foo1(double %a) nounwind readnone {
 entry:
@@ -94,8 +94,8 @@ entry:
 ; CHECK-ABSLEGACY: {{(ori|ins|dsll)}}
 ; CHECK-ABSLEGACY-NOT: abs.d
 
-  %call = tail call double @fabs(double %a) nounwind readnone
+  %call = tail call double @llvm.fabs.f64(double %a) nounwind readnone
   ret double %call
 }
 
-declare double @fabs(double) nounwind readnone
+declare double @llvm.fabs.f64(double) nounwind readnone

@@ -841,6 +841,7 @@ namespace bswap {
   int h7 = __builtin_bswapg(0x1234) == 0x3412 ? 1 : f();
   int h8 = __builtin_bswapg(0x00001234) == 0x34120000 ? 1 : f();
   int h9 = __builtin_bswapg(0x0000000000001234) == 0x3412000000000000 ? 1 : f();
+  int h9a = __builtin_bswapg(true) == true ? 1 : f();
 #ifndef __AVR__
   int h10 = __builtin_bswapg((_BitInt(8))0x12) == (_BitInt(8))0x12 ? 1 : f();
   int h11 = __builtin_bswapg((_BitInt(16))0x1234) == (_BitInt(16))0x3412 ? 1 : f();
@@ -1902,4 +1903,16 @@ namespace NonBlockPointerStore {
   int a;
   void foo(void) { a *= __builtin_sadd_overflow(1, 2, 0); }
   void foo2(void) { a *= __builtin_addc(1, 2, 0, 0); }
+}
+
+namespace WcslenInvalidArg {
+
+  static_assert(__builtin_wcslen("x") == 'x'); // both-error {{cannot initialize a parameter of type 'const wchar_t *' with an lvalue of type 'const char[2]'}}
+  static_assert(__builtin_wcslen((const wchar_t *)"x") == 1); // both-error {{static assertion expression is not an integral constant expression}} \
+                                                              // both-note {{cast that performs the conversions of a reinterpret_cast}}
+  const unsigned char u8s[] = "hi";
+  static_assert(__builtin_wcslen((const wchar_t *)u8s) == 2); // both-error {{static assertion expression is not an integral constant expression}} \
+                                                              // both-note {{cast that performs the conversions of a reinterpret_cast}}
+  static_assert(__builtin_wcslen(L"x") == 1);
+
 }

@@ -11,10 +11,10 @@ id func(void) {
   return array[3];
 }
 
-// CHECK: %call1 = call ptr @objc_msgSend(ptr noundef %2, ptr noundef %3, i32 noundef 3) [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
-// CHECK: call void (...) @llvm.objc.clang.arc.noop.use(ptr %call1) #2
+// CHECK: [[call:%.*]] = call ptr @objc_msgSend
+// CHECK: [[SIX:%.*]] = notail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr [[call]]) [[NUW:#[0-9]+]]
 // CHECK: call void @llvm.objc.storeStrong(ptr {{%.*}}, ptr null)
-// CHECK: %4 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %call1) #2
-// CHECK: ret ptr %4
+// CHECK: [[EIGHT:%.*]] = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr [[SIX]]) [[NUW]]
+// CHECK: ret ptr [[EIGHT]]
 
-// CHECK: attributes #2 = { nounwind }
+// CHECK: attributes [[NUW]] = { nounwind }

@@ -608,9 +608,8 @@ define i1 @fold_ne_rhs_fail_shift_not_1s(i8 %x, i8 %yy) {
 
 define i1 @test_shr_and_1_ne_0(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_shr_and_1_ne_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[A:%.*]], [[TMP1]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[SHR]] to i1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr i32 %a, %b
@@ -621,9 +620,8 @@ define i1 @test_shr_and_1_ne_0(i32 %a, i32 %b) {
 
 define i1 @test_shr_and_1_ne_0_samesign(i32 %a, i32 %b) {
 ; CHECK-LABEL: @test_shr_and_1_ne_0_samesign(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[A:%.*]], [[TMP1]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[SHR]] to i1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr i32 %a, %b
@@ -634,9 +632,8 @@ define i1 @test_shr_and_1_ne_0_samesign(i32 %a, i32 %b) {
 
 define i1 @test_const_shr_and_1_ne_0(i32 %b) {
 ; CHECK-LABEL: @test_const_shr_and_1_ne_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 42
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 42, [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[SHR]] to i1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr i32 42, %b
@@ -660,9 +657,8 @@ define i1 @test_not_const_shr_and_1_ne_0(i32 %b) {
 
 define i1 @test_const_shr_exact_and_1_ne_0(i32 %b) {
 ; CHECK-LABEL: @test_const_shr_exact_and_1_ne_0(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 42
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    [[SHR:%.*]] = lshr exact i32 42, [[B:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = trunc i32 [[SHR]] to i1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr exact i32 42, %b
@@ -721,10 +717,9 @@ define i1 @test_const_shr_and_1_ne_0_i1_negative(i1 %b) {
 define i1 @test_const_shr_and_1_ne_0_multi_use_lshr_negative(i32 %b) {
 ; CHECK-LABEL: @test_const_shr_and_1_ne_0_multi_use_lshr_negative(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 42, [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHR]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = trunc i32 [[SHR]] to i1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[B]], [[SHR]]
-; CHECK-NEXT:    [[RET:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[CMP2]], [[CMP1]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %shr = lshr i32 42, %b
@@ -739,9 +734,9 @@ define i1 @test_const_shr_and_1_ne_0_multi_use_and_negative(i32 %b) {
 ; CHECK-LABEL: @test_const_shr_and_1_ne_0_multi_use_and_negative(
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 42, [[B:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHR]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[AND]], 0
+; CHECK-NEXT:    [[CMP1:%.*]] = trunc i32 [[SHR]] to i1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[B]], [[AND]]
-; CHECK-NEXT:    [[RET:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[RET:%.*]] = and i1 [[CMP2]], [[CMP1]]
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %shr = lshr i32 42, %b

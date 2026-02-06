@@ -1549,7 +1549,10 @@ void SIRegisterInfo::buildSpillLoadStore(
   int64_t Offset = InstOffset + MFI.getObjectOffset(Index);
   int64_t MaterializedOffset = Offset;
 
-  int64_t MaxOffset = Offset + Size + RemSize - EltSize;
+  // Maxoffset is the starting offset for the last chunk to be spilled.
+  // In case of non-zero remainder element, max offset will be the
+  // last address(offset + Size) after spilling  all the EltSize chunks.
+  int64_t MaxOffset = Offset + Size - (RemSize ? 0 : EltSize);
   int64_t ScratchOffsetRegDelta = 0;
 
   if (IsFlat && EltSize > 4) {
@@ -1733,8 +1736,8 @@ void SIRegisterInfo::buildSpillLoadStore(
             : Register(getSubReg(ValueReg,
                                  getSubRegFromChannel(RegOffset / 4, NumRegs)));
 
-    unsigned SOffsetRegState = 0;
-    unsigned SrcDstRegState = getDefRegState(!IsStore);
+    RegState SOffsetRegState = {};
+    RegState SrcDstRegState = getDefRegState(!IsStore);
     const bool IsLastSubReg = i + 1 == e;
     const bool IsFirstSubReg = i == 0;
     if (IsLastSubReg) {
@@ -1774,7 +1777,7 @@ void SIRegisterInfo::buildSpillLoadStore(
       }
       if ((IsSubReg || NeedSuperRegImpOperand) && (IsFirstSubReg || IsLastSubReg)) {
         NeedSuperRegImpOperand = true;
-        unsigned State = SrcDstRegState;
+        RegState State = SrcDstRegState;
         if (!IsLastSubReg || (Lane != LaneE))
           State &= ~RegState::Kill;
         if (!IsFirstSubReg || (Lane != LaneS))
@@ -1897,7 +1900,7 @@ void SIRegisterInfo::buildSpillLoadStore(
       MIB->setAsmPrinterFlag(MachineInstr::ReloadReuse);
     }
 
-    bool IsSrcDstDef = SrcDstRegState & RegState::Define;
+    bool IsSrcDstDef = hasRegState(SrcDstRegState, RegState::Define);
     bool PartialReloadCopy = (RemEltSize != EltSize) && !IsStore;
     if (NeedSuperRegImpOperand &&
         (IsFirstSubReg || (IsLastSubReg && !IsSrcDstDef))) {
@@ -2069,13 +2072,13 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
     SB.prepare();
 
     // SubReg carries the "Kill" flag when SubReg == SB.SuperReg.
-    unsigned SubKillState = getKillRegState((SB.NumSubRegs == 1) && SB.IsKill);
+    RegState SubKillState = getKillRegState((SB.NumSubRegs == 1) && SB.IsKill);
 
     // Per VGPR helper data
     auto PVD = SB.getPerVGPRData();
 
     for (unsigned Offset = 0; Offset < PVD.NumVGPRs; ++Offset) {
-      unsigned TmpVGPRFlags = RegState::Undef;
+      RegState TmpVGPRFlags = RegState::Undef;
 
       // Write sub registers into the VGPR
       for (unsigned i = Offset * PVD.PerVGPR,
@@ -2092,7 +2095,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
                 .addReg(SubReg, SubKillState)
                 .addImm(i % PVD.PerVGPR)
                 .addReg(SB.TmpVGPR, TmpVGPRFlags);
-        TmpVGPRFlags = 0;
+        TmpVGPRFlags = {};
 
         if (Indexes) {
           if (i == 0)
@@ -2105,7 +2108,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
         // TODO: Can we detect this and skip the spill?
         if (SB.NumSubRegs > 1) {
           // The last implicit use of the SB.SuperReg carries the "Kill" flag.
-          unsigned SuperKillState = 0;
+          RegState SuperKillState = {};
           if (i + 1 == SB.NumSubRegs)
             SuperKillState |= getKillRegState(SB.IsKill);
           WriteLane.addReg(SB.SuperReg, RegState::Implicit | SuperKillState);
@@ -2215,10 +2218,10 @@ bool SIRegisterInfo::spillEmergencySGPR(MachineBasicBlock::iterator MI,
                       RS);
   SB.prepare();
   // Generate the spill of SGPR to SB.TmpVGPR.
-  unsigned SubKillState = getKillRegState((SB.NumSubRegs == 1) && SB.IsKill);
+  RegState SubKillState = getKillRegState((SB.NumSubRegs == 1) && SB.IsKill);
   auto PVD = SB.getPerVGPRData();
   for (unsigned Offset = 0; Offset < PVD.NumVGPRs; ++Offset) {
-    unsigned TmpVGPRFlags = RegState::Undef;
+    RegState TmpVGPRFlags = RegState::Undef;
     // Write sub registers into the VGPR
     for (unsigned i = Offset * PVD.PerVGPR,
                   e = std::min((Offset + 1) * PVD.PerVGPR, SB.NumSubRegs);
@@ -2234,12 +2237,12 @@ bool SIRegisterInfo::spillEmergencySGPR(MachineBasicBlock::iterator MI,
               .addReg(SubReg, SubKillState)
               .addImm(i % PVD.PerVGPR)
               .addReg(SB.TmpVGPR, TmpVGPRFlags);
-      TmpVGPRFlags = 0;
+      TmpVGPRFlags = {};
       // There could be undef components of a spilled super register.
       // TODO: Can we detect this and skip the spill?
       if (SB.NumSubRegs > 1) {
         // The last implicit use of the SB.SuperReg carries the "Kill" flag.
-        unsigned SuperKillState = 0;
+        RegState SuperKillState = {};
         if (i + 1 == SB.NumSubRegs)
           SuperKillState |= getKillRegState(SB.IsKill);
         WriteLane.addReg(SB.SuperReg, RegState::Implicit | SuperKillState);
@@ -2668,7 +2671,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         if (NumDefs == 2)
           AddI32.add(MI->getOperand(1));
 
-        unsigned MaterializedRegFlags =
+        RegState MaterializedRegFlags =
             getKillRegState(MaterializedReg != FrameReg);
 
         if (isVGPRClass(getPhysRegBaseClass(MaterializedReg))) {
