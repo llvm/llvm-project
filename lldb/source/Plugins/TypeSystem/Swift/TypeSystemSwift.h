@@ -254,8 +254,7 @@ public:
     return true;
   }
   bool IsConst(lldb::opaque_compiler_type_t type) override { return false; }
-  bool IsFloatingPointType(lldb::opaque_compiler_type_t type,
-                           bool &is_complex) override;
+  bool IsFloatingPointType(lldb::opaque_compiler_type_t type) override;
   bool IsIntegerType(lldb::opaque_compiler_type_t type,
                      bool &is_signed) override;
   bool IsScopedEnumerationType(lldb::opaque_compiler_type_t type) override {

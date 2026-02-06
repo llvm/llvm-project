@@ -370,9 +370,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Scalar) {
   {
     NodePointer int_node = b.GlobalTypeMangling(b.IntType());
     CompilerType int_type = GetCompilerType(b.Mangle(int_node));
-    bool is_complex = true;
-    ASSERT_FALSE(int_type.IsFloatingPointType(is_complex));
-    ASSERT_EQ(is_complex, false);
+    ASSERT_FALSE(int_type.IsFloatingPointType());
     bool is_signed = true;
     ASSERT_TRUE(int_type.IsIntegerType(is_signed));
     ASSERT_TRUE(int_type.IsScalarType());
@@ -380,9 +378,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, Scalar) {
   {
     NodePointer float_node = b.GlobalTypeMangling(b.FloatType());
     CompilerType float_type = GetCompilerType(b.Mangle(float_node));
-    bool is_complex = true;
-    ASSERT_TRUE(float_type.IsFloatingPointType(is_complex));
-    ASSERT_EQ(is_complex, false);
+    ASSERT_TRUE(float_type.IsFloatingPointType());
     bool is_signed = true;
     ASSERT_FALSE(float_type.IsIntegerType(is_signed));
     ASSERT_TRUE(float_type.IsScalarType());
