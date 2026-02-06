@@ -595,8 +595,8 @@ bool RecurrenceDescriptor::AddReductionVar(
     Worklist.append(NonPHIs.begin(), NonPHIs.end());
   }
 
-  // We only expect to match a single "find-last-like" per find-last reduction,
-  // with no non-phi operations in the reduction use chain.
+  // We only expect to match a single "find-last-like" phi per find-last
+  // reduction, with no non-phi operations in the reduction use chain.
   assert((!FoundFindLastLikePhi ||
           (Kind == RecurKind::FindLast && NumNonPHIUsers == 0)) &&
          "Unexpectedly matched a 'find-last-like' phi");
