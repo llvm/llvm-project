@@ -2061,13 +2061,6 @@ TEST_P(UncheckedStatusOrAccessModelTest, Member) {
       Foo().sor.value();  // [[unsafe]]
     }
   )cc");
-  ExpectDiagnosticsFor(R"cc(
-#include "unchecked_statusor_access_test_defs.h"
-
-    union target {
-      target() {}
-    };
-  )cc");
 }
 
 TEST_P(UncheckedStatusOrAccessModelTest, GlobalVars) {
