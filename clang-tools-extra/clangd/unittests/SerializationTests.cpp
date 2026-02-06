@@ -444,6 +444,111 @@ TEST(SerializationTest, NoCrashOnBadStringTableSize) {
               testing::HasSubstr("bytes is implausible"));
 }
 
+// Verify path remapping is applied to all URI fields during load/store
+TEST(SerializationTest, URITransformRoundTrip) {
+  URITransform WriteTransform = [](llvm::StringRef URI) -> std::string {
+    std::string S = URI.str();
+    size_t Pos = S.find("/original/");
+    if (Pos != std::string::npos)
+      S.replace(Pos, strlen("/original/"), "/transformed/");
+    return S;
+  };
+  URITransform ReadTransform = [](llvm::StringRef URI) -> std::string {
+    std::string S = URI.str();
+    size_t Pos = S.find("/transformed/");
+    if (Pos != std::string::npos)
+      S.replace(Pos, strlen("/transformed/"), "/original/");
+    return S;
+  };
+
+  // Build an index containing "/original/"
+  Symbol Sym;
+  Sym.ID = cantFail(SymbolID::fromStr("057557CEBF6E6B2D"));
+  Sym.Name = "TestFunc";
+  Sym.Scope = "ns::";
+  Sym.Definition.FileURI = "file:///original/def.cpp";
+  Sym.CanonicalDeclaration.FileURI = "file:///original/decl.h";
+  Sym.IncludeHeaders.push_back({/*IncludeHeader=*/"file:///original/header.h",
+                                /*References=*/1,
+                                /*SupportedDirectives=*/Symbol::Include});
+  Sym.IncludeHeaders.push_back(
+      {/*IncludeHeader=*/"<system_header>", // Literal, should not be modified
+       /*References=*/1,
+       /*SupportedDirectives=*/Symbol::Include});
+
+  SymbolSlab::Builder SymbolBuilder;
+  SymbolBuilder.insert(Sym);
+  SymbolSlab Symbols = std::move(SymbolBuilder).build();
+
+  Ref R;
+  R.Location.FileURI = "file:///original/ref.cpp";
+  R.Kind = RefKind::Reference;
+  RefSlab::Builder RefBuilder;
+  RefBuilder.insert(Sym.ID, R);
+  RefSlab Refs = std::move(RefBuilder).build();
+
+  IncludeGraph Sources;
+  IncludeGraphNode IGN;
+  IGN.URI = "file:///original/source.cpp";
+  IGN.Flags = IncludeGraphNode::SourceFlag::IsTU;
+  IGN.Digest = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'};
+  IGN.DirectIncludes = {"file:///original/inc1.h", "file:///original/inc2.h"};
+  Sources[IGN.URI] = IGN;
+
+  IndexFileOut Out;
+  Out.Symbols = &Symbols;
+  Out.Refs = &Refs;
+  Out.Sources = &Sources;
+  Out.Format = IndexFileFormat::RIFF;
+  Out.Transform = &WriteTransform;
+  std::string Serialized = llvm::to_string(Out);
+
+  // Verify the serialized data only contains "/transformed/". And if new fields
+  // are added, ensure they aren't missed by path mapping transformation logic.
+  EXPECT_TRUE(Serialized.find("/transformed/") != std::string::npos)
+      << "Serialized data should contain transformed URIs";
+  EXPECT_TRUE(Serialized.find("/original/") == std::string::npos)
+      << "Serialized data should NOT contain original URIs";
+
+  // Deserialize to restore "/original/"
+  auto In = readIndexFile(Serialized, SymbolOrigin::Background, &ReadTransform);
+  ASSERT_TRUE(bool(In)) << In.takeError();
+
+  ASSERT_TRUE(In->Symbols);
+  auto &ReadSym = *In->Symbols->find(Sym.ID);
+  EXPECT_EQ(llvm::StringRef(ReadSym.Definition.FileURI),
+            "file:///original/def.cpp")
+      << "Symbol.Definition.FileURI not transformed";
+  EXPECT_EQ(llvm::StringRef(ReadSym.CanonicalDeclaration.FileURI),
+            "file:///original/decl.h")
+      << "Symbol.CanonicalDeclaration.FileURI not transformed";
+  ASSERT_EQ(ReadSym.IncludeHeaders.size(), 2u);
+  EXPECT_EQ(ReadSym.IncludeHeaders[0].IncludeHeader,
+            "file:///original/header.h")
+      << "Symbol.IncludeHeaders[0].IncludeHeader not transformed";
+  EXPECT_EQ(ReadSym.IncludeHeaders[1].IncludeHeader, "<system_header>")
+      << "Literal include header should not be modified";
+
+  ASSERT_TRUE(In->Refs);
+  ASSERT_EQ(In->Refs->numRefs(), 1u);
+  auto RefIt = In->Refs->begin();
+  EXPECT_EQ(RefIt->first, Sym.ID);
+  ASSERT_EQ(RefIt->second.size(), 1u);
+  EXPECT_EQ(llvm::StringRef(RefIt->second[0].Location.FileURI),
+            "file:///original/ref.cpp")
+      << "Ref.Location.FileURI not transformed";
+
+  ASSERT_TRUE(In->Sources);
+  // After load, sources are keyed by the restored URI
+  auto SourceIt = In->Sources->find("file:///original/source.cpp");
+  ASSERT_NE(SourceIt, In->Sources->end()) << "Source URI key not transformed";
+  EXPECT_EQ(SourceIt->second.URI, "file:///original/source.cpp")
+      << "IncludeGraphNode.URI not transformed";
+  EXPECT_THAT(SourceIt->second.DirectIncludes,
+              ElementsAre("file:///original/inc1.h", "file:///original/inc2.h"))
+      << "IncludeGraphNode.DirectIncludes not transformed";
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
