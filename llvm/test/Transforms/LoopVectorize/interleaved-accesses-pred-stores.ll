@@ -27,7 +27,8 @@ define void @interleaved_with_cond_store_0(ptr %p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
-; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [[PAIR:%.*]], ptr [[P:%.*]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shl nsw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 8
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
@@ -35,7 +36,8 @@ define void @interleaved_with_cond_store_0(ptr %p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i1> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[DOTSPLIT3:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP14:%.*]] = shl nsw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[DOTSPLIT3:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT3]], i64 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[WIDE_VEC]], i64 0
 ; CHECK-NEXT:    store i64 [[TMP4]], ptr [[TMP3]], align 8
@@ -44,7 +46,8 @@ define void @interleaved_with_cond_store_0(ptr %p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP1]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.if1:
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr [[PAIR]], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP15:%.*]] = shl i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP15]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i64 24
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[WIDE_VEC]], i64 2
 ; CHECK-NEXT:    store i64 [[TMP8]], ptr [[TMP7]], align 8
@@ -60,7 +63,8 @@ define void @interleaved_with_cond_store_0(ptr %p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[IF_MERGE:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[P_1_SPLIT:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[TMP13:%.*]] = shl nsw i64 [[I]], 4
+; CHECK-NEXT:    [[P_1_SPLIT:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[P_1:%.*]] = getelementptr inbounds nuw i8, ptr [[P_1_SPLIT]], i64 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i64, ptr [[P_1]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[TMP10]], [[X]]
@@ -123,10 +127,13 @@ define void @interleaved_with_cond_store_1(ptr %p, i64 %x, i64 %n) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[PAIR:%.*]], ptr [[P:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP17:%.*]] = shl nsw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP18:%.*]] = shl nsw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 8
-; CHECK-NEXT:    [[DOTSPLIT5:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP21:%.*]] = shl nsw i64 [[TMP0]], 4
+; CHECK-NEXT:    [[DOTSPLIT5:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP21]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT5]], i64 8
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
@@ -134,7 +141,8 @@ define void @interleaved_with_cond_store_1(ptr %p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP22:%.*]] = shl nsw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[WIDE_VEC]], i64 0
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr [[TMP6]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
@@ -142,7 +150,8 @@ define void @interleaved_with_cond_store_1(ptr %p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP4]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.if1:
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP23:%.*]] = shl nsw i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP23]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[WIDE_VEC]], i64 2
 ; CHECK-NEXT:    store i64 [[TMP10]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
@@ -162,8 +171,10 @@ define void @interleaved_with_cond_store_1(ptr %p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[IF_MERGE:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[P_0:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[I]]
-; CHECK-NEXT:    [[P_1_SPLIT:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[TMP19:%.*]] = shl nsw i64 [[I]], 4
+; CHECK-NEXT:    [[P_0:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP20:%.*]] = shl nsw i64 [[I]], 4
+; CHECK-NEXT:    [[P_1_SPLIT:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP20]]
 ; CHECK-NEXT:    [[P_1:%.*]] = getelementptr inbounds nuw i8, ptr [[P_1_SPLIT]], i64 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i64, ptr [[P_1]], align 8
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[TMP14]], [[X]]
@@ -230,9 +241,12 @@ define void @interleaved_with_cond_store_2(ptr %p, i64 %x, i64 %n) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE2:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [[PAIR:%.*]], ptr [[P:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[TMP0]]
-; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP14:%.*]] = shl nsw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = shl nsw i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP15]]
+; CHECK-NEXT:    [[TMP16:%.*]] = shl nsw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[DOTSPLIT:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT]], i64 8
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <4 x i64> [[WIDE_VEC]], <4 x i64> poison, <2 x i32> <i32 0, i32 2>
@@ -242,7 +256,8 @@ define void @interleaved_with_cond_store_2(ptr %p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP4]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
-; CHECK-NEXT:    [[DOTSPLIT3:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP19:%.*]] = shl nsw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[DOTSPLIT3:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP19]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT3]], i64 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[WIDE_VEC]], i64 0
 ; CHECK-NEXT:    store i64 [[TMP7]], ptr [[TMP6]], align 8
@@ -251,7 +266,8 @@ define void @interleaved_with_cond_store_2(ptr %p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i1> [[TMP4]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[PRED_STORE_IF1:%.*]], label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.if1:
-; CHECK-NEXT:    [[DOTSPLIT4:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP20:%.*]] = shl nsw i64 [[TMP0]], 4
+; CHECK-NEXT:    [[DOTSPLIT4:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP20]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[DOTSPLIT4]], i64 8
 ; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[WIDE_VEC]], i64 2
 ; CHECK-NEXT:    store i64 [[TMP10]], ptr [[TMP9]], align 8
@@ -267,8 +283,10 @@ define void @interleaved_with_cond_store_2(ptr %p, i64 %x, i64 %n) {
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], [[IF_MERGE:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[P_0:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[I]]
-; CHECK-NEXT:    [[P_1_SPLIT:%.*]] = getelementptr inbounds [[PAIR]], ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[TMP17:%.*]] = shl nsw i64 [[I]], 4
+; CHECK-NEXT:    [[P_0:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP18:%.*]] = shl nsw i64 [[I]], 4
+; CHECK-NEXT:    [[P_1_SPLIT:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP18]]
 ; CHECK-NEXT:    [[P_1:%.*]] = getelementptr inbounds nuw i8, ptr [[P_1_SPLIT]], i64 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr [[P_1]], align 8
 ; CHECK-NEXT:    store i64 [[X]], ptr [[P_0]], align 8

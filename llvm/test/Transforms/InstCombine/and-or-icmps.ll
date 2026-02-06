@@ -407,8 +407,8 @@ define void @simplify_before_foldAndOfICmps2(ptr %p, ptr %A8) "instcombine-no-ve
 ; CHECK-NEXT:    [[L7:%.*]] = load i16, ptr [[A8:%.*]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i16 [[L7]], -1
 ; CHECK-NEXT:    [[B11:%.*]] = zext i1 [[TMP1]] to i16
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i64
-; CHECK-NEXT:    [[G4:%.*]] = getelementptr i16, ptr [[A8]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i64 2, i64 0
+; CHECK-NEXT:    [[G4:%.*]] = getelementptr i8, ptr [[A8]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[L2:%.*]] = load i16, ptr [[G4]], align 2
 ; CHECK-NEXT:    [[L4:%.*]] = load i16, ptr [[A8]], align 2
 ; CHECK-NEXT:    [[B21:%.*]] = sdiv i16 [[L7]], [[L4]]
@@ -429,7 +429,7 @@ define void @simplify_before_foldAndOfICmps2(ptr %p, ptr %A8) "instcombine-no-ve
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i1 [[C11]], true
 ; CHECK-NEXT:    [[C18:%.*]] = or i1 [[C10]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext i1 [[C4]] to i64
-; CHECK-NEXT:    [[G26:%.*]] = getelementptr i1, ptr null, i64 [[TMP3]]
+; CHECK-NEXT:    [[G26:%.*]] = getelementptr i8, ptr null, i64 [[TMP3]]
 ; CHECK-NEXT:    store i16 [[B33]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    store i1 [[C18]], ptr [[P]], align 1
 ; CHECK-NEXT:    store ptr [[G26]], ptr [[P]], align 8

@@ -9,7 +9,8 @@ target triple = "aarch64-unknown-linux-gnu"
 
 define <vscale x 2 x double> @test_ld1_gather_index_nxv2f64_stride1(<vscale x 2 x i1> %pred, ptr %x, i64 %base) #0 {
 ; CHECK-LABEL: @test_ld1_gather_index_nxv2f64_stride1(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[X:%.*]], i64 [[BASE:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[BASE:%.*]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[X:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[LD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 1 [[TMP1]], <vscale x 2 x i1> [[PRED:%.*]], <vscale x 2 x double> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[LD]]
 ;
@@ -31,7 +32,8 @@ define <vscale x 2 x double> @test_ld1_gather_index_nxv2f64_stride2_negtest(<vsc
 
 define <vscale x 2 x double> @test_ld1_gather_index_nxv2f64_stride1_align8(<vscale x 2 x i1> %pred, ptr align 8 %x, i64 %base) #0 {
 ; CHECK-LABEL: @test_ld1_gather_index_nxv2f64_stride1_align8(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[X:%.*]], i64 [[BASE:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[BASE:%.*]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[X:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[LD:%.*]] = call <vscale x 2 x double> @llvm.masked.load.nxv2f64.p0(ptr align 8 [[TMP1]], <vscale x 2 x i1> [[PRED:%.*]], <vscale x 2 x double> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x double> [[LD]]
 ;
@@ -46,7 +48,8 @@ define <vscale x 2 x double> @test_ld1_gather_index_nxv2f64_stride1_align8(<vsca
 
 define void @test_st1_scatter_index_nxv2f64_stride1(<vscale x 2 x i1> %pred, ptr %x, i64 %base, <vscale x 2 x double> %val) #0 {
 ; CHECK-LABEL: @test_st1_scatter_index_nxv2f64_stride1(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[X:%.*]], i64 [[BASE:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[BASE:%.*]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[X:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[VAL:%.*]], ptr align 1 [[TMP1]], <vscale x 2 x i1> [[PRED:%.*]])
 ; CHECK-NEXT:    ret void
 ;
@@ -68,7 +71,8 @@ define void @test_st1_scatter_index_nxv2f64_stride2_negtest(<vscale x 2 x i1> %p
 
 define void @test_st1_scatter_index_nxv2f64_stride1_align8(<vscale x 2 x i1> %pred, ptr align 8 %x, i64 %base, <vscale x 2 x double> %val) #0 {
 ; CHECK-LABEL: @test_st1_scatter_index_nxv2f64_stride1_align8(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[X:%.*]], i64 [[BASE:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[BASE:%.*]], 3
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[X:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> [[VAL:%.*]], ptr align 8 [[TMP1]], <vscale x 2 x i1> [[PRED:%.*]])
 ; CHECK-NEXT:    ret void
 ;

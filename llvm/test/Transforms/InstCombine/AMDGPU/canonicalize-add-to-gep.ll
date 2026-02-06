@@ -7,9 +7,9 @@ define amdgpu_ps <2 x float> @turn_add_into_gep(ptr addrspace(1) inreg %sbase) {
 ; CHECK-LABEL: define amdgpu_ps <2 x float> @turn_add_into_gep(
 ; CHECK-SAME: ptr addrspace(1) inreg [[SBASE:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[V:%.*]] = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
-; CHECK-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[V]], 1
+; CHECK-NEXT:    [[MUL:%.*]] = shl nuw nsw i32 [[V]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[MUL]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr addrspace(1) [[SBASE]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[SBASE]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(1) [[TMP2]], i64 128
 ; CHECK-NEXT:    [[LOAD:%.*]] = load <2 x float>, ptr addrspace(1) [[GEP]], align 8
 ; CHECK-NEXT:    ret <2 x float> [[LOAD]]

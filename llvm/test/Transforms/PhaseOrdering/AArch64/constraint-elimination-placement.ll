@@ -21,7 +21,8 @@ define i1 @test_order_1(ptr %this, ptr noalias %other, i1 %tobool9.not, i32 %cal
 ; CHECK-NEXT:    [[CMP442:%.*]] = icmp sgt i32 [[CALL431]], 0
 ; CHECK-NEXT:    br i1 [[CMP442]], label [[FOR_BODY45_LR_PH:%.*]], label [[FOR_COND]]
 ; CHECK:       for.body45.lr.ph:
-; CHECK-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr ptr, ptr [[OTHER]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nsw i64 [[INDVARS_IV]], 3
+; CHECK-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr i8, ptr [[OTHER]], i64 [[TMP2]]
 ; CHECK-NEXT:    br label [[FOR_BODY45:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    store i32 0, ptr [[THIS]], align 4

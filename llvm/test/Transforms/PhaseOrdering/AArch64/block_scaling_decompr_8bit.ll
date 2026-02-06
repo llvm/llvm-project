@@ -20,7 +20,8 @@ define dso_local noundef i32 @_Z33block_scaling_decompr_8bitjPK27compressed_data
 ; CHECK:       [[FOR_BODY_US]]:
 ; CHECK-NEXT:    [[INDVARS_IV55:%.*]] = phi i64 [ [[INDVARS_IV_NEXT56:%.*]], %[[FOR_BODY_US]] ], [ 0, %[[FOR_BODY_LR_PH]] ]
 ; CHECK-NEXT:    [[DST_ADDR_052_US:%.*]] = phi ptr [ [[DST_ADDR_1_US:%.*]], %[[FOR_BODY_US]] ], [ [[DST]], %[[FOR_BODY_LR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds nuw [[STRUCT_COMPRESSED_DATA_8BIT:%.*]], ptr [[SRC]], i64 [[INDVARS_IV55]]
+; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw nsw i64 [[INDVARS_IV55]], 25
+; CHECK-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[MANTISSA_US:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX_US]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[MANTISSA_US]], align 1
 ; CHECK-NEXT:    [[VMOVL_I59_US:%.*]] = sext <8 x i8> [[TMP0]] to <8 x i16>
@@ -53,7 +54,8 @@ define dso_local noundef i32 @_Z33block_scaling_decompr_8bitjPK27compressed_data
 ; CHECK-NEXT:    [[AGG_TMP_COERCE_050:%.*]] = phi i64 [ [[AGG_TMP_COERCE_0_INSERT_INSERT:%.*]], %[[FOR_BODY]] ], [ undef, %[[FOR_BODY_LR_PH]] ]
 ; CHECK-NEXT:    [[AGG_TMP42_COERCE_049:%.*]] = phi i64 [ [[AGG_TMP42_COERCE_0_INSERT_INSERT:%.*]], %[[FOR_BODY]] ], [ undef, %[[FOR_BODY_LR_PH]] ]
 ; CHECK-NEXT:    [[AGG_TMP37_COERCE_048:%.*]] = phi i64 [ [[AGG_TMP37_COERCE_0_INSERT_INSERT:%.*]], %[[FOR_BODY]] ], [ undef, %[[FOR_BODY_LR_PH]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [[STRUCT_COMPRESSED_DATA_8BIT]], ptr [[SRC]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw nsw i64 [[INDVARS_IV]], 25
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[MANTISSA:%.*]] = getelementptr inbounds nuw i8, ptr [[ARRAYIDX]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i8>, ptr [[MANTISSA]], align 1
 ; CHECK-NEXT:    [[VMOVL_I59:%.*]] = sext <8 x i8> [[TMP4]] to <8 x i16>

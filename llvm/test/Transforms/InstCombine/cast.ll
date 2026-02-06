@@ -1090,7 +1090,8 @@ define double @test73(ptr %p, i128 %i) {
 
 define double @test74(ptr %p, i64 %i) {
 ; ALL-LABEL: @test74(
-; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i64, ptr [[P:%.*]], i64 [[I:%.*]]
+; ALL-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[I:%.*]], 3
+; ALL-NEXT:    [[PP:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 [[TMP1]]
 ; ALL-NEXT:    [[L:%.*]] = load double, ptr [[PP]], align 8
 ; ALL-NEXT:    ret double [[L]]
 ;
