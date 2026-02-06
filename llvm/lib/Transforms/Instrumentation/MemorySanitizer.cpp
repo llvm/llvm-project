@@ -6978,6 +6978,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                       /*Lanes=*/kBothLanes);
       break;
 
+    // Floating-Point Absolute Compare Greater Than/Equal
+    case Intrinsic::aarch64_neon_facge:
+    case Intrinsic::aarch64_neon_facgt:
+      handleVectorComparePackedIntrinsic(I, /*PredicateAsOperand=*/false);
+      break;
+
     default:
       return false;
     }
