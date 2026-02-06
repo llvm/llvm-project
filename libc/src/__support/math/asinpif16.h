@@ -25,7 +25,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr float16 asinpif16(float16 x) {
+LIBC_INLINE constexpr float16 asinpif16(float16 x) {
   using FPBits = fputil::FPBits<float16>;
 
   FPBits xbits(x);
