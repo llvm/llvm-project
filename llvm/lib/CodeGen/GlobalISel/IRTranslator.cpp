@@ -10,6 +10,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -64,6 +65,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
@@ -1610,8 +1612,16 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   uint32_t PtrAddFlags = 0;
   // Each PtrAdd generated to implement the GEP inherits its nuw, nusw, inbounds
   // flags.
-  if (const Instruction *I = dyn_cast<Instruction>(&U))
-    PtrAddFlags = MachineInstr::copyFlagsFromInstruction(*I);
+  if (const GEPOperator *GEP = dyn_cast<GEPOperator>(&U)) {
+    if (GEP->hasNoUnsignedSignedWrap())
+      PtrAddFlags |= MachineInstr::MIFlag::NoUSWrap;
+
+    if (GEP->hasNoUnsignedWrap())
+      PtrAddFlags |= MachineInstr::MIFlag::NoUWrap;
+
+    if (GEP->isInBounds())
+      PtrAddFlags |= MachineInstr::MIFlag::InBounds;
+  }
 
   auto PtrAddFlagsWithConst = [&](int64_t Offset) {
     // For nusw/inbounds GEP with an offset that is nonnegative when interpreted
@@ -1716,6 +1726,7 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   }
 
   if (Offset != 0) {
+    Offset = APInt(OffsetTy.getSizeInBits(), Offset, true, true).getSExtValue();
     auto OffsetMIB =
         MIRBuilder.buildConstant(OffsetTy, Offset);
 

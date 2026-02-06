@@ -15,6 +15,8 @@
 #ifndef LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYISELLOWERING_H
 #define LLVM_LIB_TARGET_WEBASSEMBLY_WEBASSEMBLYISELLOWERING_H
 
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/TargetLowering.h"
 
 namespace llvm {
@@ -59,6 +61,10 @@ private:
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
   bool isVectorLoadExtDesirable(SDValue ExtVal) const override;
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
+
+  bool shouldLocalize(const MachineInstr &MI,
+                      const TargetTransformInfo *TTI) const override;
+
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
   void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
