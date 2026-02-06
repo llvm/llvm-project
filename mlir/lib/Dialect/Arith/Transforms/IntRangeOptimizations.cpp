@@ -347,7 +347,6 @@ struct NarrowElementwise final : OpTraitRewritePattern<OpTrait::Elementwise> {
           op, "no operands or operand types don't match result type");
 
     for (unsigned targetBitwidth : targetBitwidths) {
-      // Shoaib's Fix: Bitwidth must be at least 1 to be valid in MLIR.
       if (targetBitwidth == 0)
         continue;
       CastKind castKind = CastKind::Both;

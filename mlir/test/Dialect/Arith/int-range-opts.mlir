@@ -154,8 +154,6 @@ func.func @analysis_crash(%arg0: i32, %arg1: tensor<128xi1>) -> tensor<128xi64> 
 // CHECK-LABEL: func @test_i0_trunc_crash
 func.func @test_i0_trunc_crash() {
   %c1_i1 = arith.constant true
-  // Shoaib's Fix: Ensure trunci to i0 doesn't crash during range inference.
-  // The test passes if mlir-opt processes this without an assertion failure.
   %0 = arith.trunci %c1_i1 : i1 to i0
   return
 }
