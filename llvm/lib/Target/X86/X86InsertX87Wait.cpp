@@ -135,8 +135,8 @@ bool X86InsertX87WaitLegacy::runOnMachineFunction(MachineFunction &MF) {
   return insertWaitInstruction(MF);
 }
 
-PreservedAnalyses
-X86InsertX87WaitPass::run(MachineFunction &MF, MachineFunctionAnalysisManager &) {
+PreservedAnalyses X86InsertX87WaitPass::run(MachineFunction &MF,
+                                            MachineFunctionAnalysisManager &) {
   return insertWaitInstruction(MF) ? getMachineFunctionPassPreservedAnalyses()
                                          .preserveSet<CFGAnalyses>()
                                    : PreservedAnalyses::all();
