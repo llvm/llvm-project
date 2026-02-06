@@ -465,12 +465,8 @@ evaluate::Expr<evaluate::SubscriptInteger> AnalyzeKindSelector(
     SemanticsContext &, common::TypeCategory,
     const std::optional<parser::KindSelector> &);
 
-void NoteUsedSymbols(SemanticsContext &, const SomeExpr &);
-void NoteUsedSymbols(SemanticsContext &, const evaluate::ProcedureRef &);
-void NoteUsedSymbols(SemanticsContext &, const evaluate::Assignment &);
-void NoteUsedSymbols(SemanticsContext &, const parser::TypedExpr &);
-void NoteUsedSymbols(SemanticsContext &, const parser::TypedCall &);
-void NoteUsedSymbols(SemanticsContext &, const parser::TypedAssignment &);
+void NoteUsedSymbols(
+    SemanticsContext &, const SomeExpr &, bool isDefinition = false);
 
 // Semantic analysis of all expressions in a parse tree, which becomes
 // decorated with typed representations for top-level expressions.
@@ -499,11 +495,11 @@ public:
     return false;
   }
   bool Pre(const parser::AllocateObject &x) {
-    AnalyzeAndNoteUses(x);
+    AnalyzeAndNoteUses(x, /*isDefinition=*/true);
     return false;
   }
   bool Pre(const parser::PointerObject &x) {
-    AnalyzeAndNoteUses(x);
+    AnalyzeAndNoteUses(x, /*isDefinition=*/true);
     return false;
   }
   bool Pre(const parser::DataStmtObject &);
@@ -583,14 +579,23 @@ public:
   }
 
 private:
-  template <typename A> void AnalyzeAndNoteUses(const A &x) {
+  template <typename A>
+  void AnalyzeAndNoteUses(const A &x, bool isDefinition = false) {
     exprAnalyzer_.Analyze(x);
     if constexpr (parser::HasTypedExpr<A>::value) {
-      NoteUsedSymbols(context_, x.typedExpr);
+      if (x.typedExpr && x.typedExpr->v) {
+        NoteUsedSymbols(context_, *x.typedExpr->v, isDefinition);
+      }
     } else if constexpr (parser::HasTypedCall<A>::value) {
-      NoteUsedSymbols(context_, x.typedCall);
+      if (x.typedCall) {
+        context_.NoteUsedSymbols(
+            evaluate::CollectUsedSymbolValues(context_, *x.typedCall));
+      }
     } else if constexpr (parser::HasTypedAssignment<A>::value) {
-      NoteUsedSymbols(context_, x.typedAssignment);
+      if (x.typedAssignment && x.typedAssignment->v) {
+        context_.NoteUsedSymbols(
+            evaluate::CollectUsedSymbolValues(context_, *x.typedAssignment->v));
+      }
     }
   }
   bool InWhereBody() const { return whereDepth_ > 0; }

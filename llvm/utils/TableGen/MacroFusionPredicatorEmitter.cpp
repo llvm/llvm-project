@@ -41,6 +41,7 @@
 #include "Common/CodeGenTarget.h"
 #include "Common/PredicateExpander.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -78,26 +79,21 @@ public:
 
 void MacroFusionPredicatorEmitter::emitMacroFusionDecl(
     ArrayRef<const Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
-  OS << "#ifdef GET_" << Target.getName() << "_MACRO_FUSION_PRED_DECL\n";
-  OS << "#undef GET_" << Target.getName() << "_MACRO_FUSION_PRED_DECL\n\n";
-  OS << "namespace llvm {\n";
+  IfDefEmitter IfDef(
+      OS, ("GET_" + Target.getName() + "_MACRO_FUSION_PRED_DECL").str());
+  NamespaceEmitter LlvmNS(OS, "llvm");
 
-  for (const Record *Fusion : Fusions) {
+  for (const Record *Fusion : Fusions)
     OS << "bool is" << Fusion->getName() << "(const TargetInstrInfo &, "
-       << "const TargetSubtargetInfo &, "
-       << "const MachineInstr *, "
+       << "const TargetSubtargetInfo &, const MachineInstr *, "
        << "const MachineInstr &);\n";
-  }
-
-  OS << "} // end namespace llvm\n";
-  OS << "\n#endif\n";
 }
 
 void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
     ArrayRef<const Record *> Fusions, PredicateExpander &PE, raw_ostream &OS) {
-  OS << "#ifdef GET_" << Target.getName() << "_MACRO_FUSION_PRED_IMPL\n";
-  OS << "#undef GET_" << Target.getName() << "_MACRO_FUSION_PRED_IMPL\n\n";
-  OS << "namespace llvm {\n";
+  IfDefEmitter IfDef(
+      OS, ("GET_" + Target.getName() + "_MACRO_FUSION_PRED_IMPL").str());
+  NamespaceEmitter LlvmNS(OS, "llvm");
 
   for (const Record *Fusion : Fusions) {
     std::vector<const Record *> Predicates =
@@ -117,9 +113,6 @@ void MacroFusionPredicatorEmitter::emitMacroFusionImpl(
     OS.indent(2) << "return true;\n";
     OS << "}\n";
   }
-
-  OS << "} // end namespace llvm\n";
-  OS << "\n#endif\n";
 }
 
 void MacroFusionPredicatorEmitter::emitPredicates(

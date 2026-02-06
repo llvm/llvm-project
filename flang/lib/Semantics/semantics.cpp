@@ -819,6 +819,11 @@ bool SemanticsContext::IsSymbolDefined(const Symbol &symbol) const {
 void SemanticsContext::NoteUsedSymbol(const Symbol &symbol) {
   isUsed_.insert(symbol);
 }
+void SemanticsContext::NoteUsedSymbols(const UnorderedSymbolSet &set) {
+  for (const Symbol &symbol : set) {
+    NoteUsedSymbol(symbol);
+  }
+}
 
 bool SemanticsContext::IsSymbolUsed(const Symbol &symbol) const {
   return isUsed_.find(symbol) != isUsed_.end();

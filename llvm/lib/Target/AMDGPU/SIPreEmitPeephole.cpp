@@ -85,9 +85,7 @@ class SIPreEmitPeepholeLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SIPreEmitPeepholeLegacy() : MachineFunctionPass(ID) {
-    initializeSIPreEmitPeepholeLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  SIPreEmitPeepholeLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     return SIPreEmitPeephole().run(MF);
