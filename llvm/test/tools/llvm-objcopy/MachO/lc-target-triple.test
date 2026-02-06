@@ -1,0 +1,25 @@
+## This test verifies that the LC_TARGET_TRIPLE load command is copied
+## correctly.
+
+# RUN: yaml2obj %s -o %t.lc_target_triple.o
+# RUN: llvm-objcopy %t.lc_target_triple.o %t.lc_target_triple_copy.o
+# RUN: cmp %t.lc_target_triple.o %t.lc_target_triple_copy.o
+
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x1000007
+  cpusubtype:      0x3
+  filetype:        0x2
+  ncmds:           1
+  sizeofcmds:      40
+  flags:           0x18085
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_TARGET_TRIPLE
+    cmdsize:         40
+    triple:          12
+    Content:         'arm64-apple-macos27.0.0'
+    ZeroPadBytes:    5
+...
