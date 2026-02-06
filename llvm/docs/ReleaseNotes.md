@@ -316,6 +316,9 @@ Changes to LLDB
 * LLDB now includes formatters for many types from the MSVC STL.
 * DIL (the new `frame variable` implementation) now uses ':' as a bitfield
   extraction range character. '-' is deprecated and will output an error when used.
+* LLDB 22.x is the last release supporting FreeBSD 13 and below. As a result,
+  LLDB 23.x will remove support for MIPS64 on FreeBSD and assume that FreeBSD
+  targets have watchpoint support.
 
 Changes to BOLT
 ---------------------------------
