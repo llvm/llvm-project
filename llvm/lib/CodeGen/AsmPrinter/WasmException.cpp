@@ -19,29 +19,6 @@
 #include "llvm/MC/MCStreamer.h"
 using namespace llvm;
 
-void WasmException::endModule() {
-  // These are symbols used to throw/catch C++ exceptions and C longjmps. These
-  // symbols have to be emitted somewhere once in the module. Check if each of
-  // the symbols has already been created, i.e., we have at least one 'throw' or
-  // 'catch' instruction with the symbol in the module, and emit the symbol only
-  // if so.
-  //
-  // But in dynamic linking, it is in general not possible to come up with a
-  // module instantiating order in which tag-defining modules are loaded before
-  // the importing modules. So we make them undefined symbols here, define tags
-  // in the JS side, and feed them to each importing module.
-  if (!Asm->isPositionIndependent()) {
-    for (const char *SymName : {"__cpp_exception", "__c_longjmp"}) {
-      SmallString<60> NameStr;
-      Mangler::getNameWithPrefix(NameStr, SymName, Asm->getDataLayout());
-      if (Asm->OutContext.lookupSymbol(NameStr)) {
-        MCSymbol *ExceptionSym = Asm->GetExternalSymbolSymbol(SymName);
-        Asm->OutStreamer->emitLabel(ExceptionSym);
-      }
-    }
-  }
-}
-
 void WasmException::endFunction(const MachineFunction *MF) {
   bool ShouldEmitExceptionTable = false;
   for (const LandingPadInfo &Info : MF->getLandingPads()) {

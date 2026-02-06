@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly -pass-remarks-analysis="polly-scops" '-passes=print<polly-function-scops>' \
-; RUN:    -polly-precise-inbounds -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -pass-remarks-analysis=polly-scops '-passes=polly-custom<scops>' -polly-print-scops -polly-precise-inbounds -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; CHECK:      remark: <unknown>:0:0: SCoP begins here.
 ; CHECK-NEXT: remark: <unknown>:0:0: Use user assumption: [i, N, M] -> {  : N <= i or (N > i and N >= 0) }
@@ -18,8 +17,7 @@
 ;
 
 
-; RUN: opt %loadNPMPolly -pass-remarks-analysis="polly-scops" '-passes=print<polly-function-scops>' \
-; RUN:    -polly-precise-inbounds -disable-output < %s 2>&1 -pass-remarks-output=%t.yaml
+; RUN: opt %loadNPMPolly -pass-remarks-analysis=polly-scops '-passes=polly-custom<scops>' -polly-print-scops -polly-precise-inbounds -disable-output -pass-remarks-output=%t.yaml < %s 2>&1
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
 ; YAML: --- !Analysis
 ; YAML: Pass:            polly-scops

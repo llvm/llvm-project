@@ -90,7 +90,7 @@ define i32 @test_tbegin_nofloat4(i32 %pad, ptr %ptr) {
 ; CHECK: tbegin 0, 65292
 ; CHECK: ipm %r2
 ; CHECK: srl %r2, 28
-; CHECK: ciblh %r2, 2, 0(%r14)
+; CHECK: bnhr %r14
 ; CHECK: mvhi 0(%r3), 0
 ; CHECK: br %r14
   %res = call i32 @llvm.s390.tbegin.nofloat(ptr null, i32 65292)
@@ -219,7 +219,7 @@ define i32 @test_tend2(i32 %pad, ptr %ptr) {
 ; CHECK: tend
 ; CHECK: ipm %r2
 ; CHECK: srl %r2, 28
-; CHECK: ciblh %r2, 2, 0(%r14)
+; CHECK: bnhr %r14
 ; CHECK: mvhi 0(%r3), 0
 ; CHECK: br %r14
   %res = call i32 @llvm.s390.tend()

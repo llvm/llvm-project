@@ -433,15 +433,34 @@ define i1 @vecmp_load64x4(ptr %p0) {
 }
 
 define i1 @vecmp_load128x2(ptr %p0) {
-; CHECK-LABEL: vecmp_load128x2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    movq 8(%rdi), %rcx
-; CHECK-NEXT:    orq 24(%rdi), %rcx
-; CHECK-NEXT:    orq 16(%rdi), %rax
-; CHECK-NEXT:    orq %rcx, %rax
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    retq
+; SSE2-LABEL: vecmp_load128x2:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqu (%rdi), %xmm0
+; SSE2-NEXT:    movdqu 16(%rdi), %xmm1
+; SSE2-NEXT:    por %xmm0, %xmm1
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE2-NEXT:    movmskps %xmm0, %eax
+; SSE2-NEXT:    xorl $15, %eax
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: vecmp_load128x2:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqu (%rdi), %xmm0
+; SSE41-NEXT:    movdqu 16(%rdi), %xmm1
+; SSE41-NEXT:    por %xmm0, %xmm1
+; SSE41-NEXT:    ptest %xmm1, %xmm1
+; SSE41-NEXT:    sete %al
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: vecmp_load128x2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX-NEXT:    vpor 16(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    vptest %xmm0, %xmm0
+; AVX-NEXT:    sete %al
+; AVX-NEXT:    retq
   %p1 = getelementptr i8, ptr %p0, i64 16
   %i0 = load i128, ptr %p0, align 1
   %i1 = load i128, ptr %p1, align 1
@@ -453,21 +472,55 @@ define i1 @vecmp_load128x2(ptr %p0) {
 }
 
 define i1 @vecmp_load128x4(ptr %p0) {
-; CHECK-LABEL: vecmp_load128x4:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq (%rdi), %rax
-; CHECK-NEXT:    movq 8(%rdi), %rcx
-; CHECK-NEXT:    movq 24(%rdi), %rdx
-; CHECK-NEXT:    movq 16(%rdi), %rsi
-; CHECK-NEXT:    orq 32(%rdi), %rax
-; CHECK-NEXT:    orq 40(%rdi), %rcx
-; CHECK-NEXT:    orq 48(%rdi), %rsi
-; CHECK-NEXT:    orq %rax, %rsi
-; CHECK-NEXT:    orq 56(%rdi), %rdx
-; CHECK-NEXT:    orq %rcx, %rdx
-; CHECK-NEXT:    orq %rsi, %rdx
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    retq
+; SSE2-LABEL: vecmp_load128x4:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqu (%rdi), %xmm0
+; SSE2-NEXT:    movdqu 16(%rdi), %xmm1
+; SSE2-NEXT:    movdqu 32(%rdi), %xmm2
+; SSE2-NEXT:    por %xmm0, %xmm2
+; SSE2-NEXT:    movdqu 48(%rdi), %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    movmskps %xmm1, %eax
+; SSE2-NEXT:    xorl $15, %eax
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: vecmp_load128x4:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqu (%rdi), %xmm0
+; SSE41-NEXT:    movdqu 16(%rdi), %xmm1
+; SSE41-NEXT:    movdqu 32(%rdi), %xmm2
+; SSE41-NEXT:    por %xmm0, %xmm2
+; SSE41-NEXT:    movdqu 48(%rdi), %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    por %xmm2, %xmm0
+; SSE41-NEXT:    ptest %xmm0, %xmm0
+; SSE41-NEXT:    sete %al
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: vecmp_load128x4:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX1-NEXT:    vmovdqu 16(%rdi), %xmm1
+; AVX1-NEXT:    vpor 32(%rdi), %xmm0, %xmm0
+; AVX1-NEXT:    vpor 48(%rdi), %xmm1, %xmm1
+; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vptest %xmm0, %xmm0
+; AVX1-NEXT:    sete %al
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: vecmp_load128x4:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovdqu (%rdi), %xmm0
+; AVX512-NEXT:    vmovdqu 16(%rdi), %xmm1
+; AVX512-NEXT:    vpor 32(%rdi), %xmm0, %xmm0
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm0 | xmm1 | mem
+; AVX512-NEXT:    vptest %xmm0, %xmm0
+; AVX512-NEXT:    sete %al
+; AVX512-NEXT:    retq
   %p1 = getelementptr i8, ptr %p0, i64 16
   %p2 = getelementptr i8, ptr %p0, i64 32
   %p3 = getelementptr i8, ptr %p0, i64 48
@@ -486,21 +539,52 @@ define i1 @vecmp_load128x4(ptr %p0) {
 
 ; PR144861
 define i1 @vecmp_load256x2(ptr %p0) {
-; CHECK-LABEL: vecmp_load256x2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq 24(%rdi), %rax
-; CHECK-NEXT:    movq (%rdi), %rcx
-; CHECK-NEXT:    movq 8(%rdi), %rdx
-; CHECK-NEXT:    movq 16(%rdi), %rsi
-; CHECK-NEXT:    orq 48(%rdi), %rsi
-; CHECK-NEXT:    orq 32(%rdi), %rcx
-; CHECK-NEXT:    orq %rsi, %rcx
-; CHECK-NEXT:    orq 56(%rdi), %rax
-; CHECK-NEXT:    orq 40(%rdi), %rdx
-; CHECK-NEXT:    orq %rax, %rdx
-; CHECK-NEXT:    orq %rcx, %rdx
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    retq
+; SSE2-LABEL: vecmp_load256x2:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqu (%rdi), %xmm0
+; SSE2-NEXT:    movdqu 16(%rdi), %xmm1
+; SSE2-NEXT:    movdqu 32(%rdi), %xmm2
+; SSE2-NEXT:    por %xmm0, %xmm2
+; SSE2-NEXT:    movdqu 48(%rdi), %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    movmskps %xmm1, %eax
+; SSE2-NEXT:    xorl $15, %eax
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: vecmp_load256x2:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqu (%rdi), %xmm0
+; SSE41-NEXT:    movdqu 16(%rdi), %xmm1
+; SSE41-NEXT:    movdqu 32(%rdi), %xmm2
+; SSE41-NEXT:    por %xmm0, %xmm2
+; SSE41-NEXT:    movdqu 48(%rdi), %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    por %xmm2, %xmm0
+; SSE41-NEXT:    ptest %xmm0, %xmm0
+; SSE41-NEXT:    sete %al
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: vecmp_load256x2:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovups (%rdi), %ymm0
+; AVX1-NEXT:    vorps 32(%rdi), %ymm0, %ymm0
+; AVX1-NEXT:    vptest %ymm0, %ymm0
+; AVX1-NEXT:    sete %al
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: vecmp_load256x2:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovdqu (%rdi), %ymm0
+; AVX512-NEXT:    vpor 32(%rdi), %ymm0, %ymm0
+; AVX512-NEXT:    vptest %ymm0, %ymm0
+; AVX512-NEXT:    sete %al
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %p1 = getelementptr i8, ptr %p0, i64 32
   %i0 = load i256, ptr %p0, align 1
   %i1 = load i256, ptr %p1, align 1
@@ -512,33 +596,72 @@ define i1 @vecmp_load256x2(ptr %p0) {
 }
 
 define i1 @vecmp_load512x2(ptr %p0) {
-; CHECK-LABEL: vecmp_load512x2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq 24(%rdi), %rax
-; CHECK-NEXT:    movq 56(%rdi), %rdx
-; CHECK-NEXT:    movq 40(%rdi), %rsi
-; CHECK-NEXT:    movq 16(%rdi), %rcx
-; CHECK-NEXT:    movq 48(%rdi), %r8
-; CHECK-NEXT:    movq (%rdi), %r9
-; CHECK-NEXT:    movq 8(%rdi), %r10
-; CHECK-NEXT:    movq 32(%rdi), %r11
-; CHECK-NEXT:    orq 96(%rdi), %r11
-; CHECK-NEXT:    orq 64(%rdi), %r9
-; CHECK-NEXT:    orq %r11, %r9
-; CHECK-NEXT:    orq 112(%rdi), %r8
-; CHECK-NEXT:    orq 80(%rdi), %rcx
-; CHECK-NEXT:    orq %r8, %rcx
-; CHECK-NEXT:    orq %r9, %rcx
-; CHECK-NEXT:    orq 104(%rdi), %rsi
-; CHECK-NEXT:    orq 72(%rdi), %r10
-; CHECK-NEXT:    orq %rsi, %r10
-; CHECK-NEXT:    orq 120(%rdi), %rdx
-; CHECK-NEXT:    orq 88(%rdi), %rax
-; CHECK-NEXT:    orq %rdx, %rax
-; CHECK-NEXT:    orq %r10, %rax
-; CHECK-NEXT:    orq %rcx, %rax
-; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    retq
+; SSE2-LABEL: vecmp_load512x2:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqu (%rdi), %xmm0
+; SSE2-NEXT:    movdqu 16(%rdi), %xmm1
+; SSE2-NEXT:    movdqu 32(%rdi), %xmm2
+; SSE2-NEXT:    movdqu 48(%rdi), %xmm3
+; SSE2-NEXT:    movdqu 80(%rdi), %xmm4
+; SSE2-NEXT:    por %xmm1, %xmm4
+; SSE2-NEXT:    movdqu 112(%rdi), %xmm1
+; SSE2-NEXT:    por %xmm3, %xmm1
+; SSE2-NEXT:    por %xmm4, %xmm1
+; SSE2-NEXT:    movdqu 64(%rdi), %xmm3
+; SSE2-NEXT:    por %xmm0, %xmm3
+; SSE2-NEXT:    movdqu 96(%rdi), %xmm0
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm3, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    movmskps %xmm1, %eax
+; SSE2-NEXT:    xorl $15, %eax
+; SSE2-NEXT:    sete %al
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: vecmp_load512x2:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movdqu (%rdi), %xmm0
+; SSE41-NEXT:    movdqu 16(%rdi), %xmm1
+; SSE41-NEXT:    movdqu 32(%rdi), %xmm2
+; SSE41-NEXT:    movdqu 48(%rdi), %xmm3
+; SSE41-NEXT:    movdqu 80(%rdi), %xmm4
+; SSE41-NEXT:    por %xmm1, %xmm4
+; SSE41-NEXT:    movdqu 112(%rdi), %xmm1
+; SSE41-NEXT:    por %xmm3, %xmm1
+; SSE41-NEXT:    por %xmm4, %xmm1
+; SSE41-NEXT:    movdqu 64(%rdi), %xmm3
+; SSE41-NEXT:    por %xmm0, %xmm3
+; SSE41-NEXT:    movdqu 96(%rdi), %xmm0
+; SSE41-NEXT:    por %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm3, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    ptest %xmm0, %xmm0
+; SSE41-NEXT:    sete %al
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: vecmp_load512x2:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovups (%rdi), %ymm0
+; AVX1-NEXT:    vmovups 32(%rdi), %ymm1
+; AVX1-NEXT:    vorps 96(%rdi), %ymm1, %ymm1
+; AVX1-NEXT:    vorps 64(%rdi), %ymm0, %ymm0
+; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX1-NEXT:    vptest %ymm0, %ymm0
+; AVX1-NEXT:    sete %al
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: vecmp_load512x2:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovdqu64 (%rdi), %zmm0
+; AVX512-NEXT:    vporq 64(%rdi), %zmm0, %zmm0
+; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k0
+; AVX512-NEXT:    kortestw %k0, %k0
+; AVX512-NEXT:    sete %al
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
   %p1 = getelementptr i8, ptr %p0, i64 64
   %i0 = load i512, ptr %p0, align 1
   %i1 = load i512, ptr %p1, align 1

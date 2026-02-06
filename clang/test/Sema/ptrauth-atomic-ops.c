@@ -50,7 +50,7 @@ void f() {
   __c11_atomic_store(ATOMIZE(non_addr_discriminatedauthenticated_ptr), 0, memory_order_relaxed);
   __c11_atomic_load(ATOMIZE(non_addr_discriminatedauthenticated_ptr), memory_order_seq_cst);
   __atomic_store(&j, ATOMIZE(non_addr_discriminatedauthenticated_ptr), memory_order_release);
-  // expected-warning@-1 {{incompatible pointer types passing 'volatile __ptrauth(2,0,200) _Atomic(int *) *' to parameter of type 'int *'}}
+  // expected-error@-1 {{incompatible pointer types passing 'volatile __ptrauth(2,0,200) _Atomic(int *) *' to parameter of type 'int *'}}
   __c11_atomic_exchange(ATOMIZE(j), ATOMIZE(non_addr_discriminatedauthenticated_ptr), memory_order_seq_cst);
   // expected-error@-1 {{incompatible pointer to integer conversion passing 'volatile __ptrauth(2,0,200) _Atomic(int *) *' to parameter of type 'typeof (j)' (aka 'int')}}
   __c11_atomic_fetch_add(ATOMIZE(non_addr_discriminatedauthenticated_ptr), ATOMIZE(j), memory_order_seq_cst);

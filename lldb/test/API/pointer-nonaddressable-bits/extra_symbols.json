@@ -1,0 +1,21 @@
+{
+    "triple": "replace me",
+    "uuid": "replace me",
+    "type": "executable",
+    "sections": [
+        {
+            "name": "__DATA",
+            "type": "data",
+            "address": 1297224342667202580,
+            "size": 16
+        }
+    ],
+    "symbols": [
+        {
+            "name": "myglobal_json",
+            "size": 8,
+            "type": "data",
+            "address": 1297224342667202580
+        }
+    ]
+}

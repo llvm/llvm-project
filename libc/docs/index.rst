@@ -2,12 +2,6 @@
 The LLVM C Library
 ==================
 
-.. warning::
-  LLVM-libc is not yet ABI stable; currently only static linking is supported.
-  LLVM-libc developers retain the right to modify the ABI of types used
-  throughout the library. Another libc should be preferred if ABI stability is
-  a requirement.
-
 .. note::
   LLVM-libc is not fully complete right now. Some programs may fail to build due
   to missing functions. If you would like to help us finish LLVM-libc, check
@@ -18,24 +12,27 @@ The LLVM C Library
 Introduction
 ============
 
-LLVM-libc aspires to a unique place in the software ecosystem.  The goals are:
+LLVM-libc is an implementation of the C standard library written in C++ focused
+on embodying three main principles:
 
-- Fully compliant with current C23 and POSIX.1-2024 standards.
-- Easily decomposed and embedded: Supplement or replace system C library
-  functionality easily.  This is useful to get consistent math precision across
-  systems, or updated memory operations for newer microarchitectures.  These
-  pieces will work on Linux, MacOS, Windows, and Fuchsia.
-- The creation of fully static binaries without license implications.
-- Increase whole program optimization opportunities for static binaries through
-  ability to inline math and memory operations.
-- Reduce coding errors by coding in modern C++ through the use of lightweight
-  containers during coding that can be optimized away at runtime.
-- Permit fuzzing and sanitizer instrumentation of user binaries including the
-  libc functions.
-- A complete testsuite that tests both the public interface and internal
-  algorithms.
-- `Fuzzing <https://github.com/llvm/llvm-project/tree/main/libc/fuzzing>`__
+- Modular
+- Multiplatform
+- Community Oriented
 
+Our current goal is to support users who want to make libc part of their
+application. This can be through static linking libc into the application, which
+is common for containerized servers or embedded devices. It can also be through
+using the LLVM-libc internal sources as a library, such as through the
+:ref:`Hand-in-Hand interface<hand_in_hand>`.
+
+For more details please watch the talk "`Climbing the ladder of Complete <https://www.youtube.com/watch?v=HtCMCL13Grg>`__ by Michael Jones.".
+
+LLVM-libc is currently used in Google servers, Pixel Buds, and other Google
+projects. Through Project Hand-in-Hand LLVM-libc's code is used in other LLVM
+projects, specifically libc++ and the offloading runtime. There is an
+experiemental config to use LLVM-libc in Emscripten and the ARM embedded
+toolchain. Pieces of LLVM-libc are being used in Bionic (Android's libc) and
+Fuchsia.
 
 .. toctree::
    :hidden:
@@ -65,6 +62,7 @@ LLVM-libc aspires to a unique place in the software ecosystem.  The goals are:
    gpu/index.rst
    uefi/index.rst
    configure
+   hand_in_hand
 
 .. toctree::
    :hidden:

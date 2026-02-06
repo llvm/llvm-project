@@ -238,6 +238,16 @@ func.func private @samped_image_type_invaid_type(!spirv.sampled_image<f32>) -> (
 
 // -----
 
+// expected-error @+1 {{sampled image Dim must not be SubpassData or Buffer, got Buffer}}
+func.func private @sampled_image_type(!spirv.sampled_image<!spirv.image<f32, Buffer, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>) -> ()
+
+// -----
+
+// expected-error @+1 {{sampled image Dim must not be SubpassData or Buffer, got SubpassData}}
+func.func private @sampled_image_type(!spirv.sampled_image<!spirv.image<f32, SubpassData, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>) -> ()
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // StructType
 //===----------------------------------------------------------------------===//
@@ -621,3 +631,15 @@ func.func private @arm_tensor_type_unranked(!spirv.arm.tensor<*xi32>) -> ()
 
 // expected-error @+1 {{arm.tensors do not support zero dimensions}}
 func.func private @arm_tensor_type_zero_dim(!spirv.arm.tensor<0xi32>) -> ()
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Float8_EXT
+//===----------------------------------------------------------------------===//
+
+// CHECK: func private @type_f8E4M3FN(f8E4M3FN)
+func.func private @type_f8E4M3FN(f8E4M3FN) -> ()
+
+// CHECK: func private @type_f8E5M2(f8E5M2)
+func.func private @type_f8E5M2(f8E5M2) -> ()

@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 namespace cir {
 
@@ -36,7 +37,7 @@ public:
   bool isBigEndian() const { return bigEndian; }
 
   /// Internal helper method that returns requested alignment for type.
-  llvm::Align getAlignment(mlir::Type ty, bool abiOrPref) const;
+  llvm::Align getAlignment(mlir::Type ty, bool useABIAlign) const;
 
   llvm::Align getABITypeAlign(mlir::Type ty) const {
     return getAlignment(ty, true);
@@ -81,6 +82,18 @@ public:
   }
 
   llvm::TypeSize getTypeSizeInBits(mlir::Type ty) const;
+
+  llvm::TypeSize getPointerTypeSizeInBits(mlir::Type ty) const {
+    assert(mlir::isa<cir::PointerType>(ty) &&
+           "This should only be called with a pointer type");
+    return layout.getTypeSizeInBits(ty);
+  }
+
+  mlir::Type getIntPtrType(mlir::Type ty) const {
+    assert(mlir::isa<cir::PointerType>(ty) && "Expected pointer type");
+    return cir::IntType::get(ty.getContext(), getPointerTypeSizeInBits(ty),
+                             false);
+  }
 };
 
 } // namespace cir

@@ -162,7 +162,7 @@ bool LoongArchAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   else if (OffsetMO.isImm())
     OS << ", " << OffsetMO.getImm();
   else if (OffsetMO.isGlobal() || OffsetMO.isBlockAddress() ||
-           OffsetMO.isMCSymbol()) {
+           OffsetMO.isMCSymbol() || OffsetMO.isCPI()) {
     OS << ", ";
     MAI->printExpr(OS, *MCO.getExpr());
   } else
@@ -276,7 +276,7 @@ void LoongArchAsmPrinter::emitJumpTableInfo() {
     return;
 
   unsigned Size = getDataLayout().getPointerSize();
-  auto JT = JTI->getJumpTables();
+  const auto &JT = JTI->getJumpTables();
 
   // Emit an additional section to store the correlation info as pairs of
   // addresses, each pair contains the address of a jump instruction (jr) and

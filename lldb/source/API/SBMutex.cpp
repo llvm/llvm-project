@@ -58,3 +58,12 @@ void SBMutex::unlock() const {
   if (m_opaque_sp)
     m_opaque_sp->unlock();
 }
+
+bool SBMutex::try_lock() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (m_opaque_sp)
+    return m_opaque_sp->try_lock();
+
+  return false;
+}

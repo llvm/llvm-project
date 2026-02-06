@@ -1,4 +1,4 @@
-//===--- UseScopedLockCheck.h - clang-tidy ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@ namespace clang::tidy::modernize {
 /// alternative ``std::scoped_lock``.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-scoped-lock.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-scoped-lock.html
 class UseScopedLockCheck : public ClangTidyCheck {
 public:
   UseScopedLockCheck(StringRef Name, ClangTidyContext *Context);

@@ -208,6 +208,16 @@ add_libc_test(
 )
 
 add_libc_test(
+  netinet_in_test
+  SUITE
+    libc_include_tests
+  SRCS
+    netinet_in_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.netinet_in_macros
+)
+
+add_libc_test(
   signbit_test
   SUITE
     libc_include_tests

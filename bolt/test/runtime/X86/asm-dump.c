@@ -30,7 +30,7 @@
  * Reconstruct fdata
  * RUN: link_fdata %t/main.s %t.o %t.fdata.reconst
  *
- * XXX: reenable once dumping data is supported
+ * XXX: re-enable once dumping data is supported
  * Check if reoptimized file produces the same results
  * dontrun: %t.exe.reopt > %t.result.reopt
  * dontrun: cmp %t.result %t.result.reopt

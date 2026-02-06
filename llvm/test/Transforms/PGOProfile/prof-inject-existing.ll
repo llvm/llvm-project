@@ -14,9 +14,9 @@ no:
 }
 
 !0 = !{!"branch_weights", i32 1, i32 2}
-!1 = !{!"unknown"}
+!1 = !{!"unknown", !"test"}
 ; CHECK: define void @foo(i32 %i) !prof !0
 ; CHECK: br i1 %c, label %yes, label %no, !prof !1
 ; CHECK: !0 = !{!"function_entry_count", i64 1000}
 ; CHECK: !1 = !{!"branch_weights", i32 1, i32 2}
-; CHECK: !2 = !{!"unknown"}
+; CHECK: !2 = !{!"unknown", !"test"}

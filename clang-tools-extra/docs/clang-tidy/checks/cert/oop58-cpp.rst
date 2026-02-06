@@ -1,11 +1,11 @@
-.. title:: clang-tidy - cert-mutating-copy
+.. title:: clang-tidy - cert-oop58-cpp
+.. meta::
+   :http-equiv=refresh: 5;URL=../bugprone/copy-constructor-mutates-argument.html
 
 cert-oop58-cpp
 ==============
 
-Finds assignments to the copied object and its direct or indirect members
-in copy constructors and copy assignment operators.
-
-This check corresponds to the CERT C Coding Standard rule
-`OOP58-CPP. Copy operations must not mutate the source object
-<https://wiki.sei.cmu.edu/confluence/display/cplusplus/OOP58-CPP.+Copy+operations+must+not+mutate+the+source+object>`_.
+The `cert-oop58-cpp` check is an alias, please see
+:doc:`bugprone-copy-constructor-mutates-argument
+<../bugprone/copy-constructor-mutates-argument>`
+for more information.

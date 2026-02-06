@@ -1,0 +1,54 @@
+RUN: llvm-remarkutil summary --inline-callees %p/Inputs/inline.yaml | FileCheck -strict-whitespace %s
+
+; CHECK: --- !Analysis
+; CHECK-NEXT: Pass:            inline
+; CHECK-NEXT: Name:            Summary
+; CHECK-NEXT: DebugLoc:        { File: bar.cpp, Line: 5, Column: 0 }
+; CHECK-NEXT: Function:        barCallee
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - String:          'Incoming Calls ('
+; CHECK-NEXT:   - String:          AlwaysInline
+; CHECK-NEXT:   - String:          ': '
+; CHECK-NEXT:   - AlwaysInline:    '1'
+; CHECK-NEXT:   - String:          ')'
+; CHECK-NEXT: ...
+; CHECK-NEXT: --- !Analysis
+; CHECK-NEXT: Pass:            inline
+; CHECK-NEXT: Name:            Summary
+; CHECK-NEXT: Function:        bazCallee
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - String:          'Incoming Calls ('
+; CHECK-NEXT:   - String:          NoDefinition
+; CHECK-NEXT:   - String:          ': '
+; CHECK-NEXT:   - NoDefinition:    '1'
+; CHECK-NEXT:   - String:          ')'
+; CHECK-NEXT: ...
+; CHECK-NEXT: --- !Analysis
+; CHECK-NEXT: Pass:            inline
+; CHECK-NEXT: Name:            Summary
+; CHECK-NEXT: DebugLoc:        { File: foo.cpp, Line: 10, Column: 0 }
+; CHECK-NEXT: Function:        fooCallee
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - String:          'Incoming Calls ('
+; CHECK-NEXT:   - String:          Inlined
+; CHECK-NEXT:   - String:          ': '
+; CHECK-NEXT:   - Inlined:         '1'
+; CHECK-NEXT:   - String:          ', '
+; CHECK-NEXT:   - String:          TooCostly
+; CHECK-NEXT:   - String:          ': '
+; CHECK-NEXT:   - TooCostly:       '1'
+; CHECK-NEXT:   - String:          ')'
+; CHECK-NEXT:   - String:          "\nLeast profitable (cost="
+; CHECK-NEXT:   - LeastProfitCost: '125'
+; CHECK-NEXT:     DebugLoc:        { File: foo.cpp, Line: 21, Column: 6 }
+; CHECK-NEXT:   - String:          ', threshold='
+; CHECK-NEXT:   - LeastProfitThreshold: '100'
+; CHECK-NEXT:   - String:          ')'
+; CHECK-NEXT:   - String:          "\nMost profitable (cost="
+; CHECK-NEXT:   - MostProfitCost:  '-15'
+; CHECK-NEXT:     DebugLoc:        { File: foo.cpp, Line: 21, Column: 6 }
+; CHECK-NEXT:   - String:          ', threshold='
+; CHECK-NEXT:   - MostProfitThreshold: '100'
+; CHECK-NEXT:   - String:          ')'
+; CHECK-NEXT: ...
+; CHECK-NOT: {{.}}

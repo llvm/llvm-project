@@ -341,21 +341,24 @@ define <2 x i32> @s_fneg_select_v2i32_1(<2 x i32> inreg %cond, <2 x i32> inreg %
 ; GCN-LABEL: s_fneg_select_v2i32_1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_xor_b32 s4, s19, 0x80000000
-; GCN-NEXT:    s_xor_b32 s5, s18, 0x80000000
+; GCN-NEXT:    s_brev_b32 s4, 1
+; GCN-NEXT:    s_mov_b32 s5, s4
+; GCN-NEXT:    s_xor_b64 s[4:5], s[18:19], s[4:5]
 ; GCN-NEXT:    s_cmp_eq_u32 s16, 0
-; GCN-NEXT:    s_cselect_b32 s5, s5, s20
+; GCN-NEXT:    s_cselect_b32 s4, s4, s20
 ; GCN-NEXT:    s_cmp_eq_u32 s17, 0
-; GCN-NEXT:    s_cselect_b32 s4, s4, s21
-; GCN-NEXT:    v_mov_b32_e32 v0, s5
-; GCN-NEXT:    v_mov_b32_e32 v1, s4
+; GCN-NEXT:    s_cselect_b32 s5, s5, s21
+; GCN-NEXT:    v_mov_b32_e32 v0, s4
+; GCN-NEXT:    v_mov_b32_e32 v1, s5
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: s_fneg_select_v2i32_1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_xor_b32 s3, s3, 0x80000000
-; GFX11-NEXT:    s_xor_b32 s2, s2, 0x80000000
+; GFX11-NEXT:    s_brev_b32 s4, 1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_mov_b32 s5, s4
+; GFX11-NEXT:    s_xor_b64 s[2:3], s[2:3], s[4:5]
 ; GFX11-NEXT:    s_cmp_eq_u32 s0, 0
 ; GFX11-NEXT:    s_cselect_b32 s0, s2, s16
 ; GFX11-NEXT:    s_cmp_eq_u32 s1, 0
@@ -373,12 +376,13 @@ define <2 x i32> @s_fneg_fabs_select_v2i32_2(<2 x i32> inreg %cond, <2 x i32> in
 ; GCN-LABEL: s_fneg_fabs_select_v2i32_2:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_bitset1_b32 s19, 31
-; GCN-NEXT:    s_bitset1_b32 s18, 31
+; GCN-NEXT:    s_brev_b32 s4, 1
+; GCN-NEXT:    s_mov_b32 s5, s4
+; GCN-NEXT:    s_or_b64 s[4:5], s[18:19], s[4:5]
 ; GCN-NEXT:    s_cmp_eq_u32 s16, 0
-; GCN-NEXT:    s_cselect_b32 s4, s20, s18
+; GCN-NEXT:    s_cselect_b32 s4, s20, s4
 ; GCN-NEXT:    s_cmp_eq_u32 s17, 0
-; GCN-NEXT:    s_cselect_b32 s5, s21, s19
+; GCN-NEXT:    s_cselect_b32 s5, s21, s5
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -386,8 +390,10 @@ define <2 x i32> @s_fneg_fabs_select_v2i32_2(<2 x i32> inreg %cond, <2 x i32> in
 ; GFX11-LABEL: s_fneg_fabs_select_v2i32_2:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_bitset1_b32 s3, 31
-; GFX11-NEXT:    s_bitset1_b32 s2, 31
+; GFX11-NEXT:    s_brev_b32 s4, 1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_mov_b32 s5, s4
+; GFX11-NEXT:    s_or_b64 s[2:3], s[2:3], s[4:5]
 ; GFX11-NEXT:    s_cmp_eq_u32 s0, 0
 ; GFX11-NEXT:    s_cselect_b32 s0, s16, s2
 ; GFX11-NEXT:    s_cmp_eq_u32 s1, 0

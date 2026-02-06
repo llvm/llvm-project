@@ -370,6 +370,16 @@ define <8 x float> @constant_fold_vpermilvar_ps_256() {
   ret <8 x float> %1
 }
 
+define <8 x float> @freeze_vpermilvar_ps_256(<8 x float> %a0) {
+; CHECK-LABEL: freeze_vpermilvar_ps_256:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret{{[l|q]}}
+  %s0 = call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 0, i32 3, i32 1, i32 2, i32 7, i32 6, i32 5, i32 4>)
+  %f0 = freeze <8 x float> %s0
+  %s1 = call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %f0, <8 x i32> <i32 0, i32 2, i32 3, i32 1, i32 7, i32 6, i32 5, i32 4>)
+  ret <8 x float> %s1
+}
+
 define void @PR39483() {
 ; X86-AVX1-LABEL: PR39483:
 ; X86-AVX1:       # %bb.0: # %entry
@@ -612,6 +622,52 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, ptr n
   %r2 = shufflevector <4 x double> %t2, <4 x double> %v2, <4 x i32> <i32 6, i32 0, i32 1, i32 7>
   store <4 x double> %r2, ptr %out2, align 32
   ret void
+}
+
+define i32 @PR164107(<16 x i1> %0) {
+; AVX1-LABEL: PR164107:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpsllw $15, %xmm0, %xmm0
+; AVX1-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX1-NEXT:    vpmovsxwq %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    ret{{[l|q]}}
+;
+; AVX2-LABEL: PR164107:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastb %xmm0, %xmm0
+; AVX2-NEXT:    vpsllw $15, %xmm0, %xmm0
+; AVX2-NEXT:    vpsraw $15, %xmm0, %xmm0
+; AVX2-NEXT:    vpmovsxwq %xmm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    ret{{[l|q]}}
+;
+; AVX512-LABEL: PR164107:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpmovsxbd %xmm0, %zmm0
+; AVX512-NEXT:    vpslld $31, %zmm0, %zmm0
+; AVX512-NEXT:    vptestmd %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
+; AVX512-NEXT:    vpbroadcastq %xmm0, %zmm0
+; AVX512-NEXT:    vptestmq %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
+; AVX512-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
+; AVX512-NEXT:    vpbroadcastw %xmm0, %xmm0
+; AVX512-NEXT:    vpmovsxwq %xmm0, %zmm0
+; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, %eax
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    ret{{[l|q]}}
+  %cmp = shufflevector <16 x i1> %0, <16 x i1> zeroinitializer, <16 x i32> zeroinitializer
+  %sext = sext <16 x i1> %cmp to <16 x i64>
+  %bc.1 = bitcast <16 x i64> %sext to <64 x i16>
+  %vecinit15.i = shufflevector <64 x i16> %bc.1, <64 x i16> zeroinitializer, <16 x i32> <i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56, i32 56>
+  %conv16.i = sext <16 x i16> %vecinit15.i to <16 x i64>
+  %bc.2 = bitcast <16 x i64> %conv16.i to <32 x i32>
+  %conv22.i = extractelement <32 x i32> %bc.2, i64 4
+  ret i32 %conv22.i
 }
 
 define <4 x i64> @concat_self_v4i64(<2 x i64> %x) {

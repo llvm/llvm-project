@@ -253,6 +253,21 @@ void Region::OpIterator::skipOverBlocksWithNoOps() {
     operation = block->begin();
 }
 
+llvm::raw_ostream &mlir::operator<<(llvm::raw_ostream &os, Region &region) {
+  if (!region.getParentOp()) {
+    os << "Region has no parent op";
+  } else {
+    os << "Region #" << region.getRegionNumber() << " in operation "
+       << region.getParentOp()->getName();
+  }
+  for (auto it : llvm::enumerate(region.getBlocks())) {
+    os << "\n  Block #" << it.index() << ":";
+    for (Operation &op : it.value().getOperations())
+      os << "\n    " << OpWithFlags(&op, OpPrintingFlags().skipRegions());
+  }
+  return os;
+}
+
 //===----------------------------------------------------------------------===//
 // RegionRange
 //===----------------------------------------------------------------------===//

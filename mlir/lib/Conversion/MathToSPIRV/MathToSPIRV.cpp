@@ -117,7 +117,7 @@ struct CheckedElementwiseOpPattern final
 
 /// Converts math.copysign to SPIR-V ops.
 struct CopySignPattern final : public OpConversionPattern<math::CopySignOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(math::CopySignOp copySignOp, OpAdaptor adaptor,
@@ -188,7 +188,7 @@ struct CopySignPattern final : public OpConversionPattern<math::CopySignOp> {
 /// it.
 struct CountLeadingZerosPattern final
     : public OpConversionPattern<math::CountLeadingZerosOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(math::CountLeadingZerosOp countOp, OpAdaptor adaptor,
@@ -239,7 +239,7 @@ struct CountLeadingZerosPattern final
 /// these operations.
 template <typename ExpOp>
 struct ExpM1OpPattern final : public OpConversionPattern<math::ExpM1Op> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(math::ExpM1Op operation, OpAdaptor adaptor,
@@ -267,7 +267,7 @@ struct ExpM1OpPattern final : public OpConversionPattern<math::ExpM1Op> {
 /// these operations.
 template <typename LogOp>
 struct Log1pOpPattern final : public OpConversionPattern<math::Log1pOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(math::Log1pOp operation, OpAdaptor adaptor,
@@ -351,7 +351,7 @@ struct Log2Log10OpPattern final : public OpConversionPattern<MathLogOp> {
 
 /// Converts math.powf to SPIRV-Ops.
 struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(math::PowFOp powfOp, OpAdaptor adaptor,
@@ -407,11 +407,11 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
     if (auto vectorType = dyn_cast<VectorType>(operandType))
       nanAttr = DenseElementsAttr::get(vectorType, nan);
 
-    Value NanValue =
+    Value nanValue =
         spirv::ConstantOp::create(rewriter, loc, operandType, nanAttr);
     Value lhs =
         spirv::SelectOp::create(rewriter, loc, cmpNegativeWithFractionalExp,
-                                NanValue, adaptor.getLhs());
+                                nanValue, adaptor.getLhs());
     Value abs = spirv::GLFAbsOp::create(rewriter, loc, lhs);
 
     // TODO: The following just forcefully casts y into an integer value in
@@ -440,7 +440,7 @@ struct PowFOpPattern final : public OpConversionPattern<math::PowFOp> {
 
 /// Converts math.round to GLSL SPIRV extended ops.
 struct RoundOpPattern final : public OpConversionPattern<math::RoundOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(math::RoundOp roundOp, OpAdaptor adaptor,

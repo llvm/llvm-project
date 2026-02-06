@@ -354,26 +354,6 @@ CacheCostTy IndexedReference::computeRefCost(const Loop &L,
   return CacheCostTy::getInvalid();
 }
 
-bool IndexedReference::tryDelinearizeFixedSize(
-    const SCEV *AccessFn, SmallVectorImpl<const SCEV *> &Subscripts) {
-  SmallVector<int, 4> ArraySizes;
-  if (!tryDelinearizeFixedSizeImpl(&SE, &StoreOrLoadInst, AccessFn, Subscripts,
-                                   ArraySizes))
-    return false;
-
-  // Populate Sizes with scev expressions to be used in calculations later.
-  for (auto Idx : seq<unsigned>(1, Subscripts.size()))
-    Sizes.push_back(
-        SE.getConstant(Subscripts[Idx]->getType(), ArraySizes[Idx - 1]));
-
-  LLVM_DEBUG({
-    dbgs() << "Delinearized subscripts of fixed-size array\n"
-           << "GEP:" << *getLoadStorePointerOperand(&StoreOrLoadInst)
-           << "\n";
-  });
-  return true;
-}
-
 bool IndexedReference::delinearize(const LoopInfo &LI) {
   assert(Subscripts.empty() && "Subscripts should be empty");
   assert(Sizes.empty() && "Sizes should be empty");
@@ -396,21 +376,20 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
     }
 
     bool IsFixedSize = false;
+    AccessFn = SE.getMinusSCEV(AccessFn, BasePointer);
+
     // Try to delinearize fixed-size arrays.
-    if (tryDelinearizeFixedSize(AccessFn, Subscripts)) {
+    if (delinearizeFixedSizeArray(SE, AccessFn, Subscripts, Sizes, ElemSize)) {
       IsFixedSize = true;
-      // The last element of Sizes is the element size.
-      Sizes.push_back(ElemSize);
       LLVM_DEBUG(dbgs().indent(2) << "In Loop '" << L->getName()
                                   << "', AccessFn: " << *AccessFn << "\n");
     }
-
-    AccessFn = SE.getMinusSCEV(AccessFn, BasePointer);
 
     // Try to delinearize parametric-size arrays.
     if (!IsFixedSize) {
       LLVM_DEBUG(dbgs().indent(2) << "In Loop '" << L->getName()
                                   << "', AccessFn: " << *AccessFn << "\n");
+      Sizes.clear();
       llvm::delinearize(SE, AccessFn, Subscripts, Sizes,
                         SE.getElementSize(&StoreOrLoadInst));
     }
@@ -436,10 +415,9 @@ bool IndexedReference::delinearize(const LoopInfo &LI) {
       const SCEV *StepRec = AccessFnAR ? AccessFnAR->getStepRecurrence(SE) : nullptr;
 
       if (StepRec && SE.isKnownNegative(StepRec))
-        AccessFn = SE.getAddRecExpr(AccessFnAR->getStart(),
-                                    SE.getNegativeSCEV(StepRec),
-                                    AccessFnAR->getLoop(),
-                                    AccessFnAR->getNoWrapFlags());
+        AccessFn = SE.getAddRecExpr(
+            AccessFnAR->getStart(), SE.getNegativeSCEV(StepRec),
+            AccessFnAR->getLoop(), SCEV::NoWrapFlags::FlagAnyWrap);
       const SCEV *Div = SE.getUDivExactExpr(AccessFn, ElemSize);
       Subscripts.push_back(Div);
       Sizes.push_back(ElemSize);

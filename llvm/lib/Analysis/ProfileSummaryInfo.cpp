@@ -24,6 +24,8 @@
 #include <optional>
 using namespace llvm;
 
+namespace llvm {
+
 static cl::opt<bool> PartialProfile(
     "partial-profile", cl::Hidden, cl::init(false),
     cl::desc("Specify the current profile is used as a partial profile."));
@@ -43,6 +45,8 @@ static cl::opt<double> PartialSampleProfileWorkingSetSizeScaleFactor(
              "This includes the factor of the profile counter per block "
              "and the factor to scale the working set size to use the same "
              "shared thresholds as PGO."));
+
+} // end namespace llvm
 
 // The profile summary metadata may be attached either by the frontend or by
 // any backend passes (IR level instrumentation, for example). This method

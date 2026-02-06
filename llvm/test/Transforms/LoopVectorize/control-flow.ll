@@ -10,7 +10,7 @@
 ;   return 0;
 ; }
 
-; CHECK: remark: source.cpp:5:9: loop not vectorized: Cannot vectorize early exit loop with writes to memory
+; CHECK: remark: source.cpp:5:9: loop not vectorized: Cannot vectorize potentially faulting early exit loop
 ; CHECK: remark: source.cpp:5:9: loop not vectorized
 
 ; CHECK: _Z4testPii

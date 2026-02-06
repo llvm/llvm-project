@@ -1,7 +1,7 @@
 # BOLT-based binary analysis
 
 As part of post-link-time optimizing, BOLT needs to perform a range of analyses
-on binaries such as recontructing control flow graphs, and more.
+on binaries such as reconstructing control flow graphs, and more.
 
 The `llvm-bolt-binary-analysis` tool enables running requested binary analyses
 on binaries, and generating reports. It does this by building on top of the

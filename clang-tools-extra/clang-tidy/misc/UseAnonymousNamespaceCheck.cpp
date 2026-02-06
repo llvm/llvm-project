@@ -1,4 +1,4 @@
-//===--- UseAnonymousNamespaceCheck.cpp - clang-tidy ----------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -52,7 +52,8 @@ void UseAnonymousNamespaceCheck::registerMatchers(MatchFinder *Finder) {
 
 void UseAnonymousNamespaceCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *MatchedDecl = Result.Nodes.getNodeAs<NamedDecl>("x")) {
-    StringRef Type = llvm::isa<VarDecl>(MatchedDecl) ? "variable" : "function";
+    const StringRef Type =
+        llvm::isa<VarDecl>(MatchedDecl) ? "variable" : "function";
     diag(MatchedDecl->getLocation(),
          "%0 %1 declared 'static', move to anonymous namespace instead")
         << Type << MatchedDecl;
