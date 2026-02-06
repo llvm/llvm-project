@@ -48,8 +48,6 @@ class ExprEngine;
 /// CoreEngine - Implements the core logic of the graph-reachability analysis.
 /// It traverses the CFG and generates the ExplodedGraph.
 class CoreEngine {
-  friend class CommonNodeBuilder;
-  friend class EndOfFunctionNodeBuilder;
   friend class ExprEngine;
   friend class IndirectGotoNodeBuilder;
   friend class NodeBuilder;
