@@ -3262,11 +3262,11 @@ define void @void_readlane_i1_signext_inreg(<15 x i32> inreg %arg1, i1 inreg sig
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s1)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[SEXT]], [[C]]
-  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %ext = sext i1 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, i32 addrspace(1)* undef
+  store i32 %add, i32 addrspace(1)* poison
   ret void
 }
 
@@ -3300,11 +3300,11 @@ define void @void_readlane_i1_zeroext_inreg(<15 x i32> inreg %arg1, i1 inreg zer
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s1)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ZEXT]], [[C]]
-  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %ext = zext i1 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, i32 addrspace(1)* undef
+  store i32 %add, i32 addrspace(1)* poison
   ret void
 }
 
@@ -3339,11 +3339,11 @@ define void @void_readlane_i8_signext_inreg(<15 x i32> inreg %arg1, i8 inreg sig
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s8)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[SEXT]], [[C]]
-  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %ext = sext i8 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, i32 addrspace(1)* undef
+  store i32 %add, i32 addrspace(1)* poison
   ret void
 }
 
@@ -3377,11 +3377,11 @@ define void @void_readlane_i8_zeroext_inreg(<15 x i32> inreg %arg1, i8 inreg zer
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s8)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ZEXT]], [[C]]
-  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %ext = zext i8 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, i32 addrspace(1)* undef
+  store i32 %add, i32 addrspace(1)* poison
   ret void
 }
 
@@ -3416,11 +3416,11 @@ define void @void_readlane_i16_signext_inreg(<15 x i32> inreg %arg1, i16 inreg s
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[TRUNC]](s16)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[SEXT]], [[C]]
-  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %ext = sext i16 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, i32 addrspace(1)* undef
+  store i32 %add, i32 addrspace(1)* poison
   ret void
 }
 
@@ -3454,11 +3454,11 @@ define void @void_readlane_i16_zeroext_inreg(<15 x i32> inreg %arg1, i16 inreg z
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s16)
   ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ZEXT]], [[C]]
-  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[ADD]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
   %ext = zext i16 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, i32 addrspace(1)* undef
+  store i32 %add, i32 addrspace(1)* poison
   ret void
 }
 
@@ -3487,9 +3487,9 @@ define void @void_readlane_i32_signext_inreg(<15 x i32> inreg %arg1, i32 inreg s
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY15]](s32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[INTRINSIC_CONVERGENT1]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[INTRINSIC_CONVERGENT1]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
-  store i32 %arg0, i32 addrspace(1)* undef
+  store i32 %arg0, i32 addrspace(1)* poison
   ret void
 }
 
@@ -3518,9 +3518,9 @@ define void @void_readlane_i32_zeroext_inreg(<15 x i32> inreg %arg1, i32 inreg z
   ; CHECK-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $vgpr1
   ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY15]](s32)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[INTRINSIC_CONVERGENT1]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; CHECK-NEXT:   G_STORE [[INTRINSIC_CONVERGENT1]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
-  store i32 %arg0, i32 addrspace(1)* undef
+  store i32 %arg0, i32 addrspace(1)* poison
   ret void
 }
 
