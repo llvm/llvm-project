@@ -24,7 +24,9 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/Uniformity.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/InterestingMemoryOperand.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/PassManager.h"
@@ -88,6 +90,8 @@ struct MemIntrinsicInfo {
   bool WriteMem = false;
   bool IsVolatile = false;
 
+  SmallVector<InterestingMemoryOperand, 1> InterestingOperands;
+
   bool isUnordered() const {
     return (Ordering == AtomicOrdering::NotAtomic ||
             Ordering == AtomicOrdering::Unordered) &&
@@ -118,6 +122,60 @@ struct HardwareLoopInfo {
                                         bool ForceNestedLoop = false,
                                         bool ForceHardwareLoopPHI = false);
   LLVM_ABI bool canAnalyze(LoopInfo &LI);
+};
+
+/// Information for memory intrinsic cost model.
+class MemIntrinsicCostAttributes {
+  /// Optional context instruction, if one exists, e.g. the
+  /// load/store to transform to the intrinsic.
+  const Instruction *I = nullptr;
+
+  /// Address in memory.
+  const Value *Ptr = nullptr;
+
+  /// Vector type of the data to be loaded or stored.
+  Type *DataTy = nullptr;
+
+  /// ID of the memory intrinsic.
+  Intrinsic::ID IID;
+
+  /// True when the memory access is predicated with a mask
+  /// that is not a compile-time constant.
+  bool VariableMask = true;
+
+  /// Address space of the pointer.
+  unsigned AddressSpace = 0;
+
+  /// Alignment of single element.
+  Align Alignment;
+
+public:
+  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
+                                      const Value *Ptr, bool VariableMask,
+                                      Align Alignment,
+                                      const Instruction *I = nullptr)
+      : I(I), Ptr(Ptr), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
+        Alignment(Alignment) {}
+
+  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
+                                      Align Alignment,
+                                      unsigned AddressSpace = 0)
+      : DataTy(DataTy), IID(Id), AddressSpace(AddressSpace),
+        Alignment(Alignment) {}
+
+  LLVM_ABI MemIntrinsicCostAttributes(Intrinsic::ID Id, Type *DataTy,
+                                      bool VariableMask, Align Alignment,
+                                      const Instruction *I = nullptr)
+      : I(I), DataTy(DataTy), IID(Id), VariableMask(VariableMask),
+        Alignment(Alignment) {}
+
+  Intrinsic::ID getID() const { return IID; }
+  const Instruction *getInst() const { return I; }
+  const Value *getPointer() const { return Ptr; }
+  Type *getDataType() const { return DataTy; }
+  bool getVariableMask() const { return VariableMask; }
+  unsigned getAddressSpace() const { return AddressSpace; }
+  Align getAlignment() const { return Alignment; }
 };
 
 class IntrinsicCostAttributes {
@@ -219,11 +277,19 @@ class TargetTransformInfoImplBase;
 /// for IR-level transformations.
 class TargetTransformInfo {
 public:
-  enum PartialReductionExtendKind { PR_None, PR_SignExtend, PR_ZeroExtend };
+  enum PartialReductionExtendKind {
+    PR_None,
+    PR_SignExtend,
+    PR_ZeroExtend,
+    PR_FPExtend
+  };
 
   /// Get the kind of extension that an instruction represents.
   LLVM_ABI static PartialReductionExtendKind
   getPartialReductionExtendKind(Instruction *I);
+  /// Get the kind of extension that a cast opcode represents.
+  LLVM_ABI static PartialReductionExtendKind
+  getPartialReductionExtendKind(Instruction::CastOps CastOpc);
 
   /// Construct a TTI object using a type implementing the \c Concept
   /// API below.
@@ -451,16 +517,14 @@ public:
   /// uniformity analysis and assume all values are uniform.
   LLVM_ABI bool hasBranchDivergence(const Function *F = nullptr) const;
 
-  /// Returns whether V is a source of divergence.
-  ///
-  /// This function provides the target-dependent information for
-  /// the target-independent UniformityAnalysis.
-  LLVM_ABI bool isSourceOfDivergence(const Value *V) const;
-
-  // Returns true for the target specific
-  // set of operations which produce uniform result
-  // even taking non-uniform arguments
-  LLVM_ABI bool isAlwaysUniform(const Value *V) const;
+  /// Get target-specific uniformity information for an instruction.
+  /// This allows targets to provide more fine-grained control over
+  /// uniformity analysis by specifying whether specific instructions
+  /// should always or never be considered uniform, or require custom
+  /// operand-based analysis.
+  /// \param V The value to query for uniformity information.
+  /// \return InstructionUniformity.
+  LLVM_ABI InstructionUniformity getInstructionUniformity(const Value *V) const;
 
   /// Query the target whether the specified address space cast from FromAS to
   /// ToAS is valid.
@@ -495,6 +559,18 @@ public:
                                            Intrinsic::ID IID) const;
 
   LLVM_ABI bool isNoopAddrSpaceCast(unsigned FromAS, unsigned ToAS) const;
+
+  // Given an address space cast of the given pointer value, calculate the known
+  // bits of the source pointer in the source addrspace and the destination
+  // pointer in the destination addrspace.
+  LLVM_ABI std::pair<KnownBits, KnownBits>
+  computeKnownBitsAddrSpaceCast(unsigned ToAS, const Value &PtrOp) const;
+
+  // Given an address space cast, calculate the known bits of the resulting ptr
+  // in the destination addrspace using the known bits of the source pointer in
+  // the source addrspace.
+  LLVM_ABI KnownBits computeKnownBitsAddrSpaceCast(
+      unsigned FromAS, unsigned ToAS, const KnownBits &FromPtrBits) const;
 
   /// Return true if globals in this address space can have initializers other
   /// than `undef`.
@@ -629,7 +705,7 @@ public:
     /// Don't allow loop unrolling to simulate more than this number of
     /// iterations when checking full unroll profitability
     unsigned MaxIterationsCountToAnalyze;
-    /// Don't disable runtime unroll for the loops which were vectorized.
+    /// Disable runtime unrolling by default for vectorized loops.
     bool UnrollVectorizedLoop = false;
     /// Don't allow runtime unrolling if expanding the trip count takes more
     /// than SCEVExpansionBudget.
@@ -810,12 +886,20 @@ public:
   LLVM_ABI AddressingModeKind
   getPreferredAddressingMode(const Loop *L, ScalarEvolution *SE) const;
 
+  /// Some targets only support masked load/store with a constant mask.
+  enum MaskKind {
+    VariableOrConstantMask,
+    ConstantMask,
+  };
+
   /// Return true if the target supports masked store.
-  LLVM_ABI bool isLegalMaskedStore(Type *DataType, Align Alignment,
-                                   unsigned AddressSpace) const;
+  LLVM_ABI bool
+  isLegalMaskedStore(Type *DataType, Align Alignment, unsigned AddressSpace,
+                     MaskKind MaskKind = VariableOrConstantMask) const;
   /// Return true if the target supports masked load.
-  LLVM_ABI bool isLegalMaskedLoad(Type *DataType, Align Alignment,
-                                  unsigned AddressSpace) const;
+  LLVM_ABI bool
+  isLegalMaskedLoad(Type *DataType, Align Alignment, unsigned AddressSpace,
+                    MaskKind MaskKind = VariableOrConstantMask) const;
 
   /// Return true if the target supports nontemporal store.
   LLVM_ABI bool isLegalNTStore(Type *DataType, Align Alignment) const;
@@ -940,6 +1024,10 @@ public:
   ///  should use coldcc calling convention.
   LLVM_ABI bool useColdCCForColdCall(Function &F) const;
 
+  /// Return true if the input function is internal, should use fastcc calling
+  /// convention.
+  LLVM_ABI bool useFastCCForInternalCall(Function &F) const;
+
   LLVM_ABI bool isTargetIntrinsicTriviallyScalarizable(Intrinsic::ID ID) const;
 
   /// Identifies if the vector form of the intrinsic has a scalar operand.
@@ -958,6 +1046,24 @@ public:
   isTargetIntrinsicWithStructReturnOverloadAtField(Intrinsic::ID ID,
                                                    int RetIdx) const;
 
+  /// Represents a hint about the context in which an insert/extract is used.
+  ///
+  /// On some targets, inserts/extracts can cheaply be folded into loads/stores.
+  ///
+  /// This enum allows the vectorizer to give getVectorInstrCost an idea of how
+  /// inserts/extracts are used
+  ///
+  /// See \c getVectorInstrContextHint to compute a VectorInstrContext from an
+  /// insert/extract Instruction*.
+  enum class VectorInstrContext : uint8_t {
+    None,  ///< The insert/extract is not used with a load/store.
+    Load,  ///< The value being inserted comes from a load (InsertElement only).
+    Store, ///< The extracted value is stored (ExtractElement only).
+  };
+
+  /// Calculates a VectorInstrContext from \p I.
+  static VectorInstrContext getVectorInstrContextHint(const Instruction *I);
+
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
   /// extracted from vectors.  The involved values may be passed in VL if
@@ -965,12 +1071,14 @@ public:
   LLVM_ABI InstructionCost getScalarizationOverhead(
       VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
       TTI::TargetCostKind CostKind, bool ForPoisonSrc = true,
-      ArrayRef<Value *> VL = {}) const;
+      ArrayRef<Value *> VL = {},
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
 
   /// Estimate the overhead of scalarizing operands with the given types. The
   /// (potentially vector) types to use for each of argument are passes via Tys.
   LLVM_ABI InstructionCost getOperandsScalarizationOverhead(
-      ArrayRef<Type *> Tys, TTI::TargetCostKind CostKind) const;
+      ArrayRef<Type *> Tys, TTI::TargetCostKind CostKind,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
 
   /// If target has efficient vector element load/store instructions, it can
   /// return true here so that insertion/extraction costs are not added to
@@ -1183,6 +1291,17 @@ public:
     OperandValueInfo getNoProps() const {
       return {Kind, OP_None};
     }
+
+    OperandValueInfo mergeWith(const OperandValueInfo OpInfoY) {
+      OperandValueKind MergeKind = OK_AnyValue;
+      if (isConstant() && OpInfoY.isConstant())
+        MergeKind = OK_NonUniformConstantValue;
+
+      OperandValueProperties MergeProp = OP_None;
+      if (Properties == OpInfoY.Properties)
+        MergeProp = Properties;
+      return {MergeKind, MergeProp};
+    }
   };
 
   /// \return the number of registers in the target-provided register class.
@@ -1328,13 +1447,18 @@ public:
 
   /// \return The cost of a partial reduction, which is a reduction from a
   /// vector to another vector with fewer elements of larger size. They are
-  /// represented by the llvm.vector.partial.reduce.add intrinsic, which
-  /// takes an accumulator of type \p AccumType and a second vector operand to
-  /// be accumulated, whose element count is specified by \p VF. The type of
-  /// reduction is specified by \p Opcode. The second operand passed to the
-  /// intrinsic could be the result of an extend, such as sext or zext. In
-  /// this case \p BinOp is nullopt, \p InputTypeA represents the type being
-  /// extended and \p OpAExtend the operation, i.e. sign- or zero-extend.
+  /// represented by the llvm.vector.partial.reduce.add and
+  /// llvm.vector.partial.reduce.fadd intrinsics, which take an accumulator of
+  /// type \p AccumType and a second vector operand to be accumulated, whose
+  /// element count is specified by \p VF. The type of reduction is specified by
+  /// \p Opcode. The second operand passed to the intrinsic could be the result
+  /// of an extend, such as sext or zext. In this case \p BinOp is nullopt,
+  /// \p InputTypeA represents the type being extended and \p OpAExtend the
+  /// operation, i.e. sign- or zero-extend.
+  /// For floating-point partial reductions, any fast math flags (FMF) should be
+  /// provided to govern which reductions are valid to perform (depending on
+  /// reassoc or contract, for example), whereas this must be nullopt for
+  /// integer partial reductions.
   /// Also, \p InputTypeB should be nullptr and OpBExtend should be None.
   /// Alternatively, the second operand could be the result of a binary
   /// operation performed on two extends, i.e.
@@ -1349,7 +1473,7 @@ public:
       unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
       ElementCount VF, PartialReductionExtendKind OpAExtend,
       PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-      TTI::TargetCostKind CostKind) const;
+      TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const;
 
   /// \return The maximum interleave factor that any transform should try to
   /// perform for this target. This number depends on the level of parallelism
@@ -1358,6 +1482,10 @@ public:
 
   /// Collect properties of V used in cost analysis, e.g. OP_PowerOf2.
   LLVM_ABI static OperandValueInfo getOperandInfo(const Value *V);
+
+  /// Collect common data between two OperandValueInfo inputs
+  LLVM_ABI static OperandValueInfo commonOperandInfo(const Value *X,
+                                                     const Value *Y);
 
   /// This is an approximation of reciprocal throughput of a math/logic op.
   /// A higher cost indicates less expected throughput.
@@ -1486,11 +1614,11 @@ public:
   /// This is used when the instruction is not available; a typical use
   /// case is to provision the cost of vectorization/scalarization in
   /// vectorizer passes.
-  LLVM_ABI InstructionCost getVectorInstrCost(unsigned Opcode, Type *Val,
-                                              TTI::TargetCostKind CostKind,
-                                              unsigned Index = -1,
-                                              const Value *Op0 = nullptr,
-                                              const Value *Op1 = nullptr) const;
+  LLVM_ABI InstructionCost getVectorInstrCost(
+      unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind,
+      unsigned Index = -1, const Value *Op0 = nullptr,
+      const Value *Op1 = nullptr,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
 
   /// \return The expected cost of vector Insert and Extract.
   /// Use -1 to indicate that there is no information on the index value.
@@ -1504,7 +1632,8 @@ public:
   LLVM_ABI InstructionCost getVectorInstrCost(
       unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
       Value *Scalar,
-      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const;
+      ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
 
   /// \return The expected cost of vector Insert and Extract.
   /// This is used when instruction is available, and implementation
@@ -1512,9 +1641,10 @@ public:
   ///
   /// A typical suitable use case is cost estimation when vector instruction
   /// exists (e.g., from basic blocks during transformation).
-  LLVM_ABI InstructionCost getVectorInstrCost(const Instruction &I, Type *Val,
-                                              TTI::TargetCostKind CostKind,
-                                              unsigned Index = -1) const;
+  LLVM_ABI InstructionCost getVectorInstrCost(
+      const Instruction &I, Type *Val, TTI::TargetCostKind CostKind,
+      unsigned Index = -1,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None) const;
 
   /// \return The expected cost of inserting or extracting a lane that is \p
   /// Index elements from the end of a vector, i.e. the mathematical expression
@@ -1546,58 +1676,6 @@ public:
       unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
       TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       OperandValueInfo OpdInfo = {OK_AnyValue, OP_None},
-      const Instruction *I = nullptr) const;
-
-  /// \return The cost of VP Load and Store instructions.
-  LLVM_ABI InstructionCost getVPMemoryOpCost(
-      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      const Instruction *I = nullptr) const;
-
-  /// \return The cost of masked Load and Store instructions.
-  LLVM_ABI InstructionCost getMaskedMemoryOpCost(
-      unsigned Opcode, Type *Src, Align Alignment, unsigned AddressSpace,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput) const;
-
-  /// \return The cost of Gather or Scatter operation
-  /// \p Opcode - is a type of memory access Load or Store
-  /// \p DataTy - a vector type of the data to be loaded or stored
-  /// \p Ptr - pointer [or vector of pointers] - address[es] in memory
-  /// \p VariableMask - true when the memory access is predicated with a mask
-  ///                   that is not a compile-time constant
-  /// \p Alignment - alignment of single element
-  /// \p I - the optional original context instruction, if one exists, e.g. the
-  ///        load/store to transform or the call to the gather/scatter intrinsic
-  LLVM_ABI InstructionCost getGatherScatterOpCost(
-      unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-      Align Alignment, TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      const Instruction *I = nullptr) const;
-
-  /// \return The cost of Expand Load or Compress Store operation
-  /// \p Opcode - is a type of memory access Load or Store
-  /// \p Src - a vector type of the data to be loaded or stored
-  /// \p VariableMask - true when the memory access is predicated with a mask
-  ///                   that is not a compile-time constant
-  /// \p Alignment - alignment of single element
-  /// \p I - the optional original context instruction, if one exists, e.g. the
-  ///        load/store to transform or the call to the gather/scatter intrinsic
-  LLVM_ABI InstructionCost getExpandCompressMemoryOpCost(
-      unsigned Opcode, Type *DataTy, bool VariableMask, Align Alignment,
-      TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
-      const Instruction *I = nullptr) const;
-
-  /// \return The cost of strided memory operations.
-  /// \p Opcode - is a type of memory access Load or Store
-  /// \p DataTy - a vector type of the data to be loaded or stored
-  /// \p Ptr - pointer [or vector of pointers] - address[es] in memory
-  /// \p VariableMask - true when the memory access is predicated with a mask
-  ///                   that is not a compile-time constant
-  /// \p Alignment - alignment of single element
-  /// \p I - the optional original context instruction, if one exists, e.g. the
-  ///        load/store to transform or the call to the gather/scatter intrinsic
-  LLVM_ABI InstructionCost getStridedMemoryOpCost(
-      unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
-      Align Alignment, TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
       const Instruction *I = nullptr) const;
 
   /// \return The cost of the interleaved memory operation.
@@ -1677,6 +1755,12 @@ public:
   /// 3. scalar instruction which is to be vectorized.
   LLVM_ABI InstructionCost getIntrinsicInstrCost(
       const IntrinsicCostAttributes &ICA, TTI::TargetCostKind CostKind) const;
+
+  /// \returns The cost of memory intrinsic instructions.
+  /// Used when IntrinsicInst is not materialized.
+  LLVM_ABI InstructionCost
+  getMemIntrinsicInstrCost(const MemIntrinsicCostAttributes &MICA,
+                           TTI::TargetCostKind CostKind) const;
 
   /// \returns The cost of Call instructions.
   LLVM_ABI InstructionCost getCallInstrCost(
@@ -1764,7 +1848,7 @@ public:
   /// \param Types List of types to check.
   LLVM_ABI bool areTypesABICompatible(const Function *Caller,
                                       const Function *Callee,
-                                      const ArrayRef<Type *> &Types) const;
+                                      ArrayRef<Type *> Types) const;
 
   /// The type of load/store indexing.
   enum MemIndexedMode {
@@ -1949,8 +2033,12 @@ public:
   LLVM_ABI bool hasArmWideBranch(bool Thumb) const;
 
   /// Returns a bitmask constructed from the target-features or fmv-features
-  /// metadata of a function.
+  /// metadata of a function corresponding to its Arch Extensions.
   LLVM_ABI APInt getFeatureMask(const Function &F) const;
+
+  /// Returns a bitmask constructed from the target-features or fmv-features
+  /// metadata of a function corresponding to its FMV priority.
+  LLVM_ABI APInt getPriorityMask(const Function &F) const;
 
   /// Returns true if this is an instance of a function with multiple versions.
   LLVM_ABI bool isMultiversionedFunction(const Function &F) const;

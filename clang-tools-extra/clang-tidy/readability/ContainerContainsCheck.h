@@ -18,7 +18,7 @@ namespace clang::tidy::readability {
 /// to the `container.contains()` method.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/container-contains.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/container-contains.html
 class ContainerContainsCheck : public ClangTidyCheck {
 public:
   ContainerContainsCheck(StringRef Name, ClangTidyContext *Context)
@@ -29,7 +29,7 @@ public:
     return LO.CPlusPlus;
   }
   std::optional<TraversalKind> getCheckTraversalKind() const override {
-    return TK_AsIs;
+    return TK_IgnoreUnlessSpelledInSource;
   }
 };
 

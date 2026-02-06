@@ -47,6 +47,9 @@ static cl::opt<bool>
     DisableHardwareLoops("disable-hexagon-hwloops", cl::Hidden,
                          cl::desc("Disable Hardware Loops for Hexagon target"));
 
+static cl::opt<bool> EnableMCR("hexagon-mcr", cl::Hidden, cl::init(true),
+                               cl::desc("Enable the machine combiner pass"));
+
 static cl::opt<bool>
     DisableAModeOpt("disable-hexagon-amodeopt", cl::Hidden,
                     cl::desc("Disable Hexagon Addressing Mode Optimization"));
@@ -220,6 +223,7 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonPeepholePass(PR);
   initializeHexagonSplitConst32AndConst64Pass(PR);
   initializeHexagonVectorPrintPass(PR);
+  initializeHexagonQFPOptimizerPass(PR);
 }
 
 HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
@@ -250,13 +254,6 @@ HexagonTargetMachine::getSubtargetImpl(const Function &F) const {
       CPUAttr.isValid() ? CPUAttr.getValueAsString().str() : TargetCPU;
   std::string FS =
       FSAttr.isValid() ? FSAttr.getValueAsString().str() : TargetFS;
-  // Append the preexisting target features last, so that +mattr overrides
-  // the "unsafe-fp-math" function attribute.
-  // Creating a separate target feature is not strictly necessary, it only
-  // exists to make "unsafe-fp-math" force creating a new subtarget.
-
-  if (F.getFnAttribute("unsafe-fp-math").getValueAsBool())
-    FS = FS.empty() ? "+unsafe-fp" : "+unsafe-fp," + FS;
 
   auto &I = SubtargetMap[CPU + FS];
   if (!I) {
@@ -275,11 +272,13 @@ void HexagonTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 
   PB.registerLateLoopOptimizationsEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        LPM.addPass(HexagonLoopIdiomRecognitionPass());
+        if (Level.getSpeedupLevel() > 0)
+          LPM.addPass(HexagonLoopIdiomRecognitionPass());
       });
   PB.registerLoopOptimizerEndEPCallback(
       [=](LoopPassManager &LPM, OptimizationLevel Level) {
-        LPM.addPass(HexagonVectorLoopCarriedReusePass());
+        if (Level.getSpeedupLevel() > 0)
+          LPM.addPass(HexagonVectorLoopCarriedReusePass());
       });
 }
 
@@ -315,6 +314,7 @@ public:
 
   void addIRPasses() override;
   bool addInstSelector() override;
+  bool addILPOpts() override;
   void addPreRegAlloc() override;
   void addPostRegAlloc() override;
   void addPreSched2() override;
@@ -393,9 +393,17 @@ bool HexagonPassConfig::addInstSelector() {
       addPass(createHexagonGenInsert());
     if (EnableEarlyIf)
       addPass(createHexagonEarlyIfConversion());
+    addPass(createHexagonQFPOptimizer());
   }
 
   return false;
+}
+
+bool HexagonPassConfig::addILPOpts() {
+  if (EnableMCR)
+    addPass(&MachineCombinerID);
+
+  return true;
 }
 
 void HexagonPassConfig::addPreRegAlloc() {

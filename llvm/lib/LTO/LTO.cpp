@@ -19,7 +19,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/StackSafetyAnalysis.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -48,6 +47,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/SHA1.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
@@ -75,9 +75,10 @@ static cl::opt<bool>
     DumpThinCGSCCs("dump-thin-cg-sccs", cl::init(false), cl::Hidden,
                    cl::desc("Dump the SCCs in the ThinLTO index's callgraph"));
 
+namespace llvm {
 extern cl::opt<bool> CodeGenDataThinLTOTwoRounds;
-
 extern cl::opt<bool> ForceImportAll;
+} // end namespace llvm
 
 namespace llvm {
 /// Enable global value internalization in LTO.
@@ -168,6 +169,7 @@ std::string llvm::computeLTOCacheKey(
   AddString(Conf.OverrideTriple);
   AddString(Conf.DefaultTriple);
   AddString(Conf.DwoDir);
+  AddUint8(Conf.Dtlto);
 
   // Include the hash for the current module
   auto ModHash = Index.getModuleHash(ModuleID);
@@ -456,7 +458,7 @@ void llvm::thinLTOResolvePrevailingInIndex(
   // when needed.
   DenseSet<GlobalValueSummary *> GlobalInvolvedWithAlias;
   for (auto &I : Index)
-    for (auto &S : I.second.SummaryList)
+    for (auto &S : I.second.getSummaryList())
       if (auto AS = dyn_cast<AliasSummary>(S.get()))
         GlobalInvolvedWithAlias.insert(&AS->getAliasee());
 
@@ -470,11 +472,13 @@ static void thinLTOInternalizeAndPromoteGUID(
     ValueInfo VI, function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing) {
-  auto ExternallyVisibleCopies =
-      llvm::count_if(VI.getSummaryList(),
-                     [](const std::unique_ptr<GlobalValueSummary> &Summary) {
-                       return !GlobalValue::isLocalLinkage(Summary->linkage());
-                     });
+  // Before performing index-based internalization and promotion for this GUID,
+  // the local flag should be consistent with the summary list linkage types.
+  VI.verifyLocal();
+
+  const bool SingleExternallyVisibleCopy =
+      VI.getSummaryList().size() == 1 &&
+      !GlobalValue::isLocalLinkage(VI.getSummaryList().front()->linkage());
 
   for (auto &S : VI.getSummaryList()) {
     // First see if we need to promote an internal value because it is not
@@ -538,7 +542,9 @@ static void thinLTOInternalizeAndPromoteGUID(
         GlobalValue::isExternalWeakLinkage(S->linkage()))
       continue;
 
-    if (isPrevailing(VI.getGUID(), S.get()) && ExternallyVisibleCopies == 1)
+    // We may have a single summary copy that is externally visible but not
+    // prevailing if the prevailing copy is in a native object.
+    if (SingleExternallyVisibleCopy && isPrevailing(VI.getGUID(), S.get()))
       S->setLinkage(GlobalValue::InternalLinkage);
   }
 }
@@ -550,9 +556,11 @@ void llvm::thinLTOInternalizeAndPromoteInIndex(
     function_ref<bool(StringRef, ValueInfo)> isExported,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing) {
+  assert(!Index.withInternalizeAndPromote());
   for (auto &I : Index)
     thinLTOInternalizeAndPromoteGUID(Index.getValueInfo(I), isExported,
                                      isPrevailing);
+  Index.setWithInternalizeAndPromote();
 }
 
 // Requires a destructor for std::vector<InputModule>.
@@ -570,6 +578,8 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
   File->COFFLinkerOpts = FOrErr->TheReader.getCOFFLinkerOpts();
   File->DependentLibraries = FOrErr->TheReader.getDependentLibraries();
   File->ComdatTable = FOrErr->TheReader.getComdatTable();
+  File->MbRef =
+      Object; // Save a memory buffer reference to an input file object.
 
   for (unsigned I = 0; I != FOrErr->Mods.size(); ++I) {
     size_t Begin = File->Symbols.size();
@@ -587,6 +597,11 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
   return std::move(File);
 }
 
+bool InputFile::Symbol::isLibcall(
+    const RTLIB::RuntimeLibcallsInfo &Libcalls) const {
+  return Libcalls.getSupportedLibcallImpl(IRName) != RTLIB::Unsupported;
+}
+
 StringRef InputFile::getName() const {
   return Mods[0].getModuleIdentifier();
 }
@@ -595,6 +610,8 @@ BitcodeModule &InputFile::getSingleBitcodeModule() {
   assert(Mods.size() == 1 && "Expect only one bitcode module");
   return Mods[0];
 }
+
+BitcodeModule &InputFile::getPrimaryBitcodeModule() { return Mods[0]; }
 
 LTO::RegularLTOState::RegularLTOState(unsigned ParallelCodeGenParallelismLevel,
                                       const Config &Conf)
@@ -630,11 +647,13 @@ LTO::~LTO() = default;
 // their partitions.
 void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
                                ArrayRef<SymbolResolution> Res,
-                               unsigned Partition, bool InSummary) {
+                               unsigned Partition, bool InSummary,
+                               const Triple &TT) {
   llvm::TimeTraceScope timeScope("LTO add module to global resolution");
   auto *ResI = Res.begin();
   auto *ResE = Res.end();
   (void)ResE;
+  RTLIB::RuntimeLibcallsInfo Libcalls(TT);
   for (const InputFile::Symbol &Sym : Syms) {
     assert(ResI != ResE);
     SymbolResolution Res = *ResI++;
@@ -677,11 +696,14 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
       GlobalRes.VisibleOutsideSummary = true;
     }
 
+    bool IsLibcall = Sym.isLibcall(Libcalls);
+
     // Set the partition to external if we know it is re-defined by the linker
     // with -defsym or -wrap options, used elsewhere, e.g. it is visible to a
     // regular object, is referenced from llvm.compiler.used/llvm.used, or was
     // already recorded as being referenced from a different partition.
     if (Res.LinkerRedefined || Res.VisibleToRegularObj || Sym.isUsed() ||
+        IsLibcall ||
         (GlobalRes.Partition != GlobalResolution::Unknown &&
          GlobalRes.Partition != Partition)) {
       GlobalRes.Partition = GlobalResolution::External;
@@ -692,7 +714,7 @@ void LTO::addModuleToGlobalRes(ArrayRef<InputFile::Symbol> Syms,
     // Flag as visible outside of summary if visible from a regular object or
     // from a module that does not have a summary.
     GlobalRes.VisibleOutsideSummary |=
-        (Res.VisibleToRegularObj || Sym.isUsed() || !InSummary);
+        (Res.VisibleToRegularObj || Sym.isUsed() || IsLibcall || !InSummary);
 
     GlobalRes.ExportDynamic |= Res.ExportDynamic;
   }
@@ -730,13 +752,19 @@ static void writeToResolutionFile(raw_ostream &OS, InputFile *Input,
   assert(ResI == Res.end());
 }
 
-Error LTO::add(std::unique_ptr<InputFile> Input,
+Error LTO::add(std::unique_ptr<InputFile> InputPtr,
                ArrayRef<SymbolResolution> Res) {
-  llvm::TimeTraceScope timeScope("LTO add input", Input->getName());
+  llvm::TimeTraceScope timeScope("LTO add input", InputPtr->getName());
   assert(!CalledGetMaxTasks);
 
+  Expected<std::shared_ptr<InputFile>> InputOrErr =
+      addInput(std::move(InputPtr));
+  if (!InputOrErr)
+    return InputOrErr.takeError();
+  InputFile *Input = (*InputOrErr).get();
+
   if (Conf.ResolutionFile)
-    writeToResolutionFile(*Conf.ResolutionFile, Input.get(), Res);
+    writeToResolutionFile(*Conf.ResolutionFile, Input, Res);
 
   if (RegularLTO.CombinedModule->getTargetTriple().empty()) {
     Triple InputTriple(Input->getTargetTriple());
@@ -785,11 +813,15 @@ LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
     LTOMode = LTOK_UnifiedThin;
 
   bool IsThinLTO = LTOInfo->IsThinLTO && (LTOMode != LTOK_UnifiedRegular);
+  // If any of the modules inside of a input bitcode file was compiled with
+  // ThinLTO, we assume that the whole input file also was compiled with
+  // ThinLTO.
+  Input.IsThinLTO |= IsThinLTO;
 
   auto ModSyms = Input.module_symbols(ModI);
   addModuleToGlobalRes(ModSyms, Res,
                        IsThinLTO ? ThinLTO.ModuleMap.size() + 1 : 0,
-                       LTOInfo->HasSummary);
+                       LTOInfo->HasSummary, Triple(Input.getTargetTriple()));
 
   if (IsThinLTO)
     return addThinLTO(BM, ModSyms, Res);
@@ -1069,63 +1101,59 @@ Expected<ArrayRef<SymbolResolution>>
 LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
                 ArrayRef<SymbolResolution> Res) {
   llvm::TimeTraceScope timeScope("LTO add thin LTO");
+  const auto BMID = BM.getModuleIdentifier();
   ArrayRef<SymbolResolution> ResTmp = Res;
   for (const InputFile::Symbol &Sym : Syms) {
     assert(!ResTmp.empty());
     const SymbolResolution &R = ResTmp.consume_front();
 
-    if (!Sym.getIRName().empty()) {
+    if (!Sym.getIRName().empty() && R.Prevailing) {
       auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(
           GlobalValue::getGlobalIdentifier(Sym.getIRName(),
                                            GlobalValue::ExternalLinkage, ""));
-      if (R.Prevailing)
-        ThinLTO.PrevailingModuleForGUID[GUID] = BM.getModuleIdentifier();
+      ThinLTO.setPrevailingModuleForGUID(GUID, BMID);
     }
   }
 
-  if (Error Err =
-          BM.readSummary(ThinLTO.CombinedIndex, BM.getModuleIdentifier(),
-                         [&](GlobalValue::GUID GUID) {
-                           return ThinLTO.PrevailingModuleForGUID[GUID] ==
-                                  BM.getModuleIdentifier();
-                         }))
+  if (Error Err = BM.readSummary(
+          ThinLTO.CombinedIndex, BMID, [&](GlobalValue::GUID GUID) {
+            return ThinLTO.isPrevailingModuleForGUID(GUID, BMID);
+          }))
     return Err;
-  LLVM_DEBUG(dbgs() << "Module " << BM.getModuleIdentifier() << "\n");
+  LLVM_DEBUG(dbgs() << "Module " << BMID << "\n");
 
   for (const InputFile::Symbol &Sym : Syms) {
     assert(!Res.empty());
     const SymbolResolution &R = Res.consume_front();
 
-    if (!Sym.getIRName().empty()) {
+    if (!Sym.getIRName().empty() &&
+        (R.Prevailing || R.FinalDefinitionInLinkageUnit)) {
       auto GUID = GlobalValue::getGUIDAssumingExternalLinkage(
           GlobalValue::getGlobalIdentifier(Sym.getIRName(),
                                            GlobalValue::ExternalLinkage, ""));
       if (R.Prevailing) {
-        assert(ThinLTO.PrevailingModuleForGUID[GUID] ==
-               BM.getModuleIdentifier());
+        assert(ThinLTO.isPrevailingModuleForGUID(GUID, BMID));
 
         // For linker redefined symbols (via --wrap or --defsym) we want to
         // switch the linkage to `weak` to prevent IPOs from happening.
         // Find the summary in the module for this very GV and record the new
         // linkage so that we can switch it when we import the GV.
         if (R.LinkerRedefined)
-          if (auto S = ThinLTO.CombinedIndex.findSummaryInModule(
-                  GUID, BM.getModuleIdentifier()))
+          if (auto S = ThinLTO.CombinedIndex.findSummaryInModule(GUID, BMID))
             S->setLinkage(GlobalValue::WeakAnyLinkage);
       }
 
       // If the linker resolved the symbol to a local definition then mark it
       // as local in the summary for the module we are adding.
       if (R.FinalDefinitionInLinkageUnit) {
-        if (auto S = ThinLTO.CombinedIndex.findSummaryInModule(
-                GUID, BM.getModuleIdentifier())) {
+        if (auto S = ThinLTO.CombinedIndex.findSummaryInModule(GUID, BMID)) {
           S->setDSOLocal(true);
         }
       }
     }
   }
 
-  if (!ThinLTO.ModuleMap.insert({BM.getModuleIdentifier(), BM}).second)
+  if (!ThinLTO.ModuleMap.insert({BMID, BM}).second)
     return make_error<StringError>(
         "Expected at most one ThinLTO module per bitcode file",
         inconvertibleErrorCode());
@@ -1136,10 +1164,10 @@ LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     // This is a fuzzy name matching where only modules with name containing the
     // specified switch values are going to be compiled.
     for (const std::string &Name : Conf.ThinLTOModulesToCompile) {
-      if (BM.getModuleIdentifier().contains(Name)) {
-        ThinLTO.ModulesToCompile->insert({BM.getModuleIdentifier(), BM});
-        LLVM_DEBUG(dbgs() << "[ThinLTO] Selecting " << BM.getModuleIdentifier()
-                          << " to compile\n");
+      if (BMID.contains(Name)) {
+        ThinLTO.ModulesToCompile->insert({BMID, BM});
+        LLVM_DEBUG(dbgs() << "[ThinLTO] Selecting " << BMID << " to compile\n");
+        break;
       }
     }
   }
@@ -1181,7 +1209,7 @@ Error LTO::checkPartiallySplit() {
   // Otherwise check if there are any recorded in the combined summary from the
   // ThinLTO modules.
   for (auto &P : ThinLTO.CombinedIndex) {
-    for (auto &S : P.second.SummaryList) {
+    for (auto &S : P.second.getSummaryList()) {
       auto *FS = dyn_cast<FunctionSummary>(S.get());
       if (!FS)
         continue;
@@ -1199,6 +1227,11 @@ Error LTO::checkPartiallySplit() {
 }
 
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
+  llvm::scope_exit CleanUp([this]() { cleanup(); });
+
+  if (Error EC = handleArchiveInputs())
+    return EC;
+
   // Compute "dead" symbols, we don't want to import/export these!
   DenseSet<GlobalValue::GUID> GUIDPreservedSymbols;
   DenseMap<GlobalValue::GUID, PrevailingType> GUIDPrevailingResolutions;
@@ -1256,45 +1289,13 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   return Result;
 }
 
-void lto::updateMemProfAttributes(Module &Mod,
-                                  const ModuleSummaryIndex &Index) {
-  llvm::TimeTraceScope timeScope("LTO update memprof attributes");
-  if (Index.withSupportsHotColdNew())
-    return;
-
-  // The profile matcher applies hotness attributes directly for allocations,
-  // and those will cause us to generate calls to the hot/cold interfaces
-  // unconditionally. If supports-hot-cold-new was not enabled in the LTO
-  // link then assume we don't want these calls (e.g. not linking with
-  // the appropriate library, or otherwise trying to disable this behavior).
-  for (auto &F : Mod) {
-    for (auto &BB : F) {
-      for (auto &I : BB) {
-        auto *CI = dyn_cast<CallBase>(&I);
-        if (!CI)
-          continue;
-        if (CI->hasFnAttr("memprof"))
-          CI->removeFnAttr("memprof");
-        // Strip off all memprof metadata as it is no longer needed.
-        // Importantly, this avoids the addition of new memprof attributes
-        // after inlining propagation.
-        // TODO: If we support additional types of MemProf metadata beyond hot
-        // and cold, we will need to update the metadata based on the allocator
-        // APIs supported instead of completely stripping all.
-        CI->setMetadata(LLVMContext::MD_memprof, nullptr);
-        CI->setMetadata(LLVMContext::MD_callsite, nullptr);
-      }
-    }
-  }
-}
-
 Error LTO::runRegularLTO(AddStreamFn AddStream) {
   llvm::TimeTraceScope timeScope("Run regular LTO");
+  LLVMContext &CombinedCtx = RegularLTO.CombinedModule->getContext();
   // Setup optimization remarks.
   auto DiagFileOrErr = lto::setupLLVMOptimizationRemarks(
-      RegularLTO.CombinedModule->getContext(), Conf.RemarksFilename,
-      Conf.RemarksPasses, Conf.RemarksFormat, Conf.RemarksWithHotness,
-      Conf.RemarksHotnessThreshold);
+      CombinedCtx, Conf.RemarksFilename, Conf.RemarksPasses, Conf.RemarksFormat,
+      Conf.RemarksWithHotness, Conf.RemarksHotnessThreshold);
   LLVM_DEBUG(dbgs() << "Running regular LTO\n");
   if (!DiagFileOrErr)
     return DiagFileOrErr.takeError();
@@ -1324,7 +1325,7 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       // Don't do anything if no instance of this common was prevailing.
       continue;
     GlobalVariable *OldGV = RegularLTO.CombinedModule->getNamedGlobal(I.first);
-    if (OldGV && DL.getTypeAllocSize(OldGV->getValueType()) == I.second.Size) {
+    if (OldGV && OldGV->getGlobalSize(DL) == I.second.Size) {
       // Don't create a new global if the type is already correct, just make
       // sure the alignment is correct.
       OldGV->setAlignment(I.second.Alignment);
@@ -1344,8 +1345,6 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
       GV->setName(I.first);
     }
   }
-
-  updateMemProfAttributes(*RegularLTO.CombinedModule, ThinLTO.CombinedIndex);
 
   bool WholeProgramVisibilityEnabledInLTO =
       Conf.HasWholeProgramVisibility &&
@@ -1427,11 +1426,10 @@ Error LTO::runRegularLTO(AddStreamFn AddStream) {
 SmallVector<const char *> LTO::getRuntimeLibcallSymbols(const Triple &TT) {
   RTLIB::RuntimeLibcallsInfo Libcalls(TT);
   SmallVector<const char *> LibcallSymbols;
-  ArrayRef<RTLIB::LibcallImpl> LibcallImpls = Libcalls.getLibcallImpls();
-  LibcallSymbols.reserve(LibcallImpls.size());
+  LibcallSymbols.reserve(Libcalls.getNumAvailableLibcallImpls());
 
-  for (RTLIB::LibcallImpl Impl : LibcallImpls) {
-    if (Impl != RTLIB::Unsupported)
+  for (RTLIB::LibcallImpl Impl : RTLIB::libcall_impls()) {
+    if (Libcalls.isAvailable(Impl))
       LibcallSymbols.push_back(Libcalls.getLibcallImplName(Impl).data());
   }
 
@@ -1738,7 +1736,7 @@ public:
                              /*ShouldEmitImportsFiles=*/false),
         IRFiles(std::move(IRFiles)), CombinedCGDataHash(CombinedCGDataHash) {}
 
-  virtual Error runThinLTOBackendThread(
+  Error runThinLTOBackendThread(
       AddStreamFn AddStream, FileCache Cache, unsigned Task, BitcodeModule BM,
       ModuleSummaryIndex &CombinedIndex,
       const FunctionImporter::ImportMapTy &ImportList,
@@ -1931,7 +1929,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   LLVM_DEBUG(dbgs() << "Running ThinLTO\n");
   ThinLTO.CombinedIndex.releaseTemporaryMemory();
   timeTraceProfilerBegin("ThinLink", StringRef(""));
-  auto TimeTraceScopeExit = llvm::make_scope_exit([]() {
+  llvm::scope_exit TimeTraceScopeExit([]() {
     if (llvm::timeTraceProfilerEnabled())
       llvm::timeTraceProfilerEnd();
   });
@@ -2015,7 +2013,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
                                LocalWPDTargetsMap);
 
   auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
-    return ThinLTO.PrevailingModuleForGUID[GUID] == S->modulePath();
+    return ThinLTO.isPrevailingModuleForGUID(GUID, S->modulePath());
   };
   if (EnableMemProfContextDisambiguation) {
     MemProfContextDisambiguation ContextDisambiguation;
@@ -2177,7 +2175,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   return RunBackends(SecondRoundLTO.get());
 }
 
-Expected<std::unique_ptr<ToolOutputFile>> lto::setupLLVMOptimizationRemarks(
+Expected<LLVMRemarkFileHandle> lto::setupLLVMOptimizationRemarks(
     LLVMContext &Context, StringRef RemarksFilename, StringRef RemarksPasses,
     StringRef RemarksFormat, bool RemarksWithHotness,
     std::optional<uint64_t> RemarksHotnessThreshold, int Count) {
@@ -2251,13 +2249,15 @@ class OutOfProcessThinBackend : public CGThinBackend {
   ArrayRef<StringRef> DistributorArgs;
 
   SString RemoteCompiler;
+  ArrayRef<StringRef> RemoteCompilerPrependArgs;
   ArrayRef<StringRef> RemoteCompilerArgs;
 
   bool SaveTemps;
 
   SmallVector<StringRef, 0> CodegenOptions;
   DenseSet<StringRef> CommonInputs;
-
+  // Number of the object files that have been already cached.
+  std::atomic<size_t> CachedJobs{0};
   // Information specific to individual backend compilation job.
   struct Job {
     unsigned Task;
@@ -2265,6 +2265,9 @@ class OutOfProcessThinBackend : public CGThinBackend {
     StringRef NativeObjectPath;
     StringRef SummaryIndexPath;
     ImportsFilesContainer ImportsFiles;
+    std::string CacheKey;
+    AddStreamFn CacheAddStream;
+    bool Cached = false;
   };
   // The set of backend compilations jobs.
   SmallVector<Job> Jobs;
@@ -2278,29 +2281,84 @@ class OutOfProcessThinBackend : public CGThinBackend {
   // The target triple to supply for backend compilations.
   llvm::Triple Triple;
 
+  // Cache
+  FileCache Cache;
+
 public:
   OutOfProcessThinBackend(
       const Config &Conf, ModuleSummaryIndex &CombinedIndex,
       ThreadPoolStrategy ThinLTOParallelism,
       const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-      AddStreamFn AddStream, lto::IndexWriteCallback OnWrite,
+      AddStreamFn AddStream, FileCache CacheFn, lto::IndexWriteCallback OnWrite,
       bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
       StringRef LinkerOutputFile, StringRef Distributor,
       ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+      ArrayRef<StringRef> RemoteCompilerPrependArgs,
       ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps)
       : CGThinBackend(Conf, CombinedIndex, ModuleToDefinedGVSummaries,
                       AddStream, OnWrite, ShouldEmitIndexFiles,
                       ShouldEmitImportsFiles, ThinLTOParallelism),
         LinkerOutputFile(LinkerOutputFile), DistributorPath(Distributor),
         DistributorArgs(DistributorArgs), RemoteCompiler(RemoteCompiler),
-        RemoteCompilerArgs(RemoteCompilerArgs), SaveTemps(SaveTemps) {}
+        RemoteCompilerPrependArgs(RemoteCompilerPrependArgs),
+        RemoteCompilerArgs(RemoteCompilerArgs), SaveTemps(SaveTemps),
+        Cache(std::move(CacheFn)) {}
 
-  virtual void setup(unsigned ThinLTONumTasks, unsigned ThinLTOTaskOffset,
-                     llvm::Triple Triple) override {
+  void setup(unsigned ThinLTONumTasks, unsigned ThinLTOTaskOffset,
+             llvm::Triple Triple) override {
     UID = itostr(sys::Process::getProcessId());
     Jobs.resize((size_t)ThinLTONumTasks);
     this->ThinLTOTaskOffset = ThinLTOTaskOffset;
     this->Triple = Triple;
+    this->Conf.Dtlto = 1;
+  }
+
+  virtual Error runThinLTOBackendThread(
+      Job &J, const FunctionImporter::ImportMapTy &ImportList,
+      const FunctionImporter::ExportSetTy &ExportList,
+      const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>
+          &ResolvedODR) {
+    {
+      TimeTraceScope TimeScope("Emit individual index for DTLTO",
+                               J.SummaryIndexPath);
+      if (auto E = emitFiles(ImportList, J.ModuleID, J.ModuleID.str(),
+                             J.SummaryIndexPath, J.ImportsFiles))
+        return E;
+    }
+
+    if (!Cache.isValid() || !CombinedIndex.modulePaths().count(J.ModuleID) ||
+        all_of(CombinedIndex.getModuleHash(J.ModuleID),
+               [](uint32_t V) { return V == 0; }))
+      // Cache disabled or no entry for this module in the combined index or
+      // no module hash.
+      return Error::success();
+
+    TimeTraceScope TimeScope("Check cache for DTLTO", J.SummaryIndexPath);
+    const GVSummaryMapTy &DefinedGlobals =
+        ModuleToDefinedGVSummaries.find(J.ModuleID)->second;
+
+    // The module may be cached, this helps handling it.
+    J.CacheKey = computeLTOCacheKey(Conf, CombinedIndex, J.ModuleID, ImportList,
+                                    ExportList, ResolvedODR, DefinedGlobals,
+                                    CfiFunctionDefs, CfiFunctionDecls);
+
+    // The module may be cached, this helps handling it.
+    auto CacheAddStreamExp = Cache(J.Task, J.CacheKey, J.ModuleID);
+    if (Error Err = CacheAddStreamExp.takeError())
+      return Err;
+    AddStreamFn &CacheAddStream = *CacheAddStreamExp;
+    // If CacheAddStream is null, we have a cache hit and at this point
+    // object file is already passed back to the linker.
+    if (!CacheAddStream) {
+      J.Cached = true; // Cache hit, mark the job as cached.
+      CachedJobs.fetch_add(1);
+    } else {
+      // If CacheAddStream is not null, we have a cache miss and we need to
+      // run the backend for codegen. Save cache 'add stream'
+      // function for a later use.
+      J.CacheAddStream = std::move(CacheAddStream);
+    }
+    return Error::success();
   }
 
   Error start(
@@ -2317,30 +2375,49 @@ public:
                                        itostr(Task) + "." + UID + ".native.o");
 
     Job &J = Jobs[Task - ThinLTOTaskOffset];
-    J = {
-        Task,
-        ModulePath,
-        Saver.save(ObjFilePath.str()),
-        Saver.save(ObjFilePath.str() + ".thinlto.bc"),
-        {} // Filled in by emitFiles below.
-    };
+    J = {Task,
+         ModulePath,
+         Saver.save(ObjFilePath.str()),
+         Saver.save(ObjFilePath.str() + ".thinlto.bc"),
+         {}, // Filled in by emitFiles below.
+         "", /*CacheKey=*/
+         nullptr,
+         false};
+
+    // Cleanup per-job temporary files on abnormal process exit.
+    if (!SaveTemps) {
+      llvm::sys::RemoveFileOnSignal(J.NativeObjectPath);
+      if (!ShouldEmitIndexFiles)
+        llvm::sys::RemoveFileOnSignal(J.SummaryIndexPath);
+    }
 
     assert(ModuleToDefinedGVSummaries.count(ModulePath));
 
     // The BackendThreadPool is only used here to write the sharded index files
     // (similar to WriteIndexesThinBackend).
     BackendThreadPool.async(
-        [=](Job &J, const FunctionImporter::ImportMapTy &ImportList) {
-          if (auto E = emitFiles(ImportList, J.ModuleID, J.ModuleID.str(),
-                                 J.SummaryIndexPath, J.ImportsFiles)) {
+        [=](Job &J, const FunctionImporter::ImportMapTy &ImportList,
+            const FunctionImporter::ExportSetTy &ExportList,
+            const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>
+                &ResolvedODR) {
+          if (LLVM_ENABLE_THREADS && Conf.TimeTraceEnabled)
+            timeTraceProfilerInitialize(
+                Conf.TimeTraceGranularity,
+                "Emit individual index and check cache for DTLTO");
+          Error E =
+              runThinLTOBackendThread(J, ImportList, ExportList, ResolvedODR);
+          if (E) {
             std::unique_lock<std::mutex> L(ErrMu);
             if (Err)
               Err = joinErrors(std::move(*Err), std::move(E));
             else
               Err = std::move(E);
           }
+          if (LLVM_ENABLE_THREADS && Conf.TimeTraceEnabled)
+            timeTraceProfilerFinishThread();
         },
-        std::ref(J), std::ref(ImportList));
+        std::ref(J), std::ref(ImportList), std::ref(ExportList),
+        std::ref(ResolvedODR));
 
     return Error::success();
   }
@@ -2414,6 +2491,11 @@ public:
         JOS.attributeArray("args", [&]() {
           JOS.value(RemoteCompiler);
 
+          // Forward any supplied prepend options.
+          if (!RemoteCompilerPrependArgs.empty())
+            for (auto &A : RemoteCompilerPrependArgs)
+              JOS.value(A);
+
           JOS.value("-c");
 
           JOS.value(Saver.save("--target=" + Triple.str()));
@@ -2429,6 +2511,10 @@ public:
       JOS.attributeArray("jobs", [&]() {
         for (const auto &J : Jobs) {
           assert(J.Task != 0);
+          if (J.Cached) {
+            assert(!Cache.getCacheDirectoryPath().empty());
+            continue;
+          }
 
           SmallVector<StringRef, 2> Inputs;
           SmallVector<StringRef, 1> Outputs;
@@ -2476,7 +2562,8 @@ public:
     if (Err)
       return std::move(*Err);
 
-    auto CleanPerJobFiles = llvm::make_scope_exit([&] {
+    llvm::scope_exit CleanPerJobFiles([&] {
+      llvm::TimeTraceScope TimeScope("Remove DTLTO temporary files");
       if (!SaveTemps)
         for (auto &Job : Jobs) {
           removeFile(Job.NativeObjectPath);
@@ -2490,50 +2577,92 @@ public:
     buildCommonRemoteCompilerOptions();
 
     SString JsonFile = sys::path::parent_path(LinkerOutputFile);
-    sys::path::append(JsonFile, sys::path::stem(LinkerOutputFile) + "." + UID +
-                                    ".dist-file.json");
-    if (!emitDistributorJson(JsonFile))
-      return make_error<StringError>(
-          BCError + "failed to generate distributor JSON script: " + JsonFile,
-          inconvertibleErrorCode());
-    auto CleanJson = llvm::make_scope_exit([&] {
+    {
+      llvm::TimeTraceScope TimeScope("Emit DTLTO JSON");
+      sys::path::append(JsonFile, sys::path::stem(LinkerOutputFile) + "." +
+                                      UID + ".dist-file.json");
+      // Cleanup DTLTO JSON file on abnormal process exit.
+      if (!SaveTemps)
+        llvm::sys::RemoveFileOnSignal(JsonFile);
+      if (!emitDistributorJson(JsonFile))
+        return make_error<StringError>(
+            BCError + "failed to generate distributor JSON script: " + JsonFile,
+            inconvertibleErrorCode());
+    }
+    llvm::scope_exit CleanJson([&] {
       if (!SaveTemps)
         removeFile(JsonFile);
     });
 
-    SmallVector<StringRef, 3> Args = {DistributorPath};
-    llvm::append_range(Args, DistributorArgs);
-    Args.push_back(JsonFile);
-    std::string ErrMsg;
-    if (sys::ExecuteAndWait(Args[0], Args,
-                            /*Env=*/std::nullopt, /*Redirects=*/{},
-                            /*SecondsToWait=*/0, /*MemoryLimit=*/0, &ErrMsg)) {
-      return make_error<StringError>(
-          BCError + "distributor execution failed" +
-              (!ErrMsg.empty() ? ": " + ErrMsg + Twine(".") : Twine(".")),
-          inconvertibleErrorCode());
+    {
+      llvm::TimeTraceScope TimeScope("Execute DTLTO distributor",
+                                     DistributorPath);
+      // Checks if we have any jobs that don't have corresponding cache entries.
+      if (CachedJobs.load() < Jobs.size()) {
+        SmallVector<StringRef, 3> Args = {DistributorPath};
+        llvm::append_range(Args, DistributorArgs);
+        Args.push_back(JsonFile);
+        std::string ErrMsg;
+        if (sys::ExecuteAndWait(Args[0], Args,
+                                /*Env=*/std::nullopt, /*Redirects=*/{},
+                                /*SecondsToWait=*/0, /*MemoryLimit=*/0,
+                                &ErrMsg)) {
+          return make_error<StringError>(
+              BCError + "distributor execution failed" +
+                  (!ErrMsg.empty() ? ": " + ErrMsg + Twine(".") : Twine(".")),
+              inconvertibleErrorCode());
+        }
+      }
     }
 
-    for (auto &Job : Jobs) {
-      // Load the native object from a file into a memory buffer
-      // and store its contents in the output buffer.
-      auto ObjFileMbOrErr =
-          MemoryBuffer::getFile(Job.NativeObjectPath, /*IsText=*/false,
-                                /*RequiresNullTerminator=*/false);
-      if (std::error_code EC = ObjFileMbOrErr.getError())
-        return make_error<StringError>(
-            BCError + "cannot open native object file: " +
-                Job.NativeObjectPath + ": " + EC.message(),
-            inconvertibleErrorCode());
-      auto StreamOrErr = AddStream(Job.Task, Job.ModuleID);
-      if (Error Err = StreamOrErr.takeError())
-        report_fatal_error(std::move(Err));
-      auto &Stream = *StreamOrErr->get();
-      *Stream.OS << ObjFileMbOrErr->get()->getMemBufferRef().getBuffer();
-      if (Error Err = Stream.commit())
-        report_fatal_error(std::move(Err));
-    }
+    {
+      llvm::TimeTraceScope FilesScope("Add DTLTO files to the link");
+      for (auto &Job : Jobs) {
+        if (!Job.CacheKey.empty() && Job.Cached) {
+          assert(Cache.isValid());
+          continue;
+        }
+        // Load the native object from a file into a memory buffer
+        // and store its contents in the output buffer.
+        auto ObjFileMbOrErr =
+            MemoryBuffer::getFile(Job.NativeObjectPath, /*IsText=*/false,
+                                  /*RequiresNullTerminator=*/false);
+        if (std::error_code EC = ObjFileMbOrErr.getError())
+          return make_error<StringError>(
+              BCError + "cannot open native object file: " +
+                  Job.NativeObjectPath + ": " + EC.message(),
+              inconvertibleErrorCode());
 
+        MemoryBufferRef ObjFileMbRef = ObjFileMbOrErr->get()->getMemBufferRef();
+        if (Cache.isValid()) {
+          // Cache hits are taken care of earlier. At this point, we could only
+          // have cache misses.
+          assert(Job.CacheAddStream);
+          // Obtain a file stream for a storing a cache entry.
+          auto CachedFileStreamOrErr =
+              Job.CacheAddStream(Job.Task, Job.ModuleID);
+          if (!CachedFileStreamOrErr)
+            return joinErrors(
+                CachedFileStreamOrErr.takeError(),
+                createStringError(inconvertibleErrorCode(),
+                                  "Cannot get a cache file stream: %s",
+                                  Job.NativeObjectPath.data()));
+          // Store a file buffer into the cache stream.
+          auto &CacheStream = *(CachedFileStreamOrErr->get());
+          *(CacheStream.OS) << ObjFileMbRef.getBuffer();
+          if (Error Err = CacheStream.commit())
+            return Err;
+        } else {
+          auto StreamOrErr = AddStream(Job.Task, Job.ModuleID);
+          if (Error Err = StreamOrErr.takeError())
+            report_fatal_error(std::move(Err));
+          auto &Stream = *StreamOrErr->get();
+          *Stream.OS << ObjFileMbRef.getBuffer();
+          if (Error Err = Stream.commit())
+            report_fatal_error(std::move(Err));
+        }
+      }
+    }
     return Error::success();
   }
 };
@@ -2544,15 +2673,17 @@ ThinBackend lto::createOutOfProcessThinBackend(
     bool ShouldEmitIndexFiles, bool ShouldEmitImportsFiles,
     StringRef LinkerOutputFile, StringRef Distributor,
     ArrayRef<StringRef> DistributorArgs, StringRef RemoteCompiler,
+    ArrayRef<StringRef> RemoteCompilerPrependArgs,
     ArrayRef<StringRef> RemoteCompilerArgs, bool SaveTemps) {
   auto Func =
       [=](const Config &Conf, ModuleSummaryIndex &CombinedIndex,
           const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
-          AddStreamFn AddStream, FileCache /*Cache*/) {
+          AddStreamFn AddStream, FileCache Cache) {
         return std::make_unique<OutOfProcessThinBackend>(
             Conf, CombinedIndex, Parallelism, ModuleToDefinedGVSummaries,
-            AddStream, OnWrite, ShouldEmitIndexFiles, ShouldEmitImportsFiles,
-            LinkerOutputFile, Distributor, DistributorArgs, RemoteCompiler,
+            AddStream, Cache, OnWrite, ShouldEmitIndexFiles,
+            ShouldEmitImportsFiles, LinkerOutputFile, Distributor,
+            DistributorArgs, RemoteCompiler, RemoteCompilerPrependArgs,
             RemoteCompilerArgs, SaveTemps);
       };
   return ThinBackend(Func, Parallelism);

@@ -95,6 +95,13 @@ private:
   void getBinaryCodeForInstr(const MCInst &MI, SmallVectorImpl<MCFixup> &Fixups,
                              APInt &Inst, APInt &Scratch,
                              const MCSubtargetInfo &STI) const;
+
+  template <bool HasSrc0, bool HasSrc1, bool HasSrc2>
+  APInt postEncodeVOP3(const MCInst &MI, APInt EncodedValue,
+                       const MCSubtargetInfo &STI) const;
+
+  APInt postEncodeVOPCX(const MCInst &MI, APInt EncodedValue,
+                        const MCSubtargetInfo &STI) const;
 };
 
 } // end anonymous namespace
@@ -270,10 +277,19 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
     const MCInstrDesc &Desc, const MCOperand &MO, unsigned OpNo,
     const MCSubtargetInfo &STI, bool HasMandatoryLiteral) const {
   const MCOperandInfo &OpInfo = Desc.operands()[OpNo];
-  int64_t Imm;
+  int64_t Imm = 0;
   if (MO.isExpr()) {
-    if (!MO.getExpr()->evaluateAsAbsolute(Imm))
-      return AMDGPU::getOperandSize(OpInfo) == 8 ? 254 : 255;
+    if (!MO.getExpr()->evaluateAsAbsolute(Imm) ||
+        AMDGPU::isLitExpr(MO.getExpr())) {
+      if (OpInfo.OperandType == AMDGPU::OPERAND_KIMM16 ||
+          OpInfo.OperandType == AMDGPU::OPERAND_KIMM32 ||
+          OpInfo.OperandType == AMDGPU::OPERAND_KIMM64)
+        return Imm;
+      if (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+          AMDGPU::getOperandSize(OpInfo) == 8)
+        return 254;
+      return 255;
+    }
   } else {
     assert(!MO.isDFPImm());
 
@@ -334,6 +350,14 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
     return AMDGPU::getInlineEncodingV2F16(static_cast<uint32_t>(Imm))
         .value_or(255);
 
+  case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
+    // V_PK_FMAC_F16 has different inline constant behavior on pre-GFX11 vs
+    // GFX11+: pre-GFX11 produces (f16, 0), GFX11+ duplicates f16 to both
+    // halves.
+    return AMDGPU::getPKFMACF16InlineEncoding(static_cast<uint32_t>(Imm),
+                                              AMDGPU::isGFX11Plus(STI))
+        .value_or(255);
+
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     return AMDGPU::getInlineEncodingV2BF16(static_cast<uint32_t>(Imm))
@@ -345,7 +369,7 @@ std::optional<uint64_t> AMDGPUMCCodeEmitter::getLitEncoding(
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
   case AMDGPU::OPERAND_KIMM64:
-    return MO.getImm();
+    return Imm;
   default:
     llvm_unreachable("invalid operand size");
   }
@@ -363,11 +387,6 @@ uint64_t AMDGPUMCCodeEmitter::getImplicitOpSelHiEncoding(int Opcode) const {
       return OP_SEL_HI_1 | OP_SEL_HI_2;
   }
   return OP_SEL_HI_0 | OP_SEL_HI_1 | OP_SEL_HI_2;
-}
-
-static bool isVCMPX64(const MCInstrDesc &Desc) {
-  return (Desc.TSFlags & SIInstrFlags::VOP3) &&
-         Desc.hasImplicitDefOfPhysReg(AMDGPU::EXEC);
 }
 
 void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
@@ -392,18 +411,6 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
       // Matrix B reuse operand reuses op_sel_hi.
       !AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::matrix_b_reuse)) {
     Encoding |= getImplicitOpSelHiEncoding(Opcode);
-  }
-
-  // GFX10+ v_cmpx opcodes promoted to VOP3 have implied dst=EXEC.
-  // Documentation requires dst to be encoded as EXEC (0x7E),
-  // but it looks like the actual value encoded for dst operand
-  // is ignored by HW. It was decided to define dst as "do not care"
-  // in td files to allow disassembler accept any dst value.
-  // However, dst is encoded as EXEC for compatibility with SP3.
-  if (AMDGPU::isGFX10Plus(STI) && isVCMPX64(Desc)) {
-    assert((Encoding & 0xFF) == 0);
-    Encoding |= MRI.getEncodingValue(AMDGPU::EXEC_LO) &
-                AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
   }
 
   for (unsigned i = 0; i < bytes; i++) {
@@ -452,11 +459,16 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     // Yes! Encode it
     int64_t Imm = 0;
 
+    bool IsLit = false;
     if (Op.isImm())
       Imm = Op.getImm();
     else if (Op.isExpr()) {
-      if (const auto *C = dyn_cast<MCConstantExpr>(Op.getExpr()))
+      if (const auto *C = dyn_cast<MCConstantExpr>(Op.getExpr())) {
         Imm = C->getValue();
+      } else if (AMDGPU::isLitExpr(Op.getExpr())) {
+        IsLit = true;
+        Imm = AMDGPU::getLitValue(Op.getExpr());
+      }
     } else // Exprs will be replaced with a fixup value.
       llvm_unreachable("Must be immediate or expr");
 
@@ -466,7 +478,7 @@ void AMDGPUMCCodeEmitter::encodeInstruction(const MCInst &MI,
     } else {
       auto OpType =
           static_cast<AMDGPU::OperandType>(Desc.operands()[i].OperandType);
-      Imm = AMDGPU::encode32BitLiteral(Imm, OpType);
+      Imm = AMDGPU::encode32BitLiteral(Imm, OpType, IsLit);
       support::endian::write<uint32_t>(CB, Imm, llvm::endianness::little);
     }
 
@@ -717,6 +729,39 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
   }
 
   llvm_unreachable("Encoding of this operand type is not supported yet.");
+}
+
+template <bool HasSrc0, bool HasSrc1, bool HasSrc2>
+APInt AMDGPUMCCodeEmitter::postEncodeVOP3(const MCInst &MI, APInt EncodedValue,
+                                          const MCSubtargetInfo &STI) const {
+  if (!AMDGPU::isGFX10Plus(STI))
+    return EncodedValue;
+  // Set unused source fields in VOP3 encodings to inline immediate 0 to avoid
+  // hardware conservatively assuming the instruction reads SGPRs.
+  constexpr uint64_t InlineImmediate0 = 0x80;
+  if (!HasSrc0)
+    EncodedValue |= InlineImmediate0 << 32;
+  if (!HasSrc1)
+    EncodedValue |= InlineImmediate0 << 41;
+  if (!HasSrc2)
+    EncodedValue |= InlineImmediate0 << 50;
+  return EncodedValue;
+}
+
+APInt AMDGPUMCCodeEmitter::postEncodeVOPCX(const MCInst &MI, APInt EncodedValue,
+                                           const MCSubtargetInfo &STI) const {
+  // GFX10+ v_cmpx opcodes promoted to VOP3 have implied dst=EXEC.
+  // Documentation requires dst to be encoded as EXEC (0x7E),
+  // but it looks like the actual value encoded for dst operand
+  // is ignored by HW. It was decided to define dst as "do not care"
+  // in td files to allow disassembler accept any dst value.
+  // However, dst is encoded as EXEC for compatibility with SP3.
+  [[maybe_unused]] const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+  assert((Desc.TSFlags & SIInstrFlags::VOP3) &&
+         Desc.hasImplicitDefOfPhysReg(AMDGPU::EXEC));
+  EncodedValue |= MRI.getEncodingValue(AMDGPU::EXEC_LO) &
+                  AMDGPU::HWEncoding::LO256_REG_IDX_MASK;
+  return postEncodeVOP3<true, true, false>(MI, EncodedValue, STI);
 }
 
 #include "AMDGPUGenMCCodeEmitter.inc"

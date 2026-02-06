@@ -134,7 +134,6 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_VectorCall:                                              \
   case ParsedAttr::AT_AArch64VectorPcs:                                        \
   case ParsedAttr::AT_AArch64SVEPcs:                                           \
-  case ParsedAttr::AT_DeviceKernel:                                            \
   case ParsedAttr::AT_MSABI:                                                   \
   case ParsedAttr::AT_SysVABI:                                                 \
   case ParsedAttr::AT_Pcs:                                                     \
@@ -1238,8 +1237,8 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     Result = S.GetTypeFromParser(DS.getRepAsType());
     assert(!Result.isNull() && "Didn't get a type for typeof?");
     if (!Result->isDependentType())
-      if (const TagType *TT = Result->getAs<TagType>())
-        S.DiagnoseUseOfDecl(TT->getOriginalDecl(), DS.getTypeSpecTypeLoc());
+      if (const auto *TT = Result->getAs<TagType>())
+        S.DiagnoseUseOfDecl(TT->getDecl(), DS.getTypeSpecTypeLoc());
     // TypeQuals handled by caller.
     Result = Context.getTypeOfType(
         Result, DS.getTypeSpecType() == DeclSpec::TST_typeof_unqualType
@@ -2260,6 +2259,8 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
              isSFINAEContext() ? diag::err_typecheck_zero_array_size
                                : diag::ext_typecheck_zero_array_size)
             << 0 << ArraySize->getSourceRange();
+        if (isSFINAEContext())
+          return QualType();
       }
 
       // Is the array too large?
@@ -2270,7 +2271,10 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
               : ConstVal.getActiveBits();
       if (ActiveSizeBits > ConstantArrayType::getMaxSizeBits(Context)) {
         Diag(ArraySize->getBeginLoc(), diag::err_array_too_large)
-            << toString(ConstVal, 10) << ArraySize->getSourceRange();
+            << toString(ConstVal, 10, ConstVal.isSigned(),
+                        /*formatAsCLiteral=*/false, /*UpperCase=*/false,
+                        /*InsertSeparators=*/true)
+            << ArraySize->getSourceRange();
         return QualType();
       }
 
@@ -2356,6 +2360,11 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
     return QualType();
   }
 
+  if (VecSize->isNegative()) {
+    Diag(SizeExpr->getExprLoc(), diag::err_attribute_vec_negative_size);
+    return QualType();
+  }
+
   if (CurType->isDependentType())
     return Context.getDependentVectorType(CurType, SizeExpr, AttrLoc,
                                           VectorKind::Generic);
@@ -2392,7 +2401,7 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
                                VectorKind::Generic);
 }
 
-QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
+QualType Sema::BuildExtVectorType(QualType T, Expr *SizeExpr,
                                   SourceLocation AttrLoc) {
   // Unlike gcc's vector_size attribute, we do not allow vectors to be defined
   // in conjunction with complex types (pointers, arrays, functions, etc.).
@@ -2415,35 +2424,40 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *ArraySize,
       BIT && CheckBitIntElementType(*this, AttrLoc, BIT))
     return QualType();
 
-  if (!ArraySize->isTypeDependent() && !ArraySize->isValueDependent()) {
-    std::optional<llvm::APSInt> vecSize =
-        ArraySize->getIntegerConstantExpr(Context);
-    if (!vecSize) {
+  if (!SizeExpr->isTypeDependent() && !SizeExpr->isValueDependent()) {
+    std::optional<llvm::APSInt> VecSize =
+        SizeExpr->getIntegerConstantExpr(Context);
+    if (!VecSize) {
       Diag(AttrLoc, diag::err_attribute_argument_type)
-        << "ext_vector_type" << AANT_ArgumentIntegerConstant
-        << ArraySize->getSourceRange();
+          << "ext_vector_type" << AANT_ArgumentIntegerConstant
+          << SizeExpr->getSourceRange();
       return QualType();
     }
 
-    if (!vecSize->isIntN(32)) {
+    if (VecSize->isNegative()) {
+      Diag(SizeExpr->getExprLoc(), diag::err_attribute_vec_negative_size);
+      return QualType();
+    }
+
+    if (!VecSize->isIntN(32)) {
       Diag(AttrLoc, diag::err_attribute_size_too_large)
-          << ArraySize->getSourceRange() << "vector";
+          << SizeExpr->getSourceRange() << "vector";
       return QualType();
     }
     // Unlike gcc's vector_size attribute, the size is specified as the
     // number of elements, not the number of bytes.
-    unsigned vectorSize = static_cast<unsigned>(vecSize->getZExtValue());
+    unsigned VectorSize = static_cast<unsigned>(VecSize->getZExtValue());
 
-    if (vectorSize == 0) {
+    if (VectorSize == 0) {
       Diag(AttrLoc, diag::err_attribute_zero_size)
-          << ArraySize->getSourceRange() << "vector";
+          << SizeExpr->getSourceRange() << "vector";
       return QualType();
     }
 
-    return Context.getExtVectorType(T, vectorSize);
+    return Context.getExtVectorType(T, VectorSize);
   }
 
-  return Context.getDependentSizedExtVectorType(T, ArraySize, AttrLoc);
+  return Context.getDependentSizedExtVectorType(T, SizeExpr, AttrLoc);
 }
 
 QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
@@ -2453,7 +2467,7 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
 
   // Check element type, if it is not dependent.
   if (!ElementTy->isDependentType() &&
-      !MatrixType::isValidElementType(ElementTy)) {
+      !MatrixType::isValidElementType(ElementTy, getLangOpts())) {
     Diag(AttrLoc, diag::err_attribute_invalid_matrix_type) << ElementTy;
     return QualType();
   }
@@ -2514,12 +2528,18 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
     Diag(AttrLoc, diag::err_attribute_zero_size) << "matrix" << ColRange;
     return QualType();
   }
-  if (!ConstantMatrixType::isDimensionValid(MatrixRows)) {
+  if (MatrixRows > Context.getLangOpts().MaxMatrixDimension &&
+      MatrixColumns > Context.getLangOpts().MaxMatrixDimension) {
+    Diag(AttrLoc, diag::err_attribute_size_too_large)
+        << RowRange << ColRange << "matrix row and column";
+    return QualType();
+  }
+  if (MatrixRows > Context.getLangOpts().MaxMatrixDimension) {
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << RowRange << "matrix row";
     return QualType();
   }
-  if (!ConstantMatrixType::isDimensionValid(MatrixColumns)) {
+  if (MatrixColumns > Context.getLangOpts().MaxMatrixDimension) {
     Diag(AttrLoc, diag::err_attribute_size_too_large)
         << ColRange << "matrix column";
     return QualType();
@@ -2777,13 +2797,14 @@ QualType Sema::GetTypeFromParser(ParsedType Ty, TypeSourceInfo **TInfo) {
     return QualType();
   }
 
-  TypeSourceInfo *DI = nullptr;
+  TypeSourceInfo *TSI = nullptr;
   if (const LocInfoType *LIT = dyn_cast<LocInfoType>(QT)) {
     QT = LIT->getType();
-    DI = LIT->getTypeSourceInfo();
+    TSI = LIT->getTypeSourceInfo();
   }
 
-  if (TInfo) *TInfo = DI;
+  if (TInfo)
+    *TInfo = TSI;
   return QT;
 }
 
@@ -3777,12 +3798,13 @@ static CallingConv getCCForDeclaratorChunk(
       }
     }
   }
-  if (!S.getLangOpts().isSYCL()) {
-    for (const ParsedAttr &AL : D.getDeclSpec().getAttributes()) {
-      if (AL.getKind() == ParsedAttr::AT_DeviceKernel) {
-        CC = CC_DeviceKernel;
-        break;
-      }
+
+  for (const ParsedAttr &AL : llvm::concat<ParsedAttr>(
+           D.getDeclSpec().getAttributes(), D.getAttributes(),
+           D.getDeclarationAttributes())) {
+    if (AL.getKind() == ParsedAttr::AT_DeviceKernel) {
+      CC = CC_DeviceKernel;
+      break;
     }
   }
   return CC;
@@ -4812,66 +4834,65 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       IsQualifiedFunction =
           FTI.hasMethodTypeQualifiers() || FTI.hasRefQualifier();
 
+      auto IsClassType = [&](CXXScopeSpec &SS) {
+        // If there already was an problem with the scope, don’t issue another
+        // error about the explicit object parameter.
+        return SS.isInvalid() ||
+               isa_and_present<CXXRecordDecl>(S.computeDeclContext(SS));
+      };
+
+      // C++23 [dcl.fct]p6:
+      //
+      // An explicit-object-parameter-declaration is a parameter-declaration
+      // with a this specifier. An explicit-object-parameter-declaration shall
+      // appear only as the first parameter-declaration of a
+      // parameter-declaration-list of one of:
+      //
+      // - a declaration of a member function or member function template
+      //   ([class.mem]), or
+      //
+      // - an explicit instantiation ([temp.explicit]) or explicit
+      //   specialization ([temp.expl.spec]) of a templated member function,
+      //   or
+      //
+      // - a lambda-declarator [expr.prim.lambda].
+      DeclaratorContext C = D.getContext();
+      ParmVarDecl *First =
+          FTI.NumParams ? dyn_cast_if_present<ParmVarDecl>(FTI.Params[0].Param)
+                        : nullptr;
+
+      bool IsFunctionDecl = D.getInnermostNonParenChunk() == &DeclType;
+      if (First && First->isExplicitObjectParameter() &&
+          C != DeclaratorContext::LambdaExpr &&
+
+          // Either not a member or nested declarator in a member.
+          //
+          // Note that e.g. 'static' or 'friend' declarations are accepted
+          // here; we diagnose them later when we build the member function
+          // because it's easier that way.
+          (C != DeclaratorContext::Member || !IsFunctionDecl) &&
+
+          // Allow out-of-line definitions of member functions.
+          !IsClassType(D.getCXXScopeSpec())) {
+        if (IsFunctionDecl)
+          S.Diag(First->getBeginLoc(),
+                 diag::err_explicit_object_parameter_nonmember)
+              << /*non-member*/ 2 << /*function*/ 0 << First->getSourceRange();
+        else
+          S.Diag(First->getBeginLoc(),
+                 diag::err_explicit_object_parameter_invalid)
+              << First->getSourceRange();
+
+        // Do let non-member function have explicit parameters
+        // to not break assumptions elsewhere in the code.
+        First->setExplicitObjectParameterLoc(SourceLocation());
+        D.setInvalidType();
+        AreDeclaratorChunksValid = false;
+      }
+
       // Check for auto functions and trailing return type and adjust the
       // return type accordingly.
       if (!D.isInvalidType()) {
-        auto IsClassType = [&](CXXScopeSpec &SS) {
-          // If there already was an problem with the scope, don’t issue another
-          // error about the explicit object parameter.
-          return SS.isInvalid() ||
-                 isa_and_present<CXXRecordDecl>(S.computeDeclContext(SS));
-        };
-
-        // C++23 [dcl.fct]p6:
-        //
-        // An explicit-object-parameter-declaration is a parameter-declaration
-        // with a this specifier. An explicit-object-parameter-declaration shall
-        // appear only as the first parameter-declaration of a
-        // parameter-declaration-list of one of:
-        //
-        // - a declaration of a member function or member function template
-        //   ([class.mem]), or
-        //
-        // - an explicit instantiation ([temp.explicit]) or explicit
-        //   specialization ([temp.expl.spec]) of a templated member function,
-        //   or
-        //
-        // - a lambda-declarator [expr.prim.lambda].
-        DeclaratorContext C = D.getContext();
-        ParmVarDecl *First =
-            FTI.NumParams
-                ? dyn_cast_if_present<ParmVarDecl>(FTI.Params[0].Param)
-                : nullptr;
-
-        bool IsFunctionDecl = D.getInnermostNonParenChunk() == &DeclType;
-        if (First && First->isExplicitObjectParameter() &&
-            C != DeclaratorContext::LambdaExpr &&
-
-            // Either not a member or nested declarator in a member.
-            //
-            // Note that e.g. 'static' or 'friend' declarations are accepted
-            // here; we diagnose them later when we build the member function
-            // because it's easier that way.
-            (C != DeclaratorContext::Member || !IsFunctionDecl) &&
-
-            // Allow out-of-line definitions of member functions.
-            !IsClassType(D.getCXXScopeSpec())) {
-          if (IsFunctionDecl)
-            S.Diag(First->getBeginLoc(),
-                   diag::err_explicit_object_parameter_nonmember)
-                << /*non-member*/ 2 << /*function*/ 0
-                << First->getSourceRange();
-          else
-            S.Diag(First->getBeginLoc(),
-                   diag::err_explicit_object_parameter_invalid)
-                << First->getSourceRange();
-          // Do let non-member function have explicit parameters
-          // to not break assumptions elsewhere in the code.
-          First->setExplicitObjectParameterLoc(SourceLocation());
-          D.setInvalidType();
-          AreDeclaratorChunksValid = false;
-        }
-
         // trailing-return-type is only required if we're declaring a function,
         // and not, for instance, a pointer to a function.
         if (D.getDeclSpec().hasAutoTypeSpec() &&
@@ -5049,8 +5070,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // cv-qualifiers on return types are pointless except when the type is a
       // class type in C++.
       if ((T.getCVRQualifiers() || T->isAtomicType()) &&
+          // A dependent type or an undeduced type might later become a class
+          // type.
           !(S.getLangOpts().CPlusPlus &&
-            (T->isDependentType() || T->isRecordType()))) {
+            (T->isRecordType() || T->isDependentType() ||
+             T->isUndeducedAutoType()))) {
         if (T->isVoidType() && !S.getLangOpts().CPlusPlus &&
             D.getFunctionDefinitionKind() ==
                 FunctionDefinitionKind::Definition) {
@@ -7155,6 +7179,14 @@ static bool HandleWebAssemblyFuncrefAttr(TypeProcessingState &State,
     return true;
   }
 
+  // Check that the type is a function pointer type.
+  QualType Desugared = QT.getDesugaredType(S.Context);
+  const auto *Ptr = dyn_cast<PointerType>(Desugared);
+  if (!Ptr || !Ptr->getPointeeType()->isFunctionType()) {
+    S.Diag(PAttr.getLoc(), diag::err_attribute_webassembly_funcref);
+    return true;
+  }
+
   // Add address space to type based on its attributes.
   LangAS ASIdx = LangAS::wasm_funcref;
   QualType Pointee = QT->getPointeeType();
@@ -7562,8 +7594,6 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<AArch64SVEPcsAttr>(Ctx, Attr);
   case ParsedAttr::AT_ArmStreaming:
     return createSimpleAttr<ArmStreamingAttr>(Ctx, Attr);
-  case ParsedAttr::AT_DeviceKernel:
-    return createSimpleAttr<DeviceKernelAttr>(Ctx, Attr);
   case ParsedAttr::AT_Pcs: {
     // The attribute may have had a fixit applied where we treated an
     // identifier as a string literal.  The contents of the string are valid,
@@ -8802,16 +8832,6 @@ static void HandleHLSLParamModifierAttr(TypeProcessingState &State,
   }
 }
 
-static bool isMultiSubjectAttrAllowedOnType(const ParsedAttr &Attr) {
-  // The DeviceKernel attribute is shared for many targets, and
-  // it is only allowed to be a type attribute with the AMDGPU
-  // spelling, so skip processing the attr as a type attr
-  // unless it has that spelling.
-  if (Attr.getKind() != ParsedAttr::AT_DeviceKernel)
-    return true;
-  return DeviceKernelAttr::isAMDGPUSpelling(Attr);
-}
-
 static void processTypeAttrs(TypeProcessingState &state, QualType &type,
                              TypeAttrLocation TAL,
                              const ParsedAttributesView &attrs,
@@ -9065,8 +9085,6 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
         break;
       [[fallthrough]];
     FUNCTION_TYPE_ATTRS_CASELIST:
-      if (!isMultiSubjectAttrAllowedOnType(attr))
-        break;
 
       attr.setUsedAsTypeAttr();
 
@@ -9264,11 +9282,59 @@ bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
 
   // If this definition was instantiated from a template, map back to the
   // pattern from which it was instantiated.
-  if (isa<TagDecl>(D) && cast<TagDecl>(D)->isBeingDefined()) {
+  if (isa<TagDecl>(D) && cast<TagDecl>(D)->isBeingDefined())
     // We're in the middle of defining it; this definition should be treated
     // as visible.
     return true;
-  } else if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
+
+  auto DefinitionIsAcceptable = [&](NamedDecl *D) {
+    // The (primary) definition might be in a visible module.
+    if (isAcceptable(D, Kind))
+      return true;
+
+    // A visible module might have a merged definition instead.
+    if (D->isModulePrivate() ? hasMergedDefinitionInCurrentModule(D)
+                             : hasVisibleMergedDefinition(D)) {
+      if (CodeSynthesisContexts.empty() &&
+          !getLangOpts().ModulesLocalVisibility) {
+        // Cache the fact that this definition is implicitly visible because
+        // there is a visible merged definition.
+        D->setVisibleDespiteOwningModule();
+      }
+      return true;
+    }
+
+    return false;
+  };
+  auto IsDefinition = [](NamedDecl *D) {
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D))
+      return RD->isThisDeclarationADefinition();
+    if (auto *ED = dyn_cast<EnumDecl>(D))
+      return ED->isThisDeclarationADefinition();
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      return FD->isThisDeclarationADefinition();
+    if (auto *VD = dyn_cast<VarDecl>(D))
+      return VD->isThisDeclarationADefinition() == VarDecl::Definition;
+    llvm_unreachable("unexpected decl type");
+  };
+  auto FoundAcceptableDefinition = [&](NamedDecl *D) {
+    if (!isa<CXXRecordDecl, FunctionDecl, EnumDecl, VarDecl>(D))
+      return DefinitionIsAcceptable(D);
+
+    for (auto *RD : D->redecls()) {
+      auto *ND = cast<NamedDecl>(RD);
+      if (!IsDefinition(ND))
+        continue;
+      if (DefinitionIsAcceptable(ND)) {
+        *Suggested = ND;
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
     if (auto *Pattern = RD->getTemplateInstantiationPattern())
       RD = Pattern;
     D = RD->getDefinition();
@@ -9307,34 +9373,14 @@ bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
 
   *Suggested = D;
 
-  auto DefinitionIsAcceptable = [&] {
-    // The (primary) definition might be in a visible module.
-    if (isAcceptable(D, Kind))
-      return true;
-
-    // A visible module might have a merged definition instead.
-    if (D->isModulePrivate() ? hasMergedDefinitionInCurrentModule(D)
-                             : hasVisibleMergedDefinition(D)) {
-      if (CodeSynthesisContexts.empty() &&
-          !getLangOpts().ModulesLocalVisibility) {
-        // Cache the fact that this definition is implicitly visible because
-        // there is a visible merged definition.
-        D->setVisibleDespiteOwningModule();
-      }
-      return true;
-    }
-
-    return false;
-  };
-
-  if (DefinitionIsAcceptable())
+  if (FoundAcceptableDefinition(D))
     return true;
 
   // The external source may have additional definitions of this entity that are
   // visible, so complete the redeclaration chain now and ask again.
   if (auto *Source = Context.getExternalSource()) {
     Source->CompleteRedeclChain(D);
-    return DefinitionIsAcceptable();
+    return FoundAcceptableDefinition(D);
   }
 
   return false;
@@ -9698,7 +9744,7 @@ QualType Sema::BuildTypeofExprType(Expr *E, TypeOfKind Kind) {
   if (!E->isTypeDependent()) {
     QualType T = E->getType();
     if (const TagType *TT = T->getAs<TagType>())
-      DiagnoseUseOfDecl(TT->getOriginalDecl(), E->getExprLoc());
+      DiagnoseUseOfDecl(TT->getDecl(), E->getExprLoc());
   }
   return Context.getTypeOfExprType(E, Kind);
 }
@@ -9864,16 +9910,12 @@ QualType Sema::BuildPackIndexingType(QualType Pattern, Expr *IndexExpr,
 static QualType GetEnumUnderlyingType(Sema &S, QualType BaseType,
                                       SourceLocation Loc) {
   assert(BaseType->isEnumeralType());
-  EnumDecl *ED = BaseType->castAs<EnumType>()->getOriginalDecl();
+  EnumDecl *ED = BaseType->castAs<EnumType>()->getDecl();
 
   S.DiagnoseUseOfDecl(ED, Loc);
 
   QualType Underlying = ED->getIntegerType();
   if (Underlying.isNull()) {
-    // This is an enum without a fixed underlying type which we skipped parsing
-    // the body because we saw its definition previously in another module.
-    // Use the definition's integer type in that case.
-    assert(ED->isThisDeclarationADemotedDefinition());
     Underlying = ED->getDefinition()->getIntegerType();
     assert(!Underlying.isNull());
   }

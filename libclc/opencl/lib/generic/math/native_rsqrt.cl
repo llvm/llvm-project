@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_native_rsqrt.h>
-#include <clc/opencl/math/native_rsqrt.h>
 
 #define __CLC_FLOAT_ONLY
 #define __CLC_FUNCTION native_rsqrt

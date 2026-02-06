@@ -16,7 +16,7 @@ namespace clang::tidy::readability {
 /// Finds non-static member functions that can be made 'const'.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability/make-member-function-const.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/readability/make-member-function-const.html
 class MakeMemberFunctionConstCheck : public ClangTidyCheck {
 public:
   MakeMemberFunctionConstCheck(StringRef Name, ClangTidyContext *Context)

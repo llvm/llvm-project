@@ -83,7 +83,7 @@ which is why you otherwise need gold to be the installed system linker in
 your path.
 
 ``ar`` and ``nm`` also accept the ``-plugin`` option and it's possible to
-to install ``LLVMgold.so`` to ``/usr/lib/bfd-plugins`` for a seamless setup.
+install ``LLVMgold.so`` to ``/usr/lib/bfd-plugins`` for a seamless setup.
 If you built your own gold, be sure to install the ``ar`` and ``nm-new`` you
 built to ``/usr/bin``.
 
@@ -143,7 +143,7 @@ Quickstart for using LTO with autotooled projects
 =================================================
 
 Once your system ``ld``, ``ar``, and ``nm`` all support LLVM bitcode,
-everything is in place for an easy to use LTO build of autotooled projects:
+everything is in place for an easy-to-use LTO build of autotooled projects:
 
 * Follow the instructions :ref:`on how to build LLVMgold.so
   <lto-how-to-build>`.

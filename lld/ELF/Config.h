@@ -278,6 +278,7 @@ struct Config {
   llvm::StringRef dtltoDistributor;
   llvm::SmallVector<llvm::StringRef, 0> dtltoDistributorArgs;
   llvm::StringRef dtltoCompiler;
+  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerPrependArgs;
   llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerArgs;
   llvm::SmallVector<llvm::StringRef, 0> undefined;
   llvm::SmallVector<SymbolVersion, 0> dynamicList;
@@ -667,6 +668,9 @@ struct Ctx : CommonLinkerContext {
   ElfSym sym{};
   std::unique_ptr<SymbolTable> symtab;
   SmallVector<Symbol *, 0> synthesizedSymbols;
+  // ifunc resolver symbol clones for IRELATIVE. Linker relaxation adjusts
+  // these.
+  SmallVector<Defined *, 0> irelativeSyms;
 
   SmallVector<std::unique_ptr<MemoryBuffer>> memoryBuffers;
   SmallVector<ELFFileBase *, 0> objectFiles;

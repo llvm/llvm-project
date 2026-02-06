@@ -107,11 +107,17 @@ static cl::opt<bool> ExhaustiveSearch(
              "and interference cutoffs of last chance recoloring"),
     cl::Hidden);
 
+// This option should be deprecated!
 // FIXME: Find a good default for this flag and remove the flag.
 static cl::opt<unsigned>
 CSRFirstTimeCost("regalloc-csr-first-time-cost",
               cl::desc("Cost for first time use of callee-saved register."),
               cl::init(0), cl::Hidden);
+
+static cl::opt<unsigned> CSRCostScale(
+    "regalloc-csr-cost-scale",
+    cl::desc("Scale for the callee-saved register cost, in percentage."),
+    cl::init(80), cl::Hidden);
 
 static cl::opt<unsigned long> GrowRegionComplexityBudget(
     "grow-region-complexity-budget",
@@ -169,9 +175,7 @@ public:
 } // end anonymous namespace
 
 RAGreedyLegacy::RAGreedyLegacy(const RegAllocFilterFunc F)
-    : MachineFunctionPass(ID), F(std::move(F)) {
-  initializeRAGreedyLegacyPass(*PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID), F(std::move(F)) {}
 
 struct RAGreedy::RequiredAnalyses {
   VirtRegMap *VRM = nullptr;
@@ -590,7 +594,8 @@ bool RegAllocEvictionAdvisor::canReassign(const LiveInterval &VirtReg,
                                           MCRegister FromReg) const {
   auto HasRegUnitInterference = [&](MCRegUnit Unit) {
     // Instantiate a "subquery", not to be confused with the Queries array.
-    LiveIntervalUnion::Query SubQ(VirtReg, Matrix->getLiveUnions()[Unit]);
+    LiveIntervalUnion::Query SubQ(
+        VirtReg, Matrix->getLiveUnions()[static_cast<unsigned>(Unit)]);
     return SubQ.checkInterference();
   };
 
@@ -978,9 +983,9 @@ bool RAGreedy::calcCompactRegion(GlobalSplitCandidate &Cand) {
   return true;
 }
 
-/// calcSpillCost - Compute how expensive it would be to split the live range in
-/// SA around all use blocks instead of forming bundle regions.
-BlockFrequency RAGreedy::calcSpillCost() {
+/// calcBlockSplitCost - Compute how expensive it would be to split the live
+/// range in SA around all use blocks instead of forming bundle regions.
+BlockFrequency RAGreedy::calcBlockSplitCost() {
   BlockFrequency Cost = BlockFrequency(0);
   ArrayRef<SplitAnalysis::BlockInfo> UseBlocks = SA->getUseBlocks();
   for (const SplitAnalysis::BlockInfo &BI : UseBlocks) {
@@ -1198,7 +1203,7 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
   if (!TRI->shouldRegionSplitForVirtReg(*MF, VirtReg))
     return MCRegister::NoRegister;
   unsigned NumCands = 0;
-  BlockFrequency SpillCost = calcSpillCost();
+  BlockFrequency SpillCost = calcBlockSplitCost();
   BlockFrequency BestCost;
 
   // Check if we can split this live range around a compact region.
@@ -1225,12 +1230,11 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
   return doRegionSplit(VirtReg, BestCand, HasCompact, NewVRegs);
 }
 
-unsigned
-RAGreedy::calculateRegionSplitCostAroundReg(MCPhysReg PhysReg,
-                                            AllocationOrder &Order,
-                                            BlockFrequency &BestCost,
-                                            unsigned &NumCands,
-                                            unsigned &BestCand) {
+unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
+                                                     AllocationOrder &Order,
+                                                     BlockFrequency &BestCost,
+                                                     unsigned &NumCands,
+                                                     unsigned &BestCand) {
   // Discard bad candidates before we run out of interference cache cursors.
   // This will only affect register classes with a lot of registers (>32).
   if (NumCands == IntfCache.getMaxCursors()) {
@@ -1309,7 +1313,7 @@ unsigned RAGreedy::calculateRegionSplitCost(const LiveInterval &VirtReg,
                                             unsigned &NumCands,
                                             bool IgnoreCSR) {
   unsigned BestCand = NoCand;
-  for (MCPhysReg PhysReg : Order) {
+  for (MCRegister PhysReg : Order) {
     assert(PhysReg);
     if (IgnoreCSR && EvictAdvisor->isUnusedCalleeSavedReg(PhysReg))
       continue;
@@ -1363,7 +1367,7 @@ MCRegister RAGreedy::doRegionSplit(const LiveInterval &VirtReg,
 
 // VirtReg has a physical Hint, this function tries to split VirtReg around
 // Hint if we can place new COPY instructions in cold blocks.
-bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
+bool RAGreedy::trySplitAroundHintReg(MCRegister Hint,
                                      const LiveInterval &VirtReg,
                                      SmallVectorImpl<Register> &NewVRegs,
                                      AllocationOrder &Order) {
@@ -1383,21 +1387,52 @@ bool RAGreedy::trySplitAroundHintReg(MCPhysReg Hint,
   // Compute the cost of assigning a non Hint physical register to VirtReg.
   // We define it as the total frequency of broken COPY instructions to/from
   // Hint register, and after split, they can be deleted.
-  for (const MachineInstr &Instr : MRI->reg_nodbg_instructions(Reg)) {
-    if (!TII->isFullCopyInstr(Instr))
+
+  // FIXME: This is miscounting the costs with subregisters. In particular, this
+  // should support recognizing SplitKit formed copy bundles instead of direct
+  // copy instructions, which will appear in the same block.
+  for (const MachineOperand &Opnd : MRI->reg_nodbg_operands(Reg)) {
+    const MachineInstr &Instr = *Opnd.getParent();
+    if (!Instr.isCopy() || Opnd.isImplicit())
       continue;
-    Register OtherReg = Instr.getOperand(1).getReg();
-    if (OtherReg == Reg) {
-      OtherReg = Instr.getOperand(0).getReg();
-      if (OtherReg == Reg)
-        continue;
-      // Check if VirtReg interferes with OtherReg after this COPY instruction.
-      if (VirtReg.liveAt(LIS->getInstructionIndex(Instr).getRegSlot()))
-        continue;
+
+    // Look for the other end of the copy.
+    const bool IsDef = Opnd.isDef();
+    const MachineOperand &OtherOpnd = Instr.getOperand(IsDef);
+    Register OtherReg = OtherOpnd.getReg();
+    assert(Reg == Opnd.getReg());
+    if (OtherReg == Reg)
+      continue;
+
+    unsigned SubReg = Opnd.getSubReg();
+    unsigned OtherSubReg = OtherOpnd.getSubReg();
+    if (SubReg && OtherSubReg && SubReg != OtherSubReg)
+      continue;
+
+    // Check if VirtReg interferes with OtherReg after this COPY instruction.
+    if (Opnd.readsReg()) {
+      SlotIndex Index = LIS->getInstructionIndex(Instr).getRegSlot();
+
+      if (SubReg) {
+        LaneBitmask Mask = TRI->getSubRegIndexLaneMask(SubReg);
+        if (IsDef)
+          Mask = ~Mask;
+
+        if (any_of(VirtReg.subranges(), [=](const LiveInterval::SubRange &S) {
+              return (S.LaneMask & Mask).any() && S.liveAt(Index);
+            })) {
+          continue;
+        }
+      } else {
+        if (VirtReg.liveAt(Index))
+          continue;
+      }
     }
+
     MCRegister OtherPhysReg =
         OtherReg.isPhysical() ? OtherReg.asMCReg() : VRM->getPhys(OtherReg);
-    if (OtherPhysReg == Hint)
+    MCRegister ThisHint = SubReg ? TRI->getSubReg(Hint, SubReg) : Hint;
+    if (OtherPhysReg == ThisHint)
       Cost += MBFI->getBlockFreq(Instr.getParent());
   }
 
@@ -1651,7 +1686,7 @@ void RAGreedy::calcGapWeights(MCRegister PhysReg,
     // StartIdx and after StopIdx.
     //
     LiveIntervalUnion::SegmentIter IntI =
-        Matrix->getLiveUnions()[Unit].find(StartIdx);
+        Matrix->getLiveUnions()[static_cast<unsigned>(Unit)].find(StartIdx);
     for (unsigned Gap = 0; IntI.valid() && IntI.start() < StopIdx; ++IntI) {
       // Skip the gaps before IntI.
       while (Uses[Gap+1].getBoundaryIndex() < IntI.start())
@@ -1790,7 +1825,7 @@ MCRegister RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
       (1.0f / MBFI->getEntryFreq().getFrequency());
   SmallVector<float, 8> GapWeight;
 
-  for (MCPhysReg PhysReg : Order) {
+  for (MCRegister PhysReg : Order) {
     assert(PhysReg);
     // Keep track of the largest spill weight that would need to be evicted in
     // order to make use of PhysReg between UseSlots[I] and UseSlots[I + 1].
@@ -2310,6 +2345,30 @@ MCRegister RAGreedy::selectOrSplit(const LiveInterval &VirtReg,
   return Reg;
 }
 
+/// calcSpillCost - Compute how expensive it would be to spill the live range in
+/// LI into memory.
+BlockFrequency RAGreedy::calcSpillCost(const LiveInterval &LI) {
+  uint64_t SpillCost = 0;
+  SmallPtrSet<MachineInstr *, 8> Visited;
+
+  for (MachineRegisterInfo::reg_instr_nodbg_iterator
+           I = MRI->reg_instr_nodbg_begin(LI.reg()),
+           E = MRI->reg_instr_nodbg_end();
+       I != E;) {
+    MachineInstr *MI = &*(I++);
+    if (MI->isMetaInstruction())
+      continue;
+    if (!Visited.insert(MI).second)
+      continue;
+
+    auto [Reads, Writes] = MI->readsWritesVirtualRegister(LI.reg());
+    auto MBBFreq = SpillPlacer->getBlockFrequency(MI->getParent()->getNumber());
+    SpillCost += (Reads + Writes) * MBBFreq.getFrequency();
+  }
+
+  return BlockFrequency(SpillCost);
+}
+
 /// Using a CSR for the first time has a cost because it causes push|pop
 /// to be added to prologue|epilogue. Splitting a cold section of the live
 /// range can have lower cost than using the CSR for the first time;
@@ -2323,7 +2382,7 @@ MCRegister RAGreedy::tryAssignCSRFirstTime(
     // We choose spill over using the CSR for the first time if the spill cost
     // is lower than CSRCost.
     SA->analyze(&VirtReg);
-    if (calcSpillCost() >= CSRCost)
+    if (calcSpillCost(VirtReg) >= CSRCost)
       return PhysReg;
 
     // We are going to spill, set CostPerUseLimit to 1 to make sure that
@@ -2356,31 +2415,43 @@ void RAGreedy::aboutToRemoveInterval(const LiveInterval &LI) {
 }
 
 void RAGreedy::initializeCSRCost() {
-  // We use the command-line option if it is explicitly set, otherwise use the
-  // larger one out of the command-line option and the value reported by TRI.
-  CSRCost = BlockFrequency(
-      CSRFirstTimeCost.getNumOccurrences()
-          ? CSRFirstTimeCost
-          : std::max((unsigned)CSRFirstTimeCost, TRI->getCSRFirstUseCost()));
-  if (!CSRCost.getFrequency())
-    return;
+  if (!CSRCostScale.getNumOccurrences() &&
+      (CSRFirstTimeCost.getNumOccurrences() || TRI->getCSRCost())) {
+    // We should deprecate the usage of CSRFirstTimeCost!
+    // We use the command-line option if it is explicitly set, otherwise use the
+    // larger one out of the command-line option and the value reported by TRI.
+    CSRCost = BlockFrequency(
+        CSRFirstTimeCost.getNumOccurrences()
+            ? CSRFirstTimeCost
+            : std::max((unsigned)CSRFirstTimeCost, TRI->getCSRCost()));
+    if (!CSRCost.getFrequency())
+      return;
 
-  // Raw cost is relative to Entry == 2^14; scale it appropriately.
-  uint64_t ActualEntry = MBFI->getEntryFreq().getFrequency();
-  if (!ActualEntry) {
-    CSRCost = BlockFrequency(0);
-    return;
+    // Raw cost is relative to Entry == 2^14; scale it appropriately.
+    uint64_t ActualEntry = MBFI->getEntryFreq().getFrequency();
+    if (!ActualEntry) {
+      CSRCost = BlockFrequency(0);
+      return;
+    }
+    uint64_t FixedEntry = 1 << 14;
+    if (ActualEntry < FixedEntry) {
+      CSRCost *= BranchProbability(ActualEntry, FixedEntry);
+    } else if (ActualEntry <= UINT32_MAX) {
+      // Invert the fraction and divide.
+      CSRCost /= BranchProbability(FixedEntry, ActualEntry);
+    } else {
+      // Can't use BranchProbability in general, since it takes 32-bit numbers.
+      CSRCost =
+          BlockFrequency(CSRCost.getFrequency() * (ActualEntry / FixedEntry));
+    }
+  } else {
+    uint64_t EntryFreq = MBFI->getEntryFreq().getFrequency();
+    CSRCost = BlockFrequency(TRI->getCSRFirstUseCost() * EntryFreq);
+    if (CSRCostScale < 100)
+      CSRCost *= BranchProbability(CSRCostScale, 100);
+    else
+      CSRCost /= BranchProbability(100, CSRCostScale);
   }
-  uint64_t FixedEntry = 1 << 14;
-  if (ActualEntry < FixedEntry)
-    CSRCost *= BranchProbability(ActualEntry, FixedEntry);
-  else if (ActualEntry <= UINT32_MAX)
-    // Invert the fraction and divide.
-    CSRCost /= BranchProbability(FixedEntry, ActualEntry);
-  else
-    // Can't use BranchProbability in general, since it takes 32-bit numbers.
-    CSRCost =
-        BlockFrequency(CSRCost.getFrequency() * (ActualEntry / FixedEntry));
 }
 
 /// Collect the hint info for \p Reg.
@@ -2389,43 +2460,42 @@ void RAGreedy::initializeCSRCost() {
 void RAGreedy::collectHintInfo(Register Reg, HintsInfo &Out) {
   const TargetRegisterClass *RC = MRI->getRegClass(Reg);
 
-  for (const MachineInstr &Instr : MRI->reg_nodbg_instructions(Reg)) {
-    if (!Instr.isCopy())
+  for (const MachineOperand &Opnd : MRI->reg_nodbg_operands(Reg)) {
+    const MachineInstr &Instr = *Opnd.getParent();
+    if (!Instr.isCopy() || Opnd.isImplicit())
       continue;
 
     // Look for the other end of the copy.
-    Register OtherReg = Instr.getOperand(0).getReg();
-    unsigned OtherSubReg = Instr.getOperand(0).getSubReg();
-    unsigned SubReg = Instr.getOperand(1).getSubReg();
+    const MachineOperand &OtherOpnd = Instr.getOperand(Opnd.isDef());
+    Register OtherReg = OtherOpnd.getReg();
+    if (OtherReg == Reg)
+      continue;
+    unsigned OtherSubReg = OtherOpnd.getSubReg();
+    unsigned SubReg = Opnd.getSubReg();
 
-    if (OtherReg == Reg) {
-      OtherReg = Instr.getOperand(1).getReg();
-      OtherSubReg = Instr.getOperand(1).getSubReg();
-      SubReg = Instr.getOperand(0).getSubReg();
-      if (OtherReg == Reg)
+    // Get the current assignment.
+    MCRegister OtherPhysReg;
+    if (OtherReg.isPhysical()) {
+      if (OtherSubReg)
+        OtherPhysReg = TRI->getMatchingSuperReg(OtherReg, OtherSubReg, RC);
+      else if (SubReg)
+        OtherPhysReg = TRI->getMatchingSuperReg(OtherReg, SubReg, RC);
+      else
+        OtherPhysReg = OtherReg;
+    } else {
+      OtherPhysReg = VRM->getPhys(OtherReg);
+      // TODO: Should find matching superregister, but applying this in the
+      // non-hint case currently causes regressions
+
+      if (SubReg && OtherSubReg && SubReg != OtherSubReg)
         continue;
     }
 
-    // Get the current assignment.
-    MCRegister OtherPhysReg =
-        OtherReg.isPhysical() ? OtherReg.asMCReg() : VRM->getPhys(OtherReg);
-    if (OtherSubReg) {
-      if (OtherReg.isPhysical()) {
-        MCRegister Tuple =
-            TRI->getMatchingSuperReg(OtherPhysReg, OtherSubReg, RC);
-        if (!Tuple)
-          continue;
-        OtherPhysReg = Tuple;
-      } else {
-        // TODO: There should be a hinting mechanism for subregisters
-        if (SubReg != OtherSubReg)
-          continue;
-      }
-    }
-
     // Push the collected information.
-    Out.push_back(HintInfo(MBFI->getBlockFreq(Instr.getParent()), OtherReg,
-                           OtherPhysReg));
+    if (OtherPhysReg) {
+      Out.push_back(HintInfo(MBFI->getBlockFreq(Instr.getParent()), OtherReg,
+                             OtherPhysReg));
+    }
   }
 }
 
@@ -2454,15 +2524,13 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
   // We have a broken hint, check if it is possible to fix it by
   // reusing PhysReg for the copy-related live-ranges. Indeed, we evicted
   // some register and PhysReg may be available for the other live-ranges.
-  SmallSet<Register, 4> Visited;
-  SmallVector<Register, 2> RecoloringCandidates;
   HintsInfo Info;
   Register Reg = VirtReg.reg();
   MCRegister PhysReg = VRM->getPhys(Reg);
   // Start the recoloring algorithm from the input live-interval, then
   // it will propagate to the ones that are copy-related with it.
-  Visited.insert(Reg);
-  RecoloringCandidates.push_back(Reg);
+  SmallSet<Register, 4> Visited = {Reg};
+  SmallVector<Register, 2> RecoloringCandidates = {Reg};
 
   LLVM_DEBUG(dbgs() << "Trying to reconcile hints for: " << printReg(Reg, TRI)
                     << '(' << printReg(PhysReg, TRI) << ")\n");
@@ -2470,12 +2538,10 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
   do {
     Reg = RecoloringCandidates.pop_back_val();
 
-    // We cannot recolor physical register.
-    if (Reg.isPhysical())
-      continue;
+    MCRegister CurrPhys = VRM->getPhys(Reg);
 
     // This may be a skipped register.
-    if (!VRM->hasPhys(Reg)) {
+    if (!CurrPhys) {
       assert(!shouldAllocateRegister(Reg) &&
              "We have an unallocated variable which should have been handled");
       continue;
@@ -2484,7 +2550,6 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
     // Get the live interval mapped with this virtual register to be able
     // to check for the interference with the new color.
     LiveInterval &LI = LIS->getInterval(Reg);
-    MCRegister CurrPhys = VRM->getPhys(Reg);
     // Check that the new color matches the register class constraints and
     // that it is free for this live range.
     if (CurrPhys != PhysReg && (!MRI->getRegClass(Reg)->contains(PhysReg) ||
@@ -2521,7 +2586,8 @@ void RAGreedy::tryHintRecoloring(const LiveInterval &VirtReg) {
     // Push all copy-related live-ranges to keep reconciling the broken
     // hints.
     for (const HintInfo &HI : Info) {
-      if (Visited.insert(HI.Reg).second)
+      // We cannot recolor physical register.
+      if (HI.Reg.isVirtual() && Visited.insert(HI.Reg).second)
         RecoloringCandidates.push_back(HI.Reg);
     }
   } while (!RecoloringCandidates.empty());

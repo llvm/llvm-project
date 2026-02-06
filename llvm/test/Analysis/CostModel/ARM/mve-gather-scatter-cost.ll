@@ -5,32 +5,32 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
 define i32 @masked_gather() {
 ; CHECK-LABEL: 'masked_gather'
-; CHECK-NEXT:  Cost Model: Found costs of 16 for: %V4F64 = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> undef, i32 4, <4 x i1> undef, <4 x double> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 6 for: %V2F64 = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> undef, i32 4, <2 x i1> undef, <2 x double> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 96 for: %V16F32 = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> undef, i32 4, <16 x i1> undef, <16 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 32 for: %V8F32 = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> undef, i32 4, <8 x i1> undef, <8 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %V4F32 = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> undef, i32 4, <4 x i1> undef, <4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 6 for: %V2F32 = call <2 x float> @llvm.masked.gather.v2f32.v2p0(<2 x ptr> undef, i32 4, <2 x i1> undef, <2 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 64 for: %V16F16 = call <16 x half> @llvm.masked.gather.v16f16.v16p0(<16 x ptr> undef, i32 2, <16 x i1> undef, <16 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 24 for: %V8F16 = call <8 x half> @llvm.masked.gather.v8f16.v8p0(<8 x ptr> undef, i32 2, <8 x i1> undef, <8 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 12 for: %V4F16 = call <4 x half> @llvm.masked.gather.v4f16.v4p0(<4 x ptr> undef, i32 2, <4 x i1> undef, <4 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 6 for: %V2F16 = call <2 x half> @llvm.masked.gather.v2f16.v2p0(<2 x ptr> undef, i32 2, <2 x i1> undef, <2 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 72 for: %V4I64 = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> undef, i32 4, <4 x i1> undef, <4 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 34 for: %V2I64 = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> undef, i32 4, <2 x i1> undef, <2 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 192 for: %V16I32 = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> undef, i32 4, <16 x i1> undef, <16 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 80 for: %V8I32 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> undef, i32 4, <8 x i1> undef, <8 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %V4I32 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> undef, i32 4, <4 x i1> undef, <4 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 18 for: %V2I32 = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> undef, i32 4, <2 x i1> undef, <2 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 160 for: %V16I16 = call <16 x i16> @llvm.masked.gather.v16i16.v16p0(<16 x ptr> undef, i32 2, <16 x i1> undef, <16 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 72 for: %V8I16 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr> undef, i32 2, <8 x i1> undef, <8 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 36 for: %V4I16 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> undef, i32 2, <4 x i1> undef, <4 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 18 for: %V2I16 = call <2 x i16> @llvm.masked.gather.v2i16.v2p0(<2 x ptr> undef, i32 2, <2 x i1> undef, <2 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 320 for: %V32I8 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> undef, i32 1, <32 x i1> undef, <32 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 144 for: %V16I8 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> undef, i32 1, <16 x i1> undef, <16 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 72 for: %V8I8 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> undef, i32 1, <8 x i1> undef, <8 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 36 for: %V4I8 = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> undef, i32 1, <4 x i1> undef, <4 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 18 for: %V2I8 = call <2 x i8> @llvm.masked.gather.v2i8.v2p0(<2 x ptr> undef, i32 1, <2 x i1> undef, <2 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 12 for: %V4I32p = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> undef, i32 4, <4 x i1> undef, <4 x ptr> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 16 for: %V4F64 = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> align 4 undef, <4 x i1> undef, <4 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %V2F64 = call <2 x double> @llvm.masked.gather.v2f64.v2p0(<2 x ptr> align 4 undef, <2 x i1> undef, <2 x double> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 96 for: %V16F32 = call <16 x float> @llvm.masked.gather.v16f32.v16p0(<16 x ptr> align 4 undef, <16 x i1> undef, <16 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 32 for: %V8F32 = call <8 x float> @llvm.masked.gather.v8f32.v8p0(<8 x ptr> align 4 undef, <8 x i1> undef, <8 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %V4F32 = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 undef, <4 x i1> undef, <4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %V2F32 = call <2 x float> @llvm.masked.gather.v2f32.v2p0(<2 x ptr> align 4 undef, <2 x i1> undef, <2 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 64 for: %V16F16 = call <16 x half> @llvm.masked.gather.v16f16.v16p0(<16 x ptr> align 2 undef, <16 x i1> undef, <16 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 24 for: %V8F16 = call <8 x half> @llvm.masked.gather.v8f16.v8p0(<8 x ptr> align 2 undef, <8 x i1> undef, <8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 12 for: %V4F16 = call <4 x half> @llvm.masked.gather.v4f16.v4p0(<4 x ptr> align 2 undef, <4 x i1> undef, <4 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %V2F16 = call <2 x half> @llvm.masked.gather.v2f16.v2p0(<2 x ptr> align 2 undef, <2 x i1> undef, <2 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 72 for: %V4I64 = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 4 undef, <4 x i1> undef, <4 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 34 for: %V2I64 = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> align 4 undef, <2 x i1> undef, <2 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 192 for: %V16I32 = call <16 x i32> @llvm.masked.gather.v16i32.v16p0(<16 x ptr> align 4 undef, <16 x i1> undef, <16 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 80 for: %V8I32 = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 undef, <8 x i1> undef, <8 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %V4I32 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 undef, <4 x i1> undef, <4 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 18 for: %V2I32 = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 undef, <2 x i1> undef, <2 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 160 for: %V16I16 = call <16 x i16> @llvm.masked.gather.v16i16.v16p0(<16 x ptr> align 2 undef, <16 x i1> undef, <16 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 72 for: %V8I16 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr> align 2 undef, <8 x i1> undef, <8 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 36 for: %V4I16 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> align 2 undef, <4 x i1> undef, <4 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 18 for: %V2I16 = call <2 x i16> @llvm.masked.gather.v2i16.v2p0(<2 x ptr> align 2 undef, <2 x i1> undef, <2 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 320 for: %V32I8 = call <32 x i8> @llvm.masked.gather.v32i8.v32p0(<32 x ptr> align 1 undef, <32 x i1> undef, <32 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 144 for: %V16I8 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> align 1 undef, <16 x i1> undef, <16 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 72 for: %V8I8 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> align 1 undef, <8 x i1> undef, <8 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 36 for: %V4I8 = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 1 undef, <4 x i1> undef, <4 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 18 for: %V2I8 = call <2 x i8> @llvm.masked.gather.v2i8.v2p0(<2 x ptr> align 1 undef, <2 x i1> undef, <2 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 12 for: %V4I32p = call <4 x ptr> @llvm.masked.gather.v4p0.v4p0(<4 x ptr> align 4 undef, <4 x i1> undef, <4 x ptr> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 0
 ;
   %V4F64 = call <4 x double> @llvm.masked.gather.v4f64.v4p0(<4 x ptr> undef, i32 4, <4 x i1> undef, <4 x double> undef)
@@ -72,31 +72,31 @@ define i32 @masked_gather() {
 
 define i32 @masked_scatter() {
 ; CHECK-LABEL: 'masked_scatter'
-; CHECK-NEXT:  Cost Model: Found costs of 16 for: call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> undef, <4 x ptr> undef, i32 4, <4 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 6 for: call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> undef, <2 x ptr> undef, i32 4, <2 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 96 for: call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> undef, <16 x ptr> undef, i32 4, <16 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 32 for: call void @llvm.masked.scatter.v8f32.v8p0(<8 x float> undef, <8 x ptr> undef, i32 4, <8 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> undef, <4 x ptr> undef, i32 4, <4 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 6 for: call void @llvm.masked.scatter.v2f32.v2p0(<2 x float> undef, <2 x ptr> undef, i32 4, <2 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 64 for: call void @llvm.masked.scatter.v16f16.v16p0(<16 x half> undef, <16 x ptr> undef, i32 2, <16 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 24 for: call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> undef, <8 x ptr> undef, i32 2, <8 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 12 for: call void @llvm.masked.scatter.v4f16.v4p0(<4 x half> undef, <4 x ptr> undef, i32 2, <4 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 6 for: call void @llvm.masked.scatter.v2f16.v2p0(<2 x half> undef, <2 x ptr> undef, i32 2, <2 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 72 for: call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> undef, <4 x ptr> undef, i32 4, <4 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 34 for: call void @llvm.masked.scatter.v2i64.v2p0(<2 x i64> undef, <2 x ptr> undef, i32 4, <2 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 192 for: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> undef, <16 x ptr> undef, i32 4, <16 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 80 for: call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> undef, <8 x ptr> undef, i32 4, <8 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> undef, <4 x ptr> undef, i32 4, <4 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 18 for: call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> undef, <2 x ptr> undef, i32 4, <2 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 160 for: call void @llvm.masked.scatter.v16i16.v16p0(<16 x i16> undef, <16 x ptr> undef, i32 2, <16 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 72 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> undef, <8 x ptr> undef, i32 2, <8 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 36 for: call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> undef, <4 x ptr> undef, i32 2, <4 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 18 for: call void @llvm.masked.scatter.v2i16.v2p0(<2 x i16> undef, <2 x ptr> undef, i32 2, <2 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 320 for: call void @llvm.masked.scatter.v32i8.v32p0(<32 x i8> undef, <32 x ptr> undef, i32 1, <32 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 144 for: call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> undef, <16 x ptr> undef, i32 1, <16 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 72 for: call void @llvm.masked.scatter.v8i8.v8p0(<8 x i8> undef, <8 x ptr> undef, i32 1, <8 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 36 for: call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> undef, <4 x ptr> undef, i32 1, <4 x i1> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 18 for: call void @llvm.masked.scatter.v2i8.v2p0(<2 x i8> undef, <2 x ptr> undef, i32 1, <2 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 16 for: call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> undef, <4 x ptr> align 4 undef, <4 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> undef, <2 x ptr> align 4 undef, <2 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 96 for: call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> undef, <16 x ptr> align 4 undef, <16 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 32 for: call void @llvm.masked.scatter.v8f32.v8p0(<8 x float> undef, <8 x ptr> align 4 undef, <8 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> undef, <4 x ptr> align 4 undef, <4 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: call void @llvm.masked.scatter.v2f32.v2p0(<2 x float> undef, <2 x ptr> align 4 undef, <2 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 64 for: call void @llvm.masked.scatter.v16f16.v16p0(<16 x half> undef, <16 x ptr> align 2 undef, <16 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 24 for: call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> undef, <8 x ptr> align 2 undef, <8 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 12 for: call void @llvm.masked.scatter.v4f16.v4p0(<4 x half> undef, <4 x ptr> align 2 undef, <4 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: call void @llvm.masked.scatter.v2f16.v2p0(<2 x half> undef, <2 x ptr> align 2 undef, <2 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 72 for: call void @llvm.masked.scatter.v4i64.v4p0(<4 x i64> undef, <4 x ptr> align 4 undef, <4 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 34 for: call void @llvm.masked.scatter.v2i64.v2p0(<2 x i64> undef, <2 x ptr> align 4 undef, <2 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 192 for: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> undef, <16 x ptr> align 4 undef, <16 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 80 for: call void @llvm.masked.scatter.v8i32.v8p0(<8 x i32> undef, <8 x ptr> align 4 undef, <8 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> undef, <4 x ptr> align 4 undef, <4 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 18 for: call void @llvm.masked.scatter.v2i32.v2p0(<2 x i32> undef, <2 x ptr> align 4 undef, <2 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 160 for: call void @llvm.masked.scatter.v16i16.v16p0(<16 x i16> undef, <16 x ptr> align 2 undef, <16 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 72 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> undef, <8 x ptr> align 2 undef, <8 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 36 for: call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> undef, <4 x ptr> align 2 undef, <4 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 18 for: call void @llvm.masked.scatter.v2i16.v2p0(<2 x i16> undef, <2 x ptr> align 2 undef, <2 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 320 for: call void @llvm.masked.scatter.v32i8.v32p0(<32 x i8> undef, <32 x ptr> align 1 undef, <32 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 144 for: call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> undef, <16 x ptr> align 1 undef, <16 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 72 for: call void @llvm.masked.scatter.v8i8.v8p0(<8 x i8> undef, <8 x ptr> align 1 undef, <8 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 36 for: call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> undef, <4 x ptr> align 1 undef, <4 x i1> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 18 for: call void @llvm.masked.scatter.v2i8.v2p0(<2 x i8> undef, <2 x ptr> align 1 undef, <2 x i1> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 0
 ;
   call void @llvm.masked.scatter.v4f64.v4p0(<4 x double> undef, <4 x ptr> undef, i32 4, <4 x i1> undef)
@@ -137,27 +137,27 @@ define i32 @masked_scatter() {
 define void @gep_v4i32(ptr %base, ptr %base16, ptr %base8, <4 x i32> %ind32, <4 x i16> %ind16, <4 x i1> %mask)  {
 ; CHECK-LABEL: 'gep_v4i32'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gep1 = getelementptr i32, ptr %base, <4 x i32> %ind32
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res1 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep1, i32 4, <4 x i1> %mask, <4 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %res1, <4 x ptr> %gep1, i32 4, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res1 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %gep1, <4 x i1> %mask, <4 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %res1, <4 x ptr> align 4 %gep1, <4 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %indzext = zext <4 x i16> %ind16 to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gep2 = getelementptr i32, ptr %base, <4 x i32> %indzext
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res2 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep2, i32 4, <4 x i1> %mask, <4 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %res2, <4 x ptr> %gep2, i32 4, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res2 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %gep2, <4 x i1> %mask, <4 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %res2, <4 x ptr> align 4 %gep2, <4 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %indsext = sext <4 x i16> %ind16 to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gep3 = getelementptr i32, ptr %base, <4 x i32> %indsext
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res3 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gep3, i32 4, <4 x i1> %mask, <4 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %res3, <4 x ptr> %gep3, i32 4, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res3 = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %gep3, <4 x i1> %mask, <4 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %res3, <4 x ptr> align 4 %gep3, <4 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gepu = getelementptr i32, ptr %base, <4 x i32> %ind32
-; CHECK-NEXT:  Cost Model: Found costs of 56 for: %resu = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gepu, i32 1, <4 x i1> %mask, <4 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 56 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %resu, <4 x ptr> %gepu, i32 1, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of 56 for: %resu = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 1 %gepu, <4 x i1> %mask, <4 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 56 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %resu, <4 x ptr> align 1 %gepu, <4 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gepos = getelementptr i8, ptr %base8, <4 x i32> %indzext
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %geposb = bitcast <4 x ptr> %gepos to <4 x ptr>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %resos = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %geposb, i32 4, <4 x i1> %mask, <4 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %resos, <4 x ptr> %geposb, i32 4, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %resos = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %geposb, <4 x i1> %mask, <4 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %resos, <4 x ptr> align 4 %geposb, <4 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gepbs = getelementptr i16, ptr %base16, <4 x i32> %indzext
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gepbsb = bitcast <4 x ptr> %gepbs to <4 x ptr>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %resbs = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> %gepbsb, i32 4, <4 x i1> %mask, <4 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %resbs, <4 x ptr> %gepbsb, i32 4, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %resbs = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 %gepbsb, <4 x i1> %mask, <4 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> %resbs, <4 x ptr> align 4 %gepbsb, <4 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %gep1 = getelementptr i32, ptr %base, <4 x i32> %ind32
@@ -196,27 +196,27 @@ define void @gep_v4i32(ptr %base, ptr %base16, ptr %base8, <4 x i32> %ind32, <4 
 define void @gep_v4f32(ptr %base, ptr %base16, ptr %base8, <4 x i32> %ind32, <4 x i16> %ind16, <4 x i1> %mask)  {
 ; CHECK-LABEL: 'gep_v4f32'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %gep1 = getelementptr float, ptr %base, <4 x i32> %ind32
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res1 = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> %gep1, i32 4, <4 x i1> %mask, <4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %res1, <4 x ptr> %gep1, i32 4, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res1 = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 %gep1, <4 x i1> %mask, <4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %res1, <4 x ptr> align 4 %gep1, <4 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %indzext = zext <4 x i16> %ind16 to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %gep2 = getelementptr float, ptr %base, <4 x i32> %indzext
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res2 = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> %gep2, i32 4, <4 x i1> %mask, <4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %res2, <4 x ptr> %gep2, i32 4, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res2 = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 %gep2, <4 x i1> %mask, <4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %res2, <4 x ptr> align 4 %gep2, <4 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %indsext = sext <4 x i16> %ind16 to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %gep3 = getelementptr float, ptr %base, <4 x i32> %indsext
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res3 = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> %gep3, i32 4, <4 x i1> %mask, <4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %res3, <4 x ptr> %gep3, i32 4, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res3 = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 %gep3, <4 x i1> %mask, <4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %res3, <4 x ptr> align 4 %gep3, <4 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %gepu = getelementptr float, ptr %base, <4 x i32> %ind32
-; CHECK-NEXT:  Cost Model: Found costs of 32 for: %resu = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> %gepu, i32 1, <4 x i1> %mask, <4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 32 for: call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %resu, <4 x ptr> %gepu, i32 1, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of 32 for: %resu = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 1 %gepu, <4 x i1> %mask, <4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 32 for: call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %resu, <4 x ptr> align 1 %gepu, <4 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gepos = getelementptr i8, ptr %base8, <4 x i32> %indzext
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %geposb = bitcast <4 x ptr> %gepos to <4 x ptr>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %resos = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> %geposb, i32 4, <4 x i1> %mask, <4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %resos, <4 x ptr> %geposb, i32 4, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %resos = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 %geposb, <4 x i1> %mask, <4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %resos, <4 x ptr> align 4 %geposb, <4 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gepbs = getelementptr i16, ptr %base16, <4 x i32> %indzext
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gepbsb = bitcast <4 x ptr> %gepbs to <4 x ptr>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %resbs = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> %gepbsb, i32 4, <4 x i1> %mask, <4 x float> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %resbs, <4 x ptr> %gepbsb, i32 4, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %resbs = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 %gepbsb, <4 x i1> %mask, <4 x float> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> %resbs, <4 x ptr> align 4 %gepbsb, <4 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %gep1 = getelementptr float, ptr %base, <4 x i32> %ind32
@@ -255,25 +255,25 @@ define void @gep_v4f32(ptr %base, ptr %base16, ptr %base8, <4 x i32> %ind32, <4 
 define void @gep_v4i16(ptr %base, <4 x i32> %ind32, <4 x i16> %ind16, <4 x i1> %mask)  {
 ; CHECK-LABEL: 'gep_v4i16'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gep1 = getelementptr i16, ptr %base, <4 x i32> %ind32
-; CHECK-NEXT:  Cost Model: Found costs of 56 for: %res1 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> %gep1, i32 2, <4 x i1> %mask, <4 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 56 for: call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> %res1, <4 x ptr> %gep1, i32 2, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of 56 for: %res1 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> align 2 %gep1, <4 x i1> %mask, <4 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 56 for: call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> %res1, <4 x ptr> align 2 %gep1, <4 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %indzext = zext <4 x i16> %ind16 to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gep2 = getelementptr i16, ptr %base, <4 x i32> %indzext
-; CHECK-NEXT:  Cost Model: Found costs of 56 for: %res2 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> %gep2, i32 2, <4 x i1> %mask, <4 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 56 for: call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> %res2, <4 x ptr> %gep2, i32 2, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of 56 for: %res2 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> align 2 %gep2, <4 x i1> %mask, <4 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 56 for: call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> %res2, <4 x ptr> align 2 %gep2, <4 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %indsext = sext <4 x i16> %ind16 to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gep3 = getelementptr i16, ptr %base, <4 x i32> %indsext
-; CHECK-NEXT:  Cost Model: Found costs of 56 for: %res3 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> %gep3, i32 2, <4 x i1> %mask, <4 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 56 for: call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> %res3, <4 x ptr> %gep3, i32 2, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of 56 for: %res3 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> align 2 %gep3, <4 x i1> %mask, <4 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 56 for: call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> %res3, <4 x ptr> align 2 %gep3, <4 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gep5 = getelementptr i16, ptr %base, <4 x i16> %ind16
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res5 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> %gep5, i32 2, <4 x i1> %mask, <4 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res5 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> align 2 %gep5, <4 x i1> %mask, <4 x i16> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %res5zext = zext <4 x i16> %res5 to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %res5trunc = trunc <4 x i32> %res5zext to <4 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> %res5trunc, <4 x ptr> %gep5, i32 4, <4 x i1> %mask)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res6 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> %gep5, i32 2, <4 x i1> %mask, <4 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> %res5trunc, <4 x ptr> align 4 %gep5, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res6 = call <4 x i16> @llvm.masked.gather.v4i16.v4p0(<4 x ptr> align 2 %gep5, <4 x i1> %mask, <4 x i16> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %res6sext = sext <4 x i16> %res6 to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %res6trunc = trunc <4 x i32> %res6sext to <4 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> %res6trunc, <4 x ptr> %gep5, i32 4, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i16.v4p0(<4 x i16> %res6trunc, <4 x ptr> align 4 %gep5, <4 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %gep1 = getelementptr i16, ptr %base, <4 x i32> %ind32
@@ -309,14 +309,14 @@ define void @gep_v4i16(ptr %base, <4 x i32> %ind32, <4 x i16> %ind16, <4 x i1> %
 define void @gep_v4i8(ptr %base, <4 x i8> %ind8, <4 x i1> %mask)  {
 ; CHECK-LABEL: 'gep_v4i8'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gep5 = getelementptr i8, ptr %base, <4 x i8> %ind8
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res5 = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> %gep5, i32 2, <4 x i1> %mask, <4 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res5 = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 2 %gep5, <4 x i1> %mask, <4 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:4 for: %res5zext = zext <4 x i8> %res5 to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %res5trunc = trunc <4 x i32> %res5zext to <4 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> %res5trunc, <4 x ptr> %gep5, i32 4, <4 x i1> %mask)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res6 = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> %gep5, i32 2, <4 x i1> %mask, <4 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> %res5trunc, <4 x ptr> align 4 %gep5, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: %res6 = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 2 %gep5, <4 x i1> %mask, <4 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:2 Lat:4 SizeLat:4 for: %res6sext = sext <4 x i8> %res6 to <4 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %res6trunc = trunc <4 x i32> %res6sext to <4 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> %res6trunc, <4 x ptr> %gep5, i32 4, <4 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:4 Lat:8 SizeLat:8 for: call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> %res6trunc, <4 x ptr> align 4 %gep5, <4 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   ; result zext
@@ -338,34 +338,34 @@ define void @gep_v4i8(ptr %base, <4 x i8> %ind8, <4 x i1> %mask)  {
 define void @gep_v8i16(ptr %base, ptr %base8, ptr %base32, <8 x i32> %ind32, <8 x i16> %ind16, <8 x i8> %ind8, <8 x i1> %mask)  {
 ; CHECK-LABEL: 'gep_v8i16'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gep1 = getelementptr i16, ptr %base, <8 x i32> %ind32
-; CHECK-NEXT:  Cost Model: Found costs of 112 for: %res1 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr> %gep1, i32 2, <8 x i1> %mask, <8 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 112 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %res1, <8 x ptr> %gep1, i32 2, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of 112 for: %res1 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr> align 2 %gep1, <8 x i1> %mask, <8 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 112 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %res1, <8 x ptr> align 2 %gep1, <8 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %indzext = zext <8 x i16> %ind16 to <8 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gep2 = getelementptr i16, ptr %base, <8 x i32> %indzext
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %res2 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr> %gep2, i32 2, <8 x i1> %mask, <8 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %res2, <8 x ptr> %gep2, i32 2, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %res2 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr> align 2 %gep2, <8 x i1> %mask, <8 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %res2, <8 x ptr> align 2 %gep2, <8 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %indsext = sext <8 x i16> %ind16 to <8 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gep3 = getelementptr i16, ptr %base, <8 x i32> %indsext
-; CHECK-NEXT:  Cost Model: Found costs of 112 for: %res3 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr> %gep3, i32 2, <8 x i1> %mask, <8 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 112 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %res3, <8 x ptr> %gep3, i32 2, <8 x i1> %mask)
-; CHECK-NEXT:  Cost Model: Found costs of 112 for: %resu = call <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr> %gep2, i32 1, <8 x i1> %mask, <8 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 112 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %resu, <8 x ptr> %gep2, i32 1, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of 112 for: %res3 = call <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr> align 2 %gep3, <8 x i1> %mask, <8 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 112 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %res3, <8 x ptr> align 2 %gep3, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of 112 for: %resu = call <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr> align 1 %gep2, <8 x i1> %mask, <8 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 112 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %resu, <8 x ptr> align 1 %gep2, <8 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gepos = getelementptr i8, ptr %base8, <8 x i32> %indzext
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %geposb = bitcast <8 x ptr> %gepos to <8 x ptr>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %resos = call <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr> %geposb, i32 2, <8 x i1> %mask, <8 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %resos, <8 x ptr> %geposb, i32 2, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %resos = call <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr> align 2 %geposb, <8 x i1> %mask, <8 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %resos, <8 x ptr> align 2 %geposb, <8 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gepbs = getelementptr i32, ptr %base32, <8 x i32> %indzext
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gepbsb = bitcast <8 x ptr> %gepbs to <8 x ptr>
-; CHECK-NEXT:  Cost Model: Found costs of 112 for: %resbs = call <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr> %gepbsb, i32 2, <8 x i1> %mask, <8 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 112 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %resbs, <8 x ptr> %gepbsb, i32 2, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of 112 for: %resbs = call <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr> align 2 %gepbsb, <8 x i1> %mask, <8 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 112 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %resbs, <8 x ptr> align 2 %gepbsb, <8 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %indzext4 = zext <8 x i16> %ind16 to <8 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gep4 = getelementptr i16, ptr %base, <8 x i32> %indzext4
 ; CHECK-NEXT:  Cost Model: Found costs of 16 for: %indtrunc = trunc <8 x i32> %ind32 to <8 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %indtrunc, <8 x ptr> %gep4, i32 2, <8 x i1> %mask)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %res = call <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr> %gep4, i32 2, <8 x i1> %mask, <8 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %indtrunc, <8 x ptr> align 2 %gep4, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %res = call <8 x i16> @llvm.masked.gather.v8i16.v8p0(<8 x ptr> align 2 %gep4, <8 x i1> %mask, <8 x i16> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %ressext = sext <8 x i16> %res to <8 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 16 for: %restrunc = trunc <8 x i32> %ressext to <8 x i16>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %restrunc, <8 x ptr> %gep4, i32 4, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: call void @llvm.masked.scatter.v8i16.v8p0(<8 x i16> %restrunc, <8 x ptr> align 4 %gep4, <8 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   ; no offset ext
@@ -419,26 +419,26 @@ define void @gep_v8i16(ptr %base, ptr %base8, ptr %base32, <8 x i32> %ind32, <8 
 define void @gep_v8f16(ptr %base, ptr %base8, ptr %base32, <8 x i32> %ind32, <8 x i16> %ind16, <8 x i1> %mask)  {
 ; CHECK-LABEL: 'gep_v8f16'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %gep1 = getelementptr half, ptr %base, <8 x i32> %ind32
-; CHECK-NEXT:  Cost Model: Found costs of 64 for: %res1 = call <8 x half> @llvm.masked.gather.v8f16.v8p0(<8 x ptr> %gep1, i32 2, <8 x i1> %mask, <8 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 64 for: call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> %res1, <8 x ptr> %gep1, i32 2, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of 64 for: %res1 = call <8 x half> @llvm.masked.gather.v8f16.v8p0(<8 x ptr> align 2 %gep1, <8 x i1> %mask, <8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 64 for: call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> %res1, <8 x ptr> align 2 %gep1, <8 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %indzext = zext <8 x i16> %ind16 to <8 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %gep2 = getelementptr half, ptr %base, <8 x i32> %indzext
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %res2 = call <8 x half> @llvm.masked.gather.v8f16.v8p0(<8 x ptr> %gep2, i32 2, <8 x i1> %mask, <8 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> %res2, <8 x ptr> %gep2, i32 2, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %res2 = call <8 x half> @llvm.masked.gather.v8f16.v8p0(<8 x ptr> align 2 %gep2, <8 x i1> %mask, <8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> %res2, <8 x ptr> align 2 %gep2, <8 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:1 Lat:1 SizeLat:1 for: %indsext = sext <8 x i16> %ind16 to <8 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %gep3 = getelementptr half, ptr %base, <8 x i32> %indsext
-; CHECK-NEXT:  Cost Model: Found costs of 64 for: %res3 = call <8 x half> @llvm.masked.gather.v8f16.v8p0(<8 x ptr> %gep3, i32 2, <8 x i1> %mask, <8 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 64 for: call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> %res3, <8 x ptr> %gep3, i32 2, <8 x i1> %mask)
-; CHECK-NEXT:  Cost Model: Found costs of 64 for: %resu = call <8 x half> @llvm.masked.gather.v8f16.v8p0(<8 x ptr> %gep2, i32 1, <8 x i1> %mask, <8 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 64 for: call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> %resu, <8 x ptr> %gep2, i32 1, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of 64 for: %res3 = call <8 x half> @llvm.masked.gather.v8f16.v8p0(<8 x ptr> align 2 %gep3, <8 x i1> %mask, <8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 64 for: call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> %res3, <8 x ptr> align 2 %gep3, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of 64 for: %resu = call <8 x half> @llvm.masked.gather.v8f16.v8p0(<8 x ptr> align 1 %gep2, <8 x i1> %mask, <8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 64 for: call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> %resu, <8 x ptr> align 1 %gep2, <8 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gepos = getelementptr i8, ptr %base8, <8 x i32> %indzext
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %geposb = bitcast <8 x ptr> %gepos to <8 x ptr>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %resos = call <8 x half> @llvm.masked.gather.v8f16.v8p0(<8 x ptr> %geposb, i32 2, <8 x i1> %mask, <8 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> %resos, <8 x ptr> %geposb, i32 2, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %resos = call <8 x half> @llvm.masked.gather.v8f16.v8p0(<8 x ptr> align 2 %geposb, <8 x i1> %mask, <8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> %resos, <8 x ptr> align 2 %geposb, <8 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gepbs = getelementptr i32, ptr %base32, <8 x i32> %indzext
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gepbsb = bitcast <8 x ptr> %gepbs to <8 x ptr>
-; CHECK-NEXT:  Cost Model: Found costs of 64 for: %resbs = call <8 x half> @llvm.masked.gather.v8f16.v8p0(<8 x ptr> %gepbsb, i32 2, <8 x i1> %mask, <8 x half> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 64 for: call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> %resbs, <8 x ptr> %gepbsb, i32 2, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of 64 for: %resbs = call <8 x half> @llvm.masked.gather.v8f16.v8p0(<8 x ptr> align 2 %gepbsb, <8 x i1> %mask, <8 x half> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 64 for: call void @llvm.masked.scatter.v8f16.v8p0(<8 x half> %resbs, <8 x ptr> align 2 %gepbsb, <8 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   ; no offset ext
@@ -481,14 +481,14 @@ define void @gep_v8i8(ptr %base, <8 x i8> %ind8, <8 x i1> %mask)  {
 ; CHECK-LABEL: 'gep_v8i8'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:1 Lat:1 SizeLat:1 for: %indzext = zext <8 x i8> %ind8 to <8 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gep5 = getelementptr i8, ptr %base, <8 x i32> %indzext
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %res5 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> %gep5, i32 2, <8 x i1> %mask, <8 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %res5 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> align 2 %gep5, <8 x i1> %mask, <8 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %res5zext = zext <8 x i8> %res5 to <8 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %res5trunc = trunc <8 x i16> %res5zext to <8 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: call void @llvm.masked.scatter.v8i8.v8p0(<8 x i8> %res5trunc, <8 x ptr> %gep5, i32 4, <8 x i1> %mask)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %res6 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> %gep5, i32 2, <8 x i1> %mask, <8 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: call void @llvm.masked.scatter.v8i8.v8p0(<8 x i8> %res5trunc, <8 x ptr> align 4 %gep5, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: %res6 = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> align 2 %gep5, <8 x i1> %mask, <8 x i8> undef)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:2 SizeLat:2 for: %res6sext = sext <8 x i8> %res6 to <8 x i16>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %res6trunc = trunc <8 x i16> %res6sext to <8 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: call void @llvm.masked.scatter.v8i8.v8p0(<8 x i8> %res6trunc, <8 x ptr> %gep5, i32 4, <8 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:8 Lat:16 SizeLat:16 for: call void @llvm.masked.scatter.v8i8.v8p0(<8 x i8> %res6trunc, <8 x ptr> align 4 %gep5, <8 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   ; result zext
@@ -511,24 +511,24 @@ define void @gep_v8i8(ptr %base, <8 x i8> %ind8, <8 x i1> %mask)  {
 define void @gep_v16i8(ptr %base, ptr %base16, <16 x i8> %ind8, <16 x i32> %ind32, <16 x i1> %mask)  {
 ; CHECK-LABEL: 'gep_v16i8'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gep1 = getelementptr i8, ptr %base, <16 x i32> %ind32
-; CHECK-NEXT:  Cost Model: Found costs of 224 for: %res1 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> %gep1, i32 1, <16 x i1> %mask, <16 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 224 for: call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> %res1, <16 x ptr> %gep1, i32 2, <16 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of 224 for: %res1 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> align 1 %gep1, <16 x i1> %mask, <16 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 224 for: call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> %res1, <16 x ptr> align 2 %gep1, <16 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:74 CodeSize:1 Lat:1 SizeLat:1 for: %indzext = zext <16 x i8> %ind8 to <16 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gep2 = getelementptr i8, ptr %base, <16 x i32> %indzext
-; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:16 Lat:32 SizeLat:32 for: %res2 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> %gep2, i32 2, <16 x i1> %mask, <16 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:16 Lat:32 SizeLat:32 for: call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> %res2, <16 x ptr> %gep2, i32 2, <16 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:16 Lat:32 SizeLat:32 for: %res2 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> align 2 %gep2, <16 x i1> %mask, <16 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:16 Lat:32 SizeLat:32 for: call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> %res2, <16 x ptr> align 2 %gep2, <16 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:74 CodeSize:1 Lat:1 SizeLat:1 for: %indsext = sext <16 x i8> %ind8 to <16 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gep3 = getelementptr i8, ptr %base, <16 x i32> %indsext
-; CHECK-NEXT:  Cost Model: Found costs of 224 for: %res3 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> %gep3, i32 2, <16 x i1> %mask, <16 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 224 for: call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> %res3, <16 x ptr> %gep3, i32 2, <16 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of 224 for: %res3 = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> align 2 %gep3, <16 x i1> %mask, <16 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 224 for: call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> %res3, <16 x ptr> align 2 %gep3, <16 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gepbs = getelementptr i16, ptr %base16, <16 x i32> %indzext
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gepbsb = bitcast <16 x ptr> %gepbs to <16 x ptr>
-; CHECK-NEXT:  Cost Model: Found costs of 224 for: %resbs = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> %gepbsb, i32 2, <16 x i1> %mask, <16 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 224 for: call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> %resbs, <16 x ptr> %gepbsb, i32 2, <16 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of 224 for: %resbs = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> align 2 %gepbsb, <16 x i1> %mask, <16 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 224 for: call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> %resbs, <16 x ptr> align 2 %gepbsb, <16 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:74 CodeSize:1 Lat:1 SizeLat:1 for: %indzext4 = zext <16 x i8> %ind8 to <16 x i32>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %gep4 = getelementptr i8, ptr %base, <16 x i32> %indzext
 ; CHECK-NEXT:  Cost Model: Found costs of 32 for: %indtrunc = trunc <16 x i32> %ind32 to <16 x i8>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:16 Lat:32 SizeLat:32 for: call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> %indtrunc, <16 x ptr> %gep4, i32 2, <16 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:16 Lat:32 SizeLat:32 for: call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> %indtrunc, <16 x ptr> align 2 %gep4, <16 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   ; no offset ext
@@ -566,8 +566,8 @@ define void @gep_v16i8(ptr %base, ptr %base16, <16 x i8> %ind8, <16 x i32> %ind3
 define void @gep_v16i8p(<16 x ptr> %base, i32 %off, <16 x i1> %mask)  {
 ; CHECK-LABEL: 'gep_v16i8p'
 ; CHECK-NEXT:  Cost Model: Found costs of 0 for: %gepbs = getelementptr i8, <16 x ptr> %base, i32 %off
-; CHECK-NEXT:  Cost Model: Found costs of 224 for: %resbs = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> %gepbs, i32 2, <16 x i1> %mask, <16 x i8> undef)
-; CHECK-NEXT:  Cost Model: Found costs of 224 for: call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> %resbs, <16 x ptr> %gepbs, i32 2, <16 x i1> %mask)
+; CHECK-NEXT:  Cost Model: Found costs of 224 for: %resbs = call <16 x i8> @llvm.masked.gather.v16i8.v16p0(<16 x ptr> align 2 %gepbs, <16 x i1> %mask, <16 x i8> undef)
+; CHECK-NEXT:  Cost Model: Found costs of 224 for: call void @llvm.masked.scatter.v16i8.v16p0(<16 x i8> %resbs, <16 x ptr> align 2 %gepbs, <16 x i1> %mask)
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %gepbs = getelementptr i8, <16 x ptr> %base, i32 %off

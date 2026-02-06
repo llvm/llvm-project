@@ -10,6 +10,11 @@ from lldbsuite.test import lldbutil
 
 
 class AbiTagStructorsTestCase(TestBase):
+    @skipIf(
+        compiler="clang",
+        compiler_version=["<", "22"],
+        bugnumber="Required Clang flag not supported",
+    )
     @expectedFailureAll(oslist=["windows"])
     def test_with_structor_linkage_names(self):
         self.build(dictionary={"CXXFLAGS_EXTRAS": "-gstructor-decl-linkage-names"})
@@ -73,7 +78,16 @@ class AbiTagStructorsTestCase(TestBase):
         Test that without linkage names on structor declarations we can't call
         ABI-tagged structors.
         """
-        self.build(dictionary={"CXXFLAGS_EXTRAS": "-gno-structor-decl-linkage-names"})
+        # In older versions of Clang the -gno-structor-decl-linkage-names
+        # behaviour was the default.
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
+            [">=", "22.0"]
+        ):
+            self.build(
+                dictionary={"CXXFLAGS_EXTRAS": "-gno-structor-decl-linkage-names"}
+            )
+        else:
+            self.build()
 
         lldbutil.run_to_source_breakpoint(
             self, "Break here", lldb.SBFileSpec("main.cpp", False)
@@ -105,12 +119,23 @@ class AbiTagStructorsTestCase(TestBase):
             "expression TaggedLocal()", error=True, substrs=["Couldn't look up symbols"]
         )
 
+    @skipIf(compiler="clang", compiler_version=["<", "22"])
     @expectedFailureAll(oslist=["windows"])
-    def test_nested_no_structor_linkage_names(self):
+    def test_nested_with_structor_linkage_names(self):
         self.build(dictionary={"CXXFLAGS_EXTRAS": "-gstructor-decl-linkage-names"})
         self.do_nested_structor_test()
 
     @expectedFailureAll(oslist=["windows"])
-    def test_nested_with_structor_linkage_names(self):
-        self.build(dictionary={"CXXFLAGS_EXTRAS": "-gno-structor-decl-linkage-names"})
+    def test_nested_no_structor_linkage_names(self):
+        # In older versions of Clang the -gno-structor-decl-linkage-names
+        # behaviour was the default.
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(
+            [">=", "22.0"]
+        ):
+            self.build(
+                dictionary={"CXXFLAGS_EXTRAS": "-gno-structor-decl-linkage-names"}
+            )
+        else:
+            self.build()
+
         self.do_nested_structor_test()

@@ -180,6 +180,13 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
 }
 
 void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
+  if (GV->hasCommonLinkage()) {
+    OutContext.reportError(SMLoc(),
+                           "common symbols are not yet implemented for Wasm: " +
+                               getSymbol(GV)->getName());
+    return;
+  }
+
   if (!WebAssembly::isWasmVarAddressSpace(GV->getAddressSpace())) {
     AsmPrinter::emitGlobalVariable(GV);
     return;
@@ -404,7 +411,7 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
     if (!G.hasInitializer() && G.hasExternalLinkage() &&
         !WebAssembly::isWasmVarAddressSpace(G.getAddressSpace()) &&
         G.getValueType()->isSized()) {
-      uint16_t Size = M.getDataLayout().getTypeAllocSize(G.getValueType());
+      uint16_t Size = G.getGlobalSize(M.getDataLayout());
       OutStreamer->emitELFSize(getSymbol(&G),
                                MCConstantExpr::create(Size, OutContext));
     }
@@ -441,7 +448,9 @@ void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
     llvm::SmallSet<StringRef, 4> SeenLanguages;
     for (size_t I = 0, E = Debug->getNumOperands(); I < E; ++I) {
       const auto *CU = cast<DICompileUnit>(Debug->getOperand(I));
-      StringRef Language = dwarf::LanguageString(CU->getSourceLanguage());
+      StringRef Language =
+          dwarf::LanguageString(CU->getSourceLanguage().getUnversionedName());
+
       Language.consume_front("DW_LANG_");
       if (SeenLanguages.insert(Language).second)
         Languages.emplace_back(Language.str(), "");

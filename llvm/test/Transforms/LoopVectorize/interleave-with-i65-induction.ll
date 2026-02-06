@@ -19,13 +19,13 @@ define void @i65_induction_with_negative_step(ptr %dst) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[VECTOR_RECUR]], <4 x i64> [[VEC_IND]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[VEC_IND]], <4 x i64> [[STEP_ADD]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i32 -3
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 -4
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP7]], i32 -3
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i64 -3
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i64 -4
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP7]], i64 -3
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    store <4 x i64> [[REVERSE]], ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[REVERSE1:%.*]] = shufflevector <4 x i64> [[TMP3]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    store <4 x i64> [[REVERSE]], ptr [[TMP6]], align 8
 ; CHECK-NEXT:    store <4 x i64> [[REVERSE1]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i65 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD]], splat (i64 -4)
@@ -33,19 +33,6 @@ define void @i65_induction_with_negative_step(ptr %dst) {
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV_I65:%.*]] = phi i65 [ 0, %[[SCALAR_PH]] ], [ [[IV_I65_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[FOR:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[TRUNC:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TRUNC]] = trunc i65 [[IV_I65]] to i64
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[DST]], i64 [[TRUNC]]
-; CHECK-NEXT:    store i64 [[FOR]], ptr [[GEP]], align 8
-; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i64 [[IV_NEXT]], 1000
-; CHECK-NEXT:    [[IV_I65_NEXT]] = add i65 [[IV_I65]], -1
-; CHECK-NEXT:    br i1 [[ICMP]], label %[[EXIT]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

@@ -215,6 +215,8 @@ TEST_F(QualifierFixerTest, RightQualifier) {
                Style);
   verifyFormat("void foo() const override;", Style);
   verifyFormat("void foo() const override LLVM_READONLY;", Style);
+  verifyFormat("MOCK_METHOD(ReturnType, myMethod, (int), (const override));",
+               Style);
   verifyFormat("void foo() const final;", Style);
   verifyFormat("void foo() const final LLVM_READONLY;", Style);
   verifyFormat("void foo() const LLVM_READONLY;", Style);
@@ -1192,6 +1194,41 @@ TEST_F(QualifierFixerTest, QualifiersBrokenUpByPPDirectives) {
                "    constexpr\n"
                "#endif\n"
                "    int i = 0;",
+               Style);
+}
+
+TEST_F(QualifierFixerTest, QualifierOrderingAfterPreprocessorDirectives) {
+  auto Style = getLLVMStyle();
+  Style.QualifierAlignment = FormatStyle::QAS_Custom;
+  Style.QualifierOrder = {"static", "inline", "const", "type"};
+
+  verifyFormat("#if 1\n"
+               "void foo(const int par);\n"
+               "const int var1;\n"
+               "#endif\n"
+               "\n"
+               "const int var2;\n"
+               "const int var3;",
+               "#if 1\n"
+               "void foo(int const par);\n"
+               "int const var1;\n"
+               "#endif\n"
+               "\n"
+               "int const var2;\n"
+               "int const var3;",
+               Style);
+  verifyFormat("#if defined(FOO)\n"
+               "static const int x = 1;\n"
+               "#else\n"
+               "static const int x = 2;\n"
+               "#endif\n"
+               "static const int y = 3;",
+               "#if defined(FOO)\n"
+               "const static int x = 1;\n"
+               "#else\n"
+               "const static int x = 2;\n"
+               "#endif\n"
+               "const static int y = 3;",
                Style);
 }
 

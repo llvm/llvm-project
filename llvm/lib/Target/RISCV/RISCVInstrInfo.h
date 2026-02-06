@@ -25,6 +25,25 @@
 
 namespace llvm {
 
+// If Value is of the form C1<<C2, where C1 = 3, 5 or 9,
+// returns log2(C1 - 1) and assigns Shift = C2.
+// Otherwise, returns 0.
+template <typename T> int isShifted359(T Value, int &Shift) {
+  if (Value == 0)
+    return 0;
+  Shift = llvm::countr_zero(Value);
+  switch (Value >> Shift) {
+  case 3:
+    return 1;
+  case 5:
+    return 2;
+  case 9:
+    return 3;
+  default:
+    return 0;
+  }
+}
+
 class RISCVSubtarget;
 
 static const MachineMemOperand::Flags MONontemporalBit0 =
@@ -44,7 +63,7 @@ enum CondCode {
   COND_INVALID
 };
 
-CondCode getOppositeBranchCondition(CondCode);
+CondCode getInverseBranchCondition(CondCode);
 unsigned getBrCond(CondCode CC, unsigned SelectOpc = 0);
 
 } // end of namespace RISCVCC
@@ -60,9 +79,12 @@ enum RISCVMachineCombinerPattern : unsigned {
 };
 
 class RISCVInstrInfo : public RISCVGenInstrInfo {
+  const RISCVRegisterInfo RegInfo;
 
 public:
   explicit RISCVInstrInfo(const RISCVSubtarget &STI);
+
+  const RISCVRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
   MCInst getNop() const override;
 
@@ -75,7 +97,7 @@ public:
   Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
                               TypeSize &MemBytes) const override;
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI) const override;
 
   bool shouldBreakCriticalEdgeToSink(MachineInstr &MI) const override {
     return MI.getOpcode() == RISCV::ADDI && MI.getOperand(1).isReg() &&
@@ -94,13 +116,14 @@ public:
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
       bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+
+      Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DstReg,
-      int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   using TargetInstrInfo::foldMemoryOperandImpl;
@@ -110,6 +133,11 @@ public:
                                       int FrameIndex,
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
+
+  MachineInstr *foldMemoryOperandImpl(
+      MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
+      MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
+      LiveIntervals *LIS = nullptr) const override;
 
   // Materializes the given integer Val into DstReg.
   void movImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
@@ -146,10 +174,6 @@ public:
 
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
-
-  bool analyzeSelect(const MachineInstr &MI,
-                     SmallVectorImpl<MachineOperand> &Cond, unsigned &TrueOp,
-                     unsigned &FalseOp, bool &Optimizable) const override;
 
   MachineInstr *optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
@@ -208,6 +232,7 @@ public:
 
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
+  bool analyzeCandidate(outliner::Candidate &C) const;
   // Calculate target-specific information for a set of outlining candidates.
   std::optional<std::unique_ptr<outliner::OutlinedFunction>>
   getOutliningCandidateInfo(
@@ -302,6 +327,10 @@ public:
 
   bool isHighLatencyDef(int Opc) const override;
 
+  /// Return true if \p MI is a COPY to a vector register of a specific \p LMul,
+  /// or any kind of vector registers when \p LMul is zero.
+  bool isVRegCopy(const MachineInstr *MI, unsigned LMul = 0) const;
+
   /// Return true if pairing the given load or store may be paired with another.
   static bool isPairableLdStInstOpc(unsigned Opc);
 
@@ -340,6 +369,9 @@ namespace RISCV {
 // Returns true if the given MI is an RVV instruction opcode for which we may
 // expect to see a FrameIndex operand.
 bool isRVVSpill(const MachineInstr &MI);
+
+/// Return true if \p MI is a copy that will be lowered to one or more vmvNr.vs.
+bool isVectorCopy(const TargetRegisterInfo *TRI, const MachineInstr &MI);
 
 std::optional<std::pair<unsigned, unsigned>>
 isRVVSpillForZvlsseg(unsigned Opcode);
@@ -385,6 +417,9 @@ namespace RISCVVPseudosTable {
 struct PseudoInfo {
   uint16_t Pseudo;
   uint16_t BaseInstr;
+  uint16_t VLMul : 3;
+  uint16_t SEW : 8;
+  uint16_t IsAltFmt : 1;
 };
 
 #define GET_RISCVVPseudosTable_DECL

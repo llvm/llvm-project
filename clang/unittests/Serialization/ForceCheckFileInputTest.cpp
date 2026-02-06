@@ -9,6 +9,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/FileManager.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -122,8 +123,8 @@ export int aa = 43;
 
     Clang.setDiagnostics(Diags);
     Clang.createVirtualFileSystem(CIOpts.VFS);
-    FileManager *FM = Clang.createFileManager();
-    Clang.createSourceManager(*FM);
+    Clang.createFileManager();
+    Clang.createSourceManager();
 
     EXPECT_TRUE(Clang.createTarget());
     Clang.createPreprocessor(TU_Complete);

@@ -47,6 +47,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
+#include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
 #include <cassert>
 #include <utility>
 
@@ -142,8 +143,8 @@ struct SubGraphTraits {
   class WrappedSuccIterator
       : public iterator_adaptor_base<
             WrappedSuccIterator, BaseSuccIterator,
-            typename std::iterator_traits<BaseSuccIterator>::iterator_category,
-            NodeRef, std::ptrdiff_t, NodeRef *, NodeRef> {
+            std::iterator_traits<BaseSuccIterator>::iterator_category, NodeRef,
+            std::ptrdiff_t, NodeRef *, NodeRef> {
     SmallDenseSet<RegionNode *> *Nodes;
 
   public:
@@ -321,7 +322,7 @@ class StructurizeCFG {
 
   void collectInfos();
 
-  void insertConditions(bool Loops);
+  void insertConditions(bool Loops, SSAUpdaterBulk &PhiInserter);
 
   void simplifyConditions();
 
@@ -557,11 +558,10 @@ void StructurizeCFG::analyzeLoops(RegionNode *N) {
   } else {
     // Test for successors as back edge
     BasicBlock *BB = N->getNodeAs<BasicBlock>();
-    BranchInst *Term = cast<BranchInst>(BB->getTerminator());
-
-    for (BasicBlock *Succ : Term->successors())
-      if (Visited.count(Succ))
-        Loops[Succ] = BB;
+    if (BranchInst *Term = dyn_cast<BranchInst>(BB->getTerminator()))
+      for (BasicBlock *Succ : Term->successors())
+        if (Visited.count(Succ))
+          Loops[Succ] = BB;
   }
 }
 
@@ -593,7 +593,7 @@ void StructurizeCFG::gatherPredicates(RegionNode *N) {
 
   for (BasicBlock *P : predecessors(BB)) {
     // Ignore it if it's a branch from outside into our region entry
-    if (!ParentRegion->contains(P))
+    if (!ParentRegion->contains(P) || !dyn_cast<BranchInst>(P->getTerminator()))
       continue;
 
     Region *R = RI->getRegionFor(P);
@@ -671,10 +671,9 @@ void StructurizeCFG::collectInfos() {
 }
 
 /// Insert the missing branch conditions
-void StructurizeCFG::insertConditions(bool Loops) {
+void StructurizeCFG::insertConditions(bool Loops, SSAUpdaterBulk &PhiInserter) {
   BranchVector &Conds = Loops ? LoopConds : Conditions;
   Value *Default = Loops ? BoolTrue : BoolFalse;
-  SSAUpdater PhiInserter;
 
   for (BranchInst *Term : Conds) {
     assert(Term->isConditional());
@@ -683,8 +682,9 @@ void StructurizeCFG::insertConditions(bool Loops) {
     BasicBlock *SuccTrue = Term->getSuccessor(0);
     BasicBlock *SuccFalse = Term->getSuccessor(1);
 
-    PhiInserter.Initialize(Boolean, "");
-    PhiInserter.AddAvailableValue(Loops ? SuccFalse : Parent, Default);
+    unsigned Variable = PhiInserter.AddVariable("", Boolean);
+    PhiInserter.AddAvailableValue(Variable, Loops ? SuccFalse : Parent,
+                                  Default);
 
     BBPredicates &Preds = Loops ? LoopPreds[SuccFalse] : Predicates[SuccTrue];
 
@@ -697,7 +697,7 @@ void StructurizeCFG::insertConditions(bool Loops) {
         ParentInfo = PI;
         break;
       }
-      PhiInserter.AddAvailableValue(BB, PI.Pred);
+      PhiInserter.AddAvailableValue(Variable, BB, PI.Pred);
       Dominator.addAndRememberBlock(BB);
     }
 
@@ -706,9 +706,9 @@ void StructurizeCFG::insertConditions(bool Loops) {
       CondBranchWeights::setMetadata(*Term, ParentInfo.Weights);
     } else {
       if (!Dominator.resultIsRememberedBlock())
-        PhiInserter.AddAvailableValue(Dominator.result(), Default);
+        PhiInserter.AddAvailableValue(Variable, Dominator.result(), Default);
 
-      Term->setCondition(PhiInserter.GetValueInMiddleOfBlock(Parent));
+      PhiInserter.AddUse(Variable, &Term->getOperandUse(0));
     }
   }
 }
@@ -1401,21 +1401,29 @@ bool StructurizeCFG::makeUniformRegion(Region *R, UniformityInfo &UA) {
 /// Run the transformation for each region found
 bool StructurizeCFG::run(Region *R, DominatorTree *DT,
                          const TargetTransformInfo *TTI) {
-  if (R->isTopLevelRegion())
+  // CallBr and its corresponding direct target blocks are for now ignored by
+  // this pass. This is not a limitation for the currently intended uses cases
+  // of callbr in the AMDGPU backend.
+  // Parent and child regions are not affected by this (current) restriction.
+  // See `llvm/test/Transforms/StructurizeCFG/callbr.ll` for details.
+  if (R->isTopLevelRegion() || isa<CallBrInst>(R->getEntry()->getTerminator()))
     return false;
 
   this->DT = DT;
   this->TTI = TTI;
   Func = R->getEntry()->getParent();
-  assert(hasOnlySimpleTerminator(*Func) && "Unsupported block terminator.");
 
   ParentRegion = R;
 
   orderNodes();
   collectInfos();
   createFlow();
-  insertConditions(false);
-  insertConditions(true);
+
+  SSAUpdaterBulk PhiInserter;
+  insertConditions(false, PhiInserter);
+  insertConditions(true, PhiInserter);
+  PhiInserter.RewriteAndOptimizeAllUses(*DT);
+
   setPhiValues();
   simplifyHoistedPhis();
   simplifyConditions();

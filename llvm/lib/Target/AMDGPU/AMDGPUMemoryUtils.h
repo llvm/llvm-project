@@ -53,8 +53,6 @@ void getUsesOfLDSByFunction(const CallGraph &CG, Module &M,
                             FunctionVariableMap &kernels,
                             FunctionVariableMap &functions);
 
-bool isKernelLDS(const Function *F);
-
 LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M);
 
 /// Strip FnAttr attribute from any functions where we may have

@@ -76,6 +76,9 @@ void basic_correct_arc() {
   return copy;
 }
 
+- (void)copy:(id)sender {
+}
+
 - (void)doWork {
   _number = [[NSNumber alloc] initWithInt:5];
 }
@@ -104,7 +107,26 @@ void basic_correct_arc() {
   _number = value;
 }
 
+- (id)copyWithZone:(NSZone *)zone {
+  auto copy = adoptNS([(SomeObj *)[SomeObj allocWithZone:zone] init]);
+  [copy setValue:_number];
+  [copy setNext:_next];
+  [copy setOther:_other];
+  return copy.leakRef();
+}
+
 @end;
+
+@interface SubObj : SomeObj
+@end
+
+@implementation SubObj
+
+- (void)copy:(id)sender {
+  [super copy:sender];
+}
+
+@end
 
 RetainPtr<CVPixelBufferRef> cf_out_argument() {
   auto surface = adoptCF(IOSurfaceCreate(nullptr));
@@ -151,7 +173,7 @@ NSArray *makeArray() NS_RETURNS_RETAINED {
 
 extern Class (*getNSArrayClass)();
 NSArray *allocArrayInstance() NS_RETURNS_RETAINED {
-  return [[getNSArrayClass() alloc] init];
+  return adoptNS([[getNSArrayClass() alloc] init]).leakRef();
 }
 
 extern int (*GetObj)(CF_RETURNS_RETAINED CFTypeRef* objOut);
@@ -180,6 +202,14 @@ SomeObj* allocSomeObj() CF_RETURNS_RETAINED;
 void adopt_retainptr() {
   RetainPtr<NSObject> foo = adoptNS([[SomeObj alloc] init]);
   auto bar = adoptNS([allocSomeObj() init]);
+}
+
+CFTypeRef make_cf_obj() CF_RETURNS_RETAINED {
+  return CFArrayCreateMutable(kCFAllocatorDefault, 1);
+}
+
+void get_cf_obj(CFTypeRef* CF_RETURNS_RETAINED result) {
+  *result = CFArrayCreateMutable(kCFAllocatorDefault, 1);
 }
 
 RetainPtr<CFArrayRef> return_arg(CFArrayRef arg) {
@@ -294,7 +324,7 @@ RetainPtr<CFArrayRef> adopt_make_array() {
 }
 
 -(NSString *)make_string {
-  return [[NSString alloc] initWithUTF8String:"hello"];
+  return adoptNS([[NSString alloc] initWithUTF8String:"hello"]).leakRef();
 }
 
 -(void)local_leak_string {

@@ -18,7 +18,7 @@ namespace clang::tidy::bugprone {
 /// otherwise occur when calling ``shared_from_this``.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/incorrect-enable-shared-from-this.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/incorrect-enable-shared-from-this.html
 class IncorrectEnableSharedFromThisCheck : public ClangTidyCheck {
 public:
   IncorrectEnableSharedFromThisCheck(StringRef Name, ClangTidyContext *Context)

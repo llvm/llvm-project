@@ -61,7 +61,6 @@
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <array>
@@ -296,6 +295,7 @@ protected:
                   const Elf_Shdr &Sec, const Elf_Shdr *SymTab);
   void printDynamicReloc(const Relocation<ELFT> &R);
   void printDynamicRelocationsHelper();
+  StringRef getRelocTypeName(uint32_t Type, SmallString<32> &RelocName);
   void printRelocationsHelper(const Elf_Shdr &Sec);
   void forEachRelocationDo(
       const Elf_Shdr &Sec,
@@ -402,6 +402,15 @@ protected:
   const Elf_Shdr *SymbolVersionSection = nullptr;   // .gnu.version
   const Elf_Shdr *SymbolVersionNeedSection = nullptr; // .gnu.version_r
   const Elf_Shdr *SymbolVersionDefSection = nullptr; // .gnu.version_d
+
+  // Used for tracking the current RISCV vendor name when printing relocations.
+  // When an R_RISCV_VENDOR relocation is encountered, we record the symbol name
+  // and offset so that the immediately following R_RISCV_CUSTOM* relocation at
+  // the same offset can be resolved to its vendor-specific name. Per RISC-V
+  // psABI, R_RISCV_VENDOR must be placed immediately before the vendor-specific
+  // relocation and both must be at the same offset.
+  std::string CurrentRISCVVendorSymbol;
+  uint64_t CurrentRISCVVendorOffset = 0;
 
   std::string getFullSymbolName(const Elf_Sym &Symbol, unsigned SymIndex,
                                 DataRegion<Elf_Word> ShndxTable,
@@ -795,7 +804,7 @@ public:
   void printFileSummary(StringRef FileStr, ObjectFile &Obj,
                         ArrayRef<std::string> InputFilenames,
                         const Archive *A) override;
-  virtual void printZeroSymbolOtherField(const Elf_Sym &Symbol) const override;
+  void printZeroSymbolOtherField(const Elf_Sym &Symbol) const override;
 
   void printDefaultRelRelaReloc(const Relocation<ELFT> &R,
                                 StringRef SymbolName,
@@ -1133,179 +1142,175 @@ const EnumEntry<unsigned> C6000ElfOSABI[] = {
   {"C6000_LINUX",  "Linux C6000",      ELF::ELFOSABI_C6000_LINUX}
 };
 
+// clang-format off
 const EnumEntry<unsigned> ElfMachineType[] = {
-    ENUM_ENT(EM_NONE, "None"),
-    ENUM_ENT(EM_M32, "WE32100"),
-    ENUM_ENT(EM_SPARC, "Sparc"),
-    ENUM_ENT(EM_386, "Intel 80386"),
-    ENUM_ENT(EM_68K, "MC68000"),
-    ENUM_ENT(EM_88K, "MC88000"),
-    ENUM_ENT(EM_IAMCU, "EM_IAMCU"),
-    ENUM_ENT(EM_860, "Intel 80860"),
-    ENUM_ENT(EM_MIPS, "MIPS R3000"),
-    ENUM_ENT(EM_S370, "IBM System/370"),
-    ENUM_ENT(EM_MIPS_RS3_LE, "MIPS R3000 little-endian"),
-    ENUM_ENT(EM_PARISC, "HPPA"),
-    ENUM_ENT(EM_VPP500, "Fujitsu VPP500"),
-    ENUM_ENT(EM_SPARC32PLUS, "Sparc v8+"),
-    ENUM_ENT(EM_960, "Intel 80960"),
-    ENUM_ENT(EM_PPC, "PowerPC"),
-    ENUM_ENT(EM_PPC64, "PowerPC64"),
-    ENUM_ENT(EM_S390, "IBM S/390"),
-    ENUM_ENT(EM_SPU, "SPU"),
-    ENUM_ENT(EM_V800, "NEC V800 series"),
-    ENUM_ENT(EM_FR20, "Fujistsu FR20"),
-    ENUM_ENT(EM_RH32, "TRW RH-32"),
-    ENUM_ENT(EM_RCE, "Motorola RCE"),
-    ENUM_ENT(EM_ARM, "ARM"),
-    ENUM_ENT(EM_ALPHA, "EM_ALPHA"),
-    ENUM_ENT(EM_SH, "Hitachi SH"),
-    ENUM_ENT(EM_SPARCV9, "Sparc v9"),
-    ENUM_ENT(EM_TRICORE, "Siemens Tricore"),
-    ENUM_ENT(EM_ARC, "ARC"),
-    ENUM_ENT(EM_H8_300, "Hitachi H8/300"),
-    ENUM_ENT(EM_H8_300H, "Hitachi H8/300H"),
-    ENUM_ENT(EM_H8S, "Hitachi H8S"),
-    ENUM_ENT(EM_H8_500, "Hitachi H8/500"),
-    ENUM_ENT(EM_IA_64, "Intel IA-64"),
-    ENUM_ENT(EM_MIPS_X, "Stanford MIPS-X"),
-    ENUM_ENT(EM_COLDFIRE, "Motorola Coldfire"),
-    ENUM_ENT(EM_68HC12, "Motorola MC68HC12 Microcontroller"),
-    ENUM_ENT(EM_MMA, "Fujitsu Multimedia Accelerator"),
-    ENUM_ENT(EM_PCP, "Siemens PCP"),
-    ENUM_ENT(EM_NCPU, "Sony nCPU embedded RISC processor"),
-    ENUM_ENT(EM_NDR1, "Denso NDR1 microprocesspr"),
-    ENUM_ENT(EM_STARCORE, "Motorola Star*Core processor"),
-    ENUM_ENT(EM_ME16, "Toyota ME16 processor"),
-    ENUM_ENT(EM_ST100, "STMicroelectronics ST100 processor"),
-    ENUM_ENT(EM_TINYJ, "Advanced Logic Corp. TinyJ embedded processor"),
-    ENUM_ENT(EM_X86_64, "Advanced Micro Devices X86-64"),
-    ENUM_ENT(EM_PDSP, "Sony DSP processor"),
-    ENUM_ENT(EM_PDP10, "Digital Equipment Corp. PDP-10"),
-    ENUM_ENT(EM_PDP11, "Digital Equipment Corp. PDP-11"),
-    ENUM_ENT(EM_FX66, "Siemens FX66 microcontroller"),
-    ENUM_ENT(EM_ST9PLUS, "STMicroelectronics ST9+ 8/16 bit microcontroller"),
-    ENUM_ENT(EM_ST7, "STMicroelectronics ST7 8-bit microcontroller"),
-    ENUM_ENT(EM_68HC16, "Motorola MC68HC16 Microcontroller"),
-    ENUM_ENT(EM_68HC11, "Motorola MC68HC11 Microcontroller"),
-    ENUM_ENT(EM_68HC08, "Motorola MC68HC08 Microcontroller"),
-    ENUM_ENT(EM_68HC05, "Motorola MC68HC05 Microcontroller"),
-    ENUM_ENT(EM_SVX, "Silicon Graphics SVx"),
-    ENUM_ENT(EM_ST19, "STMicroelectronics ST19 8-bit microcontroller"),
-    ENUM_ENT(EM_VAX, "Digital VAX"),
-    ENUM_ENT(EM_CRIS, "Axis Communications 32-bit embedded processor"),
-    ENUM_ENT(EM_JAVELIN, "Infineon Technologies 32-bit embedded cpu"),
-    ENUM_ENT(EM_FIREPATH, "Element 14 64-bit DSP processor"),
-    ENUM_ENT(EM_ZSP, "LSI Logic's 16-bit DSP processor"),
-    ENUM_ENT(EM_MMIX, "Donald Knuth's educational 64-bit processor"),
-    ENUM_ENT(EM_HUANY,
-             "Harvard Universitys's machine-independent object format"),
-    ENUM_ENT(EM_PRISM, "Vitesse Prism"),
-    ENUM_ENT(EM_AVR, "Atmel AVR 8-bit microcontroller"),
-    ENUM_ENT(EM_FR30, "Fujitsu FR30"),
-    ENUM_ENT(EM_D10V, "Mitsubishi D10V"),
-    ENUM_ENT(EM_D30V, "Mitsubishi D30V"),
-    ENUM_ENT(EM_V850, "NEC v850"),
-    ENUM_ENT(EM_M32R, "Renesas M32R (formerly Mitsubishi M32r)"),
-    ENUM_ENT(EM_MN10300, "Matsushita MN10300"),
-    ENUM_ENT(EM_MN10200, "Matsushita MN10200"),
-    ENUM_ENT(EM_PJ, "picoJava"),
-    ENUM_ENT(EM_OPENRISC, "OpenRISC 32-bit embedded processor"),
-    ENUM_ENT(EM_ARC_COMPACT, "EM_ARC_COMPACT"),
-    ENUM_ENT(EM_XTENSA, "Tensilica Xtensa Processor"),
-    ENUM_ENT(EM_VIDEOCORE, "Alphamosaic VideoCore processor"),
-    ENUM_ENT(EM_TMM_GPP, "Thompson Multimedia General Purpose Processor"),
-    ENUM_ENT(EM_NS32K, "National Semiconductor 32000 series"),
-    ENUM_ENT(EM_TPC, "Tenor Network TPC processor"),
-    ENUM_ENT(EM_SNP1K, "EM_SNP1K"),
-    ENUM_ENT(EM_ST200, "STMicroelectronics ST200 microcontroller"),
-    ENUM_ENT(EM_IP2K, "Ubicom IP2xxx 8-bit microcontrollers"),
-    ENUM_ENT(EM_MAX, "MAX Processor"),
-    ENUM_ENT(EM_CR, "National Semiconductor CompactRISC"),
-    ENUM_ENT(EM_F2MC16, "Fujitsu F2MC16"),
-    ENUM_ENT(EM_MSP430, "Texas Instruments msp430 microcontroller"),
-    ENUM_ENT(EM_BLACKFIN, "Analog Devices Blackfin"),
-    ENUM_ENT(EM_SE_C33, "S1C33 Family of Seiko Epson processors"),
-    ENUM_ENT(EM_SEP, "Sharp embedded microprocessor"),
-    ENUM_ENT(EM_ARCA, "Arca RISC microprocessor"),
-    ENUM_ENT(EM_UNICORE, "Unicore"),
-    ENUM_ENT(EM_EXCESS, "eXcess 16/32/64-bit configurable embedded CPU"),
-    ENUM_ENT(EM_DXP, "Icera Semiconductor Inc. Deep Execution Processor"),
-    ENUM_ENT(EM_ALTERA_NIOS2, "Altera Nios"),
-    ENUM_ENT(EM_CRX, "National Semiconductor CRX microprocessor"),
-    ENUM_ENT(EM_XGATE, "Motorola XGATE embedded processor"),
-    ENUM_ENT(EM_C166, "Infineon Technologies xc16x"),
-    ENUM_ENT(EM_M16C, "Renesas M16C"),
-    ENUM_ENT(EM_DSPIC30F,
-             "Microchip Technology dsPIC30F Digital Signal Controller"),
-    ENUM_ENT(EM_CE, "Freescale Communication Engine RISC core"),
-    ENUM_ENT(EM_M32C, "Renesas M32C"),
-    ENUM_ENT(EM_TSK3000, "Altium TSK3000 core"),
-    ENUM_ENT(EM_RS08, "Freescale RS08 embedded processor"),
-    ENUM_ENT(EM_SHARC, "EM_SHARC"),
-    ENUM_ENT(EM_ECOG2, "Cyan Technology eCOG2 microprocessor"),
-    ENUM_ENT(EM_SCORE7, "SUNPLUS S+Core"),
-    ENUM_ENT(EM_DSP24, "New Japan Radio (NJR) 24-bit DSP Processor"),
-    ENUM_ENT(EM_VIDEOCORE3, "Broadcom VideoCore III processor"),
-    ENUM_ENT(EM_LATTICEMICO32, "Lattice Mico32"),
-    ENUM_ENT(EM_SE_C17, "Seiko Epson C17 family"),
-    ENUM_ENT(EM_TI_C6000, "Texas Instruments TMS320C6000 DSP family"),
-    ENUM_ENT(EM_TI_C2000, "Texas Instruments TMS320C2000 DSP family"),
-    ENUM_ENT(EM_TI_C5500, "Texas Instruments TMS320C55x DSP family"),
-    ENUM_ENT(EM_MMDSP_PLUS,
-             "STMicroelectronics 64bit VLIW Data Signal Processor"),
-    ENUM_ENT(EM_CYPRESS_M8C, "Cypress M8C microprocessor"),
-    ENUM_ENT(EM_R32C, "Renesas R32C series microprocessors"),
-    ENUM_ENT(EM_TRIMEDIA, "NXP Semiconductors TriMedia architecture family"),
-    ENUM_ENT(EM_HEXAGON, "Qualcomm Hexagon"),
-    ENUM_ENT(EM_8051, "Intel 8051 and variants"),
-    ENUM_ENT(EM_STXP7X, "STMicroelectronics STxP7x family"),
-    ENUM_ENT(
-        EM_NDS32,
-        "Andes Technology compact code size embedded RISC processor family"),
-    ENUM_ENT(EM_ECOG1, "Cyan Technology eCOG1 microprocessor"),
-    // FIXME: Following EM_ECOG1X definitions is dead code since EM_ECOG1X has
-    //        an identical number to EM_ECOG1.
-    ENUM_ENT(EM_ECOG1X, "Cyan Technology eCOG1X family"),
-    ENUM_ENT(EM_MAXQ30, "Dallas Semiconductor MAXQ30 Core microcontrollers"),
-    ENUM_ENT(EM_XIMO16, "New Japan Radio (NJR) 16-bit DSP Processor"),
-    ENUM_ENT(EM_MANIK, "M2000 Reconfigurable RISC Microprocessor"),
-    ENUM_ENT(EM_CRAYNV2, "Cray Inc. NV2 vector architecture"),
-    ENUM_ENT(EM_RX, "Renesas RX"),
-    ENUM_ENT(EM_METAG, "Imagination Technologies Meta processor architecture"),
-    ENUM_ENT(EM_MCST_ELBRUS,
-             "MCST Elbrus general purpose hardware architecture"),
-    ENUM_ENT(EM_ECOG16, "Cyan Technology eCOG16 family"),
-    ENUM_ENT(EM_CR16, "National Semiconductor CompactRISC 16-bit processor"),
-    ENUM_ENT(EM_ETPU, "Freescale Extended Time Processing Unit"),
-    ENUM_ENT(EM_SLE9X, "Infineon Technologies SLE9X core"),
-    ENUM_ENT(EM_L10M, "EM_L10M"),
-    ENUM_ENT(EM_K10M, "EM_K10M"),
-    ENUM_ENT(EM_AARCH64, "AArch64"),
-    ENUM_ENT(EM_AVR32, "Atmel Corporation 32-bit microprocessor family"),
-    ENUM_ENT(EM_STM8, "STMicroeletronics STM8 8-bit microcontroller"),
-    ENUM_ENT(EM_TILE64, "Tilera TILE64 multicore architecture family"),
-    ENUM_ENT(EM_TILEPRO, "Tilera TILEPro multicore architecture family"),
-    ENUM_ENT(EM_MICROBLAZE,
-             "Xilinx MicroBlaze 32-bit RISC soft processor core"),
-    ENUM_ENT(EM_CUDA, "NVIDIA CUDA architecture"),
-    ENUM_ENT(EM_TILEGX, "Tilera TILE-Gx multicore architecture family"),
-    ENUM_ENT(EM_CLOUDSHIELD, "EM_CLOUDSHIELD"),
-    ENUM_ENT(EM_COREA_1ST, "EM_COREA_1ST"),
-    ENUM_ENT(EM_COREA_2ND, "EM_COREA_2ND"),
-    ENUM_ENT(EM_ARC_COMPACT2, "EM_ARC_COMPACT2"),
-    ENUM_ENT(EM_OPEN8, "EM_OPEN8"),
-    ENUM_ENT(EM_RL78, "Renesas RL78"),
-    ENUM_ENT(EM_VIDEOCORE5, "Broadcom VideoCore V processor"),
-    ENUM_ENT(EM_78KOR, "EM_78KOR"),
-    ENUM_ENT(EM_56800EX, "EM_56800EX"),
-    ENUM_ENT(EM_AMDGPU, "EM_AMDGPU"),
-    ENUM_ENT(EM_RISCV, "RISC-V"),
-    ENUM_ENT(EM_LANAI, "EM_LANAI"),
-    ENUM_ENT(EM_BPF, "EM_BPF"),
-    ENUM_ENT(EM_VE, "NEC SX-Aurora Vector Engine"),
-    ENUM_ENT(EM_LOONGARCH, "LoongArch"),
+  ENUM_ENT(EM_NONE,          "None"),
+  ENUM_ENT(EM_M32,           "WE32100"),
+  ENUM_ENT(EM_SPARC,         "Sparc"),
+  ENUM_ENT(EM_386,           "Intel 80386"),
+  ENUM_ENT(EM_68K,           "MC68000"),
+  ENUM_ENT(EM_88K,           "MC88000"),
+  ENUM_ENT(EM_IAMCU,         "EM_IAMCU"),
+  ENUM_ENT(EM_860,           "Intel 80860"),
+  ENUM_ENT(EM_MIPS,          "MIPS R3000"),
+  ENUM_ENT(EM_S370,          "IBM System/370"),
+  ENUM_ENT(EM_MIPS_RS3_LE,   "MIPS R3000 little-endian"),
+  ENUM_ENT(EM_PARISC,        "HPPA"),
+  ENUM_ENT(EM_VPP500,        "Fujitsu VPP500"),
+  ENUM_ENT(EM_SPARC32PLUS,   "Sparc v8+"),
+  ENUM_ENT(EM_960,           "Intel 80960"),
+  ENUM_ENT(EM_PPC,           "PowerPC"),
+  ENUM_ENT(EM_PPC64,         "PowerPC64"),
+  ENUM_ENT(EM_S390,          "IBM S/390"),
+  ENUM_ENT(EM_SPU,           "SPU"),
+  ENUM_ENT(EM_V800,          "NEC V800 series"),
+  ENUM_ENT(EM_FR20,          "Fujistsu FR20"),
+  ENUM_ENT(EM_RH32,          "TRW RH-32"),
+  ENUM_ENT(EM_RCE,           "Motorola RCE"),
+  ENUM_ENT(EM_ARM,           "ARM"),
+  ENUM_ENT(EM_ALPHA,         "EM_ALPHA"),
+  ENUM_ENT(EM_SH,            "Hitachi SH"),
+  ENUM_ENT(EM_SPARCV9,       "Sparc v9"),
+  ENUM_ENT(EM_TRICORE,       "Siemens Tricore"),
+  ENUM_ENT(EM_ARC,           "ARC"),
+  ENUM_ENT(EM_H8_300,        "Hitachi H8/300"),
+  ENUM_ENT(EM_H8_300H,       "Hitachi H8/300H"),
+  ENUM_ENT(EM_H8S,           "Hitachi H8S"),
+  ENUM_ENT(EM_H8_500,        "Hitachi H8/500"),
+  ENUM_ENT(EM_IA_64,         "Intel IA-64"),
+  ENUM_ENT(EM_MIPS_X,        "Stanford MIPS-X"),
+  ENUM_ENT(EM_COLDFIRE,      "Motorola Coldfire"),
+  ENUM_ENT(EM_68HC12,        "Motorola MC68HC12 Microcontroller"),
+  ENUM_ENT(EM_MMA,           "Fujitsu Multimedia Accelerator"),
+  ENUM_ENT(EM_PCP,           "Siemens PCP"),
+  ENUM_ENT(EM_NCPU,          "Sony nCPU embedded RISC processor"),
+  ENUM_ENT(EM_NDR1,          "Denso NDR1 microprocesspr"),
+  ENUM_ENT(EM_STARCORE,      "Motorola Star*Core processor"),
+  ENUM_ENT(EM_ME16,          "Toyota ME16 processor"),
+  ENUM_ENT(EM_ST100,         "STMicroelectronics ST100 processor"),
+  ENUM_ENT(EM_TINYJ,         "Advanced Logic Corp. TinyJ embedded processor"),
+  ENUM_ENT(EM_X86_64,        "Advanced Micro Devices X86-64"),
+  ENUM_ENT(EM_PDSP,          "Sony DSP processor"),
+  ENUM_ENT(EM_PDP10,         "Digital Equipment Corp. PDP-10"),
+  ENUM_ENT(EM_PDP11,         "Digital Equipment Corp. PDP-11"),
+  ENUM_ENT(EM_FX66,          "Siemens FX66 microcontroller"),
+  ENUM_ENT(EM_ST9PLUS,       "STMicroelectronics ST9+ 8/16 bit microcontroller"),
+  ENUM_ENT(EM_ST7,           "STMicroelectronics ST7 8-bit microcontroller"),
+  ENUM_ENT(EM_68HC16,        "Motorola MC68HC16 Microcontroller"),
+  ENUM_ENT(EM_68HC11,        "Motorola MC68HC11 Microcontroller"),
+  ENUM_ENT(EM_68HC08,        "Motorola MC68HC08 Microcontroller"),
+  ENUM_ENT(EM_68HC05,        "Motorola MC68HC05 Microcontroller"),
+  ENUM_ENT(EM_SVX,           "Silicon Graphics SVx"),
+  ENUM_ENT(EM_ST19,          "STMicroelectronics ST19 8-bit microcontroller"),
+  ENUM_ENT(EM_VAX,           "Digital VAX"),
+  ENUM_ENT(EM_CRIS,          "Axis Communications 32-bit embedded processor"),
+  ENUM_ENT(EM_JAVELIN,       "Infineon Technologies 32-bit embedded cpu"),
+  ENUM_ENT(EM_FIREPATH,      "Element 14 64-bit DSP processor"),
+  ENUM_ENT(EM_ZSP,           "LSI Logic's 16-bit DSP processor"),
+  ENUM_ENT(EM_MMIX,          "Donald Knuth's educational 64-bit processor"),
+  ENUM_ENT(EM_HUANY,         "Harvard Universitys's machine-independent object format"),
+  ENUM_ENT(EM_PRISM,         "Vitesse Prism"),
+  ENUM_ENT(EM_AVR,           "Atmel AVR 8-bit microcontroller"),
+  ENUM_ENT(EM_FR30,          "Fujitsu FR30"),
+  ENUM_ENT(EM_D10V,          "Mitsubishi D10V"),
+  ENUM_ENT(EM_D30V,          "Mitsubishi D30V"),
+  ENUM_ENT(EM_V850,          "NEC v850"),
+  ENUM_ENT(EM_M32R,          "Renesas M32R (formerly Mitsubishi M32r)"),
+  ENUM_ENT(EM_MN10300,       "Matsushita MN10300"),
+  ENUM_ENT(EM_MN10200,       "Matsushita MN10200"),
+  ENUM_ENT(EM_PJ,            "picoJava"),
+  ENUM_ENT(EM_OPENRISC,      "OpenRISC 32-bit embedded processor"),
+  ENUM_ENT(EM_ARC_COMPACT,   "EM_ARC_COMPACT"),
+  ENUM_ENT(EM_XTENSA,        "Tensilica Xtensa Processor"),
+  ENUM_ENT(EM_VIDEOCORE,     "Alphamosaic VideoCore processor"),
+  ENUM_ENT(EM_TMM_GPP,       "Thompson Multimedia General Purpose Processor"),
+  ENUM_ENT(EM_NS32K,         "National Semiconductor 32000 series"),
+  ENUM_ENT(EM_TPC,           "Tenor Network TPC processor"),
+  ENUM_ENT(EM_SNP1K,         "EM_SNP1K"),
+  ENUM_ENT(EM_ST200,         "STMicroelectronics ST200 microcontroller"),
+  ENUM_ENT(EM_IP2K,          "Ubicom IP2xxx 8-bit microcontrollers"),
+  ENUM_ENT(EM_MAX,           "MAX Processor"),
+  ENUM_ENT(EM_CR,            "National Semiconductor CompactRISC"),
+  ENUM_ENT(EM_F2MC16,        "Fujitsu F2MC16"),
+  ENUM_ENT(EM_MSP430,        "Texas Instruments msp430 microcontroller"),
+  ENUM_ENT(EM_BLACKFIN,      "Analog Devices Blackfin"),
+  ENUM_ENT(EM_SE_C33,        "S1C33 Family of Seiko Epson processors"),
+  ENUM_ENT(EM_SEP,           "Sharp embedded microprocessor"),
+  ENUM_ENT(EM_ARCA,          "Arca RISC microprocessor"),
+  ENUM_ENT(EM_UNICORE,       "Unicore"),
+  ENUM_ENT(EM_EXCESS,        "eXcess 16/32/64-bit configurable embedded CPU"),
+  ENUM_ENT(EM_DXP,           "Icera Semiconductor Inc. Deep Execution Processor"),
+  ENUM_ENT(EM_ALTERA_NIOS2,  "Altera Nios"),
+  ENUM_ENT(EM_CRX,           "National Semiconductor CRX microprocessor"),
+  ENUM_ENT(EM_XGATE,         "Motorola XGATE embedded processor"),
+  ENUM_ENT(EM_C166,          "Infineon Technologies xc16x"),
+  ENUM_ENT(EM_M16C,          "Renesas M16C"),
+  ENUM_ENT(EM_DSPIC30F,      "Microchip Technology dsPIC30F Digital Signal Controller"),
+  ENUM_ENT(EM_CE,            "Freescale Communication Engine RISC core"),
+  ENUM_ENT(EM_M32C,          "Renesas M32C"),
+  ENUM_ENT(EM_TSK3000,       "Altium TSK3000 core"),
+  ENUM_ENT(EM_RS08,          "Freescale RS08 embedded processor"),
+  ENUM_ENT(EM_SHARC,         "EM_SHARC"),
+  ENUM_ENT(EM_ECOG2,         "Cyan Technology eCOG2 microprocessor"),
+  ENUM_ENT(EM_SCORE7,        "SUNPLUS S+Core"),
+  ENUM_ENT(EM_DSP24,         "New Japan Radio (NJR) 24-bit DSP Processor"),
+  ENUM_ENT(EM_VIDEOCORE3,    "Broadcom VideoCore III processor"),
+  ENUM_ENT(EM_LATTICEMICO32, "Lattice Mico32"),
+  ENUM_ENT(EM_SE_C17,        "Seiko Epson C17 family"),
+  ENUM_ENT(EM_TI_C6000,      "Texas Instruments TMS320C6000 DSP family"),
+  ENUM_ENT(EM_TI_C2000,      "Texas Instruments TMS320C2000 DSP family"),
+  ENUM_ENT(EM_TI_C5500,      "Texas Instruments TMS320C55x DSP family"),
+  ENUM_ENT(EM_MMDSP_PLUS,    "STMicroelectronics 64bit VLIW Data Signal Processor"),
+  ENUM_ENT(EM_CYPRESS_M8C,   "Cypress M8C microprocessor"),
+  ENUM_ENT(EM_R32C,          "Renesas R32C series microprocessors"),
+  ENUM_ENT(EM_TRIMEDIA,      "NXP Semiconductors TriMedia architecture family"),
+  ENUM_ENT(EM_HEXAGON,       "Qualcomm Hexagon"),
+  ENUM_ENT(EM_8051,          "Intel 8051 and variants"),
+  ENUM_ENT(EM_STXP7X,        "STMicroelectronics STxP7x family"),
+  ENUM_ENT(EM_NDS32,         "Andes Technology compact code size embedded RISC processor family"),
+  ENUM_ENT(EM_ECOG1,         "Cyan Technology eCOG1 microprocessor"),
+  // FIXME: Following EM_ECOG1X definitions is dead code since EM_ECOG1X has
+  //        an identical number to EM_ECOG1.
+  ENUM_ENT(EM_ECOG1X,        "Cyan Technology eCOG1X family"),
+  ENUM_ENT(EM_MAXQ30,        "Dallas Semiconductor MAXQ30 Core microcontrollers"),
+  ENUM_ENT(EM_XIMO16,        "New Japan Radio (NJR) 16-bit DSP Processor"),
+  ENUM_ENT(EM_MANIK,         "M2000 Reconfigurable RISC Microprocessor"),
+  ENUM_ENT(EM_CRAYNV2,       "Cray Inc. NV2 vector architecture"),
+  ENUM_ENT(EM_RX,            "Renesas RX"),
+  ENUM_ENT(EM_METAG,         "Imagination Technologies Meta processor architecture"),
+  ENUM_ENT(EM_MCST_ELBRUS,   "MCST Elbrus general purpose hardware architecture"),
+  ENUM_ENT(EM_ECOG16,        "Cyan Technology eCOG16 family"),
+  ENUM_ENT(EM_CR16,          "National Semiconductor CompactRISC 16-bit processor"),
+  ENUM_ENT(EM_ETPU,          "Freescale Extended Time Processing Unit"),
+  ENUM_ENT(EM_SLE9X,         "Infineon Technologies SLE9X core"),
+  ENUM_ENT(EM_L10M,          "EM_L10M"),
+  ENUM_ENT(EM_K10M,          "EM_K10M"),
+  ENUM_ENT(EM_AARCH64,       "AArch64"),
+  ENUM_ENT(EM_AVR32,         "Atmel Corporation 32-bit microprocessor family"),
+  ENUM_ENT(EM_STM8,          "STMicroeletronics STM8 8-bit microcontroller"),
+  ENUM_ENT(EM_TILE64,        "Tilera TILE64 multicore architecture family"),
+  ENUM_ENT(EM_TILEPRO,       "Tilera TILEPro multicore architecture family"),
+  ENUM_ENT(EM_MICROBLAZE,    "Xilinx MicroBlaze 32-bit RISC soft processor core"),
+  ENUM_ENT(EM_CUDA,          "NVIDIA CUDA architecture"),
+  ENUM_ENT(EM_TILEGX,        "Tilera TILE-Gx multicore architecture family"),
+  ENUM_ENT(EM_CLOUDSHIELD,   "EM_CLOUDSHIELD"),
+  ENUM_ENT(EM_COREA_1ST,     "EM_COREA_1ST"),
+  ENUM_ENT(EM_COREA_2ND,     "EM_COREA_2ND"),
+  ENUM_ENT(EM_ARC_COMPACT2,  "EM_ARC_COMPACT2"),
+  ENUM_ENT(EM_OPEN8,         "EM_OPEN8"),
+  ENUM_ENT(EM_RL78,          "Renesas RL78"),
+  ENUM_ENT(EM_VIDEOCORE5,    "Broadcom VideoCore V processor"),
+  ENUM_ENT(EM_78KOR,         "EM_78KOR"),
+  ENUM_ENT(EM_56800EX,       "EM_56800EX"),
+  ENUM_ENT(EM_AMDGPU,        "EM_AMDGPU"),
+  ENUM_ENT(EM_RISCV,         "RISC-V"),
+  ENUM_ENT(EM_LANAI,         "EM_LANAI"),
+  ENUM_ENT(EM_BPF,           "EM_BPF"),
+  ENUM_ENT(EM_VE,            "NEC SX-Aurora Vector Engine"),
+  ENUM_ENT(EM_LOONGARCH,     "LoongArch"),
+  ENUM_ENT(EM_INTELGT,       "Intel Graphics Technology"),
 };
+// clang-format on
 
 const EnumEntry<unsigned> ElfSymbolBindings[] = {
     {"Local",  "LOCAL",  ELF::STB_LOCAL},
@@ -1663,6 +1668,7 @@ const EnumEntry<unsigned> ElfHeaderMipsFlags[] = {
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1201, "gfx1201"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1250, "gfx1250"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1251, "gfx1251"),                          \
+  ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX1310, "gfx1310"),                          \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, "gfx9-generic"),                \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, "gfx9-4-generic"),            \
   ENUM_ENT(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, "gfx10-1-generic"),          \
@@ -3321,6 +3327,7 @@ MipsGOTParser<ELFT>::getPltSym(const Entry *E) const {
   }
 }
 
+// clang-format off
 const EnumEntry<unsigned> ElfMipsISAExtType[] = {
   {"None",                    Mips::AFL_EXT_NONE},
   {"Broadcom SB-1",           Mips::AFL_EXT_SB1},
@@ -3333,7 +3340,6 @@ const EnumEntry<unsigned> ElfMipsISAExtType[] = {
   {"Loongson 2F",             Mips::AFL_EXT_LOONGSON_2F},
   {"Loongson 3A",             Mips::AFL_EXT_LOONGSON_3A},
   {"MIPS R4650",              Mips::AFL_EXT_4650},
-  {"MIPS R5900",              Mips::AFL_EXT_5900},
   {"MIPS R10000",             Mips::AFL_EXT_10000},
   {"NEC VR4100",              Mips::AFL_EXT_4100},
   {"NEC VR4111/VR4181",       Mips::AFL_EXT_4111},
@@ -3341,8 +3347,10 @@ const EnumEntry<unsigned> ElfMipsISAExtType[] = {
   {"NEC VR5400",              Mips::AFL_EXT_5400},
   {"NEC VR5500",              Mips::AFL_EXT_5500},
   {"RMI Xlr",                 Mips::AFL_EXT_XLR},
-  {"Toshiba R3900",           Mips::AFL_EXT_3900}
+  {"Toshiba R3900",           Mips::AFL_EXT_3900},
+  {"Toshiba R5900",           Mips::AFL_EXT_5900},
 };
+// clang-format on
 
 const EnumEntry<unsigned> ElfMipsASEFlags[] = {
   {"DSP",                Mips::AFL_ASE_DSP},
@@ -3537,12 +3545,58 @@ template <class ELFT>
 void ELFDumper<ELFT>::printReloc(const Relocation<ELFT> &R, unsigned RelIndex,
                                  const Elf_Shdr &Sec, const Elf_Shdr *SymTab) {
   Expected<RelSymbol<ELFT>> Target = getRelocationTarget(R, SymTab);
-  if (!Target)
+  if (!Target) {
     reportUniqueWarning("unable to print relocation " + Twine(RelIndex) +
                         " in " + describe(Sec) + ": " +
                         toString(Target.takeError()));
-  else
-    printRelRelaReloc(R, *Target);
+    return;
+  }
+
+  // Track RISCV vendor symbol for resolving vendor-specific relocations.
+  // Per RISC-V psABI, R_RISCV_VENDOR must be placed immediately before the
+  // vendor-specific relocation at the same offset.
+  if (Obj.getHeader().e_machine == ELF::EM_RISCV) {
+    if (R.Type == ELF::R_RISCV_VENDOR) {
+      // Store vendor symbol name and offset for the next relocation.
+      CurrentRISCVVendorSymbol = Target->Name;
+      CurrentRISCVVendorOffset = R.Offset;
+    } else if (!CurrentRISCVVendorSymbol.empty()) {
+      // We have a pending vendor symbol. Clear it if this relocation doesn't
+      // form a valid pair: either the offset doesn't match or this is not a
+      // vendor-specific (CUSTOM) relocation.
+      if (R.Offset != CurrentRISCVVendorOffset ||
+          R.Type < ELF::R_RISCV_CUSTOM192 || R.Type > ELF::R_RISCV_CUSTOM255) {
+        CurrentRISCVVendorSymbol.clear();
+      }
+      // If it IS a valid CUSTOM relocation at matching offset,
+      // getRelocTypeName will use and clear the vendor symbol.
+    }
+  }
+
+  printRelRelaReloc(R, *Target);
+}
+
+template <class ELFT>
+StringRef ELFDumper<ELFT>::getRelocTypeName(uint32_t Type,
+                                            SmallString<32> &RelocName) {
+  Obj.getRelocationTypeName(Type, RelocName);
+
+  // For RISCV vendor-specific relocations, use the vendor-specific name
+  // if we have a vendor symbol from a preceding R_RISCV_VENDOR relocation.
+  // Per RISC-V psABI, R_RISCV_VENDOR must be placed immediately before the
+  // vendor-specific relocation, so we consume the vendor symbol after use.
+  if (Obj.getHeader().e_machine == ELF::EM_RISCV &&
+      Type >= ELF::R_RISCV_CUSTOM192 && Type <= ELF::R_RISCV_CUSTOM255 &&
+      !CurrentRISCVVendorSymbol.empty()) {
+    StringRef VendorRelocName =
+        getRISCVVendorRelocationTypeName(Type, CurrentRISCVVendorSymbol);
+    CurrentRISCVVendorSymbol.clear();
+    // Only use the vendor-specific name if the vendor is known.
+    // Otherwise, keep the generic R_RISCV_CUSTOM* name.
+    if (VendorRelocName != "Unknown")
+      return VendorRelocName;
+  }
+  return RelocName;
 }
 
 template <class ELFT>
@@ -3912,8 +3966,7 @@ void GNUELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
   Fields[1].Str = to_string(format_hex_no_prefix(R.Info, Width));
 
   SmallString<32> RelocName;
-  this->Obj.getRelocationTypeName(R.Type, RelocName);
-  Fields[2].Str = RelocName.c_str();
+  Fields[2].Str = this->getRelocTypeName(R.Type, RelocName);
 
   if (RelSym.Sym)
     Fields[3].Str =
@@ -6155,6 +6208,8 @@ const NoteType CoreNoteTypes[] = {
     {ELF::NT_ARM_ZA, "NT_ARM_ZA (AArch64 SME ZA registers)"},
     {ELF::NT_ARM_ZT, "NT_ARM_ZT (AArch64 SME ZT registers)"},
     {ELF::NT_ARM_FPMR, "NT_ARM_FPMR (AArch64 Floating Point Mode Register)"},
+    {ELF::NT_ARM_POE,
+     "NT_ARM_POE (AArch64 Permission Overlay Extension Registers)"},
     {ELF::NT_ARM_GCS, "NT_ARM_GCS (AArch64 Guarded Control Stack state)"},
 
     {ELF::NT_FILE, "NT_FILE (mapped files)"},
@@ -7581,12 +7636,12 @@ void LLVMELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
   if (RelSym.Sym && RelSym.Name.empty())
     SymbolName = "<null>";
   SmallString<32> RelocName;
-  this->Obj.getRelocationTypeName(R.Type, RelocName);
+  StringRef RelocTypeName = this->getRelocTypeName(R.Type, RelocName);
 
   if (opts::ExpandRelocs) {
-    printExpandedRelRelaReloc(R, SymbolName, RelocName);
+    printExpandedRelRelaReloc(R, SymbolName, RelocTypeName);
   } else {
-    printDefaultRelRelaReloc(R, SymbolName, RelocName);
+    printDefaultRelRelaReloc(R, SymbolName, RelocTypeName);
   }
 }
 
@@ -8159,6 +8214,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
             W.printHex("Offset", BBE.Offset);
             if (!BBE.CallsiteEndOffsets.empty())
               W.printList("Callsite End Offsets", BBE.CallsiteEndOffsets);
+            if (PAM.FeatEnable.BBHash)
+              W.printHex("Hash", BBE.Hash);
             W.printHex("Size", BBE.Size);
             W.printBoolean("HasReturn", BBE.hasReturn());
             W.printBoolean("HasTailCall", BBE.hasTailCall());
@@ -8190,6 +8247,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
               } else {
                 W.printNumber("Frequency", PBBE.BlockFreq.getFrequency());
               }
+              if (PAM.FeatEnable.PostLinkCfg)
+                W.printNumber("PostLink Frequency", PBBE.PostLinkBlockFreq);
             }
 
             if (PAM.FeatEnable.BrProb) {
@@ -8202,6 +8261,8 @@ void LLVMELFDumper<ELFT>::printBBAddrMaps(bool PrettyPGOAnalysis) {
                 } else {
                   W.printHex("Probability", Succ.Prob.getNumerator());
                 }
+                if (PAM.FeatEnable.PostLinkCfg)
+                  W.printNumber("PostLink Probability", Succ.PostLinkFreq);
               }
             }
           }

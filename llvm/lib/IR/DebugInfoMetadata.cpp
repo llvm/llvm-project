@@ -839,7 +839,7 @@ DISubrangeType::convertRawToBound(Metadata *IN) const {
     return BoundType();
 
   assert(isa<ConstantAsMetadata>(IN) || isa<DIVariable>(IN) ||
-         isa<DIExpression>(IN));
+         isa<DIExpression>(IN) || isa<DIDerivedType>(IN));
 
   if (auto *MD = dyn_cast<ConstantAsMetadata>(IN))
     return BoundType(cast<ConstantInt>(MD->getValue()));
@@ -849,6 +849,9 @@ DISubrangeType::convertRawToBound(Metadata *IN) const {
 
   if (auto *MD = dyn_cast<DIExpression>(IN))
     return BoundType(MD);
+
+  if (auto *DT = dyn_cast<DIDerivedType>(IN))
+    return BoundType(DT);
 
   return BoundType();
 }
@@ -872,15 +875,18 @@ DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, const APInt &Value,
 DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
                                   MDString *Name, Metadata *SizeInBits,
                                   uint32_t AlignInBits, unsigned Encoding,
-                                  uint32_t NumExtraInhabitants, DIFlags Flags,
+                                  uint32_t NumExtraInhabitants,
+                                  uint32_t DataSizeInBits, DIFlags Flags,
                                   StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIBasicType, (Tag, Name, SizeInBits, AlignInBits,
-                                      Encoding, NumExtraInhabitants, Flags));
+  DEFINE_GETIMPL_LOOKUP(DIBasicType,
+                        (Tag, Name, SizeInBits, AlignInBits, Encoding,
+                         NumExtraInhabitants, DataSizeInBits, Flags));
   Metadata *Ops[] = {nullptr, nullptr, Name, SizeInBits, nullptr};
-  DEFINE_GETIMPL_STORE(DIBasicType,
-                       (Tag, AlignInBits, Encoding, NumExtraInhabitants, Flags),
-                       Ops);
+  DEFINE_GETIMPL_STORE(
+      DIBasicType,
+      (Tag, AlignInBits, Encoding, NumExtraInhabitants, DataSizeInBits, Flags),
+      Ops);
 }
 
 std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
@@ -959,16 +965,29 @@ DIType *DIDerivedType::getClassType() const {
   assert(getTag() == dwarf::DW_TAG_ptr_to_member_type);
   return cast_or_null<DIType>(getExtraData());
 }
+
+// Helper function to extract ConstantAsMetadata from ExtraData,
+// handling extra data MDTuple unwrapping if needed.
+static ConstantAsMetadata *extractConstantMetadata(Metadata *ExtraData) {
+  Metadata *ED = ExtraData;
+  if (auto *Tuple = dyn_cast_or_null<MDTuple>(ED)) {
+    if (Tuple->getNumOperands() != 1)
+      return nullptr;
+    ED = Tuple->getOperand(0);
+  }
+  return cast_or_null<ConstantAsMetadata>(ED);
+}
+
 uint32_t DIDerivedType::getVBPtrOffset() const {
   assert(getTag() == dwarf::DW_TAG_inheritance);
-  if (auto *CM = cast_or_null<ConstantAsMetadata>(getExtraData()))
+  if (auto *CM = extractConstantMetadata(getExtraData()))
     if (auto *CI = dyn_cast_or_null<ConstantInt>(CM->getValue()))
       return static_cast<uint32_t>(CI->getZExtValue());
   return 0;
 }
 Constant *DIDerivedType::getStorageOffsetInBits() const {
   assert(getTag() == dwarf::DW_TAG_member && isBitField());
-  if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
+  if (auto *C = extractConstantMetadata(getExtraData()))
     return C->getValue();
   return nullptr;
 }
@@ -977,13 +996,13 @@ Constant *DIDerivedType::getConstant() const {
   assert((getTag() == dwarf::DW_TAG_member ||
           getTag() == dwarf::DW_TAG_variable) &&
          isStaticMember());
-  if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
+  if (auto *C = extractConstantMetadata(getExtraData()))
     return C->getValue();
   return nullptr;
 }
 Constant *DIDerivedType::getDiscriminantValue() const {
   assert(getTag() == dwarf::DW_TAG_member && !isStaticMember());
-  if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
+  if (auto *C = extractConstantMetadata(getExtraData()))
     return C->getValue();
   return nullptr;
 }
@@ -1184,9 +1203,10 @@ DIFile *DIFile::getImpl(LLVMContext &Context, MDString *Filename,
   DEFINE_GETIMPL_STORE(DIFile, (CS, Source), Ops);
 }
 DICompileUnit::DICompileUnit(LLVMContext &C, StorageType Storage,
-                             unsigned SourceLanguage, bool IsOptimized,
-                             unsigned RuntimeVersion, unsigned EmissionKind,
-                             uint64_t DWOId, bool SplitDebugInlining,
+                             DISourceLanguageName SourceLanguage,
+                             bool IsOptimized, unsigned RuntimeVersion,
+                             unsigned EmissionKind, uint64_t DWOId,
+                             bool SplitDebugInlining,
                              bool DebugInfoForProfiling, unsigned NameTableKind,
                              bool RangesBaseAddress, ArrayRef<Metadata *> Ops)
     : DIScope(C, DICompileUnitKind, Storage, dwarf::DW_TAG_compile_unit, Ops),
@@ -1199,7 +1219,7 @@ DICompileUnit::DICompileUnit(LLVMContext &C, StorageType Storage,
 }
 
 DICompileUnit *DICompileUnit::getImpl(
-    LLVMContext &Context, unsigned SourceLanguage, Metadata *File,
+    LLVMContext &Context, DISourceLanguageName SourceLanguage, Metadata *File,
     MDString *Producer, bool IsOptimized, MDString *Flags,
     unsigned RuntimeVersion, MDString *SplitDebugFilename,
     unsigned EmissionKind, Metadata *EnumTypes, Metadata *RetainedTypes,
@@ -1424,6 +1444,70 @@ bool DISubprogram::describes(const Function *F) const {
   assert(F && "Invalid function");
   return F->getSubprogram() == this;
 }
+
+template <typename ScopeT, typename NodeT>
+static ScopeT getRawRetainedNodeScopeInternal(NodeT *N) {
+  auto getScope = [](auto *N) { return N->getScope(); };
+
+  return DISubprogram::visitRetainedNode<ScopeT>(
+      N, getScope, getScope, getScope, getScope,
+      [](auto *N) { return nullptr; });
+}
+
+const DIScope *DISubprogram::getRawRetainedNodeScope(const MDNode *N) {
+  return getRawRetainedNodeScopeInternal<const DIScope *>(N);
+}
+
+DIScope *DISubprogram::getRawRetainedNodeScope(MDNode *N) {
+  return getRawRetainedNodeScopeInternal<DIScope *>(N);
+}
+
+const DILocalScope *DISubprogram::getRetainedNodeScope(const MDNode *N) {
+  return cast<DILocalScope>(getRawRetainedNodeScope(N));
+}
+
+DILocalScope *DISubprogram::getRetainedNodeScope(MDNode *N) {
+  return cast<DILocalScope>(getRawRetainedNodeScope(N));
+}
+
+void DISubprogram::cleanupRetainedNodes() {
+  // Checks if a metadata node from retainedTypes is a type not belonging to
+  // this subprogram.
+  auto IsAlienType = [this](DINode *N) {
+    auto *T = dyn_cast_or_null<DIType>(N);
+    if (!T)
+      return false;
+
+    DISubprogram *TypeSP = nullptr;
+    // The type might have been global in the previously loaded IR modules.
+    if (auto *LS = dyn_cast_or_null<DILocalScope>(T->getScope()))
+      TypeSP = LS->getSubprogram();
+
+    return this != TypeSP;
+  };
+
+  // As this is expected to be called during module loading, before
+  // stripping old or incorrect debug info, perform minimal sanity check.
+  if (!isa_and_present<MDTuple>(getRawRetainedNodes()))
+    return;
+
+  MDTuple *RetainedNodes = cast<MDTuple>(getRawRetainedNodes());
+  SmallVector<Metadata *> MDs;
+  MDs.reserve(RetainedNodes->getNumOperands());
+  for (const MDOperand &Node : RetainedNodes->operands()) {
+    // Ignore malformed retainedNodes.
+    if (Node && !isa<DINode>(Node))
+      return;
+
+    auto *N = cast_or_null<DINode>(Node);
+    if (!IsAlienType(N))
+      MDs.push_back(N);
+  }
+
+  if (MDs.size() != RetainedNodes->getNumOperands())
+    replaceRetainedNodes(MDNode::get(getContext(), MDs));
+}
+
 DILexicalBlockBase::DILexicalBlockBase(LLVMContext &C, unsigned ID,
                                        StorageType Storage,
                                        ArrayRef<Metadata *> Ops)
@@ -1768,6 +1852,7 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_bregx:
     case dwarf::DW_OP_push_object_address:
     case dwarf::DW_OP_over:
+    case dwarf::DW_OP_rot:
     case dwarf::DW_OP_consts:
     case dwarf::DW_OP_eq:
     case dwarf::DW_OP_ne:
@@ -1775,6 +1860,8 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_ge:
     case dwarf::DW_OP_lt:
     case dwarf::DW_OP_le:
+    case dwarf::DW_OP_neg:
+    case dwarf::DW_OP_abs:
       break;
     }
   }

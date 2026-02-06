@@ -3,8 +3,10 @@
 # allow the use of the `list[str]` type hint in Python 3.8
 from __future__ import annotations
 
+from collections.abc import Callable
 from functools import wraps
 from packaging import version
+import contextlib
 import ctypes
 import locale
 import os
@@ -27,6 +29,7 @@ from lldbsuite.support import funcutils
 from lldbsuite.support import temp_file
 from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbplatformutil
+from lldbsuite.test.cpu_feature import CPUFeature
 
 
 class DecorateMode:
@@ -98,11 +101,13 @@ def _match_decorator_property(expected, actual):
     return expected == actual
 
 
-def _compiler_supports(
-    compiler, flag, source="int main() {}", output_file=temp_file.OnDiskTempFile()
-):
+def _compiler_supports(compiler, flag, source="int main() {}", output_file=None):
     """Test whether the compiler supports the given flag."""
-    with output_file:
+    if output_file:
+        context = contextlib.nullcontext(output_file)
+    else:
+        context = temp_file.OnDiskTempFile()
+    with context as ctx:
         if platform.system() == "Darwin":
             compiler = "xcrun " + compiler
         try:
@@ -110,7 +115,7 @@ def _compiler_supports(
                 source,
                 compiler,
                 flag,
-                output_file.path,
+                ctx.path,
             )
             subprocess.check_call(cmd, shell=True)
         except subprocess.CalledProcessError:
@@ -646,6 +651,31 @@ def skipIfOutOfTreeDebugserver(func):
     return skipTestIfFn(is_out_of_tree_debugserver)(func)
 
 
+def skipIfOutOfTreeLibunwind(func):
+    """Decorate the item to skip tests if libunwind was not built in-tree."""
+
+    def is_out_of_tree_libunwind():
+        if not configuration.llvm_tools_dir:
+            return "out-of-tree libunwind"
+
+        # llvm_tools_dir is typically <build>/bin, so lib is a sibling.
+        llvm_lib_dir = os.path.join(
+            os.path.dirname(configuration.llvm_tools_dir), "lib"
+        )
+
+        if not os.path.isdir(llvm_lib_dir):
+            return "out-of-tree libunwind"
+
+        # Check for libunwind library (any extension).
+        for filename in os.listdir(llvm_lib_dir):
+            if filename.startswith("libunwind.") or filename.startswith("unwind."):
+                return None
+
+        return "out-of-tree libunwind"
+
+    return skipTestIfFn(is_out_of_tree_libunwind)(func)
+
+
 def skipIfRemote(func):
     """Decorate the item to skip tests if testing remotely."""
     return unittest.skipIf(lldb.remote_platform, "skip on remote platform")(func)
@@ -755,9 +785,33 @@ def skipIfLinux(func):
     return skipIfPlatform(["linux"])(func)
 
 
-def skipIfWindows(func):
+def skipIfWindows(func=None, windows_version=None):
     """Decorate the item to skip tests that should be skipped on Windows."""
-    return skipIfPlatform(["windows"])(func)
+
+    def decorator(func):
+        if windows_version is None:
+            return skipIfPlatform(["windows"])(func)
+        else:
+            actual_win_version = lldbplatformutil.getWindowsVersion()
+
+            def version_check():
+                if actual_win_version == "unknown":
+                    return False
+                operator, required_windows_version = windows_version
+                return lldbplatformutil.isExpectedVersion(
+                    actual_version=actual_win_version,
+                    required_version=required_windows_version,
+                    operator=operator,
+                )
+
+            return unittest.skipIf(
+                version_check(),
+                f"Test is skipped on Windows '{actual_win_version}'",
+            )(func)
+
+    if func is not None:
+        return decorator(func)
+    return decorator
 
 
 def skipIfWindowsAndNonEnglish(func):
@@ -927,6 +981,19 @@ def skipUnlessHasCallSiteInfo(func):
     return skipTestIfFn(is_compiler_clang_with_call_site_info)(func)
 
 
+def skipUnlessCompilerIsClang(func):
+    """Decorate the item to skip test unless the compiler is clang."""
+
+    def is_compiler_clang():
+        compiler_path = lldbplatformutil.getCompiler()
+        compiler = os.path.basename(compiler_path)
+        if not compiler.startswith("clang"):
+            return "Test requires clang as compiler"
+        return None
+
+    return skipTestIfFn(is_compiler_clang)(func)
+
+
 def skipUnlessThreadSanitizer(func):
     """Decorate the item to skip test unless Clang -fsanitize=thread is supported."""
 
@@ -963,46 +1030,27 @@ def skipUnlessUndefinedBehaviorSanitizer(func):
             )
 
         # We need to write out the object into a named temp file for inspection.
-        outputf = temp_file.OnDiskTempFile()
+        with temp_file.OnDiskTempFile() as outputf:
+            # Try to compile with ubsan turned on.
+            if not _compiler_supports(
+                lldbplatformutil.getCompiler(),
+                "-fsanitize=undefined",
+                "int main() { int x = 0; return x / x; }",
+                outputf,
+            ):
+                return "Compiler cannot compile with -fsanitize=undefined"
+            if not outputf.path:
+                return "Cannot create Temp file path."
 
-        # Try to compile with ubsan turned on.
-        if not _compiler_supports(
-            lldbplatformutil.getCompiler(),
-            "-fsanitize=undefined",
-            "int main() { int x = 0; return x / x; }",
-            outputf,
-        ):
-            return "Compiler cannot compile with -fsanitize=undefined"
+            nm_bin = configuration.get_nm_path()
+            if not nm_bin:
+                return "No llvm-nm or nm binary."
 
-        # Check that we actually see ubsan instrumentation in the binary.
-        cmd = "nm %s" % outputf.path
-        with os.popen(cmd) as nm_output:
-            if "___ubsan_handle_divrem_overflow" not in nm_output.read():
+            # Check that we actually see ubsan instrumentation in the binary.
+            nm_output = subprocess.check_output([nm_bin, outputf.path], text=True)
+            if "__ubsan_handle_divrem_overflow" not in nm_output:
                 return "Division by zero instrumentation is missing"
 
-        # Find the ubsan dylib.
-        # FIXME: This check should go away once compiler-rt gains support for __ubsan_on_report.
-        cmd = (
-            "%s -fsanitize=undefined -x c - -o - -### 2>&1"
-            % lldbplatformutil.getCompiler()
-        )
-        with os.popen(cmd) as cc_output:
-            driver_jobs = cc_output.read()
-            m = re.search(r'"([^"]+libclang_rt.ubsan_osx_dynamic.dylib)"', driver_jobs)
-            if not m:
-                return "Could not find the ubsan dylib used by the driver"
-            ubsan_dylib = m.group(1)
-
-        # Check that the ubsan dylib has special monitor hooks.
-        cmd = "nm -gU %s" % ubsan_dylib
-        with os.popen(cmd) as nm_output:
-            syms = nm_output.read()
-            if "___ubsan_on_report" not in syms:
-                return "Missing ___ubsan_on_report"
-            if "___ubsan_get_current_report_data" not in syms:
-                return "Missing ___ubsan_get_current_report_data"
-
-        # OK, this dylib + compiler works for us.
         return None
 
     return skipTestIfFn(is_compiler_clang_with_ubsan)(func)
@@ -1031,6 +1079,17 @@ def skipUnlessAddressSanitizer(func):
         return None
 
     return skipTestIfFn(is_compiler_with_address_sanitizer)(func)
+
+
+def skipUnlessBoundsSafety(func):
+    """Decorate the item to skip test unless Clang -fbounds-safety is supported."""
+
+    def is_compiler_with_bounds_safety():
+        if not _compiler_supports(lldbplatformutil.getCompiler(), "-fbounds-safety"):
+            return "Compiler cannot compile with -fbounds-safety"
+        return None
+
+    return skipTestIfFn(is_compiler_with_bounds_safety)(func)
 
 
 def skipIfAsan(func):
@@ -1119,6 +1178,10 @@ def skipIfFBSDVMCoreSupportMissing(func):
     return _get_bool_config_skip_if_decorator("fbsdvmcore")(func)
 
 
+def skipIfZLIBSupportMissing(func):
+    return _get_bool_config_skip_if_decorator("zlib")(func)
+
+
 def skipIfLLVMTargetMissing(target):
     config = lldb.SBDebugger.GetBuildConfiguration()
     targets = config.GetValueForKey("targets").GetValueForKey("value")
@@ -1131,24 +1194,13 @@ def skipIfLLVMTargetMissing(target):
     return unittest.skipIf(not found, "requires " + target)
 
 
-# Call sysctl on darwin to see if a specified hardware feature is available on this machine.
-def skipUnlessFeature(feature):
-    def is_feature_enabled():
-        if platform.system() == "Darwin":
-            try:
-                output = subprocess.check_output(
-                    ["/usr/sbin/sysctl", feature], stderr=subprocess.DEVNULL
-                ).decode("utf-8")
-                # If 'feature: 1' was output, then this feature is available and
-                # the test should not be skipped.
-                if re.match(r"%s: 1\s*" % feature, output):
-                    return None
-                else:
-                    return "%s is not supported on this system." % feature
-            except subprocess.CalledProcessError:
-                return "%s is not supported on this system." % feature
+def skipUnlessFeature(cpu_feature: CPUFeature):
+    def hasFeature(test_case):
+        if not test_case.isSupported(cpu_feature):
+            return f"Unsupported CPU feature: {cpu_feature}"
+        return None
 
-    return skipTestIfFn(is_feature_enabled)
+    return skipTestIfFn(hasFeature)
 
 
 def skipIfBuildType(types: list[str]):

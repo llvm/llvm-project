@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_RETURN_BRACED_INIT_LIST_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_RETURN_BRACED_INIT_LIST_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_RETURNBRACEDINITLISTCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_RETURNBRACEDINITLISTCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -17,7 +17,7 @@ namespace clang::tidy::modernize {
 /// repeating the return type name.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/return-braced-init-list.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/return-braced-init-list.html
 class ReturnBracedInitListCheck : public ClangTidyCheck {
 public:
   ReturnBracedInitListCheck(StringRef Name, ClangTidyContext *Context)
@@ -34,4 +34,4 @@ public:
 
 } // namespace clang::tidy::modernize
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_RETURN_BRACED_INIT_LIST_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_RETURNBRACEDINITLISTCHECK_H

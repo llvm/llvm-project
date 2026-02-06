@@ -16,11 +16,8 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
-namespace llvm {
-
-namespace coro {
-
-namespace {
+using namespace llvm;
+using namespace llvm::coro;
 
 typedef SmallPtrSet<BasicBlock *, 8> VisitedBlocksSet;
 
@@ -71,7 +68,7 @@ static bool isLocalAlloca(CoroAllocaAllocInst *AI) {
 /// This happens during the all-instructions iteration, so it must not
 /// delete the call.
 static Instruction *
-lowerNonLocalAlloca(CoroAllocaAllocInst *AI, const coro::Shape &Shape,
+lowerNonLocalAlloca(CoroAllocaAllocInst *AI, const Shape &Shape,
                     SmallVectorImpl<Instruction *> &DeadInsts) {
   IRBuilder<> Builder(AI);
   auto Alloc = Shape.emitAlloc(Builder, AI->getSize(), nullptr);
@@ -450,10 +447,8 @@ static void collectFrameAlloca(AllocaInst *AI, const coro::Shape &Shape,
                        Visitor.getMayWriteBeforeCoroBegin());
 }
 
-} // namespace
-
-void collectSpillsFromArgs(SpillInfo &Spills, Function &F,
-                           const SuspendCrossingInfo &Checker) {
+void coro::collectSpillsFromArgs(SpillInfo &Spills, Function &F,
+                                 const SuspendCrossingInfo &Checker) {
   // Collect the spills for arguments and other not-materializable values.
   for (Argument &A : F.args())
     for (User *U : A.users())
@@ -461,7 +456,7 @@ void collectSpillsFromArgs(SpillInfo &Spills, Function &F,
         Spills[&A].push_back(cast<Instruction>(U));
 }
 
-void collectSpillsAndAllocasFromInsts(
+void coro::collectSpillsAndAllocasFromInsts(
     SpillInfo &Spills, SmallVector<AllocaInfo, 8> &Allocas,
     SmallVector<Instruction *, 4> &DeadInstructions,
     SmallVector<CoroAllocaAllocInst *, 4> &LocalAllocas, Function &F,
@@ -516,8 +511,8 @@ void collectSpillsAndAllocasFromInsts(
   }
 }
 
-void collectSpillsFromDbgInfo(SpillInfo &Spills, Function &F,
-                              const SuspendCrossingInfo &Checker) {
+void coro::collectSpillsFromDbgInfo(SpillInfo &Spills, Function &F,
+                                    const SuspendCrossingInfo &Checker) {
   // We don't want the layout of coroutine frame to be affected
   // by debug information. So we only choose to salvage dbg.values for
   // whose value is already in the frame.
@@ -535,10 +530,9 @@ void collectSpillsFromDbgInfo(SpillInfo &Spills, Function &F,
 
 /// Async and Retcon{Once} conventions assume that all spill uses can be sunk
 /// after the coro.begin intrinsic.
-void sinkSpillUsesAfterCoroBegin(const DominatorTree &Dom,
-                                 CoroBeginInst *CoroBegin,
-                                 coro::SpillInfo &Spills,
-                                 SmallVectorImpl<coro::AllocaInfo> &Allocas) {
+void coro::sinkSpillUsesAfterCoroBegin(
+    const DominatorTree &Dom, CoroBeginInst *CoroBegin, coro::SpillInfo &Spills,
+    SmallVectorImpl<coro::AllocaInfo> &Allocas) {
   SmallSetVector<Instruction *, 32> ToMove;
   SmallVector<Instruction *, 32> Worklist;
 
@@ -582,8 +576,9 @@ void sinkSpillUsesAfterCoroBegin(const DominatorTree &Dom,
     Inst->moveBefore(InsertPt->getIterator());
 }
 
-BasicBlock::iterator getSpillInsertionPt(const coro::Shape &Shape, Value *Def,
-                                         const DominatorTree &DT) {
+BasicBlock::iterator coro::getSpillInsertionPt(const coro::Shape &Shape,
+                                               Value *Def,
+                                               const DominatorTree &DT) {
   BasicBlock::iterator InsertPt;
   if (auto *Arg = dyn_cast<Argument>(Def)) {
     // For arguments, we will place the store instruction right after
@@ -625,7 +620,3 @@ BasicBlock::iterator getSpillInsertionPt(const coro::Shape &Shape, Value *Def,
 
   return InsertPt;
 }
-
-} // End namespace coro.
-
-} // End namespace llvm.

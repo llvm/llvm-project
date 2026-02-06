@@ -8,7 +8,6 @@
 
 #include "mlir/Conversion/XeVMToLLVM/XeVMToLLVM.h"
 
-#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -19,6 +18,7 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -68,9 +68,7 @@ std::string getTypeMangling(Type ty, bool isUnsigned = false) {
           llvm_unreachable("unhandled integer type");
         }
       })
-      .Default([](Type) -> std::string {
-        llvm_unreachable("unhandled type for mangling");
-      });
+      .DefaultUnreachable("unhandled type for mangling");
 }
 
 std::string mangle(StringRef baseName, ArrayRef<Type> types,
@@ -216,11 +214,19 @@ static std::optional<LoadCacheControl> getCacheControl(BlockLoad2dOp op) {
   return op.getCacheControl();
 }
 
+static std::optional<LoadCacheControl> getCacheControl(BlockLoadOp op) {
+  return op.getCacheControl();
+}
+
 static std::optional<LoadCacheControl> getCacheControl(BlockPrefetch2dOp op) {
   return op.getCacheControl();
 }
 
 static std::optional<StoreCacheControl> getCacheControl(BlockStore2dOp op) {
+  return op.getCacheControl();
+}
+
+static std::optional<StoreCacheControl> getCacheControl(BlockStoreOp op) {
   return op.getCacheControl();
 }
 
@@ -265,6 +271,7 @@ getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
   constexpr bool isLoad = std::is_same_v<OpType, BlockLoad2dOp> ||
                           std::is_same_v<OpType, BlockPrefetch2dOp> ||
                           std::is_same_v<OpType, LLVM::LoadOp> ||
+                          std::is_same_v<OpType, BlockLoadOp> ||
                           std::is_same_v<OpType, PrefetchOp>;
   const int32_t controlKey{isLoad ? loadCacheControlKey : storeCacheControlKey};
   SmallVector<int32_t, decorationCacheControlArity> decorationsL1{
@@ -283,7 +290,7 @@ static LLVM::CallOp createDeviceFunctionCall(
     ArrayRef<Type> argTypes, ArrayRef<Value> args,
     mlir::ArrayRef<std::pair<unsigned, mlir::StringRef>> paramAttrs,
     LLVMFuncAttributeOptions funcAttributeOptions, Operation *op) {
-  auto moduleOp = op->getParentWithTrait<OpTrait::SymbolTable>();
+  auto *moduleOp = op->getParentWithTrait<OpTrait::SymbolTable>();
   assert(moduleOp && "Expecting module");
   Location loc = op->getLoc();
 
@@ -394,7 +401,10 @@ class MMAToOCLPattern : public OpConversionPattern<xevm::MMAOp> {
     auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
         /*other=*/LLVM::ModRefInfo::NoModRef,
         /*argMem=*/LLVM::ModRefInfo::NoModRef,
-        /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef);
+        /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef,
+        /*errnoMem=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem0=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
     auto funcAttrs = convergentNoUnwindWillReturnAttrs;
     funcAttrs.memEffectsAttr = memAttr;
     Value result =
@@ -443,7 +453,10 @@ class PrefetchToOCLPattern : public OpConversionPattern<PrefetchOp> {
     auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
         /*other=*/LLVM::ModRefInfo::NoModRef,
         /*argMem=*/LLVM::ModRefInfo::Ref,
-        /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef);
+        /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef,
+        /*errnoMem=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem0=*/LLVM::ModRefInfo::NoModRef,
+        /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
     funcAttr.memEffectsAttr = memAttr;
 
     LLVM::CallOp call = createDeviceFunctionCall(
@@ -549,7 +562,10 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
       auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
           /*other=*/LLVM::ModRefInfo::NoModRef,
           /*argMem=*/LLVM::ModRefInfo::Ref,
-          /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef);
+          /*inaccessibleMem=*/LLVM::ModRefInfo::NoModRef,
+          /*errnoMem=*/LLVM::ModRefInfo::NoModRef,
+          /*targetMem0=*/LLVM::ModRefInfo::NoModRef,
+          /*targetMem1=*/LLVM::ModRefInfo::NoModRef);
       funcAttr = noUnwindAttrs;
       funcAttr.memEffectsAttr = memAttr;
     } else {
@@ -620,6 +636,77 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
     return success();
   }
 };
+
+template <typename OpType>
+class BlockLoadStore1DToOCLPattern : public OpConversionPattern<OpType> {
+  using OpConversionPattern<OpType>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(OpType op, typename OpType::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    constexpr bool isStore = std::is_same_v<OpType, xevm::BlockStoreOp>;
+    // Get OpenCL function name
+    // https://registry.khronos.org/OpenCL/extensions/
+    //         intel/cl_intel_subgroup_local_block_io.html
+    std::string funcName{"intel_sub_group_block_"};
+    // Value or Result type can be vector or scalar
+    Type valOrResTy;
+    if constexpr (isStore) {
+      funcName += "write_u";
+      valOrResTy = op.getVal().getType();
+    } else {
+      funcName += "read_u";
+      valOrResTy = op.getType();
+    }
+    // Get element type of the vector/scalar
+    VectorType vecTy = dyn_cast<VectorType>(valOrResTy);
+    Type elemType = vecTy ? vecTy.getElementType() : valOrResTy;
+    funcName += getTypeMangling(elemType);
+    if (vecTy)
+      funcName += std::to_string(vecTy.getNumElements());
+    SmallVector<Type, 2> argTypes{};
+    // XeVM BlockLoad/StoreOp always use signless integer types
+    // but OpenCL builtins expect unsigned types
+    // use unsigned types for mangling
+    SmallVector<bool, 2> isUnsigned{};
+    // arg0: pointer to the src/dst address
+    // arg1 - only if store : vector to store
+    // Prepare arguments
+    SmallVector<Value, 2> args{};
+    args.push_back(op.getPtr());
+    argTypes.push_back(op.getPtr().getType());
+    isUnsigned.push_back(true);
+    Type retType;
+    if constexpr (isStore) {
+      args.push_back(op.getVal());
+      argTypes.push_back(op.getVal().getType());
+      isUnsigned.push_back(true);
+      retType = LLVM::LLVMVoidType::get(rewriter.getContext());
+    } else {
+      retType = valOrResTy;
+    }
+    funcName = std::string("_Z") + std::to_string(funcName.size()) + funcName +
+               "PU3AS" +
+               std::to_string(op.getPtr().getType().getAddressSpace());
+    funcName += getTypeMangling(elemType, /*isUnsigned=*/true);
+    if constexpr (isStore)
+      funcName += getTypeMangling(valOrResTy, /*isUnsigned=*/true);
+    LLVMFuncAttributeOptions funcAttr{noUnwindWillReturnAttrs};
+
+    LLVM::CallOp call =
+        createDeviceFunctionCall(rewriter, funcName, retType, argTypes, args,
+                                 {}, funcAttr, op.getOperation());
+    if (std::optional<ArrayAttr> optCacheControls =
+            getCacheControlMetadata(rewriter, op)) {
+      call->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
+    }
+    if constexpr (isStore)
+      rewriter.eraseOp(op);
+    else
+      rewriter.replaceOp(op, call->getResult(0));
+    return success();
+  }
+};
+
 template <typename OpType>
 class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
   using OpConversionPattern<OpType>::OpConversionPattern;
@@ -632,6 +719,274 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
         getCacheControlMetadata(rewriter, op);
     op->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
     op->removeAttr("cache_control");
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// GPU index id operations
+//===----------------------------------------------------------------------===//
+/*
+// Launch Config ops
+//   dimidx - x, y, z - is fixed to i32
+//   return type is set by XeVM type converter
+// get_local_id
+xevm::WorkitemIdXOp;
+xevm::WorkitemIdYOp;
+xevm::WorkitemIdZOp;
+// get_local_size
+xevm::WorkgroupDimXOp;
+xevm::WorkgroupDimYOp;
+xevm::WorkgroupDimZOp;
+// get_group_id
+xevm::WorkgroupIdXOp;
+xevm::WorkgroupIdYOp;
+xevm::WorkgroupIdZOp;
+// get_num_groups
+xevm::GridDimXOp;
+xevm::GridDimYOp;
+xevm::GridDimZOp;
+// get_global_id : to be added if needed
+*/
+
+// Helpers to get the OpenCL function name and dimension argument for each op.
+static std::pair<StringRef, int64_t> getConfig(xevm::WorkitemIdXOp) {
+  return {"get_local_id", 0};
+}
+static std::pair<StringRef, int64_t> getConfig(xevm::WorkitemIdYOp) {
+  return {"get_local_id", 1};
+}
+static std::pair<StringRef, int64_t> getConfig(xevm::WorkitemIdZOp) {
+  return {"get_local_id", 2};
+}
+static std::pair<StringRef, int64_t> getConfig(xevm::WorkgroupDimXOp) {
+  return {"get_local_size", 0};
+}
+static std::pair<StringRef, int64_t> getConfig(xevm::WorkgroupDimYOp) {
+  return {"get_local_size", 1};
+}
+static std::pair<StringRef, int64_t> getConfig(xevm::WorkgroupDimZOp) {
+  return {"get_local_size", 2};
+}
+static std::pair<StringRef, int64_t> getConfig(xevm::WorkgroupIdXOp) {
+  return {"get_group_id", 0};
+}
+static std::pair<StringRef, int64_t> getConfig(xevm::WorkgroupIdYOp) {
+  return {"get_group_id", 1};
+}
+static std::pair<StringRef, int64_t> getConfig(xevm::WorkgroupIdZOp) {
+  return {"get_group_id", 2};
+}
+static std::pair<StringRef, int64_t> getConfig(xevm::GridDimXOp) {
+  return {"get_num_groups", 0};
+}
+static std::pair<StringRef, int64_t> getConfig(xevm::GridDimYOp) {
+  return {"get_num_groups", 1};
+}
+static std::pair<StringRef, int64_t> getConfig(xevm::GridDimZOp) {
+  return {"get_num_groups", 2};
+}
+/// Replace `xevm.*` with an `llvm.call` to the corresponding OpenCL func with
+/// a constant argument for the dimension - x, y or z.
+template <typename OpType>
+class LaunchConfigOpToOCLPattern : public OpConversionPattern<OpType> {
+  using OpConversionPattern<OpType>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(OpType op, typename OpType::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    auto [baseName, dim] = getConfig(op);
+    Type dimTy = rewriter.getI32Type();
+    Value dimVal = LLVM::ConstantOp::create(rewriter, loc, dimTy,
+                                            static_cast<int64_t>(dim));
+    std::string func = mangle(baseName, {dimTy}, {true});
+    Type resTy = op.getType();
+    auto call =
+        createDeviceFunctionCall(rewriter, func, resTy, {dimTy}, {dimVal}, {},
+                                 noUnwindWillReturnAttrs, op.getOperation());
+    constexpr auto noModRef = LLVM::ModRefInfo::NoModRef;
+    auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
+        /*other=*/noModRef,
+        /*argMem=*/noModRef, /*inaccessibleMem=*/noModRef,
+        /*errnoMem=*/noModRef,
+        /*targetMem0=*/noModRef,
+        /*targetMem1=*/noModRef);
+    call.setMemoryEffectsAttr(memAttr);
+    rewriter.replaceOp(op, call);
+    return success();
+  }
+};
+
+/*
+// Subgroup ops
+// get_sub_group_local_id
+xevm::LaneIdOp;
+// get_sub_group_id
+xevm::SubgroupIdOp;
+// get_sub_group_size
+xevm::SubgroupSizeOp;
+// get_num_sub_groups : to be added if needed
+*/
+
+// Helpers to get the OpenCL function name for each op.
+static StringRef getConfig(xevm::LaneIdOp) { return "get_sub_group_local_id"; }
+static StringRef getConfig(xevm::SubgroupIdOp) { return "get_sub_group_id"; }
+static StringRef getConfig(xevm::SubgroupSizeOp) {
+  return "get_sub_group_size";
+}
+template <typename OpType>
+class SubgroupOpWorkitemOpToOCLPattern : public OpConversionPattern<OpType> {
+  using OpConversionPattern<OpType>::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(OpType op, typename OpType::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    std::string func = mangle(getConfig(op).str(), {});
+    Type resTy = op.getType();
+    auto call =
+        createDeviceFunctionCall(rewriter, func, resTy, {}, {}, {},
+                                 noUnwindWillReturnAttrs, op.getOperation());
+    constexpr auto noModRef = LLVM::ModRefInfo::NoModRef;
+    auto memAttr = rewriter.getAttr<LLVM::MemoryEffectsAttr>(
+        /*other=*/noModRef,
+        /*argMem=*/noModRef, /*inaccessibleMem=*/noModRef,
+        /*errnoMem=*/noModRef,
+        /*targetMem0=*/noModRef,
+        /*targetMem1=*/noModRef);
+    call.setMemoryEffectsAttr(memAttr);
+    rewriter.replaceOp(op, call);
+    return success();
+  }
+};
+
+static bool isExtractingContiguousSlice(LLVM::ShuffleVectorOp op) {
+  if (op.getV1() != op.getV2())
+    return false;
+  auto maskAttr = op.getMask();
+  int64_t firstIndex = maskAttr[0];
+  for (int64_t i = 1; i < static_cast<int64_t>(maskAttr.size()); ++i) {
+    int64_t index = maskAttr[i];
+    if (index != firstIndex + i)
+      return false;
+  }
+  return true;
+}
+
+// Input vector of a shuffle vector op extracting a contiguous slice is an
+// illegal vector in SPIRV kernel if the vector size is > 16 elements.
+// To legalize this case, keep applying the following transformations until no
+// more match:
+//   1. keep hoisting the shuffle vector op past unary element-wise operations
+//       start with fpext, fptrunc and bitcast for now.
+//   2. merge with another shuffle vector op
+//   3. merge with load as a smaller load
+class HandleVectorExtractPattern
+    : public OpRewritePattern<LLVM::ShuffleVectorOp> {
+  using OpRewritePattern<LLVM::ShuffleVectorOp>::OpRewritePattern;
+
+  void initialize() { setHasBoundedRewriteRecursion(); }
+
+  LogicalResult matchAndRewrite(LLVM::ShuffleVectorOp op,
+                                PatternRewriter &rewriter) const override {
+
+    if (!isExtractingContiguousSlice(op))
+      return failure();
+
+    auto mask = op.getMask();
+    auto loc = op.getLoc();
+    auto ty = op.getType();
+    // Check source operand to determine rewrite pattern.
+    auto src = op.getV1();
+    // 1. Hoist past unary element-wise operations
+    if (auto srcOp = src.getDefiningOp()) {
+      if (isa<LLVM::FPExtOp>(srcOp) || isa<LLVM::FPTruncOp>(srcOp)) {
+        Value srcInput = srcOp->getOperand(0);
+        // Create new shuffle vector op with unary input as source.
+        auto srcVecTy = dyn_cast<VectorType>(srcInput.getType());
+        auto newShuffleVecTy =
+            VectorType::get(mask.size(), srcVecTy.getElementType());
+        auto newShuffle = LLVM::ShuffleVectorOp::create(
+            rewriter, loc, newShuffleVecTy, srcInput, srcInput, mask);
+        // Create new unary op with new shuffle as input.
+        Value newUnaryOp;
+        if (isa<LLVM::FPExtOp>(srcOp)) {
+          newUnaryOp = LLVM::FPExtOp::create(rewriter, loc, ty, newShuffle);
+        } else {
+          newUnaryOp = LLVM::FPTruncOp::create(rewriter, loc, ty, newShuffle);
+        }
+        rewriter.replaceOp(op, newUnaryOp);
+      } else if (isa<LLVM::BitcastOp>(srcOp)) {
+        Value srcInput = srcOp->getOperand(0);
+        // Create new shuffle vector op with unary input as source.
+        auto srcInputVecTy = dyn_cast<VectorType>(srcInput.getType());
+        auto srcInputSize = srcInputVecTy.getNumElements();
+        auto srcResVecTy = dyn_cast<VectorType>(srcOp->getResult(0).getType());
+        auto srcResSize = srcResVecTy.getNumElements();
+        auto maskSize = static_cast<int32_t>(mask.size());
+        if (srcInputSize > srcResSize) {
+          return failure();
+        }
+        if (srcResSize % srcInputSize != 0) {
+          return failure();
+        }
+        auto maskScale = srcResSize / srcInputSize;
+        if (maskScale != 1) {
+          if (mask[0] % maskScale != 0) {
+            return failure();
+          }
+          // Create a new mask that maps to the source vector
+          SmallVector<int32_t> newMask;
+          int32_t newMaskSize = maskSize / maskScale;
+          int32_t maskStart = mask[0] / maskScale;
+          for (int32_t i = 0; i < newMaskSize; ++i) {
+            newMask.push_back(maskStart + i);
+          }
+          mask = newMask;
+        }
+        auto newShuffleVecTy =
+            VectorType::get(srcInputSize, srcInputVecTy.getElementType());
+        auto newShuffle = LLVM::ShuffleVectorOp::create(
+            rewriter, loc, newShuffleVecTy, srcInput, srcInput, mask);
+        // Create new unary op with new shuffle as input.
+        auto newBitcast =
+            LLVM::BitcastOp::create(rewriter, loc, ty, newShuffle);
+        rewriter.replaceOp(op, newBitcast);
+      } else if (isa<LLVM::ShuffleVectorOp>(srcOp)) {
+        // 2. Merge with another shuffle vector op
+        auto srcShuffle = cast<LLVM::ShuffleVectorOp>(srcOp);
+        auto srcMask = srcShuffle.getMask();
+        SmallVector<int32_t> combinedMask;
+        for (auto index : mask) {
+          combinedMask.push_back(srcMask[index]);
+        }
+        auto newShuffle = LLVM::ShuffleVectorOp::create(
+            rewriter, loc, ty, srcShuffle.getV1(), srcShuffle.getV1(),
+            DenseI32ArrayAttr::get(rewriter.getContext(), combinedMask));
+        rewriter.replaceOp(op, newShuffle);
+      } else if (isa<LLVM::LoadOp>(srcOp)) {
+        // 3. Merge with load as a smaller load
+        auto loadOp = cast<LLVM::LoadOp>(srcOp);
+        auto loadPtr = loadOp.getAddr();
+        auto loadTy = dyn_cast<VectorType>(loadOp.getType());
+        auto elemTy = loadTy.getElementType();
+        auto firstIndex = mask[0];
+        auto newVecTy = VectorType::get(mask.size(), elemTy);
+        // GEPOp is needed if first index is not zero
+        if (firstIndex) {
+          auto newPtr = LLVM::GEPOp::create(
+              rewriter, loc,
+              LLVM::LLVMPointerType::get(rewriter.getContext(),
+                                         loadPtr.getType().getAddressSpace()),
+              elemTy, loadPtr, ArrayRef<LLVM::GEPArg>{firstIndex});
+          auto newLoad = LLVM::LoadOp::create(rewriter, loc, newVecTy, newPtr);
+          rewriter.replaceOp(op, newLoad);
+        } else {
+          auto newLoad = LLVM::LoadOp::create(rewriter, loc, newVecTy, loadPtr);
+          rewriter.replaceOp(op, newLoad);
+        }
+      } else {
+        return failure();
+      }
+    }
     return success();
   }
 };
@@ -655,28 +1010,22 @@ struct ConvertXeVMToLLVMPass
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
-  }
-};
-} // namespace
 
-//===----------------------------------------------------------------------===//
-// ConvertToLLVMPatternInterface implementation
-//===----------------------------------------------------------------------===//
-
-namespace {
-/// Implement the interface to convert XeVM to LLVM.
-struct XeVMToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
-  void loadDependentDialects(MLIRContext *context) const final {
-    context->loadDialect<LLVM::LLVMDialect>();
-  }
-
-  /// Hook for derived dialect interface to provide conversion patterns
-  /// and mark dialect legal for the conversion target.
-  void populateConvertToLLVMConversionPatterns(
-      ConversionTarget &target, LLVMTypeConverter &typeConverter,
-      RewritePatternSet &patterns) const final {
-    populateXeVMToLLVMConversionPatterns(target, patterns);
+    // Apply in-dialect lowerings to handle illegal vectors
+    {
+      RewritePatternSet vectorPatterns(&getContext());
+      vectorPatterns.add<HandleVectorExtractPattern>(&getContext());
+      GreedyRewriteConfig config{};
+      // folding can remove ops with temporary attributes used to
+      // represent LLVM metadata, so disable it here.
+      // Effectively just this single pattern is applied without any
+      // op folding patterns from dialects.
+      config.enableFolding(false);
+      // config.setMaxIterations(GreedyRewriteConfig::kNoLimit);
+      // config.setMaxNumRewrites(GreedyRewriteConfig::kNoLimit);
+      (void)applyPatternsGreedily(getOperation(), std::move(vectorPatterns),
+                                  config);
+    }
   }
 };
 } // namespace
@@ -695,11 +1044,23 @@ void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
                LoadStorePrefetchToOCLPattern<BlockPrefetch2dOp>,
                MMAToOCLPattern, MemfenceToOCLPattern, PrefetchToOCLPattern,
                LLVMLoadStoreToOCLPattern<LLVM::LoadOp>,
-               LLVMLoadStoreToOCLPattern<LLVM::StoreOp>>(patterns.getContext());
-}
-
-void ::mlir::registerConvertXeVMToLLVMInterface(DialectRegistry &registry) {
-  registry.addExtension(+[](MLIRContext *ctx, XeVMDialect *dialect) {
-    dialect->addInterfaces<XeVMToLLVMDialectInterface>();
-  });
+               LLVMLoadStoreToOCLPattern<LLVM::StoreOp>,
+               BlockLoadStore1DToOCLPattern<BlockLoadOp>,
+               BlockLoadStore1DToOCLPattern<BlockStoreOp>,
+               LaunchConfigOpToOCLPattern<WorkitemIdXOp>,
+               LaunchConfigOpToOCLPattern<WorkitemIdYOp>,
+               LaunchConfigOpToOCLPattern<WorkitemIdZOp>,
+               LaunchConfigOpToOCLPattern<WorkgroupDimXOp>,
+               LaunchConfigOpToOCLPattern<WorkgroupDimYOp>,
+               LaunchConfigOpToOCLPattern<WorkgroupDimZOp>,
+               LaunchConfigOpToOCLPattern<WorkgroupIdXOp>,
+               LaunchConfigOpToOCLPattern<WorkgroupIdYOp>,
+               LaunchConfigOpToOCLPattern<WorkgroupIdZOp>,
+               LaunchConfigOpToOCLPattern<GridDimXOp>,
+               LaunchConfigOpToOCLPattern<GridDimYOp>,
+               LaunchConfigOpToOCLPattern<GridDimZOp>,
+               SubgroupOpWorkitemOpToOCLPattern<LaneIdOp>,
+               SubgroupOpWorkitemOpToOCLPattern<SubgroupIdOp>,
+               SubgroupOpWorkitemOpToOCLPattern<SubgroupSizeOp>>(
+      patterns.getContext());
 }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_FOPEN_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_FOPEN_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECFOPENCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECFOPENCHECK_H
 
 #include "CloexecCheck.h"
 
@@ -19,7 +19,7 @@ namespace clang::tidy::android {
 /// This check only works when corresponding argument is StringLiteral. No
 /// constant propagation.
 ///
-/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-fopen.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-fopen.html
 class CloexecFopenCheck : public CloexecCheck {
 public:
   CloexecFopenCheck(StringRef Name, ClangTidyContext *Context)
@@ -30,4 +30,4 @@ public:
 
 } // namespace clang::tidy::android
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_FOPEN_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECFOPENCHECK_H

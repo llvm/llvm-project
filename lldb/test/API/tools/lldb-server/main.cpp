@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <errno.h>
+#include <fstream>
 #include <future>
 #include <inttypes.h>
 #include <memory>
@@ -265,7 +266,11 @@ int main(int argc, char **argv) {
   // Process command line args.
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
-    if (consume_front(arg, "stderr:")) {
+    if (consume_front(arg, "syncfile:")) {
+      // Write to this file to tell test framework that attaching is now
+      // possible.
+      std::ofstream(arg).close();
+    } else if (consume_front(arg, "stderr:")) {
       // Treat remainder as text to go to stderr.
       fprintf(stderr, "%s\n", arg.c_str());
     } else if (consume_front(arg, "retval:")) {

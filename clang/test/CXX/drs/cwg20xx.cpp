@@ -160,16 +160,16 @@ namespace cwg2076 { // cwg2076: 13
     foo({arg});
     foo({{arg}});
     foo({{{arg}}});
-    // since-cxx11-error@-1 {{no matching function}}
-    //   since-cxx11-note@#cwg2076-foo  {{cannot convert initializer list}}
+    // since-cxx11-error@-1 {{no matching function for call to 'foo'}}
+    //   since-cxx11-note@#cwg2076-foo {{candidate function not viable: cannot convert initializer list argument to 'const string'}}
     bar(arg);
     bar({arg});
     bar({{arg}});
-    // since-cxx11-error@-1 {{no matching function}}
-    //   since-cxx11-note@#cwg2076-bar {{cannot convert initializer list}}
+    // since-cxx11-error@-1 {{no matching function for call to 'bar'}}
+    //   since-cxx11-note@#cwg2076-bar {{candidate function not viable: cannot convert initializer list argument to 'string_view'}}
     bar({{{arg}}});
-    // since-cxx11-error@-1 {{no matching function}}
-    //   since-cxx11-note@#cwg2076-bar {{cannot convert initializer list}}
+    // since-cxx11-error@-1 {{no matching function for call to 'bar'}}
+    //   since-cxx11-note@#cwg2076-bar {{candidate function not viable: cannot convert initializer list argument to 'string_view'}}
   }
 #endif
 } // namespace cwg2076
@@ -400,6 +400,15 @@ namespace cwg2083 { // cwg2083: partial
   }
 #endif
 } // namespace cwg2083
+
+namespace cwg2084 { // cwg2084: 3.1
+struct S {
+  S();
+};
+union U {
+  S s{}; // cxx98-error {{function definition does not declare parameters}}
+} u;
+} // namespace cwg2084
 
 namespace cwg2091 { // cwg2091: 10
 template<int &> struct X;

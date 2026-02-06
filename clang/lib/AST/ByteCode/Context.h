@@ -67,9 +67,26 @@ public:
   bool evaluateCharRange(State &Parent, const Expr *SizeExpr,
                          const Expr *PtrExpr, std::string &Result);
 
+  /// Evaluate \param E and if it can be evaluated to a null-terminated string,
+  /// copy the result into \param Result.
+  bool evaluateString(State &Parent, const Expr *E, std::string &Result);
+
   /// Evalute \param E and if it can be evaluated to a string literal,
   /// run strlen() on it.
   bool evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result);
+
+  /// If \param E evaluates to a pointer the number of accessible bytes
+  /// past the pointer is estimated in \param Result as if evaluated by
+  /// the builtin function __builtin_object_size. This is a best effort
+  /// approximation, when Kind & 2 == 0 the object size is less
+  /// than or equal to the estimated size, when Kind & 2 == 1 the
+  /// true value is greater than or equal to the estimated size.
+  /// When Kind & 1 == 1 only bytes belonging to the same subobject
+  /// as the one referred to by E are considered, when Kind & 1 == 0
+  /// bytes belonging to the same storage (stack, heap allocation,
+  /// global variable) are considered.
+  bool tryEvaluateObjectSize(State &Parent, const Expr *E, unsigned Kind,
+                             uint64_t &Result);
 
   /// Returns the AST context.
   ASTContext &getASTContext() const { return Ctx; }
@@ -94,20 +111,22 @@ public:
     return classify(E->getType());
   }
 
-  bool canClassify(QualType T) {
+  bool canClassify(QualType T) const {
     if (const auto *BT = dyn_cast<BuiltinType>(T)) {
       if (BT->isInteger() || BT->isFloatingPoint())
         return true;
       if (BT->getKind() == BuiltinType::Bool)
         return true;
     }
+    if (T->isPointerOrReferenceType())
+      return true;
 
     if (T->isArrayType() || T->isRecordType() || T->isAnyComplexType() ||
         T->isVectorType())
       return false;
     return classify(T) != std::nullopt;
   }
-  bool canClassify(const Expr *E) {
+  bool canClassify(const Expr *E) const {
     if (E->isGLValue())
       return true;
     return canClassify(E->getType());

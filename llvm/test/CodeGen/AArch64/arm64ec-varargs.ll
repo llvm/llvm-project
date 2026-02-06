@@ -49,7 +49,7 @@ define void @varargs_caller() nounwind {
 ; CHECK-NEXT:    .weak_anti_dep "#varargs_callee"
 ; CHECK-NEXT:  "#varargs_callee" = varargs_callee
 ; CHECK-NEXT:    bl "#varargs_callee"
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
   call void (double, ...) @varargs_callee(double 1.0, i32 2, double 3.0, i32 4, double 5.0, <2 x double> <double 0.0, double 0.0>)
@@ -82,7 +82,7 @@ define void @varargs_many_argscalleer() nounwind {
 ; CHECK-NEXT:    mov x2, #4613937818241073152 // =0x4008000000000000
 ; CHECK-NEXT:    mov x4, sp
 ; CHECK-NEXT:    mov w5, #16 // =0x10
-; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #48] // 8-byte Spill
 ; CHECK-NEXT:    stp x9, x8, [sp]
 ; CHECK-NEXT:    stp q0, q0, [sp, #16]
 ; CHECK-NEXT:    .weak_anti_dep varargs_many_argscallee
@@ -90,7 +90,7 @@ define void @varargs_many_argscalleer() nounwind {
 ; CHECK-NEXT:    .weak_anti_dep "#varargs_many_argscallee"
 ; CHECK-NEXT:  "#varargs_many_argscallee" = varargs_many_argscallee
 ; CHECK-NEXT:    bl "#varargs_many_argscallee"
-; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
 ; CHECK-NEXT:    add sp, sp, #64
 ; CHECK-NEXT:    ret
   call <2 x double> (double, double, double, <2 x double>, <2 x double>, ...)
@@ -120,7 +120,7 @@ define void @varargs_caller_tail() nounwind {
 ; CHECK-NEXT:    .weak_anti_dep "#varargs_callee"
 ; CHECK-NEXT:  "#varargs_callee" = varargs_callee
 ; CHECK-NEXT:    bl "#varargs_callee"
-; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
 ; CHECK-NEXT:    add x4, sp, #48
 ; CHECK-NEXT:    mov x0, #4607182418800017408 // =0x3ff0000000000000
 ; CHECK-NEXT:    mov w1, #4 // =0x4

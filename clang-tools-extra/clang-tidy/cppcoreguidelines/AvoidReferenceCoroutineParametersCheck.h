@@ -18,7 +18,7 @@ namespace clang::tidy::cppcoreguidelines {
 /// longer be valid. This implements CppCoreGuideline CP.53.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/avoid-reference-coroutine-parameters.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/avoid-reference-coroutine-parameters.html
 class AvoidReferenceCoroutineParametersCheck : public ClangTidyCheck {
 public:
   AvoidReferenceCoroutineParametersCheck(StringRef Name,

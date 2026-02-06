@@ -97,7 +97,7 @@ static bool containsUnreachable(const Loop &L,
       }
     }
   }
-  return std::distance(Latch->begin(), Latch->end()) != Visited.size();
+  return Latch->size() != Visited.size();
 }
 
 /// A structure that can hold either a Simple Recurrence or a Conditional
@@ -468,8 +468,11 @@ std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
 
     // Ensure that the PHIs have exactly two uses:
     // the bit-shift, and the XOR (or a cast feeding into the XOR).
+    // Also ensure that the SimpleRecurrence's evolution doesn't have stray
+    // users.
     if (!ConditionalRecurrence.Phi->hasNUses(2) ||
-        !SimpleRecurrence.Phi->hasNUses(2))
+        !SimpleRecurrence.Phi->hasNUses(2) ||
+        SimpleRecurrence.BO->getUniqueUndroppableUser() != SimpleRecurrence.Phi)
       return "Recurrences have stray uses";
 
     // Check that the SelectInst ConditionalRecurrence.Step is conditional on

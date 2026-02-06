@@ -156,16 +156,19 @@ func.func @verifyNestedOpEqualArgs(
   // def TestNestedOpEqualArgsPattern :
   //   Pat<(OpN $b, (OpP $a, $b, $c, $d, $e, $f)), (replaceWithValue $b)>;
 
-  // CHECK: %arg1
+  // CHECK: "test.op_o"(%arg1)
   %0 = "test.op_p"(%arg0, %arg1, %arg2, %arg3, %arg4, %arg5)
     : (i32, i32, i32, i32, i32, i32) -> (i32)
   %1 = "test.op_n"(%arg1, %0) : (i32, i32) -> (i32)
+  %2 = "test.op_o"(%1) : (i32) -> (i32)
 
-  // CHECK: test.op_p
-  // CHECK: test.op_n
-  %2 = "test.op_p"(%arg0, %arg1, %arg2, %arg3, %arg4, %arg5)
+  // CHECK-NEXT: %[[P:.*]] = "test.op_p"
+  // CHECK-NEXT: %[[N:.*]] = "test.op_n"(%arg0, %[[P]])
+  // CHECK-NEXT: "test.op_o"(%[[N]])
+  %3 = "test.op_p"(%arg0, %arg1, %arg2, %arg3, %arg4, %arg5)
     : (i32, i32, i32, i32, i32, i32) -> (i32)
-  %3 = "test.op_n"(%arg0, %2) : (i32, i32) -> (i32)
+  %4 = "test.op_n"(%arg0, %3) : (i32, i32) -> (i32)
+  %5 = "test.op_o"(%4) : (i32) -> (i32)
 
   return
 }
@@ -202,6 +205,21 @@ func.func @verifyMultipleEqualArgs(
    // CHECK: test.op_p
   "test.op_p"(%arg0, %arg1, %arg2, %arg2, %arg3, %arg4) :
     (i32, i32, i32, i32 , i32, i32) -> i32
+
+  return
+}
+
+func.func @verifyEqualArgsCheckBeforeUserConstraints(%arg0: i32, %arg1: f32) {
+  // def TestEqualArgsCheckBeforeUserConstraintsPattern :
+  //   Pat<(OpQ:$op $x, $x),
+  //       (replaceWithValue $x),
+  //       [(AssertBinOpEqualArgsAndReturnTrue $op)]>;
+
+  // CHECK: "test.op_q"(%arg0, %arg1)
+  %0 = "test.op_q"(%arg0, %arg1) : (i32, f32) -> (i32)
+
+  // CHECK: "test.op_q"(%arg1, %arg0)
+  %1 = "test.op_q"(%arg1, %arg0) : (f32, i32) -> (i32)
 
   return
 }

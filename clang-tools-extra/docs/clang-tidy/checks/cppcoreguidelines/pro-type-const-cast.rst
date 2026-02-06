@@ -16,13 +16,13 @@ attempts to change the value of that variable.
 
 Removing the ``volatile`` qualifier in C++ can have serious consequences. This
 qualifier indicates that a variable's value can change unpredictably, and
-removing it may lead to undefined behavior, optimization problems, and debugging
-challenges. It's essential to retain the ``volatile`` qualifier in situations
-where the variable's volatility is a crucial aspect of program correctness and
-reliability.
+removing it may lead to undefined behavior, optimization problems, and
+debugging challenges. It's essential to retain the ``volatile`` qualifier in
+situations where the variable's volatility is a crucial aspect of program
+correctness and reliability.
 
 This rule is part of the `Type safety (Type 3)
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Pro-type-constcast>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#pro-type-constcast>`_
 profile and `ES.50: Don’t cast away const
 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#es50-dont-cast-away-const>`_
 rule from the C++ Core Guidelines.

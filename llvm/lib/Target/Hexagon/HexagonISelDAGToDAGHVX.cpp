@@ -789,7 +789,7 @@ struct ShuffleMask {
   }
 };
 
-LLVM_ATTRIBUTE_UNUSED
+[[maybe_unused]]
 raw_ostream &operator<<(raw_ostream &OS, const ShuffleMask &SM) {
   SM.print(OS);
   return OS;
@@ -811,8 +811,8 @@ ArrayRef<int> hi(ArrayRef<int> Vuu) { return Vuu.take_back(Vuu.size() / 2); }
 MaskT vshuffvdd(ArrayRef<int> Vu, ArrayRef<int> Vv, unsigned Rt) {
   int Len = Vu.size();
   MaskT Vdd(2 * Len);
-  std::copy(Vv.begin(), Vv.end(), Vdd.begin());
-  std::copy(Vu.begin(), Vu.end(), Vdd.begin() + Len);
+  llvm::copy(Vv, Vdd.begin());
+  llvm::copy(Vu, Vdd.begin() + Len);
 
   auto Vd0 = MutableArrayRef<int>(Vdd).take_front(Len);
   auto Vd1 = MutableArrayRef<int>(Vdd).take_back(Len);
@@ -831,8 +831,8 @@ MaskT vshuffvdd(ArrayRef<int> Vu, ArrayRef<int> Vv, unsigned Rt) {
 MaskT vdealvdd(ArrayRef<int> Vu, ArrayRef<int> Vv, unsigned Rt) {
   int Len = Vu.size();
   MaskT Vdd(2 * Len);
-  std::copy(Vv.begin(), Vv.end(), Vdd.begin());
-  std::copy(Vu.begin(), Vu.end(), Vdd.begin() + Len);
+  llvm::copy(Vv, Vdd.begin());
+  llvm::copy(Vu, Vdd.begin() + Len);
 
   auto Vd0 = MutableArrayRef<int>(Vdd).take_front(Len);
   auto Vd1 = MutableArrayRef<int>(Vdd).take_back(Len);
@@ -2483,8 +2483,15 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
     }
     ++I;
 
+    // Upper bits of the vdeal/vshuff parameter that do not cover any byte in
+    // the vector are ignored. Technically, A2_tfrsi takes a signed value, which
+    // is sign-extended to 32 bit if there is no extender. The practical
+    // advantages are that signed values are smaller in common use cases and are
+    // not sensitive to the vector size.
+    int SS = SignExtend32(S, HwLog);
+
     NodeTemplate Res;
-    Results.push(Hexagon::A2_tfrsi, MVT::i32, {getConst32(S, dl)});
+    Results.push(Hexagon::A2_tfrsi, MVT::i32, {getSignedConst32(SS, dl)});
     Res.Opc = IsInc ? Hexagon::V6_vshuffvdd : Hexagon::V6_vdealvdd;
     Res.Ty = PairTy;
     Res.Ops = {OpRef::hi(Arg), OpRef::lo(Arg), OpRef::res(-1)};
@@ -2945,6 +2952,10 @@ void HexagonDAGToDAGISel::SelectV65Gather(SDNode *N) {
   case Intrinsic::hexagon_V6_vgathermhw:
   case Intrinsic::hexagon_V6_vgathermhw_128B:
     Opcode = Hexagon::V6_vgathermhw_pseudo;
+    break;
+  case Intrinsic::hexagon_V6_vgather_vscattermh:
+  case Intrinsic::hexagon_V6_vgather_vscattermh_128B:
+    Opcode = Hexagon::V6_vgather_vscatter_mh_pseudo;
     break;
   }
 

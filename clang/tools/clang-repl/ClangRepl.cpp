@@ -11,11 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Interpreter/CodeCompletion.h"
+#include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Sema.h"
@@ -85,6 +86,8 @@ static llvm::cl::list<std::string>
               llvm::cl::CommaSeparated);
 static llvm::cl::opt<bool> OptHostSupportsJit("host-supports-jit",
                                               llvm::cl::Hidden);
+static llvm::cl::opt<bool> OptHostJitTriple("host-jit-triple",
+                                            llvm::cl::Hidden);
 static llvm::cl::list<std::string> OptInputs(llvm::cl::Positional,
                                              llvm::cl::desc("[code to run]"));
 
@@ -279,10 +282,33 @@ int main(int argc, const char **argv) {
       llvm::outs() << "false\n";
     }
     return 0;
+  } else if (OptHostJitTriple) {
+    auto J = ExitOnErr(llvm::orc::LLJITBuilder().create());
+    auto T = J->getTargetTriple();
+    llvm::outs() << T.normalize() << '\n';
+    return 0;
   }
+
+  ExitOnErr(sanitizeOopArguments(argv[0]));
 
   clang::IncrementalCompilerBuilder CB;
   CB.SetCompilerArgs(ClangArgv);
+
+  auto IEB = std::make_unique<clang::IncrementalExecutorBuilder>();
+  IEB->IsOutOfProcess = !OOPExecutor.empty() || !OOPExecutorConnect.empty();
+  IEB->OOPExecutor = OOPExecutor;
+  if (!OrcRuntimePath.empty())
+    IEB->OrcRuntimePath = OrcRuntimePath;
+  else
+    CB.SetDriverCompilationCallback(IEB->UpdateOrcRuntimePathCB);
+
+  auto SizeOrErr = getSlabAllocSize(SlabAllocateSizeString);
+  if (!SizeOrErr) {
+    llvm::logAllUnhandledErrors(SizeOrErr.takeError(), llvm::errs(), "error: ");
+    return EXIT_FAILURE;
+  }
+  IEB->SlabAllocateSize = *SizeOrErr;
+  IEB->UseSharedMemory = UseSharedMemory;
 
   std::unique_ptr<clang::CompilerInstance> DeviceCI;
   if (CudaEnabled) {
@@ -296,19 +322,6 @@ int main(int argc, const char **argv) {
 
     DeviceCI = ExitOnErr(CB.CreateCudaDevice());
   }
-
-  ExitOnErr(sanitizeOopArguments(argv[0]));
-
-  clang::Interpreter::JITConfig Config;
-  Config.IsOutOfProcess = !OOPExecutor.empty() || !OOPExecutorConnect.empty();
-  Config.OOPExecutor = OOPExecutor;
-  auto SizeOrErr = getSlabAllocSize(SlabAllocateSizeString);
-  if (!SizeOrErr) {
-    llvm::logAllUnhandledErrors(SizeOrErr.takeError(), llvm::errs(), "error: ");
-    return EXIT_FAILURE;
-  }
-  Config.SlabAllocateSize = *SizeOrErr;
-  Config.UseSharedMemory = UseSharedMemory;
 
   // FIXME: Investigate if we could use runToolOnCodeWithArgs from tooling. It
   // can replace the boilerplate code for creation of the compiler instance.
@@ -342,7 +355,8 @@ int main(int argc, const char **argv) {
       ExitOnErr(Interp->LoadDynamicLibrary(CudaRuntimeLibPath.c_str()));
     }
   } else {
-    Interp = ExitOnErr(clang::Interpreter::create(std::move(CI), Config));
+    Interp =
+        ExitOnErr(clang::Interpreter::create(std::move(CI), std::move(IEB)));
   }
 
   bool HasError = false;

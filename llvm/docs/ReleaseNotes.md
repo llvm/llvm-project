@@ -59,12 +59,17 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
-* The `ptrtoaddr` instruction was introduced. This instruction returns the
-  address component of a pointer type variable but unlike `ptrtoint` does not
-  capture provenance ([#125687](https://github.com/llvm/llvm-project/pull/125687)).
+* Removed `llvm.convert.to.fp16` and `llvm.convert.from.fp16`
+  intrinsics. These are equivalent to `fptrunc` and `fpext` with half
+  with a bitcast.
+
+* "denormal-fp-math" and "denormal-fp-math-f32" string attributes were
+  migrated to first-class denormal_fpenv attribute.
 
 Changes to LLVM infrastructure
 ------------------------------
+
+* Removed TypePromoteFloat legalization from SelectionDAG
 
 Changes to building LLVM
 ------------------------
@@ -75,22 +80,16 @@ Changes to TableGen
 Changes to Interprocedural Optimizations
 ----------------------------------------
 
-* Added `-enable-machine-outliner={optimistic-pgo,conservative-pgo}` to read
-  profile data to guide the machine outliner
-  ([#154437](https://github.com/llvm/llvm-project/pull/154437)).
-
 Changes to Vectorizers
-----------------------------------------
-
-* Added initial support for copyable elements in SLP, which models copyable
-  elements as add <element>, 0, i.e. uses identity constants for missing lanes.
-* SLP vectorizer supports initial recognition of FMA/FMAD pattern
+----------------------
 
 Changes to the AArch64 Backend
 ------------------------------
 
 Changes to the AMDGPU Backend
 -----------------------------
+
+* Initial support for gfx1310
 
 Changes to the ARM Backend
 --------------------------
@@ -107,8 +106,18 @@ Changes to the Hexagon Backend
 Changes to the LoongArch Backend
 --------------------------------
 
+* DWARF fission is now compatible with linker relaxations, allowing `-gsplit-dwarf` and `-mrelax`
+  to be used together when building for the LoongArch platform.
+
 Changes to the MIPS Backend
 ---------------------------
+
+Changes to the NVPTX Backend
+----------------------------
+
+* The default SM version has been changed from `sm_30` to `sm_75`. `sm_75` is
+  the oldest GPU variant compatible with the widest range of recent major CUDA
+  Toolkit versions (11/12/13).
 
 Changes to the PowerPC Backend
 ------------------------------
@@ -116,16 +125,13 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
-* The loop vectorizer now performs tail folding by default on RISC-V, which
-  removes the need for a scalar epilogue loop. To restore the previous behaviour
-  use `-prefer-predicate-over-epilogue=scalar-epilogue`.
-* `llvm-objdump` now has basic support for switching between disassembling code
-  and data using mapping symbols such as `$x` and `$d`. Switching architectures
-  using `$x` with an architecture string suffix is not yet supported.
-* Ssctr and Smctr extensions are no longer experimental.
-* Add support for Zvfbfa (Additional BF16 vector compute support)
-* Adds experimental support for the 'Zibi` (Branch with Immediate) extension.
-* Add support for Zvfofp8min (OFP8 conversion extension)
+* `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
+* `-mcpu=spacemit-x100` was added.
+* Change P extension version to match the 019 draft specification. Encoded in `-march` as `0p19`.
+* Mnemonics for MOP/HINT-based instructions (`lpad`, `pause`, `ntl.*`, `c.ntl.*`,
+  `sspush`, `sspopchk`, `ssrdp`, `c.sspush`, `c.sspopchk`) are now always
+  available in the assembler and disassembler without requiring their respective
+  extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -133,8 +139,15 @@ Changes to the WebAssembly Backend
 Changes to the Windows Target
 -----------------------------
 
+* The `.seh_startchained` and `.seh_endchained` assembly instructions have been removed and replaced
+  with a new `.seh_splitchained` instruction.
+
 Changes to the X86 Backend
 --------------------------
+
+* `.att_syntax` directive is now emitted for assembly files when AT&T syntax is
+  in use. This matches the behaviour of Intel syntax and aids with
+  compatibility when changing the default Clang syntax to the Intel syntax.
 
 Changes to the OCaml bindings
 -----------------------------
@@ -149,25 +162,25 @@ Changes to the CodeGen infrastructure
 -------------------------------------
 
 Changes to the Metadata Info
----------------------------------
+----------------------------
 
 Changes to the Debug Info
----------------------------------
+-------------------------
 
 Changes to the LLVM tools
----------------------------------
+-------------------------
 
-* `llvm-readelf` now dumps all hex format values in lower-case mode.
-* Some code paths for supporting Python 2.7 in `llvm-lit` have been removed.
+* `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
+* `FileCheck` option `-check-prefix` now accepts a comma-separated list of
+  prefixes, making it an alias of the existing `-check-prefixes` option.
 
 Changes to LLDB
----------------------------------
+---------------
 
-* LLDB can now set breakpoints, show backtraces, and display variables when
-  debugging Wasm with supported runtimes (WAMR and V8).
+* Support for FreeBSD on MIPS64 has been removed.
 
 Changes to BOLT
----------------------------------
+---------------
 
 Changes to Sanitizers
 ---------------------
@@ -177,8 +190,6 @@ Other Changes
 
 External Open Source Projects Using LLVM {{env.config.release}}
 ===============================================================
-
-* A project...
 
 Additional Information
 ======================

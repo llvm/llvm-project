@@ -6,12 +6,6 @@ AND call SWIG_fail at the same time, because it will result in a double free.
 
 */
 
-%inline %{
-
-#include "../bindings/python/python-typemaps.h"
-
-%}
-
 %typemap(in) char ** {
   /* Check if is a list  */
   if (PythonList::Check($input)) {
@@ -224,6 +218,24 @@ AND call SWIG_fail at the same time, because it will result in a double free.
   }
   $1 = (char *)malloc($2);
 }
+
+// Disable default type checking for this method to avoid SWIG dispatch issues.
+// 
+// Problem: SBThread::GetStopDescription has two overloads:
+//   1. GetStopDescription(char* dst_or_null, size_t dst_len) 
+//   2. GetStopDescription(lldb::SBStream& stream)
+//
+// SWIG generates a dispatch function to select the correct overload based on argument types.
+// see https://www.swig.org/Doc4.0/SWIGDocumentation.html#Typemaps_overloading.
+// However, this dispatcher doesn't consider typemaps that transform function signatures.
+//
+// In Python, our typemap converts GetStopDescription(char*, size_t) to GetStopDescription(int).
+// The dispatcher still checks against the original (char*, size_t) signature instead of 
+// the transformed (int) signature, causing type matching to fail.
+// This only affects SBThread::GetStopDescription since the type check also matches 
+// the argument name, which is unique to this function.
+%typemap(typecheck, precedence=SWIG_TYPECHECK_POINTER) (char *dst_or_null, size_t dst_len) ""
+
 %typemap(argout) (char *dst_or_null, size_t dst_len) {
   Py_XDECREF($result); /* Blow away any previous result */
   llvm::StringRef ref($1);
@@ -231,6 +243,11 @@ AND call SWIG_fail at the same time, because it will result in a double free.
   $result = string.release();
   free($1);
 }
+
+
+// For lldb::SBFileSpec::GetPath
+%typemap(in) (char *dst_path, size_t dst_len) = (char *dst_or_null, size_t dst_len);
+%typemap(argout) (char *dst_path, size_t dst_len) = (char *dst_or_null, size_t dst_len);
 
 
 // typemap for an outgoing buffer
@@ -611,49 +628,34 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
   }
 }
 
-// These two pybuffer macros are copied out of swig/Lib/python/pybuffer.i,
-// and fixed so they will not crash if PyObject_GetBuffer fails.
-// https://github.com/swig/swig/issues/1640
-//
-// I've also moved the call to PyBuffer_Release to the end of the SWIG wrapper,
-// doing it right away is not legal according to the python buffer protocol.
 
-%define %pybuffer_mutable_binary(TYPEMAP, SIZE)
-%typemap(in) (TYPEMAP, SIZE) (Py_buffer_RAII view) {
-  int res;
-  Py_ssize_t size = 0;
-  void *buf = 0;
-  res = PyObject_GetBuffer($input, &view.buffer, PyBUF_WRITABLE);
-  if (res < 0) {
-    PyErr_Clear();
-    %argument_fail(res, "(TYPEMAP, SIZE)", $symname, $argnum);
+// Typemap for SBFile::Write.
+%typemap(in) (const uint8_t *buf, size_t num_bytes) {
+  if (PythonByteArray::Check($input)) {
+    PythonByteArray bytearray(PyRefType::Borrowed, $input);
+    $1 = (uint8_t *)bytearray.GetBytes().data();
+    $2 = bytearray.GetSize();
+  } else if (PythonBytes::Check($input)) {
+    PythonBytes bytes(PyRefType::Borrowed, $input);
+    $1 = (uint8_t *)bytes.GetBytes().data();
+    $2 = bytes.GetSize();
+  } else {
+    PyErr_SetString(PyExc_ValueError, "Expecting a bytes or bytearray object");
+    SWIG_fail;
   }
-  size = view.buffer.len;
-  buf = view.buffer.buf;
-  $1 = ($1_ltype)buf;
-  $2 = ($2_ltype)(size / sizeof($*1_type));
 }
-%enddef
 
-%define %pybuffer_binary(TYPEMAP, SIZE)
-%typemap(in) (TYPEMAP, SIZE) (Py_buffer_RAII view) {
-  int res;
-  Py_ssize_t size = 0;
-  const void *buf = 0;
-  res = PyObject_GetBuffer($input, &view.buffer, PyBUF_CONTIG_RO);
-  if (res < 0) {
-    PyErr_Clear();
-    %argument_fail(res, "(TYPEMAP, SIZE)", $symname, $argnum);
+// Typemap for SBFile::Read.
+%typemap(in) (uint8_t *buf, size_t num_bytes) {
+  if (PythonByteArray::Check($input)) {
+    PythonByteArray bytearray(PyRefType::Borrowed, $input);
+    $1 = (uint8_t *)bytearray.GetBytes().data();
+    $2 = bytearray.GetSize();
+  } else {
+    PyErr_SetString(PyExc_ValueError, "Expecting a bytearray");
+    SWIG_fail;
   }
-  size = view.buffer.len;
-  buf = view.buffer.buf;
-  $1 = ($1_ltype)buf;
-  $2 = ($2_ltype)(size / sizeof($*1_type));
 }
-%enddef
-
-%pybuffer_binary(const uint8_t *buf, size_t num_bytes);
-%pybuffer_mutable_binary(uint8_t *buf, size_t num_bytes);
 
 %typemap(in) (const char **symbol_name, uint32_t num_names) {
   using namespace lldb_private;

@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// different from the number of data members inside the union.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/tagged-union-member-count.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/tagged-union-member-count.html
 class TaggedUnionMemberCountCheck : public ClangTidyCheck {
 public:
   TaggedUnionMemberCountCheck(StringRef Name, ClangTidyContext *Context);

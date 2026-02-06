@@ -1,4 +1,5 @@
 // RUN: llvm-tblgen %s | FileCheck %s
+// RUN: not llvm-tblgen -DERROR1 %s 2>&1 | FileCheck --check-prefix=ERROR1 %s
 
 // CHECK: ------------- Classes -----------------
 // CHECK-NEXT: class X<int X:a = ?, int X:b = ?> {
@@ -73,3 +74,8 @@ def DYa1 : Y<"a", 1>;
 def DYa2 : Y<"a", 2>;
 
 def DZ : X<42, !size([1, 2, 3])>;
+
+#ifdef ERROR1
+// ERROR1: !listsplat count -1 is negative
+defvar E = !listsplat("", -1);
+#endif

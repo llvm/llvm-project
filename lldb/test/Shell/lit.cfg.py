@@ -33,7 +33,7 @@ config.test_format = toolchain.ShTestLldb(not use_lit_shell)
 
 # suffixes: A list of file extensions to treat as test files. This is overriden
 # by individual lit.local.cfg files in the test subdirectories.
-config.suffixes = [".test", ".cpp", ".s", ".m", ".ll"]
+config.suffixes = [".test", ".cpp", ".s", ".m", ".ll", ".c"]
 
 # excludes: A list of directories to exclude from the testsuite. The 'Inputs'
 # subdirectories contain auxiliary inputs for various tests in their parent

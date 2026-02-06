@@ -20,7 +20,7 @@ namespace clang::tidy::modernize {
 /// alternative ``std::scoped_lock``.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-scoped-lock.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-scoped-lock.html
 class UseScopedLockCheck : public ClangTidyCheck {
 public:
   UseScopedLockCheck(StringRef Name, ClangTidyContext *Context);

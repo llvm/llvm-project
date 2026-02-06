@@ -186,11 +186,11 @@ constexpr float A_2x2_5x5[] = {
 
 /// Structure to keep information of constant transform matrices.
 struct TransformMatrix {
-  TransformMatrix(const float *table, int64_t rows, int64_t cols,
+  TransformMatrix(ArrayRef<float> table, int64_t rows, int64_t cols,
                   int64_t scalarFactor = 1)
       : table(table), rows(rows), cols(cols), scalarFactor(scalarFactor) {}
 
-  const float *table;
+  ArrayRef<float> table;
   int64_t rows;
   int64_t cols;
   int64_t scalarFactor;
@@ -199,14 +199,20 @@ struct TransformMatrix {
 /// Utility function to convert constant array to arith.constant Value.
 Value create2DTransformMatrix(OpBuilder &builder, Location loc,
                               TransformMatrix transform, Type type) {
-  ArrayRef<float> constVec(transform.table, transform.rows * transform.cols);
-
+  assert(transform.table.size() ==
+         static_cast<size_t>(transform.rows * transform.cols));
+  assert(type.isFloat() && "Only floats are supported by Winograd");
+  ArrayRef<float> constVec(transform.table.data(),
+                           transform.rows * transform.cols);
+  auto constAttrVec =
+      llvm::map_to_vector<>(constVec, [&](const float v) -> Attribute {
+        return builder.getFloatAttr(type, v);
+      });
+  SmallVector<int64_t, 2> shape{transform.rows, transform.cols};
   return arith::ConstantOp::create(
       builder, loc,
-      DenseFPElementsAttr::get(
-          RankedTensorType::get(
-              SmallVector<int64_t>{transform.rows, transform.cols}, type),
-          constVec));
+      DenseFPElementsAttr::get(RankedTensorType::get(shape, type),
+                               constAttrVec));
 }
 
 /// Extract height x width data from 4D tensors.
@@ -551,8 +557,7 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
       auto init =
           linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
 
-      Value BT =
-          create2DTransformMatrix(builder, loc, BTMatrix, builder.getF32Type());
+      Value BT = create2DTransformMatrix(builder, loc, BTMatrix, elementType);
       // Multiply BT x d.
       auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
                                                ValueRange{BT, matmulRetValue},
@@ -574,8 +579,7 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
                        .getResult();
       auto init =
           linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
-      Value B =
-          create2DTransformMatrix(builder, loc, BMatrix, builder.getF32Type());
+      Value B = create2DTransformMatrix(builder, loc, BMatrix, elementType);
       // Multiply v = (BT x d) x B.
       auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
                                                ValueRange{matmulRetValue, B},

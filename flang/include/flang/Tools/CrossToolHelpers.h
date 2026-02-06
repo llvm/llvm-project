@@ -109,6 +109,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
       InstrumentFunctionExit = "__cyg_profile_func_exit";
     }
     DwarfVersion = opts.DwarfVersion;
+    SplitDwarfFile = opts.SplitDwarfFile;
   }
 
   llvm::OptimizationLevel OptLevel; ///< optimisation level
@@ -127,7 +128,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
   bool ApproxFuncFPMath = false; ///< Set afn flag for instructions.
   bool NoSignedZerosFPMath =
       false; ///< Set no-signed-zeros-fp-math attribute for functions.
-  bool UnsafeFPMath = false; ///< Set unsafe-fp-math attribute for functions.
+  bool UnsafeFPMath = false; ///< Set all fast-math flags for instructions.
   std::string Reciprocals = ""; ///< Set reciprocal-estimate attribute for
                                 ///< functions.
   std::string PreferVectorWidth = ""; ///< Set prefer-vector-width attribute for
@@ -146,6 +147,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
       Fortran::frontend::CodeGenOptions::ComplexRangeKind::
           CX_Full; ///< Method for calculating complex number division
   int32_t DwarfVersion = 0; ///< Version of DWARF debug info to generate
+  std::string SplitDwarfFile = ""; ///< File name for the split debug info
 };
 
 struct OffloadModuleOpts {

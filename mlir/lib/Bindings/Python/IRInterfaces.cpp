@@ -12,11 +12,11 @@
 #include <utility>
 #include <vector>
 
-#include "IRModule.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Interfaces.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -25,7 +25,7 @@ namespace nb = nanobind;
 
 namespace mlir {
 namespace python {
-
+namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 constexpr static const char *constructorDoc =
     R"(Creates an interface from a given operation/opview object or from a
 subclass of OpView. Raises ValueError if the operation does not implement the
@@ -212,11 +212,9 @@ public:
   /// Returns the operation instance from which this object was constructed.
   /// Throws a type error if this object was constructed from a subclass of
   /// OpView.
-  nb::object getOperationObject() {
-    if (operation == nullptr) {
+  nb::typed<nb::object, PyOperation> getOperationObject() {
+    if (operation == nullptr)
       throw nb::type_error("Cannot get an operation from a static interface");
-    }
-
     return operation->getRef().releaseObject();
   }
 
@@ -224,10 +222,8 @@ public:
   /// constructed. Throws a type error if this object was constructed form a
   /// subclass of OpView.
   nb::typed<nb::object, PyOpView> getOpView() {
-    if (operation == nullptr) {
+    if (operation == nullptr)
       throw nb::type_error("Cannot get an opview from a static interface");
-    }
-
     return operation->createOpView();
   }
 
@@ -362,10 +358,9 @@ public:
             "Returns whether the given shaped type component is ranked.")
         .def_prop_ro(
             "rank",
-            [](PyShapedTypeComponents &self) -> nb::object {
-              if (!self.ranked) {
-                return nb::none();
-              }
+            [](PyShapedTypeComponents &self) -> std::optional<nb::int_> {
+              if (!self.ranked)
+                return {};
               return nb::int_(self.shape.size());
             },
             "Returns the rank of the given ranked shaped type components. If "
@@ -373,10 +368,9 @@ public:
             "returned.")
         .def_prop_ro(
             "shape",
-            [](PyShapedTypeComponents &self) -> nb::object {
-              if (!self.ranked) {
-                return nb::none();
-              }
+            [](PyShapedTypeComponents &self) -> std::optional<nb::list> {
+              if (!self.ranked)
+                return {};
               return nb::list(self.shape);
             },
             "Returns the shape of the ranked shaped type components as a list "
@@ -475,6 +469,6 @@ void populateIRInterfaces(nb::module_ &m) {
   PyShapedTypeComponents::bind(m);
   PyInferShapedTypeOpInterface::bind(m);
 }
-
+} // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
 } // namespace mlir

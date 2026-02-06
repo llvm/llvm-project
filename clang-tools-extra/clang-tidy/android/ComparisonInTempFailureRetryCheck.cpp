@@ -19,7 +19,7 @@ ComparisonInTempFailureRetryCheck::ComparisonInTempFailureRetryCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       RawRetryList(Options.get("RetryMacros", "TEMP_FAILURE_RETRY")) {
-  StringRef(RawRetryList).split(RetryMacros, ",", -1, false);
+  RawRetryList.split(RetryMacros, ",", -1, false);
 }
 
 void ComparisonInTempFailureRetryCheck::storeOptions(
@@ -64,7 +64,7 @@ void ComparisonInTempFailureRetryCheck::check(
   const LangOptions &Opts = Result.Context->getLangOpts();
   SourceLocation LocStart = Node.getBeginLoc();
   while (LocStart.isMacroID()) {
-    SourceLocation Invocation = SM.getImmediateMacroCallerLoc(LocStart);
+    const SourceLocation Invocation = SM.getImmediateMacroCallerLoc(LocStart);
     Token Tok;
     if (!Lexer::getRawToken(SM.getSpellingLoc(Invocation), Tok, SM, Opts,
                             /*IgnoreWhiteSpace=*/true)) {
@@ -83,7 +83,7 @@ void ComparisonInTempFailureRetryCheck::check(
   const auto &Inner = *Result.Nodes.getNodeAs<BinaryOperator>("inner");
   diag(Inner.getOperatorLoc(), "top-level comparison in %0") << RetryMacroName;
 
-  // FIXME: FixIts would be nice, but potentially nontrivial when nested macros
+  // FIXME: Fix-its would be nice, but potentially nontrivial when nested macros
   // happen, e.g. `TEMP_FAILURE_RETRY(IS_ZERO(foo()))`
 }
 

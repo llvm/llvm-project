@@ -12,7 +12,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 
 #define DEBUG_TYPE "unicode"
 
@@ -37,7 +36,7 @@ inline bool operator<(UnicodeCharRange Range, uint32_t Value) {
 /// array.
 class UnicodeCharSet {
 public:
-  typedef ArrayRef<UnicodeCharRange> CharRanges;
+  using CharRanges = ArrayRef<UnicodeCharRange>;
 
   /// Constructs a UnicodeCharSet instance from an array of
   /// UnicodeCharRanges.

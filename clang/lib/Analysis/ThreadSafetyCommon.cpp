@@ -248,9 +248,17 @@ til::SExpr *SExprBuilder::translateVariable(const VarDecl *VD,
   // defining VD, use its pre-assignment value to break the cycle.
   if (VarsBeingTranslated.contains(VD->getCanonicalDecl()))
     return new (Arena) til::LiteralPtr(VD);
+
+  // The closure captures state that is updated to correctly translate chains of
+  // aliases. Restore it when we are done with recursive translation.
+  llvm::scope_exit Cleanup([&, RestoreClosure = VarsBeingTranslated.empty()
+                                                    ? LookupLocalVarExpr
+                                                    : nullptr] {
+    VarsBeingTranslated.erase(VD->getCanonicalDecl());
+    if (VarsBeingTranslated.empty())
+      LookupLocalVarExpr = RestoreClosure;
+  });
   VarsBeingTranslated.insert(VD->getCanonicalDecl());
-  auto Cleanup = llvm::make_scope_exit(
-      [&] { VarsBeingTranslated.erase(VD->getCanonicalDecl()); });
 
   QualType Ty = VD->getType();
   if (!VD->isStaticLocal() && Ty->isPointerType()) {
@@ -329,15 +337,29 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
 
   // Collect all literals
   case Stmt::CharacterLiteralClass:
+    return new (Arena)
+        til::LiteralT<char32_t>(cast<CharacterLiteral>(S)->getValue());
   case Stmt::CXXNullPtrLiteralExprClass:
   case Stmt::GNUNullExprClass:
+    return new (Arena) til::LiteralT(nullptr);
   case Stmt::CXXBoolLiteralExprClass:
-  case Stmt::FloatingLiteralClass:
-  case Stmt::ImaginaryLiteralClass:
-  case Stmt::IntegerLiteralClass:
+    return new (Arena) til::LiteralT(cast<CXXBoolLiteralExpr>(S)->getValue());
+  case Stmt::IntegerLiteralClass: {
+    const auto *IL = cast<IntegerLiteral>(S);
+    const auto *BT = cast<BuiltinType>(IL->getType());
+    const llvm::APInt &Value = IL->getValue();
+    if (BT->isSignedInteger())
+      return new (Arena) til::LiteralT(Value.getSExtValue());
+    else if (BT->isUnsignedInteger())
+      return new (Arena) til::LiteralT(Value.getZExtValue());
+    else
+      llvm_unreachable("Invalid integer type");
+  }
   case Stmt::StringLiteralClass:
+    return new (Arena) til::LiteralT(cast<StringLiteral>(S)->getString());
   case Stmt::ObjCStringLiteralClass:
-    return new (Arena) til::Literal(cast<Expr>(S));
+    return new (Arena)
+        til::LiteralT(cast<ObjCStringLiteral>(S)->getString()->getString());
 
   case Stmt::DeclStmtClass:
     return translateDeclStmt(cast<DeclStmt>(S), Ctx);

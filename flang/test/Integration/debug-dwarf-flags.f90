@@ -1,7 +1,13 @@
+! RUN: %if !target={{.*aix.*}} %{ \
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone -dwarf-version=5 %s  \
-! RUN:         -o - | FileCheck --check-prefix=CHECK-DWARF5 %s
+! RUN:         -o - | FileCheck --check-prefix=CHECK-DWARF5 %s \
+! RUN: %}
+
+! RUN: %if !target={{.*aix.*}} %{ \
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only -dwarf-version=5 \
-! RUN:         %s -o - | FileCheck --check-prefix=CHECK-DWARF5 %s
+! RUN:         %s -o - | FileCheck --check-prefix=CHECK-DWARF5 %s \
+! RUN: %}
+
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone -dwarf-version=4 %s  \
 ! RUN:         -o - | FileCheck --check-prefix=CHECK-DWARF4 %s
 ! RUN: %flang_fc1 -emit-llvm -debug-info-kind=standalone -dwarf-version=3 %s  \

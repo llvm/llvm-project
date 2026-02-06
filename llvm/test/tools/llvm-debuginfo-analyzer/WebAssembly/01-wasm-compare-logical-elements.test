@@ -38,8 +38,8 @@
 ; ONE-NEXT:  [002]     1         {TypeAlias} 'INTPTR' -> '* const int'
 ; ONE-NEXT:  [002]     2         {Function} extern not_inlined 'foo' -> 'int'
 ; ONE-NEXT:  [003]                 {Block}
-; ONE-NEXT:  [004]     5             {Variable} 'CONSTANT' -> 'const INTEGER'
 ; ONE-NEXT: +[004]     4             {TypeAlias} 'INTEGER' -> 'int'
+; ONE-NEXT:  [004]     5             {Variable} 'CONSTANT' -> 'const INTEGER'
 ; ONE-NEXT:  [003]     2           {Parameter} 'ParamBool' -> 'bool'
 ; ONE-NEXT:  [003]     2           {Parameter} 'ParamPtr' -> 'INTPTR'
 ; ONE-NEXT:  [003]     2           {Parameter} 'ParamUnsigned' -> 'unsigned int'

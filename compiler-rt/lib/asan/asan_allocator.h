@@ -198,9 +198,14 @@ const uptr kAllocatorSpace = ~(uptr)0;
 #    endif  // SANITIZER_APPLE
 
 #    if defined(__powerpc64__)
+#      if SANITIZER_AIX
+const uptr kAllocatorSize = 1ULL << 38;  // 256G.
+#      else
 const uptr kAllocatorSize  =  0x20000000000ULL;  // 2T.
+#      endif
 typedef DefaultSizeClassMap SizeClassMap;
-#    elif defined(__aarch64__) && SANITIZER_ANDROID
+#    elif defined(__aarch64__) && \
+        (SANITIZER_ANDROID || defined(SANITIZER_AARCH64_39BIT_VA))
 // Android needs to support 39, 42 and 48 bit VMA.
 const uptr kAllocatorSize  =  0x2000000000ULL;  // 128G.
 typedef VeryCompactSizeClassMap SizeClassMap;
