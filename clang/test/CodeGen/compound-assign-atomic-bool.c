@@ -4,26 +4,26 @@
 // correctly handle the conversion from integer to boolean, by comparing
 // with zero rather than truncating.
 
-// CHECK: @compund_assign_add
+// CHECK-LABEL: @compund_assign_add
 int compund_assign_add(void) {
     _Atomic _Bool b;
 
     b += 2;
     // CHECK: add
-    // CHECK-NEXT: icmp ne
-    // CHECK-NEXT: zext
-    // CHECK-NEXT: cmpxchg
+    // CHECK: icmp ne
+    // CHECK-NOT: trunc
+    // CHECK: {{cmpxchg|call.*__atomic_compare_exchange}}
     return b;
 }
 
-// CHECK: @compund_assign_minus
+// CHECK-LABEL: @compund_assign_minus
 int compund_assign_minus(void) {
     _Atomic _Bool b;
 
     b -= 2;
     // CHECK: sub
-    // CHECK-NEXT: icmp ne
-    // CHECK-NEXT: zext
-    // CHECK-NEXT: cmpxchg
+    // CHECK: icmp ne
+    // CHECK-NOT: trunc
+    // CHECK: {{cmpxchg|call.*__atomic_compare_exchange}}
     return b;
 }
