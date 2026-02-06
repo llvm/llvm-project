@@ -56,14 +56,19 @@ add_fp_unittest(
     libc.src.__support.math.expf
     libc.src.__support.math.expf16
     libc.src.__support.math.f16fma
+    libc.src.__support.math.f16fmaf
+    libc.src.__support.math.f16fmaf128
     libc.src.__support.math.f16fmal
+    libc.src.__support.math.f16sqrt
     libc.src.__support.math.f16sqrtl
     libc.src.__support.math.frexpf
     libc.src.__support.math.frexpf128
     libc.src.__support.math.frexpf16
     libc.src.__support.math.fsqrt
     libc.src.__support.math.fsqrtf128
+    libc.src.__support.math.fsqrtl
     libc.src.__support.math.hypotf
+    libc.src.__support.math.ilogb
     libc.src.__support.math.ilogbf
     libc.src.__support.math.ilogbf16
     libc.src.__support.math.ilogbf128
@@ -82,12 +87,21 @@ add_fp_unittest(
     libc.src.__support.math.ldexpf128
     libc.src.__support.math.ldexpf16
     libc.src.__support.math.llogbf
+    libc.src.__support.math.llogbf128
+    libc.src.__support.math.llogbf16
+    libc.src.__support.math.logf16    
     libc.src.__support.math.rsqrtf
     libc.src.__support.math.rsqrtf16
+    libc.src.__support.math.sqrtf16
     libc.src.__support.math.sin
+    libc.src.__support.math.sincosf
     libc.src.__support.math.sinf
+    libc.src.__support.math.sinf16
     libc.src.__support.math.sinhf
     libc.src.__support.math.sinhf16
+    libc.src.__support.math.sinpif
+    libc.src.__support.math.sqrt
+    libc.src.__support.math.sqrtf
     libc.src.__support.math.tan
     libc.src.__support.math.tanf
 )

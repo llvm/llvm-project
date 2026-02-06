@@ -986,7 +986,7 @@ binaryFolder(DenseElementsAttr lhs, DenseElementsAttr rhs, ShapedType returnTy,
 
   return {};
 }
-struct FoldAddAdaptor {
+struct AddFoldAdaptor {
   static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
                                const bool isUnsigned) {
     bool overflow;
@@ -1002,7 +1002,7 @@ struct FoldAddAdaptor {
   }
 };
 
-struct FoldSubAdaptor {
+struct SubFoldAdaptor {
   static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
                                const bool isUnsigned) {
     bool overflow;
@@ -1018,7 +1018,131 @@ struct FoldSubAdaptor {
   }
 };
 
-struct FoldGreaterAdaptor {
+struct MulFoldAdaptor {
+  static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
+                               const bool isUnsigned) {
+
+    const unsigned originalWidth = lhs.getBitWidth();
+
+    // Check same type
+    if (lhs.getBitWidth() != rhs.getBitWidth()) {
+      return failure();
+    }
+
+    // If either is `0`
+    if (lhs == 0 || rhs == 0)
+      return APInt::getZero(originalWidth);
+
+    bool overflow = false;
+    APInt const result =
+        isUnsigned ? lhs.umul_ov(rhs, overflow) : lhs.smul_ov(rhs, overflow);
+
+    if (overflow)
+      return failure();
+
+    return result.trunc(originalWidth);
+  }
+
+  static FailureOr<APFloat> fold(const APFloat &lhs, const APFloat &rhs) {
+    return lhs * rhs;
+  }
+};
+
+static bool signsDiffer(const APInt &a, const APInt &b) {
+  return a.isNegative() != b.isNegative();
+}
+
+template <bool Ceil>
+struct DivFoldAdaptor {
+  static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
+                               bool isUnsigned) {
+    if (lhs.getBitWidth() != rhs.getBitWidth())
+      return failure();
+    if (rhs.isZero())
+      return failure();
+
+    if (isUnsigned) {
+      APInt q{};
+      APInt r{};
+      APInt::udivrem(lhs, rhs, q, r);
+      if (!r.isZero() && Ceil) {
+        return q + 1;
+      }
+      return q;
+    }
+
+    // Signed: start from trunc-toward-zero, then adjust to ceil.
+    bool overflow{false};
+    APInt const q = lhs.sdiv_ov(rhs, overflow);
+    if (overflow)
+      return failure();
+    APInt const r = lhs.srem(rhs);
+
+    if (Ceil && !r.isZero() && !signsDiffer(lhs, rhs)) {
+      // Same sign => exact quotient is positive; trunc is below ceil =>
+      // increment q.
+      return q + 1;
+    }
+    return q;
+  }
+
+  static FailureOr<APFloat> fold(const APFloat &lhs, const APFloat &rhs) {
+    return lhs / rhs;
+  }
+};
+
+struct ModFoldAdaptor {
+  static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
+                               bool isUnsigned) {
+    if (lhs.getBitWidth() != rhs.getBitWidth())
+      return failure();
+    if (lhs.isNegative() || (!rhs.isStrictlyPositive()))
+      return failure();
+
+    if (isUnsigned) {
+      return lhs.urem(rhs);
+    }
+
+    return lhs.srem(rhs);
+  }
+
+  static FailureOr<APFloat> fold(const APFloat &lhs, const APFloat &rhs) {
+    auto t = lhs;
+    auto const r = t.mod(rhs);
+    if (llvm::APFloatBase::opStatus::opOK == r) {
+      return t;
+    }
+    return failure();
+  }
+};
+
+struct MaxFoldAdaptor {
+  static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
+                               bool isUnsigned) {
+    if (lhs.getBitWidth() != rhs.getBitWidth())
+      return failure();
+    return lhs.getSExtValue() >= rhs.getSExtValue() ? lhs : rhs;
+  }
+
+  static FailureOr<APFloat> fold(const APFloat &lhs, const APFloat &rhs) {
+    return lhs >= rhs ? lhs : rhs;
+  }
+};
+
+struct MinFoldAdaptor {
+  static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
+                               bool isUnsigned) {
+    if (lhs.getBitWidth() != rhs.getBitWidth())
+      return failure();
+    return lhs.getSExtValue() <= rhs.getSExtValue() ? lhs : rhs;
+  }
+
+  static FailureOr<APFloat> fold(const APFloat &lhs, const APFloat &rhs) {
+    return lhs <= rhs ? lhs : rhs;
+  }
+};
+
+struct GreaterFoldAdaptor {
   static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
                                const bool isUnsigned) {
     return isUnsigned ? APInt(1, lhs.ugt(rhs)) : APInt(1, lhs.sgt(rhs));
@@ -1029,7 +1153,7 @@ struct FoldGreaterAdaptor {
   }
 };
 
-struct FoldGreaterEqualAdaptor {
+struct GreaterEqualFoldAdaptor {
   static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
                                const bool isUnsigned) {
     return isUnsigned ? APInt(1, lhs.uge(rhs)) : APInt(1, lhs.sge(rhs));
@@ -1040,7 +1164,7 @@ struct FoldGreaterEqualAdaptor {
   }
 };
 
-struct FoldEqualAdaptor {
+struct EqualFoldAdaptor {
   static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
                                const bool isUnsigned) {
     return APInt(1, lhs == rhs);
@@ -1097,7 +1221,7 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return binaryFolder<FoldAddAdaptor>(lhsAttr, rhsAttr, resultTy);
+  return binaryFolder<AddFoldAdaptor>(lhsAttr, rhsAttr, resultTy);
 }
 
 OpFoldResult ArgMaxOp::fold(FoldAdaptor adaptor) {
@@ -1149,8 +1273,12 @@ OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
     APInt l = lhsAttr.getSplatValue<APInt>();
     APInt r = rhsAttr.getSplatValue<APInt>();
     if (!r.isZero()) {
-      APInt result = l.sdiv(r);
-      return DenseElementsAttr::get(resultTy, result);
+      auto intTy = dyn_cast<mlir::IntegerType>(resultETy);
+      auto const result =
+          DivFoldAdaptor</*Ceil*/ false>::fold(l, r, intTy.isUnsigned());
+      if (failed(result))
+        return {};
+      return DenseElementsAttr::get(resultTy, result.value());
     }
   }
 
@@ -1162,7 +1290,11 @@ namespace {
 // return nullopt if result is not in range of int32_t when shift > 0
 std::optional<APInt> mulInt(APInt lhs, APInt rhs, int32_t shift,
                             unsigned bitwidth) {
-  APInt result = lhs.sext(64) * rhs.sext(64);
+  bool overflow = false;
+  APInt result = lhs.sext(64).smul_ov(rhs.sext(64), overflow);
+
+  if (overflow)
+    return std::nullopt;
 
   if (shift > 0) {
     auto round = APInt(64, 1) << (shift - 1);
@@ -1278,7 +1410,7 @@ OpFoldResult SubOp::fold(FoldAdaptor adaptor) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return binaryFolder<FoldSubAdaptor>(lhsAttr, rhsAttr, resultTy);
+  return binaryFolder<SubFoldAdaptor>(lhsAttr, rhsAttr, resultTy);
 }
 
 OpFoldResult GreaterOp::fold(FoldAdaptor adaptor) {
@@ -1291,7 +1423,7 @@ OpFoldResult GreaterOp::fold(FoldAdaptor adaptor) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return binaryFolder<FoldGreaterAdaptor>(lhsAttr, rhsAttr, resultTy);
+  return binaryFolder<GreaterFoldAdaptor>(lhsAttr, rhsAttr, resultTy);
 }
 
 OpFoldResult GreaterEqualOp::fold(FoldAdaptor adaptor) {
@@ -1304,7 +1436,7 @@ OpFoldResult GreaterEqualOp::fold(FoldAdaptor adaptor) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return binaryFolder<FoldGreaterEqualAdaptor>(lhsAttr, rhsAttr, resultTy);
+  return binaryFolder<GreaterEqualFoldAdaptor>(lhsAttr, rhsAttr, resultTy);
 }
 
 OpFoldResult EqualOp::fold(FoldAdaptor adaptor) {
@@ -1327,7 +1459,7 @@ OpFoldResult EqualOp::fold(FoldAdaptor adaptor) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return binaryFolder<FoldEqualAdaptor>(lhsAttr, rhsAttr, resultTy);
+  return binaryFolder<EqualFoldAdaptor>(lhsAttr, rhsAttr, resultTy);
 }
 
 OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
@@ -1750,17 +1882,65 @@ OpFoldResult tosa::ReciprocalOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
-OpFoldResult tosa::AddShapeOp::fold(FoldAdaptor adaptor) {
+template <typename Op, typename OpFoldAdaptor>
+OpFoldResult binaryFold(Op *op) {
   auto input1ConstShape =
-      dyn_cast<tosa::ConstShapeOp>(getInput1().getDefiningOp());
+      dyn_cast<tosa::ConstShapeOp>(op->getInput1().getDefiningOp());
   auto input2ConstShape =
-      dyn_cast<tosa::ConstShapeOp>(getInput2().getDefiningOp());
+      dyn_cast<tosa::ConstShapeOp>(op->getInput2().getDefiningOp());
   if (!input1ConstShape || !input2ConstShape)
     return {};
 
   const auto input1Attr = cast<DenseElementsAttr>(input1ConstShape.getValues());
   const auto input2Attr = cast<DenseElementsAttr>(input2ConstShape.getValues());
 
-  return binaryFolder<FoldAddAdaptor>(
+  return binaryFolder<OpFoldAdaptor>(
       input1Attr, input2Attr, input1Attr.getType(), /*foldDenseValues=*/true);
+}
+
+OpFoldResult tosa::DimOp::fold(FoldAdaptor adaptor) {
+  const auto inputTy = llvm::dyn_cast<ShapedType>(getInput1().getType());
+  if (!inputTy || !inputTy.hasRank())
+    return {};
+  const int32_t axis = getAxis();
+  const int64_t dimSize = inputTy.getDimSize(axis);
+  if (ShapedType::isDynamic(dimSize))
+    return {};
+
+  OpBuilder builder(getContext());
+  const auto resultAttrTy =
+      RankedTensorType::get(/*rank=*/1, builder.getIndexType());
+  return DenseElementsAttr::get(resultAttrTy, dimSize);
+}
+
+OpFoldResult tosa::AddShapeOp::fold(FoldAdaptor adaptor) {
+  return binaryFold<AddShapeOp, AddFoldAdaptor>(this);
+}
+
+OpFoldResult tosa::SubShapeOp::fold(FoldAdaptor adaptor) {
+  return binaryFold<SubShapeOp, SubFoldAdaptor>(this);
+}
+
+OpFoldResult tosa::MulShapeOp::fold(FoldAdaptor adaptor) {
+  return binaryFold<MulShapeOp, MulFoldAdaptor>(this);
+}
+
+OpFoldResult tosa::DivCeilShapeOp::fold(FoldAdaptor adaptor) {
+  return binaryFold<DivCeilShapeOp, DivFoldAdaptor</*Ceil*/ true>>(this);
+}
+
+OpFoldResult tosa::DivFloorShapeOp::fold(FoldAdaptor adaptor) {
+  return binaryFold<DivFloorShapeOp, DivFoldAdaptor</*Ceil*/ false>>(this);
+}
+
+OpFoldResult tosa::ModShapeOp::fold(FoldAdaptor adaptor) {
+  return binaryFold<ModShapeOp, ModFoldAdaptor>(this);
+}
+
+OpFoldResult tosa::MaxShapeOp::fold(FoldAdaptor adaptor) {
+  return binaryFold<MaxShapeOp, MaxFoldAdaptor>(this);
+}
+
+OpFoldResult tosa::MinShapeOp::fold(FoldAdaptor adaptor) {
+  return binaryFold<MinShapeOp, MinFoldAdaptor>(this);
 }

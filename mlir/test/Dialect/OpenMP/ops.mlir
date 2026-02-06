@@ -1148,6 +1148,19 @@ func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
     omp.terminator
   }
 
+  // CHECK: omp.teams thread_limit(%{{.*}}, %{{.*}} : i32, i32)
+  omp.teams thread_limit(%lb, %ub : i32, i32) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Test thread_limit with mixed types.
+  // CHECK: omp.teams thread_limit(%{{.*}}, %{{.*}}, %{{.*}} : i32, i64, i16)
+  omp.teams thread_limit(%lb, %ub64, %ub16 : i32, i64, i16) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
   // Test reduction.
   %c1 = arith.constant 1 : i32
   %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
@@ -3505,5 +3518,35 @@ func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
     linear(%iv = %step : i32)
     uniform(%p0 : memref<i32>, %p1 : memref<i32>)
     inbranch
+  return
+}
+
+// CHECK-LABEL: func.func @task_affinity_single
+func.func @task_affinity_single() {
+  // CHECK:       %[[A:.*]] = memref.alloca() : memref<100xi32>
+  // CHECK:       omp.task affinity(%[[A]] : memref<100xi32>) {
+  // CHECK:         omp.terminator
+  // CHECK:       }
+  // CHECK:       return
+  %a = memref.alloca() : memref<100xi32>
+  omp.task affinity(%a : memref<100xi32>) {
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @task_affinity_multi
+func.func @task_affinity_multi() {
+  // CHECK:       %[[A:.*]] = memref.alloca() : memref<64xi32>
+  // CHECK:       %[[B:.*]] = memref.alloca() : memref<8xf64>
+  // CHECK:       omp.task affinity(%[[A]] : memref<64xi32>, %[[B]] : memref<8xf64>) {
+  // CHECK:         omp.terminator
+  // CHECK:       }
+  // CHECK:       return
+  %a = memref.alloca() : memref<64xi32>
+  %b = memref.alloca() : memref<8xf64>
+  omp.task affinity(%a : memref<64xi32>, %b : memref<8xf64>) {
+    omp.terminator
+  }
   return
 }

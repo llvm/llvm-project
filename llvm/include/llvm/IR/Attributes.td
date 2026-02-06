@@ -400,6 +400,10 @@ def CoroDestroyOnlyWhenComplete : EnumAttr<"coro_only_destroy_when_complete", In
 /// pipeline to perform elide on the call or invoke instruction.
 def CoroElideSafe : EnumAttr<"coro_elide_safe", IntersectPreserve, [FnAttr]>;
 
+/// Indicate the denormal handling of the default floating-point
+/// environment.
+def DenormalFPEnv : IntAttr<"denormal_fpenv", IntersectPreserve, [FnAttr]>;
+
 /// Function is marked for Windows Hot Patching
 def MarkedForWindowsSecureHotPatching
     : StrBoolAttr<"marked_for_windows_hot_patching">;
@@ -420,9 +424,6 @@ def NoInlineLineTables : StrBoolAttr<"no-inline-line-tables">;
 def ProfileSampleAccurate : StrBoolAttr<"profile-sample-accurate">;
 def UseSampleProfile : StrBoolAttr<"use-sample-profile">;
 def LoaderReplaceable : StrBoolAttr<"loader-replaceable">;
-
-def DenormalFPMath : ComplexStrAttr<"denormal-fp-math", [FnAttr]>;
-def DenormalFPMathF32 : ComplexStrAttr<"denormal-fp-math-f32", [FnAttr]>;
 
 // Attribute compatiblity rules are generated to check the attribute of the
 // caller and callee and decide whether inlining should be allowed. CompatRule

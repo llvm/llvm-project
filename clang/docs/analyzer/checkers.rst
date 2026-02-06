@@ -1413,8 +1413,12 @@ For a more detailed description of configuration options, please see the
 
 **Configuration**
 
-* `Config`  Specifies the name of the YAML configuration file. The user can
-  define their own taint sources and sinks.
+* ``optin.taint.TaintPropagation:Config``  Specifies the name of the YAML
+  configuration file. The user can define their own taint sources and sinks.
+* ``optin.taint.TaintPropagation:EnableDefaultConfig`` If set to false,
+   the default source, sink and propagation rules are not loaded. This way,
+   advanced users can fully customize their taint configuration model.
+   Default: ``true``.
 
 **Related Guidelines**
 
@@ -3721,6 +3725,23 @@ This applies to:
 - Inside template instantiations and macro expansions that are visible to the compiler.
 
 For types like this, instead of using built in casts, the programmer will use helper functions that internally perform the appropriate type check and disable static analysis.
+
+alpha.webkit.NoDeleteChecker
+"""""""""""""""""""""""""""""""
+Check that ``[[clang::annotate_type("webkit.nodelete")]]`` annotation does not appear on a function which could delete an object.
+
+.. code-block:: cpp
+
+ void [[clang::annotate_type("webkit.nodelete")]] someFunction(RefCountable* obj) { // warn
+   delete obj;
+ };
+
+ Foo [[clang::annotate_type("webkit.nodelete")]] trivialFunction(RefCountable* obj) {
+   return obj->anotherTrivialFunction();
+ };
+ 
+``[[clang::annotate_type("webkit.nodelete")]]`` annotation makes the function ignored for the purpose of other WebKit smart pointer checkers.
+For example, ``alpha.webkit.UncountedCallArgsChecker`` will ignore a function call with this annotation.
 
 alpha.webkit.NoUncheckedPtrMemberChecker
 """"""""""""""""""""""""""""""""""""""""

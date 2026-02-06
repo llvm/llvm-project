@@ -63,6 +63,9 @@ Changes to the LLVM IR
   intrinsics. These are equivalent to `fptrunc` and `fpext` with half
   with a bitcast.
 
+* "denormal-fp-math" and "denormal-fp-math-f32" string attributes were
+  migrated to first-class denormal_fpenv attribute.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -124,6 +127,11 @@ Changes to the RISC-V Backend
 
 * `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
 * `-mcpu=spacemit-x100` was added.
+* Change P extension version to match the 019 draft specification. Encoded in `-march` as `0p19`.
+* Mnemonics for MOP/HINT-based instructions (`lpad`, `pause`, `ntl.*`, `c.ntl.*`,
+  `sspush`, `sspopchk`, `ssrdp`, `c.sspush`, `c.sspopchk`) are now always
+  available in the assembler and disassembler without requiring their respective
+  extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -163,9 +171,15 @@ Changes to the LLVM tools
 -------------------------
 
 * `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
+* `FileCheck` option `-check-prefix` now accepts a comma-separated list of
+  prefixes, making it an alias of the existing `-check-prefixes` option.
 
 Changes to LLDB
 ---------------
+
+* Support for FreeBSD on MIPS64 has been removed.
+* The minimum assumed version of FreeBSD is now 14. The effect of which is that watchpoints are
+  assumed to be supported.
 
 Changes to BOLT
 ---------------

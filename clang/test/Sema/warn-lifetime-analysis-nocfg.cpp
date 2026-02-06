@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -Wdangling -Wdangling-field -Wreturn-stack-address -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=cfg %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=cfg,cfg-field %s
+
+// FIXME: cfg-field should be detected in end-of-TU analysis but it doesn't work for constructors!
 // RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=cfg %s
 
 #include "Inputs/lifetime-analysis.h"
@@ -80,11 +82,18 @@ void dangligGslPtrFromTemporary() {
 }
 
 struct DanglingGslPtrField {
-  MyIntPointer p; // expected-note {{pointer member declared here}}
-  MyLongPointerFromConversion p2; // expected-note {{pointer member declared here}}
-  DanglingGslPtrField(int i) : p(&i) {} // TODO
-  DanglingGslPtrField() : p2(MyLongOwnerWithConversion{}) {} // expected-warning {{initializing pointer member 'p2' to point to a temporary object whose lifetime is shorter than the lifetime of the constructed object}}
-  DanglingGslPtrField(double) : p(MyIntOwner{}) {} // expected-warning {{initializing pointer member 'p' to point to a temporary object whose lifetime is shorter than the lifetime of the constructed object}}
+  MyIntPointer p; // expected-note {{pointer member declared here}} \
+                  // cfg-field-note 3 {{this field dangles}}
+  MyLongPointerFromConversion p2; // expected-note {{pointer member declared here}} \
+                                  // cfg-field-note 2 {{this field dangles}}
+
+  DanglingGslPtrField(int i) : p(&i) {} // cfg-field-warning {{address of stack memory escapes to a field}}
+  DanglingGslPtrField() : p2(MyLongOwnerWithConversion{}) {}  // expected-warning {{initializing pointer member 'p2' to point to a temporary object whose lifetime is shorter than the lifetime of the constructed object}} \
+                                                              // cfg-field-warning {{address of stack memory escapes to a field}}
+  DanglingGslPtrField(double) : p(MyIntOwner{}) {}  // expected-warning {{initializing pointer member 'p' to point to a temporary object whose lifetime is shorter than the lifetime of the constructed object}} \
+                                                    // cfg-field-warning {{address of stack memory escapes to a field}}
+  DanglingGslPtrField(MyIntOwner io) : p(io) {} // cfg-field-warning {{address of stack memory escapes to a field}}
+  DanglingGslPtrField(MyLongOwnerWithConversion lo) : p2(lo) {} // cfg-field-warning {{address of stack memory escapes to a field}}
 };
 
 MyIntPointer danglingGslPtrFromLocal() {
@@ -340,9 +349,11 @@ const char *trackThroughMultiplePointer() {
 
 struct X {
   X(std::unique_ptr<int> up) :
-    pointee(*up), pointee2(up.get()), pointer(std::move(up)) {}
-  int &pointee;
-  int *pointee2;
+    pointee(*up),             // cfg-field-warning {{may have been moved.}}
+    pointee2(up.get()),       // cfg-field-warning {{may have been moved.}}
+    pointer(std::move(up)) {} // cfg-field-note 2 {{potentially moved here}}
+  int &pointee;               // cfg-field-note {{this field dangles}}
+  int *pointee2;              // cfg-field-note {{this field dangles}}
   std::unique_ptr<int> pointer;
 };
 
@@ -351,11 +362,11 @@ struct [[gsl::Owner]] XOwner {
 };
 struct X2 {
   // A common usage that moves the passing owner to the class.
-  // verify no warning on this case.
+  // verify a strict warning on this case.
   X2(XOwner owner) :
-    pointee(owner.get()),
-    owner(std::move(owner)) {}
-  int* pointee;
+    pointee(owner.get()),       // cfg-field-warning {{may have been moved.}}
+    owner(std::move(owner)) {}  // cfg-field-note {{potentially moved here}}
+  int* pointee;                 // cfg-field-note {{this field dangles}}
   XOwner owner;
 };
 
@@ -419,6 +430,29 @@ int *returnPtrToLocalArray() {
   int a[5];
   return std::begin(a); // TODO
 }
+
+namespace lifetimebound_stl_algorithms {
+
+std::vector<std::string> GetTemporaryString();
+std::vector<std::string_view> GetTemporaryView();
+
+std::string_view test_str_local() {
+  std::vector<std::string> v;
+  return *std::find(v.begin(), // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                    v.end(), "42");
+}
+std::string_view test_str_temporary() {
+  return *std::find(GetTemporaryString().begin(), // cfg-warning {{address of stack memory is returned later}} cfg-note {{returned here}}
+                    GetTemporaryString().end(), "42");
+}
+std::string_view test_view() {
+  std::vector<std::string_view> v;
+  return *std::find(v.begin(), v.end(), "42");
+}
+std::string_view test_view_local() {
+  return *std::find(GetTemporaryView().begin(), GetTemporaryView().end(), "42");
+}
+} // namespace lifetimebound_stl_algorithms
 
 struct ptr_wrapper {
   std::vector<int>::iterator member;
@@ -1099,10 +1133,10 @@ struct Foo2 {
 };
 
 struct Test {
-  Test(Foo2 foo) : bar(foo.bar.get()), // OK
-      storage(std::move(foo.bar)) {};
+  Test(Foo2 foo) : bar(foo.bar.get()),  // cfg-field-warning-re {{address of stack memory escapes to a field. {{.*}} may have been moved}}
+      storage(std::move(foo.bar)) {};   // cfg-field-note {{potentially moved here}}
 
-  Bar* bar;
+  Bar* bar; // cfg-field-note {{this field dangles}}
   std::unique_ptr<Bar> storage;
 };
 

@@ -679,8 +679,8 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
     // block.
     assert(SP == BB && "CFG broken");
     (void)SP;
-    return SplitBlock(Succ, &Succ->front(), DT, LI, MSSAU, BBName,
-                      /*Before=*/true);
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+    return splitBlockBefore(Succ, &Succ->front(), &DTU, LI, MSSAU, BBName);
   }
 
   // Otherwise, if BB has a single successor, split it at the bottom of the
@@ -996,13 +996,7 @@ llvm::SplitAllCriticalEdges(Function &F,
 static BasicBlock *SplitBlockImpl(BasicBlock *Old, BasicBlock::iterator SplitPt,
                                   DomTreeUpdater *DTU, DominatorTree *DT,
                                   LoopInfo *LI, MemorySSAUpdater *MSSAU,
-                                  const Twine &BBName, bool Before) {
-  if (Before) {
-    DomTreeUpdater LocalDTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-    return splitBlockBefore(Old, SplitPt,
-                            DTU ? DTU : (DT ? &LocalDTU : nullptr), LI, MSSAU,
-                            BBName);
-  }
+                                  const Twine &BBName) {
   BasicBlock::iterator SplitIt = SplitPt;
   while (isa<PHINode>(SplitIt) || SplitIt->isEHPad()) {
     ++SplitIt;
@@ -1051,62 +1045,13 @@ static BasicBlock *SplitBlockImpl(BasicBlock *Old, BasicBlock::iterator SplitPt,
 
 BasicBlock *llvm::SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
                              DominatorTree *DT, LoopInfo *LI,
-                             MemorySSAUpdater *MSSAU, const Twine &BBName,
-                             bool Before) {
-  return SplitBlockImpl(Old, SplitPt, /*DTU=*/nullptr, DT, LI, MSSAU, BBName,
-                        Before);
+                             MemorySSAUpdater *MSSAU, const Twine &BBName) {
+  return SplitBlockImpl(Old, SplitPt, /*DTU=*/nullptr, DT, LI, MSSAU, BBName);
 }
 BasicBlock *llvm::SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
                              DomTreeUpdater *DTU, LoopInfo *LI,
-                             MemorySSAUpdater *MSSAU, const Twine &BBName,
-                             bool Before) {
-  return SplitBlockImpl(Old, SplitPt, DTU, /*DT=*/nullptr, LI, MSSAU, BBName,
-                        Before);
-}
-
-BasicBlock *llvm::splitBlockBefore(BasicBlock *Old, BasicBlock::iterator SplitPt,
-                                   DomTreeUpdater *DTU, LoopInfo *LI,
-                                   MemorySSAUpdater *MSSAU,
-                                   const Twine &BBName) {
-
-  BasicBlock::iterator SplitIt = SplitPt;
-  while (isa<PHINode>(SplitIt) || SplitIt->isEHPad())
-    ++SplitIt;
-  std::string Name = BBName.str();
-  BasicBlock *New = Old->splitBasicBlock(
-      SplitIt, Name.empty() ? Old->getName() + ".split" : Name,
-      /* Before=*/true);
-
-  // The new block lives in whichever loop the old one did. This preserves
-  // LCSSA as well, because we force the split point to be after any PHI nodes.
-  if (LI)
-    if (Loop *L = LI->getLoopFor(Old))
-      L->addBasicBlockToLoop(New, *LI);
-
-  if (DTU) {
-    SmallVector<DominatorTree::UpdateType, 8> DTUpdates;
-    // New dominates Old. The predecessor nodes of the Old node dominate
-    // New node.
-    SmallPtrSet<BasicBlock *, 8> UniquePredecessorsOfOld;
-    DTUpdates.push_back({DominatorTree::Insert, New, Old});
-    DTUpdates.reserve(DTUpdates.size() + 2 * pred_size(New));
-    for (BasicBlock *PredecessorOfOld : predecessors(New))
-      if (UniquePredecessorsOfOld.insert(PredecessorOfOld).second) {
-        DTUpdates.push_back({DominatorTree::Insert, PredecessorOfOld, New});
-        DTUpdates.push_back({DominatorTree::Delete, PredecessorOfOld, Old});
-      }
-
-    DTU->applyUpdates(DTUpdates);
-
-    // Move MemoryAccesses still tracked in Old, but part of New now.
-    // Update accesses in successor blocks accordingly.
-    if (MSSAU) {
-      MSSAU->applyUpdates(DTUpdates, DTU->getDomTree());
-      if (VerifyMemorySSA)
-        MSSAU->getMemorySSA()->verifyMemorySSA();
-    }
-  }
-  return New;
+                             MemorySSAUpdater *MSSAU, const Twine &BBName) {
+  return SplitBlockImpl(Old, SplitPt, DTU, /*DT=*/nullptr, LI, MSSAU, BBName);
 }
 
 /// Update DominatorTree, LoopInfo, and LCCSA analysis information.
@@ -1221,6 +1166,25 @@ static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
     if (SplitMakesNewLoopHeader)
       L->moveToHeader(NewBB);
   }
+}
+
+BasicBlock *llvm::splitBlockBefore(BasicBlock *Old,
+                                   BasicBlock::iterator SplitPt,
+                                   DomTreeUpdater *DTU, LoopInfo *LI,
+                                   MemorySSAUpdater *MSSAU,
+                                   const Twine &BBName) {
+  BasicBlock::iterator SplitIt = SplitPt;
+  while (isa<PHINode>(SplitIt) || SplitIt->isEHPad())
+    ++SplitIt;
+  SmallVector<BasicBlock *, 4> Preds(predecessors(Old));
+  BasicBlock *New = Old->splitBasicBlockBefore(
+      SplitIt, BBName.isTriviallyEmpty() ? Old->getName() + ".split" : BBName);
+
+  bool HasLoopExit = false;
+  UpdateAnalysisInformation(Old, New, Preds, DTU, nullptr, LI, MSSAU, false,
+                            HasLoopExit);
+
+  return New;
 }
 
 /// Update the PHI nodes in OrigBB to include the values coming from NewBB.

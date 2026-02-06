@@ -24,6 +24,29 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/IR/BuiltinAttributes.td"
 
 //===----------------------------------------------------------------------===//
+// V5.2: [12.5.1] `affinity` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_AffinityClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false>
+    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins Variadic<OpenMP_PointerLikeType>:$affinity_vars);
+
+  let optAssemblyFormat = [{
+    `affinity` `(` custom<AffinityClause>($affinity_vars, type($affinity_vars)) `)`
+  }];
+
+  let description = [{
+    The `affinity` clause specifies a locator list used as a hint for task
+    placement / scheduling affinity.
+  }];
+}
+
+def OpenMP_AffinityClause : OpenMP_AffinityClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [6.3] `align` clause
 //===----------------------------------------------------------------------===//
 
@@ -1521,15 +1544,47 @@ class OpenMP_ThreadLimitClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let arguments = (ins
-    Optional<AnyInteger>:$thread_limit
+    Variadic<IntLikeType>:$thread_limit_vars
   );
 
   let optAssemblyFormat = [{
-    `thread_limit` `(` $thread_limit `:` type($thread_limit) `)`
+    `thread_limit` `(` $thread_limit_vars `:` type($thread_limit_vars) `)`
   }];
 
   let description = [{
-    The optional `thread_limit` specifies the limit on the number of threads.
+    The `thread_limit` clause specifies the limit on the number of threads.
+
+    Multi-dimensional format (dims modifier):
+    - Multiple values can be specified for multi-dimensional thread limits.
+    - The number of dimensions is derived from the number of values.
+    - Values can have different integer types.
+    - Format: `thread_limit(%v1, %v2, ... : type1, type2, ...)`
+    - Example: `thread_limit(%n, %m : i32, i64)`
+
+    Single value format:
+    - A single value specifies the thread limit.
+    - Format: `thread_limit(%value : type)`
+    - Example: `thread_limit(%n : i32)`
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns true if using multi-dimensional values (more than one value)
+    bool hasThreadLimitMultiDim() {
+      return getThreadLimitVars().size() > 1;
+    }
+
+    /// Returns the number of dimensions specified for thread_limit
+    unsigned getThreadLimitDimsCount() {
+      return getThreadLimitVars().size();
+    }
+
+    /// Returns the value for a specific dimension
+    /// dim must be less than getThreadLimitDimsCount()
+    ::mlir::Value getThreadLimit(unsigned dim = 0) {
+      assert(dim < getThreadLimitDimsCount() &&
+             "Thread limit index out of bounds");
+      return getThreadLimitVars()[dim];
+    }
   }];
 }
 
