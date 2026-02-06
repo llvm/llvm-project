@@ -37,10 +37,12 @@ std::string getShardPathFromFilePath(llvm::StringRef ShardRoot,
 // Uses disk as a storage for index shards.
 class DiskBackedIndexStorage : public BackgroundIndexStorage {
   std::string DiskShardRoot;
+  PathMappings Mappings;
 
 public:
   // Creates `DiskShardRoot` and any parents during construction.
-  DiskBackedIndexStorage(llvm::StringRef Directory) : DiskShardRoot(Directory) {
+  DiskBackedIndexStorage(llvm::StringRef Directory, PathMappings Mappings)
+      : DiskShardRoot(Directory), Mappings(std::move(Mappings)) {
     std::error_code OK;
     std::error_code EC = llvm::sys::fs::create_directories(DiskShardRoot);
     if (EC != OK) {
@@ -107,9 +109,11 @@ public:
 class DiskBackedIndexStorageManager {
 public:
   DiskBackedIndexStorageManager(
-      std::function<std::optional<ProjectInfo>(PathRef)> GetProjectInfo)
+      std::function<std::optional<ProjectInfo>(PathRef)> GetProjectInfo,
+      PathMappings Mappings)
       : IndexStorageMapMu(std::make_unique<std::mutex>()),
-        GetProjectInfo(std::move(GetProjectInfo)) {
+        GetProjectInfo(std::move(GetProjectInfo)),
+        Mappings(std::move(Mappings)) {
     llvm::SmallString<128> FallbackDir;
     if (llvm::sys::path::cache_directory(FallbackDir))
       llvm::sys::path::append(FallbackDir, "clangd", "index");
@@ -136,7 +140,7 @@ private:
       elog("Tried to create storage for empty directory!");
       return std::make_unique<NullStorage>();
     }
-    return std::make_unique<DiskBackedIndexStorage>(CDBDirectory);
+    return std::make_unique<DiskBackedIndexStorage>(CDBDirectory, Mappings);
   }
 
   Path FallbackDir;
@@ -145,6 +149,7 @@ private:
   std::unique_ptr<std::mutex> IndexStorageMapMu;
 
   std::function<std::optional<ProjectInfo>(PathRef)> GetProjectInfo;
+  PathMappings Mappings;
 };
 
 } // namespace
@@ -153,7 +158,8 @@ BackgroundIndexStorage::Factory
 BackgroundIndexStorage::createDiskBackedStorageFactory(
     std::function<std::optional<ProjectInfo>(PathRef)> GetProjectInfo,
     PathMappings Mappings) {
-  return DiskBackedIndexStorageManager(std::move(GetProjectInfo));
+  return DiskBackedIndexStorageManager(std::move(GetProjectInfo),
+                                       std::move(Mappings));
 }
 
 } // namespace clangd
