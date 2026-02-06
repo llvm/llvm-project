@@ -1,4 +1,4 @@
-// Testing `-include-pch` canoniclaization.
+// Testing `-include-pch` canonicalization.
 // When PCHs are chained, the dependent PCHs produced are identical
 // whether the included PCH is specified through a relative path or an absolute
 // path (bridging1.h.pch vs bridging2.h.pch).

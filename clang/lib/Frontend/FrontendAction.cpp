@@ -1040,6 +1040,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
       llvm::sys::path::native(PCHDir->getName(), DirNative);
       bool Found = false;
       llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
+      std::string SpecificModuleCachePath = CI.getSpecificModuleCachePath();
       for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
                                          DirEnd;
            Dir != DirEnd && !EC; Dir.increment(EC)) {
@@ -1049,7 +1050,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
                 CI.getPCHContainerReader(), CI.getLangOpts(),
                 CI.getCodeGenOpts(), CI.getTargetOpts(),
                 CI.getPreprocessorOpts(), CI.getHeaderSearchOpts(),
-                CI.getSpecificModuleCachePath(),
+                SpecificModuleCachePath,
                 /*RequireStrictOptionMatches=*/true)) {
           PPOpts.ImplicitPCHInclude = std::string(Dir->path());
           Found = true;
