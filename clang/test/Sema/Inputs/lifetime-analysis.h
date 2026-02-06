@@ -129,6 +129,7 @@ struct unique_ptr {
   unique_ptr();
   unique_ptr(unique_ptr<T>&&);
   ~unique_ptr();
+  T* release();
   T &operator*();
   T *get() const;
 };
