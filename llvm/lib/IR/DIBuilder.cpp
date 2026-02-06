@@ -53,27 +53,23 @@ void DIBuilder::trackIfUnresolved(MDNode *N) {
 
 void DIBuilder::finalizeSubprogram(DISubprogram *SP) {
   auto PN = SubprogramTrackedNodes.find(SP);
-  if (PN != SubprogramTrackedNodes.end()) {
-    SmallVector<Metadata *, 16> RetainedNodes(PN->second.begin(),
-                                              PN->second.end());
+  if (PN == SubprogramTrackedNodes.end())
+    return;
 
-    // If the tracked node PN was temporary, and the DIBuilder user replaced it
-    // with a node that does not belong to SP or is non-local, do not add PN to
+  SmallVector<Metadata *, 16> RetainedNodes;
+  for (MDNode *N : PN->second) {
+    // If the tracked node N was temporary, and the DIBuilder user replaced it
+    // with a node that does not belong to SP or is non-local, do not add N to
     // SP's retainedNodes list.
-    auto IsNodeAlien = [SP](Metadata *M) {
-      MDNode *N = cast<MDNode>(M);
-      DILocalScope *Scope = dyn_cast_or_null<DILocalScope>(
-          DISubprogram::getRawRetainedNodeScope(N));
-      if (!Scope)
-        return true;
-      return Scope->getSubprogram() != SP;
-    };
-    RetainedNodes.erase(
-        std::remove_if(RetainedNodes.begin(), RetainedNodes.end(), IsNodeAlien),
-        RetainedNodes.end());
+    DILocalScope *Scope = dyn_cast_or_null<DILocalScope>(
+        DISubprogram::getRawRetainedNodeScope(N));
+    if (!Scope || Scope->getSubprogram() != SP)
+      continue;
 
-    SP->replaceRetainedNodes(MDTuple::get(VMContext, RetainedNodes));
+    RetainedNodes.push_back(N);
   }
+
+  SP->replaceRetainedNodes(MDTuple::get(VMContext, RetainedNodes));
 }
 
 void DIBuilder::finalize() {
