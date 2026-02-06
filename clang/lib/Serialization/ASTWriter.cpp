@@ -1526,10 +1526,12 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
 
       // Write out all other paths relative to the base directory if possible.
       BaseDirectory.assign(BaseDir->begin(), BaseDir->end());
-    } else if (!isysroot.empty()) {
-      // Write out paths relative to the sysroot if possible.
-      BaseDirectory = std::string(isysroot);
     }
+  } else if (!isysroot.empty()) {
+    // Write out paths relative to the sysroot if possible.
+    SmallString<128> CleanedSysroot(isysroot);
+    cleanPathForOutput(PP.getFileManager(), CleanedSysroot);
+    BaseDirectory.assign(CleanedSysroot.begin(), CleanedSysroot.end());
   }
 
   // Module map file
