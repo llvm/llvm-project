@@ -28,11 +28,9 @@ class TestMachExceptionData(TestBase):
         self.assertEqual(
             lldb.eStopReasonException,
             thread.GetStopReason(),
-            "Got the right stop reason"
+            "Got the right stop reason",
         )
         self.assertEqual(thread.GetStopReasonDataCount(), 3, "Got all the codes")
         self.assertEqual(thread.stop_reason_data[0], 1, "1 is EXC_BAD_ACCESS")
         self.assertEqual(thread.stop_reason_data[1], 1, "1 is 'access invalid memory'")
         self.assertEqual(thread.stop_reason_data[2], 0x400, "That's the bad address")
-
-
