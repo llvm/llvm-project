@@ -324,7 +324,15 @@ public:
 
     explicit DAGUpdateListener(SelectionDAG &D)
       : Next(D.UpdateListeners), DAG(D) {
+      // False positive - RAII pattern, destructor cleans up.
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdangling-pointer"
+#endif
       DAG.UpdateListeners = this;
+#if defined(__GNUC__) && !defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
     }
 
     virtual ~DAGUpdateListener() {
