@@ -260,3 +260,21 @@ define amdgpu_kernel void @test_scc_quadmask_64(i32 %val0, i64 %val1, ptr addrsp
   store i32 %sel, ptr addrspace(1) null, align 4
   ret void
 }
+
+
+; See issue #125950
+define amdgpu_ps void @issue125950_test_quadmask_half_poison_i64(i32 %in, ptr %out) {
+; GFX11-LABEL: issue125950_test_quadmask_half_poison_i64:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    s_quadmask_b64 s[0:1], s[0:1]
+; GFX11-NEXT:    v_dual_mov_b32 v4, s1 :: v_dual_mov_b32 v3, s0
+; GFX11-NEXT:    flat_store_b64 v[1:2], v[3:4]
+; GFX11-NEXT:    s_endpgm
+  %v1 = insertelement <2 x i32> <i32 poison, i32 poison>, i32 %in, i32 0
+  %v2 = bitcast <2 x i32> %v1 to i64
+  %v3 = call i64 @llvm.amdgcn.s.quadmask.i64(i64 %v2)
+  %p = inttoptr i64 %v2 to ptr addrspace(4)
+  store i64 %v3, ptr %out
+  ret void
+}

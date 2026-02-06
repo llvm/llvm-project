@@ -42,8 +42,7 @@ body:             |
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE killed [[DEF]], %subreg.sub0, killed [[V_MOV_B32_e32_]], %subreg.sub1
-    ; GCN-NEXT: [[V_XOR_B32_e32_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e32 [[DEF2]], [[REG_SEQUENCE]].sub0, implicit $exec
+    ; GCN-NEXT: [[V_XOR_B32_e32_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e32 [[DEF2]], [[DEF]], implicit $exec
     %0:vgpr_32 = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
@@ -459,8 +458,6 @@ body:             |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; GCN-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_96_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1, [[V_MOV_B32_e32_2]], %subreg.sub2
     ; GCN-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64_align2 = nofpexcept V_ADD_F64_e64 0, [[COPY]], 1, 0, 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[V_ADD_F64_e64_]]
     ; GCN-NEXT: S_ENDPGM 0
@@ -488,8 +485,6 @@ body:             |
     ; GCN-NEXT: [[COPY:%[0-9]+]]:vreg_64_align2 = COPY $vgpr0_vgpr1
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
     ; GCN-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; GCN-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1, implicit $exec
-    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_96_align2 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1, [[V_MOV_B32_e32_2]], %subreg.sub2
     ; GCN-NEXT: [[V_ADD_F64_e64_:%[0-9]+]]:vreg_64_align2 = nofpexcept V_ADD_F64_e64 0, [[COPY]], 1, -1, 0, 0, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[V_ADD_F64_e64_]]
     ; GCN-NEXT: S_ENDPGM 0

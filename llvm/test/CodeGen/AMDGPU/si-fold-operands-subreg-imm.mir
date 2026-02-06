@@ -67,9 +67,8 @@ body:             |
     ; CHECK: liveins: $sgpr8_sgpr9, $vgpr8_vgpr9
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY]].sub0, %subreg.sub0, [[COPY]].sub1, %subreg.sub1
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY [[COPY]]
-    ; CHECK-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[REG_SEQUENCE]].sub1, [[COPY1]].sub1, 0, implicit $exec
+    ; CHECK-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[COPY]].sub1, [[COPY1]].sub1, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_ADD_CO_U32_e64_]]
     %0:sgpr_64 = COPY $sgpr8_sgpr9
     %1:sreg_64 = REG_SEQUENCE %0.sub0, %subreg.sub0, %0.sub1, %subreg.sub1
@@ -113,8 +112,6 @@ body:             |
     ; CHECK: liveins: $sgpr8_sgpr9
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr8_sgpr9
-    ; CHECK-NEXT: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 8
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B64_]].sub1, %subreg.sub0, [[S_MOV_B64_]].sub0, %subreg.sub1
     ; CHECK-NEXT: [[S_ADD_U32_:%[0-9]+]]:sreg_32 = S_ADD_U32 [[COPY]].sub0, 0, implicit-def $scc
     ; CHECK-NEXT: [[S_ADDC_U32_:%[0-9]+]]:sreg_32 = S_ADDC_U32 [[COPY]].sub1, 8, implicit-def $scc, implicit $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_ADD_U32_]], implicit [[S_ADDC_U32_]]
