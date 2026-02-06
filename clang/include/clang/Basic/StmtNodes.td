@@ -179,6 +179,9 @@ def CoyieldExpr : StmtNode<CoroutineSuspendExpr>;
 def ConceptSpecializationExpr : StmtNode<Expr>;
 def RequiresExpr : StmtNode<Expr>;
 
+// c++ 26 reflection
+def CXXReflectExpr : StmtNode<Expr>;
+
 // Obj-C Expressions.
 def ObjCStringLiteral : StmtNode<Expr>;
 def ObjCBoxedExpr : StmtNode<Expr>;

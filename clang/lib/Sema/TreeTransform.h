@@ -13054,6 +13054,12 @@ ExprResult TreeTransform<Derived>::TransformSYCLUniqueStableNameExpr(
       E->getLocation(), E->getLParenLocation(), E->getRParenLocation(), NewT);
 }
 
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformCXXReflectExpr(CXXReflectExpr *E) {
+  // TODO(reflection): Implement its transform
+  assert(false && "not implemented yet");
+}
+
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformPredefinedExpr(PredefinedExpr *E) {
