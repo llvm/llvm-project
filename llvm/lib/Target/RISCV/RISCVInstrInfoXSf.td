@@ -14,9 +14,8 @@
 // XSFVCP extension instructions.
 //===----------------------------------------------------------------------===//
 
-def VCIXVS2    : RISCVVConstraint<VS2Constraint.Value>;
-def VCIXVS2VS1 : RISCVVConstraint<!or(VS2Constraint.Value,
-                                      VS1Constraint.Value)>;
+def VCIXVS2    : RISCVVConstraint<VS2 = 1>;
+def VCIXVS2VS1 : RISCVVConstraint<VS2 = 1, VS1 = 1>;
 
 class VCIXType<bits<4> val> {
   bits<4> Val = val;
@@ -37,7 +36,7 @@ def payload1 : PayloadOp<1>;
 def payload2 : PayloadOp<2>;
 def payload5 : PayloadOp<5>;
 
-def tsimm5 : Operand<XLenVT>, TImmLeaf<XLenVT, [{return isInt<5>(Imm);}]> {
+def tsimm5 : RISCVOp, TImmLeaf<XLenVT, [{return isInt<5>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<5>;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<5>";
@@ -47,6 +46,7 @@ def tsimm5 : Operand<XLenVT>, TImmLeaf<XLenVT, [{return isInt<5>(Imm);}]> {
       return isInt<5>(Imm);
     return MCOp.isBareSymbolRef();
   }];
+  let OperandType = "OPERAND_SIMM5";
 }
 
 class SwapVCIXIns<dag funct6, dag rd, dag rs2, dag rs1, bit swap> {
@@ -182,14 +182,20 @@ class SiFiveVMACCScheds<string name> {
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 class CustomSiFiveVMACC<bits<6> funct6, RISCVVFormat opv, string opcodestr>
-    : RVInstVCCustom2<funct6{5-2}, opv.Value, (outs VR:$rd), (ins VR:$rs1, VR:$rs2),
-                      opcodestr, "$rd, $rs1, $rs2">,
+    : RVInstVV<funct6, opv, (outs VR:$vd_wb), (ins VR:$vd, VR:$vs1, VR:$vs2), opcodestr,
+               "$vd, $vs1, $vs2">,
       SchedTernaryMC<SiFiveVMACCScheds<NAME>.write,
                      SiFiveVMACCScheds<NAME>.read,
                      SiFiveVMACCScheds<NAME>.read,
                      SiFiveVMACCScheds<NAME>.read> {
   let vm = 1;
-  let funct6_lo2 = funct6{1-0};
+
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
+
+  let Constraints = "$vd = $vd_wb";
+  let RVVConstraint = NoConstraint;
+  let ElementsDependOn = EltDepsVLMask;
+  let ReadsPastVL = true;
 }
 }
 

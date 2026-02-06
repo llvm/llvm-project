@@ -85,7 +85,7 @@ public:
 
   /// If Ty is a vector type, return a Constant with a splat of the given
   /// value. Otherwise return a ConstantInt for the given value.
-  LLVM_ABI static ConstantInt *get(Type *Ty, uint64_t V, bool IsSigned = false);
+  LLVM_ABI static Constant *get(Type *Ty, uint64_t V, bool IsSigned = false);
 
   /// Return a ConstantInt with the specified integer value for the specified
   /// type. If the type is wider than 64 bits, the value will be zero-extended

@@ -65,12 +65,11 @@ AST_MATCHER_P(CXXRecordDecl, isMoveConstructibleInBoundCXXRecordDecl, StringRef,
        &Node](const ast_matchers::internal::BoundNodesMap &Nodes) -> bool {
         const auto *BoundClass =
             Nodes.getNode(this->RecordDeclID).get<CXXRecordDecl>();
-        for (const CXXConstructorDecl *Ctor : Node.ctors()) {
+        for (const CXXConstructorDecl *Ctor : Node.ctors())
           if (Ctor->isMoveConstructor() && !Ctor->isDeleted() &&
               (Ctor->getAccess() == AS_public ||
                (BoundClass && isFirstFriendOfSecond(BoundClass, &Node))))
             return false;
-        }
         return true;
       });
 }

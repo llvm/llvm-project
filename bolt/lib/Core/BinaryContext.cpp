@@ -826,7 +826,7 @@ void BinaryContext::populateJumpTables() {
 }
 
 void BinaryContext::skipMarkedFragments() {
-  std::vector<BinaryFunction *> FragmentQueue;
+  BinaryFunctionListType FragmentQueue;
   // Copy the functions to FragmentQueue.
   FragmentQueue.assign(FragmentsToSkip.begin(), FragmentsToSkip.end());
   auto addToWorklist = [&](BinaryFunction *Function) -> void {
@@ -1715,18 +1715,8 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
                                DestCUID, DstUnit->getVersion()));
 }
 
-std::vector<BinaryFunction *> BinaryContext::getSortedFunctions() {
-  std::vector<BinaryFunction *> SortedFunctions(BinaryFunctions.size());
-  llvm::transform(llvm::make_second_range(BinaryFunctions),
-                  SortedFunctions.begin(),
-                  [](BinaryFunction &BF) { return &BF; });
-
-  llvm::stable_sort(SortedFunctions, compareBinaryFunctionByIndex);
-  return SortedFunctions;
-}
-
-std::vector<BinaryFunction *> BinaryContext::getAllBinaryFunctions() {
-  std::vector<BinaryFunction *> AllFunctions;
+BinaryFunctionListType BinaryContext::getAllBinaryFunctions() {
+  BinaryFunctionListType AllFunctions;
   AllFunctions.reserve(BinaryFunctions.size() + InjectedBinaryFunctions.size());
   llvm::transform(llvm::make_second_range(BinaryFunctions),
                   std::back_inserter(AllFunctions),
@@ -2569,6 +2559,10 @@ BinaryContext::createInjectedBinaryFunction(const std::string &Name,
   BinaryFunction *BF = InjectedBinaryFunctions.back();
   setSymbolToFunctionMap(BF->getSymbol(), BF);
   BF->CurrentState = BinaryFunction::State::CFG;
+
+  if (!getOutputBinaryFunctions().empty())
+    getOutputBinaryFunctions().push_back(BF);
+
   return BF;
 }
 

@@ -483,7 +483,9 @@ void CGHLSLRuntime::finishCodeGen() {
     addDxilValVersion(TargetOpts.DxilValidatorVersion, M);
   if (CodeGenOpts.ResMayAlias)
     M.setModuleFlag(llvm::Module::ModFlagBehavior::Error, "dx.resmayalias", 1);
-
+  if (CodeGenOpts.AllResourcesBound)
+    M.setModuleFlag(llvm::Module::ModFlagBehavior::Error,
+                    "dx.allresourcesbound", 1);
   // NativeHalfType corresponds to the -fnative-half-type clang option which is
   // aliased by clang-dxc's -enable-16bit-types option. This option is used to
   // set the UseNativeLowPrecision DXIL module flag in the DirectX backend
@@ -1111,9 +1113,7 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
       /*ReturnType=*/HandleTy, IntrID, Args, nullptr,
       Twine(GV->getName()).concat("_h"));
 
-  llvm::Value *HandleRef = Builder.CreateStructGEP(GV->getValueType(), GV, 0);
-  Builder.CreateAlignedStore(CreateHandle, HandleRef,
-                             HandleRef->getPointerAlignment(DL));
+  Builder.CreateAlignedStore(CreateHandle, GV, GV->getPointerAlignment(DL));
   Builder.CreateRetVoid();
 
   CGM.AddCXXGlobalInit(InitResFunc);
@@ -1279,8 +1279,8 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
       AggValueSlot::DoesNotOverlap);
 
   // Calculate total array size (= range size).
-  llvm::Value *Range =
-      llvm::ConstantInt::get(CGM.IntTy, getTotalArraySize(AST, ResArrayTy));
+  llvm::Value *Range = llvm::ConstantInt::getSigned(
+      CGM.IntTy, getTotalArraySize(AST, ResArrayTy));
 
   // If the result of the subscript operation is a single resource, call the
   // constructor.
@@ -1418,7 +1418,7 @@ class HLSLBufferCopyEmitter {
                          llvm::ConstantInt *LoadIndex) {
     CurStoreIndices.push_back(StoreIndex);
     CurLoadIndices.push_back(LoadIndex);
-    auto RestoreIndices = llvm::make_scope_exit([&]() {
+    llvm::scope_exit RestoreIndices([&]() {
       CurStoreIndices.pop_back();
       CurLoadIndices.pop_back();
     });
@@ -1556,10 +1556,7 @@ LValue CGHLSLRuntime::emitBufferMemberExpr(CodeGenFunction &CGF,
   auto *Field = dyn_cast<FieldDecl>(E->getMemberDecl());
   assert(Field && "Unexpected access into HLSL buffer");
 
-  // Get the field index for the struct.
   const RecordDecl *Rec = Field->getParent();
-  unsigned FieldIdx =
-      CGM.getTypes().getCGRecordLayout(Rec).getLLVMFieldNo(Field);
 
   // Work out the buffer layout type to index into.
   QualType RecType = CGM.getContext().getCanonicalTagType(Rec);
@@ -1570,6 +1567,22 @@ LValue CGHLSLRuntime::emitBufferMemberExpr(CodeGenFunction &CGF,
   CGHLSLOffsetInfo EmptyOffsets;
   llvm::StructType *LayoutTy = HLSLBufferLayoutBuilder(CGM).layOutStruct(
       RecType->getAsCanonical<RecordType>(), EmptyOffsets);
+
+  // Get the field index for the layout struct, accounting for padding.
+  unsigned FieldIdx =
+      CGM.getTypes().getCGRecordLayout(Rec).getLLVMFieldNo(Field);
+  assert(FieldIdx < LayoutTy->getNumElements() &&
+         "Layout struct is smaller than member struct");
+  unsigned Skipped = 0;
+  for (unsigned I = 0; I <= FieldIdx;) {
+    llvm::Type *ElementTy = LayoutTy->getElementType(I + Skipped);
+    if (CGF.CGM.getTargetCodeGenInfo().isHLSLPadding(ElementTy))
+      ++Skipped;
+    else
+      ++I;
+  }
+  FieldIdx += Skipped;
+  assert(FieldIdx < LayoutTy->getNumElements() && "Access out of bounds");
 
   // Now index into the struct, making sure that the type we return is the
   // buffer layout type rather than the original type in the AST.

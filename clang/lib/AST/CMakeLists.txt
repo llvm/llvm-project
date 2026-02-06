@@ -82,6 +82,7 @@ add_clang_library(clangAST
   ByteCode/Floating.cpp
   ByteCode/EvaluationResult.cpp
   ByteCode/DynamicAllocator.cpp
+  ByteCode/InitMap.cpp
   ByteCode/Interp.cpp
   ByteCode/InterpBlock.cpp
   ByteCode/InterpFrame.cpp

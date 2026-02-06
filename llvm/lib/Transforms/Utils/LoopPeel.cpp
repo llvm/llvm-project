@@ -447,10 +447,10 @@ static unsigned peelToTurnInvariantLoadsDereferenceable(Loop &L,
   const DataLayout &DL = L.getHeader()->getDataLayout();
   for (BasicBlock *BB : L.blocks()) {
     for (Instruction &I : *BB) {
-      // Don't consider llvm.assume as writing to memory.
+      // Calls that only access inaccessible memory can never alias with loads.
       if (I.mayWriteToMemory() &&
-          !(isa<IntrinsicInst>(I) &&
-            cast<IntrinsicInst>(I).getIntrinsicID() == Intrinsic::assume))
+          !(isa<CallBase>(I) &&
+            cast<CallBase>(I).onlyAccessesInaccessibleMemory()))
         return 0;
 
       if (LoadUsers.contains(&I))
@@ -1099,7 +1099,7 @@ llvm::gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
 /// this provides a benefit, since the peeled off iterations, which account
 /// for the bulk of dynamic execution, can be further simplified by scalar
 /// optimizations.
-bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
+void llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
                     ScalarEvolution *SE, DominatorTree &DT, AssumptionCache *AC,
                     bool PreserveLCSSA, ValueToValueMapTy &LVMap) {
   assert(PeelCount > 0 && "Attempt to peel out zero iterations?");
@@ -1438,6 +1438,4 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
 
   NumPeeled++;
   NumPeeledEnd += PeelLast;
-
-  return true;
 }

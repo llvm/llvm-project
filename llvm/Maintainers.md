@@ -186,7 +186,7 @@ i@maskray.me (email), [MaskRay](https://github.com/MaskRay) (GitHub)
 #### Windows ABI and codegen
 
 Reid Kleckner \
-rnk@google.com (email), [rnk](https://github.com/rnk) (GitHub)
+rnk@llvm.org (email), [rnk](https://github.com/rnk) (GitHub)
 
 ### Backends / Targets
 
@@ -275,7 +275,7 @@ jholewinski@nvidia.com (email), [jholewinski](https://github.com/jholewinski) (G
 Artem Belevich \
 tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub) \
 Alex MacLean \
-amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub) \
+amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub)
 
 #### PowerPC backend
 
@@ -484,7 +484,7 @@ echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
 #### Exception handling
 
 Reid Kleckner \
-rnk@google.com (email), [rnk](https://github.com/rnk) (GitHub)
+rnk@llvm.org (email), [rnk](https://github.com/rnk) (GitHub)
 
 #### LLVM Buildbot
 
@@ -495,11 +495,11 @@ gkistanova@gmail.com (email), [gkistanova](https://github.com/gkistanova) (GitHu
 
 Some subprojects maintain their own list of per-component maintainers.
 
-[Bolt maintainers](https://github.com/llvm/llvm-project/blob/main/bolt/Maintainers.txt)
+[BOLT maintainers](https://github.com/llvm/llvm-project/blob/main/bolt/Maintainers.md)
 
 [Clang maintainers](https://github.com/llvm/llvm-project/blob/main/clang/Maintainers.rst)
 
-[Clang-tools-extra maintainers](https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/Maintainers.txt)
+[Clang-tools-extra maintainers](https://github.com/llvm/llvm-project/blob/main/clang-tools-extra/Maintainers.rst)
 
 [Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/Maintainers.md)
 

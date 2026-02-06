@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CIR_CODEGEN_CIRGENMODULE_H
 
 #include "CIRGenBuilder.h"
+#include "CIRGenCUDARuntime.h"
 #include "CIRGenCall.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenTypes.h"
@@ -90,11 +91,16 @@ private:
   /// Holds information about C++ vtables.
   CIRGenVTables vtables;
 
+  /// Holds the CUDA runtime
+  std::unique_ptr<CIRGenCUDARuntime> cudaRuntime;
+
   /// Per-function codegen information. Updated everytime emitCIR is called
   /// for FunctionDecls's.
   CIRGenFunction *curCGF = nullptr;
 
   llvm::SmallVector<mlir::Attribute> globalScopeAsm;
+
+  void createCUDARuntime();
 
 public:
   mlir::ModuleOp getModule() const { return theModule; }
@@ -147,6 +153,7 @@ public:
   void handleCXXStaticMemberVarInstantiation(VarDecl *vd);
 
   llvm::DenseMap<const Decl *, cir::GlobalOp> staticLocalDeclMap;
+  llvm::DenseMap<const VarDecl *, cir::GlobalOp> initializerConstants;
 
   mlir::Operation *getGlobalValue(llvm::StringRef ref);
 
@@ -160,6 +167,9 @@ public:
 
   cir::GlobalOp getOrCreateStaticVarDecl(const VarDecl &d,
                                          cir::GlobalLinkageKind linkage);
+
+  Address createUnnamedGlobalFrom(const VarDecl &d, mlir::Attribute constAttr,
+                                  CharUnits align);
 
   /// If the specified mangled name is not in the module, create and return an
   /// mlir::GlobalOp value
@@ -255,11 +265,24 @@ public:
   /// Get the CIR attributes and calling convention to use for a particular
   /// function type.
   ///
+  /// \param name - The function name.
+  /// \param info - The function type information.
   /// \param calleeInfo - The callee information these attributes are being
   /// constructed for. If valid, the attributes applied to this decl may
   /// contribute to the function attributes and calling convention.
-  void constructAttributeList(CIRGenCalleeInfo calleeInfo,
-                              mlir::NamedAttrList &attrs);
+  /// \param attrs [out] - On return, the attribute list to use.
+  /// \param callingConv [out] - On return, the calling convention to use.
+  /// \param sideEffect [out] - On return, the side effect type of the
+  /// attributes.
+  /// \param attrOnCallSite - Whether or not the attributes are on a call site.
+  /// \param isThunk - Whether the function is a thunk.
+  void constructAttributeList(llvm::StringRef name,
+                              const CIRGenFunctionInfo &info,
+                              CIRGenCalleeInfo calleeInfo,
+                              mlir::NamedAttrList &attrs,
+                              cir::CallingConv &callingConv,
+                              cir::SideEffect &sideEffect, bool attrOnCallSite,
+                              bool isThunk);
 
   /// Will return a global variable of the given type. If a variable with a
   /// different type already exists then a new variable with the right type
@@ -458,6 +481,10 @@ public:
   void setFunctionAttributes(GlobalDecl gd, cir::FuncOp f,
                              bool isIncompleteFunction, bool isThunk);
 
+  /// Set the CIR function attributes (Sext, zext, etc).
+  void setCIRFunctionAttributes(GlobalDecl gd, const CIRGenFunctionInfo &info,
+                                cir::FuncOp func, bool isThunk);
+
   /// Set extra attributes (inline, etc.) for a function.
   void setCIRFunctionAttributesForDefinition(const clang::FunctionDecl *fd,
                                              cir::FuncOp f);
@@ -491,6 +518,14 @@ public:
                               cir::FuncOp func, SourceLocation pragmaLoc,
                               ArrayRef<const OpenACCClause *> clauses);
 
+  void emitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *d);
+  void emitOMPGroupPrivateDecl(const OMPGroupPrivateDecl *d);
+  void emitOMPCapturedExpr(const OMPCapturedExprDecl *d);
+  void emitOMPAllocateDecl(const OMPAllocateDecl *d);
+  void emitOMPDeclareReduction(const OMPDeclareReductionDecl *d);
+  void emitOMPDeclareMapper(const OMPDeclareMapperDecl *d);
+  void emitOMPRequiresDecl(const OMPRequiresDecl *d);
+
   // C++ related functions.
   void emitDeclContext(const DeclContext *dc);
 
@@ -507,6 +542,15 @@ public:
   mlir::Value emitMemberPointerConstant(const UnaryOperator *e);
 
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
+  // This function is to support the OpenACC 'bind' clause, which names an
+  // alternate name for the function to be called by. This function mangles
+  // `attachedFunction` as-if its name was actually `bindName` (that is, with
+  // the same signature).  It has some additional complications, as the 'bind'
+  // target is always going to be a global function, so member functions need an
+  // explicit instead of implicit 'this' parameter, and thus gets mangled
+  // differently.
+  std::string getOpenACCBindMangledName(const IdentifierInfo *bindName,
+                                        const FunctionDecl *attachedFunction);
 
   void emitTentativeDefinition(const VarDecl *d);
 
@@ -522,6 +566,10 @@ public:
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
+
+  // Whether a global variable should be emitted by CUDA/HIP host/device
+  // related attributes.
+  bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
 
   void replaceUsesOfNonProtoTypeWithRealFunction(mlir::Operation *old,
                                                  cir::FuncOp newFn);
@@ -553,10 +601,16 @@ public:
   static constexpr const char *builtinCoroId = "__builtin_coro_id";
   static constexpr const char *builtinCoroAlloc = "__builtin_coro_alloc";
   static constexpr const char *builtinCoroBegin = "__builtin_coro_begin";
+  static constexpr const char *builtinCoroEnd = "__builtin_coro_end";
 
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".
   cir::FuncOp getBuiltinLibFunction(const FunctionDecl *fd, unsigned builtinID);
+
+  CIRGenCUDARuntime &getCUDARuntime() {
+    assert(cudaRuntime != nullptr);
+    return *cudaRuntime;
+  }
 
   mlir::IntegerAttr getSize(CharUnits size) {
     return builder.getSizeFromCharUnits(size);
@@ -632,6 +686,15 @@ public:
                              const T &name) {
     return errorNYI(loc.getBegin(), feature, name) << loc;
   }
+
+  /// Emit a general error that something can't be done.
+  void error(SourceLocation loc, llvm::StringRef error);
+
+  /// Print out an error that codegen doesn't support the specified stmt yet.
+  void errorUnsupported(const Stmt *s, llvm::StringRef type);
+
+  /// Print out an error that codegen doesn't support the specified decl yet.
+  void errorUnsupported(const Decl *d, llvm::StringRef type);
 
 private:
   // An ordered map of canonical GlobalDecls to their mangled names.

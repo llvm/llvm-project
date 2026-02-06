@@ -788,7 +788,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       if (Exp == APFloat::IEK_NaN || Exp == APFloat::IEK_Inf)
         Exp = 0;
 
-      return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), Exp));
+      return IC.replaceInstUsesWith(II,
+                                    ConstantInt::getSigned(II.getType(), Exp));
     }
 
     if (isa<PoisonValue>(Src))
@@ -1458,30 +1459,30 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (isa<PoisonValue>(Src) || isa<PoisonValue>(Segment))
       return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
 
-    if (isa<UndefValue>(Src)) {
-      auto *QNaN = ConstantFP::get(
-          II.getType(), APFloat::getQNaN(II.getType()->getFltSemantics()));
-      return IC.replaceInstUsesWith(II, QNaN);
-    }
-
-    const ConstantFP *Csrc = dyn_cast<ConstantFP>(Src);
-    if (!Csrc)
-      break;
+    if (isa<UndefValue>(Segment))
+      return IC.replaceInstUsesWith(II, ConstantFP::getZero(II.getType()));
 
     if (II.isStrictFP())
       break;
 
-    const APFloat &Fsrc = Csrc->getValueAPF();
-    if (Fsrc.isNaN()) {
-      auto *Quieted = ConstantFP::get(II.getType(), Fsrc.makeQuiet());
-      return IC.replaceInstUsesWith(II, Quieted);
-    }
-
-    const ConstantInt *Cseg = dyn_cast<ConstantInt>(Segment);
-    if (!Cseg)
+    const ConstantFP *CSrc = dyn_cast<ConstantFP>(Src);
+    if (!CSrc && !isa<UndefValue>(Src))
       break;
 
-    unsigned Exponent = (Fsrc.bitcastToAPInt().getZExtValue() >> 52) & 0x7ff;
+    // The instruction ignores special cases, and literally just extracts the
+    // exponents. Fold undef to nan, and index the table as normal.
+    APInt FSrcInt = CSrc ? CSrc->getValueAPF().bitcastToAPInt()
+                         : APFloat::getQNaN(II.getType()->getFltSemantics())
+                               .bitcastToAPInt();
+
+    const ConstantInt *Cseg = dyn_cast<ConstantInt>(Segment);
+    if (!Cseg) {
+      if (isa<UndefValue>(Src))
+        return IC.replaceInstUsesWith(II, ConstantFP::getZero(II.getType()));
+      break;
+    }
+
+    unsigned Exponent = FSrcInt.extractBitsAsZExtValue(11, 52);
     unsigned SegmentVal = Cseg->getValue().trunc(5).getZExtValue();
     unsigned Shift = SegmentVal * 53;
     if (Exponent > 1077)
@@ -1736,6 +1737,27 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         Args, &II);
     NewII->takeName(&II);
     return IC.replaceInstUsesWith(II, NewII);
+  }
+  case Intrinsic::amdgcn_tensor_load_to_lds:
+  case Intrinsic::amdgcn_tensor_store_from_lds: {
+    Value *D2 = II.getArgOperand(2);
+    Value *D3 = II.getArgOperand(3);
+    // We know that not passing the second and third tensor DMA groups is
+    // equivalent to passing zeroes for those registers, so we rewrite to the
+    // shorter form here. Undef or poison are replaced by 0.
+    auto Pred = m_CombineOr(m_Zero(), m_Undef());
+    if (!match(D2, Pred) || !match(D3, Pred))
+      return std::nullopt;
+
+    auto ShortIntrinsic = IID == Intrinsic::amdgcn_tensor_load_to_lds
+                              ? Intrinsic::amdgcn_tensor_load_to_lds_d2
+                              : Intrinsic::amdgcn_tensor_store_from_lds_d2;
+    CallInst *NewII = IC.Builder.CreateIntrinsic(
+        ShortIntrinsic,
+        {II.getArgOperand(0), II.getArgOperand(1), II.getArgOperand(4)});
+    NewII->takeName(&II);
+    NewII->copyMetadata(II);
+    return IC.eraseInstFromFunction(II);
   }
   }
   if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =

@@ -226,9 +226,9 @@ const BlockConstruct *GetFortranBlockConstruct(
 const Block &GetInnermostExecPart(const Block &block);
 bool IsStrictlyStructuredBlock(const Block &block);
 
-const OmpCombinerExpression *GetCombinerExpr(
-    const OmpReductionSpecifier &rspec);
-const OmpInitializerExpression *GetInitializerExpr(const OmpClause &init);
+const OmpCombinerExpression *GetCombinerExpr(const OmpReductionSpecifier &x);
+const OmpCombinerExpression *GetCombinerExpr(const OmpClause &x);
+const OmpInitializerExpression *GetInitializerExpr(const OmpClause &x);
 
 struct OmpAllocateInfo {
   std::vector<const OmpAllocateDirective *> dirs;

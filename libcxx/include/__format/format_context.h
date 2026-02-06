@@ -80,17 +80,17 @@ public:
   template <class _Tp>
   using formatter_type = formatter<_Tp, _CharT>;
 
-  _LIBCPP_HIDE_FROM_ABI basic_format_arg<basic_format_context> arg(size_t __id) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI basic_format_arg<basic_format_context> arg(size_t __id) const noexcept {
     return __args_.get(__id);
   }
 #  if _LIBCPP_HAS_LOCALIZATION
-  _LIBCPP_HIDE_FROM_ABI std::locale locale() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI std::locale locale() {
     if (!__loc_)
       __loc_ = std::locale{};
     return *__loc_;
   }
 #  endif
-  _LIBCPP_HIDE_FROM_ABI iterator out() { return std::move(__out_it_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI iterator out() { return std::move(__out_it_); }
   _LIBCPP_HIDE_FROM_ABI void advance_to(iterator __it) { __out_it_ = std::move(__it); }
 
 private:

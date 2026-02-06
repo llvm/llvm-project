@@ -1458,8 +1458,7 @@ ConstantLValueEmitter::VisitObjCBoxedExpr(const ObjCBoxedExpr *e) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitPredefinedExpr(const PredefinedExpr *e) {
-  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: predefined expr");
-  return {};
+  return cgm.getAddrOfConstantStringFromLiteral(e->getFunctionName());
 }
 
 ConstantLValue
@@ -1670,6 +1669,12 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
     return tryEmitPrivateForMemory(*value, destType);
 
   return {};
+}
+
+mlir::Attribute ConstantEmitter::tryEmitAbstract(const Expr *e,
+                                                 QualType destType) {
+  AbstractStateRAII state{*this, true};
+  return tryEmitPrivate(e, destType);
 }
 
 mlir::Attribute ConstantEmitter::tryEmitConstantExpr(const ConstantExpr *ce) {
@@ -1885,9 +1890,13 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
       return {};
     }
 
-    if (isa<CXXMethodDecl>(memberDecl)) {
-      cgm.errorNYI("ConstExprEmitter::tryEmitPrivate member pointer to method");
-      return {};
+    if (auto const *cxxDecl = dyn_cast<CXXMethodDecl>(memberDecl)) {
+      auto ty = mlir::cast<cir::MethodType>(cgm.convertType(destType));
+      if (cxxDecl->isVirtual())
+        return cgm.getCXXABI().buildVirtualMethodAttr(ty, cxxDecl);
+
+      cir::FuncOp methodFuncOp = cgm.getAddrOfFunction(cxxDecl);
+      return cgm.getBuilder().getMethodAttr(ty, methodFuncOp);
     }
 
     auto cirTy = mlir::cast<cir::DataMemberType>(cgm.convertType(destType));

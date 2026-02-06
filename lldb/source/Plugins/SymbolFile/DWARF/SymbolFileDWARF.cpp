@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
@@ -518,12 +519,7 @@ SymbolFileDWARF::GetTypeSystemForLanguage(LanguageType language) {
   if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
     return debug_map_symfile->GetTypeSystemForLanguage(language);
 
-  auto type_system_or_err =
-      m_objfile_sp->GetModule()->GetTypeSystemForLanguage(language);
-  if (type_system_or_err)
-    if (auto ts = *type_system_or_err)
-      ts->SetSymbolFile(this);
-  return type_system_or_err;
+  return SymbolFileCommon::GetTypeSystemForLanguage(language);
 }
 
 void SymbolFileDWARF::InitializeObject() {
@@ -2515,6 +2511,7 @@ static llvm::StringRef ClangToItaniumDtorKind(clang::CXXDtorType kind) {
   case clang::CXXDtorType::Dtor_Unified:
     return "D4";
   case clang::CXXDtorType::Dtor_Comdat:
+  case clang::CXXDtorType::Dtor_VectorDeleting:
     llvm_unreachable("Unexpected destructor kind.");
   }
   llvm_unreachable("Fully covered switch above");
@@ -2618,24 +2615,23 @@ SymbolFileDWARF::ResolveFunctionCallLabel(FunctionCallLabel &label) {
         label.lookup_name, from, variant);
     if (!subst_or_err)
       return llvm::joinErrors(
-          llvm::createStringError(llvm::formatv(
+          llvm::createStringErrorV(
               "failed to substitute {0} for {1} in mangled name {2}:", from,
-              variant, label.lookup_name)),
+              variant, label.lookup_name),
           subst_or_err.takeError());
 
     if (!*subst_or_err)
-      return llvm::createStringError(
-          llvm::formatv("got invalid substituted mangled named (substituted "
-                        "{0} for {1} in mangled name {2})",
-                        from, variant, label.lookup_name));
+      return llvm::createStringErrorV(
+          "got invalid substituted mangled named (substituted "
+          "{0} for {1} in mangled name {2})",
+          from, variant, label.lookup_name);
 
     label.lookup_name = subst_or_err->GetStringRef();
   }
 
   DWARFDIE die = GetDIE(label.symbol_id);
   if (!die.IsValid())
-    return llvm::createStringError(
-        llvm::formatv("invalid DIE ID in {0}", label));
+    return llvm::createStringErrorV("invalid DIE ID in {0}", label);
 
   // Label was created using a declaration DIE. Need to fetch the definition
   // to resolve the function call.
@@ -2736,8 +2732,8 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
     if (it != llvm::StringRef::npos) {
       const llvm::StringRef name_no_template_params = name_ref.slice(0, it);
 
-      Module::LookupInfo no_tp_lookup_info(lookup_info);
-      no_tp_lookup_info.SetLookupName(ConstString(name_no_template_params));
+      Module::LookupInfo no_tp_lookup_info(
+          lookup_info, ConstString(name_no_template_params));
       m_index->GetFunctions(no_tp_lookup_info, *this, parent_decl_ctx,
                             [&](DWARFDIE die) {
                               if (resolved_dies.insert(die.GetDIE()).second)

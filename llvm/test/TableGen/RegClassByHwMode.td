@@ -42,30 +42,43 @@ include "Common/RegClassByHwModeCommon.td"
 
 // INSTRINFO: extern const int16_t MyTargetRegClassByHwModeTables[4][3] = {
 // INSTRINFO-NEXT:  { // DefaultMode
-// INSTRINFO-NEXT:    MyTarget::PtrRegs32RegClassID,
-// INSTRINFO-NEXT:    MyTarget::XRegsRegClassID,
-// INSTRINFO-NEXT:    MyTarget::YRegsRegClassID,
+// INSTRINFO-NEXT:    MyTarget::PtrRegs32RegClassID, // MyPtrRC
+// INSTRINFO-NEXT:    MyTarget::XRegsRegClassID, // XRegs_EvenIfRequired
+// INSTRINFO-NEXT:    MyTarget::YRegsRegClassID, // YRegs_EvenIfRequired
 // INSTRINFO-NEXT:  },
 // INSTRINFO-NEXT:  { // EvenMode
-// INSTRINFO-NEXT:    -1, // Missing mode entry
-// INSTRINFO-NEXT:    MyTarget::XRegs_EvenRegClassID,
-// INSTRINFO-NEXT:    MyTarget::YRegs_EvenRegClassID,
+// INSTRINFO-NEXT:    -1, // Missing mode entry for MyPtrRC
+// INSTRINFO-NEXT:    MyTarget::XRegs_EvenRegClassID, // XRegs_EvenIfRequired
+// INSTRINFO-NEXT:    MyTarget::YRegs_EvenRegClassID, // YRegs_EvenIfRequired
 // INSTRINFO-NEXT:  },
 // INSTRINFO-NEXT:  { // OddMode
-// INSTRINFO-NEXT:    -1, // Missing mode entry
-// INSTRINFO-NEXT:    MyTarget::XRegs_OddRegClassID,
-// INSTRINFO-NEXT:    -1, // Missing mode entry
+// INSTRINFO-NEXT:    -1, // Missing mode entry for MyPtrRC
+// INSTRINFO-NEXT:    MyTarget::XRegs_OddRegClassID, // XRegs_EvenIfRequired
+// INSTRINFO-NEXT:    -1, // Missing mode entry for YRegs_EvenIfRequired
 // INSTRINFO-NEXT:  },
 // INSTRINFO-NEXT:  { // Ptr64
-// INSTRINFO-NEXT:    MyTarget::PtrRegs64RegClassID,
-// INSTRINFO-NEXT:    -1, // Missing mode entry
-// INSTRINFO-NEXT:    -1, // Missing mode entry
+// INSTRINFO-NEXT:    MyTarget::PtrRegs64RegClassID, // MyPtrRC
+// INSTRINFO-NEXT:    -1, // Missing mode entry for XRegs_EvenIfRequired
+// INSTRINFO-NEXT:    -1, // Missing mode entry for YRegs_EvenIfRequired
 // INSTRINFO-NEXT:  },
 // INSTRINFO-NEXT: };
 
 // INSTRINFO: static inline void InitMyTargetMCInstrInfo(
 // INSTRINFO-NEXT: II->InitMCInstrInfo(MyTargetDescs.Insts, MyTargetInstrNameIndices, MyTargetInstrNameData, nullptr, nullptr, {{[0-9]+}}, &MyTargetRegClassByHwModeTables[0][0], 3);
 
+// INSTRINFO: #ifdef GET_INSTRINFO_HEADER
+// INSTRINFO-NEXT: #undef GET_INSTRINFO_HEADER
+// INSTRINFO-EMPTY:
+// INSTRINFO-NEXT: namespace llvm {
+// INSTRINFO-EMPTY:
+// INSTRINFO-NEXT: struct MyTargetGenInstrInfo : public TargetInstrInfo {
+// INSTRINFO-NEXT:   explicit MyTargetGenInstrInfo(const TargetSubtargetInfo &STI, const TargetRegisterInfo &TRI, unsigned CFSetupOpcode = ~0u, unsigned CFDestroyOpcode = ~0u, unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u);
+// INSTRINFO-NEXT:   ~MyTargetGenInstrInfo() override = default;
+// INSTRINFO-NEXT: };
+// INSTRINFO-NEXT: extern const int16_t MyTargetRegClassByHwModeTables[4][3];
+// INSTRINFO-EMPTY:
+// INSTRINFO-NEXT: } // namespace llvm
+// INSTRINFO: #endif // GET_INSTRINFO_HEADER
 
 
 // ASMMATCHER: enum MatchClassKind {
@@ -92,24 +105,24 @@ include "Common/RegClassByHwModeCommon.td"
 // ASMMATCHER: if (Operand.isReg() && Kind > MCK_LAST_REGISTER && Kind <= MCK_LAST_REGCLASS_BY_HWMODE) {
 // ASMMATCHER-NEXT:    static constexpr MatchClassKind RegClassByHwModeMatchTable[4][3] = {
 // ASMMATCHER-NEXT:      { // DefaultMode
-// ASMMATCHER-NEXT:        MCK_PtrRegs32,
-// ASMMATCHER-NEXT:        MCK_XRegs,
-// ASMMATCHER-NEXT:        MCK_YRegs,
+// ASMMATCHER-NEXT:        MCK_PtrRegs32, // MyPtrRC
+// ASMMATCHER-NEXT:        MCK_XRegs, // XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:        MCK_YRegs, // YRegs_EvenIfRequired
 // ASMMATCHER-NEXT:      },
 // ASMMATCHER-NEXT:      { // EvenMode
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode
-// ASMMATCHER-NEXT:        MCK_XRegs_Even,
-// ASMMATCHER-NEXT:        MCK_YRegs_Even,
+// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for MyPtrRC
+// ASMMATCHER-NEXT:        MCK_XRegs_Even, // XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:        MCK_YRegs_Even, // YRegs_EvenIfRequired
 // ASMMATCHER-NEXT:      },
 // ASMMATCHER-NEXT:      { // OddMode
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode
-// ASMMATCHER-NEXT:        MCK_XRegs_Odd,
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode
+// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for MyPtrRC
+// ASMMATCHER-NEXT:        MCK_XRegs_Odd, // XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for YRegs_EvenIfRequired
 // ASMMATCHER-NEXT:      },
 // ASMMATCHER-NEXT:      { // Ptr64
-// ASMMATCHER-NEXT:        MCK_PtrRegs64,
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode
-// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode
+// ASMMATCHER-NEXT:        MCK_PtrRegs64, // MyPtrRC
+// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for XRegs_EvenIfRequired
+// ASMMATCHER-NEXT:        InvalidMatchClass, // Missing mode entry for YRegs_EvenIfRequired
 // ASMMATCHER-NEXT:      },
 // ASMMATCHER-NEXT:    };
 // ASMMATCHER-EMPTY:
@@ -189,46 +202,34 @@ include "Common/RegClassByHwModeCommon.td"
 
 // ISEL-SDAG: MatcherTable
 // ISEL-SDAG: OPC_SwitchOpcode /*2 cases */, {{[0-9]+}}, TARGET_VAL(ISD::STORE),
-// ISEL-SDAG: OPC_RecordMemRef,
-// ISEL-SDAG: OPC_RecordNode, // #0 = 'st' chained node
-// ISEL-SDAG: OPC_RecordChild1, // #1 = $val
+// ISEL-SDAG-NEXT: OPC_RecordMemRef,
+// ISEL-SDAG-NEXT: OPC_RecordNode, // #0 = 'st' chained node
+// ISEL-SDAG-NEXT: OPC_RecordChild1, // #1 = $val
+// ISEL-SDAG-NEXT: OPC_CheckChild1TypeByHwMode, /*{(*:i64),(m1:i64),(m2:i64)}*/0,
 // ISEL-SDAG-NEXT: OPC_RecordChild2, // #2 = $src
-// ISEL-SDAG-NEXT: OPC_CheckChild2TypeI64,
-// ISEL-SDAG-NEXT: OPC_CheckPredicate2,  // Predicate_unindexedstore
-// ISEL-SDAG-NEXT: OPC_CheckPredicate3,  // Predicate_store
-// ISEL-SDAG: OPC_MorphNodeTo0, TARGET_VAL(MyTarget::MY_STORE), 0|OPFL_Chain|OPFL_MemRefs,
+// ISEL-SDAG-NEXT: OPC_CheckChild2TypeByHwMode, /*{(*:i32),(m3:i64)}*/1,
+// ISEL-SDAG-NEXT: OPC_CheckPredicate0,  // Predicate_unindexedstore
+// ISEL-SDAG-NEXT: OPC_CheckPredicate1,  // Predicate_store
+// ISEL-SDAG-NEXT: OPC_EmitMergeInputChains1_0,
+// ISEL-SDAG-NEXT: OPC_MorphNodeTo0, TARGET_VAL(MyTarget::MY_STORE), 0|OPFL_Chain|OPFL_MemRefs,
+// ISEL-SDAG-NEXT:     2/*#Ops*/, /*OperandList*/1, // Ops = #1 #2
 
 // ISEL-SDAG: /*SwitchOpcode*/ {{[0-9]+}}, TARGET_VAL(ISD::LOAD),
 // ISEL-SDAG-NEXT: OPC_RecordMemRef,
 // ISEL-SDAG-NEXT: OPC_RecordNode, // #0 = 'ld' chained node
 // ISEL-SDAG-NEXT: OPC_RecordChild1, // #1 = $src
+// ISEL-SDAG-NEXT: OPC_CheckChild1TypeByHwMode, /*{(*:i32),(m3:i64)}*/1,
+// ISEL-SDAG-NEXT: OPC_CheckPredicate2,  // Predicate_unindexedload
+// ISEL-SDAG-NEXT: OPC_CheckPredicate3,  // Predicate_load
 // ISEL-SDAG-NEXT: OPC_CheckTypeI64,
-// ISEL-SDAG-NEXT: OPC_Scope, {{[0-9]+}}, /*->{{[0-9]+}}*/ // 2 children in Scope
-// ISEL-SDAG-NEXT: OPC_CheckChild1TypeI32,
-// ISEL-SDAG-NEXT: OPC_CheckPredicate0,  // Predicate_unindexedload
-// ISEL-SDAG-NEXT: OPC_CheckPredicate1,  // Predicate_load
-// ISEL-SDAG-NEXT: OPC_Scope, {{[0-9]+}}, /*->{{[0-9]+}}*/ // 3 children in Scope
-// ISEL-SDAG-NEXT: OPC_CheckPatternPredicate1, // (Subtarget->hasAlignedRegisters())
 // ISEL-SDAG-NEXT: OPC_EmitMergeInputChains1_0,
-// ISEL-SDAG-NEXT: OPC_MorphNodeTo1, TARGET_VAL(MyTarget::MY_LOAD), 0|OPFL_Chain|OPFL_MemRefs,
+// ISEL-SDAG-NEXT: OPC_MorphNodeToByHwMode, TARGET_VAL(MyTarget::MY_LOAD), 0|OPFL_Chain|OPFL_MemRefs,
+// ISEL-SDAG-NEXT:     1/*#VTs*/, /*{(*:i64),(m1:i64),(m2:i64)}*/0, 1/*#Ops*/, /*OperandList*/0, // Ops = #1
 
-// ISEL-SDAG: /*Scope*/
-// ISEL-SDAG: OPC_CheckPatternPredicate2, // (Subtarget->hasUnalignedRegisters())
-// ISEL-SDAG-NEXT: OPC_EmitMergeInputChains1_0,
-// ISEL-SDAG-NEXT: OPC_MorphNodeTo1, TARGET_VAL(MyTarget::MY_LOAD), 0|OPFL_Chain|OPFL_MemRefs,
-
-// ISEL-SDAG: /*Scope*/
-// ISEL-SDAG: OPC_CheckPatternPredicate3, // !((Subtarget->hasAlignedRegisters())) && !((Subtarget->hasUnalignedRegisters())) && !((Subtarget->isPtr64()))
-// ISEL-SDAG-NEXT: OPC_EmitMergeInputChains1_0,
-// ISEL-SDAG-NEXT: OPC_MorphNodeTo1, TARGET_VAL(MyTarget::MY_LOAD), 0|OPFL_Chain|OPFL_MemRefs,
-
-// ISEL-SDAG: /*Scope*/
-// ISEL-SDAG-NEXT: OPC_CheckChild1TypeI64,
-// ISEL-SDAG-NEXT: OPC_CheckPredicate0,  // Predicate_unindexedload
-// ISEL-SDAG-NEXT: OPC_CheckPredicate1,  // Predicate_load
-// ISEL-SDAG-NEXT: OPC_CheckPatternPredicate0, // (Subtarget->isPtr64())
-// ISEL-SDAG-NEXT: OPC_EmitMergeInputChains1_0,
-// ISEL-SDAG-NEXT: OPC_MorphNodeTo1, TARGET_VAL(MyTarget::MY_LOAD), 0|OPFL_Chain|OPFL_MemRefs,
+// ISEL-SDAG:      static const uint8_t OperandLists[] = {
+// ISEL-SDAG-NEXT:   /* 0 */ 1,
+// ISEL-SDAG-NEXT:   /* 1 */ 1, 2,
+// ISEL-SDAG-NEXT: }
 
 
 
@@ -245,36 +246,36 @@ include "Common/RegClassByHwModeCommon.td"
 // FIXME: This should be a direct check for regbank, not have an incorrect class
 
 // ISEL-GISEL-NEXT:     GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::PtrRegs32RegClassID),
-// ISEL-GISEL-NEXT:     GIM_Try, /*On fail goto*//*Label 5*/ GIMT_Encode4(85), // Rule ID 1 //
+// ISEL-GISEL-NEXT:     GIM_Try, /*On fail goto*//*Label 5*/ GIMT_Encode4(85), // Rule ID 4 //
+// ISEL-GISEL-NEXT:       GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode0),
+// ISEL-GISEL-NEXT:       // (ld:{ *:[i64] } PtrRegOperand:{ *:[i32] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (MY_LOAD:{ *:[i64] } ?:{ *:[i32] }:$src)
+// ISEL-GISEL-NEXT:       GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_LOAD),
+// ISEL-GISEL-NEXT:       GIR_RootConstrainSelectedInstOperands,
+// ISEL-GISEL-NEXT:       // GIR_Coverage, 4,
+// ISEL-GISEL-NEXT:       GIR_Done,
+// ISEL-GISEL-NEXT:     // Label 5: @85
+// ISEL-GISEL-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4(100), // Rule ID 5 //
 // ISEL-GISEL-NEXT:       GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode1),
 // ISEL-GISEL-NEXT:       // (ld:{ *:[i64] } PtrRegOperand:{ *:[i32] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (MY_LOAD:{ *:[i64] } ?:{ *:[i32] }:$src)
 // ISEL-GISEL-NEXT:       GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_LOAD),
 // ISEL-GISEL-NEXT:       GIR_RootConstrainSelectedInstOperands,
-// ISEL-GISEL-NEXT:       // GIR_Coverage, 1,
-// ISEL-GISEL-NEXT:       GIR_Done,
-// ISEL-GISEL-NEXT:     // Label 5: @85
-// ISEL-GISEL-NEXT:     GIM_Try, /*On fail goto*//*Label 6*/ GIMT_Encode4(100), // Rule ID 2 //
-// ISEL-GISEL-NEXT:       GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode2),
-// ISEL-GISEL-NEXT:       // (ld:{ *:[i64] } PtrRegOperand:{ *:[i32] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (MY_LOAD:{ *:[i64] } ?:{ *:[i32] }:$src)
-// ISEL-GISEL-NEXT:       GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_LOAD),
-// ISEL-GISEL-NEXT:       GIR_RootConstrainSelectedInstOperands,
-// ISEL-GISEL-NEXT:       // GIR_Coverage, 2,
+// ISEL-GISEL-NEXT:       // GIR_Coverage, 5,
 // ISEL-GISEL-NEXT:       GIR_Done,
 // ISEL-GISEL-NEXT:     // Label 6: @100
 // ISEL-GISEL-NEXT:     GIM_Reject,
 // ISEL-GISEL-NEXT:   // Label 4: @101
-// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 7*/ GIMT_Encode4(124), // Rule ID 3 //
-// ISEL-GISEL-NEXT:     GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode0),
+// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 7*/ GIMT_Encode4(124), // Rule ID 6 //
+// ISEL-GISEL-NEXT:     GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode2),
 // ISEL-GISEL-NEXT:     // MIs[0] src
 // ISEL-GISEL-NEXT:     GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/64,
 // ISEL-GISEL-NEXT:     GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::PtrRegs32RegClassID),
 // ISEL-GISEL-NEXT:     // (ld:{ *:[i64] } PtrRegOperand:{ *:[i64] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (MY_LOAD:{ *:[i64] } ?:{ *:[i64] }:$src)
 // ISEL-GISEL-NEXT:     GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_LOAD),
 // ISEL-GISEL-NEXT:     GIR_RootConstrainSelectedInstOperands,
-// ISEL-GISEL-NEXT:     // GIR_Coverage, 3,
+// ISEL-GISEL-NEXT:     // GIR_Coverage, 6,
 // ISEL-GISEL-NEXT:     GIR_Done,
 // ISEL-GISEL-NEXT:   // Label 7: @124
-// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 8*/ GIMT_Encode4(147), // Rule ID 4 //
+// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 8*/ GIMT_Encode4(147), // Rule ID 7 //
 // ISEL-GISEL-NEXT:     GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode3),
 // ISEL-GISEL-NEXT:     // MIs[0] src
 // ISEL-GISEL-NEXT:     GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
@@ -282,25 +283,67 @@ include "Common/RegClassByHwModeCommon.td"
 // ISEL-GISEL-NEXT:     // (ld:{ *:[i64] } PtrRegOperand:{ *:[i32] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (MY_LOAD:{ *:[i64] } ?:{ *:[i32] }:$src)
 // ISEL-GISEL-NEXT:     GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_LOAD),
 // ISEL-GISEL-NEXT:     GIR_RootConstrainSelectedInstOperands,
-// ISEL-GISEL-NEXT:     // GIR_Coverage, 4,
+// ISEL-GISEL-NEXT:     // GIR_Coverage, 7,
 // ISEL-GISEL-NEXT:     GIR_Done,
 // ISEL-GISEL-NEXT:   // Label 8: @147
 // ISEL-GISEL-NEXT:   GIM_Reject,
 // ISEL-GISEL-NEXT: // Label 3: @148
 // ISEL-GISEL-NEXT: GIM_Reject,
 // ISEL-GISEL-NEXT: // Label 1: @149
-// ISEL-GISEL-NEXT: GIM_Try, /*On fail goto*//*Label 9*/ GIMT_Encode4(186), // Rule ID 0 //
-// ISEL-GISEL-NEXT:   GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode0),
+// ISEL-GISEL-NEXT: GIM_Try, /*On fail goto*//*Label 9*/ GIMT_Encode4(259),
 // ISEL-GISEL-NEXT:   GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s64,
 // ISEL-GISEL-NEXT:   GIM_CheckAtomicOrdering, /*MI*/0, /*Order*/(uint8_t)AtomicOrdering::NotAtomic,
 // ISEL-GISEL-NEXT:   GIM_CheckMemorySizeEqualToLLT, /*MI*/0, /*MMO*/0, /*OpIdx*/0,
 // ISEL-GISEL-NEXT:   GIM_RootCheckRegBankForClass, /*Op*/0, /*RC*/GIMT_Encode2(MyTarget::XRegsRegClassID),
-// ISEL-GISEL-NEXT:   // MIs[0] src
-// ISEL-GISEL-NEXT:   GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/64,
-// ISEL-GISEL-NEXT:   GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::PtrRegs32RegClassID),
-// ISEL-GISEL-NEXT:   // (st XRegs_EvenIfRequired:{ *:[i64] }:$val, MyPtrRC:{ *:[i64] }:$src)<<P:Predicate_unindexedstore>><<P:Predicate_store>>  =>  (MY_STORE ?:{ *:[i64] }:$val, XRegs_EvenIfRequired:{ *:[i64] }:$src)
-// ISEL-GISEL-NEXT:   GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_STORE),
-// ISEL-GISEL-NEXT:   GIR_RootConstrainSelectedInstOperands,
+// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 10*/ GIMT_Encode4(212),
+// ISEL-GISEL-NEXT:     GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
+// ISEL-GISEL-NEXT:     GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::PtrRegs32RegClassID),
+// ISEL-GISEL-NEXT:     GIM_Try, /*On fail goto*//*Label 11*/ GIMT_Encode4(196), // Rule ID 0 //
+// ISEL-GISEL-NEXT:       GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode0),
+// ISEL-GISEL-NEXT:       // (st XRegs_EvenIfRequired:{ *:[i64] }:$val, MyPtrRC:{ *:[i32] }:$src)<<P:Predicate_unindexedstore>><<P:Predicate_store>>  =>  (MY_STORE XRegs_EvenIfRequired:{ *:[i64] }:$val, ?:{ *:[i32] }:$src)
+// ISEL-GISEL-NEXT:       GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_STORE),
+// ISEL-GISEL-NEXT:       GIR_RootConstrainSelectedInstOperands,
+// ISEL-GISEL-NEXT:       // GIR_Coverage, 0,
+// ISEL-GISEL-NEXT:       GIR_Done,
+// ISEL-GISEL-NEXT:     // Label 11: @196
+// ISEL-GISEL-NEXT:     GIM_Try, /*On fail goto*//*Label 12*/ GIMT_Encode4(211), // Rule ID 1 //
+// ISEL-GISEL-NEXT:       GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode1),
+// ISEL-GISEL-NEXT:       // (st XRegs_EvenIfRequired:{ *:[i64] }:$val, MyPtrRC:{ *:[i32] }:$src)<<P:Predicate_unindexedstore>><<P:Predicate_store>>  =>  (MY_STORE XRegs_EvenIfRequired:{ *:[i64] }:$val, ?:{ *:[i32] }:$src)
+// ISEL-GISEL-NEXT:       GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_STORE),
+// ISEL-GISEL-NEXT:       GIR_RootConstrainSelectedInstOperands,
+// ISEL-GISEL-NEXT:       // GIR_Coverage, 1,
+// ISEL-GISEL-NEXT:       GIR_Done,
+// ISEL-GISEL-NEXT:     // Label 12: @211
+// ISEL-GISEL-NEXT:     GIM_Reject,
+// ISEL-GISEL-NEXT:   // Label 10: @212
+// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 13*/ GIMT_Encode4(235), // Rule ID 2 //
+// ISEL-GISEL-NEXT:     GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode2),
+// ISEL-GISEL-NEXT:     // MIs[0] src
+// ISEL-GISEL-NEXT:     GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/64,
+// ISEL-GISEL-NEXT:     GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::PtrRegs32RegClassID),
+// ISEL-GISEL-NEXT:     // (st XRegs_EvenIfRequired:{ *:[i64] }:$val, MyPtrRC:{ *:[i64] }:$src)<<P:Predicate_unindexedstore>><<P:Predicate_store>>  =>  (MY_STORE XRegs_EvenIfRequired:{ *:[i64] }:$val, ?:{ *:[i64] }:$src)
+// ISEL-GISEL-NEXT:     GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_STORE),
+// ISEL-GISEL-NEXT:     GIR_RootConstrainSelectedInstOperands,
+// ISEL-GISEL-NEXT:     // GIR_Coverage, 2,
+// ISEL-GISEL-NEXT:     GIR_Done,
+// ISEL-GISEL-NEXT:   // Label 13: @235
+// ISEL-GISEL-NEXT:   GIM_Try, /*On fail goto*//*Label 14*/ GIMT_Encode4(258), // Rule ID 3 //
+// ISEL-GISEL-NEXT:     GIM_CheckFeatures, GIMT_Encode2(GIFBS_HwMode3),
+// ISEL-GISEL-NEXT:     // MIs[0] src
+// ISEL-GISEL-NEXT:     GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
+// ISEL-GISEL-NEXT:     GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::PtrRegs32RegClassID),
+// ISEL-GISEL-NEXT:     // (st XRegs_EvenIfRequired:{ *:[i64] }:$val, MyPtrRC:{ *:[i32] }:$src)<<P:Predicate_unindexedstore>><<P:Predicate_store>>  =>  (MY_STORE XRegs_EvenIfRequired:{ *:[i64] }:$val, ?:{ *:[i32] }:$src)
+// ISEL-GISEL-NEXT:     GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MY_STORE)
+// ISEL-GISEL-NEXT:     GIR_RootConstrainSelectedInstOperands,
+// ISEL-GISEL-NEXT:     // GIR_Coverage, 3,
+// ISEL-GISEL-NEXT:   GIR_Done,
+// ISEL-GISEL-NEXT:   // Label 14: @258
+// ISEL-GISEL-NEXT:   GIM_Reject,
+// ISEL-GISEL-NEXT: // Label 9: @259
+// ISEL-GISEL-NEXT: GIM_Reject,
+// ISEL-GISEL-NEXT: // Label 2: @260
+// ISEL-GISEL-NEXT: GIM_Reject,
+// ISEL-GISEL-NEXT: }; // Size: 261 bytes
 
 def HasAlignedRegisters : Predicate<"Subtarget->hasAlignedRegisters()">;
 def HasUnalignedRegisters : Predicate<"Subtarget->hasUnalignedRegisters()">;
@@ -418,7 +461,7 @@ def MY_LOAD_ALIAS2 : InstAlias<"also_my_load_2 $dst, $src",
 // Direct RegClassByHwMode usage
 def : Pat<
   (store XRegs_EvenIfRequired:$val, MyPtrRC:$src),
-  (MY_STORE $val, XRegs_EvenIfRequired:$src)
+  (MY_STORE XRegs_EvenIfRequired:$val, $src)
 >;
 
 // Wrapped in RegisterOperand

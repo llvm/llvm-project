@@ -7,7 +7,6 @@ Checks: >
   -bugprone-branch-clone,
   -bugprone-easily-swappable-parameters,
   -bugprone-narrowing-conversions,
-  -bugprone-unchecked-optional-access,
   -bugprone-unused-return-value,
   cppcoreguidelines-init-variables,
   cppcoreguidelines-missing-std-forward,
@@ -15,6 +14,7 @@ Checks: >
   cppcoreguidelines-virtual-class-destructor,
   google-readability-casting,
   misc-const-correctness,
+  misc-include-cleaner,
   modernize-*,
   -modernize-avoid-c-arrays,
   -modernize-pass-by-value,
@@ -41,4 +41,6 @@ Checks: >
 
 CheckOptions:
   - key:             performance-move-const-arg.CheckTriviallyCopyableMove
+    value:           false
+  - key:             misc-include-cleaner.MissingIncludes
     value:           false
