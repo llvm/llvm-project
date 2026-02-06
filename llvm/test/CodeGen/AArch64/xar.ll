@@ -419,9 +419,7 @@ define <2 x i64> @rev64_v2i64(<2 x i64> %r) {
 define <1 x i64> @rev64_v1i64_r(<1 x i64> %a) {
 ; CHECK-LABEL: rev64_v1i64_r:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    shl d1, d0, #32
-; CHECK-NEXT:    usra d1, d0, #32
-; CHECK-NEXT:    fmov d0, d1
+; CHECK-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-NEXT:    ret
   %r = tail call <1 x i64> @llvm.fshr(<1 x i64> %a, <1 x i64> %a, <1 x i64> splat (i64 32))
   ret <1 x i64> %r

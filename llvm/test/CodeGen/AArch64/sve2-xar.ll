@@ -330,18 +330,11 @@ define <vscale x 2 x i64> @revw_nx2i64(<vscale x 2 x i64> %r) {
 
 ; As above, one test with rotate right.
 define <vscale x 2 x i64> @revw_nx2i64_r(<vscale x 2 x i64> %a) {
-; SVE-LABEL: revw_nx2i64_r:
-; SVE:       // %bb.0:
-; SVE-NEXT:    lsl z1.d, z0.d, #32
-; SVE-NEXT:    lsr z0.d, z0.d, #32
-; SVE-NEXT:    orr z0.d, z0.d, z1.d
-; SVE-NEXT:    ret
-;
-; SVE2-LABEL: revw_nx2i64_r:
-; SVE2:       // %bb.0:
-; SVE2-NEXT:    movi v1.2d, #0000000000000000
-; SVE2-NEXT:    xar z0.d, z0.d, z1.d, #32
-; SVE2-NEXT:    ret
+; CHECK-LABEL: revw_nx2i64_r:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    revw z0.d, p0/m, z0.d
+; CHECK-NEXT:    ret
   %r = tail call <vscale x 2 x i64> @llvm.fshr(<vscale x 2 x i64> %a, <vscale x 2 x i64> %a, <vscale x 2 x i64> splat (i64 32))
   ret <vscale x 2 x i64> %r
 }
@@ -350,9 +343,7 @@ define <vscale x 2 x i64> @revw_nx2i64_r(<vscale x 2 x i64> %a) {
 define <vscale x 4 x i32> @revh_nx4i32_shifts_l(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) {
 ; CHECK-LABEL: revh_nx4i32_shifts_l:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsl z1.s, z0.s, #16
-; CHECK-NEXT:    lsr z0.s, z0.s, #16
-; CHECK-NEXT:    orr z0.d, z1.d, z0.d
+; CHECK-NEXT:    revh z0.s, p0/m, z0.s
 ; CHECK-NEXT:    ret
   %shl = tail call <vscale x 4 x i32> @llvm.aarch64.sve.lsl.u(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 16))
   %shr = tail call <vscale x 4 x i32> @llvm.aarch64.sve.lsr.u(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 16))
@@ -364,9 +355,7 @@ define <vscale x 4 x i32> @revh_nx4i32_shifts_l(<vscale x 4 x i1> %pg, <vscale x
 define <vscale x 8 x i16> @revb_nx8i16_shifts_r(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a) {
 ; CHECK-LABEL: revb_nx8i16_shifts_r:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr z1.h, z0.h, #8
-; CHECK-NEXT:    lsl z0.h, z0.h, #8
-; CHECK-NEXT:    orr z0.d, z1.d, z0.d
+; CHECK-NEXT:    revb z0.h, p0/m, z0.h
 ; CHECK-NEXT:    ret
   %shr = tail call <vscale x 8 x i16> @llvm.aarch64.sve.lsr.u(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> splat (i16 8))
   %shl = tail call <vscale x 8 x i16> @llvm.aarch64.sve.lsl.u(<vscale x 8 x i1> %pg, <vscale x 8 x i16> %a, <vscale x 8 x i16> splat (i16 8))

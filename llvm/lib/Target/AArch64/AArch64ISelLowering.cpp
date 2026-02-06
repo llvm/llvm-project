@@ -20771,34 +20771,39 @@ static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
                      CSel0.getOperand(1), getCondCode(DAG, CC1), CCmp);
 }
 
-// Attempt to use REVs for half-rotations of vectors of i32 and i64.
+// Attempt to use REVs for half-rotations of vectors of i16, i32 and i64.
 // Patterns for i32:
 //
-// (OR (SHL_PRED all-true, X, (splat 16)),
-//     (SRL_PRED all-true, X, (splat 16)))
+// (OR (SHL_PRED Pg, X, (splat 16)),
+//     (SRL_PRED Pg, X, (splat 16)))
 // =>
-// REVH all-true, X, poison
+// REVH Pg, X, poison
 //
 // (OR (VSHL X, 16), (VLSHR X, 16))
 // =>
 // NVCAST (REV32 X)
-static SDValue tryCombineToREV(SDNode *N, SelectionDAG &DAG) {
+static SDValue tryCombineToREV(SDNode *N, SelectionDAG &DAG,
+                               TargetLowering::DAGCombinerInfo &DCI) {
   assert(N->getOpcode() == ISD::OR && "Expected OR instruction");
+
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
 
   EVT VT = N->getValueType(0);
   if (!VT.isVector())
     return SDValue();
 
-  SDValue N0 = N->getOperand(0);
-  SDValue N1 = N->getOperand(1);
   unsigned EltSize = VT.getScalarSizeInBits();
-
-  // Half rotations of i16 vectors should be lowered to a bswap, so we shouldn't
-  // need custom code for them here.
-  if (EltSize != 32 && EltSize != 64)
+  if (EltSize != 16 && EltSize != 32 && EltSize != 64)
     return SDValue();
 
+  SDLoc DL(N);
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
   if (VT.isScalableVector()) {
+    if (N0.getOpcode() == AArch64ISD::SRL_PRED)
+      std::swap(N0, N1);
     if (N0.getOpcode() != AArch64ISD::SHL_PRED ||
         N1.getOpcode() != AArch64ISD::SRL_PRED)
       return SDValue();
@@ -20809,32 +20814,35 @@ static SDValue tryCombineToREV(SDNode *N, SelectionDAG &DAG) {
         N0.getOperand(2) != N1.getOperand(2))
       return SDValue();
 
-    // Check for all-true predicate.
-    // NOTE: Since SHL_PRED and SRL_PRED are defined ``with the result of
-    // inactive lanes being unspecified'', this shouldn't be required.
-    SDValue Pg = N0.getOperand(0);
-    if (!isAllActivePredicate(DAG, Pg))
-      return SDValue();
-
     APInt ShAmt;
     if (!ISD::isConstantSplatVector(N0.getOperand(2).getNode(), ShAmt) ||
         EltSize / 2 != ShAmt)
       return SDValue();
 
     unsigned RevOp;
-    if (EltSize == 32)
+    if (EltSize == 16)
+      RevOp = AArch64ISD::BSWAP_MERGE_PASSTHRU;
+    else if (EltSize == 32)
       RevOp = AArch64ISD::REVH_MERGE_PASSTHRU;
     else if (EltSize == 64)
       RevOp = AArch64ISD::REVW_MERGE_PASSTHRU;
-    else
-      llvm_unreachable("Unexpected element size");
 
-    return DAG.getNode(RevOp, SDLoc(N), VT, Pg, N0.getOperand(1),
+    return DAG.getNode(RevOp, DL, VT, N0.getOperand(0), N0.getOperand(1),
                        DAG.getPOISON(VT));
   }
 
   assert(VT.isFixedLengthVector() && "Expected fixed length vector type");
 
+  // Half rotations of i16 vectors should be combined to bswap, so we shouldn't
+  // need custom code for them here.
+  // Note: This doesn't apply to scalable vectors as we allow arbitrary (but
+  // matching) predicates in the shifts. Predicated rotations aren't matched to
+  // rotl / rotr, and subsequently aren't combined to bswap.
+  if (EltSize == 16)
+    return SDValue();
+
+  if (N0.getOpcode() == AArch64ISD::VLSHR)
+    std::swap(N0, N1);
   if (N0.getOpcode() != AArch64ISD::VSHL || N1.getOpcode() != AArch64ISD::VLSHR)
     return SDValue();
 
@@ -20854,10 +20862,8 @@ static SDValue tryCombineToREV(SDNode *N, SelectionDAG &DAG) {
   } else if (EltSize == 64) {
     RevOp = AArch64ISD::REV64;
     HalfVT = VT.is64BitVector() ? MVT::v2i32 : MVT::v4i32;
-  } else
-    llvm_unreachable("Unexpected element size");
+  }
 
-  SDLoc DL(N);
   return DAG.getNode(AArch64ISD::NVCAST, DL, VT,
                      DAG.getNode(RevOp, DL, HalfVT, N0->getOperand(0)));
 }
@@ -20870,7 +20876,7 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (SDValue R = performANDORCSELCombine(N, DAG))
     return R;
 
-  if (SDValue R = tryCombineToREV(N, DAG))
+  if (SDValue R = tryCombineToREV(N, DAG, DCI))
     return R;
 
   return SDValue();
