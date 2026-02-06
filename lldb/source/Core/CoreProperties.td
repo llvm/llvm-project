@@ -17,7 +17,7 @@ let Definition = "modulelist" in {
   def SharedCacheSegmentLoads: Property<"shared-cache-segment-mapping", "Boolean">,
     Global,
     DefaultTrue,
-    Desc<"On macOS, a feature to load the binaries from a shared cache blob directly, instead of requiring discrete binaries or using lldb's own shared cache memory.">;
+    Desc<"On macOS, load the binaries from a shared cache blob directly, instead of loading them from lldb's own in-process shared cache.">;
   def ClangModulesCachePath: Property<"clang-modules-cache-path", "FileSpec">,
     Global,
     DefaultStringValue<"">,
