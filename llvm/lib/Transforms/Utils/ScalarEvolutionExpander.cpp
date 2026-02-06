@@ -1254,22 +1254,6 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
       !SE.DT.dominates(EB, Builder.GetInsertBlock()))
     return nullptr;
 
-  // Helper to check if the diff between S and ExitSCEV is simple enough to
-  // allow reusing the LCSSA phi.
-  auto CanReuse = [&](const SCEV *ExitSCEV) -> const SCEV * {
-    if (isa<SCEVCouldNotCompute>(ExitSCEV))
-      return nullptr;
-    const SCEV *Diff = SE.getMinusSCEV(S, ExitSCEV);
-    const SCEV *Op = Diff;
-    match(Op, m_scev_Add(m_SCEVConstant(), m_SCEV(Op)));
-    match(Op, m_scev_Mul(m_scev_AllOnes(), m_SCEV(Op)));
-    match(Op, m_scev_PtrToAddr(m_SCEV(Op))) ||
-        match(Op, m_scev_PtrToInt(m_SCEV(Op)));
-    if (!isa<SCEVConstant, SCEVUnknown>(Op))
-      return nullptr;
-    return Diff;
-  };
-
   for (auto &PN : EB->phis()) {
     if (!SE.isSCEVable(PN.getType()))
       continue;
@@ -1277,19 +1261,22 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     if (!isa<SCEVAddRecExpr>(ExitSCEV))
       continue;
     Type *PhiTy = PN.getType();
-    const SCEV *Diff = nullptr;
     if (STy->isIntegerTy() && PhiTy->isPointerTy()) {
-      // Prefer ptrtoaddr over ptrtoint.
-      const SCEV *AddrSCEV = SE.getPtrToAddrExpr(ExitSCEV);
-      Diff = CanReuse(AddrSCEV);
-      if (!Diff) {
-        const SCEV *IntSCEV = SE.getPtrToIntExpr(ExitSCEV, STy);
-        Diff = CanReuse(IntSCEV);
-      }
-    } else if (STy == PhiTy) {
-      Diff = CanReuse(ExitSCEV);
+      ExitSCEV = SE.getPtrToIntExpr(ExitSCEV, STy);
+      if (isa<SCEVCouldNotCompute>(ExitSCEV))
+        continue;
+    } else if (S->getType() != PN.getType()) {
+      continue;
     }
-    if (!Diff)
+
+    // Check if we can re-use the existing PN, by adjusting it with an expanded
+    // offset, if the offset is simpler.
+    const SCEV *Diff = SE.getMinusSCEV(S, ExitSCEV);
+    const SCEV *Op = Diff;
+    match(Op, m_scev_Add(m_SCEVConstant(), m_SCEV(Op)));
+    match(Op, m_scev_Mul(m_scev_AllOnes(), m_SCEV(Op)));
+    match(Op, m_scev_PtrToInt(m_SCEV(Op)));
+    if (!isa<SCEVConstant, SCEVUnknown>(Op))
       continue;
 
     assert(Diff->getType()->isIntegerTy() &&
@@ -1299,7 +1286,7 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
     if (PhiTy->isPointerTy()) {
       if (STy->isPointerTy())
         return Builder.CreatePtrAdd(BaseV, DiffV);
-      BaseV = Builder.CreatePtrToAddr(BaseV);
+      BaseV = Builder.CreatePtrToInt(BaseV, DiffV->getType());
     }
     return Builder.CreateAdd(BaseV, DiffV);
   }

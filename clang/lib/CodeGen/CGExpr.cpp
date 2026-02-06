@@ -29,6 +29,7 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/InferAlloc.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/ParentMapContext.h"
@@ -1825,6 +1826,8 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitArraySectionExpr(cast<ArraySectionExpr>(E));
   case Expr::ExtVectorElementExprClass:
     return EmitExtVectorElementExpr(cast<ExtVectorElementExpr>(E));
+  case Expr::MatrixElementExprClass:
+    return EmitMatrixElementExpr(cast<MatrixElementExpr>(E));
   case Expr::CXXThisExprClass:
     return MakeAddrLValue(LoadCXXThisAddress(), E->getType());
   case Expr::MemberExprClass:
@@ -2291,6 +2294,49 @@ static RawAddress MaybeConvertMatrixAddress(RawAddress Addr,
   }
 
   return Addr;
+}
+
+LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
+  LValue Base;
+  if (E->getBase()->isGLValue())
+    Base = EmitLValue(E->getBase());
+  else {
+    assert(E->getBase()->getType()->isConstantMatrixType() &&
+           "Result must be a Constant Matrix");
+    llvm::Value *Mat = EmitScalarExpr(E->getBase());
+    Address MatMem = CreateMemTemp(E->getBase()->getType());
+    QualType Ty = E->getBase()->getType();
+    llvm::Type *LTy = convertTypeForLoadStore(Ty, Mat->getType());
+    if (LTy->getScalarSizeInBits() > Mat->getType()->getScalarSizeInBits())
+      Mat = Builder.CreateZExt(Mat, LTy);
+    Builder.CreateStore(Mat, MatMem);
+    Base = MakeAddrLValue(MatMem, Ty, AlignmentSource::Decl);
+  }
+  QualType ResultType =
+      E->getType().withCVRQualifiers(Base.getQuals().getCVRQualifiers());
+
+  // Encode the element access list into a vector of unsigned indices.
+  SmallVector<uint32_t, 4> Indices;
+  E->getEncodedElementAccess(Indices);
+
+  if (Base.isSimple()) {
+    llvm::Constant *CV =
+        llvm::ConstantDataVector::get(getLLVMContext(), Indices);
+    return LValue::MakeExtVectorElt(
+        MaybeConvertMatrixAddress(Base.getAddress(), *this), CV, ResultType,
+        Base.getBaseInfo(), TBAAAccessInfo());
+  }
+  assert(Base.isExtVectorElt() && "Can only subscript lvalue vec elts here!");
+
+  llvm::Constant *BaseElts = Base.getExtVectorElts();
+  SmallVector<llvm::Constant *, 4> CElts;
+
+  for (unsigned Index : Indices)
+    CElts.push_back(BaseElts->getAggregateElement(Index));
+  llvm::Constant *CV = llvm::ConstantVector::get(CElts);
+  return LValue::MakeExtVectorElt(
+      MaybeConvertMatrixAddress(Base.getExtVectorAddress(), *this), CV,
+      ResultType, Base.getBaseInfo(), TBAAAccessInfo());
 }
 
 // Emit a store of a matrix LValue. This may require casting the original

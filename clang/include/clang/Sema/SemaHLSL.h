@@ -215,6 +215,10 @@ public:
   bool transformInitList(const InitializedEntity &Entity, InitListExpr *Init);
   bool handleInitialization(VarDecl *VDecl, Expr *&Init);
   void deduceAddressSpace(VarDecl *Decl);
+  QualType checkMatrixComponent(Sema &S, QualType baseType, ExprValueKind &VK,
+                                SourceLocation OpLoc,
+                                const IdentifierInfo *CompName,
+                                SourceLocation CompLoc);
 
 private:
   // HLSL resource type attributes need to be processed all at once.

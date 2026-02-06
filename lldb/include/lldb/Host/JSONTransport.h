@@ -166,8 +166,7 @@ public:
   ///
   /// If an unexpected error occurs, the MainLoop will be terminated and a log
   /// message will include additional information about the termination reason.
-  virtual llvm::Expected<MainLoop::ReadHandleUP>
-  RegisterMessageHandler(MainLoop &loop, MessageHandler &handler) = 0;
+  virtual llvm::Error RegisterMessageHandler(MessageHandler &handler) = 0;
 
 protected:
   template <typename... Ts> inline auto Logv(const char *Fmt, Ts &&...Vals) {
@@ -182,29 +181,27 @@ public:
   using Message = typename JSONTransport<Proto>::Message;
   using MessageHandler = typename JSONTransport<Proto>::MessageHandler;
 
-  IOTransport(lldb::IOObjectSP in, lldb::IOObjectSP out)
-      : m_in(in), m_out(out) {}
+  IOTransport(MainLoop &loop, lldb::IOObjectSP in, lldb::IOObjectSP out)
+      : m_loop(loop), m_in(in), m_out(out) {}
 
   llvm::Error Send(const typename Proto::Evt &evt) override {
     return Write(evt);
   }
+
   llvm::Error Send(const typename Proto::Req &req) override {
     return Write(req);
   }
+
   llvm::Error Send(const typename Proto::Resp &resp) override {
     return Write(resp);
   }
 
-  llvm::Expected<MainLoop::ReadHandleUP>
-  RegisterMessageHandler(MainLoop &loop, MessageHandler &handler) override {
+  llvm::Error RegisterMessageHandler(MessageHandler &handler) override {
     Status status;
-    MainLoop::ReadHandleUP read_handle = loop.RegisterReadObject(
+    m_read_handle = m_loop.RegisterReadObject(
         m_in, [this, &handler](MainLoopBase &base) { OnRead(base, handler); },
         status);
-    if (status.Fail()) {
-      return status.takeError();
-    }
-    return read_handle;
+    return status.takeError();
   }
 
   /// Public for testing purposes, otherwise this should be an implementation
@@ -263,11 +260,15 @@ private:
         handler.OnError(llvm::make_error<TransportUnhandledContentsError>(
             std::string(m_buffer.str())));
       handler.OnClosed();
+      // On EOF, remove the read handle from the MainLoop.
+      m_read_handle.reset();
     }
   }
 
+  MainLoop &m_loop;
   lldb::IOObjectSP m_in;
   lldb::IOObjectSP m_out;
+  MainLoop::ReadHandleUP m_read_handle;
 };
 
 /// A transport class for JSON with a HTTP header.
