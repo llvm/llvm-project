@@ -105,8 +105,7 @@ Error X86CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
   // For ELF, cleanup any local-dynamic TLS accesses
   if (TM.getTargetTriple().isOSBinFormatELF() &&
       getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add CleanupLocalDynamicTLSPass here once it has
-    // been ported.
+    addMachineFunctionPass(X86CleanupLocalDynamicTLSPass(), PMW);
   }
 
   // TODO(boomanaiden154): Add X86GlobalPassRegPass here once it has been
@@ -174,8 +173,7 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
     addMachineFunctionPass(BreakFalseDepsPass(), PMW);
   }
 
-  // TODO(boomanaiden154): Add X86IndirectBranchTrackingPass here once it has
-  // been ported.
+  addMachineFunctionPass(X86IndirectBranchTrackingPass(), PMW);
   // TODO(boomanaiden154): Add X86IssueVZeroUpperPass here once it has been
   // ported.
 
