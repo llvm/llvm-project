@@ -244,6 +244,90 @@ public:
   llvm::StringRef getMangledTypeName() override { return m_type_name; }
 };
 
+/// Builtin type descriptor that owns its type name string, used for hardcoded
+/// fallback descriptors.
+class HardcodedBuiltinTypeDescriptorImpl
+    : public swift::reflection::BuiltinTypeDescriptorBase {
+  std::string m_type_name;
+
+public:
+  HardcodedBuiltinTypeDescriptorImpl(uint32_t size, uint32_t alignment,
+                                     uint32_t stride,
+                                     uint32_t num_extra_inhabitants,
+                                     bool is_bitwise_takable,
+                                     std::string type_name)
+      : swift::reflection::BuiltinTypeDescriptorBase(
+            size, alignment, stride, num_extra_inhabitants, is_bitwise_takable),
+        m_type_name(std::move(type_name)) {}
+  ~HardcodedBuiltinTypeDescriptorImpl() override = default;
+
+  llvm::StringRef getMangledTypeName() override { return m_type_name; }
+};
+
+/// Returns a hardcoded builtin type descriptor for special stdlib builtin
+/// types. This mirrors the types created by
+/// IRGenModule::getOrCreateSpecialStlibBuiltinTypes() in the Swift compiler.
+static std::unique_ptr<swift::reflection::BuiltinTypeDescriptorBase>
+getHardcodedBuiltinTypeDescriptor(const swift::reflection::TypeRef *TR,
+                                  uint32_t pointer_size) {
+  auto *builtin_TR = llvm::dyn_cast<swift::reflection::BuiltinTypeRef>(TR);
+  if (!builtin_TR)
+    return nullptr;
+
+  llvm::StringRef mangled_name = builtin_TR->getMangledName();
+
+  auto makePointerSizedDescriptor =
+      [pointer_size](std::string name, uint32_t num_extra_inhabitants) {
+        return std::make_unique<HardcodedBuiltinTypeDescriptorImpl>(
+            /*size=*/pointer_size,
+            /*alignment=*/pointer_size,
+            /*stride=*/pointer_size,
+            /*num_extra_inhabitants=*/num_extra_inhabitants,
+            /*is_bitwise_takable=*/true, std::move(name));
+      };
+
+  // Builtin.NativeObject (Bo).
+  if (mangled_name == "Bo")
+    return makePointerSizedDescriptor("Bo", /*num_extra_inhabitants=*/1);
+
+  // Builtin.UnknownObject (BO).
+  if (mangled_name == "BO")
+    return makePointerSizedDescriptor("BO", /*num_extra_inhabitants=*/1);
+
+  // Builtin.BridgeObject (Bb).
+  if (mangled_name == "Bb") {
+    uint32_t extra_inhabitants = pointer_size == 8 ? 0x7FFFFFFF : 0x3FFFFFFF;
+    return makePointerSizedDescriptor("Bb", extra_inhabitants);
+  }
+
+  // Builtin.RawPointer.
+  if (mangled_name == "Bp")
+    return makePointerSizedDescriptor("Bp", /*num_extra_inhabitants=*/1);
+
+  // Builtin.UnsafeValueBuffer.
+  if (mangled_name == "BB") {
+    uint32_t size = pointer_size * 3;
+    return std::make_unique<HardcodedBuiltinTypeDescriptorImpl>(
+        /*size=*/size,
+        /*alignment=*/pointer_size,
+        /*stride=*/size,
+        /*num_extra_inhabitants=*/0,
+        /*is_bitwise_takable=*/true, "BB");
+  }
+
+  // Thin function type () -> ().
+  if (mangled_name == "yyXf")
+    return makePointerSizedDescriptor("yyXf", /*num_extra_inhabitants=*/1);
+
+  // Existential metatype Any.Type.
+  if (mangled_name == "ypXp") {
+    uint32_t extra_inhabitants = pointer_size == 8 ? 0x7FFFFFFF : 0x0FFFFFFF;
+    return makePointerSizedDescriptor("ypXp", extra_inhabitants);
+  }
+
+  return nullptr;
+}
+
 class DWARFFieldRecordImpl : public swift::reflection::FieldRecordBase {
   ConstString m_field_name;
   ConstString m_type_name;
@@ -435,15 +519,10 @@ public:
 } // namespace
 
 /// Constructs a builtin type descriptor from DWARF information.
-std::unique_ptr<swift::reflection::BuiltinTypeDescriptorBase>
-DWARFASTParserSwift::getBuiltinTypeDescriptor(
-    const swift::reflection::TypeRef *TR) {
-  assert(ModuleList::GetGlobalModuleListProperties()
-                 .GetSwiftEnableFullDwarfDebugging() !=
-             lldb_private::AutoBool::False &&
-         "Full DWARF debugging for Swift is disabled!");
-
-  auto pair = getTypeAndDie(m_swift_typesystem, TR);
+static std::unique_ptr<swift::reflection::BuiltinTypeDescriptorBase>
+getDWARFBuiltinTypeDescriptor(TypeSystemSwiftTypeRef &swift_typesystem,
+                              const swift::reflection::TypeRef *TR) {
+  auto pair = getTypeAndDie(swift_typesystem, TR);
   if (!pair)
     return nullptr;
   auto &[type, die] = *pair;
@@ -460,7 +539,7 @@ DWARFASTParserSwift::getBuiltinTypeDescriptor(
   auto byte_size = die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_byte_size,
                                                    LLDB_INVALID_ADDRESS);
   if (byte_size == LLDB_INVALID_ADDRESS)
-    return {};
+    return nullptr;
 
   auto alignment = die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_alignment,
                                                    byte_size ? byte_size : 8);
@@ -477,6 +556,24 @@ DWARFASTParserSwift::getBuiltinTypeDescriptor(
   return std::make_unique<DWARFBuiltinTypeDescriptorImpl>(
       byte_size, alignment, stride, num_extra_inhabitants, is_bitwise_takable,
       type.GetMangledTypeName());
+}
+
+/// Constructs a builtin type descriptor from DWARF information.
+/// Falls back to hardcoded descriptors for special stdlib builtin types
+/// that may not be present in DWARF.
+std::unique_ptr<swift::reflection::BuiltinTypeDescriptorBase>
+DWARFASTParserSwift::getBuiltinTypeDescriptor(
+    const swift::reflection::TypeRef *TR) {
+  assert(ModuleList::GetGlobalModuleListProperties()
+                 .GetSwiftEnableFullDwarfDebugging() !=
+             lldb_private::AutoBool::False &&
+         "Full DWARF debugging for Swift is disabled!");
+
+  if (auto descriptor = getDWARFBuiltinTypeDescriptor(m_swift_typesystem, TR))
+    return descriptor;
+
+  uint32_t pointer_size = m_swift_typesystem.GetPointerByteSize();
+  return getHardcodedBuiltinTypeDescriptor(TR, pointer_size);
 }
 
 std::unique_ptr<swift::reflection::MultiPayloadEnumDescriptorBase>
