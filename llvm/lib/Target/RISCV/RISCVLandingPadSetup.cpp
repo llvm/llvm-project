@@ -48,7 +48,7 @@ bool RISCVLandingPadSetup::runOnMachineFunction(MachineFunction &MF) {
   const auto &STI = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo &TII = *STI.getInstrInfo();
 
-  if (!STI.hasStdExtZicfilp())
+  if (!STI.hasZicfilpCFI())
     return false;
 
   uint32_t Label = 0;

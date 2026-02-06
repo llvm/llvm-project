@@ -90,12 +90,19 @@ public:
     Quadratic,
     NLog2N,
   };
+  enum RISCVZicfilpCFISchemeEnum : uint8_t {
+    ZicfilpDisabled,
+    ZicfilpUnlabeled,
+    ZicfilpFuncSig,
+  };
   // clang-format on
+
 private:
   virtual void anchor();
 
   RISCVProcFamilyEnum RISCVProcFamily = Others;
   RISCVVRGatherCostModelEnum RISCVVRGatherCostModel = Quadratic;
+  RISCVZicfilpCFISchemeEnum RISCVZicfilpCFIScheme = ZicfilpDisabled;
 
   bool IsLittleEndian = true;
 
@@ -203,6 +210,13 @@ public:
 
   bool hasCZEROLike() const {
     return HasStdExtZicond || HasVendorXVentanaCondOps;
+  }
+
+  RISCVZicfilpCFISchemeEnum getZicfilpCFIScheme() const {
+    return RISCVZicfilpCFIScheme;
+  }
+  bool hasZicfilpCFI() const {
+    return getZicfilpCFIScheme() != ZicfilpDisabled;
   }
 
   bool hasConditionalMoveFusion() const {

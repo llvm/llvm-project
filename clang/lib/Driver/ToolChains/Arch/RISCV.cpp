@@ -169,6 +169,35 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     Features.push_back("+unaligned-vector-mem");
   }
 
+  if (const Arg *A = Args.getLastArg(options::OPT_fcf_protection_EQ)) {
+    const StringRef CFProtection{A->getValue()};
+    const bool CFProtectionBranch =
+        CFProtection == "full" || CFProtection == "branch";
+    if (CFProtectionBranch) {
+      bool FuncSig;
+      if (const Arg *SA =
+              Args.getLastArg(options::OPT_mcf_branch_label_scheme_EQ)) {
+        const StringRef Scheme{SA->getValue()};
+        if (Scheme == "unlabeled") {
+          FuncSig = false;
+        } else {
+          assert(Scheme == "func-sig" &&
+                 "-mcf-branch-label-scheme should be either `unlabeled` or "
+                 "`func-sig`");
+          FuncSig = true;
+        }
+      } else {
+        // `func-sig` is assumed if `-mcf-branch-label-scheme` is not given.
+        FuncSig = true;
+      }
+
+      if (FuncSig)
+        Features.push_back("+zicfilp-func-sig");
+      else
+        Features.push_back("+zicfilp-unlabeled");
+    }
+  }
+
   // Now add any that the user explicitly requested on the command line,
   // which may override the defaults.
   handleTargetFeaturesGroup(D, Triple, Args, Features,

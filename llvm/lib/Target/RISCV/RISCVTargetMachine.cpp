@@ -18,6 +18,7 @@
 #include "RISCVTargetObjectFile.h"
 #include "RISCVTargetTransformInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
@@ -32,11 +33,15 @@
 #include "llvm/CodeGen/RegAllocRegistry.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
@@ -194,6 +199,33 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
   setCFIFixup(!EnableCFIInstrInserter);
 }
 
+static void reportBadZicfilpUsage(const FeatureBitset &Features,
+                                  const Module &M) {
+  if (const Metadata *const CF = M.getModuleFlag("cf-protection-branch");
+      CF && !mdconst::extract<ConstantInt>(CF)->isZero()) {
+    StringRef LabelScheme;
+    if (const Metadata *const MD = M.getModuleFlag("cf-branch-label-scheme")) {
+      LabelScheme = cast<MDString>(MD)->getString();
+      if (LabelScheme != "func-sig" && LabelScheme != "unlabeled")
+        reportFatalUsageError("cf-branch-label-scheme=" + LabelScheme +
+                              " module flag is unsupported");
+    } else {
+      reportFatalUsageError("missing cf-branch-label-scheme module flag");
+    }
+
+    if ((!Features[RISCV::FeatureZicfilpFuncSig] &&
+         LabelScheme == "func-sig") ||
+        (!Features[RISCV::FeatureZicfilpUnlabeled] &&
+         LabelScheme == "unlabeled"))
+      reportFatalUsageError(
+          "require target feature (+zicfilp-" + LabelScheme +
+          ") to handle cf-branch-label-scheme=" + LabelScheme + " module flag");
+  } else if (Features[RISCV::FeatureZicfilpFuncSig] ||
+             Features[RISCV::FeatureZicfilpUnlabeled]) {
+    reportFatalUsageError("require cf-protection-branch != 0 module flag");
+  }
+}
+
 const RISCVSubtarget *
 RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
@@ -268,6 +300,9 @@ RISCVTargetMachine::getSubtargetImpl(const Function &F) const {
     I = std::make_unique<RISCVSubtarget>(
         TargetTriple, CPU, TuneCPU, FS, ABIName, RVVBitsMin, RVVBitsMax, *this);
   }
+
+  if (const Module *const M = F.getParent())
+    reportBadZicfilpUsage(I->getFeatureBits(), *M);
   return I.get();
 }
 

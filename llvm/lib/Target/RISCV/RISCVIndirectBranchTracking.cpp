@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/Support/Error.h"
 
 #define DEBUG_TYPE "riscv-indirect-branch-tracking"
 #define PASS_NAME "RISC-V Indirect Branch Tracking"
@@ -76,9 +77,14 @@ static bool isCallReturnTwice(const MachineOperand &MOp) {
 
 bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
   const auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
-  const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
-  if (!Subtarget.hasStdExtZicfilp())
+  if (!Subtarget.hasZicfilpCFI())
     return false;
+
+  const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
+
+  if (Subtarget.getZicfilpCFIScheme() != RISCVSubtarget::ZicfilpUnlabeled)
+    reportFatalUsageError(
+        "only cf-branch-label-scheme=unlabeled is supported for now");
 
   uint32_t FixedLabel = 0;
   if (PreferredLandingPadLabel.getNumOccurrences() > 0) {

@@ -302,6 +302,8 @@
 ; CHECK-NEXT:   ziccif                           - 'Ziccif' (Main Memory Supports Instruction Fetch with Atomicity Requirement).
 ; CHECK-NEXT:   zicclsm                          - 'Zicclsm' (Main Memory Supports Misaligned Loads/Stores).
 ; CHECK-NEXT:   ziccrse                          - 'Ziccrse' (Main Memory Supports Forward Progress on LR/SC Sequences).
+; CHECK-NEXT:   zicfilp-func-sig                 - Enforce forward-edge control-flow integrity with ZICFILP-func-sig.
+; CHECK-NEXT:   zicfilp-unlabeled                - Enforce forward-edge control-flow integrity with ZICFILP-unlabeled.
 ; CHECK-NEXT:   zicntr                           - 'Zicntr' (Base Counters and Timers).
 ; CHECK-NEXT:   zicond                           - 'Zicond' (Integer Conditional Operations).
 ; CHECK-NEXT:   zicsr                            - 'Zicsr' (CSRs).

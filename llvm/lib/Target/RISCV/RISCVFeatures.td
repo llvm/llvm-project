@@ -176,8 +176,6 @@ def FeatureStdExtZicfilp
 def HasStdExtZicfilp : Predicate<"Subtarget->hasStdExtZicfilp()">,
                        AssemblerPredicate<(all_of FeatureStdExtZicfilp),
                                           "'Zicfilp' (Landing pad)">;
-def NoStdExtZicfilp : Predicate<"!Subtarget->hasStdExtZicfilp()">,
-                      AssemblerPredicate<(all_of (not FeatureStdExtZicfilp))>;
 
 def FeatureStdExtZicfiss
     : RISCVExperimentalExtension<1, 0, "Shadow stack",
@@ -2038,3 +2036,14 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
 def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
                                          "Ventana Veyron-Series processors">;
 
+// Zicfilp-based CFI
+def FeatureZicfilpUnlabeled
+    : SubtargetFeature<
+          "zicfilp-unlabeled", "RISCVZicfilpCFIScheme", "ZicfilpUnlabeled",
+          "Enforce forward-edge control-flow integrity with ZICFILP-unlabeled">;
+def FeatureZicfilpFuncSig
+    : SubtargetFeature<
+          "zicfilp-func-sig", "RISCVZicfilpCFIScheme", "ZicfilpFuncSig",
+          "Enforce forward-edge control-flow integrity with ZICFILP-func-sig">;
+def HasZicfilpCFI : Predicate<"Subtarget->hasZicfilpCFI()">;
+def NoZicfilpCFI : Predicate<"!Subtarget->hasZicfilpCFI()">;

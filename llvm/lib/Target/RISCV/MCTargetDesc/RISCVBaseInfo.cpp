@@ -135,6 +135,10 @@ void validate(const Triple &TT, const FeatureBitset &FeatureBits) {
   if (FeatureBits[RISCV::Feature32Bit] &&
       FeatureBits[RISCV::Feature64Bit])
     reportFatalUsageError("RV32 and RV64 can't be combined");
+  if (FeatureBits[RISCV::FeatureZicfilpFuncSig] &&
+      FeatureBits[RISCV::FeatureZicfilpUnlabeled])
+    reportFatalUsageError(
+        "+zicfilp-func-sig and +zicfilp-unlabeled can't be combined");
 }
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
