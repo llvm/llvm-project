@@ -515,6 +515,12 @@ inline VPInstruction_match<VPInstruction::StepVector> m_StepVector() {
   return m_VPInstruction<VPInstruction::StepVector>();
 }
 
+template <typename Op0_t, typename Op1_t>
+inline VPInstruction_match<VPInstruction::ExitingIVValue, Op0_t, Op1_t>
+m_ExitingIVValue(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_VPInstruction<VPInstruction::ExitingIVValue>(Op0, Op1);
+}
+
 template <unsigned Opcode, typename Op0_t>
 inline AllRecipe_match<Opcode, Op0_t> m_Unary(const Op0_t &Op0) {
   return AllRecipe_match<Opcode, Op0_t>(Op0);
