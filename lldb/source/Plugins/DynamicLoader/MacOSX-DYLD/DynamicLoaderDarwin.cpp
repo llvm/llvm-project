@@ -126,7 +126,7 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
 
   // See if we have this binary in the Target or the global Module
   // cache already.
-  module_sp = target.GetOrCreateModule(module_spec, /*notify=*/false );
+  module_sp = target.GetOrCreateModule(module_spec, /*notify=*/false);
 
   if (!module_sp &&
       HostInfo::GetArchitecture().IsCompatibleMatch(target.GetArchitecture())) {
