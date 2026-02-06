@@ -2069,6 +2069,12 @@ public:
                         const Twine &name = "tmp", Address *alloca = nullptr,
                         mlir::OpBuilder::InsertPoint ip = {});
 
+  mlir::Value performAddrSpaceCast(mlir::Value v, mlir::Type destTy) const {
+    if (cir::GlobalOp globalOp = v.getDefiningOp<cir::GlobalOp>())
+      cgm.errorNYI("Global op addrspace cast");
+    return builder.createAddrSpaceCast(v, destTy);
+  }
+
   //===--------------------------------------------------------------------===//
   //                         OpenMP Emission
   //===--------------------------------------------------------------------===//
