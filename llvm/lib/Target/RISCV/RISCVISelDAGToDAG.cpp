@@ -1876,7 +1876,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     CurDAG->RemoveDeadNode(Node);
     return;
   }
-  case RISCVISD::PPACK_DH: {
+  case RISCVISD::PPAIRE_DB: {
     assert(Subtarget->enablePExtSIMDCodeGen() && Subtarget->isRV32());
 
     SDValue Val0 = Node->getOperand(0);
@@ -1901,13 +1901,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
                                        MVT::Untyped, Ops1),
                 0);
 
-    MachineSDNode *PackDH = CurDAG->getMachineNode(
+    MachineSDNode *PPAIRE_DB = CurDAG->getMachineNode(
         RISCV::PPAIRE_DB, DL, MVT::Untyped, {RegPair0, RegPair1});
 
     SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL,
-                                                MVT::i32, SDValue(PackDH, 0));
+                                                MVT::i32, SDValue(PPAIRE_DB, 0));
     SDValue Hi = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL,
-                                                MVT::i32, SDValue(PackDH, 0));
+                                                MVT::i32, SDValue(PPAIRE_DB, 0));
     ReplaceUses(SDValue(Node, 0), Lo);
     ReplaceUses(SDValue(Node, 1), Hi);
     CurDAG->RemoveDeadNode(Node);
