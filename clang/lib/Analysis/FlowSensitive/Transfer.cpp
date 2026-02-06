@@ -329,8 +329,7 @@ public:
       if (S->getType()->isPointerType()) {
         auto *PV = Env.get<PointerValue>(*SubExpr);
         if (PV == nullptr)
-          PV = cast<PointerValue>(Env.createValue(S->getType()));
-
+          break;
         Loc = cast<RecordStorageLocation>(&PV->getPointeeLoc());
       } else {
         assert(S->getType()->isRecordType());
