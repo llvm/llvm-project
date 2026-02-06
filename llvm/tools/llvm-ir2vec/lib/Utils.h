@@ -129,7 +129,8 @@ public:
   Expected<BBEmbeddingsMap> getBBEmbeddingsMap(const Function &F,
                                                IR2VecKind Kind) const;
   /// Get embeddings for all instructions in a function
-  Expected<InstEmbeddingsMap> getInstEmbMap(const Function &F, IR2VecKind Kind) const;
+  Expected<InstEmbeddingsMap> getInstEmbMap(const Function &F,
+                                            IR2VecKind Kind) const;
 
   /// Get embeddings for all instructions in the module, organized by function
   Expected<FuncInstEmbMap> getFuncInstEmbMap(IR2VecKind Kind) const;

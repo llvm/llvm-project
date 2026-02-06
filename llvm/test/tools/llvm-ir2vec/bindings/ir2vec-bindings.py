@@ -54,7 +54,7 @@ if tool is not None:
         for inst_str in sorted(func_inst_map.keys()):
             emb = func_inst_map[inst_str]
             inst_sorted.append((inst_str, emb))
-    
+
     for inst_str, emb in inst_sorted:
         print(f"Inst: {inst_str}")
         print(f"  Embedding: {emb.tolist()}")
