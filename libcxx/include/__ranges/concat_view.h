@@ -303,7 +303,7 @@ private:
 
   template <size_t... _Is, typename _Func>
   _LIBCPP_HIDE_FROM_ABI constexpr void __apply_at_index(size_t __index, _Func&& __func, index_sequence<_Is...>) const {
-    ((__index == _Is ? (__func(integral_constant<size_t, _Is>{}), 0) : 0), ...);
+    ((__index == _Is ? (static_cast<void>(__func(integral_constant<size_t, _Is>{})), 0) : 0), ...);
   }
 
   template <size_t _Idx, typename _Func>
