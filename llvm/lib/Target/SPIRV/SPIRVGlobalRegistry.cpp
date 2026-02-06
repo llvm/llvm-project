@@ -378,9 +378,8 @@ Register SPIRVGlobalRegistry::getOrCreateConstInt(uint64_t Val, MachineInstr &I,
                                                   SPIRVType *SpvType,
                                                   const SPIRVInstrInfo &TII,
                                                   bool ZeroAsNull) {
-  return getOrCreateConstInt(
-      APInt(getScalarOrVectorBitWidth(SpvType), Val), I, SpvType, TII,
-      ZeroAsNull);
+  return getOrCreateConstInt(APInt(getScalarOrVectorBitWidth(SpvType), Val), I,
+                             SpvType, TII, ZeroAsNull);
 }
 
 Register SPIRVGlobalRegistry::getOrCreateConstInt(const APInt &Val,
@@ -588,9 +587,8 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(uint64_t Val,
                                                      SPIRVType *SpvType,
                                                      const SPIRVInstrInfo &TII,
                                                      bool ZeroAsNull) {
-  return getOrCreateConstVector(
-      APInt(getScalarOrVectorBitWidth(SpvType), Val), I, SpvType, TII,
-      ZeroAsNull);
+  return getOrCreateConstVector(APInt(getScalarOrVectorBitWidth(SpvType), Val),
+                                I, SpvType, TII, ZeroAsNull);
 }
 
 Register SPIRVGlobalRegistry::getOrCreateConstVector(const APInt &Val,
