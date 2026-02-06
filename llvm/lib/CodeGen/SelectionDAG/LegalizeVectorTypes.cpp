@@ -3572,6 +3572,9 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::INSERT_SUBVECTOR:  Res = SplitVecOp_INSERT_SUBVECTOR(N, OpNo); break;
   case ISD::EXTRACT_VECTOR_ELT:Res = SplitVecOp_EXTRACT_VECTOR_ELT(N); break;
   case ISD::CONCAT_VECTORS:    Res = SplitVecOp_CONCAT_VECTORS(N); break;
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    Res = SplitVecOp_VECTOR_FIND_LAST_ACTIVE(N);
+    break;
   case ISD::VP_TRUNCATE:
   case ISD::TRUNCATE:
     Res = SplitVecOp_TruncateHelper(N);
@@ -3730,6 +3733,32 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
 
   ReplaceValueWith(SDValue(N, 0), Res);
   return false;
+}
+
+SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
+  SDLoc DL(N);
+
+  SDValue LoMask, HiMask;
+  GetSplitVector(N->getOperand(0), LoMask, HiMask);
+
+  EVT VT = N->getValueType(0);
+  EVT SplitVT = LoMask.getValueType();
+  ElementCount SplitEC = SplitVT.getVectorElementCount();
+
+  // Find the last active in both the low and the high masks.
+  SDValue LoFind = DAG.getNode(ISD::VECTOR_FIND_LAST_ACTIVE, DL, VT, LoMask);
+  SDValue HiFind = DAG.getNode(ISD::VECTOR_FIND_LAST_ACTIVE, DL, VT, HiMask);
+
+  // Check if any lane is active in the high mask.
+  // FIXME: This would not be necessary if VECTOR_FIND_LAST_ACTIVE returned a
+  // sentinel value for "none active".
+  SDValue AnyHiActive = DAG.getNode(ISD::VECREDUCE_OR, DL, MVT::i32, HiMask);
+
+  // Return: AnyHiActive ? (HiFind + SplitEC) : LoFind;
+  return DAG.getSelect(DL, VT, AnyHiActive,
+                       DAG.getNode(ISD::ADD, DL, VT, HiFind,
+                                   DAG.getElementCount(DL, VT, SplitEC)),
+                       LoFind);
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VSELECT(SDNode *N, unsigned OpNo) {
