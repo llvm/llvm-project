@@ -4,9 +4,9 @@
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 
 ; Test cases for https://github.com/llvm/llvm-project/issues/87410.
-define void @test_not_first_lane_only_constant(ptr %A, ptr noalias %B)  {
+define void @test_not_first_lane_only_constant(ptr %A, ptr noalias %B, ptr noalias %C)  {
 ; CHECK-LABEL: define void @test_not_first_lane_only_constant(
-; CHECK-SAME: ptr [[A:%.*]], ptr noalias [[B:%.*]]) {
+; CHECK-SAME: ptr [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -45,7 +45,7 @@ else.2:
   br label %loop.latch
 
 loop.latch:
-  %merge = phi ptr [ %B, %else.2 ], [ poison, %loop.header ]
+  %merge = phi ptr [ %B, %else.2 ], [ %C, %loop.header ]
   %l = load i16, ptr %merge, align 2
   %iv.next = add i16 %iv, 1
   store i16 %l, ptr %gep.A
@@ -100,7 +100,7 @@ else.2:
   br label %loop.latch
 
 loop.latch:
-  %merge = phi ptr [ %B, %else.2 ], [ poison, %loop.header ]
+  %merge = phi ptr [ %B, %else.2 ], [ %B, %loop.header ]
   %l = load i16, ptr %merge, align 2
   %iv.next = add i16 %iv, 1
   store i16 %l, ptr %gep.A

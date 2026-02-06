@@ -69,7 +69,7 @@ then.2:
   br label %merge
 
 merge:
-  %idx = phi i64 [ poison, %then.1 ], [ %iv, %then.2 ]
+  %idx = phi i64 [ %iv, %then.1 ], [ %iv, %then.2 ]
   %getelementptr = getelementptr i16, ptr %arg, i64 %idx
   store i16 0, ptr %getelementptr, align 2
   br label %loop.latch
