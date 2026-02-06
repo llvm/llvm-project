@@ -566,9 +566,8 @@ static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
   for (const auto &[PhiR, ScalarPhiR] : zip_equal(
            drop_begin(HeaderVPBB->phis()), Plan.getScalarHeader()->phis())) {
     auto *VectorPhiR = cast<VPPhi>(&PhiR);
-    auto *ResumePhiR =
-        ScalarPHBuilder.createScalarPhi({VectorPhiR, VectorPhiR->getOperand(0)},
-                                        *VectorPhiR, VectorPhiR->getDebugLoc());
+    auto *ResumePhiR = ScalarPHBuilder.createScalarPhi(
+        {VectorPhiR, VectorPhiR->getOperand(0)}, {}, VectorPhiR->getDebugLoc());
     cast<VPIRPhi>(&ScalarPhiR)->addOperand(ResumePhiR);
   }
 }
