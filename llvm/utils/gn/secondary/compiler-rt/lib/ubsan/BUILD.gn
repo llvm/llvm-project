@@ -133,6 +133,7 @@ if (current_os != "mac") {
     ]
     configs += [ "//llvm/utils/gn/build:crt_code" ]
     sources = [ "ubsan_loop_detect.cpp" ]
+    deps = [ "//compiler-rt/include($host_toolchain)" ]
   }
 
   gen_dynamic_list("ubsan_loop_detect_dynamic_list") {
