@@ -115,6 +115,8 @@ public:
                          IndexFileOut Shard) const override {
     auto ShardPath =
         getShardPathFromFilePath(DiskShardRoot, ShardIdentifier, Mappings);
+    if (!Mappings.empty())
+      Shard.Transform = &StoreTransform;
     return llvm::writeToOutput(ShardPath, [&Shard](llvm::raw_ostream &OS) {
       OS << Shard;
       return llvm::Error::success();

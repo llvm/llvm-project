@@ -163,12 +163,16 @@ void writeVar(uint32_t I, llvm::raw_ostream &OS) {
 // These are sorted to improve compression.
 
 // Maps each string to a canonical representation.
-// Strings remain owned externally (e.g. by SymbolSlab).
+// Strings remain owned externally (e.g. by SymbolSlab), except for strings
+// that are transformed by path remapping.
 class StringTableOut {
   llvm::DenseSet<llvm::StringRef> Unique;
   std::vector<llvm::StringRef> Sorted;
   // Since strings are interned, look up can be by pointer.
   llvm::DenseMap<std::pair<const char *, size_t>, unsigned> Index;
+  llvm::BumpPtrAllocator Arena;
+  llvm::StringSaver TransformSaver{Arena};
+  const URITransform *Transform = nullptr;
 
 public:
   StringTableOut() {
@@ -176,8 +180,14 @@ public:
     // Table size zero is reserved to indicate no compression.
     Unique.insert("");
   }
+  void setTransform(const URITransform *T) { Transform = T; }
   // Add a string to the table. Overwrites S if an identical string exists.
-  void intern(llvm::StringRef &S) { S = *Unique.insert(S).first; };
+  // If path remapping is enabled, transform and store the new value.
+  void intern(llvm::StringRef &S) {
+    if (Transform && S.starts_with("file://"))
+      S = TransformSaver.save((*Transform)(S));
+    S = *Unique.insert(S).first;
+  }
   // Finalize the table and write it to OS. No more strings may be added.
   void finalize(llvm::raw_ostream &OS) {
     Sorted = {Unique.begin(), Unique.end()};
@@ -576,6 +586,8 @@ void writeRIFF(const IndexFileOut &Data, llvm::raw_ostream &OS) {
   RIFF.Chunks.push_back({riff::fourCC("meta"), Meta});
 
   StringTableOut Strings;
+  if (Data.Transform)
+    Strings.setTransform(Data.Transform);
   std::vector<Symbol> Symbols;
   for (const auto &Sym : *Data.Symbols) {
     Symbols.emplace_back(Sym);

@@ -69,6 +69,7 @@ struct IndexFileOut {
   // TODO: Support serializing Dex posting lists.
   IndexFileFormat Format = IndexFileFormat::RIFF;
   const tooling::CompileCommand *Cmd = nullptr;
+  const URITransform *Transform = nullptr;
 
   IndexFileOut() = default;
   IndexFileOut(const IndexFileIn &I)
