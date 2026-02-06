@@ -136,8 +136,10 @@ void DominanceFrontierBase<BlockT, IsPostDom>::calculate(const DomTreeT &DT) {
 
       workList.pop_back();
       if (!parentBB) {
-        // IsPostDom == true with multiple roots, processing below isn't
-        // necessary for the virtual root node.
+        assert(IsPostDom && "For forward frontiers only root node (processed "
+                            "above) might not have a parent.");
+        // Processing below isn't necessary for the virtual root node in case
+        // of post-dominance frontier.
         continue;
       }
 
