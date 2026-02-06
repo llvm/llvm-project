@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 /// This file implements the targeting of the Machinelegalizer class for
-/// WebAssembly
+/// WebAssembly.
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyLegalizerInfo.h"
