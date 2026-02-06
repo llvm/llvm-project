@@ -447,6 +447,12 @@ public:
     return PostAllocaInsertPt;
   }
 
+  // Try to preserve the source's name to make IR more readable.
+  llvm::Value *performAddrSpaceCast(llvm::Value *Src, llvm::Type *DestTy) {
+    return Builder.CreateAddrSpaceCast(
+        Src, DestTy, Src->hasName() ? Src->getName() + ".ascast" : "");
+  }
+
   /// API for captured statement code generation.
   class CGCapturedStmtInfo {
   public:
@@ -4439,6 +4445,7 @@ public:
   LValue EmitArraySectionExpr(const ArraySectionExpr *E,
                               bool IsLowerBound = true);
   LValue EmitExtVectorElementExpr(const ExtVectorElementExpr *E);
+  LValue EmitMatrixElementExpr(const MatrixElementExpr *E);
   LValue EmitMemberExpr(const MemberExpr *E);
   LValue EmitObjCIsaExpr(const ObjCIsaExpr *E);
   LValue EmitCompoundLiteralLValue(const CompoundLiteralExpr *E);

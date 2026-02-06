@@ -460,7 +460,7 @@ bool X86PassConfig::addInstSelector() {
   // For ELF, cleanup any local-dynamic TLS accesses.
   if (TM->getTargetTriple().isOSBinFormatELF() &&
       getOptLevel() != CodeGenOptLevel::None)
-    addPass(createCleanupLocalDynamicTLSPass());
+    addPass(createCleanupLocalDynamicTLSLegacyPass());
 
   addPass(createX86GlobalBaseRegPass());
   addPass(createX86ArgumentStackSlotLegacyPass());
@@ -566,7 +566,7 @@ void X86PassConfig::addPreEmitPass() {
     addPass(createBreakFalseDeps());
   }
 
-  addPass(createX86IndirectBranchTrackingPass());
+  addPass(createX86IndirectBranchTrackingLegacyPass());
 
   addPass(createX86IssueVZeroUpperPass());
 

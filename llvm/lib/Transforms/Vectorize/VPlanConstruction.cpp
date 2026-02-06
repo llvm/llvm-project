@@ -643,8 +643,31 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   // used, so it is safe.
   VPIRFlags Flags = vputils::getFlagsFromIndDesc(IndDesc);
 
-  return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
-                                           IndDesc, Flags, DL);
+  auto *WideIV = new VPWidenIntOrFpInductionRecipe(
+      Phi, Start, Step, &Plan.getVF(), IndDesc, Flags, DL);
+
+  // Replace live-out extracts of WideIV's backedge value by ExitingIVValue
+  // recipes.
+  VPValue *BackedgeVal = PhiR->getOperand(1);
+  for (VPUser *U : to_vector(BackedgeVal->users())) {
+    if (!match(U, m_ExtractLastPart(m_VPValue())))
+      continue;
+    auto *ExtractLastPart = cast<VPInstruction>(U);
+    if (!match(ExtractLastPart->getSingleUser(),
+               m_ExtractLastLane(m_VPValue())))
+      continue;
+    auto *ExtractLastLane =
+        cast<VPInstruction>(ExtractLastPart->getSingleUser());
+    assert(is_contained(ExtractLastLane->getParent()->successors(),
+                        Plan.getScalarPreheader()) &&
+           "last lane must be extracted in the middle block");
+    VPBuilder Builder(ExtractLastLane);
+    ExtractLastLane->replaceAllUsesWith(Builder.createNaryOp(
+        VPInstruction::ExitingIVValue, {WideIV, BackedgeVal}));
+    ExtractLastLane->eraseFromParent();
+    ExtractLastPart->eraseFromParent();
+  }
+  return WideIV;
 }
 
 void VPlanTransforms::createHeaderPhiRecipes(
@@ -1333,11 +1356,34 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
                      PhiR->getRecurrenceKind()))
       continue;
 
-    // Find the condition for the select.
+    // Find the condition for the select/blend.
     auto *SelectR = cast<VPSingleDefRecipe>(&PhiR->getBackedgeRecipe());
     VPValue *Cond = nullptr, *Op1 = nullptr, *Op2 = nullptr;
+
+    // If we're matching a blend rather than a select, there should be one
+    // incoming value which is the data, then all other incoming values should
+    // be the phi.
+    auto MatchBlend = [&](VPRecipeBase *R) {
+      auto *Blend = dyn_cast<VPBlendRecipe>(R);
+      if (!Blend)
+        return false;
+      assert(!Blend->isNormalized() && "must run before blend normalizaion");
+      unsigned NumIncomingDataValues = 0;
+      for (unsigned I = 0; I < Blend->getNumIncomingValues(); ++I) {
+        VPValue *Incoming = Blend->getIncomingValue(I);
+        if (Incoming != PhiR) {
+          ++NumIncomingDataValues;
+          Cond = Blend->getMask(I);
+          Op1 = Incoming;
+          Op2 = PhiR;
+        }
+      }
+      return NumIncomingDataValues == 1;
+    };
+
     if (!match(SelectR,
-               m_Select(m_VPValue(Cond), m_VPValue(Op1), m_VPValue(Op2))))
+               m_Select(m_VPValue(Cond), m_VPValue(Op1), m_VPValue(Op2))) &&
+        !MatchBlend(SelectR))
       return false;
 
     // Add mask phi.
