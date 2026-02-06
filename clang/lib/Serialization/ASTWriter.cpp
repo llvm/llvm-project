@@ -6120,9 +6120,10 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
 
         endian::Writer LE(Out, llvm::endianness::little);
         LE.write<uint8_t>(static_cast<uint8_t>(M.Kind));
-        // FIXME: Storing Name as just a string does not handle relocatable
-        // files. We probably should call `PreparePathForOutput(...)` to
-        // properly support relocatable files.
+        // FIXME: Storing a PCH's name (M.FileName) as a string does not handle
+        // relocatable files. We probably should call
+        // `PreparePathForOutput(M.FileName)` to properly support relocatable
+        // PCHs.
         StringRef Name = M.isModule() ? M.ModuleName : M.FileName;
         LE.write<uint16_t>(Name.size());
         Out.write(Name.data(), Name.size());
