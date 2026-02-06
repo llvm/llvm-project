@@ -1046,14 +1046,13 @@ TEST(TransferTest, BinaryOperatorAssignFloat) {
         // FIXME: Should be non-null. Floats aren't modeled at all.
         EXPECT_THAT(FooAtBVal, IsNull());
 
-        // See if the storage location is correctly propagated.
+        // Check that the storage location is correctly propagated.
         auto MatchResult =
             match(binaryOperator(hasOperatorName("=")).bind("bo"), ASTCtx);
         const auto *BO = selectFirst<BinaryOperator>("bo", MatchResult);
         ASSERT_THAT(BO, NotNull());
         const StorageLocation *BOLoc = EnvP.getStorageLocation(*BO);
-        // FIXME: Should be non-null.
-        EXPECT_THAT(BOLoc, IsNull());
+        EXPECT_THAT(BOLoc, NotNull());
       });
 }
 
