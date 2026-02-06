@@ -15,6 +15,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Target/ThreadPlan.h"
+#include "lldb/Target/ThreadPlanStepOverBreakpoint.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -576,6 +577,12 @@ bool ThreadList::WillResume(RunDirection &direction) {
       assert(thread_to_run->GetCurrentPlan()->GetDirection() == direction);
     }
   } else {
+    // Pre-scan to find all threads that need to step over a breakpoint,
+    // and group them by breakpoint address. This optimization allows us to
+    // step multiple threads over the same breakpoint with minimal breakpoint
+    // swaps - only the last thread in each group will re-enable the breakpoint.
+    std::map<lldb::addr_t, std::vector<ThreadSP>> breakpoint_groups;
+
     for (pos = m_threads.begin(); pos != end; ++pos) {
       ThreadSP thread_sp(*pos);
       if (thread_sp->GetResumeState() != eStateSuspended) {
@@ -589,6 +596,14 @@ bool ThreadList::WillResume(RunDirection &direction) {
           assert(thread_sp->GetCurrentPlan()->GetDirection() == direction);
           // You can't say "stop others" and also want yourself to be suspended.
           assert(thread_sp->GetCurrentPlan()->RunState() != eStateSuspended);
+
+          // Get the breakpoint address from the step-over-breakpoint plan
+          ThreadPlan *current_plan = thread_sp->GetCurrentPlan();
+          ThreadPlanStepOverBreakpoint *bp_plan =
+              static_cast<ThreadPlanStepOverBreakpoint *>(current_plan);
+          lldb::addr_t bp_addr = bp_plan->GetBreakpointLoadAddress();
+          breakpoint_groups[bp_addr].push_back(thread_sp);
+
           thread_to_run = thread_sp;
           if (thread_sp->ShouldRunBeforePublicStop()) {
             // This takes precedence, so if we find one of these, service it:
@@ -596,6 +611,30 @@ bool ThreadList::WillResume(RunDirection &direction) {
           }
         }
       }
+    }
+
+    // For each group of threads at the same breakpoint, register them with
+    // ThreadList and set them to use deferred re-enable. The breakpoint will
+    // only be re-enabled when ALL threads have finished stepping over it.
+    for (auto &group : breakpoint_groups) {
+      lldb::addr_t bp_addr = group.first;
+      std::vector<ThreadSP> &threads = group.second;
+
+      if (threads.size() > 1) {
+        // Multiple threads stepping over the same breakpoint - use tracking
+        for (ThreadSP &thread_sp : threads) {
+          // Register this thread as stepping over the breakpoint
+          RegisterThreadSteppingOverBreakpoint(bp_addr, thread_sp->GetID());
+
+          // Set the plan to defer re-enabling (use callback instead)
+          ThreadPlan *plan = thread_sp->GetCurrentPlan();
+          ThreadPlanStepOverBreakpoint *bp_plan =
+              static_cast<ThreadPlanStepOverBreakpoint *>(plan);
+          bp_plan->SetDeferReenableBreakpointSite(true);
+        }
+      }
+      // Single thread at breakpoint - keeps default behavior (re-enable
+      // directly)
     }
   }
 
@@ -799,5 +838,67 @@ ThreadList::ExpressionExecutionThreadPusher::ExpressionExecutionThreadPusher(
     m_tid = thread_sp->GetID();
     m_thread_list = &thread_sp->GetProcess()->GetThreadList();
     m_thread_list->PushExpressionExecutionThread(m_tid);
+  }
+}
+
+void ThreadList::RegisterThreadSteppingOverBreakpoint(addr_t breakpoint_addr,
+                                                      tid_t tid) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
+  m_threads_stepping_over_bp[breakpoint_addr].insert(tid);
+
+  Log *log = GetLog(LLDBLog::Step);
+  LLDB_LOGF(log,
+            "ThreadList::%s: Registered thread 0x%" PRIx64
+            " stepping over breakpoint at 0x%" PRIx64 " (now %zu threads)",
+            __FUNCTION__, tid, breakpoint_addr,
+            m_threads_stepping_over_bp[breakpoint_addr].size());
+}
+
+void ThreadList::ThreadFinishedSteppingOverBreakpoint(addr_t breakpoint_addr,
+                                                      tid_t tid) {
+  std::lock_guard<std::recursive_mutex> guard(GetMutex());
+
+  Log *log = GetLog(LLDBLog::Step);
+
+  auto it = m_threads_stepping_over_bp.find(breakpoint_addr);
+  if (it == m_threads_stepping_over_bp.end()) {
+    // No threads registered for this breakpoint - just re-enable it directly
+    LLDB_LOGF(log,
+              "ThreadList::%s: Thread 0x%" PRIx64
+              " finished stepping over breakpoint at 0x%" PRIx64
+              " but no threads were registered, re-enabling directly",
+              __FUNCTION__, tid, breakpoint_addr);
+    BreakpointSiteSP bp_site_sp(
+        m_process.GetBreakpointSiteList().FindByAddress(breakpoint_addr));
+    if (bp_site_sp) {
+      m_process.EnableBreakpointSite(bp_site_sp.get());
+    }
+    return;
+  }
+
+  // Remove this thread from the set
+  it->second.erase(tid);
+
+  LLDB_LOGF(log,
+            "ThreadList::%s: Thread 0x%" PRIx64
+            " finished stepping over breakpoint at 0x%" PRIx64
+            " (%zu threads remaining)",
+            __FUNCTION__, tid, breakpoint_addr, it->second.size());
+
+  // If no more threads are stepping over this breakpoint, re-enable it
+  if (it->second.empty()) {
+    LLDB_LOGF(log,
+              "ThreadList::%s: All threads finished stepping over breakpoint "
+              "at 0x%" PRIx64 ", re-enabling breakpoint",
+              __FUNCTION__, breakpoint_addr);
+
+    BreakpointSiteSP bp_site_sp(
+        m_process.GetBreakpointSiteList().FindByAddress(breakpoint_addr));
+    if (bp_site_sp) {
+      m_process.EnableBreakpointSite(bp_site_sp.get());
+    }
+
+    // Clean up the entry
+    m_threads_stepping_over_bp.erase(it);
   }
 }
