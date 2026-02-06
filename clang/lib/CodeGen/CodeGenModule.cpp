@@ -3520,7 +3520,7 @@ void CodeGenModule::AddDependentLib(StringRef Lib) {
   LinkerOptionsMetadata.push_back(llvm::MDNode::get(C, MDOpts));
 }
 
-/// Process AIX copyright pragma and create LLVM metadata.
+/// Process copyright pragma and create LLVM metadata.
 /// #pragma comment(copyright, "string") embed copyright
 /// information into the object file's loader section.
 ///

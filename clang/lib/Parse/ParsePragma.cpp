@@ -3299,8 +3299,7 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
           .Case("copyright", PCK_Copyright)
           .Default(PCK_Unknown);
 
-  // Restrict copyright to AIX targets only. This could be applied for z/OS
-  // and extended with other IBM pragma comment kinds.
+  // Restrict copyright to AIX targets only.
   if (!PP.getTargetInfo().getTriple().isOSAIX() && Kind == PCK_Copyright) {
     Kind = PCK_Unknown;
   }
