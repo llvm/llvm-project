@@ -19,11 +19,11 @@ template<typename T> struct remove_reference<T &>  { typedef T type; };
 template<typename T> struct remove_reference<T &&> { typedef T type; };
 
 template< class InputIt, class T >
-InputIt find( InputIt first, InputIt last, const T& value );
+InputIt find(InputIt first, InputIt last, const T& value);
 
 template< class ForwardIt1, class ForwardIt2 >
-ForwardIt1 search( ForwardIt1 first, ForwardIt1 last,
-                   ForwardIt2 s_first, ForwardIt2 s_last );
+ForwardIt1 search(ForwardIt1 first, ForwardIt1 last,
+                  ForwardIt2 s_first, ForwardIt2 s_last);
 
 template<typename T>
 typename remove_reference<T>::type &&move(T &&t) noexcept;
@@ -75,11 +75,6 @@ struct vector {
   void clear();
 };
 
-template<class Key,class T>
-struct unordered_map {
-  T& operator[](const Key& key);
-};
-
 template<class T>
 void swap( T& a, T& b );
 
@@ -87,6 +82,14 @@ template<typename A, typename B>
 struct pair {
   A first;
   B second;
+};
+
+template<class Key,class T>
+struct unordered_map {
+  using iterator = __gnu_cxx::basic_iterator<std::pair<const Key, T>>;
+  T& operator[](const Key& key);
+  iterator begin();
+  iterator end();
 };
 
 template<typename T>
@@ -116,6 +119,9 @@ struct basic_string {
   ~basic_string();
   basic_string& operator=(const basic_string&);
   basic_string& operator+=(const basic_string&);
+  basic_string& append(const basic_string&);
+  basic_string& replace(unsigned pos, unsigned count,
+                        const basic_string& str);
   basic_string& operator+=(const T*);
   const T *c_str() const;
   operator basic_string_view<T> () const;

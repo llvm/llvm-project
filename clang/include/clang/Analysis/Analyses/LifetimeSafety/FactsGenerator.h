@@ -55,7 +55,8 @@ private:
   OriginList *getOriginsList(const ValueDecl &D);
   OriginList *getOriginsList(const Expr &E);
 
-  void flow(OriginList *Dst, OriginList *Src, bool Kill);
+  void flow(OriginList *Dst, OriginList *Src, bool Kill,
+            std::optional<PathElement> AddPath = std::nullopt);
 
   void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
 

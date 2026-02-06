@@ -35,7 +35,8 @@ namespace internal {
 
 #ifndef NDEBUG
 static void DebugOnlyFunction(AnalysisDeclContext &AC, const CFG &Cfg,
-                              FactManager &FactMgr) {
+                              FactManager &FactMgr,
+                              const LoanPropagationAnalysis *LPA) {
   std::string Name;
   if (const Decl *D = AC.getDecl()) {
     if (const auto *ND = dyn_cast<NamedDecl>(D))
@@ -44,7 +45,7 @@ static void DebugOnlyFunction(AnalysisDeclContext &AC, const CFG &Cfg,
   DEBUG_WITH_TYPE(Name.c_str(), AC.getDecl()->dumpColor());
   DEBUG_WITH_TYPE(Name.c_str(), Cfg.dump(AC.getASTContext().getLangOpts(),
                                          /*ShowColors=*/true));
-  DEBUG_WITH_TYPE(Name.c_str(), FactMgr.dump(Cfg, AC));
+  DEBUG_WITH_TYPE(Name.c_str(), FactMgr.dump(Cfg, AC, LPA));
 }
 #endif
 
@@ -89,12 +90,13 @@ void LifetimeSafetyAnalysis::run() {
   DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
                                        /*ShowColors=*/true));
 
-  DEBUG_WITH_TYPE("LifetimeFacts", FactMgr->dump(Cfg, AC));
+  DEBUG_WITH_TYPE("LifetimeFacts",
+                  FactMgr->dump(Cfg, AC, LoanPropagation.get()));
 
   // Debug print facts for a specific function using
   // -debug-only=EnableFilterByFunctionName,YourFunctionNameFoo
   DEBUG_WITH_TYPE("EnableFilterByFunctionName",
-                  DebugOnlyFunction(AC, Cfg, *FactMgr));
+                  DebugOnlyFunction(AC, Cfg, *FactMgr, LoanPropagation.get()));
   DEBUG_WITH_TYPE("LiveOrigins",
                   LiveOrigins->dump(llvm::dbgs(), FactMgr->getTestPoints()));
 }
