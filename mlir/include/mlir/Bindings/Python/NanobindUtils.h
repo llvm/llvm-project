@@ -336,7 +336,7 @@ protected:
   /// Returns a new instance of the pseudo-container restricted to the given
   /// slice. Returns a nullptr object on failure.
   nanobind::object getItemSlice(PyObject *slice) {
-    ssize_t start, stop, extraStep, sliceLength;
+    Py_ssize_t start, stop, extraStep, sliceLength;
     if (PySlice_GetIndicesEx(slice, length, &start, &stop, &extraStep,
                              &sliceLength) != 0) {
       PyErr_SetString(PyExc_IndexError, "index out of range");
