@@ -28,11 +28,15 @@
 #include "index/Index.h"
 #include "index/Symbol.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/Support/Error.h"
 #include <optional>
 
 namespace clang {
 namespace clangd {
+
+// Used to remap URIs during serialization/deserialization
+using URITransform = llvm::unique_function<std::string(llvm::StringRef) const>;
 
 enum class IndexFileFormat {
   RIFF, // Versioned binary format, suitable for production use.
