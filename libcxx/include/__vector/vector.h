@@ -822,22 +822,9 @@ private:
     return __p;
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_layouts(__split_buffer<_Tp, allocator_type>& __sb) {
-    auto __vector_begin    = __begin_;
-    auto __vector_sentinel = __end_;
-    auto __vector_cap      = __cap_;
-
-    auto __sb_begin    = __sb.begin();
-    auto __sb_sentinel = __sb.__raw_sentinel();
-    auto __sb_cap      = __sb.__raw_capacity();
-
-    // TODO: replace with __set_valid_range and __set_capacity when vector supports it.
-    __begin_ = __sb_begin;
-    __end_   = __sb_sentinel;
-    __cap_   = __sb_cap;
-
-    __sb.__set_valid_range(__vector_begin, __vector_sentinel);
-    __sb.__set_capacity(__vector_cap);
+  _LIBCPP_NODEBUG _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+  void __swap_layouts(__split_buffer<_Tp, allocator_type>& __sb) {
+    __sb.__swap_layouts(__begin_, __end_, __cap_);
   }
 };
 
