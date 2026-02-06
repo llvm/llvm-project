@@ -6902,6 +6902,20 @@ class SBExpressionOptions(object):
         """
         return _lldb.SBExpressionOptions_SetAllowJIT(self, allow)
 
+    def GetBooleanLanguageOption(self, option_name, error):
+        r"""
+        GetBooleanLanguageOption(SBExpressionOptions self, char const * option_name, SBError error) -> bool
+        Gets language-plugin specific boolean option for expression evaluation. LLDB currently doesn't validate whether the option being retrieved is one that is understood by the expression evaluator.
+        """
+        return _lldb.SBExpressionOptions_GetBooleanLanguageOption(self, option_name, error)
+
+    def SetBooleanLanguageOption(self, option_name, value):
+        r"""
+        SetBooleanLanguageOption(SBExpressionOptions self, char const * option_name, bool value) -> SBError
+        Sets language-plugin specific boolean option for expression evaluation. LLDB currently doesn't validate whether the option being set is understood by the expression evaluator.
+        """
+        return _lldb.SBExpressionOptions_SetBooleanLanguageOption(self, option_name, value)
+
 # Register SBExpressionOptions in _lldb:
 _lldb.SBExpressionOptions_swigregister(SBExpressionOptions)
 class SBFile(object):
