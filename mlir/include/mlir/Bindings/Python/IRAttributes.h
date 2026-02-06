@@ -13,6 +13,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
@@ -31,13 +32,13 @@ struct nb_buffer_info {
   ssize_t size = 0;
   const char *format = nullptr;
   ssize_t ndim = 0;
-  SmallVector<ssize_t, 4> shape;
-  SmallVector<ssize_t, 4> strides;
+  std::vector<ssize_t> shape;
+  std::vector<ssize_t> strides;
   bool readonly = false;
 
   nb_buffer_info(
       void *ptr, ssize_t itemsize, const char *format, ssize_t ndim,
-      SmallVector<ssize_t, 4> shape_in, SmallVector<ssize_t, 4> strides_in,
+      std::vector<ssize_t> shape_in, std::vector<ssize_t> strides_in,
       bool readonly = false,
       std::unique_ptr<Py_buffer, void (*)(Py_buffer *)> owned_view_in =
           std::unique_ptr<Py_buffer, void (*)(Py_buffer *)>(nullptr, nullptr));
@@ -462,11 +463,11 @@ private:
     Type *data = static_cast<Type *>(
         const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
     // Prepare the shape for the buffer_info.
-    SmallVector<intptr_t, 4> shape;
+    std::vector<ssize_t> shape;
     for (intptr_t i = 0; i < rank; ++i)
       shape.push_back(mlirShapedTypeGetDimSize(shapedType, i));
     // Prepare the strides for the buffer_info.
-    SmallVector<intptr_t, 4> strides;
+    std::vector<ssize_t> strides;
     if (mlirDenseElementsAttrIsSplat(*this)) {
       // Splats are special, only the single value is stored.
       strides.assign(rank, 0);
