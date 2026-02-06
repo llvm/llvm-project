@@ -80,11 +80,11 @@
 #include "math/ldexpf.h"
 #include "math/ldexpf128.h"
 #include "math/ldexpf16.h"
-<<<<<<< HEAD
 #include "math/llogb.h"
 #include "math/llogbf.h"
 #include "math/llogbf128.h"
 #include "math/llogbf16.h"
+#include "math/llogbl.h"
 #include "math/log.h"
 #include "math/log10.h"
 #include "math/log1p.h"
@@ -94,9 +94,6 @@
 #include "math/logbf16.h"
 #include "math/logf.h"
 #include "math/logf16.h"
-=======
-#include "math/llogbl.h"
->>>>>>> 238d90f8ed77 (fix: [libc][math] Refactor llogbl implementation to header-only in src/__support/math folder)
 #include "math/rsqrtf.h"
 #include "math/rsqrtf16.h"
 #include "math/sin.h"

@@ -138,7 +138,7 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log1p(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log2(1.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::sin(0.0));
-  EXPECT_EQ(0, LIBC_NAMESPACE::shared::llogbl(1.0L));
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogbl(1.0L));
   EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogb(1.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::tan(0.0));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::ilogb(1.0));
@@ -150,7 +150,7 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
                LIBC_NAMESPACE::shared::dfmal(0x0.p+0L, 0x0.p+0L, 0x0.p+0L));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fsqrtl(0.0L));
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::ilogbl(0x1.p+0L));
-  EXPECT_EQ(0, LIBC_NAMESPACE::shared::llogbl(1.0L));
+  EXPECT_EQ(0L, LIBC_NAMESPACE::shared::llogbl(1.0L));
 }
 
 #ifdef LIBC_TYPES_HAS_FLOAT128

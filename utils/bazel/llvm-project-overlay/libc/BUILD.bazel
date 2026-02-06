@@ -3099,6 +3099,7 @@ libc_support_library(
     name = "__support_math_llogbl",
     hdrs = ["src/__support/math/llogbl.h"],
     deps = [
+        ":__support_common",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
     ],
@@ -3241,14 +3242,6 @@ libc_support_library(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":__support_math_common_constants",
-    ],
-)
-
-libc_support_library(
-    name = "__support_math_llogbl",
-    hdrs = ["src/__support/math/llogbl.h"],
-    deps = [
-        ":__support_fputil_manipulation_functions",
     ],
 )
 
