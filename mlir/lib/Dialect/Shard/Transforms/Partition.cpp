@@ -436,24 +436,32 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
                          targetSharding);
 }
 
-// Handles only resharding on a 1D shard.
 // Currently the sharded tensor axes must be exactly divisible by the single
-// grid axis size.
+// grid axis size.static TypedValue<ShapedType>
 static TypedValue<ShapedType>
-reshardOn1DGrid(ImplicitLocOpBuilder &builder, GridOp grid,
-                const Sharding &sourceSharding, const Sharding &targetSharding,
-                TypedValue<ShapedType> sourceUnshardedValue,
-                TypedValue<ShapedType> sourceShard) {
+reshard(ImplicitLocOpBuilder &builder, GridOp grid,
+        const Sharding &sourceSharding, const Sharding &targetSharding,
+        TypedValue<ShapedType> sourceUnshardedValue,
+        TypedValue<ShapedType> sourceShard) {
+  // If source and destination sharding are the same, no need to do anything.
+  if (sourceSharding == targetSharding || (isFullReplication(sourceSharding) &&
+                                           isFullReplication(targetSharding))) {
+    return sourceShard;
+  }
+
+  // Tries to handle the case where the resharding is needed because the halo
+  // sizes are different. Supports arbitrary grid dimensionality.
+  if (auto tryRes = tryUpdateHaloInResharding(
+          builder, grid, sourceSharding, targetSharding,
+          sourceUnshardedValue.getType(), sourceShard)) {
+    return std::get<0>(tryRes.value()); // targetShard
+  }
+
   assert(sourceShard.getType() ==
          shardShapedType(sourceUnshardedValue.getType(), grid, sourceSharding));
   [[maybe_unused]] ShapedType targetShardType =
       shardShapedType(sourceUnshardedValue.getType(), grid, targetSharding);
   assert(sourceShard.getType().getRank() == targetShardType.getRank());
-  assert(grid.getRank() == 1 && "Only 1D grides are currently supported.");
-
-  if (sourceSharding == targetSharding) {
-    return sourceShard;
-  }
 
   TypedValue<ShapedType> targetShard;
   Sharding actualTargetSharding;
@@ -475,36 +483,11 @@ reshardOn1DGrid(ImplicitLocOpBuilder &builder, GridOp grid,
       std::tie(targetShard, actualTargetSharding) = tryRes.value();
     }
   }
+
   assert(targetShard && "Did not find any pattern to apply.");
   assert(actualTargetSharding == targetSharding);
   assert(targetShard.getType() == targetShardType);
   return targetShard;
-}
-
-static TypedValue<ShapedType>
-reshard(ImplicitLocOpBuilder &builder, GridOp grid,
-        const Sharding &sourceSharding, const Sharding &targetSharding,
-        TypedValue<ShapedType> sourceUnshardedValue,
-        TypedValue<ShapedType> sourceShard) {
-  // If source and destination sharding are the same, no need to do anything.
-  if (sourceSharding == targetSharding || (isFullReplication(sourceSharding) &&
-                                           isFullReplication(targetSharding))) {
-    return sourceShard;
-  }
-
-  // Tries to handle the case where the resharding is needed because the halo
-  // sizes are different. Supports arbitrary grid dimensionality.
-  if (auto tryRes = tryUpdateHaloInResharding(
-          builder, grid, sourceSharding, targetSharding,
-          sourceUnshardedValue.getType(), sourceShard)) {
-    return std::get<0>(tryRes.value()); // targetShard
-  }
-
-  // Resort to handling only 1D grids since the general case is complicated if
-  // it needs to be communication efficient in terms of minimizing the data
-  // transfered between devices.
-  return reshardOn1DGrid(builder, grid, sourceSharding, targetSharding,
-                         sourceUnshardedValue, sourceShard);
 }
 
 TypedValue<ShapedType> reshard(OpBuilder &builder, GridOp grid, ShardOp source,
