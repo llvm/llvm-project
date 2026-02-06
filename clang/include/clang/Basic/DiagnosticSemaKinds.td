@@ -9367,6 +9367,8 @@ def err_typecheck_lvalue_casts_not_supported : Error<
 
 def err_typecheck_duplicate_vector_components_not_mlvalue : Error<
   "vector is not assignable (contains duplicate components)">;
+def err_typecheck_duplicate_matrix_components_not_mlvalue
+    : Error<"matrix is not assignable (contains duplicate components)">;
 def err_block_decl_ref_not_modifiable_lvalue : Error<
   "variable is not assignable (missing __block type specifier)">;
 def err_lambda_decl_ref_not_modifiable_lvalue : Error<
@@ -13163,6 +13165,8 @@ def err_builtin_matrix_stride_too_small: Error<
   "stride must be greater or equal to the number of rows">;
 def err_builtin_matrix_invalid_dimension: Error<
   "%0 dimension is outside the allowed range [1, %1]">;
+def err_builtin_matrix_invalid_member
+    : Error<"invalid matrix member '%0' expected %1">;
 
 def warn_mismatched_import : Warning<
   "import %select{module|name}0 (%1) does not match the import %select{module|name}0 (%2) of the "
@@ -13433,6 +13437,17 @@ def err_hlsl_builtin_scalar_vector_mismatch
     : Error<
           "%select{all|second and third}0 arguments to %1 must be of scalar or "
           "vector type with matching scalar element type%diff{: $ vs $|}2,3">;
+
+def err_hlsl_matrix_element_not_in_bounds
+    : Error<"matrix %select{row|column}0 element accessor is out of bounds of "
+            "%select{zero|one}1 based indexing">;
+
+def err_hlsl_matrix_index_out_of_bounds
+    : Error<"matrix %select{row|column}0 index %1 is out of bounds of "
+            "%select{rows|columns}0 size %2">;
+
+def err_hlsl_matrix_swizzle_invalid_length
+    : Error<"matrix swizzle length must be between 1 and 4 but is %0">;
 
 def warn_hlsl_impcast_vector_truncation : Warning<
   "implicit conversion truncates vector: %0 to %1">, InGroup<VectorConversion>;
