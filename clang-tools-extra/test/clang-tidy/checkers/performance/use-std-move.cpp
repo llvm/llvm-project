@@ -61,7 +61,6 @@ auto ConvertibleNonTrivialMoveAssignWithinLambda = [](NonTrivialMoveAssign& targ
   target = source;
 };
 
-#if 0
 void SomeFunction(NonTrivialMoveAssign source0, NonTrivialMoveAssign const &source1) {
 
 auto NonConvertibleNonTrivialMoveAssignWithinLambdaAsCaptureByRef = [&](NonTrivialMoveAssign& target) {
@@ -79,7 +78,6 @@ auto ConvertibleNonTrivialMoveAssignWithinLambdaAsCapture = [=](NonTrivialMoveAs
 };
 
 }
-#endif
 
 void ConvertibleNonTrivialMoveAssignShadowing(NonTrivialMoveAssign& target, NoMoveAssign source) {
   {

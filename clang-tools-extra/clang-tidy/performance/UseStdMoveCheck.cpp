@@ -26,6 +26,20 @@ AST_MATCHER(CXXRecordDecl, hasTrivialMoveAssignment) {
   return Node.hasTrivialMoveAssignment();
 }
 
+AST_MATCHER(VarDecl, isMovableAndProfitable) {
+  const QualType NodeQual = Node.getType();
+
+  // Not profitable.
+  if (NodeQual->isScalarType())
+    return false;
+
+  // Not valid.
+  if (NodeQual->isLValueReferenceType() || NodeQual.isConstQualified())
+    return false;
+
+  return true;
+}
+
 // Ignore nodes inside macros.
 AST_POLYMORPHIC_MATCHER(isInMacro,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(Stmt, Decl)) {
@@ -42,10 +56,9 @@ void UseStdMoveCheck::registerMatchers(MatchFinder *Finder) {
           hasArgument(
               0, hasType(cxxRecordDecl(hasMethod(isMoveAssignmentOperator()),
                                        unless(hasTrivialMoveAssignment())))),
-          hasArgument(
-              1, declRefExpr(
-                     to(varDecl(hasLocalStorage()).bind("assign-value-decl")))
-                     .bind("assign-value")),
+          hasArgument(1, declRefExpr(to(varDecl(hasLocalStorage(),
+                                                isMovableAndProfitable())))
+                             .bind("assign-value")),
           hasAncestor(functionDecl().bind("within-func")), unless(isInMacro()))
           .bind("assign");
   Finder->addMatcher(AssignOperatorExpr, this);
@@ -68,14 +81,10 @@ const CFG *UseStdMoveCheck::getCFG(const FunctionDecl *FD,
 void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *AssignExpr = Result.Nodes.getNodeAs<Expr>("assign");
   const auto *AssignValue = Result.Nodes.getNodeAs<DeclRefExpr>("assign-value");
-  const auto *AssignValueDecl =
-      Result.Nodes.getNodeAs<VarDecl>("assign-value-decl");
   const auto *WithinFunctionDecl =
       Result.Nodes.getNodeAs<FunctionDecl>("within-func");
 
-  const QualType AssignValueQual = AssignValueDecl->getType();
-  if (AssignValueQual->isLValueReferenceType() ||
-      AssignValueQual.isConstQualified() || AssignValueQual->isScalarType())
+  if (AssignValue->refersToEnclosingVariableOrCapture())
     return;
 
   const CFG *TheCFG = getCFG(WithinFunctionDecl, Result.Context);
