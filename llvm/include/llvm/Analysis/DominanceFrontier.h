@@ -9,8 +9,12 @@
 // This file defines the DominanceFrontier class, which calculate and holds the
 // dominance frontier for a function.
 //
-// This should be considered deprecated, don't add any more uses of this data
-// structure.
+// CAUTION: For SSA-construction-like problems there are more efficient ways to
+// do that, take a look at GenericIteratedDominanceFrontier.h/SSAUpdater.h. Also
+// note that that this analysis computes dominance frontiers for *every* block
+// which inherently increases complexity. Unless you do need *all* of them and
+// *without* any modifications to the DomTree/CFG in between queries there
+// should be better alternatives.
 //
 //===----------------------------------------------------------------------===//
 
