@@ -6,7 +6,7 @@ target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind readnone
-define float @fool(float %X) #0 {
+define nofpclass(zero) float @fool(float %X) #0 {
 ; FPCVT-LABEL: fool:
 ; FPCVT:       # %bb.0: # %entry
 ; FPCVT-NEXT:    friz 1, 1
@@ -32,7 +32,7 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone
-define double @foodl(double %X) #0 {
+define nofpclass(zero) double @foodl(double %X) #0 {
 ; FPCVT-LABEL: foodl:
 ; FPCVT:       # %bb.0: # %entry
 ; FPCVT-NEXT:    friz 1, 1
@@ -57,7 +57,7 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone
-define float @fooul(float %X) #0 {
+define nofpclass(zero) float @fooul(float %X) #0 {
 ; FPCVT-LABEL: fooul:
 ; FPCVT:       # %bb.0: # %entry
 ; FPCVT-NEXT:    friz 1, 1
@@ -138,7 +138,7 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone
-define double @fooudl(double %X) #0 {
+define nofpclass(zero) double @fooudl(double %X) #0 {
 ; FPCVT-LABEL: fooudl:
 ; FPCVT:       # %bb.0: # %entry
 ; FPCVT-NEXT:    friz 1, 1
@@ -323,5 +323,5 @@ entry:
   ret double %conv
 
 }
-attributes #0 = { nounwind readnone "no-signed-zeros-fp-math"="true" }
+attributes #0 = { nounwind readnone }
 

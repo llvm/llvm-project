@@ -432,7 +432,7 @@ public:
 
   // Lower nofpclass attributes to AssertNoFPClass
   SDValue lowerNoFPClassToAssertNoFPClass(SelectionDAG &DAG,
-                                          const Instruction &I, SDValue Op);
+                                          FPClassTest Classes, SDValue Op);
 
   void populateCallLoweringInfo(TargetLowering::CallLoweringInfo &CLI,
                                 const CallBase *Call, unsigned ArgIdx,

@@ -2,7 +2,7 @@
 ; RUN: llc -mcpu=pwr8 -mtriple=powerpc64le-unknown-unknown -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mcpu=pwr8 -mtriple=powerpc64-ibm-aix-xcoff -vec-extabi -verify-machineinstrs < %s | FileCheck %s
 
-define <4 x float> @truncf32(<4 x float> %a) #0 {
+define nofpclass(zero) <4 x float> @truncf32(<4 x float> %a) {
 ; CHECK-LABEL: truncf32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvrspiz 34, 34
@@ -12,7 +12,7 @@ define <4 x float> @truncf32(<4 x float> %a) #0 {
   ret <4 x float> %t1
 }
 
-define <2 x double> @truncf64(<2 x double> %a) #0 {
+define nofpclass(zero) <2 x double> @truncf64(<2 x double> %a) {
 ; CHECK-LABEL: truncf64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvrdpiz 34, 34
@@ -22,7 +22,7 @@ define <2 x double> @truncf64(<2 x double> %a) #0 {
   ret <2 x double> %t1
 }
 
-define <4 x float> @truncf32u(<4 x float> %a) #0 {
+define nofpclass(zero) <4 x float> @truncf32u(<4 x float> %a) {
 ; CHECK-LABEL: truncf32u:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvrspiz 34, 34
@@ -32,7 +32,7 @@ define <4 x float> @truncf32u(<4 x float> %a) #0 {
   ret <4 x float> %t1
 }
 
-define <2 x double> @truncf64u(<2 x double> %a) #0 {
+define nofpclass(zero) <2 x double> @truncf64u(<2 x double> %a) {
 ; CHECK-LABEL: truncf64u:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvrdpiz 34, 34
@@ -41,6 +41,3 @@ define <2 x double> @truncf64u(<2 x double> %a) #0 {
   %t1 = uitofp <2 x i64> %t0 to <2 x double>
   ret <2 x double> %t1
 }
-
-attributes #0 = { "no-signed-zeros-fp-math"="true" }
-

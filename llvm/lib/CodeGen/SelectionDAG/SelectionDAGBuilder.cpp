@@ -2223,6 +2223,8 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     SDValue RetPtr =
         DAG.getCopyFromReg(Chain, getCurSDLoc(), DemoteReg, PtrValueVT);
     SDValue RetOp = getValue(I.getOperand(0));
+    RetOp = lowerNoFPClassToAssertNoFPClass(
+        DAG, FuncInfo.Fn->getAttributes().getRetNoFPClass(), RetOp);
 
     SmallVector<EVT, 4> ValueVTs, MemVTs;
     SmallVector<uint64_t, 4> Offsets;
@@ -2256,6 +2258,8 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     unsigned NumValues = Types.size();
     if (NumValues) {
       SDValue RetOp = getValue(I.getOperand(0));
+      RetOp = lowerNoFPClassToAssertNoFPClass(
+          DAG, FuncInfo.Fn->getAttributes().getRetNoFPClass(), RetOp);
 
       const Function *F = I.getParent()->getParent();
 
@@ -9202,7 +9206,8 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
 
   if (Result.first.getNode()) {
     Result.first = lowerRangeToAssertZExt(DAG, CB, Result.first);
-    Result.first = lowerNoFPClassToAssertNoFPClass(DAG, CB, Result.first);
+    Result.first =
+        lowerNoFPClassToAssertNoFPClass(DAG, getNoFPClass(CB), Result.first);
     setValue(&CB, Result.first);
   }
 
@@ -10749,8 +10754,7 @@ SDValue SelectionDAGBuilder::lowerRangeToAssertZExt(SelectionDAG &DAG,
 }
 
 SDValue SelectionDAGBuilder::lowerNoFPClassToAssertNoFPClass(
-    SelectionDAG &DAG, const Instruction &I, SDValue Op) {
-  FPClassTest Classes = getNoFPClass(I);
+    SelectionDAG &DAG, FPClassTest Classes, SDValue Op) {
   if (Classes == fcNone)
     return Op;
 

@@ -7,7 +7,7 @@
 declare i32 @llvm.fptoui.sat.i32.f32(float)
 declare i64 @llvm.fptosi.sat.i64.f64(double)
 
-define float @trunc_unsigned_f32(float %x) #0 {
+define nofpclass(zero) float @trunc_unsigned_f32(float %x) #0 {
 ; SSE2-LABEL: trunc_unsigned_f32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttss2si %xmm0, %rax
@@ -40,7 +40,7 @@ define float @trunc_unsigned_f32(float %x) #0 {
   ret float %r
 }
 
-define double @trunc_unsigned_f64(double %x) #0 {
+define nofpclass(zero) double @trunc_unsigned_f64(double %x) #0 {
 ; SSE2-LABEL: trunc_unsigned_f64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttsd2si %xmm0, %rax
@@ -86,7 +86,7 @@ define double @trunc_unsigned_f64(double %x) #0 {
   ret double %r
 }
 
-define <4 x float> @trunc_unsigned_v4f32(<4 x float> %x) #0 {
+define nofpclass(zero) <4 x float> @trunc_unsigned_v4f32(<4 x float> %x) #0 {
 ; SSE2-LABEL: trunc_unsigned_v4f32:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttps2dq %xmm0, %xmm1
@@ -119,7 +119,7 @@ define <4 x float> @trunc_unsigned_v4f32(<4 x float> %x) #0 {
   ret <4 x float> %r
 }
 
-define <2 x double> @trunc_unsigned_v2f64(<2 x double> %x) #0 {
+define nofpclass(zero) <2 x double> @trunc_unsigned_v2f64(<2 x double> %x) #0 {
 ; SSE2-LABEL: trunc_unsigned_v2f64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movsd {{.*#+}} xmm2 = [9.2233720368547758E+18,0.0E+0]
@@ -166,7 +166,7 @@ define <2 x double> @trunc_unsigned_v2f64(<2 x double> %x) #0 {
   ret <2 x double> %r
 }
 
-define <4 x double> @trunc_unsigned_v4f64(<4 x double> %x) #0 {
+define nofpclass(zero) <4 x double> @trunc_unsigned_v4f64(<4 x double> %x) #0 {
 ; SSE2-LABEL: trunc_unsigned_v4f64:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movapd %xmm1, %xmm2
@@ -273,7 +273,7 @@ define float @trunc_signed_f32_no_fast_math(float %x) nounwind {
 
 ; Without -0.0, it is ok to use roundss if it is available.
 
-define float @trunc_signed_f32_nsz(float %x) #0 {
+define nofpclass(zero) float @trunc_signed_f32_nsz(float %x) #0 {
 ; SSE2-LABEL: trunc_signed_f32_nsz:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
@@ -336,7 +336,7 @@ define double @trunc_signed32_f64_no_fast_math(double %x) nounwind {
   ret double %r
 }
 
-define double @trunc_signed32_f64_nsz(double %x) #0 {
+define nofpclass(zero) double @trunc_signed32_f64_nsz(double %x) #0 {
 ; SSE2-LABEL: trunc_signed32_f64_nsz:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttpd2dq %xmm0, %xmm0
@@ -371,7 +371,7 @@ define double @trunc_signed32_f64_nsz(double %x) #0 {
   ret double %r
 }
 
-define double @trunc_f32_signed32_f64_no_fast_math(float %x) nounwind {
+define nofpclass(zero) double @trunc_f32_signed32_f64_no_fast_math(float %x) nounwind {
 ; SSE-LABEL: trunc_f32_signed32_f64_no_fast_math:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm0
@@ -393,7 +393,7 @@ define double @trunc_f32_signed32_f64_no_fast_math(float %x) nounwind {
 ; X86-AVX1-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-AVX1-NEXT:    vcvttps2dq %xmm0, %xmm0
 ; X86-AVX1-NEXT:    vcvtdq2pd %xmm0, %xmm0
-; X86-AVX1-NEXT:    vmovlps %xmm0, (%esp)
+; X86-AVX1-NEXT:    vmovsd %xmm0, (%esp)
 ; X86-AVX1-NEXT:    fldl (%esp)
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
@@ -528,7 +528,7 @@ define double @trunc_signed_f64_no_fast_math(double %x) nounwind {
   ret double %r
 }
 
-define double @trunc_signed_f64_nsz(double %x) #0 {
+define nofpclass(zero) double @trunc_signed_f64_nsz(double %x) #0 {
 ; SSE2-LABEL: trunc_signed_f64_nsz:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttsd2si %xmm0, %rax
@@ -564,7 +564,7 @@ define double @trunc_signed_f64_nsz(double %x) #0 {
   ret double %r
 }
 
-define <4 x float> @trunc_signed_v4f32_nsz(<4 x float> %x) #0 {
+define nofpclass(zero) <4 x float> @trunc_signed_v4f32_nsz(<4 x float> %x) #0 {
 ; SSE2-LABEL: trunc_signed_v4f32_nsz:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
@@ -585,7 +585,7 @@ define <4 x float> @trunc_signed_v4f32_nsz(<4 x float> %x) #0 {
   ret <4 x float> %r
 }
 
-define <2 x double> @trunc_signed_v2f64_nsz(<2 x double> %x) #0 {
+define nofpclass(zero) <2 x double> @trunc_signed_v2f64_nsz(<2 x double> %x) #0 {
 ; SSE2-LABEL: trunc_signed_v2f64_nsz:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttsd2si %xmm0, %rax
@@ -611,7 +611,7 @@ define <2 x double> @trunc_signed_v2f64_nsz(<2 x double> %x) #0 {
   ret <2 x double> %r
 }
 
-define <4 x double> @trunc_signed_v4f64_nsz(<4 x double> %x) #0 {
+define nofpclass(zero) <4 x double> @trunc_signed_v4f64_nsz(<4 x double> %x) #0 {
 ; SSE2-LABEL: trunc_signed_v4f64_nsz:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    cvttsd2si %xmm1, %rax
@@ -782,4 +782,4 @@ define double @trunc_signed_f64_disable_via_intrinsic(double %x) #0 {
   ret double %r
 }
 
-attributes #0 = { nounwind "no-signed-zeros-fp-math"="true" }
+attributes #0 = { nounwind }

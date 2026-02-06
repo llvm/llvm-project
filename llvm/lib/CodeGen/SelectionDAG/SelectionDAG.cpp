@@ -6289,6 +6289,14 @@ bool SelectionDAG::canIgnoreSignBitOfZero(const SDUse &Use) const {
   case ISD::FP_TO_UINT:
     // fp-to-int conversions normalize signed zeros.
     return true;
+  case ISD::AssertNoFPClass: {
+    // nofpclass may filter out zeros.
+    if (const auto *MaskNode = dyn_cast<ConstantSDNode>(User->getOperand(1))) {
+      uint64_t Mask = MaskNode->getZExtValue();
+      return (Mask & fcZero) == fcZero;
+    }
+    return false;
+  }
   default:
     return false;
   }

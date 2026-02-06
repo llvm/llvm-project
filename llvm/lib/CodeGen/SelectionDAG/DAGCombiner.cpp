@@ -19310,7 +19310,8 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   // as example, it first becomes integer 0, and is converted back to +0.0.
   // FTRUNC on its own could produce -0.0.
 
-  // FIXME: We should be able to use node-level FMF here.
+  // FIXME: We should be able to use node-level FMF here, but currently it is
+  // impossible because nneg in uitofp is conflict with fast-math flags.
   EVT VT = N->getValueType(0);
   if (!TLI.isOperationLegal(ISD::FTRUNC, VT))
     return SDValue();
@@ -19319,8 +19320,7 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   bool IsSigned = N->getOpcode() == ISD::SINT_TO_FP;
   assert(IsSigned || IsUnsigned);
 
-  bool IsSignedZeroSafe = DAG.getTarget().Options.NoSignedZerosFPMath ||
-                          DAG.canIgnoreSignBitOfZero(SDValue(N, 0));
+  bool IsSignedZeroSafe = DAG.canIgnoreSignBitOfZero(SDValue(N, 0));
   // For signed conversions: The optimization changes signed zero behavior.
   if (IsSigned && !IsSignedZeroSafe)
     return SDValue();

@@ -958,6 +958,10 @@ bool X86TargetLowering::isUsedByReturnOnly(SDNode *N, SDValue &Chain) const {
 
   SDValue TCChain = Chain;
   SDNode *Copy = *N->user_begin();
+  if (Copy->getOpcode() == ISD::AssertNoFPClass) {
+    // If the use is AssertNoFPClass, pass through it.
+    Copy = *Copy->user_begin();
+  }
   if (Copy->getOpcode() == ISD::CopyToReg) {
     // If the copy has a glue operand, we conservatively assume it isn't safe to
     // perform a tail call.
