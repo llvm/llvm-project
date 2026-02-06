@@ -64,6 +64,29 @@ Limitations
          a | b; // the warning may not be emitted
      }
 
+* For compound operators (``&=``, ``|=``), the left-hand side (LHS) must be
+  simple. Only the following are supported:
+
+  * Variable references (``declRefExpr``)
+  * Member access expressions (``memberExpr``)
+  * Builtin dereferencing (``*``) of the above
+
+  This limitation exists because the fix-it needs to duplicate the LHS on the
+  right-hand side of the transformed assignment. Complex expressions cannot be
+  safely duplicated.
+
+.. code-block:: c++
+
+     bool a, b;
+     struct S { bool flag; } s;
+     bool *p = &a;
+
+     a |= b;        // Supported: simple variable reference
+     s.flag |= b;   // Supported: member access
+     *p |= b;       // Supported: builtin dereferencing
+
+     (a ? b : a) |= b;  // Not supported: complex expression
+
 Options
 -------
 
