@@ -25,7 +25,6 @@
 #include "mlir-c/IntegerSet.h"
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Support/LLVM.h"
-#include "llvm/ADT/Hashing.h"
 
 namespace nb = nanobind;
 using namespace mlir;
@@ -597,7 +596,7 @@ void populateIRAffine(nb::module_ &m) {
            })
       .def("__hash__",
            [](PyAffineExpr &self) {
-             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+             return std::hash<const void *>{}(self.get().ptr);
            })
       .def_prop_ro(
           "context",
@@ -734,7 +733,7 @@ void populateIRAffine(nb::module_ &m) {
            })
       .def("__hash__",
            [](PyAffineMap &self) {
-             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+             return std::hash<const void *>{}(self.get().ptr);
            })
       .def_static(
           "compress_unused_symbols",
@@ -920,7 +919,7 @@ void populateIRAffine(nb::module_ &m) {
            })
       .def("__hash__",
            [](PyIntegerSet &self) {
-             return static_cast<size_t>(llvm::hash_value(self.get().ptr));
+             return std::hash<const void *>{}(self.get().ptr);
            })
       .def_prop_ro(
           "context",
