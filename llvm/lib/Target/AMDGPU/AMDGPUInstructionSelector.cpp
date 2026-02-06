@@ -2376,17 +2376,29 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_init_whole_wave:
     return selectInitWholeWave(I);
   case Intrinsic::amdgcn_raw_buffer_load_lds:
+  case Intrinsic::amdgcn_raw_buffer_load_async_lds:
   case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds:
   case Intrinsic::amdgcn_struct_buffer_load_lds:
+  case Intrinsic::amdgcn_struct_buffer_load_async_lds:
   case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds:
     return selectBufferLoadLds(I);
   // Until we can store both the address space of the global and the LDS
   // arguments by having tto MachineMemOperands on an intrinsic, we just trust
   // that the argument is a global pointer (buffer pointers have been handled by
   // a LLVM IR-level lowering).
   case Intrinsic::amdgcn_load_to_lds:
+  case Intrinsic::amdgcn_load_async_to_lds:
   case Intrinsic::amdgcn_global_load_lds:
+  case Intrinsic::amdgcn_global_load_async_lds:
     return selectGlobalLoadLds(I);
+  case Intrinsic::amdgcn_asyncmark:
+  case Intrinsic::amdgcn_wait_asyncmark:
+    // FIXME: Not supported on GFX12 yet. Will need a new feature when we do.
+    if (!Subtarget->hasVMemToLDSLoad())
+      return false;
+    break;
   case Intrinsic::amdgcn_exp_compr:
     if (!STI.hasCompressedExport()) {
       Function &F = I.getMF()->getFunction();
@@ -3432,11 +3444,25 @@ bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
   return true;
 }
 
+static bool isAsyncLDSDMA(Intrinsic::ID Intr) {
+  switch (Intr) {
+  case Intrinsic::amdgcn_raw_buffer_load_async_lds:
+  case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds:
+  case Intrinsic::amdgcn_struct_buffer_load_async_lds:
+  case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds:
+  case Intrinsic::amdgcn_load_async_to_lds:
+  case Intrinsic::amdgcn_global_load_async_lds:
+    return true;
+  }
+  return false;
+}
+
 bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
   if (!Subtarget->hasVMemToLDSLoad())
     return false;
   unsigned Opc;
   unsigned Size = MI.getOperand(3).getImm();
+  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
 
   // The struct intrinsic variants add one additional operand over raw.
   const bool HasVIndex = MI.getNumOperands() == 9;
@@ -3526,6 +3552,7 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
       Aux & (IsGFX12Plus ? AMDGPU::CPol::SWZ : AMDGPU::CPol::SWZ_pregfx12)
           ? 1
           : 0); // swz
+  MIB.addImm(isAsyncLDSDMA(IntrinsicID));
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
   // Don't set the offset value here because the pointer points to the base of
@@ -3648,6 +3675,7 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
 
   unsigned Opc;
   unsigned Size = MI.getOperand(3).getImm();
+  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
 
   switch (Size) {
   default:
@@ -3718,6 +3746,7 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
 
   unsigned Aux = MI.getOperand(5).getImm();
   MIB.addImm(Aux & ~AMDGPU::CPol::VIRTUAL_BITS); // cpol
+  MIB.addImm(isAsyncLDSDMA(IntrinsicID));
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
   MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();

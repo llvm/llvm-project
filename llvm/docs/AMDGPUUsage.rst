@@ -7023,6 +7023,14 @@ cache modifiers. They cannot be performed atomically. They implement volatile
 (via aux/cpol bit 31) and nontemporal (via metadata) as if they were loads
 from the global address space.
 
+The LDS DMA instructions are synchronous by default, which means that the
+compiler will automatically ensure that the corresponding operation has
+completed before its side-effects are used. The :ref:`asynchronous
+versions<amdgpu-async-operations>` of these same instructions perform the same
+operations, but without automatic tracking in the compiler; the user must
+explicitly track the completion of these instructions before using their
+side-effects.
+
 Private address space uses ``buffer_load/store`` using the scratch V#
 (GFX6-GFX8), or ``scratch_load/store`` (GFX9-GFX11). Since only a single thread
 is accessing the memory, atomic memory orderings are not meaningful, and all
