@@ -129,9 +129,7 @@ RawAddress CodeGenFunction::MaybeCastStackAddressSpace(RawAddress Alloca,
     // builder.
     if (!ArraySize)
       Builder.SetInsertPoint(getPostAllocaInsertPoint());
-    V = getTargetHooks().performAddrSpaceCast(
-        *this, V, getASTAllocaAddressSpace(), Builder.getPtrTy(DestAddrSpace),
-        /*IsNonNull=*/true);
+    V = performAddrSpaceCast(V, Builder.getPtrTy(DestAddrSpace));
   }
 
   return RawAddress(V, Alloca.getElementType(), Alloca.getAlignment(),
@@ -181,9 +179,10 @@ RawAddress CodeGenFunction::CreateDefaultAlignTempAlloca(llvm::Type *Ty,
   return CreateTempAlloca(Ty, Align, Name);
 }
 
-RawAddress CodeGenFunction::CreateIRTemp(QualType Ty, const Twine &Name) {
+RawAddress CodeGenFunction::CreateIRTempWithoutCast(QualType Ty,
+                                                    const Twine &Name) {
   CharUnits Align = getContext().getTypeAlignInChars(Ty);
-  return CreateTempAlloca(ConvertType(Ty), Align, Name);
+  return CreateTempAllocaWithoutCast(ConvertType(Ty), Align, Name, nullptr);
 }
 
 RawAddress CodeGenFunction::CreateMemTemp(QualType Ty, const Twine &Name,
@@ -459,7 +458,6 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
                                            const MaterializeTemporaryExpr *M,
                                            const Expr *Inner,
                                            RawAddress *Alloca = nullptr) {
-  auto &TCG = CGF.getTargetHooks();
   switch (M->getStorageDuration()) {
   case SD_FullExpression:
   case SD_Automatic: {
@@ -482,11 +480,10 @@ static RawAddress createReferenceTemporary(CodeGenFunction &CGF,
         GV->setAlignment(alignment.getAsAlign());
         llvm::Constant *C = GV;
         if (AS != LangAS::Default)
-          C = TCG.performAddrSpaceCast(
-              CGF.CGM, GV, AS,
-              llvm::PointerType::get(
-                  CGF.getLLVMContext(),
-                  CGF.getContext().getTargetAddressSpace(LangAS::Default)));
+          C = CGF.CGM.performAddrSpaceCast(
+              GV, llvm::PointerType::get(
+                      CGF.getLLVMContext(),
+                      CGF.getContext().getTargetAddressSpace(LangAS::Default)));
         // FIXME: Should we put the new global into a COMDAT?
         return RawAddress(C, GV->getValueType(), alignment);
       }
@@ -620,6 +617,7 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
       if (isInConditionalBranch() && !E->getType().isDestructedType() &&
           ((!SanOpts.has(SanitizerKind::HWAddress) &&
             !SanOpts.has(SanitizerKind::Memory) &&
+            !SanOpts.has(SanitizerKind::MemtagStack) &&
             !CGM.getCodeGenOpts().SanitizeAddressUseAfterScope) ||
            inSuspendBlock())) {
         OldConditional = OutermostConditional;
@@ -3658,14 +3656,14 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
                           AlignmentSource::Decl);
 
   if (const auto *TPO = dyn_cast<TemplateParamObjectDecl>(ND)) {
-    auto ATPO = CGM.GetAddrOfTemplateParamObject(TPO);
+    ConstantAddress ATPO = CGM.GetAddrOfTemplateParamObject(TPO);
     auto AS = getLangASFromTargetAS(ATPO.getAddressSpace());
 
     if (AS != T.getAddressSpace()) {
       auto TargetAS = getContext().getTargetAddressSpace(T.getAddressSpace());
-      auto PtrTy = llvm::PointerType::get(CGM.getLLVMContext(), TargetAS);
-      auto ASC = getTargetHooks().performAddrSpaceCast(CGM, ATPO.getPointer(),
-                                                       AS, PtrTy);
+      llvm::Type *PtrTy =
+          llvm::PointerType::get(CGM.getLLVMContext(), TargetAS);
+      llvm::Constant *ASC = CGM.performAddrSpaceCast(ATPO.getPointer(), PtrTy);
       ATPO = ConstantAddress(ASC, ATPO.getElementType(), ATPO.getAlignment());
     }
 
@@ -5823,8 +5821,9 @@ std::optional<LValue> HandleConditionalOperatorLValueSimpleCase(
 
     if (!CGF.ContainsLabel(Dead)) {
       // If the true case is live, we need to track its region.
-      if (CondExprBool)
-        CGF.incrementProfileCounter(E);
+      CGF.incrementProfileCounter(CondExprBool ? CGF.UseExecPath
+                                               : CGF.UseSkipPath,
+                                  E, /*UseBoth=*/true);
       CGF.markStmtMaybeUsed(Dead);
       // If a throw expression we emit it and return an undefined lvalue
       // because it can't be used.
@@ -5863,7 +5862,7 @@ ConditionalInfo EmitConditionalBlocks(CodeGenFunction &CGF,
 
   // Any temporaries created here are conditional.
   CGF.EmitBlock(Info.lhsBlock);
-  CGF.incrementProfileCounter(E);
+  CGF.incrementProfileCounter(CGF.UseExecPath, E);
   eval.begin(CGF);
   Info.LHS = BranchGenFunc(CGF, E->getTrueExpr());
   eval.end(CGF);
@@ -5874,6 +5873,7 @@ ConditionalInfo EmitConditionalBlocks(CodeGenFunction &CGF,
 
   // Any temporaries created here are conditional.
   CGF.EmitBlock(Info.rhsBlock);
+  CGF.incrementProfileCounter(CGF.UseSkipPath, E);
   eval.begin(CGF);
   Info.RHS = BranchGenFunc(CGF, E->getFalseExpr());
   eval.end(CGF);
@@ -6114,9 +6114,8 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_AddressSpaceConversion: {
     LValue LV = EmitLValue(E->getSubExpr());
     QualType DestTy = getContext().getPointerType(E->getType());
-    llvm::Value *V = getTargetHooks().performAddrSpaceCast(
-        *this, LV.getPointer(*this),
-        E->getSubExpr()->getType().getAddressSpace(), ConvertType(DestTy));
+    llvm::Value *V =
+        performAddrSpaceCast(LV.getPointer(*this), ConvertType(DestTy));
     return MakeAddrLValue(Address(V, ConvertTypeForMem(E->getType()),
                                   LV.getAddress().getAlignment()),
                           E->getType(), LV.getBaseInfo(), LV.getTBAAInfo());
@@ -6153,7 +6152,7 @@ CodeGenFunction::EmitHLSLOutArgLValues(const HLSLOutArgExpr *E, QualType Ty) {
   OpaqueValueMappingData::bind(*this, E->getOpaqueArgLValue(), BaseLV);
 
   QualType ExprTy = E->getType();
-  Address OutTemp = CreateIRTemp(ExprTy);
+  Address OutTemp = CreateIRTempWithoutCast(ExprTy);
   LValue TempLV = MakeAddrLValue(OutTemp, ExprTy);
 
   if (E->isInOut())
@@ -6976,14 +6975,15 @@ void CodeGenFunction::SetFPAccuracy(llvm::Value *Val, float Accuracy) {
 
 void CodeGenFunction::SetSqrtFPAccuracy(llvm::Value *Val) {
   llvm::Type *EltTy = Val->getType()->getScalarType();
-  if (!EltTy->isFloatTy())
+  if (!EltTy->isFloatTy() && !EltTy->isHalfTy())
     return;
 
   if ((getLangOpts().OpenCL &&
        !CGM.getCodeGenOpts().OpenCLCorrectlyRoundedDivSqrt) ||
       (getLangOpts().HIP && getLangOpts().CUDAIsDevice &&
        !CGM.getCodeGenOpts().HIPCorrectlyRoundedDivSqrt)) {
-    // OpenCL v1.1 s7.4: minimum accuracy of single precision / is 3ulp
+    // OpenCL v1.1 s7.4: minimum accuracy of single precision sqrt is 3 ulp.
+    // OpenCL v3.0 s7.4: minimum accuracy of half precision sqrt is 1.5 ulp.
     //
     // OpenCL v1.2 s5.6.4.2: The -cl-fp32-correctly-rounded-divide-sqrt
     // build option allows an application to specify that single precision
@@ -6991,20 +6991,21 @@ void CodeGenFunction::SetSqrtFPAccuracy(llvm::Value *Val) {
     // source are correctly rounded.
     //
     // TODO: CUDA has a prec-sqrt flag
-    SetFPAccuracy(Val, 3.0f);
+    SetFPAccuracy(Val, EltTy->isFloatTy() ? 3.0f : 1.5f);
   }
 }
 
 void CodeGenFunction::SetDivFPAccuracy(llvm::Value *Val) {
   llvm::Type *EltTy = Val->getType()->getScalarType();
-  if (!EltTy->isFloatTy())
+  if (!EltTy->isFloatTy() && !EltTy->isHalfTy())
     return;
 
   if ((getLangOpts().OpenCL &&
        !CGM.getCodeGenOpts().OpenCLCorrectlyRoundedDivSqrt) ||
       (getLangOpts().HIP && getLangOpts().CUDAIsDevice &&
        !CGM.getCodeGenOpts().HIPCorrectlyRoundedDivSqrt)) {
-    // OpenCL v1.1 s7.4: minimum accuracy of single precision / is 2.5ulp
+    // OpenCL v1.1 s7.4: minimum accuracy of single precision / is 2.5 ulp.
+    // OpenCL v3.0 s7.4: minimum accuracy of half precision / is 1 ulp.
     //
     // OpenCL v1.2 s5.6.4.2: The -cl-fp32-correctly-rounded-divide-sqrt
     // build option allows an application to specify that single precision
@@ -7012,7 +7013,7 @@ void CodeGenFunction::SetDivFPAccuracy(llvm::Value *Val) {
     // source are correctly rounded.
     //
     // TODO: CUDA has a prec-div flag
-    SetFPAccuracy(Val, 2.5f);
+    SetFPAccuracy(Val, EltTy->isFloatTy() ? 2.5f : 1.f);
   }
 }
 

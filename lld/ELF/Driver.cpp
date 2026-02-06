@@ -236,8 +236,10 @@ bool LinkerDriver::tryAddFatLTOFile(MemoryBufferRef mb, StringRef archiveName,
       IRObjectFile::findBitcodeInMemBuffer(mb);
   if (errorToBool(fatLTOData.takeError()))
     return false;
-  files.push_back(std::make_unique<BitcodeFile>(ctx, *fatLTOData, archiveName,
-                                                offsetInArchive, lazy));
+  auto file = std::make_unique<BitcodeFile>(ctx, *fatLTOData, archiveName,
+                                            offsetInArchive, lazy);
+  file->obj->fatLTOObject(true);
+  files.push_back(std::move(file));
   return true;
 }
 
@@ -1155,7 +1157,7 @@ static void ltoValidateAllVtablesHaveTypeInfos(Ctx &ctx,
 
   SmallSetVector<StringRef, 0> vtableSymbolsWithNoRTTI;
   for (StringRef s : vtableSymbols)
-    if (!typeInfoSymbols.count(s))
+    if (!typeInfoSymbols.contains(s))
       vtableSymbolsWithNoRTTI.insert(s);
 
   // Remove known safe symbols.
@@ -2315,11 +2317,11 @@ static DenseSet<StringRef> getExcludeLibs(opt::InputArgList &args) {
 // This is not a popular option, but some programs such as bionic libc use it.
 static void excludeLibs(Ctx &ctx, opt::InputArgList &args) {
   DenseSet<StringRef> libs = getExcludeLibs(args);
-  bool all = libs.count("ALL");
+  bool all = libs.contains("ALL");
 
   auto visit = [&](InputFile *file) {
     if (file->archiveName.empty() ||
-        !(all || libs.count(path::filename(file->archiveName))))
+        !(all || libs.contains(path::filename(file->archiveName))))
       return;
     ArrayRef<Symbol *> symbols = file->getSymbols();
     if (isa<ELFFileBase>(file))
@@ -2687,7 +2689,7 @@ static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
   for (BitcodeFile *file : ctx.lazyBitcodeFiles)
     bufs.insert(file->mb.getBufferStart());
   for (MemoryBuffer &mb : llvm::make_pointee_range(ctx.memoryBuffers))
-    if (bufs.count(mb.getBufferStart()))
+    if (bufs.contains(mb.getBufferStart()))
       mb.dontNeedIfMmap();
 }
 
