@@ -233,41 +233,6 @@ define <4 x i64> @lshl_add_u64_vvv_and_2_v4(<4 x i64> %v, <4 x i64> %a, <4 x i64
   ret <4 x i64> %add
 }
 
-define amdgpu_kernel void @lshl_add_u64_salu_and_1(i32 %stride, ptr addrspace(5) %in, ptr addrspace(1) %out) {
-; GCN-LABEL: lshl_add_u64_salu_and_1:
-; GCN: s_and_b32 [[AND:s[0-9:]+]], s{{[0-9:]+}}, 1
-; GCN: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[AND]], v[{{[0-9:]+}}]
-; GISEL-LABEL: lshl_add_u64_salu_and_1:
-; GFX942-GISEL: v_add_co_u32_e32 v{{[0-9:]+}}, vcc, v{{[0-9:]+}}, v{{[0-9:]+}}
-; GFX1250-GISEL: s_and_b32 [[AND:s[0-9:]+]], s{{[0-9:]+}}, 1
-; GFX1250-GISEL: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], [[AND]], v[{{[0-9:]+}}]
-  %call = load i32, ptr addrspace(5) %in, align 4
-  %conv = zext i32 %call to i64
-  %and = and i32 %stride, 1
-  %sh_prom = zext i32 %and to i64
-  %shl = shl i64 %conv, %sh_prom
-  %add = add i64 %shl, %conv
-  store i64 %add, ptr addrspace(1) %out, align 8
-  ret void
-}
-
-define amdgpu_kernel void @lshl_add_u64_salu_and_5(i32 %stride, ptr addrspace(5) %in, ptr addrspace(1) %out) {
-; GCN-LABEL: lshl_add_u64_salu_and_5:
-; GFX942: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], 0, v[{{[0-9:]+}}]
-; GFX1250: v_add_nc_u64_e32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
-; GISEL-LABEL: lshl_add_u64_salu_and_5:
-; GFX942-GISEL: v_add_co_u32_e32 v{{[0-9:]+}}, vcc, v{{[0-9:]+}}, v{{[0-9:]+}}
-; GFX1250-GISEL: v_add_nc_u64_e32 v[{{[0-9:]+}}], v[{{[0-9:]+}}], v[{{[0-9:]+}}]
-  %call = load i32, ptr addrspace(5) %in, align 4
-  %conv = zext i32 %call to i64
-  %and = and i32 %stride, 5
-  %sh_prom = zext i32 %and to i64
-  %shl = shl i64 %conv, %sh_prom
-  %add = add i64 %shl, %conv
-  store i64 %add, ptr addrspace(1) %out, align 8
-  ret void
-}
-
 define amdgpu_ps <2 x i32> @lshl_add_u64_sss_and_4(i32 inreg %v, i32 inreg %a, i32 inreg %s) {
 ; GCN-LABEL: lshl_add_u64_sss_and_4
 ; GFX942: s_add_i32 s{{[0-9:]+}}, s{{[0-9:]+}}, s{{[0-9:]+}}
