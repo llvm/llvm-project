@@ -688,6 +688,12 @@ def FeatureStdExtV
                      [FeatureStdExtZvl128b, FeatureStdExtZve64d]>,
       RISCVExtensionBitmask<0, 21>;
 
+def FeatureStdExtZvabd
+    : RISCVExperimentalExtension<0, 7, "Vector Absolute Difference">;
+def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
+                     AssemblerPredicate<(all_of FeatureStdExtZvabd),
+                                        "'Zvabd' (Vector Absolute Difference)">;
+
 def FeatureStdExtZvfbfa
     : RISCVExperimentalExtension<0, 1, "Additional BF16 vector compute support",
                                  [FeatureStdExtZve32f, FeatureStdExtZfbfmin]>;
