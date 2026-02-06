@@ -58,6 +58,41 @@ cir.func @test_return_from_cleanup() {
 // CHECK:         cir.br ^[[CLEANUP_EXIT:bb[0-9]+]]
 // CHECK:       ^[[CLEANUP_EXIT]]:
 // CHECK:         cir.return
+// CHECK:       ^[[UNREACHABLE_NORMAL_RETURN:bb[0-9]+]]
+// CHECK:         cir.return
+
+// Test that a single return from the cleanup body branches through the cleanup.
+cir.func @test_return_from_cleanup_with_operand() -> !s32i {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    %1 = cir.const #cir.int<-1> : !s32i
+    cir.return %1 : !s32i // Should branch through cleanup
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  %2 = cir.const #cir.int<0> : !s32i
+  cir.return %2 : !s32i
+}
+
+// CHECK-LABEL: cir.func @test_return_from_cleanup_with_operand()
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+// CHECK:       ^[[BODY]]:
+// CHECK:         cir.call @doSomething(%[[ALLOCA]])
+// CHECK:         %[[MINUS_ONE:.*]] = cir.const #cir.int<-1> : !s32i
+// CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[ALLOCA]])
+// CHECK:         cir.br ^[[CLEANUP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP_EXIT]]:
+// CHECK:         cir.return %[[MINUS_ONE]] : !s32i
+// CHECK:       ^[[UNREACHABLE_NORMAL_RETURN:bb[0-9]+]]
+// CHECK:         %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CHECK:         cir.return %[[ZERO]] : !s32i
 
 // Test that a continue statement in a cleanup scope branches through the
 // cleanup block before continuing the loop.

@@ -73,7 +73,7 @@ cir.func private @shouldContinue() -> !cir.bool
 !s32i = !cir.int<s, 32>
 !rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
 
-// Test that we detect multiple exits in a switch statatement nested within a
+// Test that we detect multiple exits in a switch statement nested within a
 // loop with a continue statement inside the switch that branches through a
 // cleanup region.
 cir.func @test_continue_in_switch() {
@@ -86,7 +86,7 @@ cir.func @test_continue_in_switch() {
     // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
     cir.cleanup.scope {
       %x = cir.const #cir.int<1> : !s32i
-      // expected-error @below {{Cannot lower switch: cleanup with multiple exits}}
+      // expected-error @below {{cannot lower switch: cleanup with multiple exits}}
       cir.switch (%x : !s32i) {
         cir.case (equal, [#cir.int<1> : !s32i]) {
           cir.break     // Break from switch -- no cleanup exit
@@ -126,11 +126,11 @@ cir.func @test_return_in_loop_in_switch() {
     // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
     cir.cleanup.scope {
       %x = cir.const #cir.int<1> : !s32i
-      // expected-error @below {{Cannot lower switch: cleanup with multiple exits}}
+      // expected-error @below {{cannot lower switch: cleanup with multiple exits}}
       cir.switch (%x : !s32i) {
         cir.case (equal, [#cir.int<1> : !s32i]) {
           // Nested loop inside switch
-          // expected-error @below {{Cannot lower loop: cleanup with multiple exits}}
+          // expected-error @below {{cannot lower loop: cleanup with multiple exits}}
           cir.while {
             %cond = cir.call @shouldContinue() : () -> !cir.bool
             cir.condition(%cond)
@@ -349,7 +349,7 @@ cir.func @test_continue_in_nested_cleanup_in_switch() {
     // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
     cir.cleanup.scope {
       %x = cir.load %2 : !cir.ptr<!s32i>, !s32i
-      // expected-error @below {{Cannot lower switch: cleanup with multiple exits}}
+      // expected-error @below {{cannot lower switch: cleanup with multiple exits}}
       cir.switch (%x : !s32i) {
         cir.case (equal, [#cir.int<1> : !s32i]) {
           cir.call @ctor(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
@@ -388,7 +388,7 @@ cir.func @test_return_in_loop_in_cleanup() {
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   // expected-error @below {{cleanup scope with multiple exits is not yet implemented}}
   cir.cleanup.scope {
-    // expected-error @below {{Cannot lower loop: cleanup with multiple exits}}
+    // expected-error @below {{cannot lower loop: cleanup with multiple exits}}
     cir.while {
       %true = cir.const #cir.bool<true> : !cir.bool
       cir.condition(%true)

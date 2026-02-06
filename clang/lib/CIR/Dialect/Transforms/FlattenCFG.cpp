@@ -312,9 +312,7 @@ static bool enclosedByCleanupScopeWithMultipleExits(mlir::Operation *op) {
     return false;
   llvm::SmallVector<CleanupExit> exits;
   collectExits(cleanupParent.getBodyRegion(), exits, nextId);
-  if (exits.size() > 1)
-    return true;
-  return false;
+  return exits.size() > 1;
 }
 
 class CIRSwitchOpFlattening : public mlir::OpRewritePattern<cir::SwitchOp> {
@@ -370,8 +368,9 @@ public:
     // Cleanup scopes must be lowered before the enclosing switch so that
     // break inside them is properly routed through cleanup.
     // Fail the match so the pattern rewriter will process cleanup scopes first.
-    bool hasNestedCleanup = false;
-    op->walk([&](cir::CleanupScopeOp) { hasNestedCleanup = true; });
+    bool hasNestedCleanup = op->walk([&](cir::CleanupScopeOp) {
+                                return mlir::WalkResult::interrupt();
+                              }).wasInterrupted();
     if (hasNestedCleanup)
       return mlir::failure();
 
@@ -380,7 +379,7 @@ public:
     // handling (destination slot + switch dispatch) which is not yet
     // implemented.
     if (enclosedByCleanupScopeWithMultipleExits(op))
-      return op->emitError("Cannot lower switch: cleanup with multiple exits");
+      return op->emitError("cannot lower switch: cleanup with multiple exits");
 
     llvm::SmallVector<CaseOp> cases;
     op.collectCases(cases);
@@ -590,7 +589,7 @@ public:
     // handling (destination slot + switch dispatch) which is not yet
     // implemented.
     if (enclosedByCleanupScopeWithMultipleExits(op))
-      return op->emitError("Cannot lower loop: cleanup with multiple exits");
+      return op->emitError("cannot lower loop: cleanup with multiple exits");
 
     // Setup CFG blocks.
     mlir::Block *entry = rewriter.getInsertionBlock();
@@ -778,31 +777,43 @@ public:
 
     // Put the appropriate terminator in the exit block.
     rewriter.setInsertionPointToEnd(exitBlock);
-    llvm::TypeSwitch<mlir::Operation *, void>(exitOp)
-        .Case<cir::YieldOp>([&](auto) {
-          // Yield becomes a branch to continue block.
-          cir::BrOp::create(rewriter, loc, continueBlock);
-        })
-        .Case<cir::BreakOp>([&](auto) {
-          // Break is preserved for later lowering by enclosing switch/loop.
-          cir::BreakOp::create(rewriter, loc);
-        })
-        .Case<cir::ContinueOp>([&](auto) {
-          // Continue is preserved for later lowering by enclosing loop.
-          cir::ContinueOp::create(rewriter, loc);
-        })
-        .Case<cir::ReturnOp>([&](auto returnOp) {
-          // Return from the cleanup exit. Note, if this is a return inside a
-          // nested cleanup scope, the flattening of the outer scope will handle
-          // branching through the outer cleanup.
-          if (returnOp.hasOperand())
-            cir::ReturnOp::create(rewriter, loc, returnOp.getOperands());
-          else
-            cir::ReturnOp::create(rewriter, loc);
-        })
-        .Default([&](mlir::Operation *op) {
-          op->emitError("unexpected terminator in cleanup scope body");
-        });
+    mlir::LogicalResult result =
+        llvm::TypeSwitch<mlir::Operation *, mlir::LogicalResult>(exitOp)
+            .Case<cir::YieldOp>([&](auto) {
+              // Yield becomes a branch to continue block.
+              cir::BrOp::create(rewriter, loc, continueBlock);
+              return mlir::success();
+            })
+            .Case<cir::BreakOp>([&](auto) {
+              // Break is preserved for later lowering by enclosing switch/loop.
+              cir::BreakOp::create(rewriter, loc);
+              return mlir::success();
+            })
+            .Case<cir::ContinueOp>([&](auto) {
+              // Continue is preserved for later lowering by enclosing loop.
+              cir::ContinueOp::create(rewriter, loc);
+              return mlir::success();
+            })
+            .Case<cir::ReturnOp>([&](auto &returnOp) {
+              // Return from the cleanup exit. Note, if this is a return inside
+              // a nested cleanup scope, the flattening of the outer scope will
+              // handle branching through the outer cleanup.
+              if (returnOp.hasOperand())
+                cir::ReturnOp::create(rewriter, loc, returnOp.getOperands());
+              else
+                cir::ReturnOp::create(rewriter, loc);
+              return mlir::success();
+            })
+            .Case<cir::GotoOp>([&](auto &gotoOp) {
+              cir::UnreachableOp::create(rewriter, loc);
+              return gotoOp.emitError(
+                  "goto in cleanup scope is not yet implemented");
+            })
+            .Default([&](mlir::Operation *op) {
+              cir::UnreachableOp::create(rewriter, loc);
+              return op->emitError(
+                  "unexpected terminator in cleanup scope body");
+            });
 
     // Replace body exit with branch to cleanup entry.
     rewriter.setInsertionPoint(exitOp);
@@ -811,7 +822,7 @@ public:
     // Erase the original cleanup scope op.
     rewriter.eraseOp(cleanupOp);
 
-    return mlir::success();
+    return result;
   }
 
   // Flatten a cleanup scope with multiple exit destinations.
