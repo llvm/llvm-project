@@ -152,10 +152,6 @@ else()
     "Appended user specified linked libs flags. (e.g., -lm)")
 endif()
 
-if("${LIBOMP_ARCH}" STREQUAL "mips" OR "${LIBOMP_ARCH}" STREQUAL "mips64")
-  set(LIBOMP_LIBFLAGS "${LIBOMP_LIBFLAGS} -latomic")
-endif()
-
 # Should the libomp library and generated headers be copied into the original source exports/ directory
 # Turning this to FALSE aids parallel builds to not interfere with each other.
 # Currently, the testsuite module expects the just built OpenMP library to be located inside the exports/
