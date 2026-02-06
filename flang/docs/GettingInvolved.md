@@ -51,13 +51,11 @@ Contributions to Flang are done using GitHub Pull Requests and follow the
 -   Technical discussions as well as general updates on the Flang project.
 -   Join the [Flang Biweekly Call](https://lanl-us.webex.com/lanl-us/j.php?MTID=m0fcaebfcf6b4b4f506efd792a71a015c)   
     - Alternative ways to join the call:
-        - Join by meeting number
+        - Meeting info:
 	    - Meeting number (access code): 177 400 7047  
   	    - Meeting password: 6PCdCYKmN43  
- 	    - Tap to join from a mobile device (attendees only)  
-  	    - [\+1-415-655-0002,,1774007047\#\#](tel:%2B1-415-655-0002,,*01*1774007047%23%23*01*) US Toll  
 	- Join by phone  
-  	    - [\+1-415-655-0002](tel:+14156550002) US Toll  
+  	    - +1-415-655-0002 US Toll  
   	    - [Global call-in numbers](https://lanl-us.webex.com/lanl-us/globalcallin.php?MTID=ma8c4fc1f538bce541415427fbe89c85b)  
 	- Join from a video system or application  
   	    - Dial [1774007047@lanl-us.webex.com](mailto:1774007047@lanl-us.webex.com)  
