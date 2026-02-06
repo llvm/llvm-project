@@ -1757,6 +1757,26 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, MULHU);
     return;
   }
+  case ISD::SMUL_LOHI:
+  case ISD::UMUL_LOHI: {
+    // Custom select (S/U)MUL_LOHI to WMUL(U) for RV32P.
+    assert(Subtarget->hasStdExtP() && !Subtarget->is64Bit() && VT == MVT::i32 &&
+           "Unexpected opcode");
+
+    unsigned Opc =
+        Node->getOpcode() == ISD::SMUL_LOHI ? RISCV::WMUL : RISCV::WMULU;
+    SDNode *WMUL = CurDAG->getMachineNode(
+        Opc, DL, MVT::Untyped, Node->getOperand(0), Node->getOperand(1));
+
+    SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL,
+                                                MVT::i32, SDValue(WMUL, 0));
+    SDValue Hi = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL,
+                                                MVT::i32, SDValue(WMUL, 0));
+    ReplaceUses(SDValue(Node, 0), Lo);
+    ReplaceUses(SDValue(Node, 1), Hi);
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   case ISD::LOAD: {
     if (tryIndexedLoad(Node))
       return;
