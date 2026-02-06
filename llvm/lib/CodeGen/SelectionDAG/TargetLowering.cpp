@@ -11945,6 +11945,10 @@ SDValue TargetLowering::expandFP_TO_INT_SAT(SDNode *Node,
     if (SDValue Res =
             EmitMinMax(ISD::FMINNUM, ISD::FMAXNUM, /*MayPropagateNaN=*/true))
       return Res;
+    // These always propagate NaN.
+    if (SDValue Res =
+            EmitMinMax(ISD::FMINIMUM, ISD::FMAXIMUM, /*MayPropagateNaN=*/true))
+      return Res;
   }
 
   SDValue MinIntNode = DAG.getConstant(MinInt, dl, DstVT);
