@@ -538,8 +538,8 @@ gentbl_filegroup(
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/X86Vector.td",
     deps = [
-        "//mlir:X86VectorTdFiles",
         "//mlir:OpBaseTdFiles",
+        "//mlir:X86VectorTdFiles",
     ],
 )
 
@@ -1365,13 +1365,13 @@ gentbl_filegroup(
     tbl_outs = {"mlir/dialects/_x86vector_transform_ops_gen.py": [
         "-gen-python-op-bindings",
         "-bind-dialect=transform",
-        "-dialect-extension=x86vector_transform"
+        "-dialect-extension=x86vector_transform",
     ]},
     tblgen = "//mlir:mlir-tblgen",
     td_file = "mlir/dialects/X86VectorTransformOps.td",
     deps = [
         "//mlir:X86VectorTransformOpsTdFiles",
-    ]
+    ],
 )
 
 gentbl_filegroup(
