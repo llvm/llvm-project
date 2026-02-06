@@ -461,22 +461,21 @@ def LLGFI : InstAlias<"llgfi\t$R1, $RI1", (LLILF GR64:$R1, imm64lf32:$RI1)>;
 def LLGHI : InstAlias<"llghi\t$R1, $RI1", (LLILL GR64:$R1, imm64ll16:$RI1)>;
 
 // Register loads.
-let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1 in {
-  let isReMaterializable = 1 in {
-    // Expands to L, LY or LFH, depending on the choice of register.
-    def LMux : UnaryRXYPseudo<"l", z_load, GRX32, 4>,
-               Requires<[FeatureHighWord]>;
-    defm L : UnaryRXPair<"l", 0x58, 0xE358, z_load, GR32, 4>;
-    def LFH : UnaryRXY<"lfh", 0xE3CA, z_load, GRH32, 4>,
-              Requires<[FeatureHighWord]>;
-    def LG : UnaryRXY<"lg", 0xE304, z_load, GR64, 8>;
+let canFoldAsLoad = 1, SimpleBDXLoad = 1, mayLoad = 1,
+    isReMaterializable = 1 in {
+  // Expands to L, LY or LFH, depending on the choice of register.
+  def LMux : UnaryRXYPseudo<"l", z_load, GRX32, 4>,
+             Requires<[FeatureHighWord]>;
+  defm L : UnaryRXPair<"l", 0x58, 0xE358, z_load, GR32, 4>;
+  def LFH : UnaryRXY<"lfh", 0xE3CA, z_load, GRH32, 4>,
+            Requires<[FeatureHighWord]>;
+  def LG : UnaryRXY<"lg", 0xE304, z_load, GR64, 8>;
 
-    // These instructions are split after register allocation, so we don't
-    // want a custom inserter.
-    let Has20BitOffset = 1, HasIndex = 1, Is128Bit = 1 in {
-      def L128 : Pseudo<(outs GR128:$dst), (ins bdxaddr20only128:$src),
-                        [(set GR128:$dst, (load bdxaddr20only128:$src))]>;
-    }
+  // These instructions are split after register allocation, so we don't
+  // want a custom inserter.
+  let Has20BitOffset = 1, HasIndex = 1, Is128Bit = 1 in {
+    def L128 : Pseudo<(outs GR128:$dst), (ins bdxaddr20only128:$src),
+                      [(set GR128:$dst, (load bdxaddr20only128:$src))]>;
   }
 }
 let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
@@ -484,7 +483,7 @@ let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in {
   def LTG : UnaryRXY<"ltg", 0xE302, z_load, GR64, 8>;
 }
 
-let canFoldAsLoad = 1, isReMaterializable = 1 in {
+let canFoldAsLoad = 1, isReMaterializable =1 in {
   def LRL  : UnaryRILPC<"lrl",  0xC4D, aligned_z_load, GR32>;
   def LGRL : UnaryRILPC<"lgrl", 0xC48, aligned_z_load, GR64>;
 }
