@@ -298,6 +298,7 @@ add_libc_test(
     wctype_utils_test.cpp
   DEPENDS
     libc.src.__support.wctype_utils
+    libc.src.__support.wctype.wctype_classification_utils
     libc.src.__support.macros.properties.os
 )
 
