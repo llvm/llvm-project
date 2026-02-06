@@ -35,31 +35,31 @@ TEST(ScudoCommonTest, VerifyGetResidentPages) {
   // Only android seems to properly detect when single pages are touched.
 #if SCUDO_ANDROID
   // Verify nothing should be mapped in right after the map is created.
-  EXPECT_EQ(0U, getResidentPages(MemMap.getBase(), SizeBytes));
+  EXPECT_EQ(0U, MemMap.getResidentPages(MemMap.getBase(), SizeBytes));
 
   // Touch a page.
   u8 *Data = reinterpret_cast<u8 *>(MemMap.getBase());
   Data[0] = 1;
-  EXPECT_EQ(1U, getResidentPages(MemMap.getBase(), SizeBytes));
+  EXPECT_EQ(1U, MemMap.getResidentPages(MemMap.getBase(), SizeBytes));
 
   // Touch a non-consective page.
   Data[getPageSizeCached() * 2] = 1;
-  EXPECT_EQ(2U, getResidentPages(MemMap.getBase(), SizeBytes));
+  EXPECT_EQ(2U, MemMap.getResidentPages(MemMap.getBase(), SizeBytes));
 
   // Touch a page far enough that the function has to make multiple calls
   // to mincore.
   Data[getPageSizeCached() * 300] = 1;
-  EXPECT_EQ(3U, getResidentPages(MemMap.getBase(), SizeBytes));
+  EXPECT_EQ(3U, MemMap.getResidentPages(MemMap.getBase(), SizeBytes));
 
   // Touch another page in the same range to make sure the second
   // read is working.
   Data[getPageSizeCached() * 400] = 1;
-  EXPECT_EQ(4U, getResidentPages(MemMap.getBase(), SizeBytes));
+  EXPECT_EQ(4U, MemMap.getResidentPages(MemMap.getBase(), SizeBytes));
 #endif
 
   // Now write the whole thing.
   memset(reinterpret_cast<void *>(MemMap.getBase()), 1, SizeBytes);
-  EXPECT_EQ(NumPages, getResidentPages(MemMap.getBase(), SizeBytes));
+  EXPECT_EQ(NumPages, MemMap.getResidentPages(MemMap.getBase(), SizeBytes));
 
   MemMap.unmap();
 }
@@ -76,19 +76,19 @@ TEST(ScudoCommonTest, VerifyReleasePagesToOS) {
   ASSERT_NE(MemMap.getBase(), 0U);
 
   void *P = reinterpret_cast<void *>(MemMap.getBase());
-  EXPECT_EQ(0U, getResidentPages(MemMap.getBase(), SizeBytes));
+  EXPECT_EQ(0U, MemMap.getResidentPages(MemMap.getBase(), SizeBytes));
 
   // Make the entire map resident.
   memset(P, 1, SizeBytes);
-  EXPECT_EQ(NumPages, getResidentPages(MemMap.getBase(), SizeBytes));
+  EXPECT_EQ(NumPages, MemMap.getResidentPages(MemMap.getBase(), SizeBytes));
 
   // Should release the memory to the kernel immediately.
   MemMap.releasePagesToOS(MemMap.getBase(), SizeBytes);
-  EXPECT_EQ(0U, getResidentPages(MemMap.getBase(), SizeBytes));
+  EXPECT_EQ(0U, MemMap.getResidentPages(MemMap.getBase(), SizeBytes));
 
   // Make the entire map resident again.
   memset(P, 1, SizeBytes);
-  EXPECT_EQ(NumPages, getResidentPages(MemMap.getBase(), SizeBytes));
+  EXPECT_EQ(NumPages, MemMap.getResidentPages(MemMap.getBase(), SizeBytes));
 
   MemMap.unmap();
 }
