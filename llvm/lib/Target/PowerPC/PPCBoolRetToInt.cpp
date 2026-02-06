@@ -208,7 +208,7 @@ class PPCBoolRetToInt : public FunctionPass {
      }
 
      return Changed;
-  }
+   }
 
   bool runOnUse(Use &U, const PHINodeSet &PromotablePHINodes,
                        B2IMap &BoolToIntMap) {

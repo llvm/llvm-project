@@ -54,7 +54,7 @@ struct NVPTXPeephole : public MachineFunctionPass {
 
    StringRef getPassName() const override {
      return "NVPTX optimize redundant cvta.to.local instruction";
-  }
+   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);

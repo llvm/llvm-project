@@ -44,7 +44,7 @@ class CFIInstrInserter : public MachineFunctionPass {
    void getAnalysisUsage(AnalysisUsage &AU) const override {
      AU.setPreservesAll();
      MachineFunctionPass::getAnalysisUsage(AU);
-  }
+   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (!MF.needsFrameMoves())
