@@ -806,12 +806,25 @@ class Cvt_PK_F32_F8_Pat_OpSel<SDPatternOperator node, int index,
          (inst_e32 $src))
 >;
 
+class Cvt_PK_F32_F8_Pat_t16<SDPatternOperator node, int index,
+    VOP3_Pseudo inst_e64> : GCNPat<
+    (v2f32 (node i32:$src, index)),
+    (inst_e64 0, (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $src, VGPR_32)),
+      !if(index, hi16, lo16)), 0)
+>;
+
 let SubtargetPredicate = isGFX12Plus, OtherPredicates = [HasFP8ConversionInsts] in {
   foreach Index = [0, -1] in {
-    def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_fp8, Index,
-                                  V_CVT_PK_F32_FP8_fake16_e32, V_CVT_PK_F32_FP8_fake16_e64>;
-    def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_bf8, Index,
-                                  V_CVT_PK_F32_BF8_fake16_e32, V_CVT_PK_F32_BF8_fake16_e64>;
+    let True16Predicate = UseFakeTrue16Insts in {
+      def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_fp8, Index,
+                                    V_CVT_PK_F32_FP8_fake16_e32, V_CVT_PK_F32_FP8_fake16_e64>;
+      def : Cvt_PK_F32_F8_Pat_OpSel<int_amdgcn_cvt_pk_f32_bf8, Index,
+                                    V_CVT_PK_F32_BF8_fake16_e32, V_CVT_PK_F32_BF8_fake16_e64>;
+    }
+    let True16Predicate = UseRealTrue16Insts in {
+      def : Cvt_PK_F32_F8_Pat_t16<int_amdgcn_cvt_pk_f32_fp8, Index, V_CVT_PK_F32_FP8_t16_e64>;
+      def : Cvt_PK_F32_F8_Pat_t16<int_amdgcn_cvt_pk_f32_bf8, Index, V_CVT_PK_F32_BF8_t16_e64>;
+    }
   }
 }
 
