@@ -328,9 +328,32 @@ public:
     return fields;
   }
 
+  /// Get field records from a raw value enum (DW_TAG_enumeration_type).
+  /// Raw value enums have DW_TAG_enumerator children directly under the
+  /// enumeration type DIE, with no payload types.
   std::vector<std::unique_ptr<swift::reflection::FieldRecordBase>>
-  getFieldRecordsFromEnum(const DWARFDIE &die,
-                          plugin::dwarf::DWARFASTParser *dwarf_parser) {
+  getFieldRecordsFromRawValueEnum(const DWARFDIE &die) {
+    std::vector<std::unique_ptr<swift::reflection::FieldRecordBase>> fields;
+    for (DWARFDIE child_die : die.children()) {
+      if (child_die.Tag() != llvm::dwarf::DW_TAG_enumerator)
+        continue;
+      const auto *case_name =
+          child_die.GetAttributeValueAsString(llvm::dwarf::DW_AT_name, "");
+      // Raw value enum cases have no payload
+      bool is_indirect_case = false;
+      bool is_var = false;
+      fields.emplace_back(std::make_unique<DWARFFieldRecordImpl>(
+          is_indirect_case, is_var, ConstString(case_name), ConstString()));
+    }
+    return fields;
+  }
+
+  /// Get field records from a payload enum (DW_TAG_structure_type with
+  /// DW_TAG_variant_part). Payload enums have a variant_part containing
+  /// variant children, each with a member that may have an associated type.
+  std::vector<std::unique_ptr<swift::reflection::FieldRecordBase>>
+  getFieldRecordsFromPayloadEnum(const DWARFDIE &die,
+                                 plugin::dwarf::DWARFASTParser *dwarf_parser) {
     // Type lowering expects the payload fields to come before the non-payload
     // ones.
     std::vector<std::unique_ptr<swift::reflection::FieldRecordBase>>
@@ -376,6 +399,19 @@ public:
                           std::make_move_iterator(non_payload_fields.begin()),
                           std::make_move_iterator(non_payload_fields.end()));
     return payload_fields;
+  }
+
+  /// Get field records from an enum DIE, dispatching to the appropriate
+  /// implementation based on the DWARF tag.
+  std::vector<std::unique_ptr<swift::reflection::FieldRecordBase>>
+  getFieldRecordsFromEnum(const DWARFDIE &die,
+                          plugin::dwarf::DWARFASTParser *dwarf_parser) {
+    // Raw value enums use DW_TAG_enumeration_type with DW_TAG_enumerator
+    // children, while payload enums use DW_TAG_structure_type with
+    // DW_TAG_variant_part containing DW_TAG_variant children.
+    if (die.Tag() == llvm::dwarf::DW_TAG_enumeration_type)
+      return getFieldRecordsFromRawValueEnum(die);
+    return getFieldRecordsFromPayloadEnum(die, dwarf_parser);
   }
 };
 } // namespace
