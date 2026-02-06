@@ -278,14 +278,7 @@ FunctionPass *createX86CompressEVEXLegacyPass();
 
 /// This pass creates the thunks for the retpoline feature.
 class X86IndirectThunksPass : public PassInfoMixin<X86IndirectThunksPass> {
-  struct Impl;
-  std::unique_ptr<Impl> PImpl;
-
 public:
-  X86IndirectThunksPass();
-  ~X86IndirectThunksPass();
-  X86IndirectThunksPass(X86IndirectThunksPass &&);
-  X86IndirectThunksPass &operator=(X86IndirectThunksPass &&);
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 };

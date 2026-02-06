@@ -171,15 +171,13 @@ inline ArmInsertedThunks &operator|=(ArmInsertedThunks &X,
 }
 
 namespace {
-struct SLSBLRThunkInserter
-    : ThunkInserter<SLSBLRThunkInserter, ArmInsertedThunks> {
+struct SLSBLRThunkInserter : ThunkInserter<SLSBLRThunkInserter> {
   const char *getThunkPrefix() { return SLSBLRNamePrefix; }
   bool mayUseThunk(const MachineFunction &MF) {
     ComdatThunks &= !MF.getSubtarget<ARMSubtarget>().hardenSlsNoComdat();
     return MF.getSubtarget<ARMSubtarget>().hardenSlsBlr();
   }
-  ArmInsertedThunks insertThunks(MachineModuleInfo &MMI, MachineFunction &MF,
-                                 ArmInsertedThunks InsertedThunks);
+  bool insertThunks(MachineModuleInfo &MMI, MachineFunction &MF);
   void populateThunk(MachineFunction &MF);
 
 private:
@@ -187,23 +185,20 @@ private:
 };
 } // namespace
 
-ArmInsertedThunks
-SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI, MachineFunction &MF,
-                                  ArmInsertedThunks InsertedThunks) {
-  if ((InsertedThunks & ArmThunk &&
-       !MF.getSubtarget<ARMSubtarget>().isThumb()) ||
-      (InsertedThunks & ThumbThunk &&
-       MF.getSubtarget<ARMSubtarget>().isThumb()))
-    return NoThunk;
+bool SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI,
+                                       MachineFunction &MF) {
   // FIXME: It probably would be possible to filter which thunks to produce
   // based on which registers are actually used in indirect calls in this
   // function. But would that be a worthwhile optimization?
   const ARMSubtarget *ST = &MF.getSubtarget<ARMSubtarget>();
+  bool Modified = false;
   for (auto T : SLSBLRThunks)
-    if (ST->isThumb() == T.isThumb)
+    if (ST->isThumb() == T.isThumb) {
       createThunkFunction(MMI, T.Name, ComdatThunks,
                           T.isThumb ? "+thumb-mode" : "");
-  return ST->isThumb() ? ThumbThunk : ArmThunk;
+      Modified = true;
+    }
+  return Modified;
 }
 
 void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
@@ -385,11 +380,11 @@ FunctionPass *llvm::createARMSLSHardeningPass() {
 }
 
 namespace {
-class ARMIndirectThunks : public ThunkInserterPass<SLSBLRThunkInserter> {
+class ARMIndirectThunks : public ThunkInserterLegacyPass<SLSBLRThunkInserter> {
 public:
   static char ID;
 
-  ARMIndirectThunks() : ThunkInserterPass(ID) {}
+  ARMIndirectThunks() : ThunkInserterLegacyPass(ID) {}
 
   StringRef getPassName() const override { return "ARM Indirect Thunks"; }
 };

@@ -61,8 +61,7 @@ struct RetpolineThunkInserter : ThunkInserter<RetpolineThunkInserter> {
             STI.useRetpolineIndirectBranches()) &&
            !STI.useRetpolineExternalThunk();
   }
-  bool insertThunks(MachineModuleInfo &MMI, MachineFunction &MF,
-                    bool ExistingThunks);
+  bool insertThunks(MachineModuleInfo &MMI, MachineFunction &MF);
   void populateThunk(MachineFunction &MF);
 };
 
@@ -71,10 +70,7 @@ struct LVIThunkInserter : ThunkInserter<LVIThunkInserter> {
   bool mayUseThunk(const MachineFunction &MF) {
     return MF.getSubtarget<X86Subtarget>().useLVIControlFlowIntegrity();
   }
-  bool insertThunks(MachineModuleInfo &MMI, MachineFunction &MF,
-                    bool ExistingThunks) {
-    if (ExistingThunks)
-      return false;
+  bool insertThunks(MachineModuleInfo &MMI, MachineFunction &MF) {
     createThunkFunction(MMI, R11LVIThunkName);
     return true;
   }
@@ -99,11 +95,11 @@ struct LVIThunkInserter : ThunkInserter<LVIThunkInserter> {
 };
 
 class X86IndirectThunksLegacy
-    : public ThunkInserterPass<RetpolineThunkInserter, LVIThunkInserter> {
+    : public ThunkInserterLegacyPass<RetpolineThunkInserter, LVIThunkInserter> {
 public:
   static char ID;
 
-  X86IndirectThunksLegacy() : ThunkInserterPass(ID) {}
+  X86IndirectThunksLegacy() : ThunkInserterLegacyPass(ID) {}
 
   StringRef getPassName() const override { return "X86 Indirect Thunks"; }
 };
@@ -111,10 +107,7 @@ public:
 } // end anonymous namespace
 
 bool RetpolineThunkInserter::insertThunks(MachineModuleInfo &MMI,
-                                          MachineFunction &MF,
-                                          bool ExistingThunks) {
-  if (ExistingThunks)
-    return false;
+                                          MachineFunction &MF) {
   if (MMI.getTarget().getTargetTriple().isX86_64())
     createThunkFunction(MMI, R11RetpolineName);
   else
@@ -241,36 +234,15 @@ FunctionPass *llvm::createX86IndirectThunksLegacyPass() {
 
 char X86IndirectThunksLegacy::ID = 0;
 
-struct X86IndirectThunksPass::Impl {
-  std::tuple<RetpolineThunkInserter, LVIThunkInserter> TIs;
-  const Module *M = nullptr;
-};
-
-X86IndirectThunksPass::X86IndirectThunksPass()
-    : PImpl(std::make_unique<Impl>()) {}
-X86IndirectThunksPass::~X86IndirectThunksPass() = default;
-X86IndirectThunksPass::X86IndirectThunksPass(X86IndirectThunksPass &&) =
-    default;
-X86IndirectThunksPass &
-X86IndirectThunksPass::operator=(X86IndirectThunksPass &&) = default;
-
 PreservedAnalyses
 X86IndirectThunksPass::run(MachineFunction &MF,
                            MachineFunctionAnalysisManager &MFAM) {
-  // If we're processing a new module, reset the thunk inserters.
-  // This replicates the logic of ThunkInserterPass::doInitialization
-  if (MF.getFunction().getParent() != PImpl->M) {
-    PImpl->M = MF.getFunction().getParent();
-    std::get<0>(PImpl->TIs).init(const_cast<Module &>(*PImpl->M));
-    std::get<1>(PImpl->TIs).init(const_cast<Module &>(*PImpl->M));
-  }
-
   auto &MMI = MFAM.getResult<MachineModuleAnalysis>(MF).getMMI();
   bool Changed = false;
-  // Manually run each inserter in the tuple
-  Changed |= std::get<0>(PImpl->TIs).run(MMI, MF);
-  Changed |= std::get<1>(PImpl->TIs).run(MMI, MF);
-
+  RetpolineThunkInserter RTI;
+  LVIThunkInserter LTI;
+  Changed |= RTI.run(MMI, MF);
+  Changed |= LTI.run(MMI, MF);
   return Changed ? getMachineFunctionPassPreservedAnalyses()
                        .preserveSet<CFGAnalyses>()
                  : PreservedAnalyses::all();
