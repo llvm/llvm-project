@@ -241,8 +241,7 @@ IR2VecTool::getInstEmbMap(const Function &F, IR2VecKind Kind) const {
   return Result;
 }
 
-Expected<FuncInstEmbMap>
-IR2VecTool::getFuncInstEmbMap(IR2VecKind Kind) const {
+Expected<FuncInstEmbMap> IR2VecTool::getFuncInstEmbMap(IR2VecKind Kind) const {
   if (!Vocab || !Vocab->isValid())
     return createStringError(
         errc::invalid_argument,
