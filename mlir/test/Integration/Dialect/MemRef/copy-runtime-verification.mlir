@@ -28,7 +28,7 @@ func.func @main() {
   %cast2 = memref.cast %alloca2 : memref<5xf32> to memref<?xf32>
 
   //      CHECK: ERROR: Runtime op verification failed
-  // CHECK-NEXT: "memref.copy"(%{{.*}}, %{{.*}}) : (memref<?xf32>, memref<?xf32>) -> ()
+  // CHECK-NEXT: memref.copy %{{.*}}, %{{.*}} : memref<?xf32> to memref<?xf32>
   // CHECK-NEXT: ^ size of 0-th source/target dim does not match
   // CHECK-NEXT: Location: loc({{.*}})
   call @memcpy_helper(%cast1, %cast2) : (memref<?xf32>, memref<?xf32>) -> ()

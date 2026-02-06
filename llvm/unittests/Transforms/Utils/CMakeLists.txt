@@ -19,6 +19,7 @@ add_llvm_unittest(UtilsTests
   CodeLayoutTest.cpp
   CodeMoverUtilsTest.cpp
   DebugifyTest.cpp
+  DebugSSAUpdaterTest.cpp
   FunctionComparatorTest.cpp
   IntegerDivisionTest.cpp
   LocalTest.cpp

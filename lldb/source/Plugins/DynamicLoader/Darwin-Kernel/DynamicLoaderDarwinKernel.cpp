@@ -465,8 +465,15 @@ DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress(lldb::addr_t addr,
   if (header.filetype == llvm::MachO::MH_EXECUTE &&
       (header.flags & llvm::MachO::MH_DYLDLINK) == 0) {
     // Create a full module to get the UUID
-    ModuleSP memory_module_sp =
+    llvm::Expected<ModuleSP> memory_module_sp_or_err =
         process->ReadModuleFromMemory(FileSpec("temp_mach_kernel"), addr);
+    if (auto err = memory_module_sp_or_err.takeError()) {
+      LLDB_LOG_ERROR(log, std::move(err),
+                     "DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress: "
+                     "Failed to read module in memory -- {0}");
+      return UUID();
+    }
+    ModuleSP memory_module_sp = *memory_module_sp_or_err;
     if (!memory_module_sp.get())
       return UUID();
 
@@ -663,9 +670,16 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::ReadMemoryModule(
       size_to_read = sizeof(llvm::MachO::mach_header_64) + mh.sizeofcmds;
   }
 
-  ModuleSP memory_module_sp =
+  llvm::Expected<ModuleSP> memory_module_sp_or_err =
       process->ReadModuleFromMemory(file_spec, m_load_address, size_to_read);
+  if (auto err = memory_module_sp_or_err.takeError()) {
+    LLDB_LOG_ERROR(log, std::move(err),
+                   "KextImageInfo::ReadMemoryModule failed to read module from "
+                   "memory: {0}");
+    return false;
+  }
 
+  ModuleSP memory_module_sp = *memory_module_sp_or_err;
   if (memory_module_sp.get() == nullptr)
     return false;
 
@@ -789,6 +803,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
     // Search for the kext on the local filesystem via the UUID
     if (!m_module_sp && m_uuid.IsValid()) {
       ModuleSpec module_spec;
+      module_spec.SetTarget(target.shared_from_this());
       module_spec.GetUUID() = m_uuid;
       if (!m_uuid.IsValid())
         module_spec.GetArchitecture() = target.GetArchitecture();
@@ -801,9 +816,8 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       // system.
       PlatformSP platform_sp(target.GetPlatform());
       if (platform_sp) {
-        FileSpecList search_paths = target.GetExecutableSearchPaths();
-        platform_sp->GetSharedModule(module_spec, process, m_module_sp,
-                                     &search_paths, nullptr, nullptr);
+        platform_sp->GetSharedModule(module_spec, process, m_module_sp, nullptr,
+                                     nullptr);
       }
 
       // Ask the Target to find this file on the local system, if possible.

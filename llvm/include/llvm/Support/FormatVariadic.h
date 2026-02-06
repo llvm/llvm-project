@@ -37,7 +37,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <array>
 #include <cstddef>
-#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -103,16 +102,13 @@ public:
 
   std::string str() const {
     std::string Result;
-    raw_string_ostream Stream(Result);
-    Stream << *this;
-    Stream.flush();
+    raw_string_ostream(Result) << *this;
     return Result;
   }
 
   template <unsigned N> SmallString<N> sstr() const {
     SmallString<N> Result;
-    raw_svector_ostream Stream(Result);
-    Stream << *this;
+    raw_svector_ostream(Result) << *this;
     return Result;
   }
 

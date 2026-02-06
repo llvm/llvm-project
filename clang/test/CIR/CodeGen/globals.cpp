@@ -35,3 +35,9 @@ int *constArrAddr = &arr[2][1];
 // LLVM: @constArrAddr = global ptr getelementptr inbounds nuw (i8, ptr @arr, i64 132), align 8
 
 // OGCG: @constArrAddr = global ptr getelementptr (i8, ptr @arr, i64 132), align 8
+
+bool bool_global = true;
+
+// CIR: cir.global external @bool_global = #true {alignment = 1 : i64}
+// LLVM: @bool_global = global i8 1, align 1
+// OGCG: @bool_global = global i8 1, align 1

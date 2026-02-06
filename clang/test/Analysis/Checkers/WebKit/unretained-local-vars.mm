@@ -1,8 +1,11 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UnretainedLocalVarsChecker -verify %s
 
 #import "objc-mock-types.h"
+#import "mock-system-header.h"
 
 void someFunction();
+extern "C" CFStringRef LocalGlobalCFString;
+extern "C" NSString *LocalGlobalNSString;
 
 namespace raw_ptr {
 void foo() {
@@ -30,18 +33,27 @@ void cf_ptr() {
   // expected-warning@-1{{Local variable 'array' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
   CFArrayAppendValue(array, nullptr);
 }
+
+dispatch_queue_t provide_os();
+void os_ptr() {
+  auto queue = provide_os();
+  // expected-warning@-1{{Local variable 'queue' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  dispatch_queue_get_label(queue);
+}
+
 } // namespace pointer
 
 namespace guardian_scopes {
+SomeObj *provide();
 void foo1() {
-  RetainPtr<SomeObj> foo;
+  RetainPtr<SomeObj> foo = provide();
   {
     SomeObj *bar = foo.get();
   }
 }
 
 void foo2() {
-  RetainPtr<SomeObj> foo;
+  RetainPtr<SomeObj> foo = provide();
   // missing embedded scope here
   SomeObj *bar = foo.get();
   // expected-warning@-1{{Local variable 'bar' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
@@ -49,7 +61,7 @@ void foo2() {
 }
 
 void foo3() {
-  RetainPtr<SomeObj> foo;
+  RetainPtr<SomeObj> foo = provide();
   {
     { SomeObj *bar = foo.get(); }
   }
@@ -57,9 +69,33 @@ void foo3() {
 
 void foo4() {
   {
-    RetainPtr<SomeObj> foo;
+    RetainPtr<SomeObj> foo = provide();
     { SomeObj *bar = foo.get(); }
   }
+}
+
+CFMutableArrayRef provide_cf();
+void foo5() {
+  RetainPtr<CFMutableArrayRef> foo = provide_cf();
+  {
+    CFMutableArrayRef bar = foo.get();
+    CFArrayAppendValue(bar, nullptr);
+  }
+  CFMutableArrayRef baz = foo.get();
+  // expected-warning@-1{{Local variable 'baz' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  CFArrayAppendValue(baz, nullptr);
+}
+
+dispatch_queue_t provide_os();
+void foo6() {
+  OSObjectPtr<dispatch_queue_t> queue = provide_os();
+  {
+    dispatch_queue_t bar = queue.get();
+    dispatch_queue_get_label(bar);
+  }
+  dispatch_queue_t baz = queue.get();
+  // expected-warning@-1{{Local variable 'baz' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  dispatch_queue_get_label(baz);
 }
 
 struct SelfReferencingStruct {
@@ -171,13 +207,35 @@ void foo10() {
   }
 }
 
+bool trivialFunction(dispatch_queue_t queue) { return !!queue; }
+void foo11() {
+  OSObjectPtr<dispatch_queue_t> queue = adoptOSObject(dispatch_queue_create("some queue", nullptr));
+  {
+    dispatch_queue_t queuePtr = queue.get();
+    dispatch_queue_get_label(queuePtr);
+  }
+  {
+    dispatch_queue_t queuePtr = queue.get();
+    // expected-warning@-1{{Local variable 'queuePtr' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    queue = nullptr;
+    dispatch_queue_get_label(queuePtr);
+  }
+  {
+    dispatch_queue_t queuePtr = queue.get();
+    if (trivialFunction(queuePtr))
+      queuePtr = nullptr;
+  }
+}
+
 } // namespace guardian_scopes
 
 namespace auto_keyword {
 class Foo {
   SomeObj *provide_obj();
   CFMutableArrayRef provide_cf_array();
+  dispatch_queue_t provide_queue();
   void doWork(CFMutableArrayRef);
+  void doWork(dispatch_queue_t);
 
   void evil_func() {
     SomeObj *bar = provide_obj();
@@ -204,6 +262,14 @@ class Foo {
     doWork(baz);
   }
 
+  void baz() {
+    auto value1 = provide_queue();
+    // expected-warning@-1{{Local variable 'value1' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    doWork(value1);
+    [[clang::suppress]] auto value2 = provide_queue(); // no-warning
+    doWork(value2);
+  }
+
 };
 } // namespace auto_keyword
 
@@ -220,6 +286,14 @@ void foo2() {
   RetainPtr<NSObject> foo;
   {
     SomeObj *bar = static_cast<SomeObj *>(downcast<SomeObj>(foo.get()));
+    someFunction();
+  }
+}
+
+void foo3() {
+  OSObjectPtr<dispatch_queue_t> foo;
+  {
+    dispatch_queue_t bar = foo.get();
     someFunction();
   }
 }
@@ -292,6 +366,15 @@ void bar(CFMutableArrayRef a) {
   doWork(a);
 }
 
+dispatch_queue_t provide_queue();
+void doWork(dispatch_queue_t);
+
+void baz(dispatch_queue_t a) {
+  a = provide_queue();
+  // expected-warning@-1{{Assignment to an unretained parameter 'a' is unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  doWork(a);
+}
+
 } // namespace local_assignment_to_parameter
 
 namespace local_assignment_to_static_local {
@@ -314,6 +397,16 @@ void bar() {
   static CFMutableArrayRef a = nullptr;
   // expected-warning@-1{{Static local variable 'a' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
   a = provide_cf_array();
+  doWork(a);
+}
+
+dispatch_queue_t provide_queue();
+void doWork(dispatch_queue_t);
+
+void baz() {
+  static dispatch_queue_t a = nullptr;
+  // expected-warning@-1{{Static local variable 'a' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  a = provide_queue();
   doWork(a);
 }
 
@@ -344,6 +437,16 @@ void bar() {
   doWork(g_b);
 }
 
+dispatch_queue_t provide_queue();
+void doWork(dispatch_queue_t);
+dispatch_queue_t g_c = nullptr;
+// expected-warning@-1{{Global variable 'local_assignment_to_global::g_c' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+
+void baz() {
+  g_c = provide_queue();
+  doWork(g_c);
+}
+
 } // namespace local_assignment_to_global
 
 namespace local_var_for_singleton {
@@ -357,6 +460,11 @@ namespace local_var_for_singleton {
   CFMutableArrayRef cfSingleton();
   void bar() {
     CFMutableArrayRef cf = cfSingleton();
+  }
+
+  dispatch_queue_t osSingleton();
+  void baz() {
+    dispatch_queue_t os = osSingleton();
   }
 }
 
@@ -391,22 +499,79 @@ namespace const_global {
 
 extern NSString * const SomeConstant;
 extern CFDictionaryRef const SomeDictionary;
-void doWork(NSString *, CFDictionaryRef);
+extern dispatch_queue_t const SomeQueue;
+void doWork(NSString *, CFDictionaryRef, dispatch_queue_t);
 void use_const_global() {
-  doWork(SomeConstant, SomeDictionary);
+  doWork(SomeConstant, SomeDictionary, SomeQueue);
 }
 
 NSString *provide_str();
 CFDictionaryRef provide_dict();
+dispatch_queue_t provide_queue();
 void use_const_local() {
   NSString * const str = provide_str();
   // expected-warning@-1{{Local variable 'str' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
   CFDictionaryRef dict = provide_dict();
   // expected-warning@-1{{Local variable 'dict' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
-  doWork(str, dict);
+  dispatch_queue_t queue = provide_queue();
+  // expected-warning@-1{{Local variable 'queue' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  doWork(str, dict, queue);
 }
 
 } // namespace const_global
+
+namespace ns_retained_return_value {
+
+NSString *provideNS() NS_RETURNS_RETAINED;
+CFDictionaryRef provideCF() CF_RETURNS_RETAINED;
+dispatch_queue_t provideOS() CF_RETURNS_RETAINED;
+void consumeNS(NSString *);
+void consumeCF(CFDictionaryRef);
+int consumeOS(dispatch_queue_t);
+
+unsigned foo() {
+  auto *string = provideNS();
+  auto *dictionary = provideCF();
+  auto* queue = provideOS();
+  return string.length + CFDictionaryGetCount(dictionary) + consumeOS(queue);
+}
+
+} // namespace ns_retained_return_value
+
+namespace autoreleased {
+
+NSString *provideAutoreleased() __attribute__((ns_returns_autoreleased));
+void consume(NSString *);
+
+void foo() {
+  auto *string = provideAutoreleased();
+  consume(string);
+}
+
+} // autoreleased
+
+namespace ns_global {
+
+void consumeCFString(CFStringRef);
+void consumeNSString(NSString *);
+
+void cf() {
+  auto *str = kCFURLTagNamesKey;
+  consumeCFString(str);
+  auto *localStr = LocalGlobalCFString;
+  // expected-warning@-1{{Local variable 'localStr' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  consumeCFString(localStr);
+}
+
+void ns() {
+  auto *str = NSApplicationDidBecomeActiveNotification;
+  consumeNSString(str);
+  auto *localStr = LocalGlobalNSString;
+  // expected-warning@-1{{Local variable 'localStr' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  consumeNSString(localStr);
+}
+
+}
 
 bool doMoreWorkOpaque(OtherObj*);
 SomeObj* provide();

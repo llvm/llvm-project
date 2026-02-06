@@ -192,7 +192,7 @@ struct WebAssemblyFunctionInfo final : public yaml::MachineFunctionInfo {
                           const llvm::WebAssemblyFunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~WebAssemblyFunctionInfo() = default;
+  ~WebAssemblyFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<WebAssemblyFunctionInfo> {
@@ -207,13 +207,12 @@ template <> struct MappingTraits<WebAssemblyFunctionInfo> {
 template <> struct CustomMappingTraits<BBNumberMap> {
   static void inputOne(IO &YamlIO, StringRef Key,
                        BBNumberMap &SrcToUnwindDest) {
-    YamlIO.mapRequired(Key.str().c_str(),
-                       SrcToUnwindDest[std::atoi(Key.str().c_str())]);
+    YamlIO.mapRequired(Key, SrcToUnwindDest[std::atoi(Key.str().c_str())]);
   }
 
   static void output(IO &YamlIO, BBNumberMap &SrcToUnwindDest) {
-    for (auto KV : SrcToUnwindDest)
-      YamlIO.mapRequired(std::to_string(KV.first).c_str(), KV.second);
+    for (auto [Src, Dest] : SrcToUnwindDest)
+      YamlIO.mapRequired(std::to_string(Src), Dest);
   }
 };
 

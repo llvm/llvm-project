@@ -16,6 +16,7 @@
 #include <deque>
 #include <flat_set>
 #include <functional>
+#include <type_traits>
 #include <vector>
 
 #include "test_macros.h"
@@ -23,39 +24,56 @@
 #include "test_allocator.h"
 
 struct ThrowingDtorComp {
-  bool operator()(const auto&, const auto&) const;
-  ~ThrowingDtorComp() noexcept(false) {}
+  constexpr bool operator()(const auto&, const auto&) const;
+  constexpr ~ThrowingDtorComp() noexcept(false) {}
 };
 
-void test() {
+template <template <class...> class KeyContainer>
+constexpr void test() {
   {
-    using C = std::flat_multiset<MoveOnly, MoveOnly>;
+    using C = std::flat_multiset<MoveOnly, std::less<MoveOnly>, KeyContainer<MoveOnly>>;
     static_assert(std::is_nothrow_destructible_v<C>);
     C c;
   }
   {
-    using V = std::vector<MoveOnly, test_allocator<MoveOnly>>;
+    using V = KeyContainer<MoveOnly, test_allocator<MoveOnly>>;
     using C = std::flat_multiset<MoveOnly, std::less<MoveOnly>, V>;
     static_assert(std::is_nothrow_destructible_v<C>);
     C c;
   }
   {
-    using V = std::deque<MoveOnly, other_allocator<MoveOnly>>;
+    using V = KeyContainer<MoveOnly, other_allocator<MoveOnly>>;
     using C = std::flat_multiset<MoveOnly, std::greater<MoveOnly>, V>;
     static_assert(std::is_nothrow_destructible_v<C>);
     C c;
   }
 #if defined(_LIBCPP_VERSION)
   {
-    using C = std::flat_multiset<MoveOnly, ThrowingDtorComp>;
+    using C = std::flat_multiset<MoveOnly, ThrowingDtorComp, KeyContainer<MoveOnly>>;
     static_assert(!std::is_nothrow_destructible_v<C>);
     C c;
   }
 #endif // _LIBCPP_VERSION
 }
 
+constexpr bool test() {
+  test<std::vector>();
+
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test<std::deque>();
+  }
+
+  return true;
+}
+
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

@@ -71,7 +71,7 @@ public:
     if (SIInstrInfo::isTRANS(MI))
       return TRANS;
     // WMMA XDL ops are treated the same as TRANS.
-    if (AMDGPU::isGFX1250(*ST) && SII->isXDLWMMA(MI))
+    if (ST->hasGFX1250Insts() && SII->isXDLWMMA(MI))
       return TRANS;
     if (SIInstrInfo::isVALU(MI))
       return VALU;
@@ -221,7 +221,7 @@ public:
   };
 
   // A map from regunits to the delay info for that regunit.
-  struct DelayState : DenseMap<unsigned, DelayInfo> {
+  struct DelayState : DenseMap<MCRegUnit, DelayInfo> {
     // Merge another DelayState into this one by merging the delay info for each
     // regunit.
     void merge(const DelayState &RHS) {
@@ -325,6 +325,13 @@ public:
       for (auto I = MachineBasicBlock::instr_iterator(LastDelayAlu),
                 E = MachineBasicBlock::instr_iterator(MI);
            ++I != E;) {
+        if (I->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
+          // It is not deterministic whether the skip count counts
+          // S_SET_VGPR_MSB instructions or not, so do not include them in a
+          // skip region.
+          Skip = 6;
+          break;
+        }
         if (!I->isBundle() && !I->isMetaInstruction())
           ++Skip;
       }
@@ -359,7 +366,8 @@ public:
     bool Changed = false;
     MachineInstr *LastDelayAlu = nullptr;
 
-    MCRegUnit LastSGPRFromVALU = 0;
+    // FIXME: 0 is a valid register unit.
+    MCRegUnit LastSGPRFromVALU = static_cast<MCRegUnit>(0);
     // Iterate over the contents of bundles, but don't emit any instructions
     // inside a bundle.
     for (auto &MI : MBB.instrs()) {
@@ -379,7 +387,8 @@ public:
         if (It != State.end()) {
           DelayInfo Info = It->getSecond();
           State.advanceByVALUNum(Info.VALUNum);
-          LastSGPRFromVALU = 0;
+          // FIXME: 0 is a valid register unit.
+          LastSGPRFromVALU = static_cast<MCRegUnit>(0);
         }
       }
 

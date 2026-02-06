@@ -5,6 +5,8 @@
 ; RUN: llc -mtriple=arm-unknown-linux-eabi -mattr=+vfp2 < %s | FileCheck -check-prefixes=AAPCS-SOFT,EABI-SOFT %s
 ; RUN: llc -mtriple=armv7-unknown-linux -target-abi=apcs -float-abi=soft < %s | FileCheck -check-prefix=APCS %s
 ; RUN: llc -mtriple=armv7-unknown-linux -target-abi=apcs -float-abi=hard < %s | FileCheck -check-prefix=APCS %s
+; RUN: llc -mtriple=armv7k-apple-watchos2.0 -mcpu=cortex-a7 < %s | FileCheck -check-prefix=WATCHABI-HARD %s
+; RUN: llc -mtriple=armv7k-apple-watchos2.0 -mcpu=cortex-a7 -float-abi=soft < %s | FileCheck -check-prefix=WATCHABI-SOFT %s
 
 define i1 @test(half %self) #0 {
 ; GNU-AAPCS-HARD-LABEL: test:
@@ -72,6 +74,26 @@ define i1 @test(half %self) #0 {
 ; APCS-NEXT:    movwvs r0, #1
 ; APCS-NEXT:    pop {lr}
 ; APCS-NEXT:    bx lr
+;
+; WATCHABI-HARD-LABEL: test:
+; WATCHABI-HARD:       @ %bb.0:
+; WATCHABI-HARD-NEXT:    vcvtb.f32.f16 s0, s0
+; WATCHABI-HARD-NEXT:    mov r0, #0
+; WATCHABI-HARD-NEXT:    vcmp.f32 s0, s0
+; WATCHABI-HARD-NEXT:    vmrs APSR_nzcv, fpscr
+; WATCHABI-HARD-NEXT:    movwvs r0, #1
+; WATCHABI-HARD-NEXT:    bx lr
+;
+; WATCHABI-SOFT-LABEL: test:
+; WATCHABI-SOFT:       @ %bb.0:
+; WATCHABI-SOFT-NEXT:    vmov s0, r0
+; WATCHABI-SOFT-NEXT:    mov r1, #0
+; WATCHABI-SOFT-NEXT:    vcvtb.f32.f16 s0, s0
+; WATCHABI-SOFT-NEXT:    vcmp.f32 s0, s0
+; WATCHABI-SOFT-NEXT:    vmrs APSR_nzcv, fpscr
+; WATCHABI-SOFT-NEXT:    movwvs r1, #1
+; WATCHABI-SOFT-NEXT:    mov r0, r1
+; WATCHABI-SOFT-NEXT:    bx lr
   %_0 = fcmp une half %self, %self
   ret i1 %_0
 }
@@ -111,6 +133,21 @@ define float @f16_to_f32(ptr %p) #0 {
 ; APCS:       @ %bb.0:
 ; APCS-NEXT:    ldrh r0, [r0]
 ; APCS-NEXT:    b __gnu_h2f_ieee
+;
+; WATCHABI-HARD-LABEL: f16_to_f32:
+; WATCHABI-HARD:       @ %bb.0:
+; WATCHABI-HARD-NEXT:    ldrh r0, [r0]
+; WATCHABI-HARD-NEXT:    vmov s0, r0
+; WATCHABI-HARD-NEXT:    vcvtb.f32.f16 s0, s0
+; WATCHABI-HARD-NEXT:    bx lr
+;
+; WATCHABI-SOFT-LABEL: f16_to_f32:
+; WATCHABI-SOFT:       @ %bb.0:
+; WATCHABI-SOFT-NEXT:    ldrh r0, [r0]
+; WATCHABI-SOFT-NEXT:    vmov s0, r0
+; WATCHABI-SOFT-NEXT:    vcvtb.f32.f16 s0, s0
+; WATCHABI-SOFT-NEXT:    vmov r0, s0
+; WATCHABI-SOFT-NEXT:    bx lr
   %load = load half, ptr %p
   %cvt = fpext half %load to float
   ret float %cvt
@@ -169,6 +206,21 @@ define void @f32_to_f16(ptr %p, float %arg) #0 {
 ; APCS-NEXT:    bl __gnu_f2h_ieee
 ; APCS-NEXT:    strh r0, [r4]
 ; APCS-NEXT:    pop {r4, pc}
+;
+; WATCHABI-HARD-LABEL: f32_to_f16:
+; WATCHABI-HARD:       @ %bb.0:
+; WATCHABI-HARD-NEXT:    vcvtb.f16.f32 s0, s0
+; WATCHABI-HARD-NEXT:    vmov r1, s0
+; WATCHABI-HARD-NEXT:    strh r1, [r0]
+; WATCHABI-HARD-NEXT:    bx lr
+;
+; WATCHABI-SOFT-LABEL: f32_to_f16:
+; WATCHABI-SOFT:       @ %bb.0:
+; WATCHABI-SOFT-NEXT:    vmov s0, r1
+; WATCHABI-SOFT-NEXT:    vcvtb.f16.f32 s0, s0
+; WATCHABI-SOFT-NEXT:    vmov r1, s0
+; WATCHABI-SOFT-NEXT:    strh r1, [r0]
+; WATCHABI-SOFT-NEXT:    bx lr
   %cvt = fptrunc float %arg to half
   store half %cvt, ptr %p
   ret void
@@ -231,6 +283,23 @@ define double @f16_to_f64(ptr %p) #0 {
 ; APCS-NEXT:    vmov r0, r1, d16
 ; APCS-NEXT:    pop {lr}
 ; APCS-NEXT:    bx lr
+;
+; WATCHABI-HARD-LABEL: f16_to_f64:
+; WATCHABI-HARD:       @ %bb.0:
+; WATCHABI-HARD-NEXT:    ldrh r0, [r0]
+; WATCHABI-HARD-NEXT:    vmov s0, r0
+; WATCHABI-HARD-NEXT:    vcvtb.f32.f16 s0, s0
+; WATCHABI-HARD-NEXT:    vcvt.f64.f32 d0, s0
+; WATCHABI-HARD-NEXT:    bx lr
+;
+; WATCHABI-SOFT-LABEL: f16_to_f64:
+; WATCHABI-SOFT:       @ %bb.0:
+; WATCHABI-SOFT-NEXT:    ldrh r0, [r0]
+; WATCHABI-SOFT-NEXT:    vmov s0, r0
+; WATCHABI-SOFT-NEXT:    vcvtb.f32.f16 s0, s0
+; WATCHABI-SOFT-NEXT:    vcvt.f64.f32 d16, s0
+; WATCHABI-SOFT-NEXT:    vmov r0, r1, d16
+; WATCHABI-SOFT-NEXT:    bx lr
   %load = load half, ptr %p
   %cvt = fpext half %load to double
   ret double %cvt
@@ -269,6 +338,28 @@ define void @f64_to_f16(ptr %p, double %arg) #0 {
 ; APCS-NEXT:    bl __truncdfhf2
 ; APCS-NEXT:    strh r0, [r4]
 ; APCS-NEXT:    pop {r4, pc}
+;
+; WATCHABI-HARD-LABEL: f64_to_f16:
+; WATCHABI-HARD:       @ %bb.0:
+; WATCHABI-HARD-NEXT:    push {r4, lr}
+; WATCHABI-HARD-NEXT:    sub sp, sp, #8
+; WATCHABI-HARD-NEXT:    mov r4, r0
+; WATCHABI-HARD-NEXT:    bl ___truncdfhf2
+; WATCHABI-HARD-NEXT:    strh r0, [r4]
+; WATCHABI-HARD-NEXT:    add sp, sp, #8
+; WATCHABI-HARD-NEXT:    pop {r4, pc}
+;
+; WATCHABI-SOFT-LABEL: f64_to_f16:
+; WATCHABI-SOFT:       @ %bb.0:
+; WATCHABI-SOFT-NEXT:    push {r4, lr}
+; WATCHABI-SOFT-NEXT:    sub sp, sp, #8
+; WATCHABI-SOFT-NEXT:    mov r4, r0
+; WATCHABI-SOFT-NEXT:    mov r1, r3
+; WATCHABI-SOFT-NEXT:    mov r0, r2
+; WATCHABI-SOFT-NEXT:    bl ___truncdfhf2
+; WATCHABI-SOFT-NEXT:    strh r0, [r4]
+; WATCHABI-SOFT-NEXT:    add sp, sp, #8
+; WATCHABI-SOFT-NEXT:    pop {r4, pc}
   %cvt = fptrunc double %arg to half
   store half %cvt, ptr %p
   ret void

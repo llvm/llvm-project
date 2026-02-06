@@ -86,6 +86,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   ObjCSelfInitChecker.cpp
   ObjCSuperDeallocChecker.cpp
   ObjCUnusedIVarsChecker.cpp
+  OpaqueSTLFunctionsModeling.cpp
   OSObjectCStyleCast.cpp
   PaddingChecker.cpp
   PointerArithChecker.cpp
@@ -127,11 +128,12 @@ add_clang_library(clangStaticAnalyzerCheckers
   UnreachableCodeChecker.cpp
   VforkChecker.cpp
   VLASizeChecker.cpp
-  ValistChecker.cpp
+  VAListChecker.cpp
   VirtualCallChecker.cpp
   WebKit/ASTUtils.cpp
   WebKit/ForwardDeclChecker.cpp
   WebKit/MemoryUnsafeCastChecker.cpp
+  WebKit/NoDeleteChecker.cpp
   WebKit/PtrTypesSemantics.cpp
   WebKit/RefCntblBaseVirtualDtorChecker.cpp
   WebKit/RetainPtrCtorAdoptChecker.cpp

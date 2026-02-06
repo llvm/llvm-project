@@ -8,7 +8,7 @@ KernelInfo
 Introduction
 ============
 
-This LLVM IR pass reports various statistics for codes compiled for GPUs.  The
+This LLVM IR pass reports various statistics for code compiled for GPUs.  The
 goal of these statistics is to help identify bad code patterns and ways to
 mitigate them.  The pass operates at the LLVM IR level so that it can, in
 theory, support any LLVM-based compiler for programming languages supporting

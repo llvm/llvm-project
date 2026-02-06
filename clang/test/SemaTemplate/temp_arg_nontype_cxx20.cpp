@@ -371,3 +371,18 @@ namespace ReportedRegression2 {
     fn<str>();
   }
 }
+
+namespace GH151531 {
+struct w {
+    int n;
+};
+
+template <const w *X> void f() { static_assert(X->n == 42); }
+
+template <w X> void g() { f<&X>(); }
+
+void test() {
+    constexpr w X = {42};
+    g<X>();
+}
+}

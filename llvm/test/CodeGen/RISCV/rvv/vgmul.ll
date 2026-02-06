@@ -4,11 +4,6 @@
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+zvkg \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
 
-declare <vscale x 1 x i32> @llvm.riscv.vgmul.vv.nxv1i32(
-  <vscale x 1 x i32>,
-  <vscale x 1 x i32>,
-  iXLen, iXLen);
-
 define <vscale x 1 x i32> @intrinsic_vgmul_vs_nxv1i32(<vscale x 1 x i32> %0, <vscale x 1 x i32> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vgmul_vs_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
@@ -23,11 +18,6 @@ entry:
 
   ret <vscale x 1 x i32> %a
 }
-
-declare <vscale x 2 x i32> @llvm.riscv.vgmul.vv.nxv2i32(
-  <vscale x 2 x i32>,
-  <vscale x 2 x i32>,
-  iXLen, iXLen);
 
 define <vscale x 2 x i32> @intrinsic_vgmul_vs_nxv2i32(<vscale x 2 x i32> %0, <vscale x 2 x i32> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vgmul_vs_nxv2i32:
@@ -44,11 +34,6 @@ entry:
   ret <vscale x 2 x i32> %a
 }
 
-declare <vscale x 4 x i32> @llvm.riscv.vgmul.vv.nxv4i32(
-  <vscale x 4 x i32>,
-  <vscale x 4 x i32>,
-  iXLen, iXLen);
-
 define <vscale x 4 x i32> @intrinsic_vgmul_vs_nxv4i32(<vscale x 4 x i32> %0, <vscale x 4 x i32> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vgmul_vs_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
@@ -64,11 +49,6 @@ entry:
   ret <vscale x 4 x i32> %a
 }
 
-declare <vscale x 8 x i32> @llvm.riscv.vgmul.vv.nxv8i32(
-  <vscale x 8 x i32>,
-  <vscale x 8 x i32>,
-  iXLen, iXLen);
-
 define <vscale x 8 x i32> @intrinsic_vgmul_vs_nxv8i32(<vscale x 8 x i32> %0, <vscale x 8 x i32> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vgmul_vs_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
@@ -83,11 +63,6 @@ entry:
 
   ret <vscale x 8 x i32> %a
 }
-
-declare <vscale x 16 x i32> @llvm.riscv.vgmul.vv.nxv16i32(
-  <vscale x 16 x i32>,
-  <vscale x 16 x i32>,
-  iXLen, iXLen);
 
 define <vscale x 16 x i32> @intrinsic_vgmul_vs_nxv16i32(<vscale x 16 x i32> %0, <vscale x 16 x i32> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: intrinsic_vgmul_vs_nxv16i32:

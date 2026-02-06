@@ -1508,61 +1508,81 @@ define void @test_fma(ptr %p, ptr %q, ptr %r) #0 {
 ; CHECK-FP16-NEXT:    push {r4, lr}
 ; CHECK-FP16-NEXT:    mov r4, r0
 ; CHECK-FP16-NEXT:    ldrh r0, [r1]
-; CHECK-FP16-NEXT:    ldrh r1, [r4]
-; CHECK-FP16-NEXT:    ldrh r2, [r2]
-; CHECK-FP16-NEXT:    vmov s2, r0
-; CHECK-FP16-NEXT:    vmov s0, r1
-; CHECK-FP16-NEXT:    vcvtb.f32.f16 s1, s2
-; CHECK-FP16-NEXT:    vmov s2, r2
+; CHECK-FP16-NEXT:    ldrh r1, [r2]
+; CHECK-FP16-NEXT:    vmov s0, r0
+; CHECK-FP16-NEXT:    ldrh r0, [r4]
 ; CHECK-FP16-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-FP16-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-FP16-NEXT:    bl fmaf
-; CHECK-FP16-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vcvt.f64.f32 d16, s0
+; CHECK-FP16-NEXT:    vmov s0, r0
+; CHECK-FP16-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-FP16-NEXT:    vcvt.f64.f32 d17, s0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-FP16-NEXT:    vcvt.f64.f32 d18, s0
+; CHECK-FP16-NEXT:    vmla.f64 d18, d17, d16
+; CHECK-FP16-NEXT:    vmov r0, r1, d18
+; CHECK-FP16-NEXT:    bl __aeabi_d2h
 ; CHECK-FP16-NEXT:    strh r0, [r4]
 ; CHECK-FP16-NEXT:    pop {r4, pc}
 ;
 ; CHECK-LIBCALL-VFP-LABEL: test_fma:
 ; CHECK-LIBCALL-VFP:         .save {r4, r5, r6, lr}
 ; CHECK-LIBCALL-VFP-NEXT:    push {r4, r5, r6, lr}
+; CHECK-LIBCALL-VFP-NEXT:    .vsave {d8, d9}
+; CHECK-LIBCALL-VFP-NEXT:    vpush {d8, d9}
 ; CHECK-LIBCALL-VFP-NEXT:    mov r4, r0
-; CHECK-LIBCALL-VFP-NEXT:    ldrh r0, [r2]
-; CHECK-LIBCALL-VFP-NEXT:    mov r5, r1
+; CHECK-LIBCALL-VFP-NEXT:    ldrh r0, [r0]
+; CHECK-LIBCALL-VFP-NEXT:    mov r5, r2
+; CHECK-LIBCALL-VFP-NEXT:    mov r6, r1
 ; CHECK-LIBCALL-VFP-NEXT:    bl __aeabi_h2f
-; CHECK-LIBCALL-VFP-NEXT:    mov r6, r0
-; CHECK-LIBCALL-VFP-NEXT:    ldrh r0, [r5]
+; CHECK-LIBCALL-VFP-NEXT:    ldrh r1, [r6]
+; CHECK-LIBCALL-VFP-NEXT:    vmov s16, r0
+; CHECK-LIBCALL-VFP-NEXT:    ldrh r5, [r5]
+; CHECK-LIBCALL-VFP-NEXT:    mov r0, r1
 ; CHECK-LIBCALL-VFP-NEXT:    bl __aeabi_h2f
-; CHECK-LIBCALL-VFP-NEXT:    mov r5, r0
-; CHECK-LIBCALL-VFP-NEXT:    ldrh r0, [r4]
+; CHECK-LIBCALL-VFP-NEXT:    vmov s18, r0
+; CHECK-LIBCALL-VFP-NEXT:    mov r0, r5
 ; CHECK-LIBCALL-VFP-NEXT:    bl __aeabi_h2f
 ; CHECK-LIBCALL-VFP-NEXT:    vmov s0, r0
-; CHECK-LIBCALL-VFP-NEXT:    vmov s1, r5
-; CHECK-LIBCALL-VFP-NEXT:    vmov s2, r6
-; CHECK-LIBCALL-VFP-NEXT:    bl fmaf
-; CHECK-LIBCALL-VFP-NEXT:    vmov r0, s0
-; CHECK-LIBCALL-VFP-NEXT:    bl __aeabi_f2h
+; CHECK-LIBCALL-VFP-NEXT:    vcvt.f64.f32 d16, s18
+; CHECK-LIBCALL-VFP-NEXT:    vcvt.f64.f32 d17, s16
+; CHECK-LIBCALL-VFP-NEXT:    vcvt.f64.f32 d18, s0
+; CHECK-LIBCALL-VFP-NEXT:    vmla.f64 d18, d17, d16
+; CHECK-LIBCALL-VFP-NEXT:    vmov r0, r1, d18
+; CHECK-LIBCALL-VFP-NEXT:    bl __aeabi_d2h
 ; CHECK-LIBCALL-VFP-NEXT:    strh r0, [r4]
+; CHECK-LIBCALL-VFP-NEXT:    vpop {d8, d9}
 ; CHECK-LIBCALL-VFP-NEXT:    pop {r4, r5, r6, pc}
 ;
 ; CHECK-NOVFP-LABEL: test_fma:
-; CHECK-NOVFP:         .save {r4, r5, r6, lr}
-; CHECK-NOVFP-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NOVFP:         .save {r4, r5, r6, r7, r11, lr}
+; CHECK-NOVFP-NEXT:    push {r4, r5, r6, r7, r11, lr}
 ; CHECK-NOVFP-NEXT:    mov r4, r0
 ; CHECK-NOVFP-NEXT:    ldrh r0, [r1]
 ; CHECK-NOVFP-NEXT:    mov r5, r2
 ; CHECK-NOVFP-NEXT:    bl __aeabi_h2f
+; CHECK-NOVFP-NEXT:    bl __aeabi_f2d
+; CHECK-NOVFP-NEXT:    mov r6, r0
+; CHECK-NOVFP-NEXT:    ldrh r0, [r4]
+; CHECK-NOVFP-NEXT:    mov r7, r1
+; CHECK-NOVFP-NEXT:    bl __aeabi_h2f
+; CHECK-NOVFP-NEXT:    bl __aeabi_f2d
+; CHECK-NOVFP-NEXT:    mov r2, r6
+; CHECK-NOVFP-NEXT:    mov r3, r7
+; CHECK-NOVFP-NEXT:    bl __aeabi_dmul
 ; CHECK-NOVFP-NEXT:    mov r6, r0
 ; CHECK-NOVFP-NEXT:    ldrh r0, [r5]
+; CHECK-NOVFP-NEXT:    mov r7, r1
 ; CHECK-NOVFP-NEXT:    bl __aeabi_h2f
-; CHECK-NOVFP-NEXT:    mov r5, r0
-; CHECK-NOVFP-NEXT:    ldrh r0, [r4]
-; CHECK-NOVFP-NEXT:    bl __aeabi_h2f
-; CHECK-NOVFP-NEXT:    mov r1, r6
-; CHECK-NOVFP-NEXT:    mov r2, r5
-; CHECK-NOVFP-NEXT:    bl fmaf
-; CHECK-NOVFP-NEXT:    bl __aeabi_f2h
+; CHECK-NOVFP-NEXT:    bl __aeabi_f2d
+; CHECK-NOVFP-NEXT:    mov r2, r0
+; CHECK-NOVFP-NEXT:    mov r3, r1
+; CHECK-NOVFP-NEXT:    mov r0, r6
+; CHECK-NOVFP-NEXT:    mov r1, r7
+; CHECK-NOVFP-NEXT:    bl __aeabi_dadd
+; CHECK-NOVFP-NEXT:    bl __aeabi_d2h
 ; CHECK-NOVFP-NEXT:    strh r0, [r4]
-; CHECK-NOVFP-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-NOVFP-NEXT:    pop {r4, r5, r6, r7, r11, pc}
   %a = load half, ptr %p, align 2
   %b = load half, ptr %q, align 2
   %c = load half, ptr %r, align 2
@@ -1572,26 +1592,11 @@ define void @test_fma(ptr %p, ptr %q, ptr %r) #0 {
 }
 
 define void @test_fabs(ptr %p) {
-; CHECK-FP16-LABEL: test_fabs:
-; CHECK-FP16:         ldrh r1, [r0]
-; CHECK-FP16-NEXT:    vmov s0, r1
-; CHECK-FP16-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-FP16-NEXT:    vabs.f32 s0, s0
-; CHECK-FP16-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-FP16-NEXT:    vmov r1, s0
-; CHECK-FP16-NEXT:    strh r1, [r0]
-; CHECK-FP16-NEXT:    bx lr
-;
-; CHECK-LIBCALL-LABEL: test_fabs:
-; CHECK-LIBCALL:         .save {r4, lr}
-; CHECK-LIBCALL-NEXT:    push {r4, lr}
-; CHECK-LIBCALL-NEXT:    mov r4, r0
-; CHECK-LIBCALL-NEXT:    ldrh r0, [r0]
-; CHECK-LIBCALL-NEXT:    bl __aeabi_h2f
-; CHECK-LIBCALL-NEXT:    bic r0, r0, #-2147483648
-; CHECK-LIBCALL-NEXT:    bl __aeabi_f2h
-; CHECK-LIBCALL-NEXT:    strh r0, [r4]
-; CHECK-LIBCALL-NEXT:    pop {r4, pc}
+; CHECK-ALL-LABEL: test_fabs:
+; CHECK-ALL:         ldrh r1, [r0]
+; CHECK-ALL-NEXT:    bfc r1, #15, #17
+; CHECK-ALL-NEXT:    strh r1, [r0]
+; CHECK-ALL-NEXT:    bx lr
   %a = load half, ptr %p, align 2
   %r = call half @llvm.fabs.f16(half %a)
   store half %r, ptr %p
@@ -2454,26 +2459,11 @@ define half @test_sitofp_i32_fadd(i32 %a, half %b) #0 {
 }
 
 define void @test_fneg(ptr %p1, ptr %p2) #0 {
-; CHECK-FP16-LABEL: test_fneg:
-; CHECK-FP16:         ldrh r0, [r0]
-; CHECK-FP16-NEXT:    vmov s0, r0
-; CHECK-FP16-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-FP16-NEXT:    vneg.f32 s0, s0
-; CHECK-FP16-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-FP16-NEXT:    vmov r0, s0
-; CHECK-FP16-NEXT:    strh r0, [r1]
-; CHECK-FP16-NEXT:    bx lr
-;
-; CHECK-LIBCALL-LABEL: test_fneg:
-; CHECK-LIBCALL:         .save {r4, lr}
-; CHECK-LIBCALL-NEXT:    push {r4, lr}
-; CHECK-LIBCALL-NEXT:    ldrh r0, [r0]
-; CHECK-LIBCALL-NEXT:    mov r4, r1
-; CHECK-LIBCALL-NEXT:    bl __aeabi_h2f
-; CHECK-LIBCALL-NEXT:    eor r0, r0, #-2147483648
-; CHECK-LIBCALL-NEXT:    bl __aeabi_f2h
-; CHECK-LIBCALL-NEXT:    strh r0, [r4]
-; CHECK-LIBCALL-NEXT:    pop {r4, pc}
+; CHECK-ALL-LABEL: test_fneg:
+; CHECK-ALL:         ldrh r0, [r0]
+; CHECK-ALL-NEXT:    eor r0, r0, #32768
+; CHECK-ALL-NEXT:    strh r0, [r1]
+; CHECK-ALL-NEXT:    bx lr
   %v = load half, ptr %p1, align 2
   %res = fneg half %v
   store half %res, ptr %p2, align 2

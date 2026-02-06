@@ -48,7 +48,7 @@ public:
                 raw_pwrite_stream &OutFile,
                 DWARFLinkerBase::MessageHandlerTy Warning)
       : OutFile(OutFile), OutFileType(OutFileType), WarningHandler(Warning) {}
-  virtual ~DwarfStreamer() = default;
+  ~DwarfStreamer() override = default;
 
   static Expected<std::unique_ptr<DwarfStreamer>> createStreamer(
       const Triple &TheTriple, DWARFLinkerBase::OutputFileType FileType,

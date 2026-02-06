@@ -12,6 +12,7 @@
 #include <__compare/common_comparison_category.h>
 #include <__compare/ordering.h>
 #include <__concepts/common_reference_with.h>
+#include <__concepts/comparison_common_type.h>
 #include <__concepts/equality_comparable.h>
 #include <__concepts/same_as.h>
 #include <__concepts/totally_ordered.h>
@@ -39,8 +40,7 @@ concept three_way_comparable =
 
 template <class _Tp, class _Up, class _Cat = partial_ordering>
 concept three_way_comparable_with =
-    three_way_comparable<_Tp, _Cat> && three_way_comparable<_Up, _Cat> &&
-    common_reference_with<__make_const_lvalue_ref<_Tp>, __make_const_lvalue_ref<_Up>> &&
+    three_way_comparable<_Tp, _Cat> && three_way_comparable<_Up, _Cat> && __comparison_common_type_with<_Tp, _Up> &&
     three_way_comparable<common_reference_t<__make_const_lvalue_ref<_Tp>, __make_const_lvalue_ref<_Up>>, _Cat> &&
     __weakly_equality_comparable_with<_Tp, _Up> && __partially_ordered_with<_Tp, _Up> &&
     requires(__make_const_lvalue_ref<_Tp> __t, __make_const_lvalue_ref<_Up> __u) {

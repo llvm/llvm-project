@@ -6,7 +6,7 @@
     ret [13 x i32] poison
   }
 
-  attributes #0 = { alwaysinline nounwind memory(readwrite) "amdgpu-flat-work-group-size"="32,32" "amdgpu-memory-bound"="false" "amdgpu-unroll-threshold"="700" "amdgpu-wave-limiter"="false" "denormal-fp-math-f32"="preserve-sign" "target-cpu"="gfx1030" "target-features"=",+wavefrontsize32,+cumode,+enable-flat-scratch" "uniform-work-group-size"="false" }
+  attributes #0 = { alwaysinline nounwind memory(readwrite) "amdgpu-flat-work-group-size"="32,32" "amdgpu-memory-bound"="false" "amdgpu-unroll-threshold"="700" "amdgpu-wave-limiter"="false" denormal_fpenv(float: preservesign) "target-cpu"="gfx1030" "target-features"="+wavefrontsize32,+cumode,+enable-flat-scratch" "uniform-work-group-size"="false" }
 ...
 ---
 
@@ -33,11 +33,11 @@ body:             |
   ; GCN-NEXT:   $vcc_hi = frame-setup COPY $sgpr33
   ; GCN-NEXT:   $sgpr33 = frame-setup COPY $sgpr32
   ; GCN-NEXT:   $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-  ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.69, addrspace 5)
-  ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr2, $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.70, addrspace 5)
-  ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr3, $sgpr33, 8, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.71, addrspace 5)
-  ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr4, $sgpr33, 12, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.72, addrspace 5)
-  ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr5, $sgpr33, 16, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.73, addrspace 5)
+  ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.69, addrspace 5)
+  ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr2, $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.70, addrspace 5)
+  ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr3, $sgpr33, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.71, addrspace 5)
+  ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr4, $sgpr33, 12, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.72, addrspace 5)
+  ; GCN-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr5, $sgpr33, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.73, addrspace 5)
   ; GCN-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr0
   ; GCN-NEXT:   $sgpr32 = frame-setup S_ADD_I32 $sgpr32, 24, implicit-def dead $scc
   ; GCN-NEXT:   $vgpr2 = SI_SPILL_S32_TO_VGPR $sgpr4, 0, $vgpr2
@@ -200,11 +200,11 @@ body:             |
   ; GCN-NEXT:   $sgpr4 = SI_RESTORE_S32_FROM_VGPR $vgpr2, 0
   ; GCN-NEXT:   $sgpr32 = frame-destroy COPY $sgpr33
   ; GCN-NEXT:   $sgpr0 = S_XOR_SAVEEXEC_B32 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
-  ; GCN-NEXT:   $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.69, addrspace 5)
-  ; GCN-NEXT:   $vgpr2 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.70, addrspace 5)
-  ; GCN-NEXT:   $vgpr3 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 8, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.71, addrspace 5)
-  ; GCN-NEXT:   $vgpr4 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 12, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.72, addrspace 5)
-  ; GCN-NEXT:   $vgpr5 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 16, 0, implicit $exec, implicit $flat_scr :: (load (s32) from %stack.73, addrspace 5)
+  ; GCN-NEXT:   $vgpr1 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.69, addrspace 5)
+  ; GCN-NEXT:   $vgpr2 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.70, addrspace 5)
+  ; GCN-NEXT:   $vgpr3 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 8, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.71, addrspace 5)
+  ; GCN-NEXT:   $vgpr4 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 12, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.72, addrspace 5)
+  ; GCN-NEXT:   $vgpr5 = SCRATCH_LOAD_DWORD_SADDR $sgpr33, 16, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" load (s32) from %stack.73, addrspace 5)
   ; GCN-NEXT:   $exec_lo = S_MOV_B32 killed $sgpr0
   ; GCN-NEXT:   $sgpr33 = frame-destroy COPY $vcc_hi
   ; GCN-NEXT:   S_ENDPGM 0

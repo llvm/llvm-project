@@ -10,8 +10,6 @@
 
 namespace clang {
 namespace syntax {
-constexpr llvm::StringLiteral syntax::TokenBufferTokenManager::Kind;
-
 std::pair<FileID, ArrayRef<syntax::Token>>
 syntax::TokenBufferTokenManager::lexBuffer(
     std::unique_ptr<llvm::MemoryBuffer> Input) {

@@ -13,6 +13,7 @@ set(LIBS
   FIRDialectSupport
   FIRSupport
   HLFIRDialect
+  MIFDialect
 )
 
 add_flang_unittest(FlangOptimizerTests
@@ -42,7 +43,8 @@ DEPENDS
   CUFDialect
   FIRDialect
   FIRSupport
-  HLFIRDialect)
+  HLFIRDialect
+  MIFDialect)
 
 if(NOT FLANG_STANDALONE_BUILD)
   add_dependencies(FlangOptimizerTests

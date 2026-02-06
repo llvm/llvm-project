@@ -28,6 +28,15 @@ enum class ResourceClass : uint8_t {
   UAV,
   CBuffer,
   Sampler,
+  LastEntry = Sampler,
+};
+
+enum class ResourceDimension : uint8_t {
+  Unknown = 0,
+  Dim1D,
+  Dim2D,
+  Dim3D,
+  Cube,
 };
 
 /// The kind of resource for an SRV or UAV resource. Sometimes referred to as
@@ -101,7 +110,6 @@ const unsigned MinWaveSize = 4;
 const unsigned MaxWaveSize = 128;
 
 LLVM_ABI StringRef getResourceClassName(ResourceClass RC);
-
 } // namespace dxil
 } // namespace llvm
 

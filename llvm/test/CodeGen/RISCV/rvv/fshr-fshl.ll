@@ -36,5 +36,3 @@ define <vscale x 1 x i32> @fshl(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <v
   ret <vscale x 1 x i32> %res
 }
 
-declare <vscale x 1 x i32> @llvm.fshr.v4i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c)
-declare <vscale x 1 x i32> @llvm.fshl.v4i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <vscale x 1 x i32> %c)

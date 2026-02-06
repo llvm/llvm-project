@@ -42,7 +42,7 @@ namespace vector {
 ///
 /// [ContractionOpToDotLowering]
 /// Progressively lower a `vector.contract` with row-major matmul semantics to
-/// linearized `vector.extract` + `vector.reduce` + `vector.insert`.
+/// linearized `vector.extract` + `vector.reduction` + `vector.insert`.
 ///
 /// [ContractionOpToOuterProductOpLowering]
 /// Progressively lower a `vector.contract` with row-major matmul semantics to
@@ -293,6 +293,9 @@ void populateVectorBitCastLoweringPatterns(RewritePatternSet &patterns,
                                            int64_t targetRank = 1,
                                            PatternBenefit benefit = 1);
 
+void populateVectorShuffleLoweringPatterns(RewritePatternSet &patterns,
+                                           PatternBenefit benefit = 1);
+
 /// Populates a pattern that rank-reduces n-D FMAs into (n-1)-D FMAs where
 /// n > 1.
 void populateVectorRankReducingFMAPattern(RewritePatternSet &patterns);
@@ -302,14 +305,6 @@ void populateVectorRankReducingFMAPattern(RewritePatternSet &patterns);
 /// operations.
 void populateVectorToFromElementsToShuffleTreePatterns(
     RewritePatternSet &patterns, PatternBenefit benefit = 1);
-
-/// Populate the pattern set with the following patterns:
-///
-/// [UnrollFromElements]
-/// Unrolls 2 or more dimensional `vector.from_elements` ops by unrolling the
-/// outermost dimension.
-void populateVectorFromElementsLoweringPatterns(RewritePatternSet &patterns,
-                                                PatternBenefit benefit = 1);
 
 /// Populate the pattern set with the following patterns:
 ///

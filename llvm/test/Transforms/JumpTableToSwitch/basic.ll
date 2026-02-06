@@ -286,7 +286,7 @@ define i32 @function_with_jump_table_addrspace_42(i32 %index) addrspace(42) {
 ; CHECK: [[META0]] = !{i64 5678}
 ; CHECK: [[META1]] = !{i64 5555}
 ; CHECK: [[PROF2]] = !{!"branch_weights", i32 0, i32 20, i32 5}
-; CHECK: [[PROF3]] = !{!"unknown"}
+; CHECK: [[PROF3]] = !{!"unknown", !"jump-table-to-switch"}
 ;.
 ; THRESHOLD-0: [[META0]] = !{i64 5678}
 ; THRESHOLD-0: [[META1]] = !{i64 5555}

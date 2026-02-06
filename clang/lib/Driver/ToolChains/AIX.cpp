@@ -9,8 +9,8 @@
 #include "AIX.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -19,6 +19,7 @@
 #include <set>
 
 using AIX = clang::driver::toolchains::AIX;
+using namespace clang;
 using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang::driver::toolchains;
@@ -146,29 +147,13 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-bforceimprw");
   }
 
-  // PGO instrumentation generates symbols belonging to special sections, and
-  // the linker needs to place all symbols in a particular section together in
-  // memory; the AIX linker does that under an option.
-  if (Args.hasFlag(options::OPT_fprofile_arcs, options::OPT_fno_profile_arcs,
-                    false) ||
-       Args.hasFlag(options::OPT_fprofile_generate,
-                    options::OPT_fno_profile_generate, false) ||
-       Args.hasFlag(options::OPT_fprofile_generate_EQ,
-                    options::OPT_fno_profile_generate, false) ||
-       Args.hasFlag(options::OPT_fprofile_instr_generate,
-                    options::OPT_fno_profile_instr_generate, false) ||
-       Args.hasFlag(options::OPT_fprofile_instr_generate_EQ,
-                    options::OPT_fno_profile_instr_generate, false) ||
-       Args.hasFlag(options::OPT_fcs_profile_generate,
-                    options::OPT_fno_profile_generate, false) ||
-       Args.hasFlag(options::OPT_fcs_profile_generate_EQ,
-                    options::OPT_fno_profile_generate, false) ||
-       Args.hasArg(options::OPT_fcreate_profile) ||
-       Args.hasArg(options::OPT_coverage))
+  // PGO and ifunc support depends on the named sections linker feature that is
+  // available on AIX 7.2 TL5 SP5 onwards.
+  if (ToolChain.getTriple().getOSMajorVersion() == 0 ||
+      ToolChain.getTriple().getOSVersion() >= VersionTuple(7, 2))
     CmdArgs.push_back("-bdbg:namedsects:ss");
 
-  if (Arg *A =
-          Args.getLastArg(clang::driver::options::OPT_mxcoff_build_id_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_mxcoff_build_id_EQ)) {
     StringRef BuildId = A->getValue();
     if (BuildId[0] != '0' || BuildId[1] != 'x' ||
         BuildId.find_if_not(llvm::isHexDigit, 2) != StringRef::npos)

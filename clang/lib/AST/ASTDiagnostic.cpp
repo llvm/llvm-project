@@ -196,8 +196,7 @@ break; \
     // Don't desugar through the primary typedef of an anonymous type.
     if (const TagType *UTT = Underlying->getAs<TagType>())
       if (const TypedefType *QTT = dyn_cast<TypedefType>(QT))
-        if (UTT->getOriginalDecl()->getTypedefNameForAnonDecl() ==
-            QTT->getDecl())
+        if (UTT->getDecl()->getTypedefNameForAnonDecl() == QTT->getDecl())
           break;
 
     // Record that we actually looked through an opaque type here.
@@ -1147,14 +1146,11 @@ class TemplateDiff {
     if (const auto* SubstType = Ty->getAs<SubstTemplateTypeParmType>())
       Ty = SubstType->getReplacementType();
 
-    const RecordType *RT = Ty->getAs<RecordType>();
-
+    const auto *RT = Ty->getAs<RecordType>();
     if (!RT)
       return nullptr;
 
-    const ClassTemplateSpecializationDecl *CTSD =
-        dyn_cast<ClassTemplateSpecializationDecl>(RT->getOriginalDecl());
-
+    const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
     if (!CTSD)
       return nullptr;
 

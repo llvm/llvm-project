@@ -9,7 +9,7 @@ define i32 @f(i64 %0) {
 ; CHECK-NEXT:    mov w10, #10 // =0xa
 ; CHECK-NEXT:    eor x8, x8, #0x8000000000000003
 ; CHECK-NEXT:    umulh x8, x9, x8
-; CHECK-NEXT:    msub x0, x8, x10, x9
+; CHECK-NEXT:    umsubl x0, w8, w10, x9
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret
   %2 = trunc i64 %0 to i32

@@ -12,6 +12,11 @@
 #include <windows.h>
 #include "WindowsMMap.h"
 #else
+#if defined(__linux__)
+// For fdopen(), fileno(), getpagesize(), madvise()
+#define _DEFAULT_SOURCE
+#endif
+
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/file.h>

@@ -42,7 +42,7 @@ class DroppedVariableStats {
 public:
   LLVM_ABI DroppedVariableStats(bool DroppedVarStatsEnabled);
 
-  virtual ~DroppedVariableStats() {}
+  virtual ~DroppedVariableStats() = default;
 
   // We intend this to be unique per-compilation, thus no copies.
   DroppedVariableStats(const DroppedVariableStats &) = delete;

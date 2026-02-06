@@ -27,8 +27,8 @@ TEST(DebugLogTest, Basic) {
   {
     std::string str;
     raw_string_ostream os(str);
-    DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, nullptr) << "NoType";
-    EXPECT_FALSE(StringRef(os.str()).starts_with('['));
+    LDGB_STREAM_LEVEL_AND_TYPE(os, "", 0) << "NoType";
+    EXPECT_TRUE(StringRef(os.str()).starts_with('['));
     EXPECT_TRUE(StringRef(os.str()).ends_with("NoType\n"));
   }
 
@@ -36,8 +36,8 @@ TEST(DebugLogTest, Basic) {
   {
     std::string str;
     raw_string_ostream os(str);
-    DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, "A") << "A";
-    DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, "B") << "B";
+    LDGB_STREAM_LEVEL_AND_TYPE(os, 0, "A") << "A";
+    LDGB_STREAM_LEVEL_AND_TYPE(os, "B", 0) << "B";
     EXPECT_TRUE(StringRef(os.str()).starts_with('['));
     EXPECT_THAT(os.str(), AllOf(HasSubstr("A\n"), HasSubstr("B\n")));
   }
@@ -48,18 +48,18 @@ TEST(DebugLogTest, Basic) {
     raw_string_ostream os(str);
     // Just check that the macro doesn't result in dangling else.
     if (true)
-      DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, "A") << "A";
+      LDGB_STREAM_LEVEL_AND_TYPE(os, 0, "A") << "A";
     else
-      DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, "A") << "B";
-    DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, "B") << "B";
+      LDGB_STREAM_LEVEL_AND_TYPE(os, 0, "A") << "B";
+    LDGB_STREAM_LEVEL_AND_TYPE(os, 0, "B") << "B";
     EXPECT_THAT(os.str(), AllOf(HasSubstr("A\n"), Not(HasSubstr("B\n"))));
 
     int count = 0;
     auto inc = [&]() { return ++count; };
     EXPECT_THAT(count, Eq(0));
-    DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, "A") << inc();
+    LDGB_STREAM_LEVEL_AND_TYPE(os, 0, "A") << inc();
     EXPECT_THAT(count, Eq(1));
-    DEBUGLOG_WITH_STREAM_AND_TYPE(os, 0, "B") << inc();
+    LDGB_STREAM_LEVEL_AND_TYPE(os, 0, "B") << inc();
     EXPECT_THAT(count, Eq(1));
   }
 }
@@ -75,10 +75,10 @@ TEST(DebugLogTest, BasicWithLevel) {
   raw_string_ostream os(str);
   for (auto type : {"A", "B", "C", "D"})
     for (int level : llvm::seq<int>(0, 4))
-      DEBUGLOG_WITH_STREAM_TYPE_FILE_AND_LINE(os, level, type, type, level)
+      LDBG_STREAM_LEVEL_TYPE_FILE_AND_LINE(os, level, type, type, level)
           << level;
-  EXPECT_EQ(os.str(), "[A:0] A:0 0\n[A:1] A:1 1\n[A:2] A:2 2\n[A:3] A:3 "
-                      "3\n[B:0] B:0 0\n[B:1] B:1 1\n[C:0] C:0 0\n");
+  EXPECT_EQ(os.str(), "[A:0 0] 0\n[A:1 1] 1\n[A:2 2] 2\n[A:3 3] 3\n[B:0 0] "
+                      "0\n[B:1 1] 1\n[C:0 0] 0\n");
 }
 
 TEST(DebugLogTest, NegativeLevel) {
@@ -92,9 +92,10 @@ TEST(DebugLogTest, NegativeLevel) {
   raw_string_ostream os(str);
   for (auto type : {"A", "B"})
     for (int level : llvm::seq<int>(0, 2))
-      DEBUGLOG_WITH_STREAM_TYPE_FILE_AND_LINE(os, level, type, type, level)
+      LDBG_STREAM_LEVEL_TYPE_FILE_AND_LINE(
+          os, level, type, (std::string(type) + ".cpp").c_str(), level)
           << level;
-  EXPECT_EQ(os.str(), "[A:0] A:0 0\n[B:0] B:0 0\n[B:1] B:1 1\n");
+  EXPECT_EQ(os.str(), "[A A.cpp:0 0] 0\n[B B.cpp:0 0] 0\n[B B.cpp:1 1] 1\n");
 }
 
 TEST(DebugLogTest, StreamPrefix) {
@@ -128,6 +129,188 @@ TEST(DebugLogTest, DestructorPrefix) {
   // After destructors, nothing should have been printed.
   EXPECT_EQ(os.str(), "");
 }
+
+TEST(DebugLogTest, LDBG_MACROS) {
+  llvm::DebugFlag = true;
+  static const char *DT[] = {"A:3", "B:2"};
+  setCurrentDebugTypes(DT, sizeof(DT) / sizeof(DT[0]));
+  std::string Str;
+  raw_string_ostream DebugOs(Str);
+  std::string StrExpected;
+  raw_string_ostream ExpectedOs(StrExpected);
+#undef LDBG_STREAM
+#define LDBG_STREAM DebugOs
+#define DEBUG_TYPE "A"
+  LDBG() << "Hello, world!";
+  ExpectedOs << "[A " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+             << " 1] Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), ExpectedOs.str());
+  Str.clear();
+  StrExpected.clear();
+
+  // Test with a level, no type.
+  LDBG(2) << "Hello, world!";
+  ExpectedOs << "[A " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+             << " 2] Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), ExpectedOs.str());
+  Str.clear();
+  StrExpected.clear();
+
+// Now check when we don't use DEBUG_TYPE, the file name is implicitly used
+// instead.
+#undef DEBUG_TYPE
+
+  // Repeat the tests above, they won't match since the debug types defined
+  // above don't match the file name.
+  LDBG() << "Hello, world!";
+  EXPECT_EQ(DebugOs.str(), "");
+  Str.clear();
+  StrExpected.clear();
+
+  // Test with a level, no type.
+  LDBG(2) << "Hello, world!";
+  EXPECT_EQ(DebugOs.str(), "");
+  Str.clear();
+  StrExpected.clear();
+
+  // Now enable the debug types that match the file name.
+  auto fileNameAndLevel = std::string(__LLVM_FILE_NAME__) + ":3";
+  static const char *DT2[] = {fileNameAndLevel.c_str(), "B:2"};
+  setCurrentDebugTypes(DT2, sizeof(DT2) / sizeof(DT2[0]));
+
+  // Repeat the tests above, they should match now.
+
+  LDBG() << "Hello, world!";
+  ExpectedOs << "[" << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+             << " 1] Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), ExpectedOs.str());
+  Str.clear();
+  StrExpected.clear();
+
+  // Test with a level, no type.
+  LDBG(2) << "Hello, world!";
+  ExpectedOs << "[" << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+             << " 2] Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), ExpectedOs.str());
+  Str.clear();
+  StrExpected.clear();
+
+  // Test with a type
+  LDBG("B") << "Hello, world!";
+  ExpectedOs << "[B " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+             << " 1] Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), ExpectedOs.str());
+  Str.clear();
+  StrExpected.clear();
+
+  // Test with a type and a level
+  LDBG("B", 2) << "Hello, world!";
+  ExpectedOs << "[B " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+             << " 2] Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), ExpectedOs.str());
+  Str.clear();
+  StrExpected.clear();
+
+  // Test with a type not enabled.
+  LDBG("C", 1) << "Hello, world!";
+  EXPECT_EQ(DebugOs.str(), "");
+
+  // Test with a level not enabled.
+  LDBG("B", 3) << "Hello, world!";
+  EXPECT_EQ(DebugOs.str(), "");
+  LDBG(__LLVM_FILE_NAME__, 4) << "Hello, world!";
+  EXPECT_EQ(DebugOs.str(), "");
+}
+
+TEST(DebugLogTest, LDBG_OS_MACROS) {
+  llvm::DebugFlag = true;
+  static const char *DT[] = {"A:3", "B:2"};
+  setCurrentDebugTypes(DT, sizeof(DT) / sizeof(DT[0]));
+  std::string Str;
+  raw_string_ostream DebugOs(Str);
+  std::string StrExpected;
+  raw_string_ostream ExpectedOs(StrExpected);
+#undef LDBG_STREAM
+#define LDBG_STREAM DebugOs
+#define DEBUG_TYPE "A"
+  LDBG_OS([](raw_ostream &Os) { Os << "Hello, world!"; });
+  ExpectedOs << "[A " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+             << " 1] Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), ExpectedOs.str());
+  Str.clear();
+  StrExpected.clear();
+
+  // Test with a level, no type.
+  LDBG_OS(2, [](raw_ostream &Os) { Os << "Hello, world!"; });
+  ExpectedOs << "[A " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+             << " 2] Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), ExpectedOs.str());
+  Str.clear();
+  StrExpected.clear();
+
+// Now check when we don't use DEBUG_TYPE, the file name is implicitly used
+// instead.
+#undef DEBUG_TYPE
+
+  // Repeat the tests above, they won't match since the debug types defined
+  // above don't match the file name.
+  LDBG_OS([](raw_ostream &Os) { Os << "Hello, world!"; });
+  EXPECT_EQ(DebugOs.str(), "");
+  Str.clear();
+  StrExpected.clear();
+
+  // Test with a level, no type.
+  LDBG_OS(2, [](raw_ostream &Os) { Os << "Hello, world!"; });
+  EXPECT_EQ(DebugOs.str(), "");
+  Str.clear();
+  StrExpected.clear();
+
+  // Now enable the debug types that match the file name.
+  auto fileNameAndLevel = std::string(__LLVM_FILE_NAME__) + ":3";
+  static const char *DT2[] = {fileNameAndLevel.c_str(), "B:2"};
+  setCurrentDebugTypes(DT2, sizeof(DT2) / sizeof(DT2[0]));
+
+  // Repeat the tests above, they should match now.
+  LDBG_OS([](raw_ostream &Os) { Os << "Hello, world!"; });
+  ExpectedOs << "[" << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+             << " 1] Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), ExpectedOs.str());
+  Str.clear();
+  StrExpected.clear();
+
+  // Test with a level, no type.
+  LDBG_OS(2, [](raw_ostream &Os) { Os << "Hello, world!"; });
+  ExpectedOs << "[" << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+             << " 2] Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), ExpectedOs.str());
+  Str.clear();
+  StrExpected.clear();
+
+  // Test with a type.
+  LDBG_OS("B", [](raw_ostream &Os) { Os << "Hello, world!"; });
+  ExpectedOs << "[B " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+             << " 1] Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), ExpectedOs.str());
+  Str.clear();
+  StrExpected.clear();
+
+  // Test with a type and a level
+  LDBG_OS("B", 2, [](raw_ostream &Os) { Os << "Hello, world!"; });
+  ExpectedOs << "[B " << __LLVM_FILE_NAME__ << ":" << (__LINE__ - 1)
+             << " 2] Hello, world!\n";
+  EXPECT_EQ(DebugOs.str(), ExpectedOs.str());
+  Str.clear();
+  StrExpected.clear();
+
+  // Test with a type not enabled.
+  LDBG_OS("C", 1, [](raw_ostream &Os) { Os << "Hello, world!"; });
+  EXPECT_EQ(DebugOs.str(), "");
+
+  // Test with a level not enabled.
+  LDBG_OS("B", 3, [](raw_ostream &Os) { Os << "Hello, world!"; });
+  EXPECT_EQ(DebugOs.str(), "");
+}
+
 #else
 TEST(DebugLogTest, Basic) {
   // LDBG should be compiled out in NDEBUG, so just check it compiles and has

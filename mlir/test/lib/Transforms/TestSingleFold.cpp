@@ -26,6 +26,9 @@ struct TestSingleFold : public PassWrapper<TestSingleFold, OperationPass<>>,
                         public RewriterBase::Listener {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSingleFold)
 
+  TestSingleFold() = default;
+  TestSingleFold(const TestSingleFold &pass) : PassWrapper(pass) {}
+
   StringRef getArgument() const final { return "test-single-fold"; }
   StringRef getDescription() const final {
     return "Test single-pass operation folding and dead constant elimination";
@@ -45,13 +48,18 @@ struct TestSingleFold : public PassWrapper<TestSingleFold, OperationPass<>>,
     if (it != existingConstants.end())
       existingConstants.erase(it);
   }
+
+  Option<int> maxIterations{*this, "max-iterations",
+                            llvm::cl::desc("Max iterations in the tryToFold"),
+                            llvm::cl::init(1)};
 };
 } // namespace
 
 void TestSingleFold::foldOperation(Operation *op, OperationFolder &helper) {
   // Attempt to fold the specified operation, including handling unused or
   // duplicated constants.
-  (void)helper.tryToFold(op);
+  bool inPlaceUpdate = false;
+  (void)helper.tryToFold(op, &inPlaceUpdate, maxIterations);
 }
 
 void TestSingleFold::runOnOperation() {

@@ -27,7 +27,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // where State contains a lock bit and might contain other data,
 // and LockedBit is the value of State when the lock bit is set, e.g  1 << 2
 template <class _State, _State _LockedBit>
-class _LIBCPP_AVAILABILITY_SYNC __atomic_unique_lock {
+class __atomic_unique_lock {
   static_assert(std::__popcount(static_cast<unsigned long long>(_LockedBit)) == 1,
                 "LockedBit must be an integer where only one bit is set");
 

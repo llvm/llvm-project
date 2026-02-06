@@ -4,7 +4,7 @@ Contributing to LLVM
 
 
 Thank you for your interest in contributing to LLVM! There are multiple ways to
-contribute, and we appreciate all contributions. In case you have questions,
+contribute, and we appreciate all contributions. If you have questions,
 you can either use the `Forum`_ or, for a more interactive chat, go to our
 `Discord server`_.
 
@@ -20,14 +20,14 @@ Ways to Contribute
 Bug Reports
 -----------
 If you are working with LLVM and run into a bug, we definitely want to know
-about it. Please let us know and follow the instructions in
+about it. Please follow the instructions in
 :doc:`HowToSubmitABug`  to create a bug report.
 
 Bug Fixes
 ---------
 If you are interested in contributing code to LLVM, bugs labeled with the
 `good first issue`_ keyword in the `bug tracker`_ are a good way to get familiar with
-the code base. If you are interested in fixing a bug please comment on it to
+the code base. If you are interested in fixing a bug, please comment on it to
 let people know you are working on it.
 
 Then try to reproduce and fix the bug with upstream LLVM. Start by building
@@ -43,8 +43,8 @@ There is a separate process to submit security-related bugs, see :ref:`report-se
 
 Bigger Pieces of Work
 ---------------------
-In case you are interested in taking on a bigger piece of work, a list of
-interesting projects is maintained at the `LLVM's Open Projects page`_. In case
+If you are interested in taking on a bigger piece of work, a list of
+interesting projects is maintained at the `LLVM's Open Projects page`_. If
 you are interested in working on any of these projects, please post on the
 `Forum`_, so that we know the project is being worked on.
 
@@ -62,7 +62,7 @@ Once you have a patch ready, it is time to submit it. The patch should:
 
 .. _format patches:
 
-Before sending a patch for review, please also try to ensure it is
+Before sending a patch for review, please also ensure it is
 formatted properly. We use ``clang-format`` for this, which has git integration
 through the ``git-clang-format`` script. On some systems, it may already be
 installed (or be installable via your package manager). If so, you can simply
@@ -108,7 +108,7 @@ you will likely want to run one of the following to add the changes to a commit:
 
 The LLVM project has migrated to GitHub Pull Requests as its review process.
 For more information about the workflow of using GitHub Pull Requests see our
-:ref:`GitHub <github-reviews>` documentation. We still have an read-only
+:ref:`GitHub <github-reviews>` documentation. We still have a read-only
 `LLVM's Phabricator <https://reviews.llvm.org>`_ instance.
 
 To make sure the right people see your patch, please select suitable reviewers
@@ -146,12 +146,12 @@ For developers to commit changes from Git
    See also :ref:`GitHub <github-reviews>` for more details on merging your changes
    into LLVM project monorepo.
 
-Once a patch is reviewed, you can select the "Squash and merge" button in the
+Once a pull request is approved, you can select the "Squash and merge" button in the
 GitHub web interface.
 
 When pushing directly from the command-line to the ``main`` branch, you will need
 to rebase your change. LLVM has a linear-history policy, which means
-that merge commits are not allowed and the ``main`` branch is configured to reject
+that merge commits are not allowed, and the ``main`` branch is configured to reject
 pushes that include merges.
 
 GitHub will display a message that looks like this:
@@ -173,8 +173,8 @@ Please ask for help if you're having trouble with your particular git workflow.
 Git pre-push hook
 ^^^^^^^^^^^^^^^^^
 
-We include an optional pre-push hook that run some sanity checks on the revisions
-you are about to push and ask confirmation if you push multiple commits at once.
+We include an optional pre-push hook that runs some sanity checks on the revisions
+you are about to push and asks for confirmation if you push multiple commits at once.
 You can set it up (on Unix systems) by running from the repository root:
 
 .. code-block:: console

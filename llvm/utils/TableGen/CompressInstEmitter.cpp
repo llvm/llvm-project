@@ -72,6 +72,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
@@ -142,7 +143,8 @@ class CompressInstEmitter {
   void emitCompressInstEmitter(raw_ostream &OS, EmitterType EType);
   bool validateTypes(const Record *DagOpType, const Record *InstOpType,
                      bool IsSourceInst);
-  bool validateRegister(const Record *Reg, const Record *RegClass);
+  bool validateRegister(const Record *Reg, const Record *RegClass,
+                        ArrayRef<SMLoc> Loc);
   void checkDagOperandMapping(const Record *Rec,
                               const StringMap<ArgData> &DestOperands,
                               const DagInit *SourceDag, const DagInit *DestDag);
@@ -162,12 +164,13 @@ public:
 } // End anonymous namespace.
 
 bool CompressInstEmitter::validateRegister(const Record *Reg,
-                                           const Record *RegClass) {
+                                           const Record *RegClass,
+                                           ArrayRef<SMLoc> Loc) {
   assert(Reg->isSubClassOf("Register") && "Reg record should be a Register");
-  assert(RegClass->isSubClassOf("RegisterClass") &&
-         "RegClass record should be a RegisterClass");
-  const CodeGenRegisterClass &RC = Target.getRegisterClass(RegClass);
-  const CodeGenRegister *R = Target.getRegisterByName(Reg->getName().lower());
+  assert(RegClass->isSubClassOf("RegisterClassLike") &&
+         "RegClass record should be RegisterClassLike");
+  const CodeGenRegisterClass &RC = Target.getRegisterClass(RegClass, Loc);
+  const CodeGenRegister *R = Target.getRegBank().getReg(Reg);
   assert(R != nullptr && "Register not defined!!");
   return RC.contains(R);
 }
@@ -237,7 +240,7 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
       // Source instructions can have at most 1 tied operand.
       if (IsSourceInst && (OpNo - DAGOpNo > 1))
         PrintFatalError(Rec->getLoc(),
-                        "Input operands for Inst '" + Inst.TheDef->getName() +
+                        "Input operands for Inst '" + Inst.getName() +
                             "' and input Dag operand count mismatch");
 
       continue;
@@ -249,13 +252,13 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
         OpndRec = cast<DefInit>(Opnd.MIOperandInfo->getArg(SubOp))->getDef();
 
       if (DAGOpNo >= Dag->getNumArgs())
-        PrintFatalError(Rec->getLoc(), "Inst '" + Inst.TheDef->getName() +
+        PrintFatalError(Rec->getLoc(), "Inst '" + Inst.getName() +
                                            "' and Dag operand count mismatch");
 
       if (const auto *DI = dyn_cast<DefInit>(Dag->getArg(DAGOpNo))) {
         if (DI->getDef()->isSubClassOf("Register")) {
           // Check if the fixed register belongs to the Register class.
-          if (!validateRegister(DI->getDef(), OpndRec))
+          if (!validateRegister(DI->getDef(), OpndRec, Rec->getLoc()))
             PrintFatalError(Rec->getLoc(),
                             "Error in Dag '" + Dag->getAsString() +
                                 "'Register: '" + DI->getDef()->getName() +
@@ -328,7 +331,7 @@ void CompressInstEmitter::addDagOperandMapping(const Record *Rec,
 
   // We shouldn't have extra Dag operands.
   if (DAGOpNo != Dag->getNumArgs())
-    PrintFatalError(Rec->getLoc(), "Inst '" + Inst.TheDef->getName() +
+    PrintFatalError(Rec->getLoc(), "Inst '" + Inst.getName() +
                                        "' and Dag operand count mismatch");
 }
 
@@ -590,8 +593,8 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   llvm::stable_sort(CompressPatterns, [EType](const CompressPat &LHS,
                                               const CompressPat &RHS) {
     if (EType == EmitterType::Compress || EType == EmitterType::CheckCompress)
-      return (LHS.Source.TheDef->getName() < RHS.Source.TheDef->getName());
-    return (LHS.Dest.TheDef->getName() < RHS.Dest.TheDef->getName());
+      return LHS.Source.getName() < RHS.Source.getName();
+    return LHS.Dest.getName() < RHS.Dest.getName();
   });
 
   // A list of MCOperandPredicates for all operands in use, and the reverse map.
@@ -606,15 +609,19 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
   raw_string_ostream Func(F);
   raw_string_ostream FuncH(FH);
 
-  if (EType == EmitterType::Compress)
-    OS << "\n#ifdef GEN_COMPRESS_INSTR\n"
-       << "#undef GEN_COMPRESS_INSTR\n\n";
-  else if (EType == EmitterType::Uncompress)
-    OS << "\n#ifdef GEN_UNCOMPRESS_INSTR\n"
-       << "#undef GEN_UNCOMPRESS_INSTR\n\n";
-  else if (EType == EmitterType::CheckCompress)
-    OS << "\n#ifdef GEN_CHECK_COMPRESS_INSTR\n"
-       << "#undef GEN_CHECK_COMPRESS_INSTR\n\n";
+  auto GetEmitterGuard = [EType]() -> StringRef {
+    switch (EType) {
+    case EmitterType::Compress:
+      return "GEN_COMPRESS_INSTR";
+    case EmitterType::Uncompress:
+      return "GEN_UNCOMPRESS_INSTR";
+    case EmitterType::CheckCompress:
+      return "GEN_CHECK_COMPRESS_INSTR";
+    }
+    llvm_unreachable("Invalid emitter type");
+  };
+
+  IfDefEmitter IfDef(OS, GetEmitterGuard());
 
   if (EType == EmitterType::Compress) {
     FuncH << "static bool compressInst(MCInst &OutInst,\n";
@@ -628,16 +635,14 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     FuncH << "static bool isCompressibleInst(const MachineInstr &MI,\n";
     FuncH.indent(31) << "const " << TargetName << "Subtarget &STI) {\n";
   }
+  // HwModeId is used if we have any RegClassByHwMode patterns
+  if (!Target.getAllRegClassByHwMode().empty())
+    FuncH.indent(2) << "[[maybe_unused]] unsigned HwModeId = "
+                    << "STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo);\n";
 
   if (CompressPatterns.empty()) {
     OS << FH;
     OS.indent(2) << "return false;\n}\n";
-    if (EType == EmitterType::Compress)
-      OS << "\n#endif //GEN_COMPRESS_INSTR\n";
-    else if (EType == EmitterType::Uncompress)
-      OS << "\n#endif //GEN_UNCOMPRESS_INSTR\n\n";
-    else if (EType == EmitterType::CheckCompress)
-      OS << "\n#endif //GEN_CHECK_COMPRESS_INSTR\n\n";
     return;
   }
 
@@ -678,7 +683,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
         CompressOrCheck ? CompressPat.DestOperandMap
                         : CompressPat.SourceOperandMap;
 
-    CurOp = Source.TheDef->getName();
+    CurOp = Source.getName();
     // Check current and previous opcode to decide to continue or end a case.
     if (CurOp != PrevOp) {
       if (!PrevOp.empty()) {
@@ -733,7 +738,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
         switch (SourceOperandMap[OpNo].Kind) {
         case OpData::Operand:
           if (SourceOperandMap[OpNo].OpInfo.TiedOpIdx != -1) {
-            if (Source.Operands[OpNo].Rec->isSubClassOf("RegisterClass"))
+            if (Source.Operands[OpNo].Rec->isSubClassOf("RegisterClassLike"))
               CondStream << CondSep << "MI.getOperand(" << OpNo
                          << ").isReg() && MI.getOperand("
                          << SourceOperandMap[OpNo].OpInfo.TiedOpIdx
@@ -768,7 +773,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
     CodeStream.indent(6) << "// " << Dest.AsmString << "\n";
     if (CompressOrUncompress)
       CodeStream.indent(6) << "OutInst.setOpcode(" << TargetName
-                           << "::" << Dest.TheDef->getName() << ");\n";
+                           << "::" << Dest.getName() << ");\n";
     OpNo = 0;
     for (const auto &DestOperand : Dest.Operands) {
       CodeStream.indent(6) << "// Operand: " << DestOperand.Name << "\n";
@@ -786,11 +791,7 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
           const Record *DagRec = DestOperandMap[OpNo].OpInfo.DagRec;
           // Check that the operand in the Source instruction fits
           // the type for the Dest instruction.
-          if (DagRec->isSubClassOf("RegisterClass") ||
-              DagRec->isSubClassOf("RegisterOperand")) {
-            auto *ClassRec = DagRec->isSubClassOf("RegisterClass")
-                                 ? DagRec
-                                 : DagRec->getValueAsDef("RegClass");
+          if (auto *ClassRec = Target.getAsRegClassLike(DagRec)) {
             // This is a register operand. Check the register class.
             // Don't check register class if this is a tied operand, it was done
             // for the operand it's tied to.
@@ -799,9 +800,15 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
               if (EType == EmitterType::CheckCompress)
                 CondStream << " && MI.getOperand(" << OpIdx
                            << ").getReg().isPhysical()";
-              CondStream << CondSep << TargetName << "MCRegisterClasses["
-                         << TargetName << "::" << ClassRec->getName()
-                         << "RegClassID].contains(MI.getOperand(" << OpIdx
+              CondStream << CondSep << TargetName << "MCRegisterClasses[";
+              if (ClassRec->isSubClassOf("RegClassByHwMode")) {
+                CondStream << TargetName << "RegClassByHwModeTables[HwModeId]["
+                           << TargetName << "::" << ClassRec->getName() << "]";
+              } else {
+                CondStream << TargetName << "::" << ClassRec->getName()
+                           << "RegClassID";
+              }
+              CondStream << "].contains(MI.getOperand(" << OpIdx
                          << ").getReg())";
             }
 
@@ -932,13 +939,6 @@ void CompressInstEmitter::emitCompressInstEmitter(raw_ostream &OS,
 
   OS << FH;
   OS << F;
-
-  if (EType == EmitterType::Compress)
-    OS << "\n#endif //GEN_COMPRESS_INSTR\n";
-  else if (EType == EmitterType::Uncompress)
-    OS << "\n#endif //GEN_UNCOMPRESS_INSTR\n\n";
-  else if (EType == EmitterType::CheckCompress)
-    OS << "\n#endif //GEN_CHECK_COMPRESS_INSTR\n\n";
 }
 
 void CompressInstEmitter::run(raw_ostream &OS) {
