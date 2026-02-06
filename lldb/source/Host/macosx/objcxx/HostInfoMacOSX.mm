@@ -720,7 +720,7 @@ SharedCacheInfo::SharedCacheInfo() {
   m_host_uuid = UUID(dsc_uuid);
 
   if (ModuleList::GetGlobalModuleListProperties()
-          .GetSharedCacheSegmentLoads() &&
+          .GetSharedCacheBinaryLoading() &&
       CreateHostSharedCacheImageList())
     return;
 
