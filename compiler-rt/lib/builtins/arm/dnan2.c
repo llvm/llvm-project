@@ -40,6 +40,6 @@ uint64_t __compiler_rt_dnan2(uint64_t a, uint64_t b) {
     return b | 0x0008000000000000; //   if so, return it with the quiet bit set
   if (aadj < 0x0010000000000000)   // a is a quiet NaN?
     return a;                      // if so, return it
-  else /* expect (badj < 0x0010000000000000) */
+  else                             // expect (badj < 0x0010000000000000)
     return b;                      // in that case b must be a quiet NaN
 }
