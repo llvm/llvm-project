@@ -12,7 +12,7 @@ define void @f(ptr noalias %p, i1 %c) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[P]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <4 x float> zeroinitializer, <4 x float> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select fast i1 [[C]], <4 x float> zeroinitializer, <4 x float> [[WIDE_LOAD]]
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024

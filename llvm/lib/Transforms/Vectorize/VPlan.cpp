@@ -849,7 +849,7 @@ void VPRegionBlock::dissolveToCFGLoop() {
     assert(this == getPlan()->getVectorLoopRegion() &&
            "Canonical IV must be in the entry of the top-level loop region");
     auto *ScalarR = VPBuilder(CanIV).createScalarPhi(
-        {CanIV->getStartValue(), CanIV->getBackedgeValue()},
+        {CanIV->getStartValue(), CanIV->getBackedgeValue()}, {},
         CanIV->getDebugLoc(), "index");
     CanIV->replaceAllUsesWith(ScalarR);
     CanIV->eraseFromParent();

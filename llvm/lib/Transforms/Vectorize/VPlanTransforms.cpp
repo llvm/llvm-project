@@ -1792,7 +1792,7 @@ static void simplifyBlends(VPlan &Plan) {
 
       auto *NewBlend =
           new VPBlendRecipe(cast_or_null<PHINode>(Blend->getUnderlyingValue()),
-                            OperandsWithMask, Blend->getDebugLoc());
+                            OperandsWithMask, *Blend, Blend->getDebugLoc());
       NewBlend->insertBefore(&R);
 
       VPValue *DeadMask = Blend->getMask(StartIndex);
@@ -3162,7 +3162,7 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
 
     Builder.setInsertPoint(Header, Header->getFirstNonPhi());
     VPValue *PrevEVL = Builder.createScalarPhi(
-        {MaxEVL, &EVL}, DebugLoc::getUnknown(), "prev.evl");
+        {MaxEVL, &EVL}, {}, DebugLoc::getUnknown(), "prev.evl");
 
     for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
              vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
@@ -3275,14 +3275,14 @@ void VPlanTransforms::addExplicitVectorLength(
   // Create the AVL (application vector length), starting from TC -> 0 in steps
   // of EVL.
   VPPhi *AVLPhi = Builder.createScalarPhi(
-      {Plan.getTripCount()}, DebugLoc::getCompilerGenerated(), "avl");
+      {Plan.getTripCount()}, {}, DebugLoc::getCompilerGenerated(), "avl");
   VPValue *AVL = AVLPhi;
 
   if (MaxSafeElements) {
     // Support for MaxSafeDist for correct loop emission.
     VPValue *AVLSafe = Plan.getConstantInt(CanIVTy, *MaxSafeElements);
     VPValue *Cmp = Builder.createICmp(ICmpInst::ICMP_ULT, AVL, AVLSafe);
-    AVL = Builder.createSelect(Cmp, AVL, AVLSafe, DebugLoc::getUnknown(),
+    AVL = Builder.createSelect(Cmp, AVL, AVLSafe, {}, DebugLoc::getUnknown(),
                                "safe_avl");
   }
   auto *VPEVL = Builder.createNaryOp(VPInstruction::ExplicitVectorLength, AVL,
@@ -3340,9 +3340,9 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
   VPValue *EVLIncrement = EVLPhi->getBackedgeValue();
 
   // Convert EVLPhi to concrete recipe.
-  auto *ScalarR =
-      VPBuilder(EVLPhi).createScalarPhi({EVLPhi->getStartValue(), EVLIncrement},
-                                        EVLPhi->getDebugLoc(), "evl.based.iv");
+  auto *ScalarR = VPBuilder(EVLPhi).createScalarPhi(
+      {EVLPhi->getStartValue(), EVLIncrement}, {}, EVLPhi->getDebugLoc(),
+      "evl.based.iv");
   EVLPhi->replaceAllUsesWith(ScalarR);
   EVLPhi->eraseFromParent();
 
@@ -3817,7 +3817,7 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
   DebugLoc DL = R->getDebugLoc();
 
   // Build a scalar pointer phi.
-  VPPhi *ScalarPtrPhi = Builder.createScalarPhi(Start, DL, "pointer.phi");
+  VPPhi *ScalarPtrPhi = Builder.createScalarPhi(Start, {}, DL, "pointer.phi");
 
   // Create actual address geps that use the pointer phi as base and a
   // vectorized version of the step value (<step*0, ..., step*N>) as offset.
@@ -3940,7 +3940,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
           Select = Builder.createSelect(Blend->getMask(I),
                                         Blend->getIncomingValue(I), Select,
-                                        R.getDebugLoc(), "predphi");
+                                        *Blend, R.getDebugLoc(), "predphi");
         Blend->replaceAllUsesWith(Select);
         ToRemove.push_back(Blend);
       }
@@ -4708,7 +4708,7 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
     for (unsigned I = 1; I < Group.size(); ++I) {
       VPValue *Mask = Group[I]->getMask();
       VPValue *Value = Group[I]->getOperand(0);
-      SelectedValue = Builder.createSelect(Mask, Value, SelectedValue,
+      SelectedValue = Builder.createSelect(Mask, Value, SelectedValue, {},
                                            Group[I]->getDebugLoc());
     }
 
@@ -5554,7 +5554,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     auto *Cmp =
         MiddleBuilder.createICmp(CmpInst::ICMP_NE, ReducedIV, Sentinel, ExitDL);
     VPInstruction *NewRdxResult = MiddleBuilder.createSelect(
-        Cmp, ReducedIV, PhiR->getStartValue(), ExitDL);
+        Cmp, ReducedIV, PhiR->getStartValue(), {}, ExitDL);
     RdxResult->replaceAllUsesWith(NewRdxResult);
     RdxResult->eraseFromParent();
 

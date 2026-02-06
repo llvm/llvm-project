@@ -7922,7 +7922,7 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
       VPValue *Mask = getBlockInMask(Builder.getInsertBlock());
       VPValue *One = Plan.getConstantInt(I->getType(), 1u);
       auto *SafeRHS =
-          Builder.createSelect(Mask, Ops[1], One, VPI->getDebugLoc());
+          Builder.createSelect(Mask, Ops[1], One, {}, VPI->getDebugLoc());
       Ops[1] = SafeRHS;
       return new VPWidenRecipe(*I, Ops, *VPI, *VPI, VPI->getDebugLoc());
     }
@@ -8482,12 +8482,11 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
         (!RR || !RR->isPartialReduction())) {
       VPValue *Cond = RecipeBuilder.getBlockInMask(PhiR->getParent());
-      std::optional<FastMathFlags> FMFs =
-          PhiTy->isFloatingPointTy()
-              ? std::make_optional(RdxDesc.getFastMathFlags())
-              : std::nullopt;
+      VPIRFlags Flags = PhiTy->isFloatingPointTy()
+                            ? VPIRFlags(RdxDesc.getFastMathFlags())
+                            : VPIRFlags();
       NewExitingVPV =
-          Builder.createSelect(Cond, OrigExitingVPV, PhiR, {}, "", FMFs);
+          Builder.createSelect(Cond, OrigExitingVPV, PhiR, Flags, {}, "");
       OrigExitingVPV->replaceUsesWithIf(NewExitingVPV, [](VPUser &U, unsigned) {
         using namespace VPlanPatternMatch;
         return match(
@@ -9082,7 +9081,7 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
     ResumePhi = ScalarPHBuilder.createScalarPhi(
         {VectorTC,
          MainPlan.getVectorLoopRegion()->getCanonicalIV()->getStartValue()},
-        {}, "vec.epilog.resume.val");
+        {}, {}, "vec.epilog.resume.val");
   } else {
     ResumePhi = cast<VPPhi>(&*ResumePhiIter);
     if (MainScalarPH->begin() == MainScalarPH->end())
