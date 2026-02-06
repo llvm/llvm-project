@@ -62,8 +62,7 @@ namespace sqrtf128_internal {
 
 using FPBits = fputil::FPBits<float128>;
 
-template <typename T, typename U = T>
-LIBC_INLINE static constexpr T prod_hi(T, U);
+template <typename T, typename U = T> LIBC_INLINE constexpr T prod_hi(T, U);
 
 // Get high part of integer multiplications.
 // Use template to prevent implicit conversion.
@@ -124,8 +123,7 @@ LIBC_INLINE constexpr Int128 prod_hi<Int128, UInt128>(Int128 x, UInt128 y) {
 //   r1 = r0 - r0 * h / 2
 // which has error bounded by:
 //   |r1 - 1/sqrt(x)| < h^2 / 2.
-LIBC_INLINE static constexpr uint64_t rsqrt_newton_raphson(uint64_t m,
-                                                           uint64_t r) {
+LIBC_INLINE constexpr uint64_t rsqrt_newton_raphson(uint64_t m, uint64_t r) {
   uint64_t r2 = prod_hi(r, r);
   // h = r0^2*x - 1.
   int64_t h = static_cast<int64_t>(prod_hi(m, r2) + r2);
@@ -141,7 +139,7 @@ LIBC_INLINE_VAR constexpr uint32_t RSQRT_COEFFS[12] = {
     0x01492449, 0x0066ff7d, 0x001e74a1, 0x000984cc, 0x00049abc, 0x00018340,
 };
 
-LIBC_INLINE static constexpr uint64_t rsqrt_approx(uint64_t m) {
+LIBC_INLINE constexpr uint64_t rsqrt_approx(uint64_t m) {
   int64_t x = static_cast<uint64_t>(m) ^ (uint64_t(1) << 63);
   int64_t x_26 = x >> 2;
   int64_t z = x >> 31;
@@ -251,7 +249,7 @@ LIBC_INLINE_VAR constexpr uint32_t RSQRT_COEFFS[64][4] = {
 // natural to round coefficients into 32 bit. The constant coefficient can be
 // rounded to 33 bits since the most significant bit is always 1 and implicitly
 // assumed in the table.
-LIBC_INLINE static constexpr uint64_t rsqrt_approx(uint64_t m) {
+LIBC_INLINE constexpr uint64_t rsqrt_approx(uint64_t m) {
   // ULP(m) = 2^-64.
   // Use the top 6 bits as index for looking up polynomial coeffs.
   uint64_t indx = m >> 58;
@@ -284,7 +282,7 @@ LIBC_INLINE static constexpr uint64_t rsqrt_approx(uint64_t m) {
 
 } // namespace sqrtf128_internal
 
-LIBC_INLINE static float128 sqrtf128(float128 x) {
+LIBC_INLINE float128 sqrtf128(float128 x) {
   using namespace sqrtf128_internal;
   using FPBits = fputil::FPBits<float128>;
   // Get rounding mode.
