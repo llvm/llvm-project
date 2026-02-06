@@ -57,9 +57,10 @@ void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {
 }
 
 void Session::waitForShutdown() {
-  shutdown([]() {});
-  std::unique_lock<std::mutex> Lock(M);
-  SI->CompleteCV.wait(Lock, [&]() { return SI->Complete; });
+  std::promise<void> P;
+  auto F = P.get_future();
+  shutdown([P = std::move(P)]() mutable { P.set_value(); });
+  F.get();
 }
 
 void Session::addResourceManager(std::unique_ptr<ResourceManager> RM) {
@@ -100,7 +101,7 @@ void Session::shutdownComplete() {
 
   std::unique_ptr<TaskDispatcher> TmpDispatcher;
   {
-    std::lock_guard<std::mutex> Lock(M);
+    std::scoped_lock<std::mutex> Lock(M);
     TmpDispatcher = std::move(Dispatcher);
   }
 
@@ -108,15 +109,13 @@ void Session::shutdownComplete() {
 
   std::vector<OnShutdownCompleteFn> OnCompletes;
   {
-    std::lock_guard<std::mutex> Lock(M);
+    std::scoped_lock<std::mutex> Lock(M);
     SI->Complete = true;
     OnCompletes = std::move(SI->OnCompletes);
   }
 
   for (auto &OnShutdownComplete : OnCompletes)
     OnShutdownComplete();
-
-  SI->CompleteCV.notify_all();
 }
 
 void Session::wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,

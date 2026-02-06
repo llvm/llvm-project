@@ -114,6 +114,16 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "OpAsmDialectInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/IR/OpAsmDialectInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/IR/OpAsmDialectInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
+gentbl_cc_library(
     name = "TensorEncodingIncGen",
     tbl_outs = {
         "include/mlir/IR/TensorEncInterfaces.h.inc": ["-gen-attr-interface-decls"],
@@ -397,6 +407,7 @@ cc_library(
         "lib/Bytecode/Writer/*.h",
         "include/mlir/Bytecode/*.h",
     ]) + [
+        "include/mlir/IR/OpAsmDialectInterface.h.inc",
         "include/mlir/IR/OpAsmOpInterface.h.inc",
         "include/mlir/Interfaces/DataLayoutInterfaces.h",
         "include/mlir/Interfaces/InferIntRangeInterface.h",
@@ -505,6 +516,7 @@ mlir_c_api_cc_library(
         ":IR",
         ":Pass",
         ":Support",
+        ":TransformUtils",
         ":config",
         ":FuncTransformsPassIncGen",
         ":Rewrite",
@@ -1697,7 +1709,14 @@ cc_library(
 
 td_library(
     name = "AMDGPUTdFiles",
-    srcs = ["include/mlir/Dialect/AMDGPU/IR/AMDGPU.td"],
+    srcs = [
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPU.td",
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUAttrs.td",
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUBase.td",
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.td",
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUOps.td",
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUTypes.td",
+    ],
     includes = ["include"],
     deps = [
         ":InferTypeOpInterfaceTdFiles",
@@ -1710,11 +1729,11 @@ td_library(
 gentbl_cc_library(
     name = "AMDGPUIncGen",
     tbl_outs = {
-        "include/mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.h.inc": [
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUAttrs.h.inc": [
             "-gen-attrdef-decls",
             "-dialect=amdgpu",
         ],
-        "include/mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.cpp.inc": [
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUAttrs.cpp.inc": [
             "-gen-attrdef-defs",
             "-dialect=amdgpu",
         ],
@@ -1745,7 +1764,13 @@ gentbl_cc_library(
 
 cc_library(
     name = "AMDGPUDialect",
-    srcs = ["lib/Dialect/AMDGPU/IR/AMDGPUDialect.cpp"],
+    srcs = [
+        "lib/Dialect/AMDGPU/IR/AMDGPUAttrs.cpp",
+        "lib/Dialect/AMDGPU/IR/AMDGPUDialect.cpp",
+        "lib/Dialect/AMDGPU/IR/AMDGPUEnums.cpp",
+        "lib/Dialect/AMDGPU/IR/AMDGPUOps.cpp",
+        "lib/Dialect/AMDGPU/IR/AMDGPUTypes.cpp",
+    ],
     hdrs = [
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h",
         "lib/Conversion/LLVMCommon/MemRefDescriptor.h",
@@ -3936,6 +3961,7 @@ cc_library(
         ":ArithUtils",
         ":ControlFlowInterfaces",
         ":DialectUtils",
+        ":FuncDialect",
         ":FunctionInterfaces",
         ":GPUDialect",
         ":GPUUtils",
@@ -3956,6 +3982,7 @@ cc_library(
         ":XeGPUPassIncGen",
         ":XeGPUUtils",
         ":XeGPUuArch",
+        ":XeVMDialect",
         "//llvm:Support",
     ],
 )
@@ -3975,6 +4002,7 @@ cc_library(
         ":SCFTransforms",
         ":TransformUtils",
         ":XeGPUDialect",
+        ":XeGPUuArch",
         ":XeVMDialect",
         "//llvm:Support",
     ],
@@ -4543,6 +4571,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":TensorDialect",
         ":TransformUtils",
+        ":UBDialect",
         ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
@@ -13729,6 +13758,7 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/MPI/IR/*.h"]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":BytecodeOpInterface",
         ":DLTIDialect",
         ":IR",
@@ -14488,6 +14518,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BytecodeOpInterface",
+        ":ControlFlowInterfaces",
         ":ConvertToLLVMInterface",
         ":IR",
         ":InliningUtils",

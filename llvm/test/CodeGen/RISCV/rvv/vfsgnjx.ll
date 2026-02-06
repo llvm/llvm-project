@@ -188,8 +188,8 @@ entry:
 define <vscale x 32 x half> @intrinsic_vfsgnjx_mask_vv_nxv32f16_nxv32f16_nxv32f16(<vscale x 32 x half> %0, <vscale x 32 x half> %1, <vscale x 32 x half> %2, <vscale x 32 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfsgnjx_mask_vv_nxv32f16_nxv32f16_nxv32f16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vl8re16.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e16, m8, ta, mu
+; CHECK-NEXT:    vle16.v v24, (a0)
 ; CHECK-NEXT:    vfsgnjx.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -354,8 +354,8 @@ entry:
 define <vscale x 16 x float> @intrinsic_vfsgnjx_mask_vv_nxv16f32_nxv16f32_nxv16f32(<vscale x 16 x float> %0, <vscale x 16 x float> %1, <vscale x 16 x float> %2, <vscale x 16 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfsgnjx_mask_vv_nxv16f32_nxv16f32_nxv16f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vl8re32.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
+; CHECK-NEXT:    vle32.v v24, (a0)
 ; CHECK-NEXT:    vfsgnjx.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -487,8 +487,8 @@ entry:
 define <vscale x 8 x double> @intrinsic_vfsgnjx_mask_vv_nxv8f64_nxv8f64_nxv8f64(<vscale x 8 x double> %0, <vscale x 8 x double> %1, <vscale x 8 x double> %2, <vscale x 8 x i1> %3, iXLen %4) nounwind {
 ; CHECK-LABEL: intrinsic_vfsgnjx_mask_vv_nxv8f64_nxv8f64_nxv8f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
+; CHECK-NEXT:    vle64.v v24, (a0)
 ; CHECK-NEXT:    vfsgnjx.vv v8, v16, v24, v0.t
 ; CHECK-NEXT:    ret
 entry:

@@ -320,12 +320,12 @@ void CoreEngine::HandleBlockEdge(const BlockEdge &L, ExplodedNode *Pred) {
   // Call into the ExprEngine to process entering the CFGBlock.
   BlockEntrance BE(L.getSrc(), L.getDst(), Pred->getLocationContext());
   ExplodedNodeSet DstNodes;
-  NodeBuilderWithSinks NodeBuilder(Pred, DstNodes, BuilderCtx, BE);
-  ExprEng.processCFGBlockEntrance(L, NodeBuilder, Pred);
+  NodeBuilder Builder(Pred, DstNodes, BuilderCtx);
+  ExprEng.processCFGBlockEntrance(L, BE, Builder, Pred);
 
   // Auto-generate a node.
-  if (!NodeBuilder.hasGeneratedNodes()) {
-    NodeBuilder.generateNode(Pred->State, Pred);
+  if (!Builder.hasGeneratedNodes()) {
+    Builder.generateNode(BE, Pred->State, Pred);
   }
 
   ExplodedNodeSet CheckerNodes;
@@ -449,10 +449,7 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
         return;
 
       case Stmt::SwitchStmtClass: {
-        SwitchNodeBuilder builder(Pred, B, cast<SwitchStmt>(Term)->getCond(),
-                                    this);
-
-        ExprEng.processSwitch(builder);
+        ExprEng.processSwitch(cast<SwitchStmt>(Term), *this, B, Pred);
         return;
       }
 
@@ -705,8 +702,6 @@ ExplodedNode* NodeBuilder::generateNodeImpl(const ProgramPoint &Loc,
   return N;
 }
 
-void NodeBuilderWithSinks::anchor() {}
-
 StmtNodeBuilder::~StmtNodeBuilder() {
   if (EnclosingBldr)
     for (const auto I : Frontier)
@@ -748,13 +743,11 @@ IndirectGotoNodeBuilder::generateNode(const iterator &I,
   return Succ;
 }
 
-ExplodedNode*
-SwitchNodeBuilder::generateCaseStmtNode(const iterator &I,
-                                        ProgramStateRef St) {
+ExplodedNode *SwitchNodeBuilder::generateCaseStmtNode(const CFGBlock *Block,
+                                                      ProgramStateRef St) {
   bool IsNew;
-  ExplodedNode *Succ =
-      Eng.G.getNode(BlockEdge(Src, I.getBlock(), Pred->getLocationContext()),
-                    St, false, &IsNew);
+  ExplodedNode *Succ = Eng.G.getNode(
+      BlockEdge(Src, Block, Pred->getLocationContext()), St, false, &IsNew);
   Succ->addPredecessor(Pred, Eng.G);
   if (!IsNew)
     return nullptr;

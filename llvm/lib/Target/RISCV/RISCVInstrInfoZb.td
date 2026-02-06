@@ -530,6 +530,8 @@ def : Pat<(XLenVT (and (srl GPR:$rs1, shiftMaskXLen:$rs2), 1)),
 
 def : Pat<(XLenVT (shl 1, shiftMaskXLen:$rs2)),
           (BSET (XLenVT X0), shiftMaskXLen:$rs2)>;
+def : Pat<(XLenVT (add (shl -1, shiftMaskXLen:$rs2), GPR:$rs3)),
+          (SUB GPR:$rs3, (XLenVT (BSET (XLenVT X0), shiftMaskXLen:$rs2)))>;
 def : Pat<(XLenVT (not (shl -1, shiftMaskXLen:$rs2))),
           (ADDI (XLenVT (BSET (XLenVT X0), shiftMaskXLen:$rs2)), -1)>;
 

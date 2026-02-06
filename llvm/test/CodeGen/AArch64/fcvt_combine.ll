@@ -5,89 +5,30 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+fullfp16 -verify-machineinstrs -global-isel -o - %s | FileCheck %s --check-prefixes=CHECK,CHECK-FP16,CHECK-FP16-GI
 
 define <2 x i32> @test1(<2 x float> %f) {
-; CHECK-NO16-SD-LABEL: test1:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    fcvtzs v0.2s, v0.2s, #4
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test1:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.2s, v0.2s, #4
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test1:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    fmov s1, #16.00000000
-; CHECK-NO16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test1:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    fmov s1, #16.00000000
-; CHECK-FP16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs v0.2s, v0.2s, #4
+; CHECK-NEXT:    ret
   %mul.i = fmul <2 x float> %f, <float 16.000000e+00, float 16.000000e+00>
   %vcvt.i = fptosi <2 x float> %mul.i to <2 x i32>
   ret <2 x i32> %vcvt.i
 }
 
 define <4 x i32> @test2(<4 x float> %f) {
-; CHECK-NO16-SD-LABEL: test2:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    fcvtzs v0.4s, v0.4s, #3
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test2:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.4s, v0.4s, #3
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test2:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    fmov s1, #8.00000000
-; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v1.s[0]
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test2:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    fmov s1, #8.00000000
-; CHECK-FP16-GI-NEXT:    fmul v0.4s, v0.4s, v1.s[0]
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s, #3
+; CHECK-NEXT:    ret
   %mul.i = fmul <4 x float> %f, <float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00>
   %vcvt.i = fptosi <4 x float> %mul.i to <4 x i32>
   ret <4 x i32> %vcvt.i
 }
 
 define <2 x i64> @test3(<2 x double> %d) {
-; CHECK-NO16-SD-LABEL: test3:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    fcvtzs v0.2d, v0.2d, #5
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test3:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.2d, v0.2d, #5
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test3:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    mov x8, #4629700416936869888 // =0x4040000000000000
-; CHECK-NO16-GI-NEXT:    fmov d1, x8
-; CHECK-NO16-GI-NEXT:    fmul v0.2d, v0.2d, v1.d[0]
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test3:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    mov x8, #4629700416936869888 // =0x4040000000000000
-; CHECK-FP16-GI-NEXT:    fmov d1, x8
-; CHECK-FP16-GI-NEXT:    fmul v0.2d, v0.2d, v1.d[0]
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test3:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d, #5
+; CHECK-NEXT:    ret
   %mul.i = fmul <2 x double> %d, <double 32.000000e+00, double 32.000000e+00>
   %vcvt.i = fptosi <2 x double> %mul.i to <2 x i64>
   ret <2 x i64> %vcvt.i
@@ -95,33 +36,11 @@ define <2 x i64> @test3(<2 x double> %d) {
 
 ; Truncate double to i32
 define <2 x i32> @test4(<2 x double> %d) {
-; CHECK-NO16-SD-LABEL: test4:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    fcvtzs v0.2d, v0.2d, #4
-; CHECK-NO16-SD-NEXT:    xtn v0.2s, v0.2d
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test4:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.2d, v0.2d, #4
-; CHECK-FP16-SD-NEXT:    xtn v0.2s, v0.2d
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test4:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    fmov d1, #16.00000000
-; CHECK-NO16-GI-NEXT:    fmul v0.2d, v0.2d, v1.d[0]
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-NO16-GI-NEXT:    xtn v0.2s, v0.2d
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test4:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    fmov d1, #16.00000000
-; CHECK-FP16-GI-NEXT:    fmul v0.2d, v0.2d, v1.d[0]
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    xtn v0.2s, v0.2d
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d, #4
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
   %mul.i = fmul <2 x double> %d, <double 16.000000e+00, double 16.000000e+00>
   %vcvt.i = fptosi <2 x double> %mul.i to <2 x i32>
   ret <2 x i32> %vcvt.i
@@ -129,29 +48,10 @@ define <2 x i32> @test4(<2 x double> %d) {
 
 ; Truncate float to i16
 define <2 x i16> @test5(<2 x float> %f) {
-; CHECK-NO16-SD-LABEL: test5:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    fcvtzs v0.2s, v0.2s, #4
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test5:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.2s, v0.2s, #4
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test5:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    fmov s1, #16.00000000
-; CHECK-NO16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test5:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    fmov s1, #16.00000000
-; CHECK-FP16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test5:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs v0.2s, v0.2s, #4
+; CHECK-NEXT:    ret
   %mul.i = fmul <2 x float> %f, <float 16.000000e+00, float 16.000000e+00>
   %vcvt.i = fptosi <2 x float> %mul.i to <2 x i16>
   ret <2 x i16> %vcvt.i
@@ -196,29 +96,10 @@ define <2 x i64> @test6(<2 x float> %f) {
 }
 
 define <2 x i32> @test7(<2 x float> %f) {
-; CHECK-NO16-SD-LABEL: test7:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    fcvtzu v0.2s, v0.2s, #4
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test7:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzu v0.2s, v0.2s, #4
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test7:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    fmov s1, #16.00000000
-; CHECK-NO16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-NO16-GI-NEXT:    fcvtzu v0.2s, v0.2s
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test7:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    fmov s1, #16.00000000
-; CHECK-FP16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-FP16-GI-NEXT:    fcvtzu v0.2s, v0.2s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test7:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu v0.2s, v0.2s, #4
+; CHECK-NEXT:    ret
   %mul.i = fmul <2 x float> %f, <float 16.000000e+00, float 16.000000e+00>
   %vcvt.i = fptoui <2 x float> %mul.i to <2 x i32>
   ret <2 x i32> %vcvt.i
@@ -406,31 +287,10 @@ define <2 x i32> @test13(<2 x float> %f) {
 
 ; Test case where const is max power of 2 (i.e., 2^32).
 define <2 x i32> @test14(<2 x float> %f) {
-; CHECK-NO16-SD-LABEL: test14:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    fcvtzs v0.2s, v0.2s, #32
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test14:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.2s, v0.2s, #32
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test14:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    mov w8, #1333788672 // =0x4f800000
-; CHECK-NO16-GI-NEXT:    fmov s1, w8
-; CHECK-NO16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test14:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    mov w8, #1333788672 // =0x4f800000
-; CHECK-FP16-GI-NEXT:    fmov s1, w8
-; CHECK-FP16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test14:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs v0.2s, v0.2s, #32
+; CHECK-NEXT:    ret
   %mul.i = fmul <2 x float> %f, <float 0x41F0000000000000, float 0x41F0000000000000>
   %vcvt.i = fptosi <2 x float> %mul.i to <2 x i32>
   ret <2 x i32> %vcvt.i
@@ -490,10 +350,10 @@ define <8 x i16> @test_v8f16(<8 x half> %in) {
 ; CHECK-NO16-SD-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
 ; CHECK-NO16-SD-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: test_v8f16:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.8h, v0.8h, #2
-; CHECK-FP16-SD-NEXT:    ret
+; CHECK-FP16-LABEL: test_v8f16:
+; CHECK-FP16:       // %bb.0:
+; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h, #2
+; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-NO16-GI-LABEL: test_v8f16:
 ; CHECK-NO16-GI:       // %bb.0:
@@ -511,13 +371,6 @@ define <8 x i16> @test_v8f16(<8 x half> %in) {
 ; CHECK-NO16-GI-NEXT:    fcvtzs v0.4s, v0.4s
 ; CHECK-NO16-GI-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
 ; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test_v8f16:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    movi v1.8h, #68, lsl #8
-; CHECK-FP16-GI-NEXT:    fmul v0.8h, v0.8h, v1.8h
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.8h, v0.8h
-; CHECK-FP16-GI-NEXT:    ret
   %scale = fmul <8 x half> %in, <half 4.0, half 4.0, half 4.0, half 4.0, half 4.0, half 4.0, half 4.0, half 4.0>
   %val = fptosi <8 x half> %scale to <8 x i16>
   ret <8 x i16> %val
@@ -535,10 +388,10 @@ define <4 x i16> @test_v4f16(<4 x half> %in) {
 ; CHECK-NO16-SD-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NO16-SD-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: test_v4f16:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzu v0.4h, v0.4h, #2
-; CHECK-FP16-SD-NEXT:    ret
+; CHECK-FP16-LABEL: test_v4f16:
+; CHECK-FP16:       // %bb.0:
+; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h, #2
+; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-NO16-GI-LABEL: test_v4f16:
 ; CHECK-NO16-GI:       // %bb.0:
@@ -551,13 +404,6 @@ define <4 x i16> @test_v4f16(<4 x half> %in) {
 ; CHECK-NO16-GI-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NO16-GI-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test_v4f16:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    movi v1.4h, #68, lsl #8
-; CHECK-FP16-GI-NEXT:    fmul v0.4h, v0.4h, v1.4h
-; CHECK-FP16-GI-NEXT:    fcvtzu v0.4h, v0.4h
-; CHECK-FP16-GI-NEXT:    ret
   %scale = fmul <4 x half> %in, <half 4.0, half 4.0, half 4.0, half 4.0>
   %val = fptoui <4 x half> %scale to <4 x i16>
   ret <4 x i16> %val
@@ -613,89 +459,30 @@ declare <4 x i32> @llvm.fptosi.sat.v4i32.v4f16(<4 x half>)
 declare <4 x i24> @llvm.fptoui.sat.v4i24.v4f32(<4 x float>)
 
 define <2 x i32> @test1_sat(<2 x float> %f) {
-; CHECK-NO16-SD-LABEL: test1_sat:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    fcvtzs v0.2s, v0.2s, #4
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test1_sat:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.2s, v0.2s, #4
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test1_sat:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    fmov s1, #16.00000000
-; CHECK-NO16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test1_sat:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    fmov s1, #16.00000000
-; CHECK-FP16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test1_sat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs v0.2s, v0.2s, #4
+; CHECK-NEXT:    ret
   %mul.i = fmul <2 x float> %f, <float 16.000000e+00, float 16.000000e+00>
   %vcvt.i = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f32(<2 x float> %mul.i)
   ret <2 x i32> %vcvt.i
 }
 
 define <4 x i32> @test2_sat(<4 x float> %f) {
-; CHECK-NO16-SD-LABEL: test2_sat:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    fcvtzs v0.4s, v0.4s, #3
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test2_sat:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.4s, v0.4s, #3
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test2_sat:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    fmov s1, #8.00000000
-; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v1.s[0]
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test2_sat:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    fmov s1, #8.00000000
-; CHECK-FP16-GI-NEXT:    fmul v0.4s, v0.4s, v1.s[0]
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test2_sat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s, #3
+; CHECK-NEXT:    ret
   %mul.i = fmul <4 x float> %f, <float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00>
   %vcvt.i = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> %mul.i)
   ret <4 x i32> %vcvt.i
 }
 
 define <2 x i64> @test3_sat(<2 x double> %d) {
-; CHECK-NO16-SD-LABEL: test3_sat:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    fcvtzs v0.2d, v0.2d, #5
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test3_sat:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.2d, v0.2d, #5
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test3_sat:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    mov x8, #4629700416936869888 // =0x4040000000000000
-; CHECK-NO16-GI-NEXT:    fmov d1, x8
-; CHECK-NO16-GI-NEXT:    fmul v0.2d, v0.2d, v1.d[0]
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test3_sat:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    mov x8, #4629700416936869888 // =0x4040000000000000
-; CHECK-FP16-GI-NEXT:    fmov d1, x8
-; CHECK-FP16-GI-NEXT:    fmul v0.2d, v0.2d, v1.d[0]
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2d, v0.2d
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test3_sat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d, #5
+; CHECK-NEXT:    ret
   %mul.i = fmul <2 x double> %d, <double 32.000000e+00, double 32.000000e+00>
   %vcvt.i = call <2 x i64> @llvm.fptosi.sat.v2i64.v2f64(<2 x double> %mul.i)
   ret <2 x i64> %vcvt.i
@@ -729,12 +516,10 @@ define <2 x i32> @test4_sat(<2 x double> %d) {
 ;
 ; CHECK-NO16-GI-LABEL: test4_sat:
 ; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    fmov d1, #16.00000000
+; CHECK-NO16-GI-NEXT:    fcvtzs v0.2d, v0.2d, #4
 ; CHECK-NO16-GI-NEXT:    adrp x8, .LCPI21_1
-; CHECK-NO16-GI-NEXT:    fmul v0.2d, v0.2d, v1.d[0]
 ; CHECK-NO16-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI21_1]
 ; CHECK-NO16-GI-NEXT:    adrp x8, .LCPI21_0
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-NO16-GI-NEXT:    cmgt v2.2d, v1.2d, v0.2d
 ; CHECK-NO16-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NO16-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI21_0]
@@ -745,12 +530,10 @@ define <2 x i32> @test4_sat(<2 x double> %d) {
 ;
 ; CHECK-FP16-GI-LABEL: test4_sat:
 ; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    fmov d1, #16.00000000
+; CHECK-FP16-GI-NEXT:    fcvtzs v0.2d, v0.2d, #4
 ; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI21_1
-; CHECK-FP16-GI-NEXT:    fmul v0.2d, v0.2d, v1.d[0]
 ; CHECK-FP16-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI21_1]
 ; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI21_0
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-FP16-GI-NEXT:    cmgt v2.2d, v1.2d, v0.2d
 ; CHECK-FP16-GI-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-FP16-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI21_0]
@@ -785,22 +568,18 @@ define <2 x i16> @test5_sat(<2 x float> %f) {
 ;
 ; CHECK-NO16-GI-LABEL: test5_sat:
 ; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    fmov s1, #16.00000000
-; CHECK-NO16-GI-NEXT:    mvni v2.2s, #127, msl #8
-; CHECK-NO16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
 ; CHECK-NO16-GI-NEXT:    movi v1.2s, #127, msl #8
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.2s, v0.2s
+; CHECK-NO16-GI-NEXT:    fcvtzs v0.2s, v0.2s, #4
+; CHECK-NO16-GI-NEXT:    mvni v2.2s, #127, msl #8
 ; CHECK-NO16-GI-NEXT:    smin v0.2s, v0.2s, v1.2s
 ; CHECK-NO16-GI-NEXT:    smax v0.2s, v0.2s, v2.2s
 ; CHECK-NO16-GI-NEXT:    ret
 ;
 ; CHECK-FP16-GI-LABEL: test5_sat:
 ; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    fmov s1, #16.00000000
-; CHECK-FP16-GI-NEXT:    mvni v2.2s, #127, msl #8
-; CHECK-FP16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
 ; CHECK-FP16-GI-NEXT:    movi v1.2s, #127, msl #8
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2s, v0.2s
+; CHECK-FP16-GI-NEXT:    fcvtzs v0.2s, v0.2s, #4
+; CHECK-FP16-GI-NEXT:    mvni v2.2s, #127, msl #8
 ; CHECK-FP16-GI-NEXT:    smin v0.2s, v0.2s, v1.2s
 ; CHECK-FP16-GI-NEXT:    smax v0.2s, v0.2s, v2.2s
 ; CHECK-FP16-GI-NEXT:    ret
@@ -811,33 +590,11 @@ define <2 x i16> @test5_sat(<2 x float> %f) {
 
 ; Truncate float to i16
 define <4 x i16> @test5l_sat(<4 x float> %f) {
-; CHECK-NO16-SD-LABEL: test5l_sat:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    fcvtzs v0.4s, v0.4s, #4
-; CHECK-NO16-SD-NEXT:    sqxtn v0.4h, v0.4s
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test5l_sat:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.4s, v0.4s, #4
-; CHECK-FP16-SD-NEXT:    sqxtn v0.4h, v0.4s
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test5l_sat:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    fmov s1, #16.00000000
-; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v1.s[0]
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-NO16-GI-NEXT:    sqxtn v0.4h, v0.4s
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test5l_sat:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    fmov s1, #16.00000000
-; CHECK-FP16-GI-NEXT:    fmul v0.4s, v0.4s, v1.s[0]
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.4s, v0.4s
-; CHECK-FP16-GI-NEXT:    sqxtn v0.4h, v0.4s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test5l_sat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s, #4
+; CHECK-NEXT:    sqxtn v0.4h, v0.4s
+; CHECK-NEXT:    ret
   %mul.i = fmul <4 x float> %f, <float 16.000000e+00, float 16.000000e+00, float 16.000000e+00, float 16.000000e+00>
   %vcvt.i = call <4 x i16> @llvm.fptosi.sat.v4i16.v4f32(<4 x float> %mul.i)
   ret <4 x i16> %vcvt.i
@@ -882,29 +639,10 @@ define <2 x i64> @test6_sat(<2 x float> %f) {
 }
 
 define <2 x i32> @test7_sat(<2 x float> %f) {
-; CHECK-NO16-SD-LABEL: test7_sat:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    fcvtzu v0.2s, v0.2s, #4
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test7_sat:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzu v0.2s, v0.2s, #4
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test7_sat:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    fmov s1, #16.00000000
-; CHECK-NO16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-NO16-GI-NEXT:    fcvtzu v0.2s, v0.2s
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test7_sat:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    fmov s1, #16.00000000
-; CHECK-FP16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-FP16-GI-NEXT:    fcvtzu v0.2s, v0.2s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test7_sat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu v0.2s, v0.2s, #4
+; CHECK-NEXT:    ret
   %mul.i = fmul <2 x float> %f, <float 16.000000e+00, float 16.000000e+00>
   %vcvt.i = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float> %mul.i)
   ret <2 x i32> %vcvt.i
@@ -1092,31 +830,10 @@ define <2 x i32> @test13_sat(<2 x float> %f) {
 
 ; Test case where const is max power of 2 (i.e., 2^32).
 define <2 x i32> @test14_sat(<2 x float> %f) {
-; CHECK-NO16-SD-LABEL: test14_sat:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    fcvtzs v0.2s, v0.2s, #32
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test14_sat:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.2s, v0.2s, #32
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test14_sat:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    mov w8, #1333788672 // =0x4f800000
-; CHECK-NO16-GI-NEXT:    fmov s1, w8
-; CHECK-NO16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test14_sat:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    mov w8, #1333788672 // =0x4f800000
-; CHECK-FP16-GI-NEXT:    fmov s1, w8
-; CHECK-FP16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test14_sat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs v0.2s, v0.2s, #32
+; CHECK-NEXT:    ret
   %mul.i = fmul <2 x float> %f, <float 0x41F0000000000000, float 0x41F0000000000000>
   %vcvt.i = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f32(<2 x float> %mul.i)
   ret <2 x i32> %vcvt.i
@@ -1177,10 +894,10 @@ define <8 x i16> @test_v8f16_sat(<8 x half> %in) {
 ; CHECK-NO16-SD-NEXT:    sqxtn2 v0.8h, v1.4s
 ; CHECK-NO16-SD-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: test_v8f16_sat:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.8h, v0.8h, #2
-; CHECK-FP16-SD-NEXT:    ret
+; CHECK-FP16-LABEL: test_v8f16_sat:
+; CHECK-FP16:       // %bb.0:
+; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h, #2
+; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-NO16-GI-LABEL: test_v8f16_sat:
 ; CHECK-NO16-GI:       // %bb.0:
@@ -1199,13 +916,6 @@ define <8 x i16> @test_v8f16_sat(<8 x half> %in) {
 ; CHECK-NO16-GI-NEXT:    sqxtn v0.4h, v1.4s
 ; CHECK-NO16-GI-NEXT:    sqxtn2 v0.8h, v2.4s
 ; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test_v8f16_sat:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    movi v1.8h, #68, lsl #8
-; CHECK-FP16-GI-NEXT:    fmul v0.8h, v0.8h, v1.8h
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.8h, v0.8h
-; CHECK-FP16-GI-NEXT:    ret
   %mul.i = fmul <8 x half> %in, <half 4.0, half 4.0, half 4.0, half 4.0, half 4.0, half 4.0, half 4.0, half 4.0>
   %val = call <8 x i16> @llvm.fptosi.sat.v8i16.v8f16(<8 x half> %mul.i)
   ret <8 x i16> %val
@@ -1223,10 +933,10 @@ define <4 x i16> @test_v4f16_sat(<4 x half> %in) {
 ; CHECK-NO16-SD-NEXT:    uqxtn v0.4h, v0.4s
 ; CHECK-NO16-SD-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: test_v4f16_sat:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    fcvtzu v0.4h, v0.4h, #2
-; CHECK-FP16-SD-NEXT:    ret
+; CHECK-FP16-LABEL: test_v4f16_sat:
+; CHECK-FP16:       // %bb.0:
+; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h, #2
+; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-NO16-GI-LABEL: test_v4f16_sat:
 ; CHECK-NO16-GI:       // %bb.0:
@@ -1239,13 +949,6 @@ define <4 x i16> @test_v4f16_sat(<4 x half> %in) {
 ; CHECK-NO16-GI-NEXT:    fcvtzu v0.4s, v0.4s
 ; CHECK-NO16-GI-NEXT:    uqxtn v0.4h, v0.4s
 ; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test_v4f16_sat:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    movi v1.4h, #68, lsl #8
-; CHECK-FP16-GI-NEXT:    fmul v0.4h, v0.4h, v1.4h
-; CHECK-FP16-GI-NEXT:    fcvtzu v0.4h, v0.4h
-; CHECK-FP16-GI-NEXT:    ret
   %mul.i = fmul <4 x half> %in, <half 4.0, half 4.0, half 4.0, half 4.0>
   %val = call <4 x i16> @llvm.fptoui.sat.v4i16.v4f16(<4 x half> %mul.i)
   ret <4 x i16> %val
@@ -1286,37 +989,12 @@ define <4 x i32> @test_v4f16_i32_sat(<4 x half> %in) {
 }
 
 define <4 x i32> @test_extrasat(<4 x float> %f) {
-; CHECK-NO16-SD-LABEL: test_extrasat:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    movi v1.2d, #0xffffff00ffffff
-; CHECK-NO16-SD-NEXT:    fcvtzu v0.4s, v0.4s, #3
-; CHECK-NO16-SD-NEXT:    umin v0.4s, v0.4s, v1.4s
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test_extrasat:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    movi v1.2d, #0xffffff00ffffff
-; CHECK-FP16-SD-NEXT:    fcvtzu v0.4s, v0.4s, #3
-; CHECK-FP16-SD-NEXT:    umin v0.4s, v0.4s, v1.4s
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test_extrasat:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    fmov s1, #8.00000000
-; CHECK-NO16-GI-NEXT:    fmul v0.4s, v0.4s, v1.s[0]
-; CHECK-NO16-GI-NEXT:    movi v1.2d, #0xffffff00ffffff
-; CHECK-NO16-GI-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-NO16-GI-NEXT:    umin v0.4s, v0.4s, v1.4s
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test_extrasat:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    fmov s1, #8.00000000
-; CHECK-FP16-GI-NEXT:    fmul v0.4s, v0.4s, v1.s[0]
-; CHECK-FP16-GI-NEXT:    movi v1.2d, #0xffffff00ffffff
-; CHECK-FP16-GI-NEXT:    fcvtzu v0.4s, v0.4s
-; CHECK-FP16-GI-NEXT:    umin v0.4s, v0.4s, v1.4s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test_extrasat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.2d, #0xffffff00ffffff
+; CHECK-NEXT:    fcvtzu v0.4s, v0.4s, #3
+; CHECK-NEXT:    umin v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ret
   %mul.i = fmul <4 x float> %f, <float 8.000000e+00, float 8.000000e+00, float 8.000000e+00, float 8.000000e+00>
   %vcvt.i = call <4 x i24> @llvm.fptoui.sat.v4i24.v4f32(<4 x float> %mul.i)
   %t = zext <4 x i24> %vcvt.i to <4 x i32>
@@ -1328,8 +1006,7 @@ define <4 x i32> @test_extrasat(<4 x float> %f) {
 define <2 x i64> @tests_v2i64_fadd(<2 x double> %f) {
 ; CHECK-LABEL: tests_v2i64_fadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.2d, v0.2d, v0.2d
-; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d, #1
 ; CHECK-NEXT:    ret
   %mul.i = fadd <2 x double> %f, %f
   %vcvt.i = fptosi <2 x double> %mul.i to <2 x i64>
@@ -1339,8 +1016,7 @@ define <2 x i64> @tests_v2i64_fadd(<2 x double> %f) {
 define <2 x i32> @tests_v2i32_fadd(<2 x float> %f) {
 ; CHECK-LABEL: tests_v2i32_fadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.2s, v0.2s, v0.2s
-; CHECK-NEXT:    fcvtzs v0.2s, v0.2s
+; CHECK-NEXT:    fcvtzs v0.2s, v0.2s, #1
 ; CHECK-NEXT:    ret
   %mul.i = fadd <2 x float> %f, %f
   %vcvt.i = fptosi <2 x float> %mul.i to <2 x i32>
@@ -1350,8 +1026,7 @@ define <2 x i32> @tests_v2i32_fadd(<2 x float> %f) {
 define <4 x i32> @tests_v4i32_fadd(<4 x float> %f) {
 ; CHECK-LABEL: tests_v4i32_fadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s, #1
 ; CHECK-NEXT:    ret
   %mul.i = fadd <4 x float> %f, %f
   %vcvt.i = fptosi <4 x float> %mul.i to <4 x i32>
@@ -1371,8 +1046,7 @@ define <4 x i16> @tests_v2i16_fadd(<4 x half> %f) {
 ;
 ; CHECK-FP16-LABEL: tests_v2i16_fadd:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    fadd v0.4h, v0.4h, v0.4h
-; CHECK-FP16-NEXT:    fcvtzs v0.4h, v0.4h
+; CHECK-FP16-NEXT:    fcvtzs v0.4h, v0.4h, #1
 ; CHECK-FP16-NEXT:    ret
   %mul.i = fadd <4 x half> %f, %f
   %vcvt.i = fptosi <4 x half> %mul.i to <4 x i16>
@@ -1397,8 +1071,7 @@ define <8 x i16> @tests_v8i16_fadd(<8 x half> %f) {
 ;
 ; CHECK-FP16-LABEL: tests_v8i16_fadd:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    fadd v0.8h, v0.8h, v0.8h
-; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h, #1
 ; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-NO16-GI-LABEL: tests_v8i16_fadd:
@@ -1424,8 +1097,7 @@ define <8 x i16> @tests_v8i16_fadd(<8 x half> %f) {
 define <2 x i64> @testu_v2i64_fadd(<2 x double> %f) {
 ; CHECK-LABEL: testu_v2i64_fadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.2d, v0.2d, v0.2d
-; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
+; CHECK-NEXT:    fcvtzu v0.2d, v0.2d, #1
 ; CHECK-NEXT:    ret
   %mul.i = fadd <2 x double> %f, %f
   %vcvt.i = fptoui <2 x double> %mul.i to <2 x i64>
@@ -1435,8 +1107,7 @@ define <2 x i64> @testu_v2i64_fadd(<2 x double> %f) {
 define <2 x i32> @testu_v2i32_fadd(<2 x float> %f) {
 ; CHECK-LABEL: testu_v2i32_fadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.2s, v0.2s, v0.2s
-; CHECK-NEXT:    fcvtzu v0.2s, v0.2s
+; CHECK-NEXT:    fcvtzu v0.2s, v0.2s, #1
 ; CHECK-NEXT:    ret
   %mul.i = fadd <2 x float> %f, %f
   %vcvt.i = fptoui <2 x float> %mul.i to <2 x i32>
@@ -1446,8 +1117,7 @@ define <2 x i32> @testu_v2i32_fadd(<2 x float> %f) {
 define <4 x i32> @testu_v4i32_fadd(<4 x float> %f) {
 ; CHECK-LABEL: testu_v4i32_fadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NEXT:    fcvtzu v0.4s, v0.4s, #1
 ; CHECK-NEXT:    ret
   %mul.i = fadd <4 x float> %f, %f
   %vcvt.i = fptoui <4 x float> %mul.i to <4 x i32>
@@ -1467,8 +1137,7 @@ define <4 x i16> @testu_v2i16_fadd(<4 x half> %f) {
 ;
 ; CHECK-FP16-LABEL: testu_v2i16_fadd:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    fadd v0.4h, v0.4h, v0.4h
-; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h
+; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h, #1
 ; CHECK-FP16-NEXT:    ret
   %mul.i = fadd <4 x half> %f, %f
   %vcvt.i = fptoui <4 x half> %mul.i to <4 x i16>
@@ -1493,8 +1162,7 @@ define <8 x i16> @testu_v8i16_fadd(<8 x half> %f) {
 ;
 ; CHECK-FP16-LABEL: testu_v8i16_fadd:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    fadd v0.8h, v0.8h, v0.8h
-; CHECK-FP16-NEXT:    fcvtzu v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fcvtzu v0.8h, v0.8h, #1
 ; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-NO16-GI-LABEL: testu_v8i16_fadd:
@@ -1525,8 +1193,7 @@ define <8 x i16> @testu_v8i16_fadd(<8 x half> %f) {
 define <2 x i64> @tests_sat_v2i64_fadd(<2 x double> %f) {
 ; CHECK-LABEL: tests_sat_v2i64_fadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.2d, v0.2d, v0.2d
-; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d, #1
 ; CHECK-NEXT:    ret
   %mul.i = fadd <2 x double> %f, %f
   %vcvt.i = call <2 x i64> @llvm.fptosi.sat.v2i64.v2f64(<2 x double> %mul.i)
@@ -1536,8 +1203,7 @@ define <2 x i64> @tests_sat_v2i64_fadd(<2 x double> %f) {
 define <2 x i32> @tests_sat_v2i32_fadd(<2 x float> %f) {
 ; CHECK-LABEL: tests_sat_v2i32_fadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.2s, v0.2s, v0.2s
-; CHECK-NEXT:    fcvtzs v0.2s, v0.2s
+; CHECK-NEXT:    fcvtzs v0.2s, v0.2s, #1
 ; CHECK-NEXT:    ret
   %mul.i = fadd <2 x float> %f, %f
   %vcvt.i = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f32(<2 x float> %mul.i)
@@ -1547,8 +1213,7 @@ define <2 x i32> @tests_sat_v2i32_fadd(<2 x float> %f) {
 define <4 x i32> @tests_sat_v4i32_fadd(<4 x float> %f) {
 ; CHECK-LABEL: tests_sat_v4i32_fadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    fcvtzs v0.4s, v0.4s
+; CHECK-NEXT:    fcvtzs v0.4s, v0.4s, #1
 ; CHECK-NEXT:    ret
   %mul.i = fadd <4 x float> %f, %f
   %vcvt.i = call <4 x i32> @llvm.fptosi.sat.v4i32.v4f32(<4 x float> %mul.i)
@@ -1568,8 +1233,7 @@ define <4 x i16> @tests_sat_v2i16_fadd(<4 x half> %f) {
 ;
 ; CHECK-FP16-LABEL: tests_sat_v2i16_fadd:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    fadd v0.4h, v0.4h, v0.4h
-; CHECK-FP16-NEXT:    fcvtzs v0.4h, v0.4h
+; CHECK-FP16-NEXT:    fcvtzs v0.4h, v0.4h, #1
 ; CHECK-FP16-NEXT:    ret
   %mul.i = fadd <4 x half> %f, %f
   %vcvt.i = call <4 x i16> @llvm.fptosi.sat.v4i16.v4f16(<4 x half> %mul.i)
@@ -1595,8 +1259,7 @@ define <8 x i16> @tests_sat_v8i16_fadd(<8 x half> %f) {
 ;
 ; CHECK-FP16-LABEL: tests_sat_v8i16_fadd:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    fadd v0.8h, v0.8h, v0.8h
-; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fcvtzs v0.8h, v0.8h, #1
 ; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-NO16-GI-LABEL: tests_sat_v8i16_fadd:
@@ -1623,8 +1286,7 @@ define <8 x i16> @tests_sat_v8i16_fadd(<8 x half> %f) {
 define <2 x i64> @testu_sat_v2i64_fadd(<2 x double> %f) {
 ; CHECK-LABEL: testu_sat_v2i64_fadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.2d, v0.2d, v0.2d
-; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
+; CHECK-NEXT:    fcvtzu v0.2d, v0.2d, #1
 ; CHECK-NEXT:    ret
   %mul.i = fadd <2 x double> %f, %f
   %vcvt.i = call <2 x i64> @llvm.fptoui.sat.v2i64.v2f64(<2 x double> %mul.i)
@@ -1634,8 +1296,7 @@ define <2 x i64> @testu_sat_v2i64_fadd(<2 x double> %f) {
 define <2 x i32> @testu_sat_v2i32_fadd(<2 x float> %f) {
 ; CHECK-LABEL: testu_sat_v2i32_fadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.2s, v0.2s, v0.2s
-; CHECK-NEXT:    fcvtzu v0.2s, v0.2s
+; CHECK-NEXT:    fcvtzu v0.2s, v0.2s, #1
 ; CHECK-NEXT:    ret
   %mul.i = fadd <2 x float> %f, %f
   %vcvt.i = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float> %mul.i)
@@ -1645,8 +1306,7 @@ define <2 x i32> @testu_sat_v2i32_fadd(<2 x float> %f) {
 define <4 x i32> @testu_sat_v4i32_fadd(<4 x float> %f) {
 ; CHECK-LABEL: testu_sat_v4i32_fadd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    fcvtzu v0.4s, v0.4s
+; CHECK-NEXT:    fcvtzu v0.4s, v0.4s, #1
 ; CHECK-NEXT:    ret
   %mul.i = fadd <4 x float> %f, %f
   %vcvt.i = call <4 x i32> @llvm.fptoui.sat.v4i32.v4f32(<4 x float> %mul.i)
@@ -1666,8 +1326,7 @@ define <4 x i16> @testu_sat_v2i16_fadd(<4 x half> %f) {
 ;
 ; CHECK-FP16-LABEL: testu_sat_v2i16_fadd:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    fadd v0.4h, v0.4h, v0.4h
-; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h
+; CHECK-FP16-NEXT:    fcvtzu v0.4h, v0.4h, #1
 ; CHECK-FP16-NEXT:    ret
   %mul.i = fadd <4 x half> %f, %f
   %vcvt.i = call <4 x i16> @llvm.fptoui.sat.v4i16.v4f16(<4 x half> %mul.i)
@@ -1693,8 +1352,7 @@ define <8 x i16> @testu_sat_v8i16_fadd(<8 x half> %f) {
 ;
 ; CHECK-FP16-LABEL: testu_sat_v8i16_fadd:
 ; CHECK-FP16:       // %bb.0:
-; CHECK-FP16-NEXT:    fadd v0.8h, v0.8h, v0.8h
-; CHECK-FP16-NEXT:    fcvtzu v0.8h, v0.8h
+; CHECK-FP16-NEXT:    fcvtzu v0.8h, v0.8h, #1
 ; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-NO16-GI-LABEL: testu_sat_v8i16_fadd:
