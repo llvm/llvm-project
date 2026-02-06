@@ -731,7 +731,8 @@ public:
   }
 
   std::pair<MachineInstr *, unsigned>
-  pierceThroughRegSequence(const MachineInstr &MI) const;
+  pierceThroughRegSequence(const MachineInstr &MI,
+                           const MachineRegisterInfo &MRI) const;
 
   static bool setsSCCIfResultIsNonZero(const MachineInstr &MI) {
     switch (MI.getOpcode()) {
