@@ -95,11 +95,6 @@ void IntrinsicLaneMaskAnalyzer::initLaneMaskIntrinsics(MachineFunction &MF) {
         S32S64LaneMask.insert(MI.getOperand(3).getReg());
         S32S64LaneMask.insert(MI.getOperand(0).getReg());
       }
-
-      if (MI.getOpcode() == AMDGPU::SI_IF ||
-          MI.getOpcode() == AMDGPU::SI_ELSE) {
-        S32S64LaneMask.insert(MI.getOperand(0).getReg());
-      }
     }
   }
 }
