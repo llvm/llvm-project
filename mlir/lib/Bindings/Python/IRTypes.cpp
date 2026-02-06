@@ -309,9 +309,12 @@ void PyComplexType::bindDerived(ClassTy &c) {
           MlirType t = mlirComplexTypeGet(elementType);
           return PyComplexType(elementType.getContext(), t);
         }
-        throw nb::value_error(nanobind::detail::join(
-            "invalid '", nb::cast<std::string>(nb::repr(nb::cast(elementType))),
-            "' and expected floating point or integer type.").c_str());
+        throw nb::value_error(
+            nanobind::detail::join(
+                "invalid '",
+                nb::cast<std::string>(nb::repr(nb::cast(elementType))),
+                "' and expected floating point or integer type.")
+                .c_str());
       },
       "Create a complex type");
   c.def_prop_ro(

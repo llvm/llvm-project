@@ -84,17 +84,20 @@ std::vector<MlirValue> wrapOperands(std::optional<nb::list> operandList) {
             throw nb::cast_error();
           mlirOperands.push_back(val->get());
         } catch (nb::cast_error &err) {
-          throw nb::value_error(nanobind::detail::join(
-              "Operand ", index,
-              " must be a Value or Sequence of Values (", err.what(), ")")
-                                    .c_str());
+          throw nb::value_error(
+              nanobind::detail::join("Operand ", index,
+                                     " must be a Value or Sequence of Values (",
+                                     err.what(), ")")
+                  .c_str());
         }
       }
       continue;
     } catch (nb::cast_error &err) {
-      throw nb::value_error(nanobind::detail::join(
-          "Operand ", index, " must be a Value or Sequence of Values (",
-          err.what(), ")").c_str());
+      throw nb::value_error(
+          nanobind::detail::join("Operand ", index,
+                                 " must be a Value or Sequence of Values (",
+                                 err.what(), ")")
+              .c_str());
     }
 
     throw nb::cast_error();
@@ -270,8 +273,7 @@ public:
                    std::optional<std::vector<PyRegion>> regions,
                    DefaultingPyMlirContext context,
                    DefaultingPyLocation location) {
-    std::vector<MlirValue> mlirOperands =
-        wrapOperands(std::move(operandList));
+    std::vector<MlirValue> mlirOperands = wrapOperands(std::move(operandList));
     std::vector<MlirRegion> mlirRegions = wrapRegions(std::move(regions));
 
     std::vector<PyType> inferredTypes;
@@ -427,8 +429,7 @@ public:
       std::optional<PyAttribute> attributes, void *properties,
       std::optional<std::vector<PyRegion>> regions,
       DefaultingPyMlirContext context, DefaultingPyLocation location) {
-    std::vector<MlirValue> mlirOperands =
-        wrapOperands(std::move(operandList));
+    std::vector<MlirValue> mlirOperands = wrapOperands(std::move(operandList));
     std::vector<MlirRegion> mlirRegions = wrapRegions(std::move(regions));
 
     std::vector<PyShapedTypeComponents> inferredShapedTypeComponents;

@@ -12,6 +12,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
@@ -27,8 +28,6 @@ namespace nb = nanobind;
 using namespace nanobind::literals;
 using namespace mlir;
 using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
-
-using llvm::SmallVector;
 
 //------------------------------------------------------------------------------
 // Docstrings (trivial, non-duplicated docstrings are included inline).
@@ -129,7 +128,7 @@ namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 
 nb_buffer_info::nb_buffer_info(
     void *ptr, ssize_t itemsize, const char *format, ssize_t ndim,
-    SmallVector<ssize_t, 4> shape_in, SmallVector<ssize_t, 4> strides_in,
+    std::vector<ssize_t> shape_in, std::vector<ssize_t> strides_in,
     bool readonly,
     std::unique_ptr<Py_buffer, void (*)(Py_buffer *)> owned_view_in)
     : ptr(ptr), itemsize(itemsize), format(format), ndim(ndim),
@@ -255,7 +254,7 @@ void PyArrayAttribute::bindDerived(ClassTy &c) {
   c.def_static(
       "get",
       [](const nb::list &attributes, DefaultingPyMlirContext context) {
-        SmallVector<MlirAttribute> mlirAttributes;
+        std::vector<MlirAttribute> mlirAttributes;
         mlirAttributes.reserve(nb::len(attributes));
         for (auto attribute : attributes) {
           mlirAttributes.push_back(pyTryCast<PyAttribute>(attribute));
@@ -465,7 +464,7 @@ PySymbolRefAttribute::fromList(const std::vector<std::string> &symbols,
     throw std::runtime_error("SymbolRefAttr must be composed of at least "
                              "one symbol.");
   MlirStringRef rootSymbol = toMlirStringRef(symbols[0]);
-  SmallVector<MlirAttribute, 3> referenceAttrs;
+  std::vector<MlirAttribute> referenceAttrs;
   for (size_t i = 1; i < symbols.size(); ++i) {
     referenceAttrs.push_back(
         mlirFlatSymbolRefAttrGet(context.get(), toMlirStringRef(symbols[i])));
@@ -574,14 +573,14 @@ PyDenseElementsAttribute::getFromList(const nb::list &attributes,
     }
     shapedType = *explicitType;
   } else {
-    SmallVector<int64_t> shape = {static_cast<int64_t>(numAttributes)};
+    std::vector<int64_t> shape = {static_cast<int64_t>(numAttributes)};
     shapedType = mlirRankedTensorTypeGet(
         shape.size(), shape.data(),
         mlirAttributeGetType(pyTryCast<PyAttribute>(attributes[0])),
         mlirAttributeGetNull());
   }
 
-  SmallVector<MlirAttribute> mlirAttributes;
+  std::vector<MlirAttribute> mlirAttributes;
   mlirAttributes.reserve(numAttributes);
   for (const nb::handle &attribute : attributes) {
     MlirAttribute mlirAttribute = pyTryCast<PyAttribute>(attribute);
@@ -810,11 +809,11 @@ bool PyDenseElementsAttribute::isSignedIntegerFormat(std::string_view format) {
 MlirType PyDenseElementsAttribute::getShapedType(
     std::optional<MlirType> bulkLoadElementType,
     std::optional<std::vector<int64_t>> explicitShape, Py_buffer &view) {
-  SmallVector<int64_t> shape;
+  std::vector<int64_t> shape;
   if (explicitShape) {
-    shape.append(explicitShape->begin(), explicitShape->end());
+    shape.insert(shape.end(), explicitShape->begin(), explicitShape->end());
   } else {
-    shape.append(view.shape, view.shape + view.ndim);
+    shape.insert(shape.end(), view.shape, view.shape + view.ndim);
   }
 
   if (mlirTypeIsAShaped(*bulkLoadElementType)) {
@@ -1199,7 +1198,7 @@ void PyDictAttribute::bindDerived(ClassTy &c) {
   c.def_static(
       "get",
       [](const nb::dict &attributes, DefaultingPyMlirContext context) {
-        SmallVector<MlirNamedAttribute> mlirNamedAttributes;
+        std::vector<MlirNamedAttribute> mlirNamedAttributes;
         mlirNamedAttributes.reserve(attributes.size());
         for (std::pair<nb::handle, nb::handle> it : attributes) {
           auto &mlirAttr = nb::cast<PyAttribute &>(it.second);

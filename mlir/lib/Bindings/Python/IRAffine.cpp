@@ -8,6 +8,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -25,13 +26,10 @@
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/SmallVector.h"
 
 namespace nb = nanobind;
 using namespace mlir;
 using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
-
-using llvm::SmallVector;
 
 static const char kDumpDocstring[] =
     R"(Dumps a debug representation of the object to stderr.)";
@@ -41,24 +39,22 @@ static const char kDumpDocstring[] =
 /// Throws errors in case of failure, using "action" to describe what the caller
 /// was attempting to do.
 template <typename PyType, typename CType>
-static void pyListToVector(const nb::list &list,
-                           llvm::SmallVectorImpl<CType> &result,
+static void pyListToVector(const nb::list &list, std::vector<CType> &result,
                            std::string_view action) {
   result.reserve(nb::len(list));
   for (nb::handle item : list) {
     try {
       result.push_back(nb::cast<PyType>(item));
     } catch (nb::cast_error &err) {
-      std::string msg = nanobind::detail::join(
-                             "Invalid expression when ", action, " (",
-                             err.what(), ")")
-                             .c_str();
+      std::string msg = nanobind::detail::join("Invalid expression when ",
+                                               action, " (", err.what(), ")")
+                            .c_str();
       throw std::runtime_error(msg.c_str());
     } catch (std::runtime_error &err) {
-      std::string msg = nanobind::detail::join(
-                             "Invalid expression (None?) when ", action, " (",
-                             err.what(), ")")
-                             .c_str();
+      std::string msg =
+          nanobind::detail::join("Invalid expression (None?) when ", action,
+                                 " (", err.what(), ")")
+              .c_str();
       throw std::runtime_error(msg.c_str());
     }
   }
@@ -66,7 +62,7 @@ static void pyListToVector(const nb::list &list,
 
 template <typename PermutationTy>
 static bool isPermutation(const std::vector<PermutationTy> &permutation) {
-  llvm::SmallVector<bool, 8> seen(permutation.size(), false);
+  std::vector<bool> seen(permutation.size(), false);
   for (auto val : permutation) {
     if (val < permutation.size()) {
       if (seen[val])
@@ -105,9 +101,11 @@ public:
   static MlirAffineExpr castFrom(PyAffineExpr &orig) {
     if (!DerivedTy::isaFunction(orig)) {
       auto origRepr = nb::cast<std::string>(nb::repr(nb::cast(orig)));
-      throw nb::value_error(nanobind::detail::join(
-          "Cannot cast affine expression to ", DerivedTy::pyClassName,
-          " (from ", origRepr, ")").c_str());
+      throw nb::value_error(
+          nanobind::detail::join("Cannot cast affine expression to ",
+                                 DerivedTy::pyClassName, " (from ", origRepr,
+                                 ")")
+              .c_str());
     }
     return orig;
   }
@@ -741,7 +739,7 @@ void populateIRAffine(nb::module_ &m) {
       .def_static(
           "compress_unused_symbols",
           [](const nb::list &affineMaps, DefaultingPyMlirContext context) {
-            SmallVector<MlirAffineMap> maps;
+            std::vector<MlirAffineMap> maps;
             pyListToVector<PyAffineMap, MlirAffineMap>(
                 affineMaps, maps, "attempting to create an AffineMap");
             std::vector<MlirAffineMap> compressed(affineMaps.size());
@@ -769,7 +767,7 @@ void populateIRAffine(nb::module_ &m) {
           "get",
           [](intptr_t dimCount, intptr_t symbolCount, const nb::list &exprs,
              DefaultingPyMlirContext context) {
-            SmallVector<MlirAffineExpr> affineExprs;
+            std::vector<MlirAffineExpr> affineExprs;
             pyListToVector<PyAffineExpr, MlirAffineExpr>(
                 exprs, affineExprs, "attempting to create an AffineMap");
             MlirAffineMap map =
@@ -943,17 +941,18 @@ void populateIRAffine(nb::module_ &m) {
             if (exprs.size() == 0)
               throw nb::value_error("Expected non-empty list of constraints");
 
-            // Copy over to a SmallVector because std::vector has a
-            // specialization for booleans that packs data and does not
-            // expose a `bool *`.
-            SmallVector<bool, 8> flags(eqFlags.begin(), eqFlags.end());
+            // std::vector<bool> does not expose a bool* data pointer.
+            std::unique_ptr<bool[]> flags =
+                std::make_unique<bool[]>(eqFlags.size());
+            for (size_t i = 0, e = eqFlags.size(); i < e; ++i)
+              flags[i] = eqFlags[i];
 
-            SmallVector<MlirAffineExpr> affineExprs;
+            std::vector<MlirAffineExpr> affineExprs;
             pyListToVector<PyAffineExpr>(exprs, affineExprs,
                                          "attempting to create an IntegerSet");
             MlirIntegerSet set = mlirIntegerSetGet(
                 context->get(), numDims, numSymbols, exprs.size(),
-                affineExprs.data(), flags.data());
+                affineExprs.data(), flags.get());
             return PyIntegerSet(context->getRef(), set);
           },
           nb::arg("num_dims"), nb::arg("num_symbols"), nb::arg("exprs"),
@@ -984,7 +983,8 @@ void populateIRAffine(nb::module_ &m) {
                   "Expected the number of symbol replacement expressions "
                   "to match that of symbols");
 
-            SmallVector<MlirAffineExpr> dimAffineExprs, symbolAffineExprs;
+            std::vector<MlirAffineExpr> dimAffineExprs;
+            std::vector<MlirAffineExpr> symbolAffineExprs;
             pyListToVector<PyAffineExpr>(
                 dimExprs, dimAffineExprs,
                 "attempting to create an IntegerSet by replacing dimensions");
