@@ -265,6 +265,7 @@ NVPTX Support
 
 X86 Support
 ^^^^^^^^^^^
+- ``march=znver6`` is now supported.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^

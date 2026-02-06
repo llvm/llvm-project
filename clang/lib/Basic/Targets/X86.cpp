@@ -716,6 +716,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_ZNVER5:
     defineCPUMacros(Builder, "znver5");
     break;
+  case CK_ZNVER6:
+    defineCPUMacros(Builder, "znver6");
+    break;
   case CK_Geode:
     defineCPUMacros(Builder, "geode");
     break;
@@ -1641,6 +1644,7 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_ZNVER3:
     case CK_ZNVER4:
     case CK_ZNVER5:
+    case CK_ZNVER6:
     // Deprecated
     case CK_x86_64:
     case CK_x86_64_v2:
