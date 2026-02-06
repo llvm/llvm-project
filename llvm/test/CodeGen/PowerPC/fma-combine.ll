@@ -255,13 +255,13 @@ define dso_local float @fma_combine_no_ice() {
 ; CHECK-NEXT:    xsmaddasp 1, 2, 3
 ; CHECK-NEXT:    xsnmsubasp 1, 3, 2
 ; CHECK-NEXT:    blr
-  %tmp = load float, ptr undef, align 4
-  %tmp2 = load float, ptr undef, align 4
+  %tmp = load float, ptr poison, align 4
+  %tmp2 = load float, ptr poison, align 4
   %tmp3 = fmul contract reassoc float %tmp, 0x3FE372D780000000
   %tmp4 = fadd nsz contract reassoc float %tmp3, 1.000000e+00
   %tmp5 = fmul contract reassoc float %tmp2, %tmp4
-  %tmp6 = load float, ptr undef, align 4
-  %tmp7 = load float, ptr undef, align 4
+  %tmp6 = load float, ptr poison, align 4
+  %tmp7 = load float, ptr poison, align 4
   %tmp8 = fmul contract reassoc float %tmp7, 0x3FE372D780000000
   %tmp9 = fsub contract reassoc nsz float -1.000000e+00, %tmp8
   %tmp10 = fmul contract reassoc float %tmp9, %tmp6
@@ -317,13 +317,13 @@ define dso_local float @fma_combine_no_ice_safe() {
 ; CHECK-NEXT:    xsmaddasp 1, 2, 3
 ; CHECK-NEXT:    xsmaddasp 1, 4, 2
 ; CHECK-NEXT:    blr
-  %tmp = load float, ptr undef, align 4
-  %tmp2 = load float, ptr undef, align 4
+  %tmp = load float, ptr poison, align 4
+  %tmp2 = load float, ptr poison, align 4
   %tmp3 = fmul contract reassoc float %tmp, 0x3FE372D780000000
   %tmp4 = fadd contract reassoc float %tmp3, 1.000000e+00
   %tmp5 = fmul contract reassoc float %tmp2, %tmp4
-  %tmp6 = load float, ptr undef, align 4
-  %tmp7 = load float, ptr undef, align 4
+  %tmp6 = load float, ptr poison, align 4
+  %tmp7 = load float, ptr poison, align 4
   %tmp8 = fmul contract reassoc float %tmp7, 0x3FE372D780000000
   %tmp9 = fsub contract reassoc nsz float -1.000000e+00, %tmp8
   %tmp10 = fmul contract reassoc float %tmp9, %tmp6
