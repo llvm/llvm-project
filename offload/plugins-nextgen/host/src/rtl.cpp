@@ -99,7 +99,7 @@ struct GenELF64KernelTy : public GenericKernelTy {
                    uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
                    KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
-#if !defined(SKIP_FFI_BUILD)                    
+#if !defined(SKIP_FFI_BUILD)
     // Create a vector of ffi_types, one per argument.
     SmallVector<ffi_type *, 16> ArgTypes(KernelArgs.NumArgs, &ffi_type_pointer);
     ffi_type **ArgTypesPtr = (ArgTypes.size()) ? &ArgTypes[0] : nullptr;
@@ -390,14 +390,13 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     Info.add("Driver Version", "Unknown", "", DeviceInfo::DRIVER_VERSION);
     Info.add("Number of total EUs", 1, "", DeviceInfo::NUM_COMPUTE_UNITS);
     Info.add("Max memory clock frequency (MHz)",
-             std::numeric_limits<uintptr_t>::digits, "", 
+             std::numeric_limits<uintptr_t>::digits, "",
              DeviceInfo::MEMORY_CLOCK_RATE);
     Info.add("Max clock frequency (MHz)",
              std::numeric_limits<uintptr_t>::digits, "",
              DeviceInfo::MAX_CLOCK_FREQUENCY);
-    Info.add("Memory Address Size",
-             std::numeric_limits<uintptr_t>::digits, "bits",
-             DeviceInfo::ADDRESS_BITS);
+    Info.add("Memory Address Size", std::numeric_limits<uintptr_t>::digits,
+             "bits", DeviceInfo::ADDRESS_BITS);
     Info.add("Local memory size (bytes)", 1, "",
              DeviceInfo::WORK_GROUP_LOCAL_MEM_SIZE);
     Info.add("Global memory size (bytes)", 1, "", DeviceInfo::GLOBAL_MEM_SIZE);
@@ -522,7 +521,7 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   Expected<bool> isELFCompatible(uint32_t, StringRef) const override {
 #if defined(SKIP_FFI_BUILD)
     return false;
-#else        
+#else
     return true;
 #endif
   }
