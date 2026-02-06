@@ -50,7 +50,6 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LastRunTrackingAnalysis.h"
 #include "llvm/Analysis/LazyBlockFrequencyInfo.h"
-#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -3357,7 +3356,7 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     Value *X = nullptr;
     Value *Y = nullptr;
 
-    // Match: idx = srem X, Y -- where Y is a power-of-two constant.
+    // Match: idx = srem X, Y -- where Y is a power-of-two value.
     if (match(Indices[0], m_SRem(m_Value(X), m_Value(Y)))) {
       if (isKnownToBeAPowerOfTwo(Y, false, &GEP)) {
         // If GEP is inbounds+nuw, the offset cannot be negative
