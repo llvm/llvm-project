@@ -8,9 +8,10 @@
 ; uninitialized, if a bit is initialized in both inputs but has a different
 ; value.
 ;
-; TODO: since the compiler/optimizer may freely choose between (icmp eq + br)
-;       vs. switch, MSan's switch instrumentation also needs to be able to
-;       handle partly-uninitialized inputs.
+; If switch has a partly uninitialized input, but it is possible to rule out
+; matching any of the cases, it will use the default case instead of reporting
+; use-of-uninitialized memory. This is equivalent to if the switch was replaced
+; by a series of (icmp eq + br).
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
