@@ -196,8 +196,7 @@ gpu.module @test_distribution {
       %9 = xegpu.dpas %arg4, %arg5, %arg6 
           {layout_a = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128]>,
            layout_b = #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16]>,
-           layout_cd = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>,
-           layout_result_0 = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>}
+           layout_cd = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 16]>}
           : vector<128x128xf16>, vector<128x128xf16>, vector<128x128xf32> -> vector<128x128xf32>
       %10 = xegpu.load_nd %3[%arg3, %c0] {layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128]>}: !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], sg_data = [16, 128]>> -> vector<128x128xf16>
       %11 = xegpu.load_nd %4[%c0, %arg3] {layout = #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16]>}: !xegpu.tensor_desc<128x128xf16, #xegpu.layout<sg_layout = [8, 8], sg_data = [128, 16]>> -> vector<128x128xf16>

@@ -1879,22 +1879,4 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     return signalPassFailure();
-
-  // Remove sg_layout and sg_data attributes from the Layout
-  // attribute for each VectorType result of the operation.
-  // For Structured Control Flow ops, the layout is simply removed,
-  // since in 1:N case, the layout for new results are missing.
-  // Layout propagation pass will activated.
-  getOperation()->walk([](Operation *op) {
-    for (OpResult result : op->getOpResults()) {
-      std::string name = xegpu::getTemporaryLayoutName(result);
-      if (auto layout = op->getAttrOfType<xegpu::DistributeLayoutAttr>(name)) {
-        op->removeAttr(name);
-        if (!isa<scf::IfOp, scf::ForOp, scf::WhileOp, scf::ConditionOp>(op)) {
-          if (auto newLayout = layout.dropSgLayoutAndData())
-            op->setAttr(name, newLayout);
-        }
-      }
-    }
-  });
 }
