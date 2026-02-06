@@ -1074,11 +1074,8 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       if (!is_contained({1u, 2u, 4u, 8u}, EltSizeInBytes) ||
           VecVT.getVectorMinNumElements() != (16 / EltSizeInBytes))
         break;
-      InstructionCost Cost = 1;
       // For fixed-vector types we need to AND the mask with a ptrue vl<N>.
-      if (isa<FixedVectorType>(RetTy))
-        Cost += 1;
-      return Cost;
+      return isa<FixedVectorType>(RetTy) ? 2 : 1;
     }
     break;
   }
