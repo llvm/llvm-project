@@ -1,5 +1,4 @@
 //===---- CIRGenBuiltinAArch64.cpp - Emit CIR for AArch64 builtins --------===//
-//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -106,11 +105,8 @@ CIRGenFunction::emitAArch64CompareBuiltinExpr(mlir::Location loc,
 
   mlir::Value zero = builder.getNullValue(src.getType(), loc);
   mlir::Value cmp;
-  if (cir::isFpCompare(kind)) {
+  if (cir::isFPOrVectorOfFPType(src.getType())) {
     cgm.errorNYI(loc, std::string("unimplemented FP compare"));
-    // TODO:
-    //   if (Pred == CmpInst::FCMP_OEQ)
-    //   else
   } else {
     if (scalarCmp)
       // For scalars, cast !cir.bool to !cir.int<s, 1> so that the compare

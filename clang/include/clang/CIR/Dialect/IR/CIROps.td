@@ -1941,9 +1941,7 @@ def CIR_CmpOpKind : CIR_I32EnumAttr<"CmpOpKind", "compare operation kind", [
   I32EnumAttrCase<"gt", 2>,
   I32EnumAttrCase<"ge", 3>,
   I32EnumAttrCase<"eq", 4>,
-  I32EnumAttrCase<"ne", 5>,
-  // Floating-point only predicates
-  I32EnumAttrCase<"fcmp_first", 20> // TODO: Replace with a real FP compare
+  I32EnumAttrCase<"ne", 5>
 ]>;
 
 def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {

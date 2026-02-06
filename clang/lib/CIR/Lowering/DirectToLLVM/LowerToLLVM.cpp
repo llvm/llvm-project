@@ -2698,8 +2698,6 @@ convertCmpKindToICmpPredicate(cir::CmpOpKind kind, bool isSigned) {
     return (isSigned ? LLVMICmp::sgt : LLVMICmp::ugt);
   case CIR::ge:
     return (isSigned ? LLVMICmp::sge : LLVMICmp::uge);
-  case CIR::fcmp_first:
-    llvm_unreachable("Unknown CmpOpKind");
   }
   llvm_unreachable("Unknown CmpOpKind");
 }
@@ -2723,8 +2721,6 @@ convertCmpKindToFCmpPredicate(cir::CmpOpKind kind) {
     return LLVMFCmp::ogt;
   case CIR::ge:
     return LLVMFCmp::oge;
-  case CIR::fcmp_first:
-    llvm_unreachable("Unknown CmpOpKind");
   }
   llvm_unreachable("Unknown CmpOpKind");
 }
