@@ -1154,6 +1154,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::AND, MVT::i128, Custom);
     setOperationAction(ISD::OR, MVT::i128, Custom);
     setOperationAction(ISD::XOR, MVT::i128, Custom);
+    setOperationAction(ISD::SELECT, MVT::i128, Custom);
 
     if (Subtarget.hasPCLMUL()) {
       for (auto VT : {MVT::i64, MVT::v4i32, MVT::v2i64}) {
@@ -1510,6 +1511,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::AND, MVT::i256, Custom);
     setOperationAction(ISD::OR, MVT::i256, Custom);
     setOperationAction(ISD::XOR, MVT::i256, Custom);
+    setOperationAction(ISD::SELECT, MVT::i256, Custom);
 
     // (fp_to_int:v8i16 (v8f32 ..)) requires the result type to be promoted
     // even though v8i16 is a legal type.
@@ -1884,6 +1886,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::XOR, MVT::i512, Custom);
     setOperationAction(ISD::ADD, MVT::i512, Custom);
     setOperationAction(ISD::SUB, MVT::i512, Custom);
+    setOperationAction(ISD::SELECT, MVT::i512, Custom);
 
     for (MVT VT : { MVT::v16i1, MVT::v16i8 }) {
       setOperationPromotedToType(ISD::FP_TO_SINT       , VT, MVT::v16i32);
@@ -2932,6 +2935,9 @@ static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
     case ISD::SUB:
       return mayFoldIntoVector(Op.getOperand(0), DAG, Subtarget) &&
              mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget);
+    case ISD::SELECT:
+      return mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget) &&
+             mayFoldIntoVector(Op.getOperand(2), DAG, Subtarget);
     }
   }
   return X86::mayFoldLoad(Op, Subtarget, AssumeSingleUse,
@@ -34282,6 +34288,36 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     SDValue Op = DAG.getNode(Opc, dl, VecVT, DAG.getBitcast(VecVT, N0),
                              DAG.getBitcast(VecVT, N1));
+    Results.push_back(DAG.getBitcast(VT, Op));
+    return;
+  }
+  case ISD::SELECT: {
+    SDValue Cond = N->getOperand(0);
+    SDValue TVal = N->getOperand(1);
+    SDValue FVal = N->getOperand(2);
+    EVT VT = N->getValueType(0);
+    assert((VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512) &&
+           "Unexpected VT!");
+    // See if this is free to perform on the FPU to avoid splitting.
+    if (Cond.getValueType() != MVT::i1 ||
+        !mayFoldIntoVector(TVal, DAG, Subtarget) ||
+        !mayFoldIntoVector(FVal, DAG, Subtarget))
+      return;
+    // Splat selection bit to all-bit selection mask.
+    MVT VecVT = MVT::getVectorVT(MVT::i32, VT.getSizeInBits() / 32);
+    MVT CondVT = VecVT.changeVectorElementType(MVT::i1);
+    if (isTypeLegal(CondVT)) {
+      MVT CondIntVT = MVT::getIntegerVT(CondVT.getVectorNumElements());
+      Cond = DAG.getNode(ISD::SIGN_EXTEND, dl, CondIntVT, Cond);
+      Cond = DAG.getBitcast(CondVT, Cond);
+    } else {
+      Cond = DAG.getNode(ISD::SIGN_EXTEND, dl, MVT::i32, Cond);
+      Cond = DAG.getSetCC(dl, CondVT, DAG.getConstant(0, dl, VecVT),
+                          DAG.getSplatBuildVector(VecVT, dl, Cond),
+                          ISD::CondCode::SETGT);
+    }
+    SDValue Op = DAG.getSelect(dl, VecVT, Cond, DAG.getBitcast(VecVT, TVal),
+                               DAG.getBitcast(VecVT, FVal));
     Results.push_back(DAG.getBitcast(VT, Op));
     return;
   }
