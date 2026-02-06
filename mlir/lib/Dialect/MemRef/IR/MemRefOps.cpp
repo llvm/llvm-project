@@ -1543,11 +1543,16 @@ ParseResult GenericAtomicRMWOp::parse(OpAsmParser &parser,
       parser.resolveOperands(ivs, indexType, result.operands))
     return failure();
 
+  auto memref_type = llvm::dyn_cast<MemRefType>(memrefType);
+  if (!memref_type)
+    return parser.emitError(parser.getNameLoc())
+           << "expected memref type, but got " << memrefType;
+
   Region *body = result.addRegion();
   if (parser.parseRegion(*body, {}) ||
       parser.parseOptionalAttrDict(result.attributes))
     return failure();
-  result.types.push_back(llvm::cast<MemRefType>(memrefType).getElementType());
+  result.types.push_back(memref_type.getElementType());
   return success();
 }
 
