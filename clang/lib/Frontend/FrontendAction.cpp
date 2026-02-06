@@ -1024,8 +1024,12 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     // Canonicalize ImplicitPCHInclude. This way, all the downstream code,
     // including the ASTWriter, will receive the absolute path to the included
-    // PCH. This way we can avoid reasoning about absolute path or relative
-    // paths later on during serialization.
+    // PCH.
+    // FIXME: When serializing ImplicitPCHInclude, the ASTWriter
+    // currently does not handle the relocatable AST case. The ASTWriter
+    // simply seralizes the PCH path as it is. This implies that including
+    // a PCH in another PCH may not work with -relocatable-pch. Revisit
+    // if a use case of chaining relocatable PCHs arises.
     SmallString<128> PCHIncludePath(PPOpts.ImplicitPCHInclude);
     FileMgr.makeAbsolutePath(PCHIncludePath);
     llvm::sys::path::remove_dots(PCHIncludePath, true);
