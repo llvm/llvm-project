@@ -323,10 +323,12 @@ lldb_private::Status PlatformDarwinDevice::GetSharedModuleWithLocalCache(
 
     // If we found it and it has the correct UUID, let's proceed with
     // creating a module from the memory contents.
-    if (image_info.uuid &&
-        (!module_spec.GetUUID() || module_spec.GetUUID() == image_info.uuid)) {
-      ModuleSpec shared_cache_spec(module_spec.GetFileSpec(), image_info.uuid,
-                                   image_info.extractor_sp);
+    if (image_info.GetUUID() &&
+        (!module_spec.GetUUID() ||
+         module_spec.GetUUID() == image_info.GetUUID())) {
+      ModuleSpec shared_cache_spec(module_spec.GetFileSpec(),
+                                   image_info.GetUUID(),
+                                   image_info.GetExtractor());
       err = ModuleList::GetSharedModule(shared_cache_spec, module_sp,
                                         old_modules, did_create_ptr);
       if (module_sp) {
