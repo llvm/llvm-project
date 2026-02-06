@@ -101,8 +101,9 @@ public:
     auto Buffer = llvm::MemoryBuffer::getFile(ShardPath);
     if (!Buffer)
       return nullptr;
-    if (auto I =
-            readIndexFile(Buffer->get()->getBuffer(), SymbolOrigin::Background))
+    const URITransform *Transform = Mappings.empty() ? nullptr : &LoadTransform;
+    if (auto I = readIndexFile(Buffer->get()->getBuffer(),
+                               SymbolOrigin::Background, Transform))
       return std::make_unique<IndexFileIn>(std::move(*I));
     else
       elog("Error while reading shard {0}: {1}", ShardIdentifier,

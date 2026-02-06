@@ -214,7 +214,8 @@ struct StringTableIn {
   std::vector<llvm::StringRef> Strings;
 };
 
-llvm::Expected<StringTableIn> readStringTable(llvm::StringRef Data) {
+llvm::Expected<StringTableIn>
+readStringTable(llvm::StringRef Data, const URITransform *Transform = nullptr) {
   Reader R(Data);
   size_t UncompressedSize = R.consume32();
   if (R.err())
@@ -249,7 +250,12 @@ llvm::Expected<StringTableIn> readStringTable(llvm::StringRef Data) {
     auto Len = R.rest().find(0);
     if (Len == llvm::StringRef::npos)
       return error("Bad string table: not null terminated");
-    Table.Strings.push_back(Saver.save(R.consume(Len)));
+    llvm::StringRef S = R.consume(Len);
+    // Apply any provided path mapping transform to incoming file:// URIs
+    if (Transform && S.starts_with("file://"))
+      Table.Strings.push_back(Saver.save((*Transform)(S)));
+    else
+      Table.Strings.push_back(Saver.save(S));
     R.consume8();
   }
   if (R.err())
@@ -459,8 +465,8 @@ readCompileCommand(Reader CmdReader, llvm::ArrayRef<llvm::StringRef> Strings) {
 // data. Later we may want to support some backward compatibility.
 constexpr static uint32_t Version = 20;
 
-llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data,
-                                     SymbolOrigin Origin) {
+llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data, SymbolOrigin Origin,
+                                     const URITransform *Transform) {
   auto RIFF = riff::readFile(Data);
   if (!RIFF)
     return RIFF.takeError();
@@ -483,7 +489,7 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data,
     if (!Chunks.count(RequiredChunk))
       return error("missing required chunk {0}", RequiredChunk);
 
-  auto Strings = readStringTable(Chunks.lookup("stri"));
+  auto Strings = readStringTable(Chunks.lookup("stri"), Transform);
   if (!Strings)
     return Strings.takeError();
 
@@ -691,9 +697,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const IndexFileOut &O) {
 }
 
 llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef Data,
-                                          SymbolOrigin Origin) {
+                                          SymbolOrigin Origin,
+                                          const URITransform *Transform) {
   if (Data.starts_with("RIFF")) {
-    return readRIFF(Data, Origin);
+    return readRIFF(Data, Origin, Transform);
   }
   if (auto YAMLContents = readYAML(Data, Origin)) {
     return std::move(*YAMLContents);

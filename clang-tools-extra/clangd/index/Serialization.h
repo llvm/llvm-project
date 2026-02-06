@@ -54,7 +54,10 @@ struct IndexFileIn {
   std::optional<tooling::CompileCommand> Cmd;
 };
 // Parse an index file. The input must be a RIFF or YAML file.
-llvm::Expected<IndexFileIn> readIndexFile(llvm::StringRef, SymbolOrigin);
+// If Transform is provided, use it to remap all URIs.
+llvm::Expected<IndexFileIn>
+readIndexFile(llvm::StringRef, SymbolOrigin,
+              const URITransform *Transform = nullptr);
 
 // Specifies the contents of an index file to be written.
 struct IndexFileOut {
