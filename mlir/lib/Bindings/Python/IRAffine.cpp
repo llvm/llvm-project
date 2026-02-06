@@ -46,14 +46,11 @@ static void pyListToVector(const nb::list &list, std::vector<CType> &result,
       result.push_back(nb::cast<PyType>(item));
     } catch (nb::cast_error &err) {
       std::string msg = nanobind::detail::join("Invalid expression when ",
-                                               action, " (", err.what(), ")")
-                            .c_str();
+                                               action, " (", err.what(), ")");
       throw std::runtime_error(msg.c_str());
     } catch (std::runtime_error &err) {
-      std::string msg =
-          nanobind::detail::join("Invalid expression (None?) when ", action,
-                                 " (", err.what(), ")")
-              .c_str();
+      std::string msg = nanobind::detail::join(
+          "Invalid expression (None?) when ", action, " (", err.what(), ")");
       throw std::runtime_error(msg.c_str());
     }
   }
