@@ -1,4 +1,4 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 < %s | FileCheck %s
 
 ; Test that DAGCombiner::reassociationCanBreakAddressingModePattern does not
 ; crash when a MemSDNode user has multiple memory operands (e.g.
@@ -10,6 +10,9 @@ declare ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1), i
 declare void @llvm.amdgcn.raw.ptr.buffer.load.lds(ptr addrspace(8), ptr addrspace(3) nocapture, i32, i32, i32, i32, i32)
 declare i32 @llvm.amdgcn.workitem.id.x()
 
+; CHECK-LABEL: triton_mm_minimal:
+; CHECK: buffer_load_dwordx4
+; CHECK: buffer_load_dwordx4
 define amdgpu_kernel void @triton_mm_minimal(ptr addrspace(1) inreg %ptr) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   ; Create a pattern that will be reassociated: (add (add base, 1024), 32)
