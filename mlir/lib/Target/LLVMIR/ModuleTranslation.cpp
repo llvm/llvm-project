@@ -1516,6 +1516,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   valueMapping.clear();
   branchMapping.clear();
   llvm::Function *llvmFunc = lookupFunction(func.getName());
+  llvm::LLVMContext &llvmContext = llvmFunc->getContext();
 
   // Add function arguments to the value remapping table.
   for (auto [mlirArg, llvmArg] :
@@ -1578,12 +1579,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr("no-signed-zeros-fp-math",
                         llvm::toStringRef(*noSignedZerosFpMath));
 
-  if (auto denormalFpMath = func.getDenormalFpMath())
-    llvmFunc->addFnAttr("denormal-fp-math", *denormalFpMath);
-
-  if (auto denormalFpMathF32 = func.getDenormalFpMathF32())
-    llvmFunc->addFnAttr("denormal-fp-math-f32", *denormalFpMathF32);
-
   if (auto fpContract = func.getFpContract())
     llvmFunc->addFnAttr("fp-contract", *fpContract);
 
@@ -1594,7 +1589,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr("instrument-function-exit", *instrumentFunctionExit);
 
   // First, create all blocks so we can jump to them.
-  llvm::LLVMContext &llvmContext = llvmFunc->getContext();
   for (auto &bb : func) {
     auto *llvmBB = llvm::BasicBlock::Create(llvmContext);
     llvmBB->insertInto(llvmFunc);
@@ -1672,10 +1666,29 @@ ModuleTranslation::convertAllocsizeAttr(DenseI32ArrayAttr allocSizeAttr) {
   return llvm::Attribute::getWithAllocSizeArgs(getLLVMContext(), elemSize,
                                                numElems);
 }
+static void convertDenormalFPEnvAttribute(LLVMFuncOp func,
+                                          llvm::AttrBuilder &Attrs) {
+  std::optional<DenormalFPEnvAttr> denormalFpEnv = func.getDenormalFpenv();
+  if (!denormalFpEnv)
+    return;
+
+  llvm::DenormalMode DefaultMode(
+      convertDenormalModeKindToLLVM(denormalFpEnv->getDefaultOutputMode()),
+      convertDenormalModeKindToLLVM(denormalFpEnv->getDefaultInputMode()));
+  llvm::DenormalMode FloatMode(
+      convertDenormalModeKindToLLVM(denormalFpEnv->getFloatOutputMode()),
+      convertDenormalModeKindToLLVM(denormalFpEnv->getFloatInputMode()));
+
+  llvm::DenormalFPEnv FPEnv(DefaultMode, FloatMode);
+  Attrs.addDenormalFPEnvAttr(FPEnv);
+}
 
 /// Converts function attributes from `func` and attaches them to `llvmFunc`.
 static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
                                       llvm::Function *llvmFunc) {
+  // FIXME: Use AttrBuilder far all cases
+  llvm::AttrBuilder AttrBuilder(llvmFunc->getContext());
+
   if (func.getNoInlineAttr())
     llvmFunc->addFnAttr(llvm::Attribute::NoInline);
   if (func.getAlwaysInlineAttr())
@@ -1739,6 +1752,9 @@ static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
     llvmFunc->addFnAttr(attr);
 
   convertFunctionMemoryAttributes(func, llvmFunc);
+
+  convertDenormalFPEnvAttribute(func, AttrBuilder);
+  llvmFunc->addFnAttrs(AttrBuilder);
 }
 
 /// Converts function attributes from `func` and attaches them to `llvmFunc`.
