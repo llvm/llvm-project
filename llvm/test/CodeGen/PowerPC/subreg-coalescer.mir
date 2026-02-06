@@ -26,7 +26,7 @@ body:             |
     %0:g8rc_and_g8rc_nox0 = COPY $x3
     %1:f8rc, %2:g8rc_and_g8rc_nox0 = LFSUX %0, %0
     %3:f4rc = FRSP killed %1, implicit $rm
-    %4:vslrc = SUBREG_TO_REG 1, %3, %subreg.sub_64
+    %4:vslrc = SUBREG_TO_REG %3, %subreg.sub_64
     %5:vrrc = XVCVDPSP killed %4, implicit $rm
     $v2 = COPY %5
     BLR8 implicit $lr8, implicit $rm, implicit $v2

@@ -24,8 +24,10 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/MovedLoans.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include <memory>
 
 namespace clang::lifetimes {
 
@@ -58,18 +60,31 @@ public:
   virtual ~LifetimeSafetySemaHelper() = default;
 
   virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
-                                  SourceLocation FreeLoc,
+                                  const Expr *MovedExpr, SourceLocation FreeLoc,
                                   Confidence Confidence) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
-                                    const Expr *EscapeExpr,
+                                    const Expr *ReturnExpr,
+                                    const Expr *MovedExpr,
                                     SourceLocation ExpiryLoc,
                                     Confidence Confidence) {}
+
+  virtual void reportDanglingField(const Expr *IssueExpr,
+                                   const FieldDecl *Field,
+                                   const Expr *MovedExpr,
+                                   SourceLocation ExpiryLoc) {}
 
   // Suggests lifetime bound annotations for function paramters.
   virtual void suggestLifetimeboundToParmVar(SuggestionScope Scope,
                                              const ParmVarDecl *ParmToAnnotate,
                                              const Expr *EscapeExpr) {}
+
+  // Reports misuse of [[clang::noescape]] when parameter escapes through return
+  virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                                       const Expr *EscapeExpr) {}
+  // Reports misuse of [[clang::noescape]] when parameter escapes through field
+  virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                                       const FieldDecl *EscapeField) {}
 
   // Suggests lifetime bound annotations for implicit this.
   virtual void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
@@ -96,6 +111,7 @@ void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
 struct LifetimeFactory {
   OriginLoanMap::Factory OriginMapFactory{/*canonicalize=*/false};
   LoanSet::Factory LoanSetFactory{/*canonicalize=*/false};
+  MovedLoansMap::Factory MovedLoansMapFactory{/*canonicalize=*/false};
   LivenessMap::Factory LivenessMapFactory{/*canonicalize=*/false};
 };
 
@@ -122,6 +138,7 @@ private:
   std::unique_ptr<FactManager> FactMgr;
   std::unique_ptr<LiveOriginsAnalysis> LiveOrigins;
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;
+  std::unique_ptr<MovedLoansAnalysis> MovedLoans;
 };
 } // namespace internal
 } // namespace clang::lifetimes

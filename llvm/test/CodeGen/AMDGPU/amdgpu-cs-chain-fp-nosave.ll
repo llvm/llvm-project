@@ -94,12 +94,12 @@ define amdgpu_cs_chain void @test_alloca_var(i32 %count) {
 ; GFX12-NEXT:    s_mov_b32 s0, 0
 ; GFX12-NEXT:    s_mov_b32 s32, 16
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_and_b32 v1, -16, v0
+; GFX12-NEXT:    v_and_b32_e32 v1, -16, v0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_ctz_i32_b32 s2, s1
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_readlane_b32 s3, v1, s2
 ; GFX12-NEXT:    s_bitset0_b32 s1, s2
 ; GFX12-NEXT:    s_max_u32 s0, s0, s3
@@ -261,12 +261,12 @@ define amdgpu_cs_chain void @test_alloca_and_call_var(i32 %count) {
 ; GFX12-NEXT:    s_mov_b32 s0, 0
 ; GFX12-NEXT:    s_mov_b32 s32, 16
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_and_b32 v1, -16, v0
+; GFX12-NEXT:    v_and_b32_e32 v1, -16, v0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-NEXT:  .LBB5_1: ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_ctz_i32_b32 s2, s1
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_readlane_b32 s3, v1, s2
 ; GFX12-NEXT:    s_bitset0_b32 s1, s2
 ; GFX12-NEXT:    s_max_u32 s0, s0, s3

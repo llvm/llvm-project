@@ -1898,29 +1898,6 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
   return MI;
 }
 
-bool RISCVInstrInfo::analyzeSelect(const MachineInstr &MI,
-                                   SmallVectorImpl<MachineOperand> &Cond,
-                                   unsigned &TrueOp, unsigned &FalseOp,
-                                   bool &Optimizable) const {
-  assert(MI.getOpcode() == RISCV::PseudoCCMOVGPR &&
-         "Unknown select instruction");
-  // CCMOV operands:
-  // 0: Def.
-  // 1: LHS of compare.
-  // 2: RHS of compare.
-  // 3: Condition code.
-  // 4: False use.
-  // 5: True use.
-  TrueOp = 5;
-  FalseOp = 4;
-  Cond.push_back(MI.getOperand(1));
-  Cond.push_back(MI.getOperand(2));
-  Cond.push_back(MI.getOperand(3));
-  // We can only fold when we support short forward branch opt.
-  Optimizable = STI.hasShortForwardBranchIALU();
-  return false;
-}
-
 MachineInstr *
 RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
@@ -3642,7 +3619,22 @@ static bool cannotInsertTailCall(const MachineBasicBlock &MBB) {
   return false;
 }
 
-static bool analyzeCandidate(outliner::Candidate &C) {
+bool RISCVInstrInfo::analyzeCandidate(outliner::Candidate &C) const {
+  // If the expansion register for tail calls is live across the candidate
+  // outlined call site, we cannot outline that candidate as the expansion
+  // would clobber the register.
+  MCRegister TailExpandUseReg =
+      RISCVII::getTailExpandUseRegNo(STI.getFeatureBits());
+  if (C.back().isReturn() &&
+      !C.isAvailableAcrossAndOutOfSeq(TailExpandUseReg, RegInfo)) {
+    LLVM_DEBUG(dbgs() << "MBB:\n" << *C.getMBB());
+    LLVM_DEBUG(dbgs() << "Cannot be outlined between: " << C.front() << "and "
+                      << C.back());
+    LLVM_DEBUG(dbgs() << "Because the tail-call register is live across "
+                         "the proposed outlined function call\n");
+    return true;
+  }
+
   // If last instruction is return then we can rely on
   // the verification already performed in the getOutliningTypeImpl.
   if (C.back().isReturn()) {
@@ -3654,13 +3646,12 @@ static bool analyzeCandidate(outliner::Candidate &C) {
 
   // Filter out candidates where the X5 register (t0) can't be used to setup
   // the function call.
-  const TargetRegisterInfo *TRI = C.getMF()->getSubtarget().getRegisterInfo();
-  if (llvm::any_of(C, [TRI](const MachineInstr &MI) {
-        return isMIModifiesReg(MI, TRI, RISCV::X5);
+  if (llvm::any_of(C, [this](const MachineInstr &MI) {
+        return isMIModifiesReg(MI, &RegInfo, RISCV::X5);
       }))
     return true;
 
-  return !C.isAvailableAcrossAndOutOfSeq(RISCV::X5, *TRI);
+  return !C.isAvailableAcrossAndOutOfSeq(RISCV::X5, RegInfo);
 }
 
 std::optional<std::unique_ptr<outliner::OutlinedFunction>>
@@ -3670,7 +3661,9 @@ RISCVInstrInfo::getOutliningCandidateInfo(
     unsigned MinRepeats) const {
 
   // Analyze each candidate and erase the ones that are not viable.
-  llvm::erase_if(RepeatedSequenceLocs, analyzeCandidate);
+  llvm::erase_if(RepeatedSequenceLocs, [this](auto Candidate) {
+    return analyzeCandidate(Candidate);
+  });
 
   // If the sequence doesn't have enough candidates left, then we're done.
   if (RepeatedSequenceLocs.size() < MinRepeats)
@@ -3833,10 +3826,6 @@ std::string RISCVInstrInfo::createMIROperandComment(
   if (!GenericComment.empty())
     return GenericComment;
 
-  // If not, we must have an immediate operand.
-  if (!Op.isImm())
-    return std::string();
-
   const MCInstrDesc &Desc = MI.getDesc();
   if (OpIdx >= Desc.getNumOperands())
     return std::string();
@@ -3873,12 +3862,30 @@ std::string RISCVInstrInfo::createMIROperandComment(
     OS << "e" << SEW;
     break;
   }
-  case RISCVOp::OPERAND_VEC_POLICY:
+  case RISCVOp::OPERAND_VEC_POLICY: {
     unsigned Policy = Op.getImm();
     assert(Policy <= (RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC) &&
            "Invalid Policy Value");
     OS << (Policy & RISCVVType::TAIL_AGNOSTIC ? "ta" : "tu") << ", "
        << (Policy & RISCVVType::MASK_AGNOSTIC ? "ma" : "mu");
+    break;
+  }
+  case RISCVOp::OPERAND_AVL:
+    if (Op.isImm() && Op.getImm() == -1)
+      OS << "vl=VLMAX";
+    else
+      OS << "vl";
+    break;
+  case RISCVOp::OPERAND_VEC_RM:
+    if (RISCVII::usesVXRM(Desc.TSFlags)) {
+      assert(RISCVVXRndMode::isValidRoundingMode(Op.getImm()));
+      auto VXRM = static_cast<RISCVVXRndMode::RoundingMode>(Op.getImm());
+      OS << "vxrm=" << RISCVVXRndMode::roundingModeToString(VXRM);
+    } else {
+      assert(RISCVFPRndMode::isValidRoundingMode(Op.getImm()));
+      auto FRM = static_cast<RISCVFPRndMode::RoundingMode>(Op.getImm());
+      OS << "frm=" << RISCVFPRndMode::roundingModeToString(FRM);
+    }
     break;
   }
 
