@@ -35,7 +35,7 @@
 // RUN:   | FileCheck -check-prefixes=CHECK-LSYCL,CHECK-SYCL-HEADERS-HOST,CHECK-SYCL-HEADERS-DEVICE %s
 // CHECK-SYCL-HEADERS-DEVICE: "-fsycl-is-device"{{.*}} "-internal-isystem" "{{.*}}bin{{[/\\]+}}..{{[/\\]+}}include"
 // CHECK-SYCL-HEADERS-HOST: "-fsycl-is-host"{{.*}} "-internal-isystem" "{{.*}}bin{{[/\\]+}}..{{[/\\]+}}include"
-// CHECK-LSYCL: clang-linker-wrapper{{.*}} "{{.*}}bin/../lib/libsycl.so"
+// CHECK-LSYCL: clang-linker-wrapper{{.*}} "{{.*}}bin{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}libsycl.so"
 
 /// Check -fsycl-is-device is passed when compiling for the device.
 /// Check -fsycl-is-host is passed when compiling for host.
