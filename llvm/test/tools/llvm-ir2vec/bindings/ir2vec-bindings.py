@@ -35,20 +35,13 @@ if tool is not None:
     print("\n=== Basic Block Embeddings ===")
     bb_emb_map = tool.getBBEmbMap()
 
-    # Sorting by function name, then BB name, then embedding values for deterministic output
-    bb_sorted = []
+    # Sorting by function name, then BB name for deterministic output
     for func_name in sorted(bb_emb_map.keys()):
         func_bb_map = bb_emb_map[func_name]
         for bb_name in sorted(func_bb_map.keys()):
             emb = func_bb_map[bb_name]
-            bb_sorted.append((bb_name, emb))
-    
-    # Sort the flattened list by BB name, then embedding values
-    bb_sorted = sorted(bb_sorted, key=lambda x: (x[0], tuple(x[1].tolist())))
-    
-    for bb_name, emb in bb_sorted:
-        print(f"BB: {bb_name}")
-        print(f"  Embedding: {emb.tolist()}")
+            print(f"BB: {bb_name}")
+            print(f"  Embedding: {emb.tolist()}")
 
 # CHECK: SUCCESS: Tool initialized
 # CHECK: Tool type: IR2VecTool
@@ -70,8 +63,6 @@ if tool is not None:
 # CHECK: BB: entry
 # CHECK-NEXT:   Embedding: [38.0, 40.0, 42.0]
 # CHECK: BB: entry
-# CHECK-NEXT:   Embedding: [50.0, 52.0, 54.0]
-# CHECK: BB: entry
 # CHECK-NEXT:   Embedding: [161.20000000298023, 163.20000000298023, 165.20000000298023]
 # CHECK: BB: exit
 # CHECK-NEXT:   Embedding: [164.0, 166.0, 168.0]
@@ -79,3 +70,5 @@ if tool is not None:
 # CHECK-NEXT:   Embedding: [47.0, 49.0, 51.0]
 # CHECK: BB: positive
 # CHECK-NEXT:   Embedding: [41.0, 43.0, 45.0]
+# CHECK: BB: entry
+# CHECK-NEXT:   Embedding: [50.0, 52.0, 54.0]
