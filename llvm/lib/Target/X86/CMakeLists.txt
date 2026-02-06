@@ -31,6 +31,7 @@ set(sources
   X86AvoidTrailingCall.cpp
   X86CallFrameOptimization.cpp
   X86CallingConv.cpp
+  X86CleanupLocalDynamicTLS.cpp
   X86CmovConversion.cpp
   X86CodeGenPassBuilder.cpp
   X86DomainReassignment.cpp
