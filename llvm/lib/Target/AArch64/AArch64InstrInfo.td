@@ -7335,6 +7335,8 @@ def : Pat <(f64 (uint_to_fp (i32
 // Advanced SIMD three different-sized vector instructions.
 //===----------------------------------------------------------------------===//
 
+defm INS : SIMDIns;
+
 defm ADDHN   : SIMDNarrowThreeVectorBHS<0,0b0100,"addhn", int_aarch64_neon_addhn>;
 defm SUBHN   : SIMDNarrowThreeVectorBHS<0,0b0110,"subhn", int_aarch64_neon_subhn>;
 defm RADDHN  : SIMDNarrowThreeVectorBHS<1,0b0100,"raddhn",int_aarch64_neon_raddhn>;
@@ -7380,6 +7382,19 @@ defm USUBL   : SIMDLongThreeVectorBHS<1, 0b0010, "usubl",
                  BinOpFrag<(sub (zanyext node:$LHS), (zanyext node:$RHS))>>;
 defm USUBW   : SIMDWideThreeVectorBHS<   1, 0b0011, "usubw",
                  BinOpFrag<(sub node:$LHS, (zanyext node:$RHS))>>;
+
+// Patterns for v2i64/v1i64 clmul->pmull
+let Predicates = [HasAES] in {
+  def : Pat<(clmul v1i64:$Rn, v1i64:$Rm),
+            (v1i64 (EXTRACT_SUBREG (v16i8 (PMULLv1i64 $Rn, $Rm)),
+                                           dsub))>;
+  def : Pat<(clmul v2i64:$Rn, v2i64:$Rm),
+            (v2i64 (INSvi64lane (v16i8 (PMULLv1i64 (v1i64 (EXTRACT_SUBREG $Rn, dsub)),
+                                                   (v1i64 (EXTRACT_SUBREG $Rm, dsub)))),
+                                (i64 1),
+                                (v16i8 (PMULLv2i64 $Rn, $Rm)),
+                                (i64 0)))>;
+}
 
 // Additional patterns for [SU]ML[AS]L
 multiclass Neon_mul_acc_widen_patterns<SDPatternOperator opnode, SDPatternOperator vecopnode,
@@ -7898,8 +7913,6 @@ def : Pat<(i64 (and (i64 (anyext (i32 (vector_extract (v16i8 V128:$Rn),
 def : Pat<(i64 (and (i64 (anyext (i32 (vector_extract (v8i16 V128:$Rn),
             VectorIndexH:$idx)))), (i64 0xffff))),
           (SUBREG_TO_REG (i32 (UMOVvi16 V128:$Rn, VectorIndexH:$idx)), sub_32)>;
-
-defm INS : SIMDIns;
 
 def : Pat<(v16i8 (vec_ins_or_scal_vec GPR32:$Rn)),
           (SUBREG_TO_REG (f32 (COPY_TO_REGCLASS GPR32:$Rn, FPR32)), ssub)>;
@@ -11794,19 +11807,6 @@ let Predicates = [HasTEV] in {
   defm TENTER : TENTER<"tenter">;
   defm TEXIT : TEXIT<"texit">;
 }
-
-// Patterns for v2i64/v1i64 clmul->pmull
-def : Pat<(clmul v1i64:$Rn, v1i64:$Rd),
-          (v1i64 (EXTRACT_SUBREG (v16i8 (PMULLv1i64 $Rn, $Rd)),
-                                        (i32 3)))>;
-
-def : Pat<(clmul v2i64:$Rn, v2i64:$Rd),
-          (v2i64 (INSvi64lane (v16i8 (PMULLv1i64 (v1i64 (EXTRACT_SUBREG $Rn, (i32 3))),
-                                                 (v1i64 (EXTRACT_SUBREG $Rd, (i32 3))))),
-                              (i64 1),
-                              (v16i8 (PMULLv2i64 $Rn, $Rd)),
-                              (i64 0)))>;
-
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"
