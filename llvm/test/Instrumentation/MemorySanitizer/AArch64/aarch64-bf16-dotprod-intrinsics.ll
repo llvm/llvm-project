@@ -5,8 +5,7 @@
 ; simplified to only have the cases that directly pass the function parameters
 ; to the intrinsic.
 ;
-; Strictly handled:
-; - llvm.aarch64.neon.bfmmla
+; Strictly handled: (none)
 ;
 ; Heuristically handled: (none)
 
@@ -151,6 +150,3 @@ declare <4 x float> @llvm.aarch64.neon.bfdot.v4f32.v8bf16(<4 x float>, <8 x bflo
 declare <4 x float> @llvm.aarch64.neon.bfmmla(<4 x float>, <8 x bfloat>, <8 x bfloat>)
 declare <4 x float> @llvm.aarch64.neon.bfmlalb(<4 x float>, <8 x bfloat>, <8 x bfloat>)
 declare <4 x float> @llvm.aarch64.neon.bfmlalt(<4 x float>, <8 x bfloat>, <8 x bfloat>)
-;.
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
-;.
