@@ -211,6 +211,9 @@ private:
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
+  if (CE->containsErrors())
+    return this->emitError(CE);
+
   const Expr *SubExpr = CE->getSubExpr();
 
   if (DiscardResult)
@@ -2184,6 +2187,9 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitInitListExpr(const InitListExpr *E) {
+  if (E->containsErrors())
+    return this->emitError(E);
+
   return this->visitInitList(E->inits(), E->getArrayFiller(), E);
 }
 
