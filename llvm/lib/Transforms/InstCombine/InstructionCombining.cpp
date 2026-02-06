@@ -3348,31 +3348,24 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     }
   }
 
-  // srem -> (and/urem) for inbounds+nuw byte GEP with dereferenceable base ---
+  // srem -> (and/urem) for inbounds+nuw byte GEP ---
   if (GEPEltType->isIntegerTy(8) && Indices.size() == 1 && GEP.isInBounds() &&
       GEP.getNoWrapFlags().hasNoUnsignedWrap()) {
 
     using namespace llvm::PatternMatch;
 
     Value *X = nullptr;
-    ConstantInt *DivC = nullptr;
+    Value *Y = nullptr;
 
-    // Match: idx = srem X, C -- where C is a positive power-of-two constant.
-    if (match(Indices[0], m_SRem(m_Value(X), m_ConstantInt(DivC))) &&
-        DivC->getValue().isStrictlyPositive() &&
-        DivC->getValue().isPowerOf2()) {
-
-      uint64_t Div = DivC->getZExtValue();
-      APInt Size(DL.getIndexTypeSizeInBits(GEP.getType()), Div);
-
-      if (isDereferenceableAndAlignedPointer(PtrOp, Align(1), Size, DL, &GEP,
-                                             &AC, &DT, &TLI)) {
-        // If base is at least Div bytes dereferenceable and GEP is
-        // inbounds+nuw, index cannot be negative -> srem by power-of-two can be
-        // treated as urem, and urem by power-of-two folds to 'and' later.
+    // Match: idx = srem X, Y -- where Y is a power-of-two constant.
+    if (match(Indices[0], m_SRem(m_Value(X), m_Value(Y)))) {
+      if (isKnownToBeAPowerOfTwo(Y, false, &GEP)) {
+        // If GEP is inbounds+nuw, the offset cannot be negative
+        // -> srem by power-of-two can be treated as urem,
+        // and urem by power-of-two folds to 'and' later.
         Instruction *OldIdxI = dyn_cast<Instruction>(Indices[0]);
         Builder.SetInsertPoint(&GEP);
-        Value *NewIdx = Builder.CreateURem(X, DivC, OldIdxI->getName());
+        Value *NewIdx = Builder.CreateURem(X, Y, OldIdxI->getName());
 
         auto *NewGEP = GetElementPtrInst::Create(
             GEPEltType, PtrOp, {NewIdx}, GEP.getName(), GEP.getIterator());
