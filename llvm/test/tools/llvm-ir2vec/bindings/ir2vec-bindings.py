@@ -43,6 +43,22 @@ if tool is not None:
             print(f"  BB: {bb_name}")
             print(f"    Embedding: {emb.tolist()}")
 
+    # Test getInstEmbMap
+    print("\n=== Instruction Embeddings ===")
+    inst_emb_map = tool.getInstEmbMap()
+
+    # Sorting by function name, then instruction string for deterministic output
+    inst_sorted = []
+    for func_name in sorted(inst_emb_map.keys()):
+        func_inst_map = inst_emb_map[func_name]
+        for inst_str in sorted(func_inst_map.keys()):
+            emb = func_inst_map[inst_str]
+            inst_sorted.append((inst_str, emb))
+    
+    for inst_str, emb in inst_sorted:
+        print(f"Inst: {inst_str}")
+        print(f"  Embedding: {emb.tolist()}")
+
 # CHECK: SUCCESS: Tool initialized
 # CHECK: Tool type: IR2VecTool
 # CHECK: === Function Embeddings ===
@@ -75,3 +91,26 @@ if tool is not None:
 # CHECK: Function: multiply
 # CHECK:   BB: entry
 # CHECK-NEXT:     Embedding: [50.0, 52.0, 54.0]
+# CHECK: === Instruction Embeddings ===
+# CHECK: Inst: %sum = add i32 %a, %b
+# CHECK-NEXT:   Embedding: [37.0, 38.0, 39.0]
+# CHECK: Inst: ret i32 %sum
+# CHECK-NEXT:   Embedding: [1.0, 2.0, 3.0]
+# CHECK: Inst: %cmp = icmp sgt i32 %n, 0
+# CHECK-NEXT:   Embedding: [157.20000000298023, 158.20000000298023, 159.20000000298023]
+# CHECK: Inst: %neg_val = sub i32 %n, 10
+# CHECK-NEXT:   Embedding: [43.0, 44.0, 45.0]
+# CHECK: Inst: %pos_val = add i32 %n, 10
+# CHECK-NEXT:   Embedding: [37.0, 38.0, 39.0]
+# CHECK: Inst: %result = phi i32 [ %pos_val, %positive ], [ %neg_val, %negative ]
+# CHECK-NEXT:   Embedding: [163.0, 164.0, 165.0]
+# CHECK: Inst: br i1 %cmp, label %positive, label %negative
+# CHECK-NEXT:   Embedding: [4.0, 5.0, 6.0]
+# CHECK: Inst: br label %exit
+# CHECK-NEXT:   Embedding: [4.0, 5.0, 6.0]
+# CHECK: Inst: ret i32 %result
+# CHECK-NEXT:   Embedding: [1.0, 2.0, 3.0]
+# CHECK: Inst: %prod = mul i32 %x, %y
+# CHECK-NEXT:   Embedding: [49.0, 50.0, 51.0]
+# CHECK: Inst: ret i32 %prod
+# CHECK-NEXT:   Embedding: [1.0, 2.0, 3.0]
