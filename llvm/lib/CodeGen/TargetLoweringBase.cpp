@@ -95,6 +95,24 @@ static cl::opt<unsigned> MinimumBitTestCmpsOverride(
     cl::desc("Set minimum of largest number of comparisons "
              "to use bit test for switch."));
 
+static cl::opt<unsigned> MaxStoresPerMemsetOverride(
+    "max-store-memset", cl::init(0), cl::Hidden,
+    cl::desc("Override target's MaxStoresPerMemset and "
+             "MaxStoresPerMemsetOptSize. "
+             "Set to 0 to use the target default."));
+
+static cl::opt<unsigned> MaxStoresPerMemcpyOverride(
+    "max-store-memcpy", cl::init(0), cl::Hidden,
+    cl::desc("Override target's MaxStoresPerMemcpy and "
+             "MaxStoresPerMemcpyOptSize. "
+             "Set to 0 to use the target default."));
+
+static cl::opt<unsigned> MaxStoresPerMemmoveOverride(
+    "max-store-memmove", cl::init(0), cl::Hidden,
+    cl::desc("Override target's MaxStoresPerMemmove and "
+             "MaxStoresPerMemmoveOptSize. "
+             "Set to 0 to use the target default."));
+
 // FIXME: This option is only to test if the strict fp operation processed
 // correctly by preventing mutating strict fp operation to normal fp operation
 // during development. When the backend supports strict float operation, this
@@ -981,7 +999,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
   // division.
   MaxDivRemBitWidthSupported = 128;
 
-  MaxLargeFPConvertBitWidthSupported = llvm::IntegerType::MAX_INT_BITS;
+  MaxLargeFPConvertBitWidthSupported = 128;
 
   MinCmpXchgSizeInBits = 0;
   SupportsUnalignedAtomics = false;
@@ -1117,6 +1135,9 @@ void TargetLoweringBase::initActions() {
     // Absolute difference
     setOperationAction({ISD::ABDS, ISD::ABDU}, VT, Expand);
 
+    // Carry-less multiply
+    setOperationAction({ISD::CLMUL, ISD::CLMULR, ISD::CLMULH}, VT, Expand);
+
     // Saturated trunc
     setOperationAction(ISD::TRUNCATE_SSAT_S, VT, Expand);
     setOperationAction(ISD::TRUNCATE_SSAT_U, VT, Expand);
@@ -1162,7 +1183,8 @@ void TargetLoweringBase::initActions() {
         VT, Expand);
 
     // Named vector shuffles default to expand.
-    setOperationAction(ISD::VECTOR_SPLICE, VT, Expand);
+    setOperationAction({ISD::VECTOR_SPLICE_LEFT, ISD::VECTOR_SPLICE_RIGHT}, VT,
+                       Expand);
 
     // Only some target support this vector operation. Most need to expand it.
     setOperationAction(ISD::VECTOR_COMPRESS, VT, Expand);
@@ -1234,6 +1256,10 @@ void TargetLoweringBase::initActions() {
   // This one by default will call __clear_cache unless the target
   // wants something different.
   setOperationAction(ISD::CLEAR_CACHE, MVT::Other, LibCall);
+
+  // By default, STACKADDRESS nodes are expanded like STACKSAVE nodes.
+  // On SPARC targets, custom lowering is required.
+  setOperationAction(ISD::STACKADDRESS, MVT::Other, Expand);
 }
 
 MVT TargetLoweringBase::getScalarShiftAmountTy(const DataLayout &DL,
@@ -1723,8 +1749,7 @@ void TargetLoweringBase::computeRegisterProperties(
   // conversions).
   if (!isTypeLegal(MVT::f16)) {
     // Allow targets to control how we legalize half.
-    bool SoftPromoteHalfType = softPromoteHalfType();
-    bool UseFPRegsForHalfType = !SoftPromoteHalfType || useFPRegsForHalfType();
+    bool UseFPRegsForHalfType = useFPRegsForHalfType();
 
     if (!UseFPRegsForHalfType) {
       NumRegistersForVT[MVT::f16] = NumRegistersForVT[MVT::i16];
@@ -1734,11 +1759,7 @@ void TargetLoweringBase::computeRegisterProperties(
       RegisterTypeForVT[MVT::f16] = RegisterTypeForVT[MVT::f32];
     }
     TransformToType[MVT::f16] = MVT::f32;
-    if (SoftPromoteHalfType) {
-      ValueTypeActions.setTypeAction(MVT::f16, TypeSoftPromoteHalf);
-    } else {
-      ValueTypeActions.setTypeAction(MVT::f16, TypePromoteFloat);
-    }
+    ValueTypeActions.setTypeAction(MVT::f16, TypeSoftPromoteHalf);
   }
 
   // Decide how to handle bf16. If the target does not have native bf16 support,
@@ -2112,6 +2133,27 @@ bool TargetLoweringBase::allowsMemoryAccess(LLVMContext &Context,
                             MMO.getFlags(), Fast);
 }
 
+unsigned TargetLoweringBase::getMaxStoresPerMemset(bool OptSize) const {
+  if (MaxStoresPerMemsetOverride > 0)
+    return MaxStoresPerMemsetOverride;
+
+  return OptSize ? MaxStoresPerMemsetOptSize : MaxStoresPerMemset;
+}
+
+unsigned TargetLoweringBase::getMaxStoresPerMemcpy(bool OptSize) const {
+  if (MaxStoresPerMemcpyOverride > 0)
+    return MaxStoresPerMemcpyOverride;
+
+  return OptSize ? MaxStoresPerMemcpyOptSize : MaxStoresPerMemcpy;
+}
+
+unsigned TargetLoweringBase::getMaxStoresPerMemmove(bool OptSize) const {
+  if (MaxStoresPerMemmoveOverride > 0)
+    return MaxStoresPerMemmoveOverride;
+
+  return OptSize ? MaxStoresPerMemmoveOptSize : MaxStoresPerMemmove;
+}
+
 //===----------------------------------------------------------------------===//
 //  TargetTransformInfo Helpers
 //===----------------------------------------------------------------------===//
@@ -2245,8 +2287,8 @@ TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
   return UnsafeStackPtr;
 }
 
-Value *
-TargetLoweringBase::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
+Value *TargetLoweringBase::getSafeStackPointerLocation(
+    IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls) const {
   // FIXME: Can this triple check be replaced with SAFESTACK_POINTER_ADDRESS
   // being available?
   if (!TM.getTargetTriple().isAndroid())
@@ -2255,9 +2297,9 @@ TargetLoweringBase::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
   Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   auto *PtrTy = PointerType::getUnqual(M->getContext());
 
-  const char *SafestackPointerAddressName =
-      getLibcallName(RTLIB::SAFESTACK_POINTER_ADDRESS);
-  if (!SafestackPointerAddressName) {
+  RTLIB::LibcallImpl SafestackPointerAddressImpl =
+      Libcalls.getLibcallImpl(RTLIB::SAFESTACK_POINTER_ADDRESS);
+  if (SafestackPointerAddressImpl == RTLIB::Unsupported) {
     M->getContext().emitError(
         "no libcall available for safestack pointer address");
     return PoisonValue::get(PtrTy);
@@ -2266,7 +2308,9 @@ TargetLoweringBase::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
   // Android provides a libc function to retrieve the address of the current
   // thread's unsafe stack pointer.
   FunctionCallee Fn =
-      M->getOrInsertFunction(SafestackPointerAddressName, PtrTy);
+      M->getOrInsertFunction(RTLIB::RuntimeLibcallsInfo::getLibcallImplName(
+                                 SafestackPointerAddressImpl),
+                             PtrTy);
   return IRB.CreateCall(Fn);
 }
 
@@ -2321,8 +2365,11 @@ bool TargetLoweringBase::isLegalAddressingMode(const DataLayout &DL,
 
 // For OpenBSD return its special guard variable. Otherwise return nullptr,
 // so that SelectionDAG handle SSP.
-Value *TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB) const {
-  RTLIB::LibcallImpl GuardLocalImpl = getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+Value *
+TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB,
+                                    const LibcallLoweringInfo &Libcalls) const {
+  RTLIB::LibcallImpl GuardLocalImpl =
+      Libcalls.getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
   if (GuardLocalImpl != RTLIB::impl___guard_local)
     return nullptr;
 
@@ -2338,8 +2385,10 @@ Value *TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB) const {
 
 // Currently only support "standard" __stack_chk_guard.
 // TODO: add LOAD_STACK_GUARD support.
-void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
-  RTLIB::LibcallImpl StackGuardImpl = getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+void TargetLoweringBase::insertSSPDeclarations(
+    Module &M, const LibcallLoweringInfo &Libcalls) const {
+  RTLIB::LibcallImpl StackGuardImpl =
+      Libcalls.getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
   if (StackGuardImpl == RTLIB::Unsupported)
     return;
 
@@ -2365,17 +2414,20 @@ void TargetLoweringBase::insertSSPDeclarations(Module &M) const {
 
 // Currently only support "standard" __stack_chk_guard.
 // TODO: add LOAD_STACK_GUARD support.
-Value *TargetLoweringBase::getSDagStackGuard(const Module &M) const {
-  RTLIB::LibcallImpl GuardVarImpl = getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+Value *TargetLoweringBase::getSDagStackGuard(
+    const Module &M, const LibcallLoweringInfo &Libcalls) const {
+  RTLIB::LibcallImpl GuardVarImpl =
+      Libcalls.getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
   if (GuardVarImpl == RTLIB::Unsupported)
     return nullptr;
   return M.getNamedValue(getLibcallImplName(GuardVarImpl));
 }
 
-Function *TargetLoweringBase::getSSPStackGuardCheck(const Module &M) const {
+Function *TargetLoweringBase::getSSPStackGuardCheck(
+    const Module &M, const LibcallLoweringInfo &Libcalls) const {
   // MSVC CRT has a function to validate security cookie.
   RTLIB::LibcallImpl SecurityCheckCookieLibcall =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+      Libcalls.getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
   if (SecurityCheckCookieLibcall != RTLIB::Unsupported)
     return M.getFunction(getLibcallImplName(SecurityCheckCookieLibcall));
   return nullptr;

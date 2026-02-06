@@ -2,6 +2,7 @@
 
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
+#include "mlir/IR/BuiltinTypes.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/GlobalDecl.h"
@@ -504,15 +505,11 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::ConstantArray: {
     const ConstantArrayType *arrTy = cast<ConstantArrayType>(ty);
     mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
-
-    // TODO(CIR): In LLVM, "lower arrays of undefined struct type to arrays of
-    // i8 just to have a concrete type"
-    if (!cir::isSized(elemTy)) {
-      cgm.errorNYI(SourceLocation(), "arrays of undefined struct type", type);
-      resultType = cgm.uInt32Ty;
-      break;
-    }
-
+    // In classic codegen, arrays of unsized types which it assumes are "arrays
+    // of undefined struct type" are lowered to arrays of i8 "just to have a
+    // concrete type", but in CIR, we can get here with abstract types like
+    // !cir.method and !cir.data_member, so we just create an array of the type
+    // and handle it during lowering if we still don't have a sized type.
     resultType = cir::ArrayType::get(elemTy, arrTy->getSize().getZExtValue());
     break;
   }
@@ -545,8 +542,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     if (mpt->isMemberDataPointer()) {
       resultType = cir::DataMemberType::get(memberTy, clsTy);
     } else {
-      assert(!cir::MissingFeatures::methodType());
-      cgm.errorNYI(SourceLocation(), "MethodType");
+      auto memberFuncTy = mlir::cast<cir::FuncType>(memberTy);
+      resultType = cir::MethodType::get(memberFuncTy, clsTy);
     }
     break;
   }
@@ -661,15 +658,14 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
   return getCIRGenRecordLayout(rd).isZeroInitializable();
 }
 
-const CIRGenFunctionInfo &
-CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType,
-                                    llvm::ArrayRef<CanQualType> argTypes,
-                                    RequiredArgs required) {
+const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
+    CanQualType returnType, llvm::ArrayRef<CanQualType> argTypes,
+    FunctionType::ExtInfo info, RequiredArgs required) {
   assert(llvm::all_of(argTypes,
                       [](CanQualType t) { return t.isCanonicalAsParam(); }));
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID id;
-  CIRGenFunctionInfo::Profile(id, required, returnType, argTypes);
+  CIRGenFunctionInfo::Profile(id, info, required, returnType, argTypes);
 
   void *insertPos = nullptr;
   CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
@@ -686,7 +682,7 @@ CIRGenTypes::arrangeCIRFunctionInfo(CanQualType returnType,
   assert(!cir::MissingFeatures::opCallCallConv());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(returnType, argTypes, required);
+  fi = CIRGenFunctionInfo::create(info, returnType, argTypes, required);
   functionInfos.InsertNode(fi, insertPos);
 
   return *fi;

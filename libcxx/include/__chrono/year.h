@@ -58,16 +58,16 @@ public:
   }
   _LIBCPP_HIDE_FROM_ABI constexpr year& operator+=(const years& __dy) noexcept;
   _LIBCPP_HIDE_FROM_ABI constexpr year& operator-=(const years& __dy) noexcept;
-  _LIBCPP_HIDE_FROM_ABI inline constexpr year operator+() const noexcept { return *this; }
-  _LIBCPP_HIDE_FROM_ABI inline constexpr year operator-() const noexcept { return year{-__y_}; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year operator+() const noexcept { return *this; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year operator-() const noexcept { return year{-__y_}; }
 
-  _LIBCPP_HIDE_FROM_ABI inline constexpr bool is_leap() const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr bool is_leap() const noexcept {
     return __y_ % 4 == 0 && (__y_ % 100 != 0 || __y_ % 400 == 0);
   }
   _LIBCPP_HIDE_FROM_ABI explicit inline constexpr operator int() const noexcept { return __y_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr bool ok() const noexcept;
-  _LIBCPP_HIDE_FROM_ABI static inline constexpr year min() noexcept { return year{-32767}; }
-  _LIBCPP_HIDE_FROM_ABI static inline constexpr year max() noexcept { return year{32767}; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool ok() const noexcept;
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static inline constexpr year min() noexcept { return year{-32767}; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static inline constexpr year max() noexcept { return year{32767}; }
 };
 
 _LIBCPP_HIDE_FROM_ABI inline constexpr bool operator==(const year& __lhs, const year& __rhs) noexcept {
@@ -78,19 +78,19 @@ _LIBCPP_HIDE_FROM_ABI constexpr strong_ordering operator<=>(const year& __lhs, c
   return static_cast<int>(__lhs) <=> static_cast<int>(__rhs);
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year operator+(const year& __lhs, const years& __rhs) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year operator+(const year& __lhs, const years& __rhs) noexcept {
   return year(static_cast<int>(__lhs) + __rhs.count());
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year operator+(const years& __lhs, const year& __rhs) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year operator+(const years& __lhs, const year& __rhs) noexcept {
   return __rhs + __lhs;
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr year operator-(const year& __lhs, const years& __rhs) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr year operator-(const year& __lhs, const years& __rhs) noexcept {
   return __lhs + -__rhs;
 }
 
-_LIBCPP_HIDE_FROM_ABI inline constexpr years operator-(const year& __lhs, const year& __rhs) noexcept {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr years operator-(const year& __lhs, const year& __rhs) noexcept {
   return years{static_cast<int>(__lhs) - static_cast<int>(__rhs)};
 }
 
@@ -115,7 +115,9 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool year::ok() const noexcept {
 
 template <>
 struct hash<chrono::year> {
-  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::year& __y) noexcept { return static_cast<int>(__y); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::year& __y) noexcept {
+    return static_cast<int>(__y);
+  }
 };
 
 #  endif // _LIBCPP_STD_VER >= 26

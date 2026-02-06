@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC___SUPPORT_MATH_ATAN2F_FLOAT_H
-#define LIBC_SRC___SUPPORT_MATH_ATAN2F_FLOAT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ATAN2F_FLOAT_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_ATAN2F_FLOAT_H
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
@@ -30,7 +30,7 @@ using FloatFloat = fputil::FloatFloat;
 //     b = round(atan(i/16) - a, SG, RN);
 //     print("{", b, ",", a, "},");
 //   };
-static constexpr FloatFloat ATAN_I[17] = {
+LIBC_INLINE_VAR constexpr FloatFloat ATAN_I[17] = {
     {0.0f, 0.0f},
     {-0x1.1a6042p-30f, 0x1.ff55bcp-5f},
     {-0x1.54f424p-30f, 0x1.fd5baap-4f},
@@ -60,7 +60,7 @@ static constexpr FloatFloat ATAN_I[17] = {
 // For x = x_hi + x_lo, fully expand the polynomial and drop any terms less than
 //   ulp(x_hi^3 / 3) gives us:
 // P(x) ~ x_hi - x_hi^3/3 + x_lo * (1 - x_hi^2)
-LIBC_INLINE static constexpr FloatFloat atan_eval(const FloatFloat &x) {
+LIBC_INLINE constexpr FloatFloat atan_eval(const FloatFloat &x) {
   FloatFloat p;
   p.hi = x.hi;
   float x_hi_sq = x.hi * x.hi;
@@ -124,7 +124,7 @@ LIBC_INLINE static constexpr FloatFloat atan_eval(const FloatFloat &x) {
 // > dirtyinfnorm(atan(x) - P, [-2^-5, 2^-5]);
 // 0x1.995...p-28.
 
-LIBC_INLINE static constexpr float atan2f(float y, float x) {
+LIBC_INLINE constexpr float atan2f(float y, float x) {
   using namespace atan2f_internal;
   using FPBits = typename fputil::FPBits<float>;
   constexpr float IS_NEG[2] = {1.0f, -1.0f};
@@ -242,4 +242,4 @@ LIBC_INLINE static constexpr float atan2f(float y, float x) {
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_SRC___SUPPORT_MATH_ATAN2F_FLOAT_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_ATAN2F_FLOAT_H
