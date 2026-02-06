@@ -686,14 +686,14 @@ void __asan_version_mismatch_check() {
 
 // Used only for testing asan.
 SANITIZER_INTERFACE_ATTRIBUTE
-void *__asan_test_only_get_low_mem_beg()  { return (void*)kLowMemBeg;  }
+void *__asan_test_only_get_low_mem_beg() { return (void *)kLowMemBeg; }
 SANITIZER_INTERFACE_ATTRIBUTE
-void *__asan_test_only_get_low_mem_end()  { return (void*)kLowMemEnd;  }
+void *__asan_test_only_get_low_mem_end() { return (void *)kLowMemEnd; }
 SANITIZER_INTERFACE_ATTRIBUTE
-void *__asan_test_only_get_mid_mem_beg()  { return (void*)kMidMemBeg;  }
+void *__asan_test_only_get_mid_mem_beg() { return (void *)kMidMemBeg; }
 SANITIZER_INTERFACE_ATTRIBUTE
-void *__asan_test_only_get_mid_mem_end()  { return (void*)kMidMemEnd;  }
+void *__asan_test_only_get_mid_mem_end() { return (void *)kMidMemEnd; }
 SANITIZER_INTERFACE_ATTRIBUTE
-void *__asan_test_only_get_high_mem_beg() { return (void*)kHighMemBeg; }
+void *__asan_test_only_get_high_mem_beg() { return (void *)kHighMemBeg; }
 SANITIZER_INTERFACE_ATTRIBUTE
-void *__asan_test_only_get_high_mem_end() { return (void*)kHighMemEnd; }
+void *__asan_test_only_get_high_mem_end() { return (void *)kHighMemEnd; }

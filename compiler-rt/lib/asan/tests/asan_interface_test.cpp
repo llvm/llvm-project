@@ -285,7 +285,7 @@ static void ProbeRegionIsPoisonedNearEnd(void *end) {
   // Probe starts in the last 8 bytes of the range.
   static const size_t granularity = 1ULL << 3;
   for (size_t off = 0; off < granularity; ++off) {
-    char *s = (char*)end - off;
+    char *s = (char *)end - off;
     // Sizes 1..8 (exercise alignment and shadow lookups).
     for (size_t size = 1; size <= granularity; ++size) {
       void *first_poisoned = __asan_region_is_poisoned(s, size);
@@ -299,7 +299,7 @@ static void ProbeRegionIsPoisonedNearBeg(void *beg) {
   // Probe starts in the first 8 bytes of the range.
   static const size_t granularity = 1ULL << 3;
   for (size_t off = 0; off < granularity; ++off) {
-    char *s = (char*)beg + off;
+    char *s = (char *)beg + off;
     for (size_t size = 1; size <= granularity; ++size) {
       void *first_poisoned = __asan_region_is_poisoned(s, size);
       EXPECT_TRUE(first_poisoned == nullptr ||
@@ -309,22 +309,22 @@ static void ProbeRegionIsPoisonedNearBeg(void *beg) {
 }
 
 TEST(AddressSanitizerInterface, IsPoisonedDoesNotCrashOnMemoryBoundaries) {
-  void *lowBeg  = __asan_test_only_get_low_mem_beg();
-  void *lowEnd  = __asan_test_only_get_low_mem_end();
-  void *midBeg  = __asan_test_only_get_mid_mem_beg();
-  void *midEnd  = __asan_test_only_get_mid_mem_end();
+  void *lowBeg = __asan_test_only_get_low_mem_beg();
+  void *lowEnd = __asan_test_only_get_low_mem_end();
+  void *midBeg = __asan_test_only_get_mid_mem_beg();
+  void *midEnd = __asan_test_only_get_mid_mem_end();
   void *highBeg = __asan_test_only_get_high_mem_beg();
   void *highEnd = __asan_test_only_get_high_mem_end();
 
   ProbeRegionIsPoisonedNearBeg(lowBeg);
   ProbeRegionIsPoisonedNearEnd(lowEnd);
 
-  if (midBeg) { // if mid memory is used on this platform
+  if (midBeg) {  // if mid memory is used on this platform
     ProbeRegionIsPoisonedNearBeg(midBeg);
     ProbeRegionIsPoisonedNearEnd(midEnd);
   }
 
-  if (highBeg) { // if high memory is used on this platform
+  if (highBeg) {  // if high memory is used on this platform
     ProbeRegionIsPoisonedNearBeg(highBeg);
     ProbeRegionIsPoisonedNearEnd(highEnd);
   }
