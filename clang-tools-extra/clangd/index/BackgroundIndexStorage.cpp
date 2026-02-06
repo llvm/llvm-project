@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GlobalCompilationDatabase.h"
+#include "PathMapping.h"
 #include "index/Background.h"
 #include "support/Logger.h"
 #include "support/Path.h"
@@ -150,7 +151,8 @@ private:
 
 BackgroundIndexStorage::Factory
 BackgroundIndexStorage::createDiskBackedStorageFactory(
-    std::function<std::optional<ProjectInfo>(PathRef)> GetProjectInfo) {
+    std::function<std::optional<ProjectInfo>(PathRef)> GetProjectInfo,
+    PathMappings Mappings) {
   return DiskBackedIndexStorageManager(std::move(GetProjectInfo));
 }
 

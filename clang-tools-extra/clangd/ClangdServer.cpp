@@ -262,7 +262,8 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
     BackgroundIdx = std::make_unique<BackgroundIndex>(
         TFS, CDB,
         BackgroundIndexStorage::createDiskBackedStorageFactory(
-            [&CDB](llvm::StringRef File) { return CDB.getProjectInfo(File); }),
+            [&CDB](llvm::StringRef File) { return CDB.getProjectInfo(File); },
+            Opts.BackgroundIndexPathMappings),
         std::move(BGOpts));
     AddIndex(BackgroundIdx.get());
   }
