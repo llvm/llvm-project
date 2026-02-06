@@ -1,4 +1,5 @@
-//-  X86InsertX87Wait.cpp - Strict-Fp:Insert wait instruction X87 instructions --//
+//-  X86InsertX87Wait.cpp - Strict-Fp:Insert wait instruction X87 instructions
+//--//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -52,7 +53,9 @@ public:
 
 char X86InsertX87WaitLegacy::ID = 0;
 
-FunctionPass *llvm::createX86InsertX87WaitLegacyPass() { return new X86InsertX87WaitLegacy(); }
+FunctionPass *llvm::createX86InsertX87WaitLegacyPass() {
+  return new X86InsertX87WaitLegacy();
+}
 
 static bool isX87ControlInstruction(MachineInstr &MI) {
   switch (MI.getOpcode()) {
