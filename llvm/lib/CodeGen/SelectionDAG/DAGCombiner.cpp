@@ -12138,25 +12138,24 @@ SDValue DAGCombiner::visitCTPOP(SDNode *N) {
 static unsigned getBestMinMaxOpc(const TargetLowering &TLI, EVT VT, bool Max) {
   unsigned IEEE2019NumOpcode = Max ? ISD::FMAXIMUMNUM : ISD::FMINIMUMNUM;
   unsigned IEEE2019Opcode = Max ? ISD::FMAXIMUM : ISD::FMINIMUM;
-  unsigned IEEEOpcode = Max ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
+  unsigned IEEE2008Opcode = Max ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
   unsigned Opcode = Max ? ISD::FMAXNUM : ISD::FMINNUM;
 
-  // Try FMINIMUM/FMAXIMUM first as it has smaller codesize on AMDGPU GFX12.
+  if (TLI.isOperationLegal(IEEE2008Opcode, VT))
+    return IEEE2008Opcode;
   if (TLI.isOperationLegal(IEEE2019Opcode, VT))
     return IEEE2019Opcode;
   if (TLI.isOperationLegal(IEEE2019NumOpcode, VT))
     return IEEE2019NumOpcode;
-  if (TLI.isOperationLegal(IEEEOpcode, VT))
-    return IEEEOpcode;
   if (TLI.isOperationLegal(Opcode, VT))
     return Opcode;
 
+  if (TLI.isOperationCustom(IEEE2008Opcode, VT))
+    return IEEE2008Opcode;
   if (TLI.isOperationCustom(IEEE2019Opcode, VT))
     return IEEE2019Opcode;
   if (TLI.isOperationCustom(IEEE2019NumOpcode, VT))
     return IEEE2019NumOpcode;
-  if (TLI.isOperationCustom(IEEEOpcode, VT))
-    return IEEEOpcode;
   if (TLI.isOperationCustom(Opcode, VT))
     return Opcode;
 

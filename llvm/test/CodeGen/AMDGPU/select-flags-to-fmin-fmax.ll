@@ -2129,7 +2129,7 @@ define float @v_test_fmin_legacy_uge_f32_nsz_flag__nnan_srcs(float %arg0, float 
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_add_f32 v0, v0, v0 :: v_dual_add_f32 v1, v1, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_minimum_f32 v0, v0, v1
+; GFX12-NEXT:    v_min_num_f32_e32 v0, v0, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %a = fadd nnan float %arg0, %arg0
   %b = fadd nnan float %arg1, %arg1
@@ -2164,7 +2164,7 @@ define float @v_test_fmax_legacy_uge_f32_nsz_flag__nnan_srcs(float %arg0, float 
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_dual_add_f32 v0, v0, v0 :: v_dual_add_f32 v1, v1, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_maximum_f32 v0, v0, v1
+; GFX12-NEXT:    v_max_num_f32_e32 v0, v0, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %a = fadd nnan float %arg0, %arg0
   %b = fadd nnan float %arg1, %arg1
