@@ -480,6 +480,10 @@ public:
   /// Lookup a type in the debug info.
   lldb::TypeSP FindTypeInModule(lldb::opaque_compiler_type_t type);
 
+  /// Desugar a CompilerType and resolve type aliases by looking up
+  /// their types in the debug info.
+  CompilerType Canonicalize(CompilerType type);
+
   /// Returns the mangling flavor associated with the ASTContext corresponding
   /// with this TypeSystem.
   swift::Mangle::ManglingFlavor
