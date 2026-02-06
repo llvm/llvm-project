@@ -13,6 +13,7 @@
 #include <deque>
 #include <iterator>
 #include <list>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <vector>
