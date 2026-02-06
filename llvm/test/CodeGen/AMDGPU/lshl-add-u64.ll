@@ -268,3 +268,49 @@ define amdgpu_kernel void @lshl_add_u64_salu_and_5(i32 %stride, ptr addrspace(5)
   ret void
 }
 
+define amdgpu_ps <2 x i32> @lshl_add_u64_sss_and_4(i32 inreg %v, i32 inreg %a, i32 inreg %s) {
+; GCN-LABEL: lshl_add_u64_sss_and_4
+; GFX942: s_add_i32 s{{[0-9:]+}}, s{{[0-9:]+}}, s{{[0-9:]+}}
+; GFX1250: s_add_co_i32 s{{[0-9:]+}}, s{{[0-9:]+}}, s{{[0-9:]+}}
+; GISEL-LABEL: lshl_add_u64_sss_and_4
+; GFX942-GISEL: s_add_i32 s{{[0-9:]+}}, s{{[0-9:]+}}, s{{[0-9:]+}}
+; GFX1250-GISEL: s_add_co_i32 s{{[0-9:]+}}, s{{[0-9:]+}}, s{{[0-9:]+}}
+  %and = and i32 %s, 4
+  %zext_and = zext i32 %and to i64
+  %zext_a = zext i32 %and to i64
+  %zext_v = zext i32 %and to i64
+  %shl = shl i64 %zext_v, %zext_and
+  %add = add i64 %shl, %zext_a
+  %bitcast = bitcast i64 %add to <2 x i32>
+  ret <2 x i32> %bitcast
+}
+
+define amdgpu_ps <2 x i32> @lshl_add_u64_svs_and_4(i32 inreg %v, i64 %a, i32 inreg %s) {
+; GCN-LABEL: lshl_add_u64_svs_and_4
+; GFX-1250: v_lshl_add_u64 v[{{[0-9:]+}}], s{{[0-9:]+}}, s{{[0-9:]+}}, v[{{[0-9:]+}}]
+; GFX-942: v_lshl_add_u64 v[{{[0-9:]+}}], s[{{[0-9:]+}}], 0, v[{{[0-9:]+}}]
+; GISEL-LABEL: lshl_add_u64_svs_and_4
+; GFX942-GISEL: v_add_co_u32_e32 v{{[0-9:]+}}, vcc, s{{[0-9:]+}}, v{{[0-9:]+}}
+; GFX-1250-GISEL: v_lshl_add_u64 v[{{[0-9:]+}}], s{{[0-9:]+}}], s{{[0-9:]+}}, v[{{[0-9:]+}}]
+  %and = and i32 %s, 4
+  %zext_and = zext i32 %and to i64
+  %zext_v = zext i32 %and to i64
+  %shl = shl i64 %zext_v, %zext_and
+  %add = add i64 %shl, %a
+  %bitcast = bitcast i64 %add to <2 x i32>
+  ret <2 x i32> %bitcast
+}
+
+define amdgpu_ps <2 x i32> @lshl_add_u64_vvs_and_4(i64 %v, i64 %a, i32 inreg %s) {
+; GCN-LABEL: lshl_add_u64_vvs_and_4
+; GCN: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s{{[0-9:]+}}, v[{{[0-9:]+}}]
+; GISEL-LABEL: lshl_add_u64_vvs_and_4
+; GFX942-GISEL: v_add_co_u32_e32 v{{[0-9:]+}}, vcc, v{{[0-9:]+}}, v{{[0-9:]+}}
+; GFX-1250-GISEL: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], s{{[0-9:]+}}, v[{{[0-9:]+}}]
+  %and = and i32 %s, 4
+  %zext_and = zext i32 %and to i64
+  %shl = shl i64 %v, %zext_and
+  %add = add i64 %shl, %a
+  %bitcast = bitcast i64 %add to <2 x i32>
+  ret <2 x i32> %bitcast
+}
