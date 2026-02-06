@@ -72,7 +72,7 @@ WebAssemblySubtarget::WebAssemblySubtarget(const Triple &TT,
     : WebAssemblyGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
       TargetTriple(TT), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
       TLInfo(TM, *this) {
-  CallLoweringInfo.reset(new WebAssemblyCallLowering(*getTargetLowering()));
+  CallLowering.reset(new WebAssemblyCallLowering(*getTargetLowering()));
   Legalizer.reset(new WebAssemblyLegalizerInfo(*this));
   auto *RBI = new WebAssemblyRegisterBankInfo(*getRegisterInfo());
   RegBankInfo.reset(RBI);
@@ -94,19 +94,3 @@ bool WebAssemblySubtarget::enableMachineScheduler() const {
 }
 
 bool WebAssemblySubtarget::useAA() const { return true; }
-
-const CallLowering *WebAssemblySubtarget::getCallLowering() const {
-  return CallLoweringInfo.get();
-}
-
-InstructionSelector *WebAssemblySubtarget::getInstructionSelector() const {
-  return InstSelector.get();
-}
-
-const LegalizerInfo *WebAssemblySubtarget::getLegalizerInfo() const {
-  return Legalizer.get();
-}
-
-const RegisterBankInfo *WebAssemblySubtarget::getRegBankInfo() const {
-  return RegBankInfo.get();
-}

@@ -28,42 +28,6 @@
 
 using namespace llvm;
 
-namespace {
-
-#define GET_GLOBALISEL_PREDICATE_BITSET
-#include "WebAssemblyGenGlobalISel.inc"
-#undef GET_GLOBALISEL_PREDICATE_BITSET
-
-class WebAssemblyInstructionSelector : public InstructionSelector {
-public:
-  WebAssemblyInstructionSelector(const WebAssemblyTargetMachine &TM,
-                                 const WebAssemblySubtarget &STI,
-                                 const WebAssemblyRegisterBankInfo &RBI);
-
-  bool select(MachineInstr &I) override;
-
-  static const char *getName() { return DEBUG_TYPE; }
-
-private:
-  bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
-
-  const WebAssemblyTargetMachine &TM;
-  // const WebAssemblySubtarget &STI;
-  const WebAssemblyInstrInfo &TII;
-  const WebAssemblyRegisterInfo &TRI;
-  const WebAssemblyRegisterBankInfo &RBI;
-
-#define GET_GLOBALISEL_PREDICATES_DECL
-#include "WebAssemblyGenGlobalISel.inc"
-#undef GET_GLOBALISEL_PREDICATES_DECL
-
-#define GET_GLOBALISEL_TEMPORARIES_DECL
-#include "WebAssemblyGenGlobalISel.inc"
-#undef GET_GLOBALISEL_TEMPORARIES_DECL
-};
-
-} // end anonymous namespace
-
 #define GET_GLOBALISEL_IMPL
 #include "WebAssemblyGenGlobalISel.inc"
 #undef GET_GLOBALISEL_IMPL
@@ -83,6 +47,8 @@ WebAssemblyInstructionSelector::WebAssemblyInstructionSelector(
 {
 }
 
+const char *WebAssemblyInstructionSelector::getName() { return DEBUG_TYPE; }
+
 bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
   if (selectImpl(I, *CoverageInfo))
     return true;
@@ -91,7 +57,7 @@ bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
 }
 
 namespace llvm {
-InstructionSelector *
+WebAssemblyInstructionSelector *
 createWebAssemblyInstructionSelector(const WebAssemblyTargetMachine &TM,
                                      const WebAssemblySubtarget &Subtarget,
                                      const WebAssemblyRegisterBankInfo &RBI) {
