@@ -805,6 +805,12 @@ public:
               return mlir::success();
             })
             .Case<cir::GotoOp>([&](auto &gotoOp) {
+              // Correct goto handling requires determining whether the goto
+              // branches out of the cleanup scope or stays within it.
+              // Although the goto necessarily exits the cleanup scope in the
+              // case where it is the only exit from the scope, it is left
+              // as unimplemented for now so that it can be generalized when
+              // multi-exit flattening is implemented.
               cir::UnreachableOp::create(rewriter, loc);
               return gotoOp.emitError(
                   "goto in cleanup scope is not yet implemented");
