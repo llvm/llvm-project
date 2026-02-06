@@ -362,8 +362,8 @@ InstCombinerImpl::foldOrderedFloatingPointReduction(Instruction *I) {
   Value *Vec, *Acc;
   uint64_t ExtractIdx;
   if (!match(Root, m_FAdd(m_Value(Acc),
-                             m_FPExtOrSelf(m_ExtractElt(
-                                 m_Value(Vec), m_ConstantInt(ExtractIdx))))))
+                          m_FPExtOrSelf(m_ExtractElt(
+                              m_Value(Vec), m_ConstantInt(ExtractIdx))))))
     return nullptr;
 
   auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
