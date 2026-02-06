@@ -10,7 +10,7 @@ void if_with_bool_literal_condition() {
     i = 2;
   }
   i = 3;
-  // CHECK-MESSAGES: :[[@LINE-6]]:7: warning: {{.*}} in if statement condition
+  // CHECK-MESSAGES: :[[@LINE-6]]:7: warning: redundant boolean literal in if statement condition
   // CHECK-FIXES:      {{^  int i = 0;$}}
   // CHECK-FIXES-NEXT: {{^  {$}}
   // CHECK-FIXES-NEXT: {{^    i = 2;$}}
@@ -24,7 +24,7 @@ void if_with_bool_literal_condition() {
     i = 6;
   }
   i = 7;
-  // CHECK-MESSAGES: :[[@LINE-6]]:7: warning: {{.*}} in if statement condition
+  // CHECK-MESSAGES: :[[@LINE-6]]:7: warning: redundant boolean literal in if statement condition
   // CHECK-FIXES:      {{^  i = 4;$}}
   // CHECK-FIXES-NEXT: {{^  {$}}
   // CHECK-FIXES-NEXT: {{^    i = 5;$}}
@@ -36,7 +36,7 @@ void if_with_bool_literal_condition() {
     i = 9;
   }
   i = 11;
-  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: {{.*}} in if statement condition
+  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: redundant boolean literal in if statement condition
   // CHECK-FIXES:      {{^  i = 8;$}}
   // CHECK-FIXES-NEXT: {{^  $}}
   // CHECK-FIXES-NEXT: {{^  i = 11;$}}
@@ -50,7 +50,7 @@ void if_with_negated_bool_condition() {
     i = 12;
   }
   i = 13;
-  // CHECK-MESSAGES: :[[@LINE-6]]:7: warning: {{.*}} in if statement condition
+  // CHECK-MESSAGES: :[[@LINE-6]]:7: warning: redundant boolean literal in if statement condition
   // CHECK-FIXES:      {{^  int i = 10;$}}
   // CHECK-FIXES-NEXT: {{^  {$}}
   // CHECK-FIXES-NEXT: {{^    i = 12;$}}
@@ -64,7 +64,7 @@ void if_with_negated_bool_condition() {
     i = 16;
   }
   i = 17;
-  // CHECK-MESSAGES: :[[@LINE-6]]:7: warning: {{.*}} in if statement condition
+  // CHECK-MESSAGES: :[[@LINE-6]]:7: warning: redundant boolean literal in if statement condition
   // CHECK-FIXES:      {{^  i = 14;$}}
   // CHECK-FIXES-NEXT: {{^  {$}}
   // CHECK-FIXES-NEXT: {{^    i = 15;$}}
@@ -76,7 +76,7 @@ void if_with_negated_bool_condition() {
     i = 19;
   }
   i = 20;
-  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: {{.*}} in if statement condition
+  // CHECK-MESSAGES: :[[@LINE-4]]:7: warning: redundant boolean literal in if statement condition
   // CHECK-FIXES:      {{^  i = 18;$}}
   // CHECK-FIXES-NEXT: {{^  $}}
   // CHECK-FIXES-NEXT: {{^  i = 20;$}}
@@ -86,7 +86,7 @@ void operator_equals() {
   int i = 0;
   bool b1 = (i > 2);
   if (b1 == true) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(b1\) {$}}
     i = 5;
   } else {
@@ -94,7 +94,7 @@ void operator_equals() {
   }
   bool b2 = (i > 4);
   if (b2 == false) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(!b2\) {$}}
     i = 7;
   } else {
@@ -102,7 +102,7 @@ void operator_equals() {
   }
   bool b3 = (i > 6);
   if (true == b3) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(b3\) {$}}
     i = 10;
   } else {
@@ -110,7 +110,7 @@ void operator_equals() {
   }
   bool b4 = (i > 8);
   if (false == b4) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(!b4\) {$}}
     i = 12;
   } else {
@@ -122,7 +122,7 @@ void operator_or() {
   int i = 0;
   bool b5 = (i > 10);
   if (b5 || false) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(b5\) {$}}
     i = 14;
   } else {
@@ -130,7 +130,7 @@ void operator_or() {
   }
   bool b6 = (i > 10);
   if (b6 || true) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(true\) {$}}
     i = 16;
   } else {
@@ -138,7 +138,7 @@ void operator_or() {
   }
   bool b7 = (i > 10);
   if (false || b7) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(b7\) {$}}
     i = 18;
   } else {
@@ -146,7 +146,7 @@ void operator_or() {
   }
   bool b8 = (i > 10);
   if (true || b8) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(true\) {$}}
     i = 20;
   } else {
@@ -158,7 +158,7 @@ void operator_and() {
   int i = 0;
   bool b9 = (i > 20);
   if (b9 && false) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(false\) {$}}
     i = 22;
   } else {
@@ -166,7 +166,7 @@ void operator_and() {
   }
   bool ba = (i > 20);
   if (ba && true) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(ba\) {$}}
     i = 24;
   } else {
@@ -174,7 +174,7 @@ void operator_and() {
   }
   bool bb = (i > 20);
   if (false && bb) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(false\) {$}}
     i = 26;
   } else {
@@ -182,7 +182,7 @@ void operator_and() {
   }
   bool bc = (i > 20);
   if (true && bc) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(bc\) {$}}
     i = 28;
   } else {
@@ -193,15 +193,15 @@ void operator_and() {
 void ternary_operator() {
   int i = 0;
   bool bd = (i > 20) ? true : false;
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: {{.*}} in ternary expression result
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: redundant boolean literal in ternary expression result
   // CHECK-FIXES: {{^  bool bd = i > 20;$}}
 
   bool be = (i > 20) ? false : true;
-  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: {{.*}} in ternary expression result
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: redundant boolean literal in ternary expression result
   // CHECK-FIXES: {{^  bool be = i <= 20;$}}
 
   bool bf = ((i > 20)) ? false : true;
-  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: {{.*}} in ternary expression result
+  // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: redundant boolean literal in ternary expression result
   // CHECK-FIXES: {{^  bool bf = i <= 20;$}}
 }
 
@@ -209,7 +209,7 @@ void operator_not_equal() {
   int i = 0;
   bool bf = (i > 20);
   if (false != bf) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(bf\) {$}}
     i = 30;
   } else {
@@ -217,7 +217,7 @@ void operator_not_equal() {
   }
   bool bg = (i > 20);
   if (true != bg) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(!bg\) {$}}
     i = 32;
   } else {
@@ -225,7 +225,7 @@ void operator_not_equal() {
   }
   bool bh = (i > 20);
   if (bh != false) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(bh\) {$}}
     i = 34;
   } else {
@@ -233,7 +233,7 @@ void operator_not_equal() {
   }
   bool bi = (i > 20);
   if (bi != true) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(!bi\) {$}}
     i = 36;
   } else {
@@ -243,19 +243,19 @@ void operator_not_equal() {
 
 void nested_booleans() {
   if (false || (true || false)) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(false \|\| \(true\)\) {$}}
   }
   if (true && (true || false)) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(true && \(true\)\) {$}}
   }
   if (false || (true && false)) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(false \|\| \(false\)\) {$}}
   }
   if (true && (true && false)) {
-    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: {{.*}} to boolean operator
+    // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: redundant boolean literal supplied to boolean operator
     // CHECK-FIXES: {{^  if \(true && \(false\)\) {$}}
   }
 }
@@ -285,12 +285,12 @@ void macros() {
 bool conditional_return_statements(int i) {
   if (i == 0) return true; else return false;
 }
-// CHECK-MESSAGES: :[[@LINE-2]]:22: warning: {{.*}} in conditional return statement
+// CHECK-MESSAGES: :[[@LINE-2]]:22: warning: redundant boolean literal in conditional return statement
 // CHECK-FIXES:      {{^  return i == 0;$}}
 
 bool conditional_return_statements_no_fix_1(int i) {
   if (i == 0) return true;
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: {{.*}} in conditional return statement
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: redundant boolean literal in conditional return statement
   // CHECK-MESSAGES: :[[@LINE-2]]:7: note: conditions that can be simplified
   // comment
   return false;
@@ -299,7 +299,7 @@ bool conditional_return_statements_no_fix_1(int i) {
 
 bool conditional_return_statements_no_fix_2(int i) {
   if (i == 0) return true;
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: {{.*}} in conditional return statement
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: redundant boolean literal in conditional return statement
   // CHECK-MESSAGES: :[[@LINE-2]]:7: note: conditions that can be simplified
   // comment
   else return false;
@@ -316,13 +316,13 @@ bool conditional_return_statements_else_expr(int i, int j) {
 bool negated_conditional_return_statements(int i) {
   if (i == 0) return false; else return true;
 }
-// CHECK-MESSAGES: :[[@LINE-2]]:22: warning: {{.*}} in conditional return statement
+// CHECK-MESSAGES: :[[@LINE-2]]:22: warning: redundant boolean literal in conditional return statement
 // CHECK-FIXES:      {{^  return i != 0;$}}
 
 bool negative_condition_conditional_return_statement(int i) {
   if (!(i == 0)) return false; else return true;
 }
-// CHECK-MESSAGES: :[[@LINE-2]]:25: warning: {{.*}} in conditional return statement
+// CHECK-MESSAGES: :[[@LINE-2]]:25: warning: redundant boolean literal in conditional return statement
 // CHECK-FIXES:      {{^  return i == 0;$}}
 
 bool conditional_compound_return_statements(int i) {
@@ -332,7 +332,7 @@ bool conditional_compound_return_statements(int i) {
     return false;
   }
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return statement
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: redundant boolean literal in conditional return statement
 // CHECK-FIXES:      {{^  return i == 1;$}}
 
 bool negated_conditional_compound_return_statements(int i) {
@@ -342,7 +342,7 @@ bool negated_conditional_compound_return_statements(int i) {
     return true;
   }
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return statement
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: redundant boolean literal in conditional return statement
 // CHECK-FIXES:      {{^  return i != 1;$}}
 
 bool conditional_return_statements_side_effects_then(int i) {
@@ -386,7 +386,7 @@ void simple_conditional_assignment_statements(int i) {
   else
     b = false;
   bool bb = false;
-  // CHECK-MESSAGES: :[[@LINE-4]]:9: warning: {{.*}} in conditional assignment
+  // CHECK-MESSAGES: :[[@LINE-4]]:9: warning: redundant boolean literal in conditional assignment
   // CHECK-FIXES: bool b;
   // CHECK-FIXES: {{^  b = i > 10;$}}
   // CHECK-FIXES: bool bb = false;
@@ -397,7 +397,7 @@ void simple_conditional_assignment_statements(int i) {
   else
     c = true;
   bool c2 = false;
-  // CHECK-MESSAGES: :[[@LINE-4]]:9: warning: {{.*}} in conditional assignment
+  // CHECK-MESSAGES: :[[@LINE-4]]:9: warning: redundant boolean literal in conditional assignment
   // CHECK-FIXES: bool c;
   // CHECK-FIXES: {{^  c = i <= 20;$}}
   // CHECK-FIXES: bool c2 = false;
@@ -438,7 +438,7 @@ void complex_conditional_assignment_statements(int i) {
     d = false;
   }
   d = false;
-  // CHECK-MESSAGES: :[[@LINE-5]]:9: warning: {{.*}} in conditional assignment
+  // CHECK-MESSAGES: :[[@LINE-5]]:9: warning: redundant boolean literal in conditional assignment
   // CHECK-FIXES: bool d;
   // CHECK-FIXES: {{^  d = i > 30;$}}
   // CHECK-FIXES: d = false;
@@ -450,7 +450,7 @@ void complex_conditional_assignment_statements(int i) {
     e = true;
   }
   e = false;
-  // CHECK-MESSAGES: :[[@LINE-5]]:9: warning: {{.*}} in conditional assignment
+  // CHECK-MESSAGES: :[[@LINE-5]]:9: warning: redundant boolean literal in conditional assignment
   // CHECK-FIXES: bool e;
   // CHECK-FIXES: {{^  e = i <= 40;$}}
   // CHECK-FIXES: e = false;
@@ -594,7 +594,7 @@ bool simple_if_return_return(int i) {
     return true;
   return false;
 }
-// CHECK-MESSAGES: :[[@LINE-3]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-3]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^}}bool simple_if_return_return(int i) {{{$}}
 // CHECK-FIXES: {{^  return i > 10;$}}
 // CHECK-FIXES: {{^}$}}
@@ -604,7 +604,7 @@ bool simple_if_return_return_negated(int i) {
     return false;
   return true;
 }
-// CHECK-MESSAGES: :[[@LINE-3]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-3]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^}}bool simple_if_return_return_negated(int i) {{{$}}
 // CHECK-FIXES: {{^  return i <= 10;$}}
 // CHECK-FIXES: {{^}$}}
@@ -615,7 +615,7 @@ bool complex_if_return_return(int i) {
   }
   return false;
 }
-// CHECK-MESSAGES: :[[@LINE-4]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-4]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^}}bool complex_if_return_return(int i) {{{$}}
 // CHECK-FIXES: {{^  return i > 10;$}}
 // CHECK-FIXES: {{^}$}}
@@ -626,7 +626,7 @@ bool complex_if_return_return_negated(int i) {
   }
   return true;
 }
-// CHECK-MESSAGES: :[[@LINE-4]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-4]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^}}bool complex_if_return_return_negated(int i) {{{$}}
 // CHECK-FIXES: {{^  return i <= 10;$}}
 // CHECK-FIXES: {{^}$}}
@@ -638,7 +638,7 @@ bool if_implicit_bool_expr(int i) {
     return false;
   }
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^  return i & 1;$}}
 
 bool negated_if_implicit_bool_expr(int i) {
@@ -648,7 +648,7 @@ bool negated_if_implicit_bool_expr(int i) {
     return true;
   }
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^  return !\(i - 1\);$}}
 
 bool implicit_int(int i) {
@@ -658,7 +658,7 @@ bool implicit_int(int i) {
     return false;
   }
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^}}  return i;{{$}}
 
 bool explicit_bool(bool b) {
@@ -668,7 +668,7 @@ bool explicit_bool(bool b) {
     return false;
   }
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^}}  return b;{{$}}
 
 bool negated_explicit_bool(bool b) {
@@ -678,7 +678,7 @@ bool negated_explicit_bool(bool b) {
     return false;
   }
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^  return !b;$}}
 
 bool bitwise_complement_conversion(int i) {
@@ -688,7 +688,7 @@ bool bitwise_complement_conversion(int i) {
     return false;
   }
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^  return ~i;$}}
 
 bool logical_or(bool a, bool b) {
@@ -698,7 +698,7 @@ bool logical_or(bool a, bool b) {
     return false;
   }
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^  return a \|\| b;$}}
 
 bool logical_and(bool a, bool b) {
@@ -708,13 +708,13 @@ bool logical_and(bool a, bool b) {
     return false;
   }
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^  return a && b;$}}
 
 void ternary_integer_condition(int i) {
   bool b = i ? true : false;
 }
-// CHECK-MESSAGES: :[[@LINE-2]]:16: warning: {{.*}} in ternary expression result
+// CHECK-MESSAGES: :[[@LINE-2]]:16: warning: redundant boolean literal in ternary expression result
 // CHECK-FIXES: {{^  bool b = i;$}}
 
 bool non_null_pointer_condition(int *p1) {
@@ -724,7 +724,7 @@ bool non_null_pointer_condition(int *p1) {
     return false;
   }
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^  return p1;$}}
 
 bool null_pointer_condition(int *p2) {
@@ -734,7 +734,7 @@ bool null_pointer_condition(int *p2) {
     return false;
   }
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^  return !p2;$}}
 
 bool negated_non_null_pointer_condition(int *p3) {
@@ -744,7 +744,7 @@ bool negated_non_null_pointer_condition(int *p3) {
     return true;
   }
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^  return !p3;$}}
 
 bool negated_null_pointer_condition(int *p4) {
@@ -754,7 +754,7 @@ bool negated_null_pointer_condition(int *p4) {
     return true;
   }
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^  return p4;$}}
 
 bool comments_in_the_middle(bool b) {
@@ -765,7 +765,7 @@ bool comments_in_the_middle(bool b) {
     return false;
   }
 }
-// CHECK-MESSAGES: :[[@LINE-6]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-6]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^}}  if (b) {
 // CHECK-FIXES: // something wicked this way comes{{$}}
 
@@ -777,7 +777,7 @@ bool preprocessor_in_the_middle(bool b) {
     return false;
   }
 }
-// CHECK-MESSAGES: :[[@LINE-6]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-6]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^}}  if (b) {
 // CHECK-FIXES: {{^}}#define SOMETHING_WICKED false
 
@@ -788,5 +788,5 @@ bool integer_not_zero(int i) {
     return true;
   }
 }
-// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
+// CHECK-MESSAGES: :[[@LINE-5]]:12: warning: redundant boolean literal in conditional return
 // CHECK-FIXES: {{^  return !i;$}}
