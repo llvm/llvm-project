@@ -208,13 +208,10 @@ Transforms/IndVarSimplify/invalidate-modified-lcssa-phi.ll
 Transforms/IndVarSimplify/pr45835.ll
 Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
 Transforms/InstCombine/2004-09-20-BadLoadCombine.ll
-Transforms/InstCombine/2005-04-07-UDivSelectCrash.ll
 Transforms/InstCombine/add-shl-mul-umax.ll
 Transforms/InstCombine/and2.ll
 Transforms/InstCombine/and-fcmp.ll
 Transforms/InstCombine/and-or-icmps.ll
-Transforms/InstCombine/apint-div1.ll
-Transforms/InstCombine/apint-div2.ll
 Transforms/InstCombine/atomic.ll
 Transforms/InstCombine/binop-cast.ll
 Transforms/InstCombine/binop-select-cast-of-select-cond.ll
@@ -225,9 +222,6 @@ Transforms/InstCombine/canonicalize-clamp-like-pattern-between-negative-and-posi
 Transforms/InstCombine/canonicalize-clamp-like-pattern-between-zero-and-positive-threshold.ll
 Transforms/InstCombine/cast-mul-select.ll
 Transforms/InstCombine/clamp-to-minmax.ll
-Transforms/InstCombine/cttz.ll
-Transforms/InstCombine/div.ll
-Transforms/InstCombine/div-shift.ll
 Transforms/InstCombine/fabs.ll
 Transforms/InstCombine/fcmp-select.ll
 Transforms/InstCombine/ffs-1.ll
@@ -259,7 +253,6 @@ Transforms/InstCombine/minmax-fp.ll
 Transforms/InstCombine/minmax-intrinsics.ll
 Transforms/InstCombine/mul-inseltpoison.ll
 Transforms/InstCombine/mul.ll
-Transforms/InstCombine/mul-pow2.ll
 Transforms/InstCombine/multiple-uses-load-bitcast-select.ll
 Transforms/InstCombine/nested-select.ll
 Transforms/InstCombine/or-fcmp.ll
