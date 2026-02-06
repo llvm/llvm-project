@@ -3369,11 +3369,10 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
                                              &AC, &DT, &TLI)) {
         // If base is at least Div bytes dereferenceable and GEP is
         // inbounds+nuw, index cannot be negative -> srem by power-of-two can be
-        // treated as urem, and urem by power-of-two folds to 'and'.
+        // treated as urem, and urem by power-of-two folds to 'and' later.
         Instruction *OldIdxI = dyn_cast<Instruction>(Indices[0]);
         Builder.SetInsertPoint(&GEP);
-        Value *Mask = ConstantInt::get(X->getType(), Div - 1);
-        Value *NewIdx = Builder.CreateAnd(X, Mask, "idx.mask");
+        Value *NewIdx = Builder.CreateURem(X, DivC, OldIdxI->getName());
 
         auto *NewGEP = GetElementPtrInst::Create(GEPEltType, PtrOp, {NewIdx},
                                                  GEP.getName(), &GEP);
