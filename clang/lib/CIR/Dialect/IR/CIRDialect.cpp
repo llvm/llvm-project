@@ -3061,9 +3061,6 @@ OpFoldResult cir::VecCmpOp::fold(FoldAdaptor adaptor) {
       }
       break;
     }
-    case cir::CmpOpKind::fcmp_first: {
-      llvm_unreachable("FP compare is not yet supported.");
-    }
     }
 
     elements[i] = cir::IntAttr::get(getType().getElementType(), cmpResult);
