@@ -101,7 +101,7 @@ void MachineRegionInfoPass::releaseMemory() {
 
 void MachineRegionInfoPass::verifyAnalysis() const {
   // Only do verification when user wants to, otherwise this expensive check
-  // will be invoked by PMDataManager::verifyPreservedAnalysis when
+  // will be invoked by PMDataManager::verifyAvailableAnalyses when
   // a regionpass (marked PreservedAll) finish.
   if (MachineRegionInfo::VerifyRegionInfo)
     RI.verifyAnalysis();
