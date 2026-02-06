@@ -13059,6 +13059,7 @@ template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformCXXReflectExpr(CXXReflectExpr *E) {
   // TODO(reflection): Implement its transform
   assert(false && "not implemented yet");
+  return ExprError();
 }
 
 template<typename Derived>
