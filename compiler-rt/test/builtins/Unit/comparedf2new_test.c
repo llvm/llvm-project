@@ -20,21 +20,19 @@ COMPILER_RT_ABI int __ltdf2(double, double);
 COMPILER_RT_ABI int __cmpdf2(double, double);
 COMPILER_RT_ABI int __unorddf2(double, double);
 
-enum Result {
-  RESULT_LT,
-  RESULT_GT,
-  RESULT_EQ,
-  RESULT_UN
-};
+enum Result { RESULT_LT, RESULT_GT, RESULT_EQ, RESULT_UN };
 
-int expect(int line, uint64_t a_rep, uint64_t b_rep, const char *name, int result, int ok, const char *expected) {
+int expect(int line, uint64_t a_rep, uint64_t b_rep, const char *name,
+           int result, int ok, const char *expected) {
   if (!ok)
-    printf("error at line %d: %s(%016" PRIx64 ", %016" PRIx64 ") = %d, expected %s\n",
+    printf("error at line %d: %s(%016" PRIx64 ", %016" PRIx64
+           ") = %d, expected %s\n",
            line, name, a_rep, b_rep, result, expected);
   return !ok;
 }
 
-int test__comparedf2(int line, uint64_t a_rep, uint64_t b_rep, enum Result result) {
+int test__comparedf2(int line, uint64_t a_rep, uint64_t b_rep,
+                     enum Result result) {
   double a = fromRep64(a_rep), b = fromRep64(b_rep);
 
   int eq = __eqdf2(a, b);
@@ -94,7 +92,7 @@ int test__comparedf2(int line, uint64_t a_rep, uint64_t b_rep, enum Result resul
   return ret;
 }
 
-#define test__comparedf2(a,b,x) test__comparedf2(__LINE__,a,b,x)
+#define test__comparedf2(a, b, x) test__comparedf2(__LINE__, a, b, x)
 
 int main(void) {
   int status = 0;
