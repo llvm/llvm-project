@@ -389,7 +389,7 @@ Register SPIRVGlobalRegistry::getOrCreateConstInt(uint64_t Val, MachineInstr &I,
 
 Register SPIRVGlobalRegistry::getOrCreateConstInt(const APInt &Val,
                                                   MachineInstr &I,
-                                                  SPIRVType *SpvType,
+                                                  const SPIRVType *SpvType,
                                                   const SPIRVInstrInfo &TII,
                                                   bool ZeroAsNull) {
   auto *const CI = ConstantInt::get(
@@ -608,7 +608,7 @@ Register SPIRVGlobalRegistry::getOrCreateConstVector(uint64_t Val,
 
 Register SPIRVGlobalRegistry::getOrCreateConstVector(const APInt &Val,
                                                      MachineInstr &I,
-                                                     SPIRVType *SpvType,
+                                                     const SPIRVType *SpvType,
                                                      const SPIRVInstrInfo &TII,
                                                      bool ZeroAsNull) {
   const Type *LLVMTy = getTypeForSPIRVType(SpvType);

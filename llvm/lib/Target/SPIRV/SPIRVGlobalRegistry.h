@@ -521,7 +521,8 @@ public:
                                SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                bool ZeroAsNull = true);
   Register getOrCreateConstInt(const APInt &Val, MachineInstr &I,
-                               SPIRVType *SpvType, const SPIRVInstrInfo &TII,
+                               const SPIRVType *SpvType,
+                               const SPIRVInstrInfo &TII,
                                bool ZeroAsNull = true);
   Register createConstInt(const ConstantInt *CI, MachineInstr &I,
                           SPIRVType *SpvType, const SPIRVInstrInfo &TII,
@@ -539,7 +540,8 @@ public:
                                   SPIRVType *SpvType, const SPIRVInstrInfo &TII,
                                   bool ZeroAsNull = true);
   Register getOrCreateConstVector(const APInt &Val, MachineInstr &I,
-                                  SPIRVType *SpvType, const SPIRVInstrInfo &TII,
+                                  const SPIRVType *SpvType,
+                                  const SPIRVInstrInfo &TII,
                                   bool ZeroAsNull = true);
   Register getOrCreateConstVector(APFloat Val, MachineInstr &I,
                                   SPIRVType *SpvType, const SPIRVInstrInfo &TII,
