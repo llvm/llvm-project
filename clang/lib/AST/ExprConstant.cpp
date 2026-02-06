@@ -794,13 +794,8 @@ namespace {
   /// rules.  For example, the RHS of (0 && foo()) is not evaluated.  We can
   /// evaluate the expression regardless of what the RHS is, but C only allows
   /// certain things in certain situations.
-  class EvalInfo : public interp::State {
+  class EvalInfo final : public interp::State {
   public:
-    ASTContext &Ctx;
-
-    /// EvalStatus - Contains information about the evaluation.
-    Expr::EvalStatus &EvalStatus;
-
     /// CurrentCall - The top of the constexpr call stack.
     CallStackFrame *CurrentCall;
 
@@ -919,16 +914,8 @@ namespace {
     /// initialization.
     uint64_t ArrayInitIndex = -1;
 
-    /// HasActiveDiagnostic - Was the previous diagnostic stored? If so, further
-    /// notes attached to it will also be stored, otherwise they will not be.
-    bool HasActiveDiagnostic;
-
-    /// Have we emitted a diagnostic explaining why we couldn't constant
-    /// fold (not just why it's not strictly a constant expression)?
-    bool HasFoldFailureDiagnostic;
-
     EvalInfo(const ASTContext &C, Expr::EvalStatus &S, EvaluationMode Mode)
-        : Ctx(const_cast<ASTContext &>(C)), EvalStatus(S), CurrentCall(nullptr),
+        : State(const_cast<ASTContext &>(C), S), CurrentCall(nullptr),
           CallStackDepth(0), NextCallIndex(1),
           StepsLeft(C.getLangOpts().ConstexprStepLimit),
           EnableNewConstInterp(C.getLangOpts().EnableNewConstInterp),
@@ -936,17 +923,13 @@ namespace {
                       /*This=*/nullptr,
                       /*CallExpr=*/nullptr, CallRef()),
           EvaluatingDecl((const ValueDecl *)nullptr),
-          EvaluatingDeclValue(nullptr), HasActiveDiagnostic(false),
-          HasFoldFailureDiagnostic(false) {
+          EvaluatingDeclValue(nullptr) {
       EvalMode = Mode;
     }
 
     ~EvalInfo() {
       discardCleanups();
     }
-
-    ASTContext &getASTContext() const override { return Ctx; }
-    const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
 
     void setEvaluatingDecl(APValue::LValueBase Base, APValue &Value,
                            EvaluatingDeclKind EDK = EvaluatingDeclKind::Ctor) {
@@ -990,7 +973,7 @@ namespace {
       // We use the number of constexpr steps as a proxy for the maximum size
       // of arrays to avoid exhausting the system resources, as initialization
       // of each element is likely to take some number of steps anyway.
-      uint64_t Limit = Ctx.getLangOpts().ConstexprStepLimit;
+      uint64_t Limit = getLangOpts().ConstexprStepLimit;
       if (Limit != 0 && ElemCount > Limit) {
         if (Diag)
           FFDiag(Loc, diag::note_constexpr_new_exceeds_limits)
@@ -1017,7 +1000,7 @@ namespace {
     }
 
     bool nextStep(const Stmt *S) {
-      if (Ctx.getLangOpts().ConstexprStepLimit == 0)
+      if (getLangOpts().ConstexprStepLimit == 0)
         return true;
 
       if (!StepsLeft) {
@@ -1101,110 +1084,13 @@ namespace {
     }
 
   private:
-    interp::Frame *getCurrentFrame() override { return CurrentCall; }
+    const interp::Frame *getCurrentFrame() override { return CurrentCall; }
     const interp::Frame *getBottomFrame() const override { return &BottomFrame; }
 
-    bool hasActiveDiagnostic() override { return HasActiveDiagnostic; }
-    void setActiveDiagnostic(bool Flag) override { HasActiveDiagnostic = Flag; }
-
-    void setFoldFailureDiagnostic(bool Flag) override {
-      HasFoldFailureDiagnostic = Flag;
-    }
-
-    Expr::EvalStatus &getEvalStatus() const override { return EvalStatus; }
-
-    // If we have a prior diagnostic, it will be noting that the expression
-    // isn't a constant expression. This diagnostic is more important,
-    // unless we require this evaluation to produce a constant expression.
-    //
-    // FIXME: We might want to show both diagnostics to the user in
-    // EvaluationMode::ConstantFold mode.
-    bool hasPriorDiagnostic() override {
-      if (!EvalStatus.Diag->empty()) {
-        switch (EvalMode) {
-        case EvaluationMode::ConstantFold:
-        case EvaluationMode::IgnoreSideEffects:
-          if (!HasFoldFailureDiagnostic)
-            break;
-          // We've already failed to fold something. Keep that diagnostic.
-          [[fallthrough]];
-        case EvaluationMode::ConstantExpression:
-        case EvaluationMode::ConstantExpressionUnevaluated:
-          setActiveDiagnostic(false);
-          return true;
-        }
-      }
-      return false;
-    }
-
     unsigned getCallStackDepth() override { return CallStackDepth; }
+    bool stepsLeft() const override { return StepsLeft > 0; }
 
   public:
-    /// Should we continue evaluation after encountering a side-effect that we
-    /// couldn't model?
-    bool keepEvaluatingAfterSideEffect() const override {
-      switch (EvalMode) {
-      case EvaluationMode::IgnoreSideEffects:
-        return true;
-
-      case EvaluationMode::ConstantExpression:
-      case EvaluationMode::ConstantExpressionUnevaluated:
-      case EvaluationMode::ConstantFold:
-        // By default, assume any side effect might be valid in some other
-        // evaluation of this expression from a different context.
-        return checkingPotentialConstantExpression() ||
-               checkingForUndefinedBehavior();
-      }
-      llvm_unreachable("Missed EvalMode case");
-    }
-
-    /// Note that we have had a side-effect, and determine whether we should
-    /// keep evaluating.
-    bool noteSideEffect() override {
-      EvalStatus.HasSideEffects = true;
-      return keepEvaluatingAfterSideEffect();
-    }
-
-    /// Should we continue evaluation after encountering undefined behavior?
-    bool keepEvaluatingAfterUndefinedBehavior() {
-      switch (EvalMode) {
-      case EvaluationMode::IgnoreSideEffects:
-      case EvaluationMode::ConstantFold:
-        return true;
-
-      case EvaluationMode::ConstantExpression:
-      case EvaluationMode::ConstantExpressionUnevaluated:
-        return checkingForUndefinedBehavior();
-      }
-      llvm_unreachable("Missed EvalMode case");
-    }
-
-    /// Note that we hit something that was technically undefined behavior, but
-    /// that we can evaluate past it (such as signed overflow or floating-point
-    /// division by zero.)
-    bool noteUndefinedBehavior() override {
-      EvalStatus.HasUndefinedBehavior = true;
-      return keepEvaluatingAfterUndefinedBehavior();
-    }
-
-    /// Should we continue evaluation as much as possible after encountering a
-    /// construct which can't be reduced to a value?
-    bool keepEvaluatingAfterFailure() const override {
-      uint64_t Limit = Ctx.getLangOpts().ConstexprStepLimit;
-      if (Limit != 0 && !StepsLeft)
-        return false;
-
-      switch (EvalMode) {
-      case EvaluationMode::ConstantExpression:
-      case EvaluationMode::ConstantExpressionUnevaluated:
-      case EvaluationMode::ConstantFold:
-      case EvaluationMode::IgnoreSideEffects:
-        return checkingPotentialConstantExpression() ||
-               checkingForUndefinedBehavior();
-      }
-      llvm_unreachable("Missed EvalMode case");
-    }
-
     /// Notes that we failed to evaluate an expression that other expressions
     /// directly depend on, and determine if we should keep evaluating. This
     /// should only be called if we actually intend to keep evaluating.
@@ -2412,9 +2298,8 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
 
       // In CUDA/HIP device compilation, only device side variables have
       // constant addresses.
-      if (Info.getASTContext().getLangOpts().CUDA &&
-          Info.getASTContext().getLangOpts().CUDAIsDevice &&
-          Info.getASTContext().CUDAConstantEvalCtx.NoWrongSidedVars) {
+      if (Info.getLangOpts().CUDA && Info.getLangOpts().CUDAIsDevice &&
+          Info.Ctx.CUDAConstantEvalCtx.NoWrongSidedVars) {
         if ((!Var->hasAttr<CUDADeviceAttr>() &&
              !Var->hasAttr<CUDAConstantAttr>() &&
              !Var->getType()->isCUDADeviceBuiltinSurfaceType() &&
@@ -2767,7 +2652,7 @@ static bool HandleFloatToIntCast(EvalInfo &Info, const Expr *E,
 /// So return "tonearest" mode instead of "dynamic".
 static llvm::RoundingMode getActiveRoundingMode(EvalInfo &Info, const Expr *E) {
   llvm::RoundingMode RM =
-      E->getFPFeaturesInEffect(Info.Ctx.getLangOpts()).getRoundingMode();
+      E->getFPFeaturesInEffect(Info.getLangOpts()).getRoundingMode();
   if (RM == llvm::RoundingMode::Dynamic)
     RM = llvm::RoundingMode::NearestTiesToEven;
   return RM;
@@ -2781,7 +2666,7 @@ static bool checkFloatingPointResult(EvalInfo &Info, const Expr *E,
   if (Info.InConstantContext)
     return true;
 
-  FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+  FPOptions FPO = E->getFPFeaturesInEffect(Info.getLangOpts());
   if ((St & APFloat::opInexact) &&
       FPO.getRoundingMode() == llvm::RoundingMode::Dynamic) {
     // Inexact result means that it depends on rounding mode. If the requested
@@ -6326,7 +6211,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         *Info.CurrentCall, hasSpecificAttr<MSConstexprAttr>(AS->getAttrs()) &&
                                isa<ReturnStmt>(SS));
 
-    auto LO = Info.getASTContext().getLangOpts();
+    auto LO = Info.Ctx.getLangOpts();
     if (LO.CXXAssumptions && !LO.MSVCCompat) {
       for (auto *Attr : AS->getAttrs()) {
         auto *AA = dyn_cast<CXXAssumeAttr>(Attr);
@@ -6337,7 +6222,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         if (Assumption->isValueDependent())
           return ESR_Failed;
 
-        if (Assumption->HasSideEffects(Info.getASTContext()))
+        if (Assumption->HasSideEffects(Info.Ctx))
           continue;
 
         bool Value;
@@ -9325,8 +9210,8 @@ public:
   bool VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   bool VisitMemberExpr(const MemberExpr *E);
   bool VisitStringLiteral(const StringLiteral *E) {
-    return Success(APValue::LValueBase(
-        E, 0, Info.getASTContext().getNextStringLiteralVersion()));
+    return Success(
+        APValue::LValueBase(E, 0, Info.Ctx.getNextStringLiteralVersion()));
   }
   bool VisitObjCEncodeExpr(const ObjCEncodeExpr *E) { return Success(E); }
   bool VisitCXXTypeidExpr(const CXXTypeidExpr *E);
@@ -16174,7 +16059,7 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     APSInt Val;
     if (!EvaluateInteger(E->getArg(0), Val, Info))
       return false;
-    if (Val.getBitWidth() == 8)
+    if (Val.getBitWidth() == 8 || Val.getBitWidth() == 1)
       return Success(Val, E);
 
     return Success(Val.byteSwap(), E);
@@ -21232,6 +21117,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::ArrayTypeTraitExprClass:
   case Expr::ExpressionTraitExprClass:
   case Expr::CXXNoexceptExprClass:
+  case Expr::CXXReflectExprClass:
     return NoDiag();
   case Expr::CallExprClass:
   case Expr::CXXOperatorCallExprClass: {
@@ -21781,6 +21667,10 @@ bool Expr::tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
 
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
+  if (Info.EnableNewConstInterp) {
+    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(Info, this, Type,
+                                                             Result);
+  }
   return tryEvaluateBuiltinObjectSize(this, Type, Info, Result);
 }
 

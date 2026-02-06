@@ -3553,8 +3553,7 @@ define i32 @bittest_31_slt0_i32(i32 %x, i1 %y) {
 ;
 ; RV64-LABEL: bittest_31_slt0_i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    srliw a0, a0, 31
 ; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    ret
   %cmp = icmp slt i32 %x, 0
@@ -3572,8 +3571,7 @@ define i32 @bittest_63_slt0_i64(i32 %x, i1 %y) {
 ;
 ; RV64-LABEL: bittest_63_slt0_i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 63
+; RV64-NEXT:    srliw a0, a0, 31
 ; RV64-NEXT:    and a0, a0, a1
 ; RV64-NEXT:    ret
   %ext = sext i32 %x to i64

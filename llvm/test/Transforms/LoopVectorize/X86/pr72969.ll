@@ -90,13 +90,13 @@ define void @test(ptr %p) {
 ; VEC-NEXT:    store i64 0, ptr [[TMP36]], align 8
 ; VEC-NEXT:    store i64 0, ptr [[TMP37]], align 8
 ; VEC-NEXT:    store i64 0, ptr [[TMP38]], align 8
-; VEC-NEXT:    [[TMP27:%.*]] = add <4 x i16> [[STEP_ADD]], splat (i16 1)
-; VEC-NEXT:    [[TMP28:%.*]] = zext <4 x i16> [[TMP27]] to <4 x i64>
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; VEC-NEXT:    [[VEC_IND_NEXT]] = add <4 x i16> [[STEP_ADD]], splat (i16 4)
 ; VEC-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VEC:       middle.block:
+; VEC-NEXT:    [[TMP42:%.*]] = add <4 x i16> [[STEP_ADD]], splat (i16 1)
+; VEC-NEXT:    [[TMP28:%.*]] = zext <4 x i16> [[TMP42]] to <4 x i64>
 ; VEC-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i64> [[TMP28]], i32 3
 ; VEC-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP4]], [[N_VEC]]
 ; VEC-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
