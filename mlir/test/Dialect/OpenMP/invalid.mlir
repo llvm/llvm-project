@@ -159,6 +159,29 @@ func.func @no_loops(%lb : index, %ub : index, %step : index) {
 
 // -----
 
+func.func @collapse_size(%lb : index, %ub : index, %step : index) {
+  omp.wsloop {
+    // expected-error@+1 {{collapse value is larger than the number of loops}}
+    omp.loop_nest (%iv) : index = (%lb) to (%ub) step (%step) collapse(4) {
+      omp.yield
+    }
+  }
+}
+
+// -----
+
+func.func @tiles_length(%lb : index, %ub : index, %step : index) {
+  omp.wsloop {
+    // expected-error@+1 {{op too few canonical loops for tile dimensions}}
+    omp.loop_nest (%iv) : index =  (%lb) to (%ub) step (%step) tiles(2, 4) {
+      omp.yield
+    }
+  }
+}
+
+
+// -----
+
 func.func @inclusive_not_a_clause(%lb : index, %ub : index, %step : index) {
   // expected-error @below {{expected '{'}}
   omp.wsloop nowait inclusive {
@@ -1425,10 +1448,27 @@ func.func @omp_teams_allocate(%data_var : memref<i32>) {
 
 func.func @omp_teams_num_teams1(%lb : i32) {
   omp.target {
-    // expected-error @below {{expected num_teams upper bound to be defined if the lower bound is defined}}
+    // expected-error @below {{expected exactly one num_teams upper bound when lower bound is specified}}
     "omp.teams" (%lb) ({
       omp.terminator
     }) {operandSegmentSizes = array<i32: 0,0,0,1,0,0,0,0>} : (i32) -> ()
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+func.func @omp_teams_num_teams_multidim_with_bounds() {
+  omp.target {
+    %v0 = arith.constant 1 : i32
+    %v1 = arith.constant 2 : i32
+    %lb = arith.constant 3 : i32
+    %ub = arith.constant 4 : i32
+    // expected-error @below {{expected exactly one num_teams upper bound when lower bound is specified}}
+    "omp.teams" (%lb, %v0, %v1) ({
+      omp.terminator
+    }) {operandSegmentSizes = array<i32: 0,0,0,1,2,0,0,0>} : (i32, i32, i32) -> ()
     omp.terminator
   }
   return
@@ -3011,14 +3051,6 @@ func.func @invalid_allocate_align_2(%arg0 : memref<i32>) -> () {
 }
 
 // -----
-func.func @invalid_allocate_allocator(%arg0 : memref<i32>) -> () {
-  // expected-error @below {{invalid clause value}}
-  omp.allocate_dir (%arg0 : memref<i32>) allocator(omp_small_cap_mem_alloc)
-
-  return
-}
-
-// -----
 func.func @invalid_workdistribute_empty_region() -> () {
   omp.teams {
     // expected-error @below {{region cannot be empty}}
@@ -3122,5 +3154,16 @@ func.func @invalid_workdistribute() -> () {
   omp.workdistribute {
     omp.terminator
   }
+  return
+}
+
+// -----
+// expected-error @+1 {{'omp.declare_simd' op must be nested inside a function}}
+omp.declare_simd
+
+// -----
+func.func @omp_declare_simd_branch() -> () {
+  // expected-error @+1 {{'omp.declare_simd' op cannot have both 'inbranch' and 'notinbranch'}}
+  omp.declare_simd inbranch notinbranch
   return
 }

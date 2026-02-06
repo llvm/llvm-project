@@ -31,10 +31,8 @@ using namespace mlir;
 using namespace mlir::linalg;
 
 static LogicalResult generalizeNamedOpPrecondition(LinalgOp linalgOp) {
-  // Bailout if `linalgOp` is already a generic or a linalg.map. We cannot
-  // trivially generalize a `linalg.map`, as it does not use the output as
-  // region arguments in the block.
-  if (isa<GenericOp>(linalgOp) || isa<MapOp>(linalgOp))
+  // Bailout if `linalgOp` is already a generic.
+  if (isa<GenericOp>(linalgOp))
     return failure();
   // Check if the operation has exactly one region.
   if (linalgOp->getNumRegions() != 1) {
@@ -66,6 +64,14 @@ FailureOr<GenericOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
                         outputs, indexingMaps, iterators);
   rewriter.inlineRegionBefore(linalgOp->getRegion(0), genericOp.getRegion(),
                               genericOp.getRegion().begin());
+
+  // Discardable attributes carry user-defined metadata (e.g., annotations for
+  // downstream passes). Generalization is a semantics-preserving
+  // transformation, so dropping this metadata would be unexpected. This is safe
+  // because discardable attributes are by definition independent of op
+  // semantics.
+  genericOp->setDiscardableAttrs(linalgOp->getDiscardableAttrDictionary());
+
   rewriter.replaceOp(linalgOp, genericOp->getResults());
   return genericOp;
 }

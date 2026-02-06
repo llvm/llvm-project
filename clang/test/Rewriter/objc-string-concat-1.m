@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -rewrite-objc -fobjc-runtime=macosx-fragile-10.5  %s -o -
+// -Wno-incompatible-pointer-types is needed to disable warning triggered by assigning NSString to NSConstantString
+// RUN: %clang_cc1 -rewrite-objc -fobjc-runtime=macosx-fragile-10.5 -Wno-incompatible-pointer-types %s -o -
 
 @class NSString;
 
@@ -11,4 +12,3 @@ NSConstantString *t0 = @"123";
 NSConstantString *t = @"123"     @"4567"; // concat
 NSConstantString *t1 = @"123"     @"4567" /* COMMENT */ @"89"; // concat
 NSConstantString *t2 = @"123"     @/* COMMENT */ "4567"; // concat
-

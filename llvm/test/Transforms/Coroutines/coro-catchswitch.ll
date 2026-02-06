@@ -29,7 +29,7 @@ catch.dispatch:                                   ; preds = %if.else, %if.then
 ; added a cleanuppad spill cleanupret unwinding into the catchswitch.
 
 ; CHECK: catch.dispatch:
-; CHECK:  %val = phi i32 [ 2, %if.else ], [ 1, %if.then ]
+; CHECK:  %val = phi i32 [ 1, %if.then ], [ 2, %if.else ]
 ; CHECK:  %[[Pad:.+]] = cleanuppad within none []
 ; CHECK:  %val.spill.addr = getelementptr inbounds %f.Frame, ptr %hdl, i32 0, i32 2
 ; CHECK:  store i32 %val, ptr %val.spill.addr
@@ -54,7 +54,7 @@ resume:                                   ; preds = %await2.suspend
   br label %coro.ret
 
 coro.ret:
-  call i1 @llvm.coro.end(ptr %hdl, i1 0, token none)
+  call void @llvm.coro.end(ptr %hdl, i1 0, token none)
     ret void
 
 cleanuppad:
@@ -80,7 +80,7 @@ declare void @print(i32)
 declare noalias ptr @malloc(i32)
 declare void @free(ptr)
 
-declare i1 @llvm.coro.end(ptr, i1, token) #2
+declare void @llvm.coro.end(ptr, i1, token) #2
 
 ; Function Attrs: nobuiltin nounwind
 

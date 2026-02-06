@@ -124,7 +124,7 @@ In this table, we use the following abbreviations:
   either 0 or 1 on entry, and is unchanged on return).
 
 Functions with ``__attribute__((arm_locally_streaming))`` are excluded from this
-table because for the caller the attribute is synonymous to 'streaming', and
+table because for the caller the attribute is synonymous with 'streaming', and
 for the callee it is merely an implementation detail that is explicitly not
 exposed to the caller.
 
@@ -158,7 +158,7 @@ the function's body, so that it can place the mode changes in exactly the right
 position. The suitable place to do this seems to be SelectionDAG, where it lowers
 the call's arguments/return values to implement the specified calling convention.
 SelectionDAG provides Chains and Glue to specify the order of operations and give
-preliminary control over the instruction's scheduling.
+preliminary control over instruction scheduling.
 
 
 Example of preserving state
@@ -232,8 +232,8 @@ implement transitions from ``SC -> N`` and ``SC -> S``.
 Unchained Function calls
 ------------------------
 When a function with "``aarch64_pstate_sm_enabled``" calls a function that is not
-streaming compatible, the compiler has to insert a SMSTOP before the call and
-insert a SMSTOP after the call.
+streaming compatible, the compiler has to insert an SMSTOP before the call and
+insert an SMSTOP after the call.
 
 If the function that is called is an intrinsic with no side-effects which in
 turn is lowered to a function call (e.g., ``@llvm.cos()``), then the call to
@@ -388,7 +388,7 @@ The value of PSTATE.SM is not controlled by the feature flags, but rather by the
 function attributes. This means that we can compile for '``+sme``', and the compiler
 will code-generate any instructions, even if they are not legal under the requested
 streaming mode. The compiler needs to use the function attributes to ensure the
-compiler doesn't do transformations under the assumption that certain operations
+compiler doesn't perform transformations under the assumption that certain operations
 are available at runtime.
 
 We made a conscious choice not to model this with feature flags because we
@@ -399,11 +399,11 @@ and `D121208 <https://reviews.llvm.org/D121208>`_) because of limitations in
 TableGen.
 
 As a first step, this means we'll disable vectorization (LoopVectorize/SLP)
-entirely when the a function has either of the ``aarch64_pstate_sm_enabled``,
+entirely when a function has either of the ``aarch64_pstate_sm_enabled``,
 ``aarch64_pstate_sm_body`` or ``aarch64_pstate_sm_compatible`` attributes,
 in order to avoid the use of vector instructions.
 
-Later on we'll aim to relax these restrictions to enable scalable
+Later on, we'll aim to relax these restrictions to enable scalable
 auto-vectorization with a subset of streaming-compatible instructions, but that
 requires changes to the CostModel, Legalization and SelectionDAG lowering.
 
@@ -416,7 +416,7 @@ Other things to consider
 ------------------------
 
 * Inlining must be disabled when the call-site needs to toggle PSTATE.SM or
-  when the callee's function body is executed in a different streaming mode than
+  when the callee's function body is executed in a different streaming mode from
   its caller. This is needed because function calls are the boundaries for
   streaming mode changes.
 
@@ -434,8 +434,8 @@ lazy-save mechanism for calls to private-ZA functions (i.e. functions that may
 either directly or indirectly clobber ZA state).
 
 For the purpose of handling functions marked with ``aarch64_new_za``,
-we have introduced a new LLVM IR pass (SMEABIPass) that is run just before
-SelectionDAG. Any such functions dealt with by this pass are marked with
+we have introduced a new LLVM IR pass (SMEABIPass) that runs just before
+SelectionDAG. Any such functions handled by this pass are marked with
 ``aarch64_expanded_pstate_za``.
 
 Setting up a lazy-save
@@ -458,7 +458,7 @@ AArch64 Predicate-as-Counter Type
 The predicate-as-counter type represents the type of a predicate-as-counter
 value held in an AArch64 SVE predicate register. Such a value contains
 information about the number of active lanes, the element width and a bit that
-tells whether the generated mask should be inverted. ACLE intrinsics should be
+indicates whether the generated mask should be inverted. ACLE intrinsics should be
 used to move the predicate-as-counter value to/from a predicate vector.
 
 There are certain limitations on the type:
@@ -466,7 +466,7 @@ There are certain limitations on the type:
 * The type can be used for function parameters and return values.
 
 * The supported LLVM operations on this type are limited to ``load``, ``store``,
-  ``phi``, ``select`` and ``alloca`` instructions.
+  ``phi``, ``select``, and ``alloca`` instructions.
 
 The predicate-as-counter type is a scalable type.
 

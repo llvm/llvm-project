@@ -18,7 +18,7 @@ public:
   bool VisitRecordTypeLoc(RecordTypeLoc RTL) override {
     if (!RTL)
       return true;
-    Match(RTL.getOriginalDecl()->getName(), RTL.getNameLoc());
+    Match(RTL.getDecl()->getName(), RTL.getNameLoc());
     return true;
   }
 

@@ -1043,7 +1043,7 @@ std::optional<HostRuntimeWrapper> GetHostRuntimeWrapper(const std::string &name,
   if (const auto *hostFunction{
           SearchHostRuntime(name, biggerResultType, biggerArgTypes)}) {
     auto hostFolderWithChecks{AddArgumentVerifierIfAny(name, *hostFunction)};
-    return [hostFunction, resultType, hostFolderWithChecks](
+    return [hostFunction, resultType, hostFolderWithChecks, name](
                FoldingContext &context, std::vector<Expr<SomeType>> &&args) {
       auto nArgs{args.size()};
       for (size_t i{0}; i < nArgs; ++i) {
@@ -1051,6 +1051,8 @@ std::optional<HostRuntimeWrapper> GetHostRuntimeWrapper(const std::string &name,
             ConvertToType(hostFunction->argumentTypes[i], std::move(args[i]))
                 .value());
       }
+      auto restorer{context.SetRealFlagWarningContext(
+          "compilation-time evaluation of a call to '"s + name + "'"s)};
       return Fold(context,
           ConvertToType(
               resultType, hostFolderWithChecks(context, std::move(args)))

@@ -20,7 +20,7 @@ namespace dwarf_linker {
 
 /// StringEntry keeps data of the string: the length, external offset
 /// and a string body which is placed right after StringEntry.
-using StringEntry = StringMapEntry<std::nullopt_t>;
+using StringEntry = StringMapEntry<EmptyStringSetTag>;
 
 class StringPoolEntryInfo {
 public:

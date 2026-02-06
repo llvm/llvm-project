@@ -26,6 +26,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <algorithm>
@@ -239,7 +240,44 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
   return CapabilityExpr(E, AttrExp->getType(), Neg);
 }
 
-til::LiteralPtr *SExprBuilder::createVariable(const VarDecl *VD) {
+til::SExpr *SExprBuilder::translateVariable(const VarDecl *VD,
+                                            CallingContext *Ctx) {
+  assert(VD);
+
+  // General recursion guard for x = f(x). If we are already in the process of
+  // defining VD, use its pre-assignment value to break the cycle.
+  if (VarsBeingTranslated.contains(VD->getCanonicalDecl()))
+    return new (Arena) til::LiteralPtr(VD);
+
+  // The closure captures state that is updated to correctly translate chains of
+  // aliases. Restore it when we are done with recursive translation.
+  llvm::scope_exit Cleanup([&, RestoreClosure = VarsBeingTranslated.empty()
+                                                    ? LookupLocalVarExpr
+                                                    : nullptr] {
+    VarsBeingTranslated.erase(VD->getCanonicalDecl());
+    if (VarsBeingTranslated.empty())
+      LookupLocalVarExpr = RestoreClosure;
+  });
+  VarsBeingTranslated.insert(VD->getCanonicalDecl());
+
+  QualType Ty = VD->getType();
+  if (!VD->isStaticLocal() && Ty->isPointerType()) {
+    // Substitute local variable aliases with a canonical definition.
+    if (LookupLocalVarExpr) {
+      // Attempt to resolve an alias through the more complex local variable map
+      // lookup. This will fail with complex control-flow graphs (where we
+      // revert to no alias resolution to retain stable variable names).
+      if (const Expr *E = LookupLocalVarExpr(VD)) {
+        til::SExpr *Result = translate(E, Ctx);
+        // Unsupported expression (such as heap allocations) will be undefined;
+        // rather than failing here, we simply revert to the pointer being the
+        // canonical variable.
+        if (Result && !isa<til::Undefined>(Result))
+          return Result;
+      }
+    }
+  }
+
   return new (Arena) til::LiteralPtr(VD);
 }
 
@@ -299,18 +337,34 @@ til::SExpr *SExprBuilder::translate(const Stmt *S, CallingContext *Ctx) {
 
   // Collect all literals
   case Stmt::CharacterLiteralClass:
+    return new (Arena)
+        til::LiteralT<char32_t>(cast<CharacterLiteral>(S)->getValue());
   case Stmt::CXXNullPtrLiteralExprClass:
   case Stmt::GNUNullExprClass:
+    return new (Arena) til::LiteralT(nullptr);
   case Stmt::CXXBoolLiteralExprClass:
-  case Stmt::FloatingLiteralClass:
-  case Stmt::ImaginaryLiteralClass:
-  case Stmt::IntegerLiteralClass:
+    return new (Arena) til::LiteralT(cast<CXXBoolLiteralExpr>(S)->getValue());
+  case Stmt::IntegerLiteralClass: {
+    const auto *IL = cast<IntegerLiteral>(S);
+    const auto *BT = cast<BuiltinType>(IL->getType());
+    const llvm::APInt &Value = IL->getValue();
+    if (BT->isSignedInteger())
+      return new (Arena) til::LiteralT(Value.getSExtValue());
+    else if (BT->isUnsignedInteger())
+      return new (Arena) til::LiteralT(Value.getZExtValue());
+    else
+      llvm_unreachable("Invalid integer type");
+  }
   case Stmt::StringLiteralClass:
+    return new (Arena) til::LiteralT(cast<StringLiteral>(S)->getString());
   case Stmt::ObjCStringLiteralClass:
-    return new (Arena) til::Literal(cast<Expr>(S));
+    return new (Arena)
+        til::LiteralT(cast<ObjCStringLiteral>(S)->getString()->getString());
 
   case Stmt::DeclStmtClass:
     return translateDeclStmt(cast<DeclStmt>(S), Ctx);
+  case Stmt::StmtExprClass:
+    return translateStmtExpr(cast<StmtExpr>(S), Ctx);
   default:
     break;
   }
@@ -350,6 +404,9 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
              ? cast<FunctionDecl>(D)->getCanonicalDecl()->getParamDecl(I)
              : cast<ObjCMethodDecl>(D)->getCanonicalDecl()->getParamDecl(I);
   }
+
+  if (const auto *VarD = dyn_cast<VarDecl>(VD))
+    return translateVariable(VarD, Ctx);
 
   // For non-local variables, treat it as a reference to a named object.
   return new (Arena) til::LiteralPtr(VD);
@@ -687,6 +744,15 @@ SExprBuilder::translateDeclStmt(const DeclStmt *S, CallingContext *Ctx) {
     }
   }
   return nullptr;
+}
+
+til::SExpr *SExprBuilder::translateStmtExpr(const StmtExpr *SE,
+                                            CallingContext *Ctx) {
+  // The value of a statement expression is the value of the last statement,
+  // which must be an expression.
+  const CompoundStmt *CS = SE->getSubStmt();
+  return CS->body_empty() ? new (Arena) til::Undefined(SE)
+                          : translate(CS->body_back(), Ctx);
 }
 
 // If (E) is non-trivial, then add it to the current basic block, and

@@ -86,7 +86,7 @@ func.func @fma_size1_vector(%a: vector<1xf32>, %b: vector<1xf32>, %c: vector<1xf
 //       CHECK:   %[[VAL:.+]] = spirv.CompositeConstruct %[[A]], %[[A]], %[[A]], %[[A]]
 //       CHECK:   spirv.ReturnValue %[[VAL]] : vector<4xf32>
 func.func @splat(%f : f32) -> vector<4xf32> {
-  %splat = vector.splat %f : vector<4xf32>
+  %splat = vector.broadcast %f : f32 to vector<4xf32>
   return %splat : vector<4xf32>
 }
 
@@ -270,6 +270,42 @@ func.func @reduction_maximumf(%v : vector<3xf32>, %s: f32) -> f32 {
 //       CHECK:   spirv.ReturnValue %[[MIN2]]
 func.func @reduction_minimumf(%v : vector<3xf32>, %s: f32) -> f32 {
   %reduce = vector.reduction <minimumf>, %v, %s : vector<3xf32> into f32
+  return %reduce : f32
+}
+
+// -----
+
+// CHECK-LABEL:   spirv.func @reduction_minnumf(
+// CHECK-SAME:      %[[V:.*]]: vector<3xf32>,
+// CHECK-SAME:      %[[S:.*]]: f32) -> f32 "None" {
+// CHECK:           %[[S0:.*]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xf32>
+// CHECK:           %[[S1:.*]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
+// CHECK:           %[[S2:.*]] = spirv.CompositeExtract %[[V]][2 : i32] : vector<3xf32>
+// CHECK:           %[[MIN0:.*]] = spirv.GL.FMin %[[S0]], %[[S1]] : f32
+// CHECK:           %[[MIN1:.*]] = spirv.GL.FMin %[[MIN0]], %[[S2]] : f32
+// CHECK:           %[[MIN2:.*]] = spirv.GL.FMin %[[MIN1]], %[[S]] : f32
+// CHECK:           spirv.ReturnValue %[[MIN2]] : f32
+// CHECK:         }
+func.func @reduction_minnumf(%v : vector<3xf32>, %s: f32) -> f32 {
+  %reduce = vector.reduction <minnumf>, %v, %s : vector<3xf32> into f32
+  return %reduce : f32
+}
+
+// -----
+
+// CHECK-LABEL:   spirv.func @reduction_maxnumf(
+// CHECK-SAME:      %[[V:.*]]: vector<3xf32>,
+// CHECK-SAME:      %[[S:.*]]: f32) -> f32 "None" {
+// CHECK:           %[[S0:.*]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<3xf32>
+// CHECK:           %[[S1:.*]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<3xf32>
+// CHECK:           %[[S2:.*]] = spirv.CompositeExtract %[[V]][2 : i32] : vector<3xf32>
+// CHECK:           %[[MAX0:.*]] = spirv.GL.FMax %[[S0]], %[[S1]] : f32
+// CHECK:           %[[MAX1:.*]] = spirv.GL.FMax %[[MAX0]], %[[S2]] : f32
+// CHECK:           %[[MAX2:.*]] = spirv.GL.FMax %[[MAX1]], %[[S]] : f32
+// CHECK:           spirv.ReturnValue %[[MAX2]] : f32
+// CHECK:         }
+func.func @reduction_maxnumf(%v : vector<3xf32>, %s: f32) -> f32 {
+  %reduce = vector.reduction <maxnumf>, %v, %s : vector<3xf32> into f32
   return %reduce : f32
 }
 

@@ -183,6 +183,11 @@ def NoCallback : EnumAttr<"nocallback", IntersectAnd, [FnAttr]>;
 /// Specify how the pointer may be captured.
 def Captures : IntAttr<"captures", IntersectCustom, [ParamAttr]>;
 
+/// Result will not be undef or poison if all arguments are not undef and not
+/// poison.
+def NoCreateUndefOrPoison
+    : EnumAttr<"nocreateundeforpoison", IntersectAnd, [FnAttr]>;
+
 /// Function is not a source of divergence.
 def NoDivergenceSource : EnumAttr<"nodivergencesource", IntersectAnd, [FnAttr]>;
 
@@ -199,7 +204,7 @@ def NoFree : EnumAttr<"nofree", IntersectAnd, [FnAttr, ParamAttr]>;
 def DeadOnUnwind : EnumAttr<"dead_on_unwind", IntersectAnd, [ParamAttr]>;
 
 /// Argument is dead upon function return.
-def DeadOnReturn : EnumAttr<"dead_on_return", IntersectAnd, [ParamAttr]>;
+def DeadOnReturn : IntAttr<"dead_on_return", IntersectMin, [ParamAttr]>;
 
 /// Disable implicit floating point insts.
 def NoImplicitFloat : EnumAttr<"noimplicitfloat", IntersectPreserve, [FnAttr]>;
@@ -342,6 +347,9 @@ def SanitizeRealtime : EnumAttr<"sanitize_realtime", IntersectPreserve, [FnAttr]
 /// during a real-time sanitized function (see `sanitize_realtime`).
 def SanitizeRealtimeBlocking : EnumAttr<"sanitize_realtime_blocking", IntersectPreserve, [FnAttr]>;
 
+/// Allocation token instrumentation is on.
+def SanitizeAllocToken : EnumAttr<"sanitize_alloc_token", IntersectPreserve, [FnAttr]>;
+
 /// Speculative Load Hardening is enabled.
 ///
 /// Note that this uses the default compatibility (always compatible during
@@ -392,6 +400,10 @@ def CoroDestroyOnlyWhenComplete : EnumAttr<"coro_only_destroy_when_complete", In
 /// pipeline to perform elide on the call or invoke instruction.
 def CoroElideSafe : EnumAttr<"coro_elide_safe", IntersectPreserve, [FnAttr]>;
 
+/// Indicate the denormal handling of the default floating-point
+/// environment.
+def DenormalFPEnv : IntAttr<"denormal_fpenv", IntersectPreserve, [FnAttr]>;
+
 /// Function is marked for Windows Hot Patching
 def MarkedForWindowsSecureHotPatching
     : StrBoolAttr<"marked_for_windows_hot_patching">;
@@ -407,15 +419,11 @@ def LessPreciseFPMAD : StrBoolAttr<"less-precise-fpmad">;
 def NoInfsFPMath : StrBoolAttr<"no-infs-fp-math">;
 def NoNansFPMath : StrBoolAttr<"no-nans-fp-math">;
 def NoSignedZerosFPMath : StrBoolAttr<"no-signed-zeros-fp-math">;
-def UnsafeFPMath : StrBoolAttr<"unsafe-fp-math">;
 def NoJumpTables : StrBoolAttr<"no-jump-tables">;
 def NoInlineLineTables : StrBoolAttr<"no-inline-line-tables">;
 def ProfileSampleAccurate : StrBoolAttr<"profile-sample-accurate">;
 def UseSampleProfile : StrBoolAttr<"use-sample-profile">;
 def LoaderReplaceable : StrBoolAttr<"loader-replaceable">;
-
-def DenormalFPMath : ComplexStrAttr<"denormal-fp-math", [FnAttr]>;
-def DenormalFPMathF32 : ComplexStrAttr<"denormal-fp-math-f32", [FnAttr]>;
 
 // Attribute compatiblity rules are generated to check the attribute of the
 // caller and callee and decide whether inlining should be allowed. CompatRule
@@ -471,7 +479,6 @@ def : MergeRule<"setAND<LessPreciseFPMADAttr>">;
 def : MergeRule<"setAND<NoInfsFPMathAttr>">;
 def : MergeRule<"setAND<NoNansFPMathAttr>">;
 def : MergeRule<"setAND<NoSignedZerosFPMathAttr>">;
-def : MergeRule<"setAND<UnsafeFPMathAttr>">;
 def : MergeRule<"setOR<NoImplicitFloatAttr>">;
 def : MergeRule<"setOR<NoJumpTablesAttr>">;
 def : MergeRule<"setOR<ProfileSampleAccurateAttr>">;

@@ -17,22 +17,35 @@
 using namespace clang;
 using namespace clang::interp;
 
-InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
+InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, SourceMapper *M)
-    : Parent(Parent), M(M), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
-      Current(&BottomFrame) {}
+    : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(M), P(P), Stk(Stk),
+      Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame) {
+  InConstantContext = Parent.InConstantContext;
+  CheckingPotentialConstantExpression =
+      Parent.CheckingPotentialConstantExpression;
+  CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
+  EvalMode = Parent.EvalMode;
+}
 
-InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
+InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, const Function *Func)
-    : Parent(Parent), M(nullptr), P(P), Stk(Stk), Ctx(Ctx),
+    : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(nullptr), P(P),
+      Stk(Stk), Ctx(Ctx),
       BottomFrame(*this, Func, nullptr, CodePtr(), Func->getArgSize()),
-      Current(&BottomFrame) {}
+      Current(&BottomFrame) {
+  InConstantContext = Parent.InConstantContext;
+  CheckingPotentialConstantExpression =
+      Parent.CheckingPotentialConstantExpression;
+  CheckingForUndefinedBehavior = Parent.CheckingForUndefinedBehavior;
+  EvalMode = Parent.EvalMode;
+}
 
 bool InterpState::inConstantContext() const {
   if (ConstantContextOverride)
     return *ConstantContextOverride;
 
-  return Parent.InConstantContext;
+  return InConstantContext;
 }
 
 InterpState::~InterpState() {
@@ -63,13 +76,7 @@ void InterpState::cleanup() {
     Alloc->cleanup();
 }
 
-Frame *InterpState::getCurrentFrame() { return Current; }
-
-bool InterpState::reportOverflow(const Expr *E, const llvm::APSInt &Value) {
-  QualType Type = E->getType();
-  CCEDiag(E, diag::note_constexpr_overflow) << Value << Type;
-  return noteUndefinedBehavior();
-}
+const Frame *InterpState::getCurrentFrame() { return Current; }
 
 void InterpState::deallocate(Block *B) {
   assert(B);

@@ -24,6 +24,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -40,6 +41,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -62,10 +64,10 @@ static OpFoldResult getDimValue(OpBuilder &builder, Location loc, Value v,
 
   return getAsOpFoldResult(
       TypeSwitch<Type, Value>(v.getType())
-          .Case<RankedTensorType>([&](RankedTensorType t) -> Value {
+          .Case([&](RankedTensorType t) -> Value {
             return tensor::DimOp::create(builder, loc, v, dim);
           })
-          .Case<MemRefType>([&](MemRefType t) -> Value {
+          .Case([&](MemRefType t) -> Value {
             return memref::DimOp::create(builder, loc, v, dim);
           }));
 }
@@ -77,11 +79,11 @@ static Operation *getSlice(OpBuilder &b, Location loc, Value source,
                            ArrayRef<OpFoldResult> sizes,
                            ArrayRef<OpFoldResult> strides) {
   return TypeSwitch<Type, Operation *>(source.getType())
-      .Case<RankedTensorType>([&](RankedTensorType t) -> Operation * {
+      .Case([&](RankedTensorType t) -> Operation * {
         return tensor::ExtractSliceOp::create(b, loc, source, offsets, sizes,
                                               strides);
       })
-      .Case<MemRefType>([&](MemRefType type) -> Operation * {
+      .Case([&](MemRefType type) -> Operation * {
         return memref::SubViewOp::create(b, loc, source, offsets, sizes,
                                          strides);
       })
@@ -579,13 +581,23 @@ public:
       return arith::MinSIOp::create(builder, arg0.getLoc(), arg0, arg1);
     case BinaryFn::max_unsigned:
       assert(!allComplex);
-      if (allFloatingPoint)
-        return arith::MaximumFOp::create(builder, arg0.getLoc(), arg0, arg1);
+      if (!allInteger || allBool) {
+        if (emitError) {
+          emitError() << "unsupported operation: unsigned max not on uint";
+          return nullptr;
+        }
+        llvm_unreachable("unsupported operation: unsigned max not on uint");
+      }
       return arith::MaxUIOp::create(builder, arg0.getLoc(), arg0, arg1);
     case BinaryFn::min_unsigned:
       assert(!allComplex);
-      if (allFloatingPoint)
-        return arith::MinimumFOp::create(builder, arg0.getLoc(), arg0, arg1);
+      if (!allInteger || allBool) {
+        if (emitError) {
+          emitError() << "unsupported operation: unsigned min not on uint";
+          return nullptr;
+        }
+        llvm_unreachable("unsupported operation: unsigned min not on uint");
+      }
       return arith::MinUIOp::create(builder, arg0.getLoc(), arg0, arg1);
     case BinaryFn::powf:
       assert(allFloatingPoint);
@@ -1119,11 +1131,11 @@ void GenericOp::build(
     ArrayRef<NamedAttribute> attributes) {
   build(builder, result, resultTensorTypes, inputs, outputs,
         builder.getAffineMapArrayAttr(indexingMaps),
-        builder.getArrayAttr(llvm::to_vector(llvm::map_range(
+        builder.getArrayAttr(llvm::map_to_vector(
             iteratorTypes,
             [&](utils::IteratorType iter) -> mlir::Attribute {
               return IteratorTypeAttr::get(builder.getContext(), iter);
-            }))),
+            })),
         doc.empty() ? StringAttr() : builder.getStringAttr(doc),
         libraryCall.empty() ? StringAttr() : builder.getStringAttr(libraryCall),
         bodyBuild, attributes);
@@ -1181,11 +1193,10 @@ void GenericOp::print(OpAsmPrinter &p) {
       // needed, because tests still use the old format when 'iterator_types'
       // attribute is represented as an array of strings.
       // TODO: Remove this conversion once tests are fixed.
-      SmallVector<Attribute> iteratorTypeNames =
-          llvm::to_vector(llvm::map_range(
-              iteratorTypes, [&](utils::IteratorType t) -> Attribute {
-                return StringAttr::get(getContext(), stringifyIteratorType(t));
-              }));
+      SmallVector<Attribute> iteratorTypeNames = llvm::map_to_vector(
+          iteratorTypes, [&](utils::IteratorType t) -> Attribute {
+            return StringAttr::get(getContext(), stringifyIteratorType(t));
+          });
 
       genericAttrs.emplace_back(
           getIteratorTypesAttrName(),
@@ -1338,8 +1349,6 @@ Speculation::Speculatability GenericOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 
-LogicalResult GenericOp::verify() { return success(); }
-
 namespace {
 
 /// Remove linalg operations that are just copying the values from inputs to
@@ -1474,6 +1483,8 @@ void MapOp::getAsmBlockArgumentNames(Region &region,
                                      OpAsmSetValueNameFn setNameFn) {
   for (Value v : getRegionInputArgs())
     setNameFn(v, "in");
+  for (Value v : getRegionOutputArgs())
+    setNameFn(v, "init");
 }
 
 void MapOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
@@ -1495,14 +1506,14 @@ void MapOp::build(
 
   if (bodyBuild)
     buildGenericRegion(builder, result.location, *result.regions.front(),
-                       inputs, /*outputs=*/{}, bodyBuild);
+                       inputs, /*outputs=*/{init}, bodyBuild);
 }
 
 static void addBodyWithPayloadOp(OpAsmParser &parser, OperationState &result,
                                  const OperationName &payloadOpName,
                                  const NamedAttrList &payloadOpAttrs,
                                  ArrayRef<Value> operands,
-                                 bool initFirst = false) {
+                                 bool initFirst = false, bool mapInit = true) {
   OpBuilder b(parser.getContext());
   Region *body = result.addRegion();
   Block &block = body->emplaceBlock();
@@ -1516,12 +1527,13 @@ static void addBodyWithPayloadOp(OpAsmParser &parser, OperationState &result,
   // If initFirst flag is enabled, we consider init as the first position of
   // payload operands.
   if (initFirst) {
-    payloadOpOperands.push_back(block.getArguments().back());
+    if (mapInit)
+      payloadOpOperands.push_back(block.getArguments().back());
     for (const auto &arg : block.getArguments().drop_back())
       payloadOpOperands.push_back(arg);
   } else {
     payloadOpOperands = {block.getArguments().begin(),
-                         block.getArguments().end()};
+                         block.getArguments().end() - int(!mapInit)};
   }
 
   Operation *payloadOp = b.create(
@@ -1553,8 +1565,8 @@ ParseResult MapOp::parse(OpAsmParser &parser, OperationState &result) {
   if (payloadOpName.has_value()) {
     if (!result.operands.empty())
       addBodyWithPayloadOp(parser, result, payloadOpName.value(),
-                           payloadOpAttrs,
-                           ArrayRef(result.operands).drop_back());
+                           payloadOpAttrs, ArrayRef(result.operands), false,
+                           false);
     else
       result.addRegion();
   } else {
@@ -1570,7 +1582,11 @@ ParseResult MapOp::parse(OpAsmParser &parser, OperationState &result) {
   return success();
 }
 
-static bool canUseShortForm(Block *body, bool initFirst = false) {
+static bool canUseShortForm(Block *body, bool initFirst = false,
+                            bool mapInit = true) {
+  // `intFirst == true` implies that we want to map init arg
+  if (initFirst && !mapInit)
+    return false;
   // Check if the body can be printed in short form. The following 4 conditions
   // must be satisfied:
 
@@ -1582,7 +1598,7 @@ static bool canUseShortForm(Block *body, bool initFirst = false) {
   // 2) The payload op must have the same number of operands as the number of
   //    block arguments.
   if (payload.getNumOperands() == 0 ||
-      payload.getNumOperands() != body->getNumArguments())
+      payload.getNumOperands() != body->getNumArguments() - int(!mapInit))
     return false;
 
   // 3) If `initFirst` is true (e.g., for reduction ops), the init block
@@ -1600,7 +1616,8 @@ static bool canUseShortForm(Block *body, bool initFirst = false) {
     }
   } else {
     for (const auto &[operand, bbArg] :
-         llvm::zip(payload.getOperands(), body->getArguments())) {
+         llvm::zip(payload.getOperands(),
+                   body->getArguments().drop_back(int(!mapInit)))) {
       if (bbArg != operand)
         return false;
     }
@@ -1632,7 +1649,8 @@ static void printShortForm(OpAsmPrinter &p, Operation *payloadOp) {
 
 void MapOp::print(OpAsmPrinter &p) {
   Block *mapper = getBody();
-  bool useShortForm = canUseShortForm(mapper);
+  bool useShortForm =
+      canUseShortForm(mapper, /*initFirst=*/false, /*mapInit*/ false);
   if (useShortForm) {
     printShortForm(p, &mapper->getOperations().front());
   }
@@ -1658,11 +1676,13 @@ LogicalResult MapOp::verify() {
   auto *bodyBlock = getBody();
   auto blockArgs = bodyBlock->getArguments();
 
-  // Checks if the number of `inputs` match the arity of the `mapper` region.
-  if (getInputs().size() != blockArgs.size())
+  // Checks if the number of `inputs` + `init` match the arity of the `mapper`
+  // region.
+  if (getInputs().size() + 1 != blockArgs.size())
     return emitOpError() << "expects number of operands to match the arity of "
                             "mapper, but got: "
-                         << getInputs().size() << " and " << blockArgs.size();
+                         << getInputs().size() + 1 << " and "
+                         << blockArgs.size();
 
   // The parameters of mapper should all match the element type of inputs.
   for (const auto &[bbArgType, inputArg] :
@@ -2024,9 +2044,9 @@ LogicalResult TransposeOp::verify() {
 
   int64_t rank = inputType.getRank();
 
-  if (rank != initType.getRank())
-    return emitOpError() << "input rank " << rank
-                         << " does not match init rank " << initType.getRank();
+  if (failed(verifyRanksMatch(getOperation(), inputType, initType, "input",
+                              "init")))
+    return failure();
 
   if (rank != static_cast<int64_t>(permutationRef.size()))
     return emitOpError() << "size of permutation " << permutationRef.size()
@@ -2080,7 +2100,7 @@ LogicalResult TransposeOp::fold(FoldAdaptor adaptor,
     return failure();
 
   // Single dimension transpose.
-  if (getPermutation().size() == 0) {
+  if (getPermutation().empty()) {
     result.push_back(getInput());
     return success();
   }
@@ -3754,6 +3774,7 @@ std::pair<int64_t, int64_t> getFmrFromWinogradConv2DFmr(WinogradConv2DFmr fmr) {
   case WinogradConv2DFmr::F_2_5:
     return {2, 5};
   }
+  llvm_unreachable("Unkown WinogradConv2DFmr");
 }
 
 //===----------------------------------------------------------------------===//
@@ -4874,13 +4895,6 @@ void ElementwiseOp::print(OpAsmPrinter &p) {
                          elidedAttrs);
 }
 
-LogicalResult ElementwiseOp::verify() {
-  // All necessary checks are done either by
-  // - EnumAttr (e.g. unknown operation kind)
-  // - verifyStructuredOpInterface (incorrect map, sizes).
-  return success();
-}
-
 /// Implements the block region builder for the ElementwiseOp. This is called by
 /// 'fillStructuredOpRegion'.
 void ElementwiseOp::regionBuilder(
@@ -4957,12 +4971,12 @@ Speculation::Speculatability ElementwiseOp::getSpeculatability() {
 template <typename OpTy, typename>
 SmallVector<int64_t>
 getPackedOuterShapeWithoutTransposition(OpTy packOrUnPack) {
-  RankedTensorType packedType = (std::is_same<OpTy, PackOp>::value)
-                                    ? packOrUnPack.getDestType()
-                                    : packOrUnPack.getSourceType();
-  RankedTensorType unpackedType = (std::is_same<OpTy, PackOp>::value)
-                                      ? packOrUnPack.getSourceType()
-                                      : packOrUnPack.getDestType();
+  ShapedType packedType = (std::is_same<OpTy, PackOp>::value)
+                              ? packOrUnPack.getDestType()
+                              : packOrUnPack.getSourceType();
+  ShapedType unpackedType = (std::is_same<OpTy, PackOp>::value)
+                                ? packOrUnPack.getSourceType()
+                                : packOrUnPack.getDestType();
   SmallVector<int64_t> result(
       packedType.getShape().take_front(unpackedType.getRank()));
   if (!packOrUnPack.getOuterDimsPerm().empty()) {
@@ -5096,15 +5110,30 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
     return llvm::any_of(tiles, isZeroInteger);
   };
 
+  // Verify that the source and destination are ranked types.
+  if (!packOrUnPack.getSourceType().hasRank() ||
+      !packOrUnPack.getDestType().hasRank())
+    return op->emitError("expected both source and destination to have rank");
+
+  // Verify that the Operation does not have mixed tensor/buffer semantics.
+  if (!packOrUnPack.hasPureBufferSemantics() &&
+      !packOrUnPack.hasPureTensorSemantics())
+    return op->emitError("mixing tensor and buffer semantics is not allowed");
+  const unsigned numResults = packOrUnPack.getNumResults();
+  if (packOrUnPack.hasPureTensorSemantics() && numResults != 1)
+    return op->emitError("expected 1 result, got ") << numResults;
+  if (packOrUnPack.hasPureBufferSemantics() && numResults != 0)
+    return op->emitError("expected 0 results, got ") << numResults;
+
   // Verify tiles. Do not allow zero tiles.
   SmallVector<OpFoldResult> mixedTiles = packOrUnPack.getMixedTiles();
   if (hasZeros(mixedTiles))
     return op->emitError("invalid zero tile factor");
 
   // Verify inner_dims_pos and outer_dims_perm.
-  RankedTensorType unpackedType = (std::is_same<OpTy, PackOp>::value)
-                                      ? packOrUnPack.getSourceType()
-                                      : packOrUnPack.getDestType();
+  ShapedType unpackedType = (std::is_same<OpTy, PackOp>::value)
+                                ? packOrUnPack.getSourceType()
+                                : packOrUnPack.getDestType();
   size_t unpackedRank = unpackedType.getRank();
   ArrayRef<int64_t> innerDimsPos = packOrUnPack.getInnerDimsPos();
   ArrayRef<int64_t> outerDimPerm = packOrUnPack.getOuterDimsPerm();
@@ -5141,8 +5170,9 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
   // Verify result shape is greater than the minimum expected
   // by the pack operation, and that the output shape
   // represents full tiles.
-  RankedTensorType expectedPackedType = PackOp::inferPackedType(
-      unpackedType, packOrUnPack.getStaticTiles(), innerDimsPos, outerDimPerm);
+  SmallVector<int64_t> expectedPackedShape = PackOp::inferPackedShape(
+      unpackedType.getShape(), packOrUnPack.getStaticTiles(),
+      packOrUnPack.getInnerDimsPos(), packOrUnPack.getOuterDimsPerm());
   if (!llvm::all_of(
           llvm::zip(packedType.getShape().take_back(mixedTiles.size()),
                     mixedTiles),
@@ -5159,11 +5189,20 @@ static LogicalResult commonVerifierPackAndUnPackOp(OpTy packOrUnPack) {
     return op->emitError("mismatch in inner tile sizes specified and shaped of "
                          "tiled dimension in the packed type");
   }
-  if (failed(verifyCompatibleShape(expectedPackedType.getShape(),
-                                   packedType.getShape()))) {
+  if (failed(
+          verifyCompatibleShape(expectedPackedShape, packedType.getShape()))) {
+    auto elementType = unpackedType.getElementType();
+    Type expectedType, actualType;
+    if (packOrUnPack.hasPureTensorSemantics()) {
+      expectedType = RankedTensorType::get(expectedPackedShape, elementType);
+      actualType = RankedTensorType::get(packedType.getShape(), elementType);
+    } else {
+      expectedType = MemRefType::get(expectedPackedShape, elementType);
+      actualType = MemRefType::get(packedType.getShape(), elementType);
+    }
     return op->emitError("expected ")
-           << expectedPackedType << " for the packed domain value, got "
-           << packedType;
+           << expectedType << " for the packed domain value, got "
+           << actualType;
   }
   return success();
 }
@@ -5224,7 +5263,154 @@ commonPermutationOfPackAndUnPackOp(OpTy packOrUnPackOp,
 //===----------------------------------------------------------------------===//
 
 void PackOp::getAsmResultNames(function_ref<void(Value, StringRef)> setNameFn) {
-  setNameFn(getResult(), "pack");
+  if (!getResults().empty())
+    setNameFn(getResult(), "pack");
+}
+
+ParseResult PackOp::parse(OpAsmParser &parser, OperationState &result) {
+  OpAsmParser::UnresolvedOperand source, dest;
+  SmallVector<OpAsmParser::UnresolvedOperand> dynamicTiles;
+  SmallVector<OpAsmParser::UnresolvedOperand> paddingValue;
+  SmallVector<Type> paddingValueType;
+  SmallVector<int64_t> staticTiles;
+  DenseI64ArrayAttr innerDimsPos, outerDimsPerm;
+  Type sourceType, destType, resultType;
+
+  if (parser.parseOperand(source))
+    return failure();
+
+  if (succeeded(parser.parseOptionalKeyword("padding_value"))) {
+    if (parser.parseLParen() ||
+        parser.parseOperandList(paddingValue, /*requiredOperandCount=*/1) ||
+        parser.parseColon() || parser.parseTypeList(paddingValueType) ||
+        parser.parseRParen())
+      return failure();
+  }
+
+  if (succeeded(parser.parseOptionalKeyword("outer_dims_perm"))) {
+    if (parser.parseEqual())
+      return failure();
+
+    SmallVector<int64_t> outerDimsPermVec;
+    if (parser.parseCommaSeparatedList(AsmParser::Delimiter::Square, [&]() {
+          int64_t value;
+          if (parser.parseInteger(value))
+            return failure();
+          outerDimsPermVec.push_back(value);
+          return success();
+        }))
+      return failure();
+    outerDimsPerm = parser.getBuilder().getDenseI64ArrayAttr(outerDimsPermVec);
+  }
+
+  if (parser.parseKeyword("inner_dims_pos") || parser.parseEqual())
+    return failure();
+
+  SmallVector<int64_t> innerDimsPosVec;
+  if (parser.parseCommaSeparatedList(AsmParser::Delimiter::Square, [&]() {
+        int64_t value;
+        if (parser.parseInteger(value))
+          return failure();
+        innerDimsPosVec.push_back(value);
+        return success();
+      }))
+    return failure();
+  innerDimsPos = parser.getBuilder().getDenseI64ArrayAttr(innerDimsPosVec);
+
+  if (parser.parseKeyword("inner_tiles") || parser.parseEqual())
+    return failure();
+
+  DenseI64ArrayAttr staticTilesAttr;
+  if (parseDynamicIndexList(parser, dynamicTiles, staticTilesAttr))
+    return failure();
+  for (auto val : staticTilesAttr.asArrayRef())
+    staticTiles.push_back(val);
+
+  if (parser.parseKeyword("into") || parser.parseOperand(dest))
+    return failure();
+
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  if (parser.parseColon() || parser.parseType(sourceType))
+    return failure();
+
+  bool hasArrow = succeeded(parser.parseOptionalArrow());
+  if (hasArrow) {
+    if (parser.parseType(destType))
+      return failure();
+  }
+
+  bool isMemRef = llvm::isa<MemRefType>(sourceType);
+  if (!hasArrow) {
+    return parser.emitError(parser.getCurrentLocation(),
+                            "pack/unpack requires '->' and destination type");
+  }
+
+  if (!isMemRef)
+    resultType = destType;
+
+  if (parser.resolveOperand(source, sourceType, result.operands) ||
+      parser.resolveOperand(dest, destType, result.operands))
+    return failure();
+
+  if (!paddingValue.empty() &&
+      parser.resolveOperands(paddingValue, paddingValueType[0],
+                             result.operands))
+    return failure();
+
+  if (!dynamicTiles.empty() &&
+      parser.resolveOperands(dynamicTiles, parser.getBuilder().getIndexType(),
+                             result.operands))
+    return failure();
+
+  result.addAttribute("static_inner_tiles",
+                      parser.getBuilder().getDenseI64ArrayAttr(staticTiles));
+  result.addAttribute("inner_dims_pos", innerDimsPos);
+  if (outerDimsPerm)
+    result.addAttribute("outer_dims_perm", outerDimsPerm);
+
+  SmallVector<int32_t> segmentSizes = {
+      1, 1, static_cast<int32_t>(paddingValue.size()),
+      static_cast<int32_t>(dynamicTiles.size())};
+  result.addAttribute("operandSegmentSizes",
+                      parser.getBuilder().getDenseI32ArrayAttr(segmentSizes));
+
+  if (!isMemRef)
+    result.addTypes(resultType);
+
+  return success();
+}
+
+void PackOp::print(OpAsmPrinter &p) {
+  p << " " << getSource();
+
+  if (getPaddingValue()) {
+    p << " padding_value(" << getPaddingValue() << " : "
+      << getPaddingValue().getType() << ")";
+  }
+
+  if (!getOuterDimsPerm().empty()) {
+    p << " outer_dims_perm = [";
+    llvm::interleaveComma(getOuterDimsPerm(), p);
+    p << "]";
+  }
+
+  p << " inner_dims_pos = [";
+  llvm::interleaveComma(getInnerDimsPos(), p);
+  p << "]";
+
+  p << " inner_tiles = ";
+  printDynamicIndexList(p, *this, getInnerTiles(), getStaticInnerTilesAttr());
+
+  p << " into " << getDest();
+
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          {"static_inner_tiles", "inner_dims_pos",
+                           "outer_dims_perm", "operandSegmentSizes"});
+
+  p << " : " << getSource().getType();
+  p << " -> " << getDest().getType();
 }
 
 void PackOp::build(OpBuilder &builder, OperationState &state, Value source,
@@ -5249,6 +5435,8 @@ void PackOp::build(OpBuilder &builder, OperationState &state, Value source,
 LogicalResult
 PackOp::reifyResultShapes(OpBuilder &builder,
                           ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+  if (!hasPureTensorSemantics())
+    return failure();
   return reifyResultShapesImpl(*this, builder, reifiedReturnShapes);
 }
 
@@ -5272,11 +5460,18 @@ ArrayRef<int64_t> PackOp::getAllOuterDims() {
 
 SmallVector<int64_t> PackOp::getTiledOuterDims() {
   auto innerDimsPos = getInnerDimsPos();
-  auto packedShape = getDestType().getShape();
+  SmallVector<int64_t> outerDims(getAllOuterDims());
   SmallVector<int64_t> res;
 
+  // Recover the original order of the outer dims.
+  SmallVector<int64_t> outerDimPermInv(getOuterDimsPerm());
+  invertPermutationVector(outerDimPermInv);
+  if (!outerDimPermInv.empty())
+    applyPermutationToVector(outerDims, outerDimPermInv);
+
+  // Collect the outer dims corresponding to the tilled inner dims.
   for (auto index : innerDimsPos)
-    res.push_back(packedShape[index]);
+    res.push_back(outerDims[index]);
 
   return res;
 }
@@ -5306,6 +5501,32 @@ bool PackOp::requirePaddingValue(ArrayRef<int64_t> inputShape,
     } else if (inputShape[pos] % (*constantTile) != 0) {
       return true;
     }
+  }
+  return false;
+}
+
+bool PackOp::requirePaddingValueStrict(ArrayRef<int64_t> inputShape,
+                                       ArrayRef<int64_t> innerDimsPos,
+                                       ArrayRef<int64_t> outputShape,
+                                       ArrayRef<int64_t> outerDimsPerm,
+                                       ArrayRef<OpFoldResult> innerTiles) {
+  SmallVector<int64_t> outputTileSizes(
+      outputShape.take_front(inputShape.size()));
+  if (!outerDimsPerm.empty()) {
+    assert(outerDimsPerm.size() == outputTileSizes.size() &&
+           "expected output and outer_dims_perm to have same size");
+    applyPermutationToVector(outputTileSizes,
+                             invertPermutationVector(outerDimsPerm));
+  }
+  for (auto [pos, tileSize] : llvm::zip_equal(innerDimsPos, innerTiles)) {
+    if (ShapedType::isDynamic(inputShape[pos]) ||
+        ShapedType::isDynamic(outputTileSizes[pos]))
+      return true;
+    std::optional<int64_t> constantTile = getConstantIntValue(tileSize);
+    if (!constantTile)
+      return true;
+    if (inputShape[pos] % (*constantTile) != 0)
+      return true;
   }
   return false;
 }
@@ -5351,13 +5572,11 @@ asShapeWithAnyValueAsDynamic(ArrayRef<OpFoldResult> ofrs) {
   return result;
 }
 
-/// Helper for PackOp::{getResultShape,inferPackedType}. Returns the shape of
-/// the packed type. Having a shared helper helps implement these two methods in
-/// a way that ensures that they agree on which dimensions are dynamic.
-static SmallVector<int64_t> getPackOpResultTypeShape(
-    ArrayRef<int64_t> sourceShape, ArrayRef<int64_t> innerTileSizes,
-    ArrayRef<int64_t> innerDimsPos, ArrayRef<int64_t> outerDimsPerm) {
-  SmallVector<int64_t> resultShape = llvm::to_vector(sourceShape);
+SmallVector<int64_t> PackOp::inferPackedShape(ArrayRef<int64_t> inputShape,
+                                              ArrayRef<int64_t> innerTileSizes,
+                                              ArrayRef<int64_t> innerDimsPos,
+                                              ArrayRef<int64_t> outerDimsPerm) {
+  SmallVector<int64_t> resultShape = llvm::to_vector(inputShape);
   for (auto tiledDim : llvm::enumerate(llvm::to_vector(innerDimsPos))) {
     if (ShapedType::isDynamic(resultShape[tiledDim.value()]))
       continue;
@@ -5397,9 +5616,9 @@ SmallVector<OpFoldResult> PackOp::getResultShape(
   resultDims.append(innerTileSizes.begin(), innerTileSizes.end());
 
   SmallVector<int64_t> resultTypeShape =
-      getPackOpResultTypeShape(asShapeWithAnyValueAsDynamic(sourceDims),
-                               asShapeWithAnyValueAsDynamic(innerTileSizes),
-                               innerDimsPos, outerDimsPerm);
+      inferPackedShape(asShapeWithAnyValueAsDynamic(sourceDims),
+                       asShapeWithAnyValueAsDynamic(innerTileSizes),
+                       innerDimsPos, outerDimsPerm);
 
   // Fix-up `resultDims` to ensure that they are Value's if and only if the
   // result type shape says it's a dynamic dim. This is needed as callers may
@@ -5415,15 +5634,21 @@ SmallVector<OpFoldResult> PackOp::getResultShape(
   return resultDims;
 }
 
-/// Get the expected packed type based on source type, tile factors, position of
-/// the inner tiles and permutation of the outer tiled loop.
-RankedTensorType PackOp::inferPackedType(RankedTensorType sourceType,
+RankedTensorType PackOp::inferPackedTensorType(
+    RankedTensorType sourceType, ArrayRef<int64_t> innerTileSizes,
+    ArrayRef<int64_t> innerDimsPos, ArrayRef<int64_t> outerDimsPerm) {
+  SmallVector<int64_t> resultShape = inferPackedShape(
+      sourceType.getShape(), innerTileSizes, innerDimsPos, outerDimsPerm);
+  return RankedTensorType::get(resultShape, sourceType.getElementType());
+}
+
+MemRefType PackOp::inferPackedMemRefType(MemRefType sourceType,
                                          ArrayRef<int64_t> innerTileSizes,
                                          ArrayRef<int64_t> innerDimsPos,
                                          ArrayRef<int64_t> outerDimsPerm) {
-  SmallVector<int64_t> resultShape = getPackOpResultTypeShape(
+  SmallVector<int64_t> resultShape = inferPackedShape(
       sourceType.getShape(), innerTileSizes, innerDimsPos, outerDimsPerm);
-  return RankedTensorType::get(resultShape, sourceType.getElementType());
+  return MemRefType::get(resultShape, sourceType.getElementType());
 }
 
 Value PackOp::createDestinationTensor(OpBuilder &b, Location loc, Value source,
@@ -5472,6 +5697,45 @@ PackOp PackOp::createTransposedClone(OpBuilder &b, Location loc,
                         getPaddingValue(), metadata.outerDimsPerm);
 }
 
+template <typename OpTy>
+static void getPackUnPackEffectsImpl(
+    OpTy op, SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+                 &effects) {
+  // No memory effects for pure tensor semantics
+  if (op.hasPureTensorSemantics())
+    return;
+
+  for (OpOperand &opOperand : op.getOperation()->getOpOperands()) {
+    if (!llvm::isa<MemRefType>(opOperand.get().getType()))
+      continue;
+
+    if (&opOperand == &op.getSourceMutable()) {
+      effects.emplace_back(MemoryEffects::Read::get(), &opOperand, /*stage=*/0,
+                           /*effectOnFullRegion=*/true,
+                           SideEffects::DefaultResource::get());
+    } else if (&opOperand == &op.getDestMutable()) {
+      effects.emplace_back(MemoryEffects::Read::get(), &opOperand, /*stage=*/0,
+                           /*effectOnFullRegion=*/true,
+                           SideEffects::DefaultResource::get());
+      effects.emplace_back(MemoryEffects::Write::get(), &opOperand, /*stage=*/0,
+                           /*effectOnFullRegion=*/true,
+                           SideEffects::DefaultResource::get());
+    }
+  }
+}
+
+void PackOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  getPackUnPackEffectsImpl(*this, effects);
+}
+
+void UnPackOp::getEffects(
+    SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+  getPackUnPackEffectsImpl(*this, effects);
+}
+
 /// Returns true if the tiles and the tiled dims are constant.
 template <typename OpTy>
 static bool areTilesAndTiledDimsAllConstant(OpTy op) {
@@ -5491,6 +5755,8 @@ static bool areTilesAndTiledDimsAllConstant(OpTy op) {
 }
 
 Speculation::Speculatability PackOp::getSpeculatability() {
+  if (!hasPureTensorSemantics())
+    return Speculation::NotSpeculatable;
   if (getPaddingValue())
     return Speculation::Speculatable;
 
@@ -5581,16 +5847,19 @@ static bool inferStaticShape(PackOp packOp, SmallVectorImpl<int64_t> &srcShape,
 }
 
 LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
+  // TODO: Support Memref PackOp. Temporarily return failure.
+  if (!packOp.hasPureTensorSemantics())
+    return failure();
+
   // Fold an pack(unpack(x)) to x.
   if (auto unPackOp = packOp.getSource().getDefiningOp<UnPackOp>()) {
-    if (unPackOp.getSourceType() != packOp.getDestType())
-      return failure();
-    if (packOp.getPaddingValue() ||
-        !hasSameInnerOuterAttribute(packOp, unPackOp) ||
-        !haveSameTiles(packOp, unPackOp))
-      return failure();
-    rewriter.replaceOp(packOp, unPackOp.getSource());
-    return success();
+    if (unPackOp.getSourceType() == packOp.getDestType() &&
+        !packOp.getPaddingValue() &&
+        hasSameInnerOuterAttribute(packOp, unPackOp) &&
+        haveSameTiles(packOp, unPackOp)) {
+      rewriter.replaceOp(packOp, unPackOp.getSource());
+      return success();
+    }
   }
 
   // Fold optional PaddingValue operand away if padding is not needed.
@@ -5612,7 +5881,7 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
           tensor::CastOp::create(rewriter, loc, newSrcType, packOp.getSource());
     }
     Value dest = packOp.getDest();
-    RankedTensorType originalResultType = packOp.getDestType();
+    ShapedType originalResultType = packOp.getDestType();
     bool needUpdateDestType = (destShape != originalResultType.getShape());
     if (needUpdateDestType) {
       auto newDestType = packOp.getDestType().clone(destShape);
@@ -5627,9 +5896,9 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
     // Insert a cast if needed
     if (needUpdateDestType) {
       rewriter.setInsertionPointAfter(packOp);
-      auto castOp =
-          tensor::CastOp::create(rewriter, loc, originalResultType, packOp);
-      rewriter.replaceAllUsesExcept(packOp, castOp, castOp);
+      auto castOp = tensor::CastOp::create(rewriter, loc, originalResultType,
+                                           packOp.getResult());
+      rewriter.replaceAllUsesExcept(packOp.getResult(), castOp, castOp);
     }
     return success();
   }
@@ -5638,8 +5907,7 @@ LogicalResult PackOp::canonicalize(PackOp packOp, PatternRewriter &rewriter) {
 }
 
 template <typename PackOrUnpackOp>
-static bool isLikePadUnPad(PackOrUnpackOp packOp,
-                           RankedTensorType packedTensorType) {
+static bool isLikePadUnPad(PackOrUnpackOp packOp, ShapedType packedTensorType) {
   static_assert(std::is_same<PackOrUnpackOp, PackOp>::value ||
                     std::is_same<PackOrUnpackOp, UnPackOp>::value,
                 "Function meant for pack/unpack");
@@ -5672,19 +5940,25 @@ static bool isLikePadUnPad(PackOrUnpackOp packOp,
 
 bool PackOp::isLikePad() {
   auto packedTensorType =
-      llvm::cast<RankedTensorType>((*this)->getResultTypes().front());
+      llvm::cast<ShapedType>((*this)->getResultTypes().front());
   return isLikePadUnPad(*this, packedTensorType);
 }
 
-OpFoldResult PackOp::fold(FoldAdaptor adaptor) {
+::mlir::LogicalResult
+PackOp::fold(FoldAdaptor adaptor,
+             ::llvm::SmallVectorImpl<OpFoldResult> &results) {
+  if (!hasPureTensorSemantics())
+    return failure();
   std::optional<Attribute> paddingValue;
   if (auto pad = adaptor.getPaddingValue())
     paddingValue = pad;
   if (OpFoldResult reshapedSource = reshapeConstantSource(
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
-          getDestType(), paddingValue))
-    return reshapedSource;
-  return {};
+          cast<TensorType>(getDestType()), paddingValue)) {
+    results.push_back(reshapedSource);
+    return success();
+  }
+  return failure();
 }
 
 /// Folds a tensor.cast op into a consuming PackOp op if the
@@ -5706,6 +5980,10 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
 
   LogicalResult matchAndRewrite(PackOp op,
                                 PatternRewriter &rewriter) const override {
+    // TODO: Support Memref PackOp. Temporarily return failure.
+    if (!op.hasPureTensorSemantics())
+      return failure();
+
     if (!tensor::hasFoldableTensorCastOperand(op))
       return failure();
 
@@ -5748,12 +6026,141 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
 
 void UnPackOp::getAsmResultNames(
     function_ref<void(Value, StringRef)> setNameFn) {
-  setNameFn(getResult(), "unpack");
+  if (!getResults().empty())
+    setNameFn(getResult(), "unpack");
+}
+
+// Custom parser for UnPackOp that handles the memref/tensor case distinction
+ParseResult UnPackOp::parse(OpAsmParser &parser, OperationState &result) {
+  OpAsmParser::UnresolvedOperand source, dest;
+  SmallVector<OpAsmParser::UnresolvedOperand> dynamicTiles;
+  SmallVector<int64_t> staticTiles;
+  DenseI64ArrayAttr innerDimsPos, outerDimsPerm;
+  Type sourceType, destType, resultType;
+
+  if (parser.parseOperand(source))
+    return failure();
+
+  if (succeeded(parser.parseOptionalKeyword("outer_dims_perm"))) {
+    if (parser.parseEqual())
+      return failure();
+
+    SmallVector<int64_t> outerDimsPermVec;
+    if (parser.parseCommaSeparatedList(AsmParser::Delimiter::Square, [&]() {
+          int64_t value;
+          if (parser.parseInteger(value))
+            return failure();
+          outerDimsPermVec.push_back(value);
+          return success();
+        }))
+      return failure();
+    outerDimsPerm = parser.getBuilder().getDenseI64ArrayAttr(outerDimsPermVec);
+  }
+
+  if (parser.parseKeyword("inner_dims_pos") || parser.parseEqual())
+    return failure();
+
+  SmallVector<int64_t> innerDimsPosVec;
+  if (parser.parseCommaSeparatedList(AsmParser::Delimiter::Square, [&]() {
+        int64_t value;
+        if (parser.parseInteger(value))
+          return failure();
+        innerDimsPosVec.push_back(value);
+        return success();
+      }))
+    return failure();
+  innerDimsPos = parser.getBuilder().getDenseI64ArrayAttr(innerDimsPosVec);
+
+  if (parser.parseKeyword("inner_tiles") || parser.parseEqual())
+    return failure();
+
+  DenseI64ArrayAttr staticTilesAttr;
+  if (parseDynamicIndexList(parser, dynamicTiles, staticTilesAttr))
+    return failure();
+  for (auto val : staticTilesAttr.asArrayRef())
+    staticTiles.push_back(val);
+
+  if (parser.parseKeyword("into") || parser.parseOperand(dest))
+    return failure();
+
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  if (parser.parseColon() || parser.parseType(sourceType))
+    return failure();
+
+  bool hasArrow = succeeded(parser.parseOptionalArrow());
+  if (hasArrow) {
+    if (parser.parseType(destType))
+      return failure();
+  }
+
+  bool isMemRef = llvm::isa<MemRefType>(sourceType);
+  if (!hasArrow) {
+    return parser.emitError(parser.getCurrentLocation(),
+                            "pack/unpack requires '->' and destination type");
+  }
+
+  if (!isMemRef)
+    resultType = destType;
+
+  if (parser.resolveOperand(source, sourceType, result.operands) ||
+      parser.resolveOperand(dest, destType, result.operands))
+    return failure();
+
+  if (!dynamicTiles.empty() &&
+      parser.resolveOperands(dynamicTiles, parser.getBuilder().getIndexType(),
+                             result.operands))
+    return failure();
+
+  result.addAttribute("static_inner_tiles",
+                      parser.getBuilder().getDenseI64ArrayAttr(staticTiles));
+  result.addAttribute("inner_dims_pos", innerDimsPos);
+  if (outerDimsPerm)
+    result.addAttribute("outer_dims_perm", outerDimsPerm);
+
+  SmallVector<int32_t> segmentSizes = {
+      1, 1, 0, static_cast<int32_t>(dynamicTiles.size())};
+  result.addAttribute("operandSegmentSizes",
+                      parser.getBuilder().getDenseI32ArrayAttr(segmentSizes));
+
+  if (!isMemRef)
+    result.addTypes(resultType);
+
+  return success();
+}
+
+void UnPackOp::print(OpAsmPrinter &p) {
+  p << " " << getSource();
+
+  if (!getOuterDimsPerm().empty()) {
+    p << " outer_dims_perm = [";
+    llvm::interleaveComma(getOuterDimsPerm(), p);
+    p << "]";
+  }
+
+  p << " inner_dims_pos = [";
+  llvm::interleaveComma(getInnerDimsPos(), p);
+  p << "]";
+
+  p << " inner_tiles = ";
+  printDynamicIndexList(p, *this, getInnerTiles(), getStaticInnerTilesAttr());
+
+  p << " into " << getDest();
+
+  p.printOptionalAttrDict((*this)->getAttrs(),
+                          {"static_inner_tiles", "inner_dims_pos",
+                           "outer_dims_perm", "operandSegmentSizes"});
+
+  p << " : " << getSource().getType();
+  p << " -> " << getDest().getType();
 }
 
 LogicalResult
 UnPackOp::reifyResultShapes(OpBuilder &builder,
                             ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+  if (!hasPureTensorSemantics())
+    return failure();
   return reifyResultShapesImpl(*this, builder, reifiedReturnShapes);
 }
 
@@ -5798,6 +6205,8 @@ LogicalResult UnPackOp::verify() {
 }
 
 Speculation::Speculatability UnPackOp::getSpeculatability() {
+  if (!hasPureTensorSemantics())
+    return Speculation::NotSpeculatable;
   // See PackOp::getSpeculatability.
   if (!areTilesAndTiledDimsAllConstant(*this))
     return Speculation::NotSpeculatable;
@@ -5904,6 +6313,10 @@ static bool inferStaticShape(UnPackOp op, SmallVectorImpl<int64_t> &srcShape,
 
 LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
                                      PatternRewriter &rewriter) {
+  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  if (!unPackOp.hasPureTensorSemantics())
+    return failure();
+
   /// unpack(pack(x)) -> x
   if (PackOp packOp = unPackOp.getSource().getDefiningOp<PackOp>()) {
     if (packOp.getSourceType() != unPackOp.getDestType())
@@ -5960,11 +6373,11 @@ LogicalResult UnPackOp::canonicalize(UnPackOp unPackOp,
       dest = tensor::CastOp::create(rewriter, loc, newDestType,
                                     unPackOp.getDest());
     }
-    Value newOp = UnPackOp::create(
+    UnPackOp newOp = UnPackOp::create(
         rewriter, loc, source, dest, unPackOp.getInnerDimsPos(),
         unPackOp.getMixedTiles(), unPackOp.getOuterDimsPerm());
     rewriter.replaceOpWithNewOp<tensor::CastOp>(
-        unPackOp, unPackOp.getResult().getType(), newOp);
+        unPackOp, unPackOp.getResult().getType(), newOp.getResult());
     return success();
   }
 
@@ -5998,16 +6411,24 @@ bool UnPackOp::canFoldSliceOp(tensor::ExtractSliceOp sliceOp) {
 }
 
 bool UnPackOp::isLikeUnPad() {
-  RankedTensorType packedTensorType = getSourceType();
+  ShapedType packedTensorType = getSourceType();
   return isLikePadUnPad(*this, packedTensorType);
 }
 
-OpFoldResult UnPackOp::fold(FoldAdaptor adaptor) {
+::mlir::LogicalResult
+UnPackOp::fold(FoldAdaptor adaptor,
+               ::llvm::SmallVectorImpl<OpFoldResult> &results) {
+  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  if (!hasPureTensorSemantics())
+    return failure();
+
   if (OpFoldResult reshapedSource = reshapeConstantSource(
           llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()),
-          getResult().getType()))
-    return reshapedSource;
-  return {};
+          cast<TensorType>(getResult().getType()))) {
+    results.push_back(reshapedSource);
+    return success();
+  }
+  return failure();
 }
 
 /// Folds a tensor.cast op into a consuming UnPackOp op if the
@@ -6029,6 +6450,10 @@ struct FoldTensorCastUnPackOp : public OpRewritePattern<UnPackOp> {
 
   LogicalResult matchAndRewrite(UnPackOp op,
                                 PatternRewriter &rewriter) const override {
+    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    if (!op.hasPureTensorSemantics())
+      return failure();
+
     if (!tensor::hasFoldableTensorCastOperand(op))
       return failure();
 

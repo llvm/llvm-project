@@ -19,10 +19,10 @@ define void @minbw_cast(ptr %dst, i64 %n, i1 %bool1, i1 %bool2) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc <4 x i32> [[BROADCAST_SPLAT2]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i1> [[BROADCAST_SPLAT]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP2:%.*]] = xor <4 x i8> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i8> [[TMP2]], i32 3
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i8> [[TMP2]], i32 3
 ; CHECK-NEXT:    store i8 [[TMP3]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -80,17 +80,13 @@ define void @single_scalar_cast_stored(ptr %src, ptr %dst, i32 %n) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[SRC]], align 2, !alias.scope [[META4:![0-9]+]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i16 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = and i16 [[TMP0]], 15
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], i16 0, i16 [[TMP4]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[SRC]], align 2, !alias.scope [[META4:![0-9]+]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[TMP0]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i16> [[BROADCAST_SPLAT]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i16> [[BROADCAST_SPLAT]], splat (i16 15)
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i16> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], i16 0, i16 [[TMP4]]
 ; CHECK-NEXT:    store i16 [[TMP5]], ptr [[DST]], align 2, !alias.scope [[META7:![0-9]+]], !noalias [[META4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]

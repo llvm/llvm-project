@@ -108,6 +108,29 @@ TEST(EquivalenceClassesTest, SimpleErase4) {
   EXPECT_FALSE(EqClasses.erase(1));
 }
 
+TEST(EquivalenceClassesTest, EraseKeepsLeaderBit) {
+  EquivalenceClasses<int> EC;
+
+  // Create a set {1, 2} where 1 is the leader.
+  EC.unionSets(1, 2);
+
+  // Verify initial state.
+  EXPECT_EQ(EC.getLeaderValue(2), 1);
+
+  // Erase 2, the non-leader member.
+  EXPECT_TRUE(EC.erase(2));
+
+  // Verify that we have exactly one equivalence class.
+  ASSERT_NE(EC.begin(), EC.end());
+  ASSERT_EQ(std::next(EC.begin()), EC.end());
+
+  // Verify that 1 is still a leader after erasing 2.
+  const auto *Elem = *EC.begin();
+  ASSERT_NE(Elem, nullptr);
+  EXPECT_EQ(Elem->getData(), 1);
+  EXPECT_TRUE(Elem->isLeader()) << "The leader bit was lost!";
+}
+
 TEST(EquivalenceClassesTest, TwoSets) {
   EquivalenceClasses<int> EqClasses;
   // Form sets of odd and even numbers, check that we split them into these

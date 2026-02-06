@@ -33,7 +33,7 @@ name:            asm_write_vgpr_accvgpr_write_read
 body:             |
   bb.0:
 
-    INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 2228234 /* regdef:VGPR_32 */, def $vgpr0
+    INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 1245194 /* regdef:VGPR_32 */, def $vgpr0
     $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
 ...
 
@@ -47,7 +47,7 @@ name:            asm_write_vgpr_accvgpr_write_read_partialnop
 body:             |
   bb.0:
 
-    INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 2228234 /* regdef:VGPR_32 */, def $vgpr0
+    INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 1245194 /* regdef:VGPR_32 */, def $vgpr0
     S_NOP 0
     $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
 ...
@@ -60,7 +60,7 @@ name:            asm_write_vgpr_accvgpr_write_read_otherreg
 body:             |
   bb.0:
     liveins: $vgpr0
-    INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 2228234 /* regdef:VGPR_32 */, def $vgpr1
+    INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 1245194 /* regdef:VGPR_32 */, def $vgpr1
     $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr0, implicit $exec
 ...
 
@@ -157,8 +157,7 @@ body:             |
 
 # GCN-LABEL: name: mfma_16x16_write_agpr_accvgpr_read
 # GCN:      V_MFMA_F32_16X16X1F32
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 1
+# GCN-NEXT: S_NOP 9
 # GCN-NEXT: V_ACCVGPR_READ_B32_e64
 name:            mfma_16x16_write_agpr_accvgpr_read
 body:             |
@@ -170,8 +169,7 @@ body:             |
 
 # GCN-LABEL: name: mfma_32x32_write_agpr_accvgpr_read
 # GCN:      V_MFMA_F32_32X32X2F32
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 7
+# GCN-NEXT: S_NOP 15
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_ACCVGPR_READ_B32_e64
 name:            mfma_32x32_write_agpr_accvgpr_read
@@ -208,8 +206,7 @@ body:             |
 
 # GCN-LABEL: name: mfma_32x32_write_agpr_accvgpr_write
 # GCN:      V_MFMA_F32_32X32X2F32
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 6
+# GCN-NEXT: S_NOP 14
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            mfma_32x32_write_agpr_accvgpr_write
 body:             |
@@ -244,8 +241,7 @@ body:             |
 
 # GCN-LABEL: name: mfma_32x32_read_srcc_accvgpr_write
 # GCN:      V_MFMA_F32_32X32X2F32
-# GCN-NEXT: S_NOP 7
-# GCN-NEXT: S_NOP 4
+# GCN-NEXT: S_NOP 12
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            mfma_32x32_read_srcc_accvgpr_write
 body:             |

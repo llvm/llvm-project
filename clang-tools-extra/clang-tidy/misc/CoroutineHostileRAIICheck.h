@@ -1,4 +1,4 @@
-//===--- CoroutineHostileRAIICheck.h - clang-tidy ----------------*- C++-*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINESHOSTILERAIICHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINESHOSTILERAIICHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINEHOSTILERAIICHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINEHOSTILERAIICHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "clang/AST/ASTTypeTraits.h"
@@ -22,7 +22,7 @@ namespace clang::tidy::misc {
 /// types and types belonging to a configurable denylist.
 ///
 ///  For the user-facing documentation see:
-///  http://clang.llvm.org/extra/clang-tidy/checks/misc/coroutine-hostile-raii.html
+///  https://clang.llvm.org/extra/clang-tidy/checks/misc/coroutine-hostile-raii.html
 class CoroutineHostileRAIICheck : public ClangTidyCheck {
 public:
   CoroutineHostileRAIICheck(llvm::StringRef Name, ClangTidyContext *Context);
@@ -46,8 +46,11 @@ private:
   // List of fully qualified awaitable types which are considered safe to
   // co_await.
   std::vector<StringRef> AllowedAwaitablesList;
+  // List of callees whose return values are considered safe to directly
+  // co_await.
+  std::vector<StringRef> AllowedCallees;
 };
 
 } // namespace clang::tidy::misc
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINESHOSTILERAIICHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_COROUTINEHOSTILERAIICHECK_H

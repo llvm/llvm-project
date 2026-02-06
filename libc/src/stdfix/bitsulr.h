@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_STDFIX_BITSULR_H
 
 #include "include/llvm-libc-macros/stdfix-macros.h" // unsigned long fract
-#include "include/llvm-libc-types/stdfix-types.h"   // uint_ulr_t
+#include "include/llvm-libc-types/uint_ulr_t.h"     // uint_ulr_t
 #include "src/__support/macros/config.h"            // LIBC_NAMESPACE_DECL
 
 namespace LIBC_NAMESPACE_DECL {

@@ -25,6 +25,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
@@ -970,7 +971,7 @@ public:
   /// diagnostics in specific files.
   /// Mapping file is expected to be a special case list with sections denoting
   /// diagnostic groups and `src` entries for globs to suppress. `emit` category
-  /// can be used to disable suppression. Longest glob that matches a filepath
+  /// can be used to disable suppression. The last glob that matches a filepath
   /// takes precedence. For example:
   ///   [unused]
   ///   src:clang/*
@@ -1363,6 +1364,22 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              const char *Str) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(Str),
                   DiagnosticsEngine::ak_c_string);
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const llvm::APSInt &Int) {
+  DB.AddString(toString(Int, /*Radix=*/10, Int.isSigned(),
+                        /*formatAsCLiteral=*/false,
+                        /*UpperCase=*/true, /*InsertSeparators=*/true));
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const llvm::APInt &Int) {
+  DB.AddString(toString(Int, /*Radix=*/10, /*Signed=*/false,
+                        /*formatAsCLiteral=*/false,
+                        /*UpperCase=*/true, /*InsertSeparators=*/true));
   return DB;
 }
 

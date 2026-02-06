@@ -244,7 +244,7 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
   unsigned IterCnt = 0;
   (void)IterCnt;
   while (LocalChange) {
-    assert(IterCnt++ < 1000 && "Iterative simplification didn't converge!");
+    assert(IterCnt++ < 2000 && "Iterative simplification didn't converge!");
     LocalChange = false;
 
     // Loop over all of the basic blocks and remove them if they are unneeded.
@@ -355,6 +355,8 @@ void SimplifyCFGPass::printPipeline(
   OS << (Options.ForwardSwitchCondToPhi ? "" : "no-") << "forward-switch-cond;";
   OS << (Options.ConvertSwitchRangeToICmp ? "" : "no-")
      << "switch-range-to-icmp;";
+  OS << (Options.ConvertSwitchToArithmetic ? "" : "no-")
+     << "switch-to-arithmetic;";
   OS << (Options.ConvertSwitchToLookupTable ? "" : "no-")
      << "switch-to-lookup;";
   OS << (Options.NeedCanonicalLoop ? "" : "no-") << "keep-loops;";

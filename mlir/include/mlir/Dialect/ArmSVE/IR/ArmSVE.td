@@ -590,7 +590,7 @@ def DupQLaneOp : ArmSVE_Op<"dupq_lane", [Pure, AllTypesMatch<["src", "dst"]>]> {
     // %V = [A B C D E F H A B C D E F H]
     ```
 
-    Note: The semantics of the operation match those of the `svdupq_lane` instrinsics.
+    Note: The semantics of the operation match those of the `svdupq_lane` intrinsics.
     [Source](https://developer.arm.com/architectures/instruction-sets/intrinsics/#q=svdupq_lane)
   }];
 

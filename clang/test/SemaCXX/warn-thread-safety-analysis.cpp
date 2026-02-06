@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
 
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++11 -Wc++98-compat %s
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety %s
@@ -1556,9 +1556,9 @@ void main() {
   Child *c;
   Base *b = c;
 
-  b->func1(); // expected-warning {{calling function 'func1' requires holding mutex 'b->mu_' exclusively}}
+  b->func1(); // expected-warning {{calling function 'func1' requires holding mutex 'c->mu_' exclusively}}
   b->mu_.Lock();
-  b->func2(); // expected-warning {{cannot call function 'func2' while mutex 'b->mu_' is held}}
+  b->func2(); // expected-warning {{cannot call function 'func2' while mutex 'c->mu_' is held}}
   b->mu_.Unlock();
 
   c->func1(); // expected-warning {{calling function 'func1' requires holding mutex 'c->mu_' exclusively}}
@@ -1847,7 +1847,52 @@ struct TestScopedLockable {
     a = b + 1;
     b = a + 1;
   }
+
+#if __cplusplus >= 202002L
+  void rangeForLoopInitializer() {
+    for (MutexLock lock{&mu1}; int& x : (int[]){1, 2, 3}) {
+      a = 42;
+    }
+  }
+#endif
 };
+
+namespace test_function_param_lock_unlock {
+class A {
+ public:
+  A() EXCLUSIVE_LOCK_FUNCTION(mu_) { mu_.Lock(); }
+  ~A() UNLOCK_FUNCTION(mu_) { mu_.Unlock(); }
+ private:
+  Mutex mu_;
+};
+int do_something(A a) { return 0; }
+
+// Unlock in dtor without lock in ctor.
+// FIXME: We cannot detect that we are releasing a lock that was never held!
+class B {
+ public:
+  B() {}
+  B(int) {}
+  ~B() UNLOCK_FUNCTION(mu_) { mu_.Unlock(); }
+ private:
+  Mutex mu_;
+};
+int do_something(B b) { return 0; }
+
+class SCOPED_LOCKABLE MutexWrapper {
+public:
+  MutexWrapper(Mutex *mu) : mu_(mu) {}
+  ~MutexWrapper() UNLOCK_FUNCTION(mu_) { mu_->Unlock(); }
+  void Lock() EXCLUSIVE_LOCK_FUNCTION(mu_) { mu_->Lock(); }
+
+  Mutex *mu_;
+};
+// FIXME: This is a false-positive as the lock is released by the dtor.
+void do_something(MutexWrapper mw) {
+  mw.Lock(); // expected-note {{mutex acquired here}}
+}            // expected-warning {{mutex 'mw.mu_' is still held at the end of function}}
+
+} // namespace test_function_param_lock_unlock
 
 } // end namespace test_scoped_lockable
 
@@ -2487,6 +2532,10 @@ public:
   Foo& getFoo()              { return *f; }
   Foo& getFoo2(int c)        { return *f; }
   Foo& getFoo3(int c, int d) { return *f; }
+  Foo& getFoo4(bool)         { return *f; }
+  Foo& getFoo5(char)         { return *f; }
+  Foo& getFoo6(char16_t)     { return *f; }
+  Foo& getFoo7(const char*)  { return *f; }
 
   Foo& getFooey() { return *f; }
 };
@@ -2517,6 +2566,22 @@ void test() {
   bar.getFoo3(a, b).mu_.Lock();
   bar.getFoo3(a, b).a = 0;
   bar.getFoo3(a, b).mu_.Unlock();
+
+  bar.getFoo4(true).mu_.Lock();
+  bar.getFoo4(true).a = 0;
+  bar.getFoo4(true).mu_.Unlock();
+
+  bar.getFoo5('a').mu_.Lock();
+  bar.getFoo5('a').a = 0;
+  bar.getFoo5('a').mu_.Unlock();
+
+  bar.getFoo6(u'\u1234').mu_.Lock();
+  bar.getFoo6(u'\u1234').a = 0;
+  bar.getFoo6(u'\u1234').mu_.Unlock();
+
+  bar.getFoo7("foo").mu_.Lock();
+  bar.getFoo7("foo").a = 0;
+  bar.getFoo7("foo").mu_.Unlock();
 
   getBarFoo(bar, a).mu_.Lock();
   getBarFoo(bar, a).a = 0;
@@ -2559,11 +2624,41 @@ void test2() {
     // expected-note {{found near match 'bar.getFoo2(a).mu_'}}
   bar.getFoo2(a).mu_.Unlock();
 
+  bar.getFoo2(0).mu_.Lock();
+  bar.getFoo2(1).a = 0; // \
+    // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo2(1).mu_' exclusively}} \
+    // expected-note {{found near match 'bar.getFoo2(0).mu_'}}
+  bar.getFoo2(0).mu_.Unlock();
+
   bar.getFoo3(a, b).mu_.Lock();
   bar.getFoo3(a, c).a = 0;  // \
     // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo3(a, c).mu_' exclusively}} \
     // expected-note {{found near match 'bar.getFoo3(a, b).mu_'}}
   bar.getFoo3(a, b).mu_.Unlock();
+
+  bar.getFoo4(true).mu_.Lock();
+  bar.getFoo4(false).a = 0; // \
+    // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo4(false).mu_' exclusively}} \
+    // expected-note {{found near match 'bar.getFoo4(true).mu_'}}
+  bar.getFoo4(true).mu_.Unlock();
+
+  bar.getFoo5('x').mu_.Lock();
+  bar.getFoo5('y').a = 0; // \
+    // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo5(U'y').mu_' exclusively}} \
+    // expected-note {{found near match 'bar.getFoo5(U'x').mu_'}}
+  bar.getFoo5('x').mu_.Unlock();
+
+  bar.getFoo6(u'\u1234').mu_.Lock();
+  bar.getFoo6(u'\u4321').a = 0; // \
+    // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo6(U'\u4321').mu_' exclusively}} \
+    // expected-note {{found near match 'bar.getFoo6(U'\u1234').mu_'}}
+  bar.getFoo6(u'\u1234').mu_.Unlock();
+
+  bar.getFoo7("foo").mu_.Lock();
+  bar.getFoo7("bar").a = 0; // \
+    // expected-warning {{writing variable 'a' requires holding mutex 'bar.getFoo7("bar").mu_' exclusively}} \
+    // expected-note {{found near match 'bar.getFoo7("foo").mu_'}}
+  bar.getFoo7("foo").mu_.Unlock();
 
   getBarFoo(bar, a).mu_.Lock();
   getBarFoo(bar, b).a = 0;  // \
@@ -6875,6 +6970,34 @@ class PointerGuard {
 };
 } // namespace Derived_Smart_Pointer
 
+// Test for capabilities that are heap-allocated and stored in static variables.
+namespace FunctionStaticVariable {
+struct Data {
+  Mutex mu;
+  int x GUARDED_BY(mu);
+};
+
+void testStaticVariable() {
+}
+
+void testHeapAllocation() {
+  static Data *d = new Data;
+  d->mu.Lock();
+  d->x = 5;
+  d->mu.Unlock();
+}
+
+void testHeapAllocationBug() {
+  static auto *d = new Data;
+  d->x = 10; // expected-warning{{writing variable 'x' requires holding mutex 'd->mu' exclusively}}
+}
+
+void testHeapAllocationScopedLock() {
+  static Mutex *mu = new Mutex;
+  MutexLock lock(mu);
+}
+} // namespace FunctionStaticVariable
+
 namespace Reentrancy {
 
 class LOCKABLE REENTRANT_CAPABILITY ReentrantMutex {
@@ -7238,3 +7361,412 @@ public:
 };
 
 } // namespace Reentrancy
+
+// Tests for tracking aliases of capabilities.
+namespace CapabilityAliases {
+struct Foo {
+  Mutex mu;
+  int data GUARDED_BY(mu);
+};
+
+Foo *returnsFoo();
+Foo *returnsFoo(Foo *foo);
+void locksRequired(Foo *foo) EXCLUSIVE_LOCKS_REQUIRED(foo->mu);
+void escapeAlias(int a, Foo *&ptr);
+void escapeAlias(int b, Foo **ptr);
+void passByConstRef(Foo* const& ptr);
+
+void testBasicPointerAlias(Foo *f) {
+  Foo *ptr = f;
+  ptr->mu.Lock();         // lock through alias
+  f->data = 42;           // access through original
+  ptr->mu.Unlock();       // unlock through alias
+}
+
+void testCastPointerAlias(Foo *f) {
+  // Cast to void* from unsigned long to test non-pointer cast indirection.
+  void *priv = (void *)(__UINTPTR_TYPE__)(&f->mu);
+  f->mu.Lock();
+  f->data = 42;
+  auto *mu = (Mutex *)priv;
+  mu->Unlock();
+}
+
+void testBasicPointerAliasNoInit(Foo *f) {
+  Foo *ptr;
+
+  ptr = nullptr;
+  ptr = f;
+  ptr->mu.Lock();
+  f->data = 42;
+  ptr->mu.Unlock();
+  ptr = nullptr;
+}
+
+void testBasicPointerAliasLoop() {
+  for (;;) {
+    Foo *f = returnsFoo();
+    Foo *ptr = f;
+    if (!ptr)
+      break;
+    ptr->mu.Lock();
+    f->data = 42;
+    ptr->mu.Unlock();
+  }
+}
+
+void testPointerAliasNoEscape1(Foo *f) {
+  Foo *ptr = f;
+  testBasicPointerAlias(ptr);  // pass alias by value
+
+  ptr->mu.Lock();
+  f->data = 42;
+  ptr->mu.Unlock();
+}
+
+void testPointerAliasNoEscape2(Foo *f) {
+  Foo *ptr = f;
+  passByConstRef(ptr);  // pass alias by const ref
+
+  ptr->mu.Lock();
+  f->data = 42;
+  ptr->mu.Unlock();
+}
+
+void testPointerAliasNoEscape3() {
+  Foo *ptr = returnsFoo();
+  ptr->mu.Lock();
+  locksRequired(ptr);
+  ptr->mu.Unlock();
+}
+
+void testPointerAliasEscape1(Foo *f) {
+  Foo *ptr = f;
+  escapeAlias(0, ptr);
+
+  ptr->mu.Lock();
+  f->data = 42;           // expected-warning{{writing variable 'data' requires holding mutex 'f->mu' exclusively}} \
+                          // expected-note{{found near match 'ptr->mu'}}
+  ptr->mu.Unlock();
+}
+
+void testPointerAliasEscape2(Foo *f) {
+  Foo *ptr = f;
+  escapeAlias(0, &ptr);
+
+  ptr->mu.Lock();
+  f->data = 42;           // expected-warning{{writing variable 'data' requires holding mutex 'f->mu' exclusively}} \
+                          // expected-note{{found near match 'ptr->mu'}}
+  ptr->mu.Unlock();
+}
+
+void testPointerAliasEscape3(Foo *f) {
+  Foo *ptr;
+
+  ptr = f;
+  escapeAlias(0, &ptr);
+
+  ptr->mu.Lock();
+  f->data = 42;           // expected-warning{{writing variable 'data' requires holding mutex 'f->mu' exclusively}} \
+                          // expected-note{{found near match 'ptr->mu'}}
+  ptr->mu.Unlock();
+}
+
+void testPointerAliasEscapeAndReset(Foo *f) {
+  Foo *ptr;
+
+  ptr = f;
+  escapeAlias(0, &ptr);
+  ptr = f;
+
+  ptr->mu.Lock();
+  f->data = 42;
+  ptr->mu.Unlock();
+}
+
+// A function that may do anything to the objects referred to by the inputs.
+void escapeAliasMultiple(void *, void *, void *);
+void testPointerAliasEscapeMultiple(Foo *F) {
+    Foo *L;
+    F->mu.Lock(); // expected-note{{mutex acquired here}}
+    Foo *Fp = F;
+    escapeAliasMultiple(&L, &L, &Fp);
+    Fp->mu.Unlock(); // expected-warning{{releasing mutex 'Fp->mu' that was not held}}
+} // expected-warning{{mutex 'F->mu' is still held at the end of function}}
+  
+void testPointerAliasTryLock1() {
+  Foo *ptr = returnsFoo();
+  if (ptr->mu.TryLock()) {
+    locksRequired(ptr);
+    ptr->mu.Unlock();
+  }
+}
+
+void testPointerAliasTryLock2() {
+  Foo *ptr;
+  ptr = returnsFoo();
+  Foo *ptr2 = ptr;
+  if (ptr->mu.TryLock()) {
+    locksRequired(ptr);
+    ptr2->mu.Unlock();
+  }
+}
+
+// FIXME: This test demonstrates a dubious pattern that the analysis correctly
+// flags as unsafe, though the user might perceive it as a false positive. The
+// pattern combines a TryLock() failure path with a conditional reassignment of
+// the pointer being locked:
+//
+// 1.  The conditional reassignment `ptr = returnsFoo(ptr);` forces `ptr` to
+//     become a phi node in the CFG at the subsequent merge point. The alias
+//     analysis correctly tracks that `ptr` could refer to one of two distinct
+//     objects.
+//
+// 2.  The lock acquired on the `!TryLock()` path should be (conceptually)
+//     `phi(P1, P2)->mu`, while the lock on the successful path is on the
+//     original `P1->mu`. When the paths merge the analysis currently discards
+//     the alias as it cannot prove a single alias on that path.
+//
+// While this pattern is stylistically fragile and difficult to reason about, a
+// robust solution would require a more advanced symbolic representation of
+// capabilities within the analyzer. For now, we warn on such ambiguity.
+void testPointerAliasTryLockDubious(int x) {
+  Foo *ptr = returnsFoo();
+  if (!ptr->mu.TryLock()) {  // expected-note{{mutex acquired here}}
+    if (x)
+      ptr = returnsFoo(ptr); // <-- this breaks the pattern
+    ptr->mu.Lock();          // expected-note{{mutex acquired here}}
+  }
+  ptr->data = 42;            // expected-warning{{writing variable 'data' requires holding mutex 'ptr->mu' exclusively}} \
+                             // expected-warning{{mutex 'ptr->mu' is not held on every path through here}} \
+                             // expected-warning{{mutex 'returnsFoo().mu' is not held on every path through here}}
+  ptr->mu.Unlock();          // expected-warning{{releasing mutex 'ptr->mu' that was not held}}
+}
+
+void testReassignment() {
+  Foo f1, f2;
+  Foo *ptr = &f1;
+  ptr->mu.Lock();
+  f1.data = 42;
+  ptr->mu.Unlock();
+
+  ptr = &f2;
+  ptr->mu.Lock();
+  f2.data = 42;
+  f1.data = 42;           // expected-warning{{writing variable 'data' requires holding mutex 'f1.mu'}} \
+                          // expected-note{{found near match 'f2.mu'}}
+  ptr->mu.Unlock();
+}
+
+// Alias reassignment through pointer-to-pointer (nor ptr-to-ptr-to-ptr...) does
+// not invalidate aliases for now.
+//
+// While this may result in either false positives or negatives, there's rarely
+// a good reason not to just do direct assignment within the same scope. For the
+// time being, we retain this as a deliberate "escape hatch": specifically, this
+// may be used to help the alias analysis to "see through" complex helper macros
+// that e.g. read a value (such as a pointer) via inline assembly or other
+// opaque helpers.
+void testReassignmentPointerToAlias(Foo *f) {
+  Mutex *mu = &f->mu;
+  // Escape hatch.
+  Mutex **mu_p = &mu;
+  Mutex *actual_mu = [&] { /* ... */ return mu; }();
+  *mu_p = actual_mu;
+
+  mu->Lock();
+  f->data = 42;
+  mu->Unlock();
+}
+
+// Nested field access through pointer
+struct Container {
+  Foo foo;
+};
+
+void testNestedAccess(Container *c) {
+  Foo *ptr = &c->foo; // pointer to nested field
+  ptr->mu.Lock();
+  c->foo.data = 42;
+  ptr->mu.Unlock();
+}
+
+void testNestedAcquire(Container *c) EXCLUSIVE_LOCK_FUNCTION(&c->foo.mu) {
+  Foo *buf = &c->foo;
+  buf->mu.Lock();
+}
+
+void testArrayOfContainers() {
+  Container array[10];
+
+  Foo *ptr1 = &array[0].foo;
+  Foo *ptr2 = &array[1].foo;
+  ptr1->mu.Lock();
+  ptr2->mu.Lock();
+  array[0].foo.data = 0;
+  array[1].foo.data = 1;
+  ptr2->mu.Unlock();
+  ptr1->mu.Unlock();
+}
+
+struct ContainerOfPtr {
+  Foo *foo_ptr;
+  ContainerOfPtr *next;
+};
+
+void testIndirectAccess(ContainerOfPtr *fc) {
+  Foo *ptr = fc->foo_ptr; // get pointer
+  ptr->mu.Lock();
+  fc->foo_ptr->data = 42; // access via original
+  ptr->mu.Unlock();
+}
+
+void testAliasChainUnrelatedReassignment1(ContainerOfPtr *list) {
+  Foo *eb = list->foo_ptr;
+  eb->mu.Lock();
+  list = list->next;
+  eb->data = 42;
+  eb->mu.Unlock();
+}
+
+void testAliasChainUnrelatedReassignment2(ContainerOfPtr *list) {
+  ContainerOfPtr *busyp = list;
+  Foo *eb = busyp->foo_ptr;
+  eb->mu.Lock();
+  busyp = busyp->next;
+  eb->data = 42;
+  eb->mu.Unlock();
+}
+
+void testControlFlowDoWhile(Foo *f, int x) {
+  Foo *ptr = f;
+
+  f->mu.Lock();
+  if (x) {
+    // complex merge
+    do { } while (x--);
+  }
+  ptr->data = 42;
+  ptr->mu.Unlock();
+}
+
+// FIXME: No alias tracking through complex control flow.
+void testComplexControlFlow(Foo *f1, Foo *f2, bool cond) {
+  Foo *ptr;
+  if (cond) {
+    ptr = f1;
+  } else {
+    ptr = f2;
+  }
+  ptr->mu.Lock();
+  if (cond) {
+    f1->data = 42; // expected-warning{{writing variable 'data' requires holding mutex 'f1->mu' exclusively}} \
+                   // expected-note{{found near match 'ptr->mu'}}
+  } else {
+    f2->data = 42; // expected-warning{{writing variable 'data' requires holding mutex 'f2->mu' exclusively}} \
+                   // expected-note{{found near match 'ptr->mu'}}
+  }
+  ptr->mu.Unlock();
+}
+
+void testLockFunction(Foo *f) EXCLUSIVE_LOCK_FUNCTION(&f->mu) {
+  Mutex *mu = &f->mu;
+  mu->Lock();
+}
+
+void testUnlockFunction(Foo *f) UNLOCK_FUNCTION(&f->mu) {
+  Mutex *mu = &f->mu;
+  mu->Unlock();
+}
+
+// This is an idiom to deal with "pointer to returned object has a lock held,
+// but you must unlock it later" where the statement expression would be hidden
+// behind a macro.
+void lockWithinStatementExpr() {
+  Foo *f = ({ auto x = returnsFoo(); x->mu.Lock(); x; });
+  f->data = 42;
+  f->mu.Unlock();
+}
+
+// Semantically UB, but let's not crash the compiler with this (should be
+// handled by -Wuninitialized).
+void testSelfInit() {
+  Mutex *mu = mu; // don't do this at home
+  mu->Lock();
+  mu->Unlock();
+}
+
+void testSelfAssign() {
+  Foo *f = returnsFoo();
+  f = f;
+  f->mu.Lock();
+  f->data = 42;
+  f->mu.Unlock();
+}
+
+void testRecursiveAssign() {
+  Foo *f = returnsFoo();
+  f = returnsFoo(f);
+  f->mu.Lock();
+  f->data = 42;
+  f->mu.Unlock();
+}
+
+void testNew(Mutex *&out, int &x) {
+  Mutex *mu = new Mutex;
+  __atomic_store_n(&out, mu, __ATOMIC_RELEASE);
+  mu->Lock();
+  x = 42;  // ... perhaps guarded by mu
+  mu->Unlock();
+}
+
+void testNestedLoopInvariant(Container *c, int n) {
+  Foo *ptr = &c->foo;
+  ptr->mu.Lock();
+
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < n; ++j) {
+    }
+  }
+
+  c->foo.data = 42; // ok: alias still valid
+  ptr->mu.Unlock();
+}
+
+void testLoopWithBreak(Foo *f, bool cond) {
+  Foo *ptr = f;
+  ptr->mu.Lock();
+  for (int i = 0; i < 10; ++i) {
+    if (cond) {
+      break; // merge point is after the loop
+    }
+  }
+  f->data = 42; // ok
+  ptr->mu.Unlock();
+}
+
+void testLoopWithContinue(Foo *f, bool cond) {
+  Foo *ptr = f;
+  ptr->mu.Lock();
+  for (int i = 0; i < 10; ++i) {
+    if (cond) {
+      continue; // tests merge at the top of loop.
+    }
+  }
+  f->data = 42; // ok
+  ptr->mu.Unlock();
+}
+
+void testLoopConditionalReassignment(Foo *f1, Foo *f2, bool cond) {
+  Foo *ptr = f1;
+  ptr->mu.Lock(); // expected-note{{mutex acquired here}}
+
+  for (int i = 0; i < 10; ++i) {
+    if (cond) {
+      ptr = f2; // alias is reassigned on some path inside the loop.
+    }
+  }
+  f1->data = 42;
+  ptr->mu.Unlock(); // expected-warning{{releasing mutex 'ptr->mu' that was not held}}
+} // expected-warning{{mutex 'f1->mu' is still held at the end of function}}
+}  // namespace CapabilityAliases

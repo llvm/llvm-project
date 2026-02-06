@@ -115,10 +115,10 @@ define float @test_select_frexp_no_const(float %x, float %y, i1 %cond) {
 define i32 @test_select_frexp_extract_exp(float %x, i1 %cond) {
 ; CHECK-LABEL: define i32 @test_select_frexp_extract_exp(
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], float 1.000000e+00, float [[X]]
-; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[SEL]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[FREXP_1:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
-; CHECK-NEXT:    ret i32 [[FREXP_1]]
+; CHECK-NEXT:    [[FREXP_2:%.*]] = select i1 [[COND]], i32 1, i32 [[FREXP_1]]
+; CHECK-NEXT:    ret i32 [[FREXP_2]]
 ;
   %sel = select i1 %cond, float 1.000000e+00, float %x
   %frexp = call { float, i32 } @llvm.frexp.f32.i32(float %sel)
@@ -132,7 +132,7 @@ define float @test_select_frexp_fast_math_select(float %x, i1 %cond) {
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    [[FREXP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[MANTISSA:%.*]] = extractvalue { float, i32 } [[FREXP1]], 0
-; CHECK-NEXT:    [[SELECT_FREXP:%.*]] = select nnan ninf nsz i1 [[COND]], float 5.000000e-01, float [[MANTISSA]]
+; CHECK-NEXT:    [[SELECT_FREXP:%.*]] = select i1 [[COND]], float 5.000000e-01, float [[MANTISSA]]
 ; CHECK-NEXT:    ret float [[SELECT_FREXP]]
 ;
   %sel = select nnan ninf nsz i1 %cond, float 1.000000e+00, float %x

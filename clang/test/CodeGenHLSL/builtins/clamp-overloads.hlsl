@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
-// RUN:  -fnative-half-type -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NATIVE_HALF \
+// RUN:  -fnative-half-type -fnative-int16-type -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NATIVE_HALF \
 // RUN:  -DTARGET=dx -DFNATTRS="hidden noundef" -DFFNATTRS="nofpclass(nan inf)"
 
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
@@ -7,7 +7,7 @@
 // RUN:  -DTARGET=dx -DFNATTRS="hidden noundef" -DFFNATTRS="nofpclass(nan inf)"
 
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple spirv-unknown-vulkan-compute %s \
-// RUN:  -fnative-half-type -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NATIVE_HALF \
+// RUN:  -fnative-half-type -fnative-int16-type -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,NATIVE_HALF \
 // RUN:  -DTARGET=spv -DFNATTRS="hidden spir_func noundef" -DFFNATTRS="nofpclass(nan inf)"
 
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple spirv-unknown-vulkan-compute %s \

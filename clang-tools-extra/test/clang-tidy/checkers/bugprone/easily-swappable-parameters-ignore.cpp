@@ -6,7 +6,7 @@
 // RUN:     bugprone-easily-swappable-parameters.QualifiersMix: 0, \
 // RUN:     bugprone-easily-swappable-parameters.ModelImplicitConversions: 0, \
 // RUN:     bugprone-easily-swappable-parameters.SuppressParametersUsedTogether: 0, \
-// RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityTreshold: 0 \
+// RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityThreshold: 0 \
 // RUN:  }}' --
 
 void ignoredUnnamed(int I, int, int) {} // NO-WARN: No >= 2 length of non-unnamed.

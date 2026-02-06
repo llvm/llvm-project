@@ -13,6 +13,7 @@
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -21,7 +22,6 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
@@ -44,6 +44,9 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
   const int short_option = GetDefinitions()[option_idx].short_option;
 
   switch (short_option) {
+  case 'Q':
+    cpp_ignore_context_qualifiers = true;
+    break;
   case 'l':
     language = Language::GetLanguageTypeFromString(option_arg);
     if (language == eLanguageTypeUnknown) {
@@ -191,6 +194,7 @@ void CommandObjectExpression::CommandOptions::OptionParsingStarting(
   top_level = false;
   allow_jit = true;
   suppress_persistent_result = eLazyBoolCalculate;
+  cpp_ignore_context_qualifiers = false;
 }
 
 llvm::ArrayRef<OptionDefinition>
@@ -213,6 +217,7 @@ CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
   options.SetExecutionPolicy(
       allow_jit ? EvaluateExpressionOptions::default_execution_policy
                 : lldb_private::eExecutionPolicyNever);
+  options.SetCppIgnoreContextQualifiers(cpp_ignore_context_qualifiers);
 
   bool auto_apply_fixits;
   if (this->auto_apply_fixits == eLazyBoolCalculate)

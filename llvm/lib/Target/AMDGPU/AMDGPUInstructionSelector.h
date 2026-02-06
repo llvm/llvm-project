@@ -156,6 +156,7 @@ private:
   bool selectSBarrierSignalIsfirst(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectSGetBarrierState(MachineInstr &I, Intrinsic::ID IID) const;
   bool selectSBarrierLeave(MachineInstr &I) const;
+  bool selectWaveShuffleIntrin(MachineInstr &I) const;
 
   std::pair<Register, unsigned> selectVOP3ModsImpl(Register Src,
                                                    bool IsCanonicalizing = true,
@@ -342,6 +343,7 @@ private:
                                                           bool &Matched) const;
   ComplexRendererFns selectVOP3PMadMixModsExt(MachineOperand &Root) const;
   ComplexRendererFns selectVOP3PMadMixMods(MachineOperand &Root) const;
+  ComplexRendererFns selectVOP3PMadMixModsNeg(MachineOperand &Root) const;
 
   void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx = -1) const;

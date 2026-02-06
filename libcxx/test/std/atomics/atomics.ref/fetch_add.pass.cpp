@@ -7,6 +7,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: !has-64-bit-atomics
+// XFAIL: target={{x86_64-.*}} && tsan
 
 // integral-type fetch_add(integral-type, memory_order = memory_order::seq_cst) const noexcept;
 // floating-point-type fetch_add(floating-point-type, memory_order = memory_order::seq_cst) const noexcept;
@@ -37,7 +38,7 @@ template <typename T>
 struct TestFetchAdd {
   void operator()() const {
     if constexpr (std::is_arithmetic_v<T>) {
-      T x(T(1));
+      alignas(std::atomic_ref<T>::required_alignment) T x(T(1));
       std::atomic_ref<T> const a(x);
 
       {
@@ -56,7 +57,7 @@ struct TestFetchAdd {
     } else if constexpr (std::is_pointer_v<T>) {
       using U = std::remove_pointer_t<T>;
       U t[9]  = {};
-      T p{&t[1]};
+      alignas(std::atomic_ref<T>::required_alignment) T p{&t[1]};
       std::atomic_ref<T> const a(p);
 
       {

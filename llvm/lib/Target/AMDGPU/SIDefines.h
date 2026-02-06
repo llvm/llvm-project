@@ -46,6 +46,7 @@ enum {
   GFX11 = 10,
   GFX12 = 11,
   GFX1250 = 12,
+  GFX13 = 13,
 };
 }
 
@@ -207,6 +208,7 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_FP16,
   OPERAND_REG_IMM_V2BF16,
   OPERAND_REG_IMM_V2FP16,
+  OPERAND_REG_IMM_V2FP16_SPLAT,
   OPERAND_REG_IMM_V2INT16,
   OPERAND_REG_IMM_NOINLINE_V2FP16,
   OPERAND_REG_IMM_V2INT32,
@@ -423,6 +425,9 @@ enum CPol {
   // Volatile (used to preserve/signal operation volatility for buffer
   // operations not a real instruction bit)
   VOLATILE = 1 << 31,
+  // The set of "cache policy" bits used for compiler features that
+  // do not correspond to handware features.
+  VIRTUAL_BITS = VOLATILE,
 };
 
 } // namespace CPol
@@ -457,6 +462,8 @@ enum Id { // Message ID, width(4) [3:0].
   ID_RTN_GET_TBA = 133,
   ID_RTN_GET_TBA_TO_PC = 134,
   ID_RTN_GET_SE_AID_ID = 135,
+
+  ID_RTN_GET_CLUSTER_BARRIER_STATE = 136, // added in GFX1250
 
   ID_MASK_PreGFX11_ = 0xF,
   ID_MASK_GFX11Plus_ = 0xFF
@@ -518,6 +525,7 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_HW_ID1 = 23,
   ID_HW_ID2 = 24,
   ID_POPS_PACKER = 25,
+  ID_SCHED_MODE = 26,
   ID_PERF_SNAPSHOT_DATA_gfx11 = 27,
   ID_IB_STS2 = 28,
   ID_SHADER_CYCLES = 29,
@@ -576,11 +584,11 @@ enum ModeRegisterMasks : uint32_t {
   CSP_MASK = 0x7u << 29, // Bits 29..31
 
   // GFX1250
-  DST_VGPR_MSB = 1 << 12,
-  SRC0_VGPR_MSB = 1 << 13,
-  SRC1_VGPR_MSB = 1 << 14,
-  SRC2_VGPR_MSB = 1 << 15,
-  VGPR_MSB_MASK = 0xf << 12, // Bits 12..15
+  DST_VGPR_MSB = 0x3 << 12,
+  SRC0_VGPR_MSB = 0x3 << 14,
+  SRC1_VGPR_MSB = 0x3 << 16,
+  SRC2_VGPR_MSB = 0x3 << 18,
+  VGPR_MSB_MASK = 0xff << 12, // Bits 12..19
 
   REPLAY_MODE = 1 << 25,
   FLAT_SCRATCH_IS_NV = 1 << 26,
@@ -1106,7 +1114,14 @@ enum Register_Flag : uint8_t {
 namespace AMDGPU {
 namespace Barrier {
 
-enum Type { TRAP = -2, WORKGROUP = -1 };
+enum Type {
+  CLUSTER_TRAP = -4,
+  CLUSTER = -3,
+  TRAP = -2,
+  WORKGROUP = -1,
+  NAMED_BARRIER_FIRST = 1,
+  NAMED_BARRIER_LAST = 16,
+};
 
 enum {
   BARRIER_SCOPE_WORKGROUP = 0,

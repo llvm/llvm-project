@@ -31,8 +31,6 @@ define <vscale x 2 x bfloat> @vuitofp_nxv2bf16_nxv2i1_unmasked(<vscale x 2 x i1>
   ret <vscale x 2 x bfloat> %v
 }
 
-declare <vscale x 2 x half> @llvm.vp.uitofp.nxv2f16.nxv2i1(<vscale x 2 x i1>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x half> @vuitofp_nxv2f16_nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_nxv2f16_nxv2i1:
 ; CHECK:       # %bb.0:
@@ -58,8 +56,6 @@ define <vscale x 2 x half> @vuitofp_nxv2f16_nxv2i1_unmasked(<vscale x 2 x i1> %v
   ret <vscale x 2 x half> %v
 }
 
-declare <vscale x 2 x float> @llvm.vp.uitofp.nxv2f32.nxv2i1(<vscale x 2 x i1>, <vscale x 2 x i1>, i32)
-
 define <vscale x 2 x float> @vuitofp_nxv2f32_nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_nxv2f32_nxv2i1:
 ; CHECK:       # %bb.0:
@@ -84,8 +80,6 @@ define <vscale x 2 x float> @vuitofp_nxv2f32_nxv2i1_unmasked(<vscale x 2 x i1> %
   %v = call <vscale x 2 x float> @llvm.vp.uitofp.nxv2f32.nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x float> %v
 }
-
-declare <vscale x 2 x double> @llvm.vp.uitofp.nxv2f64.nxv2i1(<vscale x 2 x i1>, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x double> @vuitofp_nxv2f64_nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_nxv2f64_nxv2i1:

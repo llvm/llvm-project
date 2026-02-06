@@ -19,7 +19,6 @@
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/BuiltinModules.h"
 #include "flang/Lower/CallInterface.h"
-#include "flang/Lower/Coarray.h"
 #include "flang/Lower/ComponentPath.h"
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertConstant.h"
@@ -28,6 +27,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
 #include "flang/Lower/Mangler.h"
+#include "flang/Lower/MultiImageFortran.h"
 #include "flang/Lower/Runtime.h"
 #include "flang/Lower/Support/Utils.h"
 #include "flang/Optimizer/Builder/Character.h"
@@ -2907,10 +2907,8 @@ public:
       }
     }
 
-    auto loweredResult =
-        Fortran::lower::genCallOpAndResult(loc, converter, symMap, stmtCtx,
-                                           caller, callSiteType, resultType)
-            .first;
+    auto loweredResult = std::get<0>(Fortran::lower::genCallOpAndResult(
+        loc, converter, symMap, stmtCtx, caller, callSiteType, resultType));
     auto &result = std::get<ExtValue>(loweredResult);
 
     // Sync pointers and allocatables that may have been modified during the
@@ -4946,10 +4944,9 @@ private:
         caller.placeInput(argIface, arg);
       }
       Fortran::lower::LoweredResult res =
-          Fortran::lower::genCallOpAndResult(loc, converter, symMap,
-                                             getElementCtx(), caller,
-                                             callSiteType, retTy)
-              .first;
+          std::get<0>(Fortran::lower::genCallOpAndResult(
+              loc, converter, symMap, getElementCtx(), caller, callSiteType,
+              retTy));
       return std::get<ExtValue>(res);
     };
   }
@@ -5603,7 +5600,7 @@ private:
                     return newIters;
                   };
                   if (useTripsForSlice) {
-                    LLVM_ATTRIBUTE_UNUSED auto vectorSubscriptShape =
+                    [[maybe_unused]] auto vectorSubscriptShape =
                         getShape(arrayOperands.back());
                     auto undef = fir::UndefOp::create(builder, loc, idxTy);
                     trips.push_back(undef);

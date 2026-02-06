@@ -27,7 +27,7 @@
 # RUN:   -DFLAG0_NAME=EF_SPARC_32PLUS -DFLAG1_NAME=EF_SPARC_HAL_R1 \
 # RUN:   -DFLAG2_NAME=EF_SPARC_SUN_US1 -DFLAG3_NAME=EF_SPARC_SUN_US3
 # RUN: llvm-readelf -h %t | FileCheck %s --match-full-lines --check-prefix=GNU \
-# RUN:   -DFLAG_VALUE=0xF00 \
+# RUN:   -DFLAG_VALUE=0xf00 \
 # RUN:   -DGNU_FLAG_NAME=", V8+ ABI, Sun UltraSPARC I extensions, HAL/Fujitsu R1 extensions, Sun UltraSPARC III extensions"
 
 # RUN: yaml2obj %s -o %t -DCLASS_NAME="ELFCLASS64" -DMACHINE_NAME="EM_SPARCV9" -DFLAG_NAME=""
@@ -57,7 +57,7 @@
 # RUN:   -DFLAG0_NAME=EF_SPARCV9_PSO -DFLAG1_NAME=EF_SPARC_HAL_R1 \
 # RUN:   -DFLAG2_NAME=EF_SPARC_SUN_US1 -DFLAG3_NAME=EF_SPARC_SUN_US3
 # RUN: llvm-readelf -h %t | FileCheck %s --match-full-lines --check-prefix=GNU \
-# RUN:   -DFLAG_VALUE=0xE01\
+# RUN:   -DFLAG_VALUE=0xe01\
 # RUN:   -DGNU_FLAG_NAME=", Sun UltraSPARC I extensions, HAL/Fujitsu R1 extensions, Sun UltraSPARC III extensions, Partial Store Ordering"
 
 --- !ELF

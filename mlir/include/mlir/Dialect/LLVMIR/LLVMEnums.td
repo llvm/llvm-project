@@ -758,13 +758,16 @@ def FramePointerKindAll
     : LLVM_EnumAttrCase<"All", "all", "All", 2>;
 def FramePointerKindReserved
     : LLVM_EnumAttrCase<"Reserved", "reserved", "Reserved", 3>;
+def FramePointerKindNonLeafNoReserve
+    : LLVM_EnumAttrCase<"NonLeafNoReserve", "non-leaf-no-reserve", "NonLeafNoReserve", 4>;
 
 def FramePointerKindEnum : LLVM_EnumAttr<
     "FramePointerKind",
     "::llvm::FramePointerKind",
     "LLVM FramePointerKind",
     [FramePointerKindNone, FramePointerKindNonLeaf,
-     FramePointerKindAll, FramePointerKindReserved]> {
+     FramePointerKindAll, FramePointerKindReserved,
+     FramePointerKindNonLeafNoReserve]> {
   let cppNamespace = "::mlir::LLVM::framePointerKind";
 }
 
@@ -802,6 +805,32 @@ def RoundingModeAttr : LLVM_EnumAttr<
 }
 
 def ValidRoundingModeAttr : ConfinedAttr<RoundingModeAttr, [IntMinValue<0>]>;
+
+//===----------------------------------------------------------------------===//
+// DenormalModeKind
+//===----------------------------------------------------------------------===//
+
+def DenormalModeIEEE : LLVM_EnumAttrCase<"IEEE", "ieee", "IEEE", 0>;
+def DenormalModePreserveSign
+    : LLVM_EnumAttrCase<"PreserveSign", "preservesign", "PreserveSign", 1>;
+def DenormalModePositiveZero
+    : LLVM_EnumAttrCase<"PositiveZero", "positivezero", "PositiveZero", 2>;
+def DenormalModeDynamic : LLVM_EnumAttrCase<"Dynamic", "dynamic", "Dynamic", 3>;
+// Needed as llvm::DenormalModeKind defines this.
+def DenormalModeInvalid
+    : LLVM_EnumAttrCase<"Invalid", "invalid", "Invalid", -1>;
+
+def DenormalModeKindAttr : LLVM_EnumAttr<
+    "DenormalModeKind",
+    "::llvm::DenormalMode::DenormalModeKind",
+    "LLVM Denormal Mode Kinds",
+    [DenormalModeIEEE,
+     DenormalModePreserveSign,
+     DenormalModePositiveZero,
+     DenormalModeDynamic,
+     DenormalModeInvalid]> {
+  let cppNamespace = "::mlir::LLVM";
+}
 
 //===----------------------------------------------------------------------===//
 // FPExceptionBehavior

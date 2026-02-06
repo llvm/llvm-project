@@ -40,14 +40,14 @@ public:
 // A CSE config for fully optimized builds.
 class LLVM_ABI CSEConfigFull : public CSEConfigBase {
 public:
-  virtual ~CSEConfigFull() = default;
+  ~CSEConfigFull() override = default;
   bool shouldCSEOpc(unsigned Opc) override;
 };
 
 // Commonly used for O0 config.
 class LLVM_ABI CSEConfigConstantOnly : public CSEConfigBase {
 public:
-  virtual ~CSEConfigConstantOnly() = default;
+  ~CSEConfigConstantOnly() override = default;
   bool shouldCSEOpc(unsigned Opc) override;
 };
 
@@ -118,7 +118,7 @@ class LLVM_ABI GISelCSEInfo : public GISelChangeObserver {
 public:
   GISelCSEInfo() = default;
 
-  virtual ~GISelCSEInfo();
+  ~GISelCSEInfo() override;
 
   void setMF(MachineFunction &MF);
 
@@ -218,8 +218,7 @@ public:
   /// If CSEConfig is already set, and the CSE Analysis has been preserved,
   /// it will not use the new CSEOpt(use Recompute to force using the new
   /// CSEOpt).
-  LLVM_ABI GISelCSEInfo &get(std::unique_ptr<CSEConfigBase> CSEOpt,
-                             bool ReCompute = false);
+  LLVM_ABI GISelCSEInfo &get(std::unique_ptr<CSEConfigBase> CSEOpt);
   void setMF(MachineFunction &MFunc) { MF = &MFunc; }
   void setComputed(bool Computed) { AlreadyComputed = Computed; }
   void releaseMemory() { Info.releaseMemory(); }

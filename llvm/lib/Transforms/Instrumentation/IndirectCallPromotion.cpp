@@ -55,11 +55,11 @@ using namespace llvm;
 STATISTIC(NumOfPGOICallPromotion, "Number of indirect call promotions.");
 STATISTIC(NumOfPGOICallsites, "Number of indirect call candidate sites.");
 
+namespace llvm {
 extern cl::opt<unsigned> MaxNumVTableAnnotations;
 
-namespace llvm {
 extern cl::opt<bool> EnableVTableProfileUse;
-}
+} // namespace llvm
 
 // Command line option to disable indirect-call promotion with the default as
 // false. This is for debug purpose.
@@ -83,7 +83,7 @@ static cl::opt<unsigned>
 // ICP the candidate function even when only a declaration is present.
 static cl::opt<bool> ICPAllowDecls(
     "icp-allow-decls", cl::init(false), cl::Hidden,
-    cl::desc("Promote the target candidate even when the defintion "
+    cl::desc("Promote the target candidate even when the definition "
              " is not available"));
 
 // ICP hot candidate functions only. When setting to false, non-cold functions
@@ -213,8 +213,7 @@ static Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
                                              uint32_t AddressPointOffset) {
   Module &M = *VTable->getParent();
   LLVMContext &Context = M.getContext();
-  assert(AddressPointOffset <
-             M.getDataLayout().getTypeAllocSize(VTable->getValueType()) &&
+  assert(AddressPointOffset < VTable->getGlobalSize(M.getDataLayout()) &&
          "Out-of-bound access");
 
   return ConstantExpr::getInBoundsGetElementPtr(
@@ -672,8 +671,8 @@ CallBase &llvm::pgo::promoteIndirectCall(CallBase &CB, Function *DirectCallee,
       createBranchWeights(CB.getContext(), Count, TotalCount - Count));
 
   if (AttachProfToDirectCall)
-    setBranchWeights(NewInst, {static_cast<uint32_t>(Count)},
-                     /*IsExpected=*/false);
+    setFittedBranchWeights(NewInst, {Count},
+                           /*IsExpected=*/false);
 
   using namespace ore;
 

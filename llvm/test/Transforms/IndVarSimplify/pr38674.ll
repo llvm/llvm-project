@@ -81,7 +81,7 @@ define i32 @test_02(i32 %x) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = mul i32 [[X:%.*]], 1
 ; CHECK-NEXT:    br label [[FOR_BODY6:%.*]]
 ; CHECK:       for.cond4:
-; CHECK-NEXT:    [[CMP5:%.*]] = icmp ult i32 [[INC:%.*]], 2
+; CHECK-NEXT:    [[CMP5:%.*]] = icmp samesign ult i32 [[INC:%.*]], 2
 ; CHECK-NEXT:    br i1 [[CMP5]], label [[FOR_BODY6]], label [[FOR_END:%.*]]
 ; CHECK:       for.body6:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[FOR_COND4_PREHEADER]] ], [ [[INC]], [[FOR_COND4:%.*]] ]

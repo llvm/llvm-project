@@ -100,7 +100,7 @@ public:
 
   AllowedRegVector(const std::vector<MCRegister> &OptVec)
       : NumOpts(OptVec.size()), Opts(new MCRegister[NumOpts]) {
-    std::copy(OptVec.begin(), OptVec.end(), Opts.get());
+    llvm::copy(OptVec, Opts.get());
   }
 
   unsigned size() const { return NumOpts; }
