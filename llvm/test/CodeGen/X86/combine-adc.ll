@@ -137,7 +137,7 @@ define i32 @adc_merge_sub(i32 %a0) nounwind {
 }
 
 ; Basic positive test
-define i32 @adc_add(i32 %0, i32 %1, i32 %2, i32 %3) {
+define i32 @adc_add(i32 %0, i32 %1, i32 %2, i32 %3) nounwind {
 ; X86-LABEL: adc_add:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -170,7 +170,7 @@ define i32 @adc_add(i32 %0, i32 %1, i32 %2, i32 %3) {
 }
 
 ; Negative test: Carry or overflow flag is used
-define i32 @adc_add_wrong_flags(i32 %0, i32 %1, i32 %2, i32 %3) {
+define i32 @adc_add_wrong_flags(i32 %0, i32 %1, i32 %2, i32 %3) nounwind {
 ; X86-LABEL: adc_add_wrong_flags:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -203,18 +203,12 @@ define i32 @adc_add_wrong_flags(i32 %0, i32 %1, i32 %2, i32 %3) {
 }
 
 ; Negative test: Multi-use
-define i32 @adc_add_multi_use(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, ptr %5) {
+define i32 @adc_add_multi_use(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, ptr %5) nounwind {
 ; X86-LABEL: adc_add_multi_use:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 16
-; X86-NEXT:    .cfi_offset %esi, -16
-; X86-NEXT:    .cfi_offset %edi, -12
-; X86-NEXT:    .cfi_offset %ebx, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -230,11 +224,8 @@ define i32 @adc_add_multi_use(i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, ptr %5) {
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:  .LBB6_2:
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    popl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %ebx
-; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: adc_add_multi_use:
