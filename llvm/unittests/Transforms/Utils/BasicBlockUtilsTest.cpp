@@ -354,6 +354,37 @@ bb3:
 }
 #endif
 
+TEST(BasicBlockUtils, splitBlockBefore2) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define void @split-block-before-test(i1 %flag) {
+entry:
+  br label %loop
+
+loop:
+  br i1 %flag, label %loop, label %exit
+
+exit:
+  ret void
+}
+)IR");
+  Function *F = M->getFunction("split-block-before-test");
+  DominatorTree DT(*F);
+  LoopInfo LI(DT);
+
+  EXPECT_TRUE(DT.verify());
+  LI.verify(DT);
+  auto *LoopBB = getBasicBlockByName(*F, "loop");
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  auto *New = splitBlockBefore(LoopBB, LoopBB->getFirstInsertionPt(), &DTU, &LI,
+                               /* MemorySSAUpdater */ nullptr,
+                               LoopBB->getName() + ".split");
+
+  EXPECT_TRUE(DT.verify());
+  LI.verify(DT);
+  EXPECT_EQ(LI.getLoopFor(New)->getHeader(), New);
+}
+
 TEST(BasicBlockUtils, NoUnreachableBlocksToEliminate) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
@@ -376,6 +407,31 @@ bb1:
   EXPECT_FALSE(Result);
   EXPECT_EQ(F->size(), (size_t)3);
   EXPECT_TRUE(DT.verify());
+}
+
+TEST(BasicBlockUtils, splitBlockBefore) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define i32 @basic_func(i1 %cond) {
+entry:
+  br i1 %cond, label %bb0, label %bb1
+bb0:
+  br label %bb1
+bb1:
+  %phi = phi i32 [ 0, %entry ], [ 1, %bb0 ]
+  ret i32 %phi
+}
+)IR");
+  Function *F = M->getFunction("basic_func");
+  DominatorTree DT(*F);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  BasicBlock *EntryBB = &F->getEntryBlock();
+  Instruction *TI = EntryBB->getTerminator();
+
+  // Make sure the dominator tree is properly updated if calling this on the
+  // entry block.
+  splitBlockBefore(EntryBB, TI, &DTU, nullptr, nullptr);
+  EXPECT_TRUE(DTU.getDomTree().verify());
 }
 
 TEST(BasicBlockUtils, SplitBlockPredecessors) {
