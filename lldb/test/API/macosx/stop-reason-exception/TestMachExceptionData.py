@@ -6,11 +6,13 @@ Test that we get the type code and subcode for MachExceptions
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
+from lldbsuite.test.decorators import *
 
 
 class TestMachExceptionData(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipUnlessDarwin
     def test_exc_bad_access(self):
         """Test that we get type 1, code 1 and the right address for
            a EXC_BAD_ACCESS mach exception."""
