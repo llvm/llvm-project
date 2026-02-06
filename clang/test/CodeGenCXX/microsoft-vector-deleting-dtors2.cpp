@@ -75,14 +75,14 @@ void TesttheTest() {
 // X86: call void @"??3@YAXPAXI@Z"(ptr noundef %this1, i32 noundef {{.*}})
 
 
-// X64: define weak dso_local noundef ptr @"??_ETest@@UEAAPEAXI@Z"(ptr noundef nonnull align 8 dereferenceable(8) %this, i32 noundef %should_call_delete)
-// X86: define weak dso_local x86_thiscallcc noundef ptr @"??_ETest@@UAEPAXI@Z"(ptr noundef nonnull align 4 dereferenceable(4) %this, i32 noundef %should_call_delete)
+// X64: define weak dso_local noundef ptr @"??_ETest@@UEAAPEAXI@Z"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %this, i32 noundef %should_call_delete)
+// X86: define weak dso_local x86_thiscallcc noundef ptr @"??_ETest@@UAEPAXI@Z"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %this, i32 noundef %should_call_delete)
 // CHECK: dtor.call_delete_after_array_destroy:
 // CHECK-NEXT:  call void @llvm.trap()
 // CHECK-NEXT:  unreachable
 // CHECK: dtor.scalar:
-// X64-NEXT: call void @"??1Test@@UEAA@XZ"(ptr noundef nonnull align 8 dereferenceable(8) %this1)
-// X86-NEXT: call x86_thiscallcc void @"??1Test@@UAE@XZ"(ptr noundef nonnull align 4 dereferenceable(4) %this1)
+// X64-NEXT: call void @"??1Test@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %this1)
+// X86-NEXT: call x86_thiscallcc void @"??1Test@@UAE@XZ"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %this1)
 // CHECK-NEXT: %6 = and i32 %should_call_delete2, 1
 // CHECK-NEXT: %7 = icmp eq i32 %6, 0
 // CHECK-NEXT: br i1 %7, label %dtor.continue, label %dtor.call_delete
