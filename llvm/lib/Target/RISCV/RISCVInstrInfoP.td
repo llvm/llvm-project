@@ -24,12 +24,12 @@ def SImm8UnsignedAsmOperand : SImmAsmOperand<8, "Unsigned"> {
   let RenderMethod = "addSImm8UnsignedOperands";
 }
 
-// (<2 x i16>, <2 x i16>) PPACK_DH (<4 x i8>, <4 x i8>, <4 x i8>, <4 x i8>)
-def SDT_RISCVPPackDH
+// (<2 x i16>, <2 x i16>) PPAIRE_DB (<4 x i8>, <4 x i8>, <4 x i8>, <4 x i8>)
+def SDT_RISCVPPairE_DB
     : SDTypeProfile<2, 4, [SDTCisVT<0, v2i16>, SDTCisSameAs<0, 1>,
                            SDTCisVT<2, v4i8>, SDTCisSameAs<0, 3>,
                            SDTCisSameAs<0, 4>, SDTCisSameAs<0, 5>]>;
-def riscv_ppack_dh : RVSDNode<"PPACK_DH", SDT_RISCVPPackDH>;
+def riscv_ppaire_db : RVSDNode<"PPAIRE_DB", SDT_RISCVPPairE_DB>;
 
 // A 8-bit signed immediate allowing range [-128, 255]
 // but represented as [-128, 127].
