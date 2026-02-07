@@ -651,10 +651,14 @@ bool ThreadList::WillResume(RunDirection &direction) {
 
           // Get the breakpoint address from the step-over-breakpoint plan
           ThreadPlan *current_plan = thread_sp->GetCurrentPlan();
-          ThreadPlanStepOverBreakpoint *bp_plan =
-              static_cast<ThreadPlanStepOverBreakpoint *>(current_plan);
-          lldb::addr_t bp_addr = bp_plan->GetBreakpointLoadAddress();
-          breakpoint_groups[bp_addr].push_back(thread_sp);
+          if (current_plan &&
+              current_plan->GetKind() ==
+                  ThreadPlan::eKindStepOverBreakpoint) {
+            ThreadPlanStepOverBreakpoint *bp_plan =
+                static_cast<ThreadPlanStepOverBreakpoint *>(current_plan);
+            lldb::addr_t bp_addr = bp_plan->GetBreakpointLoadAddress();
+            breakpoint_groups[bp_addr].push_back(thread_sp);
+          }
 
           thread_to_run = thread_sp;
           if (thread_sp->ShouldRunBeforePublicStop()) {
@@ -678,11 +682,15 @@ bool ThreadList::WillResume(RunDirection &direction) {
           // Register this thread as stepping over the breakpoint
           RegisterThreadSteppingOverBreakpoint(bp_addr, thread_sp->GetID());
 
-          // Set the plan to defer re-enabling (use callback instead)
+          // Set the plan to defer re-enabling (use callback instead).
           ThreadPlan *plan = thread_sp->GetCurrentPlan();
-          ThreadPlanStepOverBreakpoint *bp_plan =
-              static_cast<ThreadPlanStepOverBreakpoint *>(plan);
-          bp_plan->SetDeferReenableBreakpointSite(true);
+          // Verify the plan is actually a StepOverBreakpoint plan.
+          if (plan &&
+              plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
+            ThreadPlanStepOverBreakpoint *bp_plan =
+                static_cast<ThreadPlanStepOverBreakpoint *>(plan);
+            bp_plan->SetDeferReenableBreakpointSite(true);
+          }
         }
       }
       // Single thread at breakpoint - keeps default behavior (re-enable
