@@ -201,8 +201,8 @@ Changes in existing checks
 
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
-  positives on parameters used in template-dependent expressions, including
-  generic lambda parameters.
+  positives for pointer parameters in generic lambdas (C++20 lambdas with
+  explicit template parameters).
 
 Removed checks
 ^^^^^^^^^^^^^^
