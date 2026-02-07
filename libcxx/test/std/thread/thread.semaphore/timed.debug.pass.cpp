@@ -78,7 +78,7 @@ void test(auto log_start) {
 
 int main(int, char**) {
   auto const log_start = std::chrono::steady_clock::now();
-  for (auto i = 0; i < 10; ++i) {
+  for (auto i = 0; i < 20; ++i) {
     std::cerr << "=== Iteration " << i << " ===" << std::endl;
     test(log_start);
   }
