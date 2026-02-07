@@ -2729,42 +2729,6 @@ WebAssemblyTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   return DAG.getNode(WebAssemblyISD::SHUFFLE, DL, Op.getValueType(), Ops);
 }
 
-static SDValue emitShuffleReduceTree(SelectionDAG &DAG, const SDLoc &DL,
-                                     SDValue Vec, unsigned BaseOpc) {
-  EVT VecVT = Vec.getValueType();
-  assert(VecVT.isVector() && "expected vector");
-
-  auto foldInHalf = [&](ArrayRef<int> Mask) -> void {
-    SDValue Shuf = DAG.getVectorShuffle(VecVT, DL, Vec, Vec, Mask);
-    Vec = DAG.getNode(BaseOpc, DL, VecVT, Vec, Shuf);
-  };
-
-  if (VecVT == MVT::v16i8) {
-    foldInHalf({8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0});
-    foldInHalf({4, 5, 6, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
-    foldInHalf({2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
-    foldInHalf({1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
-    return Vec;
-  }
-  if (VecVT == MVT::v8i16) {
-    foldInHalf({4, 5, 6, 7, 0, 0, 0, 0});
-    foldInHalf({2, 3, 0, 0, 0, 0, 0, 0});
-    foldInHalf({1, 0, 0, 0, 0, 0, 0, 0});
-    return Vec;
-  }
-  if (VecVT == MVT::v4i32) {
-    foldInHalf({2, 3, 0, 0});
-    foldInHalf({1, 0, 0, 0});
-    return Vec;
-  }
-  if (VecVT == MVT::v2i64) {
-    foldInHalf({1, 0});
-    return Vec;
-  }
-
-  return SDValue();
-}
-
 SDValue WebAssemblyTargetLowering::LowerSETCC(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
