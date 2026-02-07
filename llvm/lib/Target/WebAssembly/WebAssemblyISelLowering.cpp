@@ -1749,7 +1749,7 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::VECREDUCE_OR:
   case ISD::VECREDUCE_AND:
-    return LowerVECREDUCE(Op, DAG);
+    return expandVecReduce(Op.getNode(), DAG);
   case ISD::SETCC:
     return LowerSETCC(Op, DAG);
   case ISD::SHL:
@@ -2763,34 +2763,6 @@ static SDValue emitShuffleReduceTree(SelectionDAG &DAG, const SDLoc &DL,
   }
 
   return SDValue();
-}
-
-SDValue WebAssemblyTargetLowering::LowerVECREDUCE(SDValue Op,
-                                                  SelectionDAG &DAG) const {
-  const SDLoc DL(Op);
-  // Only ISD::VECREDUCE_AND and ISD::VECREDUCE_OR are custom-lowered currently.
-  unsigned BaseOpc = ISD::getVecReduceBaseOpcode(Op.getOpcode());
-  if (BaseOpc != ISD::AND && BaseOpc != ISD::OR)
-    return SDValue();
-
-  if (!Subtarget->hasSIMD128())
-    return SDValue();
-
-  // Expand to a sequence of scalar operations when the vector is small.
-  SDValue Vec = Op.getOperand(0);
-  EVT VecVT = Vec.getValueType();
-  if (VecVT.getVectorNumElements() < 16)
-    return SDValue();
-
-  SDValue ReducedVec =
-      emitShuffleReduceTree(DAG, DL, Op.getOperand(0), BaseOpc);
-  if (!ReducedVec)
-    return SDValue();
-
-  // Extract lane 0 (the reduced value) and convert to the result type.
-  EVT EltVT = ReducedVec.getValueType().getVectorElementType();
-  SDValue Lane0 = DAG.getExtractVectorElt(DL, EltVT, ReducedVec, 0);
-  return DAG.getZExtOrTrunc(Lane0, DL, Op.getValueType());
 }
 
 SDValue WebAssemblyTargetLowering::LowerSETCC(SDValue Op,
