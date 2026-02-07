@@ -88,5 +88,10 @@ int main(int, char**)
     test(log_start);
   }
 
+#if defined(_WIN32)
   return 1;
+#else
+  return 0;
+#endif
+
 }
