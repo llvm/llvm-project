@@ -8112,10 +8112,11 @@ ExprResult Sema::BuildVectorLiteral(SourceLocation LParenLoc,
     // it will be replicated to all components of the vector.
     if (getLangOpts().OpenCL && VTy->getVectorKind() == VectorKind::Generic &&
         numExprs == 1) {
-      if (!exprs[0]->getType()->isArithmeticType()) {
+      QualType SrcTy = exprs[0]->getType();
+      if (!SrcTy->isArithmeticType()) {
         Diag(exprs[0]->getBeginLoc(), diag::err_typecheck_convert_incompatible)
-            << Ty << exprs[0]->getType() << AssignmentAction::Initializing << 0
-            << 0 << "" << exprs[0]->getSourceRange();
+            << Ty << SrcTy << AssignmentAction::Initializing << /*elidable=*/0
+            << /*c_style=*/0 << /*cast_kind=*/"" << exprs[0]->getSourceRange();
         return ExprError();
       }
       QualType ElemTy = VTy->getElementType();
