@@ -26,18 +26,10 @@ AST_MATCHER(CXXRecordDecl, hasTrivialMoveAssignment) {
   return Node.hasTrivialMoveAssignment();
 }
 
-AST_MATCHER(VarDecl, isMovableAndProfitable) {
-  const QualType NodeQual = Node.getType();
+AST_MATCHER(QualType, isScalarType) { return Node->isScalarType(); }
 
-  // Not profitable.
-  if (NodeQual->isScalarType())
-    return false;
-
-  // Not valid.
-  if (NodeQual->isLValueReferenceType() || NodeQual.isConstQualified())
-    return false;
-
-  return true;
+AST_MATCHER(QualType, isLValueReferenceType) {
+  return Node->isLValueReferenceType();
 }
 
 // Ignore nodes inside macros.
@@ -56,9 +48,14 @@ void UseStdMoveCheck::registerMatchers(MatchFinder *Finder) {
           hasArgument(
               0, hasType(cxxRecordDecl(hasMethod(isMoveAssignmentOperator()),
                                        unless(hasTrivialMoveAssignment())))),
-          hasArgument(1, declRefExpr(to(varDecl(hasLocalStorage(),
-                                                isMovableAndProfitable())))
-                             .bind("assign-value")),
+          hasArgument(
+              1, declRefExpr(to(varDecl(hasLocalStorage(),
+                                        hasType(qualType(unless(anyOf(
+                                            isScalarType(), // Not profitable.
+                                            isLValueReferenceType(),
+                                            isConstQualified() // Not valid.
+                                            )))))))
+                     .bind("assign-value")),
           hasAncestor(functionDecl().bind("within-func")), unless(isInMacro()))
           .bind("assign");
   Finder->addMatcher(AssignOperatorExpr, this);

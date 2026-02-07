@@ -3,6 +3,14 @@
 // Definitions used in the tests
 // -----------------------------
 
+namespace std {
+template<class T> struct remove_reference { typedef T type; };
+template<class T> struct remove_reference<T&> { typedef T type; };
+template<class T> struct remove_reference<T&&> { typedef T type; };
+template< class T >
+constexpr typename remove_reference<T>::type&& move( T&& t ) noexcept;
+}
+
 struct NonTrivialMoveAssign {
   NonTrivialMoveAssign() = default;
   NonTrivialMoveAssign(const NonTrivialMoveAssign&) = default;
@@ -44,6 +52,19 @@ void NonProfitableNonTrivialMoveAssignPointer(NonTrivialMoveAssign*& target, Non
 void ConvertibleNonTrivialMoveAssignFromLValue(NonTrivialMoveAssign& target, NonTrivialMoveAssign&& source) {
   // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-use-std-move]
   target = source;
+}
+
+// Check moving already moved values
+// ---------------------------------
+
+void NonConvertibleNonTrivialMoveAssignAlreadyMoved(NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  // No message expected, it's already moved
+  target = std::move(source);
+}
+
+void NonConvertibleNonTrivialMoveAssignFromLValueAlreadyMoved(NonTrivialMoveAssign& target, NonTrivialMoveAssign&& source) {
+  // No message expected, it's already moved
+  target = std::move(source);
 }
 
 // Check moving within different context
