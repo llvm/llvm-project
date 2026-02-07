@@ -3533,7 +3533,7 @@ Examples:
 - ``// cxx98-17-warning@#func-decl + {{target exception specification is not superset of source}}``
 - ``// expected-note@* 1 {{file entered}}``
 - ``// expected-note@decls.h:2 {{previous declaration is here}}``
-- ``// cxx11-17-error-re@-1 {{no matching constructor for initialization of 'A' (aka '(lambda at {{.+}})')}}`
+- ``// cxx11-17-error-re@-1 {{no matching constructor for initialization of 'A' (aka '(lambda at {{.+}})')}}``
 
 .. _custom-prefixes:
 
