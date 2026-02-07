@@ -237,6 +237,8 @@ Bug Fixes to C++ Support
 - Fixed a crash when a default argument is passed to an explicit object parameter. (#GH176639)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 
+- Fix initialization of GRO when GRO-return type mismatches, as part of CWG2563. (#GH98744)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
