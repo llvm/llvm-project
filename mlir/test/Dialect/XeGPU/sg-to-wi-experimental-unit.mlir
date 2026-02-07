@@ -3,7 +3,7 @@
 // RUN: --test-xegpu-sg-to-wi-distribute-experimental --split-input-file %s | FileCheck %s
 
 // RUN: mlir-opt --allow-unregistered-dialect \
-// RUN: --test-xegpu-sg-to-wi-distribute-experimental="enable-REWRITE-to-reductions" \
+// RUN: --test-xegpu-sg-to-wi-distribute-experimental="enable-rewrite-multi-reduction-to-reductions"  \
 // RUN: --split-input-file  %s | FileCheck --check-prefix=CHECK-REWRITE %s
 
 
