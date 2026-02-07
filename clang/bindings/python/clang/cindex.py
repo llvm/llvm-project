@@ -339,10 +339,9 @@ class SourceLocation(Structure):
         return bool(conf.lib.clang_Location_isInSystemHeader(self))
 
     def __eq__(self, other: object) -> bool:
-        if isinstance(other, SourceLocation):
-            return bool(conf.lib.clang_equalLocations(self, other))
-        else:
+        if not isinstance(other, SourceLocation):
             return NotImplemented
+        return bool(conf.lib.clang_equalLocations(self, other))
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
@@ -400,10 +399,9 @@ class SourceRange(Structure):
         return conf.lib.clang_getRangeEnd(self)  # type: ignore [no-any-return]
 
     def __eq__(self, other: object) -> bool:
-        if isinstance(other, SourceRange):
-            return bool(conf.lib.clang_equalRanges(self, other))
-        else:
+        if not isinstance(other, SourceRange):
             return NotImplemented
+        return bool(conf.lib.clang_equalRanges(self, other))
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
