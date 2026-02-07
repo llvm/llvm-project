@@ -281,14 +281,10 @@ static bool isInInlineFunction(const DeclContext *DC) {
 //    Yeah, I think the only cases left where lambdas don't need a
 //    mangling are when they have (effectively) internal linkage or
 //    appear in a non-inline function in a non-module translation unit.
-static bool isNonInlineInModulePurview(const NamedDecl *ND) {
-  return (ND->isInNamedModule() || ND->isFromGlobalModule()) &&
-         ND->isExternallyVisible();
-}
-
-static bool isNonInlineInModulePurview(const DeclContext *DC) {
-  if (auto *ND = dyn_cast<NamedDecl>(DC))
-    return isNonInlineInModulePurview(ND);
+static bool isNonInlineInModulePurview(const Decl *D) {
+  if (auto *ND = dyn_cast<NamedDecl>(D))
+    return (ND->isInNamedModule() || ND->isFromGlobalModule()) &&
+           ND->isExternallyVisible();
   return false;
 }
 
@@ -305,17 +301,27 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     InlineVariable,
     TemplatedVariable,
     Concept,
+    NonInlineInModulePurview,
   } Kind = Normal;
 
   bool IsInNonspecializedTemplate =
       inTemplateInstantiation() || CurContext->isDependentContext();
+
+  const auto NormalOrNonInlineInModulePurview = [&]() {
+    if (isNonInlineInModulePurview(cast<Decl>(DC))) {
+      ManglingContextDecl = const_cast<Decl *>(cast<Decl>(DC));
+      return NonInlineInModulePurview;
+    }
+
+    return Normal;
+  };
 
   // Default arguments of member function parameters that appear in a class
   // definition, as well as the initializers of data members, receive special
   // treatment. Identify them.
   Kind = [&]() {
     if (!ManglingContextDecl)
-      return Normal;
+      return NormalOrNonInlineInModulePurview();
 
     if (ParmVarDecl *Param = dyn_cast<ParmVarDecl>(ManglingContextDecl)) {
       if (const DeclContext *LexicalDC
@@ -324,9 +330,6 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
           return DefaultArgument;
     } else if (VarDecl *Var = dyn_cast<VarDecl>(ManglingContextDecl)) {
       if (Var->getMostRecentDecl()->isInline())
-        return InlineVariable;
-
-      if (isNonInlineInModulePurview(Var))
         return InlineVariable;
 
       if (Var->getDeclContext()->isRecord() && IsInNonspecializedTemplate)
@@ -339,13 +342,16 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
         if (!VTS->isExplicitSpecialization())
           return TemplatedVariable;
       }
+
+      if (isNonInlineInModulePurview(Var))
+        return NonInlineInModulePurview;
     } else if (isa<FieldDecl>(ManglingContextDecl)) {
       return DataMember;
     } else if (isa<ImplicitConceptSpecializationDecl>(ManglingContextDecl)) {
       return Concept;
     }
 
-    return Normal;
+    return NormalOrNonInlineInModulePurview();
   }();
 
   // Itanium ABI [5.1.7]:
@@ -353,23 +359,19 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   //   types in different translation units to "correspond":
   switch (Kind) {
   case Normal: {
-    if (!isNonInlineInModulePurview(CurContext)) {
-      //  -- the bodies of inline or templated functions
-      if ((IsInNonspecializedTemplate &&
-           !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
-          isInInlineFunction(CurContext)) {
-        while (auto *CD = dyn_cast<CapturedDecl>(DC))
-          DC = CD->getParent();
-        return std::make_tuple(&Context.getManglingNumberContext(DC), nullptr);
-      }
-
-      return std::make_tuple(nullptr, nullptr);
+    //  -- the bodies of inline or templated functions
+    if ((IsInNonspecializedTemplate &&
+         !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
+        isInInlineFunction(CurContext)) {
+      while (auto *CD = dyn_cast<CapturedDecl>(DC))
+        DC = CD->getParent();
+      return std::make_tuple(&Context.getManglingNumberContext(DC), nullptr);
     }
 
-    ManglingContextDecl = const_cast<Decl *>(cast<Decl>(DC));
-    [[fallthrough]];
+    return std::make_tuple(nullptr, nullptr);
   }
 
+  case NonInlineInModulePurview:
   case Concept:
     // Concept definitions aren't code generated and thus aren't mangled,
     // however the ManglingContextDecl is important for the purposes of
