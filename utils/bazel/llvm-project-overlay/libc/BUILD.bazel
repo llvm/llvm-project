@@ -1417,6 +1417,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_f16sqrt",
+    hdrs = ["src/__support/math/f16sqrt.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_f16sqrtl",
     hdrs = ["src/__support/math/f16sqrtl.h"],
     deps = [
@@ -2328,6 +2339,7 @@ libc_support_library(
     name = "__support_math_acosh_float_constants",
     hdrs = ["src/__support/math/acosh_float_constants.h"],
     deps = [
+        ":__support_macros_attributes",
         ":__support_macros_config",
     ],
 )
@@ -2820,6 +2832,7 @@ libc_support_library(
     name = "__support_math_exp_float_constants",
     hdrs = ["src/__support/math/exp_float_constants.h"],
     deps = [
+        ":__support_macros_attributes",
         ":__support_macros_config",
     ],
 )
@@ -2898,6 +2911,29 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_f16fmaf",
+    hdrs = ["src/__support/math/f16fmaf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_f16fmaf128",
+    hdrs = ["src/__support/math/f16fmaf128.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_f16fmal",
     hdrs = ["src/__support/math/f16fmal.h"],
     deps = [
@@ -2942,6 +2978,14 @@ libc_support_library(
         ":__support_common",
         ":__support_fputil_sqrt",
         ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_fsqrtl",
+    hdrs = ["src/__support/math/fsqrtl.h"],
+    deps = [
+        ":__support_fputil_sqrt",
     ],
 )
 
@@ -3019,6 +3063,16 @@ libc_support_library(
     deps = [
         ":__support_fputil_manipulation_functions",
         ":__support_macros_properties_types",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llogbf128",
+    hdrs = ["src/__support/math/llogbf128.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
         ":llvm_libc_types_float128",
     ],
 )
@@ -3448,6 +3502,27 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_logf16",
+    hdrs = ["src/__support/math/logf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_cast",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_math_expxf16_utils",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_range_reduction_double",
     hdrs = [
         "src/__support/math/range_reduction_double_common.h",
@@ -3508,6 +3583,25 @@ libc_support_library(
         ":__support_fputil_fp_bits",
         ":__support_fputil_polyeval",
         ":__support_range_reduction",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_sincosf",
+    hdrs = ["src/__support/math/sincosf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fma",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_range_reduction",
+        ":__support_sincosf_utils",
     ],
 )
 
@@ -3589,6 +3683,22 @@ libc_support_library(
     deps = [
         ":__support_fputil_multiply_add",
         ":__support_math_exp10f_utils",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_sqrt",
+    hdrs = ["src/__support/math/sqrt.h"],
+    deps = [
+        ":__support_fputil_sqrt",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_sqrtf",
+    hdrs = ["src/__support/math/sqrtf.h"],
+    deps = [
+        ":__support_fputil_sqrt",
     ],
 )
 
@@ -4353,14 +4463,14 @@ libc_math_function(
 libc_math_function(
     name = "f16fmaf",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_f16fmaf",
     ],
 )
 
 libc_math_function(
     name = "f16fmaf128",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_f16fmaf128",
     ],
 )
 
@@ -4382,7 +4492,7 @@ libc_math_function(name = "f16mull")
 libc_math_function(
     name = "f16sqrt",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_f16sqrt",
     ],
 )
 
@@ -4709,7 +4819,7 @@ libc_math_function(
 libc_math_function(
     name = "fsqrtl",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_fsqrtl",
     ],
 )
 
@@ -4827,7 +4937,12 @@ libc_math_function(
 
 libc_math_function(name = "llogbl")
 
-libc_math_function(name = "llogbf128")
+libc_math_function(
+    name = "llogbf128",
+    additional_deps = [
+        ":__support_math_llogbf128",
+    ],
+)
 
 libc_math_function(
     name = "llogbf16",
@@ -4871,7 +4986,7 @@ libc_math_function(
 libc_math_function(
     name = "logf16",
     additional_deps = [
-        ":__support_math_expxf16_utils",
+        ":__support_math_logf16",
     ],
 )
 
@@ -5253,12 +5368,7 @@ libc_math_function(
 libc_math_function(
     name = "sincosf",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_rounding_mode",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
-        ":__support_sincosf_utils",
+        ":__support_math_sincosf",
     ],
 )
 
@@ -5295,14 +5405,14 @@ libc_math_function(
 libc_math_function(
     name = "sqrt",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_sqrt",
     ],
 )
 
 libc_math_function(
     name = "sqrtf",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_sqrtf",
     ],
 )
 

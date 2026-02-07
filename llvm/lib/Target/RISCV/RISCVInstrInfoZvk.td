@@ -693,8 +693,27 @@ foreach vtiToWti = AllWidenableIntVectors in {
                  (wti.Vector (IMPLICIT_DEF)),
                  vti.RegClass:$rs2, uimm5:$rs1,
                  vti.AVL, vti.Log2SEW, TA_MA)>;
+
+    // Patterns where the LHS is an any_extend.
+    // TODO: vv pattern when we have a test.
+    def : Pat<(shl (wti.Vector (anyext_oneuse (vti.Vector vti.RegClass:$rs2))),
+                   (wti.Vector (Low8BitsSplatPat (XLenVT GPR:$rs1)))),
+              (!cast<Instruction>("PseudoVWSLL_VX_"#vti.LMul.MX)
+                 (wti.Vector (IMPLICIT_DEF)),
+                 vti.RegClass:$rs2, GPR:$rs1,
+                 vti.AVL, vti.Log2SEW, TA_MA)>;
+
+    def : Pat<(shl (wti.Vector (anyext_oneuse (vti.Vector vti.RegClass:$rs2))),
+                   (wti.Vector (SplatPat_uimm5 uimm5:$rs1))),
+              (!cast<Instruction>("PseudoVWSLL_VI_"#vti.LMul.MX)
+                 (wti.Vector (IMPLICIT_DEF)),
+                 vti.RegClass:$rs2, uimm5:$rs1,
+                 vti.AVL, vti.Log2SEW, TA_MA)>;
   }
 }
+
+defm : VPatBinarySDNode_VV_VX<clmul, "PseudoVCLMUL", I64IntegerVectors, ExtraPreds=[HasStdExtZvbc]>;
+defm : VPatBinarySDNode_VV_VX<clmulh, "PseudoVCLMULH", I64IntegerVectors, ExtraPreds=[HasStdExtZvbc]>;
 
 //===----------------------------------------------------------------------===//
 // VL patterns
