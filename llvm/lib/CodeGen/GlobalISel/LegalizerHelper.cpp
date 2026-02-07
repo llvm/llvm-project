@@ -8724,7 +8724,6 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPOWI(MachineInstr &MI) {
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerFMODF(MachineInstr &MI) {
   auto [DstFrac, DstInt, Src] = MI.getFirst3Regs();
   LLT Ty = MRI.getType(Src);
-  LLT CmpTy = Ty.changeElementSize(1);
   auto Flags = MI.getFlags();
 
   auto IntPart = MIRBuilder.buildIntrinsicTrunc(Ty, Src, Flags);
@@ -8737,16 +8736,16 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFMODF(MachineInstr &MI) {
     auto Abs = MIRBuilder.buildFAbs(Ty, Src, Flags);
     const fltSemantics &Semantics = getFltSemanticForLLT(Ty.getScalarType());
     auto Inf = MIRBuilder.buildFConstant(Ty, APFloat::getInf(Semantics));
-    auto IsInf = MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ, CmpTy, Abs, Inf);
+    auto IsInf = MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ,
+                                      Ty.changeElementSize(1), Abs, Inf);
     auto Zero = MIRBuilder.buildFConstant(Ty, 0.0);
     auto Select = MIRBuilder.buildSelect(Ty, IsInf, Zero, FracPart);
     FracToUse = Select.getReg(0);
   }
 
-  auto Copysign = MIRBuilder.buildFCopysign(DstFrac, FracToUse, Src);
-  Copysign->setFlags(Flags);
-
+  MIRBuilder.buildFCopysign(DstFrac, FracToUse, Src, Flags);
   MIRBuilder.buildCopy(DstInt, IntPart.getReg(0));
+
   MI.eraseFromParent();
   return Legalized;
 }
