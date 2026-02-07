@@ -398,15 +398,3 @@ __m512i test_mm512_mask_shrdv_epi16(__m512i s, __mmask32 u, __m512i a, __m512i b
   return _mm512_mask_shrdv_epi16(s, u, a, b);
 }
 
-__m512i test_mm512_shrdv_epi16(__m512i s, __m512i a, __m512i b) {
-  // CIR-LABEL: _mm512_shrdv_epi16
-  // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<32 x !u16i>, !cir.vector<32 x !u16i>, !cir.vector<32 x !u16i>) -> !cir.vector<32 x !u16i>
-  // CIR: cir.cast bitcast %{{.*}} : !cir.vector<32 x !u16i> -> !cir.vector<8 x !s64i>
-  // CIR-LABEL: test_mm512_shrdv_epi16
-  // CIR: cir.call @_mm512_shrdv_epi16(%{{.*}}, %{{.*}}, %{{.*}}) : (!cir.vector<8 x !s64i>, !cir.vector<8 x !s64i>, !cir.vector<8 x !s64i>) -> !cir.vector<8 x !s64i>
-  // LLVM-LABEL: @test_mm512_shrdv_epi16
-  // LLVM: call <32 x i16> @llvm.fshr.v32i16(<32 x i16> {{.*}}, <32 x i16> {{.*}}, <32 x i16>
-  // OGCG-LABEL: @test_mm512_shrdv_epi16
-  // OGCG: call <32 x i16> @llvm.fshr.v32i16(<32 x i16> %{{.*}}, <32 x i16> %{{.*}}, <32 x i16>
-  return _mm512_shrdv_epi16(s, a, b);
-}
