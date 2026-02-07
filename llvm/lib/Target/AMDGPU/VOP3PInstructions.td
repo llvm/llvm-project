@@ -213,12 +213,11 @@ multiclass MadFmaMixFP32Pats<SDPatternOperator fma_like,
     (mix_inst $src0_mods, $src0, (i32 8), (i32 OneImm), $src1_mods, $src1,
               DSTCLAMP.NONE)>;
 
-  // (fmul x, y) -> (fma x, y, 0.0)
-  // FIXME: This is only valid with nsz.
+  // (fmul x, y) -> (fma x, y, -0.0)
   def : GCNPat <
     (f32 (fmul (f32 (VOP3PMadMixModsExtPat VT:$src0, i32:$src0_mods)),
                (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_mods)))),
-    (mix_inst $src0_mods, $src0, $src1_mods, $src1, (i32 0), (i32 0),
+    (mix_inst $src0_mods, $src0, $src1_mods, $src1, (i32 SRCMODS.NEG), (i32 0),
               DSTCLAMP.NONE)>;
 
   // (fsub x, y) -> (fma y, -1.0, x)
