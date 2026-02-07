@@ -16,11 +16,14 @@
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblyMachineFunctionInfo.h"
+#include "WebAssemblyRegisterInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Value.h"
@@ -112,11 +115,12 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
   MachineRegisterInfo &MRI = MF.getRegInfo();
   WebAssemblyFunctionInfo *MFI = MF.getInfo<WebAssemblyFunctionInfo>();
   const DataLayout &DL = F.getDataLayout();
-  auto &TLI = *getTLI<WebAssemblyTargetLowering>();
-  auto &Subtarget = MF.getSubtarget<WebAssemblySubtarget>();
-  auto &TRI = *Subtarget.getRegisterInfo();
-  auto &TII = *Subtarget.getInstrInfo();
-  auto &RBI = *Subtarget.getRegBankInfo();
+  const WebAssemblyTargetLowering &TLI = *getTLI<WebAssemblyTargetLowering>();
+  const WebAssemblySubtarget &Subtarget =
+      MF.getSubtarget<WebAssemblySubtarget>();
+  const WebAssemblyRegisterInfo &TRI = *Subtarget.getRegisterInfo();
+  const WebAssemblyInstrInfo &TII = *Subtarget.getInstrInfo();
+  const RegisterBankInfo &RBI = *Subtarget.getRegBankInfo();
 
   LLVMContext &Ctx = MIRBuilder.getContext();
   const CallingConv::ID CallConv = F.getCallingConv();
@@ -137,7 +141,7 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
   unsigned ArgIdx = 0;
   bool HasSwiftErrorArg = false;
   bool HasSwiftSelfArg = false;
-  for (const auto &Arg : F.args()) {
+  for (const Argument &Arg : F.args()) {
     ArgInfo OrigArg{VRegs[ArgIdx], Arg.getType(), ArgIdx};
     setArgFlags(OrigArg, ArgIdx + AttributeList::FirstArgIndex, DL, F);
 
@@ -154,7 +158,7 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
   }
 
   unsigned FinalArgIdx = 0;
-  for (auto &Arg : SplitArgs) {
+  for (ArgInfo &Arg : SplitArgs) {
     EVT OrigVT = TLI.getValueType(DL, Arg.Ty);
     MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
     LLT OrigLLT = getLLTForType(*Arg.Ty, DL);
@@ -196,9 +200,10 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
     }
 
     for (unsigned Part = 0; Part < NumParts; ++Part) {
-      auto ArgInst = MIRBuilder.buildInstr(getWASMArgumentOpcode(NewVT))
-                         .addDef(Arg.Regs[Part])
-                         .addImm(FinalArgIdx);
+      MachineInstrBuilder ArgInst =
+          MIRBuilder.buildInstr(getWASMArgumentOpcode(NewVT))
+              .addDef(Arg.Regs[Part])
+              .addImm(FinalArgIdx);
 
       constrainOperandRegClass(MF, TRI, MRI, TII, RBI, *ArgInst,
                                ArgInst->getDesc(), ArgInst->getOperand(0), 0);
@@ -216,7 +221,7 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
   // if there aren't. These additional arguments are also added for callee
   // signature They are necessary to match callee and caller signature for
   // indirect call.
-  auto PtrVT = TLI.getPointerTy(DL);
+  MVT PtrVT = TLI.getPointerTy(DL);
   if (CallConv == CallingConv::Swift) {
     if (!HasSwiftSelfArg) {
       MFI->addParam(PtrVT);
@@ -229,15 +234,16 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
   // Varargs are copied into a buffer allocated by the caller, and a pointer to
   // the buffer is passed as an argument.
   if (F.isVarArg()) {
-    auto PtrVT = TLI.getPointerTy(DL, 0);
-    auto PtrLLT = LLT::pointer(0, DL.getPointerSizeInBits(0));
+    MVT PtrVT = TLI.getPointerTy(DL, 0);
+    LLT PtrLLT = LLT::pointer(0, DL.getPointerSizeInBits(0));
     Register VarargVreg = MF.getRegInfo().createGenericVirtualRegister(PtrLLT);
 
     MFI->setVarargBufferVreg(VarargVreg);
 
-    auto ArgInst = MIRBuilder.buildInstr(getWASMArgumentOpcode(PtrVT))
-                       .addDef(VarargVreg)
-                       .addImm(FinalArgIdx);
+    MachineInstrBuilder ArgInst =
+        MIRBuilder.buildInstr(getWASMArgumentOpcode(PtrVT))
+            .addDef(VarargVreg)
+            .addImm(FinalArgIdx);
 
     constrainOperandRegClass(MF, TRI, MRI, TII, RBI, *ArgInst,
                              ArgInst->getDesc(), ArgInst->getOperand(0), 0);
