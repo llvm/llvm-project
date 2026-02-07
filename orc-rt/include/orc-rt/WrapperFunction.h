@@ -34,7 +34,7 @@ public:
   /// Create a WrapperFunctionBuffer from a WrapperFunctionBuffer. This
   /// instance takes ownership of the result object and will automatically
   /// call dispose on the result upon destruction.
-  WrapperFunctionBuffer(orc_rt_WrapperFunctionBuffer B) : B(B) {}
+  explicit WrapperFunctionBuffer(orc_rt_WrapperFunctionBuffer B) : B(B) {}
 
   WrapperFunctionBuffer(const WrapperFunctionBuffer &) = delete;
   WrapperFunctionBuffer &operator=(const WrapperFunctionBuffer &) = delete;
@@ -78,22 +78,25 @@ public:
   /// Create a WrapperFunctionBuffer with the given size and return a pointer
   /// to the underlying memory.
   static WrapperFunctionBuffer allocate(size_t Size) {
-    return orc_rt_WrapperFunctionBufferAllocate(Size);
+    return WrapperFunctionBuffer(orc_rt_WrapperFunctionBufferAllocate(Size));
   }
 
   /// Copy from the given char range.
   static WrapperFunctionBuffer copyFrom(const char *Source, size_t Size) {
-    return orc_rt_CreateWrapperFunctionBufferFromRange(Source, Size);
+    return WrapperFunctionBuffer(
+        orc_rt_CreateWrapperFunctionBufferFromRange(Source, Size));
   }
 
   /// Copy from the given null-terminated string (includes the null-terminator).
   static WrapperFunctionBuffer copyFrom(const char *Source) {
-    return orc_rt_CreateWrapperFunctionBufferFromString(Source);
+    return WrapperFunctionBuffer(
+        orc_rt_CreateWrapperFunctionBufferFromString(Source));
   }
 
   /// Create an out-of-band error by copying the given string.
   static WrapperFunctionBuffer createOutOfBandError(const char *Msg) {
-    return orc_rt_CreateWrapperFunctionBufferFromOutOfBandError(Msg);
+    return WrapperFunctionBuffer(
+        orc_rt_CreateWrapperFunctionBufferFromOutOfBandError(Msg));
   }
 
   /// If this value is an out-of-band error then this returns the error message,

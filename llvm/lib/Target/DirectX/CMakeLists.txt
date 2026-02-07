@@ -26,6 +26,7 @@ add_llvm_target(DirectXCodeGen
   DXILForwardHandleAccesses.cpp
   DXILFlattenArrays.cpp
   DXILIntrinsicExpansion.cpp
+  DXILMemIntrinsics.cpp
   DXILOpBuilder.cpp
   DXILOpLowering.cpp
   DXILPostOptimizationValidation.cpp
@@ -37,7 +38,7 @@ add_llvm_target(DirectXCodeGen
   DXILTranslateMetadata.cpp
   DXILRootSignature.cpp
   DXILLegalizePass.cpp
-  
+
   LINK_COMPONENTS
   Analysis
   AsmPrinter

@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
 
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++11 -Wc++98-compat %s
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety %s
@@ -1847,7 +1847,52 @@ struct TestScopedLockable {
     a = b + 1;
     b = a + 1;
   }
+
+#if __cplusplus >= 202002L
+  void rangeForLoopInitializer() {
+    for (MutexLock lock{&mu1}; int& x : (int[]){1, 2, 3}) {
+      a = 42;
+    }
+  }
+#endif
 };
+
+namespace test_function_param_lock_unlock {
+class A {
+ public:
+  A() EXCLUSIVE_LOCK_FUNCTION(mu_) { mu_.Lock(); }
+  ~A() UNLOCK_FUNCTION(mu_) { mu_.Unlock(); }
+ private:
+  Mutex mu_;
+};
+int do_something(A a) { return 0; }
+
+// Unlock in dtor without lock in ctor.
+// FIXME: We cannot detect that we are releasing a lock that was never held!
+class B {
+ public:
+  B() {}
+  B(int) {}
+  ~B() UNLOCK_FUNCTION(mu_) { mu_.Unlock(); }
+ private:
+  Mutex mu_;
+};
+int do_something(B b) { return 0; }
+
+class SCOPED_LOCKABLE MutexWrapper {
+public:
+  MutexWrapper(Mutex *mu) : mu_(mu) {}
+  ~MutexWrapper() UNLOCK_FUNCTION(mu_) { mu_->Unlock(); }
+  void Lock() EXCLUSIVE_LOCK_FUNCTION(mu_) { mu_->Lock(); }
+
+  Mutex *mu_;
+};
+// FIXME: This is a false-positive as the lock is released by the dtor.
+void do_something(MutexWrapper mw) {
+  mw.Lock(); // expected-note {{mutex acquired here}}
+}            // expected-warning {{mutex 'mw.mu_' is still held at the end of function}}
+
+} // namespace test_function_param_lock_unlock
 
 } // end namespace test_scoped_lockable
 
@@ -7288,6 +7333,15 @@ void testBasicPointerAlias(Foo *f) {
   ptr->mu.Unlock();       // unlock through alias
 }
 
+void testCastPointerAlias(Foo *f) {
+  // Cast to void* from unsigned long to test non-pointer cast indirection.
+  void *priv = (void *)(__UINTPTR_TYPE__)(&f->mu);
+  f->mu.Lock();
+  f->data = 42;
+  auto *mu = (Mutex *)priv;
+  mu->Unlock();
+}
+
 void testBasicPointerAliasNoInit(Foo *f) {
   Foo *ptr;
 
@@ -7442,6 +7496,27 @@ void testReassignment() {
   f1.data = 42;           // expected-warning{{writing variable 'data' requires holding mutex 'f1.mu'}} \
                           // expected-note{{found near match 'f2.mu'}}
   ptr->mu.Unlock();
+}
+
+// Alias reassignment through pointer-to-pointer (nor ptr-to-ptr-to-ptr...) does
+// not invalidate aliases for now.
+//
+// While this may result in either false positives or negatives, there's rarely
+// a good reason not to just do direct assignment within the same scope. For the
+// time being, we retain this as a deliberate "escape hatch": specifically, this
+// may be used to help the alias analysis to "see through" complex helper macros
+// that e.g. read a value (such as a pointer) via inline assembly or other
+// opaque helpers.
+void testReassignmentPointerToAlias(Foo *f) {
+  Mutex *mu = &f->mu;
+  // Escape hatch.
+  Mutex **mu_p = &mu;
+  Mutex *actual_mu = [&] { /* ... */ return mu; }();
+  *mu_p = actual_mu;
+
+  mu->Lock();
+  f->data = 42;
+  mu->Unlock();
 }
 
 // Nested field access through pointer

@@ -75,6 +75,14 @@ libc_test(
 )
 
 libc_test(
+    name = "getpagesize_test",
+    srcs = ["getpagesize_test.cpp"],
+    deps = [
+        "//libc:getpagesize",
+    ],
+)
+
+libc_test(
     name = "pread_pwrite_test",
     srcs = ["pread_pwrite_test.cpp"],
     deps = [

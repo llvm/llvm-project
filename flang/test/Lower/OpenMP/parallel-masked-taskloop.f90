@@ -3,7 +3,7 @@
 ! RUN: bbc -emit-hlfir -fopenmp -fopenmp-version=50 -o - %s 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 -o - %s 2>&1 | FileCheck %s
 
-! CHECK-LABEL:  omp.private {type = private} 
+! CHECK-LABEL:  omp.private {type = private}
 ! CHECK-SAME:        @[[I_PRIVATE:.*]] : i32
 ! CHECK-LABEL:    func.func @_QPtest_parallel_master_taskloop() {
 ! CHECK:          %[[VAL0:.*]] = fir.dummy_scope : !fir.dscope
@@ -44,5 +44,5 @@ subroutine test_parallel_master_taskloop
   do i=1,10
    j = j + 1
   end do
-  !$omp end parallel masked taskloop 
+  !$omp end parallel masked taskloop
 end subroutine

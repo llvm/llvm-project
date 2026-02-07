@@ -16,11 +16,10 @@ void test_reserved_placement_new(void *p) {
   new (p) A();
 }
 
-// CIR-LABEL:   cir.func dso_local @_Z27test_reserved_placement_newPv(
+// CIR-LABEL:   cir.func {{.*}} @_Z27test_reserved_placement_newPv(
 // CIR-SAME:                                   %[[ARG0:.*]]: !cir.ptr<!void>
 // CIR:           %[[P:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["p", init]
 // CIR:           cir.store %[[ARG0]], %[[P]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
-// CIR:           %[[SIZE:.*]] = cir.const #cir.int<1> : !u64i
 // CIR:           %[[PTR:.*]] = cir.load{{.*}} %[[P]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:           %[[PTR_A:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!void> -> !cir.ptr<!rec_A>
 // CIR:           cir.call @_ZN1AC1Ev(%[[PTR_A]]) : (!cir.ptr<!rec_A>) -> ()

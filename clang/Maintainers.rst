@@ -42,9 +42,6 @@ AST Visitors
 
 Clang LLVM IR generation
 ~~~~~~~~~~~~~~~~~~~~~~~~
-| John McCall
-| rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)
-
 | Eli Friedman
 | efriedma\@qti.qualcomm.com (email), efriedma (Phabricator), efriedma-quic (GitHub)
 
@@ -64,9 +61,6 @@ Clang MLIR generation
 
 Analysis & CFG
 ~~~~~~~~~~~~~~
-| Dmitri Gribenko
-| gribozavr\@gmail.com (email), gribozavr (Phabricator), gribozavr (GitHub)
-
 | Yitzhak Mandelbaum
 | yitzhakm\@google.com (email), ymandel (Phabricator), ymand (GitHub)
 
@@ -113,6 +107,12 @@ Templates
 | ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
 
 
+Concepts
+~~~~~~~~
+| Corentin Jabot
+| corentin.jabot\@gmail.com (email), cor3ntin (Phabricator), cor3ntin (GitHub)
+
+
 Lambdas
 ~~~~~~~
 | Corentin Jabot
@@ -140,13 +140,17 @@ Exception handling
 Clang static analyzer
 ~~~~~~~~~~~~~~~~~~~~~
 | Artem Dergachev
-| adergachev\@apple.com (email), NoQ (Phabricator), haoNoQ (GitHub)
+| artem.dergachev\@gmail.com (email), NoQ (Phabricator), haoNoQ (GitHub)
 
 | Gábor Horváth
 | xazax.hun\@gmail.com (email), xazax.hun (Phabricator), Xazax-hun (GitHub)
 
 | Balázs Benics
 | benicsbalazs\@gmail.com (email), steakhal (Phabricator), steakhal (GitHub)
+
+| Donát Nagy
+| donat.nagy\@ericsson.com (email), NagyDonat (GitHub), DonatNagyE (Discourse)
+
 
 Compiler options
 ~~~~~~~~~~~~~~~~
@@ -172,6 +176,9 @@ Offloading driver
 ~~~~~~~~~~~~~~~~~
 | Joseph Huber
 | joseph.huber\@amd.com (email), jhuber6 (GitHub)
+
+| Nick Sarnie
+| nick.sarnie\@intel.com (email), sarnex (GitHub)
 
 
 Driver parts not covered by someone else
@@ -199,6 +206,21 @@ Function Effect Analysis
 
 | Sirraide
 | aeternalmail\@gmail.com (email), Sirraide (GitHub), Ætérnal (Discord), Sirraide (Discourse)
+
+
+Code Coverage
+~~~~~~~~~~~~~
+| Takumi Nakamura
+| geek4civic\@gmail.com (email), chapuni(GitHub), chapuni (Discord), chapuni (Discourse)
+
+| Alan Phipps
+| a-phipps\@ti.com (email), evodius96 (GitHub), evodius96 (Discourse)
+
+
+Python Bindings
+~~~~~~~~~~~~~~~
+| Vlad Serebrennikov
+| serebrennikov.vladislav\@gmail.com (email), Endilll (GitHub), Endill (Discord), Endill (Discourse)
 
 
 Tools
@@ -246,8 +268,8 @@ compiler.
 
 Attributes
 ~~~~~~~~~~
-| Erich Keane
-| ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
+| Aaron Ballman
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
 
 Plugins
@@ -264,9 +286,6 @@ Inline assembly
 
 Text encodings
 ~~~~~~~~~~~~~~
-| Tom Honermann
-| tom\@honermann.net (email), tahonermann (Phabricator), tahonermann (GitHub)
-
 | Corentin Jabot
 | corentin.jabot\@gmail.com (email), cor3ntin (Phabricator), cor3ntin (GitHub)
 
@@ -385,3 +404,6 @@ Inactive component maintainers
 | Chandler Carruth (chandlerc\@gmail.com, chandlerc\@google.com) -- CMake, library layering
 | Devin Coughlin (dcoughlin\@apple.com) -- Clang static analyzer
 | Manuel Klimek (klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)) -- Tooling, AST matchers
+| Dmitri Gribenko (gribozavr\@gmail.com (email), gribozavr (Phabricator), gribozavr (GitHub)) -- Analysis & CFG
+| Tom Honermann (tom\@honermann.net (email), tahonermann (Phabricator), tahonermann (GitHub)) -- Text Encodings
+| John McCall (rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)) -- Clang LLVM IR generation

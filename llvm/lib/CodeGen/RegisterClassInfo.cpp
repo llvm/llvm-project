@@ -145,12 +145,7 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
   // FIXME: Once targets reserve registers instead of removing them from the
   // allocation order, we can simply use begin/end here.
   ArrayRef<MCPhysReg> RawOrder = RC->getRawAllocationOrder(*MF, Reverse);
-  std::vector<MCPhysReg> ReverseOrder;
-  if (Reverse) {
-    llvm::append_range(ReverseOrder, reverse(RawOrder));
-    RawOrder = ArrayRef<MCPhysReg>(ReverseOrder);
-  }
-  for (unsigned PhysReg : RawOrder) {
+  for (unsigned PhysReg : reverse_conditionally(RawOrder, Reverse)) {
     // Remove reserved registers from the allocation order.
     if (Reserved.test(PhysReg))
       continue;

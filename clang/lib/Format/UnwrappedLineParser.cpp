@@ -2395,17 +2395,17 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
   const FormatToken *LeftSquare = FormatTok;
   nextToken();
   if (Previous) {
+    const auto *PrevPrev = Previous->getPreviousNonComment();
+    if (Previous->is(tok::star) && PrevPrev && PrevPrev->isTypeName(LangOpts))
+      return false;
     if (Previous->closesScope()) {
       // Not a potential C-style cast.
       if (Previous->isNot(tok::r_paren))
         return false;
-      const auto *BeforeRParen = Previous->getPreviousNonComment();
       // Lambdas can be cast to function types only, e.g. `std::function<int()>`
       // and `int (*)()`.
-      if (!BeforeRParen || BeforeRParen->isNoneOf(tok::greater, tok::r_paren))
+      if (!PrevPrev || PrevPrev->isNoneOf(tok::greater, tok::r_paren))
         return false;
-    } else if (Previous->is(tok::star)) {
-      Previous = Previous->getPreviousNonComment();
     }
     if (Previous && Previous->Tok.getIdentifierInfo() &&
         Previous->isNoneOf(tok::kw_return, tok::kw_co_await, tok::kw_co_yield,
@@ -2618,10 +2618,9 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType,
       nextToken();
       if (Prev) {
         auto OptionalParens = [&] {
-          if (MightBeStmtExpr || MightBeFoldExpr || SeenComma || InMacroCall ||
-              Line->InMacroBody ||
-              Style.RemoveParentheses == FormatStyle::RPS_Leave ||
-              RParen->getPreviousNonComment() == LParen) {
+          if (Style.RemoveParentheses == FormatStyle::RPS_Leave ||
+              MightBeStmtExpr || MightBeFoldExpr || SeenComma || InMacroCall ||
+              Line->InMacroBody || RParen->getPreviousNonComment() == LParen) {
             return false;
           }
           const bool DoubleParens =
@@ -2659,14 +2658,17 @@ bool UnwrappedLineParser::parseParens(TokenType AmpAmpTokenType,
           }
           return false;
         };
-        if (Prev->is(TT_TypenameMacro)) {
+        if (OptionalParens()) {
+          LParen->Optional = true;
+          RParen->Optional = true;
+        } else if (Prev->is(TT_TypenameMacro)) {
           LParen->setFinalizedType(TT_TypeDeclarationParen);
           RParen->setFinalizedType(TT_TypeDeclarationParen);
         } else if (Prev->is(tok::greater) && RParen->Previous == LParen) {
           Prev->setFinalizedType(TT_TemplateCloser);
-        } else if (OptionalParens()) {
-          LParen->Optional = true;
-          RParen->Optional = true;
+        } else if (FormatTok->is(tok::l_brace) && Prev->is(tok::amp) &&
+                   !Prev->Previous) {
+          FormatTok->setBlockKind(BK_BracedInit);
         }
       }
       return SeenEqual;

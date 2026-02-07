@@ -40,6 +40,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
@@ -619,6 +620,7 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
       if (isInConditionalBranch() && !E->getType().isDestructedType() &&
           ((!SanOpts.has(SanitizerKind::HWAddress) &&
             !SanOpts.has(SanitizerKind::Memory) &&
+            !SanOpts.has(SanitizerKind::MemtagStack) &&
             !CGM.getCodeGenOpts().SanitizeAddressUseAfterScope) ||
            inSuspendBlock())) {
         OldConditional = OutermostConditional;
@@ -1235,43 +1237,65 @@ llvm::Value *CodeGenFunction::EmitLoadOfCountedByField(
   return nullptr;
 }
 
-void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
-                                      llvm::Value *Index, QualType IndexType,
+void CodeGenFunction::EmitBoundsCheck(const Expr *ArrayExpr,
+                                      const Expr *ArrayExprBase,
+                                      llvm::Value *IndexVal, QualType IndexType,
                                       bool Accessed) {
   assert(SanOpts.has(SanitizerKind::ArrayBounds) &&
          "should not be called unless adding bounds checks");
   const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
       getLangOpts().getStrictFlexArraysLevel();
-  QualType IndexedType;
-  llvm::Value *Bound =
-      getArrayIndexingBound(*this, Base, IndexedType, StrictFlexArraysLevel);
+  QualType ArrayExprBaseType;
+  llvm::Value *BoundsVal = getArrayIndexingBound(
+      *this, ArrayExprBase, ArrayExprBaseType, StrictFlexArraysLevel);
 
-  EmitBoundsCheckImpl(E, Bound, Index, IndexType, IndexedType, Accessed);
+  EmitBoundsCheckImpl(ArrayExpr, ArrayExprBaseType, IndexVal, IndexType,
+                      BoundsVal, getContext().getSizeType(), Accessed);
 }
 
-void CodeGenFunction::EmitBoundsCheckImpl(const Expr *E, llvm::Value *Bound,
-                                          llvm::Value *Index,
+void CodeGenFunction::EmitBoundsCheckImpl(const Expr *ArrayExpr,
+                                          QualType ArrayBaseType,
+                                          llvm::Value *IndexVal,
                                           QualType IndexType,
-                                          QualType IndexedType, bool Accessed) {
-  if (!Bound)
+                                          llvm::Value *BoundsVal,
+                                          QualType BoundsType, bool Accessed) {
+  if (!BoundsVal)
     return;
 
   auto CheckKind = SanitizerKind::SO_ArrayBounds;
   auto CheckHandler = SanitizerHandler::OutOfBounds;
   SanitizerDebugLocation SanScope(this, {CheckKind}, CheckHandler);
 
+  // All hail the C implicit type conversion rules!!!
   bool IndexSigned = IndexType->isSignedIntegerOrEnumerationType();
-  llvm::Value *IndexVal = Builder.CreateIntCast(Index, SizeTy, IndexSigned);
-  llvm::Value *BoundVal = Builder.CreateIntCast(Bound, SizeTy, false);
+  bool BoundsSigned = BoundsType->isSignedIntegerOrEnumerationType();
+
+  const ASTContext &Ctx = getContext();
+  llvm::Type *Ty = ConvertType(
+      Ctx.getTypeSize(IndexType) >= Ctx.getTypeSize(BoundsType) ? IndexType
+                                                                : BoundsType);
+
+  llvm::Value *IndexInst = Builder.CreateIntCast(IndexVal, Ty, IndexSigned);
+  llvm::Value *BoundsInst = Builder.CreateIntCast(BoundsVal, Ty, false);
 
   llvm::Constant *StaticData[] = {
-    EmitCheckSourceLocation(E->getExprLoc()),
-    EmitCheckTypeDescriptor(IndexedType),
-    EmitCheckTypeDescriptor(IndexType)
+      EmitCheckSourceLocation(ArrayExpr->getExprLoc()),
+      EmitCheckTypeDescriptor(ArrayBaseType),
+      EmitCheckTypeDescriptor(IndexType),
   };
-  llvm::Value *Check = Accessed ? Builder.CreateICmpULT(IndexVal, BoundVal)
-                                : Builder.CreateICmpULE(IndexVal, BoundVal);
-  EmitCheck(std::make_pair(Check, CheckKind), CheckHandler, StaticData, Index);
+
+  llvm::Value *Check = Accessed ? Builder.CreateICmpULT(IndexInst, BoundsInst)
+                                : Builder.CreateICmpULE(IndexInst, BoundsInst);
+
+  if (BoundsSigned) {
+    // Don't allow a negative bounds.
+    llvm::Value *Cmp = Builder.CreateICmpSGT(
+        BoundsVal, llvm::ConstantInt::get(BoundsVal->getType(), 0));
+    Check = Builder.CreateAnd(Cmp, Check);
+  }
+
+  EmitCheck(std::make_pair(Check, CheckKind), CheckHandler, StaticData,
+            IndexInst);
 }
 
 llvm::MDNode *CodeGenFunction::buildAllocToken(QualType AllocType) {
@@ -1796,6 +1820,8 @@ LValue CodeGenFunction::EmitLValueHelper(const Expr *E,
     return EmitUnaryOpLValue(cast<UnaryOperator>(E));
   case Expr::ArraySubscriptExprClass:
     return EmitArraySubscriptExpr(cast<ArraySubscriptExpr>(E));
+  case Expr::MatrixSingleSubscriptExprClass:
+    return EmitMatrixSingleSubscriptExpr(cast<MatrixSingleSubscriptExpr>(E));
   case Expr::MatrixSubscriptExprClass:
     return EmitMatrixSubscriptExpr(cast<MatrixSubscriptExpr>(E));
   case Expr::ArraySectionExprClass:
@@ -2191,8 +2217,12 @@ llvm::Value *CodeGenFunction::EmitToMemory(llvm::Value *Value, QualType Ty) {
   if (auto *AtomicTy = Ty->getAs<AtomicType>())
     Ty = AtomicTy->getValueType();
 
-  if (Ty->isExtVectorBoolType()) {
+  if (Ty->isExtVectorBoolType() || Ty->isConstantMatrixBoolType()) {
     llvm::Type *StoreTy = convertTypeForLoadStore(Ty, Value->getType());
+
+    if (Value->getType() == StoreTy)
+      return Value;
+
     if (StoreTy->isVectorTy() && StoreTy->getScalarSizeInBits() >
                                      Value->getType()->getScalarSizeInBits())
       return Builder.CreateZExt(Value, StoreTy);
@@ -2440,6 +2470,45 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
         Builder.CreateLoad(LV.getMatrixAddress(), LV.isVolatileQualified());
     return RValue::get(Builder.CreateExtractElement(Load, Idx, "matrixext"));
   }
+  if (LV.isMatrixRow()) {
+    QualType MatTy = LV.getType();
+    const ConstantMatrixType *MT = MatTy->castAs<ConstantMatrixType>();
+
+    unsigned NumRows = MT->getNumRows();
+    unsigned NumCols = MT->getNumColumns();
+    unsigned NumLanes = NumCols;
+    llvm::Value *MatrixVec = EmitLoadOfScalar(LV, Loc);
+    llvm::Value *Row = LV.getMatrixRowIdx();
+    llvm::Type *ElemTy = ConvertType(MT->getElementType());
+    llvm::Constant *ColConstsIndices = nullptr;
+    llvm::MatrixBuilder MB(Builder);
+
+    if (LV.isMatrixRowSwizzle()) {
+      ColConstsIndices = LV.getMatrixRowElts();
+      NumLanes = llvm::cast<llvm::FixedVectorType>(ColConstsIndices->getType())
+                     ->getNumElements();
+    }
+
+    llvm::Type *RowTy = llvm::FixedVectorType::get(ElemTy, NumLanes);
+    llvm::Value *Result = llvm::PoisonValue::get(RowTy); // <NumLanes x T>
+
+    for (unsigned Col = 0; Col < NumLanes; ++Col) {
+      llvm::Value *ColIdx;
+      if (ColConstsIndices)
+        ColIdx = ColConstsIndices->getAggregateElement(Col);
+      else
+        ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
+      bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                              LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      llvm::Value *EltIndex =
+          MB.CreateIndex(Row, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
+      llvm::Value *Elt = Builder.CreateExtractElement(MatrixVec, EltIndex);
+      llvm::Value *Lane = llvm::ConstantInt::get(Builder.getInt32Ty(), Col);
+      Result = Builder.CreateInsertElement(Result, Elt, Lane);
+    }
+
+    return RValue::get(Result);
+  }
 
   assert(LV.isBitField() && "Unknown LValue type!");
   return EmitLoadOfBitfieldLValue(LV, Loc);
@@ -2575,6 +2644,32 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
                                              bool isInit) {
   if (!Dst.isSimple()) {
     if (Dst.isVectorElt()) {
+      if (getLangOpts().HLSL) {
+        // HLSL allows direct access to vector elements, so storing to
+        // individual elements of a vector through VectorElt is handled as
+        // separate store instructions.
+        Address DstAddr = Dst.getVectorAddress();
+        llvm::Type *DestAddrTy = DstAddr.getElementType();
+        llvm::Type *ElemTy = DestAddrTy->getScalarType();
+        CharUnits ElemAlign = CharUnits::fromQuantity(
+            CGM.getDataLayout().getPrefTypeAlign(ElemTy));
+
+        assert(ElemTy->getScalarSizeInBits() >= 8 &&
+               "vector element type must be at least byte-sized");
+
+        llvm::Value *Val = Src.getScalarVal();
+        if (Val->getType()->getPrimitiveSizeInBits() <
+            ElemTy->getScalarSizeInBits())
+          Val = Builder.CreateZExt(Val, ElemTy->getScalarType());
+
+        llvm::Value *Idx = Dst.getVectorIdx();
+        llvm::Value *Zero = llvm::ConstantInt::get(Int32Ty, 0);
+        Address DstElemAddr =
+            Builder.CreateGEP(DstAddr, {Zero, Idx}, DestAddrTy, ElemAlign);
+        Builder.CreateStore(Val, DstElemAddr, Dst.isVolatileQualified());
+        return;
+      }
+
       // Read/modify/write the vector, inserting the new element.
       llvm::Value *Vec = Builder.CreateLoad(Dst.getVectorAddress(),
                                             Dst.isVolatileQualified());
@@ -2622,6 +2717,32 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       return EmitStoreThroughGlobalRegLValue(Src, Dst);
 
     if (Dst.isMatrixElt()) {
+      if (getLangOpts().HLSL) {
+        // HLSL allows direct access to matrix elements, so storing to
+        // individual elements of a matrix through MatrixElt is handled as
+        // separate store instructions.
+        Address DstAddr = Dst.getMatrixAddress();
+        llvm::Type *DestAddrTy = DstAddr.getElementType();
+        llvm::Type *ElemTy = DestAddrTy->getScalarType();
+        CharUnits ElemAlign = CharUnits::fromQuantity(
+            CGM.getDataLayout().getPrefTypeAlign(ElemTy));
+
+        assert(ElemTy->getScalarSizeInBits() >= 8 &&
+               "matrix element type must be at least byte-sized");
+
+        llvm::Value *Val = Src.getScalarVal();
+        if (Val->getType()->getPrimitiveSizeInBits() <
+            ElemTy->getScalarSizeInBits())
+          Val = Builder.CreateZExt(Val, ElemTy->getScalarType());
+
+        llvm::Value *Idx = Dst.getMatrixIdx();
+        llvm::Value *Zero = llvm::ConstantInt::get(Int32Ty, 0);
+        Address DstElemAddr =
+            Builder.CreateGEP(DstAddr, {Zero, Idx}, DestAddrTy, ElemAlign);
+        Builder.CreateStore(Val, DstElemAddr, Dst.isVolatileQualified());
+        return;
+      }
+
       llvm::Value *Idx = Dst.getMatrixIdx();
       if (CGM.getCodeGenOpts().OptimizationLevel > 0) {
         const auto *const MatTy = Dst.getType()->castAs<ConstantMatrixType>();
@@ -2629,11 +2750,74 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
         MB.CreateIndexAssumption(Idx, MatTy->getNumElementsFlattened());
       }
       llvm::Instruction *Load = Builder.CreateLoad(Dst.getMatrixAddress());
+      llvm::Value *InsertVal = Src.getScalarVal();
       llvm::Value *Vec =
-          Builder.CreateInsertElement(Load, Src.getScalarVal(), Idx, "matins");
+          Builder.CreateInsertElement(Load, InsertVal, Idx, "matins");
       auto *I = Builder.CreateStore(Vec, Dst.getMatrixAddress(),
                                     Dst.isVolatileQualified());
       addInstToCurrentSourceAtom(I, Vec);
+      return;
+    }
+    if (Dst.isMatrixRow()) {
+      // NOTE: Since there are no other languages that implement matrix single
+      // subscripting, the logic here is specific to HLSL which allows
+      // per-element stores to rows of matrices.
+      assert(getLangOpts().HLSL &&
+             "Store through matrix row LValues is only implemented for HLSL!");
+      QualType MatTy = Dst.getType();
+      const ConstantMatrixType *MT = MatTy->castAs<ConstantMatrixType>();
+
+      unsigned NumRows = MT->getNumRows();
+      unsigned NumCols = MT->getNumColumns();
+      unsigned NumLanes = NumCols;
+
+      Address DstAddr = Dst.getMatrixAddress();
+      llvm::Type *DestAddrTy = DstAddr.getElementType();
+      llvm::Type *ElemTy = DestAddrTy->getScalarType();
+      CharUnits ElemAlign =
+          CharUnits::fromQuantity(CGM.getDataLayout().getPrefTypeAlign(ElemTy));
+
+      assert(ElemTy->getScalarSizeInBits() >= 8 &&
+             "matrix element type must be at least byte-sized");
+
+      llvm::Value *RowVal = Src.getScalarVal();
+      if (RowVal->getType()->getScalarType()->getPrimitiveSizeInBits() <
+          ElemTy->getScalarSizeInBits()) {
+        auto *RowValVecTy = cast<llvm::FixedVectorType>(RowVal->getType());
+        llvm::Type *StorageElmTy = llvm::FixedVectorType::get(
+            ElemTy->getScalarType(), RowValVecTy->getNumElements());
+        RowVal = Builder.CreateZExt(RowVal, StorageElmTy);
+      }
+
+      llvm::MatrixBuilder MB(Builder);
+
+      llvm::Constant *ColConstsIndices = nullptr;
+      if (Dst.isMatrixRowSwizzle()) {
+        ColConstsIndices = Dst.getMatrixRowElts();
+        NumLanes =
+            llvm::cast<llvm::FixedVectorType>(ColConstsIndices->getType())
+                ->getNumElements();
+      }
+
+      llvm::Value *Row = Dst.getMatrixRowIdx();
+      for (unsigned Col = 0; Col < NumLanes; ++Col) {
+        llvm::Value *ColIdx;
+        if (ColConstsIndices)
+          ColIdx = ColConstsIndices->getAggregateElement(Col);
+        else
+          ColIdx = llvm::ConstantInt::get(Row->getType(), Col);
+        bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                                LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+        llvm::Value *EltIndex =
+            MB.CreateIndex(Row, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
+        llvm::Value *Lane = llvm::ConstantInt::get(Builder.getInt32Ty(), Col);
+        llvm::Value *Zero = llvm::ConstantInt::get(Int32Ty, 0);
+        llvm::Value *NewElt = Builder.CreateExtractElement(RowVal, Lane);
+        Address DstElemAddr =
+            Builder.CreateGEP(DstAddr, {Zero, EltIndex}, DestAddrTy, ElemAlign);
+        Builder.CreateStore(NewElt, DstElemAddr, Dst.isVolatileQualified());
+      }
+
       return;
     }
 
@@ -4582,9 +4766,10 @@ static std::optional<int64_t> getOffsetDifferenceInBits(CodeGenFunction &CGF,
 /// i.e. "a.b.count", so we shouldn't need the full force of EmitLValue or
 /// similar to emit the correct GEP.
 void CodeGenFunction::EmitCountedByBoundsChecking(
-    const Expr *E, llvm::Value *Idx, Address Addr, QualType IdxTy,
-    QualType ArrayTy, bool Accessed, bool FlexibleArray) {
-  const auto *ME = dyn_cast<MemberExpr>(E->IgnoreImpCasts());
+    const Expr *ArrayExpr, QualType ArrayType, Address ArrayInst,
+    QualType IndexType, llvm::Value *IndexVal, bool Accessed,
+    bool FlexibleArray) {
+  const auto *ME = dyn_cast<MemberExpr>(ArrayExpr->IgnoreImpCasts());
   if (!ME || !ME->getMemberDecl()->getType()->isCountAttributedType())
     return;
 
@@ -4601,11 +4786,11 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
 
   if (std::optional<int64_t> Diff =
           getOffsetDifferenceInBits(*this, CountFD, FD)) {
-    if (!Addr.isValid()) {
+    if (!ArrayInst.isValid()) {
       // An invalid Address indicates we're checking a pointer array access.
       // Emit the checked L-Value here.
-      LValue LV = EmitCheckedLValue(E, TCK_MemberAccess);
-      Addr = LV.getAddress();
+      LValue LV = EmitCheckedLValue(ArrayExpr, TCK_MemberAccess);
+      ArrayInst = LV.getAddress();
     }
 
     // FIXME: The 'static_cast' is necessary, otherwise the result turns into a
@@ -4614,17 +4799,19 @@ void CodeGenFunction::EmitCountedByBoundsChecking(
 
     // Create a GEP with the byte offset between the counted object and the
     // count and use that to load the count value.
-    Addr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, Int8PtrTy, Int8Ty);
+    ArrayInst = Builder.CreatePointerBitCastOrAddrSpaceCast(ArrayInst,
+                                                            Int8PtrTy, Int8Ty);
 
-    llvm::Type *CountTy = ConvertType(CountFD->getType());
-    llvm::Value *Res =
-        Builder.CreateInBoundsGEP(Int8Ty, Addr.emitRawPointer(*this),
+    llvm::Type *BoundsType = ConvertType(CountFD->getType());
+    llvm::Value *BoundsVal =
+        Builder.CreateInBoundsGEP(Int8Ty, ArrayInst.emitRawPointer(*this),
                                   Builder.getInt32(*Diff), ".counted_by.gep");
-    Res = Builder.CreateAlignedLoad(CountTy, Res, getIntAlign(),
-                                    ".counted_by.load");
+    BoundsVal = Builder.CreateAlignedLoad(BoundsType, BoundsVal, getIntAlign(),
+                                          ".counted_by.load");
 
     // Now emit the bounds checking.
-    EmitBoundsCheckImpl(E, Res, Idx, IdxTy, ArrayTy, Accessed);
+    EmitBoundsCheckImpl(ArrayExpr, ArrayType, IndexVal, IndexType, BoundsVal,
+                        CountFD->getType(), Accessed);
   }
 }
 
@@ -4770,9 +4957,9 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
     auto *Idx = EmitIdxAfterBase(/*Promote*/true);
 
     if (SanOpts.has(SanitizerKind::ArrayBounds))
-      EmitCountedByBoundsChecking(Array, Idx, ArrayLV.getAddress(),
-                                  E->getIdx()->getType(), Array->getType(),
-                                  Accessed, /*FlexibleArray=*/true);
+      EmitCountedByBoundsChecking(Array, Array->getType(), ArrayLV.getAddress(),
+                                  E->getIdx()->getType(), Idx, Accessed,
+                                  /*FlexibleArray=*/true);
 
     // Propagate the alignment from the array itself to the result.
     QualType arrayType = Array->getType();
@@ -4824,8 +5011,8 @@ LValue CodeGenFunction::EmitArraySubscriptExpr(const ArraySubscriptExpr *E,
 
       if (const auto *CE = dyn_cast_if_present<CastExpr>(Base);
           CE && CE->getCastKind() == CK_LValueToRValue)
-        EmitCountedByBoundsChecking(CE, Idx, Address::invalid(),
-                                    E->getIdx()->getType(), ptrType, Accessed,
+        EmitCountedByBoundsChecking(CE, ptrType, Address::invalid(),
+                                    E->getIdx()->getType(), Idx, Accessed,
                                     /*FlexibleArray=*/false);
     }
   }
@@ -4848,6 +5035,15 @@ llvm::Value *CodeGenFunction::EmitMatrixIndexExpr(const Expr *E) {
   return Builder.CreateIntCast(Idx, IntPtrTy, IsSigned);
 }
 
+LValue CodeGenFunction::EmitMatrixSingleSubscriptExpr(
+    const MatrixSingleSubscriptExpr *E) {
+  LValue Base = EmitLValue(E->getBase());
+  llvm::Value *RowIdx = EmitMatrixIndexExpr(E->getRowIdx());
+  return LValue::MakeMatrixRow(
+      MaybeConvertMatrixAddress(Base.getAddress(), *this), RowIdx,
+      E->getBase()->getType(), Base.getBaseInfo(), TBAAAccessInfo());
+}
+
 LValue CodeGenFunction::EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E) {
   assert(
       !E->isIncomplete() &&
@@ -4857,12 +5053,15 @@ LValue CodeGenFunction::EmitMatrixSubscriptExpr(const MatrixSubscriptExpr *E) {
   // Extend or truncate the index type to 32 or 64-bits if needed.
   llvm::Value *RowIdx = EmitMatrixIndexExpr(E->getRowIdx());
   llvm::Value *ColIdx = EmitMatrixIndexExpr(E->getColumnIdx());
-
-  llvm::Value *NumRows = Builder.getIntN(
-      RowIdx->getType()->getScalarSizeInBits(),
-      E->getBase()->getType()->castAs<ConstantMatrixType>()->getNumRows());
+  llvm::MatrixBuilder MB(Builder);
+  const auto *MatrixTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
+  unsigned NumCols = MatrixTy->getNumColumns();
+  unsigned NumRows = MatrixTy->getNumRows();
+  bool IsMatrixRowMajor = getLangOpts().getDefaultMatrixMemoryLayout() ==
+                          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
   llvm::Value *FinalIdx =
-      Builder.CreateAdd(Builder.CreateMul(ColIdx, NumRows), RowIdx);
+      MB.CreateIndex(RowIdx, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
+
   return LValue::MakeMatrixElt(
       MaybeConvertMatrixAddress(Base.getAddress(), *this), FinalIdx,
       E->getBase()->getType(), Base.getBaseInfo(), TBAAAccessInfo());
@@ -5120,6 +5319,39 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
     return LValue::MakeExtVectorElt(Base.getAddress(), CV, type,
                                     Base.getBaseInfo(), TBAAAccessInfo());
   }
+  if (Base.isMatrixRow()) {
+    if (auto *RowIdx =
+            llvm::dyn_cast<llvm::ConstantInt>(Base.getMatrixRowIdx())) {
+      llvm::SmallVector<llvm::Constant *> MatIndices;
+      QualType MatTy = Base.getType();
+      const ConstantMatrixType *MT = MatTy->castAs<ConstantMatrixType>();
+      unsigned NumCols = MT->getNumColumns();
+      unsigned NumRows = MT->getNumRows();
+      MatIndices.reserve(NumCols);
+
+      unsigned Row = RowIdx->getZExtValue();
+      for (unsigned C = 0; C < NumCols; ++C) {
+        unsigned Col = Indices[C];
+        unsigned Linear = Col * NumRows + Row;
+        MatIndices.push_back(llvm::ConstantInt::get(Int32Ty, Linear));
+      }
+
+      llvm::Constant *ConstIdxs = llvm::ConstantVector::get(MatIndices);
+      return LValue::MakeExtVectorElt(Base.getMatrixAddress(), ConstIdxs,
+                                      E->getBase()->getType(),
+                                      Base.getBaseInfo(), TBAAAccessInfo());
+    }
+    llvm::Constant *Cols =
+        llvm::ConstantDataVector::get(getLLVMContext(), Indices);
+    // Note: intentionally not using E.getType() so we can reuse isMatrixRow()
+    // implementations in EmitLoadOfLValue & EmitStoreThroughLValue and don't
+    // need the LValue to have its own number of rows and columns when the
+    // type is a vector.
+    return LValue::MakeMatrixRowSwizzle(
+        Base.getMatrixAddress(), Base.getMatrixRowIdx(), Cols, Base.getType(),
+        Base.getBaseInfo(), TBAAAccessInfo());
+  }
+
   assert(Base.isExtVectorElt() && "Can only subscript lvalue vec elts here!");
 
   llvm::Constant *BaseElts = Base.getExtVectorElts();
@@ -5592,8 +5824,9 @@ std::optional<LValue> HandleConditionalOperatorLValueSimpleCase(
 
     if (!CGF.ContainsLabel(Dead)) {
       // If the true case is live, we need to track its region.
-      if (CondExprBool)
-        CGF.incrementProfileCounter(E);
+      CGF.incrementProfileCounter(CondExprBool ? CGF.UseExecPath
+                                               : CGF.UseSkipPath,
+                                  E, /*UseBoth=*/true);
       CGF.markStmtMaybeUsed(Dead);
       // If a throw expression we emit it and return an undefined lvalue
       // because it can't be used.
@@ -5632,7 +5865,7 @@ ConditionalInfo EmitConditionalBlocks(CodeGenFunction &CGF,
 
   // Any temporaries created here are conditional.
   CGF.EmitBlock(Info.lhsBlock);
-  CGF.incrementProfileCounter(E);
+  CGF.incrementProfileCounter(CGF.UseExecPath, E);
   eval.begin(CGF);
   Info.LHS = BranchGenFunc(CGF, E->getTrueExpr());
   eval.end(CGF);
@@ -5643,6 +5876,7 @@ ConditionalInfo EmitConditionalBlocks(CodeGenFunction &CGF,
 
   // Any temporaries created here are conditional.
   CGF.EmitBlock(Info.rhsBlock);
+  CGF.incrementProfileCounter(CGF.UseSkipPath, E);
   eval.begin(CGF);
   Info.RHS = BranchGenFunc(CGF, E->getFalseExpr());
   eval.end(CGF);
@@ -5722,8 +5956,7 @@ LValue CodeGenFunction::EmitConditionalOperatorLValue(
 /// are permitted with aggregate result, including noop aggregate casts, and
 /// cast from scalar to union.
 LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
-  auto RestoreCurCast =
-      llvm::make_scope_exit([this, Prev = CurCast] { CurCast = Prev; });
+  llvm::scope_exit RestoreCurCast([this, Prev = CurCast] { CurCast = Prev; });
   CurCast = E;
   switch (E->getCastKind()) {
   case CK_ToVoid:
@@ -5772,6 +6005,7 @@ LValue CodeGenFunction::EmitCastLValue(const CastExpr *E) {
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLMatrixTruncation:
   case CK_HLSLArrayRValue:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:
@@ -6019,7 +6253,7 @@ RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
     CallOrInvoke = &CallOrInvokeStorage;
   }
 
-  auto AddCoroElideSafeOnExit = llvm::make_scope_exit([&] {
+  llvm::scope_exit AddCoroElideSafeOnExit([&] {
     if (E->isCoroElideSafe()) {
       auto *I = *CallOrInvoke;
       if (I)
@@ -6330,8 +6564,15 @@ LValue CodeGenFunction::EmitBinaryOperatorLValue(const BinaryOperator *E) {
 LValue CodeGenFunction::EmitHLSLArrayAssignLValue(const BinaryOperator *E) {
   // Don't emit an LValue for the RHS because it might not be an LValue
   LValue LHS = EmitLValue(E->getLHS());
+
+  // If the RHS is a global resource array, copy all individual resources
+  // into LHS.
+  if (E->getRHS()->getType()->isHLSLResourceRecordArray())
+    if (CGM.getHLSLRuntime().emitResourceArrayCopy(LHS, E->getRHS(), *this))
+      return LHS;
+
   // In C the RHS of an assignment operator is an RValue.
-  // EmitAggregateAssign takes anan LValue for the RHS. Instead we can call
+  // EmitAggregateAssign takes an LValue for the RHS. Instead we can call
   // EmitInitializationToLValue to emit an RValue into an LValue.
   EmitInitializationToLValue(E->getRHS(), LHS);
   return LHS;
@@ -6486,9 +6727,11 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
 
   CGCallee Callee = OrigCallee;
 
+  bool CFIUnchecked = CalleeType->hasPointeeToCFIUncheckedCalleeFunctionType();
+
   if (SanOpts.has(SanitizerKind::Function) &&
       (!TargetDecl || !isa<FunctionDecl>(TargetDecl)) &&
-      !isa<FunctionNoProtoType>(PointeeType)) {
+      !isa<FunctionNoProtoType>(PointeeType) && !CFIUnchecked) {
     if (llvm::Constant *PrefixSig =
             CGM.getTargetCodeGenInfo().getUBSanFunctionSignature(CGM)) {
       auto CheckOrdinal = SanitizerKind::SO_Function;
@@ -6524,7 +6767,7 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
       if (CGM.getTriple().isARM() || CGM.getTriple().isThumb()) {
         llvm::Value *CalleeAddress =
             Builder.CreatePtrToInt(CalleePtr, IntPtrTy);
-        llvm::Value *Mask = llvm::ConstantInt::get(IntPtrTy, ~1);
+        llvm::Value *Mask = llvm::ConstantInt::getSigned(IntPtrTy, ~1);
         llvm::Value *AlignedCalleeAddress =
             Builder.CreateAnd(CalleeAddress, Mask);
         AlignedCalleePtr =
@@ -6566,9 +6809,6 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
   if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
       FD && DeviceKernelAttr::isOpenCLSpelling(FD->getAttr<DeviceKernelAttr>()))
     CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FnType);
-
-  bool CFIUnchecked =
-      CalleeType->hasPointeeToToCFIUncheckedCalleeFunctionType();
 
   // If we are checking indirect calls and this call is indirect, check that the
   // function pointer is a member of the bit set for the function type.

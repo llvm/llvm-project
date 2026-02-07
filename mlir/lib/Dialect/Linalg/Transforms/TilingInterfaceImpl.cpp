@@ -23,6 +23,7 @@
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -110,12 +111,11 @@ struct LinalgOpTilingInterface
         linalgOp.createFlatListOfOperandDims(b, loc);
     AffineMap map = linalgOp.getShapesToLoopsMap();
 
-    return llvm::to_vector(
-        llvm::map_range(map.getResults(), [&](AffineExpr loopExpr) {
-          OpFoldResult ofr = affine::makeComposedFoldedAffineApply(
-              b, loc, loopExpr, allShapesSizes);
-          return Range{b.getIndexAttr(0), ofr, b.getIndexAttr(1)};
-        }));
+    return llvm::map_to_vector(map.getResults(), [&](AffineExpr loopExpr) {
+      OpFoldResult ofr = affine::makeComposedFoldedAffineApply(b, loc, loopExpr,
+                                                               allShapesSizes);
+      return Range{b.getIndexAttr(0), ofr, b.getIndexAttr(1)};
+    });
   }
 
   /// Instantiate the tiled implementation of the operation.
@@ -167,7 +167,7 @@ struct LinalgOpTilingInterface
            llvm::zip_equal(indexingMap.getResults(), offsets, sizes)) {
         auto dimExpr = dyn_cast<AffineDimExpr>(resultExpr);
         if (!dimExpr)
-          continue;
+          return failure();
         unsigned position = dimExpr.getPosition();
         auto it = mappedOffsets.find(position);
         if (it != mappedOffsets.end()) {
@@ -243,9 +243,9 @@ struct LinalgOpTilingInterface
     AffineExpr d0;
     bindDims(b.getContext(), d0);
     SmallVector<OpFoldResult> subShapeSizes =
-        llvm::to_vector(llvm::map_range(sizes, [&](OpFoldResult ofr) {
+        llvm::map_to_vector(sizes, [&](OpFoldResult ofr) {
           return affine::makeComposedFoldedAffineApply(b, loc, d0 - 1, ofr);
-        }));
+        });
 
     OpOperand *outOperand = linalgOp.getDpsInitOperand(resultNumber);
     SliceParameters sliceParams = computeSliceParameters(
@@ -356,6 +356,32 @@ struct LinalgOpTilingInterface
 
     /// Inline the op payload and store the result.
     return inlinePayload(builder, linalgOp, ivs, indexedValues);
+  }
+
+  bool isOpFusableWithConsumerSlice(Operation *op, unsigned resultNumber,
+                                    ArrayRef<OpFoldResult> offsets,
+                                    ArrayRef<OpFoldResult> sizes) const {
+    // The verifier gives all the necessary requirements for consumer fusion.
+    return true;
+  }
+
+  bool isOpFusableWithProducerSlices(
+      Operation *op, ArrayRef<unsigned> operandNumbers,
+      ArrayRef<SmallVector<OpFoldResult>> allOffsets,
+      ArrayRef<SmallVector<OpFoldResult>> allSizes) const {
+
+    auto linalgOp = cast<LinalgOp>(op);
+    SmallVector<AffineMap> indexingMaps =
+        llvm::map_to_vector(operandNumbers, [&](unsigned operandNumber) {
+          OpOperand &opOperand = linalgOp->getOpOperand(operandNumber);
+          return linalgOp.getMatchingIndexingMap(&opOperand);
+        });
+    // Check that offsets/sizes are consistent across all operands.
+    OpBuilder b(op);
+    SmallVector<OpFoldResult> mappedOffsets, mappedSizes;
+    return succeeded(getMappedOffsetAndSize(linalgOp, b, indexingMaps,
+                                            allOffsets, allSizes, mappedOffsets,
+                                            mappedSizes));
   }
 };
 
@@ -740,6 +766,10 @@ struct PackOpTiling
                          ArrayRef<OpFoldResult> offsets,
                          ArrayRef<OpFoldResult> sizes) const {
     auto packOp = cast<PackOp>(op);
+    // TODO: Support Memref PackOp. Temporarily return failure.
+    if (!packOp.hasPureTensorSemantics())
+      return failure();
+
     Location loc = packOp.getLoc();
 
     // The tiling is applied on interchanged dimensions. We have to undo the
@@ -984,6 +1014,10 @@ struct PackOpTiling
     ArrayRef<OpFoldResult> sizes(allSizes[0]);
 
     auto packOp = cast<PackOp>(op);
+    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    if (!packOp.hasPureTensorSemantics())
+      return failure();
+
     Location loc = packOp.getLoc();
 
     int64_t inputRank = packOp.getSourceRank();
@@ -1163,6 +1197,10 @@ struct UnPackOpTiling
                          ArrayRef<OpFoldResult> offsets,
                          ArrayRef<OpFoldResult> sizes) const {
     auto unpackOp = cast<UnPackOp>(op);
+    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    if (!unpackOp.hasPureTensorSemantics())
+      return failure();
+
     int64_t srcRank = unpackOp.getSourceRank();
     int64_t destRank = unpackOp.getDestRank();
     int64_t numInnerTiles = srcRank - destRank;
@@ -1333,6 +1371,10 @@ struct UnPackOpTiling
       return failure();
     }
     auto unPackOp = cast<UnPackOp>(op);
+    // TODO: Support Memref UnPackOp. Temporarily return failure.
+    if (!unPackOp.hasPureTensorSemantics())
+      return failure();
+
     ArrayRef<OpFoldResult> offsets(allOffsets[0]);
     ArrayRef<OpFoldResult> sizes(allSizes[0]);
 

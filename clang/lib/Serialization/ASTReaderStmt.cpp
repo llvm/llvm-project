@@ -335,6 +335,12 @@ void ASTStmtReader::VisitContinueStmt(ContinueStmt *S) {
 
 void ASTStmtReader::VisitBreakStmt(BreakStmt *S) { VisitLoopControlStmt(S); }
 
+void ASTStmtReader::VisitDeferStmt(DeferStmt *S) {
+  VisitStmt(S);
+  S->setDeferLoc(readSourceLocation());
+  S->setBody(Record.readSubStmt());
+}
+
 void ASTStmtReader::VisitReturnStmt(ReturnStmt *S) {
   VisitStmt(S);
 
@@ -959,6 +965,14 @@ void ASTStmtReader::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   VisitExpr(E);
   E->setLHS(Record.readSubExpr());
   E->setRHS(Record.readSubExpr());
+  E->setRBracketLoc(readSourceLocation());
+}
+
+void ASTStmtReader::VisitMatrixSingleSubscriptExpr(
+    MatrixSingleSubscriptExpr *E) {
+  VisitExpr(E);
+  E->setBase(Record.readSubExpr());
+  E->setRowIdx(Record.readSubExpr());
   E->setRBracketLoc(readSourceLocation());
 }
 
@@ -3144,6 +3158,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case STMT_BREAK:
       S = new (Context) BreakStmt(Empty);
+      break;
+
+    case STMT_DEFER:
+      S = DeferStmt::CreateEmpty(Context, Empty);
       break;
 
     case STMT_RETURN:
