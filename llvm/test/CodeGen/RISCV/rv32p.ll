@@ -554,9 +554,7 @@ define i64 @wmulu_i32(i32 %x, i32 %y) {
 define i64 @wmulsu_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: wmulsu_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mul a2, a1, a0
-; CHECK-NEXT:    mulhsu a1, a1, a0
-; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    wmulsu a0, a1, a0
 ; CHECK-NEXT:    ret
   %a = zext i32 %x to i64
   %b = sext i32 %y to i64
