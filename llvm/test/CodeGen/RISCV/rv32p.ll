@@ -551,6 +551,19 @@ define i64 @wmulu_i32(i32 %x, i32 %y) {
   ret i64 %c
 }
 
+define i64 @wmulsu_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: wmulsu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mul a2, a1, a0
+; CHECK-NEXT:    mulhsu a1, a1, a0
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    ret
+  %a = zext i32 %x to i64
+  %b = sext i32 %y to i64
+  %c = mul i64 %a, %b
+  ret i64 %c
+}
+
 ; Test that mulh continues to be used with P.
 define i32 @mulh_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: mulh_i32:
@@ -579,6 +592,20 @@ define i32 @mulhu_i32(i32 %x, i32 %y) {
   ret i32 %e
 }
 
+; Test that mulhsu continues to be used with P.
+define i32 @mulhsu_i32(i32 %x, i32 %y) {
+; CHECK-LABEL: mulhsu_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mulhsu a0, a1, a0
+; CHECK-NEXT:    ret
+  %a = zext i32 %x to i64
+  %b = sext i32 %y to i64
+  %c = mul i64 %a, %b
+  %d = lshr i64 %c, 32
+  %e = trunc i64 %d to i32
+  ret i32 %e
+}
+
 define i64 @add_i64(i64 %x, i64 %y) {
 ; CHECK-LABEL: add_i64:
 ; CHECK:       # %bb.0:
@@ -588,8 +615,8 @@ define i64 @add_i64(i64 %x, i64 %y) {
   ret i64 %a
 }
 
-define i64 @usb_i64(i64 %x, i64 %y) {
-; CHECK-LABEL: usb_i64:
+define i64 @sub_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: sub_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subd a0, a0, a2
 ; CHECK-NEXT:    ret
