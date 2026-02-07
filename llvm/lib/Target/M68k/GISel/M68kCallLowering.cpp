@@ -39,7 +39,8 @@ struct CallReturnHandler : public M68kIncomingValueHandler {
 
 private:
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override;
+                        const CCValAssign &VA,
+                        ISD::ArgFlagsTy Flags = {}) override;
 
   MachineInstrBuilder &MIB;
 };
@@ -57,7 +58,8 @@ struct M68kOutgoingArgHandler : public CallLowering::OutgoingValueHandler {
         STI(MIRBuilder.getMF().getSubtarget<M68kSubtarget>()) {}
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override {
+                        const CCValAssign &VA,
+                        ISD::ArgFlagsTy Flags = {}) override {
     MIB.addUse(PhysReg, RegState::Implicit);
     Register ExtReg = extendRegister(ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);

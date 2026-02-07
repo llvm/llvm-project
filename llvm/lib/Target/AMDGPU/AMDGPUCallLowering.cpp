@@ -62,7 +62,8 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override {
+                        const CCValAssign &VA,
+                        ISD::ArgFlagsTy Flags = {}) override {
     Register ExtReg = extendRegisterMin32(*this, ValVReg, VA);
 
     // If this is a scalar return, insert a readfirstlane just in case the value
@@ -98,12 +99,8 @@ struct AMDGPUOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
 struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
   uint64_t StackUsed = 0;
 
-  AMDGPUIncomingArgHandler(
-      MachineIRBuilder &B, MachineRegisterInfo &MRI,
-      const SmallVector<CallLowering::ArgInfo, 32> *SpArgs = nullptr)
-      : IncomingValueHandler(B, MRI), SplitArgs(SpArgs) {}
-
-  const SmallVector<CallLowering::ArgInfo, 32> *SplitArgs;
+  AMDGPUIncomingArgHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI)
+      : IncomingValueHandler(B, MRI) {}
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO,
@@ -169,15 +166,15 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override {
+                        const CCValAssign &VA,
+                        ISD::ArgFlagsTy Flags = {}) override {
     markPhysRegUsed(PhysReg);
 
     const SIRegisterInfo *TRI =
         static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
 
     // Inreg flag should be the same across SplitArg[i]
-    if (SplitArgs && (*SplitArgs)[VA.getValNo()].Flags[0].isInReg() &&
-        TRI->isVGPR(MRI, PhysReg))
+    if (Flags.isInReg() && TRI->isVGPR(MRI, PhysReg))
       readLaneToSGPR(ValVReg, PhysReg, VA);
     else
       copyToReg(ValVReg, PhysReg, VA);
@@ -201,9 +198,8 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
 };
 
 struct FormalArgHandler : public AMDGPUIncomingArgHandler {
-  FormalArgHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI,
-                   const SmallVector<CallLowering::ArgInfo, 32> *SpArgs)
-      : AMDGPUIncomingArgHandler(B, MRI, SpArgs) {}
+  FormalArgHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI)
+      : AMDGPUIncomingArgHandler(B, MRI) {}
 
   void markPhysRegUsed(unsigned PhysReg) override {
     MIRBuilder.getMBB().addLiveIn(PhysReg);
@@ -804,7 +800,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
         CCInfo.getFirstUnallocated(AMDGPU::VGPR_32RegClass.getRegisters()));
   }
 
-  FormalArgHandler Handler(B, MRI, &SplitArgs);
+  FormalArgHandler Handler(B, MRI);
   if (!handleAssignments(Handler, SplitArgs, CCInfo, ArgLocs, B))
     return false;
 

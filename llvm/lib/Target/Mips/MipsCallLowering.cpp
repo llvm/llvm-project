@@ -37,7 +37,8 @@ public:
 
 private:
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override;
+                        const CCValAssign &VA,
+                        ISD::ArgFlagsTy Flags = {}) override;
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO,
@@ -144,7 +145,8 @@ public:
 
 private:
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        const CCValAssign &VA) override;
+                        const CCValAssign &VA,
+                        ISD::ArgFlagsTy Flags = {}) override;
 
   Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO,
