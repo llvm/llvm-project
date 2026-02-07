@@ -208,6 +208,11 @@ void DAP::PopulateExceptionBreakpoints() {
   }
 }
 
+bool DAP::ProcessIsNotStopped() {
+  const lldb::StateType process_state = target.GetProcess().GetState();
+  return !lldb::SBDebugger::StateIsStoppedState(process_state);
+}
+
 ExceptionBreakpoint *DAP::GetExceptionBreakpoint(llvm::StringRef filter) {
   for (auto &bp : exception_breakpoints) {
     if (bp.GetFilter() == filter)

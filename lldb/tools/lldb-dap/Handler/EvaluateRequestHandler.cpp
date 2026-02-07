@@ -97,8 +97,7 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
     return body;
   }
 
-  const lldb::StateType process_state = dap.target.GetProcess().GetState();
-  if (!lldb::SBDebugger::StateIsStoppedState(process_state))
+  if (dap.ProcessIsNotStopped())
     return llvm::make_error<DAPError>(
         "Cannot evaluate expressions while the process is running. Pause "
         "the process and try again.",
