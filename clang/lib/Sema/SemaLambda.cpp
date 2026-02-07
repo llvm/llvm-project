@@ -320,7 +320,8 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
         if (LexicalDC->isRecord())
           return DefaultArgument;
     } else if (VarDecl *Var = dyn_cast<VarDecl>(ManglingContextDecl)) {
-      if (Var->getMostRecentDecl()->isInline() || isNonInlineInModulePurview(Var))
+      if (Var->getMostRecentDecl()->isInline() ||
+          isNonInlineInModulePurview(Var))
         return InlineVariable;
 
       if (Var->getDeclContext()->isRecord() && IsInNonspecializedTemplate)
