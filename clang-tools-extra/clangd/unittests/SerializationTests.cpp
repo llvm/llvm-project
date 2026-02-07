@@ -503,14 +503,17 @@ TEST(SerializationTest, URITransformRoundTrip) {
   Out.Transform = &WriteTransform;
   std::string Serialized = llvm::to_string(Out);
 
-  // Verify the serialized data only contains "/transformed/". And if new fields
-  // are added, ensure they aren't missed by path mapping transformation logic.
-  EXPECT_TRUE(Serialized.find("/transformed/") != std::string::npos)
-      << "Serialized data should contain transformed URIs";
-  EXPECT_TRUE(Serialized.find("/original/") == std::string::npos)
-      << "Serialized data should NOT contain original URIs";
+  // Verify path mapping was applied by deserializing without the load
+  // transform. We cannot search raw bytes as the string table may be
+  // compressed.
+  auto Raw = readIndexFile(Serialized, SymbolOrigin::Background);
+  ASSERT_TRUE(bool(Raw)) << Raw.takeError();
+  ASSERT_TRUE(Raw->Symbols);
+  EXPECT_EQ(llvm::StringRef(Raw->Symbols->find(Sym.ID)->Definition.FileURI),
+            "file:///transformed/def.cpp")
+      << "Write transform should have rewritten URIs on disk";
 
-  // Deserialize to restore "/original/"
+  // Deserialize with load transform to restore "/original/"
   auto In = readIndexFile(Serialized, SymbolOrigin::Background, &ReadTransform);
   ASSERT_TRUE(bool(In)) << In.takeError();
 
