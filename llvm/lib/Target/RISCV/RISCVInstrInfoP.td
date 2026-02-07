@@ -1269,9 +1269,9 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PNSRAI_H     : RVPNarrowingShiftH_ri<0b100, "pnsrai.h">;
   def NSRAI        : RVPNarrowingShiftW_ri<0b100, "nsrai">;
 
-  def PNSARI_B     : RVPNarrowingShiftB_ri<0b101, "pnsari.b">;
-  def PNSARI_H     : RVPNarrowingShiftH_ri<0b101, "pnsari.h">;
-  def NSARI        : RVPNarrowingShiftW_ri<0b101, "nsari">;
+  def PNSRARI_B    : RVPNarrowingShiftB_ri<0b101, "pnsrari.b">;
+  def PNSRARI_H    : RVPNarrowingShiftH_ri<0b101, "pnsrari.h">;
+  def NSRARI       : RVPNarrowingShiftW_ri<0b101, "nsrari">;
 
   def PNCLIPI_B    : RVPNarrowingShiftB_ri<0b110, "pnclipi.b">;
   def PNCLIPI_H    : RVPNarrowingShiftH_ri<0b110, "pnclipi.h">;
@@ -1435,7 +1435,7 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PSAS_DHX     : RVPPairBinaryExchanged_rr<0b0010, 0b00, "psas.dhx">;
   def PSSA_DHX     : RVPPairBinaryExchanged_rr<0b0010, 0b10, "pssa.dhx">;
 
-  def PAAX_DHX     : RVPPairBinaryExchanged_rr<0b0011, 0b00, "paax.dhx">;
+  def PAAS_DHX     : RVPPairBinaryExchanged_rr<0b0011, 0b00, "paas.dhx">;
   def PASA_DHX     : RVPPairBinaryExchanged_rr<0b0011, 0b10, "pasa.dhx">;
 
   def PMSEQ_DH     : RVPPairBinaryExchanged_rr<0b1000, 0b00, "pmseq.dh", Commutable=1>;
