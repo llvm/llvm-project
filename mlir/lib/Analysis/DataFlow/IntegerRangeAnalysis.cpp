@@ -217,10 +217,19 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
       return SparseForwardDataFlowAnalysis ::visitNonControlFlowArguments(
           op, successor, nonSuccessorInputs, nonSuccessorInputLattices);
     }
-    // This shouldn't be returning nullopt if there are indunction variables.
-    SmallVector<OpFoldResult> lowerBounds = *loop.getLoopLowerBounds();
-    SmallVector<OpFoldResult> upperBounds = *loop.getLoopUpperBounds();
-    SmallVector<OpFoldResult> steps = *loop.getLoopSteps();
+    std::optional<SmallVector<OpFoldResult>> maybeLowerBounds =
+        loop.getLoopLowerBounds();
+    std::optional<SmallVector<OpFoldResult>> maybeUpperBounds =
+        loop.getLoopUpperBounds();
+    std::optional<SmallVector<OpFoldResult>> maybeSteps = loop.getLoopSteps();
+    // Not all loops provide bounds information (e.g., some region-based ops).
+    if (!maybeLowerBounds || !maybeUpperBounds || !maybeSteps) {
+      return SparseForwardDataFlowAnalysis::visitNonControlFlowArguments(
+          op, successor, nonSuccessorInputs, nonSuccessorInputLattices);
+    }
+    SmallVector<OpFoldResult> &lowerBounds = *maybeLowerBounds;
+    SmallVector<OpFoldResult> &upperBounds = *maybeUpperBounds;
+    SmallVector<OpFoldResult> &steps = *maybeSteps;
     for (auto [iv, lowerBound, upperBound, step] :
          llvm::zip_equal(*maybeIvs, lowerBounds, upperBounds, steps)) {
       Block *block = iv.getParentBlock();
