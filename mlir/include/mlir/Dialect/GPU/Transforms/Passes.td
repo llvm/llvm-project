@@ -146,7 +146,7 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
            /*default=*/"\"sm_75\"",
            "Target chip.">,
     Option<"features", "features", "std::string",
-           /*default=*/"\"\"",
+           /*default=*/"\"+ptx60\"",
            "Target features.">,
     Option<"optLevel", "O", "unsigned",
            /*default=*/"2",
