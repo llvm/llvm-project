@@ -711,9 +711,8 @@ static void AlignMatchingTokenSequence(
     bool FoundMatchOnLine = false;
 
     for (unsigned I = StartOfSequence; I != EndOfSequence; ++I) {
-      if (Changes[I].NewlinesBefore > 0) {
+      if (Changes[I].NewlinesBefore > 0)
         FoundMatchOnLine = false;
-      }
 
       // If this is the first matching token to be aligned, remember by how many
       // spaces it has to be shifted, so the rest of the changes on the line are
@@ -1319,7 +1318,7 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
             Cells.begin(), CellIter, CellDescs.InitialSpaces,
             CellDescs.CellCounts[0], CellDescs.CellCounts.size());
         if (ThisNetWidth < MaxNetWidth)
-          setChangeSpaces(CellIter->Index, (MaxNetWidth - ThisNetWidth));
+          setChangeSpaces(CellIter->Index, MaxNetWidth - ThisNetWidth);
         auto RowCount = 1U;
         auto Offset = std::distance(Cells.begin(), CellIter);
         for (const auto *Next = CellIter->NextColumnElement; Next;
@@ -1330,7 +1329,7 @@ void WhitespaceManager::alignArrayInitializersRightJustified(
           auto *End = Start + Offset;
           ThisNetWidth = getNetWidth(Start, End, CellDescs.InitialSpaces);
           if (ThisNetWidth < MaxNetWidth)
-            setChangeSpaces(Next->Index, (MaxNetWidth - ThisNetWidth));
+            setChangeSpaces(Next->Index, MaxNetWidth - ThisNetWidth);
           ++RowCount;
         }
       }
