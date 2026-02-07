@@ -124,7 +124,12 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
   if (module_sp || !can_create)
     return module_sp;
 
-  if (HostInfo::GetArchitecture().IsCompatibleMatch(target.GetArchitecture())) {
+  // See if we have this binary in the Target or the global Module
+  // cache already.
+  module_sp = target.GetOrCreateModule(module_spec, /*notify=*/false);
+
+  if (!module_sp &&
+      HostInfo::GetArchitecture().IsCompatibleMatch(target.GetArchitecture())) {
     // When debugging on the host, we are most likely using the same shared
     // cache as our inferior. The dylibs from the shared cache might not
     // exist on the filesystem, so let's use the images in our own memory
@@ -135,21 +140,28 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
 
     // If we found it and it has the correct UUID, let's proceed with
     // creating a module from the memory contents.
-    if (image_info.uuid &&
-        (!module_spec.GetUUID() || module_spec.GetUUID() == image_info.uuid)) {
-      ModuleSpec shared_cache_spec(module_spec.GetFileSpec(), image_info.uuid,
-                                   image_info.extractor_sp);
+    if (image_info.GetUUID() &&
+        (!module_spec.GetUUID() ||
+         module_spec.GetUUID() == image_info.GetUUID())) {
+      ModuleSpec shared_cache_spec(module_spec.GetFileSpec(),
+                                   image_info.GetUUID(),
+                                   image_info.GetExtractor());
       module_sp =
           target.GetOrCreateModule(shared_cache_spec, false /* notify */);
     }
   }
   // We'll call Target::ModulesDidLoad after all the modules have been
   // added to the target, don't let it be called for every one.
-  if (!module_sp)
-    module_sp = target.GetOrCreateModule(module_spec, false /* notify */);
-  if (!module_sp || module_sp->GetObjectFile() == nullptr)
-    module_sp = m_process->ReadModuleFromMemory(image_info.file_spec,
-                                                image_info.address);
+  if (!module_sp || module_sp->GetObjectFile() == nullptr) {
+    llvm::Expected<ModuleSP> module_sp_or_err = m_process->ReadModuleFromMemory(
+        image_info.file_spec, image_info.address);
+    if (auto err = module_sp_or_err.takeError()) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
+                     "Failed to load module from memory: {0}");
+      return {};
+    }
+    module_sp = *module_sp_or_err;
+  }
 
   if (did_create_ptr)
     *did_create_ptr = (bool)module_sp;
@@ -722,19 +734,26 @@ bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
                                                                true /* notify */);
               if (!commpage_image_module_sp ||
                   commpage_image_module_sp->GetObjectFile() == nullptr) {
-                commpage_image_module_sp = m_process->ReadModuleFromMemory(
-                    image_info.file_spec, image_info.address);
-                // Always load a memory image right away in the target in case
-                // we end up trying to read the symbol table from memory... The
-                // __LINKEDIT will need to be mapped so we can figure out where
-                // the symbol table bits are...
-                bool changed = false;
-                UpdateImageLoadAddress(commpage_image_module_sp.get(),
-                                       image_info);
-                target.GetImages().Append(commpage_image_module_sp);
-                if (changed) {
-                  image_info.load_stop_id = m_process->GetStopID();
-                  loaded_module_list.AppendIfNeeded(commpage_image_module_sp);
+                llvm::Expected<ModuleSP> module_sp_or_err =
+                    m_process->ReadModuleFromMemory(image_info.file_spec,
+                                                    image_info.address);
+                if (auto err = module_sp_or_err.takeError()) {
+                  LLDB_LOG_ERROR(log, std::move(err),
+                                 "Failed to read module from memory: {0}");
+                } else {
+                  // Always load a memory image right away in the target in case
+                  // we end up trying to read the symbol table from memory...
+                  // The __LINKEDIT will need to be mapped so we can figure out
+                  // where the symbol table bits are...
+                  commpage_image_module_sp = *module_sp_or_err;
+                  bool changed = false;
+                  UpdateImageLoadAddress(commpage_image_module_sp.get(),
+                                         image_info);
+                  target.GetImages().Append(commpage_image_module_sp);
+                  if (changed) {
+                    image_info.load_stop_id = m_process->GetStopID();
+                    loaded_module_list.AppendIfNeeded(commpage_image_module_sp);
+                  }
                 }
               }
             }
