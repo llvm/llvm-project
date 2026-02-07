@@ -5012,13 +5012,11 @@ the configuration (without a prefix: ``Auto``).
 .. _KeepFormFeed:
 
 **KeepFormFeed** (``Boolean``) :versionbadge:`clang-format 20` :ref:`¶ <KeepFormFeed>`
-  Keep the form feed character (``\f``) if it's immediately preceded and
-  followed by a newline. Multiple form feeds and newlines within a
-  whitespace range are replaced with a single newline and form feed followed
-  by the remaining newlines. See
-  `GNU formfeed coding standard
-  <https://www.gnu.org/prep/standards/html_node/Formatting.html#:~:text=formfeed>`_
-  for more information.
+  Keep the form feed character if it's immediately preceded and followed by
+  a newline. Multiple form feeds and newlines within a whitespace range are
+  replaced with a single newline and form feed followed by the remaining
+  newlines. (See
+  www.gnu.org/prep/standards/html_node/Formatting.html#:~:text=formfeed.)
 
 .. _LambdaBodyIndentation:
 
