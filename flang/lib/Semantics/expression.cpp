@@ -4401,7 +4401,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::PointerObject &x) {
 // | | | | | | AcValue -> Expr -> LiteralConstant -> IntLiteralConstant = '4'
 // We can decide that a misparsed AllocateShapeSpecList is supposed to be 
 // an AllocateShapeSpecArray if the list is 1 entry long AND either of the expressions
-// is a rank-1 array. 
+// is an array (rank > 0). We will check that it is a rank-1 array 
+// as part of other error checks in check-allocate.cpp.
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &x) {
   auto &shapeSpecList{
     std::get<std::list<parser::AllocateShapeSpec>>(x.u)};
@@ -4409,28 +4410,14 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &
     return std::nullopt;
   }
 
-  bool foundArray = false;
-  int64_t ubSize = -1;
-  int64_t lbSize = -1;
-  int ubRank = 0;
-  int lbRank = 0;
+  bool foundArray{false};
   
   // Get upper bound - BoundExpr is Scalar<Integer<Indirection<Expr>>>
   const auto &upperBound{std::get<1>(shapeSpecList.front().t)};
   const auto &upperBoundExpr{upperBound.thing};
   
   if(MaybeExpr analyzedExpr = Analyze(upperBoundExpr)) {
-    ubRank = analyzedExpr->Rank();
-    if(ubRank == 1) {
-      foundArray = true;
-      if (auto shape = GetShape(GetFoldingContext(), *analyzedExpr)) {
-        if (shape->size() == 1 && (*shape)[0]) {
-          if (auto extent = ToInt64(*(*shape)[0])) {
-            ubSize = *extent;
-          }
-        }
-      }
-    }
+    foundArray = analyzedExpr->Rank() > 0;
   }
   
   // Check lower bound if it exists
@@ -4438,30 +4425,11 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &
   if(lowerBoundOpt) {
     const auto &lowerBoundExpr{lowerBoundOpt->thing};
     if(MaybeExpr analyzedExpr = Analyze(lowerBoundExpr)) {
-      lbRank = analyzedExpr->Rank();
-      if(lbRank == 1) {
-        foundArray = true;
-        if (auto shape = GetShape(GetFoldingContext(), *analyzedExpr)) {
-          if (shape->size() == 1 && (*shape)[0]) {
-            if (auto extent = ToInt64(*(*shape)[0])) {
-              lbSize = *extent;
-            }
-          }
-        }
-      }
+      foundArray |= analyzedExpr->Rank() > 0;
     }  
   }
 
   if(foundArray) {
-    // Check for size mismatch BEFORE the rewrite (when both are arrays)
-    if (ubRank == 1 && lbRank == 1 && ubSize > 0 && lbSize > 0 && ubSize != lbSize) {
-      parser::CharBlock at{parser::FindSourceLocation(upperBoundExpr)};
-      Say(at, "ALLOCATE bounds arrays must have the same size; "
-          "lower bounds has %jd elements, upper bounds has %jd elements"_err_en_US,
-          static_cast<std::intmax_t>(lbSize), 
-          static_cast<std::intmax_t>(ubSize));
-    }
-    
     // Get the IntExpr from the upper bound (BoundExpr.thing is the IntExpr)
     auto &mutableUpperBound{const_cast<parser::BoundExpr&>(upperBound)};
     parser::IntExpr upperIntExpr{std::move(mutableUpperBound.thing)};

@@ -672,9 +672,9 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
         }
       }
       else {
-        // Array bounds specification - check that bounds array size matches object rank
         const auto &allocateShapeSpecArrayList{
             std::get<parser::AllocateShapeSpecArrayList>(allocation_.t)};
+        //TODO: change to get, remove if
         if (const auto *boundsArray{
                 std::get_if<parser::AllocateShapeSpecArray>(&allocateShapeSpecArrayList.u)}) {
           const auto &lowerOptIntExpr{std::get<0>(boundsArray->t)};
@@ -682,43 +682,89 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
           
           int64_t upperBoundsArraySize{-1};
           int64_t lowerBoundsArraySize{-1};
+
+          // We can check both bounds and report multiple errors instead of returning immediately.
+          bool flaggedNonConstSize{false}, flaggedRank{false};
+          const auto *upperExpr{GetExpr(context, upperIntExpr)};
+          const auto *lowerExpr{lowerOptIntExpr ? GetExpr(context, *lowerOptIntExpr) : nullptr};
           
           // Try to get size from upper bounds (always present)
-          if (const auto *upperExpr{GetExpr(context, upperIntExpr)}) {
+          if (upperExpr) {
             if (upperExpr->Rank() == 1) {
               if (auto shape{evaluate::GetShape(context.foldingContext(), *upperExpr)}) {
                 if (shape->size() == 1 && (*shape)[0]) {
                   if (auto extent{evaluate::ToInt64(*(*shape)[0])}) {
                     upperBoundsArraySize = *extent;
                   }
-                }
-              }
-            }
-          }
-          
-          // If upper was scalar, try to get size from lower bounds
-          if (lowerOptIntExpr) {
-            if (const auto *lowerExpr{GetExpr(context, *lowerOptIntExpr)}) {
-              if (lowerExpr->Rank() == 1) {
-                if (auto shape{evaluate::GetShape(context.foldingContext(), *lowerExpr)}) {
-                  if (shape->size() == 1 && (*shape)[0]) {
-                    if (auto extent{evaluate::ToInt64(*(*shape)[0])}) {
-                      lowerBoundsArraySize = *extent;
-                    }
+                  else {
+                    context.Say(parser::FindSourceLocation(upperIntExpr),
+                        "Rank-1 integer array used as upper bounds in ALLOCATE must have constant size"_err_en_US);                    
+                    flaggedNonConstSize = true;
                   }
                 }
               }
             }
+            else if(upperExpr->Rank() > 1) {
+              context.Say(parser::FindSourceLocation(upperIntExpr),
+                  "Integer array used as upper bounds in ALLOCATE must be rank-1 but is rank-%d"_err_en_US, upperExpr->Rank());                    
+              flaggedRank = true;
+            }
           }
           
-          // Check if bounds array size matches the object's rank
+          if (lowerExpr) {
+            if (lowerExpr->Rank() == 1) {
+              if (auto shape{evaluate::GetShape(context.foldingContext(), *lowerExpr)}) {
+                if (shape->size() == 1 && (*shape)[0]) {
+                  if (auto extent{evaluate::ToInt64(*(*shape)[0])}) {
+                    lowerBoundsArraySize = *extent;
+                  }
+                  else {
+                    context.Say(parser::FindSourceLocation(lowerOptIntExpr),
+                        "Rank-1 integer array used as lower bounds in ALLOCATE must have constant size"_err_en_US);                    
+                    flaggedNonConstSize = true;
+                  }
+                }
+              }
+            } else if(lowerExpr->Rank() > 1) {
+              context.Say(parser::FindSourceLocation(lowerOptIntExpr),
+                  "Integer array used as lower bounds in ALLOCATE must be rank-1 but is rank-%d"_err_en_US, lowerExpr->Rank());                    
+              flaggedRank = true;
+            }
+          }
+
+          // Errors after this don't make sense to check if the previous checks failed
+          if(flaggedNonConstSize || flaggedRank) return false;
+
+          if((lowerBoundsArraySize > 0) && (upperBoundsArraySize > 0) && lowerBoundsArraySize != upperBoundsArraySize) {
+            parser::CharBlock at{parser::FindSourceLocation(*boundsArray)};
+            context.Say(at, "ALLOCATE bounds integer rank-1 arrays must have the same size; "
+                "lower bounds has %jd elements, upper bounds has %jd elements"_err_en_US,
+                static_cast<std::intmax_t>(lowerBoundsArraySize), 
+                static_cast<std::intmax_t>(upperBoundsArraySize));
+            return false;
+          }
+          
           if ((lowerBoundsArraySize == upperBoundsArraySize) && (upperBoundsArraySize > 0) && (upperBoundsArraySize != rank_)) {
             context.Say(name_.source,
-                "ALLOCATE bounds array has %jd elements but allocatable object '%s' has rank %d"_err_en_US,
+                "ALLOCATE bounds integer rank-1 arrays have %jd elements but allocatable object '%s' has rank %d"_err_en_US,
                 static_cast<std::intmax_t>(upperBoundsArraySize),
                 name_.source,
                 rank_);
             return false;
+          }
+          else if(upperBoundsArraySize > -1 && lowerBoundsArraySize == -1 && upperBoundsArraySize != rank_) {
+            context.Say(parser::FindSourceLocation(upperIntExpr),
+                "ALLOCATE upper bounds integer rank-1 array has %jd elements but allocatable object '%s' has rank %d"_err_en_US,
+                static_cast<std::intmax_t>(upperBoundsArraySize),
+                name_.source,
+                rank_);                    
+          }
+          else if(lowerBoundsArraySize > -1 && upperBoundsArraySize == -1 && lowerBoundsArraySize != rank_) {
+            context.Say(parser::FindSourceLocation(lowerOptIntExpr),
+                "ALLOCATE lower bounds integer rank-1 array has %jd elements but allocatable object '%s' has rank %d"_err_en_US,
+                static_cast<std::intmax_t>(lowerBoundsArraySize),
+                name_.source,
+                rank_);                    
           }
         }
       }
