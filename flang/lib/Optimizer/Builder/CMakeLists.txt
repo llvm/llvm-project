@@ -47,7 +47,6 @@ add_flang_library(FIRBuilder
   LINK_LIBS
   CUFAttrs
   CUFDialect
-  FIRAnalysis
   FIRDialect
   FIRDialectSupport
   FIRSupport
