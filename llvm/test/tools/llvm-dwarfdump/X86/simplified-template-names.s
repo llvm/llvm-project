@@ -4,7 +4,7 @@
 # CHECK: No errors.
 
 # To regenerate this test, run from llvm-project root:
-#   PATH=/path/to/clang_build/bin:$PATH llvm/utils/update_test_body.py \
+#   LLVM_SRC_ROOT=/path/to/llvm_src PATH=/path/to/clang_build/bin:$PATH llvm/utils/update_test_body.py \
 #     llvm/test/tools/llvm-dwarfdump/X86/simplified-template-names.s
 
 .ifdef GEN

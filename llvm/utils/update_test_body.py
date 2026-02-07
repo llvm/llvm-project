@@ -49,7 +49,6 @@ def process(args, path):
     if not seen_gen:
         print("'gen' does not exist", file=sys.stderr)
         return 1
-    original_cwd = os.getcwd()
     with tempfile.TemporaryDirectory(prefix="update_test_body_") as dir:
         try:
             # If the last line starts with ".endif", remove it.
@@ -79,7 +78,6 @@ def process(args, path):
                     os.environ,
                     CCC_OVERRIDE_OPTIONS="#^-fno-ident",
                     PWD="/proc/self/cwd",
-                    LLVM_SRC_ROOT=original_cwd,
                 ),
             )
             sys.stderr.write(sub.stderr.decode())
