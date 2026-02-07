@@ -13,6 +13,14 @@
 using namespace llvm;
 using namespace llvm::orc;
 
+Error RedirectionManager::redirect(JITDylib &JD, SymbolMap NewDests) {
+  std::promise<MSVCPError> P;
+  redirect(JD, std::move(NewDests),
+           [&P](Error E) { P.set_value(std::move(E)); });
+  auto F = P.get_future();
+  return F.get();
+}
+
 void RedirectionManager::anchor() {}
 
 Error RedirectableSymbolManager::createRedirectableSymbols(

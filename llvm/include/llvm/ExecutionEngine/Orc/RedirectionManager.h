@@ -27,7 +27,11 @@ public:
 
   /// Change the redirection destination of given symbols to new destination
   /// symbols.
-  virtual Error redirect(JITDylib &JD, const SymbolMap &NewDests) = 0;
+  virtual void redirect(JITDylib &JD, SymbolMap NewDests,
+                        unique_function<void(Error)> OnComplete) = 0;
+
+  /// Blocking version of redirect.
+  Error redirect(JITDylib &JD, SymbolMap NewDests);
 
   /// Change the redirection destination of given symbol to new destination
   /// symbol.

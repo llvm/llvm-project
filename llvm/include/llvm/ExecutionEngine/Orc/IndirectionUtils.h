@@ -308,7 +308,8 @@ public:
   virtual Error updatePointer(StringRef Name, ExecutorAddr NewAddr) = 0;
 
   /// --- RedirectableSymbolManager implementation ---
-  Error redirect(JITDylib &JD, const SymbolMap &NewDests) override;
+  void redirect(JITDylib &JD, SymbolMap NewDests,
+                unique_function<void(Error)> OnComplete) override;
 
   void
   emitRedirectableSymbols(std::unique_ptr<MaterializationResponsibility> MR,

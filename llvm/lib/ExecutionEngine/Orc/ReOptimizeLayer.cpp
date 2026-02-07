@@ -276,15 +276,18 @@ void ReOptimizeLayer::rt_reoptimize(SendErrorFn SendResult,
     return;
   }
 
-  if (auto Err = RSManager.redirect(JD, std::move(*SymbolDests))) {
-    ES.reportError(std::move(Err));
-    MUState.reoptimizeFailed();
-    SendResult(Error::success());
-    return;
-  }
-
-  MUState.reoptimizeSucceeded();
-  SendResult(Error::success());
+  RSManager.redirect(
+      JD, std::move(*SymbolDests),
+      [this, MUID, SendResult = std::move(SendResult)](Error Err) mutable {
+        auto &MUState = getMaterializationUnitState(MUID);
+        if (Err) {
+          ES.reportError(std::move(Err));
+          MUState.reoptimizeFailed();
+        } else {
+          MUState.reoptimizeSucceeded();
+        }
+        SendResult(Error::success());
+      });
 }
 
 void ReOptimizeLayer::createReoptimizeCall(Module &M, Instruction &IP,
