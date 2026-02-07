@@ -30,7 +30,7 @@ std::string platformString() {
   return PlatformString;
 }
 
-std::string featureString() {
+llvm::StringRef featureString() {
   return
 #if defined(_WIN32)
       "windows"

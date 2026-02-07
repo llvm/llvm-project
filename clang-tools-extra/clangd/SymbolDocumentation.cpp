@@ -20,7 +20,8 @@ namespace clang {
 namespace clangd {
 namespace {
 
-std::string commandMarkerAsString(comments::CommandMarkerKind CommandMarker) {
+llvm::StringRef
+commandMarkerAsString(comments::CommandMarkerKind CommandMarker) {
   switch (CommandMarker) {
   case comments::CommandMarkerKind::CMK_At:
     return "@";
@@ -33,7 +34,7 @@ std::string commandMarkerAsString(comments::CommandMarkerKind CommandMarker) {
 void commandToMarkup(markup::Paragraph &Out, StringRef Command,
                      comments::CommandMarkerKind CommandMarker,
                      StringRef Args) {
-  Out.appendBoldText(commandMarkerAsString(CommandMarker) + Command.str());
+  Out.appendBoldText((commandMarkerAsString(CommandMarker) + Command).str());
   Out.appendSpace();
   if (!Args.empty())
     Out.appendCode(Args.str());

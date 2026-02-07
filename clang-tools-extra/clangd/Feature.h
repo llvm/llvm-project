@@ -15,6 +15,7 @@
 
 // Export constants like CLANGD_BUILD_XPC
 #include "Features.inc"
+#include "llvm/ADT/StringRef.h"
 
 namespace clang {
 namespace clangd {
@@ -28,7 +29,7 @@ std::string platformString();
 
 // Returns a string describing the compile-time configuration.
 // e.g. mac+debug+asan+grpc
-std::string featureString();
+llvm::StringRef featureString();
 
 } // namespace clangd
 } // namespace clang
