@@ -19,16 +19,14 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-  // Make sure that text_encoding(id) asserts when the input id not in range of allowed values
+  // Make sure that text_encoding(id) asserts when the input id not in the range of allowed values
 
-  TEST_LIBCPP_ASSERT_FAILURE(
-      std::text_encoding(std::text_encoding::id(33)), "invalid text_encoding::id passed to text_encoding(id)");
-  TEST_LIBCPP_ASSERT_FAILURE(
-      std::text_encoding(std::text_encoding::id(34)), "invalid text_encoding::id passed to text_encoding(id)");
-  TEST_LIBCPP_ASSERT_FAILURE(
-      std::text_encoding(std::text_encoding::id(-1)), "invalid text_encoding::id passed to text_encoding(id)");
-  TEST_LIBCPP_ASSERT_FAILURE(
-      std::text_encoding(std::text_encoding::id(INT_MAX)), "invalid text_encoding::id passed to text_encoding(id)");
+  TEST_LIBCPP_ASSERT_FAILURE(std::text_encoding(std::text_encoding::id(33)), "Mib for NATS-DANO used");
+  TEST_LIBCPP_ASSERT_FAILURE(std::text_encoding(std::text_encoding::id(34)), "Mib for NATS-DANO-ADD used");
+  TEST_LIBCPP_ASSERT_FAILURE(std::text_encoding(std::text_encoding::id(-1)), "invalid text_encoding::id passed");
+  TEST_LIBCPP_ASSERT_FAILURE(std::text_encoding(std::text_encoding::id(INT_MAX)), "invalid text_encoding::id passed");
+  TEST_LIBCPP_ASSERT_FAILURE(std::text_encoding(std::text_encoding::id(int(std::text_encoding::id::CP50220) + 1)),
+                             "invalid text_encoding::id passed");
 
   return 0;
 }

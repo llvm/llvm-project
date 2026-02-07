@@ -295,6 +295,9 @@ private:
     CP50220                 = 2260
   };
 
+  static constexpr int __NATS_DANO_     = 33;
+  static constexpr int __NATS_DANO_ADD_ = 34;
+
   using enum __id;
   static constexpr size_t __max_name_length_ = 63;
 
@@ -310,11 +313,11 @@ private:
              __comp_name(string_view(__e.__name_, __e.__name_size_), string_view(__other.__name_, __e.__name_size_));
     }
 
-    _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(const __te_data& __e, const int_least32_t __i) noexcept {
-      return __e.__mib_rep_ < __i;
+    _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(const __te_data& __e, __id __i) noexcept {
+      return __e.__mib_rep_ < int_least32_t(__i);
     }
 
-    _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __te_data& __e, std::string_view __name) noexcept {
+    _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __te_data& __e, string_view __name) noexcept {
       return __comp_name(__name, string_view(__e.__name_, __e.__name_size_));
     }
   }; // __te_data
@@ -326,16 +329,19 @@ private:
 
     // Map any non-alphanumeric character to 255, skip prefix 0s, else get tolower(__n).
     auto __map_char = [](char __n, bool& __in_number) -> unsigned char {
-      auto __to_lower = [](char __n_in) -> char {
-        return (__n_in >= 'A' && __n_in <= 'Z') ? __n_in + ('a' - 'A') : __n_in;
-      };
       if (__n == '0') {
         return __in_number ? '0' : 255;
       }
       __in_number = __n >= '1' && __n <= '9';
-      return (__n >= '1' && __n <= '9') || (__n >= 'A' && __n <= 'Z') || (__n >= 'a' && __n <= 'z')
-               ? __to_lower(__n)
-               : 255;
+
+      if ((__n >= '1' && __n <= '9') || (__n >= 'a' && __n <= 'z')) {
+        return __n;
+      }
+      if (__n >= 'A' && __n <= 'Z') {
+        return __n + ('a' - 'A'); // tolower
+      }
+
+      return 255;
     };
 
     auto __a_ptr = __a.begin(), __b_ptr = __b.begin();
@@ -358,51 +364,52 @@ private:
     return true;
   }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr const __te_data* __find_encoding_data(string_view __a) {
-    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
-        __a.size() <= __max_name_length_ && !__a.contains('\0'), "invalid string passed to text_encoding(string_view)");
-    const __te_data* __data_first = __text_encoding_data + 2;
-    const __te_data* __data_last  = std::end(__text_encoding_data);
+  _LIBCPP_HIDE_FROM_ABI static constexpr unsigned short __find_data_idx(string_view __a) {
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__a.size() <= __max_name_length_, "input string_view must have size <= 63");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(!__a.contains('\0'), "input string_view must not contain '\\0'");
 
-    auto* __found_data = std::find(__data_first, __data_last, __a);
+    auto* __found = std::find(__text_encoding_data + 2, std::end(__text_encoding_data), __a);
 
-    if (__found_data == __data_last) {
-      return __text_encoding_data; // other
+    if (__found == std::end(__text_encoding_data)) {
+      return 0u; // other
     }
 
-    while (__found_data[-1].__mib_rep_ == __found_data->__mib_rep_) {
-      __found_data--;
+    while (__found[-1].__mib_rep_ == __found->__mib_rep_) {
+      __found--;
     }
 
-    return __found_data;
+    return __found - __text_encoding_data;
   }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr const __te_data* __find_encoding_data_by_id(__id __i) {
-    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
-        ((__i >= __id::other && __i <= __id::CP50220) && ((int_least32_t(__i) != 33) && (int_least32_t(__i) != 34))),
-        "invalid text_encoding::id passed to text_encoding(id)");
-    auto __found =
-        std::lower_bound(std::begin(__text_encoding_data), std::end(__text_encoding_data), int_least32_t(__i));
+  _LIBCPP_HIDE_FROM_ABI static constexpr unsigned short __find_data_idx_by_id(__id __i) {
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__i >= __id::other, "invalid text_encoding::id passed");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__i <= __id::CP50220, "invalid text_encoding::id passed");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(int_least32_t(__i) != __NATS_DANO_, "Mib for NATS-DANO used");
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(int_least32_t(__i) != __NATS_DANO_ADD_, "Mib for NATS-DANO-ADD used");
+    auto __found = std::lower_bound(std::begin(__text_encoding_data), std::end(__text_encoding_data), __i);
 
-    return __found != std::end(__text_encoding_data)
-             ? __found
-             : __text_encoding_data + 1; // unknown, should be unreachable
+    if (__found == std::end(__text_encoding_data)) {
+      return 1u;
+    }
+
+    return __found - __text_encoding_data;
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __te_impl() = default;
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __te_impl(string_view __enc) noexcept
-      : __encoding_rep_(__find_encoding_data(__enc)) {
+      : __encoding_idx_(__find_data_idx(__enc)) {
     __enc.copy(__name_, __max_name_length_, 0);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __te_impl(__id __i) noexcept : __encoding_rep_(__find_encoding_data_by_id(__i)) {
-    if (__encoding_rep_->__name_[0] != '\0')
-      std::copy_n(__encoding_rep_->__name_, __encoding_rep_->__name_size_, __name_);
+  _LIBCPP_HIDE_FROM_ABI constexpr __te_impl(__id __i) noexcept : __encoding_idx_(__find_data_idx_by_id(__i)) {
+    if (__text_encoding_data[__encoding_idx_].__name_[0] != '\0')
+      std::copy_n(
+          __text_encoding_data[__encoding_idx_].__name_, __text_encoding_data[__encoding_idx_].__name_size_, __name_);
   }
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr __id __mib() const noexcept {
-    return __id(__encoding_rep_->__mib_rep_);
+    return __id(__text_encoding_data[__encoding_idx_].__mib_rep_);
   }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr const char* __name() const noexcept { return __name_; }
 
@@ -475,7 +482,7 @@ private:
         return *this;
       }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator-=(difference_type __n) { return operator+=(-__n); }
+      _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator-=(difference_type __n) { return (*this += -__n); }
 
       _LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const __iterator& __it) const { return __data_ == __it.__data_; }
 
@@ -499,10 +506,10 @@ private:
 
     _LIBCPP_HIDE_FROM_ABI constexpr __aliases_view(const __te_data* __d) : __view_data_(__d) {}
     const __te_data* __view_data_;
-  };
+  }; // __aliases_view
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr __aliases_view __aliases() const {
-    return __aliases_view(__encoding_rep_);
+    return __aliases_view(&__text_encoding_data[__encoding_idx_]);
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __te_impl& __a, const __te_impl& __b) noexcept {
@@ -511,7 +518,7 @@ private:
              : __a.__mib() == __b.__mib();
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __te_impl& __encoding, const __id __i) noexcept {
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __te_impl& __encoding, __id __i) noexcept {
     return __encoding.__mib() == __i;
   }
 
@@ -541,9 +548,8 @@ private:
   }
 
 #  endif
-
-  const __te_data* __encoding_rep_     = __text_encoding_data + 1;
-  char __name_[__max_name_length_ + 1] = {0};
+  unsigned short __encoding_idx_{1u};
+  char __name_[__max_name_length_ + 1]{};
 
   _LIBCPP_HIDE_FROM_ABI static constexpr __te_data __text_encoding_data[] = {
       {"", 1, 0, 0}, // other

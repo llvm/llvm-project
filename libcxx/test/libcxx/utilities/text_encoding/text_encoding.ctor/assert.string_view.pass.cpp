@@ -24,14 +24,14 @@ int main(int, char**) {
   std::string_view view(str);
 
   // text_encoding(string_view) asserts if its input size() > max_name_length
-  TEST_LIBCPP_ASSERT_FAILURE(std::text_encoding(view), "invalid string passed to text_encoding(string_view)");
+  TEST_LIBCPP_ASSERT_FAILURE(std::text_encoding(view), "input string_view must have size <= 63");
 
   // text_encoding(string_view) asserts if its input contains a null terminator
   char str2[std::text_encoding::max_name_length] = "HELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELLOHELL";
   std::string_view view2(str2);
   str2[3] = '\0';
 
-  TEST_LIBCPP_ASSERT_FAILURE(std::text_encoding(view2), "invalid string passed to text_encoding(string_view)");
+  TEST_LIBCPP_ASSERT_FAILURE(std::text_encoding(view2), "input string_view must not contain '\\0'");
 
   return 0;
 }
