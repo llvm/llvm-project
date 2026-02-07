@@ -207,6 +207,8 @@ class SPIRVEmitIntrinsics
 
   void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
 
+  void emitUnstructuredLoopControls(Function &F, IRBuilder<> &B);
+
   // Tries to walk the type accessed by the given GEP instruction.
   // For each nested type access, one of the 2 callbacks is called:
   //  - OnLiteralIndexing when the index is a known constant value.
@@ -220,7 +222,7 @@ class SPIRVEmitIntrinsics
   //    Parameters:
   //      ElementType: the type of the elements stored in the parent array.
   //      Offset: the Value* containing the byte offset into the array.
-  // Return true if an error occured during the walk, false otherwise.
+  // Return true if an error occurred during the walk, false otherwise.
   bool walkLogicalAccessChain(
       GetElementPtrInst &GEP,
       const std::function<void(Type *PointedType, uint64_t Index)>
@@ -2029,7 +2031,7 @@ Instruction *SPIRVEmitIntrinsics::visitLoadInst(LoadInst &I) {
   auto *NewI =
       B.CreateIntrinsic(Intrinsic::spv_load, {I.getOperand(0)->getType()},
                         {I.getPointerOperand(), B.getInt16(Flags),
-                         B.getInt8(I.getAlign().value())});
+                         B.getInt32(I.getAlign().value())});
   replaceMemInstrUses(&I, NewI, B);
   return NewI;
 }
@@ -2044,10 +2046,23 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
   MachineMemOperand::Flags Flags =
       TLI->getStoreMemOperandFlags(I, CurrF->getDataLayout());
   auto *PtrOp = I.getPointerOperand();
+
+  if (I.getValueOperand()->getType()->isAggregateType()) {
+    // It is possible that what used to be an ExtractValueInst has been replaced
+    // with a call to the spv_extractv intrinsic, and that said call hasn't
+    // had its return type replaced with i32 during the dedicated pass (because
+    // it was emitted later); we have to handle this here, because IRTranslator
+    // cannot deal with multi-register types at the moment.
+    CallBase *CB = dyn_cast<CallBase>(I.getValueOperand());
+    assert(CB && CB->getIntrinsicID() == Intrinsic::spv_extractv &&
+           "Unexpected argument of aggregate type, should be spv_extractv!");
+    CB->mutateType(B.getInt32Ty());
+  }
+
   auto *NewI = B.CreateIntrinsic(
       Intrinsic::spv_store, {I.getValueOperand()->getType(), PtrOp->getType()},
       {I.getValueOperand(), PtrOp, B.getInt16(Flags),
-       B.getInt8(I.getAlign().value())});
+       B.getInt32(I.getAlign().value())});
   NewI->copyMetadata(I);
   I.eraseFromParent();
   return NewI;
@@ -2073,9 +2088,9 @@ Instruction *SPIRVEmitIntrinsics::visitAllocaInst(AllocaInst &I) {
       ArraySize
           ? B.CreateIntrinsic(Intrinsic::spv_alloca_array,
                               {PtrTy, ArraySize->getType()},
-                              {ArraySize, B.getInt8(I.getAlign().value())})
+                              {ArraySize, B.getInt32(I.getAlign().value())})
           : B.CreateIntrinsic(Intrinsic::spv_alloca, {PtrTy},
-                              {B.getInt8(I.getAlign().value())});
+                              {B.getInt32(I.getAlign().value())});
   replaceAllUsesWithAndErase(B, &I, NewI);
   return NewI;
 }
@@ -2108,7 +2123,7 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
                                              IRBuilder<> &B) {
   // Skip special artificial variables.
   static const StringSet<> ArtificialGlobals{"llvm.global.annotations",
-                                             "llvm.compiler.used"};
+                                             "llvm.compiler.used", "llvm.used"};
 
   if (ArtificialGlobals.contains(GV.getName()))
     return;
@@ -2865,6 +2880,38 @@ SPIRVEmitIntrinsics::simplifyZeroLengthArrayGepInst(GetElementPtrInst *GEP) {
   return nullptr;
 }
 
+void SPIRVEmitIntrinsics::emitUnstructuredLoopControls(Function &F,
+                                                       IRBuilder<> &B) {
+  const SPIRVSubtarget *ST = TM->getSubtargetImpl(F);
+  // Shaders use SPIRVStructurizer which emits OpLoopMerge via spv_loop_merge.
+  if (ST->isShader())
+    return;
+  if (!ST->canUseExtension(
+          SPIRV::Extension::SPV_INTEL_unstructured_loop_controls))
+    return;
+
+  for (BasicBlock &BB : F) {
+    Instruction *Term = BB.getTerminator();
+    MDNode *LoopMD = Term->getMetadata(LLVMContext::MD_loop);
+    if (!LoopMD)
+      continue;
+
+    SmallVector<unsigned, 1> Ops =
+        getSpirvLoopControlOperandsFromLoopMetadata(LoopMD);
+    unsigned LC = Ops[0];
+    if (LC == SPIRV::LoopControl::None)
+      continue;
+
+    // Emit intrinsic: loop control mask + optional parameters.
+    B.SetInsertPoint(Term);
+    SmallVector<Value *, 4> IntrArgs;
+    IntrArgs.push_back(B.getInt32(LC));
+    for (unsigned I = 1; I < Ops.size(); ++I)
+      IntrArgs.push_back(B.getInt32(Ops[I]));
+    B.CreateIntrinsic(Intrinsic::spv_loop_control_intel, IntrArgs);
+  }
+}
+
 bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   if (Func.isDeclaration())
     return false;
@@ -2980,6 +3027,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     addSaturatedDecorationToIntrinsic(I, B);
     processInstrAfterVisit(I, B);
   }
+
+  emitUnstructuredLoopControls(Func, B);
 
   return true;
 }

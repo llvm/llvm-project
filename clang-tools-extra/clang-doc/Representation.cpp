@@ -273,6 +273,10 @@ void Info::mergeBase(Info &&Other) {
   llvm::sort(Description);
   auto Last = llvm::unique(Description);
   Description.erase(Last, Description.end());
+  if (ParentUSR == EmptySID)
+    ParentUSR = Other.ParentUSR;
+  if (DocumentationFileName.empty())
+    DocumentationFileName = Other.DocumentationFileName;
 }
 
 bool Info::mergeable(const Info &Other) {

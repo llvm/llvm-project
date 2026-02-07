@@ -47,7 +47,6 @@
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
-#include <condition_variable>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -286,11 +285,11 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 
   lldb_private::FileSystem::Initialize();
   if (!stdio.empty()) {
-    llvm::SmallVector<llvm::StringRef, 3> files;
-    stdio.split(files, ':');
-    while (files.size() < 3)
-      files.push_back(files.back());
-    if (llvm::Error err = SetupIORedirection(files))
+    constexpr size_t num_of_stdio = 3;
+    llvm::SmallVector<llvm::StringRef, num_of_stdio> stdio_files;
+    stdio.split(stdio_files, ':');
+    stdio_files.resize(std::max(num_of_stdio, stdio_files.size()));
+    if (llvm::Error err = SetupIORedirection(stdio_files))
       return err;
   } else if ((isatty(STDIN_FILENO) != 0) &&
              llvm::StringRef(getenv("TERM")).starts_with_insensitive("xterm")) {
@@ -451,7 +450,7 @@ static llvm::Error serveConnection(
     if (connection_timeout_seconds)
       ResetConnectionTimeout(g_connection_timeout_mutex,
                              g_connection_timeout_time_point);
-    std::string client_name = llvm::formatv("client_{0}", clientCount++).str();
+    const std::string client_name = llvm::formatv("conn{0}", clientCount++);
     lldb::IOObjectSP io(std::move(sock));
 
     // Move the client into a background thread to unblock accepting the next
@@ -463,7 +462,7 @@ static llvm::Error serveConnection(
       DAP_LOG(client_log, "client connected");
 
       MainLoop loop;
-      Transport transport(client_log, io, io);
+      Transport transport(client_log, loop, io, io);
       DAP dap(client_log, default_repl_mode, pre_init_commands, no_lldbinit,
               client_name, transport, loop);
 
@@ -738,7 +737,7 @@ int main(int argc, char *argv[]) {
   constexpr llvm::StringLiteral client_name = "stdio";
   MainLoop loop;
   Log client_log = log.WithPrefix("(stdio)");
-  Transport transport(client_log, input, output);
+  Transport transport(client_log, loop, input, output);
   DAP dap(client_log, default_repl_mode, pre_init_commands, no_lldbinit,
           client_name, transport, loop);
 

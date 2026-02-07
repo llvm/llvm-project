@@ -23,6 +23,7 @@
 #include "lld/Common/Timer.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Config/llvm-config.h"
@@ -151,7 +152,8 @@ using MBErrPair = std::pair<std::unique_ptr<MemoryBuffer>, std::error_code>;
 
 // Create a std::future that opens and maps a file using the best strategy for
 // the host platform.
-static std::future<MBErrPair> createFutureForFile(std::string path) {
+static std::future<MBErrPair> createFutureForFile(std::string path,
+                                                  bool prefetchInputs) {
 #if _WIN64
   // On Windows, file I/O is relatively slow so it is best to do this
   // asynchronously.  But 32-bit has issues with potentially launching tons
@@ -165,6 +167,9 @@ static std::future<MBErrPair> createFutureForFile(std::string path) {
                                          /*RequiresNullTerminator=*/false);
     if (!mbOrErr)
       return MBErrPair{nullptr, mbOrErr.getError()};
+    // Prefetch memory pages in the background as we will need them soon enough.
+    if (prefetchInputs)
+      (*mbOrErr)->willNeedIfMmap();
     return MBErrPair{std::move(*mbOrErr), std::error_code()};
   });
 }
@@ -361,7 +366,7 @@ void LinkerDriver::handleReproFile(StringRef path, InputOpt inputOpt) {
 
 void LinkerDriver::enqueuePath(StringRef path, bool lazy, InputOpt inputOpt) {
   auto future = std::make_shared<std::future<MBErrPair>>(
-      createFutureForFile(std::string(path)));
+      createFutureForFile(std::string(path), ctx.config.prefetchInputs));
   std::string pathStr = std::string(path);
   enqueueTask([=]() {
     llvm::TimeTraceScope timeScope("File: ", path);
@@ -378,8 +383,13 @@ void LinkerDriver::enqueuePath(StringRef path, bool lazy, InputOpt inputOpt) {
         auto retryMb = MemoryBuffer::getFile(*retryPath, /*IsText=*/false,
                                              /*RequiresNullTerminator=*/false);
         ec = retryMb.getError();
-        if (!ec)
+        if (!ec) {
           mb = std::move(*retryMb);
+          // Prefetch memory pages in the background as we will need them soon
+          // enough.
+          if (ctx.config.prefetchInputs)
+            mb->willNeedIfMmap();
+        }
       } else {
         // We've already handled this file.
         return;
@@ -476,8 +486,8 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
       CHECK(c.getFullName(),
             "could not get the filename for the member defining symbol " +
                 toCOFFString(ctx, sym));
-  auto future =
-      std::make_shared<std::future<MBErrPair>>(createFutureForFile(childName));
+  auto future = std::make_shared<std::future<MBErrPair>>(
+      createFutureForFile(childName, ctx.config.prefetchInputs));
   enqueueTask([=]() {
     auto mbOrErr = future->get();
     if (mbOrErr.second)
@@ -706,7 +716,7 @@ std::optional<StringRef> LinkerDriver::findLibIfNew(StringRef filename) {
     return std::nullopt;
 
   StringRef path = findLib(filename);
-  if (ctx.config.noDefaultLibs.count(path.lower()))
+  if (ctx.config.noDefaultLibs.contains(path.lower()))
     return std::nullopt;
 
   if (std::optional<sys::fs::UniqueID> id = getUniqueID(path))
@@ -855,9 +865,9 @@ void LinkerDriver::addWinSysRootLibSearchPaths() {
 
   // Libraries specified by `/nodefaultlib:` may not be found in incomplete
   // search paths before lld infers a machine type from input files.
-  std::set<std::string> noDefaultLibs;
-  for (const std::string &path : ctx.config.noDefaultLibs)
-    noDefaultLibs.insert(findLib(path).lower());
+  llvm::StringSet<> noDefaultLibs;
+  for (auto &iter : ctx.config.noDefaultLibs)
+    noDefaultLibs.insert(findLib(iter.first()).lower());
   ctx.config.noDefaultLibs = noDefaultLibs;
 }
 
@@ -1144,7 +1154,7 @@ void LinkerDriver::parseOrderFile(StringRef arg) {
     if (ctx.config.machine == I386 && !isDecorated(s))
       s = "_" + s;
 
-    if (set.count(s) == 0) {
+    if (!set.contains(s)) {
       if (ctx.config.warnMissingOrderSymbol)
         Warn(ctx) << "/order:" << arg << ": missing symbol: " << s
                   << " [LNK4037]";
@@ -2269,10 +2279,13 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     config->incremental = false;
   }
 
+  if (args.hasFlag(OPT_prefetch_inputs, OPT_prefetch_inputs_no, false))
+    config->prefetchInputs = true;
+
   if (errCount(ctx))
     return;
 
-  std::set<sys::fs::UniqueID> wholeArchives;
+  SmallSet<sys::fs::UniqueID, 0> wholeArchives;
   for (auto *arg : args.filtered(OPT_wholearchive_file))
     if (std::optional<StringRef> path = findFile(arg->getValue()))
       if (std::optional<sys::fs::UniqueID> id = getUniqueID(*path))
@@ -2286,7 +2299,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     if (args.hasArg(OPT_wholearchive_flag))
       return true;
     if (std::optional<sys::fs::UniqueID> id = getUniqueID(path))
-      return wholeArchives.count(*id);
+      return wholeArchives.contains(*id);
     return false;
   };
 
