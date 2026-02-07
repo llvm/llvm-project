@@ -17,7 +17,7 @@ def LOAD32 : I<(outs GPR8:$dst), (ins GPR32:$src), []>;
 // CHECK-NEXT: GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/8,
 // CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR8RegClassID),
 // CHECK-NEXT: // (ld:{ *:[i8] } GPR8:{ *:[i8] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD8:{ *:[i8] } GPR8:{ *:[i8] }:$src)
-// CHECK-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode4(MyTarget::LOAD8),
+// CHECK-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD8),
 // CHECK-NEXT: GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT: // GIR_Coverage, 0,
 // CHECK-NEXT: GIR_Done,
@@ -27,7 +27,7 @@ def LOAD32 : I<(outs GPR8:$dst), (ins GPR32:$src), []>;
 // CHECK-NEXT: GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
 // CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NEXT: // (ld:{ *:[i8] } GPR32:{ *:[i32] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD32:{ *:[i8] } GPR32:{ *:[i32] }:$src)
-// CHECK-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode4(MyTarget::LOAD32),
+// CHECK-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD32),
 // CHECK-NEXT: GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT: // GIR_Coverage, 1,
 // CHECK-NEXT: GIR_Done,
@@ -60,7 +60,7 @@ def LOAD16Imm : I<(outs GPR16:$dst), (ins GPR16:$src), []>;
 // CHECK-NEXT: GIM_CheckConstantInt8, /*MI*/1, /*Op*/2, 10,
 // CHECK-NEXT: GIM_CheckIsSafeToFold, /*NumInsns*/1,
 // CHECK-NEXT: // (ld:{ *:[i16] } (add:{ *:[i16] } GPR16:{ *:[i16] }:$src, 10:{ *:[i16] }))<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD16Imm:{ *:[i16] } GPR16:{ *:[i16] }:$src)
-// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode4(MyTarget::LOAD16Imm),
+// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::LOAD16Imm),
 // CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src
 // CHECK-NEXT: GIR_MergeMemOperands, /*InsnID*/0, /*NumInsns*/2, /*MergeInsnID's*/0, 1,
@@ -71,7 +71,7 @@ def LOAD16Imm : I<(outs GPR16:$dst), (ins GPR16:$src), []>;
 // CHECK-NEXT: GIM_Try, /*On fail goto*//*Label [[L3_ID:[0-9]+]]*/ GIMT_Encode4([[L3_AT:[0-9]+]]),
 // CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR16RegClassID),
 // CHECK-NEXT: // (ld:{ *:[i16] } GPR16:{ *:[i16] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (LOAD16:{ *:[i16] } GPR16:{ *:[i16] }:$src)
-// CHECK-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode4(MyTarget::LOAD16),
+// CHECK-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::LOAD16),
 // CHECK-NEXT: GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT: // GIR_Coverage, 2,
 // CHECK-NEXT: GIR_Done,
