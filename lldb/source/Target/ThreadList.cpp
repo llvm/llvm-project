@@ -505,6 +505,58 @@ bool ThreadList::WillResume(RunDirection &direction) {
 
   collection::iterator pos, end = m_threads.end();
 
+  // Clear any cached defer state from previous stops. This ensures we always
+  // compute fresh based on the current thread list state, handling edge cases
+  // like user suspending a thread or exceptions returning control to the user.
+  for (pos = m_threads.begin(); pos != end; ++pos) {
+    ThreadSP thread_sp(*pos);
+    ThreadPlan *plan = thread_sp->GetCurrentPlan();
+    if (plan && plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
+      ThreadPlanStepOverBreakpoint *bp_plan =
+          static_cast<ThreadPlanStepOverBreakpoint *>(plan);
+      bp_plan->SetDeferReenableBreakpointSite(false);
+    }
+  }
+  // Also clear the tracking map - we'll rebuild it based on current state
+  m_threads_stepping_over_bp.clear();
+
+  // Recompute deferred state for threads with existing StepOverBreakpoint
+  // plans (incomplete batch members from the previous stop). Group them by
+  // breakpoint address and set deferred re-enable so the breakpoint is only
+  // re-enabled when ALL threads finish, even if they run one at a time.
+  {
+    std::map<lldb::addr_t, std::vector<ThreadSP>> existing_bp_groups;
+    for (pos = m_threads.begin(); pos != end; ++pos) {
+      ThreadSP thread_sp(*pos);
+      if (thread_sp->GetResumeState() == eStateSuspended)
+        continue;
+      if (thread_sp->IsOperatingSystemPluginThread() &&
+          !thread_sp->GetBackingThread())
+        continue;
+      ThreadPlan *plan = thread_sp->GetCurrentPlan();
+      if (plan && plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
+        ThreadPlanStepOverBreakpoint *bp_plan =
+            static_cast<ThreadPlanStepOverBreakpoint *>(plan);
+        existing_bp_groups[bp_plan->GetBreakpointLoadAddress()].push_back(
+            thread_sp);
+      }
+    }
+    for (auto &group : existing_bp_groups) {
+      if (group.second.size() > 1) {
+        for (ThreadSP &thread_sp : group.second) {
+          RegisterThreadSteppingOverBreakpoint(group.first,
+                                               thread_sp->GetID());
+          ThreadPlan *plan = thread_sp->GetCurrentPlan();
+          if (plan &&
+              plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
+            static_cast<ThreadPlanStepOverBreakpoint *>(plan)
+                ->SetDeferReenableBreakpointSite(true);
+          }
+        }
+      }
+    }
+  }
+
   // Go through the threads and see if any thread wants to run just itself.
   // if so then pick one and run it.
 
