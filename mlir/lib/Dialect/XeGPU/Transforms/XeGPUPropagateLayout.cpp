@@ -840,9 +840,6 @@ void LayoutInfoPropagation::visitDpasOp(
       // Step 1. Get all valid layouts for A, B, and C operands.
       // All operands must have at least one valid subgroup layout.
       LayoutInfo layoutD = results[0]->getValue();
-      llvm::errs() << "DPAS result layout: ";
-      layoutD.print(llvm::errs());
-      llvm::errs() << "\n";
       SmallVector<int> sgLayoutD = layoutD.getSgLayout();
       assert(!sgLayoutD.empty() && "Expected layout for DPAS result.");
       auto layoutDVal = std::make_pair(sgLayoutD[0], sgLayoutD[1]);
@@ -997,7 +994,6 @@ void LayoutInfoPropagation::visitStoreNdOp(
             "Unable to determine the number of subgroups for the operation.");
         return;
       }
-      llvm::errs() << "Num SG: " << numSgOrErr.value() << "\n";
       auto sgLayouts = getValidLayouts(store.getValueType().getShape(),
                                        instData, numSgOrErr.value());
       if (sgLayouts.empty()) {
@@ -1015,9 +1011,6 @@ void LayoutInfoPropagation::visitStoreNdOp(
           DenseI32ArrayAttr::get(dataTy.getContext(), sgData),
           /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
           /*lane_data =*/nullptr, /*order =*/nullptr));
-      llvm::errs() << "Chosen SG Layout:";
-      storeLayout.print(llvm::errs());
-      llvm::errs() << "\n";
     }
     store.setLayoutAttr(
         dyn_cast<xegpu::DistributeLayoutAttr>(storeLayout.get()));
