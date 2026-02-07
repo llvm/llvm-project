@@ -3624,8 +3624,6 @@ bool MIParser::parseMMRA(MDNode *&Node) {
   lex();
   if (parseMDNode(Node))
     return true;
-  if (!Node)
-    return error("expected a MDNode after 'mmra'");
   if (Token.isNewlineOrEOF() || Token.is(MIToken::coloncolon) ||
       Token.is(MIToken::lbrace))
     return false;
