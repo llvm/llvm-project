@@ -1198,9 +1198,9 @@ bool ASTStructuralEquivalence::isEquivalent(
     break;
 
   case Type::LateParsedAttr:
-    if (!IsStructurallyEquivalent(Context,
-                                  cast<LateParsedAttrType>(T1)->getWrappedType(),
-                                  cast<LateParsedAttrType>(T2)->getWrappedType()))
+    if (!IsStructurallyEquivalent(
+            Context, cast<LateParsedAttrType>(T1)->getWrappedType(),
+            cast<LateParsedAttrType>(T2)->getWrappedType()))
       return false;
     break;
 

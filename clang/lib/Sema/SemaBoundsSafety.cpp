@@ -232,7 +232,7 @@ bool Sema::CheckCountedByAttrOnField(FieldDecl *FD, QualType T, Expr *E,
 }
 
 bool Sema::CheckCountedByAttrOnFieldDecl(FieldDecl *FD, Expr *E,
-                                          bool CountInBytes, bool OrNull) {
+                                         bool CountInBytes, bool OrNull) {
   unsigned Kind = getCountAttrKind(CountInBytes, OrNull);
 
   if (FD->getParent()->isUnion()) {

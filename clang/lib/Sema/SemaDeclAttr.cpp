@@ -8117,9 +8117,9 @@ static bool isKernelDecl(Decl *D) {
          D->hasAttr<CUDAGlobalAttr>();
 }
 
-void Sema::ProcessDeclAttributeList(Scope *S, Decl *D,
-                                    const ParsedAttributesView &AttrList,
-                                    const ProcessDeclAttributeOptions &Options) {
+void Sema::ProcessDeclAttributeList(
+    Scope *S, Decl *D, const ParsedAttributesView &AttrList,
+    const ProcessDeclAttributeOptions &Options) {
   if (AttrList.empty())
     return;
 

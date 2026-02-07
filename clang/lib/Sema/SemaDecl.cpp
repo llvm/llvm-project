@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TypeLocBuilder.h"
 #include "TreeTransform.h"
+#include "TypeLocBuilder.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
@@ -19722,7 +19722,8 @@ bool Sema::EntirelyFunctionPointers(const RecordDecl *Record) {
   return llvm::all_of(Record->decls(), IsFunctionPointerOrForwardDecl);
 }
 
-static QualType handleCountedByAttrField(Sema &S, QualType T, Decl *D, const ParsedAttr &AL) {
+static QualType handleCountedByAttrField(Sema &S, QualType T, Decl *D,
+                                         const ParsedAttr &AL) {
   if (!AL.diagnoseLangOpts(S))
     return QualType();
 
@@ -19756,11 +19757,11 @@ static QualType handleCountedByAttrField(Sema &S, QualType T, Decl *D, const Par
     llvm_unreachable("unexpected counted_by family attribute");
   }
 
-  return S.BuildCountAttributedArrayOrPointerType(
-      T, CountExpr, CountInBytes, OrNull);
+  return S.BuildCountAttributedArrayOrPointerType(T, CountExpr, CountInBytes,
+                                                  OrNull);
 }
 struct RebuildTypeWithLateParsedAttr
-  : TreeTransform<RebuildTypeWithLateParsedAttr> {
+    : TreeTransform<RebuildTypeWithLateParsedAttr> {
   FieldDecl *FD;
 
   RebuildTypeWithLateParsedAttr(Sema &SemaRef, FieldDecl *FD)
@@ -19778,7 +19779,7 @@ struct RebuildTypeWithLateParsedAttr
   }
 
   QualType TransformLateParsedAttrType(TypeLocBuilder &TLB,
-                                        LateParsedAttrTypeLoc TL) {
+                                       LateParsedAttrTypeLoc TL) {
     const LateParsedAttrType *LPA = TL.getTypePtr();
     auto *LTA = LPA->getLateParsedAttribute();
 
@@ -19847,7 +19848,7 @@ struct RebuildTypeWithLateParsedAttr
   }
 
   QualType TransformConstantArrayType(TypeLocBuilder &TLB,
-                                       ConstantArrayTypeLoc TL) {
+                                      ConstantArrayTypeLoc TL) {
     const ConstantArrayType *T = TL.getTypePtr();
     QualType ElementType = getDerived().TransformType(TLB, TL.getElementLoc());
     if (ElementType.isNull()) {
@@ -19893,7 +19894,7 @@ struct RebuildTypeWithLateParsedAttr
   }
 
   QualType TransformIncompleteArrayType(TypeLocBuilder &TLB,
-                                         IncompleteArrayTypeLoc TL) {
+                                        IncompleteArrayTypeLoc TL) {
     const IncompleteArrayType *T = TL.getTypePtr();
     QualType ElementType = getDerived().TransformType(TLB, TL.getElementLoc());
     if (ElementType.isNull()) {
@@ -19901,8 +19902,8 @@ struct RebuildTypeWithLateParsedAttr
       return QualType();
     }
 
-    // Diagnose flexible array member with element type having counted_by attribute
-    // e.g., int * __counted_by(n) arr[];
+    // Diagnose flexible array member with element type having counted_by
+    // attribute e.g., int * __counted_by(n) arr[];
     if (diagnoseCountAttributedType(ElementType, TL.getLBracketLoc()))
       return QualType();
 
@@ -19926,7 +19927,7 @@ struct RebuildTypeWithLateParsedAttr
   }
 
   QualType TransformVariableArrayType(TypeLocBuilder &TLB,
-                                       VariableArrayTypeLoc TL) {
+                                      VariableArrayTypeLoc TL) {
     const VariableArrayType *T = TL.getTypePtr();
     QualType ElementType = getDerived().TransformType(TLB, TL.getElementLoc());
     if (ElementType.isNull()) {
@@ -19968,7 +19969,7 @@ struct RebuildTypeWithLateParsedAttr
   }
 
   QualType TransformDependentSizedArrayType(TypeLocBuilder &TLB,
-                                             DependentSizedArrayTypeLoc TL) {
+                                            DependentSizedArrayTypeLoc TL) {
     const DependentSizedArrayType *T = TL.getTypePtr();
     QualType ElementType = getDerived().TransformType(TLB, TL.getElementLoc());
     if (ElementType.isNull()) {
@@ -19976,8 +19977,9 @@ struct RebuildTypeWithLateParsedAttr
       return QualType();
     }
 
-    // Diagnose dependent-sized array with element type having counted_by attribute
-    // e.g., template<int N> struct S { int * __counted_by(n) arr[N]; };
+    // Diagnose dependent-sized array with element type having counted_by
+    // attribute e.g., template<int N> struct S { int * __counted_by(n) arr[N];
+    // };
     if (diagnoseCountAttributedType(ElementType, TL.getLBracketLoc()))
       return QualType();
 
@@ -20003,7 +20005,8 @@ struct RebuildTypeWithLateParsedAttr
       }
     }
 
-    DependentSizedArrayTypeLoc NewTL = TLB.push<DependentSizedArrayTypeLoc>(Result);
+    DependentSizedArrayTypeLoc NewTL =
+        TLB.push<DependentSizedArrayTypeLoc>(Result);
     NewTL.setLBracketLoc(TL.getLBracketLoc());
     NewTL.setRBracketLoc(TL.getRBracketLoc());
     NewTL.setSizeExpr(Size);
@@ -20064,7 +20067,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       // named parent struct.
       FieldDecl *FD = dyn_cast<FieldDecl>(*i);
       if (FD->getType()->isRecordType())
-          continue;
+        continue;
 
       RebuildTypeWithLateParsedAttr RebuildFieldType(*this, FD);
       auto *OldTSI = FD->getTypeSourceInfo();
@@ -20082,7 +20085,7 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
     FieldDecl *FD = cast<FieldDecl>(*i);
     if (auto *CAT = FD->getType()->getAs<CountAttributedType>()) {
       CheckCountedByAttrOnFieldDecl(FD, CAT->getCountExpr(),
-                                     CAT->isCountInBytes(), CAT->isOrNull());
+                                    CAT->isCountInBytes(), CAT->isOrNull());
     }
   }
 
