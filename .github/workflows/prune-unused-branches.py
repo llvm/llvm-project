@@ -1,4 +1,5 @@
 import subprocess
+import sys
 import os
 
 import github
@@ -71,7 +72,59 @@ def get_user_branches_to_remove(
     return list(user_branches_to_remove)
 
 
+def generate_patch_for_branch(branch_name: str) -> bytes:
+    command_vector = ["git", "diff", f"origin/main...origin/{branch_name}"]
+    try:
+        result = subprocess.run(
+            command_vector, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
+        )
+    except subprocess.CalledProcessError as process_error:
+        print(process_error.stderr)
+        print(process_error.stdout)
+        raise process_error
+    return result.stdout
+
+
+def generate_patches_for_all_branches(branches_to_remove: list[str], patches_path: str):
+    for index, branch in enumerate(branches_to_remove):
+        patch = generate_patch_for_branch(branch)
+        patch_filename = branch.replace("/", "-") + ".patch"
+        patch_path = os.path.join(patches_path, patch_filename)
+        with open(patch_path, "wb") as patches_file_handle:
+            patches_file_handle.write(patch)
+        if index % 50 == 0:
+            print(
+                f"Finished generating patches for {index}/{len(branches_to_remove)} branches."
+            )
+
+
+def delete_branches(branches_to_remove: list[str]):
+    for branch in branches_to_remove:
+        # TODO(boomanaiden154): Only delete my branches for now to verify that
+        # everything is working in the production environment.
+        if "boomanaiden154" not in branch:
+            continue
+        command_vector = ["git", "push", "-d", "origin", branch]
+        try:
+            subprocess.run(
+                command_vector,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=True,
+            )
+        except subprocess.CalledProcessError as process_error:
+            print(process_error.stderr)
+            print(process_error.stdout)
+        print(f"Deleted branch {branch}")
+
+
 def main(github_token):
+    if len(sys.argv) != 2:
+        print(
+            "Invalid invocation. Correct usage: python3 prune-unused-branches.py <patch output diectory>"
+        )
+        sys.exit(1)
+
     user_branches = get_branches()
     user_branches_from_prs = get_branches_from_open_prs(github_token)
     print(f"Found {len(user_branches)} user branches in the repository")
@@ -80,7 +133,8 @@ def main(github_token):
         user_branches, user_branches_from_prs
     )
     print(f"Deleting {len(user_branches_to_remove)} user branches.")
-    print(user_branches_to_remove)
+    generate_patches_for_all_branches(user_branches_to_remove, sys.argv[1])
+    delete_branches(user_branches_to_remove)
 
 
 if __name__ == "__main__":
