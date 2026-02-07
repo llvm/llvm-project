@@ -213,6 +213,55 @@ for.body:                                         ; preds = %for.cond
   br label %for.cond
 }
 
+define fastcc i1 @ShouldMergeBlock(ptr %arena, i1 %exitcond) {
+; CHECK-LABEL: define fastcc i1 @ShouldMergeBlock(
+; CHECK-SAME: ptr [[ARENA:%.*]], i1 [[EXITCOND:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[DOT026:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ 1.000000e+00, %[[LOOP_BACKEDGE:.*]] ]
+; CHECK-NEXT:    br i1 true, label %[[LOAD_BLOCK:.*]], label %[[ZERO_BLOCK:.*]]
+; CHECK:       [[ZERO_BLOCK]]:
+; CHECK-NEXT:    br label %[[LOOP_BACKEDGE]]
+; CHECK:       [[LOAD_BLOCK]]:
+; CHECK-NEXT:    [[LOADED_VAL:%.*]] = load double, ptr [[ARENA]], align 8
+; CHECK-NEXT:    br label %[[LOOP_BACKEDGE]]
+; CHECK:       [[LOOP_BACKEDGE]]:
+; CHECK-NEXT:    [[DOT0_I22:%.*]] = phi double [ [[LOADED_VAL]], %[[LOAD_BLOCK]] ], [ 0.000000e+00, %[[ZERO_BLOCK]] ]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[FMA_RESULT:%.*]] = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double [[DOT0_I22]], double [[DOT026]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge double [[FMA_RESULT]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %.026 = phi double [ 0.000000e+00, %entry ],
+  [ 1.000000e+00, %loop_backedge ]
+  br i1 true, label %load_block, label %zero_block
+
+zero_block:
+  br label %loop_backedge
+
+load_block:
+  %loaded_val = load double, ptr %arena, align 8
+  br label %loop_backedge
+
+loop_backedge:
+  %.0.i22 = phi double [ %loaded_val, %load_block ],
+  [ 0.000000e+00, %zero_block ]
+  br i1 %exitcond, label %loop, label %exit
+
+exit:
+  %fma_result = tail call double @llvm.fmuladd.f64(double 0.000000e+00,
+  double %.0.i22,
+  double %.026)
+  %cmp = fcmp oge double %fma_result, 0.000000e+00
+  ret i1 %cmp
+}
+
 declare double @llvm.fmuladd.f64(double, double, double)
 
 declare double @llvm.fma.f64(double, double, double)

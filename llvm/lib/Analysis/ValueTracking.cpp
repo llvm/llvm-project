@@ -9292,7 +9292,7 @@ static bool matchThreeInputRecurrence(const PHINode *PN, InstTy *&Inst,
   if (PN->getNumIncomingValues() != 2)
     return false;
 
-  for (unsigned I = 0; I != 3; ++I) {
+  for (unsigned I = 0; I != 2; ++I) {
     if (auto *Operation = dyn_cast<InstTy>(PN->getIncomingValue(I));
         Operation) {
       Value *Op0 = Operation->getOperand(0);
