@@ -20053,11 +20053,19 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
   if (getLangOpts().ExperimentalLateParseAttributes) {
     for (ArrayRef<Decl *>::iterator i = Fields.begin(), end = Fields.end();
          i != end; ++i) {
-      FieldDecl *FD = cast<FieldDecl>(*i);
+      // We only process FieldDecl here, not IndirectFieldDecl, because
+      // ActOnFields is called on the struct that directly contains the field.
+      // TODO: To support counted_by referring to a field in an anonymous struct
+      // declared later, late parsing should be triggered from the innermost
+      // named parent struct.
+      FieldDecl *FD = dyn_cast<FieldDecl>(*i);
+      if (FD->getType()->isRecordType())
+          continue;
 
       RebuildTypeWithLateParsedAttr RebuildFieldType(*this, FD);
+      auto *OldTSI = FD->getTypeSourceInfo();
       auto *TSI = RebuildFieldType.TransformType(FD->getTypeSourceInfo());
-      if (TSI) {
+      if (TSI && TSI != OldTSI) {
         FD->setTypeSourceInfo(TSI);
         FD->setType(TSI->getType());
       }

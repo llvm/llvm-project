@@ -37,6 +37,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "clang/Sema/DeclSpec.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -1816,18 +1817,28 @@ void TypePrinter::printCountAttributedAfter(const CountAttributedType *T,
     printCountAttributedImpl(T, OS, Policy);
 }
 
+static void printLateParsedAttrImpl(const LateParsedAttrType *T,
+                                    raw_ostream &OS) {
+  OS << " LateParsedTypeAttr::" << T->getLateParsedAttribute()->AttrName.getName() << "()";
+}
+
 void TypePrinter::printLateParsedAttrBefore(const LateParsedAttrType *T,
                                              raw_ostream &OS) {
   // LateParsedAttrType is a transient placeholder that should not appear
-  // in user-facing output. Just print the wrapped type.
+  // in final output. Print it explicitly for debugging purposes.
   printBefore(T->getWrappedType(), OS);
+  if (!T->isArrayType())
+    printLateParsedAttrImpl(T, OS);
 }
 
 void TypePrinter::printLateParsedAttrAfter(const LateParsedAttrType *T,
                                             raw_ostream &OS) {
   // LateParsedAttrType is a transient placeholder that should not appear
-  // in user-facing output. Just print the wrapped type.
+  // in final output. The attribute name is already printed in printBefore
+  // for pointer types, but for array types we print it here.
   printAfter(T->getWrappedType(), OS);
+  if (T->isArrayType())
+    printLateParsedAttrImpl(T, OS);
 }
 
 void TypePrinter::printAttributedBefore(const AttributedType *T,
