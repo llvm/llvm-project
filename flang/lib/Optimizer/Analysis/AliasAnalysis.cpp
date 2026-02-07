@@ -227,6 +227,34 @@ bool AliasAnalysis::Source::mayBeActualArgWithPtr(
   return false;
 }
 
+// Return true if the two locations cannot alias based
+// on the access data type, e.g. an address of a descriptor
+// cannot alias with an address of data (unless the data
+// may contain a descriptor).
+static bool noAliasBasedOnType(mlir::Value lhs, mlir::Value rhs) {
+  mlir::Type lhsType = lhs.getType();
+  mlir::Type rhsType = rhs.getType();
+  if (!fir::isa_ref_type(lhsType) || !fir::isa_ref_type(rhsType))
+    return false;
+  mlir::Type lhsElemType = fir::unwrapRefType(lhsType);
+  mlir::Type rhsElemType = fir::unwrapRefType(rhsType);
+  if (mlir::isa<fir::BaseBoxType>(lhsElemType) !=
+      mlir::isa<fir::BaseBoxType>(rhsElemType)) {
+    // One of the types is fir.box and another is not.
+    mlir::Type nonBoxType;
+    if (mlir::isa<fir::BaseBoxType>(lhsElemType))
+      nonBoxType = rhsElemType;
+    else
+      nonBoxType = lhsElemType;
+
+    if (!fir::isRecordWithDescriptorMember(nonBoxType)) {
+      LLVM_DEBUG(llvm::dbgs() << "  no alias based on the access types\n");
+      return true;
+    }
+  }
+  return false;
+}
+
 AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // A wrapper around alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // mlir::Value rhs) This allows a user to provide Source that may be obtained
@@ -247,6 +275,10 @@ AliasResult AliasAnalysis::alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
              llvm::dbgs() << "  lhsSrc: " << lhsSrc << "\n";
              llvm::dbgs() << "  rhs: " << rhs << "\n";
              llvm::dbgs() << "  rhsSrc: " << rhsSrc << "\n";);
+
+  // Disambiguate data and descriptors addresses.
+  if (noAliasBasedOnType(lhs, rhs))
+    return AliasResult::NoAlias;
 
   // Indirect case currently not handled. Conservatively assume
   // it aliases with everything
