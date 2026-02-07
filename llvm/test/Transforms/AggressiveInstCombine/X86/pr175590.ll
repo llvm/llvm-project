@@ -214,7 +214,7 @@ for.body:                                         ; preds = %for.cond
 }
 
 define i1 @test_phi_operand_crash(ptr %arena, i1 %exitcond) {
-; CHECK-LABEL: define fastcc i1 @ShouldMergeBlock(
+; CHECK-LABEL: define i1 @test_phi_operand_crash(
 ; CHECK-SAME: ptr [[ARENA:%.*]], i1 [[EXITCOND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
@@ -238,8 +238,7 @@ entry:
   br label %loop
 
 loop:
-  %.026 = phi double [ 0.000000e+00, %entry ],
-                     [ 1.000000e+00, %loop_backedge ]
+  %.026 = phi double [ 0.000000e+00, %entry ], [ 1.000000e+00, %loop_backedge ]
   br i1 true, label %load_block, label %zero_block
 
 zero_block:
@@ -250,14 +249,11 @@ load_block:
   br label %loop_backedge
 
 loop_backedge:
-  %.0.i22 = phi double [ %loaded_val, %load_block ],
-                       [ 0.000000e+00, %zero_block ]
+  %.0.i22 = phi double [ %loaded_val, %load_block ], [ 0.000000e+00, %zero_block ]
   br i1 %exitcond, label %loop, label %exit
 
 exit:
-  %fma_result = tail call double @llvm.fmuladd.f64(double 0.000000e+00,
-                                                   double %.0.i22,
-                                                   double %.026)
+  %fma_result = tail call double @llvm.fmuladd.f64(double 0.000000e+00, double %.0.i22, double %.026)
   %cmp = fcmp oge double %fma_result, 0.000000e+00
   ret i1 %cmp
 }
