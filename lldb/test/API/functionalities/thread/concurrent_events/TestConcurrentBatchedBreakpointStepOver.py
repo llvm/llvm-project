@@ -15,7 +15,6 @@ from lldbsuite.test.lldbtest import TestBase
 
 @skipIfWindows
 class ConcurrentBatchedBreakpointStepOver(ConcurrentEventsBase):
-
     @skipIf(triple="^mips")
     @expectedFailureAll(
         archs=["aarch64"], oslist=["freebsd"], bugnumber="llvm.org/pr49433"
