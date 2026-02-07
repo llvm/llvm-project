@@ -67,6 +67,7 @@ static const char *const LLDB_NT_OWNER_OPENBSD = "OpenBSD";
 static const char *const LLDB_NT_OWNER_ANDROID = "Android";
 static const char *const LLDB_NT_OWNER_CORE = "CORE";
 static const char *const LLDB_NT_OWNER_LINUX = "LINUX";
+static const char *const LLDB_NT_OWNER_QNX = "QNX";
 
 // ELF note type definitions
 static const elf_word LLDB_NT_FREEBSD_ABI_TAG = 0x01;
@@ -1327,6 +1328,8 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
           // cases (e.g. compile with -nostdlib) Hence set OS to Linux
           arch_spec.GetTriple().setOS(llvm::Triple::OSType::Linux);
       }
+    } else if (note.n_name == LLDB_NT_OWNER_QNX) {
+      arch_spec.GetTriple().setOS(llvm::Triple::OSType::QNX);
     }
 
     // Calculate the offset of the next note just in case "offset" has been
