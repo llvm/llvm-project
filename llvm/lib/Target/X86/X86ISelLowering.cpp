@@ -57441,12 +57441,6 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
   EVT OpVT = LHS.getValueType();
   SDLoc DL(N);
 
-  if (CC == ISD::SETNE || CC == ISD::SETEQ) {
-    if (SDValue V = combineVectorSizedSetCCEquality(VT, LHS, RHS, CC, DL, DAG,
-                                                    Subtarget))
-      return V;
-  }
-
   if (VT == MVT::i1) {
     X86::CondCode X86CC;
     if (SDValue V =
@@ -57562,6 +57556,10 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
         }
       }
     }
+
+    if (SDValue V = combineVectorSizedSetCCEquality(VT, LHS, RHS, CC, DL, DAG,
+                                                    Subtarget))
+      return V;
   }
 
   if (VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
