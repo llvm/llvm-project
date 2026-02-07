@@ -343,13 +343,12 @@ Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
                                   ol_platform_info_t PropName, size_t PropSize,
                                   void *PropValue, size_t *PropSizeRet) {
   InfoWriter Info(PropSize, PropValue, PropSizeRet);
-  bool IsHost = Platform->Plugin == nullptr;
 
   // Note that the plugin is potentially uninitialized here. It will need to be
   // initialized once info is added that requires it to be initialized.
   switch (PropName) {
   case OL_PLATFORM_INFO_NAME:
-    return Info.writeString(IsHost ? "Host" : Platform->Plugin->getName());
+    return Info.writeString(Platform->Plugin->getName());
   case OL_PLATFORM_INFO_VENDOR_NAME:
     // TODO: Implement this
     return Info.writeString("Unknown platform vendor");
