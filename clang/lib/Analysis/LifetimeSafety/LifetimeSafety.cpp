@@ -18,8 +18,10 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Checker.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/FactsGenerator.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LoanPropagation.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/FoldingSet.h"
@@ -46,28 +48,19 @@ static void DebugOnlyFunction(AnalysisDeclContext &AC, const CFG &Cfg,
 }
 #endif
 
-LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                                               LifetimeSafetyReporter *Reporter)
-    : AC(AC), Reporter(Reporter) {}
+LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(
+    AnalysisDeclContext &AC, LifetimeSafetySemaHelper *SemaHelper)
+    : AC(AC), SemaHelper(SemaHelper) {}
 
 void LifetimeSafetyAnalysis::run() {
   llvm::TimeTraceScope TimeProfile("LifetimeSafetyAnalysis");
 
   const CFG &Cfg = *AC.getCFG();
-  DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
-                                       /*ShowColors=*/true));
 
   FactMgr = std::make_unique<FactManager>(AC, Cfg);
 
   FactsGenerator FactGen(*FactMgr, AC);
   FactGen.run();
-
-  DEBUG_WITH_TYPE("LifetimeFacts", FactMgr->dump(Cfg, AC));
-
-  // Debug print facts for a specific function using
-  // -debug-only=EnableFilterByFunctionName,YourFunctionNameFoo
-  DEBUG_WITH_TYPE("EnableFilterByFunctionName",
-                  DebugOnlyFunction(AC, Cfg, *FactMgr));
 
   /// TODO(opt): Consider optimizing individual blocks before running the
   /// dataflow analysis.
@@ -85,16 +78,42 @@ void LifetimeSafetyAnalysis::run() {
 
   LiveOrigins = std::make_unique<LiveOriginsAnalysis>(
       Cfg, AC, *FactMgr, Factory.LivenessMapFactory);
+
+  MovedLoans = std::make_unique<MovedLoansAnalysis>(
+      Cfg, AC, *FactMgr, *LoanPropagation, *LiveOrigins, FactMgr->getLoanMgr(),
+      Factory.MovedLoansMapFactory);
+
+  runLifetimeChecker(*LoanPropagation, *MovedLoans, *LiveOrigins, *FactMgr, AC,
+                     SemaHelper);
+
+  DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
+                                       /*ShowColors=*/true));
+
+  DEBUG_WITH_TYPE("LifetimeFacts", FactMgr->dump(Cfg, AC));
+
+  // Debug print facts for a specific function using
+  // -debug-only=EnableFilterByFunctionName,YourFunctionNameFoo
+  DEBUG_WITH_TYPE("EnableFilterByFunctionName",
+                  DebugOnlyFunction(AC, Cfg, *FactMgr));
   DEBUG_WITH_TYPE("LiveOrigins",
                   LiveOrigins->dump(llvm::dbgs(), FactMgr->getTestPoints()));
+}
 
-  runLifetimeChecker(*LoanPropagation, *LiveOrigins, *FactMgr, AC, Reporter);
+void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
+                          LifetimeSafetyStats &Stats) {
+  Stmt *FunctionBody = AC.getBody();
+  if (FunctionBody == nullptr)
+    return;
+  OM.collectMissingOrigins(*FunctionBody, Stats);
 }
 } // namespace internal
 
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                               LifetimeSafetyReporter *Reporter) {
-  internal::LifetimeSafetyAnalysis Analysis(AC, Reporter);
+                               LifetimeSafetySemaHelper *SemaHelper,
+                               LifetimeSafetyStats &Stats, bool CollectStats) {
+  internal::LifetimeSafetyAnalysis Analysis(AC, SemaHelper);
   Analysis.run();
+  if (CollectStats)
+    collectLifetimeStats(AC, Analysis.getFactManager().getOriginMgr(), Stats);
 }
 } // namespace clang::lifetimes

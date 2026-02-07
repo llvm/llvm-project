@@ -875,6 +875,49 @@ void RISCVISAInfo::updateImplication() {
     Exts["zcf"] = *Version;
   }
 
+  // Add C if Zca is enabled and the conditions are met.
+  // This follows the RISC-V spec rules for MISA.C and matches GCC behavior
+  // (PR119122). The rule is:
+  // For RV32:
+  //   - No F and no D: Zca alone implies C
+  //   - F but no D: Zca + Zcf implies C
+  //   - F and D: Zca + Zcf + Zcd implies C
+  // For RV64:
+  //   - No D: Zca alone implies C
+  //   - D: Zca + Zcd implies C
+  if (Exts.count("zca") && !Exts.count("c")) {
+    bool ShouldAddC = false;
+    if (XLen == 32) {
+      if (Exts.count("d"))
+        ShouldAddC = Exts.count("zcf") && Exts.count("zcd");
+      else if (Exts.count("f"))
+        ShouldAddC = Exts.count("zcf");
+      else
+        ShouldAddC = true;
+    } else if (XLen == 64) {
+      if (Exts.count("d"))
+        ShouldAddC = Exts.count("zcd");
+      else
+        ShouldAddC = true;
+    }
+    if (ShouldAddC) {
+      auto Version = findDefaultVersion("c");
+      Exts["c"] = *Version;
+    }
+  }
+
+  if (!Exts.count("zce") && Exts.count("zca") && Exts.count("zcb") &&
+      Exts.count("zcmp") && Exts.count("zcmt")) {
+    bool ShouldAddZce = false;
+    if (XLen == 32) {
+      ShouldAddZce = !Exts.count("f") || Exts.count("zcf");
+    } else if (XLen == 64) {
+      ShouldAddZce = true;
+    }
+    if (ShouldAddZce)
+      Exts["zce"] = *findDefaultVersion("zce");
+  }
+
   // Handle I/E after implications have been resolved, in case either
   // of them was implied by another extension.
   bool HasE = Exts.count("e") != 0;

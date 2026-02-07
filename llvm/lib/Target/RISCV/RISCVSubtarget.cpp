@@ -98,6 +98,15 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
   assert(TuneInfo && "TuneInfo shouldn't be nullptr!");
 
   ParseSubtargetFeatures(CPU, TuneCPU, FS);
+
+  RISCV::updateCZceFeatureImplications(*this);
+
+  // Re-sync the flags.
+  HasStdExtZcd = hasFeature(RISCV::FeatureStdExtZcd);
+  HasStdExtZcf = hasFeature(RISCV::FeatureStdExtZcf);
+  HasStdExtC = hasFeature(RISCV::FeatureStdExtC);
+  HasStdExtZce = hasFeature(RISCV::FeatureStdExtZce);
+
   TargetABI = RISCVABI::computeTargetABI(TT, getFeatureBits(), ABIName);
   RISCVFeatures::validate(TT, getFeatureBits());
   return *this;
@@ -109,7 +118,8 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
                                unsigned RVVVectorBitsMax,
                                const TargetMachine &TM)
     : RISCVGenSubtargetInfo(TT, CPU, TuneCPU, FS),
-      RVVVectorBitsMin(RVVVectorBitsMin), RVVVectorBitsMax(RVVVectorBitsMax),
+      IsLittleEndian(TT.isLittleEndian()), RVVVectorBitsMin(RVVVectorBitsMin),
+      RVVVectorBitsMax(RVVVectorBitsMax),
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
       InstrInfo(*this), TLInfo(TM, *this) {
@@ -155,6 +165,16 @@ bool RISCVSubtarget::useConstantPoolForLargeInts() const {
 
 bool RISCVSubtarget::enablePExtSIMDCodeGen() const {
   return HasStdExtP && EnablePExtSIMDCodeGen;
+}
+
+// Returns true if VT is a P extension packed SIMD type that fits in XLen.
+bool RISCVSubtarget::isPExtPackedType(MVT VT) const {
+  if (!enablePExtSIMDCodeGen())
+    return false;
+
+  if (is64Bit())
+    return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
+  return VT == MVT::v4i8 || VT == MVT::v2i16;
 }
 
 unsigned RISCVSubtarget::getMaxBuildIntsCost() const {

@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1250 %s | FileCheck --check-prefix=GFX1250 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefixes=GFX12-ERR --implicit-check-not=error: -strict-whitespace %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -filetype=null %s 2>&1 | FileCheck --check-prefixes=GFX12-ERR --implicit-check-not=error: -strict-whitespace %s
 
 s_wait_asynccnt 0x1234
 // GFX1250: [0x34,0x12,0xca,0xbf]
@@ -61,8 +61,12 @@ s_monitor_sleep 0
 // GFX1250: s_monitor_sleep 0                       ; encoding: [0x00,0x00,0x84,0xbf]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-s_sendmsg sendmsg(MSG_SAVEWAVE_HAS_TDM)
-// GFX1250: s_sendmsg sendmsg(MSG_SAVEWAVE_HAS_TDM)     ; encoding: [0x0a,0x00,0xb6,0xbf]
+s_sendmsg_rtn_b32 s1, sendmsg(MSG_RTN_SAVE_WAVE_HAS_TDM)     ; encoding: [0x0a,0x00,0xb6,0xbf]
+// GFX12: s_sendmsg_rtn_b32 s1, sendmsg(MSG_RTN_SAVE_WAVE_HAS_TDM) ; encoding: [0x98,0x4c,0x81,0xbe]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: specified message id is not supported on this GPU
+
+s_sendmsg sendmsg(MSG_RTN_SAVE_WAVE_HAS_TDM)     ; encoding: [0x0a,0x00,0xb6,0xbf]
+// GFX1250: s_sendmsg sendmsg(MSG_RTN_SAVE_WAVE_HAS_TDM) ; encoding: [0x98,0x00,0xb6,0xbf]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: specified message id is not supported on this GPU
 
 s_barrier_wait -3

@@ -294,13 +294,15 @@ bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
     if (!FieldDesc->isPrimitiveArray())
       return false;
 
-    if (Ptr.isDummy() || Ptr.isUnknownSizeArray())
+    if (Ptr.isDummy() || Ptr.isUnknownSizeArray() || Ptr.isPastEnd())
       return false;
 
     unsigned N = Ptr.getNumElems();
     if (Ptr.elemSize() == 1) {
-      Result = strnlen(reinterpret_cast<const char *>(Ptr.getRawAddress()), N);
-      return Result != N;
+      unsigned Size = N - Ptr.getIndex();
+      Result =
+          strnlen(reinterpret_cast<const char *>(Ptr.getRawAddress()), Size);
+      return Result != Size;
     }
 
     PrimType ElemT = FieldDesc->getPrimType();
@@ -314,6 +316,37 @@ bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
       });
     }
     // We didn't find a 0 byte.
+    return false;
+  });
+
+  if (PtrRes.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
+  return true;
+}
+
+bool Context::tryEvaluateObjectSize(State &Parent, const Expr *E, unsigned Kind,
+                                    uint64_t &Result) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    const Descriptor *DeclDesc = Ptr.getDeclDesc();
+    if (!DeclDesc)
+      return false;
+
+    QualType T = DeclDesc->getType().getNonReferenceType();
+    if (T->isIncompleteType() || T->isFunctionType() ||
+        !T->isConstantSizeType())
+      return false;
+
+    Pointer P = Ptr;
+    if (auto ObjectSize = evaluateBuiltinObjectSize(getASTContext(), Kind, P)) {
+      Result = *ObjectSize;
+      return true;
+    }
     return false;
   });
 
@@ -518,9 +551,7 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   }
   // Set up argument indices.
   unsigned ParamOffset = 0;
-  SmallVector<PrimType, 8> ParamTypes;
-  SmallVector<unsigned, 8> ParamOffsets;
-  llvm::DenseMap<unsigned, Function::ParamDescriptor> ParamDescriptors;
+  llvm::SmallVector<Function::ParamDescriptor> ParamDescriptors;
 
   // If the return is not a primitive, a pointer to the storage where the
   // value is initialized in is passed as the first argument. See 'RVO'
@@ -529,8 +560,7 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
   bool HasRVO = false;
   if (!Ty->isVoidType() && !canClassify(Ty)) {
     HasRVO = true;
-    ParamTypes.push_back(PT_Ptr);
-    ParamOffsets.push_back(ParamOffset);
+    ParamDescriptors.emplace_back(nullptr, ParamOffset, PT_Ptr);
     ParamOffset += align(primSize(PT_Ptr));
   }
 
@@ -542,8 +572,7 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
     if (!IsLambdaStaticInvoker) {
       HasThisPointer = MD->isInstance();
       if (MD->isImplicitObjectMemberFunction()) {
-        ParamTypes.push_back(PT_Ptr);
-        ParamOffsets.push_back(ParamOffset);
+        ParamDescriptors.emplace_back(nullptr, ParamOffset, PT_Ptr);
         ParamOffset += align(primSize(PT_Ptr));
       }
     }
@@ -553,15 +582,15 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
       // the lambda captures.
       if (!MD->getParent()->isCompleteDefinition())
         return nullptr;
-      llvm::DenseMap<const ValueDecl *, FieldDecl *> LC;
-      FieldDecl *LTC;
+      if (MD->isStatic()) {
+        llvm::DenseMap<const ValueDecl *, FieldDecl *> LC;
+        FieldDecl *LTC;
 
-      MD->getParent()->getCaptureFields(LC, LTC);
-
-      if (MD->isStatic() && !LC.empty()) {
+        MD->getParent()->getCaptureFields(LC, LTC);
         // Static lambdas cannot have any captures. If this one does,
         // it has already been diagnosed and we can only ignore it.
-        return nullptr;
+        if (!LC.empty())
+          return nullptr;
       }
     }
   }
@@ -582,18 +611,15 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
     Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
                                            IsConst, /*IsTemporary=*/false,
                                            /*IsMutable=*/false, IsVolatile);
-
-    ParamDescriptors.insert({ParamOffset, {PT, Desc}});
-    ParamOffsets.push_back(ParamOffset);
+    ParamDescriptors.emplace_back(Desc, ParamOffset, PT);
     ParamOffset += align(primSize(PT));
-    ParamTypes.push_back(PT);
   }
 
   // Create a handle over the emitted code.
   assert(!P->getFunction(FuncDecl));
-  const Function *Func = P->createFunction(
-      FuncDecl, ParamOffset, std::move(ParamTypes), std::move(ParamDescriptors),
-      std::move(ParamOffsets), HasThisPointer, HasRVO, IsLambdaStaticInvoker);
+  const Function *Func =
+      P->createFunction(FuncDecl, ParamOffset, std::move(ParamDescriptors),
+                        HasThisPointer, HasRVO, IsLambdaStaticInvoker);
   return Func;
 }
 
@@ -601,9 +627,7 @@ const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
   const BlockDecl *BD = E->getBlockDecl();
   // Set up argument indices.
   unsigned ParamOffset = 0;
-  SmallVector<PrimType, 8> ParamTypes;
-  SmallVector<unsigned, 8> ParamOffsets;
-  llvm::DenseMap<unsigned, Function::ParamDescriptor> ParamDescriptors;
+  llvm::SmallVector<Function::ParamDescriptor> ParamDescriptors;
 
   // Assign descriptors to all parameters.
   // Composite objects are lowered to pointers.
@@ -616,10 +640,8 @@ const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
     Descriptor *Desc = P->createDescriptor(PD, PT, nullptr, std::nullopt,
                                            IsConst, /*IsTemporary=*/false,
                                            /*IsMutable=*/false, IsVolatile);
-    ParamDescriptors.insert({ParamOffset, {PT, Desc}});
-    ParamOffsets.push_back(ParamOffset);
+    ParamDescriptors.emplace_back(Desc, ParamOffset, PT);
     ParamOffset += align(primSize(PT));
-    ParamTypes.push_back(PT);
   }
 
   if (BD->hasCaptures())
@@ -627,8 +649,7 @@ const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
 
   // Create a handle over the emitted code.
   Function *Func =
-      P->createFunction(E, ParamOffset, std::move(ParamTypes),
-                        std::move(ParamDescriptors), std::move(ParamOffsets),
+      P->createFunction(E, ParamOffset, std::move(ParamDescriptors),
                         /*HasThisPointer=*/false, /*HasRVO=*/false,
                         /*IsLambdaStaticInvoker=*/false);
 
@@ -636,6 +657,7 @@ const Function *Context::getOrCreateObjCBlock(const BlockExpr *E) {
   Func->setDefined(true);
   // We don't compile the BlockDecl code at all right now.
   Func->setIsFullyCompiled(true);
+
   return Func;
 }
 
