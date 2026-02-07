@@ -82,6 +82,7 @@ struct PRAttr {
 
 // Attributes for ER symbols.
 struct ERAttr {
+  bool IsIndirectReference = false;
   GOFF::ESDExecutable Executable = GOFF::ESD_EXE_Unspecified;
   GOFF::ESDBindingStrength BindingStrength = GOFF::ESD_BST_Strong;
   GOFF::ESDLinkageType Linkage = GOFF::ESD_LT_XPLink;

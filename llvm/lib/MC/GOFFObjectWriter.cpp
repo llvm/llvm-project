@@ -278,6 +278,7 @@ public:
     BehavAttrs.setLinkageType(Attr.Linkage);
     BehavAttrs.setAmode(Attr.Amode);
     BehavAttrs.setBindingScope(Attr.BindingScope);
+    BehavAttrs.setIndirectReference(Attr.IsIndirectReference);
   }
 };
 
@@ -358,10 +359,11 @@ void GOFFWriter::defineLabel(const MCSymbolGOFF &Symbol) {
 }
 
 void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
-  GOFFSymbol ER(Symbol.getName(), Symbol.getIndex(), RootSD->getOrdinal(),
-                GOFF::ERAttr{Symbol.getCodeData(), Symbol.getBindingStrength(),
-                             Symbol.getLinkage(), GOFF::ESD_AMODE_64,
-                             Symbol.getBindingScope()});
+  GOFFSymbol ER(Symbol.getNameInObjectFile(), Symbol.getIndex(),
+                RootSD->getOrdinal(),
+                GOFF::ERAttr{Symbol.isIndirect(), Symbol.getCodeData(),
+                             Symbol.getBindingStrength(), Symbol.getLinkage(),
+                             GOFF::ESD_AMODE_64, Symbol.getBindingScope()});
   writeSymbol(ER);
 }
 

@@ -1244,16 +1244,15 @@ void SystemZAsmPrinter::emitADASection() {
       EmittedBytes += PointerSize;
       break;
     case SystemZII::MO_ADA_INDIRECT_FUNC_DESC: {
-      MCSymbol *Alias = OutContext.createTempSymbol(
-          Twine(Sym->getName()).concat("@indirect"));
-      OutStreamer->emitAssignment(Alias,
-                                  MCSymbolRefExpr::create(Sym, OutContext));
-      OutStreamer->emitSymbolAttribute(Alias, MCSA_IndirectSymbol);
 
       EMIT_COMMENT("pointer to function descriptor");
+      MCSymbolGOFF *GOFFSym =
+          static_cast<llvm::MCSymbolGOFF *>(const_cast<llvm::MCSymbol *>(Sym));
       OutStreamer->emitValue(
-          MCSpecifierExpr::create(MCSymbolRefExpr::create(Alias, OutContext),
-                                  SystemZ::S_VCon, OutContext),
+          MCSpecifierExpr::create(
+              MCSymbolRefExpr::create(
+                  GOFFSym->getOrCreateIndirectSymbol(OutContext), OutContext),
+              SystemZ::S_VCon, OutContext),
           PointerSize);
       EmittedBytes += PointerSize;
       break;

@@ -193,7 +193,7 @@ void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
   EmitEOL();
 }
 
-static void emitXATTR(raw_ostream &OS, StringRef Name,
+static void emitXATTR(raw_ostream &OS, StringRef Name, bool IsIndirectReference,
                       GOFF::ESDLinkageType Linkage,
                       GOFF::ESDExecutable Executable,
                       GOFF::ESDBindingScope BindingScope) {
@@ -245,8 +245,8 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
       EmitEOL();
     }
 
-    emitXATTR(OS, Sym->getName(), Sym->getLinkage(), Sym->getCodeData(),
-              Sym->getBindingScope());
+    emitXATTR(OS, Sym->getName(), Sym->isIndirect(), Sym->getLinkage(),
+              Sym->getCodeData(), Sym->getBindingScope());
     EmitEOL();
   }
 
@@ -355,9 +355,12 @@ void SystemZHLASMAsmStreamer::finishImpl() {
     auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
     OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
     EmitEOL();
-    emitXATTR(OS, Sym.getName(), Sym.getLinkage(), Sym.getCodeData(),
-              Sym.getBindingScope());
-    EmitEOL();
+    emitXATTR(OS, Sym.getName(), Sym.isIndirect(), Sym.getLinkage(),
+              Sym.getCodeData(), Sym.getBindingScope());
+    if (Sym.hasExternalName()) {
+      OS << Sym.getName() << " ALIAS \"" << Sym.getExternalName() << "\"\n";
+      EmitEOL();
+    }
   }
 
   // Finish the assembly output.
