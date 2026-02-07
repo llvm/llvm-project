@@ -787,9 +787,10 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
   Value reductionResult = arith::ConstantOp::create(
       rewriter, loc, acc.getType(),
       DenseElementsAttr::get(acc.getType(), zeroAttr));
+  auto srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
+  auto accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
   // Reduction result should have the same layout as the accumulator.
-  xegpu::setTemporaryLayout(cast<OpResult>(reductionResult),
-                            xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc)));
+  xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
   // For each slice of the source, extract the slice vector, do a reduction
   // and, insert the reduced value back to the result vector.
   for (int i = 0; i < nSlices; ++i) {
@@ -801,9 +802,12 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
       sliceOffsets = {0, i};
       sliceSizes = {sourceH, 1};
     }
+
     vector::ExtractStridedSliceOp extractOp =
         vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
                                               sliceSizes, {1, 1});
+    // Extract strided slice has the same layout as src.
+    xegpu::setTemporaryLayout(extractOp->getOpResult(0), srcLayout);
 
     int64_t nSliceElements = extractOp.getResult().getType().getNumElements();
 
@@ -812,14 +816,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
         VectorType::get({nSliceElements}, sourceType.getElementType()),
         extractOp.getResult());
 
-    // Shape cast is currently handled in xegpu side. So layouts must be
-    // retained during lowering. Shape cast output has the same layout as the
-    // accumulator. Shape cast source has the same layout as the original
-    // reduction source.
-    // TODO: other ops generated here may also need layout attributes.
-    auto srcLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(src));
-    auto accLayout = xegpu::getTemporaryLayout(dyn_cast<OpResult>(acc));
-
+    // Shape cast output has the same layout as the accumulator. Shape cast
+    // source has the same layout as the original reduction source.
     xegpu::setTemporaryLayout(slice->getOpOperand(0), srcLayout);
     xegpu::setTemporaryLayout(slice->getOpResult(0), accLayout);
     // Extract and reduction results in scalars, so no result layout is needed.
@@ -828,6 +826,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
         rewriter, loc, kind, slice.getResult(), accExtract);
     reductionResult =
         vector::InsertOp::create(rewriter, loc, reduction, reductionResult, i);
+    // Insert op should have the same layout as the accumulator.
+    xegpu::setTemporaryLayout(cast<OpResult>(reductionResult), accLayout);
   }
   return reductionResult;
 }
