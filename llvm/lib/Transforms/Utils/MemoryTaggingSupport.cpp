@@ -85,17 +85,16 @@ bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
   return !UncoveredRets;
 }
 
-bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
-                        const SmallVectorImpl<IntrinsicInst *> &LifetimeEnd,
-                        const DominatorTree *DT, const LoopInfo *LI,
-                        size_t MaxLifetimes) {
+bool isStandardLifetime(const AllocaInfo &AInfo, const DominatorTree *DT,
+                        const LoopInfo *LI, size_t MaxLifetimes) {
   // An alloca that has exactly one start and end in every possible execution.
   // If it has multiple ends, they have to be unreachable from each other, so
   // at most one of them is actually used for each execution of the function.
-  return LifetimeStart.size() > 0 &&
-         (LifetimeEnd.size() == 1 ||
-          (LifetimeEnd.size() > 0 &&
-           !maybeReachableFromEachOther(LifetimeEnd, DT, LI, MaxLifetimes)));
+  return AInfo.LifetimeStart.size() > 0 &&
+         (AInfo.LifetimeEnd.size() == 1 ||
+          (AInfo.LifetimeEnd.size() > 0 &&
+           !maybeReachableFromEachOther(AInfo.LifetimeEnd, DT, LI,
+                                        MaxLifetimes)));
 }
 
 Instruction *getUntagLocationIfFunctionExit(Instruction &Inst) {
