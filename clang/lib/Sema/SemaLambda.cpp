@@ -281,12 +281,15 @@ static bool isInInlineFunction(const DeclContext *DC) {
 //    Yeah, I think the only cases left where lambdas don't need a
 //    mangling are when they have (effectively) internal linkage or
 //    appear in a non-inline function in a non-module translation unit.
-static bool isNonInlineInModulePurview(const Decl *ManglingContextDecl,
-                                       const DeclContext *DC) {
-  auto *ND = dyn_cast<NamedDecl>(ManglingContextDecl ? ManglingContextDecl
-                                                     : cast<Decl>(DC));
-  return ND && ((ND->isInNamedModule() || ND->isFromGlobalModule()) &&
-                ND->isExternallyVisible());
+static bool isNonInlineInModulePurview(const NamedDecl *ND) {
+  return (ND->isInNamedModule() || ND->isFromGlobalModule()) &&
+         ND->isExternallyVisible();
+}
+
+static bool isNonInlineInModulePurview(const DeclContext *DC) {
+  if (auto *ND = dyn_cast<NamedDecl>(DC))
+    return isNonInlineInModulePurview(ND);
+  return false;
 }
 
 std::tuple<MangleNumberingContext *, Decl *>
@@ -323,6 +326,9 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
       if (Var->getMostRecentDecl()->isInline())
         return InlineVariable;
 
+      if (isNonInlineInModulePurview(Var))
+        return InlineVariable;
+
       if (Var->getDeclContext()->isRecord() && IsInNonspecializedTemplate)
         return TemplatedVariable;
 
@@ -351,7 +357,7 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     if ((IsInNonspecializedTemplate &&
          !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
         isInInlineFunction(CurContext) ||
-        isNonInlineInModulePurview(ManglingContextDecl, DC)) {
+        isNonInlineInModulePurview(CurContext)) {
       while (auto *CD = dyn_cast<CapturedDecl>(DC))
         DC = CD->getParent();
       return std::make_tuple(&Context.getManglingNumberContext(DC), nullptr);
