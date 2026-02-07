@@ -729,7 +729,7 @@ define <2 x i32> @test_pasubu_w(<2 x i32> %a, <2 x i32> %b) {
 define <2 x i32> @test_non_const_splat_i32(i32 %elt) {
 ; CHECK-LABEL: test_non_const_splat_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    padd.ws a0, zero, a0
+; CHECK-NEXT:    pmv.ws a0, a0
 ; CHECK-NEXT:    ret
   %insert = insertelement <2 x i32> poison, i32 %elt, i32 0
   %splat = shufflevector <2 x i32> %insert, <2 x i32> poison, <2 x i32> zeroinitializer

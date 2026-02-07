@@ -16,7 +16,7 @@ define i64 @abs_i64(i64 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bgez a1, .LBB1_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    subd a0, zero, a0
+; CHECK-NEXT:    negd a0, a0
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    ret
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
