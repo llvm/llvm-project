@@ -383,8 +383,19 @@ def testExtDialectWithRegion():
         # CHECK: }
         print(TestRegion._mlir_module)
 
-        IsTerminatorTrait().attach(YieldOp)
-        NoTerminatorTrait().attach(NoTermOp)
+        IsTerminatorTrait.attach(YieldOp)
+        NoTerminatorTrait.attach(NoTermOp)
+
+        class ParentIsIfTrait(DynamicOpTrait):
+            @staticmethod
+            def verify(op) -> bool:
+                if not isinstance(op.parent.opview, IfOp):
+                    raise RuntimeError(
+                        f"{op.name} should be put inside {IfOp.OPERATION_NAME}"
+                    )
+                return True
+
+        ParentIsIfTrait.attach(YieldOp)
 
         # CHECK: (self, /, result, cond, *, loc=None, ip=None)
         print(IfOp.__init__.__signature__)
@@ -464,4 +475,15 @@ def testExtDialectWithRegion():
         except Exception as e:
             # CHECK: Verification failed:
             # CHECK: block with no terminator
+            print(e)
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            v = arith.constant(i32, 2)
+            YieldOp(v)
+
+        try:
+            module.operation.verify()
+        except Exception as e:
+            # CHECK: ext_region.yield should be put inside ext_region.if
             print(e)

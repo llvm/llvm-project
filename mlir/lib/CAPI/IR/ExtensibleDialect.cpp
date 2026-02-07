@@ -47,3 +47,41 @@ MlirDynamicOpTrait mlirDynamicOpTraitGetNoTerminator() {
 void mlirDynamicOpTraitDestroy(MlirDynamicOpTrait dynamicOpTrait) {
   delete unwrap(dynamicOpTrait);
 }
+
+namespace mlir {
+
+class ExternalDynamicOpTrait : public DynamicOpTrait {
+public:
+  ExternalDynamicOpTrait(TypeID typeID, MlirDynamicOpTraitCallbacks callbacks,
+                         void *userData)
+      : typeID(typeID), callbacks(callbacks), userData(userData) {
+    if (callbacks.construct)
+      callbacks.construct(userData);
+  }
+  ~ExternalDynamicOpTrait() {
+    if (callbacks.destruct)
+      callbacks.destruct(userData);
+  }
+
+  LogicalResult verifyTrait(Operation *op) const override {
+    return unwrap(callbacks.verifyTrait(wrap(op), userData));
+  };
+  LogicalResult verifyRegionTrait(Operation *op) const override {
+    return unwrap(callbacks.verifyRegionTrait(wrap(op), userData));
+  };
+
+  TypeID getTypeID() const override { return typeID; };
+
+private:
+  TypeID typeID;
+  MlirDynamicOpTraitCallbacks callbacks;
+  void *userData;
+};
+
+} // namespace mlir
+
+MlirDynamicOpTrait mlirDynamicOpTraitCreate(
+    MlirTypeID typeID, MlirDynamicOpTraitCallbacks callbacks, void *userData) {
+  return wrap(
+      new mlir::ExternalDynamicOpTrait(unwrap(typeID), callbacks, userData));
+}

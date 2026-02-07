@@ -1847,49 +1847,24 @@ private:
 
 class MLIR_PYTHON_API_EXPORTED PyDynamicOpTrait {
 public:
-  PyDynamicOpTrait(MlirDynamicOpTrait trait) : trait(trait) {}
-  ~PyDynamicOpTrait() { mlirDynamicOpTraitDestroy(trait); }
-
-  bool attach(std::string opName, DefaultingPyMlirContext context) {
-    assert(this->trait.ptr && "Trait has already been attached");
-
-    MlirDynamicOpTrait trait = this->trait;
-    this->trait = MlirDynamicOpTrait{nullptr};
-    return mlirDynamicOpTraitAttach(trait,
-                                    MlirStringRef{opName.data(), opName.size()},
-                                    context.get()->get());
-  }
-
-  bool attachToOpView(const nanobind::type_object &opView,
-                      DefaultingPyMlirContext context) {
-    return attach(nanobind::cast<std::string>(opView.attr("OPERATION_NAME")),
-                  context);
-  }
+  static bool attach(const nanobind::object &opName,
+                     const nanobind::object &target, PyMlirContext &context);
 
   static void bind(nanobind::module_ &m);
-
-private:
-  MlirDynamicOpTrait trait;
 };
 
 namespace PyDynamicOpTraits {
 
 class MLIR_PYTHON_API_EXPORTED IsTerminator : public PyDynamicOpTrait {
 public:
-  IsTerminator() : PyDynamicOpTrait(mlirDynamicOpTraitGetIsTerminator()) {}
-  static void bind(nanobind::module_ &m) {
-    nanobind::class_<IsTerminator, PyDynamicOpTrait>(m, "IsTerminatorTrait")
-        .def(nanobind::init<>());
-  }
+  static bool attach(const nanobind::object &opName, PyMlirContext &context);
+  static void bind(nanobind::module_ &m);
 };
 
 class MLIR_PYTHON_API_EXPORTED NoTerminator : public PyDynamicOpTrait {
 public:
-  NoTerminator() : PyDynamicOpTrait(mlirDynamicOpTraitGetNoTerminator()) {}
-  static void bind(nanobind::module_ &m) {
-    nanobind::class_<NoTerminator, PyDynamicOpTrait>(m, "NoTerminatorTrait")
-        .def(nanobind::init<>());
-  }
+  static bool attach(const nanobind::object &opName, PyMlirContext &context);
+  static void bind(nanobind::module_ &m);
 };
 
 } // namespace PyDynamicOpTraits

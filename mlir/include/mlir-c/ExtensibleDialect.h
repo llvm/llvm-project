@@ -52,6 +52,23 @@ MLIR_CAPI_EXPORTED MlirDynamicOpTrait mlirDynamicOpTraitGetNoTerminator(void);
 MLIR_CAPI_EXPORTED void
 mlirDynamicOpTraitDestroy(MlirDynamicOpTrait dynamicOpTrait);
 
+typedef struct {
+  /// Optional constructor for the user data.
+  /// Set to nullptr to disable it.
+  void (*construct)(void *userData);
+  /// Optional destructor for the user data.
+  /// Set to nullptr to disable it.
+  void (*destruct)(void *userData);
+  /// The callback function to verify the operation.
+  MlirLogicalResult (*verifyTrait)(MlirOperation op, void *userData);
+  /// The callback function to verify the operation with access to regions.
+  MlirLogicalResult (*verifyRegionTrait)(MlirOperation op, void *userData);
+} MlirDynamicOpTraitCallbacks;
+
+/// Create a custom dynamic op trait with the given type ID and callbacks.
+MLIR_CAPI_EXPORTED MlirDynamicOpTrait mlirDynamicOpTraitCreate(
+    MlirTypeID typeID, MlirDynamicOpTraitCallbacks callbacks, void *userData);
+
 #ifdef __cplusplus
 }
 #endif
