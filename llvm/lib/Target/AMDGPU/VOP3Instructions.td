@@ -638,19 +638,13 @@ class ThreeOpFrag<SDPatternOperator op1, SDPatternOperator op2> : ThreeOpFragSDA
 }
 
 def shl_0_to_4 : PatFrag<
-  (ops node:$src0, node:$src1), (shl node:$src0, node:$src1),
-  [{
-     if (auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
-       return C->getZExtValue() <= 4;
-     }
-     return false;
-   }]> {
+  (ops node:$src0, node:$src1), (shl node:$src0, node:$src1), [{
+    KnownBits KB = CurDAG->computeKnownBits(N->getOperand(1));
+    return KB.getMaxValue().getZExtValue() <= 4;
+  }]> {
   let GISelPredicateCode = [{
-    int64_t Imm = 0;
-    if (!mi_match(MI.getOperand(2).getReg(), MRI, m_ICst(Imm)) &&
-        !mi_match(MI.getOperand(2).getReg(), MRI, m_Copy(m_ICst(Imm))))
-      return false;
-    return (uint64_t)Imm <= 4;
+    KnownBits KB = VT->getKnownBits(MI.getOperand(2).getReg());
+    return KB.getMaxValue().getZExtValue() <= 4;
   }];
 }
 
