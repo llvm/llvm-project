@@ -3740,7 +3740,7 @@ static void sortJavaImports(const FormatStyle &Style,
 
 namespace {
 
-constexpr StringRef 
+constexpr StringRef
     JavaImportRegexPattern("^import[\t ]+(static[\t ]*)?([^\t ]*)[\t ]*;");
 
 constexpr StringRef JavaPackageRegexPattern("^package[\t ]+");
