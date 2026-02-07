@@ -8114,8 +8114,8 @@ ExprResult Sema::BuildVectorLiteral(SourceLocation LParenLoc,
         numExprs == 1) {
       if (!exprs[0]->getType()->isArithmeticType()) {
         Diag(exprs[0]->getBeginLoc(), diag::err_typecheck_convert_incompatible)
-            << Ty << exprs[0]->getType() << 4 << 0 << 0 << ""
-            << exprs[0]->getSourceRange();
+            << Ty << exprs[0]->getType() << AssignmentAction::Initializing << 0
+            << 0 << "" << exprs[0]->getSourceRange();
         return ExprError();
       }
       QualType ElemTy = VTy->getElementType();
