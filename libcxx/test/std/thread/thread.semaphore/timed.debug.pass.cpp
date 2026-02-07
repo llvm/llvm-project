@@ -22,13 +22,11 @@
 #include "make_test_thread.h"
 #include "test_macros.h"
 
-int main(int, char**)
-{
-  auto const start = std::chrono::steady_clock::now();
-  auto log = [start] ()-> auto& {
+void test(auto log_start){
+  auto log = [log_start] ()-> auto& {
     using namespace std::chrono;
 
-    auto elapsed = steady_clock::now() - start;
+    auto elapsed = steady_clock::now() - log_start;
 
     auto hours = duration_cast<std::chrono::hours>(elapsed);
     elapsed -= hours;
@@ -51,15 +49,16 @@ int main(int, char**)
     return std::cerr;
   };
 
+  auto const start = std::chrono::steady_clock::now();
   std::counting_semaphore<> s(0);
 
-  log() << "try_acquire_until: start + " <<  std::chrono::milliseconds(250)  << "\n";
+  log() << "start: try_acquire_until: start + " <<  std::chrono::milliseconds(250)  << "\n";
   assert(!s.try_acquire_until(start + std::chrono::milliseconds(250)));
-  log() << "done: try_acquire_until: start + " <<  std::chrono::milliseconds(250)  << "\n";
+  log() << "done:  try_acquire_until: start + " <<  std::chrono::milliseconds(250)  << "\n";
 
-  log() << "try_acquire_for: " << std::chrono::milliseconds(250) << "\n";
+  log() << "start: try_acquire_for: " << std::chrono::milliseconds(250) << "\n";
   assert(!s.try_acquire_for(std::chrono::milliseconds(250)));
-  log() << "done: try_acquire_for: " << std::chrono::milliseconds(250) << "\n";
+  log() << "done:  try_acquire_for: " << std::chrono::milliseconds(250) << "\n";
 
   std::thread t = support::make_test_thread([&](){
     std::this_thread::sleep_for(std::chrono::milliseconds(250));
@@ -68,17 +67,26 @@ int main(int, char**)
     s.release();
   });
 
-  log() << "try_acquire_until: start + " <<  std::chrono::seconds(2)  << "\n";
+  log() << "start: try_acquire_until: start + " <<  std::chrono::seconds(2)  << "\n";
   assert(s.try_acquire_until(start + std::chrono::seconds(2)));
-  log() << "done: try_acquire_until: start + " <<  std::chrono::seconds(2)  << "\n";
+  log() << "done:  try_acquire_until: start + " <<  std::chrono::seconds(2)  << "\n";
 
-  log() << "try_acquire_for: " << std::chrono::seconds(2) << "\n";
+  log() << "start: try_acquire_for: " << std::chrono::seconds(2) << "\n";
   assert(s.try_acquire_for(std::chrono::seconds(2)));
-  log() << "done: try_acquire_for: " << std::chrono::seconds(2) << "\n";
+  log() << "done:  try_acquire_for: " << std::chrono::seconds(2) << "\n";
   t.join();
 
   auto const end = std::chrono::steady_clock::now();
   assert(end - start < std::chrono::seconds(10));
+}
+
+int main(int, char**)
+{
+  auto const log_start = std::chrono::steady_clock::now();
+  for (auto i = 0; i < 10; ++i) {
+    std::cerr << "=== Iteration " << i << " ===\n";
+    test(log_start);
+  }
 
   return 1;
 }
