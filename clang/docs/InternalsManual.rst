@@ -3451,25 +3451,23 @@ are similar.
 Testing
 -------
 All functional changes to Clang should come with test coverage demonstrating
-the change in behavior. There are four kinds of such tests.
+the change in behavior. There are four kinds of tests:
 
-The first kind is unit tests. Such tests are placed in ``clang/test/unittest``.
-
-The second kind of tests ensures that only specific diagnostics are emitted at
-specific source lines. Those tests are using ``-verify`` mode of ``-cc1``,
-which is described below in
-:ref:`"Verifying Diagnostics" <verifying-diagnostics>`. Additional
-provisions for tests for C++ defect reports are described in ... section. 
-
-The third kind of tests checks AST dump. Such tests pass AST dump to
-`FileCheck <https://llvm.org/docs/CommandGuide/FileCheck.html>`_ utility,
-which check presence of certain patterns (or lack of thereof).
-
-The fourth kind of tests checks LLVM IR output of Clang in cases when checking
-diagnostics is not sufficient (e.g. when testing exception handling or object
-lifetime). Such tests pass LLVM IR output to
-`FileCheck <https://llvm.org/docs/CommandGuide/FileCheck.html>`_ utility,
-which check presence of certain IR patterns (or lack of thereof).
+* Unit tests: such tests are placed in ``clang/test/unittest``.
+* Diagnostic tests: such tests ensures that only specific diagnostics are
+  emitted at specific source lines. Those tests are using ``-verify`` mode of
+  ``-cc1``, which is described below in
+  :ref:`"Verifying Diagnostics" <verifying-diagnostics>`. Additional
+  provisions for tests for C++ defect reports are described in ... section. 
+* AST dump tests: such tests pass AST dump to
+  `FileCheck <https://llvm.org/docs/CommandGuide/FileCheck.html>`_ utility,
+  which check presence of certain patterns (or lack of thereof).
+* LLVM IR tests: in such tests LLVM IR output of Clang is checked, which is
+  needed in cases when checking diagnostics is not sufficient (e.g. when
+  testing exception handling or object lifetime). Such tests pass LLVM IR
+  output to
+  `FileCheck <https://llvm.org/docs/CommandGuide/FileCheck.html>`_ utility,
+  which check presence of certain IR patterns (or lack of thereof).
 
 .. _verifying-diagnostics:
 
@@ -3527,6 +3525,15 @@ Where:
   (:ref:`Diagnostic Location <diagnostic-location>`).
 - ``diagnostic-text`` is text of the expected diagnostic
   (:ref:`Diagnostic Text <diagnostic-text>`).
+
+Examples:
+
+- ``// expected-note {{declared here}}``
+- ``// expected-error@+1 0-1 {{{expected identifier or '{'}}}``
+- ``// cxx98-17-warning@#func-decl + {{target exception specification is not superset of source}}``
+- ``// expected-note@* 1 {{file entered}}``
+- ``// expected-note@decls.h:2 {{previous declaration is here}}``
+- ``// cxx11-17-error-re@-1 {{no matching constructor for initialization of 'A' (aka '(lambda at {{.+}})')}}`
 
 .. _custom-prefixes:
 
