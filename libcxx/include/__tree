@@ -564,13 +564,15 @@ public:
   pointer __left_;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_end_node() _NOEXCEPT
-      : __left_(
-// Due to a compiler bug that has been fixed in clang 21, we can't rely on value initialization during constant
-// evaluation to correctly initialize this pointer, hence, we need to initialize it explicitly with `nullptr`
-#if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 2101
-            nullptr
+// Due to a compiler bug that has been fixed in clang 21 but still present in AppleClang (atleast for 1700.x), we can't
+// rely on value initialization during constant evaluation to correctly initialize this pointer, hence, we need to
+// initialize it explicitly with `nullptr`
+#if defined(_LIBCPP_APPLE_CLANG_VER) || (defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 2101)
+      : __left_(nullptr)
+#else
+      : __left_()
 #endif
-        ) {
+  {
   }
 };
 
