@@ -49,7 +49,6 @@
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Sema/DeclSpec.h"
 #include "clang/Basic/CommentOptions.h"
 #include "clang/Basic/ExceptionSpecificationType.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -66,6 +65,7 @@
 #include "clang/Basic/TargetCXXABI.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/XRayLists.h"
+#include "clang/Sema/DeclSpec.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
@@ -2469,7 +2469,8 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     return getTypeInfo(cast<CountAttributedType>(T)->desugar().getTypePtr());
 
   case Type::LateParsedAttr:
-    return getTypeInfo(cast<LateParsedAttrType>(T)->getWrappedType().getTypePtr());
+    return getTypeInfo(
+        cast<LateParsedAttrType>(T)->getWrappedType().getTypePtr());
 
   case Type::BTFTagAttributed:
     return getTypeInfo(

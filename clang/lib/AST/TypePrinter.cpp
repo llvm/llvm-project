@@ -32,12 +32,12 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Sema/DeclSpec.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "clang/Sema/DeclSpec.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -1819,11 +1819,12 @@ void TypePrinter::printCountAttributedAfter(const CountAttributedType *T,
 
 static void printLateParsedAttrImpl(const LateParsedAttrType *T,
                                     raw_ostream &OS) {
-  OS << " LateParsedTypeAttr::" << T->getLateParsedAttribute()->AttrName.getName() << "()";
+  OS << " LateParsedTypeAttr::"
+     << T->getLateParsedAttribute()->AttrName.getName() << "()";
 }
 
 void TypePrinter::printLateParsedAttrBefore(const LateParsedAttrType *T,
-                                             raw_ostream &OS) {
+                                            raw_ostream &OS) {
   // LateParsedAttrType is a transient placeholder that should not appear
   // in final output. Print it explicitly for debugging purposes.
   printBefore(T->getWrappedType(), OS);
@@ -1832,7 +1833,7 @@ void TypePrinter::printLateParsedAttrBefore(const LateParsedAttrType *T,
 }
 
 void TypePrinter::printLateParsedAttrAfter(const LateParsedAttrType *T,
-                                            raw_ostream &OS) {
+                                           raw_ostream &OS) {
   // LateParsedAttrType is a transient placeholder that should not appear
   // in final output. The attribute name is already printed in printBefore
   // for pointer types, but for array types we print it here.

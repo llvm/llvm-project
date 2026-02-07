@@ -2484,11 +2484,11 @@ public:
   /// `counted_by_or_null` attribute.
   ///
   /// \returns false iff semantically valid.
-  bool CheckCountedByAttrOnField(FieldDecl *FD, QualType T, Expr *E, bool CountInBytes,
-                                 bool OrNull);
+  bool CheckCountedByAttrOnField(FieldDecl *FD, QualType T, Expr *E,
+                                 bool CountInBytes, bool OrNull);
 
   bool CheckCountedByAttrOnFieldDecl(FieldDecl *FD, Expr *E, bool CountInBytes,
-                                      bool OrNull);
+                                     bool OrNull);
 
   /// Perform Bounds Safety Semantic checks for assigning to a `__counted_by` or
   /// `__counted_by_or_null` pointer type \param LHSTy.

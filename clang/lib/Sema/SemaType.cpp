@@ -398,7 +398,9 @@ processTypeAttrs(TypeProcessingState &state, QualType &type,
                  TypeAttrLocation TAL, const ParsedAttributesView &attrs,
                  CUDAFunctionTarget CFT = CUDAFunctionTarget::HostDevice);
 
-static bool processLateTypeAttrs(TypeProcessingState &state, QualType &type, const LateParsedAttrList &LateAttrs, unsigned chunkIndex = 0);
+static bool processLateTypeAttrs(TypeProcessingState &state, QualType &type,
+                                 const LateParsedAttrList &LateAttrs,
+                                 unsigned chunkIndex = 0);
 
 static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
                                    QualType &type, CUDAFunctionTarget CFT);
@@ -8904,18 +8906,18 @@ static unsigned getPointerNestLevel(TypeProcessingState &state,
   if (chunkIndex > 0) {
     const auto &stateDeclarator = state.getDeclarator();
     assert(chunkIndex <= stateDeclarator.getNumTypeObjects());
-    // DeclChunks are ordered identifier out. Index 0 is the outer most type object.
-    // Find outer pointer, array or function.
+    // DeclChunks are ordered identifier out. Index 0 is the outer most type
+    // object. Find outer pointer, array or function.
     for (unsigned i = 0; i < chunkIndex; ++i) {
       auto TypeObject = stateDeclarator.getTypeObject(i);
       switch (TypeObject.Kind) {
-        case DeclaratorChunk::Function:
-        case DeclaratorChunk::Array:
-        case DeclaratorChunk::Pointer:
-          pointerNestLevel++;
-          break;
-        default:
-          break;
+      case DeclaratorChunk::Function:
+      case DeclaratorChunk::Array:
+      case DeclaratorChunk::Pointer:
+        pointerNestLevel++;
+        break;
+      default:
+        break;
       }
     }
   }
@@ -8923,10 +8925,10 @@ static unsigned getPointerNestLevel(TypeProcessingState &state,
 }
 
 static bool validateCountedByAttrType(Sema &S, QualType Ty,
-                                       ParsedAttr::Kind AttrKind,
-                                       SourceLocation AttrLoc,
-                                       unsigned pointerNestLevel,
-                                       bool &CountInBytes, bool &OrNull) {
+                                      ParsedAttr::Kind AttrKind,
+                                      SourceLocation AttrLoc,
+                                      unsigned pointerNestLevel,
+                                      bool &CountInBytes, bool &OrNull) {
   switch (AttrKind) {
   case ParsedAttr::AT_CountedBy:
     CountInBytes = false;
@@ -9008,8 +9010,7 @@ static bool validateCountedByAttrType(Sema &S, QualType Ty,
   }
 
   if (pointerNestLevel > 0) {
-    S.Diag(AttrLoc, diag::err_counted_by_on_nested_pointer)
-            << Kind;
+    S.Diag(AttrLoc, diag::err_counted_by_on_nested_pointer) << Kind;
     return false;
   }
 
@@ -9017,7 +9018,7 @@ static bool validateCountedByAttrType(Sema &S, QualType Ty,
 }
 
 static void HandleCountedByAttrOnType(TypeProcessingState &State,
-                                       QualType &CurType, ParsedAttr &Attr) {
+                                      QualType &CurType, ParsedAttr &Attr) {
   Sema &S = State.getSema();
 
   // This attribute is only supported in C.
@@ -9035,8 +9036,8 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
 
   // This is a mechanism to prevent nested count pointer types in the contexts
   // where late parsing isn't allowed: currently that is any context other than
-  // struct fields. In the context where late parsing is allowed, the level check
-  // will be done once the whole context is constructed.
+  // struct fields. In the context where late parsing is allowed, the level
+  // check will be done once the whole context is constructed.
   unsigned chunkIndex = State.getCurrentChunkIndex();
   unsigned pointerNestLevel = 0;
 
@@ -9048,16 +9049,18 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
 
   bool CountInBytes, OrNull;
   if (!validateCountedByAttrType(S, CurType, Attr.getKind(), Attr.getLoc(),
-                                   pointerNestLevel, CountInBytes, OrNull)) {
+                                 pointerNestLevel, CountInBytes, OrNull)) {
     Attr.setInvalid();
     return;
   }
 
   CurType = S.BuildCountAttributedArrayOrPointerType(CurType, CountExpr,
-                                                       CountInBytes, OrNull);
+                                                     CountInBytes, OrNull);
 }
 
-static bool processLateTypeAttrs(TypeProcessingState &state, QualType &type, const LateParsedAttrList &LateAttrs, unsigned chunkIndex) {
+static bool processLateTypeAttrs(TypeProcessingState &state, QualType &type,
+                                 const LateParsedAttrList &LateAttrs,
+                                 unsigned chunkIndex) {
 
   if (LateAttrs.empty())
     return true;
@@ -9068,12 +9071,12 @@ static bool processLateTypeAttrs(TypeProcessingState &state, QualType &type, con
   unsigned pointerNestLevel = 0;
 
   for (auto *LA : LateAttrs) {
-    ParsedAttr::Kind AttrKind =
-      ParsedAttr::getParsedKind(&LA->AttrName, nullptr, ParsedAttr::Form::GNU().getSyntax());
+    ParsedAttr::Kind AttrKind = ParsedAttr::getParsedKind(
+        &LA->AttrName, nullptr, ParsedAttr::Form::GNU().getSyntax());
 
     bool CountInBytes, OrNull;
     if (!validateCountedByAttrType(S, type, AttrKind, LA->AttrNameLoc,
-                                     pointerNestLevel, CountInBytes, OrNull))
+                                   pointerNestLevel, CountInBytes, OrNull))
       return false;
 
     type = S.getASTContext().getLateParsedAttrType(

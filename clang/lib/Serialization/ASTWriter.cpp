@@ -157,7 +157,8 @@ static TypeCode getTypeCodeForTypeClass(Type::TypeClass id) {
   case Type::CLASS_ID: return TYPE_##CODE_ID;
 #include "clang/Serialization/TypeBitCodes.def"
   case Type::LateParsedAttr:
-    llvm_unreachable("should be replaced with a concrete type before serialization");
+    llvm_unreachable(
+        "should be replaced with a concrete type before serialization");
   case Type::Builtin:
     llvm_unreachable("shouldn't be serializing a builtin type this way");
   }

@@ -116,7 +116,8 @@ static bool IsAttributeTypeAttr(ParsedAttr::Kind Kind) {
 #define TYPE_ATTR(NAME) case ParsedAttr::AT_##NAME:
 #include "clang/Basic/AttrList.inc"
     return true;
-    default: return false;
+  default:
+    return false;
 #undef DECL_OR_TYPE_ATTR
 #undef TYPE_ATTR
 #undef ATTR
@@ -172,9 +173,8 @@ bool Parser::ParseSingleGNUAttribute(ParsedAttributes &Attrs,
     return false;
   }
 
-
-  ParsedAttr::Kind AttrKind =
-        ParsedAttr::getParsedKind(AttrName, nullptr, ParsedAttr::Form::GNU().getSyntax());
+  ParsedAttr::Kind AttrKind = ParsedAttr::getParsedKind(
+      AttrName, nullptr, ParsedAttr::Form::GNU().getSyntax());
 
   bool LateParse = false;
   if (!LateAttrs)
@@ -185,7 +185,8 @@ bool Parser::ParseSingleGNUAttribute(ParsedAttributes &Attrs,
     // only be late parsed if the experimental language option is enabled.
     LateParse = getLangOpts().ExperimentalLateParseAttributes &&
                 IsAttributeLateParsedExperimentalExt(*AttrName) &&
-                (IsAttributeTypeAttr(AttrKind) || !LateAttrs->lateAttrParseTypeAttrOnly());
+                (IsAttributeTypeAttr(AttrKind) ||
+                 !LateAttrs->lateAttrParseTypeAttrOnly());
   } else {
     // The caller did not restrict late parsing to only
     // `LateAttrParseExperimentalExt` attributes so late parse
@@ -2754,9 +2755,11 @@ void Parser::ParseSpecifierQualifierList(
   ParsedTemplateInfo TemplateInfo;
 
   if (LateAttrs)
-    assert(!std::any_of(LateAttrs->begin(), LateAttrs->end(), [&](const LateParsedAttribute *LA) {
-      return isa<LateParsedTypeAttribute>(LA);
-    }) && "Late type attribute carried over");
+    assert(!std::any_of(LateAttrs->begin(), LateAttrs->end(),
+                        [&](const LateParsedAttribute *LA) {
+                          return isa<LateParsedTypeAttribute>(LA);
+                        }) &&
+           "Late type attribute carried over");
 
   /// specifier-qualifier-list is a subset of declaration-specifiers.  Just
   /// parse declaration-specifiers and complain about extra stuff.
@@ -4827,7 +4830,9 @@ void Parser::ParseLexedCAttributeList(LateParsedAttrList &LAs, bool EnterScope,
   LAs.clear();
 }
 
-void Parser::ParseLexedTypeAttribute(LateParsedTypeAttribute &LA, bool EnterScope, ParsedAttributes &OutAttrs) {
+void Parser::ParseLexedTypeAttribute(LateParsedTypeAttribute &LA,
+                                     bool EnterScope,
+                                     ParsedAttributes &OutAttrs) {
   // Create a fake EOF so that attribute parsing won't go off the end of the
   // attribute.
   Token AttrEnd;
@@ -4929,10 +4934,12 @@ void Parser::ParseLexedCAttribute(LateParsedAttribute &LA, bool EnterScope,
   }
 }
 
-void Parser::LateTypeAttrParserCallback(void *P, void *OLA, bool EnterScope, ParsedAttributes &OutAttrs) {
+void Parser::LateTypeAttrParserCallback(void *P, void *OLA, bool EnterScope,
+                                        ParsedAttributes &OutAttrs) {
   auto *LA = static_cast<LateParsedAttribute *>(OLA);
   auto *LTA = cast<LateParsedTypeAttribute>(LA);
-  return ((Parser *)(P))->ParseLexedTypeAttribute(*LTA, /*EnterScope=*/false, OutAttrs);
+  return ((Parser *)(P))
+      ->ParseLexedTypeAttribute(*LTA, /*EnterScope=*/false, OutAttrs);
 }
 
 void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
@@ -6556,15 +6563,13 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
                          : AR_GNUAttributesParsedAndRejected);
     // FIXME: Don't need to pass parameter. It's not used. This is the path
     // where it is experimental only.
-    // FIXME: Still don't know whether this is the right context to do late parsing. Is it okay?
-    // You don't want to do late parsing if it's a variable declaration.
-    // You can probably look at the DeclaratorContext!
+    // FIXME: Still don't know whether this is the right context to do late
+    // parsing. Is it okay? You don't want to do late parsing if it's a variable
+    // declaration. You can probably look at the DeclaratorContext!
     bool LateParsingContext = D.getContext() == DeclaratorContext::Member ||
-        D.getContext() == DeclaratorContext::Prototype;
+                              D.getContext() == DeclaratorContext::Prototype;
     LateParsedAttrList *LateAttrs =
-        LateParsingContext
-            ? &DS.getLateAttributes()
-            : nullptr;
+        LateParsingContext ? &DS.getLateAttributes() : nullptr;
 
     ParseTypeQualifierListOpt(DS, Reqs, /*AtomicOrPtrauthAllowed=*/true,
                               !D.mayOmitIdentifier(), {}, LateAttrs);
@@ -7222,7 +7227,8 @@ void Parser::ParseParenDeclarator(Declarator &D) {
     return;
   }
 
-  assert(LateAttrs.empty() && "Late parsed type attribute on FirstParamAttr is dropped");
+  assert(LateAttrs.empty() &&
+         "Late parsed type attribute on FirstParamAttr is dropped");
 
   // Okay, if this wasn't a grouping paren, it must be the start of a function
   // argument list.  Recognize that this declarator will never have an

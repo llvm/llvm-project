@@ -1428,10 +1428,11 @@ private:
   void ParseLexedCAttribute(LateParsedAttribute &LA, bool EnterScope,
                             ParsedAttributes *OutAttrs = nullptr);
 
+  void ParseLexedTypeAttribute(LateParsedTypeAttribute &LA, bool EnterScope,
+                               ParsedAttributes &OutAttrs);
 
-  void ParseLexedTypeAttribute(LateParsedTypeAttribute &LA, bool EnterScope, ParsedAttributes &OutAttrs);
-
-  static void LateTypeAttrParserCallback(void *P, void *LA, bool EnterScope, ParsedAttributes &OutAttrs);
+  static void LateTypeAttrParserCallback(void *P, void *LA, bool EnterScope,
+                                         ParsedAttributes &OutAttrs);
 
   void ParseLexedPragmas(ParsingClass &Class);
   void ParseLexedPragma(LateParsedPragma &LP);
