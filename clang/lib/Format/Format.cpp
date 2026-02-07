@@ -3740,10 +3740,10 @@ static void sortJavaImports(const FormatStyle &Style,
 
 namespace {
 
-const char JavaImportRegexPattern[] =
-    "^[\t ]*import[\t ]+(static[\t ]*)?([^\t ]*)[\t ]*;";
+constexpr StringRef JavaImportRegexPattern(
+"^import[\t ]+(static[\t ]*)?([^\t ]*)[\t ]*;");
 
-const char JavaPackageRegexPattern[] = "^[\t ]*package[\t ]+[^;]+;";
+constexpr StringRef JavaPackageRegexPattern("^package[\t ]+");
 
 } // anonymous namespace
 
