@@ -3320,7 +3320,7 @@ add_entrypoint_object(
     ../ffmaf128.h
   DEPENDS
     libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.fma
+    libc.src.__support.math.ffmaf128
 )
 
 add_entrypoint_object(

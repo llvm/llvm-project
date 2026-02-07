@@ -1,4 +1,4 @@
-//===-- Implementation of ffmaf128 function -------------------------------===//
+//===-- Shared ffmaf128 function --------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/ffmaf128.h"
+#ifndef LLVM_LIBC_SHARED_MATH_FFMAF128_H
+#define LLVM_LIBC_SHARED_MATH_FFMAF128_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/ffmaf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float, ffmaf128, (float128 x, float128 y, float128 z)) {
-    return math::ffmaf128(x, y, z);
-}
+using math::ffmaf128;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_FFMAF128_H

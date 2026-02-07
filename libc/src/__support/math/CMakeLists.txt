@@ -613,6 +613,14 @@ add_header_library(
 )
 
 add_header_library(
+  ffmaf128
+  HDRS
+    ffmaf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+)
+
+add_header_library(
   frexpf128
   HDRS
     frexpf128.h
