@@ -342,16 +342,7 @@ set(llvm_system_libs ${system_libs})
 # This block is only needed for llvm-config. When we deprecate llvm-config and
 # move to using CMake export, this block can be removed.
 if(LLVM_ENABLE_ZLIB)
-  # CMAKE_BUILD_TYPE is only meaningful to single-configuration generators.
-  if(CMAKE_BUILD_TYPE)
-    string(TOUPPER ${CMAKE_BUILD_TYPE} build_type)
-    get_property(zlib_library TARGET ZLIB::ZLIB PROPERTY LOCATION_${build_type})
-  endif()
-  if(NOT zlib_library)
-    get_property(zlib_library TARGET ZLIB::ZLIB PROPERTY LOCATION)
-  endif()
-  get_library_name(${zlib_library} zlib_library)
-  set(llvm_system_libs ${llvm_system_libs} "${zlib_library}")
+  list(APPEND llvm_system_libs ZLIB::ZLIB)
 endif()
 
 if(LLVM_ENABLE_ZSTD)
