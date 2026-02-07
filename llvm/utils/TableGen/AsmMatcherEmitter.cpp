@@ -3609,7 +3609,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   OS << "namespace {\n";
   OS << "  struct MatchEntry {\n";
   OS << "    " << getMinimalTypeForRange(MaxMnemonicIndex) << " Mnemonic;\n";
-  OS << "    uint32_t Opcode;\n";
+  OS << "    uint16_t Opcode;\n";
   OS << "    " << getMinimalTypeForRange(NumConverters) << " ConvertFn;\n";
   OS << "    " << getMinimalTypeForRange(FeatureBitsets.size())
      << " RequiredFeaturesIdx;\n";

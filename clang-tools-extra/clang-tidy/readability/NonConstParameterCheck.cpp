@@ -95,8 +95,8 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
         }
       }
     } else if (const auto *CE = dyn_cast<CXXUnresolvedConstructExpr>(S)) {
-      for (const auto *Arg : CE->arguments())
-        markCanNotBeConst(Arg->IgnoreParenCasts(), true);
+        for (const auto *Arg : CE->arguments())
+          markCanNotBeConst(Arg->IgnoreParenCasts(), true);
     } else if (const auto *R = dyn_cast<ReturnStmt>(S)) {
       markCanNotBeConst(R->getRetValue(), true);
     } else if (const auto *U = dyn_cast<UnaryOperator>(S)) {
@@ -224,7 +224,7 @@ void NonConstParameterCheck::markCanNotBeConst(const Expr *E,
   } else if (const auto *ILE = dyn_cast<InitListExpr>(E)) {
     for (unsigned I = 0U; I < ILE->getNumInits(); ++I)
       markCanNotBeConst(ILE->getInit(I), true);
-  } else if (dyn_cast<CXXUnresolvedConstructExpr>(E)) {
+  } else if (isa<CXXUnresolvedConstructExpr>(E)) {
     // Skip template-dependent constructors
     return;
   } else if (CanNotBeConst) {
