@@ -544,11 +544,9 @@ bool ThreadList::WillResume(RunDirection &direction) {
     for (auto &group : existing_bp_groups) {
       if (group.second.size() > 1) {
         for (ThreadSP &thread_sp : group.second) {
-          RegisterThreadSteppingOverBreakpoint(group.first,
-                                               thread_sp->GetID());
+          RegisterThreadSteppingOverBreakpoint(group.first, thread_sp->GetID());
           ThreadPlan *plan = thread_sp->GetCurrentPlan();
-          if (plan &&
-              plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
+          if (plan && plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
             static_cast<ThreadPlanStepOverBreakpoint *>(plan)
                 ->SetDeferReenableBreakpointSite(true);
           }
@@ -581,6 +579,15 @@ bool ThreadList::WillResume(RunDirection &direction) {
         thread_sp->GetCurrentPlan()->StopOthers()) {
       if (thread_sp->IsOperatingSystemPluginThread() &&
           !thread_sp->GetBackingThread())
+        continue;
+
+      // Skip threads with existing StepOverBreakpoint plans — they are
+      // mid-step-over from an incomplete previous batch and will be
+      // re-batched in the else branch below. Exception: if a thread
+      // needs to run before public stop, it takes priority.
+      if (thread_sp->GetCurrentPlan()->GetKind() ==
+              ThreadPlan::eKindStepOverBreakpoint &&
+          !thread_sp->ShouldRunBeforePublicStop())
         continue;
 
       // You can't say "stop others" and also want yourself to be suspended.
@@ -657,8 +664,7 @@ bool ThreadList::WillResume(RunDirection &direction) {
           // Get the breakpoint address from the step-over-breakpoint plan
           ThreadPlan *current_plan = thread_sp->GetCurrentPlan();
           if (current_plan &&
-              current_plan->GetKind() ==
-                  ThreadPlan::eKindStepOverBreakpoint) {
+              current_plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
             ThreadPlanStepOverBreakpoint *bp_plan =
                 static_cast<ThreadPlanStepOverBreakpoint *>(current_plan);
             lldb::addr_t bp_addr = bp_plan->GetBreakpointLoadAddress();
@@ -670,6 +676,19 @@ bool ThreadList::WillResume(RunDirection &direction) {
             // This takes precedence, so if we find one of these, service it:
             found_run_before_public_stop = true;
             break;
+          }
+        } else {
+          // Check for threads with existing StepOverBreakpoint plans from
+          // an incomplete previous batch. SetupToStepOverBreakpointIfNeeded
+          // returns false for these because the plan already exists.
+          ThreadPlan *current_plan = thread_sp->GetCurrentPlan();
+          if (current_plan &&
+              current_plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
+            ThreadPlanStepOverBreakpoint *bp_plan =
+                static_cast<ThreadPlanStepOverBreakpoint *>(current_plan);
+            lldb::addr_t bp_addr = bp_plan->GetBreakpointLoadAddress();
+            breakpoint_groups[bp_addr].push_back(thread_sp);
+            thread_to_run = thread_sp;
           }
         }
       }

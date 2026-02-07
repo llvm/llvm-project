@@ -26,31 +26,21 @@ class ConcurrentBatchedBreakpointStepOver(ConcurrentEventsBase):
         self.build()
 
         # Enable logging to capture optimization messages and GDB packets.
-        # Both categories must be in a single command because successive
-        # 'log enable lldb <cat> -f <file>' calls redirect the entire 'lldb'
-        # channel to the new file, leaving the old file empty.
         lldb_logfile = self.getBuildArtifact("lldb-log.txt")
-        self.runCmd(
-            "log enable lldb step break -f {}".format(lldb_logfile)
-        )
+        self.runCmd("log enable lldb step break -f {}".format(lldb_logfile))
 
         gdb_logfile = self.getBuildArtifact("gdb-remote-log.txt")
         self.runCmd("log enable gdb-remote packets -f {}".format(gdb_logfile))
 
-        # Run with 10 breakpoint threads - the pseudo_barrier in main.cpp
-        # ensures they all race to the breakpoint simultaneously, making it
-        # very likely multiple threads are at the same address when stopped.
+        # Run with 10 breakpoint threads.
         self.do_thread_actions(num_breakpoint_threads=10)
 
-        # --- Analyze the lldb log ---
-        self.assertTrue(
-            os.path.isfile(lldb_logfile), "lldb log file not found"
-        )
+        self.assertTrue(os.path.isfile(lldb_logfile), "lldb log file not found")
         with open(lldb_logfile, "r") as f:
             lldb_log = f.read()
 
-        # 1) Find the thread breakpoint address from "Registered thread"
-        #    messages, which tell us the optimization was used.
+        # Find the thread breakpoint address from "Registered thread"
+        # messages, which tell us the optimization was used.
         registered_matches = re.findall(
             r"Registered thread 0x[0-9a-fA-F]+ stepping over "
             r"breakpoint at (0x[0-9a-fA-F]+)",
@@ -64,10 +54,8 @@ class ConcurrentBatchedBreakpointStepOver(ConcurrentEventsBase):
         )
         thread_bp_addr = registered_matches[0]
 
-        # 2) Verify all threads completed their step-over.
-        completed_count = lldb_log.count(
-            "Completed step over breakpoint plan."
-        )
+        # Verify all threads completed their step-over.
+        completed_count = lldb_log.count("Completed step over breakpoint plan.")
         self.assertGreaterEqual(
             completed_count,
             10,
@@ -75,10 +63,10 @@ class ConcurrentBatchedBreakpointStepOver(ConcurrentEventsBase):
             "messages (one per thread), but got {}.".format(completed_count),
         )
 
-        # 3) Verify the deferred re-enable path was used: "finished stepping
-        #    over breakpoint" messages show threads completed via the tracking
-        #    mechanism. The last thread may use the direct path (when only 1
-        #    thread remains, deferred is not set), so we expect at least N-1.
+        # Verify the deferred re-enable path was used: "finished stepping
+        # over breakpoint" messages show threads completed via the tracking
+        # mechanism. The last thread may use the direct path (when only 1
+        # hread remains, deferred is not set), so we expect at least N-1.
         finished_matches = re.findall(
             r"Thread 0x[0-9a-fA-F]+ finished stepping over breakpoint at "
             r"(0x[0-9a-fA-F]+)",
@@ -88,12 +76,10 @@ class ConcurrentBatchedBreakpointStepOver(ConcurrentEventsBase):
             len(finished_matches),
             9,
             "Expected at least 9 'finished stepping over breakpoint' "
-            "messages (deferred path), but got {}.".format(
-                len(finished_matches)
-            ),
+            "messages (deferred path), but got {}.".format(len(finished_matches)),
         )
 
-        # --- Count z0/Z0 packets for the thread breakpoint address ---
+        # Count z0/Z0 packets for the thread breakpoint address
         # z0 = remove (disable) software breakpoint
         # Z0 = set (enable) software breakpoint
         # Strip the "0x" prefix and leading zeros to match the GDB packet
@@ -105,21 +91,17 @@ class ConcurrentBatchedBreakpointStepOver(ConcurrentEventsBase):
         initial_Z0_seen = False
         max_vcont_step_threads = 0  # largest number of s: actions in one vCont
 
-        self.assertTrue(
-            os.path.isfile(gdb_logfile), "gdb-remote log file not found"
-        )
+        self.assertTrue(os.path.isfile(gdb_logfile), "gdb-remote log file not found")
         with open(gdb_logfile, "r") as f:
             for line in f:
                 if "send packet: $" not in line:
                     continue
+
                 # Match z0,<addr> (disable) or Z0,<addr> (enable)
-                m = re.search(
-                    r'send packet: \$([Zz])0,([0-9a-fA-F]+),', line
-                )
+                m = re.search(r"send packet: \$([Zz])0,([0-9a-fA-F]+),", line)
                 if m and m.group(2) == bp_addr_hex:
                     if m.group(1) == "Z":
                         if not initial_Z0_seen:
-                            # Skip the initial breakpoint set
                             initial_Z0_seen = True
                         else:
                             Z0_count += 1
@@ -128,24 +110,15 @@ class ConcurrentBatchedBreakpointStepOver(ConcurrentEventsBase):
 
                 # Count step actions in vCont packets to detect batching.
                 # A batched vCont looks like: vCont;s:tid1;s:tid2;...
-                vcont_m = re.search(
-                    r'send packet: \$vCont((?:;[^#]+)*)', line
-                )
+                vcont_m = re.search(r"send packet: \$vCont((?:;[^#]+)*)", line)
                 if vcont_m:
                     actions = vcont_m.group(1)
-                    step_count = len(re.findall(r';s:', actions))
+                    step_count = len(re.findall(r";s:", actions))
                     if step_count > max_vcont_step_threads:
                         max_vcont_step_threads = step_count
 
-        print("\n--- Breakpoint packet summary for {} ---".format(
-            thread_bp_addr))
-        print("  z0 (disable) packets: {}".format(z0_count))
-        print("  Z0 (re-enable) packets: {}".format(Z0_count))
-        print("  Max threads in a single vCont step: {}".format(
-            max_vcont_step_threads))
-
-        # 4) With the optimization: 1 z0 (disable once) + 1 Z0 (re-enable once)
-        #    Without optimization: N z0 + N Z0 (one pair per thread)
+        # With the optimization: 1 z0 (disable once) + 1 Z0 (re-enable once)
+        # Without optimization: N z0 + N Z0 (one pair per thread)
         self.assertEqual(
             z0_count,
             1,
@@ -165,9 +138,9 @@ class ConcurrentBatchedBreakpointStepOver(ConcurrentEventsBase):
             ),
         )
 
-        # 5) Verify batched vCont: at least one vCont packet should contain
-        #    multiple s: (step) actions, proving threads were stepped together
-        #    in a single packet rather than one at a time.
+        # Verify batched vCont: at least one vCont packet should contain
+        # multiple s: (step) actions, proving threads were stepped together
+        # in a single packet rather than one at a time.
         self.assertGreater(
             max_vcont_step_threads,
             1,
