@@ -73,6 +73,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
                 ->onlyReadsMemory();
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
+  case VPActiveLaneMaskPHISC:
   case VPCanonicalIVPHISC:
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
@@ -161,6 +162,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   switch (getVPRecipeID()) {
   case VPExpressionSC:
     return cast<VPExpressionRecipe>(this)->mayHaveSideEffects();
+  case VPActiveLaneMaskPHISC:
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
   case VPReductionPHISC:
@@ -423,6 +425,8 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
       VPIRMetadata(MD), Opcode(Opcode), Name(Name.str()) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
+  assert(hasRequiredFlagsForOpcode(getOpcode()) &&
+         "Opcode requires specific flags to be set");
   assert((getNumOperandsForOpcode(Opcode) == -1u ||
           getNumOperandsForOpcode(Opcode) == getNumOperands()) &&
          "number of operands does not match opcode");
@@ -466,6 +470,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::Store:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnTwoConds:
+  case VPInstruction::ExitingIVValue:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::PtrAdd:
@@ -1273,6 +1278,8 @@ void VPInstruction::execute(VPTransformState &State) {
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
+  assert(hasRequiredFlagsForOpcode(getOpcode()) &&
+         "Opcode requires specific flags to be set");
   if (hasFastMathFlags())
     State.Builder.setFastMathFlags(getFastMathFlags());
   Value *GeneratedValue = generate(State);
@@ -1316,6 +1323,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ExtractLastPart:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::ActiveLaneMask:
+  case VPInstruction::ExitingIVValue:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
@@ -1379,6 +1387,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     return false;
   case VPInstruction::ComputeAnyOfResult:
     return Op == getOperand(0) || Op == getOperand(1);
+  case VPInstruction::ExitingIVValue:
   case VPInstruction::ExtractLane:
     return Op == getOperand(0);
   };
@@ -1463,6 +1472,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::BuildVector:
     O << "buildvector";
+    break;
+  case VPInstruction::ExitingIVValue:
+    O << "exiting-iv-value";
     break;
   case VPInstruction::ExtractLane:
     O << "extract-lane";
@@ -1828,12 +1840,7 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1,
                                              State.TTI)) {
     Type *RetTy = toVectorizedTy(getResultType(), State.VF);
-    ArrayRef<Type *> ContainedTys = getContainedTypes(RetTy);
-    for (auto [Idx, Ty] : enumerate(ContainedTys)) {
-      if (isVectorIntrinsicWithStructReturnOverloadAtField(VectorIntrinsicID,
-                                                           Idx, State.TTI))
-        TysForDecl.push_back(Ty);
-    }
+    append_range(TysForDecl, getContainedTypes(RetTy));
   }
   SmallVector<Value *, 4> Args;
   for (const auto &I : enumerate(operands())) {
@@ -2050,6 +2057,48 @@ VPIRFlags::FastMathFlagsTy::FastMathFlagsTy(const FastMathFlags &FMF) {
   ApproxFunc = FMF.approxFunc();
 }
 
+VPIRFlags VPIRFlags::getDefaultFlags(unsigned Opcode) {
+  switch (Opcode) {
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::Shl:
+  case VPInstruction::CanonicalIVIncrementForPart:
+    return WrapFlagsTy(false, false);
+  case Instruction::Trunc:
+    return TruncFlagsTy(false, false);
+  case Instruction::Or:
+    return DisjointFlagsTy(false);
+  case Instruction::AShr:
+  case Instruction::LShr:
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+    return ExactFlagsTy(false);
+  case Instruction::GetElementPtr:
+  case VPInstruction::PtrAdd:
+  case VPInstruction::WidePtrAdd:
+    return GEPNoWrapFlags::none();
+  case Instruction::ZExt:
+  case Instruction::UIToFP:
+    return NonNegFlagsTy(false);
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+  case Instruction::FDiv:
+  case Instruction::FRem:
+  case Instruction::FNeg:
+  case Instruction::FPExt:
+  case Instruction::FPTrunc:
+    return FastMathFlags();
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+  case VPInstruction::ComputeReductionResult:
+    llvm_unreachable("opcode requires explicit flags");
+  default:
+    return VPIRFlags();
+  }
+}
+
 #if !defined(NDEBUG)
 bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
   switch (OpType) {
@@ -2088,6 +2137,19 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
     return true;
   }
   llvm_unreachable("Unknown OperationType enum");
+}
+
+bool VPIRFlags::hasRequiredFlagsForOpcode(unsigned Opcode) const {
+  // Handle opcodes without default flags.
+  if (Opcode == Instruction::ICmp)
+    return OpType == OperationType::Cmp;
+  if (Opcode == Instruction::FCmp)
+    return OpType == OperationType::FCmp;
+  if (Opcode == VPInstruction::ComputeReductionResult)
+    return OpType == OperationType::ReductionOp;
+
+  OperationType Required = getDefaultFlags(Opcode).OpType;
+  return Required == OperationType::Other || Required == OpType;
 }
 #endif
 
@@ -2610,9 +2672,9 @@ void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
     LastLane =
         Builder.CreateMul(ConstantInt::getSigned(IndexTy, Stride), LastLane);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
-  Value *ResultPtr =
-      Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", getGEPNoWrapFlags());
-  ResultPtr = Builder.CreateGEP(IndexedTy, ResultPtr, LastLane, "",
+  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, NumElt, "",
+                                       getGEPNoWrapFlags());
+  ResultPtr = Builder.CreateGEP(getSourceElementType(), ResultPtr, LastLane, "",
                                 getGEPNoWrapFlags());
 
   State.set(this, ResultPtr, /*IsScalar*/ true);
@@ -2912,19 +2974,22 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
     unsigned Opcode = RecurrenceDescriptor::getOpcode(
         cast<VPReductionRecipe>(ExpressionRecipes[1])->getRecurrenceKind());
     auto *ExtR = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
+    auto *RedR = cast<VPReductionRecipe>(ExpressionRecipes.back());
 
-    return cast<VPReductionRecipe>(ExpressionRecipes.back())
-                   ->isPartialReduction()
-               ? Ctx.TTI.getPartialReductionCost(
-                     Opcode, Ctx.Types.inferScalarType(getOperand(0)), nullptr,
-                     RedTy, VF,
-                     TargetTransformInfo::getPartialReductionExtendKind(
-                         ExtR->getOpcode()),
-                     TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind,
-                     std::nullopt)
-               : Ctx.TTI.getExtendedReductionCost(
-                     Opcode, ExtR->getOpcode() == Instruction::ZExt, RedTy,
-                     SrcVecTy, std::nullopt, Ctx.CostKind);
+    if (RedR->isPartialReduction())
+      return Ctx.TTI.getPartialReductionCost(
+          Opcode, Ctx.Types.inferScalarType(getOperand(0)), nullptr, RedTy, VF,
+          TargetTransformInfo::getPartialReductionExtendKind(ExtR->getOpcode()),
+          TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind,
+          RedTy->isFloatingPointTy() ? std::optional{RedR->getFastMathFlags()}
+                                     : std::nullopt);
+    else if (!RedTy->isFloatingPointTy())
+      // TTI::getExtendedReductionCost only supports integer types.
+      return Ctx.TTI.getExtendedReductionCost(
+          Opcode, ExtR->getOpcode() == Instruction::ZExt, RedTy, SrcVecTy,
+          std::nullopt, Ctx.CostKind);
+    else
+      return InstructionCost::getInvalid();
   }
   case ExpressionTypes::MulAccReduction:
     return Ctx.TTI.getMulAccReductionCost(false, Opcode, RedTy, SrcVecTy,

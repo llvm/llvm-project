@@ -1202,5 +1202,34 @@ void ScaledMFMAOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<PackScales>(context);
 }
 
+//===----------------------------------------------------------------------===//
+// In-LDS Barrier Operations (gfx1250+)
+//===----------------------------------------------------------------------===//
+
+template <typename T>
+static LogicalResult verifyDsBarrierOpCommon(T &op) {
+  MemRefType memrefType = llvm::cast<MemRefType>(op.getBase().getType());
+  if (!hasWorkgroupMemorySpace(memrefType.getMemorySpace()))
+    return op.emitOpError("barrier must be in workgroup (LDS) memory");
+
+  return success();
+}
+
+LogicalResult DsBarrierInitOp::verify() {
+  return verifyDsBarrierOpCommon(*this);
+}
+
+LogicalResult DsBarrierPollStateOp::verify() {
+  return verifyDsBarrierOpCommon(*this);
+}
+
+LogicalResult DsAsyncBarrierArriveOp::verify() {
+  return verifyDsBarrierOpCommon(*this);
+}
+
+LogicalResult DsBarrierArriveOp::verify() {
+  return verifyDsBarrierOpCommon(*this);
+}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/AMDGPU/IR/AMDGPU.cpp.inc"

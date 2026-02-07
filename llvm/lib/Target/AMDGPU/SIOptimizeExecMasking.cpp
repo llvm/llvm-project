@@ -76,9 +76,7 @@ class SIOptimizeExecMaskingLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SIOptimizeExecMaskingLegacy() : MachineFunctionPass(ID) {
-    initializeSIOptimizeExecMaskingLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  SIOptimizeExecMaskingLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

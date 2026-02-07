@@ -20,68 +20,68 @@ jobs:
         include:
           - os: ubuntu-24.04
             build_type: Debug
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
           - os: ubuntu-24.04
             build_type: Release
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
           - os: ubuntu-24.04-arm
             build_type: Debug
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: aarch64-unknown-linux-llvm
             include_scudo: ON
           - os: ubuntu-24.04
             build_type: Debug
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: x86_64-unknown-uefi-llvm
             include_scudo: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: armv6m-none-eabi
             include_scudo: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: armv7m-none-eabi
             include_scudo: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: armv7em-none-eabi
             include_scudo: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: armv8m.main-none-eabi
             include_scudo: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: armv8.1m.main-none-eabi
             include_scudo: OFF
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            c_compiler: clang-22
-            cpp_compiler: clang++-22
+            c_compiler: clang-21
+            cpp_compiler: clang++-21
             target: riscv32-unknown-elf
             include_scudo: OFF
           # TODO: add back gcc build when it is fixed
@@ -111,7 +111,7 @@ jobs:
       run: |
         wget https://apt.llvm.org/llvm.sh
         chmod +x llvm.sh
-        sudo ./llvm.sh 22
+        sudo ./llvm.sh 21
         sudo apt-get update
         sudo apt-get install -y libmpfr-dev libgmp-dev libmpc-dev ninja-build linux-libc-dev
         sudo ln -sf /usr/include/$(uname -p)-linux-gnu/asm /usr/include/asm

@@ -115,6 +115,12 @@ New checks
 
   Looks for functions returning ``std::[w|u8|u16|u32]string`` and suggests to
   change it to ``std::[...]string_view`` for performance reasons if possible.
+  
+- New :doc:`modernize-use-structured-binding
+  <clang-tidy/checks/modernize/use-structured-binding>` check.
+
+  Finds places where structured bindings could be used to decompose pairs and
+  suggests replacing them.
 
 - New :doc:`performance-string-view-conversions
   <clang-tidy/checks/performance/string-view-conversions>` check.
@@ -122,11 +128,21 @@ New checks
   Finds and removes redundant conversions from ``std::[w|u8|u16|u32]string_view`` to
   ``std::[...]string`` in call expressions expecting ``std::[...]string_view``.
 
+- New :doc:`readability-trailing-comma
+  <clang-tidy/checks/readability/trailing-comma>` check.
+
+  Checks for presence or absence of trailing commas in enum definitions and
+  initializer lists.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Improved :doc:`bugprone-argument-comment
+  <clang-tidy/checks/bugprone/argument-comment>` to also check for C++11
+  inherited constructors.
 
 - Improved :doc:`bugprone-macro-parentheses
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
@@ -141,6 +157,12 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/use-after-move>` check by including the name of
   the invalidating function in the warning message when a custom invalidation
   function is used (via the `InvalidationFunctions` option).
+
+- Improved :doc:`cppcoreguidelines-pro-type-vararg
+  <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer
+  warning on builtins with custom type checking (e.g., type-generic builtins
+  like ``__builtin_clzg``) that use variadic declarations as an implementation
+  detail.
 
 - Improved :doc:`llvm-use-ranges
   <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following

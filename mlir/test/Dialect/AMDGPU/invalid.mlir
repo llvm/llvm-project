@@ -524,3 +524,27 @@ func.func @dpp_rejects_scalable(%a: vector<[16]x[16]xi8>, %b: vector<[16]x[16]xi
   %0 = amdgpu.dpp %a %b row_shl(1 : i32) : vector<[16]x[16]xi8>
   func.return
 }
+
+// -----
+
+func.func @ds_barrier_init_non_workgroup(%barrier: memref<!amdgpu.ds_barrier_state>, %participants: i32) {
+  // expected-error@+1 {{'amdgpu.ds_barrier_init' op barrier must be in workgroup (LDS) memory}}
+  amdgpu.ds_barrier_init %barrier[], %participants : memref<!amdgpu.ds_barrier_state>, i32
+  func.return
+}
+
+// -----
+
+func.func @ds_barrier_poll_state_non_workgroup(%barrier: memref<!amdgpu.ds_barrier_state, #gpu.address_space<global>>) -> !amdgpu.ds_barrier_state {
+  // expected-error@+1 {{'amdgpu.ds_barrier_poll_state' op barrier must be in workgroup (LDS) memory}}
+  %state = amdgpu.ds_barrier_poll_state %barrier[] : memref<!amdgpu.ds_barrier_state, #gpu.address_space<global>> -> !amdgpu.ds_barrier_state
+  func.return %state : !amdgpu.ds_barrier_state
+}
+
+// -----
+
+func.func @ds_barrier_arrive_non_workgroup(%barrier: memref<!amdgpu.ds_barrier_state, #amdgpu.address_space<fat_raw_buffer>>, %count: i64) -> !amdgpu.ds_barrier_state {
+  // expected-error@+1 {{'amdgpu.ds_barrier_arrive' op barrier must be in workgroup (LDS) memory}}
+  %old_state = amdgpu.ds_barrier_arrive %barrier[], %count : memref<!amdgpu.ds_barrier_state, #amdgpu.address_space<fat_raw_buffer>>, i64 -> !amdgpu.ds_barrier_state
+  func.return %old_state : !amdgpu.ds_barrier_state
+}
