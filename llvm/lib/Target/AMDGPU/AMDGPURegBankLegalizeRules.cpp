@@ -624,12 +624,18 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(V2S16, {{SgprV2S16}, {SgprV2S16, SgprV2S16}, UnpackMinMax})
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
 
-  // Note: we only write S1 rules for G_IMPLICIT_DEF, G_CONSTANT, G_FCONSTANT
-  // and G_FREEZE here, rest is trivially regbankselected earlier
+  // Note: we only write S1 rules for G_IMPLICIT_DEF, G_CONSTANT and G_FCONSTANT
+  // here, rest is trivially regbankselected earlier
   addRulesForGOpcs({G_IMPLICIT_DEF}).Any({{UniS1}, {{Sgpr32Trunc}, {}}});
   addRulesForGOpcs({G_CONSTANT})
       .Any({{UniS1, _}, {{Sgpr32Trunc}, {None}, UniCstExt}});
-  addRulesForGOpcs({G_FREEZE}).Any({{DivS1}, {{Vcc}, {Vcc}}});
+
+  addRulesForGOpcs({G_FREEZE})
+      .Any({{UniS1}, {{Sgpr32Trunc}, {Sgpr32AExt}}})
+      .Any({{DivS1}, {{Vcc}, {Vcc}}})
+      .Any({{UniS16}, {{Sgpr16}, {Sgpr16}}})
+      .Any({{UniBRC}, {{SgprBRC}, {SgprBRC}}})
+      .Any({{DivBRC}, {{VgprBRC}, {VgprBRC}}});
 
   addRulesForGOpcs({G_UNMERGE_VALUES})
       .Any({{UniS16}, {{}, {}, UnmergeToShiftTrunc}})
