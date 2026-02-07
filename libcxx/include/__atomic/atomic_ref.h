@@ -23,6 +23,7 @@
 #include <__atomic/check_memory_order.h>
 #include <__atomic/floating_point_helper.h>
 #include <__atomic/memory_order.h>
+#include <__atomic/support.h>
 #include <__atomic/to_gcc_order.h>
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
@@ -301,10 +302,10 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   }
 #  if _LIBCPP_STD_VER >= 26
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_max(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
-    return __atomic_fetch_max(this->__ptr_, __arg, std::__to_gcc_order(__order));
+    return std::__cxx_atomic_fetch_max(this->__ptr_, __arg, __m);
   }
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_min(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
-    return __atomic_fetch_min(this->__ptr_, __arg, std::__to_gcc_order(__order));
+    return std::__cxx_atomic_fetch_min(this->__ptr_, __arg, __m);
   }
 #  endif
 
