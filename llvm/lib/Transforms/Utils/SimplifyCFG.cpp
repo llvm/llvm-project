@@ -8367,6 +8367,217 @@ static bool tryToMergeLandingPad(LandingPadInst *LPad, BranchInst *BI,
   return false;
 }
 
+/// Return true if \/p I is safe to keep in a “trivial block” that we intend to
+/// merge away.
+///
+/// This predicate is intentionally conservative and only whitelists a small set
+/// of obviously-safe instructions. Anything not explicitly allowed returns
+/// false.
+static bool isSafeInstructionForTrivialMerge(const Instruction *I) {
+  assert(I && "Expected non-null instruction");
+
+  // Control-flow and SSA plumbing are handled elsewhere.
+  if (I->isTerminator() || isa<PHINode>(I))
+    return false;
+
+  // Debug and lifetime markers are safe to ignore.
+  if (I->isDebugOrPseudoInst() || I->isLifetimeStartOrEnd())
+    return true;
+
+  // Explicitly reject fences / fence-like operations.
+  if (I->getOpcode() == Instruction::Fence || I->isFenceLike())
+    return false;
+
+  // Stack allocations should not be moved/merged by this transform.
+  if (isa<AllocaInst>(I))
+    return false;
+
+  // Reject anything that may unwind.
+  if (I->mayThrow())
+    return false;
+
+  // Handle memory operations explicitly.
+  if (const auto *LI = dyn_cast<LoadInst>(I))
+    return LI->isSimple();
+  if (const auto *SI = dyn_cast<StoreInst>(I))
+    return SI->isSimple();
+
+  // Calls/intrinsics: only allow “pure” (readnone) and nounwind, non-convergent.
+  if (const auto *CB = dyn_cast<CallBase>(I)) {
+    if (CB->isConvergent())
+      return false;
+    return CB->doesNotAccessMemory() && CB->doesNotThrow();
+  }
+
+  // Anything with side effects is unsafe.
+  if (I->mayHaveSideEffects())
+    return false;
+
+  // Whitelist a small set of trivially-safe, side-effect-free opcodes.
+  switch (I->getOpcode()) {
+  // Integer/FP arithmetic and logical ops.
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul:
+  case Instruction::UDiv:
+  case Instruction::SDiv:
+  case Instruction::URem:
+  case Instruction::SRem:
+  case Instruction::FAdd:
+  case Instruction::FSub:
+  case Instruction::FMul:
+  case Instruction::FDiv:
+  case Instruction::FRem:
+  case Instruction::And:
+  case Instruction::Or:
+  case Instruction::Xor:
+  case Instruction::Shl:
+  case Instruction::LShr:
+  case Instruction::AShr:
+
+  // Comparisons.
+  case Instruction::ICmp:
+  case Instruction::FCmp:
+
+  // Casts / pointer-int conversions.
+  case Instruction::Trunc:
+  case Instruction::ZExt:
+  case Instruction::SExt:
+  case Instruction::FPToUI:
+  case Instruction::FPToSI:
+  case Instruction::UIToFP:
+  case Instruction::SIToFP:
+  case Instruction::FPTrunc:
+  case Instruction::FPExt:
+  case Instruction::PtrToInt:
+  case Instruction::IntToPtr:
+  case Instruction::BitCast:
+  case Instruction::AddrSpaceCast:
+
+  // Address calculation.
+  case Instruction::GetElementPtr:
+
+  // Select and vector/aggregate element ops.
+  case Instruction::Select:
+  case Instruction::ExtractElement:
+  case Instruction::InsertElement:
+  case Instruction::ShuffleVector:
+  case Instruction::ExtractValue:
+  case Instruction::InsertValue:
+    return true;
+
+  default:
+    break;
+  }
+
+  // Unknown/unhandled instruction: be conservative.
+  return false;
+}
+
+/// Return true if \/p BB is a “trivial but non-empty” block that is safe for
+/// SimplifyCFG to fold away (subject to additional CFG/PHI legality checks).
+///
+/// This is a purely syntactic and conservative predicate:
+/// - Requires an unconditional `br` terminator.
+/// - Skips PHIs and debug/lifetime markers.
+/// - Requires all remaining non-terminator instructions to be explicitly
+///   whitelisted by isSafeInstructionForTrivialMerge().
+static bool isTrivialNonEmptyBlockSafeToFold(const BasicBlock *BB) {
+  assert(BB && "Expected non-null basic block");
+
+  const auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
+  if (!BI || !BI->isUnconditional())
+    return false;
+
+  for (const Instruction &Inst : *BB) {
+    const Instruction *I = &Inst;
+    if (isa<PHINode>(I))
+      continue;
+    if (I->isDebugOrPseudoInst() || I->isLifetimeStartOrEnd())
+      continue;
+    if (I == BI)
+      continue;
+    if (!isSafeInstructionForTrivialMerge(I))
+      return false;
+  }
+
+  return true;
+}
+
+/// Single-predecessor version of non-empty trivial block folding.
+///
+/// This is a minimal, conservative extension in the spirit of
+/// TryToSimplifyUncondBranchFromEmptyBlock(): it only splices instructions into
+/// the unique predecessor (no cloning/duplication) and performs a simple PHI
+/// fixup in the successor.
+static bool TryToSimplifyUncondBranchFromNonEmptyBlock(BasicBlock *BB,
+                                                      DomTreeUpdater *DTU) {
+  assert(BB && "Expected non-null BB");
+
+  if (BB == &BB->getParent()->getEntryBlock())
+    return false;
+
+  if (!isTrivialNonEmptyBlockSafeToFold(BB))
+    return false;
+
+  auto *BBBr = cast<BranchInst>(BB->getTerminator());
+  BasicBlock *Succ = BBBr->getSuccessor(0);
+  if (Succ == BB)
+    return false;
+
+  // Only handle the single-predecessor case.
+  BasicBlock *Pred = BB->getSinglePredecessor();
+  if (!Pred)
+    return false;
+
+  // Be conservative: avoid folding blocks with PHIs for now.
+  if (!BB->phis().empty())
+    return false;
+
+  auto *PredBr = dyn_cast<BranchInst>(Pred->getTerminator());
+  if (!PredBr || !PredBr->isUnconditional() || PredBr->getSuccessor(0) != BB)
+    return false;
+
+  // Update PHIs in the successor: replace incoming block BB with Pred.
+  for (PHINode &PN : Succ->phis()) {
+    int BBIdx = PN.getBasicBlockIndex(BB);
+    if (BBIdx < 0)
+      continue;
+    if (count(PN.blocks(), BB) != 1)
+      return false;
+    PN.setIncomingBlock(BBIdx, Pred);
+  }
+
+  // Splice all whitelisted instructions (excluding debug/lifetime and the
+  // terminator) into Pred, immediately before Pred's terminator.
+  Instruction *InsertBefore = Pred->getTerminator();
+  for (auto It = BB->getFirstNonPHIOrDbg(), End = BB->end(); It != End;) {
+    Instruction *I = &*It++;
+    if (I == BBBr)
+      break;
+    if (I->isDebugOrPseudoInst() || I->isLifetimeStartOrEnd())
+      continue;
+    assert(isSafeInstructionForTrivialMerge(I) &&
+           "Unexpected instruction in supposedly-trivial block");
+    I->moveBefore(InsertBefore);
+  }
+
+  // Redirect Pred's branch to Succ.
+  PredBr->setSuccessor(0, Succ);
+
+  if (DTU) {
+    DTU->applyUpdates({
+        {DominatorTree::Insert, Pred, Succ},
+        {DominatorTree::Delete, Pred, BB},
+        {DominatorTree::Delete, BB, Succ},
+    });
+  }
+
+  BB->dropAllReferences();
+  BB->eraseFromParent();
+  return true;
+}
+
 bool SimplifyCFGOpt::simplifyBranch(BranchInst *Branch, IRBuilder<> &Builder) {
   return Branch->isUnconditional() ? simplifyUncondBranch(Branch, Builder)
                                    : simplifyCondBranch(Branch, Builder);
@@ -8391,6 +8602,12 @@ bool SimplifyCFGOpt::simplifyUncondBranch(BranchInst *BI,
   BasicBlock::iterator I = BB->getFirstNonPHIOrDbg();
   if (I->isTerminator() && BB != &BB->getParent()->getEntryBlock() &&
       !NeedCanonicalLoop && TryToSimplifyUncondBranchFromEmptyBlock(BB, DTU))
+    return true;
+
+  // If the block is not empty, try a conservative single-predecessor fold for
+  // trivial blocks that contain only whitelisted instructions.
+  if (!I->isTerminator() && BB != &BB->getParent()->getEntryBlock() &&
+      !NeedCanonicalLoop && TryToSimplifyUncondBranchFromNonEmptyBlock(BB, DTU))
     return true;
 
   // If the only instruction in the block is a seteq/setne comparison against a
