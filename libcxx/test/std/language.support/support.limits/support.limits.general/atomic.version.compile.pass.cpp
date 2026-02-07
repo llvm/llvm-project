@@ -339,17 +339,11 @@
 #    error "__cpp_lib_atomic_lock_free_type_aliases should have the value 201907L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_atomic_min_max
-#      error "__cpp_lib_atomic_min_max should be defined in c++26"
-#    endif
-#    if __cpp_lib_atomic_min_max != 202403L
-#      error "__cpp_lib_atomic_min_max should have the value 202403L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_atomic_min_max
-#      error "__cpp_lib_atomic_min_max should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_atomic_min_max
+#    error "__cpp_lib_atomic_min_max should be defined in c++26"
+#  endif
+#  if __cpp_lib_atomic_min_max != 202403L
+#    error "__cpp_lib_atomic_min_max should have the value 202403L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_atomic_ref

@@ -299,6 +299,14 @@ struct atomic_ref<_Tp> : public __atomic_ref_base<_Tp> {
   _LIBCPP_HIDE_FROM_ABI _Tp fetch_xor(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
     return __atomic_fetch_xor(this->__ptr_, __arg, std::__to_gcc_order(__order));
   }
+#  if _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_max(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    return __atomic_fetch_max(this->__ptr_, __arg, std::__to_gcc_order(__order));
+  }
+  _LIBCPP_HIDE_FROM_ABI _Tp fetch_min(_Tp __arg, memory_order __order = memory_order_seq_cst) const noexcept {
+    return __atomic_fetch_min(this->__ptr_, __arg, std::__to_gcc_order(__order));
+  }
+#  endif
 
   _LIBCPP_HIDE_FROM_ABI _Tp operator++(int) const noexcept { return fetch_add(_Tp(1)); }
   _LIBCPP_HIDE_FROM_ABI _Tp operator--(int) const noexcept { return fetch_sub(_Tp(1)); }

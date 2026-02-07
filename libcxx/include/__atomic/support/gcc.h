@@ -258,6 +258,30 @@ __cxx_atomic_fetch_xor(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_o
   return __atomic_fetch_xor(std::addressof(__a->__a_value), __pattern, __to_gcc_order(__order));
 }
 
+template <typename _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__cxx_atomic_fetch_max(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_order __order) {
+  return __atomic_fetch_max(std::addressof(__a->__a_value), __pattern, __to_gcc_order(__order));
+}
+
+template <typename _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_order __order) {
+  return __atomic_fetch_max(std::addressof(__a->__a_value), __pattern, __to_gcc_order(__order));
+}
+
+template <typename _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__cxx_atomic_fetch_min(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_order __order) {
+  return __atomic_fetch_min(std::addressof(__a->__a_value), __pattern, __to_gcc_order(__order));
+}
+
+template <typename _Tp>
+_LIBCPP_HIDE_FROM_ABI _Tp
+__cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_order __order) {
+  return __atomic_fetch_min(std::addressof(__a->__a_value), __pattern, __to_gcc_order(__order));
+}
+
 #define __cxx_atomic_is_lock_free(__s) __atomic_is_lock_free(__s, 0)
 
 _LIBCPP_END_NAMESPACE_STD
