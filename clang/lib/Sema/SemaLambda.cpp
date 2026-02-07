@@ -261,20 +261,6 @@ Sema::createLambdaClosureType(SourceRange IntroducerRange, TypeSourceInfo *Info,
   return Class;
 }
 
-/// Determine whether the given context is or is enclosed in an inline
-/// function.
-static bool isInInlineFunction(const DeclContext *DC) {
-  while (!DC->isFileContext()) {
-    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC))
-      if (FD->isInlined())
-        return true;
-
-    DC = DC->getLexicalParent();
-  }
-
-  return false;
-}
-
 // See discussion in https://github.com/itanium-cxx-abi/cxx-abi/issues/186
 //
 // zygoloid:
@@ -285,6 +271,21 @@ static bool isNonInlineInModulePurview(const Decl *D) {
   if (auto *ND = dyn_cast<NamedDecl>(D))
     return (ND->isInNamedModule() || ND->isFromGlobalModule()) &&
            ND->isExternallyVisible();
+  return false;
+}
+
+/// Determine whether the given context is or is enclosed in an inline
+/// function.
+static bool isInInlineFunction(const DeclContext *DC) {
+  while (!DC->isFileContext()) {
+    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC)) {
+      if (FD->isInlined() || isNonInlineInModulePurview(FD))
+        return true;
+    }
+
+    DC = DC->getLexicalParent();
+  }
+
   return false;
 }
 
@@ -301,27 +302,17 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     InlineVariable,
     TemplatedVariable,
     Concept,
-    NonInlineInModulePurview,
   } Kind = Normal;
 
   bool IsInNonspecializedTemplate =
       inTemplateInstantiation() || CurContext->isDependentContext();
-
-  const auto NormalOrNonInlineInModulePurview = [&]() {
-    if (isNonInlineInModulePurview(cast<Decl>(DC))) {
-      ManglingContextDecl = const_cast<Decl *>(cast<Decl>(DC));
-      return NonInlineInModulePurview;
-    }
-
-    return Normal;
-  };
 
   // Default arguments of member function parameters that appear in a class
   // definition, as well as the initializers of data members, receive special
   // treatment. Identify them.
   Kind = [&]() {
     if (!ManglingContextDecl)
-      return NormalOrNonInlineInModulePurview();
+      return Normal;
 
     if (ParmVarDecl *Param = dyn_cast<ParmVarDecl>(ManglingContextDecl)) {
       if (const DeclContext *LexicalDC
@@ -329,7 +320,7 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
         if (LexicalDC->isRecord())
           return DefaultArgument;
     } else if (VarDecl *Var = dyn_cast<VarDecl>(ManglingContextDecl)) {
-      if (Var->getMostRecentDecl()->isInline())
+      if (Var->getMostRecentDecl()->isInline() || isNonInlineInModulePurview(Var))
         return InlineVariable;
 
       if (Var->getDeclContext()->isRecord() && IsInNonspecializedTemplate)
@@ -342,16 +333,13 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
         if (!VTS->isExplicitSpecialization())
           return TemplatedVariable;
       }
-
-      if (isNonInlineInModulePurview(Var))
-        return NonInlineInModulePurview;
     } else if (isa<FieldDecl>(ManglingContextDecl)) {
       return DataMember;
     } else if (isa<ImplicitConceptSpecializationDecl>(ManglingContextDecl)) {
       return Concept;
     }
 
-    return NormalOrNonInlineInModulePurview();
+    return Normal;
   }();
 
   // Itanium ABI [5.1.7]:
@@ -371,7 +359,6 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     return std::make_tuple(nullptr, nullptr);
   }
 
-  case NonInlineInModulePurview:
   case Concept:
     // Concept definitions aren't code generated and thus aren't mangled,
     // however the ManglingContextDecl is important for the purposes of
