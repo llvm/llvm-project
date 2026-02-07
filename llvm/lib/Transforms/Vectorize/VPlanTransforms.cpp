@@ -995,10 +995,14 @@ static VPValue *optimizeLatchExitInductionUser(
     VPlan &Plan, VPTypeAnalysis &TypeInfo, VPBlockBase *PredVPBB, VPValue *Op,
     DenseMap<VPValue *, VPValue *> &EndValues, PredicatedScalarEvolution &PSE) {
   VPValue *Incoming;
-  if (!match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))
-    return nullptr;
+  VPWidenInductionRecipe *WideIV = nullptr;
+  if (match(Op, m_ExitingIVValue(m_VPValue(), m_VPValue(Incoming)))) {
+    WideIV = getOptimizableIVOf(Op->getDefiningRecipe()->getOperand(0), PSE);
+    assert(WideIV && "must have an optimizable IV");
+  } else if (match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming)))) {
+    WideIV = getOptimizableIVOf(Incoming, PSE);
+  }
 
-  auto *WideIV = getOptimizableIVOf(Incoming, PSE);
   if (!WideIV)
     return nullptr;
 
@@ -1255,9 +1259,9 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
 #endif
   }
 
-  // Simplify (X && Y) || (X && !Y) -> X.
-  // TODO: Split up into simpler, modular combines: (X && Y) || (X && Z) into X
-  // && (Y || Z) and (X || !X) into true. This requires queuing newly created
+  // Simplify (X && Y) | (X && !Y) -> X.
+  // TODO: Split up into simpler, modular combines: (X && Y) | (X && Z) into X
+  // && (Y | Z) and (X | !X) into true. This requires queuing newly created
   // recipes to be visited during simplification.
   VPValue *X, *Y, *Z;
   if (match(Def,
@@ -1286,11 +1290,15 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt())))
     return Def->replaceAllUsesWith(Def->getOperand(Def->getOperand(0) == X));
 
+  // x & AllOnes -> x
+  if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_AllOnes())))
+    return Def->replaceAllUsesWith(X);
+
   // x && false -> false
   if (match(Def, m_LogicalAnd(m_VPValue(X), m_False())))
     return Def->replaceAllUsesWith(Def->getOperand(1));
 
-  // (x && y) || (x && z) -> x && (y || z)
+  // (x && y) | (x && z) -> x && (y | z)
   if (match(Def, m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
                               m_LogicalAnd(m_Deferred(X), m_VPValue(Z)))) &&
       // Simplify only if one of the operands has one use to avoid creating an
@@ -5465,6 +5473,101 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
           "vector.recur.extract.for.phi");
       cast<VPInstruction>(&R)->replaceAllUsesWith(PenultimateElement);
     }
+  }
+}
+
+void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
+                                               PredicatedScalarEvolution &PSE,
+                                               Loop &L) {
+  ScalarEvolution &SE = *PSE.getSE();
+  VPRegionBlock *VectorLoopRegion = Plan.getVectorLoopRegion();
+
+  // Helper lambda to check if the IV range excludes the sentinel value.
+  auto CheckSentinel = [&SE](const SCEV *IVSCEV, bool UseMax,
+                             bool Signed) -> std::optional<APInt> {
+    unsigned BW = IVSCEV->getType()->getScalarSizeInBits();
+    APInt Sentinel =
+        UseMax
+            ? (Signed ? APInt::getSignedMinValue(BW) : APInt::getMinValue(BW))
+            : (Signed ? APInt::getSignedMaxValue(BW) : APInt::getMaxValue(BW));
+
+    ConstantRange IVRange =
+        Signed ? SE.getSignedRange(IVSCEV) : SE.getUnsignedRange(IVSCEV);
+    if (!IVRange.contains(Sentinel))
+      return Sentinel;
+    return std::nullopt;
+  };
+
+  for (VPRecipeBase &Phi :
+       make_early_inc_range(VectorLoopRegion->getEntryBasicBlock()->phis())) {
+    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
+    if (!PhiR || !RecurrenceDescriptor::isFindLastRecurrenceKind(
+                     PhiR->getRecurrenceKind()))
+      continue;
+
+    // Get the IV from the backedge value of the reduction phi.
+    // The backedge value should be a select between the phi and the IV.
+    VPValue *BackedgeVal = PhiR->getBackedgeValue();
+    VPValue *TrueVal, *FalseVal;
+    if (!match(BackedgeVal,
+               m_Select(m_VPValue(), m_VPValue(TrueVal), m_VPValue(FalseVal))))
+      continue;
+
+    // The non-phi operand of the select is the IV.
+    assert(is_contained(BackedgeVal->getDefiningRecipe()->operands(), PhiR));
+    VPValue *IV = TrueVal == PhiR ? FalseVal : TrueVal;
+
+    const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(IV, PSE, &L);
+    const SCEV *Step;
+    if (!match(IVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step))))
+      continue;
+
+    // Determine direction from SCEV step.
+    if (!SE.isKnownNonZero(Step))
+      continue;
+
+    // Positive step means we need UMax/SMax to find the last IV value, and
+    // UMin/SMin otherwise.
+    bool UseMax = SE.isKnownPositive(Step);
+    bool UseSigned = true;
+    std::optional<APInt> SentinelVal =
+        CheckSentinel(IVSCEV, UseMax, /*IsSigned=*/true);
+    if (!SentinelVal) {
+      SentinelVal = CheckSentinel(IVSCEV, UseMax, /*IsSigned=*/false);
+      if (!SentinelVal)
+        continue;
+      UseSigned = false;
+    }
+
+    auto *RdxResult = cast<VPInstruction>(vputils::findRecipe(
+        BackedgeVal,
+        match_fn(m_VPInstruction<VPInstruction::ComputeReductionResult>())));
+
+    // Create the reduction result in the middle block using sentinel directly.
+    RecurKind MinMaxKind =
+        UseMax ? (UseSigned ? RecurKind::SMax : RecurKind::UMax)
+               : (UseSigned ? RecurKind::SMin : RecurKind::UMin);
+    VPIRFlags Flags(MinMaxKind, /*IsOrdered=*/false, /*IsInLoop=*/false,
+                    FastMathFlags());
+    VPValue *Sentinel = Plan.getConstantInt(*SentinelVal);
+    DebugLoc ExitDL = RdxResult->getDebugLoc();
+    VPBuilder MiddleBuilder(RdxResult);
+    VPValue *ReducedIV =
+        MiddleBuilder.createNaryOp(VPInstruction::ComputeReductionResult,
+                                   RdxResult->getOperand(0), Flags, ExitDL);
+    auto *Cmp =
+        MiddleBuilder.createICmp(CmpInst::ICMP_NE, ReducedIV, Sentinel, ExitDL);
+    VPInstruction *NewRdxResult = MiddleBuilder.createSelect(
+        Cmp, ReducedIV, PhiR->getStartValue(), ExitDL);
+    RdxResult->replaceAllUsesWith(NewRdxResult);
+    RdxResult->eraseFromParent();
+
+    auto *NewPhiR = new VPReductionPHIRecipe(
+        cast<PHINode>(PhiR->getUnderlyingInstr()), RecurKind::FindIV, *Sentinel,
+        *BackedgeVal, RdxUnordered{1}, PhiR->hasUsesOutsideReductionChain());
+    NewPhiR->insertBefore(PhiR);
+    PhiR->replaceAllUsesWith(NewPhiR);
+    PhiR->eraseFromParent();
   }
 }
 
