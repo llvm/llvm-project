@@ -224,7 +224,7 @@ void NonConstParameterCheck::markCanNotBeConst(const Expr *E,
   } else if (const auto *ILE = dyn_cast<InitListExpr>(E)) {
     for (unsigned I = 0U; I < ILE->getNumInits(); ++I)
       markCanNotBeConst(ILE->getInit(I), true);
-  } else if (const auto *UCE = dyn_cast<CXXUnresolvedConstructExpr>(E)) {
+  } else if (dyn_cast<CXXUnresolvedConstructExpr>(E)) {
     // Skip template-dependent constructors
     return;
   } else if (CanNotBeConst) {
