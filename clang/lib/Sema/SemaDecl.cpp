@@ -20011,6 +20011,34 @@ struct RebuildTypeWithLateParsedAttr
   }
 };
 
+void Sema::ProcessLateParsedTypeAttributes(RecordDecl *EnclosingDecl) {
+  for (auto *I : EnclosingDecl->decls()) {
+    // We only process FieldDecl here, not IndirectFieldDecl, because
+    // ActOnFields is called on the struct that directly contains the field.
+    // TODO: To support counted_by referring to a field in an anonymous struct
+    // declared later, late parsing should be triggered from the innermost
+    // named parent struct.
+    FieldDecl *FD = dyn_cast<FieldDecl>(I);
+    IndirectFieldDecl *IFD = dyn_cast<IndirectFieldDecl>(I);
+    if (!FD && IFD) {
+      FD = IFD->getAnonField();
+    }
+    if (!FD)
+      continue;
+
+    RebuildTypeWithLateParsedAttr RebuildFieldType(*this, FD);
+    auto *OldTSI = FD->getTypeSourceInfo();
+    auto *TSI = RebuildFieldType.TransformType(FD->getTypeSourceInfo());
+    if (TSI && TSI != OldTSI) {
+      FD->setTypeSourceInfo(TSI);
+      FD->setType(TSI->getType());
+      if (IFD) {
+        IFD->setType(TSI->getType());
+      }
+    }
+  }
+}
+
 void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
                        ArrayRef<Decl *> Fields, SourceLocation LBrac,
                        SourceLocation RBrac,
@@ -20052,28 +20080,13 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
   // Late-parsed type attributes are stored as placeholder LateParsedAttrType
   // nodes. We need to transform them into proper attributed types now that
   // all fields are visible and can be referenced.
-  // This is only enabled when -fexperimental-late-parse-attributes is set.
-  if (getLangOpts().ExperimentalLateParseAttributes) {
-    for (ArrayRef<Decl *>::iterator i = Fields.begin(), end = Fields.end();
-         i != end; ++i) {
-      // We only process FieldDecl here, not IndirectFieldDecl, because
-      // ActOnFields is called on the struct that directly contains the field.
-      // TODO: To support counted_by referring to a field in an anonymous struct
-      // declared later, late parsing should be triggered from the innermost
-      // named parent struct.
-      FieldDecl *FD = dyn_cast<FieldDecl>(*i);
-      if (FD->getType()->isRecordType())
-        continue;
-
-      RebuildTypeWithLateParsedAttr RebuildFieldType(*this, FD);
-      auto *OldTSI = FD->getTypeSourceInfo();
-      auto *TSI = RebuildFieldType.TransformType(FD->getTypeSourceInfo());
-      if (TSI && TSI != OldTSI) {
-        FD->setTypeSourceInfo(TSI);
-        FD->setType(TSI->getType());
-      }
-    }
-  }
+  // This is only enabled when -fexperimental-late-parse-attributes is set
+  // If late parsing here only if it's top-level record type. Otherwise, wait
+  // until struct declaration is.
+  // if (getLangOpts().ExperimentalLateParseAttributes &&
+  //     !EnclosingDecl->getDeclContext()->isRecord()) {
+  //   ProcessLateParsedTypeAttributes(Fields);
+  // }
 
   // Perform FieldDecl-dependent validation for counted_by family attributes
   for (ArrayRef<Decl *>::iterator i = Fields.begin(), end = Fields.end();

@@ -4381,6 +4381,9 @@ public:
                    ArrayRef<Decl *> Fields, SourceLocation LBrac,
                    SourceLocation RBrac, const ParsedAttributesView &AttrList);
 
+  /// Transform field types that contain late-parsed type attributes.
+  void ProcessLateParsedTypeAttributes(RecordDecl *EnclosingDecl);
+
   /// ActOnTagStartDefinition - Invoked when we have entered the
   /// scope of a tag's definition (e.g., for an enumeration, class,
   /// struct, or union).

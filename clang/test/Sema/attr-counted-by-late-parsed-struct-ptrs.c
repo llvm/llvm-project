@@ -87,9 +87,7 @@ struct on_member_pointer_struct_with_annotated_vla {
 };
 
 struct on_pointer_anon_buf {
-  // TODO: Support referring to parent scope
   struct {
-    // expected-error@+1{{use of undeclared identifier 'count'}}
     struct size_known *buf __counted_by(count);
   };
   int count;
@@ -205,8 +203,6 @@ struct on_nested_pointer_flexible_array_inner {
 
 struct on_pointer_anon_buf_ty_pos {
   struct {
-    // TODO: Support referring to parent scope
-    // expected-error@+1{{use of undeclared identifier 'count'}}
     struct size_known * __counted_by(count) buf;
   };
   int count;

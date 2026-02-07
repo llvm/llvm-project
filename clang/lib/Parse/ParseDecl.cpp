@@ -5025,6 +5025,12 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
       // Parse all the comma separated declarators.
       ParsingDeclSpec DS(*this);
       ParseStructDeclaration(DS, CFieldCallback, &LateFieldAttrs);
+      if (DS.getTypeSpecType() == TST_struct) {
+        auto *RD = dyn_cast<RecordDecl>(DS.getRepAsDecl());
+        if (RD && !RD->isAnonymousStructOrUnion()) {
+            Actions.ProcessLateParsedTypeAttributes(RD);
+        }
+      }
     } else { // Handle @defs
       ConsumeToken();
       if (!Tok.isObjCAtKeyword(tok::objc_defs)) {
@@ -5077,6 +5083,10 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
   // pointer and cached tokens) to parse themselves.
   Actions.ActOnFields(getCurScope(), RecordLoc, TagDecl, FieldDecls,
                       T.getOpenLocation(), T.getCloseLocation(), attrs);
+  Scope *ParentScope = getCurScope()->getParent();
+  assert(ParentScope);
+  if (!ParentScope->getEntity()->isRecord())
+    Actions.ProcessLateParsedTypeAttributes(TagDecl);
   StructScope.Exit();
   Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl, T.getRange());
 }
