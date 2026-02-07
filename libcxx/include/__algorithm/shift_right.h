@@ -37,20 +37,15 @@ template <class _AlgPolicy, class _Iter, class _Sent>
 _LIBCPP_HIDE_FROM_ABI constexpr pair<_Iter, _Iter>
 __shift_right(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::template __difference_type<_Iter> __n) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n >= 0, "Providing a negative shift amount to shift_right is UB");
-  _Iter __end = _IterOps<_AlgPolicy>::next(__first, __last);
   if (__n == 0) {
+    _Iter __end = _IterOps<_AlgPolicy>::next(__first, __last);
     return pair<_Iter, _Iter>(std::move(__first), std::move(__end));
-  }
-
-  if constexpr (sized_sentinel_for<_Sent, _Iter>) {
-    if (__n >= ranges::distance(__first, __last)) {
-      return pair<_Iter, _Iter>(__end, std::move(__end));
-    }
   }
 
   using _IterCategory = typename _IterOps<_AlgPolicy>::template __iterator_category<_Iter>;
 
   if constexpr (derived_from<_IterCategory, random_access_iterator_tag>) {
+    _Iter __end = _IterOps<_AlgPolicy>::next(__first, __last);
     auto __size = __end - __first;
     if (__n >= __size) {
       return pair<_Iter, _Iter>(__end, std::move(__end));
@@ -60,6 +55,12 @@ __shift_right(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::templa
     auto __ret = std::__move_backward<_AlgPolicy>(std::move(__first), std::move(__m), __end);
     return pair<_Iter, _Iter>(std::move(__ret.second), std::move(__end));
   } else if constexpr (derived_from<_IterCategory, bidirectional_iterator_tag>) {
+    _Iter __end = _IterOps<_AlgPolicy>::next(__first, __last);
+    if constexpr (sized_sentinel_for<_Sent, _Iter>) {
+      if (__n >= ranges::distance(__first, __last)) {
+        return pair<_Iter, _Iter>(__end, std::move(__end));
+      }
+    }
     _Iter __m = __end;
     for (; __n > 0; --__n) {
       if (__m == __first) {
@@ -72,8 +73,8 @@ __shift_right(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::templa
   } else {
     _Iter __ret = __first;
     for (; __n > 0; --__n) {
-      if (__ret == __end) {
-        return pair<_Iter, _Iter>(__end, std::move(__end));
+      if (__ret == __last) {
+        return pair<_Iter, _Iter>(__ret, std::move(__ret));
       }
       ++__ret;
     }
@@ -87,9 +88,9 @@ __shift_right(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::templa
     auto __trail = __first;
     auto __lead  = __ret;
     while (__trail != __ret) {
-      if (__lead == __end) {
+      if (__lead == __last) {
         std::__move<_AlgPolicy>(std::move(__first), std::move(__trail), __ret);
-        return pair<_Iter, _Iter>(__ret, std::move(__end));
+        return pair<_Iter, _Iter>(__ret, std::move(__lead));
       }
       ++__trail;
       ++__lead;
@@ -97,10 +98,10 @@ __shift_right(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::templa
 
     _Iter __mid = __first;
     while (true) {
-      if (__lead == __end) {
+      if (__lead == __last) {
         __trail = std::__move<_AlgPolicy>(__mid, __ret, __trail).second;
         std::__move<_AlgPolicy>(std::move(__first), std::move(__mid), std::move(__trail));
-        return pair<_Iter, _Iter>(__ret, std::move(__end));
+        return pair<_Iter, _Iter>(__ret, std::move(__lead));
       }
       _IterOps<_AlgPolicy>::iter_swap(__mid, __trail);
       ++__mid;
