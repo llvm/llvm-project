@@ -500,6 +500,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SETCC,  VT, Custom);
   }
 
+  setOperationAction(ISD::COND_LOOP, MVT::Other, Custom);
+
   // Custom action for SELECT MMX and expand action for SELECT_CC MMX
   setOperationAction(ISD::SELECT, MVT::x86mmx, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::x86mmx, Expand);
@@ -2910,23 +2912,30 @@ bool X86::mayFoldIntoZeroExtend(SDValue Op) {
 }
 
 // Return true if its cheap to bitcast this to a vector type.
-static bool mayFoldIntoVector(SDValue Op, const X86Subtarget &Subtarget,
+static bool mayFoldIntoVector(SDValue Op, const SelectionDAG &DAG,
+                              const X86Subtarget &Subtarget,
                               bool AssumeSingleUse = false) {
   if (peekThroughBitcasts(Op).getValueType().isVector())
     return true;
   if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
     return true;
   EVT VT = Op.getValueType();
-  // TODO : might have better handling by using
-  // `TargetLowering::LegalizeAction::Custom`
   unsigned Opcode = Op.getOpcode();
-  bool BitwiseCase = (ISD::isBitwiseLogicOp(Opcode) &&
-                      (VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512));
-  bool AddSubCase =
-      ((Opcode == ISD::ADD || Opcode == ISD::SUB) && (VT == MVT::i512));
-  if (BitwiseCase || AddSubCase)
-    return mayFoldIntoVector(Op.getOperand(0), Subtarget) &&
-           mayFoldIntoVector(Op.getOperand(1), Subtarget);
+  if ((VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512) &&
+      DAG.getTargetLoweringInfo().getOperationAction(Opcode, VT) ==
+          TargetLowering::LegalizeAction::Custom) {
+    // Check for larger than legal scalar integer ops that might have been
+    // custom lowered to vector instruction.
+    switch (Opcode) {
+    case ISD::AND:
+    case ISD::OR:
+    case ISD::XOR:
+    case ISD::ADD:
+    case ISD::SUB:
+      return mayFoldIntoVector(Op.getOperand(0), DAG, Subtarget) &&
+             mayFoldIntoVector(Op.getOperand(1), DAG, Subtarget);
+    }
+  }
   return X86::mayFoldLoad(Op, Subtarget, AssumeSingleUse,
                           /*IgnoreAlignment=*/true);
 }
@@ -23273,8 +23282,8 @@ static SDValue combineVectorSizedSetCCEquality(EVT VT, SDValue X, SDValue Y,
 
   // Don't perform this combine if constructing the vector will be expensive.
   // TODO: Drop AssumeSingleUse = true override.
-  if ((!mayFoldIntoVector(X, Subtarget, /*AssumeSingleUse=*/true) ||
-       !mayFoldIntoVector(Y, Subtarget, /*AssumeSingleUse=*/true)) &&
+  if ((!mayFoldIntoVector(X, DAG, Subtarget, /*AssumeSingleUse=*/true) ||
+       !mayFoldIntoVector(Y, DAG, Subtarget, /*AssumeSingleUse=*/true)) &&
       !IsOrXorXorTreeCCZero)
     return SDValue();
 
@@ -26107,11 +26116,23 @@ static bool isAndOrOfSetCCs(SDValue Op, unsigned &Opc) {
           Op.getOperand(1).hasOneUse());
 }
 
-SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
+SDValue X86TargetLowering::LowerConditionalBranch(SDValue Op,
+                                                  SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   SDValue Cond  = Op.getOperand(1);
-  SDValue Dest  = Op.getOperand(2);
+  SDValue Dest;
+  if (Op.getOpcode() == ISD::BRCOND)
+    Dest = Op.getOperand(2);
+
   SDLoc dl(Op);
+
+  auto GetLoweredBranch = [&](SDValue CC, SDValue EFLAGS) {
+    if (Op.getOpcode() == ISD::BRCOND)
+      return DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CC,
+                         EFLAGS, Op->getFlags());
+    return DAG.getNode(X86ISD::BRCOND_SELF, dl, MVT::Other, Chain, CC, EFLAGS,
+                       Op->getFlags());
+  };
 
   // Bail out when we don't have native compare instructions.
   if (Cond.getOpcode() == ISD::SETCC &&
@@ -26135,15 +26156,13 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
         X86Cond = X86::GetOppositeBranchCondition(X86Cond);
 
       SDValue CCVal = DAG.getTargetConstant(X86Cond, dl, MVT::i8);
-      return DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
-                         Overflow, Op->getFlags());
+      return GetLoweredBranch(CCVal, Overflow);
     }
 
     if (LHS.getSimpleValueType().isInteger()) {
       SDValue CCVal;
       SDValue EFLAGS = emitFlagsForSetcc(LHS, RHS, CC, SDLoc(Cond), DAG, CCVal);
-      return DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
-                         EFLAGS, Op->getFlags());
+      return GetLoweredBranch(CCVal, EFLAGS);
     }
 
     if (CC == ISD::SETOEQ) {
@@ -26152,7 +26171,7 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
       // separate test. However, we only do this if this block doesn't
       // have a fall-through edge, because this requires an explicit
       // jmp when the condition is false.
-      if (Op.getNode()->hasOneUse()) {
+      if (Op.getOpcode() == ISD::BRCOND && Op.getNode()->hasOneUse()) {
         SDNode *User = *Op.getNode()->user_begin();
         // Look for an unconditional branch following this conditional branch.
         // We need this because we need to reverse the successors in order
@@ -26168,11 +26187,9 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
           SDValue Cmp =
               DAG.getNode(X86ISD::FCMP, SDLoc(Cond), MVT::i32, LHS, RHS);
           SDValue CCVal = DAG.getTargetConstant(X86::COND_NE, dl, MVT::i8);
-          Chain = DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest,
-                              CCVal, Cmp, Op->getFlags());
+          Chain = GetLoweredBranch(CCVal, Cmp);
           CCVal = DAG.getTargetConstant(X86::COND_P, dl, MVT::i8);
-          return DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
-                             Cmp, Op->getFlags());
+          return GetLoweredBranch(CCVal, Cmp);
         }
       }
     } else if (CC == ISD::SETUNE) {
@@ -26181,18 +26198,15 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
       // separate test.
       SDValue Cmp = DAG.getNode(X86ISD::FCMP, SDLoc(Cond), MVT::i32, LHS, RHS);
       SDValue CCVal = DAG.getTargetConstant(X86::COND_NE, dl, MVT::i8);
-      Chain = DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
-                          Cmp, Op->getFlags());
+      Chain = GetLoweredBranch(CCVal, Cmp);
       CCVal = DAG.getTargetConstant(X86::COND_P, dl, MVT::i8);
-      return DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
-                         Cmp, Op->getFlags());
+      return GetLoweredBranch(CCVal, Cmp);
     } else {
       X86::CondCode X86Cond =
           TranslateX86CC(CC, dl, /*IsFP*/ true, LHS, RHS, DAG);
       SDValue Cmp = DAG.getNode(X86ISD::FCMP, SDLoc(Cond), MVT::i32, LHS, RHS);
       SDValue CCVal = DAG.getTargetConstant(X86Cond, dl, MVT::i8);
-      return DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
-                         Cmp, Op->getFlags());
+      return GetLoweredBranch(CCVal, Cmp);
     }
   }
 
@@ -26202,8 +26216,7 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
     std::tie(Value, Overflow) = getX86XALUOOp(X86Cond, Cond.getValue(0), DAG);
 
     SDValue CCVal = DAG.getTargetConstant(X86Cond, dl, MVT::i8);
-    return DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
-                       Overflow, Op->getFlags());
+    return GetLoweredBranch(CCVal, Overflow);
   }
 
   // Look past the truncate if the high bits are known zero.
@@ -26222,8 +26235,7 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue CCVal;
   SDValue EFLAGS = emitFlagsForSetcc(LHS, RHS, ISD::SETNE, dl, DAG, CCVal);
-  return DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal, EFLAGS,
-                     Op->getFlags());
+  return GetLoweredBranch(CCVal, EFLAGS);
 }
 
 // Lower dynamic stack allocation to _alloca call for Cygwin/Mingw targets.
@@ -34127,7 +34139,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STRICT_FSETCCS:     return LowerSETCC(Op, DAG);
   case ISD::SETCCCARRY:         return LowerSETCCCARRY(Op, DAG);
   case ISD::SELECT:             return LowerSELECT(Op, DAG);
-  case ISD::BRCOND:             return LowerBRCOND(Op, DAG);
+  case ISD::COND_LOOP:
+  case ISD::BRCOND:             return LowerConditionalBranch(Op, DAG);
   case ISD::JumpTable:          return LowerJumpTable(Op, DAG);
   case ISD::VASTART:            return LowerVASTART(Op, DAG);
   case ISD::VAARG:              return LowerVAARG(Op, DAG);
@@ -34270,7 +34283,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
            "Unexpected VT!");
     // See if this is free to perform on the FPU to avoid splitting.
     MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
-    if (!mayFoldIntoVector(N0, Subtarget) || !mayFoldIntoVector(N1, Subtarget))
+    if (!mayFoldIntoVector(N0, DAG, Subtarget) ||
+        !mayFoldIntoVector(N1, DAG, Subtarget))
       return;
     SDValue Op = DAG.getNode(Opc, dl, VecVT, DAG.getBitcast(VecVT, N0),
                              DAG.getBitcast(VecVT, N1));
@@ -34287,8 +34301,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     assert(Subtarget.useAVX512Regs() && "AVX512 required");
     assert(VT == MVT::i512 && "Unexpected VT!");
 
-    if (!mayFoldIntoVector(LHS, Subtarget) ||
-        !mayFoldIntoVector(RHS, Subtarget))
+    if (!mayFoldIntoVector(LHS, DAG, Subtarget) ||
+        !mayFoldIntoVector(RHS, DAG, Subtarget))
       return;
 
     MVT VecVT = MVT::v8i64;
@@ -34385,7 +34399,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT VT = N->getValueType(0);
     assert(Subtarget.hasCDI() && "AVX512CD required");
     assert((VT == MVT::i256 || VT == MVT::i512) && "Unexpected VT!");
-    if (VT == MVT::i256 && !mayFoldIntoVector(N0, Subtarget))
+    if (VT == MVT::i256 && !mayFoldIntoVector(N0, DAG, Subtarget))
       return;
 
     unsigned SizeInBits = VT.getSizeInBits();
@@ -35592,6 +35606,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FSETCCM_SAE)
   NODE_NAME_CASE(CMOV)
   NODE_NAME_CASE(BRCOND)
+  NODE_NAME_CASE(BRCOND_SELF)
   NODE_NAME_CASE(RET_GLUE)
   NODE_NAME_CASE(IRET)
   NODE_NAME_CASE(REP_STOS)
@@ -54685,7 +54700,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   if (VT == MVT::i256 || VT == MVT::i512) {
     MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
     if (TLI.isTypeLegal(VecVT) && ISD::isNormalStore(St) &&
-        mayFoldIntoVector(StoredVal, Subtarget))
+        mayFoldIntoVector(StoredVal, DAG, Subtarget))
       return DAG.getStore(St->getChain(), dl, DAG.getBitcast(VecVT, StoredVal),
                           St->getBasePtr(), St->getPointerInfo(),
                           St->getBaseAlign(), St->getMemOperand()->getFlags());
@@ -57433,12 +57448,6 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
   EVT OpVT = LHS.getValueType();
   SDLoc DL(N);
 
-  if (CC == ISD::SETNE || CC == ISD::SETEQ) {
-    if (SDValue V = combineVectorSizedSetCCEquality(VT, LHS, RHS, CC, DL, DAG,
-                                                    Subtarget))
-      return V;
-  }
-
   if (VT == MVT::i1) {
     X86::CondCode X86CC;
     if (SDValue V =
@@ -57554,6 +57563,10 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
         }
       }
     }
+
+    if (SDValue V = combineVectorSizedSetCCEquality(VT, LHS, RHS, CC, DL, DAG,
+                                                    Subtarget))
+      return V;
   }
 
   if (VT.isVector() && VT.getVectorElementType() == MVT::i1 &&
