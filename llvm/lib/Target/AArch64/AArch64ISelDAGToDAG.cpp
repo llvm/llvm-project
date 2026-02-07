@@ -1582,12 +1582,15 @@ void AArch64DAGToDAGISel::SelectPtrauthAuth(SDNode *N) {
 
 void AArch64DAGToDAGISel::SelectPtrauthResign(SDNode *N) {
   SDLoc DL(N);
-  // IntrinsicID is operand #0
-  SDValue Val = N->getOperand(1);
-  SDValue AUTKey = N->getOperand(2);
-  SDValue AUTDisc = N->getOperand(3);
-  SDValue PACKey = N->getOperand(4);
-  SDValue PACDisc = N->getOperand(5);
+  // IntrinsicID is operand #0, if W_CHAIN it is #1
+  int OffsetBase = N->getOpcode() == ISD::INTRINSIC_W_CHAIN ? 1 : 0;
+  SDValue Val = N->getOperand(OffsetBase + 1);
+  SDValue AUTKey = N->getOperand(OffsetBase + 2);
+  SDValue AUTDisc = N->getOperand(OffsetBase + 3);
+  SDValue PACKey = N->getOperand(OffsetBase + 4);
+  SDValue PACDisc = N->getOperand(OffsetBase + 5);
+  uint32_t IntNum = N->getConstantOperandVal(OffsetBase + 0);
+  bool HasLoad = IntNum == Intrinsic::ptrauth_resign_load_relative;
 
   unsigned AUTKeyC = cast<ConstantSDNode>(AUTKey)->getZExtValue();
   unsigned PACKeyC = cast<ConstantSDNode>(PACKey)->getZExtValue();
@@ -1606,11 +1609,23 @@ void AArch64DAGToDAGISel::SelectPtrauthResign(SDNode *N) {
   SDValue X16Copy = CurDAG->getCopyToReg(CurDAG->getEntryNode(), DL,
                                          AArch64::X16, Val, SDValue());
 
-  SDValue Ops[] = {AUTKey,       AUTConstDisc, AUTAddrDisc,        PACKey,
-                   PACConstDisc, PACAddrDisc,  X16Copy.getValue(1)};
+  if (HasLoad) {
+    SDValue Addend = N->getOperand(OffsetBase + 6);
+    SDValue IncomingChain = N->getOperand(0);
+    SDValue Ops[] = {AUTKey, AUTConstDisc,  AUTAddrDisc,
+                     PACKey, PACConstDisc,  PACAddrDisc,
+                     Addend, IncomingChain, X16Copy.getValue(1)};
 
-  SDNode *AUTPAC = CurDAG->getMachineNode(AArch64::AUTPAC, DL, MVT::i64, Ops);
-  ReplaceNode(N, AUTPAC);
+    SDNode *AUTRELLOADPAC = CurDAG->getMachineNode(AArch64::AUTRELLOADPAC, DL,
+                                                   MVT::i64, MVT::Other, Ops);
+    ReplaceNode(N, AUTRELLOADPAC);
+  } else {
+    SDValue Ops[] = {AUTKey,       AUTConstDisc, AUTAddrDisc,        PACKey,
+                     PACConstDisc, PACAddrDisc,  X16Copy.getValue(1)};
+
+    SDNode *AUTPAC = CurDAG->getMachineNode(AArch64::AUTPAC, DL, MVT::i64, Ops);
+    ReplaceNode(N, AUTPAC);
+  }
 }
 
 bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
@@ -1741,12 +1756,9 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
   SDValue LoadedVal = SDValue(Res, 1);
   if (InsertTo64) {
     SDValue SubReg = CurDAG->getTargetConstant(AArch64::sub_32, dl, MVT::i32);
-    LoadedVal =
-        SDValue(CurDAG->getMachineNode(
-                    AArch64::SUBREG_TO_REG, dl, MVT::i64,
-                    CurDAG->getTargetConstant(0, dl, MVT::i64), LoadedVal,
-                    SubReg),
-                0);
+    LoadedVal = SDValue(CurDAG->getMachineNode(AArch64::SUBREG_TO_REG, dl,
+                                               MVT::i64, LoadedVal, SubReg),
+                        0);
   }
 
   ReplaceUses(SDValue(N, 0), LoadedVal);
@@ -3974,47 +3986,14 @@ bool AArch64DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
     NewShiftAmt = narrowIfNeeded(CurDAG, NewShiftAmt);
   else if (VT == MVT::i64 && NewShiftAmt->getValueType(0) == MVT::i32) {
     SDValue SubReg = CurDAG->getTargetConstant(AArch64::sub_32, DL, MVT::i32);
-    MachineSDNode *Ext = CurDAG->getMachineNode(
-        AArch64::SUBREG_TO_REG, DL, VT,
-        CurDAG->getTargetConstant(0, DL, MVT::i64), NewShiftAmt, SubReg);
+    MachineSDNode *Ext = CurDAG->getMachineNode(AArch64::SUBREG_TO_REG, DL, VT,
+                                                NewShiftAmt, SubReg);
     NewShiftAmt = SDValue(Ext, 0);
   }
 
   SDValue Ops[] = {N->getOperand(0), NewShiftAmt};
   CurDAG->SelectNodeTo(N, Opc, VT, Ops);
   return true;
-}
-
-static unsigned CheckFixedPointOperandConstant(APFloat &FVal, unsigned RegWidth,
-                                               bool isReciprocal) {
-  // An FCVT[SU] instruction performs: convertToInt(Val * 2^fbits) where fbits
-  // is between 1 and 32 for a destination w-register, or 1 and 64 for an
-  // x-register.
-  //
-  // By this stage, we've detected (fp_to_[su]int (fmul Val, THIS_NODE)) so we
-  // want THIS_NODE to be 2^fbits. This is much easier to deal with using
-  // integers.
-  bool IsExact;
-
-  if (isReciprocal)
-    if (!FVal.getExactInverse(&FVal))
-      return 0;
-
-  // fbits is between 1 and 64 in the worst-case, which means the fmul
-  // could have 2^64 as an actual operand. Need 65 bits of precision.
-  APSInt IntVal(65, true);
-  FVal.convertToInteger(IntVal, APFloat::rmTowardZero, &IsExact);
-
-  // N.b. isPowerOf2 also checks for > 0.
-  if (!IsExact || !IntVal.isPowerOf2())
-    return 0;
-  unsigned FBits = IntVal.logBase2();
-
-  // Checks above should have guaranteed that we haven't lost information in
-  // finding FBits, but it must still be in range.
-  if (FBits == 0 || FBits > RegWidth)
-    return 0;
-  return FBits;
 }
 
 static bool checkCVTFixedPointOperandWithFBits(SelectionDAG *CurDAG, SDValue N,
@@ -4695,8 +4674,8 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
       SDValue MOVIV = SDValue(MOV, 0);
 
       SDValue ZSub = CurDAG->getTargetConstant(AArch64::zsub, DL, MVT::i32);
-      SDNode *SubRegToReg = CurDAG->getMachineNode(AArch64::SUBREG_TO_REG, DL,
-                                                   VT, Zero, MOVIV, ZSub);
+      SDNode *SubRegToReg =
+          CurDAG->getMachineNode(AArch64::SUBREG_TO_REG, DL, VT, MOVIV, ZSub);
 
       R1 = N1->getOperand(1);
       R2 = SDValue(SubRegToReg, 0);
@@ -5835,6 +5814,9 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
               Node->getValueType(0),
               {AArch64::BF2CVT_2ZZ_BtoH, AArch64::F2CVT_2ZZ_BtoH}))
         SelectCVTIntrinsicFP8(Node, 2, Opc);
+      return;
+    case Intrinsic::ptrauth_resign_load_relative:
+      SelectPtrauthResign(Node);
       return;
     }
   } break;
