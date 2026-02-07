@@ -362,10 +362,22 @@ static bool ProcessInlineAsm(Function &F, CallBase *CB) {
     const InlineAsm::ConstraintInfo &C = Constraints[I];
 
     if (C.Type == InlineAsm::isOutput) {
-      ProcessOutputConstraint(C, CB->getType(), OutputIdx, EntryBuilder,
-                              NewArgs, NewArgTypes, NewRetTypes,
-                              ElementTypeAttrs, OutputAllocas, I);
-      OutputIdx++;
+      if (C.isIndirect) {
+        // Indirect output takes a pointer argument from the original call.
+        // Pass it through to the new call.
+        Value *ArgVal = CB->getArgOperand(ArgNo);
+        NewArgs.push_back(ArgVal);
+        NewArgTypes.push_back(ArgVal->getType());
+        // Preserve element type attribute if present.
+        if (auto *Ty = CB->getParamElementType(ArgNo))
+          ElementTypeAttrs.push_back({NewArgs.size() - 1, Ty});
+        ArgNo++;
+      } else {
+        ProcessOutputConstraint(C, CB->getType(), OutputIdx, EntryBuilder,
+                                NewArgs, NewArgTypes, NewRetTypes,
+                                ElementTypeAttrs, OutputAllocas, I);
+        OutputIdx++;
+      }
     } else if (C.Type == InlineAsm::isInput) {
       Value *ArgVal = CB->getArgOperand(ArgNo);
       ProcessInputConstraint(C, ArgVal, TiedOutput, OutputAllocas, I, Builder,
