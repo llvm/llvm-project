@@ -570,7 +570,6 @@ start:
   %0 = tail call i16 @llvm.fptosi.sat.i16.f16(half %a)
   ret i16 %0
 }
-declare i16 @llvm.fptosi.sat.i16.f16(half)
 
 define i16 @fcvt_ui_h(half %a) nounwind {
 ; RV32IZFH-LABEL: fcvt_ui_h:
@@ -1016,7 +1015,6 @@ start:
   %0 = tail call i16 @llvm.fptoui.sat.i16.f16(half %a)
   ret i16 %0
 }
-declare i16 @llvm.fptoui.sat.i16.f16(half)
 
 define i32 @fcvt_w_h(half %a) nounwind {
 ; CHECKIZFH-LABEL: fcvt_w_h:
@@ -1406,7 +1404,6 @@ start:
   %0 = tail call i32 @llvm.fptosi.sat.i32.f16(half %a)
   ret i32 %0
 }
-declare i32 @llvm.fptosi.sat.i32.f16(half)
 
 define i32 @fcvt_wu_h(half %a) nounwind {
 ; CHECKIZFH-LABEL: fcvt_wu_h:
@@ -1990,7 +1987,6 @@ start:
   %0 = tail call i32 @llvm.fptoui.sat.i32.f16(half %a)
   ret i32 %0
 }
-declare i32 @llvm.fptoui.sat.i32.f16(half)
 
 define i64 @fcvt_l_h(half %a) nounwind {
 ; RV32IZFH-LABEL: fcvt_l_h:
@@ -2753,7 +2749,6 @@ start:
   %0 = tail call i64 @llvm.fptosi.sat.i64.f16(half %a)
   ret i64 %0
 }
-declare i64 @llvm.fptosi.sat.i64.f16(half)
 
 define i64 @fcvt_lu_h(half %a) nounwind {
 ; RV32IZFH-LABEL: fcvt_lu_h:
@@ -3348,7 +3343,6 @@ start:
   %0 = tail call i64 @llvm.fptoui.sat.i64.f16(half %a)
   ret i64 %0
 }
-declare i64 @llvm.fptoui.sat.i64.f16(half)
 
 define half @fcvt_h_si(i16 %a) nounwind {
 ; RV32IZFH-LABEL: fcvt_h_si:
@@ -7684,7 +7678,6 @@ start:
   %0 = tail call i8 @llvm.fptosi.sat.i8.f16(half %a)
   ret i8 %0
 }
-declare i8 @llvm.fptosi.sat.i8.f16(half)
 
 define zeroext i8 @fcvt_wu_s_i8(half %a) nounwind {
 ; RV32IZFH-LABEL: fcvt_wu_s_i8:
@@ -8110,7 +8103,6 @@ start:
   %0 = tail call i8 @llvm.fptoui.sat.i8.f16(half %a)
   ret i8 %0
 }
-declare i8 @llvm.fptoui.sat.i8.f16(half)
 
 define zeroext i32 @fcvt_wu_h_sat_zext(half %a) nounwind {
 ; RV32IZFH-LABEL: fcvt_wu_h_sat_zext:

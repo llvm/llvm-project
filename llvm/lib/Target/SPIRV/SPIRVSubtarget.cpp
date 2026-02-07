@@ -70,7 +70,6 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
     SPIRVVersion = VersionTuple(1, 3);
     break;
   case Triple::SPIRVSubArch_v14:
-  default:
     SPIRVVersion = VersionTuple(1, 4);
     break;
   case Triple::SPIRVSubArch_v15:
@@ -79,13 +78,19 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   case Triple::SPIRVSubArch_v16:
     SPIRVVersion = VersionTuple(1, 6);
     break;
+  default:
+    if (TT.getVendor() == Triple::AMD)
+      SPIRVVersion = VersionTuple(1, 6);
+    else
+      SPIRVVersion = VersionTuple(1, 4);
   }
   OpenCLVersion = VersionTuple(2, 2);
 
   // Set the environment based on the target triple.
   if (TargetTriple.getOS() == Triple::Vulkan)
     Env = Shader;
-  else if (TargetTriple.getEnvironment() == Triple::OpenCL)
+  else if (TargetTriple.getEnvironment() == Triple::OpenCL ||
+           TargetTriple.getVendor() == Triple::AMD)
     Env = Kernel;
   else
     Env = Unknown;
@@ -93,6 +98,8 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   // Set the default extensions based on the target triple.
   if (TargetTriple.getVendor() == Triple::Intel)
     Extensions.insert(SPIRV::Extension::SPV_INTEL_function_pointers);
+  if (TargetTriple.getVendor() == Triple::AMD)
+    Extensions = SPIRVExtensionsParser::getValidExtensions(TargetTriple);
 
   // The order of initialization is important.
   initAvailableExtensions(Extensions);
@@ -164,6 +171,42 @@ void SPIRVSubtarget::initAvailableExtInstSets() {
 
   // Handle extended instruction sets from extensions.
   accountForAMDShaderTrinaryMinmax();
+}
+
+void SPIRVSubtarget::setEnv(SPIRVEnvType E) {
+  if (E == Unknown)
+    report_fatal_error("Unknown environment is not allowed.");
+  if (Env != Unknown && Env != E)
+    report_fatal_error("Environment is already set to a different value.");
+  if (Env == E)
+    return;
+
+  Env = E;
+
+  // Reinitialize Env-dependent state aka ExtInstSet and legalizer info.
+  initAvailableExtInstSets();
+  Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
+}
+
+void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
+  if (Env != Unknown) {
+    assert(!(isKernel() && any_of(M,
+                                  [](const Function &F) {
+                                    return F.hasFnAttribute("hlsl.shader");
+                                  })) &&
+           "Module has hlsl.shader attributes but environment is Kernel");
+    return;
+  }
+
+  bool HasShaderAttr = false;
+  for (const Function &F : M) {
+    if (F.hasFnAttribute("hlsl.shader")) {
+      HasShaderAttr = true;
+      break;
+    }
+  }
+
+  setEnv(HasShaderAttr ? Shader : Kernel);
 }
 
 // Set available extensions after SPIRVSubtarget is created.

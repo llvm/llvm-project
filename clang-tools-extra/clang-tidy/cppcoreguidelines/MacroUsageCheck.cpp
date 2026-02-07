@@ -47,7 +47,7 @@ public:
         SM.isWrittenInCommandLineFile(MD->getLocation()))
       return;
 
-    StringRef MacroName = MacroNameTok.getIdentifierInfo()->getName();
+    const StringRef MacroName = MacroNameTok.getIdentifierInfo()->getName();
     if (MacroName == "__GCC_HAVE_DWARF2_CFI_ASM")
       return;
     if (!CheckCapsOnly && !RegExp.match(MacroName))

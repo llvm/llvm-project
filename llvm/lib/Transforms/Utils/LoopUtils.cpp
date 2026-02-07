@@ -54,6 +54,9 @@ using namespace llvm::PatternMatch;
 
 static const char *LLVMLoopDisableNonforced = "llvm.loop.disable_nonforced";
 static const char *LLVMLoopDisableLICM = "llvm.licm.disable";
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
 
 bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    MemorySSAUpdater *MSSAU,
@@ -66,7 +69,7 @@ bool llvm::formDedicatedExitBlocks(Loop *L, DominatorTree *DT, LoopInfo *LI,
   auto RewriteExit = [&](BasicBlock *BB) {
     assert(InLoopPredecessors.empty() &&
            "Must start with an empty predecessors list!");
-    auto Cleanup = make_scope_exit([&] { InLoopPredecessors.clear(); });
+    llvm::scope_exit Cleanup([&] { InLoopPredecessors.clear(); });
 
     // See if there are any non-loop predecessors of this exit block and
     // keep track of the in-loop predecessors.
@@ -608,30 +611,30 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
   llvm::SmallDenseSet<DebugVariable, 4> DeadDebugSet;
   llvm::SmallVector<DbgVariableRecord *, 4> DeadDbgVariableRecords;
 
-  if (ExitBlock) {
-    // Given LCSSA form is satisfied, we should not have users of instructions
-    // within the dead loop outside of the loop. However, LCSSA doesn't take
-    // unreachable uses into account. We handle them here.
-    // We could do it after drop all references (in this case all users in the
-    // loop will be already eliminated and we have less work to do but according
-    // to API doc of User::dropAllReferences only valid operation after dropping
-    // references, is deletion. So let's substitute all usages of
-    // instruction from the loop with poison value of corresponding type first.
-    for (auto *Block : L->blocks())
-      for (Instruction &I : *Block) {
-        auto *Poison = PoisonValue::get(I.getType());
-        for (Use &U : llvm::make_early_inc_range(I.uses())) {
-          if (auto *Usr = dyn_cast<Instruction>(U.getUser()))
-            if (L->contains(Usr->getParent()))
-              continue;
-          // If we have a DT then we can check that uses outside a loop only in
-          // unreachable block.
-          if (DT)
-            assert(!DT->isReachableFromEntry(U) &&
-                   "Unexpected user in reachable block");
-          U.set(Poison);
-        }
+  // Given LCSSA form is satisfied, we should not have users of instructions
+  // within the dead loop outside of the loop. However, LCSSA doesn't take
+  // unreachable uses into account. We handle them here.
+  // We could do it after drop all references (in this case all users in the
+  // loop will be already eliminated and we have less work to do but according
+  // to API doc of User::dropAllReferences only valid operation after dropping
+  // references, is deletion. So let's substitute all usages of
+  // instruction from the loop with poison value of corresponding type first.
+  for (auto *Block : L->blocks())
+    for (Instruction &I : *Block) {
+      auto *Poison = PoisonValue::get(I.getType());
+      for (Use &U : llvm::make_early_inc_range(I.uses())) {
+        if (auto *Usr = dyn_cast<Instruction>(U.getUser()))
+          if (L->contains(Usr->getParent()))
+            continue;
+        // If we have a DT then we can check that uses outside a loop only in
+        // unreachable block.
+        if (DT)
+          assert(!DT->isReachableFromEntry(U) &&
+                 "Unexpected user in reachable block");
+        U.set(Poison);
+      }
 
+      if (ExitBlock) {
         // For one of each variable encountered, preserve a debug record (set
         // to Poison) and transfer it to the loop exit. This terminates any
         // variable locations that were set during the loop.
@@ -646,7 +649,9 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
           DeadDbgVariableRecords.push_back(&DVR);
         }
       }
+    }
 
+  if (ExitBlock) {
     // After the loop has been deleted all the values defined and modified
     // inside the loop are going to be unavailable. Values computed in the
     // loop will have been deleted, automatically causing their debug uses
@@ -913,11 +918,26 @@ llvm::getLoopEstimatedTripCount(Loop *L,
 
   // Return the estimated trip count from metadata unless the metadata is
   // missing or has no value.
+  //
+  // Some passes set llvm.loop.estimated_trip_count to 0.  For example, after
+  // peeling 10 or more iterations from a loop with an estimated trip count of
+  // 10, llvm.loop.estimated_trip_count becomes 0 on the remaining loop.  It
+  // indicates that, each time execution reaches the peeled iterations,
+  // execution is estimated to exit them without reaching the remaining loop's
+  // header.
+  //
+  // Even if the probability of reaching a loop's header is low, if it is
+  // reached, it is the start of an iteration.  Consequently, some passes
+  // historically assume that llvm::getLoopEstimatedTripCount always returns a
+  // positive count or std::nullopt.  Thus, return std::nullopt when
+  // llvm.loop.estimated_trip_count is 0.
   if (auto TC = getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount)) {
     LLVM_DEBUG(dbgs() << "getLoopEstimatedTripCount: "
                       << LLVMLoopEstimatedTripCount << " metadata has trip "
-                      << "count of " << *TC << " for " << DbgLoop(L) << "\n");
-    return TC;
+                      << "count of " << *TC
+                      << (*TC == 0 ? " (returning std::nullopt)" : "")
+                      << " for " << DbgLoop(L) << "\n");
+    return *TC == 0 ? std::nullopt : std::optional(*TC);
   }
 
   // Estimate the trip count from latch branch weights.
@@ -950,7 +970,7 @@ bool llvm::setLoopEstimatedTripCount(
     return true;
 
   // Calculate taken and exit weights.
-  unsigned LatchExitWeight = 0;
+  unsigned LatchExitWeight = ProfcheckDisableMetadataFixes ? 0 : 1;
   unsigned BackedgeTakenWeight = 0;
 
   if (EstimatedTripCount != 0) {
@@ -962,13 +982,88 @@ bool llvm::setLoopEstimatedTripCount(
   if (LatchBranch->getSuccessor(0) != L->getHeader())
     std::swap(BackedgeTakenWeight, LatchExitWeight);
 
-  MDBuilder MDB(LatchBranch->getContext());
-
   // Set/Update profile metadata.
-  LatchBranch->setMetadata(
-      LLVMContext::MD_prof,
-      MDB.createBranchWeights(BackedgeTakenWeight, LatchExitWeight));
+  setBranchWeights(*LatchBranch, {BackedgeTakenWeight, LatchExitWeight},
+                   /*IsExpected=*/false);
 
+  return true;
+}
+
+BranchProbability llvm::getLoopProbability(Loop *L) {
+  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
+  if (!LatchBranch)
+    return BranchProbability::getUnknown();
+  bool FirstTargetIsLoop = LatchBranch->getSuccessor(0) == L->getHeader();
+  return getBranchProbability(LatchBranch, FirstTargetIsLoop);
+}
+
+bool llvm::setLoopProbability(Loop *L, BranchProbability P) {
+  BranchInst *LatchBranch = getExpectedExitLoopLatchBranch(L);
+  if (!LatchBranch)
+    return false;
+  bool FirstTargetIsLoop = LatchBranch->getSuccessor(0) == L->getHeader();
+  return setBranchProbability(LatchBranch, P, FirstTargetIsLoop);
+}
+
+BranchProbability llvm::getBranchProbability(BranchInst *B,
+                                             bool ForFirstTarget) {
+  if (B->getNumSuccessors() != 2)
+    return BranchProbability::getUnknown();
+  uint64_t Weight0, Weight1;
+  if (!extractBranchWeights(*B, Weight0, Weight1))
+    return BranchProbability::getUnknown();
+  uint64_t Denominator = Weight0 + Weight1;
+  if (Denominator == 0)
+    return BranchProbability::getUnknown();
+  if (!ForFirstTarget)
+    std::swap(Weight0, Weight1);
+  return BranchProbability::getBranchProbability(Weight0, Denominator);
+}
+
+BranchProbability llvm::getBranchProbability(BasicBlock *Src, BasicBlock *Dst) {
+  assert(Src != Dst && "Passed in same source as destination");
+
+  Instruction *TI = Src->getTerminator();
+  if (!TI || TI->getNumSuccessors() == 0)
+    return BranchProbability::getZero();
+
+  SmallVector<uint32_t, 4> Weights;
+
+  if (!extractBranchWeights(*TI, Weights)) {
+    // No metadata
+    return BranchProbability::getUnknown();
+  }
+  assert(TI->getNumSuccessors() == Weights.size() &&
+         "Missing weights in branch_weights");
+
+  uint64_t Total = 0;
+  uint32_t Numerator = 0;
+  for (auto [i, Weight] : llvm::enumerate(Weights)) {
+    if (TI->getSuccessor(i) == Dst)
+      Numerator += Weight;
+    Total += Weight;
+  }
+
+  // Total of edges might be 0 if the metadata is incorrect/set by hand
+  // or missing. In such case return here to avoid division by 0 later on.
+  // There might also be a case where the value of Total cannot fit into
+  // uint32_t, in such case, just bail out.
+  if (Total == 0 || Total > std::numeric_limits<uint32_t>::max())
+    return BranchProbability::getUnknown();
+
+  return BranchProbability(Numerator, Total);
+}
+
+bool llvm::setBranchProbability(BranchInst *B, BranchProbability P,
+                                bool ForFirstTarget) {
+  if (B->getNumSuccessors() != 2)
+    return false;
+  BranchProbability Prob0 = P;
+  BranchProbability Prob1 = P.getCompl();
+  if (!ForFirstTarget)
+    std::swap(Prob0, Prob1);
+  setBranchWeights(*B, {Prob0.getNumerator(), Prob1.getNumerator()},
+                   /*IsExpected=*/false);
   return true;
 }
 
@@ -1328,22 +1423,6 @@ Value *llvm::createAnyOfReduction(IRBuilderBase &Builder, Value *Src,
   return Builder.CreateSelect(AnyOf, NewVal, InitVal, "rdx.select");
 }
 
-Value *llvm::createFindLastIVReduction(IRBuilderBase &Builder, Value *Src,
-                                       RecurKind RdxKind, Value *Start,
-                                       Value *Sentinel) {
-  bool IsSigned = RecurrenceDescriptor::isSignedRecurrenceKind(RdxKind);
-  bool IsMaxRdx = RecurrenceDescriptor::isFindLastIVRecurrenceKind(RdxKind);
-  Value *MaxRdx = Src->getType()->isVectorTy()
-                      ? (IsMaxRdx ? Builder.CreateIntMaxReduce(Src, IsSigned)
-                                  : Builder.CreateIntMinReduce(Src, IsSigned))
-                      : Src;
-  // Correct the final reduction result back to the start value if the maximum
-  // reduction is sentinel value.
-  Value *Cmp =
-      Builder.CreateCmp(CmpInst::ICMP_NE, MaxRdx, Sentinel, "rdx.select.cmp");
-  return Builder.CreateSelect(Cmp, MaxRdx, Start, "rdx.select");
-}
-
 Value *llvm::getReductionIdentity(Intrinsic::ID RdxID, Type *Ty,
                                   FastMathFlags Flags) {
   bool Negative = false;
@@ -1435,7 +1514,7 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
 Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
                                    RecurKind Kind, Value *Mask, Value *EVL) {
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
-         !RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) &&
+         !RecurrenceDescriptor::isFindRecurrenceKind(Kind) &&
          "AnyOf and FindIV reductions are not supported.");
   Intrinsic::ID Id = getReductionIntrinsicID(Kind);
   auto VPID = VPIntrinsic::getForIntrinsic(Id);
@@ -2292,7 +2371,7 @@ llvm::hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
     if (!Info.ExitForPath)
       Info.PathIsNoop = false;
 
-    Info.InstToDuplicate = InstToDuplicate;
+    Info.InstToDuplicate = std::move(InstToDuplicate);
     return Info;
   };
 

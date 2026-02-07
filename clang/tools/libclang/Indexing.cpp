@@ -15,6 +15,7 @@
 #include "CXString.h"
 #include "CXTranslationUnit.h"
 #include "clang/AST/ASTConsumer.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"

@@ -12,7 +12,7 @@
 
 using namespace LIBC_NAMESPACE;
 
-// Test to ensure that we can use aribtrary combinations of sends and recieves
+// Test to ensure that we can use arbitrary combinations of sends and receives
 // as long as they are mirrored.
 static void test_interface(bool end_with_send) {
   uint64_t cnt = 0;

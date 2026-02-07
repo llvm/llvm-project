@@ -134,14 +134,16 @@ static bool isAllocationSupported(Operation *allocOp, MemRefType type) {
     return false;
   }
 
-  // Currently only support static shape and int or float or vector of int or
-  // float element type.
+  // Currently only support static shape and int or float, complex of int or
+  // float, or vector of int or float element type.
   if (!type.hasStaticShape())
     return false;
 
   Type elementType = type.getElementType();
   if (auto vecType = dyn_cast<VectorType>(elementType))
     elementType = vecType.getElementType();
+  if (auto compType = dyn_cast<ComplexType>(elementType))
+    elementType = compType.getElementType();
   return elementType.isIntOrFloat();
 }
 

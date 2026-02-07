@@ -210,9 +210,7 @@ namespace {
     static char ID;
 
     IfConverter(std::function<bool(const MachineFunction &)> Ftor = nullptr)
-        : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {
-      initializeIfConverterPass(*PassRegistry::getPassRegistry());
-    }
+        : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
@@ -940,7 +938,7 @@ bool IfConverter::ValidForkedDiamond(
     FalseReversed = true;
     reverseBranchCondition(FalseBBI);
   }
-  auto UnReverseOnExit = make_scope_exit([&]() {
+  llvm::scope_exit UnReverseOnExit([&]() {
     if (FalseReversed)
       reverseBranchCondition(FalseBBI);
   });

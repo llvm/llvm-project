@@ -1,4 +1,5 @@
 #include "CIRGenBuilder.h"
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
 #include "clang/AST/StmtVisitor.h"
@@ -66,7 +67,12 @@ public:
 
   mlir::Value VisitExpr(Expr *e);
   mlir::Value VisitConstantExpr(ConstantExpr *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(), "ComplexExprEmitter VisitConstantExpr");
+    if (mlir::Attribute result = ConstantEmitter(cgf).tryEmitConstantExpr(e))
+      return builder.getConstant(cgf.getLoc(e->getSourceRange()),
+                                 mlir::cast<mlir::TypedAttr>(result));
+
+    cgf.cgm.errorNYI(e->getExprLoc(),
+                     "ComplexExprEmitter VisitConstantExpr non constantexpr");
     return {};
   }
 
@@ -204,9 +210,12 @@ public:
     return Visit(die->getExpr());
   }
   mlir::Value VisitExprWithCleanups(ExprWithCleanups *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(),
-                     "ComplexExprEmitter VisitExprWithCleanups");
-    return {};
+    CIRGenFunction::RunCleanupsScope scope(cgf);
+    mlir::Value complexVal = Visit(e->getSubExpr());
+    // Defend against dominance problems caused by jumps out of expression
+    // evaluation through the shared cleanup block.
+    scope.forceCleanup();
+    return complexVal;
   }
   mlir::Value VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
     mlir::Location loc = cgf.getLoc(e->getExprLoc());
@@ -339,7 +348,7 @@ mlir::Value ComplexExprEmitter::emitLoadOfLValue(LValue lv,
     cgf.cgm.errorNYI(loc, "emitLoadOfLValue with Atomic LV");
 
   const Address srcAddr = lv.getAddress();
-  return builder.createLoad(cgf.getLoc(loc), srcAddr);
+  return builder.createLoad(cgf.getLoc(loc), srcAddr, lv.isVolatileQualified());
 }
 
 /// EmitStoreOfComplex - Store the specified real/imag parts into the
@@ -353,7 +362,7 @@ void ComplexExprEmitter::emitStoreOfComplex(mlir::Location loc, mlir::Value val,
   }
 
   const Address destAddr = lv.getAddress();
-  builder.createStore(loc, val, destAddr);
+  builder.createStore(loc, val, destAddr, lv.isVolatileQualified());
 }
 
 //===----------------------------------------------------------------------===//
@@ -400,8 +409,13 @@ mlir::Value ComplexExprEmitter::VisitCallExpr(const CallExpr *e) {
 }
 
 mlir::Value ComplexExprEmitter::VisitStmtExpr(const StmtExpr *e) {
-  cgf.cgm.errorNYI(e->getExprLoc(), "ComplexExprEmitter VisitExpr");
-  return {};
+  CIRGenFunction::StmtExprEvaluation eval(cgf);
+  Address retAlloca =
+      cgf.createMemTemp(e->getType(), cgf.getLoc(e->getSourceRange()));
+  (void)cgf.emitCompoundStmt(*e->getSubStmt(), &retAlloca);
+  assert(retAlloca.isValid() && "Expected complex return value");
+  return emitLoadOfLValue(cgf.makeAddrLValue(retAlloca, e->getType()),
+                          e->getExprLoc());
 }
 
 mlir::Value ComplexExprEmitter::emitComplexToComplexCast(mlir::Value val,
@@ -534,6 +548,7 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLMatrixTruncation:
   case CK_HLSLArrayRValue:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:

@@ -60,11 +60,7 @@ public:
   DDGNode(DDGNode &&N) : DDGNodeBase(std::move(N)), Kind(N.Kind) {}
   virtual ~DDGNode() = 0;
 
-  DDGNode &operator=(const DDGNode &N) {
-    DGNode::operator=(N);
-    Kind = N.Kind;
-    return *this;
-  }
+  DDGNode &operator=(const DDGNode &N) = default;
 
   DDGNode &operator=(DDGNode &&N) {
     DGNode::operator=(std::move(N));

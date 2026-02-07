@@ -858,6 +858,10 @@ MLIR_CAPI_EXPORTED
 void mlirOperationWalk(MlirOperation op, MlirOperationWalkCallback callback,
                        void *userData, MlirWalkOrder walkOrder);
 
+/// Replace uses of 'of' value with the 'with' value inside the 'op' operation.
+MLIR_CAPI_EXPORTED void
+mlirOperationReplaceUsesOfWith(MlirOperation op, MlirValue of, MlirValue with);
+
 //===----------------------------------------------------------------------===//
 // Region API.
 //===----------------------------------------------------------------------===//
@@ -1050,6 +1054,10 @@ MLIR_CAPI_EXPORTED intptr_t mlirBlockArgumentGetArgNumber(MlirValue value);
 /// Sets the type of the block argument to the given type.
 MLIR_CAPI_EXPORTED void mlirBlockArgumentSetType(MlirValue value,
                                                  MlirType type);
+
+/// Sets the location of the block argument to the given location.
+MLIR_CAPI_EXPORTED void mlirBlockArgumentSetLocation(MlirValue value,
+                                                     MlirLocation loc);
 
 /// Returns an operation that produced this value as its result. Asserts if the
 /// value is not an op result.

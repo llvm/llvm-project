@@ -35,5 +35,9 @@ class TestDAP_setExceptionBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         if response:
             self.assertTrue(response["success"])
 
-        self.continue_to_exception_breakpoint("C++ Throw")
-        self.continue_to_exception_breakpoint("C++ Catch")
+        self.continue_to_exception_breakpoint(
+            expected_description=r"breakpoint 1\.1", expected_text=r"C\+\+ Throw"
+        )
+        self.continue_to_exception_breakpoint(
+            expected_description=r"breakpoint 2\.1", expected_text=r"C\+\+ Catch"
+        )

@@ -580,6 +580,8 @@ static const PlatformMemoryMapParams NetBSD_X86_MemoryMapParams = {
     &NetBSD_X86_64_MemoryMapParams,
 };
 
+enum OddOrEvenLanes { kBothLanes, kEvenLanes, kOddLanes };
+
 namespace {
 
 /// Instrument functions of a module to detect uninitialized reads.
@@ -1791,7 +1793,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
           constToIntPtr(VectTy->getElementType(), C));
     }
     assert(IntPtrTy == MS.IntptrTy);
-    return ConstantInt::get(MS.IntptrTy, C);
+    // TODO: Avoid implicit trunc?
+    // See https://github.com/llvm/llvm-project/issues/112510.
+    return ConstantInt::get(MS.IntptrTy, C, /*IsSigned=*/false,
+                            /*ImplicitTrunc=*/true);
   }
 
   /// Returns the integer shadow offset that corresponds to a given
@@ -2417,6 +2422,85 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     I.setSuccessOrdering(addReleaseOrdering(I.getSuccessOrdering()));
   }
 
+  /// Generic handler to compute shadow for == and != comparisons.
+  ///
+  /// This function is used by handleEqualityComparison and visitSwitchInst.
+  ///
+  /// Sometimes the comparison result is known even if some of the bits of the
+  /// arguments are not.
+  Value *propagateEqualityComparison(IRBuilder<> &IRB, Value *A, Value *B,
+                                     Value *Sa, Value *Sb) {
+    assert(getShadowTy(A) == Sa->getType());
+    assert(getShadowTy(B) == Sb->getType());
+
+    // Get rid of pointers and vectors of pointers.
+    // For ints (and vectors of ints), types of A and Sa match,
+    // and this is a no-op.
+    A = IRB.CreatePointerCast(A, Sa->getType());
+    B = IRB.CreatePointerCast(B, Sb->getType());
+
+    // A == B  <==>  (C = A^B) == 0
+    // A != B  <==>  (C = A^B) != 0
+    // Sc = Sa | Sb
+    Value *C = IRB.CreateXor(A, B);
+    Value *Sc = IRB.CreateOr(Sa, Sb);
+    // Now dealing with i = (C == 0) comparison (or C != 0, does not matter now)
+    // Result is defined if one of the following is true
+    // * there is a defined 1 bit in C
+    // * C is fully defined
+    // Si = !(C & ~Sc) && Sc
+    Value *Zero = Constant::getNullValue(Sc->getType());
+    Value *MinusOne = Constant::getAllOnesValue(Sc->getType());
+    Value *LHS = IRB.CreateICmpNE(Sc, Zero);
+    Value *RHS =
+        IRB.CreateICmpEQ(IRB.CreateAnd(IRB.CreateXor(Sc, MinusOne), C), Zero);
+    Value *Si = IRB.CreateAnd(LHS, RHS);
+    Si->setName("_msprop_icmp");
+
+    return Si;
+  }
+
+  // Instrument:
+  //     switch i32 %Val, label %else [ i32 0, label %A
+  //                                    i32 1, label %B
+  //                                    i32 2, label %C ]
+  //
+  // Typically, the switch input value (%Val) is fully initialized.
+  //
+  // Sometimes the compiler may convert (icmp + br) into a switch statement.
+  // MSan allows icmp eq/ne with partly initialized inputs to still result in a
+  // fully initialized output, if there exists a bit that is initialized in
+  // both inputs with a differing value. For compatibility, we support this in
+  // the switch instrumentation as well. Note that this edge case only applies
+  // if the switch input value does not match *any* of the cases (matching any
+  // of the cases requires an exact, fully initialized match).
+  //
+  //     ShadowCases =   0
+  //                   | propagateEqualityComparison(Val, 0)
+  //                   | propagateEqualityComparison(Val, 1)
+  //                   | propagateEqualityComparison(Val, 2))
+  void visitSwitchInst(SwitchInst &SI) {
+    IRBuilder<> IRB(&SI);
+
+    Value *Val = SI.getCondition();
+    Value *ShadowVal = getShadow(Val);
+
+    Value *ShadowCases = nullptr;
+    for (auto Case : SI.cases()) {
+      Value *Comparator = Case.getCaseValue();
+      Value *ComparisonShadow = propagateEqualityComparison(
+          IRB, Val, Comparator, ShadowVal, getShadow(Comparator));
+
+      if (ShadowCases)
+        ShadowCases = IRB.CreateOr(ShadowCases, ComparisonShadow);
+      else
+        ShadowCases = ComparisonShadow;
+    }
+
+    if (ShadowCases)
+      insertCheckShadow(ShadowCases, getOrigin(Val), &SI);
+  }
+
   // Vector manipulation.
   void visitExtractElementInst(ExtractElementInst &I) {
     insertCheckShadowOf(I.getOperand(1), &I);
@@ -2497,30 +2581,42 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitFPExtInst(CastInst &I) { handleShadowOr(I); }
   void visitFPTruncInst(CastInst &I) { handleShadowOr(I); }
 
-  /// Propagate shadow for bitwise AND.
+  /// Generic handler to compute shadow for bitwise AND.
   ///
-  /// This code is exact, i.e. if, for example, a bit in the left argument
-  /// is defined and 0, then neither the value not definedness of the
-  /// corresponding bit in B don't affect the resulting shadow.
-  void visitAnd(BinaryOperator &I) {
-    IRBuilder<> IRB(&I);
-    //  "And" of 0 and a poisoned value results in unpoisoned value.
-    //  1&1 => 1;     0&1 => 0;     p&1 => p;
-    //  1&0 => 0;     0&0 => 0;     p&0 => 0;
-    //  1&p => p;     0&p => 0;     p&p => p;
-    //  S = (S1 & S2) | (V1 & S2) | (S1 & V2)
-    Value *S1 = getShadow(&I, 0);
-    Value *S2 = getShadow(&I, 1);
-    Value *V1 = I.getOperand(0);
-    Value *V2 = I.getOperand(1);
+  /// This is used by 'visitAnd' but also as a primitive for other handlers.
+  ///
+  /// This code is precise: it implements the rule that "And" of an initialized
+  /// zero bit always results in an initialized value:
+  //    1&1 => 1;     0&1 => 0;     p&1 => p;
+  //    1&0 => 0;     0&0 => 0;     p&0 => 0;
+  //    1&p => p;     0&p => 0;     p&p => p;
+  //
+  //    S = (S1 & S2) | (V1 & S2) | (S1 & V2)
+  Value *handleBitwiseAnd(IRBuilder<> &IRB, Value *V1, Value *V2, Value *S1,
+                          Value *S2) {
+    Value *S1S2 = IRB.CreateAnd(S1, S2);
+    Value *V1S2 = IRB.CreateAnd(V1, S2);
+    Value *S1V2 = IRB.CreateAnd(S1, V2);
+
     if (V1->getType() != S1->getType()) {
       V1 = IRB.CreateIntCast(V1, S1->getType(), false);
       V2 = IRB.CreateIntCast(V2, S2->getType(), false);
     }
-    Value *S1S2 = IRB.CreateAnd(S1, S2);
-    Value *V1S2 = IRB.CreateAnd(V1, S2);
-    Value *S1V2 = IRB.CreateAnd(S1, V2);
-    setShadow(&I, IRB.CreateOr({S1S2, V1S2, S1V2}));
+
+    return IRB.CreateOr({S1S2, V1S2, S1V2});
+  }
+
+  /// Handler for bitwise AND operator.
+  void visitAnd(BinaryOperator &I) {
+    IRBuilder<> IRB(&I);
+    Value *V1 = I.getOperand(0);
+    Value *V2 = I.getOperand(1);
+    Value *S1 = getShadow(&I, 0);
+    Value *S2 = getShadow(&I, 1);
+
+    Value *OutShadow = handleBitwiseAnd(IRB, V1, V2, S1, S2);
+
+    setShadow(&I, OutShadow);
     setOriginForNaryOp(I);
   }
 
@@ -2720,34 +2816,55 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // of elements.
   //
   // For example, suppose we have:
-  //   VectorA: <a1, a2, a3, a4, a5, a6>
-  //   VectorB: <b1, b2, b3, b4, b5, b6>
-  //   ReductionFactor: 3.
+  //   VectorA: <a0, a1, a2, a3, a4, a5>
+  //   VectorB: <b0, b1, b2, b3, b4, b5>
+  //   ReductionFactor: 3
+  //   Shards: 1
   // The output would be:
-  //   <a1|a2|a3, a4|a5|a6, b1|b2|b3, b4|b5|b6>
+  //   <a0|a1|a2, a3|a4|a5, b0|b1|b2, b3|b4|b5>
+  //
+  // If we have:
+  //   VectorA: <a0, a1, a2, a3, a4, a5, a6, a7>
+  //   VectorB: <b0, b1, b2, b3, b4, b5, b6, b7>
+  //   ReductionFactor: 2
+  //   Shards: 2
+  // then a and be each have 2 "shards", resulting in the output being
+  // interleaved:
+  //   <a0|a1, a2|a3, b0|b1, b2|b3, a4|a5, a6|a7, b4|b5, b6|b7>
   //
   // This is convenient for instrumenting horizontal add/sub.
   // For bitwise OR on "vertical" pairs, see maybeHandleSimpleNomemIntrinsic().
   Value *horizontalReduce(IntrinsicInst &I, unsigned ReductionFactor,
-                          Value *VectorA, Value *VectorB) {
+                          unsigned Shards, Value *VectorA, Value *VectorB) {
     assert(isa<FixedVectorType>(VectorA->getType()));
-    unsigned TotalNumElems =
+    unsigned NumElems =
         cast<FixedVectorType>(VectorA->getType())->getNumElements();
 
+    [[maybe_unused]] unsigned TotalNumElems = NumElems;
     if (VectorB) {
       assert(VectorA->getType() == VectorB->getType());
-      TotalNumElems = TotalNumElems * 2;
+      TotalNumElems *= 2;
     }
 
-    assert(TotalNumElems % ReductionFactor == 0);
+    assert(NumElems % (ReductionFactor * Shards) == 0);
 
     Value *Or = nullptr;
 
     IRBuilder<> IRB(&I);
     for (unsigned i = 0; i < ReductionFactor; i++) {
       SmallVector<int, 16> Mask;
-      for (unsigned X = 0; X < TotalNumElems; X += ReductionFactor)
-        Mask.push_back(X + i);
+
+      for (unsigned j = 0; j < Shards; j++) {
+        unsigned Offset = NumElems / Shards * j;
+
+        for (unsigned X = 0; X < NumElems / Shards; X += ReductionFactor)
+          Mask.push_back(Offset + X + i);
+
+        if (VectorB) {
+          for (unsigned X = 0; X < NumElems / Shards; X += ReductionFactor)
+            Mask.push_back(NumElems + Offset + X + i);
+        }
+      }
 
       Value *Masked;
       if (VectorB)
@@ -2769,7 +2886,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   ///
   /// e.g., <2 x i32> @llvm.aarch64.neon.saddlp.v2i32.v4i16(<4 x i16>)
   ///       <16 x i8> @llvm.aarch64.neon.addp.v16i8(<16 x i8>, <16 x i8>)
-  void handlePairwiseShadowOrIntrinsic(IntrinsicInst &I) {
+  void handlePairwiseShadowOrIntrinsic(IntrinsicInst &I, unsigned Shards) {
     assert(I.arg_size() == 1 || I.arg_size() == 2);
 
     assert(I.getType()->isVectorTy());
@@ -2792,8 +2909,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (I.arg_size() == 2)
       SecondArgShadow = getShadow(&I, 1);
 
-    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/2, FirstArgShadow,
-                                       SecondArgShadow);
+    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/2, Shards,
+                                       FirstArgShadow, SecondArgShadow);
 
     OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
 
@@ -2808,7 +2925,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// conceptually operates on
   ///     (<4 x i16> [[VAR1]], <4 x i16> [[VAR2]])
   /// and can be handled with ReinterpretElemWidth == 16.
-  void handlePairwiseShadowOrIntrinsic(IntrinsicInst &I,
+  void handlePairwiseShadowOrIntrinsic(IntrinsicInst &I, unsigned Shards,
                                        int ReinterpretElemWidth) {
     assert(I.arg_size() == 1 || I.arg_size() == 2);
 
@@ -2852,8 +2969,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       SecondArgShadow = IRB.CreateBitCast(SecondArgShadow, ReinterpretShadowTy);
     }
 
-    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/2, FirstArgShadow,
-                                       SecondArgShadow);
+    Value *OrShadow = horizontalReduce(I, /*ReductionFactor=*/2, Shards,
+                                       FirstArgShadow, SecondArgShadow);
 
     OrShadow = CreateShadowCast(IRB, OrShadow, getShadowTy(&I));
 
@@ -2954,29 +3071,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Sa = getShadow(A);
     Value *Sb = getShadow(B);
 
-    // Get rid of pointers and vectors of pointers.
-    // For ints (and vectors of ints), types of A and Sa match,
-    // and this is a no-op.
-    A = IRB.CreatePointerCast(A, Sa->getType());
-    B = IRB.CreatePointerCast(B, Sb->getType());
+    Value *Si = propagateEqualityComparison(IRB, A, B, Sa, Sb);
 
-    // A == B  <==>  (C = A^B) == 0
-    // A != B  <==>  (C = A^B) != 0
-    // Sc = Sa | Sb
-    Value *C = IRB.CreateXor(A, B);
-    Value *Sc = IRB.CreateOr(Sa, Sb);
-    // Now dealing with i = (C == 0) comparison (or C != 0, does not matter now)
-    // Result is defined if one of the following is true
-    // * there is a defined 1 bit in C
-    // * C is fully defined
-    // Si = !(C & ~Sc) && Sc
-    Value *Zero = Constant::getNullValue(Sc->getType());
-    Value *MinusOne = Constant::getAllOnesValue(Sc->getType());
-    Value *LHS = IRB.CreateICmpNE(Sc, Zero);
-    Value *RHS =
-        IRB.CreateICmpEQ(IRB.CreateAnd(IRB.CreateXor(Sc, MinusOne), C), Zero);
-    Value *Si = IRB.CreateAnd(LHS, RHS);
-    Si->setName("_msprop_icmp");
     setShadow(&I, Si);
     setOriginForNaryOp(I);
   }
@@ -3414,15 +3510,28 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// Handle Arm NEON vector convert intrinsics.
   ///
   /// e.g., <4 x i32> @llvm.aarch64.neon.fcvtpu.v4i32.v4f32(<4 x float>)
-  ///      i32 @llvm.aarch64.neon.fcvtms.i32.f64(double)
+  ///      i32        @llvm.aarch64.neon.fcvtms.i32.f64    (double)
+  ///
+  /// For conversions to or from fixed-point, there is a trailing argument to
+  /// indicate the fixed-point precision:
+  /// - <4 x float> llvm.aarch64.neon.vcvtfxs2fp.v4f32.v4i32(<4 x i32>,   i32)
+  /// - <4 x i32>   llvm.aarch64.neon.vcvtfp2fxu.v4i32.v4f32(<4 x float>, i32)
   ///
   /// For x86 SSE vector convert intrinsics, see
   /// handleSSEVectorConvertIntrinsic().
-  void handleNEONVectorConvertIntrinsic(IntrinsicInst &I) {
-    assert(I.arg_size() == 1);
+  void handleNEONVectorConvertIntrinsic(IntrinsicInst &I, bool FixedPoint) {
+    if (FixedPoint)
+      assert(I.arg_size() == 2);
+    else
+      assert(I.arg_size() == 1);
 
     IRBuilder<> IRB(&I);
     Value *S0 = getShadow(&I, 0);
+
+    if (FixedPoint) {
+      Value *Precision = I.getOperand(1);
+      insertCheckShadowOf(Precision, &I);
+    }
 
     /// For scalars:
     /// Since they are converting from floating-point to integer, the output is
@@ -3888,7 +3997,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // Instrument multiply-add(-accumulate)? intrinsics.
+  // Instrument dot-product / multiply-add(-accumulate)? intrinsics.
   //
   // e.g., Two operands:
   //         <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %a, <8 x i16> %b)
@@ -3899,12 +4008,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //       Three operands:
   //         <4 x i32> @llvm.x86.avx512.vpdpbusd.128
   //                       (<4 x i32> %s, <16 x i8> %a, <16 x i8> %b)
-  //         (this is equivalent to multiply-add on %a and %b, followed by
+  //         <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v4bf16
+  //                       (<2 x float> %acc, <4 x bfloat> %a, <4 x bfloat> %b)
+  //         (these are equivalent to multiply-add on %a and %b, followed by
   //          adding/"accumulating" %s. "Accumulation" stores the result in one
   //          of the source registers, but this accumulate vs. add distinction
   //          is lost when dealing with LLVM intrinsics.)
-  void handleVectorPmaddIntrinsic(IntrinsicInst &I, unsigned ReductionFactor,
-                                  unsigned EltSizeInBits = 0) {
+  //
+  // ZeroPurifies means that multiplying a known-zero with an uninitialized
+  // value results in an initialized value. This is applicable for integer
+  // multiplication, but not floating-point (counter-example: NaN).
+  void handleVectorDotProductIntrinsic(IntrinsicInst &I,
+                                       unsigned ReductionFactor,
+                                       bool ZeroPurifies,
+                                       unsigned EltSizeInBits,
+                                       enum OddOrEvenLanes Lanes) {
     IRBuilder<> IRB(&I);
 
     [[maybe_unused]] FixedVectorType *ReturnType =
@@ -3919,6 +4037,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     assert(I.arg_size() == 2 || I.arg_size() == 3);
     if (I.arg_size() == 2) {
+      assert(Lanes == kBothLanes);
+
       Va = I.getOperand(0);
       Vb = I.getOperand(1);
 
@@ -3931,6 +4051,26 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
       Sa = getShadow(&I, 1);
       Sb = getShadow(&I, 2);
+
+      if (Lanes == kEvenLanes || Lanes == kOddLanes) {
+        // Convert < S0, S1, S2, S3, S4, S5, S6, S7 >
+        //      to < S0, S0, S2, S2, S4, S4, S6, S6 > (if even)
+        //      to < S1, S1, S3, S3, S5, S5, S7, S7 > (if odd)
+        //
+        // Note: for aarch64.neon.bfmlalb/t, the odd/even-indexed values are
+        //       zeroed, not duplicated. However, for shadow propagation, this
+        //       distinction is unimportant because Step 1 below will squeeze
+        //       each pair of elements (e.g., [S0, S0]) into a single bit, and
+        //       we only care if it is fully initialized.
+
+        FixedVectorType *InputShadowType = cast<FixedVectorType>(Sa->getType());
+        unsigned Width = InputShadowType->getNumElements();
+
+        Sa = IRB.CreateShuffleVector(
+            Sa, getPclmulMask(Width, /*OddElements=*/Lanes == kOddLanes));
+        Sb = IRB.CreateShuffleVector(
+            Sb, getPclmulMask(Width, /*OddElements=*/Lanes == kOddLanes));
+      }
     }
 
     FixedVectorType *ParamType = cast<FixedVectorType>(Va->getType());
@@ -3945,7 +4085,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       assert(AccumulatorType == ReturnType);
     }
 
-    FixedVectorType *ImplicitReturnType = ReturnType;
+    FixedVectorType *ImplicitReturnType =
+        cast<FixedVectorType>(getShadowTy(ReturnType));
     // Step 1: instrument multiplication of corresponding vector elements
     if (EltSizeInBits) {
       ImplicitReturnType = cast<FixedVectorType>(
@@ -3964,30 +4105,32 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
              ReturnType->getNumElements() * ReductionFactor);
     }
 
-    // Multiplying an *initialized* zero by an uninitialized element results in
-    // an initialized zero element.
-    //
-    // This is analogous to bitwise AND, where "AND" of 0 and a poisoned value
-    // results in an unpoisoned value. We can therefore adapt the visitAnd()
-    // instrumentation:
-    //   OutShadow =   (SaNonZero & SbNonZero)
-    //               | (VaNonZero & SbNonZero)
-    //               | (SaNonZero & VbNonZero)
-    //   where non-zero is checked on a per-element basis (not per bit).
-    Value *SZero = Constant::getNullValue(Va->getType());
-    Value *VZero = Constant::getNullValue(Sa->getType());
-    Value *SaNonZero = IRB.CreateICmpNE(Sa, SZero);
-    Value *SbNonZero = IRB.CreateICmpNE(Sb, SZero);
-    Value *VaNonZero = IRB.CreateICmpNE(Va, VZero);
-    Value *VbNonZero = IRB.CreateICmpNE(Vb, VZero);
-
-    Value *SaAndSbNonZero = IRB.CreateAnd(SaNonZero, SbNonZero);
-    Value *VaAndSbNonZero = IRB.CreateAnd(VaNonZero, SbNonZero);
-    Value *SaAndVbNonZero = IRB.CreateAnd(SaNonZero, VbNonZero);
-
     // Each element of the vector is represented by a single bit (poisoned or
     // not) e.g., <8 x i1>.
-    Value *And = IRB.CreateOr({SaAndSbNonZero, VaAndSbNonZero, SaAndVbNonZero});
+    Value *SaNonZero = IRB.CreateIsNotNull(Sa);
+    Value *SbNonZero = IRB.CreateIsNotNull(Sb);
+    Value *And;
+    if (ZeroPurifies) {
+      // Multiplying an *initialized* zero by an uninitialized element results
+      // in an initialized zero element.
+      //
+      // This is analogous to bitwise AND, where "AND" of 0 and a poisoned value
+      // results in an unpoisoned value.
+      Value *VaInt = Va;
+      Value *VbInt = Vb;
+      if (!Va->getType()->isIntegerTy()) {
+        VaInt = CreateAppToShadowCast(IRB, Va);
+        VbInt = CreateAppToShadowCast(IRB, Vb);
+      }
+
+      // We check for non-zero on a per-element basis, not per-bit.
+      Value *VaNonZero = IRB.CreateIsNotNull(VaInt);
+      Value *VbNonZero = IRB.CreateIsNotNull(VbInt);
+
+      And = handleBitwiseAnd(IRB, VaNonZero, VbNonZero, SaNonZero, SbNonZero);
+    } else {
+      And = IRB.CreateOr({SaNonZero, SbNonZero});
+    }
 
     // Extend <8 x i1> to <8 x i16>.
     // (The real pmadd intrinsic would have computed intermediate values of
@@ -4022,10 +4165,31 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   // Instrument compare-packed intrinsic.
-  // Basically, an or followed by sext(icmp ne 0) to end up with all-zeros or
-  // all-ones shadow.
-  void handleVectorComparePackedIntrinsic(IntrinsicInst &I) {
+  //
+  // x86 has the predicate as the third operand, which is ImmArg e.g.,
+  // - <4 x double> @llvm.x86.avx.cmp.pd.256(<4 x double>, <4 x double>, i8)
+  // - <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double>, <2 x double>, i8)
+  //
+  // while Arm has separate intrinsics for >= and > e.g.,
+  // - <2 x i32> @llvm.aarch64.neon.facge.v2i32.v2f32
+  //                 (<2 x float> %A, <2 x float>)
+  // - <2 x i32> @llvm.aarch64.neon.facgt.v2i32.v2f32
+  //                 (<2 x float> %A, <2 x float>)
+  //
+  // Bonus: this also handles scalar cases e.g.,
+  // - i32 @llvm.aarch64.neon.facgt.i32.f32(float %A, float %B)
+  void handleVectorComparePackedIntrinsic(IntrinsicInst &I,
+                                          bool PredicateAsOperand) {
+    if (PredicateAsOperand) {
+      assert(I.arg_size() == 3);
+      assert(I.paramHasAttr(2, Attribute::ImmArg));
+    } else
+      assert(I.arg_size() == 2);
+
     IRBuilder<> IRB(&I);
+
+    // Basically, an or followed by sext(icmp ne 0) to end up with all-zeros or
+    // all-ones shadow.
     Type *ResTy = getShadowTy(&I);
     auto *Shadow0 = getShadow(&I, 0);
     auto *Shadow1 = getShadow(&I, 1);
@@ -4933,7 +5097,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
-  // Handle llvm.x86.avx512.* instructions that take a vector of floating-point
+  // Handle llvm.x86.avx512.* instructions that take vector(s) of floating-point
   // values and perform an operation whose shadow propagation should be handled
   // as all-or-nothing [*], with masking provided by a vector and a mask
   // supplied as an integer.
@@ -4947,44 +5111,63 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //
   //       <2 x double> @llvm.x86.avx512.rcp14.pd.128
   //                        (<2 x double>, <2 x double>, i8)
+  //                         A             WriteThru     Mask
   //
   //       <8 x double> @llvm.x86.avx512.mask.rndscale.pd.512
   //                        (<8 x double>, i32, <8 x double>, i8,  i32)
   //                         A             Imm  WriteThru     Mask Rounding
   //
-  // All operands other than A and WriteThru (e.g., Mask, Imm, Rounding) must
-  // be fully initialized.
+  //       <16 x float> @llvm.x86.avx512.mask.scalef.ps.512
+  //                       (<16 x float>, <16 x float>, <16 x float>, i16, i32)
+  //                        WriteThru     A             B             Mask Rnd
   //
-  // Dst[i]        = Mask[i] ? some_op(A[i]) : WriteThru[i]
-  // Dst_shadow[i] = Mask[i] ? all_or_nothing(A_shadow[i]) : WriteThru_shadow[i]
-  void handleAVX512VectorGenericMaskedFP(IntrinsicInst &I, unsigned AIndex,
+  // All operands other than A, B, ..., and WriteThru (e.g., Mask, Imm,
+  // Rounding) must be fully initialized.
+  //
+  // Dst[i]        = Mask[i] ? some_op(A[i], B[i], ...)
+  //                         : WriteThru[i]
+  // Dst_shadow[i] = Mask[i] ? all_or_nothing(A_shadow[i] | B_shadow[i] | ...)
+  //                         : WriteThru_shadow[i]
+  void handleAVX512VectorGenericMaskedFP(IntrinsicInst &I,
+                                         SmallVector<unsigned, 4> DataIndices,
                                          unsigned WriteThruIndex,
                                          unsigned MaskIndex) {
     IRBuilder<> IRB(&I);
 
     unsigned NumArgs = I.arg_size();
-    assert(AIndex < NumArgs);
+
     assert(WriteThruIndex < NumArgs);
     assert(MaskIndex < NumArgs);
-    assert(AIndex != WriteThruIndex);
-    assert(AIndex != MaskIndex);
     assert(WriteThruIndex != MaskIndex);
-
-    Value *A = I.getOperand(AIndex);
     Value *WriteThru = I.getOperand(WriteThruIndex);
-    Value *Mask = I.getOperand(MaskIndex);
 
-    assert(isFixedFPVector(A));
-    assert(isFixedFPVector(WriteThru));
-
-    [[maybe_unused]] unsigned ANumElements =
-        cast<FixedVectorType>(A->getType())->getNumElements();
     unsigned OutputNumElements =
         cast<FixedVectorType>(WriteThru->getType())->getNumElements();
-    assert(ANumElements == OutputNumElements);
+
+    assert(DataIndices.size() > 0);
+
+    bool isData[16] = {false};
+    assert(NumArgs <= 16);
+    for (unsigned i : DataIndices) {
+      assert(i < NumArgs);
+      assert(i != WriteThruIndex);
+      assert(i != MaskIndex);
+
+      isData[i] = true;
+
+      Value *A = I.getOperand(i);
+      assert(isFixedFPVector(A));
+      [[maybe_unused]] unsigned ANumElements =
+          cast<FixedVectorType>(A->getType())->getNumElements();
+      assert(ANumElements == OutputNumElements);
+    }
+
+    Value *Mask = I.getOperand(MaskIndex);
+
+    assert(isFixedFPVector(WriteThru));
 
     for (unsigned i = 0; i < NumArgs; ++i) {
-      if (i != AIndex && i != WriteThruIndex) {
+      if (!isData[i] && i != WriteThruIndex) {
         // Imm, Mask, Rounding etc. are "control" data, hence we require that
         // they be fully initialized.
         assert(I.getOperand(i)->getType()->isIntegerTy());
@@ -4993,24 +5176,32 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
 
     // The mask has 1 bit per element of A, but a minimum of 8 bits.
-    if (Mask->getType()->getScalarSizeInBits() == 8 && ANumElements < 8)
-      Mask = IRB.CreateTrunc(Mask, Type::getIntNTy(*MS.C, ANumElements));
-    assert(Mask->getType()->getScalarSizeInBits() == ANumElements);
+    if (Mask->getType()->getScalarSizeInBits() == 8 && OutputNumElements < 8)
+      Mask = IRB.CreateTrunc(Mask, Type::getIntNTy(*MS.C, OutputNumElements));
+    assert(Mask->getType()->getScalarSizeInBits() == OutputNumElements);
 
     assert(I.getType() == WriteThru->getType());
 
     Mask = IRB.CreateBitCast(
         Mask, FixedVectorType::get(IRB.getInt1Ty(), OutputNumElements));
 
-    Value *AShadow = getShadow(A);
+    Value *DataShadow = nullptr;
+    for (unsigned i : DataIndices) {
+      Value *A = I.getOperand(i);
+      if (DataShadow)
+        DataShadow = IRB.CreateOr(DataShadow, getShadow(A));
+      else
+        DataShadow = getShadow(A);
+    }
 
     // All-or-nothing shadow
-    AShadow = IRB.CreateSExt(IRB.CreateICmpNE(AShadow, getCleanShadow(AShadow)),
-                             AShadow->getType());
+    DataShadow =
+        IRB.CreateSExt(IRB.CreateICmpNE(DataShadow, getCleanShadow(DataShadow)),
+                       DataShadow->getType());
 
     Value *WriteThruShadow = getShadow(WriteThru);
 
-    Value *Shadow = IRB.CreateSelect(Mask, AShadow, WriteThruShadow);
+    Value *Shadow = IRB.CreateSelect(Mask, DataShadow, WriteThruShadow);
     setShadow(&I, Shadow);
 
     setOriginForNaryOp(I);
@@ -5308,6 +5499,150 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       OC.DoneAndStoreOrigin(DL.getTypeStoreSize(OutputVectorTy),
                             OutputOriginPtr);
     }
+  }
+
+  // Integer matrix multiplication:
+  // - <4 x i32> @llvm.aarch64.neon.smmla.v4i32.v16i8
+  //                 (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
+  // - <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8
+  //                 (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
+  // - <4 x i32> @llvm.aarch64.neon.usmmla.v4i32.v16i8
+  //                 (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
+  //
+  // Note:
+  // - <4 x i32> is a 2x2 matrix
+  // - <16 x i8> %X and %Y are 2x8 and 8x2 matrices respectively
+  //
+  //   2x8 %X                                8x2 %Y
+  //   [ X01 X02 X03 X04 X05 X06 X07 X08 ]   [ Y01 Y09 ]
+  //   [ X09 X10 X11 X12 X13 X14 X15 X16 ] x [ Y02 Y10 ]
+  //                                         [ Y03 Y11 ]
+  //                                         [ Y04 Y12 ]
+  //                                         [ Y05 Y13 ]
+  //                                         [ Y06 Y14 ]
+  //                                         [ Y07 Y15 ]
+  //                                         [ Y08 Y16 ]
+  //
+  // The general shadow propagation approach is:
+  // 1) get the shadows of the input matrices %X and %Y
+  // 2) change the shadow values to 0x1 if the corresponding value is fully
+  //    initialized, and 0x0 otherwise
+  // 3) perform a matrix multiplication on the shadows of %X and %Y. The output
+  //    will be a 2x2 matrix; for each element, a value of 0x8 means all the
+  //    corresponding inputs were clean.
+  // 4) blend in the shadow of %R
+  //
+  // TODO: consider allowing multiplication of zero with an uninitialized value
+  //       to result in an initialized value.
+  //
+  // Floating-point matrix multiplication:
+  // - <4 x float> @llvm.aarch64.neon.bfmmla
+  //                   (<4 x float> %R, <8 x bfloat> %X, <8 x bfloat> %Y)
+  //   %X and %Y are 2x4 and 4x2 matrices respectively
+  //
+  // Although there are half as many elements of %X and %Y compared to the
+  // integer case, each element is twice the bit-width. Thus, we can reuse the
+  // shadow propagation logic if we cast the shadows to the same type as the
+  // integer case, and apply ummla to the shadows:
+  //
+  //   2x4 %X                                4x2 %Y
+  //   [ A01:A02 A03:A04 A05:A06 A07:A08 ]   [ B01:B02 B09:B10 ]
+  //   [ A09:A10 A11:A12 A13:A14 A15:A16 ] x [ B03:B04 B11:B12 ]
+  //                                         [ B05:B06 B13:B14 ]
+  //                                         [ B07:B08 B15:B16 ]
+  //
+  // For example, consider multiplying the first row of %X with the first
+  // column of Y. We want to know if
+  // A01:A02*B01:B02 + A03:A04*B03:B04 + A05:A06*B06:B06 + A07:A08*B07:B08 is
+  // fully initialized, which will be true if and only if (A01, A02, ..., A08)
+  // and (B01, B02, ..., B08) are each fully initialized. This latter condition
+  // is equivalent to what is tested by the instrumentation for the integer
+  // form.
+  void handleNEONMatrixMultiply(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+
+    assert(I.arg_size() == 3);
+    Value *R = I.getArgOperand(0);
+    Value *A = I.getArgOperand(1);
+    Value *B = I.getArgOperand(2);
+
+    assert(I.getType() == R->getType());
+
+    assert(isa<FixedVectorType>(R->getType()));
+    assert(isa<FixedVectorType>(A->getType()));
+    assert(isa<FixedVectorType>(B->getType()));
+
+    [[maybe_unused]] FixedVectorType *RTy = cast<FixedVectorType>(R->getType());
+    [[maybe_unused]] FixedVectorType *ATy = cast<FixedVectorType>(A->getType());
+    [[maybe_unused]] FixedVectorType *BTy = cast<FixedVectorType>(B->getType());
+
+    Value *ShadowR = getShadow(&I, 0);
+    Value *ShadowA = getShadow(&I, 1);
+    Value *ShadowB = getShadow(&I, 2);
+
+    // We will use ummla to compute the shadow. These are the types it expects.
+    // These are also the types of the corresponding shadows.
+    FixedVectorType *ExpectedRTy =
+        FixedVectorType::get(IntegerType::get(*MS.C, 32), 4);
+    FixedVectorType *ExpectedATy =
+        FixedVectorType::get(IntegerType::get(*MS.C, 8), 16);
+    FixedVectorType *ExpectedBTy =
+        FixedVectorType::get(IntegerType::get(*MS.C, 8), 16);
+
+    if (RTy->getElementType()->isIntegerTy()) {
+      // Types of R and A/B are not identical e.g., <4 x i32> %R, <16 x i8> %A
+      assert(ATy->getElementType()->isIntegerTy());
+
+      assert(RTy == ExpectedRTy);
+      assert(ATy == ExpectedATy);
+      assert(BTy == ExpectedBTy);
+    } else {
+      assert(ATy->getElementType()->isFloatingPointTy());
+      assert(BTy->getElementType()->isFloatingPointTy());
+
+      // Technically, what we care about is that:
+      //   getShadowTy(RTy)->canLosslesslyBitCastTo(ExpectedRTy)) etc.
+      // but that is equivalent.
+      assert(RTy->canLosslesslyBitCastTo(ExpectedRTy));
+      assert(ATy->canLosslesslyBitCastTo(ExpectedATy));
+      assert(BTy->canLosslesslyBitCastTo(ExpectedBTy));
+
+      ShadowA = IRB.CreateBitCast(ShadowA, getShadowTy(ExpectedATy));
+      ShadowB = IRB.CreateBitCast(ShadowB, getShadowTy(ExpectedBTy));
+    }
+    assert(ATy->getElementType() == BTy->getElementType());
+
+    // From this point on, use Expected{R,A,B}Type.
+
+    // If the value is fully initialized, the shadow will be 000...001.
+    // Otherwise, the shadow will be all zero.
+    // (This is the opposite of how we typically handle shadows.)
+    ShadowA =
+        IRB.CreateZExt(IRB.CreateICmpEQ(ShadowA, getCleanShadow(ExpectedATy)),
+                       getShadowTy(ExpectedATy));
+    ShadowB =
+        IRB.CreateZExt(IRB.CreateICmpEQ(ShadowB, getCleanShadow(ExpectedBTy)),
+                       getShadowTy(ExpectedBTy));
+
+    Value *ShadowAB =
+        IRB.CreateIntrinsic(ExpectedRTy, Intrinsic::aarch64_neon_ummla,
+                            {getCleanShadow(ExpectedRTy), ShadowA, ShadowB});
+
+    // ummla multiplies a 2x8 matrix with an 8x2 matrix. If all entries of the
+    // input matrices are equal to 0x1, all entries of the output matrix will
+    // be 0x8.
+    Value *FullyInit = ConstantVector::getSplat(
+        ExpectedRTy->getElementCount(),
+        ConstantInt::get(ExpectedRTy->getElementType(), 0x8));
+
+    ShadowAB = IRB.CreateSExt(IRB.CreateICmpNE(ShadowAB, FullyInit),
+                              ShadowAB->getType());
+
+    ShadowR = IRB.CreateSExt(
+        IRB.CreateICmpNE(ShadowR, getCleanShadow(ExpectedRTy)), ExpectedRTy);
+
+    setShadow(&I, IRB.CreateOr(ShadowAB, ShadowR));
+    setOriginForNaryOp(I);
   }
 
   /// Handle intrinsics by applying the intrinsic to the shadows.
@@ -5752,22 +6087,82 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_ssse3_pmadd_ub_sw_128:
     case Intrinsic::x86_avx2_pmadd_ub_sw:
     case Intrinsic::x86_avx512_pmaddubs_w_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2);
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     // <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_ssse3_pmadd_ub_sw:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/8);
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/8,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     // <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_mmx_pmadd_wd:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/16);
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/16,
+                                      /*Lanes=*/kBothLanes);
+      break;
+
+    // BFloat16 multiply-add to single-precision
+    // <4 x float> llvm.aarch64.neon.bfmlalt
+    //                 (<4 x float>, <8 x bfloat>, <8 x bfloat>)
+    case Intrinsic::aarch64_neon_bfmlalt:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kOddLanes);
+      break;
+
+    // <4 x float> llvm.aarch64.neon.bfmlalb
+    //                 (<4 x float>, <8 x bfloat>, <8 x bfloat>)
+    case Intrinsic::aarch64_neon_bfmlalb:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kEvenLanes);
       break;
 
     // AVX Vector Neural Network Instructions: bytes
     //
-    // Multiply and Add Packed Signed and Unsigned Bytes
+    // Multiply and Add Signed Bytes
+    //   < 4 x i32> @llvm.x86.avx2.vpdpbssd.128
+    //                  (< 4 x i32>, <16 x i8>, <16 x i8>)
+    //   < 8 x i32> @llvm.x86.avx2.vpdpbssd.256
+    //                  (< 8 x i32>, <32 x i8>, <32 x i8>)
+    //   <16 x i32> @llvm.x86.avx10.vpdpbssd.512
+    //                  (<16 x i32>, <64 x i8>, <64 x i8>)
+    //
+    // Multiply and Add Signed Bytes With Saturation
+    //   < 4 x i32> @llvm.x86.avx2.vpdpbssds.128
+    //                  (< 4 x i32>, <16 x i8>, <16 x i8>)
+    //   < 8 x i32> @llvm.x86.avx2.vpdpbssds.256
+    //                  (< 8 x i32>, <32 x i8>, <32 x i8>)
+    //   <16 x i32> @llvm.x86.avx10.vpdpbssds.512
+    //                  (<16 x i32>, <64 x i8>, <64 x i8>)
+    //
+    // Multiply and Add Signed and Unsigned Bytes
+    //   < 4 x i32> @llvm.x86.avx2.vpdpbsud.128
+    //                  (< 4 x i32>, <16 x i8>, <16 x i8>)
+    //   < 8 x i32> @llvm.x86.avx2.vpdpbsud.256
+    //                  (< 8 x i32>, <32 x i8>, <32 x i8>)
+    //   <16 x i32> @llvm.x86.avx10.vpdpbsud.512
+    //                  (<16 x i32>, <64 x i8>, <64 x i8>)
+    //
+    // Multiply and Add Signed and Unsigned Bytes With Saturation
+    //   < 4 x i32> @llvm.x86.avx2.vpdpbsuds.128
+    //                  (< 4 x i32>, <16 x i8>, <16 x i8>)
+    //   < 8 x i32> @llvm.x86.avx2.vpdpbsuds.256
+    //                  (< 8 x i32>, <32 x i8>, <32 x i8>)
+    //   <16 x i32> @llvm.x86.avx512.vpdpbusds.512
+    //                  (<16 x i32>, <64 x i8>, <64 x i8>)
+    //
+    // Multiply and Add Unsigned and Signed Bytes
     //   < 4 x i32> @llvm.x86.avx512.vpdpbusd.128
     //                  (< 4 x i32>, <16 x i8>, <16 x i8>)
     //   < 8 x i32> @llvm.x86.avx512.vpdpbusd.256
@@ -5780,23 +6175,24 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //                  (< 4 x i32>, <16 x i8>, <16 x i8>)
     //   < 8 x i32> @llvm.x86.avx512.vpdpbusds.256
     //                  (< 8 x i32>, <32 x i8>, <32 x i8>)
-    //   <16 x i32> @llvm.x86.avx512.vpdpbusds.512
+    //   <16 x i32> @llvm.x86.avx10.vpdpbsuds.512
     //                  (<16 x i32>, <64 x i8>, <64 x i8>)
     //
-    //   < 4 x i32> @llvm.x86.avx2.vpdpbssd.128
-    //                  (< 4 x i32>, < 4 x i32>, < 4 x i32>)
-    //   < 8 x i32> @llvm.x86.avx2.vpdpbssd.256
-    //                  (< 8 x i32>, < 8 x i32>, < 8 x i32>)
+    // Multiply and Add Unsigned Bytes
+    //   < 4 x i32> @llvm.x86.avx2.vpdpbuud.128
+    //                  (< 4 x i32>, <16 x i8>, <16 x i8>)
+    //   < 8 x i32> @llvm.x86.avx2.vpdpbuud.256
+    //                  (< 8 x i32>, <32 x i8>, <32 x i8>)
+    //   <16 x i32> @llvm.x86.avx10.vpdpbuud.512
+    //                  (<16 x i32>, <64 x i8>, <64 x i8>)
     //
-    //   < 4 x i32> @llvm.x86.avx2.vpdpbssds.128
-    //                  (< 4 x i32>, < 4 x i32>, < 4 x i32>)
-    //   < 8 x i32> @llvm.x86.avx2.vpdpbssds.256
-    //                  (< 8 x i32>, < 8 x i32>, < 8 x i32>)
-    //
-    //   <16 x i32> @llvm.x86.avx10.vpdpbssd.512
-    //                  (<16 x i32>, <16 x i32>, <16 x i32>)
-    //   <16 x i32> @llvm.x86.avx10.vpdpbssds.512
-    //                  (<16 x i32>, <16 x i32>, <16 x i32>)
+    // Multiply and Add Unsigned Bytes With Saturation
+    //   < 4 x i32> @llvm.x86.avx2.vpdpbuuds.128
+    //                  (< 4 x i32>, <16 x i8>, <16 x i8>)
+    //   < 8 x i32> @llvm.x86.avx2.vpdpbuuds.256
+    //                  (< 8 x i32>, <32 x i8>, <32 x i8>)
+    //   <16 x i32> @llvm.x86.avx10.vpdpbuuds.512
+    //                  (<16 x i32>, <64 x i8>, <64 x i8>)
     //
     // These intrinsics are auto-upgraded into non-masked forms:
     //   <4 x i32> @llvm.x86.avx512.mask.vpdpbusd.128
@@ -5848,71 +6244,150 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_vpdpbuuds_128:
     case Intrinsic::x86_avx2_vpdpbuuds_256:
     case Intrinsic::x86_avx10_vpdpbuuds_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/4, /*EltSize=*/8);
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/4,
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     // AVX Vector Neural Network Instructions: words
     //
     // Multiply and Add Signed Word Integers
     //   < 4 x i32> @llvm.x86.avx512.vpdpwssd.128
-    //                  (< 4 x i32>, < 4 x i32>, < 4 x i32>)
+    //                  (< 4 x i32>, < 8 x i16>, < 8 x i16>)
     //   < 8 x i32> @llvm.x86.avx512.vpdpwssd.256
-    //                  (< 8 x i32>, < 8 x i32>, < 8 x i32>)
+    //                  (< 8 x i32>, <16 x i16>, <16 x i16>)
     //   <16 x i32> @llvm.x86.avx512.vpdpwssd.512
-    //                  (<16 x i32>, <16 x i32>, <16 x i32>)
+    //                  (<16 x i32>, <32 x i16>, <32 x i16>)
     //
     // Multiply and Add Signed Word Integers With Saturation
     //   < 4 x i32> @llvm.x86.avx512.vpdpwssds.128
-    //                  (< 4 x i32>, < 4 x i32>, < 4 x i32>)
+    //                  (< 4 x i32>, < 8 x i16>, < 8 x i16>)
     //   < 8 x i32> @llvm.x86.avx512.vpdpwssds.256
-    //                  (< 8 x i32>, < 8 x i32>, < 8 x i32>)
+    //                  (< 8 x i32>, <16 x i16>, <16 x i16>)
     //   <16 x i32> @llvm.x86.avx512.vpdpwssds.512
-    //                  (<16 x i32>, <16 x i32>, <16 x i32>)
+    //                  (<16 x i32>, <32 x i16>, <32 x i16>)
+    //
+    // Multiply and Add Signed and Unsigned Word Integers
+    //   < 4 x i32> @llvm.x86.avx2.vpdpwsud.128
+    //                  (< 4 x i32>, < 8 x i16>, < 8 x i16>)
+    //   < 8 x i32> @llvm.x86.avx2.vpdpwsud.256
+    //                  (< 8 x i32>, <16 x i16>, <16 x i16>)
+    //   <16 x i32> @llvm.x86.avx10.vpdpwsud.512
+    //                  (<16 x i32>, <32 x i16>, <32 x i16>)
+    //
+    // Multiply and Add Signed and Unsigned Word Integers With Saturation
+    //   < 4 x i32> @llvm.x86.avx2.vpdpwsuds.128
+    //                  (< 4 x i32>, < 8 x i16>, < 8 x i16>)
+    //   < 8 x i32> @llvm.x86.avx2.vpdpwsuds.256
+    //                  (< 8 x i32>, <16 x i16>, <16 x i16>)
+    //   <16 x i32> @llvm.x86.avx10.vpdpwsuds.512
+    //                  (<16 x i32>, <32 x i16>, <32 x i16>)
+    //
+    // Multiply and Add Unsigned and Signed Word Integers
+    //   < 4 x i32> @llvm.x86.avx2.vpdpwusd.128
+    //                  (< 4 x i32>, < 8 x i16>, < 8 x i16>)
+    //   < 8 x i32> @llvm.x86.avx2.vpdpwusd.256
+    //                  (< 8 x i32>, <16 x i16>, <16 x i16>)
+    //   <16 x i32> @llvm.x86.avx10.vpdpwusd.512
+    //                  (<16 x i32>, <32 x i16>, <32 x i16>)
+    //
+    // Multiply and Add Unsigned and Signed Word Integers With Saturation
+    //   < 4 x i32> @llvm.x86.avx2.vpdpwusds.128
+    //                  (< 4 x i32>, < 8 x i16>, < 8 x i16>)
+    //   < 8 x i32> @llvm.x86.avx2.vpdpwusds.256
+    //                  (< 8 x i32>, <16 x i16>, <16 x i16>)
+    //   <16 x i32> @llvm.x86.avx10.vpdpwusds.512
+    //                  (<16 x i32>, <32 x i16>, <32 x i16>)
+    //
+    // Multiply and Add Unsigned and Unsigned Word Integers
+    //   < 4 x i32> @llvm.x86.avx2.vpdpwuud.128
+    //                  (< 4 x i32>, < 8 x i16>, < 8 x i16>)
+    //   < 8 x i32> @llvm.x86.avx2.vpdpwuud.256
+    //                  (< 8 x i32>, <16 x i16>, <16 x i16>)
+    //   <16 x i32> @llvm.x86.avx10.vpdpwuud.512
+    //                  (<16 x i32>, <32 x i16>, <32 x i16>)
+    //
+    // Multiply and Add Unsigned and Unsigned Word Integers With Saturation
+    //   < 4 x i32> @llvm.x86.avx2.vpdpwuuds.128
+    //                  (< 4 x i32>, < 8 x i16>, < 8 x i16>)
+    //   < 8 x i32> @llvm.x86.avx2.vpdpwuuds.256
+    //                  (< 8 x i32>, <16 x i16>, <16 x i16>)
+    //   <16 x i32> @llvm.x86.avx10.vpdpwuuds.512
+    //                  (<16 x i32>, <32 x i16>, <32 x i16>)
     //
     // These intrinsics are auto-upgraded into non-masked forms:
     //   <4 x i32> @llvm.x86.avx512.mask.vpdpwssd.128
-    //                 (<4 x i32>, <4 x i32>, <4 x i32>, i8)
+    //                 (<4 x i32>, <8 x i16>, <8 x i16>, i8)
     //   <4 x i32> @llvm.x86.avx512.maskz.vpdpwssd.128
-    //                 (<4 x i32>, <4 x i32>, <4 x i32>, i8)
+    //                 (<4 x i32>, <8 x i16>, <8 x i16>, i8)
     //   <8 x i32> @llvm.x86.avx512.mask.vpdpwssd.256
-    //                 (<8 x i32>, <8 x i32>, <8 x i32>, i8)
+    //                 (<8 x i32>, <16 x i16>, <16 x i16>, i8)
     //   <8 x i32> @llvm.x86.avx512.maskz.vpdpwssd.256
-    //                 (<8 x i32>, <8 x i32>, <8 x i32>, i8)
+    //                 (<8 x i32>, <16 x i16>, <16 x i16>, i8)
     //   <16 x i32> @llvm.x86.avx512.mask.vpdpwssd.512
-    //                 (<16 x i32>, <16 x i32>, <16 x i32>, i16)
+    //                 (<16 x i32>, <32 x i16>, <32 x i16>, i16)
     //   <16 x i32> @llvm.x86.avx512.maskz.vpdpwssd.512
-    //                 (<16 x i32>, <16 x i32>, <16 x i32>, i16)
+    //                 (<16 x i32>, <32 x i16>, <32 x i16>, i16)
     //
     //   <4 x i32> @llvm.x86.avx512.mask.vpdpwssds.128
-    //                 (<4 x i32>, <4 x i32>, <4 x i32>, i8)
+    //                 (<4 x i32>, <8 x i16>, <8 x i16>, i8)
     //   <4 x i32> @llvm.x86.avx512.maskz.vpdpwssds.128
-    //                 (<4 x i32>, <4 x i32>, <4 x i32>, i8)
+    //                 (<4 x i32>, <8 x i16>, <8 x i16>, i8)
     //   <8 x i32> @llvm.x86.avx512.mask.vpdpwssds.256
-    //                 (<8 x i32>, <8 x i32>, <8 x i32>, i8)
+    //                 (<8 x i32>, <16 x i16>, <16 x i16>, i8)
     //   <8 x i32> @llvm.x86.avx512.maskz.vpdpwssds.256
-    //                 (<8 x i32>, <8 x i32>, <8 x i32>, i8)
+    //                 (<8 x i32>, <16 x i16>, <16 x i16>, i8)
     //   <16 x i32> @llvm.x86.avx512.mask.vpdpwssds.512
-    //                 (<16 x i32>, <16 x i32>, <16 x i32>, i16)
+    //                 (<16 x i32>, <32 x i16>, <32 x i16>, i16)
     //   <16 x i32> @llvm.x86.avx512.maskz.vpdpwssds.512
-    //                 (<16 x i32>, <16 x i32>, <16 x i32>, i16)
+    //                 (<16 x i32>, <32 x i16>, <32 x i16>, i16)
     case Intrinsic::x86_avx512_vpdpwssd_128:
     case Intrinsic::x86_avx512_vpdpwssd_256:
     case Intrinsic::x86_avx512_vpdpwssd_512:
     case Intrinsic::x86_avx512_vpdpwssds_128:
     case Intrinsic::x86_avx512_vpdpwssds_256:
     case Intrinsic::x86_avx512_vpdpwssds_512:
-      handleVectorPmaddIntrinsic(I, /*ReductionFactor=*/2, /*EltSize=*/16);
+    case Intrinsic::x86_avx2_vpdpwsud_128:
+    case Intrinsic::x86_avx2_vpdpwsud_256:
+    case Intrinsic::x86_avx10_vpdpwsud_512:
+    case Intrinsic::x86_avx2_vpdpwsuds_128:
+    case Intrinsic::x86_avx2_vpdpwsuds_256:
+    case Intrinsic::x86_avx10_vpdpwsuds_512:
+    case Intrinsic::x86_avx2_vpdpwusd_128:
+    case Intrinsic::x86_avx2_vpdpwusd_256:
+    case Intrinsic::x86_avx10_vpdpwusd_512:
+    case Intrinsic::x86_avx2_vpdpwusds_128:
+    case Intrinsic::x86_avx2_vpdpwusds_256:
+    case Intrinsic::x86_avx10_vpdpwusds_512:
+    case Intrinsic::x86_avx2_vpdpwuud_128:
+    case Intrinsic::x86_avx2_vpdpwuud_256:
+    case Intrinsic::x86_avx10_vpdpwuud_512:
+    case Intrinsic::x86_avx2_vpdpwuuds_128:
+    case Intrinsic::x86_avx2_vpdpwuuds_256:
+    case Intrinsic::x86_avx10_vpdpwuuds_512:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
       break;
 
-      // TODO: Dot Product of BF16 Pairs Accumulated Into Packed Single
-      // Precision
-      //   <4 x float> @llvm.x86.avx512bf16.dpbf16ps.128
-      //                   (<4 x float>, <8 x bfloat>, <8 x bfloat>)
-      //   <8 x float> @llvm.x86.avx512bf16.dpbf16ps.256
-      //                   (<8 x float>, <16 x bfloat>, <16 x bfloat>)
-      //   <16 x float> @llvm.x86.avx512bf16.dpbf16ps.512
-      //                   (<16 x float>, <32 x bfloat>, <32 x bfloat>)
-      // handleVectorPmaddIntrinsic() currently only handles integer types.
+    // Dot Product of BF16 Pairs Accumulated Into Packed Single
+    // Precision
+    //   <4 x float> @llvm.x86.avx512bf16.dpbf16ps.128
+    //                   (<4 x float>, <8 x bfloat>, <8 x bfloat>)
+    //   <8 x float> @llvm.x86.avx512bf16.dpbf16ps.256
+    //                   (<8 x float>, <16 x bfloat>, <16 x bfloat>)
+    //   <16 x float> @llvm.x86.avx512bf16.dpbf16ps.512
+    //                   (<16 x float>, <32 x bfloat>, <32 x bfloat>)
+    case Intrinsic::x86_avx512bf16_dpbf16ps_128:
+    case Intrinsic::x86_avx512bf16_dpbf16ps_256:
+    case Intrinsic::x86_avx512bf16_dpbf16ps_512:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
+      break;
 
     case Intrinsic::x86_sse_cmp_ss:
     case Intrinsic::x86_sse2_cmp_sd:
@@ -5947,7 +6422,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx_cmp_ps_256:
     case Intrinsic::x86_sse2_cmp_pd:
     case Intrinsic::x86_sse_cmp_ps:
-      handleVectorComparePackedIntrinsic(I);
+      handleVectorComparePackedIntrinsic(I, /*PredicateAsOperand=*/true);
       break;
 
     case Intrinsic::x86_bmi_bextr_32:
@@ -6010,48 +6485,62 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Packed Horizontal Add/Subtract
     case Intrinsic::x86_ssse3_phadd_w:
     case Intrinsic::x86_ssse3_phadd_w_128:
-    case Intrinsic::x86_avx2_phadd_w:
     case Intrinsic::x86_ssse3_phsub_w:
     case Intrinsic::x86_ssse3_phsub_w_128:
-    case Intrinsic::x86_avx2_phsub_w: {
-      handlePairwiseShadowOrIntrinsic(I, /*ReinterpretElemWidth=*/16);
+      handlePairwiseShadowOrIntrinsic(I, /*Shards=*/1,
+                                      /*ReinterpretElemWidth=*/16);
       break;
-    }
+
+    case Intrinsic::x86_avx2_phadd_w:
+    case Intrinsic::x86_avx2_phsub_w:
+      handlePairwiseShadowOrIntrinsic(I, /*Shards=*/2,
+                                      /*ReinterpretElemWidth=*/16);
+      break;
 
     // Packed Horizontal Add/Subtract
     case Intrinsic::x86_ssse3_phadd_d:
     case Intrinsic::x86_ssse3_phadd_d_128:
-    case Intrinsic::x86_avx2_phadd_d:
     case Intrinsic::x86_ssse3_phsub_d:
     case Intrinsic::x86_ssse3_phsub_d_128:
-    case Intrinsic::x86_avx2_phsub_d: {
-      handlePairwiseShadowOrIntrinsic(I, /*ReinterpretElemWidth=*/32);
+      handlePairwiseShadowOrIntrinsic(I, /*Shards=*/1,
+                                      /*ReinterpretElemWidth=*/32);
       break;
-    }
+
+    case Intrinsic::x86_avx2_phadd_d:
+    case Intrinsic::x86_avx2_phsub_d:
+      handlePairwiseShadowOrIntrinsic(I, /*Shards=*/2,
+                                      /*ReinterpretElemWidth=*/32);
+      break;
 
     // Packed Horizontal Add/Subtract and Saturate
     case Intrinsic::x86_ssse3_phadd_sw:
     case Intrinsic::x86_ssse3_phadd_sw_128:
-    case Intrinsic::x86_avx2_phadd_sw:
     case Intrinsic::x86_ssse3_phsub_sw:
     case Intrinsic::x86_ssse3_phsub_sw_128:
-    case Intrinsic::x86_avx2_phsub_sw: {
-      handlePairwiseShadowOrIntrinsic(I, /*ReinterpretElemWidth=*/16);
+      handlePairwiseShadowOrIntrinsic(I, /*Shards=*/1,
+                                      /*ReinterpretElemWidth=*/16);
       break;
-    }
+
+    case Intrinsic::x86_avx2_phadd_sw:
+    case Intrinsic::x86_avx2_phsub_sw:
+      handlePairwiseShadowOrIntrinsic(I, /*Shards=*/2,
+                                      /*ReinterpretElemWidth=*/16);
+      break;
 
     // Packed Single/Double Precision Floating-Point Horizontal Add
     case Intrinsic::x86_sse3_hadd_ps:
     case Intrinsic::x86_sse3_hadd_pd:
-    case Intrinsic::x86_avx_hadd_pd_256:
-    case Intrinsic::x86_avx_hadd_ps_256:
     case Intrinsic::x86_sse3_hsub_ps:
     case Intrinsic::x86_sse3_hsub_pd:
-    case Intrinsic::x86_avx_hsub_pd_256:
-    case Intrinsic::x86_avx_hsub_ps_256: {
-      handlePairwiseShadowOrIntrinsic(I);
+      handlePairwiseShadowOrIntrinsic(I, /*Shards=*/1);
       break;
-    }
+
+    case Intrinsic::x86_avx_hadd_pd_256:
+    case Intrinsic::x86_avx_hadd_ps_256:
+    case Intrinsic::x86_avx_hsub_pd_256:
+    case Intrinsic::x86_avx_hsub_ps_256:
+      handlePairwiseShadowOrIntrinsic(I, /*Shards=*/2);
+      break;
 
     case Intrinsic::x86_avx_maskstore_ps:
     case Intrinsic::x86_avx_maskstore_pd:
@@ -6256,7 +6745,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512fp16_mask_rsqrt_ph_512:
     case Intrinsic::x86_avx512fp16_mask_rsqrt_ph_256:
     case Intrinsic::x86_avx512fp16_mask_rsqrt_ph_128:
-      handleAVX512VectorGenericMaskedFP(I, /*AIndex=*/0, /*WriteThruIndex=*/1,
+      handleAVX512VectorGenericMaskedFP(I, /*DataIndices=*/{0},
+                                        /*WriteThruIndex=*/1,
                                         /*MaskIndex=*/2);
       break;
 
@@ -6308,7 +6798,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512fp16_mask_rcp_ph_512:
     case Intrinsic::x86_avx512fp16_mask_rcp_ph_256:
     case Intrinsic::x86_avx512fp16_mask_rcp_ph_128:
-      handleAVX512VectorGenericMaskedFP(I, /*AIndex=*/0, /*WriteThruIndex=*/1,
+      handleAVX512VectorGenericMaskedFP(I, /*DataIndices=*/{0},
+                                        /*WriteThruIndex=*/1,
                                         /*MaskIndex=*/2);
       break;
 
@@ -6364,7 +6855,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx10_mask_rndscale_bf16_512:
     case Intrinsic::x86_avx10_mask_rndscale_bf16_256:
     case Intrinsic::x86_avx10_mask_rndscale_bf16_128:
-      handleAVX512VectorGenericMaskedFP(I, /*AIndex=*/0, /*WriteThruIndex=*/2,
+      handleAVX512VectorGenericMaskedFP(I, /*DataIndices=*/{0},
+                                        /*WriteThruIndex=*/2,
                                         /*MaskIndex=*/3);
       break;
 
@@ -6395,6 +6887,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
   bool maybeHandleArmSIMDIntrinsic(IntrinsicInst &I) {
     switch (I.getIntrinsicID()) {
+    // Two operands e.g.,
+    // - <8 x i8>  @llvm.aarch64.neon.rshrn.v8i8  (<8 x i16>, i32)
+    // - <4 x i16> @llvm.aarch64.neon.uqrshl.v4i16(<4 x i16>, <4 x i16>)
     case Intrinsic::aarch64_neon_rshrn:
     case Intrinsic::aarch64_neon_sqrshl:
     case Intrinsic::aarch64_neon_sqrshrn:
@@ -6411,8 +6906,23 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_uqshrn:
     case Intrinsic::aarch64_neon_urshl:
     case Intrinsic::aarch64_neon_ushl:
-      // Not handled here: aarch64_neon_vsli (vector shift left and insert)
       handleVectorShiftIntrinsic(I, /* Variable */ false);
+      break;
+
+    // Vector Shift Left/Right and Insert
+    //
+    // Three operands e.g.,
+    // - <4 x i16> @llvm.aarch64.neon.vsli.v4i16
+    //                 (<4 x i16> %a, <4 x i16> %b, i32 %n)
+    // - <16 x i8> @llvm.aarch64.neon.vsri.v16i8
+    //                 (<16 x i8> %a, <16 x i8> %b, i32 %n)
+    //
+    // %b is shifted by %n bits, and the "missing" bits are filled in with %a
+    // (instead of zero-extending/sign-extending).
+    case Intrinsic::aarch64_neon_vsli:
+    case Intrinsic::aarch64_neon_vsri:
+      handleIntrinsicByApplyingToShadow(I, I.getIntrinsicID(),
+                                        /*trailingVerbatimArgs=*/1);
       break;
 
     // TODO: handling max/min similarly to AND/OR may be more precise
@@ -6434,7 +6944,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Add Long Pairwise
     case Intrinsic::aarch64_neon_saddlp:
     case Intrinsic::aarch64_neon_uaddlp: {
-      handlePairwiseShadowOrIntrinsic(I);
+      handlePairwiseShadowOrIntrinsic(I, /*Shards=*/1);
       break;
     }
 
@@ -6454,10 +6964,25 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_fcvtzs:
     case Intrinsic::aarch64_neon_fcvtzu:
     // Floating-point convert to lower precision narrow, rounding to odd
-    case Intrinsic::aarch64_neon_fcvtxn: {
-      handleNEONVectorConvertIntrinsic(I);
+    case Intrinsic::aarch64_neon_fcvtxn:
+    // Vector Conversions Between Half-Precision and Single-Precision
+    case Intrinsic::aarch64_neon_vcvthf2fp:
+    case Intrinsic::aarch64_neon_vcvtfp2hf:
+      handleNEONVectorConvertIntrinsic(I, /*FixedPoint=*/false);
       break;
-    }
+
+    // Vector Conversions Between Fixed-Point and Floating-Point
+    case Intrinsic::aarch64_neon_vcvtfxs2fp:
+    case Intrinsic::aarch64_neon_vcvtfp2fxs:
+    case Intrinsic::aarch64_neon_vcvtfxu2fp:
+    case Intrinsic::aarch64_neon_vcvtfp2fxu:
+      handleNEONVectorConvertIntrinsic(I, /*FixedPoint=*/true);
+      break;
+
+    // TODO: bfloat conversions
+    // - bfloat @llvm.aarch64.neon.bfcvt(float)
+    // - <8 x bfloat> @llvm.aarch64.neon.bfcvtn(<4 x float>)
+    // - <8 x bfloat> @llvm.aarch64.neon.bfcvtn2(<8 x bfloat>, <4 x float>)
 
     // Add reduction to scalar
     case Intrinsic::aarch64_neon_faddv:
@@ -6562,6 +7087,43 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleNEONVectorMultiplyIntrinsic(I);
       break;
     }
+
+    case Intrinsic::aarch64_neon_smmla:
+    case Intrinsic::aarch64_neon_ummla:
+    case Intrinsic::aarch64_neon_usmmla:
+    case Intrinsic::aarch64_neon_bfmmla:
+      handleNEONMatrixMultiply(I);
+      break;
+
+    // <2 x i32> @llvm.aarch64.neon.{u,s,us}dot.v2i32.v8i8
+    //               (<2 x i32> %acc, <8 x i8> %a, <8 x i8> %b)
+    // <4 x i32> @llvm.aarch64.neon.{u,s,us}dot.v4i32.v16i8
+    //               (<4 x i32> %acc, <16 x i8> %a, <16 x i8> %b)
+    case Intrinsic::aarch64_neon_sdot:
+    case Intrinsic::aarch64_neon_udot:
+    case Intrinsic::aarch64_neon_usdot:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/4,
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
+      break;
+
+    // <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v4bf16
+    //               (<2 x float> %acc, <4 x bfloat> %a, <4 x bfloat> %b)
+    // <4 x float> @llvm.aarch64.neon.bfdot.v4f32.v8bf16
+    //               (<4 x float> %acc, <8 x bfloat> %a, <8 x bfloat> %b)
+    case Intrinsic::aarch64_neon_bfdot:
+      handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
+      break;
+
+    // Floating-Point Absolute Compare Greater Than/Equal
+    case Intrinsic::aarch64_neon_facge:
+    case Intrinsic::aarch64_neon_facgt:
+      handleVectorComparePackedIntrinsic(I, /*PredicateAsOperand=*/false);
+      break;
 
     default:
       return false;
@@ -6952,12 +7514,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (!InsPoint)
       InsPoint = &I;
     NextNodeIRBuilder IRB(InsPoint);
-    const DataLayout &DL = F.getDataLayout();
-    TypeSize TS = DL.getTypeAllocSize(I.getAllocatedType());
-    Value *Len = IRB.CreateTypeSize(MS.IntptrTy, TS);
-    if (I.isArrayAllocation())
-      Len = IRB.CreateMul(Len,
-                          IRB.CreateZExtOrTrunc(I.getArraySize(), MS.IntptrTy));
+    Value *Len = IRB.CreateAllocationSize(MS.IntptrTy, &I);
 
     if (MS.CompileKernel)
       poisonAllocaKmsan(I, IRB, Len);
@@ -7083,11 +7640,51 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void dumpInst(Instruction &I) {
+    // Instruction name only
+    // For intrinsics, the full/overloaded name is used
+    //
+    // e.g., "call llvm.aarch64.neon.uqsub.v16i8"
     if (CallInst *CI = dyn_cast<CallInst>(&I)) {
       errs() << "ZZZ call " << CI->getCalledFunction()->getName() << "\n";
     } else {
       errs() << "ZZZ " << I.getOpcodeName() << "\n";
     }
+
+    // Instruction prototype (including return type and parameter types)
+    // For intrinsics, we use the base/non-overloaded name
+    //
+    // e.g., "call <16 x i8> @llvm.aarch64.neon.uqsub(<16 x i8>, <16 x i8>)"
+    unsigned NumOperands = I.getNumOperands();
+    if (CallInst *CI = dyn_cast<CallInst>(&I)) {
+      errs() << "YYY call " << *I.getType() << " @";
+
+      if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI))
+        errs() << Intrinsic::getBaseName(II->getIntrinsicID());
+      else
+        errs() << CI->getCalledFunction()->getName();
+
+      errs() << "(";
+
+      // The last operand of a CallInst is the function itself.
+      NumOperands--;
+    } else
+      errs() << "YYY " << *I.getType() << " " << I.getOpcodeName() << "(";
+
+    for (size_t i = 0; i < NumOperands; i++) {
+      if (i > 0)
+        errs() << ", ";
+
+      errs() << *(I.getOperand(i)->getType());
+    }
+
+    errs() << ")\n";
+
+    // Full instruction, including types and operand values
+    // For intrinsics, the full/overloaded name is used
+    //
+    // e.g., "%vqsubq_v.i15 = call noundef <16 x i8>
+    //            @llvm.aarch64.neon.uqsub.v16i8(<16 x i8> %vext21.i,
+    //            <16 x i8> splat (i8 1)), !dbg !66"
     errs() << "QQQ " << I << "\n";
   }
 

@@ -385,7 +385,9 @@ Builtin Macros
 
 ``__COUNTER__``
   Defined to an integer value that starts at zero and is incremented each time
-  the ``__COUNTER__`` macro is expanded.
+  the ``__COUNTER__`` macro is expanded. This is a standard feature in C2y but
+  is an extension in earlier language modes and in C++. This macro can only be
+  expanded 2147483647 times at most.
 
 ``__INCLUDE_LEVEL__``
   Defined to an integral value that is the include depth of the file currently
@@ -805,6 +807,8 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_exp(T x)               returns the base-e exponential, e^x, of the specified value            floating point types
  T __builtin_elementwise_exp2(T x)              returns the base-2 exponential, 2^x, of the specified value            floating point types
  T __builtin_elementwise_exp10(T x)             returns the base-10 exponential, 10^x, of the specified value          floating point types
+ T __builtin_elementwise_ldexp(T x, IntT y)     returns the product of x and 2 raised to the power y.                  T: floating point types,
+                                                y must be an integer type matching the shape of x.                     IntT: integer types
 
  T __builtin_elementwise_sqrt(T x)              return the square root of a floating-point number                      floating point types
  T __builtin_elementwise_roundeven(T x)         round x to the nearest integer value in floating point format,         floating point types
@@ -838,20 +842,20 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_max(T x, T y)          return x or y, whichever is larger                                     integer and floating point types
                                                 For floating point types, follows semantics of maxNum
                                                 in IEEE 754-2008. See `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_min(T x, T y)          return x or y, whichever is smaller                                    integer and floating point types
                                                 For floating point types, follows semantics of minNum
                                                 in IEEE 754-2008. See `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_maxnum(T x, T y)       return x or y, whichever is larger. Follows IEEE 754-2008              floating point types
                                                 semantics (maxNum) with +0.0>-0.0. See `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_minnum(T x, T y)       return x or y, whichever is smaller. Follows IEEE 754-2008             floating point types
                                                 semantics (minNum) with +0.0>-0.0. See `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_add_sat(T x, T y)      return the sum of x and y, clamped to the range of                     integer types
                                                 representable values for the signed/unsigned integer type.
@@ -859,19 +863,19 @@ of different sizes and signs is forbidden in binary and ternary builtins.
                                                 representable values for the signed/unsigned integer type.
  T __builtin_elementwise_maximum(T x, T y)      return x or y, whichever is larger. Follows IEEE 754-2019              floating point types
                                                 semantics, see `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_minimum(T x, T y)      return x or y, whichever is smaller. Follows IEEE 754-2019             floating point types
                                                 semantics, see `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_maximumnum(T x, T y)   return x or y, whichever is larger. Follows IEEE 754-2019              floating point types
                                                 semantics, see `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_minimumnum(T x, T y)   return x or y, whichever is smaller. Follows IEEE 754-2019             floating point types
                                                 semantics, see `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
 T __builtin_elementwise_fshl(T x, T y, T z)     perform a funnel shift left. Concatenate x and y (x is the most        integer types
                                                 significant bits of the wide value), the combined value is shifted
@@ -936,11 +940,11 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
  ET __builtin_reduce_xor(VT a)           ^                                                                      integer types
  ET __builtin_reduce_maximum(VT a)       return the largest element of the vector. Follows IEEE 754-2019        floating point types
                                          semantics, see `LangRef
-                                         <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                         <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                          for the comparison.
  ET __builtin_reduce_minimum(VT a)       return the smallest element of the vector. Follows IEEE 754-2019       floating point types
                                          semantics, see `LangRef
-                                         <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                         <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                          for the comparison.
 ======================================= ====================================================================== ==================================
 
@@ -1069,6 +1073,12 @@ The matrix type extension supports explicit casts. Implicit type conversion betw
     i = static_cast<matrix_5_5<int>>(d);
   }
 
+The matrix type extension supports column and row major memory layouts, but not
+all builtins are supported with row-major layout. The layout defaults to column
+major and can be specified using `-fmatrix-memory-layout`. To enable column 
+major layout, use `-fmatrix-memory-layout=column-major`, and for row major
+layout use `-fmatrix-memory-layout=row-major`
+
 Half-Precision Floating Point
 =============================
 
@@ -1182,6 +1192,50 @@ certain library facilities with ``_Float16``; for example, there is no ``printf`
 specifier for ``_Float16``, and (unlike ``float``) it will not be implicitly promoted to
 ``double`` when passed to ``printf``, so the programmer must explicitly cast it to
 ``double`` before using it with an ``%f`` or similar specifier.
+
+Pragmas
+=======
+
+#pragma export
+--------------
+
+Clang supports the export pragma used to indicate an
+external symbol is to be exported from the shared library being built.  The
+syntax for the pragma is:
+
+.. code-block:: c++
+
+  #pragma export (name)
+
+where ``name`` is the name of the external function or variable to be
+exported.  The symbol needs to have external linkage.  The pragma may appear
+before or after the declaration of ``name``, but must precede the
+definition.  The pragma must also appear at file scope.  If ``name`` is not
+defined, the pragma will have no effect.  The pragma needs to be specified
+in the same translation unit as ``name`` is defined.
+
+The pragma has the same effect as adding ``__attribute__((visibility("default")))``
+to the declaration of ``name``.
+
+In C++, the function being exported must be declared as ``extern "C"``.  If the
+function has overloads, the pragma only applies to the overload with ``extern "C"``
+linkage.  For example:
+
+.. code-block:: c++
+
+  #pragma export(func)
+  int func(double) { return 0; }
+  extern "C" int func(int) { return 4;}
+
+In the code above the pragma will export ``func(int)`` but not ``func(double)``.
+
+If none of the overloads are declared with ``extern "C"`` a warning will be
+generated saying the pragma didn't resolve to a declaration.  For example:
+
+.. code-block:: c++
+
+  #pragma export(func)
+  int func(double) { return 0; } // warning: failed to resolve '#pragma export' to a declaration
 
 Messages on ``deprecated`` and ``unavailable`` Attributes
 =========================================================
@@ -1821,6 +1875,7 @@ Octal literals prefixed with ``0o`` or ``0O``                                  C
 ``_Countof`` (N3369, N3469)                                                    C2y           C89
 ``_Generic`` with a type operand (N3260)                                       C2y           C89, C++
 ``++``/``--`` on ``_Complex`` value (N3259)                                    C2y           C89, C++
+``__COUNTER__`` (N3457)                                                        C2y           C89, C++
 ============================================= ================================ ============= =============
 
 Builtin type aliases
@@ -2039,8 +2094,6 @@ The following type trait primitives are supported by Clang. Those traits marked
   is trivially relocatable, as defined by the C++26 standard [meta.unary.prop].
   Note that when relocating the caller code should ensure that if the object is polymorphic,
   the dynamic type is of the most derived type. Padding bytes should not be copied.
-* ``__builtin_is_replaceable`` (C++): Returns true if an object
-  is replaceable, as defined by the C++26 standard [meta.unary.prop].
 * ``__is_trivially_equality_comparable`` (Clang): Returns true if comparing two
   objects of the provided type is known to be equivalent to comparing their
   object representations. Note that types containing padding bytes are never
@@ -2405,6 +2458,60 @@ those modes.
 
 Use ``__has_feature(c_fixed_enum)`` to determine whether support for fixed
 underlying types is available in C23 and later.
+
+Enumerations with no enumerators
+--------------------------------
+
+Clang provides support for Microsoft extensions to support enumerations with no enumerators.
+
+.. code-block:: c++
+
+  typedef enum empty { } A;
+
+Microsoft Anonymous Structs and Unions
+--------------------------------------
+
+Clang provides support for a Microsoft extension that allows use of named struct or union types to
+declare anonymous members inside another struct or union, making their fields directly accessible
+from the enclosing type.
+
+For example, consider the following code:
+
+.. code-block:: c
+
+    struct Inner {
+        int x;
+        int y;
+    };
+
+    struct Outer {
+        struct Inner;  /* Microsoft extension: named anonymous struct member */
+    };
+
+    void f(struct Outer *o) {
+        o->x = 1;      /* accesses x member of anonymous member of type Inner directly */
+        o->y = 1;      /* accesses x member of anonymous member of type Inner directly */
+    }
+
+Without this extension, such declarations generate a warning that the declaration does not
+declare anything, the associated member names are not available for access, and the layout
+of types containing such declarations are affected accordingly.
+
+This extension can be controlled independently of other Microsoft extensions:
+
+* ``-fms-anonymous-structs``
+    Enable named anonymous struct/union support
+
+* ``-fno-ms-anonymous-structs``
+    Disable anonymous struct/union support
+
+This extension is also **implicitly enabled** when either of the following options is used:
+
+* ``-fms-extensions``
+* ``-fms-compatibility``
+
+When multiple controlling options are specified, the last option on the command line takes
+precedence.
 
 Interoperability with C++11 lambdas
 -----------------------------------
@@ -2820,6 +2927,50 @@ between the host and device is known to be compatible.
     global OnlySL *d
   );
   #pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : disable
+
+``__cl_clang_function_scope_local_variables``
+----------------------------------------------
+
+This extension allows declaring variables in the local address space within
+function scope, including non-kernel functions or nested scopes within a kernel,
+using regular OpenCL extension pragma mechanism detailed in `the OpenCL
+Extension Specification, section 1.2
+<https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#extensions-overview>`_.
+
+This relaxes the `Declaration Scopes and Variable Types
+<https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_C.html#_usage_for_declaration_scopes_and_variable_types>`_
+rule that limits local-address-space variable declarations to the outermost
+compound statement inside the body of the kernel function.
+
+To expose static local allocations at kernel scope, targets can either force-
+inline non-kernel functions that declare local memory or pass a kernel-allocated
+local buffer to those functions via an implicit argument.
+
+.. code-block:: c++
+
+  #pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : enable
+  kernel void kernel1(...)
+  {
+    {
+      local float a; // compiled - no diagnostic generated
+    }
+  }
+  void foo()
+  {
+    local float c; // compiled - no diagnostic generated
+  }
+
+  #pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : disable
+  kernel void kernel2(...)
+  {
+    {
+      local float a; // error - variables in the local address space can only be declared in the outermost scope of a kernel function
+    }
+  }
+  void bar()
+  {
+    local float c; // error - non-kernel function variable cannot be declared in local address space
+  }
 
 Remove address space builtin function
 -------------------------------------
@@ -3680,6 +3831,42 @@ the arguments. Both arguments and the result have the bitwidth specified
 by the name of the builtin. These builtins can be used within constant
 expressions.
 
+``__builtin_stdc_rotate_left`` and ``__builtin_stdc_rotate_right``
+------------------------------------------------------------------
+
+**Syntax**:
+
+.. code-block:: c
+
+    T __builtin_stdc_rotate_left(T value, count)
+    T __builtin_stdc_rotate_right(T value, count)
+
+where ``T`` is any unsigned integer type and ``count`` is any integer type.
+
+**Description**:
+
+These builtins rotate the bits in ``value`` by ``count`` positions. The
+``__builtin_stdc_rotate_left`` builtin rotates bits to the left, while
+``__builtin_stdc_rotate_right`` rotates bits to the right. The first
+argument (``value``) must be an unsigned integer type, including ``_BitInt`` types.
+The second argument (``count``) can be any integer type. The rotation count is
+normalized modulo the bit-width of the value being rotated, with negative
+counts converted to equivalent positive rotations (e.g., rotating left
+by ``-1`` is equivalent to rotating left by ``BitWidth-1``). These builtins can
+be used within constant expressions.
+
+**Example of use**:
+
+.. code-block:: c
+
+  unsigned char rotated_left = __builtin_stdc_rotate_left((unsigned char)0xB1, 3);
+  unsigned int rotated_right = __builtin_stdc_rotate_right(0x12345678U, 8);
+
+  unsigned char neg_rotate = __builtin_stdc_rotate_left((unsigned char)0xB1, -1);
+
+  unsigned _BitInt(20) value = 0xABCDE;
+  unsigned _BitInt(20) rotated = __builtin_stdc_rotate_left(value, 5);
+
 ``__builtin_unreachable``
 -------------------------
 
@@ -4298,9 +4485,9 @@ as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
 ``__builtin_counted_by_ref`` returns a pointer to the count field from the
 ``counted_by`` attribute.
 
-The argument must be a flexible array member. If the argument isn't a flexible
-array member or doesn't have the ``counted_by`` attribute, the builtin returns
-``(void *)0``.
+The argument must be a flexible array member or a pointer with the ``counted_by``
+attribute. If the argument doesn't have the ``counted_by`` attribute, the builtin
+returns ``(void *)0``.
 
 **Syntax**:
 
@@ -4331,9 +4518,9 @@ array member or doesn't have the ``counted_by`` attribute, the builtin returns
 The ``__builtin_counted_by_ref`` builtin allows the programmer to prevent a
 common error associated with the ``counted_by`` attribute. When using the
 ``counted_by`` attribute, the ``count`` field **must** be set before the
-flexible array member can be accessed. Otherwise, the sanitizers may view such
-accesses as false positives. For instance, it's not uncommon for programmers to
-initialize the flexible array before setting the ``count`` field:
+flexible array member or pointer can be accessed. Otherwise, the sanitizers may
+view such accesses as false positives. For instance, it's not uncommon for
+programmers to initialize the flexible array before setting the ``count`` field:
 
 .. code-block:: c
 
@@ -4351,14 +4538,46 @@ initialize the flexible array before setting the ``count`` field:
   ptr->count = COUNT;
 
 Enforcing the rule that ``ptr->count = COUNT;`` must occur after every
-allocation of a struct with a flexible array member with the ``counted_by``
-attribute is prone to failure in large code bases. This builtin mitigates this
-for allocators (like in Linux) that are implemented in a way where the counter
-assignment can happen automatically.
+allocation of a struct with a ``counted_by`` member is prone to failure in large
+code bases. This builtin mitigates this for allocators (like in Linux) that are
+implemented in a way where the counter assignment can happen automatically.
 
 **Note:** The value returned by ``__builtin_counted_by_ref`` cannot be assigned
 to a variable, have its address taken, or passed into or returned from a
 function, because doing so violates bounds safety conventions.
+
+.. _builtin_stack_address-doc:
+
+``__builtin_stack_address``
+---------------------------
+
+``__builtin_stack_address`` returns the address that separates the current
+function's (i.e. the one calling the builtin) stack space and the region of the
+stack that may be modified by called functions. The semantics match those of
+GCC's builtin of the same name.
+
+**Syntax**:
+
+.. code-block:: c++
+
+  void *__builtin_stack_address()
+
+**Example**:
+
+.. code-block:: c++
+
+  void *sp = __builtin_stack_address();
+
+**Description**:
+
+The address returned by ``__builtin_stack_address`` identifies the starting
+address of the stack region that may be used by called functions.
+
+On some architectures (e.g. x86), it's sufficient to return the value in the
+stack pointer register directly. On others (e.g. SPARCv9), adjustments are
+required to the value of the stack pointer register.
+``__builtin_stack_address`` performs the necessary adjustments and returns the
+correct boundary address.
 
 Multiprecision Arithmetic Builtins
 ----------------------------------
@@ -4772,6 +4991,20 @@ The syntax and semantics are similar to GCC-compatible __atomic_* builtins.
 The builtins work with signed and unsigned integers and require to specify memory ordering.
 The return value is the original value that was stored in memory before comparison.
 
+Clang provides two additional atomic builtins with incrementing behavior. These
+builtins perform an unsigned increment or decrement modulo a  wrap-around value.
+
+* ``__atomic_fetch_uinc``
+* ``__atomic_fetch_udec``
+
+See the LLVM IR `atomicrmw <https://llvm.org/docs/LangRef.html#atomicrmw-instruction>`_
+instruction for the complete semantics of uinc_wrap and udec_wrap.
+
+Atomic memory scopes are designed to assist optimizations for systems with
+several levels of memory hierarchy like GPUs. The following memory scopes are
+currently supported:
+
+
 Example:
 
 .. code-block:: c
@@ -4838,10 +5071,6 @@ are identical to the standard GNU / GCC atomic builtins but taking an extra
 memory scope argument. These are designed to be a generic alternative to the
 ``__opencl_atomic_*`` builtin functions for targets that support atomic memory
 scopes.
-
-Atomic memory scopes are designed to assist optimizations for systems with
-several levels of memory hierarchy like GPUs. The following memory scopes are
-currently supported:
 
 * ``__MEMORY_SCOPE_SYSTEM``
 * ``__MEMORY_SCOPE_DEVICE``

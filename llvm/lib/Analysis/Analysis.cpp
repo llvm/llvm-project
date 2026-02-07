@@ -63,6 +63,7 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeRegionPrinterPass(Registry);
   initializeRegionOnlyViewerPass(Registry);
   initializeRegionOnlyPrinterPass(Registry);
+  initializeRuntimeLibraryInfoWrapperPass(Registry);
   initializeSCEVAAWrapperPassPass(Registry);
   initializeScalarEvolutionWrapperPassPass(Registry);
   initializeStackSafetyGlobalInfoWrapperPassPass(Registry);

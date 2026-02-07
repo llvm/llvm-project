@@ -4,36 +4,36 @@
 
 define { half, half } @test_sincos_f16(half %a) #0 {
 ; WASM32-LABEL: test_sincos_f16:
-; WASM32:         .functype test_sincos_f16 (i32, f32) -> ()
+; WASM32:         .functype test_sincos_f16 (i32, i32) -> ()
+; WASM32-NEXT:    .local f32
 ; WASM32-NEXT:  # %bb.0:
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    call __truncsfhf2
 ; WASM32-NEXT:    call __extendhfsf2
-; WASM32-NEXT:    local.tee 1
+; WASM32-NEXT:    local.tee 2
 ; WASM32-NEXT:    call cosf
 ; WASM32-NEXT:    call __truncsfhf2
 ; WASM32-NEXT:    i32.store16 2
 ; WASM32-NEXT:    local.get 0
-; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 2
 ; WASM32-NEXT:    call sinf
 ; WASM32-NEXT:    call __truncsfhf2
 ; WASM32-NEXT:    i32.store16 0
 ; WASM32-NEXT:    # fallthrough-return
 ;
 ; WASM64-LABEL: test_sincos_f16:
-; WASM64:         .functype test_sincos_f16 (i64, f32) -> ()
+; WASM64:         .functype test_sincos_f16 (i64, i32) -> ()
+; WASM64-NEXT:    .local f32
 ; WASM64-NEXT:  # %bb.0:
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    call __truncsfhf2
 ; WASM64-NEXT:    call __extendhfsf2
-; WASM64-NEXT:    local.tee 1
+; WASM64-NEXT:    local.tee 2
 ; WASM64-NEXT:    call cosf
 ; WASM64-NEXT:    call __truncsfhf2
 ; WASM64-NEXT:    i32.store16 2
 ; WASM64-NEXT:    local.get 0
-; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 2
 ; WASM64-NEXT:    call sinf
 ; WASM64-NEXT:    call __truncsfhf2
 ; WASM64-NEXT:    i32.store16 0
@@ -44,12 +44,12 @@ define { half, half } @test_sincos_f16(half %a) #0 {
 
 define half @test_sincos_f16_only_use_sin(half %a) #0 {
 ; CHECK-LABEL: test_sincos_f16_only_use_sin:
-; CHECK:         .functype test_sincos_f16_only_use_sin (f32) -> (f32)
+; CHECK:         .functype test_sincos_f16_only_use_sin (i32) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    call __truncsfhf2
 ; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    call sinf
+; CHECK-NEXT:    call __truncsfhf2
 ; CHECK-NEXT:    # fallthrough-return
   %result = call { half, half } @llvm.sincos.f16(half %a)
   %result.0 = extractvalue { half, half } %result, 0
@@ -58,12 +58,12 @@ define half @test_sincos_f16_only_use_sin(half %a) #0 {
 
 define half @test_sincos_f16_only_use_cos(half %a) #0 {
 ; CHECK-LABEL: test_sincos_f16_only_use_cos:
-; CHECK:         .functype test_sincos_f16_only_use_cos (f32) -> (f32)
+; CHECK:         .functype test_sincos_f16_only_use_cos (i32) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    call __truncsfhf2
 ; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    call cosf
+; CHECK-NEXT:    call __truncsfhf2
 ; CHECK-NEXT:    # fallthrough-return
   %result = call { half, half } @llvm.sincos.f16(half %a)
   %result.1 = extractvalue { half, half } %result, 1
@@ -72,62 +72,60 @@ define half @test_sincos_f16_only_use_cos(half %a) #0 {
 
 define { <2 x half>, <2 x half> } @test_sincos_v2f16(<2 x half> %a) #0 {
 ; WASM32-LABEL: test_sincos_v2f16:
-; WASM32:         .functype test_sincos_v2f16 (i32, f32, f32) -> ()
+; WASM32:         .functype test_sincos_v2f16 (i32, i32, i32) -> ()
+; WASM32-NEXT:    .local f32, f32
 ; WASM32-NEXT:  # %bb.0:
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    local.get 2
-; WASM32-NEXT:    call __truncsfhf2
 ; WASM32-NEXT:    call __extendhfsf2
-; WASM32-NEXT:    local.tee 2
+; WASM32-NEXT:    local.tee 3
 ; WASM32-NEXT:    call cosf
 ; WASM32-NEXT:    call __truncsfhf2
 ; WASM32-NEXT:    i32.store16 6
 ; WASM32-NEXT:    local.get 0
 ; WASM32-NEXT:    local.get 1
-; WASM32-NEXT:    call __truncsfhf2
 ; WASM32-NEXT:    call __extendhfsf2
-; WASM32-NEXT:    local.tee 1
+; WASM32-NEXT:    local.tee 4
 ; WASM32-NEXT:    call cosf
 ; WASM32-NEXT:    call __truncsfhf2
 ; WASM32-NEXT:    i32.store16 4
 ; WASM32-NEXT:    local.get 0
-; WASM32-NEXT:    local.get 2
+; WASM32-NEXT:    local.get 3
 ; WASM32-NEXT:    call sinf
 ; WASM32-NEXT:    call __truncsfhf2
 ; WASM32-NEXT:    i32.store16 2
 ; WASM32-NEXT:    local.get 0
-; WASM32-NEXT:    local.get 1
+; WASM32-NEXT:    local.get 4
 ; WASM32-NEXT:    call sinf
 ; WASM32-NEXT:    call __truncsfhf2
 ; WASM32-NEXT:    i32.store16 0
 ; WASM32-NEXT:    # fallthrough-return
 ;
 ; WASM64-LABEL: test_sincos_v2f16:
-; WASM64:         .functype test_sincos_v2f16 (i64, f32, f32) -> ()
+; WASM64:         .functype test_sincos_v2f16 (i64, i32, i32) -> ()
+; WASM64-NEXT:    .local f32, f32
 ; WASM64-NEXT:  # %bb.0:
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    local.get 2
-; WASM64-NEXT:    call __truncsfhf2
 ; WASM64-NEXT:    call __extendhfsf2
-; WASM64-NEXT:    local.tee 2
+; WASM64-NEXT:    local.tee 3
 ; WASM64-NEXT:    call cosf
 ; WASM64-NEXT:    call __truncsfhf2
 ; WASM64-NEXT:    i32.store16 6
 ; WASM64-NEXT:    local.get 0
 ; WASM64-NEXT:    local.get 1
-; WASM64-NEXT:    call __truncsfhf2
 ; WASM64-NEXT:    call __extendhfsf2
-; WASM64-NEXT:    local.tee 1
+; WASM64-NEXT:    local.tee 4
 ; WASM64-NEXT:    call cosf
 ; WASM64-NEXT:    call __truncsfhf2
 ; WASM64-NEXT:    i32.store16 4
 ; WASM64-NEXT:    local.get 0
-; WASM64-NEXT:    local.get 2
+; WASM64-NEXT:    local.get 3
 ; WASM64-NEXT:    call sinf
 ; WASM64-NEXT:    call __truncsfhf2
 ; WASM64-NEXT:    i32.store16 2
 ; WASM64-NEXT:    local.get 0
-; WASM64-NEXT:    local.get 1
+; WASM64-NEXT:    local.get 4
 ; WASM64-NEXT:    call sinf
 ; WASM64-NEXT:    call __truncsfhf2
 ; WASM64-NEXT:    i32.store16 0

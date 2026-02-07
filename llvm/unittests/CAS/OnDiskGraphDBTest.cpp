@@ -8,6 +8,9 @@
 
 #include "CASTestConfig.h"
 #include "OnDiskCommonUtils.h"
+#include "llvm/Support/Alignment.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Testing/Support/Error.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
@@ -59,6 +62,14 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBTest) {
   ASSERT_TRUE(Obj2.has_value());
   EXPECT_EQ(toStringRef(DB->getObjectData(*Obj2)), "world");
 
+  ASSERT_THAT_ERROR(DB->validateObjectID(*ID1), Succeeded());
+  ASSERT_THAT_ERROR(DB->validateObjectID(ObjectID::fromOpaqueData(0)),
+                    Failed());
+  ASSERT_THAT_ERROR(DB->validateObjectID(ObjectID::fromOpaqueData(4)),
+                    Failed());
+  ASSERT_THAT_ERROR(DB->validateObjectID(ObjectID::fromOpaqueData(8)),
+                    Failed());
+
   size_t LargeDataSize = 256LL * 1024LL; // 256K.
   // The precise size number is not important, we mainly check that the large
   // object will be properly accounted for.
@@ -102,7 +113,7 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInSingleNode) {
   std::unique_ptr<OnDiskGraphDB> DB;
   ASSERT_THAT_ERROR(
       OnDiskGraphDB::open(Temp.path(), "blake3", sizeof(HashType),
-                          std::move(UpstreamDB),
+                          UpstreamDB.get(), /*Logger=*/nullptr,
                           OnDiskGraphDB::FaultInPolicy::SingleNode)
           .moveInto(DB),
       Succeeded());
@@ -149,7 +160,7 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInSingleNode) {
   // the upstream.
   ASSERT_THAT_ERROR(
       OnDiskGraphDB::open(Temp.path(), "blake3", sizeof(HashType),
-                          /*UpstreamDB=*/nullptr,
+                          /*UpstreamDB=*/nullptr, /*Logger=*/nullptr,
                           OnDiskGraphDB::FaultInPolicy::SingleNode)
           .moveInto(DB),
       Succeeded());
@@ -208,7 +219,8 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInFullTree) {
   unittest::TempDir Temp("ondiskcas", /*Unique=*/true);
   std::unique_ptr<OnDiskGraphDB> DB;
   ASSERT_THAT_ERROR(OnDiskGraphDB::open(Temp.path(), "blake3", sizeof(HashType),
-                                        std::move(UpstreamDB),
+                                        UpstreamDB.get(),
+                                        /*Logger=*/nullptr,
                                         OnDiskGraphDB::FaultInPolicy::FullTree)
                         .moveInto(DB),
                     Succeeded());
@@ -228,6 +240,7 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInFullTree) {
   // the upstream.
   ASSERT_THAT_ERROR(OnDiskGraphDB::open(Temp.path(), "blake3", sizeof(HashType),
                                         /*UpstreamDB=*/nullptr,
+                                        /*Logger=*/nullptr,
                                         OnDiskGraphDB::FaultInPolicy::FullTree)
                         .moveInto(DB),
                     Succeeded());
@@ -264,14 +277,14 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInPolicyConflict) {
     unittest::TempDir Temp("ondiskcas", /*Unique=*/true);
     std::unique_ptr<OnDiskGraphDB> DB;
     ASSERT_THAT_ERROR(OnDiskGraphDB::open(Temp.path(), "blake3",
-                                          sizeof(HashType),
-                                          std::move(UpstreamDB), Policy1)
+                                          sizeof(HashType), UpstreamDB.get(),
+                                          /*Logger=*/nullptr, Policy1)
                           .moveInto(DB),
                       Succeeded());
     DB.reset();
     ASSERT_THAT_ERROR(OnDiskGraphDB::open(Temp.path(), "blake3",
-                                          sizeof(HashType),
-                                          std::move(UpstreamDB), Policy2)
+                                          sizeof(HashType), UpstreamDB.get(),
+                                          /*Logger=*/nullptr, Policy2)
                           .moveInto(DB),
                       Failed());
   };
@@ -281,6 +294,211 @@ TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInPolicyConflict) {
   // Open as 'full', then as 'single'.
   tryFaultInPolicyConflict(OnDiskGraphDB::FaultInPolicy::FullTree,
                            OnDiskGraphDB::FaultInPolicy::SingleNode);
+}
+
+static std::unique_ptr<unittest::TempFile> createLargeFile(char initChar) {
+  auto TmpFile = std::make_unique<unittest::TempFile>(
+      "largefile.o", /*Suffix=*/"", /*Contents=*/"",
+      /*Unique=*/true);
+  StringRef Path = TmpFile->path();
+  std::error_code EC;
+  raw_fd_stream Out(Path, EC);
+  EXPECT_FALSE(EC);
+  SmallString<200> Data;
+  Data += initChar;
+  for (unsigned i = 1; i != 200; ++i) {
+    Data += i;
+  }
+  for (unsigned i = 0; i != 1000; ++i) {
+    Out.write(Data.data(), Data.size());
+  }
+  return TmpFile;
+}
+
+static std::unique_ptr<unittest::TempFile>
+createLargePageAlignedFile(char initChar) {
+  auto TmpFile = std::make_unique<unittest::TempFile>(
+      "largepagealignedfile.o", /*Suffix=*/"", /*Contents=*/"",
+      /*Unique=*/true);
+  StringRef Path = TmpFile->path();
+  std::error_code EC;
+  raw_fd_stream Out(Path, EC);
+  EXPECT_FALSE(EC);
+  SmallString<256> Data;
+  Data += initChar;
+  for (unsigned i = 1; i != sys::Process::getPageSizeEstimate(); ++i) {
+    Data += char(i);
+  }
+  for (unsigned i = 0; i != 64; ++i) {
+    Out.write(Data.data(), Data.size());
+  }
+  Out.close();
+  uint64_t FileSize;
+  EC = sys::fs::file_size(Path, FileSize);
+  EXPECT_FALSE(EC);
+  assert(isAligned(Align(sys::Process::getPageSizeEstimate()), FileSize));
+  return TmpFile;
+}
+
+TEST_F(OnDiskCASTest, OnDiskGraphDBFaultInLargeFile) {
+  auto runCommonTests =
+      [](function_ref<std::unique_ptr<unittest::TempFile>(char)> createFileFn) {
+        unittest::TempDir TempUpstream("ondiskcas-upstream", /*Unique=*/true);
+        std::unique_ptr<OnDiskGraphDB> UpstreamDB;
+        ASSERT_THAT_ERROR(
+            OnDiskGraphDB::open(TempUpstream.path(), "blake3", sizeof(HashType))
+                .moveInto(UpstreamDB),
+            Succeeded());
+
+        auto TmpFile = createFileFn('a');
+        auto Path = TmpFile->path();
+        HashType FileDigest = digestFile(Path);
+        std::optional<ObjectID> UpstrID;
+        ASSERT_THAT_ERROR(
+            UpstreamDB->getReference(FileDigest).moveInto(UpstrID),
+            Succeeded());
+        ASSERT_THAT_ERROR(UpstreamDB->storeFile(*UpstrID, Path), Succeeded());
+
+        unittest::TempDir Temp("ondiskcas", /*Unique=*/true);
+        std::unique_ptr<OnDiskGraphDB> DB;
+        ASSERT_THAT_ERROR(
+            OnDiskGraphDB::open(Temp.path(), "blake3", sizeof(HashType),
+                                UpstreamDB.get(), /*Logger=*/nullptr,
+                                OnDiskGraphDB::FaultInPolicy::SingleNode)
+                .moveInto(DB),
+            Succeeded());
+
+        std::optional<ObjectID> ID1;
+        ASSERT_THAT_ERROR(DB->getReference(FileDigest).moveInto(ID1),
+                          Succeeded());
+        std::optional<ondisk::ObjectHandle> Obj;
+        ASSERT_THAT_ERROR(DB->load(*ID1).moveInto(Obj), Succeeded());
+        ASSERT_TRUE(Obj.has_value());
+
+        std::optional<ObjectID> ID2;
+        ASSERT_THAT_ERROR(
+            store(*DB, toStringRef(DB->getObjectData(*Obj)), {}).moveInto(ID2),
+            Succeeded());
+        ASSERT_TRUE(ID2.has_value());
+        EXPECT_EQ(*ID1, *ID2);
+      };
+
+  runCommonTests(createLargeFile);
+  runCommonTests(createLargePageAlignedFile);
+}
+
+TEST_F(OnDiskCASTest, OnDiskGraphDBFileAPIs) {
+  unittest::TempDir Temp("ondiskcas", /*Unique=*/true);
+  std::unique_ptr<OnDiskGraphDB> DB;
+  ASSERT_THAT_ERROR(
+      OnDiskGraphDB::open(Temp.path(), "blake3", sizeof(HashType)).moveInto(DB),
+      Succeeded());
+
+  SmallVector<std::unique_ptr<unittest::TempFile>, 4> TempFiles;
+
+  // Create a file with small size and and controlling the initial byte so
+  // caller can create different contents.
+  auto createSmallFile = [&TempFiles](char initChar) -> StringRef {
+    TempFiles.push_back(std::make_unique<unittest::TempFile>(
+        "smallfile.o", /*Suffix=*/"", /*Contents=*/"",
+        /*Unique=*/true));
+    StringRef Path = TempFiles.back()->path();
+    std::error_code EC;
+    raw_fd_stream Out(Path, EC);
+    EXPECT_FALSE(EC);
+    SmallString<200> Data;
+    Data += initChar;
+    for (unsigned i = 1; i != 200; ++i) {
+      Data += i;
+    }
+    Out.write(Data.data(), Data.size());
+    return Path;
+  };
+
+  auto createLargeFile = [&TempFiles](char initChar) -> StringRef {
+    TempFiles.push_back(::createLargeFile(initChar));
+    return TempFiles.back()->path();
+  };
+
+  auto createLargePageAlignedFile = [&TempFiles](char initChar) -> StringRef {
+    TempFiles.push_back(::createLargePageAlignedFile(initChar));
+    return TempFiles.back()->path();
+  };
+
+  auto runCommonTests =
+      [&DB](function_ref<StringRef(char)> createFileFn,
+            function_ref<void(const OnDiskGraphDB::FileBackedData &FBD)>
+                additionalChecks) {
+        {
+          auto FilePath = createFileFn('a');
+          ObjectID ID1 = digestFile(*DB, FilePath);
+          ASSERT_THAT_ERROR(DB->storeFile(ID1, FilePath), Succeeded());
+          EXPECT_TRUE(sys::fs::exists(FilePath));
+
+          std::optional<ondisk::ObjectHandle> Obj;
+          ASSERT_THAT_ERROR(DB->load(ID1).moveInto(Obj), Succeeded());
+          EXPECT_TRUE(DB->getObjectRefs(*Obj).empty());
+          ArrayRef<char> Contents = DB->getObjectData(*Obj);
+          EXPECT_EQ(Contents.data()[Contents.size()], '\0');
+          ObjectID ID2 = digest(*DB, toStringRef(Contents), {});
+          EXPECT_EQ(ID1, ID2);
+
+          auto FBD = DB->getInternalFileBackedObjectData(*Obj);
+          EXPECT_EQ(FBD.Data, Contents);
+          additionalChecks(FBD);
+        }
+      };
+
+  auto checkSmallFile = [](const OnDiskGraphDB::FileBackedData &FBD) {
+    EXPECT_FALSE(FBD.FileInfo.has_value());
+  };
+
+  auto checkLargeFile = [](const OnDiskGraphDB::FileBackedData &FBD) {
+    ASSERT_TRUE(FBD.FileInfo.has_value());
+    EXPECT_FALSE(FBD.FileInfo->IsFileNulTerminated);
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
+        MemoryBuffer::getFile(FBD.FileInfo->FilePath);
+    ASSERT_TRUE(!!MB);
+    ASSERT_NE(*MB, nullptr);
+    EXPECT_EQ((*MB)->getBuffer(), toStringRef(FBD.Data));
+  };
+
+  auto checkLargePageAlignedFile =
+      [](const OnDiskGraphDB::FileBackedData &FBD) {
+        ASSERT_TRUE(FBD.FileInfo.has_value());
+        EXPECT_TRUE(FBD.FileInfo->IsFileNulTerminated);
+        ErrorOr<std::unique_ptr<MemoryBuffer>> MB =
+            MemoryBuffer::getFile(FBD.FileInfo->FilePath);
+        ASSERT_TRUE(!!MB);
+        ASSERT_NE(*MB, nullptr);
+        EXPECT_EQ((*MB)->getBuffer().back(), '\0');
+        EXPECT_EQ((*MB)->getBuffer().drop_back(1), toStringRef(FBD.Data));
+      };
+
+  runCommonTests(createSmallFile, checkSmallFile);
+  runCommonTests(createLargeFile, checkLargeFile);
+  runCommonTests(createLargePageAlignedFile, checkLargePageAlignedFile);
+
+  // Check non-leaf node.
+  {
+    std::optional<ObjectID> ID1;
+    ASSERT_THAT_ERROR(store(*DB, "hello", {}).moveInto(ID1), Succeeded());
+
+    auto Path = createLargeFile('r');
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MB = MemoryBuffer::getFile(Path);
+    ASSERT_TRUE(!!MB);
+    ASSERT_NE(*MB, nullptr);
+    std::optional<ObjectID> ID2;
+    ASSERT_THAT_ERROR(store(*DB, (*MB)->getBuffer(), *ID1).moveInto(ID2),
+                      Succeeded());
+
+    std::optional<ondisk::ObjectHandle> Obj;
+    ASSERT_THAT_ERROR(DB->load(*ID2).moveInto(Obj), Succeeded());
+    ArrayRef<char> Contents = DB->getObjectData(*Obj);
+    auto FBD = DB->getInternalFileBackedObjectData(*Obj);
+    EXPECT_EQ(FBD.Data, Contents);
+    EXPECT_FALSE(FBD.FileInfo.has_value());
+  }
 }
 
 #if defined(EXPENSIVE_CHECKS) && !defined(_WIN32)

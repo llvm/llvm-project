@@ -206,6 +206,8 @@ enum Kind {
   kw_readwrite,
   kw_argmem,
   kw_inaccessiblemem,
+  kw_target_mem0,
+  kw_target_mem1,
   kw_errnomem,
 
   // Legacy attributes:
@@ -219,6 +221,12 @@ enum Kind {
   kw_address_is_null,
   kw_provenance,
   kw_read_provenance,
+
+  // denormal_fpenv attribute:
+  kw_ieee,
+  kw_preservesign,
+  kw_positivezero,
+  kw_dynamic,
 
   // nofpclass attribute:
   kw_all,

@@ -28,7 +28,7 @@ TEST_F(AlignBracketsTest, AlignsAfterOpenBracket) {
       "SomeLongVariableName->someFunction(foooooooo(aaaaaaaaaaaaaaa,\n"
       "                                             aaaaaaaaaaaaaaaaaaaaa));");
   FormatStyle Style = getLLVMStyle();
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  Style.AlignAfterOpenBracket = false;
   verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
                "    aaaaaaaaaaa aaaaaaaa, aaaaaaaaa aaaaaaa) {}",
                Style);
@@ -64,7 +64,7 @@ TEST_F(AlignBracketsTest, AlignsAfterOpenBracket) {
                Style);
   Style.ColumnLimit = 80;
 
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.BreakAfterOpenBracketFunction = true;
   Style.BinPackArguments = false;
   Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
@@ -115,7 +115,9 @@ TEST_F(AlignBracketsTest, AlignsAfterOpenBracket) {
       "    XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXZZZZZZZZZZZZZZZZZZZZZZZZZ()));",
       Style);
 
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  Style.BreakAfterOpenBracketFunction = true;
+  Style.BreakBeforeCloseBracketFunction = true;
+  Style.BreakBeforeCloseBracketBracedList = true;
   Style.BinPackArguments = false;
   Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   verifyFormat("void aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa(\n"
@@ -254,7 +256,8 @@ TEST_F(AlignBracketsTest, AlignAfterOpenBracketBlockIndent) {
                "argument5));",
                Style);
 
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  Style.BreakAfterOpenBracketFunction = true;
+  Style.BreakBeforeCloseBracketFunction = true;
 
   verifyFormat(Short, Style);
   verifyFormat(
@@ -378,7 +381,8 @@ TEST_F(AlignBracketsTest, AlignAfterOpenBracketBlockIndentIfStatement) {
                "}",
                Style);
 
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  Style.BreakAfterOpenBracketFunction = true;
+  Style.BreakBeforeCloseBracketFunction = true;
 
   verifyFormat("if (foo()) {\n"
                "  return;\n"
@@ -440,7 +444,8 @@ TEST_F(AlignBracketsTest, AlignAfterOpenBracketBlockIndentForStatement) {
                "}",
                Style);
 
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  Style.BreakAfterOpenBracketFunction = true;
+  Style.BreakBeforeCloseBracketFunction = true;
 
   verifyFormat("for (int i = 0; i < 5; ++i) {\n"
                "  doSomething();\n"
@@ -457,7 +462,8 @@ TEST_F(AlignBracketsTest, AlignAfterOpenBracketBlockIndentForStatement) {
 
 TEST_F(AlignBracketsTest, AlignAfterOpenBracketBlockIndentInitializers) {
   auto Style = getLLVMStyleWithColumns(60);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  Style.BreakAfterOpenBracketBracedList = true;
+  Style.BreakBeforeCloseBracketBracedList = true;
   // Aggregate initialization.
   verifyFormat("int LooooooooooooooooooooooooongVariable[2] = {\n"
                "    10000000, 20000000\n"
@@ -611,13 +617,13 @@ TEST_F(AlignBracketsTest, AllowAllArgumentsOnNextLineDontAlign) {
   StringRef Input = "functionCall(paramA, paramB, paramC);\n"
                     "void functionDecl(int A, int B, int C);";
   Style.AllowAllArgumentsOnNextLine = false;
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  Style.AlignAfterOpenBracket = false;
   verifyFormat(StringRef("functionCall(paramA, paramB,\n"
                          "    paramC);\n"
                          "void functionDecl(int A, int B,\n"
                          "    int C);"),
                Input, Style);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+  Style.AlignAfterOpenBracket = true;
   verifyFormat(StringRef("functionCall(paramA, paramB,\n"
                          "             paramC);\n"
                          "void functionDecl(int A, int B,\n"
@@ -625,13 +631,14 @@ TEST_F(AlignBracketsTest, AllowAllArgumentsOnNextLineDontAlign) {
                Input, Style);
   // However, BAS_AlwaysBreak and BAS_BlockIndent should take precedence over
   // AllowAllArgumentsOnNextLine.
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.BreakAfterOpenBracketFunction = true;
   verifyFormat(StringRef("functionCall(\n"
                          "    paramA, paramB, paramC);\n"
                          "void functionDecl(\n"
                          "    int A, int B, int C);"),
                Input, Style);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  Style.BreakAfterOpenBracketFunction = true;
+  Style.BreakBeforeCloseBracketFunction = true;
   verifyFormat("functionCall(\n"
                "    paramA, paramB, paramC\n"
                ");\n"
@@ -639,11 +646,12 @@ TEST_F(AlignBracketsTest, AllowAllArgumentsOnNextLineDontAlign) {
                "    int A, int B, int C\n"
                ");",
                Input, Style);
+  Style.BreakBeforeCloseBracketFunction = false;
 
   // When AllowAllArgumentsOnNextLine is set, we prefer breaking before the
   // first argument.
   Style.AllowAllArgumentsOnNextLine = true;
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.BreakAfterOpenBracketFunction = true;
   verifyFormat(StringRef("functionCall(\n"
                          "    paramA, paramB, paramC);\n"
                          "void functionDecl(\n"
@@ -651,13 +659,14 @@ TEST_F(AlignBracketsTest, AllowAllArgumentsOnNextLineDontAlign) {
                Input, Style);
   // It wouldn't fit on one line with aligned parameters so this setting
   // doesn't change anything for BAS_Align.
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+  Style.AlignAfterOpenBracket = true;
+  Style.BreakAfterOpenBracketFunction = false;
   verifyFormat(StringRef("functionCall(paramA, paramB,\n"
                          "             paramC);\n"
                          "void functionDecl(int A, int B,\n"
                          "                  int C);"),
                Input, Style);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  Style.BreakAfterOpenBracketFunction = true;
   verifyFormat(StringRef("functionCall(\n"
                          "    paramA, paramB, paramC);\n"
                          "void functionDecl(\n"
@@ -678,13 +687,14 @@ TEST_F(AlignBracketsTest, FormatsDeclarationBreakAlways) {
 
   // Ensure AlignAfterOpenBracket interacts correctly with BinPackParameters set
   // to BPPS_AlwaysOnePerLine.
-  BreakAlways.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  BreakAlways.BreakAfterOpenBracketFunction = true;
   verifyFormat(
       "void someLongFunctionName(\n"
       "    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
       "    int b);",
       BreakAlways);
-  BreakAlways.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  BreakAlways.BreakAfterOpenBracketFunction = true;
+  BreakAlways.BreakBeforeCloseBracketFunction = true;
   verifyFormat(
       "void someLongFunctionName(\n"
       "    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
@@ -734,7 +744,7 @@ TEST_F(AlignBracketsTest, FormatsDefinitionBreakAlways) {
 
   // Ensure AlignAfterOpenBracket interacts correctly with BinPackParameters set
   // to BPPS_AlwaysOnePerLine.
-  BreakAlways.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  BreakAlways.BreakAfterOpenBracketFunction = true;
   verifyFormat(
       "void someLongFunctionName(\n"
       "    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
@@ -743,7 +753,8 @@ TEST_F(AlignBracketsTest, FormatsDefinitionBreakAlways) {
       "      aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, b);\n"
       "}",
       BreakAlways);
-  BreakAlways.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  BreakAlways.BreakAfterOpenBracketFunction = true;
+  BreakAlways.BreakBeforeCloseBracketFunction = true;
   verifyFormat(
       "void someLongFunctionName(\n"
       "    int aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
@@ -761,17 +772,17 @@ TEST_F(AlignBracketsTest, ParenthesesAndOperandAlignment) {
   verifyFormat("int a = f(aaaaaaaaaaaaaaaaaaaaaa &&\n"
                "          bbbbbbbbbbbbbbbbbbbbbb);",
                Style);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+  Style.AlignAfterOpenBracket = true;
   Style.AlignOperands = FormatStyle::OAS_DontAlign;
   verifyFormat("int a = f(aaaaaaaaaaaaaaaaaaaaaa &&\n"
                "          bbbbbbbbbbbbbbbbbbbbbb);",
                Style);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  Style.AlignAfterOpenBracket = false;
   Style.AlignOperands = FormatStyle::OAS_Align;
   verifyFormat("int a = f(aaaaaaaaaaaaaaaaaaaaaa &&\n"
                "          bbbbbbbbbbbbbbbbbbbbbb);",
                Style);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  Style.AlignAfterOpenBracket = false;
   Style.AlignOperands = FormatStyle::OAS_DontAlign;
   verifyFormat("int a = f(aaaaaaaaaaaaaaaaaaaaaa &&\n"
                "    bbbbbbbbbbbbbbbbbbbbbb);",
@@ -781,7 +792,10 @@ TEST_F(AlignBracketsTest, ParenthesesAndOperandAlignment) {
 TEST_F(AlignBracketsTest, BlockIndentAndNamespace) {
   auto Style = getLLVMStyleWithColumns(120);
   Style.AllowShortNamespacesOnASingleLine = true;
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  Style.BreakAfterOpenBracketFunction = true;
+  Style.BreakAfterOpenBracketBracedList = true;
+  Style.BreakBeforeCloseBracketFunction = true;
+  Style.BreakBeforeCloseBracketBracedList = true;
 
   verifyNoCrash(
       "namespace {\n"

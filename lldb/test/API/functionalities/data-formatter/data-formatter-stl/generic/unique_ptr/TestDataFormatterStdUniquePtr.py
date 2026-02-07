@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def do_test(self):
         """Test `frame variable` output for `std::unique_ptr` types."""
 
@@ -84,7 +86,15 @@ class TestCase(TestBase):
         self.assertNotEqual(valobj.child[0].unsigned, 0)
 
         self.expect_var_path("up_user->id", type="int", value="30")
-        self.expect_var_path("up_user->name", type="std::string", summary='"steph"')
+        self.expect_var_path(
+            "up_user->name",
+            type=(
+                "std::basic_string<char, std::char_traits<char>, std::allocator<char>>"
+                if self.getDebugInfo() == "pdb"
+                else "std::string"
+            ),
+            summary='"steph"',
+        )
 
         self.runCmd("settings set target.experimental.use-DIL true")
         self.expect_var_path("ptr_node->value", value="1")

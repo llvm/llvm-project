@@ -22,7 +22,7 @@ def FoldMemRefAliasOpsPass : Pass<"fold-memref-alias-ops"> {
     from/to the original memref.
   }];
   let dependentDialects = [
-      "affine::AffineDialect", "memref::MemRefDialect", "vector::VectorDialect"
+      "memref::MemRefDialect", "vector::VectorDialect"
   ];
 }
 
@@ -164,6 +164,11 @@ def ResolveRankedShapeTypeResultDimsPass
     implement the `ReifyRankedShapedTypeOpInterface` in terms of
     shapes of its operands.
   }];
+  let options = [
+    Option<"errorOnPatternIterationLimit", "error-on-pattern-iteration-limit", "bool",
+           /*default=*/"true",
+           "Throw an error when pattern rewriter hits iteration limit">,
+  ];
   let dependentDialects = [
     "memref::MemRefDialect", "tensor::TensorDialect"
   ];
@@ -177,6 +182,11 @@ def ResolveShapedTypeResultDimsPass : Pass<"resolve-shaped-type-result-dims"> {
     `ReifyRankedShapedTypeOpInterface` in terms of shapes of its
     operands.
   }];
+  let options = [
+    Option<"errorOnPatternIterationLimit", "error-on-pattern-iteration-limit", "bool",
+           /*default=*/"true",
+           "Throw an error when pattern rewriter hits iteration limit">,
+  ];
   let dependentDialects = [
     "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
   ];
@@ -187,7 +197,7 @@ def ReifyResultShapesPass : Pass<"reify-result-shapes"> {
   let description = [{
     This pass reifies the shapes of a subset of `ReifyRankedShapedTypeOpInterface`
     ops with `tensor` results.
-    
+
     The pass currently only supports result shape type reification for:
       - tensor::PadOp
       - tensor::ConcatOp

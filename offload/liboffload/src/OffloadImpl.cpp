@@ -147,8 +147,8 @@ llvm::Error ol_platform_impl_t::init() {
     if (llvm::Error Err = Plugin->initDevice(Id))
       return Err;
 
-    auto Device = &Plugin->getDevice(Id);
-    auto Info = Device->obtainInfoImpl();
+    GenericDeviceTy *Device = &Plugin->getDevice(Id);
+    llvm::Expected<InfoTreeNode> Info = Device->obtainInfo();
     if (llvm::Error Err = Info.takeError())
       return Err;
     Devices.emplace_back(std::make_unique<ol_device_impl_t>(Id, Device, *this,
@@ -263,6 +263,8 @@ constexpr ol_platform_backend_t pluginNameToBackend(StringRef Name) {
     return OL_PLATFORM_BACKEND_AMDGPU;
   } else if (Name == "cuda") {
     return OL_PLATFORM_BACKEND_CUDA;
+  } else if (Name == "level_zero") {
+    return OL_PLATFORM_BACKEND_LEVEL_ZERO;
   } else {
     return OL_PLATFORM_BACKEND_UNKNOWN;
   }
@@ -389,6 +391,12 @@ Error olGetPlatformInfoSize_impl(ol_platform_handle_t Platform,
                                      PropSizeRet);
 }
 
+Error olPlatformRegisterRPCCallback_impl(ol_platform_handle_t Platform,
+                                         ol_platform_rpc_cb_t Callback) {
+  Platform->Plugin->getRPCServer().registerCallback(Callback);
+  return Error::success();
+}
+
 Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
                                 ol_device_info_t PropName, size_t PropSize,
                                 void *PropValue, size_t *PropSizeRet) {
@@ -467,6 +475,7 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   switch (PropName) {
   case OL_DEVICE_INFO_NAME:
   case OL_DEVICE_INFO_PRODUCT_NAME:
+  case OL_DEVICE_INFO_UID:
   case OL_DEVICE_INFO_VENDOR:
   case OL_DEVICE_INFO_DRIVER_VERSION: {
     // String values
@@ -492,6 +501,13 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
       return makeError(ErrorCode::BACKEND_FAILURE,
                        "plugin returned out of range device info");
     return Info.write(static_cast<uint32_t>(Value));
+  }
+
+  case OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE: {
+    if (!std::holds_alternative<uint64_t>(Entry->Value))
+      return makeError(ErrorCode::BACKEND_FAILURE,
+                       "plugin returned incorrect type");
+    return Info.write(std::get<uint64_t>(Entry->Value));
   }
 
   case OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION:
@@ -544,6 +560,8 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
     return Info.writeString("Virtual Host Device");
   case OL_DEVICE_INFO_PRODUCT_NAME:
     return Info.writeString("Virtual Host Device");
+  case OL_DEVICE_INFO_UID:
+    return Info.writeString(GenericPluginTy::getHostDeviceUid());
   case OL_DEVICE_INFO_VENDOR:
     return Info.writeString("Liboffload");
   case OL_DEVICE_INFO_DRIVER_VERSION:
@@ -587,6 +605,7 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
     return Info.write<uint32_t>(std::numeric_limits<uintptr_t>::digits);
   case OL_DEVICE_INFO_MAX_MEM_ALLOC_SIZE:
   case OL_DEVICE_INFO_GLOBAL_MEM_SIZE:
+  case OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE:
     return Info.write<uint64_t>(0);
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
@@ -992,10 +1011,28 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
     if (auto Res =
             DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size, QueueImpl))
       return Res;
-  } else {
+  } else if (SrcDevice->Platform.Plugin == DstDevice->Platform.Plugin &&
+             SrcDevice->Platform.Plugin->isDataExchangable(
+                 SrcDevice->Device->getDeviceId(),
+                 DstDevice->Device->getDeviceId())) {
     if (auto Res = SrcDevice->Device->dataExchange(SrcPtr, *DstDevice->Device,
                                                    DstPtr, Size, QueueImpl))
       return Res;
+  } else {
+    if (Queue)
+      if (auto Res = olSyncQueue_impl(Queue))
+        return Res;
+
+    void *Buffer = malloc(Size);
+    if (!Buffer)
+      return createOffloadError(ErrorCode::OUT_OF_RESOURCES,
+                                "Couldn't allocate a buffer for transfer");
+    Error Res = SrcDevice->Device->dataRetrieve(Buffer, SrcPtr, Size, nullptr);
+    if (!Res)
+      Res = DstDevice->Device->dataSubmit(DstPtr, Buffer, Size, nullptr);
+
+    free(Buffer);
+    return Res;
   }
 
   return Error::success();
@@ -1201,6 +1238,33 @@ Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
                                 void *UserData) {
   return Queue->Device->Device->enqueueHostCall(Callback, UserData,
                                                 Queue->AsyncInfo);
+}
+
+Error olMemRegister_impl(ol_device_handle_t Device, void *Ptr, size_t Size,
+                         ol_memory_register_flags_t flags, void **LockedPtr) {
+  Expected<void *> LockedPtrOrErr = Device->Device->dataLock(Ptr, Size);
+  if (!LockedPtrOrErr)
+    return LockedPtrOrErr.takeError();
+
+  *LockedPtr = *LockedPtrOrErr;
+
+  return Error::success();
+}
+
+Error olMemUnregister_impl(ol_device_handle_t Device, void *Ptr) {
+  return Device->Device->dataUnlock(Ptr);
+}
+
+Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
+  if (Queue->AsyncInfo->Queue) {
+    if (auto Err = Queue->Device->Device->queryAsync(Queue->AsyncInfo, false,
+                                                     IsQueueWorkCompleted))
+      return Err;
+  } else if (IsQueueWorkCompleted) {
+    // No underlying queue means there's no work to complete.
+    *IsQueueWorkCompleted = true;
+  }
+  return Error::success();
 }
 
 } // namespace offload

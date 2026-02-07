@@ -36,7 +36,7 @@ define void @test_pr55096(i64 %c, ptr %p) {
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE2]]
 ; CHECK:       pred.store.continue2:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], 340
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[EXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       exit:

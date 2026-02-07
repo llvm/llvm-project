@@ -437,7 +437,7 @@ void SymbolFileBreakpad::FindFunctions(
       sc.comp_unit = cu_sp.get();
       sc.function = func_sp.get();
       sc.module_sp = func_sp->CalculateSymbolContextModule();
-      sc_list.Append(sc);
+      sc_list.AppendIfUnique(sc, /*merge_symbol_into_function=*/true);
     }
   }
 }
@@ -498,7 +498,7 @@ void SymbolFileBreakpad::AddSymbols(Symtab &symtab) {
 }
 
 llvm::Expected<lldb::addr_t>
-SymbolFileBreakpad::GetParameterStackSize(Symbol &symbol) {
+SymbolFileBreakpad::GetParameterStackSize(const Symbol &symbol) {
   ParseUnwindData();
   if (auto *entry = m_unwind_data->win.FindEntryThatContains(
           symbol.GetAddress().GetFileAddress())) {

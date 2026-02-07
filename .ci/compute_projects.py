@@ -64,7 +64,6 @@ DEPENDENTS_TO_TEST = {
         "mlir",
         "polly",
         "flang",
-        "libclc",
         "openmp",
     },
 }
@@ -83,7 +82,7 @@ DEPENDENT_RUNTIMES_TO_TEST = {
     "compiler-rt": {"compiler-rt"},
     "flang": {"flang-rt"},
     "flang-rt": {"flang-rt"},
-    ".ci": {"compiler-rt", "libc", "flang-rt"},
+    ".ci": {"compiler-rt", "libc", "flang-rt", "libclc"},
 }
 DEPENDENT_RUNTIMES_TO_TEST_NEEDS_RECONFIG = {
     "llvm": {"libcxx", "libcxxabi", "libunwind"},
@@ -109,10 +108,10 @@ EXCLUDE_WINDOWS = {
 }
 
 # These are projects that we should test if the project itself is changed but
-# where testing is not yet stable enough for it to be enabled on changes to
-# dependencies.
+# where testing is not yet stable enough or is too expensive for it to be
+# enabled on changes to dependencies.
 EXCLUDE_DEPENDENTS_WINDOWS = {
-    "flang",  # TODO(issues/132803): Flang is not stable.
+    "flang",
 }
 
 EXCLUDE_MAC = {

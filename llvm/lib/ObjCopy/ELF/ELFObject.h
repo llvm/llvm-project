@@ -134,7 +134,7 @@ private:
   using Elf_Sym = typename ELFT::Sym;
 
 public:
-  ~ELFSectionWriter() override {}
+  ~ELFSectionWriter() override = default;
   Error visit(const SymbolTableSection &Sec) override;
   Error visit(const RelocationSection &Sec) override;
   Error visit(const GnuDebugLinkSection &Sec) override;
@@ -180,7 +180,7 @@ public:
 
 class BinarySectionWriter : public SectionWriter {
 public:
-  ~BinarySectionWriter() override {}
+  ~BinarySectionWriter() override = default;
 
   Error visit(const SymbolTableSection &Sec) override;
   Error visit(const RelocationSection &Sec) override;
@@ -346,7 +346,7 @@ private:
   size_t totalSize() const;
 
 public:
-  ~ELFWriter() override {}
+  ~ELFWriter() override = default;
   bool WriteSectionHeaders;
 
   // For --only-keep-debug, select an alternative section/segment layout
@@ -367,7 +367,7 @@ private:
   uint64_t TotalSize = 0;
 
 public:
-  ~BinaryWriter() override {}
+  ~BinaryWriter() override = default;
   Error finalize() override;
   Error write() override;
   BinaryWriter(Object &Obj, raw_ostream &Out, const CommonConfig &Config)
@@ -784,7 +784,7 @@ private:
   SymbolTableSection *Symbols = nullptr;
 
 public:
-  ~SectionIndexSection() override {}
+  ~SectionIndexSection() override = default;
   void addIndex(uint32_t Index) {
     assert(Size > 0);
     Indexes.push_back(Index);

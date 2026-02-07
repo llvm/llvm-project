@@ -6,13 +6,11 @@
 ; Check we can use ssa.copy with unnamed types.
 
 ; CHECK-LABEL: bb:
-; CHECK: Has predicate info
 ; CHECK: branch predicate info { TrueEdge: 1 Comparison:  %cmp1 = icmp ne ptr %arg, null Edge: [label %bb,label %bb1], RenamedOp: %arg }
 ; CHECK-NEXT:  %arg.0 = bitcast ptr %arg to ptr
 
 ; CHECK-LABEL: bb1:
-; CHECK: Has predicate info
-; CHECK-NEXT: branch predicate info { TrueEdge: 0 Comparison:  %cmp2 = icmp ne ptr null, %tmp Edge: [label %bb1,label %bb3], RenamedOp: %tmp }
+; CHECK: branch predicate info { TrueEdge: 0 Comparison:  %cmp2 = icmp ne ptr null, %tmp Edge: [label %bb1,label %bb3], RenamedOp: %tmp }
 ; CHECK-NEXT: %tmp.0 = bitcast ptr %tmp to ptr
 
 define void @f0(ptr %arg, ptr %tmp) {

@@ -236,7 +236,3 @@ define iXLen @fixed_v2i64_zero_poison(<2 x i64> %src, <2 x i1> %m, i32 %evl) {
   ret iXLen %r
 }
 
-declare iXLen @llvm.vp.cttz.elts.iXLen.nxv2i1(<vscale x 2 x i1>, i1, <vscale x 2 x i1>, i32)
-declare iXLen @llvm.vp.cttz.elts.iXLen.nxv2i32(<vscale x 2 x i32>, i1, <vscale x 2 x i1>, i32)
-declare iXLen @llvm.vp.cttz.elts.iXLen.nxv2i64(<vscale x 2 x i64>, i1, <vscale x 2 x i1>, i32)
-declare iXLen @llvm.vp.cttz.elts.iXLen.v2i64(<2 x i64>, i1, <2 x i1>, i32)

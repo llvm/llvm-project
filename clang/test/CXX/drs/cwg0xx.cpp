@@ -90,6 +90,8 @@ namespace cwg5 { // cwg5: 3.1
   const C c = e;
 } // namespace cwg5
 
+// cwg6 is in cwg6.cpp
+
 namespace cwg7 { // cwg7: 3.4
   class A { public: ~A(); };
   class B : virtual private A {}; // #cwg7-B
@@ -333,14 +335,14 @@ namespace cwg25 { // cwg25: 4
   //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
   void (A::*g)() throw () = f;
   // cxx98-14-error@-1 {{target exception specification is not superset of source}}
-  // since-cxx17-error@-2 {{different exception specifications}}
+  // since-cxx17-error@-2 {{cannot initialize a variable of type 'void (A::*)() throw()' with an lvalue of type 'void (A::*)() throw(int)': different exception specifications}}
   void (A::*g2)() throw () = 0;
   void (A::*h)() throw (int, char) = f;
   // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
   //   since-cxx17-note@-2 {{use 'noexcept(false)' instead}}
   void (A::*i)() throw () = &A::f;
   // cxx98-14-error@-1 {{target exception specification is not superset of source}}
-  // since-cxx17-error@-2 {{different exception specifications}}
+  // since-cxx17-error@-2 {{cannot initialize a variable of type 'void (A::*)() throw()' with an rvalue of type 'void (A::*)() throw(int)': different exception specifications}}
   void (A::*i2)() throw () = 0;
   void (A::*j)() throw (int, char) = &A::f;
   // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
@@ -348,11 +350,11 @@ namespace cwg25 { // cwg25: 4
   void x() {
     g2 = f;
     // cxx98-14-error@-1 {{target exception specification is not superset of source}}
-    // since-cxx17-error@-2 {{different exception specifications}}
+    // since-cxx17-error@-2 {{assigning to 'void (A::*)() throw()' from incompatible type 'void (A::*)() throw(int)': different exception specifications}}
     h = f;
     i2 = &A::f;
     // cxx98-14-error@-1 {{target exception specification is not superset of source}}
-    // since-cxx17-error@-2 {{different exception specifications}}
+    // since-cxx17-error@-2 {{assigning to 'void (A::*)() throw()' from incompatible type 'void (A::*)() throw(int)': different exception specifications}}
     j = &A::f;
   }
 } // namespace cwg25
@@ -706,7 +708,7 @@ namespace cwg39 { // cwg39: no
     struct cwg39::PR5916::D -> C -> A}} */
     //   expected-note@#cwg39-A-n {{member found by ambiguous name lookup}}
 
-    // expected-error@#cwg39-sizeof {{unknown type name}}
+    // expected-error@#cwg39-sizeof {{unknown type name 'n'}}
 #if __cplusplus >= 201103L
     decltype(D::n) n;
     /* since-cxx11-error@-1
@@ -1056,19 +1058,19 @@ namespace cwg62 { // cwg62: 2.9
   void f() {
     struct NoLinkage {};
     X<NoLinkage> a;
-    // cxx98-error@-1 {{template argument uses local type }}
+    // cxx98-error@-1 {{template argument uses local type 'NoLinkage'}}
     X<const NoLinkage> b;
-    // cxx98-error@-1 {{template argument uses local type }}
+    // cxx98-error@-1 {{template argument uses local type 'NoLinkage'}}
     get<NoLinkage>();
-    // cxx98-error@-1 {{template argument uses local type }}
-    //   cxx98-note@-2 {{while substituting explicitly-specified template arguments}}
+    // cxx98-error@-1 {{template argument uses local type 'NoLinkage'}}
+    //   cxx98-note@-2 {{while substituting explicitly-specified template arguments into function template 'get'}}
     get<const NoLinkage>();
-    // cxx98-error@-1 {{template argument uses local type }}
-    //   cxx98-note@-2 {{while substituting explicitly-specified template arguments}}
+    // cxx98-error@-1 {{template argument uses local type 'NoLinkage'}}
+    //   cxx98-note@-2 {{while substituting explicitly-specified template arguments into function template 'get'}}
     X<void (*)(NoLinkage A::*)> c;
-    // cxx98-error@-1 {{template argument uses local type }}
+    // cxx98-error@-1 {{template argument uses local type 'NoLinkage'}}
     X<int NoLinkage::*> d;
-    // cxx98-error@-1 {{template argument uses local type }}
+    // cxx98-error@-1 {{template argument uses local type 'NoLinkage'}}
   }
 } // namespace cwg62
 

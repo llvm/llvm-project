@@ -618,8 +618,8 @@ namespace cwg647 { // cwg647: 3.1
         : n(0),
           d(0.0f) {} // #cwg647-int-d
     constexpr E(float f)
-    // cxx11-20-error@-1 {{never produces a constant expression}}
-    //   cxx11-20-note@#cwg647-float-d {{non-constexpr constructor}}
+    // cxx11-20-error@-1 {{constexpr constructor never produces a constant expression}}
+    //   cxx11-20-note@#cwg647-float-d {{non-constexpr constructor 'D' cannot be used in a constant expression}}
     //   cxx11-20-note@#cwg647-D-float-ctor {{declared here}}
         : n(get()),
           d(D(0) + f) {} // #cwg647-float-d
@@ -895,12 +895,12 @@ namespace cwg666 { // cwg666: 2.8
   template<int> int f();
   template<typename T> int f() {
     T::type *p = 0;
-    // expected-error@-1 {{missing 'typename' prior to dependent type name 'cwg666::Y::type'}}
+    // expected-error@-1 {{missing 'typename' prior to dependent type name 'cwg666::Y::type' (aka 'int')}}
     //   expected-note@#cwg666-f-Y {{in instantiation of function template specialization 'cwg666::f<cwg666::Y>' requested here}}
     int a(T::type);
-    // expected-error@-1 {{missing 'typename' prior to dependent type name 'cwg666::Y::type'}}
+    // expected-error@-1 {{missing 'typename' prior to dependent type name 'cwg666::Y::type' (aka 'int')}}
     return f<T::type>();
-    // expected-error@-1 {{missing 'typename' prior to dependent type name 'cwg666::Y::type'}}
+    // expected-error@-1 {{missing 'typename' prior to dependent type name 'cwg666::Y::type' (aka 'int')}}
   }
   struct X { static const int type = 0; };
   struct Y { typedef int type; };
@@ -1159,7 +1159,7 @@ namespace cwg684 { // cwg684: sup 1454
     constexpr int *p = &a;
     // since-cxx11-error@-1 {{constexpr variable 'p' must be initialized by a constant expression}}
     //   since-cxx11-note@-2 {{pointer to 'a' is not a constant expression}}
-    //   since-cxx11-note@#cwg684-a {{here}}
+    //   since-cxx11-note@#cwg684-a {{declared here}}
   }
 #endif
 } // namespace cwg684
@@ -1241,7 +1241,7 @@ namespace cwg686 { // cwg686: 3.0
 #endif
     struct N {
       operator struct O{}(){};
-      // expected-error@-1 {{'N::O' cannot be defined in a type specifier}}
+      // expected-error@-1 {{'cwg686::f()::N::O' cannot be defined in a type specifier}}
     };
     try {}
     catch (struct P *) {}
@@ -1308,7 +1308,7 @@ namespace cwg692 { // cwg692: 16
       //   expected-note@#cwg692-f-deleted {{candidate function [with T = int, U = int] has been explicitly deleted}}
       //   expected-note@#cwg692-f {{candidate function [with U = int]}}
       g(42);
-      // expected-error@-1 {{ambiguous}}
+      // expected-error@-1 {{call to 'g' is ambiguous}}
       //   expected-note@#cwg692-g {{candidate function [with T = int]}}
       //   expected-note@#cwg692-g-variadic {{candidate function [with T = int, U = <>]}}
     }

@@ -780,6 +780,7 @@ define <vscale x 4 x float> @llvm_tanh_vscale_f32(<vscale x 4 x float> %in) #0 {
 
 attributes #0 = { "target-features"="+sve" }
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR1]] = { "target-features"="+sve" }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
