@@ -213,6 +213,7 @@ class DAPTestCaseBase(TestBase):
         'exception' with the description matching 'expected_description' and
         text match 'expected_text', if specified."""
         stopped_events = self.dap_server.wait_for_stopped()
+        self.assertIsNotNone(stopped_events, "No stopped events detected")
         for stopped_event in stopped_events:
             body = stopped_event["body"]
             if body["reason"] != "exception":
@@ -235,7 +236,7 @@ class DAPTestCaseBase(TestBase):
                     f"for stopped event {stopped_event!r}",
                 )
             return
-        self.fail(f"No valid stop exception info detected in {stopped_events}")
+        self.fail(f"No valid stop exception info detected in {stopped_events!r}")
 
     def verify_stop_on_entry(self) -> None:
         """Waits for the process to be stopped and then verifies at least one
@@ -471,12 +472,17 @@ class DAPTestCaseBase(TestBase):
         self.do_continue()
         self.verify_breakpoint_hit(breakpoint_ids)
 
-    def continue_to_exception_breakpoint(self, description, text=None):
+    def continue_to_exception_breakpoint(
+        self, expected_description, expected_text=None
+    ):
         self.do_continue()
-        self.verify_stop_exception_info(description, text)
+        self.verify_stop_exception_info(expected_description, expected_text)
 
     def continue_to_exit(self, exitCode=0):
         self.do_continue()
+        self.verify_process_exited(exitCode)
+
+    def verify_process_exited(self, exitCode: int = 0):
         stopped_events = self.dap_server.wait_for_stopped()
         self.assertEqual(
             len(stopped_events), 1, "stopped_events = {}".format(stopped_events)
@@ -529,6 +535,7 @@ class DAPTestCaseBase(TestBase):
     def attach(
         self,
         *,
+        client_features: Optional[dict[str, bool]] = None,
         disconnectAutomatically=True,
         sourceInitFile=False,
         **kwargs,
@@ -545,7 +552,9 @@ class DAPTestCaseBase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
         # Initialize and launch the program
-        self.dap_server.request_initialize(sourceInitFile)
+        self.dap_server.request_initialize(
+            client_features=client_features, sourceInitFile=sourceInitFile
+        )
         return self.dap_server.request_attach(**kwargs)
 
     def attach_and_configurationDone(
@@ -562,6 +571,7 @@ class DAPTestCaseBase(TestBase):
         self,
         program: str,
         *,
+        client_features: Optional[dict[str, bool]] = None,
         sourceInitFile=False,
         disconnectAutomatically=True,
         **kwargs,
@@ -579,7 +589,9 @@ class DAPTestCaseBase(TestBase):
         self.addTearDownHook(cleanup)
 
         # Initialize and launch the program
-        self.dap_server.request_initialize(sourceInitFile)
+        self.dap_server.request_initialize(
+            client_features=client_features, sourceInitFile=sourceInitFile
+        )
         return self.dap_server.request_launch(program, **kwargs)
 
     def launch_and_configurationDone(

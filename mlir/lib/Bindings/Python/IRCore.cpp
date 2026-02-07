@@ -21,12 +21,12 @@
 
 #include <functional>
 #include <optional>
-#include <sstream>
 #include <string>
 
 namespace nb = nanobind;
 using namespace nb::literals;
 using namespace mlir;
+using nanobind::detail::join;
 
 static const char kModuleParseDocstring[] =
     R"(Parses a module's assembly format from a string.
@@ -48,14 +48,6 @@ operations.
 //------------------------------------------------------------------------------
 // Utilities.
 //------------------------------------------------------------------------------
-
-/// Local helper to concatenate arguments into a `std::string`.
-template <typename... Ts>
-static std::string join(const Ts &...args) {
-  std::ostringstream oss;
-  (oss << ... << args);
-  return oss.str();
-}
 
 /// Local helper to compute std::hash for a value.
 template <typename T>
@@ -1671,7 +1663,7 @@ nb::object PyOpView::buildGeneric(
       int segmentSpec = operandSegmentSpec[i];
       if (segmentSpec == 1 || segmentSpec == 0) {
         // Unpack unary element.
-        const auto operand = operandList[i];
+        const nanobind::handle operand = operandList[i];
         if (!operand.is_none()) {
           try {
             operands.push_back(getOpResultOrValue(operand));

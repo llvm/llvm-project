@@ -36,6 +36,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 #include "llvm/Transforms/Utils/LowerVectorIntrinsics.h"
@@ -381,7 +382,7 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
             canEmitLibcall(ModuleLibcalls, TM, ParentFunc, RTLIB::MEMSET))
           break;
 
-        expandMemSetAsLoop(Memset);
+        expandMemSetAsLoop(Memset, TTI);
         Changed = true;
         Memset->eraseFromParent();
       }
@@ -396,7 +397,9 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
       if (isa<ConstantInt>(Memset->getLength()))
         break;
 
-      expandMemSetAsLoop(Memset);
+      Function *ParentFunc = Memset->getFunction();
+      const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
+      expandMemSetAsLoop(Memset, TTI);
       Changed = true;
       Memset->eraseFromParent();
       break;
@@ -611,6 +614,18 @@ static bool expandProtectedFieldPtr(Function &Intr) {
   return true;
 }
 
+static bool expandCondLoop(Function &Intr) {
+  for (User *U : llvm::make_early_inc_range(Intr.users())) {
+    auto *Call = cast<CallInst>(U);
+
+    auto *Br = cast<BranchInst>(
+        SplitBlockAndInsertIfThen(Call->getArgOperand(0), Call, false));
+    Br->setSuccessor(0, Br->getParent());
+    Call->eraseFromParent();
+  }
+  return true;
+}
+
 bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
   // Map unique constants to globals.
   DenseMap<Constant *, GlobalVariable *> CMap;
@@ -755,6 +770,10 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       break;
     case Intrinsic::protected_field_ptr:
       Changed |= expandProtectedFieldPtr(F);
+      break;
+    case Intrinsic::cond_loop:
+      if (!TM->canLowerCondLoop())
+        Changed |= expandCondLoop(F);
       break;
     }
   }

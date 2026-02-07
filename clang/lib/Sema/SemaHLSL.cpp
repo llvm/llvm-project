@@ -3189,10 +3189,13 @@ static bool CheckAnyScalarOrVector(Sema *S, CallExpr *TheCall,
   return false;
 }
 
-static bool CheckWaveActive(Sema *S, CallExpr *TheCall) {
+// Check that the argument is not a bool or vector<bool>
+// Returns true on error
+static bool CheckNotBoolScalarOrVector(Sema *S, CallExpr *TheCall,
+                                       unsigned ArgIndex) {
   QualType BoolType = S->getASTContext().BoolTy;
-  assert(TheCall->getNumArgs() >= 1);
-  QualType ArgType = TheCall->getArg(0)->getType();
+  assert(ArgIndex < TheCall->getNumArgs());
+  QualType ArgType = TheCall->getArg(ArgIndex)->getType();
   auto *VTy = ArgType->getAs<VectorType>();
   // is the bool or vector<bool>
   if (S->Context.hasSameUnqualifiedType(ArgType, BoolType) ||
@@ -3203,6 +3206,18 @@ static bool CheckWaveActive(Sema *S, CallExpr *TheCall) {
         << ArgType << 0;
     return true;
   }
+  return false;
+}
+
+static bool CheckWaveActive(Sema *S, CallExpr *TheCall) {
+  if (CheckNotBoolScalarOrVector(S, TheCall, 0))
+    return true;
+  return false;
+}
+
+static bool CheckWavePrefix(Sema *S, CallExpr *TheCall) {
+  if (CheckNotBoolScalarOrVector(S, TheCall, 0))
+    return true;
   return false;
 }
 
@@ -3363,6 +3378,31 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
+  case Builtin::BI__builtin_hlsl_resource_getpointer_typed: {
+    if (SemaRef.checkArgCount(TheCall, 3) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy))
+      return true;
+
+    QualType ElementTy = TheCall->getArg(2)->getType();
+    assert(ElementTy->isPointerType() &&
+           "expected pointer type for second argument");
+    ElementTy = ElementTy->getPointeeType();
+
+    // Reject array types
+    if (ElementTy->isArrayType())
+      return SemaRef.Diag(
+          cast<FunctionDecl>(SemaRef.CurContext)->getPointOfInstantiation(),
+          diag::err_invalid_use_of_array_type);
+
+    auto ReturnType =
+        SemaRef.Context.getAddrSpaceQualType(ElementTy, LangAS::hlsl_device);
+    ReturnType = SemaRef.Context.getPointerType(ReturnType);
+    TheCall->setType(ReturnType);
+
+    break;
+  }
   case Builtin::BI__builtin_hlsl_resource_load_with_status: {
     if (SemaRef.checkArgCount(TheCall, 3) ||
         CheckResourceHandle(&SemaRef, TheCall, 0) ||
@@ -3376,6 +3416,31 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
     QualType ReturnType = ResourceTy->getContainedType();
+    TheCall->setType(ReturnType);
+
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_load_with_status_typed: {
+    if (SemaRef.checkArgCount(TheCall, 4) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2),
+                            SemaRef.getASTContext().UnsignedIntTy) ||
+        CheckModifiableLValue(&SemaRef, TheCall, 2))
+      return true;
+
+    QualType ReturnType = TheCall->getArg(3)->getType();
+    assert(ReturnType->isPointerType() &&
+           "expected pointer type for second argument");
+    ReturnType = ReturnType->getPointeeType();
+
+    // Reject array types
+    if (ReturnType->isArrayType())
+      return SemaRef.Diag(
+          cast<FunctionDecl>(SemaRef.CurContext)->getPointOfInstantiation(),
+          diag::err_invalid_use_of_array_type);
+
     TheCall->setType(ReturnType);
 
     break;
@@ -3762,6 +3827,20 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case Builtin::BI__builtin_hlsl_wave_get_lane_index: {
     if (SemaRef.checkArgCount(TheCall, 0))
       return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_wave_prefix_sum: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    // Ensure input expr type is a scalar/vector and the same as the return type
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+    if (CheckWavePrefix(&SemaRef, TheCall))
+      return true;
+    ExprResult Expr = TheCall->getArg(0);
+    QualType ArgTyExpr = Expr.get()->getType();
+    TheCall->setType(ArgTyExpr);
     break;
   }
   case Builtin::BI__builtin_hlsl_elementwise_splitdouble: {
@@ -4993,6 +5072,187 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
   for (unsigned I = 0; I < NewInit->getNumInits(); ++I)
     Init->updateInit(Ctx, I, NewInit->getInit(I));
   return true;
+}
+
+static QualType ReportMatrixInvalidMember(Sema &S, StringRef Name,
+                                          StringRef Expected,
+                                          SourceLocation OpLoc,
+                                          SourceLocation CompLoc) {
+  S.Diag(OpLoc, diag::err_builtin_matrix_invalid_member)
+      << Name << Expected << SourceRange(CompLoc);
+  return QualType();
+}
+
+QualType SemaHLSL::checkMatrixComponent(Sema &S, QualType baseType,
+                                        ExprValueKind &VK, SourceLocation OpLoc,
+                                        const IdentifierInfo *CompName,
+                                        SourceLocation CompLoc) {
+  const auto *MT = baseType->castAs<ConstantMatrixType>();
+  StringRef AccessorName = CompName->getName();
+  assert(!AccessorName.empty() && "Matrix Accessor must have a name");
+
+  unsigned Rows = MT->getNumRows();
+  unsigned Cols = MT->getNumColumns();
+  bool IsZeroBasedAccessor = false;
+  unsigned ChunkLen = 0;
+  if (AccessorName.size() < 2)
+    return ReportMatrixInvalidMember(S, AccessorName,
+                                     "length 4 for zero based: \'_mRC\' or "
+                                     "length 3 for one-based: \'_RC\' accessor",
+                                     OpLoc, CompLoc);
+
+  if (AccessorName[0] == '_') {
+    if (AccessorName[1] == 'm') {
+      IsZeroBasedAccessor = true;
+      ChunkLen = 4; // zero-based: "_mRC"
+    } else {
+      ChunkLen = 3; // one-based: "_RC"
+    }
+  } else
+    return ReportMatrixInvalidMember(
+        S, AccessorName, "zero based: \'_mRC\' or one-based: \'_RC\' accessor",
+        OpLoc, CompLoc);
+
+  if (AccessorName.size() % ChunkLen != 0) {
+    const llvm::StringRef Expected = IsZeroBasedAccessor
+                                         ? "zero based: '_mRC' accessor"
+                                         : "one-based: '_RC' accessor";
+
+    return ReportMatrixInvalidMember(S, AccessorName, Expected, OpLoc, CompLoc);
+  }
+
+  auto isDigit = [](char c) { return c >= '0' && c <= '9'; };
+  auto isZeroBasedIndex = [](unsigned i) { return i <= 3; };
+  auto isOneBasedIndex = [](unsigned i) { return i >= 1 && i <= 4; };
+
+  bool HasRepeated = false;
+  SmallVector<bool, 16> Seen(Rows * Cols, false);
+  unsigned NumComponents = 0;
+  const char *Begin = AccessorName.data();
+
+  for (unsigned I = 0, E = AccessorName.size(); I < E; I += ChunkLen) {
+    const char *Chunk = Begin + I;
+    char RowChar = 0, ColChar = 0;
+    if (IsZeroBasedAccessor) {
+      // Zero-based: "_mRC"
+      if (Chunk[0] != '_' || Chunk[1] != 'm') {
+        char Bad = (Chunk[0] != '_') ? Chunk[0] : Chunk[1];
+        return ReportMatrixInvalidMember(
+            S, StringRef(&Bad, 1), "\'_m\' prefix",
+            OpLoc.getLocWithOffset(I + (Bad == Chunk[0] ? 1 : 2)), CompLoc);
+      }
+      RowChar = Chunk[2];
+      ColChar = Chunk[3];
+    } else {
+      // One-based: "_RC"
+      if (Chunk[0] != '_')
+        return ReportMatrixInvalidMember(
+            S, StringRef(&Chunk[0], 1), "\'_\' prefix",
+            OpLoc.getLocWithOffset(I + 1), CompLoc);
+      RowChar = Chunk[1];
+      ColChar = Chunk[2];
+    }
+
+    // Must be digits.
+    bool IsDigitsError = false;
+    if (!isDigit(RowChar)) {
+      unsigned BadPos = IsZeroBasedAccessor ? 2 : 1;
+      ReportMatrixInvalidMember(S, StringRef(&RowChar, 1), "row as integer",
+                                OpLoc.getLocWithOffset(I + BadPos + 1),
+                                CompLoc);
+      IsDigitsError = true;
+    }
+
+    if (!isDigit(ColChar)) {
+      unsigned BadPos = IsZeroBasedAccessor ? 3 : 2;
+      ReportMatrixInvalidMember(S, StringRef(&ColChar, 1), "column as integer",
+                                OpLoc.getLocWithOffset(I + BadPos + 1),
+                                CompLoc);
+      IsDigitsError = true;
+    }
+    if (IsDigitsError)
+      return QualType();
+
+    unsigned Row = RowChar - '0';
+    unsigned Col = ColChar - '0';
+
+    bool HasIndexingError = false;
+    if (IsZeroBasedAccessor) {
+      // 0-based [0..3]
+      if (!isZeroBasedIndex(Row)) {
+        S.Diag(OpLoc, diag::err_hlsl_matrix_element_not_in_bounds)
+            << /*row*/ 0 << /*zero-based*/ 0 << SourceRange(CompLoc);
+        HasIndexingError = true;
+      }
+      if (!isZeroBasedIndex(Col)) {
+        S.Diag(OpLoc, diag::err_hlsl_matrix_element_not_in_bounds)
+            << /*col*/ 1 << /*zero-based*/ 0 << SourceRange(CompLoc);
+        HasIndexingError = true;
+      }
+    } else {
+      // 1-based [1..4]
+      if (!isOneBasedIndex(Row)) {
+        S.Diag(OpLoc, diag::err_hlsl_matrix_element_not_in_bounds)
+            << /*row*/ 0 << /*one-based*/ 1 << SourceRange(CompLoc);
+        HasIndexingError = true;
+      }
+      if (!isOneBasedIndex(Col)) {
+        S.Diag(OpLoc, diag::err_hlsl_matrix_element_not_in_bounds)
+            << /*col*/ 1 << /*one-based*/ 1 << SourceRange(CompLoc);
+        HasIndexingError = true;
+      }
+      // Convert to 0-based after range checking.
+      --Row;
+      --Col;
+    }
+
+    if (HasIndexingError)
+      return QualType();
+
+    // Note: matrix swizzle index is hard coded. That means Row and Col can
+    // potentially be larger than Rows and Cols if matrix size is less than
+    // the max index size.
+    bool HasBoundsError = false;
+    if (Row >= Rows) {
+      Diag(OpLoc, diag::err_hlsl_matrix_index_out_of_bounds)
+          << /*Row*/ 0 << Row << Rows << SourceRange(CompLoc);
+      HasBoundsError = true;
+    }
+    if (Col >= Cols) {
+      Diag(OpLoc, diag::err_hlsl_matrix_index_out_of_bounds)
+          << /*Col*/ 1 << Col << Cols << SourceRange(CompLoc);
+      HasBoundsError = true;
+    }
+    if (HasBoundsError)
+      return QualType();
+
+    unsigned FlatIndex = Row * Cols + Col;
+    if (Seen[FlatIndex])
+      HasRepeated = true;
+    Seen[FlatIndex] = true;
+    ++NumComponents;
+  }
+  if (NumComponents == 0 || NumComponents > 4) {
+    S.Diag(OpLoc, diag::err_hlsl_matrix_swizzle_invalid_length)
+        << NumComponents << SourceRange(CompLoc);
+    return QualType();
+  }
+
+  QualType ElemTy = MT->getElementType();
+  QualType VT = S.Context.getExtVectorType(ElemTy, NumComponents);
+  if (HasRepeated)
+    VK = VK_PRValue;
+
+  for (Sema::ExtVectorDeclsType::iterator
+           I = S.ExtVectorDecls.begin(S.getExternalSource()),
+           E = S.ExtVectorDecls.end();
+       I != E; ++I) {
+    if ((*I)->getUnderlyingType() == VT)
+      return S.Context.getTypedefType(ElaboratedTypeKeyword::None,
+                                      /*Qualifier=*/std::nullopt, *I);
+  }
+
+  return VT;
 }
 
 bool SemaHLSL::handleInitialization(VarDecl *VDecl, Expr *&Init) {
