@@ -239,10 +239,6 @@ define void @no_optimize_alignment_mismatch() {
 
 ; Negative test: Clobbering store to source offset between memcpy from source and memcpy to dest
 ; This is a minimal reproducer for the bug in LLVM PR #176436.
-; The bug: MemCpyOpt incorrectly eliminated temp2 without accounting for the store
-; that clobbers byte 0 of local_buf before the final memcpy.
-; The fix ensures that when checking for clobbering of the source, we check the
-; actual range being copied (SrcPtr with Size) rather than the entire SrcAlloca.
 define void @no_optimize_clobbering_store_to_src_offset(ptr noalias %dst) {
 ; CHECK-LABEL: define void @no_optimize_clobbering_store_to_src_offset
 ; CHECK-SAME: (ptr noalias [[DST:%.*]]) {
@@ -276,8 +272,8 @@ define void @no_optimize_clobbering_store_to_src_offset(ptr noalias %dst) {
   call void @llvm.lifetime.end.p0(ptr %temp1)
 
   ; Second move: copy from local+48 back to dst+48 via temp2
-  ; BUG: PR incorrectly eliminated temp2 but the store below clobbers byte 0 first!
-  ; The fix ensures we check SrcPtr (local_buf) not SrcAlloca (local) for clobbering.
+  ; BUG: PR incorrectly eliminated temp2 but the store below clobbers part of local_buf first!
+  ; The fix ensures we check the right portion of SrcAlloca for any clobbering.
   call void @llvm.lifetime.start.p0(ptr %temp2)
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %temp2, ptr align 8 %local_buf, i64 16, i1 false)
   store i8 0, ptr %local_buf, align 1   ; <-- clobbers byte 0

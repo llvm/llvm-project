@@ -1685,11 +1685,14 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   // Check that, from after the Load to the end of the BB,
   //   - if the dest has any Mod, src has no Ref, and
   //   - if the dest has any Ref, src has no Mod except full-sized lifetimes
-  //   - from SrcPtr minus DestOffset to min(DestSize, SrcSize minus SrcOffset)
-  //   - where DestOffset and DestSize could be computed by DestModRefCallback
-  //     to be the bounds of the first and last mod region, which is at least
-  //     DestOffset to DestSize.
-  // Currently DestOffset==0 and DestSize==Size, so this math is simplified.
+  // Where:
+  //   - src is defined as the memory from max(SrcAlloca, SrcPtr minus
+  //     dest_offset) to min(dest_size, SrcSize minus SrcOffset)
+  //   - dest_offset and dest_size could be computed by DestModRefCallback
+  //     to be the bounds of the first and last mod region, and which is at
+  //     least as large as DestOffset to DestSize, and at most as large as
+  //     SrcAlloca to SrcSize.
+  //   - Currently DestOffset==0 and DestSize==Size, so this math is simplified.
   MemoryLocation SrcLoc(SrcPtr, LocationSize::precise(Size));
 
   auto SrcModRefCallback = [&](Instruction *UI) -> bool {
