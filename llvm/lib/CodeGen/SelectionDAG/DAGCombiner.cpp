@@ -4841,8 +4841,7 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
     //       callback to determine that sequence (similar to sqrt expansion).
     unsigned MathOp = ISD::DELETED_NODE;
     APInt MulC = ConstValue1.abs();
-    // Decompose 2^N ± 2^M as 2^(A+B) ± 2^B. The constant `2` should be
-    // treated as (2^0 + 1).
+    // The constant `2` should be treated as (2^0 + 1).
     unsigned TZeros = MulC == 2 ? 0 : MulC.countr_zero();
     MulC.lshrInPlace(TZeros);
     if ((MulC - 1).isPowerOf2())
