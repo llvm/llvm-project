@@ -255,6 +255,10 @@ static constexpr FeatureBitset FeaturesZNVER5 =
     FeaturesZNVER4 | FeatureAVXVNNI | FeatureMOVDIRI | FeatureMOVDIR64B |
     FeatureAVX512VP2INTERSECT | FeaturePREFETCHI | FeatureAVXVNNI;
 
+static constexpr FeatureBitset FeaturesZNVER6 =
+    FeaturesZNVER5 | FeatureAVXVNNIINT8 | FeatureAVX512FP16 | FeatureAVXIFMA |
+    FeatureAVXNECONVERT;
+
 // D151696 tranplanted Mangling and OnlyForCPUDispatchSpecific from
 // X86TargetParser.def to here. They are assigned by following ways:
 // 1. Copy the mangling from the original CPU_SPEICIFC MACROs. If no, assign
@@ -440,6 +444,7 @@ constexpr ProcInfo Processors[] = {
   { {"znver3"}, CK_ZNVER3, FEATURE_AVX2, FeaturesZNVER3, '\0', false },
   { {"znver4"}, CK_ZNVER4, FEATURE_AVX512VBMI2, FeaturesZNVER4, '\0', false },
   { {"znver5"}, CK_ZNVER5, FEATURE_AVX512VP2INTERSECT, FeaturesZNVER5, '\0', false },
+  { {"znver6"}, CK_ZNVER6, FEATURE_AVX512FP16, FeaturesZNVER6, '\0', false },
   // Generic 64-bit processor.
   { {"x86-64"}, CK_x86_64, FEATURE_SSE2 , FeaturesX86_64, '\0', false },
   { {"x86-64-v2"}, CK_x86_64_v2, FEATURE_SSE4_2 , FeaturesX86_64_V2, '\0', false },
