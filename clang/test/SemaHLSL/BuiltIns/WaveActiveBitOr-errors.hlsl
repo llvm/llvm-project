@@ -19,3 +19,8 @@ uint test_type_check(Foo p0) {
   return __builtin_hlsl_wave_active_bit_or(p0);
   // expected-error@-1 {{no viable conversion from 'Foo' to 'unsigned int'}}
 }
+
+float test_expr_bool_type_check(float p0) {
+  return __builtin_hlsl_wave_active_bit_or(p0);
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'float')}}
+}
