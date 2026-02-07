@@ -105,10 +105,11 @@ public:
   // Handle TLS Initial-Exec relocation.
   void handleTlsIe(RelExpr ieExpr, RelType type, uint64_t offset,
                    int64_t addend, Symbol &sym) {
-    ctx.hasTlsIe.store(true, std::memory_order_relaxed);
     if (!ctx.arg.shared && !sym.isPreemptible) {
+      // Optimize to Local Exec.
       sec->addReloc({R_TPREL, type, offset, addend, &sym});
     } else {
+      ctx.hasTlsIe.store(true, std::memory_order_relaxed);
       sym.setFlags(NEEDS_TLSIE);
       // R_GOT (absolute GOT address) needs a RELATIVE dynamic relocation in
       // PIC. This is used by R_386_TLS_IE.
@@ -129,6 +130,7 @@ public:
       sec->addReloc({sharedExpr, type, offset, addend, &sym});
       return false;
     }
+    // Optimize to Local Exec.
     sec->addReloc({R_TPREL, type, offset, addend, &sym});
     return true;
   }
@@ -143,10 +145,12 @@ public:
       return false;
     }
     if (sym.isPreemptible) {
+      // Optimize to Initial Exec.
       ctx.hasTlsIe.store(true, std::memory_order_relaxed);
       sym.setFlags(NEEDS_TLSIE);
       sec->addReloc({ieExpr, type, offset, addend, &sym});
     } else {
+      // Optimize to Local Exec.
       sec->addReloc({leExpr, type, offset, addend, &sym});
     }
     return true;
@@ -159,10 +163,12 @@ public:
       sym.setFlags(NEEDS_TLSDESC);
       sec->addReloc({sharedExpr, type, offset, addend, &sym});
     } else if (sym.isPreemptible) {
+      // Optimize to Initial Exec.
       ctx.hasTlsIe.store(true, std::memory_order_relaxed);
       sym.setFlags(NEEDS_TLSIE);
       sec->addReloc({ieExpr, type, offset, addend, &sym});
     } else {
+      // Optimize to Local Exec.
       sec->addReloc({R_TPREL, type, offset, addend, &sym});
     }
   }

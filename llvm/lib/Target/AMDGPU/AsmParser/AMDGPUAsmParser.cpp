@@ -143,6 +143,8 @@ public:
     ImmTyExpTgt,
     ImmTyExpCompr,
     ImmTyExpVM,
+    ImmTyDone,
+    ImmTyRowEn,
     ImmTyFORMAT,
     ImmTyHwreg,
     ImmTyOff,
@@ -413,6 +415,8 @@ public:
   bool isNegLo() const { return isImmTy(ImmTyNegLo); }
   bool isNegHi() const { return isImmTy(ImmTyNegHi); }
   bool isBitOp3() const { return isImmTy(ImmTyBitOp3) && isUInt<8>(getImm()); }
+  bool isDone() const { return isImmTy(ImmTyDone); }
+  bool isRowEn() const { return isImmTy(ImmTyRowEn); }
 
   bool isRegOrImm() const {
     return isReg() || isImm();
@@ -1140,6 +1144,8 @@ public:
     case ImmTyExpTgt: OS << "ExpTgt"; break;
     case ImmTyExpCompr: OS << "ExpCompr"; break;
     case ImmTyExpVM: OS << "ExpVM"; break;
+    case ImmTyDone: OS << "Done"; break;
+    case ImmTyRowEn: OS << "RowEn"; break;
     case ImmTyHwreg: OS << "Hwreg"; break;
     case ImmTySendMsg: OS << "SendMsg"; break;
     case ImmTyInterpSlot: OS << "InterpSlot"; break;
@@ -1688,7 +1694,8 @@ public:
 
   ParseStatus
   parseNamedBit(StringRef Name, OperandVector &Operands,
-                AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyNone);
+                AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyNone,
+                bool IgnoreNegative = false);
   unsigned getCPolKind(StringRef Id, StringRef Mnemo, bool &Disabling) const;
   ParseStatus parseCPol(OperandVector &Operands);
   ParseStatus parseScope(OperandVector &Operands, int64_t &Scope);
@@ -5544,12 +5551,9 @@ bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
     if (RegSize == AMDGPU::wmmaScaleF8F6F4FormatToNumRegs(Fmt) * 32)
       return true;
 
-    static const char *FmtNames[] = {"MATRIX_FMT_FP8", "MATRIX_FMT_BF8",
-                                     "MATRIX_FMT_FP6", "MATRIX_FMT_BF6",
-                                     "MATRIX_FMT_FP4"};
-
     Error(getOperandLoc(Operands, SrcIdx),
-          "wrong register tuple size for " + Twine(FmtNames[Fmt]));
+          "wrong register tuple size for " +
+              Twine(WMMAMods::ModMatrixFmt[Fmt]));
     return false;
   };
 
@@ -7046,13 +7050,16 @@ ParseStatus AMDGPUAsmParser::parseOperandArrayWithPrefix(
 
 ParseStatus AMDGPUAsmParser::parseNamedBit(StringRef Name,
                                            OperandVector &Operands,
-                                           AMDGPUOperand::ImmTy ImmTy) {
+                                           AMDGPUOperand::ImmTy ImmTy,
+                                           bool IgnoreNegative) {
   int64_t Bit;
   SMLoc S = getLoc();
 
   if (trySkipId(Name)) {
     Bit = 1;
   } else if (trySkipId("no", Name)) {
+    if (IgnoreNegative)
+      return ParseStatus::Success;
     Bit = 0;
   } else {
     return ParseStatus::NoMatch;
@@ -7409,10 +7416,7 @@ ParseStatus AMDGPUAsmParser::parseIndexKey32bit(OperandVector &Operands) {
 ParseStatus AMDGPUAsmParser::tryParseMatrixFMT(OperandVector &Operands,
                                                StringRef Name,
                                                AMDGPUOperand::ImmTy Type) {
-  return parseStringOrIntWithPrefix(Operands, Name,
-                                    {"MATRIX_FMT_FP8", "MATRIX_FMT_BF8",
-                                     "MATRIX_FMT_FP6", "MATRIX_FMT_BF6",
-                                     "MATRIX_FMT_FP4"},
+  return parseStringOrIntWithPrefix(Operands, Name, WMMAMods::ModMatrixFmt,
                                     Type);
 }
 
@@ -7429,8 +7433,8 @@ ParseStatus AMDGPUAsmParser::parseMatrixBFMT(OperandVector &Operands) {
 ParseStatus AMDGPUAsmParser::tryParseMatrixScale(OperandVector &Operands,
                                                  StringRef Name,
                                                  AMDGPUOperand::ImmTy Type) {
-  return parseStringOrIntWithPrefix(
-      Operands, Name, {"MATRIX_SCALE_ROW0", "MATRIX_SCALE_ROW1"}, Type);
+  return parseStringOrIntWithPrefix(Operands, Name, WMMAMods::ModMatrixScale,
+                                    Type);
 }
 
 ParseStatus AMDGPUAsmParser::parseMatrixAScale(OperandVector &Operands) {
@@ -7446,10 +7450,8 @@ ParseStatus AMDGPUAsmParser::parseMatrixBScale(OperandVector &Operands) {
 ParseStatus AMDGPUAsmParser::tryParseMatrixScaleFmt(OperandVector &Operands,
                                                     StringRef Name,
                                                     AMDGPUOperand::ImmTy Type) {
-  return parseStringOrIntWithPrefix(
-      Operands, Name,
-      {"MATRIX_SCALE_FMT_E8", "MATRIX_SCALE_FMT_E5M3", "MATRIX_SCALE_FMT_E4M3"},
-      Type);
+  return parseStringOrIntWithPrefix(Operands, Name, WMMAMods::ModMatrixScaleFmt,
+                                    Type);
 }
 
 ParseStatus AMDGPUAsmParser::parseMatrixAScaleFmt(OperandVector &Operands) {
@@ -10448,7 +10450,7 @@ ParseStatus AMDGPUAsmParser::parseCustomOperand(OperandVector &Operands,
   case MCK_addr64:
     return parseTokenOp("addr64", Operands);
   case MCK_done:
-    return parseTokenOp("done", Operands);
+    return parseNamedBit("done", Operands, AMDGPUOperand::ImmTyDone, true);
   case MCK_idxen:
     return parseTokenOp("idxen", Operands);
   case MCK_lds:
@@ -10458,7 +10460,7 @@ ParseStatus AMDGPUAsmParser::parseCustomOperand(OperandVector &Operands,
   case MCK_off:
     return parseTokenOp("off", Operands);
   case MCK_row_95_en:
-    return parseTokenOp("row_en", Operands);
+    return parseNamedBit("row_en", Operands, AMDGPUOperand::ImmTyRowEn, true);
   case MCK_gds:
     return parseNamedBit("gds", Operands, AMDGPUOperand::ImmTyGDS);
   case MCK_tfe:
@@ -10489,6 +10491,10 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
     return Operand.isOffen() ? Match_Success : Match_InvalidOperand;
   case MCK_tfe:
     return Operand.isTFE() ? Match_Success : Match_InvalidOperand;
+  case MCK_done:
+    return Operand.isDone() ? Match_Success : Match_InvalidOperand;
+  case MCK_row_95_en:
+    return Operand.isRowEn() ? Match_Success : Match_InvalidOperand;
   case MCK_SSrc_b32:
     // When operands have expression values, they will return true for isToken,
     // because it is not possible to distinguish between a token and an

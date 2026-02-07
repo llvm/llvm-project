@@ -10816,24 +10816,43 @@ def warn_lifetime_safety_loan_expires_permissive : Warning<
 def warn_lifetime_safety_loan_expires_strict : Warning<
    "object whose reference is captured may not live long enough">,
    InGroup<LifetimeSafetyStrict>, DefaultIgnore;
+def warn_lifetime_safety_loan_expires_moved_strict : Warning<
+   "object whose reference is captured may not live long enough. "
+   "This could be false positive as the storage may have been moved later">,
+   InGroup<LifetimeSafetyStrict>, DefaultIgnore;
 
 def warn_lifetime_safety_return_stack_addr_permissive
     : Warning<"address of stack memory is returned later">,
       InGroup<LifetimeSafetyPermissive>,
       DefaultIgnore;
-def warn_lifetime_safety_return_stack_addr_strict
-    : Warning<"address of stack memory may be returned later">,
+def warn_lifetime_safety_return_stack_addr_moved_strict
+    : Warning<"address of stack memory may be returned later. "
+      "This could be false positive as the storage may have been moved. "
+      "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyStrict>,
+      DefaultIgnore;
+
+def warn_lifetime_safety_invalidation
+    : Warning<"%select{object whose reference is captured|parameter}0 is later invalidated">,
+      InGroup<LifetimeSafetyInvalidation>,
       DefaultIgnore;
 
 def warn_lifetime_safety_dangling_field
     : Warning<"address of stack memory escapes to a field">,
       InGroup<LifetimeSafetyDanglingField>,
       DefaultIgnore;
+def warn_lifetime_safety_dangling_field_moved
+    : Warning<"address of stack memory escapes to a field. "
+      "This could be a false positive as the storage may have been moved. "
+      "Consider moving first and then aliasing later to resolve the issue">,
+      InGroup<LifetimeSafetyDanglingFieldStrict>,
+      DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
+def note_lifetime_safety_invalidated_here : Note<"invalidated here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
+def note_lifetime_safety_moved_here : Note<"potentially moved here">;
 def note_lifetime_safety_dangling_field_here: Note<"this field dangles">;
 def note_lifetime_safety_escapes_to_field_here: Note<"escapes to this field">;
 
