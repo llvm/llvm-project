@@ -244,19 +244,11 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
 
     // We have custom shuffle lowering to expose the shuffle mask
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
-                   MVT::v2f64}) {
+                   MVT::v2f64})
       setOperationAction(ISD::VECTOR_SHUFFLE, T, Custom);
 
-      setOperationAction(ISD::VECREDUCE_OR, T, Custom);
-      setOperationAction(ISD::VECREDUCE_AND, T, Custom);
-    }
-
-    if (Subtarget->hasFP16()) {
+    if (Subtarget->hasFP16())
       setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v8f16, Custom);
-
-      setOperationAction(ISD::VECREDUCE_OR, MVT::v8f16, Custom);
-      setOperationAction(ISD::VECREDUCE_AND, MVT::v8f16, Custom);
-    }
 
     // Support splatting
     for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
@@ -1747,9 +1739,6 @@ SDValue WebAssemblyTargetLowering::LowerOperation(SDValue Op,
     return LowerBUILD_VECTOR(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return LowerVECTOR_SHUFFLE(Op, DAG);
-  case ISD::VECREDUCE_OR:
-  case ISD::VECREDUCE_AND:
-    return expandVecReduce(Op.getNode(), DAG);
   case ISD::SETCC:
     return LowerSETCC(Op, DAG);
   case ISD::SHL:

@@ -115,7 +115,6 @@ private:
   SDValue LowerEXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerVECREDUCE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerAccessVectorElement(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShift(SDValue Op, SelectionDAG &DAG) const;
