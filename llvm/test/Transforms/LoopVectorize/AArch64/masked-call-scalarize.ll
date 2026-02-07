@@ -68,7 +68,8 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFCOMMON-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i64 0
 ; TFCOMMON-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
 ; TFCOMMON-NEXT:    [[TMP9:%.*]] = fcmp ogt <2 x double> [[TMP8]], zeroinitializer
-; TFCOMMON-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP9]], <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
+; TFCOMMON-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP9]], i32 0
+; TFCOMMON-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP7]], <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
 ; TFCOMMON-NEXT:    [[TMP16:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i32 0
 ; TFCOMMON-NEXT:    br i1 [[TMP16]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; TFCOMMON:       pred.store.if:
@@ -109,7 +110,8 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP5]], i64 0
 ; TFA_INTERLEAVE-NEXT:    [[TMP12:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
 ; TFA_INTERLEAVE-NEXT:    [[TMP14:%.*]] = fcmp ogt <2 x double> [[TMP12]], zeroinitializer
-; TFA_INTERLEAVE-NEXT:    [[PREDPHI3:%.*]] = select <2 x i1> [[TMP14]], <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
+; TFA_INTERLEAVE-NEXT:    [[TMP7:%.*]] = extractelement <2 x i1> [[TMP14]], i32 0
+; TFA_INTERLEAVE-NEXT:    [[PREDPHI3:%.*]] = select i1 [[TMP7]], <2 x double> zeroinitializer, <2 x double> splat (double 1.000000e+00)
 ; TFA_INTERLEAVE-NEXT:    [[TMP19:%.*]] = extractelement <2 x i1> [[ACTIVE_LANE_MASK]], i32 0
 ; TFA_INTERLEAVE-NEXT:    br i1 [[TMP19]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; TFA_INTERLEAVE:       pred.store.if:

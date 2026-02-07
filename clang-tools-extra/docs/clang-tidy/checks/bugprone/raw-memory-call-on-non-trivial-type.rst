@@ -16,17 +16,17 @@ Options
 
 .. option:: MemSetNames
 
-   Specify extra functions to flag that act similarly to ``memset``. Specify 
+   Specify extra functions to flag that act similarly to ``memset``. Specify
    names in a semicolon-delimited list. Default is an empty string.
 
 .. option:: MemCpyNames
 
-   Specify extra functions to flag that act similarly to ``memcpy``. Specify 
+   Specify extra functions to flag that act similarly to ``memcpy``. Specify
    names in a semicolon-delimited list. Default is an empty string.
 
 .. option:: MemCmpNames
 
-   Specify extra functions to flag that act similarly to ``memcmp``. Specify 
+   Specify extra functions to flag that act similarly to ``memcmp``. Specify
    names in a semicolon-delimited list. Default is an empty string.
 
 This check corresponds to the CERT C++ Coding Standard rule

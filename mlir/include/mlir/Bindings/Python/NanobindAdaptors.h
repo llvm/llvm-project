@@ -30,7 +30,7 @@
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
 // clang-format on
-#include "llvm/ADT/Twine.h"
+#include "mlir/Bindings/Python/NanobindUtils.h"
 
 namespace mlir {
 namespace python {
@@ -181,14 +181,22 @@ struct type_caster<MlirContext> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (src.is_none()) {
       // Gets the current thread-bound context.
-      // TODO: This raises an error of "No current context" currently.
-      // Update the implementation to pretty-print the helpful error that the
-      // core implementations print in this case.
       src = mlir::python::irModule().attr("Context").attr("current");
     }
-    std::optional<nanobind::object> capsule = mlirApiObjectToCapsule(src);
-    value = mlirPythonCapsuleToContext(capsule->ptr());
-    return !mlirContextIsNull(value);
+    // If there is no context, including thread-bound, emit a warning (since
+    // this function is not allowed to throw) and fail to cast.
+    if (src.is_none()) {
+      PyErr_Warn(
+          PyExc_RuntimeWarning,
+          "Passing None as MLIR Context is only allowed inside "
+          "the " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " context manager.");
+      return false;
+    }
+    if (std::optional<nanobind::object> capsule = mlirApiObjectToCapsule(src)) {
+      value = mlirPythonCapsuleToContext(capsule->ptr());
+      return !mlirContextIsNull(value);
+    }
+    return false;
   }
 };
 
@@ -542,10 +550,9 @@ public:
               !isaFunction(rawAttribute)) {
             auto origRepr =
                 nanobind::cast<std::string>(nanobind::repr(otherAttribute));
-            throw std::invalid_argument(
-                (llvm::Twine("Cannot cast attribute to ") + captureTypeName +
-                 " (from " + origRepr + ")")
-                    .str());
+            throw std::invalid_argument(nanobind::detail::join(
+                "Cannot cast attribute to ", captureTypeName, " (from ",
+                origRepr, ")"));
           }
           nanobind::object self = superCls.attr("__new__")(cls, otherAttribute);
           return self;
@@ -625,10 +632,9 @@ public:
               !isaFunction(rawType)) {
             auto origRepr =
                 nanobind::cast<std::string>(nanobind::repr(otherType));
-            throw std::invalid_argument((llvm::Twine("Cannot cast type to ") +
-                                         captureTypeName + " (from " +
-                                         origRepr + ")")
-                                            .str());
+            throw std::invalid_argument(
+                nanobind::detail::join("Cannot cast type to ", captureTypeName,
+                                       " (from ", origRepr, ")"));
           }
           nanobind::object self = superCls.attr("__new__")(cls, otherType);
           return self;
@@ -712,10 +718,9 @@ public:
               !isaFunction(rawValue)) {
             auto origRepr =
                 nanobind::cast<std::string>(nanobind::repr(otherValue));
-            throw std::invalid_argument((llvm::Twine("Cannot cast value to ") +
-                                         captureValueName + " (from " +
-                                         origRepr + ")")
-                                            .str());
+            throw std::invalid_argument(nanobind::detail::join(
+                "Cannot cast value to ", captureValueName, " (from ", origRepr,
+                ")"));
           }
           nanobind::object self = superCls.attr("__new__")(cls, otherValue);
           return self;

@@ -1378,11 +1378,11 @@ define half @test_log2(half %a) #0 {
 define half @test_fma(half %a, half %b, half %c) #0 {
 ; CHECK-CVT-SD-LABEL: test_fma:
 ; CHECK-CVT-SD:       // %bb.0:
-; CHECK-CVT-SD-NEXT:    fcvt s2, h2
-; CHECK-CVT-SD-NEXT:    fcvt s1, h1
-; CHECK-CVT-SD-NEXT:    fcvt s0, h0
-; CHECK-CVT-SD-NEXT:    fmadd s0, s0, s1, s2
-; CHECK-CVT-SD-NEXT:    fcvt h0, s0
+; CHECK-CVT-SD-NEXT:    fcvt d2, h2
+; CHECK-CVT-SD-NEXT:    fcvt d1, h1
+; CHECK-CVT-SD-NEXT:    fcvt d0, h0
+; CHECK-CVT-SD-NEXT:    fmadd d0, d0, d1, d2
+; CHECK-CVT-SD-NEXT:    fcvt h0, d0
 ; CHECK-CVT-SD-NEXT:    ret
 ;
 ; CHECK-FP16-LABEL: test_fma:

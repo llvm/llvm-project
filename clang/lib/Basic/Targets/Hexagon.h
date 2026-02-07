@@ -38,13 +38,7 @@ class LLVM_LIBRARY_VISIBILITY HexagonTargetInfo : public TargetInfo {
 public:
   HexagonTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple) {
-    // Specify the vector alignment explicitly. For v512x1, the calculated
-    // alignment would be 512*alignment(i1), which is 512 bytes, instead of
-    // the required minimum of 64 bytes.
-    resetDataLayout(
-        "e-m:e-p:32:32:32-a:0-n16:32-"
-        "i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-"
-        "v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048");
+    resetDataLayout();
     SizeType = UnsignedInt;
     PtrDiffType = SignedInt;
     IntPtrType = SignedInt;
@@ -64,6 +58,8 @@ public:
     // for modeling predicate registers in HVX, and the bool -> byte
     // correspondence matches the HVX architecture.
     BoolWidth = BoolAlign = 8;
+    BFloat16Width = BFloat16Align = 16;
+    BFloat16Format = &llvm::APFloat::BFloat();
   }
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
@@ -94,6 +90,8 @@ public:
   bool isCLZForZeroUndef() const override { return false; }
 
   bool hasFeature(StringRef Feature) const override;
+
+  bool hasBFloat16Type() const override;
 
   bool
   initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,

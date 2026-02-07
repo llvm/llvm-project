@@ -27,7 +27,7 @@ unsigned Program::getOrCreateNativePointer(const void *Ptr) {
   return It->second;
 }
 
-const void *Program::getNativePointer(unsigned Idx) {
+const void *Program::getNativePointer(unsigned Idx) const {
   return NativePointers[Idx];
 }
 
@@ -197,7 +197,8 @@ UnsignedOrNone Program::createGlobal(const ValueDecl *VD, const Expr *Init) {
     // global variable and points to the block we just created.
     if (auto DummyIt = DummyVariables.find(Redecl);
         DummyIt != DummyVariables.end()) {
-      assert(!Globals[DummyIt->second]->block()->hasPointers());
+      Global *Dummy = Globals[DummyIt->second];
+      Dummy->block()->movePointersTo(NewGlobal->block());
       Globals[DummyIt->second] = NewGlobal;
       DummyVariables.erase(DummyIt);
     }
@@ -410,8 +411,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
       if (OptPrimType T = Ctx.classify(ElemTy)) {
         // Arrays of primitives.
         unsigned ElemSize = primSize(*T);
-        if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems) {
-          return {};
+        if ((Descriptor::MaxArrayElemBytes / ElemSize) < NumElems) {
+          return nullptr;
         }
         return allocateDescriptor(D, *T, MDSize, NumElems, IsConst, IsTemporary,
                                   IsMutable);
@@ -424,7 +425,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
           return nullptr;
         unsigned ElemSize = ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
         if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems)
-          return {};
+          return nullptr;
         return allocateDescriptor(D, Ty, ElemDesc, MDSize, NumElems, IsConst,
                                   IsTemporary, IsMutable);
     }

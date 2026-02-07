@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 
 
 class GenericListDataFormatterTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
     NO_DEBUG_INFO_TESTCASE = True
 
     def do_test_with_run_command(self):

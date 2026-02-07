@@ -31,8 +31,8 @@ if lit_shell_env:
 # testFormat: The test format to use to interpret tests.
 extra_substitutions = extra_substitutions = (
     [
-        (r"FileCheck .*", "cat > /dev/null"),
         (r"not FileCheck .*", "cat > /dev/null"),
+        (r"FileCheck .*", "cat > /dev/null"),
     ]
     if config.enable_profcheck
     else []
@@ -49,6 +49,7 @@ config.suffixes = [".ll", ".c", ".test", ".txt", ".s", ".mir", ".yaml", ".spv"]
 config.excludes = ["Inputs", "CMakeLists.txt", "README.txt", "LICENSE.txt"]
 
 if config.enable_profcheck:
+    config.available_features.add("profcheck")
     # Exclude llvm-reduce tests for profcheck because we substitute the FileCheck
     # binary with a no-op command for profcheck, but llvm-reduce tests have RUN
     # commands of the form llvm-reduce --test FileCheck, which explode if we
@@ -64,6 +65,16 @@ if config.enable_profcheck:
     config.excludes.append("LoopVectorize")
     # exclude UpdateTestChecks - they fail because of inserted prof annotations
     config.excludes.append("UpdateTestChecks")
+    # TODO(#166655): Reenable Instrumentation tests
+    config.excludes.append("Instrumentation")
+    # profiling doesn't work quite well on GPU, excluding
+    config.excludes.append("AMDGPU")
+    # TODO targets where profiling may make sense but will be addressed later
+    config.excludes.extend(
+        ["Hexagon", "NVPTX", "PowerPC", "RISCV", "SPARC", "WebAssembly"]
+    )
+    # these passes aren't hooked up to the pass pipeline:
+    config.excludes.append("IRCE")
 
 # test_source_root: The root path where tests are located.
 config.test_source_root = os.path.dirname(__file__)
@@ -229,6 +240,7 @@ tools.extend(
         "llvm-addr2line",
         "llvm-bcanalyzer",
         "llvm-bitcode-strip",
+        "llvm-cas",
         "llvm-cgdata",
         "llvm-config",
         "llvm-cov",
@@ -505,7 +517,7 @@ elif uname_r.endswith("microsoft-standard-WSL2"):
 if config.has_plugins:
     config.available_features.add("plugins")
 
-if config.build_examples:
+if config.include_examples:
     config.available_features.add("examples")
 
 if config.linked_bye_extension:
@@ -792,9 +804,18 @@ if config.have_opt_viewer_modules:
 if config.expensive_checks:
     config.available_features.add("expensive_checks")
 
+if config.have_ondisk_cas:
+    config.available_features.add("ondisk_cas")
+
 if "MemoryWithOrigins" in config.llvm_use_sanitizer:
     config.available_features.add("use_msan_with_origins")
 
+
+# Restrict the size of the on-disk CAS for tests. This allows testing in
+# constrained environments (e.g. small TMPDIR). It also prevents leaving
+# behind large files on file systems that do not support sparse files if a test
+# crashes before resizing the file.
+config.environment["LLVM_CAS_MAX_MAPPING_SIZE"] = "%d" % (100 * 1024 * 1024)
 
 # Some tools support an environment variable "OBJECT_MODE" on AIX OS, which
 # controls the kind of objects they will support. If there is no "OBJECT_MODE"

@@ -781,30 +781,32 @@ void ObjectFileMachO::Terminate() {
 }
 
 ObjectFile *ObjectFileMachO::CreateInstance(const lldb::ModuleSP &module_sp,
-                                            DataBufferSP data_sp,
+                                            DataExtractorSP extractor_sp,
                                             lldb::offset_t data_offset,
                                             const FileSpec *file,
                                             lldb::offset_t file_offset,
                                             lldb::offset_t length) {
-  if (!data_sp) {
-    data_sp = MapFileData(*file, length, file_offset);
+  if (!extractor_sp || !extractor_sp->HasData()) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
+    extractor_sp = std::make_shared<DataExtractor>(data_sp);
   }
 
-  if (!ObjectFileMachO::MagicBytesMatch(data_sp, data_offset, length))
+  if (!ObjectFileMachO::MagicBytesMatch(extractor_sp, data_offset, length))
     return nullptr;
 
   // Update the data to contain the entire file if it doesn't already
-  if (data_sp->GetByteSize() < length) {
-    data_sp = MapFileData(*file, length, file_offset);
+  if (extractor_sp->GetByteSize() < length) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
+    extractor_sp = std::make_shared<DataExtractor>(data_sp);
   }
   auto objfile_up = std::make_unique<ObjectFileMachO>(
-      module_sp, data_sp, data_offset, file, file_offset, length);
+      module_sp, extractor_sp, data_offset, file, file_offset, length);
   if (!objfile_up || !objfile_up->ParseHeader())
     return nullptr;
 
@@ -814,7 +816,9 @@ ObjectFile *ObjectFileMachO::CreateInstance(const lldb::ModuleSP &module_sp,
 ObjectFile *ObjectFileMachO::CreateMemoryInstance(
     const lldb::ModuleSP &module_sp, WritableDataBufferSP data_sp,
     const ProcessSP &process_sp, lldb::addr_t header_addr) {
-  if (ObjectFileMachO::MagicBytesMatch(data_sp, 0, data_sp->GetByteSize())) {
+  DataExtractorSP extractor_sp = std::make_shared<DataExtractor>(data_sp);
+  if (ObjectFileMachO::MagicBytesMatch(extractor_sp, 0,
+                                       extractor_sp->GetByteSize())) {
     std::unique_ptr<ObjectFile> objfile_up(
         new ObjectFileMachO(module_sp, data_sp, process_sp, header_addr));
     if (objfile_up.get() && objfile_up->ParseHeader())
@@ -824,29 +828,32 @@ ObjectFile *ObjectFileMachO::CreateMemoryInstance(
 }
 
 size_t ObjectFileMachO::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
+  if (!extractor_sp || !extractor_sp->HasData())
+    return initial_count;
 
-  if (ObjectFileMachO::MagicBytesMatch(data_sp, 0, data_sp->GetByteSize())) {
-    DataExtractor data;
-    data.SetData(data_sp);
+  if (ObjectFileMachO::MagicBytesMatch(extractor_sp, 0,
+                                       extractor_sp->GetByteSize())) {
     llvm::MachO::mach_header header;
-    if (ParseHeader(data, &data_offset, header)) {
+    if (ParseHeader(extractor_sp, &data_offset, header)) {
       size_t header_and_load_cmds =
           header.sizeofcmds + MachHeaderSizeFromMagic(header.magic);
-      if (header_and_load_cmds >= data_sp->GetByteSize()) {
-        data_sp = MapFileData(file, header_and_load_cmds, file_offset);
-        data.SetData(data_sp);
+      if (header_and_load_cmds >= extractor_sp->GetByteSize()) {
+        DataBufferSP file_data_sp =
+            MapFileData(file, header_and_load_cmds, file_offset);
+        if (file_data_sp)
+          extractor_sp->SetData(file_data_sp);
         data_offset = MachHeaderSizeFromMagic(header.magic);
       }
-      if (data_sp) {
+      if (extractor_sp && extractor_sp->HasData()) {
         ModuleSpec base_spec;
         base_spec.GetFileSpec() = file;
         base_spec.SetObjectOffset(file_offset);
         base_spec.SetObjectSize(length);
-        GetAllArchSpecs(header, data, data_offset, base_spec, specs);
+        GetAllArchSpecs(header, *extractor_sp, data_offset, base_spec, specs);
       }
     }
   }
@@ -903,17 +910,15 @@ ConstString ObjectFileMachO::GetSectionNameLLDBNoNlist() {
   return g_section_name_lldb_no_nlist;
 }
 
-bool ObjectFileMachO::MagicBytesMatch(DataBufferSP data_sp,
+bool ObjectFileMachO::MagicBytesMatch(DataExtractorSP extractor_sp,
                                       lldb::addr_t data_offset,
                                       lldb::addr_t data_length) {
-  DataExtractor data;
-  data.SetData(data_sp, data_offset, data_length);
-  lldb::offset_t offset = 0;
-  uint32_t magic = data.GetU32(&offset);
+  lldb::offset_t offset = data_offset;
+  uint32_t magic = extractor_sp->GetU32(&offset);
 
   offset += 4; // cputype
   offset += 4; // cpusubtype
-  uint32_t filetype = data.GetU32(&offset);
+  uint32_t filetype = extractor_sp->GetU32(&offset);
 
   // A fileset has a Mach-O header but is not an
   // individual file and must be handled via an
@@ -925,12 +930,13 @@ bool ObjectFileMachO::MagicBytesMatch(DataBufferSP data_sp,
 }
 
 ObjectFileMachO::ObjectFileMachO(const lldb::ModuleSP &module_sp,
-                                 DataBufferSP data_sp,
+                                 DataExtractorSP extractor_sp,
                                  lldb::offset_t data_offset,
                                  const FileSpec *file,
                                  lldb::offset_t file_offset,
                                  lldb::offset_t length)
-    : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
+    : ObjectFile(module_sp, file, file_offset, length, extractor_sp,
+                 data_offset),
       m_mach_sections(), m_entry_point_address(), m_thread_context_offsets(),
       m_thread_context_offsets_valid(false), m_reexported_dylibs(),
       m_allow_assembly_emulation_unwind_plans(true) {
@@ -942,7 +948,8 @@ ObjectFileMachO::ObjectFileMachO(const lldb::ModuleSP &module_sp,
                                  lldb::WritableDataBufferSP header_data_sp,
                                  const lldb::ProcessSP &process_sp,
                                  lldb::addr_t header_addr)
-    : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
+    : ObjectFile(module_sp, process_sp, header_addr,
+                 std::make_shared<DataExtractor>(header_data_sp)),
       m_mach_sections(), m_entry_point_address(), m_thread_context_offsets(),
       m_thread_context_offsets_valid(false), m_reexported_dylibs(),
       m_allow_assembly_emulation_unwind_plans(true) {
@@ -950,41 +957,41 @@ ObjectFileMachO::ObjectFileMachO(const lldb::ModuleSP &module_sp,
   ::memset(&m_dysymtab, 0, sizeof(m_dysymtab));
 }
 
-bool ObjectFileMachO::ParseHeader(DataExtractor &data,
+bool ObjectFileMachO::ParseHeader(DataExtractorSP &extractor_sp,
                                   lldb::offset_t *data_offset_ptr,
                                   llvm::MachO::mach_header &header) {
-  data.SetByteOrder(endian::InlHostByteOrder());
+  extractor_sp->SetByteOrder(endian::InlHostByteOrder());
   // Leave magic in the original byte order
-  header.magic = data.GetU32(data_offset_ptr);
+  header.magic = extractor_sp->GetU32(data_offset_ptr);
   bool can_parse = false;
   bool is_64_bit = false;
   switch (header.magic) {
   case MH_MAGIC:
-    data.SetByteOrder(endian::InlHostByteOrder());
-    data.SetAddressByteSize(4);
+    extractor_sp->SetByteOrder(endian::InlHostByteOrder());
+    extractor_sp->SetAddressByteSize(4);
     can_parse = true;
     break;
 
   case MH_MAGIC_64:
-    data.SetByteOrder(endian::InlHostByteOrder());
-    data.SetAddressByteSize(8);
+    extractor_sp->SetByteOrder(endian::InlHostByteOrder());
+    extractor_sp->SetAddressByteSize(8);
     can_parse = true;
     is_64_bit = true;
     break;
 
   case MH_CIGAM:
-    data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
-                          ? eByteOrderLittle
-                          : eByteOrderBig);
-    data.SetAddressByteSize(4);
+    extractor_sp->SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
+                                   ? eByteOrderLittle
+                                   : eByteOrderBig);
+    extractor_sp->SetAddressByteSize(4);
     can_parse = true;
     break;
 
   case MH_CIGAM_64:
-    data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
-                          ? eByteOrderLittle
-                          : eByteOrderBig);
-    data.SetAddressByteSize(8);
+    extractor_sp->SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
+                                   ? eByteOrderLittle
+                                   : eByteOrderBig);
+    extractor_sp->SetAddressByteSize(8);
     is_64_bit = true;
     can_parse = true;
     break;
@@ -994,7 +1001,7 @@ bool ObjectFileMachO::ParseHeader(DataExtractor &data,
   }
 
   if (can_parse) {
-    data.GetU32(data_offset_ptr, &header.cputype, 6);
+    extractor_sp->GetU32(data_offset_ptr, &header.cputype, 6);
     if (is_64_bit)
       *data_offset_ptr += 4;
     return true;
@@ -1012,35 +1019,35 @@ bool ObjectFileMachO::ParseHeader() {
   std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
   bool can_parse = false;
   lldb::offset_t offset = 0;
-  m_data.SetByteOrder(endian::InlHostByteOrder());
+  m_data_nsp->SetByteOrder(endian::InlHostByteOrder());
   // Leave magic in the original byte order
-  m_header.magic = m_data.GetU32(&offset);
+  m_header.magic = m_data_nsp->GetU32(&offset);
   switch (m_header.magic) {
   case MH_MAGIC:
-    m_data.SetByteOrder(endian::InlHostByteOrder());
-    m_data.SetAddressByteSize(4);
+    m_data_nsp->SetByteOrder(endian::InlHostByteOrder());
+    m_data_nsp->SetAddressByteSize(4);
     can_parse = true;
     break;
 
   case MH_MAGIC_64:
-    m_data.SetByteOrder(endian::InlHostByteOrder());
-    m_data.SetAddressByteSize(8);
+    m_data_nsp->SetByteOrder(endian::InlHostByteOrder());
+    m_data_nsp->SetAddressByteSize(8);
     can_parse = true;
     break;
 
   case MH_CIGAM:
-    m_data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
-                            ? eByteOrderLittle
-                            : eByteOrderBig);
-    m_data.SetAddressByteSize(4);
+    m_data_nsp->SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
+                                 ? eByteOrderLittle
+                                 : eByteOrderBig);
+    m_data_nsp->SetAddressByteSize(4);
     can_parse = true;
     break;
 
   case MH_CIGAM_64:
-    m_data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
-                            ? eByteOrderLittle
-                            : eByteOrderBig);
-    m_data.SetAddressByteSize(8);
+    m_data_nsp->SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
+                                 ? eByteOrderLittle
+                                 : eByteOrderBig);
+    m_data_nsp->SetAddressByteSize(8);
     can_parse = true;
     break;
 
@@ -1049,12 +1056,13 @@ bool ObjectFileMachO::ParseHeader() {
   }
 
   if (can_parse) {
-    m_data.GetU32(&offset, &m_header.cputype, 6);
+    m_data_nsp->GetU32(&offset, &m_header.cputype, 6);
 
     ModuleSpecList all_specs;
     ModuleSpec base_spec;
-    GetAllArchSpecs(m_header, m_data, MachHeaderSizeFromMagic(m_header.magic),
-                    base_spec, all_specs);
+    GetAllArchSpecs(m_header, *m_data_nsp,
+                    MachHeaderSizeFromMagic(m_header.magic), base_spec,
+                    all_specs);
 
     for (unsigned i = 0, e = all_specs.GetSize(); i != e; ++i) {
       ArchSpec mach_arch =
@@ -1068,7 +1076,7 @@ bool ObjectFileMachO::ParseHeader() {
       if (SetModulesArchitecture(mach_arch)) {
         const size_t header_and_lc_size =
             m_header.sizeofcmds + MachHeaderSizeFromMagic(m_header.magic);
-        if (m_data.GetByteSize() < header_and_lc_size) {
+        if (m_data_nsp->GetByteSize() < header_and_lc_size) {
           DataBufferSP data_sp;
           ProcessSP process_sp(m_process_wp.lock());
           if (process_sp) {
@@ -1080,7 +1088,7 @@ bool ObjectFileMachO::ParseHeader() {
               continue;
           }
           if (data_sp)
-            m_data.SetData(data_sp);
+            m_data_nsp->SetData(data_sp);
         }
       }
       return true;
@@ -1094,7 +1102,7 @@ bool ObjectFileMachO::ParseHeader() {
 }
 
 ByteOrder ObjectFileMachO::GetByteOrder() const {
-  return m_data.GetByteOrder();
+  return m_data_nsp->GetByteOrder();
 }
 
 bool ObjectFileMachO::IsExecutable() const {
@@ -1114,7 +1122,7 @@ bool ObjectFileMachO::IsKext() const {
 }
 
 uint32_t ObjectFileMachO::GetAddressByteSize() const {
-  return m_data.GetAddressByteSize();
+  return m_data_nsp->GetAddressByteSize();
 }
 
 AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
@@ -1122,7 +1130,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
   if (!symtab)
     return AddressClass::eUnknown;
 
-  Symbol *symbol = symtab->FindSymbolContainingFileAddress(file_addr);
+  const Symbol *symbol = symtab->FindSymbolContainingFileAddress(file_addr);
   if (symbol) {
     if (symbol->ValueIsAddress()) {
       SectionSP section_sp(symbol->GetAddressRef().GetSection());
@@ -1297,13 +1305,13 @@ bool ObjectFileMachO::IsStripped() {
         const lldb::offset_t load_cmd_offset = offset;
 
         llvm::MachO::load_command lc = {};
-        if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
+        if (m_data_nsp->GetU32(&offset, &lc.cmd, 2) == nullptr)
           break;
         if (lc.cmd == LC_DYSYMTAB) {
           m_dysymtab.cmd = lc.cmd;
           m_dysymtab.cmdsize = lc.cmdsize;
-          if (m_data.GetU32(&offset, &m_dysymtab.ilocalsym,
-                            (sizeof(m_dysymtab) / sizeof(uint32_t)) - 2) ==
+          if (m_data_nsp->GetU32(&offset, &m_dysymtab.ilocalsym,
+                                 (sizeof(m_dysymtab) / sizeof(uint32_t)) - 2) ==
               nullptr) {
             // Clear m_dysymtab if we were unable to read all items from the
             // load command
@@ -1326,14 +1334,14 @@ ObjectFileMachO::EncryptedFileRanges ObjectFileMachO::GetEncryptedFileRanges() {
   llvm::MachO::encryption_info_command encryption_cmd;
   for (uint32_t i = 0; i < m_header.ncmds; ++i) {
     const lldb::offset_t load_cmd_offset = offset;
-    if (m_data.GetU32(&offset, &encryption_cmd, 2) == nullptr)
+    if (m_data_nsp->GetU32(&offset, &encryption_cmd, 2) == nullptr)
       break;
 
     // LC_ENCRYPTION_INFO and LC_ENCRYPTION_INFO_64 have the same sizes for the
     // 3 fields we care about, so treat them the same.
     if (encryption_cmd.cmd == LC_ENCRYPTION_INFO ||
         encryption_cmd.cmd == LC_ENCRYPTION_INFO_64) {
-      if (m_data.GetU32(&offset, &encryption_cmd.cryptoff, 3)) {
+      if (m_data_nsp->GetU32(&offset, &encryption_cmd.cryptoff, 3)) {
         if (encryption_cmd.cryptid != 0) {
           EncryptedFileRanges::Entry entry;
           entry.SetRangeBase(encryption_cmd.cryptoff);
@@ -1562,7 +1570,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
   llvm::MachO::segment_command_64 load_cmd;
   memcpy(&load_cmd, &load_cmd_, sizeof(load_cmd_));
 
-  if (!m_data.GetU8(&offset, (uint8_t *)load_cmd.segname, 16))
+  if (!m_data_nsp->GetU8(&offset, (uint8_t *)load_cmd.segname, 16))
     return;
 
   ModuleSP module_sp = GetModule();
@@ -1586,11 +1594,11 @@ void ObjectFileMachO::ProcessSegmentCommand(
       add_section = false;
     }
   }
-  load_cmd.vmaddr = m_data.GetAddress(&offset);
-  load_cmd.vmsize = m_data.GetAddress(&offset);
-  load_cmd.fileoff = m_data.GetAddress(&offset);
-  load_cmd.filesize = m_data.GetAddress(&offset);
-  if (!m_data.GetU32(&offset, &load_cmd.maxprot, 4))
+  load_cmd.vmaddr = m_data_nsp->GetAddress(&offset);
+  load_cmd.vmsize = m_data_nsp->GetAddress(&offset);
+  load_cmd.fileoff = m_data_nsp->GetAddress(&offset);
+  load_cmd.filesize = m_data_nsp->GetAddress(&offset);
+  if (!m_data_nsp->GetU32(&offset, &load_cmd.maxprot, 4))
     return;
 
   SanitizeSegmentCommand(load_cmd, cmd_idx);
@@ -1681,16 +1689,16 @@ void ObjectFileMachO::ProcessSegmentCommand(
   const uint32_t num_u32s = load_cmd.cmd == LC_SEGMENT ? 7 : 8;
   for (segment_sect_idx = 0; segment_sect_idx < load_cmd.nsects;
        ++segment_sect_idx) {
-    if (m_data.GetU8(&offset, (uint8_t *)sect64.sectname,
-                     sizeof(sect64.sectname)) == nullptr)
+    if (m_data_nsp->GetU8(&offset, (uint8_t *)sect64.sectname,
+                          sizeof(sect64.sectname)) == nullptr)
       break;
-    if (m_data.GetU8(&offset, (uint8_t *)sect64.segname,
-                     sizeof(sect64.segname)) == nullptr)
+    if (m_data_nsp->GetU8(&offset, (uint8_t *)sect64.segname,
+                          sizeof(sect64.segname)) == nullptr)
       break;
-    sect64.addr = m_data.GetAddress(&offset);
-    sect64.size = m_data.GetAddress(&offset);
+    sect64.addr = m_data_nsp->GetAddress(&offset);
+    sect64.size = m_data_nsp->GetAddress(&offset);
 
-    if (m_data.GetU32(&offset, &sect64.offset, num_u32s) == nullptr)
+    if (m_data_nsp->GetU32(&offset, &sect64.offset, num_u32s) == nullptr)
       break;
 
     if (IsSharedCacheBinary() && !IsInMemory()) {
@@ -1855,8 +1863,8 @@ void ObjectFileMachO::ProcessDysymtabCommand(
     const llvm::MachO::load_command &load_cmd, lldb::offset_t offset) {
   m_dysymtab.cmd = load_cmd.cmd;
   m_dysymtab.cmdsize = load_cmd.cmdsize;
-  m_data.GetU32(&offset, &m_dysymtab.ilocalsym,
-                (sizeof(m_dysymtab) / sizeof(uint32_t)) - 2);
+  m_data_nsp->GetU32(&offset, &m_dysymtab.ilocalsym,
+                     (sizeof(m_dysymtab) / sizeof(uint32_t)) - 2);
 }
 
 void ObjectFileMachO::CreateSections(SectionList &unified_section_list) {
@@ -1875,7 +1883,7 @@ void ObjectFileMachO::CreateSections(SectionList &unified_section_list) {
   llvm::MachO::load_command load_cmd;
   for (uint32_t i = 0; i < m_header.ncmds; ++i) {
     const lldb::offset_t load_cmd_offset = offset;
-    if (m_data.GetU32(&offset, &load_cmd, 2) == nullptr)
+    if (m_data_nsp->GetU32(&offset, &load_cmd, 2) == nullptr)
       break;
 
     if (load_cmd.cmd == LC_SEGMENT || load_cmd.cmd == LC_SEGMENT_64)
@@ -2240,13 +2248,13 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     const lldb::offset_t cmd_offset = offset;
     // Read in the load command and load command size
     llvm::MachO::load_command lc;
-    if (m_data.GetU32(&offset, &lc, 2) == nullptr)
+    if (m_data_nsp->GetU32(&offset, &lc, 2) == nullptr)
       break;
     // Watch for the symbol table load command
     switch (lc.cmd) {
     case LC_SYMTAB: {
       llvm::MachO::symtab_command lc_obj;
-      if (m_data.GetU32(&offset, &lc_obj.symoff, 4)) {
+      if (m_data_nsp->GetU32(&offset, &lc_obj.symoff, 4)) {
         lc_obj.cmd = lc.cmd;
         lc_obj.cmdsize = lc.cmdsize;
         symtab_load_command = lc_obj;
@@ -2256,7 +2264,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     case LC_DYLD_INFO:
     case LC_DYLD_INFO_ONLY: {
       llvm::MachO::dyld_info_command lc_obj;
-      if (m_data.GetU32(&offset, &lc_obj.rebase_off, 10)) {
+      if (m_data_nsp->GetU32(&offset, &lc_obj.rebase_off, 10)) {
         lc_obj.cmd = lc.cmd;
         lc_obj.cmdsize = lc.cmdsize;
         dyld_info = lc_obj;
@@ -2268,8 +2276,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     case LC_REEXPORT_DYLIB:
     case LC_LOADFVMLIB:
     case LC_LOAD_UPWARD_DYLIB: {
-      uint32_t name_offset = cmd_offset + m_data.GetU32(&offset);
-      const char *path = m_data.PeekCStr(name_offset);
+      uint32_t name_offset = cmd_offset + m_data_nsp->GetU32(&offset);
+      const char *path = m_data_nsp->PeekCStr(name_offset);
       if (path) {
         FileSpec file_spec(path);
         // Strip the path if there is @rpath, @executable, etc so we just use
@@ -2289,19 +2297,19 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       llvm::MachO::linkedit_data_command lc_obj;
       lc_obj.cmd = lc.cmd;
       lc_obj.cmdsize = lc.cmdsize;
-      if (m_data.GetU32(&offset, &lc_obj.dataoff, 2))
+      if (m_data_nsp->GetU32(&offset, &lc_obj.dataoff, 2))
         exports_trie_load_command = lc_obj;
     } break;
     case LC_FUNCTION_STARTS: {
       llvm::MachO::linkedit_data_command lc_obj;
       lc_obj.cmd = lc.cmd;
       lc_obj.cmdsize = lc.cmdsize;
-      if (m_data.GetU32(&offset, &lc_obj.dataoff, 2))
+      if (m_data_nsp->GetU32(&offset, &lc_obj.dataoff, 2))
         function_starts_load_command = lc_obj;
     } break;
 
     case LC_UUID: {
-      const uint8_t *uuid_bytes = m_data.PeekData(offset, 16);
+      const uint8_t *uuid_bytes = m_data_nsp->PeekData(offset, 16);
 
       if (uuid_bytes)
         image_uuid = UUID(uuid_bytes, 16);
@@ -2321,8 +2329,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   if (section_list == nullptr)
     return;
 
-  const uint32_t addr_byte_size = m_data.GetAddressByteSize();
-  const ByteOrder byte_order = m_data.GetByteOrder();
+  const uint32_t addr_byte_size = m_data_nsp->GetAddressByteSize();
+  const ByteOrder byte_order = m_data_nsp->GetByteOrder();
   bool bit_width_32 = addr_byte_size == 4;
   const size_t nlist_byte_size =
       bit_width_32 ? sizeof(struct nlist) : sizeof(struct nlist_64);
@@ -2487,30 +2495,32 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       exports_trie_load_command.dataoff += linkedit_slide;
     }
 
-    nlist_data.SetData(m_data, symtab_load_command.symoff,
-                       nlist_data_byte_size);
-    strtab_data.SetData(m_data, symtab_load_command.stroff,
-                        strtab_data_byte_size);
+    nlist_data = *m_data_nsp->GetSubsetExtractorSP(symtab_load_command.symoff,
+                                                   nlist_data_byte_size);
+    strtab_data = *m_data_nsp->GetSubsetExtractorSP(symtab_load_command.stroff,
+                                                    strtab_data_byte_size);
 
     // We shouldn't have exports data from both the LC_DYLD_INFO command
     // AND the LC_DYLD_EXPORTS_TRIE command in the same binary:
     lldbassert(!((dyld_info.export_size > 0)
                  && (exports_trie_load_command.datasize > 0)));
     if (dyld_info.export_size > 0) {
-      dyld_trie_data.SetData(m_data, dyld_info.export_off,
-                             dyld_info.export_size);
+      dyld_trie_data = *m_data_nsp->GetSubsetExtractorSP(dyld_info.export_off,
+                                                         dyld_info.export_size);
     } else if (exports_trie_load_command.datasize > 0) {
-      dyld_trie_data.SetData(m_data, exports_trie_load_command.dataoff,
-                             exports_trie_load_command.datasize);
+      dyld_trie_data =
+          *m_data_nsp->GetSubsetExtractorSP(exports_trie_load_command.dataoff,
+                                            exports_trie_load_command.datasize);
     }
 
     if (dysymtab.nindirectsyms != 0) {
-      indirect_symbol_index_data.SetData(m_data, dysymtab.indirectsymoff,
-                                         dysymtab.nindirectsyms * 4);
+      indirect_symbol_index_data = *m_data_nsp->GetSubsetExtractorSP(
+          dysymtab.indirectsymoff, dysymtab.nindirectsyms * 4);
     }
     if (function_starts_load_command.cmd) {
-      function_starts_data.SetData(m_data, function_starts_load_command.dataoff,
-                                   function_starts_load_command.datasize);
+      function_starts_data = *m_data_nsp->GetSubsetExtractorSP(
+          function_starts_load_command.dataoff,
+          function_starts_load_command.datasize);
     }
   }
 
@@ -2697,7 +2707,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     __block vm_offset_t vm_string_memory = 0;
     __block mach_msg_type_number_t vm_string_bytes_read = 0;
 
-    auto _ = llvm::make_scope_exit(^{
+    llvm::scope_exit _(^{
       if (vm_nlist_memory)
         vm_deallocate(mach_task_self(), vm_nlist_memory, vm_nlist_bytes_read);
       if (vm_string_memory)
@@ -4561,8 +4571,9 @@ void ObjectFileMachO::Dump(Stream *s) {
     *s << ", file = '" << m_file;
     ModuleSpecList all_specs;
     ModuleSpec base_spec;
-    GetAllArchSpecs(m_header, m_data, MachHeaderSizeFromMagic(m_header.magic),
-                    base_spec, all_specs);
+    GetAllArchSpecs(m_header, *m_data_nsp,
+                    MachHeaderSizeFromMagic(m_header.magic), base_spec,
+                    all_specs);
     for (unsigned i = 0, e = all_specs.GetSize(); i != e; ++i) {
       *s << "', triple";
       if (e)
@@ -4868,7 +4879,7 @@ UUID ObjectFileMachO::GetUUID() {
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
-    return GetUUID(m_header, m_data, offset);
+    return GetUUID(m_header, *m_data_nsp, offset);
   }
   return UUID();
 }
@@ -4888,7 +4899,7 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
   uint32_t i;
   for (i = 0; i < m_header.ncmds; ++i) {
     const uint32_t cmd_offset = offset;
-    if (m_data.GetU32(&offset, &load_cmd, 2) == nullptr)
+    if (m_data_nsp->GetU32(&offset, &load_cmd, 2) == nullptr)
       break;
 
     switch (load_cmd.cmd) {
@@ -4899,17 +4910,17 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
     case LC_LOAD_DYLINKER:
     case LC_LOADFVMLIB:
     case LC_LOAD_UPWARD_DYLIB: {
-      uint32_t name_offset = cmd_offset + m_data.GetU32(&offset);
+      uint32_t name_offset = cmd_offset + m_data_nsp->GetU32(&offset);
       // For LC_LOAD_DYLIB there is an alternate encoding
       // which adds a uint32_t `flags` field for `DYLD_USE_*`
       // flags.  This can be detected by a timestamp field with
       // the `DYLIB_USE_MARKER` constant value.
       bool is_delayed_init = false;
-      uint32_t use_command_marker = m_data.GetU32(&offset);
+      uint32_t use_command_marker = m_data_nsp->GetU32(&offset);
       if (use_command_marker == 0x1a741800 /* DYLIB_USE_MARKER */) {
         offset += 4; /* uint32_t current_version */
         offset += 4; /* uint32_t compat_version */
-        uint32_t flags = m_data.GetU32(&offset);
+        uint32_t flags = m_data_nsp->GetU32(&offset);
         // If this LC_LOAD_DYLIB is marked delay-init,
         // don't report it as a dependent library -- it
         // may be loaded in the process at some point,
@@ -4917,7 +4928,7 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
         if (flags & 0x08 /* DYLIB_USE_DELAYED_INIT */)
           is_delayed_init = true;
       }
-      const char *path = m_data.PeekCStr(name_offset);
+      const char *path = m_data_nsp->PeekCStr(name_offset);
       if (path && !is_delayed_init) {
         if (load_cmd.cmd == LC_RPATH)
           rpath_paths.push_back(path);
@@ -5037,15 +5048,15 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
 
     for (i = 0; i < m_header.ncmds; ++i) {
       const lldb::offset_t cmd_offset = offset;
-      if (m_data.GetU32(&offset, &load_cmd, 2) == nullptr)
+      if (m_data_nsp->GetU32(&offset, &load_cmd, 2) == nullptr)
         break;
 
       switch (load_cmd.cmd) {
       case LC_UNIXTHREAD:
       case LC_THREAD: {
         while (offset < cmd_offset + load_cmd.cmdsize) {
-          uint32_t flavor = m_data.GetU32(&offset);
-          uint32_t count = m_data.GetU32(&offset);
+          uint32_t flavor = m_data_nsp->GetU32(&offset);
+          uint32_t count = m_data_nsp->GetU32(&offset);
           if (count == 0) {
             // We've gotten off somehow, log and exit;
             return m_entry_point_address;
@@ -5059,7 +5070,7 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
             {
               offset += 60; // This is the offset of pc in the GPR thread state
                             // data structure.
-              start_address = m_data.GetU32(&offset);
+              start_address = m_data_nsp->GetU32(&offset);
               done = true;
             }
             break;
@@ -5069,7 +5080,7 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
             {
               offset += 256; // This is the offset of pc in the GPR thread state
                              // data structure.
-              start_address = m_data.GetU64(&offset);
+              start_address = m_data_nsp->GetU64(&offset);
               done = true;
             }
             break;
@@ -5079,7 +5090,7 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
             {
               offset += 16 * 8; // This is the offset of rip in the GPR thread
                                 // state data structure.
-              start_address = m_data.GetU64(&offset);
+              start_address = m_data_nsp->GetU64(&offset);
               done = true;
             }
             break;
@@ -5094,7 +5105,7 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
         }
       } break;
       case LC_MAIN: {
-        uint64_t entryoffset = m_data.GetU64(&offset);
+        uint64_t entryoffset = m_data_nsp->GetU64(&offset);
         SectionSP text_segment_sp =
             GetSectionList()->FindSectionByName(GetSegmentNameTEXT());
         if (text_segment_sp) {
@@ -5115,9 +5126,10 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
 
     if (start_address == LLDB_INVALID_ADDRESS && IsDynamicLoader()) {
       if (GetSymtab()) {
-        Symbol *dyld_start_sym = GetSymtab()->FindFirstSymbolWithNameAndType(
-            ConstString("_dyld_start"), SymbolType::eSymbolTypeCode,
-            Symtab::eDebugAny, Symtab::eVisibilityAny);
+        const Symbol *dyld_start_sym =
+            GetSymtab()->FindFirstSymbolWithNameAndType(
+                ConstString("_dyld_start"), SymbolType::eSymbolTypeCode,
+                Symtab::eDebugAny, Symtab::eVisibilityAny);
         if (dyld_start_sym && dyld_start_sym->GetAddress().IsValid()) {
           start_address = dyld_start_sym->GetAddress().GetFileAddress();
         }
@@ -5178,7 +5190,7 @@ uint32_t ObjectFileMachO::GetNumThreadContexts() {
       llvm::MachO::thread_command thread_cmd;
       for (uint32_t i = 0; i < m_header.ncmds; ++i) {
         const uint32_t cmd_offset = offset;
-        if (m_data.GetU32(&offset, &thread_cmd, 2) == nullptr)
+        if (m_data_nsp->GetU32(&offset, &thread_cmd, 2) == nullptr)
           break;
 
         if (thread_cmd.cmd == LC_THREAD) {
@@ -5204,17 +5216,17 @@ ObjectFileMachO::FindLC_NOTEByName(std::string name) {
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
       llvm::MachO::load_command lc = {};
-      if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
+      if (m_data_nsp->GetU32(&offset, &lc.cmd, 2) == nullptr)
         break;
       if (lc.cmd == LC_NOTE) {
         char data_owner[17];
-        m_data.CopyData(offset, 16, data_owner);
+        m_data_nsp->CopyData(offset, 16, data_owner);
         data_owner[16] = '\0';
         offset += 16;
 
         if (name == data_owner) {
-          offset_t payload_offset = m_data.GetU64_unchecked(&offset);
-          offset_t payload_size = m_data.GetU64_unchecked(&offset);
+          offset_t payload_offset = m_data_nsp->GetU64_unchecked(&offset);
+          offset_t payload_size = m_data_nsp->GetU64_unchecked(&offset);
           results.push_back({payload_offset, payload_size});
         }
       }
@@ -5236,11 +5248,11 @@ std::string ObjectFileMachO::GetIdentifierString() {
       offset_t payload_offset = std::get<0>(lc_note);
       offset_t payload_size = std::get<1>(lc_note);
       uint32_t version;
-      if (m_data.GetU32(&payload_offset, &version, 1) != nullptr) {
+      if (m_data_nsp->GetU32(&payload_offset, &version, 1) != nullptr) {
         if (version == 1) {
           uint32_t strsize = payload_size - sizeof(uint32_t);
           std::string result(strsize, '\0');
-          m_data.CopyData(payload_offset, strsize, result.data());
+          m_data_nsp->CopyData(payload_offset, strsize, result.data());
           LLDB_LOGF(log, "LC_NOTE 'kern ver str' found with text '%s'",
                     result.c_str());
           return result;
@@ -5254,12 +5266,12 @@ std::string ObjectFileMachO::GetIdentifierString() {
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
       llvm::MachO::ident_command ident_command;
-      if (m_data.GetU32(&offset, &ident_command, 2) == nullptr)
+      if (m_data_nsp->GetU32(&offset, &ident_command, 2) == nullptr)
         break;
       if (ident_command.cmd == LC_IDENT && ident_command.cmdsize != 0) {
         std::string result(ident_command.cmdsize, '\0');
-        if (m_data.CopyData(offset, ident_command.cmdsize, result.data()) ==
-            ident_command.cmdsize) {
+        if (m_data_nsp->CopyData(offset, ident_command.cmdsize,
+                                 result.data()) == ident_command.cmdsize) {
           LLDB_LOGF(log, "LC_IDENT found with text '%s'", result.c_str());
           return result;
         }
@@ -5281,9 +5293,10 @@ AddressableBits ObjectFileMachO::GetAddressableBits() {
     for (auto lc_note : lc_notes) {
       offset_t payload_offset = std::get<0>(lc_note);
       uint32_t version;
-      if (m_data.GetU32(&payload_offset, &version, 1) != nullptr) {
+      if (m_data_nsp->GetU32(&payload_offset, &version, 1) != nullptr) {
         if (version == 3) {
-          uint32_t num_addr_bits = m_data.GetU32_unchecked(&payload_offset);
+          uint32_t num_addr_bits =
+              m_data_nsp->GetU32_unchecked(&payload_offset);
           addressable_bits.SetAddressableBits(num_addr_bits);
           LLDB_LOGF(log,
                     "LC_NOTE 'addrable bits' v3 found, value %d "
@@ -5291,8 +5304,8 @@ AddressableBits ObjectFileMachO::GetAddressableBits() {
                     num_addr_bits);
         }
         if (version == 4) {
-          uint32_t lo_addr_bits = m_data.GetU32_unchecked(&payload_offset);
-          uint32_t hi_addr_bits = m_data.GetU32_unchecked(&payload_offset);
+          uint32_t lo_addr_bits = m_data_nsp->GetU32_unchecked(&payload_offset);
+          uint32_t hi_addr_bits = m_data_nsp->GetU32_unchecked(&payload_offset);
 
           if (lo_addr_bits == hi_addr_bits)
             addressable_bits.SetAddressableBits(lo_addr_bits);
@@ -5363,25 +5376,26 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
       //    uint32_t unused        [ for alignment ]
 
       uint32_t version;
-      if (m_data.GetU32(&payload_offset, &version, 1) != nullptr &&
+      if (m_data_nsp->GetU32(&payload_offset, &version, 1) != nullptr &&
           version <= 2) {
         uint32_t binspec_type = 0;
         uuid_t raw_uuid;
         memset(raw_uuid, 0, sizeof(uuid_t));
 
-        if (!m_data.GetU32(&payload_offset, &binspec_type, 1))
+        if (!m_data_nsp->GetU32(&payload_offset, &binspec_type, 1))
           return false;
-        if (!m_data.GetU64(&payload_offset, &value, 1))
+        if (!m_data_nsp->GetU64(&payload_offset, &value, 1))
           return false;
         uint64_t slide = LLDB_INVALID_ADDRESS;
-        if (version > 1 && !m_data.GetU64(&payload_offset, &slide, 1))
+        if (version > 1 && !m_data_nsp->GetU64(&payload_offset, &slide, 1))
           return false;
         if (value == LLDB_INVALID_ADDRESS && slide != LLDB_INVALID_ADDRESS) {
           value = slide;
           value_is_offset = true;
         }
 
-        if (m_data.CopyData(payload_offset, sizeof(uuid_t), raw_uuid) != 0) {
+        if (m_data_nsp->CopyData(payload_offset, sizeof(uuid_t), raw_uuid) !=
+            0) {
           uuid = UUID(raw_uuid, sizeof(uuid_t));
           // convert the "main bin spec" type into our
           // ObjectFile::BinaryType enum
@@ -5415,9 +5429,9 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
                     version, type, typestr, value,
                     value_is_offset ? "true" : "false",
                     uuid.GetAsString().c_str());
-          if (!m_data.GetU32(&payload_offset, &log2_pagesize, 1))
+          if (!m_data_nsp->GetU32(&payload_offset, &log2_pagesize, 1))
             return false;
-          if (version > 1 && !m_data.GetU32(&payload_offset, &platform, 1))
+          if (version > 1 && !m_data_nsp->GetU32(&payload_offset, &platform, 1))
             return false;
           return true;
         }
@@ -5497,7 +5511,7 @@ StructuredData::ObjectSP ObjectFileMachO::GetCorefileProcessMetadata() {
 
   auto [payload_offset, strsize] = lc_notes[0];
   std::string buf(strsize, '\0');
-  if (m_data.CopyData(payload_offset, strsize, buf.data()) != strsize) {
+  if (m_data_nsp->CopyData(payload_offset, strsize, buf.data()) != strsize) {
     LLDB_LOGF(log,
               "Unable to read %" PRIu64
               " bytes of 'process metadata' LC_NOTE JSON contents",
@@ -5537,7 +5551,7 @@ ObjectFileMachO::GetThreadContextAtIndex(uint32_t idx,
         m_thread_context_offsets.GetEntryAtIndex(idx);
     if (thread_context_file_range) {
 
-      DataExtractor data(m_data, thread_context_file_range->GetRangeBase(),
+      DataExtractor data(*m_data_nsp, thread_context_file_range->GetRangeBase(),
                          thread_context_file_range->GetByteSize());
 
       switch (m_header.cputype) {
@@ -5677,13 +5691,13 @@ llvm::VersionTuple ObjectFileMachO::GetVersion() {
     uint32_t i;
     for (i = 0; i < m_header.ncmds; ++i) {
       const lldb::offset_t cmd_offset = offset;
-      if (m_data.GetU32(&offset, &load_cmd, 2) == nullptr)
+      if (m_data_nsp->GetU32(&offset, &load_cmd, 2) == nullptr)
         break;
 
       if (load_cmd.cmd == LC_ID_DYLIB) {
         if (version_cmd == 0) {
           version_cmd = load_cmd.cmd;
-          if (m_data.GetU32(&offset, &load_cmd.dylib, 4) == nullptr)
+          if (m_data_nsp->GetU32(&offset, &load_cmd.dylib, 4) == nullptr)
             break;
           version = load_cmd.dylib.current_version;
         }
@@ -5709,7 +5723,7 @@ ArchSpec ObjectFileMachO::GetArchitecture() {
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
-    return GetArchitecture(module_sp, m_header, m_data,
+    return GetArchitecture(module_sp, m_header, *m_data_nsp,
                            MachHeaderSizeFromMagic(m_header.magic));
   }
   return arch;
@@ -5880,14 +5894,14 @@ static llvm::VersionTuple FindMinimumVersionInfo(DataExtractor &data,
 llvm::VersionTuple ObjectFileMachO::GetMinimumOSVersion() {
   if (!m_min_os_version)
     m_min_os_version = FindMinimumVersionInfo(
-        m_data, MachHeaderSizeFromMagic(m_header.magic), m_header.ncmds);
+        *m_data_nsp, MachHeaderSizeFromMagic(m_header.magic), m_header.ncmds);
   return *m_min_os_version;
 }
 
 llvm::VersionTuple ObjectFileMachO::GetSDKVersion() {
   if (!m_sdk_versions)
     m_sdk_versions = FindMinimumVersionInfo(
-        m_data, MachHeaderSizeFromMagic(m_header.magic), m_header.ncmds);
+        *m_data_nsp, MachHeaderSizeFromMagic(m_header.magic), m_header.ncmds);
   return *m_sdk_versions;
 }
 
@@ -5934,6 +5948,20 @@ Section *ObjectFileMachO::GetMachHeaderSection() {
   }
 
   return nullptr;
+}
+
+bool ObjectFileMachO::IsGOTSection(const lldb_private::Section &section) const {
+  assert(section.GetObjectFile() == this && "Wrong object file!");
+  SectionSP segment = section.GetParent();
+  if (!segment)
+    return false;
+
+  const bool is_data_const_got =
+      segment->GetName() == "__DATA_CONST" && section.GetName() == "__got";
+  const bool is_auth_const_ptr =
+      segment->GetName() == "__AUTH_CONST" &&
+      (section.GetName() == "__auth_got" || section.GetName() == "__auth_ptr");
+  return is_data_const_got || is_auth_const_ptr;
 }
 
 bool ObjectFileMachO::SectionIsLoadable(const Section *section) {
@@ -6688,12 +6716,12 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
   for (auto lc_note : lc_notes) {
     offset_t payload_offset = std::get<0>(lc_note);
     // Read the struct all_image_infos_header.
-    uint32_t version = m_data.GetU32(&payload_offset);
+    uint32_t version = m_data_nsp->GetU32(&payload_offset);
     if (version != 1) {
       return image_infos;
     }
-    uint32_t imgcount = m_data.GetU32(&payload_offset);
-    uint64_t entries_fileoff = m_data.GetU64(&payload_offset);
+    uint32_t imgcount = m_data_nsp->GetU32(&payload_offset);
+    uint64_t entries_fileoff = m_data_nsp->GetU64(&payload_offset);
     // 'entries_size' is not used, nor is the 'unused' entry.
     //  offset += 4; // uint32_t entries_size;
     //  offset += 4; // uint32_t unused;
@@ -6703,17 +6731,18 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
     payload_offset = entries_fileoff;
     for (uint32_t i = 0; i < imgcount; i++) {
       // Read the struct image_entry.
-      offset_t filepath_offset = m_data.GetU64(&payload_offset);
+      offset_t filepath_offset = m_data_nsp->GetU64(&payload_offset);
       uuid_t uuid;
-      memcpy(&uuid, m_data.GetData(&payload_offset, sizeof(uuid_t)),
+      memcpy(&uuid, m_data_nsp->GetData(&payload_offset, sizeof(uuid_t)),
              sizeof(uuid_t));
-      uint64_t load_address = m_data.GetU64(&payload_offset);
-      offset_t seg_addrs_offset = m_data.GetU64(&payload_offset);
-      uint32_t segment_count = m_data.GetU32(&payload_offset);
-      uint32_t currently_executing = m_data.GetU32(&payload_offset);
+      uint64_t load_address = m_data_nsp->GetU64(&payload_offset);
+      offset_t seg_addrs_offset = m_data_nsp->GetU64(&payload_offset);
+      uint32_t segment_count = m_data_nsp->GetU32(&payload_offset);
+      uint32_t currently_executing = m_data_nsp->GetU32(&payload_offset);
 
       MachOCorefileImageEntry image_entry;
-      image_entry.filename = (const char *)m_data.GetCStr(&filepath_offset);
+      image_entry.filename =
+          (const char *)m_data_nsp->GetCStr(&filepath_offset);
       image_entry.uuid = UUID(uuid, sizeof(uuid_t));
       image_entry.load_address = load_address;
       image_entry.currently_executing = currently_executing;
@@ -6721,10 +6750,10 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
       offset_t seg_vmaddrs_offset = seg_addrs_offset;
       for (uint32_t j = 0; j < segment_count; j++) {
         char segname[17];
-        m_data.CopyData(seg_vmaddrs_offset, 16, segname);
+        m_data_nsp->CopyData(seg_vmaddrs_offset, 16, segname);
         segname[16] = '\0';
         seg_vmaddrs_offset += 16;
-        uint64_t vmaddr = m_data.GetU64(&seg_vmaddrs_offset);
+        uint64_t vmaddr = m_data_nsp->GetU64(&seg_vmaddrs_offset);
         seg_vmaddrs_offset += 8; /* unused */
 
         std::tuple<ConstString, addr_t> new_seg{ConstString(segname), vmaddr};
@@ -6743,14 +6772,14 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
   lc_notes = FindLC_NOTEByName("load binary");
   for (auto lc_note : lc_notes) {
     offset_t payload_offset = std::get<0>(lc_note);
-    uint32_t version = m_data.GetU32(&payload_offset);
+    uint32_t version = m_data_nsp->GetU32(&payload_offset);
     if (version == 1) {
       uuid_t uuid;
-      memcpy(&uuid, m_data.GetData(&payload_offset, sizeof(uuid_t)),
+      memcpy(&uuid, m_data_nsp->GetData(&payload_offset, sizeof(uuid_t)),
              sizeof(uuid_t));
-      uint64_t load_address = m_data.GetU64(&payload_offset);
-      uint64_t slide = m_data.GetU64(&payload_offset);
-      std::string filename = m_data.GetCStr(&payload_offset);
+      uint64_t load_address = m_data_nsp->GetU64(&payload_offset);
+      uint64_t slide = m_data_nsp->GetU64(&payload_offset);
+      std::string filename = m_data_nsp->GetCStr(&payload_offset);
 
       MachOCorefileImageEntry image_entry;
       image_entry.filename = filename;

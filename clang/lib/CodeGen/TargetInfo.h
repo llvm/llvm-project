@@ -38,7 +38,9 @@ namespace CodeGen {
 class ABIInfo;
 class CallArgList;
 class CodeGenFunction;
+class CGHLSLOffsetInfo;
 class CGBlockInfo;
+class CGHLSLOffsetInfo;
 class SwiftABIInfo;
 
 /// TargetCodeGenInfo - This class organizes various target-specific
@@ -319,31 +321,6 @@ public:
   /// Get the AST address space for alloca.
   virtual LangAS getASTAllocaAddressSpace() const { return LangAS::Default; }
 
-  Address performAddrSpaceCast(CodeGen::CodeGenFunction &CGF, Address Addr,
-                               LangAS SrcAddr, llvm::Type *DestTy,
-                               bool IsNonNull = false) const;
-
-  /// Perform address space cast of an expression of pointer type.
-  /// \param V is the LLVM value to be casted to another address space.
-  /// \param SrcAddr is the language address space of \p V.
-  /// \param DestAddr is the targeted language address space.
-  /// \param DestTy is the destination LLVM pointer type.
-  /// \param IsNonNull is the flag indicating \p V is known to be non null.
-  virtual llvm::Value *performAddrSpaceCast(CodeGen::CodeGenFunction &CGF,
-                                            llvm::Value *V, LangAS SrcAddr,
-                                            llvm::Type *DestTy,
-                                            bool IsNonNull = false) const;
-
-  /// Perform address space cast of a constant expression of pointer type.
-  /// \param V is the LLVM constant to be casted to another address space.
-  /// \param SrcAddr is the language address space of \p V.
-  /// \param DestAddr is the targeted language address space.
-  /// \param DestTy is the destination LLVM pointer type.
-  virtual llvm::Constant *performAddrSpaceCast(CodeGenModule &CGM,
-                                               llvm::Constant *V,
-                                               LangAS SrcAddr,
-                                               llvm::Type *DestTy) const;
-
   /// Get address space of pointer parameter for __cxa_atexit.
   virtual LangAS getAddrSpaceOfCxaAtexitPtrParam() const {
     return LangAS::Default;
@@ -442,11 +419,19 @@ public:
   }
 
   /// Return an LLVM type that corresponds to a HLSL type
-  virtual llvm::Type *
-  getHLSLType(CodeGenModule &CGM, const Type *T,
-              const SmallVector<int32_t> *Packoffsets = nullptr) const {
+  virtual llvm::Type *getHLSLType(CodeGenModule &CGM, const Type *T,
+                                  const CGHLSLOffsetInfo &OffsetInfo) const {
     return nullptr;
   }
+
+  /// Return an LLVM type that corresponds to padding in HLSL types
+  virtual llvm::Type *getHLSLPadding(CodeGenModule &CGM,
+                                     CharUnits NumBytes) const {
+    return nullptr;
+  }
+
+  /// Return true if this is an HLSL padding type.
+  virtual bool isHLSLPadding(llvm::Type *Ty) const { return false; }
 
   // Set the Branch Protection Attributes of the Function accordingly to the
   // BPI. Remove attributes that contradict with current BPI.

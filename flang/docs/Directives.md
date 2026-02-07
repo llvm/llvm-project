@@ -19,8 +19,11 @@ A list of non-standard directives supported by Flang
   incompatible in type (T), kind (K), rank (R), CUDA device (D), or managed (M)
   status. The letter (A) is a shorthand for (TKRDM), and is the default when no
   letters appear. The letter (C) checks for contiguity, for example allowing an
-  element of an assumed-shape array to be passed as a dummy argument. The
-  letter (P) ignores pointer and allocatable matching, so that one can pass an
+  element of an assumed-shape array to be passed as a dummy argument. It also
+  specifies that dummy arguments passed by descriptor should not have their
+  descriptor copied or reboxed, allowing the original descriptor to be passed
+  directly even if attributes like ALLOCATABLE or POINTER don't match exactly.
+  The letter (P) ignores pointer and allocatable matching, so that one can pass an
   allocatable array to routine with pointer array argument and vice versa. For
   example, if one wanted to call a "set all bytes to zero" utility that could
   be applied to arrays of any type or rank:
@@ -32,6 +35,22 @@ A list of non-standard directives supported by Flang
     end
   end interface
 ```
+  Note that it's not allowed to pass array actual argument to `ignore_trk(R)`
+  dummy argument that is a scalar with `VALUE` attribute, for example:
+```
+  interface
+    subroutine s(b)
+      !dir$ ignore_tkr(r) b
+      integer, value :: b
+    end
+  end interface
+  integer :: a(5)
+  call s(a)
+```
+  The reason for this limitation is that scalars with `VALUE` attribute can
+  be passed in registers, so it's not clear how lowering should handle this
+  case. (Passing scalar actual argument to `ignore_tkr(R)` dummy argument
+  that is a scalar with `VALUE` attribute is allowed.)
 * `!dir$ assume_aligned desginator:alignment`, where designator is a variable,
   maybe with array indices, and alignment is what the compiler should assume the
   alignment to be. E.g A:64 or B(1,1,1):128. The alignment should be a power of 2,
@@ -41,6 +60,15 @@ A list of non-standard directives supported by Flang
 * `!dir$ vector always` forces vectorization on the following loop regardless
   of cost model decisions. The loop must still be vectorizable.
   [This directive currently only works on plain do loops without labels].
+* `!dir$ vector vectorlength({fixed|scalable|<num>|<num>,fixed|<num>,scalable})`
+  specifies a hint to the compiler about the desired vectorization factor. If
+  `fixed` is used, the compiler should prefer fixed-width vectorization.
+  Scalable vectorization instructions may still be used with a fixed-width
+  predicate. If `scalable` is used the compiler should prefer scalable
+  vectorization, though it can choose to use fixed length vectorization or not
+  at all. `<num>` means that the compiler should consider using this specific
+  vectorization factor, which should be an integer literal. This directive
+  currently has the same limitations as `!dir$ vector always`.
 * `!dir$ unroll [n]` specifies that the compiler ought to unroll the immediately
   following loop `n` times. When `n` is `0` or `1`, the loop should not be unrolled
   at all. When `n` is `2` or greater, the loop should be unrolled exactly `n`
@@ -52,6 +80,9 @@ A list of non-standard directives supported by Flang
   integer that specifying the unrolling factor. When `N` is `0` or `1`, the loop
   should not be unrolled at all. If `N` is omitted the optimizer will
   selects the number of times to unroll the loop.
+* `!dir$ prefetch designator[, designator]...`, where the designator list can be
+  a variable or an array reference. This directive is used to insert a hint to
+  the code generator to prefetch instructions for memory references.
 * `!dir$ novector` disabling vectorization on the following loop.
 * `!dir$ nounroll` disabling unrolling on the following loop.
 * `!dir$ nounroll_and_jam` disabling unrolling and jamming on the following loop.

@@ -32,7 +32,6 @@
 #include <__type_traits/is_trivially_assignable.h>
 #include <__type_traits/is_trivially_constructible.h>
 #include <__type_traits/is_trivially_relocatable.h>
-#include <__type_traits/is_unbounded_array.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_extent.h>
 #include <__utility/exception_guard.h>

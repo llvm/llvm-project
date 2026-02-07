@@ -10,6 +10,7 @@ add_lldb_library(lldbDAP
   DAP.cpp
   DAPError.cpp
   DAPLog.cpp
+  DAPSessionManager.cpp
   EventHelper.cpp
   ExceptionBreakpoint.cpp
   FifoFiles.cpp
@@ -28,10 +29,10 @@ add_lldb_library(lldbDAP
 
   Handler/ResponseHandler.cpp
   Handler/AttachRequestHandler.cpp
-  Handler/BreakpointLocationsHandler.cpp
+  Handler/BreakpointLocationsRequestHandler.cpp
   Handler/CancelRequestHandler.cpp
   Handler/CompileUnitsRequestHandler.cpp
-  Handler/CompletionsHandler.cpp
+  Handler/CompletionsRequestHandler.cpp
   Handler/ConfigurationDoneRequestHandler.cpp
   Handler/ContinueRequestHandler.cpp
   Handler/DataBreakpointInfoRequestHandler.cpp

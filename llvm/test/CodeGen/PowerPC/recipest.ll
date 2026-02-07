@@ -164,7 +164,7 @@ define double @foof_fmf(double %a, float %b) nounwind {
 ; CHECK-P9-NEXT:    xsmuldp f1, f1, f0
 ; CHECK-P9-NEXT:    blr
   %x = call contract reassoc arcp float @llvm.sqrt.f32(float %b)
-  %y = fpext float %x to double
+  %y = fpext arcp float %x to double
   %r = fdiv contract reassoc arcp double %a, %y
   ret double %r
 }
@@ -1300,5 +1300,5 @@ define fp128 @hoo5_safe(fp128 %a) #1 {
 }
 
 attributes #0 = { nounwind "reciprocal-estimates"="sqrtf:0,sqrtd:0" }
-attributes #1 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
+attributes #1 = { nounwind denormal_fpenv(preservesign) }
 attributes #2 = { nounwind readnone "target-features"="-crbits" }

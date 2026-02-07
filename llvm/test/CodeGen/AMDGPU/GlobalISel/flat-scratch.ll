@@ -2848,7 +2848,7 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX12-NEXT:    s_mov_b32 s2, 3
 ; GFX12-NEXT:    s_mov_b32 s1, 2
 ; GFX12-NEXT:    s_mov_b32 s0, 1
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_dual_mov_b32 v3, s2 :: v_dual_mov_b32 v2, s1
 ; GFX12-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-NEXT:    s_wait_storecnt 0x0
@@ -3229,7 +3229,7 @@ define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX12-NEXT:    s_mov_b32 s2, 3
 ; GFX12-NEXT:    s_mov_b32 s1, 2
 ; GFX12-NEXT:    s_mov_b32 s0, 1
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    v_dual_mov_b32 v4, s3 :: v_dual_mov_b32 v3, s2
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
 ; GFX12-NEXT:    s_wait_storecnt 0x0

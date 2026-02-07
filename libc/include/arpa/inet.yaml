@@ -3,6 +3,7 @@ header_template: inet.h.def
 macros: []
 types:
   - type_name: in_addr
+  - type_name: in_addr_t
 enums: []
 objects: []
 functions:
@@ -18,6 +19,12 @@ functions:
     return_type: uint16_t
     arguments:
       - type: uint16_t
+  - name: inet_addr
+    standards:
+      - POSIX
+    return_type: in_addr_t
+    arguments:
+      - type: const char *
   - name: inet_aton
     standards:
       - llvm_libc_ext

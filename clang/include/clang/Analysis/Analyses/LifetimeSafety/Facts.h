@@ -16,13 +16,18 @@
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Loans.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include <cstdint>
 
 namespace clang::lifetimes::internal {
+
+using FactID = utils::ID<struct FactTag>;
+
 /// An abstract base class for a single, atomic lifetime-relevant event.
 class Fact {
 
@@ -38,16 +43,21 @@ public:
     /// it. Otherwise, the source's loan set is merged into the destination's
     /// loan set.
     OriginFlow,
-    /// An origin escapes the function by flowing into the return value.
-    ReturnOfOrigin,
     /// An origin is used (eg. appears as l-value expression like DeclRefExpr).
     Use,
+    /// An origin that is moved (e.g., passed to an rvalue reference parameter).
+    MovedOrigin,
     /// A marker for a specific point in the code, for testing.
     TestPoint,
+    /// An origin that escapes the function scope (e.g., via return).
+    OriginEscapes,
+    /// An origin is invalidated (e.g. vector resized).
+    InvalidateOrigin,
   };
 
 private:
   Kind K;
+  FactID ID;
 
 protected:
   Fact(Kind K) : K(K) {}
@@ -55,6 +65,9 @@ protected:
 public:
   virtual ~Fact() = default;
   Kind getKind() const { return K; }
+
+  void setID(FactID ID) { this->ID = ID; }
+  FactID getID() const { return ID; }
 
   template <typename T> const T *getAs() const {
     if (T::classof(this))
@@ -128,22 +141,70 @@ public:
             const OriginManager &OM) const override;
 };
 
-class ReturnOfOriginFact : public Fact {
+/// Represents that an origin escapes the current scope through various means.
+/// This is the base class for different escape scenarios.
+class OriginEscapesFact : public Fact {
   OriginID OID;
 
 public:
+  /// The way an origin can escape the current scope.
+  enum class EscapeKind : uint8_t {
+    Return, /// Escapes via return statement.
+    Field,  /// Escapes via assignment to a field.
+    // FIXME: Add support for escape to global (dangling global ptr).
+  } EscKind;
+
   static bool classof(const Fact *F) {
-    return F->getKind() == Kind::ReturnOfOrigin;
+    return F->getKind() == Kind::OriginEscapes;
   }
 
-  ReturnOfOriginFact(OriginID OID) : Fact(Kind::ReturnOfOrigin), OID(OID) {}
-  OriginID getReturnedOriginID() const { return OID; }
+  OriginEscapesFact(OriginID OID, EscapeKind EscKind)
+      : Fact(Kind::OriginEscapes), OID(OID), EscKind(EscKind) {}
+  OriginID getEscapedOriginID() const { return OID; }
+  EscapeKind getEscapeKind() const { return EscKind; }
+};
+
+/// Represents that an origin escapes via a return statement.
+class ReturnEscapeFact : public OriginEscapesFact {
+  const Expr *ReturnExpr;
+
+public:
+  ReturnEscapeFact(OriginID OID, const Expr *ReturnExpr)
+      : OriginEscapesFact(OID, EscapeKind::Return), ReturnExpr(ReturnExpr) {}
+
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::OriginEscapes &&
+           static_cast<const OriginEscapesFact *>(F)->getEscapeKind() ==
+               EscapeKind::Return;
+  }
+  const Expr *getReturnExpr() const { return ReturnExpr; };
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override;
+};
+
+/// Represents that an origin escapes via assignment to a field.
+/// Example: `this->view = local_var;` where local_var outlives the assignment
+/// but not the object containing the field.
+class FieldEscapeFact : public OriginEscapesFact {
+  const FieldDecl *FDecl;
+
+public:
+  FieldEscapeFact(OriginID OID, const FieldDecl *FDecl)
+      : OriginEscapesFact(OID, EscapeKind::Field), FDecl(FDecl) {}
+
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::OriginEscapes &&
+           static_cast<const OriginEscapesFact *>(F)->getEscapeKind() ==
+               EscapeKind::Field;
+  }
+  const FieldDecl *getFieldDecl() const { return FDecl; };
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &OM) const override;
 };
 
 class UseFact : public Fact {
   const Expr *UseExpr;
+  const OriginList *OList;
   // True if this use is a write operation (e.g., left-hand side of assignment).
   // Write operations are exempted from use-after-free checks.
   bool IsWritten = false;
@@ -151,15 +212,57 @@ class UseFact : public Fact {
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Use; }
 
-  UseFact(const Expr *UseExpr) : Fact(Kind::Use), UseExpr(UseExpr) {}
+  UseFact(const Expr *UseExpr, const OriginList *OList)
+      : Fact(Kind::Use), UseExpr(UseExpr), OList(OList) {}
 
-  OriginID getUsedOrigin(const OriginManager &OM) const {
-    // TODO: Remove const cast and make OriginManager::get as const.
-    return const_cast<OriginManager &>(OM).get(*UseExpr);
-  }
+  const OriginList *getUsedOrigins() const { return OList; }
   const Expr *getUseExpr() const { return UseExpr; }
   void markAsWritten() { IsWritten = true; }
   bool isWritten() const { return IsWritten; }
+
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override;
+};
+
+/// Represents that an origin's storage has been invalidated by a container
+/// operation (e.g., vector::push_back may reallocate, invalidating iterators).
+/// Created when a container method that may invalidate references/iterators
+/// is called on the container.
+class InvalidateOriginFact : public Fact {
+  OriginID OID;
+  const Expr *InvalidationExpr;
+
+public:
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::InvalidateOrigin;
+  }
+
+  InvalidateOriginFact(OriginID OID, const Expr *InvalidationExpr)
+      : Fact(Kind::InvalidateOrigin), OID(OID),
+        InvalidationExpr(InvalidationExpr) {}
+
+  OriginID getInvalidatedOrigin() const { return OID; }
+  const Expr *getInvalidationExpr() const { return InvalidationExpr; }
+  void dump(llvm::raw_ostream &OS, const LoanManager &,
+            const OriginManager &OM) const override;
+};
+
+/// Top-level origin of the expression which was found to be moved, e.g, when
+/// being used as an argument to an r-value reference parameter.
+class MovedOriginFact : public Fact {
+  const OriginID MovedOrigin;
+  const Expr *MoveExpr;
+
+public:
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::MovedOrigin;
+  }
+
+  MovedOriginFact(const Expr *MoveExpr, OriginID MovedOrigin)
+      : Fact(Kind::MovedOrigin), MovedOrigin(MovedOrigin), MoveExpr(MoveExpr) {}
+
+  OriginID getMovedOrigin() const { return MovedOrigin; }
+  const Expr *getMoveExpr() const { return MoveExpr; }
 
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &OM) const override;
@@ -184,22 +287,26 @@ public:
 
 class FactManager {
 public:
+  FactManager(const AnalysisDeclContext &AC, const CFG &Cfg)
+      : OriginMgr(AC.getASTContext(), AC.getDecl()) {
+    BlockToFacts.resize(Cfg.getNumBlockIDs());
+  }
+
   llvm::ArrayRef<const Fact *> getFacts(const CFGBlock *B) const {
-    auto It = BlockToFactsMap.find(B);
-    if (It != BlockToFactsMap.end())
-      return It->second;
-    return {};
+    return BlockToFacts[B->getBlockID()];
   }
 
   void addBlockFacts(const CFGBlock *B, llvm::ArrayRef<Fact *> NewFacts) {
     if (!NewFacts.empty())
-      BlockToFactsMap[B].assign(NewFacts.begin(), NewFacts.end());
+      BlockToFacts[B->getBlockID()].assign(NewFacts.begin(), NewFacts.end());
   }
 
   template <typename FactType, typename... Args>
   FactType *createFact(Args &&...args) {
     void *Mem = FactAllocator.Allocate<FactType>();
-    return new (Mem) FactType(std::forward<Args>(args)...);
+    FactType *Res = new (Mem) FactType(std::forward<Args>(args)...);
+    Res->setID(NextFactID++);
+    return Res;
   }
 
   void dump(const CFG &Cfg, AnalysisDeclContext &AC) const;
@@ -214,6 +321,11 @@ public:
   /// user-defined locations in the code.
   /// \note This is intended for testing only.
   llvm::StringMap<ProgramPoint> getTestPoints() const;
+  /// Retrieves all the facts in the block containing Program Point P.
+  /// \note This is intended for testing only.
+  llvm::ArrayRef<const Fact *> getBlockContaining(ProgramPoint P) const;
+
+  unsigned getNumFacts() const { return NextFactID.Value; }
 
   LoanManager &getLoanMgr() { return LoanMgr; }
   const LoanManager &getLoanMgr() const { return LoanMgr; }
@@ -221,10 +333,11 @@ public:
   const OriginManager &getOriginMgr() const { return OriginMgr; }
 
 private:
+  FactID NextFactID{0};
   LoanManager LoanMgr;
   OriginManager OriginMgr;
-  llvm::DenseMap<const clang::CFGBlock *, llvm::SmallVector<const Fact *>>
-      BlockToFactsMap;
+  /// Facts for each CFG block, indexed by block ID.
+  llvm::SmallVector<llvm::SmallVector<const Fact *>> BlockToFacts;
   llvm::BumpPtrAllocator FactAllocator;
 };
 } // namespace clang::lifetimes::internal

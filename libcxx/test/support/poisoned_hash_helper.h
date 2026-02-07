@@ -123,13 +123,9 @@ struct Class {};
 // Each header that declares the std::hash template provides enabled
 // specializations of std::hash for std::nullptr_t and all cv-unqualified
 // arithmetic, enumeration, and pointer types.
-#if TEST_STD_VER >= 17
-using MaybeNullptr = types::type_list<std::nullptr_t>;
-#else
-using MaybeNullptr = types::type_list<>;
-#endif
-using LibraryHashTypes = types::
-    concatenate_t<types::arithmetic_types, types::type_list<Enum, EnumClass, void*, void const*, Class*>, MaybeNullptr>;
+using LibraryHashTypes =
+    types::concatenate_t<types::arithmetic_types,
+                         types::type_list<Enum, EnumClass, void*, void const*, Class*, std::nullptr_t>>;
 
 struct TestHashEnabled {
   template <class T>

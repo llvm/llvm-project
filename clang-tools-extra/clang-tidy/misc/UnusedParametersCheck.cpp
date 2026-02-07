@@ -15,8 +15,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
-#include <unordered_map>
-#include <unordered_set>
 
 using namespace clang::ast_matchers;
 
@@ -30,13 +28,10 @@ static bool isOverrideMethod(const FunctionDecl *Function) {
 
 static bool hasAttrAfterParam(const SourceManager *SourceManager,
                               const ParmVarDecl *Param) {
-  for (const auto *Attr : Param->attrs()) {
-    if (SourceManager->isBeforeInTranslationUnit(Param->getLocation(),
-                                                 Attr->getLocation())) {
-      return true;
-    }
-  }
-  return false;
+  return llvm::any_of(Param->attrs(), [&](const Attr *Attr) {
+    return SourceManager->isBeforeInTranslationUnit(Param->getLocation(),
+                                                    Attr->getLocation());
+  });
 }
 
 void UnusedParametersCheck::registerMatchers(MatchFinder *Finder) {
@@ -87,12 +82,12 @@ class UnusedParametersCheck::IndexerVisitor
 public:
   IndexerVisitor(ASTContext &Ctx) { TraverseAST(Ctx); }
 
-  const std::unordered_set<const CallExpr *> &
+  const llvm::SmallPtrSetImpl<const CallExpr *> &
   getFnCalls(const FunctionDecl *Fn) {
     return Index[Fn->getCanonicalDecl()].Calls;
   }
 
-  const std::unordered_set<const DeclRefExpr *> &
+  const llvm::SmallPtrSetImpl<const DeclRefExpr *> &
   getOtherRefs(const FunctionDecl *Fn) {
     return Index[Fn->getCanonicalDecl()].OtherRefs;
   }
@@ -122,11 +117,11 @@ public:
 
 private:
   struct IndexEntry {
-    std::unordered_set<const CallExpr *> Calls;
-    std::unordered_set<const DeclRefExpr *> OtherRefs;
+    llvm::SmallPtrSet<const CallExpr *, 2> Calls;
+    llvm::SmallPtrSet<const DeclRefExpr *, 2> OtherRefs;
   };
 
-  std::unordered_map<const FunctionDecl *, IndexEntry> Index;
+  llvm::DenseMap<const FunctionDecl *, IndexEntry> Index;
 };
 
 UnusedParametersCheck::~UnusedParametersCheck() = default;
@@ -151,21 +146,19 @@ void UnusedParametersCheck::warnOnUnusedParameter(
     return;
   auto MyDiag = diag(Param->getLocation(), "parameter %0 is unused") << Param;
 
-  if (!Indexer) {
+  if (!Indexer)
     Indexer = std::make_unique<IndexerVisitor>(*Result.Context);
-  }
 
   // Cannot remove parameter for non-local functions.
   if (Function->isExternallyVisible() ||
       !Result.SourceManager->isInMainFile(Function->getLocation()) ||
       !Indexer->getOtherRefs(Function).empty() || isOverrideMethod(Function) ||
       isLambdaCallOperator(Function)) {
-
     // It is illegal to omit parameter name here in C code, so early-out.
     if (!Result.Context->getLangOpts().CPlusPlus)
       return;
 
-    SourceRange RemovalRange(Param->getLocation());
+    const SourceRange RemovalRange(Param->getLocation());
     // Note: We always add a space before the '/*' to not accidentally create
     // a '*/*' for pointer types, which doesn't start a comment. clang-format
     // will clean this up afterwards.

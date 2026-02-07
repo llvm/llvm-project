@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++2a -Wno-unused-value %s -verify
+// RUN: %clang_cc1 -std=c++2a -Wno-unused-value %s -verify -fexperimental-new-constant-interpreter
 // RUN: %clang_cc1 -std=c++2b -Wno-unused-value %s -verify
+// RUN: %clang_cc1 -std=c++2b -Wno-unused-value %s -verify -fexperimental-new-constant-interpreter
 
 consteval int id(int i) { return i; }
 constexpr char id(char c) { return c; }
@@ -627,6 +629,20 @@ void fn() {
 
 }
 
+namespace GH176045 {
+
+template <int NumArgs> struct MessageFormat {
+  template <int N> consteval MessageFormat(const char (&)[N]) {}
+};
+template <typename... Ts> void format(MessageFormat<sizeof...(Ts)>, Ts ...args);
+
+auto message = [] {
+   format("");
+   format("");
+};
+
+}
+
 
 namespace GH109096 {
 consteval void undefined();
@@ -634,7 +650,7 @@ template <typename T>
 struct scope_exit {
     T t;
     constexpr ~scope_exit() { t(); }
-    // expected-error@-1 {{call to immediate function 'GH109096::(anonymous class)::operator()' is not a constant expression}} \
+    // expected-error@-1 {{call to immediate function 'GH109096::(lambda)::operator()' is not a constant expression}} \
     // expected-note@-1 {{implicit use of 'this' pointer is only allowed within the evaluation}}
 };
 

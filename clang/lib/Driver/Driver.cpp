@@ -29,6 +29,7 @@
 #include "ToolChains/Haiku.h"
 #include "ToolChains/Hexagon.h"
 #include "ToolChains/Hurd.h"
+#include "ToolChains/LFILinux.h"
 #include "ToolChains/Lanai.h"
 #include "ToolChains/Linux.h"
 #include "ToolChains/MSP430.h"
@@ -60,16 +61,17 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Job.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Phases.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
-#include "clang/Lex/DependencyDirectivesScanner.h"
+#include "clang/Options/OptionUtils.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -87,6 +89,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -103,6 +106,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <string>
 #include <utility>
 #if LLVM_ON_UNIX
 #include <unistd.h> // getpid
@@ -121,40 +125,6 @@ template <typename F> static bool usesInput(const ArgList &Args, F &&Fn) {
             Fn(types::lookupTypeForExtension(
                 &A->getValue()[StringRef(A->getValue()).rfind('.') + 1])));
   });
-}
-
-// static
-std::string Driver::GetResourcesPath(StringRef BinaryPath) {
-  // Since the resource directory is embedded in the module hash, it's important
-  // that all places that need it call this function, so that they get the
-  // exact same string ("a/../b/" and "b/" get different hashes, for example).
-
-  // Dir is bin/ or lib/, depending on where BinaryPath is.
-  StringRef Dir = llvm::sys::path::parent_path(BinaryPath);
-  SmallString<128> P(Dir);
-
-  StringRef ConfiguredResourceDir(CLANG_RESOURCE_DIR);
-  if (!ConfiguredResourceDir.empty()) {
-    // FIXME: We should fix the behavior of llvm::sys::path::append so we don't
-    // need to check for absolute paths here.
-    if (llvm::sys::path::is_absolute(ConfiguredResourceDir))
-      P = ConfiguredResourceDir;
-    else
-      llvm::sys::path::append(P, ConfiguredResourceDir);
-  } else {
-    // On Windows, libclang.dll is in bin/.
-    // On non-Windows, libclang.so/.dylib is in lib/.
-    // With a static-library build of libclang, LibClangPath will contain the
-    // path of the embedding binary, which for LLVM binaries will be in bin/.
-    // ../lib gets us to lib/ in both cases.
-    P = llvm::sys::path::parent_path(Dir);
-    // This search path is also created in the COFF driver of lld, so any
-    // changes here also needs to happen in lld/COFF/Driver.cpp
-    llvm::sys::path::append(P, CLANG_INSTALL_LIBDIR_BASENAME, "clang",
-                            CLANG_VERSION_MAJOR_STRING);
-  }
-
-  return std::string(P);
 }
 
 CUIDOptions::CUIDOptions(llvm::opt::DerivedArgList &Args, const Driver &D)
@@ -831,11 +801,27 @@ static llvm::Triple computeTargetTriple(const Driver &D,
           ArchName, /*EnableExperimentalExtensions=*/true);
       if (!llvm::errorToBool(ISAInfo.takeError())) {
         unsigned XLen = (*ISAInfo)->getXLen();
-        if (XLen == 32)
-          Target.setArch(llvm::Triple::riscv32);
-        else if (XLen == 64)
-          Target.setArch(llvm::Triple::riscv64);
+        if (XLen == 32) {
+          if (Target.isLittleEndian())
+            Target.setArch(llvm::Triple::riscv32);
+          else
+            Target.setArch(llvm::Triple::riscv32be);
+        } else if (XLen == 64) {
+          if (Target.isLittleEndian())
+            Target.setArch(llvm::Triple::riscv64);
+          else
+            Target.setArch(llvm::Triple::riscv64be);
+        }
       }
+    }
+  }
+
+  if (Target.getArch() == llvm::Triple::riscv32be ||
+      Target.getArch() == llvm::Triple::riscv64be) {
+    static bool WarnedRISCVBE = false;
+    if (!WarnedRISCVBE) {
+      D.Diag(diag::warn_drv_riscv_be_experimental);
+      WarnedRISCVBE = true;
     }
   }
 
@@ -1303,8 +1289,7 @@ bool Driver::readConfigFile(StringRef FileName,
 
 bool Driver::loadConfigFiles() {
   llvm::cl::ExpansionContext ExpCtx(Saver.getAllocator(),
-                                    llvm::cl::tokenizeConfigFile);
-  ExpCtx.setVFS(&getVFS());
+                                    llvm::cl::tokenizeConfigFile, &getVFS());
 
   // Process options that change search path for config files.
   if (CLOptions) {
@@ -1879,6 +1864,8 @@ bool Driver::getCrashDiagnosticFile(StringRef ReproCrashFilename,
   using namespace llvm::sys;
   assert(llvm::Triple(llvm::sys::getProcessTriple()).isOSDarwin() &&
          "Only knows about .crash files on Darwin");
+  // This is not a formal output of the compiler, let's bypass the sandbox.
+  auto BypassSandbox = sandbox::scopedDisable();
 
   // The .crash file can be found on at ~/Library/Logs/DiagnosticReports/
   // (or /Library/Logs/DiagnosticReports for root) and has the filename pattern
@@ -2050,12 +2037,17 @@ void Driver::generateCompilationDiagnostics(
   InputList Inputs;
   BuildInputs(C.getDefaultToolChain(), C.getArgs(), Inputs);
 
+  ArgStringList IRInputs;
   for (InputList::iterator it = Inputs.begin(), ie = Inputs.end(); it != ie;) {
     bool IgnoreInput = false;
 
-    // Ignore input from stdin or any inputs that cannot be preprocessed.
-    // Check type first as not all linker inputs have a value.
-    if (types::getPreprocessedType(it->first) == types::TY_INVALID) {
+    // Save IR inputs separately, ignore input from stdin or any other inputs
+    // that cannot be preprocessed. Check type first as not all linker inputs
+    // have a value.
+    if (types::isLLVMIR(it->first)) {
+      IRInputs.push_back(it->second->getValue());
+      IgnoreInput = true;
+    } else if (types::getPreprocessedType(it->first) == types::TY_INVALID) {
       IgnoreInput = true;
     } else if (!strcmp(it->second->getValue(), "-")) {
       Diag(clang::diag::note_drv_command_failed_diag_msg)
@@ -2072,7 +2064,7 @@ void Driver::generateCompilationDiagnostics(
     }
   }
 
-  if (Inputs.empty()) {
+  if (Inputs.empty() && IRInputs.empty()) {
     Diag(clang::diag::note_drv_command_failed_diag_msg)
         << "Error generating preprocessed source(s) - "
            "no preprocessable inputs.";
@@ -2095,46 +2087,82 @@ void Driver::generateCompilationDiagnostics(
     return;
   }
 
-  // Construct the list of abstract actions to perform for this compilation. On
-  // Darwin OSes this uses the driver-driver and builds universal actions.
-  const ToolChain &TC = C.getDefaultToolChain();
-  if (TC.getTriple().isOSBinFormatMachO())
-    BuildUniversalActions(C, TC, Inputs);
-  else
-    BuildActions(C, C.getArgs(), Inputs, C.getActions());
+  // If we only have IR inputs there's no need for preprocessing.
+  if (!Inputs.empty()) {
+    // Construct the list of abstract actions to perform for this compilation.
+    // On Darwin OSes this uses the driver-driver and builds universal actions.
+    const ToolChain &TC = C.getDefaultToolChain();
+    if (TC.getTriple().isOSBinFormatMachO())
+      BuildUniversalActions(C, TC, Inputs);
+    else
+      BuildActions(C, C.getArgs(), Inputs, C.getActions());
 
-  BuildJobs(C);
+    BuildJobs(C);
 
-  // If there were errors building the compilation, quit now.
-  if (Trap.hasErrorOccurred()) {
-    Diag(clang::diag::note_drv_command_failed_diag_msg)
-        << "Error generating preprocessed source(s).";
-    return;
+    // If there were errors building the compilation, quit now.
+    if (Trap.hasErrorOccurred()) {
+      Diag(clang::diag::note_drv_command_failed_diag_msg)
+          << "Error generating preprocessed source(s).";
+      return;
+    }
+    // Generate preprocessed output.
+    SmallVector<std::pair<int, const Command *>, 4> FailingCommands;
+    C.ExecuteJobs(C.getJobs(), FailingCommands);
+
+    // If any of the preprocessing commands failed, clean up and exit.
+    if (!FailingCommands.empty()) {
+      Diag(clang::diag::note_drv_command_failed_diag_msg)
+          << "Error generating preprocessed source(s).";
+      return;
+    }
+
+    const ArgStringList &TempFiles = C.getTempFiles();
+    if (TempFiles.empty()) {
+      Diag(clang::diag::note_drv_command_failed_diag_msg)
+          << "Error generating preprocessed source(s).";
+      return;
+    }
   }
 
-  // Generate preprocessed output.
-  SmallVector<std::pair<int, const Command *>, 4> FailingCommands;
-  C.ExecuteJobs(C.getJobs(), FailingCommands);
+  // Copying filenames due to ownership.
+  const ArgStringList &Files = C.getTempFiles();
+  SmallVector<std::string> TempFiles(Files.begin(), Files.end());
 
-  // If any of the preprocessing commands failed, clean up and exit.
-  if (!FailingCommands.empty()) {
-    Diag(clang::diag::note_drv_command_failed_diag_msg)
-        << "Error generating preprocessed source(s).";
-    return;
-  }
+  // We'd like to copy the IR input file into our own temp file
+  // because the build system might try to clean-up after itself.
+  for (auto const *Input : IRInputs) {
+    int FD;
+    llvm::SmallVector<char, 64> Path;
 
-  const ArgStringList &TempFiles = C.getTempFiles();
-  if (TempFiles.empty()) {
-    Diag(clang::diag::note_drv_command_failed_diag_msg)
-        << "Error generating preprocessed source(s).";
-    return;
+    StringRef extension = llvm::sys::path::extension(Input);
+    if (!extension.empty())
+      extension = extension.drop_front();
+
+    std::error_code EC = llvm::sys::fs::createTemporaryFile(
+        llvm::sys::path::stem(Input), extension, FD, Path);
+    if (EC) {
+      Diag(clang::diag::note_drv_command_failed_diag_msg)
+          << "Error generating run script: " << "Failed copying IR input files"
+          << " " << EC.message();
+      return;
+    }
+
+    EC = llvm::sys::fs::copy_file(Input, FD);
+    if (EC) {
+      Diag(clang::diag::note_drv_command_failed_diag_msg)
+          << "Error generating run script: " << "Failed copying IR input files"
+          << " " << EC.message();
+      return;
+    }
+
+    TempFiles.push_back(std::string(Path.begin(), Path.end()));
   }
 
   Diag(clang::diag::note_drv_command_failed_diag_msg) << BugReporMsg;
 
   SmallString<128> VFS;
   SmallString<128> ReproCrashFilename;
-  for (const char *TempFile : TempFiles) {
+  for (std::string &TempFile : TempFiles) {
     Diag(clang::diag::note_drv_command_failed_diag_msg) << TempFile;
     if (Report)
       Report->TemporaryFiles.push_back(TempFile);
@@ -2151,7 +2179,7 @@ void Driver::generateCompilationDiagnostics(
   }
 
   for (const char *TempFile : SavedTemps)
-    C.addTempFile(TempFile);
+    TempFiles.push_back(TempFile);
 
   // Assume associated files are based off of the first temporary file.
   CrashReportInfo CrashInfo(TempFiles[0], VFS);
@@ -4208,11 +4236,6 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
     YcArg = nullptr;
   }
 
-  if (Args.hasArgNoClaim(options::OPT_fmodules_driver))
-    // TODO: Check against all incompatible -fmodules-driver arguments
-    if (!ModulesModeCXX20 && !Args.hasArgNoClaim(options::OPT_fmodules))
-      Args.eraseArg(options::OPT_fmodules_driver);
-
   Arg *FinalPhaseArg;
   phases::ID FinalPhase = getFinalPhase(Args, &FinalPhaseArg);
 
@@ -4222,8 +4245,11 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
       Args.AddFlagArg(nullptr,
                       getOpts().getOption(options::OPT_frtlib_add_rpath));
     }
-    // Emitting LLVM while linking disabled except in HIPAMD Toolchain
-    if (Args.hasArg(options::OPT_emit_llvm) && !Args.hasArg(options::OPT_hip_link))
+    // Emitting LLVM while linking disabled except in the HIPAMD or SPIR-V
+    // Toolchains
+    if (Args.hasArg(options::OPT_emit_llvm) &&
+        !Args.hasArg(options::OPT_hip_link) &&
+        !C.getDefaultToolChain().getTriple().isSPIRV())
       Diag(clang::diag::err_drv_emit_llvm_link);
     if (C.getDefaultToolChain().getTriple().isWindowsMSVCEnvironment() &&
         LTOMode != LTOK_None &&
@@ -4339,33 +4365,6 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
   }
 }
 
-static bool hasCXXModuleInputType(const Driver::InputList &Inputs) {
-  const auto IsTypeCXXModule = [](const auto &Input) -> bool {
-    const auto TypeID = Input.first;
-    return (TypeID == types::TY_CXXModule);
-  };
-  return llvm::any_of(Inputs, IsTypeCXXModule);
-}
-
-llvm::ErrorOr<bool>
-Driver::ScanInputsForCXX20ModulesUsage(const InputList &Inputs) const {
-  const auto CXXInputs = llvm::make_filter_range(
-      Inputs, [](const auto &Input) { return types::isCXX(Input.first); });
-  for (const auto &Input : CXXInputs) {
-    StringRef Filename = Input.second->getSpelling();
-    auto ErrOrBuffer = VFS->getBufferForFile(Filename);
-    if (!ErrOrBuffer)
-      return ErrOrBuffer.getError();
-    const auto Buffer = std::move(*ErrOrBuffer);
-
-    if (scanInputForCXX20ModulesUsage(Buffer->getBuffer())) {
-      Diags.Report(diag::remark_found_cxx20_module_usage) << Filename;
-      return true;
-    }
-  }
-  return false;
-}
-
 void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
                           const InputList &Inputs, ActionList &Actions) const {
   llvm::PrettyStackTraceString CrashInfo("Building compilation actions");
@@ -4377,33 +4376,6 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
   handleArguments(C, Args, Inputs, Actions);
 
-  if (Args.hasFlag(options::OPT_fmodules_driver,
-                   options::OPT_fno_modules_driver, false)) {
-    // TODO: Move the logic for implicitly enabling explicit-module-builds out
-    // of -fmodules-driver once it is no longer experimental.
-    // Currently, this serves diagnostic purposes only.
-    bool UsesCXXModules = hasCXXModuleInputType(Inputs);
-    if (!UsesCXXModules) {
-      const auto ErrOrScanResult = ScanInputsForCXX20ModulesUsage(Inputs);
-      if (!ErrOrScanResult) {
-        Diags.Report(diag::err_cannot_open_file)
-            << ErrOrScanResult.getError().message();
-        return;
-      }
-      UsesCXXModules = *ErrOrScanResult;
-    }
-    if (UsesCXXModules || Args.hasArg(options::OPT_fmodules))
-      BuildDriverManagedModuleBuildActions(C, Args, Inputs, Actions);
-    return;
-  }
-
-  BuildDefaultActions(C, Args, Inputs, Actions);
-}
-
-void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
-                                 const InputList &Inputs,
-                                 ActionList &Actions) const {
-
   bool UseNewOffloadingDriver =
       C.isOffloadingHostKind(Action::OFK_OpenMP) ||
       C.isOffloadingHostKind(Action::OFK_SYCL) ||
@@ -4412,10 +4384,6 @@ void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
       Args.hasFlag(options::OPT_offload_new_driver,
                    options::OPT_no_offload_new_driver,
                    C.isOffloadingHostKind(Action::OFK_Cuda));
-
-  bool HIPNoRDC =
-      C.isOffloadingHostKind(Action::OFK_HIP) &&
-      !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
 
   // Builder to be used to build offloading actions.
   std::unique_ptr<OffloadingActionBuilder> OffloadBuilder =
@@ -4550,13 +4518,20 @@ void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
     // Check if this Linker Job should emit a static library.
     if (ShouldEmitStaticLibrary(Args)) {
       LA = C.MakeAction<StaticLibJobAction>(LinkerInputs, types::TY_Image);
-    } else if ((UseNewOffloadingDriver && !HIPNoRDC) ||
+    } else if (UseNewOffloadingDriver ||
                Args.hasArg(options::OPT_offload_link)) {
       LA = C.MakeAction<LinkerWrapperJobAction>(LinkerInputs, types::TY_Image);
       LA->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
                                    /*BoundArch=*/nullptr);
     } else {
-      LA = C.MakeAction<LinkJobAction>(LinkerInputs, types::TY_Image);
+      // If we are linking but were passed -emit-llvm, we will be calling
+      // llvm-link, so set the output type accordingly. This is only allowed in
+      // rare cases, so make sure we aren't going to error about it.
+      bool LinkingIR = Args.hasArg(options::OPT_emit_llvm) &&
+                       C.getDefaultToolChain().getTriple().isSPIRV();
+      types::ID LT = LinkingIR && !Diags.hasErrorOccurred() ? types::TY_LLVM_BC
+                                                            : types::TY_Image;
+      LA = C.MakeAction<LinkJobAction>(LinkerInputs, LT);
     }
     if (!UseNewOffloadingDriver)
       LA = OffloadBuilder->processHostLinkAction(LA);
@@ -4697,12 +4672,6 @@ void Driver::BuildDefaultActions(Compilation &C, DerivedArgList &Args,
 
   // Claim ignored clang-cl options.
   Args.ClaimAllArgs(options::OPT_cl_ignored_Group);
-}
-
-void Driver::BuildDriverManagedModuleBuildActions(
-    Compilation &C, llvm::opt::DerivedArgList &Args, const InputList &Inputs,
-    ActionList &Actions) const {
-  Diags.Report(diag::remark_performing_driver_managed_module_build);
 }
 
 /// Returns the canonical name for the offloading architecture when using a HIP
@@ -4887,20 +4856,6 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
         << "-fhip-emit-relocatable"
         << "--offload-device-only";
 
-  // For HIP non-rdc non-device-only compilation, create a linker wrapper
-  // action for each host object to link, bundle and wrap device files in
-  // it.
-  if ((isa<AssembleJobAction>(HostAction) ||
-       (isa<BackendJobAction>(HostAction) &&
-        HostAction->getType() == types::TY_LTO_BC)) &&
-      HIPNoRDC && !offloadDeviceOnly()) {
-    ActionList AL{HostAction};
-    HostAction = C.MakeAction<LinkerWrapperJobAction>(AL, types::TY_Object);
-    HostAction->propagateHostOffloadInfo(C.getActiveOffloadKinds(),
-                                         /*BoundArch=*/nullptr);
-    return HostAction;
-  }
-
   // Don't build offloading actions if we do not have a compile action. If
   // preprocessing only ignore embedding.
   if (!(isa<CompileJobAction>(HostAction) ||
@@ -4999,15 +4954,29 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     // Compiling HIP in device-only non-RDC mode requires linking each action
     // individually.
     for (Action *&A : DeviceActions) {
-      // Special handling for the HIP SPIR-V toolchain because it doesn't use
-      // the SPIR-V backend yet doesn't report the output as an object.
-      bool IsAMDGCNSPIRV = A->getOffloadingToolChain() &&
-                           A->getOffloadingToolChain()->getTriple().getOS() ==
-                               llvm::Triple::OSType::AMDHSA &&
-                           A->getOffloadingToolChain()->getTriple().isSPIRV();
-      if ((A->getType() != types::TY_Object && !IsAMDGCNSPIRV &&
+      auto *OffloadTriple = A->getOffloadingToolChain()
+                                ? &A->getOffloadingToolChain()->getTriple()
+                                : nullptr;
+      bool IsHIPSPV =
+          OffloadTriple && OffloadTriple->isSPIRV() &&
+          (OffloadTriple->getOS() == llvm::Triple::OSType::AMDHSA ||
+           OffloadTriple->getOS() == llvm::Triple::OSType::ChipStar);
+      bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
+                                          options::OPT_no_use_spirv_backend,
+                                          /*Default=*/false);
+
+      // Special handling for the HIP SPIR-V toolchains in device-only.
+      // The translator path has a linking step, whereas the SPIR-V backend path
+      // does not to avoid any external dependency such as spirv-link. The
+      // linking step is skipped for the SPIR-V backend path.
+      bool IsAMDGCNSPIRVWithBackend =
+          IsHIPSPV && OffloadTriple->getOS() == llvm::Triple::OSType::AMDHSA &&
+          UseSPIRVBackend;
+
+      if ((A->getType() != types::TY_Object && !IsHIPSPV &&
            A->getType() != types::TY_LTO_BC) ||
-          HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly())
+          HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly() ||
+          (IsAMDGCNSPIRVWithBackend && offloadDeviceOnly()))
         continue;
       ActionList LinkerInput = {A};
       A = C.MakeAction<LinkJobAction>(LinkerInput, types::TY_Image);
@@ -5065,6 +5034,21 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     DDep.add(*FatbinAction,
              *C.getOffloadToolChains<Action::OFK_HIP>().first->second, nullptr,
              Action::OFK_HIP);
+  } else if (HIPNoRDC) {
+    // Package all the offloading actions into a single output that can be
+    // embedded in the host and linked.
+    Action *PackagerAction =
+        C.MakeAction<OffloadPackagerJobAction>(OffloadActions, types::TY_Image);
+
+    // For HIP non-RDC compilation, wrap the device binary with linker wrapper
+    // before bundling with host code. Do not bind a specific GPU arch here,
+    // as the packaged image may contain entries for multiple GPUs.
+    ActionList AL{PackagerAction};
+    PackagerAction =
+        C.MakeAction<LinkerWrapperJobAction>(AL, types::TY_HIP_FATBIN);
+    DDep.add(*PackagerAction,
+             *C.getOffloadToolChains<Action::OFK_HIP>().first->second,
+             /*BoundArch=*/nullptr, Action::OFK_HIP);
   } else {
     // Package all the offloading actions into a single output that can be
     // embedded in the host and linked.
@@ -5194,6 +5178,14 @@ Action *Driver::ConstructPhaseAction(
     return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_BC);
   }
   case phases::Backend: {
+    // Skip a redundant Backend phase for HIP device code when using the new
+    // offload driver, where mid-end is done in linker wrapper.
+    if (TargetDeviceOffloadKind == Action::OFK_HIP &&
+        Args.hasFlag(options::OPT_offload_new_driver,
+                     options::OPT_no_offload_new_driver, false) &&
+        !offloadDeviceOnly())
+      return Input;
+
     if (isUsingLTO() && TargetDeviceOffloadKind == Action::OFK_None) {
       types::ID Output;
       if (Args.hasArg(options::OPT_ffat_lto_objects) &&
@@ -5210,11 +5202,40 @@ Action *Driver::ConstructPhaseAction(
           Args.hasArg(options::OPT_S) ? types::TY_LTO_IR : types::TY_LTO_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
+    bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
+                                        options::OPT_no_use_spirv_backend,
+                                        /*Default=*/false);
+
+    auto OffloadingToolChain = Input->getOffloadingToolChain();
+    // For AMD SPIRV, if offloadDeviceOnly(), we call the SPIRV backend unless
+    // LLVM bitcode was requested explicitly or RDC is set. If
+    // !offloadDeviceOnly, we emit LLVM bitcode, and clang-linker-wrapper will
+    // compile it to SPIRV.
+    bool UseSPIRVBackendForHipDeviceOnlyNoRDC =
+        TargetDeviceOffloadKind == Action::OFK_HIP && OffloadingToolChain &&
+        OffloadingToolChain->getTriple().isSPIRV() && UseSPIRVBackend &&
+        offloadDeviceOnly() &&
+        !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
+
+    auto &DefaultToolChain = C.getDefaultToolChain();
+    auto DefaultToolChainTriple = DefaultToolChain.getTriple();
+    // For regular C/C++ to AMD SPIRV emit bitcode to avoid spirv-link
+    // dependency, SPIRVAMDToolChain's linker takes care of the generation of
+    // the final SPIRV. The only exception is -S without -emit-llvm to output
+    // textual SPIRV assembly, which fits the default compilation path.
+    bool EmitBitcodeForNonOffloadAMDSPIRV =
+        !OffloadingToolChain && DefaultToolChainTriple.isSPIRV() &&
+        DefaultToolChainTriple.getVendor() == llvm::Triple::VendorType::AMD &&
+        !(Args.hasArg(options::OPT_S) && !Args.hasArg(options::OPT_emit_llvm));
+
     if (Args.hasArg(options::OPT_emit_llvm) ||
+        EmitBitcodeForNonOffloadAMDSPIRV ||
         TargetDeviceOffloadKind == Action::OFK_SYCL ||
         (((Input->getOffloadingToolChain() &&
-           Input->getOffloadingToolChain()->getTriple().isAMDGPU()) ||
+           Input->getOffloadingToolChain()->getTriple().isAMDGPU() &&
+           TargetDeviceOffloadKind != Action::OFK_None) ||
           TargetDeviceOffloadKind == Action::OFK_HIP) &&
+         !UseSPIRVBackendForHipDeviceOnlyNoRDC &&
          ((Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
                         false) ||
            (Args.hasFlag(options::OPT_offload_new_driver,
@@ -5236,6 +5257,19 @@ Action *Driver::ConstructPhaseAction(
               : types::TY_LLVM_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
+
+    // The SPIRV backend compilation path for HIP must avoid external
+    // dependencies. The default compilation path assembles and links its
+    // output, but the SPIRV assembler and linker are external tools. This code
+    // ensures the backend emits binary SPIRV directly to bypass those steps and
+    // avoid failures. Without -save-temps, the compiler may already skip
+    // assembling and linking. With -save-temps, these steps must be explicitly
+    // disabled, as done here. We also force skipping these steps regardless of
+    // -save-temps to avoid relying on optimizations (unless -S is set).
+    // The current HIP bundling expects the type to be types::TY_Image
+    if (UseSPIRVBackendForHipDeviceOnlyNoRDC && !Args.hasArg(options::OPT_S))
+      return C.MakeAction<BackendJobAction>(Input, types::TY_Image);
+
     return C.MakeAction<BackendJobAction>(Input, types::TY_PP_Asm);
   }
   case phases::Assemble:
@@ -6236,12 +6270,7 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
                                        StringRef OrigBoundArch, bool AtTopLevel,
                                        bool MultipleArchs,
                                        StringRef OffloadingPrefix) const {
-  std::string BoundArch = OrigBoundArch.str();
-  if (is_style_windows(llvm::sys::path::Style::native)) {
-    // BoundArch may contains ':', which is invalid in file names on Windows,
-    // therefore replace it with '%'.
-    llvm::replace(BoundArch, ':', '@');
-  }
+  std::string BoundArch = sanitizeTargetIDInFileName(OrigBoundArch);
 
   llvm::PrettyStackTraceString CrashInfo("Computing output path");
   // Output to a user requested destination?
@@ -6864,6 +6893,8 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         TC = std::make_unique<toolchains::OHOS>(*this, Target, Args);
       else if (Target.isWALI())
         TC = std::make_unique<toolchains::WebAssembly>(*this, Target, Args);
+      else if (Target.isLFI())
+        TC = std::make_unique<toolchains::LFILinux>(*this, Target, Args);
       else
         TC = std::make_unique<toolchains::Linux>(*this, Target, Args);
       break;
@@ -6951,6 +6982,9 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::ShaderModel:
       TC = std::make_unique<toolchains::HLSLToolChain>(*this, Target, Args);
       break;
+    case llvm::Triple::ChipStar:
+      TC = std::make_unique<toolchains::HIPSPVToolChain>(*this, Target, Args);
+      break;
     default:
       // Of these targets, Hexagon is the only one that might have
       // an OS of Linux, in which case it got handled above already.
@@ -6983,6 +7017,8 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
         break;
       case llvm::Triple::riscv32:
       case llvm::Triple::riscv64:
+      case llvm::Triple::riscv32be:
+      case llvm::Triple::riscv64be:
         TC = std::make_unique<toolchains::BareMetal>(*this, Target, Args);
         break;
       case llvm::Triple::ve:
@@ -7000,6 +7036,8 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
           TC = std::make_unique<toolchains::BareMetal>(*this, Target, Args);
         else if (Target.isOSBinFormatELF())
           TC = std::make_unique<toolchains::Generic_ELF>(*this, Target, Args);
+        else if (Target.isAppleFirmware())
+          TC = std::make_unique<toolchains::DarwinClang>(*this, Target, Args);
         else if (Target.isAppleMachO())
           TC = std::make_unique<toolchains::AppleMachO>(*this, Target, Args);
         else if (Target.isOSBinFormatMachO())

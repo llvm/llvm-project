@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen < %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' < %s
 ;
 ; Check we do not crash even though the dead %tmp8 is referenced by a parameter
 ; and we do not pre-load it (as it is dead).

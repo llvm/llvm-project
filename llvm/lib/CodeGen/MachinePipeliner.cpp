@@ -72,6 +72,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
@@ -290,10 +291,12 @@ class LoopCarriedOrderDepsTracker {
     InstrTag getTag() const { return InstrTag(getInt()); }
   };
 
-  /// Holds loads and stores with memory related information.
-  struct LoadStoreChunk {
+  /// Holds instructions that may form loop-carried order-dependencies, but not
+  /// global barriers.
+  struct NoBarrierInstsChunk {
     SmallVector<SUnitWithMemInfo, 4> Loads;
     SmallVector<SUnitWithMemInfo, 4> Stores;
+    SmallVector<SUnitWithMemInfo, 1> FPExceptions;
 
     void append(SUnit *SU);
   };
@@ -340,21 +343,19 @@ private:
   /// Tags to \p SU if the instruction may affect the order-dependencies.
   std::optional<InstrTag> getInstrTag(SUnit *SU) const;
 
-  void addLoopCarriedDepenenciesForChunks(const LoadStoreChunk &From,
-                                          const LoadStoreChunk &To);
+  void addLoopCarriedDepenenciesForChunks(const NoBarrierInstsChunk &From,
+                                          const NoBarrierInstsChunk &To);
 
   /// Add a loop-carried order dependency between \p Src and \p Dst if we
-  /// cannot prove they are independent. When \p PerformCheapCheck is true, a
-  /// lightweight dependency test (referred to as "cheap check" below) is
-  /// performed at first. Note that the cheap check is retained to maintain the
-  /// existing behavior and not expected to be used anymore.
-  ///
-  /// TODO: Remove \p PerformCheapCheck and the corresponding cheap check.
+  /// cannot prove they are independent.
   void addDependenciesBetweenSUs(const SUnitWithMemInfo &Src,
-                                 const SUnitWithMemInfo &Dst,
-                                 bool PerformCheapCheck = false);
+                                 const SUnitWithMemInfo &Dst);
 
   void computeDependenciesAux();
+
+  void setLoopCarriedDep(const SUnit *Src, const SUnit *Dst) {
+    LoopCarried[Src->NodeNum].set(Dst->NodeNum);
+  }
 };
 
 } // end anonymous namespace
@@ -485,6 +486,61 @@ void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
   }
 }
 
+/// Depth-first search to detect cycles among PHI dependencies.
+/// Returns true if a cycle is detected within the PHI-only subgraph.
+static bool hasPHICycleDFS(
+    unsigned Reg, const DenseMap<unsigned, SmallVector<unsigned, 2>> &PhiDeps,
+    SmallSet<unsigned, 8> &Visited, SmallSet<unsigned, 8> &RecStack) {
+
+  // If Reg is not a PHI-def it cannot contribute to a PHI cycle.
+  auto It = PhiDeps.find(Reg);
+  if (It == PhiDeps.end())
+    return false;
+
+  if (RecStack.count(Reg))
+    return true; // backedge.
+  if (Visited.count(Reg))
+    return false;
+
+  Visited.insert(Reg);
+  RecStack.insert(Reg);
+
+  for (unsigned Dep : It->second) {
+    if (hasPHICycleDFS(Dep, PhiDeps, Visited, RecStack))
+      return true;
+  }
+
+  RecStack.erase(Reg);
+  return false;
+}
+
+static bool hasPHICycle(const MachineBasicBlock *LoopHeader,
+                        const MachineRegisterInfo &MRI) {
+  DenseMap<unsigned, SmallVector<unsigned, 2>> PhiDeps;
+
+  // Collect PHI nodes and their dependencies.
+  for (const MachineInstr &MI : LoopHeader->phis()) {
+    unsigned DefReg = MI.getOperand(0).getReg();
+    auto Ins = PhiDeps.try_emplace(DefReg).first;
+
+    // PHI operands are (Reg, MBB) pairs starting at index 1.
+    for (unsigned I = 1; I < MI.getNumOperands(); I += 2)
+      Ins->second.push_back(MI.getOperand(I).getReg());
+  }
+
+  // DFS to detect cycles among PHI nodes.
+  SmallSet<unsigned, 8> Visited, RecStack;
+
+  // Start DFS from each PHI-def.
+  for (const auto &KV : PhiDeps) {
+    unsigned Reg = KV.first;
+    if (hasPHICycleDFS(Reg, PhiDeps, Visited, RecStack))
+      return true;
+  }
+
+  return false;
+}
+
 /// Return true if the loop can be software pipelined.  The algorithm is
 /// restricted to loops with a single basic block.  Make sure that the
 /// branch in the loop can be analyzed.
@@ -496,6 +552,11 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
              << "Not a single basic block: "
              << ore::NV("NumBlocks", L.getNumBlocks());
     });
+    return false;
+  }
+
+  if (hasPHICycle(L.getHeader(), MF->getRegInfo())) {
+    LLVM_DEBUG(dbgs() << "Cannot pipeline loop due to PHI cycle\n");
     return false;
   }
 
@@ -991,11 +1052,12 @@ bool SUnitWithMemInfo::getUnderlyingObjects() {
 
 /// Returns true if there is a loop-carried order dependency from \p Src to \p
 /// Dst.
-static bool
-hasLoopCarriedMemDep(const SUnitWithMemInfo &Src, const SUnitWithMemInfo &Dst,
-                     BatchAAResults &BAA, const TargetInstrInfo *TII,
-                     const TargetRegisterInfo *TRI,
-                     const SwingSchedulerDAG *SSD, bool PerformCheapCheck) {
+static bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
+                                 const SUnitWithMemInfo &Dst,
+                                 BatchAAResults &BAA,
+                                 const TargetInstrInfo *TII,
+                                 const TargetRegisterInfo *TRI,
+                                 const SwingSchedulerDAG *SSD) {
   if (Src.isTriviallyDisjoint(Dst))
     return false;
   if (isSuccOrder(Src.SU, Dst.SU))
@@ -1003,28 +1065,6 @@ hasLoopCarriedMemDep(const SUnitWithMemInfo &Src, const SUnitWithMemInfo &Dst,
 
   MachineInstr &SrcMI = *Src.SU->getInstr();
   MachineInstr &DstMI = *Dst.SU->getInstr();
-  if (PerformCheapCheck) {
-    // First, perform the cheaper check that compares the base register.
-    // If they are the same and the load offset is less than the store
-    // offset, then mark the dependence as loop carried potentially.
-    //
-    // TODO: This check will be removed.
-    const MachineOperand *BaseOp1, *BaseOp2;
-    int64_t Offset1, Offset2;
-    bool Offset1IsScalable, Offset2IsScalable;
-    if (TII->getMemOperandWithOffset(SrcMI, BaseOp1, Offset1, Offset1IsScalable,
-                                     TRI) &&
-        TII->getMemOperandWithOffset(DstMI, BaseOp2, Offset2, Offset2IsScalable,
-                                     TRI)) {
-      if (BaseOp1->isIdenticalTo(*BaseOp2) &&
-          Offset1IsScalable == Offset2IsScalable &&
-          (int)Offset1 < (int)Offset2) {
-        assert(TII->areMemAccessesTriviallyDisjoint(SrcMI, DstMI) &&
-               "What happened to the chain edge?");
-        return true;
-      }
-    }
-  }
 
   if (!SSD->mayOverlapInLaterIter(&SrcMI, &DstMI))
     return false;
@@ -1054,11 +1094,16 @@ hasLoopCarriedMemDep(const SUnitWithMemInfo &Src, const SUnitWithMemInfo &Dst,
   return false;
 }
 
-void LoopCarriedOrderDepsTracker::LoadStoreChunk::append(SUnit *SU) {
+void LoopCarriedOrderDepsTracker::NoBarrierInstsChunk::append(SUnit *SU) {
   const MachineInstr *MI = SU->getInstr();
-  if (!MI->mayLoadOrStore())
-    return;
-  (MI->mayStore() ? Stores : Loads).emplace_back(SU);
+  if (MI->mayStore())
+    Stores.emplace_back(SU);
+  else if (MI->mayLoad())
+    Loads.emplace_back(SU);
+  else if (MI->mayRaiseFPException())
+    FPExceptions.emplace_back(SU);
+  else
+    llvm_unreachable("Unexpected instruction type.");
 }
 
 LoopCarriedOrderDepsTracker::LoopCarriedOrderDepsTracker(
@@ -1098,23 +1143,21 @@ LoopCarriedOrderDepsTracker::getInstrTag(SUnit *SU) const {
 }
 
 void LoopCarriedOrderDepsTracker::addDependenciesBetweenSUs(
-    const SUnitWithMemInfo &Src, const SUnitWithMemInfo &Dst,
-    bool PerformCheapCheck) {
+    const SUnitWithMemInfo &Src, const SUnitWithMemInfo &Dst) {
   // Avoid self-dependencies.
   if (Src.SU == Dst.SU)
     return;
 
-  if (hasLoopCarriedMemDep(Src, Dst, *BAA, TII, TRI, DAG, PerformCheapCheck))
-    LoopCarried[Src.SU->NodeNum].set(Dst.SU->NodeNum);
+  if (hasLoopCarriedMemDep(Src, Dst, *BAA, TII, TRI, DAG))
+    setLoopCarriedDep(Src.SU, Dst.SU);
 }
 
 void LoopCarriedOrderDepsTracker::addLoopCarriedDepenenciesForChunks(
-    const LoadStoreChunk &From, const LoadStoreChunk &To) {
+    const NoBarrierInstsChunk &From, const NoBarrierInstsChunk &To) {
   // Add load-to-store dependencies (WAR).
   for (const SUnitWithMemInfo &Src : From.Loads)
     for (const SUnitWithMemInfo &Dst : To.Stores)
-      // Perform a cheap check first if this is a forward dependency.
-      addDependenciesBetweenSUs(Src, Dst, Src.SU->NodeNum < Dst.SU->NodeNum);
+      addDependenciesBetweenSUs(Src, Dst);
 
   // Add store-to-load dependencies (RAW).
   for (const SUnitWithMemInfo &Src : From.Stores)
@@ -1128,19 +1171,22 @@ void LoopCarriedOrderDepsTracker::addLoopCarriedDepenenciesForChunks(
 }
 
 void LoopCarriedOrderDepsTracker::computeDependenciesAux() {
-  SmallVector<LoadStoreChunk, 2> Chunks(1);
+  SmallVector<NoBarrierInstsChunk, 2> Chunks(1);
+  SUnit *FirstBarrier = nullptr;
+  SUnit *LastBarrier = nullptr;
   for (const auto &TSU : TaggedSUnits) {
     InstrTag Tag = TSU.getTag();
     SUnit *SU = TSU.getPointer();
     switch (Tag) {
     case InstrTag::Barrier:
+      if (!FirstBarrier)
+        FirstBarrier = SU;
+      LastBarrier = SU;
       Chunks.emplace_back();
       break;
     case InstrTag::LoadOrStore:
-      Chunks.back().append(SU);
-      break;
     case InstrTag::FPExceptions:
-      // TODO: Handle this properly.
+      Chunks.back().append(SU);
       break;
     }
   }
@@ -1148,12 +1194,58 @@ void LoopCarriedOrderDepsTracker::computeDependenciesAux() {
   // Add dependencies between memory operations. If there are one or more
   // barrier events between two memory instructions, we don't add a
   // loop-carried dependence for them.
-  for (const LoadStoreChunk &Chunk : Chunks)
+  for (const NoBarrierInstsChunk &Chunk : Chunks)
     addLoopCarriedDepenenciesForChunks(Chunk, Chunk);
 
-  // TODO: If there are multiple barrier instructions, dependencies from the
-  // last barrier instruction (or load/store below it) to the first barrier
-  // instruction (or load/store above it).
+  // There is no barrier instruction between load/store/fp-exception
+  // instructions in the same chunk. If there are one or more barrier
+  // instructions, the instructions sequence is as follows:
+  //
+  //   Loads/Stores/FPExceptions (Chunks.front())
+  //   Barrier (FirstBarrier)
+  //   Loads/Stores/FPExceptions
+  //   Barrier
+  //   ...
+  //   Loads/Stores/FPExceptions
+  //   Barrier (LastBarrier)
+  //   Loads/Stores/FPExceptions (Chunks.back())
+  //
+  // Since loads/stores/fp-exceptions must not be reordered across barrier
+  // instructions, and the order of barrier instructions must be preserved, add
+  // the following loop-carried dependences:
+  //
+  //       Loads/Stores/FPExceptions (Chunks.front()) <-----+
+  //  +--> Barrier (FirstBarrier) <----------------------+  |
+  //  |    Loads/Stores/FPExceptions                     |  |
+  //  |    Barrier                                       |  |
+  //  |    ...                                           |  |
+  //  |    Loads/Stores/FPExceptions                     |  |
+  //  |    Barrier (LastBarrier) ------------------------+--+
+  //  +--- Loads/Stores/FPExceptions (Chunks.back())
+  //
+  if (FirstBarrier) {
+    assert(LastBarrier && "Both barriers should be set.");
+
+    // LastBarrier -> Loads/Stores/FPExceptions in Chunks.front()
+    for (const SUnitWithMemInfo &Dst : Chunks.front().Loads)
+      setLoopCarriedDep(LastBarrier, Dst.SU);
+    for (const SUnitWithMemInfo &Dst : Chunks.front().Stores)
+      setLoopCarriedDep(LastBarrier, Dst.SU);
+    for (const SUnitWithMemInfo &Dst : Chunks.front().FPExceptions)
+      setLoopCarriedDep(LastBarrier, Dst.SU);
+
+    // Loads/Stores/FPExceptions in Chunks.back() -> FirstBarrier
+    for (const SUnitWithMemInfo &Src : Chunks.back().Loads)
+      setLoopCarriedDep(Src.SU, FirstBarrier);
+    for (const SUnitWithMemInfo &Src : Chunks.back().Stores)
+      setLoopCarriedDep(Src.SU, FirstBarrier);
+    for (const SUnitWithMemInfo &Src : Chunks.back().FPExceptions)
+      setLoopCarriedDep(Src.SU, FirstBarrier);
+
+    // LastBarrier -> FirstBarrier (if they are different)
+    if (FirstBarrier != LastBarrier)
+      setLoopCarriedDep(LastBarrier, FirstBarrier);
+  }
 }
 
 /// Add a chain edge between a load and store if the store can be an
@@ -1214,8 +1306,19 @@ void SwingSchedulerDAG::updatePhiDependences() {
               HasPhiDef = Reg;
               // Add a chain edge to a dependent Phi that isn't an existing
               // predecessor.
-              if (SU->NodeNum < I.NodeNum && !I.isPred(SU))
-                I.addPred(SDep(SU, SDep::Barrier));
+
+              // %3:intregs = PHI %21:intregs, %bb.6, %7:intregs, %bb.1 - SU0
+              // %7:intregs = PHI %21:intregs, %bb.6, %13:intregs, %bb.1 - SU1
+              // %27:intregs = A2_zxtb %3:intregs - SU2
+              // %13:intregs = C2_muxri %45:predregs, 0, %46:intreg
+              // If we have dependent phis, SU0 should be the successor of SU1
+              // not the other way around. (it used to be SU1 is the successor
+              // of SU0). In some cases, SU0 is scheduled earlier than SU1
+              // resulting in bad IR as we do not have a value that can be used
+              // by SU2.
+
+              if (SU->NodeNum < I.NodeNum && !SU->isPred(&I))
+                SU->addPred(SDep(&I, SDep::Barrier));
             }
           }
         }
@@ -1509,7 +1612,11 @@ private:
 
   void dumpPSet(Register Reg) const {
     dbgs() << "Reg=" << printReg(Reg, TRI, 0, &MRI) << " PSet=";
-    for (auto PSetIter = MRI.getPressureSets(Reg); PSetIter.isValid();
+    // FIXME: The static_cast is a bug compensating bugs in the callers.
+    VirtRegOrUnit VRegOrUnit =
+        Reg.isVirtual() ? VirtRegOrUnit(Reg)
+                        : VirtRegOrUnit(static_cast<MCRegUnit>(Reg.id()));
+    for (auto PSetIter = MRI.getPressureSets(VRegOrUnit); PSetIter.isValid();
          ++PSetIter) {
       dbgs() << *PSetIter << ' ';
     }
@@ -1518,7 +1625,11 @@ private:
 
   void increaseRegisterPressure(std::vector<unsigned> &Pressure,
                                 Register Reg) const {
-    auto PSetIter = MRI.getPressureSets(Reg);
+    // FIXME: The static_cast is a bug compensating bugs in the callers.
+    VirtRegOrUnit VRegOrUnit =
+        Reg.isVirtual() ? VirtRegOrUnit(Reg)
+                        : VirtRegOrUnit(static_cast<MCRegUnit>(Reg.id()));
+    auto PSetIter = MRI.getPressureSets(VRegOrUnit);
     unsigned Weight = PSetIter.getWeight();
     for (; PSetIter.isValid(); ++PSetIter)
       Pressure[*PSetIter] += Weight;
@@ -1526,7 +1637,7 @@ private:
 
   void decreaseRegisterPressure(std::vector<unsigned> &Pressure,
                                 Register Reg) const {
-    auto PSetIter = MRI.getPressureSets(Reg);
+    auto PSetIter = MRI.getPressureSets(VirtRegOrUnit(Reg));
     unsigned Weight = PSetIter.getWeight();
     for (; PSetIter.isValid(); ++PSetIter) {
       auto &P = Pressure[*PSetIter];
@@ -1559,7 +1670,11 @@ private:
       if (MI.isDebugInstr())
         continue;
       for (auto &Use : ROMap[&MI].Uses) {
-        auto Reg = Use.RegUnit;
+        // FIXME: The static_cast is a bug.
+        Register Reg =
+            Use.VRegOrUnit.isVirtualReg()
+                ? Use.VRegOrUnit.asVirtualReg()
+                : Register(static_cast<unsigned>(Use.VRegOrUnit.asMCRegUnit()));
         // Ignore the variable that appears only on one side of phi instruction
         // because it's used only at the first iteration.
         if (MI.isPHI() && Reg != getLoopPhiReg(MI, OrigMBB))
@@ -1609,8 +1724,14 @@ private:
         Register Reg = getLoopPhiReg(*MI, OrigMBB);
         UpdateTargetRegs(Reg);
       } else {
-        for (auto &Use : ROMap.find(MI)->getSecond().Uses)
-          UpdateTargetRegs(Use.RegUnit);
+        for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
+          // FIXME: The static_cast is a bug.
+          Register Reg = Use.VRegOrUnit.isVirtualReg()
+                             ? Use.VRegOrUnit.asVirtualReg()
+                             : Register(static_cast<unsigned>(
+                                   Use.VRegOrUnit.asMCRegUnit()));
+          UpdateTargetRegs(Reg);
+        }
       }
     }
 
@@ -1621,7 +1742,11 @@ private:
     DenseMap<Register, MachineInstr *> LastUseMI;
     for (MachineInstr *MI : llvm::reverse(OrderedInsts)) {
       for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
-        auto Reg = Use.RegUnit;
+        // FIXME: The static_cast is a bug.
+        Register Reg =
+            Use.VRegOrUnit.isVirtualReg()
+                ? Use.VRegOrUnit.asVirtualReg()
+                : Register(static_cast<unsigned>(Use.VRegOrUnit.asMCRegUnit()));
         if (!TargetRegs.contains(Reg))
           continue;
         auto [Ite, Inserted] = LastUseMI.try_emplace(Reg, MI);
@@ -1635,8 +1760,8 @@ private:
     }
 
     Instr2LastUsesTy LastUses;
-    for (auto &Entry : LastUseMI)
-      LastUses[Entry.second].insert(Entry.first);
+    for (auto [Reg, MI] : LastUseMI)
+      LastUses[MI].insert(Reg);
     return LastUses;
   }
 
@@ -1675,7 +1800,12 @@ private:
     });
 
     const auto InsertReg = [this, &CurSetPressure](RegSetTy &RegSet,
-                                                   Register Reg) {
+                                                   VirtRegOrUnit VRegOrUnit) {
+      // FIXME: The static_cast is a bug.
+      Register Reg =
+          VRegOrUnit.isVirtualReg()
+              ? VRegOrUnit.asVirtualReg()
+              : Register(static_cast<unsigned>(VRegOrUnit.asMCRegUnit()));
       if (!Reg.isValid() || isReservedRegister(Reg))
         return;
 
@@ -1712,7 +1842,7 @@ private:
         const unsigned Iter = I - Stage;
 
         for (auto &Def : ROMap.find(MI)->getSecond().Defs)
-          InsertReg(LiveRegSets[Iter], Def.RegUnit);
+          InsertReg(LiveRegSets[Iter], Def.VRegOrUnit);
 
         for (auto LastUse : LastUses[MI]) {
           if (MI->isPHI()) {
@@ -2235,7 +2365,7 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallVector<VRegMaskOrUnit, 8> LiveOutRegs;
-  SmallSet<Register, 4> Uses;
+  SmallSet<VirtRegOrUnit, 4> Uses;
   for (SUnit *SU : NS) {
     const MachineInstr *MI = SU->getInstr();
     if (MI->isPHI())
@@ -2243,9 +2373,10 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
     for (const MachineOperand &MO : MI->all_uses()) {
       Register Reg = MO.getReg();
       if (Reg.isVirtual())
-        Uses.insert(Reg);
+        Uses.insert(VirtRegOrUnit(Reg));
       else if (MRI.isAllocatable(Reg))
-        Uses.insert_range(TRI->regunits(Reg.asMCReg()));
+        for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+          Uses.insert(VirtRegOrUnit(Unit));
     }
   }
   for (SUnit *SU : NS)
@@ -2253,12 +2384,14 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
       if (!MO.isDead()) {
         Register Reg = MO.getReg();
         if (Reg.isVirtual()) {
-          if (!Uses.count(Reg))
-            LiveOutRegs.emplace_back(Reg, LaneBitmask::getNone());
+          if (!Uses.count(VirtRegOrUnit(Reg)))
+            LiveOutRegs.emplace_back(VirtRegOrUnit(Reg),
+                                     LaneBitmask::getNone());
         } else if (MRI.isAllocatable(Reg)) {
           for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-            if (!Uses.count(Unit))
-              LiveOutRegs.emplace_back(Unit, LaneBitmask::getNone());
+            if (!Uses.count(VirtRegOrUnit(Unit)))
+              LiveOutRegs.emplace_back(VirtRegOrUnit(Unit),
+                                       LaneBitmask::getNone());
         }
       }
   RPTracker.addLiveRegs(LiveOutRegs);
@@ -3185,54 +3318,6 @@ bool SMSchedule::insert(SUnit *SU, int StartCycle, int EndCycle, int II) {
   return false;
 }
 
-// Return the cycle of the earliest scheduled instruction in the chain.
-int SMSchedule::earliestCycleInChain(const SwingSchedulerDDGEdge &Dep,
-                                     const SwingSchedulerDDG *DDG) {
-  SmallPtrSet<SUnit *, 8> Visited;
-  SmallVector<SwingSchedulerDDGEdge, 8> Worklist;
-  Worklist.push_back(Dep);
-  int EarlyCycle = INT_MAX;
-  while (!Worklist.empty()) {
-    const SwingSchedulerDDGEdge &Cur = Worklist.pop_back_val();
-    SUnit *PrevSU = Cur.getSrc();
-    if (Visited.count(PrevSU))
-      continue;
-    std::map<SUnit *, int>::const_iterator it = InstrToCycle.find(PrevSU);
-    if (it == InstrToCycle.end())
-      continue;
-    EarlyCycle = std::min(EarlyCycle, it->second);
-    for (const auto &IE : DDG->getInEdges(PrevSU))
-      if (IE.isOrderDep() || IE.isOutputDep())
-        Worklist.push_back(IE);
-    Visited.insert(PrevSU);
-  }
-  return EarlyCycle;
-}
-
-// Return the cycle of the latest scheduled instruction in the chain.
-int SMSchedule::latestCycleInChain(const SwingSchedulerDDGEdge &Dep,
-                                   const SwingSchedulerDDG *DDG) {
-  SmallPtrSet<SUnit *, 8> Visited;
-  SmallVector<SwingSchedulerDDGEdge, 8> Worklist;
-  Worklist.push_back(Dep);
-  int LateCycle = INT_MIN;
-  while (!Worklist.empty()) {
-    const SwingSchedulerDDGEdge &Cur = Worklist.pop_back_val();
-    SUnit *SuccSU = Cur.getDst();
-    if (Visited.count(SuccSU) || SuccSU->isBoundaryNode())
-      continue;
-    std::map<SUnit *, int>::const_iterator it = InstrToCycle.find(SuccSU);
-    if (it == InstrToCycle.end())
-      continue;
-    LateCycle = std::max(LateCycle, it->second);
-    for (const auto &OE : DDG->getOutEdges(SuccSU))
-      if (OE.isOrderDep() || OE.isOutputDep())
-        Worklist.push_back(OE);
-    Visited.insert(SuccSU);
-  }
-  return LateCycle;
-}
-
 /// If an instruction has a use that spans multiple iterations, then
 /// return true. These instructions are characterized by having a back-ege
 /// to a Phi, which contains a reference to another Phi.
@@ -3258,12 +3343,6 @@ void SMSchedule::computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
     for (SUnit *I : getInstructions(cycle)) {
       for (const auto &IE : DDG->getInEdges(SU)) {
         if (IE.getSrc() == I) {
-          // FIXME: Add reverse edge to `DDG` instead of calling
-          // `isLoopCarriedDep`
-          if (DAG->isLoopCarriedDep(IE)) {
-            int End = earliestCycleInChain(IE, DDG) + (II - 1);
-            *MinLateStart = std::min(*MinLateStart, End);
-          }
           int EarlyStart = cycle + IE.getLatency() - IE.getDistance() * II;
           *MaxEarlyStart = std::max(*MaxEarlyStart, EarlyStart);
         }
@@ -3271,12 +3350,6 @@ void SMSchedule::computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart,
 
       for (const auto &OE : DDG->getOutEdges(SU)) {
         if (OE.getDst() == I) {
-          // FIXME: Add reverse edge to `DDG` instead of calling
-          // `isLoopCarriedDep`
-          if (DAG->isLoopCarriedDep(OE)) {
-            int Start = latestCycleInChain(OE, DDG) + 1 - II;
-            *MaxEarlyStart = std::max(*MaxEarlyStart, Start);
-          }
           int LateStart = cycle - OE.getLatency() + OE.getDistance() * II;
           *MinLateStart = std::min(*MinLateStart, LateStart);
         }

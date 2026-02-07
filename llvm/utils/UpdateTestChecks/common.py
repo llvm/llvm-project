@@ -605,6 +605,7 @@ TRIPLE_IR_RE = re.compile(r'^\s*target\s+triple\s*=\s*"([^"]+)"$')
 TRIPLE_ARG_RE = re.compile(r"-m?triple[= ]([^ ]+)")
 MARCH_ARG_RE = re.compile(r"-march[= ]([^ ]+)")
 DEBUG_ONLY_ARG_RE = re.compile(r"-debug-only[= ]([^ ]+)")
+STOP_PASS_RE = re.compile(r"-stop-(before|after)=(\w+)")
 
 IS_DEBUG_RECORD_RE = re.compile(r"^(\s+)#dbg_")
 IS_SWITCH_CASE_RE = re.compile(r"^\s+i\d+ \d+, label %\S+")
@@ -1183,6 +1184,7 @@ class NamelessValue:
     # Create a FileCheck variable name based on an IR name.
     def get_value_name(self, var: str, check_prefix: str):
         var = var.replace("!", "")
+        var = var.replace("%", "")
         if self.replace_number_with_counter:
             assert var
             replacement = self.variable_mapping.get(var, None)
@@ -1411,15 +1413,23 @@ def make_analyze_generalizer(version):
         NamelessValue(
             r"GRP",
             "#",
-            r"",
+            r"group",
             r"0x[0-9a-f]+",
             None,
             replace_number_with_counter=True,
         ),
+        NamelessValue(
+            r"VP",
+            r"vp",
+            r"vp<",
+            r"%[0-9]+",
+            None,
+            ir_suffix=r">",
+        ),
     ]
 
     prefix = r"(\s*)"
-    suffix = r"(\)?:)"
+    suffix = r"([,\s\(\)\}\]:]|\Z)"
 
     return GeneralizerInfo(
         version, GeneralizerInfo.MODE_ANALYZE, values, prefix, suffix
@@ -1576,7 +1586,12 @@ def find_diff_matching(lhs: List[str], rhs: List[str]) -> List[tuple]:
 
 
 VARIABLE_TAG = "[[@@]]"
-METAVAR_RE = re.compile(r"\[\[([A-Z0-9_]+)(?::[^]]+)?\]\]")
+METAVAR_PATTERN = r"\[\[([A-Z0-9_]+)(?::[^]]+)?\]\]"
+LABEL_METAVAR_PATTERN1 = r"label %" + METAVAR_PATTERN
+LABEL_METAVAR_PATTERN2 = r"^" + METAVAR_PATTERN + r":"
+METAVAR_RE = re.compile(
+    rf"(?:{LABEL_METAVAR_PATTERN1})|(?:{LABEL_METAVAR_PATTERN2})|(?:{METAVAR_PATTERN})"
+)
 NUMERIC_SUFFIX_RE = re.compile(r"[0-9]*$")
 
 
@@ -2013,7 +2028,8 @@ def generalize_check_lines(
                     CheckValueInfo(
                         key=None,
                         text=None,
-                        name=m.group(1),
+                        # The sole capturing group is only designated for the name.
+                        name=m.group(m.lastindex),
                         prefix="",
                         suffix="",
                     )
@@ -2261,7 +2277,9 @@ def add_checks(
                             "{} {}-EMPTY:".format(comment_marker, checkprefix)
                         )
                     else:
-                        check_suffix = "-NEXT" if not is_filtered else ""
+                        # TODO: Remove once only -vplan-print-after is supported.
+                        check_next = not is_filtered and "VPlan" not in func_line
+                        check_suffix = "-NEXT" if check_next else ""
                         output_lines.append(
                             "{} {}{}:  {}".format(
                                 comment_marker, checkprefix, check_suffix, func_line

@@ -311,6 +311,10 @@ static std::optional<std::string> hexagonAttrToFeatureString(unsigned Attr) {
     return "v73";
   case 75:
     return "v75";
+  case 79:
+    return "v79";
+  case 81:
+    return "v81";
   default:
     return {};
   }
@@ -591,6 +595,8 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1152";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1153:
     return "gfx1153";
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1170:
+    return "gfx1170";
 
   // AMDGCN GFX12.
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1200:
@@ -601,6 +607,10 @@ StringRef ELFObjectFileBase::getAMDGPUCPUName() const {
     return "gfx1250";
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1251:
     return "gfx1251";
+
+  // AMDGCN GFX13.
+  case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1310:
+    return "gfx1310";
 
   // Generic AMDGCN targets
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC:

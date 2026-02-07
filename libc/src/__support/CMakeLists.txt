@@ -162,7 +162,6 @@ add_header_library(
     wctype_utils.h
   DEPENDS
     libc.hdr.types.wchar_t
-    libc.hdr.types.wint_t
 )
 
 add_header_library(
@@ -221,7 +220,9 @@ add_header_library(
   HDRS
     high_precision_decimal.h
   DEPENDS
+    .ctype_utils
     .str_to_integer
+    .wctype_utils
     libc.hdr.stdint_proxy
 )
 
@@ -236,6 +237,7 @@ add_header_library(
     .str_to_integer
     .str_to_num_result
     .uint128
+    .wctype_utils
     libc.hdr.errno_macros
     libc.hdr.stdint_proxy
     libc.src.__support.common
@@ -389,6 +391,21 @@ add_header_library(
     libc.src.__support.macros.attributes
 )
 
+add_header_library(
+  weak_avl
+  HDRS
+    weak_avl.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.utility
+    libc.src.__support.CPP.optional
+    libc.src.__support.libc_assert
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+)
+
 add_subdirectory(FPUtil)
 add_subdirectory(OSUtil)
 add_subdirectory(StringUtil)
@@ -411,6 +428,7 @@ add_subdirectory(time)
 # Therefore, cannot currently build this on macos in overlay mode
 if(NOT (LIBC_TARGET_OS_IS_DARWIN))
   add_subdirectory(wchar)
+  add_subdirectory(wctype)
 endif()
 
 add_subdirectory(math)

@@ -8,6 +8,7 @@ declare <2 x bfloat> @llvm.sqrt.v2bf16(<2 x bfloat> %a)
 define amdgpu_kernel void @sqrt_bf16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX12-TRUE16-LABEL: sqrt_bf16:
 ; GFX12-TRUE16:       ; %bb.0: ; %entry
+; GFX12-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s6, -1
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
@@ -17,7 +18,7 @@ define amdgpu_kernel void @sqrt_bf16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s3
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s4, s0
-; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[8:11], null
+; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[8:11], null
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s5, s1
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_sqrt_bf16_e32 v0.l, v0.l
@@ -26,6 +27,7 @@ define amdgpu_kernel void @sqrt_bf16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ;
 ; GFX12-FAKE16-LABEL: sqrt_bf16:
 ; GFX12-FAKE16:       ; %bb.0: ; %entry
+; GFX12-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX12-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s6, -1
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s7, 0x31016000
@@ -51,6 +53,7 @@ entry:
 define amdgpu_kernel void @sqrt_v2bf16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX12-TRUE16-LABEL: sqrt_v2bf16:
 ; GFX12-TRUE16:       ; %bb.0: ; %entry
+; GFX12-TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX12-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s6, -1
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
@@ -72,6 +75,7 @@ define amdgpu_kernel void @sqrt_v2bf16(ptr addrspace(1) %r, ptr addrspace(1) %a)
 ;
 ; GFX12-FAKE16-LABEL: sqrt_v2bf16:
 ; GFX12-FAKE16:       ; %bb.0: ; %entry
+; GFX12-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX12-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s6, -1
 ; GFX12-FAKE16-NEXT:    s_mov_b32 s7, 0x31016000

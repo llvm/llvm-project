@@ -53,6 +53,9 @@ class UnrollState {
   /// Unroll replicate region \p VPR by cloning the region UF - 1 times.
   void unrollReplicateRegionByUF(VPRegionBlock *VPR);
 
+  /// Add a start index operand to \p Steps for \p Part.
+  void addStartIndexForScalarSteps(VPScalarIVStepsRecipe *Steps, unsigned Part);
+
   /// Unroll recipe \p R by cloning it UF - 1 times, unless it is uniform across
   /// all parts.
   void unrollRecipeByUF(VPRecipeBase &R);
@@ -79,7 +82,7 @@ public:
   void unrollBlock(VPBlockBase *VPB);
 
   VPValue *getValueForPart(VPValue *V, unsigned Part) {
-    if (Part == 0 || V->isLiveIn())
+    if (Part == 0 || isa<VPIRValue, VPSymbolicValue>(V))
       return V;
     assert((VPV2Parts.contains(V) && VPV2Parts[V].size() >= Part) &&
            "accessed value does not exist");
@@ -123,6 +126,33 @@ public:
 };
 } // namespace
 
+void UnrollState::addStartIndexForScalarSteps(VPScalarIVStepsRecipe *Steps,
+                                              unsigned Part) {
+  if (Part == 0)
+    return;
+
+  VPBuilder Builder(Steps);
+  Type *BaseIVTy = TypeInfo.inferScalarType(Steps->getOperand(0));
+  Type *IntStepTy =
+      IntegerType::get(BaseIVTy->getContext(), BaseIVTy->getScalarSizeInBits());
+  VPValue *StartIndex = Steps->getVFValue();
+  if (Part > 1) {
+    StartIndex = Builder.createOverflowingOp(
+        Instruction::Mul,
+        {StartIndex,
+         Plan.getConstantInt(TypeInfo.inferScalarType(StartIndex), Part)});
+  }
+  StartIndex = Builder.createScalarSExtOrTrunc(
+      StartIndex, IntStepTy, TypeInfo.inferScalarType(StartIndex),
+      Steps->getDebugLoc());
+
+  if (BaseIVTy->isFloatingPointTy())
+    StartIndex = Builder.createScalarCast(Instruction::SIToFP, StartIndex,
+                                          BaseIVTy, Steps->getDebugLoc());
+
+  Steps->addOperand(StartIndex);
+}
+
 void UnrollState::unrollReplicateRegionByUF(VPRegionBlock *VPR) {
   VPBlockBase *InsertPt = VPR->getSingleSuccessor();
   for (unsigned Part = 1; Part != UF; ++Part) {
@@ -136,9 +166,8 @@ void UnrollState::unrollReplicateRegionByUF(VPRegionBlock *VPR) {
              VPBlockUtils::blocksOnly<VPBasicBlock>(Part0))) {
       for (const auto &[PartIR, Part0R] : zip(*PartIVPBB, *Part0VPBB)) {
         remapOperands(&PartIR, Part);
-        if (auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(&PartIR)) {
-          ScalarIVSteps->addOperand(getConstantInt(Part));
-        }
+        if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&PartIR))
+          addStartIndexForScalarSteps(Steps, Part);
 
         addRecipeForPart(&Part0R, &PartIR, Part);
       }
@@ -181,22 +210,28 @@ void UnrollState::unrollWidenInductionByUF(
   VPValue *Prev = IV;
   Builder.setInsertPoint(IV->getParent(), InsertPtForPhi);
   unsigned AddOpc;
-  if (IVTy->isPointerTy())
+  VPIRFlags AddFlags;
+  if (IVTy->isPointerTy()) {
     AddOpc = VPInstruction::WidePtrAdd;
-  else if (IVTy->isFloatingPointTy())
+    AddFlags = GEPNoWrapFlags::none();
+  } else if (IVTy->isFloatingPointTy()) {
     AddOpc = ID.getInductionOpcode();
-  else
+    AddFlags = Flags; // FMF flags
+  } else {
     AddOpc = Instruction::Add;
+    AddFlags = VPIRFlags::getDefaultFlags(AddOpc);
+  }
   for (unsigned Part = 1; Part != UF; ++Part) {
     std::string Name =
         Part > 1 ? "step.add." + std::to_string(Part) : "step.add";
 
-    VPInstruction *Add = Builder.createNaryOp(AddOpc,
-                                              {
-                                                  Prev,
-                                                  VectorStep,
-                                              },
-                                              Flags, IV->getDebugLoc(), Name);
+    VPInstruction *Add =
+        Builder.createNaryOp(AddOpc,
+                             {
+                                 Prev,
+                                 VectorStep,
+                             },
+                             AddFlags, IV->getDebugLoc(), Name);
     ToSkip.insert(Add);
     addRecipeForPart(IV, Add, Part);
     Prev = Add;
@@ -275,11 +310,10 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       remapOperands(&R, UF - 1);
       return;
     }
-    if (auto *II = dyn_cast<IntrinsicInst>(RepR->getUnderlyingValue())) {
-      if (II->getIntrinsicID() == Intrinsic::experimental_noalias_scope_decl) {
-        addUniformForAllParts(RepR);
-        return;
-      }
+    if (match(RepR,
+              m_Intrinsic<Intrinsic::experimental_noalias_scope_decl>())) {
+      addUniformForAllParts(RepR);
+      return;
     }
   }
 
@@ -298,6 +332,22 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Copy->setOperand(1, getValueForPart(Op, Part));
       continue;
     }
+    if (auto *VPR = dyn_cast<VPVectorPointerRecipe>(&R)) {
+      VPBuilder Builder(VPR);
+      const DataLayout &DL =
+          Plan.getScalarHeader()->getIRBasicBlock()->getDataLayout();
+      Type *IndexTy = DL.getIndexType(TypeInfo.inferScalarType(VPR));
+      Type *VFTy = TypeInfo.inferScalarType(&Plan.getVF());
+      VPValue *VF = Builder.createScalarZExtOrTrunc(
+          &Plan.getVF(), IndexTy, VFTy, DebugLoc::getUnknown());
+      // VFxUF does not wrap, so VF * Part also cannot wrap.
+      VPValue *VFxPart = Builder.createOverflowingOp(
+          Instruction::Mul, {VF, Plan.getConstantInt(IndexTy, Part)},
+          {true, true});
+      Copy->setOperand(0, VPR->getOperand(0));
+      Copy->addOperand(VFxPart);
+      continue;
+    }
     if (auto *Red = dyn_cast<VPReductionRecipe>(&R)) {
       auto *Phi = dyn_cast<VPReductionPHIRecipe>(R.getOperand(0));
       if (Phi && Phi->isOrdered()) {
@@ -312,15 +362,17 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     }
     remapOperands(Copy, Part);
 
+    if (auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Copy))
+      addStartIndexForScalarSteps(ScalarIVSteps, Part);
+
     // Add operand indicating the part to generate code for, to recipes still
     // requiring it.
-    if (isa<VPScalarIVStepsRecipe, VPWidenCanonicalIVRecipe,
-            VPVectorPointerRecipe, VPVectorEndPointerRecipe>(Copy) ||
+    if (isa<VPWidenCanonicalIVRecipe, VPVectorEndPointerRecipe>(Copy) ||
         match(Copy,
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
       Copy->addOperand(getConstantInt(Part));
 
-    if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe>(R))
+    if (isa<VPVectorEndPointerRecipe>(R))
       Copy->setOperand(0, R.getOperand(0));
   }
 }
@@ -352,41 +404,40 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
     VPValue *Op1;
     if (match(&R, m_VPInstruction<VPInstruction::AnyOf>(m_VPValue(Op1))) ||
         match(&R, m_FirstActiveLane(m_VPValue(Op1))) ||
-        match(&R, m_VPInstruction<VPInstruction::ComputeAnyOfResult>(
-                      m_VPValue(), m_VPValue(), m_VPValue(Op1))) ||
-        match(&R, m_VPInstruction<VPInstruction::ComputeReductionResult>(
-                      m_VPValue(), m_VPValue(Op1))) ||
-        match(&R, m_VPInstruction<VPInstruction::ComputeFindIVResult>(
-                      m_VPValue(), m_VPValue(), m_VPValue(), m_VPValue(Op1)))) {
+        match(&R, m_LastActiveLane(m_VPValue(Op1))) ||
+        match(&R,
+              m_ComputeAnyOfResult(m_VPValue(), m_VPValue(), m_VPValue(Op1))) ||
+        match(&R, m_ComputeReductionResult(m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
         R.addOperand(getValueForPart(Op1, Part));
       continue;
     }
     VPValue *Op0;
-    if (match(&R, m_VPInstruction<VPInstruction::ExtractLane>(
-                      m_VPValue(Op0), m_VPValue(Op1)))) {
+    if (match(&R, m_ExtractLane(m_VPValue(Op0), m_VPValue(Op1)))) {
       addUniformForAllParts(cast<VPInstruction>(&R));
       for (unsigned Part = 1; Part != UF; ++Part)
         R.addOperand(getValueForPart(Op1, Part));
       continue;
     }
-    if (match(&R, m_ExtractLastElement(m_VPValue(Op0))) ||
-        match(&R, m_VPInstruction<VPInstruction::ExtractPenultimateElement>(
-                      m_VPValue(Op0)))) {
-      addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
-      if (Plan.hasScalarVFOnly()) {
+
+    if (Plan.hasScalarVFOnly()) {
+      if (match(&R, m_ExtractLastPart(m_VPValue(Op0))) ||
+          match(&R, m_ExtractPenultimateElement(m_VPValue(Op0)))) {
         auto *I = cast<VPInstruction>(&R);
-        // Extracting from end with VF = 1 implies retrieving the last or
-        // penultimate scalar part (UF-1 or UF-2).
-        unsigned Offset =
-            I->getOpcode() == VPInstruction::ExtractLastElement ? 1 : 2;
-        I->replaceAllUsesWith(getValueForPart(Op0, UF - Offset));
-        R.eraseFromParent();
-      } else {
-        // Otherwise we extract from the last part.
-        remapOperands(&R, UF - 1);
+        bool IsPenultimatePart =
+            I->getOpcode() == VPInstruction::ExtractPenultimateElement;
+        unsigned PartIdx = IsPenultimatePart ? UF - 2 : UF - 1;
+        // For scalar VF, directly use the scalar part value.
+        I->replaceAllUsesWith(getValueForPart(Op0, PartIdx));
+        continue;
       }
+    }
+    // For vector VF, the penultimate element is always extracted from the last part.
+    if (match(&R, m_ExtractLastLaneOfLastPart(m_VPValue(Op0))) ||
+        match(&R, m_ExtractPenultimateElement(m_VPValue(Op0)))) {
+      addUniformForAllParts(cast<VPSingleDefRecipe>(&R));
+      R.setOperand(0, getValueForPart(Op0, UF - 1));
       continue;
     }
 
@@ -408,7 +459,7 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
 void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
   assert(UF > 0 && "Unroll factor must be positive");
   Plan.setUF(UF);
-  auto Cleanup = make_scope_exit([&Plan]() {
+  llvm::scope_exit Cleanup([&Plan]() {
     auto Iter = vp_depth_first_deep(Plan.getEntry());
     // Remove recipes that are redundant after unrolling.
     for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
@@ -466,7 +517,7 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
 /// definitions for operands of \DefR.
 static VPValue *
 cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
-             VPRecipeWithIRFlags *DefR, VPLane Lane,
+             VPSingleDefRecipe *DefR, VPLane Lane,
              const DenseMap<VPValue *, SmallVector<VPValue *>> &Def2LaneDefs) {
   VPValue *Op;
   if (match(DefR, m_VPInstruction<VPInstruction::Unpack>(m_VPValue(Op)))) {
@@ -493,8 +544,10 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
       [[maybe_unused]] bool Matched =
           match(Op, m_VPInstruction<VPInstruction::Unpack>(m_VPValue(Op)));
       assert(Matched && "original op must have been Unpack");
+      auto *ExtractPart =
+          Builder.createNaryOp(VPInstruction::ExtractLastPart, {Op});
       NewOps.push_back(
-          Builder.createNaryOp(VPInstruction::ExtractLastElement, {Op}));
+          Builder.createNaryOp(VPInstruction::ExtractLastLane, {ExtractPart}));
       continue;
     }
     if (vputils::isSingleScalar(Op)) {
@@ -513,14 +566,14 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
     NewOps.push_back(Ext);
   }
 
-  VPRecipeWithIRFlags *New;
+  VPSingleDefRecipe *New;
   if (auto *RepR = dyn_cast<VPReplicateRecipe>(DefR)) {
     // TODO: have cloning of replicate recipes also provide the desired result
     // coupled with setting its operands to NewOps (deriving IsSingleScalar and
     // Mask from the operands?)
-    New =
-        new VPReplicateRecipe(RepR->getUnderlyingInstr(), NewOps,
-                              /*IsSingleScalar=*/true, /*Mask=*/nullptr, *RepR);
+    New = new VPReplicateRecipe(RepR->getUnderlyingInstr(), NewOps,
+                                /*IsSingleScalar=*/true, /*Mask=*/nullptr,
+                                *RepR, *RepR, RepR->getDebugLoc());
   } else {
     assert(isa<VPInstruction>(DefR) &&
            "DefR must be a VPReplicateRecipe or VPInstruction");
@@ -529,7 +582,6 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
       New->setOperand(Idx, Op);
     }
   }
-  New->transferFlags(*DefR);
   New->insertBefore(DefR);
   return New;
 }
@@ -563,7 +615,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
            cast<VPInstruction>(&R)->getOpcode() != VPInstruction::Unpack))
         continue;
 
-      auto *DefR = cast<VPRecipeWithIRFlags>(&R);
+      auto *DefR = cast<VPSingleDefRecipe>(&R);
       VPBuilder Builder(DefR);
       if (DefR->getNumUsers() == 0) {
         // Create single-scalar version of DefR for all lanes.
@@ -582,7 +634,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
       DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U, unsigned) {
-        return U.onlyFirstLaneUsed(DefR);
+        return U.usesFirstLaneOnly(DefR);
       });
 
       // Update each build vector user that currently has DefR as its only

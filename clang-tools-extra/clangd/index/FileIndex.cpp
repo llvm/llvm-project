@@ -143,7 +143,7 @@ FileShardedIndex::FileShardedIndex(IndexFileIn Input)
       }
     }
   }
-  // Attribute references into each file they occured in.
+  // Attribute references into each file they occurred in.
   if (Index.Refs) {
     for (const auto &SymRefs : *Index.Refs) {
       for (const auto &R : SymRefs.second) {
