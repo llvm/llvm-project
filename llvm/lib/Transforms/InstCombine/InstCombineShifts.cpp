@@ -532,10 +532,12 @@ Instruction *InstCombinerImpl::commonShiftTransforms(BinaryOperator &I) {
 
 /// Return true if we can simplify two logical (either left or right) shifts
 /// that have constant shift amounts: OuterShift (InnerShift X, C1), C2.
-static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
+static bool canEvaluateShiftedShift(unsigned OuterShAmt,
+                                    Instruction::BinaryOps OuterOpc,
                                     Instruction *InnerShift,
                                     InstCombinerImpl &IC, Instruction *CxtI) {
   assert(InnerShift->isLogicalShift() && "Unexpected instruction type");
+  bool IsOuterShl = OuterOpc == Instruction::Shl;
 
   // We need constant scalar or constant splat shifts.
   const APInt *InnerShiftConst;
@@ -546,6 +548,9 @@ static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
   // shl (shl X, C1), C2 -->  shl X, C1 + C2
   // lshr (lshr X, C1), C2 --> lshr X, C1 + C2
   bool IsInnerShl = InnerShift->getOpcode() == Instruction::Shl;
+  if (OuterOpc == Instruction::AShr && IsInnerShl &&
+      !cast<BinaryOperator>(InnerShift)->hasNoSignedWrap())
+    return false;
   if (IsInnerShl == IsOuterShl)
     return true;
 
@@ -616,8 +621,7 @@ bool InstCombinerImpl::canEvaluateShifted(Value *V, unsigned NumBits,
 
   case Instruction::Shl:
   case Instruction::LShr:
-    return canEvaluateShiftedShift(NumBits, ShiftOp == Instruction::Shl, I,
-                                   *this, CxtI);
+    return canEvaluateShiftedShift(NumBits, ShiftOp, I, *this, CxtI);
 
   case Instruction::Select: {
     SelectInst *SI = cast<SelectInst>(I);
