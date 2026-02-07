@@ -563,7 +563,15 @@ public:
   using pointer = _Pointer;
   pointer __left_;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_end_node() _NOEXCEPT : __left_() {}
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __tree_end_node() _NOEXCEPT
+      : __left_(
+// Due to a compiler bug that has been fixed in clang 21, we can't rely on value initialization during constant
+// evaluation to correctly initialize this pointer, hence, we need to initialize it explicitly with `nullptr`
+#if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 2101
+            nullptr
+#endif
+        ) {
+  }
 };
 
 template <class _VoidPtr>
