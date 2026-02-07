@@ -711,6 +711,8 @@ public:
   getExpertSchedulingEventType(const MachineInstr &Inst) const;
 
   bool isVmemAccess(const MachineInstr &MI) const;
+  /// Collect returns, endpgm and calls.
+  void collectInst(MachineInstr &MI, const WaitcntBrackets &ScoreBrackets);
   bool generateWaitcntInstBefore(MachineInstr &MI,
                                  WaitcntBrackets &ScoreBrackets,
                                  MachineInstr *OldWaitcntInstr,
@@ -2274,6 +2276,40 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
   return Modified;
 }
 
+void SIInsertWaitcnts::collectInst(MachineInstr &MI,
+                                   const WaitcntBrackets &ScoreBrackets) {
+  if (MI.isCall()) {
+    CallInsts.insert(&MI);
+  } else {
+    switch (MI.getOpcode()) {
+    case AMDGPU::SI_RETURN_TO_EPILOG:
+    case AMDGPU::SI_RETURN:
+    case AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN:
+    case AMDGPU::S_SETPC_B64_return: {
+      // All waits must be resolved at call return.
+      // NOTE: this could be improved with knowledge of all call sites or
+      //   with knowledge of the called routines.
+      ReturnInsts.insert(&MI);
+      break;
+    }
+    case AMDGPU::S_ENDPGM:
+    case AMDGPU::S_ENDPGM_SAVED: {
+      // In dynamic VGPR mode, we want to release the VGPRs before the wave
+      // exits. Technically the hardware will do this on its own if we don't,
+      // but that might cost extra cycles compared to doing it explicitly. When
+      // not in dynamic VGPR mode, identify S_ENDPGM instructions which may have
+      // to wait for outstanding VMEM stores. In this case it can be useful to
+      // send a message to explicitly release all VGPRs before the stores have
+      // completed, but it is only safe to do this if there are no outstanding
+      // scratch stores.
+      EndPgmInsts[&MI] = ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
+                         !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS);
+      break;
+    }
+    }
+  }
+}
+
 ///  Generate s_waitcnt instruction to be placed before cur_Inst.
 ///  Instructions of a given type are returned in order,
 ///  but instructions of different types can complete out of order.
@@ -2314,10 +2350,6 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   case AMDGPU::SI_RETURN:
   case AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN:
   case AMDGPU::S_SETPC_B64_return: {
-    // All waits must be resolved at call return.
-    // NOTE: this could be improved with knowledge of all call sites or
-    //   with knowledge of the called routines.
-    ReturnInsts.insert(&MI);
     AMDGPU::Waitcnt AllZeroWait =
         WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false);
     // On GFX12+, if LOAD_CNT is pending but no VGPRs are waiting for loads
@@ -2328,20 +2360,6 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
         !ScoreBrackets.hasPendingEvent(VMEM_ACCESS))
       AllZeroWait.LoadCnt = ~0u;
     Wait = AllZeroWait;
-    break;
-  }
-  case AMDGPU::S_ENDPGM:
-  case AMDGPU::S_ENDPGM_SAVED: {
-    // In dynamic VGPR mode, we want to release the VGPRs before the wave exits.
-    // Technically the hardware will do this on its own if we don't, but that
-    // might cost extra cycles compared to doing it explicitly.
-    // When not in dynamic VGPR mode, identify S_ENDPGM instructions which may
-    // have to wait for outstanding VMEM stores. In this case it can be useful
-    // to send a message to explicitly release all VGPRs before the stores have
-    // completed, but it is only safe to do this if there are no outstanding
-    // scratch stores.
-    EndPgmInsts[&MI] = ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
-                       !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS);
     break;
   }
   case AMDGPU::S_SENDMSG:
@@ -2381,7 +2399,6 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
       // The function is going to insert a wait on everything in its prolog.
       // This still needs to be careful if the call target is a load (e.g. a GOT
       // load). We also need to check WAW dependency with saved PC.
-      CallInsts.insert(&MI);
       Wait = AMDGPU::Waitcnt();
 
       const MachineOperand &CallAddrOp = TII->getCalleeOperand(MI);
@@ -3050,6 +3067,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     if (Block.getFirstTerminator() == Inst)
       FlushFlags = isPreheaderToFlush(Block, ScoreBrackets);
 
+    collectInst(Inst, ScoreBrackets);
     // Generate an s_waitcnt instruction to be placed before Inst, if needed.
     Modified |= generateWaitcntInstBefore(Inst, ScoreBrackets, OldWaitcntInstr,
                                           FlushFlags);
