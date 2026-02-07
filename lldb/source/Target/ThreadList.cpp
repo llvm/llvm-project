@@ -560,6 +560,10 @@ bool ThreadList::WillResume(RunDirection &direction) {
   // Go through the threads and see if any thread wants to run just itself.
   // if so then pick one and run it.
 
+  // Collect threads for batched vCont - multiple threads at the same breakpoint
+  // can be stepped together in a single vCont packet.
+  std::vector<ThreadSP> batched_step_threads;
+
   ThreadList run_me_only_list(m_process);
 
   run_me_only_list.SetStopID(m_process.GetStopID());
@@ -634,6 +638,7 @@ bool ThreadList::WillResume(RunDirection &direction) {
     // step multiple threads over the same breakpoint with minimal breakpoint
     // swaps - only the last thread in each group will re-enable the breakpoint.
     std::map<lldb::addr_t, std::vector<ThreadSP>> breakpoint_groups;
+    bool found_run_before_public_stop = false;
 
     for (pos = m_threads.begin(); pos != end; ++pos) {
       ThreadSP thread_sp(*pos);
@@ -663,38 +668,56 @@ bool ThreadList::WillResume(RunDirection &direction) {
           thread_to_run = thread_sp;
           if (thread_sp->ShouldRunBeforePublicStop()) {
             // This takes precedence, so if we find one of these, service it:
+            found_run_before_public_stop = true;
             break;
           }
         }
       }
     }
 
-    // For each group of threads at the same breakpoint, register them with
-    // ThreadList and set them to use deferred re-enable. The breakpoint will
-    // only be re-enabled when ALL threads have finished stepping over it.
-    for (auto &group : breakpoint_groups) {
-      lldb::addr_t bp_addr = group.first;
-      std::vector<ThreadSP> &threads = group.second;
+    // Only apply batching optimization if we have a complete picture of
+    // breakpoint groups. If a ShouldRunBeforePublicStop thread caused the
+    // scan to exit early, the groups are incomplete and the priority thread
+    // must run solo. Deferred state will be cleaned up on next WillResume().
+    if (!found_run_before_public_stop) {
+      // For each group of threads at the same breakpoint, register them with
+      // ThreadList and set them to use deferred re-enable. The breakpoint will
+      // only be re-enabled when ALL threads have finished stepping over it.
+      // Also collect threads for batched vCont if multiple threads at same BP.
+      for (auto &group : breakpoint_groups) {
+        lldb::addr_t bp_addr = group.first;
+        std::vector<ThreadSP> &threads = group.second;
 
-      if (threads.size() > 1) {
-        // Multiple threads stepping over the same breakpoint - use tracking
-        for (ThreadSP &thread_sp : threads) {
-          // Register this thread as stepping over the breakpoint
-          RegisterThreadSteppingOverBreakpoint(bp_addr, thread_sp->GetID());
+        if (threads.size() > 1) {
+          // Multiple threads stepping over the same breakpoint - use tracking
+          for (ThreadSP &thread_sp : threads) {
+            // Register this thread as stepping over the breakpoint
+            RegisterThreadSteppingOverBreakpoint(bp_addr, thread_sp->GetID());
 
-          // Set the plan to defer re-enabling (use callback instead).
-          ThreadPlan *plan = thread_sp->GetCurrentPlan();
-          // Verify the plan is actually a StepOverBreakpoint plan.
-          if (plan &&
-              plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
-            ThreadPlanStepOverBreakpoint *bp_plan =
-                static_cast<ThreadPlanStepOverBreakpoint *>(plan);
-            bp_plan->SetDeferReenableBreakpointSite(true);
+            // Set the plan to defer re-enabling (use callback instead).
+            ThreadPlan *plan = thread_sp->GetCurrentPlan();
+            // Verify the plan is actually a StepOverBreakpoint plan.
+            if (plan &&
+                plan->GetKind() == ThreadPlan::eKindStepOverBreakpoint) {
+              ThreadPlanStepOverBreakpoint *bp_plan =
+                  static_cast<ThreadPlanStepOverBreakpoint *>(plan);
+              bp_plan->SetDeferReenableBreakpointSite(true);
+            }
+          }
+
+          // Collect for batched vCont - pick the largest group
+          if (threads.size() > batched_step_threads.size()) {
+            batched_step_threads = threads;
           }
         }
+        // Single thread at breakpoint - keeps default behavior (re-enable
+        // directly)
       }
-      // Single thread at breakpoint - keeps default behavior (re-enable
-      // directly)
+
+      // If we found a batch, use the first thread as thread_to_run
+      if (!batched_step_threads.empty()) {
+        thread_to_run = batched_step_threads[0];
+      }
     }
   }
 
@@ -714,7 +737,26 @@ bool ThreadList::WillResume(RunDirection &direction) {
 
   bool need_to_resume = true;
 
-  if (thread_to_run == nullptr) {
+  if (!batched_step_threads.empty()) {
+    // Batched stepping: all threads in the batch step together,
+    // all other threads stay suspended.
+    std::set<lldb::tid_t> batch_tids;
+    for (ThreadSP &thread_sp : batched_step_threads) {
+      batch_tids.insert(thread_sp->GetID());
+    }
+
+    for (pos = m_threads.begin(); pos != end; ++pos) {
+      ThreadSP thread_sp(*pos);
+      if (batch_tids.count(thread_sp->GetID()) > 0) {
+        // This thread is in the batch - let it step
+        if (!thread_sp->ShouldResume(thread_sp->GetCurrentPlan()->RunState()))
+          need_to_resume = false;
+      } else {
+        // Not in the batch - suspend it
+        thread_sp->ShouldResume(eStateSuspended);
+      }
+    }
+  } else if (thread_to_run == nullptr) {
     // Everybody runs as they wish:
     for (pos = m_threads.begin(); pos != end; ++pos) {
       ThreadSP thread_sp(*pos);
