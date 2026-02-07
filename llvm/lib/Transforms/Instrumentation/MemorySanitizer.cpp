@@ -2422,6 +2422,85 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     I.setSuccessOrdering(addReleaseOrdering(I.getSuccessOrdering()));
   }
 
+  /// Generic handler to compute shadow for == and != comparisons.
+  ///
+  /// This function is used by handleEqualityComparison and visitSwitchInst.
+  ///
+  /// Sometimes the comparison result is known even if some of the bits of the
+  /// arguments are not.
+  Value *propagateEqualityComparison(IRBuilder<> &IRB, Value *A, Value *B,
+                                     Value *Sa, Value *Sb) {
+    assert(getShadowTy(A) == Sa->getType());
+    assert(getShadowTy(B) == Sb->getType());
+
+    // Get rid of pointers and vectors of pointers.
+    // For ints (and vectors of ints), types of A and Sa match,
+    // and this is a no-op.
+    A = IRB.CreatePointerCast(A, Sa->getType());
+    B = IRB.CreatePointerCast(B, Sb->getType());
+
+    // A == B  <==>  (C = A^B) == 0
+    // A != B  <==>  (C = A^B) != 0
+    // Sc = Sa | Sb
+    Value *C = IRB.CreateXor(A, B);
+    Value *Sc = IRB.CreateOr(Sa, Sb);
+    // Now dealing with i = (C == 0) comparison (or C != 0, does not matter now)
+    // Result is defined if one of the following is true
+    // * there is a defined 1 bit in C
+    // * C is fully defined
+    // Si = !(C & ~Sc) && Sc
+    Value *Zero = Constant::getNullValue(Sc->getType());
+    Value *MinusOne = Constant::getAllOnesValue(Sc->getType());
+    Value *LHS = IRB.CreateICmpNE(Sc, Zero);
+    Value *RHS =
+        IRB.CreateICmpEQ(IRB.CreateAnd(IRB.CreateXor(Sc, MinusOne), C), Zero);
+    Value *Si = IRB.CreateAnd(LHS, RHS);
+    Si->setName("_msprop_icmp");
+
+    return Si;
+  }
+
+  // Instrument:
+  //     switch i32 %Val, label %else [ i32 0, label %A
+  //                                    i32 1, label %B
+  //                                    i32 2, label %C ]
+  //
+  // Typically, the switch input value (%Val) is fully initialized.
+  //
+  // Sometimes the compiler may convert (icmp + br) into a switch statement.
+  // MSan allows icmp eq/ne with partly initialized inputs to still result in a
+  // fully initialized output, if there exists a bit that is initialized in
+  // both inputs with a differing value. For compatibility, we support this in
+  // the switch instrumentation as well. Note that this edge case only applies
+  // if the switch input value does not match *any* of the cases (matching any
+  // of the cases requires an exact, fully initialized match).
+  //
+  //     ShadowCases =   0
+  //                   | propagateEqualityComparison(Val, 0)
+  //                   | propagateEqualityComparison(Val, 1)
+  //                   | propagateEqualityComparison(Val, 2))
+  void visitSwitchInst(SwitchInst &SI) {
+    IRBuilder<> IRB(&SI);
+
+    Value *Val = SI.getCondition();
+    Value *ShadowVal = getShadow(Val);
+
+    Value *ShadowCases = nullptr;
+    for (auto Case : SI.cases()) {
+      Value *Comparator = Case.getCaseValue();
+      Value *ComparisonShadow = propagateEqualityComparison(
+          IRB, Val, Comparator, ShadowVal, getShadow(Comparator));
+
+      if (ShadowCases)
+        ShadowCases = IRB.CreateOr(ShadowCases, ComparisonShadow);
+      else
+        ShadowCases = ComparisonShadow;
+    }
+
+    if (ShadowCases)
+      insertCheckShadow(ShadowCases, getOrigin(Val), &SI);
+  }
+
   // Vector manipulation.
   void visitExtractElementInst(ExtractElementInst &I) {
     insertCheckShadowOf(I.getOperand(1), &I);
@@ -2992,29 +3071,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Sa = getShadow(A);
     Value *Sb = getShadow(B);
 
-    // Get rid of pointers and vectors of pointers.
-    // For ints (and vectors of ints), types of A and Sa match,
-    // and this is a no-op.
-    A = IRB.CreatePointerCast(A, Sa->getType());
-    B = IRB.CreatePointerCast(B, Sb->getType());
+    Value *Si = propagateEqualityComparison(IRB, A, B, Sa, Sb);
 
-    // A == B  <==>  (C = A^B) == 0
-    // A != B  <==>  (C = A^B) != 0
-    // Sc = Sa | Sb
-    Value *C = IRB.CreateXor(A, B);
-    Value *Sc = IRB.CreateOr(Sa, Sb);
-    // Now dealing with i = (C == 0) comparison (or C != 0, does not matter now)
-    // Result is defined if one of the following is true
-    // * there is a defined 1 bit in C
-    // * C is fully defined
-    // Si = !(C & ~Sc) && Sc
-    Value *Zero = Constant::getNullValue(Sc->getType());
-    Value *MinusOne = Constant::getAllOnesValue(Sc->getType());
-    Value *LHS = IRB.CreateICmpNE(Sc, Zero);
-    Value *RHS =
-        IRB.CreateICmpEQ(IRB.CreateAnd(IRB.CreateXor(Sc, MinusOne), C), Zero);
-    Value *Si = IRB.CreateAnd(LHS, RHS);
-    Si->setName("_msprop_icmp");
     setShadow(&I, Si);
     setOriginForNaryOp(I);
   }
@@ -4117,6 +4175,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //                 (<2 x float> %A, <2 x float>)
   // - <2 x i32> @llvm.aarch64.neon.facgt.v2i32.v2f32
   //                 (<2 x float> %A, <2 x float>)
+  //
+  // Bonus: this also handles scalar cases e.g.,
+  // - i32 @llvm.aarch64.neon.facgt.i32.f32(float %A, float %B)
   void handleVectorComparePackedIntrinsic(IntrinsicInst &I,
                                           bool PredicateAsOperand) {
     if (PredicateAsOperand) {
@@ -5440,16 +5501,27 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
   }
 
-  // <4 x i32> @llvm.aarch64.neon.smmla.v4i32.v16i8
-  //               (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
-  // <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8
-  //               (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
-  // <4 x i32> @llvm.aarch64.neon.usmmla.v4i32.v16i8
-  //               (<4 x i32> R%, <16 x i8> %X, <16 x i8> %Y)
+  // Integer matrix multiplication:
+  // - <4 x i32> @llvm.aarch64.neon.smmla.v4i32.v16i8
+  //                 (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
+  // - <4 x i32> @llvm.aarch64.neon.ummla.v4i32.v16i8
+  //                 (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
+  // - <4 x i32> @llvm.aarch64.neon.usmmla.v4i32.v16i8
+  //                 (<4 x i32> %R, <16 x i8> %X, <16 x i8> %Y)
   //
   // Note:
-  // - < 4 x *> is a 2x2 matrix
-  // - <16 x *> is a 2x8 matrix and 8x2 matrix respectively
+  // - <4 x i32> is a 2x2 matrix
+  // - <16 x i8> %X and %Y are 2x8 and 8x2 matrices respectively
+  //
+  //   2x8 %X                                8x2 %Y
+  //   [ X01 X02 X03 X04 X05 X06 X07 X08 ]   [ Y01 Y09 ]
+  //   [ X09 X10 X11 X12 X13 X14 X15 X16 ] x [ Y02 Y10 ]
+  //                                         [ Y03 Y11 ]
+  //                                         [ Y04 Y12 ]
+  //                                         [ Y05 Y13 ]
+  //                                         [ Y06 Y14 ]
+  //                                         [ Y07 Y15 ]
+  //                                         [ Y08 Y16 ]
   //
   // The general shadow propagation approach is:
   // 1) get the shadows of the input matrices %X and %Y
@@ -5463,14 +5535,30 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // TODO: consider allowing multiplication of zero with an uninitialized value
   //       to result in an initialized value.
   //
-  // TODO: handle floating-point matrix multiply using ummla on the shadows:
-  //   case Intrinsic::aarch64_neon_bfmmla:
-  //     handleNEONMatrixMultiply(I, /*ARows=*/ 2, /*ACols=*/ 4,
-  //                                 /*BRows=*/ 4, /*BCols=*/ 2);
+  // Floating-point matrix multiplication:
+  // - <4 x float> @llvm.aarch64.neon.bfmmla
+  //                   (<4 x float> %R, <8 x bfloat> %X, <8 x bfloat> %Y)
+  //   %X and %Y are 2x4 and 4x2 matrices respectively
   //
-  void handleNEONMatrixMultiply(IntrinsicInst &I, unsigned int ARows,
-                                unsigned int ACols, unsigned int BRows,
-                                unsigned int BCols) {
+  // Although there are half as many elements of %X and %Y compared to the
+  // integer case, each element is twice the bit-width. Thus, we can reuse the
+  // shadow propagation logic if we cast the shadows to the same type as the
+  // integer case, and apply ummla to the shadows:
+  //
+  //   2x4 %X                                4x2 %Y
+  //   [ A01:A02 A03:A04 A05:A06 A07:A08 ]   [ B01:B02 B09:B10 ]
+  //   [ A09:A10 A11:A12 A13:A14 A15:A16 ] x [ B03:B04 B11:B12 ]
+  //                                         [ B05:B06 B13:B14 ]
+  //                                         [ B07:B08 B15:B16 ]
+  //
+  // For example, consider multiplying the first row of %X with the first
+  // column of Y. We want to know if
+  // A01:A02*B01:B02 + A03:A04*B03:B04 + A05:A06*B06:B06 + A07:A08*B07:B08 is
+  // fully initialized, which will be true if and only if (A01, A02, ..., A08)
+  // and (B01, B02, ..., B08) are each fully initialized. This latter condition
+  // is equivalent to what is tested by the instrumentation for the integer
+  // form.
+  void handleNEONMatrixMultiply(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
 
     assert(I.arg_size() == 3);
@@ -5488,47 +5576,70 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     [[maybe_unused]] FixedVectorType *ATy = cast<FixedVectorType>(A->getType());
     [[maybe_unused]] FixedVectorType *BTy = cast<FixedVectorType>(B->getType());
 
-    assert(ACols == BRows);
-    assert(ATy->getNumElements() == ARows * ACols);
-    assert(BTy->getNumElements() == BRows * BCols);
-    assert(RTy->getNumElements() == ARows * BCols);
-
-    LLVM_DEBUG(dbgs() << "### R: " << *RTy->getElementType() << "\n");
-    LLVM_DEBUG(dbgs() << "### A: " << *ATy->getElementType() << "\n");
-    if (RTy->getElementType()->isIntegerTy()) {
-      // Types are not identical e.g., <4 x i32> %R, <16 x i8> %A
-      assert(ATy->getElementType()->isIntegerTy());
-    } else {
-      assert(RTy->getElementType()->isFloatingPointTy());
-      assert(ATy->getElementType()->isFloatingPointTy());
-    }
-    assert(ATy->getElementType() == BTy->getElementType());
-
     Value *ShadowR = getShadow(&I, 0);
     Value *ShadowA = getShadow(&I, 1);
     Value *ShadowB = getShadow(&I, 2);
 
+    // We will use ummla to compute the shadow. These are the types it expects.
+    // These are also the types of the corresponding shadows.
+    FixedVectorType *ExpectedRTy =
+        FixedVectorType::get(IntegerType::get(*MS.C, 32), 4);
+    FixedVectorType *ExpectedATy =
+        FixedVectorType::get(IntegerType::get(*MS.C, 8), 16);
+    FixedVectorType *ExpectedBTy =
+        FixedVectorType::get(IntegerType::get(*MS.C, 8), 16);
+
+    if (RTy->getElementType()->isIntegerTy()) {
+      // Types of R and A/B are not identical e.g., <4 x i32> %R, <16 x i8> %A
+      assert(ATy->getElementType()->isIntegerTy());
+
+      assert(RTy == ExpectedRTy);
+      assert(ATy == ExpectedATy);
+      assert(BTy == ExpectedBTy);
+    } else {
+      assert(ATy->getElementType()->isFloatingPointTy());
+      assert(BTy->getElementType()->isFloatingPointTy());
+
+      // Technically, what we care about is that:
+      //   getShadowTy(RTy)->canLosslesslyBitCastTo(ExpectedRTy)) etc.
+      // but that is equivalent.
+      assert(RTy->canLosslesslyBitCastTo(ExpectedRTy));
+      assert(ATy->canLosslesslyBitCastTo(ExpectedATy));
+      assert(BTy->canLosslesslyBitCastTo(ExpectedBTy));
+
+      ShadowA = IRB.CreateBitCast(ShadowA, getShadowTy(ExpectedATy));
+      ShadowB = IRB.CreateBitCast(ShadowB, getShadowTy(ExpectedBTy));
+    }
+    assert(ATy->getElementType() == BTy->getElementType());
+
+    // From this point on, use Expected{R,A,B}Type.
+
     // If the value is fully initialized, the shadow will be 000...001.
     // Otherwise, the shadow will be all zero.
     // (This is the opposite of how we typically handle shadows.)
-    ShadowA = IRB.CreateZExt(IRB.CreateICmpEQ(ShadowA, getCleanShadow(A)),
-                             ShadowA->getType());
-    ShadowB = IRB.CreateZExt(IRB.CreateICmpEQ(ShadowB, getCleanShadow(B)),
-                             ShadowB->getType());
+    ShadowA =
+        IRB.CreateZExt(IRB.CreateICmpEQ(ShadowA, getCleanShadow(ExpectedATy)),
+                       getShadowTy(ExpectedATy));
+    ShadowB =
+        IRB.CreateZExt(IRB.CreateICmpEQ(ShadowB, getCleanShadow(ExpectedBTy)),
+                       getShadowTy(ExpectedBTy));
 
-    Value *ShadowAB = IRB.CreateIntrinsic(
-        I.getType(), I.getIntrinsicID(), {getCleanShadow(R), ShadowA, ShadowB});
+    Value *ShadowAB =
+        IRB.CreateIntrinsic(ExpectedRTy, Intrinsic::aarch64_neon_ummla,
+                            {getCleanShadow(ExpectedRTy), ShadowA, ShadowB});
 
+    // ummla multiplies a 2x8 matrix with an 8x2 matrix. If all entries of the
+    // input matrices are equal to 0x1, all entries of the output matrix will
+    // be 0x8.
     Value *FullyInit = ConstantVector::getSplat(
-        RTy->getElementCount(),
-        ConstantInt::get(cast<VectorType>(getShadowTy(R))->getElementType(),
-                         ACols));
+        ExpectedRTy->getElementCount(),
+        ConstantInt::get(ExpectedRTy->getElementType(), 0x8));
 
     ShadowAB = IRB.CreateSExt(IRB.CreateICmpNE(ShadowAB, FullyInit),
                               ShadowAB->getType());
 
-    ShadowR = IRB.CreateSExt(IRB.CreateICmpNE(ShadowR, getCleanShadow(R)),
-                             ShadowR->getType());
+    ShadowR = IRB.CreateSExt(
+        IRB.CreateICmpNE(ShadowR, getCleanShadow(ExpectedRTy)), ExpectedRTy);
 
     setShadow(&I, IRB.CreateOr(ShadowAB, ShadowR));
     setOriginForNaryOp(I);
@@ -6980,8 +7091,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_smmla:
     case Intrinsic::aarch64_neon_ummla:
     case Intrinsic::aarch64_neon_usmmla:
-      handleNEONMatrixMultiply(I, /*ARows=*/2, /*ACols=*/8, /*BRows=*/8,
-                               /*BCols=*/2);
+    case Intrinsic::aarch64_neon_bfmmla:
+      handleNEONMatrixMultiply(I);
       break;
 
     // <2 x i32> @llvm.aarch64.neon.{u,s,us}dot.v2i32.v8i8
@@ -7006,6 +7117,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                       /*ZeroPurifies=*/false,
                                       /*EltSizeInBits=*/0,
                                       /*Lanes=*/kBothLanes);
+      break;
+
+    // Floating-Point Absolute Compare Greater Than/Equal
+    case Intrinsic::aarch64_neon_facge:
+    case Intrinsic::aarch64_neon_facgt:
+      handleVectorComparePackedIntrinsic(I, /*PredicateAsOperand=*/false);
       break;
 
     default:

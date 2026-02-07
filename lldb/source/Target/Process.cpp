@@ -3914,10 +3914,7 @@ bool Process::ShouldBroadcastEvent(Event *event_ptr) {
 bool Process::PrivateStateThread::StartupThread() {
   llvm::Expected<HostThread> private_state_thread =
       ThreadLauncher::LaunchThread(
-          m_thread_name,
-          [this] {
-            return m_process.RunPrivateStateThread(m_is_secondary_thread);
-          },
+          m_thread_name, [this] { return m_process.RunPrivateStateThread(); },
           8 * 1024 * 1024);
   if (!private_state_thread) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Host), private_state_thread.takeError(),
@@ -4196,7 +4193,7 @@ Status Process::HaltPrivate() {
   return error;
 }
 
-thread_result_t Process::RunPrivateStateThread(bool is_secondary_thread) {
+thread_result_t Process::RunPrivateStateThread() {
   bool control_only = true;
 
   Log *log = GetLog(LLDBLog::Process);
