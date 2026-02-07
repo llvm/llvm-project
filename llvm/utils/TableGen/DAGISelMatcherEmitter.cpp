@@ -1094,7 +1094,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       OS << "ByHwMode";
 
     const CodeGenInstruction &CGI = EN->getInstruction();
-    OS << ", TARGET_OUTPUT_VAL(" << CGI.Namespace << "::" << CGI.TheDef->getName()
+    OS << ", TARGET_VAL(" << CGI.Namespace << "::" << CGI.TheDef->getName()
        << ")";
 
     if (!CompressNodeInfo) {
@@ -1188,7 +1188,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       OS << '\n';
     }
 
-    return 6 + SupportsDeactivationSymbol + !CompressVTs + !CompressNodeInfo +
+    return 4 + SupportsDeactivationSymbol + !CompressVTs + !CompressNodeInfo +
            NumTypeBytes + NumOperandBytes + NumCoveredBytes;
   }
   case Matcher::CompleteMatch: {
@@ -1579,13 +1579,11 @@ void llvm::EmitMatcherTable(Matcher *TheMatcher, const CodeGenDAGPatterns &CGP,
   // final stream.
   OS << "{\n";
   OS << "  // Some target values are emitted as 2 bytes, TARGET_VAL handles\n";
-  OS << "  // this. Output opcodes are emitted as 4 bytes. TARGET_OUTPUT_VAL\n";
-  OS << "  // handles that. Coverage indexes are emitted as 4 bytes,\n";
+  OS << "  // this. Coverage indexes are emitted as 4 bytes,\n";
   OS << "  // COVERAGE_IDX_VAL handles this.\n";
   OS << "  #define TARGET_VAL(X) X & 255, unsigned(X) >> 8\n";
-  OS << "  #define TARGET_OUTPUT_VAL(X) X & 255, (unsigned(X) >> 8) & 255, ";
+  OS << "  #define COVERAGE_IDX_VAL(X) X & 255, (unsigned(X) >> 8) & 255, ";
   OS << "(unsigned(X) >> 16) & 255, (unsigned(X) >> 24) & 255\n";
-  OS << "  #define COVERAGE_IDX_VAL(X) TARGET_OUTPUT_VAL(X)\n";
   OS << "  static const uint8_t MatcherTable[] = {\n";
   TotalSize = MatcherEmitter.EmitMatcherList(TheMatcher, 1, 0, OS);
   OS << "  }; // Total Array size is " << TotalSize << " bytes\n\n";
@@ -1597,7 +1595,6 @@ void llvm::EmitMatcherTable(Matcher *TheMatcher, const CodeGenDAGPatterns &CGP,
   OS << "  };\n\n";
 
   OS << "  #undef COVERAGE_IDX_VAL\n";
-  OS << "  #undef TARGET_OUTPUT_VAL\n";
   OS << "  #undef TARGET_VAL\n";
   OS << "  SelectCodeCommon(N, MatcherTable, sizeof(MatcherTable),\n";
   OS << "                   OperandLists);\n";
