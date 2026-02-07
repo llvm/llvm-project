@@ -1001,6 +1001,24 @@ LLVM_ABI bool matchSimpleBinaryIntrinsicRecurrence(const IntrinsicInst *I,
                                                    PHINode *&P, Value *&Init,
                                                    Value *&OtherOp);
 
+/// Attempt to match a simple value-accumulating recurrence of the form:
+///   %llvm.intrinsic.acc = phi Ty [%Init, %Entry], [%llvm.intrinsic, %backedge]
+///   %llvm.intrinsic = call Ty @llvm.intrinsic(%OtherOp0, %OtherOp1,
+///   %llvm.intrinsic.acc)
+/// OR
+///   %llvm.intrinsic.acc = phi Ty [%Init, %Entry], [%llvm.intrinsic, %backedge]
+///   %llvm.intrinsic = call Ty @llvm.intrinsic(%llvm.intrinsic.acc, %OtherOp0,
+///   %OtherOp1)
+///
+/// The recurrence relation is of kind:
+///   X_0 = %a (initial value),
+///   X_i = call @llvm.ternary.intrinsic(X_i-1, %b, %c)
+/// Where %b, %c are not required to be loop-invariant.
+LLVM_ABI bool matchSimpleTernaryIntrinsicRecurrence(const IntrinsicInst *I,
+                                                    PHINode *&P, Value *&Init,
+                                                    Value *&OtherOp0,
+                                                    Value *&OtherOp1);
+
 /// Return true if RHS is known to be implied true by LHS.  Return false if
 /// RHS is known to be implied false by LHS.  Otherwise, return std::nullopt if
 /// no implication can be made. A & B must be i1 (boolean) values or a vector of

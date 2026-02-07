@@ -33,6 +33,17 @@ def AnyIntegerOrFloat : AnyTypeOf<[AnySignlessInteger, AnyFloat], "Integer or Fl
 def AnyIntegerOrFloatOr1DVector :
   AnyTypeOf<[AnyIntegerOrFloat, FixedVectorOfRankAndType<[1], [AnyIntegerOrFloat]>]>;
 
+// Types with element width up to 64 bits, used to keep dpp operands legal.
+def AMDGPU_IntOrFloatWidthLeq64 : Type<
+  CPred<"$_self.isIntOrFloat() && $_self.getIntOrFloatBitWidth() <= 64">,
+  "integer or float with element bitwidth <= 64">;
+
+def AMDGPU_IntOrFloatOr1DVectorWidthLeq64 :
+  AnyTypeOf<[
+    AMDGPU_IntOrFloatWidthLeq64,
+    FixedVectorOfRankAndType<[1], [AMDGPU_IntOrFloatWidthLeq64]>
+  ]>;
+
 //===----------------------------------------------------------------------===//
 // AMDGPU Op definitions
 //===----------------------------------------------------------------------===//
@@ -643,8 +654,8 @@ def AMDGPU_RawBufferAtomicUminOp :
 
 def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
     [Pure, SameTypeOperands, AllTypesMatch<["result", "old", "src"]>]>,
-  Arguments<(ins AnyType:$old,
-                 AnyType:$src,
+  Arguments<(ins AMDGPU_IntOrFloatOr1DVectorWidthLeq64:$old,
+                 AMDGPU_IntOrFloatOr1DVectorWidthLeq64:$src,
                  AMDGPU_DPPPermAttr:$kind,
                  OptionalAttr<AnyAttrOf<[I32Attr, ArrayAttr, UnitAttr]>>:$permArgument,
                  DefaultValuedAttr<I32Attr, "0xf">:$row_mask,
