@@ -2631,6 +2631,10 @@ def int_load_relative: DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_a
 def int_asan_check_memaccess :
   Intrinsic<[],[llvm_ptr_ty, llvm_i32_ty], [ImmArg<ArgIndex<1>>]>;
 
+// Spin in an infinite loop (using instructions specified by the target) iff the
+// argument is true. Used to implement efficient conditional traps.
+def int_cond_loop : Intrinsic<[], [llvm_i1_ty], [IntrNoMem, IntrHasSideEffects]>;
+
 // HWASan intrinsics to test whether a pointer is addressable.
 //===----------------------------------------------------------------------===//
 //

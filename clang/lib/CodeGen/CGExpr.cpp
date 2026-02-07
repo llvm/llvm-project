@@ -4448,6 +4448,12 @@ void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {
 void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
                                     SanitizerHandler CheckHandlerID,
                                     bool NoMerge, const TrapReason *TR) {
+  if (CGM.getCodeGenOpts().SanitizeTrapLoop) {
+    Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::cond_loop),
+                       Builder.CreateNot(Checked));
+    return;
+  }
+
   llvm::BasicBlock *Cont = createBasicBlock("cont");
 
   // If we're optimizing, collapse all calls to trap down to just one per

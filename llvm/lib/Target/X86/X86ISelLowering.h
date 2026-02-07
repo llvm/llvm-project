@@ -143,6 +143,11 @@ namespace llvm {
     /// or TEST instruction.
     BRCOND,
 
+    /// X86 conditional branch to self, used for implementing efficient
+    /// conditional traps. Operand 0 is the chain operand, operand 1 is the
+    /// condition code, and operand 2 is the flag operand.
+    BRCOND_SELF,
+
     /// BRIND node with NoTrack prefix. Operand 0 is the chain operand and
     /// operand 1 is the target address.
     NT_BRIND,
@@ -1798,7 +1803,7 @@ namespace llvm {
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerConditionalBranch(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;
