@@ -1906,14 +1906,14 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     SDValue Ops[] = {
         CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32), Val0,
-        CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32), Val2,
+        CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32), Val1,
         CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
     SDValue RegPair0 =
         SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
                                        MVT::Untyped, Ops),
                 0);
     SDValue Ops1[] = {
-        CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32), Val1,
+        CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32), Val2,
         CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32), Val3,
         CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
     SDValue RegPair1 =
