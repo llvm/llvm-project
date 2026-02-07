@@ -2724,6 +2724,13 @@ defm sanitize_handler_preserve_all_regs
           NegFlag<SetFalse, [], [],
                   "Disable handlers with preserve_all calling convention">>,
       Group<f_clang_Group>;
+defm sanitize_trap_loop : BoolOption<"f", "sanitize-trap-loop",
+  CodeGenOpts<"SanitizeTrapLoop">, DefaultFalse,
+  PosFlag<SetTrue, [], [],
+          "Use infinite loops in trapping mode">,
+  NegFlag<SetFalse, [], [],
+          "Do not use infinite loops in trapping mode">>,
+  Group<f_clang_Group>;
 def fsanitize_link_runtime : Flag<["-"], "fsanitize-link-runtime">,
                            Group<f_clang_Group>;
 def fno_sanitize_link_runtime : Flag<["-"], "fno-sanitize-link-runtime">,
@@ -2964,20 +2971,6 @@ or passing a null pointer to a function parameter annotated with the "nonnull"
 attribute as undefined behavior. (And, thus the optimizer may assume that any
 pointer used in such a way must not have been null and optimize away the
 branches accordingly.) On by default.}]>;
-
-defm lifetime_dse
-    : BoolFOption<"lifetime-dse", CodeGenOpts<"StrictLifetimes">, DefaultTrue,
-                  NegFlag<SetFalse, [], [ClangOption, CC1Option],
-                          "Do not aggressively delete stores after the end of "
-                          "an object's lifetime">,
-                  PosFlag<SetTrue, [], [ClangOption, CC1Option],
-                          "Aggressively delete stores after the end of an "
-                          "object's lifetime">,
-                  BothFlags<[], [ClangOption, CLOption]>>,
-      DocBrief<
-          [{When enabled, mark an object dead after its destructor returns which allows the
-the optimizer to perform more aggressive optimizations in some cases, particularly dead
-store elimination.}]>;
 
 defm use_line_directives : BoolFOption<"use-line-directives",
   PreprocessorOutputOpts<"UseLineDirectives">, DefaultFalse,
