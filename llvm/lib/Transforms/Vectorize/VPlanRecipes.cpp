@@ -3470,12 +3470,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   }
   case Instruction::Load:
   case Instruction::Store: {
-    // TODO: See getMemInstScalarizationCost for how to handle replicating and
-    // predicated cases.
-    const VPRegionBlock *ParentRegion = getRegion();
-    if (ParentRegion && ParentRegion->isReplicator())
-      break;
-
     bool IsLoad = UI->getOpcode() == Instruction::Load;
     const VPValue *PtrOp = getOperand(!IsLoad);
     const SCEV *PtrSCEV = getAddressAccessSCEV(PtrOp, Ctx.PSE, Ctx.L);
@@ -3521,9 +3515,32 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
 
     TTI::VectorInstrContext VIC =
         IsLoad ? TTI::VectorInstrContext::Load : TTI::VectorInstrContext::Store;
-    return (ScalarCost * VF.getFixedValue()) +
-           Ctx.getScalarizationOverhead(ResultTy, OpsToScalarize, VF, VIC,
-                                        true);
+    InstructionCost Cost =
+        (ScalarCost * VF.getFixedValue()) +
+        Ctx.getScalarizationOverhead(ResultTy, OpsToScalarize, VF, VIC, true);
+
+    const VPRegionBlock *ParentRegion = getRegion();
+    if (ParentRegion && ParentRegion->isReplicator()) {
+      // TODO: Handle loop-invariant pointers in predicated blocks. For now,
+      // fall back to the legacy cost model.
+      if (Ctx.PSE.getSE()->isLoopInvariant(PtrSCEV, Ctx.L))
+        break;
+      Cost /= Ctx.getPredBlockCostDivisor(UI->getParent());
+      Cost += Ctx.TTI.getCFInstrCost(Instruction::Br, Ctx.CostKind);
+
+      auto *VecI1Ty = VectorType::get(
+          IntegerType::getInt1Ty(Ctx.L->getHeader()->getContext()), VF);
+      Cost += Ctx.TTI.getScalarizationOverhead(
+          VecI1Ty, APInt::getAllOnes(VF.getFixedValue()),
+          /*Insert=*/false, /*Extract=*/true, Ctx.CostKind);
+
+      if (Ctx.useEmulatedMaskMemRefHack(UI, VF)) {
+        // Artificially setting to a high enough value to practically disable
+        // vectorization with such operations.
+        return 3000000;
+      }
+    }
+    return Cost;
   }
   case Instruction::SExt:
   case Instruction::ZExt:

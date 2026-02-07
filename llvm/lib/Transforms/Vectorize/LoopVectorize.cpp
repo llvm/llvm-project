@@ -1250,6 +1250,10 @@ public:
   getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
                           const BasicBlock *BB);
 
+  /// Returns true if an artificially high cost for emulated masked memrefs
+  /// should be used.
+  bool useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF);
+
   /// Return the costs for our two available strategies for lowering a
   /// div/rem operation which requires speculating at least one lane.
   /// First result is for scalarization (will be invalid for scalable
@@ -1561,10 +1565,6 @@ private:
   /// convenience wrapper for the type-based getScalarizationOverhead API.
   InstructionCost getScalarizationOverhead(Instruction *I,
                                            ElementCount VF) const;
-
-  /// Returns true if an artificially high cost for emulated masked memrefs
-  /// should be used.
-  bool useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF);
 
   /// Map of scalar integer values to the smallest bitwidth they can be legally
   /// represented as. The vector equivalents of these values should be truncated
@@ -6884,6 +6884,10 @@ bool VPCostContext::skipCostComputation(Instruction *UI, bool IsVector) const {
 
 unsigned VPCostContext::getPredBlockCostDivisor(BasicBlock *BB) const {
   return CM.getPredBlockCostDivisor(CostKind, BB);
+}
+
+bool VPCostContext::useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF) {
+  return CM.useEmulatedMaskMemRefHack(I, VF);
 }
 
 InstructionCost
