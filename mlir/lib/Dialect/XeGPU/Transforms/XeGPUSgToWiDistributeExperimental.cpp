@@ -23,7 +23,6 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
-#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/LogicalResult.h"
@@ -419,94 +418,6 @@ struct SgToWiVectorReduction : public OpConversionPattern<vector::ReductionOp> {
     return success();
   }
 };
-
-// class SgToWiRewriteVectorMultiReduction
-//     : public OpConversionPattern<vector::MultiDimReductionOp> {
-//   using
-//   OpConversionPattern<vector::MultiDimReductionOp>::OpConversionPattern;
-
-//   LogicalResult
-//   matchAndRewrite(vector::MultiDimReductionOp op, OpAdaptor adaptor,
-//                   ConversionPatternRewriter &rewriter) const override {
-//     auto layout = xegpu::getDistributeLayoutAttr(op.getSource());
-
-//     // If no layout, nothing to do.
-//     if (!layout || !layout.isForSubgroup())
-//       return failure();
-
-//     VectorType sourceType = op.getSourceVectorType();
-//     // Only 2D vectors are supported.
-//     if (sourceType.getRank() != 2)
-//       return rewriter.notifyMatchFailure(op,
-//                                          "Only 2D reductions are
-//                                          supported.");
-
-//     ArrayRef<int64_t> reductionDims = op.getReductionDims();
-//     // Only 1 reduction dimension supported.
-//     if (reductionDims.size() != 1)
-//       return rewriter.notifyMatchFailure(
-//           op, "Only 1 reduction dimension is supported.");
-
-//     int64_t reductionDim = reductionDims[0];
-
-//     // Get the distributed source type based on layout.
-//     FailureOr<VectorType> sourceDistTypeOrFailure =
-//         getDistVecTypeBasedOnLaneLayout(layout, sourceType);
-//     if (failed(sourceDistTypeOrFailure))
-//       return rewriter.notifyMatchFailure(
-//           op, "Failed to distribute the source vector type.");
-
-//     VectorType sourceDistType = sourceDistTypeOrFailure.value();
-
-//     // Determine which dimension is distributed.
-//     bool dim0Distributed =
-//         sourceDistType.getShape()[0] != sourceType.getShape()[0];
-//     bool dim1Distributed =
-//         sourceDistType.getShape()[1] != sourceType.getShape()[1];
-
-//     if (dim0Distributed && dim1Distributed)
-//       return rewriter.notifyMatchFailure(
-//           op, "Expecting source to be distributed in a single dimension.");
-
-//     int64_t sourceDistDim = dim0Distributed ? 0 : (dim1Distributed ? 1 : -1);
-//     if (sourceDistDim == -1)
-//       return rewriter.notifyMatchFailure(
-//           op, "Expecting a distributed source vector.");
-
-//     // Check if reduction is lane-local or requires cross-lane shuffling.
-//     // Lane-local: reduction dimension is NOT the distributed dimension.
-//     // Cross-lane: reduction dimension IS the distributed dimension.
-//     bool isReductionLaneLocal = (sourceDistDim == 0 && reductionDim == 1) ||
-//                                 (sourceDistDim == 1 && reductionDim == 0);
-
-//     // Get the distributed source and accumulator.
-//     Value distributedSource = adaptor.getSource();
-//     Value distributedAcc = adaptor.getAcc();
-
-//     if (isReductionLaneLocal) {
-//       // For lane-local reduction, each lane reduces its local data.
-//       // Use lowerToVectorReductions to create a sequence of 1D reductions.
-//       Value result = xegpu::lowerToVectorReductions(
-//           cast<TypedValue<VectorType>>(distributedSource),
-//           cast<TypedValue<VectorType>>(distributedAcc), op.getKind(),
-//           reductionDim, op.getLoc(), rewriter);
-
-//       rewriter.replaceOp(op, result);
-//       return success();
-//     }
-
-//     // For non-lane-local (cross-lane) reduction, we also lower to a sequence
-//     // of 1D reductions. The individual 1D reductions will be handled by
-//     // SgToWiVectorReduction pattern which performs the cross-lane shuffles.
-//     Value result = xegpu::lowerToVectorReductions(
-//         cast<TypedValue<VectorType>>(distributedSource),
-//         cast<TypedValue<VectorType>>(distributedAcc), op.getKind(),
-//         reductionDim, op.getLoc(), rewriter);
-
-//     rewriter.replaceOp(op, result);
-//     return success();
-//   }
-// };
 
 struct LowerVectorMultiReductionPattern
     : public OpConversionPattern<vector::MultiDimReductionOp> {
