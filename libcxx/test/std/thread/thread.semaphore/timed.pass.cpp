@@ -19,8 +19,7 @@
 #include "make_test_thread.h"
 #include "test_macros.h"
 
-int main(int, char**)
-{
+int main(int, char**) {
   auto const start = std::chrono::steady_clock::now();
 
   std::counting_semaphore<> s(0);
@@ -28,7 +27,7 @@ int main(int, char**)
   assert(!s.try_acquire_until(start + std::chrono::milliseconds(250)));
   assert(!s.try_acquire_for(std::chrono::milliseconds(250)));
 
-  std::thread t = support::make_test_thread([&](){
+  std::thread t = support::make_test_thread([&]() {
     std::this_thread::sleep_for(std::chrono::milliseconds(250));
     s.release();
     std::this_thread::sleep_for(std::chrono::milliseconds(250));
