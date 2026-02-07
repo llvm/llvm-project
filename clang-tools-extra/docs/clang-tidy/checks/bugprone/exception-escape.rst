@@ -82,8 +82,8 @@ Options
       specification as throwing only if they have a visible definition which
       can be deduced to throw.
    - `OnlyUndefined`
-      The check will consider functions with only a declaration available as
-      throwing.
+      The check will consider functions with only a declaration available and
+      no visible definition as throwing.
    - `All`
       The check will consider all functions without an explicit exception
       specification (such as ``noexcept``) as throwing, even if they have a
