@@ -1080,30 +1080,34 @@ def run_suite():
         else:
             configuration.lldb_platform_url = None
 
-    if configuration.lldb_platform_working_dir:
-        print(
-            "Setting remote platform working directory to '%s'..."
-            % (configuration.lldb_platform_working_dir)
-        )
-        error = lldb.remote_platform.MakeDirectory(
-            configuration.lldb_platform_working_dir, 448
-        )  # 448 = 0o700
-        if error.Fail():
-            raise Exception(
-                "making remote directory '%s': %s"
-                % (configuration.lldb_platform_working_dir, error)
+        if configuration.lldb_platform_working_dir:
+            print(
+                "Setting remote platform working directory to '%s'..."
+                % (configuration.lldb_platform_working_dir)
             )
+            error = lldb.remote_platform.MakeDirectory(
+                configuration.lldb_platform_working_dir, 448
+            )  # 448 = 0o700
+            if error.Fail():
+                raise Exception(
+                    "making remote directory '%s': %s"
+                    % (configuration.lldb_platform_working_dir, error)
+                )
 
-        if not lldb.remote_platform.SetWorkingDirectory(
-            configuration.lldb_platform_working_dir
-        ):
-            raise Exception(
-                "failed to set working directory '%s'"
-                % configuration.lldb_platform_working_dir
-            )
+            if not lldb.remote_platform.SetWorkingDirectory(
+                configuration.lldb_platform_working_dir
+            ):
+                raise Exception(
+                    "failed to set working directory '%s'"
+                    % configuration.lldb_platform_working_dir
+                )
+        else:
+            configuration.lldb_platform_working_dir = None
+
         lldb.selected_platform = lldb.remote_platform
     else:
         lldb.remote_platform = None
+        configuration.lldb_platform_name = None
         configuration.lldb_platform_working_dir = None
         configuration.lldb_platform_url = None
 
