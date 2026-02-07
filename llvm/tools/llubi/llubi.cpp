@@ -201,7 +201,7 @@ int main(int argc, char **argv) {
       ArgvPtrsMem->writePointer(Idx * PtrSize, ArgPtr, Ctx.getDataLayout());
     }
     Args.push_back(Ctx.deriveFromMemoryObject(ArgvPtrsMem));
-  } else {
+  } else if (!EntryFn->arg_empty()) {
     // If the signature does not match (e.g., llvm-reduce change the signature
     // of main), it will pass null values for all arguments.
     WithColor::warning()
