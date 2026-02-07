@@ -2529,8 +2529,8 @@ static MlirLogicalResult verifyTraitByMethod(MlirOperation op, void *userData,
     return mlirLogicalResultSuccess();
   }
   PyMlirContextRef ctx = PyMlirContext::forContext(mlirOperationGetContext(op));
-  PyOperationRef pyOp = PyOperation::forOperation(ctx, op);
-  bool success = nb::cast<bool>(targetObj.attr(methodName)(pyOp.get()));
+  nb::object opView = PyOperation::forOperation(ctx, op)->createOpView();
+  bool success = nb::cast<bool>(targetObj.attr(methodName)(opView));
   return success ? mlirLogicalResultSuccess() : mlirLogicalResultFailure();
 };
 
@@ -2587,22 +2587,14 @@ bool PyDynamicOpTrait::attach(const nb::object &opName,
 
 void PyDynamicOpTrait::bind(nb::module_ &m) {
   nb::class_<PyDynamicOpTrait> cls(m, "DynamicOpTrait");
-  cls.def_static(
-      "attach_target",
-      [](const nb::object &opName, const nb::object &target,
+  cls.attr("attach") = classmethod(
+      [](const nb::object &cls, const nb::object &opName, nb::object target,
          DefaultingPyMlirContext context) {
+        if (target.is_none())
+          target = cls;
         return PyDynamicOpTrait::attach(opName, target, *context.get());
       },
-      "Attach the dynamic op trait with the target object to the given "
-      "operation name.",
-      nb::arg("op_name"), nb::arg("target"),
-      nb::arg("context").none() = nb::none());
-  cls.attr("attach") = classmethod(
-      [](const nb::object &cls, const nb::object &opName,
-         DefaultingPyMlirContext context) {
-        return PyDynamicOpTrait::attach(opName, cls, *context.get());
-      },
-      nb::arg("cls"), nb::arg("op_name"),
+      nb::arg("cls"), nb::arg("op_name"), nb::arg("target").none() = nb::none(),
       nb::arg("context").none() = nb::none(),
       "Attach the dynamic op trait subclass to the given operation name.");
 }
