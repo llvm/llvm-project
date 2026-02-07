@@ -8409,7 +8409,8 @@ static bool isSafeInstructionForTrivialMerge(const Instruction *I) {
     return CB->doesNotAccessMemory() && CB->doesNotThrow();
   }
 
-  // Anything with side effects is unsafe.
+  // Remaining side-effecting instructions (beyond simple loads/stores and pure,
+  // non-throwing calls handled above) are unsafe to fold.
   if (I->mayHaveSideEffects())
     return false;
 
@@ -8548,15 +8549,13 @@ static bool TryToSimplifyUncondBranchFromNonEmptyBlock(BasicBlock *BB,
     PN.setIncomingBlock(BBIdx, Pred);
   }
 
-  // Splice all whitelisted instructions (excluding debug/lifetime and the
-  // terminator) into Pred, immediately before Pred's terminator.
+  // Splice all whitelisted instructions (including debug/lifetime markers,
+  // excluding the terminator) into Pred, immediately before Pred's terminator.
   Instruction *InsertBefore = Pred->getTerminator();
   for (auto It = BB->getFirstNonPHIOrDbg(), End = BB->end(); It != End;) {
     Instruction *I = &*It++;
     if (I == BBBr)
       break;
-    if (I->isDebugOrPseudoInst() || I->isLifetimeStartOrEnd())
-      continue;
     assert(isSafeInstructionForTrivialMerge(I) &&
            "Unexpected instruction in supposedly-trivial block");
     I->moveBefore(InsertBefore);

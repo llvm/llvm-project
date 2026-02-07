@@ -72,3 +72,16 @@ bb1:
 exit:
   ret void
 }
+
+; CHECK-LABEL: @fold_store
+; CHECK: store i32
+; CHECK: ret void
+define void @fold_store(ptr %p) {
+entry:
+  br label %mid
+mid:
+  store i32 5, ptr %p
+  br label %exit
+exit:
+  ret void
+}
