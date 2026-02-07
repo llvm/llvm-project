@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// USUPPORTED: no-threads
-// USUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: no-threads
+// UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <semaphore>
 
@@ -83,9 +83,5 @@ int main(int, char**) {
     test(log_start);
   }
 
-#if defined(_WI32)
-  return 1;
-#else
   return 0;
-#endif
 }
