@@ -353,17 +353,21 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   //   types in different translation units to "correspond":
   switch (Kind) {
   case Normal: {
-    //  -- the bodies of inline or templated functions
-    if ((IsInNonspecializedTemplate &&
-         !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
-        isInInlineFunction(CurContext) ||
-        isNonInlineInModulePurview(CurContext)) {
-      while (auto *CD = dyn_cast<CapturedDecl>(DC))
-        DC = CD->getParent();
-      return std::make_tuple(&Context.getManglingNumberContext(DC), nullptr);
+    if (!isNonInlineInModulePurview(CurContext)) {
+      //  -- the bodies of inline or templated functions
+      if ((IsInNonspecializedTemplate &&
+           !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
+          isInInlineFunction(CurContext)) {
+        while (auto *CD = dyn_cast<CapturedDecl>(DC))
+          DC = CD->getParent();
+        return std::make_tuple(&Context.getManglingNumberContext(DC), nullptr);
+      }
+
+      return std::make_tuple(nullptr, nullptr);
     }
 
-    return std::make_tuple(nullptr, nullptr);
+    ManglingContextDecl = const_cast<Decl *>(cast<Decl>(DC));
+    [[fallthrough]];
   }
 
   case Concept:
