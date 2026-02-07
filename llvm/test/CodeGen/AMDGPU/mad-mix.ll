@@ -2946,7 +2946,7 @@ define float @v_mad_mix_f32_negf16lo_add_f16lo(half %src0, half %src1)  {
 ; SDAG-GFX1100-LABEL: v_mad_mix_f32_negf16lo_add_f16lo:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, v1, 1.0, -v0 op_sel_hi:[1,1,1]
+; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, v0, -1.0, v1 op_sel_hi:[1,1,1]
 ; SDAG-GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX900-LABEL: v_mad_mix_f32_negf16lo_add_f16lo:
@@ -2960,7 +2960,7 @@ define float @v_mad_mix_f32_negf16lo_add_f16lo(half %src0, half %src1)  {
 ; SDAG-GFX906-LABEL: v_mad_mix_f32_negf16lo_add_f16lo:
 ; SDAG-GFX906:       ; %bb.0:
 ; SDAG-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX906-NEXT:    v_fma_mix_f32 v0, v1, 1.0, -v0 op_sel_hi:[1,1,1]
+; SDAG-GFX906-NEXT:    v_fma_mix_f32 v0, v0, -1.0, v1 op_sel_hi:[1,1,1]
 ; SDAG-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX9GEN-LABEL: v_mad_mix_f32_negf16lo_add_f16lo:
@@ -3100,7 +3100,7 @@ define float @v_mad_mix_f32_negabsf16lo_add_f16lo(half %src0, half %src1)  {
 ; GFX1100-LABEL: v_mad_mix_f32_negabsf16lo_add_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_fma_mix_f32 v0, v1, 1.0, -|v0| op_sel_hi:[1,1,1]
+; GFX1100-NEXT:    v_fma_mix_f32 v0, |v0|, -1.0, v1 op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX900-LABEL: v_mad_mix_f32_negabsf16lo_add_f16lo:
@@ -3114,7 +3114,7 @@ define float @v_mad_mix_f32_negabsf16lo_add_f16lo(half %src0, half %src1)  {
 ; GFX906-LABEL: v_mad_mix_f32_negabsf16lo_add_f16lo:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_fma_mix_f32 v0, v1, 1.0, -|v0| op_sel_hi:[1,1,1]
+; GFX906-NEXT:    v_fma_mix_f32 v0, |v0|, -1.0, v1 op_sel_hi:[1,1,1]
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9GEN-LABEL: v_mad_mix_f32_negabsf16lo_add_f16lo:
@@ -3205,7 +3205,7 @@ define float @v_mad_mix_f32_f16lo_add_negf32(half %src0, float %src1)  {
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_add_negf32:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_fma_mix_f32 v0, v0, 1.0, -v1 op_sel_hi:[1,1,0]
+; GFX1100-NEXT:    v_fma_mix_f32 v0, v1, -1.0, v0 op_sel_hi:[0,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX900-LABEL: v_mad_mix_f32_f16lo_add_negf32:
@@ -3218,7 +3218,7 @@ define float @v_mad_mix_f32_f16lo_add_negf32(half %src0, float %src1)  {
 ; GFX906-LABEL: v_mad_mix_f32_f16lo_add_negf32:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_fma_mix_f32 v0, v0, 1.0, -v1 op_sel_hi:[1,1,0]
+; GFX906-NEXT:    v_fma_mix_f32 v0, v1, -1.0, v0 op_sel_hi:[0,1,1]
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9GEN-LABEL: v_mad_mix_f32_f16lo_add_negf32:
@@ -3297,7 +3297,7 @@ define float @v_mad_mix_f32_f16lo_add_negabsf32(half %src0, float %src1)  {
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_add_negabsf32:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_fma_mix_f32 v0, v0, 1.0, -|v1| op_sel_hi:[1,1,0]
+; GFX1100-NEXT:    v_fma_mix_f32 v0, |v1|, -1.0, v0 op_sel_hi:[0,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX900-LABEL: v_mad_mix_f32_f16lo_add_negabsf32:
@@ -3310,7 +3310,7 @@ define float @v_mad_mix_f32_f16lo_add_negabsf32(half %src0, float %src1)  {
 ; GFX906-LABEL: v_mad_mix_f32_f16lo_add_negabsf32:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_fma_mix_f32 v0, v0, 1.0, -|v1| op_sel_hi:[1,1,0]
+; GFX906-NEXT:    v_fma_mix_f32 v0, |v1|, -1.0, v0 op_sel_hi:[0,1,1]
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9GEN-LABEL: v_mad_mix_f32_f16lo_add_negabsf32:
@@ -3491,7 +3491,7 @@ define float @v_mad_mix_f32_negprecvtf16lo_add_f16lo(i32 %src0.arg, half %src1) 
 ; SDAG-GFX1100-LABEL: v_mad_mix_f32_negprecvtf16lo_add_f16lo:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, v1, 1.0, -v0 op_sel_hi:[1,1,1]
+; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, v0, -1.0, v1 op_sel_hi:[1,1,1]
 ; SDAG-GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX900-LABEL: v_mad_mix_f32_negprecvtf16lo_add_f16lo:
@@ -3505,7 +3505,7 @@ define float @v_mad_mix_f32_negprecvtf16lo_add_f16lo(i32 %src0.arg, half %src1) 
 ; SDAG-GFX906-LABEL: v_mad_mix_f32_negprecvtf16lo_add_f16lo:
 ; SDAG-GFX906:       ; %bb.0:
 ; SDAG-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX906-NEXT:    v_fma_mix_f32 v0, v1, 1.0, -v0 op_sel_hi:[1,1,1]
+; SDAG-GFX906-NEXT:    v_fma_mix_f32 v0, v0, -1.0, v1 op_sel_hi:[1,1,1]
 ; SDAG-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX9GEN-LABEL: v_mad_mix_f32_negprecvtf16lo_add_f16lo:
@@ -3641,7 +3641,7 @@ define float @v_mad_mix_f32_negabsprecvtf16lo_add_f16lo(i32 %src0.arg, half %src
 ; SDAG-GFX1100-LABEL: v_mad_mix_f32_negabsprecvtf16lo_add_f16lo:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, v1, 1.0, -|v0| op_sel_hi:[1,1,1]
+; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, |v0|, -1.0, v1 op_sel_hi:[1,1,1]
 ; SDAG-GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX900-LABEL: v_mad_mix_f32_negabsprecvtf16lo_add_f16lo:
@@ -3655,7 +3655,7 @@ define float @v_mad_mix_f32_negabsprecvtf16lo_add_f16lo(i32 %src0.arg, half %src
 ; SDAG-GFX906-LABEL: v_mad_mix_f32_negabsprecvtf16lo_add_f16lo:
 ; SDAG-GFX906:       ; %bb.0:
 ; SDAG-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX906-NEXT:    v_fma_mix_f32 v0, v1, 1.0, -|v0| op_sel_hi:[1,1,1]
+; SDAG-GFX906-NEXT:    v_fma_mix_f32 v0, |v0|, -1.0, v1 op_sel_hi:[1,1,1]
 ; SDAG-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX9GEN-LABEL: v_mad_mix_f32_negabsprecvtf16lo_add_f16lo:
@@ -3880,7 +3880,7 @@ define float @v_mad_mix_f32_preextractfneg_f16hi_add_f16lo(i32 %src0.arg, half %
 ; SDAG-GFX1100-LABEL: v_mad_mix_f32_preextractfneg_f16hi_add_f16lo:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, v1, 1.0, -v0 op_sel:[0,0,1] op_sel_hi:[1,1,1]
+; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, v0, -1.0, v1 op_sel:[1,0,0] op_sel_hi:[1,1,1]
 ; SDAG-GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX900-LABEL: v_mad_mix_f32_preextractfneg_f16hi_add_f16lo:
@@ -3894,7 +3894,7 @@ define float @v_mad_mix_f32_preextractfneg_f16hi_add_f16lo(i32 %src0.arg, half %
 ; SDAG-GFX906-LABEL: v_mad_mix_f32_preextractfneg_f16hi_add_f16lo:
 ; SDAG-GFX906:       ; %bb.0:
 ; SDAG-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX906-NEXT:    v_fma_mix_f32 v0, v1, 1.0, -v0 op_sel:[0,0,1] op_sel_hi:[1,1,1]
+; SDAG-GFX906-NEXT:    v_fma_mix_f32 v0, v0, -1.0, v1 op_sel:[1,0,0] op_sel_hi:[1,1,1]
 ; SDAG-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX9GEN-LABEL: v_mad_mix_f32_preextractfneg_f16hi_add_f16lo:
@@ -4074,7 +4074,7 @@ define float @v_mad_mix_f32_preextractfabsfneg_f16hi_add_f16lo(i32 %src0.arg, ha
 ; SDAG-GFX1100-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_add_f16lo:
 ; SDAG-GFX1100:       ; %bb.0:
 ; SDAG-GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, v1, 1.0, -|v0| op_sel:[0,0,1] op_sel_hi:[1,1,1]
+; SDAG-GFX1100-NEXT:    v_fma_mix_f32 v0, |v0|, -1.0, v1 op_sel:[1,0,0] op_sel_hi:[1,1,1]
 ; SDAG-GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX900-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_add_f16lo:
@@ -4088,7 +4088,7 @@ define float @v_mad_mix_f32_preextractfabsfneg_f16hi_add_f16lo(i32 %src0.arg, ha
 ; SDAG-GFX906-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_add_f16lo:
 ; SDAG-GFX906:       ; %bb.0:
 ; SDAG-GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX906-NEXT:    v_fma_mix_f32 v0, v1, 1.0, -|v0| op_sel:[0,0,1] op_sel_hi:[1,1,1]
+; SDAG-GFX906-NEXT:    v_fma_mix_f32 v0, |v0|, -1.0, v1 op_sel:[1,0,0] op_sel_hi:[1,1,1]
 ; SDAG-GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX9GEN-LABEL: v_mad_mix_f32_preextractfabsfneg_f16hi_add_f16lo:
@@ -5658,7 +5658,7 @@ define float @v_mad_mix_f32_f16lo_sub_f16lo(half %src0, half %src1)  {
 ; GFX1100-LABEL: v_mad_mix_f32_f16lo_sub_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_fma_mix_f32 v0, v0, 1.0, -v1 op_sel_hi:[1,1,1]
+; GFX1100-NEXT:    v_fma_mix_f32 v0, v1, -1.0, v0 op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX900-LABEL: v_mad_mix_f32_f16lo_sub_f16lo:
@@ -5672,7 +5672,7 @@ define float @v_mad_mix_f32_f16lo_sub_f16lo(half %src0, half %src1)  {
 ; GFX906-LABEL: v_mad_mix_f32_f16lo_sub_f16lo:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_fma_mix_f32 v0, v0, 1.0, -v1 op_sel_hi:[1,1,1]
+; GFX906-NEXT:    v_fma_mix_f32 v0, v1, -1.0, v0 op_sel_hi:[1,1,1]
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9GEN-LABEL: v_mad_mix_f32_f16lo_sub_f16lo:
@@ -5708,7 +5708,7 @@ define float @v_mad_mix_f32_absf16lo_sub_f16lo(half %src0, half %src1)  {
 ; GFX1100-LABEL: v_mad_mix_f32_absf16lo_sub_f16lo:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_fma_mix_f32 v0, |v0|, 1.0, -v1 op_sel_hi:[1,1,1]
+; GFX1100-NEXT:    v_fma_mix_f32 v0, v1, -1.0, |v0| op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX900-LABEL: v_mad_mix_f32_absf16lo_sub_f16lo:
@@ -5722,7 +5722,7 @@ define float @v_mad_mix_f32_absf16lo_sub_f16lo(half %src0, half %src1)  {
 ; GFX906-LABEL: v_mad_mix_f32_absf16lo_sub_f16lo:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_fma_mix_f32 v0, |v0|, 1.0, -v1 op_sel_hi:[1,1,1]
+; GFX906-NEXT:    v_fma_mix_f32 v0, v1, -1.0, |v0| op_sel_hi:[1,1,1]
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9GEN-LABEL: v_mad_mix_f32_absf16lo_sub_f16lo:
@@ -5767,7 +5767,7 @@ define float @v_mad_mix_f32_f16hi_fsub_f16hi(i32 %src0, i32 %src1)  {
 ; GFX1100-LABEL: v_mad_mix_f32_f16hi_fsub_f16hi:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_fma_mix_f32 v0, v0, 1.0, -v1 op_sel:[1,0,1] op_sel_hi:[1,1,1]
+; GFX1100-NEXT:    v_fma_mix_f32 v0, v1, -1.0, v0 op_sel:[1,0,1] op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX900-LABEL: v_mad_mix_f32_f16hi_fsub_f16hi:
@@ -5781,7 +5781,7 @@ define float @v_mad_mix_f32_f16hi_fsub_f16hi(i32 %src0, i32 %src1)  {
 ; GFX906-LABEL: v_mad_mix_f32_f16hi_fsub_f16hi:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_fma_mix_f32 v0, v0, 1.0, -v1 op_sel:[1,0,1] op_sel_hi:[1,1,1]
+; GFX906-NEXT:    v_fma_mix_f32 v0, v1, -1.0, v0 op_sel:[1,0,1] op_sel_hi:[1,1,1]
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9GEN-LABEL: v_mad_mix_f32_f16hi_fsub_f16hi:
@@ -5825,7 +5825,7 @@ define float @v_mad_mix_f32_absf16hi_fsub_f16hi(i32 %src0, i32 %src1)  {
 ; GFX1100-LABEL: v_mad_mix_f32_absf16hi_fsub_f16hi:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_fma_mix_f32 v0, |v0|, 1.0, -v1 op_sel:[1,0,1] op_sel_hi:[1,1,1]
+; GFX1100-NEXT:    v_fma_mix_f32 v0, v1, -1.0, |v0| op_sel:[1,0,1] op_sel_hi:[1,1,1]
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX900-LABEL: v_mad_mix_f32_absf16hi_fsub_f16hi:
@@ -5839,7 +5839,7 @@ define float @v_mad_mix_f32_absf16hi_fsub_f16hi(i32 %src0, i32 %src1)  {
 ; GFX906-LABEL: v_mad_mix_f32_absf16hi_fsub_f16hi:
 ; GFX906:       ; %bb.0:
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX906-NEXT:    v_fma_mix_f32 v0, |v0|, 1.0, -v1 op_sel:[1,0,1] op_sel_hi:[1,1,1]
+; GFX906-NEXT:    v_fma_mix_f32 v0, v1, -1.0, |v0| op_sel:[1,0,1] op_sel_hi:[1,1,1]
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9GEN-LABEL: v_mad_mix_f32_absf16hi_fsub_f16hi:

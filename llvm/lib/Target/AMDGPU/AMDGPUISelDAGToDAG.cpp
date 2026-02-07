@@ -4204,24 +4204,6 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixBF16Mods(SDValue In, SDValue &Src,
   return true;
 }
 
-bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixModsNeg(SDValue In, SDValue &Src,
-                                                  SDValue &SrcMods) const {
-  unsigned Mods = 0;
-  SelectVOP3PMadMixModsImpl(In, Src, Mods, MVT::f16);
-  Mods ^= SISrcMods::NEG;
-  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
-  return true;
-}
-
-bool AMDGPUDAGToDAGISel::SelectVOP3PMadMixBF16ModsNeg(SDValue In, SDValue &Src,
-                                                      SDValue &SrcMods) const {
-  unsigned Mods = 0;
-  SelectVOP3PMadMixModsImpl(In, Src, Mods, MVT::bf16);
-  Mods ^= SISrcMods::NEG;
-  SrcMods = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
-  return true;
-}
-
 // Match BITOP3 operation and return a number of matched instructions plus
 // truth table.
 static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
