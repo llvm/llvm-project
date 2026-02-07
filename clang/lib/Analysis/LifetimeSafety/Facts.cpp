@@ -82,6 +82,13 @@ void UseFact::dump(llvm::raw_ostream &OS, const LoanManager &,
   OS << ", " << (isWritten() ? "Write" : "Read") << ")\n";
 }
 
+void InvalidateOriginFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                                const OriginManager &OM) const {
+  OS << "InvalidateOrigin (";
+  OM.dump(getInvalidatedOrigin(), OS);
+  OS << ")\n";
+}
+
 void TestPointFact::dump(llvm::raw_ostream &OS, const LoanManager &,
                          const OriginManager &) const {
   OS << "TestPoint (Annotation: \"" << getAnnotation() << "\")\n";
