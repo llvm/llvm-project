@@ -54,9 +54,7 @@ __device__ void test_load(__bf16 *out, __bf16 *in) {
 
 // CHECK-LABEL: @_Z8test_retDF16b(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca bfloat, align 2
 // CHECK-NEXT:    [[IN_ADDR:%.*]] = alloca bfloat, align 2
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
 // CHECK-NEXT:    [[IN_ADDR_ASCAST:%.*]] = addrspacecast ptr [[IN_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    store bfloat [[IN:%.*]], ptr addrspace(4) [[IN_ADDR_ASCAST]], align 2
 // CHECK-NEXT:    [[TMP0:%.*]] = load bfloat, ptr addrspace(4) [[IN_ADDR_ASCAST]], align 2
@@ -68,9 +66,7 @@ __device__ __bf16 test_ret( __bf16 in) {
 
 // CHECK-LABEL: @_Z9test_callDF16b(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca bfloat, align 2
 // CHECK-NEXT:    [[IN_ADDR:%.*]] = alloca bfloat, align 2
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
 // CHECK-NEXT:    [[IN_ADDR_ASCAST:%.*]] = addrspacecast ptr [[IN_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    store bfloat [[IN:%.*]], ptr addrspace(4) [[IN_ADDR_ASCAST]], align 2
 // CHECK-NEXT:    [[TMP0:%.*]] = load bfloat, ptr addrspace(4) [[IN_ADDR_ASCAST]], align 2

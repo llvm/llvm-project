@@ -1262,7 +1262,12 @@ public:
 
     /// Returns the value for vscale.
     VScale,
-    OpsEnd = VScale,
+    /// Compute the exiting value of a wide induction after vectorization, that
+    /// is the value of the last lane of the induction increment (i.e. its
+    /// backedge value). Takes the wide induction recipe and the original
+    /// backedge value as operands.
+    ExitingIVValue,
+    OpsEnd = ExitingIVValue,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
@@ -2548,7 +2553,7 @@ class VPReductionPHIRecipe : public VPHeaderPHIRecipe,
 
   ReductionStyle Style;
 
-  /// The phi is part of a multi-use reduction (e.g., used in FindLastIV
+  /// The phi is part of a multi-use reduction (e.g., used in FindIV
   /// patterns for argmin/argmax).
   /// TODO: Also support cases where the phi itself has a single use, but its
   /// compare has multiple uses.
