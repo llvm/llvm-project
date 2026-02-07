@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-using %t -- -- -fno-delayed-template-parsing -isystem %S/Inputs/use-using/
+ // RUN: %check_clang_tidy %s modernize-use-using %t -- -- -fno-delayed-template-parsing -isystem %S/Inputs/use-using/
 
 typedef int Type;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef' [modernize-use-using]
@@ -487,3 +487,70 @@ namespace GH176267 {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
   // CHECK-FIXES: using f6 = int  (double);
 }
+
+namespace GH159518 {
+typedef int  // start and end chunks for cells in a line
+    Commented;  // (end is chunk beyond end of line)
+// CHECK-MESSAGES: :[[@LINE-2]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using Commented = int  // start and end chunks for cells in a line
+// CHECK-FIXES-NEXT:     ;  // (end is chunk beyond end of line)
+
+typedef /*prefix*/ int PrefixCommented;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using PrefixCommented = /*prefix*/ int;
+
+typedef const /*qual*/ int QualCommented;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using QualCommented = const /*qual*/ int;
+
+typedef int /*between*/ BetweenCommented;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using BetweenCommented = int /*between*/;
+
+typedef int /*multi-line
+comment*/ MultiLineCommented;
+// CHECK-MESSAGES: :[[@LINE-2]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using MultiLineCommented = int /*multi-line
+// CHECK-FIXES-NEXT: comment*/;
+
+typedef int // line comment 1
+// line comment 2
+// line comment 3
+    MultiLineSlashCommented;
+// CHECK-MESSAGES: :[[@LINE-4]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using MultiLineSlashCommented = int // line comment 1
+// CHECK-FIXES-NEXT: // line comment 2
+// CHECK-FIXES-NEXT: // line comment 3
+// CHECK-FIXES-NEXT:     ;
+
+typedef int * /*ptr*/ PtrCommented;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using PtrCommented = int * /*ptr*/;
+
+typedef int AfterNameCommented /*after*/;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using AfterNameCommented = int /*after*/;
+
+typedef int TrailingCommented; // trailing
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using TrailingCommented = int; // trailing
+
+typedef int MultiA, /*between comma*/ *MultiB;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-MESSAGES: :[[@LINE-2]]:{{[0-9]+}}: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using MultiA = int;
+// CHECK-FIXES-NEXT: using MultiB = MultiA /*between comma*/ *;
+
+struct TagCommented;
+typedef struct /*tag*/ TagCommented TagCommentedAlias;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using TagCommentedAlias = struct /*tag*/ TagCommented;
+
+typedef int (* /*fp*/ FuncPtrCommented)(int);
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using FuncPtrCommented = int (* /*fp*/ )(int);
+
+typedef TwoArgTemplate</*tmpl*/ int, int> TemplateArgCommented;
+// CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
+// CHECK-FIXES: using TemplateArgCommented = TwoArgTemplate</*tmpl*/ int, int>;
+} // namespace GH159518

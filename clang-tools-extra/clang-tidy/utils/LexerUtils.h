@@ -13,6 +13,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
 #include <optional>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -125,6 +126,19 @@ struct CommentToken {
 std::vector<CommentToken>
 getTrailingCommentsInRange(CharSourceRange Range, const SourceManager &SM,
                            const LangOptions &LangOpts);
+
+/// Returns the source text for the given range or an empty string on failure.
+std::string getSourceText(CharSourceRange Range, const SourceManager &SM,
+                          const LangOptions &LangOpts);
+
+struct TokenRangeInfo {
+  bool HasComment = false;
+  bool HasIdentifier = false;
+  bool HasPointerOrRef = false;
+};
+/// Returns basic token information for the given range.
+TokenRangeInfo analyzeTokenRange(CharSourceRange Range, const SourceManager &SM,
+                                 const LangOptions &LangOpts);
 
 /// Assuming that ``Range`` spans a CVR-qualified type, returns the
 /// token in ``Range`` that is responsible for the qualification. ``Range``
