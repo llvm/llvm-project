@@ -75,7 +75,8 @@ private:
 
 void MipsIncomingValueHandler::assignValueToReg(Register ValVReg,
                                                 Register PhysReg,
-                                                const CCValAssign &VA) {
+                                                const CCValAssign &VA,
+                                                ISD::ArgFlagsTy Flags) {
   markPhysRegUsed(PhysReg);
   IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
 }
@@ -165,7 +166,8 @@ private:
 
 void MipsOutgoingValueHandler::assignValueToReg(Register ValVReg,
                                                 Register PhysReg,
-                                                const CCValAssign &VA) {
+                                                const CCValAssign &VA,
+                                                ISD::ArgFlagsTy Flags) {
   Register ExtReg = extendRegister(ValVReg, VA);
   MIRBuilder.buildCopy(PhysReg, ExtReg);
   MIB.addUse(PhysReg, RegState::Implicit);
