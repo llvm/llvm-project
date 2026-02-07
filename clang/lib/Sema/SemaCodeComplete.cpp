@@ -5152,7 +5152,7 @@ void SemaCodeCompletion::CodeCompletePostfixExpression(Scope *S, ExprResult E,
                                                        QualType PreferredType) {
   if (E.isInvalid())
     CodeCompleteExpression(S, PreferredType);
-  else if (getLangOpts().ObjC)
+  else if (getLangOpts().ObjC && !E.get()->getType().isNull())
     CodeCompleteObjCInstanceMessage(S, E.get(), {}, false);
 }
 
