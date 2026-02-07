@@ -13,13 +13,27 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
 #include <optional>
+#include <string>
 #include <utility>
+#include <vector>
 
 namespace clang {
 
 class Stmt;
 
 namespace tidy::utils::lexer {
+
+struct TokenRangeInfo {
+  bool HasComment = false;
+  bool HasIdentifier = false;
+  bool HasPointerOrRef = false;
+};
+
+// Represents a comment token and its source location in the original file.
+struct CommentToken {
+  SourceLocation Loc;
+  StringRef Text;
+};
 
 /// Returns previous token or ``std::nullopt`` if not found.
 std::optional<Token> getPreviousToken(SourceLocation Location,
@@ -112,6 +126,20 @@ findNextTokenSkippingComments(SourceLocation Start, const SourceManager &SM,
 bool rangeContainsExpansionsOrDirectives(SourceRange Range,
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts);
+
+/// Returns comment tokens found in the given range. If a non-comment token is
+/// encountered, clears previously collected comments and continues.
+std::vector<CommentToken> getCommentsInRange(CharSourceRange Range,
+                                             const SourceManager &SM,
+                                             const LangOptions &LangOpts);
+
+/// Returns the source text for the given range or an empty string on failure.
+std::string getSourceText(CharSourceRange Range, const SourceManager &SM,
+                          const LangOptions &LangOpts);
+
+/// Returns basic token information for the given range.
+TokenRangeInfo analyzeTokenRange(CharSourceRange Range, const SourceManager &SM,
+                                 const LangOptions &LangOpts);
 
 /// Assuming that ``Range`` spans a CVR-qualified type, returns the
 /// token in ``Range`` that is responsible for the qualification. ``Range``
