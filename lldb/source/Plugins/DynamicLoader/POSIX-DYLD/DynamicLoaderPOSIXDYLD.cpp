@@ -58,7 +58,8 @@ DynamicLoader *DynamicLoaderPOSIXDYLD::CreateInstance(Process *process,
     if (triple_ref.getOS() == llvm::Triple::FreeBSD ||
         triple_ref.getOS() == llvm::Triple::Linux ||
         triple_ref.getOS() == llvm::Triple::NetBSD ||
-        triple_ref.getOS() == llvm::Triple::OpenBSD)
+        triple_ref.getOS() == llvm::Triple::OpenBSD ||
+        triple_ref.getOS() == llvm::Triple::QNX)
       create = true;
   }
 
