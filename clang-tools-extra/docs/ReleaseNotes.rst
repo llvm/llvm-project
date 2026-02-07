@@ -205,7 +205,7 @@ Changes in existing checks
 
 - Improved :doc:`readability-suspicious-call-argument
   <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
-  crash from malformed `Abbreviations` configuration.
+  crash from invalid ``Abbreviations`` option.
 
 Removed checks
 ^^^^^^^^^^^^^^
