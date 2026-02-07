@@ -829,7 +829,7 @@ public:
     return __table_.template __node_handle_extract<node_type>(__key);
   }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI node_type extract(const_iterator __it) {
-    return __table_.template __node_handle_extract_iterator<node_type>(__it);
+    return __table_.template __node_handle_extract_from_iterator<node_type>(__it);
   }
 
 #    if _LIBCPP_STD_VER >= 23
@@ -1429,7 +1429,7 @@ public:
     return __table_.template __node_handle_insert_multi<node_type>(__hint, std::move(__nh));
   }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI node_type extract(const_iterator __position) {
-    return __table_.template __node_handle_extract_iterator<node_type>(__position);
+    return __table_.template __node_handle_extract_from_iterator<node_type>(__position);
   }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI node_type extract(key_type const& __key) {
     return __table_.template __node_handle_extract<node_type>(__key);

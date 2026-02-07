@@ -1304,7 +1304,7 @@ public:
     return __tree_.template __node_handle_extract<node_type>(__key);
   }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI node_type extract(const_iterator __it) {
-    return __tree_.template __node_handle_extract_iterator<node_type>(__it.__i_);
+    return __tree_.template __node_handle_extract_from_iterator<node_type>(__it.__i_);
   }
 
 #    if _LIBCPP_STD_VER >= 23
@@ -1927,7 +1927,7 @@ public:
     return __tree_.template __node_handle_extract<node_type>(__key);
   }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI node_type extract(const_iterator __it) {
-    return __tree_.template __node_handle_extract_iterator<node_type>(__it.__i_);
+    return __tree_.template __node_handle_extract_from_iterator<node_type>(__it.__i_);
   }
 
 #    if _LIBCPP_STD_VER >= 23
