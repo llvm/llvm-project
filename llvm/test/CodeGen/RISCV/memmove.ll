@@ -760,3 +760,112 @@ entry:
   ret i32 0
 }
 
+; ----------------------------------------------------------------------
+; Volatile memmove tests - should NOT use overlapping loads/stores
+; Volatile operations must access each byte exactly once
+
+define void @unaligned_memmove7_volatile(ptr nocapture %dest, ptr %src) nounwind {
+; RV32-LABEL: unaligned_memmove7_volatile:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    lbu a2, 0(a1)
+; RV32-NEXT:    lbu a3, 1(a1)
+; RV32-NEXT:    lbu a4, 2(a1)
+; RV32-NEXT:    lbu a5, 3(a1)
+; RV32-NEXT:    lbu a6, 4(a1)
+; RV32-NEXT:    lbu a7, 5(a1)
+; RV32-NEXT:    lbu a1, 6(a1)
+; RV32-NEXT:    sb a1, 6(a0)
+; RV32-NEXT:    sb a7, 5(a0)
+; RV32-NEXT:    sb a6, 4(a0)
+; RV32-NEXT:    sb a5, 3(a0)
+; RV32-NEXT:    sb a4, 2(a0)
+; RV32-NEXT:    sb a3, 1(a0)
+; RV32-NEXT:    sb a2, 0(a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: unaligned_memmove7_volatile:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    lbu a2, 0(a1)
+; RV64-NEXT:    lbu a3, 1(a1)
+; RV64-NEXT:    lbu a4, 2(a1)
+; RV64-NEXT:    lbu a5, 3(a1)
+; RV64-NEXT:    lbu a6, 4(a1)
+; RV64-NEXT:    lbu a7, 5(a1)
+; RV64-NEXT:    lbu a1, 6(a1)
+; RV64-NEXT:    sb a1, 6(a0)
+; RV64-NEXT:    sb a7, 5(a0)
+; RV64-NEXT:    sb a6, 4(a0)
+; RV64-NEXT:    sb a5, 3(a0)
+; RV64-NEXT:    sb a4, 2(a0)
+; RV64-NEXT:    sb a3, 1(a0)
+; RV64-NEXT:    sb a2, 0(a0)
+; RV64-NEXT:    ret
+;
+; RV32-FAST-LABEL: unaligned_memmove7_volatile:
+; RV32-FAST:       # %bb.0: # %entry
+; RV32-FAST-NEXT:    lw a2, 0(a1)
+; RV32-FAST-NEXT:    lh a3, 4(a1)
+; RV32-FAST-NEXT:    lbu a1, 6(a1)
+; RV32-FAST-NEXT:    sb a1, 6(a0)
+; RV32-FAST-NEXT:    sh a3, 4(a0)
+; RV32-FAST-NEXT:    sw a2, 0(a0)
+; RV32-FAST-NEXT:    ret
+;
+; RV64-FAST-LABEL: unaligned_memmove7_volatile:
+; RV64-FAST:       # %bb.0: # %entry
+; RV64-FAST-NEXT:    lw a2, 0(a1)
+; RV64-FAST-NEXT:    lh a3, 4(a1)
+; RV64-FAST-NEXT:    lbu a1, 6(a1)
+; RV64-FAST-NEXT:    sb a1, 6(a0)
+; RV64-FAST-NEXT:    sh a3, 4(a0)
+; RV64-FAST-NEXT:    sw a2, 0(a0)
+; RV64-FAST-NEXT:    ret
+entry:
+  tail call void @llvm.memmove.p0.p0.i64(ptr %dest, ptr %src, i64 7, i1 true)
+  ret void
+}
+
+define void @aligned_memmove7_volatile(ptr nocapture %dest, ptr %src) nounwind {
+; RV32-LABEL: aligned_memmove7_volatile:
+; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    lw a2, 0(a1)
+; RV32-NEXT:    lh a3, 4(a1)
+; RV32-NEXT:    lbu a1, 6(a1)
+; RV32-NEXT:    sb a1, 6(a0)
+; RV32-NEXT:    sh a3, 4(a0)
+; RV32-NEXT:    sw a2, 0(a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: aligned_memmove7_volatile:
+; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    lw a2, 0(a1)
+; RV64-NEXT:    lh a3, 4(a1)
+; RV64-NEXT:    lbu a1, 6(a1)
+; RV64-NEXT:    sb a1, 6(a0)
+; RV64-NEXT:    sh a3, 4(a0)
+; RV64-NEXT:    sw a2, 0(a0)
+; RV64-NEXT:    ret
+;
+; RV32-FAST-LABEL: aligned_memmove7_volatile:
+; RV32-FAST:       # %bb.0: # %entry
+; RV32-FAST-NEXT:    lw a2, 0(a1)
+; RV32-FAST-NEXT:    lh a3, 4(a1)
+; RV32-FAST-NEXT:    lbu a1, 6(a1)
+; RV32-FAST-NEXT:    sb a1, 6(a0)
+; RV32-FAST-NEXT:    sh a3, 4(a0)
+; RV32-FAST-NEXT:    sw a2, 0(a0)
+; RV32-FAST-NEXT:    ret
+;
+; RV64-FAST-LABEL: aligned_memmove7_volatile:
+; RV64-FAST:       # %bb.0: # %entry
+; RV64-FAST-NEXT:    lw a2, 0(a1)
+; RV64-FAST-NEXT:    lh a3, 4(a1)
+; RV64-FAST-NEXT:    lbu a1, 6(a1)
+; RV64-FAST-NEXT:    sb a1, 6(a0)
+; RV64-FAST-NEXT:    sh a3, 4(a0)
+; RV64-FAST-NEXT:    sw a2, 0(a0)
+; RV64-FAST-NEXT:    ret
+entry:
+  tail call void @llvm.memmove.p0.p0.i64(ptr align 4 %dest, ptr align 4 %src, i64 7, i1 true)
+  ret void
+}

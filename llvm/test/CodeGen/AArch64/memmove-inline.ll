@@ -218,3 +218,64 @@ entry:
   call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 65, i1 false)
   ret void
 }
+
+; Test volatile memmove - should NOT use overlapping loads/stores
+; Volatile operations must access each byte exactly once
+
+define void @move7_volatile(ptr %out, ptr %in) {
+; CHECK-ALIGNED-LABEL: move7_volatile:
+; CHECK-ALIGNED:       // %bb.0: // %entry
+; CHECK-ALIGNED-NEXT:    ldr w8, [x1]
+; CHECK-ALIGNED-NEXT:    ldrh w9, [x1, #4]
+; CHECK-ALIGNED-NEXT:    ldrb w10, [x1, #6]
+; CHECK-ALIGNED-NEXT:    strb w10, [x0, #6]
+; CHECK-ALIGNED-NEXT:    strh w9, [x0, #4]
+; CHECK-ALIGNED-NEXT:    str w8, [x0]
+; CHECK-ALIGNED-NEXT:    ret
+entry:
+  call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 7, i1 true)
+  ret void
+}
+
+define void @move13_volatile(ptr %out, ptr %in) {
+; CHECK-ALIGNED-LABEL: move13_volatile:
+; CHECK-ALIGNED:       // %bb.0: // %entry
+; CHECK-ALIGNED-NEXT:    ldr x8, [x1]
+; CHECK-ALIGNED-NEXT:    ldr w9, [x1, #8]
+; CHECK-ALIGNED-NEXT:    ldrb w10, [x1, #12]
+; CHECK-ALIGNED-NEXT:    strb w10, [x0, #12]
+; CHECK-ALIGNED-NEXT:    str w9, [x0, #8]
+; CHECK-ALIGNED-NEXT:    str x8, [x0]
+; CHECK-ALIGNED-NEXT:    ret
+entry:
+  call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 13, i1 true)
+  ret void
+}
+
+define void @move17_volatile(ptr %out, ptr %in) {
+; CHECK-ALIGNED-LABEL: move17_volatile:
+; CHECK-ALIGNED:       // %bb.0: // %entry
+; CHECK-ALIGNED-NEXT:    ldr q0, [x1]
+; CHECK-ALIGNED-NEXT:    ldrb w8, [x1, #16]
+; CHECK-ALIGNED-NEXT:    strb w8, [x0, #16]
+; CHECK-ALIGNED-NEXT:    str q0, [x0]
+; CHECK-ALIGNED-NEXT:    ret
+entry:
+  call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 17, i1 true)
+  ret void
+}
+
+define void @move25_volatile(ptr %out, ptr %in) {
+; CHECK-ALIGNED-LABEL: move25_volatile:
+; CHECK-ALIGNED:       // %bb.0: // %entry
+; CHECK-ALIGNED-NEXT:    ldr q0, [x1]
+; CHECK-ALIGNED-NEXT:    ldr x8, [x1, #16]
+; CHECK-ALIGNED-NEXT:    ldrb w9, [x1, #24]
+; CHECK-ALIGNED-NEXT:    strb w9, [x0, #24]
+; CHECK-ALIGNED-NEXT:    str x8, [x0, #16]
+; CHECK-ALIGNED-NEXT:    str q0, [x0]
+; CHECK-ALIGNED-NEXT:    ret
+entry:
+  call void @llvm.memmove.p0.p0.i64(ptr %out, ptr %in, i64 25, i1 true)
+  ret void
+}
