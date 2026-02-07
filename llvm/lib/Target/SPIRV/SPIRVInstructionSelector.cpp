@@ -2920,6 +2920,15 @@ bool SPIRVInstructionSelector::selectWaveReduce(
   return true;
 }
 
+bool SPIRVInstructionSelector::selectWaveReduceOp(Register ResVReg,
+                                                  const SPIRVType *ResType,
+                                                  MachineInstr &I,
+                                                  unsigned Opcode) {
+  return selectWaveReduceOp(
+      ResVReg, ResType, I, false,
+      [&](Register InputRegister, bool IsUnsigned) { return Opcode; });
+}
+
 bool SPIRVInstructionSelector::selectWaveExclusiveScanSum(
     Register ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
   return selectWaveExclusiveScan(ResVReg, ResType, I, /*IsUnsigned*/ false,
@@ -4055,8 +4064,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_is_first_lane:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformElect);
   case Intrinsic::spv_wave_reduce_or:
-    return selectWaveOpInst(ResVReg, ResType, I,
-                            SPIRV::OpGroupNonUniformBitwiseOr);
+    return selectWaveReduceOp(ResVReg, ResType, I, SPIRV::OpGroupNonUniformBitwiseOr);
   case Intrinsic::spv_wave_reduce_umax:
     return selectWaveReduceMax(ResVReg, ResType, I, /*IsUnsigned*/ true);
   case Intrinsic::spv_wave_reduce_max:
