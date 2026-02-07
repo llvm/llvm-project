@@ -1696,6 +1696,9 @@ enum StmtCode {
   /// An ExtVectorElementExpr record.
   EXPR_EXT_VECTOR_ELEMENT,
 
+  /// A MatrixElementExpr record.
+  EXPR_MATRIX_ELEMENT,
+
   /// An InitListExpr record.
   EXPR_INIT_LIST,
 
