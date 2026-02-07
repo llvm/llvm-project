@@ -3528,6 +3528,8 @@ Where:
 - ``diagnostic-text`` is text of the expected diagnostic
   (:ref:`Diagnostic Text <diagnostic-text>`).
 
+.. _custom-prefixes:
+
 Custom Prefixes
 ~~~~~~~~~~~~~~~
 The ``-verify`` command optionally accepts a comma-delimited list of one or
@@ -3556,6 +3558,8 @@ Multiple occurrences accumulate prefixes.  For example,
 ``-verify -verify=foo,bar -verify=baz`` is equivalent to
 ``-verify=expected,foo,bar,baz``.
 
+.. _diagnostic-location:
+
 Dianogstic Location
 ^^^^^^^^^^^^^^^^^^^
 Indicating that a line expects an error or a warning is easy. Put a comment
@@ -3568,7 +3572,7 @@ should be included in test cases unless there is a compelling reason to use
 truncated text instead.)
 
 For a full description of the matching behavior, including more complex
-matching scenarios, see :ref:`matching <DiagnosticMatching>` below.
+matching scenarios, see :ref:`"Diagnostic text" <diagnostic-text>` below.
 
 Here's an example of the most commonly used way to specify expected
 diagnostics:
@@ -3657,7 +3661,7 @@ A range can also be specified by ``<n>-<m>``. For example:
 
 In this example, the diagnostic may appear only once, if at all.
 
-.. _DiagnosticMatching:
+.. _diagnostic-text:
 
 Diagnostic Text
 ~~~~~~~~~~~~~~~
