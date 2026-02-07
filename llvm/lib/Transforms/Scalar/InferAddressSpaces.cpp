@@ -1102,7 +1102,8 @@ bool InferAddressSpacesImpl::updateAddressSpace(
   } else {
     // Otherwise, infer the address space from its pointer operands.
     SmallVector<Constant *, 2> ConstantPtrOps;
-    for (Value *PtrOperand : getPointerOperands(V, *DL, TTI)) {
+    SmallVector<Value *, 2> PtrOps = getPointerOperands(V, *DL, TTI);
+    for (Value *PtrOperand : PtrOps) {
       auto I = InferredAddrSpace.find(PtrOperand);
       unsigned OperandAS;
       if (I == InferredAddrSpace.end()) {
@@ -1133,12 +1134,18 @@ bool InferAddressSpacesImpl::updateAddressSpace(
       if (NewAS == FlatAddrSpace)
         break;
     }
+
     if (NewAS != FlatAddrSpace && NewAS != UninitializedAddressSpace) {
       if (any_of(ConstantPtrOps, [=](Constant *C) {
             return !isSafeToCastConstAddrSpace(C, NewAS);
           }))
         NewAS = FlatAddrSpace;
     }
+
+    // operator(flat const, flat const, ...) -> flat
+    if (NewAS == UninitializedAddressSpace &&
+        PtrOps.size() == ConstantPtrOps.size())
+      NewAS = FlatAddrSpace;
   }
 
   unsigned OldAS = InferredAddrSpace.lookup(&V);
