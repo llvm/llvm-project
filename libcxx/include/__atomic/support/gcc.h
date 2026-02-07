@@ -265,7 +265,7 @@ __cxx_atomic_fetch_max(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern,
   _Tp __value;
   do {
     __value = __ret > __pattern ? __ret : __pattern;
-  } while (__cxx_atomic_compare_exchange_weak(__a, std::addressof(__ret), __value, __order, memory_order_relaxed));
+  } while (!__cxx_atomic_compare_exchange_weak(__a, std::addressof(__ret), __value, __order, memory_order_relaxed));
   return __ret;
 }
 
@@ -276,7 +276,7 @@ __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_o
   _Tp __value;
   do {
     __value = __ret > __pattern ? __ret : __pattern;
-  } while (__cxx_atomic_compare_exchange_weak(__a, std::addressof(__ret), __value, __order, memory_order_relaxed));
+  } while (!__cxx_atomic_compare_exchange_weak(__a, std::addressof(__ret), __value, __order, memory_order_relaxed));
   return __ret;
 }
 
@@ -287,7 +287,7 @@ __cxx_atomic_fetch_min(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern,
   _Tp __value;
   do {
     __value = __ret < __pattern ? __ret : __pattern;
-  } while (__cxx_atomic_compare_exchange_weak(__a, std::addressof(__ret), __value, __order, memory_order_relaxed));
+  } while (!__cxx_atomic_compare_exchange_weak(__a, std::addressof(__ret), __value, __order, memory_order_relaxed));
   return __ret;
 }
 
@@ -298,7 +298,7 @@ __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_o
   _Tp __value;
   do {
     __value = __ret < __pattern ? __ret : __pattern;
-  } while (__cxx_atomic_compare_exchange_weak(__a, std::addressof(__ret), __value, __order, memory_order_relaxed));
+  } while (!__cxx_atomic_compare_exchange_weak(__a, std::addressof(__ret), __value, __order, memory_order_relaxed));
   return __ret;
 }
 
