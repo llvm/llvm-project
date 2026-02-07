@@ -261,7 +261,7 @@ __cxx_atomic_fetch_xor(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_o
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_max(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_order __order) {
-  _Tp __ret = __cxx_atomic_load(__a, __order);
+  _Tp __ret = __cxx_atomic_load(__a, memory_order_relaxed);
   _Tp __value;
   do {
     __value = __ret > __pattern ? __ret : __pattern;
@@ -272,7 +272,7 @@ __cxx_atomic_fetch_max(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern,
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_order __order) {
-  _Tp __ret = __cxx_atomic_load(__a, __order);
+  _Tp __ret = __cxx_atomic_load(__a, memory_order_relaxed);
   _Tp __value;
   do {
     __value = __ret > __pattern ? __ret : __pattern;
@@ -283,7 +283,7 @@ __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_o
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_min(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_order __order) {
-  _Tp __ret = __cxx_atomic_load(__a, __order);
+  _Tp __ret = __cxx_atomic_load(__a, memory_order_relaxed);
   _Tp __value;
   do {
     __value = __ret < __pattern ? __ret : __pattern;
@@ -294,7 +294,7 @@ __cxx_atomic_fetch_min(volatile __cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern,
 template <typename _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memory_order __order) {
-  _Tp __ret = __cxx_atomic_load(__a, __order);
+  _Tp __ret = __cxx_atomic_load(__a, memory_order_relaxed);
   _Tp __value;
   do {
     __value = __ret < __pattern ? __ret : __pattern;
