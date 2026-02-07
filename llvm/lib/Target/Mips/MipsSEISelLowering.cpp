@@ -362,6 +362,25 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
     setOperationAction(ISD::SELECT_CC, MVT::i64, Expand);
   }
 
+  if (Subtarget.isR5900()) {
+    // R5900 FPU only supports 4 compare conditions: C.F, C.EQ, C.OLT, C.OLE
+    // (and their inversions via bc1t/bc1f). Expand all conditions that would
+    // require C.UN, C.UEQ, C.ULT, or C.ULE instructions (not available on
+    // R5900). The legalizer resolves these via operand swapping, condition
+    // inversion, and decomposition into supported conditions.
+    setCondCodeAction(ISD::SETOGT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETOGE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETGT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETGE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETULT, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETULE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETUO, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETO, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETONE, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETUEQ, MVT::f32, Expand);
+    setCondCodeAction(ISD::SETNE, MVT::f32, Expand);
+  }
+
   computeRegisterProperties(Subtarget.getRegisterInfo());
 }
 
