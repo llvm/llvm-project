@@ -3753,8 +3753,8 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
   // FIXME: This would not be necessary if VECTOR_FIND_LAST_ACTIVE returned a
   // sentinel value for "none active".
   SDValue AnyHiActive = DAG.getNode(ISD::VECREDUCE_OR, DL, MVT::i1, HiMask);
-  SDValue Cond = DAG.getSetCC(DL, getSetCCResultType(MVT::i1), AnyHiActive,
-                              DAG.getConstant(0, DL, MVT::i1), ISD::SETNE);
+  SDValue Cond = DAG.getBoolExtOrTrunc(AnyHiActive, DL,
+                                       getSetCCResultType(MVT::i1), MVT::i1);
 
   // Return: AnyHiActive ? (HiFind + SplitEC) : LoFind;
   return DAG.getNode(ISD::SELECT, DL, VT, Cond,
