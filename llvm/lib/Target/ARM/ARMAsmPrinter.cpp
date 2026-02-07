@@ -792,16 +792,12 @@ void ARMAsmPrinter::emitAttributes() {
       ATS.emitAttribute(ARMBuildAttrs::ABI_FP_rounding, ARMBuildAttrs::Allowed);
   }
 
-  // TM.Options.NoInfsFPMath && TM.Options.NoNaNsFPMath is the
-  // equivalent of GCC's -ffinite-math-only flag.
+  // Generate ABI tags from module flags.
   if (auto *NumModel = mdconst::extract_or_null<ConstantInt>(
           MMI->getModule()->getModuleFlag("arm-eabi-fp-number-model"))) {
     if (unsigned TagVal = NumModel->getZExtValue())
       ATS.emitAttribute(ARMBuildAttrs::ABI_FP_number_model, TagVal);
-  } else if (TM.Options.NoInfsFPMath && TM.Options.NoNaNsFPMath)
-    ATS.emitAttribute(ARMBuildAttrs::ABI_FP_number_model,
-                      ARMBuildAttrs::Allowed);
-  else
+  } else
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_number_model,
                       ARMBuildAttrs::AllowIEEE754);
 
