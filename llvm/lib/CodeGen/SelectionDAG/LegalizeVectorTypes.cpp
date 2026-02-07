@@ -3752,13 +3752,15 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
   // Check if any lane is active in the high mask.
   // FIXME: This would not be necessary if VECTOR_FIND_LAST_ACTIVE returned a
   // sentinel value for "none active".
-  SDValue AnyHiActive = DAG.getNode(ISD::VECREDUCE_OR, DL, MVT::i32, HiMask);
+  SDValue AnyHiActive = DAG.getNode(ISD::VECREDUCE_OR, DL, MVT::i1, HiMask);
+  SDValue Cond = DAG.getSetCC(DL, getSetCCResultType(MVT::i1), AnyHiActive,
+                              DAG.getConstant(0, DL, MVT::i1), ISD::SETNE);
 
   // Return: AnyHiActive ? (HiFind + SplitEC) : LoFind;
-  return DAG.getSelect(DL, VT, AnyHiActive,
-                       DAG.getNode(ISD::ADD, DL, VT, HiFind,
-                                   DAG.getElementCount(DL, VT, SplitEC)),
-                       LoFind);
+  return DAG.getNode(ISD::SELECT, DL, VT, Cond,
+                     DAG.getNode(ISD::ADD, DL, VT, HiFind,
+                                 DAG.getElementCount(DL, VT, SplitEC)),
+                     LoFind);
 }
 
 SDValue DAGTypeLegalizer::SplitVecOp_VSELECT(SDNode *N, unsigned OpNo) {

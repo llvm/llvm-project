@@ -397,8 +397,7 @@ define i8 @extract_last_active_split(<32 x i8> %data, <32 x i8> %mask, i8 %passt
 ; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
 ; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
 ; CHECK-NEXT:    orb -{{[0-9]+}}(%rsp), %al
-; CHECK-NEXT:    movzbl %al, %eax
-; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    cmoveq %rcx, %rdx
 ; CHECK-NEXT:    andl $31, %edx
 ; CHECK-NEXT:    movzbl -40(%rsp,%rdx), %eax
