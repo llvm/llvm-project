@@ -12,9 +12,7 @@
 // CHECK-LABEL: define spir_func noundef i64 @_Z3fooi(
 // CHECK-SAME: i32 noundef [[P:%.*]]) addrspace(4) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[P_ADDR:%.*]] = alloca i32, align 4
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr [[RETVAL]] to ptr addrspace(4)
 // CHECK-NEXT:    [[P_ADDR_ASCAST:%.*]] = addrspacecast ptr [[P_ADDR]] to ptr addrspace(4)
 // CHECK-NEXT:    store i32 [[P]], ptr addrspace(4) [[P_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr addrspace(4) [[P_ADDR_ASCAST]], align 4

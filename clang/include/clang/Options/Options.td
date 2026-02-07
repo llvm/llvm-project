@@ -2724,6 +2724,13 @@ defm sanitize_handler_preserve_all_regs
           NegFlag<SetFalse, [], [],
                   "Disable handlers with preserve_all calling convention">>,
       Group<f_clang_Group>;
+defm sanitize_trap_loop : BoolOption<"f", "sanitize-trap-loop",
+  CodeGenOpts<"SanitizeTrapLoop">, DefaultFalse,
+  PosFlag<SetTrue, [], [],
+          "Use infinite loops in trapping mode">,
+  NegFlag<SetFalse, [], [],
+          "Do not use infinite loops in trapping mode">>,
+  Group<f_clang_Group>;
 def fsanitize_link_runtime : Flag<["-"], "fsanitize-link-runtime">,
                            Group<f_clang_Group>;
 def fno_sanitize_link_runtime : Flag<["-"], "fno-sanitize-link-runtime">,
@@ -3784,6 +3791,11 @@ defm application_extension : BoolFOption<"application-extension",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Restrict code to those available for App Extensions">,
   NegFlag<SetFalse>>;
+defm reflection : BoolFOption<"reflection",
+  LangOpts<"Reflection">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option],
+          "Enable C++26 reflection">,
+  NegFlag<SetFalse>>, ShouldParseIf<cplusplus.KeyPath>;
 defm sized_deallocation : BoolFOption<"sized-deallocation",
   LangOpts<"SizedDeallocation">, Default<cpp14.KeyPath>,
   PosFlag<SetTrue, [], [], "Enable C++14 sized global deallocation functions">,
@@ -3986,9 +3998,13 @@ def fno_openmp_assume_threads_oversubscription : Flag<["-"], "fno-openmp-assume-
 def fopenmp_assume_no_thread_state : Flag<["-"], "fopenmp-assume-no-thread-state">,
   HelpText<"Assert no thread in a parallel region modifies an ICV">,
   MarshallingInfoFlag<LangOpts<"OpenMPNoThreadState">>;
+def fno_openmp_assume_no_thread_state : Flag<["-"], "fno-openmp-assume-no-thread-state">,
+  HelpText<"Assert that a thread in a parallel region may modify an ICV">;
 def fopenmp_assume_no_nested_parallelism : Flag<["-"], "fopenmp-assume-no-nested-parallelism">,
   HelpText<"Assert no nested parallel regions in the GPU">,
   MarshallingInfoFlag<LangOpts<"OpenMPNoNestedParallelism">>;
+def fno_openmp_assume_no_nested_parallelism : Flag<["-"], "fno-openmp-assume-no-nested-parallelism">,
+  HelpText<"Assert that a nested parallel region may be used in the GPU">;
 
 } // let Group = f_Group
 } // let Visibility = [ClangOption, CC1Option, FC1Option]
@@ -4012,6 +4028,13 @@ def fopenmp_target_new_runtime : Flag<["-"], "fopenmp-target-new-runtime">,
   Group<f_Group>, Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fno_openmp_target_new_runtime : Flag<["-"], "fno-openmp-target-new-runtime">,
   Group<f_Group>, Flags<[HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
+def fopenmp_target_fast : Flag<["-"], "fopenmp-target-fast">,
+  Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,
+  Visibility<[ClangOption]>,
+  HelpText<"Assert common GPU usage patterns to enable OpenMP runtime optimizations">;
+def fno_openmp_target_fast : Flag<["-"], "fno-openmp-target-fast">,
+  Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,
+  Visibility<[ClangOption]>;
 defm openmp_optimistic_collapse : BoolFOption<"openmp-optimistic-collapse",
   LangOpts<"OpenMPOptimisticCollapse">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option]>,
@@ -7057,12 +7080,8 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
     HelpText<"Enable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">,  Visibility<[ClangOption, CLOption, FlangOption]>;
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu">, Visibility<[ClangOption, CLOption, FlangOption]>;
-def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>,
-            AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu"]>,
-            Group<m_x86_Features_Group>;
-def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>,
-               AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu"]>,
-               Group<m_x86_Features_Group>;
+def mapxf : Flag<["-"], "mapxf">, Group<m_x86_Features_Group>;
+def mno_apxf : Flag<["-"], "mno-apxf">, Group<m_x86_Features_Group>;
 def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
                                 HelpText<"Enable use of GPR32 in inline assembly for APX">;
 } // let Flags = [TargetSpecific]

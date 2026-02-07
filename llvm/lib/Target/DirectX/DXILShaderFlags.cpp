@@ -99,6 +99,9 @@ static bool checkWaveOps(Intrinsic::ID IID) {
   case Intrinsic::dx_wave_reduce_umax:
   case Intrinsic::dx_wave_reduce_min:
   case Intrinsic::dx_wave_reduce_umin:
+    // Wave Prefix Op Variants
+  case Intrinsic::dx_wave_prefix_sum:
+  case Intrinsic::dx_wave_prefix_usum:
     return true;
   }
 }
