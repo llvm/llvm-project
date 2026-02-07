@@ -111,6 +111,7 @@ public:
   bool needsUbsanRt() const;
   bool needsUbsanCXXRt() const;
   bool requiresMinimalRuntime() const { return MinimalRuntime; }
+  bool needsUbsanLoopDetectRt() const { return TrapLoop; }
   bool needsDfsanRt() const { return Sanitizers.has(SanitizerKind::DataFlow); }
   bool needsSafeStackRt() const { return SafeStackRuntime; }
   bool needsCfiCrossDsoRt() const;
