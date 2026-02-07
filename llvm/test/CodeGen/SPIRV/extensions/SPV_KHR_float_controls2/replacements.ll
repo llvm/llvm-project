@@ -1,27 +1,19 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2 %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2 %s -o - -filetype=obj | spirv-val %}
+; RUN: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_float_controls2 %s -o - -filetype=obj | spirv-val %}
 
 ;; This test checks that the OpenCL.std instructions fmin_common, fmax_common are replaced with fmin, fmax with NInf and NNaN instead.
 
 ; CHECK-DAG: Capability FloatControls2
 ; CHECK: Extension "SPV_KHR_float_controls2"
 
-; CHECK: OpName %[[#maxRes:]] "maxRes"
-; CHECK: OpName %[[#maxCommonRes:]] "maxCommonRes"
-; CHECK: OpName %[[#minRes:]] "minRes"
-; CHECK: OpName %[[#minCommonRes:]] "minCommonRes"
-; CHECK: OpName %[[#maxResV:]] "maxResV"
-; CHECK: OpName %[[#maxCommonResV:]] "maxCommonResV"
-; CHECK: OpName %[[#minResV:]] "minResV"
-; CHECK: OpName %[[#minCommonResV:]] "minCommonResV"
-; CHECK: OpDecorate %[[#maxRes]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK: OpDecorate %[[#maxCommonRes]] FPFastMathMode NotNaN|NotInf
-; CHECK: OpDecorate %[[#minRes]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK: OpDecorate %[[#minCommonRes]] FPFastMathMode NotNaN|NotInf
-; CHECK: OpDecorate %[[#maxResV]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK: OpDecorate %[[#maxCommonResV]] FPFastMathMode NotNaN|NotInf
-; CHECK: OpDecorate %[[#minResV]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
-; CHECK: OpDecorate %[[#minCommonResV]] FPFastMathMode NotNaN|NotInf
+; CHECK: OpDecorate %[[#maxRes:]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
+; CHECK: OpDecorate %[[#maxCommonRes:]] FPFastMathMode NotNaN|NotInf
+; CHECK: OpDecorate %[[#minRes:]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
+; CHECK: OpDecorate %[[#minCommonRes:]] FPFastMathMode NotNaN|NotInf
+; CHECK: OpDecorate %[[#maxResV:]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
+; CHECK: OpDecorate %[[#maxCommonResV:]] FPFastMathMode NotNaN|NotInf
+; CHECK: OpDecorate %[[#minResV:]] FPFastMathMode NotNaN|NotInf|NSZ|AllowRecip|AllowContract|AllowReassoc|AllowTransform
+; CHECK: OpDecorate %[[#minCommonResV:]] FPFastMathMode NotNaN|NotInf
 ; CHECK: %[[#maxRes]] = OpExtInst {{.*}} fmax
 ; CHECK: %[[#maxCommonRes]] = OpExtInst {{.*}} fmax
 ; CHECK: %[[#minRes]] = OpExtInst {{.*}} fmin

@@ -214,5 +214,5 @@ bb6:                                              ; preds = %bb2
 
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 
-attributes #0 = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { nounwind denormal_fpenv(float: preservesign) }
 attributes #1 = { nounwind readnone }

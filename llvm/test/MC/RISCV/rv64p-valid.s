@@ -1,7 +1,7 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-p -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+experimental-p -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj --triple=riscv64 -mattr=+experimental-p < %s \
-# RUN:     | llvm-objdump --triple=riscv64 --mattr=+experimental-p -M no-aliases --no-print-imm-hex -d -r - \
+# RUN:     | llvm-objdump --triple=riscv64 --mattr=+experimental-p --no-print-imm-hex -d -r - \
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: cls a1, a2
@@ -472,6 +472,9 @@ ppaire.b s0, s0, s2
 # CHECK-ASM-AND-OBJ: ppaire.h t5, a2, a4
 # CHECK-ASM: encoding: [0x3b,0x4f,0xe6,0x82]
 ppaire.h t5, a2, a4
+# CHECK-ASM-AND-OBJ: pack s0, s1, s2
+# CHECK-ASM: encoding: [0x33,0xc4,0x24,0x09]
+ppaire.w s0, s1, s2
 # CHECK-ASM-AND-OBJ: ppaireo.b a4, s2, t3
 # CHECK-ASM: encoding: [0x3b,0x47,0xc9,0x91]
 ppaireo.b a4, s2, t3

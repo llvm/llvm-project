@@ -90,6 +90,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
@@ -1598,25 +1599,25 @@ bool ProcessGDBRemote::UpdateThreadIDList() {
     if (m_last_stop_packet) {
       // Get the thread stop info
       StringExtractorGDBRemote &stop_info = *m_last_stop_packet;
-      const std::string &stop_info_str = std::string(stop_info.GetStringRef());
+      const llvm::StringRef stop_info_str = stop_info.GetStringRef();
 
       m_thread_pcs.clear();
       const size_t thread_pcs_pos = stop_info_str.find(";thread-pcs:");
-      if (thread_pcs_pos != std::string::npos) {
+      if (thread_pcs_pos != llvm::StringRef::npos) {
         const size_t start = thread_pcs_pos + strlen(";thread-pcs:");
         const size_t end = stop_info_str.find(';', start);
-        if (end != std::string::npos) {
-          std::string value = stop_info_str.substr(start, end - start);
+        if (end != llvm::StringRef::npos) {
+          llvm::StringRef value = stop_info_str.substr(start, end - start);
           UpdateThreadPCsFromStopReplyThreadsValue(value);
         }
       }
 
       const size_t threads_pos = stop_info_str.find(";threads:");
-      if (threads_pos != std::string::npos) {
+      if (threads_pos != llvm::StringRef::npos) {
         const size_t start = threads_pos + strlen(";threads:");
         const size_t end = stop_info_str.find(';', start);
-        if (end != std::string::npos) {
-          std::string value = stop_info_str.substr(start, end - start);
+        if (end != llvm::StringRef::npos) {
+          llvm::StringRef value = stop_info_str.substr(start, end - start);
           if (UpdateThreadIDsFromStopReplyThreadsValue(value))
             return true;
         }
@@ -2545,7 +2546,7 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
 Status ProcessGDBRemote::DoHalt(bool &caused_stop) {
   Status error;
 
-  if (m_public_state.GetValue() == eStateAttaching) {
+  if (GetPublicState() == eStateAttaching) {
     // We are being asked to halt during an attach. We used to just close our
     // file handle and debugserver will go away, but with remote proxies, it
     // is better to send a positive signal, so let's send the interrupt first...
@@ -2594,7 +2595,7 @@ Status ProcessGDBRemote::DoDestroy() {
   std::string exit_string;
 
   if (m_gdb_comm.IsConnected()) {
-    if (m_public_state.GetValue() != eStateAttaching) {
+    if (GetPublicState() != eStateAttaching) {
       llvm::Expected<int> kill_res = m_gdb_comm.KillProcess(GetID());
 
       if (kill_res) {
@@ -2790,6 +2791,29 @@ size_t ProcessGDBRemote::DoReadMemory(addr_t addr, void *buf, size_t size,
   return 0;
 }
 
+/// Returns the number of ranges that is safe to request using MultiMemRead
+/// while respecting max_packet_size.
+static uint64_t ComputeNumRangesMultiMemRead(
+    uint64_t max_packet_size,
+    llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges) {
+  // Each range is specified by two numbers (up to 16 ASCII characters) and one
+  // comma.
+  constexpr uint64_t range_overhead = 33;
+  uint64_t current_size = 0;
+  for (auto [idx, range] : llvm::enumerate(ranges)) {
+    uint64_t potential_size = current_size + range.size + range_overhead;
+    if (potential_size > max_packet_size) {
+      if (idx == 0)
+        LLDB_LOG(GetLog(GDBRLog::Process),
+                 "MultiMemRead input has a range (base = {0:x}, size = {1}) "
+                 "bigger than the maximum allowed by remote",
+                 range.base, range.size);
+      return idx;
+    }
+  }
+  return ranges.size();
+}
+
 llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
 ProcessGDBRemote::ReadMemoryRanges(
     llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
@@ -2797,22 +2821,34 @@ ProcessGDBRemote::ReadMemoryRanges(
   if (!m_gdb_comm.GetMultiMemReadSupported())
     return Process::ReadMemoryRanges(ranges, buffer);
 
-  llvm::Expected<StringExtractorGDBRemote> response =
-      SendMultiMemReadPacket(ranges);
-  if (!response) {
-    LLDB_LOG_ERROR(GetLog(GDBRLog::Process), response.takeError(),
-                   "MultiMemRead error response: {0}");
-    return Process::ReadMemoryRanges(ranges, buffer);
-  }
-
-  llvm::StringRef response_str = response->GetStringRef();
-  const unsigned expected_num_ranges = ranges.size();
+  const llvm::ArrayRef<Range<lldb::addr_t, size_t>> original_ranges = ranges;
   llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> memory_regions;
-  if (llvm::Error error = ParseMultiMemReadPacket(
-          response_str, buffer, expected_num_ranges, memory_regions)) {
-    LLDB_LOG_ERROR(GetLog(GDBRLog::Process), std::move(error),
-                   "MultiMemRead error parsing response: {0}");
-    return Process::ReadMemoryRanges(ranges, buffer);
+
+  while (!ranges.empty()) {
+    uint64_t num_ranges =
+        ComputeNumRangesMultiMemRead(m_max_memory_size, ranges);
+    if (num_ranges == 0)
+      return Process::ReadMemoryRanges(original_ranges, buffer);
+
+    auto ranges_for_request = ranges.take_front(num_ranges);
+    ranges = ranges.drop_front(num_ranges);
+
+    llvm::Expected<StringExtractorGDBRemote> response =
+        SendMultiMemReadPacket(ranges_for_request);
+    if (!response) {
+      LLDB_LOG_ERROR(GetLog(GDBRLog::Process), response.takeError(),
+                     "MultiMemRead error response: {0}");
+      return Process::ReadMemoryRanges(original_ranges, buffer);
+    }
+
+    llvm::StringRef response_str = response->GetStringRef();
+    const unsigned expected_num_ranges = ranges_for_request.size();
+    if (llvm::Error error = ParseMultiMemReadPacket(
+            response_str, buffer, expected_num_ranges, memory_regions)) {
+      LLDB_LOG_ERROR(GetLog(GDBRLog::Process), std::move(error),
+                     "MultiMemRead error parsing response: {0}");
+      return Process::ReadMemoryRanges(original_ranges, buffer);
+    }
   }
   return memory_regions;
 }
@@ -2836,16 +2872,16 @@ ProcessGDBRemote::SendMultiMemReadPacket(
       m_gdb_comm.SendPacketAndWaitForResponse(packet_str.data(), response,
                                               GetInterruptTimeout());
   if (packet_result != GDBRemoteCommunication::PacketResult::Success)
-    return llvm::createStringError(
-        llvm::formatv("MultiMemRead failed to send packet: '{0}'", packet_str));
+    return llvm::createStringErrorV("MultiMemRead failed to send packet: '{0}'",
+                                    packet_str);
 
   if (response.IsErrorResponse())
-    return llvm::createStringError(
-        llvm::formatv("MultiMemRead failed: '{0}'", response.GetStringRef()));
+    return llvm::createStringErrorV("MultiMemRead failed: '{0}'",
+                                    response.GetStringRef());
 
   if (!response.IsNormalResponse())
-    return llvm::createStringError(llvm::formatv(
-        "MultiMemRead unexpected response: '{0}'", response.GetStringRef()));
+    return llvm::createStringErrorV("MultiMemRead unexpected response: '{0}'",
+                                    response.GetStringRef());
 
   return response;
 }
@@ -2857,22 +2893,21 @@ llvm::Error ProcessGDBRemote::ParseMultiMemReadPacket(
   // The sizes and the data are separated by a `;`.
   auto [sizes_str, memory_data] = response_str.split(';');
   if (sizes_str.size() == response_str.size())
-    return llvm::createStringError(llvm::formatv(
+    return llvm::createStringErrorV(
         "MultiMemRead response missing field separator ';' in: '{0}'",
-        response_str));
+        response_str);
 
   // Sizes are separated by a `,`.
   for (llvm::StringRef size_str : llvm::split(sizes_str, ',')) {
     uint64_t read_size;
     if (size_str.getAsInteger(16, read_size))
-      return llvm::createStringError(llvm::formatv(
-          "MultiMemRead response has invalid size string: {0}", size_str));
+      return llvm::createStringErrorV(
+          "MultiMemRead response has invalid size string: {0}", size_str);
 
     if (memory_data.size() < read_size)
-      return llvm::createStringError(
-          llvm::formatv("MultiMemRead response did not have enough data, "
-                        "requested sizes: {0}",
-                        sizes_str));
+      return llvm::createStringErrorV("MultiMemRead response did not have "
+                                      "enough data, requested sizes: {0}",
+                                      sizes_str);
 
     llvm::StringRef region_to_read = memory_data.take_front(read_size);
     memory_data = memory_data.drop_front(read_size);
@@ -4478,7 +4513,7 @@ static FieldEnum::Enumerators ParseEnumEvalues(const XMLNode &enum_node) {
   Log *log(GetLog(GDBRLog::Process));
   // We will use the last instance of each value. Also we preserve the order
   // of declaration in the XML, as it may not be numerical.
-  // For example, hardware may intially release with two states that softwware
+  // For example, hardware may initially release with two states that software
   // can read from a register field:
   // 0 = startup, 1 = running
   // If in a future hardware release, the designers added a pre-startup state:
@@ -5639,9 +5674,8 @@ llvm::Expected<bool> ProcessGDBRemote::SaveCore(llvm::StringRef outfile) {
     // TODO: grab error message from the packet?  StringExtractor seems to
     // be missing a method for that
     if (response.IsErrorResponse())
-      return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
-          llvm::formatv("qSaveCore returned an error"));
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "qSaveCore returned an error");
 
     std::string path;
 

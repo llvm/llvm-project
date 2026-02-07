@@ -2,29 +2,23 @@
 ; RUN: opt -p loop-vectorize -vectorize-memory-check-threshold=0 -S %s | FileCheck --check-prefix=LIMIT0 %s
 ; RUN: opt -p loop-vectorize -vectorize-memory-check-threshold=1 -S %s | FileCheck --check-prefix=LIMIT1 %s
 
-; FIXME: Currently this miscompiles with -vectorize-memory-check-threshold=0;
-; no runtime check is generated even though one is needed and !noalias
-; annotations are added.
+; Make sure we do not incorrectly vectorize with -vectorize-memory-check-threshold=0;
+; no runtime check is generated and the loop should not be vectorized.
 define i16 @runtime_checks_needed(ptr %src, ptr %dst) {
 ; LIMIT0-LABEL: define i16 @runtime_checks_needed(
 ; LIMIT0-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) {
-; LIMIT0-NEXT:  [[ENTRY:.*:]]
-; LIMIT0-NEXT:    br label %[[VECTOR_PH:.*]]
-; LIMIT0:       [[VECTOR_PH]]:
-; LIMIT0-NEXT:    [[TMP0:%.*]] = load i16, ptr [[SRC]], align 1, !alias.scope [[META0:![0-9]+]]
-; LIMIT0-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i16> poison, i16 [[TMP0]], i64 0
-; LIMIT0-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i16> [[BROADCAST_SPLATINSERT]], <2 x i16> poison, <2 x i32> zeroinitializer
-; LIMIT0-NEXT:    br label %[[VECTOR_BODY:.*]]
-; LIMIT0:       [[VECTOR_BODY]]:
-; LIMIT0-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; LIMIT0-NEXT:  [[ENTRY:.*]]:
+; LIMIT0-NEXT:    br label %[[LOOP:.*]]
+; LIMIT0:       [[LOOP]]:
+; LIMIT0-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
+; LIMIT0-NEXT:    [[L:%.*]] = load i16, ptr [[SRC]], align 1
 ; LIMIT0-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 [[INDEX]]
-; LIMIT0-NEXT:    store <2 x i16> [[BROADCAST_SPLAT]], ptr [[TMP1]], align 1, !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
-; LIMIT0-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; LIMIT0-NEXT:    store i16 [[L]], ptr [[TMP1]], align 1
+; LIMIT0-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX]], 1
 ; LIMIT0-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; LIMIT0-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
-; LIMIT0:       [[MIDDLE_BLOCK]]:
-; LIMIT0-NEXT:    br label %[[EXIT:.*]]
+; LIMIT0-NEXT:    br i1 [[TMP2]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LIMIT0:       [[EXIT]]:
+; LIMIT0-NEXT:    [[TMP0:%.*]] = phi i16 [ [[L]], %[[LOOP]] ]
 ; LIMIT0-NEXT:    ret i16 [[TMP0]]
 ;
 ; LIMIT1-LABEL: define i16 @runtime_checks_needed(
@@ -88,14 +82,9 @@ exit:
 !3 = !{!"llvm.loop.vectorize.enable", i1 true}
 
 ;.
-; LIMIT0: [[META0]] = !{[[META1:![0-9]+]]}
-; LIMIT0: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
-; LIMIT0: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
-; LIMIT0: [[META3]] = !{[[META4:![0-9]+]]}
-; LIMIT0: [[META4]] = distinct !{[[META4]], [[META2]]}
-; LIMIT0: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]]}
-; LIMIT0: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; LIMIT0: [[META7]] = !{!"llvm.loop.unroll.runtime.disable"}
+; LIMIT0: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; LIMIT0: [[META1]] = !{!"llvm.loop.vectorize.width", i32 2}
+; LIMIT0: [[META2]] = !{!"llvm.loop.vectorize.enable", i1 true}
 ;.
 ; LIMIT1: [[META0]] = !{[[META1:![0-9]+]]}
 ; LIMIT1: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}

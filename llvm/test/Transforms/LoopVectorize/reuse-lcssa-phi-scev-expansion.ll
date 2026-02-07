@@ -41,8 +41,8 @@ define void @reuse_lcssa_phi_for_add_rec1(ptr %head) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[TMP7]], align 8
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <2 x ptr> [[WIDE_LOAD]], <2 x ptr> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x ptr> [[REVERSE]], i32 0
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x ptr> [[REVERSE]], i32 1
 ; CHECK-NEXT:    store ptr null, ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x ptr> [[REVERSE]], i32 1
 ; CHECK-NEXT:    store ptr null, ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -118,7 +118,7 @@ define void @runtime_checks_ptr_inductions(ptr %dst.1, ptr %dst.2, i1 %c) {
 ; CHECK-NEXT:    [[SEL_DST_LCSSA:%.*]] = phi ptr [ [[SEL_DST]], %[[LOOP_1]] ]
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[PTR_IV_1_LCSSA]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoaddr ptr [[PTR_IV_1_LCSSA]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP0]], [[SEL_DST_LCSSA12]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 2
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -308,7 +308,7 @@ define void @expand_diff_neg_ptrtoint_expr(ptr %src, ptr %start) {
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 0, [[SRC2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoaddr ptr [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP5]], [[TMP0]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP2]], 16
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
@@ -403,7 +403,7 @@ define void @scev_exp_reuse_const_add(ptr %dst, ptr %src) {
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 -2, [[SRC2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR_IV_1_NEXT_LCSSA]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[PTR_IV_1_NEXT_LCSSA]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]

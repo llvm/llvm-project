@@ -1565,10 +1565,16 @@ static void printConstant(const Constant *COp, unsigned BitWidth,
       printConstant(CI->getValue(), CS, PrintZero);
   } else if (auto *CF = dyn_cast<ConstantFP>(COp)) {
     if (auto VTy = dyn_cast<FixedVectorType>(CF->getType())) {
-      for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
-        if (I != 0)
-          CS << ',';
-        printConstant(CF->getValueAPF(), CS, PrintZero);
+      unsigned EltBits = VTy->getScalarSizeInBits();
+      unsigned E = std::min(BitWidth / EltBits, VTy->getNumElements());
+      if ((BitWidth % EltBits) == 0) {
+        for (unsigned I = 0; I != E; ++I) {
+          if (I != 0)
+            CS << ",";
+          printConstant(CF->getValueAPF(), CS, PrintZero);
+        }
+      } else {
+        CS << "?";
       }
     } else
       printConstant(CF->getValueAPF(), CS, PrintZero);
@@ -2526,6 +2532,12 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     EmitSEHInstruction(MI);
     return;
 
+  case X86::SEH_SplitChainedAtEndOfBlock:
+    assert(!SplitChainedAtEndOfBlock &&
+           "Duplicate SEH_SplitChainedAtEndOfBlock in a current block");
+    SplitChainedAtEndOfBlock = true;
+    return;
+
   case X86::SEH_BeginEpilogue: {
     assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
     EmitSEHInstruction(MI);
@@ -2604,6 +2616,15 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
         EmitAndCountInstruction(MCInstBuilder(X86::DS_PREFIX));
     }
     break;
+
+  case X86::JCC_SELF:
+    MCSymbol *Sym = OutContext.createTempSymbol();
+    OutStreamer->emitLabel(Sym);
+    EmitAndCountInstruction(
+        MCInstBuilder(X86::JCC_1)
+            .addExpr(MCSymbolRefExpr::create(Sym, OutContext))
+            .addImm(MI->getOperand(0).getImm()));
+    return;
   }
 
   MCInst TmpInst;
@@ -2619,6 +2640,18 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   EmitAndCountInstruction(TmpInst);
+}
+
+void X86AsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
+                                     const MCSubtargetInfo *EndInfo,
+                                     const MachineInstr *MI) {
+  if (MI) {
+    // If unwinding inline asm ends on a call, wineh may require insertion of
+    // a nop.
+    unsigned ExtraInfo = MI->getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
+    if (ExtraInfo & InlineAsm::Extra_MayUnwind)
+      maybeEmitNopAfterCallForWindowsEH(MI);
+  }
 }
 
 void X86AsmPrinter::emitCallInstruction(const llvm::MCInst &MCI) {

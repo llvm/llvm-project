@@ -1650,6 +1650,48 @@ void addInstrRequirements(const MachineInstr &MI,
     }
     break;
   }
+  case SPIRV::OpImageQueryFormat: {
+    Register ResultReg = MI.getOperand(0).getReg();
+    const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+    static const unsigned CompareOps[] = {
+        SPIRV::OpIEqual,       SPIRV::OpINotEqual,
+        SPIRV::OpUGreaterThan, SPIRV::OpUGreaterThanEqual,
+        SPIRV::OpULessThan,    SPIRV::OpULessThanEqual,
+        SPIRV::OpSGreaterThan, SPIRV::OpSGreaterThanEqual,
+        SPIRV::OpSLessThan,    SPIRV::OpSLessThanEqual};
+
+    auto CheckAndAddExtension = [&](int64_t ImmVal) {
+      if (ImmVal == 4323 || ImmVal == 4324) {
+        if (ST.canUseExtension(SPIRV::Extension::SPV_EXT_image_raw10_raw12))
+          Reqs.addExtension(SPIRV::Extension::SPV_EXT_image_raw10_raw12);
+        else
+          report_fatal_error("This requires the "
+                             "SPV_EXT_image_raw10_raw12 extension");
+      }
+    };
+
+    for (MachineInstr &UseInst : MRI.use_instructions(ResultReg)) {
+      unsigned Opc = UseInst.getOpcode();
+
+      if (Opc == SPIRV::OpSwitch) {
+        for (const MachineOperand &Op : UseInst.operands())
+          if (Op.isImm())
+            CheckAndAddExtension(Op.getImm());
+      } else if (llvm::is_contained(CompareOps, Opc)) {
+        for (unsigned i = 1; i < UseInst.getNumOperands(); ++i) {
+          Register UseReg = UseInst.getOperand(i).getReg();
+          MachineInstr *ConstInst = MRI.getVRegDef(UseReg);
+          if (ConstInst && ConstInst->getOpcode() == SPIRV::OpConstantI) {
+            int64_t ImmVal = ConstInst->getOperand(2).getImm();
+            if (ImmVal)
+              CheckAndAddExtension(ImmVal);
+          }
+        }
+      }
+    }
+    break;
+  }
+
   case SPIRV::OpGroupNonUniformShuffle:
   case SPIRV::OpGroupNonUniformShuffleXor:
     Reqs.addCapability(SPIRV::Capability::GroupNonUniformShuffle);
@@ -1724,6 +1766,12 @@ void addInstrRequirements(const MachineInstr &MI,
     if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume)) {
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_expect_assume);
       Reqs.addCapability(SPIRV::Capability::ExpectAssumeKHR);
+    }
+    break;
+  case SPIRV::OpFmaKHR:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_fma)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_fma);
+      Reqs.addCapability(SPIRV::Capability::FmaKHR);
     }
     break;
   case SPIRV::OpPtrCastToCrossWorkgroupINTEL:
@@ -2086,6 +2134,9 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpSUDotAccSat:
     AddDotProductRequirements(MI, Reqs, ST);
     break;
+  case SPIRV::OpImageSampleImplicitLod:
+    Reqs.addCapability(SPIRV::Capability::Shader);
+    break;
   case SPIRV::OpImageRead: {
     Register ImageReg = MI.getOperand(2).getReg();
     SPIRVType *TypeDef = ST.getSPIRVGlobalRegistry()->getResultType(
@@ -2125,6 +2176,59 @@ void addInstrRequirements(const MachineInstr &MI,
           false);
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_long_composites);
     Reqs.addCapability(SPIRV::Capability::LongCompositesINTEL);
+    break;
+  }
+  case SPIRV::OpArbitraryFloatEQALTERA:
+  case SPIRV::OpArbitraryFloatGEALTERA:
+  case SPIRV::OpArbitraryFloatGTALTERA:
+  case SPIRV::OpArbitraryFloatLEALTERA:
+  case SPIRV::OpArbitraryFloatLTALTERA:
+  case SPIRV::OpArbitraryFloatCbrtALTERA:
+  case SPIRV::OpArbitraryFloatCosALTERA:
+  case SPIRV::OpArbitraryFloatCosPiALTERA:
+  case SPIRV::OpArbitraryFloatExp10ALTERA:
+  case SPIRV::OpArbitraryFloatExp2ALTERA:
+  case SPIRV::OpArbitraryFloatExpALTERA:
+  case SPIRV::OpArbitraryFloatExpm1ALTERA:
+  case SPIRV::OpArbitraryFloatHypotALTERA:
+  case SPIRV::OpArbitraryFloatLog10ALTERA:
+  case SPIRV::OpArbitraryFloatLog1pALTERA:
+  case SPIRV::OpArbitraryFloatLog2ALTERA:
+  case SPIRV::OpArbitraryFloatLogALTERA:
+  case SPIRV::OpArbitraryFloatRecipALTERA:
+  case SPIRV::OpArbitraryFloatSinCosALTERA:
+  case SPIRV::OpArbitraryFloatSinCosPiALTERA:
+  case SPIRV::OpArbitraryFloatSinALTERA:
+  case SPIRV::OpArbitraryFloatSinPiALTERA:
+  case SPIRV::OpArbitraryFloatSqrtALTERA:
+  case SPIRV::OpArbitraryFloatACosALTERA:
+  case SPIRV::OpArbitraryFloatACosPiALTERA:
+  case SPIRV::OpArbitraryFloatAddALTERA:
+  case SPIRV::OpArbitraryFloatASinALTERA:
+  case SPIRV::OpArbitraryFloatASinPiALTERA:
+  case SPIRV::OpArbitraryFloatATan2ALTERA:
+  case SPIRV::OpArbitraryFloatATanALTERA:
+  case SPIRV::OpArbitraryFloatATanPiALTERA:
+  case SPIRV::OpArbitraryFloatCastFromIntALTERA:
+  case SPIRV::OpArbitraryFloatCastALTERA:
+  case SPIRV::OpArbitraryFloatCastToIntALTERA:
+  case SPIRV::OpArbitraryFloatDivALTERA:
+  case SPIRV::OpArbitraryFloatMulALTERA:
+  case SPIRV::OpArbitraryFloatPowALTERA:
+  case SPIRV::OpArbitraryFloatPowNALTERA:
+  case SPIRV::OpArbitraryFloatPowRALTERA:
+  case SPIRV::OpArbitraryFloatRSqrtALTERA:
+  case SPIRV::OpArbitraryFloatSubALTERA: {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_ALTERA_arbitrary_precision_floating_point))
+      report_fatal_error(
+          "Floating point instructions can't be translated correctly without "
+          "enabled SPV_ALTERA_arbitrary_precision_floating_point extension!",
+          false);
+    Reqs.addExtension(
+        SPIRV::Extension::SPV_ALTERA_arbitrary_precision_floating_point);
+    Reqs.addCapability(
+        SPIRV::Capability::ArbitraryPrecisionFloatingPointALTERA);
     break;
   }
   case SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL: {
@@ -2231,6 +2335,11 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpDPdxFine:
   case SPIRV::OpDPdyFine: {
     Reqs.addCapability(SPIRV::Capability::DerivativeControl);
+    break;
+  }
+  case SPIRV::OpLoopControlINTEL: {
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_unstructured_loop_controls);
+    Reqs.addCapability(SPIRV::Capability::UnstructuredLoopControlsINTEL);
     break;
   }
 

@@ -3,8 +3,7 @@
 
 # Instructions for debugging can be found in LLJITWithRemoteDebugging.cpp
 
-# REQUIRES: default_triple, thread_support
-# UNSUPPORTED: target=powerpc64{{.*}}, target=s390{{.*}}
+# REQUIRES: native, system-linux, target-x86_64, thread_support
 
 # RUN: LLJITWithRemoteDebugging %p/Inputs/argc_sub1.ll 2>&1 | FileCheck --check-prefix=CHECK0 %s
 # CHECK0: __jit_debug_descriptor.last_entry = [[BEFORE0:0x[0-9a-f]+]]

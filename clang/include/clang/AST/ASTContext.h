@@ -681,7 +681,6 @@ private:
 public:
   struct CXXRecordDeclRelocationInfo {
     unsigned IsRelocatable;
-    unsigned IsReplaceable;
   };
   std::optional<CXXRecordDeclRelocationInfo>
   getRelocationInfoForCXXRecord(const CXXRecordDecl *) const;
@@ -2883,6 +2882,8 @@ public:
   /// DeviceLambdaManglingNumber. Currently this asserts that the TargetInfo
   /// (from the AuxTargetInfo) is a an itanium target.
   MangleContext *createDeviceMangleContext(const TargetInfo &T);
+
+  MangleContext *cudaNVInitDeviceMC();
 
   void DeepCollectObjCIvars(const ObjCInterfaceDecl *OI, bool leafClass,
                             SmallVectorImpl<const ObjCIvarDecl*> &Ivars) const;

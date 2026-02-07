@@ -1690,6 +1690,14 @@ void StmtPrinter::VisitArraySubscriptExpr(ArraySubscriptExpr *Node) {
   OS << "]";
 }
 
+void StmtPrinter::VisitMatrixSingleSubscriptExpr(
+    MatrixSingleSubscriptExpr *Node) {
+  PrintExpr(Node->getBase());
+  OS << "[";
+  PrintExpr(Node->getRowIdx());
+  OS << "]";
+}
+
 void StmtPrinter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *Node) {
   PrintExpr(Node->getBase());
   OS << "[";
@@ -1813,6 +1821,12 @@ void StmtPrinter::VisitObjCIsaExpr(ObjCIsaExpr *Node) {
 }
 
 void StmtPrinter::VisitExtVectorElementExpr(ExtVectorElementExpr *Node) {
+  PrintExpr(Node->getBase());
+  OS << ".";
+  OS << Node->getAccessor().getName();
+}
+
+void StmtPrinter::VisitMatrixElementExpr(MatrixElementExpr *Node) {
   PrintExpr(Node->getBase());
   OS << ".";
   OS << Node->getAccessor().getName();
@@ -2569,6 +2583,11 @@ void StmtPrinter::VisitCXXUnresolvedConstructExpr(
   }
   if (!Node->isListInitialization())
     OS << ')';
+}
+
+void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
+  // TODO(Reflection): Implement this.
+  assert(false && "not implemented yet");
 }
 
 void StmtPrinter::VisitCXXDependentScopeMemberExpr(

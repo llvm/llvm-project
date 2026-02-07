@@ -269,6 +269,8 @@ storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
     return 11;
   case SPIRV::StorageClass::Uniform:
     return 12;
+  case SPIRV::StorageClass::PushConstant:
+    return 13;
   default:
     report_fatal_error("Unable to get address space id");
   }
@@ -569,6 +571,8 @@ bool isTypeFoldingSupported(unsigned Opcode);
 
 // Get loop controls from llvm.loop. metadata.
 SmallVector<unsigned, 1> getSpirvLoopControlOperandsFromLoopMetadata(Loop *L);
+SmallVector<unsigned, 1>
+getSpirvLoopControlOperandsFromLoopMetadata(MDNode *LoopMD);
 
 // Traversing [g]MIR accounting for pseudo-instructions.
 MachineInstr *passCopy(MachineInstr *Def, const MachineRegisterInfo *MRI);

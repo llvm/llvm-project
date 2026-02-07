@@ -84,7 +84,7 @@ def SPIRV_AccessChainOp : SPIRV_Op<"AccessChain", [Pure]> {
 def SPIRV_CopyMemoryOp : SPIRV_Op<"CopyMemory", [DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = [{
     Copy from the memory pointed to by Source to the memory pointed to by
-    Target. Both operands must be non-void pointers and having the same <id>
+    Target. Both operands must be non-void pointers and having the same `<id>`
     Type operand in their OpTypePointer type declaration.  Matching Storage
     Class is not required.  The amount of memory copied is the size of the
     type pointed to. The copied type must have a fixed size; i.e., it must
@@ -381,7 +381,7 @@ def SPIRV_VariableOp : SPIRV_Op<"Variable", []> {
 
     Initializer is optional. If Initializer is present, it will be the
     initial value of the variable's memory content. Initializer must be an
-    <id> from a constant instruction or a global (module scope) OpVariable
+    `<id>` from a constant instruction or a global (module scope) OpVariable
     instruction. Initializer must have the same type as the type pointed to
     by Result Type.
 

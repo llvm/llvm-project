@@ -4,6 +4,7 @@
 // UNSUPPORTED: nvptx64-nvidia-cuda
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 // UNSUPPORTED: amdgcn-amd-amdhsa
+// XFAIL: intelgpu
 
 #include <omp.h>
 #include <stdio.h>
