@@ -1290,6 +1290,10 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt())))
     return Def->replaceAllUsesWith(Def->getOperand(Def->getOperand(0) == X));
 
+  // x & AllOnes -> x
+  if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_AllOnes())))
+    return Def->replaceAllUsesWith(X);
+
   // x && false -> false
   if (match(Def, m_LogicalAnd(m_VPValue(X), m_False())))
     return Def->replaceAllUsesWith(Def->getOperand(1));
