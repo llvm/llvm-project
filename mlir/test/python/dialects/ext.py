@@ -390,9 +390,10 @@ def testExtDialectWithRegion():
             @staticmethod
             def verify(op) -> bool:
                 if not isinstance(op.parent.opview, IfOp):
-                    raise RuntimeError(
+                    op.location.emit_error(
                         f"{op.name} should be put inside {IfOp.OPERATION_NAME}"
                     )
+                    return False
                 return True
 
         ParentIsIfTrait.attach(YieldOp)
@@ -485,5 +486,6 @@ def testExtDialectWithRegion():
         try:
             module.operation.verify()
         except Exception as e:
+            # CHECK: Verification failed:
             # CHECK: ext_region.yield should be put inside ext_region.if
             print(e)
