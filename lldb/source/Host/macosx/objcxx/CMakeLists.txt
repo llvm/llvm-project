@@ -20,6 +20,7 @@ add_lldb_library(lldbHostMacOSXObjCXX NO_PLUGIN_DEPENDENCIES
     Support
     TargetParser
   LINK_LIBS
+    lldbCore
     lldbUtility
     ${EXTRA_LIBS}
   )

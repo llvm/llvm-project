@@ -208,8 +208,9 @@ std::optional<ModuleSpec> SymbolLocatorDebugSymbols::LocateExecutableObjectFile(
 
             // If we found it and it has the correct UUID, let's proceed with
             // creating a module from the memory contents.
-            if (image_info.uuid && (!module_spec.GetUUID() ||
-                                    module_spec.GetUUID() == image_info.uuid)) {
+            if (image_info.GetUUID() &&
+                (!module_spec.GetUUID() ||
+                 module_spec.GetUUID() == image_info.GetUUID())) {
               success = true;
               return_module_spec.GetFileSpec() = module_spec.GetFileSpec();
               LLDB_LOGF(log,
@@ -650,8 +651,9 @@ static int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
 
             // If we found it and it has the correct UUID, let's proceed with
             // creating a module from the memory contents.
-            if (image_info.uuid && (!module_spec.GetUUID() ||
-                                    module_spec.GetUUID() == image_info.uuid)) {
+            if (image_info.GetUUID() &&
+                (!module_spec.GetUUID() ||
+                 module_spec.GetUUID() == image_info.GetUUID())) {
               success = true;
               return_module_spec.GetFileSpec() = module_spec.GetFileSpec();
               LLDB_LOGF(log,
