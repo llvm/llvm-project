@@ -400,6 +400,11 @@ public:
 
   mlir::Value VisitExtVectorElementExpr(Expr *e) { return emitLoadOfLValue(e); }
 
+  mlir::Value VisitMatrixElementExpr(Expr *e) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: matrix element");
+    return {};
+  }
+
   mlir::Value VisitMemberExpr(MemberExpr *e);
 
   mlir::Value VisitCompoundLiteralExpr(CompoundLiteralExpr *e) {
@@ -2142,22 +2147,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
       return cgf.cgm.emitNullConstant(destTy,
                                       cgf.getLoc(subExpr->getExprLoc()));
     }
-
-    clang::QualType srcTy = subExpr->IgnoreImpCasts()->getType();
-    if (srcTy->isPointerType() || srcTy->isReferenceType())
-      srcTy = srcTy->getPointeeType();
-
-    clang::LangAS srcLangAS = srcTy.getAddressSpace();
-    cir::TargetAddressSpaceAttr subExprAS;
-    if (clang::isTargetAddressSpace(srcLangAS))
-      subExprAS = cir::toCIRTargetAddressSpace(cgf.getMLIRContext(), srcLangAS);
-    else
-      cgf.cgm.errorNYI(subExpr->getSourceRange(),
-                       "non-target address space conversion");
-    // Since target may map different address spaces in AST to the same address
-    // space, an address space conversion may end up as a bitcast.
-    return cgf.cgm.getTargetCIRGenInfo().performAddrSpaceCast(
-        cgf, Visit(subExpr), subExprAS, convertType(destTy));
+    return cgf.performAddrSpaceCast(Visit(subExpr), convertType(destTy));
   }
 
   case CK_AtomicToNonAtomic: {

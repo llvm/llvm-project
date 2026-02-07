@@ -1726,6 +1726,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
   switch (S->getStmtClass()) {
     // C++, OpenMP and ARC stuff we don't support yet.
     case Stmt::CXXDependentScopeMemberExprClass:
+    case Stmt::CXXReflectExprClass:
     case Stmt::CXXTryStmtClass:
     case Stmt::CXXTypeidExprClass:
     case Stmt::CXXUuidofExprClass:
@@ -1930,6 +1931,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::DesignatedInitUpdateExprClass:
     case Stmt::ArrayInitIndexExprClass:
     case Stmt::ExtVectorElementExprClass:
+    case Stmt::MatrixElementExprClass:
     case Stmt::ImaginaryLiteralClass:
     case Stmt::ObjCAtCatchStmtClass:
     case Stmt::ObjCAtFinallyStmtClass:
@@ -3001,13 +3003,11 @@ void ExprEngine::processIndirectGoto(IndirectGotoNodeBuilder &builder) {
   //   (3) We have no clue about the label.  Dispatch to all targets.
   //
 
-  using iterator = IndirectGotoNodeBuilder::iterator;
-
   if (std::optional<loc::GotoLabel> LV = V.getAs<loc::GotoLabel>()) {
     const LabelDecl *L = LV->getLabel();
 
-    for (iterator Succ : builder) {
-      if (Succ.getLabel() == L) {
+    for (const CFGBlock *Succ : builder) {
+      if (cast<LabelStmt>(Succ->getLabel())->getDecl() == L) {
         builder.generateNode(Succ, state);
         return;
       }
@@ -3027,7 +3027,7 @@ void ExprEngine::processIndirectGoto(IndirectGotoNodeBuilder &builder) {
   // This is really a catch-all.  We don't support symbolics yet.
   // FIXME: Implement dispatch for symbolic pointers.
 
-  for (iterator Succ : builder)
+  for (const CFGBlock *Succ : builder)
     builder.generateNode(Succ, state);
 }
 

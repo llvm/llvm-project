@@ -7909,14 +7909,9 @@ struct VerifierLegacyPass : public FunctionPass {
   std::unique_ptr<Verifier> V;
   bool FatalErrors = true;
 
-  VerifierLegacyPass() : FunctionPass(ID) {
-    initializeVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+  VerifierLegacyPass() : FunctionPass(ID) {}
   explicit VerifierLegacyPass(bool FatalErrors)
-      : FunctionPass(ID),
-        FatalErrors(FatalErrors) {
-    initializeVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+      : FunctionPass(ID), FatalErrors(FatalErrors) {}
 
   bool doInitialization(Module &M) override {
     V = std::make_unique<Verifier>(

@@ -1224,8 +1224,9 @@ def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
                             [(AArch64rshrnb node:$rs, node:$i),
                             (int_aarch64_sve_rshrnb node:$rs, node:$i)]>;
 
+// res = cttz.elts(pg, op)
 def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 2,
-                             [SDTCisInt<0>, SDTCisVec<1>, SDTCisInt<2>]>, []>;
+                             [SDTCisInt<0>, SDTCVecEltisVT<1,i1>, SDTCisSameAs<1,2>]>, []>;
 
 // NEON Load/Store with post-increment base updates.
 // TODO: Complete SDTypeProfile constraints.
@@ -9116,12 +9117,25 @@ def fixedpoint_vec_xform : SDNodeXForm<timm, [{
   (void)N;
   return V;
 }]>;
+def gi_fixedpoint_vec_xform : GICustomOperandRenderer<"renderFixedPointXForm">,
+  GISDNodeXFormEquiv<fixedpoint_vec_xform>;
 
 def fixedpoint_v2f64 : fixedpoint_vec_f64<v2f64>;
 def fixedpoint_v2f32 : fixedpoint_vec_f32<v2f32>;
 def fixedpoint_v4f32 : fixedpoint_vec_f32<v4f32>;
 def fixedpoint_v4f16 : fixedpoint_vec_f16<v4f16>;
 def fixedpoint_v8f16 : fixedpoint_vec_f16<v8f16>;
+
+def gi_fixedpoint_v2f64 : GIComplexOperandMatcher<v2s64, "selectCVTFixedPointVec">,
+                          GIComplexPatternEquiv<fixedpoint_v2f64>;
+def gi_fixedpoint_v2f32 : GIComplexOperandMatcher<v2s32, "selectCVTFixedPointVec">,
+                          GIComplexPatternEquiv<fixedpoint_v2f32>;
+def gi_fixedpoint_v4f32 : GIComplexOperandMatcher<v4s32, "selectCVTFixedPointVec">,
+                          GIComplexPatternEquiv<fixedpoint_v4f32>;
+def gi_fixedpoint_v4f16 : GIComplexOperandMatcher<v4s16, "selectCVTFixedPointVec">,
+                          GIComplexPatternEquiv<fixedpoint_v4f16>;
+def gi_fixedpoint_v8f16 : GIComplexOperandMatcher<v8s16, "selectCVTFixedPointVec">,
+                          GIComplexPatternEquiv<fixedpoint_v8f16>;
 
 let Predicates = [HasNEON] in {
 def : Pat<(v2f32 (sint_to_fp (v2i32 (AArch64vashr_exact v2i32:$Vn, i32:$shift)))),
@@ -9161,11 +9175,15 @@ multiclass FCVTPat<ValueType FVT, ValueType IVT, ValueType ScalarVT, RegisterOpe
             (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
   def : Pat<(IVT (fp_to_sint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
             (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+  def : Pat<(IVT (fp_to_sint_sat_gi (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
 
   // fptoui(fmul(x, power2)) -> FCVTZU_shift x, log2(power2)
   def : Pat<(IVT (fp_to_uint (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
             (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
   def : Pat<(IVT (fp_to_uint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+  def : Pat<(IVT (fp_to_uint_sat_gi (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
             (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
 }
 
@@ -9987,7 +10005,7 @@ def SHA256SU0rr : SHATiedInstVV<0b0010, "sha256su0",int_aarch64_crypto_sha256su0
 // FIXME: Like for X86, these should go in their own separate .td file.
 
 // For an anyext, we don't care what the high bits are, so we can perform an
-// INSERT_SUBREF into an IMPLICIT_DEF.
+// INSERT_SUBREG into an IMPLICIT_DEF.
 def : Pat<(i64 (anyext GPR32:$src)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$src, sub_32)>;
 

@@ -500,6 +500,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::SETCC,  VT, Custom);
   }
 
+  setOperationAction(ISD::COND_LOOP, MVT::Other, Custom);
+
   // Custom action for SELECT MMX and expand action for SELECT_CC MMX
   setOperationAction(ISD::SELECT, MVT::x86mmx, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::x86mmx, Expand);
@@ -26114,11 +26116,23 @@ static bool isAndOrOfSetCCs(SDValue Op, unsigned &Opc) {
           Op.getOperand(1).hasOneUse());
 }
 
-SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
+SDValue X86TargetLowering::LowerConditionalBranch(SDValue Op,
+                                                  SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   SDValue Cond  = Op.getOperand(1);
-  SDValue Dest  = Op.getOperand(2);
+  SDValue Dest;
+  if (Op.getOpcode() == ISD::BRCOND)
+    Dest = Op.getOperand(2);
+
   SDLoc dl(Op);
+
+  auto GetLoweredBranch = [&](SDValue CC, SDValue EFLAGS) {
+    if (Op.getOpcode() == ISD::BRCOND)
+      return DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CC,
+                         EFLAGS, Op->getFlags());
+    return DAG.getNode(X86ISD::BRCOND_SELF, dl, MVT::Other, Chain, CC, EFLAGS,
+                       Op->getFlags());
+  };
 
   // Bail out when we don't have native compare instructions.
   if (Cond.getOpcode() == ISD::SETCC &&
@@ -26142,15 +26156,13 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
         X86Cond = X86::GetOppositeBranchCondition(X86Cond);
 
       SDValue CCVal = DAG.getTargetConstant(X86Cond, dl, MVT::i8);
-      return DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
-                         Overflow, Op->getFlags());
+      return GetLoweredBranch(CCVal, Overflow);
     }
 
     if (LHS.getSimpleValueType().isInteger()) {
       SDValue CCVal;
       SDValue EFLAGS = emitFlagsForSetcc(LHS, RHS, CC, SDLoc(Cond), DAG, CCVal);
-      return DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
-                         EFLAGS, Op->getFlags());
+      return GetLoweredBranch(CCVal, EFLAGS);
     }
 
     if (CC == ISD::SETOEQ) {
@@ -26159,7 +26171,7 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
       // separate test. However, we only do this if this block doesn't
       // have a fall-through edge, because this requires an explicit
       // jmp when the condition is false.
-      if (Op.getNode()->hasOneUse()) {
+      if (Op.getOpcode() == ISD::BRCOND && Op.getNode()->hasOneUse()) {
         SDNode *User = *Op.getNode()->user_begin();
         // Look for an unconditional branch following this conditional branch.
         // We need this because we need to reverse the successors in order
@@ -26175,11 +26187,9 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
           SDValue Cmp =
               DAG.getNode(X86ISD::FCMP, SDLoc(Cond), MVT::i32, LHS, RHS);
           SDValue CCVal = DAG.getTargetConstant(X86::COND_NE, dl, MVT::i8);
-          Chain = DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest,
-                              CCVal, Cmp, Op->getFlags());
+          Chain = GetLoweredBranch(CCVal, Cmp);
           CCVal = DAG.getTargetConstant(X86::COND_P, dl, MVT::i8);
-          return DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
-                             Cmp, Op->getFlags());
+          return GetLoweredBranch(CCVal, Cmp);
         }
       }
     } else if (CC == ISD::SETUNE) {
@@ -26188,18 +26198,15 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
       // separate test.
       SDValue Cmp = DAG.getNode(X86ISD::FCMP, SDLoc(Cond), MVT::i32, LHS, RHS);
       SDValue CCVal = DAG.getTargetConstant(X86::COND_NE, dl, MVT::i8);
-      Chain = DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
-                          Cmp, Op->getFlags());
+      Chain = GetLoweredBranch(CCVal, Cmp);
       CCVal = DAG.getTargetConstant(X86::COND_P, dl, MVT::i8);
-      return DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
-                         Cmp, Op->getFlags());
+      return GetLoweredBranch(CCVal, Cmp);
     } else {
       X86::CondCode X86Cond =
           TranslateX86CC(CC, dl, /*IsFP*/ true, LHS, RHS, DAG);
       SDValue Cmp = DAG.getNode(X86ISD::FCMP, SDLoc(Cond), MVT::i32, LHS, RHS);
       SDValue CCVal = DAG.getTargetConstant(X86Cond, dl, MVT::i8);
-      return DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
-                         Cmp, Op->getFlags());
+      return GetLoweredBranch(CCVal, Cmp);
     }
   }
 
@@ -26209,8 +26216,7 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
     std::tie(Value, Overflow) = getX86XALUOOp(X86Cond, Cond.getValue(0), DAG);
 
     SDValue CCVal = DAG.getTargetConstant(X86Cond, dl, MVT::i8);
-    return DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal,
-                       Overflow, Op->getFlags());
+    return GetLoweredBranch(CCVal, Overflow);
   }
 
   // Look past the truncate if the high bits are known zero.
@@ -26229,8 +26235,7 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue CCVal;
   SDValue EFLAGS = emitFlagsForSetcc(LHS, RHS, ISD::SETNE, dl, DAG, CCVal);
-  return DAG.getNode(X86ISD::BRCOND, dl, MVT::Other, Chain, Dest, CCVal, EFLAGS,
-                     Op->getFlags());
+  return GetLoweredBranch(CCVal, EFLAGS);
 }
 
 // Lower dynamic stack allocation to _alloca call for Cygwin/Mingw targets.
@@ -34134,7 +34139,8 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::STRICT_FSETCCS:     return LowerSETCC(Op, DAG);
   case ISD::SETCCCARRY:         return LowerSETCCCARRY(Op, DAG);
   case ISD::SELECT:             return LowerSELECT(Op, DAG);
-  case ISD::BRCOND:             return LowerBRCOND(Op, DAG);
+  case ISD::COND_LOOP:
+  case ISD::BRCOND:             return LowerConditionalBranch(Op, DAG);
   case ISD::JumpTable:          return LowerJumpTable(Op, DAG);
   case ISD::VASTART:            return LowerVASTART(Op, DAG);
   case ISD::VAARG:              return LowerVAARG(Op, DAG);
@@ -35600,6 +35606,7 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FSETCCM_SAE)
   NODE_NAME_CASE(CMOV)
   NODE_NAME_CASE(BRCOND)
+  NODE_NAME_CASE(BRCOND_SELF)
   NODE_NAME_CASE(RET_GLUE)
   NODE_NAME_CASE(IRET)
   NODE_NAME_CASE(REP_STOS)
@@ -57441,12 +57448,6 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
   EVT OpVT = LHS.getValueType();
   SDLoc DL(N);
 
-  if (CC == ISD::SETNE || CC == ISD::SETEQ) {
-    if (SDValue V = combineVectorSizedSetCCEquality(VT, LHS, RHS, CC, DL, DAG,
-                                                    Subtarget))
-      return V;
-  }
-
   if (VT == MVT::i1) {
     X86::CondCode X86CC;
     if (SDValue V =
@@ -57562,6 +57563,10 @@ static SDValue combineSetCC(SDNode *N, SelectionDAG &DAG,
         }
       }
     }
+
+    if (SDValue V = combineVectorSizedSetCCEquality(VT, LHS, RHS, CC, DL, DAG,
+                                                    Subtarget))
+      return V;
   }
 
   if (VT.isVector() && VT.getVectorElementType() == MVT::i1 &&

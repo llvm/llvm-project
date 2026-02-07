@@ -209,9 +209,7 @@ namespace {
 
 struct SafepointIRVerifier : public FunctionPass {
   static char ID; // Pass identification, replacement for typeid
-  SafepointIRVerifier() : FunctionPass(ID) {
-    initializeSafepointIRVerifierPass(*PassRegistry::getPassRegistry());
-  }
+  SafepointIRVerifier() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();

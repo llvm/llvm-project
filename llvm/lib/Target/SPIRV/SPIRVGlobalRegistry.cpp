@@ -629,9 +629,10 @@ Register SPIRVGlobalRegistry::getOrCreateConstIntArray(
   // that would be a truly unique but dangerous key, because it could lead to
   // the creation of constants of arbitrary length (that is, the parameter of
   // memset) which were missing in the original module.
+  Type *I64Ty = Type::getInt64Ty(LLVMBaseTy->getContext());
   Constant *UniqueKey = ConstantStruct::getAnon(
       {PoisonValue::get(const_cast<ArrayType *>(LLVMArrTy)),
-       ConstantInt::get(LLVMBaseTy, Val), ConstantInt::get(LLVMBaseTy, Num)});
+       ConstantInt::get(LLVMBaseTy, Val), ConstantInt::get(I64Ty, Num)});
   return getOrCreateCompositeOrNull(CI, I, SpvType, TII, UniqueKey, BW,
                                     LLVMArrTy->getNumElements());
 }
