@@ -828,4 +828,5 @@ func.func @ds_barrier_ops(%barrier: memref<!amdgpu.ds_barrier_state, #gpu.addres
   %init = amdgpu.ds_barrier_state_init_count %state : !amdgpu.ds_barrier_state -> i32
   // CHECK: [[PARITY:%.*]] = amdgpu.ds_barrier_state_phase_parity [[STATE]] : !amdgpu.ds_barrier_state -> i1
   %parity = amdgpu.ds_barrier_state_phase_parity %state : !amdgpu.ds_barrier_state -> i1
-
+  func.return
+}
