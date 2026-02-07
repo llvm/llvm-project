@@ -223,9 +223,6 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
-
-- Fixed atomic boolean compound assignment; the conversion back to atomic bool would be miscompiled. (#GH33210)
-
 - Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
 
 - Fix lifetime extension of temporaries in for-range-initializers in templates. (#GH165182)
