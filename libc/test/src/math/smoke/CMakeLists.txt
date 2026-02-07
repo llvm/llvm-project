@@ -5985,6 +5985,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cbrtbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    cbrtbf16_test.cpp
+  DEPENDS
+    libc.src.math.cbrtbf16
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   dmull_test
   SUITE
     libc-math-smoke-tests
