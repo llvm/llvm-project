@@ -643,8 +643,31 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   // used, so it is safe.
   VPIRFlags Flags = vputils::getFlagsFromIndDesc(IndDesc);
 
-  return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
-                                           IndDesc, Flags, DL);
+  auto *WideIV = new VPWidenIntOrFpInductionRecipe(
+      Phi, Start, Step, &Plan.getVF(), IndDesc, Flags, DL);
+
+  // Replace live-out extracts of WideIV's backedge value by ExitingIVValue
+  // recipes.
+  VPValue *BackedgeVal = PhiR->getOperand(1);
+  for (VPUser *U : to_vector(BackedgeVal->users())) {
+    if (!match(U, m_ExtractLastPart(m_VPValue())))
+      continue;
+    auto *ExtractLastPart = cast<VPInstruction>(U);
+    if (!match(ExtractLastPart->getSingleUser(),
+               m_ExtractLastLane(m_VPValue())))
+      continue;
+    auto *ExtractLastLane =
+        cast<VPInstruction>(ExtractLastPart->getSingleUser());
+    assert(is_contained(ExtractLastLane->getParent()->successors(),
+                        Plan.getScalarPreheader()) &&
+           "last lane must be extracted in the middle block");
+    VPBuilder Builder(ExtractLastLane);
+    ExtractLastLane->replaceAllUsesWith(Builder.createNaryOp(
+        VPInstruction::ExitingIVValue, {WideIV, BackedgeVal}));
+    ExtractLastLane->eraseFromParent();
+    ExtractLastPart->eraseFromParent();
+  }
+  return WideIV;
 }
 
 void VPlanTransforms::createHeaderPhiRecipes(
@@ -1464,8 +1487,20 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     }
 
     auto *FindIVPhiR = dyn_cast<VPReductionPHIRecipe>(FindIV);
-    if (!FindIVPhiR || !RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+    if (!FindIVPhiR || !RecurrenceDescriptor::isFindIVRecurrenceKind(
                            FindIVPhiR->getRecurrenceKind()))
+      return false;
+
+    // Check if FindIVPhiR is a FindLast pattern by checking the MinMaxKind
+    // on its ComputeReductionResult. SMax/UMax indicates FindLast.
+    VPInstruction *FindIVResult =
+        vputils::findUserOf<VPInstruction::ComputeReductionResult>(
+            FindIVPhiR->getBackedgeValue());
+    assert(FindIVResult &&
+           "must be able to retrieve the FindIVResult VPInstruction");
+    RecurKind FindIVMinMaxKind = FindIVResult->getRecurKind();
+    if (FindIVMinMaxKind != RecurKind::SMax &&
+        FindIVMinMaxKind != RecurKind::UMax)
       return false;
 
     // TODO: Support cases where IVOp is the IV increment.

@@ -121,6 +121,8 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
     return CGF->EmitHexagonBuiltinExpr(BuiltinID, E);
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     return CGF->EmitRISCVBuiltinExpr(BuiltinID, E, ReturnValue);
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
@@ -4452,12 +4454,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     AI->setAlignment(SuitableAlignmentInBytes);
     if (BuiltinID != Builtin::BI__builtin_alloca_uninitialized)
       initializeAlloca(*this, AI, Size, SuitableAlignmentInBytes);
-    LangAS AAS = getASTAllocaAddressSpace();
-    LangAS EAS = E->getType()->getPointeeType().getAddressSpace();
-    if (AAS != EAS) {
+    if (AI->getAddressSpace() !=
+        CGM.getContext().getTargetAddressSpace(
+            E->getType()->getPointeeType().getAddressSpace())) {
       llvm::Type *Ty = CGM.getTypes().ConvertType(E->getType());
-      return RValue::get(
-          getTargetHooks().performAddrSpaceCast(*this, AI, AAS, Ty));
+      return RValue::get(performAddrSpaceCast(AI, Ty));
     }
     return RValue::get(AI);
   }
@@ -4474,12 +4475,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     AI->setAlignment(AlignmentInBytes);
     if (BuiltinID != Builtin::BI__builtin_alloca_with_align_uninitialized)
       initializeAlloca(*this, AI, Size, AlignmentInBytes);
-    LangAS AAS = getASTAllocaAddressSpace();
-    LangAS EAS = E->getType()->getPointeeType().getAddressSpace();
-    if (AAS != EAS) {
+    if (AI->getAddressSpace() !=
+        CGM.getContext().getTargetAddressSpace(
+            E->getType()->getPointeeType().getAddressSpace())) {
       llvm::Type *Ty = CGM.getTypes().ConvertType(E->getType());
-      return RValue::get(
-          getTargetHooks().performAddrSpaceCast(*this, AI, AAS, Ty));
+      return RValue::get(performAddrSpaceCast(AI, Ty));
     }
     return RValue::get(AI);
   }
