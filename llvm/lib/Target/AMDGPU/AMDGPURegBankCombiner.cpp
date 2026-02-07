@@ -76,7 +76,8 @@ public:
 
   struct CopySccVccMatchInfo {
     Register VccReg;
-    int64_t TrueVal; // -1 for SEXT, 1 for ZEXT
+    Register TrueReg;
+    Register FalseReg;
   };
 
   MinMaxMedOpc getMinMaxPair(unsigned Opc) const;
@@ -145,6 +146,17 @@ Register AMDGPURegBankCombinerImpl::getAsVgpr(Register Reg) const {
   if (isVgprRegBank(Reg))
     return Reg;
 
+  const RegisterBank &VgprRB = RBI.getRegBank(AMDGPU::VGPRRegBankID);
+
+  // Build constants directly in VGPR instead of copying from SGPR.
+  std::optional<ValueAndVReg> Val =
+      getIConstantVRegValWithLookThrough(Reg, MRI);
+  if (Val) {
+    auto VgprCst = B.buildConstant(MRI.getType(Reg), Val->Value);
+    MRI.setRegBank(VgprCst.getReg(0), VgprRB);
+    return VgprCst.getReg(0);
+  }
+
   // Search for existing copy of Reg to vgpr.
   for (MachineInstr &Use : MRI.use_instructions(Reg)) {
     Register Def = Use.getOperand(0).getReg();
@@ -154,7 +166,7 @@ Register AMDGPURegBankCombinerImpl::getAsVgpr(Register Reg) const {
 
   // Copy Reg to vgpr.
   Register VgprReg = B.buildCopy(MRI.getType(Reg), Reg).getReg(0);
-  MRI.setRegBank(VgprReg, RBI.getRegBank(AMDGPU::VGPRRegBankID));
+  MRI.setRegBank(VgprReg, VgprRB);
   return VgprReg;
 }
 
@@ -486,9 +498,9 @@ bool AMDGPURegBankCombinerImpl::applyD16Load(
   return true;
 }
 
-// Eliminate VCC->SGPR->VGPR register bounce for uniform boolean extensions.
-// Match: COPY (G_SELECT (G_AND (G_AMDGPU_COPY_SCC_VCC %vcc), 1), {-1|1}, 0)
-// Replace with: G_SELECT %vcc, {-1|1}, 0
+// Eliminate VCC->SGPR->VGPR register bounce for uniform boolean in VCC.
+// Match: COPY (G_SELECT (G_AMDGPU_COPY_SCC_VCC %vcc), %true, %false)
+// Replace with: G_SELECT %vcc, %vgpr_true, %vgpr_false
 bool AMDGPURegBankCombinerImpl::matchCopySccVcc(
     MachineInstr &MI, CopySccVccMatchInfo &MatchInfo) const {
   assert(MI.getOpcode() == AMDGPU::COPY);
@@ -502,46 +514,30 @@ bool AMDGPURegBankCombinerImpl::matchCopySccVcc(
   if (!isVgprRegBank(VgprDst))
     return false;
 
-  // Match: G_SELECT (G_AND (G_AMDGPU_COPY_SCC_VCC %vcc), 1), TrueReg, 0
-  MachineInstr *CopySccVcc;
-  Register TrueReg;
+  MachineInstr *CondDef;
+  Register TrueReg, FalseReg;
   if (!mi_match(SgprSrc, MRI,
-                m_GISelect(m_GAnd(m_MInstr(CopySccVcc), m_SpecificICst(1)),
-                           m_Reg(TrueReg), m_ZeroInt())))
+                m_GISelect(m_MInstr(CondDef), m_Reg(TrueReg),
+                           m_Reg(FalseReg))))
     return false;
 
-  if (CopySccVcc->getOpcode() != AMDGPU::G_AMDGPU_COPY_SCC_VCC)
+  if (CondDef->getOpcode() != AMDGPU::G_AMDGPU_COPY_SCC_VCC)
     return false;
 
-  Register VccReg = CopySccVcc->getOperand(1).getReg();
-
-  // TrueReg must be constant -1 (SEXT) or 1 (ZEXT)
-  auto TrueConst = getIConstantVRegValWithLookThrough(TrueReg, MRI);
-  if (!TrueConst)
-    return false;
-
-  int64_t TrueVal = TrueConst->Value.getSExtValue();
-  if (TrueVal != -1 && TrueVal != 1)
-    return false;
-
-  MatchInfo.VccReg = VccReg;
-  MatchInfo.TrueVal = TrueVal;
+  MatchInfo.VccReg = CondDef->getOperand(1).getReg();
+  MatchInfo.TrueReg = TrueReg;
+  MatchInfo.FalseReg = FalseReg;
   return true;
 }
 
 void AMDGPURegBankCombinerImpl::applyCopySccVcc(
     MachineInstr &MI, CopySccVccMatchInfo &MatchInfo) const {
   Register VgprDst = MI.getOperand(0).getReg();
-  LLT Ty = MRI.getType(VgprDst);
-  const RegisterBank &VgprRB = RBI.getRegBank(AMDGPU::VGPRRegBankID);
 
-  auto TrueVal = B.buildConstant(Ty, MatchInfo.TrueVal);
-  MRI.setRegBank(TrueVal.getReg(0), VgprRB);
+  Register VgprTrue = getAsVgpr(MatchInfo.TrueReg);
+  Register VgprFalse = getAsVgpr(MatchInfo.FalseReg);
 
-  auto FalseVal = B.buildConstant(Ty, 0);
-  MRI.setRegBank(FalseVal.getReg(0), VgprRB);
-
-  B.buildSelect(VgprDst, MatchInfo.VccReg, TrueVal, FalseVal);
+  B.buildSelect(VgprDst, MatchInfo.VccReg, VgprTrue, VgprFalse);
   MI.eraseFromParent();
 }
 
