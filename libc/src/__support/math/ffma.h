@@ -10,13 +10,14 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_FFMA_H
 
 #include "src/__support/FPUtil/FMA.h"
+#include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static float ffma(double x, double y, double z) {
+LIBC_INLINE float ffma(double x, double y, double z) {
   return fputil::fma<float>(x, y, z);
 }
 
