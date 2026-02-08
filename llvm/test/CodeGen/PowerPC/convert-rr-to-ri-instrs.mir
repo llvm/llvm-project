@@ -1175,10 +1175,10 @@ body:             |
     %0 = COPY $x3
     %4 = COPY %0.sub_32
     %5 = LI 55
-    %6 = ADDC %5, %4, implicit-def $carry
-    ; CHECK: ADDIC killed %4, 55, implicit-def $carry
+    %6 = ADDC %5, %4, implicit-def $xer
+    ; CHECK: ADDIC killed %4, 55, implicit-def $xer
     ; CHECK-LATE: addic 3, 3, 55
-    %7 = ADDE8 %3, %1, implicit-def dead $carry, implicit $carry
+    %7 = ADDE8 %3, %1, implicit-def dead $xer, implicit $xer
     %8 = EXTSW_32_64 %6
     $x3 = COPY %8
     $x4 = COPY %7
@@ -1234,10 +1234,10 @@ body:             |
     %2 = COPY $x5
     %1 = COPY $x4
     %0 = LI8 777
-    %4 = ADDC8 %2, %0, implicit-def $carry
-    ; CHECK: ADDIC8 killed %2, 777, implicit-def $carry
+    %4 = ADDC8 %2, %0, implicit-def $xer
+    ; CHECK: ADDIC8 killed %2, 777, implicit-def $xer
     ; CHECK-LATE: addic 3, 5, 777
-    %5 = ADDE8 %3, %1, implicit-def dead $carry, implicit $carry
+    %5 = ADDE8 %3, %1, implicit-def dead $xer, implicit $xer
     $x3 = COPY %4
     $x4 = COPY %5
     BLR8 implicit $lr8, implicit $rm, implicit $x3, implicit $x4
@@ -1292,8 +1292,8 @@ body:             |
     %1 = LI 433
     %0 = COPY $x3
     %2 = COPY %0.sub_32
-    %3 = ADDC_rec %1, %2, implicit-def $cr0, implicit-def $carry
-    ; CHECK: ADDIC_rec killed %2, 433, implicit-def $cr0, implicit-def dead $carry
+    %3 = ADDC_rec %1, %2, implicit-def $cr0, implicit-def $xer
+    ; CHECK: ADDIC_rec killed %2, 433, implicit-def $cr0, implicit-def dead $xer
     ; CHECK-LATE: addic. 3, 3, 433
     %4 = COPY killed $cr0
     %5 = COPY %4.sub_eq
@@ -4989,10 +4989,10 @@ body:             |
     %0 = COPY $x3
     %2 = LI 15
     %3 = COPY %0.sub_32
-    %4 = SRAW killed %3, killed %2, implicit-def dead $carry
+    %4 = SRAW killed %3, killed %2, implicit-def dead $xer
     ; CHECK:      %6:g8rc = IMPLICIT_DEF
     ; CHECK-NEXT: %7:g8rc = INSERT_SUBREG %6, killed %3, %subreg.sub_32
-    ; CHECK-NEXT: %8:g8rc = SRAWI8 killed %7, 15, implicit-def $carry, implicit-def dead $carry
+    ; CHECK-NEXT: %8:g8rc = SRAWI8 killed %7, 15, implicit-def $xer, implicit-def dead $xer
     ; CHECK-NEXT: %4:gprc = COPY killed %8.sub_32
     ; CHECK-LATE: srawi 3, 3, 15
     %5 = EXTSW_32_64 killed %4
@@ -5049,8 +5049,8 @@ body:             |
     %0 = COPY $x3
     %2 = LI 8
     %3 = COPY %0.sub_32
-    %4 = SRAW_rec killed %3, %2, implicit-def dead $carry, implicit-def $cr0
-    ; CHECK:  %11:g8rc = SRAWI8_rec killed %10, 8, implicit-def $carry, implicit-def $cr0, implicit-def dead $carry, implicit-def $cr0
+    %4 = SRAW_rec killed %3, %2, implicit-def dead $xer, implicit-def $cr0
+    ; CHECK:  %11:g8rc = SRAWI8_rec killed %10, 8, implicit-def $xer, implicit-def $cr0, implicit-def dead $xer, implicit-def $cr0
     ; CHECK-LATE: srawi. 3, 3, 8
     %5 = COPY killed $cr0
     %6 = ISEL %2, %4, %5.sub_eq
@@ -5103,8 +5103,8 @@ body:             |
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 44
-    %3 = SRAD %0, killed %2, implicit-def dead $carry
-    ; CHECK: SRADI killed %0, 44, implicit-def dead $carry
+    %3 = SRAD %0, killed %2, implicit-def dead $xer
+    ; CHECK: SRADI killed %0, 44, implicit-def dead $xer
     ; CHECK-LATE: sradi 3, 3, 44
     $x3 = COPY %3
     BLR8 implicit $lr8, implicit $rm, implicit $x3
@@ -5156,8 +5156,8 @@ body:             |
     %1 = COPY $x4
     %0 = COPY $x3
     %2 = LI 61
-    %3 = SRAD_rec %0, killed %2, implicit-def dead $carry, implicit-def $cr0
-    ; CHECK: SRADI_rec killed %0, 61, implicit-def dead $carry, implicit-def $cr0
+    %3 = SRAD_rec %0, killed %2, implicit-def dead $xer, implicit-def $cr0
+    ; CHECK: SRADI_rec killed %0, 61, implicit-def dead $xer, implicit-def $cr0
     ; CHECK-LATE: sradi. 3, 3, 61
     %4 = COPY killed $cr0
     %5 = ISEL8 %1, %3, %4.sub_eq
@@ -6252,10 +6252,10 @@ body:             |
     %7 = COPY %2.sub_32
     %8 = COPY %1.sub_32
     %0 = LI 55
-    %4 = SUBFC %7, %0, implicit-def $carry
+    %4 = SUBFC %7, %0, implicit-def $xer
     ; CHECK: SUBFIC killed %7, 55
     ; CHECK-LATE: subfic 3, 5, 55
-    %5 = SUBFE %6, %8, implicit-def dead $carry, implicit $carry
+    %5 = SUBFE %6, %8, implicit-def dead $xer, implicit $xer
     $x3 = EXTSW_32_64 %4
     $x4 = EXTSW_32_64 %5
     BLR8 implicit $lr8, implicit $rm, implicit $x3, implicit $x4
@@ -6310,10 +6310,10 @@ body:             |
     %2 = COPY $x5
     %1 = COPY $x4
     %0 = LI8 7635
-    %4 = SUBFC8 %2, %0, implicit-def $carry
+    %4 = SUBFC8 %2, %0, implicit-def $xer
     ; CHECK: SUBFIC8 killed %2, 7635
     ; CHECK-LATE: subfic 3, 5, 7635
-    %5 = SUBFE8 %3, %1, implicit-def dead $carry, implicit $carry
+    %5 = SUBFE8 %3, %1, implicit-def dead $xer, implicit $xer
     $x3 = COPY %4
     $x4 = COPY %5
     BLR8 implicit $lr8, implicit $rm, implicit $x3, implicit $x4

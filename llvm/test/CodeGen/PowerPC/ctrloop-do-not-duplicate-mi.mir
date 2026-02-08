@@ -141,7 +141,7 @@ body:             |
     %8:gprc = LWZ 0, %9 :: (load (s32) from `ptr undef`)
     %15:gprc = ANDI_rec %8, 1, implicit-def $cr0
     %1:crbitrc = COPY $cr0eq
-    %10:g8rc_and_g8rc_nox0 = SUBFIC8 %0, 1, implicit-def dead $carry
+    %10:g8rc_and_g8rc_nox0 = SUBFIC8 %0, 1, implicit-def dead $xer
     %11:crrc = CMPDI %10, 1
     %12:g8rc_and_g8rc_nox0 = LI8 1
     %2:g8rc = ISEL8 %10, %12, %11.sub_gt

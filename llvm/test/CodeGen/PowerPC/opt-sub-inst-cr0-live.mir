@@ -104,8 +104,8 @@ body:             |
     %1 = PHI %12, %bb.0.top, %5, %bb.3.loop
     %2 = PHI %13, %bb.0.top, %4, %bb.3.loop
     %3 = PHI %14, %bb.0.top, %5, %bb.3.loop
-    %15 = SUBFC8 %3, %1, implicit-def $carry
-    %16 = SUBFE8 %2, %0, implicit-def dead $carry, implicit $carry
+    %15 = SUBFC8 %3, %1, implicit-def $xer
+    %16 = SUBFE8 %2, %0, implicit-def dead $xer, implicit $xer
     %17 = ADDI8 %16, -1
     %18 = ADDI8 %15, -1
     %19 = ANDC8 killed %17, %16
@@ -114,7 +114,7 @@ body:             |
     %24 = CNTLZD killed %20
     %25 = CMPLDI %15, 0
     BCC 76, %25, %bb.2.loop
-    ; CHECK: SUBFC8_rec %3, %1, implicit-def $carry, implicit-def $cr0
+    ; CHECK: SUBFC8_rec %3, %1, implicit-def $xer, implicit-def $cr0
     ; CHECK: COPY killed $cr0
     ; CHECK: BCC
 

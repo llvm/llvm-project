@@ -301,12 +301,12 @@ define i64 @test_i64(i64 %a, i64 %b, i64 %c, i64 %d) {
   ; 32BIT: bb.0.entry:
   ; 32BIT-NEXT:   liveins: $r3, $r4, $r5, $r6, $r7, $r8, $r9, $r10
   ; 32BIT-NEXT: {{  $}}
-  ; 32BIT-NEXT:   renamable $r4 = ADDC killed renamable $r4, killed renamable $r6, implicit-def $carry
-  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r3, killed renamable $r5, implicit-def dead $carry, implicit killed $carry
-  ; 32BIT-NEXT:   renamable $r4 = ADDC killed renamable $r4, killed renamable $r8, implicit-def $carry
-  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r3, killed renamable $r7, implicit-def dead $carry, implicit killed $carry
-  ; 32BIT-NEXT:   renamable $r4 = ADDC killed renamable $r4, killed renamable $r10, implicit-def $carry
-  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r3, killed renamable $r9, implicit-def dead $carry, implicit killed $carry
+  ; 32BIT-NEXT:   renamable $r4 = ADDC killed renamable $r4, killed renamable $r6, implicit-def $xer
+  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r3, killed renamable $r5, implicit-def dead $xer, implicit killed $xer
+  ; 32BIT-NEXT:   renamable $r4 = ADDC killed renamable $r4, killed renamable $r8, implicit-def $xer
+  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r3, killed renamable $r7, implicit-def dead $xer, implicit killed $xer
+  ; 32BIT-NEXT:   renamable $r4 = ADDC killed renamable $r4, killed renamable $r10, implicit-def $xer
+  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r3, killed renamable $r9, implicit-def dead $xer, implicit killed $xer
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3, implicit $r4
   ;
   ; 64BIT-LABEL: name: test_i64
@@ -678,9 +678,9 @@ define i64 @callee_mixed_ints(i32 %a, i8 signext %b, i32 %c, i16 signext %d, i64
   ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r4
   ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r5
   ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r6
-  ; 32BIT-NEXT:   renamable $r5 = SRAWI renamable $r3, 31, implicit-def dead $carry
-  ; 32BIT-NEXT:   renamable $r4 = ADDC killed renamable $r3, killed renamable $r8, implicit-def $carry
-  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r5, killed renamable $r7, implicit-def dead $carry, implicit killed $carry
+  ; 32BIT-NEXT:   renamable $r5 = SRAWI renamable $r3, 31, implicit-def dead $xer
+  ; 32BIT-NEXT:   renamable $r4 = ADDC killed renamable $r3, killed renamable $r8, implicit-def $xer
+  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r5, killed renamable $r7, implicit-def dead $xer, implicit killed $xer
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3, implicit $r4
   ;
   ; 64BIT-LABEL: name: callee_mixed_ints
@@ -1113,30 +1113,30 @@ define i64 @test_ints_stack(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6
   ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r4
   ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r5
   ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r6
-  ; 32BIT-NEXT:   renamable $r5 = SRAWI renamable $r11, 31, implicit-def dead $carry
-  ; 32BIT-NEXT:   renamable $r4 = SRAWI renamable $r12, 31, implicit-def dead $carry
+  ; 32BIT-NEXT:   renamable $r5 = SRAWI renamable $r11, 31, implicit-def dead $xer
+  ; 32BIT-NEXT:   renamable $r4 = SRAWI renamable $r12, 31, implicit-def dead $xer
   ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r7
   ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r8
   ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r9
   ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r10
-  ; 32BIT-NEXT:   renamable $r6 = SRAWI renamable $r3, 31, implicit-def dead $carry
-  ; 32BIT-NEXT:   renamable $r3 = ADDC killed renamable $r3, killed renamable $r25, implicit-def $carry
-  ; 32BIT-NEXT:   renamable $r6 = ADDE killed renamable $r6, killed renamable $r26, implicit-def dead $carry, implicit $carry
-  ; 32BIT-NEXT:   renamable $r7 = SRAWI renamable $r27, 31, implicit-def dead $carry
-  ; 32BIT-NEXT:   renamable $r3 = ADDC killed renamable $r3, killed renamable $r27, implicit-def $carry
-  ; 32BIT-NEXT:   renamable $r6 = ADDE killed renamable $r6, killed renamable $r7, implicit-def dead $carry, implicit $carry
-  ; 32BIT-NEXT:   renamable $r3 = ADDC killed renamable $r3, killed renamable $r28, implicit-def $carry
-  ; 32BIT-NEXT:   renamable $r6 = ADDZE killed renamable $r6, implicit-def dead $carry, implicit $carry
-  ; 32BIT-NEXT:   renamable $r3 = ADDC killed renamable $r3, killed renamable $r29, implicit-def $carry
-  ; 32BIT-NEXT:   renamable $r6 = ADDZE killed renamable $r6, implicit-def dead $carry, implicit $carry
-  ; 32BIT-NEXT:   renamable $r3 = ADDC killed renamable $r3, killed renamable $r12, implicit-def $carry
-  ; 32BIT-NEXT:   renamable $r4 = ADDE killed renamable $r6, killed renamable $r4, implicit-def dead $carry, implicit $carry
-  ; 32BIT-NEXT:   renamable $r3 = ADDC killed renamable $r3, killed renamable $r30, implicit-def $carry
-  ; 32BIT-NEXT:   renamable $r4 = ADDE killed renamable $r4, killed renamable $r31, implicit-def dead $carry, implicit $carry
-  ; 32BIT-NEXT:   renamable $r3 = ADDC killed renamable $r3, killed renamable $r0, implicit-def $carry
-  ; 32BIT-NEXT:   renamable $r6 = ADDZE killed renamable $r4, implicit-def dead $carry, implicit $carry
-  ; 32BIT-NEXT:   renamable $r4 = ADDC killed renamable $r3, killed renamable $r11, implicit-def $carry
-  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r6, killed renamable $r5, implicit-def dead $carry, implicit $carry
+  ; 32BIT-NEXT:   renamable $r6 = SRAWI renamable $r3, 31, implicit-def dead $xer
+  ; 32BIT-NEXT:   renamable $r3 = ADDC killed renamable $r3, killed renamable $r25, implicit-def $xer
+  ; 32BIT-NEXT:   renamable $r6 = ADDE killed renamable $r6, killed renamable $r26, implicit-def dead $xer, implicit $xer
+  ; 32BIT-NEXT:   renamable $r7 = SRAWI renamable $r27, 31, implicit-def dead $xer
+  ; 32BIT-NEXT:   renamable $r3 = ADDC killed renamable $r3, killed renamable $r27, implicit-def $xer
+  ; 32BIT-NEXT:   renamable $r6 = ADDE killed renamable $r6, killed renamable $r7, implicit-def dead $xer, implicit $xer
+  ; 32BIT-NEXT:   renamable $r3 = ADDC killed renamable $r3, killed renamable $r28, implicit-def $xer
+  ; 32BIT-NEXT:   renamable $r6 = ADDZE killed renamable $r6, implicit-def dead $xer, implicit $xer
+  ; 32BIT-NEXT:   renamable $r3 = ADDC killed renamable $r3, killed renamable $r29, implicit-def $xer
+  ; 32BIT-NEXT:   renamable $r6 = ADDZE killed renamable $r6, implicit-def dead $xer, implicit $xer
+  ; 32BIT-NEXT:   renamable $r3 = ADDC killed renamable $r3, killed renamable $r12, implicit-def $xer
+  ; 32BIT-NEXT:   renamable $r4 = ADDE killed renamable $r6, killed renamable $r4, implicit-def dead $xer, implicit $xer
+  ; 32BIT-NEXT:   renamable $r3 = ADDC killed renamable $r3, killed renamable $r30, implicit-def $xer
+  ; 32BIT-NEXT:   renamable $r4 = ADDE killed renamable $r4, killed renamable $r31, implicit-def dead $xer, implicit $xer
+  ; 32BIT-NEXT:   renamable $r3 = ADDC killed renamable $r3, killed renamable $r0, implicit-def $xer
+  ; 32BIT-NEXT:   renamable $r6 = ADDZE killed renamable $r4, implicit-def dead $xer, implicit $xer
+  ; 32BIT-NEXT:   renamable $r4 = ADDC killed renamable $r3, killed renamable $r11, implicit-def $xer
+  ; 32BIT-NEXT:   renamable $r3 = ADDE killed renamable $r6, killed renamable $r5, implicit-def dead $xer, implicit $xer
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3, implicit $r4
   ;
   ; 64BIT-LABEL: name: test_ints_stack

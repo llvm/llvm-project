@@ -13915,9 +13915,9 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     F->insert(It, copy0MBB);
     F->insert(It, sinkMBB);
 
-    if (isPhysRegUsedAfter(PPC::CARRY, MI.getIterator())) {
-      copy0MBB->addLiveIn(PPC::CARRY);
-      sinkMBB->addLiveIn(PPC::CARRY);
+    if (isPhysRegUsedAfter(PPC::XER, MI.getIterator())) {
+      copy0MBB->addLiveIn(PPC::XER);
+      sinkMBB->addLiveIn(PPC::XER);
     }
 
     // Set the call frame size on entry to the new basic blocks.

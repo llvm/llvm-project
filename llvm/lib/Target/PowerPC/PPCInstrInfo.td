@@ -1036,11 +1036,11 @@ multiclass XForm_6rc<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
                      string asmbase, string asmstr, InstrItinClass itin,
                      list<dag> pattern> {
   let BaseName = asmbase in {
-    let Defs = [CARRY] in
+    let Defs = [XER] in
     def NAME : XForm_6<opcode, xo, OOL, IOL,
                        !strconcat(asmbase, !strconcat(" ", asmstr)), itin,
                        pattern>, RecFormRel;
-    let Defs = [CARRY, CR0] in
+    let Defs = [XER, CR0] in
     def _rec    : XForm_6<opcode, xo, OOL, IOL,
                        !strconcat(asmbase, !strconcat(". ", asmstr)), itin,
                        []>, isRecordForm, RecFormRel;
@@ -1051,11 +1051,11 @@ multiclass XForm_10rc<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
                       string asmbase, string asmstr, InstrItinClass itin,
                       list<dag> pattern> {
   let BaseName = asmbase in {
-    let Defs = [CARRY] in
+    let Defs = [XER] in
     def NAME : XForm_10<opcode, xo, OOL, IOL,
                        !strconcat(asmbase, !strconcat(" ", asmstr)), itin,
                        pattern>, RecFormRel;
-    let Defs = [CARRY, CR0] in
+    let Defs = [XER, CR0] in
     def _rec    : XForm_10<opcode, xo, OOL, IOL,
                        !strconcat(asmbase, !strconcat(". ", asmstr)), itin,
                        []>, isRecordForm, RecFormRel;
@@ -1147,21 +1147,21 @@ multiclass XOForm_1rc<bits<6> opcode, bits<9> xo, bit oe, dag OOL, dag IOL,
                       string asmbase, string asmstr, InstrItinClass itin,
                       list<dag> pattern> {
   let BaseName = asmbase in {
-    let Defs = [CARRY] in
+    let Defs = [XER] in
     def NAME : XOForm_1<opcode, xo, oe, OOL, IOL,
                        !strconcat(asmbase, !strconcat(" ", asmstr)), itin,
                        pattern>, RecFormRel;
-    let Defs = [CARRY, CR0] in
+    let Defs = [XER, CR0] in
     def _rec    : XOForm_1<opcode, xo, oe, OOL, IOL,
                        !strconcat(asmbase, !strconcat(". ", asmstr)), itin,
                        []>, isRecordForm, RecFormRel;
   }
   let BaseName = !strconcat(asmbase, "O") in {
-    let Defs = [CARRY, XER] in
+    let Defs = [XER] in
     def O    : XOForm_1<opcode, xo, 1, OOL, IOL,
                         !strconcat(asmbase, !strconcat("o ", asmstr)), itin,
                         []>, RecFormRel;
-    let Defs = [CARRY, XER, CR0] in
+    let Defs = [XER, CR0] in
     def O_rec   : XOForm_1<opcode, xo, 1, OOL, IOL,
                         !strconcat(asmbase, !strconcat("o. ", asmstr)), itin,
                         []>, isRecordForm, RecFormRel;
@@ -1196,21 +1196,21 @@ multiclass XOForm_3rc<bits<6> opcode, bits<9> xo, bit oe, dag OOL, dag IOL,
                       string asmbase, string asmstr, InstrItinClass itin,
                       list<dag> pattern> {
   let BaseName = asmbase in {
-    let Defs = [CARRY] in
+    let Defs = [XER] in
     def NAME : XOForm_3<opcode, xo, oe, OOL, IOL,
                        !strconcat(asmbase, !strconcat(" ", asmstr)), itin,
                        pattern>, RecFormRel;
-    let Defs = [CARRY, CR0] in
+    let Defs = [XER, CR0] in
     def _rec    : XOForm_3<opcode, xo, oe, OOL, IOL,
                        !strconcat(asmbase, !strconcat(". ", asmstr)), itin,
                        []>, isRecordForm, RecFormRel;
   }
   let BaseName = !strconcat(asmbase, "O") in {
-    let Defs = [CARRY, XER] in
+    let Defs = [XER] in
     def O    : XOForm_3<opcode, xo, 1, OOL, IOL,
                         !strconcat(asmbase, !strconcat("o ", asmstr)), itin,
                         []>, RecFormRel;
-    let Defs = [CARRY, XER, CR0] in
+    let Defs = [XER, CR0] in
     def O_rec   : XOForm_3<opcode, xo, 1, OOL, IOL,
                         !strconcat(asmbase, !strconcat("o. ", asmstr)), itin,
                         []>, isRecordForm, RecFormRel;
@@ -1277,11 +1277,11 @@ multiclass XSForm_1rc<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
                       string asmbase, string asmstr, InstrItinClass itin,
                       list<dag> pattern> {
   let BaseName = asmbase in {
-    let Defs = [CARRY] in
+    let Defs = [XER] in
     def NAME : XSForm_1<opcode, xo, OOL, IOL,
                        !strconcat(asmbase, !strconcat(" ", asmstr)), itin,
                        pattern>, RecFormRel;
-    let Defs = [CARRY, CR0] in
+    let Defs = [XER, CR0] in
     def _rec    : XSForm_1<opcode, xo, OOL, IOL,
                        !strconcat(asmbase, !strconcat(". ", asmstr)), itin,
                        []>, isRecordForm, RecFormRel;
@@ -2552,12 +2552,12 @@ def ADDI   : DForm_2<14, (outs gprc:$RST), (ins gprc_nor0:$RA, s16imm:$D),
                      "addi $RST, $RA, $D", IIC_IntSimple,
                      [(set i32:$RST, (add i32:$RA, imm32SExt16:$D))]>;
 let BaseName = "addic" in {
-let Defs = [CARRY] in
+let Defs = [XER] in
 def ADDIC  : DForm_2<12, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
                      "addic $RST, $RA, $D", IIC_IntGeneral,
                      [(set i32:$RST, (PPCaddc i32:$RA, imm32SExt16:$D))]>,
                      RecFormRel, PPC970_DGroup_Cracked;
-let Defs = [CARRY, CR0] in
+let Defs = [XER, CR0] in
 def ADDIC_rec : DForm_2<13, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
                      "addic. $RST, $RA, $D", IIC_IntGeneral,
                      []>, isRecordForm, RecFormRel;
@@ -2573,7 +2573,7 @@ def LA     : DForm_2<14, (outs gprc:$RST), (ins gprc_nor0:$RA, s16imm:$D),
 def MULLI  : DForm_2< 7, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
                      "mulli $RST, $RA, $D", IIC_IntMulLI,
                      [(set i32:$RST, (mul i32:$RA, imm32SExt16:$D))]>;
-let Defs = [CARRY] in
+let Defs = [XER] in
 def SUBFIC : DForm_2< 8, (outs gprc:$RST), (ins gprc:$RA, s16imm:$D),
                      "subfic $RST, $RA, $D", IIC_IntGeneral,
                      [(set i32:$RST, (PPCsubc imm32SExt16:$D, i32:$RA))]>;
@@ -3212,26 +3212,26 @@ defm SUBFC : XOForm_1rc<31, 8, 0, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
 defm NEG    : XOForm_3r<31, 104, 0, (outs gprc:$RT), (ins gprc:$RA),
                         "neg", "$RT, $RA", IIC_IntSimple,
                         [(set i32:$RT, (ineg i32:$RA))]>;
-let Uses = [CARRY] in {
+let Uses = [XER] in {
 let isCommutable = 1 in
 defm ADDE  : XOForm_1rc<31, 138, 0, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
                         "adde", "$RT, $RA, $RB", IIC_IntGeneral,
-                        [(set i32:$RT, (PPCadde i32:$RA, i32:$RB, CARRY))]>;
+                        [(set i32:$RT, (PPCadde i32:$RA, i32:$RB, XER))]>;
 defm ADDME  : XOForm_3rc<31, 234, 0, (outs gprc:$RT), (ins gprc:$RA),
                          "addme", "$RT, $RA", IIC_IntGeneral,
-                         [(set i32:$RT, (PPCadde i32:$RA, -1, CARRY))]>;
+                         [(set i32:$RT, (PPCadde i32:$RA, -1, XER))]>;
 defm ADDZE  : XOForm_3rc<31, 202, 0, (outs gprc:$RT), (ins gprc:$RA),
                          "addze", "$RT, $RA", IIC_IntGeneral,
-                         [(set i32:$RT, (PPCadde i32:$RA, 0, CARRY))]>;
+                         [(set i32:$RT, (PPCadde i32:$RA, 0, XER))]>;
 defm SUBFE : XOForm_1rc<31, 136, 0, (outs gprc:$RT), (ins gprc:$RA, gprc:$RB),
                         "subfe", "$RT, $RA, $RB", IIC_IntGeneral,
-                        [(set i32:$RT, (PPCsube i32:$RB, i32:$RA, CARRY))]>;
+                        [(set i32:$RT, (PPCsube i32:$RB, i32:$RA, XER))]>;
 defm SUBFME : XOForm_3rc<31, 232, 0, (outs gprc:$RT), (ins gprc:$RA),
                          "subfme", "$RT, $RA", IIC_IntGeneral,
-                         [(set i32:$RT, (PPCsube -1, i32:$RA, CARRY))]>;
+                         [(set i32:$RT, (PPCsube -1, i32:$RA, XER))]>;
 defm SUBFZE : XOForm_3rc<31, 200, 0, (outs gprc:$RT), (ins gprc:$RA),
                          "subfze", "$RT, $RA", IIC_IntGeneral,
-                         [(set i32:$RT, (PPCsube 0, i32:$RA, CARRY))]>;
+                         [(set i32:$RT, (PPCsube 0, i32:$RA, XER))]>;
 }
 }
 
