@@ -1297,6 +1297,29 @@ TEST_P(UncheckedStatusOrAccessModelTest, CopyAssignment) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, MoveAssignment) {
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_INT sor1(42);
+      STATUSOR_INT sor2;
+      sor2 = std::move(sor1);
+      sor2.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    void target() {
+      STATUSOR_INT sor1 = Make<STATUSOR_INT>();
+      STATUSOR_INT sor2;
+      sor2 = std::move(sor1);
+      sor2.value();  // [[unsafe]]
+    }
+  )cc");
+}
+
 TEST_P(UncheckedStatusOrAccessModelTest, ShortCircuitingBinaryOperators) {
   ExpectDiagnosticsFor(R"cc(
 #include "unchecked_statusor_access_test_defs.h"
