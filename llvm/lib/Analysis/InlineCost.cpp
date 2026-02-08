@@ -180,10 +180,6 @@ static cl::opt<bool> DisableGEPConstOperand(
     "disable-gep-const-evaluation", cl::Hidden, cl::init(false),
     cl::desc("Disables evaluation of GetElementPtr with constant operands"));
 
-static cl::opt<bool> InlineAllViableCalls(
-    "inline-all-viable-calls", cl::Hidden, cl::init(false),
-    cl::desc("Inline all viable calls, even if they exceed the inlining "
-             "threshold"));
 namespace llvm {
 std::optional<int> getStringFnAttrAsInt(const Attribute &Attr) {
   if (Attr.isValid()) {
@@ -3274,10 +3270,6 @@ InlineCost llvm::getInlineCost(
       return llvm::InlineCost::getAlways("always inline attribute");
     return llvm::InlineCost::getNever(UserDecision->getFailureReason());
   }
-
-  if (InlineAllViableCalls && isInlineViable(*Callee).isSuccess())
-    return llvm::InlineCost::getAlways(
-        "Inlining forced by -inline-all-viable-calls");
 
   LLVM_DEBUG(llvm::dbgs() << "      Analyzing call of " << Callee->getName()
                           << "... (caller:" << Call.getCaller()->getName()
