@@ -99,8 +99,11 @@ bool tryAssignPredicateSpecConstIDs(Module &M, Function *F) {
     if (ID != UINT32_MAX)
       continue;
 
-    StringRef Name = CI->getName().substr(0, CI->getName().rfind('.'));
-    ID = IDs.try_emplace(Name, IDs.size()).first->second;
+    assert(CI->getMetadata("llvm.amdgcn.feature.predicate") &&
+           "Feature predicates must be encoded into metadata!");
+    auto *P = cast<MDString>(
+        CI->getMetadata("llvm.amdgcn.feature.predicate")->getOperand(0));
+    ID = IDs.try_emplace(P->getString(), IDs.size()).first->second;
 
     CI->setArgOperand(0, ConstantInt::get(CI->getArgOperand(0)->getType(), ID));
   }

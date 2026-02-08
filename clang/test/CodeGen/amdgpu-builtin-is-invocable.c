@@ -25,8 +25,8 @@
 // AMDGCNSPIRV-LABEL: define spir_func void @foo(
 // AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
 // AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
-// AMDGCNSPIRV-NEXT:    [[HAS_GFX10_INSTS_:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false)
-// AMDGCNSPIRV-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[HAS_GFX10_INSTS_]], false
+// AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i1 @_Z20__spirv_SpecConstant(i32 -1, i1 false), !llvm.amdgcn.feature.predicate [[META3:![0-9]+]]
+// AMDGCNSPIRV-NEXT:    [[TOBOOL:%.*]] = icmp ne i1 [[TMP0]], false
 // AMDGCNSPIRV-NEXT:    br i1 [[TOBOOL]], label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // AMDGCNSPIRV:       [[IF_THEN]]:
 // AMDGCNSPIRV-NEXT:    call addrspace(4) void @llvm.trap()
@@ -58,4 +58,5 @@ void foo() {
 // AMDGCNSPIRV: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
 // AMDGCNSPIRV: [[META1:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // AMDGCNSPIRV: [[META2:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// AMDGCNSPIRV: [[META3]] = !{!"has.gfx10-insts"}
 //.

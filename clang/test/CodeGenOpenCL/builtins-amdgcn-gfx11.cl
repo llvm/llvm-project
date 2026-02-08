@@ -30,11 +30,11 @@ void test_s_sendmsg_rtnl(global ulong* out) {
 }
 
 // CHECK-LABEL: @test_ds_bvh_stack_rtn(
-// CHECK: %0 = tail call{{.*}} { i32, i32 } @llvm.amdgcn.ds.bvh.stack.rtn(i32 %addr, i32 %data, <4 x i32> %data1, i32 128)
-// CHECK: %1 = extractvalue { i32, i32 } %0, 0
-// CHECK: %2 = extractvalue { i32, i32 } %0, 1
-// CHECK: %3 = insertelement <2 x i32> poison, i32 %1, i64 0
-// CHECK: %4 = insertelement <2 x i32> %3, i32 %2, i64 1
+// CHECK: %[[#BVH_STACK:]] = tail call{{.*}} { i32, i32 } @llvm.amdgcn.ds.bvh.stack.rtn(i32 %addr, i32 %data, <4 x i32> %data1, i32 128)
+// CHECK: %[[#RET_FIRST:]] = extractvalue { i32, i32 } %[[#BVH_STACK]], 0
+// CHECK: %[[#RET_SECOND:]] = extractvalue { i32, i32 } %[[#BVH_STACK]], 1
+// CHECK: %[[#OUT:]] = insertelement <2 x i32> poison, i32 %[[#RET_FIRST]], i64 0
+// CHECK: %{{.*}} = insertelement <2 x i32> %[[#OUT]], i32 %[[#RET_SECOND]], i64 1
 void test_ds_bvh_stack_rtn(global uint2* out, uint addr, uint data, uint4 data1)
 {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_ds_bvh_stack_rtn))

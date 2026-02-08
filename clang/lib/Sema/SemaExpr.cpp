@@ -6788,11 +6788,13 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
     FunctionDecl *FDecl = dyn_cast<FunctionDecl>(NDecl);
     if (FDecl && FDecl->getBuiltinID()) {
-      if (Context.BuiltinInfo.isTSBuiltin(FDecl->getBuiltinID())) {
-        const llvm::Triple &Triple = Context.getTargetInfo().getTriple();
-        if (Triple.isSPIRV() && Triple.getVendor() == llvm::Triple::AMD)
+      const llvm::Triple &Triple = Context.getTargetInfo().getTriple();
+      if (Triple.isSPIRV() && Triple.getVendor() == llvm::Triple::AMD) {
+        if (Context.BuiltinInfo.isTSBuiltin(FDecl->getBuiltinID()) &&
+            !Context.BuiltinInfo.isAuxBuiltinID(FDecl->getBuiltinID())) {
           AMDGPU().AddPotentiallyUnguardedBuiltinUser(cast<FunctionDecl>(
               getFunctionLevelDeclContext(/*AllowLambda=*/true)));
+        }
       }
 
       // Rewrite the function decl for this builtin by replacing parameters

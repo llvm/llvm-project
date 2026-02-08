@@ -25,7 +25,7 @@ void test_permlanex16(global uint* out, uint a, uint b, uint c, uint d) {
 
 // CHECK-LABEL: @test_mov_dpp8_uint(
 // CHECK:      {{.*}}call{{.*}} i32 @llvm.amdgcn.mov.dpp8.i32(i32 %a, i32 1)
-// CHECK-NEXT: store i32 %0,
+// CHECK-NEXT: store i32 %[[#]],
 void test_mov_dpp8_uint(global uint* out, uint a) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_mov_dpp8))
     *out = __builtin_amdgcn_mov_dpp8(a, 1);
@@ -33,56 +33,56 @@ void test_mov_dpp8_uint(global uint* out, uint a) {
 
 // CHECK-LABEL: @test_mov_dpp8_long(
 // CHECK:      {{.*}}call{{.*}} i64 @llvm.amdgcn.mov.dpp8.i64(i64 %a, i32 1)
-// CHECK-NEXT: store i64 %0,
+// CHECK-NEXT: store i64 %[[#]],
 void test_mov_dpp8_long(global long* out, long a) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_mov_dpp8))
     *out = __builtin_amdgcn_mov_dpp8(a, 1);
 }
 
 // CHECK-LABEL: @test_mov_dpp8_float(
-// CHECK:      %0 = bitcast float %a to i32
-// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.mov.dpp8.i32(i32 %0, i32 1)
-// CHECK-NEXT: store i32 %1,
+// CHECK:      %[[BC:[0-9]+]] = bitcast float %a to i32
+// CHECK-NEXT: %[[DPP_RET:[0-9]+]] = tail call{{.*}} i32 @llvm.amdgcn.mov.dpp8.i32(i32 %[[BC]], i32 1)
+// CHECK-NEXT: store i32 %[[DPP_RET]],
 void test_mov_dpp8_float(global float* out, float a) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_mov_dpp8))
     *out = __builtin_amdgcn_mov_dpp8(a, 1);
 }
 
 // CHECK-LABEL: @test_mov_dpp8_double
-// CHECK:      %0 = bitcast double %x to i64
-// CHECK-NEXT: %1 = tail call{{.*}} i64 @llvm.amdgcn.mov.dpp8.i64(i64 %0, i32 1)
-// CHECK-NEXT: store i64 %1,
+// CHECK:      %[[BC:[0-9]+]] = bitcast double %x to i64
+// CHECK-NEXT: %[[DPP_RET:[0-9]+]] = tail call{{.*}} i64 @llvm.amdgcn.mov.dpp8.i64(i64 %[[BC]], i32 1)
+// CHECK-NEXT: store i64 %[[DPP_RET]],
 void test_mov_dpp8_double(double x, global double *p) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_mov_dpp8))
     *p = __builtin_amdgcn_mov_dpp8(x, 1);
 }
 
 // CHECK-LABEL: @test_mov_dpp8_short
-// CHECK:      %0 = zext i16 %x to i32
-// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.mov.dpp8.i32(i32 %0, i32 1)
-// CHECK-NEXT: %2 = trunc i32 %1 to i16
-// CHECK-NEXT: store i16 %2,
+// CHECK:      %[[ZEXT:[0-9]+]] = zext i16 %x to i32
+// CHECK-NEXT: %[[DPP_RET:[0-9]+]] = tail call{{.*}} i32 @llvm.amdgcn.mov.dpp8.i32(i32 %[[ZEXT]], i32 1)
+// CHECK-NEXT: %[[TRUNC:[0-9]+]] = trunc i32 %[[DPP_RET]] to i16
+// CHECK-NEXT: store i16 %[[TRUNC]],
 void test_mov_dpp8_short(short x, global short *p) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_mov_dpp8))
     *p = __builtin_amdgcn_mov_dpp8(x, 1);
 }
 
 // CHECK-LABEL: @test_mov_dpp8_char
-// CHECK:      %0 = zext i8 %x to i32
-// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.mov.dpp8.i32(i32 %0, i32 1)
-// CHECK-NEXT: %2 = trunc i32 %1 to i8
-// CHECK-NEXT: store i8 %2,
+// CHECK:      %[[ZEXT:[0-9]+]] = zext i8 %x to i32
+// CHECK-NEXT: %[[DPP_RET:[0-9]+]] = tail call{{.*}} i32 @llvm.amdgcn.mov.dpp8.i32(i32 %[[ZEXT]], i32 1)
+// CHECK-NEXT: %[[TRUNC:[0-9]+]] = trunc i32 %[[DPP_RET]] to i8
+// CHECK-NEXT: store i8 %[[TRUNC]],
 void test_mov_dpp8_char(char x, global char *p) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_mov_dpp8))
     *p = __builtin_amdgcn_mov_dpp8(x, 1);
 }
 
 // CHECK-LABEL: @test_mov_dpp8_half
-// CHECK:      %0 = load i16,
-// CHECK:      %1 = zext i16 %0 to i32
-// CHECK-NEXT: %2 = tail call{{.*}} i32 @llvm.amdgcn.mov.dpp8.i32(i32 %1, i32 1)
-// CHECK-NEXT: %3 = trunc i32 %2 to i16
-// CHECK-NEXT: store i16 %3,
+// CHECK:      %[[LD:[0-9]+]] = load i16,
+// CHECK:      %[[ZEXT:[0-9]+]] = zext i16 %[[LD]] to i32
+// CHECK-NEXT: %[[DPP_RET:[0-9]+]] = tail call{{.*}} i32 @llvm.amdgcn.mov.dpp8.i32(i32 %[[ZEXT]], i32 1)
+// CHECK-NEXT: %[[TRUNC:[0-9]+]] = trunc i32 %[[DPP_RET]] to i16
+// CHECK-NEXT: store i16 %[[TRUNC]],
 void test_mov_dpp8_half(half *x, global half *p) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_mov_dpp8))
     *p = __builtin_amdgcn_mov_dpp8(*x, 1);

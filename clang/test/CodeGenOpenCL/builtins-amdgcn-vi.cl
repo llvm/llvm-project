@@ -1,9 +1,9 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu tonga -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx900 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1012 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN %s
-// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,AMDGCNSPIRV %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu tonga -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN --enable-var-scope %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx900 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN --enable-var-scope %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN --enable-var-scope %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx1012 -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,GCN --enable-var-scope %s
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm -o - %s | FileCheck --check-prefixes=CHECK,AMDGCNSPIRV --enable-var-scope %s
 
 #define INVALID_MEMORY_SCOPE (__MEMORY_SCOPE_CLUSTR+1)
 
@@ -126,57 +126,57 @@ void test_mov_dpp_int(global int* out, int src)
 }
 
 // CHECK-LABEL: @test_mov_dpp_long
-// CHECK:      %0 = tail call{{.*}} i64 @llvm.amdgcn.update.dpp.i64(i64 poison, i64 %x, i32 257, i32 15, i32 15, i1 false)
-// CHECK-NEXT: store i64 %0,
+// CHECK:      %[[DPP_RET:[0-9]+]] = tail call{{.*}} i64 @llvm.amdgcn.update.dpp.i64(i64 poison, i64 %x, i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: store i64 %[[DPP_RET]],
 void test_mov_dpp_long(long x, global long *p) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_mov_dpp))
     *p = __builtin_amdgcn_mov_dpp(x, 0x101, 0xf, 0xf, 0);
 }
 
 // CHECK-LABEL: @test_mov_dpp_float
-// CHECK:      %0 = bitcast float %x to i32
-// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 %0, i32 257, i32 15, i32 15, i1 false)
-// CHECK-NEXT: store i32 %1,
+// CHECK:      %[[BC:[0-9]+]] = bitcast float %x to i32
+// CHECK-NEXT: %[[DPP_RET:[0-9]+]] = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 %[[BC]], i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: store i32 %[[DPP_RET]],
 void test_mov_dpp_float(float x, global float *p) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_mov_dpp))
     *p = __builtin_amdgcn_mov_dpp(x, 0x101, 0xf, 0xf, 0);
 }
 
 // CHECK-LABEL: @test_mov_dpp_double
-// CHECK:      %0 = bitcast double %x to i64
-// CHECK-NEXT: %1 = tail call{{.*}} i64 @llvm.amdgcn.update.dpp.i64(i64 poison, i64 %0, i32 257, i32 15, i32 15, i1 false)
-// CHECK-NEXT: store i64 %1,
+// CHECK:      %[[BC:[0-9]+]] = bitcast double %x to i64
+// CHECK-NEXT: %[[DPP_RET:[0-9]+]] = tail call{{.*}} i64 @llvm.amdgcn.update.dpp.i64(i64 poison, i64 %[[BC]], i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: store i64 %[[DPP_RET]],
 void test_mov_dpp_double(double x, global double *p) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_mov_dpp))
     *p = __builtin_amdgcn_mov_dpp(x, 0x101, 0xf, 0xf, 0);
 }
 
 // CHECK-LABEL: @test_mov_dpp_short
-// CHECK:      %0 = zext i16 %x to i32
-// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 %0, i32 257, i32 15, i32 15, i1 false)
-// CHECK-NEXT: %2 = trunc i32 %1 to i16
-// CHECK-NEXT: store i16 %2,
+// CHECK:      %[[ZEXT:[0-9]+]] = zext i16 %x to i32
+// CHECK-NEXT: %[[DPP_RET:[0-9]+]] = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 %[[ZEXT]], i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: %[[TRUNC:[0-9]+]] = trunc i32 %[[DPP_RET]] to i16
+// CHECK-NEXT: store i16 %[[TRUNC]],
 void test_mov_dpp_short(short x, global short *p) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_mov_dpp))
     *p = __builtin_amdgcn_mov_dpp(x, 0x101, 0xf, 0xf, 0);
 }
 
 // CHECK-LABEL: @test_mov_dpp_char
-// CHECK:      %0 = zext i8 %x to i32
-// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 %0, i32 257, i32 15, i32 15, i1 false)
-// CHECK-NEXT: %2 = trunc i32 %1 to i8
-// CHECK-NEXT: store i8 %2,
+// CHECK:      %[[ZEXT:[0-9]+]] = zext i8 %x to i32
+// CHECK-NEXT: %[[DPP_RET:[0-9]+]] = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 %[[ZEXT]], i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: %[[TRUNC:[0-9]+]] = trunc i32 %[[DPP_RET]] to i8
+// CHECK-NEXT: store i8 %[[TRUNC]],
 void test_mov_dpp_char(char x, global char *p) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_mov_dpp))
     *p = __builtin_amdgcn_mov_dpp(x, 0x101, 0xf, 0xf, 0);
 }
 
 // CHECK-LABEL: @test_mov_dpp_half
-// CHECK:      %0 = load i16,
-// CHECK:      %1 = zext i16 %0 to i32
-// CHECK-NEXT: %2 = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 %1, i32 257, i32 15, i32 15, i1 false)
-// CHECK-NEXT: %3 = trunc i32 %2 to i16
-// CHECK-NEXT: store i16 %3,
+// CHECK:      %[[LD:[0-9]+]] = load i16,
+// CHECK:      %[[ZEXT:[0-9]+]] = zext i16 %[[LD]] to i32
+// CHECK-NEXT: %[[DPP_RET:[0-9]+]] = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 %[[ZEXT]], i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: %[[TRUNC:[0-9]+]] = trunc i32 %[[DPP_RET]] to i16
+// CHECK-NEXT: store i16 %[[TRUNC]],
 void test_mov_dpp_half(half *x, global half *p) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_mov_dpp))
     *p = __builtin_amdgcn_mov_dpp(*x, 0x101, 0xf, 0xf, 0);
@@ -191,57 +191,57 @@ void test_update_dpp_int(global int* out, int arg1, int arg2)
 }
 
 // CHECK-LABEL: @test_update_dpp_long
-// CHECK:      %0 = tail call{{.*}} i64 @llvm.amdgcn.update.dpp.i64(i64 %x, i64 %x, i32 257, i32 15, i32 15, i1 false)
-// CHECK-NEXT: store i64 %0,
+// CHECK:      %[[DPP_RET:[0-9]+]] = tail call{{.*}} i64 @llvm.amdgcn.update.dpp.i64(i64 %x, i64 %x, i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: store i64 %[[DPP_RET]],
 void test_update_dpp_long(long x, global long *p) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_update_dpp))
     *p = __builtin_amdgcn_update_dpp(x, x, 0x101, 0xf, 0xf, 0);
 }
 
 // CHECK-LABEL: @test_update_dpp_float
-// CHECK:      %0 = bitcast float %x to i32
-// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 %0, i32 %0, i32 257, i32 15, i32 15, i1 false)
-// CHECK-NEXT: store i32 %1,
+// CHECK:      %[[BC:[0-9]+]] = bitcast float %x to i32
+// CHECK-NEXT: %[[DPP_RET:[0-9]+]] = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 %[[BC]], i32 %[[BC]], i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: store i32 %[[DPP_RET]],
 void test_update_dpp_float(float x, global float *p) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_update_dpp))
     *p = __builtin_amdgcn_update_dpp(x, x, 0x101, 0xf, 0xf, 0);
 }
 
 // CHECK-LABEL: @test_update_dpp_double
-// CHECK:      %0 = bitcast double %x to i64
-// CHECK-NEXT: %1 = tail call{{.*}} i64 @llvm.amdgcn.update.dpp.i64(i64 %0, i64 %0, i32 257, i32 15, i32 15, i1 false)
-// CHECK-NEXT: store i64 %1,
+// CHECK:      %[[BC:[0-9]+]] = bitcast double %x to i64
+// CHECK-NEXT: %[[DPP_RET:[0-9]+]] = tail call{{.*}} i64 @llvm.amdgcn.update.dpp.i64(i64 %[[BC]], i64 %[[BC]], i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: store i64 %[[DPP_RET]],
 void test_update_dpp_double(double x, global double *p) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_update_dpp))
     *p = __builtin_amdgcn_update_dpp(x, x, 0x101, 0xf, 0xf, 0);
 }
 
 // CHECK-LABEL: @test_update_dpp_short
-// CHECK:      %0 = zext i16 %x to i32
-// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 %0, i32 %0, i32 257, i32 15, i32 15, i1 false)
-// CHECK-NEXT: %2 = trunc i32 %1 to i16
-// CHECK-NEXT: store i16 %2,
+// CHECK:      %[[ZEXT:[0-9]+]] = zext i16 %x to i32
+// CHECK-NEXT: %[[DPP_RET:[0-9]+]] = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 %[[ZEXT]], i32 %[[ZEXT]], i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: %[[TRUNC:[0-9]+]] = trunc i32 %[[DPP_RET]] to i16
+// CHECK-NEXT: store i16 %[[TRUNC]],
 void test_update_dpp_short(short x, global short *p) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_update_dpp))
     *p = __builtin_amdgcn_update_dpp(x, x, 0x101, 0xf, 0xf, 0);
 }
 
 // CHECK-LABEL: @test_update_dpp_char
-// CHECK:      %0 = zext i8 %x to i32
-// CHECK-NEXT: %1 = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 %0, i32 %0, i32 257, i32 15, i32 15, i1 false)
-// CHECK-NEXT: %2 = trunc i32 %1 to i8
-// CHECK-NEXT: store i8 %2,
+// CHECK:      %[[ZEXT:[0-9]+]] = zext i8 %x to i32
+// CHECK-NEXT: %[[DPP_RET:[0-9]+]] = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 %[[ZEXT]], i32 %[[ZEXT]], i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: %[[TRUNC:[0-9]+]] = trunc i32 %[[DPP_RET]] to i8
+// CHECK-NEXT: store i8 %[[TRUNC]],
 void test_update_dpp_char(char x, global char *p) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_update_dpp))
     *p = __builtin_amdgcn_update_dpp(x, x, 0x101, 0xf, 0xf, 0);
 }
 
 // CHECK-LABEL: @test_update_dpp_half
-// CHECK:      %0 = load i16,
-// CHECK:      %1 = zext i16 %0 to i32
-// CHECK-NEXT: %2 = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 %1, i32 %1, i32 257, i32 15, i32 15, i1 false)
-// CHECK-NEXT: %3 = trunc i32 %2 to i16
-// CHECK-NEXT: store i16 %3,
+// CHECK:      %[[LD:[0-9]+]] = load i16,
+// CHECK:      %[[ZEXT:[0-9]+]] = zext i16 %[[LD]] to i32
+// CHECK-NEXT: %[[DPP_RET:[0-9]+]] = tail call{{.*}} i32 @llvm.amdgcn.update.dpp.i32(i32 %[[ZEXT]], i32 %[[ZEXT]], i32 257, i32 15, i32 15, i1 false)
+// CHECK-NEXT: %[[TRUNC:[0-9]+]] = trunc i32 %[[DPP_RET]] to i16
+// CHECK-NEXT: store i16 %[[TRUNC]],
 void test_update_dpp_half(half *x, global half *p) {
   if (__builtin_amdgcn_is_invocable(__builtin_amdgcn_update_dpp))
     *p = __builtin_amdgcn_update_dpp(*x, *x, 0x101, 0xf, 0xf, 0);
