@@ -4673,6 +4673,57 @@ TEST(Hover, HideBigInitializers) {
   EXPECT_EQ(H->Definition, "int arr[]");
 }
 
+TEST(Hover, HideBigInitializersIncludedFromThePreamble) {
+  Annotations T(R"cpp(
+  #include "hugearray.h"
+  auto x = a^rr;
+  )cpp");
+  TestTU TU = TestTU::withCode(T.code());
+  TU.AdditionalFiles["hugearray.h"] = R"cpp(
+    #define A(x) x, x, x, x
+    #define B(x) A(A(A(A(x))))
+    int arr[256] = {B(0)};
+  )cpp";
+  auto AST = TU.build();
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(H);
+  EXPECT_EQ(H->Definition, "int arr[256]");
+}
+
+TEST(Hover, HideBigNestedInitializersIncludedFromThePreamble) {
+  Annotations T(R"cpp(
+  #include "hugearray.h"
+  auto x = a^rr;
+  )cpp");
+  TestTU TU = TestTU::withCode(T.code());
+  TU.AdditionalFiles["hugearray.h"] = R"cpp(
+    #define A(x) x, x, x, x
+    #define B(x) A(A(A(A(x))))
+    int arr[1][1][256] = {{{B(0)}}};
+  )cpp";
+  auto AST = TU.build();
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(H);
+  EXPECT_EQ(H->Definition, "int arr[1][1][256]");
+}
+
+TEST(Hover, DoNotHideSmallInitializersIncludedFromThePreamble) {
+  Annotations T(R"cpp(
+  #include "smallarray.h"
+  auto x = a^rr;
+  )cpp");
+  TestTU TU = TestTU::withCode(T.code());
+  TU.AdditionalFiles["smallarray.h"] = R"cpp(
+    #define A(x) x, x
+    #define B(x) A(A(x))
+    int arr[4] = {B(0)};
+  )cpp";
+  auto AST = TU.build();
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(H);
+  EXPECT_EQ(H->Definition, "int arr[4] = {0, 0, 0, 0}");
+}
+
 #if defined(__aarch64__)
 // FIXME: AARCH64 sanitizer buildbots are broken after 72142fbac4.
 #define PREDEFINEMACROS_TEST(x) DISABLED_##x
