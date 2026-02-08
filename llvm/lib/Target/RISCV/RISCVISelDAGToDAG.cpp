@@ -1896,6 +1896,43 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     CurDAG->RemoveDeadNode(Node);
     return;
   }
+  case RISCVISD::WMACCU:
+  case RISCVISD::WMACC: {
+    assert(!Subtarget->is64Bit() && Subtarget->hasStdExtP() &&
+           "Unexpected opcode");
+
+    // WMACCU/WMACC has 4 operands: (m1, m2, addlo, addhi) -> (lo, hi)
+    SDValue M1 = Node->getOperand(0);
+    SDValue M2 = Node->getOperand(1);
+    SDValue AddLo = Node->getOperand(2);
+    SDValue AddHi = Node->getOperand(3);
+
+    // Build the register pair for the accumulator input
+    SDValue AccOps[] = {
+        CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32),
+        AddLo, CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32),
+        AddHi, CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
+    SDValue Acc = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
+                                                 MVT::Untyped, AccOps),
+                          0);
+
+    unsigned Opc =
+        Node->getOpcode() == RISCVISD::WMACCU ? RISCV::WMACCU : RISCV::WMACC;
+
+    // Instruction format: WMACCU rd, rs1, rs2 (rd is accumulator, comes first)
+    MachineSDNode *New =
+        CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Acc, M1, M2);
+
+    SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL,
+                                                MVT::i32, SDValue(New, 0));
+    SDValue Hi = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL,
+                                                MVT::i32, SDValue(New, 0));
+
+    ReplaceUses(SDValue(Node, 0), Lo);
+    ReplaceUses(SDValue(Node, 1), Hi);
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
   case RISCVISD::ADDD:
   case RISCVISD::SUBD:
   case RISCVISD::PPAIRE_DB: {
