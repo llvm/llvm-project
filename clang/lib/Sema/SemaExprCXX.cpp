@@ -2653,25 +2653,6 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
                             ResultType, AllocTypeInfo, Range, DirectInitRange);
 }
 
-// Format an address space for diagnostics without assuming it maps to a
-// target-specific value. Language-specific spaces (e.g. OpenCL) are rendered
-// using their spelled qualifiers, and return whole qual type
-
-static std::string formatAddressSpaceForDiag(QualType T,
-                                             const LangOptions &LangOpts,
-                                             const ASTContext &Ctx) {
-  LangAS AS = T.getAddressSpace();
-  if (isTargetAddressSpace(AS))
-    return Qualifiers::getAddrSpaceAsString(AS);
-  PrintingPolicy PP(LangOpts);
-  std::string Sugared, Desugared;
-  llvm::raw_string_ostream OS(Sugared);
-  llvm::raw_string_ostream KO(Desugared);
-  T.print(OS, PP);
-  T.getDesugaredType(Ctx).print(KO, PP);
-  return OS.str() + " (" + KO.str() + ")";
-}
-
 bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
                               SourceRange R) {
   // C++ 5.3.4p1: "[The] type shall be a complete object type, but not an
@@ -2696,7 +2677,7 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
            !getLangOpts().OpenCLCPlusPlus)
     return Diag(Loc, diag::err_address_space_qualified_new)
            << AllocType.getUnqualifiedType()
-           << formatAddressSpaceForDiag(AllocType, getLangOpts(), Context);
+           << Qualifiers::getAddrSpaceAsString(AllocType.getAddressSpace());
 
   else if (getLangOpts().ObjCAutoRefCount) {
     if (const ArrayType *AT = Context.getAsArrayType(AllocType)) {
@@ -4089,7 +4070,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       return Diag(Ex.get()->getBeginLoc(),
                   diag::err_address_space_qualified_delete)
              << Pointee.getUnqualifiedType()
-             << formatAddressSpaceForDiag(Pointee, getLangOpts(), Context);
+             << Qualifiers::getAddrSpaceAsString(Pointee.getAddressSpace());
 
     CXXRecordDecl *PointeeRD = nullptr;
     if (Pointee->isVoidType() && !isSFINAEContext()) {
