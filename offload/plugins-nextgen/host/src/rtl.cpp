@@ -12,9 +12,7 @@
 
 #include <cassert>
 #include <cstddef>
-#if !defined(SKIP_FFI_BUILD)
 #include <ffi.h>
-#endif
 #include <string>
 #include <unordered_map>
 
@@ -99,7 +97,6 @@ struct GenELF64KernelTy : public GenericKernelTy {
                    uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
                    KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
-#if !defined(SKIP_FFI_BUILD)
     // Create a vector of ffi_types, one per argument.
     SmallVector<ffi_type *, 16> ArgTypes(KernelArgs.NumArgs, &ffi_type_pointer);
     ffi_type **ArgTypesPtr = (ArgTypes.size()) ? &ArgTypes[0] : nullptr;
@@ -115,7 +112,6 @@ struct GenELF64KernelTy : public GenericKernelTy {
     // Call the kernel function through libffi.
     long Return;
     ffi_call(&Cif, Func, &Return, (void **)LaunchParams.Ptrs);
-#endif
     return Plugin::success();
   }
 
@@ -519,11 +515,7 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 
   /// All images (ELF-compatible) should be compatible with this plugin.
   Expected<bool> isELFCompatible(uint32_t, StringRef) const override {
-#if defined(SKIP_FFI_BUILD)
-    return false;
-#else
     return true;
-#endif
   }
 
   Triple::ArchType getTripleArch() const override {
