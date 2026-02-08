@@ -255,19 +255,29 @@ template <typename T> static bool isRecordWithAttr(QualType Type) {
 bool isGslPointerType(QualType QT) { return isRecordWithAttr<PointerAttr>(QT); }
 bool isGslOwnerType(QualType QT) { return isRecordWithAttr<OwnerAttr>(QT); }
 
+static StringRef getName(const CXXRecordDecl &RD) {
+  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(&RD))
+    return CTSD->getSpecializedTemplate()->getName();
+  if (RD.getIdentifier())
+    return RD.getName();
+  return "";
+}
+
+static bool isStdUniquePtr(const CXXRecordDecl &RD) {
+  return RD.isInStdNamespace() && getName(RD) == "unique_ptr";
+}
+
+bool isUniquePtrRelease(const CXXMethodDecl &MD) {
+  return MD.getIdentifier() && MD.getName() == "release" &&
+         MD.getNumParams() == 0 && isStdUniquePtr(*MD.getParent());
+}
+
 bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
   const CXXRecordDecl *RD = MD.getParent();
   if (!isInStlNamespace(RD))
     return false;
 
-  StringRef ContainerName;
-  if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
-    ContainerName = CTSD->getSpecializedTemplate()->getName();
-  else if (RD->getIdentifier())
-    ContainerName = RD->getName();
-  else
-    return false;
-
+  StringRef ContainerName = getName(*RD);
   static const llvm::StringSet<> Containers = {
       // Sequence
       "vector", "basic_string", "deque",

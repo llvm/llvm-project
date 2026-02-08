@@ -547,7 +547,20 @@ void FactsGenerator::handleInvalidatingCall(const Expr *Call,
                                             const FunctionDecl *FD,
                                             ArrayRef<const Expr *> Args) {
   const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-  if (!MD || !MD->isInstance() || !isContainerInvalidationMethod(*MD))
+  if (!MD || !MD->isInstance())
+    return;
+  // std::unique_ptr::release() transfers ownership.
+  // Treat it as a move to prevent false-positive warnings when the unique_ptr
+  // destructor runs after ownership has been transferred.
+  if (isUniquePtrRelease(*MD)) {
+    const Expr *UniquePtrExpr = Args[0];
+    OriginList *MovedOrigins = getOriginsList(*UniquePtrExpr);
+    if (MovedOrigins)
+      CurrentBlockFacts.push_back(FactMgr.createFact<MovedOriginFact>(
+          UniquePtrExpr, MovedOrigins->getOuterOriginID()));
+  }
+
+  if (!isContainerInvalidationMethod(*MD))
     return;
   // Heuristics to turn-down false positives.
   auto *DRE = dyn_cast<DeclRefExpr>(Args[0]);
