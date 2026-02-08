@@ -20,8 +20,8 @@
 # vim swap files
 .*.sw?
 .sw?
-#OS X specific files.
-.DS_store
+#macOS specific
+.DS_Store
 
 # Temporary file created by the automerger tool.
 .am.txt
