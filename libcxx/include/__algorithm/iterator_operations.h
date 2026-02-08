@@ -75,8 +75,8 @@ struct _IterOps<_RangeAlgPolicy> {
   }
 
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
-  _LIBCPP_HIDE_FROM_ABI static constexpr _Ip __next_sentinel(_Ip __x, _Sp __bound_sentinel) {
-    ranges::__advance::__advance_sentinel(__x, __bound_sentinel);
+  _LIBCPP_HIDE_FROM_ABI static constexpr _Ip __next_until(_Ip __x, _Sp __bound_sentinel) {
+    ranges::__advance::__advance_until(__x, __bound_sentinel);
     return __x;
   }
 
@@ -162,7 +162,7 @@ struct _IterOps<_ClassicAlgPolicy> {
 
   // next
   template <class _Iterator>
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iterator __next_sentinel(_Iterator, _Iterator __last) {
+  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iterator __next_until(_Iterator, _Iterator __last) {
     return __last;
   }
 

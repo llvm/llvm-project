@@ -162,7 +162,7 @@ template <class _AlgPolicy, class _Iterator, class _Sentinel>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Iterator, _Iterator>
 __rotate(_Iterator __first, _Iterator __middle, _Sentinel __last) {
   using _Ret            = pair<_Iterator, _Iterator>;
-  _Iterator __last_iter = _IterOps<_AlgPolicy>::__next_sentinel(__middle, __last);
+  _Iterator __last_iter = _IterOps<_AlgPolicy>::__next_until(__middle, __last);
 
   if (__first == __middle)
     return _Ret(__last_iter, __last_iter);

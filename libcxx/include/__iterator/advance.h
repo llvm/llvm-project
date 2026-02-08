@@ -125,7 +125,7 @@ private:
   // Preconditions: Either `assignable_from<I&, S> || sized_sentinel_for<S, I>` is modeled, or [i, bound_sentinel)
   // denotes a range.
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
-  _LIBCPP_HIDE_FROM_ABI static constexpr void __advance_sentinel(_Ip& __i, _Sp __bound_sentinel) {
+  _LIBCPP_HIDE_FROM_ABI static constexpr void __advance_until(_Ip& __i, _Sp __bound_sentinel) {
     // If `I` and `S` model `assignable_from<I&, S>`, equivalent to `i = std::move(bound_sentinel)`.
     if constexpr (assignable_from<_Ip&, _Sp>) {
       __i = std::move(__bound_sentinel);
@@ -144,17 +144,14 @@ private:
   }
 
 public:
-  // Preconditions: If `I` does not model `bidirectional_iterator`, `n` is not negative.
   template <input_or_output_iterator _Ip>
   _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Ip& __i, iter_difference_t<_Ip> __n) const {
     return __advance_n(__i, __n);
   }
 
-  // Preconditions: Either `assignable_from<I&, S> || sized_sentinel_for<S, I>` is modeled, or [i, bound_sentinel)
-  // denotes a range.
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
   _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Ip& __i, _Sp __bound_sentinel) const {
-    __advance_sentinel(__i, std::move(__bound_sentinel));
+    __advance_until(__i, std::move(__bound_sentinel));
   }
 
   // Preconditions:
