@@ -13,11 +13,12 @@
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Protocol/MCP/Server.h"
-#include "lldb/Protocol/MCP/Transport.h"
-#include <map>
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+#include <cstddef>
 #include <memory>
+#include <mutex>
 #include <thread>
-#include <tuple>
 #include <vector>
 
 namespace lldb_private::mcp {
