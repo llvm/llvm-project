@@ -40,43 +40,49 @@ class LiveStacks {
   ///
   VNInfo::Allocator VNInfoAllocator;
 
-  int StartIdx = -1;
-  SmallVector<LiveInterval *> S2LI;
-  SmallVector<const TargetRegisterClass *> S2RC;
+  /// S2IMap - Stack slot indices to live interval mapping.
+  using SS2IntervalMap = std::unordered_map<int, LiveInterval>;
+  SS2IntervalMap S2IMap;
+
+  /// S2RCMap - Stack slot indices to register class mapping.
+  std::map<int, const TargetRegisterClass *> S2RCMap;
 
 public:
-  using iterator = SmallVector<LiveInterval *>::iterator;
-  using const_iterator = SmallVector<LiveInterval *>::const_iterator;
+  using iterator = SS2IntervalMap::iterator;
+  using const_iterator = SS2IntervalMap::const_iterator;
 
-  const_iterator begin() const { return S2LI.begin(); }
-  const_iterator end() const { return S2LI.end(); }
-  iterator begin() { return S2LI.begin(); }
-  iterator end() { return S2LI.end(); }
+  const_iterator begin() const { return S2IMap.begin(); }
+  const_iterator end() const { return S2IMap.end(); }
+  iterator begin() { return S2IMap.begin(); }
+  iterator end() { return S2IMap.end(); }
 
-  unsigned getStartIdx() const { return StartIdx; }
-  unsigned getNumIntervals() const { return (unsigned)S2LI.size(); }
+  unsigned getNumIntervals() const { return (unsigned)S2IMap.size(); }
 
   LiveInterval &getOrCreateInterval(int Slot, const TargetRegisterClass *RC);
 
   LiveInterval &getInterval(int Slot) {
     assert(Slot >= 0 && "Spill slot indice must be >= 0");
-    return *S2LI[Slot - StartIdx];
+    SS2IntervalMap::iterator I = S2IMap.find(Slot);
+    assert(I != S2IMap.end() && "Interval does not exist for stack slot");
+    return I->second;
   }
 
   const LiveInterval &getInterval(int Slot) const {
     assert(Slot >= 0 && "Spill slot indice must be >= 0");
-    return *S2LI[Slot - StartIdx];
+    SS2IntervalMap::const_iterator I = S2IMap.find(Slot);
+    assert(I != S2IMap.end() && "Interval does not exist for stack slot");
+    return I->second;
   }
 
-  bool hasInterval(int Slot) const {
-    if (Slot < StartIdx || StartIdx == -1)
-      return false;
-    return !getInterval(Slot).empty();
-  }
+  bool hasInterval(int Slot) const { return S2IMap.count(Slot); }
 
   const TargetRegisterClass *getIntervalRegClass(int Slot) const {
     assert(Slot >= 0 && "Spill slot indice must be >= 0");
-    return S2RC[Slot - StartIdx];
+    std::map<int, const TargetRegisterClass *>::const_iterator I =
+        S2RCMap.find(Slot);
+    assert(I != S2RCMap.end() &&
+           "Register class info does not exist for stack slot");
+    return I->second;
   }
 
   VNInfo::Allocator &getVNInfoAllocator() { return VNInfoAllocator; }
