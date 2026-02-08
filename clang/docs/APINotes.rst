@@ -243,6 +243,26 @@ declaration kind), all of which are optional:
         - Name: size
           SwiftSafety: safe
 
+:SwiftAttributes:
+
+  Attach arbitrary Swift attributes to a declaration.
+  This is equivalent to applying the `swift_attr("")` attribute in the header.
+
+  ::
+
+    # Mark safe globals as nonisolated to make them accessible in Swift 6
+    Globals:
+    - Name: globalVariable
+      SwiftAttributes:
+      - "nonisolated(unsafe)"
+    
+    # Apply Swift macros to C declarations on import
+    Functions:
+    - Name: cFunction
+      SwiftAttributes:
+      - "@MyModule.GenerateWrapper"
+  
+
 :Availability, AvailabilityMsg:
 
   A value of "nonswift" is equivalent to ``NS_SWIFT_UNAVAILABLE``. A value of
