@@ -1072,6 +1072,16 @@ class BinOpSameOpcodeHelper {
     }
 
     SmallVector<Value *> getOperand(const Instruction *To) const {
+      auto GetIdentityValue = [](unsigned Opcode, unsigned BitWidth) -> APInt {
+        switch (Opcode) {
+        case Instruction::Mul:
+          return APInt::getOneBitSet(BitWidth, 0);
+        case Instruction::And:
+          return APInt::getAllOnes(BitWidth);
+        default:
+          return APInt::getZero(BitWidth);
+        }
+      };
       unsigned ToOpcode = To->getOpcode();
       unsigned FromOpcode = I->getOpcode();
       if (FromOpcode == ToOpcode)
@@ -1088,9 +1098,7 @@ class BinOpSameOpcodeHelper {
                                           FromCIValue.getZExtValue());
         } else {
           assert(FromCIValue.isZero() && "Cannot convert the instruction.");
-          ToCIValue = ToOpcode == Instruction::And
-                          ? APInt::getAllOnes(FromCIValueBitWidth)
-                          : APInt::getZero(FromCIValueBitWidth);
+          ToCIValue = GetIdentityValue(ToOpcode, FromCIValueBitWidth);
         }
         break;
       case Instruction::Mul:
@@ -1099,15 +1107,13 @@ class BinOpSameOpcodeHelper {
           ToCIValue = APInt(FromCIValueBitWidth, FromCIValue.logBase2());
         } else {
           assert(FromCIValue.isOne() && "Cannot convert the instruction.");
-          ToCIValue = ToOpcode == Instruction::And
-                          ? APInt::getAllOnes(FromCIValueBitWidth)
-                          : APInt::getZero(FromCIValueBitWidth);
+          ToCIValue = GetIdentityValue(ToOpcode, FromCIValueBitWidth);
         }
         break;
       case Instruction::Add:
       case Instruction::Sub:
         if (FromCIValue.isZero()) {
-          ToCIValue = APInt::getZero(FromCIValueBitWidth);
+          ToCIValue = GetIdentityValue(ToOpcode, FromCIValueBitWidth);
         } else {
           assert(is_contained({Instruction::Add, Instruction::Sub}, ToOpcode) &&
                  "Cannot convert the instruction.");
@@ -1117,13 +1123,11 @@ class BinOpSameOpcodeHelper {
         break;
       case Instruction::And:
         assert(FromCIValue.isAllOnes() && "Cannot convert the instruction.");
-        ToCIValue = ToOpcode == Instruction::Mul
-                        ? APInt::getOneBitSet(FromCIValueBitWidth, 0)
-                        : APInt::getZero(FromCIValueBitWidth);
+        ToCIValue = GetIdentityValue(ToOpcode, FromCIValueBitWidth);
         break;
       default:
         assert(FromCIValue.isZero() && "Cannot convert the instruction.");
-        ToCIValue = APInt::getZero(FromCIValueBitWidth);
+        ToCIValue = GetIdentityValue(ToOpcode, FromCIValueBitWidth);
         break;
       }
       Value *LHS = I->getOperand(1 - Pos);
