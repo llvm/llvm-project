@@ -787,13 +787,13 @@ define <16 x i8> @test_remconstant_16i8(<16 x i8> %a) nounwind {
 ; SSE2-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm1[8],xmm3[9],xmm1[9],xmm3[10],xmm1[10],xmm3[11],xmm1[11],xmm3[12],xmm1[12],xmm3[13],xmm1[13],xmm3[14],xmm1[14],xmm3[15],xmm1[15]
 ; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3 # [64,64,32,32,32,128,128,64]
 ; SSE2-NEXT:    psrlw $8, %xmm3
-; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3 # [14,13,12,11,10,9,9,7]
+; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3 # [14,u,13,u,12,u,11,u,10,u,9,u,9,u,7,u]
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
 ; SSE2-NEXT:    pand %xmm4, %xmm3
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
 ; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [64,256,128,32,32,32,64,64]
 ; SSE2-NEXT:    psrlw $8, %xmm2
-; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [7,8,9,10,11,12,13,14]
+; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [7,u,8,u,9,u,10,u,11,u,12,u,13,u,14,u]
 ; SSE2-NEXT:    pand %xmm4, %xmm2
 ; SSE2-NEXT:    packuswb %xmm3, %xmm2
 ; SSE2-NEXT:    psubb %xmm2, %xmm0
@@ -840,7 +840,7 @@ define <16 x i8> @test_remconstant_16i8(<16 x i8> %a) nounwind {
 ; SSE41-NEXT:    movdqa %xmm2, %xmm1
 ; SSE41-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [0,8,0,10,0,12,0,14,0,13,0,11,0,9,0,7]
 ; SSE41-NEXT:    psllw $8, %xmm1
-; SSE41-NEXT:    pmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [7,0,9,0,11,0,13,0,14,0,12,0,10,0,9,0]
+; SSE41-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [7,8,9,10,11,12,13,14,14,13,12,11,10,9,9,7]
 ; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE41-NEXT:    por %xmm1, %xmm2
 ; SSE41-NEXT:    psubb %xmm2, %xmm0
@@ -882,7 +882,7 @@ define <16 x i8> @test_remconstant_16i8(<16 x i8> %a) nounwind {
 ; AVX1-NEXT:    vpackuswb %xmm1, %xmm2, %xmm1
 ; AVX1-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm2 # [0,8,0,10,0,12,0,14,0,13,0,11,0,9,0,7]
 ; AVX1-NEXT:    vpsllw $8, %xmm2, %xmm2
-; AVX1-NEXT:    vpmaddubsw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [7,0,9,0,11,0,13,0,14,0,12,0,10,0,9,0]
+; AVX1-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [7,8,9,10,11,12,13,14,14,13,12,11,10,9,9,7]
 ; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsubb %xmm1, %xmm0, %xmm0

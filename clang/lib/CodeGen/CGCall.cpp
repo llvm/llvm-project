@@ -27,10 +27,12 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "clang/CodeGen/SwiftCallingConv.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Assumptions.h"
@@ -150,7 +152,7 @@ static CanQual<FunctionProtoType> GetFormalType(const CXXMethodDecl *MD) {
 /// and it makes ABI code a little easier to be able to assume that
 /// all parameter and return types are top-level unqualified.
 static CanQualType GetReturnType(QualType RetTy) {
-  return RetTy->getCanonicalTypeUnqualified().getUnqualifiedType();
+  return RetTy->getCanonicalTypeUnqualified();
 }
 
 /// Arrange the argument and result information for a value of the given
@@ -1941,11 +1943,9 @@ static bool HasStrictReturn(const CodeGenModule &Module, QualType RetTy,
 static void addDenormalModeAttrs(llvm::DenormalMode FPDenormalMode,
                                  llvm::DenormalMode FP32DenormalMode,
                                  llvm::AttrBuilder &FuncAttrs) {
-  if (FPDenormalMode != llvm::DenormalMode::getDefault())
-    FuncAttrs.addAttribute("denormal-fp-math", FPDenormalMode.str());
-
-  if (FP32DenormalMode != FPDenormalMode && FP32DenormalMode.isValid())
-    FuncAttrs.addAttribute("denormal-fp-math-f32", FP32DenormalMode.str());
+  llvm::DenormalFPEnv FPEnv(FPDenormalMode, FP32DenormalMode);
+  if (FPEnv != llvm::DenormalFPEnv::getDefault())
+    FuncAttrs.addDenormalFPEnvAttr(FPEnv);
 }
 
 /// Add default attributes to a function, which have merge semantics under
@@ -1991,6 +1991,7 @@ static void getTrivialDefaultFunctionAttributes(
       // This is the default behavior.
       break;
     case CodeGenOptions::FramePointerKind::Reserved:
+    case CodeGenOptions::FramePointerKind::NonLeafNoReserve:
     case CodeGenOptions::FramePointerKind::NonLeaf:
     case CodeGenOptions::FramePointerKind::All:
       FuncAttrs.addAttribute("frame-pointer",
@@ -2166,35 +2167,19 @@ void CodeGen::mergeDefaultFunctionDefinitionAttributes(
 
   llvm::AttributeMask AttrsToRemove;
 
-  llvm::DenormalMode DenormModeToMerge = F.getDenormalModeRaw();
-  llvm::DenormalMode DenormModeToMergeF32 = F.getDenormalModeF32Raw();
-  llvm::DenormalMode Merged =
-      CodeGenOpts.FPDenormalMode.mergeCalleeMode(DenormModeToMerge);
-  llvm::DenormalMode MergedF32 = CodeGenOpts.FP32DenormalMode;
+  llvm::DenormalFPEnv OptsFPEnv(CodeGenOpts.FPDenormalMode,
+                                CodeGenOpts.FP32DenormalMode);
+  llvm::DenormalFPEnv MergedFPEnv =
+      OptsFPEnv.mergeCalleeMode(F.getDenormalFPEnv());
 
-  if (DenormModeToMergeF32.isValid()) {
-    MergedF32 =
-        CodeGenOpts.FP32DenormalMode.mergeCalleeMode(DenormModeToMergeF32);
-  }
-
-  if (Merged == llvm::DenormalMode::getDefault()) {
-    AttrsToRemove.addAttribute("denormal-fp-math");
-  } else if (Merged != DenormModeToMerge) {
+  if (MergedFPEnv == llvm::DenormalFPEnv::getDefault()) {
+    AttrsToRemove.addAttribute(llvm::Attribute::DenormalFPEnv);
+  } else {
     // Overwrite existing attribute
-    FuncAttrs.addAttribute("denormal-fp-math",
-                           CodeGenOpts.FPDenormalMode.str());
-  }
-
-  if (MergedF32 == llvm::DenormalMode::getDefault()) {
-    AttrsToRemove.addAttribute("denormal-fp-math-f32");
-  } else if (MergedF32 != DenormModeToMergeF32) {
-    // Overwrite existing attribute
-    FuncAttrs.addAttribute("denormal-fp-math-f32",
-                           CodeGenOpts.FP32DenormalMode.str());
+    FuncAttrs.addDenormalFPEnvAttr(MergedFPEnv);
   }
 
   F.removeFnAttrs(AttrsToRemove);
-  addDenormalModeAttrs(Merged, MergedF32, FuncAttrs);
 
   overrideFunctionFeaturesWithTargetFeatures(FuncAttrs, F, TargetOpts);
 
@@ -2558,6 +2543,19 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())
       FuncAttrs.addAttribute("aarch64_pstate_sm_body");
+
+    if (auto *ModularFormat = TargetDecl->getAttr<ModularFormatAttr>()) {
+      FormatAttr *Format = TargetDecl->getAttr<FormatAttr>();
+      StringRef Type = Format->getType()->getName();
+      std::string FormatIdx = std::to_string(Format->getFormatIdx());
+      std::string FirstArg = std::to_string(Format->getFirstArg());
+      SmallVector<StringRef> Args = {
+          Type, FormatIdx, FirstArg,
+          ModularFormat->getModularImplFn()->getName(),
+          ModularFormat->getImplName()};
+      llvm::append_range(Args, ModularFormat->aspects());
+      FuncAttrs.addAttribute("modular-format", llvm::join(Args, ","));
+    }
   }
 
   // Attach "no-builtins" attributes to:
@@ -2766,7 +2764,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   }
 
   // Apply `nonnull`, `dereferenceable(N)` and `align N` to the `this` argument,
-  // unless this is a thunk function.
+  // unless this is a thunk function. Add dead_on_return to the `this` argument
+  // in base class destructors to aid in DSE.
   // FIXME: fix this properly, https://reviews.llvm.org/D100388
   if (FI.isInstanceMethod() && !IRFunctionArgs.hasInallocaArg() &&
       !FI.arg_begin()->type->isVoidPointerType() && !IsThunk) {
@@ -2798,6 +2797,27 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                 /*TBAAInfo=*/nullptr, /*forPointeeType=*/true)
             .getAsAlign();
     Attrs.addAlignmentAttr(Alignment);
+
+    const auto *DD = dyn_cast_if_present<CXXDestructorDecl>(
+        CalleeInfo.getCalleeDecl().getDecl());
+    // Do not annotate vector deleting destructors with dead_on_return as the
+    // this pointer in that case points to an array which we cannot
+    // statically know the size of.
+    if (DD &&
+        CalleeInfo.getCalleeDecl().getDtorType() !=
+            CXXDtorType::Dtor_VectorDeleting &&
+        CodeGenOpts.StrictLifetimes) {
+      const CXXRecordDecl *ClassDecl =
+          dyn_cast<CXXRecordDecl>(DD->getDeclContext());
+      // TODO(boomanaiden154): We are being intentionally conservative here
+      // as we gain experience with this optimization. We should remove the
+      // condition for non-virtual bases after more testing. We cannot add
+      // dead_on_return if we have virtual base classes because they will
+      // generally still be live after the base object destructor.
+      if (ClassDecl->getNumBases() == 0 && ClassDecl->getNumVBases() == 0)
+        Attrs.addDeadOnReturnAttr(llvm::DeadOnReturnInfo(
+            Context.getASTRecordLayout(ClassDecl).getDataSize().getQuantity()));
+    }
 
     ArgAttrs[IRArgs.first] = llvm::AttributeSet::get(getLLVMContext(), Attrs);
   }
@@ -2870,7 +2890,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
           // (e.g., Obj-C ARC-managed structs, MSVC callee-destroyed objects).
           if (!ParamType.isDestructedType() || !ParamType->isRecordType() ||
               ParamType->castAsRecordDecl()->isParamDestroyedInCallee())
-            Attrs.addAttribute(llvm::Attribute::DeadOnReturn);
+            Attrs.addDeadOnReturnAttr(llvm::DeadOnReturnInfo());
         }
       }
 
@@ -5326,13 +5346,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       // here, symmetrically with the handling we have for normal pointer args.
       if (SRetPtr.getAddressSpace() != RetAI.getIndirectAddrSpace()) {
         llvm::Value *V = SRetPtr.getBasePointer();
-        LangAS SAS = getLangASFromTargetAS(SRetPtr.getAddressSpace());
         llvm::Type *Ty = llvm::PointerType::get(getLLVMContext(),
                                                 RetAI.getIndirectAddrSpace());
 
-        SRetPtr = SRetPtr.withPointer(
-            getTargetHooks().performAddrSpaceCast(*this, V, SAS, Ty, true),
-            SRetPtr.isKnownNonNull());
+        SRetPtr = SRetPtr.withPointer(performAddrSpaceCast(V, Ty),
+                                      SRetPtr.isKnownNonNull());
       }
       IRCallArgs[IRFunctionArgs.getSRetArgNo()] =
           getAsNaturalPointerTo(SRetPtr, RetTy);
@@ -5475,8 +5493,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           // only the contextual values. If the address space mismatches, see if
           // we can look through a cast to a compatible address space value,
           // otherwise emit a copy.
-          llvm::Value *Val = getTargetHooks().performAddrSpaceCast(
-              *this, V, I->Ty.getAddressSpace(), T, true);
+          llvm::Value *Val = performAddrSpaceCast(V, T);
           if (ArgHasMaybeUndefAttr)
             Val = Builder.CreateFreeze(Val);
           IRCallArgs[FirstIRArg] = Val;
@@ -5560,9 +5577,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         if (FirstIRArg < IRFuncTy->getNumParams() &&
             V->getType() != IRFuncTy->getParamType(FirstIRArg)) {
           assert(V->getType()->isPointerTy() && "Only pointers can mismatch!");
-          auto ActualAS = I->Ty.getAddressSpace();
-          V = getTargetHooks().performAddrSpaceCast(
-              *this, V, ActualAS, IRFuncTy->getParamType(FirstIRArg));
+          V = performAddrSpaceCast(V, IRFuncTy->getParamType(FirstIRArg));
         }
 
         if (ArgHasMaybeUndefAttr)
@@ -5996,11 +6011,20 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     AddObjCARCExceptionMetadata(CI);
 
   // Set tail call kind if necessary.
+  bool IsPPC = getTarget().getTriple().isPPC();
+  bool IsMIPS = getTarget().getTriple().isMIPS();
+  bool HasMips16 = false;
+  if (IsMIPS) {
+    const TargetOptions &TargetOpts = getTarget().getTargetOpts();
+    HasMips16 = TargetOpts.FeatureMap.lookup("mips16");
+    if (!HasMips16)
+      HasMips16 = llvm::is_contained(TargetOpts.Features, "+mips16");
+  }
   if (llvm::CallInst *Call = dyn_cast<llvm::CallInst>(CI)) {
     if (TargetDecl && TargetDecl->hasAttr<NotTailCalledAttr>())
       Call->setTailCallKind(llvm::CallInst::TCK_NoTail);
     else if (IsMustTail) {
-      if (getTarget().getTriple().isPPC()) {
+      if (IsPPC) {
         if (getTarget().getTriple().isOSAIX())
           CGM.getDiags().Report(Loc, diag::err_aix_musttail_unsupported);
         else if (!getTarget().hasFeature("pcrelative-memops")) {
@@ -6025,6 +6049,12 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             }
           }
         }
+      }
+      if (IsMIPS) {
+        if (HasMips16)
+          CGM.getDiags().Report(Loc, diag::err_mips_impossible_musttail) << 0;
+        else if (const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl))
+          CGM.addUndefinedGlobalForTailCall({FD, Loc});
       }
       Call->setTailCallKind(llvm::CallInst::TCK_MustTail);
     }

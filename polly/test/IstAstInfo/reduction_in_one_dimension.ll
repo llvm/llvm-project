@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -polly-print-ast -polly-ast-detect-parallel -disable-output < %s | FileCheck %s
 ;
 ; Verify that we won't privatize anything in the outer dimension
 ;

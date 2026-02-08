@@ -14,18 +14,14 @@
 
 class LlvmLibcPrintfConverterTest : public LIBC_NAMESPACE::testing::Test {
 protected:
-  // void SetUp() override {}
-  // void TearDown() override {}
+  LlvmLibcPrintfConverterTest() : wb(str, sizeof(str) - 1), writer(wb) {}
 
   char str[60];
-  LIBC_NAMESPACE::printf_core::WriteBuffer<
-      LIBC_NAMESPACE::printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>
-      wb = LIBC_NAMESPACE::printf_core::WriteBuffer<
-          LIBC_NAMESPACE::printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>(
-          str, sizeof(str) - 1);
-  LIBC_NAMESPACE::printf_core::Writer<
-      LIBC_NAMESPACE::printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>
-      writer = LIBC_NAMESPACE::printf_core::Writer(wb);
+  LIBC_NAMESPACE::printf_core::DropOverflowBuffer wb;
+  LIBC_NAMESPACE::printf_core::Writer<LIBC_NAMESPACE::printf_core::Mode<
+      LIBC_NAMESPACE::printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>::
+                                          value>
+      writer;
 };
 
 TEST_F(LlvmLibcPrintfConverterTest, SimpleRawConversion) {

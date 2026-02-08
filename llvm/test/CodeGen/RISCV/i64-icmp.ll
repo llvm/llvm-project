@@ -828,4 +828,3 @@ define i64 @mask_test_eq_multiuse(i64 %x, ptr %p) nounwind {
   ret i64 %ext
 }
 
-declare i64 @llvm.umin.i64(i64, i64)

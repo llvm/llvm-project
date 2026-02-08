@@ -20,8 +20,10 @@
 #include "clang/Testing/CommandLineArgs.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "clang/Tooling/JSONCompilationDatabase.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/Host.h"
@@ -74,6 +76,20 @@ TEST(runToolOnCode, FindsNoTopLevelDeclOnEmptyCode) {
           std::make_unique<FindTopLevelDeclConsumer>(&FoundTopLevelDecl)),
       ""));
   EXPECT_FALSE(FoundTopLevelDecl);
+}
+
+TEST(runToolOnCode, CudaSyntaxOnly) {
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      std::make_unique<TestAction>(std::make_unique<clang::ASTConsumer>()), "",
+      {"-fsyntax-only", "-x", "cuda", "--offload-arch=sm_70", "-nocudalib",
+       "-nocudainc"}));
+}
+
+TEST(runToolOnCode, CudaMultipleArchs) {
+  EXPECT_TRUE(runToolOnCodeWithArgs(
+      std::make_unique<TestAction>(std::make_unique<clang::ASTConsumer>()), "",
+      {"-fsyntax-only", "-x", "cuda", "--offload-arch=sm_70,sm_80",
+       "-nocudalib", "-nocudainc"}));
 }
 
 namespace {
@@ -1032,6 +1048,137 @@ TEST(runToolOnCode, TestResetDiagnostics) {
       runToolOnCode(std::make_unique<ResetDiagnosticAction>(),
                     "struct Foo { Foo(int); ~Foo(); struct Fwd _fwd; };"
                     "void func() { long x; Foo f(x); }"));
+}
+
+namespace {
+struct TestCommand {
+  llvm::StringRef File;
+  llvm::StringRef Command;
+};
+
+std::string runToolWithProgress(llvm::ArrayRef<TestCommand> Commands,
+                                llvm::StringRef BaseDir) {
+  std::string ErrorMessage;
+
+  llvm::json::Array Entries;
+  for (const auto &Cmd : Commands) {
+    Entries.push_back(llvm::json::Object{
+        {"directory", BaseDir}, {"command", Cmd.Command}, {"file", Cmd.File}});
+  }
+  std::string DatabaseContent;
+  llvm::raw_string_ostream OS(DatabaseContent);
+  OS << llvm::json::Value(std::move(Entries));
+
+  std::unique_ptr<CompilationDatabase> Database(
+      JSONCompilationDatabase::loadFromBuffer(DatabaseContent, ErrorMessage,
+                                              JSONCommandLineSyntax::Gnu));
+  if (!Database) {
+    ADD_FAILURE() << "Failed to load compilation database: " << ErrorMessage;
+    return "";
+  }
+
+  std::vector<std::string> AbsoluteFiles;
+  for (const auto &Cmd : Commands) {
+    SmallString<32> NativeFile(BaseDir);
+    llvm::sys::path::append(NativeFile, Cmd.File);
+    llvm::sys::path::native(NativeFile);
+    std::string AbsPath = std::string(NativeFile);
+    if (AbsoluteFiles.empty() || AbsoluteFiles.back() != AbsPath) {
+      AbsoluteFiles.push_back(AbsPath);
+    }
+  }
+
+  ClangTool Tool(*Database, AbsoluteFiles);
+  for (const auto &F : AbsoluteFiles) {
+    Tool.mapVirtualFile(F, "int x;");
+  }
+
+  testing::internal::CaptureStderr();
+  Tool.run(newFrontendActionFactory<SyntaxOnlyAction>().get());
+  return testing::internal::GetCapturedStderr();
+}
+} // namespace
+
+TEST(ClangToolTest, ProgressReportSingleFile) {
+  SmallString<32> BaseDir;
+  llvm::sys::path::system_temp_directory(false, BaseDir);
+  llvm::sys::path::native(BaseDir, llvm::sys::path::Style::posix);
+
+  EXPECT_TRUE(
+      runToolWithProgress({{"test.cpp", "clang++ -c test.cpp"}}, BaseDir)
+          .empty());
+}
+
+TEST(ClangToolTest, ProgressReportMultipleFiles) {
+  SmallString<32> BaseDir;
+  llvm::sys::path::system_temp_directory(false, BaseDir);
+  llvm::sys::path::native(BaseDir, llvm::sys::path::Style::posix);
+
+  std::string Output =
+      runToolWithProgress({{"test1.cpp", "clang++ -c test1.cpp"},
+                           {"test2.cpp", "clang++ -c test2.cpp"}},
+                          BaseDir);
+
+  SmallString<32> NativeFile1(BaseDir);
+  llvm::sys::path::append(NativeFile1, "test1.cpp");
+  llvm::sys::path::native(NativeFile1);
+  SmallString<32> NativeFile2(BaseDir);
+  llvm::sys::path::append(NativeFile2, "test2.cpp");
+  llvm::sys::path::native(NativeFile2);
+
+  std::string Expected = "[1/2] Processing file " + std::string(NativeFile1) +
+                         ".\n" + "[2/2] Processing file " +
+                         std::string(NativeFile2) + ".\n";
+  EXPECT_EQ(Output, Expected);
+}
+
+TEST(ClangToolTest, ProgressReportMultipleCommands) {
+  SmallString<32> BaseDir;
+  llvm::sys::path::system_temp_directory(false, BaseDir);
+  llvm::sys::path::native(BaseDir, llvm::sys::path::Style::posix);
+
+  std::string Output =
+      runToolWithProgress({{"test.cpp", "clang++ -c test.cpp -DCMD1"},
+                           {"test.cpp", "clang++ -c test.cpp -DCMD2"}},
+                          BaseDir);
+
+  SmallString<32> NativeFile(BaseDir);
+  llvm::sys::path::append(NativeFile, "test.cpp");
+  llvm::sys::path::native(NativeFile);
+  std::string Expected =
+      "[1/1] (1/2) Processing file " + std::string(NativeFile) + ".\n" +
+      "[1/1] (2/2) Processing file " + std::string(NativeFile) + ".\n";
+  EXPECT_EQ(Output, Expected);
+}
+
+TEST(ClangToolTest, ProgressReportMixed) {
+  SmallString<32> BaseDir;
+  llvm::sys::path::system_temp_directory(false, BaseDir);
+  llvm::sys::path::native(BaseDir, llvm::sys::path::Style::posix);
+
+  std::string Output =
+      runToolWithProgress({{"test1.cpp", "clang++ -c test1.cpp"},
+                           {"test2.cpp", "clang++ -c test2.cpp -DCMD1"},
+                           {"test2.cpp", "clang++ -c test2.cpp -DCMD2"},
+                           {"test3.cpp", "clang++ -c test3.cpp"}},
+                          BaseDir);
+
+  SmallString<32> NativeFile1(BaseDir);
+  llvm::sys::path::append(NativeFile1, "test1.cpp");
+  llvm::sys::path::native(NativeFile1);
+  SmallString<32> NativeFile2(BaseDir);
+  llvm::sys::path::append(NativeFile2, "test2.cpp");
+  llvm::sys::path::native(NativeFile2);
+  SmallString<32> NativeFile3(BaseDir);
+  llvm::sys::path::append(NativeFile3, "test3.cpp");
+  llvm::sys::path::native(NativeFile3);
+
+  std::string Expected =
+      "[1/3] Processing file " + std::string(NativeFile1) + ".\n" +
+      "[2/3] (1/2) Processing file " + std::string(NativeFile2) + ".\n" +
+      "[2/3] (2/2) Processing file " + std::string(NativeFile2) + ".\n" +
+      "[3/3] Processing file " + std::string(NativeFile3) + ".\n";
+  EXPECT_EQ(Output, Expected);
 }
 
 } // end namespace tooling

@@ -126,7 +126,7 @@ public:
   llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
-    return std::make_pair(32, 32);
+    return std::make_pair(64, 64);
   }
 
   bool supportsCpuSupports() const override { return getTriple().isOSLinux(); }
@@ -175,13 +175,13 @@ public:
     IntPtrType = SignedInt;
     PtrDiffType = SignedInt;
     SizeType = UnsignedInt;
-    resetDataLayout("e-m:e-p:32:32-i64:64-n32-S128");
+    resetDataLayout();
   }
 
   bool setABI(const std::string &Name) override {
     if (Name == "ilp32e") {
       ABI = Name;
-      resetDataLayout("e-m:e-p:32:32-i64:64-n32-S32");
+      resetDataLayout();
       return true;
     }
 
@@ -206,13 +206,13 @@ public:
       : RISCVTargetInfo(Triple, Opts) {
     LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
     IntMaxType = Int64Type = SignedLong;
-    resetDataLayout("e-m:e-p:64:64-i64:64-i128:128-n32:64-S128");
+    resetDataLayout();
   }
 
   bool setABI(const std::string &Name) override {
     if (Name == "lp64e") {
       ABI = Name;
-      resetDataLayout("e-m:e-p:64:64-i64:64-i128:128-n32:64-S64");
+      resetDataLayout();
       return true;
     }
 

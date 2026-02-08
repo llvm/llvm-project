@@ -193,7 +193,7 @@ TEST(BitReaderTest, MaterializeFunctionsForBlockAddr) { // PR11677
 
   LLVMContext Context;
   std::unique_ptr<Module> M = getLazyModuleFromAssembly(
-      Context, Mem, "@table = constant i8* blockaddress(@func, %bb)\n"
+      Context, Mem, "@table = constant ptr blockaddress(@func, %bb)\n"
                     "define void @func() {\n"
                     "  unreachable\n"
                     "bb:\n"
@@ -208,8 +208,8 @@ TEST(BitReaderTest, MaterializeFunctionsForBlockAddrInFunctionBefore) {
 
   LLVMContext Context;
   std::unique_ptr<Module> M = getLazyModuleFromAssembly(
-      Context, Mem, "define i8* @before() {\n"
-                    "  ret i8* blockaddress(@func, %bb)\n"
+      Context, Mem, "define ptr @before() {\n"
+                    "  ret ptr blockaddress(@func, %bb)\n"
                     "}\n"
                     "define void @other() {\n"
                     "  unreachable\n"
@@ -243,8 +243,8 @@ TEST(BitReaderTest, MaterializeFunctionsForBlockAddrInFunctionAfter) {
                     "define void @other() {\n"
                     "  unreachable\n"
                     "}\n"
-                    "define i8* @after() {\n"
-                    "  ret i8* blockaddress(@func, %bb)\n"
+                    "define ptr @after() {\n"
+                    "  ret ptr blockaddress(@func, %bb)\n"
                     "}\n");
   EXPECT_TRUE(M->getFunction("after")->empty());
   EXPECT_TRUE(M->getFunction("func")->empty());

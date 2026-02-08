@@ -59,6 +59,8 @@ LLVM_ABI extern const char *MemoryReadStringsWrapperName;
 LLVM_ABI extern const char *RegisterEHFrameSectionAllocActionName;
 LLVM_ABI extern const char *DeregisterEHFrameSectionAllocActionName;
 
+LLVM_ABI extern const char *RegisterJITLoaderGDBAllocActionName;
+
 LLVM_ABI extern const char *RunAsMainWrapperName;
 LLVM_ABI extern const char *RunAsVoidFunctionWrapperName;
 LLVM_ABI extern const char *RunAsIntFunctionWrapperName;

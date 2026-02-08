@@ -40,7 +40,6 @@
 #include <algorithm>
 #include <cassert>
 #include <optional>
-#include <utility>
 
 using namespace llvm;
 using namespace llvm::at;
@@ -61,6 +60,23 @@ TinyPtrVector<DbgVariableRecord *> llvm::findDVRDeclares(Value *V) {
       Declares.push_back(DVR);
 
   return Declares;
+}
+
+TinyPtrVector<DbgVariableRecord *> llvm::findDVRDeclareValues(Value *V) {
+  // This function is hot. Check whether the value has any metadata to avoid a
+  // DenseMap lookup. This check is a bitfield datamember lookup.
+  if (!V->isUsedByMetadata())
+    return {};
+  auto *L = ValueAsMetadata::getIfExists(V);
+  if (!L)
+    return {};
+
+  TinyPtrVector<DbgVariableRecord *> DEclareValues;
+  for (DbgVariableRecord *DVR : L->getAllDbgVariableRecordUsers())
+    if (DVR->getType() == DbgVariableRecord::LocationType::DeclareValue)
+      DEclareValues.push_back(DVR);
+
+  return DEclareValues;
 }
 
 TinyPtrVector<DbgVariableRecord *> llvm::findDVRValues(Value *V) {
@@ -160,6 +176,7 @@ void DebugInfoFinder::reset() {
   GVs.clear();
   TYs.clear();
   Scopes.clear();
+  Macros.clear();
   NodesSeen.clear();
 }
 
@@ -196,6 +213,8 @@ void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
       processSubprogram(cast<DISubprogram>(RT));
   for (auto *Import : CU->getImportedEntities())
     processImportedEntity(Import);
+  for (auto *Macro : CU->getMacros())
+    processMacroNode(Macro, nullptr);
 }
 
 void DebugInfoFinder::processInstruction(const Module &M,
@@ -259,6 +278,36 @@ void DebugInfoFinder::processImportedEntity(const DIImportedEntity *Import) {
     processScope(M->getScope());
 }
 
+/// Process a macro debug info node (DIMacroNode).
+///
+/// A DIMacroNode is one of two types:
+///   - DIMacro: A single macro definition. Add it to the Macros list along with
+///     its containing DIMacroFile.
+///   - DIMacroFile: A file containing macros. Recursively process all nested
+///     macro nodes within it (avoiding duplicates by tracking visited nodes).
+void DebugInfoFinder::processMacroNode(DIMacroNode *Macro,
+                                       DIMacroFile *CurrentMacroFile) {
+  if (!Macro)
+    return;
+
+  if (auto *M = dyn_cast<DIMacro>(Macro)) {
+    addMacro(M, CurrentMacroFile);
+    return;
+  }
+
+  auto *MF = dyn_cast<DIMacroFile>(Macro);
+  assert(MF &&
+         "Expected a DIMacroFile (it can't be any other type at this point)");
+
+  // Check if we've already seen this macro file to avoid infinite recursion
+  if (!NodesSeen.insert(MF).second)
+    return;
+
+  // Recursively process nested macros in the macro file
+  for (auto *Element : MF->getElements())
+    processMacroNode(Element, MF);
+}
+
 void DebugInfoFinder::processScope(DIScope *Scope) {
   if (!Scope)
     return;
@@ -308,9 +357,9 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
   }
 
   SP->forEachRetainedNode(
-      [this](const DILocalVariable *LV) { processVariable(LV); },
-      [](const DILabel *L) {},
-      [this](const DIImportedEntity *IE) { processImportedEntity(IE); });
+      [this](DILocalVariable *LV) { processVariable(LV); }, [](DILabel *L) {},
+      [this](DIImportedEntity *IE) { processImportedEntity(IE); },
+      [this](DIType *T) { processType(T); });
 }
 
 void DebugInfoFinder::processVariable(const DILocalVariable *DV) {
@@ -370,6 +419,17 @@ bool DebugInfoFinder::addScope(DIScope *Scope) {
   if (!NodesSeen.insert(Scope).second)
     return false;
   Scopes.push_back(Scope);
+  return true;
+}
+
+bool DebugInfoFinder::addMacro(DIMacro *Macro, DIMacroFile *MacroFile) {
+  if (!Macro)
+    return false;
+
+  if (!NodesSeen.insert(Macro).second)
+    return false;
+
+  Macros.push_back(std::make_pair(Macro, MacroFile));
   return true;
 }
 

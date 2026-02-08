@@ -39,6 +39,11 @@ func.func @extract_slice_zero_size_dim(%arg0: tensor<10x4x1xf32>, %dim_0: index,
     return
 }
 
+func.func @extract_slice_empty_tensor(%arg0: tensor<10x4x1xf32>, %dim_0: index, %dim_1: index, %dim_2: index, %offset: index) {
+    tensor.extract_slice %arg0[%offset, 0, 0] [%dim_0, %dim_1, %dim_2] [1, 1, 1] : tensor<10x4x1xf32> to tensor<?x?x?xf32>
+    return
+}
+
 
 func.func @main() {
   %0 = arith.constant 0 : index
@@ -114,6 +119,10 @@ func.func @main() {
   %dim_1 = arith.constant 4 : index
   %dim_2 = arith.constant 1 : index
   func.call @extract_slice_zero_size_dim(%cst10x4x1xf32, %dim_0, %dim_1, %dim_2) : (tensor<10x4x1xf32>, index, index, index) -> ()
+
+  // CHECK-NOT: ERROR: Runtime op verification failed
+  %offset = arith.constant 10 : index  
+  func.call @extract_slice_empty_tensor(%cst10x4x1xf32, %dim_0, %dim_1, %dim_2, %offset) : (tensor<10x4x1xf32>, index, index, index, index) -> ()
 
   return
 }

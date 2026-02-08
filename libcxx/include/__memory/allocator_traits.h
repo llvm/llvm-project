@@ -11,6 +11,7 @@
 #define _LIBCPP___MEMORY_ALLOCATOR_TRAITS_H
 
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__cstddef/size_t.h>
 #include <__fwd/memory.h>
 #include <__memory/construct_at.h>
@@ -223,8 +224,13 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(allocation_result);
 
 #endif // _LIBCPP_STD_VER
 
+template <class>
+struct allocator_traits;
+
+// We have a base class that can be specialized for different allocators, since the metaprogramming to get the aliases
+// is quite expensive and the definition of these aliases is usually quite trivial in the end.
 template <class _Alloc>
-struct allocator_traits {
+struct __allocator_traits_base {
   using allocator_type                         = _Alloc;
   using value_type                             = typename allocator_type::value_type;
   using pointer                                = __pointer<value_type, allocator_type>;
@@ -253,6 +259,60 @@ struct allocator_traits {
     using other = allocator_traits<typename rebind_alloc<_Tp>::other>;
   };
 #endif // _LIBCPP_CXX03_LANG
+};
+
+template <class _Tp>
+struct __allocator_traits_base<allocator<_Tp> > {
+  using allocator_type                         = allocator<_Tp>;
+  using value_type                             = _Tp;
+  using pointer                                = _Tp*;
+  using const_pointer                          = const _Tp*;
+  using void_pointer                           = void*;
+  using const_void_pointer                     = const void*;
+  using difference_type                        = ptrdiff_t;
+  using size_type                              = size_t;
+  using propagate_on_container_copy_assignment = false_type;
+  using propagate_on_container_move_assignment = true_type;
+  using propagate_on_container_swap            = false_type;
+  using is_always_equal                        = true_type;
+
+#ifndef _LIBCPP_CXX03_LANG
+  template <class _Up>
+  using rebind_alloc = allocator<_Up>;
+  template <class _Up>
+  using rebind_traits = allocator_traits<allocator<_Up> >;
+#else
+  template <class _Up>
+  struct rebind_alloc {
+    using other = allocator<_Up>;
+  };
+  template <class _Up>
+  struct rebind_traits {
+    using other = allocator_traits<allocator<_Up> >;
+  };
+#endif
+};
+
+template <class _Alloc>
+struct allocator_traits : __allocator_traits_base<_Alloc> {
+  using __base _LIBCPP_NODEBUG = __allocator_traits_base<_Alloc>;
+
+  using allocator_type                         = typename __base::allocator_type;
+  using value_type                             = typename __base::value_type;
+  using pointer                                = typename __base::pointer;
+  using const_pointer                          = typename __base::const_pointer;
+  using void_pointer                           = typename __base::void_pointer;
+  using const_void_pointer                     = typename __base::const_void_pointer;
+  using difference_type                        = typename __base::difference_type;
+  using size_type                              = typename __base::size_type;
+  using propagate_on_container_copy_assignment = typename __base::propagate_on_container_copy_assignment;
+  using propagate_on_container_move_assignment = typename __base::propagate_on_container_move_assignment;
+  using is_always_equal                        = typename __base::is_always_equal;
+
+  template <class _Tp>
+  using rebind_alloc = typename __base::template rebind_alloc<_Tp>;
+  template <class _Tp>
+  using rebind_traits = typename __base::template rebind_traits<_Tp>;
 
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static pointer
   allocate(allocator_type& __a, size_type __n) {
@@ -314,23 +374,25 @@ struct allocator_traits {
   }
 
   template <class _Ap = _Alloc, __enable_if_t<__has_max_size_v<const _Ap>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static size_type max_size(const allocator_type& __a) _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static size_type
+  max_size(const allocator_type& __a) _NOEXCEPT {
     _LIBCPP_SUPPRESS_DEPRECATED_PUSH
     return __a.max_size();
     _LIBCPP_SUPPRESS_DEPRECATED_POP
   }
   template <class _Ap = _Alloc, __enable_if_t<!__has_max_size_v<const _Ap>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static size_type max_size(const allocator_type&) _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static size_type
+  max_size(const allocator_type&) _NOEXCEPT {
     return numeric_limits<size_type>::max() / sizeof(value_type);
   }
 
   template <class _Ap = _Alloc, __enable_if_t<__has_select_on_container_copy_construction_v<const _Ap>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static allocator_type
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static allocator_type
   select_on_container_copy_construction(const allocator_type& __a) {
     return __a.select_on_container_copy_construction();
   }
   template <class _Ap = _Alloc, __enable_if_t<!__has_select_on_container_copy_construction_v<const _Ap>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static allocator_type
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 static allocator_type
   select_on_container_copy_construction(const allocator_type& __a) {
     return __a;
   }

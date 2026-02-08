@@ -54,9 +54,6 @@ struct BuiltinTensorExternalModel
   mlir::LogicalResult verifyCompatibleBufferType(
       mlir::Type tensor, BufferLikeType bufferType,
       llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
-    assert(isa<TensorType>(tensor) && "expected tensor type");
-    assert(isa<BaseMemRefType>(bufferType) && "expected memref type");
-
     auto tensorType = cast<ShapedType>(tensor);
     auto memrefType = cast<ShapedType>(bufferType);
 

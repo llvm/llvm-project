@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -S -passes=polly-codegen -polly-annotate-metadata-vectorize < %s | FileCheck %s
-; RUN: opt %loadNPMPolly -S -passes=polly-codegen < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' -polly-annotate-metadata-vectorize < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' < %s | FileCheck %s
 
 ; Verify vectorization is not disabled when RTC of Polly is false
 

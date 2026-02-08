@@ -44,11 +44,6 @@ class VPPredicator {
   /// possibly inserting new recipes at \p Dst (using Builder's insertion point)
   VPValue *createEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst);
 
-  /// Returns the *entry* mask for \p VPBB.
-  VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
-    return BlockMaskCache.lookup(VPBB);
-  }
-
   /// Record \p Mask as the *entry* mask of \p VPBB, which is expected to not
   /// already have a mask.
   void setBlockInMask(VPBasicBlock *VPBB, VPValue *Mask) {
@@ -68,6 +63,11 @@ class VPPredicator {
   }
 
 public:
+  /// Returns the *entry* mask for \p VPBB.
+  VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
+    return BlockMaskCache.lookup(VPBB);
+  }
+
   /// Returns the precomputed predicate of the edge from \p Src to \p Dst.
   VPValue *getEdgeMask(const VPBasicBlock *Src, const VPBasicBlock *Dst) const {
     return EdgeMaskCache.lookup({Src, Dst});
@@ -225,6 +225,10 @@ void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
     DefaultMask = Builder.createNot(DefaultMask);
     if (SrcMask)
       DefaultMask = Builder.createLogicalAnd(SrcMask, DefaultMask);
+  } else {
+    // There are no destinations other than the default destination, so this is
+    // an unconditional branch.
+    DefaultMask = SrcMask;
   }
   setEdgeMask(Src, DefaultDst, DefaultMask);
 }
@@ -240,17 +244,18 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     // be duplications since this is a simple recursive scan, but future
     // optimizations will clean it up.
 
+    if (all_equal(make_filter_range(PhiR->incoming_values(), [](VPValue *V) {
+          return !match(V, m_Poison());
+        }))) {
+      PhiR->replaceAllUsesWith(PhiR->getIncomingValue(0));
+      PhiR->eraseFromParent();
+      continue;
+    }
+
     SmallVector<VPValue *, 2> OperandsWithMask;
     for (const auto &[InVPV, InVPBB] : PhiR->incoming_values_and_blocks()) {
       OperandsWithMask.push_back(InVPV);
-      VPValue *EdgeMask = getEdgeMask(InVPBB, VPBB);
-      if (!EdgeMask) {
-        assert(all_equal(PhiR->incoming_values()) &&
-               "Distinct incoming values with one having a full mask");
-        break;
-      }
-
-      OperandsWithMask.push_back(EdgeMask);
+      OperandsWithMask.push_back(getEdgeMask(InVPBB, VPBB));
     }
     PHINode *IRPhi = cast_or_null<PHINode>(PhiR->getUnderlyingValue());
     auto *Blend =
@@ -300,6 +305,35 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
       VPBlockUtils::connectBlocks(PrevVPBB, VPBB);
 
     PrevVPBB = VPBB;
+  }
+
+  // If we folded the tail and introduced a header mask, any extract of the
+  // last element must be updated to extract from the last active lane of the
+  // header mask instead (i.e., the lane corresponding to the last active
+  // iteration).
+  if (FoldTail) {
+    assert(Plan.getExitBlocks().size() == 1 &&
+           "only a single-exit block is supported currently");
+    assert(Plan.getExitBlocks().front()->getSinglePredecessor() ==
+               Plan.getMiddleBlock() &&
+           "the exit block must have middle block as single predecessor");
+
+    VPBuilder B(Plan.getMiddleBlock()->getTerminator());
+    for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
+      VPValue *Op;
+      if (!match(&R, m_CombineOr(
+                         m_ExitingIVValue(m_VPValue(), m_VPValue(Op)),
+                         m_ExtractLastLane(m_ExtractLastPart(m_VPValue(Op))))))
+        continue;
+
+      // Compute the index of the last active lane.
+      VPValue *HeaderMask = Predicator.getBlockInMask(Header);
+      VPValue *LastActiveLane =
+          B.createNaryOp(VPInstruction::LastActiveLane, HeaderMask);
+      auto *Ext =
+          B.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
+      R.getVPSingleValue()->replaceAllUsesWith(Ext);
+    }
   }
   return Predicator.getBlockMaskCache();
 }

@@ -61,19 +61,22 @@ LLVMModuleRef llvm_load_module(LLVMContextRef C, bool Lazy, bool New) {
 }
 
 int llvm_module_dump(bool Lazy, bool New) {
-  LLVMModuleRef M = llvm_load_module(LLVMGetGlobalContext(), Lazy, New);
+  LLVMContextRef C = LLVMContextCreate();
+  LLVMModuleRef M = llvm_load_module(C, Lazy, New);
 
   char *irstr = LLVMPrintModuleToString(M);
   puts(irstr);
   LLVMDisposeMessage(irstr);
 
   LLVMDisposeModule(M);
+  LLVMContextDispose(C);
 
   return 0;
 }
 
 int llvm_module_list_functions(void) {
-  LLVMModuleRef M = llvm_load_module(LLVMGetGlobalContext(), false, false);
+  LLVMContextRef C = LLVMContextCreate();
+  LLVMModuleRef M = llvm_load_module(C, false, false);
   LLVMValueRef f;
 
   f = LLVMGetFirstFunction(M);
@@ -109,12 +112,14 @@ int llvm_module_list_functions(void) {
   }
 
   LLVMDisposeModule(M);
+  LLVMContextDispose(C);
 
   return 0;
 }
 
 int llvm_module_list_globals(void) {
-  LLVMModuleRef M = llvm_load_module(LLVMGetGlobalContext(), false, false);
+  LLVMContextRef C = LLVMContextCreate();
+  LLVMModuleRef M = llvm_load_module(C, false, false);
   LLVMValueRef g;
 
   g = LLVMGetFirstGlobal(M);
@@ -132,6 +137,7 @@ int llvm_module_list_globals(void) {
   }
 
   LLVMDisposeModule(M);
+  LLVMContextDispose(C);
 
   return 0;
 }

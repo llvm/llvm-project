@@ -113,15 +113,18 @@ struct ExtAddrMode {
 ///
 class LLVM_ABI TargetInstrInfo : public MCInstrInfo {
 protected:
+  const TargetRegisterInfo &TRI;
+
   /// Subtarget specific sub-array of MCInstrInfo's RegClassByHwModeTables
   /// (i.e. the table for the active HwMode). This should be indexed by
   /// MCOperandInfo's RegClass field for LookupRegClassByHwMode operands.
   const int16_t *const RegClassByHwMode;
 
-  TargetInstrInfo(unsigned CFSetupOpcode = ~0u, unsigned CFDestroyOpcode = ~0u,
-                  unsigned CatchRetOpcode = ~0u, unsigned ReturnOpcode = ~0u,
+  TargetInstrInfo(const TargetRegisterInfo &TRI, unsigned CFSetupOpcode = ~0u,
+                  unsigned CFDestroyOpcode = ~0u, unsigned CatchRetOpcode = ~0u,
+                  unsigned ReturnOpcode = ~0u,
                   const int16_t *const RegClassByHwModeTable = nullptr)
-      : RegClassByHwMode(RegClassByHwModeTable),
+      : TRI(TRI), RegClassByHwMode(RegClassByHwModeTable),
         CallFrameSetupOpcode(CFSetupOpcode),
         CallFrameDestroyOpcode(CFDestroyOpcode), CatchRetOpcode(CatchRetOpcode),
         ReturnOpcode(ReturnOpcode) {}
@@ -130,6 +133,8 @@ public:
   TargetInstrInfo(const TargetInstrInfo &) = delete;
   TargetInstrInfo &operator=(const TargetInstrInfo &) = delete;
   virtual ~TargetInstrInfo();
+
+  const TargetRegisterInfo &getRegisterInfo() const { return TRI; }
 
   static bool isGenericOpcode(unsigned Opc) {
     return Opc <= TargetOpcode::GENERIC_OP_END;
@@ -154,9 +159,8 @@ public:
 
   /// Given a machine instruction descriptor, returns the register
   /// class constraint for OpNum, or NULL.
-  virtual const TargetRegisterClass *
-  getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-              const TargetRegisterInfo *TRI) const;
+  virtual const TargetRegisterClass *getRegClass(const MCInstrDesc &MCID,
+                                                 unsigned OpNum) const;
 
   /// Returns true if MI is an instruction we are unable to reason about
   /// (like a call or something with unmodeled side effects).
@@ -459,8 +463,7 @@ public:
   /// SubIdx.
   virtual void reMaterialize(MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MI, Register DestReg,
-                             unsigned SubIdx, const MachineInstr &Orig,
-                             const TargetRegisterInfo &TRI) const;
+                             unsigned SubIdx, const MachineInstr &Orig) const;
 
   /// Clones instruction or the whole instruction bundle \p Orig and
   /// insert into \p MBB before \p InsertBefore. The target may update operands
@@ -1018,35 +1021,8 @@ public:
     llvm_unreachable("Target didn't implement TargetInstrInfo::insertSelect!");
   }
 
-  /// Analyze the given select instruction, returning true if
-  /// it cannot be understood. It is assumed that MI->isSelect() is true.
-  ///
-  /// When successful, return the controlling condition and the operands that
-  /// determine the true and false result values.
-  ///
-  ///   Result = SELECT Cond, TrueOp, FalseOp
-  ///
-  /// Some targets can optimize select instructions, for example by predicating
-  /// the instruction defining one of the operands. Such targets should set
-  /// Optimizable.
-  ///
-  /// @param         MI Select instruction to analyze.
-  /// @param Cond    Condition controlling the select.
-  /// @param TrueOp  Operand number of the value selected when Cond is true.
-  /// @param FalseOp Operand number of the value selected when Cond is false.
-  /// @param Optimizable Returned as true if MI is optimizable.
-  /// @returns False on success.
-  virtual bool analyzeSelect(const MachineInstr &MI,
-                             SmallVectorImpl<MachineOperand> &Cond,
-                             unsigned &TrueOp, unsigned &FalseOp,
-                             bool &Optimizable) const {
-    assert(MI.getDesc().isSelect() && "MI must be a select instruction");
-    return true;
-  }
-
-  /// Given a select instruction that was understood by
-  /// analyzeSelect and returned Optimizable = true, attempt to optimize MI by
-  /// merging it with one of its operands. Returns NULL on failure.
+  /// Given an instruction marked as `isSelect = true`, attempt to optimize MI
+  /// by merging it with one of its operands. Returns nullptr on failure.
   ///
   /// When successful, returns the new select instruction. The client is
   /// responsible for deleting MI.
@@ -1062,8 +1038,8 @@ public:
   virtual MachineInstr *optimizeSelect(MachineInstr &MI,
                                        SmallPtrSetImpl<MachineInstr *> &NewMIs,
                                        bool PreferFalse = false) const {
-    // This function must be implemented if Optimizable is ever set.
-    llvm_unreachable("Target must implement TargetInstrInfo::optimizeSelect!");
+    assert(MI.isSelect() && "MI must be a select instruction");
+    return nullptr;
   }
 
   /// Emit instructions to copy a pair of physical registers.
@@ -1193,8 +1169,7 @@ public:
   /// register spill instruction, part of prologue, during the frame lowering.
   virtual void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::storeRegToStackSlot!");
@@ -1207,13 +1182,15 @@ public:
   /// register, \p VReg is the register being assigned. This additional register
   /// argument is needed for certain targets when invoked from RegAllocFast to
   /// map the loaded physical register to its virtual register. A null register
-  /// can be passed elsewhere. The \p Flags is used to set appropriate machine
-  /// flags on the spill instruction e.g. FrameDestroy flag on a callee saved
-  /// register reload instruction, part of epilogue, during the frame lowering.
+  /// can be passed elsewhere. \p SubReg is required for partial reload of
+  /// tuples if the target supports it. The \p Flags is used to set appropriate
+  /// machine flags on the spill instruction e.g. FrameDestroy flag on a callee
+  /// saved register reload instruction, part of epilogue, during the frame
+  /// lowering.
   virtual void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
-      int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const {
     llvm_unreachable("Target didn't implement "
                      "TargetInstrInfo::loadRegFromStackSlot!");
@@ -1276,7 +1253,7 @@ public:
 
   /// Return true when there is potentially a faster code sequence
   /// for an instruction chain ending in \p Root. All potential patterns are
-  /// returned in the \p Pattern vector. Pattern should be sorted in priority
+  /// returned in the \p Patterns vector. Patterns should be sorted in priority
   /// order since the pattern evaluator stops checking as soon as it finds a
   /// faster sequence.
   /// \param Root - Instruction that could be combined with one of its operands
@@ -1378,7 +1355,7 @@ public:
   /// has to decide whether the actual replacement is beneficial or not.
   /// \param Root - Instruction that could be combined with one of its operands
   /// \param Pattern - Combination pattern for Root
-  /// \param InsInstrs - Vector of new instructions that implement P
+  /// \param InsInstrs - Vector of new instructions that implement Pattern
   /// \param DelInstrs - Old instructions, including Root, that could be
   /// replaced by InsInstr
   /// \param InstIdxForVirtReg - map of virtual register to instruction in
@@ -2191,7 +2168,7 @@ public:
                                             unsigned SrcSubReg,
                                             Register Dst) const {
     return BuildMI(MBB, InsPt, DL, get(TargetOpcode::COPY), Dst)
-        .addReg(Src, 0, SrcSubReg);
+        .addReg(Src, {}, SrcSubReg);
   }
 
   /// Returns a \p outliner::OutlinedFunction struct containing target-specific
@@ -2349,7 +2326,18 @@ public:
 
   /// Returns the callee operand from the given \p MI.
   virtual const MachineOperand &getCalleeOperand(const MachineInstr &MI) const {
-    return MI.getOperand(0);
+    assert(MI.isCall());
+
+    switch (MI.getOpcode()) {
+    case TargetOpcode::STATEPOINT:
+    case TargetOpcode::STACKMAP:
+    case TargetOpcode::PATCHPOINT:
+      return MI.getOperand(3);
+    default:
+      return MI.getOperand(0);
+    }
+
+    llvm_unreachable("impossible call instruction");
   }
 
   /// Return the uniformity behavior of the given instruction.

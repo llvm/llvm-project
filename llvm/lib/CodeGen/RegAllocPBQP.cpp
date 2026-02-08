@@ -118,12 +118,7 @@ public:
 
   /// Construct a PBQP register allocator.
   RegAllocPBQP(char *cPassID = nullptr)
-      : MachineFunctionPass(ID), customPassID(cPassID) {
-    initializeSlotIndexesWrapperPassPass(*PassRegistry::getPassRegistry());
-    initializeLiveIntervalsWrapperPassPass(*PassRegistry::getPassRegistry());
-    initializeLiveStacksWrapperLegacyPass(*PassRegistry::getPassRegistry());
-    initializeVirtRegMapWrapperLegacyPass(*PassRegistry::getPassRegistry());
-  }
+      : MachineFunctionPass(ID), customPassID(cPassID) {}
 
   /// Return the pass name.
   StringRef getPassName() const override { return "PBQP Register Allocator"; }

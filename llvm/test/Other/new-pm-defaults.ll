@@ -208,7 +208,6 @@
 ; CHECK-O-NEXT: Running analysis: DemandedBitsAnalysis
 ; CHECK-O-NEXT: Running pass: InstCombinePass
 ; CHECK-EP-PEEPHOLE-NEXT: Running pass: NoOpFunctionPass
-; CHECK-O23SZ-NEXT: Running pass: DFAJumpThreadingPass
 ; CHECK-O23SZ-NEXT: Running pass: JumpThreadingPass
 ; CHECK-O23SZ-NEXT: Running analysis: LazyValueAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: CorrelatedValuePropagationPass
@@ -286,6 +285,7 @@
 ; CHECK-O-NEXT: Running pass: DivRemPairsPass
 ; CHECK-O-NEXT: Running pass: TailCallElimPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
+; CHECK-DEFAULT-NEXT: Running pass: AllocToken
 ; CHECK-EP-OPTIMIZER-LAST: Running pass: NoOpModulePass
 ; CHECK-HOT-COLD-SPLIT-NEXT: Running pass: HotColdSplittingPass
 ; CHECK-IR-OUTLINER-NEXT: Running pass: IROutlinerPass

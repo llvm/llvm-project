@@ -95,7 +95,7 @@ Nomination process
 
 Anyone who feels they meet these criteria can nominate themselves, or may be nominated by a third party such as an existing LLVM Security Response Group member. The nomination should state whether the nominee is nominated as an individual, researcher, or as a vendor contact. It should clearly describe the grounds for nomination.
 
-For the moment, nominations are generally proposed, discussed, and voted on using a github pull request. An `example nomination is available here`_. The use of pull requests helps keep membership discussions open, transparent, and easily accessible to LLVM developers in many ways. If, for any reason, a fully-world-readable nomination seems inappropriate, you may reach out to the LLVM Security Response Group via the `report a vulnerability`_ route, and a discussion can be had about the best way to approach nomination, given the constraints that individuals are under.
+For the moment, nominations are generally proposed, discussed, and voted on using a GitHub pull request. An `example nomination is available here`_. The use of pull requests helps keep membership discussions open, transparent, and easily accessible to LLVM developers in many ways. If, for any reason, a fully-world-readable nomination seems inappropriate, you may reach out to the LLVM Security Response Group via the `report a vulnerability`_ route, and a discussion can be had about the best way to approach nomination, given the constraints that individuals are under.
 
 Choosing new members
 --------------------

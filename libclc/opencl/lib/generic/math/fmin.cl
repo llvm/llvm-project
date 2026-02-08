@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_fmin.h>
-#include <clc/opencl/math/fmin.h>
 
 #define __CLC_FUNCTION fmin
 #define __CLC_BODY <clc/shared/binary_def_with_scalar_second_arg.inc>

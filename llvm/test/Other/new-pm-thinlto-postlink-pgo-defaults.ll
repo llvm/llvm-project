@@ -118,7 +118,6 @@
 ; CHECK-O-NEXT: Running pass: BDCEPass
 ; CHECK-O-NEXT: Running analysis: DemandedBitsAnalysis
 ; CHECK-O-NEXT: Running pass: InstCombinePass
-; CHECK-O23SZ-NEXT: Running pass: DFAJumpThreadingPass
 ; CHECK-O23SZ-NEXT: Running pass: JumpThreadingPass
 ; CHECK-O23SZ-NEXT: Running analysis: LazyValueAnalysis
 ; CHECK-O23SZ-NEXT: Running pass: CorrelatedValuePropagationPass
@@ -189,6 +188,7 @@
 ; CHECK-O-NEXT: Running pass: DivRemPairsPass
 ; CHECK-O-NEXT: Running pass: TailCallElimPass
 ; CHECK-O-NEXT: Running pass: SimplifyCFGPass
+; CHECK-O-NEXT: Running pass: AllocTokenPass
 ; CHECK-O-NEXT: Running pass: GlobalDCEPass
 ; CHECK-O-NEXT: Running pass: ConstantMergePass
 ; CHECK-O-NEXT: Running pass: CGProfilePass
