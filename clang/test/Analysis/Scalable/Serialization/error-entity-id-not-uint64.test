@@ -3,6 +3,6 @@
 // Test that entity_id field must be a valid uint64
 
 // CHECK: failed to read TUSummary
-// CHECK: failed to deserialize entity data map entry
-// CHECK: at index 0
+// CHECK: failed to deserialize EntityDataMap at index 0
+// CHECK: failed to deserialize EntityDataMap entry
 // CHECK: field 'entity_id' is not a valid unsigned 64-bit integer

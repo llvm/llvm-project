@@ -3,4 +3,6 @@
 // Test that 'data' array elements must be objects
 
 // CHECK: failed to read TUSummary
-// CHECK: data array contains non-object element
+// CHECK: failed to deserialize SummaryDataMap
+// CHECK: element at index
+// CHECK: expected SummaryDataMap entry with 'summary_name' and 'data' fields

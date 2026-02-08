@@ -3,6 +3,7 @@
 // Test that DefUse analysis requires 'def_use_chains' field
 
 // CHECK: failed to read TUSummary
-// CHECK: failed to deserialize summary data for summary 'DefUse'
-// CHECK: failed to deserialize entity data map entry at index 0
+// CHECK: failed to deserialize SummaryDataMap entry for summary 'DefUse'
+// CHECK: failed to deserialize EntityDataMap at index 0
+// CHECK: failed to deserialize EntityDataMap entry
 // CHECK: DefUse: missing or invalid 'def_use_chains' field

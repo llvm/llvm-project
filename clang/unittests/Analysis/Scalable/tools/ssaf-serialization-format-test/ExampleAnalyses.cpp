@@ -25,10 +25,24 @@ using namespace clang::ssaf;
 //===----------------------------------------------------------------------===//
 
 namespace {
+/// Example analysis that tracks function call relationships.
+///
+/// This analysis builds a call graph where each function (represented by an
+/// EntityId) is mapped to the set of functions it directly calls. This is
+/// useful for understanding control flow and dependencies between functions.
+///
+/// Example structure:
+///   CallGraph[functionA] = {functionB, functionC}
+///   CallGraph[functionB] = {functionD}
+///
+/// This indicates that functionA calls functionB and functionC, and
+/// functionB calls functionD.
 struct CallGraphAnalysis : EntitySummary {
   CallGraphAnalysis() : EntitySummary(SummaryName("CallGraph")) {}
 
-  // Maps each function (EntityId) to the set of functions it calls
+  /// Maps each caller function (EntityId) to the set of functions it calls.
+  /// Key: Caller function EntityId
+  /// Value: Set of callee function EntityIds
   std::map<EntityId, std::set<EntityId>> CallGraph;
 };
 } // namespace
@@ -118,7 +132,8 @@ deserializeCallGraph(const llvm::json::Object &JSONObj, EntityIdTable &Table,
     Result->CallGraph[Caller] = std::move(Callees);
   }
 
-  return std::move(Result);
+  // Return by value to enable NRVO (Named Return Value Optimization)
+  return Result;
 }
 
 namespace {
@@ -142,11 +157,31 @@ static llvm::Registry<JSONFormat::FormatInfo>::Add<CallGraphFormatInfo>
 //===----------------------------------------------------------------------===//
 
 namespace {
+/// Example analysis that tracks definition-use chains for variables.
+///
+/// This analysis builds def-use chains showing how variable definitions flow
+/// to their use sites. The structure is a three-level nested map:
+///
+/// Level 1: Variable EntityId
+///   Level 2: Definition EntityId (where the variable is defined)
+///     Level 3: Set of Use EntityIds (where that definition is used)
+///
+/// Example structure:
+///   DefUseChains[varX][def1] = {use1, use2}
+///   DefUseChains[varX][def2] = {use3}
+///   DefUseChains[varY][def3] = {use4, use5, use6}
+///
+/// This indicates that:
+/// - Variable varX has two definitions (def1, def2)
+/// - def1 is used at use1 and use2
+/// - def2 is used at use3
+/// - Variable varY has one definition (def3) used at use4, use5, use6
 struct DefUseAnalysis : EntitySummary {
   DefUseAnalysis() : EntitySummary(SummaryName("DefUse")) {}
 
-  // For each variable (EntityId), maps definitions (EntityId) to their use
-  // sites (set of EntityId)
+  /// Maps variables to their definition-use chains.
+  /// Key: Variable EntityId
+  /// Value: Map from definition EntityId to set of use EntityIds
   std::map<EntityId, std::map<EntityId, std::set<EntityId>>> DefUseChains;
 };
 } // namespace
@@ -285,7 +320,7 @@ deserializeDefUse(const llvm::json::Object &JSONObj, EntityIdTable &Table,
     Result->DefUseChains[Variable] = std::move(DefUseMap);
   }
 
-  return std::move(Result);
+  return Result;
 }
 
 namespace {

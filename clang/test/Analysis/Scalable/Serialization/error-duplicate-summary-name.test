@@ -3,4 +3,5 @@
 // Test that duplicate summary names are detected
 
 // CHECK: failed to read TUSummary
-// CHECK: duplicate SummaryName 'test' found
+// CHECK: failed to deserialize SummaryDataMap
+// CHECK: duplicate SummaryName 'test' found at index

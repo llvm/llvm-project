@@ -28,8 +28,6 @@ llvm::Error wrapError(llvm::Error E, const char *Fmt, Args &&...Vals) {
                    std::forward<Args>(Vals)...);
 }
 
-} // namespace
-
 //----------------------------------------------------------------------------
 // JSON Reader and Writer
 //----------------------------------------------------------------------------
@@ -80,7 +78,7 @@ llvm::Expected<llvm::json::Object> readJSONObject(llvm::StringRef Path) {
                                    "failed to read JSON object from file '%s'",
                                    Path.str().c_str());
   }
-  return std::move(*Object);
+  return *Object;
 }
 
 llvm::Error writeJSON(llvm::json::Value &&Value, llvm::StringRef Path) {
@@ -100,6 +98,18 @@ llvm::Error writeJSON(llvm::json::Value &&Value, llvm::StringRef Path) {
 
   return llvm::Error::success();
 }
+
+llvm::StringRef buildNamespaceKindToJSON(BuildNamespaceKind BNK) {
+  return toString(BNK);
+}
+
+SummaryName summaryNameFromJSON(llvm::StringRef SummaryNameStr) {
+  return SummaryName(SummaryNameStr.str());
+}
+
+llvm::StringRef summaryNameToJSON(const SummaryName &SN) { return SN.str(); }
+
+} // namespace
 
 //----------------------------------------------------------------------------
 // JSONFormat Constructor
@@ -134,8 +144,8 @@ uint64_t JSONFormat::entityIdToJSON(EntityId EI) const {
 // BuildNamespaceKind
 //----------------------------------------------------------------------------
 
-llvm::Expected<BuildNamespaceKind>
-JSONFormat::buildNamespaceKindFromJSON(llvm::StringRef BuildNamespaceKindStr) {
+llvm::Expected<BuildNamespaceKind> JSONFormat::buildNamespaceKindFromJSON(
+    llvm::StringRef BuildNamespaceKindStr) const {
   auto OptBuildNamespaceKind = parseBuildNamespaceKind(BuildNamespaceKindStr);
   if (!OptBuildNamespaceKind) {
     return llvm::createStringError(
@@ -147,16 +157,12 @@ JSONFormat::buildNamespaceKindFromJSON(llvm::StringRef BuildNamespaceKindStr) {
   return *OptBuildNamespaceKind;
 }
 
-llvm::StringRef buildNamespaceKindToJSON(BuildNamespaceKind BNK) {
-  return toString(BNK);
-}
-
 //----------------------------------------------------------------------------
 // BuildNamespace
 //----------------------------------------------------------------------------
 
 llvm::Expected<BuildNamespace> JSONFormat::buildNamespaceFromJSON(
-    const llvm::json::Object &BuildNamespaceObject) {
+    const llvm::json::Object &BuildNamespaceObject) const {
   auto OptBuildNamespaceKindStr = BuildNamespaceObject.getString("kind");
   if (!OptBuildNamespaceKindStr) {
     return llvm::createStringError(
@@ -193,7 +199,7 @@ JSONFormat::buildNamespaceToJSON(const BuildNamespace &BN) const {
 //----------------------------------------------------------------------------
 
 llvm::Expected<NestedBuildNamespace> JSONFormat::nestedBuildNamespaceFromJSON(
-    const llvm::json::Array &NestedBuildNamespaceArray) {
+    const llvm::json::Array &NestedBuildNamespaceArray) const {
   std::vector<BuildNamespace> Namespaces;
 
   size_t NamespaceCount = NestedBuildNamespaceArray.size();
@@ -242,8 +248,8 @@ JSONFormat::nestedBuildNamespaceToJSON(const NestedBuildNamespace &NBN) const {
 // EntityName
 //----------------------------------------------------------------------------
 
-llvm::Expected<EntityName>
-JSONFormat::entityNameFromJSON(const llvm::json::Object &EntityNameObject) {
+llvm::Expected<EntityName> JSONFormat::entityNameFromJSON(
+    const llvm::json::Object &EntityNameObject) const {
   const auto OptUSR = EntityNameObject.getString("usr");
   if (!OptUSR) {
     return llvm::createStringError(
@@ -286,22 +292,12 @@ llvm::json::Object JSONFormat::entityNameToJSON(const EntityName &EN) const {
 }
 
 //----------------------------------------------------------------------------
-// SummaryName
-//----------------------------------------------------------------------------
-
-SummaryName summaryNameFromJSON(llvm::StringRef SummaryNameStr) {
-  return SummaryName(SummaryNameStr.str());
-}
-
-llvm::StringRef summaryNameToJSON(const SummaryName &SN) { return SN.str(); }
-
-//----------------------------------------------------------------------------
 // EntityIdTable
 //----------------------------------------------------------------------------
 
 llvm::Expected<std::pair<EntityName, EntityId>>
 JSONFormat::entityIdTableEntryFromJSON(
-    const llvm::json::Object &EntityIdTableEntryObject) {
+    const llvm::json::Object &EntityIdTableEntryObject) const {
 
   const llvm::json::Object *OptEntityNameObject =
       EntityIdTableEntryObject.getObject("name");
@@ -341,14 +337,12 @@ JSONFormat::entityIdTableEntryFromJSON(
   return std::make_pair(std::move(*ExpectedEntityName), std::move(EI));
 }
 
-llvm::Expected<EntityIdTable>
-JSONFormat::entityIdTableFromJSON(const llvm::json::Array &EntityIdTableArray) {
-  const size_t EntityCount = EntityIdTableArray.size();
-
+llvm::Expected<EntityIdTable> JSONFormat::entityIdTableFromJSON(
+    const llvm::json::Array &EntityIdTableArray) const {
   EntityIdTable IdTable;
   std::map<EntityName, EntityId> &Entities = getEntities(IdTable);
 
-  for (size_t Index = 0; Index < EntityCount; ++Index) {
+  for (size_t Index = 0; Index < EntityIdTableArray.size(); ++Index) {
     const llvm::json::Value &EntityIdTableEntryValue =
         EntityIdTableArray[Index];
 
@@ -408,7 +402,7 @@ JSONFormat::entityIdTableToJSON(const EntityIdTable &IdTable) const {
 llvm::Expected<std::unique_ptr<EntitySummary>>
 JSONFormat::entitySummaryFromJSON(const SummaryName &SN,
                                   const llvm::json::Object &EntitySummaryObject,
-                                  EntityIdTable &IdTable) {
+                                  EntityIdTable &IdTable) const {
   auto InfoIt = FormatInfos.find(SN);
   if (InfoIt == FormatInfos.end()) {
     return llvm::createStringError(
@@ -442,83 +436,94 @@ JSONFormat::entitySummaryToJSON(const SummaryName &SN,
 }
 
 //----------------------------------------------------------------------------
-// SummaryData
+// EntityDataMapEntry
+//----------------------------------------------------------------------------
+
+llvm::Expected<std::pair<EntityId, std::unique_ptr<EntitySummary>>>
+JSONFormat::entityDataMapEntryFromJSON(
+    const llvm::json::Object &EntityDataMapEntryObject, const SummaryName &SN,
+    EntityIdTable &IdTable) const {
+
+  const llvm::json::Value *EntityIdIntValue =
+      EntityDataMapEntryObject.get("entity_id");
+  if (!EntityIdIntValue) {
+    return llvm::createStringError(std::errc::invalid_argument,
+                                   "failed to deserialize EntityDataMap entry: "
+                                   "missing required field 'entity_id' "
+                                   "(expected unsigned integer EntityId)");
+  }
+
+  const std::optional<uint64_t> OptEntityIdInt =
+      EntityIdIntValue->getAsUINT64();
+  if (!OptEntityIdInt) {
+    return llvm::createStringError(
+        std::errc::invalid_argument,
+        "failed to deserialize EntityDataMap entry: "
+        "field 'entity_id' is not a valid unsigned 64-bit integer "
+        "(expected non-negative EntityId value)");
+  }
+
+  EntityId EI = entityIdFromJSON(*OptEntityIdInt);
+
+  const llvm::json::Object *OptEntitySummaryObject =
+      EntityDataMapEntryObject.getObject("entity_summary");
+  if (!OptEntitySummaryObject) {
+    return llvm::createStringError(std::errc::invalid_argument,
+                                   "failed to deserialize EntityDataMap entry: "
+                                   "missing or invalid field 'entity_summary' "
+                                   "(expected EntitySummary JSON object)");
+  }
+
+  auto ExpectedEntitySummary =
+      entitySummaryFromJSON(SN, *OptEntitySummaryObject, IdTable);
+  if (!ExpectedEntitySummary)
+    return wrapError(ExpectedEntitySummary.takeError(),
+                     "failed to deserialize EntityDataMap entry");
+
+  return std::make_pair(std::move(EI), std::move(*ExpectedEntitySummary));
+}
+
+//----------------------------------------------------------------------------
+// EntityDataMap
 //----------------------------------------------------------------------------
 
 llvm::Expected<std::map<EntityId, std::unique_ptr<EntitySummary>>>
 JSONFormat::entityDataMapFromJSON(const SummaryName &SN,
                                   const llvm::json::Array &EntityDataArray,
-                                  EntityIdTable &IdTable) {
+                                  EntityIdTable &IdTable) const {
   std::map<EntityId, std::unique_ptr<EntitySummary>> EntityDataMap;
 
-  size_t Index = 0;
-  for (const llvm::json::Value &EntityDataEntryValue : EntityDataArray) {
-    const llvm::json::Object *OptEntityDataEntryObject =
-        EntityDataEntryValue.getAsObject();
-    if (!OptEntityDataEntryObject) {
+  for (size_t Index = 0; Index < EntityDataArray.size(); ++Index) {
+    const llvm::json::Value &EntityDataMapEntryValue = EntityDataArray[Index];
+
+    const llvm::json::Object *OptEntityDataMapEntryObject =
+        EntityDataMapEntryValue.getAsObject();
+    if (!OptEntityDataMapEntryObject) {
       return llvm::createStringError(
           std::errc::invalid_argument,
-          "failed to deserialize entity data map: "
+          "failed to deserialize EntityDataMap: "
           "element at index %zu is not a JSON object "
-          "(expected object with 'entity_id' and 'entity_summary' fields)",
+          "(expected EntityDataMap entry with 'entity_id' and 'entity_summary' "
+          "fields)",
           Index);
     }
 
-    const llvm::json::Value *EntityIdIntValue =
-        OptEntityDataEntryObject->get("entity_id");
-    if (!EntityIdIntValue) {
-      return llvm::createStringError(
-          std::errc::invalid_argument,
-          "failed to deserialize entity data map entry "
-          "at index %zu: missing required field 'entity_id' "
-          "(expected unsigned integer EntityId)",
-          Index);
-    }
+    auto ExpectedEntityDataMapEntry =
+        entityDataMapEntryFromJSON(*OptEntityDataMapEntryObject, SN, IdTable);
+    if (!ExpectedEntityDataMapEntry)
+      return wrapError(ExpectedEntityDataMapEntry.takeError(),
+                       "failed to deserialize EntityDataMap at index %zu",
+                       Index);
 
-    const std::optional<uint64_t> OptEntityIdInt =
-        EntityIdIntValue->getAsUINT64();
-    if (!OptEntityIdInt) {
-      return llvm::createStringError(
-          std::errc::invalid_argument,
-          "failed to deserialize entity data map entry "
-          "at index %zu: field 'entity_id' is not a valid unsigned 64-bit "
-          "integer",
-          Index);
-    }
-
-    EntityId EI = entityIdFromJSON(*OptEntityIdInt);
-
-    const llvm::json::Object *OptEntitySummaryObject =
-        OptEntityDataEntryObject->getObject("entity_summary");
-    if (!OptEntitySummaryObject) {
-      return llvm::createStringError(
-          std::errc::invalid_argument,
-          "failed to deserialize entity data map entry "
-          "at index %zu: missing or invalid field 'entity_summary' "
-          "(expected EntitySummary JSON object)",
-          Index);
-    }
-
-    auto ExpectedEntitySummary =
-        entitySummaryFromJSON(SN, *OptEntitySummaryObject, IdTable);
-
-    if (!ExpectedEntitySummary) {
-      return wrapError(
-          ExpectedEntitySummary.takeError(),
-          "failed to deserialize entity data map entry at index %zu", Index);
-    }
-
-    auto [DataIt, DataInserted] = EntityDataMap.insert(
-        {std::move(EI), std::move(*ExpectedEntitySummary)});
+    auto [DataIt, DataInserted] =
+        EntityDataMap.insert(std::move(*ExpectedEntityDataMapEntry));
     if (!DataInserted) {
       return llvm::createStringError(
           std::errc::invalid_argument,
-          "failed to deserialize entity data map: "
+          "failed to deserialize EntityDataMap: "
           "duplicate EntityId (%zu) found at index %zu",
           getEntityIdIndex(DataIt->first), Index);
     }
-
-    ++Index;
   }
 
   return EntityDataMap;
@@ -539,18 +544,23 @@ llvm::json::Array JSONFormat::entityDataMapToJSON(
   return Result;
 }
 
+//----------------------------------------------------------------------------
+// SummaryDataMapEntry
+//----------------------------------------------------------------------------
+
 llvm::Expected<
     std::pair<SummaryName, std::map<EntityId, std::unique_ptr<EntitySummary>>>>
 JSONFormat::summaryDataMapEntryFromJSON(
-    const llvm::json::Object &SummaryDataObject, EntityIdTable &IdTable) {
+    const llvm::json::Object &SummaryDataMapEntryObject,
+    EntityIdTable &IdTable) const {
 
   std::optional<llvm::StringRef> OptSummaryNameStr =
-      SummaryDataObject.getString("summary_name");
+      SummaryDataMapEntryObject.getString("summary_name");
 
   if (!OptSummaryNameStr) {
     return llvm::createStringError(
         std::errc::invalid_argument,
-        "failed to deserialize summary data: "
+        "failed to deserialize SummaryDataMap entry: "
         "missing required field 'summary_name' "
         "(expected string identifier for the analysis summary)");
   }
@@ -558,22 +568,22 @@ JSONFormat::summaryDataMapEntryFromJSON(
   SummaryName SN = summaryNameFromJSON(*OptSummaryNameStr);
 
   const llvm::json::Array *OptEntityDataArray =
-      SummaryDataObject.getArray("data");
+      SummaryDataMapEntryObject.getArray("data");
   if (!OptEntityDataArray) {
     return llvm::createStringError(
         std::errc::invalid_argument,
-        "failed to deserialize summary data for summary '%s': "
+        "failed to deserialize SummaryDataMap entry: "
         "missing or invalid field 'data' "
-        "(expected JSON array of entity summaries)",
-        SN.str().data());
+        "(expected JSON array of entity data entries)");
   }
 
   auto ExpectedEntityDataMap =
       entityDataMapFromJSON(SN, *OptEntityDataArray, IdTable);
   if (!ExpectedEntityDataMap)
-    return wrapError(ExpectedEntityDataMap.takeError(),
-                     "failed to deserialize summary data for summary '%s'",
-                     SN.str().data());
+    return wrapError(
+        ExpectedEntityDataMap.takeError(),
+        "failed to deserialize SummaryDataMap entry for summary '%s'",
+        SN.str().data());
 
   return std::make_pair(std::move(SN), std::move(*ExpectedEntityDataMap));
 }
@@ -584,6 +594,65 @@ llvm::json::Object JSONFormat::summaryDataMapEntryToJSON(
   llvm::json::Object Result;
   Result["summary_name"] = summaryNameToJSON(SN);
   Result["data"] = entityDataMapToJSON(SN, SD);
+  return Result;
+}
+
+//----------------------------------------------------------------------------
+// SummaryDataMap
+//----------------------------------------------------------------------------
+
+llvm::Expected<
+    std::map<SummaryName, std::map<EntityId, std::unique_ptr<EntitySummary>>>>
+JSONFormat::summaryDataMapFromJSON(const llvm::json::Array &SummaryDataArray,
+                                   EntityIdTable &IdTable) const {
+  std::map<SummaryName, std::map<EntityId, std::unique_ptr<EntitySummary>>>
+      SummaryDataMap;
+
+  for (size_t Index = 0; Index < SummaryDataArray.size(); ++Index) {
+    const llvm::json::Value &SummaryDataMapEntryValue = SummaryDataArray[Index];
+
+    const llvm::json::Object *OptSummaryDataMapEntryObject =
+        SummaryDataMapEntryValue.getAsObject();
+    if (!OptSummaryDataMapEntryObject) {
+      return llvm::createStringError(
+          std::errc::invalid_argument,
+          "failed to deserialize SummaryDataMap: "
+          "element at index %zu is not a JSON object "
+          "(expected SummaryDataMap entry with 'summary_name' and 'data' "
+          "fields)",
+          Index);
+    }
+
+    auto ExpectedSummaryDataMapEntry =
+        summaryDataMapEntryFromJSON(*OptSummaryDataMapEntryObject, IdTable);
+    if (!ExpectedSummaryDataMapEntry)
+      return wrapError(ExpectedSummaryDataMapEntry.takeError(),
+                       "failed to deserialize SummaryDataMap at index %zu",
+                       Index);
+
+    auto [SummaryIt, SummaryInserted] =
+        SummaryDataMap.emplace(std::move(*ExpectedSummaryDataMapEntry));
+    if (!SummaryInserted) {
+      return llvm::createStringError(
+          std::errc::invalid_argument,
+          "failed to deserialize SummaryDataMap: "
+          "duplicate SummaryName '%s' found at index %zu",
+          SummaryIt->first.str().data(), Index);
+    }
+  }
+
+  return SummaryDataMap;
+}
+
+llvm::json::Array JSONFormat::summaryDataMapToJSON(
+    const std::map<SummaryName,
+                   std::map<EntityId, std::unique_ptr<EntitySummary>>>
+        &SummaryDataMap) const {
+  llvm::json::Array Result;
+  Result.reserve(SummaryDataMap.size());
+  for (const auto &[SummaryName, DataMap] : SummaryDataMap) {
+    Result.push_back(summaryDataMapEntryToJSON(SummaryName, DataMap));
+  }
   return Result;
 }
 
@@ -649,38 +718,14 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
           Path.str().c_str());
     }
 
-    // Parse each summary data entry
-    std::map<SummaryName, std::map<EntityId, std::unique_ptr<EntitySummary>>>
-        Data;
-    for (const llvm::json::Value &SummaryDataValue : *SummaryDataArray) {
-      const llvm::json::Object *SummaryDataObject =
-          SummaryDataValue.getAsObject();
-      if (!SummaryDataObject) {
-        return llvm::createStringError(std::errc::invalid_argument,
-                                       "failed to read TUSummary from '%s': "
-                                       "data array contains non-object element",
-                                       Path.str().c_str());
-      }
+    auto ExpectedSummaryDataMap =
+        summaryDataMapFromJSON(*SummaryDataArray, getIdTable(Summary));
+    if (!ExpectedSummaryDataMap)
+      return wrapError(ExpectedSummaryDataMap.takeError(),
+                       "failed to read TUSummary from '%s'",
+                       Path.str().c_str());
 
-      auto ExpectedSummaryDataEntry =
-          summaryDataMapEntryFromJSON(*SummaryDataObject, getIdTable(Summary));
-      if (!ExpectedSummaryDataEntry)
-        return wrapError(ExpectedSummaryDataEntry.takeError(),
-                         "failed to read TUSummary from '%s'",
-                         Path.str().c_str());
-
-      auto [SummaryIt, SummaryInserted] =
-          Data.emplace(std::move(*ExpectedSummaryDataEntry));
-      if (!SummaryInserted) {
-        return llvm::createStringError(std::errc::invalid_argument,
-                                       "failed to read TUSummary from '%s': "
-                                       "duplicate SummaryName '%s' found",
-                                       Path.str().c_str(),
-                                       SummaryIt->first.str().data());
-      }
-    }
-
-    getData(Summary) = std::move(Data);
+    getData(Summary) = std::move(*ExpectedSummaryDataMap);
   }
 
   return Summary;
@@ -694,14 +739,7 @@ llvm::Error JSONFormat::writeTUSummary(const TUSummary &S,
 
   RootObject["id_table"] = entityIdTableToJSON(getIdTable(S));
 
-  {
-    llvm::json::Array SummaryDataArray;
-    for (const auto &[SummaryName, DataMap] : getData(S)) {
-      SummaryDataArray.push_back(
-          summaryDataMapEntryToJSON(SummaryName, DataMap));
-    }
-    RootObject["data"] = std::move(SummaryDataArray);
-  }
+  RootObject["data"] = summaryDataMapToJSON(getData(S));
 
   // Write the JSON to file
   if (auto Error = writeJSON(std::move(RootObject), Path)) {

@@ -3,5 +3,7 @@
 // Test that data array entries must have 'summary_name' field
 
 // CHECK: failed to read TUSummary
+// CHECK: failed to deserialize SummaryDataMap at index
+// CHECK: failed to deserialize SummaryDataMap entry
 // CHECK: missing required field 'summary_name'
 // CHECK: expected string identifier for the analysis summary

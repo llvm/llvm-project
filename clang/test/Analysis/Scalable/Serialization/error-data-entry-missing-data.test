@@ -3,6 +3,7 @@
 // Test that data array entries must have 'data' field
 
 // CHECK: failed to read TUSummary
-// CHECK: for summary 'test'
+// CHECK: failed to deserialize SummaryDataMap at index
+// CHECK: failed to deserialize SummaryDataMap entry
 // CHECK: missing or invalid field 'data'
-// CHECK: expected JSON array of entity summaries
+// CHECK: expected JSON array of entity data entries

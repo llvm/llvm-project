@@ -61,7 +61,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  TUSummary &Summary = *SummaryOrErr;
+  const TUSummary &Summary = *SummaryOrErr;
 
   // Print summary information if requested
   if (PrintSummary) {

@@ -3,7 +3,7 @@
 // Test that entity data entries must have 'entity_id' field
 
 // CHECK: failed to read TUSummary
-// CHECK: failed to deserialize entity data map entry
-// CHECK: at index 0
+// CHECK: failed to deserialize EntityDataMap at index 0
+// CHECK: failed to deserialize EntityDataMap entry
 // CHECK: missing required field 'entity_id'
 // CHECK: expected unsigned integer EntityId
