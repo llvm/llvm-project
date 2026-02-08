@@ -36,7 +36,7 @@ jobs:
           - cd $HOME && printf '#include <iostream>\nint main(int argc, char **argv) { std::cout << "Hello\\n"; }' | clang++ -x c++ - && ./a.out | grep Hello
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           sparse-checkout: |
             .github/workflows/containers/github-action-ci/
@@ -62,7 +62,7 @@ jobs:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           sparse-checkout: |
             .github/actions/push-container
