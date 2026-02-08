@@ -13188,18 +13188,42 @@ SDValue SITargetLowering::lowerFSQRTF64(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue SITargetLowering::lowerFSQRTBF16(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc SL(Op);
+  SDLoc DL(Op);
   assert(!Subtarget->hasBF16TransInsts());
   SDNodeFlags Flags = Op->getFlags();
   SDValue Ext =
-      DAG.getNode(ISD::FP_EXTEND, SL, MVT::f32, Op.getOperand(0), Flags);
+      DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op.getOperand(0), Flags);
 
-  SDValue SqrtID = DAG.getTargetConstant(Intrinsic::amdgcn_sqrt, SL, MVT::i32);
-  SDValue Sqrt =
-      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, MVT::f32, SqrtID, Ext, Flags);
+  SDValue SqrtID = DAG.getTargetConstant(Intrinsic::amdgcn_sqrt, DL, MVT::i32);
 
-  return DAG.getNode(ISD::FP_ROUND, SL, MVT::bf16, Sqrt,
-                     DAG.getTargetConstant(0, SL, MVT::i32), Flags);
+  SDValue ResultF32;
+  if (!allowApproxFunc(DAG, Flags) && needsDenormHandlingF32(DAG, Ext, Flags)) {
+    SDValue ScaleThreshold = DAG.getConstantFP(0x1.0p-96f, DL, MVT::f32);
+    SDValue NeedScale =
+        DAG.getSetCC(DL, MVT::i1, Ext, ScaleThreshold, ISD::SETOLT);
+
+    SDValue ScaleUpFactor = DAG.getConstantFP(0x1.0p+32f, DL, MVT::f32);
+    SDValue ScaledExt =
+        DAG.getNode(ISD::FMUL, DL, MVT::f32, Ext, ScaleUpFactor, Flags);
+    SDValue SqrtInput = DAG.getNode(ISD::SELECT, DL, MVT::f32, NeedScale,
+                                    ScaledExt, Ext, Flags);
+
+    SDValue SqrtExt = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::f32, SqrtID,
+                                  SqrtInput, Flags);
+
+    SDValue ScaleDownFactor = DAG.getConstantFP(0x1.0p-16f, DL, MVT::f32);
+    SDValue ScaledDown =
+        DAG.getNode(ISD::FMUL, DL, MVT::f32, SqrtExt, ScaleDownFactor, Flags);
+
+    ResultF32 = DAG.getNode(ISD::SELECT, DL, MVT::f32, NeedScale, ScaledDown,
+                            SqrtExt, Flags);
+  } else {
+    ResultF32 =
+        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::f32, SqrtID, Ext, Flags);
+  }
+
+  return DAG.getNode(ISD::FP_ROUND, DL, MVT::bf16, ResultF32,
+                     DAG.getTargetConstant(0, DL, MVT::i32), Flags);
 }
 
 SDValue SITargetLowering::LowerTrig(SDValue Op, SelectionDAG &DAG) const {
