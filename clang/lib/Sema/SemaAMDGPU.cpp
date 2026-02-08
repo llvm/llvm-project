@@ -837,7 +837,7 @@ void DiagnoseUnguardedBuiltins::ExitPredicateGuardedContext(bool WasProcCheck) {
 
 inline std::pair<Stmt *, Stmt *> GetTraversalOrder(Stmt *S) {
   std::pair<Stmt *, Stmt *> Ordered;
-  Expr *Condition;
+  Expr *Condition = nullptr;
 
   if (auto *CO = dyn_cast<ConditionalOperator>(S)) {
     Condition = CO->getCond();
