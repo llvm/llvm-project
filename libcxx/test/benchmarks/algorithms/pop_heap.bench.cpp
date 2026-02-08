@@ -13,7 +13,7 @@
 #include "common.h"
 
 namespace {
-template <class ValueType>
+template <class ValueType, class Order>
 struct PopHeap {
   size_t Quantity;
 
@@ -25,6 +25,8 @@ struct PopHeap {
     });
   }
 
+  bool skip() const { return Order() != ::Order::Heap; }
+
   std::string name() const { return "BM_PopHeap" + ValueType::name() + "_" + std::to_string(Quantity); };
 };
 } // namespace
@@ -33,6 +35,6 @@ int main(int argc, char** argv) {
   benchmark::Initialize(&argc, argv);
   if (benchmark::ReportUnrecognizedArguments(argc, argv))
     return 1;
-  makeCartesianProductBenchmark<PopHeap, AllValueTypes>(Quantities);
+  makeCartesianProductBenchmark<PopHeap, AllValueTypes, AllOrders>(Quantities);
   benchmark::RunSpecifiedBenchmarks();
 }
