@@ -7064,7 +7064,11 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       return Op0;
 
     // Canonicalize constant operand as Op1.
-    if (isa<Constant>(Op0))
+    bool Op1IsNaN = false;
+    if (const ConstantFP *CFP = dyn_cast<ConstantFP>(Op1)) {
+      Op1IsNaN = CFP->getValueAPF().isNaN();
+    }
+    if (isa<Constant>(Op0) && !Op1IsNaN)
       std::swap(Op0, Op1);
 
     if (Constant *C = dyn_cast<Constant>(Op1)) {
