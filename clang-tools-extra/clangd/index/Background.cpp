@@ -74,6 +74,7 @@ llvm::SmallString<128> getAbsolutePath(const tooling::CompileCommand &Cmd) {
     llvm::sys::path::append(AbsolutePath, Cmd.Filename);
     llvm::sys::path::remove_dots(AbsolutePath, true);
   }
+  llvm::sys::path::native(AbsolutePath);
   return AbsolutePath;
 }
 
