@@ -21463,6 +21463,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::CompoundAssignOperatorClass:
   case Expr::CompoundLiteralExprClass:
   case Expr::ExtVectorElementExprClass:
+  case Expr::MatrixElementExprClass:
   case Expr::DesignatedInitExprClass:
   case Expr::ArrayInitLoopExprClass:
   case Expr::ArrayInitIndexExprClass:

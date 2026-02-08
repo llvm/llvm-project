@@ -4966,6 +4966,7 @@ recurse:
   case Expr::ChooseExprClass:
   case Expr::CompoundLiteralExprClass:
   case Expr::ExtVectorElementExprClass:
+  case Expr::MatrixElementExprClass:
   case Expr::GenericSelectionExprClass:
   case Expr::ObjCEncodeExprClass:
   case Expr::ObjCIsaExprClass:

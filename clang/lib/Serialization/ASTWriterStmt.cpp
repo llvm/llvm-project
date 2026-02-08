@@ -1205,6 +1205,14 @@ void ASTStmtWriter::VisitExtVectorElementExpr(ExtVectorElementExpr *E) {
   Code = serialization::EXPR_EXT_VECTOR_ELEMENT;
 }
 
+void ASTStmtWriter::VisitMatrixElementExpr(MatrixElementExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getBase());
+  Record.AddIdentifierRef(&E->getAccessor());
+  Record.AddSourceLocation(E->getAccessorLoc());
+  Code = serialization::EXPR_MATRIX_ELEMENT;
+}
+
 void ASTStmtWriter::VisitInitListExpr(InitListExpr *E) {
   VisitExpr(E);
   // NOTE: only add the (possibly null) syntactic form.

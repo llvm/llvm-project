@@ -93,6 +93,7 @@ def CStyleCastExpr : StmtNode<ExplicitCastExpr>;
 def OMPArrayShapingExpr : StmtNode<Expr>;
 def CompoundLiteralExpr : StmtNode<Expr>;
 def ExtVectorElementExpr : StmtNode<Expr>;
+def MatrixElementExpr : StmtNode<Expr>;
 def InitListExpr : StmtNode<Expr>;
 def DesignatedInitExpr : StmtNode<Expr>;
 def DesignatedInitUpdateExpr : StmtNode<Expr>;
