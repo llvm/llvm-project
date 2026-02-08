@@ -81,6 +81,8 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   default:
     if (TT.getVendor() == Triple::AMD)
       SPIRVVersion = VersionTuple(1, 6);
+    else if (TT.getOS() == Triple::ChipStar)
+      SPIRVVersion = VersionTuple(1, 2);
     else
       SPIRVVersion = VersionTuple(1, 4);
   }
