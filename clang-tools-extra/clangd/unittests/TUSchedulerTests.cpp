@@ -1438,6 +1438,140 @@ TEST_F(TUSchedulerTests, IncluderCache) {
       << "association invalidated and then claimed by main3";
 }
 
+// When a non-header file (e.g. child.c) is #included by another non-header
+// file (parent.c), the proxy mechanism should inject -include flags for
+// includes that precede child.c in parent.c. Header files should not get
+// preceding includes injected even when they have a proxy.
+TEST_F(TUSchedulerTests, IncluderCacheNonHeaderProxy) {
+  static std::string Parent = testPath("parent.c"), Child = testPath("child.c"),
+                     Header = testPath("header.h"),
+                     NoCmd = testPath("no_cmd.h");
+  struct NonHeaderCDB : public GlobalCompilationDatabase {
+    std::optional<tooling::CompileCommand>
+    getCompileCommand(PathRef File) const override {
+      if (File == Child || File == NoCmd)
+        return std::nullopt;
+      auto Basic = getFallbackCommand(File);
+      Basic.Heuristic.clear();
+      if (File == Parent)
+        Basic.CommandLine.push_back("-DPARENT");
+      return Basic;
+    }
+  } CDB;
+  TUScheduler S(CDB, optsForTest());
+  auto GetFlags = [&](PathRef File) {
+    S.update(File, getInputs(File, ";"), WantDiagnostics::Yes);
+    EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
+    Notification CmdDone;
+    tooling::CompileCommand Cmd;
+    S.runWithPreamble("GetFlags", File, TUScheduler::StaleOrAbsent,
+                      [&](llvm::Expected<InputsAndPreamble> Inputs) {
+                        ASSERT_FALSE(!Inputs) << Inputs.takeError();
+                        Cmd = std::move(Inputs->Command);
+                        CmdDone.notify();
+                      });
+    CmdDone.wait();
+    EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
+    return Cmd.CommandLine;
+  };
+
+  FS.Files[Header] = "";
+  FS.Files[Child] = ";";
+  FS.Files[NoCmd] = ";";
+
+  // Parent includes header.h, then no_cmd.h, then child.c.
+  // no_cmd.h has no CDB entry, so it gets parent.c as proxy.
+  const char *ParentContents = R"cpp(
+    #include "header.h"
+    #include "no_cmd.h"
+    #include "child.c"
+  )cpp";
+  FS.Files[Parent] = ParentContents;
+  S.update(Parent, getInputs(Parent, ParentContents), WantDiagnostics::Yes);
+  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
+
+  // child.c is a non-header included by a non-header: should get
+  // -include flags for preceding includes.
+  auto ChildFlags = GetFlags(Child);
+  EXPECT_THAT(ChildFlags, Contains("-DPARENT"))
+      << "child.c should use parent.c's compile command";
+  EXPECT_THAT(ChildFlags, Contains("-include"))
+      << "child.c should have preceding includes injected";
+
+  // no_cmd.h is a header included by a non-header: should get proxy
+  // flags but NOT preceding -include injection.
+  auto HdrFlags = GetFlags(NoCmd);
+  EXPECT_THAT(HdrFlags, Contains("-DPARENT"))
+      << "no_cmd.h should use parent.c's compile command";
+  EXPECT_THAT(HdrFlags, Not(Contains("-include")))
+      << "header files should not get preceding includes";
+}
+
+// Cold-start: when a non-header file is opened directly without the proxy
+// (parent) ever being opened, the proxy cache is empty. The cold-start path
+// should preprocess the proxy file (respecting #ifdef guards) and inject
+// preceding includes.
+TEST_F(TUSchedulerTests, IncluderCacheNonHeaderProxyColdStart) {
+  // Cold-start: child.c is opened directly without parent.c being opened
+  // first. The CDB returns an interpolated command for child.c inferred from
+  // parent.c. Preprocessing parent.c should find preceding includes and
+  // inject them as -include flags.
+  static std::string Parent = testPath("parent.c"), Child = testPath("child.c"),
+                     Header = testPath("header.h"),
+                     Sibling = testPath("sibling.c");
+  FS.Files[Header] = "";
+  FS.Files[Sibling] = ";";
+  FS.Files[Child] = ";";
+  FS.Files[Parent] = R"cpp(
+    #include "header.h"
+    #include "sibling.c"
+    #include "child.c"
+  )cpp";
+
+  struct InterpolatingCDB : public GlobalCompilationDatabase {
+    std::optional<tooling::CompileCommand>
+    getCompileCommand(PathRef File) const override {
+      if (File == Parent) {
+        auto Basic = getFallbackCommand(File);
+        Basic.Heuristic.clear();
+        Basic.CommandLine.push_back("-DPARENT");
+        return Basic;
+      }
+      if (File == Child) {
+        // Simulate interpolated command inferred from parent.c
+        auto Basic = getFallbackCommand(File);
+        Basic.Heuristic = "inferred from " + Parent;
+        Basic.CommandLine.push_back("-DPARENT");
+        return Basic;
+      }
+      return std::nullopt;
+    }
+  } CDB;
+
+  TUScheduler S(CDB, optsForTest());
+  S.update(Child, getInputs(Child, ";"), WantDiagnostics::Yes);
+  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
+
+  Notification CmdDone;
+  tooling::CompileCommand Cmd;
+  S.runWithPreamble("GetFlags", Child, TUScheduler::StaleOrAbsent,
+                    [&](llvm::Expected<InputsAndPreamble> Inputs) {
+                      ASSERT_FALSE(!Inputs) << Inputs.takeError();
+                      Cmd = std::move(Inputs->Command);
+                      CmdDone.notify();
+                    });
+  CmdDone.wait();
+  EXPECT_TRUE(S.blockUntilIdle(timeoutSeconds(60)));
+
+  EXPECT_THAT(Cmd.CommandLine, Contains("-DPARENT"))
+      << "child.c should use the interpolated compile command";
+  EXPECT_THAT(Cmd.CommandLine, Contains("-include"))
+      << "child.c should have preceding includes from cold-start proxy scan";
+  // header.h and sibling.c should precede child.c.
+  EXPECT_THAT(Cmd.CommandLine, Contains(Header));
+  EXPECT_THAT(Cmd.CommandLine, Contains(Sibling));
+}
+
 TEST_F(TUSchedulerTests, PreservesLastActiveFile) {
   for (bool Sync : {false, true}) {
     auto Opts = optsForTest();
