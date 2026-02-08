@@ -9,6 +9,7 @@ unittest("CASTests") {
   ]
   sources = [
     "ActionCacheTest.cpp",
+    "BuiltinObjectHasherTest.cpp",
     "CASTestConfig.cpp",
     "NamedValuesSchemaTest.cpp",
     "ObjectStoreTest.cpp",
