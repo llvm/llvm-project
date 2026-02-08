@@ -150,6 +150,10 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 
+- The ``-ffp-contract`` option now honors pragmas by default when the ``fast``
+  argument is used. The ``fast-honor-pragmas`` option is now deprecated and acts
+  as an alias for ``fast``.
+
 Removed Compiler Flags
 ----------------------
 
