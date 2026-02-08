@@ -1950,6 +1950,119 @@ TEST_P(UncheckedStatusOrAccessModelTest, QcheckNeMacro) {
   )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, Member) {
+  // The following examples are not sound as there could be member calls between
+  // the ok() and the value() calls that change the StatusOr value.
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      STATUSOR_INT bar;
+    };
+
+    void target() {
+      Foo foo;
+      if (foo.bar.ok()) foo.bar.value();
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      STATUSOR_INT sor;
+    };
+
+    void target(Foo foo) {
+      foo.sor.value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      STATUSOR_INT sor;
+    };
+
+    void target(Foo foo) {
+      if (foo.sor.ok())
+        foo.sor.value();
+      else
+        foo.sor.value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      STATUSOR_INT sor;
+    };
+
+    void target(Foo foo) {
+      if (foo.sor.status().ok())
+        foo.sor.value();
+      else
+        foo.sor.value();  // [[unsafe]]
+    }
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      STATUSOR_INT sor;
+
+      void target() {
+        if (sor.ok())
+          sor.value();
+        else
+          sor.value();  // [[unsafe]]
+      }
+    };
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      STATUSOR_INT sor;
+
+      void target(bool b) {
+        if (b) {
+          if (!sor.ok()) return;
+        } else {
+          if (!sor.ok()) return;
+        }
+        sor.value();
+      }
+    };
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      struct Bar {
+        STATUSOR_INT sor;
+
+        void target() {
+          if (sor.ok())
+            sor.value();
+          else
+            sor.value();  // [[unsafe]]
+        }
+      };
+    };
+  )cc");
+  ExpectDiagnosticsFor(R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+    struct Foo {
+      STATUSOR_INT sor;
+    };
+
+    void target() {
+      Foo().sor.value();  // [[unsafe]]
+    }
+  )cc");
+}
+
 TEST_P(UncheckedStatusOrAccessModelTest, GlobalVars) {
   // The following examples are not sound as there could be opaque calls between
   // the ok() and the value() calls that change the StatusOr value.
