@@ -107,6 +107,22 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, FPClassTest Mask) {
   return OS;
 }
 
+void DenormalFPEnv::print(raw_ostream &OS, bool OmitIfSame) const {
+  if (F32Mode == DefaultMode) {
+    DefaultMode.print(OS, /*Legacy=*/false, OmitIfSame);
+    return;
+  }
+
+  // Omit printing the base mode if only the f32 mode isn't the default.
+  if (DefaultMode != DenormalMode::getDefault()) {
+    DefaultMode.print(OS, /*Legacy=*/false, OmitIfSame);
+    OS << ", ";
+  }
+
+  OS << "float: ";
+  F32Mode.print(OS, /*Legacy=*/false, OmitIfSame);
+}
+
 static bool cannotOrderStrictlyGreaterImpl(FPClassTest LHS, FPClassTest RHS,
                                            bool OrEqual, bool OrderedZero) {
   LHS &= ~fcNan;

@@ -14,6 +14,10 @@ let Definition = "modulelist" in {
     DefaultEnumValue<"eSymbolDownloadOff">,
     EnumValues<"OptionEnumValues(g_auto_download_enum_values)">,
     Desc<"On macOS, automatically download symbols with dsymForUUID (or an equivalent script/binary) for relevant images in the debug session.">;
+  def SharedCacheBinaryLoading: Property<"shared-cache-binary-loading", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"On macOS, load the binaries from a shared cache blob directly, instead of loading them from lldb's own in-process shared cache.">;
   def ClangModulesCachePath: Property<"clang-modules-cache-path", "FileSpec">,
     Global,
     DefaultStringValue<"">,

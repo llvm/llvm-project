@@ -19,7 +19,6 @@ static_library("elf-core") {
     "RegisterContextPOSIXCore_arm.cpp",
     "RegisterContextPOSIXCore_arm64.cpp",
     "RegisterContextPOSIXCore_loongarch64.cpp",
-    "RegisterContextPOSIXCore_mips64.cpp",
     "RegisterContextPOSIXCore_powerpc.cpp",
     "RegisterContextPOSIXCore_ppc64le.cpp",
     "RegisterContextPOSIXCore_riscv32.cpp",

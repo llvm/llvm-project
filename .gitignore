@@ -20,8 +20,8 @@
 # vim swap files
 .*.sw?
 .sw?
-#OS X specific files.
-.DS_store
+#macOS specific
+.DS_Store
 
 # Ignore the user specified CMake presets in subproject directories.
 /*/CMakeUserPresets.json

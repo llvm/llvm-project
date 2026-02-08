@@ -29,6 +29,7 @@ class PHINode;
 class ScalarEvolution;
 class PredicatedScalarEvolution;
 class TargetLibraryInfo;
+class TargetTransformInfo;
 class VPBuilder;
 class VPRecipeBuilder;
 struct VFRange;
@@ -126,11 +127,9 @@ struct VPlanTransforms {
 
   /// Create VPReductionRecipes for in-loop reductions. This processes chains
   /// of operations contributing to in-loop reductions and creates appropriate
-  /// VPReductionRecipe instances. Block masks from \p BlockMaskCache are used
-  /// to add predication for blocks in \p BlocksNeedingPredication.
+  /// VPReductionRecipe instances.
   static void createInLoopReductionRecipes(
-      VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
-      const DenseSet<BasicBlock *> &BlocksNeedingPredication,
+      VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
       ElementCount MinVF);
 
   /// Update \p Plan to account for all early exits.
@@ -312,6 +311,12 @@ struct VPlanTransforms {
                                          VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                          VPBasicBlock *LatchVPBB);
 
+  /// Replaces the exit condition from
+  ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)
+  /// to
+  ///   (branch-on-cond eq AVLNext, 0)
+  static void convertEVLExitCond(VPlan &Plan);
+
   /// Replace loop regions with explicit CFG.
   static void dissolveLoopRegions(VPlan &Plan);
 
@@ -326,10 +331,6 @@ struct VPlanTransforms {
   /// variable vector lengths instead of fixed lengths. This transformation:
   ///  * Makes EVL-Phi concrete.
   //   * Removes CanonicalIV and increment.
-  ///  * Replaces the exit condition from
-  ///      (branch-on-count CanonicalIVInc, VectorTripCount)
-  ///    to
-  ///      (branch-on-cond eq AVLNext, 0)
   static void canonicalizeEVLLoops(VPlan &Plan);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
@@ -426,12 +427,8 @@ struct VPlanTransforms {
 
   /// Predicate and linearize the control-flow in the only loop region of
   /// \p Plan. If \p FoldTail is true, create a mask guarding the loop
-  /// header, otherwise use all-true for the header mask. Masks for blocks are
-  /// added to a block-to-mask map which is returned in order to be used later
-  /// for wide recipe construction. This argument is temporary and will be
-  /// removed in the future.
-  static DenseMap<VPBasicBlock *, VPValue *>
-  introduceMasksAndLinearize(VPlan &Plan, bool FoldTail);
+  /// header, otherwise use all-true for the header mask.
+  static void introduceMasksAndLinearize(VPlan &Plan, bool FoldTail);
 
   /// Add branch weight metadata, if the \p Plan's middle block is terminated by
   /// a BranchOnCond recipe.
@@ -451,6 +448,17 @@ struct VPlanTransforms {
   /// users in the original exit block using the VPIRInstruction wrapping to the
   /// LCSSA phi.
   static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range);
+
+  /// Optimize FindLast reductions selecting IVs by converting them to FindIV
+  /// reductions, if their IV range excludes a suitable sentinel value.
+  static void optimizeFindIVReductions(VPlan &Plan,
+                                       PredicatedScalarEvolution &PSE, Loop &L);
+
+  /// Detect and create partial reduction recipes for scaled reductions in
+  /// \p Plan. Must be called after recipe construction. If partial reductions
+  /// are only valid for a subset of VFs in Range, Range.End is updated.
+  static void createPartialReductions(VPlan &Plan, VPCostContext &CostCtx,
+                                      VFRange &Range);
 };
 
 } // namespace llvm
