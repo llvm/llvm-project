@@ -7,7 +7,7 @@
   "data": [
     {
       "summary_name": "test",
-      "data": [
+      "summary_data": [
         {
           "entity_id": "not a number",
           "entity_summary": {}

@@ -40,22 +40,30 @@
   "data": [
     {
       "summary_name": "CallGraph",
-      "data": [
+      "summary_data": [
         {
           "entity_id": 0,
           "entity_summary": {
             "call_graph": [
               {
                 "caller": 0,
-                "callees": [1, 2]
+                "callees": [
+                  1,
+                  2
+                ]
               },
               {
                 "caller": 1,
-                "callees": [2, 3]
+                "callees": [
+                  2,
+                  3
+                ]
               },
               {
                 "caller": 2,
-                "callees": [3]
+                "callees": [
+                  3
+                ]
               }
             ]
           }

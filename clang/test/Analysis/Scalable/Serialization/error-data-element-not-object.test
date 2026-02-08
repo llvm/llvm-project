@@ -5,4 +5,4 @@
 // CHECK: failed to read TUSummary
 // CHECK: failed to deserialize SummaryDataMap
 // CHECK: element at index
-// CHECK: expected SummaryDataMap entry with 'summary_name' and 'data' fields
+// CHECK: expected SummaryDataMap entry with 'summary_name' and 'summary_data' fields

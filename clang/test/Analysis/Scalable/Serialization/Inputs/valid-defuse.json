@@ -64,7 +64,7 @@
   "data": [
     {
       "summary_name": "DefUse",
-      "data": [
+      "summary_data": [
         {
           "entity_id": 0,
           "entity_summary": {
@@ -74,11 +74,16 @@
                 "definitions": [
                   {
                     "definition": 10,
-                    "uses": [12, 13]
+                    "uses": [
+                      12,
+                      13
+                    ]
                   },
                   {
                     "definition": 14,
-                    "uses": [13]
+                    "uses": [
+                      13
+                    ]
                   }
                 ]
               },
@@ -87,7 +92,10 @@
                 "definitions": [
                   {
                     "definition": 11,
-                    "uses": [12, 14]
+                    "uses": [
+                      12,
+                      14
+                    ]
                   }
                 ]
               }

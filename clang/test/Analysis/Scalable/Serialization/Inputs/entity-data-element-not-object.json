@@ -7,7 +7,9 @@
   "data": [
     {
       "summary_name": "test",
-      "data": ["not an object"]
+      "summary_data": [
+        "not an object"
+      ]
     }
   ]
 }

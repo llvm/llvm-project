@@ -85,6 +85,8 @@ private:
       const llvm::json::Object &EntityIdTableEntryObject) const;
   llvm::Expected<EntityIdTable>
   entityIdTableFromJSON(const llvm::json::Array &EntityIdTableArray) const;
+  llvm::json::Object entityIdTableEntryToJSON(const EntityName &EN,
+                                              EntityId EI) const;
   llvm::json::Array entityIdTableToJSON(const EntityIdTable &IdTable) const;
 
   llvm::Expected<std::unique_ptr<EntitySummary>>

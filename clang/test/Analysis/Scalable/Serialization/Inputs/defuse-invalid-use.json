@@ -7,7 +7,7 @@
   "data": [
     {
       "summary_name": "DefUse",
-      "data": [
+      "summary_data": [
         {
           "entity_id": 0,
           "entity_summary": {
@@ -17,7 +17,9 @@
                 "definitions": [
                   {
                     "definition": 10,
-                    "uses": ["invalid"]
+                    "uses": [
+                      "invalid"
+                    ]
                   }
                 ]
               }
