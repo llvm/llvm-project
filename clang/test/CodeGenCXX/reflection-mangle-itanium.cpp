@@ -3,4 +3,5 @@
 
 int main() {
   (void)(^^int); // expected-error {{cannot compile this scalar expression yet}}
+  return 0;
 }
