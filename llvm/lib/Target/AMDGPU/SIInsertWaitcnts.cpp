@@ -783,6 +783,18 @@ public:
     return T == X_CNT ? 1 : 0;
   }
 
+  unsigned getOutstanding(InstCounterType T) const {
+    return ScoreUBs[T] - ScoreLBs[T];
+  }
+
+  bool hasPendingVMEM(VMEMID ID, InstCounterType T) const {
+    return getVMemScore(ID, T) > getScoreLB(T);
+  }
+
+  /// \Return true if we have no score entries for counter \p T.
+  bool empty(InstCounterType T) const { return getScoreRange(T) == 0; }
+
+private:
   unsigned getScoreLB(InstCounterType T) const {
     assert(T < NUM_INST_CNTS);
     return ScoreLBs[T];
@@ -807,6 +819,7 @@ public:
     return It != VMem.end() ? It->second.Scores[T] : 0;
   }
 
+public:
   bool merge(const WaitcntBrackets &Other);
 
   bool counterOutOfOrder(InstCounterType T) const;
@@ -837,8 +850,8 @@ public:
   }
   bool hasPendingEvent(InstCounterType T) const {
     bool HasPending = PendingEvents & Context->getWaitEvents(T);
-    assert(HasPending == (getScoreRange(T) != 0) &&
-           "Expected no pending events iff scoreboard is empty");
+    assert(HasPending == !empty(T) &&
+           "Expected pending events iff scoreboard is not empty");
     return HasPending;
   }
 
@@ -1818,8 +1831,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
           if (WaitCnt == ~0u)
             continue;
 
-          unsigned Outstanding = std::min(ScoreBrackets.getScoreUB(CT) -
-                                              ScoreBrackets.getScoreLB(CT),
+          unsigned Outstanding = std::min(ScoreBrackets.getOutstanding(CT),
                                           getWaitCountMax(getLimits(), CT) - 1);
           EmitExpandedWaitcnt(Outstanding, WaitCnt, [&](unsigned Count) {
             AMDGPU::Waitcnt W;
@@ -1849,8 +1861,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
         !ScoreBrackets.counterOutOfOrder(STORE_CNT)) {
       // Only expand if counter is not out-of-order
       unsigned Outstanding =
-          std::min(ScoreBrackets.getScoreUB(STORE_CNT) -
-                       ScoreBrackets.getScoreLB(STORE_CNT),
+          std::min(ScoreBrackets.getOutstanding(STORE_CNT),
                    getWaitCountMax(getLimits(), STORE_CNT) - 1);
       EmitExpandedWaitcnt(Outstanding, Wait.StoreCnt, [&](unsigned Count) {
         BuildMI(Block, It, DL, TII.get(AMDGPU::S_WAITCNT_VSCNT))
@@ -2194,9 +2205,8 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
         continue;
       }
 
-      unsigned Outstanding =
-          std::min(ScoreBrackets.getScoreUB(CT) - ScoreBrackets.getScoreLB(CT),
-                   getWaitCountMax(getLimits(), CT) - 1);
+      unsigned Outstanding = std::min(ScoreBrackets.getOutstanding(CT),
+                                      getWaitCountMax(getLimits(), CT) - 1);
       EmitExpandedWaitcnt(Outstanding, Count, [&](unsigned Val) {
         BuildMI(Block, It, DL, TII.get(instrsForExtendedCounterTypes[CT]))
             .addImm(Val);
@@ -2340,7 +2350,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     // to send a message to explicitly release all VGPRs before the stores have
     // completed, but it is only safe to do this if there are no outstanding
     // scratch stores.
-    EndPgmInsts[&MI] = ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
+    EndPgmInsts[&MI] = !ScoreBrackets.empty(STORE_CNT) &&
                        !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS);
     break;
   }
@@ -3271,19 +3281,14 @@ SIInsertWaitcnts::getPreheaderFlushFlags(MachineLoop *ML,
           // Check if this register has a pending VMEM load from outside the
           // loop (value loaded outside and used inside).
           VMEMID ID = toVMEMID(RU);
-          bool HasPendingVMEM =
-              Brackets.getVMemScore(ID, LOAD_CNT) >
-                  Brackets.getScoreLB(LOAD_CNT) ||
-              Brackets.getVMemScore(ID, SAMPLE_CNT) >
-                  Brackets.getScoreLB(SAMPLE_CNT) ||
-              Brackets.getVMemScore(ID, BVH_CNT) > Brackets.getScoreLB(BVH_CNT);
-          if (HasPendingVMEM)
+          if (Brackets.hasPendingVMEM(ID, LOAD_CNT) ||
+              Brackets.hasPendingVMEM(ID, SAMPLE_CNT) ||
+              Brackets.hasPendingVMEM(ID, BVH_CNT))
             UsesVgprLoadedOutsideVMEM = true;
           // Check if loaded outside the loop via DS (not VMEM/FLAT).
           // Only consider it a DS load if there's no pending VMEM load for
           // this register, since FLAT can set both counters.
-          if (!HasPendingVMEM &&
-              Brackets.getVMemScore(ID, DS_CNT) > Brackets.getScoreLB(DS_CNT))
+          else if (Brackets.hasPendingVMEM(ID, DS_CNT))
             UsesVgprLoadedOutsideDS = true;
         }
       }

@@ -43,6 +43,9 @@ C/C++ Language Potentially Breaking Changes
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
+- Clang now more aggressively optimizes away stores to objects after they are
+  dead. This behavior can be disabled with ``-fno-lifetime-dse``.
+
 ABI Changes in This Version
 ---------------------------
 
@@ -84,6 +87,10 @@ Clang Python Bindings Potentially Breaking Changes
   An alias is kept in the form of a ``SPELLING_CACHE`` variable, but it only supports
   ``__getitem__`` and ``__contains__``. It will be removed in a future release.
   Please migrate to using ``CompletionChunk.SPELLING_CACHE`` instead.
+- ``SourceLocation`` and ``SourceRange`` now use ``NotImplemented`` to delegate
+  equality checks (``__eq__``) to the other object they are compared with when
+  they are of different classes. They previously returned ``False`` when compared
+  with objects of other classes.
 
 What's New in Clang |release|?
 ==============================
@@ -279,6 +286,7 @@ NVPTX Support
 
 X86 Support
 ^^^^^^^^^^^
+- ``march=znver6`` is now supported.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
