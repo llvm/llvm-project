@@ -84,9 +84,7 @@ struct on_member_pointer_struct_with_annotated_vla {
 };
 
 struct on_pointer_anon_buf {
-  // TODO: Support referring to parent scope
   struct {
-    // expected-error@+1{{use of undeclared identifier 'size'}}
     struct size_known *buf __sized_by(size);
   };
   int size;
@@ -189,8 +187,6 @@ struct on_nested_pointer_outer {
 
 struct on_pointer_anon_buf_ty_pos {
   struct {
-    // TODO: Support referring to parent scope
-    // expected-error@+1{{use of undeclared identifier 'size'}}
     struct size_known * __sized_by(size) buf;
   };
   int size;

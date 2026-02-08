@@ -20013,17 +20013,12 @@ struct RebuildTypeWithLateParsedAttr
 
 void Sema::ProcessLateParsedTypeAttributes(RecordDecl *EnclosingDecl) {
   for (auto *I : EnclosingDecl->decls()) {
-    // We only process FieldDecl here, not IndirectFieldDecl, because
-    // ActOnFields is called on the struct that directly contains the field.
-    // TODO: To support counted_by referring to a field in an anonymous struct
-    // declared later, late parsing should be triggered from the innermost
-    // named parent struct.
     FieldDecl *FD = dyn_cast<FieldDecl>(I);
     IndirectFieldDecl *IFD = dyn_cast<IndirectFieldDecl>(I);
     if (!FD && IFD) {
       FD = IFD->getAnonField();
     }
-    if (!FD)
+    if (!FD || FD->getType()->isRecordType())
       continue;
 
     RebuildTypeWithLateParsedAttr RebuildFieldType(*this, FD);
@@ -20035,6 +20030,11 @@ void Sema::ProcessLateParsedTypeAttributes(RecordDecl *EnclosingDecl) {
       if (IFD) {
         IFD->setType(TSI->getType());
       }
+    }
+
+    if (auto *CAT = FD->getType()->getAs<CountAttributedType>()) {
+      CheckCountedByAttrOnFieldDecl(FD, CAT->getCountExpr(),
+                                    CAT->isCountInBytes(), CAT->isOrNull());
     }
   }
 }
