@@ -190,7 +190,7 @@ void namedBarrierInit() {
 
 void namedBarrier() {
   uint32_t NumThreads = omp_get_num_threads();
-  
+
   // Uses two 16 bit unsigned counters. One for the number of threads to have
   // reached the barrier, and one to count how many times the barrier has been
   // passed. These are packed in a single atomically accessed 32 bit integer.
@@ -199,7 +199,7 @@ void namedBarrier() {
 
   // Increment the low 16 bits once.
 
-  uint32_t load = atomic::add(&namedBarrierTracker, 1, atomic::seq_cst); 
+  uint32_t load = atomic::add(&namedBarrierTracker, 1, atomic::seq_cst);
 
   // Record the number of times the barrier has been passed
   uint32_t generation = load & 0xffff0000u;
