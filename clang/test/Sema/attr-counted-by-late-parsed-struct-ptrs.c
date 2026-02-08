@@ -196,9 +196,10 @@ struct on_nested_pointer_array_inner {
 };
 
 struct on_nested_pointer_flexible_array_inner {
+  // expected-error@+2{{flexible array member 'arr' with type 'struct size_known *[]' is not at the end of struct}}
   // expected-error@+1{{'counted_by' attribute on nested pointer type is not allowed}}
   struct size_known *__counted_by(count) arr[];
-  int count;
+  int count; // expected-note{{next field declaration is here}}
 };
 
 struct on_pointer_anon_buf_ty_pos {

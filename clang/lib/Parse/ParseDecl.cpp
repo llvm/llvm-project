@@ -4806,11 +4806,6 @@ void Parser::ParseStructDeclaration(
     } else
       DeclaratorInfo.D.SetIdentifier(nullptr, Tok.getLocation());
 
-    // Here, we now know that the unnamed struct is not an anonymous struct.
-    // Report an error if a counted_by attribute refers to a field in a
-    // different named struct.
-    DiagnoseCountAttributedTypeInUnnamedAnon(DS, *this);
-
     if (TryConsumeToken(tok::colon)) {
       ExprResult Res(ParseConstantExpression());
       if (Res.isInvalid())
@@ -5046,9 +5041,14 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
       ParsingDeclSpec DS(*this);
       ParseStructDeclaration(DS, CFieldCallback, &LateFieldAttrs);
       if (DS.getTypeSpecType() == TST_struct) {
-        auto *RD = dyn_cast<RecordDecl>(DS.getRepAsDecl());
-        if (RD && !RD->isAnonymousStructOrUnion()) {
-            Actions.ProcessLateParsedTypeAttributes(RD);
+
+        if (getLangOpts().ExperimentalLateParseAttributes) {
+          auto *RD = dyn_cast<RecordDecl>(DS.getRepAsDecl());
+          if (RD && !RD->isAnonymousStructOrUnion()) {
+              Actions.ProcessLateParsedTypeAttributes(RD);
+          }
+        } else {
+          DiagnoseCountAttributedTypeInUnnamedAnon(DS, *this);
         }
       }
     } else { // Handle @defs
@@ -5105,7 +5105,7 @@ void Parser::ParseStructUnionBody(SourceLocation RecordLoc,
                       T.getOpenLocation(), T.getCloseLocation(), attrs);
   Scope *ParentScope = getCurScope()->getParent();
   assert(ParentScope);
-  if (!ParentScope->getEntity()->isRecord())
+  if (getLangOpts().ExperimentalLateParseAttributes && !ParentScope->getEntity()->isRecord())
     Actions.ProcessLateParsedTypeAttributes(TagDecl);
   StructScope.Exit();
   Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl, T.getRange());
