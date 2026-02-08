@@ -1064,9 +1064,9 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 
   // Warn about dubious actual argument association with a TARGET dummy
   // argument
+  bool actualIsVariable{evaluate::IsVariable(actual)};
   if (dummy.attrs.test(characteristics::DummyDataObject::Attr::Target) &&
       context.ShouldWarn(common::UsageWarning::NonTargetPassedToTarget)) {
-    bool actualIsVariable{evaluate::IsVariable(actual)};
     bool actualIsTemp{
         !actualIsVariable || HasVectorSubscript(actual) || actualCoarrayRef};
     if (actualIsTemp) {
@@ -1090,10 +1090,15 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       !dummy.attrs.test(characteristics::DummyDataObject::Attr::Value) &&
       !FindOpenACCConstructContaining(scope)) {
     std::optional<common::CUDADataAttr> actualDataAttr, dummyDataAttr;
-    if (const auto *actualObject{actualLastSymbol
-                ? actualLastSymbol->detailsIf<ObjectEntityDetails>()
-                : nullptr}) {
-      actualDataAttr = actualObject->cudaDataAttr();
+    // For a%b%c, the last symbol with a CUDA data attribute wins
+    if (actualIsVariable) {
+      for (const Symbol &s : evaluate::GetSymbolVector(actual)) {
+        if (const auto *object{s.detailsIf<ObjectEntityDetails>()}) {
+          if (auto cudaAttr{object->cudaDataAttr()}) {
+            actualDataAttr = *cudaAttr;
+          }
+        }
+      }
     }
     dummyDataAttr = dummy.cudaDataAttr;
     // Treat MANAGED like DEVICE for nonallocatable nonpointer arguments to
@@ -1113,9 +1118,10 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         actualDataAttr = common::CUDADataAttr::Device;
       }
       // For device procedures, treat actual arguments with VALUE attribute as
-      // device data; also constant actual arguments.
+      // device data; also constant actual arguments and the function result.
       if (!actualDataAttr &&
-          (!actualLastSymbol || IsValue(*actualLastSymbol)) &&
+          (!actualFirstSymbol || IsValue(*actualFirstSymbol) ||
+              IsFunctionResult(*actualFirstSymbol)) &&
           (*procedure.cudaSubprogramAttrs ==
               common::CUDASubprogramAttrs::Device)) {
         actualDataAttr = common::CUDADataAttr::Device;
