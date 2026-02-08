@@ -47,7 +47,7 @@ static cl::opt<bool> DisableVSXFMAMutate(
 #define DEBUG_TYPE "ppc-vsx-fma-mutate"
 
 namespace llvm { namespace PPC {
-  int64_t getAltVSXFMAOpcode(uint32_t Opcode);
+  int getAltVSXFMAOpcode(uint16_t Opcode);
 } }
 
 namespace {
