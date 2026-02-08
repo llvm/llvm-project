@@ -260,14 +260,24 @@ void StackSlotColoring::InitializeSlots() {
   UsedColors[0].resize(LastFI);
   Assignments.resize(LastFI);
 
+  using Pair = std::iterator_traits<LiveStacks::iterator>::value_type;
+
+  SmallVector<Pair *, 16> Intervals;
+
+  Intervals.reserve(LS->getNumIntervals());
+  for (auto &I : *LS)
+    Intervals.push_back(&I);
+  llvm::sort(Intervals,
+             [](Pair *LHS, Pair *RHS) { return LHS->first < RHS->first; });
+
   // Gather all spill slots into a list.
   LLVM_DEBUG(dbgs() << "Spill slot intervals:\n");
-  for (auto [Idx, I] : llvm::enumerate(*LS)) {
-    int FI = Idx + LS->getStartIdx();
-    if (!I || MFI->isDeadObjectIndex(FI))
-      continue;
-    LiveInterval &li = *I;
+  for (auto *I : Intervals) {
+    LiveInterval &li = I->second;
     LLVM_DEBUG(li.dump());
+    int FI = li.reg().stackSlotIndex();
+    if (MFI->isDeadObjectIndex(FI))
+      continue;
 
     SSIntervals.push_back(&li);
     OrigAlignments[FI] = MFI->getObjectAlign(FI);
