@@ -76,6 +76,7 @@ static_library("LLVMHexagonCodeGen") {
     "HexagonISelLowering.cpp",
     "HexagonISelLoweringHVX.cpp",
     "HexagonInstrInfo.cpp",
+    "HexagonLiveVariables.cpp",
     "HexagonLoadStoreWidening.cpp",
     "HexagonLoopAlign.cpp",
     "HexagonLoopIdiomRecognition.cpp",
