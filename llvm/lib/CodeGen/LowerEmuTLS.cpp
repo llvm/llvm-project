@@ -148,14 +148,7 @@ bool addEmuTlsVar(Module &M, const GlobalVariable *GV) {
     return true;
 
   Type *GVType = GV->getValueType();
-  Align GVAlignment = DL.getValueOrABITypeAlignment(GV->getAlign(), GVType);
-
-  // For types larger than a vector register, use preferred alignment.
-  // This ensures the backend can use vectorized load/store instructions
-  // (e.g., memcpy of large arrays may use ARM NEON vld1.64 which requires
-  // 16-byte alignment). See https://github.com/llvm/llvm-project/issues/167219
-  if (DL.getTypeStoreSize(GVType) > 16)
-    GVAlignment = std::max(GVAlignment, DL.getPreferredAlign(GV));
+  Align GVAlignment = DL.getPreferredAlign(GV);
 
   // Define "__emutls_t.*" if there is InitValue
   GlobalVariable *EmuTlsTmplVar = nullptr;
