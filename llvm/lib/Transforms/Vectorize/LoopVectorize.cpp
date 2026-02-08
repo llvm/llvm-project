@@ -7708,7 +7708,7 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   if (!LoopVectorizationPlanner::getDecisionAndClampRange(WillWiden, Range))
     return nullptr;
 
-  // If a mask is not required drop it - use unmasked version for safe loads.
+  // If a mask is not required, drop it - use unmasked version for safe loads.
   // TODO: Determine if mask is needed in VPlan.
   VPValue *Mask = Legal->isMaskRequired(I) ? VPI->getMask() : nullptr;
 

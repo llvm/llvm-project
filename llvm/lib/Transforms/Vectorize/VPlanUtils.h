@@ -146,7 +146,7 @@ template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
 VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 
 /// Collect the header mask with the pattern:
-/// ICMP_ULE, WideCanonicalIV, backedge-taken-count)
+/// (ICMP_ULE, WideCanonicalIV, backedge-taken-count)
 /// TODO: Introduce explicit recipe for header-mask instead of searching
 /// the header-mask pattern manually.
 VPSingleDefRecipe *findHeaderMask(VPlan &Plan);

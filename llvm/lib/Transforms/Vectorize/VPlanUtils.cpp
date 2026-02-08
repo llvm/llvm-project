@@ -591,7 +591,7 @@ VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
   // (ICMP_ULE, WideCanonicalIV, backedge-taken-count).
   VPSingleDefRecipe *HeaderMask = nullptr;
   for (auto *Wide : WideCanonicalIVs) {
-    for (VPUser *U : SmallVector<VPUser *>(Wide->users())) {
+    for (VPUser *U : Wide->users()) {
       auto *VPI = dyn_cast<VPInstruction>(U);
       if (!VPI || !vputils::isHeaderMask(VPI, Plan))
         continue;

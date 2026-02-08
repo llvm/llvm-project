@@ -1147,8 +1147,8 @@ public:
 /// This is a concrete Recipe that models a single VPlan-level instruction.
 /// While as any Recipe it may generate a sequence of IR instructions when
 /// executed, these instructions would always form a single-def expression as
-/// the VPInstruction is also a single def-use vertex. Most VPInstructions
-/// opcodes can take an optional mask.  Masks may be assigned during
+/// the VPInstruction is also a single def-use vertex. Most VPInstruction
+/// opcodes can take an optional mask. Masks may be assigned during
 /// predication.
 class LLVM_ABI_FOR_TEST VPInstruction : public VPRecipeWithIRFlags,
                                         public VPIRMetadata,
@@ -1368,7 +1368,7 @@ public:
   /// Returns true if the VPInstruction has a mask operand.
   bool isMasked() const {
     unsigned NumOpsForOpcode = getNumOperandsForOpcode();
-    // VPInstructions for without fixed number of operands cannot be masked.
+    // VPInstructions without a fixed number of operands cannot be masked.
     if (NumOpsForOpcode == -1u)
       return false;
     return NumOpsForOpcode + 1 == getNumOperands();
