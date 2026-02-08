@@ -450,6 +450,9 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   Expected<int32_t> initImpl() override {
 #ifdef USES_DYNAMIC_FFI
     supportsFFI = ffi_init() == DYNAMIC_FFI_SUCCESS ? true : false;
+    if (!supportsFFI)
+      ODBG(OLDT_Init) << "libffi is not available, kernels will not be launched "
+                         "through libffi, and some features may be unavailable";
 #endif
     ODBG(OLDT_Init) << "GenELF64 plugin detected " << ODBG_IF_LEVEL(2)
                     << NUM_DEVICES << " " << ODBG_RESET_LEVEL() << "devices";
@@ -516,11 +519,7 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 
 private:
   /// Whether this plugin supports FFI-based launch.
-#ifdef USES_DYNAMIC_FFI
-  bool SupportsFFI = false;
-#else
-  static constexpr bool SupportsFFI = true;
-#endif
+  bool SupportsFFI = true;
 };
 
 template <typename... ArgsTy>
