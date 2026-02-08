@@ -243,7 +243,6 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
       PersonalityEncoding = dwarf::DW_EH_PE_absptr;
       TTypeEncoding = dwarf::DW_EH_PE_absptr;
     }
-    CallSiteEncoding = dwarf::DW_EH_PE_udata4;
     break;
   case Triple::riscv32:
   case Triple::riscv64:
@@ -254,7 +253,6 @@ void TargetLoweringObjectFileELF::Initialize(MCContext &Ctx,
                           dwarf::DW_EH_PE_sdata4;
     TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
                     dwarf::DW_EH_PE_sdata4;
-    CallSiteEncoding = dwarf::DW_EH_PE_udata4;
     break;
   case Triple::sparcv9:
     LSDAEncoding = dwarf::DW_EH_PE_pcrel | dwarf::DW_EH_PE_sdata4;

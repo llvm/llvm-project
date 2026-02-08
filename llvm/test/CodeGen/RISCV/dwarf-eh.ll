@@ -68,15 +68,14 @@ try.cont:
 ; TTypeEncoding = DW_EH_PE_indirect | DW_EH_PE_pcrel | DW_EH_PE_sdata4
 ; CHECK-NEXT: .byte 155 # @TType Encoding = indirect pcrel sdata4
 ; CHECK: .Lttbaseref0:
-; CallSiteEncoding = dwarf::DW_EH_PE_udata4
-; CHECK-NEXT: .byte	3                       # Call site Encoding = udata4
+; CHECK-NEXT: .byte	1                       # Call site Encoding = uleb128
 ; CHECK-NEXT: .uleb128 .Lcst_end0-.Lcst_begin0
 ; CHECK-NEXT: cst_begin0:
-; CHECK-NEXT: .word .Ltmp0-.Lfunc_begin0   # >> Call Site 1 <<
-; CHECK-NEXT: .word .Ltmp1-.Ltmp0          #   Call between .Ltmp0 and .Ltmp1
-; CHECK-NEXT: .word .Ltmp2-.Lfunc_begin0   #     jumps to .Ltmp2
+; CHECK-NEXT: .uleb128 .Ltmp0-.Lfunc_begin0     # >> Call Site 1 <<
+; CHECK-NEXT: .uleb128 .Ltmp1-.Ltmp0            #   Call between .Ltmp0 and .Ltmp1
+; CHECK-NEXT: .uleb128 .Ltmp2-.Lfunc_begin0     #     jumps to .Ltmp2
 ; CHECK-NEXT: .byte	1                       #   On action: 1
-; CHECK-NEXT: .word .Ltmp1-.Lfunc_begin0   # >> Call Site 2 <<
-; CHECK-NEXT: .word .Lfunc_end0-.Ltmp1     #   Call between .Ltmp1 and .Lfunc_end0
-; CHECK-NEXT: .word	0                       #     has no landing pad
+; CHECK-NEXT: .uleb128 .Ltmp1-.Lfunc_begin0     # >> Call Site 2 <<
+; CHECK-NEXT: .uleb128 .Lfunc_end0-.Ltmp1       #   Call between .Ltmp1 and .Lfunc_end0
+; CHECK-NEXT: .byte	0                       #     has no landing pad
 ; CHECK-NEXT: .byte	0                       #   On action: cleanup
