@@ -278,10 +278,9 @@ static bool isNonInlineInModulePurview(const Decl *D) {
 /// function.
 static bool isInInlineFunction(const DeclContext *DC) {
   while (!DC->isFileContext()) {
-    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC)) {
+    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC))
       if (FD->isInlined() || isNonInlineInModulePurview(FD))
         return true;
-    }
 
     DC = DC->getLexicalParent();
   }
