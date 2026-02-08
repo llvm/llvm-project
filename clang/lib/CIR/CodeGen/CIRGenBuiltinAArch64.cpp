@@ -134,8 +134,7 @@ mlir::Value CIRGenFunction::emitSVEPredicateCast(mlir::Value pred,
   if (pred.getType() == retTy)
     return pred;
 
-  unsigned intID;
-  mlir::Type intrinsicTy;
+  llvm::Intrinsic::ID intID;
   switch (minNumElts) {
   default:
     llvm_unreachable("unsupported element count!");
@@ -144,11 +143,9 @@ mlir::Value CIRGenFunction::emitSVEPredicateCast(mlir::Value pred,
   case 4:
   case 8:
     intID = Intrinsic::aarch64_sve_convert_from_svbool;
-    intrinsicTy = retTy;
     break;
   case 16:
     intID = Intrinsic::aarch64_sve_convert_to_svbool;
-    intrinsicTy = pred.getType();
     break;
   }
 
@@ -159,8 +156,10 @@ mlir::Value CIRGenFunction::emitSVEPredicateCast(mlir::Value pred,
   return call;
 }
 
-// Return the element count for
-static unsigned getSVEMinEltCount(const clang::SVETypeFlags::EltType &sveType) {
+// Get the minimum number of elements in an SVE vector for the given element
+// type. The actual number of elements in the vector would be an integer (power
+// of two) multiple of this value.
+static unsigned getSVEMinEltCount(clang::SVETypeFlags::EltType sveType) {
   switch (sveType) {
   default:
     llvm_unreachable("Invalid SVETypeFlag!");
@@ -305,7 +304,7 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
     }
 
     llvm::StringRef llvmIntrName = getLLVMIntrNameNoPrefix(
-        (llvm::Intrinsic::ID)builtinIntrInfo->llvmIntrinsic);
+        static_cast<llvm::Intrinsic::ID>(builtinIntrInfo->llvmIntrinsic));
     auto retTy = convertType(expr->getType());
 
     auto call = builder.emitIntrinsicCallOp(loc, llvmIntrName, retTy,
