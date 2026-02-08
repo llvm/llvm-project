@@ -82,7 +82,7 @@ define i32 @indirect_notail(%fn %f, i32 %x, i32 %y) {
 ; CHECK-LABEL: indirect_notail:
 ; CHECK:         .functype indirect_notail (i32, i32, i32) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    call_indirect 0, (i32, i32, i32) -> (i32), $push0=, $0, $1, $2, $0 # Invalid depth argument!
+; CHECK-NEXT:    call_indirect (i32, i32, i32) -> (i32), $push0=, $0, $1, $2, $0 # Invalid depth argument!
 ; CHECK-NEXT:    return $pop0
   %p = extractvalue %fn %f, 0
   %v = notail call i32 %p(%fn %f, i32 %x, i32 %y)
@@ -93,7 +93,7 @@ define i32 @indirect_musttail(%fn %f, i32 %x, i32 %y) {
 ; CHECK-LABEL: indirect_musttail:
 ; CHECK:         .functype indirect_musttail (i32, i32, i32) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    return_call_indirect 0, (i32, i32, i32) -> (i32), $0, $1, $2, $0
+; CHECK-NEXT:    return_call_indirect (i32, i32, i32) -> (i32), $0, $1, $2, $0
   %p = extractvalue %fn %f, 0
   %v = musttail call i32 %p(%fn %f, i32 %x, i32 %y)
   ret i32 %v
@@ -103,7 +103,7 @@ define i32 @indirect_tail(%fn %f, i32 %x, i32 %y) {
 ; CHECK-LABEL: indirect_tail:
 ; CHECK:         .functype indirect_tail (i32, i32, i32) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    return_call_indirect 0, (i32, i32, i32) -> (i32), $0, $1, $2, $0
+; CHECK-NEXT:    return_call_indirect (i32, i32, i32) -> (i32), $0, $1, $2, $0
   %p = extractvalue %fn %f, 0
   %v = tail call i32 %p(%fn %f, i32 %x, i32 %y)
   ret i32 %v
@@ -118,7 +118,7 @@ define i1 @choice_notail(i1 %x) {
 ; SLOW-NEXT:    i32.const $push0=, 1
 ; SLOW-NEXT:    i32.and $push1=, $0, $pop0
 ; SLOW-NEXT:    i32.select $push4=, $pop3, $pop2, $pop1
-; SLOW-NEXT:    call_indirect 0, (i32) -> (i32), $push5=, $0, $pop4 # Invalid depth argument!
+; SLOW-NEXT:    call_indirect (i32) -> (i32), $push5=, $0, $pop4 # Invalid depth argument!
 ; SLOW-NEXT:    return $pop5
 ;
 ; FAST-LABEL: choice_notail:
@@ -129,7 +129,7 @@ define i1 @choice_notail(i1 %x) {
 ; FAST-NEXT:    i32.const $push1=, 1
 ; FAST-NEXT:    i32.and $push2=, $0, $pop1
 ; FAST-NEXT:    i32.select $push5=, $pop3, $pop4, $pop2
-; FAST-NEXT:    call_indirect 0, (i32) -> (i32), $push0=, $0, $pop5 # Invalid depth argument!
+; FAST-NEXT:    call_indirect (i32) -> (i32), $push0=, $0, $pop5 # Invalid depth argument!
 ; FAST-NEXT:    return $pop0
   %p = select i1 %x, ptr @foo, ptr @bar
   %v = notail call i1 %p(i1 %x)
@@ -145,7 +145,7 @@ define i1 @choice_musttail(i1 %x) {
 ; SLOW-NEXT:    i32.const $push0=, 1
 ; SLOW-NEXT:    i32.and $push1=, $0, $pop0
 ; SLOW-NEXT:    i32.select $push4=, $pop3, $pop2, $pop1
-; SLOW-NEXT:    return_call_indirect 0, (i32) -> (i32), $0, $pop4
+; SLOW-NEXT:    return_call_indirect (i32) -> (i32), $0, $pop4
 ;
 ; FAST-LABEL: choice_musttail:
 ; FAST:         .functype choice_musttail (i32) -> (i32)
@@ -155,7 +155,7 @@ define i1 @choice_musttail(i1 %x) {
 ; FAST-NEXT:    i32.const $push1=, 1
 ; FAST-NEXT:    i32.and $push2=, $0, $pop1
 ; FAST-NEXT:    i32.select $push0=, $pop4, $pop3, $pop2
-; FAST-NEXT:    return_call_indirect 0, (i32) -> (i32), $0, $pop0
+; FAST-NEXT:    return_call_indirect (i32) -> (i32), $0, $pop0
   %p = select i1 %x, ptr @foo, ptr @bar
   %v = musttail call i1 %p(i1 %x)
   ret i1 %v
@@ -170,7 +170,7 @@ define i1 @choice_tail(i1 %x) {
 ; SLOW-NEXT:    i32.const $push0=, 1
 ; SLOW-NEXT:    i32.and $push1=, $0, $pop0
 ; SLOW-NEXT:    i32.select $push4=, $pop3, $pop2, $pop1
-; SLOW-NEXT:    return_call_indirect 0, (i32) -> (i32), $0, $pop4
+; SLOW-NEXT:    return_call_indirect (i32) -> (i32), $0, $pop4
 ;
 ; FAST-LABEL: choice_tail:
 ; FAST:         .functype choice_tail (i32) -> (i32)
@@ -180,7 +180,7 @@ define i1 @choice_tail(i1 %x) {
 ; FAST-NEXT:    i32.const $push1=, 1
 ; FAST-NEXT:    i32.and $push2=, $0, $pop1
 ; FAST-NEXT:    i32.select $push5=, $pop3, $pop4, $pop2
-; FAST-NEXT:    call_indirect  0, (i32) -> (i32), $push0=, $0, $pop5 # Invalid depth argument!
+; FAST-NEXT:    call_indirect (i32) -> (i32), $push0=, $0, $pop5 # Invalid depth argument!
 ; FAST-NEXT:    return $pop0
   %p = select i1 %x, ptr @foo, ptr @bar
   %v = tail call i1 %p(i1 %x)
@@ -264,7 +264,7 @@ define void @mismatched_indirect_void(%fn %f, i32 %x, i32 %y) {
 ; CHECK-LABEL: mismatched_indirect_void:
 ; CHECK:         .functype mismatched_indirect_void (i32, i32, i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    call_indirect 0, (i32, i32, i32) -> (i32), $drop=, $0, $1, $2, $0 # Invalid depth argument!
+; CHECK-NEXT:    call_indirect (i32, i32, i32) -> (i32), $drop=, $0, $1, $2, $0 # Invalid depth argument!
 ; CHECK-NEXT:    return
   %p = extractvalue %fn %f, 0
   %v = tail call i32 %p(%fn %f, i32 %x, i32 %y)
@@ -275,7 +275,7 @@ define float @mismatched_indirect_f32(%fn %f, i32 %x, i32 %y) {
 ; CHECK-LABEL: mismatched_indirect_f32:
 ; CHECK:         .functype mismatched_indirect_f32 (i32, i32, i32) -> (f32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    call_indirect 0, (i32, i32, i32) -> (i32), $push0=, $0, $1, $2, $0 # Invalid depth argument!
+; CHECK-NEXT:    call_indirect (i32, i32, i32) -> (i32), $push0=, $0, $1, $2, $0 # Invalid depth argument!
 ; CHECK-NEXT:    f32.reinterpret_i32 $push1=, $pop0
 ; CHECK-NEXT:    return $pop1
   %p = extractvalue %fn %f, 0
@@ -538,7 +538,7 @@ define i32 @indirect_epilogue(ptr %p) {
 ; CHECK-NEXT:    i32.const $push2=, 256
 ; CHECK-NEXT:    i32.add $push3=, $1, $pop2
 ; CHECK-NEXT:    global.set __stack_pointer, $pop3
-; CHECK-NEXT:    return_call_indirect 0, (i32) -> (i32), $0, $0
+; CHECK-NEXT:    return_call_indirect (i32) -> (i32), $0, $0
   %a = alloca [64 x i32]
   %v = musttail call i32 %p(ptr %p)
   ret i32 %v
@@ -564,7 +564,7 @@ define i32 @unique_caller(ptr %p) {
 ; SLOW-NEXT:    i64.const $push2=, 0
 ; SLOW-NEXT:    f64.const $push1=, 0x0p0
 ; SLOW-NEXT:    i32.load $push0=, 0($0)
-; SLOW-NEXT:    return_call_indirect  0, (i32, f32, i64, f64) -> (i32), $pop4, $pop3, $pop2, $pop1, $pop0
+; SLOW-NEXT:    return_call_indirect (i32, f32, i64, f64) -> (i32), $pop4, $pop3, $pop2, $pop1, $pop0
 ;
 ; FAST-LABEL: unique_caller:
 ; FAST:         .functype unique_caller (i32) -> (i32)
@@ -576,7 +576,7 @@ define i32 @unique_caller(ptr %p) {
 ; FAST-NEXT:    i32.const $push6=, 0
 ; FAST-NEXT:    f64.convert_i32_s $push4=, $pop6
 ; FAST-NEXT:    i32.load $push5=, 0($0)
-; FAST-NEXT:    call_indirect 0, (i32, f32, i64, f64) -> (i32), $push0=, $pop1, $pop2, $pop3, $pop4, $pop5 # Invalid depth argument!
+; FAST-NEXT:    call_indirect (i32, f32, i64, f64) -> (i32), $push0=, $pop1, $pop2, $pop3, $pop4, $pop5 # Invalid depth argument!
 ; FAST-NEXT:    return $pop0
   %f = load ptr, ptr %p
   %v = tail call i32 %f(i32 0, float 0., i64 0, double 0.)

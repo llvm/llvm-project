@@ -48,25 +48,17 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                        StringRef Annot,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &OS) {
+
+  unsigned TypeOperand = 0;
+  unsigned TableOperand = 1;
   switch (MI->getOpcode()) {
-  case WebAssembly::CALL_INDIRECT:
-  case WebAssembly::RET_CALL_INDIRECT: {
-    OS << "\t" << getMnemonic(*MI).first << "\t";
-    unsigned TypeOperand = 0;
-    unsigned TableOperand = 1;
-    if (MI->getOpcode() == WebAssembly::CALL_INDIRECT) {
-      unsigned NumDefs = MI->getOperand(0).getImm();
-      TypeOperand = 1 + NumDefs;      // Type 위치 보정
-      TableOperand = 1 + NumDefs + 1; // Table 위치 보정
-    }
-    printOperand(MI, TableOperand, OS);
-    OS << ", ";
-    printOperand(MI, TypeOperand, OS);
-    if (MI->getOpcode() == WebAssembly::CALL_INDIRECT) {
-      OS << ", ";
-    }
-    break;
+  case WebAssembly::CALL_INDIRECT: {
+    unsigned NumDefs = MI->getOperand(0).getImm();
+    TypeOperand = NumDefs + 1;
+    TableOperand = NumDefs + 2;
+    [[fallthrough]];
   }
+  case WebAssembly::RET_CALL_INDIRECT:
   case WebAssembly::CALL_INDIRECT_S:
   case WebAssembly::RET_CALL_INDIRECT_S: {
     // A special case for call_indirect (and ret_call_indirect), if the table
@@ -77,17 +69,13 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     OS << "\t";
     OS << getMnemonic(*MI).first;
     OS << " ";
-
-    assert(MI->getNumOperands() == 2);
-    const unsigned TypeOperand = 0;
-    const unsigned TableOperand = 1;
     if (MI->getOperand(TableOperand).isExpr()) {
       printOperand(MI, TableOperand, OS);
       OS << ", ";
-    } else {
-      assert(MI->getOperand(TableOperand).getImm() == 0);
     }
     printOperand(MI, TypeOperand, OS);
+    if (MI->getOpcode() == WebAssembly::CALL_INDIRECT)
+      OS << ", ";
     break;
   }
   default:
