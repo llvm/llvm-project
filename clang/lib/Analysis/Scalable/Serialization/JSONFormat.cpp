@@ -35,9 +35,8 @@ public:
   // Add context message with formatting
   template <typename... Args>
   ErrorBuilder &context(const char *Fmt, Args &&...ArgVals) {
-    char Buffer[2048];
-    snprintf(Buffer, sizeof(Buffer), Fmt, std::forward<Args>(ArgVals)...);
-    ContextStack.push_back(Buffer);
+    ContextStack.push_back(
+        llvm::formatv(Fmt, std::forward<Args>(ArgVals)...).str());
     return *this;
   }
 
@@ -74,20 +73,20 @@ public:
 
 namespace ErrorMessages {
 // File validation errors
-constexpr const char *FileNotFound = "file does not exist: '%s'";
-constexpr const char *IsDirectory = "path is a directory, not a file: '%s'";
-constexpr const char *NotJSONFile = "not a JSON file: '%s'";
+constexpr const char *FileNotFound = "file does not exist: '{0}'";
+constexpr const char *IsDirectory = "path is a directory, not a file: '{0}'";
+constexpr const char *NotJSONFile = "not a JSON file: '{0}'";
 constexpr const char *FailedToValidateJSONFile =
-    "failed to validate JSON file '%s'";
-constexpr const char *FailedToReadFile = "failed to read file '%s'";
+    "failed to validate JSON file '{0}'";
+constexpr const char *FailedToReadFile = "failed to read file '{0}'";
 constexpr const char *FailedToReadJSONObject =
-    "failed to read JSON object from file '%s'";
-constexpr const char *FailedToOpenFile = "failed to open '%s'";
+    "failed to read JSON object from file '{0}'";
+constexpr const char *FailedToOpenFile = "failed to open '{0}'";
 constexpr const char *WriteFailed = "write failed";
 
 // BuildNamespace errors
 constexpr const char *InvalidBuildNamespaceKind =
-    "invalid 'kind' BuildNamespaceKind value '%s'";
+    "invalid 'kind' BuildNamespaceKind value '{0}'";
 constexpr const char *MissingBuildNamespaceKind =
     "failed to deserialize BuildNamespace: "
     "missing required field 'kind' (expected BuildNamespaceKind)";
@@ -100,10 +99,10 @@ constexpr const char *FailedToDeserializeBuildNamespace =
 // NestedBuildNamespace errors
 constexpr const char *NestedBuildNamespaceElementNotObject =
     "failed to deserialize NestedBuildNamespace: "
-    "element at index %zu is not a JSON object "
+    "element at index {0} is not a JSON object "
     "(expected BuildNamespace object)";
 constexpr const char *FailedToDeserializeNestedBuildNamespace =
-    "failed to deserialize NestedBuildNamespace at index %zu";
+    "failed to deserialize NestedBuildNamespace at index {0}";
 
 // EntityName errors
 constexpr const char *MissingEntityNameUSR =
@@ -136,19 +135,19 @@ constexpr const char *FailedToDeserializeEntityIdTableEntry =
 // EntityIdTable errors
 constexpr const char *EntityIdTableElementNotObject =
     "failed to deserialize EntityIdTable: "
-    "element at index %zu is not a JSON object "
+    "element at index {0} is not a JSON object "
     "(expected EntityIdTable entry with 'id' and 'name' fields)";
 constexpr const char *FailedToDeserializeEntityIdTable =
-    "failed to deserialize EntityIdTable at index %zu";
+    "failed to deserialize EntityIdTable at index {0}";
 constexpr const char *DuplicateEntityName =
     "failed to deserialize EntityIdTable: "
-    "duplicate EntityName found at index %zu "
-    "(EntityId=%zu already exists in table)";
+    "duplicate EntityName found at index {0} "
+    "(EntityId={1} already exists in table)";
 
 // EntitySummary errors
 constexpr const char *NoFormatInfoForSummary =
     "failed to deserialize EntitySummary: "
-    "no FormatInfo was registered for summary name: %s";
+    "no FormatInfo was registered for summary name: {0}";
 
 // EntityDataMap entry errors
 constexpr const char *MissingEntityDataMapEntryEntityId =
@@ -168,14 +167,14 @@ constexpr const char *FailedToDeserializeEntityDataMapEntry =
 // EntityDataMap errors
 constexpr const char *EntityDataMapElementNotObject =
     "failed to deserialize EntityDataMap: "
-    "element at index %zu is not a JSON object "
+    "element at index {0} is not a JSON object "
     "(expected EntityDataMap entry with 'entity_id' and 'entity_summary' "
     "fields)";
 constexpr const char *FailedToDeserializeEntityDataMap =
-    "failed to deserialize EntityDataMap at index %zu";
+    "failed to deserialize EntityDataMap at index {0}";
 constexpr const char *DuplicateEntityId =
     "failed to deserialize EntityDataMap: "
-    "duplicate EntityId (%zu) found at index %zu";
+    "duplicate EntityId ({0}) found at index {1}";
 
 // SummaryDataMap entry errors
 constexpr const char *MissingSummaryDataMapEntrySummaryName =
@@ -187,29 +186,29 @@ constexpr const char *MissingSummaryDataMapEntrySummaryData =
     "missing or invalid field 'summary_data' "
     "(expected JSON array of entity data entries)";
 constexpr const char *FailedToDeserializeSummaryDataMapEntry =
-    "failed to deserialize SummaryDataMap entry for summary '%s'";
+    "failed to deserialize SummaryDataMap entry for summary '{0}'";
 
 // SummaryDataMap errors
 constexpr const char *SummaryDataMapElementNotObject =
     "failed to deserialize SummaryDataMap: "
-    "element at index %zu is not a JSON object "
+    "element at index {0} is not a JSON object "
     "(expected SummaryDataMap entry with 'summary_name' and 'summary_data' "
     "fields)";
 constexpr const char *FailedToDeserializeSummaryDataMap =
-    "failed to deserialize SummaryDataMap at index %zu";
+    "failed to deserialize SummaryDataMap at index {0}";
 constexpr const char *DuplicateSummaryName =
     "failed to deserialize SummaryDataMap: "
-    "duplicate SummaryName '%s' found at index %zu";
+    "duplicate SummaryName '{0}' found at index {1}";
 
 // TUSummary errors
-constexpr const char *ReadingTUSummaryFrom = "reading TUSummary from '%s'";
+constexpr const char *ReadingTUSummaryFrom = "reading TUSummary from '{0}'";
 constexpr const char *MissingTUNamespace =
     "missing or invalid field 'tu_namespace' (expected JSON object)";
 constexpr const char *MissingIdTable =
     "missing or invalid field 'id_table' (expected JSON array)";
 constexpr const char *MissingData =
     "missing or invalid field 'data' (expected JSON array)";
-constexpr const char *WritingTUSummaryTo = "writing TUSummary to '%s'";
+constexpr const char *WritingTUSummaryTo = "writing TUSummary to '{0}'";
 } // namespace ErrorMessages
 
 } // namespace
