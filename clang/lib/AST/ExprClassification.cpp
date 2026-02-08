@@ -221,6 +221,7 @@ static Cl::Kinds ClassifyInternal(ASTContext &Ctx, const Expr *E) {
   case Expr::GetBoundExprClass:
   case Expr::TerminatedByToIndexableExprClass:
   case Expr::TerminatedByFromIndexableExprClass:
+  case Expr::CXXReflectExprClass:
     return Cl::CL_PRValue;
 
   case Expr::AssumptionExprClass:

@@ -4089,6 +4089,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
   case PackIndexingExprClass:
   case HLSLOutArgExprClass:
   case OpenACCAsteriskSizeExprClass:
+  case CXXReflectExprClass:
     // These never have a side-effect.
     return false;
 

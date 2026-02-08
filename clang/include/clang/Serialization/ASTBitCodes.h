@@ -1938,6 +1938,9 @@ enum StmtCode {
   EXPR_CONCEPT_SPECIALIZATION,            // ConceptSpecializationExpr
   EXPR_REQUIRES,                          // RequiresExpr
 
+  // Reflection
+  EXPR_REFLECT,
+
   // CUDA
   EXPR_CUDA_KERNEL_CALL, // CUDAKernelCallExpr
 
