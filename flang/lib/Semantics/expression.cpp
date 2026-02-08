@@ -2431,6 +2431,14 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
         result.Add(symbol, Expr<SomeType>{ProcedureDesignator{**proc->init()}});
       } else if (IsAllocatableOrPointer(symbol)) {
         result.Add(symbol, Expr<SomeType>{NullPointer{}});
+        if (IsPointer(symbol)) {
+          AttachDeclaration(
+              Warn(common::LanguageFeature::DefaultStructConstructorNullPointer,
+                  typeName,
+                  "Structure constructor lacks a value for pointer component '%s', NULL() assumed"_warn_en_US,
+                  symbol.name()),
+              symbol);
+        }
       } else {
         AttachDeclaration(
             Say(typeName,
