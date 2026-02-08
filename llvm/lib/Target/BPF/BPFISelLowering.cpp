@@ -629,15 +629,24 @@ BPFTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // CCValAssign - represent the assignment of the return value to a location
   SmallVector<CCValAssign, 16> RVLocs;
   MachineFunction &MF = DAG.getMachineFunction();
+  const Function &F = MF.getFunction();
+  Type *retTy = F.getReturnType();
+	
+  if (retTy->isAggregateType()) {
+  	// BPF calling convention does not allow large return that is
+  	// 1. larger than 128 bit, or
+  	// 2. struct/array taking up more than 2 registers
+  	const DataLayout &data = F.getParent()->getDataLayout();
+  	const auto *AT = dyn_cast<const ArrayType>(retTy);
+	if (Outs.size() > 2 || data.getTypeAllocSize(retTy) > 128 || (AT && AT->getArrayNumElements() > 2)) {
+	  fail(DL, DAG, "aggregate returns are not supported");
+      return DAG.getNode(Opc, DL, MVT::Other, Chain);
+	}
+  }	
 
   // CCState - Info about the registers and stack slot.
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
-
-  if (MF.getFunction().getReturnType()->isAggregateType()) {
-    fail(DL, DAG, "aggregate returns are not supported");
-    return DAG.getNode(Opc, DL, MVT::Other, Chain);
-  }
-
+  
   // Analize return values.
   CCInfo.AnalyzeReturn(Outs, getHasAlu32() ? RetCC_BPF32 : RetCC_BPF64);
 
@@ -677,11 +686,13 @@ SDValue BPFTargetLowering::LowerCallResult(
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
 
-  if (Ins.size() > 1) {
+   // BPF calling convention does not allow returning more than 2 registers
+  if (Ins.size() > 2) {
     fail(DL, DAG, "only small returns supported");
     for (auto &In : Ins)
       InVals.push_back(DAG.getConstant(0, DL, In.VT));
-    return DAG.getCopyFromReg(Chain, DL, 1, Ins[0].VT, InGlue).getValue(1);
+    // create a dummy node with i64 type to continue code gen
+	return DAG.getCopyFromReg(Chain, DL, 1, MVT::i64, InGlue).getValue(1);
   }
 
   CCInfo.AnalyzeCallResult(Ins, getHasAlu32() ? RetCC_BPF32 : RetCC_BPF64);
