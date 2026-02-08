@@ -3406,10 +3406,22 @@ static QualType checkBuiltinTemplateIdType(
     Sema &SemaRef, ElaboratedTypeKeyword Keyword, BuiltinTemplateDecl *BTD,
     ArrayRef<TemplateArgument> Converted, SourceLocation TemplateLoc,
     TemplateArgumentListInfo &TemplateArgs) {
+  TemplateParameterList *Params = BTD->getTemplateParameters();
+  unsigned RequiredArgs = Params->size();
+  if (Params->hasParameterPack()) {
+    if (Converted.size() < RequiredArgs)
+      return QualType();
+  } else {
+    if (Converted.size() != RequiredArgs)
+      return QualType();
+  }
+
   ASTContext &Context = SemaRef.getASTContext();
 
   switch (BTD->getBuiltinTemplateKind()) {
   case BTK__make_integer_seq: {
+    if (Converted[2].isDependent())
+      return QualType();
     // Specializations of __make_integer_seq<S, T, N> are treated like
     // S<T, 0, ..., N-1>.
 
@@ -3423,8 +3435,6 @@ static QualType checkBuiltinTemplateIdType(
     }
 
     TemplateArgument NumArgsArg = Converted[2];
-    if (NumArgsArg.isDependent())
-      return QualType();
 
     TemplateArgumentListInfo SyntheticTemplateArgs;
     // The type argument, wrapped in substitution sugar, gets reused as the
@@ -3459,12 +3469,6 @@ static QualType checkBuiltinTemplateIdType(
   }
 
   case BTK__type_pack_element: {
-    // Specializations of
-    //    __type_pack_element<Index, T_1, ..., T_N>
-    // are treated like T_Index.
-    assert(Converted.size() == 2 &&
-           "__type_pack_element should be given an index and a parameter pack");
-
     TemplateArgument IndexArg = Converted[0], Ts = Converted[1];
     if (IndexArg.isDependent() || Ts.isDependent())
       return QualType();
@@ -3485,7 +3489,6 @@ static QualType checkBuiltinTemplateIdType(
   }
 
   case BTK__builtin_common_type: {
-    assert(Converted.size() == 4);
     if (llvm::any_of(Converted, [](auto &C) { return C.isDependent(); }))
       return QualType();
 
@@ -3508,8 +3511,6 @@ static QualType checkBuiltinTemplateIdType(
   }
 
   case BTK__hlsl_spirv_type: {
-    assert(Converted.size() == 4);
-
     if (!Context.getTargetInfo().getTriple().isSPIRV()) {
       SemaRef.Diag(TemplateLoc, diag::err_hlsl_spirv_only) << BTD;
     }
@@ -3537,12 +3538,7 @@ static QualType checkBuiltinTemplateIdType(
     return Context.getHLSLInlineSpirvType(Opcode, Size, Alignment, Operands);
   }
   case BTK__builtin_dedup_pack: {
-    assert(Converted.size() == 1 && "__builtin_dedup_pack should be given "
-                                    "a parameter pack");
     TemplateArgument Ts = Converted[0];
-    // Delay the computation until we can compute the final result. We choose
-    // not to remove the duplicates upfront before substitution to keep the code
-    // simple.
     if (Ts.isDependent())
       return QualType();
     assert(Ts.getKind() == clang::TemplateArgument::Pack);
