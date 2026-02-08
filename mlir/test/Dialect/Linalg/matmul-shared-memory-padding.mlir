@@ -5,14 +5,13 @@
 //   CHECK-NOT:     memref.copy
 //       CHECK:     linalg.fill
 //       CHECK:     scf.for
+//       CHECK:       vector.constant_mask [16, 4] : vector<128x4xi1>
 //       CHECK:       memref.alloc() : memref<128x16xf32, 3>
 //       CHECK:       scf.forall
-//       CHECK:         vector.constant_mask [16, 4] : vector<128x4xi1>
 //       CHECK:         vector.transfer_read
 //       CHECK:         vector.transfer_write
 //       CHECK:       memref.alloc() : memref<16x128xf32, 3>
 //       CHECK:       scf.forall
-//       CHECK:         vector.constant_mask [16, 4] : vector<128x4xi1>
 //       CHECK:         vector.transfer_read
 //       CHECK:         vector.transfer_write
 //       CHECK:       memref.alloc() : memref<128x128xf32, 3>

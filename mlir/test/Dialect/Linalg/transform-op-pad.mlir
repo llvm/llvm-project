@@ -315,7 +315,7 @@ module attributes {transform.with_named_sequence} {
 
 // Test dynamic padding using `use_prescribed_tensor_shapes`
 
-// CHECK: #[[MAP:.*]] = affine_map<()[s0] -> (-s0 + (s0 ceildiv 7) * 7)>
+// CHECK: #[[MAP:.*]] = affine_map<()[s0] -> (-s0 + (s0 ceildiv 7) * 7)> 
 // CHECK: @use_prescribed_tensor_shapes
 // CHECK: (%[[ARG0:.*]]: tensor<?x12xf32>, %[[ARG1:.*]]: tensor<12x?xf32>
 func.func @use_prescribed_tensor_shapes(%arg0: tensor<?x12xf32>,
