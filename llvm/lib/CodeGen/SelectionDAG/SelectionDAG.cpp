@@ -2187,11 +2187,9 @@ SDValue SelectionDAG::getConstantBuildVector(EVT VT, const SDLoc &DL,
          "Mismatch between VT element count and Ops size");
   assert(UndefElts.getBitWidth() == Ops.size() &&
          "Mismatch between UndefElts width and Ops size");
-
   unsigned NumElts = VT.getVectorNumElements();
   EVT EltVT = VT.getVectorElementType();
   assert(EltVT.isInteger() && "Expected integer element type");
-
   // Determine the type to use for the constant elements. After type
   // legalization, the original scalar element type may be illegal (e.g., i32
   // on LoongArch64 where only i64 is legal). In that case, we promote to a
@@ -2202,21 +2200,22 @@ SDValue SelectionDAG::getConstantBuildVector(EVT VT, const SDLoc &DL,
     if (Action == TargetLowering::TypePromoteInteger)
       ConstantVT = TLI->getTypeToTransformTo(*getContext(), EltVT);
   }
-
   SmallVector<SDValue, 16> BVOps(NumElts);
   for (unsigned i = 0; i < NumElts; ++i) {
     if (UndefElts[i]) {
       BVOps[i] = getUNDEF(ConstantVT);
     } else {
-      // Zero-extend the APInt to the promoted width if needed, preserving
-      // the original value (BUILD_VECTOR will implicitly truncate).
+
       APInt Val = Ops[i];
-      if (ConstantVT.getSizeInBits() > EltVT.getSizeInBits())
-        Val = Val.zextOrTrunc(ConstantVT.getSizeInBits());
+      if (ConstantVT.getSizeInBits() > EltVT.getSizeInBits()) {
+        if (TLI->isSExtCheaperThanZExt(EltVT, ConstantVT))
+          Val = Val.sextOrTrunc(ConstantVT.getSizeInBits());
+        else
+          Val = Val.zextOrTrunc(ConstantVT.getSizeInBits());
+      }
       BVOps[i] = getConstant(Val, DL, ConstantVT);
     }
   }
-
   return getBuildVector(VT, DL, BVOps);
 }
 
