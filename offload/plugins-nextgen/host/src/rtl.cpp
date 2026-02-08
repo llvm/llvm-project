@@ -449,8 +449,8 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   /// Initialize the plugin and return the number of devices.
   Expected<int32_t> initImpl() override {
 #ifdef USES_DYNAMIC_FFI
-    supportsFFI = ffi_init() == DYNAMIC_FFI_SUCCESS ? true : false;
-    if (!supportsFFI)
+    SupportsFFI = ffi_init() == FFI_OK ? true : false;
+    if (!SupportsFFI)
       ODBG(OLDT_Init) << "libffi is not available, kernels will not be launched "
                          "through libffi, and some features may be unavailable";
 #endif
