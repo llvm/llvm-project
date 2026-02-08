@@ -186,6 +186,32 @@ static mlir::Value emitX86CompressExpand(CIRGenBuilderTy &builder,
                                      mlir::ValueRange{source, mask, maskValue});
 }
 
+static mlir::Value
+emitEncodeKey(mlir::MLIRContext *context, CIRGenBuilderTy &builder,
+              const mlir::Location &location, mlir::ValueRange inputOperands,
+              mlir::Value outputOperand, std::uint8_t vecOutputCount,
+              const std::string &intrinsicName, std::uint8_t numResults) {
+  cir::VectorType resVector = cir::VectorType::get(builder.getUInt64Ty(), 2);
+  llvm::SmallVector<mlir::Type> members{builder.getUInt32Ty()};
+  llvm::append_range(members,
+                     llvm::SmallVector<mlir::Type>(vecOutputCount, resVector));
+  cir::RecordType resRecord = cir::RecordType::get(
+      context, members, false, false, cir::RecordType::RecordKind::Struct);
+
+  mlir::Value outputPtr =
+      builder.createBitcast(outputOperand, cir::PointerType::get(resVector));
+  mlir::Value call = builder.emitIntrinsicCallOp(location, intrinsicName,
+                                                 resRecord, inputOperands);
+  for (std::uint8_t i = 0; i < numResults; ++i) {
+    mlir::Value vecValue =
+        cir::ExtractMemberOp::create(builder, location, call, i + 1);
+    mlir::Value index = builder.getSInt32(i, location);
+    mlir::Value ptr = builder.createPtrStride(location, outputPtr, index);
+    builder.createStore(location, vecValue, Address{ptr, CharUnits::One()});
+  }
+  return cir::ExtractMemberOp::create(builder, location, call, 0);
+}
+
 static mlir::Value emitX86Select(CIRGenBuilderTy &builder, mlir::Location loc,
                                  mlir::Value mask, mlir::Value op0,
                                  mlir::Value op1) {
@@ -2402,14 +2428,23 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__readgsbyte:
   case X86::BI__readgsword:
   case X86::BI__readgsdword:
-  case X86::BI__readgsqword:
-  case X86::BI__builtin_ia32_encodekey128_u32:
-  case X86::BI__builtin_ia32_encodekey256_u32: {
+  case X86::BI__readgsqword: {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented X86 builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   }
+  case X86::BI__builtin_ia32_encodekey128_u32: {
+    return emitEncodeKey(&getMLIRContext(), builder, getLoc(expr->getExprLoc()),
+                         {ops[0], ops[1]}, ops[2], 6, "x86.encodekey128", 3);
+  }
+  case X86::BI__builtin_ia32_encodekey256_u32: {
+
+    return emitEncodeKey(&getMLIRContext(), builder, getLoc(expr->getExprLoc()),
+                         {ops[0], ops[1], ops[2]}, ops[3], 7,
+                         "x86.encodekey256", 4);
+  }
+
   case X86::BI__builtin_ia32_aesenc128kl_u8:
   case X86::BI__builtin_ia32_aesdec128kl_u8:
   case X86::BI__builtin_ia32_aesenc256kl_u8:
