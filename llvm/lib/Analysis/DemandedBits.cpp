@@ -162,6 +162,7 @@ void DemandedBits::determineLiveOperandBits(
           uint64_t Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
           uint64_t Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
           bool IsFShl = II->getIntrinsicID() == Intrinsic::fshl;
+          bool IsFShr = II->getIntrinsicID() == Intrinsic::fshr;
           bool ShiftLeft;
           uint64_t SMin = Min, SMax = Max;
           // fshl(a, b, k ) is defined by concatenating a . b
@@ -185,14 +186,20 @@ void DemandedBits::determineLiveOperandBits(
           // a4 a3 a2 a1 b4 b3, then exracting the lower bits
           // a2 a1 b4 b3
           // fshr(a,b,k) = (a >> k) | (b << (BW - k))
-          //
-          if (OperandNo == 0) {
-            // We shift left for a only for fshr
-            ShiftLeft = !IsFShl;
-          } else {
+
+          // Normalize to funnel shift left.
+          if (IsFShr) {
             SMin = BitWidth - Max;
             SMax = BitWidth - Min;
-            ShiftLeft = IsFShl;
+          }
+          if (OperandNo == 0) {
+            ShiftLeft = false;
+          } else if (OperandNo == 1) {
+            ShiftLeft = true;
+            auto NewSMin = BitWidth - SMax;
+            auto NewSMax = BitWidth - SMin;
+            SMin = NewSMin;
+            SMax = NewSMax;
           }
           GetShiftedRange(SMin, SMax, ShiftLeft);
         }
