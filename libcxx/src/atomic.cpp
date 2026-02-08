@@ -240,7 +240,7 @@ static void __platform_wait_on_address(void const* __ptr, void const* __val, opt
   __libcpp_thread_poll_with_backoff(
       [=]() -> bool { return std::memcmp(const_cast<const void*>(__ptr), __val, _Size) != 0; },
       __libcpp_timed_backoff_policy(),
-      std::chrono::nanoseconds(__timeout_ns));
+      std::chrono::nanoseconds(__timeout_ns.value_or(0)));
 }
 
 template <std::size_t _Size>
