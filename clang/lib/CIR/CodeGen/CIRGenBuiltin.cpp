@@ -745,10 +745,6 @@ decodeFixedType(CIRGenFunction &cgf,
   case IITDescriptor::Integer:
     return cir::IntType::get(context, descriptor.Integer_Width,
                              /*isSigned=*/true);
-  case IITDescriptor::Float:
-    return cir::SingleType::get(context);
-  case IITDescriptor::Double:
-    return cir::DoubleType::get(context);
   default:
     cgf.cgm.errorNYI("Unimplemented intrinsic type descriptor");
     return cir::VoidType::get(context);
