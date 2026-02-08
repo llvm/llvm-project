@@ -246,8 +246,12 @@ class RISCVAsmParser : public MCTargetAsmParser {
   void setFeatureBits(uint64_t Feature, StringRef FeatureString) {
     if (!(getSTI().hasFeature(Feature))) {
       MCSubtargetInfo &STI = copySTI();
-      setAvailableFeatures(
-          ComputeAvailableFeatures(STI.ToggleFeature(FeatureString)));
+      STI.ToggleFeature(FeatureString);
+
+      // Update the C and Zce implications.
+      RISCV::updateCZceFeatureImplications(STI);
+
+      setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
     }
   }
 
@@ -3812,9 +3816,9 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   }
 
   if (Opcode == RISCV::CM_MVSA01 || Opcode == RISCV::QC_CM_MVSA01) {
-    MCRegister Rd1 = Inst.getOperand(0).getReg();
-    MCRegister Rd2 = Inst.getOperand(1).getReg();
-    if (Rd1 == Rd2) {
+    MCRegister Rs1 = Inst.getOperand(0).getReg();
+    MCRegister Rs2 = Inst.getOperand(1).getReg();
+    if (Rs1 == Rs2) {
       SMLoc Loc = Operands[1]->getStartLoc();
       return Error(Loc, "rs1 and rs2 must be different");
     }

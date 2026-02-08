@@ -76,6 +76,8 @@ def testMyInt():
         print(add1._ODS_OPERAND_SEGMENTS)
         # CHECK: None
         print(add1._ODS_RESULT_SEGMENTS)
+        # CHECK: (0, True)
+        print(add1._ODS_REGIONS)
         # CHECK: %0 = "myint.constant"() {value = 2 : i32} : () -> i32
         print(add1.lhs.owner)
         # CHECK: %1 = "myint.constant"() {value = 3 : i32} : () -> i32
@@ -338,3 +340,73 @@ def testExtDialect():
             except TypeError as e:
                 # CHECK：too many positional arguments
                 print(e)
+
+
+# CHECK: TEST: testExtDialectWithRegion
+@run
+def testExtDialectWithRegion():
+    class TestRegion(Dialect, name="ext_region"):
+        pass
+
+    class IfOp(TestRegion.Operation, name="if"):
+        cond: Operand[IntegerType[1]]
+        then: Region
+        else_: Region
+
+    with Context(), Location.unknown():
+        TestRegion.load()
+        # CHECK: irdl.dialect @ext_region {
+        # CHECK:     irdl.operation @if {
+        # CHECK:     %0 = irdl.is i1
+        # CHECK:     irdl.operands(cond: %0)
+        # CHECK:     %1 = irdl.region
+        # CHECK:     %2 = irdl.region
+        # CHECK:     irdl.regions(then: %1, else_: %2)
+        # CHECK: }
+        print(TestRegion._mlir_module)
+
+        # CHECK: (self, /, cond, *, loc=None, ip=None)
+        print(IfOp.__init__.__signature__)
+
+        # CHECK: None None
+        print(IfOp._ODS_OPERAND_SEGMENTS, IfOp._ODS_RESULT_SEGMENTS)
+        # CHECK: (2, True)
+        print(IfOp._ODS_REGIONS)
+
+        from mlir.dialects import llvm
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            i1 = IntegerType.get_signless(1)
+            i32 = IntegerType.get_signless(32)
+            cond = arith.constant(i1, 1)
+
+            if_ = IfOp(cond)
+            if_.then.blocks.append()
+            if_.else_.blocks.append()
+
+            with InsertionPoint(if_.then.blocks[0]):
+                v = arith.constant(i32, 2)
+                llvm.unreachable()
+
+            with InsertionPoint(if_.else_.blocks[0]):
+                v = arith.constant(i32, 3)
+                llvm.unreachable()
+
+        assert module.operation.verify()
+        # CHECK: module {
+        # CHECK:     %true = arith.constant true
+        # CHECK:     "ext_region.if"(%true) ({
+        # CHECK:         %c2_i32 = arith.constant 2 : i32
+        # CHECK:         llvm.unreachable
+        # CHECK:     }, {
+        # CHECK:         %c3_i32 = arith.constant 3 : i32
+        # CHECK:         llvm.unreachable
+        # CHECK:     }) : (i1) -> ()
+        # CHECK: }
+        print(module)
+
+        # CHECK: %c2_i32 = arith.constant 2 : i32
+        print(if_.then.blocks[0])
+        # CHECK: %c3_i32 = arith.constant 3 : i32
+        print(if_.else_.blocks[0])

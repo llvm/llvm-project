@@ -16,12 +16,15 @@
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
+#include "VPlanUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -473,9 +476,8 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
   // Add a VPInstruction to increment the scalar canonical IV by VF * UF.
   // Initially the induction increment is guaranteed to not wrap, but that may
   // change later, e.g. when tail-folding, when the flags need to be dropped.
-  auto *CanonicalIVIncrement = Builder.createOverflowingOp(
-      Instruction::Add, {CanonicalIVPHI, &Plan.getVFxUF()}, {true, false}, DL,
-      "index.next");
+  auto *CanonicalIVIncrement = Builder.createAdd(
+      CanonicalIVPHI, &Plan.getVFxUF(), DL, "index.next", {true, false});
   CanonicalIVPHI->addOperand(CanonicalIVIncrement);
 
   // Add the BranchOnCount VPInstruction to the latch.
@@ -641,8 +643,31 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   // used, so it is safe.
   VPIRFlags Flags = vputils::getFlagsFromIndDesc(IndDesc);
 
-  return new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, &Plan.getVF(),
-                                           IndDesc, Flags, DL);
+  auto *WideIV = new VPWidenIntOrFpInductionRecipe(
+      Phi, Start, Step, &Plan.getVF(), IndDesc, Flags, DL);
+
+  // Replace live-out extracts of WideIV's backedge value by ExitingIVValue
+  // recipes.
+  VPValue *BackedgeVal = PhiR->getOperand(1);
+  for (VPUser *U : to_vector(BackedgeVal->users())) {
+    if (!match(U, m_ExtractLastPart(m_VPValue())))
+      continue;
+    auto *ExtractLastPart = cast<VPInstruction>(U);
+    if (!match(ExtractLastPart->getSingleUser(),
+               m_ExtractLastLane(m_VPValue())))
+      continue;
+    auto *ExtractLastLane =
+        cast<VPInstruction>(ExtractLastPart->getSingleUser());
+    assert(is_contained(ExtractLastLane->getParent()->successors(),
+                        Plan.getScalarPreheader()) &&
+           "last lane must be extracted in the middle block");
+    VPBuilder Builder(ExtractLastLane);
+    ExtractLastLane->replaceAllUsesWith(Builder.createNaryOp(
+        VPInstruction::ExitingIVValue, {WideIV, BackedgeVal}));
+    ExtractLastLane->eraseFromParent();
+    ExtractLastPart->eraseFromParent();
+  }
+  return WideIV;
 }
 
 void VPlanTransforms::createHeaderPhiRecipes(
@@ -810,11 +835,10 @@ void VPlanTransforms::createInLoopReductionRecipes(
                  match(CurrentLink, m_Sub(m_VPValue(), m_VPValue()))) {
         Type *PhiTy = TypeInfo.inferScalarType(PhiR);
         auto *Zero = Plan.getConstantInt(PhiTy, 0);
-        auto *Sub = new VPInstruction(Instruction::Sub,
-                                      {Zero, CurrentLink->getOperand(1)}, {},
-                                      {}, CurrentLinkI->getDebugLoc());
+        VPBuilder Builder(LinkVPBB, CurrentLink->getIterator());
+        auto *Sub = Builder.createSub(Zero, CurrentLink->getOperand(1),
+                                      CurrentLinkI->getDebugLoc());
         Sub->setUnderlyingValue(CurrentLinkI);
-        LinkVPBB->insert(Sub, CurrentLink->getIterator());
         VecOp = Sub;
       } else {
         // Index of the first operand which holds a non-mask vector operand.
@@ -1058,9 +1082,8 @@ void VPlanTransforms::addMinimumIterationCheck(
       // Get the maximum unsigned value for the type.
       VPValue *MaxUIntTripCount =
           Plan.getConstantInt(cast<IntegerType>(TripCountTy)->getMask());
-      VPValue *DistanceToMax = Builder.createNaryOp(
-          Instruction::Sub, {MaxUIntTripCount, TripCountVPV},
-          DebugLoc::getUnknown());
+      VPValue *DistanceToMax =
+          Builder.createSub(MaxUIntTripCount, TripCountVPV);
 
       // Don't execute the vector loop if (UMax - n) < (VF * UF).
       // FIXME: Should only check VF * UF, but currently checks Step=max(VF*UF,
@@ -1108,9 +1131,8 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
   VPBuilder Builder(cast<VPBasicBlock>(Plan.getEntry()));
   VPValue *VFxUF = Builder.createExpandSCEV(SE.getElementCount(
       TripCount->getType(), (EpilogueVF * EpilogueUF), SCEV::FlagNUW));
-  VPValue *Count = Builder.createNaryOp(
-      Instruction::Sub, {TC, Plan.getOrAddLiveIn(VectorTripCount)},
-      DebugLoc::getUnknown(), "n.vec.remaining");
+  VPValue *Count = Builder.createSub(TC, Plan.getOrAddLiveIn(VectorTripCount),
+                                     DebugLoc::getUnknown(), "n.vec.remaining");
 
   // Generate code to check if the loop's trip count is less than VF * UF of
   // the vector epilogue loop.
@@ -1133,37 +1155,6 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
   MDNode *BranchWeights =
       MDB.createBranchWeights(Weights, /*IsExpected=*/false);
   Branch->setMetadata(LLVMContext::MD_prof, BranchWeights);
-}
-
-/// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
-/// return nullptr;
-template <typename MatchT>
-static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
-  auto It = find_if(V->users(), match_fn(P));
-  return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
-}
-
-/// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
-/// return nullptr.
-template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
-  return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
-}
-
-/// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
-/// inserted for predicated reductions or tail folding.
-static VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
-  VPValue *BackedgeVal = PhiR->getBackedgeValue();
-  if (auto *Res =
-          findUserOf<VPInstruction::ComputeReductionResult>(BackedgeVal))
-    return Res;
-
-  // Look through selects inserted for tail folding or predicated reductions.
-  VPRecipeBase *SelR =
-      findUserOf(BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
-  if (!SelR)
-    return nullptr;
-  return findUserOf<VPInstruction::ComputeReductionResult>(
-      cast<VPSingleDefRecipe>(SelR));
 }
 
 /// Find and return the final select instruction of the FindIV result pattern
@@ -1274,7 +1265,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
 
     // If we exit early due to NaNs, compute the final reduction result based on
     // the reduction phi at the beginning of the last vector iteration.
-    auto *RdxResult = findComputeReductionResult(RedPhiR);
+    auto *RdxResult = vputils::findComputeReductionResult(RedPhiR);
     assert(RdxResult && "must find a ComputeReductionResult");
 
     auto *NewSel = MiddleBuilder.createSelect(AnyNaNLane, RedPhiR,
@@ -1290,8 +1281,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   auto *IsLatchExitTaken = LatchBuilder.createICmp(
       CmpInst::ICMP_EQ, LatchExitingBranch->getOperand(0),
       LatchExitingBranch->getOperand(1));
-  auto *AnyExitTaken = LatchBuilder.createNaryOp(
-      Instruction::Or, {AnyNaNLane, IsLatchExitTaken});
+  auto *AnyExitTaken = LatchBuilder.createOr(AnyNaNLane, IsLatchExitTaken);
   LatchBuilder.createNaryOp(VPInstruction::BranchOnCond, AnyExitTaken);
   LatchExitingBranch->eraseFromParent();
 
@@ -1402,7 +1392,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     // Find final reduction computation and replace it with an
     // extract.last.active intrinsic.
     auto *RdxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(DataSelect);
+        vputils::findUserOf<VPInstruction::ComputeReductionResult>(DataSelect);
     // TODO: Handle tail-folding.
     if (!RdxResult)
       return false;
@@ -1461,7 +1451,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     VPValue *CmpOpA;
     VPValue *CmpOpB;
     CmpPredicate Pred;
-    auto *Cmp = dyn_cast_or_null<VPRecipeWithIRFlags>(findUserOf(
+    auto *Cmp = dyn_cast_or_null<VPRecipeWithIRFlags>(vputils::findUserOf(
         MinOrMaxPhiR, m_Cmp(Pred, m_VPValue(CmpOpA), m_VPValue(CmpOpB))));
     if (!Cmp || Cmp->getNumUsers() != 1 ||
         (CmpOpA != MinOrMaxOpValue && CmpOpB != MinOrMaxOpValue))
@@ -1477,7 +1467,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
       return false;
 
     VPInstruction *MinOrMaxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(MinOrMaxOp);
+        vputils::findUserOf<VPInstruction::ComputeReductionResult>(MinOrMaxOp);
     assert(is_contained(MinOrMaxPhiR->users(), MinOrMaxOp) &&
            "one user must be MinOrMaxOp");
     assert(MinOrMaxResult &&
@@ -1497,8 +1487,20 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     }
 
     auto *FindIVPhiR = dyn_cast<VPReductionPHIRecipe>(FindIV);
-    if (!FindIVPhiR || !RecurrenceDescriptor::isFindLastIVRecurrenceKind(
+    if (!FindIVPhiR || !RecurrenceDescriptor::isFindIVRecurrenceKind(
                            FindIVPhiR->getRecurrenceKind()))
+      return false;
+
+    // Check if FindIVPhiR is a FindLast pattern by checking the MinMaxKind
+    // on its ComputeReductionResult. SMax/UMax indicates FindLast.
+    VPInstruction *FindIVResult =
+        vputils::findUserOf<VPInstruction::ComputeReductionResult>(
+            FindIVPhiR->getBackedgeValue());
+    assert(FindIVResult &&
+           "must be able to retrieve the FindIVResult VPInstruction");
+    RecurKind FindIVMinMaxKind = FindIVResult->getRecurKind();
+    if (FindIVMinMaxKind != RecurKind::SMax &&
+        FindIVMinMaxKind != RecurKind::UMax)
       return false;
 
     // TODO: Support cases where IVOp is the IV increment.

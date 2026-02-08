@@ -14,6 +14,7 @@
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/AffineMap.h"
@@ -1532,8 +1533,9 @@ struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
       }
       // case 2: source and result have same rank
       if (rankDiff == 0) {
-        SetVector<int64_t> broadcastUnitDims =
-            broadcastOp.computeBroadcastedUnitDims();
+        auto broadcastUnitDimsSet = broadcastOp.computeBroadcastedUnitDims();
+        SmallVector<int64_t> broadcastUnitDims(broadcastUnitDimsSet.begin(),
+                                               broadcastUnitDimsSet.end());
         bool isEqualTo = sourceLayout.isEqualTo(resultLayout);
         if (!isEqualTo)
           return rewriter.notifyMatchFailure(
@@ -1610,19 +1612,6 @@ struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
       return rewriter.notifyMatchFailure(
           warpOp,
           "the source or result of shape_cast op lacks distribution layout");
-
-    // For rank reducing or increasing shape_cast ops, the lower rank layout
-    // must be a slice of higher rank layout.
-    int64_t sourceRank = shapeCastOp.getSourceVectorType().getRank();
-    int64_t resultRank = shapeCastOp.getResultVectorType().getRank();
-    if (sourceRank < resultRank && !sourceLayout.isSliceOf(resultLayout))
-      return rewriter.notifyMatchFailure(
-          warpOp, "shape_cast is rank reducing but source layout is not a "
-                  "slice of result layout");
-    if (sourceRank > resultRank && !resultLayout.isSliceOf(sourceLayout))
-      return rewriter.notifyMatchFailure(
-          warpOp, "shape_cast is rank increasing but result layout is not a "
-                  "slice of source layout");
 
     FailureOr<VectorType> sourceDistTypeOrFailure =
         getDistVecTypeBasedOnLaneLayout(sourceLayout,
@@ -1902,8 +1891,8 @@ struct MemrefExtractAlignedPointerAsIndexDistribution final
     auto newExtractOp = memref::ExtractAlignedPointerAsIndexOp::create(
         rewriter, newWarpOp.getLoc(), extractOp.getType(),
         newWarpOp.getResult(newRetIndices[0]));
-    Value distributedVal = newWarpOp.getResult(operandIdx);
-    rewriter.replaceAllUsesWith(distributedVal, newExtractOp.getResult());
+    Value resultVal = newWarpOp.getResult(operandIdx);
+    rewriter.replaceAllUsesWith(resultVal, newExtractOp.getResult());
     return success();
   }
 };
