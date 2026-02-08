@@ -238,7 +238,6 @@ static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
 
   unsigned bitWidth = floatTy.getWidth();
   unsigned mantissaWidth = floatTy.getFPMantissaWidth() - 1;
-  unsigned exponentWidth = bitWidth - mantissaWidth - 1;
   const int bias = (&semantics == &APFloat::Float8E8M0FNU())
                        ? -semantics.minExponent
                        : -(semantics.minExponent - 1);
