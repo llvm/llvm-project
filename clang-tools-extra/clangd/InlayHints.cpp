@@ -782,16 +782,14 @@ private:
     if (Callee.Decl) {
       Params = maybeDropCxxExplicitObjectParameters(Callee.Decl->parameters());
 
-      [&]() {
-        auto Params = resolveForwardingParameters(Callee.Decl);
-        if (std::holds_alternative<decltype(ForwardedParamsStorage)>(Params)) {
-          ForwardedParamsStorage =
-              std::get<decltype(ForwardedParamsStorage)>(Params);
-        }
-        if (std::holds_alternative<decltype(CxxRecord)>(Params)) {
-          CxxRecord = std::get<decltype(CxxRecord)>(Params);
-        }
-      }();
+      auto ParamsOrRecord = resolveForwardingParameters(Callee.Decl);
+      if (std::holds_alternative<decltype(ForwardedParamsStorage)>(ParamsOrRecord)) {
+        ForwardedParamsStorage =
+            std::get<decltype(ForwardedParamsStorage)>(ParamsOrRecord);
+      }
+      if (std::holds_alternative<decltype(CxxRecord)>(ParamsOrRecord)) {
+        CxxRecord = std::get<decltype(CxxRecord)>(ParamsOrRecord);
+      }
 
       ForwardedParams =
           maybeDropCxxExplicitObjectParameters(ForwardedParamsStorage);

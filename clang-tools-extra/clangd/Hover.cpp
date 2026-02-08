@@ -1063,11 +1063,11 @@ void maybeAddCalleeArgInfo(const SelectionTree::Node *N, HoverInfo &HI,
 
   HoverInfo::PassType PassType;
 
-  const auto Params = resolveForwardingParameters(FD);
+  const auto ParamsOrRecord = resolveForwardingParameters(FD);
 
   auto Parameters = [&]() -> SmallVector<const ParmVarDecl *> {
-    if (std::holds_alternative<SmallVector<const ParmVarDecl *>>(Params)) {
-      return std::get<SmallVector<const ParmVarDecl *>>(Params);
+    if (std::holds_alternative<SmallVector<const ParmVarDecl *>>(ParamsOrRecord)) {
+      return std::get<SmallVector<const ParmVarDecl *>>(ParamsOrRecord);
     }
     return {};
   }();
