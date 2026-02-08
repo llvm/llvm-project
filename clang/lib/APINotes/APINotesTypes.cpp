@@ -35,6 +35,13 @@ LLVM_DUMP_METHOD void CommonEntityInfo::dump(llvm::raw_ostream &OS) const {
   }
   if (!SwiftName.empty())
     OS << "Swift Name: " << SwiftName << ' ';
+  if (!SwiftAttributes.empty()) {
+    OS << "Swift Attrs: [";
+    for (const std::string &attr : SwiftAttributes) {
+      OS << '\"' << attr << "\", ";
+    }
+    OS << "] ";
+  }
   OS << '\n';
 }
 
