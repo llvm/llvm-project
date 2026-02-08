@@ -277,6 +277,7 @@ public:
 class ParamIdx {
 public:
   constexpr static unsigned IdxBitWidth = 30;
+
 private:
   // Idx is exposed only via accessors that specify specific encodings.
   unsigned Idx : IdxBitWidth;
