@@ -1,15 +1,4 @@
-if(WIN32)
-set(supported_targets AMD64 IA64 ARM64 EM64T X86)
-else()
-set(supported_targets x86_64 aarch64 ppc64 ppc64le riscv64 s390x loongarch64)
-endif()
-
 set(machine ${CMAKE_SYSTEM_PROCESSOR})
-if(NOT ${machine} IN_LIST supported_targets)
-  message(STATUS "Not building ${machine} NextGen offloading plugin")
-  return()
-endif()
-
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "ppc64le$")
   set(machine ppc64)
 endif()
