@@ -3481,13 +3481,14 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     const Align Alignment = getLoadStoreAlignment(UI);
     unsigned AS = cast<PointerType>(ScalarPtrTy)->getAddressSpace();
     TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(UI->getOperand(0));
-    InstructionCost ScalarMemOpCost = Ctx.TTI.getMemoryOpCost(
-        UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo);
-
-    Type *PtrTy = isSingleScalar() ? ScalarPtrTy : toVectorTy(ScalarPtrTy, VF);
     bool PreferVectorizedAddressing = Ctx.TTI.prefersVectorizedAddressing();
     bool UsedByLoadStoreAddress =
         !PreferVectorizedAddressing && isUsedByLoadStoreAddress(this);
+    InstructionCost ScalarMemOpCost = Ctx.TTI.getMemoryOpCost(
+        UI->getOpcode(), ValTy, Alignment, AS, Ctx.CostKind, OpInfo,
+        UsedByLoadStoreAddress ? UI : nullptr);
+
+    Type *PtrTy = isSingleScalar() ? ScalarPtrTy : toVectorTy(ScalarPtrTy, VF);
     InstructionCost ScalarCost =
         ScalarMemOpCost +
         Ctx.TTI.getAddressComputationCost(
