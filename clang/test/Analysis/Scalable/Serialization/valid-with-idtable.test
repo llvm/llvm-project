@@ -1,4 +1,0 @@
-// RUN: ssaf-serialization-format-test %S/Inputs/valid-with-idtable.json -q -o %t.json
-// RUN: diff %t.json %S/Inputs/valid-with-idtable-expected.json
-
-// Test that a TUSummary with id_table entries can be read and written back

@@ -1,9 +1,0 @@
-// RUN: not ssaf-serialization-format-test %S/Inputs/entity-data-missing-entity-summary.json 2>&1 | FileCheck %s
-
-// Test that entity data entries must have 'entity_summary' field
-
-// CHECK: failed to read TUSummary
-// CHECK: failed to deserialize EntityDataMap at index 0
-// CHECK: failed to deserialize EntityDataMap entry
-// CHECK: missing or invalid field 'entity_summary'
-// CHECK: expected EntitySummary JSON object

@@ -1,7 +1,0 @@
-// RUN: not ssaf-serialization-format-test %S/Inputs/duplicate-summary-name.json 2>&1 | FileCheck %s
-
-// Test that duplicate summary names are detected
-
-// CHECK: failed to read TUSummary
-// CHECK: failed to deserialize SummaryDataMap
-// CHECK: duplicate SummaryName 'test' found at index

@@ -1,8 +1,0 @@
-// RUN: not ssaf-serialization-format-test %S/Inputs/missing-kind.json 2>&1 | FileCheck %s
-
-// Test that missing kind field in tu_namespace is detected
-
-// CHECK: failed to read TUSummary
-// CHECK: failed to deserialize BuildNamespace
-// CHECK: missing required field 'kind'
-// CHECK: expected BuildNamespaceKind

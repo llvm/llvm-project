@@ -10,6 +10,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   Registries/MockSummaryExtractor2.cpp
   Registries/SerializationFormatRegistryTest.cpp
   Registries/SummaryExtractorRegistryTest.cpp
+  Serialization/JSONFormatTest.cpp
   SummaryNameTest.cpp
 
   CLANG_LIBS
@@ -27,6 +28,4 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   FrontendOpenMP
   Support
   )
-
-add_subdirectory(tools)
 

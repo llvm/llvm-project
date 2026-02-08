@@ -1,7 +1,0 @@
-// RUN: not ssaf-serialization-format-test %S/Inputs/directory.json 2>&1 | FileCheck %s
-
-// Test that directories with .json extension are rejected
-
-// CHECK: failed to read TUSummary
-// CHECK: failed to validate JSON file
-// CHECK: path is a directory, not a file

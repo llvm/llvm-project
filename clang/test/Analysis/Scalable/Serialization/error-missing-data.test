@@ -1,7 +1,0 @@
-// RUN: not ssaf-serialization-format-test %S/Inputs/missing-data.json 2>&1 | FileCheck %s
-
-// Test that missing root 'data' field is detected
-
-// CHECK: failed to read TUSummary
-// CHECK: missing or invalid field 'data'
-// CHECK: expected JSON array

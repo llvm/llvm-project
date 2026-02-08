@@ -1,9 +1,0 @@
-// RUN: not ssaf-serialization-format-test %S/Inputs/entity-name-missing-usr.json 2>&1 | FileCheck %s
-
-// Test that EntityName must have 'usr' field
-
-// CHECK: failed to read TUSummary
-// CHECK: failed to deserialize EntityIdTable entry
-// CHECK: failed to deserialize EntityName
-// CHECK: missing required field 'usr'
-// CHECK: Unified Symbol Resolution string

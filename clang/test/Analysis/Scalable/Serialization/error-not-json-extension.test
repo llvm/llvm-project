@@ -1,8 +1,0 @@
-// RUN: not ssaf-serialization-format-test %S/Inputs/not-json-extension.txt 2>&1 | FileCheck %s
-
-// Test that files with non-.json extensions are rejected
-
-// CHECK: failed to read TUSummary
-// CHECK: failed to read JSON object
-// CHECK: failed to validate JSON file
-// CHECK: not a JSON file

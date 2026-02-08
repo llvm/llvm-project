@@ -1,4 +1,0 @@
-// RUN: ssaf-serialization-format-test %S/Inputs/valid-link-unit.json -q -o %t.json
-// RUN: diff %t.json %S/Inputs/valid-link-unit-expected.json
-
-// Test that a TUSummary with link_unit namespace can be read and written back

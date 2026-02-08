@@ -1,9 +1,0 @@
-// RUN: not ssaf-serialization-format-test %S/Inputs/callgraph-invalid-caller.json 2>&1 | FileCheck %s
-
-// Test that CallGraph analysis validates caller field type
-
-// CHECK: failed to read TUSummary
-// CHECK: failed to deserialize SummaryDataMap entry for summary 'CallGraph'
-// CHECK: failed to deserialize EntityDataMap at index 0
-// CHECK: failed to deserialize EntityDataMap entry
-// CHECK: CallGraph: 'caller' at index 0 is not a valid uint64

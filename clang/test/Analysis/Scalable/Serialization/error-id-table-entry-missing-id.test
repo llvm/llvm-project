@@ -1,8 +1,0 @@
-// RUN: not ssaf-serialization-format-test %S/Inputs/id-table-entry-missing-id.json 2>&1 | FileCheck %s
-
-// Test that id_table entries must have 'id' field
-
-// CHECK: failed to read TUSummary
-// CHECK: failed to deserialize EntityIdTable entry
-// CHECK: missing required field 'id'
-// CHECK: expected unsigned integer EntityId

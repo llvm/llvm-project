@@ -1,9 +1,0 @@
-// RUN: not ssaf-serialization-format-test %S/Inputs/callgraph-missing-field.json 2>&1 | FileCheck %s
-
-// Test that CallGraph analysis requires 'call_graph' field
-
-// CHECK: failed to read TUSummary
-// CHECK: failed to deserialize SummaryDataMap entry for summary 'CallGraph'
-// CHECK: failed to deserialize EntityDataMap at index 0
-// CHECK: failed to deserialize EntityDataMap entry
-// CHECK: CallGraph: missing or invalid 'call_graph' field

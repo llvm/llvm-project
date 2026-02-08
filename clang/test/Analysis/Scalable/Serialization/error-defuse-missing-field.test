@@ -1,9 +1,0 @@
-// RUN: not ssaf-serialization-format-test %S/Inputs/defuse-missing-field.json 2>&1 | FileCheck %s
-
-// Test that DefUse analysis requires 'def_use_chains' field
-
-// CHECK: failed to read TUSummary
-// CHECK: failed to deserialize SummaryDataMap entry for summary 'DefUse'
-// CHECK: failed to deserialize EntityDataMap at index 0
-// CHECK: failed to deserialize EntityDataMap entry
-// CHECK: DefUse: missing or invalid 'def_use_chains' field
