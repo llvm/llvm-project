@@ -3040,6 +3040,24 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_ilogbf",
+    hdrs = ["src/__support/math/ilogbf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_ilogbl",
+    hdrs = ["src/__support/math/ilogbl.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_ldexpf128",
     hdrs = ["src/__support/math/ldexpf128.h"],
     deps = [
@@ -3174,6 +3192,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_logb",
+    hdrs = ["src/__support/math/logb.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_logbf",
     hdrs = ["src/__support/math/logbf.h"],
     deps = [
@@ -3193,8 +3221,6 @@ libc_support_library(
 libc_support_library(
     name = "__support_math_logbf16",
     hdrs = ["src/__support/math/logbf16.h"],
-    name = "__support_math_logb",
-    hdrs = ["src/__support/math/logb.h"],
     deps = [
         ":__support_fputil_manipulation_functions",
     ],
@@ -4262,7 +4288,7 @@ libc_math_function(name = "ddivf128")
 libc_math_function(
     name = "dfmal",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_dfmal",
     ],
 )
 
@@ -4440,7 +4466,7 @@ libc_math_function(name = "f16divl")
 libc_math_function(
     name = "f16fma",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_f16fma",
     ],
 )
 
@@ -4796,7 +4822,7 @@ libc_math_function(name = "fromfpxf16")
 libc_math_function(
     name = "fsqrt",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_fsqrt",
     ],
 )
 
@@ -4810,7 +4836,8 @@ libc_math_function(
 libc_math_function(
     name = "fsqrtf128",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_fsqrtf128",
+        ":errno",
     ],
 )
 
@@ -4835,8 +4862,8 @@ libc_math_function(name = "hypot")
 libc_math_function(
     name = "hypotf",
     additional_deps = [
-        ":__support_fputil_double_double",
-        ":__support_fputil_sqrt",
+        ":__support_math_hypotf",
+        ":errno",
     ],
 )
 
@@ -4855,9 +4882,17 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "ilogbf")
+libc_math_function(
+    name = "ilogbf",
+    additional_deps = [
+        ":__support_math_ilogbf",
+    ],
+)
 
-libc_math_function(name = "ilogbl")
+libc_math_function(
+    name = "ilogbl",
+    additional_deps = ["__support_math_ilogbl"],
+)
 
 libc_math_function(
     name = "ilogbf128",
@@ -4905,7 +4940,10 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "llogbf")
+libc_math_function(
+    name = "llogbf",
+    additional_deps = [":__support_math_llogbf"],
+)
 
 libc_math_function(name = "llogbl")
 
@@ -5039,13 +5077,26 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "logbf")
+libc_math_function(
+    name = "logbf",
+    additional_deps = [
+        ":__support_math_logbf",
+    ],
+)
 
 libc_math_function(name = "logbl")
 
-libc_math_function(name = "logbf128")
+libc_math_function(
+    name = "logbf128",
+    additional_deps = [":__support_math_logbf128"],
+)
 
-libc_math_function(name = "logbf16")
+libc_math_function(
+    name = "logbf16",
+    additional_deps = [
+        ":__support_math_logbf16",
+    ],
+)
 
 libc_math_function(name = "lrint")
 
