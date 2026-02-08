@@ -18,5 +18,5 @@ def int_anytypeof_multi : Intrinsic<
 
 // Verify encoding table generation.
 // CHECK-IMPL: static constexpr unsigned char IIT_LongEncodingTable[] = {
-// CHECK-IMPL-NEXT: /* 0 */ 4, 15, 0, 93, 2, 3, 4, 15, 8, 93, 3, 15, 9, 7, 8, 0,
+// CHECK-IMPL-NEXT: /* 0 */ 4, 15, 0, 54, 2, 3, 4, 15, 8, 54, 3, 15, 9, 7, 8, 0,
 // CHECK-IMPL-NEXT: 255

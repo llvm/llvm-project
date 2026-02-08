@@ -373,7 +373,7 @@ def IIT_V10 : IIT_Vec<10, 51>;
 def IIT_V2048 : IIT_Vec<2048, 52>;
 def IIT_V4096 : IIT_Vec<4096, 53>;
 // Constrained type encoding for overloaded intrinsics.
-def IIT_ANYTYPE : IIT_Base<93>;
+def IIT_ANYTYPE : IIT_Base<54>;
 }
 
 defvar IIT_all_FixedTypes = !filter(iit, IIT_all,
@@ -455,7 +455,7 @@ class LLVMAnyPointerType : LLVMAnyType<pAny> {
 class AnyTypeOf<list<LLVMType> allowed_types> : LLVMAnyType<Any> {
   list<LLVMType> AllowedTypes = allowed_types;
   
-  // Validation: specifying maximal 255 number of allowed types.
+  // Limit to 255 allowed types since it is encoded as a single byte.
   assert !le(!size(allowed_types), 255),
          "AnyTypeOf cannot exceed 255 allowed types";
   
