@@ -3,9 +3,9 @@
 typedef int LocalInt __attribute__((opencl_local));
 
 void test_new() {
-  int *p = new LocalInt[1]; // expected-error {{cannot allocate objects of type 'int' in address space}}
+  int *p = new LocalInt[1]; // expected-error {{'new' cannot allocate objects of type 'int' in address space '__local'}}
 }
 
 void test_delete(LocalInt *p) {
-  delete p; // expected-error {{cannot delete objects of type 'int' in address space}}
+  delete p; // expected-error {{'delete' cannot delete objects of type 'int' in address space '__local'}}
 }
