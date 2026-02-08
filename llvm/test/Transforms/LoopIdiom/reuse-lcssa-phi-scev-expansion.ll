@@ -10,7 +10,7 @@ define void @scev_expand_ptrtoint(i8 %x, ptr %start) {
 ; CHECK-LABEL: define void @scev_expand_ptrtoint(
 ; CHECK-SAME: i8 [[X:%.*]], ptr [[START:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[START1:%.*]] = ptrtoint ptr [[START]] to i64
+; CHECK-NEXT:    [[START1:%.*]] = ptrtoaddr ptr [[START]] to i64
 ; CHECK-NEXT:    br label %[[LOOP_1_HEADER:.*]]
 ; CHECK:       [[LOOP_1_HEADER]]:
 ; CHECK-NEXT:    [[PTR_IV_1:%.*]] = phi ptr [ [[START]], %[[ENTRY]] ], [ [[PTR_IV_1_NEXT:%.*]], %[[LOOP_1_LATCH:.*]] ]
@@ -36,7 +36,7 @@ define void @scev_expand_ptrtoint(i8 %x, ptr %start) {
 ; CHECK-NEXT:    [[INDVAR_LCSSA:%.*]] = phi i64 [ [[INDVAR]], %[[LOOP_2_HEADER]] ], [ [[INDVAR]], %[[LOOP_2_HEADER]] ]
 ; CHECK-NEXT:    [[PTR_IV_2_LCSSA:%.*]] = phi ptr [ [[PTR_IV_2]], %[[LOOP_2_HEADER]] ], [ [[PTR_IV_2]], %[[LOOP_2_HEADER]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 1, [[START1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR_IV_1_LCSSA]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoaddr ptr [[PTR_IV_1_LCSSA]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[CMP_EXT]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDVAR_LCSSA]], [[TMP4]]
