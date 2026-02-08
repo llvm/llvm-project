@@ -102,15 +102,15 @@ bool AMDGPUMarkLastScratchLoad::run(MachineFunction &MF) {
 
   bool Changed = false;
 
-  for (auto *LI : *LS) {
-    for (const LiveRange::Segment &Segment : LI->segments) {
+  for (auto &[SS, LI] : *LS) {
+    for (const LiveRange::Segment &Segment : LI.segments) {
 
       // Ignore segments that run to the end of basic block because in this case
       // slot is still live at the end of it.
       if (Segment.end.isBlock())
         continue;
 
-      const int FrameIndex = LI->reg().stackSlotIndex();
+      const int FrameIndex = LI.reg().stackSlotIndex();
       MachineInstr *LastLoad = nullptr;
 
       MachineInstr *MISegmentEnd = SI->getInstructionFromIndex(Segment.end);
