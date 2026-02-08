@@ -11,6 +11,10 @@
 
 // <semaphore>
 
+// This is a regression test for a bug in semaphore::try_acquire_for
+// where it can wait indefinitely
+// https://github.com/llvm/llvm-project/issues/180334
+
 #include <semaphore>
 #include <thread>
 #include <chrono>
@@ -19,27 +23,23 @@
 #include "make_test_thread.h"
 #include "test_macros.h"
 
-int main(int, char**) {
+void test() {
   auto const start = std::chrono::steady_clock::now();
-
   std::counting_semaphore<> s(0);
 
-  assert(!s.try_acquire_until(start + std::chrono::milliseconds(250)));
-  assert(!s.try_acquire_for(std::chrono::milliseconds(250)));
-
-  std::thread t = support::make_test_thread([&](){
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
-    s.release();
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
-    s.release();
-  });
-
-  assert(s.try_acquire_until(start + std::chrono::seconds(2)));
-  assert(s.try_acquire_for(std::chrono::seconds(2)));
-  t.join();
+  assert(!s.try_acquire_for(std::chrono::nanoseconds(1)));
+  assert(!s.try_acquire_for(std::chrono::microseconds(1)));
+  assert(!s.try_acquire_for(std::chrono::milliseconds(1)));
+  assert(!s.try_acquire_for(std::chrono::milliseconds(100)));
 
   auto const end = std::chrono::steady_clock::now();
   assert(end - start < std::chrono::seconds(10));
+}
+
+int main(int, char**) {
+  for (auto i = 0; i < 10; ++i) {
+    test();
+  }
 
   return 0;
 }
