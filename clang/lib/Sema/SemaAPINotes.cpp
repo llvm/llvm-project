@@ -337,7 +337,7 @@ static void ProcessAPINotes(Sema &S, Decl *D,
   }
 
   // swift_attr
-  for (const std::string& swiftAttrName : Info.SwiftAttributes) {
+  for (const std::string &swiftAttrName : Info.SwiftAttributes) {
     D->addAttr(SwiftAttrAttr::Create(S.Context, swiftAttrName));
   }
 }

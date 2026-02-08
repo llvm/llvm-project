@@ -502,7 +502,8 @@ public:
   }
 };
 
-/// Emit a serialized representation of the Attribute from the SwifrAttributes sequence.
+/// Emit a serialized representation of the Attribute from the SwifrAttributes
+/// sequence.
 void emitSwiftAttribute(raw_ostream &OS, const std::string &Attribute) {
   llvm::support::endian::Writer writer(OS, llvm::endianness::little);
   writer.write<uint16_t>(Attribute.size());
@@ -543,8 +544,8 @@ void emitCommonEntityInfo(raw_ostream &OS, const CommonEntityInfo &CEI) {
     emitSwiftAttribute(OS, Attribute);
 }
 
-/// Retrieve the serialized size of the given an Attribute in a SwiftAttributes sequence,
-/// for use in on-disk hash tables.
+/// Retrieve the serialized size of the given an Attribute in a SwiftAttributes
+/// sequence, for use in on-disk hash tables.
 unsigned getSwiftAttributeSize(const std::string &Attribute) {
   return sizeof(uint16_t) + Attribute.size(); // length and contents
 }

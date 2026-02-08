@@ -137,7 +137,8 @@ public:
       SwiftName = RHS.SwiftName;
 
     // Merge SwiftAttributes
-    SwiftAttributes.insert(SwiftAttributes.end(), RHS.SwiftAttributes.begin(), RHS.SwiftAttributes.end());
+    SwiftAttributes.insert(SwiftAttributes.end(), RHS.SwiftAttributes.begin(),
+                           RHS.SwiftAttributes.end());
 
     return *this;
   }
@@ -153,8 +154,7 @@ inline bool operator==(const CommonEntityInfo &LHS,
          LHS.SwiftPrivateSpecified == RHS.SwiftPrivateSpecified &&
          LHS.SwiftPrivate == RHS.SwiftPrivate &&
          LHS.SwiftSafetyAudited == RHS.SwiftSafetyAudited &&
-         LHS.SwiftSafety == RHS.SwiftSafety &&
-         LHS.SwiftName == RHS.SwiftName &&
+         LHS.SwiftSafety == RHS.SwiftSafety && LHS.SwiftName == RHS.SwiftName &&
          LHS.SwiftAttributes == RHS.SwiftAttributes;
 }
 

@@ -801,7 +801,8 @@ public:
 
   void convertSwiftAttributes(const SwiftAttributeSeq &SwiftAttributes,
                               CommonEntityInfo &OutInfo) {
-    // Convert StringRef attributes to std::vector<std::string> in CommonEntityInfo
+    // Convert StringRef attributes to std::vector<std::string> in
+    // CommonEntityInfo
     OutInfo.SwiftAttributes.reserve(SwiftAttributes.size());
     for (const StringRef &A : SwiftAttributes) {
       OutInfo.SwiftAttributes.emplace_back(A);
