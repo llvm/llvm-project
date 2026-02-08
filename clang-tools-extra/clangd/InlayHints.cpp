@@ -783,7 +783,8 @@ private:
       Params = maybeDropCxxExplicitObjectParameters(Callee.Decl->parameters());
 
       auto ParamsOrRecord = resolveForwardingParameters(Callee.Decl);
-      if (std::holds_alternative<decltype(ForwardedParamsStorage)>(ParamsOrRecord)) {
+      if (std::holds_alternative<decltype(ForwardedParamsStorage)>(
+              ParamsOrRecord)) {
         ForwardedParamsStorage =
             std::get<decltype(ForwardedParamsStorage)>(ParamsOrRecord);
       }
