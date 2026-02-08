@@ -8503,7 +8503,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
         Expr::EvalResult ER;
         if (Entity.getType()->getAs<PointerType>() &&
             CurInit.get()->EvaluateAsRValue(ER, S.Context) &&
-            (!ER.Val.isLValue() || !ER.Val.isNullPointer())) {
+            // We continue and let it error later if Rvalue is not a pointer
+            ER.Val.isLValue() && !ER.Val.isNullPointer()) {
           S.Diag(Kind.getLocation(), diag::err_c23_constexpr_pointer_not_null);
           return ExprError();
         }
