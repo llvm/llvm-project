@@ -131,4 +131,3 @@ def olGetDeviceInfoSize : Function {
     Return<"OL_ERRC_INVALID_DEVICE">
   ];
 }
-
