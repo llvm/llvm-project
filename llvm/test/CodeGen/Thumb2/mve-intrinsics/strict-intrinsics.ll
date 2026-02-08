@@ -340,6 +340,31 @@ entry:
   ret <8 x half> %0
 }
 
+define arm_aapcs_vfpcc <8 x half> @test_roundeven_f16(<8 x half> %a) #0 {
+; CHECK-LABEL: test_roundeven_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmovx.f16 s4, s0
+; CHECK-NEXT:    vrintn.f16 s0, s0
+; CHECK-NEXT:    vrintn.f16 s4, s4
+; CHECK-NEXT:    vins.f16 s0, s4
+; CHECK-NEXT:    vmovx.f16 s4, s1
+; CHECK-NEXT:    vrintn.f16 s4, s4
+; CHECK-NEXT:    vrintn.f16 s1, s1
+; CHECK-NEXT:    vins.f16 s1, s4
+; CHECK-NEXT:    vmovx.f16 s4, s2
+; CHECK-NEXT:    vrintn.f16 s4, s4
+; CHECK-NEXT:    vrintn.f16 s2, s2
+; CHECK-NEXT:    vins.f16 s2, s4
+; CHECK-NEXT:    vmovx.f16 s4, s3
+; CHECK-NEXT:    vrintn.f16 s4, s4
+; CHECK-NEXT:    vrintn.f16 s3, s3
+; CHECK-NEXT:    vins.f16 s3, s4
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = tail call <8 x half> @llvm.experimental.constrained.roundeven.v8f16(<8 x half> %a, metadata !"fpexcept.strict")
+  ret <8 x half> %0
+}
+
 define arm_aapcs_vfpcc <4 x float> @test_vrndnq_f32(<4 x float> %a) #0 {
 ; CHECK-LABEL: test_vrndnq_f32:
 ; CHECK:       @ %bb.0: @ %entry
