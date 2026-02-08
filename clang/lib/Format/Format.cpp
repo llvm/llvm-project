@@ -3766,7 +3766,14 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
     StringRef Line =
         Code.substr(Prev, (Pos != StringRef::npos ? Pos : Code.size()) - Prev);
 
-    StringRef Trimmed = Line.trim();`r`n    if (Trimmed.empty()) {`r`n      // Skip empty lines.`r`n    } else if (isClangFormatOff(Trimmed)) {`r`n      FormattingOff = true;`r`n    } else if (isClangFormatOn(Trimmed)) {`r`n      FormattingOff = false;`r`n    } else if (Trimmed.starts_with("//")) {
+    StringRef Trimmed = Line.trim();
+    if (Trimmed.empty()) {
+      // Skip empty lines.
+    } else if (isClangFormatOff(Trimmed)) {
+      FormattingOff = true;
+    } else if (isClangFormatOn(Trimmed)) {
+      FormattingOff = false;
+    } else if (Trimmed.starts_with("//")) {
       if (!ImportsInBlock.empty())
         AssociatedCommentLines.push_back(Line);
     } else if (Trimmed.starts_with("/*")) {
