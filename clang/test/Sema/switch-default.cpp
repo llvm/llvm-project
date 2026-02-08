@@ -16,6 +16,15 @@ int f2(int a) {
   return a;
 }
 
+void f3(int z) {
+    switch(z) {
+      default: // expected-note {{previous case defined here}}
+      case 1:
+      default:  // expected-error {{multiple default labels in one switch}}
+        break;
+    }
+}
+
 // Warn even completely covered Enum cases(GCC compatibility).
 enum E { A, B };
 enum E check_enum(enum E e) {

@@ -1395,8 +1395,12 @@ public:
   StmtResult RebuildDefaultStmt(SourceLocation DefaultLoc,
                                       SourceLocation ColonLoc,
                                       Stmt *SubStmt) {
-    return getSema().ActOnDefaultStmt(DefaultLoc, ColonLoc, SubStmt,
-                                      /*CurScope=*/nullptr);
+    StmtResult Default = getSema().ActOnDefaultStmt(DefaultLoc, ColonLoc,
+                                                    /*CurScope=*/nullptr);
+    if (Default.isInvalid())
+      return StmtError();
+    getSema().ActOnDefaultStmtBody(Default.get(), SubStmt);
+    return Default;
   }
 
   /// Build a new label statement.

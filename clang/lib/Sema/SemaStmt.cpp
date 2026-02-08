@@ -564,12 +564,11 @@ void Sema::ActOnCaseStmtBody(Stmt *S, Stmt *SubStmt) {
   cast<CaseStmt>(S)->setSubStmt(SubStmt);
 }
 
-StmtResult
-Sema::ActOnDefaultStmt(SourceLocation DefaultLoc, SourceLocation ColonLoc,
-                       Stmt *SubStmt, Scope *CurScope) {
+StmtResult Sema::ActOnDefaultStmt(SourceLocation DefaultLoc,
+                                  SourceLocation ColonLoc, Scope *CurScope) {
   if (getCurFunction()->SwitchStack.empty()) {
     Diag(DefaultLoc, diag::err_default_not_in_switch);
-    return SubStmt;
+    return StmtError();
   }
 
   if (LangOpts.OpenACC &&
@@ -579,9 +578,14 @@ Sema::ActOnDefaultStmt(SourceLocation DefaultLoc, SourceLocation ColonLoc,
     return StmtError();
   }
 
-  DefaultStmt *DS = new (Context) DefaultStmt(DefaultLoc, ColonLoc, SubStmt);
+  DefaultStmt *DS = new (Context) DefaultStmt(DefaultLoc, ColonLoc,
+                                              /*SubStmt=*/nullptr);
   getCurFunction()->SwitchStack.back().getPointer()->addSwitchCase(DS);
   return DS;
+}
+
+void Sema::ActOnDefaultStmtBody(Stmt *S, Stmt *SubStmt) {
+  cast<DefaultStmt>(S)->setSubStmt(SubStmt);
 }
 
 StmtResult
@@ -1369,8 +1373,9 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
 
     if (DefaultStmt *DS = dyn_cast<DefaultStmt>(SC)) {
       if (TheDefaultStmt) {
-        Diag(DS->getDefaultLoc(), diag::err_multiple_default_labels_defined);
-        Diag(TheDefaultStmt->getDefaultLoc(), diag::note_duplicate_case_prev);
+        Diag(TheDefaultStmt->getDefaultLoc(),
+             diag::err_multiple_default_labels_defined);
+        Diag(DS->getDefaultLoc(), diag::note_duplicate_case_prev);
 
         // FIXME: Remove the default statement from the switch block so that
         // we'll return a valid AST.  This requires recursing down the AST and
