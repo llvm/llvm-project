@@ -78,16 +78,10 @@ exit:
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedInnerReduction
+; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        reduction_02
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Only supports at most one reduction.
-; CHECK: --- !Missed
-; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedPHIInner
-; CHECK-NEXT: Function:        reduction_02
-; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
+; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
 
 ; IR-LABEL: @reduction_02(
 ; IR-NOT: split
@@ -142,16 +136,10 @@ exit:
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedInnerReduction
+; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        reduction_03
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Only supported when the reduction is used once in the outer loop.
-; CHECK: --- !Missed
-; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedPHIInner
-; CHECK-NEXT: Function:        reduction_03
-; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
+; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
 
 ; IR-LABEL: @reduction_03(
 ; IR-NOT: split
@@ -212,16 +200,10 @@ exit:
 ; CHECK-NEXT:   - String:          Only outer loops with induction or reduction PHI nodes can be interchanged currently.
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedInnerReduction
+; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        reduction_04
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Only supported when the loop is the innermost.
-; CHECK: --- !Missed
-; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedPHIInner
-; CHECK-NEXT: Function:        reduction_04
-; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
+; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
 
 ; IR-LABEL: @reduction_04(
 ; IR-NOT: split
@@ -270,7 +252,6 @@ exit:
   ret void
 }
 
-
 ; 5. MemRef doesn't dominate InnerLoop's HeaderBB.
 ; for (int i = 0; i < 100; i++) {
 ;   r = 0;
@@ -281,16 +262,10 @@ exit:
 
 ; CHECK: --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedInnerReduction
+; CHECK-NEXT: Name:            Dependence
 ; CHECK-NEXT: Function:        reduction_05
 ; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Only supported when memory reference dominate the inner loop.
-; CHECK: --- !Missed
-; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            UnsupportedPHIInner
-; CHECK-NEXT: Function:        reduction_05
-; CHECK-NEXT: Args:
-; CHECK-NEXT:   - String:          Only inner loops with induction or reduction PHI nodes can be interchange currently.
+; CHECK-NEXT:   - String:          Cannot interchange loops due to dependences.
 
 ; IR-LABEL: @reduction_05(
 ; IR-NOT: split
