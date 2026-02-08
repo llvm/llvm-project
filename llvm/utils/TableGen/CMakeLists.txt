@@ -56,6 +56,7 @@ add_tablegen(llvm-tblgen LLVM
   GlobalISelEmitter.cpp
   InstrDocsEmitter.cpp
   InstrInfoEmitter.cpp
+  IntrinsicFolderEmitter.cpp
   llvm-tblgen.cpp
   MacroFusionPredicatorEmitter.cpp
   OptionParserEmitter.cpp
