@@ -136,8 +136,8 @@ New checks
 - New :doc:`readability-redundant-qualified-alias
   <clang-tidy/checks/readability/redundant-qualified-alias>` check.
 
-  Finds redundant identity type aliases of the form ``using X = ns::X;`` and
-  suggests rewriting them as using-declarations when safe.
+  Finds redundant identity type aliases that re-expose a qualified name and can
+  be replaced with a ``using`` declaration.
 
 - New :doc:`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check.

@@ -3,8 +3,8 @@
 readability-redundant-qualified-alias
 =====================================
 
-Finds redundant identity type aliases that simply re-expose a qualified name
-and can be replaced with a using-declaration.
+Finds redundant identity type aliases that re-expose a qualified name and can
+be replaced with a ``using`` declaration.
 
 .. code-block:: c++
 
@@ -25,5 +25,6 @@ Options
 
 .. option:: OnlyNamespaceScope
 
-   When false (default), consider aliases declared in any scope. When true,
-   only consider aliases declared in a namespace or the translation unit.
+   When ``true``, only consider aliases declared in a namespace or the
+   translation unit. When ``false``, also consider aliases declared inside
+   classes, functions, and lambdas. Default is ``false``.
