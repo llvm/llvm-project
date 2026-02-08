@@ -17,7 +17,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [MIFlagsTest]>;
 
 // CHECK:      const uint8_t *GenMyCombiner::getMatchTable() const {
 // CHECK-NEXT:   constexpr static uint8_t MatchTable0[] = {
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4(63), // Rule ID 0 //
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4(65), // Rule ID 0 //
 // CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
 // CHECK-NEXT:       GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_SEXT),
 // CHECK-NEXT:       // MIs[0] dst
@@ -31,7 +31,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [MIFlagsTest]>;
 // CHECK-NEXT:       // No operand predicates
 // CHECK-NEXT:       GIM_CheckIsSafeToFold, /*NumInsns*/1,
 // CHECK-NEXT:       // Combiner Rule #0: MIFlagsTest
-// CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_MUL),
+// CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode4(TargetOpcode::G_MUL),
 // CHECK-NEXT:       GIR_RootToRootCopy, /*OpIdx*/0, // dst
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src
 // CHECK-NEXT:       GIR_Copy, /*NewInsnID*/0, /*OldInsnID*/1, /*OpIdx*/1, // src
@@ -39,7 +39,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [MIFlagsTest]>;
 // CHECK-NEXT:       GIR_SetMIFlags, /*InsnID*/0, GIMT_Encode4(MachineInstr::FmReassoc),
 // CHECK-NEXT:       GIR_UnsetMIFlags, /*InsnID*/0, GIMT_Encode4(MachineInstr::FmNsz | MachineInstr::FmArcp),
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
-// CHECK-NEXT:     // Label 0: @63
+// CHECK-NEXT:     // Label 0: @65
 // CHECK-NEXT:     GIM_Reject,
 // CHECK-NEXT:     };
 // CHECK-NEXT:   return MatchTable0;

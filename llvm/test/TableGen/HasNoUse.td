@@ -24,7 +24,7 @@ def NO_RET_ATOMIC_ADD : I<(outs), (ins GPR32Op:$src0, GPR32Op:$src1), []>;
 // GISEL-NEXT: // MIs[0] src0
 // GISEL-NEXT: GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/0,
 // GISEL-NEXT: // (atomic_load_add:{ *:[i32] } iPTR:{ *:[iPTR] }:$src0, i32:{ *:[i32] }:$src1)<<P:Predicate_atomic_load_add_no_ret_i32>>  =>  (NO_RET_ATOMIC_ADD GPR32:{ *:[i32] }:$src0, GPR32:{ *:[i32] }:$src1)
-// GISEL-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::NO_RET_ATOMIC_ADD),
+// GISEL-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode4(MyTarget::NO_RET_ATOMIC_ADD),
 // GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/1, // src0
 // GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/2, // src1
 // GISEL-NEXT: GIR_MergeMemOperands, /*InsnID*/0, /*NumInsns*/1, /*MergeInsnID's*/0,

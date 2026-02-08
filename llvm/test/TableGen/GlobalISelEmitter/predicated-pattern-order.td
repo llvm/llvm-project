@@ -26,7 +26,7 @@ def aligned_store: PatFrag<(ops node:$v, node:$a), (store $v, $a), [{
 // CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NEXT: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_aligned_store),
 // CHECK-NEXT: // (st GPR32:{ *:[i32] }:$src0, GPR32:{ *:[i32] }:$src1)<<P:Predicate_unindexedstore>><<P:Predicate_store>><<P:Predicate_aligned_store>>  =>  (MOVALIGNED GPR32:{ *:[i32] }:$src0, GPR32:{ *:[i32] }:$src1)
-// CHECK-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MOVALIGNED),
+// CHECK-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode4(MyTarget::MOVALIGNED),
 // CHECK-NEXT: GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT: // GIR_Coverage
 
@@ -42,7 +42,7 @@ def aligned_store: PatFrag<(ops node:$v, node:$a), (store $v, $a), [{
 // CHECK-NEXT: GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
 // CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NEXT: // (st GPR32:{ *:[i32] }:$src0, GPR32:{ *:[i32] }:$src1)<<P:Predicate_unindexedstore>><<P:Predicate_store>>  =>  (MOVUNALIGNED GPR32:{ *:[i32] }:$src0, GPR32:{ *:[i32] }:$src1)
-// CHECK-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MOVUNALIGNED),
+// CHECK-NEXT: GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode4(MyTarget::MOVUNALIGNED),
 // CHECK-NEXT: GIR_RootConstrainSelectedInstOperands,
 // CHECK-NEXT: // GIR_Coverage
 
@@ -59,7 +59,7 @@ def aligned_store: PatFrag<(ops node:$v, node:$a), (store $v, $a), [{
 // OPT-NEXT:   GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // OPT-NEXT:   GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIMT_Encode2(GICXXPred_MI_Predicate_aligned_store),
 // OPT-NEXT:   // (st GPR32:{ *:[i32] }:$src0, GPR32:{ *:[i32] }:$src1)<<P:Predicate_unindexedstore>><<P:Predicate_store>><<P:Predicate_aligned_store>>  =>  (MOVALIGNED GPR32:{ *:[i32] }:$src0, GPR32:{ *:[i32] }:$src1)
-// OPT-NEXT:   GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MOVALIGNED),
+// OPT-NEXT:   GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode4(MyTarget::MOVALIGNED),
 // OPT-NEXT:   GIR_RootConstrainSelectedInstOperands,
 // OPT-NEXT:   // GIR_Coverage
 
@@ -69,7 +69,7 @@ def aligned_store: PatFrag<(ops node:$v, node:$a), (store $v, $a), [{
 // OPT-NEXT:   GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
 // OPT-NEXT:   GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // OPT-NEXT:   // (st GPR32:{ *:[i32] }:$src0, GPR32:{ *:[i32] }:$src1)<<P:Predicate_unindexedstore>><<P:Predicate_store>>  =>  (MOVUNALIGNED GPR32:{ *:[i32] }:$src0, GPR32:{ *:[i32] }:$src1)
-// OPT-NEXT:   GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode2(MyTarget::MOVUNALIGNED),
+// OPT-NEXT:   GIR_MutateOpcode, /*InsnID*/0, /*RecycleInsnID*/0, /*Opcode*/GIMT_Encode4(MyTarget::MOVUNALIGNED),
 // OPT-NEXT:   GIR_RootConstrainSelectedInstOperands,
 // OPT-NEXT:   // GIR_Coverage
 

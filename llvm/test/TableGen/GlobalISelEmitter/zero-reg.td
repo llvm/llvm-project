@@ -31,7 +31,7 @@ def INST : PredI<(outs GPR32:$dst), (ins GPR32:$src), []>;
 // CHECK-NEXT: GIM_CheckPointerToAny, /*MI*/0, /*Op*/1, /*SizeInBits*/32,
 // CHECK-NEXT: GIM_RootCheckRegBankForClass, /*Op*/1, /*RC*/GIMT_Encode2(MyTarget::GPR32RegClassID),
 // CHECK-NEXT: // (ld:{ *:[i32] } GPR32:{ *:[i32] }:$src)<<P:Predicate_unindexedload>><<P:Predicate_load>>  =>  (INST:{ *:[i32] } GPR32:{ *:[i32] }:$src)
-// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::INST),
+// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode4(MyTarget::INST),
 // CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/1, // src
 // CHECK-NEXT: GIR_AddRegister, /*InsnID*/0, GIMT_Encode2(MyTarget::NoRegister), /*AddRegisterRegFlags*/GIMT_Encode2(0),

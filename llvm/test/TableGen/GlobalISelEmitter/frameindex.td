@@ -15,7 +15,7 @@ def : Pat<(frameindex:$fi), (ADDI (to_tframeindex $fi), 0)>;
 def : Pat<(ptradd frameindex:$fi, (i32 imm:$offset)),
           (ADDI (to_tframeindex $fi), imm:$offset)>;
 
-// CHECK-LABEL: GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4(74), // Rule ID 1 //
+// CHECK-LABEL: GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4(76), // Rule ID 1 //
 // CHECK-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/3,
 // CHECK-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_PTR_ADD),
 // CHECK-NEXT: // MIs[0] DstI[dst]
@@ -41,7 +41,7 @@ def : Pat<(ptradd frameindex:$fi, (i32 imm:$offset)),
 // CHECK-NEXT: // No operand predicates
 // CHECK-NEXT: GIM_CheckIsSafeToFold, /*NumInsns*/2,
 // CHECK-NEXT: // (ptradd:{ *:[i32] } (frameindex:{ *:[i32] }):$fi, (imm:{ *:[i32] }):$offset)  =>  (ADDI:{ *:[i32] } (to_tframeindex:{ *:[i32] } ?:{ *:[i32] }:$fi), (imm:{ *:[i32] }):$offset)
-// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::ADDI),
+// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode4(MyTarget::ADDI),
 // CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_CustomRenderer, /*InsnID*/0, /*OldInsnID*/1, /*Renderer*/GIMT_Encode2(GICR_renderFrameIndex), // fi
 // CHECK-NEXT: GIR_CopyConstantAsSImm, /*NewInsnID*/0, /*OldInsnID*/2, // offset
@@ -49,7 +49,7 @@ def : Pat<(ptradd frameindex:$fi, (i32 imm:$offset)),
 // CHECK-NEXT: // GIR_Coverage, 1,
 // CHECK-NEXT: GIR_EraseRootFromParent_Done,
 
-// CHECK-LABEL: GIM_Try, /*On fail goto*//*Label 1*/ GIMT_Encode4(109), // Rule ID 0 //
+// CHECK-LABEL: GIM_Try, /*On fail goto*//*Label 1*/ GIMT_Encode4(113), // Rule ID 0 //
 // CHECK-NEXT: GIM_CheckNumOperands, /*MI*/0, /*Expected*/2,
 // CHECK-NEXT: GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_FRAME_INDEX),
 // CHECK-NEXT: // MIs[0] DstI[dst]
@@ -58,7 +58,7 @@ def : Pat<(ptradd frameindex:$fi, (i32 imm:$offset)),
 // CHECK-NEXT: // MIs[0] Operand 1
 // CHECK-NEXT: // No operand predicates
 // CHECK-NEXT: // (frameindex:{ *:[i32] }):$fi  =>  (ADDI:{ *:[i32] } (to_tframeindex:{ *:[i32] } ?:{ *:[i32] }:$fi), 0:{ *:[i32] })
-// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::ADDI),
+// CHECK-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode4(MyTarget::ADDI),
 // CHECK-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
 // CHECK-NEXT: GIR_CustomRenderer, /*InsnID*/0, /*OldInsnID*/0, /*Renderer*/GIMT_Encode2(GICR_renderFrameIndex), // fi
 // CHECK-NEXT: GIR_AddImm8, /*InsnID*/0, /*Imm*/0,

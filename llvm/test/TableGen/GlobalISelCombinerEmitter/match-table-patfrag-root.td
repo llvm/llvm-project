@@ -42,7 +42,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // CHECK-NEXT:       GIR_BuildConstant, /*TempRegID*/0, /*Val*/GIMT_Encode8(0),
 // CHECK-NEXT:       // Combiner Rule #0: Test0 @ [__Test0_match_0[1]]
-// CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
+// CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode4(TargetOpcode::COPY),
 // CHECK-NEXT:       GIR_RootToRootCopy, /*OpIdx*/0, // root
 // CHECK-NEXT:       GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
@@ -62,7 +62,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // CHECK-NEXT:       GIR_BuildConstant, /*TempRegID*/0, /*Val*/GIMT_Encode8(0),
 // CHECK-NEXT:       // Combiner Rule #0: Test0 @ [__Test0_match_0[0]]
-// CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
+// CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode4(TargetOpcode::COPY),
 // CHECK-NEXT:       GIR_RootToRootCopy, /*OpIdx*/0, // root
 // CHECK-NEXT:       GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
@@ -78,7 +78,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s32,
 // CHECK-NEXT:       GIR_BuildConstant, /*TempRegID*/0, /*Val*/GIMT_Encode8(0),
 // CHECK-NEXT:       // Combiner Rule #0: Test0 @ [__Test0_match_0[2]]
-// CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::COPY),
+// CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode4(TargetOpcode::COPY),
 // CHECK-NEXT:       GIR_RootToRootCopy, /*OpIdx*/0, // root
 // CHECK-NEXT:       GIR_AddSimpleTempRegister, /*InsnID*/0, /*TempRegID*/0,
 // CHECK-NEXT:       GIR_EraseRootFromParent_Done,
