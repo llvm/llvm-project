@@ -4,6 +4,7 @@ if (LLVM_CAS_ENABLE_REMOTE_CACHE)
 endif()
 
 set(ONDISK_CAS_TEST_SOURCES
+  BuiltinObjectHasherTest.cpp
   BuiltinUnifiedCASDatabasesTest.cpp
   CASConfigurationTest.cpp
   OnDiskCASLoggerTest.cpp
