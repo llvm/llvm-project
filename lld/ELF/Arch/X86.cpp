@@ -509,8 +509,10 @@ void X86::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       break;
     case R_386_GOT32:
     case R_386_GOT32X:
-      // These relocations return R_GOT or R_GOTPLT depending on instruction
-      // encoding. R_GOT is absolute, R_GOTPLT is relative to GOT base.
+      // R_386_GOT32(X) is used for both absolute GOT access (foo@GOT,
+      // non-PIC, G + A => R_GOT) and register-relative GOT access
+      // (foo@GOT(%ebx), PIC, G + A - GOT => R_GOTPLT). Both use the same
+      // relocation type, so we check the ModRM byte to distinguish them.
       expr =
           (sec.content().data()[offset - 1] & 0xc7) == 0x5 ? R_GOT : R_GOTPLT;
       if (expr == R_GOTPLT)

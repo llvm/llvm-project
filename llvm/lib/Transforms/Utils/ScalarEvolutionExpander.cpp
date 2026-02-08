@@ -1278,7 +1278,8 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
       continue;
     Type *PhiTy = PN.getType();
     const SCEV *Diff = nullptr;
-    if (STy->isIntegerTy() && PhiTy->isPointerTy()) {
+    if (STy->isIntegerTy() && PhiTy->isPointerTy() &&
+        DL.getAddressType(PhiTy) == STy) {
       // Prefer ptrtoaddr over ptrtoint.
       const SCEV *AddrSCEV = SE.getPtrToAddrExpr(ExitSCEV);
       Diff = CanReuse(AddrSCEV);
