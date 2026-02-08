@@ -71,6 +71,8 @@ static cl::opt<bool> DisableFPCallFolding(
 
 namespace {
 
+#include "IntrinsicConstantFolding.inc"
+
 //===----------------------------------------------------------------------===//
 // Constant Folding internal helper functions
 //===----------------------------------------------------------------------===//
@@ -4536,6 +4538,10 @@ Constant *llvm::ConstantFoldCall(const CallBase *Call, Function *F,
     return nullptr;
 
   StringRef Name = F->getName();
+  // Try to fold intrinsic with funtions from a ConstFolder intrinsic's field
+  if (auto *FoldedIntr = foldIntrinsic(Name, IID, Ty, Operands, F->getDataLayout(), TLI, Call))
+    return FoldedIntr;
+
   if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
     return ConstantFoldFixedVectorCall(
         Name, IID, FVTy, Operands, F->getDataLayout(), TLI, Call);

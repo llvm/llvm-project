@@ -1,7 +1,6 @@
+#include "llvm/ADT/SmallString.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-
-// utils/TableGen/IntrinsicFolderEmitter.cpp
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <vector>
@@ -21,31 +20,31 @@ public:
 
 private:
   void emitSwitchFunction(raw_ostream &OS) {
-    // Get all intrinsic definitions
+    const char *ConstRecordName = "ConstFolder";
     ArrayRef<const Record*> Intrinsics =
         Records.getAllDerivedDefinitions("Intrinsic");
 
     OS << "// Automatically generated file. Do not edit!\n";
     OS << "// Intrinsic constant folding switch function\n\n";
 
-    OS << "static Constant *foldIntrinsic(Intrinsic::ID IntrinsicID, Type *Ty,\n";
-    OS << "                               ArrayRef<Constant *> Operands,\n";
+    OS << "static Constant *foldIntrinsic(StringRef Name, Intrinsic::ID IntrinsicID,\n";
+    OS << "                               Type *Ty, ArrayRef<Constant *> Operands,\n";
+    OS << "                               const DataLayout &DL, const TargetLibraryInfo *TLI,\n";
     OS << "                               const CallBase *Call) {\n";
     OS << "  switch (IntrinsicID) {\n";
     OS << "    default: return nullptr;\n";
 
     for (const Record *R : Intrinsics) {
-      if (R->isValueUnset("Folder"))
+      if (R->isValueUnset(ConstRecordName))
         continue;
 
-      StringRef FolderName = R->getValueAsString("Folder");
+      StringRef FolderName = R->getValueAsString(ConstRecordName);
       if (FolderName.empty())
         continue;
 
       StringRef EnumName = R->getName();
-      // TODO: make a proper interface
       OS << "    case Intrinsic::" << EnumName << ":\n";
-      OS << "      return " << FolderName << "(...);\n";
+      OS << "      return " << FolderName << "(Name, Ty, Operands, DL, TLI, Call);\n";
     }
 
     OS << "  }\n";
@@ -55,4 +54,4 @@ private:
 } // namespace
 
 static TableGen::Emitter::OptClass<IntrinsicFolderEmitter>
-    X("gen-constant-folding-functions", "Generate functions for constants folding for intrinsics");
+    X("gen-constant-folding", "Generate functions for constants folding for intrinsics");
