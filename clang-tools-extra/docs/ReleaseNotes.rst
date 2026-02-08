@@ -133,6 +133,12 @@ New checks
   Finds and removes redundant conversions from ``std::[w|u8|u16|u32]string_view`` to
   ``std::[...]string`` in call expressions expecting ``std::[...]string_view``.
 
+- New :doc:`readability-redundant-qualified-alias
+  <clang-tidy/checks/readability/redundant-qualified-alias>` check.
+
+  Finds redundant identity type aliases of the form ``using X = ns::X;`` and
+  suggests rewriting them as using-declarations when safe.
+
 - New :doc:`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check.
 
