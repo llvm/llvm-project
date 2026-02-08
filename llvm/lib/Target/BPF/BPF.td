@@ -34,6 +34,9 @@ def MisalignedMemAccess : SubtargetFeature<"allows-misaligned-mem-access",
                                            "AllowsMisalignedMemAccess", "true",
                                            "Allows misaligned memory access">;
 
+def i128DirectReturn : SubtargetFeature<"has-i128-direct-return", "Hasi128DirectReturn", 
+                                        "true", "Enable i128 direct return">;
+
 def : Proc<"generic", []>;
 def : Proc<"v1", []>;
 def : Proc<"v2", []>;
