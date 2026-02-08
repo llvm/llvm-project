@@ -49,12 +49,12 @@ void UseStdMoveCheck::registerMatchers(MatchFinder *Finder) {
               0, hasType(cxxRecordDecl(hasMethod(isMoveAssignmentOperator()),
                                        unless(hasTrivialMoveAssignment())))),
           hasArgument(
-              1, declRefExpr(to(varDecl(hasLocalStorage(),
-                                        hasType(qualType(unless(anyOf(
-                                            isScalarType(), // Not profitable.
-                                            isLValueReferenceType(),
-                                            isConstQualified() // Not valid.
-                                            )))))))
+              1, declRefExpr(
+                     to(varDecl(hasLocalStorage(),
+                                hasType(qualType(unless(anyOf(
+                                    isScalarType(), isLValueReferenceType(),
+                                    isConstQualified() // Not valid.
+                                    )))))))
                      .bind("assign-value")),
           hasAncestor(functionDecl().bind("within-func")), unless(isInMacro()))
           .bind("assign");
@@ -82,6 +82,13 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<FunctionDecl>("within-func");
 
   if (AssignValue->refersToEnclosingVariableOrCapture())
+    return;
+
+  const CXXRecordDecl *AssignValueRD =
+      AssignValue->getDecl()->getType().getTypePtr()->getAsCXXRecordDecl();
+  const CXXRecordDecl *AssignExprRD =
+      AssignExpr->getType().getTypePtr()->getAsCXXRecordDecl();
+  if (AssignValueRD && AssignValueRD != AssignExprRD)
     return;
 
   const CFG *TheCFG = getCFG(WithinFunctionDecl, Result.Context);
