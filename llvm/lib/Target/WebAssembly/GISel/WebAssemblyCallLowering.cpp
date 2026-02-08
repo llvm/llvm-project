@@ -14,6 +14,7 @@
 
 #include "WebAssemblyCallLowering.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "Utils/WasmAddressSpaces.h"
 #include "WebAssemblyISelLowering.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRegisterInfo.h"
@@ -108,6 +109,24 @@ static unsigned getWASMArgumentOpcode(MVT ArgType) {
   llvm_unreachable("Found unexpected type for WASM argument");
 }
 
+static LLT getLLTForWasmMVT(MVT Ty, const DataLayout &DL) {
+  if (Ty == MVT::externref) {
+    return LLT::pointer(
+        WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF,
+        DL.getPointerSizeInBits(
+            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_EXTERNREF));
+  }
+
+  if (Ty == MVT::funcref) {
+    return LLT::pointer(
+        WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF,
+        DL.getPointerSizeInBits(
+            WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_FUNCREF));
+  }
+
+  return llvm::getLLTForMVT(Ty);
+}
+
 bool WebAssemblyCallLowering::lowerFormalArguments(
     MachineIRBuilder &MIRBuilder, const Function &F,
     ArrayRef<ArrayRef<Register>> VRegs, FunctionLoweringInfo &FLI) const {
@@ -159,17 +178,18 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
 
   unsigned FinalArgIdx = 0;
   for (ArgInfo &Arg : SplitArgs) {
-    EVT OrigVT = TLI.getValueType(DL, Arg.Ty);
-    MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
-    LLT OrigLLT = getLLTForType(*Arg.Ty, DL);
-    LLT NewLLT = getLLTForMVT(NewVT);
+    const EVT OrigVT = TLI.getValueType(DL, Arg.Ty);
+    const MVT NewVT = TLI.getRegisterTypeForCallingConv(Ctx, CallConv, OrigVT);
+    const LLT OrigLLT =
+        getLLTForType(*OrigVT.getTypeForEVT(F.getContext()), DL);
+    const LLT NewLLT = getLLTForWasmMVT(NewVT, DL);
 
     // If we need to split the type over multiple regs, check it's a scenario
     // we currently support.
-    unsigned NumParts =
+    const unsigned NumParts =
         TLI.getNumRegistersForCallingConv(Ctx, CallConv, OrigVT);
 
-    ISD::ArgFlagsTy OrigFlags = Arg.Flags[0];
+    const ISD::ArgFlagsTy OrigFlags = Arg.Flags[0];
     Arg.Flags.clear();
 
     for (unsigned Part = 0; Part < NumParts; ++Part) {
@@ -186,7 +206,7 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
     }
 
     Arg.OrigRegs.assign(Arg.Regs.begin(), Arg.Regs.end());
-    if (NumParts != 1 || OrigVT != NewVT) {
+    if (NumParts != 1 || OrigLLT != NewLLT) {
       // If we can't directly assign the register, we need one or more
       // intermediate values.
       Arg.Regs.resize(NumParts);
@@ -211,7 +231,7 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
       ++FinalArgIdx;
     }
 
-    if (NumParts != 1 || OrigVT != NewVT) {
+    if (OrigVT != NewVT) {
       buildCopyFromRegs(MIRBuilder, Arg.OrigRegs, Arg.Regs, OrigLLT, NewLLT,
                         Arg.Flags[0]);
     }
@@ -221,8 +241,9 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
   // if there aren't. These additional arguments are also added for callee
   // signature They are necessary to match callee and caller signature for
   // indirect call.
-  MVT PtrVT = TLI.getPointerTy(DL);
   if (CallConv == CallingConv::Swift) {
+    const MVT PtrVT = TLI.getPointerTy(DL);
+
     if (!HasSwiftSelfArg) {
       MFI->addParam(PtrVT);
     }
@@ -234,8 +255,8 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
   // Varargs are copied into a buffer allocated by the caller, and a pointer to
   // the buffer is passed as an argument.
   if (F.isVarArg()) {
-    MVT PtrVT = TLI.getPointerTy(DL, 0);
-    LLT PtrLLT = LLT::pointer(0, DL.getPointerSizeInBits(0));
+    const MVT PtrVT = TLI.getPointerTy(DL, 0);
+    const LLT PtrLLT = LLT::pointer(0, DL.getPointerSizeInBits(0));
     Register VarargVreg = MF.getRegInfo().createGenericVirtualRegister(PtrLLT);
 
     MFI->setVarargBufferVreg(VarargVreg);
