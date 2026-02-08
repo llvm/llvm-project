@@ -1758,13 +1758,27 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::SMUL_LOHI:
-  case ISD::UMUL_LOHI: {
+  case ISD::UMUL_LOHI:
+  case RISCVISD::WMULSU: {
     // Custom select (S/U)MUL_LOHI to WMUL(U) for RV32P.
     assert(Subtarget->hasStdExtP() && !Subtarget->is64Bit() && VT == MVT::i32 &&
            "Unexpected opcode");
 
-    unsigned Opc =
-        Node->getOpcode() == ISD::SMUL_LOHI ? RISCV::WMUL : RISCV::WMULU;
+    unsigned Opc;
+    switch (Node->getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected opcode");
+    case ISD::SMUL_LOHI:
+      Opc = RISCV::WMUL;
+      break;
+    case ISD::UMUL_LOHI:
+      Opc = RISCV::WMULU;
+      break;
+    case RISCVISD::WMULSU:
+      Opc = RISCV::WMULSU;
+      break;
+    }
+
     SDNode *WMUL = CurDAG->getMachineNode(
         Opc, DL, MVT::Untyped, Node->getOperand(0), Node->getOperand(1));
 

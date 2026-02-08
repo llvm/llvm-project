@@ -1493,6 +1493,8 @@ def riscv_addd : RVSDNode<"ADDD", SDT_RISCVIntBinOpD,
                           [SDNPCommutative, SDNPAssociative]>;
 def riscv_subd : RVSDNode<"SUBD", SDT_RISCVIntBinOpD>;
 
+def riscv_wmulsu : RVSDNode<"WMULSU", SDTIntBinHiLoOp>;
+
 // Averaging subtraction, (a - b) >> 2
 def riscv_asub : RVSDNode<"ASUB", SDTIntBinOp>;
 def riscv_asubu : RVSDNode<"ASUBU", SDTIntBinOp>;

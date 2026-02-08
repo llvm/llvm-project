@@ -15122,8 +15122,15 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         MVT XLenVT = Subtarget.getXLenVT();
         S = DAG.getNode(ISD::TRUNCATE, DL, XLenVT, S);
         U = DAG.getNode(ISD::TRUNCATE, DL, XLenVT, U);
-        SDValue Lo = DAG.getNode(ISD::MUL, DL, XLenVT, S, U);
-        SDValue Hi = DAG.getNode(RISCVISD::MULHSU, DL, XLenVT, S, U);
+        SDValue Lo, Hi;
+        if (Subtarget.hasStdExtP() && !Subtarget.is64Bit()) {
+          Lo = DAG.getNode(RISCVISD::WMULSU, DL,
+                           DAG.getVTList(MVT::i32, MVT::i32), S, U);
+          Hi = Lo.getValue(1);
+        } else {
+          Lo = DAG.getNode(ISD::MUL, DL, XLenVT, S, U);
+          Hi = DAG.getNode(RISCVISD::MULHSU, DL, XLenVT, S, U);
+        }
         return DAG.getNode(ISD::BUILD_PAIR, DL, N->getValueType(0), Lo, Hi);
       };
 
@@ -21113,6 +21120,15 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // Only the lower 32 bits of the first operand are read
     if (SimplifyDemandedLowBitsHelper(0, 32))
       return SDValue(N, 0);
+    break;
+  }
+  case RISCVISD::WMULSU: {
+    // Convert to MULHSU if only the upper half is used.
+    if (!N->hasAnyUseOfValue(0)) {
+      SDValue Res = DAG.getNode(RISCVISD::MULHSU, DL, N->getValueType(1),
+                                N->getOperand(0), N->getOperand(1));
+      return DCI.CombineTo(N, Res, Res);
+    }
     break;
   }
   case RISCVISD::FMV_W_X_RV64: {
