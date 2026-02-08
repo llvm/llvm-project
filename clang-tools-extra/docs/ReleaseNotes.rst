@@ -148,6 +148,11 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
 
+- Improved :doc:`bugprone-string-constructor
+  <clang-tidy/checks/bugprone/string-constructor>` check to detect suspicious
+  string constructor calls when the string class constructor has a default
+  allocator argument.
+
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check by adding the function
   ``std::get_temporary_buffer`` to the default list of unsafe functions. (This
