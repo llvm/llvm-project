@@ -59,7 +59,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   // other operands match and cache them.
   auto SetResultTyFromOp = [this, R]() {
     Type *ResTy = inferScalarType(R->getOperand(0));
-    for (unsigned Op = 1; Op != R->getNumOperands(); ++Op) {
+    unsigned NumOperands = R->getNumOperandsWithoutMask();
+    for (unsigned Op = 1; Op != NumOperands; ++Op) {
       VPValue *OtherV = R->getOperand(Op);
       assert(inferScalarType(OtherV) == ResTy &&
              "different types inferred for different operands");

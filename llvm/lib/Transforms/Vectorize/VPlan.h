@@ -1147,7 +1147,9 @@ public:
 /// This is a concrete Recipe that models a single VPlan-level instruction.
 /// While as any Recipe it may generate a sequence of IR instructions when
 /// executed, these instructions would always form a single-def expression as
-/// the VPInstruction is also a single def-use vertex.
+/// the VPInstruction is also a single def-use vertex. Most VPInstruction
+/// opcodes can take an optional mask. Masks may be assigned during
+/// predication.
 class LLVM_ABI_FOR_TEST VPInstruction : public VPRecipeWithIRFlags,
                                         public VPIRMetadata,
                                         public VPUnrollPartAccessor<1> {
@@ -1279,9 +1281,9 @@ public:
   bool doesGeneratePerAllLanes() const;
 
   /// Return the number of operands determined by the opcode of the
-  /// VPInstruction. Returns -1u if the number of operands cannot be determined
-  /// directly by the opcode.
-  static unsigned getNumOperandsForOpcode(unsigned Opcode);
+  /// VPInstruction, excluding mask. Returns -1u if the number of operands
+  /// cannot be determined directly by the opcode.
+  unsigned getNumOperandsForOpcode() const;
 
 private:
   typedef unsigned char OpcodeTy;
@@ -1298,6 +1300,16 @@ private:
   /// the modeled instruction. \returns the generated value. . In some cases an
   /// existing value is returned rather than a generated one.
   Value *generate(VPTransformState &State);
+
+  /// Returns true if the VPInstruction does not need masking.
+  bool alwaysUnmasked() const {
+    // For now only VPInstructions with underlying values use masks.
+    // TODO: provide masks to VPInstructions w/o underlying values.
+    if (!getUnderlyingValue())
+      return true;
+
+    return Opcode == Instruction::PHI || Opcode == Instruction::GetElementPtr;
+  }
 
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
@@ -1351,6 +1363,44 @@ public:
     default:
       return true;
     }
+  }
+
+  /// Returns true if the VPInstruction has a mask operand.
+  bool isMasked() const {
+    unsigned NumOpsForOpcode = getNumOperandsForOpcode();
+    // VPInstructions without a fixed number of operands cannot be masked.
+    if (NumOpsForOpcode == -1u)
+      return false;
+    return NumOpsForOpcode + 1 == getNumOperands();
+  }
+
+  /// Returns the number of operands, excluding the mask if the VPInstruction is
+  /// masked.
+  unsigned getNumOperandsWithoutMask() const {
+    return getNumOperands() - isMasked();
+  }
+
+  /// Add mask \p Mask to an unmasked VPInstruction, if it needs masking.
+  void addMask(VPValue *Mask) {
+    assert(!isMasked() && "recipe is already masked");
+    if (alwaysUnmasked())
+      return;
+    addOperand(Mask);
+  }
+
+  /// Returns the mask for the VPInstruction. Returns nullptr for unmasked
+  /// VPInstructions.
+  VPValue *getMask() const {
+    return isMasked() ? getOperand(getNumOperands() - 1) : nullptr;
+  }
+
+  /// Returns an iterator range over the operands excluding the mask operand
+  /// if present.
+  iterator_range<operand_iterator> operandsWithoutMask() {
+    return make_range(op_begin(), op_begin() + getNumOperandsWithoutMask());
+  }
+  iterator_range<const_operand_iterator> operandsWithoutMask() const {
+    return make_range(op_begin(), op_begin() + getNumOperandsWithoutMask());
   }
 
   /// Returns true if the underlying opcode may read from or write to memory.

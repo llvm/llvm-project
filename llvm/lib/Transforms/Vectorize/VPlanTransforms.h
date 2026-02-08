@@ -127,11 +127,9 @@ struct VPlanTransforms {
 
   /// Create VPReductionRecipes for in-loop reductions. This processes chains
   /// of operations contributing to in-loop reductions and creates appropriate
-  /// VPReductionRecipe instances. Block masks from \p BlockMaskCache are used
-  /// to add predication for blocks in \p BlocksNeedingPredication.
+  /// VPReductionRecipe instances.
   static void createInLoopReductionRecipes(
-      VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
-      const DenseSet<BasicBlock *> &BlocksNeedingPredication,
+      VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
       ElementCount MinVF);
 
   /// Update \p Plan to account for all early exits.
@@ -429,12 +427,8 @@ struct VPlanTransforms {
 
   /// Predicate and linearize the control-flow in the only loop region of
   /// \p Plan. If \p FoldTail is true, create a mask guarding the loop
-  /// header, otherwise use all-true for the header mask. Masks for blocks are
-  /// added to a block-to-mask map which is returned in order to be used later
-  /// for wide recipe construction. This argument is temporary and will be
-  /// removed in the future.
-  static DenseMap<VPBasicBlock *, VPValue *>
-  introduceMasksAndLinearize(VPlan &Plan, bool FoldTail);
+  /// header, otherwise use all-true for the header mask.
+  static void introduceMasksAndLinearize(VPlan &Plan, bool FoldTail);
 
   /// Add branch weight metadata, if the \p Plan's middle block is terminated by
   /// a BranchOnCond recipe.
