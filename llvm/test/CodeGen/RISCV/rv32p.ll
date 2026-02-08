@@ -16,10 +16,7 @@ define i64 @abs_i64(i64 %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bgez a1, .LBB1_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    snez a2, a0
-; CHECK-NEXT:    neg a0, a0
-; CHECK-NEXT:    neg a1, a1
-; CHECK-NEXT:    sub a1, a1, a2
+; CHECK-NEXT:    subd a0, zero, a0
 ; CHECK-NEXT:  .LBB1_2:
 ; CHECK-NEXT:    ret
   %abs = tail call i64 @llvm.abs.i64(i64 %x, i1 true)
@@ -189,15 +186,16 @@ define i64 @cls_i64(i64 %x) {
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    xor a0, a0, a2
 ; CHECK-NEXT:    clz a0, a0
-; CHECK-NEXT:    addi a1, a0, 32
+; CHECK-NEXT:    addi a0, a0, 32
 ; CHECK-NEXT:    j .LBB15_3
 ; CHECK-NEXT:  .LBB15_2:
 ; CHECK-NEXT:    xor a1, a1, a2
-; CHECK-NEXT:    clz a1, a1
+; CHECK-NEXT:    clz a0, a1
 ; CHECK-NEXT:  .LBB15_3:
-; CHECK-NEXT:    addi a0, a1, -1
-; CHECK-NEXT:    snez a1, a1
-; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    li a2, -1
+; CHECK-NEXT:    mv a3, a2
+; CHECK-NEXT:    addd a0, a0, a2
 ; CHECK-NEXT:    ret
   %a = ashr i64 %x, 63
   %b = xor i64 %x, %a
@@ -579,4 +577,22 @@ define i32 @mulhu_i32(i32 %x, i32 %y) {
   %d = lshr i64 %c, 32
   %e = trunc i64 %d to i32
   ret i32 %e
+}
+
+define i64 @add_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: add_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addd a0, a0, a2
+; CHECK-NEXT:    ret
+  %a = add i64 %x, %y
+  ret i64 %a
+}
+
+define i64 @usb_i64(i64 %x, i64 %y) {
+; CHECK-LABEL: usb_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subd a0, a0, a2
+; CHECK-NEXT:    ret
+  %a = sub i64 %x, %y
+  ret i64 %a
 }
