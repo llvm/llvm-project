@@ -717,6 +717,8 @@ static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
     uint64_t IdxOfs = ShiftAmount->udiv(DstBits).getZExtValue();
     // IdxOfs is guaranteed to be less than TruncRatio, so we won't overflow in
     // the adjustment.
+    assert(IdxOfs < TruncRatio &&
+           "IdxOfs is expected to be less than TruncRatio.");
     NewIdx = IC.getDataLayout().isBigEndian() ? (NewIdx - IdxOfs)
                                               : (NewIdx + IdxOfs);
   }
