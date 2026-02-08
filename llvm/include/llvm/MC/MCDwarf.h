@@ -778,13 +778,11 @@ struct MCDwarfFrameInfo {
   bool IsMTETaggedFrame = false;
 };
 
+// Emit DWARF call frame information and, when available, compact unwind
+// information.
 class MCDwarfFrameEmitter {
 public:
-  //
-  // This emits the frame info section.
-  //
-  LLVM_ABI static void Emit(MCObjectStreamer &streamer, MCAsmBackend *MAB,
-                            bool isEH);
+  LLVM_ABI static void emit(MCObjectStreamer &streamer, bool isEH);
   LLVM_ABI static void encodeAdvanceLoc(MCContext &Context, uint64_t AddrDelta,
                                         SmallVectorImpl<char> &OS);
 };
