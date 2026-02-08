@@ -296,3 +296,19 @@ define <4 x i64> @PR45314(<4 x i64> %x) {
   %b = bitcast <8 x i32> %s to <4 x i64>
   ret <4 x i64> %b
 }
+
+; Make sure we don't overflow when computing the new index.
+define i16 @test_overflow_idx1(<vscale x 16 x i32> %vec) {
+entry:
+  %ext = extractelement <vscale x 16 x i32> %vec, i64 -1
+  %trunc = trunc i32 %ext to i16
+  ret i16 %trunc
+}
+
+; Make sure we don't overflow when computing the new index.
+define i16 @test_overflow_idx2(<vscale x 16 x i32> %vec) {
+entry:
+  %ext = extractelement <vscale x 16 x i32> %vec, i32 2147483648
+  %trunc = trunc i32 %ext to i16
+  ret i16 %trunc
+}
