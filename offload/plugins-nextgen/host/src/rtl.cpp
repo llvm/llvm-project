@@ -451,8 +451,9 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 #ifdef USES_DYNAMIC_FFI
     SupportsFFI = ffi_init() == FFI_OK ? true : false;
     if (!SupportsFFI)
-      ODBG(OLDT_Init) << "libffi is not available, kernels will not be launched "
-                         "through libffi, and some features may be unavailable";
+      ODBG(OLDT_Init)
+          << "libffi is not available, kernels will not be launched "
+             "through libffi, and some features may be unavailable";
 #endif
     ODBG(OLDT_Init) << "GenELF64 plugin detected " << ODBG_IF_LEVEL(2)
                     << NUM_DEVICES << " " << ODBG_RESET_LEVEL() << "devices";
