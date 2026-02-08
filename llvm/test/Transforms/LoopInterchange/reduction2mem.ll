@@ -15,45 +15,33 @@ define void @func(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias 
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[N]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[INNERLOOP_PREHEADER:.*]], label %[[EXIT:.*]]
-; CHECK:       [[OUTERLOOPHEADER_PREHEADER:.*]]:
+; CHECK:       [[INNERLOOP_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[OUTERLOOP_HEADER:.*]]
 ; CHECK:       [[OUTERLOOP_HEADER]]:
-; CHECK-NEXT:    [[INDEX_I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTERLOOP_LATCH:.*]] ], [ 0, %[[OUTERLOOPHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INDEX_I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTERLOOP_LATCH:.*]] ], [ 0, %[[INNERLOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[ADDR_S:%.*]] = getelementptr inbounds nuw double, ptr [[S]], i64 [[INDEX_I]]
 ; CHECK-NEXT:    [[ADDR_A:%.*]] = getelementptr inbounds nuw double, ptr [[A]], i64 [[INDEX_I]]
 ; CHECK-NEXT:    [[ADDR_B:%.*]] = getelementptr inbounds nuw double, ptr [[B]], i64 [[INDEX_I]]
-; CHECK-NEXT:    br label %[[INNERLOOP_SPLIT1:.*]]
-; CHECK:       [[INNERLOOP_PREHEADER]]:
-; CHECK-NEXT:    br label %[[INNERLOOP:.*]]
-; CHECK:       [[INNERLOOP]]:
-; CHECK-NEXT:    [[INDEX_J:%.*]] = phi i64 [ [[J_NEXT:%.*]], %[[INNERLOOP_SPLIT:.*]] ], [ 0, %[[INNERLOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[DEAD_REDUCTION:%.*]] = phi double [ [[ADD_LCSSA:%.*]], %[[INNERLOOP_SPLIT]] ], [ 0.000000e+00, %[[INNERLOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[FIRSTITER:%.*]] = phi i1 [ false, %[[INNERLOOP_SPLIT]] ], [ true, %[[INNERLOOP_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[OUTERLOOPHEADER_PREHEADER]]
-; CHECK:       [[INNERLOOP_SPLIT1]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ADDR_S]], align 8
-; CHECK-NEXT:    [[NEW_VAR:%.*]] = select i1 [[FIRSTITER]], double [[TMP0]], double 0.000000e+00
+; CHECK-NEXT:    br label %[[OUTERLOOPHEADER_PREHEADER:.*]]
+; CHECK:       [[OUTERLOOPHEADER_PREHEADER]]:
+; CHECK-NEXT:    [[INDEX_J:%.*]] = phi i64 [ 0, %[[OUTERLOOP_HEADER]] ], [ [[J_NEXT:%.*]], %[[OUTERLOOPHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[NEW_VAR:%.*]] = phi double [ 0.000000e+00, %[[OUTERLOOP_HEADER]] ], [ [[ADD:%.*]], %[[OUTERLOOPHEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[ADDR_A_J_I:%.*]] = getelementptr inbounds nuw double, ptr [[ADDR_A]], i64 [[INDEX_J]]
 ; CHECK-NEXT:    [[A_J_I:%.*]] = load double, ptr [[ADDR_A_J_I]], align 8
 ; CHECK-NEXT:    [[ADDR_B_J_I:%.*]] = getelementptr inbounds nuw double, ptr [[ADDR_B]], i64 [[INDEX_J]]
 ; CHECK-NEXT:    [[B_J_I:%.*]] = load double, ptr [[ADDR_B_J_I]], align 8
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[B_J_I]], [[A_J_I]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd fast double [[MUL]], [[NEW_VAR]]
-; CHECK-NEXT:    store double [[ADD]], ptr [[ADDR_S]], align 8
-; CHECK-NEXT:    [[DEAD_J_NEXT:%.*]] = add nuw nsw i64 [[INDEX_J]], 1
-; CHECK-NEXT:    [[DEAD_COND:%.*]] = icmp eq i64 [[DEAD_J_NEXT]], [[N]]
-; CHECK-NEXT:    br label %[[OUTERLOOP_LATCH]]
-; CHECK:       [[INNERLOOP_SPLIT]]:
-; CHECK-NEXT:    [[ADD_LCSSA]] = phi double [ [[ADD]], %[[OUTERLOOP_LATCH]] ]
-; CHECK-NEXT:    [[DEAD_LCSSA:%.*]] = phi double [ [[ADD]], %[[OUTERLOOP_LATCH]] ]
+; CHECK-NEXT:    [[ADD]] = fadd fast double [[MUL]], [[NEW_VAR]]
 ; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[INDEX_J]], 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[J_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP1]], label %[[EXIT_LOOPEXIT:.*]], label %[[INNERLOOP]]
+; CHECK-NEXT:    br i1 [[CMP1]], label %[[OUTERLOOP_LATCH]], label %[[OUTERLOOPHEADER_PREHEADER]]
 ; CHECK:       [[OUTERLOOP_LATCH]]:
+; CHECK-NEXT:    [[LCSSA:%.*]] = phi double [ [[ADD]], %[[OUTERLOOPHEADER_PREHEADER]] ]
+; CHECK-NEXT:    store double [[LCSSA]], ptr [[ADDR_S]], align 8
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[INDEX_I]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP2]], label %[[INNERLOOP_SPLIT]], label %[[OUTERLOOP_HEADER]]
-; CHECK:       [[EXIT_LOOPEXIT]]:
+; CHECK-NEXT:    br i1 [[CMP2]], label %[[INNERLOOP_SPLIT:.*]], label %[[OUTERLOOP_HEADER]]
+; CHECK:       [[INNERLOOP_SPLIT]]:
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
