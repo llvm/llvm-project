@@ -1059,8 +1059,6 @@ public:
                : PointerWidth == 64;
   }
 
-  bool isAVR() const { return getArch() == Triple::avr; }
-
   /// Tests whether the target is 32-bit LoongArch.
   bool isLoongArch32() const { return getArch() == Triple::loongarch32; }
 
