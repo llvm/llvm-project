@@ -764,9 +764,9 @@ static mlir::Type correctIntegerSignedness(mlir::Type iitType, QualType astType,
   if (!intTy)
     return iitType;
 
-  if (astType->isUnsignedIntegerType()) {
+  if (astType->isUnsignedIntegerType())
     return cir::IntType::get(context, intTy.getWidth(), /*isSigned=*/false);
-  }
+
   return iitType;
 }
 
@@ -1953,6 +1953,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       // we need to do a bit cast.
       mlir::Type argType = argValue.getType();
       mlir::Type expectedTy = intrinsicType.getInput(i);
+      if (!mlir::isa<cir::PointerType>(expectedTy)) {
+        cgm.errorNYI(e->getSourceRange(),
+                     "intrinsic expects a pointer type (NYI for non-pointer)");
+        return getUndefRValue(e->getType());
+      }
 
       // Correct integer signedness based on AST parameter type
       mlir::Type correctedExpectedTy = expectedTy;
