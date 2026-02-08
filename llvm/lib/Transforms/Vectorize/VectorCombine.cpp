@@ -4708,70 +4708,96 @@ bool VectorCombine::foldEquivalentReductionCmp(Instruction &I) {
   return true;
 }
 
-/// Fold (icmp eq/ne (reduce.add X), 0) to (icmp eq/ne (reduce.umax X), 0)
+/// Fold (icmp eq/ne (reduce.add X), 0) to (icmp eq/ne (reduce.or/umax X), 0)
 /// when X elements are known non-negative or non-positive, making sum==0
 /// equivalent to all-zeros.
 bool VectorCombine::foldReduceAddCmpZero(Instruction &I) {
-  auto *Cmp = dyn_cast<ICmpInst>(&I);
-  if (!Cmp || !Cmp->isEquality())
+  CmpPredicate Pred;
+  Value *Vec;
+  if (!match(&I, m_ICmp(Pred,
+                        m_OneUse(m_Intrinsic<Intrinsic::vector_reduce_add>(
+                            m_Value(Vec))),
+                        m_Zero())))
     return false;
 
-  Value *ReduceOp;
-  if (!match(Cmp, m_c_ICmp(m_Value(ReduceOp), m_Zero())))
-    return false;
-
-  auto *II = dyn_cast<IntrinsicInst>(ReduceOp);
-  if (!II || !II->hasOneUse() ||
-      II->getIntrinsicID() != Intrinsic::vector_reduce_add)
-    return false;
-
-  Value *Vec = II->getArgOperand(0);
   auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
   if (!VecTy)
     return false;
 
-  InstructionCost AddCost = TTI.getArithmeticReductionCost(
-      Instruction::Add, VecTy, std::nullopt, CostKind);
-  InstructionCost UmaxCost = TTI.getMinMaxReductionCost(
-      Intrinsic::umax, VecTy, FastMathFlags(), CostKind);
-  if (UmaxCost > AddCost)
-    return false;
-
+  // Require non-negative or non-positive elements so sum == 0 iff all are 0.
+  // When NumSignBits == BitWidth then the elements are in {-1, 0} (e.g., sext
+  // i1), which is inherently non-positive. Otherwise, use KnownBits.
+  unsigned NumSignBits = ComputeNumSignBits(Vec, *DL, &AC, &I, &DT);
   unsigned BitWidth = VecTy->getScalarSizeInBits();
-  unsigned NumElts = VecTy->getNumElements();
-
-  // Determine the signed range of each element.
-  APInt Min, Max;
-  if (ComputeNumSignBits(Vec, *DL, &AC, &I, &DT) == BitWidth) {
-    Min = APInt::getAllOnes(BitWidth);
-    Max = APInt::getZero(BitWidth);
+  bool IsNonNegative = false;
+  bool IsNonPositive = false;
+  if (NumSignBits == BitWidth) {
+    IsNonPositive = true;
   } else {
     KnownBits KB = computeKnownBits(Vec, *DL, &AC, &I, &DT);
-    ConstantRange CR = ConstantRange::fromKnownBits(KB, /*IsSigned=*/true);
-    Min = CR.getSignedMin();
-    Max = CR.getSignedMax();
+    IsNonNegative = KB.isNonNegative();
+    IsNonPositive = KB.isNonPositive();
   }
-
-  // Require non-positive or non-negative elements so sum == 0 iff all are 0.
-  bool NonPositive = Max.isNonPositive();
-  bool NonNegative = Min.isNonNegative();
-  if (!NonPositive && !NonNegative)
+  if (!IsNonNegative && !IsNonPositive)
     return false;
 
-  // Check that sum cannot wrap to zero.
-  APInt Extreme = NonPositive ? Min.abs() : Max;
-  if (Extreme.isStrictlyPositive()) {
-    APInt MaxN = APInt::getMaxValue(BitWidth).udiv(Extreme);
-    if (NumElts > MaxN.getZExtValue())
-      return false;
+  // Check that sum cannot wrap to zero. Adding N elements loses at most
+  // floor(log2(N)) sign bits, so we need log2(NumElts) < NumSignBits.
+  unsigned NumElts = VecTy->getNumElements();
+  if (Log2_32(NumElts) >= NumSignBits)
+    return false;
+
+  ICmpInst::Predicate NewPred;
+  switch (Pred) {
+  case ICmpInst::ICMP_EQ:
+  case ICmpInst::ICMP_ULE:
+  case ICmpInst::ICMP_SLE:
+  case ICmpInst::ICMP_SGE:
+    NewPred = ICmpInst::ICMP_EQ;
+    break;
+  case ICmpInst::ICMP_NE:
+  case ICmpInst::ICMP_UGT:
+  case ICmpInst::ICMP_SGT:
+  case ICmpInst::ICMP_SLT:
+    NewPred = ICmpInst::ICMP_NE;
+    break;
+  default:
+    return false;
   }
 
+  // For signed predicates, need tighter bound to prevent sign change.
+  if (!IsNonNegative &&
+      (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLE))
+    return false;
+  if (!IsNonPositive &&
+      (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGE))
+    return false;
+  if ((Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLE ||
+       Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGE) &&
+      Log2_32(NumElts) >= NumSignBits - 1)
+    return false;
+
+  // Prefer OR over UMAX over ADD for simpler semantics.
+  InstructionCost OrigCost = TTI.getArithmeticReductionCost(
+      Instruction::Add, VecTy, std::nullopt, CostKind);
+  InstructionCost OrCost = TTI.getArithmeticReductionCost(
+      Instruction::Or, VecTy, std::nullopt, CostKind);
+  InstructionCost UmaxCost = TTI.getMinMaxReductionCost(
+      Intrinsic::umax, VecTy, FastMathFlags(), CostKind);
+  bool UseOr = OrCost <= UmaxCost;
+  InstructionCost AltCost = UseOr ? OrCost : UmaxCost;
+  LLVM_DEBUG(dbgs() << "Found equivalent reduction cmp: " << I
+                    << "\n  OrigCost: " << OrigCost
+                    << " vs AltCost: " << AltCost << "\n");
+  if (AltCost > OrigCost)
+    return false;
+
   Builder.SetInsertPoint(&I);
-  Value *Umax =
-      Builder.CreateIntrinsic(Intrinsic::vector_reduce_umax, {VecTy}, {Vec});
-  Value *NewCmp =
-      Builder.CreateICmp(Cmp->getPredicate(), Umax,
-                         ConstantInt::getNullValue(VecTy->getScalarType()));
+  Value *NewReduce = UseOr ? Builder.CreateOrReduce(Vec)
+                           : Builder.CreateIntrinsic(
+                                 Intrinsic::vector_reduce_umax, {VecTy}, {Vec});
+  Value *NewCmp = Builder.CreateICmp(
+      NewPred, NewReduce, ConstantInt::getNullValue(VecTy->getScalarType()));
   replaceValue(I, *NewCmp);
   return true;
 }

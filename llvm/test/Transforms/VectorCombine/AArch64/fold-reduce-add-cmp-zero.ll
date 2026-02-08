@@ -78,22 +78,6 @@ define i1 @reduce_add_sext_v2i1(<2 x i64> %a, <2 x i64> %b) {
   ret i1 %res
 }
 
-; Commuted comparison operands
-define i1 @reduce_add_sext_v4i1_commuted(<4 x i32> %a, <4 x i32> %b) {
-; CHECK-LABEL: define i1 @reduce_add_sext_v4i1_commuted(
-; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.umax.v4i1(<4 x i1> [[CMP]])
-; CHECK-NEXT:    [[RES:%.*]] = icmp eq i1 [[TMP1]], false
-; CHECK-NEXT:    ret i1 [[RES]]
-;
-  %cmp = icmp eq <4 x i32> %a, %b
-  %sext = sext <4 x i1> %cmp to <4 x i32>
-  %red = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %sext)
-  %res = icmp eq i32 0, %red
-  ret i1 %res
-}
-
 ; Negative: comparison with non-zero value
 define i1 @reduce_add_sext_v4i1_nonzero_cmp(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define i1 @reduce_add_sext_v4i1_nonzero_cmp(
@@ -130,20 +114,82 @@ define i1 @reduce_add_sext_v4i1_multiuse(<4 x i32> %a, <4 x i32> %b, ptr %p) {
   ret i1 %res
 }
 
-; Negative: non-equality comparison
+; slt with non-positive (sext i1) elements: sum < 0 iff any != 0
 define i1 @reduce_add_sext_v4i1_slt(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: define i1 @reduce_add_sext_v4i1_slt(
 ; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
-; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[SEXT]])
-; CHECK-NEXT:    [[RES:%.*]] = icmp slt i32 [[RED]], 0
+; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.vector.reduce.umax.v4i1(<4 x i1> [[CMP]])
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %cmp = icmp eq <4 x i32> %a, %b
   %sext = sext <4 x i1> %cmp to <4 x i32>
   %red = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %sext)
   %res = icmp slt i32 %red, 0
+  ret i1 %res
+}
+
+; sge with non-positive (sext i1) elements: sum >= 0 iff all == 0
+define i1 @reduce_add_sext_v4i1_sge(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: define i1 @reduce_add_sext_v4i1_sge(
+; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.umax.v4i1(<4 x i1> [[CMP]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i1 [[TMP1]], false
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cmp = icmp eq <4 x i32> %a, %b
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %red = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %sext)
+  %res = icmp sge i32 %red, 0
+  ret i1 %res
+}
+
+; sgt with non-negative (zext i1) elements: sum > 0 iff any != 0
+define i1 @reduce_add_zext_v4i1_sgt(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: define i1 @reduce_add_zext_v4i1_sgt(
+; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[RES:%.*]] = call i1 @llvm.vector.reduce.umax.v4i1(<4 x i1> [[CMP]])
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cmp = icmp eq <4 x i32> %a, %b
+  %zext = zext <4 x i1> %cmp to <4 x i32>
+  %red = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %zext)
+  %res = icmp sgt i32 %red, 0
+  ret i1 %res
+}
+
+; sle with non-negative (zext i1) elements: sum <= 0 iff all == 0
+define i1 @reduce_add_zext_v4i1_sle(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: define i1 @reduce_add_zext_v4i1_sle(
+; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.umax.v4i1(<4 x i1> [[CMP]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp eq i1 [[TMP1]], false
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cmp = icmp eq <4 x i32> %a, %b
+  %zext = zext <4 x i1> %cmp to <4 x i32>
+  %red = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %zext)
+  %res = icmp sle i32 %red, 0
+  ret i1 %res
+}
+
+; Negative: sgt with non-positive elements (sum of non-positive can't be > 0)
+define i1 @reduce_add_sext_v4i1_sgt_negative(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: define i1 @reduce_add_sext_v4i1_sgt_negative(
+; CHECK-SAME: <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> [[A]], [[B]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i32>
+; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[SEXT]])
+; CHECK-NEXT:    [[RES:%.*]] = icmp sgt i32 [[RED]], 0
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %cmp = icmp eq <4 x i32> %a, %b
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %red = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %sext)
+  %res = icmp sgt i32 %red, 0
   ret i1 %res
 }
 
