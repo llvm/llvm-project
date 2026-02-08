@@ -43,6 +43,9 @@ ArgumentCommentCheck::ArgumentCommentCheck(StringRef Name,
       CommentUserDefinedLiterals(
           Options.get("CommentUserDefinedLiterals", false)),
       CommentCharacterLiterals(Options.get("CommentCharacterLiterals", false)),
+      CommentAnonymousInitLists(
+          Options.get("CommentAnonymousInitLists", false)),
+      CommentTypedInitLists(Options.get("CommentTypedInitLists", false)),
       CommentNullPtrs(Options.get("CommentNullPtrs", false)),
       IdentRE("^(/\\* *)([_A-Za-z][_A-Za-z0-9]*)( *= *\\*/)$") {}
 
@@ -55,6 +58,8 @@ void ArgumentCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CommentStringLiterals", CommentStringLiterals);
   Options.store(Opts, "CommentUserDefinedLiterals", CommentUserDefinedLiterals);
   Options.store(Opts, "CommentCharacterLiterals", CommentCharacterLiterals);
+  Options.store(Opts, "CommentAnonymousInitLists", CommentAnonymousInitLists);
+  Options.store(Opts, "CommentTypedInitLists", CommentTypedInitLists);
   Options.store(Opts, "CommentNullPtrs", CommentNullPtrs);
 }
 
@@ -199,14 +204,60 @@ static const FunctionDecl *resolveMocks(const FunctionDecl *Func) {
   return Func;
 }
 
+enum class InitListKind {
+  None,
+  Anonymous,
+  Typed,
+};
+
+static InitListKind getInitListKind(const Expr *Arg) {
+  Arg = Arg->IgnoreImplicit();
+
+  if (const auto *StdInit = dyn_cast<CXXStdInitializerListExpr>(Arg))
+    return getInitListKind(StdInit->getSubExpr());
+
+  if (isa<InitListExpr>(Arg))
+    return InitListKind::Anonymous;
+
+  if (const auto *Ctor = dyn_cast<CXXConstructExpr>(Arg)) {
+    if (!Ctor->isListInitialization())
+      return InitListKind::None;
+    // CXXTemporaryObjectExpr corresponds to explicit Type{...} syntax.
+    if (isa<CXXTemporaryObjectExpr>(Ctor))
+      return InitListKind::Typed;
+    // Other list-initialized constructions (for example '{}') have no
+    // explicit type at the call site.
+    return InitListKind::Anonymous;
+  }
+
+  if (const auto *FuncCast = dyn_cast<CXXFunctionalCastExpr>(Arg)) {
+    if (FuncCast->isListInitialization())
+      return InitListKind::Typed;
+  }
+
+  return InitListKind::None;
+}
+
 // Given the argument type and the options determine if we should
 // be adding an argument comment.
 bool ArgumentCommentCheck::shouldAddComment(const Expr *Arg) const {
-  Arg = Arg->IgnoreImpCasts();
-  if (isa<UnaryOperator>(Arg))
-    Arg = cast<UnaryOperator>(Arg)->getSubExpr();
+  // Strip implicit wrappers so brace-init arguments bound to references still
+  // look like list-initialization at this point.
+  Arg = Arg->IgnoreImplicit();
+  if (const auto *UO = dyn_cast<UnaryOperator>(Arg))
+    Arg = UO->getSubExpr()->IgnoreImplicit();
   if (Arg->getExprLoc().isMacroID())
     return false;
+
+  switch (getInitListKind(Arg)) {
+  case InitListKind::Anonymous:
+    return CommentAnonymousInitLists;
+  case InitListKind::Typed:
+    return CommentTypedInitLists;
+  case InitListKind::None:
+    break;
+  }
+
   return (CommentBoolLiterals && isa<CXXBoolLiteralExpr>(Arg)) ||
          (CommentIntegerLiterals && isa<IntegerLiteral>(Arg)) ||
          (CommentFloatLiterals && isa<FloatingLiteral>(Arg)) ||

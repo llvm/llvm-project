@@ -46,6 +46,8 @@ private:
   const unsigned CommentStringLiterals : 1;
   const unsigned CommentUserDefinedLiterals : 1;
   const unsigned CommentCharacterLiterals : 1;
+  const unsigned CommentAnonymousInitLists : 1;
+  const unsigned CommentTypedInitLists : 1;
   const unsigned CommentNullPtrs : 1;
   llvm::Regex IdentRE;
 
