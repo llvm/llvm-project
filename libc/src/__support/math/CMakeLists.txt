@@ -1282,8 +1282,8 @@ add_header_library(
   DEPENDS
     .sincosf16_utils
     libc.src.__support.FPUtil.cast
-    libc.src.__support.FPUtil.FEnvImpl
-    libc.src.__support.FPUtil.FPBits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.common
     libc.src.__support.macros.config

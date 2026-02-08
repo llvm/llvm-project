@@ -9,6 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINPIF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SINPIF16_H
 
+#include "include/llvm-libc-macros/float16-macros.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
 #include "sincosf16_utils.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -84,5 +88,7 @@ LIBC_INLINE float16 sinpif16(float16 x) {
 
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_SINPIF16_H

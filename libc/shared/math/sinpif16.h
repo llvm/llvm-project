@@ -9,6 +9,10 @@
 #ifndef LLVM_LIBC_SHARED_MATH_SINPIF16_H
 #define LLVM_LIBC_SHARED_MATH_SINPIF16_H
 
+#include "include/llvm-libc-macros/float16-macros.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
 #include "shared/libc_common.h"
 #include "src/__support/math/sinpif16.h"
 
@@ -19,5 +23,7 @@ using math::sinpif16;
 
 } // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SHARED_MATH_SINPIF16_H
