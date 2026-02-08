@@ -94,6 +94,8 @@ void UseStdMoveCheck::check(const MatchFinder::MatchResult &Result) {
 
   const CFGBlock &TheExit = TheCFG->getExit();
   for (auto &Pred : TheExit.preds()) {
+    if (!Pred.isReachable())
+      continue;
     for (const CFGElement &Elt : llvm::reverse(*Pred)) {
       if (Elt.getKind() == CFGElement::Kind::Statement) {
         const Stmt *EltStmt = Elt.castAs<CFGStmt>().getStmt();
