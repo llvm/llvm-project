@@ -2921,7 +2921,7 @@ private:
     if (!AfterRParen->Next)
       return false;
 
-    if (AfterRParen->is(tok::l_brace) &&
+    if (Style.Language != FormatStyle::LK_C && AfterRParen->is(tok::l_brace) &&
         AfterRParen->getBlockKind() == BK_BracedInit) {
       return true;
     }
