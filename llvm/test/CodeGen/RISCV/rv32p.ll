@@ -621,3 +621,79 @@ define i64 @sub_i64(i64 %x, i64 %y) {
   %a = sub i64 %x, %y
   ret i64 %a
 }
+
+define i64 @wmaccu(i32 %a, i32 %b, i64 %c) nounwind {
+; CHECK-LABEL: wmaccu:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wmaccu a2, a0, a1
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    ret
+  %aext = zext i32 %a to i64
+  %bext = zext i32 %b to i64
+  %mul = mul i64 %aext, %bext
+  %result = add i64 %c, %mul
+  ret i64 %result
+}
+
+define i64 @wmaccu_commute(i32 %a, i32 %b, i64 %c) nounwind {
+; CHECK-LABEL: wmaccu_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wmaccu a2, a0, a1
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    ret
+  %aext = zext i32 %a to i64
+  %bext = zext i32 %b to i64
+  %mul = mul i64 %aext, %bext
+  %result = add i64 %mul, %c
+  ret i64 %result
+}
+
+define i64 @wmacc(i32 %a, i32 %b, i64 %c) nounwind {
+; CHECK-LABEL: wmacc:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wmacc a2, a0, a1
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    ret
+  %aext = sext i32 %a to i64
+  %bext = sext i32 %b to i64
+  %mul = mul i64 %aext, %bext
+  %result = add i64 %c, %mul
+  ret i64 %result
+}
+
+define i64 @wmacc_commute(i32 %a, i32 %b, i64 %c) nounwind {
+; CHECK-LABEL: wmacc_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wmacc a2, a0, a1
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:    ret
+  %aext = sext i32 %a to i64
+  %bext = sext i32 %b to i64
+  %mul = mul i64 %aext, %bext
+  %result = add i64 %mul, %c
+  ret i64 %result
+}
+
+; Negative test: multiply result has multiple uses, should not combine
+define void @wmaccu_multiple_uses(i32 %a, i32 %b, i64 %c, ptr %out1, ptr %out2) nounwind {
+; CHECK-LABEL: wmaccu_multiple_uses:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wmulu a0, a0, a1
+; CHECK-NEXT:    addd a2, a2, a0
+; CHECK-NEXT:    sw a2, 0(a4)
+; CHECK-NEXT:    sw a3, 4(a4)
+; CHECK-NEXT:    sw a0, 0(a5)
+; CHECK-NEXT:    sw a1, 4(a5)
+; CHECK-NEXT:    ret
+  %aext = zext i32 %a to i64
+  %bext = zext i32 %b to i64
+  %mul = mul i64 %aext, %bext
+  %result = add i64 %c, %mul
+  store i64 %result, ptr %out1
+  store i64 %mul, ptr %out2
+  ret void
+}
