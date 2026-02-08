@@ -262,8 +262,8 @@ static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
   Value unsignedBits = arith::AndIOp::create(b, operandBitcast, cMask);
   Value cThreshold = createIntConst(
       op->getLoc(), iTy, (uint64_t(bias + mantissaWidth)) << mantissaWidth, b);
-  Value isLargeExp =
-      arith::CmpIOp::create(b, arith::CmpIPredicate::uge, unsignedBits, cThreshold);
+  Value isLargeExp = arith::CmpIOp::create(b, arith::CmpIPredicate::uge,
+                                           unsignedBits, cThreshold);
   Value isSpecialValOrLargeVal = isLargeExp;
 
   // In FNUZ-suffixed floating point, NaN is represented by a sign bit of 1 and
