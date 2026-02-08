@@ -199,8 +199,7 @@ void namedBarrier() {
 
   // Increment the low 16 bits once.
 
-  uint32_t load = atomic::add(&namedBarrierTracker, 1,
-                              atomic::seq_cst); 
+  uint32_t load = atomic::add(&namedBarrierTracker, 1, atomic::seq_cst); 
 
   // Record the number of times the barrier has been passed
   uint32_t generation = load & 0xffff0000u;
@@ -220,7 +219,6 @@ void namedBarrier() {
     } while ((load & 0xffff0000u) == generation);
   }
   __gpu_sync_threads();
-
 }
 
 void unsetLock(omp_lock_t *Lock) {
