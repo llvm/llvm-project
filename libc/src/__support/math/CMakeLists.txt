@@ -1276,6 +1276,21 @@ add_header_library(
 )
 
 add_header_library(
+  sinpif16
+  HDRS
+    sinpif16.h
+  DEPENDS
+    .sincosf16_utils
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.FEnvImpl
+    libc.src.__support.FPUtil.FPBits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   llogb
   HDRS
     llogb.h

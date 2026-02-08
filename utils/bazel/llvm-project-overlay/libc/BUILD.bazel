@@ -3770,6 +3770,23 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_sinpif16",
+    hdrs = ["src/__support/math/sinpif16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_math_sincosf16_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_tan",
     hdrs = ["src/__support/math/tan.h"],
     deps = [
@@ -5421,9 +5438,7 @@ libc_math_function(
 libc_math_function(
     name = "sinpif16",
     additional_deps = [
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_math_sincosf16_utils",
+        ":__support_math_sinpif16",
     ],
 )
 
