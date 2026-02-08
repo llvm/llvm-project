@@ -571,7 +571,7 @@ class GlobalMergeFuncPassWrapper : public ModulePass {
 public:
   static char ID;
 
-  GlobalMergeFuncPassWrapper();
+  GlobalMergeFuncPassWrapper() : ModulePass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addUsedIfAvailable<ImmutableModuleSummaryIndexWrapperPass>();
@@ -592,11 +592,6 @@ INITIALIZE_PASS(GlobalMergeFuncPassWrapper, "global-merge-func",
 
 ModulePass *llvm::createGlobalMergeFuncPass() {
   return new GlobalMergeFuncPassWrapper();
-}
-
-GlobalMergeFuncPassWrapper::GlobalMergeFuncPassWrapper() : ModulePass(ID) {
-  initializeGlobalMergeFuncPassWrapperPass(
-      *llvm::PassRegistry::getPassRegistry());
 }
 
 bool GlobalMergeFuncPassWrapper::runOnModule(Module &M) {

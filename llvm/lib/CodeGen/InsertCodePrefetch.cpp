@@ -36,9 +36,7 @@ class InsertCodePrefetch : public MachineFunctionPass {
 public:
   static char ID;
 
-  InsertCodePrefetch() : MachineFunctionPass(ID) {
-    initializeInsertCodePrefetchPass(*PassRegistry::getPassRegistry());
-  }
+  InsertCodePrefetch() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Code Prefetch Inserter Pass";
