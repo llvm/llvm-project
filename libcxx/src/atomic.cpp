@@ -149,17 +149,10 @@ static void __platform_wait_on_address(void const* __ptr, void const* __val, May
   if constexpr (is_same_v<MaybeTimeout, NoTimeout>) {
     _umtx_op(const_cast<void*>(__ptr), UMTX_OP_WAIT, *reinterpret_cast<__cxx_contention_t*>(&buffer), nullptr, nullptr);
   } else {
-    _umtx_time ut;
-    ut._timeout.tv_sec  = maybe_timeout_ns / 1'000'000'000;
-    ut._timeout.tv_nsec = maybe_timeout_ns % 1'000'000'000;
-    ut._flags           = 0;               // Relative time (not absolute)
-    ut._clockid         = CLOCK_MONOTONIC; // Use monotonic clock
-
-    _umtx_op(const_cast<void*>(__ptr),
-             UMTX_OP_WAIT,
-             *reinterpret_cast<__cxx_contention_t*>(&buffer),
-             reinterpret_cast<void*>(sizeof(ut)), // Pass size as uaddr
-             &ut);                                // Pass _umtx_time structure as uaddr2
+    __libcpp_thread_poll_with_backoff(
+        [=]() -> bool { return std::memcmp(const_cast<const void*>(__ptr), __val, _Size) != 0; },
+        __libcpp_timed_backoff_policy(),
+        std::chrono::nanoseconds(__timeout_ns));
   }
 }
 
