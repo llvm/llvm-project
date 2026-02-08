@@ -81,9 +81,7 @@ void StringConstructorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxConstructExpr(
           hasDeclaration(cxxMethodDecl(hasName("basic_string"))),
-          anyOf(argumentCountIs(2),
-                allOf(argumentCountIs(3),
-                      hasArgument(2, unless(hasType(qualType(isInteger())))))),
+          anyOf(argumentCountIs(2), argumentCountIs(3)),
           hasArgument(0, hasType(qualType(isInteger()))),
           hasArgument(1, hasType(qualType(isInteger()))),
           anyOf(
