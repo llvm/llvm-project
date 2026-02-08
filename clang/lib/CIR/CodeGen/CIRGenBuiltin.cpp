@@ -1949,11 +1949,6 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       // we need to do a bit cast.
       mlir::Type argType = argValue.getType();
       mlir::Type expectedTy = intrinsicType.getInput(i);
-      if (!mlir::isa<cir::PointerType>(expectedTy)) {
-        cgm.errorNYI(e->getSourceRange(),
-                     "intrinsic expects a pointer type (NYI for non-pointer)");
-        return getUndefRValue(e->getType());
-      }
 
       // Correct integer signedness based on AST parameter type
       mlir::Type correctedExpectedTy = expectedTy;
@@ -1962,8 +1957,29 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
             expectedTy, fd->getParamDecl(i)->getType(), &getMLIRContext());
       }
 
-      if (argType != correctedExpectedTy)
-        argValue = getCorrectedPtr(argValue, expectedTy, builder);
+      if (mlir::isa<cir::PointerType>(expectedTy)) {
+        bool argIsPointer = mlir::isa<cir::PointerType>(argType);
+        bool argIsVectorOfPointer = false;
+        if (auto vecTy = dyn_cast<mlir::VectorType>(argType))
+          argIsVectorOfPointer =
+              mlir::isa<cir::PointerType>(vecTy.getElementType());
+
+        if (!argIsPointer && !argIsVectorOfPointer) {
+          cgm.errorNYI(
+              e->getSourceRange(),
+              "intrinsic expects a pointer type (NYI for non-pointer)");
+          return getUndefRValue(e->getType());
+        }
+
+        // Pointer handling (address-space cast / bitcast fallback).
+        if (argType != expectedTy)
+          argValue = getCorrectedPtr(argValue, expectedTy, builder);
+      } else {
+        // Non-pointer expected type: if needed, bitcast to the corrected
+        // expected type to match signedness/representation.
+        if (argType != correctedExpectedTy)
+          argValue = builder.createBitcast(argValue, correctedExpectedTy);
+      }
 
       args.push_back(argValue);
     }
