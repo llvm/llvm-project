@@ -5542,104 +5542,37 @@ struct VPPartialReductionChain {
   unsigned ScaleFactor;
 };
 
-// Helper to transform a partial reduction chain into a partial reduction
-// recipe. Returns true if transformation succeeded. Checks profitability and
-// clamps VF range.
-static bool transformToPartialReduction(const VPPartialReductionChain &Chain,
-                                        VFRange &Range, VPCostContext &CostCtx,
-                                        VPlan &Plan) {
+// Transform a partial reduction chain into a partial reduction recipe.
+// Assumes profitability has been checked. Performs RAUW so chained reductions'
+// accumulators are automatically updated. Updates the PHI's scale factor when
+// the accumulator is the reduction PHI.
+static void transformToPartialReduction(const VPPartialReductionChain &Chain,
+                                        VPTypeAnalysis &TypeInfo, VPlan &Plan) {
   VPWidenRecipe *WidenRecipe = Chain.ReductionBinOp;
-  unsigned ScaleFactor = Chain.ScaleFactor;
-  assert(WidenRecipe->getNumOperands() == 2 && "Expected binary operation");
 
   VPValue *BinOp = WidenRecipe->getOperand(0);
   VPValue *Accumulator = WidenRecipe->getOperand(1);
-
-  // Swap if needed to ensure Accumulator is the PHI or partial reduction.
-  if (isa_and_present<VPReductionPHIRecipe, VPReductionRecipe>(BinOp))
+  if (isa_and_present<VPReductionPHIRecipe, VPReductionRecipe>(
+          BinOp->getDefiningRecipe()))
     std::swap(BinOp, Accumulator);
 
-  // For chained reductions, only transform if accumulator is already a PHI or
-  // partial reduction. Otherwise, it needs to be transformed first.
-  auto *AccumRecipe = Accumulator->getDefiningRecipe();
-  if (!isa_and_present<VPReductionPHIRecipe, VPReductionRecipe>(AccumRecipe))
-    return false;
+  Type *PhiType = TypeInfo.inferScalarType(Accumulator);
 
-  // Check if the partial reduction is profitable for the VF range.
-  Type *PhiType = CostCtx.Types.inferScalarType(Accumulator);
-
-  // Derive extend info from the stored extends.
-  auto GetExtInfo = [&CostCtx](VPWidenCastRecipe *Ext)
-      -> std::pair<Type *, TargetTransformInfo::PartialReductionExtendKind> {
-    if (!Ext)
-      return {nullptr, TargetTransformInfo::PR_None};
-    Type *ExtOpType = CostCtx.Types.inferScalarType(Ext->getOperand(0));
-    auto ExtKind = TargetTransformInfo::getPartialReductionExtendKind(
-        static_cast<Instruction::CastOps>(Ext->getOpcode()));
-    return {ExtOpType, ExtKind};
-  };
-  auto ExtInfoA = GetExtInfo(Chain.ExtendA);
-  auto ExtInfoB = GetExtInfo(Chain.ExtendB);
-  Type *ExtOpTypeA = ExtInfoA.first;
-  Type *ExtOpTypeB = ExtInfoB.first;
-  auto ExtKindA = ExtInfoA.second;
-  auto ExtKindB = ExtInfoB.second;
-  // If ExtendB is nullptr but there's a separate BinOp, the second operand
-  // was a constant that can use the same extend kind as the first.
-  if (!Chain.ExtendB && Chain.BinOp && Chain.BinOp != Chain.ReductionBinOp) {
-    // Validate that the constant can be extended to the narrow type.
-    const APInt *Const = nullptr;
-    for (VPValue *Op : Chain.BinOp->operands()) {
-      if (match(Op, m_APInt(Const)))
-        break;
-    }
-    if (!Const || !canConstantBeExtended(Const, ExtOpTypeA, ExtKindA))
-      return false;
-    ExtOpTypeB = ExtOpTypeA;
-    ExtKindB = ExtKindA;
-  }
-
-  // BinOpc is only set when there's a separate binary op (not when BinOp is
-  // the reduction itself).
-  std::optional<unsigned> BinOpc =
-      (Chain.BinOp && Chain.BinOp != Chain.ReductionBinOp)
-          ? std::make_optional(Chain.BinOp->getOpcode())
-          : std::nullopt;
-
-  if (!LoopVectorizationPlanner::getDecisionAndClampRange(
-          [&](ElementCount VF) {
-            return CostCtx.TTI
-                .getPartialReductionCost(
-                    WidenRecipe->getOpcode(), ExtOpTypeA, ExtOpTypeB, PhiType,
-                    VF, ExtKindA, ExtKindB, BinOpc, CostCtx.CostKind,
-                    PhiType->isFloatingPointTy()
-                        ? std::optional{WidenRecipe->getFastMathFlags()}
-                        : std::nullopt)
-                .isValid();
-          },
-          Range))
-    return false;
-
-  VPValue *Cond = nullptr;
-  VPValue *ExitValue = nullptr;
-  if (auto *RdxPhi = dyn_cast<VPReductionPHIRecipe>(AccumRecipe)) {
+  // Update PHI and start vector scale factors when accumulator is the PHI.
+  if (auto *RdxPhi =
+          dyn_cast<VPReductionPHIRecipe>(Accumulator->getDefiningRecipe())) {
     assert(RdxPhi->getVFScaleFactor() == 1 && "scale factor must not be set");
-    RdxPhi->setVFScaleFactor(ScaleFactor);
-
-    // Update ReductionStartVector instruction scale factor.
-    VPValue *StartValue = RdxPhi->getOperand(0);
-    auto *StartInst = cast<VPInstruction>(StartValue);
-    assert(StartInst->getOpcode() == VPInstruction::ReductionStartVector);
-    auto *NewScaleFactor = Plan.getConstantInt(32, ScaleFactor);
-    StartInst->setOperand(2, NewScaleFactor);
-
+    RdxPhi->setVFScaleFactor(Chain.ScaleFactor);
+    auto *StartInst = cast<VPInstruction>(RdxPhi->getOperand(0));
+    assert(StartInst->getOpcode() == VPInstruction::ReductionStartVector &&
+           "start value must be ReductionStartVector");
+    StartInst->setOperand(2, Plan.getConstantInt(32, Chain.ScaleFactor));
   }
 
-  // Handle SUB by negating the operand and using ADD for the partial reduction.
+  // Handle SUB by negating the operand.
   if (WidenRecipe->getOpcode() == Instruction::Sub) {
     VPBuilder Builder(WidenRecipe);
-    Type *ElemTy = CostCtx.Types.inferScalarType(BinOp);
-    auto *Zero = Plan.getConstantInt(ElemTy, 0);
+    auto *Zero = Plan.getConstantInt(TypeInfo.inferScalarType(BinOp), 0);
     VPIRFlags Flags = WidenRecipe->getUnderlyingInstr()
                           ? VPIRFlags(*WidenRecipe->getUnderlyingInstr())
                           : VPIRFlags();
@@ -5649,15 +5582,12 @@ static bool transformToPartialReduction(const VPPartialReductionChain &Chain,
     BinOp = NegRecipe;
   }
 
-  // Check if WidenRecipe is the final result of the reduction. If so look
-  // through selects for predicated reductions.
+  // Look for predicated reduction's condition and replace select if found.
+  VPValue *Cond = nullptr;
   VPReductionPHIRecipe *RdxPhi;
-  ExitValue = cast_or_null<VPInstruction>(vputils::findUserOf(
+  auto *Sel = cast_or_null<VPInstruction>(vputils::findUserOf(
       WidenRecipe, m_Select(m_VPValue(Cond), m_Specific(WidenRecipe),
                             m_ReductionPhi(RdxPhi))));
-  assert(!ExitValue || RdxPhi->getBackedgeValue() == WidenRecipe ||
-         RdxPhi->getBackedgeValue() == ExitValue &&
-             "if we found ExitValue, it must match RdxPhi's backedge value");
 
   RecurKind RdxKind =
       PhiType->isFloatingPointTy() ? RecurKind::FAdd : RecurKind::Add;
@@ -5666,13 +5596,66 @@ static bool transformToPartialReduction(const VPPartialReductionChain &Chain,
       RdxKind == RecurKind::FAdd ? WidenRecipe->getFastMathFlags()
                                  : FastMathFlags(),
       WidenRecipe->getUnderlyingInstr(), Accumulator, BinOp, Cond,
-      RdxUnordered{/*VFScaleFactor=*/ScaleFactor});
+      RdxUnordered{/*VFScaleFactor=*/Chain.ScaleFactor});
   PartialRed->insertBefore(WidenRecipe);
 
-  if (Cond)
-    ExitValue->replaceAllUsesWith(PartialRed);
+  if (Sel)
+    Sel->replaceAllUsesWith(PartialRed);
   WidenRecipe->replaceAllUsesWith(PartialRed);
-  return true;
+}
+
+/// Check if a partial reduction chain is is supported by the target (i.e. does
+/// not have an invalid cost) for the given VF range. Clamps the range and
+/// returns true if profitable for any VF.
+static bool isValidPartialReduction(const VPPartialReductionChain &Chain,
+                                    Type *PhiType, VPCostContext &CostCtx,
+                                    VFRange &Range) {
+  auto GetExtInfo = [&CostCtx](VPWidenCastRecipe *Ext)
+      -> std::pair<Type *, TargetTransformInfo::PartialReductionExtendKind> {
+    if (!Ext)
+      return {nullptr, TargetTransformInfo::PR_None};
+    Type *ExtOpType = CostCtx.Types.inferScalarType(Ext->getOperand(0));
+    return {ExtOpType,
+            TargetTransformInfo::getPartialReductionExtendKind(
+                static_cast<Instruction::CastOps>(Ext->getOpcode()))};
+  };
+  auto ExtInfoA = GetExtInfo(Chain.ExtendA);
+  auto ExtInfoB = GetExtInfo(Chain.ExtendB);
+  Type *ExtOpTypeA = ExtInfoA.first;
+  Type *ExtOpTypeB = ExtInfoB.first;
+  auto ExtKindA = ExtInfoA.second;
+  auto ExtKindB = ExtInfoB.second;
+
+  // If ExtendB is nullptr but there's a separate BinOp, the second operand
+  // was a constant that can use the same extend kind as the first.
+  if (!Chain.ExtendB && Chain.BinOp && Chain.BinOp != Chain.ReductionBinOp) {
+    const APInt *Const = nullptr;
+    for (VPValue *Op : Chain.BinOp->operands())
+      if (match(Op, m_APInt(Const)))
+        break;
+    if (!Const || !canConstantBeExtended(Const, ExtOpTypeA, ExtKindA))
+      return false;
+    ExtOpTypeB = ExtOpTypeA;
+    ExtKindB = ExtKindA;
+  }
+
+  std::optional<unsigned> BinOpc =
+      (Chain.BinOp && Chain.BinOp != Chain.ReductionBinOp)
+          ? std::make_optional(Chain.BinOp->getOpcode())
+          : std::nullopt;
+  VPWidenRecipe *WidenRecipe = Chain.ReductionBinOp;
+  return LoopVectorizationPlanner::getDecisionAndClampRange(
+      [&](ElementCount VF) {
+        return CostCtx.TTI
+            .getPartialReductionCost(
+                WidenRecipe->getOpcode(), ExtOpTypeA, ExtOpTypeB, PhiType, VF,
+                ExtKindA, ExtKindB, BinOpc, CostCtx.CostKind,
+                PhiType->isFloatingPointTy()
+                    ? std::optional{WidenRecipe->getFastMathFlags()}
+                    : std::nullopt)
+            .isValid();
+      },
+      Range);
 }
 
 /// Examines reduction operations to see if the target can use a cheaper
@@ -5682,7 +5665,7 @@ static bool transformToPartialReduction(const VPPartialReductionChain &Chain,
 static bool
 getScaledReductions(VPSingleDefRecipe *RedPhiR, VPValue *PrevValue,
                     SmallVectorImpl<VPPartialReductionChain> &Chains,
-                    VPTypeAnalysis &TypeInfo) {
+                    VPCostContext &CostCtx, VFRange &Range) {
   auto *UpdateR = dyn_cast<VPWidenRecipe>(PrevValue);
   if (!UpdateR || !Instruction::isBinaryOp(UpdateR->getOpcode()))
     return false;
@@ -5711,7 +5694,7 @@ getScaledReductions(VPSingleDefRecipe *RedPhiR, VPValue *PrevValue,
   // Try and get a scaled reduction from the first non-phi operand.
   // If one is found, we use the discovered reduction instruction in
   // place of the accumulator for costing.
-  if (getScaledReductions(RedPhiR, Op, Chains, TypeInfo)) {
+  if (getScaledReductions(RedPhiR, Op, Chains, CostCtx, Range)) {
     RedPhiR = Chains.rbegin()->ReductionBinOp;
     Op = UpdateR->getOperand(0);
     PhiOp = UpdateR->getOperand(1);
@@ -5732,7 +5715,8 @@ getScaledReductions(VPSingleDefRecipe *RedPhiR, VPValue *PrevValue,
     assert(Operands.size() <= 2 && "expected at most 2 operands");
 
     for (const auto &[I, OpVal] : enumerate(Operands)) {
-      // Allow constant as second operand - validation happens in transform.
+      // Allow constant as second operand - validation happens in
+      // isValidPartialReduction.
       const APInt *Unused;
       if (I > 0 && CastRecipes[0] && match(OpVal, m_APInt(Unused)))
         continue;
@@ -5782,16 +5766,21 @@ getScaledReductions(VPSingleDefRecipe *RedPhiR, VPValue *PrevValue,
     return false;
   }
 
-  Type *PhiType = TypeInfo.inferScalarType(RedPhiR);
+  Type *PhiType = CostCtx.Types.inferScalarType(RedPhiR);
   TypeSize PHISize = PhiType->getPrimitiveSizeInBits();
-  Type *ExtOpType = TypeInfo.inferScalarType(CastRecipes[0]->getOperand(0));
+  Type *ExtOpType =
+      CostCtx.Types.inferScalarType(CastRecipes[0]->getOperand(0));
   TypeSize ASize = ExtOpType->getPrimitiveSizeInBits();
   if (!PHISize.hasKnownScalarFactor(ASize))
     return false;
 
-  Chains.push_back(
+  VPPartialReductionChain Chain(
       {UpdateR, CastRecipes[0], CastRecipes[1], BinOp,
        static_cast<unsigned>(PHISize.getKnownScalarFactor(ASize))});
+  if (!isValidPartialReduction(Chain, PhiType, CostCtx, Range))
+    return false;
+
+  Chains.push_back(Chain);
   return true;
 }
 } // namespace
@@ -5799,9 +5788,9 @@ getScaledReductions(VPSingleDefRecipe *RedPhiR, VPValue *PrevValue,
 void VPlanTransforms::createPartialReductions(VPlan &Plan,
                                               VPCostContext &CostCtx,
                                               VFRange &Range) {
-  // Find all possible partial reductions, grouping chains by their PHI. This
-  // grouping allows invalidating the whole chain, if any link is not a valid
-  // partial reduction.
+  // Find all possible valid partial reductions, grouping chains by their PHI.
+  // This grouping allows invalidating the whole chain, if any link is not a
+  // valid partial reduction.
   MapVector<VPReductionPHIRecipe *, SmallVector<VPPartialReductionChain>>
       ChainsByPhi;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
@@ -5813,13 +5802,13 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
     // Get the backedge value from the reduction PHI and find the
     // ComputeReductionResult that uses it (directly or through a select for
     // predicated reductions).
-    if (auto *RdxResult = vputils::findComputeReductionResult(RedPhiR)) {
-      VPValue *ExitValue = RdxResult->getOperand(0);
-      match(ExitValue,
-            m_Select(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
-      getScaledReductions(RedPhiR, ExitValue, ChainsByPhi[RedPhiR],
-                          CostCtx.Types);
-    }
+    auto *RdxResult = vputils::findComputeReductionResult(RedPhiR);
+    if (!RdxResult)
+      continue;
+    VPValue *ExitValue = RdxResult->getOperand(0);
+    match(ExitValue, m_Select(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
+    getScaledReductions(RedPhiR, ExitValue, ChainsByPhi[RedPhiR], CostCtx,
+                        Range);
   }
 
   if (ChainsByPhi.empty())
@@ -5845,10 +5834,10 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   };
 
   // Validate chains: check that extends are only used by partial reductions,
-  // and that reduction bin ops are only used by other partial reductions with
-  // matching scale factors, are outside the loop region or the select
-  // introduced by tail-folding. Otherwise we would create users of scaled
-  // reductions where the types of the other operands don't match.
+  // and reduction bin ops are only used by other partial reductions with
+  // matching scale factors or the select introduced by tail-folding. Otherwise
+  // we would create users of scaled reductions where the types of the other
+  // operands don't match.
   for (auto &[RedPhiR, Chains] : ChainsByPhi) {
     for (const VPPartialReductionChain &Chain : Chains) {
       if (!ExtendUsersValid(Chain.ExtendA) ||
@@ -5887,5 +5876,5 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
 
   for (const auto &[_, Chains] : ChainsByPhi)
     for (const VPPartialReductionChain &Chain : Chains)
-      transformToPartialReduction(Chain, Range, CostCtx, Plan);
+      transformToPartialReduction(Chain, CostCtx.Types, Plan);
 }
