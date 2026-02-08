@@ -120,7 +120,7 @@ struct NonSimpleNonCommonView : std::ranges::view_base {
 static_assert(!HasOnlyNonConstBegin<std::ranges::common_view<NonSimpleNonCommonView>>);
 static_assert(!HasOnlyConstBegin<std::ranges::common_view<NonSimpleNonCommonView>>);
 static_assert(HasConstAndNonConstBegin<std::ranges::common_view<NonSimpleNonCommonView>>);
-static_assert(HasConstBegin<std::ranges::common_view<const NonSimpleNonCommonView>>);
-static_assert(HasOnlyConstBegin<std::ranges::common_view<const NonSimpleNonCommonView>>);
+static_assert(HasConstBegin<const std::ranges::common_view<NonSimpleNonCommonView>>);
+static_assert(HasOnlyConstBegin<const std::ranges::common_view<NonSimpleNonCommonView>>);
 
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_COMMON_VIEW_TYPES_H
