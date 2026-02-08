@@ -491,6 +491,26 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known = KnownBits::shl(LHSKnown, RHSKnown);
     break;
   }
+  case TargetOpcode::G_ROTL:
+  case TargetOpcode::G_ROTR: {
+    MachineInstr *AmtOpMI = MRI.getVRegDef(MI.getOperand(2).getReg());
+    auto MaybeAmtOp = isConstantOrConstantSplatVector(*AmtOpMI, MRI);
+    if (!MaybeAmtOp)
+      break;
+
+    Register SrcReg = MI.getOperand(1).getReg();
+    computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
+
+    unsigned Amt = MaybeAmtOp->urem(BitWidth);
+
+    // Canonicalize to ROTR.
+    if (Opcode == TargetOpcode::G_ROTL)
+      Amt = BitWidth - Amt;
+
+    Known.Zero = Known.Zero.rotr(Amt);
+    Known.One = Known.One.rotr(Amt);
+    break;
+  }
   case TargetOpcode::G_INTTOPTR:
   case TargetOpcode::G_PTRTOINT:
     if (DstTy.isVector())

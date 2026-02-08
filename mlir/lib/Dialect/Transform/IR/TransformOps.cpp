@@ -2507,6 +2507,17 @@ verifyNamedSequenceOp(transform::NamedSequenceOp op, bool emitWarnings) {
   if (op.getBody().front().empty())
     return emitSilenceableFailure(op) << "expected a non-empty body block";
 
+  // Check that all operations in the body implement TransformOpInterface
+  for (Operation &child : op.getBody().front().without_terminator()) {
+    if (!isa<transform::TransformOpInterface>(child)) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableFailure(&child)
+          << "expected children ops to implement TransformOpInterface";
+      diag.attachNote(child.getLoc()) << "op without interface";
+      return diag;
+    }
+  }
+
   Operation *terminator = &op.getBody().front().back();
   if (!isa<transform::YieldOp>(terminator)) {
     DiagnosedSilenceableFailure diag = emitSilenceableFailure(op)
