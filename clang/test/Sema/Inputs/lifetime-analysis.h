@@ -85,11 +85,22 @@ struct pair {
 };
 
 template<class Key,class T>
+struct flat_map {
+  using iterator = __gnu_cxx::basic_iterator<std::pair<const Key, T>>;
+  T& operator[](const Key& key);
+  iterator begin();
+  iterator end();
+  iterator find(const Key& key);
+  iterator erase(iterator);
+};
+
+template<class Key,class T>
 struct unordered_map {
   using iterator = __gnu_cxx::basic_iterator<std::pair<const Key, T>>;
   T& operator[](const Key& key);
   iterator begin();
   iterator end();
+  iterator find(const Key& key);
   iterator erase(iterator);
 };
 

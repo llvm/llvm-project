@@ -102,10 +102,10 @@ private:
   /// If so, creates a `TestPointFact` and returns true.
   bool handleTestPoint(const CXXFunctionalCastExpr *FCE);
 
-  // A DeclRefExpr will be treated as a use of the referenced decl. It will be
+  // Treats an expression as a use of the referenced object. It will be
   // checked for use-after-free unless it is later marked as being written to
-  // (e.g. on the left-hand side of an assignment).
-  void handleUse(const DeclRefExpr *DRE);
+  // (e.g. on the left-hand side of an assignment in the case of a DeclRefExpr).
+  void handleUse(const Expr *E);
 
   void markUseAsWrite(const DeclRefExpr *DRE);
 
@@ -122,7 +122,7 @@ private:
   // `DeclRefExpr`s as "read" uses. When an assignment is processed, the use
   // corresponding to the left-hand side is updated to be a "write", thereby
   // exempting it from the check.
-  llvm::DenseMap<const DeclRefExpr *, UseFact *> UseFacts;
+  llvm::DenseMap<const Expr *, UseFact *> UseFacts;
 };
 
 } // namespace clang::lifetimes::internal
