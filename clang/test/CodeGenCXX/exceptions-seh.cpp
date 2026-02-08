@@ -208,7 +208,7 @@ void seh_unwinding() {
 #elif defined(ERR4)
 void seh_unwinding() {
   __try {
-  HasCleanup x; // expected-no-diagnostics
+    HasCleanup x; // expected-no-diagnostics
   } __except (1) {
   }
 }
