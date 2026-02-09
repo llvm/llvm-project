@@ -148,7 +148,7 @@ bool addEmuTlsVar(Module &M, const GlobalVariable *GV) {
     return true;
 
   Type *GVType = GV->getValueType();
-  Align GVAlignment = DL.getPreferredAlign(GV);
+  Align GVAlignment = GV->getPointerAlignment(DL);
 
   // Define "__emutls_t.*" if there is InitValue
   GlobalVariable *EmuTlsTmplVar = nullptr;
