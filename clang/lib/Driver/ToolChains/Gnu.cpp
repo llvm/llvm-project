@@ -1756,7 +1756,6 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
           });
 
   Multilib::flags_list Flags;
-  llvm::StringSet<> Added_ABIs;
   StringRef ABIName = tools::riscv::getRISCVABI(Args, TargetTriple);
   std::string MArch = tools::riscv::getRISCVArch(Args, TargetTriple);
   Flags.push_back("-march=" + MArch);
