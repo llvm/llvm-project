@@ -245,8 +245,6 @@ define double @maximum_double(double %x, double %y) {
 ; MIPS32R6:       # %bb.0:
 ; MIPS32R6-NEXT:    max.d $f1, $f12, $f14
 ; MIPS32R6-NEXT:    cmp.un.d $f0, $f12, $f14
-; MIPS32R6-NEXT:    mfc1 $1, $f0
-; MIPS32R6-NEXT:    mtc1 $1, $f0
 ; MIPS32R6-NEXT:    lui $1, %hi($CPI3_0)
 ; MIPS32R6-NEXT:    ldc1 $f2, %lo($CPI3_0)($1)
 ; MIPS32R6-NEXT:    jr $ra
@@ -346,8 +344,6 @@ define double @maximum_double_nsz(double %x, double %y) {
 ; MIPS32R6:       # %bb.0:
 ; MIPS32R6-NEXT:    max.d $f1, $f12, $f14
 ; MIPS32R6-NEXT:    cmp.un.d $f0, $f12, $f14
-; MIPS32R6-NEXT:    mfc1 $1, $f0
-; MIPS32R6-NEXT:    mtc1 $1, $f0
 ; MIPS32R6-NEXT:    lui $1, %hi($CPI4_0)
 ; MIPS32R6-NEXT:    ldc1 $f2, %lo($CPI4_0)($1)
 ; MIPS32R6-NEXT:    jr $ra
@@ -723,8 +719,6 @@ define double @minimum_double(double %x, double %y) {
 ; MIPS32R6:       # %bb.0:
 ; MIPS32R6-NEXT:    min.d $f1, $f12, $f14
 ; MIPS32R6-NEXT:    cmp.un.d $f0, $f12, $f14
-; MIPS32R6-NEXT:    mfc1 $1, $f0
-; MIPS32R6-NEXT:    mtc1 $1, $f0
 ; MIPS32R6-NEXT:    lui $1, %hi($CPI9_0)
 ; MIPS32R6-NEXT:    ldc1 $f2, %lo($CPI9_0)($1)
 ; MIPS32R6-NEXT:    jr $ra
@@ -826,8 +820,6 @@ define double @minimum_double_nsz(double %x, double %y) {
 ; MIPS32R6:       # %bb.0:
 ; MIPS32R6-NEXT:    min.d $f1, $f12, $f14
 ; MIPS32R6-NEXT:    cmp.un.d $f0, $f12, $f14
-; MIPS32R6-NEXT:    mfc1 $1, $f0
-; MIPS32R6-NEXT:    mtc1 $1, $f0
 ; MIPS32R6-NEXT:    lui $1, %hi($CPI10_0)
 ; MIPS32R6-NEXT:    ldc1 $f2, %lo($CPI10_0)($1)
 ; MIPS32R6-NEXT:    jr $ra
