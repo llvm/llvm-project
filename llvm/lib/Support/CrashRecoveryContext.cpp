@@ -92,7 +92,8 @@ static LLVM_THREAD_LOCAL const CrashRecoveryContext *IsRecoveringFromCrash;
 
 } // namespace
 
-static void installExceptionOrSignalHandlers(bool NeedsPOSIXUtilitySignalHandling);
+static void
+installExceptionOrSignalHandlers(bool NeedsPOSIXUtilitySignalHandling);
 static void uninstallExceptionOrSignalHandlers();
 
 CrashRecoveryContextCleanup::~CrashRecoveryContextCleanup() = default;
@@ -193,7 +194,8 @@ CrashRecoveryContext::unregisterCleanup(CrashRecoveryContextCleanup *cleanup) {
 // catches exceptions if they would bubble out from the stack frame with __try /
 // __except.
 
-static void installExceptionOrSignalHandlers(bool NeedsPOSIXUtilitySignalHandling) {}
+static void
+installExceptionOrSignalHandlers(bool NeedsPOSIXUtilitySignalHandling) {}
 static void uninstallExceptionOrSignalHandlers() {}
 
 // We need this function because the call to GetExceptionInformation() can only
@@ -309,7 +311,8 @@ static LONG CALLBACK ExceptionHandler(PEXCEPTION_POINTERS ExceptionInfo)
 // non-NULL, valid VEH handles, or NULL.
 static LLVM_THREAD_LOCAL const void* sCurrentExceptionHandle;
 
-static void installExceptionOrSignalHandlers(bool NeedsPOSIXUtilitySignalHandling) {
+static void
+installExceptionOrSignalHandlers(bool NeedsPOSIXUtilitySignalHandling) {
   // We can set up vectored exception handling now.  We will install our
   // handler as the front of the list, though there's no assurances that
   // it will remain at the front (another call could install itself before
@@ -390,7 +393,8 @@ static void CrashRecoverySignalHandler(int Signal) {
     const_cast<CrashRecoveryContextImpl *>(CRCI)->HandleCrash(RetCode, Signal);
 }
 
-static void installExceptionOrSignalHandlers(bool NeedsPOSIXUtilitySignalHandling) {
+static void
+installExceptionOrSignalHandlers(bool NeedsPOSIXUtilitySignalHandling) {
   // Setup the signal handler.
   struct sigaction Handler;
   Handler.sa_handler = CrashRecoverySignalHandler;
@@ -404,7 +408,7 @@ static void installExceptionOrSignalHandlers(bool NeedsPOSIXUtilitySignalHandlin
       if (sigaction(Signals[i], NULL, &act) == 0 && act.sa_handler != SIG_IGN)
         sigaction(Signals[i], &Handler, &PrevActions[i]);
     } else {
-        sigaction(Signals[i], &Handler, &PrevActions[i]);
+      sigaction(Signals[i], &Handler, &PrevActions[i]);
     }
   }
 }
