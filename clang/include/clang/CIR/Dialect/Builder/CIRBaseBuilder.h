@@ -576,7 +576,7 @@ public:
   }
 
   mlir::Value createSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
-                        OverflowBehavior ob = OverflowBehavior::Saturated) {
+                        OverflowBehavior ob = OverflowBehavior::None) {
     auto op = cir::BinOp::create(*this, loc, lhs.getType(), cir::BinOpKind::Sub,
                                  lhs, rhs);
     op.setNoUnsignedWrap(

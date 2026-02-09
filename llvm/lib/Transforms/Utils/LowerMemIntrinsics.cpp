@@ -317,11 +317,13 @@ void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
          "Atomic memcpy lowering is not supported for vector operand type");
 
   Type *Int8Type = Type::getInt8Ty(Ctx);
-  unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
+  TypeSize LoopOpSize = DL.getTypeStoreSize(LoopOpType);
+  assert(LoopOpSize.isFixed() && "LoopOpType cannot be a scalable vector type");
   assert((!AtomicElementSize || LoopOpSize % *AtomicElementSize == 0) &&
          "Atomic memcpy lowering is not supported for selected operand size");
 
-  uint64_t LoopEndCount = alignDown(CopyLen->getZExtValue(), LoopOpSize);
+  uint64_t LoopEndCount =
+      alignDown(CopyLen->getZExtValue(), LoopOpSize.getFixedValue());
 
   // Skip the loop expansion entirely if the loop would never be taken.
   if (LoopEndCount != 0) {
@@ -379,7 +381,7 @@ void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
     Align PartSrcAlign(commonAlignment(SrcAlign, BytesCopied));
     Align PartDstAlign(commonAlignment(DstAlign, BytesCopied));
 
-    unsigned OperandSize = DL.getTypeStoreSize(OpTy);
+    TypeSize OperandSize = DL.getTypeStoreSize(OpTy);
     assert((!AtomicElementSize || OperandSize % *AtomicElementSize == 0) &&
            "Atomic memcpy lowering is not supported for selected operand size");
 
@@ -432,7 +434,7 @@ void llvm::createMemCpyLoopUnknownSize(
       Ctx, CopyLen, SrcAS, DstAS, SrcAlign, DstAlign, AtomicElementSize);
   assert((!AtomicElementSize || !LoopOpType->isVectorTy()) &&
          "Atomic memcpy lowering is not supported for vector operand type");
-  unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
+  TypeSize LoopOpSize = DL.getTypeStoreSize(LoopOpType);
   assert((!AtomicElementSize || LoopOpSize % *AtomicElementSize == 0) &&
          "Atomic memcpy lowering is not supported for selected operand size");
 
@@ -441,7 +443,7 @@ void llvm::createMemCpyLoopUnknownSize(
   Type *ResidualLoopOpType = AtomicElementSize
                                  ? Type::getIntNTy(Ctx, *AtomicElementSize * 8)
                                  : Int8Type;
-  unsigned ResidualLoopOpSize = DL.getTypeStoreSize(ResidualLoopOpType);
+  TypeSize ResidualLoopOpSize = DL.getTypeStoreSize(ResidualLoopOpType);
   assert(ResidualLoopOpSize == (AtomicElementSize ? *AtomicElementSize : 1) &&
          "Store size is expected to match type size");
 
@@ -576,7 +578,7 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
 
   Type *LoopOpType = TTI.getMemcpyLoopLoweringType(Ctx, CopyLen, SrcAS, DstAS,
                                                    SrcAlign, DstAlign);
-  unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
+  TypeSize LoopOpSize = DL.getTypeStoreSize(LoopOpType);
   Type *Int8Type = Type::getInt8Ty(Ctx);
   bool LoopOpIsInt8 = LoopOpType == Int8Type;
 
@@ -585,7 +587,7 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
   bool RequiresResidual = !LoopOpIsInt8;
 
   Type *ResidualLoopOpType = Int8Type;
-  unsigned ResidualLoopOpSize = DL.getTypeStoreSize(ResidualLoopOpType);
+  TypeSize ResidualLoopOpSize = DL.getTypeStoreSize(ResidualLoopOpType);
 
   // Calculate the loop trip count and remaining bytes to copy after the loop.
   IntegerType *ILengthType = cast<IntegerType>(TypeOfCopyLen);
@@ -847,11 +849,13 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
 
   Type *LoopOpType = TTI.getMemcpyLoopLoweringType(Ctx, CopyLen, SrcAS, DstAS,
                                                    SrcAlign, DstAlign);
-  unsigned LoopOpSize = DL.getTypeStoreSize(LoopOpType);
+  TypeSize LoopOpSize = DL.getTypeStoreSize(LoopOpType);
+  assert(LoopOpSize.isFixed() && "LoopOpType cannot be a scalable vector type");
   Type *Int8Type = Type::getInt8Ty(Ctx);
 
   // Calculate the loop trip count and remaining bytes to copy after the loop.
-  uint64_t BytesCopiedInLoop = alignDown(CopyLen->getZExtValue(), LoopOpSize);
+  uint64_t BytesCopiedInLoop =
+      alignDown(CopyLen->getZExtValue(), LoopOpSize.getFixedValue());
   uint64_t RemainingBytes = CopyLen->getZExtValue() - BytesCopiedInLoop;
 
   IntegerType *ILengthType = cast<IntegerType>(TypeOfCopyLen);
@@ -886,7 +890,7 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
     Align ResSrcAlign(commonAlignment(SrcAlign, BytesCopied));
     Align ResDstAlign(commonAlignment(DstAlign, BytesCopied));
 
-    unsigned OperandSize = DL.getTypeStoreSize(OpTy);
+    TypeSize OperandSize = DL.getTypeStoreSize(OpTy);
 
     // If we used LoopOpType as GEP element type, we would iterate over the
     // buffers in TypeStoreSize strides while copying TypeAllocSize bytes, i.e.,

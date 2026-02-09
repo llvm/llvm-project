@@ -8,6 +8,7 @@ add_clang_library(clangAnalysisScalable
   Model/EntityIdTable.cpp
   Model/EntityName.cpp
   Serialization/SerializationFormat.cpp
+  Serialization/SerializationFormatRegistry.cpp
   TUSummary/ExtractorRegistry.cpp
 
   LINK_LIBS

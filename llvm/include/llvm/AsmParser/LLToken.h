@@ -222,6 +222,12 @@ enum Kind {
   kw_provenance,
   kw_read_provenance,
 
+  // denormal_fpenv attribute:
+  kw_ieee,
+  kw_preservesign,
+  kw_positivezero,
+  kw_dynamic,
+
   // nofpclass attribute:
   kw_all,
   kw_nan,

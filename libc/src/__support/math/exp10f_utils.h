@@ -132,7 +132,7 @@ struct exp_b_reduc_t {
 // Return:
 //   { 2^(hi + mid), lo }
 template <class Base>
-LIBC_INLINE static constexpr exp_b_reduc_t exp_b_range_reduc(float x) {
+LIBC_INLINE constexpr exp_b_reduc_t exp_b_range_reduc(float x) {
   double xd = static_cast<double>(x);
   // kd = round((hi + mid) * log2(b) * 2^MID_BITS)
   double kd = fputil::nearest_integer(Base::LOG2_B * xd);

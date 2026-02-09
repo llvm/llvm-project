@@ -86,7 +86,6 @@ class ExplodedNode;
 class IndirectGotoNodeBuilder;
 class MemRegion;
 class NodeBuilderContext;
-class NodeBuilderWithSinks;
 class ProgramState;
 class ProgramStateManager;
 class RegionAndSymbolInvalidationTraits;
@@ -320,9 +319,8 @@ public:
                             ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
   /// Called by CoreEngine when processing the entrance of a CFGBlock.
-  void processCFGBlockEntrance(const BlockEdge &L,
-                               NodeBuilderWithSinks &nodeBuilder,
-                               ExplodedNode *Pred);
+  void processCFGBlockEntrance(const BlockEdge &L, const BlockEntrance &BE,
+                               NodeBuilder &Builder, ExplodedNode *Pred);
 
   void runCheckersForBlockEntrance(const NodeBuilderContext &BldCtx,
                                    const BlockEntrance &Entrance,

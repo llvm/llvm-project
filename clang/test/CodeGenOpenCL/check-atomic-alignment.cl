@@ -24,10 +24,8 @@ struct __half2 {
 // CHECK-LABEL: define dso_local <2 x half> @test_flat_add_2f16(
 // CHECK-SAME: ptr noundef [[ADDR:%.*]], <2 x half> noundef [[VAL:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca <2 x half>, align 4, addrspace(5)
 // CHECK-NEXT:    [[ADDR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca <2 x half>, align 4, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[ADDR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[ADDR_ADDR]] to ptr
 // CHECK-NEXT:    [[VAL_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VAL_ADDR]] to ptr
 // CHECK-NEXT:    store ptr [[ADDR]], ptr [[ADDR_ADDR_ASCAST]], align 8

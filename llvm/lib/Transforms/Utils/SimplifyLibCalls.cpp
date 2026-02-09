@@ -2015,10 +2015,11 @@ static Value *optimizeDoubleFP(CallInst *CI, IRBuilderBase &B,
     R = isBinary ? B.CreateIntrinsic(IID, B.getFloatTy(), V)
                  : B.CreateIntrinsic(IID, B.getFloatTy(), V[0]);
   } else {
-    AttributeList CalleeAttrs = CalleeFn->getAttributes();
-    R = isBinary ? emitBinaryFloatFnCall(V[0], V[1], TLI, CalleeName, B,
-                                         CalleeAttrs)
-                 : emitUnaryFloatFnCall(V[0], TLI, CalleeName, B, CalleeAttrs);
+    AttributeList CallsiteAttrs = CI->getAttributes();
+    R = isBinary
+            ? emitBinaryFloatFnCall(V[0], V[1], TLI, CalleeName, B,
+                                    CallsiteAttrs)
+            : emitUnaryFloatFnCall(V[0], TLI, CalleeName, B, CallsiteAttrs);
   }
   return B.CreateFPExt(R, B.getDoubleTy());
 }

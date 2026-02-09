@@ -24,7 +24,7 @@ struct TestConvert {
   void operator()() const {
     T x(T(1));
 
-    T copy = x;
+    alignas(std::atomic_ref<T>::required_alignment) T copy = x;
     std::atomic_ref<T> const a(copy);
 
     T converted = a;

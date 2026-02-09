@@ -31,6 +31,7 @@ mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
   if (enableCIRSimplify)
     pm.addPass(mlir::createCIRSimplifyPass());
 
+  pm.addPass(mlir::createTargetLoweringPass());
   pm.addPass(mlir::createCXXABILoweringPass());
   pm.addPass(mlir::createLoweringPreparePass(&astContext));
 

@@ -751,23 +751,16 @@ void codegen::setFunctionAttributes(StringRef CPU, StringRef Features,
   HANDLE_BOOL_ATTR(EnableNoNaNsFPMathView, "no-nans-fp-math");
   HANDLE_BOOL_ATTR(EnableNoSignedZerosFPMathView, "no-signed-zeros-fp-math");
 
-  if (DenormalFPMathView->getNumOccurrences() > 0 &&
-      !F.hasFnAttribute("denormal-fp-math")) {
+  if ((DenormalFPMathView->getNumOccurrences() > 0 ||
+       DenormalFP32MathView->getNumOccurrences() > 0) &&
+      !F.hasFnAttribute(Attribute::DenormalFPEnv)) {
     DenormalMode::DenormalModeKind DenormKind = getDenormalFPMath();
+    DenormalMode::DenormalModeKind DenormKindF32 = getDenormalFP32Math();
 
+    DenormalFPEnv FPEnv(DenormalMode{DenormKind, DenormKind},
+                        DenormalMode{DenormKindF32, DenormKindF32});
     // FIXME: Command line flag should expose separate input/output modes.
-    NewAttrs.addAttribute("denormal-fp-math",
-                          DenormalMode(DenormKind, DenormKind).str());
-  }
-
-  if (DenormalFP32MathView->getNumOccurrences() > 0 &&
-      !F.hasFnAttribute("denormal-fp-math-f32")) {
-    // FIXME: Command line flag should expose separate input/output modes.
-    DenormalMode::DenormalModeKind DenormKind = getDenormalFP32Math();
-
-    NewAttrs.addAttribute(
-      "denormal-fp-math-f32",
-      DenormalMode(DenormKind, DenormKind).str());
+    NewAttrs.addDenormalFPEnvAttr(FPEnv);
   }
 
   if (TrapFuncNameView->getNumOccurrences() > 0)

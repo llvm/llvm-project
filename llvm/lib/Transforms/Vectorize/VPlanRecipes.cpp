@@ -470,6 +470,7 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::Store:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnTwoConds:
+  case VPInstruction::ExitingIVValue:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::PtrAdd:
@@ -1322,6 +1323,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ExtractLastPart:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::ActiveLaneMask:
+  case VPInstruction::ExitingIVValue:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
@@ -1385,6 +1387,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     return false;
   case VPInstruction::ComputeAnyOfResult:
     return Op == getOperand(0) || Op == getOperand(1);
+  case VPInstruction::ExitingIVValue:
   case VPInstruction::ExtractLane:
     return Op == getOperand(0);
   };
@@ -1469,6 +1472,9 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::BuildVector:
     O << "buildvector";
+    break;
+  case VPInstruction::ExitingIVValue:
+    O << "exiting-iv-value";
     break;
   case VPInstruction::ExtractLane:
     O << "extract-lane";
@@ -1834,12 +1840,7 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1,
                                              State.TTI)) {
     Type *RetTy = toVectorizedTy(getResultType(), State.VF);
-    ArrayRef<Type *> ContainedTys = getContainedTypes(RetTy);
-    for (auto [Idx, Ty] : enumerate(ContainedTys)) {
-      if (isVectorIntrinsicWithStructReturnOverloadAtField(VectorIntrinsicID,
-                                                           Idx, State.TTI))
-        TysForDecl.push_back(Ty);
-    }
+    append_range(TysForDecl, getContainedTypes(RetTy));
   }
   SmallVector<Value *, 4> Args;
   for (const auto &I : enumerate(operands())) {
@@ -2741,7 +2742,7 @@ void VPBlendRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     for (unsigned I = 0, E = getNumIncomingValues(); I < E; ++I) {
       O << " ";
       getIncomingValue(I)->printAsOperand(O, SlotTracker);
-      if (I == 0)
+      if (I == 0 && isNormalized())
         continue;
       O << "/";
       getMask(I)->printAsOperand(O, SlotTracker);

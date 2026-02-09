@@ -343,6 +343,7 @@ private:
                                                           bool &Matched) const;
   ComplexRendererFns selectVOP3PMadMixModsExt(MachineOperand &Root) const;
   ComplexRendererFns selectVOP3PMadMixMods(MachineOperand &Root) const;
+  ComplexRendererFns selectVOP3PMadMixModsNeg(MachineOperand &Root) const;
 
   void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx = -1) const;

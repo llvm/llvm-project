@@ -235,7 +235,7 @@ body:             |
     EH_LABEL <mcsymbol .Ltmp0>
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     %20:gr32 = MOV32r0 implicit-def dead $eflags
-    %21:gr64 = SUBREG_TO_REG 0, %20, %subreg.sub_32bit
+    %21:gr64 = SUBREG_TO_REG %20, %subreg.sub_32bit
     $edi = COPY %20
     $rsi = COPY killed %21
     $ecx = COPY %7

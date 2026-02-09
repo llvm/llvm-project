@@ -1082,24 +1082,27 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
 
   // Do the operation and optionally transform to
   // result pointer type.
-  if (Op == BO_Add) {
+  switch (Op) {
+  case BO_Add:
     if (!this->emitAddOffset(OffsetType, E))
       return false;
-
-    if (classifyPrim(E) != PT_Ptr)
-      return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
-    return true;
-  }
-  if (Op == BO_Sub) {
+    break;
+  case BO_Sub:
     if (!this->emitSubOffset(OffsetType, E))
       return false;
-
-    if (classifyPrim(E) != PT_Ptr)
-      return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
-    return true;
+    break;
+  default:
+    return false;
   }
 
-  return false;
+  if (classifyPrim(E) != PT_Ptr) {
+    if (!this->emitDecayPtr(PT_Ptr, classifyPrim(E), E))
+      return false;
+  }
+
+  if (DiscardResult)
+    return this->emitPop(classifyPrim(E), E);
+  return true;
 }
 
 template <class Emitter>
@@ -5066,14 +5069,29 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
   }
   if (Val.isUnion()) {
     const FieldDecl *UnionField = Val.getUnionField();
-    const Record *R = this->getRecord(UnionField->getParent());
+    if (!UnionField)
+      return true;
+    const Record *R = this->getRecord(T);
     assert(R);
     const APValue &F = Val.getUnionValue();
     const Record::Field *RF = R->getField(UnionField);
-    PrimType T = classifyPrim(RF->Decl->getType());
-    if (!this->visitAPValue(F, T, E))
+    QualType FieldType = RF->Decl->getType();
+
+    if (OptPrimType PT = classify(FieldType)) {
+      if (!this->visitAPValue(F, *PT, E))
+        return false;
+      if (RF->isBitField())
+        return this->emitInitBitFieldActivate(*PT, RF, E);
+      return this->emitInitFieldActivate(*PT, RF->Offset, E);
+    }
+
+    if (!this->emitGetPtrField(RF->Offset, E))
       return false;
-    return this->emitInitField(T, RF->Offset, E);
+    if (!this->emitActivate(E))
+      return false;
+    if (!this->visitAPValueInitializer(F, E, FieldType))
+      return false;
+    return this->emitPopPtr(E);
   }
   if (Val.isArray()) {
     const auto *ArrType = T->getAsArrayTypeUnsafe();
@@ -5172,6 +5190,15 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_assume:
     // Argument is not evaluated.
     break;
+  case Builtin::BI__atomic_is_lock_free:
+  case Builtin::BI__atomic_always_lock_free: {
+    assert(E->getNumArgs() == 2);
+    if (!this->visit(E->getArg(0)))
+      return false;
+    if (!this->visitAsLValue(E->getArg(1)))
+      return false;
+  } break;
+
   default:
     if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
       // Put arguments on the stack.
@@ -7114,8 +7141,9 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
           return false;
         return this->emitInitGlobal(*T, *Index, E);
       }
-      return this->visitAPValueInitializer(TPOD->getValue(), E,
-                                           TPOD->getType());
+      if (!this->visitAPValueInitializer(TPOD->getValue(), E, TPOD->getType()))
+        return false;
+      return this->emitFinishInit(E);
     }
     return false;
   }

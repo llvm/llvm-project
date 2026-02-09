@@ -194,7 +194,7 @@ body:             |
     JMP_1 %bb.11, debug-location !9
   
   bb.11:
-    %36:gr64 = SUBREG_TO_REG 0, %27, %subreg.sub_32bit
+    %36:gr64 = SUBREG_TO_REG %27, %subreg.sub_32bit
     JMP_1 %bb.13, debug-location !9
   
   bb.12:
@@ -247,7 +247,7 @@ body:             |
   
   bb.20:
     %43:gr32 = nsw DEC32r %5, implicit-def dead $eflags, debug-location !9
-    %44:gr64_nosp = SUBREG_TO_REG 0, killed %43, %subreg.sub_32bit
+    %44:gr64_nosp = SUBREG_TO_REG killed %43, %subreg.sub_32bit
     ; Fiddled with to morph into llvm test,
     %8:gr64 = LEA64r $noreg, 4, killed %44, @amd64_push_arguments, $noreg, debug-location !9
     %42:gr32 = MOV32ri 8

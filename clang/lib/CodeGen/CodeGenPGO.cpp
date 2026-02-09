@@ -1505,7 +1505,7 @@ void CodeGenFunction::maybeCreateMCDCCondBitmap() {
     // Note: This doesn't initialize Addrs in invalidated Decisions.
     for (auto *MCDCCondBitmapAddr : PGO->getMCDCCondBitmapAddrArray(Builder))
       *MCDCCondBitmapAddr =
-          CreateIRTemp(getContext().UnsignedIntTy, "mcdc.addr");
+          CreateIRTempWithoutCast(getContext().UnsignedIntTy, "mcdc.addr");
   }
 }
 bool CodeGenFunction::isMCDCDecisionExpr(const Expr *E) const {

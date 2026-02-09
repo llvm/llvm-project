@@ -302,7 +302,6 @@ void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
 //===----------------------------------------------------------------------===//
 
 LogicalResult cir::BreakOp::verify() {
-  assert(!cir::MissingFeatures::switchOp());
   if (!getOperation()->getParentOfType<LoopOpInterface>() &&
       !getOperation()->getParentOfType<SwitchOp>())
     return emitOpError("must be within a loop");

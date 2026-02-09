@@ -10,6 +10,7 @@
 #define LLDB_HOST_HOSTINFOBASE_H
 
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/Utility/UserIDResolver.h"
@@ -28,8 +29,38 @@ namespace lldb_private {
 class FileSpec;
 
 struct SharedCacheImageInfo {
-  UUID uuid;
-  lldb::DataExtractorSP extractor_sp;
+  SharedCacheImageInfo()
+      : m_uuid(), m_extractor_sp(), m_create_data_extractor(nullptr),
+        m_image_baton(nullptr) {}
+  SharedCacheImageInfo(UUID uuid, lldb::DataExtractorSP extractor_sp)
+      : m_uuid(uuid), m_extractor_sp(extractor_sp),
+        m_create_data_extractor(nullptr), m_image_baton(nullptr) {}
+  SharedCacheImageInfo(
+      UUID uuid, lldb::DataExtractorSP (*create_data_extractor)(void *image),
+      void *image_baton)
+      : m_uuid(uuid), m_extractor_sp(),
+        m_create_data_extractor(create_data_extractor),
+        m_image_baton(image_baton) {}
+
+  lldb::DataExtractorSP GetExtractor() {
+    if (!m_extractor_sp && m_image_baton)
+      m_extractor_sp = m_create_data_extractor(m_image_baton);
+    return m_extractor_sp;
+  }
+  const UUID &GetUUID() const { return m_uuid; }
+  void *GetImageBaton();
+  void SetExtractor(lldb::DataExtractorSP extractor_sp) {
+    m_extractor_sp = extractor_sp;
+  }
+  void SetImageBaton(void *image_baton) { m_image_baton = image_baton; }
+  void SetDataExtractorCreateFunction(
+      lldb::DataExtractorSP (*create_data_extractor)(void *image));
+
+private:
+  UUID m_uuid;
+  lldb::DataExtractorSP m_extractor_sp;
+  lldb::DataExtractorSP (*m_create_data_extractor)(void *image);
+  void *m_image_baton;
 };
 
 namespace {

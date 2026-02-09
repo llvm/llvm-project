@@ -1,6 +1,7 @@
 """
 Tests that C++ member and static variables are available where they should be.
 """
+
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -37,10 +38,20 @@ class CPPThisTestCase(TestBase):
 
         self.runCmd("process continue")
 
-        # This would be disallowed if we enforced const.  But we don't.
-        self.expect("expression -- m_a = 2", startstr="(int) $1 = 2")
+        self.expect(
+            "expression -- m_a = 2",
+            error=True,
+            substrs=[
+                "cannot assign to non-static data member within const member function",
+                "Possibly trying to mutate object in a const context. Try running the expression with: expression --c++-ignore-context-qualifiers -- m_a = 2",
+            ],
+        )
 
-        self.expect("expression -- (int)getpid(); m_a", startstr="(int) $2 = 2")
+        self.expect("expression -- (int)getpid(); m_a", startstr="(const int) $1 = 3")
+        self.expect(
+            "expression --c++-ignore-context-qualifiers -- m_a = 2",
+            startstr="(int) $2 = 2",
+        )
 
         self.runCmd("process continue")
 

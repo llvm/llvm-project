@@ -44,7 +44,7 @@ DEFAULT_TIMEOUT: Final[float] = 50.0 * (10.0 if ("ASAN_OPTIONS" in os.environ) e
 # A quiet period between events, used to determine if we're done receiving
 # events in a given window, otherwise 'wait_for_stopped' would need to wait
 # until the DEFAULT_TIMEOUT occurs, slows down tests significantly.
-EVENT_QUIET_PERIOD = 0.25
+EVENT_QUIET_PERIOD = 0.25 * (20.0 if ("ASAN_OPTIONS" in os.environ) else 1.0)
 
 
 # See lldbtest.Base.spawnSubprocess, which should help ensure any processes
@@ -310,6 +310,7 @@ class DebugCommunication(object):
 
         # trigger enqueue thread
         self._recv_thread.start()
+        self.initialized_event = None
 
     @classmethod
     def encode_content(cls, s: str) -> bytes:
@@ -516,6 +517,7 @@ class DebugCommunication(object):
                 self.output[category] = output
         elif event == "initialized":
             self.initialized = True
+            self.initialized_event = packet
         elif event == "process":
             # When a new process is attached or launched, remember the
             # details that are available in the body of the event
@@ -1141,18 +1143,24 @@ class DebugCommunication(object):
     def request_evaluate(
         self,
         expression,
-        frameIndex=0,
+        frameIndex: Optional[int] = 0,
         threadId=None,
         context=None,
         is_hex: Optional[bool] = None,
     ) -> Response:
-        stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
-        if stackFrame is None:
-            raise ValueError("invalid frameIndex")
         args_dict = {
             "expression": expression,
-            "frameId": stackFrame["id"],
         }
+
+        if frameIndex is not None:
+            if threadId is None:
+                threadId = self.get_thread_id()
+            stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
+
+            if stackFrame is None:
+                raise ValueError("invalid frameIndex")
+            args_dict["frameId"] = stackFrame["id"]
+
         if context:
             args_dict["context"] = context
         if is_hex is not None:

@@ -14645,7 +14645,6 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     Register Val64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
     if (IsLwat)
       BuildMI(*BB, MI, DL, TII->get(TargetOpcode::SUBREG_TO_REG), Val64)
-          .addImm(0)
           .addReg(ValReg)
           .addImm(PPC::sub_32);
     else

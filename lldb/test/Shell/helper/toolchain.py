@@ -167,7 +167,9 @@ def use_lldb_substitutions(config):
             unresolved="ignore",
         ),
         "lldb-test",
-        "lldb-dap",
+        ToolSubst(
+            "%lldb-dap", command=FindTool("lldb-dap"), extra_args=[], unresolved="fatal"
+        ),
         ToolSubst(
             "%build", command="'" + sys.executable + "'", extra_args=build_script_args
         ),

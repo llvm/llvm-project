@@ -1543,12 +1543,28 @@ cc_library(
 )
 
 cc_library(
+    name = "AVRTargetParser",
+    srcs = ["lib/TargetParser/AVRTargetParser.cpp"],
+    hdrs = ["include/llvm/TargetParser/AVRTargetParser.h"],
+    copts = llvm_copts,
+    deps = [
+        ":BinaryFormat",
+        ":Object",
+        ":Support",
+        ":TargetParser",
+    ],
+)
+
+cc_library(
     name = "TargetParser",
     srcs = glob(
         [
             "lib/TargetParser/*.cpp",
         ],
-        exclude = ["lib/TargetParser/PPCTargetParser.cpp"],
+        exclude = [
+            "lib/TargetParser/AVRTargetParser.cpp",
+            "lib/TargetParser/PPCTargetParser.cpp",
+        ],
     ) + select({
         "@platforms//os:windows": glob([
             "lib/TargetParser/Windows/*.inc",
@@ -1557,9 +1573,10 @@ cc_library(
             "lib/TargetParser/Unix/*.inc",
         ]),
     }),
-    hdrs = glob([
-        "include/llvm/TargetParser/*.h",
-    ]),
+    hdrs = glob(
+        ["include/llvm/TargetParser/*.h"],
+        exclude = ["include/llvm/TargetParser/AVRTargetParser.h"],
+    ),
     copts = llvm_copts,
     includes = ["include"],
     textual_hdrs = [
@@ -3780,7 +3797,9 @@ gentbl_cc_library(
             ":config",
             ":" + target["name"] + "CommonTableGen",
             ":" + target["name"] + "Info",
-        ] + target.get("tbl_deps", []),
+        ] + target.get("tbl_deps", []) + (
+            [":AVRTargetParser"] if target["name"] == "AVR" else []
+        ),
     )],
     [cc_library(
         name = target["name"] + "CodeGen",
@@ -5723,6 +5742,7 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
+        ":AVRTargetParser",
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":AllTargetsDisassemblers",
@@ -5874,6 +5894,7 @@ cc_binary(
         ":AllTargetsDisassemblers",
         ":Core",
         ":DebugInfoDWARF",
+        ":DebugInfoPDB",
         ":Demangle",
         ":IPO",
         ":MC",

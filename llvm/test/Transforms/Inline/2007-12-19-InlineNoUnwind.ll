@@ -1,5 +1,4 @@
 ; RUN: opt < %s -passes=inline -S | FileCheck %s
-; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 
 declare i1 @extern()
 

@@ -24,6 +24,29 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/IR/BuiltinAttributes.td"
 
 //===----------------------------------------------------------------------===//
+// V5.2: [12.5.1] `affinity` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_AffinityClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false>
+    : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins Variadic<OpenMP_PointerLikeType>:$affinity_vars);
+
+  let optAssemblyFormat = [{
+    `affinity` `(` custom<AffinityClause>($affinity_vars, type($affinity_vars)) `)`
+  }];
+
+  let description = [{
+    The `affinity` clause specifies a locator list used as a hint for task
+    placement / scheduling affinity.
+  }];
+}
+
+def OpenMP_AffinityClause : OpenMP_AffinityClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [6.3] `align` clause
 //===----------------------------------------------------------------------===//
 

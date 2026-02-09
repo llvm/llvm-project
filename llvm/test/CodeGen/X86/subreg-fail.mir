@@ -22,9 +22,9 @@ body:             |
     ; CHECK-NEXT: MOV32mr undef %10:gr64, 1, $noreg, 0, $noreg, [[LEA64r]].sub_32bit :: (volatile store (s32) into `ptr undef`)
     ; CHECK-NEXT: RET 0, undef $eax
     %0:gr32 = MOV32rm undef %1:gr64, 1, $noreg, 0, $noreg :: (volatile load (s32) from `ptr undef`)
-    %2:gr64_nosp = SUBREG_TO_REG 0, killed %0, %subreg.sub_32bit
+    %2:gr64_nosp = SUBREG_TO_REG killed %0, %subreg.sub_32bit
     %3:gr32 = MOV32rm undef %4:gr64, 1, $noreg, 0, $noreg :: (volatile load (s32) from `ptr undef`)
-    %5:gr64 = SUBREG_TO_REG 0, killed %3, %subreg.sub_32bit
+    %5:gr64 = SUBREG_TO_REG killed %3, %subreg.sub_32bit
     %6:gr64 = COPY killed %5
     %6:gr64 = SHL64ri %6, 32, implicit-def dead $eflags
     %7:gr64 = LEA64r killed %6, 1, killed %2, 256, $noreg
