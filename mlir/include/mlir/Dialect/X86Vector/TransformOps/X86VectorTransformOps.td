@@ -71,5 +71,6 @@ def ApplyShuffleVectorFMAOpsPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+
 #endif // X86VECTOR_TRANSFORM_OPS
 

@@ -54,8 +54,6 @@ def non_configurable_patterns():
     vector.ApplyLowerScanPatternsOp()
     # CHECK: transform.apply_patterns.vector.lower_shape_cast
     vector.ApplyLowerShapeCastPatternsOp()
-    # CHECK: transform.apply_patterns.vector.flatten_vector_transfer_ops
-    vector.ApplyFlattenVectorTransferOpsPatternsOp()
 
 
 @run_apply_patterns
@@ -69,6 +67,9 @@ def configurable_patterns():
     # CHECK-SAME: max_transfer_rank = 3
     # CHECK-SAME: full_unroll = true
     vector.ApplyTransferToScfPatternsOp(max_transfer_rank=3, full_unroll=True)
+    # CHECK-SAME: target_vector_bitwidth = 1
+    # CHECK: transform.apply_patterns.vector.flatten_vector_transfer_ops
+    vector.ApplyFlattenVectorTransferOpsPatternsOp(target_vector_bitwidth=1)
 
 
 @run_apply_patterns

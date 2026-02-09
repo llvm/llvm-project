@@ -21,7 +21,6 @@
 using namespace mlir;
 using namespace mlir::x86vector;
 using namespace mlir::transform;
-using namespace mlir::vector;
 
 void mlir::transform::ApplyVectorContractToFMAPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
