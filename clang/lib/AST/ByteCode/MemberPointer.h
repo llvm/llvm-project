@@ -97,6 +97,7 @@ public:
 
   // Pretend we always have a path.
   bool singleWord() const { return false; }
+  ComparisonCategoryResult compare(const MemberPointer &RHS) const;
 
   std::optional<Pointer> toPointer(const Context &Ctx) const;
   FunctionPointer toFunctionPointer(const Context &Ctx) const;
@@ -161,22 +162,6 @@ public:
 
   std::string toDiagnosticString(const ASTContext &Ctx) const {
     return toAPValue(Ctx).getAsString(Ctx, getDecl()->getType());
-  }
-
-  ComparisonCategoryResult compare(const MemberPointer &RHS) const {
-    if (this->getDecl() == RHS.getDecl()) {
-
-      if (this->PathLength != RHS.PathLength)
-        return ComparisonCategoryResult::Unordered;
-
-      if (PathLength != 0 &&
-          std::memcmp(Path, RHS.Path, PathLength * sizeof(CXXRecordDecl *)) !=
-              0)
-        return ComparisonCategoryResult::Unordered;
-
-      return ComparisonCategoryResult::Equal;
-    }
-    return ComparisonCategoryResult::Unordered;
   }
 };
 

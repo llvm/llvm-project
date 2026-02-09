@@ -93,5 +93,21 @@ APValue MemberPointer::toAPValue(const ASTContext &ASTCtx) const {
                  /*Path=*/ArrayRef(Path, PathLength));
 }
 
+ComparisonCategoryResult
+MemberPointer::compare(const MemberPointer &RHS) const {
+  if (this->getDecl() == RHS.getDecl()) {
+
+    if (this->PathLength != RHS.PathLength)
+      return ComparisonCategoryResult::Unordered;
+
+    if (PathLength != 0 &&
+        std::memcmp(Path, RHS.Path, PathLength * sizeof(CXXRecordDecl *)) != 0)
+      return ComparisonCategoryResult::Unordered;
+
+    return ComparisonCategoryResult::Equal;
+  }
+  return ComparisonCategoryResult::Unordered;
+}
+
 } // namespace interp
 } // namespace clang
