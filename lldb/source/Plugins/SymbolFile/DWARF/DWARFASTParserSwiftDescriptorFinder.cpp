@@ -411,21 +411,27 @@ public:
       auto tag = child_die.Tag();
       if (tag != llvm::dwarf::DW_TAG_member)
         continue;
-      const auto *member_field_name =
+      const char *member_field_name =
           child_die.GetAttributeValueAsString(llvm::dwarf::DW_AT_name, "");
       auto *member_type = dwarf_parser->GetTypeForDIE(child_die);
       if (!member_type)
         continue;
-      auto member_mangled_typename =
-          member_type->GetForwardCompilerType().GetMangledTypeName();
+      auto member_compiler_type = member_type->GetForwardCompilerType();
 
+      // TypeRefBuilder expects types to be canonical.
+      CompilerType canonical = m_type_system.Canonicalize(member_compiler_type);
+      if (!canonical) {
+        LLDB_LOG(GetLog(LLDBLog::Types), "Could not build canonical type: {0}",
+                 member_compiler_type.GetMangledTypeName());
+        canonical = member_compiler_type;
+      }
       // Only matters for enums, so set to false for structs.
       bool is_indirect_case = false;
       // Unused by type info construction.
       bool is_var = false;
       fields.emplace_back(std::make_unique<DWARFFieldRecordImpl>(
           is_indirect_case, is_var, ConstString(member_field_name),
-          member_mangled_typename));
+          canonical.GetMangledTypeName()));
     }
     return fields;
   }

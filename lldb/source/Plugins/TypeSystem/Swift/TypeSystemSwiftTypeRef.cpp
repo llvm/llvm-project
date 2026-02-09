@@ -1633,6 +1633,22 @@ TypeSystemSwiftTypeRef::Canonicalize(swift::Demangle::Demangler &dem,
   return node;
 }
 
+CompilerType TypeSystemSwiftTypeRef::Canonicalize(CompilerType type) {
+  using namespace swift::Demangle;
+  auto mangled_name = type.GetMangledTypeName();
+  if (!mangled_name)
+    return {};
+  Demangler dem;
+  NodePointer node = GetDemangledType(dem, mangled_name.GetStringRef());
+  if (!node)
+    return {};
+  auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
+  NodePointer canonical = GetCanonicalNode(dem, node, flavor);
+  NodePointer type_node = dem.createNode(Node::Kind::Type);
+  type_node->addChild(canonical, dem);
+  return RemangleAsType(dem, type_node, flavor);
+}
+
 swift::Demangle::NodePointer
 TypeSystemSwiftTypeRef::GetCanonicalNode(swift::Demangle::Demangler &dem,
                                          swift::Demangle::NodePointer node,
