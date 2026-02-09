@@ -630,6 +630,7 @@ Expected<const char *> DWARFFormValue::getAsCString() const {
   std::string Msg = FormEncodingString(Form).str();
   if (Index)
     Msg += formatv(" uses index {0}, but the referenced string", *Index).str();
+
   Msg += formatv(" offset {0} is beyond {1} bounds", Offset,
                  (IsDebugLineString ? ".debug_line_str" : ".debug_str"))
              .str();
