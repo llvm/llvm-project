@@ -350,8 +350,8 @@ public:
   constexpr static GetTypeIDFunctionTy getInterfaceID =
       &mlirMemoryEffectsOpInterfaceTypeID;
 
-  /// Attach a new MemoryEffectsOpInterface ExternalModel to the named
-  /// operation. The ExternalModel acts as a trampoline for callbacks on the
+  /// Attach a new MemoryEffectsOpInterface FallbackModel to the named
+  /// operation. The FallbackModel acts as a trampoline for callbacks on the
   /// Python class.
   static void attach(nb::object &pySubclass, const std::string &opName,
                      DefaultingPyMlirContext ctx) {
@@ -381,7 +381,7 @@ public:
       pyGetEffects(opview, effectsWrapper);
     };
 
-    mlirMemoryEffectsOpInterfaceAttachExternalModel(
+    mlirMemoryEffectsOpInterfaceAttachFallbackModel(
         ctx->get(), wrap(StringRef(opName.c_str())), callbacks);
   }
 

@@ -2293,7 +2293,7 @@ PyOpOperandList PyOpOperandList::slice(intptr_t startIndex, intptr_t length,
 /// operation.
 class PyOpOpOperandList : public Sliceable<PyOpOpOperandList, PyOpOperand> {
 public:
-  static constexpr const char *pyClassName = "OpOperands";
+  static constexpr const char *pyClassName = "OpOpOperandList";
   using SliceableT = Sliceable<PyOpOperandList, PyOpOperand>;
 
   PyOpOpOperandList(PyOperationRef operation, intptr_t startIndex = 0,

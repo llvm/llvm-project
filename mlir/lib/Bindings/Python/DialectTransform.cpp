@@ -168,11 +168,11 @@ public:
   constexpr static GetTypeIDFunctionTy getInterfaceID =
       &mlirTransformOpInterfaceTypeID;
 
-  /// Attach a new TransformOpInterface ExternalModel to the named operation.
-  /// The ExternalModel acts as a trampoline for callbacks on the Python class.
+  /// Attach a new TransformOpInterface FallbackModel to the named operation.
+  /// The FallbackModel acts as a trampoline for callbacks on the Python class.
   static void attach(nb::object &pyClass, const std::string &opName,
                      DefaultingPyMlirContext ctx) {
-    // Prepare the callbacks that will be used by the ExternalModel.
+    // Prepare the callbacks that will be used by the FallbackModel.
     MlirTransformOpInterfaceCallbacks callbacks;
     // Make the pointer to the Python class available to the callbacks.
     callbacks.userData = pyClass.ptr();
@@ -181,7 +181,7 @@ public:
     // The above ref bump is all we need as initialization, no need to run the
     // construct callback.
     callbacks.construct = nullptr;
-    // Upon the ExternalModel's destruction, drop the ref to the Python class.
+    // Upon the FallbackModel's destruction, drop the ref to the Python class.
     callbacks.destruct = [](void *userData) {
       nb::handle(static_cast<PyObject *>(userData)).dec_ref();
     };
@@ -225,8 +225,8 @@ public:
       return nb::cast<bool>(res);
     };
 
-    // Attach a ExternalModel, which calls into Python, to the named operation.
-    mlirTransformOpInterfaceAttachExternalModel(
+    // Attach a FallbackModel, which calls into Python, to the named operation.
+    mlirTransformOpInterfaceAttachFallbackModel(
         ctx->get(), wrap(StringRef(opName.c_str())), callbacks);
   }
 
