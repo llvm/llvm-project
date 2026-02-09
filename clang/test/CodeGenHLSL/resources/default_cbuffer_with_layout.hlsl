@@ -18,8 +18,8 @@
 // CHECK-DAG: @a = external hidden addrspace(2) global i32, align 4
 // CHECK-DAG: @b = external hidden addrspace(2) global float, align 4
 // CHECK-DAG: @c = external hidden addrspace(2) global <{ [3 x <{ double, target("dx.Padding", 8) }>], double }>, align 8
-// CHECK-DAG: @d = external hidden addrspace(2) global <4 x i32>, align 16
-// CHECK-DAG: @e = external hidden addrspace(2) global <4 x float>, align 16
+// CHECK-DAG: @d = external hidden addrspace(2) global <4 x i32>, align 4
+// CHECK-DAG: @e = external hidden addrspace(2) global <4 x float>, align 4
 // CHECK-DAG: @s = external hidden addrspace(2) global %S, align 1
 
 struct S {
