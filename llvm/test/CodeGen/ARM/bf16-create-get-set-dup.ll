@@ -63,7 +63,8 @@ entry:
 define arm_aapcs_vfpcc <4 x bfloat> @test_vdup_laneq_bf16(<8 x bfloat> %v) {
 ; CHECK-LABEL: test_vdup_laneq_bf16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vdup.16 d0, d1[3]
+; CHECK-NEXT:    vdup.16 q0, d1[3]
+; CHECK-NEXT:    @ kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    bx lr
 entry:
   %lane = shufflevector <8 x bfloat> %v, <8 x bfloat> undef, <4 x i32> <i32 7, i32 7, i32 7, i32 7>

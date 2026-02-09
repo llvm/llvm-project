@@ -119,35 +119,42 @@ define <4 x double> @test_mul2x2_f64(<4 x double> %a0, <4 x double> %a1) nounwin
 ;
 ; AVX1-LABEL: test_mul2x2_f64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm2 = ymm0[2,3,2,3]
-; AVX1-NEXT:    vshufpd {{.*#+}} ymm3 = ymm1[1,1,3,3]
-; AVX1-NEXT:    vmulpd %ymm3, %ymm2, %ymm2
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vmovddup {{.*#+}} ymm1 = ymm1[0,0,2,2]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm2 = xmm1[0,0]
+; AVX1-NEXT:    vmulpd %xmm2, %xmm0, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm3 = xmm3[0,0]
+; AVX1-NEXT:    vmulpd %xmm3, %xmm0, %xmm3
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3,2,3]
+; AVX1-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[1,1,3,3]
 ; AVX1-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
-; AVX1-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: test_mul2x2_f64:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vshufpd {{.*#+}} ymm2 = ymm1[1,1,3,3]
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm0[2,3,2,3]
-; AVX2-NEXT:    vmulpd %ymm2, %ymm3, %ymm2
-; AVX2-NEXT:    vmovddup {{.*#+}} ymm1 = ymm1[0,0,2,2]
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,0,1]
+; AVX2-NEXT:    vmovddup {{.*#+}} xmm2 = xmm1[0,0]
+; AVX2-NEXT:    vmulpd %xmm2, %xmm0, %xmm2
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm1[2,2,2,2]
+; AVX2-NEXT:    vmulpd %xmm3, %xmm0, %xmm3
+; AVX2-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX2-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[1,1,3,3]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX2-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_mul2x2_f64:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vshufpd {{.*#+}} ymm2 = ymm1[1,1,3,3]
-; AVX512-NEXT:    vpermpd {{.*#+}} ymm3 = ymm0[2,3,2,3]
-; AVX512-NEXT:    vmulpd %ymm2, %ymm3, %ymm2
-; AVX512-NEXT:    vmovddup {{.*#+}} ymm1 = ymm1[0,0,2,2]
-; AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,0,1]
+; AVX512-NEXT:    vmovddup {{.*#+}} xmm2 = xmm1[0,0]
+; AVX512-NEXT:    vmulpd %xmm2, %xmm0, %xmm2
+; AVX512-NEXT:    vpermpd {{.*#+}} ymm3 = ymm1[2,2,2,2]
+; AVX512-NEXT:    vmulpd %xmm3, %xmm0, %xmm3
+; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX512-NEXT:    vshufpd {{.*#+}} ymm1 = ymm1[1,1,3,3]
+; AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX512-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
-; AVX512-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
+; AVX512-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
 ; AVX512-NEXT:    retq
 entry:
   %split = shufflevector <4 x double> %a0, <4 x double> poison, <2 x i32> <i32 0, i32 1>
