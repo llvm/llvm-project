@@ -272,7 +272,7 @@ struct DebugSettings {
   bool Enabled = false;
   uint32_t DefaultLevel = 1;
   llvm::SmallVector<StringRef> ExcludeFilters;
-  llvm::SmallVector<DebugFilter> Filters;
+  llvm::SmallVector<DebugFilter> IncludeFilters;
 };
 
 [[maybe_unused]] static DebugFilter parseDebugFilter(StringRef Filter) {
@@ -336,7 +336,7 @@ struct DebugSettings {
                            }),
             Settings.ExcludeFilters.end());
 
-      Settings.Filters.push_back(Filter);
+      Settings.IncludeFilters.push_back(Filter);
     }
   });
 
@@ -357,7 +357,7 @@ shouldPrintDebug(const char *Component, const char *Type, uint32_t &Level) {
       return false;
   }
 
-  if (Settings.Filters.empty()) {
+  if (Settings.IncludeFilters.empty()) {
     if (Level <= Settings.DefaultLevel) {
       Level = Settings.DefaultLevel;
       return true;
@@ -365,7 +365,7 @@ shouldPrintDebug(const char *Component, const char *Type, uint32_t &Level) {
     return false;
   }
 
-  for (const auto &DT : Settings.Filters) {
+  for (const auto &DT : Settings.IncludeFilters) {
     if (DT.Level < Level)
       continue;
     if (DT.Type.equals_insensitive("all") ||
