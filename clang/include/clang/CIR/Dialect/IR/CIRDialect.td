@@ -72,6 +72,10 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getZeroCallUsedRegsAttrName() { return "zero_call_used_regs"; }
     static llvm::StringRef getSaveRegParamsAttrName() { return "save_reg_params"; }
     static llvm::StringRef getDefaultFuncAttrsAttrName() { return "default_func_attrs"; }
+    //static llvm::StringRef getNoundefAttrName() { return "noundef"; }
+    //static llvm::StringRef getNonNullAttrName() { return "nonnull"; }
+    //static llvm::StringRef getAlignmentAttrName() { return "align"; }
+    //static llvm::StringRef getDereferenceableAttrName() { return "dereferenceable"; }
 
     void registerAttributes();
     void registerTypes();

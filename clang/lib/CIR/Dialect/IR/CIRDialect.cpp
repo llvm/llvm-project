@@ -890,6 +890,8 @@ static void printCallCommon(mlir::Operation *op,
                             mlir::Value indirectCallee,
                             mlir::OpAsmPrinter &printer, bool isNothrow,
                             cir::SideEffect sideEffect,
+                            ArrayAttr argAttrs,
+                            ArrayAttr resAttrs,
                             mlir::Block *normalDest = nullptr,
                             mlir::Block *unwindDest = nullptr) {
   printer << ' ';
@@ -927,13 +929,17 @@ static void printCallCommon(mlir::Operation *op,
   }
 
   llvm::SmallVector<::llvm::StringRef> elidedAttrs = {
-      CIRDialect::getCalleeAttrName(), CIRDialect::getNoThrowAttrName(),
+      CIRDialect::getCalleeAttrName(),
+      CIRDialect::getNoThrowAttrName(),
       CIRDialect::getSideEffectAttrName(),
-      CIRDialect::getOperandSegmentSizesAttrName()};
+      CIRDialect::getOperandSegmentSizesAttrName(),
+      llvm::StringRef("res_attrs"),
+      llvm::StringRef("arg_attrs")};
   printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
   printer << " : ";
-  printer.printFunctionalType(op->getOperands().getTypes(),
-                              op->getResultTypes());
+  call_interface_impl::printFunctionSignature(
+      printer, op->getOperands().getTypes(), argAttrs,
+      /*isVariadic=*/false, op->getResultTypes(), resAttrs);
 }
 
 mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
@@ -945,7 +951,7 @@ void cir::CallOp::print(mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
   cir::SideEffect sideEffect = getSideEffect();
   printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
-                  sideEffect);
+                  sideEffect, getArgAttrsAttr(), getResAttrsAttr());
 }
 
 static LogicalResult
@@ -1061,7 +1067,8 @@ void cir::TryCallOp::print(::mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
   cir::SideEffect sideEffect = getSideEffect();
   printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
-                  sideEffect, getNormalDest(), getUnwindDest());
+                  sideEffect, getArgAttrsAttr(), getResAttrsAttr(),
+                  getNormalDest(), getUnwindDest());
 }
 
 //===----------------------------------------------------------------------===//

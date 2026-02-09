@@ -47,7 +47,7 @@ void acc_loop() {
 //
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}})
-// CHECK-NEXT:  cir.call @_ZpLR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT:  cir.call @_ZpLR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
@@ -78,7 +78,7 @@ void acc_loop() {
 //
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}})
-// CHECK-NEXT:  cir.call @_ZmLR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT:  cir.call @_ZmLR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
@@ -109,13 +109,13 @@ void acc_loop() {
 //
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}})
-// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZltR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.bool
+// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZltR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.bool {{.*}})
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LT]], true {
 // CHECK-NEXT: cir.yield %[[RHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: }, false {
 // CHECK-NEXT: cir.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: }) : (!cir.bool) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineaSERKS_(%[[LHSARG]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineaSERKS_(%[[LHSARG]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
@@ -146,13 +146,13 @@ void acc_loop() {
 //
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}})
-// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZltR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.bool
+// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZltR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.bool {{.*}})
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LT]], true {
 // CHECK-NEXT: cir.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: }, false {
 // CHECK-NEXT: cir.yield %[[RHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: }) : (!cir.bool) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineaSERKS_(%[[LHSARG]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineaSERKS_(%[[LHSARG]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
@@ -183,7 +183,7 @@ void acc_loop() {
 //
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}})
-// CHECK-NEXT: cir.call @_ZaNR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT: cir.call @_ZaNR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
@@ -214,7 +214,7 @@ void acc_loop() {
 //
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}})
-// CHECK-NEXT: cir.call @_ZoRR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT: cir.call @_ZoRR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
@@ -245,7 +245,7 @@ void acc_loop() {
 //
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}})
-// CHECK-NEXT: cir.call @_ZeOR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT: cir.call @_ZeOR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
@@ -276,8 +276,8 @@ void acc_loop() {
 //
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}})
-// CHECK-NEXT: %[[OP_RES:.*]] = cir.call @_ZaaR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: @_ZN19HasOperatorsOutlineaSERKS_(%[[LHSARG]], %[[OP_RES]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline
+// CHECK-NEXT: %[[OP_RES:.*]] = cir.call @_ZaaR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
+// CHECK-NEXT: @_ZN19HasOperatorsOutlineaSERKS_(%[[LHSARG]], %[[OP_RES]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
@@ -308,8 +308,8 @@ void acc_loop() {
 //
 // CHECK-NEXT: } combiner {
 // CHECK-NEXT: ^bb0(%[[LHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[RHSARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}})
-// CHECK-NEXT: %[[OP_RES:.*]] = cir.call @_ZooR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: @_ZN19HasOperatorsOutlineaSERKS_(%[[LHSARG]], %[[OP_RES]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline
+// CHECK-NEXT: %[[OP_RES:.*]] = cir.call @_ZooR19HasOperatorsOutlineS0_(%[[LHSARG]], %[[RHSARG]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
+// CHECK-NEXT: @_ZN19HasOperatorsOutlineaSERKS_(%[[LHSARG]], %[[OP_RES]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: acc.yield %[[LHSARG]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: } destroy {
 // CHECK-NEXT: ^bb0(%[[ORIG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}, %[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsOutline> {{.*}}):  
@@ -371,7 +371,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !s64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !s64i) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: cir.call @_ZpLR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT: cir.call @_ZpLR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -515,7 +515,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !s64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !s64i) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: cir.call @_ZmLR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT: cir.call @_ZmLR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -658,13 +658,13 @@ void acc_loop() {
 // CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !s64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !s64i) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZltR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.bool
+// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZltR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.bool {{.*}})
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LT]], true {
 // CHECK-NEXT: cir.yield %[[RHS_STRIDE]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: }, false {
 // CHECK-NEXT: cir.yield %[[LHS_STRIDE]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: }) : (!cir.bool) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineaSERKS_(%[[LHS_STRIDE]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineaSERKS_(%[[LHS_STRIDE]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -807,13 +807,13 @@ void acc_loop() {
 // CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !s64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !s64i) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZltR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.bool
+// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZltR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.bool {{.*}})
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LT]], true {
 // CHECK-NEXT: cir.yield %[[LHS_STRIDE]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: }, false {
 // CHECK-NEXT: cir.yield %[[RHS_STRIDE]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: }) : (!cir.bool) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineaSERKS_(%[[LHS_STRIDE]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineaSERKS_(%[[LHS_STRIDE]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -956,7 +956,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !s64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !s64i) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: cir.call @_ZaNR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT: cir.call @_ZaNR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -1041,7 +1041,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !s64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !s64i) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: cir.call @_ZoRR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT: cir.call @_ZoRR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -1125,7 +1125,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !s64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !s64i) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: cir.call @_ZeOR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT: cir.call @_ZeOR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!s64i>, !s64i
@@ -1270,8 +1270,8 @@ void acc_loop() {
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !s64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 //
-// CHECK-NEXT: %[[OP_RES:.*]] = cir.call @_ZaaR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: @_ZN19HasOperatorsOutlineaSERKS_(%[[LHS_STRIDE]], %[[OP_RES]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline
+// CHECK-NEXT: %[[OP_RES:.*]] = cir.call @_ZaaR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
+// CHECK-NEXT: @_ZN19HasOperatorsOutlineaSERKS_(%[[LHS_STRIDE]], %[[OP_RES]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 //
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
@@ -1358,8 +1358,8 @@ void acc_loop() {
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !s64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 //
-// CHECK-NEXT: %[[OP_RES:.*]] = cir.call @_ZooR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: @_ZN19HasOperatorsOutlineaSERKS_(%[[LHS_STRIDE]], %[[OP_RES]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline
+// CHECK-NEXT: %[[OP_RES:.*]] = cir.call @_ZooR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
+// CHECK-NEXT: @_ZN19HasOperatorsOutlineaSERKS_(%[[LHS_STRIDE]], %[[OP_RES]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 //
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
@@ -1454,7 +1454,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT:  cir.call @_ZpLR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT:  cir.call @_ZpLR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1557,7 +1557,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT:  cir.call @_ZmLR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT:  cir.call @_ZmLR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1660,13 +1660,13 @@ void acc_loop() {
 // CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZltR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.bool
+// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZltR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.bool {{.*}})
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LT]], true {
 // CHECK-NEXT: cir.yield %[[RHS_STRIDE]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: }, false {
 // CHECK-NEXT: cir.yield %[[LHS_STRIDE]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: }) : (!cir.bool) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineaSERKS_(%[[LHS_STRIDE]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineaSERKS_(%[[LHS_STRIDE]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1769,13 +1769,13 @@ void acc_loop() {
 // CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZltR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.bool
+// CHECK-NEXT: %[[LT:.*]] = cir.call @_ZltR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.bool {{.*}})
 // CHECK-NEXT: %[[TERNARY:.*]] = cir.ternary(%[[LT]], true {
 // CHECK-NEXT: cir.yield %[[LHS_STRIDE]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: }, false {
 // CHECK-NEXT: cir.yield %[[RHS_STRIDE]] : !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: }) : (!cir.bool) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineaSERKS_(%[[LHS_STRIDE]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT: cir.call @_ZN19HasOperatorsOutlineaSERKS_(%[[LHS_STRIDE]], %[[TERNARY]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1878,7 +1878,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT:  cir.call @_ZaNR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT:  cir.call @_ZaNR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1981,7 +1981,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT:  cir.call @_ZoRR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT:  cir.call @_ZoRR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -2084,7 +2084,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[LHS_STRIDE:.*]] = cir.ptr_stride %[[LHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT:  cir.call @_ZeOR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
+// CHECK-NEXT:  cir.call @_ZeOR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -2188,8 +2188,8 @@ void acc_loop() {
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 //
-// CHECK-NEXT: %[[OP_RES:.*]] = cir.call @_ZaaR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: @_ZN19HasOperatorsOutlineaSERKS_(%[[LHS_STRIDE]], %[[OP_RES]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline
+// CHECK-NEXT: %[[OP_RES:.*]] = cir.call @_ZaaR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
+// CHECK-NEXT: @_ZN19HasOperatorsOutlineaSERKS_(%[[LHS_STRIDE]], %[[OP_RES]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline>{{.*}})
 //
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
@@ -2294,8 +2294,8 @@ void acc_loop() {
 // CHECK-NEXT: %[[RHS_DECAY:.*]] = cir.cast array_to_ptrdecay %[[RHSARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsOutline x 5>> -> !cir.ptr<!rec_HasOperatorsOutline>
 // CHECK-NEXT: %[[RHS_STRIDE:.*]] = cir.ptr_stride %[[RHS_DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsOutline>, !u64i) -> !cir.ptr<!rec_HasOperatorsOutline>
 //
-// CHECK-NEXT: %[[OP_RES:.*]] = cir.call @_ZooR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline>
-// CHECK-NEXT: @_ZN19HasOperatorsOutlineaSERKS_(%[[LHS_STRIDE]], %[[OP_RES]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> !cir.ptr<!rec_HasOperatorsOutline
+// CHECK-NEXT: %[[OP_RES:.*]] = cir.call @_ZooR19HasOperatorsOutlineS0_(%[[LHS_STRIDE]], %[[RHS_STRIDE]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline> {{.*}})
+// CHECK-NEXT: @_ZN19HasOperatorsOutlineaSERKS_(%[[LHS_STRIDE]], %[[OP_RES]]) : (!cir.ptr<!rec_HasOperatorsOutline>, !cir.ptr<!rec_HasOperatorsOutline>) -> (!cir.ptr<!rec_HasOperatorsOutline>{{.*}})
 //
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {

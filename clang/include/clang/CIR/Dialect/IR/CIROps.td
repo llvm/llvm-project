@@ -3267,6 +3267,7 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
 
 class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     : CIR_Op<mnemonic, !listconcat(extra_traits, [
+        DeclareOpInterfaceMethods<ArgAndResultAttrsOpInterface>,
         DeclareOpInterfaceMethods<CIRCallOpInterface>,
         DeclareOpInterfaceMethods<SymbolUserOpInterface>
       ])> {
@@ -3285,15 +3286,6 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
       (*this)->setAttr(getCalleeAttrName(),
                        mlir::cast<mlir::SymbolRefAttr>(callee));
     }
-
-    mlir::ArrayAttr getArgAttrsAttr() { return {}; }
-    ::mlir::ArrayAttr getResAttrsAttr() { return {}; }
-
-    void setResAttrsAttr(::mlir::ArrayAttr attrs) {}
-    void setArgAttrsAttr(::mlir::ArrayAttr attrs) {}
-
-    ::mlir::Attribute removeArgAttrsAttr() { return {}; }
-    ::mlir::Attribute removeResAttrsAttr() { return {}; }
 
     bool isIndirect() { return !getCallee(); }
     mlir::Value getIndirectCall();
@@ -3320,7 +3312,10 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
   dag commonArgs = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
       Variadic<CIR_AnyType>:$args,
       UnitAttr:$nothrow,
-      DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect);
+      DefaultValuedAttr<CIR_SideEffect, "SideEffect::All">:$side_effect,
+      OptionalAttr<DictArrayAttr>:$arg_attrs,
+      OptionalAttr<DictArrayAttr>:$res_attrs
+      );
 }
 
 def CIR_CallOp : CIR_CallOpBase<"call", [NoRegionArguments]> {

@@ -48,7 +48,7 @@ void use(int x, unsigned int y, float f, ConvertsToScalar cts) {
 #pragma acc atomic write if (condition(x, y, f))
   f = do_thing(x);
 
-  // CHECK-NEXT: %[[CTS_CONV_CALL:.*]] = cir.call @{{.*}}(%[[CTS_ALLOC]]) : (!cir.ptr<!rec_ConvertsToScalar>) -> !cir.float
+  // CHECK-NEXT: %[[CTS_CONV_CALL:.*]] = cir.call @{{.*}}(%[[CTS_ALLOC]]) : (!cir.ptr<!rec_ConvertsToScalar>) -> (!cir.float{{.*}})
   // CHECK-NEXT: acc.atomic.write %[[F_ALLOC]] = %[[CTS_CONV_CALL]] : !cir.ptr<!cir.float>, !cir.float
 #pragma acc atomic write
   f = cts;

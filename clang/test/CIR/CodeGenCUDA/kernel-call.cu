@@ -43,8 +43,10 @@
 //
 // Check __cudaPopCallConfiguration is called with correct argument types
 // CUDA-NEW: cir.call @__cudaPopCallConfiguration({{.*}}) : (!cir.ptr<!rec_dim3>, !cir.ptr<!rec_dim3>, !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!rec_cudaStream>>) -> !s32i
+
 //
 // Check cudaLaunchKernel is called with all 6 arguments:
 // func ptr, gridDim, blockDim, args, sharedMem, stream
-// CUDA-NEW: cir.call @cudaLaunchKernel({{.*}}) : (!cir.ptr<!void>, !rec_dim3, !rec_dim3, !cir.ptr<!cir.ptr<!void>>, !u64i, !cir.ptr<!rec_cudaStream>) -> !u32i
+// CUDA-NEW: cir.call @cudaLaunchKernel({{.*}}) : (!cir.ptr<!void>, !rec_dim3, !rec_dim3, !cir.ptr<!cir.ptr<!void>>, !u64i, !cir.ptr<!rec_cudaStream>) -> (!u32i {llvm.noundef})
+
 __global__ void kernel(int x, float y) {}

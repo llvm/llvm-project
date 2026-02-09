@@ -70,7 +70,7 @@ Base *returnBaseFromDerived(Derived* derived) {
   return derived;
 }
 
-// CIR: cir.func {{.*}} @_Z21returnBaseFromDerivedP7Derived(%[[DERIVED_ARG:.*]]: !cir.ptr<!rec_Derived> {{.*}}) -> !cir.ptr<!rec_Base>
+// CIR: cir.func {{.*}} @_Z21returnBaseFromDerivedP7Derived(%[[DERIVED_ARG:.*]]: !cir.ptr<!rec_Derived> {{.*}}) -> (!cir.ptr<!rec_Base>{{.*}})
 // CIR:   %[[DERIVED_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>, ["derived", init]
 // CIR:   %[[BASE_ADDR:.*]] = cir.alloca !cir.ptr<!rec_Base>, !cir.ptr<!cir.ptr<!rec_Base>>, ["__retval"]
 // CIR:   cir.store %[[DERIVED_ARG]], %[[DERIVED_ADDR]]

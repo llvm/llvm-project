@@ -65,6 +65,22 @@ public:
   Kind getKind() const { return theKind; }
   bool isDirect() const { return theKind == Direct; }
   bool isIgnore() const { return theKind == Ignore; }
+  bool isIndirect() const {
+    assert(!cir::MissingFeatures::abiArgInfo());
+    return false;
+  }
+  bool isExtend() const {
+    assert(!cir::MissingFeatures::abiArgInfo());
+    return false;
+  }
+  bool isNoExt() const {
+    assert(!cir::MissingFeatures::abiArgInfo());
+    return false;
+  }
+  bool isIndirectAliased() const {
+    assert(!cir::MissingFeatures::abiArgInfo());
+    return false;
+  }
 
   bool canHaveCoerceToType() const {
     assert(!cir::MissingFeatures::abiArgInfo());
