@@ -1136,7 +1136,7 @@ static bool findMipsMuslMultilibs(const Driver &D,
     });
   }
   if (MuslMipsMultilibs.select(D, Flags, Result.SelectedMultilibs)) {
-    Result.Multilibs = MuslMipsMultilibs;
+    Result.Multilibs = std::move(MuslMipsMultilibs);
     return true;
   }
   return false;
@@ -1547,7 +1547,7 @@ static void findAndroidArmMultilibs(const Driver &D,
   addMultilibFlag(IsThumbMode, "-mthumb", Flags);
 
   if (AndroidArmMultilibs.select(D, Flags, Result.SelectedMultilibs))
-    Result.Multilibs = AndroidArmMultilibs;
+    Result.Multilibs = std::move(AndroidArmMultilibs);
 }
 
 static bool findMSP430Multilibs(const Driver &D,
@@ -1640,7 +1640,7 @@ static void findCSKYMultilibs(const Driver &D, const llvm::Triple &TargetTriple,
           .FilterOut(NonExistent);
 
   if (CSKYMultilibs.select(D, Flags, Result.SelectedMultilibs))
-    Result.Multilibs = CSKYMultilibs;
+    Result.Multilibs = std::move(CSKYMultilibs);
 }
 
 /// Extend the multi-lib re-use selection mechanism for RISC-V.
@@ -1817,7 +1817,7 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
 
   if (selectRISCVMultilib(D, RISCVMultilibs, MArch, Flags,
                           Result.SelectedMultilibs))
-    Result.Multilibs = RISCVMultilibs;
+    Result.Multilibs = std::move(RISCVMultilibs);
 }
 
 static void findRISCVMultilibs(const Driver &D,
@@ -1859,7 +1859,7 @@ static void findRISCVMultilibs(const Driver &D,
   addMultilibFlag(ABIName == "lp64d", "-mabi=lp64d", Flags);
 
   if (RISCVMultilibs.select(D, Flags, Result.SelectedMultilibs))
-    Result.Multilibs = RISCVMultilibs;
+    Result.Multilibs = std::move(RISCVMultilibs);
 }
 
 static bool findBiarchMultilibs(const Driver &D,
