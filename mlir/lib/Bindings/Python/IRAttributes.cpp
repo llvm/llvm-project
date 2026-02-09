@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <algorithm>
+#include <bit>
 #include <cmath>
 #include <cstdint>
 #include <optional>
@@ -121,8 +122,18 @@ Raises:
     type or if the buffer does not meet expectations.
 )";
 
-/// Local helper adapted from llvm::scope_exit.
 namespace {
+/// Local helper checking if the current machine is little endian.
+bool isLittleEndian() {
+#if defined(__cpp_lib_endian)
+  return std::endian::native == std::endian::little;
+#else
+  const uint16_t value = 1;
+  return *reinterpret_cast<const uint8_t *>(&value) == 1;
+#endif
+}
+
+/// Local helper adapted from llvm::scope_exit.
 template <typename Callable>
 class [[nodiscard]] scope_exit {
   Callable ExitFunction;
@@ -941,7 +952,7 @@ MlirAttribute PyDenseElementsAttribute::getAttributeFromBuffer(
 MlirAttribute PyDenseElementsAttribute::getBitpackedAttributeFromBooleanBuffer(
     Py_buffer &view, std::optional<std::vector<int64_t>> explicitShape,
     MlirContext &context) {
-  if (llvm::endianness::native != llvm::endianness::little) {
+  if (!isLittleEndian()) {
     // Given we have no good way of testing the behavior on big-endian
     // systems we will throw
     throw nb::type_error("Constructing a bit-packed MLIR attribute is "
@@ -969,7 +980,7 @@ MlirAttribute PyDenseElementsAttribute::getBitpackedAttributeFromBooleanBuffer(
 
 std::unique_ptr<nb_buffer_info>
 PyDenseElementsAttribute::getBooleanBufferFromBitpackedAttribute() const {
-  if (llvm::endianness::native != llvm::endianness::little) {
+  if (!isLittleEndian()) {
     // Given we have no good way of testing the behavior on big-endian
     // systems we will throw
     throw nb::type_error("Constructing a numpy array from a MLIR attribute "
