@@ -2278,9 +2278,10 @@ VariableSP SymbolFileNativePDB::CreateLocalVariable(PdbCompilandSymId scope_id,
   return var_sp;
 }
 
-VariableSP SymbolFileNativePDB::GetOrCreateLocalVariable(
-    PdbCompilandSymId scope_id, PdbCompilandSymId var_id, bool is_param,
-    bool is_constant) {
+VariableSP
+SymbolFileNativePDB::GetOrCreateLocalVariable(PdbCompilandSymId scope_id,
+                                              PdbCompilandSymId var_id,
+                                              bool is_param, bool is_constant) {
   auto iter = m_local_variables.find(toOpaqueUid(var_id));
   if (iter != m_local_variables.end())
     return iter->second;
