@@ -389,15 +389,6 @@ public:
   /// @name Feature Constructors
   /// @{
 
-  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
-  [[deprecated("Use overload accepting Triple instead")]]
-  MCAsmInfo *createMCAsmInfo(const MCRegisterInfo &MRI, StringRef TheTriple,
-                             const MCTargetOptions &Options) const {
-    if (!MCAsmInfoCtorFn)
-      return nullptr;
-    return MCAsmInfoCtorFn(MRI, Triple(TheTriple), Options);
-  }
-
   /// Create a MCAsmInfo implementation for the specified
   /// target triple.
   ///
@@ -441,28 +432,11 @@ public:
     return MCInstrAnalysisCtorFn(Info);
   }
 
-  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
-  [[deprecated("Use overload accepting Triple instead")]]
-  MCRegisterInfo *createMCRegInfo(StringRef TT) const {
-    if (!MCRegInfoCtorFn)
-      return nullptr;
-    return MCRegInfoCtorFn(Triple(TT));
-  }
-
   /// Create a MCRegisterInfo implementation.
   MCRegisterInfo *createMCRegInfo(const Triple &TT) const {
     if (!MCRegInfoCtorFn)
       return nullptr;
     return MCRegInfoCtorFn(TT);
-  }
-
-  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
-  [[deprecated("Use overload accepting Triple instead")]]
-  MCSubtargetInfo *createMCSubtargetInfo(StringRef TheTriple, StringRef CPU,
-                                         StringRef Features) const {
-    if (!MCSubtargetInfoCtorFn)
-      return nullptr;
-    return MCSubtargetInfoCtorFn(Triple(TheTriple), CPU, Features);
   }
 
   /// createMCSubtargetInfo - Create a MCSubtargetInfo implementation.
@@ -590,12 +564,6 @@ public:
     if (NullTargetStreamerCtorFn)
       return NullTargetStreamerCtorFn(S);
     return nullptr;
-  }
-
-  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
-  [[deprecated("Use overload accepting Triple instead")]]
-  MCRelocationInfo *createMCRelocationInfo(StringRef TT, MCContext &Ctx) const {
-    return createMCRelocationInfo(Triple(TT), Ctx);
   }
 
   /// createMCRelocationInfo - Create a target specific MCRelocationInfo.
