@@ -15,7 +15,7 @@
 // Instruction Definitions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasStdExtZvabd] in {
-  defm VABS_V : VALU_MV_VS2<"vabs.v", 0b010010, 0b10000>;
+  def VABS_V : VALUVs2<0b010010, 0b10000, OPMVV, "vabs.v">;
 
   def VABD_VV  : VALUVV<0b010001, OPMVV, "vabd.vv">;
   def VABDU_VV : VALUVV<0b010011, OPMVV, "vabdu.vv">;
@@ -56,10 +56,8 @@ let Predicates = [HasStdExtZvabd] in {
   defm PseudoVABS : PseudoVABS;
   defm PseudoVABD : VPseudoVALU_VV<Commutable = 1>;
   defm PseudoVABDU : VPseudoVALU_VV<Commutable = 1>;
-  let IsRVVWideningReduction = 1 in {
-    defm PseudoVWABDA : VPseudoVWABD_VV;
-    defm PseudoVWABDAU : VPseudoVWABD_VV;
-  } // IsRVVWideningReduction = 1
+  defm PseudoVWABDA : VPseudoVWABD_VV;
+  defm PseudoVWABDAU : VPseudoVWABD_VV;
 } // Predicates = [HasStdExtZvabd]
 
 //===----------------------------------------------------------------------===//
