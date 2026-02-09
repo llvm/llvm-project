@@ -38,6 +38,37 @@ on:
         type: string
         description: "If provided, the tests will run on this artifact ID"
         default: ""
+  workflow_call:
+    inputs:
+      linux_amdgpu_families:
+        type: string
+        description: "Insert comma-separated list of Linux GPU families to build and test. ex: gfx94X, gfx1201X"
+        default: ""
+      linux_test_labels:
+        type: string
+        description: "If enabled, reduce test set on Linux to the list of labels prefixed with 'test:'"
+        default: ""
+      linux_use_prebuilt_artifacts:
+        type: boolean
+        description: "If enabled, the CI will pull Linux artifacts using artifact_run_id and only run tests"
+      windows_amdgpu_families:
+        type: string
+        description: "Insert comma-separated list of Windows GPU families to build and test. ex: gfx94X, gfx1201X"
+        default: ""
+      windows_test_labels:
+        type: string
+        description: "If enabled, reduce test set on Windows to the list of labels prefixed with 'test:'"
+        default: ""
+      windows_use_prebuilt_artifacts:
+        type: boolean
+        description: "If enabled, the CI will pull Windows artifacts using artifact_run_id and only run tests"
+      artifact_run_id:
+        type: string
+        description: "If provided, the tests will run on this artifact ID"
+        default: ""
+  push:
+    branches:
+      - ADHOCBUILD
 
 permissions:
   contents: read
@@ -117,45 +148,15 @@ jobs:
       contents: read
       id-token: write
 
-  notify_build_status:
-    name: Notify amd-staging nightly status
+  invoke-teams-notifier:
+    uses: ROCm/llvm-project/.github/workflows/teams_notifier.yml@amd-staging
     if: always()
     needs:
       - windows_build_and_test
       - linux_build_and_test
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Notify status
-        env:
-          TZ: 'America/Chicago'
-        run: |
-          START_DATE=$(date +"%Y-%m-%d")  # Use the current date for the report
-          
-          # Initialize the status to success
-          STATUS="failure"
-  
-          # Check the results of the dependent jobs
-          if [ "${{ needs.windows_build_and_test.result }}" = "failure" ] || [ "${{ needs.linux_build_and_test.result }}" = "failure" ]; then
-            STATUS="failure"
-          elif [ "${{ needs.windows_build_and_test.result }}" = "cancelled" ] || [ "${{ needs.linux_build_and_test.result }}" = "cancelled" ]; then
-            STATUS="failure"
-          elif [ "${{ needs.windows_build_and_test.result }}" = "success" ] && [ "${{ needs.linux_build_and_test.result }}" = "success" ]; then
-            STATUS="success"
-          fi
-          
-          # Determine the icon based on the status
-          ICON="ℹ️"
-          if [ "$STATUS" = "success" ]; then ICON="✅"; fi
-          if [ "$STATUS" = "failure" ]; then ICON="❌"; fi      
-  
-          WEBHOOK_URL="${{ secrets.AMD_STAGING_NIGHTLY_TEAMS_WEBHOOK_URL }}"      
-          # Sending notification
-          curl -H "Content-Type: application/json" \
-          -d "{
-            \"title\": \"$START_DATE - $ICON Build $STATUS\",
-            \"text\": \"**Repository:** ${{ github.repository }}  \n**Branch:** ${{ github.ref_name }}  \n**Status:** $STATUS  \n🔗 [Build Link](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\"
-          }" \
-          "$WEBHOOK_URL"
+    with:
+        JOB_NAME_TO_MATCH: "Linux::gfx94X-dcgpu::release / Build Artifacts / Build (xfail false)"
+    secrets: inherit
 
 
   # build_python_packages:
