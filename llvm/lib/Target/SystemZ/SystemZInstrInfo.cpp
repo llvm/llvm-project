@@ -1796,6 +1796,8 @@ bool SystemZInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
 }
 
 namespace {
+// This is a workaround for https://github.com/llvm/llvm-project/issues/172511
+// and should be removed once that issue is resolved.
 Register scavengeAddrReg(MachineInstr &MI, MachineBasicBlock *MBB) {
   // create fresh RegScavanger instance.
   RegScavenger RS;
@@ -1817,63 +1819,55 @@ Register scavengeAddrReg(MachineInstr &MI, MachineBasicBlock *MBB) {
   }
   return Scratch;
 }
-
-// Check MI (which should be either MOVE_SG or COMPARE_SG)
-// to see if the early-clobber flag on the def reg was honored. If so,
-// return that register. If not, scavenge a new register and return that.
-// This is a workaround for https://github.com/llvm/llvm-project/issues/172511
-// and should be removed once that issue is resolved.
-Register chooseAddrReg(MachineInstr &MI, MachineBasicBlock *MBB) {
-  Register DefReg = MI.getOperand(0).getReg();
-  Register OpReg = MI.getOperand(1).getReg();
-  // if we can use DefReg, return it
-  if (DefReg != OpReg)
-    return DefReg;
-  // otherwise, scavenge
-  return scavengeAddrReg(MI, MBB);
-}
 } // namespace
-
-// Emit the stack guard address load, depending on guard type.
-// Return the register the stack guard address was loaded into.
-unsigned SystemZInstrInfo::emitLoadStackGuardAddress(MachineInstr &MI,
-                                                     Register AddrReg) const {
-  MachineBasicBlock &MBB = *(MI.getParent());
-  const MachineFunction &MF = *(MBB.getParent());
-  const auto DL = MI.getDebugLoc();
-
-  const Module *M = MF.getFunction().getParent();
-  StringRef GuardType = M->getStackProtectorGuard();
-
-  if (GuardType.empty() || (GuardType == "tls")) {
-    // emit a load of the TLS stack guard's address
-    BuildMI(MBB, MI, DL, get(SystemZ::LOAD_TSGA), AddrReg);
-    // return the appropriate stack guard offset (40 in the tls case).
-    return 40;
-  }
-  if (GuardType == "global") {
-    // emit a load of the global stack guard's address
-    BuildMI(MBB, MI, DL, get(SystemZ::LOAD_GSGA), AddrReg);
-    // return the appropriate stack guard offset (0 in the global case).
-    return 0;
-  }
-
-  llvm_unreachable((Twine("Unknown stack protector type \"") + GuardType + "\"")
-                       .str()
-                       .c_str());
-}
 
 void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
                                               unsigned Opcode) const {
-  MachineBasicBlock *MBB = MI.getParent();
-  Register AddrReg = chooseAddrReg(MI, MBB);
-  unsigned Offset = emitLoadStackGuardAddress(MI, AddrReg);
+  MachineBasicBlock &MBB = *(MI.getParent());
+  const MachineFunction &MF = *(MBB.getParent());
+  const auto DL = MI.getDebugLoc();
+  const Module *M = MF.getFunction().getParent();
+  StringRef GuardType = M->getStackProtectorGuard();
+  unsigned int Offset = 0;
+
+  // Check MI (which should be either MOVE_SG or COMPARE_SG)
+  // to see if the early-clobber flag on the def reg was honored. If so,
+  // return that register. If not, scavenge a new register and return that.
+  // This is a workaround for https://github.com/llvm/llvm-project/issues/172511
+  // and should be removed once that issue is resolved.
+  // After this, AddrReg is set to a usable scratch register.
+  Register AddrReg = MI.getOperand(0).getReg();
+  Register OpReg = MI.getOperand(1).getReg();
+  // if we can't use AddrReg, scavenge a new one.
+  if (AddrReg == OpReg)
+    AddrReg = scavengeAddrReg(MI, &MBB);
+
+  // emit an appropriate pseudo for the guard type, which loads the address of said
+  // guard into the scratch register AddrReg.
+  if (GuardType.empty() || (GuardType == "tls")) {
+    // emit a load of the TLS stack guard's address
+    BuildMI(MBB, MI, DL, get(SystemZ::LOAD_TSGA), AddrReg);
+    // record the appropriate stack guard offset (40 in the tls case).
+    Offset = 40;
+  }
+  else if (GuardType == "global") {
+    // emit a load of the global stack guard's address
+    BuildMI(MBB, MI, DL, get(SystemZ::LOAD_GSGA), AddrReg);
+  } else {
+    llvm_unreachable((Twine("Unknown stack protector type \"") + GuardType + "\"")
+                      .str()
+                      .c_str());
+  }
+
+  // Construct the appropriate move or compare instruction using the
+  // scratch register.
   BuildMI(*(MI.getParent()), MI, MI.getDebugLoc(), get(Opcode))
       .addReg(MI.getOperand(1).getReg())
       .addImm(MI.getOperand(2).getImm())
       .addImm(8)
       .addReg(AddrReg)
       .addImm(Offset);
+
   MI.removeFromParent();
 }
 
