@@ -21,10 +21,9 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   dead $x0 = PseudoVSETIVLI 0, 210 /* e32, m4, ta, ma */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   renamable $v12m4 = PseudoVLE32_V_M4 undef renamable $v12m4, undef renamable $x10, 0 /* vl */, 5 /* e32 */, 2 /* tu, ma */, implicit $vl, implicit $vtype :: (load unknown-size, align 4)
-  ; CHECK-NEXT:   renamable $v12m4 = PseudoVFMADD_VV_M4_E32 killed renamable $v12m4, undef renamable $v8m4, killed renamable $v8m4, 0 /* frm=rne */, 0 /* vl */, 5 /* e32 */, 1 /* ta, mu */, implicit $frm, implicit $vl, implicit $vtype
+  ; CHECK-NEXT:   renamable $v8m4 = PseudoVFMACC_VV_M4_E32 killed renamable $v8m4, undef renamable $v8m4, killed renamable $v12m4, 0 /* frm=rne */, 0 /* vl */, 5 /* e32 */, 1 /* ta, mu */, implicit $frm, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   dead $x0 = PseudoVSETVLIX0X0 killed $x0, 146 /* e32, m4, tu, ma */, implicit-def $vl, implicit-def $vtype, implicit $vl
-  ; CHECK-NEXT:   renamable $v12m4 = PseudoVFMACC_VV_M4_E32 killed renamable $v12m4, undef renamable $v8m4, undef renamable $v8m4, 0 /* frm=rne */, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $frm, implicit $vl, implicit $vtype
-  ; CHECK-NEXT:   $v8m4 = VMV4R_V killed $v12m4, implicit $vtype, implicit $v12m4, implicit $vtype
+  ; CHECK-NEXT:   renamable $v8m4 = PseudoVFMACC_VV_M4_E32 killed renamable $v8m4, undef renamable $v8m4, undef renamable $v8m4, 0 /* frm=rne */, 0 /* vl */, 5 /* e32 */, 0 /* tu, mu */, implicit $frm, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   BNE undef renamable $x10, $x0, %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
