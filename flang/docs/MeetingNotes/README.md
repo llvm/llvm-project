@@ -11,16 +11,16 @@
 
 This directory combines the notes from the LLVM Flang Technical Calls
 and the LLVM Flang Community Calls. This was done to make the Community Call 
-notes more publicly available than we could make them previously.
+notes more easily available than before.
 
 ## Helpful definitions
 
 -   "LLVM Flang" is the Fortran 2018 compiler being developed as part of the 
 LLVM project, and located in the LLVM monorepo ([github.com/llvm/llvm-project](http://github.com/llvm/llvm-project)).  
--   "Classic Flang" is the Flang Fortran 2003/2008 compiler located at [github.com/flang-compiler/flang](http://github.com/flang-compiler/flang).
+-   "Classic Flang" is the Fortran 2003/2008 compiler located at [github.com/flang-compiler/flang](http://github.com/flang-compiler/flang).
 
 ## Call Information
-- please see information in [GettingInvolved.md](https://github.com/llvm/llvm-project/blob/main/flang/docs/GettingInvolved.md) under the heading "Flang Biweekly Call"
+- Details about the call can be found in [GettingInvolved.md](https://github.com/llvm/llvm-project/blob/main/flang/docs/GettingInvolved.md) under the heading "Flang Biweekly Call"
 
 ## Flang Community
 
