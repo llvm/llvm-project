@@ -18,6 +18,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/llvm-config.h"
@@ -27,6 +28,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
 #include <limits.h>
+#include <limits>
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
   do {                                                                         \
@@ -191,24 +193,6 @@ bool APFloatBase::isRepresentableBy(const fltSemantics &A,
   return A.maxExponent <= B.maxExponent && A.minExponent >= B.minExponent &&
          A.precision <= B.precision;
 }
-
-/* A tight upper bound on number of parts required to hold the value
-   pow(5, power) is
-
-     power * 815 / (351 * integerPartWidth) + 1
-
-   However, whilst the result may require only this many parts,
-   because we are multiplying two values to get it, the
-   multiplication may require an extra part with the excess part
-   being zero (consider the trivial case of 1 * 1, tcFullMultiply
-   requires two parts to hold the single-part result).  So we add an
-   extra one to guarantee enough space whilst multiplying.  */
-const unsigned int maxExponent = 16383;
-const unsigned int maxPrecision = 113;
-const unsigned int maxPowerOfFiveExponent = maxExponent + maxPrecision - 1;
-const unsigned int maxPowerOfFiveParts =
-    2 +
-    ((maxPowerOfFiveExponent * 815) / (351 * APFloatBase::integerPartWidth));
 
 unsigned int APFloatBase::semanticsPrecision(const fltSemantics &semantics) {
   return semantics.precision;
@@ -672,27 +656,45 @@ ulpsFromBoundary(const APFloatBase::integerPart *parts, unsigned int bits,
   return ~(APFloatBase::integerPart) 0; /* A lot.  */
 }
 
-/* Place pow(5, power) in DST, and return the number of parts used.
-   DST must be at least one part larger than size of the answer.  */
-static unsigned int
-powerOf5(APFloatBase::integerPart *dst, unsigned int power) {
+/* Calculate and return pow(5, power). */
+static SmallVector<APFloatBase::integerPart, 0> powerOf5(unsigned int power) {
   static const APFloatBase::integerPart firstEightPowers[] = { 1, 5, 25, 125, 625, 3125, 15625, 78125 };
-  APFloatBase::integerPart pow5s[maxPowerOfFiveParts * 2 + 5];
+
+  // Make sure that the following expression does not overflow.
+  assert(power <= UINT_MAX / 815);
+
+  // A tight upper bound on number of parts required to hold the value
+  // pow(5, power) is
+  //
+  //   power * 815 / (351 * integerPartWidth) + 1
+  //
+  // However, whilst the result may require only this many parts,
+  // because we are multiplying two values to get it, the
+  // multiplication may require an extra part with the excess part
+  // being zero (consider the trivial case of 1 * 1, tcFullMultiply
+  // requires two parts to hold the single-part result).  So we add an
+  // extra one to guarantee enough space whilst multiplying.
+  const unsigned int maxPowerOfFiveParts =
+      2 + ((power * 815) / (351 * APFloatBase::integerPartWidth));
+
+  SmallVector<APFloatBase::integerPart, 0> pow5s(maxPowerOfFiveParts * 2 + 5);
   pow5s[0] = 78125 * 5;
 
   unsigned int partsCount = 1;
-  APFloatBase::integerPart scratch[maxPowerOfFiveParts], *p1, *p2, *pow5;
-  unsigned int result;
-  assert(power <= maxExponent);
+  SmallVector<APFloatBase::integerPart, 0> scratch(maxPowerOfFiveParts);
+  APFloatBase::integerPart *p1, *p2, *pow5;
+  unsigned int resultSize;
 
-  p1 = dst;
-  p2 = scratch;
+  SmallVector<APFloatBase::integerPart, 0> dst(maxPowerOfFiveParts);
+
+  p1 = dst.data();
+  p2 = scratch.data();
 
   *p1 = firstEightPowers[power & 7];
   power >>= 3;
 
-  result = 1;
-  pow5 = pow5s;
+  resultSize = 1;
+  pow5 = pow5s.data();
 
   for (unsigned int n = 0; power; power >>= 1, n++) {
     /* Calculate pow(5,pow(2,n+3)) if we haven't yet.  */
@@ -707,10 +709,10 @@ powerOf5(APFloatBase::integerPart *dst, unsigned int power) {
     if (power & 1) {
       APFloatBase::integerPart *tmp;
 
-      APInt::tcFullMultiply(p2, p1, pow5, result, partsCount);
-      result += partsCount;
-      if (p2[result - 1] == 0)
-        result--;
+      APInt::tcFullMultiply(p2, p1, pow5, resultSize, partsCount);
+      resultSize += partsCount;
+      if (p2[resultSize - 1] == 0)
+        resultSize--;
 
       /* Now result is in p1 with partsCount parts and p2 is scratch
          space.  */
@@ -722,10 +724,14 @@ powerOf5(APFloatBase::integerPart *dst, unsigned int power) {
     pow5 += partsCount;
   }
 
-  if (p1 != dst)
-    APInt::tcAssign(dst, p1, result);
+  if (p1 != dst.data())
+    APInt::tcAssign(dst.data(), p1, resultSize);
 
-  return result;
+  // Truncate to the actually used elements from the initial worst-case sizing
+  // during initialization.
+  dst.truncate(resultSize);
+
+  return dst;
 }
 
 /* Zero at the end to avoid modular arithmetic when adding one; used
@@ -2913,9 +2919,9 @@ APFloat::opStatus
 IEEEFloat::roundSignificandWithExponent(const integerPart *decSigParts,
                                         unsigned sigPartCount, int exp,
                                         roundingMode rounding_mode) {
-  unsigned int parts, pow5PartCount;
-  fltSemantics calcSemantics = { 32767, -32767, 0, 0 };
-  integerPart pow5Parts[maxPowerOfFiveParts];
+  unsigned int parts;
+  fltSemantics calcSemantics = {std::numeric_limits<ExponentType>::max(),
+                                std::numeric_limits<ExponentType>::min(), 0, 0};
   bool isNearest;
 
   isNearest = (rounding_mode == rmNearestTiesToEven ||
@@ -2923,8 +2929,11 @@ IEEEFloat::roundSignificandWithExponent(const integerPart *decSigParts,
 
   parts = partCountForBits(semantics->precision + 11);
 
+  // Make sure that abs(exp) is representable.
+  assert(exp > INT_MIN);
+
   /* Calculate pow(5, abs(exp)).  */
-  pow5PartCount = powerOf5(pow5Parts, exp >= 0 ? exp: -exp);
+  SmallVector<integerPart, 0> pow5Parts = powerOf5(exp >= 0 ? exp : -exp);
 
   for (;; parts *= 2) {
     opStatus sigStatus, powStatus;
@@ -2940,8 +2949,8 @@ IEEEFloat::roundSignificandWithExponent(const integerPart *decSigParts,
 
     sigStatus = decSig.convertFromUnsignedParts(decSigParts, sigPartCount,
                                                 rmNearestTiesToEven);
-    powStatus = pow5.convertFromUnsignedParts(pow5Parts, pow5PartCount,
-                                              rmNearestTiesToEven);
+    powStatus = pow5.convertFromUnsignedParts(
+        pow5Parts.data(), pow5Parts.size(), rmNearestTiesToEven);
     /* Add exp, as 10^n = 5^n * 2^n.  */
     decSig.exponent += exp;
 
