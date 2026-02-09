@@ -631,6 +631,11 @@ PreservedAnalyses ModuleInlinerWrapperPass::run(Module &M,
         createDevirtSCCRepeatedPass(std::move(PM), MaxDevirtIterations)));
 
   MPM.addPass(std::move(AfterCGMPM));
+
+  // If this is run again (e.g. same PassManager invoked twice)
+  // these need to be re-initialized after being moved.
+  PM = CGSCCPassManager();
+  AfterCGMPM = ModulePassManager();
   MPM.run(M, MAM);
 
   // Discard the InlineAdvisor, a subsequent inlining session should construct
