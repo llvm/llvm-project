@@ -228,30 +228,16 @@ endif()
 
 include(CheckCXXSymbolExists)
 include(CheckCXXSourceCompiles)
-if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
-  # The GPU cross-build uses CMAKE_REQUIRED_FLAGS with -c (compile-only) for
-  # NVPTX because its output cannot be linked conventionally. This causes
-  # check_cxx_symbol_exists to only verify the symbol is declared in headers,
-  # not that it can be linked. Combined with the absence of -nostdlibinc in
-  # CMAKE_REQUIRED_FLAGS, the checks pick up host system headers and
-  # incorrectly detect functions that the GPU libc does not yet provide.
-  # Until the GPU libc headers are on the include path during CMake checks,
-  # disable the detection and rely on the RT_DEVICE_COMPILATION guards in the
-  # runtime source instead.
-  set(HAVE_STRERROR_R 0)
-  set(HAVE_DECL_STRERROR_S 0)
-else ()
-  check_cxx_symbol_exists(strerror_r string.h HAVE_STRERROR_R)
-  # Can't use symbol exists here as the function is overloaded in C++
-  check_cxx_source_compiles(
-    "#include <string.h>
-     int main() {
-       char buf[4096];
-       return strerror_s(buf, 4096, 0);
-     }
-    "
-    HAVE_DECL_STRERROR_S)
-endif ()
+check_cxx_symbol_exists(strerror_r string.h HAVE_STRERROR_R)
+# Can't use symbol exists here as the function is overloaded in C++
+check_cxx_source_compiles(
+  "#include <string.h>
+   int main() {
+     char buf[4096];
+     return strerror_s(buf, 4096, 0);
+   }
+  "
+  HAVE_DECL_STRERROR_S)
 
 # Search for clang_rt.builtins library. Need in addition to msvcrt.
 if (WIN32)
@@ -295,15 +281,9 @@ endif()
 find_package(Threads)
 
 # function checks
-if ("${LLVM_RUNTIMES_TARGET}" MATCHES "^amdgcn|^nvptx")
-  # Same issue as above: find_package(Backtrace) detects the host backtrace
-  # support, not the GPU target's.
-  set(HAVE_BACKTRACE FALSE)
-else ()
-  find_package(Backtrace)
-  set(HAVE_BACKTRACE ${Backtrace_FOUND})
-  set(BACKTRACE_HEADER ${Backtrace_HEADER})
-endif ()
+find_package(Backtrace)
+set(HAVE_BACKTRACE ${Backtrace_FOUND})
+set(BACKTRACE_HEADER ${Backtrace_HEADER})
 
 
 #####################
