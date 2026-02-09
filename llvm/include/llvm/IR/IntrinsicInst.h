@@ -1814,6 +1814,12 @@ public:
     return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
   }
 
+  static unsigned getPointerOperandIndex() { return 0; }
+
+  Value *getPointerOperand() const {
+    return getOperand(getPointerOperandIndex());
+  }
+
   Type *getBaseType() const {
     return getParamAttr(0, Attribute::ElementType).getValueAsType();
   }

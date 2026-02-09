@@ -808,6 +808,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS64, P0}, {{Vgpr64}, {VgprP0, VgprV2S64}}})
       .Any({{DivS64, P1}, {{Vgpr64}, {VgprP1, VgprV2S64}}});
 
+  addRulesForGOpcs({G_AMDGPU_BUFFER_ATOMIC_SWAP}, Standard)
+      .Div(S32, {{Vgpr32}, {Vgpr32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
+      .Div(S64, {{Vgpr64}, {Vgpr64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
+
   bool hasSMRDx3 = ST->hasScalarDwordx3Loads();
   bool hasSMRDSmall = ST->hasScalarSubwordLoads();
   bool usesTrue16 = ST->useRealTrue16Insts();
@@ -1374,6 +1378,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_prng_b32})
       .Any({{UniS32}, {{UniInVgprS32}, {IntrId, Vgpr32}}})
       .Any({{DivS32}, {{Vgpr32}, {IntrId, Vgpr32}}});
+
+  addRulesForIOpcs({amdgcn_sffbh}, Standard)
+      .Uni(S32, {{Sgpr32}, {IntrId, Sgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}});
 
   addRulesForIOpcs({amdgcn_ubfe, amdgcn_sbfe}, Standard)
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
