@@ -1507,6 +1507,13 @@ td_library(
     ]),
 )
 
+td_library(
+    name = "WebAssemblyTargetTdFiles",
+    srcs = glob([
+        "lib/Target/WebAssembly/**/*.td",
+    ]),
+)
+
 gentbl_cc_library(
     name = "RISCVTargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/RISCVTargetParserDef.inc": ["-gen-riscv-target-def"]},
@@ -1543,28 +1550,12 @@ cc_library(
 )
 
 cc_library(
-    name = "AVRTargetParser",
-    srcs = ["lib/TargetParser/AVRTargetParser.cpp"],
-    hdrs = ["include/llvm/TargetParser/AVRTargetParser.h"],
-    copts = llvm_copts,
-    deps = [
-        ":BinaryFormat",
-        ":Object",
-        ":Support",
-        ":TargetParser",
-    ],
-)
-
-cc_library(
     name = "TargetParser",
     srcs = glob(
         [
             "lib/TargetParser/*.cpp",
         ],
-        exclude = [
-            "lib/TargetParser/AVRTargetParser.cpp",
-            "lib/TargetParser/PPCTargetParser.cpp",
-        ],
+        exclude = ["lib/TargetParser/PPCTargetParser.cpp"],
     ) + select({
         "@platforms//os:windows": glob([
             "lib/TargetParser/Windows/*.inc",
@@ -1573,10 +1564,9 @@ cc_library(
             "lib/TargetParser/Unix/*.inc",
         ]),
     }),
-    hdrs = glob(
-        ["include/llvm/TargetParser/*.h"],
-        exclude = ["include/llvm/TargetParser/AVRTargetParser.h"],
-    ),
+    hdrs = glob([
+        "include/llvm/TargetParser/*.h",
+    ]),
     copts = llvm_copts,
     includes = ["include"],
     textual_hdrs = [
@@ -3339,6 +3329,10 @@ llvm_target_lib_list = [lib for lib in [
         "short_name": "WebAssembly",
         "tbl_outs": [
             (
+                ["-gen-register-bank"],
+                "lib/Target/WebAssembly/WebAssemblyGenRegisterBank.inc",
+            ),
+            (
                 ["-gen-disassembler"],
                 "lib/Target/WebAssembly/WebAssemblyGenDisassemblerTables.inc",
             ),
@@ -3384,6 +3378,9 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-sd-node-info"],
                 "lib/Target/WebAssembly/WebAssemblyGenSDNodeInfo.inc",
             ),
+        ],
+        "tbl_deps": [
+            ":webassembly_isel_target_gen",
         ],
     },
     {
@@ -3691,6 +3688,28 @@ gentbl_cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "webassembly_isel_target_gen",
+    strip_include_prefix = "lib/Target/WebAssembly",
+    tbl_outs = {
+        "lib/Target/WebAssembly/WebAssemblyGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/WebAssembly/WebAssemblyGenPreLegalizeGICombiner.inc": [
+            "-gen-global-isel-combiner",
+            "-combiners=WebAssemblyPreLegalizerCombiner",
+        ],
+        "lib/Target/WebAssembly/WebAssemblyGenPostLegalizeGICombiner.inc": [
+            "-gen-global-isel-combiner",
+            "-combiners=WebAssemblyPostLegalizerCombiner",
+        ],
+    },
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/WebAssembly/WebAssemblyGISel.td",
+    deps = [
+        ":CommonTargetTdFiles",
+        ":WebAssemblyTargetTdFiles",
+    ],
+)
+
 [[
     [gentbl_cc_library(
         name = target["name"] + "CommonTableGen",
@@ -3797,9 +3816,7 @@ gentbl_cc_library(
             ":config",
             ":" + target["name"] + "CommonTableGen",
             ":" + target["name"] + "Info",
-        ] + target.get("tbl_deps", []) + (
-            [":AVRTargetParser"] if target["name"] == "AVR" else []
-        ),
+        ] + target.get("tbl_deps", []),
     )],
     [cc_library(
         name = target["name"] + "CodeGen",
@@ -5742,7 +5759,6 @@ cc_library(
     ]),
     copts = llvm_copts,
     deps = [
-        ":AVRTargetParser",
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
         ":AllTargetsDisassemblers",
