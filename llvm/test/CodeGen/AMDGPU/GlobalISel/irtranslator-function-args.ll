@@ -3266,7 +3266,7 @@ define void @void_readlane_i1_signext_inreg(<15 x i32> inreg %arg1, i1 inreg sig
   ; CHECK-NEXT:   SI_RETURN
   %ext = sext i1 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, i32 addrspace(1)* poison
+  store i32 %add, ptr addrspace(1) poison
   ret void
 }
 
