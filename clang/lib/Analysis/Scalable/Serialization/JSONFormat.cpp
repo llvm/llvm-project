@@ -217,6 +217,8 @@ constexpr const char *WritingTUSummaryTo = "writing TUSummary to '{0}'";
 // JSON Reader and Writer
 //----------------------------------------------------------------------------
 
+namespace {
+
 llvm::Error isJSONFile(llvm::StringRef Path) {
   if (!llvm::sys::fs::exists(Path))
     return ErrorBuilder(std::errc::no_such_file_or_directory)
@@ -290,6 +292,8 @@ llvm::Error writeJSON(llvm::json::Value &&Value, llvm::StringRef Path) {
 
   return llvm::Error::success();
 }
+
+} // namespace
 
 //----------------------------------------------------------------------------
 // JSONFormat Constructor
