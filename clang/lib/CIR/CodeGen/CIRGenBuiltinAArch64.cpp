@@ -90,23 +90,23 @@ findARMVectorIntrinsicInMap(ArrayRef<AArch64BuiltinInfo> intrinsicMap,
 //===----------------------------------------------------------------------===//
 //  Emit-helpers
 //===----------------------------------------------------------------------===//
-mlir::Value
-CIRGenFunction::emitAArch64CompareBuiltinExpr(mlir::Location loc,
-                                              mlir::Value src, mlir::Type retTy,
-                                              const cir::CmpOpKind kind) {
+static mlir::Value
+emitAArch64CompareBuiltinExpr(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
+                              mlir::Location loc, mlir::Value src,
+                              mlir::Type retTy, const cir::CmpOpKind kind) {
 
   bool scalarCmp = !isa<cir::VectorType>(src.getType());
   if (!scalarCmp) {
     assert(cast<cir::VectorType>(retTy).getIsScalable() &&
            "This is only intended for fixed-width vectors");
     // Vector retTypes are cast to i8 vectors. Recover original retType.
-    cgm.errorNYI(loc, std::string("unimplemented vector compare"));
+    cgf.cgm.errorNYI(loc, std::string("unimplemented vector compare"));
   }
 
   mlir::Value zero = builder.getNullValue(src.getType(), loc);
   mlir::Value cmp;
   if (cir::isFPOrVectorOfFPType(src.getType())) {
-    cgm.errorNYI(loc, std::string("unimplemented FP compare"));
+    cgf.cgm.errorNYI(loc, std::string("unimplemented FP compare"));
   } else {
     if (scalarCmp)
       // For scalars, cast !cir.bool to !cir.int<s, 1> so that the compare
@@ -117,7 +117,7 @@ CIRGenFunction::emitAArch64CompareBuiltinExpr(mlir::Location loc,
           builder.createCompare(loc, cir::CmpOpKind::eq, src, zero),
           builder.getSIntNTy(1));
     else
-      cgm.errorNYI(loc, std::string("unimplemented vector compare"));
+      cgf.cgm.errorNYI(loc, std::string("unimplemented vector compare"));
   }
 
   return builder.createCast(loc, cir::CastKind::integral, cmp, retTy);
@@ -1321,8 +1321,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vceqzd_s64:
     ops.push_back(emitScalarExpr(expr->getArg(0)));
     return emitAArch64CompareBuiltinExpr(
-        loc, ops[0], convertType(expr->getCallReturnType(getContext())),
-        cir::CmpOpKind::eq);
+        *this, builder, loc, ops[0],
+        convertType(expr->getCallReturnType(getContext())), cir::CmpOpKind::eq);
   case NEON::BI__builtin_neon_vceqzd_f64:
   case NEON::BI__builtin_neon_vceqzs_f32:
   case NEON::BI__builtin_neon_vceqzh_f16:

@@ -1289,12 +1289,6 @@ public:
                                       SourceLocation assumptionLoc,
                                       int64_t alignment,
                                       mlir::Value offsetValue = nullptr);
-  /// -----------------------------
-  /// CIR emit functions -- AArch64
-  /// -----------------------------
-  mlir::Value emitAArch64CompareBuiltinExpr(mlir::Location loc, mlir::Value src,
-                                            mlir::Type retTy,
-                                            cir::CmpOpKind kind);
 
 private:
   void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
