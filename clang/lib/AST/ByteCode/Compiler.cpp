@@ -6859,6 +6859,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (E->getType()->isMemberPointerType()) {
       // C++11 [expr.unary.op]p3 has very strict rules on how the address of a
       // member can be formed.
+      if (DiscardResult)
+        return true;
       return this->emitGetMemberPtr(cast<DeclRefExpr>(SubExpr)->getDecl(), E);
     }
     // We should already have a pointer when we get here.
