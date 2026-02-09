@@ -402,6 +402,15 @@ def AMDGPUExportOp : SDTypeProfile<0, 8, [
 
 ]>;
 
+def AMDGPUflat_load_monitor : SDNode<
+  "AMDGPUISD::FLAT_LOAD_MONITOR", SDTLoad,
+  [SDNPHasChain, SDNPMemOperand]
+>;
+
+def AMDGPUglobal_load_monitor : SDNode<
+  "AMDGPUISD::GLOBAL_LOAD_MONITOR", SDTLoad,
+  [SDNPHasChain, SDNPMemOperand]
+>;
 
 //===----------------------------------------------------------------------===//
 // Flow Control Profile Types

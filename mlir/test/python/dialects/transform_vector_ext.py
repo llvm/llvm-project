@@ -67,6 +67,9 @@ def configurable_patterns():
     # CHECK-SAME: max_transfer_rank = 3
     # CHECK-SAME: full_unroll = true
     vector.ApplyTransferToScfPatternsOp(max_transfer_rank=3, full_unroll=True)
+    # CHECK: transform.apply_patterns.vector.flatten_vector_transfer_ops
+    # CHECK-SAME: target_vector_bitwidth = 1
+    vector.ApplyFlattenVectorTransferOpsPatternsOp(target_vector_bitwidth=1)
 
 
 @run_apply_patterns
