@@ -651,13 +651,12 @@ static bool checkFunctionsAttributeConsistency(const Module &M, StringRef Attr,
 }
 // Returns true if all functions definitions have the same denormal mode.
 // It also returns true when the module has no functions.
-static bool checkDenormalAttributeConsistency(const Module &M, StringRef Attr,
-                                              DenormalMode Value) {
+static bool checkDenormalAttributeConsistency(const Module &M,
+                                              DenormalFPEnv Value) {
   return !any_of(M, [&](const Function &F) {
     if (F.isDeclaration())
       return false;
-    StringRef AttrVal = F.getFnAttribute(Attr).getValueAsString();
-    return parseDenormalFPAttribute(AttrVal) != Value;
+    return F.getDenormalFPEnv() != Value;
   });
 }
 
@@ -667,10 +666,10 @@ static bool checkDenormalAttributeInconsistency(const Module &M) {
   auto E = M.functions().end();
   if (F == E)
     return false;
-  DenormalMode Value = F->getDenormalModeRaw();
+  DenormalFPEnv Value = F->getDenormalFPEnv();
   ++F;
   return std::any_of(F, E, [&](const Function &F) {
-    return !F.isDeclaration() && F.getDenormalModeRaw() != Value;
+    return !F.isDeclaration() && F.getDenormalFPEnv() != Value;
   });
 }
 
@@ -736,18 +735,16 @@ void ARMAsmPrinter::emitAttributes() {
     if (unsigned TagVal = DM->getZExtValue())
       ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal, TagVal);
   } else if (checkDenormalAttributeConsistency(*MMI->getModule(),
-                                               "denormal-fp-math",
                                                DenormalMode::getPreserveSign()))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::PreserveFPSign);
   else if (checkDenormalAttributeConsistency(*MMI->getModule(),
-                                             "denormal-fp-math",
                                              DenormalMode::getPositiveZero()))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::PositiveZero);
   else if (checkDenormalAttributeInconsistency(*MMI->getModule()) ||
-           checkDenormalAttributeConsistency(
-               *MMI->getModule(), "denormal-fp-math", DenormalMode::getIEEE()))
+           checkDenormalAttributeConsistency(*MMI->getModule(),
+                                             DenormalMode::getIEEE()))
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_denormal,
                       ARMBuildAttrs::IEEEDenormals);
   else {
@@ -795,16 +792,12 @@ void ARMAsmPrinter::emitAttributes() {
       ATS.emitAttribute(ARMBuildAttrs::ABI_FP_rounding, ARMBuildAttrs::Allowed);
   }
 
-  // TM.Options.NoInfsFPMath && TM.Options.NoNaNsFPMath is the
-  // equivalent of GCC's -ffinite-math-only flag.
+  // Generate ABI tags from module flags.
   if (auto *NumModel = mdconst::extract_or_null<ConstantInt>(
           MMI->getModule()->getModuleFlag("arm-eabi-fp-number-model"))) {
     if (unsigned TagVal = NumModel->getZExtValue())
       ATS.emitAttribute(ARMBuildAttrs::ABI_FP_number_model, TagVal);
-  } else if (TM.Options.NoInfsFPMath && TM.Options.NoNaNsFPMath)
-    ATS.emitAttribute(ARMBuildAttrs::ABI_FP_number_model,
-                      ARMBuildAttrs::Allowed);
-  else
+  } else
     ATS.emitAttribute(ARMBuildAttrs::ABI_FP_number_model,
                       ARMBuildAttrs::AllowIEEE754);
 

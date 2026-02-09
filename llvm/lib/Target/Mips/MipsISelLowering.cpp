@@ -3364,6 +3364,9 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (IsTailCall) {
     if (!UseMipsTailCalls) {
       IsTailCall = false;
+      if (IsMustTail)
+        report_fatal_error("failed to perform tail call elimination on a call "
+                           "site marked musttail");
     } else {
       bool Eligible = isEligibleForTailCallOptimization(
           CCInfo, StackSize, *MF.getInfo<MipsFunctionInfo>());
