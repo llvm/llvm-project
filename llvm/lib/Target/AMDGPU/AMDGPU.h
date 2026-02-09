@@ -372,10 +372,10 @@ public:
 class AMDGPUAttributorCGSCCPass
     : public PassInfoMixin<AMDGPUAttributorCGSCCPass> {
 private:
-  TargetMachine &TM;
+  GCNTargetMachine &TM;
 
 public:
-  AMDGPUAttributorCGSCCPass(TargetMachine &TM) : TM(TM) {}
+  AMDGPUAttributorCGSCCPass(GCNTargetMachine &TM) : TM(TM) {}
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
 };
