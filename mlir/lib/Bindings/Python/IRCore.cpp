@@ -2594,7 +2594,7 @@ void PyDynamicOpTrait::bind(nb::module_ &m) {
 
 bool PyDynamicOpTraits::IsTerminator::attach(const nb::object &opName,
                                              PyMlirContext &context) {
-  MlirDynamicOpTrait trait = mlirDynamicOpTraitCreateIsTerminator();
+  MlirDynamicOpTrait trait = mlirDynamicOpTraitIsTerminatorCreate();
   return attachOpTrait(opName, trait, context);
 }
 
@@ -2612,7 +2612,7 @@ void PyDynamicOpTraits::IsTerminator::bind(nb::module_ &m) {
 
 bool PyDynamicOpTraits::NoTerminator::attach(const nb::object &opName,
                                              PyMlirContext &context) {
-  MlirDynamicOpTrait trait = mlirDynamicOpTraitCreateNoTerminator();
+  MlirDynamicOpTrait trait = mlirDynamicOpTraitNoTerminatorCreate();
   return attachOpTrait(opName, trait, context);
 }
 
