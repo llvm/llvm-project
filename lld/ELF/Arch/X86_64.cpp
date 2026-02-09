@@ -47,8 +47,7 @@ public:
   void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
   bool adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                         uint8_t stOther) const override;
-  bool deleteFallThruJmpInsn(InputSection &is, InputFile *file,
-                             InputSection *nextIS) const override;
+  bool deleteFallThruJmpInsn(InputSection &is, InputSection *nextIS) const override;
   bool relaxOnce(int pass) const override;
   void applyBranchToBranchOpt() const override;
 
@@ -184,8 +183,7 @@ static bool isRelocationForJmpInsn(Relocation &R) {
 // next section.
 // TODO: Delete this once psABI reserves a new relocation type for fall thru
 // jumps.
-static bool isFallThruRelocation(InputSection &is, InputFile *file,
-                                 InputSection *nextIS, Relocation &r) {
+static bool isFallThruRelocation(InputSection &is, InputSection *nextIS, Relocation &r) {
   if (!isRelocationForJmpInsn(r))
     return false;
 
@@ -246,7 +244,7 @@ static JmpInsnOpcode invertJmpOpcode(const JmpInsnOpcode opcode) {
 //   10: je bar  #jne flipped to je and the jmp is deleted.
 // aa.BB.foo:
 //   ...
-bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
+bool X86_64::deleteFallThruJmpInsn(InputSection &is,
                                    InputSection *nextIS) const {
   const unsigned sizeOfDirectJmpInsn = 5;
 
@@ -270,7 +268,7 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   if (*(secContents + r.offset - 1) != 0xe9)
     return false;
 
-  if (isFallThruRelocation(is, file, nextIS, r)) {
+  if (isFallThruRelocation(is, nextIS, r)) {
     // This is a fall thru and can be deleted.
     r.expr = R_NONE;
     r.offset = 0;
@@ -297,7 +295,7 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   if (jmpOpcodeB == J_UNKNOWN)
     return false;
 
-  if (!isFallThruRelocation(is, file, nextIS, rB))
+  if (!isFallThruRelocation(is, nextIS, rB))
     return false;
 
   // jmpCC jumps to the fall thru block, the branch can be flipped and the
