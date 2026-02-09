@@ -11479,7 +11479,7 @@ public:
                               : getSameOpcode(VL, TLI);
     if (S)
       return S;
-    // Cehck if series of selects + zext i1 %x to in can be combined into
+    // Check if series of selects + zext i1 %x to in can be combined into
     // selects + select %x, i32 1, i32 0.
     Instruction *SelectOp = nullptr;
     if (allSameBlock(VL) && all_of(VL, [&](Value *V) {
