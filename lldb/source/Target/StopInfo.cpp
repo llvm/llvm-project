@@ -1197,9 +1197,8 @@ public:
 
   void PerformAction([[maybe_unused]] Event *event_ptr) override {
     // A signal of SIGTRAP indicates that a trap instruction has been hit.
-    if (m_value != SIGTRAP)
-      return;
-    SkipOverTrapInstruction();
+    if (m_value == SIGTRAP)
+      SkipOverTrapInstruction();
   }
 
   bool ShouldStop(Event *event_ptr) override { return IsShouldStopSignal(); }

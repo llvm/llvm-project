@@ -336,11 +336,15 @@ public:
   /// those bits set as 0.
   ///
   /// \param[in] arch
-  ///     The architecture of the inferior
+  ///     The architecture of the inferior.
   /// \param size_hint
   ///     A hint to disambiguate which instruction is used on platforms where
   ///     there are multiple interrupts with different sizes in the ISA (e.g
-  ///     ARM Thumb, RISC-V)
+  ///     ARM Thumb, RISC-V).
+  ///
+  /// \return
+  ///     The bytes of the interrupt instruction, with any immediate value
+  ///     bits set to 0.
   llvm::ArrayRef<uint8_t> SoftwareTrapOpcodeBytes(const ArchSpec &arch,
                                                   size_t size_hint = 0);
 
@@ -352,11 +356,14 @@ public:
   /// and zero meaning no applicable hint.
   ///
   /// \param[in] target
-  ///     The target of the inferior
+  ///     The target of the inferior.
   /// \param addr
-  ///     The address of the instruction
+  ///     The address of the instruction.
   /// \param bytes
-  ///     The raw bytes of the instruction
+  ///     The raw bytes of the instruction.
+  /// \return
+  ///     The estimated size in bytes of the instruction for this target at
+  ///     the given address, or 0 if no estimate is available.
   size_t GetTrapOpcodeSizeHint(Target &target, Address addr,
                                llvm::ArrayRef<uint8_t> bytes);
 

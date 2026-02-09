@@ -54,6 +54,11 @@ class BuiltinDebugTrapTestCase(TestBase):
         # "global" is now 10.
         self.assertEqual(global_value.GetValueAsUnsigned(), 10)
 
+        # Change the handling of SIGILL on x86-64 Linux - do not pass it
+        # to the inferior, but stop and notify lldb.
+        if self.getArchitecture() == "x86_64" and platform == "linux":
+            self.runCmd("process handle -p false SIGILL")
+
         # We should be at the same point as before -- cannot advance
         # past a __builtin_trap().
         process.Continue()
@@ -61,10 +66,6 @@ class BuiltinDebugTrapTestCase(TestBase):
             self.runCmd("f")
             self.runCmd("bt")
             self.runCmd("ta v global")
-
-        # Some platforms might exit when seeing the trap instruction
-        if process.GetState() == lldb.eStateExited:
-            return
 
         self.assertEqual(
             process.GetSelectedThread().GetStopReason(), platform_stop_reason

@@ -2103,7 +2103,7 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
   }
 
   size_t size_hint = 0;
-  // Check for either ARM or RISC-V short instruction conditions
+  // Check for either ARM or RISC-V short instruction conditions.
   if ((addr_class == AddressClass::eCodeAlternateISA) ||
       (arch.GetFlags() & ArchSpec::eRISCV_rvc))
     size_hint = 2;
