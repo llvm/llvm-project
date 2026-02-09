@@ -161,7 +161,6 @@ void DemandedBits::determineLiveOperandBits(
           }
           uint64_t Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
           uint64_t Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
-          bool IsFShl = II->getIntrinsicID() == Intrinsic::fshl;
           bool IsFShr = II->getIntrinsicID() == Intrinsic::fshr;
           bool ShiftLeft;
           uint64_t SMin = Min, SMax = Max;
