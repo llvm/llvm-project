@@ -1,4 +1,4 @@
-//===-- SystemValueTypes.h --------------------------------------*- C++ -*-===//
+//===-- SystemValueTypes.h ------------------------------------------------===//
 //
 // This source file is part of the Swift.org open source project
 //
@@ -14,7 +14,6 @@
 #define liblldb_SystemValueTypes_h_
 
 #include "lldb/lldb-forward.h"
-
 #include "lldb/DataFormatters/TypeSummary.h"
 
 namespace lldb_private {
@@ -22,9 +21,6 @@ namespace formatters {
 namespace swift {
 bool FilePath_SummaryProvider(ValueObject &valobj, Stream &stream,
                               const TypeSummaryOptions &options);
-
-bool SystemChar_SummaryProvider(ValueObject &valobj, Stream &stream,
-                                const TypeSummaryOptions &options);
 }
 }
 }

@@ -772,13 +772,6 @@ LoadSystemValueTypesFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       swift_category_sp,
       lldb_private::formatters::swift::FilePath_SummaryProvider,
       "FilePath summary provider", ConstString("^System(Package)?\\.FilePath$"),
-      summary_flags, true);
-
-  lldb_private::formatters::AddCXXSummary(
-      swift_category_sp,
-      lldb_private::formatters::swift::SystemChar_SummaryProvider,
-      "SystemChar summary provider",
-      ConstString("^System(Package)?\\.SystemChar$"),
       TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true), true);
 }
 

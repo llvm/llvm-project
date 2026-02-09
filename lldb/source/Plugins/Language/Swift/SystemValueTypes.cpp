@@ -1,4 +1,4 @@
-//===-- SystemValueTypes.cpp ------------------------------------*- C++ -*-===//
+//===-- SystemValueTypes.cpp ----------------------------------------------===//
 //
 // This source file is part of the Swift.org open source project
 //
@@ -88,39 +88,5 @@ bool lldb_private::formatters::swift::FilePath_SummaryProvider(
   }
 
   stream << '"' << path << '"';
-  return true;
-}
-
-bool lldb_private::formatters::swift::SystemChar_SummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-
-  // internal struct SystemChar {
-  //   internal var rawValue: CInterop.PlatformChar // Int8 on Unix, UInt16 on Windows
-  // }
-
-  static constexpr llvm::StringLiteral g_rawValue("rawValue");
-
-  ValueObjectSP raw_value_sp = valobj.GetChildAtNamePath({g_rawValue});
-  if (!raw_value_sp)
-    return false;
-
-  raw_value_sp = raw_value_sp->GetQualifiedRepresentationIfAvailable(
-      lldb::eDynamicDontRunTarget, true);
-  if (!raw_value_sp)
-    return false;
-
-  int64_t byte_value = raw_value_sp->GetValueAsSigned(0);
-
-  // For printable ASCII characters (0x20-0x7E), show the character.
-  // For other values, just show the numeric value.
-  if (byte_value >= 0x20 && byte_value <= 0x7E) {
-    stream.Printf("'%c' (%d)", static_cast<char>(byte_value),
-                  static_cast<int>(byte_value));
-  } else if (byte_value == 0) {
-    stream.Printf("'\\0' (0)");
-  } else {
-    stream.Printf("%d", static_cast<int>(byte_value));
-  }
-
   return true;
 }
