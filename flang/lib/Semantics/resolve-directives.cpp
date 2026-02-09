@@ -450,7 +450,7 @@ public:
         return *sym;
       }
     }
-    llvm_unreachable("Should not get here");
+    llvm_unreachable("Error while looking for storage owning symbol");
   }
 
   // Recognize symbols that are not created as a part of the OpenMP data-
