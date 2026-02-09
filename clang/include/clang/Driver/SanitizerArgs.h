@@ -68,6 +68,7 @@ class SanitizerArgs {
   bool TsanFuncEntryExit = true;
   bool TsanAtomics = true;
   bool MinimalRuntime = false;
+  bool TrapLoop = false;
   bool TysanOutlineInstrumentation = true;
   bool HandlerPreserveAllRegs = false;
   // True if cross-dso CFI support if provided by the system (i.e. Android).
