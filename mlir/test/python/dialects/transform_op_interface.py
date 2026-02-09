@@ -76,7 +76,7 @@ def schedule_boilerplate():
 
 # MemoryEffectsOpInterface implementation for TransformOpInterface-implementing ops.
 # Used by most ops defined below.
-class MemoryEffectsOpInterfaceFallbackModel(ir.MemoryEffectsOpInterface):
+class MemoryEffectsOpInterfaceExternalModel(ir.MemoryEffectsOpInterface):
     @staticmethod
     def get_effects(op: ir.Operation, effects):
         transform.only_reads_handle(op.op_operands, effects)
@@ -94,10 +94,10 @@ class GetNamedAttributeOp(MyTransform.Operation, name="get_named_attribute"):
 
     @classmethod
     def attach_interface_impls(cls, ctx=None):
-        cls.TransformOpInterfaceFallbackModel.attach(cls.OPERATION_NAME, ctx)
-        MemoryEffectsOpInterfaceFallbackModel.attach(cls.OPERATION_NAME, ctx)
+        cls.TransformOpInterfaceExternalModel.attach(cls.OPERATION_NAME, ctx)
+        MemoryEffectsOpInterfaceExternalModel.attach(cls.OPERATION_NAME, ctx)
 
-    class TransformOpInterfaceFallbackModel(transform.TransformOpInterface):
+    class TransformOpInterfaceExternalModel(transform.TransformOpInterface):
         @staticmethod
         def apply(
             op: "GetNamedAttributeOp",
@@ -127,10 +127,10 @@ class PrintParamOp(MyTransform.Operation, name="print_param"):
 
     @classmethod
     def attach_interface_impls(cls, ctx=None):
-        cls.TransformOpInterfaceFallbackModel.attach(cls.OPERATION_NAME, ctx)
-        MemoryEffectsOpInterfaceFallbackModel.attach(cls.OPERATION_NAME, ctx)
+        cls.TransformOpInterfaceExternalModel.attach(cls.OPERATION_NAME, ctx)
+        MemoryEffectsOpInterfaceExternalModel.attach(cls.OPERATION_NAME, ctx)
 
-    class TransformOpInterfaceFallbackModel(transform.TransformOpInterface):
+    class TransformOpInterfaceExternalModel(transform.TransformOpInterface):
         @staticmethod
         def apply(
             op: "PrintParamOp",
@@ -165,7 +165,7 @@ def OneOpInOneOpOutTransformOpInterface():
     """
 
     # Define a simple passthrough implementation of the TransformOpInterface for OneOpInOneOpOut.
-    class TransformOpInterfaceFallbackModel(transform.TransformOpInterface):
+    class TransformOpInterfaceExternalModel(transform.TransformOpInterface):
         @staticmethod
         def apply(
             op: OneOpInOneOpOut,
@@ -184,10 +184,10 @@ def OneOpInOneOpOutTransformOpInterface():
             return False
 
     # Attach the interface implementation to the op.
-    TransformOpInterfaceFallbackModel.attach(OneOpInOneOpOut.OPERATION_NAME)
+    TransformOpInterfaceExternalModel.attach(OneOpInOneOpOut.OPERATION_NAME)
 
     # TransformOpInterface-implementing ops are also required to implement MemoryEffectsOpInterface. The above defined fallback model works for this op.
-    MemoryEffectsOpInterfaceFallbackModel.attach(OneOpInOneOpOut.OPERATION_NAME)
+    MemoryEffectsOpInterfaceExternalModel.attach(OneOpInOneOpOut.OPERATION_NAME)
 
     with schedule_boilerplate() as (schedule, named_seq):
         func_handle = structured.MatchOp.match_op_names(
@@ -212,7 +212,7 @@ def OneOpInOneOpOutTransformOpInterfaceRewriterImpl():
     that the results are correctly updated.
     """
 
-    class TransformOpInterfaceFallbackModel(transform.TransformOpInterface):
+    class TransformOpInterfaceExternalModel(transform.TransformOpInterface):
         @staticmethod
         def apply(
             op: OneOpInOneOpOut,
@@ -234,17 +234,17 @@ def OneOpInOneOpOutTransformOpInterfaceRewriterImpl():
             return False
 
     # Attach the interface implementation to the op.
-    TransformOpInterfaceFallbackModel.attach(OneOpInOneOpOut.OPERATION_NAME)
+    TransformOpInterfaceExternalModel.attach(OneOpInOneOpOut.OPERATION_NAME)
 
     # TransformOpInterface-implementing ops are also required to implement MemoryEffectsOpInterface. The above defined fallback model works for this op.
-    class MemoryEffectsOpInterfaceFallbackModel(ir.MemoryEffectsOpInterface):
+    class MemoryEffectsOpInterfaceExternalModel(ir.MemoryEffectsOpInterface):
         @staticmethod
         def get_effects(op: ir.Operation, effects):
             transform.consumes_handle(op.op_operands, effects)
             transform.produces_handle(op.results, effects)
             transform.modifies_payload(effects)
 
-    MemoryEffectsOpInterfaceFallbackModel.attach(OneOpInOneOpOut.OPERATION_NAME)
+    MemoryEffectsOpInterfaceExternalModel.attach(OneOpInOneOpOut.OPERATION_NAME)
 
     with schedule_boilerplate() as (schedule, named_seq):
         func_handle = structured.MatchOp.match_op_names(
@@ -296,7 +296,7 @@ def OpValParamInParamOpValOutTransformOpInterface():
     propagated and accessible from the (permuted) result handles.
     """
 
-    class TransformOpInterfaceFallbackModel(transform.TransformOpInterface):
+    class TransformOpInterfaceExternalModel(transform.TransformOpInterface):
         @staticmethod
         def apply(
             op: OpValParamInParamOpValOut,
@@ -319,12 +319,12 @@ def OpValParamInParamOpValOutTransformOpInterface():
         def allow_repeated_handle_operands(_op: OpValParamInParamOpValOut) -> bool:
             return False
 
-    TransformOpInterfaceFallbackModel.attach(
+    TransformOpInterfaceExternalModel.attach(
         OpValParamInParamOpValOut.OPERATION_NAME, ir.Context.current
     )
 
     # TransformOpInterface-implementing ops are also required to implement MemoryEffectsOpInterface. The above defined fallback model works for this op.
-    MemoryEffectsOpInterfaceFallbackModel.attach(
+    MemoryEffectsOpInterfaceExternalModel.attach(
         OpValParamInParamOpValOut.OPERATION_NAME, ir.Context.current
     )
 
@@ -401,7 +401,7 @@ def OpsParamsInValuesParamOutTransformOpInterface():
     result generation.
     """
 
-    class TransformOpInterfaceFallbackModel(transform.TransformOpInterface):
+    class TransformOpInterfaceExternalModel(transform.TransformOpInterface):
         @staticmethod
         def apply(
             op: OpsParamsInValuesParamOut,
@@ -424,7 +424,7 @@ def OpsParamsInValuesParamOutTransformOpInterface():
                 param_sum += sum(p.value for p in params)
 
             print(
-                f"OpsParamsInValuesParamOutTransformOpInterfaceFallbackModel: op_count={ops_count}, param_count={param_count}"
+                f"OpsParamsInValuesParamOutTransformOpInterfaceExternalModel: op_count={ops_count}, param_count={param_count}"
             )
 
             assert len(op.values) == len(op.ops)
@@ -440,9 +440,9 @@ def OpsParamsInValuesParamOutTransformOpInterface():
         def allow_repeated_handle_operands(_op: OpsParamsInValuesParamOut) -> bool:
             return False
 
-    TransformOpInterfaceFallbackModel.attach(OpsParamsInValuesParamOut.OPERATION_NAME)
+    TransformOpInterfaceExternalModel.attach(OpsParamsInValuesParamOut.OPERATION_NAME)
 
-    MemoryEffectsOpInterfaceFallbackModel.attach(
+    MemoryEffectsOpInterfaceExternalModel.attach(
         OpsParamsInValuesParamOut.OPERATION_NAME
     )
 
@@ -461,7 +461,7 @@ def OpsParamsInValuesParamOutTransformOpInterface():
             AnyParamType.get(), ir.IntegerAttr.get(ir.IntegerType.get_signless(32), 123)
         ).param
 
-        # CHECK: OpsParamsInValuesParamOutTransformOpInterfaceFallbackModel: op_count=3, param_count=3
+        # CHECK: OpsParamsInValuesParamOutTransformOpInterfaceExternalModel: op_count=3, param_count=3
         op = OpsParamsInValuesParamOut(
             [transform.AnyValueType.get()] * 2,
             transform.AnyParamType.get(),

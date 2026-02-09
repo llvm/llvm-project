@@ -212,19 +212,19 @@ MlirTypeID mlirTransformOpInterfaceTypeID(void) {
 }
 
 /// Fallback model for the TransformOpInterface that uses C API callbacks.
-class TransformOpInterfaceFallbackModel
-    : public mlir::transform::TransformOpInterface::FallbackModel<
-          TransformOpInterfaceFallbackModel> {
+class TransformOpInterfaceExternalModel
+    : public mlir::transform::TransformOpInterface::ExternalModel<
+          TransformOpInterfaceExternalModel> {
 public:
-  /// Sets the callbacks that this FallbackModel will use.
+  /// Sets the callbacks that this ExternalModel will use.
   /// NB: the callbacks can only be set through this method as the
   /// RegisteredOperationName::attachInterface mechanism default-constructs
-  /// the FallbackModel without being able to provide arguments.
+  /// the ExternalModel without being able to provide arguments.
   void setCallbacks(MlirTransformOpInterfaceCallbacks callbacks) {
     this->callbacks = callbacks;
   }
 
-  ~TransformOpInterfaceFallbackModel() {
+  ~TransformOpInterfaceExternalModel() {
     if (callbacks.destruct)
       callbacks.destruct(callbacks.userData);
   }
@@ -235,8 +235,8 @@ public:
 
   static bool classof(const mlir::transform::detail::
                           TransformOpInterfaceInterfaceTraits::Concept *op) {
-    // Enable casting back to the FallbackModel from the Interface. This is
-    // necessary as attachInterface(...) default-constructs the FallbackModel
+    // Enable casting back to the ExternalModel from the Interface. This is
+    // necessary as attachInterface(...) default-constructs the ExternalModel
     // without being able to pass in the callbacks and returns just the Concept.
     return true;
   }
@@ -258,7 +258,7 @@ public:
       // TODO: enable passing diagnostic info from C API to C++ API.
       return DiagnosedSilenceableFailure::silenceableFailure(std::move(
           *(op->emitError()
-            << "TransformOpInterfaceFallbackModel: silenceable failure")
+            << "TransformOpInterfaceExternalModel: silenceable failure")
                .getUnderlyingDiagnostic()));
     case MlirDiagnosedSilenceableFailureDefiniteFailure:
       return DiagnosedSilenceableFailure::definiteFailure();
@@ -276,9 +276,9 @@ private:
   MlirTransformOpInterfaceCallbacks callbacks;
 };
 
-/// Attach a TransformOpInterface FallbackModel to the given named operation.
-/// The FallbackModel uses the provided callbacks to implement the interface.
-void mlirTransformOpInterfaceAttachFallbackModel(
+/// Attach a TransformOpInterface ExternalModel to the given named operation.
+/// The ExternalModel uses the provided callbacks to implement the interface.
+void mlirTransformOpInterfaceAttachExternalModel(
     MlirContext ctx, MlirStringRef opName,
     MlirTransformOpInterfaceCallbacks callbacks) {
   // Look up the operation definition in the context.
@@ -291,14 +291,14 @@ void mlirTransformOpInterfaceAttachFallbackModel(
     return;
   }
 
-  // NB: the following default-constructs the FallbackModel _without_ being able
+  // NB: the following default-constructs the ExternalModel _without_ being able
   // to provide arguments.
-  opInfo->attachInterface<TransformOpInterfaceFallbackModel>();
-  // Cast to get the underlying FallbackModel and set the callbacks.
-  auto *model = cast<TransformOpInterfaceFallbackModel>(
-      opInfo->getInterface<TransformOpInterfaceFallbackModel>());
+  opInfo->attachInterface<TransformOpInterfaceExternalModel>();
+  // Cast to get the underlying ExternalModel and set the callbacks.
+  auto *model = cast<TransformOpInterfaceExternalModel>(
+      opInfo->getInterface<TransformOpInterfaceExternalModel>());
 
-  assert(model && "Failed to get TransformOpInterfaceFallbackModel");
+  assert(model && "Failed to get TransformOpInterfaceExternalModel");
   model->setCallbacks(callbacks);
 }
 

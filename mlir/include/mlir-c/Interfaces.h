@@ -116,9 +116,9 @@ typedef struct {
   void *userData;
 } MlirMemoryEffectsOpInterfaceCallbacks;
 
-/// Attach a new FallbackModel for the MemoryEffectsOpInterface to the named
-/// operation. The FallbackModel will call the provided callbacks.
-MLIR_CAPI_EXPORTED void mlirMemoryEffectsOpInterfaceAttachFallbackModel(
+/// Attach a new ExternalModel for the MemoryEffectsOpInterface to the named
+/// operation. The ExternalModel will call the provided callbacks.
+MLIR_CAPI_EXPORTED void mlirMemoryEffectsOpInterfaceAttachExternalModel(
     MlirContext ctx, MlirStringRef opName,
     MlirMemoryEffectsOpInterfaceCallbacks callbacks);
 

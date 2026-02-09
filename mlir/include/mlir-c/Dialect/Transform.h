@@ -203,7 +203,7 @@ typedef struct {
 
 /// Attach TransformOpInterface to the operation with the given name using
 /// the provided callbacks.
-MLIR_CAPI_EXPORTED void mlirTransformOpInterfaceAttachFallbackModel(
+MLIR_CAPI_EXPORTED void mlirTransformOpInterfaceAttachExternalModel(
     MlirContext ctx, MlirStringRef opName,
     MlirTransformOpInterfaceCallbacks callbacks);
 

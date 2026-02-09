@@ -177,19 +177,19 @@ MlirTypeID mlirMemoryEffectsOpInterfaceTypeID() {
 }
 
 /// Fallback model for the MemoryEffectsOpInterface that uses C API callbacks.
-class MemoryEffectOpInterfaceFallbackModel
-    : public mlir::MemoryEffectOpInterface::FallbackModel<
-          MemoryEffectOpInterfaceFallbackModel> {
+class MemoryEffectOpInterfaceExternalModel
+    : public mlir::MemoryEffectOpInterface::ExternalModel<
+          MemoryEffectOpInterfaceExternalModel> {
 public:
-  /// Sets the callbacks that this FallbackModel will use.
+  /// Sets the callbacks that this ExternalModel will use.
   /// NB: the callbacks can only be set through this method as the
   /// RegisteredOperationName::attachInterface mechanism default-constructs
-  /// the FallbackModel without being able to provide arguments.
+  /// the ExternalModel without being able to provide arguments.
   void setCallbacks(MlirMemoryEffectsOpInterfaceCallbacks callbacks) {
     this->callbacks = callbacks;
   }
 
-  ~MemoryEffectOpInterfaceFallbackModel() {
+  ~MemoryEffectOpInterfaceExternalModel() {
     if (callbacks.destruct)
       callbacks.destruct(callbacks.userData);
   }
@@ -199,8 +199,8 @@ public:
   }
 
   static bool classof(const mlir::MemoryEffectOpInterface::Concept *op) {
-    // Enable casting back to the FallbackModel from the Interface. This is
-    // necessary as attachInterface(...) default-constructs the FallbackModel
+    // Enable casting back to the ExternalModel from the Interface. This is
+    // necessary as attachInterface(...) default-constructs the ExternalModel
     // without being able to pass in the callbacks and returns just the Concept.
     return true;
   }
@@ -217,9 +217,9 @@ private:
   MlirMemoryEffectsOpInterfaceCallbacks callbacks;
 };
 
-/// Attach a MemoryEffectsOpInterface FallbackModel to the given named op.
-/// The FallbackModel uses the provided callbacks to implement the interface.
-void mlirMemoryEffectsOpInterfaceAttachFallbackModel(
+/// Attach a MemoryEffectsOpInterface ExternalModel to the given named op.
+/// The ExternalModel uses the provided callbacks to implement the interface.
+void mlirMemoryEffectsOpInterfaceAttachExternalModel(
     MlirContext ctx, MlirStringRef opName,
     MlirMemoryEffectsOpInterfaceCallbacks callbacks) {
   // Look up the operation definition in the context
@@ -232,12 +232,12 @@ void mlirMemoryEffectsOpInterfaceAttachFallbackModel(
     return;
   }
 
-  // NB: the following default-constructs the FallbackModel _without_ being able
+  // NB: the following default-constructs the ExternalModel _without_ being able
   // to provide arguments.
-  opInfo->attachInterface<MemoryEffectOpInterfaceFallbackModel>();
-  // Cast to get the underlying FallbackModel and set the callbacks.
-  auto *model = cast<MemoryEffectOpInterfaceFallbackModel>(
-      opInfo->getInterface<MemoryEffectOpInterfaceFallbackModel>());
-  assert(model && "Failed to get MemoryEffectOpInterfaceFallbackModel");
+  opInfo->attachInterface<MemoryEffectOpInterfaceExternalModel>();
+  // Cast to get the underlying ExternalModel and set the callbacks.
+  auto *model = cast<MemoryEffectOpInterfaceExternalModel>(
+      opInfo->getInterface<MemoryEffectOpInterfaceExternalModel>());
+  assert(model && "Failed to get MemoryEffectOpInterfaceExternalModel");
   model->setCallbacks(callbacks);
 }
