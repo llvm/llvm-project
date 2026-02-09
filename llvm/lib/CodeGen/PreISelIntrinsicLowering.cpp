@@ -28,6 +28,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -42,6 +43,8 @@
 #include "llvm/Transforms/Utils/LowerVectorIntrinsics.h"
 
 using namespace llvm;
+
+#define DEBUG_TYPE "pre-isel-intrinsic-lowering"
 
 /// Threshold to leave statically sized memory intrinsic calls. Calls of known
 /// size larger than this will be expanded by the pass. Calls of unknown or
@@ -619,7 +622,9 @@ static bool expandCondLoop(Function &Intr) {
     auto *Call = cast<CallInst>(U);
 
     auto *Br = cast<BranchInst>(
-        SplitBlockAndInsertIfThen(Call->getArgOperand(0), Call, false));
+        SplitBlockAndInsertIfThen(Call->getArgOperand(0), Call, false,
+                                  getExplicitlyUnknownBranchWeightsIfProfiled(
+                                      *Call->getFunction(), DEBUG_TYPE)));
     Br->setSuccessor(0, Br->getParent());
     Call->eraseFromParent();
   }
