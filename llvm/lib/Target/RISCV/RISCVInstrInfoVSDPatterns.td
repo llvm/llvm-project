@@ -123,20 +123,29 @@ class VPatBinarySDNode_XI<SDPatternOperator vop,
                      xop_kind:$rs2,
                      avl, log2sew, TA_MA)>;
 
+multiclass VPatBinarySDNode_VV<SDPatternOperator vop, string instruction_name,
+                               list<VTypeInfo> vtilist = AllIntegerVectors,
+                               bit isSEWAware = 0,
+                               list<Predicate> ExtraPreds = []> {
+  foreach vti = vtilist in {
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
+    def : VPatBinarySDNode_VV<vop, instruction_name,
+                              vti.Vector, vti.Vector, vti.Log2SEW,
+                              vti.LMul, vti.AVL, vti.RegClass, isSEWAware>;
+  }
+}
+
 multiclass VPatBinarySDNode_VV_VX<SDPatternOperator vop, string instruction_name,
                                   list<VTypeInfo> vtilist = AllIntegerVectors,
                                   bit isSEWAware = 0,
-                                  list<Predicate> ExtraPreds = []> {
+                                  list<Predicate> ExtraPreds = []>
+    : VPatBinarySDNode_VV<vop, instruction_name, vtilist, isSEWAware, ExtraPreds> {
   foreach vti = vtilist in {
-    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in {
-      def : VPatBinarySDNode_VV<vop, instruction_name,
-                                vti.Vector, vti.Vector, vti.Log2SEW,
-                                vti.LMul, vti.AVL, vti.RegClass, isSEWAware>;
-      def : VPatBinarySDNode_XI<vop, instruction_name, "VX",
-                                vti.Vector, vti.Vector, vti.Log2SEW,
-                                vti.LMul, vti.AVL, vti.RegClass,
-                                SplatPat, GPR, isSEWAware>;
-    }
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
+    def : VPatBinarySDNode_XI<vop, instruction_name, "VX",
+                              vti.Vector, vti.Vector, vti.Log2SEW,
+                              vti.LMul, vti.AVL, vti.RegClass,
+                              SplatPat, GPR, isSEWAware>;
   }
 }
 

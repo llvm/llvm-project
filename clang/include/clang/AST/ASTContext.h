@@ -2698,7 +2698,8 @@ public:
   CharUnits getTypeSizeInChars(const Type *T) const;
 
   std::optional<CharUnits> getTypeSizeInCharsIfKnown(QualType Ty) const {
-    if (Ty->isIncompleteType() || Ty->isDependentType())
+    if (Ty->isIncompleteType() || Ty->isDependentType() ||
+        Ty->isUndeducedType() || Ty->isSizelessType())
       return std::nullopt;
     return getTypeSizeInChars(Ty);
   }
