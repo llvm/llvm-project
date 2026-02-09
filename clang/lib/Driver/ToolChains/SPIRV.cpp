@@ -11,6 +11,8 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Options/Options.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -32,15 +34,20 @@ void SPIRV::constructTranslateCommand(Compilation &C, const Tool &T,
 
   CmdArgs.append({"-o", Output.getFilename()});
 
-  // Try to find "llvm-spirv-<LLVM_VERSION_MAJOR>". Otherwise, fall back to
-  // plain "llvm-spirv".
-  using namespace std::string_literals;
-  auto VersionedTool = "llvm-spirv-"s + std::to_string(LLVM_VERSION_MAJOR);
-  std::string ExeCand = T.getToolChain().GetProgramPath(VersionedTool.c_str());
-  if (!llvm::sys::fs::can_execute(ExeCand))
-    ExeCand = T.getToolChain().GetProgramPath("llvm-spirv");
+  // Derive llvm-spirv path from clang path to ensure we use the same LLVM version.
+  // Try versioned tool first, then fall back to unversioned.
+  std::string TranslateCmdClangPath = C.getDriver().getClangProgramPath();
+  SmallString<128> TranslateCmdPath(TranslateCmdClangPath);
+  llvm::sys::path::remove_filename(TranslateCmdPath);
+  SmallString<128> TranslateCmdVersionedPath(TranslateCmdPath);
+  llvm::sys::path::append(TranslateCmdVersionedPath, "llvm-spirv-" + std::to_string(LLVM_VERSION_MAJOR));
+  if (llvm::sys::fs::can_execute(TranslateCmdVersionedPath)) {
+    llvm::sys::path::append(TranslateCmdPath, "llvm-spirv-" + std::to_string(LLVM_VERSION_MAJOR));
+  } else {
+    llvm::sys::path::append(TranslateCmdPath, "llvm-spirv");
+  }
 
-  const char *Exec = C.getArgs().MakeArgString(ExeCand);
+  const char *Exec = C.getArgs().MakeArgString(TranslateCmdPath);
   C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Input, Output));
 }

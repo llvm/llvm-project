@@ -83,7 +83,12 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
     ArgStringList OptArgs{TempFile,     "-load-pass-plugin",
                           PassPathCStr, "-passes=hip-post-link-passes",
                           "-o",         OptOutput};
-    const char *Opt = Args.MakeArgString(getToolChain().GetProgramPath("opt"));
+    // Derive opt path from clang path to ensure we use the same LLVM version
+    std::string ClangPath = C.getDriver().getClangProgramPath();
+    SmallString<128> OptPath(ClangPath);
+    llvm::sys::path::remove_filename(OptPath);
+    llvm::sys::path::append(OptPath, "opt");
+    const char *Opt = C.getArgs().MakeArgString(OptPath);
     C.addCommand(std::make_unique<Command>(
         JA, *this, ResponseFileSupport::None(), Opt, OptArgs, Inputs, Output));
     TempFile = OptOutput;
