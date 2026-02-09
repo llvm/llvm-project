@@ -365,14 +365,13 @@ std::optional<APInt> constantTripCount(
              << (isSigned ? "isSigned" : "isUnsigned") << ")";
       return APInt(bitwidth, 0);
     }
-    // Extend both operands to a wider bitwidth to avoid overflow when computing
-    // ub - lb. For example, with i8: ub=127, lb=-128, the difference is 255,
-    // which overflows in 8-bit signed arithmetic. We need at least one extra
-    // bit.
-    unsigned extendedWidth = bitwidth + 1;
-    lbCst = lbCst.extend(extendedWidth);
-    ubCst = ubCst.extend(extendedWidth);
+    // Compute the difference. Since we've already checked that ub > lb, the
+    // result can be interpreted as an unsigned value without overflow concerns.
     diff = ubCst - lbCst;
+    // Convert diff to unsigned. This handles cases like i8: ub=127, lb=-128
+    // where the subtraction yields 255, which wraps to -1 in signed i8 but is
+    // correctly represented as 255 when interpreted as unsigned.
+    diff.setIsUnsigned(true);
   } else {
     if (maybeUbCst)
       return std::nullopt;
@@ -404,27 +403,13 @@ std::optional<APInt> constantTripCount(
     return std::nullopt;
   }
 
-  // Extend stepCst to match the bitwidth of diff if needed (e.g., when diff was
-  // extended to avoid overflow). Step is always positive here, so zero-extend.
-  llvm::APInt extendedStepCst = stepCst;
-  if (extendedStepCst.getBitWidth() < diff.getBitWidth()) {
-    extendedStepCst = extendedStepCst.zext(diff.getBitWidth());
-  }
-
-  // Create new APSInt instances with explicit signedness to ensure they match
-  llvm::APInt tripCount =
-      isSigned ? diff.sdiv(extendedStepCst) : diff.udiv(extendedStepCst);
-  llvm::APInt remainder =
-      isSigned ? diff.srem(extendedStepCst) : diff.urem(extendedStepCst);
+  // Both diff and step are non-negative at this point (negative steps are
+  // rejected earlier), so we use unsigned division regardless of the loop
+  // comparison signedness.
+  llvm::APInt tripCount = diff.udiv(stepCst);
+  llvm::APInt remainder = diff.urem(stepCst);
   if (!remainder.isZero())
     tripCount = tripCount + 1;
-
-  // Truncate back to original bitwidth if we extended for overflow prevention.
-  // This is safe because ceil(diff/step) ≤ 2^bitwidth - 1, which always fits
-  // in bitwidth bits when interpreted as unsigned (trip counts are inherently
-  // non-negative regardless of loop comparison signedness).
-  if (tripCount.getBitWidth() > bitwidth)
-    tripCount = tripCount.trunc(bitwidth);
 
   LDBG() << "constantTripCount found: " << tripCount;
   return tripCount;
