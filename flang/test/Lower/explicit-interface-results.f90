@@ -122,11 +122,7 @@ subroutine alloc()
   ! CHECK: fir.save_result %[[VAL_6]] to %[[VAL_5]]#0 : !fir.box<!fir.heap<!fir.array<?xf32>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   print *, return_alloc()
   ! CHECK: _FortranAioOutputDescriptor
-  ! CHECK: %[[load:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-  ! CHECK: %[[addr:.*]] = fir.box_addr %[[load]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
-  ! CHECK: %[[cmpi:.*]] = arith.cmpi
-  ! CHECK: fir.if %[[cmpi]]
-  ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?xf32>>
+  ! CHECK: hlfir.destroy %{{.*}} : !hlfir.expr<?xf32>
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMcallerPcst_char_alloc()
@@ -137,11 +133,7 @@ subroutine cst_char_alloc()
   ! CHECK: fir.save_result %[[VAL_10]] to %[[VAL_9]]#0 : !fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>
   print *, return_cst_char_alloc()
   ! CHECK: _FortranAioOutputDescriptor
-  ! CHECK: %[[load:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>>
-  ! CHECK: %[[addr:.*]] = fir.box_addr %[[load]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,10>>>
-  ! CHECK: %[[cmpi:.*]] = arith.cmpi
-  ! CHECK: fir.if %[[cmpi]]
-  ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?x!fir.char<1,10>>>
+  ! CHECK: hlfir.destroy %{{.*}} : !hlfir.expr<?x!fir.char<1,10>>
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMcallerPdef_char_alloc()
@@ -152,11 +144,7 @@ subroutine def_char_alloc()
   ! CHECK: fir.save_result %[[VAL_6]] to %[[VAL_5]]#0 : !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
   print *, return_def_char_alloc()
   ! CHECK: _FortranAioOutputDescriptor
-  ! CHECK: %[[load:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
-  ! CHECK: %[[addr:.*]] = fir.box_addr %[[load]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,?>>>
-  ! CHECK: %[[cmpi:.*]] = arith.cmpi
-  ! CHECK: fir.if %[[cmpi]]
-  ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>
+  ! CHECK: hlfir.destroy %{{.*}} : !hlfir.expr<?x!fir.char<1,?>>
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMcallerPpointer_test()
@@ -251,11 +239,7 @@ subroutine dyn_char_alloc(l)
   ! CHECK: fir.save_result %[[VAL_14]] to %[[VAL_13]]#0 : !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
   print *, return_dyn_char_alloc(l)
   ! CHECK: _FortranAioOutputDescriptor
-  ! CHECK: %[[load:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
-  ! CHECK: %[[addr:.*]] = fir.box_addr %[[load]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,?>>>
-  ! CHECK: %[[cmpi:.*]] = arith.cmpi
-  ! CHECK: fir.if %[[cmpi]]
-  ! CHECK: fir.freemem %[[addr]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>
+  ! CHECK: hlfir.destroy %{{.*}} : !hlfir.expr<?x!fir.char<1,?>>
 end subroutine
 
 ! CHECK-LABEL: func.func @_QMcallerPdyn_char_pointer
