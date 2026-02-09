@@ -163,10 +163,19 @@ define <4 x i64> @pclmul256_hi_hi_vector(<4 x i64> %a0, <4 x i64> %a1) {
 ; AVX-PCLMUL-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
 ; AVX-PCLMUL-NEXT:    retq
 ;
-; AVX-VPCLMULQDQ-LABEL: pclmul256_hi_hi_vector:
-; AVX-VPCLMULQDQ:       # %bb.0:
-; AVX-VPCLMULQDQ-NEXT:    vpclmulqdq $17, %ymm1, %ymm0, %ymm0
-; AVX-VPCLMULQDQ-NEXT:    retq
+; AVX2-VPCLMULQDQ-LABEL: pclmul256_hi_hi_vector:
+; AVX2-VPCLMULQDQ:       # %bb.0:
+; AVX2-VPCLMULQDQ-NEXT:    vpclmulqdq $17, %ymm1, %ymm0, %ymm0
+; AVX2-VPCLMULQDQ-NEXT:    retq
+;
+; AVX512-VPCLMULQDQ-LABEL: pclmul256_hi_hi_vector:
+; AVX512-VPCLMULQDQ:       # %bb.0:
+; AVX512-VPCLMULQDQ-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[1,3,2,3]
+; AVX512-VPCLMULQDQ-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[1,3,2,3]
+; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $17, %xmm1, %xmm0, %xmm2
+; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0
+; AVX512-VPCLMULQDQ-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
+; AVX512-VPCLMULQDQ-NEXT:    retq
   %s0 = shufflevector <4 x i64> %a0, <4 x i64> poison, <2 x i32> <i32 1, i32 3>
   %s1 = shufflevector <4 x i64> %a1, <4 x i64> poison, <2 x i32> <i32 1, i32 3>
   %x0 = zext <2 x i64> %s0 to <2 x i128>
@@ -365,12 +374,9 @@ define <8 x i64> @pclmul512_lo_lo(<8 x i64> %a0, <8 x i64> %a1) {
 ;
 ; AVX512-VPCLMULQDQ-LABEL: pclmul512_lo_lo:
 ; AVX512-VPCLMULQDQ:       # %bb.0:
-; AVX512-VPCLMULQDQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
-; AVX512-VPCLMULQDQ-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[2],ymm2[2]
-; AVX512-VPCLMULQDQ-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; AVX512-VPCLMULQDQ-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
-; AVX512-VPCLMULQDQ-NEXT:    vpunpcklqdq {{.*#+}} ymm1 = ymm1[0],ymm2[0],ymm1[2],ymm2[2]
-; AVX512-VPCLMULQDQ-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,1,3]
+; AVX512-VPCLMULQDQ-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [0,2,4,6]
+; AVX512-VPCLMULQDQ-NEXT:    vpermq %zmm0, %zmm2, %zmm0
+; AVX512-VPCLMULQDQ-NEXT:    vpermq %zmm1, %zmm2, %zmm1
 ; AVX512-VPCLMULQDQ-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX512-VPCLMULQDQ-NEXT:    vextracti128 $1, %ymm1, %xmm3
 ; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $17, %xmm1, %xmm0, %xmm4

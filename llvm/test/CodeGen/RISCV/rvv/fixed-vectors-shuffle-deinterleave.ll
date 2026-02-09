@@ -9,19 +9,14 @@
 define void @deinterleave3_0_i8(ptr %in, ptr %out) {
 ; CHECK-LABEL: deinterleave3_0_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    lui a0, %hi(.LCPI0_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI0_0)
+; CHECK-NEXT:    lui a0, 9
+; CHECK-NEXT:    addi a0, a0, 585
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vcompress.vm v10, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    li a0, 73
-; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 8
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
-; CHECK-NEXT:    vrgather.vv v10, v8, v9
 ; CHECK-NEXT:    vse8.v v10, (a1)
 ; CHECK-NEXT:    ret
 entry:
@@ -34,19 +29,14 @@ entry:
 define void @deinterleave3_8_i8(ptr %in, ptr %out) {
 ; CHECK-LABEL: deinterleave3_8_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    lui a0, %hi(.LCPI1_0)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI1_0)
+; CHECK-NEXT:    lui a0, 2
+; CHECK-NEXT:    addi a0, a0, 1170
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vcompress.vm v10, v8, v9
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    li a0, 146
-; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v10, v8, 8
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
-; CHECK-NEXT:    vrgather.vv v10, v8, v9
 ; CHECK-NEXT:    vse8.v v10, (a1)
 ; CHECK-NEXT:    ret
 entry:
@@ -97,17 +87,15 @@ entry:
 define void @deinterleave5_0_i8(ptr %in, ptr %out) {
 ; CHECK-LABEL: deinterleave5_0_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    li a0, 33
-; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 8
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
-; CHECK-NEXT:    vmv.v.i v0, 10
-; CHECK-NEXT:    vslidedown.vi v8, v8, 4, v0.t
-; CHECK-NEXT:    vse8.v v8, (a1)
+; CHECK-NEXT:    lui a0, 8
+; CHECK-NEXT:    addi a0, a0, 1057
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vcompress.vm v10, v8, v9
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vse8.v v10, (a1)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
@@ -119,18 +107,15 @@ entry:
 define void @deinterleave5_8_i8(ptr %in, ptr %out) {
 ; CHECK-LABEL: deinterleave5_8_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmv.v.i v0, 2
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vslidedown.vi v9, v8, 5, v0.t
-; CHECK-NEXT:    vmv.v.i v0, 4
-; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 8
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vrgather.vi v9, v8, 3, v0.t
-; CHECK-NEXT:    vse8.v v9, (a1)
+; CHECK-NEXT:    lui a0, 1
+; CHECK-NEXT:    addi a0, a0, -1982
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vcompress.vm v10, v8, v9
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vse8.v v10, (a1)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
@@ -142,16 +127,15 @@ entry:
 define void @deinterleave6_0_i8(ptr %in, ptr %out) {
 ; CHECK-LABEL: deinterleave6_0_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmv.v.i v0, 2
-; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 8
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vslidedown.vi v8, v8, 5, v0.t
-; CHECK-NEXT:    vmv.v.i v0, 4
-; CHECK-NEXT:    vrgather.vi v8, v9, 4, v0.t
-; CHECK-NEXT:    vse8.v v8, (a1)
+; CHECK-NEXT:    lui a0, 1
+; CHECK-NEXT:    addi a0, a0, 65
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vcompress.vm v10, v8, v9
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vse8.v v10, (a1)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
@@ -163,18 +147,15 @@ entry:
 define void @deinterleave6_8_i8(ptr %in, ptr %out) {
 ; CHECK-LABEL: deinterleave6_8_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmv.v.i v0, 2
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vslidedown.vi v9, v8, 1
-; CHECK-NEXT:    vslidedown.vi v9, v8, 6, v0.t
-; CHECK-NEXT:    vmv.v.i v0, 4
-; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 8
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vrgather.vi v9, v8, 5, v0.t
-; CHECK-NEXT:    vse8.v v9, (a1)
+; CHECK-NEXT:    lui a0, 2
+; CHECK-NEXT:    addi a0, a0, 130
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vcompress.vm v10, v8, v9
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vse8.v v10, (a1)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
@@ -186,16 +167,15 @@ entry:
 define void @deinterleave7_0_i8(ptr %in, ptr %out) {
 ; CHECK-LABEL: deinterleave7_0_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmv.v.i v0, 2
-; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 8
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vslidedown.vi v8, v8, 6, v0.t
-; CHECK-NEXT:    vmv.v.i v0, 4
-; CHECK-NEXT:    vrgather.vi v8, v9, 6, v0.t
-; CHECK-NEXT:    vse8.v v8, (a1)
+; CHECK-NEXT:    lui a0, 4
+; CHECK-NEXT:    addi a0, a0, 129
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vcompress.vm v10, v8, v9
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vse8.v v10, (a1)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
@@ -207,18 +187,15 @@ entry:
 define void @deinterleave7_8_i8(ptr %in, ptr %out) {
 ; CHECK-LABEL: deinterleave7_8_i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmv.v.i v0, 2
-; CHECK-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 8
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
-; CHECK-NEXT:    vslidedown.vi v10, v9, 4
-; CHECK-NEXT:    vslideup.vi v10, v9, 1, v0.t
-; CHECK-NEXT:    vmv.v.i v0, 6
-; CHECK-NEXT:    vrgather.vi v9, v8, 1
-; CHECK-NEXT:    vmerge.vvm v8, v9, v10, v0
-; CHECK-NEXT:    vse8.v v8, (a1)
+; CHECK-NEXT:    lui a0, 4
+; CHECK-NEXT:    addi a0, a0, 258
+; CHECK-NEXT:    vmv.s.x v9, a0
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vcompress.vm v10, v8, v9
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vse8.v v10, (a1)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
@@ -275,17 +252,11 @@ define void @deinterleave7_0_i64(ptr %in, ptr %out) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v0, 2
-; CHECK-NEXT:    vmv4r.v v16, v8
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; CHECK-NEXT:    vslidedown.vi v16, v8, 6, v0.t
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
-; CHECK-NEXT:    vmv.v.i v0, 4
-; CHECK-NEXT:    vsetivli zero, 8, e64, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v8, 8
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; CHECK-NEXT:    vrgather.vi v16, v8, 6, v0.t
+; CHECK-NEXT:    lui a0, 4
+; CHECK-NEXT:    addi a0, a0, 129
+; CHECK-NEXT:    vmv.s.x v24, a0
+; CHECK-NEXT:    vcompress.vm v16, v8, v24
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vse64.v v16, (a1)
 ; CHECK-NEXT:    ret
 entry:

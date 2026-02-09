@@ -66,7 +66,8 @@ entry:
 define <4 x bfloat> @test_vdup_laneq_bf16(<8 x bfloat> %v) nounwind {
 ; CHECK-LABEL: test_vdup_laneq_bf16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    dup v0.4h, v0.h[7]
+; CHECK-NEXT:    dup v0.8h, v0.h[7]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %lane = shufflevector <8 x bfloat> %v, <8 x bfloat> undef, <4 x i32> <i32 7, i32 7, i32 7, i32 7>

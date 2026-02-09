@@ -411,7 +411,7 @@ entry:
 define <4 x i32> @extract_hi128_v8i32_1(<8 x i32> %a) {
 ; CHECK-LABEL: extract_hi128_v8i32_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 14
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
@@ -433,7 +433,7 @@ entry:
 define <4 x i32> @extract_hi128_v8i32_2(<8 x i32> %a, <8 x i32> %b) {
 ; CHECK-LABEL: extract_hi128_v8i32_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr1, 14
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
@@ -454,7 +454,7 @@ entry:
 define <4 x float> @extract_hi128_v8f32_1(<8 x float> %a) {
 ; CHECK-LABEL: extract_hi128_v8f32_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 14
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
@@ -476,7 +476,7 @@ entry:
 define <4 x float> @extract_hi128_v8f32_2(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: extract_hi128_v8f32_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr1, 14
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
@@ -497,7 +497,7 @@ entry:
 define <2 x i64> @extract_hi128_v4i64_1(<4 x i64> %a) {
 ; CHECK-LABEL: extract_hi128_v4i64_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 14
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
@@ -519,7 +519,7 @@ entry:
 define <2 x i64> @extract_hi128_v4i64_2(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: extract_hi128_v4i64_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr1, 14
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
@@ -540,7 +540,7 @@ entry:
 define <2 x double> @extract_hi128_v4f64_1(<4 x double> %a) {
 ; CHECK-LABEL: extract_hi128_v4f64_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 14
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
@@ -562,7 +562,7 @@ entry:
 define <2 x double> @extract_hi128_v4f64_2(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: extract_hi128_v4f64_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr1, 14
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
@@ -584,7 +584,7 @@ entry:
 define <8 x i16> @extract_hi128_v16i16_1(<16 x i16> %a) {
 ; CHECK-LABEL: extract_hi128_v16i16_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 14
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
@@ -608,7 +608,7 @@ entry:
 define <8 x i16> @extract_hi128_v16i16_2(<16 x i16> %a, <16 x i16> %b) {
 ; CHECK-LABEL: extract_hi128_v16i16_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr1, 14
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
@@ -632,7 +632,7 @@ entry:
 define <16 x i8> @extract_hi128_v32i8_1(<32 x i8> %a) {
 ; CHECK-LABEL: extract_hi128_v32i8_1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 14
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:
@@ -658,7 +658,7 @@ entry:
 define <16 x i8> @extract_hi128_v32i8_2(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: extract_hi128_v32i8_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 1
+; CHECK-NEXT:    xvpermi.d $xr0, $xr1, 14
 ; CHECK-NEXT:    # kill: def $vr0 killed $vr0 killed $xr0
 ; CHECK-NEXT:    ret
 entry:

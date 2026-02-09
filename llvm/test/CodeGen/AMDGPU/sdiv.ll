@@ -546,44 +546,44 @@ define amdgpu_kernel void @sdiv_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX9-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX9-NEXT:    s_abs_i32 s1, s0
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v2, s1
-; GFX9-NEXT:    v_readfirstlane_b32 s5, v0
-; GFX9-NEXT:    s_xor_b32 s0, s5, s0
+; GFX9-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX9-NEXT:    s_xor_b32 s0, s4, s0
 ; GFX9-NEXT:    s_ashr_i32 s6, s0, 31
 ; GFX9-NEXT:    v_rcp_iflag_f32_e32 v2, v2
 ; GFX9-NEXT:    s_sub_i32 s0, 0, s1
-; GFX9-NEXT:    s_abs_i32 s5, s5
-; GFX9-NEXT:    v_readfirstlane_b32 s4, v3
+; GFX9-NEXT:    s_abs_i32 s4, s4
+; GFX9-NEXT:    v_readfirstlane_b32 s5, v3
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v2
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
 ; GFX9-NEXT:    v_readfirstlane_b32 s7, v0
 ; GFX9-NEXT:    s_mul_i32 s0, s0, s7
 ; GFX9-NEXT:    s_mul_hi_u32 s0, s7, s0
 ; GFX9-NEXT:    s_add_i32 s7, s7, s0
-; GFX9-NEXT:    s_mul_hi_u32 s0, s5, s7
+; GFX9-NEXT:    s_mul_hi_u32 s0, s4, s7
 ; GFX9-NEXT:    s_mul_i32 s7, s0, s1
-; GFX9-NEXT:    s_sub_i32 s5, s5, s7
+; GFX9-NEXT:    s_sub_i32 s4, s4, s7
 ; GFX9-NEXT:    s_add_i32 s10, s0, 1
-; GFX9-NEXT:    s_sub_i32 s7, s5, s1
-; GFX9-NEXT:    s_cmp_ge_u32 s5, s1
+; GFX9-NEXT:    s_sub_i32 s7, s4, s1
+; GFX9-NEXT:    s_cmp_ge_u32 s4, s1
 ; GFX9-NEXT:    s_cselect_b32 s0, s10, s0
-; GFX9-NEXT:    s_cselect_b32 s5, s7, s5
+; GFX9-NEXT:    s_cselect_b32 s4, s7, s4
 ; GFX9-NEXT:    s_add_i32 s7, s0, 1
-; GFX9-NEXT:    s_cmp_ge_u32 s5, s1
-; GFX9-NEXT:    s_cselect_b32 s5, s7, s0
-; GFX9-NEXT:    s_abs_i32 s7, s4
+; GFX9-NEXT:    s_cmp_ge_u32 s4, s1
+; GFX9-NEXT:    s_cselect_b32 s4, s7, s0
+; GFX9-NEXT:    s_abs_i32 s7, s5
 ; GFX9-NEXT:    v_cvt_f32_u32_e32 v0, s7
-; GFX9-NEXT:    s_xor_b32 s5, s5, s6
+; GFX9-NEXT:    s_xor_b32 s4, s4, s6
 ; GFX9-NEXT:    s_mov_b32 s1, s9
 ; GFX9-NEXT:    s_sub_i32 s9, 0, s7
 ; GFX9-NEXT:    v_rcp_iflag_f32_e32 v0, v0
-; GFX9-NEXT:    s_sub_i32 s5, s5, s6
+; GFX9-NEXT:    s_sub_i32 s4, s4, s6
 ; GFX9-NEXT:    s_mov_b32 s0, s8
 ; GFX9-NEXT:    v_readfirstlane_b32 s8, v1
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GFX9-NEXT:    s_xor_b32 s4, s8, s4
+; GFX9-NEXT:    s_xor_b32 s5, s8, s5
 ; GFX9-NEXT:    s_abs_i32 s8, s8
-; GFX9-NEXT:    s_ashr_i32 s4, s4, 31
+; GFX9-NEXT:    s_ashr_i32 s5, s5, 31
 ; GFX9-NEXT:    v_readfirstlane_b32 s6, v0
 ; GFX9-NEXT:    s_mul_i32 s9, s9, s6
 ; GFX9-NEXT:    s_mul_hi_u32 s9, s6, s9
@@ -599,10 +599,10 @@ define amdgpu_kernel void @sdiv_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX9-NEXT:    s_add_i32 s9, s6, 1
 ; GFX9-NEXT:    s_cmp_ge_u32 s8, s7
 ; GFX9-NEXT:    s_cselect_b32 s6, s9, s6
-; GFX9-NEXT:    s_xor_b32 s6, s6, s4
-; GFX9-NEXT:    s_sub_i32 s4, s6, s4
-; GFX9-NEXT:    v_mov_b32_e32 v0, s5
-; GFX9-NEXT:    v_mov_b32_e32 v1, s4
+; GFX9-NEXT:    s_xor_b32 s6, s6, s5
+; GFX9-NEXT:    s_sub_i32 s5, s6, s5
+; GFX9-NEXT:    v_mov_b32_e32 v0, s4
+; GFX9-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;

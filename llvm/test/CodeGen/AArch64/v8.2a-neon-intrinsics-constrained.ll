@@ -91,7 +91,8 @@ entry:
 define <4 x half> @test_vfma_laneq_f16(<4 x half> %a, <4 x half> %b, <8 x half> %c) #0 {
 ; CHECK-LABEL: test_vfma_laneq_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmla v0.4h, v1.4h, v2.h[7]
+; CHECK-NEXT:    dup v2.8h, v2.h[7]
+; CHECK-NEXT:    fmla v0.4h, v1.4h, v2.4h
 ; CHECK-NEXT:    ret
 entry:
   %lane = shufflevector <8 x half> %c, <8 x half> poison, <4 x i32> <i32 7, i32 7, i32 7, i32 7>
@@ -188,7 +189,8 @@ entry:
 define <4 x half> @test_vfms_laneq_f16(<4 x half> %a, <4 x half> %b, <8 x half> %c) #0 {
 ; CHECK-LABEL: test_vfms_laneq_f16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fmls v0.4h, v1.4h, v2.h[7]
+; CHECK-NEXT:    dup v2.8h, v2.h[7]
+; CHECK-NEXT:    fmls v0.4h, v2.4h, v1.4h
 ; CHECK-NEXT:    ret
 entry:
   %fneg = fneg <4 x half> %b

@@ -40,112 +40,112 @@ define void @load_i64_stride2_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) nou
 ;
 ; AVX2-LABEL: load_i64_stride2_vf2:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-NEXT:    vmovaps 16(%rdi), %xmm1
-; AVX2-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm0[0],xmm1[0]
-; AVX2-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX2-NEXT:    vmovaps %xmm2, (%rsi)
+; AVX2-NEXT:    vmovaps (%rdi), %ymm0
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[0,2,2,3]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,3,2,3]
+; AVX2-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX2-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX2-FP-LABEL: load_i64_stride2_vf2:
 ; AVX2-FP:       # %bb.0:
-; AVX2-FP-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-FP-NEXT:    vmovaps 16(%rdi), %xmm1
-; AVX2-FP-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm0[0],xmm1[0]
-; AVX2-FP-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX2-FP-NEXT:    vmovaps %xmm2, (%rsi)
+; AVX2-FP-NEXT:    vmovaps (%rdi), %ymm0
+; AVX2-FP-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[0,2,2,3]
+; AVX2-FP-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,3,2,3]
+; AVX2-FP-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX2-FP-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX2-FP-NEXT:    vzeroupper
 ; AVX2-FP-NEXT:    retq
 ;
 ; AVX2-FCP-LABEL: load_i64_stride2_vf2:
 ; AVX2-FCP:       # %bb.0:
-; AVX2-FCP-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-FCP-NEXT:    vmovaps 16(%rdi), %xmm1
-; AVX2-FCP-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm0[0],xmm1[0]
-; AVX2-FCP-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX2-FCP-NEXT:    vmovaps %xmm2, (%rsi)
+; AVX2-FCP-NEXT:    vmovaps (%rdi), %ymm0
+; AVX2-FCP-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[0,2,2,3]
+; AVX2-FCP-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,3,2,3]
+; AVX2-FCP-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX2-FCP-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX2-FCP-NEXT:    vzeroupper
 ; AVX2-FCP-NEXT:    retq
 ;
 ; AVX512-LABEL: load_i64_stride2_vf2:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512-NEXT:    vmovaps 16(%rdi), %xmm1
-; AVX512-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm0[0],xmm1[0]
-; AVX512-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX512-NEXT:    vmovaps %xmm2, (%rsi)
+; AVX512-NEXT:    vmovaps (%rdi), %ymm0
+; AVX512-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[0,2,2,3]
+; AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,3,2,3]
+; AVX512-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 ;
 ; AVX512-FCP-LABEL: load_i64_stride2_vf2:
 ; AVX512-FCP:       # %bb.0:
-; AVX512-FCP-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512-FCP-NEXT:    vmovaps 16(%rdi), %xmm1
-; AVX512-FCP-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm0[0],xmm1[0]
-; AVX512-FCP-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX512-FCP-NEXT:    vmovaps %xmm2, (%rsi)
+; AVX512-FCP-NEXT:    vmovaps (%rdi), %ymm0
+; AVX512-FCP-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[0,2,2,3]
+; AVX512-FCP-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,3,2,3]
+; AVX512-FCP-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512-FCP-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX512-FCP-NEXT:    vzeroupper
 ; AVX512-FCP-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: load_i64_stride2_vf2:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512DQ-NEXT:    vmovaps 16(%rdi), %xmm1
-; AVX512DQ-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm0[0],xmm1[0]
-; AVX512DQ-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX512DQ-NEXT:    vmovaps %xmm2, (%rsi)
+; AVX512DQ-NEXT:    vmovaps (%rdi), %ymm0
+; AVX512DQ-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[0,2,2,3]
+; AVX512DQ-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,3,2,3]
+; AVX512DQ-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512DQ-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512DQ-FCP-LABEL: load_i64_stride2_vf2:
 ; AVX512DQ-FCP:       # %bb.0:
-; AVX512DQ-FCP-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512DQ-FCP-NEXT:    vmovaps 16(%rdi), %xmm1
-; AVX512DQ-FCP-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm0[0],xmm1[0]
-; AVX512DQ-FCP-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX512DQ-FCP-NEXT:    vmovaps %xmm2, (%rsi)
+; AVX512DQ-FCP-NEXT:    vmovaps (%rdi), %ymm0
+; AVX512DQ-FCP-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[0,2,2,3]
+; AVX512DQ-FCP-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,3,2,3]
+; AVX512DQ-FCP-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512DQ-FCP-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX512DQ-FCP-NEXT:    vzeroupper
 ; AVX512DQ-FCP-NEXT:    retq
 ;
 ; AVX512BW-LABEL: load_i64_stride2_vf2:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512BW-NEXT:    vmovaps 16(%rdi), %xmm1
-; AVX512BW-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm0[0],xmm1[0]
-; AVX512BW-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX512BW-NEXT:    vmovaps %xmm2, (%rsi)
+; AVX512BW-NEXT:    vmovaps (%rdi), %ymm0
+; AVX512BW-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[0,2,2,3]
+; AVX512BW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,3,2,3]
+; AVX512BW-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512BW-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BW-FCP-LABEL: load_i64_stride2_vf2:
 ; AVX512BW-FCP:       # %bb.0:
-; AVX512BW-FCP-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512BW-FCP-NEXT:    vmovaps 16(%rdi), %xmm1
-; AVX512BW-FCP-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm0[0],xmm1[0]
-; AVX512BW-FCP-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX512BW-FCP-NEXT:    vmovaps %xmm2, (%rsi)
+; AVX512BW-FCP-NEXT:    vmovaps (%rdi), %ymm0
+; AVX512BW-FCP-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[0,2,2,3]
+; AVX512BW-FCP-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,3,2,3]
+; AVX512BW-FCP-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512BW-FCP-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX512BW-FCP-NEXT:    vzeroupper
 ; AVX512BW-FCP-NEXT:    retq
 ;
 ; AVX512DQ-BW-LABEL: load_i64_stride2_vf2:
 ; AVX512DQ-BW:       # %bb.0:
-; AVX512DQ-BW-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512DQ-BW-NEXT:    vmovaps 16(%rdi), %xmm1
-; AVX512DQ-BW-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm0[0],xmm1[0]
-; AVX512DQ-BW-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX512DQ-BW-NEXT:    vmovaps %xmm2, (%rsi)
+; AVX512DQ-BW-NEXT:    vmovaps (%rdi), %ymm0
+; AVX512DQ-BW-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[0,2,2,3]
+; AVX512DQ-BW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,3,2,3]
+; AVX512DQ-BW-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512DQ-BW-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX512DQ-BW-NEXT:    vzeroupper
 ; AVX512DQ-BW-NEXT:    retq
 ;
 ; AVX512DQ-BW-FCP-LABEL: load_i64_stride2_vf2:
 ; AVX512DQ-BW-FCP:       # %bb.0:
-; AVX512DQ-BW-FCP-NEXT:    vmovaps (%rdi), %xmm0
-; AVX512DQ-BW-FCP-NEXT:    vmovaps 16(%rdi), %xmm1
-; AVX512DQ-BW-FCP-NEXT:    vmovlhps {{.*#+}} xmm2 = xmm0[0],xmm1[0]
-; AVX512DQ-BW-FCP-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
-; AVX512DQ-BW-FCP-NEXT:    vmovaps %xmm2, (%rsi)
+; AVX512DQ-BW-FCP-NEXT:    vmovaps (%rdi), %ymm0
+; AVX512DQ-BW-FCP-NEXT:    vpermpd {{.*#+}} ymm1 = ymm0[0,2,2,3]
+; AVX512DQ-BW-FCP-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,3,2,3]
+; AVX512DQ-BW-FCP-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512DQ-BW-FCP-NEXT:    vmovaps %xmm0, (%rdx)
+; AVX512DQ-BW-FCP-NEXT:    vzeroupper
 ; AVX512DQ-BW-FCP-NEXT:    retq
   %wide.vec = load <4 x i64>, ptr %in.vec, align 64
   %strided.vec0 = shufflevector <4 x i64> %wide.vec, <4 x i64> poison, <2 x i32> <i32 0, i32 2>
@@ -231,101 +231,97 @@ define void @load_i64_stride2_vf4(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) nou
 ;
 ; AVX512-LABEL: load_i64_stride2_vf4:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmovaps (%rdi), %ymm0
-; AVX512-NEXT:    vmovaps 32(%rdi), %ymm1
-; AVX512-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; AVX512-NEXT:    vpermpd {{.*#+}} ymm2 = ymm2[0,2,1,3]
-; AVX512-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; AVX512-NEXT:    vmovaps %ymm2, (%rsi)
+; AVX512-NEXT:    vmovaps (%rdi), %zmm0
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,2,4,6]
+; AVX512-NEXT:    vpermpd %zmm0, %zmm1, %zmm1
+; AVX512-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [1,3,5,7]
+; AVX512-NEXT:    vpermpd %zmm0, %zmm2, %zmm0
+; AVX512-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX512-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 ;
 ; AVX512-FCP-LABEL: load_i64_stride2_vf4:
 ; AVX512-FCP:       # %bb.0:
-; AVX512-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [0,2,4,6]
-; AVX512-FCP-NEXT:    vmovaps (%rdi), %zmm1
-; AVX512-FCP-NEXT:    vpermpd %zmm1, %zmm0, %zmm0
+; AVX512-FCP-NEXT:    vmovaps (%rdi), %zmm0
+; AVX512-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,2,4,6]
+; AVX512-FCP-NEXT:    vpermpd %zmm0, %zmm1, %zmm1
 ; AVX512-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [1,3,5,7]
-; AVX512-FCP-NEXT:    vpermpd %zmm1, %zmm2, %zmm1
-; AVX512-FCP-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX512-FCP-NEXT:    vmovaps %ymm1, (%rdx)
+; AVX512-FCP-NEXT:    vpermpd %zmm0, %zmm2, %zmm0
+; AVX512-FCP-NEXT:    vmovaps %ymm1, (%rsi)
+; AVX512-FCP-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX512-FCP-NEXT:    vzeroupper
 ; AVX512-FCP-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: load_i64_stride2_vf4:
 ; AVX512DQ:       # %bb.0:
-; AVX512DQ-NEXT:    vmovaps (%rdi), %ymm0
-; AVX512DQ-NEXT:    vmovaps 32(%rdi), %ymm1
-; AVX512DQ-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; AVX512DQ-NEXT:    vpermpd {{.*#+}} ymm2 = ymm2[0,2,1,3]
-; AVX512DQ-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; AVX512DQ-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; AVX512DQ-NEXT:    vmovaps %ymm2, (%rsi)
+; AVX512DQ-NEXT:    vmovaps (%rdi), %zmm0
+; AVX512DQ-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,2,4,6]
+; AVX512DQ-NEXT:    vpermpd %zmm0, %zmm1, %zmm1
+; AVX512DQ-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [1,3,5,7]
+; AVX512DQ-NEXT:    vpermpd %zmm0, %zmm2, %zmm0
+; AVX512DQ-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX512DQ-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX512DQ-NEXT:    vzeroupper
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512DQ-FCP-LABEL: load_i64_stride2_vf4:
 ; AVX512DQ-FCP:       # %bb.0:
-; AVX512DQ-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [0,2,4,6]
-; AVX512DQ-FCP-NEXT:    vmovaps (%rdi), %zmm1
-; AVX512DQ-FCP-NEXT:    vpermpd %zmm1, %zmm0, %zmm0
+; AVX512DQ-FCP-NEXT:    vmovaps (%rdi), %zmm0
+; AVX512DQ-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,2,4,6]
+; AVX512DQ-FCP-NEXT:    vpermpd %zmm0, %zmm1, %zmm1
 ; AVX512DQ-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [1,3,5,7]
-; AVX512DQ-FCP-NEXT:    vpermpd %zmm1, %zmm2, %zmm1
-; AVX512DQ-FCP-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX512DQ-FCP-NEXT:    vmovaps %ymm1, (%rdx)
+; AVX512DQ-FCP-NEXT:    vpermpd %zmm0, %zmm2, %zmm0
+; AVX512DQ-FCP-NEXT:    vmovaps %ymm1, (%rsi)
+; AVX512DQ-FCP-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX512DQ-FCP-NEXT:    vzeroupper
 ; AVX512DQ-FCP-NEXT:    retq
 ;
 ; AVX512BW-LABEL: load_i64_stride2_vf4:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovaps (%rdi), %ymm0
-; AVX512BW-NEXT:    vmovaps 32(%rdi), %ymm1
-; AVX512BW-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; AVX512BW-NEXT:    vpermpd {{.*#+}} ymm2 = ymm2[0,2,1,3]
-; AVX512BW-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; AVX512BW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; AVX512BW-NEXT:    vmovaps %ymm2, (%rsi)
+; AVX512BW-NEXT:    vmovaps (%rdi), %zmm0
+; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,2,4,6]
+; AVX512BW-NEXT:    vpermpd %zmm0, %zmm1, %zmm1
+; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [1,3,5,7]
+; AVX512BW-NEXT:    vpermpd %zmm0, %zmm2, %zmm0
+; AVX512BW-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX512BW-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BW-FCP-LABEL: load_i64_stride2_vf4:
 ; AVX512BW-FCP:       # %bb.0:
-; AVX512BW-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [0,2,4,6]
-; AVX512BW-FCP-NEXT:    vmovaps (%rdi), %zmm1
-; AVX512BW-FCP-NEXT:    vpermpd %zmm1, %zmm0, %zmm0
+; AVX512BW-FCP-NEXT:    vmovaps (%rdi), %zmm0
+; AVX512BW-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,2,4,6]
+; AVX512BW-FCP-NEXT:    vpermpd %zmm0, %zmm1, %zmm1
 ; AVX512BW-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [1,3,5,7]
-; AVX512BW-FCP-NEXT:    vpermpd %zmm1, %zmm2, %zmm1
-; AVX512BW-FCP-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX512BW-FCP-NEXT:    vmovaps %ymm1, (%rdx)
+; AVX512BW-FCP-NEXT:    vpermpd %zmm0, %zmm2, %zmm0
+; AVX512BW-FCP-NEXT:    vmovaps %ymm1, (%rsi)
+; AVX512BW-FCP-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX512BW-FCP-NEXT:    vzeroupper
 ; AVX512BW-FCP-NEXT:    retq
 ;
 ; AVX512DQ-BW-LABEL: load_i64_stride2_vf4:
 ; AVX512DQ-BW:       # %bb.0:
-; AVX512DQ-BW-NEXT:    vmovaps (%rdi), %ymm0
-; AVX512DQ-BW-NEXT:    vmovaps 32(%rdi), %ymm1
-; AVX512DQ-BW-NEXT:    vunpcklpd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; AVX512DQ-BW-NEXT:    vpermpd {{.*#+}} ymm2 = ymm2[0,2,1,3]
-; AVX512DQ-BW-NEXT:    vunpckhpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[3],ymm1[3]
-; AVX512DQ-BW-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,2,1,3]
-; AVX512DQ-BW-NEXT:    vmovaps %ymm2, (%rsi)
+; AVX512DQ-BW-NEXT:    vmovaps (%rdi), %zmm0
+; AVX512DQ-BW-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,2,4,6]
+; AVX512DQ-BW-NEXT:    vpermpd %zmm0, %zmm1, %zmm1
+; AVX512DQ-BW-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [1,3,5,7]
+; AVX512DQ-BW-NEXT:    vpermpd %zmm0, %zmm2, %zmm0
+; AVX512DQ-BW-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX512DQ-BW-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX512DQ-BW-NEXT:    vzeroupper
 ; AVX512DQ-BW-NEXT:    retq
 ;
 ; AVX512DQ-BW-FCP-LABEL: load_i64_stride2_vf4:
 ; AVX512DQ-BW-FCP:       # %bb.0:
-; AVX512DQ-BW-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [0,2,4,6]
-; AVX512DQ-BW-FCP-NEXT:    vmovaps (%rdi), %zmm1
-; AVX512DQ-BW-FCP-NEXT:    vpermpd %zmm1, %zmm0, %zmm0
+; AVX512DQ-BW-FCP-NEXT:    vmovaps (%rdi), %zmm0
+; AVX512DQ-BW-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,2,4,6]
+; AVX512DQ-BW-FCP-NEXT:    vpermpd %zmm0, %zmm1, %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm2 = [1,3,5,7]
-; AVX512DQ-BW-FCP-NEXT:    vpermpd %zmm1, %zmm2, %zmm1
-; AVX512DQ-BW-FCP-NEXT:    vmovaps %ymm0, (%rsi)
-; AVX512DQ-BW-FCP-NEXT:    vmovaps %ymm1, (%rdx)
+; AVX512DQ-BW-FCP-NEXT:    vpermpd %zmm0, %zmm2, %zmm0
+; AVX512DQ-BW-FCP-NEXT:    vmovaps %ymm1, (%rsi)
+; AVX512DQ-BW-FCP-NEXT:    vmovaps %ymm0, (%rdx)
 ; AVX512DQ-BW-FCP-NEXT:    vzeroupper
 ; AVX512DQ-BW-FCP-NEXT:    retq
   %wide.vec = load <8 x i64>, ptr %in.vec, align 64

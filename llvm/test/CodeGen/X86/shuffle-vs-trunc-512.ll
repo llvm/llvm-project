@@ -359,20 +359,25 @@ define <32 x i8> @trunc_shuffle_v32i16_v32i8_ofs1(<32 x i16> %a0) {
 ;
 ; AVX512BW-LABEL: trunc_shuffle_v32i16_v32i8_ofs1:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vpsrlw $8, %zmm0, %zmm0
-; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,2,4,6]
+; AVX512BW-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[1,3,5,7,9,11,13,15,u,u,u,u,u,u,u,u,17,19,21,23,25,27,29,31,u,u,u,u,u,u,u,u,33,35,37,39,41,43,45,47,u,u,u,u,u,u,u,u,49,51,53,55,57,59,61,63,u,u,u,u,u,u,u,u]
+; AVX512BW-NEXT:    vpermq %zmm0, %zmm1, %zmm0
+; AVX512BW-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BWVL-LABEL: trunc_shuffle_v32i16_v32i8_ofs1:
 ; AVX512BWVL:       # %bb.0:
-; AVX512BWVL-NEXT:    vpsrlw $8, %zmm0, %zmm0
-; AVX512BWVL-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BWVL-NEXT:    vpmovsxbq {{.*#+}} ymm1 = [0,2,4,6]
+; AVX512BWVL-NEXT:    vpshufb {{.*#+}} zmm0 = zmm0[1,3,5,7,9,11,13,15,u,u,u,u,u,u,u,u,17,19,21,23,25,27,29,31,u,u,u,u,u,u,u,u,33,35,37,39,41,43,45,47,u,u,u,u,u,u,u,u,49,51,53,55,57,59,61,63,u,u,u,u,u,u,u,u]
+; AVX512BWVL-NEXT:    vpermq %zmm0, %zmm1, %zmm0
+; AVX512BWVL-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512BWVL-NEXT:    retq
 ;
 ; AVX512VBMI-LABEL: trunc_shuffle_v32i16_v32i8_ofs1:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    vpsrlw $8, %zmm0, %zmm0
-; AVX512VBMI-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} ymm1 = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,37,39,41,43,45,47,49,51,53,55,57,59,61,63]
+; AVX512VBMI-NEXT:    vpermb %zmm0, %zmm1, %zmm0
+; AVX512VBMI-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
 ; AVX512VBMI-NEXT:    retq
   %bc = bitcast <32 x i16> %a0 to <64 x i8>
   %res = shufflevector <64 x i8> %bc, <64 x i8> poison, <32 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31, i32 33, i32 35, i32 37, i32 39, i32 41, i32 43, i32 45, i32 47, i32 49, i32 51, i32 53, i32 55, i32 57, i32 59, i32 61, i32 63>
