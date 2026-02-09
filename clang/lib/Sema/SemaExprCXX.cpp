@@ -436,9 +436,8 @@ ParsedType Sema::getDestructorName(const IdentifierInfo &II,
       Diag(NameLoc, diag::err_destructor_expr_nontype)
           << &II << MakeFixItHint();
     }
-  } else {
-    Diag(NameLoc, SearchType.isNull() ? diag::err_destructor_name_nontype
-                                      : diag::err_destructor_expr_mismatch)
+  } else if (!SearchType.isNull()) {
+    Diag(NameLoc, diag::err_destructor_expr_mismatch)
         << &II << SearchType << MakeFixItHint();
   }
 
