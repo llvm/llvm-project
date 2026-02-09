@@ -221,6 +221,8 @@ enum RegBankLLTMappingApplyID {
   // Src only modifiers: execute in waterfall loop if divergent
   Sgpr32_WF,
   SgprV4S32_WF,
+  SgprP0_WF,
+  SgprP4_WF,
 
   // Src only modifiers: extends
   Sgpr32AExt,
@@ -262,8 +264,7 @@ enum LoweringMethodID {
   UnpackAExt,
   VerifyAllSgpr,
   ApplyAllVgpr,
-  UnmergeToShiftTrunc,
-  WaterfallCall
+  UnmergeToShiftTrunc
 };
 
 enum FastRulesTypes {

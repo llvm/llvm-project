@@ -1162,9 +1162,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForGOpcs({G_SI_CALL})
       .Any({{PhysReg, UniP0}, {{None}, {SgprP0}}})
-      .Any({{PhysReg, DivP0}, {{None}, {VgprP0}, WaterfallCall}})
+      .Any({{PhysReg, DivP0}, {{None}, {SgprP0_WF}}})
       .Any({{PhysReg, UniP4}, {{None}, {SgprP4}}})
-      .Any({{PhysReg, DivP4}, {{None}, {VgprP4}, WaterfallCall}});
+      .Any({{PhysReg, DivP4}, {{None}, {SgprP4_WF}}});
 
   bool hasSALUFloat = ST->hasSALUFloatInsts();
 

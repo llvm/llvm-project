@@ -1055,27 +1055,25 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
 
     MI.eraseFromParent();
     return true;
-  case WaterfallCall: {
-    SmallSet<Register, 4> SGPROperandRegs;
-    SGPROperandRegs.insert(MI.getOperand(1).getReg());
-
-    MachineBasicBlock::iterator Start(&MI);
-    while (Start->getOpcode() != AMDGPU::ADJCALLSTACKUP)
-      --Start;
-    MachineBasicBlock::iterator End(&MI);
-    while (End->getOpcode() != AMDGPU::ADJCALLSTACKDOWN)
-      ++End;
-    ++End;
-    B.setInsertPt(B.getMBB(), Start);
-
-    executeInWaterfallLoop(B, make_range(Start, End), SGPROperandRegs);
-    break;
   }
   }
 
   if (!WaterfallSgprs.empty()) {
-    MachineBasicBlock::iterator I = MI.getIterator();
-    if (!executeInWaterfallLoop(B, make_range(I, std::next(I)), WaterfallSgprs))
+    MachineBasicBlock::iterator Start = MI.getIterator();
+    MachineBasicBlock::iterator End = std::next(Start);
+
+    // For calls, the waterfall must wrap the entire call sequence.
+    if (MI.getOpcode() == AMDGPU::G_SI_CALL) {
+      while (Start->getOpcode() != AMDGPU::ADJCALLSTACKUP)
+        --Start;
+      End = std::next(MI.getIterator());
+      while (End->getOpcode() != AMDGPU::ADJCALLSTACKDOWN)
+        ++End;
+      ++End;
+      B.setInsertPt(B.getMBB(), Start);
+    }
+
+    if (!executeInWaterfallLoop(B, make_range(Start, End), WaterfallSgprs))
       return false;
   }
   return true;
@@ -1111,6 +1109,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case Vgpr128:
     return LLT::scalar(128);
   case SgprP0:
+  case SgprP0_WF:
   case VgprP0:
     return LLT::pointer(0, 64);
   case SgprP1:
@@ -1123,6 +1122,7 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case VgprP3:
     return LLT::pointer(3, 32);
   case SgprP4:
+  case SgprP4_WF:
   case VgprP4:
     return LLT::pointer(4, 64);
   case SgprP5:
@@ -1243,10 +1243,12 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case Sgpr64:
   case Sgpr128:
   case SgprP0:
+  case SgprP0_WF:
   case SgprP1:
   case SgprP2:
   case SgprP3:
   case SgprP4:
+  case SgprP4_WF:
   case SgprP5:
   case SgprP8:
   case SgprPtr32:
@@ -1571,9 +1573,11 @@ bool RegBankLegalizeHelper::applyMappingSrc(
       }
       break;
     }
-    // sgpr waterfall, scalars and vectors
+    // sgpr waterfall, scalars, vectors and pointers
     case Sgpr32_WF:
-    case SgprV4S32_WF: {
+    case SgprV4S32_WF:
+    case SgprP0_WF:
+    case SgprP4_WF: {
       assert(Ty == getTyFromID(MethodIDs[i]));
       if (RB != SgprRB)
         SgprWaterfallOperandRegs.insert(Reg);
