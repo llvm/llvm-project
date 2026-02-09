@@ -1364,7 +1364,7 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   // check that |Delta| < iteration count
   bool IsDeltaLarge = [&] {
     const SCEV *UpperBound = collectUpperBound(CurSrcLoop, Delta->getType());
-    if (!UpperBound || !SE->isKnownNonNegative(UpperBound))
+    if (!UpperBound)
       return false;
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound);
     LLVM_DEBUG(dbgs() << ", " << *UpperBound->getType() << "\n");
@@ -2416,8 +2416,8 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
   const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
-  bool SrcAnalyzable = SrcAddRec && SrcAddRec->hasNoSignedWrap();
-  bool DstAnalyzable = DstAddRec && DstAddRec->hasNoSignedWrap();
+  bool SrcAnalyzable = SrcAddRec != nullptr && SrcAddRec->hasNoSignedWrap();
+  bool DstAnalyzable = DstAddRec != nullptr && DstAddRec->hasNoSignedWrap();
   if (SrcAnalyzable && DstAnalyzable) {
     const SCEV *SrcConst = SrcAddRec->getStart();
     const SCEV *DstConst = DstAddRec->getStart();
