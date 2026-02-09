@@ -59,4 +59,7 @@ add_libc_unittest(
     libc.src.search.twalk
     libc.src.search.twalk_r
     libc.src.search.tdestroy
+    libc.src.string.strlen
+    libc.src.string.strcpy
+    libc.src.string.strcmp
 )
