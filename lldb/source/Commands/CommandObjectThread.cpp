@@ -92,6 +92,66 @@ public:
       case 'u':
         m_filtered_backtrace = false;
         break;
+      case 'p': {
+        // Parse provider range using same format as breakpoint IDs
+        // Supports: "N", "N-M", "N to M", "N To M", "N TO M"
+        static llvm::StringRef range_specifiers[] = {"-", "to", "To", "TO"};
+
+        llvm::StringRef range_from;
+        llvm::StringRef range_to;
+        bool is_range = false;
+
+        // Try to find a range specifier
+        for (auto specifier : range_specifiers) {
+          size_t idx = option_arg.find(specifier);
+          if (idx == llvm::StringRef::npos)
+            continue;
+
+          range_from = option_arg.take_front(idx).trim();
+          range_to = option_arg.drop_front(idx + specifier.size()).trim();
+
+          if (!range_from.empty() && !range_to.empty()) {
+            is_range = true;
+            break;
+          }
+        }
+
+        if (is_range) {
+          // Parse both start and end IDs
+          if (range_from.getAsInteger(0, m_provider_start_id)) {
+            error = Status::FromErrorStringWithFormat(
+                "invalid start provider ID for option '%c': %s", short_option,
+                range_from.data());
+            break;
+          }
+          if (range_to.getAsInteger(0, m_provider_end_id)) {
+            error = Status::FromErrorStringWithFormat(
+                "invalid end provider ID for option '%c': %s", short_option,
+                range_to.data());
+            break;
+          }
+
+          // Validate range
+          if (m_provider_start_id > m_provider_end_id) {
+            error = Status::FromErrorStringWithFormat(
+                "invalid provider range for option '%c': start ID %llu > end "
+                "ID %llu",
+                short_option, m_provider_start_id, m_provider_end_id);
+            break;
+          }
+        } else {
+          // Single provider ID
+          if (option_arg.getAsInteger(0, m_provider_start_id)) {
+            error = Status::FromErrorStringWithFormat(
+                "invalid provider ID for option '%c': %s", short_option,
+                option_arg.data());
+            break;
+          }
+          m_provider_end_id = m_provider_start_id;
+        }
+
+        m_use_provider_filter = true;
+      } break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -103,10 +163,13 @@ public:
       m_start = 0;
       m_extended_backtrace = false;
       m_filtered_backtrace = true;
+      m_provider_start_id = 0;
+      m_provider_end_id = 0;
+      m_use_provider_filter = false;
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::ArrayRef(g_thread_backtrace_options);
+      return g_thread_backtrace_options;
     }
 
     // Instance variables to hold the values for command options.
@@ -114,6 +177,9 @@ public:
     uint32_t m_start;
     bool m_extended_backtrace;
     bool m_filtered_backtrace;
+    lldb::frame_list_id_t m_provider_start_id;
+    lldb::frame_list_id_t m_provider_end_id;
+    bool m_use_provider_filter;
   };
 
   CommandObjectThreadBacktrace(CommandInterpreter &interpreter)
@@ -124,6 +190,9 @@ public:
             "Use the thread-index \"all\" to see all threads.\n"
             "Use the thread-index \"unique\" to see threads grouped by unique "
             "call stacks.\n"
+            "Use '--provider <id>' or '--provider <start>-<end>' to view "
+            "synthetic frame providers (0=base unwinder, 1+=synthetic). "
+            "Range specifiers '-', 'to', 'To', 'TO' are supported.\n"
             "Use 'settings set frame-format' to customize the printing of "
             "frames in the backtrace and 'settings set thread-format' to "
             "customize the thread header.\n"
@@ -227,13 +296,86 @@ protected:
     }
 
     Thread *thread = thread_sp.get();
-
     Stream &strm = result.GetOutputStream();
 
-    // Only dump stack info if we processing unique stacks.
-    const bool only_stacks = m_unique_stacks;
+    // Check if provider filtering is requested
+    if (m_options.m_use_provider_filter) {
+      // Ensure frame list is initialized to load any providers
+      thread->GetStackFrameList();
 
-    // Don't show source context when doing backtraces.
+      // Provider filter mode: show sequential views for each provider in range
+      for (lldb::frame_list_id_t provider_id = m_options.m_provider_start_id;
+           provider_id <= m_options.m_provider_end_id; ++provider_id) {
+
+        // Get the frame list for this provider
+        lldb::StackFrameListSP frame_list_sp =
+            thread->GetFrameListByIdentifier(provider_id);
+
+        if (!frame_list_sp) {
+          // Provider doesn't exist - skip silently
+          continue;
+        }
+
+        // Print provider header
+        strm.PutChar('\n');
+        strm.Printf("=== Provider %llu", provider_id);
+
+        // Get provider metadata for header
+        if (provider_id == 0) {
+          strm.Printf(": Base Unwinder ===\n");
+        } else {
+          // Find the descriptor in the provider chain
+          const auto &provider_chain = thread->GetProviderChainIds();
+          std::string provider_name = "Unknown";
+          std::string provider_desc;
+          std::optional<uint32_t> provider_priority;
+
+          for (const auto &[descriptor, id] : provider_chain) {
+            if (id == provider_id) {
+              provider_name = descriptor.GetName().str();
+              provider_desc = descriptor.GetDescription();
+              provider_priority = descriptor.GetPriority();
+              break;
+            }
+          }
+
+          strm.Printf(": %s", provider_name.c_str());
+          if (provider_priority.has_value()) {
+            strm.Printf(" (priority: %u)", *provider_priority);
+          }
+          strm.Printf(" ===\n");
+
+          if (!provider_desc.empty()) {
+            strm.Printf("Description: %s\n", provider_desc.c_str());
+          }
+        }
+
+        // Print the backtrace for this provider
+        const bool only_stacks = m_unique_stacks;
+        const uint32_t num_frames_with_source = 0;
+        const StackFrameSP selected_frame_sp =
+            thread->GetSelectedFrame(DoNoSelectMostRelevantFrame);
+        const char *selected_frame_marker = selected_frame_sp ? "->" : nullptr;
+
+        size_t num_frames = frame_list_sp->GetStatus(
+            strm, m_options.m_start, m_options.m_count,
+            /*show_frame_info=*/true, num_frames_with_source,
+            /*show_unique=*/false,
+            /*show_hidden=*/!m_options.m_filtered_backtrace,
+            selected_frame_marker);
+
+        if (num_frames == 0) {
+          strm.Printf("(No frames available)\n");
+        }
+
+        // Add blank line between providers for readability
+        strm.PutChar('\n');
+      }
+      return true;
+    }
+
+    // Original behavior: show default backtrace
+    const bool only_stacks = m_unique_stacks;
     const uint32_t num_frames_with_source = 0;
     const bool stop_format = true;
     if (!thread->GetStatus(strm, m_options.m_start, m_options.m_count,
