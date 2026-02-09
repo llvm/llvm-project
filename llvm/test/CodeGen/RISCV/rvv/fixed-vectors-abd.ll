@@ -187,9 +187,8 @@ define <2 x i32> @sabd_2s(<2 x i32> %a, <2 x i32> %b) {
 ; ZVABD-LABEL: sabd_2s:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; ZVABD-NEXT:    vmin.vv v10, v8, v9
-; ZVABD-NEXT:    vmax.vv v8, v8, v9
-; ZVABD-NEXT:    vsub.vv v8, v8, v10
+; ZVABD-NEXT:    vsub.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %a.sext = sext <2 x i32> %a to <2 x i64>
   %b.sext = sext <2 x i32> %b to <2 x i64>
@@ -238,9 +237,8 @@ define <4 x i32> @sabd_4s(<4 x i32> %a, <4 x i32> %b) {
 ; ZVABD-LABEL: sabd_4s:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVABD-NEXT:    vmin.vv v10, v8, v9
-; ZVABD-NEXT:    vmax.vv v8, v8, v9
-; ZVABD-NEXT:    vsub.vv v8, v8, v10
+; ZVABD-NEXT:    vsub.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %a.sext = sext <4 x i32> %a to <4 x i64>
   %b.sext = sext <4 x i32> %b to <4 x i64>
@@ -288,9 +286,8 @@ define <2 x i64> @sabd_2d(<2 x i64> %a, <2 x i64> %b) {
 ; ZVABD-LABEL: sabd_2d:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; ZVABD-NEXT:    vmin.vv v10, v8, v9
-; ZVABD-NEXT:    vmax.vv v8, v8, v9
-; ZVABD-NEXT:    vsub.vv v8, v8, v10
+; ZVABD-NEXT:    vsub.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %a.sext = sext <2 x i64> %a to <2 x i128>
   %b.sext = sext <2 x i64> %b to <2 x i128>
@@ -315,9 +312,8 @@ define <2 x i64> @sabd_2d_promoted_ops(<2 x i32> %a, <2 x i32> %b) {
 ; ZVABD-LABEL: sabd_2d_promoted_ops:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; ZVABD-NEXT:    vmin.vv v10, v8, v9
-; ZVABD-NEXT:    vmax.vv v8, v8, v9
-; ZVABD-NEXT:    vsub.vv v9, v8, v10
+; ZVABD-NEXT:    vsub.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v9, v8
 ; ZVABD-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; ZVABD-NEXT:    vzext.vf2 v8, v9
 ; ZVABD-NEXT:    ret
@@ -489,9 +485,8 @@ define <2 x i32> @uabd_2s(<2 x i32> %a, <2 x i32> %b) {
 ; ZVABD-LABEL: uabd_2s:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; ZVABD-NEXT:    vminu.vv v10, v8, v9
-; ZVABD-NEXT:    vmaxu.vv v8, v8, v9
-; ZVABD-NEXT:    vsub.vv v8, v8, v10
+; ZVABD-NEXT:    vsub.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %a.zext = zext <2 x i32> %a to <2 x i64>
   %b.zext = zext <2 x i32> %b to <2 x i64>
@@ -540,9 +535,8 @@ define <4 x i32> @uabd_4s(<4 x i32> %a, <4 x i32> %b) {
 ; ZVABD-LABEL: uabd_4s:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVABD-NEXT:    vminu.vv v10, v8, v9
-; ZVABD-NEXT:    vmaxu.vv v8, v8, v9
-; ZVABD-NEXT:    vsub.vv v8, v8, v10
+; ZVABD-NEXT:    vsub.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %a.zext = zext <4 x i32> %a to <4 x i64>
   %b.zext = zext <4 x i32> %b to <4 x i64>
@@ -590,9 +584,8 @@ define <2 x i64> @uabd_2d(<2 x i64> %a, <2 x i64> %b) {
 ; ZVABD-LABEL: uabd_2d:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; ZVABD-NEXT:    vminu.vv v10, v8, v9
-; ZVABD-NEXT:    vmaxu.vv v8, v8, v9
-; ZVABD-NEXT:    vsub.vv v8, v8, v10
+; ZVABD-NEXT:    vsub.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %a.zext = zext <2 x i64> %a to <2 x i128>
   %b.zext = zext <2 x i64> %b to <2 x i128>
@@ -617,9 +610,8 @@ define <2 x i64> @uabd_2d_promoted_ops(<2 x i32> %a, <2 x i32> %b) {
 ; ZVABD-LABEL: uabd_2d_promoted_ops:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; ZVABD-NEXT:    vminu.vv v10, v8, v9
-; ZVABD-NEXT:    vmaxu.vv v8, v8, v9
-; ZVABD-NEXT:    vsub.vv v9, v8, v10
+; ZVABD-NEXT:    vsub.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v9, v8
 ; ZVABD-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; ZVABD-NEXT:    vzext.vf2 v8, v9
 ; ZVABD-NEXT:    ret
@@ -767,9 +759,8 @@ define <4 x i32> @sabd_v4i32_nsw(<4 x i32> %a, <4 x i32> %b) {
 ; ZVABD-LABEL: sabd_v4i32_nsw:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVABD-NEXT:    vmin.vv v10, v8, v9
-; ZVABD-NEXT:    vmax.vv v8, v8, v9
-; ZVABD-NEXT:    vsub.vv v8, v8, v10
+; ZVABD-NEXT:    vsub.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %sub = sub nsw <4 x i32> %a, %b
   %abs = call <4 x i32> @llvm.abs.v4i32(<4 x i32> %sub, i1 true)
@@ -789,9 +780,8 @@ define <2 x i64> @sabd_v2i64_nsw(<2 x i64> %a, <2 x i64> %b) {
 ; ZVABD-LABEL: sabd_v2i64_nsw:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; ZVABD-NEXT:    vmin.vv v10, v8, v9
-; ZVABD-NEXT:    vmax.vv v8, v8, v9
-; ZVABD-NEXT:    vsub.vv v8, v8, v10
+; ZVABD-NEXT:    vsub.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %sub = sub nsw <2 x i64> %a, %b
   %abs = call <2 x i64> @llvm.abs.v2i64(<2 x i64> %sub, i1 true)
@@ -853,9 +843,8 @@ define <4 x i32> @smaxmin_v4i32(<4 x i32> %0, <4 x i32> %1) {
 ; ZVABD-LABEL: smaxmin_v4i32:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVABD-NEXT:    vmin.vv v10, v8, v9
-; ZVABD-NEXT:    vmax.vv v8, v8, v9
-; ZVABD-NEXT:    vsub.vv v8, v8, v10
+; ZVABD-NEXT:    vsub.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %a = tail call <4 x i32> @llvm.smax.v4i32(<4 x i32> %0, <4 x i32> %1)
   %b = tail call <4 x i32> @llvm.smin.v4i32(<4 x i32> %0, <4 x i32> %1)
@@ -876,9 +865,8 @@ define <2 x i64> @smaxmin_v2i64(<2 x i64> %0, <2 x i64> %1) {
 ; ZVABD-LABEL: smaxmin_v2i64:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; ZVABD-NEXT:    vmin.vv v10, v8, v9
-; ZVABD-NEXT:    vmax.vv v8, v8, v9
-; ZVABD-NEXT:    vsub.vv v8, v8, v10
+; ZVABD-NEXT:    vsub.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %a = tail call <2 x i64> @llvm.smax.v2i64(<2 x i64> %0, <2 x i64> %1)
   %b = tail call <2 x i64> @llvm.smin.v2i64(<2 x i64> %0, <2 x i64> %1)
@@ -941,9 +929,8 @@ define <4 x i32> @umaxmin_v4i32(<4 x i32> %0, <4 x i32> %1) {
 ; ZVABD-LABEL: umaxmin_v4i32:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; ZVABD-NEXT:    vminu.vv v10, v8, v9
-; ZVABD-NEXT:    vmaxu.vv v8, v8, v9
-; ZVABD-NEXT:    vsub.vv v8, v8, v10
+; ZVABD-NEXT:    vsub.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %a = tail call <4 x i32> @llvm.umax.v4i32(<4 x i32> %0, <4 x i32> %1)
   %b = tail call <4 x i32> @llvm.umin.v4i32(<4 x i32> %0, <4 x i32> %1)
@@ -964,9 +951,8 @@ define <2 x i64> @umaxmin_v2i64(<2 x i64> %0, <2 x i64> %1) {
 ; ZVABD-LABEL: umaxmin_v2i64:
 ; ZVABD:       # %bb.0:
 ; ZVABD-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; ZVABD-NEXT:    vminu.vv v10, v8, v9
-; ZVABD-NEXT:    vmaxu.vv v8, v8, v9
-; ZVABD-NEXT:    vsub.vv v8, v8, v10
+; ZVABD-NEXT:    vsub.vv v8, v8, v9
+; ZVABD-NEXT:    vabs.v v8, v8
 ; ZVABD-NEXT:    ret
   %a = tail call <2 x i64> @llvm.umax.v2i64(<2 x i64> %0, <2 x i64> %1)
   %b = tail call <2 x i64> @llvm.umin.v2i64(<2 x i64> %0, <2 x i64> %1)

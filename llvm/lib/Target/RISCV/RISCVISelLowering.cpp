@@ -8839,17 +8839,20 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerToScalableOp(Op, DAG);
   case ISD::ABDS:
   case ISD::ABDU: {
-    EVT VT = Op->getValueType(0);
-    // Only SEW=8/16 are supported in Zvabd.
-    if (Subtarget.hasStdExtZvabd() && VT.isVector() &&
-        (VT.getVectorElementType() == MVT::i8 ||
-         VT.getVectorElementType() == MVT::i16))
-      return lowerToScalableOp(Op, DAG);
-
     SDLoc dl(Op);
+    EVT VT = Op->getValueType(0);
     SDValue LHS = DAG.getFreeze(Op->getOperand(0));
     SDValue RHS = DAG.getFreeze(Op->getOperand(1));
     bool IsSigned = Op->getOpcode() == ISD::ABDS;
+    if (Subtarget.hasStdExtZvabd() && VT.isVector()) {
+      // Only SEW=8/16 are supported in Zvabd.
+      if (VT.getVectorElementType() == MVT::i8 ||
+          VT.getVectorElementType() == MVT::i16)
+        return lowerToScalableOp(Op, DAG);
+      // For SEW=32/64, we lower it to (abs (sub lhs, rhs)).
+      return DAG.getNode(ISD::ABS, dl, VT,
+                         DAG.getNode(ISD::SUB, dl, VT, LHS, RHS));
+    }
 
     // abds(lhs, rhs) -> sub(smax(lhs,rhs), smin(lhs,rhs))
     // abdu(lhs, rhs) -> sub(umax(lhs,rhs), umin(lhs,rhs))
