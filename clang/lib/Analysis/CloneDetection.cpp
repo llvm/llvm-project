@@ -403,7 +403,7 @@ void RecursiveCloneTypeIIHashConstraint::constrain(
       Result.push_back(NewGroup);
     }
   }
-  // Sequences is the output parameter, so we copy our result into it.
+  // Sequences is the output parameter, so we move our result into it.
   Sequences = std::move(Result);
 }
 
