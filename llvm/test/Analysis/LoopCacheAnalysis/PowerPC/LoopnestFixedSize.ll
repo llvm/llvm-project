@@ -83,7 +83,7 @@ for.end13:                                        ; preds = %for.inc11
 
 declare ptr @func_with_returned_arg(ptr returned %arg)
 
-; CHECK: Loop 'for.body' has cost = 2112128815104000000
+; CHECK: Loop 'for.body' has cost = 2305843009213693951
 ; CHECK-NEXT: Loop 'for.body4' has cost = 16762927104000000
 ; CHECK-NEXT: Loop 'for.body8' has cost = 130960368000000
 ; CHECK-NEXT: Loop 'for.body12' has cost = 1047682944000
