@@ -65,6 +65,7 @@
 #include "math/f16fmal.h"
 #include "math/f16sqrt.h"
 #include "math/f16sqrtl.h"
+#include "math/ffmal.h"
 #include "math/frexpf.h"
 #include "math/frexpf128.h"
 #include "math/frexpf16.h"
