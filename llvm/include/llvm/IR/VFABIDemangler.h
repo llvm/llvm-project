@@ -132,11 +132,10 @@ struct VFInfo {
   /// if any exist.
   std::optional<unsigned> getParamIndexForOptionalMask() const {
     unsigned ParamCount = Shape.Parameters.size();
-    for (unsigned i = 0; i < ParamCount; ++i)
-      if (Shape.Parameters[i].ParamKind == VFParamKind::GlobalPredicate)
-        return i;
-
-    return std::nullopt;
+    if (!ParamCount || Shape.Parameters[ParamCount - 1].ParamKind !=
+                           VFParamKind::GlobalPredicate)
+      return std::nullopt;
+    return ParamCount - 1;
   }
 
   /// Returns true if at least one of the operands to the vectorized function
