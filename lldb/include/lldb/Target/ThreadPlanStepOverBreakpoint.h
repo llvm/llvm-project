@@ -49,6 +49,11 @@ public:
     return m_defer_reenable_breakpoint_site;
   }
 
+  /// Mark the breakpoint site as already re-enabled, suppressing any
+  /// re-enable in DidPop()/ThreadDestroyed(). Used when discarding plans
+  /// during WillResume cleanup to avoid spurious breakpoint toggles.
+  void SetReenabledBreakpointSite() { m_reenabled_breakpoint_site = true; }
+
 protected:
   bool DoPlanExplainsStop(Event *event_ptr) override;
   bool DoWillResume(lldb::StateType resume_state, bool current_plan) override;
