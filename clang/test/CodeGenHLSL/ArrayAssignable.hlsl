@@ -159,11 +159,11 @@ void arr_assign8() {
 // CHECK-LABEL: define hidden void {{.*}}arr_assign9
 // CHECK: [[C:%.*]] = alloca [2 x <4 x i32>], align 16
 // CHECK-NEXT: [[V0:%.*]] = getelementptr inbounds [2 x <4 x i32>], ptr [[C]], i32 0
-// CHECK-NEXT: [[L0:%.*]] = load <4 x i32>, ptr addrspace(2) @c2, align 16
-// CHECK-NEXT: store <4 x i32> [[L0]], ptr [[V0]], align 16
+// CHECK-NEXT: [[L0:%.*]] = load <4 x i32>, ptr addrspace(2) @c2, align 4
+// CHECK-NEXT: store <4 x i32> [[L0]], ptr [[V0]], align 4
 // CHECK-NEXT: [[V1:%.*]] = getelementptr inbounds [2 x <4 x i32>], ptr [[C]], i32 0, i32 1
-// CHECK-NEXT: [[L1:%.*]] = load <4 x i32>, ptr addrspace(2) getelementptr inbounds ([2 x <4 x i32>], ptr addrspace(2) @c2, i32 0, i32 1), align 16
-// CHECK-NEXT: store <4 x i32> [[L1]], ptr [[V1]], align 16
+// CHECK-NEXT: [[L1:%.*]] = load <4 x i32>, ptr addrspace(2) getelementptr inbounds ([2 x <4 x i32>], ptr addrspace(2) @c2, i32 0, i32 1), align 4
+// CHECK-NEXT: store <4 x i32> [[L1]], ptr [[V1]], align 4
 // CHECK-NEXT: ret void
 void arr_assign9() {
   int4 C[2];
