@@ -13116,7 +13116,8 @@ SDValue SITargetLowering::lowerFSQRTF32Impl(SDLoc DL, SDValue X,
 }
 
 SDValue SITargetLowering::lowerFSQRTF32(SDValue Op, SelectionDAG &DAG) const {
-  return lowerFSQRTF32Impl(SDLoc(Op), Op.getOperand(0), Op->getFlags(), DAG, true);
+  return lowerFSQRTF32Impl(SDLoc(Op), Op.getOperand(0), Op->getFlags(), DAG,
+                           true);
 }
 
 SDValue SITargetLowering::lowerFSQRTF64(SDValue Op, SelectionDAG &DAG) const {
