@@ -33,6 +33,8 @@ extern "C" {
 
 DEFINE_C_API_STRUCT(MlirDynamicOpTrait, void);
 
+#undef DEFINE_C_API_STRUCT
+
 /// Attach a dynamic op trait to the given operation name.
 /// Note that the operation name must be modeled by dynamic dialect and must be
 /// registered.
@@ -43,10 +45,12 @@ mlirDynamicOpTraitAttach(MlirDynamicOpTrait dynamicOpTrait,
                          MlirStringRef opName, MlirContext context);
 
 /// Get the dynamic op trait that indicates the operation is a terminator.
-MLIR_CAPI_EXPORTED MlirDynamicOpTrait mlirDynamicOpTraitGetIsTerminator(void);
+MLIR_CAPI_EXPORTED MlirDynamicOpTrait
+mlirDynamicOpTraitCreateIsTerminator(void);
 
 /// Get the dynamic op trait that indicates regions have no terminator.
-MLIR_CAPI_EXPORTED MlirDynamicOpTrait mlirDynamicOpTraitGetNoTerminator(void);
+MLIR_CAPI_EXPORTED MlirDynamicOpTrait
+mlirDynamicOpTraitCreateNoTerminator(void);
 
 /// Destroy the dynamic op trait.
 MLIR_CAPI_EXPORTED void

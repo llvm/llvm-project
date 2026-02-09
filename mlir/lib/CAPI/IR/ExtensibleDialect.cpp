@@ -36,11 +36,11 @@ bool mlirDynamicOpTraitAttach(MlirDynamicOpTrait dynamicOpTrait,
   return static_cast<DynamicOpDefinition *>(impl)->addTrait(std::move(trait));
 }
 
-MlirDynamicOpTrait mlirDynamicOpTraitGetIsTerminator() {
+MlirDynamicOpTrait mlirDynamicOpTraitCreateIsTerminator() {
   return wrap(new DynamicOpTraits::IsTerminator());
 }
 
-MlirDynamicOpTrait mlirDynamicOpTraitGetNoTerminator() {
+MlirDynamicOpTrait mlirDynamicOpTraitCreateNoTerminator() {
   return wrap(new DynamicOpTraits::NoTerminator());
 }
 
