@@ -417,7 +417,7 @@ class getBUFVDataRegisterOperandForOp<RegisterOperand Op, bit isTFE> {
 }
 
 class getMUBUFInsDA<list<RegisterOperand> vdataList,
-                    list<RegisterClassLike> vaddrList, bit isTFE, bit hasRestrictedSOffset, bit isTrue16 = false> {
+                    list<RegisterOperand> vaddrList, bit isTFE, bit hasRestrictedSOffset, bit isTrue16 = false> {
   RegisterOperand vdataClass = !if(!empty(vdataList), ?, !head(vdataList));
   RegisterOperand vaddr_op = !if(!empty(vaddrList), ?, !head(vaddrList));
   RegisterOperand vdata_op = getBUFVDataRegisterOperand<!cast<SIRegisterClassLike>(vdataClass.RegClass).Size, isTFE, isTrue16>.ret;
