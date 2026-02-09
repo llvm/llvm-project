@@ -13,7 +13,7 @@ def cabs : TargetLibCall< "cabs", ? /* Checked manually. */>;
 
 // CHECK:      #ifdef GET_TARGET_LIBRARY_INFO_ENUM
 // CHECK-NEXT: #undef GET_TARGET_LIBRARY_INFO_ENUM
-// CHECK-NEXT: enum LibFunc : unsigned {
+// CHECK:      enum LibFunc : unsigned {
 // CHECK-NEXT:   NotLibFunc = 0,
 // CHECK-NEXT:   LibFunc_cosf,
 // CHECK-NEXT:   LibFunc_sinf,
@@ -24,7 +24,7 @@ def cabs : TargetLibCall< "cabs", ? /* Checked manually. */>;
 // CHECK-NEXT:   End_LibFunc = NumLibFuncs,
 // CHECK-NEXT:   Begin_LibFunc = LibFunc_cosf,
 // CHECK-NEXT: };
-// CHECK-NEXT: #endif
+// CHECK:      #endif // GET_TARGET_LIBRARY_INFO_ENUM
 
 // CHECK:      #ifdef GET_TARGET_LIBRARY_INFO_STRING_TABLE
 // CHECK-NEXT: #undef GET_TARGET_LIBRARY_INFO_STRING_TABLE
@@ -64,18 +64,18 @@ def cabs : TargetLibCall< "cabs", ? /* Checked manually. */>;
 // CHECK-NEXT:   6,
 // CHECK-NEXT:   4,
 // CHECK-NEXT: };
-// CHECK-NEXT: #endif
+// CHECK:      #endif // GET_TARGET_LIBRARY_INFO_STRING_TABLE
 
 // CHECK:      #ifdef GET_TARGET_LIBRARY_INFO_IMPL_DECL
 // CHECK-NEXT: #undef GET_TARGET_LIBRARY_INFO_IMPL_DECL
-// CHECK-NEXT: LLVM_ABI static const llvm::StringTable StandardNamesStrTable;
+// CHECK:      LLVM_ABI static const llvm::StringTable StandardNamesStrTable;
 // CHECK-NEXT: LLVM_ABI static const llvm::StringTable::Offset StandardNamesOffsets[6];
 // CHECK-NEXT: LLVM_ABI static const uint8_t StandardNamesSizeTable[6];
-// CHECK-NEXT: #endif
+// CHECK:      #endif // GET_TARGET_LIBRARY_INFO_IMPL_DECL
 
 // CHECK:      #ifdef GET_TARGET_LIBRARY_INFO_SIGNATURE_TABLE
 // CHECK-NEXT: #undef GET_TARGET_LIBRARY_INFO_SIGNATURE_TABLE
-// CHECK-NEXT: enum FuncArgTypeID : char {
+// CHECK:      enum FuncArgTypeID : char {
 // CHECK-NEXT:   NoFuncArgType = 0,
 // CHECK-NEXT:   Void,
 // CHECK-NEXT:   Bool,
@@ -112,4 +112,4 @@ def cabs : TargetLibCall< "cabs", ? /* Checked manually. */>;
 // CHECK-NEXT:   0, // printf
 // CHECK-NEXT:   3, // cabs
 // CHECK-NEXT: };
-// CHECK-NEXT: #endif
+// CHECK:      #endif // GET_TARGET_LIBRARY_INFO_SIGNATURE_TABLE

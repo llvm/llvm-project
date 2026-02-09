@@ -352,61 +352,33 @@ define i64  @test_many_callee_arguments(
 }
 
 define void @agnostic_za_buffer_alloc_with_stack_probes() nounwind "aarch64_za_state_agnostic" "probe-stack"="inline-asm" "stack-probe-size"="65536"{
-; CHECK-SDAG-LABEL: agnostic_za_buffer_alloc_with_stack_probes:
-; CHECK-SDAG:       // %bb.0:
-; CHECK-SDAG-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-SDAG-NEXT:    str x19, [sp, #16] // 8-byte Spill
-; CHECK-SDAG-NEXT:    mov x29, sp
-; CHECK-SDAG-NEXT:    bl __arm_sme_state_size
-; CHECK-SDAG-NEXT:    mov x8, sp
-; CHECK-SDAG-NEXT:    sub x19, x8, x0
-; CHECK-SDAG-NEXT:  .LBB7_1: // =>This Inner Loop Header: Depth=1
-; CHECK-SDAG-NEXT:    sub sp, sp, #16, lsl #12 // =65536
-; CHECK-SDAG-NEXT:    cmp sp, x19
-; CHECK-SDAG-NEXT:    b.le .LBB7_3
-; CHECK-SDAG-NEXT:  // %bb.2: // in Loop: Header=BB7_1 Depth=1
-; CHECK-SDAG-NEXT:    str xzr, [sp]
-; CHECK-SDAG-NEXT:    b .LBB7_1
-; CHECK-SDAG-NEXT:  .LBB7_3:
-; CHECK-SDAG-NEXT:    mov sp, x19
-; CHECK-SDAG-NEXT:    ldr xzr, [sp]
-; CHECK-SDAG-NEXT:    mov x0, x19
-; CHECK-SDAG-NEXT:    bl __arm_sme_save
-; CHECK-SDAG-NEXT:    bl private_za
-; CHECK-SDAG-NEXT:    mov x0, x19
-; CHECK-SDAG-NEXT:    bl __arm_sme_restore
-; CHECK-SDAG-NEXT:    mov sp, x29
-; CHECK-SDAG-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
-; CHECK-SDAG-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
-; CHECK-SDAG-NEXT:    ret
-;
-; CHECK-LABEL: agnostic_za_buffer_alloc_with_stack_probes:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-NEXT:    str x19, [sp, #16] // 8-byte Spill
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    bl __arm_sme_state_size
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    sub x19, x8, x0
-; CHECK-NEXT:    mov x0, x19
-; CHECK-NEXT:    bl __arm_sme_save
-; CHECK-NEXT:  .LBB7_1: // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    sub sp, sp, #16, lsl #12 // =65536
-; CHECK-NEXT:    cmp sp, x19
-; CHECK-NEXT:    b.le .LBB7_3
-; CHECK-NEXT:  // %bb.2: // in Loop: Header=BB7_1 Depth=1
-; CHECK-NEXT:    str xzr, [sp]
-; CHECK-NEXT:    b .LBB7_1
-; CHECK-NEXT:  .LBB7_3:
-; CHECK-NEXT:    mov sp, x19
-; CHECK-NEXT:    ldr xzr, [sp]
-; CHECK-NEXT:    bl private_za
-; CHECK-NEXT:    mov x0, x19
-; CHECK-NEXT:    bl __arm_sme_restore
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
-; CHECK-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
-; CHECK-NEXT:    ret
+; CHECK-COMMON-LABEL: agnostic_za_buffer_alloc_with_stack_probes:
+; CHECK-COMMON:       // %bb.0:
+; CHECK-COMMON-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-COMMON-NEXT:    str x19, [sp, #16] // 8-byte Spill
+; CHECK-COMMON-NEXT:    mov x29, sp
+; CHECK-COMMON-NEXT:    bl __arm_sme_state_size
+; CHECK-COMMON-NEXT:    mov x8, sp
+; CHECK-COMMON-NEXT:    sub x19, x8, x0
+; CHECK-COMMON-NEXT:  .LBB7_1: // =>This Inner Loop Header: Depth=1
+; CHECK-COMMON-NEXT:    sub sp, sp, #16, lsl #12 // =65536
+; CHECK-COMMON-NEXT:    cmp sp, x19
+; CHECK-COMMON-NEXT:    b.le .LBB7_3
+; CHECK-COMMON-NEXT:  // %bb.2: // in Loop: Header=BB7_1 Depth=1
+; CHECK-COMMON-NEXT:    ldr xzr, [sp]
+; CHECK-COMMON-NEXT:    b .LBB7_1
+; CHECK-COMMON-NEXT:  .LBB7_3:
+; CHECK-COMMON-NEXT:    mov sp, x19
+; CHECK-COMMON-NEXT:    ldr xzr, [sp]
+; CHECK-COMMON-NEXT:    mov x0, x19
+; CHECK-COMMON-NEXT:    bl __arm_sme_save
+; CHECK-COMMON-NEXT:    bl private_za
+; CHECK-COMMON-NEXT:    mov x0, x19
+; CHECK-COMMON-NEXT:    bl __arm_sme_restore
+; CHECK-COMMON-NEXT:    mov sp, x29
+; CHECK-COMMON-NEXT:    ldr x19, [sp, #16] // 8-byte Reload
+; CHECK-COMMON-NEXT:    ldp x29, x30, [sp], #32 // 16-byte Folded Reload
+; CHECK-COMMON-NEXT:    ret
   call void @private_za()
   ret void
 }

@@ -1,5 +1,5 @@
-## Test that --strip-all removes debug, linking, and producers sections, but not
-## known or unknown-custom sections.
+## Test that --strip-all removes debug, linking, and producers sections, and
+## unknown-custom sections, but not known or metadata.code. custom sections.
 # RUN: yaml2obj %s -o %t
 # RUN: llvm-objcopy --strip-all %t %t2
 # RUN: obj2yaml %t2 | FileCheck --implicit-check-not=Type: %s
@@ -13,7 +13,9 @@
 # CHECK:        - Type: CUSTOM
 # CHECK-NEXT:        Name: .objcopy.removed
 # CHECK:        - Type: CUSTOM
-# CHECK-NEXT:        Name: foo
+# CHECK-NEXT:        Name: .objcopy.removed
+# CHECK:        - Type: CUSTOM
+# CHECK-NEXT:        Name: metadata.code.bar
 
 --- !WASM
 FileHeader:
@@ -38,3 +40,6 @@ Sections:
   - Type: CUSTOM
     Name: foo
     Payload: CAFE
+  - Type: CUSTOM
+    Name: metadata.code.bar
+    Payload: BACE

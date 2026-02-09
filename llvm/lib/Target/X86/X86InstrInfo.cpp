@@ -1070,17 +1070,12 @@ findRedundantFlagInstr(MachineInstr &CmpInstr, MachineInstr &CmpValDefInstr,
   }
 
   if (CmpInstr.getOpcode() == X86::TEST64rr) {
-    // As seen in X86 td files, CmpValDefInstr.getOperand(1).getImm() is
-    // typically 0.
-    if (CmpValDefInstr.getOperand(1).getImm() != 0)
-      return false;
-
     // As seen in X86 td files, CmpValDefInstr.getOperand(3) is typically
     // sub_32bit or sub_xmm.
-    if (CmpValDefInstr.getOperand(3).getImm() != X86::sub_32bit)
+    if (CmpValDefInstr.getOperand(2).getImm() != X86::sub_32bit)
       return false;
 
-    VregDefInstr = MRI->getVRegDef(CmpValDefInstr.getOperand(2).getReg());
+    VregDefInstr = MRI->getVRegDef(CmpValDefInstr.getOperand(1).getReg());
   }
 
   assert(VregDefInstr && "Must have a definition (SSA)");
@@ -1098,7 +1093,7 @@ findRedundantFlagInstr(MachineInstr &CmpInstr, MachineInstr &CmpValDefInstr,
     // Get a sequence of instructions like
     //   %reg = and* ...                    // Set EFLAGS
     //   ...                                // EFLAGS not changed
-    //   %extended_reg = subreg_to_reg 0, %reg, %subreg.sub_32bit
+    //   %extended_reg = subreg_to_reg %reg, %subreg.sub_32bit
     //   test64rr %extended_reg, %extended_reg, implicit-def $eflags
     // or
     //   %reg = and32* ...
@@ -4618,13 +4613,10 @@ bool X86InstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
   if (MI.isSubregToReg()) {
     // We use following pattern to setup 64b immediate.
     //      %8:gr32 = MOV32r0 implicit-def dead $eflags
-    //      %6:gr64 = SUBREG_TO_REG 0, killed %8:gr32, %subreg.sub_32bit
-    if (!MI.getOperand(1).isImm())
-      return false;
-    unsigned FillBits = MI.getOperand(1).getImm();
-    unsigned SubIdx = MI.getOperand(3).getImm();
-    MovReg = MI.getOperand(2).getReg();
-    if (SubIdx != X86::sub_32bit || FillBits != 0)
+    //      %6:gr64 = SUBREG_TO_REG killed %8:gr32, %subreg.sub_32bit
+    unsigned SubIdx = MI.getOperand(2).getImm();
+    MovReg = MI.getOperand(1).getReg();
+    if (SubIdx != X86::sub_32bit)
       return false;
     const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
     MovMI = MRI.getUniqueVRegDef(MovReg);
@@ -5391,7 +5383,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         // Example for test64rr:
         //  %reg = and32ri %in_reg, 5
         //  ...                         // EFLAGS not changed.
-        //  %src_reg = subreg_to_reg 0, %reg, %subreg.sub_index
+        //  %src_reg = subreg_to_reg %reg, %subreg.sub_index
         //  test64rr %src_reg, %src_reg, implicit-def $eflags
         MachineInstr *AndInstr = nullptr;
         if (IsCmpZero &&
@@ -6287,7 +6279,7 @@ bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   case X86::AVX512_512_SEXT_MASK_64: {
     Register Reg = MIB.getReg(0);
     Register MaskReg = MIB.getReg(1);
-    unsigned MaskState = getRegState(MIB->getOperand(1));
+    RegState MaskState = getRegState(MIB->getOperand(1));
     unsigned Opc = (MI.getOpcode() == X86::AVX512_512_SEXT_MASK_64)
                        ? X86::VPTERNLOGQZrrikz
                        : X86::VPTERNLOGDZrrikz;
@@ -10514,120 +10506,6 @@ struct CGBR : public MachineFunctionPass {
 
 char CGBR::ID = 0;
 FunctionPass *llvm::createX86GlobalBaseRegPass() { return new CGBR(); }
-
-namespace {
-struct LDTLSCleanup : public MachineFunctionPass {
-  static char ID;
-  LDTLSCleanup() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    if (skipFunction(MF.getFunction()))
-      return false;
-
-    X86MachineFunctionInfo *MFI = MF.getInfo<X86MachineFunctionInfo>();
-    if (MFI->getNumLocalDynamicTLSAccesses() < 2) {
-      // No point folding accesses if there isn't at least two.
-      return false;
-    }
-
-    MachineDominatorTree *DT =
-        &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-    return VisitNode(DT->getRootNode(), Register());
-  }
-
-  // Visit the dominator subtree rooted at Node in pre-order.
-  // If TLSBaseAddrReg is non-null, then use that to replace any
-  // TLS_base_addr instructions. Otherwise, create the register
-  // when the first such instruction is seen, and then use it
-  // as we encounter more instructions.
-  bool VisitNode(MachineDomTreeNode *Node, Register TLSBaseAddrReg) {
-    MachineBasicBlock *BB = Node->getBlock();
-    bool Changed = false;
-
-    // Traverse the current block.
-    for (MachineBasicBlock::iterator I = BB->begin(), E = BB->end(); I != E;
-         ++I) {
-      switch (I->getOpcode()) {
-      case X86::TLS_base_addr32:
-      case X86::TLS_base_addr64:
-        if (TLSBaseAddrReg)
-          I = ReplaceTLSBaseAddrCall(*I, TLSBaseAddrReg);
-        else
-          I = SetRegister(*I, &TLSBaseAddrReg);
-        Changed = true;
-        break;
-      default:
-        break;
-      }
-    }
-
-    // Visit the children of this block in the dominator tree.
-    for (auto &I : *Node) {
-      Changed |= VisitNode(I, TLSBaseAddrReg);
-    }
-
-    return Changed;
-  }
-
-  // Replace the TLS_base_addr instruction I with a copy from
-  // TLSBaseAddrReg, returning the new instruction.
-  MachineInstr *ReplaceTLSBaseAddrCall(MachineInstr &I,
-                                       Register TLSBaseAddrReg) {
-    MachineFunction *MF = I.getParent()->getParent();
-    const X86Subtarget &STI = MF->getSubtarget<X86Subtarget>();
-    const bool is64Bit = STI.is64Bit();
-    const X86InstrInfo *TII = STI.getInstrInfo();
-
-    // Insert a Copy from TLSBaseAddrReg to RAX/EAX.
-    MachineInstr *Copy =
-        BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                TII->get(TargetOpcode::COPY), is64Bit ? X86::RAX : X86::EAX)
-            .addReg(TLSBaseAddrReg);
-
-    // Erase the TLS_base_addr instruction.
-    I.eraseFromParent();
-
-    return Copy;
-  }
-
-  // Create a virtual register in *TLSBaseAddrReg, and populate it by
-  // inserting a copy instruction after I. Returns the new instruction.
-  MachineInstr *SetRegister(MachineInstr &I, Register *TLSBaseAddrReg) {
-    MachineFunction *MF = I.getParent()->getParent();
-    const X86Subtarget &STI = MF->getSubtarget<X86Subtarget>();
-    const bool is64Bit = STI.is64Bit();
-    const X86InstrInfo *TII = STI.getInstrInfo();
-
-    // Create a virtual register for the TLS base address.
-    MachineRegisterInfo &RegInfo = MF->getRegInfo();
-    *TLSBaseAddrReg = RegInfo.createVirtualRegister(
-        is64Bit ? &X86::GR64RegClass : &X86::GR32RegClass);
-
-    // Insert a copy from RAX/EAX to TLSBaseAddrReg.
-    MachineInstr *Next = I.getNextNode();
-    MachineInstr *Copy = BuildMI(*I.getParent(), Next, I.getDebugLoc(),
-                                 TII->get(TargetOpcode::COPY), *TLSBaseAddrReg)
-                             .addReg(is64Bit ? X86::RAX : X86::EAX);
-
-    return Copy;
-  }
-
-  StringRef getPassName() const override {
-    return "Local Dynamic TLS Access Clean-up";
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-};
-} // namespace
-
-char LDTLSCleanup::ID = 0;
-FunctionPass *llvm::createCleanupLocalDynamicTLSPass() {
-  return new LDTLSCleanup();
-}
 
 /// Constants defining how certain sequences should be outlined.
 ///
