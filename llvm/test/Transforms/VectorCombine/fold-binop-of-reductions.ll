@@ -235,3 +235,33 @@ define i32 @sub_add_s_reduction_reduction(<vscale x 8 x i32> %v0, <vscale x 8 x 
   %res = sub i32 %add1, %v1_red
   ret i32 %res
 }
+
+define i32 @sub_sub_reduction_s_reduction(<vscale x 8 x i32> %v0, <vscale x 8 x i32> %v1, i32 %s1) {
+; CHECK-LABEL: define i32 @sub_sub_reduction_s_reduction(
+; CHECK-SAME: <vscale x 8 x i32> [[V0:%.*]], <vscale x 8 x i32> [[V1:%.*]], i32 [[S1:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = sub <vscale x 8 x i32> [[V0]], [[V1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> [[TMP1]])
+; CHECK-NEXT:    [[RES:%.*]] = sub i32 [[TMP2]], [[S1]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %v0_red = tail call i32 @llvm.vector.reduce.add.v8i32(<vscale x 8 x i32> %v0)
+  %v1_red = tail call i32 @llvm.vector.reduce.add.v8i32(<vscale x 8 x i32> %v1)
+  %sub1 = sub i32 %v0_red, %s1
+  %res = sub i32 %sub1, %v1_red
+  ret i32 %res
+}
+
+define i32 @sub_sub_s_reduction_reduction(<vscale x 8 x i32> %v0, <vscale x 8 x i32> %v1, i32 %s1) {
+; CHECK-LABEL: define i32 @sub_sub_s_reduction_reduction(
+; CHECK-SAME: <vscale x 8 x i32> [[V0:%.*]], <vscale x 8 x i32> [[V1:%.*]], i32 [[S1:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add <vscale x 8 x i32> [[V0]], [[V1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> [[TMP1]])
+; CHECK-NEXT:    [[RES:%.*]] = sub i32 [[S1]], [[TMP2]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %v0_red = tail call i32 @llvm.vector.reduce.add.v8i32(<vscale x 8 x i32> %v0)
+  %v1_red = tail call i32 @llvm.vector.reduce.add.v8i32(<vscale x 8 x i32> %v1)
+  %sub1 = sub i32 %s1, %v0_red
+  %res = sub i32 %sub1, %v1_red
+  ret i32 %res
+}
