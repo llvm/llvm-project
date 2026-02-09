@@ -578,10 +578,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
                   OnlyFirstLaneUsed || vputils::isSingleScalar(getOperand(0)));
     Value *Op1 = State.get(getOperand(1), OnlyFirstLaneUsed);
     Value *Op2 = State.get(getOperand(2), OnlyFirstLaneUsed);
-    IRBuilderBase::FastMathFlagGuard FMFG(Builder);
-    if (hasFastMathFlags())
-      Builder.setFastMathFlags(getFastMathFlags());
-    return Builder.CreateSelect(Cond, Op1, Op2, Name);
+    FastMathFlags FMFs =
+        hasFastMathFlags() ? getFastMathFlags() : FastMathFlags();
+    return Builder.CreateSelectFMF(Cond, Op1, Op2, FMFs, Name);
   }
   case VPInstruction::ActiveLaneMask: {
     // Get first lane of vector induction variable.
@@ -2745,13 +2744,13 @@ void VPBlendRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     getIncomingValue(0)->printAsOperand(O, SlotTracker);
   } else {
     for (unsigned I = 0, E = getNumIncomingValues(); I < E; ++I) {
+      if (I != 0)
+        O << " ";
       getIncomingValue(I)->printAsOperand(O, SlotTracker);
       if (I == 0 && isNormalized())
         continue;
       O << "/";
       getMask(I)->printAsOperand(O, SlotTracker);
-      if (I < E - 1)
-        O << " ";
     }
   }
 }
