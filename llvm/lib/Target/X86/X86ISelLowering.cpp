@@ -58483,7 +58483,11 @@ static SDValue combineFunnelShift(SDNode *N, SelectionDAG &DAG,
 static bool needCarryOrOverflowFlag(SDValue Flags) {
   assert(Flags.getValueType() == MVT::i32 && "Unexpected VT!");
 
-  for (const SDNode *User : Flags->users()) {
+  for (const SDUse &Use : Flags->uses()) {
+    // Only check things that use the flags.
+    if (Use.getResNo() != Flags.getResNo())
+      continue;
+    const SDNode *User = Use.getUser();
     X86::CondCode CC;
     switch (User->getOpcode()) {
     default:
@@ -58827,7 +58831,7 @@ static SDValue combineADC(SDNode *N, SelectionDAG &DAG,
   // Fold ADC(ADD(X,Y),0,Carry) -> ADC(X,Y,Carry)
   // iff the flag result is dead.
   if (LHS.getOpcode() == ISD::ADD && RHSC && RHSC->isZero() &&
-      !N->hasAnyUseOfValue(1))
+      !needCarryOrOverflowFlag(SDValue(N, 1)))
     return DAG.getNode(X86ISD::ADC, SDLoc(N), N->getVTList(), LHS.getOperand(0),
                        LHS.getOperand(1), CarryIn);
 
