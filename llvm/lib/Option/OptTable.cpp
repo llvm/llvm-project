@@ -537,7 +537,7 @@ InputArgList OptTable::internalParseArgs(
   MissingArgIndex = MissingArgCount = 0;
   unsigned Index = 0, End = ArgArr.size();
   while (Index < End) {
-    // Ingore nullptrs, they are response file's EOL markers
+    // Ignore nullptrs, they are response file's EOL markers.
     if (Args.getArgString(Index) == nullptr) {
       ++Index;
       continue;
