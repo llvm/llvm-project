@@ -1379,7 +1379,7 @@ class AMDGPU_MakeDescriptorOp<string mnemonic> :
     Optional<I1>: $early_timeout,
     Optional<I32>: $pad_amount,
     Optional<I32>: $pad_interval,
-    Optional<AnyMemRef>: $atomic_barrier_address,
+    Optional<MemRefOf<[AMDGPU_DsBarrierStateType]>>: $atomic_barrier_address,
     Variadic<Index>: $atomic_barrier_indices,
     Optional<Index>: $global_increment,
     Optional<I32>: $lds_increment,
@@ -1466,7 +1466,8 @@ def AMDGPU_MakeDmaDescriptorOp : AMDGPU_MakeDescriptorOp<"make_dma_descriptor"> 
      $pad_interval must be a power of two contained in [2, 256].
      $pad_amount must be a value contained in [1, 128].
 
-     $atomic_barrier_address must be aligned to 8 bytes.
+     If an atomic barrier is provided, it will be arrived at **once** after
+     each load/store using this descriptor is completed.
 
      2D and 3D tensors may be iterated over by setting $global_increment, $lds_increment, and $iteration_count.
      $global_increment determines how much to increment the starting global memory address per iteration in units of the $base's element type.
