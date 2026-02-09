@@ -931,6 +931,7 @@ private:
   SDValue ScalarizeVecOp_VECREDUCE_SEQ(SDNode *N);
   SDValue ScalarizeVecOp_CMP(SDNode *N);
   SDValue ScalarizeVecOp_FAKE_USE(SDNode *N);
+  SDValue ScalarizeVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
 
   //===--------------------------------------------------------------------===//
   // Vector Splitting Support: LegalizeVectorTypes.cpp

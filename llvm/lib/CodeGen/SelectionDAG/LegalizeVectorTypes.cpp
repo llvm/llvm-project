@@ -885,6 +885,9 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::UCMP:
     Res = ScalarizeVecOp_CMP(N);
     break;
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    Res = ScalarizeVecOp_VECTOR_FIND_LAST_ACTIVE(N);
+    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -1183,6 +1186,18 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_CMP(SDNode *N) {
   EVT ResVT = N->getValueType(0).getVectorElementType();
   SDValue Cmp = DAG.getNode(N->getOpcode(), SDLoc(N), ResVT, LHS, RHS);
   return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), N->getValueType(0), Cmp);
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N) {
+  // Since there is no "none-active" result, the only valid return for <1 x ty>
+  // is 0. Note: Since we check the high mask during splitting this is safe.
+  // As e.g., a <2 x ty> operation would split to:
+  //   any_active(%hi_mask) ? (1 + last_active(%hi_mask))
+  //                        : `last_active(%lo_mask)`
+  // Which then scalarizes to:
+  //   %mask[1] ? 1 : 0
+  EVT VT = N->getValueType(0);
+  return DAG.getConstant(0, SDLoc(N), VT);
 }
 
 //===----------------------------------------------------------------------===//
