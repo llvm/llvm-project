@@ -421,13 +421,6 @@ public:
         ultSym.flags().test(Symbol::Flag::InCommonBlock);
   }
 
-  static bool IsPrivate(const Symbol &symbol) {
-    static const Symbol::Flags privatizing{Symbol::Flag::OmpPrivate,
-        Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate,
-        Symbol::Flag::OmpLinear};
-    return (symbol.flags() & privatizing).any();
-  }
-
   static const Symbol &GetStorageOwner(const Symbol &symbol) {
     static auto getParent = [](const Symbol *s) -> const Symbol * {
       if (auto *details{s->detailsIf<UseDetails>()}) {
@@ -438,10 +431,16 @@ public:
         return nullptr;
       }
     };
+    static auto isPrivate = [](const Symbol &symbol) {
+      static const Symbol::Flags privatizing{Symbol::Flag::OmpPrivate,
+          Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate,
+          Symbol::Flag::OmpLinear};
+      return (symbol.flags() & privatizing).any();
+    };
 
     const Symbol *sym = &symbol;
     while (true) {
-      if (IsPrivate(*sym)) {
+      if (isPrivate(*sym)) {
         return *sym;
       }
       if (const Symbol *parent{getParent(sym)}) {
