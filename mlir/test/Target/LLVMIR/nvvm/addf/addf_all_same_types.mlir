@@ -9,10 +9,10 @@ llvm.func @fadd_f16_f16(%a : f16, %b : f16) -> f16 {
   // CHECK-NEXT: %6 = call half @llvm.nvvm.add.rn.ftz.sat.f16(half %5, half %5)
   // CHECK-NEXT: ret half %6
   // CHECK-NEXT: }
-  %f1 = nvvm.addf %a, %b : f16, f16 -> f16
-  %f2 = nvvm.addf %f1, %f1 {rnd = #nvvm.fp_rnd_mode<rn>} : f16, f16 -> f16
-  %f3 = nvvm.addf %f2, %f2 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>} : f16, f16 -> f16
-  %f4 = nvvm.addf %f3, %f3 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz=true} : f16, f16 -> f16
+  %f1 = nvvm.addf %a, %b : f16
+  %f2 = nvvm.addf %f1, %f1 {rnd = #nvvm.fp_rnd_mode<rn>} : f16
+  %f3 = nvvm.addf %f2, %f2 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>} : f16
+  %f4 = nvvm.addf %f3, %f3 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz=true} : f16
   llvm.return %f4 : f16
 }
 
@@ -23,8 +23,8 @@ llvm.func @fadd_bf16_bf16(%a : bf16, %b : bf16) -> bf16 {
   // CHECK-NEXT: %4 = fadd bfloat %3, %3
   // CHECK-NEXT: ret bfloat %4
   // CHECK-NEXT: }
-  %f1 = nvvm.addf %a, %b : bf16, bf16 -> bf16
-  %f2 = nvvm.addf %f1, %f1 {rnd = #nvvm.fp_rnd_mode<rn>} : bf16, bf16 -> bf16
+  %f1 = nvvm.addf %a, %b : bf16
+  %f2 = nvvm.addf %f1, %f1 {rnd = #nvvm.fp_rnd_mode<rn>} : bf16
   llvm.return %f2 : bf16
 }
 
@@ -50,23 +50,23 @@ llvm.func @fadd_f32_f32(%a : f32, %b : f32) -> f32 {
   // CHECK-NEXT: %19 = call float @llvm.nvvm.add.rz.ftz.sat.f(float %18, float %18)
   // CHECK-NEXT: ret float %19
   // CHECK-NEXT: }
-  %f1 = nvvm.addf %a, %b : f32, f32 -> f32
-  %f2 = nvvm.addf %f1, %f1 {rnd = #nvvm.fp_rnd_mode<rn>} : f32, f32 -> f32
-  %f3 = nvvm.addf %f2, %f2 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>} : f32, f32 -> f32
-  %f4 = nvvm.addf %f3, %f3 {rnd = #nvvm.fp_rnd_mode<rn>, ftz=true} : f32, f32 -> f32
-  %f5 = nvvm.addf %f4, %f4 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz=true} : f32, f32 -> f32
-  %f6 = nvvm.addf %f5, %f5 {rnd = #nvvm.fp_rnd_mode<rm>} : f32, f32 -> f32
-  %f7 = nvvm.addf %f6, %f6 {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>} : f32, f32 -> f32
-  %f8 = nvvm.addf %f7, %f7 {rnd = #nvvm.fp_rnd_mode<rm>, ftz=true} : f32, f32 -> f32
-  %f9 = nvvm.addf %f8, %f8 {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>, ftz=true} : f32, f32 -> f32
-  %f10 = nvvm.addf %f9, %f9 {rnd = #nvvm.fp_rnd_mode<rp>} : f32, f32 -> f32
-  %f11 = nvvm.addf %f10, %f10 {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>} : f32, f32 -> f32
-  %f12 = nvvm.addf %f11, %f11 {rnd = #nvvm.fp_rnd_mode<rp>, ftz=true} : f32, f32 -> f32
-  %f13 = nvvm.addf %f12, %f12 {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>, ftz=true} : f32, f32 -> f32
-  %f14 = nvvm.addf %f13, %f13 {rnd = #nvvm.fp_rnd_mode<rz>} : f32, f32 -> f32
-  %f15 = nvvm.addf %f14, %f14 {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>} : f32, f32 -> f32
-  %f16 = nvvm.addf %f15, %f15 {rnd = #nvvm.fp_rnd_mode<rz>, ftz=true} : f32, f32 -> f32
-  %f17 = nvvm.addf %f16, %f16 {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>, ftz=true} : f32, f32 -> f32
+  %f1 = nvvm.addf %a, %b : f32
+  %f2 = nvvm.addf %f1, %f1 {rnd = #nvvm.fp_rnd_mode<rn>} : f32
+  %f3 = nvvm.addf %f2, %f2 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>} : f32
+  %f4 = nvvm.addf %f3, %f3 {rnd = #nvvm.fp_rnd_mode<rn>, ftz=true} : f32
+  %f5 = nvvm.addf %f4, %f4 {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<sat>, ftz=true} : f32
+  %f6 = nvvm.addf %f5, %f5 {rnd = #nvvm.fp_rnd_mode<rm>} : f32
+  %f7 = nvvm.addf %f6, %f6 {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>} : f32
+  %f8 = nvvm.addf %f7, %f7 {rnd = #nvvm.fp_rnd_mode<rm>, ftz=true} : f32
+  %f9 = nvvm.addf %f8, %f8 {rnd = #nvvm.fp_rnd_mode<rm>, sat = #nvvm.sat_mode<sat>, ftz=true} : f32
+  %f10 = nvvm.addf %f9, %f9 {rnd = #nvvm.fp_rnd_mode<rp>} : f32
+  %f11 = nvvm.addf %f10, %f10 {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>} : f32
+  %f12 = nvvm.addf %f11, %f11 {rnd = #nvvm.fp_rnd_mode<rp>, ftz=true} : f32
+  %f13 = nvvm.addf %f12, %f12 {rnd = #nvvm.fp_rnd_mode<rp>, sat = #nvvm.sat_mode<sat>, ftz=true} : f32
+  %f14 = nvvm.addf %f13, %f13 {rnd = #nvvm.fp_rnd_mode<rz>} : f32
+  %f15 = nvvm.addf %f14, %f14 {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>} : f32
+  %f16 = nvvm.addf %f15, %f15 {rnd = #nvvm.fp_rnd_mode<rz>, ftz=true} : f32
+  %f17 = nvvm.addf %f16, %f16 {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<sat>, ftz=true} : f32
   llvm.return %f17 : f32
 }
 
@@ -80,10 +80,10 @@ llvm.func @fadd_f64_f64(%a : f64, %b : f64) -> f64 {
   // CHECK-NEXT: %7 = call double @llvm.nvvm.add.rz.d(double %6, double %6)
   // CHECK-NEXT: ret double %7
   // CHECK-NEXT: }
-  %f1 = nvvm.addf %a, %b : f64, f64 -> f64
-  %f2 = nvvm.addf %f1, %f1 {rnd = #nvvm.fp_rnd_mode<rn>} : f64, f64 -> f64
-  %f3 = nvvm.addf %f2, %f2 {rnd = #nvvm.fp_rnd_mode<rm>} : f64, f64 -> f64
-  %f4 = nvvm.addf %f3, %f3 {rnd = #nvvm.fp_rnd_mode<rp>} : f64, f64 -> f64
-  %f5 = nvvm.addf %f4, %f4 {rnd = #nvvm.fp_rnd_mode<rz>} : f64, f64 -> f64
+  %f1 = nvvm.addf %a, %b : f64
+  %f2 = nvvm.addf %f1, %f1 {rnd = #nvvm.fp_rnd_mode<rn>} : f64
+  %f3 = nvvm.addf %f2, %f2 {rnd = #nvvm.fp_rnd_mode<rm>} : f64
+  %f4 = nvvm.addf %f3, %f3 {rnd = #nvvm.fp_rnd_mode<rp>} : f64
+  %f5 = nvvm.addf %f4, %f4 {rnd = #nvvm.fp_rnd_mode<rz>} : f64
   llvm.return %f5 : f64
 }
