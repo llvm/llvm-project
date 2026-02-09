@@ -249,7 +249,7 @@ Itanium ABI
 Microsoft ABI
 ~~~~~~~~~~~~~
 | Reid Kleckner
-| rnk\@google.com (email), rnk (Phabricator), rnk (GitHub)
+| rnk\@llvm.org (email), rnk (GitHub), rnk (Discourse), rnk (Discord), rnk (Phabricator)
 
 
 ARM EABI
@@ -297,7 +297,7 @@ CMake integration
 General Windows support
 ~~~~~~~~~~~~~~~~~~~~~~~
 | Reid Kleckner
-| rnk\@google.com (email), rnk (Phabricator), rnk (GitHub)
+| rnk\@llvm.org (email), rnk (GitHub), rnk (Discourse), rnk (Discord), rnk (Phabricator)
 
 
 Incremental compilation, REPLs, clang-repl

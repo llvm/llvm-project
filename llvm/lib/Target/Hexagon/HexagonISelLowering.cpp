@@ -2342,9 +2342,18 @@ HexagonTargetLowering::getVectorShiftByInt(SDValue Op, SelectionDAG &DAG)
     default:
       llvm_unreachable("Unexpected shift opcode");
   }
+  if (SDValue Sp = getSplatValue(Op.getOperand(1), DAG)) {
+    const SDLoc dl(Op);
+    // Canonicalize shift amount to i32 as required.
+    SDValue Sh = Sp;
+    if (Sh.getValueType() != MVT::i32)
+      Sh = DAG.getZExtOrTrunc(Sh, dl, MVT::i32);
 
-  if (SDValue Sp = getSplatValue(Op.getOperand(1), DAG))
-    return DAG.getNode(NewOpc, SDLoc(Op), ty(Op), Op.getOperand(0), Sp);
+    assert(Sh.getValueType() == MVT::i32 &&
+           "Hexagon vector shift-by-int must use i32 shift operand");
+    return DAG.getNode(NewOpc, dl, ty(Op), Op.getOperand(0), Sh);
+  }
+
   return SDValue();
 }
 
