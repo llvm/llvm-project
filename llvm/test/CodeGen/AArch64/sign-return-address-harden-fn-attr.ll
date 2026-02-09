@@ -293,6 +293,74 @@ define void @stackprotector() #6 {
   ret void
 }
 
+define i32 @f8(i32 %a) #7 {
+; CHECK-NO-PAUTH-LABEL: f8:
+; CHECK-NO-PAUTH:       // %bb.0: // %entry
+; CHECK-NO-PAUTH-NEXT:    .cfi_b_key_frame
+; CHECK-NO-PAUTH-NEXT:    hint #27
+; CHECK-NO-PAUTH-NEXT:    .cfi_negate_ra_state
+; CHECK-NO-PAUTH-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NO-PAUTH-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NO-PAUTH-NEXT:    .cfi_offset w30, -16
+; CHECK-NO-PAUTH-NEXT:    bl foo
+; CHECK-NO-PAUTH-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NO-PAUTH-NEXT:    hint #31
+; CHECK-NO-PAUTH-NEXT:    mov x8, x30
+; CHECK-NO-PAUTH-NEXT:    hint #7
+; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
+; CHECK-NO-PAUTH-NEXT:    mov x30, x8
+; CHECK-NO-PAUTH-NEXT:    ret
+;
+; CHECK-PAUTH-LABEL: f8:
+; CHECK-PAUTH:       // %bb.0: // %entry
+; CHECK-PAUTH-NEXT:    .cfi_b_key_frame
+; CHECK-PAUTH-NEXT:    pacibsp
+; CHECK-PAUTH-NEXT:    .cfi_negate_ra_state
+; CHECK-PAUTH-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-PAUTH-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-PAUTH-NEXT:    .cfi_offset w30, -16
+; CHECK-PAUTH-NEXT:    bl foo
+; CHECK-PAUTH-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-PAUTH-NEXT:    autibsp
+; CHECK-PAUTH-NEXT:    mov x8, x30
+; CHECK-PAUTH-NEXT:    xpaci x8
+; CHECK-PAUTH-NEXT:    ldr w8, [x8]
+; CHECK-PAUTH-NEXT:    ret
+entry:
+  %call = call i32 @foo(i32 %a)
+  ret i32 %call
+}
+
+define i32 @f9(i32 %a) #8 {
+; CHECK-NO-PAUTH-LABEL: f9:
+; CHECK-NO-PAUTH:       // %bb.0: // %entry
+; CHECK-NO-PAUTH-NEXT:    .cfi_b_key_frame
+; CHECK-NO-PAUTH-NEXT:    hint #27
+; CHECK-NO-PAUTH-NEXT:    .cfi_negate_ra_state
+; CHECK-NO-PAUTH-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NO-PAUTH-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NO-PAUTH-NEXT:    .cfi_offset w30, -16
+; CHECK-NO-PAUTH-NEXT:    bl foo
+; CHECK-NO-PAUTH-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NO-PAUTH-NEXT:    hint #31
+; CHECK-NO-PAUTH-NEXT:    ret{{$}}
+;
+; CHECK-PAUTH-LABEL: f9:
+; CHECK-PAUTH:       // %bb.0: // %entry
+; CHECK-PAUTH-NEXT:    .cfi_b_key_frame
+; CHECK-PAUTH-NEXT:    pacibsp
+; CHECK-PAUTH-NEXT:    .cfi_negate_ra_state
+; CHECK-PAUTH-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-PAUTH-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-PAUTH-NEXT:    .cfi_offset w30, -16
+; CHECK-PAUTH-NEXT:    bl foo
+; CHECK-PAUTH-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-PAUTH-NEXT:    retab
+entry:
+  %call = call i32 @foo(i32 %a)
+  ret i32 %call
+}
+
 attributes #0 = { "sign-return-address"="all" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="a_key" }
 attributes #1 = { "sign-return-address"="all" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="b_key" }
 
@@ -303,3 +371,6 @@ attributes #4 = { "sign-return-address"="non-leaf" "sign-return-address-harden"=
 attributes #5 = { "sign-return-address"="non-leaf" "sign-return-address-harden"="none" "sign-return-address-key"="b_key" }
 
 attributes #6 = { sspreq "sign-return-address"="all" "sign-return-address-harden"="load-return-address" "sign-return-address-key"="a_key" }
+
+attributes #7 = { "ptrauth-returns" "sign-return-address-harden"="load-return-address" }
+attributes #8 = { "ptrauth-returns" "sign-return-address-harden"="none" }
