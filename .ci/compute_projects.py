@@ -71,7 +71,9 @@ DEPENDENTS_TO_TEST = {
 # This mapping describes runtimes that should be enabled for a specific project,
 # but not necessarily run for testing. The only case of this currently is lldb
 # which needs some runtimes enabled for tests.
-DEPENDENT_RUNTIMES_TO_BUILD = {"lldb": {"libcxx", "libcxxabi", "libunwind"}}
+DEPENDENT_RUNTIMES_TO_BUILD = {
+    "lldb": {"libcxx", "libcxxabi", "libunwind", "compiler-rt"}
+}
 
 # This mapping describes runtimes that should be tested when the key project is
 # touched.
