@@ -131,17 +131,16 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpPredicate Pred,
     if (W == 1)
       return getEmpty(W);
 
-    // deal with edge cases
-    APInt AugmentedUpper = CR.getUpper();
+    APInt CRUpper = CR.getUpper();
     if (CR.getUnsignedMax().isMinSignedValue())
-      AugmentedUpper = APInt::getSignedMinValue(W);
+      CRUpper = APInt::getSignedMinValue(W);
     else if (CR.getSignedMax().isMinValue())
-      AugmentedUpper = APInt::getMinValue(W);
+      CRUpper = APInt::getMinValue(W);
 
-    if (AugmentedUpper == CR.getLower() && !CR.isFullSet())
+    if (CRUpper == CR.getLower() && !CR.isFullSet())
       return getEmpty(W);
 
-    ConstantRange Augmented(CR.getLower(), AugmentedUpper);
+    ConstantRange Augmented(CR.getLower(), CRUpper);
     if (Augmented.isAllNonNegative() ||
         (!Augmented.isAllNegative() && Augmented.isSignWrappedSet()))
       return getNonEmpty(APInt::getMinValue(W), Augmented.getUnsignedMax());
@@ -156,8 +155,6 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpPredicate Pred,
   case CmpInst::ICMP_ULE:
     if (!Pred.hasSameSign())
       return getNonEmpty(APInt::getMinValue(W), CR.getUnsignedMax() + 1);
-    if (W == 1)
-      return CR;
     if (CR.isAllNegative() ||
         (!CR.isAllNonNegative() && !CR.isSignWrappedSet()))
       return getNonEmpty(APInt::getSignedMinValue(W), CR.getSignedMax() + 1);
@@ -174,16 +171,16 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpPredicate Pred,
       return getEmpty(W);
 
     // deal with edge cases
-    APInt AugmentedLower = CR.getLower();
+    APInt CRLower = CR.getLower();
     if (CR.getLower().isMaxSignedValue())
-      AugmentedLower = APInt::getSignedMinValue(W);
+      CRLower = APInt::getSignedMinValue(W);
     else if (CR.getLower().isMaxValue())
-      AugmentedLower = APInt::getMinValue(W);
+      CRLower = APInt::getMinValue(W);
 
-    if (AugmentedLower == CR.getUpper())
+    if (CRLower == CR.getUpper())
       return getEmpty(W);
 
-    ConstantRange Augmented(AugmentedLower, CR.getUpper());
+    ConstantRange Augmented(CRLower, CR.getUpper());
     if (Augmented.isAllNegative())
       return getNonEmpty(Augmented.getSignedMin() + 1, APInt::getZero(W));
     if (!Augmented.isAllNonNegative() && Augmented.isSignWrappedSet())
