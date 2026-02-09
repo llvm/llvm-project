@@ -15,9 +15,9 @@ for more information about LIT.
 
 ## Run the tests
 
-`libsycl` is integrated via LLVM_ENABLE_RUNTIMES and is not visible as top
-level target. Same is applicable for tests. To run `check-sycl` tests you
-need to prefix `<build>/runtimes/runtimes-bins/` to the paths of all tests.
+`libsycl` is integrated via `LLVM_ENABLE_RUNTIMES` and is not visible as top
+level target. Same is applicable to tests. To run `check-sycl` tests you need
+to prefix `<build>/runtimes/runtimes-bins/` to the paths of all tests.
 For example, to run all the libsycl tests you can do:
 ```bash
 <build>/bin/llvm-lit <build>/runtimes/runtimes-bins/libsycl/test
@@ -32,14 +32,13 @@ libsycl testsuite as:
  ninja -C <build>/runtimes/runtimes-bins check-sycl
  ```
 
-
 ## CMake parameters
 
 These parameters can be used to configure tests:
 
 `LIBSYCL_CXX_COMPILER` - path to compiler to use it for building tests.
 
-`LIBSYCL_TEST_CXX_FLAGS` - flags to be passed to `LIBSYCL_CXX_COMPILER` when
+`LIBSYCL_TEST_COMPILER_OPTIONS` - flags to be passed to `LIBSYCL_CXX_COMPILER` when
     building libsycl tests.
 
 `LLVM_LIT` - path to llvm-lit tool.
@@ -56,13 +55,12 @@ filters to limit test execution to the specific environment.
 The following features are automatically detected by `llvm-lit` by scanning the
 environment:
 
-* `linux` - host OS;
 * `any-device` - presence of at least 1 supported device;
 * `any-device-is-gpu` - device type to be available;
 * `any-device-is-level_zero` - backend to be available;
 
-Note: `sycl-ls` tool doesn't have assigned feature since it is essential for
-tests configuration and is always available if test is executed.
+Note: `sycl-ls` tool doesn't have an assigned feature since it is essential for
+tests configuration and is always available.
 
 ### llvm-lit parameters
 

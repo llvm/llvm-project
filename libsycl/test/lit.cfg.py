@@ -80,7 +80,6 @@ if config.extra_system_environment:
 llvm_config.with_environment("PATH", config.lit_tools_dir, append_path=True)
 
 # Configure LD_LIBRARY_PATH
-config.available_features.add("linux")
 llvm_config.with_system_environment(
     ["LD_LIBRARY_PATH", "LIBRARY_PATH", "C_INCLUDE_PATH", "CPLUS_INCLUDE_PATH"]
 )

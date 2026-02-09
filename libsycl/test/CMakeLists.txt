@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.20.0)
 message("Configuring libsycl tests")
 
 set(LIBSYCL_CXX_COMPILER "${LLVM_BINARY_DIR}/bin/clang++")
-set(LIBSYCL_TEST_CXX_FLAGS "" CACHE STRING
-    "Flags passed to clang++ when building SYCL tests")
+set(LIBSYCL_TEST_COMPILER_OPTIONS "" CACHE STRING
+    "SYCL compiler options for building libsycl tests")
 
 configure_lit_site_cfg(
     ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
