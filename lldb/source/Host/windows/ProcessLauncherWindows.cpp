@@ -146,9 +146,6 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   }
   ProcThreadAttributeList attributelist = std::move(*attributelist_or_err);
 
-  llvm::scope_exit delete_attributelist(
-      [&] { DeleteProcThreadAttributeList(startupinfoex.lpAttributeList); });
-
   std::vector<HANDLE> inherited_handles;
   if (use_pty) {
     if (auto err = attributelist.SetupPseudoConsole(hPC)) {
