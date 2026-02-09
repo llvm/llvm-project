@@ -728,9 +728,8 @@ bool DynamicLoaderMacOS::GetSharedCacheInformation(
       else
         private_shared_cache = eLazyBoolNo;
       if (info_dict->HasKey("shared_cache_path")) {
-        std::string filepath = info_dict->GetValueForKey("shared_cache_path")
-                                   ->GetStringValue()
-                                   .str();
+        llvm::StringRef filepath =
+            info_dict->GetValueForKey("shared_cache_path")->GetStringValue();
         shared_cache_path.SetPath(filepath);
       }
       return true;
