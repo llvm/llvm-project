@@ -8893,12 +8893,6 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   unsigned MinMaxOpcNum2019 = IsMax ? ISD::FMAXIMUMNUM : ISD::FMINIMUMNUM;
   unsigned MinMaxOpc = ISD::DELETED_NODE;
 
-  // Note: Currently, isOperationLegalOrCustom works well here, while if one
-  // add some new Opc type, please note that you may need to use Legal first
-  // and then Custom.
-  // If a backend defines MinMaxOpcNum2019 as Legal, and MinMaxOpcIeee as
-  // Custom in future, we will need to split to isOperationLegal group and
-  // isOperationCustom group.
   if (isOperationLegalOrCustom(MinMaxOpcIeee, VT))
     MinMaxOpc = MinMaxOpcIeee;
   else if (isOperationLegalOrCustom(MinMaxOpcNum2019, VT))
