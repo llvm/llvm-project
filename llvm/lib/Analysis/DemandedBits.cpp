@@ -162,7 +162,7 @@ void DemandedBits::determineLiveOperandBits(
           uint64_t Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
           uint64_t Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
           bool IsFShr = II->getIntrinsicID() == Intrinsic::fshr;
-          bool ShiftLeft;
+          bool ShiftLeft = false;
           uint64_t SMin = Min, SMax = Max;
           // fshl(a, b, k ) is defined by concatenating a . b
           // then doing a left shift by k and then extracting the upper bits.
