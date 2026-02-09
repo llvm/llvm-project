@@ -127,13 +127,16 @@ private:
   void processScope(DIScope *Scope);
   void processType(DIType *DT);
   void processImportedEntity(const DIImportedEntity *Import);
+  void processMacroNode(DIMacroNode *Macro, DIMacroFile *CurrentMacroFile);
   bool addCompileUnit(DICompileUnit *CU);
   bool addGlobalVariable(DIGlobalVariableExpression *DIG);
   bool addScope(DIScope *Scope);
   bool addSubprogram(DISubprogram *SP);
   bool addType(DIType *DT);
+  bool addMacro(DIMacro *Macro, DIMacroFile *MacroFile);
 
 public:
+  using DIMacroEntry = std::pair<DIMacro *, DIMacroFile *>;
   using compile_unit_iterator =
       SmallVectorImpl<DICompileUnit *>::const_iterator;
   using subprogram_iterator = SmallVectorImpl<DISubprogram *>::const_iterator;
@@ -141,6 +144,7 @@ public:
       SmallVectorImpl<DIGlobalVariableExpression *>::const_iterator;
   using type_iterator = SmallVectorImpl<DIType *>::const_iterator;
   using scope_iterator = SmallVectorImpl<DIScope *>::const_iterator;
+  using macro_iterator = SmallVectorImpl<DIMacroEntry>::const_iterator;
 
   iterator_range<compile_unit_iterator> compile_units() const { return CUs; }
 
@@ -154,11 +158,14 @@ public:
 
   iterator_range<scope_iterator> scopes() const { return Scopes; }
 
+  iterator_range<macro_iterator> macros() const { return Macros; }
+
   unsigned compile_unit_count() const { return CUs.size(); }
   unsigned global_variable_count() const { return GVs.size(); }
   unsigned subprogram_count() const { return SPs.size(); }
   unsigned type_count() const { return TYs.size(); }
   unsigned scope_count() const { return Scopes.size(); }
+  unsigned macro_count() const { return Macros.size(); }
 
 private:
   SmallVector<DICompileUnit *, 8> CUs;
@@ -166,6 +173,7 @@ private:
   SmallVector<DIGlobalVariableExpression *, 8> GVs;
   SmallVector<DIType *, 8> TYs;
   SmallVector<DIScope *, 8> Scopes;
+  SmallVector<DIMacroEntry, 8> Macros;
   SmallPtrSet<const MDNode *, 32> NodesSeen;
 };
 

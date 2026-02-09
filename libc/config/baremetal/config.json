@@ -37,6 +37,9 @@
   "str_to_float": {
     "LIBC_CONF_STRTOFLOAT_DISABLE_EISEL_LEMIRE": {
       "value": true
+    },
+    "LIBC_CONF_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH": {
+      "value": true
     }
   },
   "math": {
@@ -46,6 +49,11 @@
   },
   "general": {
     "LIBC_ADD_NULL_CHECKS": {
+      "value": false
+    }
+  },
+  "codegen": {
+    "LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR": {
       "value": false
     }
   }

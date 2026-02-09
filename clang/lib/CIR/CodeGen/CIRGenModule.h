@@ -283,6 +283,12 @@ public:
                               cir::CallingConv &callingConv,
                               cir::SideEffect &sideEffect, bool attrOnCallSite,
                               bool isThunk);
+  /// Helper function for constructAttributeList/others.  Builds a set of
+  /// function attributes to add to a function based on language opts, codegen
+  /// opts, and some small properties.
+  void addDefaultFunctionAttributes(StringRef name, bool hasOptNoneAttr,
+                                    bool attrOnCallSite,
+                                    mlir::NamedAttrList &attrs);
 
   /// Will return a global variable of the given type. If a variable with a
   /// different type already exists then a new variable with the right type
@@ -566,6 +572,10 @@ public:
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
 
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
+
+  // Whether a global variable should be emitted by CUDA/HIP host/device
+  // related attributes.
+  bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
 
   void replaceUsesOfNonProtoTypeWithRealFunction(mlir::Operation *old,
                                                  cir::FuncOp newFn);

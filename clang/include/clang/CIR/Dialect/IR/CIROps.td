@@ -722,7 +722,7 @@ def CIR_StoreOp : CIR_Op<"store", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_ReturnableScopes = [
-  "FuncOp", "ScopeOp", "IfOp", "SwitchOp", "CaseOp",
+  "FuncOp", "ScopeOp", "IfOp", "SwitchOp", "CaseOp", "CleanupScopeOp",
   "DoWhileOp", "WhileOp", "ForOp", "TryOp"
 ];
 
@@ -6074,6 +6074,262 @@ def CIR_EhTypeIdOp : CIR_Op<"eh.typeid",
 }
 
 //===----------------------------------------------------------------------===//
+// Flattened EH Operations: EhInitiateOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhInitiateOp : CIR_Op<"eh.initiate"> {
+  let summary = "Initiate exception handling in flattened CIR";
+  let description = [{
+    `cir.eh.initiate` is the first operation in the unwind destination of a
+    `cir.try_call` operation after CFG flattening. It returns an opaque
+    `!cir.eh_token` that represents the in-flight exception.
+
+    The `cleanup` attribute indicates that cleanup code must be executed before
+    the exception is dispatched to any handlers. When present, the operation
+    will be followed by cleanup code before branching to a `cir.eh.dispatch`
+    operation.
+
+    The returned token is passed to `cir.begin_cleanup`, `cir.begin_catch`,
+    or `cir.eh.dispatch` operations.
+
+    Example:
+
+    ```mlir
+    ^unwind:
+      %eh_token = cir.eh.initiate : !cir.eh_token
+      cir.br ^dispatch(%eh_token : !cir.eh_token)
+
+    ^unwind_with_cleanup:
+      %eh_token = cir.eh.initiate cleanup : !cir.eh_token
+      cir.br ^cleanup(%eh_token : !cir.eh_token)
+    ```
+  }];
+
+  let arguments = (ins UnitAttr:$cleanup);
+  let results = (outs CIR_EhTokenType:$eh_token);
+  let assemblyFormat = [{
+    (`cleanup` $cleanup^)? `:` type($eh_token) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Flattened EH Operations: EhDispatchOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhDispatchOp : CIR_Op<"eh.dispatch", [
+  Terminator
+]> {
+  let summary = "Dispatch to exception handlers based on exception type";
+
+  let description = [{
+    `cir.eh.dispatch` is a terminator operation that dispatches control flow
+    based on the type of the in-flight exception. It takes an `!cir.eh_token`
+    as input and branches to an eh handler block based on the exception type.
+
+    The operation contains a list of handlers specified as type-block pairs,
+    plus either a `catch_all` handler or an `unwind` handler, which continues
+    unwinding if no catch handler matches. Exactly one of `catch_all` or
+    `unwind` must be present.
+
+    When the type of the in-flight exception matches a type handler, control
+    is transfered to the corresponding block with the eh_token as an argument.
+    The `catch_all` handler, if present, catches any exception not matched by
+    another type handler. The `unwind` handler is used when no handler is
+    matched.
+
+    Example:
+
+    ```mlir
+    cir.eh.dispatch %eh_token : !cir.eh_token [
+      catch (#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^catch_int,
+      catch (#cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>) : ^catch_str,
+      catch_all : ^catch_all
+    ]
+
+    cir.eh.dispatch %eh_token : !cir.eh_token [
+      catch (#cir.global_view<type @_ZTIi> : !cir.ptr<!u8i>) : ^catch_int,
+      unwind : ^continue_unwind
+    ]
+    ```
+  }];
+
+  let arguments = (ins
+    CIR_EhTokenType:$eh_token,
+    OptionalAttr<ArrayAttr>:$catch_types,
+    UnitAttr:$default_is_catch_all
+  );
+
+  let successors = (successor
+     AnySuccessor:$default_destination,
+     VariadicSuccessor<AnySuccessor>:$catch_destinations
+  );
+
+  let assemblyFormat = [{
+    $eh_token `:` type($eh_token)
+    custom<EhDispatchDestinations>($catch_types, $catch_destinations,
+                                   $default_destination, $default_is_catch_all)
+    attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Flattened EH Operations: BeginCleanupOp
+//===----------------------------------------------------------------------===//
+
+def CIR_BeginCleanupOp : CIR_Op<"begin_cleanup"> {
+  let summary = "Begin a cleanup block during exception unwinding";
+  let description = [{
+    `cir.begin_cleanup` marks the beginning of a cleanup handler during
+    exception unwinding. It takes a `!cir.eh_token` and returns a
+    `!cir.cleanup_token` that must be passed to the corresponding
+    `cir.end_cleanup` operation.
+
+    The cleanup code between `cir.begin_cleanup` and `cir.end_cleanup` will be
+    executed during exception unwinding before control is transferred to
+    the exception dispatcher.
+
+    Example:
+
+    ```mlir
+    ^cleanup(%eh_token : !cir.eh_token):
+      %cleanup_token = cir.begin_cleanup %eh_token : !cir.eh_token
+                                                   -> !cir.cleanup_token
+      cir.call @destructor() : () -> ()
+      cir.end_cleanup %cleanup_token : !cir.cleanup_token
+      cir.br ^dispatch(%eh_token : !cir.eh_token)
+    ```
+  }];
+
+  let arguments = (ins CIR_EhTokenType:$eh_token);
+  let results = (outs CIR_CleanupTokenType:$cleanup_token);
+  let assemblyFormat = [{
+    $eh_token `:` type($eh_token) `->` type($cleanup_token) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Flattened EH Operations: EndCleanupOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EndCleanupOp : CIR_Op<"end_cleanup"> {
+  let summary = "End a cleanup block during exception unwinding";
+  let description = [{
+    `cir.end_cleanup` marks the end of a cleanup block during exception
+    unwinding. It takes the `!cir.cleanup_token` returned by the corresponding
+    `cir.begin_cleanup` operation.
+
+    After the cleanup is complete, control typically transfers to either a
+    catch dispatch block or continues unwinding via `cir.resume`.
+
+    Example:
+
+    ```mlir
+    ^cleanup(%eh_token : !cir.eh_token):
+      %cleanup_token = cir.begin_cleanup %eh_token : !cir.eh_token
+                                                   -> !cir.cleanup_token
+      cir.call @destructor() : () -> ()
+      cir.end_cleanup %cleanup_token : !cir.cleanup_token
+      cir.br ^dispatch(%eh_token : !cir.eh_token)
+    ```
+  }];
+
+  let arguments = (ins CIR_CleanupTokenType:$cleanup_token);
+  let assemblyFormat = [{
+    $cleanup_token `:` type($cleanup_token) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Flattened EH Operations: BeginCatchOp
+//===----------------------------------------------------------------------===//
+
+def CIR_BeginCatchOp : CIR_Op<"begin_catch"> {
+  let summary = "Begin a catch handler block";
+  let description = [{
+    `cir.begin_catch` marks the beginning of a catch handler. It takes a
+    `!cir.eh_token` and an optional exception type, and returns a
+    `!cir.catch_token` along with a pointer to the exception object.
+
+    The catch token must be passed to the corresponding `cir.end_catch`
+    operation. The exception pointer points to the caught exception object
+    and can be used to access the exception value.
+
+    For `catch(...)` (catch all), the exception type is omitted.
+
+    Example:
+
+    ```mlir
+    ^catch_int(%eh_token : !cir.eh_token):
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+      // Handle exception...
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.br ^continue
+
+    ^catch_all(%eh_token : !cir.eh_token):
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      // Handle exception...
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.br ^continue
+    ```
+  }];
+
+  let arguments = (ins CIR_EhTokenType:$eh_token);
+  let results = (outs CIR_CatchTokenType:$catch_token,
+                      CIR_PointerType:$exn_ptr);
+
+  let assemblyFormat = [{
+    $eh_token `:` type($eh_token) `->` `(` type($catch_token) `,`
+       qualified(type($exn_ptr)) `)` attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// Flattened EH Operations: EndCatchOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EndCatchOp : CIR_Op<"end_catch"> {
+  let summary = "End a catch handler block";
+  let description = [{
+    `cir.end_catch` marks the end of a catch handler block. It takes the
+    `!cir.catch_token` returned by the corresponding `cir.begin_catch`
+    operation.
+
+    All control flow paths through a catch handler must pass through a single
+    `cir.end_catch` operation before leaving the catch block.
+
+    Example:
+
+    ```mlir
+    ^catch_int(%eh_token : !cir.eh_token):
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+      // Handle exception...
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.br ^continue
+    ```
+  }];
+
+  let arguments = (ins CIR_CatchTokenType:$catch_token);
+  let assemblyFormat = [{
+    $catch_token `:` type($catch_token) attr-dict
+  }];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
 // Atomic operations
 //===----------------------------------------------------------------------===//
 
@@ -6177,11 +6433,14 @@ def CIR_AtomicXchgOp : CIR_Op<"atomic.xchg", [
     Arg<CIR_PointerType, "", [MemRead, MemWrite]>:$ptr,
     CIR_AnyType:$val,
     Arg<CIR_MemOrder, "memory order">:$mem_order,
+    CIR_SyncScopeKind:$sync_scope,
     UnitAttr:$is_volatile
   );
 
   let assemblyFormat = [{
-    $mem_order (`volatile` $is_volatile^)?
+    $mem_order
+    `syncscope` `(` $sync_scope `)`
+    (`volatile` $is_volatile^)?
     $ptr `,` $val
     `:` functional-type(operands, results) attr-dict
   }];

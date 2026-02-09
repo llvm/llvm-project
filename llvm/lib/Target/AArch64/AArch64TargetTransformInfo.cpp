@@ -1071,9 +1071,11 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       EVT VecVT = getTLI()->getValueType(DL, RetTy);
       unsigned EltSizeInBytes =
           cast<ConstantInt>(ICA.getArgs()[2])->getZExtValue();
-      if (is_contained({1u, 2u, 4u, 8u}, EltSizeInBytes) &&
-          VecVT.getVectorMinNumElements() == (16 / EltSizeInBytes))
-        return 1;
+      if (!is_contained({1u, 2u, 4u, 8u}, EltSizeInBytes) ||
+          VecVT.getVectorMinNumElements() != (16 / EltSizeInBytes))
+        break;
+      // For fixed-vector types we need to AND the mask with a ptrue vl<N>.
+      return isa<FixedVectorType>(RetTy) ? 2 : 1;
     }
     break;
   }

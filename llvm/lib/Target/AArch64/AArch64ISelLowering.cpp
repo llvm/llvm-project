@@ -1413,7 +1413,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SMUL_LOHI, VT, Expand);
       setOperationAction(ISD::UMUL_LOHI, VT, Expand);
 
-      setOperationAction(ISD::BSWAP, VT, Expand);
+      if (VT == MVT::v4i16 || VT == MVT::v8i16 || VT == MVT::v2i32 ||
+          VT == MVT::v4i32 || VT == MVT::v2i64)
+        setOperationAction(ISD::BSWAP, VT, Legal);
+      else
+        setOperationAction(ISD::BSWAP, VT, Expand);
       setOperationAction(ISD::CTTZ, VT, Expand);
 
       for (MVT InnerVT : MVT::fixedlen_vector_valuetypes()) {
@@ -3378,7 +3382,7 @@ static const MachineInstr *stripVRegCopies(const MachineRegisterInfo &MRI,
       continue;
     }
     if (Opcode == AArch64::SUBREG_TO_REG) {
-      Reg = DefMI->getOperand(2).getReg();
+      Reg = DefMI->getOperand(1).getReg();
       continue;
     }
 
@@ -3566,6 +3570,7 @@ static SDValue convertFixedMaskToScalableVector(SDValue Mask,
 static SDValue getPredicateForVector(SelectionDAG &DAG, SDLoc &DL, EVT VT);
 static SDValue getPredicateForScalableVector(SelectionDAG &DAG, SDLoc &DL,
                                              EVT VT);
+static SDValue getSVEPredicateBitCast(EVT VT, SDValue Op, SelectionDAG &DAG);
 
 /// isZerosVector - Check whether SDNode N is a zero-filled vector.
 static bool isZerosVector(const SDNode *N) {
@@ -6027,6 +6032,43 @@ static SDValue optimizeIncrementingWhile(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Match get.active.lane.mask(0, cttz.elts(x)) -> brkb(x)
+// Match get.active.lane.mask(0, add(cttz.elts(x), 1)) -> brka(x)
+static SDValue optimizeBrk(SDNode *N, SelectionDAG &DAG) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  // Lower bound must be 0.
+  if (!isZeroOrZeroSplat(N->getOperand(0)))
+    return SDValue();
+
+  SDValue Upper = N->getOperand(1);
+
+  // Default to brkb, switch to brka if we find a +1.
+  unsigned BrkID = Intrinsic::aarch64_sve_brkb_z;
+  if (Upper->getOpcode() == ISD::ADD && isOneOrOneSplat(Upper.getOperand(1))) {
+    Upper = Upper.getOperand(0);
+    BrkID = Intrinsic::aarch64_sve_brka_z;
+  }
+
+  // We're looking for an upper bound based on CTTZ_ELTS; this would be selected
+  // as a cntp(brk(Pg, Mask)), but if we're just going to make a whilelo based
+  // on that then we just need the brk.
+  if (Upper.getOpcode() != AArch64ISD::CTTZ_ELTS || !VT.isScalableVector())
+    return SDValue();
+
+  SDValue Pg = Upper->getOperand(0);
+  SDValue Mask = Upper->getOperand(1);
+
+  // brk{a,b} only support .b forms, so cast to make sure all our p regs match.
+  Pg = getSVEPredicateBitCast(MVT::nxv16i1, Pg, DAG);
+  SDValue MaskR =
+      DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, Mask);
+  SDValue ID = DAG.getTargetConstant(BrkID, DL, MVT::i64);
+  SDValue Brk =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i1, ID, Pg, MaskR);
+  return DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, Brk);
+}
+
 // Returns a safe bitcast between two scalable vector predicates, where
 // any newly created lanes from a widening bitcast are defined as zero.
 static SDValue getSVEPredicateBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) {
@@ -6908,21 +6950,17 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     EVT VT = CttzOp.getValueType();
     assert(VT.getVectorElementType() == MVT::i1 && "Expected MVT::i1");
 
-    // Default to all for scalable vectors
-    unsigned PgPattern = AArch64SVEPredPattern::all;
     if (VT.isFixedLengthVector()) {
       // We can use SVE instructions to lower this intrinsic by first creating
       // an SVE predicate register mask from the fixed-width vector.
-      EVT NewVT = getTypeToTransformTo(*DAG.getContext(), VT);
-      SDValue Mask = DAG.getNode(ISD::SIGN_EXTEND, DL, NewVT, CttzOp);
+      VT = getTypeToTransformTo(*DAG.getContext(), VT);
+      SDValue Mask = DAG.getNode(ISD::SIGN_EXTEND, DL, VT, CttzOp);
       CttzOp = convertFixedMaskToScalableVector(Mask, DAG);
-      // Override with a VLx.
-      PgPattern = *getSVEPredPatternFromNumElements(VT.getVectorNumElements());
     }
 
-    SDValue Pattern = DAG.getTargetConstant(PgPattern, DL, MVT::i32);
+    SDValue Pg = getPredicateForVector(DAG, DL, VT);
     SDValue NewCttzElts =
-        DAG.getNode(AArch64ISD::CTTZ_ELTS, DL, MVT::i64, CttzOp, Pattern);
+        DAG.getNode(AArch64ISD::CTTZ_ELTS, DL, MVT::i64, Pg, CttzOp);
     return DAG.getZExtOrTrunc(NewCttzElts, DL, Op.getValueType());
   }
   case Intrinsic::experimental_vector_match: {
@@ -13143,14 +13181,15 @@ static SDValue getEstimate(const AArch64Subtarget *ST, unsigned Opcode,
   return SDValue();
 }
 
-SDValue
-AArch64TargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
-                                        const DenormalMode &Mode) const {
+SDValue AArch64TargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
+                                                const DenormalMode &Mode,
+                                                SDNodeFlags Flags) const {
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   SDValue FPZero = DAG.getConstantFP(0.0, DL, VT);
-  return DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ);
+  return DAG.getSetCC(DL, CCVT, Op, FPZero, ISD::SETEQ, /*Chain=*/{},
+                      /*Signaling=*/false, Flags);
 }
 
 SDValue
@@ -13592,12 +13631,30 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
       int RegNo;
       bool Failed = Constraint.slice(2, Size - 1).getAsInteger(10, RegNo);
       if (!Failed && RegNo >= 0 && RegNo <= 31) {
-        // v0 - v31 are aliases of q0 - q31 or d0 - d31 depending on size.
+        // v0 - v31 are aliases of q0/d0/s0/h0 - ...31 depending on size.
         // By default we'll emit v0-v31 for this unless there's a modifier where
         // we'll emit the correct register as well.
-        if (VT != MVT::Other && VT.getSizeInBits() == 64) {
-          Res.first = AArch64::FPR64RegClass.getRegister(RegNo);
-          Res.second = &AArch64::FPR64RegClass;
+        if (VT != MVT::Other) {
+          switch (VT.getSizeInBits()) {
+          case 16:
+            Res.first = AArch64::FPR16RegClass.getRegister(RegNo);
+            Res.second = &AArch64::FPR16RegClass;
+            break;
+          case 32:
+            Res.first = AArch64::FPR32RegClass.getRegister(RegNo);
+            Res.second = &AArch64::FPR32RegClass;
+            break;
+          case 64:
+            Res.first = AArch64::FPR64RegClass.getRegister(RegNo);
+            Res.second = &AArch64::FPR64RegClass;
+            break;
+          case 128:
+            Res.first = AArch64::FPR128RegClass.getRegister(RegNo);
+            Res.second = &AArch64::FPR128RegClass;
+            break;
+          default:
+            return std::make_pair(0U, nullptr);
+          }
         } else {
           Res.first = AArch64::FPR128RegClass.getRegister(RegNo);
           Res.second = &AArch64::FPR128RegClass;
@@ -19470,6 +19527,9 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                              const AArch64Subtarget *ST) {
   if (DCI.isBeforeLegalize())
     return SDValue();
+
+  if (SDValue Brk = optimizeBrk(N, DCI.DAG))
+    return Brk;
 
   if (SDValue While = optimizeIncrementingWhile(N, DCI.DAG, /*IsSigned=*/false,
                                                 /*IsEqual=*/false))
