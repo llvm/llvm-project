@@ -2432,6 +2432,8 @@ public:
   /// addresses of basic blocks.
   bool requiresAddressMap() const;
 
+  bool hasShortRangeBranchBeyondFragment() const;
+
   /// Adjust branch instructions to match the CFG.
   ///
   /// As it comes to internal branches, the CFG represents "the ultimate source
