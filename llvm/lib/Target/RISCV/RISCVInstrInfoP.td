@@ -1493,9 +1493,23 @@ def riscv_addd : RVSDNode<"ADDD", SDT_RISCVIntBinOpD,
                           [SDNPCommutative, SDNPAssociative]>;
 def riscv_subd : RVSDNode<"SUBD", SDT_RISCVIntBinOpD>;
 
+def riscv_wmulsu : RVSDNode<"WMULSU", SDTIntBinHiLoOp>;
+
 // Averaging subtraction, (a - b) >> 2
 def riscv_asub : RVSDNode<"ASUB", SDTIntBinOp>;
 def riscv_asubu : RVSDNode<"ASUBU", SDTIntBinOp>;
+
+// Widening multiply add (lo, hi) = wmacc(m1, m2, addlo, addhi)
+def SDT_RISCVWideningMAccW : SDTypeProfile<2, 4, [SDTCisVT<0, i32>,
+                                                  SDTCisVT<1, i32>,
+                                                  SDTCisVT<2, i32>,
+                                                  SDTCisVT<3, i32>,
+                                                  SDTCisSameAs<0, 4>,
+                                                  SDTCisSameAs<0, 5>]>;
+def riscv_wmacc  : RVSDNode<"WMACC", SDT_RISCVWideningMAccW,
+                            [SDNPCommutative]>;
+def riscv_wmaccu : RVSDNode<"WMACCU", SDT_RISCVWideningMAccW,
+                            [SDNPCommutative]>;
 
 // MULH/MULHU/MULHSU with rounding.
 def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp>;

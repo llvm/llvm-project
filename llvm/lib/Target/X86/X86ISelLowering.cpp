@@ -48639,6 +48639,8 @@ static SDValue combineSelect(SDNode *N, SelectionDAG &DAG,
     }
 
     if (Opcode) {
+      // Propagate fast-math-flags.
+      SelectionDAG::FlagInserter FlagsInserter(DAG, N->getFlags());
       if (IsStrict) {
         SDValue Ret = DAG.getNode(Opcode == X86ISD::FMIN ? X86ISD::STRICT_FMIN
                                                          : X86ISD::STRICT_FMAX,
@@ -54249,7 +54251,8 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
     if (VT.isVector() && MemVT.isVector() && VT.getScalarType().isInteger() &&
         MemVT.getScalarType().isInteger() &&
         VT.getVectorNumElements() == MemVT.getVectorNumElements() &&
-        Subtarget.hasBWI() && Subtarget.hasVLX()) {
+        Subtarget.hasBWI() &&
+        (VT.getSizeInBits() == 512 || Subtarget.hasVLX())) {
 
       SDValue SatSrc;
       unsigned Opc;
@@ -56329,8 +56332,9 @@ static SDValue combineFMinFMax(SDNode *N, SelectionDAG &DAG) {
   assert(N->getOpcode() == X86ISD::FMIN || N->getOpcode() == X86ISD::FMAX);
 
   // FMIN/FMAX are commutative if no NaNs and no negative zeros are allowed.
-  if (!DAG.getTarget().Options.NoNaNsFPMath ||
-      !DAG.getTarget().Options.NoSignedZerosFPMath)
+  if ((!DAG.getTarget().Options.NoNaNsFPMath && !N->getFlags().hasNoNaNs()) ||
+      (!DAG.getTarget().Options.NoSignedZerosFPMath &&
+       !N->getFlags().hasNoSignedZeros()))
     return SDValue();
 
   // If we run in unsafe-math mode, then convert the FMAX and FMIN nodes
