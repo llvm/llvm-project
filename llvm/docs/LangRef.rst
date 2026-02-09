@@ -13062,20 +13062,21 @@ element zero ends up in the most significant bits for big-endian.
 If ``value`` is of the :ref:`byte type <t_byte>`:
 
 * If ``value`` contains at least one ``poison`` bit, the cast result is
-``poison``.
+  ``poison``.
 
 * If ``value`` is any mix of (non-``poison``) pointer and non-pointer bits:
 
     * If ``ty2`` is a non-pointer type, the provenance of the pointer bits is
-    stripped without being exposed, similarly to the
-    :ref:`ptrtoaddr <i_ptrtoaddr>` instruction.
+      stripped without being exposed, similarly to the
+      :ref:`ptrtoaddr <i_ptrtoaddr>` instruction.
 
     * If ``ty2`` is a pointer type, then if all bits of ``value`` are from the
-    same pointer and are correctly ordered (there were no pointer bit swaps),
-    the cast result is that pointer. If ``value`` is a mix of bits from
-    different pointers or a mix of pointer and non-pointer bits, the result is a
-    pointer without provenance. This pointer cannot be dereferenced, but can be
-    used in comparisons or :ref:`getelementptr <i_getelementptr>` instructions.
+      same pointer and are correctly ordered (there were no pointer bit swaps),
+      the cast result is that pointer. If ``value`` is a mix of bits from
+      different pointers or a mix of pointer and non-pointer bits, the result is
+      a pointer without provenance. This pointer cannot be dereferenced, but can
+      be used in comparisons or :ref:`getelementptr <i_getelementptr>`
+      instructions.
 
 * Otherwise, the cast is a *no-op*.
 
