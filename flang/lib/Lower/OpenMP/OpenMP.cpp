@@ -1801,6 +1801,7 @@ static void genTaskClauses(
     mlir::omp::TaskOperands &clauseOps,
     llvm::SmallVectorImpl<const semantics::Symbol *> &inReductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAffinity(clauseOps);
   cp.processAllocate(clauseOps);
   cp.processDepend(symTable, stmtCtx, clauseOps);
   cp.processFinal(stmtCtx, clauseOps);
@@ -1810,8 +1811,6 @@ static void genTaskClauses(
   cp.processPriority(stmtCtx, clauseOps);
   cp.processUntied(clauseOps);
   cp.processDetach(clauseOps);
-
-  cp.processTODO<clause::Affinity>(loc, llvm::omp::Directive::OMPD_task);
 }
 
 static void genTaskgroupClauses(
@@ -3884,31 +3883,29 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   const auto &specifier =
       DEREF(parser::omp::GetFirstArgument<parser::OmpReductionSpecifier>(
           construct.v));
-  if (std::get<parser::OmpTypeNameList>(specifier.t).v.size() > 1)
-    TODO(converter.getCurrentLocation(),
-         "multiple types in declare reduction is not yet supported");
-
-  mlir::Type reductionType = getReductionType(converter, specifier);
+  const auto &typeNameList = std::get<parser::OmpTypeNameList>(specifier.t);
   List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
   const clause::Combiner &combiner =
       appendCombiner(construct, clauses, semaCtx);
-
-  ReductionProcessor::GenCombinerCBTy genCombinerCB =
-      processReductionCombiner(converter, symTable, semaCtx, combiner);
-
-  ReductionProcessor::GenInitValueCBTy genInitValueCB;
-  ClauseProcessor cp(converter, semaCtx, clauses);
-  cp.processInitializer(symTable, genInitValueCB);
-
   const auto &identifier =
       std::get<parser::OmpReductionIdentifier>(specifier.t);
   const auto &designator = std::get<parser::ProcedureDesignator>(identifier.u);
   const auto &reductionName = std::get<parser::Name>(designator.u);
-  bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
-  ReductionProcessor::createDeclareReductionHelper<
-      mlir::omp::DeclareReductionOp>(
-      converter, reductionName.ToString(), reductionType,
-      converter.getCurrentLocation(), isByRef, genCombinerCB, genInitValueCB);
+
+  for (const auto &typeSpec : typeNameList.v) {
+    (void)typeSpec; // Currently unused
+    mlir::Type reductionType = getReductionType(converter, specifier);
+    ReductionProcessor::GenCombinerCBTy genCombinerCB =
+        processReductionCombiner(converter, symTable, semaCtx, combiner);
+    ReductionProcessor::GenInitValueCBTy genInitValueCB;
+    ClauseProcessor cp(converter, semaCtx, clauses);
+    cp.processInitializer(symTable, genInitValueCB);
+    bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
+    ReductionProcessor::createDeclareReductionHelper<
+        mlir::omp::DeclareReductionOp>(
+        converter, reductionName.ToString(), reductionType,
+        converter.getCurrentLocation(), isByRef, genCombinerCB, genInitValueCB);
+  }
 }
 
 static void

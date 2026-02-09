@@ -18,6 +18,7 @@
 #include <__iterator/segmented_iterator.h>
 #include <__type_traits/invoke.h>
 #include <__utility/convert_to_integral.h>
+#include <__utility/forward.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -31,7 +32,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _Size, class _Func, class _Proj>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
-__for_each_n(_InputIterator __first, _Size __orig_n, _Func& __f, _Proj& __proj) {
+__for_each_n(_InputIterator __first, _Size __orig_n, _Func&& __f, _Proj& __proj) {
   typedef decltype(std::__convert_to_integral(__orig_n)) _IntegralSize;
   _IntegralSize __n = __orig_n;
 
@@ -43,7 +44,7 @@ __for_each_n(_InputIterator __first, _Size __orig_n, _Func& __f, _Proj& __proj) 
         std::__for_each(__lfirst, __llast, __f, __proj);
       });
     } else {
-      return std::__for_each(__first, __first + __n, __f, __proj);
+      return std::__for_each(__first, __first + __n, std::forward<_Func>(__f), __proj);
     }
   } else
 #endif

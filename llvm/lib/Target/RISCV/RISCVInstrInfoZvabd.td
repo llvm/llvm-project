@@ -15,7 +15,7 @@
 // Instruction Definitions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasStdExtZvabd] in {
-  defm VABS_V : VALU_MV_VS2<"vabs.v", 0b010010, 0b10000>;
+  def VABS_V : VALUVs2<0b010010, 0b10000, OPMVV, "vabs.v">;
 
   def VABD_VV  : VALUVV<0b010001, OPMVV, "vabd.vv">;
   def VABDU_VV : VALUVV<0b010011, OPMVV, "vabdu.vv">;
@@ -59,12 +59,17 @@ def riscv_abds_vl : RVSDNode<"ABDS_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>
 def riscv_abdu_vl : RVSDNode<"ABDU_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 } // let HasPassthruOp = true, HasMaskOp = true
 
-let Predicates = [HasStdExtZvabd] in {
-defm : VPatBinarySDNode_VV<abds, "PseudoVABD">;
-defm : VPatBinarySDNode_VV<abdu, "PseudoVABDU">;
+// These instructions are defined for SEW=8 and SEW=16, otherwise the instruction
+// encoding is reserved.
+defvar ABDIntVectors = !filter(vti, AllIntegerVectors, !or(!eq(vti.SEW, 8),
+                                                           !eq(vti.SEW, 16)));
 
-defm : VPatBinaryVL_VV<riscv_abds_vl, "PseudoVABD">;
-defm : VPatBinaryVL_VV<riscv_abdu_vl, "PseudoVABDU">;
+let Predicates = [HasStdExtZvabd] in {
+defm : VPatBinarySDNode_VV<abds, "PseudoVABD", ABDIntVectors>;
+defm : VPatBinarySDNode_VV<abdu, "PseudoVABDU", ABDIntVectors>;
+
+defm : VPatBinaryVL_VV<riscv_abds_vl, "PseudoVABD", ABDIntVectors>;
+defm : VPatBinaryVL_VV<riscv_abdu_vl, "PseudoVABDU", ABDIntVectors>;
 
 foreach vti = AllIntegerVectors in {
   def : Pat<(vti.Vector (abs (vti.Vector vti.RegClass:$rs2))),
