@@ -261,33 +261,6 @@ Sema::createLambdaClosureType(SourceRange IntroducerRange, TypeSourceInfo *Info,
   return Class;
 }
 
-// See discussion in https://github.com/itanium-cxx-abi/cxx-abi/issues/186
-//
-// zygoloid:
-//    Yeah, I think the only cases left where lambdas don't need a
-//    mangling are when they have (effectively) internal linkage or
-//    appear in a non-inline function in a non-module translation unit.
-static bool isNonInlineInModulePurview(const Decl *D) {
-  if (auto *ND = dyn_cast<NamedDecl>(D))
-    return (ND->isInNamedModule() || ND->isFromGlobalModule()) &&
-           ND->isExternallyVisible();
-  return false;
-}
-
-/// Determine whether the given context is or is enclosed in an inline
-/// function.
-static bool isInInlineFunction(const DeclContext *DC) {
-  while (!DC->isFileContext()) {
-    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC))
-      if (FD->isInlined() || isNonInlineInModulePurview(FD))
-        return true;
-
-    DC = DC->getLexicalParent();
-  }
-
-  return false;
-}
-
 std::tuple<MangleNumberingContext *, Decl *>
 Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   // Compute the context for allocating mangling numbers in the current
@@ -306,6 +279,22 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   bool IsInNonspecializedTemplate =
       inTemplateInstantiation() || CurContext->isDependentContext();
 
+  // Checks if a VarDecl or FunctionDecl is from a module purview and externally
+  // visible. These Decls should be treated as "inline" for the purpose of
+  // mangling in the code below.
+  //
+  // See discussion in https://github.com/itanium-cxx-abi/cxx-abi/issues/186
+  //
+  // zygoloid:
+  //    Yeah, I think the only cases left where lambdas don't need a
+  //    mangling are when they have (effectively) internal linkage or
+  //    appear in a non-inline function in a non-module translation unit.
+  static constexpr auto IsExternallyVisibleInModulePurview =
+      [](const NamedDecl *ND) -> bool {
+    return (ND->isInNamedModule() || ND->isFromGlobalModule()) &&
+           ND->isExternallyVisible();
+  };
+
   // Default arguments of member function parameters that appear in a class
   // definition, as well as the initializers of data members, receive special
   // treatment. Identify them.
@@ -320,7 +309,7 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
           return DefaultArgument;
     } else if (VarDecl *Var = dyn_cast<VarDecl>(ManglingContextDecl)) {
       if (Var->getMostRecentDecl()->isInline() ||
-          isNonInlineInModulePurview(Var))
+          IsExternallyVisibleInModulePurview(Var))
         return InlineVariable;
 
       if (Var->getDeclContext()->isRecord() && IsInNonspecializedTemplate)
@@ -342,6 +331,23 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     return Normal;
   }();
 
+  // Determine whether the given context is or is enclosed in a function that
+  // must be mangled, either:
+  // - an inline function
+  // - or a function in a module purview that is externally visible
+  static constexpr auto IsInFunctionThatNeedsMangling =
+      [](const DeclContext *DC) -> bool {
+    while (!DC->isFileContext()) {
+      if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC))
+        if (FD->isInlined() || IsExternallyVisibleInModulePurview(FD))
+          return true;
+
+      DC = DC->getLexicalParent();
+    }
+
+    return false;
+  };
+
   // Itanium ABI [5.1.7]:
   //   In the following contexts [...] the one-definition rule requires closure
   //   types in different translation units to "correspond":
@@ -350,7 +356,7 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     //  -- the bodies of inline or templated functions
     if ((IsInNonspecializedTemplate &&
          !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
-        isInInlineFunction(CurContext)) {
+        IsInFunctionThatNeedsMangling(CurContext)) {
       while (auto *CD = dyn_cast<CapturedDecl>(DC))
         DC = CD->getParent();
       return std::make_tuple(&Context.getManglingNumberContext(DC), nullptr);
