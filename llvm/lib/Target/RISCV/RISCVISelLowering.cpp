@@ -5486,6 +5486,56 @@ static SDValue lowerVECTOR_SHUFFLEAsVSlideup(const SDLoc &DL, MVT VT,
   return convertFromScalableVector(VT, Res, DAG, Subtarget);
 }
 
+// A shuffle of shuffles where the final data only is drawn from 2 input ops
+// can be compressed into a single shuffle
+static SDValue compressShuffleOfShuffles(ShuffleVectorSDNode *SVN,
+                                         const RISCVSubtarget &Subtarget,
+                                         SelectionDAG &DAG) {
+  SDValue V1 = SVN->getOperand(0);
+  SDValue V2 = SVN->getOperand(1);
+
+  if (V1.getOpcode() != ISD::VECTOR_SHUFFLE ||
+      V2.getOpcode() != ISD::VECTOR_SHUFFLE)
+    return SDValue();
+
+  if (!V1.hasOneUse() || !V2.hasOneUse())
+    return SDValue();
+
+  ArrayRef<int> Mask = SVN->getMask();
+  ArrayRef<int> V1Mask = cast<ShuffleVectorSDNode>(V1.getNode())->getMask();
+  ArrayRef<int> V2Mask = cast<ShuffleVectorSDNode>(V2.getNode())->getMask();
+  unsigned NumElts = Mask.size();
+  SmallVector<int> NewMask(NumElts, -1);
+  for (unsigned Idx : seq<unsigned>(NumElts)) {
+    int Lane = Mask[Idx];
+    // Don't assign if poison
+    if (Lane == -1)
+      continue;
+    int OrigLane;
+    bool SecondOp = false;
+    if ((unsigned)Lane < NumElts) {
+      OrigLane = V1Mask[Lane];
+    } else {
+      OrigLane = V2Mask[Lane - NumElts];
+      SecondOp = true;
+    }
+    if (OrigLane == -1)
+      continue;
+    // Don't handle if shuffling from a second operand
+    if ((unsigned)OrigLane >= NumElts)
+      return SDValue();
+    if (SecondOp)
+      OrigLane += NumElts;
+    NewMask[Idx] = OrigLane;
+  }
+
+  MVT VT = SVN->getSimpleValueType(0);
+  SDLoc DL(SVN);
+
+  return DAG.getVectorShuffle(VT, DL, V1->getOperand(0), V2->getOperand(0),
+                              NewMask);
+}
+
 /// Match v(f)slide1up/down idioms.  These operations involve sliding
 /// N-1 elements to make room for an inserted scalar at one end.
 static SDValue lowerVECTOR_SHUFFLEAsVSlide1(const SDLoc &DL, MVT VT,
@@ -20435,7 +20485,8 @@ static SDValue performVECTOR_SHUFFLECombine(SDNode *N, SelectionDAG &DAG,
   const unsigned NumElts = VT.getVectorNumElements();
   SDValue V1 = N->getOperand(0);
   SDValue V2 = N->getOperand(1);
-  ArrayRef<int> Mask = cast<ShuffleVectorSDNode>(N)->getMask();
+  ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(N);
+  ArrayRef<int> Mask = SVN->getMask();
   MVT XLenVT = Subtarget.getXLenVT();
 
   // Recognized a disguised select of add/sub.
@@ -20463,6 +20514,9 @@ static SDValue performVECTOR_SHUFFLECombine(SDNode *N, SelectionDAG &DAG,
     SDValue NewB = DAG.getNode(ISD::VSELECT, DL, VT, CC, NegB, B);
     return DAG.getNode(ISD::ADD, DL, VT, A, NewB);
   }
+
+  if (SDValue V = compressShuffleOfShuffles(SVN, Subtarget, DAG))
+    return V;
 
   // Custom legalize <N x i128> or <N x i256> to <M x ELEN>.  This runs
   // during the combine phase before type legalization, and relies on
