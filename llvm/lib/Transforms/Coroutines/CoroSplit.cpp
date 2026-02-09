@@ -940,8 +940,8 @@ static void eraseIntrinsicRetPoplessBefore(ReturnInst *Return) {
 }
 
 // BEGIN SWIFT
-/// Identify which async funclets push or pop async frames, updating `NewAttrs`
-/// accordingly.
+/// Identify which async funclets push or pop async frames, and those that are
+/// continuation funclets, updating `NewAttrs` accordingly.
 static void
 appendSwiftAsyncAttributes(AttributeList &NewAttrs, Function &OrigF,
                            CoroSuspendAsyncInst &ActiveAsyncSuspend) {
@@ -953,8 +953,8 @@ appendSwiftAsyncAttributes(AttributeList &NewAttrs, Function &OrigF,
   if (HasAsyncEntryAttribute) {
     auto &Ctx = OrigF.getContext();
     NewAttrs = NewAttrs.removeFnAttribute(Ctx, "async_entry");
-    if (IsAsyncFramePop)
-      NewAttrs = NewAttrs.addFnAttribute(Ctx, "async_ret");
+    NewAttrs = NewAttrs.addFnAttribute(
+        Ctx, IsAsyncFramePop ? "async_ret" : "async_continuation");
   }
 }
 // END SWIFT
