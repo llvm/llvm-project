@@ -47,9 +47,7 @@ bool_flag(
 
 config_setting(
     name = "enable_cuda_config",
-    flag_values = {
-        ":enable_cuda": "True",
-    },
+    flag_values = {":enable_cuda": "True"},
 )
 
 expand_template(
