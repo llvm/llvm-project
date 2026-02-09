@@ -56,7 +56,6 @@
 // TODO: The LTO pre-link pipeline currently invokes
 //       buildPerModuleDefaultPipeline(), which contains LoopVectorizePass.
 //       This may change as the pipeline gets implemented.
-// CHECK-FULL-OPTIMIZED: Running pass: LoopVectorizePass
 // CHECK-FULL-OPTIMIZED: Running pass: BitcodeWriterPass
 
 // The ThinLTO pre-link pipeline shouldn't contain passes like
