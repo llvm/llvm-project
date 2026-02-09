@@ -133,11 +133,11 @@ public:
         EmitStackSizeSection(false), EnableMachineOutliner(false),
         EnableMachineFunctionSplitter(false),
         EnableStaticDataPartitioning(false), SupportsDefaultOutlining(false),
-        EmitAddrsig(false), BBAddrMap(false), EmitCallGraphSection(false),
-        EmitCallSiteInfo(false), SupportsDebugEntryValues(false),
-        EnableDebugEntryValues(false), ValueTrackingVariableLocations(false),
-        ForceDwarfFrameSection(false), XRayFunctionIndex(true),
-        DebugStrictDwarf(false), Hotpatch(false),
+        EnableDefaultMachineVerifier(true), EmitAddrsig(false),
+        BBAddrMap(false), EmitCallGraphSection(false), EmitCallSiteInfo(false),
+        SupportsDebugEntryValues(false), EnableDebugEntryValues(false),
+        ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
+        XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
         PPCGenScalarMASSEntries(false), JMCInstrument(false),
         EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
         VerifyArgABICompliance(true) {}
@@ -285,6 +285,10 @@ public:
 
   /// Set if the target supports default outlining behaviour.
   unsigned SupportsDefaultOutlining : 1;
+
+  /// Enable Machine verifier at the end of default codegen pipelines. (Only
+  /// used with NPM)
+  unsigned EnableDefaultMachineVerifier : 1;
 
   /// Emit address-significance table.
   unsigned EmitAddrsig : 1;
