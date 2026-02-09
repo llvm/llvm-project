@@ -8,7 +8,9 @@
 
 #include "mlir/Bindings/Python/IRCore.h"
 
+#include <cstring>
 #include <optional>
+#include <string_view>
 #include <vector>
 
 #include "mlir/Bindings/Python/Globals.h"
@@ -21,6 +23,21 @@
 
 namespace nb = nanobind;
 using namespace mlir;
+
+/// Local helper adapted from llvm::Regex::escape.
+namespace {
+static const char RegexMetachars[] = "()^$|*+?.[]\\{}";
+
+static std::string escapeRegex(std::string_view String) {
+  std::string RegexStr;
+  for (char C : String) {
+    if (std::strchr(RegexMetachars, C))
+      RegexStr += '\\';
+    RegexStr += C;
+  }
+  return RegexStr;
+}
+} // namespace
 
 // -----------------------------------------------------------------------------
 // PyGlobals
@@ -258,7 +275,7 @@ void PyGlobals::TracebackLoc::setLocTracebackFramesLimit(size_t value) {
 void PyGlobals::TracebackLoc::registerTracebackFileInclusion(
     const std::string &file) {
   nanobind::ft_lock_guard lock(mutex);
-  auto reg = "^" + llvm::Regex::escape(file);
+  auto reg = "^" + escapeRegex(file);
   if (userTracebackIncludeFiles.insert(reg).second)
     rebuildUserTracebackIncludeRegex = true;
   if (userTracebackExcludeFiles.count(reg)) {
@@ -270,7 +287,7 @@ void PyGlobals::TracebackLoc::registerTracebackFileInclusion(
 void PyGlobals::TracebackLoc::registerTracebackFileExclusion(
     const std::string &file) {
   nanobind::ft_lock_guard lock(mutex);
-  auto reg = "^" + llvm::Regex::escape(file);
+  auto reg = "^" + escapeRegex(file);
   if (userTracebackExcludeFiles.insert(reg).second)
     rebuildUserTracebackExcludeRegex = true;
   if (userTracebackIncludeFiles.count(reg)) {
