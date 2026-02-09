@@ -2878,6 +2878,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return new FPExtInst(NewCall, II->getType());
     }
 
+    // m(fpext X, C) -> fpext m(X, TruncC) if C can be losslessly truncated.
+    Constant *C;
+    if (match(Arg0, m_OneUse(m_FPExt(m_Value(X)))) &&
+        match(Arg1, m_ImmConstant(C))) {
+      if (Constant *TruncC =
+              getLosslessInvCast(C, X->getType(), Instruction::FPExt, DL)) {
+        Value *NewCall =
+            Builder.CreateBinaryIntrinsic(IID, X, TruncC, II, II->getName());
+        return new FPExtInst(NewCall, II->getType());
+      }
+    }
+
     // max X, -X --> fabs X
     // min X, -X --> -(fabs X)
     // TODO: Remove one-use limitation? That is obviously better for max,
