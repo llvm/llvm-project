@@ -228,6 +228,7 @@ add_math_entrypoint_object(floorbf16)
 add_math_entrypoint_object(fma)
 add_math_entrypoint_object(fmaf)
 add_math_entrypoint_object(fmaf16)
+add_math_entrypoint_object(fmabf16)
 
 add_math_entrypoint_object(fmax)
 add_math_entrypoint_object(fmaxf)
