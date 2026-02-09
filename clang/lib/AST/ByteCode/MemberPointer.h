@@ -61,17 +61,35 @@ public:
     return 17;
   }
 
+  /// Does this member pointer have a base declaration?
   bool hasDecl() const { return DeclAndIsDerivedMember.getPointer(); }
   bool isDerivedMember() const { return DeclAndIsDerivedMember.getInt(); }
+  /// Return the base declaration. Might be null.
   const ValueDecl *getDecl() const {
     return DeclAndIsDerivedMember.getPointer();
   }
+  /// Does this member pointer have a path (i.e. path length is > 0)?
   bool hasPath() const { return PathLength != 0; }
+  /// Return the length of the cast path.
   unsigned getPathLength() const { return PathLength; }
+  /// Return the cast path entry at the given position.
   const CXXRecordDecl *getPathEntry(unsigned Index) const {
+    assert(Index < PathLength);
     return Path[Index];
   }
+  /// Return the cast path. Might return null.
   const CXXRecordDecl **path() const { return Path; }
+  bool isZero() const { return Base.isZero() && !hasDecl(); }
+  bool hasBase() const { return !Base.isZero(); }
+  bool isWeak() const {
+    if (const auto *MF = getMemberFunction())
+      return MF->isWeak();
+    return false;
+  }
+
+  /// Sets the path of this member pointer. After this call,
+  /// the memory pointed to by \p NewPath is assumed to be owned
+  /// by this member pointer.
   void takePath(const CXXRecordDecl **NewPath) {
     assert(Path != NewPath);
     Path = NewPath;
@@ -81,7 +99,6 @@ public:
   bool singleWord() const { return false; }
 
   std::optional<Pointer> toPointer(const Context &Ctx) const;
-
   FunctionPointer toFunctionPointer(const Context &Ctx) const;
 
   bool isBaseCastPossible() const {
@@ -95,17 +112,20 @@ public:
       return Base.atField(-PtrOffset);
     return Base.atFieldSub(PtrOffset);
   }
+  /// Is the base declaration a member function?
   bool isMemberFunctionPointer() const {
     return isa_and_nonnull<CXXMethodDecl>(DeclAndIsDerivedMember.getPointer());
   }
+  /// Return the base declaration as a CXXMethodDecl. Might return null.
   const CXXMethodDecl *getMemberFunction() const {
     return dyn_cast_if_present<CXXMethodDecl>(
         DeclAndIsDerivedMember.getPointer());
   }
+  /// Return the base declaration as a FieldDecl. Might return null.
   const FieldDecl *getField() const {
     return dyn_cast_if_present<FieldDecl>(DeclAndIsDerivedMember.getPointer());
   }
-
+  /// Returns the record decl this member pointer points into.
   const CXXRecordDecl *getRecordDecl() const {
     if (const FieldDecl *FD = getField())
       return cast<CXXRecordDecl>(FD->getParent());
@@ -132,14 +152,6 @@ public:
   }
 
   APValue toAPValue(const ASTContext &) const;
-
-  bool isZero() const { return Base.isZero() && !hasDecl(); }
-  bool hasBase() const { return !Base.isZero(); }
-  bool isWeak() const {
-    if (const auto *MF = getMemberFunction())
-      return MF->isWeak();
-    return false;
-  }
 
   void print(llvm::raw_ostream &OS) const {
     OS << "MemberPtr(" << Base << " " << (const void *)getDecl() << " + "
