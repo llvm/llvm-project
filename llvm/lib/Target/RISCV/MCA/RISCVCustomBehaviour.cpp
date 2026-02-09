@@ -27,7 +27,7 @@ struct VXMemOpInfo {
   unsigned Log2IdxEEW : 3;
   unsigned IsOrdered : 1;
   unsigned IsStore : 1;
-  unsigned NF : 4;
+  unsigned NFields : 4;
   unsigned BaseInstr;
 };
 
@@ -215,7 +215,8 @@ getEEWAndEMUL(unsigned Opcode, RISCVVType::VLMUL LMUL, uint8_t SEW) {
     llvm_unreachable("Could not determine EEW from Opcode");
   }
 
-  auto EMUL = RISCVVType::getSameRatioLMUL(SEW, LMUL, EEW);
+  auto EMUL =
+      RISCVVType::getSameRatioLMUL(RISCVVType::getSEWLMULRatio(SEW, LMUL), EEW);
   if (!EEW)
     llvm_unreachable("Invalid SEW or LMUL for new ratio");
   return std::make_pair(EEW, *EMUL);
@@ -268,7 +269,7 @@ unsigned RISCVInstrumentManager::getSchedClassID(
     // the DataEEW and DataEMUL are equal to SEW and LMUL, respectively.
     unsigned IndexEMUL = ((1 << VXMO->Log2IdxEEW) * LMUL) / SEW;
 
-    if (!VXMO->NF) {
+    if (!VXMO->NFields) {
       // Indexed Load / Store.
       if (VXMO->IsStore) {
         if (const auto *VXP = RISCV::getVSXPseudo(
@@ -284,14 +285,14 @@ unsigned RISCVInstrumentManager::getSchedClassID(
     } else {
       // Segmented Indexed Load / Store.
       if (VXMO->IsStore) {
-        if (const auto *VXP =
-                RISCV::getVSXSEGPseudo(VXMO->NF, /*Masked=*/0, VXMO->IsOrdered,
-                                       VXMO->Log2IdxEEW, LMUL, IndexEMUL))
+        if (const auto *VXP = RISCV::getVSXSEGPseudo(
+                VXMO->NFields, /*Masked=*/0, VXMO->IsOrdered, VXMO->Log2IdxEEW,
+                LMUL, IndexEMUL))
           VPOpcode = VXP->Pseudo;
       } else {
-        if (const auto *VXP =
-                RISCV::getVLXSEGPseudo(VXMO->NF, /*Masked=*/0, VXMO->IsOrdered,
-                                       VXMO->Log2IdxEEW, LMUL, IndexEMUL))
+        if (const auto *VXP = RISCV::getVLXSEGPseudo(
+                VXMO->NFields, /*Masked=*/0, VXMO->IsOrdered, VXMO->Log2IdxEEW,
+                LMUL, IndexEMUL))
           VPOpcode = VXP->Pseudo;
       }
     }

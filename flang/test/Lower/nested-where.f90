@@ -313,7 +313,7 @@ program nested_where
   ! CHECK:  fir.call @_FortranARaggedArrayDeallocate(%[[VAL_278]]) {{.*}}: (!fir.llvm_ptr<i8>) -> ()
   ! CHECK:  %[[VAL_280:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<tuple<i64, !fir.heap<!fir.array<?xi8>>, !fir.heap<!fir.array<?xi64>>>>) -> !fir.llvm_ptr<i8>
   ! CHECK:  fir.call @_FortranARaggedArrayDeallocate(%[[VAL_280]]) {{.*}}: (!fir.llvm_ptr<i8>) -> ()
-  
+
   integer :: a(3) = 0
   logical :: mask1(3) = (/ .true.,.false.,.true. /)
   logical :: mask2(3) = (/ .true.,.true.,.false. /)

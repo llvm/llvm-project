@@ -251,6 +251,16 @@ def InitScope : Opcode {
   let Args = [ArgUint32];
 }
 
+def GetLocalEnabled : Opcode {
+  let Args = [ArgUint32];
+  let HasCustomEval = 1;
+}
+
+def EnableLocal : Opcode {
+  let Args = [ArgUint32];
+  let HasCustomEval = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Constants
 //===----------------------------------------------------------------------===//
@@ -913,5 +923,10 @@ def DiagTypeid : Opcode;
 
 def CheckDestruction : Opcode;
 
+def CtorCheck : Opcode;
+
 def PushCC : Opcode { let Args = [ArgBool]; }
 def PopCC : Opcode;
+
+def PushMSVCCE : Opcode;
+def PopMSVCCE : Opcode;

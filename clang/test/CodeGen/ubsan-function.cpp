@@ -13,9 +13,9 @@ void fun() {}
 
 // GNU-LABEL:  define{{.*}} void @_Z6callerPFvvE(ptr noundef %f)
 // MSVC-LABEL: define{{.*}} void @"?caller@@YAXP6AXXZ@Z"(ptr noundef %f)
-// ARM:   ptrtoint ptr {{.*}} to i32, !nosanitize !5
-// ARM:   and i32 {{.*}}, -2, !nosanitize !5
-// ARM:   inttoptr i32 {{.*}} to ptr, !nosanitize !5
+// ARM:   ptrtoint ptr {{.*}} to i32, !nosanitize !7
+// ARM:   and i32 {{.*}}, -2, !nosanitize !7
+// ARM:   inttoptr i32 {{.*}} to ptr, !nosanitize !7
 // AUTH:  %[[STRIPPED:.*]] = ptrtoint ptr {{.*}} to i64, !nosanitize
 // AUTH:  call i64 @llvm.ptrauth.auth(i64 %[[STRIPPED]], i32 0, i64 0), !nosanitize
 // CHECK: getelementptr <{ i32, i32 }>, ptr {{.*}}, i32 -1, i32 0, !nosanitize
@@ -40,6 +40,23 @@ void fun() {}
 // CHECK-NEXT:   call void
 // CHECK-NEXT:   ret void
 void caller(void (*f)()) { f(); }
+
+// GNU:  define{{.*}} void @_Z4fun2v() #0 {
+// MSVC: define{{.*}} void @"?fun2@@YAXXZ"() #0 {
+[[clang::cfi_unchecked_callee]]
+void fun2() {}
+
+typedef void (*unchecked_t)() [[clang::cfi_unchecked_callee]];
+
+// GNU-LABEL:  define{{.*}} void @_Z7caller2PFvvE(ptr noundef %f)
+// MSVC-LABEL: define{{.*}} void @"?caller2@@YAXP6AXXZ@Z"(ptr noundef %f)
+// CHECK-NEXT: entry:
+// CHECK-NEXT:   [[ADDR:%.*]] = alloca ptr
+// CHECK-NEXT:   store ptr %f, ptr [[ADDR]]
+// CHECK-NEXT:   [[FUNC:%.*]] = load ptr, ptr [[ADDR]]
+// CHECK-NEXT:   call void [[FUNC]]()
+// CHECK-NEXT:   ret void
+void caller2(unchecked_t f) { f(); }
 
 // GNU:  ![[FUNCSAN]] = !{i32 -1056584962, i32 905068220}
 // MSVC: ![[FUNCSAN]] = !{i32 -1056584962, i32 -1600339357}

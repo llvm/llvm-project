@@ -76,6 +76,9 @@ void basic_correct_arc() {
   return copy;
 }
 
+- (void)copy:(id)sender {
+}
+
 - (void)doWork {
   _number = [[NSNumber alloc] initWithInt:5];
 }
@@ -113,6 +116,17 @@ void basic_correct_arc() {
 }
 
 @end;
+
+@interface SubObj : SomeObj
+@end
+
+@implementation SubObj
+
+- (void)copy:(id)sender {
+  [super copy:sender];
+}
+
+@end
 
 RetainPtr<CVPixelBufferRef> cf_out_argument() {
   auto surface = adoptCF(IOSurfaceCreate(nullptr));
@@ -188,6 +202,14 @@ SomeObj* allocSomeObj() CF_RETURNS_RETAINED;
 void adopt_retainptr() {
   RetainPtr<NSObject> foo = adoptNS([[SomeObj alloc] init]);
   auto bar = adoptNS([allocSomeObj() init]);
+}
+
+CFTypeRef make_cf_obj() CF_RETURNS_RETAINED {
+  return CFArrayCreateMutable(kCFAllocatorDefault, 1);
+}
+
+void get_cf_obj(CFTypeRef* CF_RETURNS_RETAINED result) {
+  *result = CFArrayCreateMutable(kCFAllocatorDefault, 1);
 }
 
 RetainPtr<CFArrayRef> return_arg(CFArrayRef arg) {

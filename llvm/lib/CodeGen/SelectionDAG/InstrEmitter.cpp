@@ -15,10 +15,12 @@
 #include "InstrEmitter.h"
 #include "SDNodeDbgValue.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -61,6 +63,8 @@ static unsigned countOperands(SDNode *Node, unsigned NumExpUses,
   unsigned N = Node->getNumOperands();
   while (N && Node->getOperand(N - 1).getValueType() == MVT::Glue)
     --N;
+  if (N && Node->getOperand(N - 1).getOpcode() == ISD::DEACTIVATION_SYMBOL)
+    --N; // Ignore deactivation symbol if it exists.
   if (N && Node->getOperand(N - 1).getValueType() == MVT::Other)
     --N; // Ignore chain if it exists.
 
@@ -564,16 +568,23 @@ void InstrEmitter::EmitSubregNode(SDNode *Node, VRBaseMapType &VRBaseMap,
           BuildMI(*MBB, InsertPos, Node->getDebugLoc(),
                   TII->get(TargetOpcode::COPY), VRBase);
       if (Reg.isVirtual())
-        CopyMI.addReg(Reg, 0, SubIdx);
+        CopyMI.addReg(Reg, {}, SubIdx);
       else
         CopyMI.addReg(TRI->getSubReg(Reg, SubIdx));
     }
   } else if (Opc == TargetOpcode::INSERT_SUBREG ||
              Opc == TargetOpcode::SUBREG_TO_REG) {
-    SDValue N0 = Node->getOperand(0);
-    SDValue N1 = Node->getOperand(1);
-    SDValue N2 = Node->getOperand(2);
-    unsigned SubIdx = N2->getAsZExtVal();
+    SDValue Reg;
+    SDValue SubReg;
+    unsigned SubIdx;
+    if (Opc == TargetOpcode::INSERT_SUBREG) {
+      Reg = Node->getOperand(0);
+      SubReg = Node->getOperand(1);
+      SubIdx = Node->getOperand(2)->getAsZExtVal();
+    } else {
+      SubReg = Node->getOperand(0);
+      SubIdx = Node->getOperand(1)->getAsZExtVal();
+    }
 
     // Figure out the register class to create for the destreg.  It should be
     // the largest legal register class supporting SubIdx sub-registers.
@@ -601,17 +612,15 @@ void InstrEmitter::EmitSubregNode(SDNode *Node, VRBaseMapType &VRBaseMap,
     MachineInstrBuilder MIB =
       BuildMI(*MF, Node->getDebugLoc(), TII->get(Opc), VRBase);
 
-    // If creating a subreg_to_reg, then the first input operand
-    // is an implicit value immediate, otherwise it's a register
-    if (Opc == TargetOpcode::SUBREG_TO_REG) {
-      const ConstantSDNode *SD = cast<ConstantSDNode>(N0);
-      MIB.addImm(SD->getZExtValue());
-    } else
-      AddOperand(MIB, N0, 0, nullptr, VRBaseMap, /*IsDebug=*/false,
-                 IsClone, IsCloned);
+    // If creating an insert_subreg, then the first input operand
+    // is a register
+    if (Reg) {
+      AddOperand(MIB, Reg, 0, nullptr, VRBaseMap, /*IsDebug=*/false, IsClone,
+                 IsCloned);
+    }
     // Add the subregister being inserted
-    AddOperand(MIB, N1, 0, nullptr, VRBaseMap, /*IsDebug=*/false,
-               IsClone, IsCloned);
+    AddOperand(MIB, SubReg, 0, nullptr, VRBaseMap, /*IsDebug=*/false, IsClone,
+               IsCloned);
     MIB.addImm(SubIdx);
     MBB->insert(InsertPos, MIB);
   } else
@@ -1111,6 +1120,9 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
 
     if (Flags.hasSameSign())
       MI->setFlag(MachineInstr::MIFlag::SameSign);
+
+    if (Flags.hasNoConvergent())
+      MI->setFlag(MachineInstr::MIFlag::NoConvergent);
   }
 
   // Emit all of the actual operands of this instruction, adding them to the
@@ -1222,15 +1234,23 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
     }
   }
 
-  if (SDNode *GluedNode = Node->getGluedNode()) {
-    // FIXME: Possibly iterate over multiple glue nodes?
-    if (GluedNode->getOpcode() ==
-        ~(unsigned)TargetOpcode::CONVERGENCECTRL_GLUE) {
-      Register VReg = getVR(GluedNode->getOperand(0), VRBaseMap);
-      MachineOperand MO = MachineOperand::CreateReg(VReg, /*isDef=*/false,
-                                                    /*isImp=*/true);
-      MIB->addOperand(MO);
-    }
+  unsigned Op = Node->getNumOperands();
+  if (Op != 0 && Node->getOperand(Op - 1)->getOpcode() ==
+                     ~(unsigned)TargetOpcode::CONVERGENCECTRL_GLUE) {
+    Register VReg = getVR(Node->getOperand(Op - 1)->getOperand(0), VRBaseMap);
+    MachineOperand MO = MachineOperand::CreateReg(VReg, /*isDef=*/false,
+                                                  /*isImp=*/true);
+    MIB->addOperand(MO);
+    Op--;
+  }
+
+  if (Op != 0 &&
+      Node->getOperand(Op - 1)->getOpcode() == ISD::DEACTIVATION_SYMBOL) {
+    MI->setDeactivationSymbol(
+        *MF, const_cast<GlobalValue *>(
+                 cast<DeactivationSymbolSDNode>(Node->getOperand(Op - 1))
+                     ->getGlobal()));
+    Op--;
   }
 
   // Run post-isel target hook to adjust this instruction if needed.
@@ -1251,7 +1271,8 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     llvm_unreachable("This target-independent node should have been selected!");
   case ISD::EntryToken:
   case ISD::MERGE_VALUES:
-  case ISD::TokenFactor: // fall thru
+  case ISD::TokenFactor:
+  case ISD::DEACTIVATION_SYMBOL:
     break;
   case ISD::CopyToReg: {
     Register DestReg = cast<RegisterSDNode>(Node->getOperand(1))->getReg();

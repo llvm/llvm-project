@@ -614,6 +614,24 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::WASI, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("wasm32-unknown-wasip1");
+  EXPECT_EQ(Triple::wasm32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp1, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm32-unknown-wasip2");
+  EXPECT_EQ(Triple::wasm32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp2, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm32-unknown-wasip3");
+  EXPECT_EQ(Triple::wasm32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp3, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
   T = Triple("wasm64-unknown-unknown");
   EXPECT_EQ(Triple::wasm64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -624,6 +642,24 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::wasm64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::WASI, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm64-unknown-wasip1");
+  EXPECT_EQ(Triple::wasm64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp1, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm64-unknown-wasip2");
+  EXPECT_EQ(Triple::wasm64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp2, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm64-unknown-wasip3");
+  EXPECT_EQ(Triple::wasm64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp3, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
   T = Triple("avr-unknown-unknown");
@@ -1428,6 +1464,11 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::riscv32, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::CheriotRTOS, T.getOS());
+
+  T = Triple("spirv64-unknown-chipstar");
+  EXPECT_EQ(Triple::spirv64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ChipStar, T.getOS());
 }
 
 static std::string Join(StringRef A, StringRef B, StringRef C) {
@@ -1707,6 +1748,26 @@ TEST(TripleTest, Normalization) {
             Triple::normalize("wasm32-wasi")); // wasm32-unknown-wasi
   EXPECT_EQ("wasm64-unknown-wasi",
             Triple::normalize("wasm64-wasi")); // wasm64-unknown-wasi
+
+  // Firmware should only be allowed for the Apple vendor
+  EXPECT_DEATH(Triple::normalize("arm-none-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-unknown-firmware"), "");
+  EXPECT_EQ("arm-apple-firmware", Triple::normalize("arm-apple-firmware"));
+  EXPECT_DEATH(Triple::normalize("arm-pc-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-scei-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-sie-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-fsl-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-ibm-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-img-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-mti-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-nvidia-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-csr-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-amd-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-mesa-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-suse-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-oe-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-intel-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-meta-firmware"), "");
 }
 
 TEST(TripleTest, MutateName) {

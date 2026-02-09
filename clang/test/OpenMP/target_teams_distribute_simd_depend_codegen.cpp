@@ -53,11 +53,11 @@
 // TCHECK: [[ENTTY:%.+]] = type { i64, i16, i16, i32, ptr, ptr, i64, i64, ptr }
 
 // OMP45-DAG: [[SIZET:@.+]] = private unnamed_addr constant [2 x i64] [i64 0, i64 4]
-// OMP45-DAG: [[MAPT:@.+]] = private unnamed_addr constant [2 x i64] [i64 800, i64 800]
+// OMP45-DAG: [[MAPT:@.+]] = private unnamed_addr constant [2 x i64] [i64 544, i64 800]
 // OMP45-DAG: @{{.*}} = weak constant i8 0
 
 // OMP50-DAG: [[SIZET:@.+]] = private unnamed_addr constant [3 x i64] [i64 0, i64 4, i64 1]
-// OMP50-DAG: [[MAPT:@.+]] = private unnamed_addr constant [3 x i64] [i64 800, i64 800, i64 800]
+// OMP50-DAG: [[MAPT:@.+]] = private unnamed_addr constant [3 x i64] [i64 544, i64 800, i64 800]
 // OMP50-DAG: @{{.*}} = weak constant i8 0
 
 

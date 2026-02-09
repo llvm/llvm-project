@@ -127,6 +127,11 @@ public:
   int64_t CriticalEdgeCount = 0;
   int64_t ControlFlowEdgeCount = 0;
   int64_t UnconditionalBranchCount = 0;
+  int64_t ConditionalBranchCount = 0;
+  int64_t BranchInstructionCount = 0;
+  int64_t BranchSuccessorCount = 0;
+  int64_t SwitchInstructionCount = 0;
+  int64_t SwitchSuccessorCount = 0;
 
   // Call related instructions
   int64_t IntrinsicCount = 0;
@@ -177,6 +182,12 @@ public:
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   static bool isRequired() { return true; }
+};
+
+/// Statistics pass for the FunctionPropertiesAnalysis results.
+struct FunctionPropertiesStatisticsPass
+    : PassInfoMixin<FunctionPropertiesStatisticsPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// Correctly update FunctionPropertiesInfo post-inlining. A

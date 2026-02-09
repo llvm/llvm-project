@@ -34,15 +34,6 @@ inline _LIBCPP_HIDE_FROM_ABI long double __strtold(const char* __nptr, char** __
   return std::strtold(__nptr, __endptr);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long long __strtoll(const char* __nptr, char** __endptr, int __base, __locale_t) {
-  return std::strtoll(__nptr, __endptr, __base);
-}
-
-inline _LIBCPP_HIDE_FROM_ABI unsigned long long
-__strtoull(const char* __nptr, char** __endptr, int __base, __locale_t) {
-  return std::strtoull(__nptr, __endptr, __base);
-}
-
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
 

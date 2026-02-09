@@ -1,3 +1,4 @@
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,7 +29,7 @@ template <typename T>
 struct TestWait {
   void operator()() const {
     {
-      T x(T(1));
+      alignas(std::atomic_ref<T>::required_alignment) T x(T(1));
       std::atomic_ref<T> const a(x);
 
       assert(a.load() == T(1));

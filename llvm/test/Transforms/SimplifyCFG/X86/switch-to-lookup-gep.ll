@@ -57,7 +57,7 @@ define { ptr, i64 } @switch_to_lookup_gep_oob(i8 %0) unnamed_addr {
 ; CHECK:       default:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       end:
-; CHECK-NEXT:    [[DOTSROA_0_0:%.*]] = phi ptr [ getelementptr (<{ [2 x i8] }>, ptr @alloc1, i32 0, i32 0, i32 4), [[BB1]] ], [ getelementptr (<{ [2 x i8] }>, ptr @alloc2, i32 0, i32 0, i32 4), [[BB2]] ], [ getelementptr (<{ [2 x i8] }>, ptr @alloc0, i32 0, i32 0, i32 4), [[START:%.*]] ]
+; CHECK-NEXT:    [[DOTSROA_0_0:%.*]] = phi ptr [ getelementptr (<{ [2 x i8] }>, ptr @alloc2, i32 0, i32 0, i32 4), [[BB2]] ], [ getelementptr (<{ [2 x i8] }>, ptr @alloc1, i32 0, i32 0, i32 4), [[BB1]] ], [ getelementptr (<{ [2 x i8] }>, ptr @alloc0, i32 0, i32 0, i32 4), [[START:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, i64 } undef, ptr [[DOTSROA_0_0]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, i64 } [[TMP1]], i64 1, 1
 ; CHECK-NEXT:    ret { ptr, i64 } [[TMP2]]
@@ -103,7 +103,7 @@ define { ptr, i64 } @switch_to_lookup_gep_ptrtoint(i8 %0) unnamed_addr {
 ; CHECK:       default:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       end:
-; CHECK-NEXT:    [[DOTSROA_0_0:%.*]] = phi ptr [ getelementptr (<{ [2 x i8] }>, ptr @alloc1, i32 0, i32 0, i64 ptrtoint (ptr @alloc0 to i64)), [[BB1]] ], [ getelementptr (<{ [2 x i8] }>, ptr @alloc2, i32 0, i32 0, i64 ptrtoint (ptr @alloc0 to i64)), [[BB2]] ], [ getelementptr (<{ [2 x i8] }>, ptr @alloc0, i32 0, i32 0, i64 ptrtoint (ptr @alloc0 to i64)), [[START:%.*]] ]
+; CHECK-NEXT:    [[DOTSROA_0_0:%.*]] = phi ptr [ getelementptr (<{ [2 x i8] }>, ptr @alloc2, i32 0, i32 0, i64 ptrtoint (ptr @alloc0 to i64)), [[BB2]] ], [ getelementptr (<{ [2 x i8] }>, ptr @alloc1, i32 0, i32 0, i64 ptrtoint (ptr @alloc0 to i64)), [[BB1]] ], [ getelementptr (<{ [2 x i8] }>, ptr @alloc0, i32 0, i32 0, i64 ptrtoint (ptr @alloc0 to i64)), [[START:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, i64 } undef, ptr [[DOTSROA_0_0]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, i64 } [[TMP1]], i64 1, 1
 ; CHECK-NEXT:    ret { ptr, i64 } [[TMP2]]

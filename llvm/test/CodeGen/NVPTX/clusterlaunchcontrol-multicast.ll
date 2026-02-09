@@ -3,14 +3,31 @@
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_100a -mattr=+ptx86 --nvptx-short-ptr | FileCheck --check-prefixes=CHECK,CHECK-PTX-SHARED32 %s
 ; RUN: %if ptxas-sm_100a && ptxas-isa-8.6 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_100a -mattr=+ptx86 | %ptxas-verify -arch=sm_100a %}
 ; RUN: %if ptxas-sm_100a && ptxas-isa-8.6 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_100a -mattr=+ptx86 --nvptx-short-ptr | %ptxas-verify -arch=sm_100a %}
+
+; RUN: llc -o - -mcpu=sm_100f -march=nvptx64 -mattr=+ptx88 %s | FileCheck %s --check-prefixes=CHECK,CHECK-PTX-SHARED64
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_100f -mattr=+ptx88 --nvptx-short-ptr | FileCheck --check-prefixes=CHECK,CHECK-PTX-SHARED32 %s
+; RUN: %if ptxas-sm_100f && ptxas-isa-8.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_100f -mattr=+ptx88 | %ptxas-verify -arch=sm_100f %}
+; RUN: %if ptxas-sm_100f && ptxas-isa-8.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_100f -mattr=+ptx88 --nvptx-short-ptr | %ptxas-verify -arch=sm_100f %}
+
 ; RUN: llc -o - -mcpu=sm_101a -march=nvptx64 -mattr=+ptx86 %s | FileCheck %s --check-prefixes=CHECK,CHECK-PTX-SHARED64
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_101a -mattr=+ptx86 --nvptx-short-ptr | FileCheck --check-prefixes=CHECK,CHECK-PTX-SHARED32 %s
 ; RUN: %if ptxas-sm_101a && ptxas-isa-8.6 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_101a -mattr=+ptx86 | %ptxas-verify -arch=sm_101a %}
 ; RUN: %if ptxas-sm_101a && ptxas-isa-8.6 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_101a -mattr=+ptx86 --nvptx-short-ptr | %ptxas-verify -arch=sm_101a %}
+
+; RUN: llc -o - -mcpu=sm_110f -march=nvptx64 -mattr=+ptx90 %s | FileCheck %s --check-prefixes=CHECK,CHECK-PTX-SHARED64
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_110f -mattr=+ptx90 --nvptx-short-ptr | FileCheck --check-prefixes=CHECK,CHECK-PTX-SHARED32 %s
+; RUN: %if ptxas-sm_110f && ptxas-isa-9.0 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_110f -mattr=+ptx90 | %ptxas-verify -arch=sm_110f %}
+; RUN: %if ptxas-sm_110f && ptxas-isa-9.0 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_110f -mattr=+ptx90 --nvptx-short-ptr | %ptxas-verify -arch=sm_110f %}
+
 ; RUN: llc -o - -mcpu=sm_120a -march=nvptx64 -mattr=+ptx86 %s | FileCheck %s --check-prefixes=CHECK,CHECK-PTX-SHARED64
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_120a -mattr=+ptx86 --nvptx-short-ptr | FileCheck --check-prefixes=CHECK,CHECK-PTX-SHARED32 %s
 ; RUN: %if ptxas-sm_120a && ptxas-isa-8.6 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_120a -mattr=+ptx86 | %ptxas-verify -arch=sm_120a %}
 ; RUN: %if ptxas-sm_120a && ptxas-isa-8.6 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_120a -mattr=+ptx86 --nvptx-short-ptr | %ptxas-verify -arch=sm_120a %}
+
+; RUN: llc -o - -mcpu=sm_120f -march=nvptx64 -mattr=+ptx88 %s | FileCheck %s --check-prefixes=CHECK,CHECK-PTX-SHARED64
+; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_120f -mattr=+ptx88 --nvptx-short-ptr | FileCheck --check-prefixes=CHECK,CHECK-PTX-SHARED32 %s
+; RUN: %if ptxas-sm_120f && ptxas-isa-8.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_120f -mattr=+ptx88 | %ptxas-verify -arch=sm_120f %}
+; RUN: %if ptxas-sm_120f && ptxas-isa-8.8 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_120f -mattr=+ptx88 --nvptx-short-ptr | %ptxas-verify -arch=sm_120f %}
 
 define void @nvvm_clusterlaunchcontrol_try_cancel_multicast(
 ; CHECK-PTX-SHARED64-LABEL: nvvm_clusterlaunchcontrol_try_cancel_multicast(

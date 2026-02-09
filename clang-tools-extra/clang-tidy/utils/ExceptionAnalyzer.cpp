@@ -600,13 +600,14 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
     // whether the call itself throws.
     if (const auto *Call = dyn_cast<CallExpr>(St)) {
       if (const FunctionDecl *Func = Call->getDirectCallee()) {
-        ExceptionInfo Excs =
+        const ExceptionInfo Excs =
             throwsException(Func, Caught, CallStack, Call->getBeginLoc());
         Results.merge(Excs);
       }
     } else if (const auto *Construct = dyn_cast<CXXConstructExpr>(St)) {
-      ExceptionInfo Excs = throwsException(Construct->getConstructor(), Caught,
-                                           CallStack, Construct->getBeginLoc());
+      const ExceptionInfo Excs =
+          throwsException(Construct->getConstructor(), Caught, CallStack,
+                          Construct->getBeginLoc());
       Results.merge(Excs);
     }
   }
