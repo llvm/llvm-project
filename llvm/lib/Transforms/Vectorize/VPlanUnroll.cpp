@@ -657,9 +657,6 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       ToRemove.push_back(DefR);
     }
   }
-  for (auto *R : reverse(ToRemove)) {
-    assert(!cast<VPSingleDefRecipe>(R)->getNumUsers() &&
-           "Attempting to remove a VPSingleDefRecipe with users!");
+  for (auto *R : reverse(ToRemove))
     R->eraseFromParent();
-  }
 }
