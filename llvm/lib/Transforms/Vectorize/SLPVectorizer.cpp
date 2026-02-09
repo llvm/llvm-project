@@ -11395,8 +11395,8 @@ class InstructionsCompatibilityAnalysis {
         if (isa<ZExtInst>(I)) {
           // Special case for select + zext i1 to avoid explosion of different
           // types. We want to keep the condition as i1 to be able to match
-          // different selects together and reuse the vectorized condition rather
-          // than trying to gather it.
+          // different selects together and reuse the vectorized condition
+          // rather than trying to gather it.
           Operands[0][Idx] = I->getOperand(0);
           Operands[1][Idx] = ConstantInt::get(I->getType(), 1);
           Operands[2][Idx] = ConstantInt::getNullValue(I->getType());
