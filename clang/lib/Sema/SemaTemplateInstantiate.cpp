@@ -1413,7 +1413,8 @@ namespace {
     }
 
     void RememberSubstitution(MultiLevelTemplateArgumentList Old) {
-      const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs) = Old;
+      const_cast<MultiLevelTemplateArgumentList &>(this->TemplateArgs) =
+          std::move(Old);
     }
 
     TemplateArgument

@@ -8472,12 +8472,11 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
         (!RR || !RR->isPartialReduction())) {
       VPValue *Cond = vputils::findHeaderMask(*Plan);
-      std::optional<FastMathFlags> FMFs =
-          PhiTy->isFloatingPointTy()
-              ? std::make_optional(RdxDesc.getFastMathFlags())
-              : std::nullopt;
+      VPIRFlags Flags = PhiTy->isFloatingPointTy()
+                            ? VPIRFlags(RdxDesc.getFastMathFlags())
+                            : VPIRFlags();
       NewExitingVPV =
-          Builder.createSelect(Cond, OrigExitingVPV, PhiR, {}, "", FMFs);
+          Builder.createSelect(Cond, OrigExitingVPV, PhiR, {}, "", Flags);
       OrigExitingVPV->replaceUsesWithIf(NewExitingVPV, [](VPUser &U, unsigned) {
         using namespace VPlanPatternMatch;
         return match(

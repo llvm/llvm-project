@@ -290,6 +290,7 @@ static llvm::AtomicOrdering mapCABIAtomicOrdering(unsigned AO) {
   case llvm::AtomicOrderingCABI::relaxed:
     return llvm::AtomicOrdering::Monotonic;
   }
+  llvm_unreachable("Unknown AtomicOrderingCABI enum");
 }
 
 // For processing memory ordering and memory scope arguments of various

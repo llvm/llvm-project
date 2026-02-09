@@ -308,7 +308,7 @@ ProgramStateRef ProgramState::BindExpr(const Stmt *S,
     return this;
 
   ProgramState NewSt = *this;
-  NewSt.Env = NewEnv;
+  NewSt.Env = std::move(NewEnv);
   return getStateManager().getPersistentState(NewSt);
 }
 
