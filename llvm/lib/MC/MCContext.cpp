@@ -76,10 +76,10 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
          "MCAsmInfo and MCTargetOptions must be available");
   assert((!TargetOpts || TargetOpts == MAI->getTargetOptions()) &&
          "MCTargetOptions, if specified, must match MCAsmInfo");
-  SaveTempLabels = getTargetOptions() && getTargetOptions()->MCSaveTempLabels;
+  SaveTempLabels = getTargetOptions()->MCSaveTempLabels;
   if (SaveTempLabels)
     setUseNamesOnTempLabels(true);
-  SecureLogFile = getTargetOptions() ? getTargetOptions()->AsSecureLogFile : "";
+  SecureLogFile = getTargetOptions()->AsSecureLogFile;
 
   if (SrcMgr && SrcMgr->getNumBuffers())
     MainFileName = std::string(SrcMgr->getMemoryBuffer(SrcMgr->getMainFileID())
@@ -992,15 +992,11 @@ void MCContext::RemapDebugPaths() {
 //===----------------------------------------------------------------------===//
 
 EmitDwarfUnwindType MCContext::emitDwarfUnwindInfo() const {
-  if (!getTargetOptions())
-    return EmitDwarfUnwindType::Default;
   return getTargetOptions()->EmitDwarfUnwind;
 }
 
 bool MCContext::emitCompactUnwindNonCanonical() const {
-  if (getTargetOptions())
-    return getTargetOptions()->EmitCompactUnwindNonCanonical;
-  return false;
+  return getTargetOptions()->EmitCompactUnwindNonCanonical;
 }
 
 void MCContext::setGenDwarfRootFile(StringRef InputFileName, StringRef Buffer) {
@@ -1135,9 +1131,9 @@ void MCContext::reportError(SMLoc Loc, const Twine &Msg) {
 }
 
 void MCContext::reportWarning(SMLoc Loc, const Twine &Msg) {
-  if (getTargetOptions() && getTargetOptions()->MCNoWarn)
+  if (getTargetOptions()->MCNoWarn)
     return;
-  if (getTargetOptions() && getTargetOptions()->MCFatalWarnings) {
+  if (getTargetOptions()->MCFatalWarnings) {
     reportError(Loc, Msg);
   } else {
     reportCommon(Loc, [&](SMDiagnostic &D, const SourceMgr *SMP) {
