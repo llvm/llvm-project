@@ -165,8 +165,9 @@ void VPPredicator::createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail) {
   // non-phi instructions.
 
   auto &Plan = *HeaderVPBB->getPlan();
-  auto *IV =
-      new VPWidenCanonicalIVRecipe(HeaderVPBB->getParent()->getCanonicalIV());
+  // Find the canonical IV as the first recipe in the header block.
+  auto *CanonicalIV = cast<VPCanonicalIVPHIRecipe>(&*HeaderVPBB->begin());
+  auto *IV = new VPWidenCanonicalIVRecipe(CanonicalIV);
   Builder.setInsertPoint(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
   Builder.insert(IV);
 
@@ -266,16 +267,24 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
 }
 
 void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
-  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  auto *MiddleVPBB =
+      cast<VPBasicBlock>(Plan.getScalarPreheader()->getPredecessors()[0]);
+  auto *Latch = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
+  auto *Header = cast<VPBasicBlock>(Latch->getSuccessors().back());
+
+  auto IsLoopBlock = [&](VPBasicBlock *VPBB) {
+    return VPBB != MiddleVPBB &&
+           !all_of(VPBB->getSuccessors(), IsaPred<VPIRBasicBlock>);
+  };
+
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
-  VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Header);
+  auto LoopBlocks = make_filter_range(
+      VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT), IsLoopBlock);
   VPPredicator Predicator;
-  for (VPBlockBase *VPB : RPOT) {
-    // Non-outer regions with VPBBs only are supported at the moment.
-    auto *VPBB = cast<VPBasicBlock>(VPB);
+  for (VPBasicBlock *VPBB : LoopBlocks) {
     // Introduce the mask for VPBB, which may introduce needed edge masks, and
     // convert all phi recipes of VPBB to blend recipes unless VPBB is the
     // header.
@@ -297,18 +306,23 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
     }
   }
 
-  // Linearize the blocks of the loop into one serial chain.
+  // Linearize the loop's internal control flow. Exiting blocks (with edges to
+  // exit blocks) keep their terminators for handleEarlyExits to process.
   VPBlockBase *PrevVPBB = nullptr;
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
-    auto Successors = to_vector(VPBB->getSuccessors());
-    if (Successors.size() > 1)
-      VPBB->getTerminator()->eraseFromParent();
+  for (VPBasicBlock *VPBB : LoopBlocks) {
+    bool IsExiting =
+        any_of(VPBB->getSuccessors(), IsaPred<VPIRBasicBlock>) || VPBB == Latch;
+    if (!IsExiting) {
+      auto Successors = to_vector(VPBB->getSuccessors());
+      if (Successors.size() > 1)
+        VPBB->getTerminator()->eraseFromParent();
+      for (auto *Succ : Successors)
+        VPBlockUtils::disconnectBlocks(VPBB, Succ);
+    }
 
     // Flatten the CFG in the loop. To do so, first disconnect VPBB from its
     // successors. Then connect VPBB to the previously visited VPBB.
-    for (auto *Succ : Successors)
-      VPBlockUtils::disconnectBlocks(VPBB, Succ);
-    if (PrevVPBB)
+    if (PrevVPBB && !is_contained(PrevVPBB->getSuccessors(), VPBB))
       VPBlockUtils::connectBlocks(PrevVPBB, VPBB);
 
     PrevVPBB = VPBB;
@@ -321,12 +335,11 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
   if (FoldTail) {
     assert(Plan.getExitBlocks().size() == 1 &&
            "only a single-exit block is supported currently");
-    assert(Plan.getExitBlocks().front()->getSinglePredecessor() ==
-               Plan.getMiddleBlock() &&
+    assert(Plan.getExitBlocks().front()->getSinglePredecessor() == MiddleVPBB &&
            "the exit block must have middle block as single predecessor");
 
-    VPBuilder B(Plan.getMiddleBlock()->getTerminator());
-    for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
+    VPBuilder B(MiddleVPBB);
+    for (VPRecipeBase &R : make_early_inc_range(*MiddleVPBB)) {
       VPValue *Op;
       if (!match(&R, m_CombineOr(
                          m_ExitingIVValue(m_VPValue(), m_VPValue(Op)),

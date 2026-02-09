@@ -919,7 +919,14 @@ void VPlanTransforms::handleEarlyExits(VPlan &Plan,
       for (VPRecipeBase &R : EB->phis())
         cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
       auto *EarlyExitingVPBB = cast<VPBasicBlock>(Pred);
-      EarlyExitingVPBB->getTerminator()->eraseFromParent();
+      auto *Term = cast<VPInstruction>(EarlyExitingVPBB->getTerminator());
+      assert(match(Term, m_BranchOnCond()) &&
+             "terminator must be BranchOnCond");
+      // For countable early exits, the exit is never taken.
+      bool ExitOnTrue = EarlyExitingVPBB->getSuccessors()[0] == EB;
+      Term->getOperand(0)->replaceAllUsesWith(ExitOnTrue ? Plan.getFalse()
+                                                         : Plan.getTrue());
+      Term->eraseFromParent();
       VPBlockUtils::disconnectBlocks(Pred, EB);
     }
   }

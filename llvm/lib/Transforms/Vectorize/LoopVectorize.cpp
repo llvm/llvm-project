@@ -8172,6 +8172,12 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
+
+  // ---------------------------------------------------------------------------
+  // Predicate and linearize the loop-level loop, retaining early-exiting
+  // branches.
+  // ---------------------------------------------------------------------------
+  VPlanTransforms::introduceMasksAndLinearize(*Plan, CM.foldTailByMasking());
   VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit());
   VPlanTransforms::addMiddleCheck(*Plan, RequiresScalarEpilogueCheck,
                                   CM.foldTailByMasking());
@@ -8227,11 +8233,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       continue;
     InterleaveGroups.insert(IG);
   }
-
-  // ---------------------------------------------------------------------------
-  // Predicate and linearize the top-level loop region.
-  // ---------------------------------------------------------------------------
-  VPlanTransforms::introduceMasksAndLinearize(*Plan, CM.foldTailByMasking());
 
   // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar
