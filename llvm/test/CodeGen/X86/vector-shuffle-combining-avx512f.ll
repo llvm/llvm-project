@@ -1035,21 +1035,21 @@ define <8 x double> @concat_vpermilvar_v8f64_v4f64(<4 x double> %a0, <4 x double
   ret <8 x double> %res
 }
 
-define <16 x float> @combine_vexpand_of_broadcast(float %x, <16 x float> %y, i16 %m) {
-; X86-LABEL: combine_vexpand_of_broadcast:
+define <16 x float> @combine_vexpandps_of_broadcast(float %x, <16 x float> %y, i16 %m) {
+; X86-LABEL: combine_vexpandps_of_broadcast:
 ; X86:       # %bb.0:
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
 ; X86-NEXT:    vbroadcastss {{[0-9]+}}(%esp), %zmm0 {%k1}
 ; X86-NEXT:    retl
 ;
-; X64-AVX512F-LABEL: combine_vexpand_of_broadcast:
+; X64-AVX512F-LABEL: combine_vexpandps_of_broadcast:
 ; X64-AVX512F:       # %bb.0:
 ; X64-AVX512F-NEXT:    kmovw %edi, %k1
 ; X64-AVX512F-NEXT:    vbroadcastss %xmm0, %zmm1 {%k1}
 ; X64-AVX512F-NEXT:    vmovaps %zmm1, %zmm0
 ; X64-AVX512F-NEXT:    retq
 ;
-; X64-AVX512BW-LABEL: combine_vexpand_of_broadcast:
+; X64-AVX512BW-LABEL: combine_vexpandps_of_broadcast:
 ; X64-AVX512BW:       # %bb.0:
 ; X64-AVX512BW-NEXT:    kmovd %edi, %k1
 ; X64-AVX512BW-NEXT:    vbroadcastss %xmm0, %zmm1 {%k1}
