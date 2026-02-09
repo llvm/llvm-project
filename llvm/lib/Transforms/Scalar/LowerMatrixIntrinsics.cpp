@@ -68,9 +68,10 @@ static cl::opt<unsigned> TileSize(
     "fuse-matrix-tile-size", cl::init(4), cl::Hidden,
     cl::desc(
         "Tile size for matrix instruction fusion using square-shaped tiles."));
-static cl::opt<bool>
-    TileUseLoops("fuse-matrix-use-loops", cl::init(false), cl::Hidden,
-                 cl::desc("Always generate loop nest for tiling."));
+static cl::opt<unsigned>
+    TileLoopsThreshold("fuse-matrix-loops-threshold", cl::init(200), cl::Hidden,
+                       cl::desc("Generate loop nests for tiling when expected "
+                                "number of operations exceeds threshold."));
 static cl::opt<bool> ForceFusion(
     "force-fuse-matrix", cl::init(false), cl::Hidden,
     cl::desc("Force matrix instruction fusion even if not profitable."));
@@ -2075,11 +2076,11 @@ public:
     Value *BPtr = getNonAliasingPointer(LoadOp1, Store, MatMul);
     Value *CPtr = Store->getPointerOperand();
 
-    // Use loop-based tiling when forced or for larger multiplies. The threshold
-    // of 200 is approximately a 6x6x6 double matrix multiply (162 native ops).
+    // Use loop-based tiling when the number of expected operations exceeds
+    // threshold.
     unsigned NumOps = getNumNativeVectorOps(EltType, R, M, C);
-    bool UseLoops = (TileUseLoops || NumOps > 200) &&
-                    R % TileSize == 0 && C % TileSize == 0;
+    bool UseLoops =
+        (NumOps > TileLoopsThreshold) && R % TileSize == 0 && C % TileSize == 0;
     if (UseLoops)
       createTiledLoops(MatMul, APtr, LShape, BPtr, RShape, Store);
     else {
