@@ -73,11 +73,11 @@ public:
 
   InstructionCost(CostState) = delete;
   InstructionCost(CostType Val) : Value(), State(Valid) {
-    if (Val > MaxInputValue) [[unlikely]]
+    if (Val > MaxInputValue)
       Val = MaxValue;
-    else if (Val < MinInputValue) [[unlikely]]
+    else if (Val < MinInputValue)
       Val = MinValue;
-    else [[likely]]
+    else
       Val *= ScalingFactor;
     Value = Val;
   }
