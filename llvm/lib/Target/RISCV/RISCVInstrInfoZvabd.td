@@ -15,7 +15,7 @@
 // Instruction Definitions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasStdExtZvabd] in {
-  defm VABS_V : VALU_MV_VS2<"vabs.v", 0b010010, 0b10000>;
+  def VABS_V : VALUVs2<0b010010, 0b10000, OPMVV, "vabs.v">;
 
   def VABD_VV  : VALUVV<0b010001, OPMVV, "vabd.vv">;
   def VABDU_VV : VALUVV<0b010011, OPMVV, "vabdu.vv">;
