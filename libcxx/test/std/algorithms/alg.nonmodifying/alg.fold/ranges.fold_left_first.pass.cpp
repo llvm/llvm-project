@@ -10,9 +10,6 @@
 
 // REQUIRES: std-at-least-c++23
 
-// MSVC warning C4244: 'argument': conversion from 'double' to 'const int', possible loss of data
-// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4244
-
 // template<input_iterator I, sentinel_for<I> S,
 //          indirectly-binary-left-foldable<iter_value_t<I>, I> F>
 //   requires constructible_from<iter_value_t<I>, iter_reference_t<I>>
@@ -318,7 +315,7 @@ void runtime_only_test_case() {
 
   {
     auto const data     = std::deque<double>{-1.1, -2.2, -3.3, -4.4, -5.5, -6.6};
-    auto plus           = [](int const x, double const y) { return x + y; };
+    auto plus           = [](double const x, double const y) { return static_cast<int>(x) + y; };
     auto const expected = -21.6; // int(- 1.1) + -2.2 = - 1 + -2.2 =  -3.2
                                  // int(- 3.2) + -3.3 = - 3 + -3.3 =  -6.3
                                  // int(- 6.3) + -4.4 = - 6 + -4.4 = -10.4
