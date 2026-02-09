@@ -368,23 +368,16 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     if (HasMVEFP) {
       setOperationAction(ISD::FMINNUM, VT, Legal);
       setOperationAction(ISD::FMAXNUM, VT, Legal);
-      setOperationAction(ISD::FROUND, VT, Legal);
-      setOperationAction(ISD::FROUNDEVEN, VT, Legal);
-      setOperationAction(ISD::FRINT, VT, Legal);
-      setOperationAction(ISD::FTRUNC, VT, Legal);
-      setOperationAction(ISD::FFLOOR, VT, Legal);
-      setOperationAction(ISD::FCEIL, VT, Legal);
+      for (auto Op : {ISD::FROUND, ISD::STRICT_FROUND, ISD::FROUNDEVEN,
+                      ISD::STRICT_FROUNDEVEN, ISD::FTRUNC, ISD::STRICT_FTRUNC,
+                      ISD::FRINT, ISD::STRICT_FRINT, ISD::FFLOOR,
+                      ISD::STRICT_FFLOOR, ISD::FCEIL, ISD::STRICT_FCEIL}) {
+        setOperationAction(Op, VT, Legal);
+      }
       setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMUL, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
-
-      setOperationAction(ISD::STRICT_FROUND, VT, Legal);
-      setOperationAction(ISD::STRICT_FROUNDEVEN, VT, Legal);
-      setOperationAction(ISD::STRICT_FRINT, VT, Legal);
-      setOperationAction(ISD::STRICT_FTRUNC, VT, Legal);
-      setOperationAction(ISD::STRICT_FFLOOR, VT, Legal);
-      setOperationAction(ISD::STRICT_FCEIL, VT, Legal);
 
       // No native support for these.
       setOperationAction(ISD::FDIV, VT, Expand);
@@ -1356,31 +1349,13 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FMAXIMUM, MVT::v4f32, Legal);
 
     if (Subtarget->hasV8Ops()) {
-      setOperationAction(ISD::FFLOOR, MVT::v2f32, Legal);
-      setOperationAction(ISD::FFLOOR, MVT::v4f32, Legal);
-      setOperationAction(ISD::FROUND, MVT::v2f32, Legal);
-      setOperationAction(ISD::FROUND, MVT::v4f32, Legal);
-      setOperationAction(ISD::FROUNDEVEN, MVT::v2f32, Legal);
-      setOperationAction(ISD::FROUNDEVEN, MVT::v4f32, Legal);
-      setOperationAction(ISD::FCEIL, MVT::v2f32, Legal);
-      setOperationAction(ISD::FCEIL, MVT::v4f32, Legal);
-      setOperationAction(ISD::FTRUNC, MVT::v2f32, Legal);
-      setOperationAction(ISD::FTRUNC, MVT::v4f32, Legal);
-      setOperationAction(ISD::FRINT, MVT::v2f32, Legal);
-      setOperationAction(ISD::FRINT, MVT::v4f32, Legal);
-
-      setOperationAction(ISD::STRICT_FFLOOR, MVT::v2f32, Legal);
-      setOperationAction(ISD::STRICT_FFLOOR, MVT::v4f32, Legal);
-      setOperationAction(ISD::STRICT_FROUND, MVT::v2f32, Legal);
-      setOperationAction(ISD::STRICT_FROUND, MVT::v4f32, Legal);
-      setOperationAction(ISD::STRICT_FROUNDEVEN, MVT::v2f32, Legal);
-      setOperationAction(ISD::STRICT_FROUNDEVEN, MVT::v4f32, Legal);
-      setOperationAction(ISD::STRICT_FCEIL, MVT::v2f32, Legal);
-      setOperationAction(ISD::STRICT_FCEIL, MVT::v4f32, Legal);
-      setOperationAction(ISD::STRICT_FTRUNC, MVT::v2f32, Legal);
-      setOperationAction(ISD::STRICT_FTRUNC, MVT::v4f32, Legal);
-      setOperationAction(ISD::STRICT_FRINT, MVT::v2f32, Legal);
-      setOperationAction(ISD::STRICT_FRINT, MVT::v4f32, Legal);
+      for (auto Op : {ISD::FROUND, ISD::STRICT_FROUND, ISD::FROUNDEVEN,
+                      ISD::STRICT_FROUNDEVEN, ISD::FTRUNC, ISD::STRICT_FTRUNC,
+                      ISD::FRINT, ISD::STRICT_FRINT, ISD::FFLOOR,
+                      ISD::STRICT_FFLOOR, ISD::FCEIL, ISD::STRICT_FCEIL}) {
+        setOperationAction(Op, MVT::v2f32, Legal);
+        setOperationAction(Op, MVT::v4f32, Legal);
+      }
     }
 
     if (Subtarget->hasFullFP16()) {
