@@ -129,6 +129,10 @@ public:
                                                 bool IsRelatedToDecl,
                                                 ASTContext &Ctx) = 0;
 
+  virtual void handleUnsafeOperationInStringView(const Stmt *Operation,
+                                                 bool IsRelatedToDecl,
+                                                 ASTContext &Ctx) = 0;
+
   /// Invoked when a fix is suggested against a variable. This function groups
   /// all variables that must be fixed together (i.e their types must be changed
   /// to the same target type to prevent type mismatches) into a single fixit.

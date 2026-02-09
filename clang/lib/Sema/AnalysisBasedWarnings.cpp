@@ -2568,6 +2568,28 @@ public:
     }
   }
 
+  void handleUnsafeOperationInStringView(const Stmt *Operation,
+                                       bool IsRelatedToDecl,
+                                       ASTContext &Ctx) override {
+  // Extracting location: prioritize the specific location of the constructor
+  SourceLocation Loc = Operation->getBeginLoc();
+  SourceRange Range = Operation->getSourceRange();
+
+  if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(Operation)) {
+    Loc = CtorExpr->getLocation();
+  }
+
+  // 1. Emit the primary warning for string_view
+  S.Diag(Loc, diag::warn_unsafe_buffer_usage_in_string_view) << Range;
+
+  // 2. If a specific variable is 'blamed', emit the note
+  if (IsRelatedToDecl) {
+    // MsgParam 0 is "unsafe operation"
+    // Range helps the IDE underline the whole expression
+    S.Diag(Loc, diag::note_unsafe_buffer_operation) << 0 << Range;
+  }
+}
+
   void handleUnsafeVariableGroup(const VarDecl *Variable,
                                  const VariableGroupsManager &VarGrpMgr,
                                  FixItList &&Fixes, const Decl *D,
