@@ -151,36 +151,36 @@ public:
     return NbBBEmbMap;
   }
 
-  nb::dict getInstEmbMap() {
-    auto ToolInstEmbMap = Tool->getFuncInstEmbMap(OutputEmbeddingMode);
+  nb::dict getInstEmbMap(const std::string &FuncName) {
+    const Function *F = M->getFunction(FuncName);
+
+    if (!F)
+      throw nb::value_error(
+          ("Function '" + FuncName + "' not found in module").c_str());
+
+    auto ToolInstEmbMap = Tool->getInstEmbeddingsMap(*F, OutputEmbeddingMode);
 
     if (!ToolInstEmbMap)
       throw nb::value_error(toString(ToolInstEmbMap.takeError()).c_str());
 
     nb::dict NbInstEmbMap;
 
-    for (const auto &[FuncPtr, InstMap] : *ToolInstEmbMap) {
-      nb::dict NbFuncInstMap;
+    for (const auto &[InstPtr, InstEmb] : *ToolInstEmbMap) {
+      auto InstEmbVec = InstEmb.getData();
+      double *NbInstEmbVec = new double[InstEmbVec.size()];
+      std::copy(InstEmbVec.begin(), InstEmbVec.end(), NbInstEmbVec);
 
-      for (const auto &[InstPtr, InstEmb] : InstMap) {
-        auto InstEmbVec = InstEmb.getData();
-        double *NbInstEmbVec = new double[InstEmbVec.size()];
-        std::copy(InstEmbVec.begin(), InstEmbVec.end(), NbInstEmbVec);
+      auto NbArray = nb::ndarray<nb::numpy, double>(
+          NbInstEmbVec, {InstEmbVec.size()},
+          nb::capsule(NbInstEmbVec, [](void *P) noexcept {
+            delete[] static_cast<double *>(P);
+          }));
 
-        auto NbArray = nb::ndarray<nb::numpy, double>(
-            NbInstEmbVec, {InstEmbVec.size()},
-            nb::capsule(NbInstEmbVec, [](void *P) noexcept {
-              delete[] static_cast<double *>(P);
-            }));
+      std::string InstStr;
+      raw_string_ostream OS(InstStr);
+      InstPtr->print(OS);
 
-        std::string InstStr;
-        raw_string_ostream OS(InstStr);
-        InstPtr->print(OS);
-
-        NbFuncInstMap[nb::str(OS.str().c_str())] = NbArray;
-      }
-
-      NbInstEmbMap[nb::str(FuncPtr->getName().str().c_str())] = NbFuncInstMap;
+      NbInstEmbMap[nb::str(OS.str().c_str())] = NbArray;
     }
 
     return NbInstEmbMap;
@@ -204,27 +204,17 @@ NB_MODULE(ir2vec, m) {
            "Generate embedding for a single function by name\n"
            "Args: funcName (str) - IR-Name of the function\n"
            "Returns: ndarray[float64] - Function embedding vector")
-<<<<<<< HEAD
       .def("getBBEmbMap", &PyIR2VecTool::getBBEmbMap, nb::arg("funcName"),
            "Generate embeddings for all basic blocks in a function\n"
            "Args: funcName (str) - IR-Name of the function\n"
            "Returns: dict[str, ndarray[float64]] - "
-           "{basic_block_name: embedding vector}");
-=======
-      .def("getBBEmbMap", &PyIR2VecTool::getBBEmbMap,
-           "Generate embeddings for all basic blocks in the module\n"
-           "Returns: dict[str, dict[str, ndarray[float64]]] - Nested "
-           "dictionary mapping "
-           "function names to dictionaries of basic block names to embedding "
-           "vectors")
-      .def("getInstEmbMap", &PyIR2VecTool::getInstEmbMap,
-           "Generate embeddings for all instructions in the module\n"
-           "Returns: dict[str, dict[str, ndarray[float64]]] - Nested "
-           "dictionary mapping "
-           "function names to dictionaries of instruction strings to embedding "
-           "vectors");
+           "{basic_block_name: embedding vector}")
+      .def("getInstEmbMap", &PyIR2VecTool::getInstEmbMap, nb::arg("funcName"),
+           "Generate embeddings for all instructions in a function\n"
+           "Args: funcName (str) - IR-Name of the function\n"
+           "Returns: dict[str, ndarray[float64]] - "
+           "{instruction_string: embedding_vector}");
 
->>>>>>> b259e51c5fdd (Adding Inst Embeddings Map API to ir2vec python bindings - returns a nested map indexed by functions)
   m.def(
       "initEmbedding",
       [](const std::string &filename, const std::string &mode,

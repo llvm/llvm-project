@@ -217,7 +217,7 @@ IR2VecTool::getBBEmbeddingsMap(const Function &F, IR2VecKind Kind) const {
 }
 
 Expected<InstEmbeddingsMap>
-IR2VecTool::getInstEmbMap(const Function &F, IR2VecKind Kind) const {
+IR2VecTool::getInstEmbeddingsMap(const Function &F, IR2VecKind Kind) const {
   if (!Vocab || !Vocab->isValid())
     return createStringError(
         errc::invalid_argument,
@@ -237,25 +237,6 @@ IR2VecTool::getInstEmbMap(const Function &F, IR2VecKind Kind) const {
 
   for (const Instruction &I : instructions(F))
     Result.try_emplace(&I, Emb->getInstVector(I));
-
-  return Result;
-}
-
-Expected<FuncInstEmbMap> IR2VecTool::getFuncInstEmbMap(IR2VecKind Kind) const {
-  if (!Vocab || !Vocab->isValid())
-    return createStringError(
-        errc::invalid_argument,
-        "Vocabulary is not valid. IR2VecTool not initialized.");
-
-  FuncInstEmbMap Result;
-
-  for (const Function &F : M.getFunctionDefs()) {
-    auto FuncInstVecs = getInstEmbMap(F, Kind);
-    if (!FuncInstVecs)
-      return FuncInstVecs.takeError();
-
-    Result.try_emplace(&F, std::move(*FuncInstVecs));
-  }
 
   return Result;
 }
