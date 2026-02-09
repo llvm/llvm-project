@@ -19,7 +19,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LIBC_INLINE static ExpRangeReduction exp10_range_reduction(float16 x) {
+LIBC_INLINE ExpRangeReduction exp10_range_reduction(float16 x) {
   // For -8 < x < 5, to compute 10^x, we perform the following range reduction:
   // find hi, mid, lo, such that:
   //   x = (hi + mid) * log2(10) + lo, in which

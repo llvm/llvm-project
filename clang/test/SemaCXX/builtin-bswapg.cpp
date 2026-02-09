@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fexperimental-new-constant-interpreter %s
 
 void test_basic_type_checks() {
+  static_assert(__is_same(bool, decltype(__builtin_bswapg((bool)0))), "");
   static_assert(__is_same(char, decltype(__builtin_bswapg((char)0))), "");
   static_assert(__is_same(unsigned char, decltype(__builtin_bswapg((unsigned char)0))), "");
   static_assert(__is_same(short, decltype(__builtin_bswapg((short)0))), "");

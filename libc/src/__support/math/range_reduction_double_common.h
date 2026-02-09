@@ -25,12 +25,12 @@ namespace math {
 namespace range_reduction_double_internal {
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-static constexpr unsigned SPLIT = fputil::DefaultSplit<double>::VALUE;
+LIBC_INLINE_VAR constexpr unsigned SPLIT = fputil::DefaultSplit<double>::VALUE;
 #else
 // When there is no-FMA instructions, in order to have exact product of 2 double
 // precision with directional roundings, we need to lower the precision of the
 // constants by at least 1 bit, and use a different splitting constant.
-static constexpr unsigned SPLIT = 28;
+LIBC_INLINE_VAR constexpr unsigned SPLIT = 28;
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 using LIBC_NAMESPACE::fputil::DoubleDouble;
@@ -44,7 +44,7 @@ using Float128 = LIBC_NAMESPACE::fputil::DyadicFloat<128>;
 // Error bound:
 //   |(x - k * pi/128) - (u_hi + u_lo)| <= max(ulp(ulp(u_hi)), 2^-119)
 //                                      <= 2^-111.
-LIBC_INLINE static unsigned range_reduction_small(double x, DoubleDouble &u) {
+LIBC_INLINE unsigned range_reduction_small(double x, DoubleDouble &u) {
   // Values of -pi/128 used for inputs with absolute value <= 2^16.
   // The first 3 parts are generated with (53 - 21 = 32)-bit precision, so that
   // the product k * MPI_OVER_128[i] is exact.
@@ -97,7 +97,7 @@ LIBC_INLINE static unsigned range_reduction_small(double x, DoubleDouble &u) {
 // and one of those conditions guarantees that ulp(0.25 * x_reduced) >= 2, and
 // will safely be discarded.
 
-static constexpr double ONE_TWENTY_EIGHT_OVER_PI[64][4] = {
+LIBC_INLINE_VAR constexpr double ONE_TWENTY_EIGHT_OVER_PI[64][4] = {
     {0x1.0000000000014p5, 0x1.7cc1b727220a8p-49, 0x1.4fe13abe8fa9cp-101,
      -0x1.911f924eb5336p-153},
     {0x1.0000000145f3p5, 0x1.b727220a94fep-49, 0x1.3abe8fa9a6eep-101,
@@ -284,7 +284,7 @@ private:
 };
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-LIBC_INLINE static Float128 range_reduction_small_f128(double x) {
+LIBC_INLINE Float128 range_reduction_small_f128(double x) {
   constexpr Float128 PI_OVER_128_F128 = {
       Sign::POS, -133, 0xc90f'daa2'2168'c234'c4c6'628b'80dc'1cd1_u128};
   constexpr double ONE_TWENTY_EIGHT_OVER_PI_D = 0x1.45f306dc9c883p5;
@@ -306,7 +306,7 @@ LIBC_INLINE static Float128 range_reduction_small_f128(double x) {
   return fputil::quick_mul(y, PI_OVER_128_F128);
 }
 
-static constexpr Float128 SIN_K_PI_OVER_128_F128[65] = {
+LIBC_INLINE_VAR constexpr Float128 SIN_K_PI_OVER_128_F128[65] = {
     {Sign::POS, 0, 0},
     {Sign::POS, -133, 0xc90a'afbd'1b33'efc9'c539'edcb'fda0'cf2c_u128},
     {Sign::POS, -132, 0xc8fb'2f88'6ec0'9f37'6a17'954b'2b7c'5171_u128},
