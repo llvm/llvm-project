@@ -3686,6 +3686,14 @@ the configuration (without a prefix: ``Auto``).
            initializer1(),
            initializer2()
 
+  * ``BCIS_AfterComma`` (in configuration: ``AfterComma``)
+    Break constructor initializers only after the commas.
+
+    .. code-block:: c++
+
+       Constructor() : initializer1(),
+                       initializer2()
+
 
 
 .. _BreakFunctionDefinitionParameters:
