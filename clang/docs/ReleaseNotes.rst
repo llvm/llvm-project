@@ -43,11 +43,19 @@ C/C++ Language Potentially Breaking Changes
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
+- Clang now more aggressively optimizes away stores to objects after they are
+  dead. This behavior can be disabled with ``-fno-lifetime-dse``.
+
 ABI Changes in This Version
 ---------------------------
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
+
+- The JSON AST dump now includes all fields from ``AvailabilityAttr``: ``platform``,
+  ``introduced``, ``deprecated``, ``obsoleted``, ``unavailable``, ``message``,
+  ``strict``, ``replacement``, ``priority``, and ``environment``. Previously, these
+  fields were missing from the JSON output.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
@@ -84,6 +92,10 @@ Clang Python Bindings Potentially Breaking Changes
   An alias is kept in the form of a ``SPELLING_CACHE`` variable, but it only supports
   ``__getitem__`` and ``__contains__``. It will be removed in a future release.
   Please migrate to using ``CompletionChunk.SPELLING_CACHE`` instead.
+- ``SourceLocation`` and ``SourceRange`` now use ``NotImplemented`` to delegate
+  equality checks (``__eq__``) to the other object they are compared with when
+  they are of different classes. They previously returned ``False`` when compared
+  with objects of other classes.
 
 What's New in Clang |release|?
 ==============================
@@ -216,6 +228,10 @@ Improvements to Clang's diagnostics
 
 - Improved ``-Wassign-enum`` performance by caching enum enumerator values. (#GH176454)
 
+- Fixed a false negative in ``-Warray-bounds`` where the warning was suppressed
+  when accessing a member function on a past-the-end array element.
+  (#GH179128)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
@@ -228,6 +244,9 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
+
+- Fixed atomic boolean compound assignment; the conversion back to atomic bool would be miscompiled. (#GH33210)
+
 - Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
 
 - Fix lifetime extension of temporaries in for-range-initializers in templates. (#GH165182)
@@ -251,6 +270,7 @@ Bug Fixes to C++ Support
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a bug where explicit nullability property attributes were not stored in AST nodes in Objective-C. (#GH179703)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -280,6 +300,7 @@ NVPTX Support
 
 X86 Support
 ^^^^^^^^^^^
+- ``march=znver6`` is now supported.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^

@@ -2686,8 +2686,8 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs,
     Features.AddFeature("+all");
   } else if (MCPU.empty() && Obj->makeTriple().isAVR()) {
     if (const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj)) {
-      if (Expected<std::string> VersionOrErr =
-              AVR::getFeatureSetFromEFlag(Elf)) {
+      if (Expected<std::string> VersionOrErr = AVR::getFeatureSetFromEFlag(
+              Elf->getPlatformFlags() & ELF::EF_AVR_ARCH_MASK)) {
         Features.AddFeature('+' + *VersionOrErr);
       } else {
         // If the architecture version cannot be determined from ELF flags,
