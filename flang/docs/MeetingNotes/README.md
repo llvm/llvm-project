@@ -45,9 +45,6 @@ workspace is used for informal real-time communication in the Flang community.
 
 * **LLVM Flang Development:**  
   * On GitHub: The source code for LLVM Flang is available on [https://github.com/llvm/llvm-project/tree/main/flang](https://github.com/llvm/llvm-project/tree/main/flang). It is recommended to start in the "docs" directory.  
-  * Public plan: The team maintains a plan for upcoming Flang work at [https://github.com/orgs/flang-compiler/projects/](https://github.com/orgs/flang-compiler/projects/). This reflects current LLVM Flang priorities and context for the
-  project and its long-term goals. (OpenMP work for flang, clang, and
-  OpenMPIRBuilder is tracked separately.)
 
 * **Classic Flang Development:**  
   * Outstanding pull requests: [https://github.com/flang-compiler/flang/pulls](https://github.com/flang-compiler/flang/pulls)
