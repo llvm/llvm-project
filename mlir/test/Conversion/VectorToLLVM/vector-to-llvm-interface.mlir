@@ -1638,7 +1638,7 @@ func.func @load_nontemporal_scalable(%memref : memref<200x100xf32>, %i : index, 
 // -----
 
 func.func @load_volatile(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
-  %0 = vector.load %memref[%i, %j] {volatile_} : memref<200x100xf32>, vector<8xf32>
+  %0 = vector.load %memref[%i, %j] {volatile_ = true} : memref<200x100xf32>, vector<8xf32>
   return %0 : vector<8xf32>
 }
 
@@ -1647,12 +1647,12 @@ func.func @load_volatile(%memref : memref<200x100xf32>, %i : index, %j : index) 
 // CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]]  : i64
 // CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}  : i64
 // CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// CHECK: llvm.load %[[GEP]] {alignment = 4 : i64, volatile_} : !llvm.ptr -> vector<8xf32>
+// CHECK: llvm.load volatile %[[GEP]] {alignment = 4 : i64} : !llvm.ptr -> vector<8xf32>
 
 // -----
 
 func.func @load_volatile_scalable(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<[8]xf32> {
-  %0 = vector.load %memref[%i, %j] {volatile_} : memref<200x100xf32>, vector<[8]xf32>
+  %0 = vector.load %memref[%i, %j] {volatile_ = true} : memref<200x100xf32>, vector<[8]xf32>
   return %0 : vector<[8]xf32>
 }
 
@@ -1661,7 +1661,7 @@ func.func @load_volatile_scalable(%memref : memref<200x100xf32>, %i : index, %j 
 // CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]]  : i64
 // CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}  : i64
 // CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// CHECK: llvm.load %[[GEP]] {alignment = 4 : i64, volatile_} : !llvm.ptr -> vector<[8]xf32>
+// CHECK: llvm.load volatile %[[GEP]] {alignment = 4 : i64} : !llvm.ptr -> vector<[8]xf32>
 
 // -----
 
@@ -1792,7 +1792,7 @@ func.func @store_volatile(%memref : memref<200x100xf32>, %i : index, %j : index)
 // CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]]  : i64
 // CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}  : i64
 // CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// CHECK: llvm.store %{{.*}}, %[[GEP]] {alignment = 4 : i64, volatile_} :  vector<4xf32>, !llvm.ptr
+// CHECK: llvm.store volatile %{{.*}}, %[[GEP]] {alignment = 4 : i64} : vector<4xf32>, !llvm.ptr
 
 // -----
 
@@ -1807,7 +1807,7 @@ func.func @store_volatile_scalable(%memref : memref<200x100xf32>, %i : index, %j
 // CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]]  : i64
 // CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}  : i64
 // CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// CHECK: llvm.store %{{.*}}, %[[GEP]] {alignment = 4 : i64, volatile_} :  vector<[4]xf32>, !llvm.ptr
+// CHECK: llvm.store volatile %{{.*}}, %[[GEP]] {alignment = 4 : i64} : vector<[4]xf32>, !llvm.ptr
 
 // -----
 
