@@ -988,7 +988,7 @@ PyDenseElementsAttribute::getBooleanBufferFromBitpackedAttribute() const {
   }
 
   int64_t numBooleans = mlirElementsAttrGetNumElements(*this);
-  int64_t numBitpackedBytes = llvm::divideCeil(numBooleans, 8);
+  int64_t numBitpackedBytes = (numBooleans + 7) / 8;
   uint8_t *bitpackedData = static_cast<uint8_t *>(
       const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
   nb::ndarray<uint8_t, nb::numpy, nb::ndim<1>, nb::c_contig> packedArray(
