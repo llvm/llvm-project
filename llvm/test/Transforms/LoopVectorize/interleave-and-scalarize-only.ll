@@ -380,7 +380,7 @@ exit:
   ret void
 }
 
-define void @pr179671(ptr align 8 dereferenceable(120) %p, ptr %a, i32 %b, i1 %flag) {
+define void @pr179671(ptr align 8 dereferenceable(120) %p, ptr %a, i32 %b) {
 ; CHECK-LABEL: define void @pr179671(
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
@@ -403,17 +403,14 @@ define void @pr179671(ptr align 8 dereferenceable(120) %p, ptr %a, i32 %b, i1 %f
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC:%.*]]
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[LOOP_1:.*]], label %vector.body
 entry:
-  br i1 %flag, label %loop.1.ph, label %exit
-
-loop.1.ph:
   %inv_ptr = getelementptr inbounds nuw i8, ptr %p, i64 24
   %inv_ptr2 = getelementptr inbounds nuw i8, ptr %p, i64 40
-  br label %loop.1
+  br label %loop.header
 
-loop.1:
-  %load23 = phi i32 [ %b, %loop.1.ph ], [ %sadd_val, %loop.5 ]
-  %load12 = phi ptr [ %a, %loop.1.ph ], [ %phi_ptr1, %loop.5 ]
-  %phi_ptr1 = phi ptr [ null, %loop.1.ph ], [ %phi_ptr_next, %loop.5 ]
+loop.header:
+  %load23 = phi i32 [ %b, %entry ], [ %sadd_val, %loop.5 ]
+  %load12 = phi ptr [ %a, %entry ], [ %phi_ptr1, %loop.5 ]
+  %phi_ptr1 = phi ptr [ null, %entry ], [ %phi_ptr_next, %loop.5 ]
   %phi_ptr_next = getelementptr i8, ptr %phi_ptr1, i64 128
   store ptr %load12, ptr %phi_ptr1, align 8
   br label %loop.3
@@ -422,15 +419,15 @@ loop.3:
   store ptr %phi_ptr1, ptr %inv_ptr, align 8
   %sadd_val = add i32 %load23, 3
   %sadd_ov = icmp eq i32 %sadd_val, 8
-  br i1 %sadd_ov, label %loop.4, label %loop.5
-
-loop.4:
-  store i32 0, ptr %p, align 4
-  ret void
+  br i1 %sadd_ov, label %exit.0, label %loop.5
 
 loop.5:
   store i32 %sadd_val, ptr %inv_ptr2, align 8
-  br label %loop.1
+  br label %loop.header
+
+exit.0:
+  store i32 0, ptr %p, align 4
+  ret void
 
 exit:
   ret void
