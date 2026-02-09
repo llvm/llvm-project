@@ -271,7 +271,11 @@ struct DebugFilter {
 struct DebugSettings {
   bool Enabled = false;
   uint32_t DefaultLevel = 1;
+  // Types/Components in this list are not printed when debug is enabled 
+  // unless they are explicitly requested by the user in IncludeFilters.
   llvm::SmallVector<StringRef> ExcludeFilters;
+  // Types/Components in this list are printed when debug is enabled if 
+  // the debug level is equal or higher than the specified level.
   llvm::SmallVector<DebugFilter> IncludeFilters;
 };
 
@@ -310,10 +314,10 @@ struct DebugSettings {
 
     Settings.Enabled = true;
 
-    // Messages with Type/Components added to the exclude list are not 
+    // Messages with Type/Components added to the exclude list are not
     // not printed when debug is enabled unless they are explicitly 
     // requested by the user.
-    // Eventuall this should be configured from the upper layers but 
+    // Eventuall this should be configured from the upper layers but
     // for now we can hardcode some excluded types here like:
     // Settings.ExcludeFilters.push_back(Type); 
 
