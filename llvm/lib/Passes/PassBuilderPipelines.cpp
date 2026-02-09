@@ -434,10 +434,20 @@ static bool isLTOPreLink(ThinOrFullLTOPhase Phase) {
          Phase == ThinOrFullLTOPhase::FullLTOPreLink;
 }
 
+// Helper to check if the current compilation phase is preparing for FullLTO
+static bool isFullLTOPreLink(ThinOrFullLTOPhase Phase) {
+  return Phase == ThinOrFullLTOPhase::FullLTOPreLink;
+}
+
 // Helper to check if the current compilation phase is LTO backend
 static bool isLTOPostLink(ThinOrFullLTOPhase Phase) {
   return Phase == ThinOrFullLTOPhase::ThinLTOPostLink ||
          Phase == ThinOrFullLTOPhase::FullLTOPostLink;
+}
+
+// Helper to check if the current compilation phase is FullLTO backend
+static bool isFullLTOPostLink(ThinOrFullLTOPhase Phase) {
+  return Phase == ThinOrFullLTOPhase::FullLTOPostLink;
 }
 
 // Helper to wrap conditionally Coro passes.
@@ -1318,10 +1328,10 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
 void PassBuilder::addVectorPasses(OptimizationLevel Level,
                                   FunctionPassManager &FPM,
                                   ThinOrFullLTOPhase LTOPhase) {
-  const bool IsFullLTO = LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink;
 
-  FPM.addPass(LoopVectorizePass(
-      LoopVectorizeOptions(!PTO.LoopInterleaving, !PTO.LoopVectorization)));
+  if (!isFullLTOPreLink(LTOPhase))
+    FPM.addPass(LoopVectorizePass(
+        LoopVectorizeOptions(!PTO.LoopInterleaving, !PTO.LoopVectorization)));
 
   // Drop dereferenceable assumes after vectorization, as they are no longer
   // needed and can inhibit further optimization.
@@ -1329,7 +1339,8 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     FPM.addPass(DropUnnecessaryAssumesPass(/*DropDereferenceable=*/true));
 
   FPM.addPass(InferAlignmentPass());
-  if (IsFullLTO) {
+  if (isFullLTOPostLink(LTOPhase)) {
+    LoopPassManager LPM;
     // The vectorizer may have significantly shortened a loop body; unroll
     // again. Unroll small loops to hide loop backedge latency and saturate any
     // parallel execution resources of an out-of-order processor. We also then
@@ -1339,11 +1350,15 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // across the loop nests.
     // We do UnrollAndJam in a separate LPM to ensure it happens before unroll
     if (EnableUnrollAndJam && PTO.LoopUnrolling)
-      FPM.addPass(createFunctionToLoopPassAdaptor(
-          LoopUnrollAndJamPass(Level.getSpeedupLevel())));
-    FPM.addPass(LoopUnrollPass(LoopUnrollOptions(
-        Level.getSpeedupLevel(), /*OnlyWhenForced=*/!PTO.LoopUnrolling,
-        PTO.ForgetAllSCEVInLoopUnroll)));
+      LPM.addPass(LoopUnrollAndJamPass(Level.getSpeedupLevel()));
+
+    // Unroll small loops and perform peeling.
+    LPM.addPass(LoopFullUnrollPass(Level.getSpeedupLevel(),
+                                   /* OnlyWhenForced= */ !PTO.LoopUnrolling,
+                                   PTO.ForgetAllSCEVInLoopUnroll));
+    FPM.addPass(createFunctionToLoopPassAdaptor(std::move(LPM),
+                                                /*UseMemorySSA=*/false));
+
     FPM.addPass(WarnMissedTransformationsPass());
     // Now that we are done with loop unrolling, be it either by LoopVectorizer,
     // or LoopUnroll passes, some variable-offset GEP's into alloca's could have
@@ -1354,7 +1369,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     FPM.addPass(SROAPass(SROAOptions::PreserveCFG));
   }
 
-  if (!IsFullLTO) {
+  if (!isFullLTOPostLink(LTOPhase)) {
     // Eliminate loads by forwarding stores from the previous iteration to loads
     // of the current iteration.
     FPM.addPass(LoopLoadEliminationPass());
@@ -1404,14 +1419,14 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
                                   .hoistCommonInsts(true)
                                   .sinkCommonInsts(true)));
 
-  if (IsFullLTO) {
+  if (isFullLTOPostLink(LTOPhase)) {
     FPM.addPass(SCCPPass());
     FPM.addPass(InstCombinePass());
     FPM.addPass(BDCEPass());
   }
 
   // Optimize parallel scalar instruction chains into SIMD instructions.
-  if (PTO.SLPVectorization) {
+  if (PTO.SLPVectorization && !isFullLTOPreLink(LTOPhase)) {
     FPM.addPass(SLPVectorizerPass());
     if (Level.getSpeedupLevel() > 1 && ExtraVectorizerPasses) {
       FPM.addPass(EarlyCSEPass());
@@ -1420,7 +1435,7 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
   // Enhance/cleanup vector code.
   FPM.addPass(VectorCombinePass());
 
-  if (!IsFullLTO) {
+  if (!isFullLTOPreLink(LTOPhase)) {
     FPM.addPass(InstCombinePass());
     // Unroll small loops to hide loop backedge latency and saturate any
     // parallel execution resources of an out-of-order processor. We also then
@@ -2243,12 +2258,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   LPM.addPass(LoopDeletionPass());
   // FIXME: Add loop interchange.
 
-  // Unroll small loops and perform peeling.
-  LPM.addPass(LoopFullUnrollPass(Level.getSpeedupLevel(),
-                                 /* OnlyWhenForced= */ !PTO.LoopUnrolling,
-                                 PTO.ForgetAllSCEVInLoopUnroll));
   // The loop passes in LPM (LoopFullUnrollPass) do not preserve MemorySSA.
   // *All* loop passes must preserve it, in order to be able to use it.
+  // TODO: Enable MemorySSA for loop passes after we remove the
+  // LoopFullUnrollPass.
   MainFPM.addPass(
       createFunctionToLoopPassAdaptor(std::move(LPM), /*UseMemorySSA=*/false));
 
@@ -2283,6 +2296,21 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Add late LTO optimization passes.
   FunctionPassManager LateFPM;
 
+  // Delete basic blocks, which optimization passes may have killed.
+  LateFPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
+                                      .convertSwitchRangeToICmp(true)
+                                      .convertSwitchToArithmetic(true)
+                                      .hoistCommonInsts(true)
+                                      .speculateUnpredictables(true)));
+
+  LateFPM.addPass(createFunctionToLoopPassAdaptor(
+      LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
+               /*AllowSpeculation=*/true),
+      /*USeMemorySSA=*/true));
+
+  // Catch trivial redundancies
+  LateFPM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
+
   // LoopSink pass sinks instructions hoisted by LICM, which serves as a
   // canonicalization pass that enables other optimizations. As a result,
   // LoopSink pass needs to be a very late IR pass to avoid undoing LICM
@@ -2300,6 +2328,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                                       .convertSwitchToArithmetic(true)
                                       .hoistCommonInsts(true)
                                       .speculateUnpredictables(true)));
+
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(LateFPM)));
 
   // Drop bodies of available eternally objects to improve GlobalDCE.
