@@ -56,6 +56,7 @@ View param_default(View a = View()) {
   return a;
 }
 
+// FIXME: Iterate over redecls and add [[clang::lifetimebound]]
 View multi_decl(View a);
 View multi_decl(View a);
 View multi_decl(View a) {
