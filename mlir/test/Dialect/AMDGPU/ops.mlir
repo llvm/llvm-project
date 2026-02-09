@@ -802,6 +802,13 @@ func.func @wmma_scale(%fp8_src: vector<64xf8E4M3FN>, %fp6_alt_src: vector<64xf6E
   func.return
 }
 
+// CHECK-LABEL: func.func @dpp_vector_src_does_not_assert
+// CHECK: amdgpu.dpp
+func.func @dpp_vector_src_does_not_assert(%tile: vector<256xi8>, %pop: vector<256xi8>) {
+  %r = amdgpu.dpp %pop %tile row_shl(1 : i32) : vector<256xi8>
+  func.return
+}
+
 // CHECK-LABEL: func @ds_barrier_ops
 // CHECK-SAME: ([[BARRIER:%.*]]: memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, [[COUNT:%.*]]: i64, [[PARTICIPANTS:%.*]]: i32)
 func.func @ds_barrier_ops(%barrier: memref<!amdgpu.ds_barrier_state, #gpu.address_space<workgroup>>, %count: i64, %participants: i32) {
