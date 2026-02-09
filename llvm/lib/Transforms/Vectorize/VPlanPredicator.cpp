@@ -73,14 +73,11 @@ public:
     return EdgeMaskCache.lookup({Src, Dst});
   }
 
-  /// Compute and return the predicate of \p VPBB, assuming that the header
-  /// block of the loop is set to True, or to the loop mask when tail folding.
-  VPValue *createBlockInMask(VPBasicBlock *VPBB);
+  /// Compute the predicate of \p VPBB.
+  void createBlockInMask(VPBasicBlock *VPBB);
 
   /// Convert phi recipes in \p VPBB to VPBlendRecipes.
   void convertPhisToBlends(VPBasicBlock *VPBB);
-
-  const BlockMaskCacheTy getBlockMaskCache() const { return BlockMaskCache; }
 };
 } // namespace
 
@@ -125,7 +122,7 @@ VPValue *VPPredicator::createEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst) {
   return setEdgeMask(Src, Dst, EdgeMask);
 }
 
-VPValue *VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
+void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   // Start inserting after the block's phis, which be replaced by blends later.
   Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
   // All-one mask is modelled as no-mask following the convention for masked
@@ -138,7 +135,7 @@ VPValue *VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
     if (!EdgeMask) { // Mask of predecessor is all-one so mask of block is
                      // too.
       setBlockInMask(VPBB, EdgeMask);
-      return EdgeMask;
+      return;
     }
 
     if (!BlockMask) { // BlockMask has its initial nullptr value.
@@ -150,7 +147,6 @@ VPValue *VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   }
 
   setBlockInMask(VPBB, BlockMask);
-  return BlockMask;
 }
 
 void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
@@ -219,9 +215,9 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
     // be duplications since this is a simple recursive scan, but future
     // optimizations will clean it up.
 
-    if (all_equal(
-            make_filter_range(PhiR->incoming_values(),
-                              std::not_fn(match_fn<VPValue>(m_Poison()))))) {
+    if (all_equal(make_filter_range(PhiR->incoming_values(), [](VPValue *V) {
+          return !match(V, m_Poison());
+        }))) {
       PhiR->replaceAllUsesWith(PhiR->getIncomingValue(0));
       PhiR->eraseFromParent();
       continue;
@@ -241,8 +237,7 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
   }
 }
 
-DenseMap<VPBasicBlock *, VPValue *>
-VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
+void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
@@ -253,10 +248,23 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
   for (VPBlockBase *VPB : RPOT) {
     // Non-outer regions with VPBBs only are supported at the moment.
     auto *VPBB = cast<VPBasicBlock>(VPB);
-    if (VPBB == Header)
+    // Introduce the mask for VPBB, which may introduce needed edge masks, and
+    // convert all phi recipes of VPBB to blend recipes unless VPBB is the
+    // header.
+    if (VPBB != Header) {
+      Predicator.createBlockInMask(VPBB);
+      Predicator.convertPhisToBlends(VPBB);
+    }
+
+    VPValue *BlockMask = Predicator.getBlockInMask(VPBB);
+    if (!BlockMask)
       continue;
-    Predicator.createBlockInMask(VPBB);
-    Predicator.convertPhisToBlends(VPBB);
+
+    // Mask all VPInstructions in the block.
+    for (VPRecipeBase &R : *VPBB) {
+      if (auto *VPI = dyn_cast<VPInstruction>(&R))
+        VPI->addMask(BlockMask);
+    }
   }
 
   // Linearize the blocks of the loop into one serial chain.
@@ -275,5 +283,4 @@ VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
 
     PrevVPBB = VPBB;
   }
-  return Predicator.getBlockMaskCache();
 }

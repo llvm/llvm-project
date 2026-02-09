@@ -127,11 +127,9 @@ struct VPlanTransforms {
 
   /// Create VPReductionRecipes for in-loop reductions. This processes chains
   /// of operations contributing to in-loop reductions and creates appropriate
-  /// VPReductionRecipe instances. Block masks from \p BlockMaskCache are used
-  /// to add predication for blocks in \p BlocksNeedingPredication.
+  /// VPReductionRecipe instances.
   static void createInLoopReductionRecipes(
-      VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
-      const DenseSet<BasicBlock *> &BlocksNeedingPredication,
+      VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
       ElementCount MinVF);
 
   /// Update \p Plan to account for all early exits.
@@ -464,8 +462,7 @@ struct VPlanTransforms {
 
   /// Predicate and linearize the control-flow in the only loop region of
   /// \p Plan.
-  static DenseMap<VPBasicBlock *, VPValue *>
-  introduceMasksAndLinearize(VPlan &Plan);
+  static void introduceMasksAndLinearize(VPlan &Plan);
 
   /// Add branch weight metadata, if the \p Plan's middle block is terminated by
   /// a BranchOnCond recipe.

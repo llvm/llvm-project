@@ -28,6 +28,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -36,11 +37,14 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Scalar/LowerConstantIntrinsics.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 #include "llvm/Transforms/Utils/LowerVectorIntrinsics.h"
 
 using namespace llvm;
+
+#define DEBUG_TYPE "pre-isel-intrinsic-lowering"
 
 /// Threshold to leave statically sized memory intrinsic calls. Calls of known
 /// size larger than this will be expanded by the pass. Calls of unknown or
@@ -613,6 +617,20 @@ static bool expandProtectedFieldPtr(Function &Intr) {
   return true;
 }
 
+static bool expandCondLoop(Function &Intr) {
+  for (User *U : llvm::make_early_inc_range(Intr.users())) {
+    auto *Call = cast<CallInst>(U);
+
+    auto *Br = cast<BranchInst>(
+        SplitBlockAndInsertIfThen(Call->getArgOperand(0), Call, false,
+                                  getExplicitlyUnknownBranchWeightsIfProfiled(
+                                      *Call->getFunction(), DEBUG_TYPE)));
+    Br->setSuccessor(0, Br->getParent());
+    Call->eraseFromParent();
+  }
+  return true;
+}
+
 bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
   // Map unique constants to globals.
   DenseMap<Constant *, GlobalVariable *> CMap;
@@ -757,6 +775,10 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       break;
     case Intrinsic::protected_field_ptr:
       Changed |= expandProtectedFieldPtr(F);
+      break;
+    case Intrinsic::cond_loop:
+      if (!TM->canLowerCondLoop())
+        Changed |= expandCondLoop(F);
       break;
     }
   }
