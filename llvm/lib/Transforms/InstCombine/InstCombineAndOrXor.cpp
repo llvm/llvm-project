@@ -5184,23 +5184,26 @@ static Instruction *foldMaskedAddXorPattern(BinaryOperator &I,
                                             InstCombiner::BuilderTy &Builder,
                                             InstCombinerImpl &IC) {
   Value *InnerVal;
-  Value *AddOpVal;
   const APInt *AndMask, *XorMask, *AddC;
-  if (match(&I,
-            m_Xor(m_OneUse(m_And(m_OneUse(m_CombineAnd(
-                                     m_Value(AddOpVal),
-                                     m_Add(m_Value(InnerVal), m_APInt(AddC)))),
-                                 m_LowBitMask(AndMask))),
-                  m_APInt(XorMask))) &&
+
+  if (match(&I, m_Xor(m_OneUse(m_And(
+                          m_OneUse(m_Add(m_Value(InnerVal), m_APInt(AddC))),
+                          m_LowBitMask(AndMask))),
+                      m_APInt(XorMask))) &&
       *AndMask == *XorMask) {
     APInt NewConst = *AndMask - *AddC;
-    ConstantRange XRange = computeConstantRange(
-        InnerVal, /*signed*/ true, /*UseInstrInfo=*/true,
-        &IC.getAssumptionCache(), &I, &IC.getDominatorTree(), 0);
-    ConstantRange SubRange = ConstantRange(NewConst).sub(XRange);
-    bool InfersNSW = !SubRange.isSignWrappedSet();
-    Value *NewSub = Builder.CreateSub(ConstantInt::get(I.getType(), NewConst),
-                                      InnerVal, "", false, InfersNSW);
+    unsigned BitWidth = I.getType()->getScalarSizeInBits();
+    ConstantRange Range =
+        computeConstantRange(InnerVal, /*signed*/ true,
+                             /*UseInstrInfo=*/true, &IC.getAssumptionCache(),
+                             &I, &IC.getDominatorTree(), 0);
+    // Since C <= (X + C) <= M always holds, 'nuw' check is unnecessary.
+    // Bail out if 'nsw' is implied to avoid creating poison for X=INT_MIN.
+    if (!Range.contains(APInt::getSignedMinValue(BitWidth)))
+      return nullptr;
+
+    Value *NewSub =
+        Builder.CreateSub(ConstantInt::get(I.getType(), NewConst), InnerVal);
 
     return BinaryOperator::CreateAnd(NewSub,
                                      ConstantInt::get(I.getType(), *AndMask));
