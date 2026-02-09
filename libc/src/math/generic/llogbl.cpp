@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/llogbl.h"
-#include "src/__support/common.h"
 #include "src/__support/math/llogbl.h"
 
 namespace LIBC_NAMESPACE_DECL {
