@@ -188,15 +188,15 @@ void DemandedBits::determineLiveOperandBits(
 
           // Normalize to funnel shift left.
           if (IsFShr) {
-            SMin = BitWidth - Max;
-            SMax = BitWidth - Min;
+            SMin = BitWidth - Max - 1;
+            SMax = BitWidth - Min - 1;
           }
           if (OperandNo == 0) {
             ShiftLeft = false;
           } else if (OperandNo == 1) {
             ShiftLeft = true;
-            auto NewSMin = BitWidth - SMax;
-            auto NewSMax = BitWidth - SMin;
+            auto NewSMin = BitWidth - SMax - 1;
+            auto NewSMax = BitWidth - SMin - 1;
             SMin = NewSMin;
             SMax = NewSMax;
           }
