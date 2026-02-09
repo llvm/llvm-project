@@ -52,6 +52,11 @@ bool InterfaceMethod::isStatic() const {
   return def->isSubClassOf("StaticInterfaceMethod");
 }
 
+// Return if the method is a pure virtual one.
+bool InterfaceMethod::isPureVirtual() const {
+  return def->isSubClassOf("PureVirtualInterfaceMethod");
+}
+
 // Return if the method is only a declaration.
 bool InterfaceMethod::isDeclaration() const {
   return def->isSubClassOf("InterfaceMethodDeclaration");

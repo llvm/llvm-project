@@ -12,6 +12,7 @@ add_mlir_library(MLIRReduce
 
    DEPENDS
    MLIRReducerIncGen
+   MLIRReductionPatternInterfaceGen
 )
 
 mlir_check_all_link_libraries(MLIRReduce)
