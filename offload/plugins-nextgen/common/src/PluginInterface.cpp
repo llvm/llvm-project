@@ -880,7 +880,7 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
                            "failure to jit IR image");
     }
     Buffer = std::move(*CompiledImageOrErr);
-    ODBG_OS(OLDT_BinaryDump, OLDL_Verbose, [&](llvm::raw_ostream &Os){
+    ODBG_OS(OLDT_BinaryDump, OLDL_Verbose, [&](llvm::raw_ostream &Os) {
       DumpImage("jitted", Buffer->getBuffer(), Os, LoadedImages.size());
     });
   } else {
@@ -894,8 +894,10 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     return ImageOrErr.takeError();
   DeviceImageTy *Image = *ImageOrErr;
   ODBG_OS(OLDT_BinaryDump, [&](llvm::raw_ostream &Os) {
-    DumpImage("loaded", StringRef(static_cast<const char *>(Image->getStart()),
-                                  Image->getSize()), Os, LoadedImages.size());
+    DumpImage("loaded",
+              StringRef(static_cast<const char *>(Image->getStart()),
+                        Image->getSize()),
+              Os, LoadedImages.size());
   });
 
   // Add the image to list.
