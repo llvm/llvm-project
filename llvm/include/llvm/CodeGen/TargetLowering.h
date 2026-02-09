@@ -624,11 +624,6 @@ public:
     return BypassSlowDivWidths;
   }
 
-  /// Return true if the target wants ExpandIRInsts to expand div/rem
-  /// by power-of-2 constants, rather than leaving them for DAG combines.
-  /// Default is false (current behavior - skip power-of-2 cases).
-  virtual bool shouldExpandPowerOf2DivRem(EVT VT) const { return false; }
-
   /// Return true if Flow Control is an expensive operation that should be
   /// avoided.
   bool isJumpExpensive() const { return JumpIsExpensive; }
