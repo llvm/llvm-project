@@ -14,6 +14,7 @@
 #include <climits>
 
 #include <chrono>
+#include <deque>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -3215,7 +3216,7 @@ protected:
     // you won't be doing any debugging today.
     bool StartupThread();
 
-    bool IsOnThread(const HostThread &thread) const;
+    bool IsOnThread(lldb::thread_t thread) const;
 
     bool IsJoinable() { return m_private_state_thread.IsJoinable(); }
 
@@ -3234,7 +3235,12 @@ protected:
       return m_private_state.GetValue();
     }
 
-    lldb::StateType GetPublicState() const { return m_public_state.GetValue(); }
+    lldb::StateType GetPublicState() const {
+      if (UsesPrivateState())
+        return m_private_state.GetValue();
+      else
+        return m_public_state.GetValue(); 
+    }
 
     void SetPublicState(lldb::StateType new_value) {
       m_public_state.SetValue(new_value);
@@ -3273,12 +3279,33 @@ protected:
     }
 
     ProcessRunLock &GetRunLock() {
-      if (IsOnThread(Host::GetCurrentThread()))
+      lldb::thread_t curr_thread = Host::GetCurrentThread();
+      if (IsOnThread(curr_thread) || UsesPrivateState(curr_thread))
         return m_private_run_lock;
       else
         return m_public_run_lock;
     }
-
+    
+    void PushUsePrivateState(lldb::thread_t new_thread) {
+      m_use_private_state_stack.push_back(new_thread);
+    }
+    
+    void PopUsePrivateState() {
+      // Should we be permissive here?
+      if (!m_use_private_state_stack.empty())
+        m_use_private_state_stack.pop_back();
+    }
+    
+    bool UsesPrivateState() const {
+      return UsesPrivateState(Host::GetCurrentThread());
+    }
+    
+    bool UsesPrivateState(lldb::thread_t thread) const {
+      if (m_use_private_state_stack.empty())
+        return false;
+      return m_use_private_state_stack.back() == thread;
+    }
+    
     Process &m_process;
     ///< The process state that we show to client code.  This will often differ
     ///< from the actual process state, for instance when we've stopped in the
@@ -3305,6 +3332,8 @@ protected:
     ///< This will be the thread name given to the Private State HostThread when
     ///< it gets spun up.
     std::string m_thread_name;
+    
+    std::deque<lldb::thread_t> m_use_private_state_stack;
   };
 
   bool SetPrivateRunLockToStopped() {

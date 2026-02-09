@@ -33,6 +33,8 @@ public:
   /// Set the process to running. Returns true if the process was stopped.
   /// Return false if the process was running.
   bool SetRunning();
+  
+  bool IsRunning() { return m_running; }
 
   /// Set the process to stopped. Returns true if the process was running.
   /// Returns false if the process was stopped.
