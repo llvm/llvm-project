@@ -1805,6 +1805,70 @@ public:
   SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
 };
 
+class StringViewTwoParamConstructorGadget : public WarningGadget {
+  static constexpr const char *const StringViewTwoParamConstructorTag =
+      "stringViewTwoParamConstructor";
+  const CXXConstructExpr *Ctor; // the string_view constructor expression
+
+public:
+  StringViewTwoParamConstructorGadget(const MatchResult &Result)
+      : WarningGadget(Kind::StringViewTwoParamConstructor),
+        Ctor(Result.getNodeAs<CXXConstructExpr>(
+            StringViewTwoParamConstructorTag)) {}
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::StringViewTwoParamConstructor;
+  }
+
+  static bool matches(const Stmt *S, ASTContext &Ctx, MatchResult &Result) {
+    const auto *CE = dyn_cast<CXXConstructExpr>(S);
+    if (!CE)
+      return false;
+    const auto *CDecl = CE->getConstructor();
+    const auto *CRecordDecl = CDecl->getParent();
+
+    // MATCH: std::basic_string_view
+    bool IsStringView =
+        CRecordDecl->isInStdNamespace() &&
+        CDecl->getDeclName().getAsString() == "basic_string_view" &&
+        CE->getNumArgs() == 2;
+
+    if (!IsStringView || isSafeSpanTwoParamConstruct(*CE, Ctx))
+      return false;
+
+    Result.addNode(StringViewTwoParamConstructorTag, DynTypedNode::create(*CE));
+    return true;
+  }
+
+  static bool matches(const Stmt *S, ASTContext &Ctx,
+                      const UnsafeBufferUsageHandler *Handler,
+                      MatchResult &Result) {
+    if (ignoreUnsafeBufferInContainer(*S, Handler))
+      return false;
+    return matches(S, Ctx, Result);
+  }
+
+  void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
+                             bool IsRelatedToDecl,
+                             ASTContext &Ctx) const override {
+    Handler.handleUnsafeOperationInStringView(Ctor, IsRelatedToDecl, Ctx);
+  }
+
+  SourceLocation getSourceLoc() const override { return Ctor->getBeginLoc(); }
+
+  DeclUseList getClaimedVarUseSites() const override {
+    // If the constructor call is of the form `std::string_view{var, n}`, `var`
+    // is considered an unsafe variable.
+    if (auto *DRE = dyn_cast<DeclRefExpr>(Ctor->getArg(0))) {
+      if (isa<VarDecl>(DRE->getDecl()))
+        return {DRE};
+    }
+    return {};
+  }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
+};
+
 /// A pointer initialization expression of the form:
 ///  \code
 ///  int *p = q;
@@ -2954,6 +3018,8 @@ std::set<const Expr *> clang::findUnsafePointers(const FunctionDecl *FD) {
                               const Expr *UnsafeArg = nullptr) override {}
     void handleUnsafeOperationInContainer(const Stmt *, bool,
                                           ASTContext &) override {}
+    void handleUnsafeOperationInStringView(const Stmt *, bool,
+                                           ASTContext &) override {}
     void handleUnsafeVariableGroup(const VarDecl *,
                                    const VariableGroupsManager &, FixItList &&,
                                    const Decl *,
