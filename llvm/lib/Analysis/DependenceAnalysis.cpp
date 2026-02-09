@@ -2307,8 +2307,8 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
   const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
-  bool SrcAnalyzable = SrcAddRec && SrcAddRec->hasNoSignedWrap();
-  bool DstAnalyzable = DstAddRec && DstAddRec->hasNoSignedWrap();
+  bool SrcAnalyzable = SrcAddRec != nullptr && SrcAddRec->hasNoSignedWrap();
+  bool DstAnalyzable = DstAddRec != nullptr && DstAddRec->hasNoSignedWrap();
   if (SrcAnalyzable && DstAnalyzable) {
     const SCEV *SrcConst = SrcAddRec->getStart();
     const SCEV *DstConst = DstAddRec->getStart();
