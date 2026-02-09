@@ -55,12 +55,12 @@ body:             |
     ; CHECK-LABEL: name: regsequence-undef-subreg-full-reg-use
     ; CHECK: [[COPY:%[0-9]+]]:sgpr_32 = S_MOV_B32 0, implicit $exec
     ; CHECK-NEXT: undef [[DEF:%[0-9]+]].sub0:sreg_64 = COPY [[COPY]]
-    ; CHECK-NEXT: [[OTH:%[0-9]+]]:vgpr_32 = COPY [[DEF]], implicit $exec 
+    ; CHECK-NEXT: [[OTH:%[0-9]+]]:vreg_64 = COPY [[DEF]], implicit $exec 
     
     ; LIS-LABEL: name: regsequence-undef-subreg-full-reg-use
     ; LIS: [[COPY:%[0-9]+]]:sgpr_32 = S_MOV_B32 0, implicit $exec
     ; LIS-NEXT: undef [[DEF:%[0-9]+]].sub0:sreg_64 = COPY [[COPY]]
-    ; LIS-NEXT: [[OTH:%[0-9]+]]:vgpr_32 = COPY [[DEF]], implicit $exec 
+    ; LIS-NEXT: [[OTH:%[0-9]+]]:vreg_64 = COPY [[DEF]], implicit $exec 
 
     %0:sgpr_32 = S_MOV_B32  0, implicit $exec
 

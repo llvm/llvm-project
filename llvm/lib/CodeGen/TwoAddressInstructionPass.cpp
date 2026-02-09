@@ -2011,10 +2011,8 @@ void TwoAddressInstructionImpl::eliminateRegSequence(
   LaneBitmask UsedLanes = LaneBitmask::getNone();
   if (!LIS) {
     for (MachineOperand &Use : MRI->use_nodbg_operands(DstReg)) {
-      unsigned SubReg = Use.getSubReg();
-      if (SubReg) {
+      if (unsigned SubReg = Use.getSubReg())
         UsedLanes |= TRI->getSubRegIndexLaneMask(SubReg);
-      }
     }
   }
 
