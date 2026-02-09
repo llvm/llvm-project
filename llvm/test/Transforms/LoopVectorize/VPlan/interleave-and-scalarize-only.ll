@@ -1,5 +1,3 @@
-; REQUIRES: asserts
-
 ; RUN: opt -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=2 -debug -disable-output %s 2>&1 | FileCheck --check-prefix=DBG %s
 ; RUN: opt -passes=loop-vectorize -force-vector-width=1 -force-vector-interleave=2 -S %s | FileCheck %s
 

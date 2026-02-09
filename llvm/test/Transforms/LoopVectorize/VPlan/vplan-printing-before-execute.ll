@@ -2,8 +2,6 @@
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
-; REQUIRES: asserts
-
 ; Check if the vector loop condition can be simplified to true for a given
 ; VF/IC combination.
 define void @test_tc_less_than_16(ptr %A, i64 %N) {

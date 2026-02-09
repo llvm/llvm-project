@@ -1,5 +1,3 @@
-; REQUIRES: asserts
-
 ; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize \
 ; RUN: -force-tail-folding-style=data-with-evl -force-vector-width=4 \
 ; RUN: -force-target-supports-scalable-vectors -scalable-vectorization=on \

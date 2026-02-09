@@ -1,6 +1,5 @@
 ; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-after-all -force-vector-width=4 -vplan-verify-each < %s 2>&1 | FileCheck %s --implicit-check-not "VPlan after"
 ; RUN: opt -passes=loop-vectorize -disable-output -vplan-print-after-all -force-vector-width=4 -vplan-verify-each < %s 2>&1 | FileCheck %s --check-prefix CHECK-DUMP
-; REQUIRES: asserts
 
 ; Verify that `-vplan-print-after-all` option works.
 
