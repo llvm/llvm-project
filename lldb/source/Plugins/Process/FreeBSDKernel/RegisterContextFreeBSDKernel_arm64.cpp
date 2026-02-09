@@ -13,11 +13,15 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "llvm/Support/Endian.h"
 
 using namespace lldb;
 using namespace lldb_private;
+
+#define FBSD14 1400084
 
 RegisterContextFreeBSDKernel_arm64::RegisterContextFreeBSDKernel_arm64(
     Thread &thread, std::unique_ptr<RegisterInfoPOSIX_arm64> register_info_up,
@@ -61,7 +65,7 @@ bool RegisterContextFreeBSDKernel_arm64::ReadRegister(
   Status error;
 
   // TODO: LLVM 24: Remove FreeBSD 13 support
-  if (GetOsreldate() > 1400084) {
+  if (GetOsreldate() >= FBSD14) {
     size_t rd =
         m_thread.GetProcess()->ReadMemory(m_pcb_addr, &pcb, sizeof(pcb), error);
     if (rd != sizeof(pcb))
@@ -158,7 +162,7 @@ bool RegisterContextFreeBSDKernel_arm64::WriteRegister(
   return false;
 }
 
-int64_t RegisterContextFreeBSDKernel_arm64::GetOsreldate() {
+int RegisterContextFreeBSDKernel_arm64::GetOsreldate() {
   ProcessSP process_sp = m_thread.GetProcess();
   if (!process_sp)
     return 0;
@@ -169,20 +173,24 @@ int64_t RegisterContextFreeBSDKernel_arm64::GetOsreldate() {
   target.GetImages().FindSymbolsWithNameAndType(ConstString("osreldate"),
                                                 lldb::eSymbolTypeData, sc_list);
 
-  if (sc_list.GetSize() > 0) {
-    SymbolContext sc;
-    sc_list.GetContextAtIndex(0, sc);
+  if (sc_list.GetSize() == 0) {
+    LLDB_LOGF(GetLog(LLDBLog::Object),
+              "Cannot find osreldate. Defaulting to %d.", FBSD14);
+    return FBSD14;
+  }
 
-    if (sc.symbol) {
-      lldb::addr_t addr = sc.symbol->GetLoadAddress(&target);
-      if (addr != LLDB_INVALID_ADDRESS) {
-        Status error;
-        int64_t osreldate = 0;
-        size_t bytes_read =
-            process_sp->ReadMemory(addr, &osreldate, sizeof(osreldate), error);
-        if (bytes_read == sizeof(osreldate) && error.Success()) {
-          return osreldate;
-        }
+  SymbolContext sc;
+  sc_list.GetContextAtIndex(0, sc);
+
+  if (sc.symbol) {
+    lldb::addr_t addr = sc.symbol->GetLoadAddress(&target);
+    if (addr != LLDB_INVALID_ADDRESS) {
+      Status error;
+      int64_t osreldate = 0;
+      size_t bytes_read =
+          process_sp->ReadMemory(addr, &osreldate, sizeof(osreldate), error);
+      if (bytes_read == sizeof(osreldate) && error.Success()) {
+        return osreldate;
       }
     }
   }

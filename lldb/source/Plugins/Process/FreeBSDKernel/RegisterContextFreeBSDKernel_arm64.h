@@ -12,8 +12,6 @@
 #include "Plugins/Process/Utility/RegisterContextPOSIX_arm64.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 
-#include "lldb/Target/Target.h"
-
 class RegisterContextFreeBSDKernel_arm64 : public RegisterContextPOSIX_arm64 {
 public:
   RegisterContextFreeBSDKernel_arm64(
@@ -39,7 +37,7 @@ protected:
 private:
   lldb::addr_t m_pcb_addr;
 
-  int64_t GetOsreldate();
+  int GetOsreldate();
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNEL_ARM64_H
