@@ -23,6 +23,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/Support/RWMutex.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -246,7 +247,9 @@ class LLVM_ABI DWARFUnit {
 
   mutable const DWARFAbbreviationDeclarationSet *Abbrevs;
   std::optional<object::SectionedAddress> BaseAddr;
+
   /// The compile unit debug information entry items.
+  mutable sys::RWMutex DieArrayMutex;
   std::vector<DWARFDebugInfoEntry> DieArray;
 
   /// Map from range's start address to end address and corresponding DIE.
@@ -538,9 +541,10 @@ public:
   /// Return the DIE object for a given offset \p Offset inside the
   /// unit's DIE vector.
   DWARFDie getDIEForOffset(uint64_t Offset) {
-    if (std::optional<uint32_t> DieIdx = getDIEIndexForOffset(Offset))
+    if (std::optional<uint32_t> DieIdx = getDIEIndexForOffset(Offset)) {
+      sys::ScopedReader ReadLock(DieArrayMutex);
       return DWARFDie(this, &DieArray[*DieIdx]);
-
+    }
     return DWARFDie();
   }
 
@@ -548,6 +552,7 @@ public:
   /// unit's DIE vector.
   std::optional<uint32_t> getDIEIndexForOffset(uint64_t Offset) {
     extractDIEsIfNeeded(false);
+    sys::ScopedReader ReadLock(DieArrayMutex);
     auto It =
         llvm::partition_point(DieArray, [=](const DWARFDebugInfoEntry &DIE) {
           return DIE.getOffset() < Offset;
