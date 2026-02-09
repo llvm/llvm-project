@@ -1512,6 +1512,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case SgprB64:
     case SgprB96:
     case SgprB128:
+    case SgprB160:
     case SgprB256:
     case SgprB512:
     case SgprBRC:
