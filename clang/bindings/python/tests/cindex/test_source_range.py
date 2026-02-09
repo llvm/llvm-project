@@ -95,4 +95,4 @@ aaaaa"""
         self.assertEqual(r1, r1)
         self.assertEqual(r1, r1_2)
         self.assertNotEqual(r1, r2)
-        self.assertNotEqual(r1, "foo")
+        self.assertFalse(r1 == "foo")

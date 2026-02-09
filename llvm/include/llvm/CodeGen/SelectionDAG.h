@@ -438,10 +438,18 @@ private:
 
   template <typename SDNodeTy>
   static uint16_t getSyntheticNodeSubclassData(unsigned Opc, unsigned Order,
-                                                SDVTList VTs, EVT MemoryVT,
-                                                MachineMemOperand *MMO) {
+                                               SDVTList VTs, EVT MemoryVT,
+                                               MachineMemOperand *MMO) {
     return SDNodeTy(Opc, Order, DebugLoc(), VTs, MemoryVT, MMO)
-         .getRawSubclassData();
+        .getRawSubclassData();
+  }
+
+  template <typename SDNodeTy>
+  static uint16_t getSyntheticNodeSubclassData(
+      unsigned Opc, unsigned Order, SDVTList VTs, EVT MemoryVT,
+      PointerUnion<MachineMemOperand *, MachineMemOperand **> MemRefs) {
+    return SDNodeTy(Opc, Order, DebugLoc(), VTs, MemoryVT, MemRefs)
+        .getRawSubclassData();
   }
 
   void createOperands(SDNode *Node, ArrayRef<SDValue> Vals);
@@ -1365,7 +1373,7 @@ public:
   /// ISD::CondCode instead of an SDValue.
   SDValue getSetCC(const SDLoc &DL, EVT VT, SDValue LHS, SDValue RHS,
                    ISD::CondCode Cond, SDValue Chain = SDValue(),
-                   bool IsSignaling = false) {
+                   bool IsSignaling = false, SDNodeFlags Flags = {}) {
     assert(LHS.getValueType().isVector() == RHS.getValueType().isVector() &&
            "Vector/scalar operand type mismatch for setcc");
     assert(LHS.getValueType().isVector() == VT.isVector() &&
@@ -1374,8 +1382,9 @@ public:
            "Cannot create a setCC of an invalid node.");
     if (Chain)
       return getNode(IsSignaling ? ISD::STRICT_FSETCCS : ISD::STRICT_FSETCC, DL,
-                     {VT, MVT::Other}, {Chain, LHS, RHS, getCondCode(Cond)});
-    return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond));
+                     {VT, MVT::Other}, {Chain, LHS, RHS, getCondCode(Cond)},
+                     Flags);
+    return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond), Flags);
   }
 
   /// Helper function to make it easier to build VP_SETCCs if you just have an
@@ -1480,6 +1489,12 @@ public:
   LLVM_ABI SDValue getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
                                        SDVTList VTList, ArrayRef<SDValue> Ops,
                                        EVT MemVT, MachineMemOperand *MMO);
+
+  /// getMemIntrinsicNode - Creates a MemIntrinsicNode with multiple MMOs.
+  LLVM_ABI SDValue getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
+                                       SDVTList VTList, ArrayRef<SDValue> Ops,
+                                       EVT MemVT,
+                                       ArrayRef<MachineMemOperand *> MMOs);
 
   /// Creates a LifetimeSDNode that starts (`IsStart==true`) or ends
   /// (`IsStart==false`) the lifetime of the `FrameIndex`.
@@ -2098,7 +2113,7 @@ public:
 
   /// Constant fold a setcc to true or false.
   LLVM_ABI SDValue FoldSetCC(EVT VT, SDValue N1, SDValue N2, ISD::CondCode Cond,
-                             const SDLoc &dl);
+                             const SDLoc &dl, SDNodeFlags Flags = {});
 
   /// Return true if the sign bit of Op is known to be zero.
   /// We use this predicate to simplify operations downstream.
