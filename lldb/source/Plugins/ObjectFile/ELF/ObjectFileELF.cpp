@@ -2241,6 +2241,12 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
         // function will be resolved if it is referenced.
         symbol_type = eSymbolTypeResolver;
         break;
+
+      case STT_TLS:
+        // The symbol is associated with a thread-local data object, such as
+        // a thread-local variable.
+        symbol_type = eSymbolTypeData;
+        break;
       }
     }
 
