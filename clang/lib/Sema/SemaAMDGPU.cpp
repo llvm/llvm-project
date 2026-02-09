@@ -432,7 +432,7 @@ bool SemaAMDGPU::checkAtomicMonitorLoad(CallExpr *TheCall) {
   bool Fail = false;
 
   Expr *AO = TheCall->getArg(1);
-  auto *Scope = TheCall->getArg(TheCall->getNumArgs() - 1);
+  Expr *Scope = TheCall->getArg(TheCall->getNumArgs() - 1);
 
   if (AO->isValueDependent() || Scope->isValueDependent())
     return false;
