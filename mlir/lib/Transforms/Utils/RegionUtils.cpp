@@ -156,9 +156,17 @@ SmallVector<Value> mlir::makeRegionIsolatedFromAbove(
 
   // Create a mapping between the captured values and the new arguments added.
   IRMapping map;
+  Operation *regionParentOp = region.getParentOp();
   auto replaceIfFn = [&](OpOperand &use) {
-    return use.getOwner()->getBlock()->getParent() == &region;
+    Operation *parentOp = use.getOwner()->getParentOp();
+    while (parentOp) {
+      if (parentOp == regionParentOp)
+        return true;
+      parentOp = parentOp->getParentOp();
+    }
+    return false;
   };
+
   for (auto [arg, capturedVal] :
        llvm::zip(newEntryBlockArgs.take_back(finalCapturedValues.size()),
                  finalCapturedValues)) {
