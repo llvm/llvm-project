@@ -689,7 +689,7 @@ public:
   }
 
   bool GetImages(llvm::StringMap<SharedCacheImageInfo> **images, UUID &uuid) {
-    if (m_caches.find(uuid) != m_caches.end()) {
+    if (m_caches.contains(uuid)) {
       *images = &m_caches[uuid];
       return true;
     }
