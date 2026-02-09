@@ -1,15 +1,16 @@
 // REQUIRES: aarch64-registered-target
 
 // DEFINE: %{common_flags} = -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall
+// DEFINE: %{optimize} = opt -O0 -S
 
 // RUN: %clang_cc1                        %{common_flags} -fclangir -emit-cir -o - %s | FileCheck %s --check-prefixes=ALL,CIR
 // RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS %{common_flags} -fclangir -emit-cir -o - %s | FileCheck %s --check-prefixes=ALL,CIR
 
-// RUN: %clang_cc1                        %{common_flags} -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR,LLVM_VIA_CIR
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS %{common_flags} -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR,LLVM_VIA_CIR
+// RUN: %clang_cc1                        %{common_flags} -fclangir -emit-llvm -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR,LLVM_VIA_CIR
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS %{common_flags} -fclangir -emit-llvm -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR,LLVM_VIA_CIR
 
-// RUN: %clang_cc1                        %{common_flags} -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR,LLVM_DIRECT
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS %{common_flags} -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR,LLVM_DIRECT
+// RUN: %clang_cc1                        %{common_flags} -emit-llvm -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR,LLVM_DIRECT
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS %{common_flags} -emit-llvm -o - %s | %{optimize} | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR,LLVM_DIRECT
 #include <arm_sve.h>
 
 #if defined __ARM_FEATURE_SME
@@ -32,11 +33,7 @@
 // ALL-LABEL: @test_svdup_n_s8
 svint8_t test_svdup_n_s8(int8_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[OP:.*]]: !s8i {{.*}} -> !cir.vector<[16] x !s8i>
-// CIR:           %[[ALLOCA:.*]] = cir.alloca
-// CIR:           cir.store %[[OP]], %[[ALLOCA]]
-// CIR:           %[[LOAD:.*]] = cir.load align(1) %[[ALLOCA]]
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %[[LOAD]] : (!s8i) -> !cir.vector<[16] x !s8i>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!s8i) -> !cir.vector<[16] x !s8i>
 
 // LLVM_OGCG_CIR-SAME: i8 {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[OP_ADDR:%.*]] = alloca i8,{{([[:space:]]?i64 1,)?}} align 1
@@ -49,11 +46,7 @@ svint8_t test_svdup_n_s8(int8_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_s16
 svint16_t test_svdup_n_s16(int16_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[OP:.*]]: !s16i {{.*}} -> !cir.vector<[8] x !s16i>
-// CIR:           %[[ALLOCA:.*]] = cir.alloca
-// CIR:           cir.store %[[OP]], %[[ALLOCA]]
-// CIR:           %[[LOAD:.*]] = cir.load align(2) %[[ALLOCA]]
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %[[LOAD]] : (!s16i) -> !cir.vector<[8] x !s16i>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!s16i) -> !cir.vector<[8] x !s16i>
 
 // LLVM_OGCG_CIR-SAME: i16 {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[OP_ADDR:%.*]] = alloca i16,{{([[:space:]]?i64 1,)?}} align 2
@@ -66,11 +59,7 @@ svint16_t test_svdup_n_s16(int16_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_s32
 svint32_t test_svdup_n_s32(int32_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[OP:.*]]: !s32i {{.*}} -> !cir.vector<[4] x !s32i>
-// CIR:           %[[ALLOCA:.*]] = cir.alloca
-// CIR:           cir.store %[[OP]], %[[ALLOCA]]
-// CIR:           %[[LOAD:.*]] = cir.load align(4) %[[ALLOCA]]
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %[[LOAD]] : (!s32i) -> !cir.vector<[4] x !s32i>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!s32i) -> !cir.vector<[4] x !s32i>
 
 // LLVM_OGCG_CIR-SAME: i32 {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[OP_ADDR:%.*]] = alloca i32,{{([[:space:]]?i64 1,)?}} align 4
@@ -83,11 +72,7 @@ svint32_t test_svdup_n_s32(int32_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_s64
 svint64_t test_svdup_n_s64(int64_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[OP:.*]]: !s64i {{.*}} -> !cir.vector<[2] x !s64i>
-// CIR:           %[[ALLOCA:.*]] = cir.alloca
-// CIR:           cir.store %[[OP]], %[[ALLOCA]]
-// CIR:           %[[LOAD:.*]] = cir.load align(8) %[[ALLOCA]]
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %[[LOAD]] : (!s64i) -> !cir.vector<[2] x !s64i>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!s64i) -> !cir.vector<[2] x !s64i>
 
 // LLVM_OGCG_CIR-SAME: i64 {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[OP_ADDR:%.*]] = alloca i64,{{([[:space:]]?i64 1,)?}} align 8
@@ -100,11 +85,7 @@ svint64_t test_svdup_n_s64(int64_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_u8
 svuint8_t test_svdup_n_u8(uint8_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[OP:.*]]: !u8i {{.*}} -> !cir.vector<[16] x !u8i>
-// CIR:           %[[ALLOCA:.*]] = cir.alloca
-// CIR:           cir.store %[[OP]], %[[ALLOCA]]
-// CIR:           %[[LOAD:.*]] = cir.load align(1) %[[ALLOCA]]
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %[[LOAD]] : (!u8i) -> !cir.vector<[16] x !u8i>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!u8i) -> !cir.vector<[16] x !u8i>
 
 // LLVM_OGCG_CIR-SAME: i8 {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[OP_ADDR:%.*]] = alloca i8,{{([[:space:]]?i64 1,)?}} align 1
@@ -117,16 +98,8 @@ svuint8_t test_svdup_n_u8(uint8_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_u16
 svuint16_t test_svdup_n_u16(uint16_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[OP:.*]]: !u16i {{.*}} -> !cir.vector<[8] x !u16i>
-// CIR:           %[[ALLOCA:.*]] = cir.alloca
-// CIR:           cir.store %[[OP]], %[[ALLOCA]]
-// CIR:           %[[LOAD:.*]] = cir.load align(2) %[[ALLOCA]]
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %[[LOAD]] : (!u16i) -> !cir.vector<[8] x !u16i>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!u16i) -> !cir.vector<[8] x !u16i>
 
-// LLVM_OGCG_CIR-SAME: i16 {{(noundef)?[[:space:]]?}}[[OP:%.*]])
-// LLVM_OGCG_CIR:    [[OP_ADDR:%.*]] = alloca i16,{{([[:space:]]?i64 1,)?}} align 2
-// LLVM_OGCG_CIR:    store i16 [[OP]], ptr [[OP_ADDR]], align 2
-// LLVM_OGCG_CIR:    [[OP_LOAD:%.*]] = load i16, ptr [[OP_ADDR]], align 2
 // LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.dup.x.nxv8i16(i16 [[OP_LOAD]])
   return SVE_ACLE_FUNC(svdup,_n,_u16,)(op);
 }
@@ -134,11 +107,7 @@ svuint16_t test_svdup_n_u16(uint16_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_u32
 svuint32_t test_svdup_n_u32(uint32_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[OP:.*]]: !u32i {{.*}} -> !cir.vector<[4] x !u32i>
-// CIR:           %[[ALLOCA:.*]] = cir.alloca
-// CIR:           cir.store %[[OP]], %[[ALLOCA]]
-// CIR:           %[[LOAD:.*]] = cir.load align(4) %[[ALLOCA]]
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %[[LOAD]] : (!u32i) -> !cir.vector<[4] x !u32i>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!u32i) -> !cir.vector<[4] x !u32i>
 
 // LLVM_OGCG_CIR-SAME: i32 {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[OP_ADDR:%.*]] = alloca i32,{{([[:space:]]?i64 1,)?}} align 4
@@ -151,11 +120,7 @@ svuint32_t test_svdup_n_u32(uint32_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_u64
 svuint64_t test_svdup_n_u64(uint64_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[OP:.*]]: !u64i {{.*}} -> !cir.vector<[2] x !u64i>
-// CIR:           %[[ALLOCA:.*]] = cir.alloca
-// CIR:           cir.store %[[OP]], %[[ALLOCA]]
-// CIR:           %[[LOAD:.*]] = cir.load align(8) %[[ALLOCA]]
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %[[LOAD]] : (!u64i) -> !cir.vector<[2] x !u64i>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!u64i) -> !cir.vector<[2] x !u64i>
 
 // LLVM_OGCG_CIR-SAME: i64 {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[OP_ADDR:%.*]] = alloca i64,{{([[:space:]]?i64 1,)?}} align 8
@@ -168,11 +133,7 @@ svuint64_t test_svdup_n_u64(uint64_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_f16
 svfloat16_t test_svdup_n_f16(float16_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[OP:.*]]: !cir.f16 {{.*}} -> !cir.vector<[8] x !cir.f16>
-// CIR:           %[[ALLOCA:.*]] = cir.alloca
-// CIR:           cir.store %[[OP]], %[[ALLOCA]]
-// CIR:           %[[LOAD:.*]] = cir.load align(2) %[[ALLOCA]]
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %[[LOAD]] : (!cir.f16) -> !cir.vector<[8] x !cir.f16>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!cir.f16) -> !cir.vector<[8] x !cir.f16>
 
 // LLVM_OGCG_CIR-SAME: half {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[OP_ADDR:%.*]] = alloca half,{{([[:space:]]?i64 1,)?}} align 2
@@ -185,11 +146,7 @@ svfloat16_t test_svdup_n_f16(float16_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_f32
 svfloat32_t test_svdup_n_f32(float32_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[OP:.*]]: !cir.float {{.*}} -> !cir.vector<[4] x !cir.float>
-// CIR:           %[[ALLOCA:.*]] = cir.alloca
-// CIR:           cir.store %[[OP]], %[[ALLOCA]]
-// CIR:           %[[LOAD:.*]] = cir.load align(4) %[[ALLOCA]]
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %[[LOAD]] : (!cir.float) -> !cir.vector<[4] x !cir.float>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!cir.float) -> !cir.vector<[4] x !cir.float>
 
 // LLVM_OGCG_CIR-SAME: float {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[OP_ADDR:%.*]] = alloca float,{{([[:space:]]?i64 1,)?}} align 4
@@ -202,11 +159,7 @@ svfloat32_t test_svdup_n_f32(float32_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_f64
 svfloat64_t test_svdup_n_f64(float64_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[OP:.*]]: !cir.double {{.*}} -> !cir.vector<[2] x !cir.double>
-// CIR:           %[[ALLOCA:.*]] = cir.alloca
-// CIR:           cir.store %[[OP]], %[[ALLOCA]]
-// CIR:           %[[LOAD:.*]] = cir.load align(8) %[[ALLOCA]]
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %[[LOAD]] : (!cir.double) -> !cir.vector<[2] x !cir.double>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.dup.x" %{{.*}} : (!cir.double) -> !cir.vector<[2] x !cir.double>
 
 // LLVM_OGCG_CIR-SAME: double {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[OP_ADDR:%.*]] = alloca double,{{([[:space:]]?i64 1,)?}} align 8
@@ -223,22 +176,9 @@ svfloat64_t test_svdup_n_f64(float64_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_s8_z
 svint8_t test_svdup_n_s8_z(svbool_t pg, int8_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[PG:.*]]: !cir.vector<[16] x !cir.int<u, 1>>
-// CIR-SAME:      %[[OP:.*]]: !s8i
-// CIR-SAME:        -> !cir.vector<[16] x !s8i>
-// CIR:           %[[ALLOCA_PG:.*]] = cir.alloca !cir.vector<[16] x !cir.int<u, 1>>
-// CIR:           %[[ALLOCA_OP:.*]] = cir.alloca !s8i
-// CIR:           %[[ALLOCA_RES:.*]] = cir.alloca !cir.vector<[16] x !s8i>
-// CIR:           cir.store %[[PG]], %[[ALLOCA_PG]]
-// CIR:           cir.store %[[OP]], %[[ALLOCA_OP]]
-// CIR:           %[[LOAD_PG:.*]] = cir.load align(2) %[[ALLOCA_PG]]
-// CIR:           %[[LOAD_OP:.*]] = cir.load align(1) %[[ALLOCA_OP]]
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[16] x !s8i>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[LOAD_PG]], %[[LOAD_OP]]
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], {{%.*}}, {{%.*}} :
 // CIR-SAME:        -> !cir.vector<[16] x !s8i>
-// CIR:           cir.store %[[CONVERT_PG]], %[[ALLOCA_RES]]
-// CIR:           %[[RES:.*]] = cir.load %[[ALLOCA_RES]]
-// CIR:           cir.return %[[RES]]
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i8 {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>,{{([[:space:]]?i64 1,)?}} align 2
@@ -263,24 +203,11 @@ svint8_t test_svdup_n_s8_z(svbool_t pg, int8_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_s16_z(
 svint16_t test_svdup_n_s16_z(svbool_t pg, int16_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[PG:.*]]: !cir.vector<[16] x !cir.int<u, 1>>
-// CIR-SAME:      %[[OP:.*]]: !s16i
-// CIR-SAME:        -> !cir.vector<[8] x !s16i>
-// CIR:           %[[ALLOCA_PG:.*]] = cir.alloca !cir.vector<[16] x !cir.int<u, 1>>
-// CIR:           %[[ALLOCA_OP:.*]] = cir.alloca !s16i
-// CIR:           %[[ALLOCA_RES:.*]] = cir.alloca !cir.vector<[8] x !s16i>
-// CIR:           cir.store %[[PG]], %[[ALLOCA_PG]]
-// CIR:           cir.store %[[OP]], %[[ALLOCA_OP]]
-// CIR:           %[[LOAD_PG:.*]] = cir.load align(2) %[[ALLOCA_PG]] 
-// CIR:           %[[LOAD_OP:.*]] = cir.load align(2) %[[ALLOCA_OP]] 
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[8] x !s16i>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %[[LOAD_PG]]
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{%.*}} :
 // CIR-SAME:          -> !cir.vector<[8] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %[[LOAD_OP]]
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], {{.*}} :
 // CIR-SAME:          -> !cir.vector<[8] x !s16i>
-// CIR:           cir.store %[[CALL_DUP]], %[[ALLOCA_RES]]
-// CIR:           %[[RES:.*]] = cir.load %[[ALLOCA_RES]]
-// CIR:           cir.return %[[RES]]
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i16 {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>,{{([[:space:]]?i64 1,)?}} align 2
@@ -306,24 +233,11 @@ svint16_t test_svdup_n_s16_z(svbool_t pg, int16_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_s32_z(
 svint32_t test_svdup_n_s32_z(svbool_t pg, int32_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[PG:.*]]: !cir.vector<[16] x !cir.int<u, 1>>
-// CIR-SAME:      %[[OP:.*]]: !s32i
-// CIR-SAME:        -> !cir.vector<[4] x !s32i>
-// CIR:           %[[ALLOCA_PG:.*]] = cir.alloca !cir.vector<[16] x !cir.int<u, 1>>
-// CIR:           %[[ALLOCA_OP:.*]] = cir.alloca !s32i
-// CIR:           %[[ALLOCA_RES:.*]] = cir.alloca !cir.vector<[4] x !s32i>
-// CIR:           cir.store %[[PG]], %[[ALLOCA_PG]]
-// CIR:           cir.store %[[OP]], %[[ALLOCA_OP]]
-// CIR:           %[[LOAD_PG:.*]] = cir.load align(2) %[[ALLOCA_PG]]
-// CIR:           %[[LOAD_OP:.*]] = cir.load align(4) %[[ALLOCA_OP]]
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[4] x !s32i>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %[[LOAD_PG]]
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{%.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %[[LOAD_OP]]
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], {{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !s32i>
-// CIR:           cir.store %[[CALL_DUP]], %[[ALLOCA_RES]]
-// CIR:           %[[RES:.*]] = cir.load %[[ALLOCA_RES]]
-// CIR:           cir.return %[[RES]]
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i32 {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>,{{([[:space:]]?i64 1,)?}} align 2
@@ -349,24 +263,11 @@ svint32_t test_svdup_n_s32_z(svbool_t pg, int32_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_s64_z(
 svint64_t test_svdup_n_s64_z(svbool_t pg, int64_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[PG:.*]]: !cir.vector<[16] x !cir.int<u, 1>>
-// CIR-SAME:      %[[OP:.*]]: !s64i
-// CIR-SAME:        -> !cir.vector<[2] x !s64i>
-// CIR:           %[[ALLOCA_PG:.*]] = cir.alloca !cir.vector<[16] x !cir.int<u, 1>>
-// CIR:           %[[ALLOCA_OP:.*]] = cir.alloca !s64i
-// CIR:           %[[ALLOCA_RES:.*]] = cir.alloca !cir.vector<[2] x !s64i>
-// CIR:           cir.store %[[PG]], %[[ALLOCA_PG]]
-// CIR:           cir.store %[[OP]], %[[ALLOCA_OP]]
-// CIR:           %[[LOAD_PG:.*]] = cir.load align(2) %[[ALLOCA_PG]] 
-// CIR:           %[[LOAD_OP:.*]] = cir.load align(8) %[[ALLOCA_OP]] 
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[2] x !s64i>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %[[LOAD_PG]] 
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %[[LOAD_OP]]
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], {{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !s64i>
-// CIR:           cir.store %[[CALL_DUP]], %[[ALLOCA_RES]]
-// CIR:           %[[RES:.*]] = cir.load %[[ALLOCA_RES]]
-// CIR:           cir.return %[[RES]]
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i64 {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>,{{([[:space:]]?i64 1,)?}} align 2
@@ -392,22 +293,9 @@ svint64_t test_svdup_n_s64_z(svbool_t pg, int64_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_u8_z(
 svuint8_t test_svdup_n_u8_z(svbool_t pg, uint8_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[PG:.*]]: !cir.vector<[16] x !cir.int<u, 1>>
-// CIR-SAME:      %[[OP:.*]]: !u8i
-// CIR-SAME:          -> !cir.vector<[16] x !u8i>
-// CIR:           %[[ALLOCA_PG:.*]] = cir.alloca !cir.vector<[16] x !cir.int<u, 1>>
-// CIR:           %[[ALLOCA_OP:.*]] = cir.alloca !u8i
-// CIR:           %[[ALLOCA_RES:.*]] = cir.alloca !cir.vector<[16] x !u8i>
-// CIR:           cir.store %[[PG]], %[[ALLOCA_PG]]
-// CIR:           cir.store %[[OP]], %[[ALLOCA_OP]]
-// CIR:           %[[LOAD_PG:.*]] = cir.load align(2) %[[ALLOCA_PG]] 
-// CIR:           %[[LOAD_OP:.*]] = cir.load align(1) %[[ALLOCA_OP]] 
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[16] x !u8i>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[LOAD_PG]], %[[LOAD_OP]] 
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], {{.*}}, {{.*}} :
 // CIR-SAME:        -> !cir.vector<[16] x !u8i>
-// CIR:           cir.store %[[CONVERT_PG]], %[[ALLOCA_RES]]
-// CIR:           %[[RES:.*]] = cir.load %[[ALLOCA_RES]]
-// CIR:           cir.return %[[RES]]
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i8 {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>,{{([[:space:]]?i64 1,)?}} align 2
@@ -432,24 +320,11 @@ svuint8_t test_svdup_n_u8_z(svbool_t pg, uint8_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_u16_z(
 svuint16_t test_svdup_n_u16_z(svbool_t pg, uint16_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[PG:.*]]: !cir.vector<[16] x !cir.int<u, 1>>
-// CIR-SAME:      %[[OP:.*]]: !u16i
-// CIR-SAME:        -> !cir.vector<[8] x !u16i>
-// CIR:           %[[ALLOCA_PG:.*]] = cir.alloca !cir.vector<[16] x !cir.int<u, 1>>
-// CIR:           %[[ALLOCA_OP:.*]] = cir.alloca !u16i
-// CIR:           %[[ALLOCA_RES:.*]] = cir.alloca !cir.vector<[8] x !u16i>
-// CIR:           cir.store %[[PG]], %[[ALLOCA_PG]]
-// CIR:           cir.store %[[OP]], %[[ALLOCA_OP]]
-// CIR:           %[[LOAD_PG:.*]] = cir.load align(2) %[[ALLOCA_PG]] 
-// CIR:           %[[LOAD_OP:.*]] = cir.load align(2) %[[ALLOCA_OP]] 
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[8] x !u16i>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %[[LOAD_PG]]
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{.*}} :
 // CIR-SAME:          -> !cir.vector<[8] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %[[LOAD_OP]]
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], {{.*}} :
 // CIR-SAME:          -> !cir.vector<[8] x !u16i>
-// CIR:           cir.store %[[CALL_DUP]], %[[ALLOCA_RES]]
-// CIR:           %[[RES:.*]] = cir.load %[[ALLOCA_RES]]
-// CIR:           cir.return %[[RES]]
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i16 {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>,{{([[:space:]]?i64 1,)?}} align 2
@@ -475,24 +350,11 @@ svuint16_t test_svdup_n_u16_z(svbool_t pg, uint16_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_u32_z(
 svuint32_t test_svdup_n_u32_z(svbool_t pg, uint32_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[PG:.*]]: !cir.vector<[16] x !cir.int<u, 1>>
-// CIR-SAME:      %[[OP:.*]]: !u32i
-// CIR-SAME:        -> !cir.vector<[4] x !u32i>
-// CIR:           %[[ALLOCA_PG:.*]] = cir.alloca !cir.vector<[16] x !cir.int<u, 1>>
-// CIR:           %[[ALLOCA_OP:.*]] = cir.alloca !u32i
-// CIR:           %[[ALLOCA_RES:.*]] = cir.alloca !cir.vector<[4] x !u32i>
-// CIR:           cir.store %[[PG]], %[[ALLOCA_PG]]
-// CIR:           cir.store %[[OP]], %[[ALLOCA_OP]]
-// CIR:           %[[LOAD_PG:.*]] = cir.load align(2) %[[ALLOCA_PG]] 
-// CIR:           %[[LOAD_OP:.*]] = cir.load align(4) %[[ALLOCA_OP]] 
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[4] x !u32i>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %[[LOAD_PG]]
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %[[LOAD_OP]]
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], {{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !u32i>
-// CIR:           cir.store %[[CALL_DUP]], %[[ALLOCA_RES]]
-// CIR:           %[[RES:.*]] = cir.load %[[ALLOCA_RES]]
-// CIR:           cir.return %[[RES]]
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i32 {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>,{{([[:space:]]?i64 1,)?}} align 2
@@ -518,24 +380,11 @@ svuint32_t test_svdup_n_u32_z(svbool_t pg, uint32_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_u64_z(
 svuint64_t test_svdup_n_u64_z(svbool_t pg, uint64_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[PG:.*]]: !cir.vector<[16] x !cir.int<u, 1>>
-// CIR-SAME:      %[[OP:.*]]: !u64i
-// CIR-SAME:        -> !cir.vector<[2] x !u64i>
-// CIR:           %[[ALLOCA_PG:.*]] = cir.alloca !cir.vector<[16] x !cir.int<u, 1>>
-// CIR:           %[[ALLOCA_OP:.*]] = cir.alloca !u64i
-// CIR:           %[[ALLOCA_RES:.*]] = cir.alloca !cir.vector<[2] x !u64i>
-// CIR:           cir.store %[[PG]], %[[ALLOCA_PG]]
-// CIR:           cir.store %[[OP]], %[[ALLOCA_OP]]
-// CIR:           %[[LOAD_PG:.*]] = cir.load align(2) %[[ALLOCA_PG]] 
-// CIR:           %[[LOAD_OP:.*]] = cir.load align(8) %[[ALLOCA_OP]] 
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[2] x !u64i>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %[[LOAD_PG]] 
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %[[LOAD_OP]]
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], {{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !u64i>
-// CIR:           cir.store %[[CALL_DUP]], %[[ALLOCA_RES]]
-// CIR:           %[[RES:.*]] = cir.load %[[ALLOCA_RES]]
-// CIR:           cir.return %[[RES]]
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i64 {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>,{{([[:space:]]?i64 1,)?}} align 2
@@ -561,24 +410,11 @@ svuint64_t test_svdup_n_u64_z(svbool_t pg, uint64_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_f16_z(
 svfloat16_t test_svdup_n_f16_z(svbool_t pg, float16_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[PG:.*]]: !cir.vector<[16] x !cir.int<u, 1>>
-// CIR-SAME:      %[[OP:.*]]: !cir.f16
-// CIR-SAME:        -> !cir.vector<[8] x !cir.f16>
-// CIR:           %[[ALLOCA_PG:.*]] = cir.alloca !cir.vector<[16] x !cir.int<u, 1>>
-// CIR:           %[[ALLOCA_OP:.*]] = cir.alloca !cir.f16
-// CIR:           %[[ALLOCA_RES:.*]] = cir.alloca !cir.vector<[8] x !cir.f16>
-// CIR:           cir.store %[[PG]], %[[ALLOCA_PG]]
-// CIR:           cir.store %[[OP]], %[[ALLOCA_OP]]
-// CIR:           %[[LOAD_PG:.*]] = cir.load align(2) %[[ALLOCA_PG]] 
-// CIR:           %[[LOAD_OP:.*]] = cir.load align(2) %[[ALLOCA_OP]] 
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[8] x !cir.f16>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %[[LOAD_PG]]
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{.*}} :
 // CIR-SAME:        -> !cir.vector<[8] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %[[LOAD_OP]] 
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], {{.*}} :
 // CIR-SAME:        -> !cir.vector<[8] x !cir.f16>
-// CIR:           cir.store %[[CALL_DUP]], %[[ALLOCA_RES]]
-// CIR:           %[[RES:.*]] = cir.load %[[ALLOCA_RES]]
-// CIR:           cir.return %[[RES]]
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], half {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>,{{([[:space:]]?i64 1,)?}} align 2
@@ -604,24 +440,11 @@ svfloat16_t test_svdup_n_f16_z(svbool_t pg, float16_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_f32_z(
 svfloat32_t test_svdup_n_f32_z(svbool_t pg, float32_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[PG:.*]]: !cir.vector<[16] x !cir.int<u, 1>>
-// CIR-SAME:      %[[OP:.*]]: !cir.float
-// CIR-SAME:          -> !cir.vector<[4] x !cir.float>
-// CIR:           %[[ALLOCA_PG:.*]] = cir.alloca !cir.vector<[16] x !cir.int<u, 1>>
-// CIR:           %[[ALLOCA_OP:.*]] = cir.alloca !cir.float
-// CIR:           %[[ALLOCA_RES:.*]] = cir.alloca !cir.vector<[4] x !cir.float>
-// CIR:           cir.store %[[PG]], %[[ALLOCA_PG]]
-// CIR:           cir.store %[[OP]], %[[ALLOCA_OP]]
-// CIR:           %[[LOAD_PG:.*]] = cir.load align(2) %[[ALLOCA_PG]] 
-// CIR:           %[[LOAD_OP:.*]] = cir.load align(4) %[[ALLOCA_OP]] 
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[4] x !cir.float>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %[[LOAD_PG]]
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %[[LOAD_OP]]
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], {{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !cir.float>
-// CIR:           cir.store %[[CALL_DUP]], %[[ALLOCA_RES]]
-// CIR:           %[[RES:.*]] = cir.load %[[ALLOCA_RES]]
-// CIR:           cir.return %[[RES]]
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], float {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>,{{([[:space:]]?i64 1,)?}} align 2
@@ -647,24 +470,11 @@ svfloat32_t test_svdup_n_f32_z(svbool_t pg, float32_t op) MODE_ATTR
 // ALL-LABEL: @test_svdup_n_f64_z(
 svfloat64_t test_svdup_n_f64_z(svbool_t pg, float64_t op) MODE_ATTR
 {
-// CIR-SAME:      %[[PG:.*]]: !cir.vector<[16] x !cir.int<u, 1>>
-// CIR-SAME:      %[[OP:.*]]: !cir.double
-// CIR-SAME:        -> !cir.vector<[2] x !cir.double>
-// CIR:           %[[ALLOCA_PG:.*]] = cir.alloca !cir.vector<[16] x !cir.int<u, 1>>
-// CIR:           %[[ALLOCA_OP:.*]] = cir.alloca !cir.double
-// CIR:           %[[ALLOCA_RES:.*]] = cir.alloca !cir.vector<[2] x !cir.double>
-// CIR:           cir.store %[[PG]], %[[ALLOCA_PG]]
-// CIR:           cir.store %[[OP]], %[[ALLOCA_OP]]
-// CIR:           %[[LOAD_PG:.*]] = cir.load align(2) %[[ALLOCA_PG]] 
-// CIR:           %[[LOAD_OP:.*]] = cir.load align(8) %[[ALLOCA_OP]] 
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[2] x !cir.double>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %[[LOAD_PG]]
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %[[LOAD_OP]]
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !cir.double>
-// CIR:           cir.store %[[CALL_DUP]], %[[ALLOCA_RES]]
-// CIR:           %[[RES:.*]] = cir.load %[[ALLOCA_RES]]
-// CIR:           cir.return %[[RES]]
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], double {{(noundef)?[[:space:]]?}}[[OP:%.*]])
 // LLVM_OGCG_CIR:    [[PG_ADDR:%.*]] = alloca <vscale x 16 x i1>,{{([[:space:]]?i64 1,)?}} align 2
