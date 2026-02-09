@@ -18,6 +18,7 @@ include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"
 include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
@@ -6270,64 +6271,30 @@ def NVVM_Tcgen05MMAWsSparseOp : NVVM_Op<"tcgen05.mma.ws.sp",
 
 def SIMTFloatType : AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16, F32, F64]>]>;
 
-class ResultAtLeastAsWideAs<string operandArg> :
-  TypesMatchWith<"result type must be at least as wide as " # operandArg # " operand",
-    operandArg, "res", "$_self",
-    "::mlir::NVVM::isResultTypeAtLeastAsWideAsOperand">;
-
-class AllScalarsOrAllVectors<string lhsArg, string rhsArg> :
-  TypesMatchWith<"cannot mix vector and scalar operands", 
-    lhsArg, rhsArg, "$_self",
-    "::mlir::NVVM::areBothScalarsOrBothVectors">;
-
 class NVVM_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
-    NVVM_Op<mnemonic, traits # [Pure, ResultsAreFloatLike,
-                                ResultAtLeastAsWideAs<"lhs">,
-                                ResultAtLeastAsWideAs<"rhs">,
-                                AllScalarsOrAllVectors<"lhs", "rhs">]>,
+    NVVM_Op<mnemonic, traits # [Pure, SameOperandsAndResultType]>,
     Arguments<(ins SIMTFloatType:$lhs, SIMTFloatType:$rhs,
       DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
       DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
       DefaultValuedAttr<BoolAttr, "false">:$ftz)>,
     Results<(outs SIMTFloatType:$res)> {
-  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type(operands) `->` type($res)";
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($res)";
 }
 
 def NVVM_AddFOp : NVVM_FloatBinaryOp<"addf", [Commutative]> {
   let summary = [{
-    Performs floating point addition operation with support for mixed precision 
-    operands
+    Performs floating point addition operation
   }];
   let description = [{
-    The `nvvm.addf` operation performs floating point addition of two operands.
+    The `nvvm.addf` operation performs floating point addition of two floating 
+    point operands of the same type.
 
     The rounding mode is specified by the `rnd` attribute, saturation mode by 
     the `sat` attribute, and flush-to-zero by the `ftz` attribute.
 
-    **Type constraints:**
-    - The result type must be at least as wide as both operands.
-    - Operands and result must be all scalars or all vectors (no mixing).
-    - When operands are narrower than the result, they are extended to the 
-      result type before addition. When this occurs, the modifiers 
-      supported for the addition are determined by the result type.
-
-    **Supported type combinations:**
-
-    | Result Type        | Allowed Operand Types                                      |
-    |--------------------|------------------------------------------------------------|
-    | `f16`              | `f16`                                                      |
-    | `bf16`             | `bf16`                                                     |
-    | `f32`              | `f32`, `f16`, `bf16`                                       |
-    | `f64`              | `f64`, `f32`, `f16`, `bf16`                                |
-    | `vector<2xf16>`    | `vector<2xf16>`                                            |
-    | `vector<2xbf16>`   | `vector<2xbf16>`                                           |
-    | `vector<2xf32>`    | `vector<2xf32>`, `vector<2xf16>`, `vector<2xbf16>`         |
-    | `vector<2xf64>`    | `vector<2xf64>`, `vector<2xf32>`, `vector<2xf16>`, `vector<2xbf16>` |
-
     For more information, see PTX ISA:
     - [floating point addition](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-add)
     - [half-precision floating point addition](https://docs.nvidia.com/cuda/parallel-thread-execution/#half-precision-floating-point-instructions-add)
-    - [mixed precision floating point addition](https://docs.nvidia.com/cuda/parallel-thread-execution/#mixed-precision-floating-point-instructions-add)
   }];
   let hasVerifier = 1;
   
@@ -6352,9 +6319,9 @@ def NVVM_SubFOp : NVVM_FloatBinaryOp<"subf"> {
     It supports the same type combinations and modifiers as `nvvm.addf`.
     This is equivalent to `nvvm.addf(lhs, -rhs)`.
     
-    For more information, see PTX ISA - [floating point subtraction](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sub), 
-    [half-precision floating point subtraction](https://docs.nvidia.com/cuda/parallel-thread-execution/#half-precision-floating-point-instructions-sub), 
-    [mixed precision floating point subtraction](https://docs.nvidia.com/cuda/parallel-thread-execution/#mixed-precision-floating-point-instructions-sub).
+    For more information, see PTX ISA:
+    - [floating point subtraction](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sub) 
+    - [half-precision floating point subtraction](https://docs.nvidia.com/cuda/parallel-thread-execution/#half-precision-floating-point-instructions-sub)
  
   }];
   let hasCanonicalizer = 1;

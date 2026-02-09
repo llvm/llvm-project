@@ -3073,49 +3073,31 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
 }
 
 LogicalResult NVVM::AddFOp::verify() {
-  mlir::Type resFType = getRes().getType();
-  mlir::Type lhsFType = getLhs().getType();
-  mlir::Type rhsFType = getRhs().getType();
   mlir::NVVM::FPRoundingMode rndMode = getRnd();
   mlir::NVVM::SaturationMode satMode = getSat();
   bool isFTZ = getFtz();
 
-  auto getBaseFType = [](Type type) -> Type {
-    if (isa<VectorType>(type))
-      return cast<VectorType>(type).getElementType();
-    return type;
-  };
-
-  auto resBaseFType = getBaseFType(resFType);
-  auto lhsBaseFType = getBaseFType(lhsFType);
-  auto rhsBaseFType = getBaseFType(rhsFType);
-
-  bool sameTypeOperation =
-      llvm::all_equal({lhsBaseFType, rhsBaseFType, resBaseFType});
-
-  if ((resBaseFType.isF16() || resBaseFType.isBF16()) && !sameTypeOperation) {
-    return emitOpError(
-        "only f16 + f16 (bf16 + bf16) is supported for f16 (bf16) result type");
-  }
-
-  // Modifier constraints
+  mlir::Type opType = getRes().getType();
+  mlir::Type opBaseType = isa<VectorType>(opType)
+                              ? cast<VectorType>(opType).getElementType()
+                              : opType;
 
   if (satMode == NVVM::SaturationMode::SATFINITE)
     return emitOpError("SATFINITE saturation mode is not supported for "
                        "floating point addition operation");
 
-  if (resBaseFType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
+  if (opBaseType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
     return emitOpError("FTZ and saturation are not supported for additions "
                        "involving f64 type");
 
-  if (resBaseFType.isF16()) {
+  if (opBaseType.isF16()) {
     if (!(rndMode == NVVM::FPRoundingMode::RN ||
           rndMode == NVVM::FPRoundingMode::NONE))
       return emitOpError("only RN rounding mode is supported for f16 and "
                          "vector<2xf16> additions");
   }
 
-  if (resBaseFType.isBF16()) {
+  if (opBaseType.isBF16()) {
     if (rndMode != NVVM::FPRoundingMode::RN &&
         rndMode != NVVM::FPRoundingMode::NONE)
       return emitOpError("only RN rounding mode is supported for bf16 and "
@@ -3129,7 +3111,7 @@ LogicalResult NVVM::AddFOp::verify() {
   // PTX instructions since the corresponding LLVM intrinsic is missing. This
   // should be removed once the intrinsics for f16 addition (with FTZ only) are
   // available.
-  if (resBaseFType.isF16() && isFTZ && satMode == NVVM::SaturationMode::NONE)
+  if (opBaseType.isF16() && isFTZ && satMode == NVVM::SaturationMode::NONE)
     return emitOpError(
         "FTZ with no saturation is not supported for f16 result type");
 
