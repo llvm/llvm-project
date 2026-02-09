@@ -1787,6 +1787,8 @@ static bool EvaluateFixedPointOrInteger(const Expr *E, APFixedPoint &Result,
 static bool EvaluateFixedPoint(const Expr *E, APFixedPoint &Result,
                                EvalInfo &Info);
 
+static bool EvaluatePSADBW128(const CallExpr *E, EvalInfo &Info, APValue &Result);
+
 //===----------------------------------------------------------------------===//
 // Misc utilities
 //===----------------------------------------------------------------------===//
@@ -11962,6 +11964,54 @@ static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
   return true;
 }
 
+static bool EvaluatePSADBW128(const CallExpr *E, EvalInfo &Info, APValue &Result) {
+  // 1) Evaluate the arguments into APValues
+  APValue A, B;
+  if (!Evaluate(A, Info, E->getArg(0)) ||
+      !Evaluate(B, Info, E->getArg(1)))
+    return false;
+
+  if (!A.isVector() || !B.isVector())
+    return false;
+
+  unsigned Len = A.getVectorLength();
+  if (Len != 16) // psadbw128 uses 16 bytes (2 × 8)
+    return false;
+
+  // 2) Compute SAD over two 8-byte blocks
+  uint64_t Sum0 = 0;
+  uint64_t Sum1 = 0;
+
+  // bytes 0..7
+  for (unsigned i = 0; i < 8; ++i) {
+    uint64_t a = A.getVectorElt(i).getInt().getZExtValue();
+    uint64_t b = B.getVectorElt(i).getInt().getZExtValue();
+    Sum0 += (a > b ? a - b : b - a);
+  }
+
+  // bytes 8..15
+  for (unsigned i = 8; i < 16; ++i) {
+    uint64_t a = A.getVectorElt(i).getInt().getZExtValue();
+    uint64_t b = B.getVectorElt(i).getInt().getZExtValue();
+    Sum1 += (a > b ? a - b : b - a);
+  }
+
+  // 3) Build result vector of two 64-bit elements
+  SmallVector<APValue, 2> Elts;
+  QualType ElemTy = E->getType()->castAs<VectorType>()->getElementType();
+  bool Unsigned = ElemTy->isUnsignedIntegerType();
+  unsigned BW = Info.Ctx.getIntWidth(ElemTy); // usually 64
+
+  Elts.emplace_back(APValue(APSInt(APInt(BW, Sum0), Unsigned)));
+  Elts.emplace_back(APValue(APSInt(APInt(BW, Sum1), Unsigned)));
+
+  // APValue(const APValue *E, unsigned N) – copies the elements
+  Result = APValue(Elts.data(), Elts.size());
+
+  return true;
+}
+
+
 static bool evalShuffleGeneric(
     EvalInfo &Info, const CallExpr *Call, APValue &Out,
     llvm::function_ref<std::pair<unsigned, int>(unsigned, unsigned)>
@@ -12389,6 +12439,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case clang::X86::BI__builtin_ia32_pavgb512:
   case clang::X86::BI__builtin_ia32_pavgw512:
     return EvaluateBinOpExpr(llvm::APIntOps::avgCeilU);
+
+  case X86::BI__builtin_ia32_psadbw128:
+  return EvaluatePSADBW128(E, Info, Result);
 
   case clang::X86::BI__builtin_ia32_pmulhrsw128:
   case clang::X86::BI__builtin_ia32_pmulhrsw256:
