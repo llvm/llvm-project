@@ -58,23 +58,19 @@ struct TestXeGPUUnrollingPatterns
     xegpu::UnrollOptions options;
     options.setNativeShapeFn([&](Operation *op)
                                  -> std::optional<SmallVector<int64_t>> {
-            if (isa<xegpu::CreateNdDescOp, xegpu::UpdateNdOffsetOp,
+            if (isa<xegpu::CreateNdDescOp,
               xegpu::PrefetchNdOp, xegpu::LoadNdOp, xegpu::StoreNdOp,
-              xegpu::UpdateOffsetOp, xegpu::PrefetchOp, xegpu::LoadGatherOp,
+              xegpu::PrefetchOp, xegpu::LoadGatherOp,
               xegpu::StoreScatterOp>(op)) {
         xegpu::TensorDescType tdescTy;
         if (auto createNdOp = dyn_cast<xegpu::CreateNdDescOp>(op)) {
           tdescTy = createNdOp.getType();
-        } else if (auto updateNdOp = dyn_cast<xegpu::UpdateNdOffsetOp>(op)) {
-          tdescTy = updateNdOp.getTensorDescType();
         } else if (auto prefetchNdOp = dyn_cast<xegpu::PrefetchNdOp>(op)) {
           tdescTy = prefetchNdOp.getTensorDescType();
         } else if (auto loadNdOp = dyn_cast<xegpu::LoadNdOp>(op)) {
           tdescTy = loadNdOp.getTensorDescType();
         } else if (auto storeNdOp = dyn_cast<xegpu::StoreNdOp>(op)) {
           tdescTy = storeNdOp.getTensorDescType();
-        } else if (auto updateOp = dyn_cast<xegpu::UpdateOffsetOp>(op)) {
-          tdescTy = updateOp.getTensorDescType();
         } else if (auto prefetchOp = dyn_cast<xegpu::PrefetchOp>(op)) {
           tdescTy = prefetchOp.getTensorDescType();
         } else if (auto loadOp = dyn_cast<xegpu::LoadGatherOp>(op)) {

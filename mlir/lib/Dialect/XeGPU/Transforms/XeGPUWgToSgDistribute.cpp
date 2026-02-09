@@ -265,28 +265,6 @@ struct WgToSgPrefetchNdOpWithOffset
   }
 };
 
-/// This pattern transforms the UpdateNdOffsetOp to update the offsets of a
-/// subgroup descriptor. It creates an UpdateNdOffsetOp op to update the
-/// offsets of the new subgroup src tensor descriptors.
-struct WgToSgUpdateNdOffsetOp
-    : public OpConversionPattern<xegpu::UpdateNdOffsetOp> {
-  using OpConversionPattern<xegpu::UpdateNdOffsetOp>::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(xegpu::UpdateNdOffsetOp op, OneToNOpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    llvm::SmallVector<Value> newUpdateTileOffsetOps;
-    for (auto tDesc : adaptor.getTensorDesc()) {
-      auto newUpdateTileOffsetOp = xegpu::UpdateNdOffsetOp::create(
-          rewriter, op.getLoc(), tDesc.getType(), tDesc, op.getOffsets(),
-          op.getConstOffsets());
-      newUpdateTileOffsetOps.push_back(newUpdateTileOffsetOp);
-    }
-
-    rewriter.replaceOpWithMultiple(op, {newUpdateTileOffsetOps});
-    return success();
-  }
-};
-
 /// This pattern transforms the DpasOp to work at subgroup level.
 struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
   using OpConversionPattern<xegpu::DpasOp>::OpConversionPattern;
@@ -1553,7 +1531,7 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
   patterns
       .add<WgToSgCreateNdOpNoOffset,
            WgToSgLoadNdOpWithOffset, WgToSgStoreNdOpWithOffset,
-           WgToSgUpdateNdOffsetOp, WgToSgDpasOp,
+           WgToSgDpasOp,
            WgToSgPrefetchNdOpWithOffset, UnrealizedConversionCastOpPattern,
            WgToSgElementwiseOp, WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp,
            WgToSgArithConstantOp, WgToSgLoadGatherOpWithOffset,
@@ -1652,8 +1630,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
       return loadOp.getTensorDescType();
     if (auto storeOp = dyn_cast<xegpu::StoreNdOp>(op))
       return storeOp.getTensorDescType();
-    if (auto updateOp = dyn_cast<xegpu::UpdateNdOffsetOp>(op))
-      return updateOp.getType();
+
     if (auto prefetchOp = dyn_cast<xegpu::PrefetchNdOp>(op))
       return prefetchOp.getTensorDescType();
     return xegpu::TensorDescType();
@@ -1664,7 +1641,7 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   };
 
   target.addDynamicallyLegalOp<xegpu::CreateNdDescOp, xegpu::LoadNdOp,
-                               xegpu::StoreNdOp, xegpu::UpdateNdOffsetOp,
+                               xegpu::StoreNdOp,
                                xegpu::PrefetchNdOp>([=](Operation *op) -> bool {
     auto tdescTy = getTensorDescType(op);
     auto layout = dyn_cast_if_present<xegpu::LayoutAttr>(tdescTy.getLayout());

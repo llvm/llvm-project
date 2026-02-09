@@ -189,34 +189,6 @@ struct UnrollCreateNdOp : public UnrollPattern<xegpu::CreateNdDescOp> {
   }
 };
 
-struct UnrollUpdateNdOffsetOp : public UnrollPattern<xegpu::UpdateNdOffsetOp> {
-  using UnrollPattern<xegpu::UpdateNdOffsetOp>::UnrollPattern;
-  LogicalResult matchAndRewrite(xegpu::UpdateNdOffsetOp op,
-                                PatternRewriter &rewriter) const override {
-    Location loc = op.getLoc();
-    xegpu::TensorDescType tdescTy = op.getTensorDescType();
-
-    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
-    if (!targetShape)
-      return failure();
-
-    SmallVector<Type> convertedTdescTypes =
-        getUnrolledTypes(tdescTy, *targetShape);
-    SmallVector<Value> convertedTdesc = pack(
-        op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
-
-    SmallVector<Value> newOps;
-    for (auto t : convertedTdesc) {
-      auto newOp = xegpu::UpdateNdOffsetOp::create(
-          rewriter, loc, t.getType(), t, op.getOffsets(), op.getConstOffsets());
-      newOps.push_back(newOp);
-    }
-    Value castOp = unpack(newOps, op.getType(), *targetShape, loc, rewriter);
-    rewriter.replaceOp(op, castOp);
-    return success();
-  }
-};
-
 struct UnrollPrefetchNdOp : public UnrollPattern<xegpu::PrefetchNdOp> {
   using UnrollPattern<xegpu::PrefetchNdOp>::UnrollPattern;
   LogicalResult matchAndRewrite(xegpu::PrefetchNdOp op,
@@ -821,59 +793,6 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
   }
 };
 
-struct UnrollUpdateOffsetOp : public UnrollPattern<xegpu::UpdateOffsetOp> {
-  using UnrollPattern<xegpu::UpdateOffsetOp>::UnrollPattern;
-  LogicalResult matchAndRewrite(xegpu::UpdateOffsetOp op,
-                                PatternRewriter &rewriter) const override {
-    Location loc = op.getLoc();
-    xegpu::TensorDescType tdescTy = op.getTensorDescType();
-
-    if (!tdescTy.isScattered())
-      return failure();
-
-    std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
-    if (!targetShape)
-      return failure();
-
-    SmallVector<Type> convertedTdescTypes =
-        getUnrolledTypes(tdescTy, *targetShape);
-    SmallVector<Value> convertedTdesc = pack(
-        op.getTensorDesc(), convertedTdescTypes, *targetShape, loc, rewriter);
-
-    TypedValue<::mlir::VectorType> offsetVec = op.getOffsets();
-    VectorType offsetVecTy = offsetVec.getType();
-    SmallVector<Type> convertedOffsetTypes;
-    SmallVector<Value> convertedOffsetVec;
-    SmallVector<Value> newOps;
-    int64_t originalChunkSize = tdescTy.getChunkSizeAsInt();
-    if (originalChunkSize > 1) {
-      auto targetOffsetShape = ArrayRef<int64_t>(*targetShape).drop_back();
-      convertedOffsetTypes = getUnrolledTypes(offsetVecTy, targetOffsetShape);
-
-      int64_t blockedChunkSize = targetShape->back();
-      int64_t numNewChunks = originalChunkSize / blockedChunkSize;
-      // the offset is reused across the chunk_size dimension
-      for (auto offset : pack(offsetVec, convertedOffsetTypes,
-                              targetOffsetShape, loc, rewriter))
-        convertedOffsetVec.append(numNewChunks, offset);
-
-    } else {
-      convertedOffsetTypes = getUnrolledTypes(offsetVecTy, *targetShape);
-      convertedOffsetVec =
-          pack(offsetVec, convertedOffsetTypes, *targetShape, loc, rewriter);
-    }
-
-    for (auto [t, o] : llvm::zip(convertedTdesc, convertedOffsetVec)) {
-      auto newOp =
-          xegpu::UpdateOffsetOp::create(rewriter, loc, t.getType(), t, o);
-      newOps.push_back(newOp);
-    }
-    Value castOp = unpack(newOps, op.getType(), *targetShape, loc, rewriter);
-    rewriter.replaceOp(op, castOp);
-    return success();
-  }
-};
-
 struct UnrollLoadMatrixOp : public UnrollPattern<xegpu::LoadMatrixOp> {
   using UnrollPattern<xegpu::LoadMatrixOp>::UnrollPattern;
   LogicalResult matchAndRewrite(xegpu::LoadMatrixOp op,
@@ -958,9 +877,9 @@ struct UnrollStoreMatrixOp : public UnrollPattern<xegpu::StoreMatrixOp> {
 void mlir::xegpu::populateXeGPUUnrollPatterns(
     RewritePatternSet &patterns, const xegpu::UnrollOptions &options) {
   patterns
-      .add<UnrollCreateNdOp, UnrollUpdateNdOffsetOp, UnrollPrefetchNdOp,
+      .add<UnrollCreateNdOp, UnrollPrefetchNdOp,
          UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp, UnrollLoadGatherOp,
-         UnrollStoreScatterOp, UnrollPrefetchOp, UnrollUpdateOffsetOp,
+         UnrollStoreScatterOp, UnrollPrefetchOp,
          UnrollLoadMatrixOp, UnrollStoreMatrixOp,
          UnrollLoadGatherOpWithOffset, UnrollStoreScatterOpWithOffsets>(
           patterns.getContext(), options);

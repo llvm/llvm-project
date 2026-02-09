@@ -657,21 +657,6 @@ LogicalResult StoreNdOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// XeGPU_UpdateNDOffsetOp
-//===----------------------------------------------------------------------===//
-LogicalResult UpdateNdOffsetOp::verify() {
-  auto ty = getTensorDescType();
-  if (ty.isScattered())
-    return emitOpError("Expects a non-scattered TensorDesc.\n");
-
-  // number of offsets specified must match the rank of the tensor descriptor
-  if (ty.getRank() != (int64_t)getNumOffsets()) {
-    return emitOpError("Invalid number of offsets.");
-  }
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
 // XeGPU_PrefetchOp
 //===----------------------------------------------------------------------===//
 LogicalResult PrefetchOp::verify() {
@@ -879,45 +864,6 @@ void StoreScatterOp::build(
   // Call the correct builder overload that does not expect result types.
   build(builder, state, value, dest, offset, mask, chunk_size, l1_hint, l2_hint,
         l3_hint, layout);
-}
-
-//===----------------------------------------------------------------------===//
-// XeGPU_UpdateOffsetOp
-//===----------------------------------------------------------------------===//
-void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
-                           mlir::Value tensorDesc,
-                           llvm::ArrayRef<OpFoldResult> offsets) {
-  auto tdescTy = mlir::dyn_cast<TensorDescType>(tensorDesc.getType());
-  assert(tdescTy && "Expecting the source is a TensorDescType value.");
-  auto loc = tensorDesc.getLoc();
-  int64_t size = static_cast<int64_t>(offsets.size());
-  auto type = VectorType::get({size}, builder.getIndexType());
-  auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
-  auto offset = vector::FromElementsOp::create(builder, loc, type, values);
-  build(builder, state, tdescTy, tensorDesc, offset);
-}
-
-void UpdateOffsetOp::build(OpBuilder &builder, OperationState &state,
-                           Value tensorDesc, llvm::ArrayRef<int64_t> offsets) {
-  auto ofrs = getAsIndexOpFoldResult(builder.getContext(), offsets);
-  build(builder, state, tensorDesc, ofrs);
-}
-
-LogicalResult UpdateOffsetOp::verify() {
-  auto tdescTy = getTensorDescType();
-  if (!tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.\n");
-
-  SmallVector<int64_t> expectedOffsetShape = getShapeOf(tdescTy);
-  SmallVector<int64_t> offsetShape = getShapeOf(getOffsetsType());
-  if (tdescTy.getChunkSizeAsInt() > 1)
-    expectedOffsetShape.pop_back();
-
-  if (expectedOffsetShape != offsetShape)
-    return emitOpError(
-        "Offsets should match TensorDesc except the chunk size dim.");
-
-  return success();
 }
 
 //===----------------------------------------------------------------------===//

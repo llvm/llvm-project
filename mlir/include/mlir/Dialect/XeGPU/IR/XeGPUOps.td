@@ -576,55 +576,6 @@ def XeGPU_StoreNdOp : XeGPU_Op<"store_nd", [
   let hasVerifier = 1;
 }
 
-def XeGPU_UpdateNdOffsetOp : XeGPU_Op<"update_nd_offset",
-                [Pure, AllTypesMatch<["TensorDesc", "result"]>]> {
-  let summary = "It updates the offsets for the TensorDesc.";
-  let description = [{The op updates the offset of the given TensorDesc.
-    The offsets are relative offset to the current position in the number
-    of elements. It will result in a same type TensorDesc as the input.
-
-  Example:
-  ```
-    %2 = xegpu.update_nd_offset %1, [0, 16]: !xegpu.tensor_desc<8x16xf32>
-  ```
-  }];
-
-  let arguments = (ins
-    XeGPU_TensorDesc: $TensorDesc,
-    Variadic<Index>: $offsets,
-    DenseI64ArrayAttr: $const_offsets);
-
-  let results = (outs XeGPU_TensorDesc: $result);
-
-  let extraClassDeclaration = extraBaseClassDeclaration # [{
-    xegpu::TensorDescType getTensorDescType() {
-      return getTensorDesc().getType();
-    }
-
-    SmallVector<OpFoldResult> getMixedOffsets() {
-      Builder b(getContext());
-      return getMixedValues(getConstOffsets(), getOffsets(), b);
-    }
-
-    size_t getNumOffsets() {
-      return getMixedOffsets().size();
-    }
-
-    OpFoldResult getOffset(unsigned idx) {
-      assert(idx < getNumOffsets() && "Invalid out of bound access.");
-      return getMixedOffsets()[idx];
-    }
-  }];
-
-  let assemblyFormat = [{
-    $TensorDesc `,`
-    custom<DynamicIndexList>($offsets, $const_offsets)
-    attr-dict `:` qualified(type($result))
-  }];
-
-  let hasVerifier = 1;
-}
-
 def XeGPU_PrefetchOp : XeGPU_Op<"prefetch", [AnchorLayoutInterface]> {
   let summary = "prefetches a set of scattered data points to cache";
 
@@ -1083,59 +1034,6 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
                     "xegpu::CachePolicyAttr": $l3_hint,
                     "xegpu::DistributeLayoutAttr": $layout)>
    ];
-
-  let hasVerifier = 1;
-}
-
-def XeGPU_UpdateOffsetOp: XeGPU_Op<"update_offset",
-          [AllTypesMatch<["TensorDesc", "result"]>]> {
-  let summary = "It updates the offsets for the given tensor descriptor";
-
-  let description = [{It behaves similar to `update_nd_offset` in terms that
-    it updates offset of a TensorDesc, and the offsets are relative offset to
-    the current position in the number of elements. However, `update_nd_offset`
-    is to update the start point of a 2D block, so its offset constains two
-    elements representing the shift in each dimension. `update_offset` is to
-    update the offset per lane, so its offsets contains values representing
-    shifts for each lane.
-
-    Example:
-    ```mlir
-      %off = arith.constant dense<[32, 32, 32, 32]> : vector<4xindex>
-      %2 = xegpu.update_offset %1, %off :
-              !xegpu.tensor_desc<4x2xf32, #xegpu.scattered_tdesc_attr<chunk_size=2>>, vector<4xindex>
-    ```
-
-  }];
-
-  let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
-                       XeGPU_OffsetType: $offsets);
-  let results = (outs XeGPU_TensorDesc: $result);
-
-  let builders = [
-    OpBuilder<(ins "mlir::Value": $TensorDesc,
-                   "llvm::ArrayRef<OpFoldResult>": $offsets)>,
-    OpBuilder<(ins "mlir::Value": $TensorDesc,
-                   "llvm::ArrayRef<int64_t>": $offsets)>
-  ];
-
-  let extraClassDeclaration = [{
-    xegpu::TensorDescType getTensorDescType() {
-      return getTensorDesc().getType();
-    }
-
-    mlir::VectorType getOffsetsType() {
-      return getOffsets().getType();
-    }
-
-    size_t getNumOffsets() {
-      return getOffsetsType().getNumElements();
-    }
-  }];
-
-  let assemblyFormat = [{
-    $TensorDesc `,` $offsets attr-dict `:` qualified(type($TensorDesc)) `,` type($offsets)
-  }];
 
   let hasVerifier = 1;
 }

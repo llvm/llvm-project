@@ -28,30 +28,6 @@ gpu.module @test {
 
   //-----
 
-  // CHECK-LABEL: update_nd_tdesc
-  // CHECK-SAME: [[arg0:%.+]]: memref<24x32xf32>
-  // CHECK: [[tdesc:%.+]] = xegpu.create_nd_tdesc [[arg0]] : memref<24x32xf32> -> !xegpu.tensor_desc<8x16xf32>
-  // CHECK-COUNT-6: [[update:%.+]] = xegpu.update_nd_offset {{.*}} : !xegpu.tensor_desc<8x16xf32>
-  gpu.func @update_nd_tdesc(%src: memref<24x32xf32>) -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<inst_data = [8, 16]>> {
-    %tdesc = xegpu.create_nd_tdesc %src : memref<24x32xf32> -> !xegpu.tensor_desc<24x32xf32, #xegpu.layout<inst_data = [8, 16]>>
-    %update = xegpu.update_nd_offset %tdesc, [0, 16] : !xegpu.tensor_desc<24x32xf32, #xegpu.layout<inst_data = [8, 16]>>
-    gpu.return %update : !xegpu.tensor_desc<24x32xf32, #xegpu.layout<inst_data = [8, 16]>>
-  }
-
-  //-----
-
-  // CHECK-LABEL: update_nd_tdesc_1d
-  // CHECK-SAME: [[arg0:%.+]]: memref<64xf32>
-  // CHECK: [[tdesc:%.+]] = xegpu.create_nd_tdesc [[arg0]] : memref<64xf32> -> !xegpu.tensor_desc<16xf32>
-  // CHECK-COUNT-2: [[update:%.+]] = xegpu.update_nd_offset {{.*}} : !xegpu.tensor_desc<16xf32>
-  gpu.func @update_nd_tdesc_1d(%src: memref<64xf32>) -> !xegpu.tensor_desc<32xf32, #xegpu.layout<inst_data = [16]>> {
-    %tdesc = xegpu.create_nd_tdesc %src : memref<64xf32> -> !xegpu.tensor_desc<32xf32, #xegpu.layout<inst_data = [16]>>
-    %update = xegpu.update_nd_offset %tdesc, [32] : !xegpu.tensor_desc<32xf32, #xegpu.layout<inst_data = [16]>>
-    gpu.return %update : !xegpu.tensor_desc<32xf32, #xegpu.layout<inst_data = [16]>>
-  }
-
-  //-----
-
   // CHECK-LABEL: prefetch_nd_tdesc
   // CHECK-SAME: [[arg0:%.+]]: memref<24x32xf32>
   // CHECK: [[tdesc:%.+]] = xegpu.create_nd_tdesc [[arg0]] : memref<24x32xf32> -> !xegpu.tensor_desc<8x16xf32>

@@ -395,10 +395,6 @@ private:
                             ArrayRef<LayoutInfoLattice *> operands,
                             ArrayRef<const LayoutInfoLattice *> results);
 
-  void visitUpdateNdOffsetOp(xegpu::UpdateNdOffsetOp updateNdOffset,
-                             ArrayRef<LayoutInfoLattice *> operands,
-                             ArrayRef<const LayoutInfoLattice *> results);
-
   void visitPrefetchNdOp(xegpu::PrefetchNdOp prefetch,
                          ArrayRef<LayoutInfoLattice *> operands,
                          ArrayRef<const LayoutInfoLattice *> results);
@@ -468,9 +464,6 @@ LogicalResult LayoutInfoPropagation::visitOperation(
       })
       .Case([&](xegpu::LoadGatherOp loadGatherOp) {
         visitLoadGatherOp(loadGatherOp, operands, results);
-      })
-      .Case([&](xegpu::UpdateNdOffsetOp updateNdOffsetOp) {
-        visitUpdateNdOffsetOp(updateNdOffsetOp, operands, results);
       })
       .Case([&](xegpu::PrefetchNdOp prefetchNdOp) {
         visitPrefetchNdOp(prefetchNdOp, operands, results);
@@ -721,20 +714,6 @@ void LayoutInfoPropagation::visitShapeCastOp(
       shapeCast->getContext(), cast<xegpu::LayoutAttr>(resultLayout.get()),
       DenseI64ArrayAttr::get(shapeCast->getContext(), {slicedDim}));
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(sliceLayout)));
-}
-
-/// Propagate the layout of the result tensor to the source tensor descriptor
-/// in UpdateNdOffsetOp.
-void LayoutInfoPropagation::visitUpdateNdOffsetOp(
-    xegpu::UpdateNdOffsetOp updateNdOffset,
-    ArrayRef<LayoutInfoLattice *> operands,
-    ArrayRef<const LayoutInfoLattice *> results) {
-  // The layout of the result must be present.
-  LayoutInfo resultLayout = results[0]->getValue();
-  if (!resultLayout.isAssigned())
-    return;
-  // Propagate the layout to the source operand.
-  propagateIfChanged(operands[0], operands[0]->meet(resultLayout));
 }
 
 /// Set the layouts for DPAS A, B, and C operands.

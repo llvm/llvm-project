@@ -372,25 +372,6 @@ gpu.func @simt_store_nd_offset_1(%src: memref<24x32xf16>) {
   gpu.return
 }
 
-// CHECK: gpu.func @update_nd_tdesc(%[[arg0:.*]]: memref<24x32xf32>) {
-gpu.func @update_nd_tdesc(%src: memref<24x32xf32>) {
-  // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %arg0 : memref<24x32xf32> -> !xegpu.tensor_desc<8x16xf32>
-  %1 = xegpu.create_nd_tdesc %src : memref<24x32xf32> -> !xegpu.tensor_desc<8x16xf32>
-  // CHECK: %[[R1:.*]] = xegpu.update_nd_offset %[[REG]], [0, 16] : !xegpu.tensor_desc<8x16xf32>
-  %2 = xegpu.update_nd_offset %1, [0, 16]: !xegpu.tensor_desc<8x16xf32>
-  gpu.return
-}
-
-// CHECK: gpu.func @update_nd_tdesc_2(%[[arg0:.*]]: memref<8x24x32xf32>) {
-gpu.func @update_nd_tdesc_2(%src: memref<8x24x32xf32>) {
-  // CHECK: %[[REG:.*]] = xegpu.create_nd_tdesc %arg0 : memref<8x24x32xf32> -> !xegpu.tensor_desc<2x8x16xf32>
-  %1 = xegpu.create_nd_tdesc %src : memref<8x24x32xf32> -> !xegpu.tensor_desc<2x8x16xf32>
-  // CHECK: %[[R1:.*]] = xegpu.update_nd_offset %[[REG]], [0, 0, 16] : !xegpu.tensor_desc<2x8x16xf32>
-  %2 = xegpu.update_nd_offset %1, [0, 0, 16]: !xegpu.tensor_desc<2x8x16xf32>
-  gpu.return
-}
-
-
 // CHECK: gpu.func @simt_load_4(%[[arg0:.*]]: memref<256xf16>, %[[arg1:.*]]: vector<1xindex>, %[[arg2:.*]]: vector<1xi1>) {
 gpu.func @simt_load_4(%arg0: memref<256xf16>, %arg1: vector<1xindex>, %arg2: vector<1xi1>) {
   // CHECK: %0 = xegpu.load %[[arg0]][%[[arg1]]], %[[arg2]] <{chunk_size = 8 : i64}> : memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
