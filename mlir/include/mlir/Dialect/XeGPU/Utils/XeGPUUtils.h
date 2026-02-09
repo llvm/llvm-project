@@ -155,12 +155,6 @@ template <typename T>
 int getLargestDivisor(T dim, ArrayRef<T> candidates,
                       ArrayRef<T> candidateMultiples = {});
 
-/// Return the attribute name for the OpOperand to attach DistributeLayoutAttr
-std::string getTemporaryLayoutName(const OpOperand &operand);
-
-/// Return the attribute name for the OpResult to attach DistributeLayoutAttr
-std::string getTemporaryLayoutName(const OpResult result);
-
 /// Retrieves the DistributeLayoutAttr associated with a given Value. For
 /// TensorDescType values, the DistributeLayoutAttr is extracted from the
 /// TensorDescType itself. For other values, it is obtained from the attributes
@@ -173,26 +167,6 @@ DistributeLayoutAttr getDistributeLayoutAttr(const Value value);
 /// found, it will check the operand itself and its defining op.
 DistributeLayoutAttr getDistributeLayoutAttr(const OpOperand &opr);
 
-/// Removes the LayoutAttr for a given OpOperand or OpResult if it exists.
-template <typename T,
-          typename = std::enable_if_t<std::is_same_v<T, OpOperand> ||
-                                      std::is_same_v<T, OpResult>>>
-void removeLayoutAttr(const T &operandOrResult);
-
-/// Removes the DistributeLayoutAttr for each OpOperand and OpResult of the
-/// given operation if they exist. If the operation contains regions, it is also
-/// applied recursively to the contained operations
-void removeLayoutAttrs(Operation *op);
-
-/// Updates the NamedAttribute sequence by dropping sg-layout and
-/// sg-data information from any DistributeLayoutAttr found.
-SmallVector<NamedAttribute>
-dropSgLayoutAndDataOnAttrs(ArrayRef<NamedAttribute> attrs);
-
-/// Updates the NamedAttribute sequence by dropping inst-data information from
-/// any DistributeLayoutAttr found.
-SmallVector<NamedAttribute> dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs);
-
 /// [to-be-deprecated] Sets the DistributeLayoutAttr for a given OpResult
 /// user should use setAnchorLayout instead
 void setDistributeLayoutAttr(const OpResult &Result,
@@ -202,6 +176,12 @@ void setDistributeLayoutAttr(const OpResult &Result,
 /// user should use setAnchorLayout instead
 void setDistributeLayoutAttr(const OpOperand &opr,
                              const DistributeLayoutAttr layout);
+
+/// Return the attribute name for the OpOperand to attach DistributeLayoutAttr
+std::string getTemporaryLayoutName(const OpOperand &operand);
+
+/// Return the attribute name for the OpResult to attach DistributeLayoutAttr
+std::string getTemporaryLayoutName(const OpResult result);
 
 /// get and set distribute layout attribute for non-anchor operations
 /// (and offsets/masks of load/store ops before we get rid of their temp attrs)
@@ -216,17 +196,6 @@ template <typename T,
 void setTemporaryLayout(const T &operandOrResult,
                         const DistributeLayoutAttr layout);
 
-/// [to-be-deprecated] Set the DistributeLayoutAttr for each OpOperand and
-/// OpResult of of the given operation. If the operation contains regions, it is
-/// also applied recursively to the contained operations operation.
-/// TODO: To be replaced by recoverTemporaryLayouts()
-void recoverTemporaryLayoutsDeprecated(Operation *op);
-
-/// Attach layout attributes to all vector-type operands of operations within
-/// the given operation's region. Reports an error if any vector operand lacks
-/// a layout attribute.
-bool recoverTemporaryLayouts(Operation *rootOp);
-
 /// Helper function to check if the layout is packed. Layout is packed if it is
 /// 2D and lane_data[0] != 1 (data packed from col dimension).
 /// TODO: Move to target info.
@@ -234,6 +203,15 @@ bool requirePacked(const LayoutAttr layout);
 
 /// Helper function to check if the layout requires a transpose effect.
 bool requireTranspose(const LayoutAttr layout, const uArch::uArch *uArch);
+
+// Check if dst shape is an expansion of src shape by inserting unit dimensions.
+bool matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+                           SmallVector<int64_t> &expandedUnitDims);
+
+// Checks if dst shape is an expansion of src shape where each dimension in src
+// is split into one or more consecutive dimensions in dst
+bool matchSplitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+                            SmallVector<SmallVector<int64_t>> &splitDimGroups);
 
 } // namespace xegpu
 
