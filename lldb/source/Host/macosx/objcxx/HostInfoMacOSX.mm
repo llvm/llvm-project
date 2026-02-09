@@ -696,8 +696,8 @@ public:
     return false;
   }
 
-  // Given the UUID and filepath to a shared cache on the local debug host
-  // system, open it and add all of the binary images to m_caches.
+  /// Given the UUID and filepath to a shared cache on the local debug host
+  /// system, open it and add all of the binary images to m_caches.
   bool CreateSharedCacheImageList(UUID uuid, std::string filepath);
 
   SharedCacheInfo();
