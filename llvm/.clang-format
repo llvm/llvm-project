@@ -1,5 +1,5 @@
 BasedOnStyle: LLVM
-#LineEnding: LF
+LineEnding: LF
 ---
 # Don't format .td files
 Language: TableGen
