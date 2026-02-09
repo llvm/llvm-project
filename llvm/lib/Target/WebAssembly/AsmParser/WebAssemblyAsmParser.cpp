@@ -958,7 +958,7 @@ public:
     }
 
     if (DirectiveID.getString() == ".tabletype") {
-      // .tabletype SYM, ELEMTYPE[, MINSIZE[, MAXSIZE]]
+      // .tabletype SYM, ELEMTYPE[, ADDR_TYPE][, MINSIZE[, MAXSIZE]]
       auto SymName = expectIdent();
       if (SymName.empty())
         return ParseStatus::Failure;
@@ -975,6 +975,35 @@ public:
         return error("Unknown type in .tabletype directive: ", ElemTypeTok);
 
       wasm::WasmLimits Limits = defaultLimits();
+
+      if (Is64) {
+        Limits.Flags |= wasm::WASM_LIMITS_FLAG_IS_64;
+      }
+
+      // Address type is an optinal parameter with more optional parameters
+      // following.
+      auto NextTok = Lexer.peekTok();
+
+      // Check if the next parameter is an address type by checking the token
+      // type.
+      if (Lexer.is(AsmToken::Comma) && !NextTok.is(AsmToken::Integer)) {
+        // After confirming the next parameter is the address type,
+        // we can consume the tokens.
+        auto AddrType = Lexer.Lex().getString();
+        Parser.Lex();
+
+        if (AddrType == "i32")
+          Limits.Flags &= ~wasm::WASM_LIMITS_FLAG_IS_64;
+        else if (AddrType == "i64")
+          Limits.Flags |= wasm::WASM_LIMITS_FLAG_IS_64;
+        else
+          return error(
+              std::string(
+                  "Expected address type or integer constant, instead got: "),
+              Lexer.getTok());
+        ;
+      }
+
       if (isNext(AsmToken::Comma) && parseLimits(&Limits))
         return ParseStatus::Failure;
 
@@ -983,9 +1012,6 @@ public:
       auto *WasmSym =
           static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(SymName));
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TABLE);
-      if (Is64) {
-        Limits.Flags |= wasm::WASM_LIMITS_FLAG_IS_64;
-      }
       wasm::WasmTableType Type = {*ElemType, Limits};
       WasmSym->setTableType(Type);
       TOut.emitTableType(WasmSym);

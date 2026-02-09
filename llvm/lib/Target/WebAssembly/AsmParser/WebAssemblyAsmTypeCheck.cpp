@@ -280,7 +280,8 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc,
 }
 
 bool WebAssemblyAsmTypeCheck::getTable(SMLoc ErrorLoc, const MCOperand &TableOp,
-                                       wasm::ValType &Type) {
+                                       wasm::ValType &Type,
+                                       wasm::ValType &AddrType) {
   const MCSymbolRefExpr *SymRef;
   if (getSymRef(ErrorLoc, TableOp, SymRef))
     return true;
@@ -289,7 +290,12 @@ bool WebAssemblyAsmTypeCheck::getTable(SMLoc ErrorLoc, const MCOperand &TableOp,
       wasm::WASM_SYMBOL_TYPE_TABLE)
     return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
                                    ": missing .tabletype");
-  Type = static_cast<wasm::ValType>(WasmSym->getTableType().ElemType);
+  auto Table = WasmSym->getTableType();
+  Type = static_cast<wasm::ValType>(Table.ElemType);
+  if (Table.Limits.Flags & wasm::WASM_LIMITS_FLAG_IS_64)
+    AddrType = wasm::ValType::I64;
+  else
+    AddrType = wasm::ValType::I32;
   return false;
 }
 
@@ -394,6 +400,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
   auto Name = getMnemonic(Opc);
   dumpTypeStack("typechecking " + Name + ": ");
   wasm::ValType Type;
+  wasm::ValType AddrType;
 
   if (Name == "local.get") {
     if (!getLocal(Operands[1]->getStartLoc(), Inst.getOperand(0), Type)) {
@@ -439,23 +446,28 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
   }
 
   if (Name == "table.get") {
-    bool Error = popType(ErrorLoc, wasm::ValType::I32);
-    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type)) {
+    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type,
+                  AddrType)) {
+      bool Error = popType(ErrorLoc, AddrType);
       pushType(Type);
       return Error;
+    } else {
+      popType(ErrorLoc, Any{});
+      pushType(Any{});
+      return true;
     }
-    pushType(Any{});
-    return true;
   }
 
   if (Name == "table.set") {
     bool Error = false;
     SmallVector<StackType, 2> PopTypes;
-    PopTypes.push_back(wasm::ValType::I32);
-    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type)) {
+    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type,
+                  AddrType)) {
+      PopTypes.push_back(AddrType);
       PopTypes.push_back(Type);
     } else {
       Error = true;
+      PopTypes.push_back(Any{});
       PopTypes.push_back(Any{});
     }
     Error |= popTypes(ErrorLoc, PopTypes);
@@ -463,37 +475,41 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
   }
 
   if (Name == "table.size") {
-    bool Error = getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type);
-    pushType(wasm::ValType::I32);
+    bool Error = getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type,
+                          AddrType);
+    pushType(AddrType);
     return Error;
   }
 
   if (Name == "table.grow") {
     bool Error = false;
     SmallVector<StackType, 2> PopTypes;
-    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type)) {
+    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type,
+                  AddrType)) {
       PopTypes.push_back(Type);
     } else {
       Error = true;
       PopTypes.push_back(Any{});
     }
-    PopTypes.push_back(wasm::ValType::I32);
+    PopTypes.push_back(AddrType);
     Error |= popTypes(ErrorLoc, PopTypes);
-    pushType(wasm::ValType::I32);
+    pushType(AddrType);
     return Error;
   }
 
   if (Name == "table.fill") {
     bool Error = false;
     SmallVector<StackType, 2> PopTypes;
-    PopTypes.push_back(wasm::ValType::I32);
-    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type)) {
+    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type,
+                  AddrType)) {
+      PopTypes.push_back(AddrType);
       PopTypes.push_back(Type);
     } else {
       Error = true;
       PopTypes.push_back(Any{});
+      PopTypes.push_back(Any{});
     }
-    PopTypes.push_back(wasm::ValType::I32);
+    PopTypes.push_back(AddrType);
     Error |= popTypes(ErrorLoc, PopTypes);
     return Error;
   }

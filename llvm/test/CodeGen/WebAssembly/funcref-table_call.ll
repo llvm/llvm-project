@@ -4,7 +4,7 @@
 
 @funcref_table = local_unnamed_addr addrspace(1) global [0 x %funcref] undef
 
-;  CHECK: .tabletype  __funcref_call_table, funcref, 1
+;  CHECK: .tabletype  __funcref_call_table, funcref, i32, 1
 
 declare %funcref @llvm.wasm.table.get.funcref(ptr addrspace(1), i32) nounwind
 

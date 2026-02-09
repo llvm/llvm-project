@@ -874,7 +874,6 @@ br_incorrect_func_signature:
 
 multiple_errors_in_function:
   .functype multiple_errors_in_function () -> ()
-# CHECK: :[[@LINE+2]]:3: error: type mismatch, expected [i32] but got []
 # CHECK: :[[@LINE+1]]:13: error: expected expression operand
   table.get 1
 

@@ -18,7 +18,7 @@
 # CHECK: [[#@LINE+1]]:17: error: Unknown type in .tabletype directive: i42
 .tabletype sym, i42
 
-# CHECK: [[#@LINE+1]]:21: error: Expected integer constant, instead got:
+# CHECK: [[#@LINE+2]]:1: error: Expected address type or integer constant, instead got:
 .tabletype sym, i32,
 
 # CHECK: [[#@LINE+1]]:25: error: Expected integer constant, instead got:
