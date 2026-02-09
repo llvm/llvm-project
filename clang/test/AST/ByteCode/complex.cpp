@@ -319,6 +319,8 @@ namespace Builtin {
 
 
   constexpr _Complex float C = __builtin_complex(10.0f, 20.0); // both-error {{arguments are of different types}}
+
+  constexpr int Discarded = (__builtin_complex(1., 2.), 12);
 }
 
 namespace Cmp {
