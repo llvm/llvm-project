@@ -159,8 +159,8 @@ void DemandedBits::determineLiveOperandBits(
             AB = APInt::getAllOnes(BitWidth);
             return;
           }
-          uint64_t Min = Known.getMinValue().getLimitedValue(BitWidth - 1);
-          uint64_t Max = Known.getMaxValue().getLimitedValue(BitWidth - 1);
+          uint64_t Min = Known.getMinValue().getZExtValue();
+          uint64_t Max = Known.getMaxValue().getZExtValue();
           bool IsFShr = II->getIntrinsicID() == Intrinsic::fshr;
           bool ShiftLeft = false;
           uint64_t SMin = Min, SMax = Max;
