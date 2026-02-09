@@ -83,4 +83,18 @@ exit:
   ret ptr %sel2
 }
 
+define i1 @assume_pointers_equality_can_replace_valid(ptr %x, ptr %y) {
+; CHECK-LABEL: define i1 @assume_pointers_equality_can_replace_valid(
+; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X]], inttoptr (i64 12345678 to ptr)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr inttoptr (i64 12345678 to ptr), [[Y]]
+; CHECK-NEXT:    ret i1 [[CMP2]]
+;
+  %cmp = icmp eq ptr %x, inttoptr (i64 12345678 to ptr)
+  call void @llvm.assume(i1 %cmp)
+  %cmp2 = icmp eq ptr %x, %y
+  ret i1 %cmp2
+}
+
 declare void @llvm.assume(i1)
