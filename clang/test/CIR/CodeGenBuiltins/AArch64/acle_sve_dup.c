@@ -1,13 +1,15 @@
 // REQUIRES: aarch64-registered-target
-//
-// RUN: %clang_cc1 -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -fclangir -emit-cir -o - %s | FileCheck %s --check-prefixes=ALL,CIR
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -fclangir -emit-cir -o - %s | FileCheck %s --check-prefixes=ALL,CIR
 
-// RUN: %clang_cc1 -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR,LLVM_VIA_CIR
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR,LLVM_VIA_CIR
+// DEFINE: %{common_flags} = -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall
 
-// RUN: %clang_cc1 -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR,LLVM_DIRECT
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64 -target-feature +sve -disable-O0-optnone -Werror -Wall -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR,LLVM_DIRECT
+// RUN: %clang_cc1                        %{common_flags} -fclangir -emit-cir -o - %s | FileCheck %s --check-prefixes=ALL,CIR
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS %{common_flags} -fclangir -emit-cir -o - %s | FileCheck %s --check-prefixes=ALL,CIR
+
+// RUN: %clang_cc1                        %{common_flags} -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR,LLVM_VIA_CIR
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS %{common_flags} -fclangir -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR,LLVM_VIA_CIR
+
+// RUN: %clang_cc1                        %{common_flags} -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR,LLVM_DIRECT
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS %{common_flags} -emit-llvm -o - %s | FileCheck %s --check-prefixes=ALL,LLVM_OGCG_CIR,LLVM_DIRECT
 #include <arm_sve.h>
 
 #if defined __ARM_FEATURE_SME
@@ -22,6 +24,10 @@
 #else
 #define SVE_ACLE_FUNC(A1,A2,A3,A4) A1##A2##A3##A4
 #endif
+
+//===------------------------------------------------------===//
+// 1. UNPREDICTED SVDUP
+//===------------------------------------------------------===//
 
 // ALL-LABEL: @test_svdup_n_s8
 svint8_t test_svdup_n_s8(int8_t op) MODE_ATTR
@@ -209,6 +215,10 @@ svfloat64_t test_svdup_n_f64(float64_t op) MODE_ATTR
 // LLVM_OGCG_CIR:    [[RES:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.dup.x.nxv2f64(double [[OP_LOAD]])
   return SVE_ACLE_FUNC(svdup,_n,_f64,)(op);
 }
+
+//===------------------------------------------------------===//
+// 2. PREDICATED ZERO-ING SVDUP
+//===------------------------------------------------------===//
 
 // ALL-LABEL: @test_svdup_n_s8_z
 svint8_t test_svdup_n_s8_z(svbool_t pg, int8_t op) MODE_ATTR
