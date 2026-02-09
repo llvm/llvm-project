@@ -60,15 +60,15 @@ define <8 x i32> @PR32790(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c, <8 x i32> %d
 define <4 x i32> @do_not_use_256bit_op(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
 ; SSE-LABEL: do_not_use_256bit_op:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    pand %xmm3, %xmm1
+; SSE-NEXT:    pand %xmm2, %xmm0
 ; SSE-NEXT:    psubd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: do_not_use_256bit_op:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpand %xmm3, %xmm1, %xmm1
+; AVX-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %concat1 = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

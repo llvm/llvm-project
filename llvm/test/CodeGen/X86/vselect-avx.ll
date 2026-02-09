@@ -263,11 +263,11 @@ define <4 x i64> @vselect_concat_split_v16i8(<4 x i64> %a, <4 x i64> %b, <4 x i6
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm5
 ; AVX1-NEXT:    vpcmpgtb %xmm4, %xmm5, %xmm4
 ; AVX1-NEXT:    vpcmpgtb %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm2
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm1
-; AVX1-NEXT:    vpblendvb %xmm4, %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
+; AVX1-NEXT:    vpblendvb %xmm4, %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vpblendvb %xmm2, %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: vselect_concat_split_v16i8:
