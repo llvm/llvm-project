@@ -5,18 +5,18 @@
 
 cir.func @atomic_xchg(%ptr: !cir.ptr<!s32i>, %val: !s32i) {
   // CHECK-LABEL: @atomic_xchg
-  %0 = cir.atomic.xchg relaxed %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CHECK: cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  %1 = cir.atomic.xchg consume %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CHECK: cir.atomic.xchg consume %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  %2 = cir.atomic.xchg acquire %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CHECK: cir.atomic.xchg acquire %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  %3 = cir.atomic.xchg release %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CHECK: cir.atomic.xchg release %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  %4 = cir.atomic.xchg acq_rel %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CHECK: cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  %5 = cir.atomic.xchg seq_cst %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CHECK: cir.atomic.xchg seq_cst %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  %0 = cir.atomic.xchg relaxed syncscope(system) %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CHECK: cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  %1 = cir.atomic.xchg consume syncscope(system) %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CHECK: cir.atomic.xchg consume syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  %2 = cir.atomic.xchg acquire syncscope(system) %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CHECK: cir.atomic.xchg acquire syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  %3 = cir.atomic.xchg release syncscope(system) %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CHECK: cir.atomic.xchg release syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  %4 = cir.atomic.xchg acq_rel syncscope(system) %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CHECK: cir.atomic.xchg acq_rel syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  %5 = cir.atomic.xchg seq_cst syncscope(system) %ptr, %val : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CHECK: cir.atomic.xchg seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
   cir.return
 }
 
