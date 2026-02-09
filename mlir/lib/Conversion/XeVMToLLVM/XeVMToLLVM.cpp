@@ -425,9 +425,10 @@ class PrefetchToOCLPattern : public OpConversionPattern<PrefetchOp> {
         LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(), 1);
     Value ptrOp = op.getPtr();
     // Create getelementptr op to attach cache control metadata
-    // element type doesn't matter here as we use zero index, so use i32
+    // element type doesn't matter for address computation since we use
+    // but non i8 types lose metadata in SPIRV backend, so use i8 here
     LLVM::GEPOp gep = LLVM::GEPOp::create(rewriter, loc, ptrOp.getType(),
-                                          rewriter.getI32Type(), ptrOp,
+                                          rewriter.getI8Type(), ptrOp,
                                           ArrayRef<LLVM::GEPArg>{0});
     if (std::optional<ArrayAttr> optCacheControls =
             getCacheControlMetadata(rewriter, op))
@@ -534,10 +535,11 @@ class LoadStorePrefetchToOCLPattern : public OpConversionPattern<OpType> {
         rewriter, loc, VectorType::get(2, i32Type), byteCoord, op.getY(), one);
     Value ptrOp = op.getPtr();
     // Create getelementptr op to attach cache control metadata
-    // element type doesn't matter here as we use zero index, so use i32
-    LLVM::GEPOp gep =
-        LLVM::GEPOp::create(rewriter, loc, ptrOp.getType(), i32Type, ptrOp,
-                            ArrayRef<LLVM::GEPArg>{0});
+    // element type doesn't matter for address computation since we use
+    // but non i8 types lose metadata in SPIRV backend, so use i8 here
+    LLVM::GEPOp gep = LLVM::GEPOp::create(rewriter, loc, ptrOp.getType(),
+                                          rewriter.getI8Type(), ptrOp,
+                                          ArrayRef<LLVM::GEPArg>{0});
     if (std::optional<ArrayAttr> optCacheControls =
             getCacheControlMetadata(rewriter, op))
       gep->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
@@ -663,10 +665,11 @@ class BlockLoadStore1DToOCLPattern : public OpConversionPattern<OpType> {
     SmallVector<Value, 2> args{};
     Value ptrOp = op.getPtr();
     // Create getelementptr op to attach cache control metadata
-    // element type doesn't matter here as we use zero index, so use i32
-    LLVM::GEPOp gep = LLVM::GEPOp::create(
-        rewriter, op.getLoc(), ptrOp.getType(), rewriter.getI32Type(), ptrOp,
-        ArrayRef<LLVM::GEPArg>{0});
+    // element type doesn't matter for address computation since we use
+    // but non i8 types lose metadata in SPIRV backend, so use i8 here
+    LLVM::GEPOp gep = LLVM::GEPOp::create(rewriter, op.getLoc(),
+                                          ptrOp.getType(), rewriter.getI8Type(),
+                                          ptrOp, ArrayRef<LLVM::GEPArg>{0});
     if (std::optional<ArrayAttr> optCacheControls =
             getCacheControlMetadata(rewriter, op))
       gep->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);
@@ -712,10 +715,11 @@ class LLVMLoadStoreToOCLPattern : public OpConversionPattern<OpType> {
     constexpr bool isStore = std::is_same_v<OpType, LLVM::StoreOp>;
     Value ptrOp = op.getAddr();
     // Create getelementptr op to attach cache control metadata
-    // element type doesn't matter here as we use zero index, so use i32
-    LLVM::GEPOp gep = LLVM::GEPOp::create(
-        rewriter, op.getLoc(), ptrOp.getType(), rewriter.getI32Type(), ptrOp,
-        ArrayRef<LLVM::GEPArg>{0});
+    // element type doesn't matter for address computation since we use
+    // but non i8 types lose metadata in SPIRV backend, so use i8 here
+    LLVM::GEPOp gep = LLVM::GEPOp::create(rewriter, op.getLoc(),
+                                          ptrOp.getType(), rewriter.getI8Type(),
+                                          ptrOp, ArrayRef<LLVM::GEPArg>{0});
     if (std::optional<ArrayAttr> optCacheControls =
             getCacheControlMetadata(rewriter, op))
       gep->setAttr(XeVMDialect::getCacheControlsAttrName(), *optCacheControls);

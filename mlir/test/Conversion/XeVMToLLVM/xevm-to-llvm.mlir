@@ -12,7 +12,7 @@ llvm.func @blockload2d(%a: !llvm.ptr<1>, %base_width_a: i32, %base_height_a: i32
   // CHECK: %[[VAR2:.*]] = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[VAR3:.*]] = llvm.insertelement %[[ARG4]], %[[VAR0]][%[[VAR1]] : i32] : vector<2xi32>
   // CHECK: %[[VAR4:.*]] = llvm.insertelement %[[ARG5]], %[[VAR3]][%[[VAR2]] : i32] : vector<2xi32>
-  // CHECK: %[[VAR6:.*]] = llvm.getelementptr %[[ARG0]][0] : (!llvm.ptr<1>) -> !llvm.ptr<1>, i32
+  // CHECK: %[[VAR6:.*]] = llvm.getelementptr %[[ARG0]][0] : (!llvm.ptr<1>) -> !llvm.ptr<1>, i8
   // CHECK: %[[VAR7:.*]] = llvm.alloca %[[VAR5]] x i16 : (i32) -> !llvm.ptr
   // CHECK: llvm.call spir_funccc @_Z41intel_sub_group_2d_block_read_16b_8r16x1cPU3AS1viiiDv2_iPt(
   // CHECK-SAME: %[[VAR6]], %[[ARG1]], %[[ARG2]], %[[ARG3]], %[[VAR4]], %[[VAR7]])
@@ -54,7 +54,7 @@ llvm.func @blockload2d_v_blocks(%a: !llvm.ptr<1>, %base_width_a: i32, %base_heig
   // CHECK: %[[VAR2:.*]] = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[VAR3:.*]] = llvm.insertelement %[[ARG4]], %[[VAR0]][%[[VAR1]] : i32] : vector<2xi32>
   // CHECK: %[[VAR4:.*]] = llvm.insertelement %[[ARG5]], %[[VAR3]][%[[VAR2]] : i32] : vector<2xi32>
-  // CHECK: %[[VAR6:.*]] = llvm.getelementptr %[[ARG0]][0] : (!llvm.ptr<1>) -> !llvm.ptr<1>, i32
+  // CHECK: %[[VAR6:.*]] = llvm.getelementptr %[[ARG0]][0] : (!llvm.ptr<1>) -> !llvm.ptr<1>, i8
   // CHECK: %[[VAR7:.*]] = llvm.alloca %[[VAR5]] x i16 : (i32) -> !llvm.ptr
   // CHECK: llvm.call spir_funccc @_Z41intel_sub_group_2d_block_read_16b_8r16x2cPU3AS1viiiDv2_iPt(
   // CHECK-SAME: %[[VAR6]], %[[ARG1]], %[[ARG2]], %[[ARG3]], %[[VAR4]], %[[VAR7]])
@@ -84,7 +84,7 @@ llvm.func @blockload2d_pack_register(%a: !llvm.ptr<1>, %base_width_a: i32, %base
   // CHECK: %[[VAR2:.*]] = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[VAR3:.*]] = llvm.insertelement %[[ARG4]], %[[VAR0]][%[[VAR1]] : i32] : vector<2xi32>
   // CHECK: %[[VAR4:.*]] = llvm.insertelement %[[ARG5]], %[[VAR3]][%[[VAR2]] : i32] : vector<2xi32>
-  // CHECK: %[[VAR6:.*]] = llvm.getelementptr %[[ARG0]][0] : (!llvm.ptr<1>) -> !llvm.ptr<1>, i32
+  // CHECK: %[[VAR6:.*]] = llvm.getelementptr %[[ARG0]][0] : (!llvm.ptr<1>) -> !llvm.ptr<1>, i8
   // CHECK: %[[VAR7:.*]] = llvm.alloca %[[VAR5]] x i32 : (i32) -> !llvm.ptr
   // CHECK: llvm.call spir_funccc @_Z52intel_sub_group_2d_block_read_transform_16b_16r16x1cPU3AS1viiiDv2_iPj(
   // CHECK-SAME: %[[VAR6]], %[[ARG1]], %[[ARG2]], %[[ARG3]], %[[VAR4]], %[[VAR7]])
@@ -114,7 +114,7 @@ llvm.func @blockload2d_transpose(%a: !llvm.ptr<1>, %base_width_a: i32, %base_hei
   // CHECK: %[[VAR2:.*]] = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[VAR3:.*]] = llvm.insertelement %[[ARG4]], %[[VAR0]][%[[VAR1]] : i32] : vector<2xi32>
   // CHECK: %[[VAR4:.*]] = llvm.insertelement %[[ARG5]], %[[VAR3]][%[[VAR2]] : i32] : vector<2xi32>
-  // CHECK: %[[VAR6:.*]] = llvm.getelementptr %[[ARG0]][0] : (!llvm.ptr<1>) -> !llvm.ptr<1>, i32
+  // CHECK: %[[VAR6:.*]] = llvm.getelementptr %[[ARG0]][0] : (!llvm.ptr<1>) -> !llvm.ptr<1>, i8
   // CHECK: %[[VAR7:.*]] = llvm.alloca %[[VAR5]] x i32 : (i32) -> !llvm.ptr
   // CHECK: llvm.call spir_funccc @_Z51intel_sub_group_2d_block_read_transpose_32b_16r8x1cPU3AS1viiiDv2_iPj(
   // CHECK-SAME: %[[VAR6]], %[[ARG1]], %[[ARG2]], %[[ARG3]], %[[VAR4]], %[[VAR7]])
@@ -144,7 +144,7 @@ llvm.func @blockstore2d(%c: !llvm.ptr<1>, %base_width_c: i32, %base_height_c: i3
   // CHECK: %[[VAR2:.*]] = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[VAR3:.*]] = llvm.insertelement %[[ARG4]], %[[VAR0]][%[[VAR1]] : i32] : vector<2xi32>
   // CHECK: %[[VAR4:.*]] = llvm.insertelement %[[ARG5]], %[[VAR3]][%[[VAR2]] : i32] : vector<2xi32>
-  // CHECK: %[[VAR6:.*]] = llvm.getelementptr %[[ARG0]][0] : (!llvm.ptr<1>) -> !llvm.ptr<1>, i32
+  // CHECK: %[[VAR6:.*]] = llvm.getelementptr %[[ARG0]][0] : (!llvm.ptr<1>) -> !llvm.ptr<1>, i8
   // CHECK: %[[VAR7:.*]] = llvm.alloca %[[VAR5]] x i32 : (i32) -> !llvm.ptr
   // CHECK: llvm.store %[[ARG6]], %[[VAR7]] : vector<8xi32>, !llvm.ptr
   // CHECK: llvm.call spir_funccc @_Z42intel_sub_group_2d_block_write_32b_8r16x1cPU3AS1viiiDv2_iPj(
