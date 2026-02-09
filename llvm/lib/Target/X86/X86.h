@@ -62,7 +62,13 @@ FunctionPass *createX86FPStackifierLegacyPass();
 
 /// This pass inserts AVX vzeroupper instructions before each call to avoid
 /// transition penalty between functions encoded with AVX and SSE.
-FunctionPass *createX86IssueVZeroUpperPass();
+class X86IssueVZeroUpperPass : public PassInfoMixin<X86IssueVZeroUpperPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86IssueVZeroUpperLegacyPass();
 
 /// This pass inserts ENDBR instructions before indirect jump/call
 /// destinations as part of CET IBT mechanism.

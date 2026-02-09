@@ -568,7 +568,7 @@ void X86PassConfig::addPreEmitPass() {
 
   addPass(createX86IndirectBranchTrackingLegacyPass());
 
-  addPass(createX86IssueVZeroUpperPass());
+  addPass(createX86IssueVZeroUpperLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createX86FixupBWInstsLegacyPass());

@@ -57,6 +57,7 @@ set(sources
   X86ISelDAGToDAG.cpp
   X86ISelLowering.cpp
   X86ISelLoweringCall.cpp
+  X86IssueVZeroUpper.cpp
   X86IndirectBranchTracking.cpp
   X86IndirectThunks.cpp
   X86InterleavedAccess.cpp
@@ -84,7 +85,6 @@ set(sources
   X86TargetMachine.cpp
   X86TargetObjectFile.cpp
   X86TargetTransformInfo.cpp
-  X86VZeroUpper.cpp
   X86WinEHState.cpp
   X86WinEHUnwindV2.cpp
   X86InsertWait.cpp
