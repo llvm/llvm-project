@@ -2148,13 +2148,17 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
     }
   } else if (const char *SpillLibCall = getSpillLibCallName(*MF, CSI)) {
     // Add spill libcall via non-callee-saved register t0.
-    BuildMI(MBB, MI, DL, TII.get(RISCV::PseudoCALLReg), RISCV::X5)
-        .addExternalSymbol(SpillLibCall, RISCVII::MO_CALL)
-        .setMIFlag(MachineInstr::FrameSetup);
+    MachineInstrBuilder NewMI =
+        BuildMI(MBB, MI, DL, TII.get(RISCV::PseudoCALLReg), RISCV::X5)
+            .addExternalSymbol(SpillLibCall, RISCVII::MO_CALL)
+            .setMIFlag(MachineInstr::FrameSetup);
 
-    // Add registers spilled in libcall as liveins.
-    for (auto &CS : CSI)
+    for (auto &CS : CSI) {
+      // Add registers spilled as implicit used.
+      NewMI.addUse(CS.getReg(), RegState::Implicit);
+      // Add registers spilled in libcall as liveins.
       MBB.addLiveIn(CS.getReg());
+    }
   }
 
   // Manually spill values not spilled by libcall & Push/Pop.
@@ -2291,21 +2295,22 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
       for (unsigned i = 0; i < RVFI->getRVPushRegs(); i++)
         PopBuilder.addDef(FixedCSRFIMap[i], RegState::ImplicitDefine);
     }
-  } else {
-    const char *RestoreLibCall = getRestoreLibCallName(*MF, CSI);
-    if (RestoreLibCall) {
-      // Add restore libcall via tail call.
-      MachineBasicBlock::iterator NewMI =
-          BuildMI(MBB, MI, DL, TII.get(RISCV::PseudoTAIL))
-              .addExternalSymbol(RestoreLibCall, RISCVII::MO_CALL)
-              .setMIFlag(MachineInstr::FrameDestroy);
+  } else if (const char *RestoreLibCall = getRestoreLibCallName(*MF, CSI)) {
+    // Add restore libcall via tail call.
+    MachineInstrBuilder NewMI =
+        BuildMI(MBB, MI, DL, TII.get(RISCV::PseudoTAIL))
+            .addExternalSymbol(RestoreLibCall, RISCVII::MO_CALL)
+            .setMIFlag(MachineInstr::FrameDestroy);
 
-      // Remove trailing returns, since the terminator is now a tail call to the
-      // restore function.
-      if (MI != MBB.end() && MI->getOpcode() == RISCV::PseudoRET) {
-        NewMI->copyImplicitOps(*MF, *MI);
-        MI->eraseFromParent();
-      }
+    // Add registers restored as implicit defined.
+    for (auto &CS : CSI)
+      NewMI.addDef(CS.getReg(), RegState::ImplicitDefine);
+
+    // Remove trailing returns, since the terminator is now a tail call to the
+    // restore function.
+    if (MI != MBB.end() && MI->getOpcode() == RISCV::PseudoRET) {
+      NewMI.getInstr()->copyImplicitOps(*MF, *MI);
+      MI->eraseFromParent();
     }
   }
   return true;
