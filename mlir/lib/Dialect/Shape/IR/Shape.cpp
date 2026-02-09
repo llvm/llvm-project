@@ -1700,25 +1700,48 @@ struct ShapeOfOpToConstShapeOp : public OpRewritePattern<shape::ShapeOfOp> {
   using OpRewritePattern<shape::ShapeOfOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(shape::ShapeOfOp op,
-                              PatternRewriter &rewriter) const override {
-  auto shapedTy = dyn_cast<ShapedType>(op.getArg().getType());
-  if (!shapedTy || !shapedTy.hasStaticShape())
-    return failure();
+                                PatternRewriter &rewriter) const override {
+    auto shapedTy = dyn_cast<ShapedType>(op.getArg().getType());
+    if (!shapedTy || !shapedTy.hasStaticShape())
+      return failure();
 
-  Location loc = op.getLoc();
-  auto attr = rewriter.getIndexTensorAttr(shapedTy.getShape());
+    Location loc = op.getLoc();
+    auto shapeAttr = rewriter.getIndexTensorAttr(shapedTy.getShape());
+    Type resultTy = op.getType();
 
-  // IMPORTANT: Build const_shape with the SAME result type as shape_of.
-  // This avoids creating a tensor.cast to a non-tensor type (!shape.shape).
-  Value constShape = rewriter
-      .create<shape::ConstShapeOp>(loc, op.getType(), attr)
-      .getResult();
+    // Case 1: Result is !shape.shape
+    if (llvm::isa<shape::ShapeType>(resultTy)) {
+      Value cs =
+          rewriter.create<shape::ConstShapeOp>(loc, resultTy, shapeAttr)
+              .getResult();
+      rewriter.replaceOp(op, cs);
+      return success();
+    }
 
-  rewriter.replaceOp(op, constShape);
-  return success();
-}
+    // Case 2: Result is an extent tensor (tensor<...xindex>)
+    auto resultTensorTy = llvm::dyn_cast<RankedTensorType>(resultTy);
+    if (!resultTensorTy)
+      return failure();
 
+    // Build const_shape with the concrete ranked type implied by the constant.
+    int64_t rank = static_cast<int64_t>(shapedTy.getShape().size());
+    auto concreteTy = RankedTensorType::get({rank}, rewriter.getIndexType());
+
+    Value cs =
+        rewriter.create<shape::ConstShapeOp>(loc, concreteTy, shapeAttr)
+            .getResult();
+
+    // If shape_of wanted tensor<?xindex>, cast from tensor<Rxindex>.
+    if (concreteTy != resultTensorTy) {
+      cs = rewriter.create<tensor::CastOp>(loc, resultTensorTy, cs).getResult();
+    }
+
+    rewriter.replaceOp(op, cs);
+    return success();
+  }
 };
+
+
 
 // Canonicalize
 //
