@@ -638,25 +638,39 @@ struct ConvertAllGatherOp : public CommOpPattern<AllGatherOp> {
     ImplicitLocOpBuilder ib(op.getLoc(), rewriter);
     Value input = getAsMemref(adaptor.getInput(), ib);
     MemRefType inType = cast<MemRefType>(input.getType());
-    if (!memref::isStaticShapeAndContiguousRowMajor(inType))
-      return op.emitError(
-          "Expected static shaped memref in contiguous row-major layout.");
     MemRefType outType = getMemrefType(cast<ShapedType>(op.getType()));
-    if (!memref::isStaticShapeAndContiguousRowMajor(outType))
-      return op.emitError(
-          "Expected static shaped memref in contiguous row-major layout.");
-
-    auto inputShape = cast<ShapedType>(adaptor.getInput().getType()).getShape();
+    auto inputShape = inType.getShape();
     auto outputShape = outType.getShape();
     int64_t gatherAxis = adaptor.getGatherAxisAttr().getInt();
+    int64_t inputDimOnAxis = inputShape[gatherAxis];
+    int64_t outputDimOnAxis = outputShape[gatherAxis];
+
+    for (size_t i = 0; i < outputShape.size(); ++i)
+      if (outputShape[i] != inputShape[i] && i != (size_t)gatherAxis)
+        return op.emitError(
+            "Result and input shapes must match along non-gather axes.");
+    if (inputDimOnAxis == 0)
+      return op.emitError("Input size along the gather axis must be non-zero.");
+    if (inputDimOnAxis == 1) {
+      assert(outputDimOnAxis == inputDimOnAxis);
+      rewriter.replaceOp(op, adaptor.getInput());
+      return success();
+    }
+    if (outputDimOnAxis % inputDimOnAxis != 0)
+      return op.emitError("Result size along the gather axis must be an exact "
+                          "multiple of the input size along the gather axis.");
+
+    if (!memref::isStaticShapeAndContiguousRowMajor(inType) ||
+        !memref::isStaticShapeAndContiguousRowMajor(outType))
+      return op.emitError("Input/result must be statically shaped memrefs in "
+                          "contiguous row-major layout.");
 
     // Get the right communicator.
     Value comm = getComm(*gridOp, adaptor.getGridAxes(), ib);
-
     Value nRanksV =
         mpi::CommSizeOp::create(ib, ib.getI32Type(), comm).getSize();
     nRanksV = arith::IndexCastOp::create(ib, ib.getIndexType(), nRanksV);
-    int64_t nRanks = outputShape[gatherAxis] / inputShape[gatherAxis];
+    int64_t nRanks = outputDimOnAxis / inputDimOnAxis;
     Value nRanksC = arith::ConstantIndexOp::create(ib, nRanks);
     Value notError =
         arith::CmpIOp::create(ib, arith::CmpIPredicate::eq, nRanksV, nRanksC);
@@ -664,8 +678,6 @@ struct ConvertAllGatherOp : public CommOpPattern<AllGatherOp> {
                          "Expected number of ranks in the communicator to "
                          "match the output size along the gather axis divided "
                          "by the input size along the gather axis.");
-    for (size_t i = 0; i < outputShape.size(); ++i)
-      assert(outputShape[i] == inputShape[i] || i == (size_t)gatherAxis);
 
     // mpi.allgather always concatenates along the first dimension, so
     // get a output buffer of shape {nRanks, dim0, ...}.

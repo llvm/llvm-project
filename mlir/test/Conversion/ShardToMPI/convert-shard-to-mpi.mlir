@@ -175,9 +175,9 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
       // CHECK-SAME: [[varg0:%.*]]: tensor<3x4xf32>
       // CHECK-SAME: -> tensor<3x20xf32>
       %arg0 : tensor<3x4xf32>) -> tensor<3x20xf32> {
-    // CHECK: [[vc2_i32:%.*]] = arith.constant 2 : i32
-    // CHECK: [[vc1_i32:%.*]] = arith.constant 1 : i32
-    // CHECK: [[vc5:%.*]] = arith.constant 5 : index
+    // CHECK-DAG: [[vc2_i32:%.*]] = arith.constant 2 : i32
+    // CHECK-DAG: [[vc1_i32:%.*]] = arith.constant 1 : i32
+    // CHECK-DAG: [[vc5:%.*]] = arith.constant 5 : index
     // CHECK: [[v0:%.*]] = bufferization.to_buffer [[varg0]] : tensor<3x4xf32> to memref<3x4xf32>
     // CHECK: [[v1:%.*]] = mpi.comm_world : !mpi.comm
     // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v1]], [[vc1_i32]], [[vc2_i32]]) : !mpi.comm
@@ -189,7 +189,7 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
     // CHECK: mpi.allgather([[v0]], [[valloc]], [[vnewcomm]]) : memref<3x4xf32>, memref<5x3x4xf32>
     // CHECK: [[v4:%.*]] = bufferization.to_tensor [[valloc]] restrict : memref<5x3x4xf32> to tensor<5x3x4xf32>
     // CHECK: [[v5:%.*]] = tensor.empty() : tensor<3x5x4xf32>
-    // CHECK: [[vtransposed:%.*]] = linalg.transpose ins([[v4]] : tensor<5x3x4xf32>) outs([[v5]] : tensor<3x5x4xf32>) permutation = [1, 0, 2] 
+    // CHECK: [[vtransposed:%.*]] = linalg.transpose ins([[v4]] : tensor<5x3x4xf32>) outs([[v5]] : tensor<3x5x4xf32>) permutation = [1, 0, 2]
     // CHECK: [[vcollapsed:%.*]] = tensor.collapse_shape [[vtransposed]] {{\[\[}}0], [1, 2]] : tensor<3x5x4xf32> into tensor<3x20xf32>
     %0 = shard.all_gather %arg0 on @grid0 grid_axes = [2] gather_axis = 1 : tensor<3x4xf32> -> tensor<3x20xf32>
     // CHECK: return [[vcollapsed]] : tensor<3x20xf32>

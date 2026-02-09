@@ -436,8 +436,8 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
                          targetSharding);
 }
 
-// Currently the sharded tensor axes must be exactly divisible by the single
-// grid axis size.static TypedValue<ShapedType>
+// In most cases the sharded tensor axes must be exactly divisible by the single
+// grid axis size. Only halo size changes can deal with non-divisible cases.
 static TypedValue<ShapedType>
 reshard(ImplicitLocOpBuilder &builder, GridOp grid,
         const Sharding &sourceSharding, const Sharding &targetSharding,
