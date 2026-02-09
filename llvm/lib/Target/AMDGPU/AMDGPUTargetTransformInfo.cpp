@@ -80,7 +80,8 @@ static cl::opt<size_t> InlineMaxBB(
 static cl::opt<unsigned> MemcpyLoopUnroll(
     "amdgpu-memcpy-loop-unroll",
     cl::desc("Unroll factor (affecting 4x32-bit operations) to use for memory "
-             "operations when lowering memcpy as a loop"),
+             "operations when lowering statically-sized memcpy, memmove, or"
+             "memset as a loop"),
     cl::init(16), cl::Hidden);
 
 static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
@@ -882,10 +883,9 @@ GCNTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
   return LT.first * getHalfRateInstrCost(CostKind);
 }
 
-InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
-                                               TTI::TargetCostKind CostKind,
-                                               unsigned Index, const Value *Op0,
-                                               const Value *Op1) const {
+InstructionCost GCNTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *ValTy, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::InsertElement: {
@@ -894,8 +894,8 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     if (EltSize < 32) {
       if (EltSize == 16 && Index == 0 && ST->has16BitInsts())
         return 0;
-      return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0,
-                                       Op1);
+      return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
+                                       VIC);
     }
 
     // Extracts are just reads of a subregister, so are free. Inserts are
@@ -906,7 +906,8 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     return Index == ~0u ? 2 : 0;
   }
   default:
-    return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1);
+    return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
+                                     VIC);
   }
 }
 

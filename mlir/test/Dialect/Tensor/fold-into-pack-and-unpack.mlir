@@ -161,7 +161,7 @@ func.func @nofold_pad_pack_artificial_padding(%src: tensor<9x16xf32>) -> tensor<
       : tensor<17x16xf32> -> tensor<3x1x8x32xf32>
   return %pack : tensor<3x1x8x32xf32>
 }
-// CHECK-LABLE: func.func @nofold_pad_pack_artificial_padding(
+// CHECK-LABEL: func.func @nofold_pad_pack_artificial_padding(
 // CHECK:         tensor.pad
 // CHECK:         linalg.pack
 

@@ -429,7 +429,7 @@ def any_riscv_fsetccs_vl : PatFrags<(ops node:$lhs, node:$rhs, node:$cc, node:$p
 let HasMaskOp = true in {
   // Matches the semantics of vrgather.vx and vrgather.vv with extra operands
   // for passthru and VL, except that out of bound indices result in a poison
-  // result not zero.  Operands are (src, index, mask, passthru, vl).
+  // result not zero.  Operands are (src, index, passthru, mask, vl).
   def riscv_vrgather_vx_vl : RVSDNode<"VRGATHER_VX_VL",
                                       SDTypeProfile<1, 5, [SDTCisVec<0>,
                                                           SDTCisSameAs<0, 1>,
@@ -910,28 +910,40 @@ class VPatBinaryVL_XI<SDPatternOperator vop,
                    xop_kind:$rs2,
                    (mask_type VMV0:$vm), GPR:$vl, log2sew, TAIL_AGNOSTIC)>;
 
-multiclass VPatBinaryVL_VV_VX<SDPatternOperator vop, string instruction_name,
-                              list<VTypeInfo> vtilist = AllIntegerVectors,
-                              bit isSEWAware = 0> {
+multiclass VPatBinaryVL_VV<SDPatternOperator vop, string instruction_name,
+                           list<VTypeInfo> vtilist = AllIntegerVectors,
+                           bit isSEWAware = 0,
+                           list<Predicate> ExtraPreds = []> {
   foreach vti = vtilist in {
-    let Predicates = GetVTypePredicates<vti>.Predicates in {
-      def : VPatBinaryVL_V<vop, instruction_name, "VV",
-                           vti.Vector, vti.Vector, vti.Vector, vti.Mask,
-                           vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
-                           vti.RegClass, isSEWAware>;
-      def : VPatBinaryVL_XI<vop, instruction_name, "VX",
-                            vti.Vector, vti.Vector, vti.Vector, vti.Mask,
-                            vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
-                            SplatPat, GPR, isSEWAware>;
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in {
+    def : VPatBinaryVL_V<vop, instruction_name, "VV",
+                         vti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                         vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
+                         vti.RegClass, isSEWAware>;
     }
   }
 }
 
+multiclass VPatBinaryVL_VV_VX<SDPatternOperator vop, string instruction_name,
+                              list<VTypeInfo> vtilist = AllIntegerVectors,
+                              bit isSEWAware = 0,
+                              list<Predicate> ExtraPreds = []> 
+    : VPatBinaryVL_VV<vop, instruction_name, vtilist, isSEWAware, ExtraPreds>{
+  foreach vti = vtilist in {
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
+    def : VPatBinaryVL_XI<vop, instruction_name, "VX",
+                          vti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                          vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
+                          SplatPat, GPR, isSEWAware>;
+  }
+}
+
 multiclass VPatBinaryVL_VV_VX_VI<SDPatternOperator vop, string instruction_name,
-                                 Operand ImmType = simm5>
-    : VPatBinaryVL_VV_VX<vop, instruction_name> {
+                                 Operand ImmType = simm5,
+                                 list<Predicate> ExtraPreds = []>
+    : VPatBinaryVL_VV_VX<vop, instruction_name, ExtraPreds=ExtraPreds> {
   foreach vti = AllIntegerVectors in {
-    let Predicates = GetVTypePredicates<vti>.Predicates in
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
     def : VPatBinaryVL_XI<vop, instruction_name, "VI",
                           vti.Vector, vti.Vector, vti.Vector, vti.Mask,
                           vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
@@ -1939,6 +1951,26 @@ multiclass VPatAVGADDVL_VV_VX_RM<SDNode vop, int vxrm, string suffix = ""> {
                 (!cast<Instruction>("PseudoVAADD"#suffix#"_VX_"#vti.LMul.MX#"_MASK")
                   vti.RegClass:$passthru, vti.RegClass:$rs1, GPR:$rs2,
                   (vti.Mask VMV0:$vm), vxrm, GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+    }
+  }
+}
+
+multiclass VPatUnaryVL_V<SDPatternOperator op, string instruction_name,
+                         Predicate predicate = HasStdExtZvbb> {
+  foreach vti = AllIntegerVectors in {
+    let Predicates = !listconcat([predicate],
+                                 GetVTypePredicates<vti>.Predicates) in {
+      def : Pat<(vti.Vector (op (vti.Vector vti.RegClass:$rs1),
+                                (vti.Vector vti.RegClass:$passthru),
+                                (vti.Mask VMV0:$vm),
+                                VLOpFrag)),
+                (!cast<Instruction>(instruction_name#"_V_"#vti.LMul.MX#"_MASK")
+                   vti.RegClass:$passthru,
+                   vti.RegClass:$rs1,
+                   (vti.Mask VMV0:$vm),
+                   GPR:$vl,
+                   vti.Log2SEW,
+                   TAIL_AGNOSTIC)>;
     }
   }
 }

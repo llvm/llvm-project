@@ -14,10 +14,10 @@ body:             |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr64common = COPY $x3
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr64common = COPY $x4
     ; CHECK-NEXT: [[LD_i32:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], [[COPY1]], 0, 1
-    ; CHECK-NEXT: [[FIRST_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, [[LD_i32]], %subreg.ssub
+    ; CHECK-NEXT: [[FIRST_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG [[LD_i32]], %subreg.ssub
     ; CHECK-NEXT: [[LD0_1:%[0-9]+]]:fpr128 = LD1i32 [[FIRST_REG]], 1, [[COPY2]] 
     ; CHECK-NEXT: [[LD1_0:%[0-9]+]]:fpr32 = LDRSui [[COPY3]], 0
-    ; CHECK-NEXT: [[SECOND_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LD1_0]], %subreg.ssub
+    ; CHECK-NEXT: [[SECOND_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG killed [[LD1_0]], %subreg.ssub
     ; CHECK-NEXT: [[LD1_1:%[0-9]+]]:fpr128 = LD1i32 [[SECOND_REG]], 1, [[COPY4]]
     ; CHECK-NEXT: [[ZIP:%[0-9]+]]:fpr128 = ZIP1v2i64 [[LD0_1]], [[LD1_1]]
     ; CHECK-NEXT: $q0 = COPY [[ZIP]]
@@ -28,7 +28,7 @@ body:             |
     %3:gpr64common = COPY $x3
     %4:gpr64common = COPY $x4
     %5:fpr32 = LDRSroX %0, %1, 0, 1
-    %6:fpr128 = SUBREG_TO_REG 0, %5, %subreg.ssub
+    %6:fpr128 = SUBREG_TO_REG %5, %subreg.ssub
     %7:fpr128 = LD1i32 %6, 1, %2
     %8:fpr128 = LD1i32 %7, 2, %3
     %9:fpr128 = LD1i32 %8, 3, %4
@@ -48,10 +48,10 @@ body:             |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr64common = COPY $x3
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr64common = COPY $x4
     ; CHECK-NEXT: [[LD_i32:%[0-9]+]]:fpr32 = LDRSui [[COPY]], 0
-    ; CHECK-NEXT: [[FIRST_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LD_i32]], %subreg.ssub
+    ; CHECK-NEXT: [[FIRST_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG killed [[LD_i32]], %subreg.ssub
     ; CHECK-NEXT: [[LD0_1:%[0-9]+]]:fpr128 = LD1i32 [[FIRST_REG]], 1, killed [[COPY1]] 
     ; CHECK-NEXT: [[LD1_0:%[0-9]+]]:fpr32 = LDRSui [[COPY2]], 0
-    ; CHECK-NEXT: [[SECOND_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LD1_0]], %subreg.ssub
+    ; CHECK-NEXT: [[SECOND_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG killed [[LD1_0]], %subreg.ssub
     ; CHECK-NEXT: [[LD1_1:%[0-9]+]]:fpr128 = LD1i32 [[SECOND_REG]], 1, killed [[COPY3]]
     ; CHECK-NEXT: [[ZIP:%[0-9]+]]:fpr128 = ZIP1v2i64 [[LD0_1]], [[LD1_1]]
     ; CHECK-NEXT: $q0 = COPY [[ZIP]]
@@ -62,7 +62,7 @@ body:             |
     %3:gpr64common = COPY $x3
     %4:gpr64common = COPY $x4
     %5:fpr32 = LDRSui %0, 0
-    %6:fpr128 = SUBREG_TO_REG 0, killed %5, %subreg.ssub
+    %6:fpr128 = SUBREG_TO_REG killed %5, %subreg.ssub
     %7:fpr128 = LD1i32 %6, 1, killed %1
     %8:fpr128 = LD1i32 %7, 2, killed %2
     %9:fpr128 = LD1i32 %8, 3, killed %3
@@ -86,12 +86,12 @@ body:             |
     ; CHECK-NEXT: [[COPY7:%[0-9]+]]:gpr64common = COPY $x7
     ; CHECK-NEXT: [[COPY8:%[0-9]+]]:gpr64common = COPY $x8
     ; CHECK-NEXT: [[LD_i16:%[0-9]+]]:fpr16 = LDRHroX [[COPY]], killed [[COPY1]], 0, 1
-    ; CHECK-NEXT: [[FIRST_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LD_i16]], %subreg.hsub
+    ; CHECK-NEXT: [[FIRST_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG killed [[LD_i16]], %subreg.hsub
     ; CHECK-NEXT: [[LD0_1:%[0-9]+]]:fpr128 = LD1i16 [[FIRST_REG]], 1, killed [[COPY2]]
     ; CHECK-NEXT: [[LD0_2:%[0-9]+]]:fpr128 = LD1i16 [[LD0_1]], 2, killed [[COPY3]]
     ; CHECK-NEXT: [[LD0_3:%[0-9]+]]:fpr128 = LD1i16 [[LD0_2]], 3, killed [[COPY4]]
     ; CHECK-NEXT: [[LD1_0:%[0-9]+]]:fpr16 = LDRHui [[COPY5]], 0
-    ; CHECK-NEXT: [[SECOND_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LD1_0]], %subreg.hsub
+    ; CHECK-NEXT: [[SECOND_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG killed [[LD1_0]], %subreg.hsub
     ; CHECK-NEXT: [[LD1_1:%[0-9]+]]:fpr128 = LD1i16 [[SECOND_REG]], 1, killed [[COPY6]]
     ; CHECK-NEXT: [[LD1_2:%[0-9]+]]:fpr128 = LD1i16 [[LD1_1]], 2, killed [[COPY7]]
     ; CHECK-NEXT: [[LD1_3:%[0-9]+]]:fpr128 = LD1i16 [[LD1_2]], 3, killed [[COPY8]]
@@ -108,7 +108,7 @@ body:             |
     %7:gpr64common = COPY $x7
     %8:gpr64common = COPY $x8
     %9:fpr16 = LDRHroX %0, killed %1, 0, 1
-    %10:fpr128 = SUBREG_TO_REG 0, killed %9, %subreg.hsub
+    %10:fpr128 = SUBREG_TO_REG killed %9, %subreg.hsub
     %11:fpr128 = LD1i16 %10, 1, killed %2
     %12:fpr128 = LD1i16 %11, 2, killed %3
     %13:fpr128 = LD1i16 %12, 3, killed %4
@@ -136,12 +136,12 @@ body:             |
     ; CHECK-NEXT: [[COPY7:%[0-9]+]]:gpr64common = COPY $x7
     ; CHECK-NEXT: [[COPY8:%[0-9]+]]:gpr64common = COPY $x8
     ; CHECK-NEXT: [[LD_i16:%[0-9]+]]:fpr16 = LDRHui [[COPY]], 0
-    ; CHECK-NEXT: [[FIRST_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LD_i16]], %subreg.hsub
+    ; CHECK-NEXT: [[FIRST_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG killed [[LD_i16]], %subreg.hsub
     ; CHECK-NEXT: [[LD0_1:%[0-9]+]]:fpr128 = LD1i16 [[FIRST_REG]], 1, killed [[COPY1]]
     ; CHECK-NEXT: [[LD0_2:%[0-9]+]]:fpr128 = LD1i16 [[LD0_1]], 2, killed [[COPY2]]
     ; CHECK-NEXT: [[LD0_3:%[0-9]+]]:fpr128 = LD1i16 [[LD0_2]], 3, killed [[COPY3]]
     ; CHECK-NEXT: [[LD1_0:%[0-9]+]]:fpr16 = LDRHui [[COPY4]], 0
-    ; CHECK-NEXT: [[SECOND_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LD1_0]], %subreg.hsub
+    ; CHECK-NEXT: [[SECOND_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG killed [[LD1_0]], %subreg.hsub
     ; CHECK-NEXT: [[LD1_1:%[0-9]+]]:fpr128 = LD1i16 [[SECOND_REG]], 1, killed [[COPY5]]
     ; CHECK-NEXT: [[LD1_2:%[0-9]+]]:fpr128 = LD1i16 [[LD1_1]], 2, killed [[COPY6]]
     ; CHECK-NEXT: [[LD1_3:%[0-9]+]]:fpr128 = LD1i16 [[LD1_2]], 3, killed [[COPY7]]
@@ -158,7 +158,7 @@ body:             |
     %7:gpr64common = COPY $x7
     %8:gpr64common = COPY $x8
     %9:fpr16 = LDRHui %0, 0
-    %10:fpr128 = SUBREG_TO_REG 0, killed %9, %subreg.hsub
+    %10:fpr128 = SUBREG_TO_REG killed %9, %subreg.hsub
     %11:fpr128 = LD1i16 %10, 1, killed %1
     %12:fpr128 = LD1i16 %11, 2, killed %2
     %13:fpr128 = LD1i16 %12, 3, killed %3
@@ -194,7 +194,7 @@ body:             |
     ; CHECK-NEXT: [[COPY15:%[0-9]+]]:gpr64common = COPY $x15
     ; CHECK-NEXT: [[COPY16:%[0-9]+]]:gpr64common = COPY $x16
     ; CHECK-NEXT: [[LD_i8:%[0-9]+]]:fpr8 = LDRBroX [[COPY]], killed [[COPY1]], 0, 0
-    ; CHECK-NEXT: [[FIRST_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LD_i8]], %subreg.bsub
+    ; CHECK-NEXT: [[FIRST_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG killed [[LD_i8]], %subreg.bsub
     ; CHECK-NEXT: [[LD0_1:%[0-9]+]]:fpr128 = LD1i8 [[FIRST_REG]], 1, killed [[COPY2]]
     ; CHECK-NEXT: [[LD0_2:%[0-9]+]]:fpr128 = LD1i8 [[LD0_1]], 2, killed [[COPY3]]
     ; CHECK-NEXT: [[LD0_3:%[0-9]+]]:fpr128 = LD1i8 [[LD0_2]], 3, killed [[COPY4]]
@@ -203,7 +203,7 @@ body:             |
     ; CHECK-NEXT: [[LD0_6:%[0-9]+]]:fpr128 = LD1i8 [[LD0_5]], 6, killed [[COPY7]]
     ; CHECK-NEXT: [[LD0_7:%[0-9]+]]:fpr128 = LD1i8 [[LD0_6]], 7, killed [[COPY8]]
     ; CHECK-NEXT: [[LD1_0:%[0-9]+]]:fpr8 = LDRBui [[COPY9]], 0
-    ; CHECK-NEXT: [[SECOND_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LD1_0]], %subreg.bsub
+    ; CHECK-NEXT: [[SECOND_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG killed [[LD1_0]], %subreg.bsub
     ; CHECK-NEXT: [[LD1_1:%[0-9]+]]:fpr128 = LD1i8 [[SECOND_REG]], 1, killed [[COPY10]]
     ; CHECK-NEXT: [[LD1_2:%[0-9]+]]:fpr128 = LD1i8 [[LD1_1]], 2, killed [[COPY11]]
     ; CHECK-NEXT: [[LD1_3:%[0-9]+]]:fpr128 = LD1i8 [[LD1_2]], 3, killed [[COPY12]]
@@ -232,7 +232,7 @@ body:             |
     %15:gpr64common = COPY $x15
     %16:gpr64common = COPY $x16
     %17:fpr8 = LDRBroX %0, killed %1, 0, 0
-    %18:fpr128 = SUBREG_TO_REG 0, killed %17, %subreg.bsub
+    %18:fpr128 = SUBREG_TO_REG killed %17, %subreg.bsub
     %19:fpr128 = LD1i8 %18, 1, killed %2
     %20:fpr128 = LD1i8 %19, 2, killed %3
     %21:fpr128 = LD1i8 %20, 3, killed %4
@@ -280,10 +280,10 @@ body:             |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr64common = COPY $x3
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr64common = COPY $x4
     ; CHECK-NEXT: [[LD_i32:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], killed [[COPY1]], 0, 1
-    ; CHECK-NEXT: [[FIRST_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LD_i32]], %subreg.ssub
+    ; CHECK-NEXT: [[FIRST_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG killed [[LD_i32]], %subreg.ssub
     ; CHECK-NEXT: [[LD0_1:%[0-9]+]]:fpr128 = LD1i32 [[FIRST_REG]], 1, killed [[COPY3]] 
     ; CHECK-NEXT: [[LD1_0:%[0-9]+]]:fpr32 = LDRSui [[COPY2]], 0
-    ; CHECK-NEXT: [[SECOND_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LD1_0]], %subreg.ssub
+    ; CHECK-NEXT: [[SECOND_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG killed [[LD1_0]], %subreg.ssub
     ; CHECK-NEXT: [[LD1_1:%[0-9]+]]:fpr128 = LD1i32 [[SECOND_REG]], 1, killed [[COPY4]]
     ; CHECK-NEXT: [[ZIP:%[0-9]+]]:fpr128 = ZIP1v2i64 [[LD0_1]], [[LD1_1]]
     ; CHECK-NEXT: $q0 = COPY [[ZIP]]
@@ -294,7 +294,7 @@ body:             |
     %3:gpr64common = COPY $x3
     %4:gpr64common = COPY $x4
     %5:fpr32 = LDRSroX %0, killed %1, 0, 1
-    %6:fpr128 = SUBREG_TO_REG 0, killed %5, %subreg.ssub
+    %6:fpr128 = SUBREG_TO_REG killed %5, %subreg.ssub
     %7:fpr128 = LD1i32 %6, 2, killed %2
     %8:fpr128 = LD1i32 %7, 1, killed %3
     %9:fpr128 = LD1i32 %8, 3, killed %4
@@ -342,7 +342,7 @@ body:             |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr64common = COPY $x3
     ; CHECK-NEXT: [[COPY4:%[0-9]+]]:gpr64common = COPY $x4
     ; CHECK-NEXT: [[LD_i32:%[0-9]+]]:fpr32 = LDRSroX [[COPY]], killed [[COPY1]], 0, 1
-    ; CHECK-NEXT: [[FIRST_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LD_i32]], %subreg.ssub
+    ; CHECK-NEXT: [[FIRST_REG:%[0-9]+]]:fpr128 = SUBREG_TO_REG killed [[LD_i32]], %subreg.ssub
     ; CHECK-NEXT: [[LD_LANE_1:%[0-9]+]]:fpr128 = LD1i32 [[FIRST_REG]], 1, killed [[COPY2]]
     ; CHECK-NEXT: [[LD_LANE_2:%[0-9]+]]:fpr128 = LD1i32 [[LD_LANE_1]], 2, killed [[COPY3]]
     ; CHECK-NEXT: [[LD_LANE_3:%[0-9]+]]:fpr128 = LD1i32 [[LD_LANE_2]], 3, killed [[COPY4]]
@@ -355,7 +355,7 @@ body:             |
     %3:gpr64common = COPY $x3
     %4:gpr64common = COPY $x4
     %5:fpr32 = LDRSroX %0, killed %1, 0, 1
-    %6:fpr128 = SUBREG_TO_REG 0, killed %5, %subreg.ssub
+    %6:fpr128 = SUBREG_TO_REG killed %5, %subreg.ssub
     %7:fpr128 = LD1i32 %6, 1, killed %2
     %8:fpr128 = LD1i32 %7, 2, killed %3
     %9:fpr128 = LD1i32 %8, 3, killed %4
@@ -377,7 +377,7 @@ body:             |
     ; CHECK-NEXT: [[ALIAS_ADDR:%[0-9]+]]:gpr64common = COPY $x2
     ; CHECK-NEXT: [[OTHER_ADDR:%[0-9]+]]:gpr64common = COPY $x3
     ; CHECK-NEXT: [[LOAD0:%[0-9]+]]:fpr32 = LDRSroX [[BASE_PTR]], killed [[OFFSET_PTR]], 0, 1
-    ; CHECK-NEXT: [[VEC0:%[0-9]+]]:fpr128 = SUBREG_TO_REG 0, killed [[LOAD0]], %subreg.ssub
+    ; CHECK-NEXT: [[VEC0:%[0-9]+]]:fpr128 = SUBREG_TO_REG killed [[LOAD0]], %subreg.ssub
     ; CHECK-NEXT: [[VEC1:%[0-9]+]]:fpr128 = LD1i32 [[VEC0]], 1, [[ALIAS_ADDR]]
     ; CHECK-NEXT: [[CONST:%[0-9]+]]:gpr32 = MOVi32imm 99
     ; CHECK-NEXT: STRWui [[CONST]], [[ALIAS_ADDR]], 0
@@ -390,7 +390,7 @@ body:             |
     %2:gpr64common = COPY $x2
     %3:gpr64common = COPY $x3
     %5:fpr32 = LDRSroX %0, killed %1, 0, 1
-    %6:fpr128 = SUBREG_TO_REG 0, killed %5, %subreg.ssub
+    %6:fpr128 = SUBREG_TO_REG killed %5, %subreg.ssub
     %7:fpr128 = LD1i32 %6, 1, %2
     %10:gpr32 = MOVi32imm 99
     STRWui %10, %2, 0

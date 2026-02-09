@@ -1217,6 +1217,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::MERGE_VALUES: SplitRes_MERGE_VALUES(N, ResNo, Lo, Hi); break;
   case ISD::AssertZext:   SplitVecRes_AssertZext(N, Lo, Hi); break;
+  case ISD::AssertSext:   SplitVecRes_AssertSext(N, Lo, Hi); break;
   case ISD::VSELECT:
   case ISD::SELECT:
   case ISD::VP_MERGE:
@@ -1660,7 +1661,6 @@ void DAGTypeLegalizer::SplitVecRes_BITCAST(SDNode *N, SDValue &Lo,
   switch (getTypeAction(InVT)) {
   case TargetLowering::TypeLegal:
   case TargetLowering::TypePromoteInteger:
-  case TargetLowering::TypePromoteFloat:
   case TargetLowering::TypeSoftPromoteHalf:
   case TargetLowering::TypeSoftenFloat:
   case TargetLowering::TypeScalarizeVector:
@@ -6023,7 +6023,6 @@ SDValue DAGTypeLegalizer::WidenVecRes_BITCAST(SDNode *N) {
     break;
   }
   case TargetLowering::TypeSoftenFloat:
-  case TargetLowering::TypePromoteFloat:
   case TargetLowering::TypeSoftPromoteHalf:
   case TargetLowering::TypeExpandInteger:
   case TargetLowering::TypeExpandFloat:
@@ -6605,11 +6604,14 @@ SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
                       N->getMemoryVT(), N->getMemOperand());
     SDValue NewVal = NewLoad;
 
-    // Manually merge with vp.select
+    // Manually merge with vselect
     if (!N->getPassThru()->isUndef()) {
       assert(WidenVT.isScalableVector());
-      NewVal =
-          DAG.getNode(ISD::VP_SELECT, dl, WidenVT, Mask, NewVal, PassThru, EVL);
+      NewVal = DAG.getNode(ISD::VSELECT, dl, WidenVT, Mask, NewVal, PassThru);
+      // The lanes past EVL are poison.
+      NewVal = DAG.getNode(ISD::VP_MERGE, dl, WidenVT,
+                           DAG.getAllOnesConstant(dl, WideMaskVT), NewVal,
+                           DAG.getPOISON(WidenVT), EVL);
     }
 
     // Modified the chain - switch anything that used the old chain to use

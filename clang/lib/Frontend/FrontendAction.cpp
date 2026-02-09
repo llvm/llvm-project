@@ -1018,19 +1018,28 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     return true;
   }
 
-  // If the implicit PCH include is actually a directory, rather than
-  // a single file, search for a suitable PCH file in that directory.
   if (!CI.getPreprocessorOpts().ImplicitPCHInclude.empty()) {
     FileManager &FileMgr = CI.getFileManager();
     PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
+
+    // Canonicalize ImplicitPCHInclude. This way, all the downstream code,
+    // including the ASTWriter, will receive the absolute path to the included
+    // PCH.
+    SmallString<128> PCHIncludePath(PPOpts.ImplicitPCHInclude);
+    FileMgr.makeAbsolutePath(PCHIncludePath);
+    llvm::sys::path::remove_dots(PCHIncludePath, true);
+    PPOpts.ImplicitPCHInclude = PCHIncludePath.str();
     StringRef PCHInclude = PPOpts.ImplicitPCHInclude;
-    std::string SpecificModuleCachePath = CI.getSpecificModuleCachePath();
+
+    // If the implicit PCH include is actually a directory, rather than
+    // a single file, search for a suitable PCH file in that directory.
     if (auto PCHDir = FileMgr.getOptionalDirectoryRef(PCHInclude)) {
       std::error_code EC;
       SmallString<128> DirNative;
       llvm::sys::path::native(PCHDir->getName(), DirNative);
       bool Found = false;
       llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
+      std::string SpecificModuleCachePath = CI.getSpecificModuleCachePath();
       for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC),
                                          DirEnd;
            Dir != DirEnd && !EC; Dir.increment(EC)) {
