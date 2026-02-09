@@ -74,6 +74,24 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return *RM;
 }
 
+static std::string computeDataLayout(const Triple &TT) {
+  Triple::ArchType Arch = TT.getArch();
+  // SPIR-V doesn't have native integer widths, so n8:16:32:64 should not be
+  // in the data layout. The n*: part specifies native integer widths which
+  // mean anything.
+  if (Arch == Triple::spirv32)
+    return "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
+           "v256:256-v512:512-v1024:1024-G1";
+  if (Arch == Triple::spirv)
+    return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
+           "v512:512-v1024:1024-G10";
+  if (TT.getVendor() == Triple::VendorType::AMD &&
+      TT.getOS() == Triple::OSType::AMDHSA)
+    return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
+           "v512:512-v1024:1024-n32:64-S32-G1-P4-A0";
+  return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
+         "v512:512-v1024:1024-G1";
+}
 // Pin SPIRVTargetObjectFile's vtables to this file.
 SPIRVTargetObjectFile::~SPIRVTargetObjectFile() = default;
 
@@ -83,7 +101,7 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
                                        std::optional<Reloc::Model> RM,
                                        std::optional<CodeModel::Model> CM,
                                        CodeGenOptLevel OL, bool JIT)
-    : CodeGenTargetMachineImpl(T, TT.computeDataLayout(), TT, CPU, FS, Options,
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT), TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       TLOF(std::make_unique<SPIRVTargetObjectFile>()),
