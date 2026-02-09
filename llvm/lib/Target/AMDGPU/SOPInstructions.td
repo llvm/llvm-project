@@ -1834,8 +1834,8 @@ let SubtargetPredicate = isGFX10Plus in {
 
 let SubtargetPredicate = isGFX11Plus in {
 let OtherPredicates = [HasExportInsts] in
-  def S_WAIT_EVENT : SOPP_Pseudo<"s_wait_event", (ins s16imm:$simm16),
-                                 "$simm16"> {
+  def S_WAIT_EVENT : SOPP_Pseudo<"s_wait_event", (ins WaitEvent:$simm16),
+                                 "$simm16", [(int_amdgcn_s_wait_event timm:$simm16)]> {
                                    let hasSideEffects = 1;
                                  }
   def S_DELAY_ALU : SOPP_Pseudo<"s_delay_alu", (ins SDelayALU:$simm16),
@@ -1958,9 +1958,7 @@ def : GCNPat<
   (S_SEXT_I32_I16 $src)
 >;
 
-let SubtargetPredicate = isNotGFX12Plus in
-  def : GCNPat <(int_amdgcn_s_wait_event_export_ready), (S_WAIT_EVENT (i16 0))>;
-let SubtargetPredicate = isGFX12Plus in
+let SubtargetPredicate = isGFX11Plus in
   def : GCNPat <(int_amdgcn_s_wait_event_export_ready), (S_WAIT_EVENT (i16 2))>;
 
 // The first 10 bits of the mode register are the core FP mode on all
