@@ -13,9 +13,6 @@
 // Check that DIBuilder processes the limited debug info case correctly, and doesn't add the same
 // local type to retainedNodes fields of both DISubprograms (C1 and C2).
 
-// FIXME: Should we ensure that DICompositeType is emitted in the same scope in both limited and
-// standalone modes?
-
 // CHECK: ![[C2:[0-9]+]] = distinct !DISubprogram(name: "l", linkageName: "_ZN1lC2Ev", {{.*}}, retainedNodes: ![[EMPTY:[0-9]+]])
 // CHECK: ![[EMPTY]] = !{}
 // CHECK: ![[N:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "n",
