@@ -1217,12 +1217,12 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       return std::nullopt;
 
     const Expr *ObjArg = TheCall->getArg(NewIndex);
-    uint64_t Result;
-    if (!ObjArg->tryEvaluateObjectSize(Result, getASTContext(), BOSType))
-      return std::nullopt;
-
-    // Get the object size in the target's size_t width.
-    return llvm::APSInt::getUnsigned(Result).extOrTrunc(SizeTypeWidth);
+    if (std::optional<uint64_t> ObjSize =
+            ObjArg->tryEvaluateObjectSize(getASTContext(), BOSType)) {
+      // Get the object size in the target's size_t width.
+      return llvm::APSInt::getUnsigned(*ObjSize).extOrTrunc(SizeTypeWidth);
+    }
+    return std::nullopt;
   };
 
   auto ComputeStrLenArgument =
@@ -1233,11 +1233,13 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     unsigned NewIndex = *IndexOptional;
 
     const Expr *ObjArg = TheCall->getArg(NewIndex);
-    uint64_t Result;
-    if (!ObjArg->tryEvaluateStrLen(Result, getASTContext()))
-      return std::nullopt;
-    // Add 1 for null byte.
-    return llvm::APSInt::getUnsigned(Result + 1).extOrTrunc(SizeTypeWidth);
+
+    if (std::optional<uint64_t> Result =
+            ObjArg->tryEvaluateStrLen(getASTContext())) {
+      // Add 1 for null byte.
+      return llvm::APSInt::getUnsigned(*Result + 1).extOrTrunc(SizeTypeWidth);
+    }
+    return std::nullopt;
   };
 
   std::optional<llvm::APSInt> SourceSize;
