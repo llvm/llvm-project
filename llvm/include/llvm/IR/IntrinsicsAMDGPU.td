@@ -402,11 +402,13 @@ def int_amdgcn_s_wait_storecnt       : AMDGPUWaitIntrinsic;
 // It is the responsibility of the calling code to ensure it does not allocate
 // below the VGPR requirements of the current shader. This intrinsic is only
 // available on targets that support dynamic VGPR mode.
-def int_amdgcn_s_alloc_vgpr :
-  DefaultAttrsIntrinsic<
+def int_amdgcn_s_alloc_vgpr : DefaultAttrsIntrinsic<
     [llvm_i1_ty], // Returns true if the allocation succeeded, false otherwise.
     [llvm_i32_ty], // The number of VGPRs to allocate.
-    [NoUndef<RetIndex>, IntrNoMem, IntrHasSideEffects, IntrConvergent]>;
+    [NoUndef<RetIndex>, NoUndef<ArgIndex<0>>,
+     IntrNoMem, IntrHasSideEffects, IntrConvergent
+    ]
+>;
 
 def int_amdgcn_div_scale : PureIntrinsic<
   // 1st parameter: Numerator

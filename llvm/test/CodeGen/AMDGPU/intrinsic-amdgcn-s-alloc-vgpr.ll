@@ -35,7 +35,7 @@ define amdgpu_cs void @test_alloc_vreg_const(ptr addrspace(1) %out) #0 {
 ; DAGISEL-NEXT:    s_alloc_vgpr 0
 ; DAGISEL-NEXT:    s_endpgm
 entry:
-  %scc = call i1 @llvm.amdgcn.s.alloc.vgpr(i32 inreg 45)
+  %scc = call i1 @llvm.amdgcn.s.alloc.vgpr(i32 45)
   %sel = select i1 %scc, i32 1, i32 0
   store i32 %sel, ptr addrspace(1) %out
   ret void
@@ -72,7 +72,7 @@ define amdgpu_cs void @test_alloc_vreg_var(i32 inreg %n, ptr addrspace(1) %out) 
 ; DAGISEL-NEXT:    s_alloc_vgpr 0
 ; DAGISEL-NEXT:    s_endpgm
 entry:
-  %scc = call i1 @llvm.amdgcn.s.alloc.vgpr(i32 inreg %n)
+  %scc = call i1 @llvm.amdgcn.s.alloc.vgpr(i32 %n)
   %sel = select i1 %scc, i32 1, i32 0
   store i32 %sel, ptr addrspace(1) %out
   ret void
@@ -114,7 +114,7 @@ define amdgpu_cs void @test_alloc_vreg_vgpr(i32 %n, ptr addrspace(1) %out) #0 {
 ; DAGISEL-NEXT:    s_alloc_vgpr 0
 ; DAGISEL-NEXT:    s_endpgm
 entry:
-  %scc = call i1 @llvm.amdgcn.s.alloc.vgpr(i32 inreg %n)
+  %scc = call i1 @llvm.amdgcn.s.alloc.vgpr(i32 %n)
   %sel = select i1 %scc, i32 1, i32 0
   store i32 %sel, ptr addrspace(1) %out
   ret void
