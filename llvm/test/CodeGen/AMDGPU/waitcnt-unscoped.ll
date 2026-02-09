@@ -11,15 +11,14 @@ define amdgpu_kernel void @test_waitcnt(ptr addrspace(1) %global_buffer, ptr add
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_load_dword s6, s[0:1], 0x0
 ; CHECK-NEXT:    s_add_u32 s4, s0, 64
 ; CHECK-NEXT:    s_addc_u32 s5, s1, 0
 ; CHECK-NEXT:    s_mov_b32 m0, s2
-; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    global_load_lds_dword v0, s[4:5] offset:4
-; CHECK-NEXT:    s_load_dword s4, s[0:1], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v3, s4
+; CHECK-NEXT:    v_mov_b32_e32 v3, s6
 ; CHECK-NEXT:    global_store_dword v0, v3, s[0:1] offset:64
+; CHECK-NEXT:    global_load_lds_dword v0, s[4:5] offset:4
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s3

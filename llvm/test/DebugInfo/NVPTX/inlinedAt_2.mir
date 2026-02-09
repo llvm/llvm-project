@@ -1,0 +1,131 @@
+# RUN: llc %s -mattr=+ptx72 -start-after=nvptx-asm-printer -o - | FileCheck %s
+#
+# Test simple two-level inlining at MIR level - verifies that inlined_at information
+# is correctly emitted when foo() calls bar() and kernel() calls foo().
+#
+#
+# Original source:
+# __device__ int gg;
+#
+# __device__ void foo() {
+#   if (gg > 7)
+#     bar();
+# }
+#
+# __device__ void bar() {
+#   ++gg;
+# }
+#
+# __global__ void kernel() {
+#   foo();
+# }
+#
+# The inlining chain is:
+#   kernel() at line 18 calls foo()
+#   foo() at line 10 calls bar()
+#   bar() increments gg at line 14
+#
+# Expected debug locations:
+#   !6 = line 9, inlinedAt line 18  (foo inlined into kernel)
+#   !11 = line 14, inlinedAt line 10, inlinedAt line 18 (bar inlined into foo, inlined into kernel)
+#   !16 = line 10, inlinedAt line 18 (foo's call to bar, inlined into kernel)
+#
+# CHECK: .loc [[FILENUM:[1-9]]] 18
+# CHECK: .loc [[FILENUM]] 9 {{[0-9]*}}, function_name [[FOONAME:\$L__info_string[0-9]+]], inlined_at [[FILENUM]] 18
+# CHECK: .loc [[FILENUM]] 10 {{[0-9]*}}, function_name [[FOONAME]], inlined_at [[FILENUM]] 18
+# CHECK: .loc [[FILENUM]] 14 {{[0-9]*}}, function_name [[BARNAME:\$L__info_string[0-9]+]], inlined_at [[FILENUM]] 10
+# CHECK: .section .debug_str
+# CHECK: {
+# CHECK: [[FOONAME]]:
+# CHECK-NEXT: // {{.*}} _Z3foov
+# CHECK: [[BARNAME]]:
+# CHECK-NEXT: // {{.*}} _Z3barv
+# CHECK: }
+
+--- |
+  source_filename = "<unnamed>"
+  target datalayout = "e-p6:32:32-i64:64-i128:128-i256:256-v16:16-v32:32-n16:32:64"
+  target triple = "nvptx64-nvidia-cuda"
+
+  @gg = internal addrspace(1) global i32 0, align 4
+  @llvm.used = appending global [2 x ptr] [ptr @_Z6kernelv, ptr addrspacecast (ptr addrspace(1) @gg to ptr)], section "llvm.metadata"
+
+  define ptx_kernel void @_Z6kernelv() !dbg !3 {
+  entry:
+    %tmp.i = load i32, ptr addrspace(1) @gg, align 4, !dbg !6
+    %cmp.i = icmp sgt i32 %tmp.i, 7, !dbg !6
+    %inc.i.i = add nuw nsw i32 %tmp.i, 1
+    br i1 %cmp.i, label %if.then.i, label %_Z3foov.exit, !dbg !6
+
+  if.then.i:                                        ; preds = %entry
+    store i32 %inc.i.i, ptr addrspace(1) @gg, align 4, !dbg !11
+    br label %_Z3foov.exit, !dbg !16
+
+  _Z3foov.exit:                                     ; preds = %if.then.i, %entry
+    ret void, !dbg !17
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !nvvm.annotations = !{}
+  !llvm.module.flags = !{!2}
+
+  ; Debug metadata with inlinedAt chains:
+  ; foo() is inlined at kernel() line 18
+  ; bar() is inlined at foo() line 10, which is inlined at kernel() line 18
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: DebugDirectivesOnly)
+  !1 = !DIFile(filename: "t2.cu", directory: "")
+  !2 = !{i32 1, !"Debug Info Version", i32 3}
+  !3 = distinct !DISubprogram(name: "kernel", linkageName: "_Z6kernelv", scope: !1, file: !1, line: 17, type: !4, scopeLine: 17, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !4 = !DISubroutineType(types: !5)
+  !5 = !{}
+  ; !6: foo's code at line 9, inlined at kernel line 18
+  !6 = !DILocation(line: 9, column: 3, scope: !7, inlinedAt: !9)
+  !7 = distinct !DILexicalBlock(scope: !8, file: !1, line: 8, column: 29)
+  !8 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", scope: !1, file: !1, line: 8, type: !4, scopeLine: 8, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !9 = distinct !DILocation(line: 18, column: 3, scope: !10)
+  !10 = distinct !DILexicalBlock(scope: !3, file: !1, line: 17, column: 29)
+  ; !11: bar's code at line 14, inlined at foo line 10, which is inlined at kernel line 18
+  !11 = !DILocation(line: 14, column: 3, scope: !12, inlinedAt: !14)
+  !12 = distinct !DILexicalBlock(scope: !13, file: !1, line: 13, column: 29)
+  !13 = distinct !DISubprogram(name: "bar", linkageName: "_Z3barv", scope: !1, file: !1, line: 13, type: !4, scopeLine: 13, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  ; !14: foo's call to bar at line 10, inlined at kernel line 18
+  !14 = distinct !DILocation(line: 10, column: 5, scope: !15, inlinedAt: !9)
+  !15 = distinct !DILexicalBlock(scope: !7, file: !1, line: 9, column: 3)
+  !16 = !DILocation(line: 10, column: 5, scope: !15, inlinedAt: !9)
+  !17 = !DILocation(line: 19, column: 1, scope: !10)
+...
+---
+name:            _Z6kernelv
+alignment:       1
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         false
+hasFakeUses:     false
+registers:
+  - { id: 0, class: b32 }
+  - { id: 1, class: b32 }
+  - { id: 2, class: b1 }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+
+    %1:b32 = LD_i32 0, 0, 1, 3, 32, -1, @gg, 0, debug-location !6 :: (dereferenceable load (s32) from @gg, addrspace 1); t2.cu:9:3 @[ t2.cu:18:3 ]
+    %2:b1 = SETP_i32ri %1, 8, 2, debug-location !6; t2.cu:9:3 @[ t2.cu:18:3 ]
+    CBranch %2, %bb.2, debug-location !6; t2.cu:9:3 @[ t2.cu:18:3 ]
+
+  bb.1.if.then.i:
+  ; predecessors: %bb.0
+    successors: %bb.2(0x80000000)
+
+    %0:b32 = nuw nsw ADD32ri %1, 1
+    ST_i32 %0, 0, 0, 1, 32, @gg, 0, debug-location !11 :: (store (s32) into @gg, addrspace 1); t2.cu:14:3 @[ t2.cu:10:5 @[ t2.cu:18:3 ] ]
+
+
+  bb.2._Z3foov.exit:
+  ; predecessors: %bb.0, %bb.1
+    Return debug-location !17; t2.cu:19:1
+...

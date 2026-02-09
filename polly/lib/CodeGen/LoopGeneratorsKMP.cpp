@@ -282,7 +282,7 @@ ParallelLoopGeneratorKMP::createSubFn(Value *SequentialLoopStride,
   }
 
   Builder.CreateBr(CheckNextBB);
-  Builder.SetInsertPoint(--Builder.GetInsertPoint());
+  Builder.SetInsertPoint(std::prev(Builder.GetInsertPoint()));
   BasicBlock *AfterBB;
   Value *IV = createLoop(LB, UB, SequentialLoopStride, Builder, *SubFnLI,
                          *SubFnDT, AfterBB, ICmpInst::ICMP_SLE, nullptr, true,
