@@ -119,11 +119,11 @@ public:
             Target(), "", Triple(""), "", "", getTargetOptionsForBogusMachine(),
             Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
         ST(*this) {
-    // The empty Target() has no MCAsmInfoCtorFn, so createMCAsmInfo returns
-    // null. Provide a default MCAsmInfo so that MCContext can be created.
+    // With an empty Triple, `initAsmInfo` cannot be called. Provide a
+    // default MCAsmInfo so that MCContext can be created.
     auto MAI = std::make_unique<MCAsmInfo>();
+    AsmInfo = std::make_unique<MCAsmInfo>();
     MAI->setTargetOptions(Options.MCOptions);
-    AsmInfo = std::move(MAI);
   }
 
   ~BogusTargetMachine() override = default;
