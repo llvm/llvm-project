@@ -248,7 +248,9 @@ mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
 Brian Cain \
 brian.cain@oss.qualcomm.com (email), [androm3da](https://github.com/androm3da) (GitHub) \
 Ikhlas Ajbar \
-iajbar@qti.qualcomm.com (email), [iajbar](https://github.com/iajbar)
+iajbar@qti.qualcomm.com (email), [iajbar](https://github.com/iajbar) \
+Ankit Aggarwal \
+aankit@qti.qualcomm.com (email), [aankit-ca](https://github.com/aankit-ca)
 
 #### Lanai backend
 
