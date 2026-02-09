@@ -1109,7 +1109,7 @@ void Writer::combineOutputSegments() {
     }
   }
 
-  segments = newSegments;
+  segments = std::move(newSegments);
 }
 
 static void createFunction(DefinedFunction *func, StringRef bodyContent) {

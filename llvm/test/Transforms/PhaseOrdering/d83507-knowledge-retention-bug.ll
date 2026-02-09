@@ -13,7 +13,6 @@ define ptr @f1(ptr %i0) {
 ; CHECK-NEXT:    br label %[[LOOP_LATCH:.*]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[I3:%.*]] = phi ptr [ [[I0]], %[[LOOP_LATCH_LR_PH]] ], [ [[I5:%.*]], %[[LOOP_LATCH]] ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[I3]]) ]
 ; CHECK-NEXT:    [[I5]] = load ptr, ptr [[I3]], align 8
 ; CHECK-NEXT:    [[I2:%.*]] = icmp eq ptr [[I5]], null
 ; CHECK-NEXT:    br i1 [[I2]], label %[[LOOP_EXIT_CRIT_EDGE:.*]], label %[[LOOP_LATCH]]

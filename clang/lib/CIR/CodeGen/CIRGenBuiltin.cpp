@@ -2037,8 +2037,9 @@ mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
 mlir::Value CIRGenFunction::evaluateOrEmitBuiltinObjectSize(
     const Expr *e, unsigned type, cir::IntType resType, mlir::Value emittedE,
     bool isDynamic) {
-  uint64_t objectSize;
-  if (!e->tryEvaluateObjectSize(objectSize, getContext(), type))
-    return emitBuiltinObjectSize(e, type, resType, emittedE, isDynamic);
-  return builder.getConstInt(getLoc(e->getSourceRange()), resType, objectSize);
+  if (std::optional<uint64_t> objectSize =
+          e->tryEvaluateObjectSize(getContext(), type))
+    return builder.getConstInt(getLoc(e->getSourceRange()), resType,
+                               *objectSize);
+  return emitBuiltinObjectSize(e, type, resType, emittedE, isDynamic);
 }

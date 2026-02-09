@@ -777,14 +777,14 @@ public:
   ///
   /// \param Type - How to evaluate the size of the Expr, as defined by the
   /// "type" parameter of __builtin_object_size
-  bool tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
-                             unsigned Type) const;
+  std::optional<uint64_t> tryEvaluateObjectSize(const ASTContext &Ctx,
+                                                unsigned Type) const;
 
   /// If the current Expr is a pointer, this will try to statically
   /// determine the strlen of the string pointed to.
   /// Returns true if all of the above holds and we were able to figure out the
   /// strlen, false otherwise.
-  bool tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const;
+  std::optional<uint64_t> tryEvaluateStrLen(const ASTContext &Ctx) const;
 
   bool EvaluateCharRangeAsString(std::string &Result,
                                  const Expr *SizeExpression,
