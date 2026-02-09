@@ -2184,7 +2184,7 @@ struct SCEVPtrToAddrRewriter : SCEVRewriteVisitor<SCEVPtrToAddrRewriter> {
 
   const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *E) {
     const SCEV *Op = visit(E->getOperand());
-    if (E->getType() == DL.getIntPtrType(E->getOperand()->getType()))
+    if (E->getType() == DL.getAddressType(E->getOperand()->getType()))
       return SE.getPtrToAddrExpr(Op);
     return Op == E->getOperand() ? E : SE.getPtrToIntExpr(Op, E->getType());
   }
