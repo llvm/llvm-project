@@ -123,14 +123,14 @@ def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2", "f8E5M2",
 
   let extraClassDeclaration = [{
     /// QuantStorageTypeInterface method implementations
-    /// Whether the storage type should default to signed when used in quantization.
+    /// Returns true if the the storage type should default to signed
+    /// when used in quantization.
     bool shouldDefaultToSigned() const { return true; }
     /// Get the bit width of this 8-bit floating point type.
     unsigned getStorageWidth() const { return 8; }
     
-    /// Get default maximum value for this 8-bit floating point type.
+    /// Get default min, max value for this 8-bit floating point type.
     int64_t getDefaultMaximum(bool isSigned) const { return 57344; }
-    /// Get default minimum value for this 8-bit floating point type.
     int64_t getDefaultMinimum(bool isSigned) const { return -getDefaultMaximum(isSigned); }
     
     /// Get the storage type as a string.
@@ -142,7 +142,7 @@ def Builtin_Float8E5M2 : Builtin_FloatType<"Float8E5M2", "f8E5M2",
     /// Get the logical bit width per value for this 8-bit floating point type.
     unsigned getLogicalBitWidth() const { return 8; }
 
-    /// Get the number of logical elements that fit in one byte for this 8-bit floating point type.
+    /// Returns how many values of this type fit in one byte
     unsigned getElementsPerByte() const { return 1; }
 
     /// Get the preferred alignment in bytes for this 8-bit floating point type.
@@ -195,14 +195,14 @@ def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN", "f8E4M3FN",
 
   let extraClassDeclaration = [{
     /// QuantStorageTypeInterface method implementations
-    /// Whether the storage type should default to signed when used in quantization.
+    /// Returns true if the the storage type should default to signed
+    /// when used in quantization.
     bool shouldDefaultToSigned() const { return true; }
     /// Get the bit width of this 8-bit floating point type.
     unsigned getStorageWidth() const { return 8; }
     
-    /// Get default maximum value for this 8-bit floating point type.
+    /// Get default min, max value for this 8-bit floating point type.
     int64_t getDefaultMaximum(bool isSigned) const { return 448; }
-    /// Get default minimum value for this 8-bit floating point type.
     int64_t getDefaultMinimum(bool isSigned) const { return -getDefaultMaximum(isSigned); }
     
     /// Get the storage type as a string.
@@ -214,7 +214,7 @@ def Builtin_Float8E4M3FN : Builtin_FloatType<"Float8E4M3FN", "f8E4M3FN",
     /// Get the logical bit width per value for this 8-bit floating point type.
     unsigned getLogicalBitWidth() const { return 8; }
 
-    /// Get the number of logical elements that fit in one byte for this 8-bit floating point type.
+    /// Returns how many values of this type fit in one byte
     unsigned getElementsPerByte() const { return 1; }
 
     /// Get the preferred alignment in bytes for this 8-bit floating point type.
@@ -335,14 +335,14 @@ def Builtin_Float4E2M1FN : Builtin_FloatType<"Float4E2M1FN", "f4E2M1FN",
 
   let extraClassDeclaration = [{
     /// QuantStorageTypeInterface method implementations
-    /// Whether the storage type should default to signed when used in quantization.
+    /// Returns true if the the storage type should default to signed
+    /// when used in quantization.
     bool shouldDefaultToSigned() const { return true; }
     /// Get the bit width of this 4-bit floating point type.
     unsigned getStorageWidth() const { return 4; }
     
-    /// Get default maximum value for this 4-bit floating point type.
+    /// Get default min, max value for this 4-bit floating point type.
     int64_t getDefaultMaximum(bool isSigned) const { return 6; }
-    /// Get default minimum value for this 4-bit floating point type.
     int64_t getDefaultMinimum(bool isSigned) const { return -getDefaultMaximum(isSigned); }
     
     /// Get the storage type as a string.
@@ -354,7 +354,7 @@ def Builtin_Float4E2M1FN : Builtin_FloatType<"Float4E2M1FN", "f4E2M1FN",
     /// Get the logical bit width per value for this 4-bit floating point type.
     unsigned getLogicalBitWidth() const { return 4; }
 
-    /// Get the number of logical elements that fit in one byte for this 4-bit floating point type.
+    /// Returns how many values of this type fit in one byte
     unsigned getElementsPerByte() const { return 2; }
 
     /// Get the preferred alignment in bytes for this 4-bit floating point type.
@@ -650,20 +650,19 @@ def Builtin_Integer : Builtin_Type<"Integer", "integer",
     static constexpr unsigned kMaxWidth = (1 << 24) - 1;
 
     /// QuantStorageTypeInterface method implementations
-    /// Whether the storage type should default to signed when used in quantization.
-    /// Returns true if this is a signed or signless integer type.
+    /// Returns true if the storage type should default to signed when used
+    /// in quantization. Returns true for signed or signless integer types.
     bool shouldDefaultToSigned() const { return !isUnsigned(); }
     /// Get the bit width of this integer type.
     unsigned getStorageWidth() const { return getWidth(); }
     
-    /// Get default maximum value for this integer type.
+    /// Get default min, max value for this integer type.
     int64_t getDefaultMaximum(bool isSigned) const {
       if (isSigned) {
         return llvm::maxIntN(getWidth());
       }
       return llvm::maxUIntN(getWidth());
     }
-    /// Get default minimum value for this integer type.
     int64_t getDefaultMinimum(bool isSigned) const {
       if (isSigned) {
         return llvm::minIntN(getWidth());
@@ -677,13 +676,13 @@ def Builtin_Integer : Builtin_Type<"Integer", "integer",
     }
 
     /// Check if this integer type uses packed representation.
-    bool isPacked() const { return false; }
+    bool isPacked() const { return getStorageWidth() < 8; }
 
     /// Get the logical bit width per value for this integer type.
     unsigned getLogicalBitWidth() const { return getWidth(); }
 
-    /// Get the number of logical elements that fit in one byte for this integer type.
-    unsigned getElementsPerByte() const { return 1; }
+    /// Returns how many values of this type fit in one byte
+    unsigned getElementsPerByte() const { return 8 / getLogicalBitWidth(); }
 
     /// Get the preferred alignment in bytes for this integer type.
     std::optional<unsigned> getPreferredAlignmentBytes() const { return std::nullopt; }
