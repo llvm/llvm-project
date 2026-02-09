@@ -70,6 +70,14 @@ public:
     }
   }
 
+  nb::list getFuncNames() {
+    nb::list NbFuncNames;
+    for (const Function &F : M->getFunctionDefs()) {
+      NbFuncNames.append(nb::str(F.getName().str().c_str()));
+    }
+    return NbFuncNames;
+  }
+
   nb::dict getFuncEmbMap() {
     auto ToolFuncEmbMap = Tool->getFunctionEmbeddingsMap(OutputEmbeddingMode);
 
@@ -196,6 +204,9 @@ NB_MODULE(ir2vec, m) {
       .def(nb::init<const std::string &, const std::string &,
                     const std::string &>(),
            nb::arg("filename"), nb::arg("mode"), nb::arg("vocabPath"))
+      .def("getFuncNames", &PyIR2VecTool::getFuncNames,
+           "Get list of all defined functions in the module\n"
+           "Returns: list[str] - Function names")
       .def("getFuncEmbMap", &PyIR2VecTool::getFuncEmbMap,
            "Generate function-level embeddings for all functions\n"
            "Returns: dict[str, ndarray[float64]] - "
