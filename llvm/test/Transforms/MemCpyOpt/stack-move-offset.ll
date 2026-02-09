@@ -276,7 +276,7 @@ define void @no_optimize_clobbering_store_to_src_offset(ptr noalias %dst) {
   ; The fix ensures we check the right portion of SrcAlloca for any clobbering.
   call void @llvm.lifetime.start.p0(ptr %temp2)
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %temp2, ptr align 8 %local_buf, i64 16, i1 false)
-  store i8 0, ptr %local_buf, align 1   ; <-- clobbers byte 0
+  store i8 0, ptr %local_buf, align 1   ; <-- clobbers byte 48 of %local
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst_buf, ptr align 8 %temp2, i64 16, i1 false)
   call void @llvm.lifetime.end.p0(ptr %temp2)
 
