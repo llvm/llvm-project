@@ -10,7 +10,6 @@
 #include <atomic>
 #include <climits>
 #include <cstddef>
-#include <cstdint>
 #include <cstring>
 #include <functional>
 #include <new>
@@ -64,18 +63,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #ifdef __linux__
 
 template <std::size_t _Size>
-static void __platform_wait_on_address(void const* __ptr, void const* __val, uint64_t __timeout_ns) {
+static void __platform_wait_on_address(void const* __ptr, void const* __val) {
   static_assert(_Size == 4, "Can only wait on 4 bytes value");
   char buffer[_Size];
   std::memcpy(&buffer, const_cast<const void*>(__val), _Size);
-  static constexpr timespec __default_timeout = {2, 0};
-  timespec __timeout;
-  if (__timeout_ns == 0) {
-    __timeout = __default_timeout;
-  } else {
-    __timeout.tv_sec  = __timeout_ns / 1'000'000'000;
-    __timeout.tv_nsec = __timeout_ns % 1'000'000'000;
-  }
+  static constexpr timespec __timeout = {2, 0};
   _LIBCPP_FUTEX(__ptr, FUTEX_WAIT_PRIVATE, *reinterpret_cast<__cxx_contention_t const*>(&buffer), &__timeout, 0, 0);
 }
 
@@ -97,17 +89,14 @@ extern "C" int __ulock_wake(uint32_t operation, void* addr, uint64_t wake_value)
 #  define ULF_WAKE_ALL 0x00000100
 
 template <std::size_t _Size>
-static void __platform_wait_on_address(void const* __ptr, void const* __val, uint64_t __timeout_ns) {
+static void __platform_wait_on_address(void const* __ptr, void const* __val) {
   static_assert(_Size == 8 || _Size == 4, "Can only wait on 8 bytes or 4 bytes value");
   char buffer[_Size];
   std::memcpy(&buffer, const_cast<const void*>(__val), _Size);
-  auto __timeout_us = __timeout_ns == 0 ? 0 : static_cast<uint32_t>(__timeout_ns / 1000);
   if constexpr (_Size == 4)
-    __ulock_wait(
-        UL_COMPARE_AND_WAIT, const_cast<void*>(__ptr), *reinterpret_cast<uint32_t const*>(&buffer), __timeout_us);
+    __ulock_wait(UL_COMPARE_AND_WAIT, const_cast<void*>(__ptr), *reinterpret_cast<uint32_t const*>(&buffer), 0);
   else
-    __ulock_wait(
-        UL_COMPARE_AND_WAIT64, const_cast<void*>(__ptr), *reinterpret_cast<uint64_t const*>(&buffer), __timeout_us);
+    __ulock_wait(UL_COMPARE_AND_WAIT64, const_cast<void*>(__ptr), *reinterpret_cast<uint64_t const*>(&buffer), 0);
 }
 
 template <std::size_t _Size>
@@ -128,25 +117,11 @@ static void __platform_wake_by_address(void const* __ptr, bool __notify_one) {
  */
 
 template <std::size_t _Size>
-static void __platform_wait_on_address(void const* __ptr, void const* __val, uint64_t __timeout_ns) {
+static void __platform_wait_on_address(void const* __ptr, void const* __val) {
   static_assert(_Size == 8, "Can only wait on 8 bytes value");
   char buffer[_Size];
   std::memcpy(&buffer, const_cast<const void*>(__val), _Size);
-  if (__timeout_ns == 0) {
-    _umtx_op(const_cast<void*>(__ptr), UMTX_OP_WAIT, *reinterpret_cast<__cxx_contention_t*>(&buffer), nullptr, nullptr);
-  } else {
-    _umtx_time ut;
-    ut._timeout.tv_sec  = __timeout_ns / 1'000'000'000;
-    ut._timeout.tv_nsec = __timeout_ns % 1'000'000'000;
-    ut._flags           = 0;               // Relative time (not absolute)
-    ut._clockid         = CLOCK_MONOTONIC; // Use monotonic clock
-
-    _umtx_op(const_cast<void*>(__ptr),
-             UMTX_OP_WAIT,
-             *reinterpret_cast<__cxx_contention_t*>(&buffer),
-             reinterpret_cast<void*>(sizeof(ut)), // Pass size as uaddr
-             &ut);                                // Pass _umtx_time structure as uaddr2
-  }
+  _umtx_op(const_cast<void*>(__ptr), UMTX_OP_WAIT, *reinterpret_cast<__cxx_contention_t*>(&buffer), nullptr, nullptr);
 }
 
 template <std::size_t _Size>
@@ -182,21 +157,17 @@ static void* win32_get_synch_api_function(const char* function_name) {
 }
 
 template <std::size_t _Size>
-static void __platform_wait_on_address(void const* __ptr, void const* __val, uint64_t __timeout_ns) {
+static void __platform_wait_on_address(void const* __ptr, void const* __val) {
   static_assert(_Size == 8, "Can only wait on 8 bytes value");
   // WaitOnAddress was added in Windows 8 (build 9200)
   static auto wait_on_address =
       reinterpret_cast<BOOL(WINAPI*)(void*, PVOID, SIZE_T, DWORD)>(win32_get_synch_api_function("WaitOnAddress"));
   if (wait_on_address != nullptr) {
-    wait_on_address(const_cast<void*>(__ptr),
-                    const_cast<void*>(__val),
-                    _Size,
-                    __timeout_ns == 0 ? INFINITE : static_cast<DWORD>(__timeout_ns / 1'000'000));
+    wait_on_address(const_cast<void*>(__ptr), const_cast<void*>(__val), _Size, INFINITE);
   } else {
     __libcpp_thread_poll_with_backoff(
         [=]() -> bool { return std::memcmp(const_cast<const void*>(__ptr), __val, _Size) != 0; },
-        __libcpp_timed_backoff_policy(),
-        std::chrono::nanoseconds(__timeout_ns));
+        __libcpp_timed_backoff_policy());
   }
 }
 
@@ -231,11 +202,10 @@ static void __platform_wake_by_address(void const* __ptr, bool __notify_one) {
 // Baseline is just a timed backoff
 
 template <std::size_t _Size>
-static void __platform_wait_on_address(void const* __ptr, void const* __val, uint64_t __timeout_ns) {
+static void __platform_wait_on_address(void const* __ptr, void const* __val) {
   __libcpp_thread_poll_with_backoff(
       [=]() -> bool { return std::memcmp(const_cast<const void*>(__ptr), __val, _Size) != 0; },
-      __libcpp_timed_backoff_policy(),
-      std::chrono::nanoseconds(__timeout_ns));
+      __libcpp_timed_backoff_policy());
 }
 
 template <std::size_t _Size>
@@ -259,16 +229,14 @@ __contention_notify(__cxx_atomic_contention_t* __waiter_count, void const* __add
 }
 
 template <std::size_t _Size>
-static void __contention_wait(__cxx_atomic_contention_t* __waiter_count,
-                              void const* __address_to_wait,
-                              void const* __old_value,
-                              uint64_t __timeout_ns) {
+static void
+__contention_wait(__cxx_atomic_contention_t* __waiter_count, void const* __address_to_wait, void const* __old_value) {
   __cxx_atomic_fetch_add(__waiter_count, __cxx_contention_t(1), memory_order_relaxed);
   // https://llvm.org/PR109290
   // There are no platform guarantees of a memory barrier in the platform wait implementation
   __cxx_atomic_thread_fence(memory_order_seq_cst);
   // We sleep as long as the monitored value hasn't changed.
-  __platform_wait_on_address<_Size>(__address_to_wait, __old_value, __timeout_ns);
+  __platform_wait_on_address<_Size>(__address_to_wait, __old_value);
   __cxx_atomic_fetch_sub(__waiter_count, __cxx_contention_t(1), memory_order_release);
 }
 
@@ -331,14 +299,7 @@ _LIBCPP_EXPORTED_FROM_ABI void
 __atomic_wait_global_table(void const* __location, __cxx_contention_t __old_value) noexcept {
   auto const __entry = __get_global_contention_state(__location);
   __contention_wait<sizeof(__cxx_atomic_contention_t)>(
-      &__entry->__waiter_count, &__entry->__platform_state, &__old_value, 0);
-}
-
-_LIBCPP_EXPORTED_FROM_ABI void __atomic_wait_global_table_with_timeout(
-    void const* __location, __cxx_contention_t __old_value, uint64_t __timeout_ns) _NOEXCEPT {
-  auto const __entry = __get_global_contention_state(__location);
-  __contention_wait<sizeof(__cxx_atomic_contention_t)>(
-      &__entry->__waiter_count, &__entry->__platform_state, &__old_value, __timeout_ns);
+      &__entry->__waiter_count, &__entry->__platform_state, &__old_value);
 }
 
 _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_one_global_table(void const* __location) noexcept {
@@ -353,13 +314,7 @@ _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_global_table(void const* __lo
 
 template <std::size_t _Size>
 _LIBCPP_EXPORTED_FROM_ABI void __atomic_wait_native(void const* __address, void const* __old_value) noexcept {
-  __contention_wait<_Size>(__get_native_waiter_count(__address), __address, __old_value, 0);
-}
-
-template <std::size_t _Size>
-_LIBCPP_EXPORTED_FROM_ABI void
-__atomic_wait_native_with_timeout(void const* __address, void const* __old_value, uint64_t __timeout_ns) noexcept {
-  __contention_wait<_Size>(__get_native_waiter_count(__address), __address, __old_value, __timeout_ns);
+  __contention_wait<_Size>(__get_native_waiter_count(__address), __address, __old_value);
 }
 
 template <std::size_t _Size>
@@ -380,8 +335,6 @@ _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_native(void const* __location
 
 #  define _INSTANTIATE(_SIZE)                                                                                          \
     template _LIBCPP_EXPORTED_FROM_ABI void __atomic_wait_native<_SIZE>(void const*, void const*) noexcept;            \
-    template _LIBCPP_EXPORTED_FROM_ABI void __atomic_wait_native_with_timeout<_SIZE>(                                  \
-        void const*, void const*, uint64_t) noexcept;                                                                  \
     template _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_one_native<_SIZE>(void const*) noexcept;                   \
     template _LIBCPP_EXPORTED_FROM_ABI void __atomic_notify_all_native<_SIZE>(void const*) noexcept;
 
@@ -393,9 +346,6 @@ _LIBCPP_NATIVE_PLATFORM_WAIT_SIZES(_INSTANTIATE)
 
 template _LIBCPP_EXPORTED_FROM_ABI void
 __atomic_wait_native<sizeof(__cxx_contention_t)>(void const* __address, void const* __old_value) noexcept;
-
-template _LIBCPP_EXPORTED_FROM_ABI void __atomic_wait_native_with_timeout<sizeof(__cxx_contention_t)>(
-    void const* __address, void const* __old_value, uint64_t) noexcept;
 
 template _LIBCPP_EXPORTED_FROM_ABI void
 __atomic_notify_one_native<sizeof(__cxx_contention_t)>(void const* __location) noexcept;
@@ -428,7 +378,7 @@ _LIBCPP_EXPORTED_FROM_ABI void
 __libcpp_atomic_wait(void const volatile* __location, __cxx_contention_t __old_value) noexcept {
   auto const __entry = __get_global_contention_state(const_cast<void const*>(__location));
   __contention_wait<sizeof(__cxx_atomic_contention_t)>(
-      &__entry->__waiter_count, &__entry->__platform_state, &__old_value, 0);
+      &__entry->__waiter_count, &__entry->__platform_state, &__old_value);
 }
 
 _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(__cxx_atomic_contention_t const volatile* __location) noexcept {
@@ -447,7 +397,7 @@ _LIBCPP_EXPORTED_FROM_ABI void
 __libcpp_atomic_wait(__cxx_atomic_contention_t const volatile* __location, __cxx_contention_t __old_value) noexcept {
   auto __location_cast = const_cast<const void*>(static_cast<const volatile void*>(__location));
   __contention_wait<sizeof(__cxx_atomic_contention_t)>(
-      __get_native_waiter_count(__location_cast), __location_cast, &__old_value, 0);
+      __get_native_waiter_count(__location_cast), __location_cast, &__old_value);
 }
 
 // this function is even unused in the old ABI
