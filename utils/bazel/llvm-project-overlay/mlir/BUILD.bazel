@@ -478,6 +478,7 @@ mlir_c_api_cc_library(
         "lib/CAPI/IR/BuiltinTypes.cpp",
         "lib/CAPI/IR/Diagnostics.cpp",
         "lib/CAPI/IR/DialectHandle.cpp",
+        "lib/CAPI/IR/ExtensibleDialect.cpp",
         "lib/CAPI/IR/IR.cpp",
         "lib/CAPI/IR/IntegerSet.cpp",
         "lib/CAPI/IR/Pass.cpp",
@@ -492,6 +493,7 @@ mlir_c_api_cc_library(
         "include/mlir-c/Dialect/Func.h",
         "include/mlir-c/Dialect/IRDL.h",
         "include/mlir-c/ExecutionEngine.h",
+        "include/mlir-c/ExtensibleDialect.h",
         "include/mlir-c/IR.h",
         "include/mlir-c/IntegerSet.h",
         "include/mlir-c/Interfaces.h",
@@ -573,28 +575,20 @@ mlir_c_api_cc_library(
     name = "CAPIAMDGPU",
     srcs = ["lib/CAPI/Dialect/AMDGPU.cpp"],
     hdrs = ["include/mlir-c/Dialect/AMDGPU.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":AMDGPUPassIncGen"],
     includes = ["include"],
-    deps = [
-        ":AMDGPUDialect",
-        ":AMDGPUPassIncGen",
-    ],
+    deps = [":AMDGPUDialect"],
 )
 
 mlir_c_api_cc_library(
     name = "CAPIArith",
     srcs = ["lib/CAPI/Dialect/Arith.cpp"],
     hdrs = ["include/mlir-c/Dialect/Arith.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":ArithPassIncGen"],
     includes = ["include"],
-    deps = [
-        ":ArithDialect",
-        ":ArithPassIncGen",
-    ],
+    deps = [":ArithDialect"],
 )
 
 mlir_c_api_cc_library(
@@ -697,13 +691,11 @@ mlir_c_api_cc_library(
     hdrs = [
         "include/mlir-c/Dialect/LLVM.h",
     ],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":LLVMPassIncGen"],
     includes = ["include"],
     deps = [
         ":LLVMDialect",
-        ":LLVMPassIncGen",
         "//llvm:Support",
     ],
 )
@@ -712,42 +704,32 @@ mlir_c_api_cc_library(
     name = "CAPIMath",
     srcs = ["lib/CAPI/Dialect/Math.cpp"],
     hdrs = ["include/mlir-c/Dialect/Math.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":MathPassIncGen"],
     includes = ["include"],
-    deps = [
-        ":MathDialect",
-        ":MathPassIncGen",
-    ],
+    deps = [":MathDialect"],
 )
 
 mlir_c_api_cc_library(
     name = "CAPIMemRef",
     srcs = ["lib/CAPI/Dialect/MemRef.cpp"],
     hdrs = ["include/mlir-c/Dialect/MemRef.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":MemRefPassIncGen"],
     includes = ["include"],
-    deps = [
-        ":MemRefDialect",
-        ":MemRefPassIncGen",
-    ],
+    deps = [":MemRefDialect"],
 )
 
 mlir_c_api_cc_library(
     name = "CAPINVGPU",
     srcs = ["lib/CAPI/Dialect/NVGPU.cpp"],
     hdrs = ["include/mlir-c/Dialect/NVGPU.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":NVGPUPassIncGen"],
     includes = ["include"],
     deps = [
         ":IR",
         ":NVGPUDialect",
-        ":NVGPUPassIncGen",
     ],
 )
 
@@ -768,14 +750,10 @@ mlir_c_api_cc_library(
     name = "CAPIShape",
     srcs = ["lib/CAPI/Dialect/Shape.cpp"],
     hdrs = ["include/mlir-c/Dialect/Shape.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
     includes = ["include"],
-    deps = [
-        ":ShapeDialect",
-        ":ShapeTransformsPassIncGen",
-    ],
+    header_deps = [":ShapeTransformsPassIncGen"],
+    deps = [":ShapeDialect"],
 )
 
 mlir_c_api_cc_library(
@@ -803,14 +781,10 @@ mlir_c_api_cc_library(
     name = "CAPITensor",
     srcs = ["lib/CAPI/Dialect/Tensor.cpp"],
     hdrs = ["include/mlir-c/Dialect/Tensor.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
     includes = ["include"],
-    deps = [
-        ":TensorDialect",
-        ":TensorPassIncGen",
-    ],
+    header_deps = [":TensorPassIncGen"],
+    deps = [":TensorDialect"],
 )
 
 mlir_c_api_cc_library(
@@ -854,14 +828,10 @@ mlir_c_api_cc_library(
     name = "CAPISCF",
     srcs = ["lib/CAPI/Dialect/SCF.cpp"],
     hdrs = ["include/mlir-c/Dialect/SCF.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":SCFPassIncGen"],
     includes = ["include"],
-    deps = [
-        ":SCFDialect",
-        ":SCFPassIncGen",
-    ],
+    deps = [":SCFDialect"],
 )
 
 mlir_c_api_cc_library(
@@ -933,14 +903,10 @@ mlir_c_api_cc_library(
     hdrs = [
         "include/mlir-c/Dialect/Transform.h",
     ],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":TransformDialectTransformsIncGen"],
     includes = ["include"],
-    deps = [
-        ":TransformDialect",
-        ":TransformDialectTransformsIncGen",
-    ],
+    deps = [":TransformDialect"],
 )
 
 mlir_c_api_cc_library(
@@ -973,13 +939,13 @@ mlir_c_api_cc_library(
     ],
     header_deps = [
         ":CAPIIRHeaders",
+        ":MLProgramPassIncGen",
     ],
     includes = ["include"],
     deps = [
         ":CAPIIR",
         ":MLProgramDialect",
         ":MLProgramOpsIncGen",
-        ":MLProgramPassIncGen",
         ":MLProgramTypesIncGen",
     ],
 )
@@ -988,14 +954,10 @@ mlir_c_api_cc_library(
     name = "CAPIVector",
     srcs = ["lib/CAPI/Dialect/Vector.cpp"],
     hdrs = ["include/mlir-c/Dialect/Vector.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":VectorPassIncGen"],
     includes = ["include"],
-    deps = [
-        ":VectorDialect",
-        ":VectorPassIncGen",
-    ],
+    deps = [":VectorDialect"],
 )
 
 mlir_c_api_cc_library(
@@ -1428,7 +1390,6 @@ py_binary(
     name = "stubgen_runner",
     srcs = ["stubgen_runner.py"],
     data = ["@nanobind//:src/stubgen.py"],
-    visibility = ["//visibility:private"],
     deps = ["@rules_python//python/runfiles"],
 )
 
