@@ -66,7 +66,7 @@ using namespace error;
 struct GenELF64KernelTy : public GenericKernelTy {
   /// Construct the kernel with a name and an execution mode.
   GenELF64KernelTy(const char *Name, bool SupportsFFI)
-      : GenericKernelTy(Name), Func(nullptr), supportsFFI(SupportsFFI) {}
+      : GenericKernelTy(Name), Func(nullptr), SupportsFFI(SupportsFFI) {}
 
   /// Initialize the kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -100,7 +100,7 @@ struct GenELF64KernelTy : public GenericKernelTy {
                    uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
                    KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
-    if (!supportsFFI)
+    if (!SupportsFFI)
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "libffi is not available, cannot launch kernel");
     // Create a vector of ffi_types, one per argument.
@@ -134,7 +134,7 @@ private:
   /// The kernel function to execute.
   void (*Func)(void);
   /// Whether this kernel supports FFI-based launch.
-  bool supportsFFI;
+  bool SupportsFFI;
 };
 
 /// Class implementing the GenELF64 device images properties.
@@ -159,7 +159,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   GenELF64DeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
                    int32_t NumDevices, bool SupportsFFI)
       : GenericDeviceTy(Plugin, DeviceId, NumDevices, GenELF64GridValues),
-        supportsFFI(SupportsFFI) {}
+        SupportsFFI(SupportsFFI) {}
 
   ~GenELF64DeviceTy() {}
 
@@ -191,7 +191,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
       return Plugin::error(ErrorCode::OUT_OF_RESOURCES,
                            "failed to allocate memory for GenELF64 kernel");
 
-    new (GenELF64Kernel) GenELF64KernelTy(Name, supportsFFI);
+    new (GenELF64Kernel) GenELF64KernelTy(Name, SupportsFFI);
 
     return *GenELF64Kernel;
   }
@@ -409,7 +409,7 @@ private:
   };
 
   /// Whether this device supports FFI-based launch.
-  bool supportsFFI;
+  bool SupportsFFI;
 };
 
 class GenELF64GlobalHandlerTy final : public GenericGlobalHandlerTy {
