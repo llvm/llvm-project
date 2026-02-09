@@ -5080,6 +5080,54 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
           Diag(Tok, diag::err_modifier_expected_colon) << "fallback";
       }
     }
+  } // Handle num_teams clause with optional lower-bound:upper-bound syntax
+  if (Kind == OMPC_num_teams && !Tok.is(tok::r_paren) &&
+      !Tok.is(tok::annot_pragma_openmp_end)) {
+    // Look ahead to detect top-level colon
+    TentativeParsingAction TPA(*this);
+    bool HasColon = false;
+    int Depth = 0;
+
+    while (!Tok.is(tok::r_paren) && !Tok.is(tok::annot_pragma_openmp_end)) {
+      if (Tok.isOneOf(tok::l_paren, tok::l_square))
+        Depth++;
+      else if (Tok.isOneOf(tok::r_paren, tok::r_square)) {
+        if (Depth == 0)
+          break;
+        Depth--;
+      } else if (Tok.is(tok::comma) && Depth == 0)
+        break; // comma-separated syntax
+      else if (Tok.is(tok::colon) && Depth == 0) {
+        HasColon = true;
+        break;
+      }
+      ConsumeAnyToken();
+    }
+    TPA.Revert();
+
+    // Only handle colon syntax, let normal parsing handle everything else
+    if (HasColon) {
+      ExprResult LowerBound = ParseAssignmentExpression();
+      if (!LowerBound.isInvalid()) {
+        Vars.push_back(LowerBound.get());
+        if (Tok.is(tok::colon)) {
+          ConsumeToken();
+          ExprResult UpperBound = ParseAssignmentExpression();
+          if (!UpperBound.isInvalid())
+            Vars.push_back(UpperBound.get());
+          else
+            SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end,
+                      StopBeforeMatch);
+        }
+      } else {
+        SkipUntil(tok::r_paren, tok::annot_pragma_openmp_end, StopBeforeMatch);
+      }
+
+      Data.RLoc = Tok.getLocation();
+      if (!T.consumeClose())
+        Data.RLoc = T.getCloseLocation();
+      return false;
+    }
   }
 
   bool IsComma =
