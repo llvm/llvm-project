@@ -375,7 +375,7 @@ void DWARFFormValue::dumpAddressSection(const DWARFObject &Obj, raw_ostream &OS,
   ArrayRef<SectionName> SectionNames = Obj.getSectionNames();
   const auto &SecRef = SectionNames[SectionIndex];
 
-  OS << formatv(" \"{0}\"", SecRef.Name);
+  OS << " \"" << SecRef.Name << '\"';
 
   // Print section index if name is not unique.
   if (!SecRef.IsNameUnique)
@@ -629,8 +629,8 @@ Expected<const char *> DWARFFormValue::getAsCString() const {
     return Str;
   std::string Msg = FormEncodingString(Form).str();
   if (Index)
-    Msg += formatv(" uses index {}, but the referenced string", *Index).str();
-  Msg += formatv(" offset {} is beyond {} bounds", Offset,
+    Msg += formatv(" uses index {0}, but the referenced string", *Index).str();
+  Msg += formatv(" offset {0} is beyond {1} bounds", Offset,
                  (IsDebugLineString ? ".debug_line_str" : ".debug_str"))
              .str();
 
