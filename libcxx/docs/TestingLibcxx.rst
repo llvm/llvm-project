@@ -336,6 +336,33 @@ additional headers.
           Since it is not expected to add this to existing tests no effort was
           taken to make it work in earlier language versions.
 
+The Standard does not provide a ``operator<<`` for ``std::source_location`` this
+header adds one. Using ``std::source_location`` allows printing messages that
+are easier to trace to the origin. When the expected result is not unique, the
+origin of the call in the source file can be written to the output. For example:
+
+.. code-block:: cpp
+
+  void test(int input,
+            int expected,
+            std::source_location loc = std::source_location::current()) {
+    int result = ...;
+    TEST_REQUIRE(result == expected,
+                TEST_WRITE_CONCATENATED(loc,
+                                        "\nExpected output ",
+                                        expected,
+                                        "\nActual output   ",
+                                        result,
+                                        '\n'));
+
+    }
+
+    int main(int, char**) {
+      test(10, 100);
+      test(20, 100);
+
+      return 0;
+    }
 
 Test names
 ----------

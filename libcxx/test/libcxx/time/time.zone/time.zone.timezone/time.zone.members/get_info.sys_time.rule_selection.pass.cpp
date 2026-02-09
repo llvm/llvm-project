@@ -83,19 +83,19 @@ static const std::chrono::tzdb& parse(std::string_view input) {
   return std::chrono::time_point_cast<std::chrono::seconds>(static_cast<std::chrono::sys_days>(result)) + h + m + s;
 }
 
-static void assert_equal(const std::chrono::sys_info& lhs, const std::chrono::sys_info& rhs) {
+static void assert_equal(const std::chrono::sys_info& lhs, const std::chrono::sys_info& rhs, std::source_location loc = std::source_location::current()) {
   TEST_REQUIRE(lhs.begin == rhs.begin,
-               TEST_WRITE_CONCATENATED("\nBegin:\nExpected output ", lhs.begin, "\nActual output   ", rhs.begin, '\n'));
+               TEST_WRITE_CONCATENATED(loc,"\nBegin:\nExpected output ", lhs.begin, "\nActual output   ", rhs.begin, '\n'));
   TEST_REQUIRE(lhs.end == rhs.end,
-               TEST_WRITE_CONCATENATED("\nEnd:\nExpected output ", lhs.end, "\nActual output   ", rhs.end, '\n'));
+               TEST_WRITE_CONCATENATED(loc,"\nEnd:\nExpected output ", lhs.end, "\nActual output   ", rhs.end, '\n'));
   TEST_REQUIRE(
       lhs.offset == rhs.offset,
-      TEST_WRITE_CONCATENATED("\nOffset:\nExpected output ", lhs.offset, "\nActual output   ", rhs.offset, '\n'));
+      TEST_WRITE_CONCATENATED(loc,"\nOffset:\nExpected output ", lhs.offset, "\nActual output   ", rhs.offset, '\n'));
   TEST_REQUIRE(lhs.save == rhs.save,
-               TEST_WRITE_CONCATENATED("\nSave:\nExpected output ", lhs.save, "\nActual output   ", rhs.save, '\n'));
+               TEST_WRITE_CONCATENATED(loc,"\nSave:\nExpected output ", lhs.save, "\nActual output   ", rhs.save, '\n'));
   TEST_REQUIRE(
       lhs.abbrev == rhs.abbrev,
-      TEST_WRITE_CONCATENATED("\nAbbrev:\nExpected output ", lhs.abbrev, "\nActual output   ", rhs.abbrev, '\n'));
+      TEST_WRITE_CONCATENATED(loc,"\nAbbrev:\nExpected output ", lhs.abbrev, "\nActual output   ", rhs.abbrev, '\n'));
 }
 
 /***** ***** TESTS ***** *****/
@@ -109,7 +109,7 @@ int main(int, const char**) {
 Z Test 0 -     LMT      1900
 0 Rule %s
 
-R Rule 1900 max - Mar 1 2u 1 Summer
+R Rule 1900 max - Mar 1 2u 1 sUMMER
 R Rule 1900 max - Oct 1 2u 0 Winter
 )");
 
