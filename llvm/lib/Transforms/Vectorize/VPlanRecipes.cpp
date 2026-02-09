@@ -3523,7 +3523,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     if (ParentRegion && ParentRegion->isReplicator()) {
       // TODO: Handle loop-invariant pointers in predicated blocks. For now,
       // fall back to the legacy cost model.
-      if (Ctx.PSE.getSE()->isLoopInvariant(PtrSCEV, Ctx.L))
+      if (!PtrSCEV || Ctx.PSE.getSE()->isLoopInvariant(PtrSCEV, Ctx.L))
         break;
       Cost /= Ctx.getPredBlockCostDivisor(UI->getParent());
       Cost += Ctx.TTI.getCFInstrCost(Instruction::Br, Ctx.CostKind);

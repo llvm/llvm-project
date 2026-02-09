@@ -101,3 +101,57 @@ loop.latch:
 exit:
   ret void
 }
+
+define i32 @predicated_load_non_affine_address(i32 %x, ptr %src) {
+; CHECK-LABEL: define i32 @predicated_load_non_affine_address(
+; CHECK-SAME: i32 [[X:%.*]], ptr [[SRC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[REM:%.*]] = mul i32 [[IV]], [[X]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[REM]], 0
+; CHECK-NEXT:    br i1 [[C]], label %[[IF_THEN:.*]], label %[[LOOP_LATCH]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[IV]], [[X]]
+; CHECK-NEXT:    [[DIV_EXT:%.*]] = zext nneg i32 [[DIV]] to i64
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[DIV_EXT]]
+; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[GEP_SRC]], align 1
+; CHECK-NEXT:    [[L_EXT:%.*]] = zext i8 [[L]] to i32
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[T_0:%.*]] = phi i32 [ 0, %[[LOOP]] ], [ [[L_EXT]], %[[IF_THEN]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 28
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[T_0_LCSSA:%.*]] = phi i32 [ [[T_0]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    ret i32 [[T_0_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %rem = mul i32 %iv, %x
+  %c = icmp eq i32 %rem, 0
+  br i1 %c, label %if.then, label %loop.latch
+
+if.then:
+  %div = udiv i32 %iv, %x
+  %div.ext = zext nneg i32 %div to i64
+  %gep.src = getelementptr i8, ptr %src, i64 %div.ext
+  %l = load i8, ptr %gep.src, align 1
+  %l.ext = zext i8 %l to i32
+  br label %loop.latch
+
+loop.latch:
+  %t.0 = phi i32 [ 0, %loop ], [ %l.ext, %if.then ]
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, 28
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %t.0.lcssa = phi i32 [ %t.0, %loop.latch ]
+  ret i32 %t.0.lcssa
+}
