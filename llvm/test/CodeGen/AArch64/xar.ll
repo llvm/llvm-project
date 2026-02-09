@@ -415,6 +415,42 @@ define <2 x i64> @rev64_v2i64(<2 x i64> %r) {
   ret <2 x i64> %or
 }
 
+; As above, one test with rotate right.
+define <1 x i64> @rev64_v1i64_r(<1 x i64> %a) {
+; CHECK-LABEL: rev64_v1i64_r:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    shl d1, d0, #32
+; CHECK-NEXT:    usra d1, d0, #32
+; CHECK-NEXT:    fmov d0, d1
+; CHECK-NEXT:    ret
+  %r = tail call <1 x i64> @llvm.fshr(<1 x i64> %a, <1 x i64> %a, <1 x i64> splat (i64 32))
+  ret <1 x i64> %r
+}
+
+; As above, one test with individual shifts instead of rotate left.
+define <2 x i32> @rev32_v2i32_shifts_l(<2 x i32> %a) {
+; CHECK-LABEL: rev32_v2i32_shifts_l:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev32 v0.4h, v0.4h
+; CHECK-NEXT:    ret
+  %shl = shl <2 x i32> %a, splat (i32 16)
+  %shr = lshr <2 x i32> %a, splat (i32 16)
+  %or = or <2 x i32> %shl, %shr
+  ret <2 x i32> %or
+}
+
+; As above, one test with individual shifts instead of rotate right.
+define <4 x i16> @rev16_v4i16_shifts_r(<4 x i16> %a) {
+; CHECK-LABEL: rev16_v4i16_shifts_r:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev16 v0.8b, v0.8b
+; CHECK-NEXT:    ret
+  %shr = lshr <4 x i16> %a, splat (i16 8)
+  %shl = shl <4 x i16> %a, splat (i16 8)
+  %or = or <4 x i16> %shr, %shl
+  ret <4 x i16> %or
+}
+
 declare <2 x i64> @llvm.fshl.v2i64(<2 x i64>, <2 x i64>, <2 x i64>)
 declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 declare <8 x i16> @llvm.fshl.v8i16(<8 x i16>, <8 x i16>, <8 x i16>)
