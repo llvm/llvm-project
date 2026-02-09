@@ -9,7 +9,7 @@
 
 ## About these notes
 
-This document now combines the notes from the LLVM Flang Technical Calls
+This directory combines the notes from the LLVM Flang Technical Calls
 and the LLVM Flang Community Calls. This was done to make the Community Call 
 notes more publicly available than we could make them previously.
 
