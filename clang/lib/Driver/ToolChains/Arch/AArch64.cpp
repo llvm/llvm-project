@@ -69,9 +69,9 @@ static std::string getAArch64TargetCPUByTriple(const llvm::Triple &Triple) {
   return "generic";
 }
 
-/// \return the (LLVM) name of the AArch64 cpu we are
-/// targeting. Set \p A to the Arg corresponding to the -mcpu argument if it is
-/// provided, or to nullptr otherwise.
+/// \return the (LLVM) name of the AArch64 CPU we are targeting. Set \p A to the
+/// Arg corresponding to the -mcpu argument if it is provided, or to nullptr
+/// otherwise.
 std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
                                          const llvm::Triple &Triple, Arg *&A) {
   std::string CPU;
