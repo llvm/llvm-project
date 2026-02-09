@@ -48,17 +48,15 @@ class TestBatchedBreakpointStepOver(GDBRemoteTestBase):
                 # All threads stopped at the breakpoint address.
                 threads_str = ",".join("{:x}".format(t) for t in TIDS)
                 pcs_str = ",".join("{:x}".format(BP_ADDR) for _ in TIDS)
-                return (
-                    "T05thread:{:x};threads:{};thread-pcs:{};"
-                    "swbreak:;".format(TIDS[0], threads_str, pcs_str)
+                return "T05thread:{:x};threads:{};thread-pcs:{};" "swbreak:;".format(
+                    TIDS[0], threads_str, pcs_str
                 )
 
             def threadStopInfo(self, threadnum):
                 threads_str = ",".join("{:x}".format(t) for t in TIDS)
                 pcs_str = ",".join("{:x}".format(BP_ADDR) for _ in TIDS)
-                return (
-                    "T05thread:{:x};threads:{};thread-pcs:{};"
-                    "swbreak:;".format(threadnum, threads_str, pcs_str)
+                return "T05thread:{:x};threads:{};thread-pcs:{};" "swbreak:;".format(
+                    threadnum, threads_str, pcs_str
                 )
 
             def setBreakpoint(self, packet):
@@ -136,9 +134,7 @@ class TestBatchedBreakpointStepOver(GDBRemoteTestBase):
                 threads_str = ",".join("{:x}".format(t) for t in TIDS)
                 if all_done:
                     # All threads moved past breakpoint
-                    pcs_str = ",".join(
-                        "{:x}".format(STEPPED_PC) for _ in TIDS
-                    )
+                    pcs_str = ",".join("{:x}".format(STEPPED_PC) for _ in TIDS)
                 else:
                     # Stepped threads moved, others still at breakpoint.
                     pcs_str = ",".join(
@@ -207,9 +203,7 @@ class TestBatchedBreakpointStepOver(GDBRemoteTestBase):
         )
 
         # At least one batched vCont with multiple step actions.
-        max_batch = max(
-            (count for count, _ in vcont_step_packets), default=0
-        )
+        max_batch = max((count for count, _ in vcont_step_packets), default=0)
         self.assertGreaterEqual(
             max_batch,
             NUM_THREADS,
