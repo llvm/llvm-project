@@ -13,6 +13,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cinttypes>
@@ -64,7 +65,7 @@ static void printOperand(raw_ostream &OS, const DIDumpOptions &DumpOpts,
     // The offsets are all encoded in a unsigned form, but in practice
     // consumers use them signed. It's most certainly legacy due to
     // the lack of signed variants in the first Dwarf standards.
-    OS << format(" %+" PRId64, int64_t(Operand));
+    OS << formatv(" {0:+d}", int64_t(Operand));
     break;
   case CFIProgram::OT_FactoredCodeOffset: // Always Unsigned
     if (P.codeAlign())
