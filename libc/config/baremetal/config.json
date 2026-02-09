@@ -37,6 +37,9 @@
   "str_to_float": {
     "LIBC_CONF_STRTOFLOAT_DISABLE_EISEL_LEMIRE": {
       "value": true
+    },
+    "LIBC_CONF_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH": {
+      "value": true
     }
   },
   "math": {

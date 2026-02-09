@@ -23,6 +23,6 @@ G: pirama-arumuga-nainar, Sharjeel-Khan
 D: Emulator-based x86[-64] libc++ CI testing
 
 N: FreeBSD libc++
-E: emaste@freebsd.org
-G: emaste
+E: emaste@freebsd.org, jrtc27@freebsd.org
+G: emaste, jrtc27
 D: FreeBSD x86-64 libc++ CI testing
