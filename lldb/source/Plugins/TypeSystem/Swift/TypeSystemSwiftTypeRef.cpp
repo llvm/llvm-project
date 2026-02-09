@@ -5742,11 +5742,30 @@ TypeSystemSwiftTypeRef::GetDependentGenericParamListForType(
 
 swift::Mangle::ManglingFlavor
 TypeSystemSwiftTypeRef::GetManglingFlavor(const ExecutionContext *exe_ctx) {
+  if (!exe_ctx)
+    return swift::Mangle::ManglingFlavor::Default;
   auto sc = GetSymbolContext(exe_ctx);
-  auto *cu = sc.comp_unit;
+  CompileUnit *cu = sc.comp_unit;
+  // If we didn't find a compile unit, try to go up the stack until we find one.
+  // Limit the search to avoid iterating through a very large stack if
+  // interrupted during infinite recursion.
+  if (!cu) {
+    if (auto *thread = exe_ctx->GetThreadPtr()) {
+      constexpr uint32_t max_frames = 128;
+      for (uint32_t i = 0; i < max_frames; ++i) {
+        auto stack_frame = thread->GetStackFrameAtIndex(i);
+        if (!stack_frame)
+          break;
+        cu = stack_frame->GetSymbolContext(lldb::eSymbolContextCompUnit)
+                 .comp_unit;
+        if (cu)
+          break;
+      }
+    }
+  }
   // Cache the result for the last recently used CU.
   if (cu != m_lru_is_embedded.first)
-    m_lru_is_embedded = {cu, ShouldEnableEmbeddedSwift(sc.comp_unit)
+    m_lru_is_embedded = {cu, ShouldEnableEmbeddedSwift(cu)
                                  ? swift::Mangle::ManglingFlavor::Embedded
                                  : swift::Mangle::ManglingFlavor::Default};
   return m_lru_is_embedded.second;
