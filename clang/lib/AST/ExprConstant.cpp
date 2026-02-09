@@ -3599,7 +3599,9 @@ static void expandArray(APValue &Array, unsigned Index) {
   Array.swap(NewValue);
 }
 
+// Expand an indeterminate vector to materialize all elements.
 static void expandVector(APValue &Vec, unsigned NumElements) {
+  assert(Vec.isIndeterminate());
   SmallVector<APValue, 4> Elts(NumElements, APValue::IndeterminateValue());
   Vec = APValue(Elts.data(), Elts.size());
 }
@@ -4297,19 +4299,15 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       ObjType = VT->getElementType();
       assert(I == N - 1 && "extracting subobject of scalar?");
 
-      if (O->isIndeterminate() || O->isAbsent()) {
+      if (O->isIndeterminate()) {
         if (isRead(handler.AccessKind)) {
           Info.FFDiag(E);
           return handler.failed();
         }
         expandVector(*O, NumElements);
       }
-
-      if (O->isVector())
-        return handler.found(O->getVectorElt(Index), ObjType);
-
-      Info.FFDiag(E);
-      return handler.failed();
+      assert(O->isVector() && "unexpected object during vector element access");
+      return handler.found(O->getVectorElt(Index), ObjType);
     } else if (const FieldDecl *Field = getAsField(Sub.Entries[I])) {
       if (Field->isMutable() &&
           !Obj.mayAccessMutableMembers(Info, handler.AccessKind)) {
