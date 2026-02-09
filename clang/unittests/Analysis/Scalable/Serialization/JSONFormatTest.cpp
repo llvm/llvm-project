@@ -234,6 +234,84 @@ TEST_F(JSONFormatTest, PathIsDirectory) {
                                HasSubstr("path is a directory, not a file"))));
 }
 
+TEST_F(JSONFormatTest, BrokenSymlink) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Symlink test skipped on Windows";
+#else
+  SmallString<128> SymlinkPath = TestDir;
+  sys::path::append(SymlinkPath, "symlink.json");
+
+  // Create a symlink to a non-existent file
+  SmallString<128> NonexistentTarget = TestDir;
+  sys::path::append(NonexistentTarget, "does_not_exist.json");
+
+  std::error_code EC = sys::fs::create_link(NonexistentTarget, SymlinkPath);
+  if (EC) {
+    GTEST_SKIP() << "Failed to create symlink (may need elevated privileges): "
+                 << EC.message();
+  }
+
+  // Verify the symlink points to a non-existent file by checking file status
+  sys::fs::file_status Status;
+  EC = sys::fs::status(SymlinkPath, Status);
+  if (!EC) {
+    // If status succeeds, the target exists - skip test
+    GTEST_SKIP() << "Symlink unexpectedly points to existing file";
+  }
+
+  JSONFormat Format(vfs::getRealFileSystem());
+  auto Result = Format.readTUSummary(SymlinkPath);
+
+  EXPECT_THAT(Result, FailedWith(AllOf(HasSubstr("reading TUSummary from"),
+                                       HasSubstr("file does not exist"))));
+#endif
+}
+
+TEST_F(JSONFormatTest, FileWithoutReadPermission) {
+#ifdef _WIN32
+  GTEST_SKIP() << "Permission test skipped on Windows (uses different ACL "
+                  "model)";
+#else
+  SmallString<128> FilePath = TestDir;
+  sys::path::append(FilePath, "no_read.json");
+
+  // Create a file with valid JSON content
+  std::error_code EC;
+  raw_fd_ostream OS(FilePath, EC);
+  ASSERT_FALSE(EC) << "Failed to create file: " << EC.message();
+  OS << R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "data": []
+  })";
+  OS.close();
+
+  // Remove read permissions (chmod 000)
+  auto Perms = sys::fs::perms::all_all;
+  EC = sys::fs::setPermissions(FilePath, Perms);
+  ASSERT_FALSE(EC) << "Failed to set permissions: " << EC.message();
+
+  // Now remove all permissions
+  EC = sys::fs::setPermissions(FilePath, static_cast<sys::fs::perms>(0));
+  if (EC) {
+    GTEST_SKIP() << "Failed to remove permissions (may be running as root): "
+                 << EC.message();
+  }
+
+  JSONFormat Format(vfs::getRealFileSystem());
+  auto Result = Format.readTUSummary(FilePath);
+
+  // Restore permissions for cleanup
+  sys::fs::setPermissions(FilePath, sys::fs::perms::all_all);
+
+  EXPECT_THAT(Result, FailedWith(AllOf(HasSubstr("reading TUSummary from"),
+                                       HasSubstr("failed to read file"))));
+#endif
+}
+
 TEST_F(JSONFormatTest, NotJsonExtension) {
   auto Result = readJSON("{}", "test.txt");
 
@@ -289,7 +367,7 @@ TEST_F(JSONFormatTest, MissingKind) {
   EXPECT_THAT(Result, FailedWith(AllOf(
                           HasSubstr("reading TUSummary from"),
                           HasSubstr("failed to deserialize BuildNamespace"),
-                          HasSubstr("missing required field 'kind' "
+                          HasSubstr("missing or invalid field 'kind' "
                                     "(expected BuildNamespaceKind)"))));
 }
 
@@ -305,7 +383,8 @@ TEST_F(JSONFormatTest, MissingName) {
   EXPECT_THAT(Result, FailedWith(AllOf(
                           HasSubstr("reading TUSummary from"),
                           HasSubstr("failed to deserialize BuildNamespace"),
-                          HasSubstr("missing required field 'name'"))));
+                          HasSubstr("missing or invalid field 'name' "
+                                    "(expected string)"))));
 }
 
 TEST_F(JSONFormatTest, InvalidKind) {
@@ -321,6 +400,7 @@ TEST_F(JSONFormatTest, InvalidKind) {
   EXPECT_THAT(Result, FailedWith(AllOf(
                           HasSubstr("reading TUSummary from"),
                           HasSubstr("failed to deserialize BuildNamespace"),
+                          HasSubstr("while parsing field 'kind'"),
                           HasSubstr("invalid 'kind' BuildNamespaceKind "
                                     "value"))));
 }
@@ -413,10 +493,11 @@ TEST_F(JSONFormatTest, IDTableEntryMissingID) {
   EXPECT_THAT(Result,
               FailedWith(AllOf(
                   HasSubstr("reading TUSummary from"),
+                  HasSubstr("failed to read JSON array from field 'id_table'"),
                   HasSubstr("failed to deserialize EntityIdTable at index 0"),
                   HasSubstr("failed to deserialize EntityIdTable entry"),
-                  HasSubstr("missing required field 'id' (expected unsigned "
-                            "integer EntityId)"))));
+                  HasSubstr("missing or invalid field 'id' "
+                            "(expected unsigned integer EntityId)"))));
 }
 
 TEST_F(JSONFormatTest, IDTableEntryMissingName) {
@@ -437,8 +518,10 @@ TEST_F(JSONFormatTest, IDTableEntryMissingName) {
       Result,
       FailedWith(AllOf(
           HasSubstr("reading TUSummary from"),
+          HasSubstr("failed to read JSON array from field 'id_table'"),
           HasSubstr("failed to deserialize EntityIdTable at index 0"),
           HasSubstr("failed to deserialize EntityIdTable entry"),
+          HasSubstr("failed to read JSON object from field 'name'"),
           HasSubstr("missing or invalid field 'name' (expected EntityName JSON "
                     "object)"))));
 }
@@ -466,6 +549,7 @@ TEST_F(JSONFormatTest, IDTableEntryIDNotUInt64) {
       Result,
       FailedWith(
           AllOf(HasSubstr("reading TUSummary from"),
+                HasSubstr("failed to read JSON array from field 'id_table'"),
                 HasSubstr("failed to deserialize EntityIdTable at index 0"),
                 HasSubstr("failed to deserialize EntityIdTable entry"),
                 HasSubstr("field 'id' is not a valid unsigned 64-bit integer"),
@@ -541,11 +625,13 @@ TEST_F(JSONFormatTest, EntityNameMissingUSR) {
   EXPECT_THAT(Result,
               FailedWith(AllOf(
                   HasSubstr("reading TUSummary from"),
+                  HasSubstr("failed to read JSON array from field 'id_table'"),
                   HasSubstr("failed to deserialize EntityIdTable at index 0"),
                   HasSubstr("failed to deserialize EntityIdTable entry"),
+                  HasSubstr("failed to read JSON object from field 'name'"),
                   HasSubstr("failed to deserialize EntityName"),
-                  HasSubstr("missing required field 'usr' (Unified Symbol "
-                            "Resolution string)"))));
+                  HasSubstr("missing or invalid field 'usr' "
+                            "(expected string (Unified Symbol Resolution))"))));
 }
 
 TEST_F(JSONFormatTest, EntityNameMissingSuffix) {
@@ -566,14 +652,17 @@ TEST_F(JSONFormatTest, EntityNameMissingSuffix) {
     "data": []
   })");
 
-  EXPECT_THAT(
-      Result,
-      FailedWith(AllOf(HasSubstr("reading TUSummary from"),
-                       HasSubstr("failed to deserialize EntityIdTable at "
-                                 "index 0"),
-                       HasSubstr("failed to deserialize EntityIdTable entry"),
-                       HasSubstr("failed to deserialize EntityName"),
-                       HasSubstr("missing required field 'suffix'"))));
+  EXPECT_THAT(Result,
+              FailedWith(AllOf(
+                  HasSubstr("reading TUSummary from"),
+                  HasSubstr("failed to read JSON array from field 'id_table'"),
+                  HasSubstr("failed to deserialize EntityIdTable at "
+                            "index 0"),
+                  HasSubstr("failed to deserialize EntityIdTable entry"),
+                  HasSubstr("failed to read JSON object from field 'name'"),
+                  HasSubstr("failed to deserialize EntityName"),
+                  HasSubstr("missing or invalid field 'suffix' "
+                            "(expected string)"))));
 }
 
 TEST_F(JSONFormatTest, EntityNameMissingNamespace) {
@@ -598,9 +687,12 @@ TEST_F(JSONFormatTest, EntityNameMissingNamespace) {
       Result,
       FailedWith(
           AllOf(HasSubstr("reading TUSummary from"),
+                HasSubstr("failed to read JSON array from field 'id_table'"),
                 HasSubstr("failed to deserialize EntityIdTable at index 0"),
                 HasSubstr("failed to deserialize EntityIdTable entry"),
+                HasSubstr("failed to read JSON object from field 'name'"),
                 HasSubstr("failed to deserialize EntityName"),
+                HasSubstr("failed to read JSON array from field 'namespace'"),
                 HasSubstr("missing or invalid field 'namespace'"),
                 HasSubstr("(expected JSON array of BuildNamespace objects)"))));
 }
@@ -627,9 +719,12 @@ TEST_F(JSONFormatTest, NamespaceElementNotObject) {
   EXPECT_THAT(Result,
               FailedWith(AllOf(
                   HasSubstr("reading TUSummary from"),
+                  HasSubstr("failed to read JSON array from field 'id_table'"),
                   HasSubstr("failed to deserialize EntityIdTable at index 0"),
                   HasSubstr("failed to deserialize EntityIdTable entry"),
+                  HasSubstr("failed to read JSON object from field 'name'"),
                   HasSubstr("failed to deserialize EntityName"),
+                  HasSubstr("failed to read JSON array from field 'namespace'"),
                   HasSubstr("failed to deserialize NestedBuildNamespace"),
                   HasSubstr("element at index 0 is not a JSON object"))));
 }
@@ -688,11 +783,14 @@ TEST_F(JSONFormatTest, DataEntryMissingSummaryName) {
 
   EXPECT_THAT(
       Result,
-      FailedWith(AllOf(HasSubstr("reading TUSummary from"),
-                       HasSubstr("failed to deserialize SummaryDataMap at "
-                                 "index 0"),
-                       HasSubstr("failed to deserialize SummaryDataMap entry"),
-                       HasSubstr("missing required field 'summary_name'"))));
+      FailedWith(
+          AllOf(HasSubstr("reading TUSummary from"),
+                HasSubstr("failed to read JSON array from field 'data'"),
+                HasSubstr("failed to deserialize SummaryDataMap at "
+                          "index 0"),
+                HasSubstr("failed to deserialize SummaryDataMap entry"),
+                HasSubstr("missing or invalid field 'summary_name' "
+                          "(expected string (analysis summary identifier))"))));
 }
 
 TEST_F(JSONFormatTest, DataEntryMissingData) {
@@ -712,6 +810,7 @@ TEST_F(JSONFormatTest, DataEntryMissingData) {
   EXPECT_THAT(Result,
               FailedWith(AllOf(
                   HasSubstr("reading TUSummary from"),
+                  HasSubstr("failed to read JSON array from field 'data'"),
                   HasSubstr("failed to deserialize SummaryDataMap at index 0"),
                   HasSubstr("failed to deserialize SummaryDataMap entry"),
                   HasSubstr("missing or invalid field 'summary_data'"))));
@@ -766,9 +865,11 @@ TEST_F(JSONFormatTest, EntityDataElementNotObject) {
       Result,
       FailedWith(AllOf(
           HasSubstr("reading TUSummary from"),
+          HasSubstr("failed to read JSON array from field 'data'"),
           HasSubstr("failed to deserialize SummaryDataMap at index 0"),
-          HasSubstr("failed to deserialize SummaryDataMap entry for summary "
-                    "'test_summary'"),
+          HasSubstr("failed to deserialize SummaryDataMap entry"),
+          HasSubstr("for summary 'test_summary'"),
+          HasSubstr("failed to read JSON array from field 'summary_data'"),
           HasSubstr("failed to deserialize EntityDataMap"),
           HasSubstr("element at index 0 is not a JSON object"),
           HasSubstr("(expected EntityDataMap entry with 'entity_id' and "
@@ -799,13 +900,15 @@ TEST_F(JSONFormatTest, EntityDataMissingEntityID) {
       Result,
       FailedWith(AllOf(
           HasSubstr("reading TUSummary from"),
+          HasSubstr("failed to read JSON array from field 'data'"),
           HasSubstr("failed to deserialize SummaryDataMap at index 0"),
-          HasSubstr("failed to deserialize SummaryDataMap entry for summary "
-                    "'test_summary'"),
+          HasSubstr("failed to deserialize SummaryDataMap entry"),
+          HasSubstr("for summary 'test_summary'"),
+          HasSubstr("failed to read JSON array from field 'summary_data'"),
           HasSubstr("failed to deserialize EntityDataMap at index 0"),
           HasSubstr("failed to deserialize EntityDataMap entry"),
-          HasSubstr("missing required field 'entity_id' (expected unsigned "
-                    "integer EntityId)"))));
+          HasSubstr("missing or invalid field 'entity_id' "
+                    "(expected unsigned integer EntityId)"))));
 }
 
 TEST_F(JSONFormatTest, EntityDataMissingEntitySummary) {
@@ -831,11 +934,14 @@ TEST_F(JSONFormatTest, EntityDataMissingEntitySummary) {
       Result,
       FailedWith(AllOf(
           HasSubstr("reading TUSummary from"),
+          HasSubstr("failed to read JSON array from field 'data'"),
           HasSubstr("failed to deserialize SummaryDataMap at index 0"),
-          HasSubstr("failed to deserialize SummaryDataMap entry for summary "
-                    "'test_summary'"),
+          HasSubstr("failed to deserialize SummaryDataMap entry"),
+          HasSubstr("for summary 'test_summary'"),
+          HasSubstr("failed to read JSON array from field 'summary_data'"),
           HasSubstr("failed to deserialize EntityDataMap at index 0"),
           HasSubstr("failed to deserialize EntityDataMap entry"),
+          HasSubstr("failed to read JSON object from field 'entity_summary'"),
           HasSubstr("missing or invalid field 'entity_summary'"),
           HasSubstr("(expected EntitySummary JSON object)"))));
 }
@@ -864,9 +970,11 @@ TEST_F(JSONFormatTest, EntityIDNotUInt64) {
       Result,
       FailedWith(AllOf(
           HasSubstr("reading TUSummary from"),
+          HasSubstr("failed to read JSON array from field 'data'"),
           HasSubstr("failed to deserialize SummaryDataMap at index 0"),
-          HasSubstr("failed to deserialize SummaryDataMap entry for summary "
-                    "'test_summary'"),
+          HasSubstr("failed to deserialize SummaryDataMap entry"),
+          HasSubstr("for summary 'test_summary'"),
+          HasSubstr("failed to read JSON array from field 'summary_data'"),
           HasSubstr("failed to deserialize EntityDataMap at index 0"),
           HasSubstr("failed to deserialize EntityDataMap entry"),
           HasSubstr("field 'entity_id' is not a valid unsigned 64-bit integer"),
@@ -897,11 +1005,14 @@ TEST_F(JSONFormatTest, EntitySummaryNoFormatInfo) {
       Result,
       FailedWith(AllOf(
           HasSubstr("reading TUSummary from"),
+          HasSubstr("failed to read JSON array from field 'data'"),
           HasSubstr("failed to deserialize SummaryDataMap at index 0"),
-          HasSubstr("failed to deserialize SummaryDataMap entry for summary "
-                    "'unknown_summary_type'"),
+          HasSubstr("failed to deserialize SummaryDataMap entry"),
+          HasSubstr("for summary 'unknown_summary_type'"),
+          HasSubstr("failed to read JSON array from field 'summary_data'"),
           HasSubstr("failed to deserialize EntityDataMap at index 0"),
           HasSubstr("failed to deserialize EntityDataMap entry"),
+          HasSubstr("failed to read JSON object from field 'entity_summary'"),
           HasSubstr("failed to deserialize EntitySummary"),
           HasSubstr("no FormatInfo was registered for summary name: "
                     "unknown_summary_type"))));
@@ -933,15 +1044,19 @@ TEST_F(JSONFormatTest, TestAnalysisMissingField) {
 
   EXPECT_THAT(
       Result,
-      FailedWith(AllOf(HasSubstr("reading TUSummary from"),
-                       HasSubstr("failed to deserialize SummaryDataMap at "
-                                 "index 0"),
-                       HasSubstr("failed to deserialize SummaryDataMap entry "
-                                 "for summary 'test_summary'"),
-                       HasSubstr("failed to deserialize EntityDataMap at "
-                                 "index 0"),
-                       HasSubstr("failed to deserialize EntityDataMap entry"),
-                       HasSubstr("missing required field 'pairs'"))));
+      FailedWith(AllOf(
+          HasSubstr("reading TUSummary from"),
+          HasSubstr("failed to read JSON array from field 'data'"),
+          HasSubstr("failed to deserialize SummaryDataMap at "
+                    "index 0"),
+          HasSubstr("failed to deserialize SummaryDataMap entry"),
+          HasSubstr("for summary 'test_summary'"),
+          HasSubstr("failed to read JSON array from field 'summary_data'"),
+          HasSubstr("failed to deserialize EntityDataMap at "
+                    "index 0"),
+          HasSubstr("failed to deserialize EntityDataMap entry"),
+          HasSubstr("failed to read JSON object from field 'entity_summary'"),
+          HasSubstr("missing required field 'pairs'"))));
 }
 
 TEST_F(JSONFormatTest, TestAnalysisInvalidPair) {
@@ -973,16 +1088,20 @@ TEST_F(JSONFormatTest, TestAnalysisInvalidPair) {
 
   EXPECT_THAT(
       Result,
-      FailedWith(AllOf(HasSubstr("reading TUSummary from"),
-                       HasSubstr("failed to deserialize SummaryDataMap at "
-                                 "index 0"),
-                       HasSubstr("failed to deserialize SummaryDataMap entry "
-                                 "for summary 'test_summary'"),
-                       HasSubstr("failed to deserialize EntityDataMap at "
-                                 "index 0"),
-                       HasSubstr("failed to deserialize EntityDataMap entry"),
-                       HasSubstr("missing or invalid 'second' field at "
-                                 "index 0"))));
+      FailedWith(AllOf(
+          HasSubstr("reading TUSummary from"),
+          HasSubstr("failed to read JSON array from field 'data'"),
+          HasSubstr("failed to deserialize SummaryDataMap at "
+                    "index 0"),
+          HasSubstr("failed to deserialize SummaryDataMap entry"),
+          HasSubstr("for summary 'test_summary'"),
+          HasSubstr("failed to read JSON array from field 'summary_data'"),
+          HasSubstr("failed to deserialize EntityDataMap at "
+                    "index 0"),
+          HasSubstr("failed to deserialize EntityDataMap entry"),
+          HasSubstr("failed to read JSON object from field 'entity_summary'"),
+          HasSubstr("missing or invalid 'second' field at "
+                    "index 0"))));
 }
 
 // ============================================================================

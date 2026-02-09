@@ -81,133 +81,41 @@ constexpr const char *FailedToValidateJSONFile =
 constexpr const char *FailedToReadFile = "failed to read file '{0}'";
 constexpr const char *FailedToReadJSONObject =
     "failed to read JSON object from file '{0}'";
+constexpr const char *FailedToReadJSONArray =
+    "failed to read JSON array from field '{0}'";
+constexpr const char *FailedToReadJSONObjectField =
+    "failed to read JSON object from field '{0}'";
 constexpr const char *FailedToOpenFile = "failed to open '{0}'";
 constexpr const char *WriteFailed = "write failed";
 
-// BuildNamespace errors
+// Generic deserialization error templates
+constexpr const char *FailedToDeserialize = "failed to deserialize {0}";
+constexpr const char *AtIndex = "at index {0}";
+constexpr const char *ForSummary = "for summary '{0}'";
+
+// Specific error details (to be stacked with FailedToDeserialize)
+constexpr const char *MissingOrInvalidField =
+    "missing or invalid field '{0}' (expected {1})";
+constexpr const char *ElementNotObject =
+    "element at index {0} is not a JSON object (expected {1})";
+constexpr const char *InvalidUInt64Field =
+    "field '{0}' is not a valid unsigned 64-bit integer (expected "
+    "non-negative EntityId value)";
+constexpr const char *DuplicateWithExistingId =
+    "duplicate {0} found at index {1} (EntityId={2} already exists in table)";
+constexpr const char *DuplicateEntityIdAtIndex =
+    "duplicate EntityId ({0}) found at index {1}";
+constexpr const char *DuplicateAtIndex =
+    "duplicate {0} '{1}' found at index {2}";
+
+// Special cases
 constexpr const char *InvalidBuildNamespaceKind =
     "invalid 'kind' BuildNamespaceKind value '{0}'";
-constexpr const char *MissingBuildNamespaceKind =
-    "failed to deserialize BuildNamespace: "
-    "missing required field 'kind' (expected BuildNamespaceKind)";
-constexpr const char *MissingBuildNamespaceName =
-    "failed to deserialize BuildNamespace: "
-    "missing required field 'name'";
-constexpr const char *FailedToDeserializeBuildNamespace =
-    "failed to deserialize BuildNamespace";
-
-// NestedBuildNamespace errors
-constexpr const char *NestedBuildNamespaceElementNotObject =
-    "failed to deserialize NestedBuildNamespace: "
-    "element at index {0} is not a JSON object "
-    "(expected BuildNamespace object)";
-constexpr const char *FailedToDeserializeNestedBuildNamespace =
-    "failed to deserialize NestedBuildNamespace at index {0}";
-
-// EntityName errors
-constexpr const char *MissingEntityNameUSR =
-    "failed to deserialize EntityName: "
-    "missing required field 'usr' (Unified Symbol Resolution string)";
-constexpr const char *MissingEntityNameSuffix =
-    "failed to deserialize EntityName: "
-    "missing required field 'suffix'";
-constexpr const char *MissingEntityNameNamespace =
-    "failed to deserialize EntityName: "
-    "missing or invalid field 'namespace' "
-    "(expected JSON array of BuildNamespace objects)";
-constexpr const char *FailedToDeserializeEntityName =
-    "failed to deserialize EntityName";
-
-// EntityIdTable entry errors
-constexpr const char *MissingEntityIdTableEntryName =
-    "failed to deserialize EntityIdTable entry: "
-    "missing or invalid field 'name' (expected EntityName JSON object)";
-constexpr const char *MissingEntityIdTableEntryId =
-    "failed to deserialize EntityIdTable entry: "
-    "missing required field 'id' (expected unsigned integer EntityId)";
-constexpr const char *InvalidEntityIdTableEntryId =
-    "failed to deserialize EntityIdTable entry: "
-    "field 'id' is not a valid unsigned 64-bit integer "
-    "(expected non-negative EntityId value)";
-constexpr const char *FailedToDeserializeEntityIdTableEntry =
-    "failed to deserialize EntityIdTable entry";
-
-// EntityIdTable errors
-constexpr const char *EntityIdTableElementNotObject =
-    "failed to deserialize EntityIdTable: "
-    "element at index {0} is not a JSON object "
-    "(expected EntityIdTable entry with 'id' and 'name' fields)";
-constexpr const char *FailedToDeserializeEntityIdTable =
-    "failed to deserialize EntityIdTable at index {0}";
-constexpr const char *DuplicateEntityName =
-    "failed to deserialize EntityIdTable: "
-    "duplicate EntityName found at index {0} "
-    "(EntityId={1} already exists in table)";
-
-// EntitySummary errors
-constexpr const char *NoFormatInfoForSummary =
-    "failed to deserialize EntitySummary: "
+constexpr const char *NoFormatInfoForSummaryName =
     "no FormatInfo was registered for summary name: {0}";
 
-// EntityDataMap entry errors
-constexpr const char *MissingEntityDataMapEntryEntityId =
-    "failed to deserialize EntityDataMap entry: "
-    "missing required field 'entity_id' (expected unsigned integer EntityId)";
-constexpr const char *InvalidEntityDataMapEntryEntityId =
-    "failed to deserialize EntityDataMap entry: "
-    "field 'entity_id' is not a valid unsigned 64-bit integer "
-    "(expected non-negative EntityId value)";
-constexpr const char *MissingEntityDataMapEntryEntitySummary =
-    "failed to deserialize EntityDataMap entry: "
-    "missing or invalid field 'entity_summary' "
-    "(expected EntitySummary JSON object)";
-constexpr const char *FailedToDeserializeEntityDataMapEntry =
-    "failed to deserialize EntityDataMap entry";
-
-// EntityDataMap errors
-constexpr const char *EntityDataMapElementNotObject =
-    "failed to deserialize EntityDataMap: "
-    "element at index {0} is not a JSON object "
-    "(expected EntityDataMap entry with 'entity_id' and 'entity_summary' "
-    "fields)";
-constexpr const char *FailedToDeserializeEntityDataMap =
-    "failed to deserialize EntityDataMap at index {0}";
-constexpr const char *DuplicateEntityId =
-    "failed to deserialize EntityDataMap: "
-    "duplicate EntityId ({0}) found at index {1}";
-
-// SummaryDataMap entry errors
-constexpr const char *MissingSummaryDataMapEntrySummaryName =
-    "failed to deserialize SummaryDataMap entry: "
-    "missing required field 'summary_name' "
-    "(expected string identifier for the analysis summary)";
-constexpr const char *MissingSummaryDataMapEntrySummaryData =
-    "failed to deserialize SummaryDataMap entry: "
-    "missing or invalid field 'summary_data' "
-    "(expected JSON array of entity data entries)";
-constexpr const char *FailedToDeserializeSummaryDataMapEntry =
-    "failed to deserialize SummaryDataMap entry for summary '{0}'";
-
-// SummaryDataMap errors
-constexpr const char *SummaryDataMapElementNotObject =
-    "failed to deserialize SummaryDataMap: "
-    "element at index {0} is not a JSON object "
-    "(expected SummaryDataMap entry with 'summary_name' and 'summary_data' "
-    "fields)";
-constexpr const char *FailedToDeserializeSummaryDataMap =
-    "failed to deserialize SummaryDataMap at index {0}";
-constexpr const char *DuplicateSummaryName =
-    "failed to deserialize SummaryDataMap: "
-    "duplicate SummaryName '{0}' found at index {1}";
-
-// TUSummary errors
+// Context messages
 constexpr const char *ReadingTUSummaryFrom = "reading TUSummary from '{0}'";
-constexpr const char *MissingTUNamespace =
-    "missing or invalid field 'tu_namespace' (expected JSON object)";
-constexpr const char *MissingIdTable =
-    "missing or invalid field 'id_table' (expected JSON array)";
-constexpr const char *MissingData =
-    "missing or invalid field 'data' (expected JSON array)";
 constexpr const char *WritingTUSummaryTo = "writing TUSummary to '{0}'";
 } // namespace ErrorMessages
 
@@ -372,21 +280,25 @@ llvm::Expected<BuildNamespace> JSONFormat::buildNamespaceFromJSON(
   auto OptBuildNamespaceKindStr = BuildNamespaceObject.getString("kind");
   if (!OptBuildNamespaceKindStr) {
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::MissingBuildNamespaceKind)
+        .context(ErrorMessages::FailedToDeserialize, "BuildNamespace")
+        .context(ErrorMessages::MissingOrInvalidField, "kind",
+                 "BuildNamespaceKind")
         .build();
   }
 
   auto ExpectedKind = buildNamespaceKindFromJSON(*OptBuildNamespaceKindStr);
   if (!ExpectedKind)
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::FailedToDeserializeBuildNamespace)
+        .context(ErrorMessages::FailedToDeserialize, "BuildNamespace")
+        .context("while parsing field 'kind'")
         .cause(ExpectedKind.takeError())
         .build();
 
   auto OptNameStr = BuildNamespaceObject.getString("name");
   if (!OptNameStr) {
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::MissingBuildNamespaceName)
+        .context(ErrorMessages::FailedToDeserialize, "BuildNamespace")
+        .context(ErrorMessages::MissingOrInvalidField, "name", "string")
         .build();
   }
 
@@ -419,15 +331,17 @@ llvm::Expected<NestedBuildNamespace> JSONFormat::nestedBuildNamespaceFromJSON(
         BuildNamespaceValue.getAsObject();
     if (!BuildNamespaceObject) {
       return ErrorBuilder(std::errc::invalid_argument)
-          .context(ErrorMessages::NestedBuildNamespaceElementNotObject, Index)
+          .context(ErrorMessages::FailedToDeserialize, "NestedBuildNamespace")
+          .context(ErrorMessages::ElementNotObject, Index,
+                   "BuildNamespace object")
           .build();
     }
 
     auto ExpectedBuildNamespace = buildNamespaceFromJSON(*BuildNamespaceObject);
     if (!ExpectedBuildNamespace)
       return ErrorBuilder(std::errc::invalid_argument)
-          .context(ErrorMessages::FailedToDeserializeNestedBuildNamespace,
-                   Index)
+          .context(ErrorMessages::FailedToDeserialize, "NestedBuildNamespace")
+          .context(ErrorMessages::AtIndex, Index)
           .cause(ExpectedBuildNamespace.takeError())
           .build();
 
@@ -459,14 +373,17 @@ llvm::Expected<EntityName> JSONFormat::entityNameFromJSON(
   const auto OptUSR = EntityNameObject.getString("usr");
   if (!OptUSR) {
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::MissingEntityNameUSR)
+        .context(ErrorMessages::FailedToDeserialize, "EntityName")
+        .context(ErrorMessages::MissingOrInvalidField, "usr",
+                 "string (Unified Symbol Resolution)")
         .build();
   }
 
   const auto OptSuffix = EntityNameObject.getString("suffix");
   if (!OptSuffix) {
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::MissingEntityNameSuffix)
+        .context(ErrorMessages::FailedToDeserialize, "EntityName")
+        .context(ErrorMessages::MissingOrInvalidField, "suffix", "string")
         .build();
   }
 
@@ -474,14 +391,17 @@ llvm::Expected<EntityName> JSONFormat::entityNameFromJSON(
       EntityNameObject.getArray("namespace");
   if (!OptNamespaceArray) {
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::MissingEntityNameNamespace)
+        .context(ErrorMessages::FailedToDeserialize, "EntityName")
+        .context(ErrorMessages::MissingOrInvalidField, "namespace",
+                 "JSON array of BuildNamespace objects")
         .build();
   }
 
   auto ExpectedNamespace = nestedBuildNamespaceFromJSON(*OptNamespaceArray);
   if (!ExpectedNamespace)
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::FailedToDeserializeEntityName)
+        .context(ErrorMessages::FailedToDeserialize, "EntityName")
+        .context(ErrorMessages::FailedToReadJSONArray, "namespace")
         .cause(ExpectedNamespace.takeError())
         .build();
 
@@ -508,14 +428,17 @@ JSONFormat::entityIdTableEntryFromJSON(
       EntityIdTableEntryObject.getObject("name");
   if (!OptEntityNameObject) {
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::MissingEntityIdTableEntryName)
+        .context(ErrorMessages::FailedToDeserialize, "EntityIdTable entry")
+        .context(ErrorMessages::MissingOrInvalidField, "name",
+                 "EntityName JSON object")
         .build();
   }
 
   auto ExpectedEntityName = entityNameFromJSON(*OptEntityNameObject);
   if (!ExpectedEntityName)
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::FailedToDeserializeEntityIdTableEntry)
+        .context(ErrorMessages::FailedToDeserialize, "EntityIdTable entry")
+        .context(ErrorMessages::FailedToReadJSONObjectField, "name")
         .cause(ExpectedEntityName.takeError())
         .build();
 
@@ -523,7 +446,9 @@ JSONFormat::entityIdTableEntryFromJSON(
       EntityIdTableEntryObject.get("id");
   if (!EntityIdIntValue) {
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::MissingEntityIdTableEntryId)
+        .context(ErrorMessages::FailedToDeserialize, "EntityIdTable entry")
+        .context(ErrorMessages::MissingOrInvalidField, "id",
+                 "unsigned integer EntityId")
         .build();
   }
 
@@ -531,7 +456,8 @@ JSONFormat::entityIdTableEntryFromJSON(
       EntityIdIntValue->getAsUINT64();
   if (!OptEntityIdInt) {
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::InvalidEntityIdTableEntryId)
+        .context(ErrorMessages::FailedToDeserialize, "EntityIdTable entry")
+        .context(ErrorMessages::InvalidUInt64Field, "id")
         .build();
   }
 
@@ -566,7 +492,9 @@ llvm::Expected<EntityIdTable> JSONFormat::entityIdTableFromJSON(
 
     if (!OptEntityIdTableEntryObject) {
       return ErrorBuilder(std::errc::invalid_argument)
-          .context(ErrorMessages::EntityIdTableElementNotObject, Index)
+          .context(ErrorMessages::FailedToDeserialize, "EntityIdTable")
+          .context(ErrorMessages::ElementNotObject, Index,
+                   "EntityIdTable entry with 'id' and 'name' fields")
           .build();
     }
 
@@ -574,7 +502,8 @@ llvm::Expected<EntityIdTable> JSONFormat::entityIdTableFromJSON(
         entityIdTableEntryFromJSON(*OptEntityIdTableEntryObject);
     if (!ExpectedEntityIdTableEntry)
       return ErrorBuilder(std::errc::invalid_argument)
-          .context(ErrorMessages::FailedToDeserializeEntityIdTable, Index)
+          .context(ErrorMessages::FailedToDeserialize, "EntityIdTable")
+          .context(ErrorMessages::AtIndex, Index)
           .cause(ExpectedEntityIdTableEntry.takeError())
           .build();
 
@@ -582,7 +511,8 @@ llvm::Expected<EntityIdTable> JSONFormat::entityIdTableFromJSON(
         Entities.emplace(std::move(*ExpectedEntityIdTableEntry));
     if (!EntityInserted) {
       return ErrorBuilder(std::errc::invalid_argument)
-          .context(ErrorMessages::DuplicateEntityName, Index,
+          .context(ErrorMessages::FailedToDeserialize, "EntityIdTable")
+          .context(ErrorMessages::DuplicateWithExistingId, "EntityName", Index,
                    getEntityIdIndex(EntityIt->second))
           .build();
     }
@@ -616,7 +546,8 @@ JSONFormat::entitySummaryFromJSON(const SummaryName &SN,
   auto InfoIt = FormatInfos.find(SN);
   if (InfoIt == FormatInfos.end()) {
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::NoFormatInfoForSummary, SN.str().data())
+        .context(ErrorMessages::FailedToDeserialize, "EntitySummary")
+        .context(ErrorMessages::NoFormatInfoForSummaryName, SN.str().data())
         .build();
   }
   const auto &InfoEntry = InfoIt->second;
@@ -656,7 +587,9 @@ JSONFormat::entityDataMapEntryFromJSON(
       EntityDataMapEntryObject.get("entity_id");
   if (!EntityIdIntValue) {
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::MissingEntityDataMapEntryEntityId)
+        .context(ErrorMessages::FailedToDeserialize, "EntityDataMap entry")
+        .context(ErrorMessages::MissingOrInvalidField, "entity_id",
+                 "unsigned integer EntityId")
         .build();
   }
 
@@ -664,7 +597,8 @@ JSONFormat::entityDataMapEntryFromJSON(
       EntityIdIntValue->getAsUINT64();
   if (!OptEntityIdInt) {
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::InvalidEntityDataMapEntryEntityId)
+        .context(ErrorMessages::FailedToDeserialize, "EntityDataMap entry")
+        .context(ErrorMessages::InvalidUInt64Field, "entity_id")
         .build();
   }
 
@@ -674,7 +608,9 @@ JSONFormat::entityDataMapEntryFromJSON(
       EntityDataMapEntryObject.getObject("entity_summary");
   if (!OptEntitySummaryObject) {
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::MissingEntityDataMapEntryEntitySummary)
+        .context(ErrorMessages::FailedToDeserialize, "EntityDataMap entry")
+        .context(ErrorMessages::MissingOrInvalidField, "entity_summary",
+                 "EntitySummary JSON object")
         .build();
   }
 
@@ -682,7 +618,8 @@ JSONFormat::entityDataMapEntryFromJSON(
       entitySummaryFromJSON(SN, *OptEntitySummaryObject, IdTable);
   if (!ExpectedEntitySummary)
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::FailedToDeserializeEntityDataMapEntry)
+        .context(ErrorMessages::FailedToDeserialize, "EntityDataMap entry")
+        .context(ErrorMessages::FailedToReadJSONObjectField, "entity_summary")
         .cause(ExpectedEntitySummary.takeError())
         .build();
 
@@ -706,7 +643,10 @@ JSONFormat::entityDataMapFromJSON(const SummaryName &SN,
         EntityDataMapEntryValue.getAsObject();
     if (!OptEntityDataMapEntryObject) {
       return ErrorBuilder(std::errc::invalid_argument)
-          .context(ErrorMessages::EntityDataMapElementNotObject, Index)
+          .context(ErrorMessages::FailedToDeserialize, "EntityDataMap")
+          .context(ErrorMessages::ElementNotObject, Index,
+                   "EntityDataMap entry with 'entity_id' and 'entity_summary' "
+                   "fields")
           .build();
     }
 
@@ -714,7 +654,8 @@ JSONFormat::entityDataMapFromJSON(const SummaryName &SN,
         entityDataMapEntryFromJSON(*OptEntityDataMapEntryObject, SN, IdTable);
     if (!ExpectedEntityDataMapEntry)
       return ErrorBuilder(std::errc::invalid_argument)
-          .context(ErrorMessages::FailedToDeserializeEntityDataMap, Index)
+          .context(ErrorMessages::FailedToDeserialize, "EntityDataMap")
+          .context(ErrorMessages::AtIndex, Index)
           .cause(ExpectedEntityDataMapEntry.takeError())
           .build();
 
@@ -722,7 +663,8 @@ JSONFormat::entityDataMapFromJSON(const SummaryName &SN,
         EntityDataMap.insert(std::move(*ExpectedEntityDataMapEntry));
     if (!DataInserted) {
       return ErrorBuilder(std::errc::invalid_argument)
-          .context(ErrorMessages::DuplicateEntityId,
+          .context(ErrorMessages::FailedToDeserialize, "EntityDataMap")
+          .context(ErrorMessages::DuplicateEntityIdAtIndex,
                    getEntityIdIndex(DataIt->first), Index)
           .build();
     }
@@ -761,7 +703,9 @@ JSONFormat::summaryDataMapEntryFromJSON(
 
   if (!OptSummaryNameStr) {
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::MissingSummaryDataMapEntrySummaryName)
+        .context(ErrorMessages::FailedToDeserialize, "SummaryDataMap entry")
+        .context(ErrorMessages::MissingOrInvalidField, "summary_name",
+                 "string (analysis summary identifier)")
         .build();
   }
 
@@ -771,7 +715,9 @@ JSONFormat::summaryDataMapEntryFromJSON(
       SummaryDataMapEntryObject.getArray("summary_data");
   if (!OptEntityDataArray) {
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::MissingSummaryDataMapEntrySummaryData)
+        .context(ErrorMessages::FailedToDeserialize, "SummaryDataMap entry")
+        .context(ErrorMessages::MissingOrInvalidField, "summary_data",
+                 "JSON array of entity data entries")
         .build();
   }
 
@@ -779,8 +725,9 @@ JSONFormat::summaryDataMapEntryFromJSON(
       entityDataMapFromJSON(SN, *OptEntityDataArray, IdTable);
   if (!ExpectedEntityDataMap)
     return ErrorBuilder(std::errc::invalid_argument)
-        .context(ErrorMessages::FailedToDeserializeSummaryDataMapEntry,
-                 SN.str().data())
+        .context(ErrorMessages::FailedToDeserialize, "SummaryDataMap entry")
+        .context(ErrorMessages::ForSummary, SN.str().data())
+        .context(ErrorMessages::FailedToReadJSONArray, "summary_data")
         .cause(ExpectedEntityDataMap.takeError())
         .build();
 
@@ -814,7 +761,10 @@ JSONFormat::summaryDataMapFromJSON(const llvm::json::Array &SummaryDataArray,
         SummaryDataMapEntryValue.getAsObject();
     if (!OptSummaryDataMapEntryObject) {
       return ErrorBuilder(std::errc::invalid_argument)
-          .context(ErrorMessages::SummaryDataMapElementNotObject, Index)
+          .context(ErrorMessages::FailedToDeserialize, "SummaryDataMap")
+          .context(ErrorMessages::ElementNotObject, Index,
+                   "SummaryDataMap entry with 'summary_name' and "
+                   "'summary_data' fields")
           .build();
     }
 
@@ -822,7 +772,8 @@ JSONFormat::summaryDataMapFromJSON(const llvm::json::Array &SummaryDataArray,
         summaryDataMapEntryFromJSON(*OptSummaryDataMapEntryObject, IdTable);
     if (!ExpectedSummaryDataMapEntry)
       return ErrorBuilder(std::errc::invalid_argument)
-          .context(ErrorMessages::FailedToDeserializeSummaryDataMap, Index)
+          .context(ErrorMessages::FailedToDeserialize, "SummaryDataMap")
+          .context(ErrorMessages::AtIndex, Index)
           .cause(ExpectedSummaryDataMapEntry.takeError())
           .build();
 
@@ -830,7 +781,8 @@ JSONFormat::summaryDataMapFromJSON(const llvm::json::Array &SummaryDataArray,
         SummaryDataMap.emplace(std::move(*ExpectedSummaryDataMapEntry));
     if (!SummaryInserted) {
       return ErrorBuilder(std::errc::invalid_argument)
-          .context(ErrorMessages::DuplicateSummaryName,
+          .context(ErrorMessages::FailedToDeserialize, "SummaryDataMap")
+          .context(ErrorMessages::DuplicateAtIndex, "SummaryName",
                    SummaryIt->first.str().data(), Index)
           .build();
     }
@@ -871,7 +823,8 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
   if (!TUNamespaceObject) {
     return ErrorBuilder(std::errc::invalid_argument)
         .context(ErrorMessages::ReadingTUSummaryFrom, Path.str().c_str())
-        .context(ErrorMessages::MissingTUNamespace)
+        .context(ErrorMessages::MissingOrInvalidField, "tu_namespace",
+                 "JSON object")
         .build();
   }
 
@@ -890,7 +843,8 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
     if (!IdTableArray) {
       return ErrorBuilder(std::errc::invalid_argument)
           .context(ErrorMessages::ReadingTUSummaryFrom, Path.str().c_str())
-          .context(ErrorMessages::MissingIdTable)
+          .context(ErrorMessages::MissingOrInvalidField, "id_table",
+                   "JSON array")
           .build();
     }
 
@@ -898,6 +852,7 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
     if (!ExpectedIdTable)
       return ErrorBuilder(std::errc::invalid_argument)
           .context(ErrorMessages::ReadingTUSummaryFrom, Path.str().c_str())
+          .context(ErrorMessages::FailedToReadJSONArray, "id_table")
           .cause(ExpectedIdTable.takeError())
           .build();
 
@@ -910,7 +865,7 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
     if (!SummaryDataArray) {
       return ErrorBuilder(std::errc::invalid_argument)
           .context(ErrorMessages::ReadingTUSummaryFrom, Path.str().c_str())
-          .context(ErrorMessages::MissingData)
+          .context(ErrorMessages::MissingOrInvalidField, "data", "JSON array")
           .build();
     }
 
@@ -919,6 +874,7 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
     if (!ExpectedSummaryDataMap)
       return ErrorBuilder(std::errc::invalid_argument)
           .context(ErrorMessages::ReadingTUSummaryFrom, Path.str().c_str())
+          .context(ErrorMessages::FailedToReadJSONArray, "data")
           .cause(ExpectedSummaryDataMap.takeError())
           .build();
 
