@@ -4254,6 +4254,17 @@ let Predicates = [HasSVEAES, HasNonStreamingSVE_or_SSVE_AES] in {
   defm PMULLT_ZZZ_Q : sve2_wide_int_arith_pmul<0b00, 0b11011, "pmullt", int_aarch64_sve_pmullt_pair>;
 }
 
+let Predicates = [HasSVEAES, HasSVE2_or_SME] in {
+  def : Pat<(nxv2i64 (clmul nxv2i64:$Rn, nxv2i64:$Rm)),
+            (ZIP1_ZZZ_D (UZP1_ZZZ_D (PMULLB_ZZZ_Q $Rn, $Rm), (PMULLT_ZZZ_Q $Rn, $Rm)),
+                        (UZP1_ZZZ_D (PMULLT_ZZZ_Q $Rn, $Rm), (PMULLT_ZZZ_Q $Rn, $Rm)))>;
+}
+let Predicates = [HasSVE2_or_SME] in {
+  def : Pat<(nxv4i32 (clmul nxv4i32:$Rn, nxv4i32:$Rm)),
+            (ZIP1_ZZZ_S (UZP1_ZZZ_S (PMULLB_ZZZ_D $Rn, $Rm), (PMULLT_ZZZ_D $Rn, $Rm)),
+                        (UZP1_ZZZ_S (PMULLT_ZZZ_D $Rn, $Rm), (PMULLT_ZZZ_D $Rn, $Rm)))>;
+}
+
 let Predicates = [HasSVESM4] in {
   // SVE2 crypto constructive binary operations
   defm SM4EKEY_ZZZ_S : sve2_crypto_cons_bin_op<0b0, "sm4ekey", ZPR32, int_aarch64_sve_sm4ekey, nxv4i32>;
