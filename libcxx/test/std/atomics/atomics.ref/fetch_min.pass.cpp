@@ -43,12 +43,18 @@ struct TestFetchMin {
       std::same_as<T> decltype(auto) y = a.fetch_min(T(2));
       assert(y == T(3));
       assert(x == T(2));
+      y = a.fetch_min(T(4));
+      assert(y == T(2));
+      assert(x == T(2));
       ASSERT_NOEXCEPT(a.fetch_min(T(0)));
     }
 
     {
       std::same_as<T> decltype(auto) y = a.fetch_min(T(1), std::memory_order_relaxed);
       assert(y == T(2));
+      assert(x == T(1));
+      y = a.fetch_min(T(4));
+      assert(y == T(1));
       assert(x == T(1));
       ASSERT_NOEXCEPT(a.fetch_min(T(0), std::memory_order_relaxed));
     }

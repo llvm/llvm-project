@@ -43,13 +43,19 @@ struct TestFetchMax {
       std::same_as<T> decltype(auto) y = a.fetch_max(T(2));
       assert(y == T(1));
       assert(x == T(2));
+      y = a.fetch_max(T(0));
+      assert(y == T(2));
+      assert(x == T(2));
       ASSERT_NOEXCEPT(a.fetch_max(T(0)));
     }
 
     {
-      std::same_as<T> decltype(auto) y = a.fetch_max(T(1), std::memory_order_relaxed);
+      std::same_as<T> decltype(auto) y = a.fetch_max(T(3), std::memory_order_relaxed);
       assert(y == T(2));
-      assert(x == T(2));
+      assert(x == T(3));
+      y = a.fetch_max(T(0));
+      assert(y == T(3));
+      assert(x == T(3));
       ASSERT_NOEXCEPT(a.fetch_max(T(0), std::memory_order_relaxed));
     }
   }

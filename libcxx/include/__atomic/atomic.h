@@ -16,6 +16,8 @@
 #include <__atomic/is_always_lock_free.h>
 #include <__atomic/memory_order.h>
 #include <__atomic/support.h>
+#include <__concepts/arithmetic.h>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
 #include <__memory/addressof.h>
