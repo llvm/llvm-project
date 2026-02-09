@@ -16,12 +16,51 @@
 #include "lldb/ValueObject/ValueObject.h"
 
 #include <algorithm>
-#include <string>
+#include <cinttypes>
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 using namespace lldb_private::formatters::swift;
+
+// Writes a character value to the stream with appropriate escaping.
+// Printable ASCII characters (0x20-0x7E) are written directly, except for
+// backslash and double-quote which are escaped. Non-printable characters
+// use "\x{XX}" format (or "\x{XXXX}" on 16-bit wide char platforms).
+static void WriteChar(Stream &stream, uint64_t value, bool is_wide_char) {
+  // Handle special escape characters
+  switch (value) {
+  case '\n':
+    stream << "\\n";
+    return;
+  case '\r':
+    stream << "\\r";
+    return;
+  case '\t':
+    stream << "\\t";
+    return;
+  case '\\':
+    stream << "\\\\";
+    return;
+  case '"':
+    stream << "\\\"";
+    return;
+  default:
+    break;
+  }
+
+  // Printable ASCII (0x20 space through 0x7E tilde)
+  if (value >= 0x20 && value <= 0x7E) {
+    stream << static_cast<char>(value);
+    return;
+  }
+
+  // Non-printable: use "\x{XX}" format (or "\x{XXXX}" for 16-bit wide char)
+  if (is_wide_char)
+    stream.Printf("\\x{%04" PRIX64 "}", value & 0xFFFF);
+  else
+    stream.Printf("\\x{%02" PRIX64 "}", value & 0xFF);
+}
 
 bool lldb_private::formatters::swift::FilePath_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
@@ -59,8 +98,20 @@ bool lldb_private::formatters::swift::FilePath_SummaryProvider(
   const uint32_t max_path_length = 4096;
   uint32_t path_length = std::min(num_children - 1, max_path_length);
 
-  std::string path;
-  path.reserve(path_length);
+  // Detect if we're dealing with 16-bit characters (Windows) by
+  // checking the byte size of the first character's rawValue.
+  bool is_wide_char = false;
+  if (path_length > 0) {
+    if (ValueObjectSP first_char_sp = storage_sp->GetChildAtIndex(0)) {
+      if (ValueObjectSP first_raw_sp =
+              first_char_sp->GetChildAtNamePath({g_rawValue})) {
+        if (auto byte_size = first_raw_sp->GetByteSize())
+          is_wide_char = *byte_size > 1;
+      }
+    }
+  }
+
+  stream << '"';
 
   for (uint32_t i = 0; i < path_length; ++i) {
     ValueObjectSP char_sp = storage_sp->GetChildAtIndex(i);
@@ -77,16 +128,15 @@ bool lldb_private::formatters::swift::FilePath_SummaryProvider(
     if (!raw_value_sp)
       return false;
 
-    int64_t byte_value = raw_value_sp->GetValueAsSigned(0);
+    uint64_t value = raw_value_sp->GetValueAsUnsigned(0);
 
     // Stop if we reach an early null-terminator
-    if (byte_value == 0)
+    if (value == 0)
       break;
 
-    // On Windows, SystemChar is UInt16 (UTF-16). This truncates non-ASCII.
-    path.push_back(static_cast<char>(byte_value));
+    WriteChar(stream, value, is_wide_char);
   }
 
-  stream << '"' << path << '"';
+  stream << '"';
   return true;
 }
