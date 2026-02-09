@@ -90,7 +90,7 @@ class RISCVTuneProcessorModel<string n, SchedMachineModel m,
 }
 
 defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore,
-                              FeatureEnableSelectOptimize];
+                              TuneEnableSelectOptimize];
 
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
                                        NoSchedModel,
@@ -426,6 +426,7 @@ def SIFIVE_P470 : RISCVProcessorModel<"sifive-p470", SiFiveP400Model,
                                                    TuneVXRMPipelineFlush])>;
 
 defvar SiFiveP500TuneFeatures = [TuneNoDefaultUnroll,
+                                 TuneEnableSelectOptimize,
                                  TuneConditionalCompressedMoveFusion,
                                  TuneLUIADDIFusion,
                                  TuneAUIPCADDIFusion,
@@ -441,8 +442,7 @@ def SIFIVE_P550 : RISCVProcessorModel<"sifive-p550", SiFiveP500Model,
                                        FeatureStdExtD,
                                        FeatureStdExtC,
                                        FeatureStdExtZba,
-                                       FeatureStdExtZbb,
-                                       FeatureEnableSelectOptimize],
+                                       FeatureStdExtZbb],
                                       SiFiveP500TuneFeatures> {
   let MVendorID = 0x489;
   let MArchID = 0x8000000000000008;
@@ -765,12 +765,12 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
                                         FeatureStdExtZvkt,
                                         FeatureStdExtZvl256b,
                                         FeatureVendorXSMTVDot,
-                                        FeatureUnalignedScalarMem,
-                                        FeatureEnableSelectOptimize]),
+                                        FeatureUnalignedScalarMem]),
                                        [TuneDLenFactor2,
                                         TuneOptimizedNF2SegmentLoadStore,
                                         TuneOptimizedNF3SegmentLoadStore,
                                         TuneOptimizedNF4SegmentLoadStore,
+                                        TuneEnableSelectOptimize,
                                         TuneVXRMPipelineFlush]> {
   let MVendorID = 0x710;
   let MArchID = 0x8000000058000001;
