@@ -29,7 +29,23 @@ let Predicates = [HasStdExtZvabd] in {
 //===----------------------------------------------------------------------===//
 // Pseudos
 //===----------------------------------------------------------------------===//
+
+multiclass PseudoVABS {
+  foreach m = MxList in {
+    defvar mx = m.MX;
+    let VLMul = m.value in {
+      def "_V_" # mx : VPseudoUnaryNoMask<m.vrclass, m.vrclass>,
+                       SchedUnary<"WriteVIALUV", "ReadVIALUV", mx, forcePassthruRead=true>;
+      def "_V_" # mx # "_MASK" :
+        VPseudoUnaryMask<m.vrclass, m.vrclass>,
+        RISCVMaskedPseudo<MaskIdx=2>,
+        SchedUnary<"WriteVIALUV", "ReadVIALUV", mx, forcePassthruRead=true>;
+    }
+  }
+}
+
 let Predicates = [HasStdExtZvabd] in {
+  defm PseudoVABS : PseudoVABS;
   defm PseudoVABD : VPseudoVALU_VV<Commutable = 1>;
   defm PseudoVABDU : VPseudoVALU_VV<Commutable = 1>;
 } // Predicates = [HasStdExtZvabd]
@@ -38,6 +54,7 @@ let Predicates = [HasStdExtZvabd] in {
 // CodeGen Patterns
 //===----------------------------------------------------------------------===//
 let HasPassthruOp = true, HasMaskOp = true in {
+def riscv_abs_vl  : RVSDNode<"ABS_VL", SDT_RISCVIntUnOp_VL>;
 def riscv_abds_vl : RVSDNode<"ABDS_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 def riscv_abdu_vl : RVSDNode<"ABDU_VL", SDT_RISCVIntBinOp_VL, [SDNPCommutative]>;
 } // let HasPassthruOp = true, HasMaskOp = true
@@ -53,4 +70,13 @@ defm : VPatBinarySDNode_VV<abdu, "PseudoVABDU", ABDIntVectors>;
 
 defm : VPatBinaryVL_VV<riscv_abds_vl, "PseudoVABD", ABDIntVectors>;
 defm : VPatBinaryVL_VV<riscv_abdu_vl, "PseudoVABDU", ABDIntVectors>;
+
+foreach vti = AllIntegerVectors in {
+  def : Pat<(vti.Vector (abs (vti.Vector vti.RegClass:$rs2))),
+            (!cast<Instruction>("PseudoVABS_V_"#vti.LMul.MX)
+                    (vti.Vector (IMPLICIT_DEF)),
+                    vti.RegClass:$rs2, vti.AVL, vti.Log2SEW, TA_MA)>;
+}
+
+defm : VPatUnaryVL_V<riscv_abs_vl, "PseudoVABS", HasStdExtZvabd>;
 } // Predicates = [HasStdExtZvabd]
