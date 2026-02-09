@@ -29,21 +29,21 @@ define void @large_base_offset(ptr addrspace(1) writeonly %out, i32 %idx) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %36 = and i32 %idx, 15
-  %37 = shl nuw nsw i32 %36, 10
-  %38 = and i32 %idx, 16
-  %39 = shl nuw nsw i32 %38, 1
-  %40 = or disjoint i32 %39, %37
-  %41 = shl nuw nsw i32 %36, 5
-  %42 = getelementptr i8, ptr addrspace(3) @global_smem, i32 67584
-  %67 = or disjoint i32 %40, 16384
-  %68 = lshr exact i32 %67, 5
-  %69 = and i32 %68, 992
-  %70 = getelementptr inbounds nuw i8, ptr addrspace(3) %42, i32 %67
-  %71 = getelementptr inbounds nuw i8, ptr addrspace(3) %70, i32 %69
-  %72 = load <16 x half>, ptr addrspace(3) %71, align 32
-  %424 = shufflevector <16 x half> %72, <16 x half> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  store <8 x half> %424, ptr addrspace(1) %out, align 16
+  %idx_low_bits = and i32 %idx, 15
+  %row_offset = shl nuw nsw i32 %idx_low_bits, 10
+  %idx_bit4 = and i32 %idx, 16
+  %idx_bit4_shifted = shl nuw nsw i32 %idx_bit4, 1
+  %combined_offset = or disjoint i32 %idx_bit4_shifted, %row_offset
+  %lane_offset = shl nuw nsw i32 %idx_low_bits, 5
+  %lds_large_base = getelementptr i8, ptr addrspace(3) @global_smem, i32 67584
+  %combined_offset_with_stride = or disjoint i32 %combined_offset, 16384
+  %aligned_offset = lshr exact i32 %combined_offset_with_stride, 5
+  %row_alignment = and i32 %aligned_offset, 992
+  %lds_vector_ptr = getelementptr inbounds nuw i8, ptr addrspace(3) %lds_large_base, i32 %combined_offset_with_stride
+  %lds_lane_ptr = getelementptr inbounds nuw i8, ptr addrspace(3) %lds_vector_ptr, i32 %row_alignment
+  %lds_wide_load = load <16 x half>, ptr addrspace(3) %lds_lane_ptr, align 32
+  %upper_half = shufflevector <16 x half> %lds_wide_load, <16 x half> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <8 x half> %upper_half, ptr addrspace(1) %out, align 16
   ret void
 }
 
@@ -69,20 +69,20 @@ define void @small_base_offset(ptr addrspace(1) writeonly %out, i32 %idx) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %36 = and i32 %idx, 15
-  %37 = shl nuw nsw i32 %36, 10
-  %38 = and i32 %idx, 16
-  %39 = shl nuw nsw i32 %38, 1
-  %40 = or disjoint i32 %39, %37
-  %41 = shl nuw nsw i32 %36, 5
-  %42 = getelementptr i8, ptr addrspace(3) @global_smem, i32 4
-  %67 = or disjoint i32 %40, 16384
-  %68 = lshr exact i32 %67, 5
-  %69 = and i32 %68, 992
-  %70 = getelementptr inbounds nuw i8, ptr addrspace(3) %42, i32 %67
-  %71 = getelementptr inbounds nuw i8, ptr addrspace(3) %70, i32 %69
-  %72 = load <16 x half>, ptr addrspace(3) %71, align 32
-  %424 = shufflevector <16 x half> %72, <16 x half> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  store <8 x half> %424, ptr addrspace(1) %out, align 16
+  %idx_low_bits = and i32 %idx, 15
+  %row_offset = shl nuw nsw i32 %idx_low_bits, 10
+  %idx_bit4 = and i32 %idx, 16
+  %idx_bit4_shifted = shl nuw nsw i32 %idx_bit4, 1
+  %combined_offset = or disjoint i32 %idx_bit4_shifted, %row_offset
+  %lane_offset = shl nuw nsw i32 %idx_low_bits, 5
+  %lds_small_base = getelementptr i8, ptr addrspace(3) @global_smem, i32 4
+  %combined_offset_with_stride = or disjoint i32 %combined_offset, 16384
+  %aligned_offset = lshr exact i32 %combined_offset_with_stride, 5
+  %row_alignment = and i32 %aligned_offset, 992
+  %lds_vector_ptr = getelementptr inbounds nuw i8, ptr addrspace(3) %lds_small_base, i32 %combined_offset_with_stride
+  %lds_lane_ptr = getelementptr inbounds nuw i8, ptr addrspace(3) %lds_vector_ptr, i32 %row_alignment
+  %lds_wide_load = load <16 x half>, ptr addrspace(3) %lds_lane_ptr, align 32
+  %upper_half = shufflevector <16 x half> %lds_wide_load, <16 x half> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <8 x half> %upper_half, ptr addrspace(1) %out, align 16
   ret void
 }

@@ -1097,22 +1097,18 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
       // If the addressing mode was not legal and the base byte offset was not
       // 0, it could be a case where the total offset became too large for
       // the addressing mode. Try again without extracting the base offset.
-      if (ExtractBase) {
-        ExtractBase = false;
-        BaseByteOffset = APInt(IdxWidth, 0);
-        AccumulativeByteOffset = NonBaseByteOffset;
-        if (TTI.isLegalAddressingMode(
-                GEP->getResultElementType(),
-                /*BaseGV=*/nullptr, AccumulativeByteOffset.getSExtValue(),
-                /*HasBaseReg=*/true, /*Scale=*/0, AddrSpace)) {
-          // We can proceed with just extracting the other (non-base) offsets.
-          NeedsExtraction = true;
-        } else {
-          return Changed;
-        }
-      } else {
+      if (!ExtractBase)
         return Changed;
-      }
+      ExtractBase = false;
+      BaseByteOffset = APInt(IdxWidth, 0);
+      AccumulativeByteOffset = NonBaseByteOffset;
+      if (!TTI.isLegalAddressingMode(
+              GEP->getResultElementType(),
+              /*BaseGV=*/nullptr, AccumulativeByteOffset.getSExtValue(),
+              /*HasBaseReg=*/true, /*Scale=*/0, AddrSpace))
+        return Changed;
+      // We can proceed with just extracting the other (non-base) offsets.
+      NeedsExtraction = true;
     }
   }
 
