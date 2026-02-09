@@ -58,8 +58,7 @@ define i1 @icmp_ne_comm(i1 %x, i1 %y) {
   ret i1 %result
 }
 
-; Different bit zext target bit width
-
+; Different zext target bit width
 define i1 @icmp_eq_64(i1 %x, i1 %y) {
 ; CHECK-LABEL: define i1 @icmp_eq_64(
 ; CHECK-SAME: i1 [[X:%.*]], i1 [[Y:%.*]]) {
