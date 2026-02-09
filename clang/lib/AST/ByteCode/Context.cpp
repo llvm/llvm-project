@@ -245,6 +245,9 @@ bool Context::evaluateString(State &Parent, const Expr *E,
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
   auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    if (!Ptr.isBlockPointer())
+      return false;
+
     const Descriptor *FieldDesc = Ptr.getFieldDesc();
     if (!FieldDesc->isPrimitiveArray())
       return false;
@@ -291,6 +294,9 @@ std::optional<uint64_t> Context::evaluateStrlen(State &Parent, const Expr *E) {
 
   std::optional<uint64_t> Result;
   auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    if (!Ptr.isBlockPointer())
+      return false;
+
     const Descriptor *FieldDesc = Ptr.getFieldDesc();
     if (!FieldDesc->isPrimitiveArray())
       return false;
