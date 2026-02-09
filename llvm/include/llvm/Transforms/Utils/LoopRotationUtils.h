@@ -37,7 +37,8 @@ LLVM_ABI bool LoopRotation(Loop *L, LoopInfo *LI,
                            DominatorTree *DT, ScalarEvolution *SE,
                            MemorySSAUpdater *MSSAU, const SimplifyQuery &SQ,
                            bool RotationOnly, unsigned Threshold,
-                           bool IsUtilMode, bool PrepareForLTO = false);
+                           bool IsUtilMode, bool PrepareForLTO = false,
+                           bool RotateComputable = true);
 
 } // namespace llvm
 
