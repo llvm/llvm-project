@@ -8855,8 +8855,8 @@ static SDValue determineFloatSign(SDValue N, SelectionDAG &DAG, bool Positive) {
   EVT IntVT = VT.changeTypeToInteger();
   SDValue NTrunc = N;
   if (!TLI.isTypeLegal(IntVT)) {
-    EVT FloatVT = VT.changeElementType(MVT::f32);
-    IntVT = VT.changeElementType(MVT::i32);
+    EVT FloatVT = VT.changeElementType(*DAG.getContext(), MVT::f32);
+    IntVT = VT.changeElementType(*DAG.getContext(), MVT::i32);
     NTrunc = DAG.getNode(ISD::FP_ROUND, DL, FloatVT, N,
                          DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
   }
@@ -8910,9 +8910,8 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
         (!DAG.isKnownNeverNaN(RHS) || !DAG.isKnownNeverNaN(LHS))) {
       ConstantFP *FPNaN = ConstantFP::get(
           *DAG.getContext(), APFloat::getNaN(VT.getFltSemantics()));
-      MinMax =
-          DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, LHS, RHS, ISD::SETUO),
-                        DAG.getConstantFP(*FPNaN, DL, VT), MinMax, Flags);
+      MinMax = DAG.getSelectCC(DL, LHS, RHS, DAG.getConstantFP(*FPNaN, DL, VT),
+                               MinMax, ISD::SETUO, Flags);
     }
     return MinMax;
   }
@@ -8921,12 +8920,9 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
     return DAG.UnrollVectorOp(N);
 
   if (!Flags.hasNoNaNs() && !DAG.isKnownNeverNaN(RHS))
-    LHS = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, RHS, RHS, ISD::SETUO),
-                        RHS, LHS, Flags);
+    LHS = DAG.getSelectCC(DL, RHS, RHS, RHS, LHS, ISD::SETUO, Flags);
   MinMax = DAG.getSelectCC(DL, LHS, RHS, LHS, RHS,
                            IsMax ? ISD::SETUGT : ISD::SETULT);
-
-  // TODO: We need quiet sNaN if strictfp.
 
   // fminimum/fmaximum requires -0.0 less than +0.0
   bool LHSNotZero = DAG.isKnownNeverZeroFloat(LHS);
