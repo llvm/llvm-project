@@ -775,7 +775,7 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
 }
 
 def SPACEMIT_X100 : RISCVProcessorModel<"spacemit-x100",
-                                        NoSchedModel,
+                                        SpacemitX100Model,
                                         !listconcat(RVA23U64Features,
                                         [FeatureStdExtZbc,
                                          FeatureStdExtZbkc,
