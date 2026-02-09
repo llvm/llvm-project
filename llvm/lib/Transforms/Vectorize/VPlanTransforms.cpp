@@ -4001,6 +4001,16 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
     VPValue *CondToExit;
   };
 
+  // Helper to check if a VPValue's definition dominates the latch.
+  // Live-in values (with no defining recipe) dominate everything.
+  VPDominatorTree VPDT(Plan);
+  [[maybe_unused]] auto DominatesLatch = [&VPDT, LatchVPBB](VPValue *V) {
+    VPRecipeBase *DefRecipe = V->getDefiningRecipe();
+    if (!DefRecipe)
+      return true;
+    return VPDT.properlyDominates(DefRecipe->getParent(), LatchVPBB);
+  };
+
   VPBuilder Builder(LatchVPBB->getTerminator());
   SmallVector<EarlyExitInfo> Exits;
   for (VPIRBasicBlock *ExitBlock : Plan.getExitBlocks()) {
@@ -4018,6 +4028,8 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
       auto *CondToEarlyExit = TrueSucc == ExitBlock
                                   ? CondOfEarlyExitingVPBB
                                   : Builder.createNot(CondOfEarlyExitingVPBB);
+      assert(DominatesLatch(CondOfEarlyExitingVPBB) &&
+             "exit condition must dominate the latch");
       Exits.push_back({
           EarlyExitingVPBB,
           ExitBlock,
@@ -4026,29 +4038,17 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
     }
   }
 
+  assert(!Exits.empty() && "must have at least one early exit");
   // Sort exits by dominance to get the correct program order.
-  VPDominatorTree VPDT(Plan);
   llvm::sort(Exits, [&VPDT](const EarlyExitInfo &A, const EarlyExitInfo &B) {
     return VPDT.dominates(A.EarlyExitingVPBB, B.EarlyExitingVPBB);
   });
 
-  // Helper to check if a VPValue's definition dominates the latch.
-  // Live-in values (with no defining recipe) dominate everything.
-  auto DominatesLatch = [&VPDT, LatchVPBB](VPValue *V) {
-    VPRecipeBase *DefRecipe = V->getDefiningRecipe();
-    if (!DefRecipe)
-      return true;
-    return VPDT.dominates(DefRecipe->getParent(), LatchVPBB);
-  };
-
   // Build the AnyOf condition for the latch terminator.
   VPValue *Combined = Exits[0].CondToExit;
-  assert(DominatesLatch(Combined) && "All conditions must dominate the latch");
-  for (const auto &[_, _1, CondToExit] : drop_begin(Exits)) {
-    assert(DominatesLatch(CondToExit) &&
-           "All conditions must dominate the latch");
+  for (const auto &[_, _1, CondToExit] : drop_begin(Exits))
     Combined = Builder.createOr(Combined, CondToExit);
-  }
+
   VPValue *IsAnyExitTaken =
       Builder.createNaryOp(VPInstruction::AnyOf, {Combined});
 
@@ -4154,7 +4154,6 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
     }
   }
 
-  if (Exits.size() != 1) {
     // Chain through exits: for each exit, check if its condition is true at
     // the first active lane. If so, take that exit; otherwise, try the next.
     // The last exit needs no check since it must be taken if all others fail.
@@ -4185,8 +4184,6 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
           IsLastDispatch ? VectorEarlyExitVPBBs.back()
                          : Plan.createVPBasicBlock(
                                Twine("vector.early.exit.check.") + Twine(I));
-      if (!IsLastDispatch)
-        FalseBB->setParent(LatchVPBB->getParent());
 
       DispatchBuilder.createNaryOp(VPInstruction::BranchOnCond, {LaneVal});
       CurrentBB->setSuccessors({VectorEarlyExitVPBBs[I], FalseBB});
@@ -4196,7 +4193,6 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
       CurrentBB = FalseBB;
       DispatchBuilder.setInsertPoint(CurrentBB);
     }
-  }
 
   // Replace the latch terminator with the new branching logic.
   auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
