@@ -8910,8 +8910,9 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
         (!DAG.isKnownNeverNaN(RHS) || !DAG.isKnownNeverNaN(LHS))) {
       ConstantFP *FPNaN = ConstantFP::get(
           *DAG.getContext(), APFloat::getNaN(VT.getFltSemantics()));
-      MinMax = DAG.getSelectCC(DL, LHS, RHS, DAG.getConstantFP(*FPNaN, DL, VT),
-                               MinMax, ISD::SETUO, Flags);
+      MinMax =
+          DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, LHS, RHS, ISD::SETUO),
+                        DAG.getConstantFP(*FPNaN, DL, VT), MinMax, Flags);
     }
     return MinMax;
   }
@@ -8920,9 +8921,12 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
     return DAG.UnrollVectorOp(N);
 
   if (!Flags.hasNoNaNs() && !DAG.isKnownNeverNaN(RHS))
-    LHS = DAG.getSelectCC(DL, RHS, RHS, RHS, LHS, ISD::SETUO, Flags);
-  MinMax = DAG.getSelectCC(DL, LHS, RHS, LHS, RHS,
-                           IsMax ? ISD::SETUGT : ISD::SETULT);
+    LHS = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, RHS, RHS, ISD::SETUO),
+                        RHS, LHS, Flags);
+  MinMax = DAG.getSelect(
+      DL, VT,
+      DAG.getSetCC(DL, CCVT, LHS, RHS, IsMax ? ISD::SETUGT : ISD::SETULT), LHS,
+      RHS, Flags);
 
   // fminimum/fmaximum requires -0.0 less than +0.0
   bool LHSNotZero = DAG.isKnownNeverZeroFloat(LHS);
