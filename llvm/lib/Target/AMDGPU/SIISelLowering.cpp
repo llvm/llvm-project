@@ -13015,13 +13015,14 @@ SDValue SITargetLowering::lowerFSQRTF16(SDValue Op, SelectionDAG &DAG) const {
                      DAG.getTargetConstant(0, SL, MVT::i32), Flags);
 }
 
-SDValue SITargetLowering::lowerFSQRTF32(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc DL(Op);
-  SDNodeFlags Flags = Op->getFlags();
-  MVT VT = Op.getValueType().getSimpleVT();
-  const SDValue X = Op.getOperand(0);
+SDValue SITargetLowering::lowerFSQRTF32Impl(SDLoc DL, SDValue X,
+                                            SDNodeFlags Flags,
+                                            SelectionDAG &DAG,
+                                            bool NeedsCorrection) const {
+  MVT VT = X.getValueType().getSimpleVT();
 
-  if (allowApproxFunc(DAG, Flags)) {
+  if (allowApproxFunc(DAG, Flags) ||
+      (!NeedsCorrection && !needsDenormHandlingF32(DAG, X, Flags))) {
     // Instruction is 1ulp but ignores denormals.
     return DAG.getNode(
         ISD::INTRINSIC_WO_CHAIN, DL, VT,
@@ -13044,35 +13045,40 @@ SDValue SITargetLowering::lowerFSQRTF32(SDValue Op, SelectionDAG &DAG) const {
         DAG.getTargetConstant(Intrinsic::amdgcn_sqrt, DL, MVT::i32);
     SqrtS = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, VT, SqrtID, SqrtX, Flags);
 
-    SDValue SqrtSAsInt = DAG.getNode(ISD::BITCAST, DL, MVT::i32, SqrtS);
-    SDValue SqrtSNextDownInt =
-        DAG.getNode(ISD::ADD, DL, MVT::i32, SqrtSAsInt,
-                    DAG.getAllOnesConstant(DL, MVT::i32));
-    SDValue SqrtSNextDown = DAG.getNode(ISD::BITCAST, DL, VT, SqrtSNextDownInt);
+    if (NeedsCorrection) {
+      SDValue SqrtSAsInt = DAG.getNode(ISD::BITCAST, DL, MVT::i32, SqrtS);
+      SDValue SqrtSNextDownInt =
+          DAG.getNode(ISD::ADD, DL, MVT::i32, SqrtSAsInt,
+                      DAG.getAllOnesConstant(DL, MVT::i32));
+      SDValue SqrtSNextDown =
+          DAG.getNode(ISD::BITCAST, DL, VT, SqrtSNextDownInt);
 
-    SDValue NegSqrtSNextDown =
-        DAG.getNode(ISD::FNEG, DL, VT, SqrtSNextDown, Flags);
+      SDValue NegSqrtSNextDown =
+          DAG.getNode(ISD::FNEG, DL, VT, SqrtSNextDown, Flags);
 
-    SDValue SqrtVP =
-        DAG.getNode(ISD::FMA, DL, VT, NegSqrtSNextDown, SqrtS, SqrtX, Flags);
+      SDValue SqrtVP =
+          DAG.getNode(ISD::FMA, DL, VT, NegSqrtSNextDown, SqrtS, SqrtX, Flags);
 
-    SDValue SqrtSNextUpInt = DAG.getNode(ISD::ADD, DL, MVT::i32, SqrtSAsInt,
-                                         DAG.getConstant(1, DL, MVT::i32));
-    SDValue SqrtSNextUp = DAG.getNode(ISD::BITCAST, DL, VT, SqrtSNextUpInt);
+      SDValue SqrtSNextUpInt = DAG.getNode(ISD::ADD, DL, MVT::i32, SqrtSAsInt,
+                                           DAG.getConstant(1, DL, MVT::i32));
+      SDValue SqrtSNextUp = DAG.getNode(ISD::BITCAST, DL, VT, SqrtSNextUpInt);
 
-    SDValue NegSqrtSNextUp = DAG.getNode(ISD::FNEG, DL, VT, SqrtSNextUp, Flags);
-    SDValue SqrtVS =
-        DAG.getNode(ISD::FMA, DL, VT, NegSqrtSNextUp, SqrtS, SqrtX, Flags);
+      SDValue NegSqrtSNextUp =
+          DAG.getNode(ISD::FNEG, DL, VT, SqrtSNextUp, Flags);
+      SDValue SqrtVS =
+          DAG.getNode(ISD::FMA, DL, VT, NegSqrtSNextUp, SqrtS, SqrtX, Flags);
 
-    SDValue Zero = DAG.getConstantFP(0.0f, DL, VT);
-    SDValue SqrtVPLE0 = DAG.getSetCC(DL, MVT::i1, SqrtVP, Zero, ISD::SETOLE);
+      SDValue Zero = DAG.getConstantFP(0.0f, DL, VT);
+      SDValue SqrtVPLE0 = DAG.getSetCC(DL, MVT::i1, SqrtVP, Zero, ISD::SETOLE);
 
-    SqrtS = DAG.getNode(ISD::SELECT, DL, VT, SqrtVPLE0, SqrtSNextDown, SqrtS,
-                        Flags);
+      SqrtS = DAG.getNode(ISD::SELECT, DL, VT, SqrtVPLE0, SqrtSNextDown, SqrtS,
+                          Flags);
 
-    SDValue SqrtVPVSGT0 = DAG.getSetCC(DL, MVT::i1, SqrtVS, Zero, ISD::SETOGT);
-    SqrtS = DAG.getNode(ISD::SELECT, DL, VT, SqrtVPVSGT0, SqrtSNextUp, SqrtS,
-                        Flags);
+      SDValue SqrtVPVSGT0 =
+          DAG.getSetCC(DL, MVT::i1, SqrtVS, Zero, ISD::SETOGT);
+      SqrtS = DAG.getNode(ISD::SELECT, DL, VT, SqrtVPVSGT0, SqrtSNextUp, SqrtS,
+                          Flags);
+    }
   } else {
     SDValue SqrtR = DAG.getNode(AMDGPUISD::RSQ, DL, VT, SqrtX, Flags);
 
@@ -13098,11 +13104,19 @@ SDValue SITargetLowering::lowerFSQRTF32(SDValue Op, SelectionDAG &DAG) const {
       DAG.getNode(ISD::FMUL, DL, VT, SqrtS, ScaleDownFactor, Flags);
 
   SqrtS = DAG.getNode(ISD::SELECT, DL, VT, NeedScale, ScaledDown, SqrtS, Flags);
+  if (!NeedsCorrection) {
+    return SqrtS;
+  }
+
   SDValue IsZeroOrInf =
       DAG.getNode(ISD::IS_FPCLASS, DL, MVT::i1, SqrtX,
                   DAG.getTargetConstant(fcZero | fcPosInf, DL, MVT::i32));
 
   return DAG.getNode(ISD::SELECT, DL, VT, IsZeroOrInf, SqrtX, SqrtS, Flags);
+}
+
+SDValue SITargetLowering::lowerFSQRTF32(SDValue Op, SelectionDAG &DAG) const {
+  return lowerFSQRTF32Impl(SDLoc(Op), Op.getOperand(0), Op->getFlags(), DAG, true);
 }
 
 SDValue SITargetLowering::lowerFSQRTF64(SDValue Op, SelectionDAG &DAG) const {
@@ -13194,33 +13208,7 @@ SDValue SITargetLowering::lowerFSQRTBF16(SDValue Op, SelectionDAG &DAG) const {
   SDValue Ext =
       DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op.getOperand(0), Flags);
 
-  SDValue SqrtID = DAG.getTargetConstant(Intrinsic::amdgcn_sqrt, DL, MVT::i32);
-
-  SDValue ResultF32;
-  if (!allowApproxFunc(DAG, Flags) && needsDenormHandlingF32(DAG, Ext, Flags)) {
-    SDValue ScaleThreshold = DAG.getConstantFP(0x1.0p-96f, DL, MVT::f32);
-    SDValue NeedScale =
-        DAG.getSetCC(DL, MVT::i1, Ext, ScaleThreshold, ISD::SETOLT);
-
-    SDValue ScaleUpFactor = DAG.getConstantFP(0x1.0p+32f, DL, MVT::f32);
-    SDValue ScaledExt =
-        DAG.getNode(ISD::FMUL, DL, MVT::f32, Ext, ScaleUpFactor, Flags);
-    SDValue SqrtInput = DAG.getNode(ISD::SELECT, DL, MVT::f32, NeedScale,
-                                    ScaledExt, Ext, Flags);
-
-    SDValue SqrtExt = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::f32, SqrtID,
-                                  SqrtInput, Flags);
-
-    SDValue ScaleDownFactor = DAG.getConstantFP(0x1.0p-16f, DL, MVT::f32);
-    SDValue ScaledDown =
-        DAG.getNode(ISD::FMUL, DL, MVT::f32, SqrtExt, ScaleDownFactor, Flags);
-
-    ResultF32 = DAG.getNode(ISD::SELECT, DL, MVT::f32, NeedScale, ScaledDown,
-                            SqrtExt, Flags);
-  } else {
-    ResultF32 =
-        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::f32, SqrtID, Ext, Flags);
-  }
+  SDValue ResultF32 = lowerFSQRTF32Impl(DL, Ext, Flags, DAG, false);
 
   return DAG.getNode(ISD::FP_ROUND, DL, MVT::bf16, ResultF32,
                      DAG.getTargetConstant(0, DL, MVT::i32), Flags);
