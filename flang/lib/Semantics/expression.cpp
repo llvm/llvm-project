@@ -2799,6 +2799,40 @@ static bool CheckCompatibleArguments(
 
 static constexpr int cudaInfMatchingValue{std::numeric_limits<int>::max()};
 
+struct CudaMatchingDistance {
+  std::vector<int> perArg;
+  bool isInfinite{false};
+};
+
+static int CompareCudaMatchingDistance(
+    const CudaMatchingDistance &x, const CudaMatchingDistance &y) {
+  if (x.isInfinite != y.isInfinite) {
+    return x.isInfinite ? 1 : -1;
+  }
+  if (x.isInfinite) {
+    return 0;
+  }
+  std::size_t n{x.perArg.size()};
+  if (n > y.perArg.size()) {
+    n = y.perArg.size();
+  }
+  for (std::size_t i{0}; i < n; ++i) {
+    if (x.perArg[i] < y.perArg[i]) {
+      return -1;
+    }
+    if (x.perArg[i] > y.perArg[i]) {
+      return 1;
+    }
+  }
+  if (x.perArg.size() < y.perArg.size()) {
+    return -1;
+  }
+  if (x.perArg.size() > y.perArg.size()) {
+    return 1;
+  }
+  return 0;
+}
+
 // Compute the matching distance as described in section 3.2.3 of the CUDA
 // Fortran references.
 static int GetMatchingDistance(const common::LanguageFeatureControl &features,
@@ -2882,20 +2916,23 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
   return cudaInfMatchingValue;
 }
 
-static int ComputeCudaMatchingDistance(
+static CudaMatchingDistance ComputeCudaMatchingDistance(
     const common::LanguageFeatureControl &features,
     const characteristics::Procedure &procedure,
     const ActualArguments &actuals) {
   const auto &dummies{procedure.dummyArguments};
   CHECK(dummies.size() == actuals.size());
-  int distance{0};
+  CudaMatchingDistance distance;
+  distance.perArg.reserve(dummies.size());
   for (std::size_t i{0}; i < dummies.size(); ++i) {
     const characteristics::DummyArgument &dummy{dummies[i]};
     const std::optional<ActualArgument> &actual{actuals[i]};
     int d{GetMatchingDistance(features, dummy, actual)};
-    if (d == cudaInfMatchingValue)
-      return d;
-    distance += d;
+    if (d == cudaInfMatchingValue) {
+      distance.isInfinite = true;
+      return distance;
+    }
+    distance.perArg.push_back(d);
   }
   return distance;
 }
@@ -2967,7 +3004,7 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
   const Symbol *nonElemental{nullptr}; // matching non-elemental specific
   const auto *genericDetails{ultimate.detailsIf<semantics::GenericDetails>()};
   if (genericDetails && !explicitIntrinsic) {
-    int crtMatchingDistance{cudaInfMatchingValue};
+    std::optional<CudaMatchingDistance> crtMatchingDistance;
     for (const Symbol &specific0 : genericDetails->specificProcs()) {
       const Symbol &specific1{BypassGeneric(specific0)};
       if (isSubroutine != !IsFunction(specific1)) {
@@ -2992,23 +3029,25 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
                 context_, false /* no integer conversions */) &&
             CheckCompatibleArguments(
                 *procedure, localActuals, foldingContext_)) {
+          CudaMatchingDistance d{ComputeCudaMatchingDistance(
+              context_.languageFeatures(), *procedure, localActuals)};
           if ((procedure->IsElemental() && elemental) ||
               (!procedure->IsElemental() && nonElemental)) {
-            int d{ComputeCudaMatchingDistance(
-                context_.languageFeatures(), *procedure, localActuals)};
-            if (d != crtMatchingDistance) {
-              if (d > crtMatchingDistance) {
+            if (crtMatchingDistance) {
+              int cmp{CompareCudaMatchingDistance(d, *crtMatchingDistance)};
+              if (cmp > 0) {
                 continue;
+              }
+              if (cmp == 0) {
+                // 16.9.144(6): a bare NULL() is not allowed as an actual
+                // argument to a generic procedure if the specific procedure
+                // cannot be unambiguously distinguished
+                // Underspecified external procedure actual arguments can
+                // also lead to ambiguity.
+                return {nullptr, true /* due to ambiguity */, std::move(tried)};
               }
               // Matching distance is smaller than the previously matched
               // specific. Let it go through so the current procedure is picked.
-            } else {
-              // 16.9.144(6): a bare NULL() is not allowed as an actual
-              // argument to a generic procedure if the specific procedure
-              // cannot be unambiguously distinguished
-              // Underspecified external procedure actual arguments can
-              // also lead to ambiguity.
-              return {nullptr, true /* due to ambiguity */, std::move(tried)};
             }
           }
           if (!procedure->IsElemental()) {
@@ -3017,8 +3056,7 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
           } else {
             elemental = specific;
           }
-          crtMatchingDistance = ComputeCudaMatchingDistance(
-              context_.languageFeatures(), *procedure, localActuals);
+          crtMatchingDistance = std::move(d);
         }
       }
     }
