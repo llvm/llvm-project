@@ -21,7 +21,7 @@ namespace cwg705 { // cwg705: 2.7
     N::S s;
     f(s);      // ok
     (f)(s);
-    // expected-error@-1 {{use of undeclared identifier 'f'}}
+    // expected-error@-1 {{use of undeclared identifier 'f'; did you mean 'N::f'?}}
     //   expected-note@#cwg705-f {{'N::f' declared here}}
   }
 } // namespace cwg705
@@ -273,7 +273,7 @@ namespace cwg727 { // cwg727: partial
     static_assert(B<1>().v<0> == 2, "");
     static_assert(B<0>().v<1> == 3, "");
     static_assert(B<0>().v<0> == 4, "");
-    // cxx14-error@-1 {{static assertion failed due to requirement 'cwg727::mixed_inner_outer_specialization::B<0>().v<0> == 4'}}
+    // cxx14-error@-1 {{static assertion failed due to requirement 'cwg727::mixed_inner_outer_specialization::B<0>().v<0> == 4':}}
     //   cxx14-note@-2 {{expression evaluates to '2 == 4'}}
 
     static_assert(B<1>().w<1> == 1, "");

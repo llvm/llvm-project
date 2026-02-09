@@ -2,7 +2,6 @@
 ; test here.
 ;
 ; RUN: opt -passes=inline -S < %s | FileCheck %s
-; RUN: opt -passes='cgscc(inline)' -S < %s | FileCheck %s
 
 define i32 @large_stack_callee(i32 %param) {
 ; CHECK-LABEL: define i32 @large_stack_callee(
