@@ -501,13 +501,28 @@ cc_library(
 )
 
 cc_library(
+    name = "BinaryFormatELF",
+    srcs = [
+        "include/llvm/TargetParser/Triple.h",
+        "lib/BinaryFormat/ELF.cpp",
+    ],
+    hdrs = ["include/llvm/BinaryFormat/ELF.h"],
+    copts = llvm_copts,
+    includes = ["include"],
+    textual_hdrs = glob([
+        "include/llvm/BinaryFormat/*.def",
+        "include/llvm/BinaryFormat/ELFRelocs/*.def",
+    ]),
+    deps = [":Support"],
+)
+
+cc_library(
     name = "BinaryFormat",
-    srcs = glob([
-        "lib/BinaryFormat/*.cpp",
-    ]),
-    hdrs = glob([
-        "include/llvm/BinaryFormat/*.h",
-    ]),
+    srcs = glob(
+        include = ["lib/BinaryFormat/*.cpp"],
+        exclude = ["lib/BinaryFormat/ELF.cpp"],
+    ),
+    hdrs = glob(["include/llvm/BinaryFormat/*.h"]),
     copts = llvm_copts,
     includes = ["include"],
     textual_hdrs = glob([
@@ -515,6 +530,7 @@ cc_library(
         "include/llvm/BinaryFormat/ELFRelocs/*.def",
     ]),
     deps = [
+        ":BinaryFormatELF",
         ":PPCTargetParser",
         ":Support",
         ":TargetParser",
@@ -1552,9 +1568,7 @@ cc_library(
 cc_library(
     name = "TargetParser",
     srcs = glob(
-        [
-            "lib/TargetParser/*.cpp",
-        ],
+        include = ["lib/TargetParser/*.cpp"],
         exclude = ["lib/TargetParser/PPCTargetParser.cpp"],
     ) + select({
         "@platforms//os:windows": glob([
@@ -1564,9 +1578,7 @@ cc_library(
             "lib/TargetParser/Unix/*.inc",
         ]),
     }),
-    hdrs = glob([
-        "include/llvm/TargetParser/*.h",
-    ]),
+    hdrs = glob(["include/llvm/TargetParser/*.h"]),
     copts = llvm_copts,
     includes = ["include"],
     textual_hdrs = [
@@ -1579,6 +1591,7 @@ cc_library(
         "include/llvm/TargetParser/*.def",
     ]),
     deps = [
+        ":BinaryFormatELF",
         ":Support",
         ":config",
     ],

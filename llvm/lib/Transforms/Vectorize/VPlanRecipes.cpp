@@ -814,7 +814,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateLogicalAnd(A, B, Name);
   }
   case VPInstruction::PtrAdd: {
-    assert(vputils::onlyFirstLaneUsed(this) &&
+    assert((State.VF.isScalar() || vputils::onlyFirstLaneUsed(this)) &&
            "can only generate first lane for PtrAdd");
     Value *Ptr = State.get(getOperand(0), VPLane(0));
     Value *Addend = State.get(getOperand(1), VPLane(0));
@@ -1849,7 +1849,12 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1,
                                              State.TTI)) {
     Type *RetTy = toVectorizedTy(getResultType(), State.VF);
-    append_range(TysForDecl, getContainedTypes(RetTy));
+    ArrayRef<Type *> ContainedTys = getContainedTypes(RetTy);
+    for (auto [Idx, Ty] : enumerate(ContainedTys)) {
+      if (isVectorIntrinsicWithStructReturnOverloadAtField(VectorIntrinsicID,
+                                                           Idx, State.TTI))
+        TysForDecl.push_back(Ty);
+    }
   }
   SmallVector<Value *, 4> Args;
   for (const auto &I : enumerate(operands())) {

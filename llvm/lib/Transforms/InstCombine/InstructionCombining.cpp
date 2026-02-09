@@ -3671,6 +3671,25 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   if (Instruction *R = foldSelectGEP(GEP, Builder))
     return R;
 
+  // srem -> (and/urem) for inbounds+nuw GEP
+  if (Indices.size() == 1 && GEP.isInBounds() && GEP.hasNoUnsignedWrap()) {
+    Value *X, *Y;
+
+    // Match: idx = srem X, Y -- where Y is a power-of-two value.
+    if (match(Indices[0], m_OneUse(m_SRem(m_Value(X), m_Value(Y)))) &&
+        isKnownToBeAPowerOfTwo(Y, /*OrZero=*/true, &GEP)) {
+      // If GEP is inbounds+nuw, the offset cannot be negative
+      // -> srem by power-of-two can be treated as urem,
+      // and urem by power-of-two folds to 'and' later.
+      // OrZero=true is fine here because division by zero is UB.
+      Instruction *OldIdxI = cast<Instruction>(Indices[0]);
+      Value *NewIdx = Builder.CreateURem(X, Y, OldIdxI->getName());
+
+      return GetElementPtrInst::Create(GEPEltType, PtrOp, {NewIdx},
+                                       GEP.getNoWrapFlags());
+    }
+  }
+
   return nullptr;
 }
 

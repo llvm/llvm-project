@@ -73,36 +73,23 @@ define <2 x float> @PR86068(<2 x float> %a0, <2 x float> %a1) {
   ret <2 x float> %s2
 }
 
-; FIXME - ensure we don't combine cheap PSHUFB+UNPCK sequence to a costly v32i8 SK_PermuteTwoSrc shuffle.
+; ensure we don't combine cheap PSHUFB+UNPCK sequence to a costly v32i8 SK_PermuteTwoSrc shuffle.
 
 define void @PR161980(<4 x i64> %a, <4 x i64> %b, ptr %dst) {
-; SSE-LABEL: define void @PR161980(
-; SSE-SAME: <4 x i64> [[A:%.*]], <4 x i64> [[B:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
-; SSE-NEXT:    [[I:%.*]] = bitcast <4 x i64> [[A]] to <32 x i8>
-; SSE-NEXT:    [[I1:%.*]] = shufflevector <32 x i8> [[I]], <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9, i32 12, i32 13, i32 2, i32 3, i32 6, i32 7, i32 10, i32 11, i32 14, i32 15, i32 16, i32 17, i32 20, i32 21, i32 24, i32 25, i32 28, i32 29, i32 18, i32 19, i32 22, i32 23, i32 26, i32 27, i32 30, i32 31>
-; SSE-NEXT:    [[I2:%.*]] = bitcast <32 x i8> [[I1]] to <4 x i64>
-; SSE-NEXT:    [[I3:%.*]] = bitcast <4 x i64> [[B]] to <32 x i8>
-; SSE-NEXT:    [[I4:%.*]] = shufflevector <32 x i8> [[I3]], <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9, i32 12, i32 13, i32 2, i32 3, i32 6, i32 7, i32 10, i32 11, i32 14, i32 15, i32 16, i32 17, i32 20, i32 21, i32 24, i32 25, i32 28, i32 29, i32 18, i32 19, i32 22, i32 23, i32 26, i32 27, i32 30, i32 31>
-; SSE-NEXT:    [[I5:%.*]] = bitcast <32 x i8> [[I4]] to <4 x i64>
-; SSE-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i64> [[I2]], <4 x i64> [[I5]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-; SSE-NEXT:    [[SHUFFLE_I9:%.*]] = shufflevector <4 x i64> [[I2]], <4 x i64> [[I5]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-; SSE-NEXT:    store <4 x i64> [[SHUFFLE_I]], ptr [[DST]], align 1
-; SSE-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DST]], i64 32
-; SSE-NEXT:    store <4 x i64> [[SHUFFLE_I9]], ptr [[ADD_PTR]], align 1
-; SSE-NEXT:    ret void
-;
-; AVX-LABEL: define void @PR161980(
-; AVX-SAME: <4 x i64> [[A:%.*]], <4 x i64> [[B:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
-; AVX-NEXT:    [[I:%.*]] = bitcast <4 x i64> [[A]] to <32 x i8>
-; AVX-NEXT:    [[I3:%.*]] = bitcast <4 x i64> [[B]] to <32 x i8>
-; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <32 x i8> [[I]], <32 x i8> [[I3]], <32 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9, i32 12, i32 13, i32 32, i32 33, i32 36, i32 37, i32 40, i32 41, i32 44, i32 45, i32 16, i32 17, i32 20, i32 21, i32 24, i32 25, i32 28, i32 29, i32 48, i32 49, i32 52, i32 53, i32 56, i32 57, i32 60, i32 61>
-; AVX-NEXT:    [[SHUFFLE_I:%.*]] = bitcast <32 x i8> [[TMP1]] to <4 x i64>
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <32 x i8> [[I]], <32 x i8> [[I3]], <32 x i32> <i32 2, i32 3, i32 6, i32 7, i32 10, i32 11, i32 14, i32 15, i32 34, i32 35, i32 38, i32 39, i32 42, i32 43, i32 46, i32 47, i32 18, i32 19, i32 22, i32 23, i32 26, i32 27, i32 30, i32 31, i32 50, i32 51, i32 54, i32 55, i32 58, i32 59, i32 62, i32 63>
-; AVX-NEXT:    [[SHUFFLE_I9:%.*]] = bitcast <32 x i8> [[TMP2]] to <4 x i64>
-; AVX-NEXT:    store <4 x i64> [[SHUFFLE_I]], ptr [[DST]], align 1
-; AVX-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DST]], i64 32
-; AVX-NEXT:    store <4 x i64> [[SHUFFLE_I9]], ptr [[ADD_PTR]], align 1
-; AVX-NEXT:    ret void
+; CHECK-LABEL: define void @PR161980(
+; CHECK-SAME: <4 x i64> [[A:%.*]], <4 x i64> [[B:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[I:%.*]] = bitcast <4 x i64> [[A]] to <32 x i8>
+; CHECK-NEXT:    [[I1:%.*]] = shufflevector <32 x i8> [[I]], <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9, i32 12, i32 13, i32 2, i32 3, i32 6, i32 7, i32 10, i32 11, i32 14, i32 15, i32 16, i32 17, i32 20, i32 21, i32 24, i32 25, i32 28, i32 29, i32 18, i32 19, i32 22, i32 23, i32 26, i32 27, i32 30, i32 31>
+; CHECK-NEXT:    [[I2:%.*]] = bitcast <32 x i8> [[I1]] to <4 x i64>
+; CHECK-NEXT:    [[I3:%.*]] = bitcast <4 x i64> [[B]] to <32 x i8>
+; CHECK-NEXT:    [[I4:%.*]] = shufflevector <32 x i8> [[I3]], <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9, i32 12, i32 13, i32 2, i32 3, i32 6, i32 7, i32 10, i32 11, i32 14, i32 15, i32 16, i32 17, i32 20, i32 21, i32 24, i32 25, i32 28, i32 29, i32 18, i32 19, i32 22, i32 23, i32 26, i32 27, i32 30, i32 31>
+; CHECK-NEXT:    [[I5:%.*]] = bitcast <32 x i8> [[I4]] to <4 x i64>
+; CHECK-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <4 x i64> [[I2]], <4 x i64> [[I5]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; CHECK-NEXT:    [[SHUFFLE_I9:%.*]] = shufflevector <4 x i64> [[I2]], <4 x i64> [[I5]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
+; CHECK-NEXT:    store <4 x i64> [[SHUFFLE_I]], ptr [[DST]], align 1
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[DST]], i64 32
+; CHECK-NEXT:    store <4 x i64> [[SHUFFLE_I9]], ptr [[ADD_PTR]], align 1
+; CHECK-NEXT:    ret void
 ;
   %i = bitcast <4 x i64> %a to <32 x i8>
   %i1 = shufflevector <32 x i8> %i, <32 x i8> poison, <32 x i32> <i32 0, i32 1, i32 4, i32 5, i32 8, i32 9, i32 12, i32 13, i32 2, i32 3, i32 6, i32 7, i32 10, i32 11, i32 14, i32 15, i32 16, i32 17, i32 20, i32 21, i32 24, i32 25, i32 28, i32 29, i32 18, i32 19, i32 22, i32 23, i32 26, i32 27, i32 30, i32 31>
@@ -118,3 +105,6 @@ define void @PR161980(<4 x i64> %a, <4 x i64> %b, ptr %dst) {
   ret void
 }
 
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; AVX: {{.*}}
+; SSE: {{.*}}

@@ -1510,6 +1510,7 @@ def riscv_wmacc  : RVSDNode<"WMACC", SDT_RISCVWideningMAccW,
                             [SDNPCommutative]>;
 def riscv_wmaccu : RVSDNode<"WMACCU", SDT_RISCVWideningMAccW,
                             [SDNPCommutative]>;
+def riscv_wmaccsu : RVSDNode<"WMACCSU", SDT_RISCVWideningMAccW>;
 
 // MULH/MULHU/MULHSU with rounding.
 def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp>;

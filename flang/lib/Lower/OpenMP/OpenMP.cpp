@@ -1895,14 +1895,13 @@ static void genWsloopClauses(
     mlir::Location loc, mlir::omp::WsloopOperands &clauseOps,
     llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) {
   ClauseProcessor cp(converter, semaCtx, clauses);
+  cp.processAllocate(clauseOps);
   cp.processNowait(clauseOps);
   cp.processOrder(clauseOps);
   cp.processOrdered(clauseOps);
   cp.processReduction(loc, clauseOps, reductionSyms);
   cp.processSchedule(stmtCtx, clauseOps);
   cp.processLinear(clauseOps);
-
-  cp.processTODO<clause::Allocate>(loc, llvm::omp::Directive::OMPD_do);
 }
 
 //===----------------------------------------------------------------------===//
