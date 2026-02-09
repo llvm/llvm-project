@@ -259,85 +259,85 @@ define void @test_memcpy_all_hints_both(ptr addrspace(1) %dest, ptr addrspace(1)
 ;-----------------------------------------------------------------------------
 
 ; memcpy with both dest and src hints
-!80 = !{!180, !181}
+!80 = !{i32 0, !180, i32 1, !181}
 ; operand 0 (dest/store): L1::evict_last, L2::evict_last
-!180 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"last"}
+!180 = !{!"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"last"}
 ; operand 1 (src/load): L1::evict_first, L2::evict_first, L2::128B prefetch
-!181 = !{!"operand_no", i32 1, !"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"first", !"nvvm.l2_prefetch_size", !"128B"}
+!181 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"first", !"nvvm.l2_prefetch_size", !"128B"}
 
 ; memcpy with only source hint (load side)
-!81 = !{!182}
-!182 = !{!"operand_no", i32 1, !"nvvm.l1_eviction", !"first"}
+!81 = !{i32 1, !182}
+!182 = !{!"nvvm.l1_eviction", !"first"}
 
 ; memcpy with only dest hint (store side)
-!82 = !{!183}
-!183 = !{!"operand_no", i32 0, !"nvvm.l2_eviction", !"last"}
+!82 = !{i32 0, !183}
+!183 = !{!"nvvm.l2_eviction", !"last"}
 
 ; memcpy with L2::cache_hint on both operands
-!83 = !{!184, !185}
-!184 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 12121}
-!185 = !{!"operand_no", i32 1, !"nvvm.l2_cache_hint", i64 34343}
+!83 = !{i32 0, !184, i32 1, !185}
+!184 = !{!"nvvm.l2_cache_hint", i64 12121}
+!185 = !{!"nvvm.l2_cache_hint", i64 34343}
 
 ; Combined L1 + L2 eviction on source only
-!84 = !{!186}
-!186 = !{!"operand_no", i32 1, !"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"last"}
+!84 = !{i32 1, !186}
+!186 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"last"}
 
 ; Combined L1 + L2 eviction on dest only
-!85 = !{!187}
-!187 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"unchanged", !"nvvm.l2_eviction", !"first"}
+!85 = !{i32 0, !187}
+!187 = !{!"nvvm.l1_eviction", !"unchanged", !"nvvm.l2_eviction", !"first"}
 
 ; L1 + prefetch on source, L1 on dest
-!86 = !{!188, !189}
-!188 = !{!"operand_no", i32 1, !"nvvm.l1_eviction", !"last", !"nvvm.l2_prefetch_size", !"256B"}
-!189 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"no_allocate"}
+!86 = !{i32 1, !188, i32 0, !189}
+!188 = !{!"nvvm.l1_eviction", !"last", !"nvvm.l2_prefetch_size", !"256B"}
+!189 = !{!"nvvm.l1_eviction", !"no_allocate"}
 
 ; Prefetch on source, L2 eviction on dest
-!87 = !{!190, !191}
-!190 = !{!"operand_no", i32 1, !"nvvm.l2_prefetch_size", !"64B"}
-!191 = !{!"operand_no", i32 0, !"nvvm.l2_eviction", !"last"}
+!87 = !{i32 1, !190, i32 0, !191}
+!190 = !{!"nvvm.l2_prefetch_size", !"64B"}
+!191 = !{!"nvvm.l2_eviction", !"last"}
 
 ; L2::cache_hint + L1 eviction on source only
-!88 = !{!192}
-!192 = !{!"operand_no", i32 1, !"nvvm.l2_cache_hint", i64 55555, !"nvvm.l1_eviction", !"first"}
+!88 = !{i32 1, !192}
+!192 = !{!"nvvm.l2_cache_hint", i64 55555, !"nvvm.l1_eviction", !"first"}
 
 ; L2::cache_hint + L1 + L2 eviction on dest only
-!89 = !{!193}
-!193 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 66666, !"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first"}
+!89 = !{i32 0, !193}
+!193 = !{!"nvvm.l2_cache_hint", i64 66666, !"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first"}
 
 ; Both operands: L2::cache_hint + L1 + L2 eviction
-!90 = !{!194, !195}
-!194 = !{!"operand_no", i32 1, !"nvvm.l2_cache_hint", i64 77777, !"nvvm.l1_eviction", !"unchanged", !"nvvm.l2_eviction", !"last"}
-!195 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 88888, !"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"first"}
+!90 = !{i32 1, !194, i32 0, !195}
+!194 = !{!"nvvm.l2_cache_hint", i64 77777, !"nvvm.l1_eviction", !"unchanged", !"nvvm.l2_eviction", !"last"}
+!195 = !{!"nvvm.l2_cache_hint", i64 88888, !"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"first"}
 
 ; L2::cache_hint + prefetch on source, L2::cache_hint + L1 on dest
-!91 = !{!196, !197}
-!196 = !{!"operand_no", i32 1, !"nvvm.l2_cache_hint", i64 11111, !"nvvm.l2_prefetch_size", !"128B"}
-!197 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 22222, !"nvvm.l1_eviction", !"last"}
+!91 = !{i32 1, !196, i32 0, !197}
+!196 = !{!"nvvm.l2_cache_hint", i64 11111, !"nvvm.l2_prefetch_size", !"128B"}
+!197 = !{!"nvvm.l2_cache_hint", i64 22222, !"nvvm.l1_eviction", !"last"}
 
 ; Complex source (all non-cache_hint), simple dest
-!92 = !{!198, !199}
-!198 = !{!"operand_no", i32 1, !"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"last", !"nvvm.l2_prefetch_size", !"64B"}
-!199 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"last"}
+!92 = !{i32 1, !198, i32 0, !199}
+!198 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"last", !"nvvm.l2_prefetch_size", !"64B"}
+!199 = !{!"nvvm.l1_eviction", !"last"}
 
 ; Simple source, complex dest (with cache_hint)
-!93 = !{!200, !201}
-!200 = !{!"operand_no", i32 1, !"nvvm.l2_prefetch_size", !"256B"}
-!201 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 99999, !"nvvm.l1_eviction", !"no_allocate", !"nvvm.l2_eviction", !"last"}
+!93 = !{i32 1, !200, i32 0, !201}
+!200 = !{!"nvvm.l2_prefetch_size", !"256B"}
+!201 = !{!"nvvm.l2_cache_hint", i64 99999, !"nvvm.l1_eviction", !"no_allocate", !"nvvm.l2_eviction", !"last"}
 
 ; Different L1 policies: unchanged vs first
-!94 = !{!202, !203}
-!202 = !{!"operand_no", i32 1, !"nvvm.l1_eviction", !"unchanged"}
-!203 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"first"}
+!94 = !{i32 1, !202, i32 0, !203}
+!202 = !{!"nvvm.l1_eviction", !"unchanged"}
+!203 = !{!"nvvm.l1_eviction", !"first"}
 
 ; Different L1 policies: no_allocate vs unchanged
-!95 = !{!204, !205}
-!204 = !{!"operand_no", i32 1, !"nvvm.l1_eviction", !"no_allocate"}
-!205 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"unchanged"}
+!95 = !{i32 1, !204, i32 0, !205}
+!204 = !{!"nvvm.l1_eviction", !"no_allocate"}
+!205 = !{!"nvvm.l1_eviction", !"unchanged"}
 
 ; All hints maxed out on both operands
-!96 = !{!206, !207}
-!206 = !{!"operand_no", i32 1, !"nvvm.l2_cache_hint", i64 12345, !"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"first", !"nvvm.l2_prefetch_size", !"256B"}
-!207 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 67890, !"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"last", !"nvvm.l2_prefetch_size", !"128B"}
+!96 = !{i32 1, !206, i32 0, !207}
+!206 = !{!"nvvm.l2_cache_hint", i64 12345, !"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"first", !"nvvm.l2_prefetch_size", !"256B"}
+!207 = !{!"nvvm.l2_cache_hint", i64 67890, !"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"last", !"nvvm.l2_prefetch_size", !"128B"}
 
 ;-----------------------------------------------------------------------------
 ; Large memcpy tests - verify hints propagate to all expanded load/stores
@@ -389,18 +389,18 @@ define void @test_memcpy_128bytes_combined(ptr addrspace(1) %dest, ptr addrspace
 }
 
 ; Large memcpy metadata
-!97 = !{!208, !209}
-!208 = !{!"operand_no", i32 1, !"nvvm.l1_eviction", !"first"}
-!209 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"last"}
+!97 = !{i32 1, !208, i32 0, !209}
+!208 = !{!"nvvm.l1_eviction", !"first"}
+!209 = !{!"nvvm.l1_eviction", !"last"}
 
-!98 = !{!210, !211}
-!210 = !{!"operand_no", i32 1, !"nvvm.l1_eviction", !"unchanged"}
-!211 = !{!"operand_no", i32 0, !"nvvm.l2_eviction", !"first"}
+!98 = !{i32 1, !210, i32 0, !211}
+!210 = !{!"nvvm.l1_eviction", !"unchanged"}
+!211 = !{!"nvvm.l2_eviction", !"first"}
 
-!99 = !{!212, !213}
-!212 = !{!"operand_no", i32 1, !"nvvm.l2_cache_hint", i64 11111}
-!213 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 22222}
+!99 = !{i32 1, !212, i32 0, !213}
+!212 = !{!"nvvm.l2_cache_hint", i64 11111}
+!213 = !{!"nvvm.l2_cache_hint", i64 22222}
 
-!100 = !{!214, !215}
-!214 = !{!"operand_no", i32 1, !"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"last", !"nvvm.l2_prefetch_size", !"256B"}
-!215 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first"}
+!100 = !{i32 1, !214, i32 0, !215}
+!214 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"last", !"nvvm.l2_prefetch_size", !"256B"}
+!215 = !{!"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first"}

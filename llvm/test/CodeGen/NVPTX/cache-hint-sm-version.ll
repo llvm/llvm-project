@@ -306,41 +306,41 @@ define void @test_store_l1_no_allocate(ptr addrspace(1) %p, i32 %v) {
 ;-----------------------------------------------------------------------------
 
 ; L1 eviction: first
-!0 = !{!100}
-!100 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"first"}
+!0 = !{i32 0, !100}
+!100 = !{!"nvvm.l1_eviction", !"first"}
 
 ; L2 eviction: last
-!1 = !{!101}
-!101 = !{!"operand_no", i32 0, !"nvvm.l2_eviction", !"last"}
+!1 = !{i32 0, !101}
+!101 = !{!"nvvm.l2_eviction", !"last"}
 
 ; L2 prefetch: 128B
-!2 = !{!102}
-!102 = !{!"operand_no", i32 0, !"nvvm.l2_prefetch_size", !"128B"}
+!2 = !{i32 0, !102}
+!102 = !{!"nvvm.l2_prefetch_size", !"128B"}
 
 ; L2::cache_hint only
-!3 = !{!103}
-!103 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 12345}
+!3 = !{i32 0, !103}
+!103 = !{!"nvvm.l2_cache_hint", i64 12345}
 
 ; L2::cache_hint + L1 eviction
-!4 = !{!104}
-!104 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 44445, !"nvvm.l1_eviction", !"first"}
+!4 = !{i32 0, !104}
+!104 = !{!"nvvm.l2_cache_hint", i64 44445, !"nvvm.l1_eviction", !"first"}
 
 ; L2::cache_hint for store
-!5 = !{!105}
-!105 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 67890}
+!5 = !{i32 0, !105}
+!105 = !{!"nvvm.l2_cache_hint", i64 67890}
 
 ; L2 prefetch: 64B
-!6 = !{!106}
-!106 = !{!"operand_no", i32 0, !"nvvm.l2_prefetch_size", !"64B"}
+!6 = !{i32 0, !106}
+!106 = !{!"nvvm.l2_prefetch_size", !"64B"}
 
 ; L2 prefetch: 256B
-!7 = !{!107}
-!107 = !{!"operand_no", i32 0, !"nvvm.l2_prefetch_size", !"256B"}
+!7 = !{i32 0, !107}
+!107 = !{!"nvvm.l2_prefetch_size", !"256B"}
 
 ; L2 prefetch: 128B + L1 eviction
-!8 = !{!108}
-!108 = !{!"operand_no", i32 0, !"nvvm.l2_prefetch_size", !"128B", !"nvvm.l1_eviction", !"first"}
+!8 = !{i32 0, !108}
+!108 = !{!"nvvm.l2_prefetch_size", !"128B", !"nvvm.l1_eviction", !"first"}
 
 ; L1 eviction: no_allocate (for store)
-!9 = !{!109}
-!109 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"no_allocate"}
+!9 = !{i32 0, !109}
+!109 = !{!"nvvm.l1_eviction", !"no_allocate"}

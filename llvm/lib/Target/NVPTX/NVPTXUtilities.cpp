@@ -410,34 +410,28 @@ static std::optional<L2Prefetch> parseL2Prefetch(StringRef Str) {
       .Default(std::nullopt);
 }
 
-// Helper to find the metadata node matching a specific operand number.
+// Helper to find the hint node matching a specific operand number.
 // The metadata structure is:
-// !mem.cache_hint = !{!node1, !node2, ...}
-// Each node contains key-value pairs (operand_no can be anywhere):
-// !node = !{!"operand_no", i32 N, !"nvvm.key1", value1, ...}
-// Returns the matching MDNode or nullptr if not found.
+// !mem.cache_hint = !{ i32 opno0, !hints0, i32 opno1, !hints1, ... }
+// !hintsN = !{ !"nvvm.key1", value1, ... }
+// Returns the matching hints MDNode or nullptr if not found.
 static const MDNode *findCacheControlHintNode(const MDNode *MD,
                                               unsigned OperandNo) {
   if (!MD)
     return nullptr;
 
-  for (const MDOperand &Op : MD->operands()) {
-    const auto *Node = dyn_cast<MDNode>(Op);
-    if (!Node)
+  unsigned NumOps = MD->getNumOperands();
+  if (NumOps % 2 != 0)
+    return nullptr;
+
+  for (unsigned i = 0; i + 1 < NumOps; i += 2) {
+    const auto *OpNoCI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(i));
+    const auto *Node = dyn_cast<MDNode>(MD->getOperand(i + 1));
+    if (!OpNoCI || !Node || OpNoCI->getValue().isNegative())
       continue;
 
-    // Search for operand_no in the node (can be at any position)
-    for (unsigned j = 0; j + 1 < Node->getNumOperands(); j += 2) {
-      const auto *Key = dyn_cast<MDString>(Node->getOperand(j));
-      if (Key && Key->getString() == "operand_no") {
-        if (auto *OpNoCI =
-                mdconst::dyn_extract<ConstantInt>(Node->getOperand(j + 1))) {
-          if (OpNoCI->getZExtValue() == OperandNo)
-            return Node;
-        }
-        break;
-      }
-    }
+    if (OpNoCI->getZExtValue() == OperandNo)
+      return Node;
   }
 
   return nullptr;
@@ -448,7 +442,7 @@ unsigned getCacheControlHintFromMetadata(const Instruction *I,
   if (!I)
     return 0;
 
-  MDNode *MD = I->getMetadata(LLVMContext::MD_mem_cache_hint);
+  const MDNode *MD = I->getMetadata(LLVMContext::MD_mem_cache_hint);
   const MDNode *Node = findCacheControlHintNode(MD, OperandNo);
   if (!Node)
     return 0;
@@ -458,15 +452,13 @@ unsigned getCacheControlHintFromMetadata(const Instruction *I,
   L2Prefetch Prefetch = L2Prefetch::None;
 
   // Parse all key-value pairs from the matching node.
-  // Metadata structure is validated by the IR Verifier.
+  // Metadata structure is validated by the IR verifier.
   for (unsigned j = 0; j + 1 < Node->getNumOperands(); j += 2) {
     const auto *Key = dyn_cast<MDString>(Node->getOperand(j));
     if (!Key)
       continue;
 
     StringRef KeyStr = Key->getString();
-    if (KeyStr == "operand_no")
-      continue; // Already processed by findCacheControlHintNode
 
     // For eviction and prefetch hints, value should be a string
     const auto *Val = dyn_cast<MDString>(Node->getOperand(j + 1));
@@ -495,7 +487,7 @@ std::optional<uint64_t> getCachePolicyFromMetadata(const Instruction *I,
   if (!I)
     return std::nullopt;
 
-  MDNode *MD = I->getMetadata(LLVMContext::MD_mem_cache_hint);
+  const MDNode *MD = I->getMetadata(LLVMContext::MD_mem_cache_hint);
   const MDNode *Node = findCacheControlHintNode(MD, OperandNo);
   if (!Node)
     return std::nullopt;

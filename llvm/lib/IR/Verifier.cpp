@@ -5572,30 +5572,64 @@ void Verifier::visitMemCacheHintMetadata(Instruction &I, MDNode *MD) {
   Check(I.mayReadOrWriteMemory(),
         "!mem.cache_hint is only valid on memory operations", &I);
 
-  // Top-level metadata is an array of operand-specific nodes
-  for (const MDOperand &Op : MD->operands()) {
-    Check(Op, "!mem.cache_hint operand must not be null", MD);
-    const auto *Node = dyn_cast<MDNode>(Op);
-    Check(Node, "!mem.cache_hint operand must be a metadata node", MD);
+  Check(MD->getNumOperands() % 2 == 0,
+        "!mem.cache_hint must have even number of operands "
+        "(operand_no, hint_node pairs)",
+        MD);
 
-    // Each node contains key-value pairs with even number of operands
+  auto IsMemoryObjectOperand = [](const Value *V) {
+    return V->getType()->isPtrOrPtrVectorTy();
+  };
+
+  unsigned NumMemoryObjectOperands = 0;
+  if (const auto *CB = dyn_cast<CallBase>(&I))
+    NumMemoryObjectOperands = count_if(CB->args(), [&](const Use &Arg) {
+      return IsMemoryObjectOperand(Arg.get());
+    });
+  else
+    NumMemoryObjectOperands = count_if(I.operands(), [&](const Use &Op) {
+      return IsMemoryObjectOperand(Op.get());
+    });
+
+  SmallVector<unsigned, 4> SeenOperandNos;
+
+  // Top-level metadata alternates: i32 operand_no, MDNode hint_node.
+  for (unsigned i = 0; i + 1 < MD->getNumOperands(); i += 2) {
+    auto *OpNoCI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(i));
+    Check(OpNoCI,
+          "!mem.cache_hint operand_no must be an integer constant in pair", MD);
+
+    Check(OpNoCI->getValue().isNonNegative(),
+          "!mem.cache_hint operand_no must be non-negative", MD);
+
+    uint64_t OperandNo = OpNoCI->getZExtValue();
+    Check(OperandNo < NumMemoryObjectOperands,
+          "!mem.cache_hint operand_no must refer to a valid memory object "
+          "operand",
+          &I);
+
+    Check(!is_contained(SeenOperandNos, OperandNo),
+          "!mem.cache_hint contains duplicate operand_no", MD);
+    SeenOperandNos.push_back(OperandNo);
+
+    const auto *Node = dyn_cast<MDNode>(MD->getOperand(i + 1));
+    Check(Node, "!mem.cache_hint hint node must be a metadata node", MD);
+
     Check(Node->getNumOperands() % 2 == 0,
-          "!mem.cache_hint node must have even number of operands (key-value "
-          "pairs)",
+          "!mem.cache_hint hint node must have even number of operands "
+          "(key-value pairs)",
           Node);
 
-    // Validate that keys are strings; values are target-specific
+    SmallVector<StringRef, 8> SeenKeys;
     for (unsigned j = 0; j + 1 < Node->getNumOperands(); j += 2) {
       const auto *Key = dyn_cast<MDString>(Node->getOperand(j));
       Check(Key, "!mem.cache_hint key must be a string", Node);
 
-      // operand_no is a generic key that must be an integer
-      if (Key->getString() == "operand_no") {
-        auto *CI = mdconst::dyn_extract<ConstantInt>(Node->getOperand(j + 1));
-        Check(CI, "!mem.cache_hint 'operand_no' must be an integer constant",
-              Node);
-      }
-      // Other keys are target-specific; their values are not validated here
+      StringRef KeyStr = Key->getString();
+      Check(!is_contained(SeenKeys, KeyStr),
+            "!mem.cache_hint hint node contains duplicate key", Node);
+      SeenKeys.push_back(KeyStr);
+      // Values are target-specific and not validated here.
     }
   }
 }

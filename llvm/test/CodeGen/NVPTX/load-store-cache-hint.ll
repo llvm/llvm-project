@@ -607,11 +607,11 @@ define i32 @test_multiple_loads_same_ptr(ptr addrspace(1) %p) {
 ; Invalid/edge cases
 ;-----------------------------------------------------------------------------
 
-; Test with invalid operand_no - should be ignored
-; CHECK-LABEL: test_load_invalid_operand_no
+; Test with empty hint node - should produce plain load
+; CHECK-LABEL: test_load_empty_hint_node
 ; CHECK: ld.global.b32
 ; CHECK-NOT: L1::
-define i32 @test_load_invalid_operand_no(ptr addrspace(1) %p) {
+define i32 @test_load_empty_hint_node(ptr addrspace(1) %p) {
   %v = load i32, ptr addrspace(1) %p, !mem.cache_hint !11
   ret i32 %v
 }
@@ -624,7 +624,7 @@ define i32 @test_load_unknown_key(ptr addrspace(1) %p) {
   ret i32 %v
 }
 
-; Test with reordered metadata (operand_no not first) - should still work
+; Test with custom hint key order - should still work
 ; CHECK-LABEL: test_load_reordered_metadata
 ; CHECK: ld.global.L1::evict_last.L2::evict_first.b32
 define i32 @test_load_reordered_metadata(ptr addrspace(1) %p) {
@@ -697,166 +697,166 @@ define i32 @test_load_l2_normal(ptr addrspace(1) %p) {
 ;-----------------------------------------------------------------------------
 
 ; L1 eviction policies
-!0 = !{!100}
-!100 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"first"}
+!0 = !{i32 0, !100}
+!100 = !{!"nvvm.l1_eviction", !"first"}
 
-!1 = !{!101}
-!101 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"last"}
+!1 = !{i32 0, !101}
+!101 = !{!"nvvm.l1_eviction", !"last"}
 
-!2 = !{!102}
-!102 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"unchanged"}
+!2 = !{i32 0, !102}
+!102 = !{!"nvvm.l1_eviction", !"unchanged"}
 
-!3 = !{!103}
-!103 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"no_allocate"}
+!3 = !{i32 0, !103}
+!103 = !{!"nvvm.l1_eviction", !"no_allocate"}
 
 ; L2 eviction policies
-!4 = !{!104}
-!104 = !{!"operand_no", i32 0, !"nvvm.l2_eviction", !"first"}
+!4 = !{i32 0, !104}
+!104 = !{!"nvvm.l2_eviction", !"first"}
 
-!5 = !{!105}
-!105 = !{!"operand_no", i32 0, !"nvvm.l2_eviction", !"last"}
+!5 = !{i32 0, !105}
+!105 = !{!"nvvm.l2_eviction", !"last"}
 
 ; L2 prefetch sizes
-!6 = !{!106}
-!106 = !{!"operand_no", i32 0, !"nvvm.l2_prefetch_size", !"64B"}
+!6 = !{i32 0, !106}
+!106 = !{!"nvvm.l2_prefetch_size", !"64B"}
 
-!7 = !{!107}
-!107 = !{!"operand_no", i32 0, !"nvvm.l2_prefetch_size", !"128B"}
+!7 = !{i32 0, !107}
+!107 = !{!"nvvm.l2_prefetch_size", !"128B"}
 
-!8 = !{!108}
-!108 = !{!"operand_no", i32 0, !"nvvm.l2_prefetch_size", !"256B"}
+!8 = !{i32 0, !108}
+!108 = !{!"nvvm.l2_prefetch_size", !"256B"}
 
-; Invalid operand_no (should be ignored for load which has operand 0)
-!11 = !{!111}
-!111 = !{!"operand_no", i32 5, !"nvvm.l1_eviction", !"first"}
+; Empty hint node (should not emit any qualifier)
+!11 = !{i32 0, !111}
+!111 = !{}
 
 ; Unknown key (should be ignored, but valid L1 hint should still work)
-!12 = !{!112}
-!112 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"first", !"nvvm.unknown_key", !"value"}
+!12 = !{i32 0, !112}
+!112 = !{!"nvvm.l1_eviction", !"first", !"nvvm.unknown_key", !"value"}
 
 ; "normal" eviction (default, should not emit qualifier)
-!13 = !{!113}
-!113 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"normal"}
+!13 = !{i32 0, !113}
+!113 = !{!"nvvm.l1_eviction", !"normal"}
 
-!14 = !{!114}
-!114 = !{!"operand_no", i32 0, !"nvvm.l2_eviction", !"normal"}
+!14 = !{i32 0, !114}
+!114 = !{!"nvvm.l2_eviction", !"normal"}
 
 ; All L1 + L2 combinations
-!20 = !{!120}
-!120 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"first"}
+!20 = !{i32 0, !120}
+!120 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"first"}
 
-!21 = !{!121}
-!121 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"last"}
+!21 = !{i32 0, !121}
+!121 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"last"}
 
-!22 = !{!122}
-!122 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first"}
+!22 = !{i32 0, !122}
+!122 = !{!"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first"}
 
-!23 = !{!123}
-!123 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"last"}
+!23 = !{i32 0, !123}
+!123 = !{!"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"last"}
 
 ; L1 + L2 + Prefetch combination
-!24 = !{!124}
-!124 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"last", !"nvvm.l2_prefetch_size", !"128B"}
+!24 = !{i32 0, !124}
+!124 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_eviction", !"last", !"nvvm.l2_prefetch_size", !"128B"}
 
 ; L2::cache_hint with constant cache-policy
-!30 = !{!130}
-!130 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 12345}
+!30 = !{i32 0, !130}
+!130 = !{!"nvvm.l2_cache_hint", i64 12345}
 
-!31 = !{!131}
-!131 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 98765}
+!31 = !{i32 0, !131}
+!131 = !{!"nvvm.l2_cache_hint", i64 98765}
 
-!32 = !{!132}
-!132 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 55555}
+!32 = !{i32 0, !132}
+!132 = !{!"nvvm.l2_cache_hint", i64 55555}
 
-!33 = !{!133}
-!133 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 67890}
+!33 = !{i32 0, !133}
+!133 = !{!"nvvm.l2_cache_hint", i64 67890}
 
-!34 = !{!134}
-!134 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 11111}
+!34 = !{i32 0, !134}
+!134 = !{!"nvvm.l2_cache_hint", i64 11111}
 
-!35 = !{!135}
-!135 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 22222}
+!35 = !{i32 0, !135}
+!135 = !{!"nvvm.l2_cache_hint", i64 22222}
 
 ; L2::cache_hint for vector types
-!40 = !{!140}
-!140 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 33333}
+!40 = !{i32 0, !140}
+!140 = !{!"nvvm.l2_cache_hint", i64 33333}
 
-!41 = !{!141}
-!141 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 44444}
+!41 = !{i32 0, !141}
+!141 = !{!"nvvm.l2_cache_hint", i64 44444}
 
-!42 = !{!142}
-!142 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 55556}
+!42 = !{i32 0, !142}
+!142 = !{!"nvvm.l2_cache_hint", i64 55556}
 
-!43 = !{!143}
-!143 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 66666}
+!43 = !{i32 0, !143}
+!143 = !{!"nvvm.l2_cache_hint", i64 66666}
 
-!44 = !{!144}
-!144 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 77777}
+!44 = !{i32 0, !144}
+!144 = !{!"nvvm.l2_cache_hint", i64 77777}
 
-!45 = !{!145}
-!145 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 88888}
+!45 = !{i32 0, !145}
+!145 = !{!"nvvm.l2_cache_hint", i64 88888}
 
-!46 = !{!146}
-!146 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 99999}
+!46 = !{i32 0, !146}
+!146 = !{!"nvvm.l2_cache_hint", i64 99999}
 
-!47 = !{!147}
-!147 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 11112}
+!47 = !{i32 0, !147}
+!147 = !{!"nvvm.l2_cache_hint", i64 11112}
 
-!48 = !{!148}
-!148 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 22223}
+!48 = !{i32 0, !148}
+!148 = !{!"nvvm.l2_cache_hint", i64 22223}
 
-!49 = !{!149}
-!149 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 33334}
+!49 = !{i32 0, !149}
+!149 = !{!"nvvm.l2_cache_hint", i64 33334}
 
 ; L2::cache_hint combined with other hints (L2::cache_hint takes precedence)
-!50 = !{!150}
-!150 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 44445, !"nvvm.l1_eviction", !"first"}
+!50 = !{i32 0, !150}
+!150 = !{!"nvvm.l2_cache_hint", i64 44445, !"nvvm.l1_eviction", !"first"}
 
-!51 = !{!151}
-!151 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 55557, !"nvvm.l2_eviction", !"last"}
+!51 = !{i32 0, !151}
+!151 = !{!"nvvm.l2_cache_hint", i64 55557, !"nvvm.l2_eviction", !"last"}
 
-!52 = !{!152}
-!152 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 66667, !"nvvm.l2_prefetch_size", !"128B"}
+!52 = !{i32 0, !152}
+!152 = !{!"nvvm.l2_cache_hint", i64 66667, !"nvvm.l2_prefetch_size", !"128B"}
 
-!53 = !{!153}
-!153 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 77778, !"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first", !"nvvm.l2_prefetch_size", !"256B"}
+!53 = !{i32 0, !153}
+!153 = !{!"nvvm.l2_cache_hint", i64 77778, !"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first", !"nvvm.l2_prefetch_size", !"256B"}
 
-!54 = !{!154}
-!154 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 88889, !"nvvm.l1_eviction", !"unchanged"}
+!54 = !{i32 0, !154}
+!154 = !{!"nvvm.l2_cache_hint", i64 88889, !"nvvm.l1_eviction", !"unchanged"}
 
-!55 = !{!155}
-!155 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 99990, !"nvvm.l1_eviction", !"no_allocate", !"nvvm.l2_eviction", !"last"}
+!55 = !{i32 0, !155}
+!155 = !{!"nvvm.l2_cache_hint", i64 99990, !"nvvm.l1_eviction", !"no_allocate", !"nvvm.l2_eviction", !"last"}
 
-!56 = !{!156}
-!156 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 11113, !"nvvm.l1_eviction", !"first"}
+!56 = !{i32 0, !156}
+!156 = !{!"nvvm.l2_cache_hint", i64 11113, !"nvvm.l1_eviction", !"first"}
 
-!57 = !{!157}
-!157 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 22224, !"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first", !"nvvm.l2_prefetch_size", !"64B"}
+!57 = !{i32 0, !157}
+!157 = !{!"nvvm.l2_cache_hint", i64 22224, !"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first", !"nvvm.l2_prefetch_size", !"64B"}
 
 ; Multiple loads same pointer test (different policies)
-!60 = !{!160}
-!160 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 11111, !"nvvm.l1_eviction", !"last"}
+!60 = !{i32 0, !160}
+!160 = !{!"nvvm.l2_cache_hint", i64 11111, !"nvvm.l1_eviction", !"last"}
 
-!61 = !{!161}
-!161 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i64 22222, !"nvvm.l1_eviction", !"first"}
+!61 = !{i32 0, !161}
+!161 = !{!"nvvm.l2_cache_hint", i64 22222, !"nvvm.l1_eviction", !"first"}
 
-; Reordered metadata test (operand_no not first)
-!70 = !{!170}
-!170 = !{!"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first", !"operand_no", i32 0}
+; Custom key order in hint node
+!70 = !{i32 0, !170}
+!170 = !{!"nvvm.l1_eviction", !"last", !"nvvm.l2_eviction", !"first"}
 
 ; Invalid nvvm.l2_cache_hint values - should be ignored, no L2::cache_hint emitted
 ; String value instead of i64 - invalid, L1 hint should still work
-!80 = !{!180}
-!180 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"first", !"nvvm.l2_cache_hint", !"not_a_number"}
+!80 = !{i32 0, !180}
+!180 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_cache_hint", !"not_a_number"}
 
 ; Null/metadata reference instead of constant - invalid
-!81 = !{!181}
-!181 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"last", !"nvvm.l2_cache_hint", !{}}
+!81 = !{i32 0, !181}
+!181 = !{!"nvvm.l1_eviction", !"last", !"nvvm.l2_cache_hint", !{}}
 
 ; i32 instead of i64 - still valid, ConstantInt accepts any integer type
-!82 = !{!182}
-!182 = !{!"operand_no", i32 0, !"nvvm.l2_cache_hint", i32 99999}
+!82 = !{i32 0, !182}
+!182 = !{!"nvvm.l2_cache_hint", i32 99999}
 
 ; Store: string value for nvvm.l2_cache_hint - invalid
-!83 = !{!183}
-!183 = !{!"operand_no", i32 0, !"nvvm.l1_eviction", !"unchanged", !"nvvm.l2_cache_hint", !"invalid"}
+!83 = !{i32 0, !183}
+!183 = !{!"nvvm.l1_eviction", !"unchanged", !"nvvm.l2_cache_hint", !"invalid"}
