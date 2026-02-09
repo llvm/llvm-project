@@ -104,6 +104,7 @@
 #include "math/sinpif.h"
 #include "math/sqrt.h"
 #include "math/sqrtf.h"
+#include "math/sqrtf128.h"
 #include "math/sqrtf16.h"
 #include "math/tan.h"
 #include "math/tanf.h"
