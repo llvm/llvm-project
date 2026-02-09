@@ -33,6 +33,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         """
         main_source_path = self.getSourcePath("main.cpp")
         main_bp_line = line_number(main_source_path, "main breakpoint 1")
+        main_source = Source.build(path=main_source_path)
         program = self.getBuildArtifact("a.out")
 
         # Set a breakpoint after creating the target by running a command line
@@ -44,26 +45,37 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         # breakpoint events for these breakpoints but not for ones that are not
         # set via the command interpreter.
 
+        shlib_env_key = self.platformContext.shlib_environment_var
+        path_separator = self.platformContext.shlib_path_separator
+        shlib_env_value = os.getenv(shlib_env_key)
+        shlib_env_new_value = (
+            self.getBuildDir()
+            if shlib_env_value is None
+            else (shlib_env_value + path_separator + self.getBuildDir())
+        )
+
         # Set preCommand breakpoint
         func_unique_function_name = "unique_function_name"
         bp_command = f"breakpoint set --name {func_unique_function_name}"
-        launch_seq = self.build_and_launch(program, preRunCommands=[bp_command])
+        launch_seq = self.build_and_launch(
+            program,
+            preRunCommands=[bp_command],
+            env={shlib_env_key: shlib_env_new_value},
+        )
         self.dap_server.wait_for_event(["initialized"])
         dap_breakpoint_ids = []
 
         # We set the breakpoints after initialized event.
         # Set and verify new line breakpoint.
-        response = self.dap_server.request_setBreakpoints(
-            Source.build(path=main_source_path), [main_bp_line]
-        )
+        response = self.dap_server.request_setBreakpoints(main_source, [main_bp_line])
         self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]
-        self.assertEqual(len(breakpoints), 1, "Expects only one line breakpoint")
+        self.assertEqual(len(breakpoints), 1, "expects only one line breakpoint")
         main_breakpoint = breakpoints[0]
         main_bp_id = main_breakpoint["id"]
         dap_breakpoint_ids.append(main_bp_id)
         self.assertTrue(
-            main_breakpoint["verified"], "Expects main breakpoint to be verified"
+            main_breakpoint["verified"], "expects main breakpoint to be verified"
         )
 
         # Set and verify new function breakpoint.
@@ -71,13 +83,13 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         response = self.dap_server.request_setFunctionBreakpoints([func_foo])
         self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]
-        self.assertEqual(len(breakpoints), 1, "Expects only one function breakpoint")
+        self.assertEqual(len(breakpoints), 1, "expects only one function breakpoint")
         func_foo_breakpoint = breakpoints[0]
         foo_bp_id = func_foo_breakpoint["id"]
         dap_breakpoint_ids.append(foo_bp_id)
         self.assertFalse(
             func_foo_breakpoint["verified"],
-            "Expects unique function breakpoint to not be verified",
+            "expects unique function breakpoint to not be verified",
         )
 
         self.dap_server.request_configurationDone()
@@ -85,11 +97,11 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         self.assertIsNotNone(launch_response)
         self.assertTrue(launch_response["success"])
 
-        # wait for the next stop (breakpoint foo).
+        # Wait for the next stop (breakpoint foo).
         self.verify_breakpoint_hit([foo_bp_id])
         unique_bp_id = 1
 
-        # Check the breakpoints set in dap is verified
+        # Check the breakpoints set in dap is verified.
         verified_breakpoint_ids = []
         events = self.dap_server.wait_for_breakpoint_events()
         for breakpoint_event in events:
@@ -101,7 +113,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
             if "verified" in breakpoint_event_body:
                 self.assertFalse(
                     breakpoint_event_body["verified"],
-                    f"Expected changed breakpoint to be verified. event: {breakpoint_event}",
+                    f"expects changed breakpoint to be verified. event: {breakpoint_event}",
                 )
             id = breakpoint["id"]
             verified_breakpoint_ids.append(id)
@@ -118,5 +130,5 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
 
         # Clear line and function breakpoints and exit.
         self.dap_server.request_setFunctionBreakpoints([])
-        self.dap_server.request_setBreakpoints(Source.build(path=main_source_path), [])
+        self.dap_server.request_setBreakpoints(main_source, [])
         self.continue_to_exit()
