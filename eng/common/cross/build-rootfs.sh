@@ -295,9 +295,7 @@ while :; do
             ;;
         noble) # Ubuntu 24.04
             __CodeName=noble
-            if [[ -z "$__LLDB_Package" ]]; then
-                __LLDB_Package="liblldb-19-dev"
-            fi
+            __LLDB_Package="liblldb-19-dev"
             ;;
         stretch) # Debian 9
             __CodeName=stretch
