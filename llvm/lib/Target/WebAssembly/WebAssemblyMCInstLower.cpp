@@ -20,6 +20,7 @@
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyAsmPrinter.h"
 #include "WebAssemblyMachineFunctionInfo.h"
+#include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
@@ -65,7 +66,9 @@ WebAssemblyMCInstLower::GetGlobalAddressSymbol(const MachineOperand &MO) const {
       SmallVector<MVT, 1> VTs;
       computeLegalValueVTs(CurrentFunc, TM, GlobalVT, VTs);
 
-      WebAssembly::wasmSymbolSetType(WasmSym, GlobalVT, VTs);
+      WebAssembly::wasmSymbolSetType(
+          WasmSym, GlobalVT, VTs,
+          TM.getSubtarget<WebAssemblySubtarget>(CurrentFunc).hasAddr64());
     }
     return WasmSym;
   }

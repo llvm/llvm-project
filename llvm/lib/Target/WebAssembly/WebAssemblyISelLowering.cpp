@@ -827,10 +827,15 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
     // (the index in
     // __funcref_call_table is added).
     if (IsFuncrefCall) {
-      Register RegZero =
-          MF.getRegInfo().createVirtualRegister(&WebAssembly::I32RegClass);
+      Register RegZero = MF.getRegInfo().createVirtualRegister(
+          Subtarget->hasAddr64() ? &WebAssembly::I64RegClass
+                                 : &WebAssembly::I32RegClass);
       MachineInstrBuilder MIBC0 =
-          BuildMI(MF, DL, TII.get(WebAssembly::CONST_I32), RegZero).addImm(0);
+          BuildMI(MF, DL,
+                  TII.get(Subtarget->hasAddr64() ? WebAssembly::CONST_I64
+                                                 : WebAssembly::CONST_I32),
+                  RegZero)
+              .addImm(0);
 
       BB->insert(CallResults.getIterator(), MIBC0);
       MachineInstrBuilder(MF, CallParams).addReg(RegZero);
@@ -881,10 +886,15 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
   if (IsIndirect && IsFuncrefCall) {
     MCSymbolWasm *Table = WebAssembly::getOrCreateFuncrefCallTableSymbol(
         MF.getContext(), Subtarget);
-    Register RegZero =
-        MF.getRegInfo().createVirtualRegister(&WebAssembly::I32RegClass);
+    Register RegZero = MF.getRegInfo().createVirtualRegister(
+        Subtarget->hasAddr64() ? &WebAssembly::I64RegClass
+                               : &WebAssembly::I32RegClass);
     MachineInstr *Const0 =
-        BuildMI(MF, DL, TII.get(WebAssembly::CONST_I32), RegZero).addImm(0);
+        BuildMI(MF, DL,
+                TII.get(Subtarget->hasAddr64() ? WebAssembly::CONST_I64
+                                               : WebAssembly::CONST_I32),
+                RegZero)
+            .addImm(0);
     BB->insertAfter(MIB.getInstr()->getIterator(), Const0);
 
     Register RegFuncref =
@@ -894,7 +904,10 @@ LowerCallResults(MachineInstr &CallResults, DebugLoc DL, MachineBasicBlock *BB,
     BB->insertAfter(Const0->getIterator(), RefNull);
 
     MachineInstr *TableSet =
-        BuildMI(MF, DL, TII.get(WebAssembly::TABLE_SET_FUNCREF))
+        BuildMI(MF, DL,
+                TII.get(Subtarget->hasAddr64()
+                            ? WebAssembly::TABLE_SET_FUNCREF_A64
+                            : WebAssembly::TABLE_SET_FUNCREF_A32))
             .addSym(Table)
             .addReg(RegZero)
             .addReg(RegFuncref);
@@ -1517,7 +1530,8 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     MCSymbolWasm *Table = WebAssembly::getOrCreateFuncrefCallTableSymbol(
         MF.getContext(), Subtarget);
     SDValue Sym = DAG.getMCSymbol(Table, PtrVT);
-    SDValue TableSlot = DAG.getConstant(0, DL, MVT::i32);
+    SDValue TableSlot =
+        DAG.getConstant(0, DL, Subtarget->hasAddr64() ? MVT::i64 : MVT::i32);
     SDValue TableSetOps[] = {Chain, Sym, TableSlot, Callee};
     SDValue TableSet = DAG.getMemIntrinsicNode(
         WebAssemblyISD::TABLE_SET, DL, DAG.getVTList(MVT::Other), TableSetOps,
