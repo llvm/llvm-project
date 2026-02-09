@@ -10,7 +10,6 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_UNSAFETOALLOWEXCEPTIONSCHECK_H
 
 #include "../ClangTidyCheck.h"
-#include "llvm/ADT/StringSet.h"
 
 namespace clang::tidy::bugprone {
 
