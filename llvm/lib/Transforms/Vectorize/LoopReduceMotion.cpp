@@ -46,13 +46,13 @@
 
 using namespace llvm;
 
-class LoopReduceMotion : public FunctionPass {
+class LoopReduceMotionLegacy : public FunctionPass {
   LoopReduceMotionPass Impl;
 
 public:
   static char ID;
 
-  LoopReduceMotion() : FunctionPass(ID) {}
+  LoopReduceMotionLegacy() : FunctionPass(ID) {}
 
   StringRef getPassName() const override { return "Loop Reduce Motion Pass"; }
 
@@ -65,7 +65,7 @@ public:
   }
 };
 
-char LoopReduceMotion::ID = 0;
+char LoopReduceMotionLegacy::ID = 0;
 
 PreservedAnalyses LoopReduceMotionPass::run(Function &F,
                                             FunctionAnalysisManager &FAM) {
@@ -80,7 +80,7 @@ PreservedAnalyses LoopReduceMotionPass::run(Function &F,
   return PreservedAnalyses::none();
 }
 
-bool LoopReduceMotion::runOnFunction(Function &F) {
+bool LoopReduceMotionLegacy::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
 
@@ -187,21 +187,16 @@ bool LoopReduceMotionPass::matchAndTransform(Loop &L, DominatorTree &DT,
             ? LandingPadBuilder.CreateAdd(PreheaderValue, ScalarTotalSum)
             : ScalarTotalSum;
 
-    // replace use of phi and erase use empty value
+    // delete the dead PHI Node
     if (!PN.use_empty())
       PN.replaceAllUsesWith(PoisonValue::get(PN.getType()));
-    if (PN.use_empty())
-      PN.eraseFromParent();
-
+    llvm::RecursivelyDeleteDeadPHINode(&PN);
+    // replace the use of Recurrence Node and delete the dead Node
     Instruction *FinalNode = dyn_cast<Instruction>(LastAdd);
     if (!FinalNode)
       return false;
     RecurrenceInst->replaceAllUsesWith(FinalNode);
-
-    if (RecurrenceInst->use_empty())
-      RecurrenceInst->eraseFromParent();
-    if (ReduceCall->use_empty())
-      ReduceCall->eraseFromParent();
+    llvm::RecursivelyDeleteTriviallyDeadInstructions(RecurrenceInst);
 
     return true;
   }
@@ -209,5 +204,5 @@ bool LoopReduceMotionPass::matchAndTransform(Loop &L, DominatorTree &DT,
 }
 
 FunctionPass *llvm::createLoopReduceMotionPass() {
-  return new LoopReduceMotion();
+  return new LoopReduceMotionLegacy();
 }

@@ -2,8 +2,8 @@
 ; loop-reduce-motion-test.ll
 ; RUN: opt -passes=loop-reduce-motion -S < %s | FileCheck %s
 
-define i32 @pixel_asd8(ptr %pix1, i64 %stride1, ptr %pix2, i64 %stride2, i32 %height) {
-; CHECK-LABEL: @pixel_asd8(
+define i32 @func_with_VecBin_Sub(ptr %pix1, i64 %stride1, ptr %pix2, i64 %stride2, i32 %height) {
+; CHECK-LABEL: @func_with_VecBin_Sub(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP21:%.*]] = icmp sgt i32 [[HEIGHT:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP21]], label [[FOR_COND1_PREHEADER_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
@@ -65,4 +65,272 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
   %sum.0.lcssa = phi i32 [ 0, %entry ], [ %add.7, %for.cond.cleanup.loopexit ]
   %6 = tail call i32 @llvm.abs.i32(i32 %sum.0.lcssa, i1 true)
   ret i32 %6
+}
+
+define i32 @func_with_VecBin_add(ptr %pix1, i64 %stride1, ptr %pix2, i64 %stride2, i32 %height) {
+; CHECK-LABEL: @func_with_VecBin_add(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp sgt i32 [[HEIGHT:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP21]], label [[FOR_COND1_PREHEADER_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond1.preheader.preheader:
+; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
+; CHECK:       for.cond1.preheader:
+; CHECK-NEXT:    [[Y_025:%.*]] = phi i32 [ [[INC9:%.*]], [[FOR_COND1_PREHEADER]] ], [ 0, [[FOR_COND1_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[PIX1_ADDR_023:%.*]] = phi ptr [ [[ADD_PTR:%.*]], [[FOR_COND1_PREHEADER]] ], [ [[PIX1:%.*]], [[FOR_COND1_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[PIX2_ADDR_022:%.*]] = phi ptr [ [[ADD_PTR10:%.*]], [[FOR_COND1_PREHEADER]] ], [ [[PIX2:%.*]], [[FOR_COND1_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[VEC_SUM_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, [[FOR_COND1_PREHEADER_PREHEADER]] ], [ [[VEC_SUM_NEXT:%.*]], [[FOR_COND1_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[PIX1_ADDR_023]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[PIX2_ADDR_022]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i8> [[TMP1]] to <8 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = add nsw <8 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[VEC_SUM_NEXT]] = add <8 x i32> [[VEC_SUM_PHI]], [[TMP4]]
+; CHECK-NEXT:    [[INC9]] = add nuw nsw i32 [[Y_025]], 1
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[PIX1_ADDR_023]], i64 [[STRIDE1:%.*]]
+; CHECK-NEXT:    [[ADD_PTR10]] = getelementptr inbounds i8, ptr [[PIX2_ADDR_022]], i64 [[STRIDE2:%.*]]
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC9]], [[HEIGHT]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[LOOP_EXIT_LANDING:%.*]], label [[FOR_COND1_PREHEADER]]
+; CHECK:       loop.exit.landing:
+; CHECK-NEXT:    [[SCALAR_TOTAL_SUM:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[VEC_SUM_NEXT]])
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 0, [[SCALAR_TOTAL_SUM]]
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP5]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @llvm.abs.i32(i32 [[SUM_0_LCSSA]], i1 true)
+; CHECK-NEXT:    ret i32 [[TMP6]]
+;
+entry:
+  %cmp21 = icmp sgt i32 %height, 0
+  br i1 %cmp21, label %for.cond1.preheader, label %for.cond.cleanup
+
+for.cond1.preheader:                              ; preds = %for.cond1.preheader.preheader, %for.cond1.preheader
+  %y.025 = phi i32 [ %inc9, %for.cond1.preheader ], [ 0, %entry ]
+  %sum.024 = phi i32 [ %add.7, %for.cond1.preheader ], [ 0, %entry ]
+  %pix1.addr.023 = phi ptr [ %add.ptr, %for.cond1.preheader ], [ %pix1, %entry ]
+  %pix2.addr.022 = phi ptr [ %add.ptr10, %for.cond1.preheader ], [ %pix2, %entry ]
+  %0 = load <8 x i8>, ptr %pix1.addr.023
+  %1 = load <8 x i8>, ptr %pix2.addr.022
+  %2 = zext <8 x i8> %0 to <8 x i32>
+  %3 = zext <8 x i8> %1 to <8 x i32>
+  %4 = add nsw <8 x i32> %2, %3
+  %5 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %4)
+  %add.7 = add i32 %sum.024, %5
+  %inc9 = add nuw nsw i32 %y.025, 1
+  %add.ptr = getelementptr inbounds i8, ptr %pix1.addr.023, i64 %stride1
+  %add.ptr10 = getelementptr inbounds i8, ptr %pix2.addr.022, i64 %stride2
+  %exitcond.not = icmp eq i32 %inc9, %height
+  br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.cond1.preheader
+
+for.cond.cleanup.loopexit:                        ; preds = %for.cond1.preheader
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+  %sum.0.lcssa = phi i32 [ 0, %entry ], [ %add.7, %for.cond.cleanup.loopexit ]
+  %6 = tail call i32 @llvm.abs.i32(i32 %sum.0.lcssa, i1 true)
+  ret i32 %6
+}
+
+define i32 @multi_exit(ptr %pix1, i64 %stride1, ptr %pix2, i64 %stride2, i32 %val1, i32 %val2) {
+; CHECK-LABEL: @multi_exit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp sgt i32 [[VAL1:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP21]], label [[FOR_COND1_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond1.preheader:
+; CHECK-NEXT:    [[Y_025:%.*]] = phi i32 [ [[INC9:%.*]], [[NEXT_COND1:%.*]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SUM_024:%.*]] = phi i32 [ [[ADD_7:%.*]], [[NEXT_COND1]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[PIX1_ADDR_023:%.*]] = phi ptr [ [[ADD_PTR:%.*]], [[NEXT_COND1]] ], [ [[PIX1:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[PIX2_ADDR_022:%.*]] = phi ptr [ [[ADD_PTR10:%.*]], [[NEXT_COND1]] ], [ [[PIX2:%.*]], [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[PIX1_ADDR_023]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[PIX2_ADDR_022]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i8> [[TMP1]] to <8 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw <8 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP4]])
+; CHECK-NEXT:    [[ADD_7]] = add i32 [[SUM_024]], [[TMP5]]
+; CHECK-NEXT:    [[INC9]] = add nuw nsw i32 [[Y_025]], 1
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[PIX1_ADDR_023]], i64 [[STRIDE1:%.*]]
+; CHECK-NEXT:    [[ADD_PTR10]] = getelementptr inbounds i8, ptr [[PIX2_ADDR_022]], i64 [[STRIDE2:%.*]]
+; CHECK-NEXT:    br label [[NEXT_COND0:%.*]]
+; CHECK:       next.cond0:
+; CHECK-NEXT:    [[ADD_8:%.*]] = add i32 [[ADD_7]], 1
+; CHECK-NEXT:    [[EXIT1:%.*]] = icmp eq i32 [[INC9]], [[VAL1]]
+; CHECK-NEXT:    br i1 [[EXIT1]], label [[FOR_COND_CLEANUP]], label [[NEXT_COND1]]
+; CHECK:       next.cond1:
+; CHECK-NEXT:    [[ADD_9:%.*]] = add i32 [[ADD_7]], 2
+; CHECK-NEXT:    [[EXIT2:%.*]] = icmp eq i32 [[INC9]], [[VAL2:%.*]]
+; CHECK-NEXT:    br i1 [[EXIT2]], label [[FOR_COND_CLEANUP]], label [[FOR_COND1_PREHEADER]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD_8]], [[NEXT_COND0]] ], [ [[ADD_9]], [[NEXT_COND1]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @llvm.abs.i32(i32 [[SUM_0_LCSSA]], i1 true)
+; CHECK-NEXT:    ret i32 [[TMP6]]
+;
+entry:
+  %cmp21 = icmp sgt i32 %val1, 0
+  br i1 %cmp21, label %for.cond1.preheader, label %for.cond.cleanup
+
+for.cond1.preheader:                              ; preds = %for.cond1.preheader.preheader, %for.cond1.preheader
+  %y.025 = phi i32 [ %inc9, %next.cond1 ], [ 0, %entry ]
+  %sum.024 = phi i32 [ %add.7, %next.cond1 ], [ 0, %entry ]
+  %pix1.addr.023 = phi ptr [ %add.ptr, %next.cond1 ], [ %pix1, %entry ]
+  %pix2.addr.022 = phi ptr [ %add.ptr10, %next.cond1 ], [ %pix2, %entry ]
+  %0 = load <8 x i8>, ptr %pix1.addr.023
+  %1 = load <8 x i8>, ptr %pix2.addr.022
+  %2 = zext <8 x i8> %0 to <8 x i32>
+  %3 = zext <8 x i8> %1 to <8 x i32>
+  %4 = sub nsw <8 x i32> %2, %3
+  %5 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %4)
+  %add.7 = add i32 %sum.024, %5
+  %inc9 = add nuw nsw i32 %y.025, 1
+  %add.ptr = getelementptr inbounds i8, ptr %pix1.addr.023, i64 %stride1
+  %add.ptr10 = getelementptr inbounds i8, ptr %pix2.addr.022, i64 %stride2
+  br label %next.cond0
+
+next.cond0:
+  %add.8 = add i32 %add.7, 1
+  %exit1 = icmp eq i32 %inc9, %val1
+  br i1 %exit1, label %for.cond.cleanup, label %next.cond1
+
+next.cond1:
+  %add.9 = add i32 %add.7, 2
+  %exit2 = icmp eq i32 %inc9, %val2
+  br i1 %exit2, label %for.cond.cleanup, label %for.cond1.preheader
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+  %sum.0.lcssa = phi i32 [ 0, %entry ], [ %add.8, %next.cond0 ], [%add.9, %next.cond1 ]
+  %6 = tail call i32 @llvm.abs.i32(i32 %sum.0.lcssa, i1 true)
+  ret i32 %6
+}
+
+define i32 @phi_not_reduction_call(ptr %pix1, i64 %stride1, ptr %pix2, i64 %stride2, i32 %val1) {
+; CHECK-LABEL: @phi_not_reduction_call(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp sgt i32 [[VAL1:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP21]], label [[FOR_COND1_PREHEADER_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond1.preheader.preheader:
+; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
+; CHECK:       for.cond1.preheader:
+; CHECK-NEXT:    [[Y_025:%.*]] = phi i32 [ [[INC9:%.*]], [[FOR_COND1_PREHEADER]] ], [ 0, [[FOR_COND1_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[SUM_024:%.*]] = phi i32 [ [[ADD_7:%.*]], [[FOR_COND1_PREHEADER]] ], [ 0, [[FOR_COND1_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[PIX1_ADDR_023:%.*]] = phi ptr [ [[ADD_PTR:%.*]], [[FOR_COND1_PREHEADER]] ], [ [[PIX1:%.*]], [[FOR_COND1_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[PIX2_ADDR_022:%.*]] = phi ptr [ [[ADD_PTR10:%.*]], [[FOR_COND1_PREHEADER]] ], [ [[PIX2:%.*]], [[FOR_COND1_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[PIX1_ADDR_023]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[PIX2_ADDR_022]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i8> [[TMP1]] to <8 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw <8 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP4]])
+; CHECK-NEXT:    [[ADD_7]] = add i32 [[SUM_024]], [[TMP5]]
+; CHECK-NEXT:    [[INC9]] = add nuw nsw i32 [[Y_025]], 1
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[PIX1_ADDR_023]], i64 [[STRIDE1:%.*]]
+; CHECK-NEXT:    [[ADD_PTR10]] = getelementptr inbounds i8, ptr [[PIX2_ADDR_022]], i64 [[STRIDE2:%.*]]
+; CHECK-NEXT:    [[EXIT:%.*]] = icmp eq i32 [[INC9]], [[VAL1]]
+; CHECK-NEXT:    br i1 [[EXIT]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_COND1_PREHEADER]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD_7]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SUM_024]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @llvm.abs.i32(i32 [[SUM_0_LCSSA]], i1 true)
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[SUM]]
+; CHECK-NEXT:    ret i32 [[TMP7]]
+;
+entry:
+  %cmp21 = icmp sgt i32 %val1, 0
+  br i1 %cmp21, label %for.cond1.preheader, label %for.cond.cleanup
+
+for.cond1.preheader:                              ; preds = %for.cond1.preheader
+  %y.025 = phi i32 [ %inc9, %for.cond1.preheader ], [ 0, %entry ]
+  %sum.024 = phi i32 [ %add.7, %for.cond1.preheader ], [ 0, %entry ]
+  %pix1.addr.023 = phi ptr [ %add.ptr, %for.cond1.preheader ], [ %pix1, %entry ]
+  %pix2.addr.022 = phi ptr [ %add.ptr10, %for.cond1.preheader ], [ %pix2, %entry ]
+  %0 = load <8 x i8>, ptr %pix1.addr.023
+  %1 = load <8 x i8>, ptr %pix2.addr.022
+  %2 = zext <8 x i8> %0 to <8 x i32>
+  %3 = zext <8 x i8> %1 to <8 x i32>
+  %4 = sub nsw <8 x i32> %2, %3
+  %5 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %4)
+  %add.7 = add i32 %sum.024, %5
+  %inc9 = add nuw nsw i32 %y.025, 1
+  %add.ptr = getelementptr inbounds i8, ptr %pix1.addr.023, i64 %stride1
+  %add.ptr10 = getelementptr inbounds i8, ptr %pix2.addr.022, i64 %stride2
+  %exit = icmp eq i32 %inc9, %val1
+  br i1 %exit, label %for.cond.cleanup.loopexit, label %for.cond1.preheader
+
+for.cond.cleanup.loopexit:
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+  %sum.0.lcssa = phi i32 [ 0, %entry ], [%add.7, %for.cond.cleanup.loopexit ]
+  %sum = phi i32 [0, %entry], [ %sum.024, %for.cond.cleanup.loopexit]
+  %6 = tail call i32 @llvm.abs.i32(i32 %sum.0.lcssa, i1 true)
+  %7 = add i32 %6, %sum
+  ret i32 %7
+}
+
+define i32 @reduction_call_not_add(ptr %pix1, i64 %stride1, ptr %pix2, i64 %stride2, i32 %val1) {
+; CHECK-LABEL: @reduction_call_not_add(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP21:%.*]] = icmp sgt i32 [[VAL1:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP21]], label [[FOR_COND1_PREHEADER_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.cond1.preheader.preheader:
+; CHECK-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
+; CHECK:       for.cond1.preheader:
+; CHECK-NEXT:    [[Y_025:%.*]] = phi i32 [ [[INC9:%.*]], [[FOR_COND1_PREHEADER]] ], [ 0, [[FOR_COND1_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[SUM_024:%.*]] = phi i32 [ [[ADD_7:%.*]], [[FOR_COND1_PREHEADER]] ], [ 0, [[FOR_COND1_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[PIX1_ADDR_023:%.*]] = phi ptr [ [[ADD_PTR:%.*]], [[FOR_COND1_PREHEADER]] ], [ [[PIX1:%.*]], [[FOR_COND1_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[PIX2_ADDR_022:%.*]] = phi ptr [ [[ADD_PTR10:%.*]], [[FOR_COND1_PREHEADER]] ], [ [[PIX2:%.*]], [[FOR_COND1_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[PIX1_ADDR_023]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[PIX2_ADDR_022]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <8 x i8> [[TMP0]] to <8 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i8> [[TMP1]] to <8 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = sub nsw <8 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP4]])
+; CHECK-NEXT:    [[ADD_7]] = sub i32 [[SUM_024]], [[TMP5]]
+; CHECK-NEXT:    [[INC9]] = add nuw nsw i32 [[Y_025]], 1
+; CHECK-NEXT:    [[ADD_PTR]] = getelementptr inbounds i8, ptr [[PIX1_ADDR_023]], i64 [[STRIDE1:%.*]]
+; CHECK-NEXT:    [[ADD_PTR10]] = getelementptr inbounds i8, ptr [[PIX2_ADDR_022]], i64 [[STRIDE2:%.*]]
+; CHECK-NEXT:    [[EXIT:%.*]] = icmp eq i32 [[INC9]], [[VAL1]]
+; CHECK-NEXT:    br i1 [[EXIT]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_COND1_PREHEADER]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[ADD_7]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[SUM_024]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @llvm.abs.i32(i32 [[SUM_0_LCSSA]], i1 true)
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[SUM]]
+; CHECK-NEXT:    ret i32 [[TMP7]]
+;
+entry:
+  %cmp21 = icmp sgt i32 %val1, 0
+  br i1 %cmp21, label %for.cond1.preheader, label %for.cond.cleanup
+
+for.cond1.preheader:                              ; preds = %for.cond1.preheader
+  %y.025 = phi i32 [ %inc9, %for.cond1.preheader ], [ 0, %entry ]
+  %sum.024 = phi i32 [ %add.7, %for.cond1.preheader ], [ 0, %entry ]
+  %pix1.addr.023 = phi ptr [ %add.ptr, %for.cond1.preheader ], [ %pix1, %entry ]
+  %pix2.addr.022 = phi ptr [ %add.ptr10, %for.cond1.preheader ], [ %pix2, %entry ]
+  %0 = load <8 x i8>, ptr %pix1.addr.023
+  %1 = load <8 x i8>, ptr %pix2.addr.022
+  %2 = zext <8 x i8> %0 to <8 x i32>
+  %3 = zext <8 x i8> %1 to <8 x i32>
+  %4 = sub nsw <8 x i32> %2, %3
+  %5 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %4)
+  %add.7 = sub i32 %sum.024, %5
+  %inc9 = add nuw nsw i32 %y.025, 1
+  %add.ptr = getelementptr inbounds i8, ptr %pix1.addr.023, i64 %stride1
+  %add.ptr10 = getelementptr inbounds i8, ptr %pix2.addr.022, i64 %stride2
+  %exit = icmp eq i32 %inc9, %val1
+  br i1 %exit, label %for.cond.cleanup.loopexit, label %for.cond1.preheader
+
+for.cond.cleanup.loopexit:                        ; preds = %for.cond1.preheader
+  br label %for.cond.cleanup
+
+for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
+  %sum.0.lcssa = phi i32 [ 0, %entry ], [%add.7, %for.cond.cleanup.loopexit ]
+  %sum = phi i32 [0, %entry], [ %sum.024, %for.cond.cleanup.loopexit]
+  %6 = tail call i32 @llvm.abs.i32(i32 %sum.0.lcssa, i1 true)
+  %7 = add i32 %6, %sum
+  ret i32 %7
 }
