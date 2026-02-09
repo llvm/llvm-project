@@ -4,8 +4,7 @@
 define float @maximumnum_f32_1_maximumnum_val_p0(float %x) {
 ; CHECK-LABEL: define float @maximumnum_f32_1_maximumnum_val_p0(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float 0.000000e+00)
-; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.maximumnum.f32(float [[Y]], float 1.000000e+00)
+; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float 1.000000e+00)
 ; CHECK-NEXT:    ret float [[Z]]
 ;
   %y = call float @llvm.maximumnum.f32(float %x, float 0.0)
@@ -16,8 +15,7 @@ define float @maximumnum_f32_1_maximumnum_val_p0(float %x) {
 define float @maximumnum_f32_1_maximumnum_p0_val_fast(float %x) {
 ; CHECK-LABEL: define float @maximumnum_f32_1_maximumnum_p0_val_fast(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float 0.000000e+00)
-; CHECK-NEXT:    [[Z:%.*]] = call fast float @llvm.maximumnum.f32(float [[Y]], float 1.000000e+00)
+; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float 1.000000e+00)
 ; CHECK-NEXT:    ret float [[Z]]
 ;
   %y = call float @llvm.maximumnum.f32(float 0.0, float %x)
@@ -28,8 +26,7 @@ define float @maximumnum_f32_1_maximumnum_p0_val_fast(float %x) {
 define float @maximumnum_f32_1_maximumnum_p0_val_fmf1(float %x) {
 ; CHECK-LABEL: define float @maximumnum_f32_1_maximumnum_p0_val_fmf1(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[Y:%.*]] = call nnan float @llvm.maximumnum.f32(float [[X]], float 0.000000e+00)
-; CHECK-NEXT:    [[Z:%.*]] = call nnan ninf float @llvm.maximumnum.f32(float [[Y]], float 1.000000e+00)
+; CHECK-NEXT:    [[Z:%.*]] = call nnan float @llvm.maximumnum.f32(float [[X]], float 1.000000e+00)
 ; CHECK-NEXT:    ret float [[Z]]
 ;
   %y = call nnan float @llvm.maximumnum.f32(float 0.0, float %x)
@@ -40,8 +37,7 @@ define float @maximumnum_f32_1_maximumnum_p0_val_fmf1(float %x) {
 define float @maximumnum_f32_1_maximumnum_p0_val_fmf2(float %x) {
 ; CHECK-LABEL: define float @maximumnum_f32_1_maximumnum_p0_val_fmf2(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[Y:%.*]] = call nnan ninf float @llvm.maximumnum.f32(float [[X]], float 0.000000e+00)
-; CHECK-NEXT:    [[Z:%.*]] = call ninf float @llvm.maximumnum.f32(float [[Y]], float 1.000000e+00)
+; CHECK-NEXT:    [[Z:%.*]] = call ninf float @llvm.maximumnum.f32(float [[X]], float 1.000000e+00)
 ; CHECK-NEXT:    ret float [[Z]]
 ;
   %y = call nnan ninf float @llvm.maximumnum.f32(float 0.0, float %x)
@@ -52,8 +48,7 @@ define float @maximumnum_f32_1_maximumnum_p0_val_fmf2(float %x) {
 define float @maximumnum_f32_1_maximumnum_p0_val_fmf3(float %x) {
 ; CHECK-LABEL: define float @maximumnum_f32_1_maximumnum_p0_val_fmf3(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[Y:%.*]] = call nnan ninf float @llvm.maximumnum.f32(float [[X]], float 0.000000e+00)
-; CHECK-NEXT:    [[Z:%.*]] = call nnan ninf float @llvm.maximumnum.f32(float [[Y]], float 1.000000e+00)
+; CHECK-NEXT:    [[Z:%.*]] = call nnan ninf float @llvm.maximumnum.f32(float [[X]], float 1.000000e+00)
 ; CHECK-NEXT:    ret float [[Z]]
 ;
   %y = call ninf nnan float @llvm.maximumnum.f32(float 0.0, float %x)
@@ -64,8 +59,7 @@ define float @maximumnum_f32_1_maximumnum_p0_val_fmf3(float %x) {
 define float @maximumnum_f32_p0_maximumnum_val_n0(float %x) {
 ; CHECK-LABEL: define float @maximumnum_f32_p0_maximumnum_val_n0(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float -0.000000e+00)
-; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.maximumnum.f32(float [[Y]], float 0.000000e+00)
+; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float 0.000000e+00)
 ; CHECK-NEXT:    ret float [[Z]]
 ;
   %y = call float @llvm.maximumnum.f32(float %x, float -0.0)
@@ -76,8 +70,7 @@ define float @maximumnum_f32_p0_maximumnum_val_n0(float %x) {
 define float @maximumnum_f32_1_maximumnum_p0_val(float %x) {
 ; CHECK-LABEL: define float @maximumnum_f32_1_maximumnum_p0_val(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float 0.000000e+00)
-; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.maximumnum.f32(float [[Y]], float 1.000000e+00)
+; CHECK-NEXT:    [[Z:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float 1.000000e+00)
 ; CHECK-NEXT:    ret float [[Z]]
 ;
   %y = call float @llvm.maximumnum.f32(float 0.0, float %x)
@@ -88,8 +81,7 @@ define float @maximumnum_f32_1_maximumnum_p0_val(float %x) {
 define <2 x float> @maximumnum_f32_1_maximumnum_val_p0_val_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: define <2 x float> @maximumnum_f32_1_maximumnum_val_p0_val_v2f32(
 ; CHECK-SAME: <2 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[Y:%.*]] = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[X]], <2 x float> zeroinitializer)
-; CHECK-NEXT:    [[Z:%.*]] = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[Y]], <2 x float> splat (float 1.000000e+00))
+; CHECK-NEXT:    [[Z:%.*]] = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[X]], <2 x float> splat (float 1.000000e+00))
 ; CHECK-NEXT:    ret <2 x float> [[Z]]
 ;
   %y = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> %x, <2 x float> zeroinitializer)
@@ -116,9 +108,8 @@ define float @maximumnum4(float %x, float %y, float %z, float %w) {
 define <2 x float> @maximumnum_neg_neg(<2 x float> %x, <2 x float> %y) {
 ; CHECK-LABEL: define <2 x float> @maximumnum_neg_neg(
 ; CHECK-SAME: <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]]) {
-; CHECK-NEXT:    [[NEGX:%.*]] = fneg <2 x float> [[X]]
-; CHECK-NEXT:    [[NEGY:%.*]] = fneg <2 x float> [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> [[NEGX]], <2 x float> [[NEGY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> [[X]], <2 x float> [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = fneg <2 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %negx = fsub <2 x float> <float -0.0, float -0.0>, %x
@@ -132,9 +123,8 @@ define <2 x float> @maximumnum_neg_neg(<2 x float> %x, <2 x float> %y) {
 define float @maximumnum_neg_neg_vec_fmf(float %x, float %y) {
 ; CHECK-LABEL: define float @maximumnum_neg_neg_vec_fmf(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[NEGX:%.*]] = fneg arcp float [[X]]
-; CHECK-NEXT:    [[NEGY:%.*]] = fneg afn float [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = call fast float @llvm.maximumnum.f32(float [[NEGX]], float [[NEGY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.minimumnum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = fneg fast float [[TMP1]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %negx = fsub arcp float -0.0, %x
@@ -146,9 +136,8 @@ define float @maximumnum_neg_neg_vec_fmf(float %x, float %y) {
 define float @maximumnum_unary_neg_neg_vec_fmf(float %x, float %y) {
 ; CHECK-LABEL: define float @maximumnum_unary_neg_neg_vec_fmf(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[NEGX:%.*]] = fneg arcp float [[X]]
-; CHECK-NEXT:    [[NEGY:%.*]] = fneg afn float [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = call fast float @llvm.maximumnum.f32(float [[NEGX]], float [[NEGY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.minimumnum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = fneg fast float [[TMP1]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %negx = fneg arcp float %x
@@ -165,8 +154,8 @@ define float @maximumnum_neg_neg_extra_use_x(float %x, float %y) {
 ; CHECK-LABEL: define float @maximumnum_neg_neg_extra_use_x(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
 ; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X]]
-; CHECK-NEXT:    [[NEGY:%.*]] = fneg float [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maximumnum.f32(float [[NEGX]], float [[NEGY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[TMP1]]
 ; CHECK-NEXT:    call void @use(float [[NEGX]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -181,8 +170,8 @@ define float @maximumnum_unary_neg_neg_extra_use_x(float %x, float %y) {
 ; CHECK-LABEL: define float @maximumnum_unary_neg_neg_extra_use_x(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
 ; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X]]
-; CHECK-NEXT:    [[NEGY:%.*]] = fneg float [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maximumnum.f32(float [[NEGX]], float [[NEGY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[TMP1]]
 ; CHECK-NEXT:    call void @use(float [[NEGX]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -196,9 +185,9 @@ define float @maximumnum_unary_neg_neg_extra_use_x(float %x, float %y) {
 define float @maximumnum_neg_neg_extra_use_y(float %x, float %y) {
 ; CHECK-LABEL: define float @maximumnum_neg_neg_extra_use_y(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X]]
 ; CHECK-NEXT:    [[NEGY:%.*]] = fneg float [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maximumnum.f32(float [[NEGX]], float [[NEGY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[TMP1]]
 ; CHECK-NEXT:    call void @use(float [[NEGY]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -212,9 +201,9 @@ define float @maximumnum_neg_neg_extra_use_y(float %x, float %y) {
 define float @maximumnum_unary_neg_neg_extra_use_y(float %x, float %y) {
 ; CHECK-LABEL: define float @maximumnum_unary_neg_neg_extra_use_y(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X]]
 ; CHECK-NEXT:    [[NEGY:%.*]] = fneg float [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maximumnum.f32(float [[NEGX]], float [[NEGY]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = fneg float [[TMP1]]
 ; CHECK-NEXT:    call void @use(float [[NEGY]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
@@ -264,10 +253,7 @@ define float @maximumnum_unary_neg_neg_extra_use_x_and_y(float %x, float %y) {
 define float @maximumnum_reduce_precision(float %x, float %y) {
 ; CHECK-LABEL: define float @maximumnum_reduce_precision(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_EXT:%.*]] = fpext float [[X]] to double
-; CHECK-NEXT:    [[Y_EXT:%.*]] = fpext float [[Y]] to double
-; CHECK-NEXT:    [[MAXIMUMNUM:%.*]] = call double @llvm.maximumnum.f64(double [[X_EXT]], double [[Y_EXT]])
-; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[MAXIMUMNUM]] to float
+; CHECK-NEXT:    [[TRUNC:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[TRUNC]]
 ;
   %x.ext = fpext float %x to double
@@ -280,10 +266,7 @@ define float @maximumnum_reduce_precision(float %x, float %y) {
 define float @maximumnum_reduce_precision_fmf(float %x, float %y) {
 ; CHECK-LABEL: define float @maximumnum_reduce_precision_fmf(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_EXT:%.*]] = fpext float [[X]] to double
-; CHECK-NEXT:    [[Y_EXT:%.*]] = fpext float [[Y]] to double
-; CHECK-NEXT:    [[MAXIMUMNUM:%.*]] = call nnan double @llvm.maximumnum.f64(double [[X_EXT]], double [[Y_EXT]])
-; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[MAXIMUMNUM]] to float
+; CHECK-NEXT:    [[TRUNC:%.*]] = call nnan float @llvm.maximumnum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[TRUNC]]
 ;
   %x.ext = fpext float %x to double
@@ -297,10 +280,8 @@ define float @maximumnum_reduce_precision_multi_use_0(float %x, float %y, ptr %p
 ; CHECK-LABEL: define float @maximumnum_reduce_precision_multi_use_0(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[X_EXT:%.*]] = fpext float [[X]] to double
-; CHECK-NEXT:    [[Y_EXT:%.*]] = fpext float [[Y]] to double
 ; CHECK-NEXT:    store double [[X_EXT]], ptr [[P]], align 8
-; CHECK-NEXT:    [[MAXIMUMNUM:%.*]] = call double @llvm.maximumnum.f64(double [[X_EXT]], double [[Y_EXT]])
-; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[MAXIMUMNUM]] to float
+; CHECK-NEXT:    [[TRUNC:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[TRUNC]]
 ;
   %x.ext = fpext float %x to double
@@ -314,11 +295,9 @@ define float @maximumnum_reduce_precision_multi_use_0(float %x, float %y, ptr %p
 define float @reduce_precision_multi_use_1(float %x, float %y, ptr %p) {
 ; CHECK-LABEL: define float @reduce_precision_multi_use_1(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[Y_EXT:%.*]] = fpext float [[X]] to double
 ; CHECK-NEXT:    [[Y_EXT1:%.*]] = fpext float [[Y]] to double
 ; CHECK-NEXT:    store double [[Y_EXT1]], ptr [[P]], align 8
-; CHECK-NEXT:    [[MAXNUM:%.*]] = call double @llvm.maximumnum.f64(double [[Y_EXT]], double [[Y_EXT1]])
-; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[MAXNUM]] to float
+; CHECK-NEXT:    [[TRUNC:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float [[Y]])
 ; CHECK-NEXT:    ret float [[TRUNC]]
 ;
   %x.ext = fpext float %x to double
@@ -352,8 +331,7 @@ define float @maximumnum_reduce_precision_multi_use_2(float %x, float %y, ptr %p
 define float @maximumnum_negated_op(float %x) {
 ; CHECK-LABEL: define float @maximumnum_negated_op(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X]]
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maximumnum.f32(float [[NEGX]], float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %negx = fneg float %x
@@ -364,8 +342,7 @@ define float @maximumnum_negated_op(float %x) {
 define <2 x double> @maximumnum_negated_op_fmf_commute_vec(<2 x double> %x) {
 ; CHECK-LABEL: define <2 x double> @maximumnum_negated_op_fmf_commute_vec(
 ; CHECK-SAME: <2 x double> [[X:%.*]]) {
-; CHECK-NEXT:    [[NEGX:%.*]] = fneg <2 x double> [[X]]
-; CHECK-NEXT:    [[R:%.*]] = call nnan ninf nsz <2 x double> @llvm.maximumnum.v2f64(<2 x double> [[X]], <2 x double> [[NEGX]])
+; CHECK-NEXT:    [[R:%.*]] = call nnan ninf nsz <2 x double> @llvm.fabs.v2f64(<2 x double> [[X]])
 ; CHECK-NEXT:    ret <2 x double> [[R]]
 ;
   %negx = fneg <2 x double> %x
@@ -378,7 +355,7 @@ define float @maximumnum_negated_op_extra_use(float %x) {
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X]]
 ; CHECK-NEXT:    call void @use(float [[NEGX]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maximumnum.f32(float [[NEGX]], float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %negx = fneg float %x
@@ -392,7 +369,7 @@ define float @maximumnum_negated_op_extra_use_comm(float %x) {
 ; CHECK-SAME: float [[X:%.*]]) {
 ; CHECK-NEXT:    [[NEGX:%.*]] = fneg float [[X]]
 ; CHECK-NEXT:    call void @use(float [[NEGX]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float [[NEGX]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %negx = fneg float %x
