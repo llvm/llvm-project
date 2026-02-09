@@ -32,6 +32,103 @@ concept canPlusEqual = requires(T& t, U& u) { t += u; };
 template <class T, class U>
 concept canMinusEqual = requires(T& t, U& u) { t -= u; };
 
+template <class Iter>
+struct NotSizedSentinelForIter {
+  using iterator_category = std::forward_iterator_tag;
+  using value_type        = std::iterator_traits<Iter>::value_type;
+  using difference_type   = std::iterator_traits<Iter>::difference_type;
+
+  Iter ptr;
+
+  NotSizedSentinelForIter() = default;
+  NotSizedSentinelForIter(const Iter& ptr) : ptr(ptr) {}
+  NotSizedSentinelForIter(const NotSizedSentinelForIter& other) : ptr(other.ptr) {}
+
+  value_type& operator*() const { return *ptr; }
+
+  NotSizedSentinelForIter& operator++() { return *++ptr; }
+  NotSizedSentinelForIter operator++(int) {
+    auto tmp = *this;
+    ++*this;
+    return tmp;
+  }
+
+  friend bool operator==(const NotSizedSentinelForIter& a, const NotSizedSentinelForIter& b) = default;
+};
+
+template <class T>
+struct NotSizedViewWithSizedSentinel;
+
+template <class Iter>
+struct SizedSentinelForIter {
+  using iterator_category = std::forward_iterator_tag;
+  using value_type        = std::iterator_traits<Iter>::value_type;
+  using difference_type   = std::iterator_traits<Iter>::difference_type;
+
+  Iter ptr;
+  Iter e;
+
+  constexpr SizedSentinelForIter() = default;
+  constexpr SizedSentinelForIter(const Iter& ptr, const Iter& e = nullptr) : ptr(ptr), e(e) {}
+  constexpr SizedSentinelForIter(const SizedSentinelForIter& other) : ptr(other.ptr) {}
+
+  constexpr value_type& operator*() const { return *ptr; }
+
+  constexpr SizedSentinelForIter& operator++() {
+    ++ptr;
+    return *this;
+  }
+  constexpr SizedSentinelForIter operator++(int) {
+    auto tmp = *this;
+    ++*this;
+    return tmp;
+  }
+
+  friend constexpr decltype(auto) operator-(const SizedSentinelForIter& a, const SizedSentinelForIter& b) {
+    return a.ptr - b.ptr;
+  }
+
+  friend constexpr bool operator==(const SizedSentinelForIter& a, const SizedSentinelForIter& b) = default;
+};
+
+template <class T>
+struct SizedViewWithoutSizedSentinel : std::ranges::view_base {
+  T* b_;
+  std::size_t sz;
+
+  template <std::size_t N>
+  constexpr SizedViewWithoutSizedSentinel(T (&b)[N]) : b_(b), sz(N) {}
+  constexpr SizedViewWithoutSizedSentinel(T* b, std::size_t N) : b_(b), sz(N) {}
+
+  constexpr NotSizedSentinelForIter<T*> begin() const { return NotSizedSentinelForIter<T*>{b_}; }
+  constexpr NotSizedSentinelForIter<T*> end() const { return NotSizedSentinelForIter<T*>{b_ + sz}; }
+
+  constexpr std::size_t size() { return sz; }
+};
+
+template <class T>
+struct NotSizedViewWithSizedSentinel : std::ranges::view_base {
+  T* b_;
+  std::size_t sz;
+
+  NotSizedViewWithSizedSentinel() = default;
+
+  template <std::size_t N>
+  constexpr NotSizedViewWithSizedSentinel(T (&b)[N]) : b_(b), sz(N) {}
+  constexpr NotSizedViewWithSizedSentinel(T* b, std::size_t N) : b_(b), sz(N) {}
+
+  constexpr SizedSentinelForIter<T*> begin() const { return SizedSentinelForIter<T*>{b_, b_ + sz}; }
+  constexpr SizedSentinelForIter<T*> end() const { return SizedSentinelForIter<T*>{b_ + sz, b_ + sz}; }
+};
+
+static_assert(std::forward_iterator<NotSizedSentinelForIter<int*>>);
+static_assert(std::sized_sentinel_for<std::ranges::sentinel_t<NotSizedViewWithSizedSentinel<int>>,
+                                      std::ranges::iterator_t<NotSizedViewWithSizedSentinel<int>>>);
+
+template <class... Views>
+concept MinusOperatorWellFormedForDefaultSentinel =
+    requires(std::ranges::concat_view<Views...> cv) { (cv.begin() - std::default_sentinel_t{}); };
+
 constexpr bool test() {
   int buffer1[5] = {1, 2, 3, 4, 5};
   int buffer2[9] = {1, 2, 3, 4, 5, 6, 7, 8, 9};
@@ -394,6 +491,35 @@ constexpr bool test() {
     auto it1 = view.begin();
     auto res = it1 - std::default_sentinel_t{};
     assert(res == -4);
+  }
+
+  {
+    // operator-(x, default_sentinel)
+    // testing constraints
+
+    // sized_sentinel_for fails
+    static_assert(!MinusOperatorWellFormedForDefaultSentinel<SizedViewWithoutSizedSentinel<int>>);
+    static_assert(!MinusOperatorWellFormedForDefaultSentinel<SizedViewWithoutSizedSentinel<int>,
+                                                             NonSimpleCommonRandomAccessSized>);
+    static_assert(
+        MinusOperatorWellFormedForDefaultSentinel<SimpleCommonRandomAccessSized, NonSimpleCommonRandomAccessSized>);
+
+    // let Fs be the pack containing all views but the first one
+    // sized_sentinel_for succeeds and sized_range<Fs...> succeeds
+    // first range does not have size() but satisfies sized_sentinel_for
+    int arr_a[3] = {0, 1, 2};
+    int arr_b[3] = {4, 5, 6};
+    static_assert(
+        MinusOperatorWellFormedForDefaultSentinel<NotSizedViewWithSizedSentinel<int>, SimpleCommonRandomAccessSized>);
+    std::ranges::concat_view cv{NotSizedViewWithSizedSentinel<int>{arr_a}, SimpleCommonRandomAccessSized{arr_b}};
+    auto it = cv.begin();
+    it++;
+    assert((it - std::default_sentinel_t{}) == -5);
+    assert((std::default_sentinel_t{} - it) == 5);
+
+    // sized_sentinel_for succeeds but sized_range<Fs...> fails
+    static_assert(!MinusOperatorWellFormedForDefaultSentinel<NotSizedViewWithSizedSentinel<int>, InputCommonView>);
+    static_assert(!MinusOperatorWellFormedForDefaultSentinel<SimpleCommonRandomAccessSized, InputCommonView>);
   }
 
   {
