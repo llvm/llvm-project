@@ -174,7 +174,7 @@ void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
   }
 
   addMachineFunctionPass(X86IndirectBranchTrackingPass(), PMW);
-  addMachineFunctionPass(X86IssueVZeroUpperPass(), PMW);
+  addMachineFunctionPass(X86InsertVZeroUpperPass(), PMW);
 
   if (getOptLevel() != CodeGenOptLevel::None) {
     addMachineFunctionPass(X86FixupBWInstsPass(), PMW);

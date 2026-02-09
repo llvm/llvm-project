@@ -58,7 +58,7 @@ set(sources
   X86ISelDAGToDAG.cpp
   X86ISelLowering.cpp
   X86ISelLoweringCall.cpp
-  X86IssueVZeroUpper.cpp
+  X86InsertVZeroUpper.cpp
   X86IndirectBranchTracking.cpp
   X86IndirectThunks.cpp
   X86InsertX87Wait.cpp

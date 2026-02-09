@@ -1,5 +1,4 @@
-//===- X86IssueVZeroUpper.cpp - AVX vzeroupper instruction inserter
-//------------===//
+//===--- X86InsertVZeroUpper.cpp - AVX vzeroupper instruction inserter ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -40,7 +39,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "x86-issue-vzero-upper"
+#define DEBUG_TYPE "x86-insert-vzero-upper"
 
 static cl::opt<bool>
     UseVZeroUpper("x86-use-vzeroupper", cl::Hidden,
@@ -50,11 +49,11 @@ static cl::opt<bool>
 STATISTIC(NumVZU, "Number of vzeroupper instructions inserted");
 
 namespace {
-
-class X86IssueVZeroUpperLegacy : public MachineFunctionPass {
+class X86InsertVZeroUpperLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  X86IssueVZeroUpperLegacy() : MachineFunctionPass(ID) {}
+
+  X86InsertVZeroUpperLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "X86 vzeroupper inserter"; }
 
@@ -97,10 +96,10 @@ using BlockStateMap = SmallVector<BlockState, 8>;
 using DirtySuccessorsWorkList = SmallVector<MachineBasicBlock *, 8>;
 } // end anonymous namespace
 
-char X86IssueVZeroUpperLegacy::ID = 0;
+char X86InsertVZeroUpperLegacy::ID = 0;
 
-FunctionPass *llvm::createX86IssueVZeroUpperLegacyPass() {
-  return new X86IssueVZeroUpperLegacy();
+FunctionPass *llvm::createX86InsertVZeroUpperLegacyPass() {
+  return new X86InsertVZeroUpperLegacy();
 }
 
 #ifndef NDEBUG
@@ -275,7 +274,7 @@ static void processBasicBlock(MachineBasicBlock &MBB,
 
 /// Loop over all of the basic blocks, inserting vzeroupper instructions before
 /// function calls.
-static bool issueVZeroUpper(MachineFunction &MF) {
+static bool insertVZeroUpper(MachineFunction &MF) {
   if (!UseVZeroUpper)
     return false;
 
@@ -352,14 +351,14 @@ static bool issueVZeroUpper(MachineFunction &MF) {
   return EverMadeChange;
 }
 
-bool X86IssueVZeroUpperLegacy::runOnMachineFunction(MachineFunction &MF) {
-  return issueVZeroUpper(MF);
+bool X86InsertVZeroUpperLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return insertVZeroUpper(MF);
 }
 
 PreservedAnalyses
-X86IssueVZeroUpperPass::run(MachineFunction &MF,
+X86InsertVZeroUpperPass::run(MachineFunction &MF,
                             MachineFunctionAnalysisManager &MFAM) {
-  return issueVZeroUpper(MF) ? getMachineFunctionPassPreservedAnalyses()
+  return insertVZeroUpper(MF) ? getMachineFunctionPassPreservedAnalyses()
                                    .preserveSet<CFGAnalyses>()
                              : PreservedAnalyses::all();
 }
