@@ -315,3 +315,26 @@ TEST_F(SelectionDAGNodeConstructionTest, XOR) {
   EXPECT_EQ(DAG->getNode(ISD::XOR, DL, MVT::i32, Undef, Op), Undef);
   EXPECT_EQ(DAG->getNode(ISD::XOR, DL, MVT::i32, Undef, Undef), Zero);
 }
+
+TEST_F(SelectionDAGNodeConstructionTest, CTLS) {
+  SDLoc DL;
+  SDValue Zero = DAG->getConstant(0, DL, MVT::i32);
+  SDValue MaxInt = DAG->getConstant(0x7fffffff, DL, MVT::i32);
+  SDValue MinInt = DAG->getConstant(0x80000000, DL, MVT::i32);
+  SDValue MinShort = DAG->getConstant(0xffff8000, DL, MVT::i32);
+
+  SDValue CtlsZero = DAG->getNode(ISD::CTLS, DL, MVT::i32, Zero);
+  SDValue CtlsMinInt = DAG->getNode(ISD::CTLS, DL, MVT::i32, MinInt);
+  SDValue CtlsMaxInt = DAG->getNode(ISD::CTLS, DL, MVT::i32, MaxInt);
+  SDValue CtlsMinShort = DAG->getNode(ISD::CTLS, DL, MVT::i32, MinShort);
+  EXPECT_TRUE(isa<ConstantSDNode>(CtlsZero) &&
+              cast<ConstantSDNode>(CtlsZero)->getZExtValue() == 31);
+  EXPECT_TRUE(isNullConstant(CtlsMinInt));
+  EXPECT_TRUE(isNullConstant(CtlsMaxInt));
+  EXPECT_TRUE(isa<ConstantSDNode>(CtlsMinShort) &&
+              cast<ConstantSDNode>(CtlsMinShort)->getZExtValue() == 16);
+
+  SDValue i1Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i1);
+  SDValue Ctlsi1 = DAG->getNode(ISD::CTLS, DL, MVT::i32, i1Op);
+  EXPECT_TRUE(isNullConstant(Ctlsi1));
+}

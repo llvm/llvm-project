@@ -22,8 +22,12 @@ namespace {
 TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
   VPlan &Plan = getPlan();
   VPIRValue *Zero = Plan.getConstantInt(32, 0);
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero, Zero});
-  VPInstruction *UseI = new VPInstruction(Instruction::Sub, {DefI, Zero});
+  VPInstruction *DefI =
+      new VPInstruction(Instruction::Add, {Zero, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction *UseI =
+      new VPInstruction(Instruction::Sub, {DefI, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Sub));
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
@@ -57,8 +61,12 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
 TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
   VPlan &Plan = getPlan();
   VPIRValue *Zero = Plan.getConstantInt(32, 0);
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero, Zero});
-  VPInstruction *UseI = new VPInstruction(Instruction::Sub, {DefI, Zero});
+  VPInstruction *DefI =
+      new VPInstruction(Instruction::Add, {Zero, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction *UseI =
+      new VPInstruction(Instruction::Sub, {DefI, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Sub));
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
@@ -99,11 +107,13 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
   auto *Phi = PHINode::Create(Int32, 1);
   VPIRValue *Zero = Plan.getConstantInt(Int32, 0);
 
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero, Zero});
+  VPInstruction *DefI =
+      new VPInstruction(Instruction::Add, {Zero, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
-  auto *Blend = new VPBlendRecipe(Phi, {DefI, Plan.getTrue()}, {});
+  auto *Blend = new VPBlendRecipe(Phi, {DefI, Plan.getTrue()}, {}, {});
 
   VPBasicBlock *VPBB1 = Plan.getEntry();
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
@@ -153,8 +163,10 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
   VPBasicBlock *VPBB3 = Plan.createVPBasicBlock("");
   VPBasicBlock *VPBB4 = Plan.createVPBasicBlock("");
 
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero, Zero});
-  VPPhi *Phi = new VPPhi({DefI}, {});
+  VPInstruction *DefI =
+      new VPInstruction(Instruction::Add, {Zero, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPPhi *Phi = new VPPhi({DefI}, {}, {});
   VPBB2->appendRecipe(Phi);
   VPBB2->appendRecipe(DefI);
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
@@ -185,7 +197,9 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
 TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
   VPlan &Plan = getPlan();
   VPIRValue *Zero = Plan.getConstantInt(32, 0);
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Zero, Zero});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {Zero, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
@@ -219,7 +233,9 @@ TEST_F(VPVerifierTest, DuplicateSuccessorsOutsideRegion) {
 TEST_F(VPVerifierTest, DuplicateSuccessorsInsideRegion) {
   VPlan &Plan = getPlan();
   VPIRValue *Zero = Plan.getConstantInt(32, 0);
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Zero, Zero});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {Zero, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {CanIV});
@@ -263,7 +279,9 @@ TEST_F(VPVerifierTest, BlockOutsideRegionWithParent) {
   auto *CanIV = new VPCanonicalIVPHIRecipe(Zero, {});
   VPBB2->appendRecipe(CanIV);
 
-  VPInstruction *DefI = new VPInstruction(Instruction::Add, {Zero, Zero});
+  VPInstruction *DefI =
+      new VPInstruction(Instruction::Add, {Zero, Zero},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction *BranchOnCond =
       new VPInstruction(VPInstruction::BranchOnCond, {DefI});
 

@@ -9,7 +9,11 @@
 #include <cassert>
 #include <string>
 
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/FactsGenerator.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
@@ -107,6 +111,9 @@ void FactsGenerator::run() {
       const CFGElement &Element = Block->Elements[I];
       if (std::optional<CFGStmt> CS = Element.getAs<CFGStmt>())
         Visit(CS->getStmt());
+      else if (std::optional<CFGInitializer> Initializer =
+                   Element.getAs<CFGInitializer>())
+        handleCXXCtorInitializer(Initializer->getInitializer());
       else if (std::optional<CFGLifetimeEnds> LifetimeEnds =
                    Element.getAs<CFGLifetimeEnds>())
         handleLifetimeEnds(*LifetimeEnds);
@@ -114,6 +121,9 @@ void FactsGenerator::run() {
                    Element.getAs<CFGTemporaryDtor>())
         handleTemporaryDtor(*TemporaryDtor);
     }
+    if (Block == &Cfg.getExit())
+      handleExitBlock();
+
     CurrentBlockFacts.append(EscapesInCurrentBlock.begin(),
                              EscapesInCurrentBlock.end());
     FactMgr.addBlockFacts(Block, CurrentBlockFacts);
@@ -178,6 +188,16 @@ void FactsGenerator::VisitCXXConstructExpr(const CXXConstructExpr *CCE) {
     handleGSLPointerConstruction(CCE);
     return;
   }
+  handleFunctionCall(CCE, CCE->getConstructor(),
+                     {CCE->getArgs(), CCE->getNumArgs()},
+                     /*IsGslConstruction=*/false);
+}
+
+void FactsGenerator::handleCXXCtorInitializer(const CXXCtorInitializer *CII) {
+  // Flows origins from the initializer expression to the field.
+  // Example: `MyObj(std::string s) : view(s) {}`
+  if (const FieldDecl *FD = CII->getAnyMember())
+    killAndFlowOrigin(*FD, *CII->getInit());
 }
 
 void FactsGenerator::VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE) {
@@ -219,23 +239,9 @@ void FactsGenerator::VisitMemberExpr(const MemberExpr *ME) {
   }
 }
 
-static bool isStdMove(const FunctionDecl *FD) {
-  return FD && FD->isInStdNamespace() && FD->getIdentifier() &&
-         FD->getName() == "move";
-}
-
 void FactsGenerator::VisitCallExpr(const CallExpr *CE) {
   handleFunctionCall(CE, CE->getDirectCallee(),
                      {CE->getArgs(), CE->getNumArgs()});
-  // Track declarations that are moved via std::move.
-  // This is a flow-insensitive approximation: once a declaration is moved
-  // anywhere in the function, it's treated as moved everywhere. We do not
-  // generate expire facts for moved decls to avoid false alarms.
-  if (isStdMove(CE->getDirectCallee()))
-    if (CE->getNumArgs() == 1)
-      if (auto *DRE =
-              dyn_cast<DeclRefExpr>(CE->getArg(0)->IgnoreParenImpCasts()))
-        MovedDecls.insert(DRE->getDecl());
 }
 
 void FactsGenerator::VisitCXXNullPtrLiteralExpr(
@@ -317,31 +323,42 @@ void FactsGenerator::VisitReturnStmt(const ReturnStmt *RS) {
   if (const Expr *RetExpr = RS->getRetValue()) {
     if (OriginList *List = getOriginsList(*RetExpr))
       for (OriginList *L = List; L != nullptr; L = L->peelOuterOrigin())
-        EscapesInCurrentBlock.push_back(FactMgr.createFact<OriginEscapesFact>(
+        EscapesInCurrentBlock.push_back(FactMgr.createFact<ReturnEscapeFact>(
             L->getOuterOriginID(), RetExpr));
   }
 }
 
 void FactsGenerator::handleAssignment(const Expr *LHSExpr,
                                       const Expr *RHSExpr) {
-  if (const auto *DRE_LHS =
-          dyn_cast<DeclRefExpr>(LHSExpr->IgnoreParenImpCasts())) {
-    OriginList *LHSList = getOriginsList(*DRE_LHS);
+  LHSExpr = LHSExpr->IgnoreParenImpCasts();
+  OriginList *LHSList = nullptr;
+
+  if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr)) {
+    LHSList = getOriginsList(*DRE_LHS);
     assert(LHSList && "LHS is a DRE and should have an origin list");
-    OriginList *RHSList = getOriginsList(*RHSExpr);
-
-    // For operator= with reference parameters (e.g.,
-    // `View& operator=(const View&)`), the RHS argument stays an lvalue,
-    // unlike built-in assignment where LValueToRValue cast strips the outer
-    // lvalue origin. Strip it manually to get the actual value origins being
-    // assigned.
-    RHSList = getRValueOrigins(RHSExpr, RHSList);
-
-    markUseAsWrite(DRE_LHS);
-    // Kill the old loans of the destination origin and flow the new loans
-    // from the source origin.
-    flow(LHSList->peelOuterOrigin(), RHSList, /*Kill=*/true);
   }
+  // Handle assignment to member fields (e.g., `this->view = s` or `view = s`).
+  // This enables detection of dangling fields when local values escape to
+  // fields.
+  if (const auto *ME_LHS = dyn_cast<MemberExpr>(LHSExpr)) {
+    LHSList = getOriginsList(*ME_LHS);
+    assert(LHSList && "LHS is a MemberExpr and should have an origin list");
+  }
+  if (!LHSList)
+    return;
+  OriginList *RHSList = getOriginsList(*RHSExpr);
+  // For operator= with reference parameters (e.g.,
+  // `View& operator=(const View&)`), the RHS argument stays an lvalue,
+  // unlike built-in assignment where LValueToRValue cast strips the outer
+  // lvalue origin. Strip it manually to get the actual value origins being
+  // assigned.
+  RHSList = getRValueOrigins(RHSExpr, RHSList);
+
+  if (const auto *DRE_LHS = dyn_cast<DeclRefExpr>(LHSExpr))
+    markUseAsWrite(DRE_LHS);
+  // Kill the old loans of the destination origin and flow the new loans
+  // from the source origin.
+  flow(LHSList->peelOuterOrigin(), RHSList, /*Kill=*/true);
 }
 
 void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
@@ -393,12 +410,14 @@ void FactsGenerator::VisitInitListExpr(const InitListExpr *ILE) {
     killAndFlowOrigin(*ILE, *ILE->getInit(0));
 }
 
+void FactsGenerator::VisitCXXBindTemporaryExpr(
+    const CXXBindTemporaryExpr *BTE) {
+  killAndFlowOrigin(*BTE, *BTE->getSubExpr());
+}
+
 void FactsGenerator::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *MTE) {
   assert(MTE->isGLValue());
-  // We defer from handling lifetime extended materializations.
-  if (MTE->getStorageDuration() != SD_FullExpression)
-    return;
   OriginList *MTEList = getOriginsList(*MTE);
   if (!MTEList)
     return;
@@ -406,15 +425,16 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
   assert((!SubExprList ||
           MTEList->getLength() == (SubExprList->getLength() + 1)) &&
          "MTE top level origin should contain a loan to the MTE itself");
-  MTEList = getRValueOrigins(MTE, MTEList);
+
+  OriginList *RValMTEList = getRValueOrigins(MTE, MTEList);
+  flow(RValMTEList, SubExprList, /*Kill=*/true);
+  OriginID OuterMTEID = MTEList->getOuterOriginID();
   if (getChildBinding(MTE)) {
     // Issue a loan to MTE for the storage location represented by MTE.
     const Loan *L = createLoan(FactMgr, MTE);
-    OriginList *List = getOriginsList(*MTE);
     CurrentBlockFacts.push_back(
-        FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
+        FactMgr.createFact<IssueFact>(L->getID(), OuterMTEID));
   }
-  flow(MTEList, SubExprList, /*Kill=*/true);
 }
 
 void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
@@ -425,11 +445,6 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   // Iterate through all loans to see if any expire.
   for (const auto *Loan : FactMgr.getLoanMgr().getLoans()) {
     if (const auto *BL = dyn_cast<PathLoan>(Loan)) {
-      // Skip loans for declarations that have been moved. When a value is
-      // moved, the original owner no longer has ownership and its destruction
-      // should not cause the loan to expire, preventing false positives.
-      if (MovedDecls.contains(BL->getAccessPath().getAsValueDecl()))
-        continue;
       // Check if the loan is for a stack variable and if that variable
       // is the one being destructed.
       const AccessPath AP = BL->getAccessPath();
@@ -462,6 +477,14 @@ void FactsGenerator::handleTemporaryDtor(
       }
     }
   }
+}
+
+void FactsGenerator::handleExitBlock() {
+  // Creates FieldEscapeFacts for all field origins that remain live at exit.
+  for (const Origin &O : FactMgr.getOriginMgr().getOrigins())
+    if (auto *FD = dyn_cast_if_present<FieldDecl>(O.getDecl()))
+      EscapesInCurrentBlock.push_back(
+          FactMgr.createFact<FieldEscapeFact>(O.ID, FD));
 }
 
 void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
@@ -497,10 +520,59 @@ void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
   }
 }
 
-/// Checks if a call-like expression creates a borrow by passing a value to a
-/// reference parameter, creating an IssueFact if it does.
-/// \param IsGslConstruction True if this is a GSL construction where all
-///   argument origins should flow to the returned origin.
+void FactsGenerator::handleMovedArgsInCall(const FunctionDecl *FD,
+                                           ArrayRef<const Expr *> Args) {
+  unsigned IsInstance = 0;
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
+      Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD))
+    IsInstance = 1;
+
+  // Skip 'this' arg as it cannot be moved.
+  for (unsigned I = IsInstance;
+       I < Args.size() && I < FD->getNumParams() + IsInstance; ++I) {
+    const ParmVarDecl *PVD = FD->getParamDecl(I - IsInstance);
+    if (!PVD->getType()->isRValueReferenceType())
+      continue;
+    const Expr *Arg = Args[I];
+    OriginList *MovedOrigins = getOriginsList(*Arg);
+    assert(MovedOrigins->getLength() >= 1 &&
+           "unexpected length for r-value reference param");
+    // Arg is being moved to this parameter. Mark the origin as moved.
+    CurrentBlockFacts.push_back(FactMgr.createFact<MovedOriginFact>(
+        Arg, MovedOrigins->getOuterOriginID()));
+  }
+}
+
+void FactsGenerator::handleInvalidatingCall(const Expr *Call,
+                                            const FunctionDecl *FD,
+                                            ArrayRef<const Expr *> Args) {
+  const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  if (!MD || !MD->isInstance())
+    return;
+  // std::unique_ptr::release() transfers ownership.
+  // Treat it as a move to prevent false-positive warnings when the unique_ptr
+  // destructor runs after ownership has been transferred.
+  if (isUniquePtrRelease(*MD)) {
+    const Expr *UniquePtrExpr = Args[0];
+    OriginList *MovedOrigins = getOriginsList(*UniquePtrExpr);
+    if (MovedOrigins)
+      CurrentBlockFacts.push_back(FactMgr.createFact<MovedOriginFact>(
+          UniquePtrExpr, MovedOrigins->getOuterOriginID()));
+  }
+
+  if (!isContainerInvalidationMethod(*MD))
+    return;
+  // Heuristics to turn-down false positives.
+  auto *DRE = dyn_cast<DeclRefExpr>(Args[0]);
+  if (!DRE || DRE->getDecl()->getType()->isReferenceType())
+    return;
+
+  OriginList *ThisList = getOriginsList(*Args[0]);
+  if (ThisList)
+    CurrentBlockFacts.push_back(FactMgr.createFact<InvalidateOriginFact>(
+        ThisList->getOuterOriginID(), Call));
+}
+
 void FactsGenerator::handleFunctionCall(const Expr *Call,
                                         const FunctionDecl *FD,
                                         ArrayRef<const Expr *> Args,
@@ -508,7 +580,12 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
   OriginList *CallList = getOriginsList(*Call);
   // Ignore functions returning values with no origin.
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
-  if (!FD || !CallList)
+  if (!FD)
+    return;
+
+  handleInvalidatingCall(Call, FD, Args);
+  handleMovedArgsInCall(FD, Args);
+  if (!CallList)
     return;
   auto IsArgLifetimeBound = [FD](unsigned I) -> bool {
     const ParmVarDecl *PVD = nullptr;
@@ -633,6 +710,13 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
     return {};
 
   llvm::SmallVector<Fact *> PlaceholderLoanFacts;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD); MD && MD->isInstance()) {
+    OriginList *List = *FactMgr.getOriginMgr().getThisOrigins();
+    const PlaceholderLoan *L =
+        FactMgr.getLoanMgr().createLoan<PlaceholderLoan>(MD);
+    PlaceholderLoanFacts.push_back(
+        FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
+  }
   for (const ParmVarDecl *PVD : FD->parameters()) {
     OriginList *List = getOriginsList(*PVD);
     if (!List)

@@ -344,6 +344,58 @@ def CvtPackedF32ToBF16Op : AVX512_Op<"cvt.packed.f32_to_bf16", [Pure,
 }
 
 //===----------------------------------------------------------------------===//
+// AVX10 op definitions
+//===----------------------------------------------------------------------===//
+
+// Operation that is part of the input dialect.
+class AVX10_Op<string mnemonic, list<Trait> traits = []> :
+  Op<X86Vector_Dialect, "avx10." # mnemonic, traits> {}
+
+//----------------------------------------------------------------------------//
+// AVX10 Int8 Dot
+//----------------------------------------------------------------------------//
+
+def AVX10DotInt8Op : AVX10_Op<"dot.i8", [Pure,
+    X86IntrinsicOpInterface,
+    AllTypesMatch<["a", "b"]>,
+    AllTypesMatch<["w", "dst"]>,
+    TypesMatchWith<"`a` has four times elements as `w`",
+                   "w", "a",
+                   "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0] * 4}, "
+                   "IntegerType::get($_self.getContext(), 8))">
+  ]> {
+  let summary = "AVX10 Dot Int8 op";
+  let description = [{
+    The `dot` op is an AVX10-Int8 specific op that can lower to the proper
+    LLVMAVX10-INT8 operation `llvm.vpdpbssd.512`.
+
+    Multiply groups of 4 adjacent pairs of signed 8-bit integers in `a` with
+    corresponding signed 8-bit integers in `b`, producing 4 intermediate signed 16-bit
+    results. Sum these 4 results with the corresponding 32-bit integer in `w`, and
+    store the packed 32-bit results in `dst`.
+
+    Example:
+    ```mlir
+    %dst = x86vector.avx10.dot.i8 %w, %a, %b : vector<64xi8> -> vector<16xi32>
+    ```
+  }];
+  let arguments = (ins VectorOfLengthAndType<[16], [I32]>:$w,
+                   VectorOfLengthAndType<[64], [I8]>:$a,
+                   VectorOfLengthAndType<[64], [I8]>:$b
+                   );
+  let results = (outs VectorOfLengthAndType<[16], [I32]>:$dst);
+  let assemblyFormat =
+    "$w `,` $a `,` $b attr-dict `:` type($a) `->` type($w)";
+
+  let extraClassDeclaration = [{
+    std::string getIntrinsicName() {
+      return "llvm.x86.avx10.vpdpbssd.512";
+    }
+  }];
+}
+
+
+//===----------------------------------------------------------------------===//
 // AVX op definitions
 //===----------------------------------------------------------------------===//
 

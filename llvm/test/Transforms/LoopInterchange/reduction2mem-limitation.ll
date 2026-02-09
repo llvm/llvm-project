@@ -1,4 +1,4 @@
-; Several inner-loop reduction patterns not yet supported.
+; Several inner-loop reduction patterns are not yet supported.
 ; RUN: opt < %s -passes="loop-interchange"  -loop-interchange-reduction-to-mem -pass-remarks-missed='loop-interchange' \
 ; RUN:            -pass-remarks-output=%t -S | FileCheck -check-prefix=IR %s
 ; RUN: FileCheck --input-file=%t %s

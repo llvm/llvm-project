@@ -170,24 +170,16 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
     // the entry block.
     SmallVector<RegionSuccessor> successors;
     branch.getSuccessorRegions(RegionBranchPoint::parent(), successors);
-    RegionSuccessor regionSuccessor(region);
-    bool found = false;
     for (RegionSuccessor &successor : successors) {
       if (successor.getSuccessor() == region) {
         LDBG() << "  Found matching region successor: " << successor;
-        found = true;
-        regionSuccessor = successor;
-        break;
+        return collectUnderlyingAddressValues2(
+            branch, successor, arg, argNumber, maxDepth, visited, output);
       }
     }
-    if (!found) {
-      LDBG()
-          << "  No matching region successor found, adding argument to output";
-      output.push_back(arg);
-      return;
-    }
-    return collectUnderlyingAddressValues2(
-        branch, regionSuccessor, arg, argNumber, maxDepth, visited, output);
+    LDBG() << "  No matching region successor found, adding argument to output";
+    output.push_back(arg);
+    return;
   }
 
   LDBG()

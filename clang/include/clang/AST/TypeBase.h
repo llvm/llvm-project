@@ -6698,6 +6698,7 @@ public:
   struct Attributes {
     // Data gathered from HLSL resource attributes
     llvm::dxil::ResourceClass ResourceClass;
+    llvm::dxil::ResourceDimension ResourceDimension;
 
     LLVM_PREFERRED_TYPE(bool)
     uint8_t IsROV : 1;
@@ -6708,18 +6709,26 @@ public:
     LLVM_PREFERRED_TYPE(bool)
     uint8_t IsCounter : 1;
 
-    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV = false,
-               bool RawBuffer = false, bool IsCounter = false)
-        : ResourceClass(ResourceClass), IsROV(IsROV), RawBuffer(RawBuffer),
-          IsCounter(IsCounter) {}
+    Attributes(llvm::dxil::ResourceClass ResourceClass,
+               llvm::dxil::ResourceDimension ResourceDimension,
+               bool IsROV = false, bool RawBuffer = false,
+               bool IsCounter = false)
+        : ResourceClass(ResourceClass), ResourceDimension(ResourceDimension),
+          IsROV(IsROV), RawBuffer(RawBuffer), IsCounter(IsCounter) {}
+
+    Attributes(llvm::dxil::ResourceClass ResourceClass)
+        : Attributes(ResourceClass, llvm::dxil::ResourceDimension::Unknown) {}
 
     Attributes()
-        : Attributes(llvm::dxil::ResourceClass::UAV, false, false, false) {}
+        : Attributes(llvm::dxil::ResourceClass::UAV,
+                     llvm::dxil::ResourceDimension::Unknown, false, false,
+                     false) {}
 
     friend bool operator==(const Attributes &LHS, const Attributes &RHS) {
-      return std::tie(LHS.ResourceClass, LHS.IsROV, LHS.RawBuffer,
-                      LHS.IsCounter) == std::tie(RHS.ResourceClass, RHS.IsROV,
-                                                 RHS.RawBuffer, RHS.IsCounter);
+      return std::tie(LHS.ResourceClass, LHS.ResourceDimension, LHS.IsROV,
+                      LHS.RawBuffer, LHS.IsCounter) ==
+             std::tie(RHS.ResourceClass, RHS.ResourceDimension, RHS.IsROV,
+                      RHS.RawBuffer, RHS.IsCounter);
     }
     friend bool operator!=(const Attributes &LHS, const Attributes &RHS) {
       return !(LHS == RHS);
@@ -6745,6 +6754,8 @@ public:
   QualType getContainedType() const { return ContainedType; }
   bool hasContainedType() const { return !ContainedType.isNull(); }
   const Attributes &getAttrs() const { return Attrs; }
+  bool isRaw() const { return Attrs.RawBuffer; }
+  bool isStructured() const { return !ContainedType->isChar8Type(); }
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
@@ -6758,6 +6769,7 @@ public:
     ID.AddPointer(Wrapped.getAsOpaquePtr());
     ID.AddPointer(Contained.getAsOpaquePtr());
     ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
+    ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceDimension));
     ID.AddBoolean(Attrs.IsROV);
     ID.AddBoolean(Attrs.RawBuffer);
     ID.AddBoolean(Attrs.IsCounter);
