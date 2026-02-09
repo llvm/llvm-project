@@ -56,20 +56,11 @@ void LifetimeSafetyAnalysis::run() {
   llvm::TimeTraceScope TimeProfile("LifetimeSafetyAnalysis");
 
   const CFG &Cfg = *AC.getCFG();
-  DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
-                                       /*ShowColors=*/true));
 
   FactMgr = std::make_unique<FactManager>(AC, Cfg);
 
   FactsGenerator FactGen(*FactMgr, AC);
   FactGen.run();
-
-  DEBUG_WITH_TYPE("LifetimeFacts", FactMgr->dump(Cfg, AC));
-
-  // Debug print facts for a specific function using
-  // -debug-only=EnableFilterByFunctionName,YourFunctionNameFoo
-  DEBUG_WITH_TYPE("EnableFilterByFunctionName",
-                  DebugOnlyFunction(AC, Cfg, *FactMgr));
 
   /// TODO(opt): Consider optimizing individual blocks before running the
   /// dataflow analysis.
@@ -87,10 +78,25 @@ void LifetimeSafetyAnalysis::run() {
 
   LiveOrigins = std::make_unique<LiveOriginsAnalysis>(
       Cfg, AC, *FactMgr, Factory.LivenessMapFactory);
+
+  MovedLoans = std::make_unique<MovedLoansAnalysis>(
+      Cfg, AC, *FactMgr, *LoanPropagation, *LiveOrigins, FactMgr->getLoanMgr(),
+      Factory.MovedLoansMapFactory);
+
+  runLifetimeChecker(*LoanPropagation, *MovedLoans, *LiveOrigins, *FactMgr, AC,
+                     SemaHelper);
+
+  DEBUG_WITH_TYPE("PrintCFG", Cfg.dump(AC.getASTContext().getLangOpts(),
+                                       /*ShowColors=*/true));
+
+  DEBUG_WITH_TYPE("LifetimeFacts", FactMgr->dump(Cfg, AC));
+
+  // Debug print facts for a specific function using
+  // -debug-only=EnableFilterByFunctionName,YourFunctionNameFoo
+  DEBUG_WITH_TYPE("EnableFilterByFunctionName",
+                  DebugOnlyFunction(AC, Cfg, *FactMgr));
   DEBUG_WITH_TYPE("LiveOrigins",
                   LiveOrigins->dump(llvm::dbgs(), FactMgr->getTestPoints()));
-
-  runLifetimeChecker(*LoanPropagation, *LiveOrigins, *FactMgr, AC, SemaHelper);
 }
 
 void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,

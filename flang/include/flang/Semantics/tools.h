@@ -334,9 +334,6 @@ const Symbol *FindExternallyVisibleObject(
 // specific procedure of the same name, return it instead.
 const Symbol &BypassGeneric(const Symbol &);
 
-// Given a cray pointee symbol, returns the related cray pointer symbol.
-const Symbol &GetCrayPointer(const Symbol &crayPointee);
-
 using SomeExpr = evaluate::Expr<evaluate::SomeType>;
 
 bool ExprHasTypeCategory(
