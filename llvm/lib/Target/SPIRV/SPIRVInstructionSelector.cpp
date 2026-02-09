@@ -44,6 +44,16 @@ using ExtInstList =
 
 namespace {
 
+struct ImageOperands {
+  std::optional<Register> Bias;
+  std::optional<Register> Offset;
+  std::optional<Register> MinLod;
+  std::optional<Register> GradX;
+  std::optional<Register> GradY;
+  std::optional<Register> Lod;
+  std::optional<Register> Compare;
+};
+
 llvm::SPIRV::SelectionControl::SelectionControl
 getSelectionOperandForImm(int Imm) {
   if (Imm == 2)
@@ -337,8 +347,19 @@ private:
 
   bool selectReadImageIntrinsic(Register &ResVReg, const SPIRVType *ResType,
                                 MachineInstr &I) const;
-  bool selectSampleIntrinsic(Register &ResVReg, const SPIRVType *ResType,
-                             MachineInstr &I) const;
+  bool selectSampleBasicIntrinsic(Register &ResVReg, const SPIRVType *ResType,
+                                  MachineInstr &I) const;
+  bool selectSampleBiasIntrinsic(Register &ResVReg, const SPIRVType *ResType,
+                                 MachineInstr &I) const;
+  bool selectSampleGradIntrinsic(Register &ResVReg, const SPIRVType *ResType,
+                                 MachineInstr &I) const;
+  bool selectSampleLevelIntrinsic(Register &ResVReg, const SPIRVType *ResType,
+                                  MachineInstr &I) const;
+  bool selectSampleCmpIntrinsic(Register &ResVReg, const SPIRVType *ResType,
+                                MachineInstr &I) const;
+  bool selectSampleCmpLevelZeroIntrinsic(Register &ResVReg,
+                                         const SPIRVType *ResType,
+                                         MachineInstr &I) const;
   bool selectImageWriteIntrinsic(MachineInstr &I) const;
   bool selectResourceGetPointer(Register &ResVReg, const SPIRVType *ResType,
                                 MachineInstr &I) const;
@@ -390,6 +411,10 @@ private:
   bool generateImageReadOrFetch(Register &ResVReg, const SPIRVType *ResType,
                                 Register ImageReg, Register IdxReg,
                                 DebugLoc Loc, MachineInstr &Pos) const;
+  bool generateSampleImage(Register ResVReg, const SPIRVType *ResType,
+                           Register ImageReg, Register SamplerReg,
+                           Register CoordinateReg, const ImageOperands &ImOps,
+                           DebugLoc Loc, MachineInstr &I) const;
   bool BuildCOPY(Register DestReg, Register SrcReg, MachineInstr &I) const;
   bool loadVec3BuiltinInputID(SPIRV::BuiltIn::BuiltIn BuiltInValue,
                               Register ResVReg, const SPIRVType *ResType,
@@ -4098,9 +4123,21 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectReadImageIntrinsic(ResVReg, ResType, I);
   }
   case Intrinsic::spv_resource_sample:
-  case Intrinsic::spv_resource_sample_clamp: {
-    return selectSampleIntrinsic(ResVReg, ResType, I);
-  }
+  case Intrinsic::spv_resource_sample_clamp:
+    return selectSampleBasicIntrinsic(ResVReg, ResType, I);
+  case Intrinsic::spv_resource_samplebias:
+  case Intrinsic::spv_resource_samplebias_clamp:
+    return selectSampleBiasIntrinsic(ResVReg, ResType, I);
+  case Intrinsic::spv_resource_samplegrad:
+  case Intrinsic::spv_resource_samplegrad_clamp:
+    return selectSampleGradIntrinsic(ResVReg, ResType, I);
+  case Intrinsic::spv_resource_samplelevel:
+    return selectSampleLevelIntrinsic(ResVReg, ResType, I);
+  case Intrinsic::spv_resource_samplecmp:
+  case Intrinsic::spv_resource_samplecmp_clamp:
+    return selectSampleCmpIntrinsic(ResVReg, ResType, I);
+  case Intrinsic::spv_resource_samplecmplevelzero:
+    return selectSampleCmpLevelZeroIntrinsic(ResVReg, ResType, I);
   case Intrinsic::spv_resource_getpointer: {
     return selectResourceGetPointer(ResVReg, ResType, I);
   }
@@ -4292,76 +4329,181 @@ bool SPIRVInstructionSelector::selectReadImageIntrinsic(
                                   Pos);
 }
 
-bool SPIRVInstructionSelector::selectSampleIntrinsic(Register &ResVReg,
-                                                     const SPIRVType *ResType,
-                                                     MachineInstr &I) const {
-  Register ImageReg = I.getOperand(2).getReg();
-  Register SamplerReg = I.getOperand(3).getReg();
-  Register CoordinateReg = I.getOperand(4).getReg();
-  std::optional<Register> OffsetReg;
-  std::optional<Register> ClampReg;
-
-  if (I.getNumOperands() > 5)
-    OffsetReg = I.getOperand(5).getReg();
-  if (I.getNumOperands() > 6)
-    ClampReg = I.getOperand(6).getReg();
-
-  DebugLoc Loc = I.getDebugLoc();
-
+bool SPIRVInstructionSelector::generateSampleImage(
+    Register ResVReg, const SPIRVType *ResType, Register ImageReg,
+    Register SamplerReg, Register CoordinateReg, const ImageOperands &ImOps,
+    DebugLoc Loc, MachineInstr &Pos) const {
   auto *ImageDef = cast<GIntrinsic>(getVRegDef(*MRI, ImageReg));
   Register NewImageReg = MRI->createVirtualRegister(MRI->getRegClass(ImageReg));
   if (!loadHandleBeforePosition(NewImageReg, GR.getSPIRVTypeForVReg(ImageReg),
-                                *ImageDef, I)) {
+                                *ImageDef, Pos)) {
     return false;
   }
 
   auto *SamplerDef = cast<GIntrinsic>(getVRegDef(*MRI, SamplerReg));
   Register NewSamplerReg =
       MRI->createVirtualRegister(MRI->getRegClass(SamplerReg));
-  if (!loadHandleBeforePosition(
-          NewSamplerReg, GR.getSPIRVTypeForVReg(SamplerReg), *SamplerDef, I)) {
+  if (!loadHandleBeforePosition(NewSamplerReg,
+                                GR.getSPIRVTypeForVReg(SamplerReg), *SamplerDef,
+                                Pos)) {
     return false;
   }
 
-  MachineIRBuilder MIRBuilder(I);
+  MachineIRBuilder MIRBuilder(Pos);
   SPIRVType *SampledImageType = GR.getOrCreateOpTypeSampledImage(
       GR.getSPIRVTypeForVReg(ImageReg), MIRBuilder);
-
   Register SampledImageReg =
       MRI->createVirtualRegister(GR.getRegClass(SampledImageType));
-  BuildMI(*I.getParent(), I, Loc, TII.get(SPIRV::OpSampledImage))
+
+  BuildMI(*Pos.getParent(), Pos, Loc, TII.get(SPIRV::OpSampledImage))
       .addDef(SampledImageReg)
       .addUse(GR.getSPIRVTypeID(SampledImageType))
       .addUse(NewImageReg)
       .addUse(NewSamplerReg)
       .constrainAllUses(TII, TRI, RBI);
 
-  auto MIB =
-      BuildMI(*I.getParent(), I, Loc, TII.get(SPIRV::OpImageSampleImplicitLod))
-          .addDef(ResVReg)
-          .addUse(GR.getSPIRVTypeID(ResType))
-          .addUse(SampledImageReg)
-          .addUse(CoordinateReg);
+  bool IsExplicitLod = ImOps.GradX.has_value() || ImOps.GradY.has_value() ||
+                       ImOps.Lod.has_value();
+  unsigned Opcode = IsExplicitLod ? SPIRV::OpImageSampleExplicitLod
+                                  : SPIRV::OpImageSampleImplicitLod;
+  if (ImOps.Compare)
+    Opcode = IsExplicitLod ? SPIRV::OpImageSampleDrefExplicitLod
+                           : SPIRV::OpImageSampleDrefImplicitLod;
+
+  auto MIB = BuildMI(*Pos.getParent(), Pos, Loc, TII.get(Opcode))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResType))
+                 .addUse(SampledImageReg)
+                 .addUse(CoordinateReg);
+
+  if (ImOps.Compare)
+    MIB.addUse(*ImOps.Compare);
 
   uint32_t ImageOperands = 0;
-  if (OffsetReg && !isScalarOrVectorIntConstantZero(*OffsetReg)) {
-    ImageOperands |= 0x8; // ConstOffset
+  if (ImOps.Bias)
+    ImageOperands |= SPIRV::ImageOperand::Bias;
+  if (ImOps.Lod)
+    ImageOperands |= SPIRV::ImageOperand::Lod;
+  if (ImOps.GradX && ImOps.GradY)
+    ImageOperands |= SPIRV::ImageOperand::Grad;
+  if (ImOps.Offset && !isScalarOrVectorIntConstantZero(*ImOps.Offset)) {
+    if (isConstReg(MRI, *ImOps.Offset))
+      ImageOperands |= SPIRV::ImageOperand::ConstOffset;
+    else {
+      Pos.emitGenericError(
+          "Non-constant offsets are not supported in sample instructions.");
+    }
   }
-
-  if (ClampReg) {
-    ImageOperands |= 0x80; // MinLod
-  }
+  if (ImOps.MinLod)
+    ImageOperands |= SPIRV::ImageOperand::MinLod;
 
   if (ImageOperands != 0) {
     MIB.addImm(ImageOperands);
-    if (ImageOperands & 0x8)
-      MIB.addUse(*OffsetReg);
-    if (ImageOperands & 0x80)
-      MIB.addUse(*ClampReg);
+    if (ImageOperands & SPIRV::ImageOperand::Bias)
+      MIB.addUse(*ImOps.Bias);
+    if (ImageOperands & SPIRV::ImageOperand::Lod)
+      MIB.addUse(*ImOps.Lod);
+    if (ImageOperands & SPIRV::ImageOperand::Grad) {
+      MIB.addUse(*ImOps.GradX);
+      MIB.addUse(*ImOps.GradY);
+    }
+    if (ImageOperands &
+        (SPIRV::ImageOperand::ConstOffset | SPIRV::ImageOperand::Offset))
+      MIB.addUse(*ImOps.Offset);
+    if (ImageOperands & SPIRV::ImageOperand::MinLod)
+      MIB.addUse(*ImOps.MinLod);
   }
 
   MIB.constrainAllUses(TII, TRI, RBI);
   return true;
+}
+
+bool SPIRVInstructionSelector::selectSampleBasicIntrinsic(
+    Register &ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+  Register ImageReg = I.getOperand(2).getReg();
+  Register SamplerReg = I.getOperand(3).getReg();
+  Register CoordinateReg = I.getOperand(4).getReg();
+  ImageOperands ImOps;
+  if (I.getNumOperands() > 5)
+    ImOps.Offset = I.getOperand(5).getReg();
+  if (I.getNumOperands() > 6)
+    ImOps.MinLod = I.getOperand(6).getReg();
+  return generateSampleImage(ResVReg, ResType, ImageReg, SamplerReg,
+                             CoordinateReg, ImOps, I.getDebugLoc(), I);
+}
+
+bool SPIRVInstructionSelector::selectSampleBiasIntrinsic(
+    Register &ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+  Register ImageReg = I.getOperand(2).getReg();
+  Register SamplerReg = I.getOperand(3).getReg();
+  Register CoordinateReg = I.getOperand(4).getReg();
+  ImageOperands ImOps;
+  ImOps.Bias = I.getOperand(5).getReg();
+  if (I.getNumOperands() > 6)
+    ImOps.Offset = I.getOperand(6).getReg();
+  if (I.getNumOperands() > 7)
+    ImOps.MinLod = I.getOperand(7).getReg();
+  return generateSampleImage(ResVReg, ResType, ImageReg, SamplerReg,
+                             CoordinateReg, ImOps, I.getDebugLoc(), I);
+}
+
+bool SPIRVInstructionSelector::selectSampleGradIntrinsic(
+    Register &ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+  Register ImageReg = I.getOperand(2).getReg();
+  Register SamplerReg = I.getOperand(3).getReg();
+  Register CoordinateReg = I.getOperand(4).getReg();
+  ImageOperands ImOps;
+  ImOps.GradX = I.getOperand(5).getReg();
+  ImOps.GradY = I.getOperand(6).getReg();
+  if (I.getNumOperands() > 7)
+    ImOps.Offset = I.getOperand(7).getReg();
+  if (I.getNumOperands() > 8)
+    ImOps.MinLod = I.getOperand(8).getReg();
+  return generateSampleImage(ResVReg, ResType, ImageReg, SamplerReg,
+                             CoordinateReg, ImOps, I.getDebugLoc(), I);
+}
+
+bool SPIRVInstructionSelector::selectSampleLevelIntrinsic(
+    Register &ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+  Register ImageReg = I.getOperand(2).getReg();
+  Register SamplerReg = I.getOperand(3).getReg();
+  Register CoordinateReg = I.getOperand(4).getReg();
+  ImageOperands ImOps;
+  ImOps.Lod = I.getOperand(5).getReg();
+  if (I.getNumOperands() > 6)
+    ImOps.Offset = I.getOperand(6).getReg();
+  return generateSampleImage(ResVReg, ResType, ImageReg, SamplerReg,
+                             CoordinateReg, ImOps, I.getDebugLoc(), I);
+}
+
+bool SPIRVInstructionSelector::selectSampleCmpIntrinsic(
+    Register &ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+  Register ImageReg = I.getOperand(2).getReg();
+  Register SamplerReg = I.getOperand(3).getReg();
+  Register CoordinateReg = I.getOperand(4).getReg();
+  ImageOperands ImOps;
+  ImOps.Compare = I.getOperand(5).getReg();
+  if (I.getNumOperands() > 6)
+    ImOps.Offset = I.getOperand(6).getReg();
+  if (I.getNumOperands() > 7)
+    ImOps.MinLod = I.getOperand(7).getReg();
+  return generateSampleImage(ResVReg, ResType, ImageReg, SamplerReg,
+                             CoordinateReg, ImOps, I.getDebugLoc(), I);
+}
+
+bool SPIRVInstructionSelector::selectSampleCmpLevelZeroIntrinsic(
+    Register &ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+  Register ImageReg = I.getOperand(2).getReg();
+  Register SamplerReg = I.getOperand(3).getReg();
+  Register CoordinateReg = I.getOperand(4).getReg();
+  ImageOperands ImOps;
+  ImOps.Compare = I.getOperand(5).getReg();
+  if (I.getNumOperands() > 6)
+    ImOps.Offset = I.getOperand(6).getReg();
+  SPIRVType *FloatTy = GR.getOrCreateSPIRVFloatType(32, I, TII);
+  ImOps.Lod = GR.getOrCreateConstFP(APFloat(0.0f), I, FloatTy, TII);
+  return generateSampleImage(ResVReg, ResType, ImageReg, SamplerReg,
+                             CoordinateReg, ImOps, I.getDebugLoc(), I);
 }
 
 bool SPIRVInstructionSelector::generateImageReadOrFetch(
