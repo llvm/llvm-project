@@ -578,17 +578,6 @@ public:
     return Fn(TT, Ctx);
   }
 
-  // TODO(boomanaiden154): Remove this function after LLVM 22 branches.
-  [[deprecated("Use overload accepting Triple instead")]]
-  MCSymbolizer *
-  createMCSymbolizer(StringRef TT, LLVMOpInfoCallback GetOpInfo,
-                     LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo,
-                     MCContext *Ctx,
-                     std::unique_ptr<MCRelocationInfo> &&RelInfo) const {
-    return createMCSymbolizer(Triple(TT), GetOpInfo, SymbolLookUp, DisInfo, Ctx,
-                              std::move(RelInfo));
-  }
-
   /// createMCSymbolizer - Create a target specific MCSymbolizer.
   ///
   /// \param TT The target triple.
