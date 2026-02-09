@@ -2870,8 +2870,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     }
 
     // m((fpext X), (fpext Y)) -> fpext (m(X, Y))
-    if (match(Arg0, m_OneUse(m_FPExt(m_Value(X)))) &&
-        match(Arg1, m_OneUse(m_FPExt(m_Value(Y)))) &&
+    if (match(Arg0, m_FPExt(m_Value(X))) && match(Arg1, m_FPExt(m_Value(Y))) &&
+        (Arg0->hasOneUse() || Arg1->hasOneUse()) &&
         X->getType() == Y->getType()) {
       Value *NewCall =
           Builder.CreateBinaryIntrinsic(IID, X, Y, II, II->getName());

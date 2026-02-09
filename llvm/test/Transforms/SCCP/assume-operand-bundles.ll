@@ -124,5 +124,13 @@ false1:
   %cf4 = icmp ne ptr null, %v
   call void @use(i1 %cf4)
   ret void
+}
+
+define void @check_for_constant() {
+; CHECK-LABEL: define void @check_for_constant() {
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr null) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr null) ]
   ret void
 }
