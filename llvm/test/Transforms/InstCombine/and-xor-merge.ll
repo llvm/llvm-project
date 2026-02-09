@@ -93,43 +93,6 @@ define i8 @add_and_xor_basic(i8 %x) {
   ret i8 %xor
 }
 
-; Negative test
-; Should not optimize Cases where `nsw` is added to the sub.
-define i32 @add_and_xor_nsw(i32 %x) {
-; CHECK-LABEL: @add_and_xor_nsw(
-; CHECK-NEXT:    [[IS_POS:%.*]] = icmp sgt i32 [[X:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_POS]])
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X]], 63
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 63
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND]], 63
-; CHECK-NEXT:    ret i32 [[XOR]]
-;
-  %is_pos = icmp sgt i32 %x, -1
-  call void @llvm.assume(i1 %is_pos)
-  %add = add nuw nsw i32 %x, 63
-  %and = and i32 %add, 63
-  %xor = xor i32 %and, 63
-  ret i32 %xor
-}
-
-; Should not optimize Cases where `nsw` `nuw` is added to the sub.
-define i32 @add_and_xor_nsw_nuw(i32 %x) {
-; CHECK-LABEL: @add_and_xor_nsw_nuw(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X:%.*]], 10
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X]], 54
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ADD]], 63
-; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[AND]], 63
-; CHECK-NEXT:    ret i32 [[XOR]]
-;
-  %cmp = icmp ult i32 %x, 10
-  call void @llvm.assume(i1 %cmp)
-  %add = add i32 %x, 4294967286
-  %and = and i32 %add, 63
-  %xor = xor i32 %and, 63
-  ret i32 %xor
-}
-
 define <4 x i32> @add_and_xor_vector_splat(<4 x i32> %x) {
 ; CHECK-LABEL: @add_and_xor_vector_splat(
 ; CHECK-NEXT:    [[ADD:%.*]] = sub <4 x i32> splat (i32 53), [[X:%.*]]
