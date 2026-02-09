@@ -89,6 +89,30 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_s_setreg:
     return SemaRef.BuiltinConstantArgRange(TheCall, /*ArgNum=*/0, /*Low=*/0,
                                            /*High=*/UINT16_MAX);
+  case AMDGPU::BI__builtin_amdgcn_s_wait_event: {
+    llvm::APSInt Result;
+    if (SemaRef.BuiltinConstantArg(TheCall, 0, Result))
+      return true;
+
+    bool IsGFX12Plus = Builtin::evaluateRequiredTargetFeatures(
+        "gfx12-insts", CallerFeatureMap);
+
+    // gfx11 -> gfx12 changed the interpretation of the bitmask. gfx12 inverted
+    // the intepretation for export_ready, but shifted the used bit by 1. Thus
+    // waiting for the export_ready event can use a value of 2 universally.
+    if (((IsGFX12Plus && !Result[1]) || (!IsGFX12Plus && Result[0])) ||
+        Result.getZExtValue() > 2) {
+      Expr *ArgExpr = TheCall->getArg(0);
+      SemaRef.targetDiag(ArgExpr->getExprLoc(),
+                         diag::warn_amdgpu_s_wait_event_mask_no_effect_target)
+          << ArgExpr->getSourceRange();
+      SemaRef.targetDiag(ArgExpr->getExprLoc(),
+                         diag::note_amdgpu_s_wait_event_suggested_value)
+          << ArgExpr->getSourceRange();
+    }
+
+    return false;
+  }
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
     return checkMovDPPFunctionCall(TheCall, 5, 1);
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
