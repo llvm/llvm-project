@@ -48,6 +48,7 @@ jobs:
           ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --release ${{ needs.validate-tag.outputs.release-version }} --user ${{ github.actor }} --user-token "$USER_TOKEN" create
   release-documentation:
     name: Build and Upload Release Documentation
+    runs-on: ubuntu-24.04
     environment: release
     needs:
       - validate-tag
