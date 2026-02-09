@@ -7894,6 +7894,28 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     }
   }
 
+  // icmp eq (shl (zext i1 x), (zext i1 y)), 1 --> and i1 x, (not i1 y)
+  // icmp ne (shl (zext i1 x), (zext i1 y)), 1 --> or i1 (not i1 x), y
+  {
+    Value *A, *B;
+    CmpPredicate CmpPred;
+
+    if (match(&I,
+              m_c_ICmp(CmpPred, m_Shl(m_ZExt(m_Value(A)), m_ZExt(m_Value(B))),
+                       m_One())) &&
+        A->getType()->isIntegerTy(1) && B->getType()->isIntegerTy(1)) {
+
+      if (CmpPred == ICmpInst::ICMP_EQ) {
+        return replaceInstUsesWith(I,
+                                   Builder.CreateAnd(A, Builder.CreateNot(B)));
+      }
+      if (CmpPred == ICmpInst::ICMP_NE) {
+        return replaceInstUsesWith(I,
+                                   Builder.CreateOr(Builder.CreateNot(A), B));
+      }
+    }
+  }
+
   // Try to optimize equality comparisons against alloca-based pointers.
   if (Op0->getType()->isPointerTy() && I.isEquality()) {
     assert(Op1->getType()->isPointerTy() &&
