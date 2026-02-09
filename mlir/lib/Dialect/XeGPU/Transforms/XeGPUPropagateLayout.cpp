@@ -15,7 +15,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
-#include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
+#include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/Attributes.h"
@@ -127,6 +127,7 @@ public:
   }
 
   Attribute get() { return storage; }
+  void set(const xegpu::DistributeLayoutAttr &layout) { storage = layout; }
 };
 
 SmallVector<int> LayoutInfo::getLaneLayout() const {
@@ -307,27 +308,6 @@ static LayoutInfo getSIMTLayoutInfoBlockIO(Ty ty,
       ty.getContext(), {1, uArch->getSubgroupSize()}, {1, packingFactor}));
 }
 
-/// Helper to get the default layout for a vector type.
-static LayoutInfo getSIMTLayoutInfoScatterIO(VectorType vectorTy,
-                                             const xegpu::uArch::uArch *uArch) {
-  // Expecting a 1D or 2D vector.
-  assert((vectorTy.getRank() == 1 || vectorTy.getRank() == 2) &&
-         "Expected 1D or 2D vector.");
-  // Expecting int or float element type.
-  assert(vectorTy.getElementType().isIntOrFloat() &&
-         "Expected int or float element type.");
-  // If the rank is 1, then return default layout for 1D vector.
-  const unsigned packingSize{uArch->getGeneralPackedFormatBitSize()};
-  if (vectorTy.getRank() == 1)
-    return getDefaultSIMTLayoutInfo(vectorTy.getContext(), 1, uArch);
-  // Packing factor is determined by the element type bitwidth.
-  unsigned bitwidth = vectorTy.getElementType().getIntOrFloatBitWidth();
-  int packingFactor = bitwidth < packingSize ? packingSize / bitwidth : 1;
-  return LayoutInfo(xegpu::LayoutAttr::get(vectorTy.getContext(),
-                                           {uArch->getSubgroupSize(), 1},
-                                           {1, packingFactor}));
-}
-
 /// Helper Function to get the expected layouts for DPAS operands. `lane_data`
 /// is set according to the following criteria:
 /// * For A operand, the data must be packed in minimum
@@ -417,10 +397,26 @@ private:
   void visitShapeCastOp(vector::ShapeCastOp shapeCast,
                         ArrayRef<LayoutInfoLattice *> operands,
                         ArrayRef<const LayoutInfoLattice *> results);
+  void
+  visitInsertStridedSliceOp(vector::InsertStridedSliceOp insertStridedSlice,
+                            ArrayRef<LayoutInfoLattice *> operands,
+                            ArrayRef<const LayoutInfoLattice *> results);
+
+  void visitLoadMatrixOp(xegpu::LoadMatrixOp load,
+                         ArrayRef<LayoutInfoLattice *> operands,
+                         ArrayRef<const LayoutInfoLattice *> results);
 
   void visitStoreMatrixOp(xegpu::StoreMatrixOp store,
                           ArrayRef<LayoutInfoLattice *> operands,
                           ArrayRef<const LayoutInfoLattice *> results);
+
+  void visitLoadGatherOp(xegpu::LoadMatrixOp load,
+                         ArrayRef<LayoutInfoLattice *> operands,
+                         ArrayRef<const LayoutInfoLattice *> results);
+
+  void visitStoreScatterOp(xegpu::StoreMatrixOp store,
+                           ArrayRef<LayoutInfoLattice *> operands,
+                           ArrayRef<const LayoutInfoLattice *> results);
 
   bool hasParamsOfLayoutKind(xegpu::DistributeLayoutAttr anchorLayout);
 
@@ -496,6 +492,12 @@ LogicalResult LayoutInfoPropagation::visitOperation(
       })
       .Case([&](vector::ShapeCastOp shapeCastOp) {
         visitShapeCastOp(shapeCastOp, operands, results);
+      })
+      .Case([&](vector::InsertStridedSliceOp insertStridedSliceOp) {
+        visitInsertStridedSliceOp(insertStridedSliceOp, operands, results);
+      })
+      .Case([&](xegpu::LoadMatrixOp loadMatrixOp) {
+        visitLoadMatrixOp(loadMatrixOp, operands, results);
       })
       .Case([&](xegpu::StoreMatrixOp storeMatrixOp) {
         visitStoreMatrixOp(storeMatrixOp, operands, results);
@@ -646,32 +648,45 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
     ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
   // The layout of the result must be present.
-  LayoutInfo resultLayout = results[0]->getValue();
-  if (!resultLayout.isAssigned())
+  LayoutInfo resLayoutInfo = results[0]->getValue();
+  if (!resLayoutInfo.isAssigned())
     return;
-  // We only consider 2D -> 1D reductions at this point.
-  VectorType resultTy = llvm::dyn_cast<VectorType>(reduction.getDestType());
-  if (!resultTy || resultTy.getRank() != 1) {
-    reduction.emitWarning("Expecting output type to be 1D vector.");
-    return;
-  }
+
+  VectorType sourceTy = reduction.getSourceVectorType();
+  SmallVector<int64_t> reductionDims(reduction.getReductionDims());
+
   auto uArch = getUArch(xegpu::getChipStr(reduction).value_or(""));
-  // Given that the result is 1D, the layout of the operand should be 2D with
-  // default layout.
-  LayoutInfo operandLayout = getDefaultSIMTLayoutInfo(
-      reduction->getContext(), 2, uArch->getSubgroupSize());
-  propagateIfChanged(operands[0], operands[0]->meet(operandLayout));
+  auto consumerLayoutAttr =
+      dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+
+  // The result layout represents the layout requirements of the operation.
+  // it is recorded to anchor layout or temporary layout.
+  // it must be honored for current op and may conflict with the layout
+  // propagated from consumer op, the conflict is resolved in later phase by
+  // converting the required result layout to the consumer layout
+  auto requiredResLayoutAttr = xegpu::setupMultiReductionResultLayout(
+      layoutKind, sourceTy, consumerLayoutAttr, reductionDims, uArch);
+
+  xegpu::setTemporaryLayout(reduction->getResult(0), requiredResLayoutAttr);
+
+  // derive the source layout from the dominant layout and reduction dims
+  auto srcLayoutAttr = xegpu::inferMultiReductionSourceLayout(
+      requiredResLayoutAttr, reductionDims);
+
+  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
   // Accumulator should have the same layout as the result.
-  propagateIfChanged(operands[1], operands[1]->meet(resultLayout));
+  propagateIfChanged(operands[1],
+                     operands[1]->meet(LayoutInfo(requiredResLayoutAttr)));
 }
 
 void LayoutInfoPropagation::visitVectorBroadCastOp(
     vector::BroadcastOp broadcast, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
   // The layout of the result must be present.
-  LayoutInfo resultLayout = results[0]->getValue();
-  if (!resultLayout.isAssigned())
+  LayoutInfo resLayoutInfo = results[0]->getValue();
+  if (!resLayoutInfo.isAssigned())
     return;
+
   // Only consider vector to vector broadcasts for now.
   VectorType resultTy = broadcast.getResultVectorType();
   VectorType sourceTy = dyn_cast<VectorType>(broadcast.getSourceType());
@@ -679,55 +694,41 @@ void LayoutInfoPropagation::visitVectorBroadCastOp(
   if (!sourceTy)
     return;
 
-  // Hanlding broadcast from low-rank to high-rank (e.g., 1D to 2D) case.
-  if (sourceTy.getRank() != resultTy.getRank()) {
-    auto sourceDims = sourceTy.getShape();
-    auto resultDims = resultTy.getShape();
-    SmallVector<int64_t> bcastDims;
-    auto dimDiff = resultTy.getRank() - sourceTy.getRank();
-    // adding the missing leading dims
-    for (int i = 0; i < dimDiff; i++)
-      bcastDims.push_back(i);
+  auto srcShape = sourceTy.getShape();
+  auto resShape = resultTy.getShape();
 
-    // for the rest dims in the resultTy, if sourceTy dim is 1, then it's
-    // broadcasted dim
-    for (size_t i = 0; i < sourceDims.size(); i++)
-      if ((sourceDims[i] == 1) && (resultDims[i + dimDiff] != 1))
-        bcastDims.push_back(i + dimDiff);
+  size_t dimDiff = resultTy.getRank() - sourceTy.getRank();
+  for (size_t i = 0; i < srcShape.size(); i++)
+    if ((srcShape[i] == 1) && (resShape[i + dimDiff] != 1))
+      broadcast.emitWarning("broadcast must either from low-rank or same-rank "
+                            "with unit-dim, mixed scenario is not supported!");
 
-    // create a slice layout for the source
-    xegpu::SliceAttr sliceLayout = xegpu::SliceAttr::get(
-        broadcast->getContext(),
-        cast<xegpu::DistributeLayoutAttr>(resultLayout.get()),
-        DenseI64ArrayAttr::get(broadcast->getContext(), bcastDims));
+  auto resultLayoutAttr =
+      dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
 
-    propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(sliceLayout)));
-    return;
-  }
-  propagateIfChanged(operands[0], operands[0]->meet(resultLayout));
+  xegpu::DistributeLayoutAttr srcLayoutAttr =
+      xegpu::inferBroadcastSourceLayout(resultLayoutAttr, resShape, srcShape);
+
+  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
+  return;
 }
 
 void LayoutInfoPropagation::visitShapeCastOp(
     vector::ShapeCastOp shapeCast, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
   // The layout of the result must be present.
-  LayoutInfo resultLayout = results[0]->getValue();
-  if (!resultLayout.isAssigned())
+  LayoutInfo resLayoutInfo = results[0]->getValue();
+  if (!resLayoutInfo.isAssigned())
     return;
-  VectorType sourceTy = shapeCast.getSourceVectorType();
-  VectorType resultTy = shapeCast.getResultVectorType();
-  // Shape cast layout propagation only supports 1D -> 2D shape casts.
-  // TODO: Support kD -> nD shape casts (k < n, n >= 2) where expanded dims are
-  // unit dimensions and non-unit dims match.
-  if (sourceTy.getRank() != 1 || resultTy.getRank() != 2) {
-    shapeCast.emitWarning("Expecting shape cast to be 1D -> 2D.");
-    return;
-  }
-  int64_t slicedDim = resultTy.getShape()[0] == 1 ? 0 : 1;
-  xegpu::SliceAttr sliceLayout = xegpu::SliceAttr::get(
-      shapeCast->getContext(), cast<xegpu::LayoutAttr>(resultLayout.get()),
-      DenseI64ArrayAttr::get(shapeCast->getContext(), {slicedDim}));
-  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(sliceLayout)));
+  ArrayRef<int64_t> resShape = shapeCast.getResultVectorType().getShape();
+  ArrayRef<int64_t> srcShape = shapeCast.getSourceVectorType().getShape();
+  auto resultLayoutAttr =
+      dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+
+  xegpu::DistributeLayoutAttr srcLayoutAttr =
+      xegpu::inferShapeCastSourceLayout(resultLayoutAttr, resShape, srcShape);
+
+  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
 }
 
 /// Propagate the layout of the result tensor to the source tensor descriptor
@@ -748,7 +749,6 @@ void LayoutInfoPropagation::visitUpdateNdOffsetOp(
 void LayoutInfoPropagation::visitDpasOp(
     xegpu::DpasOp dpas, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-
   LayoutInfo dpasALayout;
   LayoutInfo dpasBLayout;
   LayoutInfo dpasCDLayout;
@@ -945,7 +945,6 @@ void LayoutInfoPropagation::visitDpasOp(
 void LayoutInfoPropagation::visitStoreNdOp(
     xegpu::StoreNdOp store, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-
   LayoutInfo storeLayout;
   xegpu::DistributeLayoutAttr anchorLayout = store.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
@@ -986,7 +985,7 @@ void LayoutInfoPropagation::visitStoreNdOp(
       storeLayout =
           getSIMTLayoutInfoBlockIO(store.getValueType(), uArch,
                                    uArchInstruction->getPackedFormatBitSize());
-    else { // LayoutKind::Subgroup
+    else { // xegpu::LayoutKind::Subgroup
       auto sgSize = uArch->getSubgroupSize();
       auto numSgOrErr = getNumSg(store, sgSize);
       if (failed(numSgOrErr)) {
@@ -1026,7 +1025,6 @@ void LayoutInfoPropagation::visitStoreNdOp(
 void LayoutInfoPropagation::visitLoadNdOp(
     xegpu::LoadNdOp load, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-
   LayoutInfo loadLayout;
   xegpu::DistributeLayoutAttr anchorLayout = load.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
@@ -1072,66 +1070,60 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
     vector::BitCastOp bitcast, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
   // Need the layout of bitcast result to propagate to the operands.
-  LayoutInfo resultLayout = results[0]->getValue();
-  if (!resultLayout.isAssigned())
+  LayoutInfo resLayoutInfo = results[0]->getValue();
+  if (!resLayoutInfo.isAssigned())
     return;
-  int inElemTyBitWidth =
-      bitcast.getSourceVectorType().getElementType().getIntOrFloatBitWidth();
-  int outElemTyBitWidth =
-      bitcast.getResultVectorType().getElementType().getIntOrFloatBitWidth();
-  // If the element bit widths are the same, then the layout does not change.
-  if (inElemTyBitWidth == outElemTyBitWidth) {
-    propagateIfChanged(operands[0], operands[0]->meet(resultLayout));
-    return;
-  }
-  // Check if the result layout is valid. i.e. result vector can be distributed.
-  auto resultLaneLayout = resultLayout.getLaneLayout();
-  auto resultLaneData = resultLayout.getLaneData();
-  if (failed(xegpu::getDistributedVectorType(
-          bitcast.getResultVectorType(),
-          xegpu::LayoutAttr::get(bitcast->getContext(), resultLaneLayout,
-                                 resultLaneData)))) {
-    bitcast.emitWarning(
-        "Result vector type can not be evenly distributed across lanes.");
-    return;
-  }
-  int64_t rank = bitcast.getSourceVectorType().getRank();
-  // Bitcast is a `narrowing` if the input element type bit width larger than
-  // the output element type bit width. eg. f32 -> f16 is a narrowing bitcast.
-  bool isNarrowing = inElemTyBitWidth > outElemTyBitWidth;
-  int bitCastRatio = isNarrowing ? inElemTyBitWidth / outElemTyBitWidth
-                                 : outElemTyBitWidth / inElemTyBitWidth;
-  SmallVector<int> sourceLaneLayout =
-      resultLayout.getLaneLayout(); // Lane layout does not change for bitcast.
-  SmallVector<int> outData = resultLayout.getLaneData();
 
-  // TODO: Currently we assume that bitcasts does not require cross lane
-  // communication. So each lane must own the required number of elements to
-  // perform the bitcast locally without cross-lane communication.
-  int outInnerBitsPerLane = outData[rank - 1] * outElemTyBitWidth;
-  if (outInnerBitsPerLane < inElemTyBitWidth) {
-    bitcast.emitWarning(
-        "Narrowing bitcast with cross lane communication is not supported.");
-    return;
-  }
-  // Check if each lane owns a single element in all dimensions except the
-  // innermost dimension.
-  SmallVector<int> sourceLaneData(outData.begin(), outData.end() - 1);
-  if (llvm::any_of(sourceLaneData, [](int64_t d) { return d != 1; })) {
-    bitcast.emitWarning("Each lane must not own multiple elements in any "
-                        "dimension other than "
-                        "the innermost dimension.");
-    return;
-  }
-  // Decide lane data based on whether the bitcast is narrowing or widening.
-  int64_t innerMostLaneData = isNarrowing ? outData[rank - 1] / bitCastRatio
-                                          : outData[rank - 1] * bitCastRatio;
-  sourceLaneData.push_back(innerMostLaneData);
+  auto srcVecType = bitcast.getSourceVectorType();
+  auto resVecType = bitcast.getResultVectorType();
 
-  propagateIfChanged(
-      operands[0],
-      operands[0]->meet(LayoutInfo(xegpu::LayoutAttr::get(
-          bitcast->getContext(), sourceLaneLayout, sourceLaneData))));
+  auto consumerLayoutAttr =
+      dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+  auto uArch = getUArch(xegpu::getChipStr(bitcast).value_or(""));
+  auto requiredResLayoutAttr = setupBitCastResultLayout(
+      layoutKind, srcVecType, resVecType, consumerLayoutAttr, uArch);
+
+  xegpu::setTemporaryLayout(bitcast->getResult(0), requiredResLayoutAttr);
+
+  int inElemTyBitWidth = srcVecType.getElementType().getIntOrFloatBitWidth();
+  int outElemTyBitWidth = resVecType.getElementType().getIntOrFloatBitWidth();
+
+  // derive the source layout from the dominant layout and reduction dims
+  auto srcLayoutAttr = xegpu::inferBitCastSourceLayout(
+      requiredResLayoutAttr, outElemTyBitWidth, inElemTyBitWidth);
+
+  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
+}
+
+void LayoutInfoPropagation::visitInsertStridedSliceOp(
+    vector::InsertStridedSliceOp insertStridedSlice,
+    ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
+  // The layout of the result must be present.
+  LayoutInfo resLayoutInfo = results[0]->getValue();
+  if (!resLayoutInfo.isAssigned())
+    return;
+
+  auto srcVecType = insertStridedSlice.getSourceVectorType();
+  auto resVecType = insertStridedSlice.getDestVectorType();
+
+  auto consumerLayoutAttr =
+      dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+  auto uArch = getUArch(xegpu::getChipStr(insertStridedSlice).value_or(""));
+
+  auto requiredResLayoutAttr = xegpu::setupInsertStridedSliceResultLayout(
+      layoutKind, srcVecType, resVecType, consumerLayoutAttr, uArch);
+
+  xegpu::setTemporaryLayout(insertStridedSlice->getResult(0),
+                            requiredResLayoutAttr);
+
+  auto srcLayoutAttr = xegpu::inferInsertStridedSliceSourceLayout(
+      requiredResLayoutAttr, resVecType.getShape(), srcVecType.getShape());
+
+  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
+  propagateIfChanged(operands[1],
+                     operands[1]->meet(LayoutInfo(requiredResLayoutAttr)));
+  return;
 }
 
 /// Propagate the layout of the result to the tensor descriptor, mask and offset
@@ -1139,96 +1131,56 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
 void LayoutInfoPropagation::visitLoadGatherOp(
     xegpu::LoadGatherOp load, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-
-  LayoutInfo loadLayout;
-  LayoutInfo maskLayout;
+  xegpu::DistributeLayoutAttr requiredAnchorLayoutAttr;
+  xegpu::DistributeLayoutAttr anchorLayoutAttr = load.getLayoutAttr();
   auto uArch = getUArch(getChipStr(load).value_or(""));
-  const int subgroupSize = uArch->getSubgroupSize();
-  xegpu::DistributeLayoutAttr anchorLayout = load.getLayoutAttr();
-  if (hasParamsOfLayoutKind(anchorLayout)) {
-    loadLayout = LayoutInfo(anchorLayout);
-    maskLayout = loadLayout;
+  auto subgroupSize = uArch->getSubgroupSize();
+  VectorType resVecTy = load.getValueType();
+  int chunkSize = load.getChunkSize().value_or(1);
+
+  LayoutInfo resLayoutInfo = results[0]->getValue();
+  if (!resLayoutInfo.isAssigned())
+    return;
+  auto consumerLayoutAttr =
+      dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+
+  if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
+    requiredAnchorLayoutAttr = anchorLayoutAttr;
   } else {
-    LayoutInfo valueLayout = results[0]->getValue();
-    // Need the layout of the value to propagate to the tensor descriptor.
-    if (!valueLayout.isAssigned())
-      return;
-
-    auto resAttr = dyn_cast<xegpu::DistributeLayoutAttr>(valueLayout.get());
-    auto instDataIncoming = resAttr.getEffectiveInstDataAsInt();
-    if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(resAttr))
-      instDataIncoming = SmallVector<int64_t>(
-          cast<xegpu::LayoutAttr>(sliceAttr.flatten().getParent())
-              .getInstData()
-              .asArrayRef());
-
-    VectorType payloadTy = load.getValueType();
-    if (!payloadTy) {
+    if (!resVecTy) {
       load.emitWarning("Not propagating, non-vector payload supplied.");
       return;
     }
-    const auto *uArchInstruction =
-        dyn_cast<xegpu::uArch::LoadGatherInstruction>(
-            uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
-
-    // Check if value inst_data complies with uArch
-    if (layoutKind == xegpu::LayoutKind::InstData) {
-      // Each lane loads either one element
-      SmallVector<int> instDataUarch{subgroupSize};
-      // Or multiple elements as 2D with lane's elements in the inner dimension
-      if (payloadTy.getRank() != 1) {
-        if (payloadTy.getRank() != 2) {
-          load.emitWarning("Expected 2D payload for LoadGatherOp.");
-          return;
-        }
-        instDataUarch.push_back(
-            (std::min(static_cast<int>(payloadTy.getShape().back()),
-                      uArchInstruction->getMaxLaneLoadStoreSize())));
-      }
-      // If inst data does not match, enforce the uArch-based one
-      if (!llvm::equal(instDataIncoming, instDataUarch)) {
-        xegpu::LayoutAttr sourceAttr = dyn_cast<xegpu::LayoutAttr>(resAttr);
-        if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(resAttr)) {
-          sourceAttr = cast<xegpu::LayoutAttr>(sliceAttr.flatten().getParent());
-        }
-        assert(sourceAttr);
-        xegpu::DistributeLayoutAttr updatedLayoutAttr = xegpu::LayoutAttr::get(
-            load.getContext(), sourceAttr.getSgLayout(), sourceAttr.getSgData(),
-            DenseI32ArrayAttr::get(load.getContext(), instDataUarch),
-            sourceAttr.getLaneLayout(), sourceAttr.getLaneData(),
-            sourceAttr.getOrder());
-
-        if (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(resAttr))
-          updatedLayoutAttr = xegpu::SliceAttr::get(
-              load.getContext(), updatedLayoutAttr, sliceAttr.getDims());
-        valueLayout = LayoutInfo(updatedLayoutAttr);
-      }
-    }
-    loadLayout = valueLayout;
-    load.setLayoutAttr(dyn_cast<xegpu::DistributeLayoutAttr>(loadLayout.get()));
+    requiredAnchorLayoutAttr = xegpu::setupLoadGatherAnchorLayout(
+        layoutKind, resVecTy, chunkSize, consumerLayoutAttr, uArch);
+    load.setLayoutAttr(requiredAnchorLayoutAttr);
   }
 
-  // If no user-defined anchor or we deal with a chunked op, set the default
-  // mask layout.
-  // Rank 1 data : Keep the mask layout aligned with data.
-  // Rank >1 data: Enforce the default xegpu 1D layout for mask.
-  if (!hasParamsOfLayoutKind(anchorLayout) ||
-      load.getValueType().getRank() > 1) {
+  auto maskLayoutAttr = requiredAnchorLayoutAttr;
+  // Special handling mask layout for chunked ops: Enforce the default xegpu 1D
+  // layout for mask.
+  if (chunkSize > 1) {
     if (layoutKind == xegpu::LayoutKind::InstData)
-      maskLayout = LayoutInfo(
-          xegpu::LayoutAttr::get(load->getContext(), {subgroupSize}));
+      maskLayoutAttr =
+          xegpu::LayoutAttr::get(load->getContext(), {subgroupSize});
     else if (layoutKind == xegpu::LayoutKind::Lane)
-      maskLayout =
-          getDefaultSIMTLayoutInfo(load->getContext(), 1, subgroupSize);
+      maskLayoutAttr =
+          xegpu::LayoutAttr::get(load->getContext(), {subgroupSize}, {1});
+    else
+      assert(false &&
+             "chunked StoreScatterOp should not be used at workgroup level");
   }
+
+  LayoutInfo maskLayoutInfo = LayoutInfo(maskLayoutAttr);
+  auto loadLayoutInfo = LayoutInfo(requiredAnchorLayoutAttr);
 
   // Propagate the new layout to the tensor descriptor operand.
   if (isa<xegpu::TensorDescType>(load.getSourceType()))
-    propagateIfChanged(operands[0], operands[0]->meet(loadLayout));
+    propagateIfChanged(operands[0], operands[0]->meet(loadLayoutInfo));
   // Propagate the new layout to the mask and optional offset operand.
-  propagateIfChanged(operands[1], operands[1]->meet(maskLayout));
+  propagateIfChanged(operands[1], operands[1]->meet(maskLayoutInfo));
   if (load.getOffsets())
-    propagateIfChanged(operands[2], operands[2]->meet(maskLayout));
+    propagateIfChanged(operands[2], operands[2]->meet(maskLayoutInfo));
 }
 
 /// Propagate the layout of the descriptor to the vector offset operand in
@@ -1253,107 +1205,97 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     xegpu::StoreScatterOp storeScatter, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
 
-  LayoutInfo payloadLayout;
-  LayoutInfo maskLayout;
-  xegpu::DistributeLayoutAttr anchorLayout = storeScatter.getLayoutAttr();
+  xegpu::DistributeLayoutAttr requiredAnchorLayoutAttr;
+  xegpu::DistributeLayoutAttr anchorLayoutAttr = storeScatter.getLayoutAttr();
   auto uArch = getUArch(getChipStr(storeScatter).value_or(""));
-  const int subgroupSize = uArch->getSubgroupSize();
+  auto subgroupSize = uArch->getSubgroupSize();
+  VectorType srcVecTy = storeScatter.getValueType();
+  int chunkSize = storeScatter.getChunkSize().value_or(1);
 
-  if (hasParamsOfLayoutKind(anchorLayout)) {
-    payloadLayout = LayoutInfo(anchorLayout);
-    maskLayout = payloadLayout;
+  if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
+    requiredAnchorLayoutAttr = anchorLayoutAttr;
   } else {
-    // Currently, for 2D StoreScatterOp we expect that the height dimension of
-    // the tensor descriptor is equal to the subgroup size. This is ensured by
-    // the op verifier.
-    VectorType payloadTy = storeScatter.getValueType();
-    if (!payloadTy) {
+    if (!srcVecTy) {
       storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
       return;
     }
-
-    if (layoutKind == xegpu::LayoutKind::InstData) {
-      const auto *uArchInstruction =
-          dyn_cast<xegpu::uArch::StoreScatterInstruction>(uArch->getInstruction(
-              xegpu::uArch::InstructionKind::StoreScatter));
-      const int subgroupSize = uArch->getSubgroupSize();
-      SmallVector<int> instDataUarch{subgroupSize};
-      if (payloadTy.getRank() != 1) {
-        if (payloadTy.getRank() != 2) {
-          storeScatter.emitWarning("Expected 2D payload for StoreScatterOp.");
-          return;
-        }
-        instDataUarch.push_back(
-            (std::min(static_cast<int>(payloadTy.getShape().back()),
-                      uArchInstruction->getMaxLaneLoadStoreSize())));
-      }
-      payloadLayout = LayoutInfo(
-          xegpu::LayoutAttr::get(storeScatter.getContext(), instDataUarch));
-    } else {
-      auto payloadShape = payloadTy.getShape();
-      if (payloadShape.size() > 1)
-        assert(payloadShape[0] == subgroupSize &&
-               "Expected the first dimension of 2D tensor descriptor to be "
-               "equal to "
-               "subgroup size.");
-      payloadLayout = getSIMTLayoutInfoScatterIO(payloadTy, uArch);
-    }
-
-    storeScatter.setLayoutAttr(
-        dyn_cast<xegpu::DistributeLayoutAttr>(payloadLayout.get()));
+    requiredAnchorLayoutAttr = xegpu::setupStoreScatterAnchorLayout(
+        layoutKind, srcVecTy, chunkSize, uArch);
+    storeScatter.setLayoutAttr(requiredAnchorLayoutAttr);
   }
 
-  // If no user-defined anchor or we deal with a chunked op, set the default
-  // mask layout.
-  // Rank 1 data : Keep the mask layout aligned with data.
-  // Rank >1 data: Enforce the default xegpu 1D layout for mask.
-  if (!hasParamsOfLayoutKind(anchorLayout) ||
-      storeScatter.getValueType().getRank() > 1) {
+  LayoutInfo srcLayoutInfo = LayoutInfo(requiredAnchorLayoutAttr);
+  auto maskLayoutAttr = requiredAnchorLayoutAttr;
+  // Special handling mask layout for chunked ops: Enforce the default xegpu 1D
+  // layout for mask.
+  if (chunkSize > 1) {
     if (layoutKind == xegpu::LayoutKind::InstData)
-      maskLayout = LayoutInfo(
-          xegpu::LayoutAttr::get(storeScatter->getContext(), {subgroupSize}));
+      maskLayoutAttr =
+          xegpu::LayoutAttr::get(storeScatter->getContext(), {subgroupSize});
     else if (layoutKind == xegpu::LayoutKind::Lane)
-      maskLayout =
-          getDefaultSIMTLayoutInfo(storeScatter->getContext(), 1, subgroupSize);
+      maskLayoutAttr = xegpu::LayoutAttr::get(storeScatter->getContext(),
+                                              {subgroupSize}, {1});
+    else
+      assert(false &&
+             "chunked StoreScatterOp should not be used at workgroup level");
   }
+
+  LayoutInfo maskLayoutInfo = LayoutInfo(maskLayoutAttr);
 
   // Propagate the payload operand layout
-  propagateIfChanged(operands[0], operands[0]->meet(payloadLayout));
+  propagateIfChanged(operands[0], operands[0]->meet(srcLayoutInfo));
   // Propagate the destination (if tdesc) operand layout
   if (isa<xegpu::TensorDescType>(storeScatter.getDestType()))
-    propagateIfChanged(operands[1], operands[1]->meet(payloadLayout));
+    propagateIfChanged(operands[1], operands[1]->meet(srcLayoutInfo));
   // Propagate the new layout to the mask and optional offset operand.
-  propagateIfChanged(operands[2], operands[2]->meet(maskLayout));
+  propagateIfChanged(operands[2], operands[2]->meet(maskLayoutInfo));
   if (storeScatter.getOffsets())
-    propagateIfChanged(operands[3], operands[3]->meet(maskLayout));
+    propagateIfChanged(operands[3], operands[3]->meet(maskLayoutInfo));
+}
+
+void LayoutInfoPropagation::visitLoadMatrixOp(
+    xegpu::LoadMatrixOp loadMatrixOp, ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
+
+  LayoutInfo resLayoutInfo = results[0]->getValue();
+  auto consumerLayoutAttr =
+      dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+
+  xegpu::DistributeLayoutAttr anchorLayout = loadMatrixOp.getLayoutAttr();
+
+  // only need to set anchor layout, no need to porpagate to memdesc and
+  // offset
+  if (!hasParamsOfLayoutKind(anchorLayout)) {
+    VectorType resVecTy =
+        llvm::cast<VectorType>(loadMatrixOp.getRes().getType());
+    assert(resVecTy.getRank() == 2 && "Expecting 2D vector for store matrix.");
+    auto uArch = getUArch(getChipStr(loadMatrixOp).value_or(""));
+    auto requiredAnchorLayoutAttr = xegpu::setupLoadMatrixAnchorLayout(
+        layoutKind, resVecTy, consumerLayoutAttr, uArch);
+    loadMatrixOp.setLayoutAttr(requiredAnchorLayoutAttr);
+  }
 }
 
 // Store matrix is a flavor of scattered store for 2D shapes.
 void LayoutInfoPropagation::visitStoreMatrixOp(
     xegpu::StoreMatrixOp storeMatrix, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-  Value operand = storeMatrix.getData();
-  unsigned index =
-      std::distance(storeMatrix.operand_begin(),
-                    llvm::find(storeMatrix->getOperands(), operand));
-
   xegpu::DistributeLayoutAttr anchorLayout = storeMatrix.getLayoutAttr();
   LayoutInfo layout;
   if (hasParamsOfLayoutKind(anchorLayout)) {
     layout = LayoutInfo(anchorLayout);
   } else {
-    VectorType payloadTy = llvm::cast<VectorType>(operand.getType());
-    assert(payloadTy.getRank() == 2 && "Expecting 2D vector for store matrix.");
+    VectorType srcVecTy =
+        llvm::cast<VectorType>(storeMatrix.getData().getType());
+    assert(srcVecTy.getRank() == 2 && "Expecting 2D vector for store matrix.");
     auto uArch = getUArch(getChipStr(storeMatrix).value_or(""));
-    SmallVector<int> instData = {1, uArch->getSubgroupSize()};
-    if (layoutKind == xegpu::LayoutKind::InstData)
-      layout = LayoutInfo(
-          xegpu::LayoutAttr::get(storeMatrix.getContext(), instData));
-    else
-      layout = getSIMTLayoutInfoScatterIO(payloadTy, uArch);
+    auto requiredAnchorLayoutAttr =
+        xegpu::setupStoreMatrixAnchorLayout(layoutKind, srcVecTy, uArch);
+    storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);
+    layout = LayoutInfo(requiredAnchorLayoutAttr);
   }
 
-  propagateIfChanged(operands[index], operands[index]->meet(layout));
+  propagateIfChanged(operands[0], operands[0]->meet(layout));
 }
 
 namespace {
@@ -1733,10 +1675,24 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
     LayoutInfo layout = analysis.getLayoutInfo(val);
     if (!layout.isAssigned())
       return {};
+    if (auto opResult = dyn_cast<OpResult>(val)) {
+
+      Operation *defOp = opResult.getDefiningOp();
+      if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(defOp)) {
+        auto anchorLayout = anchorOp.getAnchorLayout();
+        if (anchorLayout != nullptr)
+          return anchorLayout;
+      }
+      xegpu::DistributeLayoutAttr requiredResLayoutAttr =
+          xegpu::getTemporaryLayout(opResult);
+      if (requiredResLayoutAttr != nullptr)
+        return requiredResLayoutAttr;
+    }
     xegpu::DistributeLayoutAttr layoutAttr =
         cast<xegpu::DistributeLayoutAttr>(layout.get());
     if (layout.isSliceLayout())
       return cast<xegpu::SliceAttr>(layoutAttr);
+
     return cast<xegpu::LayoutAttr>(layoutAttr);
   };
 
