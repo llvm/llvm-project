@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s -Wno-uninitialized -std=c++17 -fsyntax-only -verify
+// RUN: %clang_cc1 %s -Wno-uninitialized -std=c++17 -fsyntax-only -verify=expected,cpp17
+// RUN: %clang_cc1 %s -Wno-uninitialized -std=c++20 -fsyntax-only -verify=expected,cpp20
 
 namespace Vector {
 
@@ -48,17 +49,33 @@ static_assert(p->x == 1);
 }
 
 namespace GH180044 {
-template <typename T> constexpr T test(char c) {
+template <typename T> constexpr T test1(char c) {
   T v;
   for (int i = 0; i < sizeof(T); ++i)
     v[i] = c;
   return v;
 }
 
-using T = char __attribute__((vector_size(16)));
-T t1 = test<T>(~1);
+using C = char __attribute__((vector_size(16)));
+C t1 = test1<C>(~1);
 
-constexpr T t2 = test<T>(~1);
+constexpr C t2 = test1<C>(~1);
 static_assert(t2[0] == -2);
 static_assert(t2[15] == -2);
+
+using I = int __attribute__((vector_size(16)));
+
+// expected-error@+1 {{constexpr function never produces a constant expression}}
+constexpr unsigned test2() {
+  // cpp17-warning@+1 {{uninitialized variable in a constexpr function is a C++20 extension}}
+  I v;
+
+  // expected-note@+2 {{subexpression not valid in a constant expression}}
+  // expected-note@+1 {{subexpression not valid in a constant expression}}
+  return __builtin_bit_cast(unsigned, v[0]);
+}
+
+// expected-error@+2 {{static assertion expression is not an integral constant expression}}
+// expected-note@+1 {{in call to 'test2()'}}
+static_assert(test2(), "");
 }
