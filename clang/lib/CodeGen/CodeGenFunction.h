@@ -870,11 +870,8 @@ public:
   /// rethrows.
   SmallVector<llvm::Value *, 8> ObjCEHValueStack;
 
-  /// Per-basic-block cache of ObjC classes that have been realized during
-  /// codegen. When a class method is emitted on a non-weakly-linked class,
-  /// we record it here. This supports the "previously realized" heuristic
-  /// in canClassObjectBeUnrealized. The structure supports future
-  /// dominator-based analysis where we can check dominating blocks.
+  /// A cache of objc classes that that are known to have been realized in each
+  /// basic block
   llvm::DenseMap<llvm::BasicBlock *,
                  llvm::SmallPtrSet<const ObjCInterfaceDecl *, 4>>
       ObjCRealizedClasses;

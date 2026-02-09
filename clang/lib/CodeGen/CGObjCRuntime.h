@@ -69,13 +69,13 @@ protected:
   CodeGen::CodeGenModule &CGM;
   CGObjCRuntime(CodeGen::CodeGenModule &CGM) : CGM(CGM) {}
 
-  /// Cache of classes that are guaranteed to be realized because they or one
-  /// of their subclasses has a +load method. Lazily populated on first query.
+  /// Cache of classes known to be realized during loading.
   mutable std::optional<RealizedClassSet> RealizedClasses;
 
-  /// Populate the RealizedClasses cache by scanning all ObjCInterfaceDecls
-  /// in the translation unit for +load methods.
-  const RealizedClassSet &getOrPopulateRealizedClasses() const;
+  /// Query the cache to determine if a class is guaranteed to be realized
+  /// because of +load. Construct the cache if by scanning all
+  /// ObjCInterfaceDecls in the translation unit if we haven't done so.
+  bool isClassRealizedByLoader(const ObjCInterfaceDecl *CalleeClassDecl) const;
 
   // Utility functions for unified ivar access. These need to
   // eventually be folded into other places (the structure layout
@@ -340,18 +340,6 @@ public:
                                      QualType resultType,
                                      CallArgList &callArgs);
 
-  /// Check if the receiver of an ObjC message send can be null.
-  /// Returns true if the receiver may be null, false if provably non-null.
-  ///
-  /// This can be overridden by subclasses to add runtime-specific heuristics.
-  /// Base implementation checks:
-  /// - Super dispatch (always non-null)
-  /// - Self in const-qualified methods (ARC)
-  /// - Weak-linked classes
-  ///
-  /// Future enhancements in CGObjCCommonMac override:
-  /// - _Nonnull attributes
-  /// - Results of alloc, new, ObjC literals
   virtual bool canMessageReceiverBeNull(CodeGenFunction &CGF,
                                         const ObjCMethodDecl *method,
                                         bool isSuper,

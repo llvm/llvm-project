@@ -2193,7 +2193,7 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
   // If this was a class method call on a non-weakly-linked class, record it
   // as realized for the "previously realized" heuristic.
   if (ClassReceiver && Method && !isWeakLinkedClass(ClassReceiver)) {
-    if (llvm::BasicBlock *CurrentBB = CGF.Builder.GetInsertBlock())
+    if (llvm::BasicBlock *CurrentBB = CGF.Builder.GetInsertBlock()) {
       // 1. Class methods have forced class realization (regardless direct or
       // not)
       // 2. Direct methods whose receiver is not null means the class is
@@ -2202,6 +2202,7 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
           (Method->isInstanceMethod() && !ReceiverCanBeNull)) {
         CGF.ObjCRealizedClasses[CurrentBB].insert(ClassReceiver);
       }
+    }
   }
 
   return nullReturn.complete(CGF, Return, rvalue, ResultType, CallArgs,
