@@ -3520,7 +3520,7 @@ define void @void_readlane_i32_zeroext_inreg(<15 x i32> inreg %arg1, i32 inreg z
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_STORE [[INTRINSIC_CONVERGENT1]](s32), [[DEF]](p1) :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   SI_RETURN
-  store i32 %arg0, i32 addrspace(1)* poison
+  store i32 %arg0, ptr addrspace(1) poison
   ret void
 }
 
