@@ -111,6 +111,17 @@ define double @nextafter_nan_with_payload() {
   ret double %next
 }
 
+define double @nextafter_nan_with_payload_2() {
+; CHECK-LABEL: define double @nextafter_nan_with_payload_2() {
+; CHECK-NEXT:    ret double 0x7FF8000000000001
+;
+  %tmp1 = load i64, ptr @dbl_nan
+  %tmp2 = or i64 %tmp1, 1
+  %nan_with_payload = bitcast i64 %tmp2 to double
+  %next = call double @nextafter(double 1.0, double %nan_with_payload)
+  ret double %next
+}
+
 define float @nextafterf_nan_with_payload() {
 ; CHECK-LABEL: define float @nextafterf_nan_with_payload() {
 ; CHECK-NEXT:    ret float 0x7FF8000020000000
