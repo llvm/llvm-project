@@ -27767,13 +27767,14 @@ Semantics:
 """"""""""
 
 This intrinsic has **target-dependent** semantics. It returns ``true`` if
-``num_bytes`` bytes starting at ``ptr`` can be loaded speculatively, even
-if the memory is beyond the bounds of an allocated object. It returns
-``false`` otherwise.
+``num_bytes`` bytes starting at ``ptr + I * num_bytes``, for any non-negative
+integer ``I`` where the computed address does not wrap around the address
+space, can be loaded speculatively, even if the memory is beyond the bounds of
+an allocated object. It returns ``false`` otherwise.
 
 The specific conditions under which this intrinsic returns ``true`` are
 determined by the target. For example, a target may check whether the pointer
-alignment guarantees the load cannot cross a page boundary.
+alignment guarantees all such loads cannot cross a page boundary.
 
 .. code-block:: llvm
 

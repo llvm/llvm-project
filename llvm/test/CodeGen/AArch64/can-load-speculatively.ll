@@ -17,6 +17,51 @@ define i1 @can_load_speculatively_16(ptr %ptr) {
   ret i1 %can_load
 }
 
+
+define i1 @can_load_speculatively_8_ptr_aligned(ptr align 8 %ptr) {
+; CHECK-LABEL: @can_load_speculatively_8_ptr_aligned(
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 15
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %can_load = call i1 @llvm.can.load.speculatively.p0(ptr %ptr, i64 16)
+  ret i1 %can_load
+}
+
+define i1 @can_load_speculatively_16_ptr_aligned(ptr align 16 %ptr) {
+; CHECK-LABEL: @can_load_speculatively_16_ptr_aligned(
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 15
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %can_load = call i1 @llvm.can.load.speculatively.p0(ptr %ptr, i64 16)
+  ret i1 %can_load
+}
+
+define i1 @can_load_speculatively_16_ptr_aligned2(ptr align 16 %ptr) {
+; CHECK-LABEL: @can_load_speculatively_16_ptr_aligned2(
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 15
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %can_load = call i1 @llvm.can.load.speculatively.p0(ptr align 16 %ptr, i64 16)
+  ret i1 %can_load
+}
+
+define i1 @can_load_speculatively_32_ptr_aligned(ptr align 32 %ptr) {
+; CHECK-LABEL: @can_load_speculatively_32_ptr_aligned(
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 15
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[TMP3]]
+;
+  %can_load = call i1 @llvm.can.load.speculatively.p0(ptr %ptr, i64 16)
+  ret i1 %can_load
+}
+
 ; Size > 16 - returns false (may cross MTE tag granule boundary)
 define i1 @can_load_speculatively_32(ptr %ptr) {
 ; CHECK-LABEL: @can_load_speculatively_32(
