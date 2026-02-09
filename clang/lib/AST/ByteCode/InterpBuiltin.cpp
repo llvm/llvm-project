@@ -2528,6 +2528,54 @@ interp__builtin_x86_pack(InterpState &S, CodePtr, const CallExpr *E,
   return true;
 }
 
+static bool interp__builtin_ia32_psadbw(InterpState &S, CodePtr,
+                                        const CallExpr *Call) {
+  assert(Call->getArg(0)->getType()->isVectorType() &&
+         Call->getArg(1)->getType()->isVectorType() &&
+         "psadbw requires vector operands");
+
+  const auto *SrcVT = Call->getArg(0)->getType()->castAs<VectorType>();
+  [[maybe_unused]] const auto *SrcVT1 =
+      Call->getArg(1)->getType()->castAs<VectorType>();
+  assert(SrcVT->getNumElements() == SrcVT1->getNumElements() &&
+         "psadbw source vectors must have equal length");
+
+  const Pointer &RHS = S.Stk.pop<Pointer>();
+  const Pointer &LHS = S.Stk.pop<Pointer>();
+  const Pointer &Dst = S.Stk.peek<Pointer>();
+
+  unsigned SrcLen = SrcVT->getNumElements();
+  assert((SrcLen % 16) == 0 && "psadbw operates on 128-bit lanes");
+
+  PrimType SrcElemT = *S.getContext().classify(SrcVT->getElementType());
+  PrimType DstElemT = *S.getContext().classify(getElemType(Dst));
+  const auto *DstVT = Call->getType()->castAs<VectorType>();
+  unsigned DstElemBits = S.getASTContext().getIntWidth(DstVT->getElementType());
+  bool DstUnsigned = DstVT->getElementType()->isUnsignedIntegerType();
+
+  unsigned DstIndex = 0;
+  for (unsigned Block = 0; Block < SrcLen; Block += 8) {
+    uint64_t Sum = 0;
+    for (unsigned I = 0; I < 8; ++I) {
+      APSInt A;
+      APSInt B;
+      INT_TYPE_SWITCH_NO_BOOL(SrcElemT, {
+        A = LHS.elem<T>(Block + I).toAPSInt();
+        B = RHS.elem<T>(Block + I).toAPSInt();
+      });
+      Sum += llvm::APIntOps::abdu(A.zextOrTrunc(8), B.zextOrTrunc(8))
+                 .getZExtValue();
+    }
+
+    assignInteger(S, Dst.atIndex(DstIndex), DstElemT,
+                  APSInt(APInt(DstElemBits, Sum), DstUnsigned));
+    ++DstIndex;
+  }
+
+  Dst.initializeAllElements();
+  return true;
+}
+
 static bool interp__builtin_elementwise_maxmin(InterpState &S, CodePtr OpPC,
                                                const CallExpr *Call,
                                                unsigned BuiltinID) {
@@ -3983,6 +4031,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pavgw512:
     return interp__builtin_elementwise_int_binop(S, OpPC, Call,
                                                  llvm::APIntOps::avgCeilU);
+
+  case clang::X86::BI__builtin_ia32_psadbw128:
+  case clang::X86::BI__builtin_ia32_psadbw256:
+  case clang::X86::BI__builtin_ia32_psadbw512:
+    return interp__builtin_ia32_psadbw(S, OpPC, Call);
 
   case clang::X86::BI__builtin_ia32_pmaddubsw128:
   case clang::X86::BI__builtin_ia32_pmaddubsw256:

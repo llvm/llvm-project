@@ -1901,7 +1901,7 @@ static bool EvaluateFixedPointOrInteger(const Expr *E, APFixedPoint &Result,
 static bool EvaluateFixedPoint(const Expr *E, APFixedPoint &Result,
                                EvalInfo &Info);
 
-static bool EvaluatePSADBW128(const CallExpr *E, EvalInfo &Info, APValue &Result);
+static bool EvaluatePSADBW(const CallExpr *E, EvalInfo &Info, APValue &Result);
 
 //===----------------------------------------------------------------------===//
 // Misc utilities
@@ -12080,50 +12080,36 @@ static bool evalPackBuiltin(const CallExpr *E, EvalInfo &Info, APValue &Result,
   return true;
 }
 
-static bool EvaluatePSADBW128(const CallExpr *E, EvalInfo &Info, APValue &Result) {
-  // 1) Evaluate the arguments into APValues
+static bool EvaluatePSADBW(const CallExpr *E, EvalInfo &Info, APValue &Result) {
   APValue A, B;
-  if (!Evaluate(A, Info, E->getArg(0)) ||
-      !Evaluate(B, Info, E->getArg(1)))
-    return false;
-
-  if (!A.isVector() || !B.isVector())
+  if (!EvaluateAsRValue(Info, E->getArg(0), A) ||
+      !EvaluateAsRValue(Info, E->getArg(1), B))
     return false;
 
   unsigned Len = A.getVectorLength();
-  if (Len != 16) // psadbw128 uses 16 bytes (2 × 8)
-    return false;
+  assert(Len != 0 && Len == B.getVectorLength() &&
+         "psadbw sources must have the same vector length");
+  assert((Len % 16) == 0 && "psadbw operates on 128-bit lanes");
 
-  // 2) Compute SAD over two 8-byte blocks
-  uint64_t Sum0 = 0;
-  uint64_t Sum1 = 0;
+  const auto *DstVT = E->getType()->castAs<VectorType>();
+  QualType DstElemTy = DstVT->getElementType();
+  bool DstUnsigned = DstElemTy->isUnsignedIntegerType();
+  unsigned DstBits = Info.Ctx.getIntWidth(DstElemTy);
 
-  // bytes 0..7
-  for (unsigned i = 0; i < 8; ++i) {
-    uint64_t a = A.getVectorElt(i).getInt().getZExtValue();
-    uint64_t b = B.getVectorElt(i).getInt().getZExtValue();
-    Sum0 += (a > b ? a - b : b - a);
+  SmallVector<APValue, 8> Elts;
+  Elts.reserve(Len / 8);
+
+  for (unsigned Block = 0; Block < Len; Block += 8) {
+    uint64_t Sum = 0;
+    for (unsigned I = 0; I < 8; ++I) {
+      APInt AByte = A.getVectorElt(Block + I).getInt().zextOrTrunc(8);
+      APInt BByte = B.getVectorElt(Block + I).getInt().zextOrTrunc(8);
+      Sum += llvm::APIntOps::abdu(AByte, BByte).getZExtValue();
+    }
+    Elts.emplace_back(APValue(APSInt(APInt(DstBits, Sum), DstUnsigned)));
   }
 
-  // bytes 8..15
-  for (unsigned i = 8; i < 16; ++i) {
-    uint64_t a = A.getVectorElt(i).getInt().getZExtValue();
-    uint64_t b = B.getVectorElt(i).getInt().getZExtValue();
-    Sum1 += (a > b ? a - b : b - a);
-  }
-
-  // 3) Build result vector of two 64-bit elements
-  SmallVector<APValue, 2> Elts;
-  QualType ElemTy = E->getType()->castAs<VectorType>()->getElementType();
-  bool Unsigned = ElemTy->isUnsignedIntegerType();
-  unsigned BW = Info.Ctx.getIntWidth(ElemTy); // usually 64
-
-  Elts.emplace_back(APValue(APSInt(APInt(BW, Sum0), Unsigned)));
-  Elts.emplace_back(APValue(APSInt(APInt(BW, Sum1), Unsigned)));
-
-  // APValue(const APValue *E, unsigned N) – copies the elements
   Result = APValue(Elts.data(), Elts.size());
-
   return true;
 }
 
@@ -12393,7 +12379,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return EvaluateBinOpExpr(llvm::APIntOps::avgCeilU);
 
   case X86::BI__builtin_ia32_psadbw128:
-  return EvaluatePSADBW128(E, Info, Result);
+  case X86::BI__builtin_ia32_psadbw256:
+  case X86::BI__builtin_ia32_psadbw512:
+    return EvaluatePSADBW(E, Info, Result);
 
   case clang::X86::BI__builtin_ia32_pmulhrsw128:
   case clang::X86::BI__builtin_ia32_pmulhrsw256:
