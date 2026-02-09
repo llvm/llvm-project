@@ -185,7 +185,6 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
   VPIRBuilder.setInsertPoint(VPBB);
   unsigned VPlanWidenKind = BB->getContext().getMDKindID("vplan.widen");
   unsigned VPlanReplicateKind = BB->getContext().getMDKindID("vplan.replicate");
-          
 
   // TODO: Model and preserve debug intrinsics in VPlan.
   for (Instruction &InstRef : BB->instructionsWithoutDebug(false)) {
