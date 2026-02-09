@@ -60,23 +60,6 @@ std::pair<mlir::Type, unsigned> inferMMAType(mlir::NVVM::MMATypes type,
                                              mlir::NVVM::MMAFrag frag, int nRow,
                                              int nCol,
                                              mlir::MLIRContext *context);
-
-/// Returns true if the result type (resType) has bitwidth >= operand type
-/// (opType). For vector types, compares element type bitwidths.
-inline bool isResultTypeAtLeastAsWideAsOperand(Type opType, Type resType) {
-  auto getBaseType = [](Type type) -> Type {
-    return isa<VectorType>(type) ? cast<VectorType>(type).getElementType()
-                                 : type;
-  };
-  Type opBase = getBaseType(opType);
-  Type resBase = getBaseType(resType);
-  return resBase.getIntOrFloatBitWidth() >= opBase.getIntOrFloatBitWidth();
-}
-
-/// Returns true if both types are vectors or both are scalars (no mixing).
-inline bool areBothScalarsOrBothVectors(Type type1, Type type2) {
-  return isa<VectorType>(type1) == isa<VectorType>(type2);
-}
 } // namespace NVVM
 } // namespace mlir
 
