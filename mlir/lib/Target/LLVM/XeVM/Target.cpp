@@ -332,6 +332,9 @@ std::optional<SmallVector<char, 0>> SPIRVSerializer::run() {
   const_cast<llvm::SPIRVSubtarget *>(STM->getSubtargetImpl())
       ->initAvailableExtensions(AllowedExtIds);
 
+  // Disable optimizations
+  (*targetMachine)->setOptLevel(llvm::CodeGenOptLevel::None);
+
   if (initialLlvmIRCallback)
     initialLlvmIRCallback(*llvmModule);
 
@@ -350,12 +353,8 @@ std::optional<SmallVector<char, 0>> SPIRVSerializer::run() {
   if (linkedLlvmIRCallback)
     linkedLlvmIRCallback(*llvmModule);
 
-  // Optimize the module.
-  if (failed(optimizeModule(*llvmModule, optLevel)))
-    return std::nullopt;
-
-  if (optimizedLlvmIRCallback)
-    optimizedLlvmIRCallback(*llvmModule);
+  // Note: Optimizing module discards metadata for cache hints.
+  // Just directly serialize the module.
 
   // Return the serialized object.
   return moduleToObject(*llvmModule);
