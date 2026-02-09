@@ -550,7 +550,8 @@ void llvm::sys::CallOneShotPipeSignalHandler() {
 /// handler can have a cookie passed to it to identify what instance of the
 /// handler it is.
 void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr,
-                                 void *Cookie) {
+                                 void *Cookie,
+                                 bool NeedsPOSIXUtilitySignalHandling)
   insertSignalHandler(FnPtr, Cookie);
   RegisterHandler();
   LeaveCriticalSection(&CriticalSection);

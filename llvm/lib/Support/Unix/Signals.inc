@@ -84,7 +84,8 @@
 
 using namespace llvm;
 
-static void SignalHandler(int Sig, siginfo_t *Info, void *);
+static void SignalHandler(int Sig, siginfo_t *Info, void *Context);
+static void SignalHandlerTerminate(int Sig, siginfo_t *Info, void *Context);
 static void InfoSignalHandler(int Sig); // defined below.
 static void InfoSignalHandlerTerminate(int Sig); // defined below.
 
@@ -319,7 +320,12 @@ static void RegisterHandlers(
 
     switch (Kind) {
     case SignalKind::IsKill:
-      NewHandler.sa_sigaction = SignalHandler;
+      if (NeedsPOSIXUtilitySignalHandling)
+        // If POSIX signal-handling semantics are followed, the signal handler
+        // resignal itself to terminate after handling the signal.
+        NewHandler.sa_sigaction = SignalHandlerTerminate;
+      else
+        NewHandler.sa_sigaction = SignalHandler;
       NewHandler.sa_flags = SA_NODEFER | SA_RESETHAND | SA_ONSTACK | SA_SIGINFO;
       break;
     case SignalKind::IsInfo:
@@ -334,12 +340,14 @@ static void RegisterHandlers(
     }
     sigemptyset(&NewHandler.sa_mask);
 
-    // Install the new handler if the signal disposition isn't SIG_IGN,
-    // save the old one in RegisteredSignalInfo.
-    struct sigaction act;
-    sigaction(Signal, NULL, &act);
-    if (act.sa_handler != SIG_IGN)
+    if (NeedsPOSIXUtilitySignalHandling) {
+      // Don't install the new handler if the signal disposition is SIG_IGN.
+      struct sigaction act;
+      if (sigaction(Signal, NULL, &act) == 0 && act.sa_handler != SIG_IGN)
+        sigaction(Signal, &NewHandler, &RegisteredSignalInfo[Index].SA);
+    } else {
       sigaction(Signal, &NewHandler, &RegisteredSignalInfo[Index].SA);
+    }
     RegisteredSignalInfo[Index].SigNo = Signal;
     ++NumRegisteredSignals;
   };
@@ -388,7 +396,7 @@ void sys::CleanupOnSignal(uintptr_t Context) {
 }
 
 // The signal handler that runs.
-static void SignalHandler(int Sig, siginfo_t *Info, void *) {
+static void SignalHandler(int Sig, siginfo_t *Info, void *Context) {
   // Restore the signal behavior to default, so that the program actually
   // crashes when we return and the signal reissues.  This also ensures that if
   // we crash in our signal handler that the program will terminate immediately
@@ -422,13 +430,6 @@ static void SignalHandler(int Sig, siginfo_t *Info, void *) {
   // Otherwise if it is a fault (like SEGV) run any handler.
   llvm::sys::RunSignalHandlers();
 
-  // Resignal if it is a kill signal so that the exit code contains the
-  // terminating signal number.
-  if (llvm::is_contained(KillSigs, Sig)) {
-    raise(Sig); // Execute the default handler.
-    return;
-  }
-
 #if defined(__linux__)
   // Re-raising a signal via `raise` loses the original siginfo. Recent
   // versions of linux (>= 3.9) support processes sending a signal to itself
@@ -444,6 +445,15 @@ static void SignalHandler(int Sig, siginfo_t *Info, void *) {
   if (Info->si_pid != getpid() && Info->si_pid != 0)
     raise(Sig);
 #endif
+}
+
+static void SignalHandlerTerminate(int Sig, siginfo_t *Info, void *Context) {
+  SignalHandler(Sig, Info, Context);
+
+  // Resignal if it is a kill signal so that the exit code contains the
+  // terminating signal number.
+  if (llvm::is_contained(KillSigs, Sig))
+    raise(Sig); // Execute the default handler.
 }
 
 static void InfoSignalHandler(int Sig) {
