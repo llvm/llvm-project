@@ -19,7 +19,6 @@
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
@@ -164,9 +163,7 @@ IncrementalParser::Parse(llvm::StringRef input) {
 }
 
 void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
-  auto DeclsMapFilter = [MostRecentTU](StoredDeclsMap *Map) -> void {
-    if (!Map)
-      return;
+  if (auto *Map = MostRecentTU->getPrimaryContext()->getLookupPtr()) {
     for (auto &&[Key, List] : *Map) {
       DeclContextLookupResult R = List.getLookupResult();
       std::vector<NamedDecl *> NamedDeclsToRemove;
@@ -184,11 +181,30 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
           List.remove(D);
       }
     }
-  };
-  DeclsMapFilter(MostRecentTU->getPrimaryContext()->getLookupPtr());
+  }
+
   auto *ECCD = S.getASTContext().getExternCContextDecl();
-  if (ECCD) {
-    DeclsMapFilter(ECCD->getPrimaryContext()->getLookupPtr());
+  if (auto *Map = ECCD->getPrimaryContext()->getLookupPtr()) {
+    for (auto &&[Key, List] : *Map) {
+      DeclContextLookupResult R = List.getLookupResult();
+      std::vector<NamedDecl *> NamedDeclsToRemove;
+      for (NamedDecl *D : R) {
+        // Implicitly generated C decl is not attached to the current TU but
+        // lexically attached to the recent TU, so we need to check the lexical
+        // context.
+        DeclContext *LDC = D->getLexicalDeclContext();
+        while (LDC && !isa<TranslationUnitDecl>(LDC)) {
+          LDC = LDC->getLexicalParent();
+        }
+        TranslationUnitDecl *TopTU = cast_or_null<TranslationUnitDecl>(LDC);
+        if (TopTU == MostRecentTU)
+          NamedDeclsToRemove.push_back(D);
+      }
+      for (NamedDecl *D : NamedDeclsToRemove) {
+        List.remove(D);
+        S.IdResolver.RemoveDecl(D);
+      }
+    }
   }
 
   // FIXME: We should de-allocate MostRecentTU
@@ -200,32 +216,6 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
     if (ND->getDeclName().getFETokenInfo() && !D->getLangOpts().ObjC &&
         !D->getLangOpts().CPlusPlus)
       S.IdResolver.RemoveDecl(ND);
-  }
-
-  // In C, implicit function declarations are not lexically attached to the
-  // current PTU, so they cannot be found in
-  // MostRecentTU->getPrimaryContext()->getLookupPtr(). We must traverse the
-  // entire IdentifierTable to locate them.
-  // FIXME: Is there a more lightweight solution?
-  llvm::SmallVector<NamedDecl *, 2> NamedDeclsToRemove;
-  if (!S.getLangOpts().CPlusPlus) {
-    for (auto &Entry : S.getASTContext().Idents) {
-      IdentifierInfo *II = Entry.getValue();
-      if (II && II->getFETokenInfo()) {
-        for (auto It = S.IdResolver.begin(II); It != S.IdResolver.end(); ++It) {
-          NamedDecl *D = *It;
-          if (D->isImplicit() && D->getTranslationUnitDecl() == MostRecentTU) {
-            if (auto *FD = dyn_cast<FunctionDecl>(D);
-                FD && FD->getBuiltinID() == 0)
-              NamedDeclsToRemove.push_back(D);
-          }
-        }
-      }
-    }
-  }
-  for (auto &&D : NamedDeclsToRemove) {
-    S.IdResolver.RemoveDecl(D);
-    D->setInvalidDecl();
   }
 }
 
