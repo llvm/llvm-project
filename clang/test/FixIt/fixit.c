@@ -27,6 +27,27 @@ struct s s0 = { y: 5 }; // expected-warning {{GNU old-style}}
 // CHECK: int array0[5] = { [3] = 3 };
 int array0[5] = { [3] 3 }; // expected-warning {{GNU 'missing ='}}
 
+// CHECK: int imp0[4],imp1,imp2=5;
+imp0[4],imp1,imp2=5; // expected-error {{type specifier missing, defaults to 'int'}}
+
+// CHECK: int const imp3;
+const imp3; // expected-error {{type specifier missing, defaults to 'int'}}
+// CHECK: int static imp4;
+static imp4; // expected-error {{type specifier missing, defaults to 'int'}}
+// CHECK: int static const imp5;
+static const imp5; // expected-error {{type specifier missing, defaults to 'int'}}
+// CHECK: int volatile __attribute__ ((aligned (16))) imp6;
+volatile __attribute__ ((aligned (16))) imp6; // expected-error {{type specifier missing, defaults to 'int'}}
+
+// CHECK-LABEL: int f2(void)
+f2(void) // expected-error {{type specifier missing, defaults to 'int'}}
+{
+  // CHECK: int register __attribute__ ((uninitialized)) i;
+  register __attribute__ ((uninitialized)) i; // expected-error {{type specifier missing, defaults to 'int'}}
+  return 0;
+}
+
+// CHECK-LABEL: void f1(x, y)
 // CHECK: int x
 // CHECK: int y
 void f1(x, y) // expected-error 2{{was not declared, defaults to 'int'; ISO C99 and later do not support implicit int}}

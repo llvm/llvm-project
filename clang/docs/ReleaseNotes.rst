@@ -227,6 +227,12 @@ Improvements to Clang's diagnostics
   when accessing a member function on a past-the-end array element.
   (#GH179128)
 
+- Fixed the FixIt for the ``implicit-int`` group of diagnostics. (#GH179354)
+
+- Changed the ``implicit-int`` diagnostics such that only one will be emitted
+  per comma-separated declaration group. Previously, one was generated for each
+  declarator in the group.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
