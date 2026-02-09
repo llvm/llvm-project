@@ -16,8 +16,7 @@
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/Process/FreeBSD/NativeProcessFreeBSD.h"
-// for register enum definitions
-#include "Plugins/Process/Utility/RegisterContextPOSIX_powerpc.h"
+#include "Plugins/Process/Utility/lldb-powerpc-register-enums.h"
 
 // clang-format off
 #include <sys/param.h>
