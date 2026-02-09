@@ -367,13 +367,13 @@ cl::opt<bool>
                           cl::desc("Verfiy VPlans after VPlan transforms."));
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-cl::opt<bool> llvm::PrintAfterEachVPlanPass(
+cl::opt<bool> llvm::VPlanPrintAfterAll(
     "vplan-print-after-all", cl::init(false), cl::Hidden,
-    cl::desc("Print after each VPlanTransforms::runPass."));
+    cl::desc("Print VPlans after all VPlan transformations."));
 
-cl::list<std::string> llvm::PrintAfterVPlanPasses(
+cl::list<std::string> llvm::VPlanPrintAfterPasses(
     "vplan-print-after", cl::Hidden,
-    cl::desc("Print after specified VPlan transformations (regexp)."));
+    cl::desc("Print VPlans after specified VPlan transformations (regexp)."));
 #endif
 
 // This flag enables the stress testing of the VPlan H-CFG construction in the

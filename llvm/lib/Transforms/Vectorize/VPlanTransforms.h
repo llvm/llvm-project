@@ -39,8 +39,8 @@ LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_ABI_FOR_TEST extern cl::opt<bool> PrintAfterEachVPlanPass;
-LLVM_ABI_FOR_TEST extern cl::list<std::string> PrintAfterVPlanPasses;
+LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintAfterAll;
+LLVM_ABI_FOR_TEST extern cl::list<std::string> VPlanPrintAfterPasses;
 #endif
 
 struct VPlanTransforms {
@@ -54,9 +54,9 @@ struct VPlanTransforms {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       // Make sure to print before verification, so that output is more useful
       // in case of failures:
-      if (PrintAfterEachVPlanPass ||
-          (PrintAfterVPlanPasses.getNumOccurrences() > 0 &&
-           any_of(PrintAfterVPlanPasses, [PassName](StringRef Entry) {
+      if (VPlanPrintAfterAll ||
+          (VPlanPrintAfterPasses.getNumOccurrences() > 0 &&
+           any_of(VPlanPrintAfterPasses, [PassName](StringRef Entry) {
              return Regex(Entry).match(PassName);
            }))) {
         dbgs() << "VPlan after " << PassName << '\n';
