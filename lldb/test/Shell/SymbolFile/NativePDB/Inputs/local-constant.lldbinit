@@ -1,0 +1,4 @@
+break set -n main
+run
+frame variable
+quit
