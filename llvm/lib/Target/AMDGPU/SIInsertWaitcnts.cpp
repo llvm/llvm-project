@@ -70,6 +70,9 @@ static cl::opt<bool> ExpertSchedulingModeFlag(
     cl::init(false), cl::Hidden);
 
 namespace {
+// Class of object that encapsulates latest instruction counter score
+// associated with the operand.  Used for determining whether
+// s_waitcnt instruction needs to be emitted.
 
 // Get the maximum wait count value for a given counter type.
 static unsigned getWaitCountMax(const AMDGPU::HardwareLimits &Limits,

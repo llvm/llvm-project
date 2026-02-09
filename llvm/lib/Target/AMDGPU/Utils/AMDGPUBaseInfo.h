@@ -1076,10 +1076,6 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
 /// Checks if \p Val is inside \p MD, a !range-like metadata.
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
 
-// Class of object that encapsulates latest instruction counter score
-// associated with the operand.  Used for determining whether
-// s_waitcnt instruction needs to be emitted.
-
 enum InstCounterType {
   LOAD_CNT = 0, // VMcnt prior to gfx12.
   DS_CNT,       // LKGMcnt prior to gfx12.
