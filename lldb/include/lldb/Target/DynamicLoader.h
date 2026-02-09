@@ -326,6 +326,7 @@ public:
     uuid.Clear();
     using_shared_cache = eLazyBoolCalculate;
     private_shared_cache = eLazyBoolCalculate;
+    shared_cache_path.Clear();
     return false;
   }
 

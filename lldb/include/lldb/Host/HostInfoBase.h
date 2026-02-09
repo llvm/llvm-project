@@ -194,7 +194,7 @@ public:
   /// the current process's address space using shared cache \p uuid.
   /// The shared cache UUID must have been previously indexed.
   static SharedCacheImageInfo
-  GetSharedCacheImageInfo(llvm::StringRef image_name, UUID &uuid) {
+  GetSharedCacheImageInfo(llvm::StringRef image_name, const UUID &uuid) {
     return {};
   }
 

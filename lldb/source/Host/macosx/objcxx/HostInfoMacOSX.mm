@@ -688,11 +688,13 @@ public:
     return m_caches[m_host_uuid];
   }
 
-  bool GetImages(llvm::StringMap<SharedCacheImageInfo> **images, UUID &uuid) {
+  bool GetImages(llvm::StringMap<SharedCacheImageInfo> **images,
+                 const UUID &uuid) {
     if (m_caches.find(uuid) != m_caches.end()) {
       *images = &m_caches[uuid];
       return true;
     }
+    *images = nullptr;
     return false;
   }
 
@@ -792,6 +794,10 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
     return {};
 
   Log *log = GetLog(LLDBLog::Modules);
+  LLDB_LOGF(log,
+            "map_shared_cache_binary_segments() mapping segments of "
+            "dyld_image_t %p into lldb address space",
+            image);
   bool log_verbosely = log && log->GetVerbose();
   for (const segment &seg : segments) {
     if (log_verbosely)
@@ -979,12 +985,11 @@ HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name) {
 
 SharedCacheImageInfo
 HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name,
-                                        UUID &uuid) {
+                                        const UUID &uuid) {
   llvm::StringMap<SharedCacheImageInfo> *shared_cache_info;
   if (GetSharedCacheSingleton().GetImages(&shared_cache_info, uuid))
     return shared_cache_info->lookup(image_name);
-  else
-    return {};
+  return {};
 }
 
 bool HostInfoMacOSX::SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid) {

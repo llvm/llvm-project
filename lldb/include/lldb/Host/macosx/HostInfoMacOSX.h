@@ -46,7 +46,7 @@ public:
   GetSharedCacheImageInfo(llvm::StringRef image_name);
 
   static SharedCacheImageInfo
-  GetSharedCacheImageInfo(llvm::StringRef image_name, UUID &uuid);
+  GetSharedCacheImageInfo(llvm::StringRef image_name, const UUID &uuid);
 
   static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid);
 
