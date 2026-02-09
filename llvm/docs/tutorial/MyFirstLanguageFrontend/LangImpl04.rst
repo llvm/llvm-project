@@ -341,11 +341,10 @@ look like this:
 
           // Search the JIT for the __anon_expr symbol.
           auto ExprSymbol = ExitOnErr(TheJIT->lookup("__anon_expr"));
-          assert(ExprSymbol && "Function not found");
 
           // Get the symbol's address and cast it to the right type (takes no
           // arguments, returns a double) so we can call it as a native function.
-          double (*FP)() = ExprSymbol.getAddress().toPtr<double (*)()>();
+          double (*FP)() = ExprSymbol.toPtr<double (*)()>();
           fprintf(stderr, "Evaluated to %f\n", FP());
 
           // Delete the anonymous expression module from the JIT.
@@ -355,23 +354,21 @@ look like this:
 If parsing and codegen succeed, the next step is to add the module containing
 the top-level expression to the JIT. We do this by calling addModule, which
 triggers code generation for all the functions in the module, and accepts a
-``ResourceTracker`` which can be used to remove the module from the JIT later. Once the module
-has been added to the JIT it can no longer be modified, so we also open a new
-module to hold subsequent code by calling ``InitializeModuleAndPassManager()``.
+``ResourceTracker`` which can be used to remove the module from the JIT later. Once 
+the module has been added to the JIT it can no longer be modified, so we also open a
+new module to hold subsequent code by calling ``InitializeModuleAndPassManager()``.
 
 Once we've added the module to the JIT we need to get a pointer to the final
 generated code. We do this by calling the JIT's ``lookup`` method, and passing
-the name of the top-level expression function: ``__anon_expr``. Since we just
-added this function, we assert that ``lookup`` returned a result.
+the name of the top-level expression function: ``__anon_expr``. 
 
-Next, we get the in-memory address of the ``__anon_expr`` function by calling
-``getAddress()`` on the symbol. Recall that we compile top-level expressions
-into a self-contained LLVM function that takes no arguments and returns the
-computed double. Because the LLVM JIT compiler matches the native platform ABI,
-this means that you can just cast the result pointer to a function pointer of
-that type and call it directly. This means, there is no difference between JIT
-compiled code and native machine code that is statically linked into your
-application.
+Next, we get the in-memory address of the ``__anon_expr`` function. Recall 
+that we compile top-level expressions into a self-contained LLVM function that 
+takes no arguments and returns the computed double. Because the LLVM JIT compiler
+matches the native platform ABI, this means that you can just cast the result pointer
+to a function pointer of that type and call it directly. This means, there is no 
+difference between JIT compiled code and native machine code that is statically 
+linked into your application.
 
 Finally, since we don't support re-evaluation of top-level expressions, we
 remove the module from the JIT when we're done to free the associated memory.

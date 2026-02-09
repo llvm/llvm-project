@@ -46,7 +46,8 @@ def FunctionFilteringPass : Pass<"omp-function-filtering"> {
                 "for the target device.";
   let dependentDialects = [
     "mlir::func::FuncDialect",
-    "fir::FIROpsDialect"
+    "fir::FIROpsDialect",
+    "mlir::omp::OpenMPDialect"
   ];
 }
 

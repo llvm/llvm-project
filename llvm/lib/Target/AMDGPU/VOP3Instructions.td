@@ -435,8 +435,8 @@ defm V_MQSAD_U32_U8 : VOP3Inst <"v_mqsad_u32_u8", VOPProfileMQSAD>;
 
 let isCommutable = 1, SchedRW = [WriteIntMul, WriteSALU] in {
   let SubtargetPredicate = isGFX7Plus in {
-    defm V_MAD_U64_U32 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64_DPP, null_frag, [HasNotMADIntraFwdBug]>;
-    defm V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64_DPP, null_frag, [HasNotMADIntraFwdBug]>;
+    defm V_MAD_U64_U32 : VOP3Inst <"v_mad_u64_u32", VOP3b_I64_I1_I32_I32_I64_DPP, null_frag, [NotHasMADIntraFwdBug]>;
+    defm V_MAD_I64_I32 : VOP3Inst <"v_mad_i64_i32", VOP3b_I64_I1_I32_I32_I64_DPP, null_frag, [NotHasMADIntraFwdBug]>;
   }
   let SubtargetPredicate = isGFX11Only, OtherPredicates = [HasMADIntraFwdBug],
       Constraints = "@earlyclobber $vdst" in {
@@ -638,19 +638,13 @@ class ThreeOpFrag<SDPatternOperator op1, SDPatternOperator op2> : ThreeOpFragSDA
 }
 
 def shl_0_to_4 : PatFrag<
-  (ops node:$src0, node:$src1), (shl node:$src0, node:$src1),
-  [{
-     if (auto *C = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
-       return C->getZExtValue() <= 4;
-     }
-     return false;
-   }]> {
+  (ops node:$src0, node:$src1), (shl node:$src0, node:$src1), [{
+    KnownBits KB = CurDAG->computeKnownBits(N->getOperand(1));
+    return KB.getMaxValue().getZExtValue() <= 4;
+  }]> {
   let GISelPredicateCode = [{
-    int64_t Imm = 0;
-    if (!mi_match(MI.getOperand(2).getReg(), MRI, m_ICst(Imm)) &&
-        !mi_match(MI.getOperand(2).getReg(), MRI, m_Copy(m_ICst(Imm))))
-      return false;
-    return (uint64_t)Imm <= 4;
+    KnownBits KB = VT->getKnownBits(MI.getOperand(2).getReg());
+    return KB.getMaxValue().getZExtValue() <= 4;
   }];
 }
 
@@ -1067,7 +1061,7 @@ multiclass IMAD32_Mul24_Pats<VOP3_Pseudo inst> {
 }
 
 // exclude pre-GFX9 where it was slow
-let OtherPredicates = [HasNotMADIntraFwdBug], SubtargetPredicate = isGFX9Plus in {
+let OtherPredicates = [NotHasMADIntraFwdBug], SubtargetPredicate = isGFX9Plus in {
   defm : IMAD32_Pats<V_MAD_U64_U32_e64>;
   defm : IMAD32_Mul24_Pats<V_MAD_U64_U32_e64>;
 }

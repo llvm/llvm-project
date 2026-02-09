@@ -86,6 +86,14 @@ public:
   lowerDerivedDataMember(cir::DerivedDataMemberOp op, mlir::Value loweredSrc,
                          mlir::OpBuilder &builder) const = 0;
 
+  virtual mlir::Value lowerBaseMethod(cir::BaseMethodOp op,
+                                      mlir::Value loweredSrc,
+                                      mlir::OpBuilder &builder) const = 0;
+
+  virtual mlir::Value lowerDerivedMethod(cir::DerivedMethodOp op,
+                                         mlir::Value loweredSrc,
+                                         mlir::OpBuilder &builder) const = 0;
+
   virtual mlir::Value lowerDataMemberCmp(cir::CmpOp op, mlir::Value loweredLhs,
                                          mlir::Value loweredRhs,
                                          mlir::OpBuilder &builder) const = 0;
@@ -93,6 +101,27 @@ public:
   virtual mlir::Value lowerMethodCmp(cir::CmpOp op, mlir::Value loweredLhs,
                                      mlir::Value loweredRhs,
                                      mlir::OpBuilder &builder) const = 0;
+
+  virtual mlir::Value
+  lowerDataMemberBitcast(cir::CastOp op, mlir::Type loweredDstTy,
+                         mlir::Value loweredSrc,
+                         mlir::OpBuilder &builder) const = 0;
+
+  virtual mlir::Value
+  lowerDataMemberToBoolCast(cir::CastOp op, mlir::Value loweredSrc,
+                            mlir::OpBuilder &builder) const = 0;
+
+  virtual mlir::Value lowerMethodBitcast(cir::CastOp op,
+                                         mlir::Type loweredDstTy,
+                                         mlir::Value loweredSrc,
+                                         mlir::OpBuilder &builder) const = 0;
+
+  virtual mlir::Value lowerMethodToBoolCast(cir::CastOp op,
+                                            mlir::Value loweredSrc,
+                                            mlir::OpBuilder &builder) const = 0;
+
+  virtual mlir::Value lowerDynamicCast(cir::DynamicCastOp op,
+                                       mlir::OpBuilder &builder) const = 0;
 };
 
 /// Creates an Itanium-family ABI.

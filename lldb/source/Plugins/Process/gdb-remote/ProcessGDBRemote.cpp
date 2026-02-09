@@ -1599,25 +1599,25 @@ bool ProcessGDBRemote::UpdateThreadIDList() {
     if (m_last_stop_packet) {
       // Get the thread stop info
       StringExtractorGDBRemote &stop_info = *m_last_stop_packet;
-      const std::string &stop_info_str = std::string(stop_info.GetStringRef());
+      const llvm::StringRef stop_info_str = stop_info.GetStringRef();
 
       m_thread_pcs.clear();
       const size_t thread_pcs_pos = stop_info_str.find(";thread-pcs:");
-      if (thread_pcs_pos != std::string::npos) {
+      if (thread_pcs_pos != llvm::StringRef::npos) {
         const size_t start = thread_pcs_pos + strlen(";thread-pcs:");
         const size_t end = stop_info_str.find(';', start);
-        if (end != std::string::npos) {
-          std::string value = stop_info_str.substr(start, end - start);
+        if (end != llvm::StringRef::npos) {
+          llvm::StringRef value = stop_info_str.substr(start, end - start);
           UpdateThreadPCsFromStopReplyThreadsValue(value);
         }
       }
 
       const size_t threads_pos = stop_info_str.find(";threads:");
-      if (threads_pos != std::string::npos) {
+      if (threads_pos != llvm::StringRef::npos) {
         const size_t start = threads_pos + strlen(";threads:");
         const size_t end = stop_info_str.find(';', start);
-        if (end != std::string::npos) {
-          std::string value = stop_info_str.substr(start, end - start);
+        if (end != llvm::StringRef::npos) {
+          llvm::StringRef value = stop_info_str.substr(start, end - start);
           if (UpdateThreadIDsFromStopReplyThreadsValue(value))
             return true;
         }
@@ -2546,7 +2546,7 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
 Status ProcessGDBRemote::DoHalt(bool &caused_stop) {
   Status error;
 
-  if (m_public_state.GetValue() == eStateAttaching) {
+  if (GetPublicState() == eStateAttaching) {
     // We are being asked to halt during an attach. We used to just close our
     // file handle and debugserver will go away, but with remote proxies, it
     // is better to send a positive signal, so let's send the interrupt first...
@@ -2595,7 +2595,7 @@ Status ProcessGDBRemote::DoDestroy() {
   std::string exit_string;
 
   if (m_gdb_comm.IsConnected()) {
-    if (m_public_state.GetValue() != eStateAttaching) {
+    if (GetPublicState() != eStateAttaching) {
       llvm::Expected<int> kill_res = m_gdb_comm.KillProcess(GetID());
 
       if (kill_res) {

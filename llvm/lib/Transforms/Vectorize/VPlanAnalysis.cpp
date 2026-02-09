@@ -59,7 +59,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   // other operands match and cache them.
   auto SetResultTyFromOp = [this, R]() {
     Type *ResTy = inferScalarType(R->getOperand(0));
-    for (unsigned Op = 1; Op != R->getNumOperands(); ++Op) {
+    unsigned NumOperands = R->getNumOperandsWithoutMask();
+    for (unsigned Op = 1; Op != NumOperands; ++Op) {
       VPValue *OtherV = R->getOperand(Op);
       assert(inferScalarType(OtherV) == ResTy &&
              "different types inferred for different operands");
@@ -77,8 +78,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case Instruction::Freeze:
   case Instruction::PHI:
   case VPInstruction::Broadcast:
-  case VPInstruction::ComputeFindIVResult:
   case VPInstruction::ComputeReductionResult:
+  case VPInstruction::ExitingIVValue:
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractPenultimateElement:
   case VPInstruction::ExtractLastPart:
@@ -293,17 +294,17 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
           .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
                 VPWidenCallRecipe, VPWidenMemoryRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
-          .Case<VPInterleaveBase>([V](const auto *R) {
+          .Case([V](const VPInterleaveBase *R) {
             // TODO: Use info from interleave group.
             return V->getUnderlyingValue()->getType();
           })
-          .Case<VPExpandSCEVRecipe>([](const VPExpandSCEVRecipe *R) {
+          .Case([](const VPExpandSCEVRecipe *R) {
             return R->getSCEV()->getType();
           })
-          .Case<VPReductionRecipe>([this](const auto *R) {
+          .Case([this](const VPReductionRecipe *R) {
             return inferScalarType(R->getChainOp());
           })
-          .Case<VPExpressionRecipe>([this](const auto *R) {
+          .Case([this](const VPExpressionRecipe *R) {
             return inferScalarType(R->getOperandOfResultType());
           });
 

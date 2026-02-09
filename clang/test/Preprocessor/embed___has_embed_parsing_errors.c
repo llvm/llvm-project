@@ -282,3 +282,13 @@
 #if __has_embed (__FILE__ limit(1) foo
 int a = __has_embed (__FILE__);
 #endif
+
+// expected-error@+2 {{expected '('}} \
+   expected-error@+2 {{expected value in expression}}
+#if __has_embed("" if_empty
+#endif
+
+// expected-error@+2 {{expected '('}} \
+   expected-error@+2 {{expected value in expression}}
+#if __has_embed("" limit
+#endif
