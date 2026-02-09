@@ -68,9 +68,9 @@ static constexpr auto programUnit{
         construct<ProgramUnit>(indirect(functionSubprogram)) ||
     construct<ProgramUnit>(indirect(Parser<MainProgram>{}))};
 
-static constexpr auto normalProgramUnit{
-    !consumedAllInput >> StartNewSubprogram{} >> programUnit /
-        skipMany(";"_tok) / space / recovery(endOfLine, skipToNextLineIfAny)};
+static constexpr auto normalProgramUnit{!consumedAllInput >>
+    StartNewSubprogram{} >>
+    programUnit / recovery(endOfStmt, skipToNextLineIfAny)};
 
 static constexpr auto globalCompilerDirective{
     construct<ProgramUnit>(indirect(compilerDirective))};
@@ -91,8 +91,9 @@ TYPE_PARSER(
                            "nonstandard usage: empty source file"_port_en_US,
                            skipStuffBeforeStatement >> consumedAllInput >>
                                pure<std::list<ProgramUnit>>()) ||
-        some(globalCompilerDirective || globalOpenACCCompilerDirective ||
-            normalProgramUnit) /
+        some(skipStuffBeforeStatement >> (globalCompilerDirective ||
+                                             globalOpenACCCompilerDirective ||
+                                             normalProgramUnit)) /
             skipStuffBeforeStatement))
 
 // R507 declaration-construct ->
