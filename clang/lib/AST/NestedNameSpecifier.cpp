@@ -212,8 +212,8 @@ NestedNameSpecifierLocBuilder::NestedNameSpecifierLocBuilder(
     NestedNameSpecifierLocBuilder &&Other)
     : Representation(std::move(Other.Representation)), Buffer(Other.Buffer),
       BufferSize(Other.BufferSize), BufferCapacity(Other.BufferCapacity) {
-  Other.buffer = nullptr;
-  Other.BufferCapacity = Other.size = 0;
+  Other.Buffer = nullptr;
+  Other.BufferCapacity = Other.BufferSize = 0;
 }
 
 NestedNameSpecifierLocBuilder &
