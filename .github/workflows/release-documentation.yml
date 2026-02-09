@@ -26,6 +26,9 @@ on:
         required: false
         type: boolean
     secrets:
+      LLVMBOT_WWW_RELEASES_PUSH:
+        description: "Secret used to push changes to llvmbot www-releases fork."
+        required: false
       WWW_RELEASES_TOKEN:
         description: "Secret used to create a PR with the documentation changes."
         required: false
@@ -33,6 +36,7 @@ on:
 jobs:
   release-documentation:
     name: Build and Upload Release Documentation
+    environment: release
     runs-on: ubuntu-24.04
     env:
       upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
@@ -81,6 +85,7 @@ jobs:
       - name: Upload Release Notes
         if: env.upload
         env:
+          PUSH_TOKEN: ${{ secrets.LLVMBOT_WWW_RELEASES_PUSH }}
           GH_TOKEN: ${{ secrets.WWW_RELEASES_TOKEN }}
         run: |
           mkdir -p www-releases/${{ inputs.release-version }}
@@ -91,5 +96,5 @@ jobs:
           git config user.email "llvmbot@llvm.org"
           git config user.name "llvmbot"
           git commit -a -m "Add ${{ inputs.release-version }} documentation"
-          git push --force  "https://$GH_TOKEN@github.com/llvmbot/www-releases.git" HEAD:refs/heads/${{ inputs.release-version }}
+          git push --force  "https://$PUSH_TOKEN@github.com/llvmbot/www-releases.git" HEAD:refs/heads/${{ inputs.release-version }}
           gh pr create -f -B main -H llvmbot:${{ inputs.release-version }}

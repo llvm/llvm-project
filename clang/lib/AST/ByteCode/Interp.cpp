@@ -38,21 +38,21 @@ static bool RetValue(InterpState &S, CodePtr &Pt) {
 
 static bool Jmp(InterpState &S, CodePtr &PC, int32_t Offset) {
   PC += Offset;
-  return true;
+  return S.noteStep(PC);
 }
 
 static bool Jt(InterpState &S, CodePtr &PC, int32_t Offset) {
   if (S.Stk.pop<bool>()) {
     PC += Offset;
   }
-  return true;
+  return S.noteStep(PC);
 }
 
 static bool Jf(InterpState &S, CodePtr &PC, int32_t Offset) {
   if (!S.Stk.pop<bool>()) {
     PC += Offset;
   }
-  return true;
+  return S.noteStep(PC);
 }
 
 // https://github.com/llvm/llvm-project/issues/102513
@@ -296,8 +296,8 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
 
   // And in any case, remove the fixed parameters (the non-variadic ones)
   // at the end.
-  for (PrimType Ty : Func->args_reverse())
-    TYPE_SWITCH(Ty, S.Stk.discard<T>());
+  for (const Function::ParamDescriptor &PDesc : Func->args_reverse())
+    TYPE_SWITCH(PDesc.T, S.Stk.discard<T>());
 }
 
 bool isConstexprUnknown(const Pointer &P) {
@@ -1042,7 +1042,9 @@ static bool CheckCallable(InterpState &S, CodePtr OpPC, const Function *F) {
   if (S.checkingPotentialConstantExpression() && S.Current->getDepth() != 0)
     return false;
 
-  if (F->isValid() && F->hasBody() && F->isConstexpr())
+  if (F->isValid() && F->hasBody() &&
+      (F->isConstexpr() || (S.Current->MSVCConstexprAllowed &&
+                            F->getDecl()->hasAttr<MSConstexprAttr>())))
     return true;
 
   const FunctionDecl *DiagDecl = F->getDecl();
@@ -1194,6 +1196,21 @@ bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
 bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR) {
   const ValueDecl *D = DR->getDecl();
   return diagnoseUnknownDecl(S, OpPC, D);
+}
+
+bool InvalidDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR,
+                    bool InitializerFailed) {
+  assert(DR);
+
+  if (InitializerFailed) {
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    const auto *VD = cast<VarDecl>(DR->getDecl());
+    S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
+    S.Note(VD->getLocation(), diag::note_declared_at);
+    return false;
+  }
+
+  return CheckDeclRef(S, OpPC, DR);
 }
 
 bool CheckDummy(InterpState &S, CodePtr OpPC, const Block *B, AccessKinds AK) {
@@ -1532,6 +1549,8 @@ bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK_Destroy))
     return false;
+  if (!CheckLifetime(S, OpPC, Ptr.getLifetime(), AK_Destroy))
+    return false;
 
   // Can't call a dtor on a global variable.
   if (Ptr.block()->isStatic()) {
@@ -1551,10 +1570,57 @@ bool CheckFunctionDecl(InterpState &S, CodePtr OpPC, const FunctionDecl *FD) {
   const Stmt *Body = FD->getBody(Definition);
 
   if (Definition && Body &&
-      (Definition->isConstexpr() || Definition->hasAttr<MSConstexprAttr>()))
+      (Definition->isConstexpr() || (S.Current->MSVCConstexprAllowed &&
+                                     Definition->hasAttr<MSConstexprAttr>())))
     return true;
 
   return diagnoseCallableDecl(S, OpPC, FD);
+}
+
+bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
+                  bool SrcIsVoidPtr) {
+  const auto &Ptr = S.Stk.peek<Pointer>();
+  if (Ptr.isZero())
+    return true;
+  if (!Ptr.isBlockPointer())
+    return true;
+
+  if (TargetType->isIntegerType())
+    return true;
+
+  if (SrcIsVoidPtr && S.getLangOpts().CPlusPlus) {
+    bool HasValidResult = !Ptr.isZero();
+
+    if (HasValidResult) {
+      if (S.getStdAllocatorCaller("allocate"))
+        return true;
+
+      const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
+      if (S.getLangOpts().CPlusPlus26 &&
+          S.getASTContext().hasSimilarType(Ptr.getType(),
+                                           QualType(TargetType, 0)))
+        return true;
+
+      S.CCEDiag(E, diag::note_constexpr_invalid_void_star_cast)
+          << E->getSubExpr()->getType() << S.getLangOpts().CPlusPlus26
+          << Ptr.getType().getCanonicalType() << E->getType()->getPointeeType();
+    } else if (!S.getLangOpts().CPlusPlus26) {
+      const SourceInfo &E = S.Current->getSource(OpPC);
+      S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+          << diag::ConstexprInvalidCastKind::CastFrom << "'void *'"
+          << S.Current->getRange(OpPC);
+    }
+  }
+
+  QualType PtrType = Ptr.getType();
+  if (PtrType->isRecordType() &&
+      PtrType->getAsRecordDecl() != TargetType->getAsRecordDecl()) {
+    S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
+        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+        << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+    return false;
+  }
+  return true;
 }
 
 static void compileFunction(InterpState &S, const Function *Func) {
@@ -1671,12 +1737,11 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   if (!CheckCallable(S, OpPC, Func))
     return cleanup();
 
-  // FIXME: The isConstructor() check here is not always right. The current
-  // constant evaluator is somewhat inconsistent in when it allows a function
-  // call when checking for a constant expression.
-  if (Func->hasThisPointer() && S.checkingPotentialConstantExpression() &&
-      !Func->isConstructor())
-    return cleanup();
+  // Do not evaluate any function calls in checkingPotentialConstantExpression
+  // mode. Constructors will be aborted later when their initializers are
+  // evaluated.
+  if (S.checkingPotentialConstantExpression() && !Func->isConstructor())
+    return false;
 
   if (!CheckCallDepth(S, OpPC))
     return cleanup();
@@ -2062,9 +2127,12 @@ bool InvalidNewDeleteExpr(InterpState &S, CodePtr OpPC, const Expr *E) {
     const FunctionDecl *OperatorNew = NewExpr->getOperatorNew();
 
     if (NewExpr->getNumPlacementArgs() > 0) {
-      // This is allowed pre-C++26, but only an std function.
-      if (S.getLangOpts().CPlusPlus26 || S.Current->isStdFunction())
+      // This is allowed pre-C++26, but only an std function or if
+      // [[msvc::constexpr]] was used.
+      if (S.getLangOpts().CPlusPlus26 || S.Current->isStdFunction() ||
+          S.Current->MSVCConstexprAllowed)
         return true;
+
       S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_new_placement)
           << /*C++26 feature*/ 1 << E->getSourceRange();
     } else if (
@@ -2360,6 +2428,41 @@ bool FinishInitGlobal(InterpState &S, CodePtr OpPC) {
   }
 
   return true;
+}
+
+bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind, bool Fatal) {
+  const SourceLocation &Loc = S.Current->getLocation(OpPC);
+
+  switch (Kind) {
+  case CastKind::Reinterpret:
+    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+        << diag::ConstexprInvalidCastKind::Reinterpret
+        << S.Current->getRange(OpPC);
+    return !Fatal;
+  case CastKind::ReinterpretLike:
+    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+        << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+    return !Fatal;
+  case CastKind::Volatile:
+    if (!S.checkingPotentialConstantExpression()) {
+      const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
+      if (S.getLangOpts().CPlusPlus)
+        S.FFDiag(E, diag::note_constexpr_access_volatile_type)
+            << AK_Read << E->getSubExpr()->getType();
+      else
+        S.FFDiag(E);
+    }
+
+    return false;
+  case CastKind::Dynamic:
+    assert(!S.getLangOpts().CPlusPlus20);
+    S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
+        << diag::ConstexprInvalidCastKind::Dynamic;
+    return true;
+  }
+  llvm_unreachable("Unhandled CastKind");
+  return false;
 }
 
 bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
