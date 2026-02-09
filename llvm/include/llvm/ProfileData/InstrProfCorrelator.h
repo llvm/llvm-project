@@ -78,7 +78,7 @@ public:
 protected:
   struct Context {
     LLVM_ABI static llvm::Expected<std::unique_ptr<Context>>
-    get(std::unique_ptr<MemoryBuffer> Buffer, object::ObjectFile *Obj,
+    get(std::unique_ptr<MemoryBuffer> Buffer, object::ObjectFile &Obj,
         ProfCorrelatorKind FileKind);
     std::unique_ptr<MemoryBuffer> Buffer;
     /// The address range of the __llvm_prf_cnts section.

@@ -54,21 +54,21 @@ const char *InstrProfCorrelator::NumCountersAttributeName = "Num Counters";
 
 llvm::Expected<std::unique_ptr<InstrProfCorrelator::Context>>
 InstrProfCorrelator::Context::get(std::unique_ptr<MemoryBuffer> Buffer,
-                                  object::ObjectFile *Obj,
+                                  object::ObjectFile &Obj,
                                   ProfCorrelatorKind FileKind) {
   auto C = std::make_unique<Context>();
-  auto CountersSection = getInstrProfSection(*Obj, IPSK_cnts);
+  auto CountersSection = getInstrProfSection(Obj, IPSK_cnts);
   if (auto Err = CountersSection.takeError())
     return std::move(Err);
-  Triple::ObjectFormatType ObjFormat = Obj->getTripleObjectFormat();
+  Triple::ObjectFormatType ObjFormat = Obj.getTripleObjectFormat();
   if (FileKind == InstrProfCorrelator::BINARY) {
-    auto DataSection = getInstrProfSection(*Obj, IPSK_covdata);
+    auto DataSection = getInstrProfSection(Obj, IPSK_covdata);
     if (auto Err = DataSection.takeError())
       return std::move(Err);
     auto DataOrErr = DataSection->getContents();
     if (!DataOrErr)
       return DataOrErr.takeError();
-    auto NameSection = getInstrProfSection(*Obj, IPSK_covname);
+    auto NameSection = getInstrProfSection(Obj, IPSK_covname);
     if (auto Err = NameSection.takeError())
       return std::move(Err);
     auto NameOrErr = NameSection->getContents();
@@ -84,7 +84,7 @@ InstrProfCorrelator::Context::get(std::unique_ptr<MemoryBuffer> Buffer,
           getInstrProfSectionName(IPSK_covdata, ObjFormat);
       SmallVector<StringRef, 3> SegmentAndSection;
       StringRef(FullSectionName).split(SegmentAndSection, ',', 2);
-      auto *MachO = static_cast<object::MachOObjectFile *>(Obj);
+      auto *MachO = static_cast<object::MachOObjectFile *>(&Obj);
       Error Err = Error::success();
       for (const object::MachOChainedFixupEntry &Entry :
            MachO->fixupTable(Err)) {
@@ -106,7 +106,7 @@ InstrProfCorrelator::Context::get(std::unique_ptr<MemoryBuffer> Buffer,
   if (ObjFormat == Triple::COFF)
     ++C->CountersSectionStart;
 
-  C->ShouldSwapBytes = Obj->isLittleEndian() != sys::IsLittleEndianHost;
+  C->ShouldSwapBytes = Obj.isLittleEndian() != sys::IsLittleEndianHost;
   return Expected<std::unique_ptr<Context>>(std::move(C));
 }
 
@@ -177,7 +177,7 @@ InstrProfCorrelator::get(std::unique_ptr<MemoryBuffer> Buffer,
     return std::move(Err);
 
   if (auto *Obj = dyn_cast<object::ObjectFile>(BinOrErr->get())) {
-    auto CtxOrErr = Context::get(std::move(Buffer), Obj, FileKind);
+    auto CtxOrErr = Context::get(std::move(Buffer), *Obj, FileKind);
     if (auto Err = CtxOrErr.takeError())
       return std::move(Err);
     auto T = Obj->makeTriple();
