@@ -115,6 +115,85 @@ bool CIRGenFunction::getAArch64SVEProcessedOperands(
   return true;
 }
 
+static llvm::StringRef getLLVMIntrNameNoPrefix(llvm::Intrinsic::ID intrID) {
+  llvm::StringRef llvmIntrName = llvm::Intrinsic::getBaseName(intrID);
+  assert(llvmIntrName.starts_with("llvm.") && "Not an LLVM intrinsic!");
+  return llvmIntrName.drop_front(/*strlen("llvm.")=*/5);
+}
+
+// Reinterpret the input predicate so that it can be used to correctly isolate
+// the elements of the specified datatype.
+mlir::Value CIRGenFunction::emitSVEPredicateCast(mlir::Value pred,
+                                                 unsigned minNumElts,
+                                                 mlir::Location loc) {
+
+  // TODO: Handle "aarch64.svcount" once we get round to supporting SME.
+
+  auto retTy = cir::VectorType::get(builder.getUIntNTy(1), minNumElts,
+                                    /*is_scalable=*/true);
+  if (pred.getType() == retTy)
+    return pred;
+
+  llvm::Intrinsic::ID intID;
+  switch (minNumElts) {
+  default:
+    llvm_unreachable("unsupported element count!");
+  case 1:
+  case 2:
+  case 4:
+  case 8:
+    intID = Intrinsic::aarch64_sve_convert_from_svbool;
+    break;
+  case 16:
+    intID = Intrinsic::aarch64_sve_convert_to_svbool;
+    break;
+  }
+
+  llvm::StringRef llvmIntrName = getLLVMIntrNameNoPrefix(intID);
+  auto call = builder.emitIntrinsicCallOp(loc, llvmIntrName, retTy,
+                                          mlir::ValueRange{pred});
+  assert(call.getType() == retTy && "Unexpected return type!");
+  return call;
+}
+
+// Get the minimum number of elements in an SVE vector for the given element
+// type. The actual number of elements in the vector would be an integer (power
+// of two) multiple of this value.
+static unsigned getSVEMinEltCount(clang::SVETypeFlags::EltType sveType) {
+  switch (sveType) {
+  default:
+    llvm_unreachable("Invalid SVETypeFlag!");
+
+  case SVETypeFlags::EltTyInt8:
+    return 16;
+  case SVETypeFlags::EltTyInt16:
+    return 8;
+  case SVETypeFlags::EltTyInt32:
+    return 4;
+  case SVETypeFlags::EltTyInt64:
+    return 2;
+
+  case SVETypeFlags::EltTyMFloat8:
+    return 16;
+  case SVETypeFlags::EltTyFloat16:
+  case SVETypeFlags::EltTyBFloat16:
+    return 8;
+  case SVETypeFlags::EltTyFloat32:
+    return 4;
+  case SVETypeFlags::EltTyFloat64:
+    return 2;
+
+  case SVETypeFlags::EltTyBool8:
+    return 16;
+  case SVETypeFlags::EltTyBool16:
+    return 8;
+  case SVETypeFlags::EltTyBool32:
+    return 4;
+  case SVETypeFlags::EltTyBool64:
+    return 2;
+  }
+}
+
 std::optional<mlir::Value>
 CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
                                           const CallExpr *expr) {
@@ -160,10 +239,12 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
                    std::string("unimplemented AArch64 builtin call: ") +
                        getContext().BuiltinInfo.getName(builtinID));
 
-    if (typeFlags.getMergeType() == SVETypeFlags::MergeZeroExp)
-      cgm.errorNYI(expr->getSourceRange(),
-                   std::string("unimplemented AArch64 builtin call: ") +
-                       getContext().BuiltinInfo.getName(builtinID));
+    // Zero-ing predication
+    if (typeFlags.getMergeType() == SVETypeFlags::MergeZeroExp) {
+      auto null = builder.getNullValue(convertType(expr->getType()),
+                                       getLoc(expr->getExprLoc()));
+      ops.insert(ops.begin(), null);
+    }
 
     if (typeFlags.getMergeType() == SVETypeFlags::MergeAnyExp)
       cgm.errorNYI(expr->getSourceRange(),
@@ -183,11 +264,11 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
 
     // Predicates must match the main datatype.
     for (mlir::Value &op : ops)
-      if (auto predTy = dyn_cast<mlir::VectorType>(op.getType()))
-        if (predTy.getElementType().isInteger(1))
-          cgm.errorNYI(expr->getSourceRange(),
-                       std::string("unimplemented AArch64 builtin call: ") +
-                           getContext().BuiltinInfo.getName(builtinID));
+      if (auto predTy = dyn_cast<cir::VectorType>(op.getType()))
+        if (auto cirInt = dyn_cast<cir::IntType>(predTy.getElementType()))
+          if (cirInt.getWidth() == 1)
+            op = emitSVEPredicateCast(
+                op, getSVEMinEltCount(typeFlags.getEltType()), loc);
 
     // Splat scalar operand to vector (intrinsics with _n infix)
     if (typeFlags.hasSplatOperand()) {
@@ -222,11 +303,8 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
                        getContext().BuiltinInfo.getName(builtinID));
     }
 
-    std::string llvmIntrName(Intrinsic::getBaseName(
-        (llvm::Intrinsic::ID)builtinIntrInfo->llvmIntrinsic));
-
-    llvmIntrName.erase(0, /*std::strlen(".llvm")=*/5);
-
+    llvm::StringRef llvmIntrName = getLLVMIntrNameNoPrefix(
+        static_cast<llvm::Intrinsic::ID>(builtinIntrInfo->llvmIntrinsic));
     auto retTy = convertType(expr->getType());
 
     auto call = builder.emitIntrinsicCallOp(loc, llvmIntrName, retTy,
