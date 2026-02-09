@@ -275,4 +275,46 @@ gpu.func @vector_multi_reduction_dim0_distributed_dim0_reduction(%laneid: index)
       [0] : vector<16x2xf32> to vector<2xf32>
   gpu.return
 }
+
+// CHECK-LABEL: gpu.func @vector_multi_reduction_dim1_distributed_dim0_reduction
+// CHECK:         %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<4x1xf32>
+// CHECK:         %[[CST_0:.*]] = arith.constant dense<0.000000e+00> : vector<1xf32>
+// CHECK:         %[[RED:.*]] = vector.multi_reduction <add>, %[[CST]], %[[CST_0]] [0] : vector<4x1xf32> to vector<1xf32>
+// CHECK:         gpu.return
+gpu.func @vector_multi_reduction_dim1_distributed_dim0_reduction(%laneid: index) {
+  %c0 = arith.constant 0 : index
+    %src = arith.constant
+      {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+      dense<0.0>  : vector<4x16xf32>
+    %acc = arith.constant
+      {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>}
+      dense<0.0>  : vector<16xf32>
+    %1 = vector.multi_reduction <add>, %src, %acc
+      {
+        layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>
+      }
+      [0] : vector<4x16xf32> to vector<16xf32>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @vector_multi_reduction_dim0_distributed_dim1_reduction
+// CHECK:         %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<1x12xf32>
+// CHECK:         %[[CST_0:.*]] = arith.constant dense<0.000000e+00> : vector<1xf32>
+// CHECK:         %[[RED:.*]] = vector.multi_reduction <add>, %[[CST]], %[[CST_0]] [1] : vector<1x12xf32> to vector<1xf32>
+// CHECK:         gpu.return
+gpu.func @vector_multi_reduction_dim0_distributed_dim1_reduction(%laneid: index) {
+  %c0 = arith.constant 0 : index
+    %src = arith.constant
+      {layout_result_0 = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>}
+      dense<0.0>  : vector<16x12xf32>
+    %acc = arith.constant
+      {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [1]>}
+      dense<0.0>  : vector<16xf32>
+    %1 = vector.multi_reduction <add>, %src, %acc
+      {
+        layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>, dims = [1]>
+      }
+      [1] : vector<16x12xf32> to vector<16xf32>
+  gpu.return
+}
 }

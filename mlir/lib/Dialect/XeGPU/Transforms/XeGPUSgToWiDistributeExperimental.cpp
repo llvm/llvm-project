@@ -419,6 +419,55 @@ struct SgToWiVectorReduction : public OpConversionPattern<vector::ReductionOp> {
   }
 };
 
+struct SgToWiMultiDimReduction
+    : public OpConversionPattern<vector::MultiDimReductionOp> {
+  using OpConversionPattern<vector::MultiDimReductionOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::MultiDimReductionOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
+    // If no layout, nothing to do.
+    if (!resLayout || !resLayout.isForSubgroup())
+      return failure();
+    VectorType sourceType = op.getSourceVectorType();
+    // Only 2D vectors are supported.
+    if (sourceType.getRank() != 2)
+      return rewriter.notifyMatchFailure(
+          op, "Expecting 2D source vector in vector::MultiDimReductionOp at "
+              "subgroup level.");
+    VectorType resVecTy = dyn_cast<VectorType>(op.getType());
+    if (!resVecTy)
+      return rewriter.notifyMatchFailure(op, "Expecting vector result type");
+    // Compute the distributed vector type based on the layout.
+    FailureOr<VectorType> resDistVecTyOrFailure =
+        getDistVecTypeBasedOnLaneLayout(resLayout, resVecTy);
+    if (failed(resDistVecTyOrFailure))
+      return rewriter.notifyMatchFailure(
+          op, "Failed to compute the distributed vector type based on the "
+              "layout.");
+    // Check if the reduction is single dim.
+    ArrayRef<int64_t> reductionDims = op.getReductionDims();
+    if (reductionDims.size() != 1)
+      return rewriter.notifyMatchFailure(
+          op, "Only 1 reduction dimension is supported.");
+    // Check if the reduction is lane-local. If not, distributed result type ==
+    // original result type. This case is handled by
+    // `LowerVectorMultiReductionPattern`.
+    if (resVecTy == resDistVecTyOrFailure.value())
+      return rewriter.notifyMatchFailure(
+          op, "Reduction is not lane-local, expected reduction dimension to be "
+              "not distributed.");
+    // Simply create a new MultiDimReductionOp using adaptor operands and the
+    // new result type.
+    auto newOp = vector::MultiDimReductionOp::create(
+        rewriter, op.getLoc(), resDistVecTyOrFailure.value(), op.getKind(),
+        adaptor.getSource(), adaptor.getAcc(), op.getReductionDims());
+    rewriter.replaceOp(op, newOp.getResult());
+    return success();
+  }
+};
+
 struct LowerVectorMultiReductionPattern
     : public OpConversionPattern<vector::MultiDimReductionOp> {
   using OpConversionPattern<vector::MultiDimReductionOp>::OpConversionPattern;
@@ -663,17 +712,42 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
         }
         return !xegpu::getTemporaryLayout(dyn_cast<OpResult>(op->getResult(0)));
       });
-  // VectorReductionOp is legal only if its source has no distribute layout
+  // vector::ReductionOp is legal only if its source has no distribute layout
   // attribute.
   target.addDynamicallyLegalOp<vector::ReductionOp>(
       [=](vector::ReductionOp op) -> bool {
         auto layout = xegpu::getDistributeLayoutAttr(op.getVector());
         return !layout;
       });
+  // vector::MultiDimReductionOp is legal only if its result has no distribute
+  // layout attribute.
+  target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(
+      [=](vector::MultiDimReductionOp op) -> bool {
+        auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
+        // If no layout, mark legal.
+        if (!resLayout || !resLayout.isForSubgroup())
+          return true;
+        VectorType resTy = dyn_cast<VectorType>(op.getType());
+        if (!resTy)
+          return true;
+        // Compute the distributed result vector type based on the layout.
+        FailureOr<VectorType> resDistTypeOrFailure =
+            getDistVecTypeBasedOnLaneLayout(resLayout, resTy);
+        if (failed(resDistTypeOrFailure))
+          return true;
+
+        ArrayRef<int64_t> reductionDims = op.getReductionDims();
+        // Only 1 reduction dimension supported.
+        if (reductionDims.size() != 1)
+          return true;
+        // Op is legal if the reduction dimension is distributed.
+        return resTy == resDistTypeOrFailure.value();
+      });
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   patterns.add<SgToWiCreateNdDesc, SgToWiLoadNd, SgToWiStoreNd, SgToWiDpas,
                SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd,
-               SgToWiVectorReduction>(typeConverter, patterns.getContext());
+               SgToWiVectorReduction, SgToWiMultiDimReduction>(
+      typeConverter, patterns.getContext());
 }
 
 void xegpu::populateXeGPUSgToWiLowerVectorMultiReductionAndLegality(
@@ -700,9 +774,6 @@ void xegpu::populateXeGPUSgToWiLowerVectorMultiReductionAndLegality(
         if (reductionDims.size() != 1)
           return true;
         // Op is legal if the reduction dimension is not distributed.
-        // If the reduction dim is distributed, each lane does its own local
-        // reduction and result is distributed. So result types before and after
-        // distribution should not match.
         return resTy != resDistTypeOrFailure.value();
       });
   // vector::ReductionOp is legal.
