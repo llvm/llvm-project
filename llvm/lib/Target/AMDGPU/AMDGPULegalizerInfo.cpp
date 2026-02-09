@@ -3554,13 +3554,9 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
   Register X = MI.getOperand(1).getReg();
   unsigned Flags = MI.getFlags();
   const LLT Ty = MRI.getType(X);
-  MachineFunction &MF = B.getMF();
 
   const LLT F32 = LLT::scalar(32);
   const LLT F16 = LLT::scalar(16);
-
-  const AMDGPUTargetMachine &TM =
-      static_cast<const AMDGPUTargetMachine &>(MF.getTarget());
 
   if (Ty == F16 || MI.getFlag(MachineInstr::FmAfn)) {
     if (Ty == F16 && !ST.has16BitInsts()) {
@@ -3630,8 +3626,7 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
   }
 
   const bool IsFiniteOnly =
-      (MI.getFlag(MachineInstr::FmNoNans) || TM.Options.NoNaNsFPMath) &&
-      MI.getFlag(MachineInstr::FmNoInfs);
+      MI.getFlag(MachineInstr::FmNoNans) && MI.getFlag(MachineInstr::FmNoInfs);
 
   if (!IsFiniteOnly) {
     // Expand isfinite(x) => fabs(x) < inf
