@@ -332,10 +332,10 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   }();
 
   // Determine whether the given context is or is enclosed in a function that
-  // must be mangled, either:
+  // requires Decl's inside to be mangled, so either:
   // - an inline function
   // - or a function in a module purview that is externally visible
-  static constexpr auto IsInFunctionThatNeedsMangling =
+  static constexpr auto IsInFunctionThatRequiresMangling =
       [](const DeclContext *DC) -> bool {
     while (!DC->isFileContext()) {
       if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC))
@@ -356,7 +356,7 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     //  -- the bodies of inline or templated functions
     if ((IsInNonspecializedTemplate &&
          !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
-        IsInFunctionThatNeedsMangling(CurContext)) {
+        IsInFunctionThatRequiresMangling(CurContext)) {
       while (auto *CD = dyn_cast<CapturedDecl>(DC))
         DC = CD->getParent();
       return std::make_tuple(&Context.getManglingNumberContext(DC), nullptr);
