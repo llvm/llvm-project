@@ -2414,8 +2414,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     (void)BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), ResReg)
         .addReg(AMDGPU::SCC);
     I.eraseFromParent();
-    return constrainSelectedInstRegOperands(*AllocMI, TII, TRI, RBI) &&
-           RBI.constrainGenericRegister(ResReg, AMDGPU::SReg_32RegClass, *MRI);
+    constrainSelectedInstRegOperands(*AllocMI, TII, TRI, RBI);
+    return RBI.constrainGenericRegister(ResReg, AMDGPU::SReg_32RegClass, *MRI);
   }
   case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_signal_var:
