@@ -3,7 +3,6 @@
 // This file is for testing enhanced diagnostics produced by the GenericTaintChecker
 
 typedef __typeof(sizeof(int)) size_t;
-
 int system(const char *command);
 size_t strlen( const char* str );
 char * strncat ( char * destination, const char * source, size_t num );
