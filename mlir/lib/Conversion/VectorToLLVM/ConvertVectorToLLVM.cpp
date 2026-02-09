@@ -1234,6 +1234,38 @@ public:
     bool insertIntoInnermostDim =
         static_cast<int64_t>(positionVec.size()) == destVectorType.getRank();
 
+// Bounds checking: Validate that indices are within range
+    for (auto [idx, pos] : llvm::enumerate(positionVec)) {
+      int64_t dimSize = destVectorType.getDimSize(idx);
+      
+      if (auto attr = dyn_cast<Attribute>(pos)) {
+        // Static index: validate at compile time
+        int64_t constIdx = cast<IntegerAttr>(attr).getInt();
+        // Allow -1 as poison index, otherwise must be in range [0, dimSize)
+        if (constIdx != -1 && (constIdx < 0 || constIdx >= dimSize)) {
+          return rewriter.notifyMatchFailure(
+              insertOp,
+              "vector.insert position out of bounds: index " + 
+              std::to_string(constIdx) + " for dimension " + 
+              std::to_string(idx) + " with size " + std::to_string(dimSize));
+        }
+      } else {
+        // Dynamic index: check if it's a constant SSA value
+        Value dynamicIdx = cast<Value>(pos);
+        if (auto cst = dynamicIdx.getDefiningOp<arith::ConstantIndexOp>()) {
+          int64_t idx_val = cst.value();
+          if (idx_val < 0 || idx_val >= dimSize) {
+            return rewriter.notifyMatchFailure(
+                insertOp, 
+                "vector.insert position out of bounds (const SSA): index " +
+                std::to_string(idx_val) + " for dimension " + 
+                std::to_string(idx) + " with size " + std::to_string(dimSize));
+          }
+        }
+        // Note: Non-constant dynamic indices cannot be validated at compile time
+      }
+    }
+
     ArrayRef<OpFoldResult> positionOf1DVectorWithinAggregate(
         positionVec.begin(),
         insertIntoInnermostDim ? positionVec.size() - 1 : positionVec.size());
@@ -1281,7 +1313,7 @@ public:
         // Aggregate case: the destination for the InsertElementOp needs to be
         // extracted from the aggregate.
         if (!llvm::all_of(positionOf1DVectorWithinAggregate,
-                          llvm::IsaPred<Attribute>)) {
+                          [](OpFoldResult ofr) { return ofr.is<Attribute>(); })) {
           // llvm.extractvalue does not support dynamic dimensions.
           return failure();
         }
@@ -1302,6 +1334,11 @@ public:
 
     Value result = sourceAggregate;
     if (isNestedAggregate) {
+      if (!llvm::all_of(positionOf1DVectorWithinAggregate,
+                        [](OpFoldResult ofr) { return ofr.is<Attribute>(); })) {
+        // llvm.insertvalue does not support dynamic dimensions.
+        return failure();
+      }
       result = LLVM::InsertValueOp::create(
           rewriter, loc, adaptor.getDest(), sourceAggregate,
           getAsIntegers(positionOf1DVectorWithinAggregate));
