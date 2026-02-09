@@ -1250,6 +1250,10 @@ public:
   getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind,
                           const BasicBlock *BB);
 
+  /// Returns true if an artificially high cost for emulated masked memrefs
+  /// should be used.
+  bool useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF);
+
   /// Return the costs for our two available strategies for lowering a
   /// div/rem operation which requires speculating at least one lane.
   /// First result is for scalarization (will be invalid for scalable
@@ -1561,10 +1565,6 @@ private:
   /// convenience wrapper for the type-based getScalarizationOverhead API.
   InstructionCost getScalarizationOverhead(Instruction *I,
                                            ElementCount VF) const;
-
-  /// Returns true if an artificially high cost for emulated masked memrefs
-  /// should be used.
-  bool useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF);
 
   /// Map of scalar integer values to the smallest bitwidth they can be legally
   /// represented as. The vector equivalents of these values should be truncated
@@ -6886,6 +6886,10 @@ unsigned VPCostContext::getPredBlockCostDivisor(BasicBlock *BB) const {
   return CM.getPredBlockCostDivisor(CostKind, BB);
 }
 
+bool VPCostContext::useEmulatedMaskMemRefHack(Instruction *I, ElementCount VF) {
+  return CM.useEmulatedMaskMemRefHack(I, VF);
+}
+
 InstructionCost
 LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
                                           VPCostContext &CostCtx) const {
@@ -7704,9 +7708,9 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
   if (!LoopVectorizationPlanner::getDecisionAndClampRange(WillWiden, Range))
     return nullptr;
 
-  VPValue *Mask = nullptr;
-  if (Legal->isMaskRequired(I))
-    Mask = getBlockInMask(Builder.getInsertBlock());
+  // If a mask is not required, drop it - use unmasked version for safe loads.
+  // TODO: Determine if mask is needed in VPlan.
+  VPValue *Mask = Legal->isMaskRequired(I) ? VPI->getMask() : nullptr;
 
   // Determine if the pointer operand of the access is either consecutive or
   // reverse consecutive.
@@ -7871,20 +7875,18 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
   if (ShouldUseVectorCall) {
     if (MaskPos.has_value()) {
       // We have 2 cases that would require a mask:
-      //   1) The block needs to be predicated, either due to a conditional
+      //   1) The call needs to be predicated, either due to a conditional
       //      in the scalar loop or use of an active lane mask with
       //      tail-folding, and we use the appropriate mask for the block.
-      //   2) No mask is required for the block, but the only available
-      //      vector variant at this VF requires a mask, so we synthesize an
-      //      all-true mask.
-      VPValue *Mask = Legal->isMaskRequired(CI)
-                          ? getBlockInMask(Builder.getInsertBlock())
-                          : Plan.getTrue();
+      //   2) No mask is required for the call instruction, but the only
+      //      available vector variant at this VF requires a mask, so we
+      //      synthesize an all-true mask.
+      VPValue *Mask = VPI->isMasked() ? VPI->getMask() : Plan.getTrue();
 
       Ops.insert(Ops.begin() + *MaskPos, Mask);
     }
 
-    Ops.push_back(VPI->getOperand(VPI->getNumOperands() - 1));
+    Ops.push_back(VPI->getOperand(VPI->getNumOperandsWithoutMask() - 1));
     return new VPWidenCallRecipe(CI, Variant, Ops, *VPI, *VPI,
                                  VPI->getDebugLoc());
   }
@@ -7918,8 +7920,8 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
     // If not provably safe, use a select to form a safe divisor before widening the
     // div/rem operation itself.  Otherwise fall through to general handling below.
     if (CM.isPredicatedInst(I)) {
-      SmallVector<VPValue *> Ops(VPI->operands());
-      VPValue *Mask = getBlockInMask(Builder.getInsertBlock());
+      SmallVector<VPValue *> Ops(VPI->operandsWithoutMask());
+      VPValue *Mask = VPI->getMask();
       VPValue *One = Plan.getConstantInt(I->getType(), 1u);
       auto *SafeRHS =
           Builder.createSelect(Mask, Ops[1], One, VPI->getDebugLoc());
@@ -7947,10 +7949,10 @@ VPWidenRecipe *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
   case Instruction::Sub:
   case Instruction::Xor:
   case Instruction::Freeze:
-    return new VPWidenRecipe(*I, VPI->operands(), *VPI, *VPI,
+    return new VPWidenRecipe(*I, VPI->operandsWithoutMask(), *VPI, *VPI,
                              VPI->getDebugLoc());
   case Instruction::ExtractValue: {
-    SmallVector<VPValue *> NewOps(VPI->operands());
+    SmallVector<VPValue *> NewOps(VPI->operandsWithoutMask());
     auto *EVI = cast<ExtractValueInst>(I);
     assert(EVI->getNumIndices() == 1 && "Expected one extractvalue index");
     unsigned Idx = EVI->getIndices()[0];
@@ -7976,7 +7978,7 @@ VPHistogramRecipe *VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
   // In case of predicated execution (due to tail-folding, or conditional
   // execution, or both), pass the relevant mask.
   if (Legal->isMaskRequired(HI->Store))
-    HGramOps.push_back(getBlockInMask(Builder.getInsertBlock()));
+    HGramOps.push_back(VPI->getMask());
 
   return new VPHistogramRecipe(Opcode, HGramOps, VPI->getDebugLoc());
 }
@@ -8030,7 +8032,7 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
     // added initially. Masked replicate recipes will later be placed under an
     // if-then construct to prevent side-effects. Generate recipes to compute
     // the block mask for this region.
-    BlockInMask = getBlockInMask(Builder.getInsertBlock());
+    BlockInMask = VPI->getMask();
   }
 
   // Note that there is some custom logic to mark some intrinsics as uniform
@@ -8040,8 +8042,8 @@ VPReplicateRecipe *VPRecipeBuilder::handleReplication(VPInstruction *VPI,
           (Range.Start.isScalable() && isa<IntrinsicInst>(I))) &&
          "Should not predicate a uniform recipe");
   auto *Recipe =
-      new VPReplicateRecipe(I, VPI->operands(), IsUniform, BlockInMask, *VPI,
-                            *VPI, VPI->getDebugLoc());
+      new VPReplicateRecipe(I, VPI->operandsWithoutMask(), IsUniform,
+                            BlockInMask, *VPI, *VPI, VPI->getDebugLoc());
   return Recipe;
 }
 
@@ -8079,8 +8081,9 @@ VPRecipeBuilder::tryToCreateWidenNonPhiRecipe(VPSingleDefRecipe *R,
     return nullptr;
 
   if (VPI->getOpcode() == Instruction::GetElementPtr)
-    return new VPWidenGEPRecipe(cast<GetElementPtrInst>(Instr), R->operands(),
-                                *VPI, VPI->getDebugLoc());
+    return new VPWidenGEPRecipe(cast<GetElementPtrInst>(Instr),
+                                VPI->operandsWithoutMask(), *VPI,
+                                VPI->getDebugLoc());
 
   if (Instruction::isCast(VPI->getOpcode())) {
     auto *CI = cast<CastInst>(Instr);
@@ -8222,14 +8225,13 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // ---------------------------------------------------------------------------
   // Predicate and linearize the top-level loop region.
   // ---------------------------------------------------------------------------
-  auto BlockMaskCache = VPlanTransforms::introduceMasksAndLinearize(
-      *Plan, CM.foldTailByMasking());
+  VPlanTransforms::introduceMasksAndLinearize(*Plan, CM.foldTailByMasking());
 
   // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar
   // VPInstructions in the loop.
   // ---------------------------------------------------------------------------
-  VPRecipeBuilder RecipeBuilder(*Plan, TLI, Legal, CM, Builder, BlockMaskCache);
+  VPRecipeBuilder RecipeBuilder(*Plan, TLI, Legal, CM, Builder);
 
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
@@ -8239,9 +8241,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
   auto *MiddleVPBB = Plan->getMiddleBlock();
   VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
-  // Mapping from VPValues in the initial plan to their widened VPValues. Needed
-  // temporarily to update created block masks.
-  DenseMap<VPValue *, VPValue *> Old2New;
 
   // Collect blocks that need predication for in-loop reduction recipes.
   DenseSet<BasicBlock *> BlocksNeedingPredication;
@@ -8249,8 +8248,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     if (CM.blockNeedsPredicationForAnyReason(BB))
       BlocksNeedingPredication.insert(BB);
 
-  VPlanTransforms::createInLoopReductionRecipes(
-      *Plan, BlockMaskCache, BlocksNeedingPredication, Range.Start);
+  VPlanTransforms::createInLoopReductionRecipes(*Plan, BlocksNeedingPredication,
+                                                Range.Start);
 
   // Now process all other blocks and instructions.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
@@ -8279,8 +8278,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
         // Only create recipe for the final invariant store of the reduction.
         if (Legal->isInvariantStoreOfReduction(SI)) {
           auto *Recipe = new VPReplicateRecipe(
-              SI, R.operands(), true /* IsUniform */, nullptr /*Mask*/, *VPI,
-              *VPI, VPI->getDebugLoc());
+              SI, VPI->operandsWithoutMask(), true /* IsUniform */,
+              nullptr /*Mask*/, *VPI, *VPI, VPI->getDebugLoc());
           Recipe->insertBefore(*MiddleVPBB, MBIP);
         }
         R.eraseFromParent();
@@ -8303,22 +8302,13 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
       }
       if (Recipe->getNumDefinedValues() == 1) {
         VPI->replaceAllUsesWith(Recipe->getVPSingleValue());
-        Old2New[VPI] = Recipe->getVPSingleValue();
       } else {
         assert(Recipe->getNumDefinedValues() == 0 &&
                "Unexpected multidef recipe");
-        R.eraseFromParent();
       }
+      R.eraseFromParent();
     }
   }
-
-  // replaceAllUsesWith above may invalidate the block masks. Update them here.
-  // TODO: Include the masks as operands in the predicated VPlan directly
-  // to remove the need to keep a map of masks beyond the predication
-  // transform.
-  RecipeBuilder.updateBlockMaskCache(Old2New);
-  for (VPValue *Old : Old2New.keys())
-    Old->getDefiningRecipe()->eraseFromParent();
 
   assert(isa<VPRegionBlock>(LoopRegion) &&
          !LoopRegion->getEntryBasicBlock()->empty() &&
@@ -8337,6 +8327,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // ---------------------------------------------------------------------------
 
   addReductionResultComputation(Plan, RecipeBuilder, Range.Start);
+
+  // Optimize FindIV reductions to use sentinel-based approach when possible.
+  RUN_VPLAN_PASS(VPlanTransforms::optimizeFindIVReductions, *Plan, PSE,
+                 *OrigLoop);
 
   // Apply mandatory transformation to handle reductions with multiple in-loop
   // uses if possible, bail out otherwise.
@@ -8477,7 +8471,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     auto *RR = dyn_cast<VPReductionRecipe>(OrigExitingVPV->getDefiningRecipe());
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
         (!RR || !RR->isPartialReduction())) {
-      VPValue *Cond = RecipeBuilder.getBlockInMask(PhiR->getParent());
+      VPValue *Cond = vputils::findHeaderMask(*Plan);
       std::optional<FastMathFlags> FMFs =
           PhiTy->isFloatingPointTy()
               ? std::make_optional(RdxDesc.getFastMathFlags())
@@ -8520,26 +8514,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
         return match(U, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
       }));
     }
-    if (RecurrenceDescriptor::isFindIVRecurrenceKind(RecurrenceKind)) {
-      VPValue *Start = PhiR->getStartValue();
-      VPValue *Sentinel = Plan->getOrAddLiveIn(RdxDesc.getSentinelValue());
-      RecurKind MinMaxKind;
-      bool IsSigned =
-          RecurrenceDescriptor::isSignedRecurrenceKind(RecurrenceKind);
-      if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RecurrenceKind))
-        MinMaxKind = IsSigned ? RecurKind::SMax : RecurKind::UMax;
-      else
-        MinMaxKind = IsSigned ? RecurKind::SMin : RecurKind::UMin;
-      VPIRFlags Flags(MinMaxKind, /*IsOrdered=*/false, /*IsInLoop=*/false,
-                      FastMathFlags());
-      auto *ReducedIV =
-          Builder.createNaryOp(VPInstruction::ComputeReductionResult,
-                               {NewExitingVPV}, Flags, ExitDL);
-      auto *Cmp =
-          Builder.createICmp(CmpInst::ICMP_NE, ReducedIV, Sentinel, ExitDL);
-      FinalReductionResult = cast<VPInstruction>(
-          Builder.createSelect(Cmp, ReducedIV, Start, ExitDL));
-    } else if (AnyOfSelect) {
+    if (AnyOfSelect) {
       VPValue *Start = PhiR->getStartValue();
       // NewVal is the non-phi operand of the select.
       VPValue *NewVal = AnyOfSelect->getOperand(1) == PhiR
@@ -8640,13 +8615,6 @@ void LoopVectorizationPlanner::addReductionResultComputation(
       continue;
     }
 
-    if (RecurrenceDescriptor::isFindIVRecurrenceKind(
-            RdxDesc.getRecurrenceKind())) {
-      // Adjust the start value for FindFirstIV/FindLastIV recurrences to use
-      // the sentinel value after generating the ResumePhi recipe, which uses
-      // the original start value.
-      PhiR->setOperand(0, Plan->getOrAddLiveIn(RdxDesc.getSentinelValue()));
-    }
     RecurKind RK = RdxDesc.getRecurrenceKind();
     if ((!RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) &&
          !RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&

@@ -358,6 +358,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        MVT::i32, Custom);
     setOperationAction({ISD::UADDO, ISD::USUBO}, MVT::i32, Custom);
     setOperationAction({ISD::SADDO, ISD::SSUBO}, MVT::i32, Custom);
+  } else {
+    // Custom legalize i64 ADD/SUB for RV32+P.
+    if (Subtarget.hasStdExtP())
+      setOperationAction({ISD::ADD, ISD::SUB}, MVT::i64, Custom);
   }
   if (!Subtarget.hasStdExtZmmul()) {
     setOperationAction({ISD::MUL, ISD::MULHS, ISD::MULHU}, XLenVT, Expand);
@@ -376,9 +380,14 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                        {MVT::i8, MVT::i16, MVT::i32}, Custom);
   }
 
-  setOperationAction(
-      {ISD::SDIVREM, ISD::UDIVREM, ISD::SMUL_LOHI, ISD::UMUL_LOHI}, XLenVT,
-      Expand);
+  setOperationAction({ISD::SDIVREM, ISD::UDIVREM}, XLenVT, Expand);
+
+  // On RV32, the P extension has a WMUL(U) instruction we can use for
+  // (S/U)MUL_LOHI.
+  // FIXME: Does P imply Zmmul?
+  if (!Subtarget.hasStdExtP() || !Subtarget.hasStdExtZmmul() ||
+      Subtarget.is64Bit())
+    setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, XLenVT, Expand);
 
   setOperationAction({ISD::SHL_PARTS, ISD::SRL_PARTS, ISD::SRA_PARTS}, XLenVT,
                      Custom);
@@ -570,7 +579,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::SCALAR_TO_VECTOR, VTs, Legal);
     setOperationAction({ISD::SHL, ISD::SRL, ISD::SRA}, VTs, Custom);
     setOperationAction(ISD::BITCAST, VTs, Custom);
-    setOperationAction(ISD::EXTRACT_VECTOR_ELT, VTs, Custom);
+    setOperationAction({ISD::EXTRACT_VECTOR_ELT, ISD::INSERT_VECTOR_ELT}, VTs,
+                       Custom);
     setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, VTs,
                        Legal);
     setOperationAction(ISD::SELECT, VTs, Custom);
@@ -4607,7 +4617,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     if (VT != MVT::v4i8)
       return SDValue();
 
-    // <4 x i8> BUILD_VECTOR a, b, c, d -> PACK(PPACK.DH pair(a, b), pair(c, d))
+    // <4 x i8> BUILD_VECTOR a, b, c, d -> PACK(PPACK.DH pair(a, c), pair(b, d))
     SDValue Val0 =
         DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(0));
     SDValue Val1 =
@@ -4616,17 +4626,17 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
         DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(2));
     SDValue Val3 =
         DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v4i8, Op->getOperand(3));
-    SDValue PackDH =
-        DAG.getNode(RISCVISD::PPACK_DH, DL, {MVT::v2i16, MVT::v2i16},
-                    {Val0, Val1, Val2, Val3});
+    SDValue PPairDB =
+        DAG.getNode(RISCVISD::PPAIRE_DB, DL, {MVT::v4i8, MVT::v4i8},
+                    {Val0, Val2, Val1, Val3});
 
     return DAG.getNode(
         ISD::BITCAST, DL, MVT::v4i8,
         SDValue(
             DAG.getMachineNode(
                 RISCV::PACK, DL, MVT::i32,
-                {DAG.getNode(ISD::BITCAST, DL, MVT::i32, PackDH.getValue(0)),
-                 DAG.getNode(ISD::BITCAST, DL, MVT::i32, PackDH.getValue(1))}),
+                {DAG.getNode(ISD::BITCAST, DL, MVT::i32, PPairDB.getValue(0)),
+                 DAG.getNode(ISD::BITCAST, DL, MVT::i32, PPairDB.getValue(1))}),
             0));
   }
 
@@ -8197,6 +8207,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
         return DAG.getMergeValues({Res, FP2Int.getValue(1)}, DL);
       }
       SDValue FP2Int = DAG.getNode(Op.getOpcode(), DL, IVecVT, Src);
+      if (EltSize == 1)
+        // The integer should be 0 or 1/-1, so compare the integer result to 0.
+        return DAG.getSetCC(DL, VT, DAG.getConstant(0, DL, IVecVT), FP2Int,
+                            ISD::SETNE);
       return DAG.getNode(ISD::TRUNCATE, DL, VT, FP2Int);
     }
 
@@ -10703,6 +10717,52 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
         ISD::INSERT_VECTOR_ELT, DL, IntVT, DAG.getBitcast(IntVT, Vec),
         DAG.getNode(RISCVISD::FMV_X_ANYEXTH, DL, XLenVT, Val), Idx);
     return DAG.getBitcast(VecVT, IntInsert);
+  }
+
+  if (Subtarget.enablePExtSIMDCodeGen() && VecVT.isFixedLengthVector()) {
+    auto *IdxC = dyn_cast<ConstantSDNode>(Idx);
+    if (!IdxC)
+      return SDValue();
+
+    unsigned IdxVal = IdxC->getZExtValue();
+    unsigned NumElts = VecVT.getVectorNumElements();
+    MVT EltVT = VecVT.getVectorElementType();
+    Vec = DAG.getBitcast(XLenVT, Vec);
+    SDValue ExtVal = DAG.getNode(ISD::ANY_EXTEND, DL, XLenVT, Val);
+
+    // For 2-element vectors, BUILD_VECTOR is more efficient since it only needs
+    // at most 2 instructions.
+    if (NumElts == 2) {
+      unsigned EltBits = EltVT.getSizeInBits();
+      SDValue Elt0, Elt1;
+      if (IdxVal == 0) {
+        Elt0 = ExtVal;
+        Elt1 = DAG.getNode(ISD::SRL, DL, XLenVT, Vec,
+                           DAG.getConstant(EltBits, DL, XLenVT));
+      } else {
+        Elt0 = Vec;
+        Elt1 = ExtVal;
+      }
+      return DAG.getNode(ISD::BUILD_VECTOR, DL, VecVT, Elt0, Elt1);
+    }
+
+    // For 4/8-element vectors, use MVM(or MERGE) instruction which does bitwise
+    // select: rd = (~mask & rd) | (mask & rs1).
+    // This generates: slli + lui/li + mvm
+    if (NumElts == 4 || NumElts == 8) {
+      unsigned EltBits = EltVT.getSizeInBits();
+      unsigned ShiftAmt = IdxVal * EltBits;
+      uint64_t PosMask = ((1ULL << EltBits) - 1) << ShiftAmt;
+
+      SDValue ShiftedVal = DAG.getNode(ISD::SHL, DL, XLenVT, ExtVal,
+                                       DAG.getConstant(ShiftAmt, DL, XLenVT));
+      SDValue Mask = DAG.getConstant(PosMask, DL, XLenVT);
+      SDValue Result =
+          DAG.getNode(RISCVISD::MVM, DL, XLenVT, Vec, ShiftedVal, Mask);
+      return DAG.getBitcast(VecVT, Result);
+    }
+
+    return SDValue();
   }
 
   MVT ContainerVT = VecVT;
@@ -13944,7 +14004,7 @@ SDValue RISCVTargetLowering::lowerVPSetCCMaskOp(SDValue Op,
   case ISD::SETULE: {
     SDValue Temp =
         DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Op1, AllOneMask, VL);
-    Result = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Temp, Op2, VL);
+    Result = DAG.getNode(RISCVISD::VMOR_VL, DL, ContainerVT, Temp, Op2, VL);
     break;
   }
   // X <=s Y  --> X == 1 | Y == 0  -->  ~Y | X
@@ -13953,7 +14013,7 @@ SDValue RISCVTargetLowering::lowerVPSetCCMaskOp(SDValue Op,
   case ISD::SETUGE: {
     SDValue Temp =
         DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Op2, AllOneMask, VL);
-    Result = DAG.getNode(RISCVISD::VMXOR_VL, DL, ContainerVT, Temp, Op1, VL);
+    Result = DAG.getNode(RISCVISD::VMOR_VL, DL, ContainerVT, Temp, Op1, VL);
     break;
   }
   }
@@ -15067,37 +15127,53 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::MUL: {
     unsigned Size = N->getSimpleValueType(0).getSizeInBits();
     unsigned XLen = Subtarget.getXLen();
-    // This multiply needs to be expanded, try to use MULHSU+MUL if possible.
     if (Size > XLen) {
+      // This multiply needs to be expanded, try to use MULH+MUL or WMUL if
+      // possible. We duplicate the default legalization to
+      // MULHU/MULHS/UMUL_LOHI/SMUL_LOHI to minimize the number of calls to
+      // MaskedValueIsZero and ComputeNumSignBits
+      // FIXME: Should we have a target independent MULHSU/WMULSU node? Are
+      // there are other targets that could use it?
       assert(Size == (XLen * 2) && "Unexpected custom legalisation");
-      SDValue LHS = N->getOperand(0);
-      SDValue RHS = N->getOperand(1);
-      APInt HighMask = APInt::getHighBitsSet(Size, XLen);
 
-      bool LHSIsU = DAG.MaskedValueIsZero(LHS, HighMask);
-      bool RHSIsU = DAG.MaskedValueIsZero(RHS, HighMask);
-      // We need exactly one side to be unsigned.
-      if (LHSIsU == RHSIsU)
-        return;
-
-      auto MakeMULPair = [&](SDValue S, SDValue U) {
+      auto MakeMULPair = [&](SDValue L, SDValue R, unsigned HighOpc,
+                             unsigned LoHiOpc) {
         MVT XLenVT = Subtarget.getXLenVT();
-        S = DAG.getNode(ISD::TRUNCATE, DL, XLenVT, S);
-        U = DAG.getNode(ISD::TRUNCATE, DL, XLenVT, U);
-        SDValue Lo = DAG.getNode(ISD::MUL, DL, XLenVT, S, U);
-        SDValue Hi = DAG.getNode(RISCVISD::MULHSU, DL, XLenVT, S, U);
+        L = DAG.getNode(ISD::TRUNCATE, DL, XLenVT, L);
+        R = DAG.getNode(ISD::TRUNCATE, DL, XLenVT, R);
+        SDValue Lo, Hi;
+        if (Subtarget.hasStdExtP() && !Subtarget.is64Bit()) {
+          SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32);
+          Lo = DAG.getNode(LoHiOpc, DL, VTs, L, R);
+          Hi = Lo.getValue(1);
+        } else {
+          Lo = DAG.getNode(ISD::MUL, DL, XLenVT, L, R);
+          Hi = DAG.getNode(HighOpc, DL, XLenVT, L, R);
+        }
         return DAG.getNode(ISD::BUILD_PAIR, DL, N->getValueType(0), Lo, Hi);
       };
 
+      SDValue LHS = N->getOperand(0);
+      SDValue RHS = N->getOperand(1);
+
+      APInt HighMask = APInt::getHighBitsSet(Size, XLen);
+      bool LHSIsU = DAG.MaskedValueIsZero(LHS, HighMask);
+      bool RHSIsU = DAG.MaskedValueIsZero(RHS, HighMask);
+      if (LHSIsU && RHSIsU) {
+        Results.push_back(MakeMULPair(LHS, RHS, ISD::MULHU, ISD::UMUL_LOHI));
+        return;
+      }
+
       bool LHSIsS = DAG.ComputeNumSignBits(LHS) > XLen;
       bool RHSIsS = DAG.ComputeNumSignBits(RHS) > XLen;
-
-      // The other operand should be signed, but still prefer MULH when
-      // possible.
-      if (RHSIsU && LHSIsS && !RHSIsS)
-        Results.push_back(MakeMULPair(LHS, RHS));
-      else if (LHSIsU && RHSIsS && !LHSIsS)
-        Results.push_back(MakeMULPair(RHS, LHS));
+      if (LHSIsS && RHSIsS)
+        Results.push_back(MakeMULPair(LHS, RHS, ISD::MULHS, ISD::SMUL_LOHI));
+      else if (RHSIsU && LHSIsS)
+        Results.push_back(
+            MakeMULPair(LHS, RHS, RISCVISD::MULHSU, RISCVISD::WMULSU));
+      else if (LHSIsU && RHSIsS)
+        Results.push_back(
+            MakeMULPair(RHS, LHS, RISCVISD::MULHSU, RISCVISD::WMULSU));
 
       return;
     }
@@ -15105,6 +15181,24 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::ADD:
   case ISD::SUB:
+    if (N->getValueType(0) == MVT::i64) {
+      assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
+             "Unexpected custom legalisation");
+
+      // Expand to ADDD/SUBD.
+      auto [LHSLo, LHSHi] =
+          DAG.SplitScalar(N->getOperand(0), DL, MVT::i32, MVT::i32);
+      auto [RHSLo, RHSHi] =
+          DAG.SplitScalar(N->getOperand(1), DL, MVT::i32, MVT::i32);
+      unsigned Opc =
+          N->getOpcode() == ISD::ADD ? RISCVISD::ADDD : RISCVISD::SUBD;
+      SDValue Res = DAG.getNode(Opc, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                                LHSLo, LHSHi, RHSLo, RHSHi);
+      Res = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Res, Res.getValue(1));
+      Results.push_back(Res);
+      return;
+    }
+
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
            "Unexpected custom legalisation");
     Results.push_back(customLegalizeToWOpWithSExt(N, DAG));
@@ -15434,20 +15528,20 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, NewRes));
     break;
   }
-  case RISCVISD::PASUB:
-  case RISCVISD::PASUBU:
-  case RISCVISD::PMULHSU:
-  case RISCVISD::PMULHR:
-  case RISCVISD::PMULHRU:
-  case RISCVISD::PMULHRSU: {
+  case RISCVISD::ASUB:
+  case RISCVISD::ASUBU:
+  case RISCVISD::MULHSU:
+  case RISCVISD::MULHR:
+  case RISCVISD::MULHRU:
+  case RISCVISD::MULHRSU: {
     MVT VT = N->getSimpleValueType(0);
     SDValue Op0 = N->getOperand(0);
     SDValue Op1 = N->getOperand(1);
     unsigned Opcode = N->getOpcode();
     // PMULH* variants don't support i8
     [[maybe_unused]] bool IsMulH =
-        Opcode == RISCVISD::PMULHSU || Opcode == RISCVISD::PMULHR ||
-        Opcode == RISCVISD::PMULHRU || Opcode == RISCVISD::PMULHRSU;
+        Opcode == RISCVISD::MULHSU || Opcode == RISCVISD::MULHR ||
+        Opcode == RISCVISD::MULHRU || Opcode == RISCVISD::MULHRSU;
     assert(VT == MVT::v2i16 || (!IsMulH && VT == MVT::v4i8));
     MVT NewVT = MVT::v4i16;
     if (VT == MVT::v4i8)
@@ -16553,9 +16647,9 @@ static SDValue combineTruncSelectToSMaxUSat(SDNode *N, SelectionDAG &DAG) {
 }
 
 // Handle P extension truncate patterns:
-// PASUB/PASUBU: (trunc (srl (sub ([s|z]ext a), ([s|z]ext b)), 1))
-// PMULHSU: (trunc (srl (mul (sext a), (zext b)), EltBits))
-// PMULHR*: (trunc (srl (add (mul (sext a), (zext b)), round_const), EltBits))
+// ASUB/ASUBU: (trunc (srl (sub ([s|z]ext a), ([s|z]ext b)), 1))
+// MULHSU: (trunc (srl (mul (sext a), (zext b)), EltBits))
+// MULHR*: (trunc (srl (add (mul (sext a), (zext b)), round_const), EltBits))
 static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue N0 = N->getOperand(0);
@@ -16630,23 +16724,23 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
     if (ShAmtVal != 1)
       return SDValue();
     if (LHSIsSExt && RHSIsSExt)
-      Opc = RISCVISD::PASUB;
+      Opc = RISCVISD::ASUB;
     else if (LHSIsZExt && RHSIsZExt)
-      Opc = RISCVISD::PASUBU;
+      Opc = RISCVISD::ASUBU;
     else
       return SDValue();
     break;
   case ISD::MUL:
-    // PMULH*/PMULHR*: shift amount must be element size, only for i16/i32
+    // MULH*/MULHR*: shift amount must be element size, only for i16/i32
     if (ShAmtVal != EltBits || (EltBits != 16 && EltBits != 32))
       return SDValue();
     if (IsRounding) {
       if (LHSIsSExt && RHSIsSExt) {
-        Opc = RISCVISD::PMULHR;
+        Opc = RISCVISD::MULHR;
       } else if (LHSIsZExt && RHSIsZExt) {
-        Opc = RISCVISD::PMULHRU;
+        Opc = RISCVISD::MULHRU;
       } else if ((LHSIsSExt && RHSIsZExt) || (LHSIsZExt && RHSIsSExt)) {
-        Opc = RISCVISD::PMULHRSU;
+        Opc = RISCVISD::MULHRSU;
         // commuted case
         if (LHSIsZExt && RHSIsSExt)
           std::swap(A, B);
@@ -16655,7 +16749,7 @@ static SDValue combinePExtTruncate(SDNode *N, SelectionDAG &DAG,
       }
     } else {
       if ((LHSIsSExt && RHSIsZExt) || (LHSIsZExt && RHSIsSExt)) {
-        Opc = RISCVISD::PMULHSU;
+        Opc = RISCVISD::MULHSU;
         // commuted case
         if (LHSIsZExt && RHSIsSExt)
           std::swap(A, B);
@@ -20969,6 +21063,64 @@ static SDValue performSHLCombine(SDNode *N,
                      Passthru, Mask, VL);
 }
 
+// Combine (ADDD (UMUL_LOHI x, y).0, (UMUL_LOHI x, y).1, a, b) into
+// (WMACCU x, y, a, b).
+// Combine (ADDD (SMUL_LOHI x, y).0, (SMUL_LOHI x, y).1, a, b) into
+// (WMACC x, y, a, b).
+static SDValue combineADDDToWMACC(SDNode *N, SelectionDAG &DAG,
+                                  const RISCVSubtarget &Subtarget) {
+  assert(N->getOpcode() == RISCVISD::ADDD && "Expected ADDD");
+  assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
+         "ADDD requires RV32 with P extension");
+
+  // ADDD has 4 operands: (op0_lo, op0_hi, op1_lo, op1_hi)
+  // Try to match UMUL_LOHI or SMUL_LOHI in either operand pair due to
+  // commutativity
+  SDValue Op0Lo = N->getOperand(0);
+  SDValue Op0Hi = N->getOperand(1);
+  SDValue Op1Lo = N->getOperand(2);
+  SDValue Op1Hi = N->getOperand(3);
+
+  SDNode *MulNode = nullptr;
+  SDValue AddLo, AddHi;
+
+  // Check if first operand pair is UMUL_LOHI or SMUL_LOHI
+  if ((Op0Lo.getOpcode() == ISD::UMUL_LOHI ||
+       Op0Lo.getOpcode() == ISD::SMUL_LOHI) &&
+      Op0Lo.getNode() == Op0Hi.getNode() && Op0Lo.getResNo() == 0 &&
+      Op0Hi.getResNo() == 1) {
+    MulNode = Op0Lo.getNode();
+    AddLo = Op1Lo;
+    AddHi = Op1Hi;
+  }
+  // Check if second operand pair is UMUL_LOHI or SMUL_LOHI (commutative case)
+  else if ((Op1Lo.getOpcode() == ISD::UMUL_LOHI ||
+            Op1Lo.getOpcode() == ISD::SMUL_LOHI) &&
+           Op1Lo.getNode() == Op1Hi.getNode() && Op1Lo.getResNo() == 0 &&
+           Op1Hi.getResNo() == 1) {
+    MulNode = Op1Lo.getNode();
+    AddLo = Op0Lo;
+    AddHi = Op0Hi;
+  } else {
+    return SDValue();
+  }
+
+  // Only combine if both multiply results are only used by this ADDD
+  if (!SDValue(MulNode, 0).hasOneUse() || !SDValue(MulNode, 1).hasOneUse())
+    return SDValue();
+
+  // Extract the multiply operands
+  SDValue MulOp0 = MulNode->getOperand(0);
+  SDValue MulOp1 = MulNode->getOperand(1);
+
+  // Create WMACCU or WMACC node: (m1, m2, addlo, addhi) -> (lo, hi)
+  SDLoc DL(N);
+  bool IsSigned = MulNode->getOpcode() == ISD::SMUL_LOHI;
+  unsigned Opc = IsSigned ? RISCVISD::WMACC : RISCVISD::WMACCU;
+  return DAG.getNode(Opc, DL, DAG.getVTList(MVT::i32, MVT::i32), MulOp0, MulOp1,
+                     AddLo, AddHi);
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -21057,6 +21209,17 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     // Only the lower 32 bits of the first operand are read
     if (SimplifyDemandedLowBitsHelper(0, 32))
       return SDValue(N, 0);
+    break;
+  }
+  case RISCVISD::ADDD:
+    return combineADDDToWMACC(N, DAG, Subtarget);
+  case RISCVISD::WMULSU: {
+    // Convert to MULHSU if only the upper half is used.
+    if (!N->hasAnyUseOfValue(0)) {
+      SDValue Res = DAG.getNode(RISCVISD::MULHSU, DL, N->getValueType(1),
+                                N->getOperand(0), N->getOperand(1));
+      return DCI.CombineTo(N, Res, Res);
+    }
     break;
   }
   case RISCVISD::FMV_W_X_RV64: {
@@ -25984,11 +26147,6 @@ bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
     if (Inst.getOperand(i)->getType()->isScalableTy() &&
         !isa<ReturnInst>(&Inst))
       return true;
-
-  if (const AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
-    if (AI->getAllocatedType()->isScalableTy())
-      return true;
-  }
 
   return false;
 }
