@@ -186,7 +186,7 @@ i@maskray.me (email), [MaskRay](https://github.com/MaskRay) (GitHub)
 #### Windows ABI and codegen
 
 Reid Kleckner \
-rnk@google.com (email), [rnk](https://github.com/rnk) (GitHub)
+rnk@llvm.org (email), [rnk](https://github.com/rnk) (GitHub)
 
 ### Backends / Targets
 
@@ -484,7 +484,7 @@ echristo@gmail.com (email), [echristo](https://github.com/echristo) (GitHub)
 #### Exception handling
 
 Reid Kleckner \
-rnk@google.com (email), [rnk](https://github.com/rnk) (GitHub)
+rnk@llvm.org (email), [rnk](https://github.com/rnk) (GitHub)
 
 #### LLVM Buildbot
 
