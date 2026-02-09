@@ -460,7 +460,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
 
     // nesting check
     HasInvalidWorksharingNesting(
-        beginName.source, llvm::omp::nestedWorkshareErrSet,beginName.v);
+        beginName.source, llvm::omp::nestedWorkshareErrSet, beginName.v);
   }
   SetLoopInfo(x);
 
