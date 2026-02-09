@@ -4337,7 +4337,7 @@ StructuredData::ObjectSP ProcessGDBRemote::GetDynamicLoaderProcessState() {
 }
 
 StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
-  std::lock_guard<std::recursive_mutex> guard(m_shared_cache_info_mutex);
+  std::lock_guard<std::mutex> guard(m_shared_cache_info_mutex);
   StructuredData::ObjectSP args_dict(new StructuredData::Dictionary());
 
   if (m_shared_cache_info_sp || !m_gdb_comm.GetSharedCacheInfoSupported())
