@@ -596,7 +596,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
   if (auto Err = derived().addMachinePasses(PMW))
     return std::move(Err);
 
-  if (!Opt.DisableVerify)
+  if (!Opt.DisableVerify && TM.Options.EnableDefaultMachineVerifier)
     addMachineFunctionPass(MachineVerifierPass(), PMW);
 
   if (PrintAsm) {
