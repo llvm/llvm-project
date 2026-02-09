@@ -69,6 +69,18 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
 }
 
 template <>
+void llvm::GenericUniformityAnalysisImpl<
+    MachineSSAContext>::finalizeUniformValues() {
+  // For MIR, we intentionally leave UniformValues empty.
+  // This preserves the original isDivergent() behavior where unknown registers
+  // are NOT treated as divergent. MIR passes like
+  // AMDGPUGlobalISelDivergenceLowering create new registers and query their
+  // divergence, expecting the original behavior. The conservative "unknown =
+  // divergent" behavior is only needed for IR-level passes like
+  // NaryReassociate.
+}
+
+template <>
 void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::pushUsers(
     Register Reg) {
   assert(isDivergent(Reg));

@@ -51,6 +51,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "uniformity"
@@ -375,6 +376,10 @@ public:
   /// Divergence is seeded by calls to \p markDivergent.
   void compute();
 
+  /// \brief Populate UniformValues set after divergence analysis completes.
+  /// This enables safe uniformity queries for transformation passes.
+  void finalizeUniformValues();
+
   /// \brief Whether any value was marked or analyzed to be divergent.
   bool hasDivergence() const { return !DivergentValues.empty(); }
 
@@ -392,7 +397,19 @@ public:
   };
 
   /// \brief Whether \p Val is divergent at its definition.
-  bool isDivergent(ConstValueRefT V) const { return DivergentValues.count(V); }
+  bool isDivergent(ConstValueRefT V) const {
+    // For IR: Constants and GlobalValues are never divergent.
+    if constexpr (!std::is_same<InstructionT, MachineInstr>::value) {
+      if (!isa<InstructionT>(V) && !isa<Argument>(V))
+        return false;
+    }
+    // If UniformValues is empty (MIR, or before finalization), use original
+    // logic. If UniformValues is populated (IR after finalization), unknown
+    // values are conservatively treated as divergent.
+    if (UniformValues.empty())
+      return DivergentValues.count(V);
+    return !UniformValues.count(V);
+  }
 
   bool isDivergentUse(const UseT &U) const;
 
@@ -416,6 +433,10 @@ protected:
   // Detected/marked divergent values.
   DenseSet<ConstValueRefT> DivergentValues;
   SmallPtrSet<const BlockT *, 32> DivergentTermBlocks;
+
+  // Known uniform values (populated after analysis by finalizeUniformValues).
+  // Values NOT in this set are conservatively treated as divergent.
+  DenseSet<ConstValueRefT> UniformValues;
 
   // Internal worklist for divergence propagation.
   std::vector<const InstructionT *> Worklist;
@@ -1107,7 +1128,7 @@ void GenericUniformityAnalysisImpl<ContextT>::compute() {
   // Initialize worklist.
   auto DivValuesCopy = DivergentValues;
   for (const auto DivVal : DivValuesCopy) {
-    assert(isDivergent(DivVal) && "Worklist invariant violated!");
+    assert(DivergentValues.count(DivVal) && "Worklist invariant violated!");
     pushUsers(DivVal);
   }
 
