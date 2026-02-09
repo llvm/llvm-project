@@ -73,6 +73,45 @@ entry:
   ret float %0
 }
 
+; CHECK-LABEL: t1_2019
+; CHECK: dfmax
+; CHECK: dfcmp.uo
+
+define dso_local double @t1_2019(double %a, double %b) local_unnamed_addr {
+entry:
+  %0 = tail call double @llvm.maximum.f64(double %a, double %b)
+  ret double %0
+}
+
+; CHECK-LABEL: t2_2019
+; CHECK: dfmin
+; CHECK: dfcmp.uo
+
+define dso_local double @t2_2019(double %a, double %b) local_unnamed_addr {
+entry:
+  %0 = tail call double @llvm.minimum.f64(double %a, double %b)
+  ret double %0
+}
+
+; CHECK-LABEL: t3_2019
+; CHECK: sfmax
+; CHECK: sfcmp.uo
+
+define dso_local float @t3_2019(float %a, float %b) local_unnamed_addr {
+entry:
+  %0 = tail call float @llvm.maximum.f32(float %a, float %b)
+  ret float %0
+}
+
+; CHECK-LABEL: t4_2019
+; CHECK: sfmin
+; CHECK: sfcmp.uo
+
+define dso_local float @t4_2019(float %a, float %b) local_unnamed_addr {
+entry:
+  %0 = tail call float @llvm.minimum.f32(float %a, float %b)
+  ret float %0
+}
 
 declare double @llvm.minnum.f64(double, double) #1
 declare double @llvm.maxnum.f64(double, double) #1

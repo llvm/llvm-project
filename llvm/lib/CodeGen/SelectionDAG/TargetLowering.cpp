@@ -8868,15 +8868,19 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   // First, implement comparison not propagating NaN. If no native fmin or fmax
   // available, use plain select with setcc instead.
   SDValue MinMax;
-  unsigned CompOpcIeee = IsMax ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
+  unsigned CompOpcIeee2008 = IsMax ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
+  unsigned CompOpcIeee2019Num = IsMax ? ISD::FMAXIMUMNUM : ISD::FMINIMUMNUM;
   unsigned CompOpc = IsMax ? ISD::FMAXNUM : ISD::FMINNUM;
 
   // FIXME: We should probably define fminnum/fmaxnum variants with correct
   // signed zero behavior.
   bool MinMaxMustRespectOrderedZero = false;
 
-  if (isOperationLegalOrCustom(CompOpcIeee, VT)) {
-    MinMax = DAG.getNode(CompOpcIeee, DL, VT, LHS, RHS, Flags);
+  if (isOperationLegalOrCustom(CompOpcIeee2008, VT)) {
+    MinMax = DAG.getNode(CompOpcIeee2008, DL, VT, LHS, RHS, Flags);
+    MinMaxMustRespectOrderedZero = true;
+  } else if (isOperationLegalOrCustom(CompOpcIeee2019Num, VT)) {
+    MinMax = DAG.getNode(CompOpcIeee2019Num, DL, VT, LHS, RHS, Flags);
     MinMaxMustRespectOrderedZero = true;
   } else if (isOperationLegalOrCustom(CompOpc, VT)) {
     MinMax = DAG.getNode(CompOpc, DL, VT, LHS, RHS, Flags);
