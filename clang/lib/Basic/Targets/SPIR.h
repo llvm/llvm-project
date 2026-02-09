@@ -118,6 +118,7 @@ protected:
     // Define available target features
     // These must be defined in sorted order!
     NoAsmVariants = true;
+    VectorsAreElementAligned = true;
 
     llvm::Triple HostTriple(Opts.HostTriple);
     if (!HostTriple.isSPIR() && !HostTriple.isSPIRV() &&
