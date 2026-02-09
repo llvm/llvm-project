@@ -301,13 +301,13 @@ bool PyGlobals::TracebackLoc::isUserTracebackFilename(
   nanobind::ft_lock_guard lock(mutex);
   if (rebuildUserTracebackIncludeRegex) {
     userTracebackIncludeRegex.assign(
-        llvm::join(userTracebackIncludeFiles, "|"));
+        nanobind::detail::joinRange(userTracebackIncludeFiles, "|"));
     rebuildUserTracebackIncludeRegex = false;
     isUserTracebackFilenameCache.clear();
   }
   if (rebuildUserTracebackExcludeRegex) {
     userTracebackExcludeRegex.assign(
-        llvm::join(userTracebackExcludeFiles, "|"));
+        nanobind::detail::joinRange(userTracebackExcludeFiles, "|"));
     rebuildUserTracebackExcludeRegex = false;
     isUserTracebackFilenameCache.clear();
   }

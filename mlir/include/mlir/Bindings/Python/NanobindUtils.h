@@ -16,6 +16,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <typeinfo>
 #include <variant>
@@ -80,6 +81,24 @@ private:
 
 namespace nanobind {
 namespace detail {
+
+/// Local helper adapted from llvm::join for a range, adding Separator between
+/// elements.
+template <typename Range>
+inline std::string joinRange(Range &&R, std::string_view Separator) {
+  auto Begin = R.begin();
+  auto End = R.end();
+  std::string S;
+  if (Begin == End)
+    return S;
+
+  S += *Begin;
+  while (++Begin != End) {
+    S += Separator;
+    S += *Begin;
+  }
+  return S;
+}
 
 /// Helper function to concatenate arguments into a `std::string`.
 template <typename... Ts>
