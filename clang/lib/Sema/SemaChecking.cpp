@@ -2143,6 +2143,8 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
     return AMDGPU().CheckAMDGCNBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32be:
+  case llvm::Triple::riscv64be:
     return RISCV().CheckBuiltinFunctionCall(TI, BuiltinID, TheCall);
   case llvm::Triple::loongarch32:
   case llvm::Triple::loongarch64:
@@ -2275,7 +2277,8 @@ static bool BuiltinBswapg(Sema &S, CallExpr *TheCall) {
     return true;
   }
   if (const auto *BT = dyn_cast<BitIntType>(ArgTy)) {
-    if (BT->getNumBits() % 16 != 0 && BT->getNumBits() != 8) {
+    if (BT->getNumBits() % 16 != 0 && BT->getNumBits() != 8 &&
+        BT->getNumBits() != 1) {
       S.Diag(Arg->getBeginLoc(), diag::err_bswapg_invalid_bit_width)
           << ArgTy << BT->getNumBits();
       return true;

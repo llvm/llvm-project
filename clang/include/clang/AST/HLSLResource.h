@@ -16,7 +16,6 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/Attrs.inc"
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Support/Compiler.h"
