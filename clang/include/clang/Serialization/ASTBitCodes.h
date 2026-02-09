@@ -1696,6 +1696,9 @@ enum StmtCode {
   /// An ExtVectorElementExpr record.
   EXPR_EXT_VECTOR_ELEMENT,
 
+  /// A MatrixElementExpr record.
+  EXPR_MATRIX_ELEMENT,
+
   /// An InitListExpr record.
   EXPR_INIT_LIST,
 
@@ -1927,6 +1930,9 @@ enum StmtCode {
   EXPR_CXX_FOLD,                          // CXXFoldExpr
   EXPR_CONCEPT_SPECIALIZATION,            // ConceptSpecializationExpr
   EXPR_REQUIRES,                          // RequiresExpr
+
+  // Reflection
+  EXPR_REFLECT,
 
   // CUDA
   EXPR_CUDA_KERNEL_CALL, // CUDAKernelCallExpr

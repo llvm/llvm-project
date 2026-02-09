@@ -140,12 +140,11 @@ define i32 @adc_merge_sub(i32 %a0) nounwind {
 define i32 @adc_add(i32 %0, i32 %1, i32 %2, i32 %3) nounwind {
 ; X86-LABEL: adc_add:
 ; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    addl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    cmpl %ecx, %eax
-; X86-NEXT:    adcl $0, %edx
+; X86-NEXT:    adcl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    js .LBB4_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl %ecx, %eax
@@ -155,9 +154,8 @@ define i32 @adc_add(i32 %0, i32 %1, i32 %2, i32 %3) nounwind {
 ; X64-LABEL: adc_add:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl %esi, %eax
-; X64-NEXT:    addl %ecx, %edx
 ; X64-NEXT:    cmpl %esi, %edi
-; X64-NEXT:    adcl $0, %edx
+; X64-NEXT:    adcl %ecx, %edx
 ; X64-NEXT:    cmovsl %edi, %eax
 ; X64-NEXT:    retq
   %5 = icmp ult i32 %0, %1

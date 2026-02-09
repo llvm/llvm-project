@@ -594,6 +594,16 @@ add_header_library(
 )
 
 add_header_library(
+  ffmal
+  HDRS
+    ffmal.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   f16sqrt
   HDRS
     f16sqrt.h
@@ -1519,6 +1529,21 @@ add_header_library(
     libc.src.__support.FPUtil.fma
     libc.src.__support.common
     libc.src.__support.macros.config
+    libc.include.llvm-libc-types.float128
+)
+
+add_header_library(
+  sqrtf128
+  HDRS
+    sqrtf128.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.common
+    libc.src.__support.macros.optimization
+    libc.src.__support.uint128
     libc.include.llvm-libc-types.float128
 )
 

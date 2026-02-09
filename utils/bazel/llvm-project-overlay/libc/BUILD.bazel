@@ -2945,6 +2945,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_ffmal",
+    hdrs = ["src/__support/math/ffmal.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fma",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_frexpf128",
     hdrs = ["src/__support/math/frexpf128.h"],
     deps = [
@@ -3510,6 +3520,21 @@ libc_support_library(
         ":__support_common",
         ":__support_fputil_fma",
         ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_sqrtf128",
+    hdrs = ["src/__support/math/sqrtf128.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_bit",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_optimization",
+        ":__support_uint128",
+        ":llvm_libc_types_float128",
     ],
 )
 
@@ -4580,7 +4605,7 @@ libc_math_function(
 libc_math_function(
     name = "ffmal",
     additional_deps = [
-        ":__support_fputil_fma",
+        ":__support_math_ffmal",
     ],
 )
 
@@ -5443,7 +5468,7 @@ libc_math_function(
 libc_math_function(
     name = "sqrtf128",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_sqrtf128",
     ],
 )
 

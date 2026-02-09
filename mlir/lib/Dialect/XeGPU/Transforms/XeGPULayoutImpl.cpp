@@ -89,11 +89,15 @@ bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
       // Layouts are needed for vector type only.
       if (!isa<VectorType>(operand.get().getType()))
         continue;
+      // Skip block arguments since they don't have defining ops to attach
+      // layout attributes to
+      if (isa<BlockArgument>(operand.get()))
+        continue;
       auto layout = xegpu::getDistributeLayoutAttr(operand.get());
       if (!layout) {
-        op->emitError("Could not find layout attribute for operand ")
+        op->emitWarning("Could not find layout attribute for operand ")
             << operand.getOperandNumber() << " of operation " << op->getName();
-        return WalkResult::interrupt();
+        continue;
       }
       xegpu::setDistributeLayoutAttr(operand, layout);
     }
@@ -167,8 +171,8 @@ xegpu::inferMultiReductionSourceLayout(xegpu::DistributeLayoutAttr resLayout,
          "reduction result layout must be slice layout");
 
   xegpu::SliceAttr sliceLayout = dyn_cast<xegpu::SliceAttr>(resLayout);
-  auto sliceDims = sliceLayout.getDims().asArrayRef();
-  assert(reduceDims == sliceDims &&
+
+  assert((reduceDims == sliceLayout.getDims().asArrayRef()) &&
          "reduction dims must match with slice dims");
 
   return sliceLayout.getParent();
