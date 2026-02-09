@@ -8504,7 +8504,9 @@ ExprResult InitializationSequence::Perform(Sema &S,
         if (Entity.getType()->getAs<PointerType>() &&
             CurInit.get()->EvaluateAsRValue(ER, S.Context) &&
             // We continue and let it error later if Rvalue is not a pointer
-            ER.Val.isLValue() && !ER.Val.isNullPointer()) {
+            ER.Val.isLValue() && 
+            !ER.Val.isNullPointer() &&
+            !ER.Val.getLValueBase().isNull()) {
           S.Diag(Kind.getLocation(), diag::err_c23_constexpr_pointer_not_null);
           return ExprError();
         }
