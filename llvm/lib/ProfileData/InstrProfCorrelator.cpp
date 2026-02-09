@@ -499,7 +499,7 @@ void BinaryInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
     uint64_t CountersStart = this->Ctx->CountersSectionStart;
     uint64_t CountersEnd = this->Ctx->CountersSectionEnd;
     if (!this->Ctx->MachOFixups.empty()) {
-      uint64_t Offset = CounterPtr - (uint64_t)DataStart;
+      uint64_t Offset = (uint64_t)&I->CounterPtr - (uint64_t)DataStart;
       auto It = this->Ctx->MachOFixups.find(Offset);
       if (It != this->Ctx->MachOFixups.end()) {
         CounterPtr = It->second;
