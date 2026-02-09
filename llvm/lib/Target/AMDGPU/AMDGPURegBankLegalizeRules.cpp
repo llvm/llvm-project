@@ -213,8 +213,6 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
   }
   case _:
     return true;
-  case PhysReg:
-    return true;
   default:
     llvm_unreachable("missing matchUniformityAndLLT");
   }
@@ -226,12 +224,14 @@ bool PredicateMapping::match(const MachineInstr &MI,
   // Check LLT signature.
   for (unsigned i = 0; i < OpUniformityAndTypes.size(); ++i) {
     if (OpUniformityAndTypes[i] == _) {
-      if (MI.getOperand(i).isReg())
+      // Skip non-register operands and physical registers, which don't
+      // need register bank consideration.
+      if (MI.getOperand(i).isReg() && MI.getOperand(i).getReg().isVirtual())
         return false;
       continue;
     }
 
-    // Remaining IDs check registers.
+    // Remaining IDs check virtual registers.
     if (!MI.getOperand(i).isReg())
       return false;
 
@@ -1161,10 +1161,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForGOpcs({G_AMDGPU_WAVE_ADDRESS}).Any({{UniP5}, {{SgprP5}, {}}});
 
   addRulesForGOpcs({G_SI_CALL})
-      .Any({{PhysReg, UniP0}, {{None}, {SgprP0}}})
-      .Any({{PhysReg, DivP0}, {{None}, {SgprP0_WF}}})
-      .Any({{PhysReg, UniP4}, {{None}, {SgprP4}}})
-      .Any({{PhysReg, DivP4}, {{None}, {SgprP4_WF}}});
+      .Any({{_, UniP0}, {{None}, {SgprP0}}})
+      .Any({{_, DivP0}, {{None}, {SgprP0_WF}}})
+      .Any({{_, UniP4}, {{None}, {SgprP4}}})
+      .Any({{_, DivP4}, {{None}, {SgprP4_WF}}});
 
   bool hasSALUFloat = ST->hasSALUFloatInsts();
 

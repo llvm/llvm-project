@@ -38,7 +38,6 @@ bool isAnyPtr(LLT Ty, unsigned Width);
 // be checked.
 enum UniformityLLTOpPredicateID {
   _,
-  PhysReg,
   // scalars
   S1,
   S16,
