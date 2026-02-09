@@ -84,4 +84,5 @@
 # RUN: clangd -background-index --background-index-path-mappings=%/t2=/MAPPED_ROOT -lit-test < %/t2/definition.jsonrpc > %/t2/clangd-output.json
 # RUN: FileCheck %/t2/definition.jsonrpc < %/t2/clangd-output.json
 # RUN: FileCheck --check-prefix=ROUNDTRIP %s -DDIR=%/t2 < %/t2/clangd-output.json
-# ROUNDTRIP: "uri": "file://[[DIR]]/foo.cpp"
+# Handle the extra slash needed on Windows
+# ROUNDTRIP: "uri": "file://{{/?}}[[DIR]]/foo.cpp"
