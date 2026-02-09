@@ -988,12 +988,14 @@ void test_promotion(void) {
 
 void test_bool(_Bool b, _Bool* bp)
 {
-#if SIZE_MAX != UINT_MAX
+  // Expect a warning if size_t/ptrdiff_t size is greater than a _Bool promoted
+  // to an int or if it might be a long int, with the same size of an int.
+#if SIZE_MAX > UINT_MAX || UINT_MAX == ULONG_MAX
   printf("%zu", b); // expected-warning-re{{format specifies type 'size_t' (aka '{{.+}}') but the argument has type '_Bool'}}
 #else
   printf("%zu", b); // no-warning
 #endif
-#if PTRDIFF_MAX != INT_MAX
+#if PTRDIFF_MAX > INT_MAX || INT_MAX == LONG_MAX
   printf("%td", b); // expected-warning-re{{format specifies type 'ptrdiff_t' (aka '{{.+}}') but the argument has type '_Bool'}}
 #else
   printf("%td", b); // no-warning
