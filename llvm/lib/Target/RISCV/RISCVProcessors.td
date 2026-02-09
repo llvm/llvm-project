@@ -78,13 +78,16 @@ class RISCVProcessorModel<string n,
   int MVendorID = 0;
   int MArchID = 0;
   int MImpID = 0;
+
+  list<RISCVTuneFeature> ConfigurableTuneFeatures = [];
 }
 
-class RISCVTuneProcessorModel<string n,
-                              SchedMachineModel m,
+class RISCVTuneProcessorModel<string n, SchedMachineModel m,
                               list<SubtargetFeature> tunef = [],
                               list<SubtargetFeature> f = []>
-    : ProcessorModel<n, m, f,tunef>;
+    : ProcessorModel<n, m, f, tunef> {
+  list<RISCVTuneFeature> ConfigurableTuneFeatures = [];
+}
 
 defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore];
 
@@ -294,7 +297,9 @@ def SIFIVE_X280 : RISCVProcessorModel<"sifive-x280", SiFive7Model,
                                        FeatureStdExtZvfh,
                                        FeatureStdExtZba,
                                        FeatureStdExtZbb],
-                                      SiFiveIntelligenceTuneFeatures>;
+                                      SiFiveIntelligenceTuneFeatures> {
+  let ConfigurableTuneFeatures = [TuneHasSingleElementVecFP64];
+}
 
 def SIFIVE_X390 : RISCVProcessorModel<"sifive-x390",
                                       SiFiveX390Model,
@@ -340,7 +345,9 @@ def SIFIVE_X390 : RISCVProcessorModel<"sifive-x390",
                                        FeatureVendorXSiFivecdiscarddlone,
                                        FeatureVendorXSiFivecflushdlone],
                                       !listconcat(SiFiveIntelligenceTuneFeatures,
-                                                  [TuneHasSingleElementVecFP64])>;
+                                                  [TuneHasSingleElementVecFP64])> {
+  let ConfigurableTuneFeatures = [TuneHasSingleElementVecFP64];
+}
 
 defvar SiFiveP400TuneFeatures = [TuneNoDefaultUnroll,
                                  TuneConditionalCompressedMoveFusion,
@@ -768,7 +775,7 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
 }
 
 def SPACEMIT_X100 : RISCVProcessorModel<"spacemit-x100",
-                                        NoSchedModel,
+                                        SpacemitX100Model,
                                         !listconcat(RVA23U64Features,
                                         [FeatureStdExtZbc,
                                          FeatureStdExtZbkc,
