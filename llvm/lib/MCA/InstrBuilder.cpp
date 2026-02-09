@@ -563,7 +563,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
          "Itineraries are not yet supported!");
 
   // Obtain the instruction descriptor from the opcode.
-  unsigned Opcode = MCI.getOpcode();
+  unsigned short Opcode = MCI.getOpcode();
   const MCInstrDesc &MCDesc = MCII.get(Opcode);
   const MCSchedModel &SM = STI.getSchedModel();
 
