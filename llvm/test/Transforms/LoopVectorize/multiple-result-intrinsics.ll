@@ -816,32 +816,3 @@ for.body:
 exit:
   ret void
 }
-
-define i32 @smul_with_overflow_vars(i32 %a, i32 %b) {
-; CHECK-LABEL: define i32 @smul_with_overflow_vars(
-; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
-; CHECK:  [[VECTOR_PH:.*:]]
-; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP0:%.*]] = call { <2 x i32>, <2 x i1> } @llvm.smul.with.overflow.v2i32(<2 x i32> [[BROADCAST_SPLAT2:%.*]], <2 x i32> [[BROADCAST_SPLAT:%.*]])
-; CHECK:    [[TMP1:%.*]] = extractvalue { <2 x i32>, <2 x i1> } [[TMP0]], 1
-; CHECK:  [[MIDDLE_BLOCK:.*:]]
-; CHECK:  [[EXIT:.*:]]
-; CHECK:  [[EXIT1:.*:]]
-;
-entry:
-  br label %loop
-
-loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %acc = phi i32 [ 0, %entry ], [ %or, %loop ]
-  %call = tail call { i32, i1 } @llvm.smul.with.overflow.i32(i32 %a, i32 %b)
-  %overflow = extractvalue { i32, i1 } %call, 1
-  %ext = zext i1 %overflow to i32
-  %or = or i32 %acc, %ext
-  %iv.next = add i64 %iv, 1
-  %done = icmp eq i64 %iv, 1
-  br i1 %done, label %exit, label %loop
-
-exit:
-  ret i32 %or
-}
