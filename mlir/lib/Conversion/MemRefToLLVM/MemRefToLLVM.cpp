@@ -938,20 +938,16 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto type = loadOp.getMemRefType();
 
-    // Bail out if volatile flag is set.
-    if (loadOp.getVolatile_())
-      return rewriter.notifyMatchFailure(loadOp,
-                                         "volatile loads not supported");
-
     // Per memref.load spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
     // hence inbounds and nuw are used when lowering to llvm.getelementptr.
     Value dataPtr = getStridedElementPtr(rewriter, loadOp.getLoc(), type,
-                                         adaptor.getMemref(),
-                                         adaptor.getIndices(), kNoWrapFlags);
+                                        adaptor.getMemref(),
+                                        adaptor.getIndices(), kNoWrapFlags);
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
         loadOp, typeConverter->convertType(type.getElementType()), dataPtr,
-        loadOp.getAlignment().value_or(0), false, loadOp.getNontemporal());
+        loadOp.getAlignment().value_or(0), loadOp.getVolatile_(),
+        loadOp.getNontemporal());
     return success();
   }
 };
@@ -966,10 +962,6 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto type = op.getMemRefType();
 
-    // Bail out if volatile flag is set.
-    if (op.getVolatile_())
-      return rewriter.notifyMatchFailure(op, "volatile stores not supported");
-
     // Per memref.store spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
     // hence inbounds and nuw are used when lowering to llvm.getelementptr.
@@ -978,7 +970,8 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
                              adaptor.getIndices(), kNoWrapFlags);
     rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, adaptor.getValue(), dataPtr,
                                                op.getAlignment().value_or(0),
-                                               false, op.getNontemporal());
+                                               op.getVolatile_(),
+                                               op.getNontemporal());
     return success();
   }
 };

@@ -820,9 +820,9 @@ func.func @load_store_alignment(%memref: memref<4xi32>) {
 // CHECK-LABEL: func @load_store_volatile
 func.func @load_store_volatile(%memref: memref<4xi32>) {
   %c0 = arith.constant 0 : index
-  // CHECK: vector.load {{.*}} {volatile_ = true} : memref<4xi32>, vector<4xi32>
+  // CHECK: vector.load {{.*}} {volatile_} : memref<4xi32>, vector<4xi32>
   %val = vector.load %memref[%c0] { volatile_ = true } : memref<4xi32>, vector<4xi32>
-  // CHECK: vector.store {{.*}} {volatile_ = true} : memref<4xi32>, vector<4xi32>
+  // CHECK: vector.store {{.*}} {volatile_} : memref<4xi32>, vector<4xi32>
   vector.store %val, %memref[%c0] { volatile_ = true } : memref<4xi32>, vector<4xi32>
   return
 }
