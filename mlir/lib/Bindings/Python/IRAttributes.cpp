@@ -22,7 +22,6 @@
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"
-#include "llvm/ADT/ScopeExit.h"
 
 namespace nb = nanobind;
 using namespace nanobind::literals;
@@ -121,6 +120,38 @@ Raises:
   ValueError: If the type of the buffer or array cannot be matched to an MLIR
     type or if the buffer does not meet expectations.
 )";
+
+/// Local helper adapted from llvm::scope_exit.
+namespace {
+template <typename Callable>
+class [[nodiscard]] scope_exit {
+  Callable ExitFunction;
+  bool Engaged = true; // False once moved-from or release()d.
+
+public:
+  template <typename Fp>
+  explicit scope_exit(Fp &&F) : ExitFunction(std::forward<Fp>(F)) {}
+
+  scope_exit(scope_exit &&Rhs)
+      : ExitFunction(std::move(Rhs.ExitFunction)), Engaged(Rhs.Engaged) {
+    Rhs.release();
+  }
+  scope_exit(const scope_exit &) = delete;
+  scope_exit &operator=(scope_exit &&) = delete;
+  scope_exit &operator=(const scope_exit &) = delete;
+
+  void release() { Engaged = false; }
+
+  ~scope_exit() {
+    if (Engaged)
+      ExitFunction();
+  }
+};
+
+template <typename Callable>
+scope_exit(Callable) -> scope_exit<Callable>;
+
+} // namespace
 
 namespace mlir {
 namespace python {
@@ -616,7 +647,7 @@ PyDenseElementsAttribute PyDenseElementsAttribute::getFromBuffer(
   if (PyObject_GetBuffer(array.ptr(), &view, flags) != 0) {
     throw nb::python_error();
   }
-  llvm::scope_exit freeBuffer([&]() { PyBuffer_Release(&view); });
+  scope_exit freeBuffer([&]() { PyBuffer_Release(&view); });
 
   MlirContext context = contextWrapper->get();
   MlirAttribute attr = getAttributeFromBuffer(
@@ -1126,7 +1157,7 @@ PyDenseResourceElementsAttribute::getFromBuffer(
 
   // This scope releaser will only release if we haven't yet transferred
   // ownership.
-  llvm::scope_exit freeBuffer([&]() {
+  scope_exit freeBuffer([&]() {
     if (view)
       PyBuffer_Release(view.get());
   });
