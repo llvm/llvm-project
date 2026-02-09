@@ -910,21 +910,31 @@ class VPatBinaryVL_XI<SDPatternOperator vop,
                    xop_kind:$rs2,
                    (mask_type VMV0:$vm), GPR:$vl, log2sew, TAIL_AGNOSTIC)>;
 
+multiclass VPatBinaryVL_VV<SDPatternOperator vop, string instruction_name,
+                           list<VTypeInfo> vtilist = AllIntegerVectors,
+                           bit isSEWAware = 0,
+                           list<Predicate> ExtraPreds = []> {
+  foreach vti = vtilist in {
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in {
+    def : VPatBinaryVL_V<vop, instruction_name, "VV",
+                         vti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                         vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
+                         vti.RegClass, isSEWAware>;
+    }
+  }
+}
+
 multiclass VPatBinaryVL_VV_VX<SDPatternOperator vop, string instruction_name,
                               list<VTypeInfo> vtilist = AllIntegerVectors,
                               bit isSEWAware = 0,
-                              list<Predicate> ExtraPreds = []> {
+                              list<Predicate> ExtraPreds = []> 
+    : VPatBinaryVL_VV<vop, instruction_name, vtilist, isSEWAware, ExtraPreds>{
   foreach vti = vtilist in {
-    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in {
-      def : VPatBinaryVL_V<vop, instruction_name, "VV",
-                           vti.Vector, vti.Vector, vti.Vector, vti.Mask,
-                           vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
-                           vti.RegClass, isSEWAware>;
-      def : VPatBinaryVL_XI<vop, instruction_name, "VX",
-                            vti.Vector, vti.Vector, vti.Vector, vti.Mask,
-                            vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
-                            SplatPat, GPR, isSEWAware>;
-    }
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
+    def : VPatBinaryVL_XI<vop, instruction_name, "VX",
+                          vti.Vector, vti.Vector, vti.Vector, vti.Mask,
+                          vti.Log2SEW, vti.LMul, vti.RegClass, vti.RegClass,
+                          SplatPat, GPR, isSEWAware>;
   }
 }
 
