@@ -371,15 +371,9 @@ struct MissingFeatures {
   static bool stringTypeWithDifferentArraySize() { return false; }
 
   // Future CIR operations
-  static bool awaitOp() { return false; }
   static bool callOp() { return false; }
-  static bool ifOp() { return false; }
-  static bool labelOp() { return false; }
-  static bool ptrDiffOp() { return false; }
   static bool llvmLoweringPtrDiffConsidersPointee() { return false; }
-  static bool ptrStrideOp() { return false; }
   static bool switchOp() { return false; }
-  static bool throwOp() { return false; }
   static bool tryOp() { return false; }
   static bool vecTernaryOp() { return false; }
   static bool zextOp() { return false; }
