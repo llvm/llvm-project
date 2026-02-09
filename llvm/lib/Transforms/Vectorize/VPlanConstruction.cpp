@@ -1046,7 +1046,9 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
                               m_VPInstruction<VPInstruction::ExitingIVValue>(),
                               m_ExtractLastPart(m_Specific(V))))) &&
                "Unexpected user of value defined inside vector loop region");
-        // TODO: For reduction phis, use phi value instead of poison.
+        // TODO: For reduction phis, use phi value instead of poison so we can
+        // remove the special casing for tail folding in
+        // LoopVectorizationPlanner::addReductionResultComputation
         VPValue *Poison = Plan.getOrAddLiveIn(
             PoisonValue::get(V->getUnderlyingValue()->getType()));
         VPInstruction *Phi = Builder.createScalarPhi({V, Poison}, {});
