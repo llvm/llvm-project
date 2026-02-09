@@ -1004,11 +1004,13 @@ def MFMALdScaleXForm : SDNodeXForm<timm, [{
   return CurDAG->getTargetConstant(New, SDLoc(N), MVT::i32);
 }]>;
 
-def is_canonicalized : PatLeaf<(fAny srcvalue:$src), [{
+def fcanonicalize_canonicalized
+    : PatFrag<(ops node:$op), (fcanonicalize node:$op), [{
   const SITargetLowering &Lowering =
       *static_cast<const SITargetLowering *>(getTargetLowering());
-  return Lowering.isCanonicalized(*CurDAG, Op);
+  return Lowering.isCanonicalized(*CurDAG, Op->getOperand(0), N->getFlags());
 }]> {
+  // FIXME: This predicate for GlobalISel is dead code.
   let GISelPredicateCode = [{
     const SITargetLowering *TLI = static_cast<const SITargetLowering *>(
         MF.getSubtarget().getTargetLowering());
@@ -1200,12 +1202,12 @@ class NamedIntOperand<string prefix, bit Optional = 1, string name = NAME>
                     !if(AlwaysPrint, "true", "false")#"); }";
 }
 
-class NamedBitOperand<string Id, string Name = NAME>
+class NamedBitOperand<string Id, string Name = NAME, bit AlwaysIgnoreNegative = 0>
     : CustomOperand<i1, 1, Name> {
   let PredicateMethod = "isImmTy<AMDGPUOperand::"#ImmTy#">";
   let ParserMethod =
     "[this](OperandVector &Operands) -> ParseStatus { "#
-    "return parseNamedBit(\""#Id#"\", Operands, AMDGPUOperand::"#ImmTy#"); }";
+    "return parseNamedBit(\""#Id#"\", Operands, AMDGPUOperand::"#ImmTy# !if(AlwaysIgnoreNegative, ", true", ", false")#"); }";
   let PrintMethod = "[this](const MCInst *MI, unsigned OpNo, "#
     "const MCSubtargetInfo &STI, raw_ostream &O) { "#
     "printNamedBit(MI, OpNo, O, \""#Id#"\"); }";
@@ -1270,8 +1272,10 @@ def R128A16 : CustomOperand<i1, 1>;
 def A16 : NamedBitOperand<"a16">;
 def D16 : NamedBitOperand<"d16">;
 def LWE : NamedBitOperand<"lwe">;
-def exp_compr : NamedBitOperand<"compr", "ExpCompr">;
-def exp_vm : NamedBitOperand<"vm", "ExpVM">;
+def exp_compr : NamedBitOperand<"compr", "ExpCompr", 1>;
+def exp_vm : NamedBitOperand<"vm", "ExpVM", 1>;
+def exp_done : NamedBitOperand<"done", "Done", 1>;
+def exp_row_en : NamedBitOperand<"row_en", "RowEn", 1>;
 
 def FORMAT : CustomOperand<i8>;
 
