@@ -12,12 +12,9 @@
 // <atomic>
 
 // template<class T>
-//     T
-//     atomic_fetch_min(volatile atomic<T>*, atomic<T>::value_type) noexcept;
-//
+//   T atomic_fetch_min(volatile atomic<T>*, typename atomic<T>::value_type) noexcept;
 // template<class T>
-//     T
-//     atomic_fetch_min(atomic<T>*, atomic<T>::value_type) noexcept;
+//   constexpr T atomic_fetch_min(atomic<T>*, typename atomic<T>::value_type) noexcept;
 
 #include <atomic>
 #include <type_traits>
@@ -30,16 +27,14 @@ template <class T>
 struct TestFn {
   void operator()() const {
     {
-      typedef std::atomic<T> A;
-      A t(T(1));
+      std::atomic<T> t(T(1));
       assert(std::atomic_fetch_min(&t, T(2)) == T(1));
       assert(t == T(1));
 
       ASSERT_NOEXCEPT(std::atomic_fetch_min(&t, T(2)));
     }
     {
-      typedef std::atomic<T> A;
-      volatile A t(T(3));
+      volatile std::atomic<T> t(T(3));
       assert(std::atomic_fetch_min(&t, T(2)) == T(3));
       assert(t == T(2));
 

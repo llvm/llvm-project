@@ -816,25 +816,29 @@ atomic_fetch_xor_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __o
 #if _LIBCPP_STD_VER >= 26
 // atomic_fetch_max
 
-template <class _Tp, __enable_if_t<is_integral<_Tp>::value && !is_same<_Tp, bool>::value, int> = 0>
+template <class _Tp>
+  requires(integral<_Tp> && !same_as<_Tp, bool>)
 _LIBCPP_HIDE_FROM_ABI _Tp atomic_fetch_max(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op) _NOEXCEPT {
   return __o->fetch_max(__op);
 }
 
-template <class _Tp, __enable_if_t<is_integral<_Tp>::value && !is_same<_Tp, bool>::value, int> = 0>
+template <class _Tp>
+  requires(integral<_Tp> && !same_as<_Tp, bool>)
 _LIBCPP_HIDE_FROM_ABI _Tp atomic_fetch_max(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op) _NOEXCEPT {
   return __o->fetch_max(__op);
 }
 
 // atomic_fetch_max_explicit
 
-template <class _Tp, __enable_if_t<is_integral<_Tp>::value && !is_same<_Tp, bool>::value, int> = 0>
+template <class _Tp>
+  requires(integral<_Tp> && !same_as<_Tp, bool>)
 _LIBCPP_HIDE_FROM_ABI _Tp atomic_fetch_max_explicit(
     volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op, memory_order __m) _NOEXCEPT {
   return __o->fetch_max(__op, __m);
 }
 
-template <class _Tp, __enable_if_t<is_integral<_Tp>::value && !is_same<_Tp, bool>::value, int> = 0>
+template <class _Tp>
+  requires(integral<_Tp> && !same_as<_Tp, bool>)
 _LIBCPP_HIDE_FROM_ABI _Tp
 atomic_fetch_max_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op, memory_order __m) _NOEXCEPT {
   return __o->fetch_max(__op, __m);
@@ -842,25 +846,29 @@ atomic_fetch_max_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __o
 
 // atomic_fetch_min
 
-template <class _Tp, __enable_if_t<is_integral<_Tp>::value && !is_same<_Tp, bool>::value, int> = 0>
+template <class _Tp>
+  requires(integral<_Tp> && !same_as<_Tp, bool>)
 _LIBCPP_HIDE_FROM_ABI _Tp atomic_fetch_min(volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op) _NOEXCEPT {
   return __o->fetch_min(__op);
 }
 
-template <class _Tp, __enable_if_t<is_integral<_Tp>::value && !is_same<_Tp, bool>::value, int> = 0>
+template <class _Tp>
+  requires(integral<_Tp> && !same_as<_Tp, bool>)
 _LIBCPP_HIDE_FROM_ABI _Tp atomic_fetch_min(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op) _NOEXCEPT {
   return __o->fetch_min(__op);
 }
 
 // atomic_fetch_min_explicit
 
-template <class _Tp, __enable_if_t<is_integral<_Tp>::value && !is_same<_Tp, bool>::value, int> = 0>
+template <class _Tp>
+  requires(integral<_Tp> && !same_as<_Tp, bool>)
 _LIBCPP_HIDE_FROM_ABI _Tp atomic_fetch_min_explicit(
     volatile atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op, memory_order __m) _NOEXCEPT {
   return __o->fetch_min(__op, __m);
 }
 
-template <class _Tp, __enable_if_t<is_integral<_Tp>::value && !is_same<_Tp, bool>::value, int> = 0>
+template <class _Tp>
+  requires(integral<_Tp> && !same_as<_Tp, bool>)
 _LIBCPP_HIDE_FROM_ABI _Tp
 atomic_fetch_min_explicit(atomic<_Tp>* __o, typename atomic<_Tp>::value_type __op, memory_order __m) _NOEXCEPT {
   return __o->fetch_min(__op, __m);
