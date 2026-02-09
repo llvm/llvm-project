@@ -698,6 +698,10 @@ static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
   auto VecElts = VecOpTy->getElementCount();
 
   uint64_t BitCastNumElts = VecElts.getKnownMinValue() * TruncRatio;
+  // Make sure we don't overflow in the calculation of the new index.
+  // (VecOpIdx + 1) * TruncRatio should not overflow.
+  if (Cst->uge(std::numeric_limits<uint64_t>::max() / TruncRatio))
+    return nullptr;
   uint64_t VecOpIdx = Cst->getZExtValue();
   uint64_t NewIdx = IC.getDataLayout().isBigEndian()
                         ? (VecOpIdx + 1) * TruncRatio - 1
@@ -711,17 +715,21 @@ static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
       return nullptr;
 
     uint64_t IdxOfs = ShiftAmount->udiv(DstBits).getZExtValue();
+    // IdxOfs is guaranteed to be less than TruncRatio, so we won't overflow in
+    // the adjustment.
+    assert(IdxOfs < TruncRatio &&
+           "IdxOfs is expected to be less than TruncRatio.");
     NewIdx = IC.getDataLayout().isBigEndian() ? (NewIdx - IdxOfs)
                                               : (NewIdx + IdxOfs);
   }
 
   assert(BitCastNumElts <= std::numeric_limits<uint32_t>::max() &&
-         NewIdx <= std::numeric_limits<uint32_t>::max() && "overflow 32-bits");
+         "overflow 32-bits");
 
   auto *BitCastTo =
       VectorType::get(DstType, BitCastNumElts, VecElts.isScalable());
   Value *BitCast = IC.Builder.CreateBitCast(VecOp, BitCastTo);
-  return ExtractElementInst::Create(BitCast, IC.Builder.getInt32(NewIdx));
+  return ExtractElementInst::Create(BitCast, IC.Builder.getInt64(NewIdx));
 }
 
 /// Funnel/Rotate left/right may occur in a wider type than necessary because of

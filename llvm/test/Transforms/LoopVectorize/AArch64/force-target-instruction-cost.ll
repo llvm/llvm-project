@@ -590,6 +590,81 @@ exit:
   ret void
 }
 
+define void @forced_scalar_instr(ptr %gep.dst) {
+; COMMON-LABEL: define void @forced_scalar_instr(
+; COMMON-SAME: ptr [[GEP_DST:%.*]]) {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    br label %[[VECTOR_PH:.*]]
+; COMMON:       [[VECTOR_PH]]:
+; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
+; COMMON:       [[VECTOR_BODY]]:
+; COMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
+; COMMON-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE6]] ]
+; COMMON-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i32
+; COMMON-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i8> [[VEC_IND]], splat (i8 4)
+; COMMON-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
+; COMMON-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; COMMON:       [[PRED_STORE_IF]]:
+; COMMON-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
+; COMMON-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], 0
+; COMMON-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[TMP3]]
+; COMMON-NEXT:    [[TMP6:%.*]] = or i32 [[TMP4]], 1
+; COMMON-NEXT:    store i32 [[TMP6]], ptr [[TMP5]], align 4
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; COMMON:       [[PRED_STORE_CONTINUE]]:
+; COMMON-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP1]], i32 1
+; COMMON-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; COMMON:       [[PRED_STORE_IF1]]:
+; COMMON-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 1
+; COMMON-NEXT:    [[TMP9:%.*]] = add i32 [[TMP0]], 1
+; COMMON-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[TMP8]]
+; COMMON-NEXT:    [[TMP11:%.*]] = or i32 [[TMP9]], 1
+; COMMON-NEXT:    store i32 [[TMP11]], ptr [[TMP10]], align 4
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
+; COMMON:       [[PRED_STORE_CONTINUE2]]:
+; COMMON-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP1]], i32 2
+; COMMON-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; COMMON:       [[PRED_STORE_IF3]]:
+; COMMON-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 2
+; COMMON-NEXT:    [[TMP14:%.*]] = add i32 [[TMP0]], 2
+; COMMON-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[TMP13]]
+; COMMON-NEXT:    [[TMP16:%.*]] = or i32 [[TMP14]], 1
+; COMMON-NEXT:    store i32 [[TMP16]], ptr [[TMP15]], align 4
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
+; COMMON:       [[PRED_STORE_CONTINUE4]]:
+; COMMON-NEXT:    [[TMP17:%.*]] = extractelement <4 x i1> [[TMP1]], i32 3
+; COMMON-NEXT:    br i1 [[TMP17]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
+; COMMON:       [[PRED_STORE_IF5]]:
+; COMMON-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], 3
+; COMMON-NEXT:    [[TMP19:%.*]] = add i32 [[TMP0]], 3
+; COMMON-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[TMP18]]
+; COMMON-NEXT:    [[TMP21:%.*]] = or i32 [[TMP19]], 1
+; COMMON-NEXT:    store i32 [[TMP21]], ptr [[TMP20]], align 4
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
+; COMMON:       [[PRED_STORE_CONTINUE6]]:
+; COMMON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; COMMON-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
+; COMMON-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], 8
+; COMMON-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; COMMON:       [[MIDDLE_BLOCK]]:
+; COMMON-NEXT:    br label %[[EXIT:.*]]
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr i32, ptr %gep.dst, i64 %iv
+  %t = trunc i64 %iv to i32
+  %o = or i32 %t, 1
+  store i32 %o, ptr %gep, align 4
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 4
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 attributes #0 = { "target-features"="+neon,+sve" vscale_range(1,16) }
 attributes #1 = { "target-cpu"="neoverse-512tvb" }
 

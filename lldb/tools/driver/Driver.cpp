@@ -634,7 +634,7 @@ int Driver::MainLoop() {
   // Check if we have any data in the commands stream, and if so, save it to a
   // temp file
   // so we can then run the command interpreter using the file contents.
-  bool go_interactive = true;
+  bool go_interactive = !m_option_data.m_batch;
   if ((commands_stream.GetData() != nullptr) &&
       (commands_stream.GetSize() != 0u)) {
     SBError error = m_debugger.SetInputString(commands_stream.GetData());
@@ -672,6 +672,7 @@ int Driver::MainLoop() {
     if (m_option_data.m_batch &&
         results.GetResult() == lldb::eCommandInterpreterResultInferiorCrash &&
         !m_option_data.m_after_crash_commands.empty()) {
+      go_interactive = true;
       SBStream crash_commands_stream;
       WriteCommandsForSourcing(eCommandPlacementAfterCrash,
                                crash_commands_stream);
