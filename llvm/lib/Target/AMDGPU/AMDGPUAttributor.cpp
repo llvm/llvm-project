@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
