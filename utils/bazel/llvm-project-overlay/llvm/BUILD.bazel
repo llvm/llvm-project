@@ -1507,6 +1507,13 @@ td_library(
     ]),
 )
 
+td_library(
+    name = "WebAssemblyTargetTdFiles",
+    srcs = glob([
+        "lib/Target/WebAssembly/**/*.td",
+    ]),
+)
+
 gentbl_cc_library(
     name = "RISCVTargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/RISCVTargetParserDef.inc": ["-gen-riscv-target-def"]},
@@ -3322,6 +3329,10 @@ llvm_target_lib_list = [lib for lib in [
         "short_name": "WebAssembly",
         "tbl_outs": [
             (
+                ["-gen-register-bank"],
+                "lib/Target/WebAssembly/WebAssemblyGenRegisterBank.inc",
+            ),
+            (
                 ["-gen-disassembler"],
                 "lib/Target/WebAssembly/WebAssemblyGenDisassemblerTables.inc",
             ),
@@ -3367,6 +3378,9 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-sd-node-info"],
                 "lib/Target/WebAssembly/WebAssemblyGenSDNodeInfo.inc",
             ),
+        ],
+        "tbl_deps": [
+            ":webassembly_isel_target_gen",
         ],
     },
     {
@@ -3671,6 +3685,28 @@ gentbl_cc_library(
     deps = [
         ":CommonTargetTdFiles",
         ":RISCVTargetTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "webassembly_isel_target_gen",
+    strip_include_prefix = "lib/Target/WebAssembly",
+    tbl_outs = {
+        "lib/Target/WebAssembly/WebAssemblyGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/WebAssembly/WebAssemblyGenPreLegalizeGICombiner.inc": [
+            "-gen-global-isel-combiner",
+            "-combiners=WebAssemblyPreLegalizerCombiner",
+        ],
+        "lib/Target/WebAssembly/WebAssemblyGenPostLegalizeGICombiner.inc": [
+            "-gen-global-isel-combiner",
+            "-combiners=WebAssemblyPostLegalizerCombiner",
+        ],
+    },
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/WebAssembly/WebAssemblyGISel.td",
+    deps = [
+        ":CommonTargetTdFiles",
+        ":WebAssemblyTargetTdFiles",
     ],
 )
 
@@ -5874,6 +5910,7 @@ cc_binary(
         ":AllTargetsDisassemblers",
         ":Core",
         ":DebugInfoDWARF",
+        ":DebugInfoPDB",
         ":Demangle",
         ":IPO",
         ":MC",
