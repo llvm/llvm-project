@@ -2521,17 +2521,8 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilderBase &B) {
   return Ret;
 }
 
-Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B) {
-  Module *M = CI->getModule();
-
-  // If we can shrink the call to a float function rather than a double
-  // function, do that first.
-  Function *Callee = CI->getCalledFunction();
-  StringRef Name = Callee->getName();
-  if ((Name == "fmin" || Name == "fmax") && hasFloatVersion(M, Name))
-    if (Value *Ret = optimizeBinaryDoubleFP(CI, B, TLI))
-      return Ret;
-
+Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B,
+                                           Intrinsic::ID IID) {
   // The LLVM intrinsics minnum/maxnum correspond to fmin/fmax. Canonicalize to
   // the intrinsics for improved optimization (for example, vectorization).
   // No-signed-zeros is implied by the definitions of fmax/fmin themselves.
@@ -2541,9 +2532,6 @@ Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilderBase &B) {
   // might be impractical."
   FastMathFlags FMF = CI->getFastMathFlags();
   FMF.setNoSignedZeros();
-
-  Intrinsic::ID IID = Callee->getName().starts_with("fmin") ? Intrinsic::minnum
-                                                            : Intrinsic::maxnum;
   return copyFlags(*CI, B.CreateBinaryIntrinsic(IID, CI->getArgOperand(0),
                                                 CI->getArgOperand(1), FMF));
 }
@@ -4148,10 +4136,11 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   case LibFunc_fminf:
   case LibFunc_fmin:
   case LibFunc_fminl:
+    return optimizeFMinFMax(CI, Builder, Intrinsic::minnum);
   case LibFunc_fmaxf:
   case LibFunc_fmax:
   case LibFunc_fmaxl:
-    return optimizeFMinFMax(CI, Builder);
+    return optimizeFMinFMax(CI, Builder, Intrinsic::maxnum);
   case LibFunc_fminimum_numf:
   case LibFunc_fminimum_num:
   case LibFunc_fminimum_numl:

@@ -181,16 +181,21 @@ void MCObjectStreamer::reset() {
   MCStreamer::reset();
 }
 
+void MCObjectStreamer::generateCompactUnwindEncodings() {
+  auto &Backend = getAssembler().getBackend();
+  for (auto &FI : DwarfFrameInfos)
+    FI.CompactUnwindEncoding =
+        Backend.generateCompactUnwindEncoding(&FI, &getContext());
+}
+
 void MCObjectStreamer::emitFrames() {
   if (!getNumFrameInfos())
     return;
 
-  auto *MAB = &getAssembler().getBackend();
   if (EmitEHFrame)
-    MCDwarfFrameEmitter::Emit(*this, MAB, true);
-
+    MCDwarfFrameEmitter::emit(*this, true);
   if (EmitDebugFrame)
-    MCDwarfFrameEmitter::Emit(*this, MAB, false);
+    MCDwarfFrameEmitter::emit(*this, false);
 
   if (EmitSFrame || (getContext().getTargetOptions() &&
                      getContext().getTargetOptions()->EmitSFrameUnwind))
