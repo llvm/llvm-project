@@ -48,43 +48,81 @@ subroutine must_split_and_create_temps(var1, var2, var3)
 end
 
 !NOFUSE-LABEL: ------------ scheduling where in _QPno_temps ------------
+!NOFUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
 !NOFUSE-NEXT: run 1 evaluate: where/region_assign1
 !NOFUSE-NEXT: run 2 evaluate: where/region_assign2
 !NOFUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg2 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> W:%{{.*}} = fir.box_addr %arg2 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
 !NOFUSE-NEXT: run 3 evaluate: where/region_assign3
+!NOFUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
 !NOFUSE-NEXT: run 4 evaluate: where/region_assign4
 !NOFUSE-LABEL: ------------ scheduling where in _QPmust_create_mask_temp_if_not_fused ------------
+!NOFUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
 !NOFUSE-NEXT: run 1 evaluate: where/region_assign1
+!NOFUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
 !NOFUSE-NEXT: run 2 evaluate: where/region_assign2
-!NOFUSE-NEXT: run 3 evaluate: where/region_assign3
-!NOFUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg2 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> W:%{{.*}} = fir.box_addr %arg2 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
-!NOFUSE-NEXT: run 4 evaluate: where/region_assign4
-!NOFUSE-LABEL: ------------ scheduling where in _QPmust_split_and_create_temps ------------
-!NOFUSE-NEXT: run 1 evaluate: where/region_assign1
-!NOFUSE-NEXT: run 2 evaluate: where/region_assign2
-!NOFUSE-NEXT: conflicting arrays:%{{.*}} and %{{.*}}
-!NOFUSE-NEXT: run 3 save    : where/region_assign3/rhs
+!NOFUSE-NEXT: where/mask is modified in order by where/region_assign2 and is needed by where/region_assign3 that is scheduled in a later run
+!NOFUSE-NEXT: run 0 save    : where/mask
 !NOFUSE-NEXT: run 4 evaluate: where/region_assign3
 !NOFUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg2 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> W:%{{.*}} = fir.box_addr %arg2 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
 !NOFUSE-NEXT: run 5 evaluate: where/region_assign4
+!NOFUSE-LABEL: ------------ scheduling where in _QPmust_split_and_create_temps ------------
+!NOFUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!NOFUSE-NEXT: run 1 evaluate: where/region_assign1
+!NOFUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!NOFUSE-NEXT: run 2 evaluate: where/region_assign2
+!NOFUSE-NEXT: conflicting arrays:%{{.*}} and %{{.*}}
+!NOFUSE-NEXT: run 3 save    : where/region_assign3/rhs
+!NOFUSE-NEXT: where/mask is modified in order by where/region_assign2 and is needed by where/region_assign3 that is scheduled in a later run
+!NOFUSE-NEXT: run 0 save    : where/mask
+!NOFUSE-NEXT: run 5 evaluate: where/region_assign3
+!NOFUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg2 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> W:%{{.*}} = fir.box_addr %arg2 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+!NOFUSE-NEXT: run 6 evaluate: where/region_assign4
 
 !FUSE-LABEL: ------------ scheduling where in _QPno_temps ------------
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
 !FUSE-NEXT: run 1 evaluate: where/region_assign1
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
 !FUSE-NEXT: run 1 evaluate: where/region_assign2
 !FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg2 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> W:%{{.*}} = fir.box_addr %arg2 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
 !FUSE-NEXT: run 1 evaluate: where/region_assign3
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
 !FUSE-NEXT: run 1 evaluate: where/region_assign4
 !FUSE-LABEL: ------------ scheduling where in _QPmust_create_mask_temp_if_not_fused ------------
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
 !FUSE-NEXT: run 1 evaluate: where/region_assign1
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
 !FUSE-NEXT: run 1 evaluate: where/region_assign2
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
 !FUSE-NEXT: run 1 evaluate: where/region_assign3
 !FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg2 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> W:%{{.*}} = fir.box_addr %arg2 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
 !FUSE-NEXT: run 1 evaluate: where/region_assign4
 !FUSE-LABEL: ------------ scheduling where in _QPmust_split_and_create_temps ------------
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
 !FUSE-NEXT: run 1 evaluate: where/region_assign1
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+!FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> W:%{{.*}} = fir.box_addr %arg1 : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
 !FUSE-NEXT: run 1 evaluate: where/region_assign2
 !FUSE-NEXT: conflicting arrays:%{{.*}} and %{{.*}}
 !FUSE-NEXT: run 2 save    : where/region_assign3/rhs
-!FUSE-NEXT: run 3 evaluate: where/region_assign3
+!FUSE-NEXT: where/mask is modified in order by where/region_assign1, where/region_assign2 and is needed by where/region_assign3 that is scheduled in a later run
+!FUSE-NEXT: run 0 save    : where/mask
+!FUSE-NEXT: run 4 evaluate: where/region_assign3
 !FUSE-NEXT: conflict (aligned): R/W: %{{.*}} = fir.box_addr %arg2 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> W:%{{.*}} = fir.box_addr %arg2 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
-!FUSE-NEXT: run 3 evaluate: where/region_assign4
+!FUSE-NEXT: run 4 evaluate: where/region_assign4

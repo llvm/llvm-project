@@ -364,13 +364,16 @@ static void gatherMemoryEffects(
     mlir::Region &region, bool mayOnlyRead,
     llvm::SmallVectorImpl<hlfir::DetailedEffectInstance> &effects) {
   if (!region.getParentOfType<hlfir::ForallOp>()) {
-    // TODO: While FORALL assignments may be array assignments, the iteration
-    // space is also driven by the FORALL indices, and it would take a bit more
-    // cups of coffee to prove that it is OK consider that "aligned" access
-    // conflicts can be ignored if they are evaluated inside the same loops.
-    // Besides, it would probably make sense to also deal with "aligned scalar"
-    // access for them like in "forall (i=1:10) x(i) = x(i) + 1".  For now this
-    // feature is disabled for inside FORALL.
+    // TODO: leverage array access analysis for FORALL.
+    // While FORALL assignments can be array assignments, the iteration space
+    // is also driven by the FORALL indices, so the way ArraySectionAnalyzer
+    // results are used is not adequate for it.
+    // For instance "disjoint" array access cannot be ignored in:
+    // "forall (i=1:10) x(i+1,:) = x(i,:)".
+    // While identical access can probably also be accepted, this would deserve
+    // more thinking, it would probably make sense to also deal with "aligned
+    // scalar" access for them like in "forall (i=1:10) x(i) = x(i) + 1".  For
+    // now this feature is disabled for inside FORALL.
     hlfir::ElementalTree tree =
         hlfir::ElementalTree::buildElementalTree(region.back().back());
     gatherMemoryEffectsImpl(region, mayOnlyRead, effects, &tree);
@@ -528,15 +531,17 @@ anyRAWorWAW(llvm::ArrayRef<hlfir::DetailedEffectInstance> effectsA,
               }
               auto overlap = fir::ArraySectionAnalyzer::analyze(arrayA, arrayB);
               if (overlap == fir::ArraySectionAnalyzer::SlicesOverlapKind::
-                                 DefinitelyIdentical) {
+                                 DefinitelyDisjoint)
+                continue;
+              if (overlap == fir::ArraySectionAnalyzer::SlicesOverlapKind::
+                                 DefinitelyIdentical ||
+                  overlap == fir::ArraySectionAnalyzer::SlicesOverlapKind::
+                                 EitherIdenticalOrDisjoint) {
                 result = result || ConflictKind::aligned();
                 LLVM_DEBUG(logConflict(llvm::dbgs(), writtenOrReadVarA,
                                        writtenVarB, /*isAligned=*/true));
                 continue;
               }
-              if (overlap !=
-                  fir::ArraySectionAnalyzer::SlicesOverlapKind::Unknown)
-                continue;
               LLVM_DEBUG(llvm::dbgs() << "conflicting arrays:" << arrayA
                                       << " and " << arrayB << "\n");
               return ConflictKind::any();
