@@ -1027,14 +1027,14 @@ BranchProbability llvm::getBranchProbability(BasicBlock *Src, BasicBlock *Dst) {
   if (!TI || TI->getNumSuccessors() == 0)
     return BranchProbability::getZero();
 
-  auto NumSucc = TI->getNumSuccessors();
   SmallVector<uint32_t, 4> Weights;
 
   if (!extractBranchWeights(*TI, Weights)) {
     // No metadata
     return BranchProbability::getUnknown();
   }
-  assert(NumSucc == Weights.size() && "Missing weights in branch_weights");
+  assert(TI->getNumSuccessors() == Weights.size() &&
+         "Missing weights in branch_weights");
 
   uint64_t Total = 0;
   uint32_t Numerator = 0;

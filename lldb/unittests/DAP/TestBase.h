@@ -59,7 +59,6 @@ protected:
   lldb_private::SubsystemRAII<lldb_private::FileSystem, lldb_private::HostInfo>
       subsystems;
   lldb_private::MainLoop loop;
-  lldb_private::MainLoop::ReadHandleUP handles[2];
 
   std::unique_ptr<lldb_dap::Log> log;
   lldb_dap::Log::Mutex log_mutex;

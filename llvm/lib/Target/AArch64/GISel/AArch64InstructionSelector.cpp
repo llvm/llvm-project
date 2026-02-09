@@ -482,6 +482,12 @@ private:
 
   ComplexRendererFns selectExtractHigh(MachineOperand &Root) const;
 
+  ComplexRendererFns selectCVTFixedPointVec(MachineOperand &Root) const;
+  ComplexRendererFns
+  selectCVTFixedPointVecBase(const MachineOperand &Root) const;
+  void renderFixedPointXForm(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                             int OpIdx = -1) const;
+
   void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx = -1) const;
   void renderLogicalImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
@@ -1071,7 +1077,6 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
       Register PromoteReg = MRI.createVirtualRegister(PromotionRC);
       BuildMI(*I.getParent(), I, I.getDebugLoc(),
               TII.get(AArch64::SUBREG_TO_REG), PromoteReg)
-          .addImm(0)
           .addUse(SrcReg)
           .addImm(SubReg);
       MachineOperand &RegOp = I.getOperand(1);
@@ -1410,7 +1415,8 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
         !MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()))
       break;
 
-    // (tbz (any_ext x), b) -> (tbz x, b) if we don't use the extended bits.
+    // (tbz (any_ext x), b) -> (tbz x, b) and
+    // (tbz (zext x), b) -> (tbz x, b) if we don't use the extended bits.
     //
     // (tbz (trunc x), b) -> (tbz x, b) is always safe, because the bit number
     // on the truncated x is the same as the bit number on x.
@@ -1422,6 +1428,9 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
       Register NextReg = MI->getOperand(1).getReg();
       // Did we find something worth folding?
       if (!NextReg.isValid() || !MRI.hasOneNonDBGUse(NextReg))
+        break;
+      TypeSize InSize = MRI.getType(NextReg).getSizeInBits();
+      if (Bit >= InSize)
         break;
 
       // NextReg is worth folding. Keep looking.
@@ -1788,7 +1797,8 @@ bool AArch64InstructionSelector::selectCompareBranch(
                  .addImm(AArch64CC::NE)
                  .addMBB(I.getOperand(1).getMBB());
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(*Bcc, TII, TRI, RBI);
+  return true;
 }
 
 /// Returns the element immediate value of a vector shift operand if found.
@@ -2286,7 +2296,8 @@ bool AArch64InstructionSelector::earlySelectSHL(MachineInstr &I,
     RenderFn(NewI);
 
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*NewI, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(*NewI, TII, TRI, RBI);
+  return true;
 }
 
 bool AArch64InstructionSelector::contractCrossBankCopyIntoStore(
@@ -2525,8 +2536,10 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   if (!I.isPreISelOpcode() || Opcode == TargetOpcode::G_PHI) {
     // Certain non-generic instructions also need some special handling.
 
-    if (Opcode ==  TargetOpcode::LOAD_STACK_GUARD)
-      return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    if (Opcode == TargetOpcode::LOAD_STACK_GUARD) {
+      constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+      return true;
+    }
 
     if (Opcode == TargetOpcode::PHI || Opcode == TargetOpcode::G_PHI) {
       const Register DefReg = I.getOperand(0).getReg();
@@ -2614,7 +2627,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
             .addImm(LSB)
             .addImm(LSB + Width - 1);
     I.eraseFromParent();
-    return constrainSelectedInstRegOperands(*BitfieldInst, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*BitfieldInst, TII, TRI, RBI);
+    return true;
   }
   case TargetOpcode::G_BRCOND:
     return selectCompareBranch(I, MF, MRI);
@@ -2628,10 +2642,12 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       MI.addImm(*BADisc);
       MI.addReg(/*AddrDisc=*/AArch64::XZR);
       I.eraseFromParent();
-      return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+      constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+      return true;
     }
     I.setDesc(TII.get(AArch64::BR));
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    return true;
   }
 
   case TargetOpcode::G_BRJT:
@@ -2646,7 +2662,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     if (BaseMI->getOpcode() != AArch64::ADRP) {
       I.setDesc(TII.get(AArch64::ADDXri));
       I.addOperand(MachineOperand::CreateImm(0));
-      return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+      constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+      return true;
     }
     assert(TM.getCodeModel() == CodeModel::Small &&
            "Expected small code model");
@@ -2658,7 +2675,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
                        .addGlobalAddress(Op2.getGlobal(), Op2.getOffset(),
                                          Op2.getTargetFlags());
     I.eraseFromParent();
-    return constrainSelectedInstRegOperands(*MovAddr, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*MovAddr, TII, TRI, RBI);
+    return true;
   }
 
   case TargetOpcode::G_FCONSTANT:
@@ -2833,7 +2851,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     if (SrcSize < 64) {
       assert(SrcSize == 32 && DstTy.getSizeInBits() == 16 &&
              "unexpected G_EXTRACT types");
-      return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+      constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+      return true;
     }
 
     DstReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
@@ -2844,7 +2863,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
                                  AArch64::GPR32RegClass, MRI);
     I.getOperand(0).setReg(DstReg);
 
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    return true;
   }
 
   case TargetOpcode::G_INSERT: {
@@ -2865,21 +2885,22 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     if (DstSize < 64) {
       assert(DstSize == 32 && SrcTy.getSizeInBits() == 16 &&
              "unexpected G_INSERT types");
-      return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+      constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+      return true;
     }
 
     Register SrcReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
     BuildMI(MBB, I.getIterator(), I.getDebugLoc(),
             TII.get(AArch64::SUBREG_TO_REG))
         .addDef(SrcReg)
-        .addImm(0)
         .addUse(I.getOperand(2).getReg())
         .addImm(AArch64::sub_32);
     RBI.constrainGenericRegister(I.getOperand(2).getReg(),
                                  AArch64::GPR32RegClass, MRI);
     I.getOperand(2).setReg(SrcReg);
 
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    return true;
   }
   case TargetOpcode::G_FRAME_INDEX: {
     // allocas and G_FRAME_INDEX are only supported in addrspace(0).
@@ -2894,7 +2915,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     I.addOperand(MachineOperand::CreateImm(0));
     I.addOperand(MachineOperand::CreateImm(0));
 
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    return true;
   }
 
   case TargetOpcode::G_GLOBAL_VALUE: {
@@ -2936,7 +2958,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       MIB.addGlobalAddress(GV, I.getOperand(1).getOffset(),
                            OpFlags | AArch64II::MO_PAGEOFF | AArch64II::MO_NC);
     }
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    return true;
   }
 
   case TargetOpcode::G_PTRAUTH_GLOBAL_VALUE:
@@ -3037,7 +3060,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         // Generate a SUBREG_TO_REG to extend it.
         MIB.setInsertPt(MIB.getMBB(), std::next(LdSt.getIterator()));
         MIB.buildInstr(AArch64::SUBREG_TO_REG, {OldDst}, {})
-            .addImm(0)
             .addUse(NewDst)
             .addImm(SubReg);
         auto SubRegRC = getRegClassForTypeOnBank(MRI.getType(OldDst), RB);
@@ -3112,14 +3134,14 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
       MIB.setInsertPt(MIB.getMBB(), std::next(LoadStore->getIterator()));
       MIB.buildInstr(AArch64::SUBREG_TO_REG, {DstReg}, {})
-          .addImm(0)
           .addUse(LdReg)
           .addImm(AArch64::sub_32);
       constrainSelectedInstRegOperands(*LoadStore, TII, TRI, RBI);
       return RBI.constrainGenericRegister(DstReg, AArch64::GPR64allRegClass,
                                           MRI);
     }
-    return constrainSelectedInstRegOperands(*LoadStore, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*LoadStore, TII, TRI, RBI);
+    return true;
   }
 
   case TargetOpcode::G_INDEXED_ZEXTLOAD:
@@ -3179,7 +3201,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
 
     // Now that we selected an opcode, we need to constrain the register
     // operands to use appropriate classes.
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    return true;
   }
 
   case TargetOpcode::G_PTR_ADD: {
@@ -3210,7 +3233,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     I.getOperand(2).ChangeToImmediate(
         AArch64_AM::encodeLogicalImmediate(Mask, 64));
 
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    return true;
   }
   case TargetOpcode::G_PTRTOINT:
   case TargetOpcode::G_TRUNC: {
@@ -3328,7 +3352,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       Register ExtSrc = MRI.createVirtualRegister(&AArch64::GPR64allRegClass);
       BuildMI(MBB, I, I.getDebugLoc(), TII.get(AArch64::SUBREG_TO_REG))
           .addDef(ExtSrc)
-          .addImm(0)
           .addUse(SrcReg)
           .addImm(AArch64::sub_32);
       I.getOperand(1).setReg(ExtSrc);
@@ -3392,7 +3415,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
             .addImm(0);
 
         MIB.buildInstr(AArch64::SUBREG_TO_REG, {DefReg}, {})
-            .addImm(0)
             .addUse(SubregToRegSrc)
             .addImm(AArch64::sub_32);
 
@@ -3424,7 +3446,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         }
         SrcReg = MIB.buildInstr(AArch64::SUBREG_TO_REG,
                                 {&AArch64::GPR64RegClass}, {})
-                     .addImm(0)
                      .addUse(SrcReg)
                      .addImm(AArch64::sub_32)
                      .getReg(0);
@@ -3563,7 +3584,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
                            I.getOperand(1).getBlockAddress(), /* Offset */ 0,
                            AArch64II::MO_NC | AArch64II::MO_PAGEOFF);
       I.eraseFromParent();
-      return constrainSelectedInstRegOperands(*MovMI, TII, TRI, RBI);
+      constrainSelectedInstRegOperands(*MovMI, TII, TRI, RBI);
+      return true;
     }
   }
   case AArch64::G_DUP: {
@@ -3586,7 +3608,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       I.setDesc(TII.get(AArch64::DUPv8i16gpr));
     else
       return false;
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    return true;
   }
   case TargetOpcode::G_BUILD_VECTOR:
     return selectBuildVector(I, MRI);
@@ -3721,7 +3744,8 @@ bool AArch64InstructionSelector::selectBrJT(MachineInstr &I,
   // Build the indirect branch.
   MIB.buildInstr(AArch64::BR, {}, {TargetReg});
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*JumpTableInst, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(*JumpTableInst, TII, TRI, RBI);
+  return true;
 }
 
 bool AArch64InstructionSelector::selectJumpTable(MachineInstr &I,
@@ -3737,7 +3761,8 @@ bool AArch64InstructionSelector::selectJumpTable(MachineInstr &I,
           .addJumpTableIndex(JTI, AArch64II::MO_PAGE)
           .addJumpTableIndex(JTI, AArch64II::MO_NC | AArch64II::MO_PAGEOFF);
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MovMI, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(*MovMI, TII, TRI, RBI);
+  return true;
 }
 
 bool AArch64InstructionSelector::selectTLSGlobalValue(
@@ -3882,17 +3907,15 @@ bool AArch64InstructionSelector::selectMergeValues(
   MachineInstr &SubRegMI = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
                                     TII.get(TargetOpcode::SUBREG_TO_REG))
                                 .addDef(SubToRegDef)
-                                .addImm(0)
                                 .addUse(I.getOperand(1).getReg())
                                 .addImm(AArch64::sub_32);
   Register SubToRegDef2 = MRI.createVirtualRegister(DstRC);
   // Need to anyext the second scalar before we can use bfm
   MachineInstr &SubRegMI2 = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
-                                    TII.get(TargetOpcode::SUBREG_TO_REG))
-                                .addDef(SubToRegDef2)
-                                .addImm(0)
-                                .addUse(I.getOperand(2).getReg())
-                                .addImm(AArch64::sub_32);
+                                     TII.get(TargetOpcode::SUBREG_TO_REG))
+                                 .addDef(SubToRegDef2)
+                                 .addUse(I.getOperand(2).getReg())
+                                 .addImm(AArch64::sub_32);
   MachineInstr &BFM =
       *BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AArch64::BFMXri))
            .addDef(I.getOperand(0).getReg())
@@ -5287,7 +5310,6 @@ bool AArch64InstructionSelector::selectUSMovFromExtend(
     Register NewReg = MRI.createVirtualRegister(&AArch64::GPR32RegClass);
     MIB.buildInstr(Opcode, {NewReg}, {Src0}).addImm(Lane);
     ExtI = MIB.buildInstr(AArch64::SUBREG_TO_REG, {DefReg}, {})
-               .addImm(0)
                .addUse(NewReg)
                .addImm(AArch64::sub_32);
     RBI.constrainGenericRegister(DefReg, AArch64::GPR64RegClass, MRI);
@@ -5556,7 +5578,6 @@ bool AArch64InstructionSelector::selectIndexedExtLoad(
   if (InsertIntoSubReg) {
     // Generate a SUBREG_TO_REG.
     auto SubToReg = MIB.buildInstr(TargetOpcode::SUBREG_TO_REG, {Dst}, {})
-                        .addImm(0)
                         .addUse(LdMI.getReg(1))
                         .addImm(InsertIntoSubReg);
     RBI.constrainGenericRegister(
@@ -5848,7 +5869,6 @@ bool AArch64InstructionSelector::tryOptBuildVecToSubregToReg(
   if (!getSubRegForClass(EltRC, TRI, SubReg))
     return false;
   auto SubregToReg = MIB.buildInstr(AArch64::SUBREG_TO_REG, {Dst}, {})
-                         .addImm(0)
                          .addUse(EltReg)
                          .addImm(SubReg);
   I.eraseFromParent();
@@ -6608,6 +6628,42 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     Memset.cloneMemRefs(I);
     constrainSelectedInstRegOperands(*Memset, TII, TRI, RBI);
     break;
+  }
+  case Intrinsic::ptrauth_resign_load_relative: {
+    Register DstReg = I.getOperand(0).getReg();
+    Register ValReg = I.getOperand(2).getReg();
+    uint64_t AUTKey = I.getOperand(3).getImm();
+    Register AUTDisc = I.getOperand(4).getReg();
+    uint64_t PACKey = I.getOperand(5).getImm();
+    Register PACDisc = I.getOperand(6).getReg();
+    int64_t Addend = I.getOperand(7).getImm();
+
+    Register AUTAddrDisc = AUTDisc;
+    uint16_t AUTConstDiscC = 0;
+    std::tie(AUTConstDiscC, AUTAddrDisc) =
+        extractPtrauthBlendDiscriminators(AUTDisc, MRI);
+
+    Register PACAddrDisc = PACDisc;
+    uint16_t PACConstDiscC = 0;
+    std::tie(PACConstDiscC, PACAddrDisc) =
+        extractPtrauthBlendDiscriminators(PACDisc, MRI);
+
+    MIB.buildCopy({AArch64::X16}, {ValReg});
+
+    MIB.buildInstr(AArch64::AUTRELLOADPAC)
+        .addImm(AUTKey)
+        .addImm(AUTConstDiscC)
+        .addUse(AUTAddrDisc)
+        .addImm(PACKey)
+        .addImm(PACConstDiscC)
+        .addUse(PACAddrDisc)
+        .addImm(Addend)
+        .constrainAllUses(TII, TRI, RBI);
+    MIB.buildCopy({DstReg}, Register(AArch64::X16));
+
+    RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
+    I.eraseFromParent();
+    return true;
   }
   }
 
@@ -7841,6 +7897,62 @@ AArch64InstructionSelector::selectExtractHigh(MachineOperand &Root) const {
   }
 
   return std::nullopt;
+}
+
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectCVTFixedPointVecBase(
+    const MachineOperand &Root) const {
+  if (!Root.isReg())
+    return std::nullopt;
+  const MachineRegisterInfo &MRI =
+      Root.getParent()->getParent()->getParent()->getRegInfo();
+
+  MachineInstr *Dup = getDefIgnoringCopies(Root.getReg(), MRI);
+  if (Dup->getOpcode() != AArch64::G_DUP)
+    return std::nullopt;
+  std::optional<ValueAndVReg> CstVal =
+      getAnyConstantVRegValWithLookThrough(Dup->getOperand(1).getReg(), MRI);
+  if (!CstVal)
+    return std::nullopt;
+
+  unsigned RegWidth = MRI.getType(Root.getReg()).getScalarSizeInBits();
+  APFloat FVal(0.0);
+  switch (RegWidth) {
+  case 16:
+    FVal = APFloat(APFloat::IEEEhalf(), CstVal->Value);
+    break;
+  case 32:
+    FVal = APFloat(APFloat::IEEEsingle(), CstVal->Value);
+    break;
+  case 64:
+    FVal = APFloat(APFloat::IEEEdouble(), CstVal->Value);
+    break;
+  default:
+    return std::nullopt;
+  };
+  if (unsigned FBits = CheckFixedPointOperandConstant(FVal, RegWidth,
+                                                      /*isReciprocal*/ false))
+    return {{[=](MachineInstrBuilder &MIB) { MIB.addImm(FBits); }}};
+
+  return std::nullopt;
+}
+
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectCVTFixedPointVec(MachineOperand &Root) const {
+  return selectCVTFixedPointVecBase(Root);
+}
+
+void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,
+                                                       const MachineInstr &MI,
+                                                       int OpIdx) const {
+  // FIXME: This is only needed to satisfy the type checking in tablegen, and
+  // should be able to reuse the Renderers already calculated by
+  // selectCVTFixedPointVecBase.
+  InstructionSelector::ComplexRendererFns Renderer =
+      selectCVTFixedPointVecBase(MI.getOperand(2));
+  assert((Renderer && Renderer->size() == 1) &&
+         "Expected selectCVTFixedPointVec to provide a function\n");
+  (Renderer->front())(MIB);
 }
 
 void AArch64InstructionSelector::renderTruncImm(MachineInstrBuilder &MIB,

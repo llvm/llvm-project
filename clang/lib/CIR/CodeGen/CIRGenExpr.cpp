@@ -883,8 +883,26 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
     if (e->isNonOdrUse() == NOUR_Constant &&
         (vd->getType()->isReferenceType() ||
          !canEmitSpuriousReferenceToVariable(*this, e, vd))) {
-      cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: NonOdrUse");
-      return LValue();
+      vd->getAnyInitializer(vd);
+      mlir::Attribute val = ConstantEmitter(*this).emitAbstract(
+          e->getLocation(), *vd->evaluateValue(), vd->getType());
+      assert(val && "failed to emit constant expression");
+
+      Address addr = Address::invalid();
+      if (!vd->getType()->isReferenceType()) {
+        // Spill the constant value to a global.
+        addr = cgm.createUnnamedGlobalFrom(*vd, val,
+                                           getContext().getDeclAlign(vd));
+        mlir::Type varTy = getTypes().convertTypeForMem(vd->getType());
+        auto ptrTy = mlir::cast<cir::PointerType>(addr.getPointer().getType());
+        if (ptrTy.getPointee() != varTy) {
+          addr = addr.withElementType(builder, varTy);
+        }
+      } else {
+        cgm.errorNYI(e->getSourceRange(),
+                     "emitDeclRefLValue: non-odr reference type");
+      }
+      return makeAddrLValue(addr, ty, AlignmentSource::Decl);
     }
 
     // Check for captured variables.
@@ -1446,8 +1464,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
           "emitCastLValue: address space conversion from unknown address "
           "space");
 
-    mlir::Value v = getTargetHooks().performAddrSpaceCast(
-        *this, lv.getPointer(), srcAS, convertType(destTy));
+    mlir::Value v = performAddrSpaceCast(lv.getPointer(), convertType(destTy));
 
     return makeAddrLValue(Address(v, convertTypeForMem(e->getType()),
                                   lv.getAddress().getAlignment()),
@@ -2486,20 +2503,13 @@ Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
   // in C++ the auto variables are in the default address space. Therefore
   // cast alloca to the default address space when necessary.
 
-  LangAS allocaAS = alloca.getAddressSpace()
-                        ? clang::getLangASFromTargetAS(
-                              alloca.getAddressSpace().getValue().getUInt())
-                        : clang::LangAS::Default;
-  LangAS dstTyAS = clang::LangAS::Default;
-  if (getCIRAllocaAddressSpace()) {
-    dstTyAS = clang::getLangASFromTargetAS(
-        getCIRAllocaAddressSpace().getValue().getUInt());
-  }
+  cir::PointerType dstTy;
+  if (getCIRAllocaAddressSpace())
+    dstTy = builder.getPointerTo(ty, getCIRAllocaAddressSpace());
+  else
+    dstTy = builder.getPointerTo(ty, clang::LangAS::Default);
+  v = performAddrSpaceCast(v, dstTy);
 
-  if (dstTyAS != allocaAS) {
-    getTargetHooks().performAddrSpaceCast(*this, v, getCIRAllocaAddressSpace(),
-                                          builder.getPointerTo(ty, dstTyAS));
-  }
   return Address(v, ty, align);
 }
 
