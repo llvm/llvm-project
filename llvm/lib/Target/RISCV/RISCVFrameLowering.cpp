@@ -2151,7 +2151,9 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
     MachineInstrBuilder NewMI =
         BuildMI(MBB, MI, DL, TII.get(RISCV::PseudoCALLReg), RISCV::X5)
             .addExternalSymbol(SpillLibCall, RISCVII::MO_CALL)
-            .setMIFlag(MachineInstr::FrameSetup);
+            .setMIFlag(MachineInstr::FrameSetup)
+            .addUse(RISCV::X2, RegState::Implicit)
+            .addDef(RISCV::X2, RegState::ImplicitDefine);
 
     for (auto &CS : CSI) {
       // Add registers spilled as implicit used.
@@ -2300,7 +2302,8 @@ bool RISCVFrameLowering::restoreCalleeSavedRegisters(
     MachineInstrBuilder NewMI =
         BuildMI(MBB, MI, DL, TII.get(RISCV::PseudoTAIL))
             .addExternalSymbol(RestoreLibCall, RISCVII::MO_CALL)
-            .setMIFlag(MachineInstr::FrameDestroy);
+            .setMIFlag(MachineInstr::FrameDestroy)
+            .addDef(RISCV::X2, RegState::ImplicitDefine);
 
     // Add registers restored as implicit defined.
     for (auto &CS : CSI)
