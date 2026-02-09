@@ -250,3 +250,18 @@ define i16 @PR90356(<16 x i1> %a) {
   %2 = bitcast <16 x i1> %1 to i16
   ret i16 %2
 }
+
+define <4 x i1> @ISSUE180426(<4 x i1> %0) {
+; CHECK-LABEL: ISSUE180426:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vpslld $31, %xmm0, %xmm0
+; CHECK-NEXT:    movb $5, %al
+; CHECK-NEXT:    kmovd %eax, %k1
+; CHECK-NEXT:    vptestmd %xmm0, %xmm0, %k1 {%k1}
+; CHECK-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovdqa32 %xmm0, %xmm0 {%k1} {z}
+; CHECK-NEXT:    retq
+entry:
+  %1 = shufflevector <4 x i1> %0, <4 x i1> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
+  ret <4 x i1> %1
+}

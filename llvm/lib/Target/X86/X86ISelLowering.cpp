@@ -18361,9 +18361,15 @@ static SDValue lower1BitShuffle(const SDLoc &DL, ArrayRef<int> Mask,
     return Zeroable[M.index()] || (M.value() == (int)M.index());
   });
   if (IsBlendWithZero) {
-    EVT IntVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
-    SDValue BlendMask = DAG.getConstant(~Zeroable, DL, IntVT);
-    return DAG.getNode(ISD::AND, DL, VT, V1, DAG.getBitcast(VT, BlendMask));
+    SmallVector<SDValue, 32> MaskElts;
+    MaskElts.reserve(NumElts);
+
+    for (int I = 0; I != NumElts; ++I) {
+      MaskElts.push_back(DAG.getConstant(Zeroable[I] ? 0 : 1, DL, MVT::i8));
+    }
+
+    SDValue MaskVec = DAG.getBuildVector(VT, DL, MaskElts);
+    return DAG.getNode(ISD::AND, DL, VT, V1, MaskVec);
   }
 
   MVT ExtVT;
