@@ -343,7 +343,6 @@ struct DebugSettings {
     // for now we can hardcode some excluded types here like:
     // Settings.ExcludeFilters.push_back(Type);
     Settings.ExcludeFilters.push_back(OLDT_BinaryDump);
-    
 
     if (!EnvRef.getAsInteger(10, Settings.DefaultLevel))
       return;
