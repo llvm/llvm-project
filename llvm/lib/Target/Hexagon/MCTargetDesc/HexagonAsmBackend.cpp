@@ -596,6 +596,13 @@ public:
               auto &RF = *Frags[K];
               MCInst Inst = RF.getInst();
 
+              // Don't add nops to packets that have fixups, as reshuffling can
+              // invalidate fixup offsets.
+              if (!RF.getVarFixups().empty()) {
+                Size = 0;
+                break;
+              }
+
               const bool WouldTraverseLabel = llvm::any_of(
                   Asm->symbols(), [&RF, &Inst, Asm = Asm](MCSymbol const &sym) {
                     uint64_t Offset = 0;
