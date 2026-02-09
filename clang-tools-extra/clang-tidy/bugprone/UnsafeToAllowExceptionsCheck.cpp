@@ -7,18 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "UnsafeToAllowExceptionsCheck.h"
-
+#include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "llvm/ADT/StringSet.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 namespace {
-
-AST_MATCHER_P(FunctionDecl, hasAnyName, llvm::StringSet<>, Names) {
-  return Names.contains(Node.getNameAsString());
-}
 
 AST_MATCHER(FunctionDecl, isExplicitThrow) {
   return isExplicitThrowExceptionSpec(Node.getExceptionSpecType()) &&
@@ -30,27 +25,24 @@ AST_MATCHER(FunctionDecl, isExplicitThrow) {
 UnsafeToAllowExceptionsCheck::UnsafeToAllowExceptionsCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      RawCheckedSwapFunctions(
-          Options.get("CheckedSwapFunctions", "swap;iter_swap;iter_move")) {
-  llvm::SmallVector<StringRef, 4> CheckedSwapFunctionsVec;
-  RawCheckedSwapFunctions.split(CheckedSwapFunctionsVec, ";", -1, false);
-  CheckedSwapFunctions.insert_range(CheckedSwapFunctionsVec);
-}
+      CheckedSwapFunctions(utils::options::parseStringList(
+          Options.get("CheckedSwapFunctions", "swap;iter_swap;iter_move"))) {}
 
 void UnsafeToAllowExceptionsCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "CheckedSwapFunctions", RawCheckedSwapFunctions);
+  Options.store(Opts, "CheckedSwapFunctions",
+                utils::options::serializeStringList(CheckedSwapFunctions));
 }
 
 void UnsafeToAllowExceptionsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      functionDecl(allOf(isDefinition(), isExplicitThrow(),
-                         anyOf(cxxDestructorDecl(),
-                               cxxConstructorDecl(isMoveConstructor()),
-                               cxxMethodDecl(isMoveAssignmentOperator()),
-                               allOf(hasAnyName(CheckedSwapFunctions),
-                                     unless(parameterCountIs(0))),
-                               isMain())))
+      functionDecl(isDefinition(), isExplicitThrow(),
+                   anyOf(cxxDestructorDecl(),
+                         cxxConstructorDecl(isMoveConstructor()),
+                         cxxMethodDecl(isMoveAssignmentOperator()),
+                         allOf(hasAnyName(CheckedSwapFunctions),
+                               unless(parameterCountIs(0))),
+                         isMain()))
           .bind("f"),
       this);
 }
@@ -58,9 +50,7 @@ void UnsafeToAllowExceptionsCheck::registerMatchers(MatchFinder *Finder) {
 void UnsafeToAllowExceptionsCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<FunctionDecl>("f");
-
-  if (!MatchedDecl)
-    return;
+  assert(MatchedDecl);
 
   diag(MatchedDecl->getLocation(),
        "function %0 should not throw exceptions but "

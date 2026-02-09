@@ -1,18 +1,19 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-unsafe-to-allow-exceptions %t -- -- -fexceptions
-// RUN: %check_clang_tidy -std=c++17-or-later -check-suffix=,CUSTOMSWAP %s bugprone-unsafe-to-allow-exceptions %t -- \
+// RUN: %check_clang_tidy -std=c++11,c++14 %s bugprone-unsafe-to-allow-exceptions %t -- \
 // RUN:     -config="{CheckOptions: { \
-// RUN:         bugprone-unsafe-to-allow-exceptions.CheckedSwapFunctions: 'swap;iter_swap;iter_move;swap1', \
+// RUN:         bugprone-unsafe-to-allow-exceptions.CheckedSwapFunctions: 'swap', \
 // RUN:     }}" \
 // RUN: -- -fexceptions
 
+class Exception {};
+
 struct may_throw {
-  may_throw(may_throw&&) noexcept(false) {
+  may_throw(may_throw&&) throw(int) {
     // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: function 'may_throw' should not throw exceptions but it is still marked as potentially throwing [bugprone-unsafe-to-allow-exceptions]
   }
-  may_throw& operator=(may_throw&&) noexcept(false) {
+  may_throw& operator=(may_throw&&) throw(Exception) {
     // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: function 'operator=' should not throw exceptions but it is still marked as potentially throwing
   }
-  ~may_throw() noexcept(false) {
+  ~may_throw() throw(char, Exception) {
     // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: function '~may_throw' should not throw exceptions but it is still marked as potentially throwing
   }
 
@@ -29,26 +30,20 @@ struct no_throw {
   }
 };
 
-int main() noexcept(false) {
+int main() throw(char) {
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'main' should not throw exceptions but it is still marked as potentially throwing
   return 0;
 }
 
-void swap(int&, int&) noexcept(false) {
+void swap(no_throw&, no_throw&) throw(bool) {
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'swap' should not throw exceptions but it is still marked as potentially throwing
 }
 
-void iter_swap(int&, int&) noexcept(false) {
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'iter_swap' should not throw exceptions but it is still marked as potentially throwing
+void iter_swap(int&, int&) throw(bool) {
 }
 
-void iter_move(int&) noexcept(false) {
-  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'iter_move' should not throw exceptions but it is still marked as potentially throwing
+void iter_move(int&) throw(bool) {
 }
 
 void swap(double&, double&) {
-}
-
-void swap1(long&) noexcept(false) {
-  // CHECK-MESSAGES-CUSTOMSWAP: :[[@LINE-1]]:6: warning: function 'swap1' should not throw exceptions but it is still marked as potentially throwing
 }

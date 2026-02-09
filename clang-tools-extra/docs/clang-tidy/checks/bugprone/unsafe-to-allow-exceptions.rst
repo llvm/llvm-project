@@ -38,5 +38,4 @@ Options
 
    Semicolon-separated list of checked swap function names (where throwing
    exceptions is unsafe). These functions are checked if the parameter count is
-   at least 1.
-   Default value is `swap;iter_swap;iter_move`.
+   at least 1. Default value is `swap;iter_swap;iter_move`.
