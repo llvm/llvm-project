@@ -693,6 +693,22 @@ foreach vtiToWti = AllWidenableIntVectors in {
                  (wti.Vector (IMPLICIT_DEF)),
                  vti.RegClass:$rs2, uimm5:$rs1,
                  vti.AVL, vti.Log2SEW, TA_MA)>;
+
+    // Patterns where the LHS is an any_extend.
+    // TODO: vv pattern when we have a test.
+    def : Pat<(shl (wti.Vector (anyext_oneuse (vti.Vector vti.RegClass:$rs2))),
+                   (wti.Vector (Low8BitsSplatPat (XLenVT GPR:$rs1)))),
+              (!cast<Instruction>("PseudoVWSLL_VX_"#vti.LMul.MX)
+                 (wti.Vector (IMPLICIT_DEF)),
+                 vti.RegClass:$rs2, GPR:$rs1,
+                 vti.AVL, vti.Log2SEW, TA_MA)>;
+
+    def : Pat<(shl (wti.Vector (anyext_oneuse (vti.Vector vti.RegClass:$rs2))),
+                   (wti.Vector (SplatPat_uimm5 uimm5:$rs1))),
+              (!cast<Instruction>("PseudoVWSLL_VI_"#vti.LMul.MX)
+                 (wti.Vector (IMPLICIT_DEF)),
+                 vti.RegClass:$rs2, uimm5:$rs1,
+                 vti.AVL, vti.Log2SEW, TA_MA)>;
   }
 }
 
@@ -702,26 +718,6 @@ defm : VPatBinarySDNode_VV_VX<clmulh, "PseudoVCLMULH", I64IntegerVectors, ExtraP
 //===----------------------------------------------------------------------===//
 // VL patterns
 //===----------------------------------------------------------------------===//
-
-multiclass VPatUnaryVL_V<SDPatternOperator op, string instruction_name,
-                         Predicate predicate = HasStdExtZvbb> {
-  foreach vti = AllIntegerVectors in {
-    let Predicates = !listconcat([predicate],
-                                 GetVTypePredicates<vti>.Predicates) in {
-      def : Pat<(vti.Vector (op (vti.Vector vti.RegClass:$rs1),
-                                (vti.Vector vti.RegClass:$passthru),
-                                (vti.Mask VMV0:$vm),
-                                VLOpFrag)),
-                (!cast<Instruction>(instruction_name#"_V_"#vti.LMul.MX#"_MASK")
-                   vti.RegClass:$passthru,
-                   vti.RegClass:$rs1,
-                   (vti.Mask VMV0:$vm),
-                   GPR:$vl,
-                   vti.Log2SEW,
-                   TAIL_AGNOSTIC)>;
-    }
-  }
-}
 
 foreach vti = AllIntegerVectors in {
   let Predicates = !listconcat([HasStdExtZvkb],

@@ -791,13 +791,14 @@ struct Allocator {
     return new_ptr;
   }
 
-  void *Calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
+  void* Calloc(uptr nmemb, uptr size, BufferedStackTrace* stack,
+               uptr align = 8) {
     if (UNLIKELY(CheckForCallocOverflow(size, nmemb))) {
       if (AllocatorMayReturnNull())
         return nullptr;
       ReportCallocOverflow(nmemb, size, stack);
     }
-    void *ptr = Allocate(nmemb * size, 8, stack, FROM_MALLOC, false);
+    void* ptr = Allocate(nmemb * size, align, stack, FROM_MALLOC, false);
     // If the memory comes from the secondary allocator no need to clear it
     // as it comes directly from mmap.
     if (ptr && allocator.FromPrimary(ptr))
@@ -1024,6 +1025,16 @@ void *asan_malloc(uptr size, BufferedStackTrace *stack) {
 void *asan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
   return SetErrnoOnNull(instance.Calloc(nmemb, size, stack));
 }
+
+#if SANITIZER_AIX
+void* asan_vec_malloc(uptr size, BufferedStackTrace* stack) {
+  return SetErrnoOnNull(instance.Allocate(size, 16, stack, FROM_MALLOC, true));
+}
+
+void* asan_vec_calloc(uptr nmemb, uptr size, BufferedStackTrace* stack) {
+  return SetErrnoOnNull(instance.Calloc(nmemb, size, stack, 16));
+}
+#endif
 
 void *asan_reallocarray(void *p, uptr nmemb, uptr size,
                         BufferedStackTrace *stack) {

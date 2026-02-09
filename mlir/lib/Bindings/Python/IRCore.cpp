@@ -16,17 +16,18 @@
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/Debug.h"
 #include "mlir-c/Diagnostics.h"
+#include "mlir-c/ExtensibleDialect.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 
 #include <functional>
 #include <optional>
-#include <sstream>
 #include <string>
 
 namespace nb = nanobind;
 using namespace nb::literals;
 using namespace mlir;
+using nanobind::detail::join;
 
 static const char kModuleParseDocstring[] =
     R"(Parses a module's assembly format from a string.
@@ -48,14 +49,6 @@ operations.
 //------------------------------------------------------------------------------
 // Utilities.
 //------------------------------------------------------------------------------
-
-/// Local helper to concatenate arguments into a `std::string`.
-template <typename... Ts>
-static std::string join(const Ts &...args) {
-  std::ostringstream oss;
-  (oss << ... << args);
-  return oss.str();
-}
 
 /// Local helper to compute std::hash for a value.
 template <typename T>
@@ -1671,7 +1664,7 @@ nb::object PyOpView::buildGeneric(
       int segmentSpec = operandSegmentSpec[i];
       if (segmentSpec == 1 || segmentSpec == 0) {
         // Unpack unary element.
-        const auto operand = operandList[i];
+        const nanobind::handle operand = operandList[i];
         if (!operand.is_none()) {
           try {
             operands.push_back(getOpResultOrValue(operand));
@@ -2505,6 +2498,135 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
           "Returns a list of `(name, attribute)` tuples.");
 }
 
+void PyOpAdaptor::bind(nb::module_ &m) {
+  nb::class_<PyOpAdaptor>(m, "OpAdaptor")
+      .def(nb::init<nb::list, PyOpAttributeMap>(),
+           "Creates an OpAdaptor with the given operands and attributes.",
+           "operands"_a, "attributes"_a)
+      .def(nb::init<nb::list, PyOpView &>(),
+           "Creates an OpAdaptor with the given operands and operation view.",
+           "operands"_a, "opview"_a)
+      .def_prop_ro(
+          "operands", [](PyOpAdaptor &self) { return self.operands; },
+          "Returns the operands of the adaptor.")
+      .def_prop_ro(
+          "attributes", [](PyOpAdaptor &self) { return self.attributes; },
+          "Returns the attributes of the adaptor.");
+}
+
+static MlirLogicalResult verifyTraitByMethod(MlirOperation op, void *userData,
+                                             const char *methodName) {
+  nb::handle targetObj(static_cast<PyObject *>(userData));
+  if (!nb::hasattr(targetObj, methodName)) {
+    return mlirLogicalResultSuccess();
+  }
+  PyMlirContextRef ctx = PyMlirContext::forContext(mlirOperationGetContext(op));
+  nb::object opView = PyOperation::forOperation(ctx, op)->createOpView();
+  bool success = nb::cast<bool>(targetObj.attr(methodName)(opView));
+  return success ? mlirLogicalResultSuccess() : mlirLogicalResultFailure();
+};
+
+static bool attachOpTrait(const nb::object &opName, MlirDynamicOpTrait trait,
+                          PyMlirContext &context) {
+  std::string opNameStr;
+  if (opName.is_type()) {
+    opNameStr = nb::cast<std::string>(opName.attr("OPERATION_NAME"));
+  } else if (nb::isinstance<nb::str>(opName)) {
+    opNameStr = nb::cast<std::string>(opName);
+  } else {
+    throw nb::type_error("the root argument must be a type or a string");
+  }
+
+  return mlirDynamicOpTraitAttach(
+      trait, MlirStringRef{opNameStr.data(), opNameStr.size()}, context.get());
+}
+
+bool PyDynamicOpTrait::attach(const nb::object &opName,
+                              const nb::object &target,
+                              PyMlirContext &context) {
+  if (!nb::hasattr(target, "verify") && !nb::hasattr(target, "verify_region"))
+    throw nb::type_error(
+        "the target object must have at least one of 'verify' or "
+        "'verify_region' methods");
+
+  MlirDynamicOpTraitCallbacks callbacks;
+  callbacks.construct = [](void *userData) {
+    nb::handle(static_cast<PyObject *>(userData)).inc_ref();
+  };
+  callbacks.destruct = [](void *userData) {
+    nb::handle(static_cast<PyObject *>(userData)).dec_ref();
+  };
+
+  callbacks.verifyTrait = [](MlirOperation op,
+                             void *userData) -> MlirLogicalResult {
+    return verifyTraitByMethod(op, userData, "verify");
+  };
+  callbacks.verifyRegionTrait = [](MlirOperation op,
+                                   void *userData) -> MlirLogicalResult {
+    return verifyTraitByMethod(op, userData, "verify_region");
+  };
+
+  constexpr const char *typeIDAttr = "_TYPE_ID";
+  if (!nb::hasattr(target, typeIDAttr)) {
+    nb::setattr(target, typeIDAttr,
+                nb::cast(PyTypeID(PyGlobals::get().allocateTypeID())));
+  }
+  MlirDynamicOpTrait trait = mlirDynamicOpTraitCreate(
+      nb::cast<PyTypeID>(target.attr(typeIDAttr)).get(), callbacks,
+      static_cast<void *>(target.ptr()));
+  return attachOpTrait(opName, trait, context);
+}
+
+void PyDynamicOpTrait::bind(nb::module_ &m) {
+  nb::class_<PyDynamicOpTrait> cls(m, "DynamicOpTrait");
+  cls.attr("attach") = classmethod(
+      [](const nb::object &cls, const nb::object &opName, nb::object target,
+         DefaultingPyMlirContext context) {
+        if (target.is_none())
+          target = cls;
+        return PyDynamicOpTrait::attach(opName, target, *context.get());
+      },
+      nb::arg("cls"), nb::arg("op_name"), nb::arg("target").none() = nb::none(),
+      nb::arg("context").none() = nb::none(),
+      "Attach the dynamic op trait subclass to the given operation name.");
+}
+
+bool PyDynamicOpTraits::IsTerminator::attach(const nb::object &opName,
+                                             PyMlirContext &context) {
+  MlirDynamicOpTrait trait = mlirDynamicOpTraitGetIsTerminator();
+  return attachOpTrait(opName, trait, context);
+}
+
+void PyDynamicOpTraits::IsTerminator::bind(nb::module_ &m) {
+  nb::class_<PyDynamicOpTraits::IsTerminator, PyDynamicOpTrait> cls(
+      m, "IsTerminatorTrait");
+  cls.attr("attach") = classmethod(
+      [](const nb::object &cls, const nb::object &opName,
+         DefaultingPyMlirContext context) {
+        return PyDynamicOpTraits::IsTerminator::attach(opName, *context.get());
+      },
+      "Attach IsTerminator trait to the given operation name.", nb::arg("cls"),
+      nb::arg("op_name"), nb::arg("context").none() = nb::none());
+}
+
+bool PyDynamicOpTraits::NoTerminator::attach(const nb::object &opName,
+                                             PyMlirContext &context) {
+  MlirDynamicOpTrait trait = mlirDynamicOpTraitGetNoTerminator();
+  return attachOpTrait(opName, trait, context);
+}
+
+void PyDynamicOpTraits::NoTerminator::bind(nb::module_ &m) {
+  nb::class_<PyDynamicOpTraits::NoTerminator, PyDynamicOpTrait> cls(
+      m, "NoTerminatorTrait");
+  cls.attr("attach") = classmethod(
+      [](const nb::object &cls, const nb::object &opName,
+         DefaultingPyMlirContext context) {
+        return PyDynamicOpTraits::NoTerminator::attach(opName, *context.get());
+      },
+      "Attach NoTerminator trait to the given operation name.", nb::arg("cls"),
+      nb::arg("op_name"), nb::arg("context").none() = nb::none());
+}
+
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
 } // namespace mlir
@@ -2755,6 +2877,28 @@ void populateRoot(nb::module_ &m) {
       "dialect_class"_a, nb::kw_only(), "replace"_a = false,
       "Produce a class decorator for registering an Operation class as part of "
       "a dialect");
+  m.def(
+      "register_op_adaptor",
+      [](const nb::type_object &opClass, bool replace) -> nb::object {
+        return nb::cpp_function(
+            [opClass,
+             replace](nb::type_object adaptorClass) -> nb::type_object {
+              std::string operationName =
+                  nb::cast<std::string>(adaptorClass.attr("OPERATION_NAME"));
+              PyGlobals::get().registerOpAdaptorImpl(operationName,
+                                                     adaptorClass, replace);
+              // Dict-stuff the new adaptorClass by name onto the opClass.
+              opClass.attr("Adaptor") = adaptorClass;
+              return adaptorClass;
+            });
+      },
+      // clang-format off
+      nb::sig("def register_op_adaptor(op_class: type, *, replace: bool = False) "
+        "-> typing.Callable[[type[T]], type[T]]"),
+      // clang-format on
+      "op_class"_a, nb::kw_only(), "replace"_a = false,
+      "Produce a class decorator for registering an OpAdaptor class for an "
+      "operation.");
   m.def(
       MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR,
       [](PyTypeID mlirTypeID, bool replace) -> nb::object {
@@ -3933,6 +4077,8 @@ void populateIRCore(nb::module_ &m) {
       "context"_a = nb::none(),
       "Parses a specific, generated OpView based on class level attributes.");
 
+  PyOpAdaptor::bind(m);
+
   //----------------------------------------------------------------------------
   // Mapping of PyRegion.
   //----------------------------------------------------------------------------
@@ -4804,6 +4950,11 @@ void populateIRCore(nb::module_ &m) {
 
   // Attribute builder getter.
   PyAttrBuilderMap::bind(m);
+
+  // Extensible Dialect
+  PyDynamicOpTrait::bind(m);
+  PyDynamicOpTraits::IsTerminator::bind(m);
+  PyDynamicOpTraits::NoTerminator::bind(m);
 }
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python

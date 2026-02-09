@@ -52,6 +52,34 @@ define i32 @align_assume_trunc_cond(ptr %a) #0 {
   ret i32 %t0
 }
 
+define void @align_32bit(ptr %ptr) {
+; CHECK-LABEL: @align_32bit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 4294967296) ]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = ptrtoint ptr %ptr to i64
+  %trunc = trunc i64 %0 to i32
+  %cmp = icmp eq i32 0, %trunc
+  call void @llvm.assume(i1 %cmp)
+  ret void
+}
+
+define void @align_63bit(ptr %ptr) {
+; CHECK-LABEL: @align_63bit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 -9223372036854775808) ]
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = ptrtoint ptr %ptr to i64
+  %trunc = trunc i64 %0 to i63
+  %cmp = icmp eq i63 0, %trunc
+  call void @llvm.assume(i1 %cmp)
+  ret void
+}
+
 ; Same check as in @foo1, but make sure it works if the assume is first too.
 
 define i32 @foo2(ptr %a) #0 {
@@ -389,6 +417,43 @@ define i1 @nonnull5(ptr %a) {
   tail call void @llvm.assume(i1 %cmp) ; %load has at least highest bit set
   %rval = icmp eq ptr %load, null
   ret i1 %rval
+}
+
+define void @redundant_nonnull1(ptr nonnull %ptr) {
+; CHECK-LABEL: @redundant_nonnull1(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
+  ret void
+}
+
+define void @redundant_nonnull2(ptr %ptr) {
+; CHECK-LABEL: @redundant_nonnull2(
+; CHECK-NEXT:    [[NULL_CMP_NOT:%.*]] = icmp eq ptr [[PTR:%.*]], null
+; CHECK-NEXT:    br i1 [[NULL_CMP_NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
+; CHECK:       true:
+; CHECK-NEXT:    ret void
+; CHECK:       false:
+; CHECK-NEXT:    ret void
+;
+  %cmp = icmp ne ptr %ptr, null
+  br i1 %cmp, label %true, label %false
+true:
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
+  ret void
+
+false:
+  ret void
+}
+
+define void @redundant_nonnull3(ptr %ptr) {
+; CHECK-LABEL: @redundant_nonnull3(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR:%.*]]) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
+  ret void
 }
 
 ; PR35846 - https://bugs.llvm.org/show_bug.cgi?id=35846
@@ -1043,4 +1108,3 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 attributes #0 = { nounwind uwtable }
 attributes #1 = { nounwind }
-
