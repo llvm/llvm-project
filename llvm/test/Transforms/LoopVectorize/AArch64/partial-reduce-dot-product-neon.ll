@@ -2392,9 +2392,130 @@ loop:
   %load.ext = sext i16 %load to i32
   %load.ext.ext = sext i32 %load.ext to i64
   %ec = icmp eq i64 %iv, %n
-  br i1 %ec, label %exit, label %loop
+  br i1 %ec, label %end, label %loop
 
-exit:
+end:
+  ret i32 %add
+}
+
+define i32 @zext_add_reduc_i8_i32_store_invariant(ptr %a, ptr %dst) {
+; CHECK-INTERLEAVE1-LABEL: define i32 @zext_add_reduc_i8_i32_store_invariant(
+; CHECK-INTERLEAVE1-SAME: ptr [[A:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
+; CHECK-INTERLEAVE1-NEXT:  entry:
+; CHECK-INTERLEAVE1-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 42
+; CHECK-INTERLEAVE1-NEXT:    store i32 0, ptr [[GEP_DST]], align 4
+; CHECK-INTERLEAVE1-NEXT:    br label [[VECTOR_PH:%.*]]
+; CHECK-INTERLEAVE1:       vector.memcheck:
+; CHECK-INTERLEAVE1-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 172
+; CHECK-INTERLEAVE1-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 1024
+; CHECK-INTERLEAVE1-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[GEP_DST]], [[SCEVGEP1]]
+; CHECK-INTERLEAVE1-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP]]
+; CHECK-INTERLEAVE1-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-INTERLEAVE1-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH1:%.*]]
+; CHECK-INTERLEAVE1:       vector.ph:
+; CHECK-INTERLEAVE1-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-INTERLEAVE1:       vector.body:
+; CHECK-INTERLEAVE1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH1]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-INTERLEAVE1-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1, !alias.scope [[META19:![0-9]+]]
+; CHECK-INTERLEAVE1-NEXT:    [[TMP1:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
+; CHECK-INTERLEAVE1-NEXT:    [[TMP3]] = add <16 x i32> [[TMP1]], [[VEC_PHI]]
+; CHECK-INTERLEAVE1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-INTERLEAVE1-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; CHECK-INTERLEAVE1:       middle.block:
+; CHECK-INTERLEAVE1-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP3]])
+; CHECK-INTERLEAVE1-NEXT:    store i32 [[TMP4]], ptr [[GEP_DST]], align 4, !alias.scope [[META23:![0-9]+]], !noalias [[META19]]
+; CHECK-INTERLEAVE1-NEXT:    br label [[FOR_EXIT:%.*]]
+; CHECK-INTERLEAVE1:       scalar.ph:
+;
+; CHECK-INTERLEAVED-LABEL: define i32 @zext_add_reduc_i8_i32_store_invariant(
+; CHECK-INTERLEAVED-SAME: ptr [[A:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
+; CHECK-INTERLEAVED-NEXT:  entry:
+; CHECK-INTERLEAVED-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 42
+; CHECK-INTERLEAVED-NEXT:    store i32 0, ptr [[GEP_DST]], align 4
+; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_PH:%.*]]
+; CHECK-INTERLEAVED:       vector.memcheck:
+; CHECK-INTERLEAVED-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 172
+; CHECK-INTERLEAVED-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 1024
+; CHECK-INTERLEAVED-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[GEP_DST]], [[SCEVGEP1]]
+; CHECK-INTERLEAVED-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP]]
+; CHECK-INTERLEAVED-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-INTERLEAVED-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH1:%.*]]
+; CHECK-INTERLEAVED:       vector.ph:
+; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-INTERLEAVED:       vector.body:
+; CHECK-INTERLEAVED-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH1]] ], [ [[TMP6:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[VEC_PHI2:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH1]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-INTERLEAVED-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 16
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1, !alias.scope [[META19:![0-9]+]]
+; CHECK-INTERLEAVED-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x i8>, ptr [[TMP1]], align 1, !alias.scope [[META19]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP2:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP3:%.*]] = zext <16 x i8> [[WIDE_LOAD2]] to <16 x i32>
+; CHECK-INTERLEAVED-NEXT:    [[TMP6]] = add <16 x i32> [[TMP2]], [[VEC_PHI]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP5]] = add <16 x i32> [[TMP3]], [[VEC_PHI2]]
+; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
+; CHECK-INTERLEAVED-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP4]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; CHECK-INTERLEAVED:       middle.block:
+; CHECK-INTERLEAVED-NEXT:    [[BIN_RDX:%.*]] = add <16 x i32> [[TMP5]], [[TMP6]]
+; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[BIN_RDX]])
+; CHECK-INTERLEAVED-NEXT:    store i32 [[TMP7]], ptr [[GEP_DST]], align 4, !alias.scope [[META23:![0-9]+]], !noalias [[META19]]
+; CHECK-INTERLEAVED-NEXT:    br label [[FOR_EXIT:%.*]]
+; CHECK-INTERLEAVED:       scalar.ph:
+;
+; CHECK-MAXBW-LABEL: define i32 @zext_add_reduc_i8_i32_store_invariant(
+; CHECK-MAXBW-SAME: ptr [[A:%.*]], ptr [[DST:%.*]]) #[[ATTR0]] {
+; CHECK-MAXBW-NEXT:  entry:
+; CHECK-MAXBW-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 42
+; CHECK-MAXBW-NEXT:    store i32 0, ptr [[GEP_DST]], align 4
+; CHECK-MAXBW-NEXT:    br label [[VECTOR_PH:%.*]]
+; CHECK-MAXBW:       vector.memcheck:
+; CHECK-MAXBW-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 172
+; CHECK-MAXBW-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[A]], i64 1024
+; CHECK-MAXBW-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[GEP_DST]], [[SCEVGEP1]]
+; CHECK-MAXBW-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[A]], [[SCEVGEP]]
+; CHECK-MAXBW-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-MAXBW-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH1:%.*]]
+; CHECK-MAXBW:       vector.ph:
+; CHECK-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-MAXBW:       vector.body:
+; CHECK-MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH1]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <16 x i32> [ zeroinitializer, [[VECTOR_PH1]] ], [ [[TMP3:%.*]], [[VECTOR_BODY]] ]
+; CHECK-MAXBW-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 [[INDEX]]
+; CHECK-MAXBW-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1, !alias.scope [[META19:![0-9]+]]
+; CHECK-MAXBW-NEXT:    [[TMP1:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
+; CHECK-MAXBW-NEXT:    [[TMP3]] = add <16 x i32> [[TMP1]], [[VEC_PHI]]
+; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-MAXBW-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-MAXBW-NEXT:    br i1 [[TMP2]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; CHECK-MAXBW:       middle.block:
+; CHECK-MAXBW-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> [[TMP3]])
+; CHECK-MAXBW-NEXT:    store i32 [[TMP4]], ptr [[GEP_DST]], align 4, !alias.scope [[META23:![0-9]+]], !noalias [[META19]]
+; CHECK-MAXBW-NEXT:    br label [[FOR_EXIT:%.*]]
+; CHECK-MAXBW:       scalar.ph:
+;
+entry:
+  %gep.dst = getelementptr inbounds i32, ptr %dst, i64 42
+  store i32 0, ptr %gep.dst, align 4
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %accum = phi i32 [ 0, %entry ], [ %add, %loop ]
+  %gep.a = getelementptr i8, ptr %a, i64 %iv
+  %load.a = load i8, ptr %gep.a, align 1
+  %ext.a = zext i8 %load.a to i32
+  %add = add i32 %ext.a, %accum
+  store i32 %add, ptr %gep.dst, align 4
+  %iv.next = add i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 1024
+  br i1 %exitcond.not, label %end, label %for.body
+
+end:
   ret i32 %add
 }
 
