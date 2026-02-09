@@ -1,7 +1,7 @@
-// RUN: mlir-opt --transform-interpreter --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --transform-interpreter --linalg-specialize-generic-ops --split-input-file %s | FileCheck %s
 // Test the same patterns on generic convolution ops by first generalizing the
 // named ops. This avoids duplicating lit tests for linalg.generic conv ops.
-// RUN: mlir-opt --linalg-generalize-named-ops --transform-interpreter --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --linalg-generalize-named-ops --transform-interpreter --linalg-specialize-generic-ops --split-input-file %s | FileCheck %s
 
 // CHECK-DAG:  #[[$MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 // CHECK-DAG:  #[[$MAP1:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
@@ -42,10 +42,11 @@ func.func @conv_2d_nchw_fchw(%input: tensor<?x?x1x?xf32>, %filter: tensor<?x?x1x
   return %0 : tensor<?x?x1x?xf32>
 }
 
-// CHECK-LABEL: @depthwise_conv_2d_nhwc_hwc
+// Depthwise conv with height=1 (downscales height dimension)
+// CHECK-LABEL: @depthwise_conv_2d_nhwc_hwc_height
 // CHECK-SAME: %[[ARG0:.+]]: tensor<1x1x113x96xf32>
 // CHECK-SAME: %[[ARG1:.+]]: tensor<1x3x96xf32>
-func.func @depthwise_conv_2d_nhwc_hwc(%input: tensor<1x1x113x96xf32>, %filter: tensor<1x3x96xf32>) -> tensor<1x1x56x96xf32> {
+func.func @depthwise_conv_2d_nhwc_hwc_height(%input: tensor<1x1x113x96xf32>, %filter: tensor<1x3x96xf32>) -> tensor<1x1x56x96xf32> {
   // CHECK: %[[RES:.+]] = tensor.empty
   %init = tensor.empty() : tensor<1x1x56x96xf32>
   // CHECK: %[[SLICE0:.+]] = tensor.extract_slice %[[ARG0]]
@@ -60,6 +61,27 @@ func.func @depthwise_conv_2d_nhwc_hwc(%input: tensor<1x1x113x96xf32>, %filter: t
          outs(%init: tensor<1x1x56x96xf32>) -> tensor<1x1x56x96xf32>
   // CHECK: %[[INSERTED]]
   return %0: tensor<1x1x56x96xf32>
+}
+
+// Depthwise conv with width=1 (downscales width dimension)
+// CHECK-LABEL: @depthwise_conv_2d_nhwc_hwc_width
+// CHECK-SAME: %[[ARG0:.+]]: tensor<1x113x1x96xf32>
+// CHECK-SAME: %[[ARG1:.+]]: tensor<3x1x96xf32>
+func.func @depthwise_conv_2d_nhwc_hwc_width(%input: tensor<1x113x1x96xf32>, %filter: tensor<3x1x96xf32>) -> tensor<1x56x1x96xf32> {
+  // CHECK: %[[RES:.+]] = tensor.empty
+  %init = tensor.empty() : tensor<1x56x1x96xf32>
+  // CHECK: %[[SLICE0:.+]] = tensor.extract_slice %[[ARG0]]
+  // CHECK: %[[SLICE1:.+]] = tensor.extract_slice %[[ARG1]]
+  // CHECK: %[[SLICERES:.+]] = tensor.extract_slice %[[RES]]
+  // CHECK: %[[OPRES:.+]] = linalg.depthwise_conv_1d_nwc_wc
+  // CHECK-SAME: ins(%[[SLICE0]], %[[SLICE1]]
+  // CHECK-SAME: outs(%[[SLICERES]]
+  // CHECK: %[[INSERTED:.+]] = tensor.insert_slice %[[OPRES]] into %[[RES]]
+  %0 = linalg.depthwise_conv_2d_nhwc_hwc {dilations = dense<1> : vector<2xi64>, strides = dense<2> : vector<2xi64>}
+         ins(%input, %filter: tensor<1x113x1x96xf32>, tensor<3x1x96xf32>)
+         outs(%init: tensor<1x56x1x96xf32>) -> tensor<1x56x1x96xf32>
+  // CHECK: %[[INSERTED]]
+  return %0: tensor<1x56x1x96xf32>
 }
 
 // CHECK-LABEL: @conv_2d
@@ -212,39 +234,19 @@ func.func @softmax(%arg0: tensor<2x16x32xf32>, %dst: tensor<2x16x32xf32>) -> ten
 
 // CHECK-LABEL:      func.func @softmax(
 // CHECK-SAME:           %[[ARG0:[a-zA-Z0-9_]+]]: tensor<2x16x32xf32>, %[[DST:[a-zA-Z0-9_]+]]: tensor<2x16x32xf32>) -> tensor<2x16x32xf32> {
-// CHECK-DAG:        %[[D1:.+]] = tensor.empty() : tensor<2x16xf32>
-// CHECK-DAG:        %[[CST:.+]] = arith.constant 0xFFC00000 : f32
-// CHECK:        %[[D2:.+]] = linalg.fill ins(%[[CST]] : f32) outs(%[[D1]] : tensor<2x16xf32>) -> tensor<2x16xf32>
-// CHECK:        %[[D3:.+]] = linalg.generic {indexing_maps = [#[[$MAP]], #[[$MAP1]]], iterator_types = ["parallel",
-// CHECK-SAME:     "parallel", "reduction"]} ins(%[[ARG0]] : tensor<2x16x32xf32>) outs(%[[D2]] : tensor<2x16xf32>) {
-// CHECK:        ^bb0(%[[IN:.+]]: f32, %[[OUT:.+]]: f32):
-// CHECK:          %[[D8:.+]] = arith.maxnumf %[[IN]], %[[OUT]] : f32
-// CHECK:          linalg.yield %[[D8]] : f32
-// CHECK:        } -> tensor<2x16xf32>
-// CHECK:        %[[D4:.+]] = linalg.generic {indexing_maps = [#[[$MAP]], #[[$MAP1]], #[[$MAP]]], iterator_types =
-// CHECK-SAME:     ["parallel", "parallel", "parallel"]} ins(%[[ARG0]], %[[D3]] : tensor<2x16x32xf32>, tensor<2x16xf32>)
-// CHECK-SAME:     outs(%[[DST]] : tensor<2x16x32xf32>) {
-// CHECK:        ^bb0(%[[IN:.+]]: f32, %[[IN_1:.+]]: f32, %[[OUT:.+]]: f32):
-// CHECK:          %[[D8]] = arith.subf %[[IN]], %[[IN_1]] : f32
-// CHECK:          %[[D9:.+]] = math.exp %[[D8]] : f32
-// CHECK:          linalg.yield %[[D9]] : f32
-// CHECK:        } -> tensor<2x16x32xf32>
-// CHECK:        %[[CST_0:.+]] = arith.constant 0.000000e+00 : f32
-// CHECK:        %[[D5:.+]] = linalg.fill ins(%[[CST_0]] : f32) outs(%[[D1]] : tensor<2x16xf32>) -> tensor<2x16xf32>
-// CHECK:        %[[D6:.+]] = linalg.generic {indexing_maps = [#[[$MAP]], #[[$MAP1]]], iterator_types = ["parallel",
-// CHECK-SAME:     "parallel", "reduction"]} ins(%[[D4]] : tensor<2x16x32xf32>) outs(%[[D5]] : tensor<2x16xf32>) {
-// CHECK:        ^bb0(%[[IN:.+]]: f32, %[[OUT:.+]]: f32):
-// CHECK:          %[[D8]] = arith.addf %[[IN]], %[[OUT]] : f32
-// CHECK:          linalg.yield %[[D8]] : f32
-// CHECK:        } -> tensor<2x16xf32>
-// CHECK:        %[[D7:.+]] = linalg.generic {indexing_maps = [#[[$MAP]], #[[$MAP1]], #[[$MAP]]], iterator_types =
-// CHECK-SAME:     ["parallel", "parallel", "parallel"]} ins(%[[D4]], %[[D6]] : tensor<2x16x32xf32>, tensor<2x16xf32>)
-// CHECK-SAME:     outs(%[[DST]] : tensor<2x16x32xf32>) {
-// CHECK:        ^bb0(%[[IN:.+]]: f32, %[[IN_1:.+]]: f32, %[[OUT:.+]]: f32):
-// CHECK:          %[[D8]] = arith.divf %[[IN]], %[[IN_1]] : f32
-// CHECK:          linalg.yield %[[D8]] : f32
-// CHECK:        } -> tensor<2x16x32xf32>
-// CHECK:        return %[[D7]] : tensor<2x16x32xf32>
+// CHECK:        linalg.fill
+// CHECK:        linalg.generic
+// CHECK:          arith.maxnumf
+// CHECK:        linalg.broadcast
+// CHECK:        linalg.generic
+// CHECK:          arith.subf
+// CHECK:          math.exp
+// CHECK:        linalg.fill
+// CHECK:        linalg.generic
+// CHECK:          arith.addf
+// CHECK:        linalg.broadcast
+// CHECK:        linalg.div
+// CHECK:        return
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {

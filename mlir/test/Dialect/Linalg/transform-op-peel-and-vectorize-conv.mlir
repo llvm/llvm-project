@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --transform-interpreter --split-input-file -resolve-shaped-type-result-dims -canonicalize | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --linalg-specialize-generic-ops --split-input-file -resolve-shaped-type-result-dims -canonicalize | FileCheck %s
 
 // Demonstrates what happens when peeling the 4th loop (that corresponds to the
 // "depth" dimension in depthwise convs) followed by vectorization in the
@@ -73,7 +73,9 @@ module attributes {transform.with_named_sequence} {
 
     // 4. Apply loop peeling - only the 4th loop
     %main_loop, %remainder_loop = transform.loop.peel %loops_1#3 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">, !transform.op<"scf.for">)
-    %5 = transform.structured.match ops{["linalg.depthwise_conv_1d_nwc_wc"]} in %main_loop : (!transform.op<"scf.for">) -> !transform.any_op
+    // Match linalg.generic since decompose produces generic ops, and
+    // --linalg-specialize-generic-ops runs after the transform interpreter.
+    %5 = transform.structured.match ops{["linalg.generic"]} in %main_loop : (!transform.op<"scf.for">) -> !transform.any_op
 
     // 5. Vectorize, but only the main loop
     transform.structured.vectorize %5 vector_sizes [2, 4, [4], 16] : !transform.any_op
