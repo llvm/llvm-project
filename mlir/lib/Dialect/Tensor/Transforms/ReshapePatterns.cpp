@@ -645,7 +645,6 @@ static LogicalResult computeExpandedSliceInfoForReassocGroup(
   // or dynamic, It's a trivial case where we always can guarantee
   // contiguous slicing.
   if (staticSize.value() == 1) {
-    SmallVector<int64_t> basis;
     for (size_t i = 0; i < reassocIndices.size(); ++i)
       groupSizes.push_back(b.getIndexAttr(1));
 
@@ -679,12 +678,12 @@ static LogicalResult computeExpandedSliceInfoForReassocGroup(
   int64_t idx = 0;
   int64_t reassocGroupSize = reassocIndices.size();
 
-  SmallVector<OpFoldResult> groupExpandedSizes;
-
   // First handle the trailing dimensions where the slice size should be
   // equal to the tensor shape and the offset should be 0 (n...k+1).
   for (; idx < reassocGroupSize; ++idx) {
     int64_t expandedShapeSize = expandedShape[reversedReassocIndices[idx]];
+    if (expandedShapeSize == ShapedType::kDynamic)
+      return failure();
 
     if (currentCollapsedsize < expandedShapeSize)
       break;
@@ -712,7 +711,7 @@ static LogicalResult computeExpandedSliceInfoForReassocGroup(
       // Static offset: check that offset + size doesn't exceed dimension.
       int64_t offsetInDim =
           (staticOffset.value() / currentOffsetDivisor) % expandedShapeSize;
-      if ((currentCollapsedsize + offsetInDim) >= expandedShapeSize)
+      if ((currentCollapsedsize + offsetInDim) > expandedShapeSize)
         return failure();
     } else {
       // If the offset is dynamic, We could have more restricted conditions
@@ -723,7 +722,8 @@ static LogicalResult computeExpandedSliceInfoForReassocGroup(
       // to check the validity of the range.
       if ((expandedShapeSize % currentCollapsedsize) != 0)
         return failure();
-      if (!isMultipleOf(collapsedOffset, currentCollapsedsize))
+      if (!isMultipleOf(collapsedOffset,
+                        currentOffsetDivisor * currentCollapsedsize))
         return failure();
     }
     // Slicing dimension gets the remaining collapsed size.

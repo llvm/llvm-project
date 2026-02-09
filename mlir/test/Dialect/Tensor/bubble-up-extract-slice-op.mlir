@@ -458,6 +458,31 @@ func.func @no_bubble_up_extract_slice_through_collapse_shape_on_unsupported_dyna
   return %extract : tensor<?xf32>
 }
 
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_boundary_offset(
+// CHECK-SAME:                      %[[SRC:.*]]: tensor<3x10xf32>) -> tensor<5xf32> {
+// CHECK-DAG:       %[[C5:.*]] = arith.constant 5 : index
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]][%[[C0]], %[[C5]]] [1, 5] [1, 1]
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1]]
+// CHECK:           return %[[COLLAPSE]]
+
+func.func @bubble_up_extract_slice_through_collapse_shape_boundary_offset(%src: tensor<3x10xf32>) -> tensor<5xf32> {
+  %collapsed = tensor.collapse_shape %src [[0, 1]] : tensor<3x10xf32> into tensor<30xf32>
+  %extracted_slice = tensor.extract_slice %collapsed[5] [5] [1] : tensor<30xf32> to tensor<5xf32>
+  return %extracted_slice : tensor<5xf32>
+}
+
+// CHECK-LABEL:   func.func @no_bubble_up_extract_slice_affine_apply_dynamic_offset_multi_trailing
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice
+
+func.func @no_bubble_up_extract_slice_affine_apply_dynamic_offset_multi_trailing(%arg0: tensor<2x8x6xf32>, %arg1: index) -> tensor<24xf32> {
+  %collapsed = tensor.collapse_shape %arg0 [[0, 1, 2]] : tensor<2x8x6xf32> into tensor<96xf32>
+  %0 = affine.apply affine_map<()[s0] -> (s0 * 12)>()[%arg1]
+  %extracted_slice = tensor.extract_slice %collapsed[%0] [24] [1] : tensor<96xf32> to tensor<24xf32>
+  return %extracted_slice : tensor<24xf32>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
     %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
