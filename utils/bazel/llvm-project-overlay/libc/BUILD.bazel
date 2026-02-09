@@ -3743,6 +3743,23 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_hypotf16",
+    hdrs = ["src/__support/math/hypotf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_types",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_sinhf",
     hdrs = ["src/__support/math/sinhf.h"],
     deps = [
@@ -4885,8 +4902,8 @@ libc_math_function(
 libc_math_function(
     name = "hypotf16",
     additional_deps = [
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_sqrt",
+        ":__support_math_hypotf16",
+        ":errno",
     ],
 )
 
