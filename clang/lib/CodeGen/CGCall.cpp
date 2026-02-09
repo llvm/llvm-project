@@ -2010,8 +2010,6 @@ static void getTrivialDefaultFunctionAttributes(
 
     // TODO: Are these all needed?
     // unsafe/inf/nan/nsz are handled by instruction-level FastMathFlags.
-    if (LangOpts.NoHonorInfs)
-      FuncAttrs.addAttribute("no-infs-fp-math", "true");
     if (LangOpts.NoHonorNaNs)
       FuncAttrs.addAttribute("no-nans-fp-math", "true");
     if (CodeGenOpts.SoftFloat)
