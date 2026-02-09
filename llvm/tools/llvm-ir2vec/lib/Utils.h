@@ -129,7 +129,7 @@ public:
                                                IR2VecKind Kind) const;
   /// Get embeddings for all instructions in a function
   Expected<InstEmbeddingsMap> getInstEmbeddingsMap(const Function &F,
-                                            IR2VecKind Kind) const;
+                                                   IR2VecKind Kind) const;
 
   /// Generate embeddings for the entire module
   void writeEmbeddingsToStream(raw_ostream &OS, EmbeddingLevel Level) const;
