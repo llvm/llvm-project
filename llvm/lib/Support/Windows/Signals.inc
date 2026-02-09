@@ -551,9 +551,9 @@ void llvm::sys::CallOneShotPipeSignalHandler() {
 /// handler it is.
 void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr, void *Cookie,
                                  bool NeedsPOSIXUtilitySignalHandling)
-  insertSignalHandler(FnPtr, Cookie);
-  RegisterHandler();
-  LeaveCriticalSection(&CriticalSection);
+    insertSignalHandler(FnPtr, Cookie);
+RegisterHandler();
+LeaveCriticalSection(&CriticalSection);
 }
 
 static void Cleanup(bool ExecuteSignalHandlers) {
