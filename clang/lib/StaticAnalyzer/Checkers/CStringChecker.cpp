@@ -2801,8 +2801,23 @@ CStringChecker::FnCheck CStringChecker::identifyCall(const CallEvent &Call,
   }
 
   const FnCheck *Callback = Callbacks.lookup(Call);
-  if (Callback)
+  if (Callback) {
+    if (const IdentifierInfo *II = FD->getIdentifier()) {
+      StringRef Name = II->getName();
+      // Logic to confirm if the function has the same type as the known
+      // standard function. String comparison functions (like strcmp) are
+      // expected to take pointers as arguments.
+      // Signature: int strcmp(const char *s1, const char *s2);
+      // Requirement: Exactly 2 arguments, both must be pointers.
+      if (Name == "strcmp" || Name == "strcasecmp" || Name == "strcoll")
+        if (FD->getNumParams() != 2 ||
+            !FD->getParamDecl(0)->getType()->isPointerType() ||
+            !FD->getParamDecl(1)->getType()->isPointerType())
+          return nullptr;
+    }
+
     return *Callback;
+  }
 
   return nullptr;
 }
