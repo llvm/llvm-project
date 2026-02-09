@@ -14,9 +14,8 @@ subroutine test_default(str)
   ! CHECK: %[[strBox:.*]] = fir.embox %{{.*}} typeparams %{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
   ! CHECK: %[[resBoxNone:.*]] = fir.convert %[[tmpBox]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK: %[[strBoxNone:.*]] = fir.convert %[[strBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
-  ! CHECK: %{{.*}} = fir.convert %{{.*}} : (!fir.box<i1>) -> !fir.box<none>
   ! CHECK: %{{.*}} = fir.convert %{{.*}} : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-  ! CHECK: fir.call @_FortranAFCString(%[[resBoxNone]], %[[strBoxNone]], %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+  ! CHECK: fir.call @_FortranAFCString(%[[resBoxNone]], %[[strBoxNone]], %{{(false|.*)}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.ref<i8>, i32) -> ()
   result = f_c_string(str)
   
   ! CHECK: fir.freemem
@@ -32,12 +31,11 @@ subroutine test_with_asis(str, keep_blanks)
   
   ! CHECK: %[[tmpBox:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>>
   ! CHECK: %[[strBox:.*]] = fir.embox %{{.*}} typeparams %{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
-  ! CHECK: %[[asisBox:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
   ! CHECK: %[[resBoxNone:.*]] = fir.convert %[[tmpBox]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK: %[[strBoxNone:.*]] = fir.convert %[[strBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
-  ! CHECK: %[[asisBoxNone:.*]] = fir.convert %[[asisBox]] : (!fir.box<!fir.logical<4>>) -> !fir.box<none>
+  ! CHECK: %[[asisBool:.*]] = fir.convert %{{.*}} : (!fir.logical<4>) -> i1
   ! CHECK: %{{.*}} = fir.convert %{{.*}} : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-  ! CHECK: fir.call @_FortranAFCString(%[[resBoxNone]], %[[strBoxNone]], %[[asisBoxNone]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+  ! CHECK: fir.call @_FortranAFCString(%[[resBoxNone]], %[[strBoxNone]], %[[asisBool]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.ref<i8>, i32) -> ()
   result = f_c_string(str, keep_blanks)
   
   ! CHECK: fir.freemem
@@ -48,11 +46,7 @@ subroutine test_literal_asis()
   use iso_c_binding
   character(:), allocatable :: result
   
-  ! CHECK: %[[asisTemp:.*]] = fir.alloca !fir.logical<4>
-  ! CHECK: %[[trueVal:.*]] = arith.constant true
-  ! CHECK: %[[trueLogical:.*]] = fir.convert %[[trueVal]] : (i1) -> !fir.logical<4>
-  ! CHECK: fir.store %[[trueLogical]] to %[[asisTemp]] : !fir.ref<!fir.logical<4>>
   ! CHECK: %{{.*}} = fir.convert %{{.*}} : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-  ! CHECK: fir.call @_FortranAFCString(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.box<none>, !fir.ref<i8>, i32) -> ()
+  ! CHECK: fir.call @_FortranAFCString(%{{.*}}, %{{.*}}, %{{(true|.*)}}, %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.ref<i8>, i32) -> ()
   result = f_c_string('hello', .true.)
 end subroutine

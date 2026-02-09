@@ -845,12 +845,12 @@ void RTDEF(Repeat)(Descriptor &result, const Descriptor &string,
 
 // F_C_STRING - Appends null terminator to create C-compatible string
 // If asis is false, trailing blanks are trimmed first
-void RTDEF(FCString)(Descriptor &result, const Descriptor &string,
-    const Descriptor *asis, const char *sourceFile, int sourceLine) {
+void RTDEF(FCString)(Descriptor &result, const Descriptor &string, bool asis,
+    const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   RUNTIME_CHECK(terminator, string.raw().type == CFI_type_char);
   std::size_t chars{string.ElementBytes()};
-  if (!asis || !IsLogicalElementTrue(*asis, nullptr)) {
+  if (!asis) {
     chars = LenTrim(string.OffsetElement<const char>(), chars);
   }
   std::size_t resultBytes{chars + 1};

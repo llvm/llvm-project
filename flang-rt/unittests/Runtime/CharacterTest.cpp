@@ -447,7 +447,7 @@ TEST(CharacterTests, FCString) {
     OwningPtr<Descriptor> result{Descriptor::Create(TypeCode{CFI_type_char}, 1,
         nullptr, 0, nullptr, CFI_attribute_allocatable)};
 
-    RTNAME(FCString)(*result, input, /*asis=*/nullptr);
+    RTNAME(FCString)(*result, input, /*asis=*/false);
 
     EXPECT_EQ(result->ElementBytes(), std::size_t(4)); // "abc\0" = 4 bytes
     const char *data = result->OffsetElement<char>();
@@ -467,17 +467,10 @@ TEST(CharacterTests, FCString) {
     input.Establish(TypeCode{CFI_type_char}, /*elemLen=*/10, buffer, 0, nullptr,
         CFI_attribute_pointer);
 
-    // Create asis descriptor (true)
-    static std::uint32_t asisValue = 1; // true
-    StaticDescriptor<0> asisStaticDescriptor;
-    Descriptor &asis{asisStaticDescriptor.descriptor()};
-    asis.Establish(TypeCategory::Logical, 4, &asisValue, 0, nullptr,
-        CFI_attribute_pointer);
-
     OwningPtr<Descriptor> result{Descriptor::Create(TypeCode{CFI_type_char}, 1,
         nullptr, 0, nullptr, CFI_attribute_allocatable)};
 
-    RTNAME(FCString)(*result, input, &asis);
+    RTNAME(FCString)(*result, input, /*asis=*/true);
 
     EXPECT_EQ(
         result->ElementBytes(), std::size_t(11)); // "abc       \0" = 11 bytes
@@ -501,7 +494,7 @@ TEST(CharacterTests, FCString) {
     OwningPtr<Descriptor> result{Descriptor::Create(TypeCode{CFI_type_char}, 1,
         nullptr, 0, nullptr, CFI_attribute_allocatable)};
 
-    RTNAME(FCString)(*result, input, /*asis=*/nullptr);
+    RTNAME(FCString)(*result, input, /*asis=*/false);
 
     EXPECT_EQ(result->ElementBytes(), std::size_t(1)); // Just "\0"
     const char *data = result->OffsetElement<char>();
@@ -523,7 +516,7 @@ TEST(CharacterTests, FCString) {
     OwningPtr<Descriptor> result{Descriptor::Create(TypeCode{CFI_type_char}, 1,
         nullptr, 0, nullptr, CFI_attribute_allocatable)};
 
-    RTNAME(FCString)(*result, input, /*asis=*/nullptr);
+    RTNAME(FCString)(*result, input, /*asis=*/false);
 
     EXPECT_EQ(result->ElementBytes(), std::size_t(6)); // "hello\0"
     const char *data = result->OffsetElement<char>();

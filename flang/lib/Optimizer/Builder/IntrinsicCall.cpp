@@ -3893,20 +3893,10 @@ IntrinsicLibrary::genFCString(mlir::Type resultType,
 
   mlir::Value string = builder.createBox(loc, args[0]);
 
-  // Handle optional ASIS argument - box it for runtime call
-  auto makeRefThenEmbox = [&](mlir::Value b) {
-    fir::LogicalType logTy = fir::LogicalType::get(
-        builder.getContext(), builder.getKindMap().defaultLogicalKind());
-    mlir::Value temp = builder.createTemporary(loc, logTy);
-    mlir::Value castb = builder.createConvert(loc, logTy, b);
-    fir::StoreOp::create(builder, loc, castb, temp);
-    return builder.createBox(loc, temp);
-  };
-  mlir::Value asisBoxed =
-      isStaticallyAbsent(args, 1)
-          ? fir::AbsentOp::create(builder, loc,
-                                  fir::BoxType::get(builder.getI1Type()))
-          : makeRefThenEmbox(fir::getBase(args[1]));
+  // Handle optional ASIS argument
+  mlir::Value asis = isStaticallyAbsent(args, 1)
+                         ? builder.createBool(loc, false)
+                         : fir::getBase(args[1]);
 
   // Create mutable fir.box to be passed to the runtime for the result.
   fir::MutableBoxValue resultMutableBox =
@@ -3914,7 +3904,7 @@ IntrinsicLibrary::genFCString(mlir::Type resultType,
   mlir::Value resultIrBox =
       fir::factory::getMutableIRBox(builder, loc, resultMutableBox);
 
-  fir::runtime::genFCString(builder, loc, resultIrBox, string, asisBoxed);
+  fir::runtime::genFCString(builder, loc, resultIrBox, string, asis);
 
   // Read result from mutable fir.box and add it to the list of temps to be
   // finalized by the StatementContext.
