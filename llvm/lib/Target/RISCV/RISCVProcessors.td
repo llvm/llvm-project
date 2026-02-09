@@ -89,7 +89,8 @@ class RISCVTuneProcessorModel<string n, SchedMachineModel m,
   list<RISCVTuneFeature> ConfigurableTuneFeatures = [];
 }
 
-defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore];
+defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore,
+                              FeatureEnableSelectOptimize];
 
 def GENERIC_RV32 : RISCVProcessorModel<"generic-rv32",
                                        NoSchedModel,
@@ -106,8 +107,7 @@ def GENERIC_RV64 : RISCVProcessorModel<"generic-rv64",
 // Support generic for compatibility with other targets. The triple will be used
 // to change to the appropriate rv32/rv64 version.
 def GENERIC : RISCVTuneProcessorModel<"generic", NoSchedModel>, GenericTuneInfo;
-def GENERIC_OOO : RISCVTuneProcessorModel<"generic-ooo", GenericOOOModel,
-                                          [FeatureEnableSelectOptimize]>,
+def GENERIC_OOO : RISCVTuneProcessorModel<"generic-ooo", GenericOOOModel>,
                   GenericTuneInfo;
 
 // clang-format off
