@@ -525,6 +525,7 @@ StringRef AMDGPUTargetCodeGenInfo::getLLVMSyncScopeStr(
   case SyncScope::OpenCLAllSVMDevices:
     return IsOneAs ? "one-as" : "";
   }
+  llvm_unreachable("Unknown SyncScope enum");
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(
