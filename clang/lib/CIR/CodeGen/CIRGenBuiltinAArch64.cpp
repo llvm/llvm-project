@@ -1,5 +1,4 @@
 //===---- CIRGenBuiltinAArch64.cpp - Emit CIR for AArch64 builtins --------===//
-//
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
@@ -86,6 +85,42 @@ findARMVectorIntrinsicInMap(ArrayRef<AArch64BuiltinInfo> intrinsicMap,
     return info;
 
   return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+//  Emit-helpers
+//===----------------------------------------------------------------------===//
+static mlir::Value
+emitAArch64CompareBuiltinExpr(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
+                              mlir::Location loc, mlir::Value src,
+                              mlir::Type retTy, const cir::CmpOpKind kind) {
+
+  bool scalarCmp = !isa<cir::VectorType>(src.getType());
+  if (!scalarCmp) {
+    assert(cast<cir::VectorType>(retTy).getIsScalable() &&
+           "This is only intended for fixed-width vectors");
+    // Vector retTypes are cast to i8 vectors. Recover original retType.
+    cgf.cgm.errorNYI(loc, std::string("unimplemented vector compare"));
+  }
+
+  mlir::Value zero = builder.getNullValue(src.getType(), loc);
+  mlir::Value cmp;
+  if (cir::isFPOrVectorOfFPType(src.getType())) {
+    cgf.cgm.errorNYI(loc, std::string("unimplemented FP compare"));
+  } else {
+    if (scalarCmp)
+      // For scalars, cast !cir.bool to !cir.int<s, 1> so that the compare
+      // result is sign- rather zero-extended when casting to the output
+      // retType.
+      cmp = builder.createCast(
+          loc, cir::CastKind::bool_to_int,
+          builder.createCompare(loc, cir::CmpOpKind::eq, src, zero),
+          builder.getSIntNTy(1));
+    else
+      cgf.cgm.errorNYI(loc, std::string("unimplemented vector compare"));
+  }
+
+  return builder.createCast(loc, cir::CastKind::integral, cmp, retTy);
 }
 
 bool CIRGenFunction::getAArch64SVEProcessedOperands(
@@ -1357,7 +1392,15 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vpaddd_s64:
   case NEON::BI__builtin_neon_vpaddd_f64:
   case NEON::BI__builtin_neon_vpadds_f32:
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented AArch64 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vceqzd_s64:
+    ops.push_back(emitScalarExpr(expr->getArg(0)));
+    return emitAArch64CompareBuiltinExpr(
+        *this, builder, loc, ops[0],
+        convertType(expr->getCallReturnType(getContext())), cir::CmpOpKind::eq);
   case NEON::BI__builtin_neon_vceqzd_f64:
   case NEON::BI__builtin_neon_vceqzs_f32:
   case NEON::BI__builtin_neon_vceqzh_f16:

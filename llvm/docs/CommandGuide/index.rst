@@ -17,6 +17,7 @@ Basic Commands
    dsymutil
    llc
    lli
+   llubi
    llvm-as
    llvm-cgdata
    llvm-config

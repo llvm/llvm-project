@@ -122,7 +122,9 @@ struct AlwaysInlinerLegacyPass : public ModulePass {
       : AlwaysInlinerLegacyPass(/*InsertLifetime*/ true) {}
 
   AlwaysInlinerLegacyPass(bool InsertLifetime)
-      : ModulePass(ID), InsertLifetime(InsertLifetime) {}
+      : ModulePass(ID), InsertLifetime(InsertLifetime) {
+    initializeAlwaysInlinerLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
 
   /// Main run interface method.
   bool runOnModule(Module &M) override {

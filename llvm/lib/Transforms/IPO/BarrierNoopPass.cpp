@@ -32,7 +32,9 @@ class BarrierNoop : public ModulePass {
 public:
   static char ID; // Pass identification.
 
-  BarrierNoop() : ModulePass(ID) {}
+  BarrierNoop() : ModulePass(ID) {
+    initializeBarrierNoopPass(*PassRegistry::getPassRegistry());
+  }
 
   bool runOnModule(Module &M) override { return false; }
 };

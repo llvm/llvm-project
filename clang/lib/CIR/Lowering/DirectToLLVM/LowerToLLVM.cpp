@@ -1293,6 +1293,7 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     auto llvmSrcTy = mlir::cast<mlir::IntegerType>(llvmSrcVal.getType());
     auto llvmDstTy =
         mlir::cast<mlir::IntegerType>(getTypeConverter()->convertType(dstTy));
+
     if (llvmSrcTy.getWidth() == llvmDstTy.getWidth())
       rewriter.replaceOpWithNewOp<mlir::LLVM::BitcastOp>(castOp, llvmDstTy,
                                                          llvmSrcVal);

@@ -36,7 +36,9 @@ namespace {
 class GlobalDCELegacyPass : public ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  GlobalDCELegacyPass() : ModulePass(ID) {}
+  GlobalDCELegacyPass() : ModulePass(ID) {
+    initializeGlobalDCELegacyPassPass(*PassRegistry::getPassRegistry());
+  }
   bool runOnModule(Module &M) override {
     if (skipModule(M))
       return false;
