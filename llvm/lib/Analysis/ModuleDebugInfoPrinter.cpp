@@ -103,6 +103,31 @@ static void printModuleDebugInfo(raw_ostream &O, const Module *M,
     }
     O << '\n';
   }
+
+  for (const auto &MacroEntry : Finder.macros()) {
+    const DIMacro *Macro = MacroEntry.first;
+    const DIMacroFile *MacroFile = MacroEntry.second;
+
+    O << "Macro: ";
+    auto MacroType = dwarf::MacinfoString(Macro->getMacinfoType());
+    if (!MacroType.empty())
+      O << MacroType;
+    else
+      O << "unknown-macinfo(" << Macro->getMacinfoType() << ")";
+
+    O << " '" << Macro->getName() << "'";
+    if (!Macro->getValue().empty())
+      O << " = '" << Macro->getValue() << "'";
+
+    if (MacroFile && MacroFile->getFile()) {
+      const DIFile *File = MacroFile->getFile();
+      printFile(O, File->getFilename(), File->getDirectory(),
+                MacroFile->getLine());
+    } else {
+      O << " at line " << Macro->getLine();
+    }
+    O << '\n';
+  }
 }
 
 ModuleDebugInfoPrinterPass::ModuleDebugInfoPrinterPass(raw_ostream &OS)

@@ -736,8 +736,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
 }
 
 void VPlanTransforms::createInLoopReductionRecipes(
-    VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
-    const DenseSet<BasicBlock *> &BlocksNeedingPredication,
+    VPlan &Plan, const DenseSet<BasicBlock *> &BlocksNeedingPredication,
     ElementCount MinVF) {
   VPTypeAnalysis TypeInfo(Plan);
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
@@ -859,17 +858,18 @@ void VPlanTransforms::createInLoopReductionRecipes(
                 ? IndexOfFirstOperand + 1
                 : IndexOfFirstOperand;
         VecOp = CurrentLink->getOperand(VecOpId);
-        assert(VecOp != PreviousLink &&
-               CurrentLink->getOperand(CurrentLink->getNumOperands() - 1 -
-                                       (VecOpId - IndexOfFirstOperand)) ==
-                   PreviousLink &&
-               "PreviousLink must be the operand other than VecOp");
+        assert(
+            VecOp != PreviousLink &&
+            CurrentLink->getOperand(
+                cast<VPInstruction>(CurrentLink)->getNumOperandsWithoutMask() -
+                1 - (VecOpId - IndexOfFirstOperand)) == PreviousLink &&
+            "PreviousLink must be the operand other than VecOp");
       }
 
-      // Get block mask from BlockMaskCache if the block needs predication.
+      // Get block mask from CurrentLink, if it needs predication.
       VPValue *CondOp = nullptr;
       if (BlocksNeedingPredication.contains(CurrentLinkI->getParent()))
-        CondOp = BlockMaskCache.lookup(LinkVPBB);
+        CondOp = cast<VPInstruction>(CurrentLink)->getMask();
 
       assert(PhiR->getVFScaleFactor() == 1 &&
              "inloop reductions must be unscaled");
@@ -1357,34 +1357,11 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
                      PhiR->getRecurrenceKind()))
       continue;
 
-    // Find the condition for the select/blend.
+    // Find the condition for the select.
     auto *SelectR = cast<VPSingleDefRecipe>(&PhiR->getBackedgeRecipe());
     VPValue *Cond = nullptr, *Op1 = nullptr, *Op2 = nullptr;
-
-    // If we're matching a blend rather than a select, there should be one
-    // incoming value which is the data, then all other incoming values should
-    // be the phi.
-    auto MatchBlend = [&](VPRecipeBase *R) {
-      auto *Blend = dyn_cast<VPBlendRecipe>(R);
-      if (!Blend)
-        return false;
-      assert(!Blend->isNormalized() && "must run before blend normalizaion");
-      unsigned NumIncomingDataValues = 0;
-      for (unsigned I = 0; I < Blend->getNumIncomingValues(); ++I) {
-        VPValue *Incoming = Blend->getIncomingValue(I);
-        if (Incoming != PhiR) {
-          ++NumIncomingDataValues;
-          Cond = Blend->getMask(I);
-          Op1 = Incoming;
-          Op2 = PhiR;
-        }
-      }
-      return NumIncomingDataValues == 1;
-    };
-
     if (!match(SelectR,
-               m_Select(m_VPValue(Cond), m_VPValue(Op1), m_VPValue(Op2))) &&
-        !MatchBlend(SelectR))
+               m_Select(m_VPValue(Cond), m_VPValue(Op1), m_VPValue(Op2))))
       return false;
 
     // Add mask phi.
