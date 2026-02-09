@@ -4841,6 +4841,16 @@ def G_AMDGPU_SPONENTRY : AMDGPUGenericInstruction {
   let hasSideEffects = 0;
 }
 
+class LoadMonitorInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins ptype1:$ptr);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
+def G_AMDGPU_FLAT_LOAD_MONITOR   : LoadMonitorInstruction;
+def G_AMDGPU_GLOBAL_LOAD_MONITOR : LoadMonitorInstruction;
+
 //============================================================================//
 // Dummy Instructions
 //============================================================================//
