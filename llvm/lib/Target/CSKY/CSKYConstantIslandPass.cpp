@@ -266,7 +266,6 @@ bool CSKYConstantIslands::isOffsetInRange(unsigned UserOffset,
   return isOffsetInRange(UserOffset, TrialOffset, U.getMaxDisp(), U.NegOk);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// print block size and offset information - debugging
 LLVM_DUMP_METHOD void CSKYConstantIslands::dumpBBs() {
   for (unsigned J = 0, E = BBInfo.size(); J != E; ++J) {
@@ -275,7 +274,6 @@ LLVM_DUMP_METHOD void CSKYConstantIslands::dumpBBs() {
            << format(" size=%#x\n", BBInfo[J].Size);
   }
 }
-#endif
 
 bool CSKYConstantIslands::runOnMachineFunction(MachineFunction &Mf) {
   MF = &Mf;

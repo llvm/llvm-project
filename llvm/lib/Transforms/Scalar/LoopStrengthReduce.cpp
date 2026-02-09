@@ -370,7 +370,6 @@ struct KeyOrderSizeTAndImmediate {
 };
 } // end anonymous namespace
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void RegSortData::print(raw_ostream &OS) const {
   OS << "[NumUses=" << UsedByIndices.count() << ']';
 }
@@ -378,7 +377,6 @@ void RegSortData::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void RegSortData::dump() const {
   print(errs()); errs() << '\n';
 }
-#endif
 
 namespace {
 
@@ -758,7 +756,6 @@ bool Formula::hasRegsUsedByUsesOtherThan(size_t LUIdx,
   return false;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Formula::print(raw_ostream &OS) const {
   ListSeparator Plus(" + ");
   if (BaseGV) {
@@ -791,7 +788,6 @@ void Formula::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void Formula::dump() const {
   print(errs()); errs() << '\n';
 }
-#endif
 
 /// Return true if the given addrec can be sign-extended without changing its
 /// value.
@@ -1614,7 +1610,6 @@ bool Cost::isLess(const Cost &Other) const {
   return TTI->isLSRCostLess(C, Other.C);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Cost::print(raw_ostream &OS) const {
   if (InsnsCost)
     OS << C.Insns << " instruction" << (C.Insns == 1 ? " " : "s ");
@@ -1638,7 +1633,6 @@ void Cost::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void Cost::dump() const {
   print(errs()); errs() << '\n';
 }
-#endif
 
 /// Test whether this fixup always uses its value outside of the given loop.
 bool LSRFixup::isUseFullyOutsideLoop(const Loop *L) const {
@@ -1654,7 +1648,6 @@ bool LSRFixup::isUseFullyOutsideLoop(const Loop *L) const {
   return !L->contains(UserInst);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LSRFixup::print(raw_ostream &OS) const {
   OS << "UserInst=";
   // Store is common and interesting enough to be worth special-casing.
@@ -1681,7 +1674,6 @@ void LSRFixup::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void LSRFixup::dump() const {
   print(errs()); errs() << '\n';
 }
-#endif
 
 /// Test whether this use as a formula which has the same registers as the given
 /// formula.
@@ -1760,7 +1752,6 @@ void LSRUse::RecomputeRegs(size_t LUIdx, RegUseTracker &RegUses) {
       RegUses.dropRegister(S, LUIdx);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LSRUse::print(raw_ostream &OS) const {
   OS << "LSR Use: Kind=";
   switch (Kind) {
@@ -1800,7 +1791,6 @@ void LSRUse::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void LSRUse::dump() const {
   print(errs()); errs() << '\n';
 }
-#endif
 
 static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
                                  LSRUse::KindType Kind, MemAccessTy AccessTy,
@@ -4501,7 +4491,6 @@ struct WorkItem {
 
 } // end anonymous namespace
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void WorkItem::print(raw_ostream &OS) const {
   OS << "in formulae referencing " << *OrigReg << " in use " << LUIdx
      << " , add offset " << Imm;
@@ -4510,7 +4499,6 @@ void WorkItem::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void WorkItem::dump() const {
   print(errs()); errs() << '\n';
 }
-#endif
 
 /// Look for registers which are a constant distance apart and try to form reuse
 /// opportunities between them.
@@ -6274,7 +6262,6 @@ LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
   ImplementSolution(Solution);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LSRInstance::print_factors_and_types(raw_ostream &OS) const {
   if (Factors.empty() && Types.empty()) return;
 
@@ -6322,7 +6309,6 @@ void LSRInstance::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void LSRInstance::dump() const {
   print(errs()); errs() << '\n';
 }
-#endif
 
 namespace {
 

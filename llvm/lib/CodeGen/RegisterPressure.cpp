@@ -77,7 +77,6 @@ static void decreaseSetPressure(std::vector<unsigned> &CurrSetPressure,
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 void llvm::dumpRegSetPressure(ArrayRef<unsigned> SetPressure,
                               const TargetRegisterInfo *TRI) {
@@ -147,8 +146,6 @@ void RegPressureDelta::dump() const {
   CurrentMax.dump();
   dbgs() << "]\n";
 }
-
-#endif
 
 void RegPressureTracker::increaseRegPressure(VirtRegOrUnit VRegOrUnit,
                                              LaneBitmask PreviousMask,

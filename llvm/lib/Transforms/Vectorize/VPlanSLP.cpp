@@ -397,7 +397,6 @@ SmallVector<VPlanSlp::MultiNodeOpTy, 4> VPlanSlp::reorderMultiNodeOps() {
   return FinalOrder;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPlanSlp::dumpBundle(ArrayRef<VPValue *> Values) {
   dbgs() << " Ops: ";
   for (auto *Op : Values) {
@@ -410,7 +409,6 @@ void VPlanSlp::dumpBundle(ArrayRef<VPValue *> Values) {
   }
   dbgs() << "\n";
 }
-#endif
 
 VPInstruction *VPlanSlp::buildGraph(ArrayRef<VPValue *> Values) {
   assert(!Values.empty() && "Need some operands!");

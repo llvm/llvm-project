@@ -193,9 +193,7 @@ DebugLoc DebugLoc::getMergedLocation(DebugLoc LocA, DebugLoc LocB) {
   return DILocation::getMergedLocation(LocA, LocB);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void DebugLoc::dump() const { print(dbgs()); }
-#endif
 
 void DebugLoc::print(raw_ostream &OS) const {
   if (!Loc)

@@ -20,7 +20,6 @@
 #define DEBUG_TYPE "coro-suspend-crossing"
 
 namespace llvm {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static void dumpBasicBlockLabel(const BasicBlock *BB, ModuleSlotTracker &MST) {
   if (BB->hasName()) {
     dbgs() << BB->getName();
@@ -65,7 +64,6 @@ LLVM_DUMP_METHOD void SuspendCrossingInfo::dump() const {
   }
   dbgs() << "\n";
 }
-#endif
 
 bool SuspendCrossingInfo::hasPathCrossingSuspendPoint(BasicBlock *From,
                                                       BasicBlock *To) const {

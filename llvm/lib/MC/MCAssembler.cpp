@@ -1056,7 +1056,6 @@ void MCAssembler::flushPendingErrors() const {
   PendingErrors.clear();
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCAssembler::dump() const{
   raw_ostream &OS = errs();
   DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>> FragToSyms;
@@ -1075,7 +1074,6 @@ LLVM_DUMP_METHOD void MCAssembler::dump() const{
   }
   OS << "\n]\n";
 }
-#endif
 
 SMLoc MCFixup::getLoc() const {
   if (auto *E = getValue())

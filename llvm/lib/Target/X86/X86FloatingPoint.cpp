@@ -150,7 +150,6 @@ private:
   // Shuffle live registers to match the expectations of successor blocks.
   void finishBlockStack();
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dumpStack() const {
     dbgs() << "Stack contents:";
     for (unsigned i = 0; i != StackTop; ++i) {
@@ -158,7 +157,6 @@ private:
       assert(RegMap[Stack[i]] == i && "Stack[] doesn't match RegMap[]!");
     }
   }
-#endif
 
   /// getSlot - Return the stack slot number a particular register number is
   /// in.

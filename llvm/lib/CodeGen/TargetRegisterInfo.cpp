@@ -706,10 +706,8 @@ TargetRegisterInfo::prependOffsetExpression(const DIExpression *Expr,
                                       PrependFlags & DIExpression::EntryValue);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 void TargetRegisterInfo::dumpReg(Register Reg, unsigned SubRegIndex,
                                  const TargetRegisterInfo *TRI) {
   dbgs() << printReg(Reg, TRI, SubRegIndex) << "\n";
 }
-#endif

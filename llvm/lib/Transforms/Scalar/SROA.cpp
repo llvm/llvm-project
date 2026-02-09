@@ -666,7 +666,6 @@ public:
   /// need to replace with undef.
   ArrayRef<Use *> getDeadOperands() const { return DeadOperands; }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void print(raw_ostream &OS, const_iterator I, StringRef Indent = "  ") const;
   void printSlice(raw_ostream &OS, const_iterator I,
                   StringRef Indent = "  ") const;
@@ -675,7 +674,6 @@ public:
   void print(raw_ostream &OS) const;
   void dump(const_iterator I) const;
   void dump() const;
-#endif
 
 private:
   template <typename DerivedT, typename RetT = void> class BuilderBase;
@@ -683,10 +681,8 @@ private:
 
   friend class AllocaSlices::SliceBuilder;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Handle to alloca instruction to simplify method interfaces.
   AllocaInst &AI;
-#endif
 
   /// The instruction responsible for this alloca not having a known set
   /// of slices.
@@ -1452,11 +1448,8 @@ private:
 };
 
 AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
-    :
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-      AI(AI),
-#endif
-      PointerEscapingInstr(nullptr), PointerEscapingInstrReadOnly(nullptr) {
+    : AI(AI), PointerEscapingInstr(nullptr),
+      PointerEscapingInstrReadOnly(nullptr) {
   SliceBuilder PB(DL, AI, *this);
   SliceBuilder::PtrInfo PtrI = PB.visitPtr(AI);
   if (PtrI.isEscaped() || PtrI.isAborted()) {
@@ -1475,8 +1468,6 @@ AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
   // and the sizes to be in descending order.
   llvm::stable_sort(Slices);
 }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
 void AllocaSlices::print(raw_ostream &OS, const_iterator I,
                          StringRef Indent) const {
@@ -1517,8 +1508,6 @@ LLVM_DUMP_METHOD void AllocaSlices::dump(const_iterator I) const {
   print(dbgs(), I);
 }
 LLVM_DUMP_METHOD void AllocaSlices::dump() const { print(dbgs()); }
-
-#endif // !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
 /// Walk the range of a partitioning looking for a common type to cover this
 /// sequence of slices.

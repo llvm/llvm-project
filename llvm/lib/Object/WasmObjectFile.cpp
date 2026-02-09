@@ -67,9 +67,7 @@ void WasmSymbol::print(raw_ostream &Out) const {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void WasmSymbol::dump() const { print(dbgs()); }
-#endif
 
 Expected<std::unique_ptr<WasmObjectFile>>
 ObjectFile::createWasmObjectFile(MemoryBufferRef Buffer) {

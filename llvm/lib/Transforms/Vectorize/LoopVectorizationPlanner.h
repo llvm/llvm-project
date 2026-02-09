@@ -574,9 +574,7 @@ public:
                                               DominatorTree *DT,
                                               bool VectorizingEpilogue);
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);
-#endif
 
   /// Look through the existing plans and return true if we have one with
   /// vectorization factor \p VF.

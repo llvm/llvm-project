@@ -545,9 +545,7 @@ public:
   /// without any path separators then the file
   /// will be created in the current directory.
   /// Error will be emitted if the path is insane.
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dumpDotGraph(const Twine &FileName, const Twine &Title);
-#endif
 
   /// Pop up a GraphViz/gv window with the DAG rendered using 'dot'.
   LLVM_ABI void viewGraph(const std::string &Title);

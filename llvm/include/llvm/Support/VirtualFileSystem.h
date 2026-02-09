@@ -351,9 +351,7 @@ public:
     visitChildFileSystems(Callback);
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
-#endif
 
 protected:
   virtual void printImpl(raw_ostream &OS, PrintType Type,

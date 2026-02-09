@@ -339,7 +339,6 @@ void SUnit::biasCriticalPath() {
     std::swap(*Preds.begin(), *BestI);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SUnit::dumpAttributes() const {
   dbgs() << "  # preds left       : " << NumPredsLeft << "\n";
   dbgs() << "  # succs left       : " << NumSuccsLeft << "\n";
@@ -389,7 +388,6 @@ LLVM_DUMP_METHOD void ScheduleDAG::dumpNodeAll(const SUnit &SU) const {
     }
   }
 }
-#endif
 
 #ifndef NDEBUG
 unsigned ScheduleDAG::VerifyScheduledDAG(bool isBottomUp) {

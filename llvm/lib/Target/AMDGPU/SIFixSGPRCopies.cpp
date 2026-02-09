@@ -109,14 +109,12 @@ public:
   SetVector<unsigned> Siblings;
   V2SCopyInfo() : Copy(nullptr), ID(0){};
   V2SCopyInfo(unsigned Id, MachineInstr *C, unsigned Width)
-      : Copy(C), NumReadfirstlanes(Width / 32), ID(Id){};
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+      : Copy(C), NumReadfirstlanes(Width / 32), ID(Id) {};
   void dump() const {
     dbgs() << ID << " : " << *Copy << "\n\tS:" << SChain.size()
            << "\n\tSV:" << NumSVCopies << "\n\tSP: " << SiblingPenalty
            << "\nScore: " << Score << "\n";
   }
-#endif
 };
 
 class SIFixSGPRCopies {

@@ -276,9 +276,7 @@ void SlotIndexes::print(raw_ostream &OS) const {
        << MBBRanges[i].second << ")\n";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SlotIndexes::dump() const { print(dbgs()); }
-#endif
 
 // Print a SlotIndex to a raw_ostream.
 void SlotIndex::print(raw_ostream &os) const {
@@ -288,10 +286,8 @@ void SlotIndex::print(raw_ostream &os) const {
     os << "invalid";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 // Dump a SlotIndex to stderr.
 LLVM_DUMP_METHOD void SlotIndex::dump() const {
   print(dbgs());
   dbgs() << "\n";
 }
-#endif

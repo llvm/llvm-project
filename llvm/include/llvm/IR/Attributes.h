@@ -517,9 +517,7 @@ public:
 
   LLVM_ABI iterator begin() const;
   LLVM_ABI iterator end() const;
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const;
-#endif
 };
 
 //===----------------------------------------------------------------------===//

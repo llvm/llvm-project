@@ -82,7 +82,6 @@ void ScoreboardHazardRecognizer::Reset() {
   ReservedScoreboard.reset();
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ScoreboardHazardRecognizer::Scoreboard::dump() const {
   dbgs() << "Scoreboard:\n";
 
@@ -99,7 +98,6 @@ LLVM_DUMP_METHOD void ScoreboardHazardRecognizer::Scoreboard::dump() const {
     dbgs() << '\n';
   }
 }
-#endif
 
 bool ScoreboardHazardRecognizer::atIssueLimit() const {
   if (IssueWidth == 0)

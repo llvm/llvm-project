@@ -38,7 +38,6 @@ const MCSymbol *MCFragment::getAtom() const {
   return static_cast<const MCSectionMachO *>(Parent)->getAtom(LayoutOrder);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCFragment::dump() const {
   raw_ostream &OS = errs();
 
@@ -192,4 +191,3 @@ LLVM_DUMP_METHOD void MCFragment::dump() const {
   }
   }
 }
-#endif

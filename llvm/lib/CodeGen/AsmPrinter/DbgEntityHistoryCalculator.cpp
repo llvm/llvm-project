@@ -568,7 +568,6 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void DbgValueHistoryMap::dump(StringRef FuncName) const {
   dbgs() << "DbgValueHistoryMap('" << FuncName << "'):\n";
   for (const auto &VarRangePair : *this) {
@@ -606,4 +605,3 @@ LLVM_DUMP_METHOD void DbgValueHistoryMap::dump(StringRef FuncName) const {
     }
   }
 }
-#endif

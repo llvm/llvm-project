@@ -366,11 +366,9 @@ cl::opt<bool>
                           cl::Hidden,
                           cl::desc("Verfiy VPlans after VPlan transforms."));
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 cl::opt<bool> llvm::PrintAfterEachVPlanPass(
     "vplan-print-after-all", cl::init(false), cl::Hidden,
     cl::desc("Print after each VPlanTransforms::runPass."));
-#endif
 
 // This flag enables the stress testing of the VPlan H-CFG construction in the
 // VPlan-native vectorization path. It must be used in conjuction with

@@ -675,13 +675,11 @@ std::string Loop::getLocStr() const {
   return Result;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Loop::dump() const { print(dbgs()); }
 
 LLVM_DUMP_METHOD void Loop::dumpVerbose() const {
   print(dbgs(), /*Verbose=*/true);
 }
-#endif
 
 //===----------------------------------------------------------------------===//
 // UnloopUpdater implementation

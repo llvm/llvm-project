@@ -62,7 +62,6 @@ struct SubMultiClassReference {
 };
 } // end namespace llvm
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SubMultiClassReference::dump() const {
   errs() << "Multiclass:\n";
 
@@ -72,7 +71,6 @@ LLVM_DUMP_METHOD void SubMultiClassReference::dump() const {
   for (const Init *TA : TemplateArgs)
     TA->dump();
 }
-#endif
 
 static bool checkBitsConcrete(Record &R, const RecordVal &RV) {
   const auto *BV = cast<BitsInit>(RV.getValue());
@@ -4612,7 +4610,6 @@ bool TGParser::CheckTemplateArgValues(
   return HasError;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RecordsEntry::dump() const {
   if (Loop)
     Loop->dump();
@@ -4638,7 +4635,6 @@ LLVM_DUMP_METHOD void MultiClass::dump() const {
   for (const auto &E : Entries)
     E.dump();
 }
-#endif
 
 bool TGParser::ParseDump(MultiClass *CurMultiClass, Record *CurRec) {
   // Location of the `dump` statement.

@@ -261,7 +261,6 @@ void StackLifetime::calculateLiveIntervals() {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void StackLifetime::dumpAllocas() const {
   dbgs() << "Allocas:\n";
   for (unsigned AllocaNo = 0; AllocaNo < NumAllocas; ++AllocaNo)
@@ -286,7 +285,6 @@ LLVM_DUMP_METHOD void StackLifetime::dumpLiveRanges() const {
   for (unsigned AllocaNo = 0; AllocaNo < NumAllocas; ++AllocaNo)
     dbgs() << "  " << AllocaNo << ": " << LiveRanges[AllocaNo] << "\n";
 }
-#endif
 
 StackLifetime::StackLifetime(const Function &F,
                              ArrayRef<const AllocaInst *> Allocas,

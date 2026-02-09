@@ -169,7 +169,6 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::getPostDomTree() {
 template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>
 LLVM_DUMP_METHOD void
 GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   raw_ostream &OS = llvm::dbgs();
 
   OS << "Available Trees: ";
@@ -259,7 +258,6 @@ GenericDomTreeUpdater<DerivedT, DomTreeT, PostDomTreeT>::dump() const {
       OS << "(no name)(";
     OS << BB << ")\n";
   }
-#endif
 }
 
 template <typename DerivedT, typename DomTreeT, typename PostDomTreeT>

@@ -255,9 +255,7 @@ public:
 
   LLVM_ABI void print(raw_ostream &) const;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
-#endif
 
   // If LHS > RHS, return 1. If LHS == RHS, return 0. If LHS < RHS, return -1.
   LLVM_ABI int compare(const APFixedPoint &Other) const;

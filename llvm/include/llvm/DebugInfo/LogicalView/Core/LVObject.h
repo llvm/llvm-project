@@ -313,9 +313,7 @@ public:
   // (class attributes, debug ranges, files, directories, etc).
   virtual void printExtra(raw_ostream &OS, bool Full = true) const {}
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const { print(dbgs()); }
-#endif
 
   uint32_t getID() const { return ID; }
 };

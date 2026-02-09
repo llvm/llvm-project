@@ -886,7 +886,7 @@ bool InlineSpiller::coalesceStackAccess(MachineInstr *MI, Register Reg) {
   return true;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifndef NDEBUG
 LLVM_DUMP_METHOD
 // Dump the range of instructions from B to E with their slot indexes.
 static void dumpMachineInstrRangeWithSlotIndex(MachineBasicBlock::iterator B,

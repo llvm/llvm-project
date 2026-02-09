@@ -738,13 +738,11 @@ struct StackAdjustingInsts {
     unsigned SPAdjust;
     bool BeforeFPSet;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     void dump() {
       dbgs() << "  " << (BeforeFPSet ? "before-fp " : "          ")
              << "sp-adjust=" << SPAdjust;
       I->dump();
     }
-#endif
   };
 
   SmallVector<InstInfo, 4> Insts;
@@ -775,13 +773,11 @@ struct StackAdjustingInsts {
     }
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() {
     dbgs() << "StackAdjustingInsts:\n";
     for (auto &Info : Insts)
       Info.dump();
   }
-#endif
 };
 
 } // end anonymous namespace

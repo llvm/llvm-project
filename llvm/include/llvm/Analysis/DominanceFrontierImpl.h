@@ -66,12 +66,10 @@ void DominanceFrontierBase<BlockT, IsPostDom>::print(raw_ostream &OS) const {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 template <class BlockT, bool IsPostDom>
 void DominanceFrontierBase<BlockT, IsPostDom>::dump() const {
   print(dbgs());
 }
-#endif
 
 template <class BlockT>
 void ForwardDominanceFrontierBase<BlockT>::calculate(const DomTreeT &DT,

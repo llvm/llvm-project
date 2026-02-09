@@ -252,7 +252,6 @@ void SchedulePostRATDList::exitRegion() {
   ScheduleDAGInstrs::exitRegion();
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// dumpSchedule - dump the scheduled Sequence.
 LLVM_DUMP_METHOD void SchedulePostRATDList::dumpSchedule() const {
   for (const SUnit *SU : Sequence) {
@@ -262,7 +261,6 @@ LLVM_DUMP_METHOD void SchedulePostRATDList::dumpSchedule() const {
       dbgs() << "**** NOOP ****\n";
   }
 }
-#endif
 
 static bool enablePostRAScheduler(const TargetSubtargetInfo &ST,
                                   CodeGenOptLevel OptLevel) {

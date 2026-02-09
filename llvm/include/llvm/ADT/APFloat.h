@@ -1546,9 +1546,7 @@ public:
 
   LLVM_ABI void print(raw_ostream &) const;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
-#endif
 
   /// If this value is normal and has an exact, normal, multiplicative inverse,
   /// store it in inv and return true.

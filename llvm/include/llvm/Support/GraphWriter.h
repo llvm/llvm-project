@@ -426,7 +426,6 @@ std::string WriteGraph(const GraphType &G, const Twine &Name,
 }
 
 /// DumpDotGraph - Just dump a dot graph to the user-provided file name.
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 template <typename GraphType>
 LLVM_DUMP_METHOD void
 dumpDotGraphToFile(const GraphType &G, const Twine &FileName,
@@ -434,7 +433,6 @@ dumpDotGraphToFile(const GraphType &G, const Twine &FileName,
                    const Twine &Name = "") {
   llvm::WriteGraph(G, Name, ShortNames, Title, FileName.str());
 }
-#endif
 
 /// ViewGraph - Emit a dot graph, run 'dot', run gv on the postscript file,
 /// then cleanup.  For use from the debugger.

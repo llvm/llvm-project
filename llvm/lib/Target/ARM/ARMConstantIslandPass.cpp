@@ -319,7 +319,6 @@ void ARMConstantIslands::verify() {
 #endif
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// print block size and offset information - debugging
 LLVM_DUMP_METHOD void ARMConstantIslands::dumpBBs() {
   LLVM_DEBUG({
@@ -333,7 +332,6 @@ LLVM_DUMP_METHOD void ARMConstantIslands::dumpBBs() {
     }
   });
 }
-#endif
 
 // Align blocks where the previous block does not fall through. This may add
 // extra NOP's but they will not be executed. It uses the PrefLoopAlignment as a

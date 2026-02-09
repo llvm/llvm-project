@@ -141,12 +141,8 @@ void Pass::print(raw_ostream &OS, const Module *) const {
   OS << "Pass::print not implemented for pass: '" << getPassName() << "'!\n";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 // dump - call print(cerr);
-LLVM_DUMP_METHOD void Pass::dump() const {
-  print(dbgs(), nullptr);
-}
-#endif
+LLVM_DUMP_METHOD void Pass::dump() const { print(dbgs(), nullptr); }
 
 #ifdef EXPENSIVE_CHECKS
 uint64_t Pass::structuralHash(Module &M) const {

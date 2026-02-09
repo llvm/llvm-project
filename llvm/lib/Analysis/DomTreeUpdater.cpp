@@ -105,7 +105,6 @@ void DomTreeUpdater::validateDeleteBB(BasicBlock *DelBB) {
 LLVM_DUMP_METHOD
 void DomTreeUpdater::dump() const {
   Base::dump();
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   raw_ostream &OS = dbgs();
   OS << "Pending Callbacks:\n";
   int Index = 0;
@@ -118,7 +117,6 @@ void DomTreeUpdater::dump() const {
       OS << "(no_name)(";
     OS << BB << ")\n";
   }
-#endif
 }
 
 } // namespace llvm

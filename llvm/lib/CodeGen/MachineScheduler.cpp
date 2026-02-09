@@ -224,9 +224,7 @@ static cl::opt<bool> MischedDetailResourceBooking(
 const bool llvm::ViewMISchedDAGs = false;
 const bool llvm::PrintDAGs = false;
 static const bool MischedDetailResourceBooking = false;
-#ifdef LLVM_ENABLE_DUMP
 static const bool MISchedDumpReservedCycles = false;
-#endif // LLVM_ENABLE_DUMP
 #endif // NDEBUG
 
 #ifndef NDEBUG
@@ -268,7 +266,6 @@ static cl::opt<unsigned>
                          cl::desc("The threshold for fast cluster"),
                          cl::init(1000));
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static cl::opt<bool> MISchedDumpScheduleTrace(
     "misched-dump-schedule-trace", cl::Hidden, cl::init(false),
     cl::desc("Dump resource usage at schedule boundary."));
@@ -284,7 +281,6 @@ static cl::opt<unsigned>
 static cl::opt<bool> MISchedSortResourcesInTrace(
     "misched-sort-resources-in-trace", cl::Hidden, cl::init(true),
     cl::desc("Sort the resources printed in the dump trace"));
-#endif
 
 static cl::opt<unsigned>
     MIResourceCutOff("misched-resource-cutoff", cl::Hidden,
@@ -898,14 +894,12 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
   Scheduler.finalizeSchedule();
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ReadyQueue::dump() const {
   dbgs() << "Queue " << Name << ": ";
   for (const SUnit *SU : Queue)
     dbgs() << SU->NodeNum << " ";
   dbgs() << "\n";
 }
-#endif
 
 //===----------------------------------------------------------------------===//
 // ScheduleDAGMI - Basic machine instruction scheduling. This is
@@ -1213,7 +1207,6 @@ void ScheduleDAGMI::placeDebugValues() {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static const char *scheduleTableLegend = "  i: issue\n  x: resource booked";
 
 LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceTopDown() const {
@@ -1377,9 +1370,7 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceBottomUp() const {
     }
   }
 }
-#endif
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ScheduleDAGMI::dumpSchedule() const {
   if (MISchedDumpScheduleTrace) {
     if (DumpDir == DumpDirection::TopDown)
@@ -1400,7 +1391,6 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpSchedule() const {
       dbgs() << "Missing SUnit\n";
   }
 }
-#endif
 
 //===----------------------------------------------------------------------===//
 // ScheduleDAGMILive - Base class for MachineInstr scheduling with LiveIntervals
@@ -1657,7 +1647,6 @@ void ScheduleDAGMILive::updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses) {
 }
 
 void ScheduleDAGMILive::dump() const {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   if (EntrySU.getInstr() != nullptr)
     dumpNodeAll(EntrySU);
   for (const SUnit &SU : SUnits) {
@@ -1676,7 +1665,6 @@ void ScheduleDAGMILive::dump() const {
   }
   if (ExitSU.getInstr() != nullptr)
     dumpNodeAll(ExitSU);
-#endif
 }
 
 /// schedule - Called back from MachineScheduler::runOnMachineFunction
@@ -3177,8 +3165,6 @@ SUnit *SchedBoundary::pickOnlyChoice() {
   return nullptr;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-
 /// Dump the content of the \ref ReservedCycles vector for the
 /// resources that are used in the basic block.
 ///
@@ -3231,7 +3217,6 @@ LLVM_DUMP_METHOD void SchedBoundary::dumpScheduledState() const {
   if (MISchedDumpReservedCycles)
     dumpReservedCycles();
 }
-#endif
 
 //===----------------------------------------------------------------------===//
 // GenericScheduler - Generic implementation of MachineSchedStrategy.
@@ -3722,13 +3707,10 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
 
 void GenericScheduler::dumpPolicy() const {
   // Cannot completely remove virtual function even in release mode.
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   dbgs() << "GenericScheduler RegionPolicy: "
          << " ShouldTrackPressure=" << RegionPolicy.ShouldTrackPressure
          << " OnlyTopDown=" << RegionPolicy.OnlyTopDown
-         << " OnlyBottomUp=" << RegionPolicy.OnlyBottomUp
-         << "\n";
-#endif
+         << " OnlyBottomUp=" << RegionPolicy.OnlyBottomUp << "\n";
 }
 
 /// Set IsAcyclicLatencyLimited if the acyclic path is longer than the cyclic

@@ -83,9 +83,7 @@ namespace llvm {
 
     void remove(SUnit *SU) override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     LLVM_DUMP_METHOD void dump(ScheduleDAG *DAG) const override;
-#endif
 
     // scheduledNode - As nodes are scheduled, we look to see if there are any
     // successor nodes that have a single unscheduled predecessor.  If so, that

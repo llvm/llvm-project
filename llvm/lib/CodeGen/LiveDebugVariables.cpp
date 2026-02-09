@@ -2004,9 +2004,7 @@ void LiveDebugVariables::emitDebugValues(VirtRegMap *VRM) {
     PImpl->emitDebugValues(VRM);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LiveDebugVariables::dump() const { print(dbgs()); }
-#endif
 
 void LiveDebugVariables::print(raw_ostream &OS) const {
   if (PImpl)

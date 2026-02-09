@@ -624,9 +624,7 @@ public:
   iterator end() { return Nodes.end(); }
   void print(raw_ostream &os) const;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
-#endif
 };
 
 // 16 was selected based on the number of ProcResource kinds for all
@@ -678,9 +676,7 @@ private:
     return R;
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dumpMRT() const;
-#endif
 
 public:
   ResourceManager(const TargetSubtargetInfo *ST, ScheduleDAGInstrs *DAG)

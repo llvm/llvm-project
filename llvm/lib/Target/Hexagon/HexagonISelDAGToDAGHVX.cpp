@@ -267,7 +267,6 @@ bool Coloring::color() {
   return true;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void Coloring::dump() const {
   dbgs() << "{ Order:   {";
   for (Node P : Order) {
@@ -308,7 +307,6 @@ void Coloring::dump() const {
     dbgs() << "    " << C.first << " -> " << ColorKindToName(C.second) << "\n";
   dbgs() << "  }\n}\n";
 }
-#endif
 
 namespace {
 // Base class of for reordering networks. They don't strictly need to be
@@ -706,7 +704,6 @@ struct ResultStack {
 };
 } // namespace
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void OpRef::print(raw_ostream &OS, const SelectionDAG &G) const {
   if (isValue()) {
     OpV.getNode()->print(OS, &G);
@@ -756,7 +753,6 @@ void ResultStack::print(raw_ostream &OS, const SelectionDAG &G) const {
     OS << '\n';
   }
 }
-#endif
 
 namespace {
 struct ShuffleMask {

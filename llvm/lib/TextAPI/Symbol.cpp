@@ -16,7 +16,6 @@
 namespace llvm {
 namespace MachO {
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Symbol::dump(raw_ostream &OS) const {
   std::string Result;
   if (isUndefined())
@@ -43,7 +42,6 @@ LLVM_DUMP_METHOD void Symbol::dump(raw_ostream &OS) const {
   }
   OS << Result;
 }
-#endif
 
 Symbol::const_filtered_target_range
 Symbol::targets(ArchitectureSet Architectures) const {

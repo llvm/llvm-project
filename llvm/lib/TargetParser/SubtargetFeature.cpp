@@ -61,11 +61,7 @@ void SubtargetFeatures::print(raw_ostream &OS) const {
   OS << "\n";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void SubtargetFeatures::dump() const {
-  print(dbgs());
-}
-#endif
+LLVM_DUMP_METHOD void SubtargetFeatures::dump() const { print(dbgs()); }
 
 void SubtargetFeatures::getDefaultSubtargetFeatures(const Triple& Triple) {
   // FIXME: This is an inelegant way of specifying the features of a

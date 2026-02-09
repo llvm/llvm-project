@@ -43,7 +43,6 @@ struct EntryPointGroup {
 
   void clear() { Functions.clear(); }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const {
     constexpr size_t INDENT = 4;
     dbgs().indent(INDENT) << "ENTRY POINTS"
@@ -53,7 +52,6 @@ struct EntryPointGroup {
 
     dbgs().indent(INDENT) << "}\n";
   }
-#endif
 };
 
 /// Annotates an llvm::Module with information necessary to perform and track
@@ -78,13 +76,11 @@ public:
     return std::move(M);
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const {
     dbgs() << "ModuleDesc[" << M->getName() << "] {\n";
     EntryPoints.dump();
     dbgs() << "}\n";
   }
-#endif
 };
 
 bool isKernel(const Function &F) {

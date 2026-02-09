@@ -62,9 +62,7 @@ bool XtensaConstantPoolValue::hasSameValue(XtensaConstantPoolValue *ACPV) {
   return false;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void XtensaConstantPoolValue::dump() const { errs() << "  " << *this; }
-#endif
 
 void XtensaConstantPoolValue::print(raw_ostream &O) const {}
 

@@ -1763,7 +1763,6 @@ LLT MachineInstr::getTypeToPrint(unsigned OpIdx, SmallBitVector &PrintedTypes,
   return TypeToPrint;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MachineInstr::dump() const {
   dbgs() << "  ";
   print(dbgs());
@@ -1799,7 +1798,6 @@ LLVM_DUMP_METHOD void MachineInstr::dumpr(const MachineRegisterInfo &MRI,
   SmallPtrSet<const MachineInstr *, 16> AlreadySeenInstrs;
   dumprImpl(MRI, 0, MaxDepth, AlreadySeenInstrs);
 }
-#endif
 
 void MachineInstr::print(raw_ostream &OS, bool IsStandalone, bool SkipOpers,
                          bool SkipDebugLoc, bool AddNewLine,

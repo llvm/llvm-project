@@ -417,7 +417,6 @@ bool MipsConstantIslands::isOffsetInRange
                          U.getMaxDisp(), U.NegOk);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// print block size and offset information - debugging
 LLVM_DUMP_METHOD void MipsConstantIslands::dumpBBs() {
   for (unsigned J = 0, E = BBInfo.size(); J !=E; ++J) {
@@ -426,7 +425,6 @@ LLVM_DUMP_METHOD void MipsConstantIslands::dumpBBs() {
            << format(" size=%#x\n", BBInfo[J].Size);
   }
 }
-#endif
 
 bool MipsConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   // The intention is for this to be a mips16 only pass for now

@@ -382,7 +382,6 @@ public:
     OS << "}";
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const {
     // LLDB swallows the first line of output after callling dump(). Add
     // newlines before/after the braces to work around this.
@@ -390,7 +389,6 @@ public:
     print(dbgs());
     dbgs() << "\n";
   }
-#endif
 
 private:
   void insert(IndexT Start, IndexT End) { Intervals.insert(Start, End, 0); }

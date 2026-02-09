@@ -80,9 +80,7 @@ public:
 
   LLVM_ABI raw_ostream &print(raw_ostream &OS) const;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
-#endif
 
   /// Scale a large integer.
   ///

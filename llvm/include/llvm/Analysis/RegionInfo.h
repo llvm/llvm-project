@@ -434,10 +434,8 @@ public:
   void print(raw_ostream &OS, bool printTree = true, unsigned level = 0,
              PrintStyle Style = PrintNone) const;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the region to stderr.
   void dump() const;
-#endif
 
   /// Check if the region contains a BasicBlock.
   ///
@@ -801,9 +799,7 @@ public:
   static typename RegionT::PrintStyle printStyle;
 
   void print(raw_ostream &OS) const;
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const;
-#endif
 
   void releaseMemory();
 

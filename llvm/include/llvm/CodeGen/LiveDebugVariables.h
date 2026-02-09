@@ -52,10 +52,8 @@ public:
   /// @param VRM Rename virtual registers according to map.
   void emitDebugValues(VirtRegMap *VRM);
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// dump - Print data structures to dbgs().
   void dump() const;
-#endif
 
   void print(raw_ostream &OS) const;
 

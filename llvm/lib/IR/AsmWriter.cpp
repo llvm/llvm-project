@@ -5451,7 +5451,6 @@ void ModuleSlotTracker::collectMDNodes(MachineMDNodeListType &L, unsigned LB,
       L.push_back(std::make_pair(I.second, I.first));
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 // Value::dump - allow easy printing of Values from the debugger.
 LLVM_DUMP_METHOD
 void Value::dump() const { print(dbgs(), /*IsForDebug=*/true); dbgs() << '\n'; }
@@ -5507,4 +5506,3 @@ void MDNode::dumpTree(const Module *M) const {
 // Allow printing of ModuleSummaryIndex from the debugger.
 LLVM_DUMP_METHOD
 void ModuleSummaryIndex::dump() const { print(dbgs(), /*IsForDebug=*/true); }
-#endif

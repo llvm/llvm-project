@@ -137,11 +137,9 @@ void LazyCallGraph::Node::replaceFunction(Function &NewF) {
   F = &NewF;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LazyCallGraph::Node::dump() const {
   dbgs() << *this << '\n';
 }
-#endif
 
 static bool isKnownLibFunction(Function &F, TargetLibraryInfo &TLI) {
   LibFunc LF;
@@ -240,11 +238,9 @@ LazyCallGraph &LazyCallGraph::operator=(LazyCallGraph &&G) {
   return *this;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LazyCallGraph::SCC::dump() const {
   dbgs() << *this << '\n';
 }
-#endif
 
 #if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
 void LazyCallGraph::SCC::verify() {
@@ -332,11 +328,9 @@ bool LazyCallGraph::SCC::isAncestorOf(const SCC &TargetC) const {
 
 LazyCallGraph::RefSCC::RefSCC(LazyCallGraph &G) : G(&G) {}
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LazyCallGraph::RefSCC::dump() const {
   dbgs() << *this << '\n';
 }
-#endif
 
 #if !defined(NDEBUG) || defined(EXPENSIVE_CHECKS)
 void LazyCallGraph::RefSCC::verify() {

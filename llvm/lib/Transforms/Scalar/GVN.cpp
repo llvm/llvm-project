@@ -933,7 +933,6 @@ void GVNPass::salvageAndRemoveInstruction(Instruction *I) {
   removeInstruction(I);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void GVNPass::dump(DenseMap<uint32_t, Value *> &Map) const {
   errs() << "{\n";
   for (const auto &[Num, Exp] : Map) {
@@ -942,7 +941,6 @@ LLVM_DUMP_METHOD void GVNPass::dump(DenseMap<uint32_t, Value *> &Map) const {
   }
   errs() << "}\n";
 }
-#endif
 
 enum class AvailabilityState : char {
   /// We know the block *is not* fully available. This is a fixpoint.

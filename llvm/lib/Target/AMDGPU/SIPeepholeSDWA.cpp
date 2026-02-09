@@ -121,10 +121,8 @@ public:
     return &getParentInst()->getMF()->getRegInfo();
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   virtual void print(raw_ostream& OS) const = 0;
   void dump() const { print(dbgs()); }
-#endif
 };
 
 class SDWASrcOperand : public SDWAOperand {
@@ -156,9 +154,7 @@ public:
   uint64_t getSrcMods(const SIInstrInfo *TII,
                       const MachineOperand *SrcOp) const;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void print(raw_ostream& OS) const override;
-#endif
+  void print(raw_ostream &OS) const override;
 };
 
 class SDWADstOperand : public SDWAOperand {
@@ -181,9 +177,7 @@ public:
   SdwaSel getDstSel() const { return DstSel; }
   DstUnused getDstUnused() const { return DstUn; }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void print(raw_ostream& OS) const override;
-#endif
+  void print(raw_ostream &OS) const override;
 };
 
 class SDWADstPreserveOperand : public SDWADstOperand {
@@ -202,9 +196,7 @@ public:
 
   MachineOperand *getPreservedOperand() const { return Preserve; }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void print(raw_ostream& OS) const override;
-#endif
+  void print(raw_ostream &OS) const override;
 };
 
 } // end anonymous namespace
@@ -220,7 +212,6 @@ FunctionPass *llvm::createSIPeepholeSDWALegacyPass() {
   return new SIPeepholeSDWALegacy();
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static raw_ostream& operator<<(raw_ostream &OS, SdwaSel Sel) {
   switch(Sel) {
   case BYTE_0: OS << "BYTE_0"; break;
@@ -264,8 +255,6 @@ void SDWADstPreserveOperand::print(raw_ostream& OS) const {
     << " dst_sel:" << getDstSel()
     << " preserve:" << *getPreservedOperand() << '\n';
 }
-
-#endif
 
 static void copyRegOperand(MachineOperand &To, const MachineOperand &From) {
   assert(To.isReg() && From.isReg());

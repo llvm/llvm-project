@@ -531,7 +531,6 @@ void StackColoringLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void StackColoring::dumpBV(const char *tag,
                                             const BitVector &BV) const {
   dbgs() << tag << " : { ";
@@ -565,7 +564,6 @@ LLVM_DUMP_METHOD void StackColoring::dumpIntervals() const {
     Intervals[I]->dump();
   }
 }
-#endif
 
 static inline int getStartOrEndSlot(const MachineInstr &MI)
 {

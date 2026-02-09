@@ -3443,7 +3443,6 @@ void InstrRefBasedLDV::placePHIsForSingleVarDefinition(
   // value will be given to them.
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void InstrRefBasedLDV::dump_mloc_transfer(
     const MLocTransferMap &mloc_transfer) const {
   for (const auto &P : mloc_transfer) {
@@ -3452,7 +3451,6 @@ void InstrRefBasedLDV::dump_mloc_transfer(
     dbgs() << "Loc " << foo << " --> " << bar << "\n";
   }
 }
-#endif
 
 void InstrRefBasedLDV::initialSetup(MachineFunction &MF) {
   // Build some useful data structures.

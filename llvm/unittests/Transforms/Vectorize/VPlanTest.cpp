@@ -757,7 +757,6 @@ TEST_F(VPBasicBlockTest, splitAtEnd) {
   EXPECT_EQ(Split->getSingleSuccessor(), Plan.getScalarHeader());
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST_F(VPBasicBlockTest, print) {
   VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
@@ -1010,7 +1009,6 @@ compound=true
   EXPECT_EQ(ExpectedStr, FullDump);
   delete Clone;
 }
-#endif
 
 using VPRecipeTest = VPlanTestBase;
 
@@ -1451,7 +1449,6 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 TEST_F(VPRecipeTest, dumpRecipeInPlan) {
   VPlan &Plan = getPlan();
   VPBasicBlock *VPBB0 = Plan.getEntry();
@@ -1646,8 +1643,6 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
   delete AI;
 }
 
-#endif
-
 TEST_F(VPRecipeTest, CastVPReductionRecipeToVPUser) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *ChainOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
@@ -1683,10 +1678,8 @@ struct VPDoubleValueDef : public VPRecipeBase {
   VPRecipeBase *clone() override { return nullptr; }
 
   void execute(struct VPTransformState &State) override {}
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printRecipe(raw_ostream &O, const Twine &Indent,
                    VPSlotTracker &SlotTracker) const override {}
-#endif
 };
 
 namespace {

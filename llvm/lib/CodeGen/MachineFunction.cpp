@@ -636,11 +636,7 @@ ArrayRef<int> MachineFunction::allocateShuffleMask(ArrayRef<int> Mask) {
   return {AllocMask, Mask.size()};
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD void MachineFunction::dump() const {
-  print(dbgs());
-}
-#endif
+LLVM_DUMP_METHOD void MachineFunction::dump() const { print(dbgs()); }
 
 StringRef MachineFunction::getName() const {
   return getFunction().getName();
@@ -1445,9 +1441,7 @@ void MachineJumpTableInfo::print(raw_ostream &OS) const {
   OS << '\n';
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MachineJumpTableInfo::dump() const { print(dbgs()); }
-#endif
 
 Printable llvm::printJumpTableEntryReference(unsigned Idx) {
   return Printable([Idx](raw_ostream &OS) { OS << "%jump-table." << Idx; });
@@ -1624,6 +1618,4 @@ ProfileSummaryInfo::getEntryCount<llvm::MachineFunction>(
   return F->getFunction().getEntryCount();
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MachineConstantPool::dump() const { print(dbgs()); }
-#endif

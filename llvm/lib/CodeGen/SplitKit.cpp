@@ -378,7 +378,6 @@ void SplitEditor::reset(LiveRangeEdit &LRE, ComplementSpillMode SM) {
                     &LIS.getVNInfoAllocator());
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SplitEditor::dump() const {
   if (RegAssign.empty()) {
     dbgs() << " empty\n";
@@ -389,7 +388,6 @@ LLVM_DUMP_METHOD void SplitEditor::dump() const {
     dbgs() << " [" << I.start() << ';' << I.stop() << "):" << I.value();
   dbgs() << '\n';
 }
-#endif
 
 /// Find a subrange corresponding to the exact lane mask @p LM in the live
 /// interval @p LI. The interval @p LI is assumed to contain such a subrange.

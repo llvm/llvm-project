@@ -109,9 +109,7 @@ public:
 
   void print(raw_ostream &O) const override;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const;
-#endif
 };
 
 inline raw_ostream &operator<<(raw_ostream &O,

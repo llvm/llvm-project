@@ -138,7 +138,6 @@ public:
     return VXRMInfo::getUnknown();
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Support for debugging, callable in GDB: V->dump()
   LLVM_DUMP_METHOD void dump() const {
     print(dbgs());
@@ -155,16 +154,13 @@ public:
       OS << getVXRMImm();
     OS << '}';
   }
-#endif
 };
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_ATTRIBUTE_USED
 inline raw_ostream &operator<<(raw_ostream &OS, const VXRMInfo &V) {
   V.print(OS);
   return OS;
 }
-#endif
 
 struct BlockData {
   // Indicates if the block uses VXRM. Uninitialized means no use.

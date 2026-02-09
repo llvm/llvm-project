@@ -32,6 +32,4 @@ raw_ostream &DynamicAPInt::print(raw_ostream &OS) const {
   return OS << ValLarge;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void DynamicAPInt::dump() const { print(dbgs()); }
-#endif

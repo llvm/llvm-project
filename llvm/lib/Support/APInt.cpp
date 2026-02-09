@@ -2305,7 +2305,6 @@ void APInt::toString(SmallVectorImpl<char> &Str, unsigned Radix, bool Signed,
   std::reverse(Str.begin()+StartDig, Str.end());
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void APInt::dump() const {
   SmallString<40> S, U;
   this->toStringUnsigned(U);
@@ -2313,7 +2312,6 @@ LLVM_DUMP_METHOD void APInt::dump() const {
   dbgs() << "APInt(" << BitWidth << "b, "
          << U << "u " << S << "s)\n";
 }
-#endif
 
 void APInt::print(raw_ostream &OS, bool isSigned) const {
   SmallString<40> S;

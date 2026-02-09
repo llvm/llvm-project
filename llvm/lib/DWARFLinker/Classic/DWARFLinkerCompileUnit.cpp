@@ -18,7 +18,6 @@ namespace llvm {
 using namespace dwarf_linker;
 using namespace dwarf_linker::classic;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void CompileUnit::DIEInfo::dump() {
   llvm::errs() << "{\n";
   llvm::errs() << "  AddrAdjust: " << AddrAdjust << '\n';
@@ -34,7 +33,6 @@ LLVM_DUMP_METHOD void CompileUnit::DIEInfo::dump() {
   llvm::errs() << "  UnclonedReference: " << UnclonedReference << '\n';
   llvm::errs() << "}\n";
 }
-#endif // if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
 /// Check if the DIE at \p Idx is in the scope of a function.
 static bool inFunctionScope(CompileUnit &U, unsigned Idx) {

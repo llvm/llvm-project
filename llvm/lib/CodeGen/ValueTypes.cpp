@@ -205,12 +205,10 @@ std::string EVT::getEVTString() const {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void EVT::dump() const {
   print(dbgs());
   dbgs() << "\n";
 }
-#endif
 
 /// getTypeForEVT - This method returns an LLVM type corresponding to the
 /// specified EVT.  For integer types, this returns an unsigned type.  Note
@@ -333,12 +331,10 @@ const fltSemantics &EVT::getFltSemantics() const {
   return getScalarType().getSimpleVT().getFltSemantics();
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void MVT::dump() const {
   print(dbgs());
   dbgs() << "\n";
 }
-#endif
 
 void MVT::print(raw_ostream &OS) const {
   if (SimpleTy == INVALID_SIMPLE_VALUE_TYPE)

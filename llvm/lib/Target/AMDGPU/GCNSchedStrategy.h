@@ -626,9 +626,7 @@ private:
       return Remat > O.Remat;
     }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     Printable print() const;
-#endif
 
   private:
     /// Number of 32-bit registers this rematerialization covers.

@@ -45,7 +45,6 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
 #endif
   EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   EXPECT_STREQ("Use before def!\n"
                "  EMIT vp<%1> = sub vp<%2>, ir<0>\n"
                "  before\n"
@@ -54,7 +53,6 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefSameBB) {
 #else
   EXPECT_STREQ("Use before def!\n",
                ::testing::internal::GetCapturedStderr().c_str());
-#endif
 #endif
 }
 
@@ -88,7 +86,6 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
 #endif
   EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   EXPECT_STREQ("Use before def!\n"
                "  EMIT vp<%1> = sub vp<%3>, ir<0>\n"
                "  before\n"
@@ -97,7 +94,6 @@ TEST_F(VPVerifierTest, VPInstructionUseBeforeDefDifferentBB) {
 #else
   EXPECT_STREQ("Use before def!\n",
                ::testing::internal::GetCapturedStderr().c_str());
-#endif
 #endif
 }
 
@@ -138,7 +134,6 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
 #endif
   EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   EXPECT_STREQ("Use before def!\n"
                "  BLEND ir<<badref>> = vp<%2>\n"
                "  before\n"
@@ -147,7 +142,6 @@ TEST_F(VPVerifierTest, VPBlendUseBeforeDefDifferentBB) {
 #else
   EXPECT_STREQ("Use before def!\n",
                ::testing::internal::GetCapturedStderr().c_str());
-#endif
 #endif
 
   delete Phi;
@@ -181,7 +175,6 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
 #endif
   EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   EXPECT_STREQ("Incoming def does not dominate incoming block!\n"
                "  EMIT vp<%2> = add ir<0>, ir<0>\n"
                "  does not dominate preheader for\n"
@@ -190,7 +183,6 @@ TEST_F(VPVerifierTest, VPPhiIncomingValueDoesntDominateIncomingBlock) {
 #else
   EXPECT_STREQ("Incoming def does not dominate incoming block!\n",
                ::testing::internal::GetCapturedStderr().c_str());
-#endif
 #endif
 }
 
@@ -329,14 +321,12 @@ TEST_F(VPVerifierTest, NonHeaderPHIInHeader) {
 #endif
   EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   EXPECT_STREQ(
       "Found non-header PHI recipe in header VPBB: IR   <badref> = phi i32 \n",
       ::testing::internal::GetCapturedStderr().c_str());
 #else
   EXPECT_STREQ("Found non-header PHI recipe in header VPBB",
                ::testing::internal::GetCapturedStderr().c_str());
-#endif
 #endif
 
   delete PHINode;

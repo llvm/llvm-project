@@ -133,9 +133,7 @@ void CallGraph::print(raw_ostream &OS) const {
     CN->print(OS);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void CallGraph::dump() const { print(dbgs()); }
-#endif
 
 // removeFunctionFromModule - Unlink the function from this module, returning
 // it.  Because this removes the function from the module, the call graph node
@@ -188,9 +186,7 @@ void CallGraphNode::print(raw_ostream &OS) const {
   OS << '\n';
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void CallGraphNode::dump() const { print(dbgs()); }
-#endif
 
 /// removeOneAbstractEdgeTo - Remove one edge associated with a null callsite
 /// from this node to the specified callee function.
@@ -325,7 +321,5 @@ void CallGraphWrapperPass::print(raw_ostream &OS, const Module *) const {
   G->print(OS);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 void CallGraphWrapperPass::dump() const { print(dbgs(), nullptr); }
-#endif

@@ -189,12 +189,10 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI,
   llvm_unreachable("Invalid expression kind!");
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCExpr::dump() const {
   print(dbgs(), nullptr);
   dbgs() << '\n';
 }
-#endif
 
 /* *** */
 
