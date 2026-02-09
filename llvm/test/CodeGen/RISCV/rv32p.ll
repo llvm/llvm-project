@@ -681,8 +681,9 @@ define i64 @wmacc_commute(i32 %a, i32 %b, i64 %c) nounwind {
 define i64 @wmaccsu(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmaccsu:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    wmulsu a0, a0, a1
-; CHECK-NEXT:    addd a0, a2, a0
+; CHECK-NEXT:    wmaccsu a2, a0, a1
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    mv a1, a3
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = zext i32 %b to i64
@@ -694,8 +695,9 @@ define i64 @wmaccsu(i32 %a, i32 %b, i64 %c) nounwind {
 define i64 @wmaccsu_commute(i32 %a, i32 %b, i64 %c) nounwind {
 ; CHECK-LABEL: wmaccsu_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    wmulsu a0, a0, a1
-; CHECK-NEXT:    addd a0, a0, a2
+; CHECK-NEXT:    wmaccsu a2, a0, a1
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    mv a1, a3
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = zext i32 %b to i64
