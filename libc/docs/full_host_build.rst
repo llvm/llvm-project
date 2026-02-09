@@ -8,6 +8,11 @@ Full Host Build
    :depth: 1
    :local:
 
+.. note::
+   Fullbuild requires running headergen, which is a python program that depends on
+   pyyaml. The minimum versions are listed on the :ref:`header_generation`
+   page, as well as additional information.
+
 Standard Building and Testing
 =============================
 
@@ -50,7 +55,7 @@ tests with the following command:
 
 .. code-block:: sh
 
-   ninja libc libm check-libc
+   ninja -C build libc libm check-libc
 
 To run a specific unit test for a function, you can target it directly using its
 full name:
@@ -96,6 +101,7 @@ assumptions:
  * The host and target are the same architecture and OS. For example, building a Linux x86-64 libc on a Linux x86-64 host.
  * The host has a working and recent clang toolchain. Clang 21 has been tested.
  * Your container is using Debian Testing or a derived distribution. Other distributions likely work but the package names and paths may differ.
+ * You have root access to your machine to set up the compiler wrapper.
 
 Step 1: Preparation
 -------------------
@@ -146,11 +152,11 @@ llvm instead of runtimes because we need to install the
       -G Ninja \
       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF \
       -DCMAKE_INSTALL_PREFIX=$SYSROOT/usr \
-      -DLLVM_ENABLE_PROJECTS="clang;lld"   \
+      -DLLVM_ENABLE_PROJECTS="clang"   \
       -DLLVM_ENABLE_RUNTIMES="libc;compiler-rt" \
+      -DCMAKE_BUILD_TYPE=Release \
       -DLLVM_LIBC_FULL_BUILD=ON \
       -DLIBC_INCLUDE_DOCS=OFF \
-      -DCMAKE_BUILD_TYPE=Release \
       -DLLVM_LIBC_INCLUDE_SCUDO=ON \
       -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON \
       -DCOMPILER_RT_BUILD_GWP_ASAN=OFF                       \
