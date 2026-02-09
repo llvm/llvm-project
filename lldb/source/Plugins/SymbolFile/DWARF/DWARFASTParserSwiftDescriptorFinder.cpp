@@ -207,11 +207,29 @@ getFieldDescriptorKindForDie(CompilerType type) {
 }
 
 namespace {
+
+/// Given a mangled name in the format $snameD, return "name". The type info
+/// builder machinery expects builtins to have their mangled names stored in
+/// this format.
+/// This is the inverse operation of LLDBTypeInfoProvider::getTypeInfo, which
+/// consumes the name from TypeRefBuilder.
+static llvm::StringRef ExtractTypeName(llvm::StringRef name) {
+  if ((name.starts_with("$s") || name.starts_with("$e")) &&
+      name.ends_with("D") && name.size() > 3) {
+    return name.drop_front(2).drop_back(1);
+  }
+  return name;
+}
+
 // Class that implements the same layout as a builtin type descriptor, only it's
 // built from DWARF instead.
 class DWARFBuiltinTypeDescriptorImpl
     : public swift::reflection::BuiltinTypeDescriptorBase {
-  ConstString m_type_name;
+  // We store the typename as a StringRef, this is safe to do because the
+  // backing variable which is passed in the constructor is a ConstString. If we
+  // ever change the constructor to receive something else, we'd need to update
+  // the type of this variable to own the data.
+  llvm::StringRef m_type_name;
 
 public:
   DWARFBuiltinTypeDescriptorImpl(uint32_t size, uint32_t alignment,
@@ -220,7 +238,7 @@ public:
                                  bool is_bitwise_takable, ConstString type_name)
       : swift::reflection::BuiltinTypeDescriptorBase(
             size, alignment, stride, num_extra_inhabitants, is_bitwise_takable),
-        m_type_name(type_name) {}
+        m_type_name(ExtractTypeName(type_name.GetStringRef())) {}
   ~DWARFBuiltinTypeDescriptorImpl() override = default;
 
   llvm::StringRef getMangledTypeName() override { return m_type_name; }
