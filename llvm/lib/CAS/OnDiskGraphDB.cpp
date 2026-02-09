@@ -1422,14 +1422,11 @@ OnDiskGraphDB::FileBackedData
 StandaloneDataInMemory::getInternalFileBackedObjectData(
     StringRef RootPath) const {
   switch (SK) {
-  case TrieRecord::StorageKind::Unknown:
-  case TrieRecord::StorageKind::DataPool:
-    llvm_unreachable("unexpected storage kind");
   case TrieRecord::StorageKind::Standalone:
     return OnDiskGraphDB::FileBackedData{getContent().getData(),
                                          /*FileInfo=*/std::nullopt};
   case TrieRecord::StorageKind::StandaloneLeaf0:
-  case TrieRecord::StorageKind::StandaloneLeaf:
+  case TrieRecord::StorageKind::StandaloneLeaf: {
     bool IsFileNulTerminated = SK == TrieRecord::StorageKind::StandaloneLeaf0;
     SmallString<256> Path;
     ::getStandalonePath(RootPath, TrieRecord::getStandaloneFilePrefix(SK),
@@ -1437,6 +1434,11 @@ StandaloneDataInMemory::getInternalFileBackedObjectData(
     return OnDiskGraphDB::FileBackedData{
         getContent().getData(), OnDiskGraphDB::FileBackedData::FileInfoTy{
                                     std::string(Path), IsFileNulTerminated}};
+  }
+  case TrieRecord::StorageKind::Unknown:
+  case TrieRecord::StorageKind::DataPool:
+  default:
+    llvm_unreachable("unexpected storage kind");
   }
 }
 
