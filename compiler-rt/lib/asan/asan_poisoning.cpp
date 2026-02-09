@@ -257,8 +257,9 @@ uptr __asan_region_is_poisoned(uptr beg, uptr size) {
       return 0;
     uptr shadow_beg = MemToShadow(aligned_b);
     uptr shadow_end = MemToShadow(aligned_e);
-    CHECK_LT(shadow_beg, shadow_end);
-    if (::mem_is_zero((const char *)shadow_beg, shadow_end - shadow_beg))
+    if (shadow_end <= shadow_beg ||
+        __sanitizer::mem_is_zero((const char *)shadow_beg,
+                                 shadow_end - shadow_beg))
       return 0;
   }
   // The fast check failed, so we have a poisoned byte somewhere.

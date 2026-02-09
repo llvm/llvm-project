@@ -189,3 +189,12 @@ INTERFACE_FUNCTION(__asan_update_allocation_context)
 INTERFACE_WEAK_FUNCTION(__asan_default_options)
 INTERFACE_WEAK_FUNCTION(__asan_default_suppressions)
 INTERFACE_WEAK_FUNCTION(__asan_on_error)
+
+// Used only for testing asan.
+INTERFACE_WEAK_FUNCTION(__asan_test_only_get_low_mem_beg)
+INTERFACE_WEAK_FUNCTION(__asan_test_only_get_low_mem_end)
+INTERFACE_WEAK_FUNCTION(__asan_test_only_get_mid_mem_beg)
+INTERFACE_WEAK_FUNCTION(__asan_test_only_get_mid_mem_end)
+INTERFACE_WEAK_FUNCTION(__asan_test_only_get_high_mem_beg)
+INTERFACE_WEAK_FUNCTION(__asan_test_only_get_high_mem_end)
+

@@ -274,12 +274,16 @@ TEST(AddressSanitizerInterface, PoisoningStressTest) {
   free(arr);
 }
 
-extern void *__asan_test_only_get_low_mem_beg();
-extern void *__asan_test_only_get_low_mem_end();
-extern void *__asan_test_only_get_mid_mem_beg();
-extern void *__asan_test_only_get_mid_mem_end();
-extern void *__asan_test_only_get_high_mem_beg();
-extern void *__asan_test_only_get_high_mem_end();
+extern "C" {
+
+void *__asan_test_only_get_low_mem_beg();
+void *__asan_test_only_get_low_mem_end();
+void *__asan_test_only_get_mid_mem_beg();
+void *__asan_test_only_get_mid_mem_end();
+void *__asan_test_only_get_high_mem_beg();
+void *__asan_test_only_get_high_mem_end();
+
+}  // extern "C"
 
 static void ProbeRegionIsPoisonedNearEnd(void *end) {
   // Probe starts in the last 8 bytes of the range.

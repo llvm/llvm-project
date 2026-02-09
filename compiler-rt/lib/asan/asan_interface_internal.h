@@ -270,6 +270,21 @@ extern "C" {
 
   SANITIZER_INTERFACE_ATTRIBUTE int __asan_update_allocation_context(
       void *addr);
+
+  // Used only for testing asan.
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void *__asan_test_only_get_low_mem_beg();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void *__asan_test_only_get_low_mem_end();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void *__asan_test_only_get_mid_mem_beg();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void *__asan_test_only_get_mid_mem_end();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void *__asan_test_only_get_high_mem_beg();
+  SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
+  void *__asan_test_only_get_high_mem_end();
+
 }  // extern "C"
 
 #endif  // ASAN_INTERFACE_INTERNAL_H
