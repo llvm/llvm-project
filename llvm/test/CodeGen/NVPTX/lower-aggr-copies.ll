@@ -117,9 +117,9 @@ entry:
 
 ; IR-LABEL:   @memset_caller
 ; IR:         [[VAL:%[0-9]+]] = trunc i32 %c to i8
-; IR:         [[CMPREG:%[0-9]+]] = icmp eq i64 0, %n
-; IR:         br i1 [[CMPREG]], label %split, label %loadstoreloop
-; IR:         loadstoreloop:
+; IR:         [[CMPREG:%[0-9]+]] = icmp ne i64 %n, 0
+; IR:         br i1 [[CMPREG]], label %dynamic-memset-expansion-main-body, label %dynamic-memset-post-expansion
+; IR:         dynamic-memset-expansion-main-body:
 ; IR:         [[STOREPTR:%[0-9]+]] = getelementptr inbounds i8, ptr %dst, i64
 ; IR-NEXT:    store i8 [[VAL]], ptr [[STOREPTR]]
 
@@ -141,7 +141,7 @@ entry:
 
 ; IR-LABEL:   @volatile_memset_caller
 ; IR:         [[VAL:%[0-9]+]] = trunc i32 %c to i8
-; IR:         loadstoreloop:
+; IR:         dynamic-memset-expansion-main-body:
 ; IR:         [[STOREPTR:%[0-9]+]] = getelementptr inbounds i8, ptr %dst, i64
 ; IR-NEXT:    store volatile i8 [[VAL]], ptr [[STOREPTR]]
 }

@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FormatterBytecode.h"
+#include "lldb/DataFormatters/FormatterSection.h"
+
 #include "lldb/Core/Module.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Utility/LLDBLog.h"

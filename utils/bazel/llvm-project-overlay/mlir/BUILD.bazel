@@ -15,6 +15,7 @@ load(
     "cc_headers_only",
     "if_cuda_available",
     "mlir_c_api_cc_library",
+    "nanobind_pyi_genrule",
 )
 load(":linalggen.bzl", "genlinalg")
 load(":tblgen.bzl", "gentbl_cc_library", "td_library")
@@ -477,6 +478,7 @@ mlir_c_api_cc_library(
         "lib/CAPI/IR/BuiltinTypes.cpp",
         "lib/CAPI/IR/Diagnostics.cpp",
         "lib/CAPI/IR/DialectHandle.cpp",
+        "lib/CAPI/IR/ExtensibleDialect.cpp",
         "lib/CAPI/IR/IR.cpp",
         "lib/CAPI/IR/IntegerSet.cpp",
         "lib/CAPI/IR/Pass.cpp",
@@ -491,6 +493,7 @@ mlir_c_api_cc_library(
         "include/mlir-c/Dialect/Func.h",
         "include/mlir-c/Dialect/IRDL.h",
         "include/mlir-c/ExecutionEngine.h",
+        "include/mlir-c/ExtensibleDialect.h",
         "include/mlir-c/IR.h",
         "include/mlir-c/IntegerSet.h",
         "include/mlir-c/Interfaces.h",
@@ -572,28 +575,20 @@ mlir_c_api_cc_library(
     name = "CAPIAMDGPU",
     srcs = ["lib/CAPI/Dialect/AMDGPU.cpp"],
     hdrs = ["include/mlir-c/Dialect/AMDGPU.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":AMDGPUPassIncGen"],
     includes = ["include"],
-    deps = [
-        ":AMDGPUDialect",
-        ":AMDGPUPassIncGen",
-    ],
+    deps = [":AMDGPUDialect"],
 )
 
 mlir_c_api_cc_library(
     name = "CAPIArith",
     srcs = ["lib/CAPI/Dialect/Arith.cpp"],
     hdrs = ["include/mlir-c/Dialect/Arith.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":ArithPassIncGen"],
     includes = ["include"],
-    deps = [
-        ":ArithDialect",
-        ":ArithPassIncGen",
-    ],
+    deps = [":ArithDialect"],
 )
 
 mlir_c_api_cc_library(
@@ -696,14 +691,12 @@ mlir_c_api_cc_library(
     hdrs = [
         "include/mlir-c/Dialect/LLVM.h",
     ],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":LLVMPassIncGen"],
     includes = ["include"],
     deps = [
         ":LLVMDialect",
-        ":LLVMPassIncGen",
-        "//llvm:Support",
+        "//third_party/llvm/llvm-project/llvm:Support",
     ],
 )
 
@@ -711,42 +704,32 @@ mlir_c_api_cc_library(
     name = "CAPIMath",
     srcs = ["lib/CAPI/Dialect/Math.cpp"],
     hdrs = ["include/mlir-c/Dialect/Math.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":MathPassIncGen"],
     includes = ["include"],
-    deps = [
-        ":MathDialect",
-        ":MathPassIncGen",
-    ],
+    deps = [":MathDialect"],
 )
 
 mlir_c_api_cc_library(
     name = "CAPIMemRef",
     srcs = ["lib/CAPI/Dialect/MemRef.cpp"],
     hdrs = ["include/mlir-c/Dialect/MemRef.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":MemRefPassIncGen"],
     includes = ["include"],
-    deps = [
-        ":MemRefDialect",
-        ":MemRefPassIncGen",
-    ],
+    deps = [":MemRefDialect"],
 )
 
 mlir_c_api_cc_library(
     name = "CAPINVGPU",
     srcs = ["lib/CAPI/Dialect/NVGPU.cpp"],
     hdrs = ["include/mlir-c/Dialect/NVGPU.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":NVGPUPassIncGen"],
     includes = ["include"],
     deps = [
         ":IR",
         ":NVGPUDialect",
-        ":NVGPUPassIncGen",
     ],
 )
 
@@ -767,14 +750,10 @@ mlir_c_api_cc_library(
     name = "CAPIShape",
     srcs = ["lib/CAPI/Dialect/Shape.cpp"],
     hdrs = ["include/mlir-c/Dialect/Shape.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
     includes = ["include"],
-    deps = [
-        ":ShapeDialect",
-        ":ShapeTransformsPassIncGen",
-    ],
+    header_deps = [":ShapeTransformsPassIncGen"],
+    deps = [":ShapeDialect"],
 )
 
 mlir_c_api_cc_library(
@@ -802,14 +781,10 @@ mlir_c_api_cc_library(
     name = "CAPITensor",
     srcs = ["lib/CAPI/Dialect/Tensor.cpp"],
     hdrs = ["include/mlir-c/Dialect/Tensor.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
     includes = ["include"],
-    deps = [
-        ":TensorDialect",
-        ":TensorPassIncGen",
-    ],
+    header_deps = [":TensorPassIncGen"],
+    deps = [":TensorDialect"],
 )
 
 mlir_c_api_cc_library(
@@ -853,14 +828,10 @@ mlir_c_api_cc_library(
     name = "CAPISCF",
     srcs = ["lib/CAPI/Dialect/SCF.cpp"],
     hdrs = ["include/mlir-c/Dialect/SCF.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":SCFPassIncGen"],
     includes = ["include"],
-    deps = [
-        ":SCFDialect",
-        ":SCFPassIncGen",
-    ],
+    deps = [":SCFDialect"],
 )
 
 mlir_c_api_cc_library(
@@ -932,14 +903,10 @@ mlir_c_api_cc_library(
     hdrs = [
         "include/mlir-c/Dialect/Transform.h",
     ],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":TransformDialectTransformsIncGen"],
     includes = ["include"],
-    deps = [
-        ":TransformDialect",
-        ":TransformDialectTransformsIncGen",
-    ],
+    deps = [":TransformDialect"],
 )
 
 mlir_c_api_cc_library(
@@ -972,13 +939,13 @@ mlir_c_api_cc_library(
     ],
     header_deps = [
         ":CAPIIRHeaders",
+        ":MLProgramPassIncGen",
     ],
     includes = ["include"],
     deps = [
         ":CAPIIR",
         ":MLProgramDialect",
         ":MLProgramOpsIncGen",
-        ":MLProgramPassIncGen",
         ":MLProgramTypesIncGen",
     ],
 )
@@ -987,14 +954,10 @@ mlir_c_api_cc_library(
     name = "CAPIVector",
     srcs = ["lib/CAPI/Dialect/Vector.cpp"],
     hdrs = ["include/mlir-c/Dialect/Vector.h"],
-    capi_deps = [
-        ":CAPIIR",
-    ],
+    capi_deps = [":CAPIIR"],
+    header_deps = [":VectorPassIncGen"],
     includes = ["include"],
-    deps = [
-        ":VectorDialect",
-        ":VectorPassIncGen",
-    ],
+    deps = [":VectorDialect"],
 )
 
 mlir_c_api_cc_library(
@@ -1420,6 +1383,29 @@ cc_binary(
 )
 
 ##---------------------------------------------------------------------------##
+# Python stub generation for native extensions.
+##---------------------------------------------------------------------------##
+
+py_binary(
+    name = "stubgen_runner",
+    srcs = ["stubgen_runner.py"],
+    data = ["@nanobind//:src/stubgen.py"],
+    deps = ["@rules_python//python/runfiles"],
+)
+
+nanobind_pyi_genrule(
+    name = "_mlir_pyi",
+    outs = [
+        "_mlir/__init__.pyi",
+        "_mlir/ir.pyi",
+        "_mlir/passmanager.pyi",
+        "_mlir/rewrite.pyi",
+    ],
+    module_name = "_mlir",
+    deps = [":_mlir.so"],
+)
+
+##---------------------------------------------------------------------------##
 
 td_library(
     name = "AttrTdFiles",
@@ -1719,6 +1705,7 @@ td_library(
     ],
     includes = ["include"],
     deps = [
+        ":BuiltinDialectTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -3961,6 +3948,7 @@ cc_library(
         ":ArithUtils",
         ":ControlFlowInterfaces",
         ":DialectUtils",
+        ":FuncDialect",
         ":FunctionInterfaces",
         ":GPUDialect",
         ":GPUUtils",
@@ -3981,6 +3969,7 @@ cc_library(
         ":XeGPUPassIncGen",
         ":XeGPUUtils",
         ":XeGPUuArch",
+        ":XeVMDialect",
         "//llvm:Support",
     ],
 )
@@ -4569,6 +4558,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":TensorDialect",
         ":TransformUtils",
+        ":UBDialect",
         ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
@@ -13755,6 +13745,7 @@ cc_library(
     hdrs = glob(["include/mlir/Dialect/MPI/IR/*.h"]),
     includes = ["include"],
     deps = [
+        ":ArithDialect",
         ":BytecodeOpInterface",
         ":DLTIDialect",
         ":IR",
@@ -14514,6 +14505,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BytecodeOpInterface",
+        ":ControlFlowInterfaces",
         ":ConvertToLLVMInterface",
         ":IR",
         ":InliningUtils",

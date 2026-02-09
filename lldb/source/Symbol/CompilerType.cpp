@@ -20,6 +20,7 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <iterator>
 #include <mutex>
@@ -240,13 +241,21 @@ bool CompilerType::ShouldTreatScalarValueAsAddress() const {
   return false;
 }
 
-bool CompilerType::IsFloatingPointType(bool &is_complex) const {
-  if (IsValid()) {
+bool CompilerType::IsComplexType() const {
+  return GetTypeClass() & eTypeClassComplexFloat ||
+         GetTypeClass() & eTypeClassComplexInteger;
+}
+
+bool CompilerType::IsFloatingPointType() const {
+  if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->IsFloatingPointType(m_type, is_complex);
-  }
-  is_complex = false;
+      return type_system_sp->IsFloatingPointType(m_type);
+
   return false;
+}
+
+bool CompilerType::IsRealFloatingPointType() const {
+  return IsFloatingPointType() && !IsComplexType() && !IsVectorType();
 }
 
 bool CompilerType::IsDefined() const {
@@ -326,11 +335,6 @@ bool CompilerType::IsBeingDefined() const {
 bool CompilerType::IsInteger() const {
   bool is_signed = false; // May be reset by the call below.
   return IsIntegerType(is_signed);
-}
-
-bool CompilerType::IsFloat() const {
-  bool is_complex = false;
-  return IsFloatingPointType(is_complex);
 }
 
 bool CompilerType::IsEnumerationType() const {
