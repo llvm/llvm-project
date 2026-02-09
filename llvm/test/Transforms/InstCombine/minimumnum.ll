@@ -85,7 +85,7 @@ define <2 x float> @minimumnum_f32_1_minimumnum_val_p0_val_v2f32(<2 x float> %x)
 ; CHECK-NEXT:    ret <2 x float> [[Z]]
 ;
   %y = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> %x, <2 x float> zeroinitializer)
-  %z = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> %y, <2 x float><float 1.0, float 1.0>)
+  %z = call <2 x float> @llvm.minimumnum.v2f32(<2 x float> %y, <2 x float> splat (float 1.0))
   ret <2 x float> %z
 }
 
@@ -165,8 +165,8 @@ define <2 x double> @minimumnum_neg_neg_vec_fmf(<2 x double> %x, <2 x double> %y
 ; CHECK-NEXT:    [[R:%.*]] = fneg nnan ninf <2 x double> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x double> [[R]]
 ;
-  %negx = fsub reassoc <2 x double> <double -0.0, double -0.0>, %x
-  %negy = fsub fast <2 x double> <double -0.0, double -0.0>, %y
+  %negx = fsub reassoc <2 x double> splat (double -0.0), %x
+  %negy = fsub fast <2 x double> splat (double -0.0), %y
   %r = call nnan ninf <2 x double> @llvm.minimumnum.v2f64(<2 x double> %negx, <2 x double> %negy)
   ret <2 x double> %r
 }

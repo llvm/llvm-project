@@ -85,7 +85,7 @@ define <2 x float> @maximumnum_f32_1_maximumnum_val_p0_val_v2f32(<2 x float> %x)
 ; CHECK-NEXT:    ret <2 x float> [[Z]]
 ;
   %y = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> %x, <2 x float> zeroinitializer)
-  %z = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> %y, <2 x float><float 1.0, float 1.0>)
+  %z = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> %y, <2 x float> splat (float 1.0))
   ret <2 x float> %z
 }
 
@@ -112,8 +112,8 @@ define <2 x float> @maximumnum_neg_neg(<2 x float> %x, <2 x float> %y) {
 ; CHECK-NEXT:    [[R:%.*]] = fneg <2 x float> [[TMP1]]
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
-  %negx = fsub <2 x float> <float -0.0, float -0.0>, %x
-  %negy = fsub <2 x float> <float -0.0, float -0.0>, %y
+  %negx = fsub <2 x float> splat (float -0.0), %x
+  %negy = fsub <2 x float> splat (float -0.0), %y
   %r = call <2 x float> @llvm.maximumnum.v2f32(<2 x float> %negx, <2 x float> %negy)
   ret <2 x float> %r
 }
