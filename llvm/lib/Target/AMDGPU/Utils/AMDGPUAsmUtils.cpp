@@ -156,6 +156,26 @@ StringRef getMsgOpName(int64_t MsgId, uint64_t Encoding,
 
 } // namespace SendMsg
 
+namespace WaitEvent {
+
+// clang-format off
+static constexpr CustomOperand WaitEventOperands[] = {
+  {{"{ export_ready: 0 }"},           0,                      isGFX12Plus},
+  {{"{ dont_wait_export_ready: 0 }"}, 0,                      isGFX11},
+  {{"{ dont_wait_export_ready: 1 }"}, DONT_WAIT_EXPORT_READY, isGFX11},
+  {{"{ export_ready: 1 }"},           EXPORT_READY,           isGFX12Plus}
+};
+// clang-format on
+
+int64_t getWaitEventMask(StringRef Name, const MCSubtargetInfo &STI) {
+  return getEncodingFromOperandTable(WaitEventOperands, Name, STI);
+}
+
+StringRef getWaitEventMaskName(uint64_t Encoding, const MCSubtargetInfo &STI) {
+  return getNameFromOperandTable(WaitEventOperands, Encoding, STI);
+}
+} // namespace WaitEvent
+
 namespace Hwreg {
 
 // Disable lint checking for this block since it makes the table unreadable.

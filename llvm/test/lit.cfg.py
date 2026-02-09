@@ -235,6 +235,7 @@ tools.extend(
         "dsymutil",
         "lli",
         "lli-child-target",
+        "llubi",
         "llvm-ar",
         "llvm-as",
         "llvm-addr2line",

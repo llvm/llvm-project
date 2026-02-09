@@ -115,7 +115,7 @@ New checks
 
   Looks for functions returning ``std::[w|u8|u16|u32]string`` and suggests to
   change it to ``std::[...]string_view`` for performance reasons if possible.
-  
+
 - New :doc:`modernize-use-structured-binding
   <clang-tidy/checks/modernize/use-structured-binding>` check.
 
@@ -147,6 +147,11 @@ Changes in existing checks
 - Improved :doc:`bugprone-macro-parentheses
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
+
+- Improved :doc:`bugprone-string-constructor
+  <clang-tidy/checks/bugprone/string-constructor>` check to detect suspicious
+  string constructor calls when the string class constructor has a default
+  allocator argument.
 
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check by adding the function
@@ -202,6 +207,10 @@ Changes in existing checks
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
   positives on parameters used in dependent expressions.
+
+- Improved :doc:`readability-suspicious-call-argument
+  <clang-tidy/checks/readability/suspicious-call-argument>` check by avoiding a
+  crash from invalid ``Abbreviations`` option.
 
 Removed checks
 ^^^^^^^^^^^^^^

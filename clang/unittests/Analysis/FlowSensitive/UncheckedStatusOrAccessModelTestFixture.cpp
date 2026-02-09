@@ -4136,9 +4136,9 @@ TEST_P(UncheckedStatusOrAccessModelTest, PointerReceiversWithSelfReferentials) {
 
     void target(Foo* foo) {
       if (foo->next->sor->status().ok())
+        // False positive, should be safe.
         foo->next->sor->value();  // [[unsafe]]
       else
-        // False positive, should be safe.
         foo->next->sor->value();  // [[unsafe]]
     }
   )cc");
