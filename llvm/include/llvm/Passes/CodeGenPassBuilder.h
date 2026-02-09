@@ -472,7 +472,7 @@ protected:
   /// addOptimizedRegAlloc - Add passes related to register allocation.
   /// CodeGenTargetMachineImpl provides standard regalloc passes for most
   /// targets.
-  void addOptimizedRegAlloc(PassManagerWrapper &PMW) const;
+  Error addOptimizedRegAlloc(PassManagerWrapper &PMW) const;
 
   /// Add passes that optimize machine instructions after register allocation.
   void addMachineLateOptimization(PassManagerWrapper &PMW) const;
@@ -484,6 +484,8 @@ protected:
 
   /// Add standard basic block placement passes.
   void addBlockPlacement(PassManagerWrapper &PMW) const;
+
+  void addPostBBSections(PassManagerWrapper &PMW) const {}
 
   using CreateMCStreamer =
       std::function<Expected<std::unique_ptr<MCStreamer>>(MCContext &)>;
@@ -503,10 +505,10 @@ protected:
   /// regalloc pass.
   void addRegAllocPass(PassManagerWrapper &PMW, bool Optimized) const;
 
-  /// Add core register alloator passes which do the actual register assignment
-  /// and rewriting. \returns true if any passes were added.
+  /// Add core register allocator passes which do the actual register assignment
+  /// and rewriting.
   Error addRegAssignmentFast(PassManagerWrapper &PMW) const;
-  Error addRegAssignmentOptimized(PassManagerWrapper &PMWM) const;
+  Error addRegAssignmentOptimized(PassManagerWrapper &PMW) const;
 
   /// Allow the target to disable a specific pass by default.
   /// Backend can declare unwanted passes in constructor.
@@ -578,6 +580,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
   addModulePass(RequireAnalysisPass<CollectorMetadataAnalysis, Module>(), PMW,
                 /*Force=*/true);
   addModulePass(RequireAnalysisPass<RuntimeLibraryAnalysis, Module>(), PMW,
+                /*Force=*/true);
+  addModulePass(RequireAnalysisPass<LibcallLoweringModuleAnalysis, Module>(),
+                PMW,
                 /*Force=*/true);
   addISelPasses(PMW);
   flushFPMsToMPM(PMW);
@@ -697,13 +702,14 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
 
   // Run loop strength reduction before anything else.
   if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableLSR) {
+    // These passes do not use MSSA.
     LoopPassManager LPM;
     LPM.addPass(CanonicalizeFreezeInLoopsPass());
     LPM.addPass(LoopStrengthReducePass());
     if (Opt.EnableLoopTermFold)
       LPM.addPass(LoopTermFoldPass());
     addFunctionPass(createFunctionToLoopPassAdaptor(std::move(LPM),
-                                                    /*UseMemorySSA=*/true),
+                                                    /*UseMemorySSA=*/false),
                     PMW);
   }
 
@@ -726,7 +732,6 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addIRPasses(
     flushFPMsToMPM(PMW);
     addModulePass(ShadowStackGCLoweringPass(), PMW);
   }
-  addFunctionPass(LowerConstantIntrinsicsPass(), PMW);
 
   // Make sure that no unreachable blocks are instruction selected.
   addFunctionPass(UnreachableBlockElimPass(), PMW);
@@ -964,7 +969,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   if (TM.Options.EnableIPRA) {
     flushFPMsToMPM(PMW);
     addModulePass(RequireAnalysisPass<PhysicalRegisterUsageAnalysis, Module>(),
-                  PMW);
+                  PMW, /*Force=*/true);
     addMachineFunctionPass(RegUsageInfoPropagationPass(), PMW);
   }
   // Run pre-ra passes.
@@ -972,12 +977,9 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
 
   // Run register allocation and passes that are tightly coupled with it,
   // including phi elimination and scheduling.
-  if (*Opt.OptimizeRegAlloc) {
-    derived().addOptimizedRegAlloc(PMW);
-  } else {
-    if (auto Err = derived().addFastRegAlloc(PMW))
-      return Err;
-  }
+  if (auto Err = *Opt.OptimizeRegAlloc ? derived().addOptimizedRegAlloc(PMW)
+                                       : derived().addFastRegAlloc(PMW))
+    return std::move(Err);
 
   // Run post-ra passes.
   derived().addPostRegAlloc(PMW);
@@ -1035,10 +1037,12 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   if (TM.Options.EnableIPRA) {
     // Collect register usage information and produce a register mask of
     // clobbered registers, to be used to optimize call sites.
-    flushFPMsToMPM(PMW);
-    addModulePass(RequireAnalysisPass<PhysicalRegisterUsageAnalysis, Module>(),
-                  PMW);
     addMachineFunctionPass(RegUsageInfoCollectorPass(), PMW);
+    // If -print-regusage is specified, print the collected register usage info.
+    if (Opt.PrintRegUsage) {
+      flushFPMsToMPM(PMW);
+      addModulePass(PhysicalRegisterUsageInfoPrinterPass(errs()), PMW);
+    }
   }
 
   addMachineFunctionPass(FuncletLayoutPass(), PMW);
@@ -1060,6 +1064,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
       addModulePass(MachineOutlinerPass(Opt.EnableMachineOutliner), PMW);
     }
   }
+
+  derived().addPostBBSections(PMW);
 
   addMachineFunctionPass(StackFrameLayoutAnalysisPass(), PMW);
 
@@ -1203,7 +1209,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addFastRegAlloc(
 /// optimized register allocation, including coalescing, machine instruction
 /// scheduling, and register allocation itself.
 template <typename Derived, typename TargetMachineT>
-void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
+Error CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
     PassManagerWrapper &PMW) const {
   addMachineFunctionPass(DetectDeadLanesPass(), PMW);
 
@@ -1246,10 +1252,11 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
   // PreRA instruction scheduling.
   addMachineFunctionPass(MachineSchedulerPass(&TM), PMW);
 
-  if (auto E = derived().addRegAssignmentOptimized(PMW)) {
-    // addRegAssignmentOptimized did not add a reg alloc pass, so do nothing.
-    return;
-  }
+  if (auto E = derived().addRegAssignmentOptimized(PMW))
+    return std::move(E);
+
+  addMachineFunctionPass(StackSlotColoringPass(), PMW);
+
   // Allow targets to expand pseudo instructions depending on the choice of
   // registers before MachineCopyPropagation.
   derived().addPostRewrite(PMW);
@@ -1262,6 +1269,8 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
   //
   // FIXME: can this move into MachineLateOptimization?
   addMachineFunctionPass(MachineLICMPass(), PMW);
+
+  return Error::success();
 }
 
 //===---------------------------------------------------------------------===//
@@ -1272,6 +1281,9 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addOptimizedRegAlloc(
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineLateOptimization(
     PassManagerWrapper &PMW) const {
+  // Cleanup of redundant (identical) address/immediate loads.
+  addMachineFunctionPass(MachineLateInstrsCleanupPass(), PMW);
+
   // Branch folding must be run after regalloc and prolog/epilog insertion.
   addMachineFunctionPass(BranchFolderPass(Opt.EnableTailMerge), PMW);
 
@@ -1281,9 +1293,6 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineLateOptimization(
   // In addition it can also make CFG irreducible. Thus we disable it.
   if (!TM.requiresStructuredCFG())
     addMachineFunctionPass(TailDuplicatePass(), PMW);
-
-  // Cleanup of redundant (identical) address/immediate loads.
-  addMachineFunctionPass(MachineLateInstrsCleanupPass(), PMW);
 
   // Copy propagation.
   addMachineFunctionPass(MachineCopyPropagationPass(), PMW);

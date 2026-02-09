@@ -13,7 +13,6 @@
 #include "clang/Sema/SemaRISCV.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
-#include "clang/AST/Attrs.inc"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
@@ -136,6 +135,10 @@ static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {
     break;
   case ScalarTypeKind::UnsignedInteger:
     QT = Context.getIntTypeForBitwidth(Type->getElementBitwidth(), false);
+    break;
+  case ScalarTypeKind::FloatE4M3:
+  case ScalarTypeKind::FloatE5M2:
+    QT = Context.getIntTypeForBitwidth(8, false);
     break;
   case ScalarTypeKind::BFloat:
     QT = Context.BFloat16Ty;
@@ -379,7 +382,7 @@ void RISCVIntrinsicManagerImpl::InitRVVIntrinsic(
 
   RVVIntrinsic::updateNamesAndPolicy(IsMasked, HasPolicy, Name, BuiltinName,
                                      OverloadedName, PolicyAttrs,
-                                     Record.HasFRMRoundModeOp);
+                                     Record.HasFRMRoundModeOp, Record.AltFmt);
 
   // Put into IntrinsicList.
   uint32_t Index = IntrinsicList.size();
@@ -1695,7 +1698,7 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
     // The QCI interrupt types require Xqciint
     case RISCVInterruptAttr::qcinest:
     case RISCVInterruptAttr::qcinonest: {
-      if (!HasFeature("experimental-xqciint")) {
+      if (!HasFeature("xqciint")) {
         Diag(AL.getLoc(),
              diag::err_riscv_attribute_interrupt_requires_extension)
             << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type) << "Xqciint";
@@ -1801,8 +1804,9 @@ bool SemaRISCV::checkTargetVersionAttr(const StringRef Param,
 }
 
 bool SemaRISCV::checkTargetClonesAttr(
-    SmallVectorImpl<StringRef> &Params, SmallVectorImpl<SourceLocation> &Locs,
-    SmallVectorImpl<SmallString<64>> &NewParams) {
+    const SmallVectorImpl<StringRef> &Params,
+    const SmallVectorImpl<SourceLocation> &Locs,
+    SmallVectorImpl<SmallString<64>> &NewParams, SourceLocation AttrLoc) {
   using namespace DiagAttrParams;
 
   assert(Params.size() == Locs.size() &&
@@ -1855,7 +1859,7 @@ bool SemaRISCV::checkTargetClonesAttr(
     NewParams.push_back(Param);
   }
   if (!HasDefault)
-    return Diag(Locs[0], diag::err_target_clone_must_have_default);
+    return Diag(AttrLoc, diag::err_target_clone_must_have_default);
 
   return false;
 }

@@ -436,7 +436,10 @@ Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
   assert(SpvType);
   auto &MF = MIRBuilder.getMF();
   const IntegerType *Ty = cast<IntegerType>(getTypeForSPIRVType(SpvType));
-  auto *const CI = ConstantInt::get(const_cast<IntegerType *>(Ty), Val);
+  // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
+  auto *const CI = ConstantInt::get(const_cast<IntegerType *>(Ty), Val,
+                                    /*IsSigned=*/false, /*ImplicitTrunc=*/true);
   Register Res = find(CI, &MF);
   if (Res.isValid())
     return Res;
@@ -626,9 +629,10 @@ Register SPIRVGlobalRegistry::getOrCreateConstIntArray(
   // that would be a truly unique but dangerous key, because it could lead to
   // the creation of constants of arbitrary length (that is, the parameter of
   // memset) which were missing in the original module.
+  Type *I64Ty = Type::getInt64Ty(LLVMBaseTy->getContext());
   Constant *UniqueKey = ConstantStruct::getAnon(
       {PoisonValue::get(const_cast<ArrayType *>(LLVMArrTy)),
-       ConstantInt::get(LLVMBaseTy, Val), ConstantInt::get(LLVMBaseTy, Num)});
+       ConstantInt::get(LLVMBaseTy, Val), ConstantInt::get(I64Ty, Num)});
   return getOrCreateCompositeOrNull(CI, I, SpvType, TII, UniqueKey, BW,
                                     LLVMArrTy->getNumElements());
 }
@@ -882,6 +886,18 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
           .addUse(getSPIRVTypeID(ElemType))
           .addUse(NumElementsVReg);
     });
+  } else if (ST.getTargetTriple().getVendor() == Triple::VendorType::AMD) {
+    // We set the array size to the token UINT64_MAX value, which is generally
+    // illegal (the maximum legal size is 61-bits) for the foreseeable future.
+    SPIRVType *SpvTypeInt64 = getOrCreateSPIRVIntegerType(64, MIRBuilder);
+    Register NumElementsVReg =
+        buildConstantInt(UINT64_MAX, MIRBuilder, SpvTypeInt64, EmitIR);
+    ArrayType = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+      return MIRBuilder.buildInstr(SPIRV::OpTypeArray)
+          .addDef(createTypeVReg(MIRBuilder))
+          .addUse(getSPIRVTypeID(ElemType))
+          .addUse(NumElementsVReg);
+    });
   } else {
     if (!ST.isShader()) {
       llvm::reportFatalUsageError(
@@ -1017,10 +1033,12 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeFunction(
     const FunctionType *Ty, SPIRVType *RetType,
     const SmallVectorImpl<SPIRVType *> &ArgTypes,
     MachineIRBuilder &MIRBuilder) {
-  if (Ty->isVarArg()) {
+  const SPIRVSubtarget *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
+  if (Ty->isVarArg() && ST->isShader()) {
     Function &Fn = MIRBuilder.getMF().getFunction();
     Ty->getContext().diagnose(DiagnosticInfoUnsupported(
-        Fn, "SPIR-V does not support variadic functions",
+        Fn, "SPIR-V shaders do not support variadic functions",
         MIRBuilder.getDebugLoc()));
   }
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {

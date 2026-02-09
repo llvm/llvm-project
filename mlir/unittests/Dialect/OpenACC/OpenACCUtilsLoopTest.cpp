@@ -19,6 +19,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OwningOpRef.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
 #include "gtest/gtest.h"
 
@@ -161,7 +162,7 @@ protected:
   }
 
   MLIRContext context;
-  OpBuilder b;
+  IRRewriter b;
   Location loc;
 };
 
@@ -177,7 +178,8 @@ TEST_F(OpenACCUtilsLoopTest, ConvertSimpleLoopToSCFFor) {
   Value c1 = createIndexConstant(1);
 
   acc::LoopOp loopOp = createLoopOp({c0}, {c10}, {c1});
-  scf::ForOp forOp = convertACCLoopToSCFFor(loopOp, /*enableCollapse=*/false);
+  scf::ForOp forOp =
+      convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/false);
 
   ASSERT_TRUE(forOp);
 
@@ -209,7 +211,8 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopWithI32Bounds) {
   Value step = createI32Constant(1);
 
   acc::LoopOp loopOp = createLoopOp({lb}, {ub}, {step});
-  scf::ForOp forOp = convertACCLoopToSCFFor(loopOp, /*enableCollapse=*/false);
+  scf::ForOp forOp =
+      convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/false);
 
   ASSERT_TRUE(forOp);
 
@@ -235,7 +238,8 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopWithNonConstantBounds) {
   Value step = createIndexConstant(1);
 
   acc::LoopOp loopOp = createLoopOp({lb}, {ub}, {step});
-  scf::ForOp forOp = convertACCLoopToSCFFor(loopOp, /*enableCollapse=*/false);
+  scf::ForOp forOp =
+      convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/false);
 
   ASSERT_TRUE(forOp);
 
@@ -263,7 +267,7 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForWithCollapse) {
   Value c1 = createIndexConstant(1);
 
   acc::LoopOp loopOp = createLoopOp({c0, c0}, {c10, c10}, {c1, c1});
-  scf::ForOp forOp = convertACCLoopToSCFFor(loopOp, /*enableCollapse=*/true);
+  scf::ForOp forOp = convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/true);
 
   ASSERT_TRUE(forOp);
 
@@ -295,13 +299,44 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForNoCollapse) {
   Value c1 = createIndexConstant(1);
 
   acc::LoopOp loopOp = createLoopOp({c0, c0}, {c10, c10}, {c1, c1});
-  scf::ForOp forOp = convertACCLoopToSCFFor(loopOp, /*enableCollapse=*/false);
+  scf::ForOp forOp =
+      convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/false);
 
   ASSERT_TRUE(forOp);
 
   bool hasNestedFor = false;
   forOp.getBody()->walk([&](scf::ForOp) { hasNestedFor = true; });
   EXPECT_TRUE(hasNestedFor);
+}
+
+TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForWithCollapseAndDynamicBounds) {
+  // Test with dynamic (non-constant) bounds to ensure all bounds are computed
+  // before any ForOp is created. This is required for coalesceLoops to work
+  // correctly (called when enableCollapse is true) - if inner loop bounds were
+  // computed inside the outer loop, coalesceLoops would create ops that
+  // reference values from a nested region.
+  auto [module, funcOp] = createModuleWithFuncArgs(
+      {b.getIndexType(), b.getIndexType(), b.getIndexType(), b.getIndexType()});
+
+  // Use function arguments as dynamic bounds
+  Value lb0 = funcOp.getArgument(0);
+  Value ub0 = funcOp.getArgument(1);
+  Value lb1 = funcOp.getArgument(2);
+  Value ub1 = funcOp.getArgument(3);
+  Value c1 = createIndexConstant(1);
+
+  acc::LoopOp loopOp = createLoopOp({lb0, lb1}, {ub0, ub1}, {c1, c1});
+  scf::ForOp forOp = convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/true);
+
+  ASSERT_TRUE(forOp);
+
+  // With collapse, there should be NO nested for loops
+  bool hasNestedFor = false;
+  forOp.getBody()->walk([&](scf::ForOp) { hasNestedFor = true; });
+  EXPECT_FALSE(hasNestedFor);
+
+  // Verify the IR is valid
+  EXPECT_TRUE(module->verify().succeeded());
 }
 
 TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForExclusiveUpperBound) {
@@ -313,7 +348,8 @@ TEST_F(OpenACCUtilsLoopTest, ConvertLoopToSCFForExclusiveUpperBound) {
 
   acc::LoopOp loopOp =
       createLoopOp({c0}, {c10}, {c1}, /*inclusiveUpperbound=*/false);
-  scf::ForOp forOp = convertACCLoopToSCFFor(loopOp, /*enableCollapse=*/false);
+  scf::ForOp forOp =
+      convertACCLoopToSCFFor(loopOp, b, /*enableCollapse=*/false);
 
   ASSERT_TRUE(forOp);
 

@@ -21,7 +21,7 @@ void LoopOpInterface::getLoopOpSuccessorRegions(
 
   // Branching to first region: go to condition or body (do-while).
   if (point.isParent()) {
-    regions.emplace_back(&op.getEntry(), op.getEntry().getArguments());
+    regions.emplace_back(&op.getEntry());
     return;
   }
 
@@ -30,8 +30,8 @@ void LoopOpInterface::getLoopOpSuccessorRegions(
 
   // Branching from condition: go to body or exit.
   if (&op.getCond() == parentRegion) {
-    regions.emplace_back(mlir::RegionSuccessor(op, op->getResults()));
-    regions.emplace_back(&op.getBody(), op.getBody().getArguments());
+    regions.emplace_back(mlir::RegionSuccessor::parent());
+    regions.emplace_back(&op.getBody());
     return;
   }
 
@@ -40,17 +40,35 @@ void LoopOpInterface::getLoopOpSuccessorRegions(
     // FIXME(cir): Should we consider break/continue statements here?
     mlir::Region *afterBody =
         (op.maybeGetStep() ? op.maybeGetStep() : &op.getCond());
-    regions.emplace_back(afterBody, afterBody->getArguments());
+    regions.emplace_back(afterBody);
     return;
   }
 
   // Branching from step: go to condition.
   if (op.maybeGetStep() == parentRegion) {
-    regions.emplace_back(&op.getCond(), op.getCond().getArguments());
+    regions.emplace_back(&op.getCond());
     return;
   }
 
   llvm_unreachable("unexpected branch origin");
+}
+
+mlir::ValueRange
+LoopOpInterface::getLoopOpSuccessorInputs(LoopOpInterface op,
+                                          mlir::RegionSuccessor successor) {
+  if (successor.isParent())
+    return op->getResults();
+  if (successor == &op.getEntry())
+    return op.getEntry().getArguments();
+  if (successor == &op.getBody())
+    return op.getBody().getArguments();
+  mlir::Region *afterBody =
+      (op.maybeGetStep() ? op.maybeGetStep() : &op.getCond());
+  if (successor == afterBody)
+    return afterBody->getArguments();
+  if (successor == &op.getCond())
+    return op.getCond().getArguments();
+  llvm_unreachable("invalid region successor");
 }
 
 /// Verify invariants of the LoopOpInterface.
