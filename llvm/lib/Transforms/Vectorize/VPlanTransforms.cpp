@@ -4154,45 +4154,45 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
     }
   }
 
-    // Chain through exits: for each exit, check if its condition is true at
-    // the first active lane. If so, take that exit; otherwise, try the next.
-    // The last exit needs no check since it must be taken if all others fail.
-    //
-    // For 3 exits (cond.0, cond.1, cond.2), this creates:
-    //
-    // vector.early.exit.check:
-    //   EMIT vp<%combined> = or vp<%cond.0>, vp<%cond.1>, vp<%cond.2>
-    //   EMIT vp<%first.lane> = first-active-lane vp<%combined>
-    //   EMIT vp<%at.cond.0> = extract-lane vp<%first.lane>, vp<%cond.0>
-    //   EMIT branch-on-cond vp<%at.cond.0>
-    // Successor(s): vector.early.exit.0, vector.early.exit.check.0
-    //
-    // vector.early.exit.check.0:
-    //   EMIT vp<%at.cond.1> = extract-lane vp<%first.lane>, vp<%cond.1>
-    //   EMIT branch-on-cond vp<%at.cond.1>
-    // Successor(s): vector.early.exit.1, vector.early.exit.2
-    VPBasicBlock *CurrentBB = DispatchVPBB;
-    for (auto [I, Exit] : enumerate(ArrayRef(Exits).drop_back())) {
-      VPValue *LaneVal = DispatchBuilder.createNaryOp(
-          VPInstruction::ExtractLane, {FirstActiveLane, Exit.CondToExit},
-          DebugLoc::getUnknown(), "exit.cond.at.lane");
+  // Chain through exits: for each exit, check if its condition is true at
+  // the first active lane. If so, take that exit; otherwise, try the next.
+  // The last exit needs no check since it must be taken if all others fail.
+  //
+  // For 3 exits (cond.0, cond.1, cond.2), this creates:
+  //
+  // vector.early.exit.check:
+  //   EMIT vp<%combined> = or vp<%cond.0>, vp<%cond.1>, vp<%cond.2>
+  //   EMIT vp<%first.lane> = first-active-lane vp<%combined>
+  //   EMIT vp<%at.cond.0> = extract-lane vp<%first.lane>, vp<%cond.0>
+  //   EMIT branch-on-cond vp<%at.cond.0>
+  // Successor(s): vector.early.exit.0, vector.early.exit.check.0
+  //
+  // vector.early.exit.check.0:
+  //   EMIT vp<%at.cond.1> = extract-lane vp<%first.lane>, vp<%cond.1>
+  //   EMIT branch-on-cond vp<%at.cond.1>
+  // Successor(s): vector.early.exit.1, vector.early.exit.2
+  VPBasicBlock *CurrentBB = DispatchVPBB;
+  for (auto [I, Exit] : enumerate(ArrayRef(Exits).drop_back())) {
+    VPValue *LaneVal = DispatchBuilder.createNaryOp(
+        VPInstruction::ExtractLane, {FirstActiveLane, Exit.CondToExit},
+        DebugLoc::getUnknown(), "exit.cond.at.lane");
 
-      // For the last dispatch, branch directly to the last exit on false;
-      // otherwise, create a new check block.
-      bool IsLastDispatch = (I + 2 == Exits.size());
-      VPBasicBlock *FalseBB =
-          IsLastDispatch ? VectorEarlyExitVPBBs.back()
-                         : Plan.createVPBasicBlock(
-                               Twine("vector.early.exit.check.") + Twine(I));
+    // For the last dispatch, branch directly to the last exit on false;
+    // otherwise, create a new check block.
+    bool IsLastDispatch = (I + 2 == Exits.size());
+    VPBasicBlock *FalseBB =
+        IsLastDispatch ? VectorEarlyExitVPBBs.back()
+                       : Plan.createVPBasicBlock(
+                             Twine("vector.early.exit.check.") + Twine(I));
 
-      DispatchBuilder.createNaryOp(VPInstruction::BranchOnCond, {LaneVal});
-      CurrentBB->setSuccessors({VectorEarlyExitVPBBs[I], FalseBB});
-      VectorEarlyExitVPBBs[I]->setPredecessors({CurrentBB});
-      FalseBB->setPredecessors({CurrentBB});
+    DispatchBuilder.createNaryOp(VPInstruction::BranchOnCond, {LaneVal});
+    CurrentBB->setSuccessors({VectorEarlyExitVPBBs[I], FalseBB});
+    VectorEarlyExitVPBBs[I]->setPredecessors({CurrentBB});
+    FalseBB->setPredecessors({CurrentBB});
 
-      CurrentBB = FalseBB;
-      DispatchBuilder.setInsertPoint(CurrentBB);
-    }
+    CurrentBB = FalseBB;
+    DispatchBuilder.setInsertPoint(CurrentBB);
+  }
 
   // Replace the latch terminator with the new branching logic.
   auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
