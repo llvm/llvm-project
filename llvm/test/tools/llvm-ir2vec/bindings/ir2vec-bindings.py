@@ -45,7 +45,7 @@ if tool is not None:
 
     # Test getInstEmbMap
     print("\n=== Instruction Embeddings ===")
-    
+
     # Test valid function names in sorted order
     for func_name in sorted(["add", "multiply", "conditional"]):
         inst_emb_map = tool.getInstEmbMap(func_name)
