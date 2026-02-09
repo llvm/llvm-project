@@ -23,7 +23,7 @@ set(LLDB_DRIVER_LINK_LIBS
 )
 
 if(WIN32)
-  list(APPEND LLDB_DRIVER_LINK_LIBS lldbUtilityPythonPathSetup)
+  list(APPEND LLDB_DRIVER_LINK_LIBS lldbHostPythonPathSetup)
 endif()
 
 add_lldb_tool(lldb
