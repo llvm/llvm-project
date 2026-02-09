@@ -9,6 +9,7 @@
 #include "clang/Format/Format.h"
 
 #include "llvm/Support/VirtualFileSystem.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -143,6 +144,12 @@ TEST(ConfigParseTest, GetsCorrectBasedOnStyle) {
   EXPECT_NE(VALUE, Style.FIELD) << "Initial value already the same!";          \
   EXPECT_EQ(0, parseConfiguration(TEXT, &Style).value());                      \
   EXPECT_EQ(VALUE, Style.FIELD) << "Unexpected value after parsing!"
+
+#define CHECK_PARSE_THAT(TEXT, FIELD, MATCHER)                                 \
+  EXPECT_THAT(Style.FIELD, ::testing::Not(MATCHER))                            \
+      << "Initial value already matches!";                                     \
+  EXPECT_EQ(0, parseConfiguration(TEXT, &Style).value());                      \
+  EXPECT_THAT(Style.FIELD, (MATCHER)) << "Does not match after parsing!";
 
 #define CHECK_PARSE_INT(FIELD) CHECK_PARSE(#FIELD ": -1234", FIELD, -1234)
 
@@ -960,6 +967,14 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               StatementAttributeLikeMacros,
               std::vector<std::string>({"emit", "Q_EMIT"}));
 
+  Style.Macros.clear();
+  CHECK_PARSE("{ BasedOnStyle: LLVM, Macros: [foo]}", Macros,
+              std::vector<std::string>({"foo"}));
+  CHECK_PARSE_THAT(
+      "BasedOnStyle: Google", Macros,
+      testing::ElementsAre(testing::StartsWith("ASSIGN_OR_RETURN(a, b)="),
+                           testing::StartsWith("ASSIGN_OR_RETURN(a, b, c)=")));
+
   Style.StatementMacros.clear();
   CHECK_PARSE("StatementMacros: [QUNUSED]", StatementMacros,
               std::vector<std::string>{"QUNUSED"});
@@ -967,8 +982,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               std::vector<std::string>({"QUNUSED", "QT_REQUIRE_VERSION"}));
 
   CHECK_PARSE_LIST(JavaImportGroups);
-  Style.Macros.clear();
-  CHECK_PARSE_LIST(Macros);
   CHECK_PARSE_LIST(MacrosSkippedByRemoveParentheses);
   CHECK_PARSE_LIST(NamespaceMacros);
   CHECK_PARSE_LIST(ObjCPropertyAttributeOrder);
