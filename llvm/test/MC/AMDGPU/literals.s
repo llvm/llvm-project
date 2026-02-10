@@ -1251,13 +1251,19 @@ v_ceil_f16 v0, neg(vccz)
 // NOSICIVI: :[[@LINE-2]]:1: error: instruction not supported on this GPU
 
 v_ceil_f16 v0, abs(scc)
-// GFX11: v_ceil_f16_e64 v0, |src_scc|            ; encoding: [0x00,0x01,0xdc,0xd5,0xfd,0x00,0x01,0x02]
 // GFX12: v_ceil_f16_e64 v0, |src_scc|            ; encoding: [0x00,0x01,0xdc,0xd5,0xfd,0x00,0x01,0x02]
-// GFX1250-ASM: v_ceil_f16_e64 v0, |src_scc|            ; encoding: [0x00,0x01,0xdc,0xd5,0xfd,0x00,0x01,0x02]
-// GFX1250-DIS: v_ceil_f16_e64 v0.l, |src_scc|          ; encoding: [0x00,0x01,0xdc,0xd5,0xfd,0x00,0x01,0x02]
 // GFX89: v_ceil_f16_e64 v0, |src_scc|            ; encoding: [0x00,0x01,0x85,0xd1,0xfd,0x00,0x00,0x00]
-// NOSICI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
+// NOGFX11: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// NOGFX1250: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
+// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
 // NOSICIVI: :[[@LINE-2]]:1: error: instruction not supported on this GPU
+
+v_ceil_f16 v0.l, abs(scc)
+// GFX11: v_ceil_f16_e64 v0.l, |src_scc|          ; encoding: [0x00,0x01,0xdc,0xd5,0xfd,0x00,0x01,0x02]
+// GFX1250: v_ceil_f16_e64 v0.l, |src_scc|          ; encoding: [0x00,0x01,0xdc,0xd5,0xfd,0x00,0x01,0x02]
+// NOGFX12: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// NOGFX89: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
+// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
 
 v_ceil_f64 v[5:6], |execz|
 // CI: v_ceil_f64_e64 v[5:6], |src_execz|      ; encoding: [0x05,0x01,0x30,0xd3,0xfc,0x00,0x00,0x00]
@@ -1473,14 +1479,21 @@ v_cmp_eq_i64 vcc, src_shared_base, v[0:1]
 // NOSICIVI: :[[@LINE-1]]:19: error: src_shared_base register not available on this GPU
 
 v_max_f16 v0, src_shared_base, v0
-// GFX11: v_max_f16_e32 v0, src_shared_base, v0   ; encoding: [0xeb,0x00,0x00,0x72]
 // GFX12: v_max_num_f16_e32 v0, src_shared_base, v0 ; encoding: [0xeb,0x00,0x00,0x62]
-// GFX1250-ASM: v_max_num_f16_e32 v0, src_shared_base, v0 ; encoding: [0xeb,0x00,0x00,0x62]
-// GFX1250-DIS: v_max_num_f16_e32 v0.l, src_shared_base, v0.l ; encoding: [0xeb,0x00,0x00,0x62]
 // GFX9: v_max_f16_e32 v0, src_shared_base, v0   ; encoding: [0xeb,0x00,0x00,0x5a]
-// NOSICI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-7]]:15: error: src_shared_base register not available on this GPU
+// NOGFX11: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// NOGFX1250: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
+// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-6]]:15: error: src_shared_base register not available on this GPU
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+
+v_max_f16 v0.l, src_shared_base, v0.l
+// GFX11: v_max_f16_e32 v0.l, src_shared_base, v0.l ; encoding: [0xeb,0x00,0x00,0x72]
+// GFX1250: v_max_num_f16_e32 v0.l, src_shared_base, v0.l ; encoding: [0xeb,0x00,0x00,0x62]
+// NOGFX12: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// NOGFX9: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
+// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-6]]:17: error: src_shared_base register not available on this GPU
 
 v_max_f32 v0, src_shared_base, v0
 // GFX11: v_max_f32_e32 v0, src_shared_base, v0   ; encoding: [0xeb,0x00,0x00,0x20]
@@ -1507,24 +1520,38 @@ v_pk_add_f16 v0, src_shared_base, v0
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
 v_ceil_f16 v0, neg(src_shared_base)
-// GFX11: v_ceil_f16_e64 v0, -src_shared_base     ; encoding: [0x00,0x00,0xdc,0xd5,0xeb,0x00,0x01,0x22]
 // GFX12: v_ceil_f16_e64 v0, -src_shared_base     ; encoding: [0x00,0x00,0xdc,0xd5,0xeb,0x00,0x01,0x22]
-// GFX1250-ASM: v_ceil_f16_e64 v0, -src_shared_base     ; encoding: [0x00,0x00,0xdc,0xd5,0xeb,0x00,0x01,0x22]
-// GFX1250-DIS: v_ceil_f16_e64 v0.l, -src_shared_base   ; encoding: [0x00,0x00,0xdc,0xd5,0xeb,0x00,0x01,0x22]
 // GFX9: v_ceil_f16_e64 v0, -src_shared_base     ; encoding: [0x00,0x00,0x85,0xd1,0xeb,0x00,0x00,0x20]
-// NOSICI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-7]]:20: error: src_shared_base register not available on this GPU
+// NOGFX11: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// NOGFX1250: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
+// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-6]]:20: error: src_shared_base register not available on this GPU
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
 
+v_ceil_f16 v0.l, neg(src_shared_base)
+// GFX11: v_ceil_f16_e64 v0.l, -src_shared_base   ; encoding: [0x00,0x00,0xdc,0xd5,0xeb,0x00,0x01,0x22]
+// GFX1250: v_ceil_f16_e64 v0.l, -src_shared_base   ; encoding: [0x00,0x00,0xdc,0xd5,0xeb,0x00,0x01,0x22]
+// NOGFX12: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// NOGFX9: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
+// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-6]]:22: error: src_shared_base register not available on this GPU
+
 v_ceil_f16 v0, abs(src_shared_base)
-// GFX11: v_ceil_f16_e64 v0, |src_shared_base|    ; encoding: [0x00,0x01,0xdc,0xd5,0xeb,0x00,0x01,0x02]
 // GFX12: v_ceil_f16_e64 v0, |src_shared_base|    ; encoding: [0x00,0x01,0xdc,0xd5,0xeb,0x00,0x01,0x02]
-// GFX1250-ASM: v_ceil_f16_e64 v0, |src_shared_base|    ; encoding: [0x00,0x01,0xdc,0xd5,0xeb,0x00,0x01,0x02]
-// GFX1250-DIS: v_ceil_f16_e64 v0.l, |src_shared_base|  ; encoding: [0x00,0x01,0xdc,0xd5,0xeb,0x00,0x01,0x02]
 // GFX9: v_ceil_f16_e64 v0, |src_shared_base|    ; encoding: [0x00,0x01,0x85,0xd1,0xeb,0x00,0x00,0x00]
-// NOSICI: :[[@LINE-6]]:1: error: instruction not supported on this GPU
-// NOVI: :[[@LINE-7]]:20: error: src_shared_base register not available on this GPU
+// NOGFX11: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// NOGFX1250: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
+// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-6]]:20: error: src_shared_base register not available on this GPU
 // NOSICIVI: :[[@LINE-1]]:1: error: instruction not supported on this GPU
+
+v_ceil_f16 v0.l, abs(src_shared_base)
+// GFX11: v_ceil_f16_e64 v0.l, |src_shared_base|  ; encoding: [0x00,0x01,0xdc,0xd5,0xeb,0x00,0x01,0x02]
+// GFX1250: v_ceil_f16_e64 v0.l, |src_shared_base|  ; encoding: [0x00,0x01,0xdc,0xd5,0xeb,0x00,0x01,0x02]
+// NOGFX12: :[[@LINE-3]]:1: error: operands are not valid for this GPU or mode
+// NOGFX9: :[[@LINE-4]]:1: error: operands are not valid for this GPU or mode
+// NOSICI: :[[@LINE-5]]:1: error: instruction not supported on this GPU
+// NOVI: :[[@LINE-6]]:22: error: src_shared_base register not available on this GPU
 
 v_ceil_f64 v[5:6], |src_shared_base|
 // GFX11: v_ceil_f64_e64 v[5:6], |src_shared_base| ; encoding: [0x05,0x01,0x98,0xd5,0xeb,0x00,0x01,0x02]

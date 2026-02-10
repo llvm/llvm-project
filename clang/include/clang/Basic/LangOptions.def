@@ -47,6 +47,7 @@ LANGOPT(MSVCCompat        , 1, 0, NotCompatible, "Microsoft Visual C++ full comp
 LANGOPT(Kernel            , 1, 0, NotCompatible, "Kernel mode")
 LANGOPT(MicrosoftExt      , 1, 0, NotCompatible, "Microsoft C++ extensions")
 LANGOPT(ZOSExt            , 1, 0, NotCompatible, "z/OS extensions")
+LANGOPT(MSAnonymousStructs, 1, 0, NotCompatible, "Microsoft anonymous struct and union extension")
 LANGOPT(AsmBlocks         , 1, 0, NotCompatible, "Microsoft inline asm blocks")
 LANGOPT(Borland           , 1, 0, NotCompatible, "Borland extensions")
 LANGOPT(CPlusPlus         , 1, 0, NotCompatible, "C++")
@@ -501,14 +502,15 @@ LANGOPT(CheckConstexprFunctionBodies, 1, 1, Benign,
 
 LANGOPT(BoundsSafety, 1, 0, NotCompatible, "Bounds safety extension for C")
 
-LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Experimental lifetime safety analysis for C++")
+LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Lifetime safety analysis for C++")
 
-LANGOPT(EnableLifetimeSafetyInference, 1, 0, NotCompatible, "Experimental lifetime safety inference analysis for C++")
+LANGOPT(EnableLifetimeSafetyInference, 1, 0, NotCompatible, "Lifetime safety inference analysis for C++")
 
 // TODO: Remove flag and default to end-of-TU analysis for lifetime safety after performance validation.
-LANGOPT(EnableLifetimeSafetyTUAnalysis, 1, 0, NotCompatible, "Experimental lifetime safety at translation-unit end, analyzing functions in call graph post-order for C++")
+LANGOPT(EnableLifetimeSafetyTUAnalysis, 1, 0, NotCompatible, "Lifetime safety at translation-unit end, analyzing functions in call graph post-order for C++")
 
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
+LANGOPT(Reflection      , 1, 0, NotCompatible, "C++26 Reflection")
 
 #undef LANGOPT
 #undef ENUM_LANGOPT

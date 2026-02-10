@@ -470,6 +470,8 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   case AtomicExpr::AO__c11_atomic_exchange:
   case AtomicExpr::AO__atomic_exchange_n:
   case AtomicExpr::AO__atomic_exchange:
+  case AtomicExpr::AO__scoped_atomic_exchange_n:
+  case AtomicExpr::AO__scoped_atomic_exchange:
     opName = cir::AtomicXchgOp::getOperationName();
     break;
 
@@ -589,8 +591,6 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
 
   case AtomicExpr::AO__hip_atomic_exchange:
   case AtomicExpr::AO__opencl_atomic_exchange:
-  case AtomicExpr::AO__scoped_atomic_exchange_n:
-  case AtomicExpr::AO__scoped_atomic_exchange:
 
   case AtomicExpr::AO__scoped_atomic_add_fetch:
 
@@ -638,8 +638,10 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
 
   case AtomicExpr::AO__scoped_atomic_fetch_nand:
 
-  case AtomicExpr::AO__scoped_atomic_uinc_wrap:
-  case AtomicExpr::AO__scoped_atomic_udec_wrap:
+  case AtomicExpr::AO__scoped_atomic_fetch_uinc:
+  case AtomicExpr::AO__scoped_atomic_fetch_udec:
+  case AtomicExpr::AO__atomic_fetch_uinc:
+  case AtomicExpr::AO__atomic_fetch_udec:
     cgf.cgm.errorNYI(expr->getSourceRange(), "emitAtomicOp: expr op NYI");
     return;
   }
@@ -655,6 +657,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   if (fetchAttr)
     rmwOp->setAttr("binop", fetchAttr);
   rmwOp->setAttr("mem_order", orderAttr);
+  rmwOp->setAttr("sync_scope", scopeAttr);
   if (expr->isVolatile())
     rmwOp->setAttr("is_volatile", builder.getUnitAttr());
   if (fetchFirst && opName == cir::AtomicFetchOp::getOperationName())
@@ -883,6 +886,7 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
     break;
 
   case AtomicExpr::AO__atomic_exchange:
+  case AtomicExpr::AO__scoped_atomic_exchange:
     val1 = emitPointerWithAlignment(e->getVal1());
     dest = emitPointerWithAlignment(e->getVal2());
     break;
@@ -943,6 +947,7 @@ RValue CIRGenFunction::emitAtomicExpr(AtomicExpr *e) {
   case AtomicExpr::AO__c11_atomic_exchange:
   case AtomicExpr::AO__c11_atomic_store:
   case AtomicExpr::AO__scoped_atomic_store_n:
+  case AtomicExpr::AO__scoped_atomic_exchange_n:
     val1 = emitValToTemp(*this, e->getVal1());
     break;
   }

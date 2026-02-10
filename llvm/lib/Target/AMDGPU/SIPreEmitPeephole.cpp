@@ -85,9 +85,7 @@ class SIPreEmitPeepholeLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SIPreEmitPeepholeLegacy() : MachineFunctionPass(ID) {
-    initializeSIPreEmitPeepholeLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  SIPreEmitPeepholeLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     return SIPreEmitPeephole().run(MF);
@@ -154,11 +152,12 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
 
   MachineOperand &Op1 = A->getOperand(1);
   MachineOperand &Op2 = A->getOperand(2);
-  if (Op1.getReg() != ExecReg && Op2.isReg() && Op2.getReg() == ExecReg) {
+  if ((!Op1.isReg() || Op1.getReg() != ExecReg) && Op2.isReg() &&
+      Op2.getReg() == ExecReg) {
     TII->commuteInstruction(*A);
     Changed = true;
   }
-  if (Op1.getReg() != ExecReg)
+  if (!Op1.isReg() || Op1.getReg() != ExecReg)
     return Changed;
   if (Op2.isImm() && !(Op2.getImm() == -1 || Op2.getImm() == 0))
     return Changed;

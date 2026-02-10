@@ -1638,6 +1638,9 @@ std::optional<int> GetDummyArgumentNumber(const Symbol *);
 
 const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule);
 
+// Given a Cray pointee symbol, returns the related Cray pointer symbol.
+const Symbol &GetCrayPointer(const Symbol &crayPointee);
+
 } // namespace Fortran::semantics
 
 #endif // FORTRAN_EVALUATE_TOOLS_H_

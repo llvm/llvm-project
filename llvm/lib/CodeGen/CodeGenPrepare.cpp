@@ -485,9 +485,7 @@ class CodeGenPrepareLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  CodeGenPrepareLegacyPass() : FunctionPass(ID) {
-    initializeCodeGenPrepareLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+  CodeGenPrepareLegacyPass() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override;
 
@@ -2674,7 +2672,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
       GlobalVariable *GV;
       if ((GV = dyn_cast<GlobalVariable>(Val)) && GV->canIncreaseAlignment() &&
           GV->getPointerAlignment(*DL) < PrefAlign &&
-          DL->getTypeAllocSize(GV->getValueType()) >= MinSize + Offset2)
+          GV->getGlobalSize(*DL) >= MinSize + Offset2)
         GV->setAlignment(PrefAlign);
     }
   }
@@ -6466,8 +6464,7 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   Type *LegalTy = Ty->getWithNewBitWidth(VTHalfBitWidth);
 
   // New BBs:
-  BasicBlock *OverflowEntryBB =
-      I->getParent()->splitBasicBlock(I, "", /*Before*/ true);
+  BasicBlock *OverflowEntryBB = I->getParent()->splitBasicBlockBefore(I, "");
   OverflowEntryBB->takeName(I->getParent());
   // Keep the 'br' instruction that is generated as a result of the split to be
   // erased/replaced later.
@@ -6871,7 +6868,8 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
           NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
         else if (InvokeInst *Invoke = dyn_cast<InvokeInst>(BaseI)) {
           NewBaseInsertBB =
-              SplitEdge(NewBaseInsertBB, Invoke->getNormalDest(), DT.get(), LI);
+              SplitEdge(NewBaseInsertBB, Invoke->getNormalDest(),
+                        &getDT(*NewBaseInsertBB->getParent()), LI);
           NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
         } else
           NewBaseInsertPt = std::next(BaseI->getIterator());
@@ -7047,7 +7045,7 @@ bool CodeGenPrepare::optimizePhiType(
     }
   }
 
-  if (!ConvertTy || !AnyAnchored ||
+  if (!ConvertTy || !AnyAnchored || PhiTy == ConvertTy ||
       !TLI->shouldConvertPhiType(PhiTy, ConvertTy))
     return false;
 

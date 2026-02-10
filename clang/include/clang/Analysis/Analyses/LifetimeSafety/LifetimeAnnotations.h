@@ -51,7 +51,8 @@ bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD);
 // pointers or references that depend on the lifetime of the object, such as
 // container iterators (begin, end), data accessors (c_str, data, get), or
 // element accessors (operator[], operator*, front, back, at).
-bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee);
+bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
+                                  bool RunningUnderLifetimeSafety);
 
 // Returns true if the first argument of a free function should be tracked for
 // GSL lifetime analysis. This applies to STL free functions that take a pointer
@@ -64,6 +65,15 @@ bool shouldTrackFirstArgument(const FunctionDecl *FD);
 bool isGslPointerType(QualType QT);
 // Tells whether the type is annotated with [[gsl::Owner]].
 bool isGslOwnerType(QualType QT);
+
+// Returns true if the given method is std::unique_ptr::release().
+// This is treated as a move in lifetime analysis to avoid false-positives
+// when ownership is manually transferred.
+bool isUniquePtrRelease(const CXXMethodDecl &MD);
+
+// Returns true if the given method invalidates iterators or references to
+// container elements (e.g. vector::push_back).
+bool isContainerInvalidationMethod(const CXXMethodDecl &MD);
 
 } // namespace clang::lifetimes
 

@@ -138,6 +138,18 @@ func.func @test_properties_rollback() {
 
 // -----
 
+// CHECK-LABEL: func @test_undo_block_move_detached
+func.func @test_undo_block_move_detached() {
+  // expected-remark @below{{op 'test.undo_detached_block_move' is not legalizable}}
+  "test.undo_detached_block_move"() ({
+  ^bb0(%arg0: i64):
+    "test.return"() : () -> ()
+  }) : () -> ()
+  "test.return"() : () -> ()
+}
+
+// -----
+
 // expected-remark@+1 {{applyPartialConversion failed}}
 builtin.module {
 // Test that region cloning can be properly undone.

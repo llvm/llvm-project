@@ -664,12 +664,32 @@ def testPackUnPackOp():
 
                 return unpacked
 
+            @func.FuncOp.from_py_func(
+                MemRefType.get((128, 128), f32),
+                MemRefType.get((16, 16, 8, 8), f32),
+            )
+            def memref_pack(src, dst):
+                linalg.pack(src, dst, inner_dims_pos=[1, 0], inner_tiles=[8, 8])
+
+                linalg.unpack(
+                    dst,
+                    src,
+                    inner_dims_pos=[0, 1],
+                    inner_tiles=[8, 8],
+                )
+
         # CHECK-LABEL:   func.func @tensor_pack(
         # CHECK-SAME:      %[[VAL_0:.*]]: tensor<128x128xf32>, %[[VAL_1:.*]]: tensor<16x16x8x8xf32>) -> tensor<128x128xf32> {
         # CHECK:           %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f32
         # CHECK:           %[[VAL_3:.*]] = linalg.pack %[[VAL_0]] padding_value(%[[VAL_2]] : f32) inner_dims_pos = [1, 0] inner_tiles = [8, 8] into %[[VAL_1]] : tensor<128x128xf32> -> tensor<16x16x8x8xf32>
         # CHECK:           %[[VAL_4:.*]] = linalg.unpack %[[VAL_3]] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %[[VAL_0]] : tensor<16x16x8x8xf32> -> tensor<128x128xf32>
         # CHECK:           return %[[VAL_4]] : tensor<128x128xf32>
+        # CHECK:         }
+        # CHECK-LABEL:   func.func @memref_pack(
+        # CHECK-SAME:      %[[VAL_0:.*]]: memref<128x128xf32>, %[[VAL_1:.*]]: memref<16x16x8x8xf32>) {
+        # CHECK:           linalg.pack %[[VAL_0]] inner_dims_pos = [1, 0] inner_tiles = [8, 8] into %[[VAL_1]] : memref<128x128xf32> -> memref<16x16x8x8xf32>
+        # CHECK:           linalg.unpack %[[VAL_1]] inner_dims_pos = [0, 1] inner_tiles = [8, 8] into %[[VAL_0]] : memref<16x16x8x8xf32> -> memref<128x128xf32>
+        # CHECK:           return
         # CHECK:         }
         print(module)
 

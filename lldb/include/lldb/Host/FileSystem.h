@@ -137,9 +137,13 @@ public:
   /// \}
 
   /// Resolve path to make it canonical.
+  ///
+  /// If force_make_absolute is specified, we'll make the path absolute even if
+  /// it does not exist.
   /// \{
-  void Resolve(llvm::SmallVectorImpl<char> &path);
-  void Resolve(FileSpec &file_spec);
+  void Resolve(llvm::SmallVectorImpl<char> &path,
+               bool force_make_absolute = false);
+  void Resolve(FileSpec &file_spec, bool force_make_absolute = false);
   /// \}
 
   /// Remove a single file.

@@ -1080,8 +1080,15 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
   case Builtin::BI__builtin_readcyclecounter:
   case Builtin::BI__builtin_readsteadycounter:
-  case Builtin::BI__builtin___clear_cache:
     return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin___clear_cache: {
+    mlir::Value begin =
+        builder.createPtrBitcast(emitScalarExpr(e->getArg(0)), cgm.voidTy);
+    mlir::Value end =
+        builder.createPtrBitcast(emitScalarExpr(e->getArg(1)), cgm.voidTy);
+    cir::ClearCacheOp::create(builder, getLoc(e->getSourceRange()), begin, end);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_trap:
     emitTrap(loc, /*createNewBlock=*/true);
     return RValue::getIgnored();
@@ -1287,12 +1294,22 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIbcopy:
   case Builtin::BI__builtin_bcopy:
     return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_char_memchr:
+  case Builtin::BI__builtin_memchr: {
+    Address srcPtr = emitPointerWithAlignment(e->getArg(0));
+    mlir::Value src =
+        builder.createBitcast(srcPtr.getPointer(), builder.getVoidPtrTy());
+    mlir::Value pattern = emitScalarExpr(e->getArg(1));
+    mlir::Value len = emitScalarExpr(e->getArg(2));
+    mlir::Value res = cir::MemChrOp::create(builder, getLoc(e->getExprLoc()),
+                                            src, pattern, len);
+    return RValue::get(res);
+  }
   case Builtin::BImemcpy:
   case Builtin::BI__builtin_memcpy:
   case Builtin::BImempcpy:
   case Builtin::BI__builtin_mempcpy:
   case Builtin::BI__builtin_memcpy_inline:
-  case Builtin::BI__builtin_char_memchr:
   case Builtin::BI__builtin___memcpy_chk:
   case Builtin::BI__builtin_objc_memmove_collectable:
   case Builtin::BI__builtin___memmove_chk:
@@ -1646,6 +1663,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BIaddressof:
   case Builtin::BI__addressof:
   case Builtin::BI__builtin_addressof:
+    return RValue::get(emitLValue(e->getArg(0)).getPointer());
   case Builtin::BI__builtin_function_start:
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_operator_new:
@@ -1883,7 +1901,11 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
   case llvm::Triple::r600:
+    // These are actually NYI, but that will be reported by emitBuiltinExpr.
+    // At this point, we don't even know that the builtin is target-specific.
+    return std::nullopt;
   case llvm::Triple::amdgcn:
+    return cgf->emitAMDGPUBuiltinExpr(builtinID, e);
   case llvm::Triple::systemz:
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
@@ -2015,8 +2037,9 @@ mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
 mlir::Value CIRGenFunction::evaluateOrEmitBuiltinObjectSize(
     const Expr *e, unsigned type, cir::IntType resType, mlir::Value emittedE,
     bool isDynamic) {
-  uint64_t objectSize;
-  if (!e->tryEvaluateObjectSize(objectSize, getContext(), type))
-    return emitBuiltinObjectSize(e, type, resType, emittedE, isDynamic);
-  return builder.getConstInt(getLoc(e->getSourceRange()), resType, objectSize);
+  if (std::optional<uint64_t> objectSize =
+          e->tryEvaluateObjectSize(getContext(), type))
+    return builder.getConstInt(getLoc(e->getSourceRange()), resType,
+                               *objectSize);
+  return emitBuiltinObjectSize(e, type, resType, emittedE, isDynamic);
 }
