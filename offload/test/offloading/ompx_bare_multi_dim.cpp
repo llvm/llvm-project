@@ -10,7 +10,9 @@
 #include <cassert>
 #include <vector>
 
-// CHECK: "PluginInterface" device 0 info: Launching kernel __omp_offloading_{{.*}} with [2,4,6] blocks and [32,4,2] threads in BARE mode
+// CHECK: PluginInterface device 0 info: Launching kernel
+// CHECK-SAME: __omp_offloading_{{.*}} with [2,4,6] blocks and [32,4,2] threads
+// CHECK-SAME: in BARE mode
 
 int main(int argc, char *argv[]) {
   int bs[3] = {32u, 4u, 2u};
