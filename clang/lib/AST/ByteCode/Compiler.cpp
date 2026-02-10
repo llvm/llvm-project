@@ -6042,7 +6042,9 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
     }
   }
 
-  assert(TargetLabel);
+  // Faulty break statement (e.g. label redefined or named loops disabled).
+  if (!TargetLabel)
+    return false;
 
   for (VariableScope<Emitter> *C = this->VarScope; C != BreakScope;
        C = C->getParent()) {
