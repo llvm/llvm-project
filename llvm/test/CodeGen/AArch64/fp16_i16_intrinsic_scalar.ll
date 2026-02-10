@@ -6,9 +6,6 @@
 ; Should be merged with fp16_intrinsic_scalar_1op.ll once there is
 ; support in GlSel.
 
-; CHECK-GI:    warning: Instruction selection used fallback path for fcvtzs_intrinsic_i16
-; CHECK-GI NEXT:    warning: Instruction selection used fallback path for fcvtzu_intrinsic_i16
-
 declare i16 @llvm.aarch64.neon.fcvtzs.i16.f16(half)
 declare i16 @llvm.aarch64.neon.fcvtzu.i16.f16(half)
 declare i16 @llvm.aarch64.neon.fcvtas.i16.f16(half)
