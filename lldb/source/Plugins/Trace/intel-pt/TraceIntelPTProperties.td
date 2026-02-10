@@ -1,6 +1,6 @@
 include "../../../../include/lldb/Core/PropertiesBase.td"
 
-let Definition = "traceintelpt", Parent = "plugin.trace.intel-pt" in {
+let Definition = "traceintelpt", Path = "plugin.trace.intel-pt" in {
   def InfiniteDecodingLoopVerificationThreshold:
       Property<"infinite-decoding-loop-verification-threshold", "UInt64">,
     Global,
