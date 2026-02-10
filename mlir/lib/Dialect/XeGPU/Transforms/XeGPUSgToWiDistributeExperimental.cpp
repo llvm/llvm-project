@@ -452,6 +452,10 @@ struct SgToWiVectorReduction : public OpConversionPattern<vector::ReductionOp> {
   }
 };
 
+/// This pattern distributes a subgroup-level vector.multi_reduction op to
+/// workitem-level only if the reduction is lane-local. This means that
+/// reduction dimension is not distributed to lanes and each lane does its own
+/// local reduction.
 struct SgToWiMultiDimReduction
     : public OpConversionPattern<vector::MultiDimReductionOp> {
   using OpConversionPattern<vector::MultiDimReductionOp>::OpConversionPattern;
@@ -484,6 +488,12 @@ struct SgToWiMultiDimReduction
   }
 };
 
+/// This pattern rewrites a subgroup-level vector.multi_reduction op to a series
+/// of vector.extract_strided_slice, vector.reduction and
+/// vector.insert_strided_slice ops. This is used when the reduction dimension
+/// is distributed to lanes and a naive (lane-local) distribution is not
+/// possible. Then later on, these partilly lowered subgroup-level ops are
+/// further lowered to workitem-level by respective patterns.
 struct LowerVectorMultiReductionPattern
     : public OpConversionPattern<vector::MultiDimReductionOp> {
   using OpConversionPattern<vector::MultiDimReductionOp>::OpConversionPattern;
