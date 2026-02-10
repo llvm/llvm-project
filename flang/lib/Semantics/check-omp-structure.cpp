@@ -638,22 +638,23 @@ bool OmpStructureChecker::IsCombinedParallelWorksharing(
   // Combined parallel-worksharing constructs create their own parallel region
   // They should not be subject to worksharing nesting restrictions
   switch (directive) {
-    case llvm::omp::OMPD_parallel_do:
-    case llvm::omp::OMPD_parallel_do_simd:
-    case llvm::omp::OMPD_parallel_sections:
-    case llvm::omp::OMPD_parallel_workshare:
-      return true;
-    default:
-      return false;
+  case llvm::omp::OMPD_parallel_do:
+  case llvm::omp::OMPD_parallel_do_simd:
+  case llvm::omp::OMPD_parallel_sections:
+  case llvm::omp::OMPD_parallel_workshare:
+    return true;
+  default:
+    return false;
   }
 }
 
 bool OmpStructureChecker::HasInvalidWorksharingNesting(
-    const parser::CharBlock &source, const OmpDirectiveSet &set,llvm::omp::Directive directive) {
+    const parser::CharBlock &source, const OmpDirectiveSet &set,
+    llvm::omp::Directive directive) {
   // set contains all the invalid closely nested directives
   // for the given directive (`source` here)
   if (IsCombinedParallelWorksharing(directive)) {
-    return false; 
+    return false;
   }
   if (IsCloselyNestedRegion(set)) {
     context_.Say(source,
@@ -1250,8 +1251,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
     CheckNoBranching(
         std::get<parser::Block>(section.t), beginName.v, beginName.source);
   }
-    HasInvalidWorksharingNesting(
-        beginName.source, llvm::omp::nestedWorkshareErrSet, beginSpec.DirId());
+  HasInvalidWorksharingNesting(
+      beginName.source, llvm::omp::nestedWorkshareErrSet, beginSpec.DirId());
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPSectionsConstruct &) {
