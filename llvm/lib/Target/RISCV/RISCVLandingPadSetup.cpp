@@ -13,9 +13,11 @@
 
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/IR/Module.h"
 
 using namespace llvm;
 
@@ -48,7 +50,7 @@ bool RISCVLandingPadSetup::runOnMachineFunction(MachineFunction &MF) {
   const auto &STI = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo &TII = *STI.getInstrInfo();
 
-  if (!STI.hasStdExtZicfilp())
+  if (!MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch())
     return false;
 
   uint32_t Label = 0;

@@ -1462,8 +1462,12 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
                           .addMBB(&DestBB, RISCVII::MO_CALL);
 
   RS->enterBasicBlockEnd(MBB);
+  // When cf-protection-branch is enabled, we must use t2 (x7) for software
+  // guarded branches to hold the landing pad label.
+  bool HasCFBranch =
+      MF->getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch();
   const TargetRegisterClass *RC = &RISCV::GPRRegClass;
-  if (STI.hasStdExtZicfilp())
+  if (HasCFBranch)
     RC = &RISCV::GPRX7RegClass;
   Register TmpGPR =
       RS->scavengeRegisterBackwards(*RC, MI.getIterator(),
@@ -1476,8 +1480,8 @@ void RISCVInstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
 
     // Pick s11(or s1 for rve) because it doesn't make a difference.
     TmpGPR = STI.hasStdExtE() ? RISCV::X9 : RISCV::X27;
-    // Force t2 if Zicfilp is on
-    if (STI.hasStdExtZicfilp())
+    // Force t2 if cf-protection-branch is enabled
+    if (HasCFBranch)
       TmpGPR = RISCV::X7;
 
     int FrameIndex = RVFI->getBranchRelaxationScratchFrameIndex();

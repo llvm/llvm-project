@@ -317,6 +317,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
   setOperationAction(ISD::BR_CC, XLenVT, Expand);
+  setOperationAction(ISD::BRIND, MVT::Other, Custom);
   setOperationAction(ISD::BRCOND, MVT::Other, Custom);
   setOperationAction(ISD::SELECT_CC, XLenVT, Expand);
 
@@ -7891,6 +7892,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerSELECT(Op, DAG);
   case ISD::BRCOND:
     return lowerBRCOND(Op, DAG);
+  case ISD::BRIND:
+    return lowerBRIND(Op, DAG);
   case ISD::VASTART:
     return lowerVASTART(Op, DAG);
   case ISD::FRAMEADDR:
@@ -9181,10 +9184,9 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   //     28: <FunctionAddressOffset>
   //     36:
 
+  const MachineFunction &MF = DAG.getMachineFunction();
   const bool HasCFBranch =
-      Subtarget.hasStdExtZicfilp() &&
-      DAG.getMachineFunction().getFunction().getParent()->getModuleFlag(
-          "cf-protection-branch");
+      MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch();
   const unsigned StaticChainIdx = HasCFBranch ? 5 : 4;
   const unsigned StaticChainOffset = StaticChainIdx * 4;
   const unsigned FunctionAddressOffset = StaticChainOffset + 8;
@@ -10179,6 +10181,19 @@ SDValue RISCVTargetLowering::lowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(RISCVISD::BR_CC, DL, Op.getValueType(), Op.getOperand(0),
                      CondV, DAG.getConstant(0, DL, XLenVT),
                      DAG.getCondCode(ISD::SETNE), Op.getOperand(2));
+}
+
+SDValue RISCVTargetLowering::lowerBRIND(SDValue Op, SelectionDAG &DAG) const {
+  // When cf-protection-branch is enabled, use BRIND_NONX7 to avoid using X7
+  // for the target address, since X7 is reserved for landing pad labels.
+  const MachineFunction &MF = DAG.getMachineFunction();
+  if (!MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch())
+    return Op;
+
+  SDLoc DL(Op);
+  SDValue Chain = Op.getOperand(0);
+  SDValue Addr = Op.getOperand(1);
+  return DAG.getNode(RISCVISD::BRIND_NONX7, DL, Op.getValueType(), Chain, Addr);
 }
 
 SDValue RISCVTargetLowering::lowerVASTART(SDValue Op, SelectionDAG &DAG) const {
@@ -24618,19 +24633,24 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Emit the call.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
-  // Use software guarded branch for large code model non-indirect calls
-  // Tail call to external symbol will have a null CLI.CB and we need another
-  // way to determine the callsite type
-  bool NeedSWGuarded = false;
-  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
-      Subtarget.hasStdExtZicfilp() &&
-      ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol))
-    NeedSWGuarded = true;
+  // Determine which call opcode to use based on cf-protection-branch and
+  // call type:
+  // - SW_GUARDED_*: Large code model direct calls need X7 for landing pad label
+  // - *_NONX7: Indirect calls with cf-protection must avoid X7
+  // - Regular: No cf-protection or direct calls in non-large code model
+  bool HasCFBranch =
+      MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch();
+  bool IsIndirectCall = CLI.CB && CLI.CB->isIndirectCall();
+  bool NeedSWGuarded = getTargetMachine().getCodeModel() == CodeModel::Large &&
+                       HasCFBranch &&
+                       (!IsIndirectCall || CalleeIsLargeExternalSymbol);
+  bool NeedNonX7 = HasCFBranch && IsIndirectCall && !NeedSWGuarded;
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    unsigned CallOpc =
-        NeedSWGuarded ? RISCVISD::SW_GUARDED_TAIL : RISCVISD::TAIL;
+    unsigned CallOpc = NeedSWGuarded ? RISCVISD::SW_GUARDED_TAIL
+                       : NeedNonX7   ? RISCVISD::TAIL_NONX7
+                                     : RISCVISD::TAIL;
     SDValue Ret = DAG.getNode(CallOpc, DL, NodeTys, Ops);
     if (CLI.CFIType)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
@@ -24639,7 +24659,9 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     return Ret;
   }
 
-  unsigned CallOpc = NeedSWGuarded ? RISCVISD::SW_GUARDED_CALL : RISCVISD::CALL;
+  unsigned CallOpc = NeedSWGuarded ? RISCVISD::SW_GUARDED_CALL
+                     : NeedNonX7   ? RISCVISD::CALL_NONX7
+                                   : RISCVISD::CALL;
   Chain = DAG.getNode(CallOpc, DL, NodeTys, Ops);
   if (CLI.CFIType)
     Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
@@ -26274,9 +26296,10 @@ SDValue RISCVTargetLowering::expandIndirectJTBranch(const SDLoc &dl,
                                                     SDValue Value, SDValue Addr,
                                                     int JTI,
                                                     SelectionDAG &DAG) const {
-  if (Subtarget.hasStdExtZicfilp()) {
-    // When Zicfilp enabled, we need to use software guarded branch for jump
-    // table branch.
+  const MachineFunction &MF = DAG.getMachineFunction();
+  if (MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch()) {
+    // When cf-protection-branch enabled, we need to use software guarded
+    // branch for jump table branch.
     SDValue Chain = Value;
     // Jump table debug info is only needed if CodeView is enabled.
     if (DAG.getTarget().getTargetTriple().isOSBinFormatCOFF())
