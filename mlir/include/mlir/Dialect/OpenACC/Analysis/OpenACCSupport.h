@@ -249,9 +249,10 @@ public:
   remark::detail::InFlightRemark
   emitRemark(Operation *op, const Twine &message,
              llvm::StringRef category = "openacc") {
-    return emitRemark(
-        op, std::function<std::string()>([msg = message.str()]() { return msg; }),
-        category);
+    return emitRemark(op, std::function<std::string()>([msg = message.str()]() {
+                        return msg;
+                      }),
+                      category);
   }
 
   /// Check if a symbol use is valid for use in an OpenACC region.
