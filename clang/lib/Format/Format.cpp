@@ -3759,12 +3759,13 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
   SmallVector<JavaImportDirective, 16> ImportsInBlock;
   SmallVector<StringRef> AssociatedCommentLines;
 
-  bool FormattingOff = false;
-
-  for (;;) {
+  for (bool FormattingOff = false;;) {
     auto Pos = Code.find('\n', Prev);
-    StringRef Line =
-        Code.substr(Prev, (Pos != StringRef::npos ? Pos : Code.size()) - Prev);
+    auto GetLine = [&] {
+      return Code.substr(Prev,
+                         (Pos != StringRef::npos ? Pos : Code.size()) - Prev);
+    };
+    StringRef Line = GetLine();
 
     StringRef Trimmed = Line.trim();
     if (Trimmed.empty() || PackageRegex.match(Trimmed)) {
@@ -3784,8 +3785,7 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
       if (HasImport) {
         // Extend `Line` for a multiline comment to include all lines the
         // comment spans.
-        Line =
-            Code.substr(Prev, (Pos != StringRef::npos ? Pos : Code.size()) - Prev);
+        Line = GetLine();
         AssociatedCommentLines.push_back(Line);
       }
     } else if (ImportRegex.match(Trimmed, &Matches)) {
