@@ -486,10 +486,9 @@ class DebugCommunication(object):
         with self._recv_condition:
             for packet in self._recv_packets:
                 if packet and ("seq" not in packet or packet["seq"] == 0):
-                    pass
-                    # raise ValueError(
-                    #     f"received a malformed packet, expected 'seq != 0' for {packet!r}"
-                    # )
+                    raise ValueError(
+                        f"received a malformed packet, expected 'seq != 0' for {packet!r}"
+                    )
                 if packet:
                     self._log.messages.append((Log.Dir.RECV, packet))
                 # Handle events that may modify any stateful properties of
