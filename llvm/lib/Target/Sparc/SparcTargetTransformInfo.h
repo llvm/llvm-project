@@ -40,8 +40,17 @@ public:
 
   /// \name Scalar TTI Implementations
   /// @{
-
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;
+  /// @}
+
+  /// \name Vector TTI Implementations
+  /// @{
+  enum SparcRegisterClass { GPRRC, FPRRC, FP128RRC, VRRC };
+  unsigned getNumberOfRegisters(unsigned ClassID) const override;
+  unsigned getRegisterClassForType(bool Vector,
+                                   Type *Ty = nullptr) const override;
+  TypeSize
+  getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
   /// @}
 };
 
