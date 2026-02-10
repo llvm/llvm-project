@@ -261,7 +261,7 @@ Status PlatformRemoteDarwinDevice::GetSharedModule(
   // This may not be an SDK-related module.  Try whether we can bring in the
   // thing to our local cache.
   error = GetSharedModuleWithLocalCache(module_spec, module_sp, old_modules,
-                                        did_create_ptr);
+                                        did_create_ptr, process);
   if (error.Success())
     return error;
 

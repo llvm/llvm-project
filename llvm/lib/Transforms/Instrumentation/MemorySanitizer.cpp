@@ -2460,47 +2460,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     return Si;
   }
 
-  // Instrument:
-  //     switch i32 %Val, label %else [ i32 0, label %A
-  //                                    i32 1, label %B
-  //                                    i32 2, label %C ]
-  //
-  // Typically, the switch input value (%Val) is fully initialized.
-  //
-  // Sometimes the compiler may convert (icmp + br) into a switch statement.
-  // MSan allows icmp eq/ne with partly initialized inputs to still result in a
-  // fully initialized output, if there exists a bit that is initialized in
-  // both inputs with a differing value. For compatibility, we support this in
-  // the switch instrumentation as well. Note that this edge case only applies
-  // if the switch input value does not match *any* of the cases (matching any
-  // of the cases requires an exact, fully initialized match).
-  //
-  //     ShadowCases =   0
-  //                   | propagateEqualityComparison(Val, 0)
-  //                   | propagateEqualityComparison(Val, 1)
-  //                   | propagateEqualityComparison(Val, 2))
-  void visitSwitchInst(SwitchInst &SI) {
-    IRBuilder<> IRB(&SI);
-
-    Value *Val = SI.getCondition();
-    Value *ShadowVal = getShadow(Val);
-
-    Value *ShadowCases = nullptr;
-    for (auto Case : SI.cases()) {
-      Value *Comparator = Case.getCaseValue();
-      Value *ComparisonShadow = propagateEqualityComparison(
-          IRB, Val, Comparator, ShadowVal, getShadow(Comparator));
-
-      if (ShadowCases)
-        ShadowCases = IRB.CreateOr(ShadowCases, ComparisonShadow);
-      else
-        ShadowCases = ComparisonShadow;
-    }
-
-    if (ShadowCases)
-      insertCheckShadow(ShadowCases, getOrigin(Val), &SI);
-  }
-
   // Vector manipulation.
   void visitExtractElementInst(ExtractElementInst &I) {
     insertCheckShadowOf(I.getOperand(1), &I);

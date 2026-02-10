@@ -34,19 +34,21 @@ Implementation Status
 
   - `darwin-x86_64 <https://github.com/llvm/llvm-project/tree/main/libc/config/darwin/x86_64/entrypoints.txt>`_
 
-  - `darwin-aarch64 <https://github.com/llvm/llvm-project/tree/main/libc/config/darwin/arm/entrypoints.txt>`_
+  - `darwin-aarch64 <https://github.com/llvm/llvm-project/tree/main/libc/config/darwin/aarch64/entrypoints.txt>`_
 
 * To check date and time functions enabled for GPU:
 
-  - `gpu-entrypoints <https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/entrypoints.txt>`_
+  - `amdgpu-entrypoints <https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/amdgpu/entrypoints.txt>`_
+
+  - `nvptx-entrypoints <https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/nvptx/entrypoints.txt>`_
 
 * To check date and time functions enabled for embedded system:
 
-  - `barebone-aarch64 <https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/aarch64/entrypoints.txt>`_
+  - `baremetal-aarch64 <https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/aarch64/entrypoints.txt>`_
 
-  - `barebone-aarch32 <https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/arm/entrypoints.txt>`_
+  - `baremetal-aarch32 <https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/arm/entrypoints.txt>`_
 
-  - barebone-riscv32 - to be added
+  - `baremetal-riscv32 <https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/riscv/entrypoints.txt>`_
 
 +---------------------+-----------------------------------------------+-------------------+-------------------+-----------------------------+---------+---------+
 | <Func>              |  Linux                                        | Windows           | MacOS             | Embedded                    | GPU               |
@@ -72,10 +74,6 @@ Implementation Status
 | clock_nanosleep     |         |         |         |                 |         |         |         |         |         |         |         |         |         |
 +---------------------+---------+---------+---------+-----------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | clock_settime       | |check| | |check| |         |     |check|     |         |         |         |         |         |         |         |         |         |
-+---------------------+---------+---------+---------+-----------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| ctime               | |check| | |check| |         |     |check|     |         |         |         |         |         |         |         |         |         |
-+---------------------+---------+---------+---------+-----------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
-| ctime_r             | |check| | |check| |         |     |check|     |         |         |         |         |         |         |         |         |         |
 +---------------------+---------+---------+---------+-----------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
 | difftime            | |check| | |check| |         |     |check|     |         |         |         |         |         |         |         |         |         |
 +---------------------+---------+---------+---------+-----------------+---------+---------+---------+---------+---------+---------+---------+---------+---------+
