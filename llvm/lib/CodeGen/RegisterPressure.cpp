@@ -513,7 +513,8 @@ class RegisterOperandsCollector {
   }
 
   /// Push this operand's register onto the correct vectors.
-  void collectOperand(const MachineOperand &MO,RegisterOperands &RegOpers) const {
+  void collectOperand(const MachineOperand &MO,
+                      RegisterOperands &RegOpers) const {
     if (!MO.isReg() || !MO.getReg())
       return;
     Register Reg = MO.getReg();
@@ -545,7 +546,8 @@ class RegisterOperandsCollector {
     }
   }
 
-  void collectOperandLanes(const MachineOperand &MO,RegisterOperands &RegOpers) const {
+  void collectOperandLanes(const MachineOperand &MO,
+                           RegisterOperands &RegOpers) const {
     if (!MO.isReg() || !MO.getReg())
       return;
     Register Reg = MO.getReg();
