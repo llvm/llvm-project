@@ -20496,8 +20496,41 @@ SDValue ARMTargetLowering::LowerREM(SDNode *N, SelectionDAG &DAG) const {
 
 SDValue
 ARMTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const {
-  assert(Subtarget->isTargetWindows() && "unsupported target platform");
   SDLoc DL(Op);
+
+  if (!Subtarget->isTargetWindows()) {
+    Register SPReg = getStackPointerRegisterToSaveRestore();
+    assert(SPReg && "Target cannot require DYNAMIC_STACKALLOC expansion and"
+                    " not tell us which reg is the stack pointer!");
+    EVT VT = Op.getValueType();
+    SDValue Chain = Op.getOperand(0);
+    SDValue Size = Op.getOperand(1);
+    SDValue AlignOp = Op.getOperand(2);
+
+    Chain = DAG.getCALLSEQ_START(Chain, 0, 0, DL);
+
+    SDValue SP = DAG.getCopyFromReg(Chain, DL, SPReg, VT);
+    Chain = SP.getValue(1);
+
+    Align Alignment = cast<ConstantSDNode>(AlignOp)->getAlignValue();
+    const TargetFrameLowering *TFL = DAG.getSubtarget().getFrameLowering();
+    unsigned Opc = TFL->getStackGrowthDirection() ==
+                           TargetFrameLowering::StackGrowsUp
+                       ? ISD::ADD
+                       : ISD::SUB;
+
+    Align StackAlign = TFL->getStackAlign();
+    SDValue NewSP = DAG.getNode(Opc, DL, VT, SP, Size);
+    if (Alignment > StackAlign)
+      NewSP = DAG.getNode(ISD::AND, DL, VT, NewSP,
+                          DAG.getSignedConstant(-Alignment.value(), DL, VT));
+
+    Chain = DAG.getCopyToReg(Chain, DL, SPReg, NewSP);
+    SDValue End = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), DL);
+
+    SDValue Ops[2] = {NewSP, End};
+    return DAG.getMergeValues(Ops, DL);
+  }
 
   // Get the inputs.
   SDValue Chain = Op.getOperand(0);
