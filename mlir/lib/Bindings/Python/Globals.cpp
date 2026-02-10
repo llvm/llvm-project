@@ -25,10 +25,8 @@ namespace nb = nanobind;
 using namespace mlir;
 
 /// Local helper adapted from llvm::Regex::escape.
-namespace {
-static const char RegexMetachars[] = "()^$|*+?.[]\\{}";
-
 static std::string escapeRegex(std::string_view String) {
+  static constexpr char RegexMetachars[] = "()^$|*+?.[]\\{}";
   std::string RegexStr;
   for (char C : String) {
     if (std::strchr(RegexMetachars, C))
@@ -37,7 +35,6 @@ static std::string escapeRegex(std::string_view String) {
   }
   return RegexStr;
 }
-} // namespace
 
 // -----------------------------------------------------------------------------
 // PyGlobals
