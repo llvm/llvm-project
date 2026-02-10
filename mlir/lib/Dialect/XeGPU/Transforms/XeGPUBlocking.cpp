@@ -162,13 +162,19 @@ XeGPUBlockingPass::getTileShape(const T &operandOrResult) const {
           ownerOp &&
           (isa<xegpu::CreateNdDescOp, xegpu::DpasOp, xegpu::ConvertLayoutOp,
                xegpu::LoadMatrixOp, xegpu::StoreMatrixOp, xegpu::AtomicRMWOp,
-               xegpu::LoadNdOp, xegpu::StoreNdOp, xegpu::PrefetchNdOp,
+               xegpu::LoadGatherOp, xegpu::StoreScatterOp, xegpu::LoadNdOp, xegpu::StoreNdOp, xegpu::PrefetchNdOp,
                vector::TransposeOp, vector::ShapeCastOp,
                vector::MultiDimReductionOp, vector::BroadcastOp>(ownerOp));
       if (!skipLeadingUnitDimRemoval) {
         auto it = llvm::find_if(instData, [](auto val) { return val != 1; });
         instData.erase(instData.begin(), it);
       }
+      
+      //print instData for debugging
+      llvm::errs() << "Inst data for value " << value << " in op " << *ownerOp << ": ";
+      for (auto dim : instData)        llvm::errs() << dim << " ";
+      llvm::errs() << "\n"; 
+
       return instData;
     }
 

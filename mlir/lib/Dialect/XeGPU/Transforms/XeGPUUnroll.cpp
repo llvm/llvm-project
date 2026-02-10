@@ -728,6 +728,13 @@ struct UnrollStoreScatterOpWithOffsets
       return failure();
 
     std::optional<SmallVector<int64_t>> targetShape = getTargetShape(op);
+    //print target shape for debugging  
+    llvm::errs() << "Target shape: ";
+    if (targetShape) {
+      for (auto dim : *targetShape)
+        llvm::errs() << dim << " ";
+    }
+    llvm::errs() << "\n";
     if (!targetShape)
       return failure();
 

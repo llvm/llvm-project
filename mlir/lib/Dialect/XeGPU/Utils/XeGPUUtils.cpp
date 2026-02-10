@@ -390,11 +390,26 @@ xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
   for (SmallVector<int64_t> offsets :
        StaticTileOffsetRange(srcShape, adjustedTargetShape)) {
     SmallVector<int64_t> staticStrides(offsets.size(), 1);
+    
+    // Debug print
+    llvm::errs() << "Extracting slice with offsets: [";
+    for (size_t i = 0; i < offsets.size(); ++i) {
+      llvm::errs() << offsets[i];
+      if (i + 1 < offsets.size()) llvm::errs() << ", ";
+    }
+    llvm::errs() << "], shape: [";
+    for (size_t i = 0; i < adjustedTargetShape.size(); ++i) {
+      llvm::errs() << adjustedTargetShape[i];
+      if (i + 1 < adjustedTargetShape.size()) llvm::errs() << ", ";
+    }
+    llvm::errs() << "]\n";
+    
     Value slice = vector::ExtractStridedSliceOp::create(
         builder, loc, value, offsets, adjustedTargetShape, staticStrides);
 
     // Reshape to remove leading unit dims if needed
     if (srcShapeRank > targetShapeRank) {
+      llvm::errs() << "Reshaping from rank " << srcShapeRank << " to rank " << targetShapeRank << "\n";
       auto targetTy = VectorType::get(shape, vecTy.getElementType());
       slice = vector::ShapeCastOp::create(builder, loc, targetTy, slice);
     }
