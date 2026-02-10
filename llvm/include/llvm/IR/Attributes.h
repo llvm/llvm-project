@@ -47,6 +47,8 @@ class Instruction;
 class Type;
 class raw_ostream;
 enum FPClassTest : unsigned;
+struct DenormalFPEnv;
+struct DenormalMode;
 
 enum class AllocFnKind : uint64_t {
   Unknown = 0,
@@ -58,6 +60,40 @@ enum class AllocFnKind : uint64_t {
   Aligned = 1 << 5,       // Allocator function aligns allocations per the
                           // `allocalign` argument
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ Aligned)
+};
+
+class DeadOnReturnInfo {
+public:
+  DeadOnReturnInfo() : DeadBytes(std::nullopt) {}
+  DeadOnReturnInfo(uint64_t DeadOnReturnBytes) : DeadBytes(DeadOnReturnBytes) {}
+
+  uint64_t getNumberOfDeadBytes() const {
+    assert(DeadBytes.has_value() &&
+           "This attribute does not specify a byte count. Did you forget to "
+           "check if the attribute covers all reachable memory?");
+    return DeadBytes.value();
+  }
+
+  bool coversAllReachableMemory() const { return !DeadBytes.has_value(); }
+
+  static DeadOnReturnInfo createFromIntValue(uint64_t Data) {
+    if (Data == std::numeric_limits<uint64_t>::max())
+      return DeadOnReturnInfo();
+    return DeadOnReturnInfo(Data);
+  }
+
+  uint64_t toIntValue() const {
+    if (DeadBytes.has_value())
+      return DeadBytes.value();
+    return std::numeric_limits<uint64_t>::max();
+  }
+
+  bool isZeroSized() const {
+    return DeadBytes.has_value() && DeadBytes.value() == 0;
+  }
+
+private:
+  std::optional<uint64_t> DeadBytes;
 };
 
 //===----------------------------------------------------------------------===//
@@ -178,6 +214,8 @@ public:
                                                  MemoryEffects ME);
   LLVM_ABI static Attribute getWithNoFPClass(LLVMContext &Context,
                                              FPClassTest Mask);
+  LLVM_ABI static Attribute getWithDeadOnReturnInfo(LLVMContext &Context,
+                                                    DeadOnReturnInfo DI);
   LLVM_ABI static Attribute getWithCaptureInfo(LLVMContext &Context,
                                                CaptureInfo CI);
 
@@ -276,6 +314,11 @@ public:
   /// dereferenceable attribute.
   LLVM_ABI uint64_t getDereferenceableBytes() const;
 
+  /// Returns the number of dead_on_return bytes from the dead_on_return
+  /// attribute, or std::nullopt if all memory reachable through the pointer is
+  /// marked dead on return.
+  LLVM_ABI DeadOnReturnInfo getDeadOnReturnInfo() const;
+
   /// Returns the number of dereferenceable_or_null bytes from the
   /// dereferenceable_or_null attribute.
   LLVM_ABI uint64_t getDereferenceableOrNullBytes() const;
@@ -299,6 +342,9 @@ public:
 
   /// Returns memory effects.
   LLVM_ABI MemoryEffects getMemoryEffects() const;
+
+  /// Returns denormal_fpenv.
+  LLVM_ABI struct DenormalFPEnv getDenormalFPEnv() const;
 
   /// Returns information from captures attribute.
   LLVM_ABI CaptureInfo getCaptureInfo() const;
@@ -445,6 +491,7 @@ public:
   LLVM_ABI MaybeAlign getAlignment() const;
   LLVM_ABI MaybeAlign getStackAlignment() const;
   LLVM_ABI uint64_t getDereferenceableBytes() const;
+  LLVM_ABI DeadOnReturnInfo getDeadOnReturnInfo() const;
   LLVM_ABI uint64_t getDereferenceableOrNullBytes() const;
   LLVM_ABI Type *getByValType() const;
   LLVM_ABI Type *getStructRetType() const;
@@ -964,6 +1011,9 @@ public:
   /// the return value.
   LLVM_ABI uint64_t getRetDereferenceableOrNullBytes() const;
 
+  /// Get the number of dead_on_return bytes (or zero if unknown) of an arg.
+  LLVM_ABI DeadOnReturnInfo getDeadOnReturnInfo(unsigned Index) const;
+
   /// Get the number of dereferenceable_or_null bytes (or zero if unknown) of an
   /// arg.
   LLVM_ABI uint64_t getParamDereferenceableOrNullBytes(unsigned ArgNo) const;
@@ -1242,6 +1292,10 @@ public:
   /// internally in Attribute.
   LLVM_ABI AttrBuilder &addDereferenceableAttr(uint64_t Bytes);
 
+  /// This turns the number of dead_on_return bytes into the form used
+  /// internally in Attribute.
+  LLVM_ABI AttrBuilder &addDeadOnReturnAttr(DeadOnReturnInfo Info);
+
   /// This turns the number of dereferenceable_or_null bytes into the
   /// form used internally in Attribute.
   LLVM_ABI AttrBuilder &addDereferenceableOrNullAttr(uint64_t Bytes);
@@ -1294,6 +1348,9 @@ public:
 
   /// Add captures attribute.
   LLVM_ABI AttrBuilder &addCapturesAttr(CaptureInfo CI);
+
+  /// Add denormal_fpenv attribute.
+  LLVM_ABI AttrBuilder &addDenormalFPEnvAttr(DenormalFPEnv Mode);
 
   // Add nofpclass attribute
   LLVM_ABI AttrBuilder &addNoFPClassAttr(FPClassTest NoFPClassMask);

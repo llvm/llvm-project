@@ -588,10 +588,17 @@ llvm::Constant *mlir::LLVM::detail::getLLVMConstant(
   }
   // For integer types, we allow a mismatch in sizes as the index type in
   // MLIR might have a different size than the index type in the LLVM module.
-  if (auto intAttr = dyn_cast<IntegerAttr>(attr))
-    return llvm::ConstantInt::get(
-        llvmType,
-        intAttr.getValue().sextOrTrunc(llvmType->getIntegerBitWidth()));
+  if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+    // If the attribute is an unsigned integer or a 1-bit integer, zero-extend
+    // the value to the bit width of the LLVM type. Otherwise, sign-extend.
+    auto intTy = dyn_cast<IntegerType>(intAttr.getType());
+    APInt value;
+    if (intTy && (intTy.isUnsigned() || intTy.getWidth() == 1))
+      value = intAttr.getValue().zextOrTrunc(llvmType->getIntegerBitWidth());
+    else
+      value = intAttr.getValue().sextOrTrunc(llvmType->getIntegerBitWidth());
+    return llvm::ConstantInt::get(llvmType, value);
+  }
   if (auto floatAttr = dyn_cast<FloatAttr>(attr)) {
     const llvm::fltSemantics &sem = floatAttr.getValue().getSemantics();
     // Special case for 8-bit floats, which are represented by integers due to
@@ -1509,6 +1516,7 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   valueMapping.clear();
   branchMapping.clear();
   llvm::Function *llvmFunc = lookupFunction(func.getName());
+  llvm::LLVMContext &llvmContext = llvmFunc->getContext();
 
   // Add function arguments to the value remapping table.
   for (auto [mlirArg, llvmArg] :
@@ -1561,21 +1569,12 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
         getLLVMContext(), attr->getMinRange().getInt(),
         attr->getMaxRange().getInt()));
 
-  if (auto noInfsFpMath = func.getNoInfsFpMath())
-    llvmFunc->addFnAttr("no-infs-fp-math", llvm::toStringRef(*noInfsFpMath));
-
   if (auto noNansFpMath = func.getNoNansFpMath())
     llvmFunc->addFnAttr("no-nans-fp-math", llvm::toStringRef(*noNansFpMath));
 
   if (auto noSignedZerosFpMath = func.getNoSignedZerosFpMath())
     llvmFunc->addFnAttr("no-signed-zeros-fp-math",
                         llvm::toStringRef(*noSignedZerosFpMath));
-
-  if (auto denormalFpMath = func.getDenormalFpMath())
-    llvmFunc->addFnAttr("denormal-fp-math", *denormalFpMath);
-
-  if (auto denormalFpMathF32 = func.getDenormalFpMathF32())
-    llvmFunc->addFnAttr("denormal-fp-math-f32", *denormalFpMathF32);
 
   if (auto fpContract = func.getFpContract())
     llvmFunc->addFnAttr("fp-contract", *fpContract);
@@ -1587,7 +1586,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
     llvmFunc->addFnAttr("instrument-function-exit", *instrumentFunctionExit);
 
   // First, create all blocks so we can jump to them.
-  llvm::LLVMContext &llvmContext = llvmFunc->getContext();
   for (auto &bb : func) {
     auto *llvmBB = llvm::BasicBlock::Create(llvmContext);
     llvmBB->insertInto(llvmFunc);
@@ -1652,9 +1650,42 @@ static void convertFunctionMemoryAttributes(LLVMFuncOp func,
   llvmFunc->setMemoryEffects(newMemEffects);
 }
 
+llvm::Attribute
+ModuleTranslation::convertAllocsizeAttr(DenseI32ArrayAttr allocSizeAttr) {
+  if (!allocSizeAttr || allocSizeAttr.empty())
+    return llvm::Attribute{};
+
+  unsigned elemSize = static_cast<unsigned>(allocSizeAttr[0]);
+  std::optional<unsigned> numElems;
+  if (allocSizeAttr.size() > 1)
+    numElems = static_cast<unsigned>(allocSizeAttr[1]);
+
+  return llvm::Attribute::getWithAllocSizeArgs(getLLVMContext(), elemSize,
+                                               numElems);
+}
+static void convertDenormalFPEnvAttribute(LLVMFuncOp func,
+                                          llvm::AttrBuilder &Attrs) {
+  std::optional<DenormalFPEnvAttr> denormalFpEnv = func.getDenormalFpenv();
+  if (!denormalFpEnv)
+    return;
+
+  llvm::DenormalMode DefaultMode(
+      convertDenormalModeKindToLLVM(denormalFpEnv->getDefaultOutputMode()),
+      convertDenormalModeKindToLLVM(denormalFpEnv->getDefaultInputMode()));
+  llvm::DenormalMode FloatMode(
+      convertDenormalModeKindToLLVM(denormalFpEnv->getFloatOutputMode()),
+      convertDenormalModeKindToLLVM(denormalFpEnv->getFloatInputMode()));
+
+  llvm::DenormalFPEnv FPEnv(DefaultMode, FloatMode);
+  Attrs.addDenormalFPEnvAttr(FPEnv);
+}
+
 /// Converts function attributes from `func` and attaches them to `llvmFunc`.
-static void convertFunctionAttributes(LLVMFuncOp func,
+static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
                                       llvm::Function *llvmFunc) {
+  // FIXME: Use AttrBuilder far all cases
+  llvm::AttrBuilder AttrBuilder(llvmFunc->getContext());
+
   if (func.getNoInlineAttr())
     llvmFunc->addFnAttr(llvm::Attribute::NoInline);
   if (func.getAlwaysInlineAttr())
@@ -1663,12 +1694,34 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::InlineHint);
   if (func.getOptimizeNoneAttr())
     llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
+  if (func.getReturnsTwiceAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::ReturnsTwice);
+  if (func.getColdAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::Cold);
+  if (func.getHotAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::Hot);
+  if (func.getNoduplicateAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::NoDuplicate);
   if (func.getConvergentAttr())
     llvmFunc->addFnAttr(llvm::Attribute::Convergent);
   if (func.getNoUnwindAttr())
     llvmFunc->addFnAttr(llvm::Attribute::NoUnwind);
   if (func.getWillReturnAttr())
     llvmFunc->addFnAttr(llvm::Attribute::WillReturn);
+  if (func.getNoreturnAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::NoReturn);
+  if (func.getOptsizeAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::OptimizeForSize);
+  if (func.getMinsizeAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::MinSize);
+  if (func.getSaveRegParamsAttr())
+    llvmFunc->addFnAttr("save-reg-params");
+  if (func.getNoCallerSavedRegistersAttr())
+    llvmFunc->addFnAttr("no_caller_saved_registers");
+  if (func.getNocallbackAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::NoCallback);
+  if (StringAttr modFormat = func.getModularFormatAttr())
+    llvmFunc->addFnAttr("modular-format", modFormat.getValue());
   if (TargetFeaturesAttr targetFeatAttr = func.getTargetFeaturesAttr())
     llvmFunc->addFnAttr("target-features", targetFeatAttr.getFeaturesString());
   if (FramePointerKindAttr fpAttr = func.getFramePointerAttr())
@@ -1677,7 +1730,28 @@ static void convertFunctionAttributes(LLVMFuncOp func,
   if (UWTableKindAttr uwTableKindAttr = func.getUwtableKindAttr())
     llvmFunc->setUWTableKind(
         convertUWTableKindToLLVM(uwTableKindAttr.getUwtableKind()));
+  if (StringAttr zcsr = func.getZeroCallUsedRegsAttr())
+    llvmFunc->addFnAttr("zero-call-used-regs", zcsr.getValue());
+
+  if (ArrayAttr noBuiltins = func.getNobuiltinsAttr()) {
+    if (noBuiltins.empty())
+      llvmFunc->addFnAttr("no-builtins");
+
+    mod.convertFunctionAttrCollection(noBuiltins, llvmFunc,
+                                      ModuleTranslation::convertNoBuiltin);
+  }
+
+  mod.convertFunctionAttrCollection(func.getDefaultFuncAttrsAttr(), llvmFunc,
+                                    ModuleTranslation::convertDefaultFuncAttr);
+
+  if (llvm::Attribute attr = mod.convertAllocsizeAttr(func.getAllocsizeAttr());
+      attr.isValid())
+    llvmFunc->addFnAttr(attr);
+
   convertFunctionMemoryAttributes(func, llvmFunc);
+
+  convertDenormalFPEnvAttribute(func, AttrBuilder);
+  llvmFunc->addFnAttrs(AttrBuilder);
 }
 
 /// Converts function attributes from `func` and attaches them to `llvmFunc`.
@@ -1724,20 +1798,20 @@ static LogicalResult convertParameterAttr(llvm::AttrBuilder &attrBuilder,
                                           ModuleTranslation &moduleTranslation,
                                           Location loc) {
   return llvm::TypeSwitch<Attribute, LogicalResult>(namedAttr.getValue())
-      .Case<TypeAttr>([&](auto typeAttr) {
+      .Case([&](TypeAttr typeAttr) {
         attrBuilder.addTypeAttr(
             llvmKind, moduleTranslation.convertType(typeAttr.getValue()));
         return success();
       })
-      .Case<IntegerAttr>([&](auto intAttr) {
+      .Case([&](IntegerAttr intAttr) {
         attrBuilder.addRawIntAttr(llvmKind, intAttr.getInt());
         return success();
       })
-      .Case<UnitAttr>([&](auto) {
+      .Case([&](UnitAttr) {
         attrBuilder.addAttribute(llvmKind);
         return success();
       })
-      .Case<LLVM::ConstantRangeAttr>([&](auto rangeAttr) {
+      .Case([&](LLVM::ConstantRangeAttr rangeAttr) {
         attrBuilder.addConstantRangeAttr(
             llvmKind,
             llvm::ConstantRange(rangeAttr.getLower(), rangeAttr.getUpper()));
@@ -1813,6 +1887,26 @@ LogicalResult ModuleTranslation::convertArgAndResultAttrs(
   return success();
 }
 
+std::optional<llvm::Attribute>
+ModuleTranslation::convertNoBuiltin(llvm::LLVMContext &ctx, mlir::Attribute a) {
+  if (auto str = dyn_cast<StringAttr>(a))
+    return llvm::Attribute::get(ctx, ("no-builtin-" + str.getValue()).str());
+  return std::nullopt;
+}
+
+std::optional<llvm::Attribute>
+ModuleTranslation::convertDefaultFuncAttr(llvm::LLVMContext &ctx,
+                                          mlir::NamedAttribute namedAttr) {
+  StringAttr name = namedAttr.getName();
+  Attribute value = namedAttr.getValue();
+
+  if (auto strVal = dyn_cast<StringAttr>(value))
+    return llvm::Attribute::get(ctx, name.getValue(), strVal.getValue());
+  if (mlir::isa<UnitAttr>(value))
+    return llvm::Attribute::get(ctx, name.getValue());
+  return std::nullopt;
+}
+
 FailureOr<llvm::AttrBuilder>
 ModuleTranslation::convertParameterAttrs(Location loc,
                                          DictionaryAttr paramAttrs) {
@@ -1846,7 +1940,7 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     addRuntimePreemptionSpecifier(function.getDsoLocal(), llvmFunc);
 
     // Convert function attributes.
-    convertFunctionAttributes(function, llvmFunc);
+    convertFunctionAttributes(*this, function, llvmFunc);
 
     // Convert function kernel attributes to metadata.
     convertFunctionKernelAttributes(function, llvmFunc, *this);

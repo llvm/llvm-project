@@ -18,37 +18,16 @@
 #include <__type_traits/is_reference.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_reference.h>
-#include <__type_traits/type_identity.h>
 #include <__utility/declval.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER >= 20
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class...>
-struct _LIBCPP_NO_SPECIALIZATIONS common_reference;
-
-template <class... _Types>
-using common_reference_t = typename common_reference<_Types...>::type;
-
-template <class, class, template <class> class, template <class> class>
-struct basic_common_reference {};
-
-#  if __has_builtin(__builtin_common_reference)
-
-template <class _Tp, class _Up, template <class> class _Tx, template <class> class _Ux>
-using __basic_common_reference_t = basic_common_reference<_Tp, _Up, _Tx, _Ux>::type;
-
-template <class... _Args>
-struct _LIBCPP_NO_SPECIALIZATIONS common_reference
-    : __builtin_common_reference<__basic_common_reference_t, common_type_t, type_identity, __empty, _Args...> {};
-
-#  else
-
+// common_reference
+#if _LIBCPP_STD_VER >= 20
 // Let COND_RES(X, Y) be:
 template <class _Xp, class _Yp>
 using __cond_res _LIBCPP_NODEBUG = decltype(false ? std::declval<_Xp (&)()>()() : std::declval<_Yp (&)()>()());
@@ -130,10 +109,19 @@ struct __common_ref {};
 
 // Note C: For the common_reference trait applied to a parameter pack [...]
 
+template <class...>
+struct _LIBCPP_NO_SPECIALIZATIONS common_reference;
+
+template <class... _Types>
+using common_reference_t = typename common_reference<_Types...>::type;
+
+template <class, class, template <class> class, template <class> class>
+struct basic_common_reference {};
+
 _LIBCPP_DIAGNOSTIC_PUSH
-#    if __has_warning("-Winvalid-specialization")
+#  if __has_warning("-Winvalid-specialization")
 _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Winvalid-specialization")
-#    endif
+#  endif
 // bullet 1 - sizeof...(T) == 0
 template <>
 struct common_reference<> {};
@@ -207,10 +195,8 @@ _LIBCPP_DIAGNOSTIC_POP
 template <class...>
 struct _LIBCPP_NO_SPECIALIZATIONS common_reference {};
 
-#  endif // __has_builtin(__builtin_common_reference)
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___TYPE_TRAITS_COMMON_REFERENCE_H

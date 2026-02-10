@@ -574,6 +574,9 @@ bool Parser::isCXXTypeId(TentativeCXXTypeIdContext Context, bool &isAmbiguous) {
     } else if (Context == TentativeCXXTypeIdContext::InTrailingReturnType) {
       TPR = TPResult::True;
       isAmbiguous = true;
+    } else if (Context == TentativeCXXTypeIdContext::AsReflectionOperand) {
+      TPR = TPResult::True;
+      isAmbiguous = true;
     } else
       TPR = TPResult::False;
   }
@@ -1063,7 +1066,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
       return TPResult::False;
     }
 
-    if (Next.isNot(tok::coloncolon) && Next.isNot(tok::less)) {
+    if (Next.isNoneOf(tok::coloncolon, tok::less, tok::colon)) {
       // Determine whether this is a valid expression. If not, we will hit
       // a parse error one way or another. In that case, tell the caller that
       // this is ambiguous. Typo-correct to type and expression keywords and

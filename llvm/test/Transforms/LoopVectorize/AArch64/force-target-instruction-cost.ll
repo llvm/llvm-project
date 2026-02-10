@@ -380,7 +380,7 @@ for.end:
   ret void
 }
 
-define void @loop_with_freeze_and_conditional_srem(ptr %dst, ptr %keyinfo, ptr %invariant.ptr, i32 %divisor) #1 {
+define void @loop_with_freeze_and_conditional_srem(ptr %dst, ptr %keyinfo, ptr %invariant.ptr, i32 %divisor) {
 ; COMMON-LABEL: define void @loop_with_freeze_and_conditional_srem(
 ; COMMON-SAME: ptr [[DST:%.*]], ptr [[KEYINFO:%.*]], ptr [[INVARIANT_PTR:%.*]], i32 [[DIVISOR:%.*]]) {
 ; COMMON-NEXT:  [[ENTRY:.*]]:
@@ -433,7 +433,240 @@ exit:                                             ; preds = %loop.latch
   ret void
 }
 
+define void @interleave_group(ptr %dst) #1 {
+; COST1-LABEL: define void @interleave_group(
+; COST1-SAME: ptr [[DST:%.*]]) #[[ATTR1:[0-9]+]] {
+; COST1-NEXT:  [[ITER_CHECK:.*:]]
+; COST1-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; COST1:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; COST1-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; COST1:       [[VECTOR_PH]]:
+; COST1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; COST1:       [[VECTOR_BODY]]:
+; COST1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COST1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 16
+; COST1-NEXT:    [[TMP1:%.*]] = mul i64 [[INDEX]], 3
+; COST1-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0]], 3
+; COST1-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP1]]
+; COST1-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP2]]
+; COST1-NEXT:    store <48 x i8> zeroinitializer, ptr [[TMP3]], align 1
+; COST1-NEXT:    store <48 x i8> zeroinitializer, ptr [[TMP4]], align 1
+; COST1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
+; COST1-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
+; COST1-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; COST1:       [[MIDDLE_BLOCK]]:
+; COST1-NEXT:    br i1 false, [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; COST1:       [[VEC_EPILOG_ITER_CHECK]]:
+; COST1-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF4]]
+; COST1:       [[VEC_EPILOG_PH]]:
+; COST1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; COST1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
+; COST1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; COST1-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
+; COST1-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
+; COST1:       [[VEC_EPILOG_VECTOR_BODY]]:
+; COST1-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT2:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; COST1-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; COST1-NEXT:    [[TMP6:%.*]] = mul <4 x i64> [[VEC_IND]], splat (i64 3)
+; COST1-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP6]], i32 0
+; COST1-NEXT:    [[TMP8:%.*]] = extractelement <4 x i64> [[TMP6]], i32 1
+; COST1-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[TMP6]], i32 2
+; COST1-NEXT:    [[TMP10:%.*]] = extractelement <4 x i64> [[TMP6]], i32 3
+; COST1-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
+; COST1-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP8]]
+; COST1-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP9]]
+; COST1-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP10]]
+; COST1-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP11]], i64 2
+; COST1-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP12]], i64 2
+; COST1-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP13]], i64 2
+; COST1-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP14]], i64 2
+; COST1-NEXT:    store i8 0, ptr [[TMP15]], align 1
+; COST1-NEXT:    store i8 0, ptr [[TMP16]], align 1
+; COST1-NEXT:    store i8 0, ptr [[TMP17]], align 1
+; COST1-NEXT:    store i8 0, ptr [[TMP18]], align 1
+; COST1-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP11]], i64 1
+; COST1-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP12]], i64 1
+; COST1-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[TMP13]], i64 1
+; COST1-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[TMP14]], i64 1
+; COST1-NEXT:    store i8 0, ptr [[TMP19]], align 1
+; COST1-NEXT:    store i8 0, ptr [[TMP20]], align 1
+; COST1-NEXT:    store i8 0, ptr [[TMP21]], align 1
+; COST1-NEXT:    store i8 0, ptr [[TMP22]], align 1
+; COST1-NEXT:    store i8 0, ptr [[TMP11]], align 1
+; COST1-NEXT:    store i8 0, ptr [[TMP12]], align 1
+; COST1-NEXT:    store i8 0, ptr [[TMP13]], align 1
+; COST1-NEXT:    store i8 0, ptr [[TMP14]], align 1
+; COST1-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], 4
+; COST1-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; COST1-NEXT:    [[TMP23:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 100
+; COST1-NEXT:    br i1 [[TMP23]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; COST1:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; COST1-NEXT:    br i1 false, [[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; COST1:       [[VEC_EPILOG_SCALAR_PH]]:
+;
+; COST10-LABEL: define void @interleave_group(
+; COST10-SAME: ptr [[DST:%.*]]) #[[ATTR1:[0-9]+]] {
+; COST10-NEXT:  [[ITER_CHECK:.*:]]
+; COST10-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
+; COST10:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; COST10-NEXT:    br i1 false, label %[[VEC_EPILOG_PH:.*]], label %[[VECTOR_PH:.*]]
+; COST10:       [[VECTOR_PH]]:
+; COST10-NEXT:    br label %[[VECTOR_BODY:.*]]
+; COST10:       [[VECTOR_BODY]]:
+; COST10-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COST10-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 3
+; COST10-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP0]]
+; COST10-NEXT:    store <48 x i8> zeroinitializer, ptr [[TMP1]], align 1
+; COST10-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; COST10-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
+; COST10-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; COST10:       [[MIDDLE_BLOCK]]:
+; COST10-NEXT:    br i1 false, [[EXIT:label %.*]], label %[[VEC_EPILOG_ITER_CHECK:.*]]
+; COST10:       [[VEC_EPILOG_ITER_CHECK]]:
+; COST10-NEXT:    br i1 false, label %[[VEC_EPILOG_SCALAR_PH]], label %[[VEC_EPILOG_PH]], !prof [[PROF4]]
+; COST10:       [[VEC_EPILOG_PH]]:
+; COST10-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 96, %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
+; COST10-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[BC_RESUME_VAL]], i64 0
+; COST10-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; COST10-NEXT:    [[INDUCTION:%.*]] = add <4 x i64> [[BROADCAST_SPLAT]], <i64 0, i64 1, i64 2, i64 3>
+; COST10-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
+; COST10:       [[VEC_EPILOG_VECTOR_BODY]]:
+; COST10-NEXT:    [[INDEX1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT2:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; COST10-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ [[INDUCTION]], %[[VEC_EPILOG_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
+; COST10-NEXT:    [[TMP3:%.*]] = mul <4 x i64> [[VEC_IND]], splat (i64 3)
+; COST10-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP3]], i32 0
+; COST10-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP3]], i32 1
+; COST10-NEXT:    [[TMP6:%.*]] = extractelement <4 x i64> [[TMP3]], i32 2
+; COST10-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP3]], i32 3
+; COST10-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
+; COST10-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP5]]
+; COST10-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP6]]
+; COST10-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP7]]
+; COST10-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP8]], i64 2
+; COST10-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP9]], i64 2
+; COST10-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP10]], i64 2
+; COST10-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[TMP11]], i64 2
+; COST10-NEXT:    store i8 0, ptr [[TMP12]], align 1
+; COST10-NEXT:    store i8 0, ptr [[TMP13]], align 1
+; COST10-NEXT:    store i8 0, ptr [[TMP14]], align 1
+; COST10-NEXT:    store i8 0, ptr [[TMP15]], align 1
+; COST10-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[TMP8]], i64 1
+; COST10-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP9]], i64 1
+; COST10-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[TMP10]], i64 1
+; COST10-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP11]], i64 1
+; COST10-NEXT:    store i8 0, ptr [[TMP16]], align 1
+; COST10-NEXT:    store i8 0, ptr [[TMP17]], align 1
+; COST10-NEXT:    store i8 0, ptr [[TMP18]], align 1
+; COST10-NEXT:    store i8 0, ptr [[TMP19]], align 1
+; COST10-NEXT:    store i8 0, ptr [[TMP8]], align 1
+; COST10-NEXT:    store i8 0, ptr [[TMP9]], align 1
+; COST10-NEXT:    store i8 0, ptr [[TMP10]], align 1
+; COST10-NEXT:    store i8 0, ptr [[TMP11]], align 1
+; COST10-NEXT:    [[INDEX_NEXT2]] = add nuw i64 [[INDEX1]], 4
+; COST10-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; COST10-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT2]], 100
+; COST10-NEXT:    br i1 [[TMP20]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
+; COST10:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
+; COST10-NEXT:    br i1 false, [[EXIT]], label %[[VEC_EPILOG_SCALAR_PH]]
+; COST10:       [[VEC_EPILOG_SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.3 = mul i64 %iv, 3
+  %gep.0 = getelementptr i8, ptr %dst, i64 %iv.3
+  %gep.2 = getelementptr i8, ptr %gep.0, i64 2
+  store i8 0, ptr %gep.2, align 1
+  %gep.1 = getelementptr i8, ptr %gep.0, i64 1
+  store i8 0, ptr %gep.1, align 1
+  store i8 0, ptr %gep.0, align 1
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 100
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @forced_scalar_instr(ptr %gep.dst) {
+; COMMON-LABEL: define void @forced_scalar_instr(
+; COMMON-SAME: ptr [[GEP_DST:%.*]]) {
+; COMMON-NEXT:  [[ENTRY:.*:]]
+; COMMON-NEXT:    br label %[[VECTOR_PH:.*]]
+; COMMON:       [[VECTOR_PH]]:
+; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
+; COMMON:       [[VECTOR_BODY]]:
+; COMMON-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
+; COMMON-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_STORE_CONTINUE6]] ]
+; COMMON-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i32
+; COMMON-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i8> [[VEC_IND]], splat (i8 4)
+; COMMON-NEXT:    [[TMP2:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
+; COMMON-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; COMMON:       [[PRED_STORE_IF]]:
+; COMMON-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 0
+; COMMON-NEXT:    [[TMP4:%.*]] = add i32 [[TMP0]], 0
+; COMMON-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[TMP3]]
+; COMMON-NEXT:    [[TMP6:%.*]] = or i32 [[TMP4]], 1
+; COMMON-NEXT:    store i32 [[TMP6]], ptr [[TMP5]], align 4
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; COMMON:       [[PRED_STORE_CONTINUE]]:
+; COMMON-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP1]], i32 1
+; COMMON-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; COMMON:       [[PRED_STORE_IF1]]:
+; COMMON-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 1
+; COMMON-NEXT:    [[TMP9:%.*]] = add i32 [[TMP0]], 1
+; COMMON-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[TMP8]]
+; COMMON-NEXT:    [[TMP11:%.*]] = or i32 [[TMP9]], 1
+; COMMON-NEXT:    store i32 [[TMP11]], ptr [[TMP10]], align 4
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
+; COMMON:       [[PRED_STORE_CONTINUE2]]:
+; COMMON-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP1]], i32 2
+; COMMON-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; COMMON:       [[PRED_STORE_IF3]]:
+; COMMON-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 2
+; COMMON-NEXT:    [[TMP14:%.*]] = add i32 [[TMP0]], 2
+; COMMON-NEXT:    [[TMP15:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[TMP13]]
+; COMMON-NEXT:    [[TMP16:%.*]] = or i32 [[TMP14]], 1
+; COMMON-NEXT:    store i32 [[TMP16]], ptr [[TMP15]], align 4
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
+; COMMON:       [[PRED_STORE_CONTINUE4]]:
+; COMMON-NEXT:    [[TMP17:%.*]] = extractelement <4 x i1> [[TMP1]], i32 3
+; COMMON-NEXT:    br i1 [[TMP17]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
+; COMMON:       [[PRED_STORE_IF5]]:
+; COMMON-NEXT:    [[TMP18:%.*]] = add i64 [[INDEX]], 3
+; COMMON-NEXT:    [[TMP19:%.*]] = add i32 [[TMP0]], 3
+; COMMON-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[GEP_DST]], i64 [[TMP18]]
+; COMMON-NEXT:    [[TMP21:%.*]] = or i32 [[TMP19]], 1
+; COMMON-NEXT:    store i32 [[TMP21]], ptr [[TMP20]], align 4
+; COMMON-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
+; COMMON:       [[PRED_STORE_CONTINUE6]]:
+; COMMON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; COMMON-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
+; COMMON-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], 8
+; COMMON-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; COMMON:       [[MIDDLE_BLOCK]]:
+; COMMON-NEXT:    br label %[[EXIT:.*]]
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep = getelementptr i32, ptr %gep.dst, i64 %iv
+  %t = trunc i64 %iv to i32
+  %o = or i32 %t, 1
+  store i32 %o, ptr %gep, align 4
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 4
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 attributes #0 = { "target-features"="+neon,+sve" vscale_range(1,16) }
+attributes #1 = { "target-cpu"="neoverse-512tvb" }
 
 declare void @llvm.assume(i1 noundef)
 declare i64 @llvm.umin.i64(i64, i64)

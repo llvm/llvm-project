@@ -457,6 +457,7 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
     case Intrinsic::wasm_trunc_unsigned:
     case Intrinsic::ptrauth_auth:
     case Intrinsic::ptrauth_resign:
+    case Intrinsic::ptrauth_resign_load_relative:
       return true;
     default:
       return false;
@@ -925,17 +926,18 @@ using IncomingValueMap = SmallDenseMap<BasicBlock *, Value *, 16>;
 /// \returns the selected value.
 static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
                                           IncomingValueMap &IncomingValues) {
+  IncomingValueMap::const_iterator It = IncomingValues.find(BB);
   if (!isa<UndefValue>(OldVal)) {
-    assert((!IncomingValues.count(BB) ||
-            IncomingValues.find(BB)->second == OldVal) &&
+    assert((It != IncomingValues.end() &&
+            (!(It->second) || It->second == OldVal)) &&
            "Expected OldVal to match incoming value from BB!");
 
-    IncomingValues.insert(std::make_pair(BB, OldVal));
+    IncomingValues.insert_or_assign(BB, OldVal);
     return OldVal;
   }
 
-  IncomingValueMap::const_iterator It = IncomingValues.find(BB);
-  if (It != IncomingValues.end()) return It->second;
+  if (It != IncomingValues.end() && It->second)
+    return It->second;
 
   return OldVal;
 }
@@ -943,19 +945,28 @@ static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
 /// Create a map from block to value for the operands of a
 /// given phi.
 ///
-/// Create a map from block to value for each non-undef value flowing
-/// into \p PN.
+/// This function initializes the map with UndefValue for all predecessors
+/// in BBPreds, and then updates the map with concrete non-undef values
+/// found in the PHI node.
 ///
 /// \param PN The phi we are collecting the map for.
+/// \param BBPreds The list of all predecessor blocks to initialize with Undef.
 /// \param IncomingValues [out] The map from block to value for this phi.
 static void gatherIncomingValuesToPhi(PHINode *PN,
+                                      const PredBlockVector &BBPreds,
                                       IncomingValueMap &IncomingValues) {
-  for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-    BasicBlock *BB = PN->getIncomingBlock(i);
-    Value *V = PN->getIncomingValue(i);
+  for (BasicBlock *Pred : BBPreds)
+    IncomingValues[Pred] = nullptr;
 
-    if (!isa<UndefValue>(V))
-      IncomingValues.insert(std::make_pair(BB, V));
+  for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+    Value *V = PN->getIncomingValue(i);
+    if (isa<UndefValue>(V))
+      continue;
+
+    BasicBlock *BB = PN->getIncomingBlock(i);
+    auto It = IncomingValues.find(BB);
+    if (It != IncomingValues.end())
+      It->second = V;
   }
 }
 
@@ -974,12 +985,14 @@ static void replaceUndefValuesInPhi(PHINode *PN,
 
     BasicBlock *BB = PN->getIncomingBlock(i);
     IncomingValueMap::const_iterator It = IncomingValues.find(BB);
+    if (It == IncomingValues.end())
+      continue;
 
     // Keep track of undef/poison incoming values. Those must match, so we fix
     // them up below if needed.
     // Note: this is conservatively correct, but we could try harder and group
     // the undef values per incoming basic block.
-    if (It == IncomingValues.end()) {
+    if (!It->second) {
       TrueUndefOps.push_back(i);
       continue;
     }
@@ -1077,6 +1090,7 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   Value *OldVal = PN->removeIncomingValue(BB, false);
   assert(OldVal && "No entry in PHI for Pred BB!");
 
+  // Map BBPreds to defined values or nullptr (representing undefined values).
   IncomingValueMap IncomingValues;
 
   // We are merging two blocks - BB, and the block containing PN - and
@@ -1088,7 +1102,7 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   // values flowing into PN, we want to rewrite those values to be
   // consistent with the non-undef values.
 
-  gatherIncomingValuesToPhi(PN, IncomingValues);
+  gatherIncomingValuesToPhi(PN, BBPreds, IncomingValues);
 
   // If this incoming value is one of the PHI nodes in BB, the new entries
   // in the PHI node are the entries from the old PHI.
@@ -2961,6 +2975,10 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(Kind, MDNode::getMostGenericRange(JMD, KMD));
         break;
+      case LLVMContext::MD_nofpclass:
+        if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
+          K->setMetadata(Kind, MDNode::getMostGenericNoFPClass(JMD, KMD));
+        break;
       case LLVMContext::MD_fpmath:
         if (!AAOnly)
           K->setMetadata(Kind, MDNode::getMostGenericFPMath(JMD, KMD));
@@ -3100,70 +3118,62 @@ void llvm::combineAAMetadata(Instruction *K, const Instruction *J) {
   combineMetadata(K, J, /*DoesKMove=*/true, /*AAOnly=*/true);
 }
 
-void llvm::copyMetadataForAccess(Instruction &DestI, Instruction &SourceI) {
+void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
   SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
-  SourceI.getAllMetadata(MD);
-  MDBuilder MDB(DestI.getContext());
-  Type *NewType = DestI.getType();
-
-  // Only needed for range metadata on loads.
-  const DataLayout *DL = nullptr;
-  const LoadInst *LSource = dyn_cast<LoadInst>(&SourceI);
-  if (LSource)
-    DL = &LSource->getDataLayout();
-
+  Source.getAllMetadata(MD);
+  MDBuilder MDB(Dest.getContext());
+  Type *NewType = Dest.getType();
+  const DataLayout &DL = Source.getDataLayout();
   for (const auto &MDPair : MD) {
     unsigned ID = MDPair.first;
     MDNode *N = MDPair.second;
-
+    // Note, essentially every kind of metadata should be preserved here! This
+    // routine is supposed to clone a load instruction changing *only its type*.
+    // The only metadata it makes sense to drop is metadata which is invalidated
+    // when the pointer type changes. This should essentially never be the case
+    // in LLVM, but we explicitly switch over only known metadata to be
+    // conservatively correct. If you are adding metadata to LLVM which pertains
+    // to loads, you almost certainly want to add it here.
     switch (ID) {
-    // Applies to both loads and stores as-is.
     case LLVMContext::MD_dbg:
+    case LLVMContext::MD_tbaa:
     case LLVMContext::MD_prof:
+    case LLVMContext::MD_fpmath:
     case LLVMContext::MD_tbaa_struct:
+    case LLVMContext::MD_invariant_load:
     case LLVMContext::MD_alias_scope:
     case LLVMContext::MD_noalias:
     case LLVMContext::MD_nontemporal:
+    case LLVMContext::MD_mem_parallel_loop_access:
     case LLVMContext::MD_access_group:
     case LLVMContext::MD_noundef:
     case LLVMContext::MD_noalias_addrspace:
-    case LLVMContext::MD_mem_parallel_loop_access:
-      DestI.setMetadata(ID, N);
-      break;
-
-    // Load-only metadata.
-    case LLVMContext::MD_fpmath:
-    case LLVMContext::MD_invariant_load:
-      if (isa<LoadInst>(DestI))
-        DestI.setMetadata(ID, N);
+      // All of these directly apply.
+      Dest.setMetadata(ID, N);
       break;
 
     case LLVMContext::MD_nonnull:
-      if (auto *LDest = dyn_cast<LoadInst>(&DestI)) {
-        if (LSource)
-          copyNonnullMetadata(*LSource, N, *LDest);
-      }
+      copyNonnullMetadata(Source, N, Dest);
       break;
 
     case LLVMContext::MD_align:
     case LLVMContext::MD_dereferenceable:
     case LLVMContext::MD_dereferenceable_or_null:
-      // Applies to both loads and stores only if the new type is also a
-      // pointer.
+      // These only directly apply if the new type is also a pointer.
       if (NewType->isPointerTy())
-        DestI.setMetadata(ID, N);
+        Dest.setMetadata(ID, N);
       break;
 
     case LLVMContext::MD_range:
-      if (auto *LDest = dyn_cast<LoadInst>(&DestI)) {
-        if (LSource && DL)
-          copyRangeMetadata(*DL, *LSource, N, *LDest);
-      }
+      copyRangeMetadata(DL, Source, N, Dest);
       break;
 
-    case LLVMContext::MD_tbaa:
-      if (isa<LoadInst>(DestI))
-        DestI.setMetadata(ID, N);
+    case LLVMContext::MD_nofpclass:
+      // This only applies if the floating-point type interpretation. This
+      // should handle degenerate cases like casting between a scalar and single
+      // element vector.
+      if (NewType->getScalarType() == Source.getType()->getScalarType())
+        Dest.setMetadata(ID, N);
       break;
     }
   }
@@ -3899,6 +3909,12 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   // instructions.
   if (Op->isSwiftError())
     return false;
+
+  // Protected pointer field loads/stores should be paired with the intrinsic
+  // to avoid unnecessary address escapes.
+  if (auto *II = dyn_cast<IntrinsicInst>(Op))
+    if (II->getIntrinsicID() == Intrinsic::protected_field_ptr)
+      return false;
 
   // Cannot replace alloca argument with phi/select.
   if (I->isLifetimeStartOrEnd())

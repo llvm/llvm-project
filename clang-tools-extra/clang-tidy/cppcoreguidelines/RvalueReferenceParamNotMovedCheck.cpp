@@ -29,9 +29,8 @@ AST_MATCHER_P(LambdaExpr, valueCapturesVar, DeclarationMatcher, VarMatcher) {
 }
 AST_MATCHER_P2(Stmt, argumentOf, bool, AllowPartialMove, StatementMatcher,
                Ref) {
-  if (AllowPartialMove) {
+  if (AllowPartialMove)
     return stmt(anyOf(Ref, hasDescendant(Ref))).matches(Node, Finder, Builder);
-  }
   return Ref.matches(Node, Finder, Builder);
 }
 } // namespace

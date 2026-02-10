@@ -177,7 +177,13 @@ inline unsigned getVaSsrcBitWidth() { return 1; }
 inline unsigned getVaSsrcBitShift() { return 8; }
 
 /// \returns HoldCnt bit shift
-inline unsigned getHoldCntWidth() { return 1; }
+inline unsigned getHoldCntWidth(unsigned VersionMajor, unsigned VersionMinor) {
+  static constexpr const unsigned MinMajor = 10;
+  static constexpr const unsigned MinMinor = 3;
+  return std::tie(VersionMajor, VersionMinor) >= std::tie(MinMajor, MinMinor)
+             ? 1
+             : 0;
+}
 
 /// \returns HoldCnt bit shift
 inline unsigned getHoldCntBitShift() { return 7; }
@@ -187,6 +193,10 @@ inline unsigned getHoldCntBitShift() { return 7; }
 namespace llvm {
 
 namespace AMDGPU {
+
+iota_range<InstCounterType> inst_counter_types(InstCounterType MaxCounter) {
+  return enum_seq(LOAD_CNT, MaxCounter);
+}
 
 /// \returns true if the target supports signed immediate offset for SMRD
 /// instructions.
@@ -424,6 +434,8 @@ struct FP4FP8DstByteSelInfo {
   bool HasFP4DstByteSel;
 };
 
+#define GET_DPMACCInstructionTable_DECL
+#define GET_DPMACCInstructionTable_IMPL
 #define GET_MTBUFInfoTable_DECL
 #define GET_MTBUFInfoTable_IMPL
 #define GET_MUBUFInfoTable_DECL
@@ -729,6 +741,8 @@ bool isGenericAtomic(unsigned Opc) {
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMIN ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_FMAX ||
          Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_CMPSWAP ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_SUB_CLAMP_U32 ||
+         Opc == AMDGPU::G_AMDGPU_BUFFER_ATOMIC_COND_SUB_U32 ||
          Opc == AMDGPU::G_AMDGPU_ATOMIC_CMPXCHG;
 }
 
@@ -778,6 +792,11 @@ FPType getFPDstSelType(unsigned Opc) {
     return FPType::FP4;
 
   return FPType::None;
+}
+
+bool isDPMACCInstruction(unsigned Opc) {
+  const DPMACCInstructionInfo *Info = getDPMACCInstructionHelper(Opc);
+  return Info && Info->IsDPMACCInstruction;
 }
 
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc) {
@@ -1710,6 +1729,30 @@ bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val) {
   return false;
 }
 
+raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::Waitcnt &Wait) {
+  ListSeparator LS;
+  if (Wait.LoadCnt != ~0u)
+    OS << LS << "LoadCnt: " << Wait.LoadCnt;
+  if (Wait.ExpCnt != ~0u)
+    OS << LS << "ExpCnt: " << Wait.ExpCnt;
+  if (Wait.DsCnt != ~0u)
+    OS << LS << "DsCnt: " << Wait.DsCnt;
+  if (Wait.StoreCnt != ~0u)
+    OS << LS << "StoreCnt: " << Wait.StoreCnt;
+  if (Wait.SampleCnt != ~0u)
+    OS << LS << "SampleCnt: " << Wait.SampleCnt;
+  if (Wait.BvhCnt != ~0u)
+    OS << LS << "BvhCnt: " << Wait.BvhCnt;
+  if (Wait.KmCnt != ~0u)
+    OS << LS << "KmCnt: " << Wait.KmCnt;
+  if (Wait.XCnt != ~0u)
+    OS << LS << "XCnt: " << Wait.XCnt;
+  if (LS.unused())
+    OS << "none";
+  OS << '\n';
+  return OS;
+}
+
 unsigned getVmcntBitMask(const IsaVersion &Version) {
   return (1 << (getVmcntBitWidthLo(Version.Major) +
                 getVmcntBitWidthHi(Version.Major))) -
@@ -1750,6 +1793,25 @@ unsigned getXcntBitMask(const IsaVersion &Version) {
 
 unsigned getStorecntBitMask(const IsaVersion &Version) {
   return (1 << getStorecntBitWidth(Version.Major)) - 1;
+}
+
+HardwareLimits::HardwareLimits(const IsaVersion &IV) {
+  bool HasExtendedWaitCounts = IV.Major >= 12;
+  if (HasExtendedWaitCounts) {
+    LoadcntMax = getLoadcntBitMask(IV);
+    DscntMax = getDscntBitMask(IV);
+  } else {
+    LoadcntMax = getVmcntBitMask(IV);
+    DscntMax = getLgkmcntBitMask(IV);
+  }
+  ExpcntMax = getExpcntBitMask(IV);
+  StorecntMax = getStorecntBitMask(IV);
+  SamplecntMax = getSamplecntBitMask(IV);
+  BvhcntMax = getBvhcntBitMask(IV);
+  KmcntMax = getKmcntBitMask(IV);
+  XcntMax = getXcntBitMask(IV);
+  VaVdstMax = DepCtr::getVaVdstBitMask();
+  VmVsrcMax = DepCtr::getVmVsrcBitMask();
 }
 
 unsigned getWaitcntBitMask(const IsaVersion &Version) {
@@ -2020,6 +2082,22 @@ int encodeDepCtr(const StringRef Name, int64_t Val, unsigned &UsedOprMask,
                              STI);
 }
 
+unsigned getVaVdstBitMask() { return (1 << getVaVdstBitWidth()) - 1; }
+
+unsigned getVaSdstBitMask() { return (1 << getVaSdstBitWidth()) - 1; }
+
+unsigned getVaSsrcBitMask() { return (1 << getVaSsrcBitWidth()) - 1; }
+
+unsigned getHoldCntBitMask(const IsaVersion &Version) {
+  return (1 << getHoldCntWidth(Version.Major, Version.Minor)) - 1;
+}
+
+unsigned getVmVsrcBitMask() { return (1 << getVmVsrcBitWidth()) - 1; }
+
+unsigned getVaVccBitMask() { return (1 << getVaVccBitWidth()) - 1; }
+
+unsigned getSaSdstBitMask() { return (1 << getSaSdstBitWidth()) - 1; }
+
 unsigned decodeFieldVmVsrc(unsigned Encoded) {
   return unpackBits(Encoded, getVmVsrcBitShift(), getVmVsrcBitWidth());
 }
@@ -2044,8 +2122,9 @@ unsigned decodeFieldVaSsrc(unsigned Encoded) {
   return unpackBits(Encoded, getVaSsrcBitShift(), getVaSsrcBitWidth());
 }
 
-unsigned decodeFieldHoldCnt(unsigned Encoded) {
-  return unpackBits(Encoded, getHoldCntBitShift(), getHoldCntWidth());
+unsigned decodeFieldHoldCnt(unsigned Encoded, const IsaVersion &Version) {
+  return unpackBits(Encoded, getHoldCntBitShift(),
+                    getHoldCntWidth(Version.Major, Version.Minor));
 }
 
 unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc) {
@@ -2102,13 +2181,15 @@ unsigned encodeFieldVaSsrc(unsigned VaSsrc, const MCSubtargetInfo &STI) {
   return encodeFieldVaSsrc(Encoded, VaSsrc);
 }
 
-unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt) {
-  return packBits(HoldCnt, Encoded, getHoldCntBitShift(), getHoldCntWidth());
+unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt,
+                            const IsaVersion &Version) {
+  return packBits(HoldCnt, Encoded, getHoldCntBitShift(),
+                  getHoldCntWidth(Version.Major, Version.Minor));
 }
 
 unsigned encodeFieldHoldCnt(unsigned HoldCnt, const MCSubtargetInfo &STI) {
   unsigned Encoded = getDefaultDepCtrEncoding(STI);
-  return encodeFieldHoldCnt(Encoded, HoldCnt);
+  return encodeFieldHoldCnt(Encoded, HoldCnt, getIsaVersion(STI.getCPU()));
 }
 
 } // namespace DepCtr
@@ -2458,7 +2539,7 @@ unsigned getNSAMaxSize(const MCSubtargetInfo &STI, bool HasSampler) {
 }
 
 unsigned getMaxNumUserSGPRs(const MCSubtargetInfo &STI) {
-  if (isGFX1250(STI))
+  if (isGFX1250Plus(STI))
     return 32;
   return 16;
 }
@@ -2525,13 +2606,25 @@ bool isGFX12(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX12];
 }
 
-bool isGFX12Plus(const MCSubtargetInfo &STI) { return isGFX12(STI); }
+bool isGFX12Plus(const MCSubtargetInfo &STI) {
+  return isGFX12(STI) || isGFX13Plus(STI);
+}
 
 bool isNotGFX12Plus(const MCSubtargetInfo &STI) { return !isGFX12Plus(STI); }
 
 bool isGFX1250(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX1250Insts] && !isGFX13(STI);
+}
+
+bool isGFX1250Plus(const MCSubtargetInfo &STI) {
   return STI.getFeatureBits()[AMDGPU::FeatureGFX1250Insts];
 }
+
+bool isGFX13(const MCSubtargetInfo &STI) {
+  return STI.getFeatureBits()[AMDGPU::FeatureGFX13];
+}
+
+bool isGFX13Plus(const MCSubtargetInfo &STI) { return isGFX13(STI); }
 
 bool supportsWGP(const MCSubtargetInfo &STI) {
   if (isGFX1250(STI))
@@ -2586,7 +2679,7 @@ bool hasMAIInsts(const MCSubtargetInfo &STI) {
 }
 
 bool hasVOPD(const MCSubtargetInfo &STI) {
-  return STI.hasFeature(AMDGPU::FeatureVOPD);
+  return STI.hasFeature(AMDGPU::FeatureVOPDInsts);
 }
 
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI) {
@@ -2751,6 +2844,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
@@ -3112,6 +3206,34 @@ std::optional<unsigned> getInlineEncodingV2F16(uint32_t Literal) {
   return getInlineEncodingV216(true, Literal);
 }
 
+// Encoding of the literal as an inline constant for V_PK_FMAC_F16 instruction
+// or nullopt. This accounts for different inline constant behavior:
+// - Pre-GFX11: fp16 inline constants have the value in low 16 bits, 0 in high
+// - GFX11+: fp16 inline constants are duplicated into both halves
+std::optional<unsigned> getPKFMACF16InlineEncoding(uint32_t Literal,
+                                                   bool IsGFX11Plus) {
+  // Pre-GFX11 behavior: f16 in low bits, 0 in high bits
+  if (!IsGFX11Plus)
+    return getInlineEncodingV216(/*IsFloat=*/true, Literal);
+
+  // GFX11+ behavior: f16 duplicated in both halves
+  // First, check for sign-extended integer inline constants (-16 to 64)
+  // These work the same across all generations
+  int32_t Signed = static_cast<int32_t>(Literal);
+  if (Signed >= 0 && Signed <= 64)
+    return 128 + Signed;
+
+  if (Signed >= -16 && Signed <= -1)
+    return 192 + std::abs(Signed);
+
+  // For float inline constants on GFX11+, both halves must be equal
+  uint16_t Lo = static_cast<uint16_t>(Literal);
+  uint16_t Hi = static_cast<uint16_t>(Literal >> 16);
+  if (Lo != Hi)
+    return std::nullopt;
+  return getInlineEncodingV216(/*IsFloat=*/true, Lo);
+}
+
 // Whether the given literal can be inlined for a V_PK_* instruction.
 bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType) {
   switch (OpType) {
@@ -3121,6 +3243,8 @@ bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType) {
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
     return getInlineEncodingV216(true, Literal).has_value();
+  case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
+    llvm_unreachable("OPERAND_REG_IMM_V2FP16_SPLAT is not supported");
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     return isInlinableLiteralV2BF16(Literal);
@@ -3146,6 +3270,11 @@ bool isInlinableLiteralV2F16(uint32_t Literal) {
   return getInlineEncodingV2F16(Literal).has_value();
 }
 
+// Whether the given literal can be inlined for V_PK_FMAC_F16 instruction.
+bool isPKFMACF16InlineConstant(uint32_t Literal, bool IsGFX11Plus) {
+  return getPKFMACF16InlineEncoding(Literal, IsGFX11Plus).has_value();
+}
+
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64) {
   if (IsFP64)
     return !Lo_32(Val);
@@ -3167,6 +3296,7 @@ int64_t encode32BitLiteral(int64_t Imm, OperandType Type, bool IsLit) {
   case OPERAND_REG_IMM_INT32:
   case OPERAND_REG_IMM_V2BF16:
   case OPERAND_REG_IMM_V2FP16:
+  case OPERAND_REG_IMM_V2FP16_SPLAT:
   case OPERAND_REG_IMM_V2FP32:
   case OPERAND_REG_IMM_V2INT16:
   case OPERAND_REG_IMM_V2INT32:
@@ -3450,6 +3580,12 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
   static const AMDGPU::OpName VOP2MADMKOps[4] = {
       AMDGPU::OpName::src0, AMDGPU::OpName::NUM_OPERAND_NAMES,
       AMDGPU::OpName::src1, AMDGPU::OpName::vdst};
+  static const AMDGPU::OpName VOPDFMAMKOpsX[4] = {
+      AMDGPU::OpName::src0X, AMDGPU::OpName::NUM_OPERAND_NAMES,
+      AMDGPU::OpName::vsrc1X, AMDGPU::OpName::vdstX};
+  static const AMDGPU::OpName VOPDFMAMKOpsY[4] = {
+      AMDGPU::OpName::src0Y, AMDGPU::OpName::NUM_OPERAND_NAMES,
+      AMDGPU::OpName::vsrc1Y, AMDGPU::OpName::vdstY};
 
   unsigned TSFlags = Desc.TSFlags;
 
@@ -3491,8 +3627,11 @@ getVGPRLoweringOperandTables(const MCInstrDesc &Desc) {
   if (TSFlags & SIInstrFlags::VIMAGE)
     return {VIMGOps, nullptr};
 
-  if (AMDGPU::isVOPD(Desc.getOpcode()))
-    return {VOPDOpsX, VOPDOpsY};
+  if (AMDGPU::isVOPD(Desc.getOpcode())) {
+    auto [OpX, OpY] = getVOPDComponents(Desc.getOpcode());
+    return {(OpX == AMDGPU::V_FMAMK_F32) ? VOPDFMAMKOpsX : VOPDOpsX,
+            (OpY == AMDGPU::V_FMAMK_F32) ? VOPDFMAMKOpsY : VOPDOpsY};
+  }
 
   assert(!(TSFlags & SIInstrFlags::MIMG));
 
@@ -3633,9 +3772,9 @@ ClusterDimsAttr ClusterDimsAttr::get(const Function &F) {
 
   if (!Attr.has_value())
     AttrKind = Kind::Unknown;
-  else if (all_of(*Attr, [](unsigned V) { return V == EncoNoCluster; }))
+  else if (all_of(*Attr, equal_to(EncoNoCluster)))
     AttrKind = Kind::NoCluster;
-  else if (all_of(*Attr, [](unsigned V) { return V == EncoVariableDims; }))
+  else if (all_of(*Attr, equal_to(EncoVariableDims)))
     AttrKind = Kind::VariableDims;
 
   ClusterDimsAttr A(AttrKind);

@@ -266,10 +266,12 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("constant-pool", MIToken::kw_constant_pool)
       .Case("call-entry", MIToken::kw_call_entry)
       .Case("custom", MIToken::kw_custom)
+      .Case("lanemask", MIToken::kw_lanemask)
       .Case("liveout", MIToken::kw_liveout)
       .Case("landing-pad", MIToken::kw_landing_pad)
       .Case("inlineasm-br-indirect-target",
             MIToken::kw_inlineasm_br_indirect_target)
+      .Case("ehscope-entry", MIToken::kw_ehscope_entry)
       .Case("ehfunclet-entry", MIToken::kw_ehfunclet_entry)
       .Case("liveins", MIToken::kw_liveins)
       .Case("successors", MIToken::kw_successors)
@@ -292,6 +294,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
             MIToken::kw_machine_block_address_taken)
       .Case("call-frame-size", MIToken::kw_call_frame_size)
       .Case("noconvergent", MIToken::kw_noconvergent)
+      .Case("mmra", MIToken::kw_mmra)
       .Default(MIToken::Identifier);
 }
 

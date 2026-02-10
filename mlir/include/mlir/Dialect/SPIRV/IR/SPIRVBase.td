@@ -360,6 +360,7 @@ def SPV_EXT_shader_image_int64           : I32EnumAttrCase<"SPV_EXT_shader_image
 def SPV_EXT_shader_atomic_float16_add    : I32EnumAttrCase<"SPV_EXT_shader_atomic_float16_add", 1011>;
 def SPV_EXT_mesh_shader                  : I32EnumAttrCase<"SPV_EXT_mesh_shader", 1012>;
 def SPV_EXT_replicated_composites        : I32EnumAttrCase<"SPV_EXT_replicated_composites", 1013>;
+def SPV_EXT_float8                       : I32EnumAttrCase<"SPV_EXT_float8", 1014>;
 
 def SPV_AMD_gpu_shader_half_float_fetch          : I32EnumAttrCase<"SPV_AMD_gpu_shader_half_float_fetch", 2000>;
 def SPV_AMD_shader_ballot                        : I32EnumAttrCase<"SPV_AMD_shader_ballot", 2001>;
@@ -449,7 +450,7 @@ def SPIRV_ExtensionAttr :
       SPV_EXT_shader_stencil_export, SPV_EXT_shader_viewport_index_layer,
       SPV_EXT_shader_atomic_float_add, SPV_EXT_shader_atomic_float_min_max,
       SPV_EXT_shader_image_int64, SPV_EXT_shader_atomic_float16_add,
-      SPV_EXT_mesh_shader, SPV_EXT_replicated_composites,
+      SPV_EXT_mesh_shader, SPV_EXT_replicated_composites, SPV_EXT_float8,
       SPV_ARM_tensors, SPV_ARM_graph,
       SPV_AMD_gpu_shader_half_float_fetch, SPV_AMD_shader_ballot,
       SPV_AMD_shader_explicit_vertex_parameter, SPV_AMD_shader_fragment_mask,
@@ -1486,6 +1487,12 @@ def SPIRV_C_CacheControlsINTEL : I32EnumAttrCase<"CacheControlsINTEL", 6441> {
   ];
 }
 
+def SPIRV_C_Float8EXT : I32EnumAttrCase<"Float8EXT", 4212> {
+  list<Availability> availability = [
+    Extension<[SPV_EXT_float8]>
+  ];
+}
+
 def SPIRV_CapabilityAttr :
     SPIRV_I32EnumAttr<"Capability", "valid SPIR-V Capability", "capability", [
       SPIRV_C_Matrix, SPIRV_C_Addresses, SPIRV_C_Linkage, SPIRV_C_Kernel, SPIRV_C_Float16,
@@ -1583,7 +1590,7 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_ShaderStereoViewNV, SPIRV_C_Bfloat16ConversionINTEL,
       SPIRV_C_CacheControlsINTEL, SPIRV_C_BFloat16TypeKHR,
       SPIRV_C_BFloat16DotProductKHR, SPIRV_C_BFloat16CooperativeMatrixKHR,
-      SPIRV_C_TensorFloat32RoundingINTEL
+      SPIRV_C_TensorFloat32RoundingINTEL, SPIRV_C_Float8EXT
     ]>;
 
 def SPIRV_AM_Logical                 : I32EnumAttrCase<"Logical", 0>;
@@ -3287,9 +3294,24 @@ def SPIRV_FPE_BFloat16KHR : I32EnumAttrCase<"BFloat16KHR", 0> {
     Capability<[SPIRV_C_BFloat16TypeKHR]>
   ];
 }
+
+def SPIRV_FPE_Float8E4M3EXT : I32EnumAttrCase<"Float8E4M3EXT", 4214> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_Float8EXT]>
+  ];
+}
+
+def SPIRV_FPE_Float8E5M2EXT : I32EnumAttrCase<"Float8E5M2EXT", 4215> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_Float8EXT]>
+  ];
+}
+
 def SPIRV_FPEncodingAttr :
     SPIRV_I32EnumAttr<"FPEncoding", "valid SPIR-V FPEncoding", "f_p_encoding", [
-      SPIRV_FPE_BFloat16KHR
+      SPIRV_FPE_BFloat16KHR,
+      SPIRV_FPE_Float8E4M3EXT,
+      SPIRV_FPE_Float8E5M2EXT,
     ]>;
 
 def SPIRV_FC_None         : I32BitEnumAttrCaseNone<"None">;
@@ -4187,6 +4209,15 @@ def SPIRV_INTEL_StoreCacheControlAttr :
       SPIRV_INTEL_SCC_WriteBack, SPIRV_INTEL_SCC_Streaming
     ]>;
 
+// Non-uniform quad swap direction attribute
+def SPIRV_QuadSwapDirectionAttr : SPIRV_I32EnumAttr<
+  "QuadSwapDirection", "Swap direction of a GroupNonUniformQuadSwap", "quad_swap_direction",
+  [
+      I32EnumAttrCase<"Horizontal", 0>,
+      I32EnumAttrCase<"Vertical", 1>,
+      I32EnumAttrCase<"Diagonal", 2>
+  ]>;
+
 //===----------------------------------------------------------------------===//
 // SPIR-V attribute definitions
 //===----------------------------------------------------------------------===//
@@ -4233,14 +4264,18 @@ def SPIRV_IsTensorArmType : CPred<"::llvm::isa<::mlir::spirv::TensorArmType>($_s
 def SPIRV_Void : TypeAlias<NoneType, "void">;
 def SPIRV_Bool : TypeAlias<I1, "bool">;
 def SPIRV_Integer : AnyIntOfWidths<[8, 16, 32, 64]>;
+def SPIRV_Int8 : TypeAlias<I8, "Int8">;
 def SPIRV_Int16 : TypeAlias<I16, "Int16">;
 def SPIRV_Int32 : TypeAlias<I32, "Int32">;
+def SPIRV_Float16 : TypeAlias<F16, "Float16">;
 def SPIRV_Float32 : TypeAlias<F32, "Float32">;
 def SPIRV_BFloat16KHR : TypeAlias<BF16, "BFloat16">;
+def SPIRV_Float8E4M3EXT : TypeAlias<F8E4M3FN, "Float8E4M3">;
+def SPIRV_Float8E5M2EXT : TypeAlias<F8E5M2, "Float8E5M2">;
 def SPIRV_Float : FloatOfWidths<[16, 32, 64]>;
 def SPIRV_Float16or32 : FloatOfWidths<[16, 32]>;
-def SPIRV_AnyFloat : AnyTypeOf<[SPIRV_Float, SPIRV_BFloat16KHR]>;
-def SPIRV_Vector : VectorOfLengthAndType<[2, 3, 4, 8, 16],
+def SPIRV_AnyFloat : AnyTypeOf<[SPIRV_Float, SPIRV_BFloat16KHR, SPIRV_Float8E4M3EXT, SPIRV_Float8E5M2EXT]>;
+def SPIRV_Vector : VectorOfRankAndLengthAndType<[1], [2, 3, 4, 8, 16],
                                        [SPIRV_Bool, SPIRV_Integer, SPIRV_AnyFloat]>;
 // Component type check is done in the type parser for the following SPIR-V
 // dialect-specific types so we use "Any" here.
@@ -4293,7 +4328,7 @@ class SPIRV_MatrixOfType<list<Type> allowedTypes> :
     "Matrix">;
 
 class SPIRV_VectorOf<Type type> :
-    FixedVectorOfLengthAndType<[2, 3, 4, 8, 16], [type]>;
+    FixedVectorOfRankAndLengthAndType<[1], [2, 3, 4, 8, 16], [type]>;
 
 class SPIRV_ScalarOrVectorOf<Type type> :
     AnyTypeOf<[type, SPIRV_VectorOf<type>]>;
@@ -4312,7 +4347,7 @@ class SPIRV_MatrixOf<Type type> :
 def SPIRV_ScalarOrVector : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector]>;
 def SPIRV_ScalarOrVectorOrPtr : AnyTypeOf<[SPIRV_ScalarOrVector, SPIRV_AnyPtr]>;
 
-class SPIRV_Vec4<Type type> : VectorOfLengthAndType<[4], [type]>;
+class SPIRV_Vec4<Type type> : VectorOfRankAndLengthAndType<[1], [4], [type]>;
 def SPIRV_IntVec4 : SPIRV_Vec4<SPIRV_Integer>;
 def SPIRV_IOrUIVec4 : SPIRV_Vec4<SPIRV_SignlessOrUnsignedInt>;
 def SPIRV_Int32Vec4 : SPIRV_Vec4<AnyI32>;
@@ -4576,6 +4611,7 @@ def SPIRV_OC_OpGroupNonUniformBitwiseXor      : I32EnumAttrCase<"OpGroupNonUnifo
 def SPIRV_OC_OpGroupNonUniformLogicalAnd      : I32EnumAttrCase<"OpGroupNonUniformLogicalAnd", 362>;
 def SPIRV_OC_OpGroupNonUniformLogicalOr       : I32EnumAttrCase<"OpGroupNonUniformLogicalOr", 363>;
 def SPIRV_OC_OpGroupNonUniformLogicalXor      : I32EnumAttrCase<"OpGroupNonUniformLogicalXor", 364>;
+def SPIRV_OC_OpGroupNonUniformQuadSwap        : I32EnumAttrCase<"OpGroupNonUniformQuadSwap", 366>;
 def SPIRV_OC_OpTypeTensorARM                  : I32EnumAttrCase<"OpTypeTensorARM", 4163>;
 def SPIRV_OC_OpGraphConstantARM               : I32EnumAttrCase<"OpGraphConstantARM", 4181>;
 def SPIRV_OC_OpGraphEntryPointARM             : I32EnumAttrCase<"OpGraphEntryPointARM", 4182>;
@@ -4702,7 +4738,7 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpGroupNonUniformFMax, SPIRV_OC_OpGroupNonUniformBitwiseAnd,
       SPIRV_OC_OpGroupNonUniformBitwiseOr, SPIRV_OC_OpGroupNonUniformBitwiseXor,
       SPIRV_OC_OpGroupNonUniformLogicalAnd, SPIRV_OC_OpGroupNonUniformLogicalOr,
-      SPIRV_OC_OpGroupNonUniformLogicalXor,
+      SPIRV_OC_OpGroupNonUniformLogicalXor, SPIRV_OC_OpGroupNonUniformQuadSwap,
       SPIRV_OC_OpTypeTensorARM,
       SPIRV_OC_OpGraphEntryPointARM, SPIRV_OC_OpGraphARM,
       SPIRV_OC_OpGraphInputARM, SPIRV_OC_OpGraphSetOutputARM, SPIRV_OC_OpGraphEndARM,
@@ -4907,5 +4943,30 @@ def SPIRV_FPFastMathModeAttr :
       SPIRV_FPFMM_AllowRecip, SPIRV_FPFMM_Fast, SPIRV_FPFMM_AllowContractFastINTEL,
       SPIRV_FPFMM_AllowReassocINTEL
     ]>;
+
+//===----------------------------------------------------------------------===//
+// SPIR-V TOSA enum definitions.
+//===----------------------------------------------------------------------===//
+
+// NOTE: This is an attribute in the SPIR-V *dialect* but a constant (<id>) in
+// SPIR-V proper.
+def SPIRV_TosaExtAccTypeAttr : SPIRV_I32EnumAttr<
+  "TosaExtAccType", "Tosa Ext Acculumator Type", "tosa_ext_acc_type",
+  [
+      I32EnumAttrCase<"INT32", 1>,
+      I32EnumAttrCase<"FP16", 2>,
+      I32EnumAttrCase<"FP32", 3>,
+      I32EnumAttrCase<"INT48", 4>,
+  ]>;
+
+// NOTE: This is an attribute in the SPIR-V *dialect* but a constant (<id>) in
+// SPIR-V proper.
+def SPIRV_TosaExtNaNPropagationModeAttr : SPIRV_I32EnumAttr<
+  "TosaExtNaNPropagationModeType", "Tosa Ext NaN Propoagation Mode Type",
+  "tosa_ext_nan_propagation_mode_type",
+  [
+      I32EnumAttrCase<"Propagate", 1>,
+      I32EnumAttrCase<"Ignore", 2>,
+  ]>;
 
 #endif // MLIR_DIALECT_SPIRV_IR_BASE

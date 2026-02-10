@@ -187,6 +187,12 @@ m_scev_PtrToInt(const Op0_t &Op0) {
 }
 
 template <typename Op0_t>
+inline SCEVUnaryExpr_match<SCEVPtrToAddrExpr, Op0_t>
+m_scev_PtrToAddr(const Op0_t &Op0) {
+  return SCEVUnaryExpr_match<SCEVPtrToAddrExpr, Op0_t>(Op0);
+}
+
+template <typename Op0_t>
 inline SCEVUnaryExpr_match<SCEVTruncateExpr, Op0_t>
 m_scev_Trunc(const Op0_t &Op0) {
   return m_scev_Unary<SCEVTruncateExpr>(Op0);
@@ -378,6 +384,19 @@ template <typename Op0_t, typename Op1_t, typename Loop_t>
 inline SCEVAffineAddRec_match<Op0_t, Op1_t, Loop_t>
 m_scev_AffineAddRec(const Op0_t &Op0, const Op1_t &Op1, const Loop_t &L) {
   return SCEVAffineAddRec_match<Op0_t, Op1_t, Loop_t>(Op0, Op1, L);
+}
+
+struct is_undef_or_poison {
+  bool match(const SCEV *S) const {
+    const SCEVUnknown *Unknown;
+    return SCEVPatternMatch::match(S, m_SCEVUnknown(Unknown)) &&
+           isa<UndefValue>(Unknown->getValue());
+  }
+};
+
+/// Match an SCEVUnknown wrapping undef or poison.
+inline is_undef_or_poison m_scev_UndefOrPoison() {
+  return is_undef_or_poison();
 }
 
 } // namespace SCEVPatternMatch

@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
@@ -518,12 +519,7 @@ SymbolFileDWARF::GetTypeSystemForLanguage(LanguageType language) {
   if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
     return debug_map_symfile->GetTypeSystemForLanguage(language);
 
-  auto type_system_or_err =
-      m_objfile_sp->GetModule()->GetTypeSystemForLanguage(language);
-  if (type_system_or_err)
-    if (auto ts = *type_system_or_err)
-      ts->SetSymbolFile(this);
-  return type_system_or_err;
+  return SymbolFileCommon::GetTypeSystemForLanguage(language);
 }
 
 void SymbolFileDWARF::InitializeObject() {
@@ -1560,8 +1556,8 @@ bool SymbolFileDWARF::HasForwardDeclForCompilerType(
   auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (!clang_type_system)
     return false;
-  DWARFASTParserClang *ast_parser =
-      static_cast<DWARFASTParserClang *>(clang_type_system->GetDWARFParser());
+  auto *ast_parser =
+      llvm::cast<DWARFASTParserClang>(clang_type_system->GetDWARFParser());
   return ast_parser->GetClangASTImporter().CanImport(compiler_type);
 }
 
@@ -1569,8 +1565,8 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   auto clang_type_system = compiler_type.GetTypeSystem<TypeSystemClang>();
   if (clang_type_system) {
-    DWARFASTParserClang *ast_parser =
-        static_cast<DWARFASTParserClang *>(clang_type_system->GetDWARFParser());
+    auto *ast_parser =
+        llvm::cast<DWARFASTParserClang>(clang_type_system->GetDWARFParser());
     if (ast_parser &&
         ast_parser->GetClangASTImporter().CanImport(compiler_type))
       return ast_parser->GetClangASTImporter().CompleteType(compiler_type);
@@ -1614,8 +1610,7 @@ bool SymbolFileDWARF::CompleteType(CompilerType &compiler_type) {
 
   if (decl_die != def_die) {
     GetDIEToType()[def_die.GetDIE()] = type;
-    DWARFASTParserClang *ast_parser =
-        static_cast<DWARFASTParserClang *>(dwarf_ast);
+    auto *ast_parser = llvm::cast<DWARFASTParserClang>(dwarf_ast);
     ast_parser->MapDeclDIEToDefDIE(decl_die, def_die);
   }
 
@@ -1935,11 +1930,11 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   }
 
   const lldb::offset_t file_offset = 0;
-  DataBufferSP dwo_file_data_sp;
+  DataExtractorSP dwo_file_extractor_sp;
   lldb::offset_t dwo_file_data_offset = 0;
   ObjectFileSP dwo_obj_file = ObjectFile::FindPlugin(
       GetObjectFile()->GetModule(), &dwo_file, file_offset,
-      FileSystem::Instance().GetByteSize(dwo_file), dwo_file_data_sp,
+      FileSystem::Instance().GetByteSize(dwo_file), dwo_file_extractor_sp,
       dwo_file_data_offset);
   if (dwo_obj_file == nullptr) {
     unit.SetDwoError(Status::FromErrorStringWithFormatv(
@@ -2482,7 +2477,7 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
         sc.block = function_block.FindBlockByID(inlined_die.GetOffset());
     }
 
-    sc_list.Append(sc);
+    sc_list.AppendIfUnique(sc, /*merge_symbol_into_function=*/true);
     return true;
   }
 
@@ -2516,6 +2511,7 @@ static llvm::StringRef ClangToItaniumDtorKind(clang::CXXDtorType kind) {
   case clang::CXXDtorType::Dtor_Unified:
     return "D4";
   case clang::CXXDtorType::Dtor_Comdat:
+  case clang::CXXDtorType::Dtor_VectorDeleting:
     llvm_unreachable("Unexpected destructor kind.");
   }
   llvm_unreachable("Fully covered switch above");
@@ -2550,11 +2546,11 @@ SymbolFileDWARF::FindFunctionDefinition(const FunctionCallLabel &label,
                                         const DWARFDIE &declaration) {
   auto do_lookup = [this](llvm::StringRef lookup_name) -> DWARFDIE {
     DWARFDIE found;
-    Module::LookupInfo info(ConstString(lookup_name),
-                            lldb::eFunctionNameTypeFull,
-                            lldb::eLanguageTypeUnknown);
+    auto lookup_infos = Module::LookupInfo::MakeLookupInfos(
+        ConstString(lookup_name), lldb::eFunctionNameTypeFull,
+        lldb::eLanguageTypeUnknown);
 
-    m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
+    m_index->GetFunctions(lookup_infos, *this, {}, [&](DWARFDIE entry) {
       if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
         return IterationAction::Continue;
 
@@ -2619,24 +2615,23 @@ SymbolFileDWARF::ResolveFunctionCallLabel(FunctionCallLabel &label) {
         label.lookup_name, from, variant);
     if (!subst_or_err)
       return llvm::joinErrors(
-          llvm::createStringError(llvm::formatv(
+          llvm::createStringErrorV(
               "failed to substitute {0} for {1} in mangled name {2}:", from,
-              variant, label.lookup_name)),
+              variant, label.lookup_name),
           subst_or_err.takeError());
 
     if (!*subst_or_err)
-      return llvm::createStringError(
-          llvm::formatv("got invalid substituted mangled named (substituted "
-                        "{0} for {1} in mangled name {2})",
-                        from, variant, label.lookup_name));
+      return llvm::createStringErrorV(
+          "got invalid substituted mangled named (substituted "
+          "{0} for {1} in mangled name {2})",
+          from, variant, label.lookup_name);
 
     label.lookup_name = subst_or_err->GetStringRef();
   }
 
   DWARFDIE die = GetDIE(label.symbol_id);
   if (!die.IsValid())
-    return llvm::createStringError(
-        llvm::formatv("invalid DIE ID in {0}", label));
+    return llvm::createStringErrorV("invalid DIE ID in {0}", label);
 
   // Label was created using a declaration DIE. Need to fetch the definition
   // to resolve the function call.
@@ -2737,8 +2732,8 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
     if (it != llvm::StringRef::npos) {
       const llvm::StringRef name_no_template_params = name_ref.slice(0, it);
 
-      Module::LookupInfo no_tp_lookup_info(lookup_info);
-      no_tp_lookup_info.SetLookupName(ConstString(name_no_template_params));
+      Module::LookupInfo no_tp_lookup_info(
+          lookup_info, ConstString(name_no_template_params));
       m_index->GetFunctions(no_tp_lookup_info, *this, parent_decl_ctx,
                             [&](DWARFDIE die) {
                               if (resolved_dies.insert(die.GetDIE()).second)
@@ -4475,12 +4470,12 @@ const std::shared_ptr<SymbolFileDWARFDwo> &SymbolFileDWARF::GetDwpSymbolFile() {
     }
     if (FileSystem::Instance().Exists(dwp_filespec)) {
       LLDB_LOG(log, "Found DWP file: \"{0}\"", dwp_filespec);
-      DataBufferSP dwp_file_data_sp;
+      DataExtractorSP dwp_file_extractor_sp;
       lldb::offset_t dwp_file_data_offset = 0;
       ObjectFileSP dwp_obj_file = ObjectFile::FindPlugin(
           GetObjectFile()->GetModule(), &dwp_filespec, 0,
-          FileSystem::Instance().GetByteSize(dwp_filespec), dwp_file_data_sp,
-          dwp_file_data_offset);
+          FileSystem::Instance().GetByteSize(dwp_filespec),
+          dwp_file_extractor_sp, dwp_file_data_offset);
       if (dwp_obj_file) {
         m_dwp_symfile = std::make_shared<SymbolFileDWARFDwo>(
             *this, dwp_obj_file, DIERef::k_file_index_mask);

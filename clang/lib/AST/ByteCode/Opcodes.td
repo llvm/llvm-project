@@ -877,13 +877,13 @@ def Alloc : Opcode {
 }
 
 def AllocN : Opcode {
-  let Types = [IntegerTypeClass];
+  let Types = [IntegralTypeClass];
   let Args = [ArgPrimType, ArgExpr, ArgBool];
   let HasGroup = 1;
 }
 
 def AllocCN : Opcode {
-  let Types = [IntegerTypeClass];
+  let Types = [IntegralTypeClass];
   let Args = [ArgDesc, ArgBool];
   let HasGroup = 1;
 }
@@ -923,5 +923,10 @@ def DiagTypeid : Opcode;
 
 def CheckDestruction : Opcode;
 
+def CtorCheck : Opcode;
+
 def PushCC : Opcode { let Args = [ArgBool]; }
 def PopCC : Opcode;
+
+def PushMSVCCE : Opcode;
+def PopMSVCCE : Opcode;

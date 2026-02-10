@@ -1,4 +1,7 @@
-math/fma.cl
+conversion/convert_float2float.cl
+conversion/convert_float2int.cl
+conversion/convert_int2float.cl
+conversion/convert_integer.cl
 shared/vstore_half.cl
 subnormal_config.cl
 ../generic/geometric/distance.cl

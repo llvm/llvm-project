@@ -95,7 +95,6 @@ ModuleListProperties::ModuleListProperties() {
     llvm::sys::path::append(path, "IndexCache");
     lldbassert(SetLLDBIndexCachePath(FileSpec(path)));
   }
-
 }
 
 bool ModuleListProperties::GetEnableExternalLookup() const {
@@ -117,6 +116,16 @@ SymbolDownload ModuleListProperties::GetSymbolAutoDownload() const {
   return GetPropertyAtIndexAs<lldb::SymbolDownload>(
       idx, static_cast<lldb::SymbolDownload>(
                g_modulelist_properties[idx].default_uint_value));
+}
+
+bool ModuleListProperties::GetSharedCacheBinaryLoading() const {
+  const uint32_t idx = ePropertySharedCacheBinaryLoading;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
+bool ModuleListProperties::SetSharedCacheBinaryLoading(bool new_value) {
+  return SetPropertyAtIndex(ePropertySharedCacheBinaryLoading, new_value);
 }
 
 FileSpec ModuleListProperties::GetClangModulesCachePath() const {
@@ -186,7 +195,7 @@ PathMappingList ModuleListProperties::GetSymlinkMappings() const {
   return m_symlink_paths;
 }
 
-bool ModuleListProperties::GetLoadSymbolOnDemand() {
+bool ModuleListProperties::GetLoadSymbolOnDemand() const {
   const uint32_t idx = ePropertyLoadSymbolOnDemand;
   return GetPropertyAtIndexAs<bool>(
       idx, g_modulelist_properties[idx].default_uint_value != 0);
@@ -453,21 +462,22 @@ void ModuleList::FindFunctions(ConstString name,
                                FunctionNameType name_type_mask,
                                const ModuleFunctionSearchOptions &options,
                                SymbolContextList &sc_list) const {
-  const size_t old_size = sc_list.GetSize();
-
   if (name_type_mask & eFunctionNameTypeAuto) {
-    Module::LookupInfo lookup_info(name, name_type_mask, eLanguageTypeUnknown);
-
+    std::vector<Module::LookupInfo> lookup_infos =
+        Module::LookupInfo::MakeLookupInfos(name, name_type_mask,
+                                            eLanguageTypeUnknown);
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
-    for (const ModuleSP &module_sp : m_modules) {
-      module_sp->FindFunctions(lookup_info, CompilerDeclContext(), options,
-                               sc_list);
+    for (const auto &lookup_info : lookup_infos) {
+      const size_t old_size = sc_list.GetSize();
+      for (const ModuleSP &module_sp : m_modules) {
+        module_sp->FindFunctions(lookup_info, CompilerDeclContext(), options,
+                                 sc_list);
+      }
+
+      const size_t new_size = sc_list.GetSize();
+      if (old_size < new_size)
+        lookup_info.Prune(sc_list, old_size);
     }
-
-    const size_t new_size = sc_list.GetSize();
-
-    if (old_size < new_size)
-      lookup_info.Prune(sc_list, old_size);
   } else {
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     for (const ModuleSP &module_sp : m_modules) {
@@ -480,21 +490,24 @@ void ModuleList::FindFunctions(ConstString name,
 void ModuleList::FindFunctionSymbols(ConstString name,
                                      lldb::FunctionNameType name_type_mask,
                                      SymbolContextList &sc_list) {
-  const size_t old_size = sc_list.GetSize();
-
   if (name_type_mask & eFunctionNameTypeAuto) {
-    Module::LookupInfo lookup_info(name, name_type_mask, eLanguageTypeUnknown);
+    std::vector<Module::LookupInfo> lookup_infos =
+        Module::LookupInfo::MakeLookupInfos(name, name_type_mask,
+                                            eLanguageTypeUnknown);
 
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
-    for (const ModuleSP &module_sp : m_modules) {
-      module_sp->FindFunctionSymbols(lookup_info.GetLookupName(),
-                                     lookup_info.GetNameTypeMask(), sc_list);
+    for (const auto &lookup_info : lookup_infos) {
+      const size_t old_size = sc_list.GetSize();
+      for (const ModuleSP &module_sp : m_modules) {
+        module_sp->FindFunctionSymbols(lookup_info.GetLookupName(),
+                                       lookup_info.GetNameTypeMask(), sc_list);
+      }
+
+      const size_t new_size = sc_list.GetSize();
+
+      if (old_size < new_size)
+        lookup_info.Prune(sc_list, old_size);
     }
-
-    const size_t new_size = sc_list.GetSize();
-
-    if (old_size < new_size)
-      lookup_info.Prune(sc_list, old_size);
   } else {
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     for (const ModuleSP &module_sp : m_modules) {
@@ -1043,8 +1056,7 @@ size_t ModuleList::RemoveOrphanSharedModules(bool mandatory) {
 Status
 ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
                             llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                            bool *did_create_ptr, bool always_create,
-                            bool invoke_locate_callback) {
+                            bool *did_create_ptr, bool invoke_locate_callback) {
   SharedModuleList &shared_module_list = GetSharedModuleList();
   std::lock_guard<std::recursive_mutex> guard(shared_module_list.GetMutex());
   char path[PATH_MAX];
@@ -1063,7 +1075,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   // Make sure no one else can try and get or create a module while this
   // function is actively working on it by doing an extra lock on the global
   // mutex list.
-  if (!always_create) {
+  {
     ModuleList matching_module_list;
     shared_module_list.FindModules(module_spec, matching_module_list);
     const size_t num_matching_modules = matching_module_list.GetSize();
@@ -1099,18 +1111,26 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   if (module_sp)
     return error;
 
-  // Try target's platform locate module callback before second attempt.
+  // Try platform's locate module callback before second attempt.
+  // The platform can come from either the Target (if available) or directly
+  // from the ModuleSpec (useful when Target is not yet created, e.g., during
+  // target creation for launch mode).
   if (invoke_locate_callback) {
-    TargetSP target_sp = module_spec.GetTargetSP();
-    if (target_sp && target_sp->IsValid()) {
-      if (PlatformSP platform_sp = target_sp->GetPlatform()) {
-        FileSpec symbol_file_spec;
-        platform_sp->CallLocateModuleCallbackIfSet(
-            module_spec, module_sp, symbol_file_spec, did_create_ptr);
-        if (module_sp) {
-          // The callback found a module.
-          return error;
-        }
+    PlatformSP platform_sp;
+    if (TargetSP target_sp = module_spec.GetTargetSP()) {
+      if (target_sp->IsValid())
+        platform_sp = target_sp->GetPlatform();
+    }
+    if (!platform_sp)
+      platform_sp = module_spec.GetPlatformSP();
+
+    if (platform_sp) {
+      FileSpec symbol_file_spec;
+      platform_sp->CallLocateModuleCallbackIfSet(
+          module_spec, module_sp, symbol_file_spec, did_create_ptr);
+      if (module_sp) {
+        // The callback found a module.
+        return error;
       }
     }
   }

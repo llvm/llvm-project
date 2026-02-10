@@ -346,18 +346,6 @@ const Symbol &BypassGeneric(const Symbol &symbol) {
   return symbol;
 }
 
-const Symbol &GetCrayPointer(const Symbol &crayPointee) {
-  const Symbol *found{nullptr};
-  const Symbol &ultimate{crayPointee.GetUltimate()};
-  for (const auto &[pointee, pointer] : ultimate.owner().crayPointers()) {
-    if (pointee == ultimate.name()) {
-      found = &pointer.get();
-      break;
-    }
-  }
-  return DEREF(found);
-}
-
 bool ExprHasTypeCategory(
     const SomeExpr &expr, const common::TypeCategory &type) {
   auto dynamicType{expr.GetType()};
@@ -953,13 +941,13 @@ public:
     return false;
   }
   bool operator()(const parser::CallStmt &stmt) {
+    const auto &call{std::get<parser::Call>(stmt.t)};
     const auto &procedureDesignator{
-        std::get<parser::ProcedureDesignator>(stmt.call.t)};
+        std::get<parser::ProcedureDesignator>(call.t)};
     if (auto *name{std::get_if<parser::Name>(&procedureDesignator.u)}) {
       // TODO: also ensure that the procedure is, in fact, an intrinsic
       if (name->source == "move_alloc") {
-        const auto &args{
-            std::get<std::list<parser::ActualArgSpec>>(stmt.call.t)};
+        const auto &args{std::get<std::list<parser::ActualArgSpec>>(call.t)};
         if (!args.empty()) {
           const parser::ActualArg &actualArg{
               std::get<parser::ActualArg>(args.front().t)};

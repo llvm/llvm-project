@@ -448,6 +448,129 @@ def CIR_ConstPtrAttr : CIR_Attr<"ConstPtr", "ptr", [TypedAttrInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// DataMemberAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_DataMemberAttr : CIR_Attr<"DataMember", "data_member", [
+  TypedAttrInterface
+]> {
+  let summary = "Holds a constant data member pointer value";
+  let parameters = (ins AttributeSelfTypeParameter<
+                            "", "cir::DataMemberType">:$type,
+                        OptionalParameter<
+                            "std::optional<unsigned>">:$member_index);
+  let description = [{
+    A data member attribute is a literal attribute that represents a constant
+    pointer-to-data-member value.
+
+    The `member_index` parameter represents the index of the pointed-to member
+    within its containing record. It is an optional parameter; lack of this
+    parameter indicates a null pointer-to-data-member value.
+
+    Example:
+    ```
+    #ptr = #cir.data_member<1> : !cir.data_member<!s32i in !rec_22Point22>
+
+    #null = #cir.data_member<null> : !cir.data_member<!s32i in !rec_22Point22>
+    ```
+  }];
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type), [{
+      return $_get(type.getContext(), type, std::nullopt);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "cir::DataMemberType":$type,
+                                        "unsigned":$member_index), [{
+      return $_get(type.getContext(), type, member_index);
+    }]>,
+  ];
+
+  let genVerifyDecl = 1;
+
+  let assemblyFormat = [{
+    `<` ($member_index^):(`null`)? `>`
+  }];
+
+  let extraClassDeclaration = [{
+    bool isNullPtr() const {
+      return !getMemberIndex().has_value();
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// MethodAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_MethodAttr : CIR_Attr<"Method", "method", [TypedAttrInterface]> {
+  let summary = "Holds a constant pointer-to-member-function value";
+  let description = [{
+    A method attribute is a literal attribute that represents a constant
+    pointer-to-member-function value.
+
+    If the member function is a non-virtual function, the `symbol` parameter
+    gives the global symbol for the non-virtual member function.
+
+    If the member function is a virtual function, the `vtable_offset` parameter
+    gives the offset of the vtable entry corresponding to the virtual member
+    function.
+
+    `symbol` and `vtable_offset` cannot be present at the same time. If both of
+    `symbol` and `vtable_offset` are not present, the attribute represents a
+    null pointer constant.
+
+    Examples:
+    ```
+    // Non-virtual method
+    %0 = cir.const #cir.method<@_ZN1S2m1Ei> :
+             !cir.method<!cir.func<(!s32i)> in !rec_S>
+
+    // Virtual method
+    %1 = cir.const #cir.method<vtable_offset = 8> :
+             !cir.method<!cir.func<(!s32i)> in !rec_S>
+
+    // Null method pointer
+    %0 = cir.const #cir.method<null> :
+             !cir.method<!cir.func<(!s32i)> in !rec_S>
+  }];
+
+  let parameters = (ins AttributeSelfTypeParameter<
+                            "", "cir::MethodType">:$type,
+                        OptionalParameter<
+                            "std::optional<mlir::FlatSymbolRefAttr>">:$symbol,
+                        OptionalParameter<
+                            "std::optional<uint64_t>">:$vtable_offset);
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "cir::MethodType":$type), [{
+      return $_get(type.getContext(), type, std::nullopt, std::nullopt);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "cir::MethodType":$type,
+                                        "mlir::FlatSymbolRefAttr":$symbol), [{
+      return $_get(type.getContext(), type, symbol, std::nullopt);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "cir::MethodType":$type,
+                                        "uint64_t":$vtable_offset), [{
+      return $_get(type.getContext(), type, std::nullopt, vtable_offset);
+    }]>,
+  ];
+
+  let hasCustomAssemblyFormat = 1;
+
+  let genVerifyDecl = 1;
+
+  let extraClassDeclaration = [{
+    bool isNull() const {
+      return !getSymbol().has_value() && !getVtableOffset().has_value();
+    }
+
+    bool isVirtual() const {
+      return getVtableOffset().has_value();
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalViewAttr
 //===----------------------------------------------------------------------===//
 
@@ -1129,5 +1252,39 @@ def CIR_BlockAddrInfoAttr : CIR_Attr<"BlockAddrInfo", "block_addr_info"> {
     }]>
   ];
 }
+
+//===----------------------------------------------------------------------===//
+// Side Effect
+//===----------------------------------------------------------------------===//
+
+def CIR_SideEffect : CIR_I32EnumAttr<
+    "SideEffect", "allowed side effects of a function", [
+      I32EnumAttrCase<"All", 0, "all">,
+      I32EnumAttrCase<"Pure", 1, "pure">,
+      I32EnumAttrCase<"Const", 2, "const">
+]> {
+  let description = [{
+    The side effect attribute specifies the possible side effects of a function
+    or the target of a call operation.  This is an enumeration attribute with
+    the following possible values:
+
+    - all: The function or callee can have any side effects. This is the default
+      if no side effects are explicitly listed.
+    - pure: The function or callee may read data from memory, but it cannot
+      write data to memory. This has the same effect as the GNU C/C++ attribute
+      `__attribute__((pure))`.
+    - const: The function or callee may not read or write data from memory. This
+      has the same effect as the GNU C/C++ attribute `__attribute__((const))`.
+
+    Examples:
+
+    ```mlir
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
+    ```
+  }];
+}
+
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD

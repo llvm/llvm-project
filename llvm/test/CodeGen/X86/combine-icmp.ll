@@ -83,12 +83,12 @@ define i8 @concat_icmp_v8i32_v4i32(<4 x i32> %a0, <4 x i32> %a1) {
 ;
 ; AVX512-LABEL: concat_icmp_v8i32_v4i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vptestnmd %xmm0, %xmm0, %k0
-; AVX512-NEXT:    vptestnmd %xmm1, %xmm1, %k1
-; AVX512-NEXT:    kshiftlb $4, %k1, %k1
-; AVX512-NEXT:    korb %k1, %k0, %k0
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vptestnmd %ymm0, %ymm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %v0 = icmp eq <4 x i32> %a0, zeroinitializer
   %v1 = icmp eq <4 x i32> %a1, zeroinitializer
@@ -151,12 +151,12 @@ define i16 @concat_icmp_v16i16_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
 ;
 ; AVX512-LABEL: concat_icmp_v16i16_v8i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1]
-; AVX512-NEXT:    vpcmpnleuw %xmm2, %xmm0, %k0
-; AVX512-NEXT:    vpcmpnleuw %xmm2, %xmm1, %k1
-; AVX512-NEXT:    kunpckbw %k0, %k1, %k0
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpcmpnleuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %v0 = icmp ugt <8 x i16> %a0, splat (i16 1)
   %v1 = icmp ugt <8 x i16> %a1, splat (i16 1)
@@ -199,11 +199,11 @@ define i32 @concat_icmp_v32i8_v16i8(<16 x i8> %a0, <16 x i8> %a1) {
 ;
 ; AVX512-LABEL: concat_icmp_v32i8_v16i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
-; AVX512-NEXT:    vpcmpgtb %xmm2, %xmm0, %k0
-; AVX512-NEXT:    vpcmpgtb %xmm2, %xmm1, %k1
-; AVX512-NEXT:    kunpckwd %k0, %k1, %k0
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %v0 = icmp sgt <16 x i8> %a0, splat (i8 5)
   %v1 = icmp sgt <16 x i8> %a1, splat (i8 5)
@@ -329,21 +329,15 @@ define i8 @concat_icmp_v8i64_v2i64(<2 x i64> %a0, <2 x i64> %a1, <2 x i64> %a2, 
 ;
 ; AVX512-LABEL: concat_icmp_v8i64_v2i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastq {{.*#+}} xmm4 = [128,128]
-; AVX512-NEXT:    vpcmpltuq %xmm4, %xmm0, %k0
-; AVX512-NEXT:    vpcmpltuq %xmm4, %xmm1, %k1
-; AVX512-NEXT:    vpcmpltuq %xmm4, %xmm2, %k2
-; AVX512-NEXT:    vpcmpltuq %xmm4, %xmm3, %k3
-; AVX512-NEXT:    kshiftlb $2, %k3, %k3
-; AVX512-NEXT:    korb %k3, %k2, %k2
-; AVX512-NEXT:    kshiftlb $4, %k2, %k2
-; AVX512-NEXT:    kshiftlb $2, %k1, %k1
-; AVX512-NEXT:    korw %k1, %k0, %k0
-; AVX512-NEXT:    kshiftlb $4, %k0, %k0
-; AVX512-NEXT:    kshiftrb $4, %k0, %k0
-; AVX512-NEXT:    korb %k2, %k0, %k0
+; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512-NEXT:    vpcmpltuq {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %v0 = icmp ult <2 x i64> %a0, splat (i64 128)
   %v1 = icmp ult <2 x i64> %a1, splat (i64 128)
@@ -387,18 +381,16 @@ define i16 @concat_icmp_v16i32_v4i32(<4 x i32> %a0, <4 x i32> %a1, <4 x i32> %a2
 ;
 ; AVX512-LABEL: concat_icmp_v16i32_v4i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; AVX512-NEXT:    vpcmpgtd %xmm4, %xmm0, %k0
-; AVX512-NEXT:    vpcmpgtd %xmm4, %xmm1, %k1
-; AVX512-NEXT:    vpcmpgtd %xmm4, %xmm2, %k2
-; AVX512-NEXT:    vpcmpgtd %xmm4, %xmm3, %k3
-; AVX512-NEXT:    kshiftlb $4, %k1, %k1
-; AVX512-NEXT:    korb %k1, %k0, %k0
-; AVX512-NEXT:    kshiftlb $4, %k3, %k1
-; AVX512-NEXT:    korb %k1, %k2, %k1
-; AVX512-NEXT:    kunpckbw %k0, %k1, %k0
+; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %v0 = icmp sgt <4 x i32> %a0, zeroinitializer
   %v1 = icmp sgt <4 x i32> %a1, zeroinitializer
@@ -468,14 +460,14 @@ define i32 @concat_icmp_v32i16_v8i16(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2
 ;
 ; AVX512-LABEL: concat_icmp_v32i16_v8i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vptestmw %xmm0, %xmm0, %k0
-; AVX512-NEXT:    vptestmw %xmm1, %xmm1, %k1
-; AVX512-NEXT:    vptestmw %xmm2, %xmm2, %k2
-; AVX512-NEXT:    vptestmw %xmm3, %xmm3, %k3
-; AVX512-NEXT:    kunpckbw %k0, %k1, %k0
-; AVX512-NEXT:    kunpckbw %k2, %k3, %k1
-; AVX512-NEXT:    kunpckwd %k0, %k1, %k0
+; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512-NEXT:    vptestmw %zmm0, %zmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %v0 = icmp ne <8 x i16> %a0, zeroinitializer
   %v1 = icmp ne <8 x i16> %a1, zeroinitializer
@@ -540,18 +532,16 @@ define i64 @concat_icmp_v64i8_v16i8(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2,
 ;
 ; AVX2-LABEL: concat_icmp_v64i8_v16i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm4 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
-; AVX2-NEXT:    vpmaxub %xmm4, %xmm0, %xmm5
-; AVX2-NEXT:    vpcmpeqb %xmm5, %xmm0, %xmm0
-; AVX2-NEXT:    vpmaxub %xmm4, %xmm1, %xmm5
-; AVX2-NEXT:    vpcmpeqb %xmm5, %xmm1, %xmm1
-; AVX2-NEXT:    vpmaxub %xmm4, %xmm2, %xmm5
-; AVX2-NEXT:    vpcmpeqb %xmm5, %xmm2, %xmm2
-; AVX2-NEXT:    vpmaxub %xmm4, %xmm3, %xmm4
-; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm3, %xmm3
+; AVX2-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
+; AVX2-NEXT:    vpmaxub %ymm1, %ymm0, %ymm4
+; AVX2-NEXT:    vpcmpeqb %ymm4, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
 ; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm0
+; AVX2-NEXT:    vpmaxub %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
 ; AVX2-NEXT:    shlq $32, %rax
 ; AVX2-NEXT:    orq %rcx, %rax
@@ -560,15 +550,14 @@ define i64 @concat_icmp_v64i8_v16i8(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2,
 ;
 ; AVX512-LABEL: concat_icmp_v64i8_v16i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm4 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; AVX512-NEXT:    vpcmpnleub %xmm4, %xmm0, %k0
-; AVX512-NEXT:    vpcmpnleub %xmm4, %xmm1, %k1
-; AVX512-NEXT:    vpcmpnleub %xmm4, %xmm2, %k2
-; AVX512-NEXT:    vpcmpnleub %xmm4, %xmm3, %k3
-; AVX512-NEXT:    kunpckwd %k0, %k1, %k0
-; AVX512-NEXT:    kunpckwd %k2, %k3, %k1
-; AVX512-NEXT:    kunpckdq %k0, %k1, %k0
+; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
+; AVX512-NEXT:    vpcmpnleub {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %k0
 ; AVX512-NEXT:    kmovq %k0, %rax
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %v0 = icmp ugt <16 x i8> %a0, splat (i8 15)
   %v1 = icmp ugt <16 x i8> %a1, splat (i8 15)
@@ -672,10 +661,9 @@ define i8 @concat_icmp_v8i64_v4i64(<4 x i64> %a0, <4 x i64> %a1) {
 ;
 ; AVX512-LABEL: concat_icmp_v8i64_v4i64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vptestnmq %ymm0, %ymm0, %k0
-; AVX512-NEXT:    vptestnmq %ymm1, %ymm1, %k1
-; AVX512-NEXT:    kshiftlb $4, %k1, %k1
-; AVX512-NEXT:    korb %k1, %k0, %k0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vptestnmq %zmm0, %zmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
 ; AVX512-NEXT:    vzeroupper
@@ -768,10 +756,9 @@ define i16 @concat_icmp_v16i32_v8i32(<8 x i32> %a0, <8 x i32> %a1) {
 ;
 ; AVX512-LABEL: concat_icmp_v16i32_v8i32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1]
-; AVX512-NEXT:    vpcmpnleud %ymm2, %ymm0, %k0
-; AVX512-NEXT:    vpcmpnleud %ymm2, %ymm1, %k1
-; AVX512-NEXT:    kunpckbw %k0, %k1, %k0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpcmpnleud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512-NEXT:    vzeroupper
@@ -830,10 +817,9 @@ define i32 @concat_icmp_v32i16_v16i16(<16 x i16> %a0, <16 x i16> %a1) {
 ;
 ; AVX512-LABEL: concat_icmp_v32i16_v16i16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5]
-; AVX512-NEXT:    vpcmpgtw %ymm2, %ymm0, %k0
-; AVX512-NEXT:    vpcmpgtw %ymm2, %ymm1, %k1
-; AVX512-NEXT:    kunpckwd %k0, %k1, %k0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpcmpgtw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -903,10 +889,9 @@ define i64 @concat_icmp_v64i8_v32i8(<32 x i8> %a0, <32 x i8> %a1) {
 ;
 ; AVX512-LABEL: concat_icmp_v64i8_v32i8:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-; AVX512-NEXT:    vpcmpgtb %ymm0, %ymm2, %k0
-; AVX512-NEXT:    vpcmpgtb %ymm1, %ymm2, %k1
-; AVX512-NEXT:    kunpckdq %k0, %k1, %k0
+; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-NEXT:    vpcmpltb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %k0
 ; AVX512-NEXT:    kmovq %k0, %rax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

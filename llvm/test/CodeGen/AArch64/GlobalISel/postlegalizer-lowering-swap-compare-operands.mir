@@ -163,7 +163,7 @@ body:             |
     ; SELECT-NEXT: [[COPY:%[0-9]+]]:gpr32all = COPY %reg.sub_32
     ; SELECT-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
     ; SELECT-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 1234567
-    ; SELECT-NEXT: %cmp_rhs:gpr64sp = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; SELECT-NEXT: %cmp_rhs:gpr64sp = SUBREG_TO_REG [[MOVi32imm]], %subreg.sub_32
     ; SELECT-NEXT: [[SUBSXrx:%[0-9]+]]:gpr64 = SUBSXrx %cmp_rhs, [[COPY1]], 32, implicit-def $nzcv
     ; SELECT-NEXT: %cmp:gpr32 = CSINCWr $wzr, $wzr, 12, implicit $nzcv
     ; SELECT-NEXT: $w0 = COPY %cmp
@@ -481,7 +481,7 @@ body:             |
     ; SELECT-NEXT: %cmp_rhs:gpr64 = COPY $x1
     ; SELECT-NEXT: %shl_lhs:gpr64 = COPY $x0
     ; SELECT-NEXT: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 64
-    ; SELECT-NEXT: %too_large:gpr64 = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+    ; SELECT-NEXT: %too_large:gpr64 = SUBREG_TO_REG [[MOVi32imm]], %subreg.sub_32
     ; SELECT-NEXT: %cmp_lhs:gpr64 = LSLVXr %shl_lhs, %too_large
     ; SELECT-NEXT: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
     ; SELECT-NEXT: %cmp:gpr32 = CSINCWr $wzr, $wzr, 10, implicit $nzcv

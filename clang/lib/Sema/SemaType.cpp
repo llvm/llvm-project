@@ -32,8 +32,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/DelayedDiagnostic.h"
-#include "clang/Sema/EnterExpressionEvaluationContext.h"
-#include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/ParsedTemplate.h"
@@ -2469,7 +2467,7 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
 
   // Check element type, if it is not dependent.
   if (!ElementTy->isDependentType() &&
-      !MatrixType::isValidElementType(ElementTy)) {
+      !MatrixType::isValidElementType(ElementTy, getLangOpts())) {
     Diag(AttrLoc, diag::err_attribute_invalid_matrix_type) << ElementTy;
     return QualType();
   }
@@ -3800,8 +3798,10 @@ static CallingConv getCCForDeclaratorChunk(
       }
     }
   }
+
   for (const ParsedAttr &AL : llvm::concat<ParsedAttr>(
-           D.getDeclSpec().getAttributes(), D.getAttributes())) {
+           D.getDeclSpec().getAttributes(), D.getAttributes(),
+           D.getDeclarationAttributes())) {
     if (AL.getKind() == ParsedAttr::AT_DeviceKernel) {
       CC = CC_DeviceKernel;
       break;
@@ -4834,66 +4834,65 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       IsQualifiedFunction =
           FTI.hasMethodTypeQualifiers() || FTI.hasRefQualifier();
 
+      auto IsClassType = [&](CXXScopeSpec &SS) {
+        // If there already was an problem with the scope, don’t issue another
+        // error about the explicit object parameter.
+        return SS.isInvalid() ||
+               isa_and_present<CXXRecordDecl>(S.computeDeclContext(SS));
+      };
+
+      // C++23 [dcl.fct]p6:
+      //
+      // An explicit-object-parameter-declaration is a parameter-declaration
+      // with a this specifier. An explicit-object-parameter-declaration shall
+      // appear only as the first parameter-declaration of a
+      // parameter-declaration-list of one of:
+      //
+      // - a declaration of a member function or member function template
+      //   ([class.mem]), or
+      //
+      // - an explicit instantiation ([temp.explicit]) or explicit
+      //   specialization ([temp.expl.spec]) of a templated member function,
+      //   or
+      //
+      // - a lambda-declarator [expr.prim.lambda].
+      DeclaratorContext C = D.getContext();
+      ParmVarDecl *First =
+          FTI.NumParams ? dyn_cast_if_present<ParmVarDecl>(FTI.Params[0].Param)
+                        : nullptr;
+
+      bool IsFunctionDecl = D.getInnermostNonParenChunk() == &DeclType;
+      if (First && First->isExplicitObjectParameter() &&
+          C != DeclaratorContext::LambdaExpr &&
+
+          // Either not a member or nested declarator in a member.
+          //
+          // Note that e.g. 'static' or 'friend' declarations are accepted
+          // here; we diagnose them later when we build the member function
+          // because it's easier that way.
+          (C != DeclaratorContext::Member || !IsFunctionDecl) &&
+
+          // Allow out-of-line definitions of member functions.
+          !IsClassType(D.getCXXScopeSpec())) {
+        if (IsFunctionDecl)
+          S.Diag(First->getBeginLoc(),
+                 diag::err_explicit_object_parameter_nonmember)
+              << /*non-member*/ 2 << /*function*/ 0 << First->getSourceRange();
+        else
+          S.Diag(First->getBeginLoc(),
+                 diag::err_explicit_object_parameter_invalid)
+              << First->getSourceRange();
+
+        // Do let non-member function have explicit parameters
+        // to not break assumptions elsewhere in the code.
+        First->setExplicitObjectParameterLoc(SourceLocation());
+        D.setInvalidType();
+        AreDeclaratorChunksValid = false;
+      }
+
       // Check for auto functions and trailing return type and adjust the
       // return type accordingly.
       if (!D.isInvalidType()) {
-        auto IsClassType = [&](CXXScopeSpec &SS) {
-          // If there already was an problem with the scope, don’t issue another
-          // error about the explicit object parameter.
-          return SS.isInvalid() ||
-                 isa_and_present<CXXRecordDecl>(S.computeDeclContext(SS));
-        };
-
-        // C++23 [dcl.fct]p6:
-        //
-        // An explicit-object-parameter-declaration is a parameter-declaration
-        // with a this specifier. An explicit-object-parameter-declaration shall
-        // appear only as the first parameter-declaration of a
-        // parameter-declaration-list of one of:
-        //
-        // - a declaration of a member function or member function template
-        //   ([class.mem]), or
-        //
-        // - an explicit instantiation ([temp.explicit]) or explicit
-        //   specialization ([temp.expl.spec]) of a templated member function,
-        //   or
-        //
-        // - a lambda-declarator [expr.prim.lambda].
-        DeclaratorContext C = D.getContext();
-        ParmVarDecl *First =
-            FTI.NumParams
-                ? dyn_cast_if_present<ParmVarDecl>(FTI.Params[0].Param)
-                : nullptr;
-
-        bool IsFunctionDecl = D.getInnermostNonParenChunk() == &DeclType;
-        if (First && First->isExplicitObjectParameter() &&
-            C != DeclaratorContext::LambdaExpr &&
-
-            // Either not a member or nested declarator in a member.
-            //
-            // Note that e.g. 'static' or 'friend' declarations are accepted
-            // here; we diagnose them later when we build the member function
-            // because it's easier that way.
-            (C != DeclaratorContext::Member || !IsFunctionDecl) &&
-
-            // Allow out-of-line definitions of member functions.
-            !IsClassType(D.getCXXScopeSpec())) {
-          if (IsFunctionDecl)
-            S.Diag(First->getBeginLoc(),
-                   diag::err_explicit_object_parameter_nonmember)
-                << /*non-member*/ 2 << /*function*/ 0
-                << First->getSourceRange();
-          else
-            S.Diag(First->getBeginLoc(),
-                   diag::err_explicit_object_parameter_invalid)
-                << First->getSourceRange();
-          // Do let non-member function have explicit parameters
-          // to not break assumptions elsewhere in the code.
-          First->setExplicitObjectParameterLoc(SourceLocation());
-          D.setInvalidType();
-          AreDeclaratorChunksValid = false;
-        }
-
         // trailing-return-type is only required if we're declaring a function,
         // and not, for instance, a pointer to a function.
         if (D.getDeclSpec().hasAutoTypeSpec() &&
@@ -7180,6 +7179,14 @@ static bool HandleWebAssemblyFuncrefAttr(TypeProcessingState &State,
     return true;
   }
 
+  // Check that the type is a function pointer type.
+  QualType Desugared = QT.getDesugaredType(S.Context);
+  const auto *Ptr = dyn_cast<PointerType>(Desugared);
+  if (!Ptr || !Ptr->getPointeeType()->isFunctionType()) {
+    S.Diag(PAttr.getLoc(), diag::err_attribute_webassembly_funcref);
+    return true;
+  }
+
   // Add address space to type based on its attributes.
   LangAS ASIdx = LangAS::wasm_funcref;
   QualType Pointee = QT->getPointeeType();
@@ -7415,6 +7422,24 @@ bool Sema::CheckImplicitNullabilityTypeSpecifier(QualType &Type,
   return CheckNullabilityTypeSpecifier(
       *this, nullptr, nullptr, Type, Nullability, DiagLoc,
       /*isContextSensitive*/ false, AllowArrayTypes, OverrideExisting);
+}
+
+bool Sema::CheckVarDeclSizeAddressSpace(const VarDecl *VD, LangAS AS) {
+  QualType T = VD->getType();
+
+  // Check that the variable's type can fit in the specified address space. This
+  // is determined by how far a pointer in that address space can reach.
+  llvm::APInt MaxSizeForAddrSpace =
+      llvm::APInt::getMaxValue(Context.getTargetInfo().getPointerWidth(AS));
+  std::optional<CharUnits> TSizeInChars = Context.getTypeSizeInCharsIfKnown(T);
+  if (TSizeInChars && static_cast<uint64_t>(TSizeInChars->getQuantity()) >
+                          MaxSizeForAddrSpace.getZExtValue()) {
+    Diag(VD->getLocation(), diag::err_type_too_large_for_address_space)
+        << T << MaxSizeForAddrSpace;
+    return false;
+  }
+
+  return true;
 }
 
 /// Check the application of the Objective-C '__kindof' qualifier to
@@ -9275,11 +9300,59 @@ bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
 
   // If this definition was instantiated from a template, map back to the
   // pattern from which it was instantiated.
-  if (isa<TagDecl>(D) && cast<TagDecl>(D)->isBeingDefined()) {
+  if (isa<TagDecl>(D) && cast<TagDecl>(D)->isBeingDefined())
     // We're in the middle of defining it; this definition should be treated
     // as visible.
     return true;
-  } else if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
+
+  auto DefinitionIsAcceptable = [&](NamedDecl *D) {
+    // The (primary) definition might be in a visible module.
+    if (isAcceptable(D, Kind))
+      return true;
+
+    // A visible module might have a merged definition instead.
+    if (D->isModulePrivate() ? hasMergedDefinitionInCurrentModule(D)
+                             : hasVisibleMergedDefinition(D)) {
+      if (CodeSynthesisContexts.empty() &&
+          !getLangOpts().ModulesLocalVisibility) {
+        // Cache the fact that this definition is implicitly visible because
+        // there is a visible merged definition.
+        D->setVisibleDespiteOwningModule();
+      }
+      return true;
+    }
+
+    return false;
+  };
+  auto IsDefinition = [](NamedDecl *D) {
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D))
+      return RD->isThisDeclarationADefinition();
+    if (auto *ED = dyn_cast<EnumDecl>(D))
+      return ED->isThisDeclarationADefinition();
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      return FD->isThisDeclarationADefinition();
+    if (auto *VD = dyn_cast<VarDecl>(D))
+      return VD->isThisDeclarationADefinition() == VarDecl::Definition;
+    llvm_unreachable("unexpected decl type");
+  };
+  auto FoundAcceptableDefinition = [&](NamedDecl *D) {
+    if (!isa<CXXRecordDecl, FunctionDecl, EnumDecl, VarDecl>(D))
+      return DefinitionIsAcceptable(D);
+
+    for (auto *RD : D->redecls()) {
+      auto *ND = cast<NamedDecl>(RD);
+      if (!IsDefinition(ND))
+        continue;
+      if (DefinitionIsAcceptable(ND)) {
+        *Suggested = ND;
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  if (auto *RD = dyn_cast<CXXRecordDecl>(D)) {
     if (auto *Pattern = RD->getTemplateInstantiationPattern())
       RD = Pattern;
     D = RD->getDefinition();
@@ -9318,34 +9391,14 @@ bool Sema::hasAcceptableDefinition(NamedDecl *D, NamedDecl **Suggested,
 
   *Suggested = D;
 
-  auto DefinitionIsAcceptable = [&] {
-    // The (primary) definition might be in a visible module.
-    if (isAcceptable(D, Kind))
-      return true;
-
-    // A visible module might have a merged definition instead.
-    if (D->isModulePrivate() ? hasMergedDefinitionInCurrentModule(D)
-                             : hasVisibleMergedDefinition(D)) {
-      if (CodeSynthesisContexts.empty() &&
-          !getLangOpts().ModulesLocalVisibility) {
-        // Cache the fact that this definition is implicitly visible because
-        // there is a visible merged definition.
-        D->setVisibleDespiteOwningModule();
-      }
-      return true;
-    }
-
-    return false;
-  };
-
-  if (DefinitionIsAcceptable())
+  if (FoundAcceptableDefinition(D))
     return true;
 
   // The external source may have additional definitions of this entity that are
   // visible, so complete the redeclaration chain now and ask again.
   if (auto *Source = Context.getExternalSource()) {
     Source->CompleteRedeclChain(D);
-    return DefinitionIsAcceptable();
+    return FoundAcceptableDefinition(D);
   }
 
   return false;
@@ -9881,10 +9934,6 @@ static QualType GetEnumUnderlyingType(Sema &S, QualType BaseType,
 
   QualType Underlying = ED->getIntegerType();
   if (Underlying.isNull()) {
-    // This is an enum without a fixed underlying type which we skipped parsing
-    // the body because we saw its definition previously in another module.
-    // Use the definition's integer type in that case.
-    assert(ED->isThisDeclarationADemotedDefinition());
     Underlying = ED->getDefinition()->getIntegerType();
     assert(!Underlying.isNull());
   }
@@ -10072,81 +10121,6 @@ QualType Sema::BuiltinChangeSignedness(QualType BaseType, UTTKind UKind,
   if (Underlying.isNull())
     return Underlying;
   return Context.getQualifiedType(Underlying, BaseType.getQualifiers());
-}
-
-bool Sema::BuiltinIsConvertible(QualType From, QualType To, SourceLocation Loc,
-                                bool CheckNothrow) {
-  if (To->isVoidType())
-    return From->isVoidType();
-
-  // [meta.rel]
-  // From and To shall be complete types, cv void, or arrays of unknown bound.
-  if ((!From->isIncompleteArrayType() && !From->isVoidType() &&
-       RequireCompleteType(
-           Loc, From, diag::err_incomplete_type_used_in_type_trait_expr)) ||
-      (!To->isIncompleteArrayType() && !To->isVoidType() &&
-       RequireCompleteType(Loc, To,
-                           diag::err_incomplete_type_used_in_type_trait_expr)))
-    return false;
-
-  // C++11 [meta.rel]p4:
-  //   Given the following function prototype:
-  //
-  //     template <class T>
-  //       typename add_rvalue_reference<T>::type create();
-  //
-  //   the predicate condition for a template specialization
-  //   is_convertible<From, To> shall be satisfied if and only if
-  //   the return expression in the following code would be
-  //   well-formed, including any implicit conversions to the return
-  //   type of the function:
-  //
-  //     To test() {
-  //       return create<From>();
-  //     }
-  //
-  //   Access checking is performed as if in a context unrelated to To and
-  //   From. Only the validity of the immediate context of the expression
-  //   of the return-statement (including conversions to the return type)
-  //   is considered.
-  //
-  // We model the initialization as a copy-initialization of a temporary
-  // of the appropriate type, which for this expression is identical to the
-  // return statement (since NRVO doesn't apply).
-
-  // Functions aren't allowed to return function or array types.
-  if (To->isFunctionType() || To->isArrayType())
-    return false;
-
-  // A function definition requires a non-abstract return type.
-  if (isAbstractType(Loc, To))
-    return false;
-
-  From = BuiltinAddRValueReference(From, Loc);
-
-  // Build a fake source and destination for initialization.
-  InitializedEntity ToEntity(InitializedEntity::InitializeTemporary(To));
-  OpaqueValueExpr FromExpr(Loc, From.getNonLValueExprType(Context),
-                           Expr::getValueKindForType(From));
-  InitializationKind Kind =
-      InitializationKind::CreateCopy(Loc, SourceLocation());
-
-  // Perform the initialization in an unevaluated context within a SFINAE
-  // trap at translation unit scope.
-  EnterExpressionEvaluationContext Unevaluated(
-      *this, Sema::ExpressionEvaluationContext::Unevaluated);
-  Sema::SFINAETrap SFINAE(*this, /*AccessCheckingSFINAE=*/true);
-  Sema::ContextRAII TUContext(*this, Context.getTranslationUnitDecl());
-  Expr *FromExprPtr = &FromExpr;
-  InitializationSequence Init(*this, ToEntity, Kind, FromExprPtr);
-  if (Init.Failed())
-    return false;
-
-  ExprResult Result = Init.Perform(*this, ToEntity, Kind, FromExprPtr);
-  if (Result.isInvalid() || SFINAE.hasErrorOccurred())
-    return false;
-
-  return !CheckNothrow || canThrow(Result.get()) == CT_Cannot;
 }
 
 QualType Sema::BuildUnaryTransformType(QualType BaseType, UTTKind UKind,

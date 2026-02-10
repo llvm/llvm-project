@@ -43,6 +43,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/raw_ostream.h"
@@ -725,11 +726,12 @@ void VarMapBuilder::VisitCallExpr(const CallExpr *CE) {
       }
     }
 
-    if (VDec && Ctx.lookup(VDec)) {
+    if (VDec)
       Ctx = VMap->clearDefinition(VDec, Ctx);
-      VMap->saveContext(CE, Ctx);
-    }
   }
+  // Save the context after the call where escaped variables' definitions (if
+  // they exist) are cleared.
+  VMap->saveContext(CE, Ctx);
 }
 
 // Computes the intersection of two contexts.  The intersection is the
@@ -1681,7 +1683,7 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
           return LocalVarMap.lookupExpr(D, Ctx);
         });
   }
-  auto Cleanup = llvm::make_scope_exit(
+  llvm::scope_exit Cleanup(
       [this] { SxBuilder.setLookupLocalVarExpr(nullptr); });
 
   const auto *Exp = getTrylockCallExpr(Cond, LVarCtx, Negate);
@@ -1770,6 +1772,8 @@ public:
   }
 
   ~BuildLockset() { Analyzer->SxBuilder.setLookupLocalVarExpr(nullptr); }
+  BuildLockset(const BuildLockset &) = delete;
+  BuildLockset &operator=(const BuildLockset &) = delete;
 
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitBinaryOperator(const BinaryOperator *BO);
@@ -2820,6 +2824,12 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         case CFGElement::AutomaticObjectDtor: {
           CFGAutomaticObjDtor AD = BI.castAs<CFGAutomaticObjDtor>();
           const auto *DD = AD.getDestructorDecl(AC.getASTContext());
+          // Function parameters as they are constructed in caller's context and
+          // the CFG does not contain the ctors. Ignore them as their
+          // capabilities cannot be analysed because of this missing
+          // information.
+          if (isa_and_nonnull<ParmVarDecl>(AD.getVarDecl()))
+            break;
           if (!DD || !DD->hasAttrs())
             break;
 

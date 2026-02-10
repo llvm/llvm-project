@@ -161,7 +161,7 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
               Binary.bytes_begin());
       const auto *Entry =
           reinterpret_cast<const object::OffloadBinary::Entry *>(
-              Binary.bytes_begin() + Header->EntryOffset);
+              Binary.bytes_begin() + Header->EntriesOffset);
       BeginOffset = Entry->ImageOffset;
       EndOffset = Entry->ImageOffset + Entry->ImageSize;
     }
@@ -494,13 +494,13 @@ Function *createRegisterGlobalsFunction(Module &M, bool IsHIP,
 
   // Create kernel registration code.
   Builder.SetInsertPoint(IfThenBB);
-  Builder.CreateCall(RegFunc, {RegGlobalsFn->arg_begin(), Addr, Name, Name,
-                               ConstantInt::get(Type::getInt32Ty(C), -1),
-                               ConstantPointerNull::get(Int8PtrTy),
-                               ConstantPointerNull::get(Int8PtrTy),
-                               ConstantPointerNull::get(Int8PtrTy),
-                               ConstantPointerNull::get(Int8PtrTy),
-                               ConstantPointerNull::get(Int32PtrTy)});
+  Builder.CreateCall(
+      RegFunc,
+      {RegGlobalsFn->arg_begin(), Addr, Name, Name,
+       ConstantInt::getAllOnesValue(Type::getInt32Ty(C)),
+       ConstantPointerNull::get(Int8PtrTy), ConstantPointerNull::get(Int8PtrTy),
+       ConstantPointerNull::get(Int8PtrTy), ConstantPointerNull::get(Int8PtrTy),
+       ConstantPointerNull::get(Int32PtrTy)});
   Builder.CreateBr(IfEndBB);
   Builder.SetInsertPoint(IfElseBB);
 

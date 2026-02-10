@@ -2409,6 +2409,11 @@ void OMPClauseEnqueue::VisitOMPFailClause(const OMPFailClause *) {}
 
 void OMPClauseEnqueue::VisitOMPThreadsetClause(const OMPThreadsetClause *) {}
 
+void OMPClauseEnqueue::VisitOMPTransparentClause(
+    const OMPTransparentClause *C) {
+  Visitor->AddStmt(C->getImpexType());
+}
+
 void OMPClauseEnqueue::VisitOMPAbsentClause(const OMPAbsentClause *) {}
 
 void OMPClauseEnqueue::VisitOMPHoldsClause(const OMPHoldsClause *) {}

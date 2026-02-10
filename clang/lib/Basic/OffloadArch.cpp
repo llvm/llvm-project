@@ -26,6 +26,7 @@ static const OffloadArchToStringMap ArchNames[] = {
     SM(75),                          // Turing
     SM(80), SM(86),                  // Ampere
     SM(87),                          // Jetson/Drive AGX Orin
+    SM(88),                          // Ampere
     SM(89),                          // Ada Lovelace
     SM(90),                          // Hopper
     SM(90a),                         // Hopper
@@ -35,6 +36,8 @@ static const OffloadArchToStringMap ArchNames[] = {
     SM(101a),                        // Blackwell
     SM(103),                         // Blackwell
     SM(103a),                        // Blackwell
+    SM(110),                         // Blackwell
+    SM(110a),                        // Blackwell
     SM(120),                         // Blackwell
     SM(120a),                        // Blackwell
     SM(121),                         // Blackwell
@@ -87,11 +90,13 @@ static const OffloadArchToStringMap ArchNames[] = {
     GFX(1151), // gfx1151
     GFX(1152), // gfx1152
     GFX(1153), // gfx1153
+    GFX(1170), // gfx1170
     {OffloadArch::GFX12_GENERIC, "gfx12-generic", "compute_amdgcn"},
     GFX(1200), // gfx1200
     GFX(1201), // gfx1201
     GFX(1250), // gfx1250
     GFX(1251), // gfx1251
+    GFX(1310), // gfx1310
     {OffloadArch::AMDGCNSPIRV, "amdgcnspirv", "compute_amdgcn"},
     // Intel CPUs
     {OffloadArch::GRANITERAPIDS, "graniterapids", ""},

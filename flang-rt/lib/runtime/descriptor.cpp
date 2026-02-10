@@ -347,23 +347,21 @@ static const char *GetTypeStr(ISO::CFI_type_t type, bool dumpRawType) {
       CASE(CFI_type_uint32_t)
       CASE(CFI_type_uint64_t)
       CASE(CFI_type_uint128_t)
+    default:
+      return nullptr;
     }
 #undef CASE
-    return nullptr;
   }
   TypeCode code{type};
-
-  if (!code.IsValid())
+  if (!code.IsValid()) {
     return "invalid";
-
-  common::optional<std::pair<TypeCategory, int>> categoryAndKind =
-      code.GetCategoryAndKind();
-  if (!categoryAndKind)
+  }
+  auto categoryAndKind{code.GetCategoryAndKind()};
+  if (!categoryAndKind) {
     return nullptr;
-
-  TypeCategory tcat;
-  int kind;
-  std::tie(tcat, kind) = *categoryAndKind;
+  }
+  TypeCategory tcat{categoryAndKind->first};
+  int kind{categoryAndKind->second};
 
 #define CASE(cat, k) \
   case (k): \
@@ -434,18 +432,14 @@ void Descriptor::Dump(FILE *f, bool dumpRawType) const {
   std::fprintf(f, "  base_addr %p\n", raw_.base_addr);
   std::fprintf(f, "  elem_len  %zd\n", ElementBytes());
   std::fprintf(f, "  version   %d\n", static_cast<int>(raw_.version));
-  if (rank() > 0) {
-    std::fprintf(f, "  rank      %d\n", rank());
-  } else {
-    std::fprintf(f, "  scalar\n");
-  }
-  int ty = static_cast<int>(raw_.type);
-  if (const char *tyStr = GetTypeStr(raw_.type, dumpRawType)) {
+  std::fprintf(f, "  rank      %d%s\n", rank(), rank() ? "" : " (scalar)");
+  int ty{static_cast<int>(raw_.type)};
+  if (const char *tyStr{GetTypeStr(raw_.type, dumpRawType)}) {
     std::fprintf(f, "  type      %d \"%s\"\n", ty, tyStr);
   } else {
     std::fprintf(f, "  type      %d\n", ty);
   }
-  int attr = static_cast<int>(raw_.attribute);
+  int attr{static_cast<int>(raw_.attribute)};
   if (IsPointer()) {
     std::fprintf(f, "  attribute %d (pointer) \n", attr);
   } else if (IsAllocatable()) {
@@ -453,7 +447,6 @@ void Descriptor::Dump(FILE *f, bool dumpRawType) const {
   } else {
     std::fprintf(f, "  attribute %d\n", attr);
   }
-
   std::fprintf(f, "  extra     %d\n", static_cast<int>(raw_.extra));
   std::fprintf(f, "    addendum  %d\n", static_cast<int>(HasAddendum()));
   std::fprintf(f, "    alloc_idx %d\n", static_cast<int>(GetAllocIdx()));

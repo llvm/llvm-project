@@ -13,11 +13,11 @@ define amdgpu_kernel void @fneg_fabs_fadd_f16(ptr addrspace(1) %out, half %x, ha
 ; CI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    v_cvt_f32_f16_e64 v0, |s0|
-; CI-NEXT:    s_lshr_b32 s0, s0, 16
-; CI-NEXT:    v_cvt_f32_f16_e32 v1, s0
+; CI-NEXT:    s_lshr_b32 s1, s0, 16
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, s1
+; CI-NEXT:    v_cvt_f32_f16_e64 v1, |s0|
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; CI-NEXT:    v_sub_f32_e32 v0, v1, v0
+; CI-NEXT:    v_sub_f32_e32 v0, v0, v1
 ; CI-NEXT:    v_cvt_f16_f32_e32 v2, v0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s0
@@ -93,10 +93,9 @@ define amdgpu_kernel void @fneg_fabs_fmul_f16(ptr addrspace(1) %out, half %x, ha
 ; CI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    s_and_b32 s1, s0, 0x7fff
-; CI-NEXT:    s_lshr_b32 s0, s0, 16
-; CI-NEXT:    v_cvt_f32_f16_e32 v0, s0
-; CI-NEXT:    v_cvt_f32_f16_e64 v1, -|s1|
+; CI-NEXT:    s_lshr_b32 s1, s0, 16
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, s1
+; CI-NEXT:    v_cvt_f32_f16_e64 v1, -|s0|
 ; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; CI-NEXT:    v_cvt_f16_f32_e32 v2, v0
@@ -516,13 +515,13 @@ define amdgpu_kernel void @fneg_fabs_v4f16(ptr addrspace(1) %out, <4 x half> %in
 ; CIVI-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CIVI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CIVI-NEXT:    s_waitcnt lgkmcnt(0)
-; CIVI-NEXT:    v_mov_b32_e32 v0, s0
-; CIVI-NEXT:    v_mov_b32_e32 v1, s1
-; CIVI-NEXT:    s_or_b32 s0, s3, 0x80008000
-; CIVI-NEXT:    s_or_b32 s1, s2, 0x80008000
-; CIVI-NEXT:    v_mov_b32_e32 v2, s1
-; CIVI-NEXT:    v_mov_b32_e32 v3, s0
-; CIVI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
+; CIVI-NEXT:    s_or_b32 s3, s3, 0x80008000
+; CIVI-NEXT:    s_or_b32 s2, s2, 0x80008000
+; CIVI-NEXT:    v_mov_b32_e32 v3, s1
+; CIVI-NEXT:    v_mov_b32_e32 v0, s2
+; CIVI-NEXT:    v_mov_b32_e32 v1, s3
+; CIVI-NEXT:    v_mov_b32_e32 v2, s0
+; CIVI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CIVI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: fneg_fabs_v4f16:
