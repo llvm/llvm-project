@@ -10,6 +10,7 @@
 
 #include <cstring>
 #include <optional>
+#include <sstream>
 #include <string_view>
 #include <vector>
 
@@ -296,15 +297,24 @@ void PyGlobals::TracebackLoc::registerTracebackFileExclusion(
 bool PyGlobals::TracebackLoc::isUserTracebackFilename(
     const std::string_view file) {
   nanobind::ft_lock_guard lock(mutex);
+  auto joinWithPipe = [](const std::unordered_set<std::string> &set) {
+    std::ostringstream os;
+    for (auto it = set.begin(); it != set.end(); ++it) {
+      if (it != set.begin())
+        os << "|";
+      os << *it;
+    }
+    return os.str();
+  };
   if (rebuildUserTracebackIncludeRegex) {
     userTracebackIncludeRegex.assign(
-        nanobind::detail::joinRange(userTracebackIncludeFiles, "|"));
+        joinWithPipe(userTracebackIncludeFiles));
     rebuildUserTracebackIncludeRegex = false;
     isUserTracebackFilenameCache.clear();
   }
   if (rebuildUserTracebackExcludeRegex) {
     userTracebackExcludeRegex.assign(
-        nanobind::detail::joinRange(userTracebackExcludeFiles, "|"));
+        joinWithPipe(userTracebackExcludeFiles));
     rebuildUserTracebackExcludeRegex = false;
     isUserTracebackFilenameCache.clear();
   }
