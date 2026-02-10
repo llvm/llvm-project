@@ -1626,3 +1626,18 @@ func.func @shape_of_0d(%arg0: tensor<f32>) -> tensor<?xindex> {
   %0 = shape.shape_of %arg0 : tensor<f32> -> tensor<?xindex>
   return %0 : tensor<?xindex>
 }
+
+
+// -----
+
+// CHECK-LABEL: func.func @shape_of_canonicalize_regression
+// CHECK:       shape.const_shape [2, 3] : !shape.shape
+// CHECK:       shape.const_shape [2, 3] : tensor<2xindex>
+// CHECK:       tensor.cast
+func.func @shape_of_canonicalize_regression(%arg0: tensor<2x3xi32>)
+    -> (!shape.shape, tensor<2xindex>, tensor<?xindex>) {
+  %0 = shape.shape_of %arg0 : tensor<2x3xi32> -> !shape.shape
+  %1 = shape.shape_of %arg0 : tensor<2x3xi32> -> tensor<2xindex>
+  %2 = shape.shape_of %arg0 : tensor<2x3xi32> -> tensor<?xindex>
+  return %0, %1, %2 : !shape.shape, tensor<2xindex>, tensor<?xindex>
+}

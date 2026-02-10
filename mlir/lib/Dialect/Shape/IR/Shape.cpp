@@ -1703,21 +1703,47 @@ struct ShapeOfOpToConstShapeOp : public OpRewritePattern<shape::ShapeOfOp> {
 
   LogicalResult matchAndRewrite(shape::ShapeOfOp op,
                                 PatternRewriter &rewriter) const override {
-    auto type = llvm::dyn_cast<ShapedType>(op.getArg().getType());
-    if (!type || !type.hasStaticShape())
+    auto shapedTy = dyn_cast<ShapedType>(op.getArg().getType());
+    if (!shapedTy || !shapedTy.hasStaticShape())
       return failure();
+
     Location loc = op.getLoc();
-    Value constShape =
-        ConstShapeOp::create(rewriter, loc,
-                             rewriter.getIndexTensorAttr(type.getShape()))
+    auto shapeAttr = rewriter.getIndexTensorAttr(shapedTy.getShape());
+    Type resultTy = op.getType();
+
+    // Case 1: Result is !shape.shape
+    if (llvm::isa<shape::ShapeType>(resultTy)) {
+      Value cs =
+          rewriter.create<shape::ConstShapeOp>(loc, resultTy, shapeAttr)
+              .getResult();
+      rewriter.replaceOp(op, cs);
+      return success();
+    }
+
+    // Case 2: Result is an extent tensor (tensor<...xindex>)
+    auto resultTensorTy = llvm::dyn_cast<RankedTensorType>(resultTy);
+    if (!resultTensorTy)
+      return failure();
+
+    // Build const_shape with the concrete ranked type implied by the constant.
+    int64_t rank = static_cast<int64_t>(shapedTy.getShape().size());
+    auto concreteTy = RankedTensorType::get({rank}, rewriter.getIndexType());
+
+    Value cs =
+        rewriter.create<shape::ConstShapeOp>(loc, concreteTy, shapeAttr)
             .getResult();
-    if (constShape.getType() != op.getResult().getType())
-      constShape = tensor::CastOp::create(rewriter, loc,
-                                          op.getResult().getType(), constShape);
-    rewriter.replaceOp(op, constShape);
+
+    // If shape_of wanted tensor<?xindex>, cast from tensor<Rxindex>.
+    if (concreteTy != resultTensorTy) {
+      cs = rewriter.create<tensor::CastOp>(loc, resultTensorTy, cs).getResult();
+    }
+
+    rewriter.replaceOp(op, cs);
     return success();
   }
 };
+
+
 
 // Canonicalize
 //
