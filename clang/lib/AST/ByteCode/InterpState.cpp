@@ -56,6 +56,14 @@ bool InterpState::inConstantContext() const {
 InterpState::~InterpState() {
   assert(Current->isBottomFrame());
 
+  // Invoke the dtor func of the allocated exception object block.
+  if (ThrownValue) {
+    Block *B = ThrownValue->B;
+    if (B && B->isInitialized())
+      deallocate(B);
+    ThrownValue = nullptr;
+  }
+
   while (DeadBlocks) {
     DeadBlock *Next = DeadBlocks->Next;
 
