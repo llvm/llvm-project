@@ -1598,6 +1598,12 @@ static bool isLoadImm(const MachineInstr *MI, int64_t &Imm) {
     Imm = MI->getOperand(2).getImm();
     return true;
   }
+//  // BSETI can be used to create power of 2 constants.
+//  if (MI->getOpcode() == RISCV::BSETI && MI->getOperand(1).isReg() &&
+//      MI->getOperand(1).getReg() == RISCV::X0) {
+//    Imm = 1ULL << MI->getOperand(2).getImm();
+//    return true;
+//  }
   return false;
 }
 
