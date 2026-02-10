@@ -782,11 +782,11 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
   if (TIL.TheKind == TypeTestResolution::AllOnes)
     return OffsetInRange;
 
-  // See if the intrinsic is used in the following common pattern:
-  //   br(llvm.type.test(...), thenbb, elsebb)
-  // where nothing happens between the type test and the br.
-  // If so, create slightly simpler IR.
-  if (CI->hasOneUse())
+  if (CI->hasOneUse()) {
+    // See if the intrinsic is used in the following common pattern:
+    //   br(llvm.type.test(...), thenbb, elsebb)
+    // where nothing happens between the type test and the br.
+    // If so, create slightly simpler IR.
     if (auto *Br = dyn_cast<BranchInst>(*CI->user_begin()))
       if (CI->getNextNode() == Br) {
         BasicBlock *Then = InitialBB->splitBasicBlock(CI->getIterator());
@@ -803,6 +803,21 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
         IRBuilder<> ThenB(CI);
         return createBitSetTest(ThenB, TIL, BitOffset);
       }
+    // Also look for the pattern llvm.cond.loop(not(llvm.type.test)) and
+    // generate a separate llvm.cond.loop for the first phase of the check if
+    // found.
+    if (auto *Xor = dyn_cast<BinaryOperator>(*CI->user_begin());
+        CI->getNextNode() == Xor && Xor->getOpcode() == BinaryOperator::Xor &&
+        Xor->getOperand(1) == ConstantInt::getTrue(M.getContext()) &&
+        Xor->hasOneUse()) {
+      if (auto *CondLoop = dyn_cast<IntrinsicInst>(*Xor->user_begin());
+          Xor->getNextNode() == CondLoop &&
+          CondLoop->getIntrinsicID() == Intrinsic::cond_loop) {
+        B.CreateIntrinsic(Intrinsic::cond_loop, B.CreateNot(OffsetInRange));
+        return createBitSetTest(B, TIL, BitOffset);
+      }
+    }
+  }
 
   MDBuilder MDB(M.getContext());
   IRBuilder<> ThenB(SplitBlockAndInsertIfThen(OffsetInRange, CI, false,

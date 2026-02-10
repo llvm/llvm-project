@@ -6,16 +6,11 @@
 // RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx1201 | FileCheck %s --check-prefixes=CHECK,GFX12,RDNA
 // RUN: mlir-opt %s -convert-amdgpu-to-rocdl=chipset=gfx1250 | FileCheck %s --check-prefixes=CHECK,GFX1250
 
-// Note: #gpu.address_space<global> is hardcoded to `1` here because the
-// test pass doesn't set up the GPU address space conversions.
-
 // CHECK: #[[$MMRA_TAG:.+]] = #llvm.mmra_tag<"amdgpu-synchronize-as":"local">
 
-#gpu_global_addrspace = 1
-
 // CHECK-LABEL: func @fat_raw_buffer_cast
-func.func @fat_raw_buffer_cast(%buf: memref<8xi32, #gpu_global_addrspace>) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
-  // CHECK: %[[desc:.*]] = builtin.unrealized_conversion_cast %{{.*}} : memref<8xi32, 1> to !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
+func.func @fat_raw_buffer_cast(%buf: memref<8xi32, #gpu.address_space<global>>) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
+  // CHECK: %[[desc:.*]] = builtin.unrealized_conversion_cast %{{.*}} : memref<8xi32, #gpu.address_space<global>> to !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK-DAG: %[[base:.*]] = llvm.extractvalue %[[desc]][1]
   // CHECK-DAG: %[[offset:.*]] = llvm.extractvalue %[[desc]][2]
   // CHECK-DAG: %[[sizes:.*]] = llvm.extractvalue %[[desc]][3]
@@ -33,13 +28,13 @@ func.func @fat_raw_buffer_cast(%buf: memref<8xi32, #gpu_global_addrspace>) -> me
   // CHECK: %[[ret4:.*]] = llvm.insertvalue %[[sizes]], %[[ret3]][3]
   // CHECK: %[[ret5:.*]] = llvm.insertvalue %[[strides]], %[[ret4]][4]
   // CHECK: builtin.unrealized_conversion_cast %[[ret5]]
-  %ret = amdgpu.fat_raw_buffer_cast %buf : memref<8xi32, #gpu_global_addrspace> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
+  %ret = amdgpu.fat_raw_buffer_cast %buf : memref<8xi32, #gpu.address_space<global>> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
   return %ret : memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
 }
 
 // CHECK-LABEL: func @fat_raw_buffer_cast_0d
-func.func @fat_raw_buffer_cast_0d(%buf: memref<i32, #gpu_global_addrspace>) -> memref<i32, #amdgpu.address_space<fat_raw_buffer>> {
-  // CHECK: %[[desc:.*]] = builtin.unrealized_conversion_cast %{{.*}} : memref<i32, 1> to !llvm.struct<(ptr<1>, ptr<1>, i64)>
+func.func @fat_raw_buffer_cast_0d(%buf: memref<i32, #gpu.address_space<global>>) -> memref<i32, #amdgpu.address_space<fat_raw_buffer>> {
+  // CHECK: %[[desc:.*]] = builtin.unrealized_conversion_cast %{{.*}} : memref<i32, #gpu.address_space<global>> to !llvm.struct<(ptr<1>, ptr<1>, i64)>
   // CHECK-DAG: %[[base:.*]] = llvm.extractvalue %[[desc]][1]
   // CHECK-DAG: %[[offset:.*]] = llvm.extractvalue %[[desc]][2]
   // CHECK-DAG: %[[numRecords:.*]] = llvm.mlir.constant(4 : i64) : i64
@@ -53,12 +48,12 @@ func.func @fat_raw_buffer_cast_0d(%buf: memref<i32, #gpu_global_addrspace>) -> m
   // CHECK: %[[ret2:.*]] = llvm.insertvalue %[[fatBuf]], %[[ret1]][1]
   // CHECK: %[[ret3:.*]] = llvm.insertvalue %[[offset]], %[[ret2]][2]
   // CHECK: builtin.unrealized_conversion_cast %[[ret3]]
-  %ret = amdgpu.fat_raw_buffer_cast %buf : memref<i32, #gpu_global_addrspace> to memref<i32, #amdgpu.address_space<fat_raw_buffer>>
+  %ret = amdgpu.fat_raw_buffer_cast %buf : memref<i32, #gpu.address_space<global>> to memref<i32, #amdgpu.address_space<fat_raw_buffer>>
   return %ret : memref<i32, #amdgpu.address_space<fat_raw_buffer>>
 }
 
 // CHECK-LABEL: func @fat_raw_buffer_cast_dyn_size_offset
-func.func @fat_raw_buffer_cast_dyn_size_offset(%buf: memref<?xi32, strided<[1], offset: ?>, #gpu_global_addrspace>) -> memref<?xi32, strided<[1], offset: ?>, #amdgpu.address_space<fat_raw_buffer>> {
+func.func @fat_raw_buffer_cast_dyn_size_offset(%buf: memref<?xi32, strided<[1], offset: ?>, #gpu.address_space<global>>) -> memref<?xi32, strided<[1], offset: ?>, #amdgpu.address_space<fat_raw_buffer>> {
   // CHECK: %[[size0:.*]] = llvm.extractvalue %{{.*}}[3, 0]
   // CHECK: %[[stride0:.*]] = llvm.extractvalue %{{.*}}[4, 0]
   // CHECK: %[[maxVals:.*]] = llvm.mul %[[size0]], %[[stride0]]
@@ -67,13 +62,13 @@ func.func @fat_raw_buffer_cast_dyn_size_offset(%buf: memref<?xi32, strided<[1], 
   // CHECK: %[[offset:.*]] = llvm.extractvalue %{{.*}}[2]
   // CHECK: rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %{{.*}}
   // CHECK: llvm.insertvalue %[[offset]], %{{.*}}[2]
-  %ret = amdgpu.fat_raw_buffer_cast %buf : memref<?xi32, strided<[1], offset: ?>, #gpu_global_addrspace> to memref<?xi32, strided<[1], offset: ?>, #amdgpu.address_space<fat_raw_buffer>>
+  %ret = amdgpu.fat_raw_buffer_cast %buf : memref<?xi32, strided<[1], offset: ?>, #gpu.address_space<global>> to memref<?xi32, strided<[1], offset: ?>, #amdgpu.address_space<fat_raw_buffer>>
   return %ret : memref<?xi32, strided<[1], offset: ?>, #amdgpu.address_space<fat_raw_buffer>>
 }
 
 // CHECK-LABEL: func @fat_raw_buffer_cast_reset_offset
-func.func @fat_raw_buffer_cast_reset_offset(%buf: memref<?xi32, strided<[1], offset: ?>, #gpu_global_addrspace>) -> memref<?xi32, #amdgpu.address_space<fat_raw_buffer>> {
-  // CHECK: %[[desc:.*]] = builtin.unrealized_conversion_cast %{{.*}} : memref<?xi32, strided<[1], offset: ?>, 1> to !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
+func.func @fat_raw_buffer_cast_reset_offset(%buf: memref<?xi32, strided<[1], offset: ?>, #gpu.address_space<global>>) -> memref<?xi32, #amdgpu.address_space<fat_raw_buffer>> {
+  // CHECK: %[[desc:.*]] = builtin.unrealized_conversion_cast %{{.*}} : memref<?xi32, strided<[1], offset: ?>, #gpu.address_space<global>> to !llvm.struct<(ptr<1>, ptr<1>, i64, array<1 x i64>, array<1 x i64>)>
   // CHECK-DAG: %[[memRefPtr:.*]] = llvm.extractvalue %[[desc]][1]
   // CHECK-DAG: %[[memRefOff:.*]] = llvm.extractvalue %[[desc]][2]
   // CHECK-DAG: %[[basePtr:.*]] = llvm.getelementptr %[[memRefPtr]][%[[memRefOff]]]
@@ -81,21 +76,21 @@ func.func @fat_raw_buffer_cast_reset_offset(%buf: memref<?xi32, strided<[1], off
   // CHECK: %[[fatBuf:.*]] = rocdl.make.buffer.rsrc %[[basePtr]], %{{.*}}, %{{.*}}, %{{.*}}
   // CHECK: llvm.insertvalue %[[fatBuf]], %{{.*}}[1]
   // CHECK: llvm.insertvalue %[[zeroOff]], %{{.*}}[2]
-  %ret = amdgpu.fat_raw_buffer_cast %buf resetOffset : memref<?xi32, strided<[1], offset: ?>, #gpu_global_addrspace> to memref<?xi32, #amdgpu.address_space<fat_raw_buffer>>
+  %ret = amdgpu.fat_raw_buffer_cast %buf resetOffset : memref<?xi32, strided<[1], offset: ?>, #gpu.address_space<global>> to memref<?xi32, #amdgpu.address_space<fat_raw_buffer>>
   return %ret : memref<?xi32, #amdgpu.address_space<fat_raw_buffer>>
 }
 
 // CHECK-LABEL: func @fat_raw_buffer_cast_valid_bytes
-func.func @fat_raw_buffer_cast_valid_bytes(%buf: memref<8xi32, #gpu_global_addrspace>) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
+func.func @fat_raw_buffer_cast_valid_bytes(%buf: memref<8xi32, #gpu.address_space<global>>) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
   // CHECK: %[[numRecords:.*]] = arith.constant -1 : i64
   // CHECK: rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %{{.*}}
   %cu64_max = arith.constant -1 : i64
-  %ret = amdgpu.fat_raw_buffer_cast %buf validBytes(%cu64_max) : memref<8xi32, #gpu_global_addrspace> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
+  %ret = amdgpu.fat_raw_buffer_cast %buf validBytes(%cu64_max) : memref<8xi32, #gpu.address_space<global>> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
   return %ret : memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
 }
 
 // CHECK-LABEL: func @fat_raw_buffer_cast_bounds_check
-func.func @fat_raw_buffer_cast_bounds_check(%buf: memref<8xi32, #gpu_global_addrspace>) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
+func.func @fat_raw_buffer_cast_bounds_check(%buf: memref<8xi32, #gpu.address_space<global>>) -> memref<8xi32, #amdgpu.address_space<fat_raw_buffer>> {
   // GFX9:  %[[numRecords:.*]] = llvm.mlir.constant({{.*}} : i64)
   // GFX9:  %[[flags:.*]] = llvm.mlir.constant(159744 : i32)
   // GFX1250: %[[numRecords:.*]] = llvm.mlir.constant(35184372088831 : i64)
@@ -103,13 +98,13 @@ func.func @fat_raw_buffer_cast_bounds_check(%buf: memref<8xi32, #gpu_global_addr
   // RDNA:  %[[numRecords:.*]] = llvm.mlir.constant({{.*}} : i64)
   // RDNA:  %[[flags:.*]] = llvm.mlir.constant(553807872 : i32)
   // CHECK: %[[rsrc:.*]] = rocdl.make.buffer.rsrc %{{.*}}, %{{.*}}, %[[numRecords]], %[[flags]]
-  %ret = amdgpu.fat_raw_buffer_cast %buf boundsCheck(false) : memref<8xi32, #gpu_global_addrspace> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
+  %ret = amdgpu.fat_raw_buffer_cast %buf boundsCheck(false) : memref<8xi32, #gpu.address_space<global>> to memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
   return %ret : memref<8xi32, #amdgpu.address_space<fat_raw_buffer>>
 }
 
 // CHECK-LABEL: func @fat_raw_buffer_cast_cache_swizzle
-// CHECK-SAME: (%{{.*}}: memref<64x64xi32, 1>, %[[stride:.*]]: i14)
-func.func @fat_raw_buffer_cast_cache_swizzle(%buf: memref<64x64xi32, #gpu_global_addrspace>, %stride: i14) -> memref<64x64xi32, #amdgpu.address_space<fat_raw_buffer>> {
+// CHECK-SAME: (%{{.*}}: memref<64x64xi32, #gpu.address_space<global>>, %[[stride:.*]]: i14)
+func.func @fat_raw_buffer_cast_cache_swizzle(%buf: memref<64x64xi32, #gpu.address_space<global>>, %stride: i14) -> memref<64x64xi32, #amdgpu.address_space<fat_raw_buffer>> {
   // GFX908: %[[stride:.*]] = llvm.mlir.constant(0 : i16) : i16
   // GFX908: %[[flags:.*]] = llvm.mlir.constant
   // GFX90A: %[[stride:.*]] = llvm.mlir.constant(0 : i16) : i16
@@ -123,7 +118,7 @@ func.func @fat_raw_buffer_cast_cache_swizzle(%buf: memref<64x64xi32, #gpu_global
   // GFX1250: %[[stride:.*]] = llvm.mlir.constant(0 : i16) : i16
   // GFX1250: %[[flags:.*]] = llvm.mlir.constant(0 : i32)
   // CHECK: rocdl.make.buffer.rsrc %{{.*}}, %[[stride]], %{{.*}}, %[[flags]]
-  %ret = amdgpu.fat_raw_buffer_cast %buf cacheSwizzleStride(%stride) : memref<64x64xi32, #gpu_global_addrspace> to memref<64x64xi32, #amdgpu.address_space<fat_raw_buffer>>
+  %ret = amdgpu.fat_raw_buffer_cast %buf cacheSwizzleStride(%stride) : memref<64x64xi32, #gpu.address_space<global>> to memref<64x64xi32, #amdgpu.address_space<fat_raw_buffer>>
   return %ret : memref<64x64xi32, #amdgpu.address_space<fat_raw_buffer>>
 }
 

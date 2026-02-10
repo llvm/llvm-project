@@ -42,6 +42,7 @@
 #include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
+using namespace llvm::AMDGPU;
 
 #define DEBUG_TYPE "si-insert-waitcnts"
 
@@ -69,42 +70,6 @@ static cl::opt<bool> ExpertSchedulingModeFlag(
     cl::init(false), cl::Hidden);
 
 namespace {
-// Class of object that encapsulates latest instruction counter score
-// associated with the operand.  Used for determining whether
-// s_waitcnt instruction needs to be emitted.
-
-enum InstCounterType {
-  LOAD_CNT = 0, // VMcnt prior to gfx12.
-  DS_CNT,       // LKGMcnt prior to gfx12.
-  EXP_CNT,      //
-  STORE_CNT,    // VScnt in gfx10/gfx11.
-  NUM_NORMAL_INST_CNTS,
-  SAMPLE_CNT = NUM_NORMAL_INST_CNTS, // gfx12+ only.
-  BVH_CNT,                           // gfx12+ only.
-  KM_CNT,                            // gfx12+ only.
-  X_CNT,                             // gfx1250.
-  NUM_EXTENDED_INST_CNTS,
-  VA_VDST = NUM_EXTENDED_INST_CNTS, // gfx12+ expert mode only.
-  VM_VSRC,                          // gfx12+ expert mode only.
-  NUM_EXPERT_INST_CNTS,
-  NUM_INST_CNTS = NUM_EXPERT_INST_CNTS
-};
-} // namespace
-
-namespace llvm {
-template <> struct enum_iteration_traits<InstCounterType> {
-  static constexpr bool is_iterable = true;
-};
-} // namespace llvm
-
-namespace {
-// Return an iterator over all counters between LOAD_CNT (the first counter)
-// and \c MaxCounter (exclusive, default value yields an enumeration over
-// all counters).
-auto inst_counter_types(InstCounterType MaxCounter = NUM_INST_CNTS) {
-  return enum_seq(LOAD_CNT, MaxCounter);
-}
-
 // Get the maximum wait count value for a given counter type.
 static unsigned getWaitCountMax(const AMDGPU::HardwareLimits &Limits,
                                 InstCounterType T) {
@@ -300,45 +265,11 @@ VmemType getVmemType(const MachineInstr &Inst) {
   return VMEM_NOSAMPLER;
 }
 
-unsigned &getCounterRef(AMDGPU::Waitcnt &Wait, InstCounterType T) {
-  switch (T) {
-  case LOAD_CNT:
-    return Wait.LoadCnt;
-  case EXP_CNT:
-    return Wait.ExpCnt;
-  case DS_CNT:
-    return Wait.DsCnt;
-  case STORE_CNT:
-    return Wait.StoreCnt;
-  case SAMPLE_CNT:
-    return Wait.SampleCnt;
-  case BVH_CNT:
-    return Wait.BvhCnt;
-  case KM_CNT:
-    return Wait.KmCnt;
-  case X_CNT:
-    return Wait.XCnt;
-  case VA_VDST:
-    return Wait.VaVdst;
-  case VM_VSRC:
-    return Wait.VmVsrc;
-  default:
-    llvm_unreachable("bad InstCounterType");
-  }
-}
-
 void addWait(AMDGPU::Waitcnt &Wait, InstCounterType T, unsigned Count) {
-  unsigned &WC = getCounterRef(Wait, T);
-  WC = std::min(WC, Count);
+  Wait.set(T, std::min(Wait.get(T), Count));
 }
 
-void setNoWait(AMDGPU::Waitcnt &Wait, InstCounterType T) {
-  getCounterRef(Wait, T) = ~0u;
-}
-
-unsigned getWait(AMDGPU::Waitcnt &Wait, InstCounterType T) {
-  return getCounterRef(Wait, T);
-}
+void setNoWait(AMDGPU::Waitcnt &Wait, InstCounterType T) { Wait.set(T, ~0u); }
 
 /// A small set of events.
 class WaitEventSet {
@@ -1812,7 +1743,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
       // would provide misleading profiling information.
       bool AnyOutOfOrder = false;
       for (auto CT : {LOAD_CNT, DS_CNT, EXP_CNT}) {
-        unsigned &WaitCnt = getCounterRef(Wait, CT);
+        unsigned WaitCnt = Wait.get(CT);
         if (WaitCnt != ~0u && ScoreBrackets.counterOutOfOrder(CT)) {
           AnyOutOfOrder = true;
           break;
@@ -1827,7 +1758,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
       } else {
         // All counters are in-order, safe to expand
         for (auto CT : {LOAD_CNT, DS_CNT, EXP_CNT}) {
-          unsigned &WaitCnt = getCounterRef(Wait, CT);
+          unsigned WaitCnt = Wait.get(CT);
           if (WaitCnt == ~0u)
             continue;
 
@@ -1835,7 +1766,7 @@ bool WaitcntGeneratorPreGFX12::createNewWaitcnt(
                                           getWaitCountMax(getLimits(), CT) - 1);
           EmitExpandedWaitcnt(Outstanding, WaitCnt, [&](unsigned Count) {
             AMDGPU::Waitcnt W;
-            getCounterRef(W, CT) = Count;
+            W.set(CT, Count);
             BuildMI(Block, It, DL, TII.get(AMDGPU::S_WAITCNT))
                 .addImm(AMDGPU::encodeWaitcnt(IV, W));
           });
@@ -2114,7 +2045,7 @@ bool WaitcntGeneratorGFX12Plus::applyPreexistingWaitcnt(
     if (!WaitInstrs[CT])
       continue;
 
-    unsigned NewCnt = getWait(Wait, CT);
+    unsigned NewCnt = Wait.get(CT);
     if (NewCnt != ~0u) {
       Modified |= updateOperandIfDifferent(*WaitInstrs[CT],
                                            AMDGPU::OpName::simm16, NewCnt);
@@ -2193,7 +2124,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
   // simpler
   if (ExpandWaitcntProfiling) {
     for (auto CT : inst_counter_types(NUM_EXTENDED_INST_CNTS)) {
-      unsigned Count = getWait(Wait, CT);
+      unsigned Count = Wait.get(CT);
       if (Count == ~0u)
         continue;
 
@@ -2251,7 +2182,7 @@ bool WaitcntGeneratorGFX12Plus::createNewWaitcnt(
   // waiting for.
 
   for (auto CT : inst_counter_types(NUM_EXTENDED_INST_CNTS)) {
-    unsigned Count = getWait(Wait, CT);
+    unsigned Count = Wait.get(CT);
     if (Count == ~0u)
       continue;
 
@@ -2571,12 +2502,12 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   for (InstCounterType T : inst_counter_types()) {
     if (!ForceEmitWaitcnt[T])
       continue;
-    getCounterRef(Wait, T) = 0;
+    Wait.set(T, 0);
   }
 
   if (FlushFlags.FlushVmCnt) {
     for (InstCounterType T : {LOAD_CNT, SAMPLE_CNT, BVH_CNT})
-      getCounterRef(Wait, T) = 0;
+      Wait.set(T, 0);
   }
 
   if (FlushFlags.FlushDsCnt && ScoreBrackets.hasPendingEvent(DS_CNT))
