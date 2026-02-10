@@ -926,10 +926,10 @@ CodeGenFunction::evaluateOrEmitBuiltinObjectSize(const Expr *E, unsigned Type,
                                                  llvm::IntegerType *ResType,
                                                  llvm::Value *EmittedE,
                                                  bool IsDynamic) {
-  uint64_t ObjectSize;
-  if (!E->tryEvaluateObjectSize(ObjectSize, getContext(), Type))
-    return emitBuiltinObjectSize(E, Type, ResType, EmittedE, IsDynamic);
-  return ConstantInt::get(ResType, ObjectSize, /*isSigned=*/true);
+  if (std::optional<uint64_t> ObjectSize =
+          E->tryEvaluateObjectSize(getContext(), Type))
+    return ConstantInt::get(ResType, *ObjectSize, /*isSigned=*/true);
+  return emitBuiltinObjectSize(E, Type, ResType, EmittedE, IsDynamic);
 }
 
 namespace {
