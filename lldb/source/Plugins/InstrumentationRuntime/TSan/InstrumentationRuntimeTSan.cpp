@@ -90,7 +90,20 @@ extern "C"
     int (*ptr__tsan_get_report_loc_object_type)(void *report, unsigned long idx, const char **object_type);
     int (*ptr__tsan_get_report_tag)(void *report, unsigned long *tag);
 }
+)"
+// clang-format off
+#if defined(__linux__)
+R"(
+    void *const RTLD_DEFAULT = (void *)0;
+  }
 )";
+#else
+R"(
+    void *const RTLD_DEFAULT = (void *)-2;
+  }
+)";
+#endif
+// clang-format on
 
 const char *thread_sanitizer_retrieve_report_data_command = R"(
 
@@ -163,7 +176,7 @@ struct {
     } unique_tids[REPORT_ARRAY_SIZE];
 } t = {0};
 
-ptr__tsan_get_report_loc_object_type = (typeof(ptr__tsan_get_report_loc_object_type))(void *)dlsym((void*)-2 /*RTLD_DEFAULT*/, "__tsan_get_report_loc_object_type");
+ptr__tsan_get_report_loc_object_type = (typeof(ptr__tsan_get_report_loc_object_type))(void *)dlsym(RTLD_DEFAULT, "__tsan_get_report_loc_object_type");
 ptr__tsan_get_report_tag = (typeof(ptr__tsan_get_report_tag))(void *)dlsym((void*)-2 /*RTLD_DEFAULT*/, "__tsan_get_report_tag");
 
 t.report = __tsan_get_current_report();
