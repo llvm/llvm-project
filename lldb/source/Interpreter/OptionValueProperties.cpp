@@ -508,18 +508,20 @@ OptionValueProperties::GetSubProperty(const ExecutionContext *exe_ctx,
 
 bool OptionValueProperties::VerifyPath() {
   OptionValueSP parent = GetParent();
-  if (!parent)
+  if (!parent) {
     // Only the top level value should have an empty path.
     return m_expected_path.empty();
+  }
   OptionValueProperties *parent_properties = parent->GetAsProperties();
   if (!parent_properties)
     return false;
 
   auto [prefix, expected_name] = llvm::StringRef(m_expected_path).rsplit('.');
 
-  if (expected_name.empty())
+  if (expected_name.empty()) {
     // There is no dot, so the parent should be the top-level (core properties).
     return parent_properties->m_expected_path.empty() && GetName() == prefix;
+  }
 
   return parent_properties->m_expected_path == prefix &&
          GetName() == expected_name;

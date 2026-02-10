@@ -99,7 +99,7 @@ let Definition = "target", Path = "target" in {
     DefaultUnsignedValue<24>,
     Desc<"Maximum number of children to expand in any level of depth.">;
   def MaxChildrenDepth: Property<"max-children-depth", "UInt64">,
-    DefaultUnsignedValue<4>,
+    DefaultUnsignedValue<5>,
     Desc<"Maximum depth to expand children.">;
   def MaxSummaryLength: Property<"max-string-summary-length", "UInt64">,
     DefaultUnsignedValue<1024>,

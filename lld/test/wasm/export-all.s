@@ -30,28 +30,41 @@ foo:
 # CHECK-NEXT:         Index:           1
 # CHECK-NEXT:       - Name:            __dso_handle
 # CHECK-NEXT:         Kind:            GLOBAL
-# CHECK-NEXT:         Index:           1
+# CHECK-NEXT:         Index:           4
 # CHECK-NEXT:       - Name:            __data_end
 # CHECK-NEXT:         Kind:            GLOBAL
-# CHECK-NEXT:         Index:           2
-# CHECK-NEXT:       - Name:            __stack_low
-# CHECK-NEXT:         Kind:            GLOBAL
-# CHECK-NEXT:         Index:           3
-# CHECK-NEXT:       - Name:            __stack_high
-# CHECK-NEXT:         Kind:            GLOBAL
-# CHECK-NEXT:         Index:           4
-# CHECK-NEXT:       - Name:            __global_base
-# CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         Index:           5
-# CHECK-NEXT:       - Name:            __heap_base
+# CHECK-NEXT:       - Name:            __rodata_start
 # CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         Index:           6
-# CHECK-NEXT:       - Name:            __heap_end
+# CHECK-NEXT:       - Name:            __rodata_end
 # CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         Index:           7
-# CHECK-NEXT:       - Name:            __memory_base
+# CHECK-NEXT:       - Name:            __stack_low
 # CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         Index:           8
-# CHECK-NEXT:       - Name:            __table_base
+# CHECK-NEXT:       - Name:            __stack_high
 # CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         Index:           9
+# CHECK-NEXT:       - Name:            __global_base
+# CHECK-NEXT:         Kind:            GLOBAL
+# CHECK-NEXT:         Index:           10
+# CHECK-NEXT:       - Name:            __heap_base
+# CHECK-NEXT:         Kind:            GLOBAL
+# CHECK-NEXT:         Index:           11
+# CHECK-NEXT:       - Name:            __heap_end
+# CHECK-NEXT:         Kind:            GLOBAL
+# CHECK-NEXT:         Index:           12
+# CHECK-NEXT:       - Name:            __memory_base
+# CHECK-NEXT:         Kind:            GLOBAL
+# CHECK-NEXT:         Index:           1
+# CHECK-NEXT:       - Name:            __table_base
+# CHECK-NEXT:         Kind:            GLOBAL
+# CHECK-NEXT:         Index:           2
+# CHECK-NEXT:       - Name:            __wasm_first_page_end
+# CHECK-NEXT:         Kind:            GLOBAL
+# CHECK-NEXT:         Index:           13
+# CHECK-NEXT:       - Name:            __tls_base
+# CHECK-NEXT:         Kind:            GLOBAL
+# CHECK-NEXT:         Index:           3
+# CHECK-NEXT:    - Type:            CODE
