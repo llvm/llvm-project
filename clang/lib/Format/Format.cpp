@@ -3803,6 +3803,8 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
       HasImport = true;
       AssociatedCommentLines.clear();
     } else {
+      // `Trimmed` is neither empty, nor a comment or a package/import
+      // statement.
       break;
     }
     Prev = Pos + 1;
