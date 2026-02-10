@@ -370,7 +370,10 @@ def testExtDialectWithRegion():
         value: Operand[Any]
 
         def verify_trait(self) -> bool:
-            if self.parent.results[0].type != self.value.type:
+            parent_results = self.parent.results
+            if len(parent_results) == 0:
+                return True
+            if parent_results[0].type != self.value.type:
                 self.location.emit_error(
                     "result type mismatch between YieldOp and its parent IfOp"
                 )
