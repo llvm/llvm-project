@@ -3119,12 +3119,15 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
   assert(all_of(Plan.getVF().users(),
-                [&LoopRegion](VPUser *U) {
-                  auto *R = cast<VPRecipeBase>(U);
-                  return (R->getParent()->getParent() != LoopRegion) ||
-                         isa<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
-                             VPWidenIntOrFpInductionRecipe,
-                             VPWidenMemIntrinsicRecipe>(R);
+                [&Plan](VPUser *U) {
+                  auto IsAllowedUser =
+                      IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
+                              VPWidenIntOrFpInductionRecipe,
+                              VPWidenMemIntrinsicRecipe>;
+                  if (match(U, m_Trunc(m_Specific(&Plan.getVF()))))
+                    return all_of(cast<VPSingleDefRecipe>(U)->users(),
+                                  IsAllowedUser);
+                  return IsAllowedUser(U);
                 }) &&
          "User of VF that we can't transform to EVL.");
   Plan.getVF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
