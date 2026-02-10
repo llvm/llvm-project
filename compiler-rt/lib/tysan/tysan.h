@@ -20,11 +20,13 @@ using __sanitizer::sptr;
 using __sanitizer::u16;
 using __sanitizer::uptr;
 
+#include "tysan_interface.h"
 #include "tysan_platform.h"
 
 extern "C" {
 void tysan_set_type_unknown(const void *addr, uptr size);
 void tysan_copy_types(const void *daddr, const void *saddr, uptr size);
+int getTDName(void *td, char *buffer, uptr buffer_size, bool assert_on_error);
 }
 
 namespace __tysan {
