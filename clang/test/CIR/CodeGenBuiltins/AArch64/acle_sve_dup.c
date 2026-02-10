@@ -158,7 +158,7 @@ svfloat64_t test_svdup_n_f64(float64_t op) MODE_ATTR
 svint8_t test_svdup_n_s8_z(svbool_t pg, int8_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[16] x !s8i>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], {{%.*}}, {{%.*}} :
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %{{.*}}, %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[16] x !s8i>
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i8{{.*}} [[OP:%.*]])
@@ -171,9 +171,9 @@ svint8_t test_svdup_n_s8_z(svbool_t pg, int8_t op) MODE_ATTR
 svint16_t test_svdup_n_s16_z(svbool_t pg, int16_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[8] x !s16i>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{%.*}} :
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:          -> !cir.vector<[8] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], {{.*}} :
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !cir.vector<[8] x !s16i>
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i16{{.*}} [[OP:%.*]])
@@ -187,9 +187,9 @@ svint16_t test_svdup_n_s16_z(svbool_t pg, int16_t op) MODE_ATTR
 svint32_t test_svdup_n_s32_z(svbool_t pg, int32_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[4] x !s32i>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{%.*}} :
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], {{.*}} :
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !s32i>
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i32{{.*}} [[OP:%.*]])
@@ -203,9 +203,9 @@ svint32_t test_svdup_n_s32_z(svbool_t pg, int32_t op) MODE_ATTR
 svint64_t test_svdup_n_s64_z(svbool_t pg, int64_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[2] x !s64i>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{.*}} :
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], {{.*}} :
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !s64i>
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i64{{.*}} [[OP:%.*]])
@@ -219,7 +219,7 @@ svint64_t test_svdup_n_s64_z(svbool_t pg, int64_t op) MODE_ATTR
 svuint8_t test_svdup_n_u8_z(svbool_t pg, uint8_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[16] x !u8i>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], {{.*}}, {{.*}} :
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %{{.*}}, %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[16] x !u8i>
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i8{{.*}} [[OP:%.*]])
@@ -232,9 +232,9 @@ svuint8_t test_svdup_n_u8_z(svbool_t pg, uint8_t op) MODE_ATTR
 svuint16_t test_svdup_n_u16_z(svbool_t pg, uint16_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[8] x !u16i>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{.*}} :
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:          -> !cir.vector<[8] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], {{.*}} :
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:          -> !cir.vector<[8] x !u16i>
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i16{{.*}} [[OP:%.*]])
@@ -248,9 +248,9 @@ svuint16_t test_svdup_n_u16_z(svbool_t pg, uint16_t op) MODE_ATTR
 svuint32_t test_svdup_n_u32_z(svbool_t pg, uint32_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[4] x !u32i>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{.*}} :
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], {{.*}} :
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !u32i>
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i32{{.*}} [[OP:%.*]])
@@ -264,9 +264,9 @@ svuint32_t test_svdup_n_u32_z(svbool_t pg, uint32_t op) MODE_ATTR
 svuint64_t test_svdup_n_u64_z(svbool_t pg, uint64_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[2] x !u64i>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{.*}} :
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], {{.*}} :
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !u64i>
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], i64{{.*}} [[OP:%.*]])
@@ -280,9 +280,9 @@ svuint64_t test_svdup_n_u64_z(svbool_t pg, uint64_t op) MODE_ATTR
 svfloat16_t test_svdup_n_f16_z(svbool_t pg, float16_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[8] x !cir.f16>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{.*}} :
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[8] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], {{.*}} :
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[8] x !cir.f16>
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], half{{.*}} [[OP:%.*]])
@@ -296,9 +296,9 @@ svfloat16_t test_svdup_n_f16_z(svbool_t pg, float16_t op) MODE_ATTR
 svfloat32_t test_svdup_n_f32_z(svbool_t pg, float32_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[4] x !cir.float>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{.*}} :
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !cir.int<u, 1>>
-// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], {{.*}} :
+// CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[4] x !cir.float>
 
 // LLVM_OGCG_CIR-SAME: <vscale x 16 x i1> [[PG:%.*]], float{{.*}} [[OP:%.*]])
@@ -312,7 +312,7 @@ svfloat32_t test_svdup_n_f32_z(svbool_t pg, float32_t op) MODE_ATTR
 svfloat64_t test_svdup_n_f64_z(svbool_t pg, float64_t op) MODE_ATTR
 {
 // CIR:           %[[CONST_0:.*]] = cir.const #cir.zero : !cir.vector<[2] x !cir.double>
-// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" {{.*}} :
+// CIR:           %[[CONVERT_PG:.*]] = cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !cir.int<u, 1>>
 // CIR:           %[[CALL_DUP:.*]] = cir.call_llvm_intrinsic "aarch64.sve.dup" %[[CONST_0]], %[[CONVERT_PG]], %{{.*}} :
 // CIR-SAME:        -> !cir.vector<[2] x !cir.double>
