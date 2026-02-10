@@ -238,8 +238,8 @@ Transforms/InstCombine/minmax-fp.ll
 Transforms/InstCombine/minmax-intrinsics.ll
 Transforms/InstCombine/mul-inseltpoison.ll
 Transforms/InstCombine/mul.ll
+Transforms/InstCombine/mul-pow2.ll
 Transforms/InstCombine/multiple-uses-load-bitcast-select.ll
-Transforms/InstCombine/nested-select.ll
 Transforms/InstCombine/or-fcmp.ll
 Transforms/InstCombine/pow-1.ll
 Transforms/InstCombine/pow-3.ll
