@@ -36,6 +36,7 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
 #include "llvm/ADT/ScopedHashTable.h"
+#include "llvm/IR/Instructions.h"
 
 namespace {
 class ScalarExprEmitter;

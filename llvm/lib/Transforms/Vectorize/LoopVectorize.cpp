@@ -7003,6 +7003,11 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
     Cost += BranchCost;
   }
 
+  // Don't apply special costs when instruction cost is forced to make sure the
+  // forced cost is used for each recipe.
+  if (ForceTargetInstructionCost.getNumOccurrences())
+    return Cost;
+
   // Pre-compute costs for instructions that are forced-scalar or profitable to
   // scalarize. Their costs will be computed separately in the legacy cost
   // model.
@@ -8472,12 +8477,11 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     if (!PhiR->isInLoop() && CM.foldTailByMasking() &&
         (!RR || !RR->isPartialReduction())) {
       VPValue *Cond = vputils::findHeaderMask(*Plan);
-      std::optional<FastMathFlags> FMFs =
-          PhiTy->isFloatingPointTy()
-              ? std::make_optional(RdxDesc.getFastMathFlags())
-              : std::nullopt;
+      VPIRFlags Flags = PhiTy->isFloatingPointTy()
+                            ? VPIRFlags(RdxDesc.getFastMathFlags())
+                            : VPIRFlags();
       NewExitingVPV =
-          Builder.createSelect(Cond, OrigExitingVPV, PhiR, {}, "", FMFs);
+          Builder.createSelect(Cond, OrigExitingVPV, PhiR, {}, "", Flags);
       OrigExitingVPV->replaceUsesWithIf(NewExitingVPV, [](VPUser &U, unsigned) {
         using namespace VPlanPatternMatch;
         return match(
