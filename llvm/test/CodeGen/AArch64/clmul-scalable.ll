@@ -379,18 +379,14 @@ define <vscale x 4 x i32> @clmul_nxv4i32(<vscale x 4 x i32> %x, <vscale x 4 x i3
 ; CHECK-SVE2:       // %bb.0:
 ; CHECK-SVE2-NEXT:    pmullt z2.d, z0.s, z1.s
 ; CHECK-SVE2-NEXT:    pmullb z0.d, z0.s, z1.s
-; CHECK-SVE2-NEXT:    uzp1 z1.s, z2.s, z2.s
-; CHECK-SVE2-NEXT:    uzp1 z0.s, z0.s, z2.s
-; CHECK-SVE2-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-SVE2-NEXT:    trn1 z0.s, z0.s, z2.s
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE2-AES-LABEL: clmul_nxv4i32:
 ; CHECK-SVE2-AES:       // %bb.0:
 ; CHECK-SVE2-AES-NEXT:    pmullt z2.d, z0.s, z1.s
 ; CHECK-SVE2-AES-NEXT:    pmullb z0.d, z0.s, z1.s
-; CHECK-SVE2-AES-NEXT:    uzp1 z1.s, z2.s, z2.s
-; CHECK-SVE2-AES-NEXT:    uzp1 z0.s, z0.s, z2.s
-; CHECK-SVE2-AES-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-SVE2-AES-NEXT:    trn1 z0.s, z0.s, z2.s
 ; CHECK-SVE2-AES-NEXT:    ret
   %a = call <vscale x 4 x i32> @llvm.clmul.nxv4i32(<vscale x 4 x i32> %x, <vscale x 4 x i32> %y)
   ret <vscale x 4 x i32> %a
@@ -888,9 +884,7 @@ define <vscale x 2 x i64> @clmul_nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i6
 ; CHECK-SVE2-AES:       // %bb.0:
 ; CHECK-SVE2-AES-NEXT:    pmullt z2.q, z0.d, z1.d
 ; CHECK-SVE2-AES-NEXT:    pmullb z0.q, z0.d, z1.d
-; CHECK-SVE2-AES-NEXT:    uzp1 z1.d, z2.d, z2.d
-; CHECK-SVE2-AES-NEXT:    uzp1 z0.d, z0.d, z2.d
-; CHECK-SVE2-AES-NEXT:    zip1 z0.d, z0.d, z1.d
+; CHECK-SVE2-AES-NEXT:    trn1 z0.d, z0.d, z2.d
 ; CHECK-SVE2-AES-NEXT:    ret
   %a = call <vscale x 2 x i64> @llvm.clmul.nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i64> %y)
   ret <vscale x 2 x i64> %a
@@ -1168,9 +1162,7 @@ define <vscale x 4 x i32> @clmul_nxv4i32_zext(<vscale x 4 x i16> %x, <vscale x 4
 ; CHECK-SVE2-NEXT:    and z1.s, z1.s, #0xffff
 ; CHECK-SVE2-NEXT:    pmullt z2.d, z0.s, z1.s
 ; CHECK-SVE2-NEXT:    pmullb z0.d, z0.s, z1.s
-; CHECK-SVE2-NEXT:    uzp1 z1.s, z2.s, z2.s
-; CHECK-SVE2-NEXT:    uzp1 z0.s, z0.s, z2.s
-; CHECK-SVE2-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-SVE2-NEXT:    trn1 z0.s, z0.s, z2.s
 ; CHECK-SVE2-NEXT:    ret
 ;
 ; CHECK-SVE2-AES-LABEL: clmul_nxv4i32_zext:
@@ -1179,9 +1171,7 @@ define <vscale x 4 x i32> @clmul_nxv4i32_zext(<vscale x 4 x i16> %x, <vscale x 4
 ; CHECK-SVE2-AES-NEXT:    and z1.s, z1.s, #0xffff
 ; CHECK-SVE2-AES-NEXT:    pmullt z2.d, z0.s, z1.s
 ; CHECK-SVE2-AES-NEXT:    pmullb z0.d, z0.s, z1.s
-; CHECK-SVE2-AES-NEXT:    uzp1 z1.s, z2.s, z2.s
-; CHECK-SVE2-AES-NEXT:    uzp1 z0.s, z0.s, z2.s
-; CHECK-SVE2-AES-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-SVE2-AES-NEXT:    trn1 z0.s, z0.s, z2.s
 ; CHECK-SVE2-AES-NEXT:    ret
   %zextx = zext <vscale x 4 x i16> %x to <vscale x 4 x i32>
   %zexty = zext <vscale x 4 x i16> %y to <vscale x 4 x i32>
@@ -1549,9 +1539,7 @@ define <vscale x 2 x i64> @clmul_nxv2i64_zext(<vscale x 2 x i32> %x, <vscale x 2
 ; CHECK-SVE2-AES-NEXT:    and z1.d, z1.d, #0xffffffff
 ; CHECK-SVE2-AES-NEXT:    pmullt z2.q, z0.d, z1.d
 ; CHECK-SVE2-AES-NEXT:    pmullb z0.q, z0.d, z1.d
-; CHECK-SVE2-AES-NEXT:    uzp1 z1.d, z2.d, z2.d
-; CHECK-SVE2-AES-NEXT:    uzp1 z0.d, z0.d, z2.d
-; CHECK-SVE2-AES-NEXT:    zip1 z0.d, z0.d, z1.d
+; CHECK-SVE2-AES-NEXT:    trn1 z0.d, z0.d, z2.d
 ; CHECK-SVE2-AES-NEXT:    ret
   %zextx = zext <vscale x 2 x i32> %x to <vscale x 2 x i64>
   %zexty = zext <vscale x 2 x i32> %y to <vscale x 2 x i64>
