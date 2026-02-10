@@ -494,17 +494,16 @@ define i32 @chained_partial_reduce_sub_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-NEON-NEXT:    [[TMP7:%.*]] = sext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
 ; CHECK-NEON-NEXT:    [[TMP8:%.*]] = sext <16 x i8> [[WIDE_LOAD1]] to <16 x i32>
 ; CHECK-NEON-NEXT:    [[TMP10:%.*]] = mul nsw <16 x i32> [[TMP7]], [[TMP8]]
-; CHECK-NEON-NEXT:    [[TMP11:%.*]] = sub nsw <16 x i32> zeroinitializer, [[TMP10]]
-; CHECK-NEON-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP11]])
+; CHECK-NEON-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[VEC_PHI]], <16 x i32> [[TMP10]])
 ; CHECK-NEON-NEXT:    [[TMP16:%.*]] = sext <16 x i8> [[WIDE_LOAD2]] to <16 x i32>
 ; CHECK-NEON-NEXT:    [[TMP12:%.*]] = mul nsw <16 x i32> [[TMP7]], [[TMP16]]
-; CHECK-NEON-NEXT:    [[TMP13:%.*]] = sub <16 x i32> zeroinitializer, [[TMP12]]
-; CHECK-NEON-NEXT:    [[PARTIAL_REDUCE3]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[PARTIAL_REDUCE]], <16 x i32> [[TMP13]])
+; CHECK-NEON-NEXT:    [[PARTIAL_REDUCE3]] = call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v16i32(<4 x i32> [[PARTIAL_REDUCE]], <16 x i32> [[TMP12]])
 ; CHECK-NEON-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEON-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEON-NEXT:    br i1 [[TMP14]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-NEON:       middle.block:
 ; CHECK-NEON-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[PARTIAL_REDUCE3]])
+; CHECK-NEON-NEXT:    [[TMP11:%.*]] = sub i32 0, [[TMP15]]
 ; CHECK-NEON-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-NEON-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; CHECK-NEON:       scalar.ph:
@@ -537,17 +536,16 @@ define i32 @chained_partial_reduce_sub_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-NEXT:    [[TMP14:%.*]] = sext <vscale x 16 x i8> [[WIDE_LOAD]] to <vscale x 16 x i32>
 ; CHECK-SVE-NEXT:    [[TMP16:%.*]] = sext <vscale x 16 x i8> [[WIDE_LOAD1]] to <vscale x 16 x i32>
 ; CHECK-SVE-NEXT:    [[TMP17:%.*]] = mul nsw <vscale x 16 x i32> [[TMP14]], [[TMP16]]
-; CHECK-SVE-NEXT:    [[TMP10:%.*]] = sub nsw <vscale x 16 x i32> zeroinitializer, [[TMP17]]
-; CHECK-SVE-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP10]])
+; CHECK-SVE-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP17]])
 ; CHECK-SVE-NEXT:    [[TMP11:%.*]] = sext <vscale x 16 x i8> [[WIDE_LOAD2]] to <vscale x 16 x i32>
 ; CHECK-SVE-NEXT:    [[TMP12:%.*]] = mul nsw <vscale x 16 x i32> [[TMP14]], [[TMP11]]
-; CHECK-SVE-NEXT:    [[TMP13:%.*]] = sub <vscale x 16 x i32> zeroinitializer, [[TMP12]]
-; CHECK-SVE-NEXT:    [[PARTIAL_REDUCE3]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]], <vscale x 16 x i32> [[TMP13]])
+; CHECK-SVE-NEXT:    [[PARTIAL_REDUCE3]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]], <vscale x 16 x i32> [[TMP12]])
 ; CHECK-SVE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-SVE-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-SVE-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-SVE:       middle.block:
 ; CHECK-SVE-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[PARTIAL_REDUCE3]])
+; CHECK-SVE-NEXT:    [[TMP18:%.*]] = sub i32 0, [[TMP15]]
 ; CHECK-SVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-SVE-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; CHECK-SVE:       scalar.ph:
@@ -580,17 +578,16 @@ define i32 @chained_partial_reduce_sub_sub(ptr %a, ptr %b, ptr %c, i32 %N) #0 {
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP13:%.*]] = sext <vscale x 8 x i8> [[WIDE_LOAD]] to <vscale x 8 x i32>
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP14:%.*]] = sext <vscale x 8 x i8> [[WIDE_LOAD1]] to <vscale x 8 x i32>
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP16:%.*]] = mul nsw <vscale x 8 x i32> [[TMP13]], [[TMP14]]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP17:%.*]] = sub nsw <vscale x 8 x i32> zeroinitializer, [[TMP16]]
-; CHECK-SVE-MAXBW-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 2 x i32> @llvm.vector.partial.reduce.add.nxv2i32.nxv8i32(<vscale x 2 x i32> [[VEC_PHI]], <vscale x 8 x i32> [[TMP17]])
+; CHECK-SVE-MAXBW-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 2 x i32> @llvm.vector.partial.reduce.add.nxv2i32.nxv8i32(<vscale x 2 x i32> [[VEC_PHI]], <vscale x 8 x i32> [[TMP16]])
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP12:%.*]] = sext <vscale x 8 x i8> [[WIDE_LOAD2]] to <vscale x 8 x i32>
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP18:%.*]] = mul nsw <vscale x 8 x i32> [[TMP13]], [[TMP12]]
-; CHECK-SVE-MAXBW-NEXT:    [[TMP19:%.*]] = sub <vscale x 8 x i32> zeroinitializer, [[TMP18]]
-; CHECK-SVE-MAXBW-NEXT:    [[PARTIAL_REDUCE3]] = call <vscale x 2 x i32> @llvm.vector.partial.reduce.add.nxv2i32.nxv8i32(<vscale x 2 x i32> [[PARTIAL_REDUCE]], <vscale x 8 x i32> [[TMP19]])
+; CHECK-SVE-MAXBW-NEXT:    [[PARTIAL_REDUCE3]] = call <vscale x 2 x i32> @llvm.vector.partial.reduce.add.nxv2i32.nxv8i32(<vscale x 2 x i32> [[PARTIAL_REDUCE]], <vscale x 8 x i32> [[TMP18]])
 ; CHECK-SVE-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-SVE-MAXBW-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK-SVE-MAXBW:       middle.block:
 ; CHECK-SVE-MAXBW-NEXT:    [[TMP21:%.*]] = call i32 @llvm.vector.reduce.add.nxv2i32(<vscale x 2 x i32> [[PARTIAL_REDUCE3]])
+; CHECK-SVE-MAXBW-NEXT:    [[TMP15:%.*]] = sub i32 0, [[TMP21]]
 ; CHECK-SVE-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[WIDE_TRIP_COUNT]], [[N_VEC]]
 ; CHECK-SVE-MAXBW-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; CHECK-SVE-MAXBW:       scalar.ph:

@@ -133,6 +133,17 @@ gentbl_cc_library(
     deps = [":TensorOpsTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "QuantStorageTypeInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/IR/QuantStorageTypeInterface.h.inc": ["-gen-type-interface-decls"],
+        "include/mlir/IR/QuantStorageTypeInterface.cpp.inc": ["-gen-type-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/IR/QuantStorageTypeInterface.td",
+    deps = [":QuantStorageTypeInterfaceTdFiles"],
+)
+
 td_library(
     name = "BuiltinDialectTdFiles",
     srcs = [
@@ -151,6 +162,7 @@ td_library(
         ":CastInterfacesTdFiles",
         ":DataLayoutInterfacesTdFiles",
         ":OpBaseTdFiles",
+        ":QuantStorageTypeInterfaceTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
 )
@@ -430,6 +442,7 @@ cc_library(
         ":DataLayoutInterfacesIncGen",
         ":InferIntRangeInterfaceIncGen",
         ":OpAsmInterfaceIncGen",
+        ":QuantStorageTypeInterfaceIncGen",
         ":RegionKindInterfaceIncGen",
         ":SideEffectInterfacesIncGen",
         ":Support",
@@ -1449,6 +1462,13 @@ td_library(
 td_library(
     name = "ParallelCombiningOpInterfaceTdFiles",
     srcs = ["include/mlir/Interfaces/ParallelCombiningOpInterface.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+td_library(
+    name = "QuantStorageTypeInterfaceTdFiles",
+    srcs = ["include/mlir/IR/QuantStorageTypeInterface.td"],
     includes = ["include"],
     deps = [":OpBaseTdFiles"],
 )
