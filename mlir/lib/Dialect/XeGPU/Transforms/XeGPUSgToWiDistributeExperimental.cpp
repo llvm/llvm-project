@@ -508,42 +508,19 @@ struct LowerVectorMultiReductionPattern
   LogicalResult
   matchAndRewrite(vector::MultiDimReductionOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
-    // If no layout, nothing to do.
-    if (!resLayout || !resLayout.isForSubgroup())
-      return failure();
-    VectorType sourceType = op.getSourceVectorType();
-    // Only 2D vectors are supported.
-    if (sourceType.getRank() != 2)
+    // Check validity for lowering at subgroup level.
+    if (!isValidSubgroupMultiReductionOp(op))
       return rewriter.notifyMatchFailure(
-          op, "Expecting 2D source vector in vector::MultiDimReductionOp at "
-              "subgroup level.");
-    VectorType resType = dyn_cast<VectorType>(op.getType());
-    if (!resType)
-      return rewriter.notifyMatchFailure(op, "Expecting vector result type");
-    // Compute the distributed vector type based on the layout.
-    FailureOr<VectorType> resDistTypeOrFailure =
-        getDistVecTypeBasedOnLaneLayout(resLayout, resType);
-    if (failed(resDistTypeOrFailure))
+          op, "Not a valid subgroup multi reduction op that can be lowered.");
+    // Only non-lane-local reduction is handled here.
+    if (isReductionLaneLocal(op))
       return rewriter.notifyMatchFailure(
-          op, "Failed to compute the distributed vector type based on the "
-              "layout.");
-
+          op, "Reduction is lane-local, it does not require rewrite.");
     ArrayRef<int64_t> reductionDims = op.getReductionDims();
-    // Only 1 reduction dimension supported.
-    if (reductionDims.size() != 1)
-      return rewriter.notifyMatchFailure(
-          op, "Only 1 reduction dimension is supported.");
-
+    assert(
+        reductionDims.size() == 1 &&
+        "Expecting single reduction dimension for subgroup multi reduction op");
     int64_t reductionDim = reductionDims[0];
-
-    // Rewrite is only needed when when the reduction is not lane-local.
-    // If the reduction is lane-local, result type is not the same before and
-    // after distribution (i.e. result is distributed to lanes not shared.)
-    bool reductionDimDistributed =
-        resType.getShape() != resDistTypeOrFailure.value().getShape();
-    if (reductionDimDistributed)
-      return failure();
 
     // Rewrite MultiDimReductionOp into a sequence of ReductionOps.
     Value result = xegpu::lowerToVectorReductions(
