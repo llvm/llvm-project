@@ -420,9 +420,9 @@ void CSEDriver::simplifyRegion(ScopedMapTy &knownValues,
          << OpWithFlags(region.getParentOp(), OpPrintingFlags().skipRegions());
 
   // Prevent CSE of pure operations across function boundaries.
-  std::optional<ScopedMapTy::ScopeTy> funcPureScope;
+  std::unique_ptr<ScopedMapTy::ScopeTy> funcPureScope;
   if (isa<FunctionOpInterface>(region.getParentOp())) {
-    funcPureScope.emplace(knownPureOps);
+    funcPureScope = std::make_unique<ScopedMapTy::ScopeTy>(knownPureOps);
   }
   bool hasSSADominance = domInfo->hasSSADominance(&region);
   // If the region only contains one block, then simplify it directly.
