@@ -3521,14 +3521,22 @@ void CodeGenModule::AddDependentLib(StringRef Lib) {
 }
 
 /// Process copyright pragma and create LLVM metadata.
-/// #pragma comment(copyright, "string") embed copyright
-/// information into the object file's loader section.
+/// #pragma comment(copyright, "string") embeds copyright information into a loadable program-data section of the object file for inclusion in the linked module.
 ///
-/// Example: #pragma comment(copyright, "Copyright IBM Corp. 2024")
+/// Example: #pragma comment(copyright, "Copyright string")
 ///
 /// This should only be called once per translation unit.
 void CodeGenModule::ProcessPragmaComment(PragmaMSCommentKind Kind,
-                                         StringRef Comment) {
+                                         StringRef Comment,
+                                         bool isFromASTFile) {
+  // Target Guard: Only AIX supports PCK_Copyright currently.
+  if (!getTriple().isOSAIX())
+    return;
+
+  // Deserialization Guard: Only process if copyright originated in this TU.
+  if (isFromASTFile)
+    return;
+
   // Ensure we are only processing Copyright Pragmas
   assert(Kind == PCK_Copyright &&
          "Unexpected pragma comment kind, ProcessPragmaComment should only be "
@@ -7741,13 +7749,11 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
       AppendLinkerOptions(PCD->getArg());
       break;
     case PCK_Lib:
-        AddDependentLib(PCD->getArg());
+      AddDependentLib(PCD->getArg());
       break;
     case PCK_Copyright:
-      // Skip pragmas deserialized from modules/PCHs. Process the pragma comment
-      // only if it originated in this TU and the target OS is AIX.
-      if (!PCD->isFromASTFile() && getTriple().isOSAIX())
-        ProcessPragmaComment(PCD->getCommentKind(), PCD->getArg());
+      ProcessPragmaComment(PCD->getCommentKind(), PCD->getArg(),
+                           PCD->isFromASTFile());
       break;
     case PCK_Compiler:
     case PCK_ExeStr:

@@ -1494,7 +1494,8 @@ public:
   void AddDependentLib(StringRef Lib);
 
   /// Process pragma comment
-  void ProcessPragmaComment(PragmaMSCommentKind Kind, StringRef Comment);
+  void ProcessPragmaComment(PragmaMSCommentKind Kind, StringRef Comment,
+                            bool isFromASTFile);
 
   llvm::GlobalVariable::LinkageTypes getFunctionLinkage(GlobalDecl GD);
 
