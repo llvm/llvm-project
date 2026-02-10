@@ -1626,3 +1626,14 @@ func.func @shape_of_0d(%arg0: tensor<f32>) -> tensor<?xindex> {
   %0 = shape.shape_of %arg0 : tensor<f32> -> tensor<?xindex>
   return %0 : tensor<?xindex>
 }
+
+// -----
+
+// Ensure this case not crash.
+
+// CHECK-LABEL: func @shape_of_static_with_shape_result(
+func.func @shape_of_static_with_shape_result(%arg0: tensor<f32>) -> !shape.shape {
+  // CHECK: shape.shape_of
+  %0 = shape.shape_of %arg0 : tensor<f32> -> !shape.shape
+  return %0 : !shape.shape
+}

@@ -1706,14 +1706,18 @@ struct ShapeOfOpToConstShapeOp : public OpRewritePattern<shape::ShapeOfOp> {
     auto type = llvm::dyn_cast<ShapedType>(op.getArg().getType());
     if (!type || !type.hasStaticShape())
       return failure();
+    Type resultType = op.getResult().getType();
+    if (isa<ShapeType>(resultType))
+      return failure();
+
     Location loc = op.getLoc();
     Value constShape =
         ConstShapeOp::create(rewriter, loc,
                              rewriter.getIndexTensorAttr(type.getShape()))
             .getResult();
-    if (constShape.getType() != op.getResult().getType())
-      constShape = tensor::CastOp::create(rewriter, loc,
-                                          op.getResult().getType(), constShape);
+    if (constShape.getType() != resultType)
+      constShape =
+          tensor::CastOp::create(rewriter, loc, resultType, constShape);
     rewriter.replaceOp(op, constShape);
     return success();
   }
