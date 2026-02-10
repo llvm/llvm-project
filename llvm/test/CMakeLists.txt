@@ -78,6 +78,7 @@ set(LLVM_TEST_DEPENDS
   llc
   lli
   lli-child-target
+  llubi
   llvm-addr2line
   llvm-ar
   llvm-as
