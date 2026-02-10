@@ -948,13 +948,20 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F, bool &ResetLI) {
 
   ResetLI = false;
   bool MadeChange = false;
+  // Copy blocks into a temporary array to avoid iterator invalidation issues
+  // as we remove them.
+  // Note that this intentionally skips the entry block.
+  SmallVector<WeakTrackingVH, 16> Blocks;
   for (auto &Block : llvm::drop_begin(F)) {
-    BasicBlock *BB = &Block;
     // Delete phi nodes that could block deleting other empty blocks.
     if (!DisableDeletePHIs)
-      MadeChange |= DeleteDeadPHIs(BB, TLInfo);
+      MadeChange |= DeleteDeadPHIs(&Block, TLInfo);
+    Blocks.push_back(&Block);
+  }
 
-    if (DTU->isBBPendingDeletion(BB))
+  for (auto &Block : Blocks) {
+    BasicBlock *BB = cast_or_null<BasicBlock>(Block);
+    if (!BB || DTU->isBBPendingDeletion(BB))
       continue;
     BasicBlock *DestBB = findDestBlockOfMergeableEmptyBlock(BB);
     if (!DestBB ||
