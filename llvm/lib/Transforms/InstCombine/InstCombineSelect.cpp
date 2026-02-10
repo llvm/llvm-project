@@ -3409,8 +3409,8 @@ struct DecomposedSelect {
 /// into:
 ///   select (xor c1 c2) b a
 static Instruction *
-foldSelectOfSymmetricSelect(SelectInst &OuterSelVal,
-                            InstCombiner::BuilderTy &Builder) {
+foldSelectOfSymmetricSelect(SelectInst &OuterSelVal, InstCombinerImpl &IC) {
+  auto &Builder = IC.Builder;
 
   Value *OuterCond, *InnerCond, *InnerTrueVal, *InnerFalseVal;
   if (!match(
@@ -3427,6 +3427,9 @@ foldSelectOfSymmetricSelect(SelectInst &OuterSelVal,
     return nullptr;
 
   Value *Xor = Builder.CreateXor(InnerCond, OuterCond);
+  if (!ProfcheckDisableMetadataFixes)
+    return IC.createSelectInstWithUnknownProfile(Xor, InnerFalseVal,
+                                                 InnerTrueVal);
   return SelectInst::Create(Xor, InnerFalseVal, InnerTrueVal);
 }
 
@@ -4885,7 +4888,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     }
   }
 
-  if (Instruction *I = foldSelectOfSymmetricSelect(SI, Builder))
+  if (Instruction *I = foldSelectOfSymmetricSelect(SI, *this))
     return I;
 
   if (Instruction *I = foldNestedSelects(SI, Builder))
