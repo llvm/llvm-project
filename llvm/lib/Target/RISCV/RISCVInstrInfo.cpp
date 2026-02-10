@@ -544,8 +544,8 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       if (STI.hasStdExtP()) {
         // On RV32P, `addd` is a GPR Pair Add
         BuildMI(MBB, MBBI, DL, get(RISCV::ADDD), DstReg)
-          .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc))
-          .addReg(RISCV::X0_Pair);
+            .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc))
+            .addReg(RISCV::X0_Pair);
         return;
       }
     }
