@@ -5,6 +5,7 @@ set(LOWFAT_SOURCES
 )
 
 set(LOWFAT_HEADERS
+  lf_config.h
   lf_interface.h
 )
 

@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lf_interface.h"
+#include "lf_config.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
@@ -26,8 +27,49 @@ namespace __lowfat {
 // Flag to track initialization state
 static bool lowfat_inited = false;
 
-// TODO: Add LowFat-specific configuration tables
-// These will define the memory regions and size classes for LowFat allocations
+// Region table - initialized in __lf_init
+// TODO: not actually needed, to use for convenience
+RegionInfo kRegions[kNumSizeClasses];
+
+// Pointers to the start of each mapped region
+static uptr region_bases[kNumSizeClasses];
+
+// Free list heads for each region (simple bump allocator for now)
+static uptr region_next_alloc[kNumSizeClasses];
+
+static void InitRegionTable() {
+  for (uptr i = 0; i < kNumSizeClasses; i++) {
+    uptr size = SizeClassToSize(i);
+    kRegions[i].size = size;
+    kRegions[i].alignment = size;
+    kRegions[i].mask = ~(size - 1);
+  }
+}
+
+// Initialize memory regions using mmap
+// Each region is mapped at a fixed address for the corresponding size class
+static bool InitMemoryRegions() {
+  for (uptr i = 0; i < kNumSizeClasses; i++) {
+    uptr region_start = GetRegionStart(i);
+    
+    // Reserve the region without committing physical memory
+    // MmapFixedNoReserve maps memory but doesn't allocate physical pages
+    // until they're accessed (lazy allocation)
+    bool success = MmapFixedNoReserve(region_start, kRegionSize, "lowfat_region");
+    
+    if (!success) {
+      Printf("LowFat: Failed to map region %zu at 0x%zx\n", i, region_start);
+      return false;
+    }
+    
+    region_bases[i] = region_start;
+    region_next_alloc[i] = region_start;
+  }
+  
+  Printf("LowFat: Mapped %zu regions starting at 0x%zx\n", 
+         kNumSizeClasses, kRegionBase);
+  return true;
+}
 
 static void PrintErrorAndDie(uptr ptr, uptr base, uptr bound) {
   Printf("=================================================================\n");
@@ -68,26 +110,31 @@ void __lf_init() {
   if (__lowfat::lowfat_inited)
     return;
 
-  // Initialize sanitizer common
-  // InitializeCommonFlags() would go here if we had custom flags
+  Printf("LowFat Sanitizer: initializing runtime\n");
 
-  Printf("LowFat Sanitizer: runtime initialized\n");
+  __lowfat::InitRegionTable();
+  
+  if (!__lowfat::InitMemoryRegions()) {
+    Printf("LowFat Sanitizer: failed to initialize memory regions\n");
+    Die();
+  }
+
+  Printf("LowFat Sanitizer: initialized runtime\n");
 
   __lowfat::lowfat_inited = true;
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void __lf_check_bounds(uptr ptr, uptr size) {
-  // TODO: Implement actual bounds checking
-  // For now, this is a stub that does nothing
-  //
-  // The full implementation should:
-  // 1. Extract the region index from the pointer's high bits
-  // 2. Look up the allocation size for that region
-  // 3. Compute the base address using the region's alignment
-  // 4. Check if ptr + size <= base + allocation_size
-  (void)ptr;
-  (void)size;
+  if (!__lowfat::IsLowFatPointer(ptr)) { // Not a LowFat-managed pointer, skip check
+    return;
+  }
+
+  if (!__lowfat::CheckBounds(ptr, size)) {
+    uptr base = __lowfat::GetBase(ptr);
+    uptr alloc_size = __lowfat::GetSize(ptr);
+    __lowfat::PrintErrorAndDie(ptr, base, alloc_size);
+  }
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
@@ -97,18 +144,12 @@ void __lf_report_oob(uptr ptr, uptr base, uptr bound) {
 
 SANITIZER_INTERFACE_ATTRIBUTE
 uptr __lf_get_base(uptr ptr) {
-  // TODO: Implement base address extraction
-  // This will use the LowFat memory layout to compute the base
-  (void)ptr;
-  return 0;
+  return __lowfat::GetBase(ptr);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 uptr __lf_get_size(uptr ptr) {
-  // TODO: Implement size extraction
-  // This will look up the size class from the pointer's region
-  (void)ptr;
-  return 0;
+  return __lowfat::GetSize(ptr);
 }
 
 }  // extern "C"
