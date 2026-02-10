@@ -11,7 +11,6 @@
 
 #include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Target/ExecutionContextScope.h"
-#include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILLexer.h"
@@ -22,6 +21,10 @@
 #include <system_error>
 #include <tuple>
 #include <vector>
+
+namespace lldb_private {
+  class StackFrame;
+}
 
 namespace lldb_private::dil {
 

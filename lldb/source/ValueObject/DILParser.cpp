@@ -16,6 +16,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/LanguageRuntime.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILEval.h"
 #include "llvm/ADT/StringRef.h"
@@ -56,7 +57,7 @@ GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
 
 CompilerType
 ResolveTypeByName(const std::string &name,
-                  std::shared_ptr<ExecutionContextScope> ctx_scope) {
+                  ExecutionContextScope &ctx_scope) {
   // Internally types don't have global scope qualifier in their names and
   // LLDB doesn't support queries with it too.
   llvm::StringRef name_ref(name);
@@ -65,27 +66,15 @@ ResolveTypeByName(const std::string &name,
     name_ref = name_ref.drop_front(2);
 
   std::vector<CompilerType> result_type_list;
-  lldb::TargetSP target_sp = ctx_scope->CalculateTarget();
-  const char *type_name = name_ref.data();
-  if (type_name && type_name[0] && target_sp) {
+  lldb::TargetSP target_sp = ctx_scope.CalculateTarget();
+  if (!name_ref.empty() && target_sp) {
     ModuleList &images = target_sp->GetImages();
-    ConstString const_type_name(type_name);
-    TypeQuery query(type_name);
+    TypeQuery query{ConstString(name_ref)};
     TypeResults results;
     images.FindTypes(nullptr, query, results);
     for (const lldb::TypeSP &type_sp : results.GetTypeMap().Types())
       if (type_sp)
         result_type_list.push_back(type_sp->GetFullCompilerType());
-
-    if (auto process_sp = target_sp->GetProcessSP()) {
-      for (auto *runtime : process_sp->GetLanguageRuntimes()) {
-        if (auto *vendor = runtime->GetDeclVendor()) {
-          auto types = vendor->FindTypes(const_type_name, UINT32_MAX);
-          for (auto type : types)
-            result_type_list.push_back(type);
-        }
-      }
-    }
   }
 
   // We've found multiple types, try finding the "correct" one.
@@ -98,14 +87,7 @@ ResolveTypeByName(const std::string &name,
 
     if (type_name_ref == name_ref && type.IsValid())
       return type;
-
-    if (type_name_ref.ends_with(name_ref))
-      partial_matches.push_back(type);
   }
-
-  // If we have partial matches, pick a "random" one.
-  if (partial_matches.size() > 0)
-    return partial_matches.back();
 
   return {};
 }
@@ -416,7 +398,7 @@ std::optional<CompilerType> DILParser::ParseTypeId() {
 
     if (type_name.empty())
       return {};
-    type = ResolveTypeByName(type_name, m_ctx_scope);
+    type = ResolveTypeByName(type_name, *m_ctx_scope);
     if (!type.IsValid())
       return {};
 

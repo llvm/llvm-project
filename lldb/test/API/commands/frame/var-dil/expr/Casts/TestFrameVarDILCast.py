@@ -265,11 +265,23 @@ class TestFrameVarDILCast(TestBase):
         self.expect_var_path("myStruct", type="myName")
         self.expect_var_path("myName", type="int", value="37")
 
+        self.expect_var_path("secondStruct", type="myGlobalName")
+        self.expect_var_path("myGlobalName", type="bool", value="true")
+
         # Here 'myName' is treated as a variable, not a type, so '(myName)'
         # is parsed as a variable expression and 'InnerFoo' is unexpected,
         # and a type cast is not attempted.
         self.expect(
             "frame variable '(myName)InnerFoo'",
+            error=True,
+            substrs=["expected 'eof', got: <'InnerFoo' (identifier)>"],
+        )
+
+        # Here 'myGlobalName' is treated as a (global) variable, not a type,
+        # so '(myGlobalName)' is parsed as a variable expression and 'InnerFoo'
+        # is unexpected, and a type cast is not attempted.
+        self.expect(
+            "frame variable '(myGlobalName)InnerFoo'",
             error=True,
             substrs=["expected 'eof', got: <'InnerFoo' (identifier)>"],
         )

@@ -18,6 +18,9 @@ class Foo {};
 
 } // namespace ns
 
+// Global variable
+bool myGlobalName = true;
+
 int main(int argc, char **argv) {
   int a = 1;
   int *ap = &a;
@@ -69,6 +72,13 @@ int main(int argc, char **argv) {
 
   struct myName myStruct = {98, 99};
   int myName = 37;
+
+  struct myGlobalName {
+    int m;
+    bool bval;
+  };
+
+  struct myGlobalName secondStruct= {42, false};
 
   return 0; // Set a breakpoint here
 }
