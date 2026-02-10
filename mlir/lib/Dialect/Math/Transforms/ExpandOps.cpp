@@ -256,11 +256,13 @@ static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
   //     condition.
   // For all such cases, `ceilf(x)` is defined to return `x` directly.
   Value operandBitcast = arith::BitcastOp::create(b, iTy, operand);
-  Value cMask =
-      createIntConst(op->getLoc(), iTy, (1ull << (bitWidth - 1)) - 1, b);
+  Value cMask = createIntConst(
+      op->getLoc(), iTy, static_cast<int64_t>((1ull << (bitWidth - 1)) - 1), b);
   Value unsignedBits = arith::AndIOp::create(b, operandBitcast, cMask);
   Value cThreshold = createIntConst(
-      op->getLoc(), iTy, (uint64_t(bias + mantissaWidth)) << mantissaWidth, b);
+      op->getLoc(), iTy,
+      static_cast<int64_t>((uint64_t(bias + mantissaWidth)) << mantissaWidth),
+      b);
   Value isLargeExp = arith::CmpIOp::create(b, arith::CmpIPredicate::uge,
                                            unsignedBits, cThreshold);
   Value isSpecialValOrLargeVal = isLargeExp;
@@ -268,8 +270,8 @@ static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
   // In FNUZ-suffixed floating point, NaN is represented by a sign bit of 1 and
   // all 0s in the exponent and mantissa, therefore requires an explicit check.
   if (hasNegativeZeroNaNEncoding) {
-    Value cNegZeroBits =
-        createIntConst(op->getLoc(), iTy, 1ull << (bitWidth - 1), b);
+    Value cNegZeroBits = createIntConst(
+        op->getLoc(), iTy, static_cast<int64_t>(1ull << (bitWidth - 1)), b);
     Value isNegZeroEncoding = arith::CmpIOp::create(
         b, arith::CmpIPredicate::eq, operandBitcast, cNegZeroBits);
     isSpecialValOrLargeVal =
