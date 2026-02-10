@@ -4429,6 +4429,44 @@ TEST_P(UncheckedStatusOrAccessModelTest, PairIteratorRef) {
 )cc");
 }
 
+TEST_P(UncheckedStatusOrAccessModelTest, NestedStatusOrInOptional) {
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        void target(std::optional<STATUSOR_INT> opt) {
+          if (!opt.has_value()) return;
+          if (!opt->ok()) return;
+          **opt;
+        }
+      )cc");
+
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        void target() {
+          auto opt = Make<std::optional<STATUSOR_INT>>();
+          if (opt.has_value() && opt->ok()) opt->value();
+        }
+      )cc");
+
+  ExpectDiagnosticsFor(
+      R"cc(
+#include "unchecked_statusor_access_test_defs.h"
+
+        void target() {
+          auto opt = Make<std::optional<STATUSOR_INT>>();
+          if (!opt.has_value()) return;
+
+          if (opt->ok())
+            opt->value();
+          else
+            opt->value();  // [[unsafe]]
+        }
+      )cc");
+}
+
 } // namespace
 
 std::string
