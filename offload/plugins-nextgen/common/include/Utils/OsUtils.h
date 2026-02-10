@@ -14,6 +14,8 @@
 #ifndef OMPTARGET_UTILS_OSUTILS_H
 #define OMPTARGET_UTILS_OSUTILS_H
 
+#include <string.h>
+
 namespace utils::os {
 
 /// Get the name of the current executable, without the path

@@ -869,7 +869,7 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   };
 
   ODBG_OS(OLDT_BinaryDump, OLDL_Verbose, [&](llvm::raw_ostream &Os) {
-    DumpImage("input", InputTgtImage, Os, LoadedImages.size());
+    DumpImage("embedded", InputTgtImage, Os, LoadedImages.size());
   });
 
   std::unique_ptr<MemoryBuffer> Buffer;
@@ -895,7 +895,7 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     return ImageOrErr.takeError();
   DeviceImageTy *Image = *ImageOrErr;
   ODBG_OS(OLDT_BinaryDump, [&](llvm::raw_ostream &Os) {
-    DumpImage("loaded",
+    DumpImage("final",
               StringRef(static_cast<const char *>(Image->getStart()),
                         Image->getSize()),
               Os, LoadedImages.size());
