@@ -219,7 +219,6 @@ Transforms/InstCombine/cttz.ll
 Transforms/InstCombine/div.ll
 Transforms/InstCombine/div-shift.ll
 Transforms/InstCombine/fcmp-select.ll
-Transforms/InstCombine/ffs-1.ll
 Transforms/InstCombine/ffs-i16.ll
 Transforms/InstCombine/fmul.ll
 Transforms/InstCombine/fneg.ll
