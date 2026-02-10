@@ -7,8 +7,11 @@
 
 # RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t
 # RUN: link_fdata --no-lbr %s %t %t.fdata
-# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp --compact-code-model
+# RUN: llvm-bolt -v=1 %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp --compact-code-model \
+# RUN:   | FileCheck %s --check-prefix=BOLT-INFO
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s
+
+# CHECK: Disassembly of section .text:
 
   .globl immediate_increment
   .type immediate_increment, %function
@@ -25,6 +28,13 @@ immediate_increment:
     mov x0, #2
     ret
 
+# CHECK: <immediate_increment>:
+# CHECK-NEXT:            {{.*}} cblt x0, #0x1, 0x[[ADDR0:[0-9a-f]+]] <{{.*}}>
+# CHECK-NEXT:            {{.*}} mov  x0, #0x2 // =2
+# CHECK-NEXT:            {{.*}} ret
+# CHECK-NEXT: [[ADDR0]]: {{.*}} mov x0, #0x1 // =1
+# CHECK-NEXT:            {{.*}} ret
+
   .globl immediate_decrement
   .type immediate_decrement, %function
 immediate_decrement:
@@ -39,6 +49,13 @@ immediate_decrement:
 # FDATA: 1 immediate_decrement #.exit1# 10
     mov x0, #2
     ret
+
+# CHECK: <immediate_decrement>:
+# CHECK-NEXT:            {{.*}} cbhi x0, #0x0, 0x[[ADDR1:[0-9a-f]+]] <{{.*}}>
+# CHECK-NEXT:            {{.*}} mov  x0, #0x2 // =2
+# CHECK-NEXT:            {{.*}} ret
+# CHECK-NEXT: [[ADDR1]]: {{.*}} mov x0, #0x1 // =1
+# CHECK-NEXT:            {{.*}} ret
 
   .globl register_swap
   .type register_swap, %function
@@ -55,6 +72,13 @@ register_swap:
     mov x0, #2
     ret
 
+# CHECK: <register_swap>:
+# CHECK-NEXT:            {{.*}} cbgt x1, x0, 0x[[ADDR2:[0-9a-f]+]] <{{.*}}>
+# CHECK-NEXT:            {{.*}} mov  x0, #0x2 // =2
+# CHECK-NEXT:            {{.*}} ret
+# CHECK-NEXT: [[ADDR2]]: {{.*}} mov x0, #0x1 // =1
+# CHECK-NEXT:            {{.*}} ret
+
   .globl irreversible
   .type irreversible, %function
 irreversible:
@@ -70,31 +94,7 @@ irreversible:
     mov x0, #2
     ret
 
-## Force relocation mode.
-.reloc 0, R_AARCH64_NONE
-
-# CHECK: Disassembly of section .text:
-
-# CHECK: <immediate_increment>:
-# CHECK-NEXT:            {{.*}} cblt x0, #0x1, 0x[[ADDR0:[0-9a-f]+]] <{{.*}}>
-# CHECK-NEXT:            {{.*}} mov  x0, #0x2 // =2
-# CHECK-NEXT:            {{.*}} ret
-# CHECK-NEXT: [[ADDR0]]: {{.*}} mov x0, #0x1 // =1
-# CHECK-NEXT:            {{.*}} ret
-
-# CHECK: <immediate_decrement>:
-# CHECK-NEXT:            {{.*}} cbhi x0, #0x0, 0x[[ADDR1:[0-9a-f]+]] <{{.*}}>
-# CHECK-NEXT:            {{.*}} mov  x0, #0x2 // =2
-# CHECK-NEXT:            {{.*}} ret
-# CHECK-NEXT: [[ADDR1]]: {{.*}} mov x0, #0x1 // =1
-# CHECK-NEXT:            {{.*}} ret
-
-# CHECK: <register_swap>:
-# CHECK-NEXT:            {{.*}} cbgt x1, x0, 0x[[ADDR2:[0-9a-f]+]] <{{.*}}>
-# CHECK-NEXT:            {{.*}} mov  x0, #0x2 // =2
-# CHECK-NEXT:            {{.*}} ret
-# CHECK-NEXT: [[ADDR2]]: {{.*}} mov x0, #0x1 // =1
-# CHECK-NEXT:            {{.*}} ret
+# BOLT-INFO: unable to swap successors in irreversible
 
 # CHECK: <irreversible>:
 # CHECK-NEXT:            {{.*}} cbgt x0, #0x3f, 0x[[ADDR3:[0-9a-f]+]] <{{.*}}>
@@ -103,3 +103,6 @@ irreversible:
 # CHECK-NEXT:            {{.*}} ret
 # CHECK-NEXT: [[ADDR4]]: {{.*}} mov x0, #0x1 // =1
 # CHECK-NEXT:            {{.*}} ret
+
+## Force relocation mode.
+.reloc 0, R_AARCH64_NONE

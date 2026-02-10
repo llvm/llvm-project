@@ -19,8 +19,8 @@ reorder_blocks:
 .entry:
 # FDATA: 1 reorder_blocks #.entry# 10
     cbgt x0, #0, .cold_exit
-.skip:
-# FDATA: 1 reorder_blocks #.skip# 10
+.fall_through:
+# FDATA: 1 reorder_blocks #.fall_through# 10
     b .hot_exit
 .cold_exit:
 # FDATA: 1 reorder_blocks #.cold_exit# 1
