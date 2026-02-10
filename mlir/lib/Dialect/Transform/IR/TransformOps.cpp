@@ -35,6 +35,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
@@ -173,8 +174,8 @@ transform::AlternativesOp::apply(transform::TransformRewriter &rewriter,
     // visible handle) to the cloned scope operations. This effectively prevents
     // the transformation from accessing any IR outside the scope.
     auto scope = state.make_region_scope(reg);
-    auto clones = llvm::to_vector(
-        llvm::map_range(originals, [](Operation *op) { return op->clone(); }));
+    auto clones = llvm::map_to_vector(
+        originals, [](Operation *op) { return op->clone(); });
     llvm::scope_exit deleteClones([&] {
       for (Operation *clone : clones)
         clone->erase();
@@ -2505,6 +2506,17 @@ verifyNamedSequenceOp(transform::NamedSequenceOp op, bool emitWarnings) {
 
   if (op.getBody().front().empty())
     return emitSilenceableFailure(op) << "expected a non-empty body block";
+
+  // Check that all operations in the body implement TransformOpInterface
+  for (Operation &child : op.getBody().front().without_terminator()) {
+    if (!isa<transform::TransformOpInterface>(child)) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableFailure(&child)
+          << "expected children ops to implement TransformOpInterface";
+      diag.attachNote(child.getLoc()) << "op without interface";
+      return diag;
+    }
+  }
 
   Operation *terminator = &op.getBody().front().back();
   if (!isa<transform::YieldOp>(terminator)) {

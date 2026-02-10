@@ -222,8 +222,8 @@ MachineInstr *R600VectorRegMerger::RebuildVector(
 
   // Update RSI
   RSI->Instr = NewMI;
-  RSI->RegToChan = UpdatedRegToChan;
-  RSI->UndefReg = UpdatedUndef;
+  RSI->RegToChan = std::move(UpdatedRegToChan);
+  RSI->UndefReg = std::move(UpdatedUndef);
 
   return NewMI;
 }
