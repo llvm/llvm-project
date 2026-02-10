@@ -80,6 +80,23 @@ bool RegBankLegalizeHelper::findRuleAndApplyMapping(MachineInstr &MI) {
 bool RegBankLegalizeHelper::executeInWaterfallLoop(
     MachineIRBuilder &B, iterator_range<MachineBasicBlock::iterator> Range,
     SmallSet<Register, 4> &SGPROperandRegs) {
+
+  // For calls, the waterfall must wrap the entire call sequence.
+  for (auto I = Range.begin(), E = Range.end(); I != E; ++I) {
+    if (I->getOpcode() == AMDGPU::G_SI_CALL) {
+      auto Start = Range.begin();
+      while (Start->getOpcode() != AMDGPU::ADJCALLSTACKUP)
+        --Start;
+      auto End = std::next(I);
+      while (End->getOpcode() != AMDGPU::ADJCALLSTACKDOWN)
+        ++End;
+      ++End;
+      B.setInsertPt(B.getMBB(), Start);
+      Range = make_range(Start, End);
+      break;
+    }
+  }
+
   // Track use registers which have already been expanded with a readfirstlane
   // sequence. This may have multiple uses if moving a sequence.
   DenseMap<Register, Register> WaterfalledRegMap;
@@ -1059,21 +1076,9 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
   }
 
   if (!WaterfallSgprs.empty()) {
-    MachineBasicBlock::iterator Start = MI.getIterator();
-    MachineBasicBlock::iterator End = std::next(Start);
-
-    // For calls, the waterfall must wrap the entire call sequence.
-    if (MI.getOpcode() == AMDGPU::G_SI_CALL) {
-      while (Start->getOpcode() != AMDGPU::ADJCALLSTACKUP)
-        --Start;
-      End = std::next(MI.getIterator());
-      while (End->getOpcode() != AMDGPU::ADJCALLSTACKDOWN)
-        ++End;
-      ++End;
-      B.setInsertPt(B.getMBB(), Start);
-    }
-
-    if (!executeInWaterfallLoop(B, make_range(Start, End), WaterfallSgprs))
+    MachineBasicBlock::iterator I = MI.getIterator();
+    if (!executeInWaterfallLoop(B, make_range(I, std::next(I)),
+                                WaterfallSgprs))
       return false;
   }
   return true;
