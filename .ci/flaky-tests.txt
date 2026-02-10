@@ -1,0 +1,7 @@
+# Known flaky tests — remove once root cause is fixed.
+# format: <suite> :: <test>  # reason | date
+
+lldb-api :: tools/lldb-server/TestGdbRemoteThreadsInStopReply.py  # timeout race | 2026-02-10
+lldb-api :: functionalities/breakpoint/TestBreakpointConditions.py  # intermittent timeout | 2026-02-10
+openmp :: libomptarget/test/offloading/target_map.c  # hardware-dependent | 2026-02-10
+openmp :: runtime/test/tasking/omp_task_depend.c  # thread race | 2026-02-10

@@ -1,0 +1,81 @@
+name: cppa-clang CI
+
+on:
+  pull_request:
+    paths:
+      - 'clang/**'
+      - 'llvm/**'
+      - 'cmake/**'
+      - '.ci/**'
+      - '.github/workflows/cppa-clang-ci.yml'
+    paths-ignore:
+      - '**/*.md'
+      - 'lldb/**'
+      - 'openmp/**'
+  push:
+    branches: [main, 'release/**']
+
+env:
+  SCCACHE_GHA_ENABLED: "true"
+  SCCACHE_IDLE_TIMEOUT: "0"
+
+jobs:
+  linux-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            llvm
+            clang
+            cmake
+            .ci
+
+      - uses: mozilla-actions/sccache-action@v0.0.6
+
+      - name: Configure
+        run: bash .ci/build.sh configure
+
+      - name: Build
+        run: bash .ci/build.sh build
+
+      - name: Test
+        run: bash .ci/run-tests.sh --retry
+
+      - name: sccache stats
+        run: sccache --show-stats
+        if: always()
+
+  windows-build:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            llvm
+            clang
+            cmake
+            .ci
+
+      - uses: mozilla-actions/sccache-action@v0.0.6
+
+      - name: Configure
+        run: |
+          cmake -G Ninja -B build ^
+            --preset ci-release ^
+            -DLLVM_TARGETS_TO_BUILD="X86"
+        shell: cmd
+
+      - name: Build
+        run: ninja -C build -j%NUMBER_OF_PROCESSORS%
+        shell: cmd
+
+      - name: Test
+        run: ninja -C build check-clang
+        shell: cmd
+
+      - name: sccache stats
+        run: sccache --show-stats
+        if: always()
