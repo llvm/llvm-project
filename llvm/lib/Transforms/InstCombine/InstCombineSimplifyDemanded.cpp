@@ -2554,6 +2554,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     // X * -0.0 --> copysign(0.0, -X)
     if ((NonNanResult || KnownLHS.isKnownNeverInfOrNaN()) &&
         KnownRHS.isKnownAlways(fcPosZero | fcNan)) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // => copysign(+0, lhs)
       // Note: Dropping canonicalize
       Value *Copysign = Builder.CreateCopySign(Y, X, FMF);
@@ -2563,6 +2566,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
     if (KnownLHS.isKnownAlways(fcPosZero | fcNan) &&
         (NonNanResult || KnownRHS.isKnownNeverInfOrNaN())) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // => copysign(+0, rhs)
       // Note: Dropping canonicalize
       Value *Copysign = Builder.CreateCopySign(X, Y, FMF);
@@ -2572,6 +2578,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
     if ((NonNanResult || KnownLHS.isKnownNeverInfOrNaN()) &&
         KnownRHS.isKnownAlways(fcNegZero | fcNan)) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // => copysign(0, fneg(lhs))
       // Note: Dropping canonicalize
       Value *Copysign =
@@ -2582,6 +2591,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
     if (KnownLHS.isKnownAlways(fcNegZero | fcNan) &&
         (NonNanResult || KnownRHS.isKnownNeverInfOrNaN())) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // => copysign(+0, fneg(rhs))
       // Note: Dropping canonicalize
       Value *Copysign =
@@ -2596,6 +2608,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if (KnownLHS.isKnownAlways(fcInf | fcNan) &&
         (KnownRHS.isKnownNeverNaN() &&
          KnownRHS.cannotBeOrderedGreaterEqZero(Mode))) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // Note: Dropping canonicalize
       Value *Neg = Builder.CreateFNegFMF(X, FMF);
       Neg->takeName(I);
@@ -2605,6 +2620,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if (KnownRHS.isKnownAlways(fcInf | fcNan) &&
         (KnownLHS.isKnownNeverNaN() &&
          KnownLHS.cannotBeOrderedGreaterEqZero(Mode))) {
+      IRBuilderBase::InsertPointGuard Guard(Builder);
+      Builder.SetInsertPoint(I);
+
       // Note: Dropping canonicalize
       Value *Neg = Builder.CreateFNegFMF(Y, FMF);
       Neg->takeName(I);
