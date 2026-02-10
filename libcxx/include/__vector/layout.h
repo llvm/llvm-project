@@ -211,6 +211,13 @@ public:
     __set_boundary(__new_end);
   }
 
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __reset_without_allocator() _NOEXCEPT
+  {
+    __begin_ = nullptr;
+    __set_boundary(__zero_relative_to_begin());
+    __set_capacity(__zero_relative_to_begin());
+  }
+
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void swap(__vector_layout& __other) _NOEXCEPT {
     std::swap(__begin_, __other.__begin_);
     std::swap(__boundary_, __other.__boundary_);
@@ -227,9 +234,7 @@ public:
     __boundary_ = __other.__boundary_;
     __capacity_ = __other.__capacity_;
 
-    __other.__begin_    = nullptr;
-    __other.__boundary_ = __zero_boundary_type();
-    __other.__capacity_ = __zero_boundary_type();
+    __other.__reset_without_allocator();
   }
 
   // Methods below this line must be implemented per vector layout.
@@ -247,6 +252,15 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_boundary(pointer __ptr) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(size_type __n) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(pointer __ptr) _NOEXCEPT;
+  /// Returns `__begin_` if `__boundary_type` is `pointer`, and `0` if it is `size_type`.
+  ///
+  /// Since `0` is implicitly convertible to both `size_type` and `nullptr`, `__set_boundary(0)` is
+  /// ambiguous. Using a named function optimises for the reader much more nicely than using an
+  /// explicit cast to `size_type`. In addition to describing intent, this function avoids extra
+  /// pointer arithmetic in the pointer-based `__set_boundary(size_type{})`.
+  ///
+  /// Note that this function cannot be used when setting `__begin_`.
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __boundary_type __zero_relative_to_begin() _NOEXCEPT;
   // Works around a Clang 20 zero-initialization bug on user-defined pointer types.
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI static __boundary_type
   __zero_boundary_type() _NOEXCEPT;
@@ -344,6 +358,11 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity(
 }
 
 template <class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::__boundary_type __vector_layout<_Tp, _Alloc>::__zero_relative_to_begin() _NOEXCEPT {
+  return 0;
+}
+
+template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename __vector_layout<_Tp, _Alloc>::__boundary_type
 __vector_layout<_Tp, _Alloc>::__zero_boundary_type() _NOEXCEPT {
   return 0;
@@ -429,6 +448,11 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity(
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity(pointer __ptr) _NOEXCEPT {
   __capacity_ = __ptr;
+}
+
+template <class _Tp, class _Alloc>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::__boundary_type __vector_layout<_Tp, _Alloc>::__zero_relative_to_begin() _NOEXCEPT {
+  return __begin_;
 }
 
 template <class _Tp, class _Alloc>
