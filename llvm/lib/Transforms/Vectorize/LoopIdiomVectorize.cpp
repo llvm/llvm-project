@@ -1335,8 +1335,8 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
 
   // (3) Check if we found a match.
   Builder.SetInsertPoint(BB3);
-  PHINode *MatchPred = Builder.CreatePHI(PredVTy, 1, "match_pred");
-  Value *IfAnyMatch = Builder.CreateOrReduce(MatchPred);
+  PHINode *MatchPredAccLCSSA = Builder.CreatePHI(PredVTy, 1, "match_pred");
+  Value *IfAnyMatch = Builder.CreateOrReduce(MatchPredAccLCSSA);
   Builder.CreateCondBr(IfAnyMatch, BB4, BB5);
   DTU.applyUpdates(
       {{DominatorTree::Insert, BB3, BB4}, {DominatorTree::Insert, BB3, BB5}});
@@ -1344,10 +1344,9 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
   // (4) We found a match. Compute the index of its location and exit.
   Builder.SetInsertPoint(BB4);
   PHINode *MatchLCSSA = Builder.CreatePHI(PtrTy, 1, "match_start");
-  PHINode *MatchPredLCSSA =
-      Builder.CreatePHI(MatchPred->getType(), 1, "match_vec");
+  PHINode *MatchPredLCSSA = Builder.CreatePHI(PredVTy, 1, "match_vec");
   Value *MatchCnt = Builder.CreateIntrinsic(
-      Intrinsic::experimental_cttz_elts, {I64Ty, MatchPred->getType()},
+      Intrinsic::experimental_cttz_elts, {I64Ty, PredVTy},
       {MatchPredLCSSA, /*ZeroIsPoison=*/Builder.getInt1(true)}, nullptr,
       "match_idx");
   Value *MatchVal =
@@ -1372,9 +1371,9 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
   Match->addIncoming(MatchInit, BB1);
   Match->addIncoming(MatchAcc, BB2);
   // These are needed to retain LCSSA form.
-  MatchPred->addIncoming(MatchAcc, BB2);
+  MatchPredAccLCSSA->addIncoming(MatchAcc, BB2);
   MatchLCSSA->addIncoming(Search, BB3);
-  MatchPredLCSSA->addIncoming(MatchPred, BB3);
+  MatchPredLCSSA->addIncoming(MatchPredAccLCSSA, BB3);
 
   // Ensure all Phis in the successors of BB4/BB5 have an incoming value from
   // them.
