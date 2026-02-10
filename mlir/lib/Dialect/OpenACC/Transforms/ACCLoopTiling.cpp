@@ -63,6 +63,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 
 namespace mlir {
@@ -117,30 +118,38 @@ struct ACCLoopTilingImpl : public OpRewritePattern<acc::LoopOp> {
 
   void emitTilingRemarks(acc::LoopOp loop, ArrayRef<Value> tileSizes) const {
     // Emit remarks for loop tiling
-    size_t tileLevel = tileSizes.size();
-    std::string msg =
-        "Tiling " + std::to_string(tileLevel) + "-level loop nest with tile(";
-    for (size_t i = 0; i < tileSizes.size(); ++i) {
-      std::optional<int64_t> val = getConstantIntValue(tileSizes[i]);
-      if (*val == -1)
-        msg += "*";
-      else
-        msg += std::to_string(*val);
-      if (i < tileSizes.size() - 1)
-        msg += ",";
-    }
-    msg += ")";
-    accSupport.emitRemark(loop, llvm::Twine(msg), DEBUG_TYPE);
+    accSupport.emitRemark(
+        loop,
+        [&]() {
+          auto getTileSizeStr = [&](Value v) -> std::string {
+            std::string name = accSupport.getVariableName(v);
+            // Use "*" for unknown tile sizes (represented as -1 or empty)
+            if (name.empty() || name == "-1")
+              return "*";
+            return name;
+          };
+          SmallVector<std::string> tileStrs;
+          for (Value v : tileSizes)
+            tileStrs.push_back(getTileSizeStr(v));
+          return "Tiling " + std::to_string(tileSizes.size()) +
+                 "-level loop nest with tile(" + llvm::join(tileStrs, ",") +
+                 ")";
+        },
+        DEBUG_TYPE);
 
     // Emit remarks for unknown tile sizes that will be resolved to default
     // TODO: Need to base the default tile size on some heuristics.
     for (Value tileSize : tileSizes) {
       std::optional<int64_t> val = getConstantIntValue(tileSize);
       if (val && *val < 0) {
-        std::string unknownMsg = "Picking default tile size " +
-                                 std::to_string(defaultTileSize) +
-                                 " for unknown tile size '*'";
-        accSupport.emitRemark(loop, llvm::Twine(unknownMsg), DEBUG_TYPE);
+        accSupport.emitRemark(
+            loop,
+            [&]() {
+              return "Picking default tile size " +
+                     std::to_string(defaultTileSize) +
+                     " for unknown tile size '*'";
+            },
+            DEBUG_TYPE);
       }
     }
   }

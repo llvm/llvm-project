@@ -215,7 +215,7 @@ enum {
 #ifndef NDEBUG
 TestingProperties::TestingProperties() {
   m_collection_sp = std::make_shared<OptionValueProperties>("testing");
-  m_collection_sp->Initialize(g_testing_properties);
+  m_collection_sp->Initialize(g_testing_properties_def);
 }
 
 bool TestingProperties::GetInjectVarLocListError() const {
@@ -1016,7 +1016,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
       m_forward_listener_sp(), m_clear_once() {
   // Initialize the debugger properties as early as possible as other parts of
   // LLDB will start querying them during construction.
-  m_collection_sp->Initialize(g_debugger_properties);
+  m_collection_sp->Initialize(g_debugger_properties_def);
   m_collection_sp->AppendProperty(
       "target", "Settings specify to debugging targets.", true,
       Target::GetGlobalProperties().GetValueProperties());

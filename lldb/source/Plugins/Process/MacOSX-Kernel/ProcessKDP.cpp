@@ -70,7 +70,7 @@ public:
 
   PluginProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_processkdp_properties);
+    m_collection_sp->Initialize(g_processkdp_properties_def);
   }
 
   ~PluginProperties() override = default;

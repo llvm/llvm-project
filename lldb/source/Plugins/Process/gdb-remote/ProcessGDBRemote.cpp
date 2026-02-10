@@ -146,7 +146,7 @@ public:
 
   PluginProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_processgdbremote_properties);
+    m_collection_sp->Initialize(g_processgdbremote_properties_def);
   }
 
   ~PluginProperties() override = default;

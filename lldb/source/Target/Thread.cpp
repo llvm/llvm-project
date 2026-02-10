@@ -107,7 +107,7 @@ public:
 ThreadProperties::ThreadProperties(bool is_global) : Properties() {
   if (is_global) {
     m_collection_sp = std::make_shared<ThreadOptionValueProperties>("thread");
-    m_collection_sp->Initialize(g_thread_properties);
+    m_collection_sp->Initialize(g_thread_properties_def);
   } else
     m_collection_sp =
         OptionValueProperties::CreateLocalCopy(Thread::GetGlobalProperties());

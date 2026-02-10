@@ -5,8 +5,8 @@
 // RUN: | FileCheck %s --check-prefix=AMDGPU
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include  \
 // RUN:   -internal-isystem %S/../../lib/Headers/ \
-// RUN:   -target-feature +ptx62 \
-// RUN:   -triple nvptx64-nvidia-cuda -emit-llvm %s -o - \
+// RUN:   -triple nvptx64-nvidia-cuda -target-feature +ptx63 \
+// RUN:   -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=NVPTX
 // RUN: %clang_cc1 -internal-isystem %S/Inputs/include  \
 // RUN:   -internal-isystem %S/../../lib/Headers/ \
