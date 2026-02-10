@@ -1413,97 +1413,150 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
              : (double)fpopr1->getValueAPF().convertToFloat();
   }
 
-  auto Res = [&FInfo, opr0, opr1,
-              copr1]() -> std::optional<std::pair<double, double>> {
-    switch (FInfo.getId()) {
-    default:
-      return std::nullopt;
-    case AMDGPULibFunc::EI_ACOS:
-      return std::make_pair(acos(opr0), 0.0);
-    case AMDGPULibFunc::EI_ACOSH:
-      // acosh(x) == log(x + sqrt(x*x - 1))
-      return std::make_pair(log(opr0 + sqrt(opr0 * opr0 - 1.0)), 0.0);
-    case AMDGPULibFunc::EI_ACOSPI:
-      return std::make_pair(acos(opr0) / MATH_PI, 0.0);
-    case AMDGPULibFunc::EI_ASIN:
-      return std::make_pair(asin(opr0), 0.0);
-    case AMDGPULibFunc::EI_ASINH:
-      // asinh(x) == log(x + sqrt(x*x + 1))
-      return std::make_pair(log(opr0 + sqrt(opr0 * opr0 + 1.0)), 0.0);
-    case AMDGPULibFunc::EI_ASINPI:
-      return std::make_pair(asin(opr0) / MATH_PI, 0.0);
-    case AMDGPULibFunc::EI_ATAN:
-      return std::make_pair(atan(opr0), 0.0);
-    case AMDGPULibFunc::EI_ATANH:
-      // atanh(x) == (log(x+1) - log(x-1))/2;
-      return std::make_pair((log(opr0 + 1.0) - log(opr0 - 1.0)) / 2.0, 0.0);
-    case AMDGPULibFunc::EI_ATANPI:
-      return std::make_pair(atan(opr0) / MATH_PI, 0.0);
-    case AMDGPULibFunc::EI_CBRT:
-      return std::make_pair(
-          (opr0 < 0.0) ? -pow(-opr0, 1.0 / 3.0) : pow(opr0, 1.0 / 3.0), 0.0);
-    case AMDGPULibFunc::EI_COS:
-      return std::make_pair(cos(opr0), 0.0);
-    case AMDGPULibFunc::EI_COSH:
-      return std::make_pair(cosh(opr0), 0.0);
-    case AMDGPULibFunc::EI_COSPI:
-      return std::make_pair(cos(MATH_PI * opr0), 0.0);
-    case AMDGPULibFunc::EI_EXP:
-      return std::make_pair(exp(opr0), 0.0);
-    case AMDGPULibFunc::EI_EXP2:
-      return std::make_pair(pow(2.0, opr0), 0.0);
-    case AMDGPULibFunc::EI_EXP10:
-      return std::make_pair(pow(10.0, opr0), 0.0);
-    case AMDGPULibFunc::EI_LOG:
-      return std::make_pair(log(opr0), 0.0);
-    case AMDGPULibFunc::EI_LOG2:
-      return std::make_pair(log(opr0) / log(2.0), 0.0);
-    case AMDGPULibFunc::EI_LOG10:
-      return std::make_pair(log(opr0) / log(10.0), 0.0);
-    case AMDGPULibFunc::EI_RSQRT:
-      return std::make_pair(1.0 / sqrt(opr0), 0.0);
-    case AMDGPULibFunc::EI_SIN:
-      return std::make_pair(sin(opr0), 0.0);
-    case AMDGPULibFunc::EI_SINH:
-      return std::make_pair(sinh(opr0), 0.0);
-    case AMDGPULibFunc::EI_SINPI:
-      return std::make_pair(sin(MATH_PI * opr0), 0.0);
-    case AMDGPULibFunc::EI_TAN:
-      return std::make_pair(tan(opr0), 0.0);
-    case AMDGPULibFunc::EI_TANH:
-      return std::make_pair(tanh(opr0), 0.0);
-    case AMDGPULibFunc::EI_TANPI:
-      return std::make_pair(tan(MATH_PI * opr0), 0.0);
-    // two-arg functions
-    case AMDGPULibFunc::EI_POW:
-    case AMDGPULibFunc::EI_POWR:
-      return std::make_pair(pow(opr0, opr1), 0.0);
-    case AMDGPULibFunc::EI_POWN: {
-      if (ConstantInt *iopr1 = dyn_cast_or_null<ConstantInt>(copr1)) {
-        double val = (double)iopr1->getSExtValue();
-        return std::make_pair(pow(opr0, val), 0.0);
-      }
-      return std::nullopt;
-    }
-
-    case AMDGPULibFunc::EI_ROOTN: {
-      if (ConstantInt *iopr1 = dyn_cast_or_null<ConstantInt>(copr1)) {
-        double val = (double)iopr1->getSExtValue();
-        return std::make_pair(pow(opr0, 1.0 / val), 0.0);
-      }
-      return std::nullopt;
-    }
-    // with ptr arg
-    case AMDGPULibFunc::EI_SINCOS:
-      return std::make_pair(sin(opr0), cos(opr0));
-    }
-  }();
-
-  if (!Res.has_value())
+  switch (FInfo.getId()) {
+  default:
     return false;
-  Res0 = APFloat(Res->first);
-  Res1 = APFloat(Res->second);
-  return true;
+
+  case AMDGPULibFunc::EI_ACOS:
+    Res0 = APFloat{acos(opr0)};
+    return true;
+
+  case AMDGPULibFunc::EI_ACOSH:
+    // acosh(x) == log(x + sqrt(x*x - 1))
+    Res0 = APFloat{log(opr0 + sqrt(opr0 * opr0 - 1.0))};
+    return true;
+
+  case AMDGPULibFunc::EI_ACOSPI:
+    Res0 = APFloat{acos(opr0) / MATH_PI};
+    return true;
+
+  case AMDGPULibFunc::EI_ASIN:
+    Res0 = APFloat{asin(opr0)};
+    return true;
+
+  case AMDGPULibFunc::EI_ASINH:
+    // asinh(x) == log(x + sqrt(x*x + 1))
+    Res0 = APFloat{log(opr0 + sqrt(opr0 * opr0 + 1.0))};
+    return true;
+
+  case AMDGPULibFunc::EI_ASINPI:
+    Res0 = APFloat{asin(opr0) / MATH_PI};
+    return true;
+
+  case AMDGPULibFunc::EI_ATAN:
+    Res0 = APFloat{atan(opr0)};
+    return true;
+
+  case AMDGPULibFunc::EI_ATANH:
+    // atanh(x) == (log(x+1) - log(x-1))/2;
+    Res0 = APFloat{(log(opr0 + 1.0) - log(opr0 - 1.0)) / 2.0};
+    return true;
+
+  case AMDGPULibFunc::EI_ATANPI:
+    Res0 = APFloat{atan(opr0) / MATH_PI};
+    return true;
+
+  case AMDGPULibFunc::EI_CBRT:
+    Res0 =
+        APFloat{(opr0 < 0.0) ? -pow(-opr0, 1.0 / 3.0) : pow(opr0, 1.0 / 3.0)};
+    return true;
+
+  case AMDGPULibFunc::EI_COS:
+    Res0 = APFloat{cos(opr0)};
+    return true;
+
+  case AMDGPULibFunc::EI_COSH:
+    Res0 = APFloat{cosh(opr0)};
+    return true;
+
+  case AMDGPULibFunc::EI_COSPI:
+    Res0 = APFloat{cos(MATH_PI * opr0)};
+    return true;
+
+  case AMDGPULibFunc::EI_EXP:
+    Res0 = APFloat{exp(opr0)};
+    return true;
+
+  case AMDGPULibFunc::EI_EXP2:
+    Res0 = APFloat{pow(2.0, opr0)};
+    return true;
+
+  case AMDGPULibFunc::EI_EXP10:
+    Res0 = APFloat{pow(10.0, opr0)};
+    return true;
+
+  case AMDGPULibFunc::EI_LOG:
+    Res0 = APFloat{log(opr0)};
+    return true;
+
+  case AMDGPULibFunc::EI_LOG2:
+    Res0 = APFloat{log(opr0) / log(2.0)};
+    return true;
+
+  case AMDGPULibFunc::EI_LOG10:
+    Res0 = APFloat{log(opr0) / log(10.0)};
+    return true;
+
+  case AMDGPULibFunc::EI_RSQRT:
+    Res0 = APFloat{1.0 / sqrt(opr0)};
+    return true;
+
+  case AMDGPULibFunc::EI_SIN:
+    Res0 = APFloat{sin(opr0)};
+    return true;
+
+  case AMDGPULibFunc::EI_SINH:
+    Res0 = APFloat{sinh(opr0)};
+    return true;
+
+  case AMDGPULibFunc::EI_SINPI:
+    Res0 = APFloat{sin(MATH_PI * opr0)};
+    return true;
+
+  case AMDGPULibFunc::EI_TAN:
+    Res0 = APFloat{tan(opr0)};
+    return true;
+
+  case AMDGPULibFunc::EI_TANH:
+    Res0 = APFloat{tanh(opr0)};
+    return true;
+
+  case AMDGPULibFunc::EI_TANPI:
+    Res0 = APFloat{tan(MATH_PI * opr0)};
+    return true;
+
+  // two-arg functions
+  case AMDGPULibFunc::EI_POW:
+  case AMDGPULibFunc::EI_POWR:
+    Res0 = APFloat{pow(opr0, opr1)};
+    return true;
+
+  case AMDGPULibFunc::EI_POWN: {
+    if (ConstantInt *iopr1 = dyn_cast_or_null<ConstantInt>(copr1)) {
+      double val = (double)iopr1->getSExtValue();
+      Res0 = APFloat{pow(opr0, val)};
+      return true;
+    }
+    return false;
+  }
+
+  case AMDGPULibFunc::EI_ROOTN: {
+    if (ConstantInt *iopr1 = dyn_cast_or_null<ConstantInt>(copr1)) {
+      double val = (double)iopr1->getSExtValue();
+      Res0 = APFloat{pow(opr0, 1.0 / val)};
+      return true;
+    }
+    return false;
+  }
+
+  // with ptr arg
+  case AMDGPULibFunc::EI_SINCOS:
+    Res0 = APFloat{sin(opr0)};
+    Res1 = APFloat{cos(opr0)};
+    return true;
+  }
+
+  return false;
 }
 
 bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
