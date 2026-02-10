@@ -1502,7 +1502,7 @@ dropDimsAndCompress(AffineExpr expr, ArrayRef<unsigned> dimsToDrop,
   return expr.replaceDims(dimReplacements);
 }
 
-FailureOr<linalg::GenericOp>
+FailureOr<LinalgOp>
 linalg::downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
                                             LinalgOp op) {
   auto maybeDims = inferConvolutionDims(op);
@@ -1516,20 +1516,20 @@ linalg::downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
   if (op.hasPureBufferSemantics())
     return failure();
 
-  // 1. Get loop domain indices.
+  // Get loop domain indices.
   unsigned ohLoopIdx = maybeDims->outputImage[0];
   unsigned owLoopIdx = maybeDims->outputImage[1];
   unsigned khLoopIdx = maybeDims->filterLoop[0];
   unsigned kwLoopIdx = maybeDims->filterLoop[1];
 
-  // 2. Get sizes from loop bounds.
+  // Get sizes from loop bounds.
   SmallVector<int64_t, 4> loopRanges = op.getStaticLoopRanges();
   int64_t ohSize = loopRanges[ohLoopIdx];
   int64_t owSize = loopRanges[owLoopIdx];
   int64_t khSize = loopRanges[khLoopIdx];
   int64_t kwSize = loopRanges[kwLoopIdx];
 
-  // 3. Check if we can downscale.
+  // Check if we can downscale.
   bool canRemoveH = (khSize == 1 && ohSize == 1);
   bool canRemoveW = (kwSize == 1 && owSize == 1);
   if (!canRemoveH && !canRemoveW)
@@ -1551,7 +1551,7 @@ linalg::downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
   // maps.
   llvm::sort(loopDimsToRemove);
 
-  // 4. Create new indexing maps with dimensions to be removed.
+  // Create new indexing maps with dimensions removed.
   SmallVector<AffineMap> newMaps;
   MLIRContext *ctx = op.getContext();
   unsigned numDims = op.getNumLoops();
@@ -1569,7 +1569,7 @@ linalg::downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
     newMaps.push_back(AffineMap::get(newNumDims, 0, newResults, ctx));
   }
 
-  // 5. Create new iterator types.
+  // Create new iterator types.
   SmallVector<utils::IteratorType> newIterTypes;
   auto iterTypes = op.getIteratorTypesArray();
   for (unsigned idx = 0; idx < iterTypes.size(); ++idx) {
@@ -1577,7 +1577,7 @@ linalg::downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
       newIterTypes.push_back(iterTypes[idx]);
   }
 
-  // 6. Rank-reduce operands using extract_slice.
+  // Rank-reduce operands using extract_slice.
   Location loc = op.getLoc();
   SmallVector<Value> newInputs;
   for (OpOperand *input : op.getDpsInputOperands()) {
@@ -1603,7 +1603,7 @@ linalg::downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
     newOutputs.push_back(reduced);
   }
 
-  // 7. Create new linalg.generic with reduced dimensions
+  // Create new linalg.generic with reduced dimensions.
   auto newOp = linalg::GenericOp::create(
       rewriter, loc, TypeRange{newOutputs[0].getType()}, newInputs, newOutputs,
       newMaps, newIterTypes,
@@ -1619,12 +1619,18 @@ linalg::downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
                                 mapping.lookup(yield.getOperand(0)));
       });
 
-  // 8. Insert result back into original shape.
+  // Try to specialize the generic back to a named op if possible.
+  LinalgOp resultOp = newOp;
+  FailureOr<LinalgOp> specializedOp = specializeGenericOp(rewriter, newOp);
+  if (succeeded(specializedOp))
+    resultOp = *specializedOp;
+
+  // Insert result back into original shape.
   Value result = tensor::createCanonicalRankReducingInsertSliceOp(
-      rewriter, loc, newOp.getResult(0), originalOutput);
+      rewriter, loc, resultOp->getResult(0), originalOutput);
 
   rewriter.replaceOp(op, result);
-  return newOp;
+  return resultOp;
 }
 
 void linalg::populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,

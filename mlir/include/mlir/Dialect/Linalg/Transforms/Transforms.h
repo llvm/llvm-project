@@ -1641,10 +1641,11 @@ FailureOr<linalg::GenericOp> deduplicateOperandsAndRemoveDeadResults(
 //===----------------------------------------------------------------------===//
 
 /// Rewrite 2-D convolution/pooling/depthwise ops with size-1 window dimensions
-/// into lower-dimensional linalg.generic ops.
-/// Handles both named ops and equivalent linalg.generic ops uniformly.
-FailureOr<linalg::GenericOp>
-downscaleSizeOneWindowedConvolution(RewriterBase &rewriter, LinalgOp op);
+/// into lower-dimensional ops. Uses `inferConvolutionDims` to work with any
+/// layout and handles both named ops and equivalent linalg.generic ops
+/// uniformly. The result is specialized back to a named op when possible.
+FailureOr<LinalgOp> downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
+                                                        LinalgOp op);
 
 /// Pattern wrapper around `downscaleSizeOneWindowedConvolution`.
 struct DownscaleSizeOneWindowedConvolution final
