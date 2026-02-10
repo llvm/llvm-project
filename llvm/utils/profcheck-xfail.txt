@@ -209,7 +209,8 @@ Transforms/IndVarSimplify/pr45835.ll
 Transforms/IndVarSimplify/preserving-debugloc-rem-div.ll
 Transforms/InstCombine/2004-09-20-BadLoadCombine.ll
 Transforms/InstCombine/and-fcmp.ll
-Transforms/InstCombine/and-or-icmps.ll
+Transforms/InstCombine/apint-div1.ll
+Transforms/InstCombine/apint-div2.ll
 Transforms/InstCombine/atomic.ll
 Transforms/InstCombine/binop-cast.ll
 Transforms/InstCombine/binop-select-cast-of-select-cond.ll
