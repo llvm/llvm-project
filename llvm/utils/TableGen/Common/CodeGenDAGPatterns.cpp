@@ -4014,6 +4014,8 @@ void CodeGenDAGPatterns::parseInstructionPattern(const CodeGenInstruction &CGI,
               " should be a set destination: all "
               "outputs must occur before inputs in operand list!");
 
+    assert(R && "Record should not be null");
+
     if (!checkOperandClass(CGI.Operands[i], R))
       I.error("Operand $" + OpName + " class mismatch!");
 
