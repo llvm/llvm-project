@@ -93,16 +93,12 @@ public:
 
   // BEGIN MCCAS
   /// Create a CAS object writer for the assembler backend.
-  std::unique_ptr<MCObjectWriter> createCASObjectWriter(
-      raw_pwrite_stream &OS, const Triple &TT, cas::ObjectStore &CAS,
-      const MCTargetOptions &MCOpts, CASBackendMode Mode,
-      std::function<const cas::ObjectProxy(llvm::MachOCASWriter &,
-                                           llvm::MCAssembler &,
-                                           cas::ObjectStore &, raw_ostream *)>
-          CreateFromMcAssembler,
-      std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
-          SerializeObjectFile,
-      raw_pwrite_stream *CasIDOS = nullptr) const;
+  std::unique_ptr<MCObjectWriter>
+  createCASObjectWriter(raw_pwrite_stream &OS, const Triple &TT,
+                        cas::ObjectStore &CAS, const MCTargetOptions &MCOpts,
+                        CASBackendMode Mode,
+                        std::unique_ptr<mccasformats::MCCASSchema> Schema,
+                        raw_pwrite_stream *CasIDOS = nullptr) const;
   // END MCCAS
 
 

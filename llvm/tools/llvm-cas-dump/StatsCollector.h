@@ -9,7 +9,9 @@
 #ifndef LLVM_TOOLS_LLVM_CAS_DUMP_STATSCOLLECTOR_H
 #define LLVM_TOOLS_LLVM_CAS_DUMP_STATSCOLLECTOR_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/CAS/CASNodeSchema.h"
 #include "llvm/CAS/CASReference.h"
 #include "llvm/MCCAS/MCCASObjectV1.h"

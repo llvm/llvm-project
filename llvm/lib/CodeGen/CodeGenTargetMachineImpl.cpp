@@ -221,27 +221,11 @@ CodeGenTargetMachineImpl::createMCStreamer(raw_pwrite_stream &Out,
     // BEGIN MCCAS
     std::unique_ptr<MCObjectWriter> CASBackendWriter;
     if (Options.UseCASBackend) {
-      std::function<const cas::ObjectProxy(llvm::MachOCASWriter &,
-                                           llvm::MCAssembler &,
-                                           cas::ObjectStore &, raw_ostream *)>
-          CreateFromMcAssembler =
-              [](llvm::MachOCASWriter &Writer, llvm::MCAssembler &Asm,
-                 cas::ObjectStore &CAS,
-                 raw_ostream *DebugOS = nullptr) -> const cas::ObjectProxy {
-        auto Schema = std::make_unique<mccasformats::v1::MCSchema>(CAS);
-        return cantFail(Schema->createFromMCAssembler(Writer, Asm, DebugOS));
-      };
-      std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
-          SerializeObjectFile = [](cas::ObjectProxy RootNode,
-                                   cas::ObjectStore &CAS,
-                                   raw_ostream &OS) -> Error {
-        auto Schema = std::make_unique<mccasformats::v1::MCSchema>(CAS);
-        return Schema->serializeObjectFile(RootNode, OS);
-      };
       CASBackendWriter = MAB->createCASObjectWriter(
           Out, getTargetTriple(), *Options.MCOptions.CAS, Options.MCOptions,
-          Options.MCOptions.CASObjMode, CreateFromMcAssembler,
-          SerializeObjectFile, CasIDOS);
+          Options.MCOptions.CASObjMode,
+          std::make_unique<mccasformats::v1::MCSchema>(*Options.MCOptions.CAS),
+          CasIDOS);
     }
     // END MCCAS
     AsmStreamer.reset(getTarget().createMCObjectStreamer(

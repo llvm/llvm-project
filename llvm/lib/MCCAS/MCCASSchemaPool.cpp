@@ -6,17 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MCCAS/MCCASFormatSchemaBase.h"
+#include "llvm/MCCAS/MCCASSchemaPool.h"
 #include "llvm/MCCAS/MCCASObjectV1.h"
 
 using namespace llvm;
-using namespace llvm::mccasformats;
-
-char MCFormatSchemaBase::ID = 0;
-void MCFormatSchemaBase::anchor() {}
 
 void mccasformats::addMCFormatSchemas(cas::SchemaPool &Pool) {
   auto &CAS = Pool.getCAS();
   Pool.addSchema(std::make_unique<v1::MCSchema>(CAS));
 }
-

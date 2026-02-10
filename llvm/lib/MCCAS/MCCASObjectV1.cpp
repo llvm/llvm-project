@@ -17,14 +17,13 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MCCAS/MCCASDebugV1.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Compression.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
-#include <memory>
 #include <stack>
 
 // FIXME: Fix dependency here.

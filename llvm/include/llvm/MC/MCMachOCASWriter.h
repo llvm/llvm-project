@@ -9,30 +9,20 @@
 #ifndef LLVM_MC_MCMACHOCASWRITER_H
 #define LLVM_MC_MCMACHOCASWRITER_H
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/CAS/ObjectStore.h"
+#include "llvm/MC/MCCASFormatSchemaBase.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/MC/MCValue.h"
-#include "llvm/MC/StringTableBuilder.h"
-#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <memory>
-#include <string>
-#include <vector>
 
 namespace llvm {
-
-namespace cas {
-class ObjectStore;
-class CASID;
-} // namespace cas
 
 class MachOCASWriter : public MachObjectWriter {
 public:
@@ -42,18 +32,12 @@ public:
   CASBackendMode Mode;
   std::optional<MCTargetOptions::ResultCallBackTy> ResultCallBack;
 
-  MachOCASWriter(
-      std::unique_ptr<MCMachObjectTargetWriter> MOTW, const Triple &TT,
-      cas::ObjectStore &CAS, CASBackendMode Mode, raw_pwrite_stream &OS,
-      bool IsLittleEndian,
-      std::function<const cas::ObjectProxy(llvm::MachOCASWriter &,
-                                           llvm::MCAssembler &,
-                                           cas::ObjectStore &, raw_ostream *)>
-          CreateFromMcAssembler,
-      std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
-          SerializeObjectFile,
-      std::optional<MCTargetOptions::ResultCallBackTy> CallBack,
-      raw_pwrite_stream *CasIDOS = nullptr);
+  MachOCASWriter(std::unique_ptr<MCMachObjectTargetWriter> MOTW,
+                 const Triple &TT, cas::ObjectStore &CAS, CASBackendMode Mode,
+                 raw_pwrite_stream &OS, bool IsLittleEndian,
+                 std::unique_ptr<mccasformats::MCCASSchema> Schema,
+                 std::optional<MCTargetOptions::ResultCallBackTy> CallBack,
+                 raw_pwrite_stream *CasIDOS = nullptr);
 
   uint8_t getAddressSize() { return Target.isArch32Bit() ? 4 : 8; }
 
@@ -72,12 +56,7 @@ private:
 
   uint64_t OSOffset = 0;
 
-  std::function<const cas::ObjectProxy(llvm::MachOCASWriter &,
-                                       llvm::MCAssembler &, cas::ObjectStore &,
-                                       raw_ostream *)>
-      CreateFromMcAssembler;
-  std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
-      SerializeObjectFile;
+  std::unique_ptr<mccasformats::MCCASSchema> Schema;
 };
 
 /// Construct a new Mach-O CAS writer instance.
@@ -88,17 +67,13 @@ private:
 /// \param TT - The target triple.
 /// \param CAS - The ObjectStore instance.
 /// \param OS - The stream to write to.
+/// \param Schema - The MCCAS schema to use.
+/// \param CallBack - The callback to return the result CASID.
 /// \returns The constructed object writer.
 std::unique_ptr<MCObjectWriter> createMachOCASWriter(
     std::unique_ptr<MCMachObjectTargetWriter> MOTW, const Triple &TT,
     cas::ObjectStore &CAS, CASBackendMode Mode, raw_pwrite_stream &OS,
-    bool IsLittleEndian,
-    std::function<const cas::ObjectProxy(llvm::MachOCASWriter &,
-                                         llvm::MCAssembler &,
-                                         cas::ObjectStore &, raw_ostream *)>
-        CreateFromMcAssembler,
-    std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
-        SerializeObjectFile,
+    bool IsLittleEndian, std::unique_ptr<mccasformats::MCCASSchema> Schema,
     std::optional<MCTargetOptions::ResultCallBackTy> CallBack = std::nullopt,
     raw_pwrite_stream *CasIDOS = nullptr);
 

@@ -700,26 +700,9 @@ int main(int argc, char **argv) {
                           llvm::sys::Process::GetEnv("LLVM_TEST_CAS_BACKEND"));
 
     if (UseCASBackend) {
-      std::function<const cas::ObjectProxy(llvm::MachOCASWriter &,
-                                           llvm::MCAssembler &,
-                                           cas::ObjectStore &, raw_ostream *)>
-          CreateFromMcAssembler =
-              [](llvm::MachOCASWriter &Writer, llvm::MCAssembler &Asm,
-                 cas::ObjectStore &CAS,
-                 raw_ostream *DebugOS = nullptr) -> const cas::ObjectProxy {
-        auto Schema = std::make_unique<mccasformats::v1::MCSchema>(CAS);
-        return cantFail(Schema->createFromMCAssembler(Writer, Asm, DebugOS));
-      };
-      std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
-          SerializeObjectFile = [](cas::ObjectProxy RootNode,
-                                   cas::ObjectStore &CAS,
-                                   raw_ostream &OS) -> Error {
-        auto Schema = std::make_unique<mccasformats::v1::MCSchema>(CAS);
-        return Schema->serializeObjectFile(RootNode, OS);
-      };
       CASBackendWriter = MAB->createCASObjectWriter(
           *OS, TheTriple, *CAS, MCOptions, MCCASBackendMode,
-          CreateFromMcAssembler, SerializeObjectFile,
+          std::make_unique<mccasformats::v1::MCSchema>(*CAS),
           CasIDOS ? &CasIDOS->os() : nullptr);
     }
     // END MCCAS

@@ -15,6 +15,7 @@ add_llvm_component_library(LLVMMC
   MCAsmMacro.cpp
   MCAsmStreamer.cpp
   MCAssembler.cpp
+  MCCASFormatSchemaBase.cpp
   MCCodeEmitter.cpp
   MCCodeView.cpp
   MCContext.cpp
