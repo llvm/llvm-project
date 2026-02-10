@@ -32,6 +32,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
+#include "llvm/Support/WindowsError.h"
 #include <fileapi.h>
 #include <windows.h>
 #include <winerror.h>
@@ -2503,9 +2504,7 @@ static llvm::Expected<bool> areShortNamesEnabled(llvm::StringRef Path8) {
   WIN32_FIND_DATAW Data;
   HANDLE H = ::FindFirstFileW(Path16.data(), &Data);
   if (H == INVALID_HANDLE_VALUE)
-    return llvm::make_error<llvm::StringError>(
-        "FindFirstFileW returned invalid handle",
-        llvm::inconvertibleErrorCode());
+    return llvm::errorCodeToError(llvm::mapWindowsError(::GetLastError()));
   ::FindClose(H);
 
   return (Data.cAlternateFileName[0] != L'\0');
