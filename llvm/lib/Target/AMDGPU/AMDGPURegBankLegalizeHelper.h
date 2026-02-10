@@ -115,6 +115,10 @@ private:
                   const SmallVectorImpl<RegBankLLTMappingApplyID> &MethodIDs,
                   WaterfallInfo &WFI);
 
+  unsigned setBufferOffsets(MachineIRBuilder &B, Register CombinedOffset,
+                            Register &VOffsetReg, Register &SOffsetReg,
+                            int64_t &InstOffsetVal, Align Alignment);
+
   bool splitLoad(MachineInstr &MI, ArrayRef<LLT> LLTBreakdown,
                  LLT MergeTy = LLT());
   bool widenLoad(MachineInstr &MI, LLT WideTy, LLT MergeTy = LLT());

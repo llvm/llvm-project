@@ -299,6 +299,73 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
   return true;
 }
 
+// Analyze a combined offset from an llvm.amdgcn.s.buffer intrinsic and store
+// the three offsets (voffset, soffset and instoffset)
+unsigned RegBankLegalizeHelper::setBufferOffsets(
+    MachineIRBuilder &B, Register CombinedOffset, Register &VOffsetReg,
+    Register &SOffsetReg, int64_t &InstOffsetVal, Align Alignment) {
+  const GCNSubtarget &ST = B.getMF().getSubtarget<GCNSubtarget>();
+  const SIInstrInfo &TII = *ST.getInstrInfo();
+  if (std::optional<int64_t> Imm =
+          getIConstantVRegSExtVal(CombinedOffset, MRI)) {
+    uint32_t SOffset, ImmOffset;
+    if (TII.splitMUBUFOffset(*Imm, SOffset, ImmOffset, Alignment)) {
+      VOffsetReg = B.buildConstant({VgprRB, S32}, 0).getReg(0);
+      SOffsetReg = B.buildConstant({SgprRB, S32}, SOffset).getReg(0);
+      InstOffsetVal = ImmOffset;
+      return SOffset + ImmOffset;
+    }
+  }
+  Register Base;
+  unsigned Offset;
+  std::tie(Base, Offset) =
+      AMDGPU::getBaseWithConstantOffset(MRI, CombinedOffset);
+  uint32_t SOffset, ImmOffset;
+  if ((int)Offset > 0 &&
+      TII.splitMUBUFOffset(Offset, SOffset, ImmOffset, Alignment)) {
+    if (Base.isValid() && MRI.getRegBank(Base) == VgprRB) {
+      VOffsetReg = Base;
+      SOffsetReg = B.buildConstant({SgprRB, S32}, SOffset).getReg(0);
+      InstOffsetVal = ImmOffset;
+      return 0;
+    }
+    // If we have SGPR base, we can use it for soffset.
+    if (SOffset == 0) {
+      VOffsetReg = B.buildConstant({VgprRB, S32}, 0).getReg(0);
+      SOffsetReg = Base;
+      InstOffsetVal = ImmOffset;
+      return 0;
+    }
+  }
+  // Handle the variable sgpr + vgpr case.
+  MachineInstr *Add = getOpcodeDef(AMDGPU::G_ADD, CombinedOffset, MRI);
+  if (Add && (int)Offset >= 0) {
+    Register Src0 = getSrcRegIgnoringCopies(Add->getOperand(1).getReg(), MRI);
+    Register Src1 = getSrcRegIgnoringCopies(Add->getOperand(2).getReg(), MRI);
+    const RegisterBank *Src0Bank = MRI.getRegBank(Src0);
+    const RegisterBank *Src1Bank = MRI.getRegBank(Src1);
+    if (Src0Bank == VgprRB && Src1Bank == SgprRB) {
+      VOffsetReg = Src0;
+      SOffsetReg = Src1;
+      return 0;
+    }
+    if (Src0Bank == SgprRB && Src1Bank == VgprRB) {
+      VOffsetReg = Src1;
+      SOffsetReg = Src0;
+      return 0;
+    }
+  }
+  // Ensure we have a VGPR for the combined offset. This could be an issue if we
+  // have an SGPR offset and a VGPR resource.
+  if (MRI.getRegBank(CombinedOffset) == VgprRB) {
+    VOffsetReg = CombinedOffset;
+  } else {
+    VOffsetReg = B.buildCopy({VgprRB, S32}, CombinedOffset).getReg(0);
+  }
+  SOffsetReg = B.buildConstant({SgprRB, S32}, 0).getReg(0);
+  return 0;
+}
+
 bool RegBankLegalizeHelper::splitLoad(MachineInstr &MI,
                                       ArrayRef<LLT> LLTBreakdown, LLT MergeTy) {
   MachineFunction &MF = B.getMF();
@@ -1267,6 +1334,109 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     MI.eraseFromParent();
     break;
   }
+  case S_BUF_to_BUF: {
+    Register Dst = MI.getOperand(0).getReg();
+    LLT Ty = MRI.getType(Dst);
+    const RegisterBank *RSrcBank = MRI.getRegBank(MI.getOperand(1).getReg());
+    // FIXME: 96-bit case was widened during legalize. We need to narrow it
+    // back here but don't have an MMO.
+    unsigned LoadSize = Ty.getSizeInBits();
+    int NumLoads = 1;
+    if (LoadSize == 256 || LoadSize == 512) {
+      NumLoads = LoadSize / 128;
+      Ty = Ty.divide(NumLoads);
+    }
+    // Use the alignment to ensure that the required offsets will fit into the
+    // immediate offsets.
+    const Align Alignment = NumLoads > 1 ? Align(16 * NumLoads) : Align(1);
+    MachineFunction &MF = B.getMF();
+    Register SOffset;
+    Register VOffset;
+    int64_t ImmOffset = 0;
+    unsigned MMOOffset = setBufferOffsets(B, MI.getOperand(2).getReg(), VOffset,
+                                          SOffset, ImmOffset, Alignment);
+    // TODO: 96-bit loads were widened to 128-bit results. Shrink the
+    // result if we can, but we need to track an MMO for that.
+    // const unsigned MemSize = (Ty.getSizeInBits() + 7) / 8;
+    const unsigned MemSize = divideCeil(Ty.getSizeInBits(), 8);
+    const DataLayout DL = MF.getDataLayout();
+    Type *IRTy = getTypeForLLT(Ty, MF.getFunction().getContext());
+    const Align MemAlign(DL.getABITypeAlign(IRTy));
+    MachineMemOperand *BaseMMO = MF.getMachineMemOperand(
+        MachinePointerInfo(),
+        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
+            MachineMemOperand::MOInvariant,
+        MemSize, MemAlign);
+    if (MMOOffset != 0)
+      BaseMMO = MF.getMachineMemOperand(BaseMMO, MMOOffset, MemSize);
+    // If only the offset is divergent, emit a MUBUF buffer load
+    // instead. We can assume that the buffer is unswizzled.
+    Register RSrc = MI.getOperand(1).getReg();
+    Register VIndex = B.buildConstant(S32, 0).getReg(0);
+    B.getMRI()->setRegBank(VIndex, *VgprRB);
+    SmallVector<Register, 4> LoadParts(NumLoads);
+    MachineBasicBlock::iterator MII = MI.getIterator();
+    MachineInstrSpan Span(MII, &B.getMBB());
+    unsigned Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD;
+    switch (MI.getOpcode()) {
+    case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SBYTE:
+      Opc = G_AMDGPU_BUFFER_LOAD_SBYTE;
+      break;
+    case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_UBYTE:
+      Opc = G_AMDGPU_BUFFER_LOAD_UBYTE;
+      break;
+    case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_SSHORT:
+      Opc = G_AMDGPU_BUFFER_LOAD_SSHORT;
+      break;
+    case AMDGPU::G_AMDGPU_S_BUFFER_LOAD_USHORT:
+      Opc = G_AMDGPU_BUFFER_LOAD_USHORT;
+      break;
+    default:
+      break;
+    }
+    for (int i = 0; i < NumLoads; ++i) {
+      if (NumLoads == 1) {
+        LoadParts[i] = Dst;
+      } else {
+        LoadParts[i] = MRI.createGenericVirtualRegister(Ty);
+        MRI.setRegBank(LoadParts[i], *VgprRB);
+      }
+      if (i != 0)
+        BaseMMO = MF.getMachineMemOperand(BaseMMO, 16, MemSize);
+      B.buildInstr(Opc)
+          .addDef(LoadParts[i])       // vdata
+          .addUse(RSrc)               // rsrc
+          .addUse(VIndex)             // vindex
+          .addUse(VOffset)            // voffset
+          .addUse(SOffset)            // soffset
+          .addImm(ImmOffset + 16 * i) // offset(imm)
+          .addImm(0)                  // cachepolicy, swizzled buffer(imm)
+          .addImm(0)                  // idxen(imm)
+          .addMemOperand(BaseMMO);
+    }
+    // TODO: If only the resource is a VGPR, it may be better to execute the
+    // scalar load in the waterfall loop if the resource is expected to
+    // frequently be dynamically uniform.
+    if (RSrcBank != SgprRB) {
+      // Remove the original instruction to avoid potentially confusing the
+      // waterfall loop logic.
+      B.setInstr(*Span.begin());
+      MI.eraseFromParent();
+      SmallSet<Register, 4> OpsToWaterfall;
+      OpsToWaterfall.insert(RSrc);
+      executeInWaterfallLoop(B, {OpsToWaterfall, Span.begin(), Span.end()});
+    }
+    if (NumLoads != 1) {
+      if (Ty.isVector())
+        B.buildConcatVectors(Dst, LoadParts);
+      else
+        B.buildMergeLikeInstr(Dst, LoadParts);
+    }
+    // We removed the instruction earlier with a waterfall loop.
+    if (RSrcBank == SgprRB)
+      MI.eraseFromParent();
+    break;
+  }
   case SplitLoad: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
     unsigned Size = DstTy.getSizeInBits();
@@ -1538,6 +1708,8 @@ LLT RegBankLegalizeHelper::getTyFromID(RegBankLLTMappingApplyID ID) {
   case UniInVgprS64:
   case Sgpr64ToVgprDst:
     return LLT::scalar(64);
+  case Vgpr96:
+    return LLT::scalar(96);
   case Sgpr128:
   case Vgpr128:
     return LLT::scalar(128);
@@ -1652,7 +1824,7 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
   case UniInVgprB128:
     if (Ty == LLT::scalar(128) || Ty == LLT::fixed_vector(4, 32) ||
         Ty == LLT::fixed_vector(2, 64) || Ty == LLT::fixed_vector(8, 16) ||
-        isAnyPtr(Ty, 128))
+        Ty == LLT::fixed_vector(2, LLT::pointer(1, 64)) || isAnyPtr(Ty, 128))
       return Ty;
     return LLT();
   case VgprB160:
@@ -1664,14 +1836,17 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
   case VgprB256:
   case UniInVgprB256:
     if (Ty == LLT::scalar(256) || Ty == LLT::fixed_vector(8, 32) ||
-        Ty == LLT::fixed_vector(4, 64) || Ty == LLT::fixed_vector(16, 16))
+        Ty == LLT::fixed_vector(4, 64) || Ty == LLT::fixed_vector(16, 16) ||
+        Ty == LLT::fixed_vector(4, LLT::pointer(1, 64)) ||
+        Ty == LLT::fixed_vector(8, LLT::pointer(3, 32)))
       return Ty;
     return LLT();
   case SgprB512:
   case VgprB512:
   case UniInVgprB512:
     if (Ty == LLT::scalar(512) || Ty == LLT::fixed_vector(16, 32) ||
-        Ty == LLT::fixed_vector(8, 64))
+        Ty == LLT::fixed_vector(32, 16) || Ty == LLT::fixed_vector(8, 64) ||
+        Ty == LLT::fixed_vector(8, LLT::pointer(1, 64)))
       return Ty;
     return LLT();
   case SgprBRC: {
@@ -1763,6 +1938,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case Vgpr16:
   case Vgpr32:
   case Vgpr64:
+  case Vgpr96:
   case Vgpr128:
   case VgprP0:
   case VgprP1:
@@ -1837,6 +2013,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case Vgpr16:
     case Vgpr32:
     case Vgpr64:
+    case Vgpr96:
     case Vgpr128:
     case VgprP0:
     case VgprP1:
@@ -2069,6 +2246,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case Vgpr16:
     case Vgpr32:
     case Vgpr64:
+    case Vgpr96:
     case Vgpr128:
     case VgprP0:
     case VgprP1:
