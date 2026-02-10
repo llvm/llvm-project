@@ -1780,7 +1780,8 @@ public:
       exit(1);
     }
     if (!TargetBB)
-      // !TargetBB -> TargetFunction is not a nullptr
+      // No need to check TargetFunction for nullptr, because
+      // !TargetBB &&!TargetFunction has already been checked.
       TargetBB = &*TargetFunction->begin();
     if (TargetBB) {
       if (!TargetBB->hasParent()) {

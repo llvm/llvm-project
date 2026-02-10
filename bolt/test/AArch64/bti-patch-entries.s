@@ -5,7 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
 # RUN:   %s -o %t.o
 # RUN: %clang %cflags -pie %t.o -o %t.exe -nostdlib -Wl,-q,-z,force-bti
-# RUN: llvm-bolt %t.exe -o %t.bolt --use-old-text=0 --lite=0 --skip-funcs=_start | FileCheck %s --check-prefix=CHECK-BOLT
+# RUN: llvm-bolt %t.exe -o %t.bolt --use-old-text=0 --lite=0 --force-patch | FileCheck %s --check-prefix=CHECK-BOLT
 # RUN: llvm-objdump -dz %t.bolt | FileCheck %s
 
 # CHECK-BOLT: binary is using BTI
@@ -34,6 +34,5 @@ pathedEntries:
 .type _start, %function
 _start:
   bl pathedEntries
-  .inst 0xdeadbeef
   ret
 .size _start, .-_start
