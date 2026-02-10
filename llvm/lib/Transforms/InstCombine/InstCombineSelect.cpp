@@ -1515,8 +1515,10 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
   return nullptr;
 }
 
-static Value *canonicalizeSPF(ICmpInst &Cmp, Value *TrueVal, Value *FalseVal,
+static Value *canonicalizeSPF(SelectInst &SI, ICmpInst &Cmp,
                               InstCombinerImpl &IC) {
+  Value *TrueVal = SI.getTrueValue();
+  Value *FalseVal = SI.getFalseValue();
   Value *LHS, *RHS;
   // TODO: What to do with pointer min/max patterns?
   if (!TrueVal->getType()->isIntOrIntVectorTy())
@@ -2312,8 +2314,7 @@ static Instruction *foldICmpUSubSatWithAndForMostSignificantBitCmp(
 /// Visit a SelectInst that has an ICmpInst as its first operand.
 Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
                                                       ICmpInst *ICI) {
-  if (Value *V =
-          canonicalizeSPF(*ICI, SI.getTrueValue(), SI.getFalseValue(), *this))
+  if (Value *V = canonicalizeSPF(SI, *ICI, *this))
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectInstWithICmpConst(SI, ICI, Builder))
@@ -4929,7 +4930,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     // Is (select B, T, F) a SPF?
     if (CondVal->hasOneUse() && SelType->isIntOrIntVectorTy()) {
       if (ICmpInst *Cmp = dyn_cast<ICmpInst>(B))
-        if (Value *V = canonicalizeSPF(*Cmp, TrueVal, FalseVal, *this)) {
+        if (Value *V = canonicalizeSPF(SI, *Cmp, *this)) {
           Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
           return SelectInst::Create(A, IsAnd ? V : TrueVal,
                                     IsAnd ? FalseVal : V, "", nullptr, MDFrom);

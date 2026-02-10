@@ -234,7 +234,6 @@ Transforms/InstCombine/memchr.ll
 Transforms/InstCombine/mem-gep-zidx.ll
 Transforms/InstCombine/memrchr-3.ll
 Transforms/InstCombine/memrchr-4.ll
-Transforms/InstCombine/minmax-fold.ll
 Transforms/InstCombine/minmax-fp.ll
 Transforms/InstCombine/minmax-intrinsics.ll
 Transforms/InstCombine/mul-inseltpoison.ll

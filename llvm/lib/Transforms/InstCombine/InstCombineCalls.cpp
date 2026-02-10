@@ -1325,7 +1325,8 @@ Instruction *InstCombinerImpl::matchSAddSubSat(IntrinsicInst &MinMax1) {
 /// can only be one of two possible constant values -- turn that into a select
 /// of constants.
 static Instruction *foldClampRangeOfTwo(IntrinsicInst *II,
-                                        InstCombiner::BuilderTy &Builder) {
+                                        InstCombinerImpl &IC) {
+  auto &Builder = IC.Builder;
   Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
   Value *X;
   const APInt *C0, *C1;
@@ -1359,6 +1360,12 @@ static Instruction *foldClampRangeOfTwo(IntrinsicInst *II,
   // max (min X, 42), 41 --> X > 41 ? 42 : 41
   // min (max X, 42), 43 --> X < 43 ? 42 : 43
   Value *Cmp = Builder.CreateICmp(Pred, X, I1);
+  if (!ProfcheckDisableMetadataFixes) {
+    auto *NewSI = IC.createSelectInstWithUnknownProfile(
+        Cmp, ConstantInt::get(II->getType(), *C0), I1);
+    NewSI->copyMetadata(*II);
+    return NewSI;
+  }
   return SelectInst::Create(Cmp, ConstantInt::get(II->getType(), *C0), I1);
 }
 
@@ -2162,9 +2169,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       auto MinIID = IsSigned ? Intrinsic::smin : Intrinsic::umin;
       Value *NewMax = Builder.CreateBinaryIntrinsic(
           MaxIID, X, ConstantInt::get(X->getType(), *MaxC));
-      return replaceInstUsesWith(
-          *II, Builder.CreateBinaryIntrinsic(
-                   MinIID, NewMax, ConstantInt::get(X->getType(), *MinC)));
+      Value *NewMin = Builder.CreateBinaryIntrinsic(
+          MinIID, NewMax, ConstantInt::get(X->getType(), *MinC));
+      if (!ProfcheckDisableMetadataFixes) {
+        if (auto *I = dyn_cast<Instruction>(NewMax))
+          I->copyMetadata(*II);
+        if (auto *I = dyn_cast<Instruction>(NewMin))
+          I->copyMetadata(*II);
+      }
+      return replaceInstUsesWith(*II, NewMin);
     };
     if (IID == Intrinsic::smax &&
         match(I0, m_OneUse(m_Intrinsic<Intrinsic::smin>(m_Value(X),
@@ -2318,7 +2331,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(CI, Abs);
     }
 
-    if (Instruction *Sel = foldClampRangeOfTwo(II, Builder))
+    if (Instruction *Sel = foldClampRangeOfTwo(II, *this))
       return Sel;
 
     if (Instruction *SAdd = matchSAddSubSat(*II))
