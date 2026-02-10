@@ -768,8 +768,7 @@ static mlir::Type correctIntegerSignedness(mlir::Type iitType, QualType astType,
 
 static mlir::Value getCorrectedPtr(mlir::Value argValue, mlir::Type expectedTy,
                                    CIRGenBuilderTy &builder) {
-  auto ptrType = mlir::dyn_cast<cir::PointerType>(argValue.getType());
-  assert(ptrType && "expected pointer type");
+  auto ptrType = mlir::cast<cir::PointerType>(argValue.getType());
 
   auto expectedPtrType = mlir::cast<cir::PointerType>(expectedTy);
   assert(ptrType != expectedPtrType && "types should not match");
