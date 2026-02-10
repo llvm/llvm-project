@@ -389,7 +389,7 @@ protected:
   void splitToValueTypes(const ArgInfo &OrigArgInfo,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
                          const DataLayout &DL, CallingConv::ID CallConv,
-                         SmallVectorImpl<uint64_t> *Offsets = nullptr) const;
+                         SmallVectorImpl<TypeSize> *Offsets = nullptr) const;
 
   /// Analyze the argument list in \p Args, using \p Assigner to populate \p
   /// CCInfo. This will determine the types and locations to use for passed or

@@ -1901,7 +1901,11 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
   case llvm::Triple::ppc64:
   case llvm::Triple::ppc64le:
   case llvm::Triple::r600:
+    // These are actually NYI, but that will be reported by emitBuiltinExpr.
+    // At this point, we don't even know that the builtin is target-specific.
+    return std::nullopt;
   case llvm::Triple::amdgcn:
+    return cgf->emitAMDGPUBuiltinExpr(builtinID, e);
   case llvm::Triple::systemz:
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
@@ -2033,8 +2037,9 @@ mlir::Value CIRGenFunction::emitBuiltinObjectSize(const Expr *e, unsigned type,
 mlir::Value CIRGenFunction::evaluateOrEmitBuiltinObjectSize(
     const Expr *e, unsigned type, cir::IntType resType, mlir::Value emittedE,
     bool isDynamic) {
-  uint64_t objectSize;
-  if (!e->tryEvaluateObjectSize(objectSize, getContext(), type))
-    return emitBuiltinObjectSize(e, type, resType, emittedE, isDynamic);
-  return builder.getConstInt(getLoc(e->getSourceRange()), resType, objectSize);
+  if (std::optional<uint64_t> objectSize =
+          e->tryEvaluateObjectSize(getContext(), type))
+    return builder.getConstInt(getLoc(e->getSourceRange()), resType,
+                               *objectSize);
+  return emitBuiltinObjectSize(e, type, resType, emittedE, isDynamic);
 }

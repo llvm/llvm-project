@@ -16,7 +16,7 @@ struct AddrDiscStrong1 {
 // Check that AddrDiscStrong0 is destructed in the callee.
 
 // CHECK: define void @_Z24testParamAddrDiscStrong015AddrDiscStrong0(ptr noundef dead_on_return %[[A:.*]])
-// CHECK: call noundef ptr @_ZN15AddrDiscStrong0D1Ev(ptr noundef nonnull align {{[0-9]+}} dereferenceable(16) %[[A]])
+// CHECK: call noundef ptr @_ZN15AddrDiscStrong0D1Ev(ptr noundef nonnull align {{[0-9]+}} dead_on_return(16) dereferenceable(16) %[[A]])
 // CHECK: ret void
 
 // CHECK: define linkonce_odr noundef ptr @_ZN15AddrDiscStrong0D1Ev(

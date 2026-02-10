@@ -256,47 +256,26 @@ config_setting(
     flag_values = {"@rules_cc//cc/compiler:compiler": "clang"},
 )
 
-# TODO(zbarsky): Is there a better way to express this?
-config_setting(
-    name = "_stamp_binary_on_check",
-    values = {"stamp": "1"},
-)
-
-config_setting(
-    name = "_stamp_binary_off_check",
-    values = {"stamp": "0"},
-)
-
-selects.config_setting_group(
-    name = "_true",
-    match_any = [
-        ":_stamp_binary_on_check",
-        ":_stamp_binary_off_check",
-    ],
-)
-
-alias(
-    name = "non_windows",
-    actual = select({
-        "@platforms//os:windows": "@platforms//os:macos",
-        "//conditions:default": ":_true",
-    }),
-)
-
-selects.config_setting_group(
-    name = "is_x86_64_non_windows",
-    match_all = [
-        "@platforms//cpu:x86_64",
-        ":non_windows",
-    ],
-)
-
 BLAKE3_x86_64_ASM_SOURCE_PATTERNS = [
     "lib/Support/BLAKE3/blake3_avx2_x86-64_%s.S",
     "lib/Support/BLAKE3/blake3_avx512_x86-64_%s.S",
     "lib/Support/BLAKE3/blake3_sse2_x86-64_%s.S",
     "lib/Support/BLAKE3/blake3_sse41_x86-64_%s.S",
 ]
+
+filegroup(
+    name = "blake3_x86_64_asm",
+    srcs = select({
+        ":is_x86_64_windows_clang_mingw": [
+            pattern % "windows_gnu"
+            for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
+        ],
+        "//conditions:default": [
+            pattern % "unix"
+            for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
+        ],
+    }),
+)
 
 cc_library(
     name = "Support",
@@ -326,14 +305,7 @@ cc_library(
         "@platforms//cpu:aarch64": [
             "lib/Support/BLAKE3/blake3_neon.c",
         ],
-        ":is_x86_64_windows_clang_mingw": [
-            pattern % "windows_gnu"
-            for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
-        ],
-        ":is_x86_64_non_windows": [
-            pattern % "unix"
-            for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
-        ],
+        "@platforms//cpu:x86_64": [":blake3_x86_64_asm"],
         "//conditions:default": [
         ],
     }),
@@ -501,13 +473,28 @@ cc_library(
 )
 
 cc_library(
+    name = "BinaryFormatELF",
+    srcs = [
+        "include/llvm/TargetParser/Triple.h",
+        "lib/BinaryFormat/ELF.cpp",
+    ],
+    hdrs = ["include/llvm/BinaryFormat/ELF.h"],
+    copts = llvm_copts,
+    includes = ["include"],
+    textual_hdrs = glob([
+        "include/llvm/BinaryFormat/*.def",
+        "include/llvm/BinaryFormat/ELFRelocs/*.def",
+    ]),
+    deps = [":Support"],
+)
+
+cc_library(
     name = "BinaryFormat",
-    srcs = glob([
-        "lib/BinaryFormat/*.cpp",
-    ]),
-    hdrs = glob([
-        "include/llvm/BinaryFormat/*.h",
-    ]),
+    srcs = glob(
+        include = ["lib/BinaryFormat/*.cpp"],
+        exclude = ["lib/BinaryFormat/ELF.cpp"],
+    ),
+    hdrs = glob(["include/llvm/BinaryFormat/*.h"]),
     copts = llvm_copts,
     includes = ["include"],
     textual_hdrs = glob([
@@ -515,6 +502,7 @@ cc_library(
         "include/llvm/BinaryFormat/ELFRelocs/*.def",
     ]),
     deps = [
+        ":BinaryFormatELF",
         ":PPCTargetParser",
         ":Support",
         ":TargetParser",
@@ -1507,6 +1495,13 @@ td_library(
     ]),
 )
 
+td_library(
+    name = "WebAssemblyTargetTdFiles",
+    srcs = glob([
+        "lib/Target/WebAssembly/**/*.td",
+    ]),
+)
+
 gentbl_cc_library(
     name = "RISCVTargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/RISCVTargetParserDef.inc": ["-gen-riscv-target-def"]},
@@ -1545,9 +1540,7 @@ cc_library(
 cc_library(
     name = "TargetParser",
     srcs = glob(
-        [
-            "lib/TargetParser/*.cpp",
-        ],
+        include = ["lib/TargetParser/*.cpp"],
         exclude = ["lib/TargetParser/PPCTargetParser.cpp"],
     ) + select({
         "@platforms//os:windows": glob([
@@ -1557,9 +1550,7 @@ cc_library(
             "lib/TargetParser/Unix/*.inc",
         ]),
     }),
-    hdrs = glob([
-        "include/llvm/TargetParser/*.h",
-    ]),
+    hdrs = glob(["include/llvm/TargetParser/*.h"]),
     copts = llvm_copts,
     includes = ["include"],
     textual_hdrs = [
@@ -1572,6 +1563,7 @@ cc_library(
         "include/llvm/TargetParser/*.def",
     ]),
     deps = [
+        ":BinaryFormatELF",
         ":Support",
         ":config",
     ],
@@ -3322,6 +3314,10 @@ llvm_target_lib_list = [lib for lib in [
         "short_name": "WebAssembly",
         "tbl_outs": [
             (
+                ["-gen-register-bank"],
+                "lib/Target/WebAssembly/WebAssemblyGenRegisterBank.inc",
+            ),
+            (
                 ["-gen-disassembler"],
                 "lib/Target/WebAssembly/WebAssemblyGenDisassemblerTables.inc",
             ),
@@ -3367,6 +3363,9 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-sd-node-info"],
                 "lib/Target/WebAssembly/WebAssemblyGenSDNodeInfo.inc",
             ),
+        ],
+        "tbl_deps": [
+            ":webassembly_isel_target_gen",
         ],
     },
     {
@@ -3671,6 +3670,28 @@ gentbl_cc_library(
     deps = [
         ":CommonTargetTdFiles",
         ":RISCVTargetTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "webassembly_isel_target_gen",
+    strip_include_prefix = "lib/Target/WebAssembly",
+    tbl_outs = {
+        "lib/Target/WebAssembly/WebAssemblyGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/WebAssembly/WebAssemblyGenPreLegalizeGICombiner.inc": [
+            "-gen-global-isel-combiner",
+            "-combiners=WebAssemblyPreLegalizerCombiner",
+        ],
+        "lib/Target/WebAssembly/WebAssemblyGenPostLegalizeGICombiner.inc": [
+            "-gen-global-isel-combiner",
+            "-combiners=WebAssemblyPostLegalizerCombiner",
+        ],
+    },
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/WebAssembly/WebAssemblyGISel.td",
+    deps = [
+        ":CommonTargetTdFiles",
+        ":WebAssemblyTargetTdFiles",
     ],
 )
 

@@ -1082,24 +1082,27 @@ bool Compiler<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
 
   // Do the operation and optionally transform to
   // result pointer type.
-  if (Op == BO_Add) {
+  switch (Op) {
+  case BO_Add:
     if (!this->emitAddOffset(OffsetType, E))
       return false;
-
-    if (classifyPrim(E) != PT_Ptr)
-      return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
-    return true;
-  }
-  if (Op == BO_Sub) {
+    break;
+  case BO_Sub:
     if (!this->emitSubOffset(OffsetType, E))
       return false;
-
-    if (classifyPrim(E) != PT_Ptr)
-      return this->emitDecayPtr(PT_Ptr, classifyPrim(E), E);
-    return true;
+    break;
+  default:
+    return false;
   }
 
-  return false;
+  if (classifyPrim(E) != PT_Ptr) {
+    if (!this->emitDecayPtr(PT_Ptr, classifyPrim(E), E))
+      return false;
+  }
+
+  if (DiscardResult)
+    return this->emitPop(classifyPrim(E), E);
+  return true;
 }
 
 template <class Emitter>
@@ -1214,7 +1217,11 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
       return false;
     if (!this->visit(RHS))
       return false;
-    return this->emitMulc(ElemT, E);
+    if (!this->emitMulc(ElemT, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopPtr(E);
+    return true;
   }
 
   if (Op == BO_Div && RHSIsComplex) {
@@ -1251,7 +1258,11 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 
     if (!this->visit(RHS))
       return false;
-    return this->emitDivc(ElemT, E);
+    if (!this->emitDivc(ElemT, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopPtr(E);
+    return true;
   }
 
   // Evaluate LHS and save value to LHSOffset.
@@ -5066,14 +5077,29 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
   }
   if (Val.isUnion()) {
     const FieldDecl *UnionField = Val.getUnionField();
-    const Record *R = this->getRecord(UnionField->getParent());
+    if (!UnionField)
+      return true;
+    const Record *R = this->getRecord(T);
     assert(R);
     const APValue &F = Val.getUnionValue();
     const Record::Field *RF = R->getField(UnionField);
-    PrimType T = classifyPrim(RF->Decl->getType());
-    if (!this->visitAPValue(F, T, E))
+    QualType FieldType = RF->Decl->getType();
+
+    if (OptPrimType PT = classify(FieldType)) {
+      if (!this->visitAPValue(F, *PT, E))
+        return false;
+      if (RF->isBitField())
+        return this->emitInitBitFieldActivate(*PT, RF, E);
+      return this->emitInitFieldActivate(*PT, RF->Offset, E);
+    }
+
+    if (!this->emitGetPtrField(RF->Offset, E))
       return false;
-    return this->emitInitField(T, RF->Offset, E);
+    if (!this->emitActivate(E))
+      return false;
+    if (!this->visitAPValueInitializer(F, E, FieldType))
+      return false;
+    return this->emitPopPtr(E);
   }
   if (Val.isArray()) {
     const auto *ArrType = T->getAsArrayTypeUnsafe();
@@ -5172,6 +5198,15 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_assume:
     // Argument is not evaluated.
     break;
+  case Builtin::BI__atomic_is_lock_free:
+  case Builtin::BI__atomic_always_lock_free: {
+    assert(E->getNumArgs() == 2);
+    if (!this->visit(E->getArg(0)))
+      return false;
+    if (!this->visitAsLValue(E->getArg(1)))
+      return false;
+  } break;
+
   default:
     if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
       // Put arguments on the stack.
@@ -5185,10 +5220,8 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
   if (!this->emitCallBI(E, BuiltinID, E))
     return false;
 
-  if (DiscardResult && !ReturnType->isVoidType()) {
-    assert(ReturnT);
-    return this->emitPop(*ReturnT, E);
-  }
+  if (DiscardResult && !ReturnType->isVoidType())
+    return this->emitPop(ReturnT.value_or(PT_Ptr), E);
 
   return true;
 }
@@ -6832,6 +6865,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (E->getType()->isMemberPointerType()) {
       // C++11 [expr.unary.op]p3 has very strict rules on how the address of a
       // member can be formed.
+      if (DiscardResult)
+        return true;
       return this->emitGetMemberPtr(cast<DeclRefExpr>(SubExpr)->getDecl(), E);
     }
     // We should already have a pointer when we get here.
@@ -7114,8 +7149,9 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
           return false;
         return this->emitInitGlobal(*T, *Index, E);
       }
-      return this->visitAPValueInitializer(TPOD->getValue(), E,
-                                           TPOD->getType());
+      if (!this->visitAPValueInitializer(TPOD->getValue(), E, TPOD->getType()))
+        return false;
+      return this->emitFinishInit(E);
     }
     return false;
   }
