@@ -19,6 +19,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -47,6 +48,7 @@
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -422,10 +424,10 @@ private:
   void removeAllAssertingVHReferences(Value *V);
   bool eliminateAssumptions(Function &F);
   bool eliminateFallThrough(Function &F);
-  bool eliminateMostlyEmptyBlocks(Function &F);
+  bool eliminateMostlyEmptyBlocks(Function &F, bool &ResetLI);
   BasicBlock *findDestBlockOfMergeableEmptyBlock(BasicBlock *BB);
   bool canMergeBlocks(const BasicBlock *BB, const BasicBlock *DestBB) const;
-  void eliminateMostlyEmptyBlock(BasicBlock *BB);
+  bool eliminateMostlyEmptyBlock(BasicBlock *BB);
   bool isMergingEmptyBlockProfitable(BasicBlock *BB, BasicBlock *DestBB,
                                      bool isPreheader);
   bool makeBitReverse(Instruction &I);
@@ -624,7 +626,7 @@ bool CodeGenPrepare::_run(Function &F) {
       // optimization to those blocks.
       BasicBlock *Next = BB->getNextNode();
       if (!llvm::shouldOptimizeForSize(BB, PSI, BFI.get()))
-        EverMadeChange |= bypassSlowDivision(BB, BypassWidths);
+        EverMadeChange |= bypassSlowDivision(BB, BypassWidths, DTU, LI);
       BB = Next;
     }
   }
@@ -636,18 +638,21 @@ bool CodeGenPrepare::_run(Function &F) {
 
   // Eliminate blocks that contain only PHI nodes and an
   // unconditional branch.
-  EverMadeChange |= eliminateMostlyEmptyBlocks(F);
+  bool ResetLI = false;
+  EverMadeChange |= eliminateMostlyEmptyBlocks(F, ResetLI);
+  if (ResetLI) {
+    LI->releaseMemory();
+    LI->analyze(DTU->getDomTree());
+  }
 
   if (!DisableBranchOpts)
     EverMadeChange |= splitBranchCondition(F);
 
   // Split some critical edges where one of the sources is an indirect branch,
   // to help generate sane code for PHIs involving such edges.
-  EverMadeChange |=
-      SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/true);
-
-  // Transformations above may invalidate dominator tree and/or loop info.
-  if (EverMadeChange) {
+  bool Split = SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/true);
+  EverMadeChange |= Split;
+  if (Split) {
     DTU->recalculate(F);
     LI->releaseMemory();
     LI->analyze(DTU->getDomTree());
@@ -931,7 +936,7 @@ BasicBlock *CodeGenPrepare::findDestBlockOfMergeableEmptyBlock(BasicBlock *BB) {
 /// unconditional branch. Passes before isel (e.g. LSR/loopsimplify) often split
 /// edges in ways that are non-optimal for isel. Start by eliminating these
 /// blocks so we can split them the way we want them.
-bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F) {
+bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F, bool &ResetLI) {
   SmallPtrSet<BasicBlock *, 16> Preheaders;
   SmallVector<Loop *, 16> LoopList(LI->begin(), LI->end());
   while (!LoopList.empty()) {
@@ -941,6 +946,7 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F) {
       Preheaders.insert(Preheader);
   }
 
+  ResetLI = false;
   bool MadeChange = false;
   // Copy blocks into a temporary array to avoid iterator invalidation issues
   // as we remove them.
@@ -955,14 +961,14 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F) {
 
   for (auto &Block : Blocks) {
     BasicBlock *BB = cast_or_null<BasicBlock>(Block);
-    if (!BB)
+    if (!BB || DTU->isBBPendingDeletion(BB))
       continue;
     BasicBlock *DestBB = findDestBlockOfMergeableEmptyBlock(BB);
     if (!DestBB ||
         !isMergingEmptyBlockProfitable(BB, DestBB, Preheaders.count(BB)))
       continue;
 
-    eliminateMostlyEmptyBlock(BB);
+    ResetLI |= eliminateMostlyEmptyBlock(BB);
     MadeChange = true;
   }
   return MadeChange;
@@ -1138,8 +1144,8 @@ static void replaceAllUsesWith(Value *Old, Value *New,
 
 /// Eliminate a basic block that has only phi's and an unconditional branch in
 /// it.
-/// Indicate that the DT was modified only if the DT wasn't updated.
-void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
+/// Indicate that the LoopInfo was modified only if it wasn't updated.
+bool CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
   BranchInst *BI = cast<BranchInst>(BB->getTerminator());
   BasicBlock *DestBB = BI->getSuccessor(0);
 
@@ -1153,7 +1159,7 @@ void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
       assert(SinglePred == BB &&
              "Single predecessor not the same as predecessor");
       // Merge DestBB into SinglePred/BB and delete it.
-      MergeBlockIntoPredecessor(DestBB);
+      MergeBlockIntoPredecessor(DestBB, DTU, LI);
       // Note: BB(=SinglePred) will not be deleted on this path.
       // DestBB(=its single successor) is the one that was deleted.
       LLVM_DEBUG(dbgs() << "AFTER:\n" << *SinglePred << "\n\n\n");
@@ -1163,7 +1169,7 @@ void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
         FreshBBs.insert(SinglePred);
         FreshBBs.erase(DestBB);
       }
-      return;
+      return false;
     }
   }
 
@@ -1202,11 +1208,29 @@ void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
 
   // The PHIs are now updated, change everything that refers to BB to use
   // DestBB and remove BB.
+  SmallVector<DominatorTree::UpdateType, 8> DTUpdates;
+  SmallPtrSet<BasicBlock *, 8> SeenPreds;
+  SmallPtrSet<BasicBlock *, 8> PredOfDestBB(llvm::from_range,
+                                            predecessors(DestBB));
+  for (auto *Pred : predecessors(BB)) {
+    if (!PredOfDestBB.contains(Pred)) {
+      if (SeenPreds.insert(Pred).second)
+        DTUpdates.push_back({DominatorTree::Insert, Pred, DestBB});
+    }
+  }
+  SeenPreds.clear();
+  for (auto *Pred : predecessors(BB)) {
+    if (SeenPreds.insert(Pred).second)
+      DTUpdates.push_back({DominatorTree::Delete, Pred, BB});
+  }
+  DTUpdates.push_back({DominatorTree::Delete, BB, DestBB});
   BB->replaceAllUsesWith(DestBB);
-  BB->eraseFromParent();
+  DTU->applyUpdates(DTUpdates);
+  DTU->deleteBB(BB);
   ++NumBlocksElim;
 
   LLVM_DEBUG(dbgs() << "AFTER:\n" << *DestBB << "\n\n\n");
+  return true;
 }
 
 // Computes a map of base pointer relocation instructions to corresponding
