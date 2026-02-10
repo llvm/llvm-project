@@ -146,7 +146,7 @@ bool RISCVPostRAExpandPseudo::expandMERGE(MachineBasicBlock &MBB,
                  .add(MI.getOperand(3))
                  .add(MI.getOperand(2))
                  .add(MI.getOperand(1));
-    transferImpOps(*MBBI, I, I);
+    transferImpOps(*MBBI, I);
   } else if (DstReg == MBBI->getOperand(2).getReg()) {
     // Expand to MVM
     auto I = BuildMI(MBB, MBBI, DL, TII->get(RISCV::MVM))
@@ -154,7 +154,7 @@ bool RISCVPostRAExpandPseudo::expandMERGE(MachineBasicBlock &MBB,
                  .add(MI.getOperand(2))
                  .add(MI.getOperand(3))
                  .add(MI.getOperand(1));
-    transferImpOps(*MBBI, I, I);
+    transferImpOps(*MBBI, I);
   } else if (DstReg == MI.getOperand(1).getReg()) {
     // Expand to MERGE
     auto I = BuildMI(MBB, MBBI, DL, TII->get(RISCV::MERGE))
@@ -162,7 +162,7 @@ bool RISCVPostRAExpandPseudo::expandMERGE(MachineBasicBlock &MBB,
                  .add(MI.getOperand(1))
                  .add(MI.getOperand(2))
                  .add(MI.getOperand(3));
-    transferImpOps(*MBBI, I, I);
+    transferImpOps(*MBBI, I);
   } else {
     // Use an additional move.
     RegState RegState =
@@ -182,7 +182,7 @@ bool RISCVPostRAExpandPseudo::expandMERGE(MachineBasicBlock &MBB,
                                               MI.getOperand(0).isRenamable()))
                  .add(MI.getOperand(2))
                  .add(MI.getOperand(3));
-    transferImpOps(*MBBI, I, I);
+    transferImpOps(*MBBI, I);
   }
   MI.eraseFromParent();
   return true;
