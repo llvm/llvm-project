@@ -2073,6 +2073,14 @@ protected:
 class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 
+  bool isPointerLoopInvariant() const {
+    return getOperand(0)->isDefinedOutsideLoopRegions();
+  }
+
+  bool isIndexLoopInvariant(unsigned I) const {
+    return getOperand(I + 1)->isDefinedOutsideLoopRegions();
+  }
+
 public:
   VPWidenGEPRecipe(GetElementPtrInst *GEP, ArrayRef<VPValue *> Operands,
                    const VPIRFlags &Flags = {},
@@ -2097,21 +2105,6 @@ public:
 
   /// This recipe generates a GEP instruction.
   unsigned getOpcode() const { return Instruction::GetElementPtr; }
-
-  bool isPointerLoopInvariant() const {
-    return getOperand(0)->isDefinedOutsideLoopRegions();
-  }
-
-  bool isIndexLoopInvariant(unsigned I) const {
-    return getOperand(I + 1)->isDefinedOutsideLoopRegions();
-  }
-
-  /// Returns the element type for the first \p I indices of this recipe.
-  Type *getIndexedType(unsigned I) const {
-    auto *GEP = cast<GetElementPtrInst>(getUnderlyingInstr());
-    SmallVector<Value *, 4> Ops(GEP->idx_begin(), GEP->idx_begin() + I);
-    return GetElementPtrInst::getIndexedType(SourceElementTy, Ops);
-  }
 
   /// Generate the gep nodes.
   void execute(VPTransformState &State) override;

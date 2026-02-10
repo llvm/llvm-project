@@ -3007,8 +3007,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
   if (match(&CurRecipe, m_Intrinsic<Intrinsic::experimental_vp_strided_load>(
                             m_VPValue(Addr), m_VPValue(Stride),
                             m_RemoveMask(HeaderMask, Mask),
-                            m_VPInstruction<Instruction::Trunc>(
-                                m_Specific(&Plan->getVF()))))) {
+                            m_TruncOrSelf(m_Specific(&Plan->getVF()))))) {
     auto *I = cast<VPWidenIntrinsicRecipe>(&CurRecipe);
     if (!Mask)
       Mask = Plan->getTrue();
@@ -3124,7 +3123,8 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
                   auto *R = cast<VPRecipeBase>(U);
                   return (R->getParent()->getParent() != LoopRegion) ||
                          isa<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
-                             VPWidenIntOrFpInductionRecipe>(R);
+                             VPWidenIntOrFpInductionRecipe,
+                             VPWidenMemIntrinsicRecipe>(R);
                 }) &&
          "User of VF that we can't transform to EVL.");
   Plan.getVF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
@@ -5981,103 +5981,19 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   }
 }
 
-static std::pair<VPValue *, VPValue *> matchStridedStart(VPValue *CurIndex) {
-  // TODO: Support VPWidenPointerInductionRecipe.
-  if (auto *WidenIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(CurIndex))
-    return {WidenIV, WidenIV->getStepValue()};
-
-  auto *WidenR = dyn_cast<VPWidenRecipe>(CurIndex);
-  if (!WidenR || !WidenR->getUnderlyingInstr())
-    return {nullptr, nullptr};
-
-  unsigned Opcode = WidenR->getOpcode();
-  // TODO: Support Instruction::Add and Instruction::Or.
-  if (Opcode != Instruction::Shl && Opcode != Instruction::Mul)
-    return {nullptr, nullptr};
-
-  // Match the pattern binop(variant, uniform), or binop(uniform, variant) if
-  // the binary operator is commutative.
-  bool IsLHSUniform = vputils::isSingleScalar(WidenR->getOperand(0));
-  if (IsLHSUniform == vputils::isSingleScalar(WidenR->getOperand(1)) ||
-      (IsLHSUniform && !Instruction::isCommutative(Opcode)))
-    return {nullptr, nullptr};
-  unsigned VarIdx = IsLHSUniform ? 1 : 0;
-
-  auto [Start, Stride] = matchStridedStart(WidenR->getOperand(VarIdx));
-  if (!Start)
-    return {nullptr, nullptr};
-
-  VPBuilder Builder(WidenR);
-  SmallVector<VPValue *> StartOps(WidenR->operands());
-  StartOps[VarIdx] = Start;
-  auto *StartR = Builder.createOverflowingOp(
-      Opcode, StartOps,
-      {WidenR->hasNoUnsignedWrap(), WidenR->hasNoSignedWrap()},
-      WidenR->getDebugLoc());
-  unsigned InvIdx = VarIdx == 0 ? 1 : 0;
-  auto *StrideR =
-      Builder.createOverflowingOp(Opcode, {Stride, WidenR->getOperand(InvIdx)});
-  return {StartR, StrideR};
-}
-
-/// Checks if the given VPWidenGEPRecipe \p WidenGEP represents a strided
-/// access. If so, it creates recipes representing the base pointer and stride
-/// in element units, and returns a tuple of {base pointer, stride, element
-/// type}. Otherwise, returns a tuple where all elements are nullptr.
-static std::tuple<VPValue *, VPValue *, Type *>
-determineBaseAndStride(VPWidenGEPRecipe *WidenGEP) {
-  // TODO: Check if the base pointer is strided.
-  if (!WidenGEP->isPointerLoopInvariant())
-    return {nullptr, nullptr, nullptr};
-
-  // Find the only one variant index.
-  unsigned VarOp = 0;
-  for (unsigned I = 1, E = WidenGEP->getNumOperands(); I < E; ++I) {
-    if (WidenGEP->isIndexLoopInvariant(I - 1))
-      continue;
-
-    if (VarOp != 0)
-      return {nullptr, nullptr, nullptr};
-    VarOp = I;
-  }
-
-  if (!VarOp)
-    return {nullptr, nullptr, nullptr};
-
-  Type *ElementTy = WidenGEP->getIndexedType(VarOp - 1);
-  assert(!ElementTy->isScalableTy() && !ElementTy->isVectorTy() &&
-         "Unexpected indexed type");
-  if (ElementTy->isStructTy())
-    return {nullptr, nullptr, nullptr};
-
-  VPValue *IndexVPV = WidenGEP->getOperand(VarOp);
-  auto [Start, Stride] = matchStridedStart(IndexVPV);
-  if (!Start)
-    return {nullptr, nullptr, nullptr};
-
-  SmallVector<VPValue *> Ops(WidenGEP->operands());
-  Ops[VarOp] = Start;
-  auto *BasePtr = new VPReplicateRecipe(
-      WidenGEP->getUnderlyingInstr(), Ops,
-      /*IsUniform*/ true, /*Mask*/ nullptr, /*Flags*/ *WidenGEP,
-      /*Metadata*/ {}, WidenGEP->getDebugLoc());
-  BasePtr->insertBefore(WidenGEP);
-
-  return {BasePtr, Stride, ElementTy};
-}
-
-void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
+void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
+                                               PredicatedScalarEvolution &PSE,
+                                               Loop &L, VPCostContext &Ctx,
                                                VFRange &Range) {
   if (Plan.hasScalarVFOnly())
     return;
 
   VPTypeAnalysis TypeInfo(Plan);
-  DenseMap<VPWidenGEPRecipe *, std::tuple<VPValue *, VPValue *, Type *>>
-      StrideCache;
+  VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
   SmallVector<VPWidenMemoryRecipe *> ToErase;
   VPValue *I32VF = nullptr;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+           vp_depth_first_shallow(VectorLoop->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       auto *LoadR = dyn_cast<VPWidenLoadRecipe>(&R);
       // TODO: Support strided store.
@@ -6113,21 +6029,13 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
                                                               Range))
         continue;
 
-      // Try to get base and stride here.
-      VPValue *BasePtr, *StrideInElement;
-      Type *ElementTy;
-      auto It = StrideCache.find(Ptr);
-      if (It != StrideCache.end())
-        std::tie(BasePtr, StrideInElement, ElementTy) = It->second;
-      else
-        std::tie(BasePtr, StrideInElement, ElementTy) = StrideCache[Ptr] =
-            determineBaseAndStride(Ptr);
-
-      // Skip if the memory access is not a strided access.
-      if (!BasePtr)
+      const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, &L);
+      const SCEV *Start;
+      const APInt *Step;
+      // TODO: Support loop invariant stride.
+      if (!match(PtrSCEV,
+                 m_scev_AffineAddRec(m_SCEV(Start), m_scev_APInt(Step))))
         continue;
-      assert(StrideInElement && ElementTy &&
-             "Can not get stride information for a strided access");
 
       // Add VF of i32 version for EVL.
       if (!I32VF) {
@@ -6138,22 +6046,24 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan, VPCostContext &Ctx,
       }
 
       VPBuilder Builder(LoadR);
+      // Create the base pointer of strided access.
+      VPValue *StartVPV = vputils::getOrCreateVPValueForSCEVExpr(Plan, Start);
+      VPValue *StrideInBytes =
+          Plan.getConstantInt(VectorLoop->getCanonicalIVType(),
+                              Step->getSExtValue(), /*IsSigned=*/true);
+      auto *AddRecPtr = cast<SCEVAddRecExpr>(PtrSCEV);
+      auto *Offset = Builder.createOverflowingOp(
+          Instruction::Mul, {VectorLoop->getCanonicalIV(), StrideInBytes},
+          {AddRecPtr->hasNoUnsignedWrap(), AddRecPtr->hasNoSignedWrap()});
+      auto *BasePtr = Builder.createNoWrapPtrAdd(
+          StartVPV, Offset,
+          AddRecPtr->hasNoUnsignedWrap() ? GEPNoWrapFlags::noUnsignedWrap()
+                                         : GEPNoWrapFlags::none());
+
       // Create a new vector pointer for strided access.
       auto *NewPtr = Builder.createVectorPointer(
-          BasePtr, ElementTy, StrideInElement, Ptr->getGEPNoWrapFlags(),
-          Ptr->getDebugLoc());
-
-      const DataLayout &DL = Ingredient.getDataLayout();
-      TypeSize TS = DL.getTypeAllocSize(ElementTy);
-      unsigned TypeScale = TS.getFixedValue();
-      VPValue *StrideInBytes = StrideInElement;
-      // Scale the stride by the size of the indexed type.
-      if (TypeScale != 1) {
-        VPValue *ScaleVPV = Plan.getConstantInt(
-            TypeInfo.inferScalarType(StrideInElement), TypeScale);
-        StrideInBytes = Builder.createOverflowingOp(
-            Instruction::Mul, {StrideInElement, ScaleVPV});
-      }
+          BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes,
+          Ptr->getGEPNoWrapFlags(), Ptr->getDebugLoc());
 
       VPValue *Mask;
       if (VPValue *LoadMask = LoadR->getMask())

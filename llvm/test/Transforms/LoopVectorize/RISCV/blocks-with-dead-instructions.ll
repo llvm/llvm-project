@@ -325,9 +325,9 @@ define void @multiple_blocks_with_dead_inst_multiple_successors_6(ptr %src, i1 %
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul nsw i64 3, [[TMP12]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[TMP16]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[DOTSPLATINSERT]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[EVL_BASED_IV]], 3
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i16, ptr [[SRC]], <vscale x 8 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[EVL_BASED_IV]], 6
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 8 x i16> @llvm.experimental.vp.strided.load.nxv8i16.p0.i64(ptr align 2 [[TMP21]], i64 6, <vscale x 8 x i1> splat (i1 true), i32 [[TMP27]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq <vscale x 8 x i16> [[WIDE_MASKED_GATHER]], zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = select <vscale x 8 x i1> [[TMP17]], <vscale x 8 x i1> [[TMP8]], <vscale x 8 x i1> zeroinitializer
