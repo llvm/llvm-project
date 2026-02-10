@@ -1077,8 +1077,7 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
 
   if (!WaterfallSgprs.empty()) {
     MachineBasicBlock::iterator I = MI.getIterator();
-    if (!executeInWaterfallLoop(B, make_range(I, std::next(I)),
-                                WaterfallSgprs))
+    if (!executeInWaterfallLoop(B, make_range(I, std::next(I)), WaterfallSgprs))
       return false;
   }
   return true;
