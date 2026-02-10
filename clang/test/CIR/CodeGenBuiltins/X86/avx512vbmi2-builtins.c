@@ -370,7 +370,7 @@ __m512i test_mm512_mask_shrdv_epi32(__m512i s, __mmask16 u, __m512i a, __m512i b
 
 __m512i test_mm512_maskz_shrdv_epi32(__mmask16 u, __m512i s, __m512i a, __m512i b) {
   // CIR-LABEL: _mm512_maskz_shrdv_epi32
-  // CIR: cir.call @_mm512_shrdv_epi32(%{{.*}}, %{{.*}}, %{{.*}}) : (!cir.vector<8 x !s64i>, !cir.vector<8 x !s64i>, !cir.vector<8 x !s64i>) -> !cir.vector<8 x !s64i>
+  // CIR: cir.call @_mm512_shrdv_epi32(%{{.*}}, %{{.*}}, %{{.*}}){{.*}} : (!cir.vector<8 x !s64i>, !cir.vector<8 x !s64i>, !cir.vector<8 x !s64i>) -> !cir.vector<8 x !s64i>
   // CIR: cir.cast bitcast %{{.*}} : !cir.vector<8 x !s64i> -> !cir.vector<16 x !s32i>
   // CIR: cir.call @_mm512_setzero_si512() {{.*}} : () -> !cir.vector<8 x !s64i>
   // CIR: cir.vec.ternary(%{{.*}}, %{{.*}}, %{{.*}}) : !cir.vector<16 x !cir.int<s, 1>>, !cir.vector<16 x !s32i>
@@ -387,7 +387,7 @@ __m512i test_mm512_maskz_shrdv_epi32(__mmask16 u, __m512i s, __m512i a, __m512i 
 
 __m512i test_mm512_mask_shrdv_epi16(__m512i s, __mmask32 u, __m512i a, __m512i b) {
   // CIR-LABEL: _mm512_mask_shrdv_epi16
-  // CIR: cir.call @_mm512_shrdv_epi16(%{{.*}}, %{{.*}}, %{{.*}}) : (!cir.vector<8 x !s64i>, !cir.vector<8 x !s64i>, !cir.vector<8 x !s64i>) -> !cir.vector<8 x !s64i>
+  // CIR: cir.call @_mm512_shrdv_epi16(%{{.*}}, %{{.*}}, %{{.*}}){{.*}} : (!cir.vector<8 x !s64i>, !cir.vector<8 x !s64i>, !cir.vector<8 x !s64i>) -> !cir.vector<8 x !s64i>
   // CIR: cir.cast bitcast %{{.*}} : !cir.vector<8 x !s64i> -> !cir.vector<32 x !s16i>
   // CIR: cir.vec.ternary(%{{.*}}, %{{.*}}, %{{.*}}) : !cir.vector<32 x !cir.int<s, 1>>, !cir.vector<32 x !s16i>
   // CIR-LABEL: test_mm512_mask_shrdv_epi16
