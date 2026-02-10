@@ -55,7 +55,8 @@ class BuiltinDebugTrapTestCase(TestBase):
         self.assertEqual(global_value.GetValueAsUnsigned(), 10)
 
         # Change the handling of SIGILL on x86-64 Linux - do not pass it
-        # to the inferior, but stop and notify lldb.
+        # to the inferior, but stop and notify lldb. If we don't do this,
+        # the inferior will receive the SIGILL and be terminated.
         if self.getArchitecture() == "x86_64" and platform == "linux":
             self.runCmd("process handle -p false SIGILL")
 
