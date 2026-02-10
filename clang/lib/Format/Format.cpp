@@ -3800,6 +3800,7 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
         IsStatic = true;
       ImportsInBlock.push_back(
           {Identifier, Line, Prev, AssociatedCommentLines, IsStatic});
+      HasImport = true;
       AssociatedCommentLines.clear();
     } else {
       break;
