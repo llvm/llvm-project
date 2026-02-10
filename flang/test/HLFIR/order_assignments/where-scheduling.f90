@@ -127,12 +127,30 @@ subroutine elsewhere_construct_unknown_conflict(x, y, mask1, mask2)
   end where
 end subroutine
 
+subroutine where_construct_need_to_be_split_no_temps(x, y)
+  real :: x(:, :), y(:, :)
+  where (y.gt.0.)
+    x = y
+  elsewhere (x(ubound(x,1):1:-1, :).gt.0)
+    y = x
+  end where
+end subroutine
+
+subroutine where_construct_need_to_be_split_with_temps(x, y)
+  real :: x(:, :), y(:, :)
+  where (y.gt.0.)
+    x = y
+    y = 0.
+  elsewhere (x(ubound(x,1):1:-1, :).gt.0)
+    y = x
+  end where
+end subroutine
+
 !CHECK-LABEL: ------------ scheduling where in _QPno_conflict ------------
 !CHECK-NEXT: run 1 evaluate: where/region_assign1
 !CHECK-LABEL: ------------ scheduling where in _QPfake_conflict ------------
-!CHECK-NEXT: conflict: R/W: <block argument> of type '!fir.box<!fir.array<?xf32>>' at index: 0 W:<block argument> of type '!fir.box<!fir.array<?xf32>>' at index: 0
-!CHECK-NEXT: run 1 save    : where/mask
-!CHECK-NEXT: run 2 evaluate: where/region_assign1
+!CHECK-NEXT: conflict (aligned): R/W: <block argument> of type '!fir.box<!fir.array<?xf32>>' at index: 0 W:<block argument> of type '!fir.box<!fir.array<?xf32>>' at index: 0
+!CHECK-NEXT: run 1 evaluate: where/region_assign1
 !CHECK-LABEL: ------------ scheduling where in _QPonly_once ------------
 !CHECK-NEXT: unknown effect: %11 = fir.call @_QPcall_me_only_once() fastmath<contract> : () -> !fir.array<10x!fir.logical<4>>
 !CHECK-NEXT: saving eval because write effect prevents re-evaluation
@@ -148,24 +166,22 @@ end subroutine
 !CHECK-NEXT: run 2 evaluate: where/elsewhere1/region_assign1
 !CHECK-LABEL: ------------ scheduling where in _QPwhere_construct_conflict ------------
 !CHECK-NEXT: run 1 evaluate: where/region_assign1
-!CHECK-NEXT: conflict: R/W: <block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1 W:<block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1
-!CHECK-NEXT: run 2 save    : where/mask
-!CHECK-NEXT: run 3 evaluate: where/elsewhere1/region_assign1
+!CHECK-NEXT: conflict (aligned): R/W: <block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1 W:<block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1
+!CHECK-NEXT: run 2 evaluate: where/elsewhere1/region_assign1
 !CHECK-LABEL: ------------ scheduling where in _QPwhere_construct_conflict_2 ------------
-!CHECK-NEXT: conflict: R/W: <block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 0 W:<block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 0
-!CHECK-NEXT: run 1 save    : where/mask
-!CHECK-NEXT: run 2 evaluate: where/region_assign1
-!CHECK-NEXT: conflict: R/W: <block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1 W:<block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1
-!CHECK-NEXT: run 3 save    : where/elsewhere1/mask
-!CHECK-NEXT: run 4 evaluate: where/elsewhere1/region_assign1
+!CHECK-NEXT: conflict (aligned): R/W: <block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 0 W:<block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 0
+!CHECK-NEXT: run 1 evaluate: where/region_assign1
+!CHECK-NEXT: conflict (aligned): R/W: <block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1 W:<block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1
+!CHECK-NEXT: where/mask is modified in order by where/region_assign1 and is needed by where/elsewhere1/region_assign1 that is scheduled in a later run
+!CHECK-NEXT: run 0 save    : where/mask
+!CHECK-NEXT: run 3 evaluate: where/elsewhere1/region_assign1
 !CHECK-LABEL: ------------ scheduling where in _QPwhere_vector_subscript_conflict_1 ------------
 !CHECK-NEXT: conflict: R/W: <block argument> of type '!fir.ref<!fir.array<10xf32>>' at index: 0 W:<block argument> of type '!fir.ref<!fir.array<10xf32>>' at index: 0
 !CHECK-NEXT: run 1 save    : where/mask
 !CHECK-NEXT: run 2 evaluate: where/region_assign1
 !CHECK-LABEL: ------------ scheduling where in _QPwhere_vector_subscript_conflict_2 ------------
-!CHECK-NEXT: conflict: R/W: <block argument> of type '!fir.ref<!fir.array<10xi32>>' at index: 0 W:<block argument> of type '!fir.ref<!fir.array<10xi32>>' at index: 0
-!CHECK-NEXT: run 1 save    : where/mask
-!CHECK-NEXT: run 2 evaluate: where/region_assign1
+!CHECK-NEXT: conflict (aligned): R/W: <block argument> of type '!fir.ref<!fir.array<10xi32>>' at index: 0 W:<block argument> of type '!fir.ref<!fir.array<10xi32>>' at index: 0
+!CHECK-NEXT: run 1 evaluate: where/region_assign1
 !CHECK-LABEL: ------------ scheduling forall in _QPwhere_in_forall_conflict ------------
 !CHECK-NEXT: conflict: R/W: <block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 0 W:<block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 0
 !CHECK-NEXT: run 1 save    : forall/where1/mask
@@ -194,4 +210,16 @@ end subroutine
 !CHECK-NEXT: unknown effect: %{{.*}} = fir.call @_QPf() fastmath<contract> : () -> f32
 !CHECK-NEXT: saving eval because write effect prevents re-evaluation
 !CHECK-NEXT: run 3 save  (w): where/elsewhere1/region_assign1/rhs
+!CHECK-NEXT: run 4 evaluate: where/elsewhere1/region_assign1
+!CHECK-LABEL: ------------ scheduling where in _QPwhere_construct_need_to_be_split_no_temps ------------
+!CHECK-NEXT: run 1 evaluate: where/region_assign1
+!CHECK-NEXT: conflict (aligned): R/W: <block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1 W:<block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1
+!CHECK-NEXT: run 2 evaluate: where/elsewhere1/region_assign1
+!CHECK-LABEL: ------------ scheduling where in _QPwhere_construct_need_to_be_split_with_temps ------------
+!CHECK-NEXT: run 1 evaluate: where/region_assign1
+!CHECK-NEXT: conflict (aligned): R/W: <block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1 W:<block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1
+!CHECK-NEXT: run 2 evaluate: where/region_assign2
+!CHECK-NEXT: conflict (aligned): R/W: <block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1 W:<block argument> of type '!fir.box<!fir.array<?x?xf32>>' at index: 1
+!CHECK-NEXT: where/mask is modified in order by where/region_assign2 and is needed by where/elsewhere1/region_assign1 that is scheduled in a later run
+!CHECK-NEXT: run 0 save    : where/mask
 !CHECK-NEXT: run 4 evaluate: where/elsewhere1/region_assign1

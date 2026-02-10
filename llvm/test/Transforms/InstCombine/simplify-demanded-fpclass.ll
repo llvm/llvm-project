@@ -1571,7 +1571,7 @@ define nofpclass(nan inf) float @pow_f32(float nofpclass(nan inf) %arg, float no
 ; CHECK-NEXT:    [[I5:%.*]] = tail call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float noundef [[ARG1]])
 ; CHECK-NEXT:    [[I6:%.*]] = tail call float @llvm.trunc.f32(float noundef [[I5]])
 ; CHECK-NEXT:    [[I7:%.*]] = fcmp oeq float [[I6]], [[I5]]
-; CHECK-NEXT:    [[I8:%.*]] = fmul float [[I5]], 5.000000e-01
+; CHECK-NEXT:    [[I8:%.*]] = fmul nnan float [[I5]], 5.000000e-01
 ; CHECK-NEXT:    [[I9:%.*]] = tail call float @llvm.trunc.f32(float noundef [[I8]])
 ; CHECK-NEXT:    [[I10:%.*]] = fcmp une float [[I9]], [[I8]]
 ; CHECK-NEXT:    [[I11:%.*]] = and i1 [[I7]], [[I10]]
