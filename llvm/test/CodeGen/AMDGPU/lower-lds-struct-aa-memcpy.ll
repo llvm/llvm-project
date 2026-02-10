@@ -22,14 +22,14 @@ define protected amdgpu_kernel void @test(ptr addrspace(1) nocapture %ptr.coerce
 ; GCN-NEXT:    v_mov_b32_e32 v0, 2
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    ds_write_b8 v1, v0
-; GCN-NEXT:    ds_read_u8 v2, v1 offset:2
 ; GCN-NEXT:    ds_read_u16 v3, v1
+; GCN-NEXT:    ds_read_u8 v2, v1 offset:2
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    ds_write_b8 v1, v2 offset:6
-; GCN-NEXT:    ds_write_b16 v1, v3 offset:4
 ; GCN-NEXT:    v_cmp_eq_u32_sdwa s[2:3], v3, v0 src0_sel:BYTE_0 src1_sel:DWORD
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s[2:3]
+; GCN-NEXT:    ds_write_b8 v1, v2 offset:6
+; GCN-NEXT:    ds_write_b16 v1, v3 offset:4
 ; GCN-NEXT:    global_store_byte v1, v0, s[0:1]
 ; GCN-NEXT:    s_endpgm
 ; CHECK-LABEL: define protected amdgpu_kernel void @test(

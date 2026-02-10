@@ -766,12 +766,12 @@ define amdgpu_kernel void @mix_elt_types_op_sel(ptr addrspace(1) %out, ptr addrs
 ; GCN-NEXT:    ds_read_b32 v0, v0 offset:8
 ; GCN-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
 ; GCN-NEXT:    ; kill: killed $vgpr0_vgpr1
+; GCN-NEXT:    ; kill: killed $vgpr0_vgpr1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_ushort v3, v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    global_load_ushort v3, v[0:1], off glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    ; kill: killed $vgpr0_vgpr1
 ; GCN-NEXT:    v_pk_add_f16 v0, v0, 2.0 op_sel_hi:[1,0]
 ; GCN-NEXT:    v_mov_b32_e32 v3, 0
 ; GCN-NEXT:    v_pk_fma_f16 v0, v1, v2, v0 op_sel:[0,0,1] op_sel_hi:[1,1,0]

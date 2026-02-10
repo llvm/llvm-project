@@ -16849,6 +16849,7 @@ define void @memset_p3_sz2048(ptr addrspace(3) %dst) {
 ; CHECK-NEXT:    s_add_u32 s4, s4, 0x100
 ; CHECK-NEXT:    s_addc_u32 s5, s5, 0
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:240
+; CHECK-NEXT:    v_cmp_gt_u64_e64 s6, 0x800, s[4:5]
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:224
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:208
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:192
@@ -16859,7 +16860,6 @@ define void @memset_p3_sz2048(ptr addrspace(3) %dst) {
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:112
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:96
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:80
-; CHECK-NEXT:    v_cmp_gt_u64_e64 s6, 0x800, s[4:5]
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:64
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:48
 ; CHECK-NEXT:    ds_write_b128 v0, v[1:4] offset:32
@@ -16883,6 +16883,7 @@ define void @memset_p3_sz2048(ptr addrspace(3) %dst) {
 ; ALIGNED-NEXT:    s_add_u32 s4, s4, 0x100
 ; ALIGNED-NEXT:    s_addc_u32 s5, s5, 0
 ; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:255
+; ALIGNED-NEXT:    v_cmp_gt_u64_e64 s6, 0x800, s[4:5]
 ; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:254
 ; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:253
 ; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:252
@@ -17133,7 +17134,6 @@ define void @memset_p3_sz2048(ptr addrspace(3) %dst) {
 ; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:7
 ; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:6
 ; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:5
-; ALIGNED-NEXT:    v_cmp_gt_u64_e64 s6, 0x800, s[4:5]
 ; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:4
 ; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:3
 ; ALIGNED-NEXT:    ds_write_b8 v0, v1 offset:2
@@ -17164,9 +17164,9 @@ define void @memset_p3_sz2048(ptr addrspace(3) %dst) {
 ; UNROLL3-NEXT:    s_add_u32 s4, s4, 48
 ; UNROLL3-NEXT:    s_addc_u32 s5, s5, 0
 ; UNROLL3-NEXT:    ds_write_b128 v5, v[1:4] offset:16
+; UNROLL3-NEXT:    v_cmp_gt_u64_e64 s6, 0x7e0, s[4:5]
 ; UNROLL3-NEXT:    ds_write_b128 v5, v[1:4]
 ; UNROLL3-NEXT:    ds_write_b128 v5, v[1:4] offset:32
-; UNROLL3-NEXT:    v_cmp_gt_u64_e64 s6, 0x7e0, s[4:5]
 ; UNROLL3-NEXT:    v_add_nc_u32_e32 v5, 48, v5
 ; UNROLL3-NEXT:    s_and_b32 vcc_lo, exec_lo, s6
 ; UNROLL3-NEXT:    s_cbranch_vccnz .LBB12_1

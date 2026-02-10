@@ -707,9 +707,9 @@ define void @load_local_lo_v2i16_reghi_vreg_multi_use_lohi(ptr addrspace(3) noal
 ; GFX900-MUBUF-NEXT:    ds_read_u16 v0, v0
 ; GFX900-MUBUF-NEXT:    s_mov_b32 s4, 0xffff
 ; GFX900-MUBUF-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
-; GFX900-MUBUF-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-MUBUF-NEXT:    ds_write_b16 v2, v0
 ; GFX900-MUBUF-NEXT:    ds_write_b16 v3, v4
+; GFX900-MUBUF-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX900-MUBUF-NEXT:    ds_write_b16 v2, v0
 ; GFX900-MUBUF-NEXT:    v_bfi_b32 v0, s4, v0, v1
 ; GFX900-MUBUF-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX900-MUBUF-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -721,9 +721,9 @@ define void @load_local_lo_v2i16_reghi_vreg_multi_use_lohi(ptr addrspace(3) noal
 ; GFX906-NEXT:    ds_read_u16 v0, v0
 ; GFX906-NEXT:    s_mov_b32 s4, 0xffff
 ; GFX906-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
-; GFX906-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX906-NEXT:    ds_write_b16 v2, v0
 ; GFX906-NEXT:    ds_write_b16 v3, v4
+; GFX906-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX906-NEXT:    ds_write_b16 v2, v0
 ; GFX906-NEXT:    v_bfi_b32 v0, s4, v0, v1
 ; GFX906-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX906-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
@@ -750,9 +750,9 @@ define void @load_local_lo_v2i16_reghi_vreg_multi_use_lohi(ptr addrspace(3) noal
 ; GFX900-FLATSCR-NEXT:    ds_read_u16 v0, v0
 ; GFX900-FLATSCR-NEXT:    s_mov_b32 s0, 0xffff
 ; GFX900-FLATSCR-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
-; GFX900-FLATSCR-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX900-FLATSCR-NEXT:    ds_write_b16 v2, v0
 ; GFX900-FLATSCR-NEXT:    ds_write_b16 v3, v4
+; GFX900-FLATSCR-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX900-FLATSCR-NEXT:    ds_write_b16 v2, v0
 ; GFX900-FLATSCR-NEXT:    v_bfi_b32 v0, s0, v0, v1
 ; GFX900-FLATSCR-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX900-FLATSCR-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)

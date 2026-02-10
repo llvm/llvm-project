@@ -46,44 +46,48 @@ define <4 x i32> @load_lds_v4i32_align1(ptr addrspace(3) %ptr) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    ds_read_u8 v1, v0
 ; GFX9-NEXT:    ds_read_u8 v2, v0 offset:1
-; GFX9-NEXT:    ds_read_u8 v3, v0 offset:2
-; GFX9-NEXT:    ds_read_u8 v4, v0 offset:3
+; GFX9-NEXT:    ds_read_u8 v3, v0 offset:3
+; GFX9-NEXT:    ds_read_u8 v4, v0 offset:2
 ; GFX9-NEXT:    ds_read_u8 v5, v0 offset:4
-; GFX9-NEXT:    ds_read_u8 v6, v0 offset:5
-; GFX9-NEXT:    ds_read_u8 v7, v0 offset:6
-; GFX9-NEXT:    ds_read_u8 v8, v0 offset:7
-; GFX9-NEXT:    s_waitcnt lgkmcnt(6)
+; GFX9-NEXT:    ds_read_u8 v6, v0 offset:9
+; GFX9-NEXT:    s_waitcnt lgkmcnt(4)
 ; GFX9-NEXT:    v_lshl_or_b32 v1, v2, 8, v1
+; GFX9-NEXT:    ds_read_u8 v2, v0 offset:5
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(4)
-; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 24, v4
+; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 24, v3
+; GFX9-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX9-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; GFX9-NEXT:    v_or3_b32 v4, v3, v4, v1
+; GFX9-NEXT:    ds_read_u8 v1, v0 offset:7
+; GFX9-NEXT:    ds_read_u8 v3, v0 offset:6
+; GFX9-NEXT:    s_waitcnt lgkmcnt(2)
+; GFX9-NEXT:    v_lshl_or_b32 v2, v2, 8, v5
+; GFX9-NEXT:    ds_read_u8 v5, v0 offset:8
+; GFX9-NEXT:    ds_read_u8 v7, v0 offset:11
+; GFX9-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 24, v1
+; GFX9-NEXT:    s_waitcnt lgkmcnt(2)
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX9-NEXT:    v_or3_b32 v4, v2, v3, v1
+; GFX9-NEXT:    v_or3_b32 v1, v1, v3, v2
+; GFX9-NEXT:    ds_read_u8 v3, v0 offset:10
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(2)
-; GFX9-NEXT:    v_lshl_or_b32 v1, v6, 8, v5
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_lshlrev_b32_e32 v2, 24, v8
-; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 16, v7
-; GFX9-NEXT:    v_or3_b32 v1, v2, v3, v1
-; GFX9-NEXT:    ds_read_u8 v2, v0 offset:8
-; GFX9-NEXT:    ds_read_u8 v3, v0 offset:9
-; GFX9-NEXT:    ds_read_u8 v5, v0 offset:10
-; GFX9-NEXT:    ds_read_u8 v6, v0 offset:11
-; GFX9-NEXT:    ds_read_u8 v7, v0 offset:12
-; GFX9-NEXT:    ds_read_u8 v8, v0 offset:13
-; GFX9-NEXT:    ds_read_u8 v9, v0 offset:14
-; GFX9-NEXT:    ds_read_u8 v0, v0 offset:15
-; GFX9-NEXT:    s_waitcnt lgkmcnt(6)
-; GFX9-NEXT:    v_lshl_or_b32 v2, v3, 8, v2
+; GFX9-NEXT:    v_lshl_or_b32 v2, v6, 8, v5
+; GFX9-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX9-NEXT:    v_lshlrev_b32_e32 v5, 24, v7
+; GFX9-NEXT:    ds_read_u8 v6, v0 offset:12
+; GFX9-NEXT:    ds_read_u8 v7, v0 offset:13
+; GFX9-NEXT:    ds_read_u8 v8, v0 offset:15
+; GFX9-NEXT:    ds_read_u8 v0, v0 offset:14
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(4)
-; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 24, v6
-; GFX9-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
-; GFX9-NEXT:    v_or3_b32 v2, v3, v5, v2
+; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
+; GFX9-NEXT:    v_or3_b32 v2, v5, v3, v2
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(2)
-; GFX9-NEXT:    v_lshl_or_b32 v3, v8, 8, v7
+; GFX9-NEXT:    v_lshl_or_b32 v3, v7, 8, v6
+; GFX9-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX9-NEXT:    v_lshlrev_b32_e32 v5, 24, v8
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 24, v0
-; GFX9-NEXT:    v_lshlrev_b32_e32 v5, 16, v9
-; GFX9-NEXT:    v_or3_b32 v3, v0, v5, v3
+; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX9-NEXT:    v_or3_b32 v3, v5, v0, v3
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;

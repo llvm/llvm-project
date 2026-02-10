@@ -168,9 +168,10 @@ define amdgpu_kernel void @test_local_misaligned_v3(ptr addrspace(3) %arg) {
 ; SPLIT-NEXT:    v_lshl_add_u32 v2, v0, 2, s0
 ; SPLIT-NEXT:    ds_read2_b32 v[0:1], v2 offset1:1
 ; SPLIT-NEXT:    ds_read_b32 v3, v2 offset:8
-; SPLIT-NEXT:    s_waitcnt lgkmcnt(0)
-; SPLIT-NEXT:    ds_write2_b32 v2, v3, v0 offset1:1
+; SPLIT-NEXT:    s_waitcnt lgkmcnt(1)
 ; SPLIT-NEXT:    ds_write_b32 v2, v1 offset:8
+; SPLIT-NEXT:    s_waitcnt lgkmcnt(1)
+; SPLIT-NEXT:    ds_write2_b32 v2, v3, v0 offset1:1
 ; SPLIT-NEXT:    s_endpgm
 ;
 ; ALIGNED-GFX10-LABEL: test_local_misaligned_v3:
@@ -180,9 +181,10 @@ define amdgpu_kernel void @test_local_misaligned_v3(ptr addrspace(3) %arg) {
 ; ALIGNED-GFX10-NEXT:    v_lshl_add_u32 v2, v0, 2, s0
 ; ALIGNED-GFX10-NEXT:    ds_read2_b32 v[0:1], v2 offset1:1
 ; ALIGNED-GFX10-NEXT:    ds_read_b32 v3, v2 offset:8
-; ALIGNED-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; ALIGNED-GFX10-NEXT:    ds_write2_b32 v2, v3, v0 offset1:1
+; ALIGNED-GFX10-NEXT:    s_waitcnt lgkmcnt(1)
 ; ALIGNED-GFX10-NEXT:    ds_write_b32 v2, v1 offset:8
+; ALIGNED-GFX10-NEXT:    s_waitcnt lgkmcnt(1)
+; ALIGNED-GFX10-NEXT:    ds_write2_b32 v2, v3, v0 offset1:1
 ; ALIGNED-GFX10-NEXT:    s_endpgm
 ;
 ; UNALIGNED-GFX10-LABEL: test_local_misaligned_v3:
@@ -192,9 +194,10 @@ define amdgpu_kernel void @test_local_misaligned_v3(ptr addrspace(3) %arg) {
 ; UNALIGNED-GFX10-NEXT:    v_lshl_add_u32 v2, v0, 2, s0
 ; UNALIGNED-GFX10-NEXT:    ds_read2_b32 v[0:1], v2 offset1:1
 ; UNALIGNED-GFX10-NEXT:    ds_read_b32 v3, v2 offset:8
-; UNALIGNED-GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; UNALIGNED-GFX10-NEXT:    ds_write2_b32 v2, v3, v0 offset1:1
+; UNALIGNED-GFX10-NEXT:    s_waitcnt lgkmcnt(1)
 ; UNALIGNED-GFX10-NEXT:    ds_write_b32 v2, v1 offset:8
+; UNALIGNED-GFX10-NEXT:    s_waitcnt lgkmcnt(1)
+; UNALIGNED-GFX10-NEXT:    ds_write2_b32 v2, v3, v0 offset1:1
 ; UNALIGNED-GFX10-NEXT:    s_endpgm
 ;
 ; ALIGNED-GFX11-LABEL: test_local_misaligned_v3:
@@ -206,9 +209,10 @@ define amdgpu_kernel void @test_local_misaligned_v3(ptr addrspace(3) %arg) {
 ; ALIGNED-GFX11-NEXT:    v_lshl_add_u32 v2, v0, 2, s0
 ; ALIGNED-GFX11-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset1:1
 ; ALIGNED-GFX11-NEXT:    ds_load_b32 v3, v2 offset:8
-; ALIGNED-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; ALIGNED-GFX11-NEXT:    ds_store_2addr_b32 v2, v3, v0 offset1:1
+; ALIGNED-GFX11-NEXT:    s_waitcnt lgkmcnt(1)
 ; ALIGNED-GFX11-NEXT:    ds_store_b32 v2, v1 offset:8
+; ALIGNED-GFX11-NEXT:    s_waitcnt lgkmcnt(1)
+; ALIGNED-GFX11-NEXT:    ds_store_2addr_b32 v2, v3, v0 offset1:1
 ; ALIGNED-GFX11-NEXT:    s_endpgm
 ;
 ; UNALIGNED-GFX11-LABEL: test_local_misaligned_v3:
@@ -220,9 +224,10 @@ define amdgpu_kernel void @test_local_misaligned_v3(ptr addrspace(3) %arg) {
 ; UNALIGNED-GFX11-NEXT:    v_lshl_add_u32 v2, v0, 2, s0
 ; UNALIGNED-GFX11-NEXT:    ds_load_2addr_b32 v[0:1], v2 offset1:1
 ; UNALIGNED-GFX11-NEXT:    ds_load_b32 v3, v2 offset:8
-; UNALIGNED-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; UNALIGNED-GFX11-NEXT:    ds_store_2addr_b32 v2, v3, v0 offset1:1
+; UNALIGNED-GFX11-NEXT:    s_waitcnt lgkmcnt(1)
 ; UNALIGNED-GFX11-NEXT:    ds_store_b32 v2, v1 offset:8
+; UNALIGNED-GFX11-NEXT:    s_waitcnt lgkmcnt(1)
+; UNALIGNED-GFX11-NEXT:    ds_store_2addr_b32 v2, v3, v0 offset1:1
 ; UNALIGNED-GFX11-NEXT:    s_endpgm
 bb:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()

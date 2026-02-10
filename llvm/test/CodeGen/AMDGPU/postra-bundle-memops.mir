@@ -35,14 +35,10 @@ body:             |
     ; GCN-NEXT: $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 0, 0, implicit $exec
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: GLOBAL_STORE_DWORD undef $vgpr3_vgpr4, $vgpr0, 4, 0, implicit $exec
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr2, implicit-def $vgpr3, implicit $vgpr0, implicit $exec, implicit $vgpr1 {
-    ; GCN-NEXT:   $vgpr2 = DS_READ_B32_gfx9 $vgpr0, 0, 0, implicit $exec
-    ; GCN-NEXT:   $vgpr3 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $exec
-    ; GCN-NEXT: }
-    ; GCN-NEXT: BUNDLE implicit $vgpr0, implicit $vgpr2, implicit killed $m0, implicit $exec, implicit $vgpr3 {
-    ; GCN-NEXT:   DS_WRITE_B32_gfx9 $vgpr0, $vgpr2, 0, 0, implicit killed $m0, implicit $exec
-    ; GCN-NEXT:   DS_WRITE_B32_gfx9 $vgpr0, $vgpr3, 4, 0, implicit killed $m0, implicit $exec
-    ; GCN-NEXT: }
+    ; GCN-NEXT: $vgpr2 = DS_READ_B32_gfx9 $vgpr0, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr3 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $exec
+    ; GCN-NEXT: DS_WRITE_B32_gfx9 $vgpr0, $vgpr2, 0, 0, implicit killed $m0, implicit $exec
+    ; GCN-NEXT: DS_WRITE_B32_gfx9 $vgpr0, $vgpr3, 4, 0, implicit killed $m0, implicit $exec
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: BUNDLE implicit-def $sgpr2, implicit-def $sgpr3, implicit undef $sgpr0_sgpr1, implicit undef $sgpr10 {
     ; GCN-NEXT:   $sgpr2 = S_LOAD_DWORD_IMM undef $sgpr0_sgpr1, 0, 0
@@ -68,10 +64,8 @@ body:             |
     ; GCN-NEXT: $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71 = S_LOAD_DWORDX8_IMM undef $sgpr10_sgpr11, 464, 0
     ; GCN-NEXT: $sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75 = S_LOAD_DWORDX8_IMM undef $sgpr10_sgpr11, 128, 0
     ; GCN-NEXT: S_NOP 0
-    ; GCN-NEXT: BUNDLE implicit-def $vgpr2, implicit-def $vgpr3, implicit $vgpr0, implicit $exec, implicit $vgpr1 {
-    ; GCN-NEXT:   $vgpr2 = DS_READ_B32_gfx9 $vgpr0, 0, 0, implicit $exec
-    ; GCN-NEXT:   $vgpr3 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $exec
-    ; GCN-NEXT: }
+    ; GCN-NEXT: $vgpr2 = DS_READ_B32_gfx9 $vgpr0, 0, 0, implicit $exec
+    ; GCN-NEXT: $vgpr3 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $exec
     $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 0, 0, implicit $exec
     S_NOP 0
     $vgpr0 = GLOBAL_LOAD_DWORD undef $vgpr3_vgpr4, 0, 0, implicit $exec

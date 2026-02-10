@@ -1333,14 +1333,14 @@ define amdgpu_kernel void @local_zextload_v8i16_to_v8i32(ptr addrspace(3) %out, 
 ; GFX9-DS128-NEXT:    ds_read_b128 v[0:3], v0
 ; GFX9-DS128-NEXT:    v_mov_b32_e32 v12, s0
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v11, 16, v3
-; GFX9-DS128-NEXT:    v_and_b32_e32 v10, 0xffff, v3
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v2
-; GFX9-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v2
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v1
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v0
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v11, 16, v3
+; GFX9-DS128-NEXT:    v_and_b32_e32 v10, 0xffff, v3
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v2
+; GFX9-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v2
 ; GFX9-DS128-NEXT:    ds_write_b128 v12, v[8:11] offset:16
 ; GFX9-DS128-NEXT:    ds_write_b128 v12, v[4:7]
 ; GFX9-DS128-NEXT:    s_endpgm
@@ -1401,14 +1401,14 @@ define amdgpu_kernel void @local_sextload_v8i16_to_v8i32(ptr addrspace(3) %out, 
 ; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v0 offset1:1
 ; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v12, s0
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v9, 16, v2
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v11, 16, v3
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v8, v2, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v10, v3, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v5, 16, v0
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v7, 16, v1
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v9, 16, v2
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v11, 16, v3
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v4, v0, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v6, v1, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v8, v2, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v10, v3, 0, 16
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[8:9], v[10:11] offset0:2 offset1:3
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[4:5], v[6:7] offset1:1
 ; GFX9-NO-DS128-NEXT:    s_endpgm
@@ -1499,14 +1499,14 @@ define amdgpu_kernel void @local_sextload_v8i16_to_v8i32(ptr addrspace(3) %out, 
 ; GFX9-DS128-NEXT:    ds_read_b128 v[0:3], v0
 ; GFX9-DS128-NEXT:    v_mov_b32_e32 v12, s0
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v11, 16, v3
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v9, 16, v2
-; GFX9-DS128-NEXT:    v_bfe_i32 v10, v3, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v8, v2, 0, 16
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v7, 16, v1
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v5, 16, v0
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v11, 16, v3
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v9, 16, v2
 ; GFX9-DS128-NEXT:    v_bfe_i32 v6, v1, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v4, v0, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v10, v3, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v8, v2, 0, 16
 ; GFX9-DS128-NEXT:    ds_write_b128 v12, v[8:11] offset:16
 ; GFX9-DS128-NEXT:    ds_write_b128 v12, v[4:7]
 ; GFX9-DS128-NEXT:    s_endpgm
@@ -1593,11 +1593,6 @@ define amdgpu_kernel void @local_zextload_v16i16_to_v16i32(ptr addrspace(3) %out
 ; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v16, s0
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v1
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v15, 16, v7
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v7
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v6
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v6
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v1
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v0
@@ -1605,10 +1600,15 @@ define amdgpu_kernel void @local_zextload_v16i16_to_v16i32(ptr addrspace(3) %out
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v10, 0xffff, v3
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v13, 16, v5
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v12, 0xffff, v5
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v4
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v15, 16, v7
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v7
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v6
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v6
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v16, v[6:7], v[14:15] offset0:6 offset1:7
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v16, v[4:5], v[12:13] offset0:4 offset1:5
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v16, v[2:3], v[10:11] offset0:2 offset1:3
@@ -1760,7 +1760,13 @@ define amdgpu_kernel void @local_zextload_v16i16_to_v16i32(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v10, 0xffff, v1
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v0
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v0
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v15, 16, v3
+; GFX9-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v3
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v13, 16, v2
+; GFX9-DS128-NEXT:    v_and_b32_e32 v12, 0xffff, v2
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v5
+; GFX9-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v5
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v4
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v4
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v19, 16, v7
@@ -1768,12 +1774,6 @@ define amdgpu_kernel void @local_zextload_v16i16_to_v16i32(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v6
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v16, 0xffff, v6
 ; GFX9-DS128-NEXT:    v_mov_b32_e32 v4, s0
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v15, 16, v3
-; GFX9-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v3
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v13, 16, v2
-; GFX9-DS128-NEXT:    v_and_b32_e32 v12, 0xffff, v2
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v5
-; GFX9-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v5
 ; GFX9-DS128-NEXT:    ds_write_b128 v4, v[16:19] offset:48
 ; GFX9-DS128-NEXT:    ds_write_b128 v4, v[0:3] offset:32
 ; GFX9-DS128-NEXT:    ds_write_b128 v4, v[12:15] offset:16
@@ -1865,6 +1865,7 @@ define amdgpu_kernel void @local_sextload_v16i16_to_v16i32(ptr addrspace(3) %out
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v13, 16, v3
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v15, 16, v2
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 16, v5
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 16, v4
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v8, v1, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v10, v0, 0, 16
@@ -1872,12 +1873,11 @@ define amdgpu_kernel void @local_sextload_v16i16_to_v16i32(ptr addrspace(3) %out
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v14, v2, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 16, v7
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 16, v6
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v5, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v4, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v0, v7, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v2, v6, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v4, s0
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 16, v5
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v5, 0, 16
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v4, v[2:3], v[0:1] offset0:6 offset1:7
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v4, v[18:19], v[16:17] offset0:4 offset1:5
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v4, v[14:15], v[12:13] offset0:2 offset1:3
@@ -2040,6 +2040,7 @@ define amdgpu_kernel void @local_sextload_v16i16_to_v16i32(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v15, 16, v3
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v13, 16, v2
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v19, 16, v5
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v17, 16, v4
 ; GFX9-DS128-NEXT:    v_bfe_i32 v10, v1, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v8, v0, 0, 16
@@ -2047,12 +2048,11 @@ define amdgpu_kernel void @local_sextload_v16i16_to_v16i32(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    v_bfe_i32 v12, v2, 0, 16
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 16, v7
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 16, v6
+; GFX9-DS128-NEXT:    v_bfe_i32 v18, v5, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v16, v4, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v2, v7, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v0, v6, 0, 16
 ; GFX9-DS128-NEXT:    v_mov_b32_e32 v4, s0
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v19, 16, v5
-; GFX9-DS128-NEXT:    v_bfe_i32 v18, v5, 0, 16
 ; GFX9-DS128-NEXT:    ds_write_b128 v4, v[0:3] offset:48
 ; GFX9-DS128-NEXT:    ds_write_b128 v4, v[16:19] offset:32
 ; GFX9-DS128-NEXT:    ds_write_b128 v4, v[12:15] offset:16
@@ -2183,9 +2183,9 @@ define amdgpu_kernel void @local_zextload_v32i16_to_v32i32(ptr addrspace(3) %out
 ; GFX9-NO-DS128:       ; %bb.0:
 ; GFX9-NO-DS128-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v24, s1
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v24 offset1:1
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v24 offset0:2 offset1:3
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v26, s1
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v26 offset1:1
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v26 offset0:2 offset1:3
 ; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v32, s0
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v3
@@ -2201,30 +2201,30 @@ define amdgpu_kernel void @local_zextload_v32i16_to_v32i32(ptr addrspace(3) %out
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v16, 0xffff, v7
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v19, 16, v6
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v6
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v26 offset0:4 offset1:5
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v21, 16, v5
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v24 offset0:4 offset1:5
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v20, 0xffff, v5
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v23, 16, v4
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v22, 0xffff, v4
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v24 offset0:6 offset1:7
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v26 offset0:6 offset1:7
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v25, 16, v1
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v24, 0xffff, v1
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v31, 16, v5
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v30, 0xffff, v5
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v4
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v27, 16, v3
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v26, 0xffff, v3
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v29, 16, v7
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v28, 0xffff, v7
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v6
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v6
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v31, 16, v5
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v30, 0xffff, v5
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v4
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v32, v[4:5], v[30:31] offset0:12 offset1:13
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v32, v[6:7], v[28:29] offset0:14 offset1:15
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v32, v[2:3], v[26:27] offset0:10 offset1:11
@@ -2491,30 +2491,21 @@ define amdgpu_kernel void @local_zextload_v32i16_to_v32i32(ptr addrspace(3) %out
 ; GFX9-DS128:       ; %bb.0:
 ; GFX9-DS128-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v20, s1
-; GFX9-DS128-NEXT:    ds_read_b128 v[0:3], v20
-; GFX9-DS128-NEXT:    ds_read_b128 v[4:7], v20 offset:16
-; GFX9-DS128-NEXT:    ds_read_b128 v[16:19], v20 offset:32
-; GFX9-DS128-NEXT:    ds_read_b128 v[20:23], v20 offset:48
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v32, s0
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v22, s1
+; GFX9-DS128-NEXT:    ds_read_b128 v[0:3], v22
+; GFX9-DS128-NEXT:    ds_read_b128 v[4:7], v22 offset:16
+; GFX9-DS128-NEXT:    ds_read_b128 v[16:19], v22 offset:32
+; GFX9-DS128-NEXT:    ds_read_b128 v[22:25], v22 offset:48
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(3)
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v11, 16, v3
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v10, 0xffff, v3
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v2
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v31, 16, v23
-; GFX9-DS128-NEXT:    v_and_b32_e32 v30, 0xffff, v23
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v29, 16, v22
-; GFX9-DS128-NEXT:    v_and_b32_e32 v28, 0xffff, v22
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v23, 16, v21
-; GFX9-DS128-NEXT:    v_and_b32_e32 v22, 0xffff, v21
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v21, 16, v20
-; GFX9-DS128-NEXT:    v_and_b32_e32 v20, 0xffff, v20
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v2
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v1
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(2)
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v15, 16, v7
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v7
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v13, 16, v6
@@ -2523,22 +2514,33 @@ define amdgpu_kernel void @local_zextload_v32i16_to_v32i32(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v5
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v27, 16, v19
-; GFX9-DS128-NEXT:    v_and_b32_e32 v26, 0xffff, v19
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v25, 16, v18
-; GFX9-DS128-NEXT:    v_and_b32_e32 v24, 0xffff, v18
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v19, 16, v17
-; GFX9-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v17
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v16
-; GFX9-DS128-NEXT:    v_and_b32_e32 v16, 0xffff, v16
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[20:23] offset:96
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[28:31] offset:112
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[16:19] offset:64
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[24:27] offset:80
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[4:7] offset:32
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[12:15] offset:48
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[0:3]
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[8:11] offset:16
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v21, 16, v19
+; GFX9-DS128-NEXT:    v_and_b32_e32 v20, 0xffff, v19
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v19, 16, v18
+; GFX9-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v18
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v29, 16, v17
+; GFX9-DS128-NEXT:    v_and_b32_e32 v28, 0xffff, v17
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v27, 16, v16
+; GFX9-DS128-NEXT:    v_and_b32_e32 v26, 0xffff, v16
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v33, 16, v25
+; GFX9-DS128-NEXT:    v_and_b32_e32 v32, 0xffff, v25
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v31, 16, v24
+; GFX9-DS128-NEXT:    v_and_b32_e32 v30, 0xffff, v24
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v25, 16, v23
+; GFX9-DS128-NEXT:    v_and_b32_e32 v24, 0xffff, v23
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v23, 16, v22
+; GFX9-DS128-NEXT:    v_and_b32_e32 v22, 0xffff, v22
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v16, s0
+; GFX9-DS128-NEXT:    ds_write_b128 v16, v[22:25] offset:96
+; GFX9-DS128-NEXT:    ds_write_b128 v16, v[30:33] offset:112
+; GFX9-DS128-NEXT:    ds_write_b128 v16, v[26:29] offset:64
+; GFX9-DS128-NEXT:    ds_write_b128 v16, v[18:21] offset:80
+; GFX9-DS128-NEXT:    ds_write_b128 v16, v[4:7] offset:32
+; GFX9-DS128-NEXT:    ds_write_b128 v16, v[12:15] offset:48
+; GFX9-DS128-NEXT:    ds_write_b128 v16, v[0:3]
+; GFX9-DS128-NEXT:    ds_write_b128 v16, v[8:11] offset:16
 ; GFX9-DS128-NEXT:    s_endpgm
   %load = load <32 x i16>, ptr addrspace(3) %in
   %ext = zext <32 x i16> %load to <32 x i32>
@@ -2665,9 +2667,9 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i32(ptr addrspace(3) %out
 ; GFX9-NO-DS128:       ; %bb.0:
 ; GFX9-NO-DS128-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v24, s1
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v24 offset1:1
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v24 offset0:2 offset1:3
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v26, s1
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v26 offset1:1
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v26 offset0:2 offset1:3
 ; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v32, s0
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v9, 16, v3
@@ -2683,30 +2685,30 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i32(ptr addrspace(3) %out
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 16, v6
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v21, 16, v5
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v7, 0, 16
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v26 offset0:4 offset1:5
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v6, 0, 16
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v24 offset0:4 offset1:5
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v20, v5, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v23, 16, v4
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v22, v4, 0, 16
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v24 offset0:6 offset1:7
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v26 offset0:6 offset1:7
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v25, 16, v1
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v24, v1, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 16, v0
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v0, v0, 0, 16
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v31, 16, v5
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v30, v5, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v5, 16, v4
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v4, v4, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v27, 16, v3
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v26, v3, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 16, v2
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v29, 16, v7
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v28, v7, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v7, 16, v6
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v6, v6, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v31, 16, v5
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v30, v5, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v5, 16, v4
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v4, v4, 0, 16
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v32, v[4:5], v[30:31] offset0:12 offset1:13
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v32, v[6:7], v[28:29] offset0:14 offset1:15
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v32, v[2:3], v[26:27] offset0:10 offset1:11
@@ -2994,11 +2996,12 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i32(ptr addrspace(3) %out
 ; GFX9-DS128:       ; %bb.0:
 ; GFX9-DS128-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v24, s1
-; GFX9-DS128-NEXT:    ds_read_b128 v[0:3], v24
-; GFX9-DS128-NEXT:    ds_read_b128 v[4:7], v24 offset:16
-; GFX9-DS128-NEXT:    ds_read_b128 v[20:23], v24 offset:32
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(2)
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v25, s1
+; GFX9-DS128-NEXT:    ds_read_b128 v[0:3], v25
+; GFX9-DS128-NEXT:    ds_read_b128 v[4:7], v25 offset:16
+; GFX9-DS128-NEXT:    ds_read_b128 v[20:23], v25 offset:32
+; GFX9-DS128-NEXT:    ds_read_b128 v[27:30], v25 offset:48
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(3)
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v11, 16, v3
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v9, 16, v2
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v15, 16, v1
@@ -3007,7 +3010,7 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i32(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    v_bfe_i32 v8, v2, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v14, v1, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v12, v0, 0, 16
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(2)
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 16, v7
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 16, v6
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v19, 16, v5
@@ -3016,34 +3019,33 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i32(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    v_bfe_i32 v0, v6, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v18, v5, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v16, v4, 0, 16
-; GFX9-DS128-NEXT:    ds_read_b128 v[4:7], v24 offset:48
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v26, 16, v23
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v24, 16, v22
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v30, 16, v21
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v28, 16, v20
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v7, 16, v23
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v5, 16, v22
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v26, 16, v21
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v24, 16, v20
+; GFX9-DS128-NEXT:    v_bfe_i32 v6, v23, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v4, v22, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v25, v21, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v23, v20, 0, 16
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v38, 16, v5
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v36, 16, v4
-; GFX9-DS128-NEXT:    v_bfe_i32 v37, v5, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v35, v4, 0, 16
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v4, s0
-; GFX9-DS128-NEXT:    v_bfe_i32 v25, v23, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v23, v22, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v29, v21, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v27, v20, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v34, 16, v7
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v32, 16, v6
-; GFX9-DS128-NEXT:    v_bfe_i32 v33, v7, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v31, v6, 0, 16
-; GFX9-DS128-NEXT:    ds_write_b128 v4, v[35:38] offset:96
-; GFX9-DS128-NEXT:    ds_write_b128 v4, v[31:34] offset:112
-; GFX9-DS128-NEXT:    ds_write_b128 v4, v[27:30] offset:64
-; GFX9-DS128-NEXT:    ds_write_b128 v4, v[23:26] offset:80
-; GFX9-DS128-NEXT:    ds_write_b128 v4, v[16:19] offset:32
-; GFX9-DS128-NEXT:    ds_write_b128 v4, v[0:3] offset:48
-; GFX9-DS128-NEXT:    ds_write_b128 v4, v[12:15]
-; GFX9-DS128-NEXT:    ds_write_b128 v4, v[8:11] offset:16
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v33, 16, v30
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v31, 16, v29
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v37, 16, v28
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v35, 16, v27
+; GFX9-DS128-NEXT:    v_bfe_i32 v32, v30, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v30, v29, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v36, v28, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v34, v27, 0, 16
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v20, s0
+; GFX9-DS128-NEXT:    ds_write_b128 v20, v[34:37] offset:96
+; GFX9-DS128-NEXT:    ds_write_b128 v20, v[30:33] offset:112
+; GFX9-DS128-NEXT:    ds_write_b128 v20, v[23:26] offset:64
+; GFX9-DS128-NEXT:    ds_write_b128 v20, v[4:7] offset:80
+; GFX9-DS128-NEXT:    ds_write_b128 v20, v[16:19] offset:32
+; GFX9-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:48
+; GFX9-DS128-NEXT:    ds_write_b128 v20, v[12:15]
+; GFX9-DS128-NEXT:    ds_write_b128 v20, v[8:11] offset:16
 ; GFX9-DS128-NEXT:    s_endpgm
   %load = load <32 x i16>, ptr addrspace(3) %in
   %ext = sext <32 x i16> %load to <32 x i32>
@@ -3292,20 +3294,62 @@ define amdgpu_kernel void @local_zextload_v64i16_to_v64i32(ptr addrspace(3) %out
 ; GFX9-NO-DS128-NEXT:    s_mov_b32 s14, -1
 ; GFX9-NO-DS128-NEXT:    s_mov_b32 s15, 0xe00000
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v56, s1
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[10:13], v56 offset1:1
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[14:17], v56 offset0:2 offset1:3
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[18:21], v56 offset0:4 offset1:5
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[22:25], v56 offset0:6 offset1:7
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v24, s1
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[25:28], v24 offset0:6 offset1:7
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[29:32], v24 offset0:8 offset1:9
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[10:13], v24 offset1:1
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[14:17], v24 offset0:2 offset1:3
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[20:23], v24 offset0:4 offset1:5
+; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(4)
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v34, 16, v26
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v33, 0xffff, v26
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v36, 16, v25
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v35, 0xffff, v25
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v38, 16, v28
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v37, 0xffff, v28
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v40, 16, v27
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v39, 0xffff, v27
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[25:28], v24 offset0:10 offset1:11
+; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(4)
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v42, 16, v30
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v41, 0xffff, v30
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v44, 16, v29
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v43, 0xffff, v29
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v46, 16, v32
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v45, 0xffff, v32
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v48, 16, v31
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v47, 0xffff, v31
+; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v50, 16, v26
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v49, 0xffff, v26
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v52, 16, v25
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v51, 0xffff, v25
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[29:32], v24 offset0:12 offset1:13
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v56, 16, v27
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v55, 0xffff, v27
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[24:27], v24 offset0:14 offset1:15
 ; GFX9-NO-DS128-NEXT:    s_add_u32 s12, s12, s11
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX9-NO-DS128-NEXT:    s_addc_u32 s13, s13, 0
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v11
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v11
+; GFX9-NO-DS128-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
+; GFX9-NO-DS128-NEXT:    s_nop 0
+; GFX9-NO-DS128-NEXT:    buffer_store_dword v1, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v54, 16, v28
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v53, 0xffff, v28
+; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v28, 16, v27
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v27, 0xffff, v27
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v26
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v26
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v26, s0
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[0:1], v[27:28] offset0:30 offset1:31
+; GFX9-NO-DS128-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
+; GFX9-NO-DS128-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v10
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v13
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v12
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(2)
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v15
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v11
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v10
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v13
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v12
@@ -3316,87 +3360,42 @@ define amdgpu_kernel void @local_zextload_v64i16_to_v64i32(ptr addrspace(3) %out
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v12, 0xffff, v17
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v15, 16, v16
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v16
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v27, 16, v19
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v26, 0xffff, v19
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v29, 16, v18
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v28, 0xffff, v18
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v31, 16, v21
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v30, 0xffff, v21
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v33, 16, v20
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v32, 0xffff, v20
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v35, 16, v23
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v34, 0xffff, v23
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v37, 16, v22
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v36, 0xffff, v22
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[16:19], v56 offset0:8 offset1:9
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[20:23], v56 offset0:10 offset1:11
-; GFX9-NO-DS128-NEXT:    s_addc_u32 s13, s13, 0
-; GFX9-NO-DS128-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
-; GFX9-NO-DS128-NEXT:    s_nop 0
-; GFX9-NO-DS128-NEXT:    buffer_store_dword v1, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v41, 16, v17
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v40, 0xffff, v17
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v43, 16, v16
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v42, 0xffff, v16
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v45, 16, v19
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v44, 0xffff, v19
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v47, 16, v18
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v46, 0xffff, v18
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v49, 16, v21
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v48, 0xffff, v21
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v51, 16, v20
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v50, 0xffff, v20
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v53, 16, v23
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[16:19], v56 offset0:12 offset1:13
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v52, 0xffff, v23
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v55, 16, v22
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v54, 0xffff, v22
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[20:23], v56 offset0:14 offset1:15
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v39, 16, v25
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v38, 0xffff, v25
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v25, 16, v24
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v24, 0xffff, v24
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v63, 16, v23
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v62, 0xffff, v23
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v21
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v16, 0xffff, v21
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v19, 16, v20
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v20
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v21, 16, v23
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v20, 0xffff, v23
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v23, 16, v22
 ; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v22, 0xffff, v22
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v57, 16, v17
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v56, 0xffff, v17
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v16
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v16, 0xffff, v16
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v59, 16, v19
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v58, 0xffff, v19
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v19, 16, v18
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v18
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v61, 16, v21
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v60, 0xffff, v21
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v21, 16, v20
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v20, 0xffff, v20
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v0, v[22:23], v[62:63] offset0:30 offset1:31
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v0, v[20:21], v[60:61] offset0:28 offset1:29
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v0, v[18:19], v[58:59] offset0:26 offset1:27
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v0, v[16:17], v[56:57] offset0:24 offset1:25
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v0, v[54:55], v[52:53] offset0:22 offset1:23
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v0, v[50:51], v[48:49] offset0:20 offset1:21
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v0, v[46:47], v[44:45] offset0:18 offset1:19
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v0, v[42:43], v[40:41] offset0:16 offset1:17
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v0, v[24:25], v[38:39] offset0:14 offset1:15
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v0, v[36:37], v[34:35] offset0:12 offset1:13
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v0, v[32:33], v[30:31] offset0:10 offset1:11
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v0, v[28:29], v[26:27] offset0:8 offset1:9
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v0, v[14:15], v[12:13] offset0:6 offset1:7
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v0, v[10:11], v[8:9] offset0:4 offset1:5
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v0, v[6:7], v[4:5] offset0:2 offset1:3
-; GFX9-NO-DS128-NEXT:    buffer_load_dword v4, off, s[12:15], 0 ; 4-byte Folded Reload
-; GFX9-NO-DS128-NEXT:    buffer_load_dword v5, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v58, 16, v30
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v57, 0xffff, v30
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v30, 16, v29
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v29, 0xffff, v29
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v60, 16, v32
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v59, 0xffff, v32
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v32, 16, v31
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v31, 0xffff, v31
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v62, 16, v25
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v61, 0xffff, v25
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v25, 16, v24
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v24, 0xffff, v24
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[24:25], v[61:62] offset0:28 offset1:29
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[31:32], v[59:60] offset0:26 offset1:27
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[29:30], v[57:58] offset0:24 offset1:25
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[55:56], v[53:54] offset0:22 offset1:23
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[51:52], v[49:50] offset0:20 offset1:21
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[47:48], v[45:46] offset0:18 offset1:19
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[43:44], v[41:42] offset0:16 offset1:17
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[39:40], v[37:38] offset0:14 offset1:15
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[35:36], v[33:34] offset0:12 offset1:13
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[22:23], v[20:21] offset0:10 offset1:11
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[18:19], v[16:17] offset0:8 offset1:9
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[14:15], v[12:13] offset0:6 offset1:7
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[10:11], v[8:9] offset0:4 offset1:5
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[6:7], v[4:5] offset0:2 offset1:3
 ; GFX9-NO-DS128-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset1:1
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[2:3], v[0:1] offset1:1
 ; GFX9-NO-DS128-NEXT:    s_endpgm
 ;
 ; EG-LABEL: local_zextload_v64i16_to_v64i32:
@@ -3937,118 +3936,128 @@ define amdgpu_kernel void @local_zextload_v64i16_to_v64i32(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    s_mov_b32 s14, -1
 ; GFX9-DS128-NEXT:    s_mov_b32 s15, 0xe00000
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v0, s1
-; GFX9-DS128-NEXT:    ds_read_b128 v[8:11], v0
-; GFX9-DS128-NEXT:    ds_read_b128 v[16:19], v0 offset:16
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v24, s1
+; GFX9-DS128-NEXT:    ds_read_b128 v[8:11], v24
+; GFX9-DS128-NEXT:    ds_read_b128 v[58:61], v24 offset:96
 ; GFX9-DS128-NEXT:    s_add_u32 s12, s12, s11
-; GFX9-DS128-NEXT:    ds_read_b128 v[20:23], v0 offset:32
-; GFX9-DS128-NEXT:    ds_read_b128 v[24:27], v0 offset:48
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(3)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v11
+; GFX9-DS128-NEXT:    ds_read_b128 v[16:19], v24 offset:16
 ; GFX9-DS128-NEXT:    s_addc_u32 s13, s13, 0
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v10
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v4, v3
-; GFX9-DS128-NEXT:    v_and_b32_e32 v3, 0xffff, v11
-; GFX9-DS128-NEXT:    v_and_b32_e32 v1, 0xffff, v10
-; GFX9-DS128-NEXT:    buffer_store_dword v1, off, s[12:15], 0 ; 4-byte Folded Spill
-; GFX9-DS128-NEXT:    s_nop 0
-; GFX9-DS128-NEXT:    buffer_store_dword v2, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
-; GFX9-DS128-NEXT:    buffer_store_dword v3, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
-; GFX9-DS128-NEXT:    buffer_store_dword v4, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v9
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v8
-; GFX9-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v9
-; GFX9-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v8
-; GFX9-DS128-NEXT:    buffer_store_dword v4, off, s[12:15], 0 offset:16 ; 4-byte Folded Spill
-; GFX9-DS128-NEXT:    s_nop 0
-; GFX9-DS128-NEXT:    buffer_store_dword v5, off, s[12:15], 0 offset:20 ; 4-byte Folded Spill
-; GFX9-DS128-NEXT:    buffer_store_dword v6, off, s[12:15], 0 offset:24 ; 4-byte Folded Spill
-; GFX9-DS128-NEXT:    buffer_store_dword v7, off, s[12:15], 0 offset:28 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(2)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v19
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v18
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v15, 16, v17
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v13, 16, v16
-; GFX9-DS128-NEXT:    v_and_b32_e32 v3, 0xffff, v19
-; GFX9-DS128-NEXT:    v_and_b32_e32 v1, 0xffff, v18
-; GFX9-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v17
-; GFX9-DS128-NEXT:    v_and_b32_e32 v12, 0xffff, v16
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v19, 16, v23
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v22
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v31, 16, v21
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v29, 16, v20
-; GFX9-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v23
-; GFX9-DS128-NEXT:    v_and_b32_e32 v16, 0xffff, v22
-; GFX9-DS128-NEXT:    v_and_b32_e32 v30, 0xffff, v21
-; GFX9-DS128-NEXT:    v_and_b32_e32 v28, 0xffff, v20
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v23, 16, v27
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v21, 16, v26
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v35, 16, v25
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v33, 16, v24
-; GFX9-DS128-NEXT:    v_and_b32_e32 v22, 0xffff, v27
-; GFX9-DS128-NEXT:    ds_read_b128 v[36:39], v0 offset:64
-; GFX9-DS128-NEXT:    v_and_b32_e32 v20, 0xffff, v26
-; GFX9-DS128-NEXT:    v_and_b32_e32 v34, 0xffff, v25
-; GFX9-DS128-NEXT:    v_and_b32_e32 v32, 0xffff, v24
-; GFX9-DS128-NEXT:    ds_read_b128 v[24:27], v0 offset:80
-; GFX9-DS128-NEXT:    ds_read_b128 v[55:58], v0 offset:96
-; GFX9-DS128-NEXT:    buffer_store_dword v1, off, s[12:15], 0 offset:32 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v11
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v10
+; GFX9-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v11
+; GFX9-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v10
+; GFX9-DS128-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    s_nop 0
-; GFX9-DS128-NEXT:    buffer_store_dword v2, off, s[12:15], 0 offset:36 ; 4-byte Folded Spill
-; GFX9-DS128-NEXT:    buffer_store_dword v3, off, s[12:15], 0 offset:40 ; 4-byte Folded Spill
-; GFX9-DS128-NEXT:    buffer_store_dword v4, off, s[12:15], 0 offset:44 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    buffer_store_dword v1, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    buffer_store_dword v2, off, s[12:15], 0 offset:8 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    buffer_store_dword v3, off, s[12:15], 0 offset:12 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v9
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v8
+; GFX9-DS128-NEXT:    v_and_b32_e32 v5, 0xffff, v9
+; GFX9-DS128-NEXT:    v_and_b32_e32 v3, 0xffff, v8
+; GFX9-DS128-NEXT:    buffer_store_dword v3, off, s[12:15], 0 offset:16 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    s_nop 0
+; GFX9-DS128-NEXT:    buffer_store_dword v4, off, s[12:15], 0 offset:20 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    buffer_store_dword v5, off, s[12:15], 0 offset:24 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    buffer_store_dword v6, off, s[12:15], 0 offset:28 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v15, 16, v61
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v13, 16, v60
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v11, 16, v59
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v58
+; GFX9-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v61
+; GFX9-DS128-NEXT:    v_and_b32_e32 v12, 0xffff, v60
+; GFX9-DS128-NEXT:    v_and_b32_e32 v10, 0xffff, v59
+; GFX9-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v58
+; GFX9-DS128-NEXT:    ds_read_b128 v[58:61], v24 offset:112
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v19
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v18
+; GFX9-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v19
+; GFX9-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v18
+; GFX9-DS128-NEXT:    buffer_store_dword v0, off, s[12:15], 0 offset:32 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    s_nop 0
+; GFX9-DS128-NEXT:    buffer_store_dword v1, off, s[12:15], 0 offset:36 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    buffer_store_dword v2, off, s[12:15], 0 offset:40 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    buffer_store_dword v3, off, s[12:15], 0 offset:44 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v17
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v16
+; GFX9-DS128-NEXT:    v_and_b32_e32 v5, 0xffff, v17
+; GFX9-DS128-NEXT:    v_and_b32_e32 v3, 0xffff, v16
+; GFX9-DS128-NEXT:    buffer_store_dword v3, off, s[12:15], 0 offset:48 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    s_nop 0
+; GFX9-DS128-NEXT:    buffer_store_dword v4, off, s[12:15], 0 offset:52 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    buffer_store_dword v5, off, s[12:15], 0 offset:56 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    buffer_store_dword v6, off, s[12:15], 0 offset:60 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    ds_read_b128 v[25:28], v24 offset:32
+; GFX9-DS128-NEXT:    ds_read_b128 v[29:32], v24 offset:48
+; GFX9-DS128-NEXT:    ds_read_b128 v[36:39], v24 offset:64
+; GFX9-DS128-NEXT:    ds_read_b128 v[47:50], v24 offset:80
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(4)
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v59
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v58
+; GFX9-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v59
+; GFX9-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v58
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v24, s0
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[0:3] offset:224
+; GFX9-DS128-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:48 ; 4-byte Folded Reload
+; GFX9-DS128-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:52 ; 4-byte Folded Reload
+; GFX9-DS128-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:56 ; 4-byte Folded Reload
+; GFX9-DS128-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:60 ; 4-byte Folded Reload
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(4)
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v19, 16, v28
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v27
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v23, 16, v26
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v21, 16, v25
+; GFX9-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v28
+; GFX9-DS128-NEXT:    v_and_b32_e32 v16, 0xffff, v27
+; GFX9-DS128-NEXT:    v_and_b32_e32 v22, 0xffff, v26
+; GFX9-DS128-NEXT:    v_and_b32_e32 v20, 0xffff, v25
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v28, 16, v32
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v26, 16, v31
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v35, 16, v30
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v33, 16, v29
+; GFX9-DS128-NEXT:    v_and_b32_e32 v27, 0xffff, v32
+; GFX9-DS128-NEXT:    v_and_b32_e32 v25, 0xffff, v31
+; GFX9-DS128-NEXT:    v_and_b32_e32 v34, 0xffff, v30
+; GFX9-DS128-NEXT:    v_and_b32_e32 v32, 0xffff, v29
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(2)
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v42, 16, v39
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v40, 16, v38
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v50, 16, v27
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v48, 16, v26
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v54, 16, v25
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v52, 16, v24
-; GFX9-DS128-NEXT:    v_and_b32_e32 v49, 0xffff, v27
-; GFX9-DS128-NEXT:    v_and_b32_e32 v47, 0xffff, v26
-; GFX9-DS128-NEXT:    v_and_b32_e32 v53, 0xffff, v25
-; GFX9-DS128-NEXT:    v_and_b32_e32 v51, 0xffff, v24
-; GFX9-DS128-NEXT:    ds_read_b128 v[24:27], v0 offset:112
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v46, 16, v37
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v44, 16, v36
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v41, 0xffff, v39
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v39, 0xffff, v38
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v25
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v24
-; GFX9-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v25
-; GFX9-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v24
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v24, s0
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v45, 0xffff, v37
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v43, 0xffff, v36
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v61, 16, v58
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v59, 16, v57
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v11, 16, v56
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v55
-; GFX9-DS128-NEXT:    v_and_b32_e32 v60, 0xffff, v58
-; GFX9-DS128-NEXT:    v_and_b32_e32 v58, 0xffff, v57
-; GFX9-DS128-NEXT:    v_and_b32_e32 v10, 0xffff, v56
-; GFX9-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v55
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v27
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v26
-; GFX9-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v27
-; GFX9-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v26
-; GFX9-DS128-NEXT:    ds_write_b128 v24, v[0:3] offset:224
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v53, 16, v50
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v51, 16, v49
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v57, 16, v48
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v55, 16, v47
+; GFX9-DS128-NEXT:    v_and_b32_e32 v52, 0xffff, v50
+; GFX9-DS128-NEXT:    v_and_b32_e32 v50, 0xffff, v49
+; GFX9-DS128-NEXT:    v_and_b32_e32 v56, 0xffff, v48
+; GFX9-DS128-NEXT:    v_and_b32_e32 v54, 0xffff, v47
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v61
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v60
+; GFX9-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v61
+; GFX9-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v60
 ; GFX9-DS128-NEXT:    ds_write_b128 v24, v[4:7] offset:240
 ; GFX9-DS128-NEXT:    ds_write_b128 v24, v[8:11] offset:192
-; GFX9-DS128-NEXT:    ds_write_b128 v24, v[58:61] offset:208
-; GFX9-DS128-NEXT:    ds_write_b128 v24, v[51:54] offset:160
-; GFX9-DS128-NEXT:    ds_write_b128 v24, v[47:50] offset:176
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[12:15] offset:208
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[54:57] offset:160
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[50:53] offset:176
 ; GFX9-DS128-NEXT:    ds_write_b128 v24, v[43:46] offset:128
 ; GFX9-DS128-NEXT:    ds_write_b128 v24, v[39:42] offset:144
 ; GFX9-DS128-NEXT:    ds_write_b128 v24, v[32:35] offset:96
-; GFX9-DS128-NEXT:    ds_write_b128 v24, v[20:23] offset:112
-; GFX9-DS128-NEXT:    ds_write_b128 v24, v[28:31] offset:64
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[25:28] offset:112
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[20:23] offset:64
 ; GFX9-DS128-NEXT:    ds_write_b128 v24, v[16:19] offset:80
-; GFX9-DS128-NEXT:    ds_write_b128 v24, v[12:15] offset:32
+; GFX9-DS128-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[0:3] offset:32
 ; GFX9-DS128-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:32 ; 4-byte Folded Reload
 ; GFX9-DS128-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:36 ; 4-byte Folded Reload
 ; GFX9-DS128-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:40 ; 4-byte Folded Reload
@@ -4312,55 +4321,58 @@ define amdgpu_kernel void @local_sextload_v64i16_to_v64i32(ptr addrspace(3) %out
 ; GFX9-NO-DS128-NEXT:    s_mov_b32 s14, -1
 ; GFX9-NO-DS128-NEXT:    s_mov_b32 s15, 0xe00000
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v28, s1
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[20:23], v28 offset0:4 offset1:5
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[29:32], v28 offset0:6 offset1:7
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[33:36], v28 offset0:8 offset1:9
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[10:13], v28 offset1:1
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[14:17], v28 offset0:2 offset1:3
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v24, s1
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[25:28], v24 offset0:6 offset1:7
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[29:32], v24 offset0:8 offset1:9
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[10:13], v24 offset1:1
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[14:17], v24 offset0:2 offset1:3
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[20:23], v24 offset0:4 offset1:5
+; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(4)
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v34, 16, v26
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v33, v26, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v36, 16, v25
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v35, v25, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v38, 16, v28
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v37, v28, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v40, 16, v27
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v39, v27, 0, 16
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[25:28], v24 offset0:10 offset1:11
+; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(4)
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v42, 16, v30
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v41, v30, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v44, 16, v29
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v43, v29, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v46, 16, v32
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v45, v32, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v48, 16, v31
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v47, v31, 0, 16
+; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v50, 16, v26
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v49, v26, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v52, 16, v25
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v51, v25, 0, 16
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[29:32], v24 offset0:12 offset1:13
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v56, 16, v27
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v55, v27, 0, 16
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[24:27], v24 offset0:14 offset1:15
 ; GFX9-NO-DS128-NEXT:    s_add_u32 s12, s12, s11
 ; GFX9-NO-DS128-NEXT:    s_addc_u32 s13, s13, 0
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(3)
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v25, 16, v30
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v24, v30, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v27, 16, v29
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v26, v29, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v38, 16, v32
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v37, v32, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v40, 16, v31
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v39, v31, 0, 16
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[29:32], v28 offset0:10 offset1:11
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(3)
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v42, 16, v34
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v41, v34, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v44, 16, v33
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v43, v33, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v46, 16, v36
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v45, v36, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v48, 16, v35
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v47, v35, 0, 16
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v50, 16, v30
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v49, v30, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v52, 16, v29
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v51, v29, 0, 16
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[33:36], v28 offset0:12 offset1:13
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v56, 16, v31
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v55, v31, 0, 16
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[28:31], v28 offset0:14 offset1:15
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 16, v11
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v0, v11, 0, 16
 ; GFX9-NO-DS128-NEXT:    buffer_store_dword v0, off, s[12:15], 0 ; 4-byte Folded Spill
 ; GFX9-NO-DS128-NEXT:    s_nop 0
 ; GFX9-NO-DS128-NEXT:    buffer_store_dword v1, off, s[12:15], 0 offset:4 ; 4-byte Folded Spill
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v54, 16, v32
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v53, v32, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v54, 16, v28
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v53, v28, 0, 16
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v32, 16, v31
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v31, v31, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 16, v30
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v0, v30, 0, 16
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v30, s0
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v28, 16, v27
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v27, v27, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 16, v26
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v0, v26, 0, 16
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v26, s0
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[0:1], v[27:28] offset0:30 offset1:31
+; GFX9-NO-DS128-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
+; GFX9-NO-DS128-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 16, v10
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v5, 16, v13
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v7, 16, v12
@@ -4383,37 +4395,34 @@ define amdgpu_kernel void @local_sextload_v64i16_to_v64i32(ptr addrspace(3) %out
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v20, v23, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v23, 16, v22
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v22, v22, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v58, 16, v34
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v57, v34, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v34, 16, v33
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v33, v33, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v60, 16, v36
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v59, v36, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v36, 16, v35
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v35, v35, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v62, 16, v29
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v61, v29, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v29, 16, v28
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v28, v28, 0, 16
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v30, v[0:1], v[31:32] offset0:30 offset1:31
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v30, v[28:29], v[61:62] offset0:28 offset1:29
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v30, v[35:36], v[59:60] offset0:26 offset1:27
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v30, v[33:34], v[57:58] offset0:24 offset1:25
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v30, v[55:56], v[53:54] offset0:22 offset1:23
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v30, v[51:52], v[49:50] offset0:20 offset1:21
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v30, v[47:48], v[45:46] offset0:18 offset1:19
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v30, v[43:44], v[41:42] offset0:16 offset1:17
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v30, v[39:40], v[37:38] offset0:14 offset1:15
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v30, v[26:27], v[24:25] offset0:12 offset1:13
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v30, v[22:23], v[20:21] offset0:10 offset1:11
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v30, v[18:19], v[16:17] offset0:8 offset1:9
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v30, v[14:15], v[12:13] offset0:6 offset1:7
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v30, v[10:11], v[8:9] offset0:4 offset1:5
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v30, v[6:7], v[4:5] offset0:2 offset1:3
-; GFX9-NO-DS128-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
-; GFX9-NO-DS128-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v58, 16, v30
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v57, v30, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v30, 16, v29
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v29, v29, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v60, 16, v32
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v59, v32, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v32, 16, v31
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v31, v31, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v62, 16, v25
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v61, v25, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v25, 16, v24
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v24, v24, 0, 16
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[24:25], v[61:62] offset0:28 offset1:29
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[31:32], v[59:60] offset0:26 offset1:27
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[29:30], v[57:58] offset0:24 offset1:25
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[55:56], v[53:54] offset0:22 offset1:23
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[51:52], v[49:50] offset0:20 offset1:21
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[47:48], v[45:46] offset0:18 offset1:19
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[43:44], v[41:42] offset0:16 offset1:17
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[39:40], v[37:38] offset0:14 offset1:15
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[35:36], v[33:34] offset0:12 offset1:13
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[22:23], v[20:21] offset0:10 offset1:11
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[18:19], v[16:17] offset0:8 offset1:9
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[14:15], v[12:13] offset0:6 offset1:7
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[10:11], v[8:9] offset0:4 offset1:5
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[6:7], v[4:5] offset0:2 offset1:3
 ; GFX9-NO-DS128-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v30, v[2:3], v[0:1] offset1:1
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v26, v[2:3], v[0:1] offset1:1
 ; GFX9-NO-DS128-NEXT:    s_endpgm
 ;
 ; EG-LABEL: local_sextload_v64i16_to_v64i32:
@@ -4978,14 +4987,13 @@ define amdgpu_kernel void @local_sextload_v64i16_to_v64i32(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    s_mov_b32 s14, -1
 ; GFX9-DS128-NEXT:    s_mov_b32 s15, 0xe00000
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v32, s1
-; GFX9-DS128-NEXT:    ds_read_b128 v[8:11], v32
-; GFX9-DS128-NEXT:    ds_read_b128 v[16:19], v32 offset:16
-; GFX9-DS128-NEXT:    ds_read_b128 v[24:27], v32 offset:32
-; GFX9-DS128-NEXT:    ds_read_b128 v[33:36], v32 offset:48
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v24, s1
+; GFX9-DS128-NEXT:    ds_read_b128 v[8:11], v24
+; GFX9-DS128-NEXT:    ds_read_b128 v[58:61], v24 offset:96
 ; GFX9-DS128-NEXT:    s_add_u32 s12, s12, s11
+; GFX9-DS128-NEXT:    ds_read_b128 v[16:19], v24 offset:16
 ; GFX9-DS128-NEXT:    s_addc_u32 s13, s13, 0
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(2)
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 16, v11
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 16, v10
 ; GFX9-DS128-NEXT:    v_bfe_i32 v2, v11, 0, 16
@@ -4999,104 +5007,126 @@ define amdgpu_kernel void @local_sextload_v64i16_to_v64i32(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v4, 16, v8
 ; GFX9-DS128-NEXT:    v_bfe_i32 v5, v9, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v3, v8, 0, 16
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(2)
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v11, 16, v19
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v9, 16, v18
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v15, 16, v17
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v13, 16, v16
-; GFX9-DS128-NEXT:    v_bfe_i32 v10, v19, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v8, v18, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v14, v17, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v12, v16, 0, 16
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v19, 16, v27
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v17, 16, v26
-; GFX9-DS128-NEXT:    v_bfe_i32 v18, v27, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v16, v26, 0, 16
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v27, 16, v36
-; GFX9-DS128-NEXT:    v_bfe_i32 v26, v36, 0, 16
-; GFX9-DS128-NEXT:    ds_read_b128 v[36:39], v32 offset:64
-; GFX9-DS128-NEXT:    ds_read_b128 v[40:43], v32 offset:80
-; GFX9-DS128-NEXT:    ds_read_b128 v[56:59], v32 offset:96
 ; GFX9-DS128-NEXT:    buffer_store_dword v3, off, s[12:15], 0 offset:16 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    s_nop 0
 ; GFX9-DS128-NEXT:    buffer_store_dword v4, off, s[12:15], 0 offset:20 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    buffer_store_dword v5, off, s[12:15], 0 offset:24 ; 4-byte Folded Spill
 ; GFX9-DS128-NEXT:    buffer_store_dword v6, off, s[12:15], 0 offset:28 ; 4-byte Folded Spill
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v23, 16, v25
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(2)
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v47, 16, v39
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v45, 16, v38
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v51, 16, v37
-; GFX9-DS128-NEXT:    v_bfe_i32 v46, v39, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v44, v38, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v50, v37, 0, 16
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v53, 16, v40
-; GFX9-DS128-NEXT:    v_bfe_i32 v52, v40, 0, 16
-; GFX9-DS128-NEXT:    ds_read_b128 v[37:40], v32 offset:112
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v32, s0
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v21, 16, v24
-; GFX9-DS128-NEXT:    v_bfe_i32 v22, v25, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v20, v24, 0, 16
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 16, v38
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 16, v37
-; GFX9-DS128-NEXT:    v_bfe_i32 v2, v38, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v0, v37, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v25, 16, v35
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v31, 16, v34
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v29, 16, v33
-; GFX9-DS128-NEXT:    v_bfe_i32 v24, v35, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v30, v34, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v28, v33, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v49, 16, v36
-; GFX9-DS128-NEXT:    v_bfe_i32 v48, v36, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v36, 16, v43
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v34, 16, v42
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v55, 16, v41
-; GFX9-DS128-NEXT:    v_bfe_i32 v35, v43, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v33, v42, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v54, v41, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v62, 16, v59
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v60, 16, v58
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v7, 16, v57
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v5, 16, v56
-; GFX9-DS128-NEXT:    v_bfe_i32 v61, v59, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v59, v58, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v6, v57, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v4, v56, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v43, 16, v40
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v41, 16, v39
-; GFX9-DS128-NEXT:    v_bfe_i32 v42, v40, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v40, v39, 0, 16
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[0:3] offset:224
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[40:43] offset:240
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[4:7] offset:192
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[59:62] offset:208
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[52:55] offset:160
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[33:36] offset:176
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[48:51] offset:128
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[44:47] offset:144
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[28:31] offset:96
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[24:27] offset:112
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[20:23] offset:64
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[16:19] offset:80
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[12:15] offset:32
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[8:11] offset:48
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v15, 16, v61
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v13, 16, v60
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v11, 16, v59
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v9, 16, v58
+; GFX9-DS128-NEXT:    v_bfe_i32 v14, v61, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v12, v60, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v10, v59, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v8, v58, 0, 16
+; GFX9-DS128-NEXT:    ds_read_b128 v[58:61], v24 offset:112
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 16, v19
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 16, v18
+; GFX9-DS128-NEXT:    v_bfe_i32 v2, v19, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v0, v18, 0, 16
+; GFX9-DS128-NEXT:    buffer_store_dword v0, off, s[12:15], 0 offset:32 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    s_nop 0
+; GFX9-DS128-NEXT:    buffer_store_dword v1, off, s[12:15], 0 offset:36 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    buffer_store_dword v2, off, s[12:15], 0 offset:40 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    buffer_store_dword v3, off, s[12:15], 0 offset:44 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v6, 16, v17
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v4, 16, v16
+; GFX9-DS128-NEXT:    v_bfe_i32 v5, v17, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v3, v16, 0, 16
+; GFX9-DS128-NEXT:    buffer_store_dword v3, off, s[12:15], 0 offset:48 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    s_nop 0
+; GFX9-DS128-NEXT:    buffer_store_dword v4, off, s[12:15], 0 offset:52 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    buffer_store_dword v5, off, s[12:15], 0 offset:56 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    buffer_store_dword v6, off, s[12:15], 0 offset:60 ; 4-byte Folded Spill
+; GFX9-DS128-NEXT:    ds_read_b128 v[25:28], v24 offset:32
+; GFX9-DS128-NEXT:    ds_read_b128 v[29:32], v24 offset:48
+; GFX9-DS128-NEXT:    ds_read_b128 v[36:39], v24 offset:64
+; GFX9-DS128-NEXT:    ds_read_b128 v[47:50], v24 offset:80
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(4)
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 16, v59
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 16, v58
+; GFX9-DS128-NEXT:    v_bfe_i32 v2, v59, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v0, v58, 0, 16
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v24, s0
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[0:3] offset:224
+; GFX9-DS128-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:48 ; 4-byte Folded Reload
+; GFX9-DS128-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:52 ; 4-byte Folded Reload
+; GFX9-DS128-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:56 ; 4-byte Folded Reload
+; GFX9-DS128-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:60 ; 4-byte Folded Reload
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(4)
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v19, 16, v28
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v17, 16, v27
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v23, 16, v26
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v21, 16, v25
+; GFX9-DS128-NEXT:    v_bfe_i32 v18, v28, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v16, v27, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v22, v26, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v20, v25, 0, 16
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v28, 16, v32
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v26, 16, v31
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v35, 16, v30
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v33, 16, v29
+; GFX9-DS128-NEXT:    v_bfe_i32 v27, v32, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v25, v31, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v34, v30, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v32, v29, 0, 16
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(2)
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v42, 16, v39
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v40, 16, v38
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v46, 16, v37
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v44, 16, v36
+; GFX9-DS128-NEXT:    v_bfe_i32 v41, v39, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v39, v38, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v45, v37, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v43, v36, 0, 16
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(1)
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v53, 16, v50
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v51, 16, v49
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v57, 16, v48
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v55, 16, v47
+; GFX9-DS128-NEXT:    v_bfe_i32 v52, v50, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v50, v49, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v56, v48, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v54, v47, 0, 16
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v7, 16, v61
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v5, 16, v60
+; GFX9-DS128-NEXT:    v_bfe_i32 v6, v61, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v4, v60, 0, 16
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[4:7] offset:240
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[8:11] offset:192
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[12:15] offset:208
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[54:57] offset:160
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[50:53] offset:176
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[43:46] offset:128
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[39:42] offset:144
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[32:35] offset:96
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[25:28] offset:112
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[20:23] offset:64
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[16:19] offset:80
+; GFX9-DS128-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[0:3] offset:32
+; GFX9-DS128-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:32 ; 4-byte Folded Reload
+; GFX9-DS128-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:36 ; 4-byte Folded Reload
+; GFX9-DS128-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:40 ; 4-byte Folded Reload
+; GFX9-DS128-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:44 ; 4-byte Folded Reload
+; GFX9-DS128-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[0:3] offset:48
 ; GFX9-DS128-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:16 ; 4-byte Folded Reload
 ; GFX9-DS128-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:20 ; 4-byte Folded Reload
 ; GFX9-DS128-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:24 ; 4-byte Folded Reload
 ; GFX9-DS128-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:28 ; 4-byte Folded Reload
 ; GFX9-DS128-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[0:3]
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[0:3]
 ; GFX9-DS128-NEXT:    buffer_load_dword v0, off, s[12:15], 0 ; 4-byte Folded Reload
 ; GFX9-DS128-NEXT:    buffer_load_dword v1, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
 ; GFX9-DS128-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
 ; GFX9-DS128-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
 ; GFX9-DS128-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-DS128-NEXT:    ds_write_b128 v32, v[0:3] offset:16
+; GFX9-DS128-NEXT:    ds_write_b128 v24, v[0:3] offset:16
 ; GFX9-DS128-NEXT:    s_endpgm
   %load = load <64 x i16>, ptr addrspace(3) %in
   %ext = sext <64 x i16> %load to <64 x i32>
@@ -5780,16 +5810,16 @@ define amdgpu_kernel void @local_sextload_v4i16_to_v4i64(ptr addrspace(3) %out, 
 ; GFX9-NO-DS128-NEXT:    ds_read_b64 v[0:1], v0
 ; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v9, s0
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v1, v1, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v7, v4, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v3, v0, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v5, v2, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v7, v4, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v8, 31, v7
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v8, 31, v7
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v9, v[1:2], v[7:8] offset0:2 offset1:3
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v9, v[3:4], v[5:6] offset1:1
 ; GFX9-NO-DS128-NEXT:    s_endpgm
@@ -5870,16 +5900,16 @@ define amdgpu_kernel void @local_sextload_v4i16_to_v4i64(ptr addrspace(3) %out, 
 ; GFX9-DS128-NEXT:    ds_read_b64 v[1:2], v0
 ; GFX9-DS128-NEXT:    v_mov_b32_e32 v8, s0
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX9-DS128-NEXT:    v_bfe_i32 v0, v2, 0, 16
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
-; GFX9-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v4, v1, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v6, v3, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX9-DS128-NEXT:    ds_write_b128 v8, v[0:3] offset:16
 ; GFX9-DS128-NEXT:    ds_write_b128 v8, v[4:7]
 ; GFX9-DS128-NEXT:    s_endpgm
@@ -6204,26 +6234,26 @@ define amdgpu_kernel void @local_sextload_v8i16_to_v8i64(ptr addrspace(3) %out, 
 ; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v0 offset1:1
 ; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v16, s0
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v3
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v2
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v10, v9, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v14, v2, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v2, v3, 0, 16
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v3
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v4, v4, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v6, v5, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v8, v7, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v10, v9, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v12, v0, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v0, v1, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v14, v2, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v2, v3, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v9, 31, v8
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v13, 31, v12
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v16, v[2:3], v[10:11] offset0:6 offset1:7
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v16, v[14:15], v[8:9] offset0:4 offset1:5
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v16, v[0:1], v[6:7] offset0:2 offset1:3
@@ -6361,24 +6391,24 @@ define amdgpu_kernel void @local_sextload_v8i16_to_v8i64(ptr addrspace(3) %out, 
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-DS128-NEXT:    v_bfe_i32 v4, v0, 0, 16
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX9-DS128-NEXT:    v_bfe_i32 v8, v1, 0, 16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
 ; GFX9-DS128-NEXT:    v_bfe_i32 v12, v2, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v6, v0, 0, 16
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v2
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
-; GFX9-DS128-NEXT:    v_bfe_i32 v8, v1, 0, 16
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; GFX9-DS128-NEXT:    v_bfe_i32 v10, v1, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v14, v0, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v0, v3, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v10, v1, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v9, 31, v8
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v13, 31, v12
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX9-DS128-NEXT:    ds_write_b128 v16, v[0:3] offset:48
 ; GFX9-DS128-NEXT:    ds_write_b128 v16, v[12:15] offset:32
 ; GFX9-DS128-NEXT:    ds_write_b128 v16, v[8:11] offset:16
@@ -6743,53 +6773,53 @@ define amdgpu_kernel void @local_zextload_v16i16_to_v16i64(ptr addrspace(3) %out
 ; GFX9-DS128-LABEL: local_zextload_v16i16_to_v16i64:
 ; GFX9-DS128:       ; %bb.0:
 ; GFX9-DS128-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v25, 0
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v21, v25
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v23, v25
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v18, v25
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v26, 0
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v22, v26
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v24, v26
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v11, v26
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v4, s1
-; GFX9-DS128-NEXT:    ds_read_b128 v[0:3], v4
-; GFX9-DS128-NEXT:    ds_read_b128 v[4:7], v4 offset:16
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v28, s0
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v15, v25
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v12, v25
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v5, s1
+; GFX9-DS128-NEXT:    ds_read_b128 v[0:3], v5
+; GFX9-DS128-NEXT:    ds_read_b128 v[13:16], v5 offset:16
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v19, v26
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v8, v26
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v28, v26
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v2
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v12, 16, v2
+; GFX9-DS128-NEXT:    v_and_b32_e32 v10, 0xffff, v2
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v22, 16, v7
-; GFX9-DS128-NEXT:    v_and_b32_e32 v20, 0xffff, v7
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v19, 16, v6
-; GFX9-DS128-NEXT:    v_and_b32_e32 v17, 0xffff, v6
-; GFX9-DS128-NEXT:    ds_write_b128 v28, v[20:23] offset:112
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v20, v25
-; GFX9-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v2
-; GFX9-DS128-NEXT:    ds_write_b128 v28, v[17:20] offset:96
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v17, v25
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v13, 16, v1
-; GFX9-DS128-NEXT:    v_and_b32_e32 v11, 0xffff, v1
-; GFX9-DS128-NEXT:    ds_write_b128 v28, v[14:17] offset:32
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v14, v25
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v10, 16, v0
-; GFX9-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v0
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v23, 16, v13
+; GFX9-DS128-NEXT:    v_and_b32_e32 v21, 0xffff, v13
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v27, 16, v14
+; GFX9-DS128-NEXT:    v_and_b32_e32 v25, 0xffff, v14
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v14, s0
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v13, v26
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v1
+; GFX9-DS128-NEXT:    v_and_b32_e32 v7, 0xffff, v1
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v20, 16, v16
+; GFX9-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v16
+; GFX9-DS128-NEXT:    ds_write_b128 v14, v[21:24] offset:64
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v21, v26
+; GFX9-DS128-NEXT:    ds_write_b128 v14, v[10:13] offset:32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v10, v26
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
+; GFX9-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v0
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v3
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v4
-; GFX9-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v26, 16, v5
-; GFX9-DS128-NEXT:    v_and_b32_e32 v24, 0xffff, v5
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v5, v25
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v7, v25
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v1, v25
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v3, v25
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v27, v25
-; GFX9-DS128-NEXT:    ds_write_b128 v28, v[11:14] offset:16
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v9, v25
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v11, v25
-; GFX9-DS128-NEXT:    ds_write_b128 v28, v[4:7] offset:64
-; GFX9-DS128-NEXT:    ds_write_b128 v28, v[0:3] offset:48
-; GFX9-DS128-NEXT:    ds_write_b128 v28, v[24:27] offset:80
-; GFX9-DS128-NEXT:    ds_write_b128 v28, v[8:11]
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v15
+; GFX9-DS128-NEXT:    v_and_b32_e32 v15, 0xffff, v15
+; GFX9-DS128-NEXT:    ds_write_b128 v14, v[18:21] offset:112
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v16, v26
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v18, v26
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v1, v26
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v3, v26
+; GFX9-DS128-NEXT:    ds_write_b128 v14, v[7:10] offset:16
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v5, v26
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v7, v26
+; GFX9-DS128-NEXT:    ds_write_b128 v14, v[15:18] offset:96
+; GFX9-DS128-NEXT:    ds_write_b128 v14, v[0:3] offset:48
+; GFX9-DS128-NEXT:    ds_write_b128 v14, v[25:28] offset:80
+; GFX9-DS128-NEXT:    ds_write_b128 v14, v[4:7]
 ; GFX9-DS128-NEXT:    s_endpgm
   %load = load <16 x i16>, ptr addrspace(3) %in
   %ext = zext <16 x i16> %load to <16 x i64>
@@ -6925,7 +6955,7 @@ define amdgpu_kernel void @local_sextload_v16i16_to_v16i64(ptr addrspace(3) %out
 ; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v4 offset0:2 offset1:3
 ; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v19, s0
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v18, 16, v3
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v14, 16, v4
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v14, v14, 0, 16
@@ -6948,28 +6978,28 @@ define amdgpu_kernel void @local_sextload_v16i16_to_v16i64(ptr addrspace(3) %out
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v19, v[14:15], v[4:5] offset0:12 offset1:13
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v14, v6, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v6, v7, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v1
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v11, 16, v2
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v4, v18, 0, 16
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v19, v[6:7], v[14:15] offset0:14 offset1:15
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v6, v2, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v2, v3, 0, 16
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v18, 16, v3
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v8, v8, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v10, v9, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v12, v11, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v4, v18, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v0, 0, 16
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v19, v[6:7], v[14:15] offset0:14 offset1:15
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v0, v1, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v6, v2, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v2, v3, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v9, 31, v8
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v13, 31, v12
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v19, v[2:3], v[4:5] offset0:6 offset1:7
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v19, v[6:7], v[12:13] offset0:4 offset1:5
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v19, v[0:1], v[10:11] offset0:2 offset1:3
@@ -7248,20 +7278,20 @@ define amdgpu_kernel void @local_sextload_v16i16_to_v16i64(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v5
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v6
+; GFX9-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
 ; GFX9-DS128-NEXT:    ds_write_b128 v8, v[14:17] offset:96
+; GFX9-DS128-NEXT:    v_bfe_i32 v14, v5, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v16, v4, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v4, v6, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v6, v7, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v14, v5, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v13, 31, v12
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
 ; GFX9-DS128-NEXT:    ds_write_b128 v8, v[4:7] offset:48
 ; GFX9-DS128-NEXT:    ds_write_b128 v8, v[14:17] offset:32
 ; GFX9-DS128-NEXT:    ds_write_b128 v8, v[10:13] offset:16
@@ -7437,79 +7467,84 @@ define amdgpu_kernel void @local_zextload_v32i16_to_v32i64(ptr addrspace(3) %out
 ; GFX9-NO-DS128-LABEL: local_zextload_v32i16_to_v32i64:
 ; GFX9-NO-DS128:       ; %bb.0:
 ; GFX9-NO-DS128-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v5, 0
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v19, v5
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v21, v5
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v1, 0
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v19, v1
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v21, v1
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v4, s1
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[6:9], v4 offset0:4 offset1:5
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v4 offset0:6 offset1:7
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v0, s1
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[2:5], v0 offset0:6 offset1:7
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[14:17], v0 offset0:4 offset1:5
 ; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v22, s0
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[10:13], v4 offset1:1
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[14:17], v4 offset0:2 offset1:3
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(2)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v20, 16, v2
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v2
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[6:9], v0 offset1:1
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[10:13], v0 offset0:2 offset1:3
+; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v20, 16, v4
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v4
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[18:19], v[20:21] offset0:28 offset1:29
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v1
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v2, v5
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[18:19], v[1:2] offset0:26 offset1:27
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v1, 0xffff, v0
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v18, 16, v0
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[1:2], v[18:19] offset0:24 offset1:25
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v9
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v1, v5
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v18, 16, v9
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[0:1], v[18:19] offset0:22 offset1:23
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v8
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v8, 16, v8
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v9, v5
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[0:1], v[8:9] offset0:20 offset1:21
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v7
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v7
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v8, v5
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[0:1], v[7:8] offset0:18 offset1:19
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v6
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v6
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v7, v5
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[6:7], v[0:1] offset0:16 offset1:17
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v3
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v4, v1
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[18:19], v[3:4] offset0:26 offset1:27
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v3, 0xffff, v2
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v18, 16, v2
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[3:4], v[18:19] offset0:24 offset1:25
+; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(5)
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v17
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v3, v1
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v17
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v18, v1
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[2:3], v[17:18] offset0:22 offset1:23
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v16
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v16
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v17, v1
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[2:3], v[16:17] offset0:20 offset1:21
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v15
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v15, 16, v15
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v16, v1
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[2:3], v[15:16] offset0:18 offset1:19
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v14
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v14
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v15, v1
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[14:15], v[2:3] offset0:16 offset1:17
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(7)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v17
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v17
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[6:7], v[0:1] offset0:14 offset1:15
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v16
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v16
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[6:7], v[0:1] offset0:12 offset1:13
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v15
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v15
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[6:7], v[0:1] offset0:10 offset1:11
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v14
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v14
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v10
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v10
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[6:7], v[1:2] offset0:8 offset1:9
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v13
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v13, 0xffff, v13
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v14, v1
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[13:14], v[2:3] offset0:14 offset1:15
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v12
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v9, 0xffff, v12
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v10, 16, v13
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v12, 0xffff, v13
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v3
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v13, 16, v3
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v14, v5
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v11
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v11
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[4:5], v[13:14] offset0:30 offset1:31
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v13, v5
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v11, v5
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v12, 0xffff, v12
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v13, v1
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[12:13], v[2:3] offset0:12 offset1:13
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v11
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v11, 0xffff, v11
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v12, v1
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[11:12], v[2:3] offset0:10 offset1:11
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v10
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v10, 0xffff, v10
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v11, v1
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[10:11], v[3:4] offset0:8 offset1:9
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v8
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v8
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v10, 16, v9
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v12, 0xffff, v9
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v5
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v13, 16, v5
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v9, v1
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v5, v1
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v7
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v7, 0xffff, v7
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[8:9], v[4:5] offset0:4 offset1:5
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v8, v1
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v4, v1
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v6
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v6
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[0:1], v[13:14] offset0:30 offset1:31
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v13, v1
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[7:8], v[3:4] offset0:2 offset1:3
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v7, v1
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[12:13], v[10:11] offset0:6 offset1:7
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v10, v5
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v3, v5
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[9:10], v[2:3] offset0:4 offset1:5
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v2, v5
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[6:7], v[1:2] offset0:2 offset1:3
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v9, v5
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v1, v5
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[8:9], v[0:1] offset1:1
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v22, v[6:7], v[2:3] offset1:1
 ; GFX9-NO-DS128-NEXT:    s_endpgm
 ;
 ; EG-LABEL: local_zextload_v32i16_to_v32i64:
@@ -7907,97 +7942,97 @@ define amdgpu_kernel void @local_zextload_v32i16_to_v32i64(ptr addrspace(3) %out
 ; GFX9-DS128-LABEL: local_zextload_v32i16_to_v32i64:
 ; GFX9-DS128:       ; %bb.0:
 ; GFX9-DS128-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v52, 0
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v48, v52
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v50, v52
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v45, v52
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v1, s1
-; GFX9-DS128-NEXT:    ds_read_b128 v[3:6], v1
-; GFX9-DS128-NEXT:    ds_read_b128 v[7:10], v1 offset:16
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v52, s0
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v9, s1
+; GFX9-DS128-NEXT:    ds_read_b128 v[4:7], v9 offset:16
+; GFX9-DS128-NEXT:    ds_read_b128 v[0:3], v9
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v42, v52
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v39, v52
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v36, v52
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v6
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v19, 16, v8
-; GFX9-DS128-NEXT:    v_and_b32_e32 v17, 0xffff, v8
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v22, 16, v7
-; GFX9-DS128-NEXT:    v_and_b32_e32 v20, 0xffff, v7
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v25, 16, v10
-; GFX9-DS128-NEXT:    v_and_b32_e32 v23, 0xffff, v10
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v28, 16, v9
-; GFX9-DS128-NEXT:    v_and_b32_e32 v26, 0xffff, v9
-; GFX9-DS128-NEXT:    ds_read_b128 v[7:10], v1 offset:32
-; GFX9-DS128-NEXT:    ds_read_b128 v[29:32], v1 offset:48
-; GFX9-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v6
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v4
-; GFX9-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v4
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v19, 16, v5
+; GFX9-DS128-NEXT:    v_and_b32_e32 v17, 0xffff, v5
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v22, 16, v4
+; GFX9-DS128-NEXT:    v_and_b32_e32 v20, 0xffff, v4
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v25, 16, v7
+; GFX9-DS128-NEXT:    v_and_b32_e32 v23, 0xffff, v7
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v28, 16, v6
+; GFX9-DS128-NEXT:    v_and_b32_e32 v26, 0xffff, v6
+; GFX9-DS128-NEXT:    ds_read_b128 v[4:7], v9 offset:32
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v38, 16, v7
-; GFX9-DS128-NEXT:    v_and_b32_e32 v36, 0xffff, v7
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v44, 16, v9
-; GFX9-DS128-NEXT:    v_and_b32_e32 v42, 0xffff, v9
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v13, 16, v0
+; GFX9-DS128-NEXT:    v_and_b32_e32 v11, 0xffff, v0
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v0, s0
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v33, v52
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v30
-; GFX9-DS128-NEXT:    v_and_b32_e32 v7, 0xffff, v30
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v50, 16, v32
-; GFX9-DS128-NEXT:    v_and_b32_e32 v48, 0xffff, v32
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v32, 16, v31
-; GFX9-DS128-NEXT:    v_and_b32_e32 v30, 0xffff, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v31, 0
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v49, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v51, v31
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v47, 16, v29
-; GFX9-DS128-NEXT:    v_and_b32_e32 v45, 0xffff, v29
-; GFX9-DS128-NEXT:    ds_write_b128 v52, v[48:51] offset:240
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v46, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v48, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v27, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v29, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v52, v[45:48] offset:192
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v43, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v45, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v52, v[26:29] offset:96
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v24, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v26, v31
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v41, 16, v10
-; GFX9-DS128-NEXT:    v_and_b32_e32 v39, 0xffff, v10
-; GFX9-DS128-NEXT:    ds_write_b128 v52, v[42:45] offset:160
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v40, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v42, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v52, v[23:26] offset:112
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v21, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v23, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v52, v[39:42] offset:176
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v37, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v39, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v52, v[20:23] offset:64
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v18, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v20, v31
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v35, 16, v8
-; GFX9-DS128-NEXT:    v_and_b32_e32 v33, 0xffff, v8
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v8, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v10, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v52, v[36:39] offset:128
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v34, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v36, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v52, v[17:20] offset:80
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v15, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v17, v31
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v13, 16, v3
-; GFX9-DS128-NEXT:    v_and_b32_e32 v11, 0xffff, v3
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
-; GFX9-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v5
-; GFX9-DS128-NEXT:    ds_write_b128 v52, v[7:10] offset:208
-; GFX9-DS128-NEXT:    ds_write_b128 v52, v[33:36] offset:144
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v5, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v7, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v33, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v52, v[14:17] offset:48
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v12, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v14, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v1, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v3, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v52, v[4:7] offset:32
-; GFX9-DS128-NEXT:    ds_write_b128 v52, v[30:33] offset:224
-; GFX9-DS128-NEXT:    ds_write_b128 v52, v[11:14]
-; GFX9-DS128-NEXT:    ds_write_b128 v52, v[0:3] offset:16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v31, 16, v5
+; GFX9-DS128-NEXT:    v_and_b32_e32 v29, 0xffff, v5
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v34, 16, v4
+; GFX9-DS128-NEXT:    v_and_b32_e32 v32, 0xffff, v4
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v37, 16, v7
+; GFX9-DS128-NEXT:    v_and_b32_e32 v35, 0xffff, v7
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v40, 16, v6
+; GFX9-DS128-NEXT:    v_and_b32_e32 v38, 0xffff, v6
+; GFX9-DS128-NEXT:    ds_read_b128 v[4:7], v9 offset:48
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v30, v52
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v27, v52
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v24, v52
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v21, v52
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v49, 16, v7
+; GFX9-DS128-NEXT:    v_and_b32_e32 v47, 0xffff, v7
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v46, 16, v4
+; GFX9-DS128-NEXT:    v_and_b32_e32 v44, 0xffff, v4
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[47:50] offset:240
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v47, v52
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v43, 16, v5
+; GFX9-DS128-NEXT:    v_and_b32_e32 v41, 0xffff, v5
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[44:47] offset:192
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v44, v52
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[41:44] offset:208
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v41, v52
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[38:41] offset:160
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v38, v52
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[35:38] offset:176
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v35, v52
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[32:35] offset:128
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v32, v52
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[29:32] offset:144
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v29, v52
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[26:29] offset:96
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v26, v52
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[23:26] offset:112
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v23, v52
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[20:23] offset:64
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v18, v52
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v20, v52
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v3
+; GFX9-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v3
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[17:20] offset:80
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v15, v52
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v17, v52
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[14:17] offset:48
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v12, v52
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v14, v52
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v10, 16, v1
+; GFX9-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v1
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; GFX9-DS128-NEXT:    v_and_b32_e32 v1, 0xffff, v2
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v53, 16, v6
+; GFX9-DS128-NEXT:    v_and_b32_e32 v51, 0xffff, v6
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v2, v52
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v4, v52
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v54, v52
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[11:14]
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v9, v52
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v11, v52
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[1:4] offset:32
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[51:54] offset:224
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[8:11] offset:16
 ; GFX9-DS128-NEXT:    s_endpgm
   %load = load <32 x i16>, ptr addrspace(3) %in
   %ext = zext <32 x i16> %load to <32 x i64>
@@ -8227,111 +8262,110 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i64(ptr addrspace(3) %out
 ; GFX9-NO-DS128:       ; %bb.0:
 ; GFX9-NO-DS128-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v11, s1
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v11 offset0:6 offset1:7
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v11 offset0:4 offset1:5
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v15, s0
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v8, 16, v7
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v7, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v8, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[7:10], v11 offset1:1
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[11:14], v11 offset0:2 offset1:3
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[16:17], v[18:19] offset0:30 offset1:31
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v6
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v16, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v6, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[18:19], v[16:17] offset0:28 offset1:29
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v6, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v5, v5, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[5:6], v[16:17] offset0:26 offset1:27
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v4
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v4, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v17, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(5)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[16:17], v[18:19] offset0:24 offset1:25
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v4, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v3, v3, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[3:4], v[16:17] offset0:22 offset1:23
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v13, s1
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v13 offset0:6 offset1:7
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v12, s0
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v13 offset1:1
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[8:11], v13 offset0:2 offset1:3
+; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(2)
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v14, 16, v3
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v17, v3, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v19, v14, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v18, 31, v17
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v20, 31, v19
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v3, v3, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v2, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[16:17], v[3:4] offset0:20 offset1:21
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[13:16], v13 offset0:4 offset1:5
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[17:18], v[19:20] offset0:30 offset1:31
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v17, v3, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v1, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v18, 31, v17
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[2:3], v[17:18] offset0:28 offset1:29
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v17, v1, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v18, 31, v17
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[17:18], v[2:3] offset0:26 offset1:27
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v17, v0, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v19, v3, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v20, 31, v19
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v18, 31, v17
+; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v16
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[17:18], v[19:20] offset0:24 offset1:25
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v17, v3, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v19, v16, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v18, 31, v17
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v20, 31, v19
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v15
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[19:20], v[17:18] offset0:22 offset1:23
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v3, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v15, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[16:17], v[2:3] offset0:18 offset1:19
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v0
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v14
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v5
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[18:19], v[16:17] offset0:20 offset1:21
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v15, v3, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v17, v14, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v16, 31, v15
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v18, 31, v17
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v14, v0, 0, 16
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v6
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[17:18], v[15:16] offset0:18 offset1:19
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v0, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v17, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[16:17], v[18:19] offset0:16 offset1:17
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(8)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v14
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v16, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v14, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v14, 16, v13
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[18:19], v[16:17] offset0:14 offset1:15
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v14, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v13, v13, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v14, 31, v13
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[13:14], v[16:17] offset0:12 offset1:13
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v13, 16, v12
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v10
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v13, v13, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v12, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v14, 31, v13
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v12, v0, 0, 16
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v11
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[16:17], v[13:14] offset0:10 offset1:11
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v0, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v11, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v7
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v20, 16, v8
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v9
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[18:19], v[16:17] offset0:8 offset1:9
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v9, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v9, v10, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v5, v5, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v1, v20, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v3, v3, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v13, 31, v12
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v20, v7, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v7, v8, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v10, 31, v9
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v13
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v13, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v20, v0, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v21, 31, v20
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v8, 31, v7
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v11
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[18:19], v[20:21] offset0:16 offset1:17
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v0, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v20, v11, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v21, 31, v20
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v10
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[20:21], v[18:19] offset0:14 offset1:15
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v0, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v10, v10, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v9
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[10:11], v[18:19] offset0:12 offset1:13
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v10, v0, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v9, 0, 16
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v7
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v8
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[18:19], v[10:11] offset0:10 offset1:11
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v9, v3, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v0, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v3, v8, 0, 16
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v4
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v20, v4, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v1, v1, 0, 16
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[3:4], v[18:19] offset0:8 offset1:9
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v3, v5, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v5, v6, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v7, v7, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[9:10], v[12:13] offset0:6 offset1:7
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[16:17], v[3:4] offset0:4 offset1:5
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[7:8], v[1:2] offset0:2 offset1:3
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[20:21], v[5:6] offset1:1
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v10, 31, v9
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v21, 31, v20
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v8, 31, v7
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[7:8], v[9:10] offset0:6 offset1:7
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[5:6], v[16:17] offset0:4 offset1:5
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[3:4], v[14:15] offset0:2 offset1:3
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v12, v[20:21], v[1:2] offset1:1
 ; GFX9-NO-DS128-NEXT:    s_endpgm
 ;
 ; EG-LABEL: local_sextload_v32i16_to_v32i64:
@@ -8793,112 +8827,110 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i64(ptr addrspace(3) %out
 ; GFX9-DS128:       ; %bb.0:
 ; GFX9-DS128-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v13, s1
-; GFX9-DS128-NEXT:    ds_read_b128 v[4:7], v13 offset:48
-; GFX9-DS128-NEXT:    ds_read_b128 v[0:3], v13 offset:32
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v12, s0
-; GFX9-DS128-NEXT:    ds_read_b128 v[8:11], v13
-; GFX9-DS128-NEXT:    ds_read_b128 v[18:21], v13 offset:16
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v9, s1
+; GFX9-DS128-NEXT:    ds_read_b128 v[0:3], v9 offset:48
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v8, s0
+; GFX9-DS128-NEXT:    ds_read_b128 v[4:7], v9
+; GFX9-DS128-NEXT:    ds_read_b128 v[10:13], v9 offset:16
+; GFX9-DS128-NEXT:    ds_read_b128 v[18:21], v9 offset:32
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(3)
-; GFX9-DS128-NEXT:    v_bfe_i32 v14, v6, 0, 16
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v6
-; GFX9-DS128-NEXT:    v_bfe_i32 v16, v6, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v14, v2, 0, 16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
+; GFX9-DS128-NEXT:    v_bfe_i32 v16, v2, 0, 16
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v7
-; GFX9-DS128-NEXT:    ds_write_b128 v12, v[14:17] offset:224
-; GFX9-DS128-NEXT:    v_bfe_i32 v15, v6, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v13, v7, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v14, 31, v13
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v16, 31, v15
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v4
-; GFX9-DS128-NEXT:    ds_write_b128 v12, v[13:16] offset:240
-; GFX9-DS128-NEXT:    v_bfe_i32 v15, v6, 0, 16
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
-; GFX9-DS128-NEXT:    v_bfe_i32 v13, v4, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v4, v5, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v6, v6, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
-; GFX9-DS128-NEXT:    ds_write_b128 v12, v[4:7] offset:208
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(5)
-; GFX9-DS128-NEXT:    v_bfe_i32 v4, v2, 0, 16
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX9-DS128-NEXT:    v_bfe_i32 v6, v2, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
-; GFX9-DS128-NEXT:    ds_write_b128 v12, v[4:7] offset:160
-; GFX9-DS128-NEXT:    v_bfe_i32 v4, v3, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v6, v2, 0, 16
+; GFX9-DS128-NEXT:    ds_write_b128 v8, v[14:17] offset:224
+; GFX9-DS128-NEXT:    v_bfe_i32 v16, v2, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v14, v3, 0, 16
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
+; GFX9-DS128-NEXT:    ds_write_b128 v8, v[14:17] offset:240
+; GFX9-DS128-NEXT:    v_bfe_i32 v16, v2, 0, 16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
+; GFX9-DS128-NEXT:    v_bfe_i32 v14, v0, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v0, v1, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-DS128-NEXT:    ds_write_b128 v8, v[0:3] offset:208
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v20
+; GFX9-DS128-NEXT:    v_bfe_i32 v0, v20, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-DS128-NEXT:    ds_write_b128 v8, v[0:3] offset:160
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v21
+; GFX9-DS128-NEXT:    v_bfe_i32 v0, v21, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-DS128-NEXT:    ds_write_b128 v8, v[0:3] offset:176
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v18
+; GFX9-DS128-NEXT:    v_bfe_i32 v0, v18, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX9-DS128-NEXT:    ds_write_b128 v8, v[0:3] offset:128
+; GFX9-DS128-NEXT:    v_bfe_i32 v0, v5, 0, 16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v5
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v19
+; GFX9-DS128-NEXT:    ds_write_b128 v8, v[14:17] offset:192
+; GFX9-DS128-NEXT:    v_bfe_i32 v14, v19, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v16, v5, 0, 16
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v12
+; GFX9-DS128-NEXT:    ds_write_b128 v8, v[14:17] offset:144
+; GFX9-DS128-NEXT:    v_bfe_i32 v14, v12, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v16, v5, 0, 16
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v13
+; GFX9-DS128-NEXT:    ds_write_b128 v8, v[14:17] offset:96
+; GFX9-DS128-NEXT:    v_bfe_i32 v14, v13, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v16, v5, 0, 16
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v10
+; GFX9-DS128-NEXT:    ds_write_b128 v8, v[14:17] offset:112
+; GFX9-DS128-NEXT:    v_bfe_i32 v12, v10, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v14, v5, 0, 16
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v13, 31, v12
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
+; GFX9-DS128-NEXT:    ds_write_b128 v8, v[12:15] offset:64
+; GFX9-DS128-NEXT:    v_bfe_i32 v12, v4, 0, 16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v4
+; GFX9-DS128-NEXT:    v_bfe_i32 v14, v4, 0, 16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v11
+; GFX9-DS128-NEXT:    v_bfe_i32 v16, v11, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v18, v4, 0, 16
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
+; GFX9-DS128-NEXT:    ds_write_b128 v8, v[16:19] offset:80
+; GFX9-DS128-NEXT:    v_bfe_i32 v16, v7, 0, 16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v7
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v6
+; GFX9-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v18, v4, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v4, v6, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v6, v7, 0, 16
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v13, 31, v12
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
-; GFX9-DS128-NEXT:    v_bfe_i32 v2, v0, 0, 16
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX9-DS128-NEXT:    ds_write_b128 v12, v[4:7] offset:176
-; GFX9-DS128-NEXT:    v_bfe_i32 v4, v0, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(6)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v9
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v14, 31, v13
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v16, 31, v15
-; GFX9-DS128-NEXT:    ds_write_b128 v12, v[2:5] offset:128
-; GFX9-DS128-NEXT:    v_bfe_i32 v4, v0, 0, 16
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
-; GFX9-DS128-NEXT:    ds_write_b128 v12, v[13:16] offset:192
-; GFX9-DS128-NEXT:    v_bfe_i32 v13, v1, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v15, v0, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v14, 31, v13
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v16, 31, v15
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(7)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v20
-; GFX9-DS128-NEXT:    ds_write_b128 v12, v[13:16] offset:144
-; GFX9-DS128-NEXT:    v_bfe_i32 v13, v20, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v15, v0, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v14, 31, v13
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v16, 31, v15
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v21
-; GFX9-DS128-NEXT:    ds_write_b128 v12, v[13:16] offset:96
-; GFX9-DS128-NEXT:    v_bfe_i32 v13, v21, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v15, v0, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v14, 31, v13
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v16, 31, v15
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v18
-; GFX9-DS128-NEXT:    ds_write_b128 v12, v[13:16] offset:112
-; GFX9-DS128-NEXT:    v_bfe_i32 v13, v18, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v15, v0, 0, 16
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v8
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v14, 31, v13
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v16, 31, v15
-; GFX9-DS128-NEXT:    v_bfe_i32 v6, v8, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v8, v0, 0, 16
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v19
-; GFX9-DS128-NEXT:    ds_write_b128 v12, v[13:16] offset:64
-; GFX9-DS128-NEXT:    v_bfe_i32 v13, v19, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v15, v0, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v14, 31, v13
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v16, 31, v15
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v11
-; GFX9-DS128-NEXT:    ds_write_b128 v12, v[13:16] offset:80
-; GFX9-DS128-NEXT:    v_bfe_i32 v15, v0, 0, 16
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v10
-; GFX9-DS128-NEXT:    v_bfe_i32 v17, v10, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v19, v0, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v2, v9, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v13, v11, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v18, 31, v17
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v20, 31, v19
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v9, 31, v8
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v14, 31, v13
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v16, 31, v15
-; GFX9-DS128-NEXT:    ds_write_b128 v12, v[17:20] offset:32
-; GFX9-DS128-NEXT:    ds_write_b128 v12, v[13:16] offset:48
-; GFX9-DS128-NEXT:    ds_write_b128 v12, v[6:9]
-; GFX9-DS128-NEXT:    ds_write_b128 v12, v[2:5] offset:16
+; GFX9-DS128-NEXT:    ds_write_b128 v8, v[4:7] offset:32
+; GFX9-DS128-NEXT:    ds_write_b128 v8, v[16:19] offset:48
+; GFX9-DS128-NEXT:    ds_write_b128 v8, v[12:15]
+; GFX9-DS128-NEXT:    ds_write_b128 v8, v[0:3] offset:16
 ; GFX9-DS128-NEXT:    s_endpgm
   %load = load <32 x i16>, ptr addrspace(3) %in
   %ext = sext <32 x i16> %load to <32 x i64>
