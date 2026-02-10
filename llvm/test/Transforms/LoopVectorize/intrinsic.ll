@@ -1904,3 +1904,36 @@ for.body:                                         ; preds = %entry, %for.body
 exit:                                            ; preds = %for.body, %entry
   ret void
 }
+
+declare i64 @llvm.clmul.i64(i64 %a, i64 %b)
+
+define void @clmul_i64(ptr %a, ptr %b, ptr %c, i64 %n) {
+; CHECK-LABEL: @clmul_i64(
+; CHECK: llvm.clmul.v4i64
+; CHECK: ret void
+;
+entry:
+  br label %for.body
+
+for.body:                                       ; preds = %entry, %for.body
+  %i = phi i64 [0, %entry], [%i.next, %for.body]
+
+  %pa = getelementptr i64, ptr %a, i64 %i
+  %pb = getelementptr i64, ptr %b, i64 %i
+  %pc = getelementptr i64, ptr %c, i64 %i
+
+  %va = load i64, ptr %pa
+  %vb = load i64, ptr %pb
+
+  %r = call i64 @llvm.clmul.i64(i64 %va, i64 %vb)
+
+  store i64 %r, ptr %pc
+
+  %i.next = add i64 %i, 1
+  %cmp = icmp eq i64 %i.next, %n
+  br i1 %cmp, label %exit, label %for.body
+
+exit:                                       ; preds = %for.body, %entry
+  ret void
+
+}
