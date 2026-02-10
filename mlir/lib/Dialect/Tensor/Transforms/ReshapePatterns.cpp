@@ -722,8 +722,7 @@ static LogicalResult computeExpandedSliceInfoForReassocGroup(
       // to check the validity of the range.
       if ((expandedShapeSize % currentCollapsedsize) != 0)
         return failure();
-      if (!isMultipleOf(collapsedOffset,
-                        currentOffsetDivisor * currentCollapsedsize))
+      if (!isMultipleOf(collapsedOffset, staticSize.value()))
         return failure();
     }
     // Slicing dimension gets the remaining collapsed size.
