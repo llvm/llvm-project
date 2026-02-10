@@ -3774,7 +3774,8 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
     } else if (isClangFormatOn(Trimmed)) {
       FormattingOff = false;
     } else if (Trimmed.starts_with("//")) {
-      if (!ImportsInBlock.empty())
+      // Associating comments within the imports with the nearest import below.
+      if (HasImport)
         AssociatedCommentLines.push_back(Line);
     } else if (Trimmed.starts_with("/*")) {
       auto EndPos = Code.find("*/", SearchFrom + 2);
