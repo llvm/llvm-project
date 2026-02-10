@@ -38,6 +38,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/InterleavedRange.h"
@@ -710,8 +711,8 @@ static Operation *buildMultiDimReduce(OpBuilder &b, Operation *reduceOp,
 }
 
 static SmallVector<bool> getDimsToReduce(LinalgOp linalgOp) {
-  return llvm::to_vector(
-      llvm::map_range(linalgOp.getIteratorTypesArray(), isReductionIterator));
+  return llvm::map_to_vector(linalgOp.getIteratorTypesArray(),
+                             isReductionIterator);
 }
 
 /// Check if `op` is a linalg.reduce or a linalg.generic that has at least one
@@ -3847,8 +3848,12 @@ public:
 
     const int64_t srcWidth = srcElementType.getIntOrFloatBitWidth();
     const int64_t dstWidth = dstElementType.getIntOrFloatBitWidth();
-    const Type dstType =
-        cast<ShapedType>(val.getType()).cloneWith(std::nullopt, dstElementType);
+    // Handle both shaped as well as scalar types.
+    Type dstType;
+    if (auto shapedType = dyn_cast<ShapedType>(val.getType()))
+      dstType = shapedType.cloneWith(std::nullopt, dstElementType);
+    else
+      dstType = dstElementType;
 
     if (isa<IntegerType>(srcElementType) && isa<FloatType>(dstElementType)) {
       return arith::SIToFPOp::create(rewriter, loc, dstType, val);
@@ -3887,6 +3892,8 @@ public:
   // convolution.
   Value conv1dSliceAsOuterProduct(RewriterBase &rewriter, Location loc,
                                   Value lhs, Value rhs, Value res) {
+    lhs = promote(rewriter, loc, lhs, res.getType());
+    rhs = promote(rewriter, loc, rhs, res.getType());
     return vector::OuterProductOp::create(rewriter, loc, res.getType(), lhs,
                                           rhs, res, vector::CombiningKind::ADD);
   }

@@ -339,10 +339,9 @@ struct DebugSettings {
     // Messages with Type/Components added to the exclude list are not
     // not printed when debug is enabled unless they are explicitly
     // requested by the user.
-    // Eventuall this should be configured from the upper layers but
+    // Eventually, this should be configured from the upper layers but
     // for now we can hardcode some excluded types here like:
     // Settings.ExcludeFilters.push_back(Type);
-    Settings.ExcludeFilters.push_back(OLDT_BinaryDump);
 
     if (!EnvRef.getAsInteger(10, Settings.DefaultLevel))
       return;

@@ -986,8 +986,13 @@ void test_promotion(void) {
 
 void test_bool(_Bool b, _Bool* bp)
 {
+#ifndef __arm__
   printf("%zu", b); // expected-warning-re{{format specifies type 'size_t' (aka '{{.+}}') but the argument has type '_Bool'}}
   printf("%td", b); // expected-warning-re{{format specifies type 'ptrdiff_t' (aka '{{.+}}') but the argument has type '_Bool'}}
+#else
+  printf("%zu", b); // no-warning
+  printf("%td", b); // no-warning
+#endif
   printf("%jd", b); // expected-warning-re{{format specifies type 'intmax_t' (aka '{{.+}}') but the argument has type '_Bool'}}
   printf("%lld", b); // expected-warning{{format specifies type 'long long' but the argument has type '_Bool'}}
   printf("%ld", b); // expected-warning{{format specifies type 'long' but the argument has type '_Bool'}}
