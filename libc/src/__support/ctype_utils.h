@@ -371,6 +371,7 @@ LIBC_INLINE constexpr bool isalnum(char ch) {
   }
 }
 
+#ifndef LIBC_COPT_SMALL_ASCII_CTYPE
 LIBC_INLINE constexpr int b36_char_to_int(char ch) {
   switch (ch) {
   case '0':
@@ -475,6 +476,17 @@ LIBC_INLINE constexpr int b36_char_to_int(char ch) {
     return 0;
   }
 }
+#else  // LIBC_COPT_SMALL_ASCII_CTYPE
+// This version assumes ASCII for the tolower, but generates smaller code since
+// the switch version of this function ends up with a table.
+LIBC_INLINE constexpr int b36_char_to_int(char ch) {
+  if (isdigit(input))
+    return input - '0';
+  if (isalpha(input))
+    return (input | 32) + 10 - 'a';
+  return 0;
+}
+#endif // LIBC_COPT_SMALL_ASCII_CTYPE
 
 LIBC_INLINE constexpr char int_to_b36_char(int num) {
   // Can't actually use LIBC_ASSERT here because it depends on integer_to_string

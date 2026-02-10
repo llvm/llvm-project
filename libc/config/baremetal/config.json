@@ -28,7 +28,7 @@
     "LIBC_CONF_PRINTF_DISABLE_STRERROR": {
       "value": true
     },
-    "LIBC_CONF_PRINTF_DISABLE_WIDE" : {
+    "LIBC_CONF_PRINTF_DISABLE_WIDE": {
       "value": true
     }
   },
@@ -66,6 +66,11 @@
   "codegen": {
     "LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR": {
       "value": false
+    }
+  },
+  "ctype": {
+    "LIBC_CONF_CTYPE_SMALLER_ASCII": {
+      "value": true
     }
   }
 }

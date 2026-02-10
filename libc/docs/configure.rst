@@ -28,6 +28,8 @@ to learn about the defaults for your platform and target.
 * **"codegen" options**
     - ``LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR``: Enable -fstack-protector-strong to defend against stack smashing attack.
     - ``LIBC_CONF_KEEP_FRAME_POINTER``: Keep frame pointer in functions for better debugging experience.
+* **"ctype" options**
+    - ``LIBC_CONF_CTYPE_SMALLER_ASCII``: Shrinks b36_char_to_int by assuming the character encoding is ASCII.
 * **"errno" options**
     - ``LIBC_CONF_ERRNO_MODE``: The implementation used for errno, acceptable values are LIBC_ERRNO_MODE_DEFAULT, LIBC_ERRNO_MODE_UNDEFINED, LIBC_ERRNO_MODE_THREAD_LOCAL, LIBC_ERRNO_MODE_SHARED, LIBC_ERRNO_MODE_EXTERNAL, and LIBC_ERRNO_MODE_SYSTEM_INLINE.
 * **"fenv" options**

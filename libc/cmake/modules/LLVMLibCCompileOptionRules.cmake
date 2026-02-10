@@ -147,6 +147,10 @@ function(_get_compile_options_from_config output_var)
     endif()
   endif()
 
+  if(LIBC_CONF_CTYPE_SMALLER_ASCII)
+    list(APPEND config_options "-DLIBC_COPT_CTYPE_SMALLER_ASCII")
+  endif()
+
   if(LIBC_CONF_PRINTF_DISABLE_WIDE)
     list(APPEND config_options "-DLIBC_COPT_PRINTF_DISABLE_WIDE")
   endif()
