@@ -66,7 +66,6 @@ attributes #0 = { nounwind uwtable "target-cpu"="x86-64" "target-features"="+cmo
 !14 = !DILocation(line: 4, column: 1, scope: !11)
 !15 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 10, type: !12, scopeLine: 10, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
 !18 = !DILocation(line: 11, column: 1, scope: !15)
-;; Discriminator 186646559 encodes pseudo-probe index 3, matching profile line 3.
 !19 = !DILocation(line: 13, column: 5, scope: !20)
 !20 = !DILexicalBlockFile(scope: !15, file: !1, discriminator: 186646559)
 !21 = !DILocation(line: 16, column: 1, scope: !15)
