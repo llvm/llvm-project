@@ -48,6 +48,8 @@ class EvalIDScope;
 /// Holds all information required to evaluate constexpr code in a module.
 class Context final {
 public:
+  bool ExceptionsEnabled;
+
   /// Initialises the constexpr VM.
   explicit Context(ASTContext &Ctx);
 

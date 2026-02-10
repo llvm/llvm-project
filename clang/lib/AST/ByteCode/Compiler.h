@@ -28,6 +28,7 @@ class QualType;
 
 namespace interp {
 
+template <class Emitter> class CatchExceptionScope;
 template <class Emitter> class LocalScope;
 template <class Emitter> class VariableScope;
 template <class Emitter> class DeclScope;
@@ -108,7 +109,7 @@ struct VarCreationState {
   bool notCreated() const { return !S; }
 };
 
-enum class ScopeKind { Block, FullExpression, Call };
+enum class ScopeKind { Block, FullExpression, Call, Try, Catch };
 
 /// Compilation context for expressions.
 template <class Emitter>
@@ -356,8 +357,9 @@ protected:
   UnsignedOrNone allocateTemporary(const Expr *E);
 
 private:
-  friend class VariableScope<Emitter>;
+  friend class CatchExceptionScope<Emitter>;
   friend class LocalScope<Emitter>;
+  friend class VariableScope<Emitter>;
   friend class DeclScope<Emitter>;
   friend class InitLinkScope<Emitter>;
   friend class InitStackScope<Emitter>;
@@ -469,6 +471,11 @@ private:
   bool maybeEmitDeferredVarInit(const VarDecl *VD);
 
   bool refersToUnion(const Expr *E);
+
+  bool emitFunctionReturn(const FunctionDecl *FD, OptPrimType ReturnType);
+
+  bool call(const Function *Func, SourceInfo Loc);
+  bool emitCallCatchEpilog(SourceInfo Loc, bool DestroyScopes = true);
 
 protected:
   /// Variable to storage mapping.
