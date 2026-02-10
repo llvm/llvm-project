@@ -29,11 +29,6 @@ Error CreateClonesAtOrigin::runOnFunctions(BinaryContext &BC) {
   if (!opts::CloneAtOrigin)
     return Error::success();
 
-  if (opts::UseOldText) {
-    BC.outs() << "BOLT-INFO: skipping clones at origin with --use-old-text\n";
-    return Error::success();
-  }
-
   if (opts::Verbosity >= 1)
     BC.outs() << "BOLT-INFO: creating clones at origin\n";
 

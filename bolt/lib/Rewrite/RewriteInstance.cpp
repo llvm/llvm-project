@@ -2425,6 +2425,20 @@ void RewriteInstance::adjustCommandLineOptions() {
     if (!opts::TerminalTrap.getNumOccurrences())
       opts::TerminalTrap = false;
   }
+
+  if (opts::CloneAtOrigin) {
+    if (opts::ForcePatch) {
+      BC->errs() << "BOLT-ERROR: --clone-at-origin is incompatible with "
+                    "--force-patch\n";
+      exit(1);
+    }
+
+    if (opts::UseOldText) {
+      BC->errs() << "BOLT-ERROR: --clone-at-origin is incompatible with "
+                    "--use-old-text\n";
+      exit(1);
+    }
+  }
 }
 
 namespace {
