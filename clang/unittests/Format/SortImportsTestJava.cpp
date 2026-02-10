@@ -350,14 +350,11 @@ TEST_F(SortImportsTestJava, NoReplacementsForValidImportsWindows) {
 }
 
 TEST_F(SortImportsTestJava, DoNotSortImportsInBlockComment) {
-  EXPECT_EQ("/* import org.d;\n"
-            "import org.c;\n"
-            "import org.b; */\n"
-            "import org.a;",
-            sort("/* import org.d;\n"
-                 "import org.c;\n"
-                 "import org.b; */\n"
-                 "import org.a;"));
+  constexpr StringRef Code("/* import org.d;\n"
+                           "import org.c;\n"
+                           "import org.b; */\n"
+                           "import org.a;");
+  EXPECT_EQ(Code, sort(Code));
 }
 
 TEST_F(SortImportsTestJava, StopAtClassDeclaration) {
