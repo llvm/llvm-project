@@ -30,7 +30,6 @@
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_const.h>
-#include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_constructible.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
@@ -1481,7 +1480,7 @@ private:
 
 #if _LIBCPP_STD_VER >= 26
 
-    if (std::is_constant_evaluated() && std::is_copy_constructible_v<decltype(__rhs.first)>) {
+    if constexpr (std::is_copy_constructible_v<decltype(__rhs.first)>) {
       // We use copy, and not "move" as the constraint here because we can NOT move
       // from `const key_type`, which is how `value_type` is defined for `std::map`
       // `typedef pair<const key_type, mapped_type> value_type;`
@@ -1595,7 +1594,7 @@ private:
     return __construct_from_tree(__src, [this](value_type& __val) {
 
 #if _LIBCPP_STD_VER >= 26
-      if (std::is_constant_evaluated() && std::is_copy_constructible_v<decltype(__val.first)>) {
+      if constexpr (std::is_copy_constructible_v<decltype(__val.first)>) {
         return __construct_node_sfinae(
             std::integral_constant<bool, std::is_copy_constructible_v<decltype(__val.first)>>(),
             std::forward<decltype(__val.first)>(__val.first),
