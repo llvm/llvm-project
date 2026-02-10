@@ -2625,19 +2625,6 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       CheckFailed("invalid name for a VFABI variant: " + S, V);
   }
 
-  if (auto A = Attrs.getFnAttr("denormal-fp-math"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    if (!parseDenormalFPAttribute(S).isValid())
-      CheckFailed("invalid value for 'denormal-fp-math' attribute: " + S, V);
-  }
-
-  if (auto A = Attrs.getFnAttr("denormal-fp-math-f32"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    if (!parseDenormalFPAttribute(S).isValid())
-      CheckFailed("invalid value for 'denormal-fp-math-f32' attribute: " + S,
-                  V);
-  }
-
   if (auto A = Attrs.getFnAttr("modular-format"); A.isValid()) {
     StringRef S = A.getValueAsString();
     SmallVector<StringRef> Args;
@@ -3909,6 +3896,9 @@ void Verifier::visitCallBase(CallBase &Call) {
           "preallocated as a call site attribute can only be on "
           "llvm.call.preallocated.arg");
   }
+
+  Check(!Attrs.hasFnAttr(Attribute::DenormalFPEnv),
+        "denormal_fpenv attribute may not apply to call sites", Call);
 
   // Verify call attributes.
   verifyFunctionAttrs(FTy, Attrs, &Call, IsIntrinsic, Call.isInlineAsm());
@@ -7919,14 +7909,9 @@ struct VerifierLegacyPass : public FunctionPass {
   std::unique_ptr<Verifier> V;
   bool FatalErrors = true;
 
-  VerifierLegacyPass() : FunctionPass(ID) {
-    initializeVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+  VerifierLegacyPass() : FunctionPass(ID) {}
   explicit VerifierLegacyPass(bool FatalErrors)
-      : FunctionPass(ID),
-        FatalErrors(FatalErrors) {
-    initializeVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+      : FunctionPass(ID), FatalErrors(FatalErrors) {}
 
   bool doInitialization(Module &M) override {
     V = std::make_unique<Verifier>(

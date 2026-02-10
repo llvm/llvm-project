@@ -480,12 +480,12 @@ void c11_atomic_exchange(_Atomic(int) *ptr, int value) {
   __c11_atomic_exchange(ptr, value, __ATOMIC_RELEASE);
   __c11_atomic_exchange(ptr, value, __ATOMIC_ACQ_REL);
   __c11_atomic_exchange(ptr, value, __ATOMIC_SEQ_CST);
-  // CIR: %{{.+}} = cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg release %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg seq_cst %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acquire syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acquire syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg release syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acq_rel syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
 
   // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
   // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4
@@ -513,12 +513,12 @@ void atomic_exchange(int *ptr, int *value, int *old) {
   __atomic_exchange(ptr, value, old, __ATOMIC_RELEASE);
   __atomic_exchange(ptr, value, old, __ATOMIC_ACQ_REL);
   __atomic_exchange(ptr, value, old, __ATOMIC_SEQ_CST);
-  // CIR: %{{.+}} = cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg release %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg seq_cst %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acquire syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acquire syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg release syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acq_rel syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
 
   // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
   // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4
@@ -546,12 +546,12 @@ void atomic_exchange_n(int *ptr, int value) {
   __atomic_exchange_n(ptr, value, __ATOMIC_RELEASE);
   __atomic_exchange_n(ptr, value, __ATOMIC_ACQ_REL);
   __atomic_exchange_n(ptr, value, __ATOMIC_SEQ_CST);
-  // CIR: %{{.+}} = cir.atomic.xchg relaxed %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg acquire %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg release %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg acq_rel %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
-  // CIR: %{{.+}} = cir.atomic.xchg seq_cst %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg relaxed syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acquire syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acquire syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg release syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg acq_rel syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR: %{{.+}} = cir.atomic.xchg seq_cst syncscope(system) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i
 
   // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} monotonic, align 4
   // LLVM: %{{.+}} = atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} acquire, align 4
@@ -2065,31 +2065,31 @@ int atomic_load_and_store_dynamic_order(int *ptr, int order) {
   // CIR:      cir.switch(%[[ORDER]] : !s32i) {
   // CIR-NEXT:   cir.case(default, []) {
   // CIR-NEXT:     %[[LIT:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg relaxed %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg relaxed syncscope(system) %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT:.+]] : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:     cir.break
   // CIR-NEXT:   }
   // CIR-NEXT:   cir.case(anyof, [#cir.int<1> : !s32i, #cir.int<2> : !s32i]) {
   // CIR-NEXT:     %[[LIT:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg acquire %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg acquire syncscope(system) %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT]] : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:     cir.break
   // CIR-NEXT:   }
   // CIR-NEXT:   cir.case(anyof, [#cir.int<3> : !s32i]) {
   // CIR-NEXT:     %[[LIT:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg release %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg release syncscope(system) %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT]] : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:     cir.break
   // CIR-NEXT:   }
   // CIR-NEXT:   cir.case(anyof, [#cir.int<4> : !s32i]) {
   // CIR-NEXT:     %[[LIT:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg acq_rel %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg acq_rel syncscope(system) %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT]] : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:     cir.break
   // CIR-NEXT:   }
   // CIR-NEXT:   cir.case(anyof, [#cir.int<5> : !s32i]) {
   // CIR-NEXT:     %[[LIT:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!s32i>, !s32i
-  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg seq_cst %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
+  // CIR-NEXT:     %[[RES:.+]] = cir.atomic.xchg seq_cst syncscope(system) %[[PTR]], %[[LIT]] : (!cir.ptr<!s32i>, !s32i) -> !s32i
   // CIR-NEXT:     cir.store align(4) %[[RES]], %[[RES_SLOT]] : !s32i, !cir.ptr<!s32i>
   // CIR-NEXT:     cir.break
   // CIR-NEXT:   }
