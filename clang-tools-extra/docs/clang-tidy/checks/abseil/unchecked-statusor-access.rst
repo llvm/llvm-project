@@ -93,7 +93,7 @@ known to have ok status. For example:
 Ensuring that the status is ok using common macros
 --------------------------------------------------
 
-The check is aware of common macros like ``ABSL_CHECK`` or ``ABSL_CHECK_OK``,
+The check is aware of common macros like ``ABSL_CHECK`` or ``ABSL_CHECK_OK``.
 Those can be used to ensure that the status of a ``StatusOr<T>`` object
 is ok. For example:
 
