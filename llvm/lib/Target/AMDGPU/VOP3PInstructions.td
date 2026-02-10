@@ -182,6 +182,8 @@ multiclass MadFmaMixFP32Pats<SDPatternOperator fma_like,
                              ValueType VT = f16> {
   defvar VOP3PMadMixModsPat = !if (!eq(VT, bf16), VOP3PMadMixBF16Mods, VOP3PMadMixMods);
   defvar VOP3PMadMixModsExtPat = !if (!eq(VT, bf16), VOP3PMadMixBF16ModsExt, VOP3PMadMixModsExt);
+  defvar OneImm = !if (!eq(VT, bf16), CONST.BF16_ONE, CONST.FP16_ONE);
+  defvar NegOneImm = !if (!eq(VT, bf16), CONST.BF16_NEG_ONE, CONST.FP16_NEG_ONE);
   // At least one of the operands needs to be an fpextend of an f16
   // for this to be worthwhile, so we need three patterns here.
   // TODO: Could we use a predicate to inspect src1/2/3 instead?
@@ -202,6 +204,34 @@ multiclass MadFmaMixFP32Pats<SDPatternOperator fma_like,
                    (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_mods)),
                    (f32 (VOP3PMadMixModsExtPat VT:$src2, i32:$src2_mods)))),
     (mix_inst $src0_mods, $src0, $src1_mods, $src1, $src2_mods, $src2,
+              DSTCLAMP.NONE)>;
+
+  // (fadd x, y) -> (fma x, 1.0, y)
+  def : GCNPat <
+    (f32 (fadd (f32 (VOP3PMadMixModsExtPat VT:$src0, i32:$src0_mods)),
+               (f32 (VOP3PMadMixModsPat  f32:$src1, i32:$src1_mods)))),
+    (mix_inst $src0_mods, $src0, (i32 8), (i32 OneImm), $src1_mods, $src1,
+              DSTCLAMP.NONE)>;
+
+  // (fmul x, y) -> (fma x, y, -0.0)
+  def : GCNPat <
+    (f32 (fmul (f32 (VOP3PMadMixModsExtPat VT:$src0, i32:$src0_mods)),
+               (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_mods)))),
+    (mix_inst $src0_mods, $src0, $src1_mods, $src1, (i32 SRCMODS.NEG), (i32 0),
+              DSTCLAMP.NONE)>;
+
+  // (fsub x, y) -> (fma y, -1.0, x)
+  def : GCNPat <
+    (f32 (fsub (f32 (VOP3PMadMixModsExtPat VT:$src0, i32:$src0_mods)),
+               (f32 (VOP3PMadMixModsPat f32:$src1, i32:$src1_mods)))),
+    (mix_inst $src1_mods, $src1, (i32 8), (i32 NegOneImm), $src0_mods, $src0,
+              DSTCLAMP.NONE)>;
+
+  // (fsub x, y) -> (fma y, -1.0, x)
+  def : GCNPat <
+    (f32 (fsub (f32 (VOP3PMadMixModsPat f32:$src0, i32:$src0_mods)),
+               (f32 (VOP3PMadMixModsExtPat VT:$src1, i32:$src1_mods)))),
+    (mix_inst $src1_mods, $src1, (i32 8), (i32 NegOneImm), $src0_mods, $src0,
               DSTCLAMP.NONE)>;
 }
 
@@ -663,7 +693,6 @@ def VOP3P_DOTF8_Profile : VOP3P_Profile<VOPProfile <[f32, i32, i32, f32]>,
 multiclass VOP3PDOTF8Inst <string OpName, SDPatternOperator intrinsic_node> {
   defm NAME : VOP3PInst<OpName, VOP3P_DOTF8_Profile, null_frag, 1>;
 
-  let SubtargetPredicate = isGFX12Plus in
   def : GCNPat <(intrinsic_node i32:$src0, i32:$src1,
                                 (VOP3Mods f32:$src2, i32:$src2_modifiers)),
                 (!cast<Instruction>(NAME) i32:$src0, i32:$src1,
@@ -996,6 +1025,7 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node, bit Scaled = 
   Instruction Opcode = !cast<Instruction>(NAME);
   bit is_dgemm = 0;
   bit is_gfx940_xdl = 0;
+  let isConvergent = 1;
   let PseudoInstr = NAME; // FIXME: Why is this not the default
 }
 
@@ -1033,7 +1063,7 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
   defvar ProfileVGPR = !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD");
 
 
-  let isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1 in {
+  let mayRaiseFPException = 0, ReadsModeReg = 1 in {
     // FP32 denorm mode is respected, rounding mode is not. Exceptions are not supported.
     let Constraints = !if(NoDstOverlap, "@earlyclobber $vdst", "") in {
       def _e64 : MAIInst<OpName, ProfileAGPR,
@@ -1060,7 +1090,7 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
                               MFMATable<1, "VGPR", NAME # "_vgprcd_e64", NAME # "_mac_e64">;
       }
     }
-  } // End isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1
+  } // mayRaiseFPException = 0, ReadsModeReg = 1
 }
 
 // Provide a wrapper around MAIInst that provides the appended operands from V_MFMA_LD_SCALE_B32
@@ -1396,13 +1426,13 @@ multiclass WMMAInst<string Suffix, string Instr, VOPProfile P, SDPatternOperator
   defvar WMMAConstraints3Addr = "@earlyclobber $vdst";
 
   defvar WMMAProfile = VOPProfileWMMA<P, Suffix, _Src01RC64, Type.hasClamp, Type.hasOpsel>;
-  let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
+  let isConvergent = 1, Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
     let Constraints = WMMAConstraints2Addr, isConvertibleToThreeAddress = convertibleTo3Addr in {
       def _twoaddr # Suffix : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
     }
   }
   if convertibleTo3Addr then {
-    let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
+    let isConvergent = 1, Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
       let Constraints = WMMAConstraints3Addr, SchedRW = [Write32Bit, Write32Bit] in {
         def _threeaddr # Suffix : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
       }
@@ -2291,7 +2321,7 @@ multiclass VOP3PX2_Real_ScaledWMMA_F4<string Gen, bits<8> op, bits<8> LdScaleOp,
   if !eq(Gen, "gfx1250") then {
     def _gfx1250 : VOP3P_Real_Gen<PS, GFX1250Gen, PS.Mnemonic>,
                    VOP3PX2e <op, LdScaleOp, WMMAP> {
-      let PostEncoderMethod = "postEncodeLdScale";
+      let PostEncoderMethod = "postEncodeVOP3<true, true, false>";
     }
   }
 }
@@ -2305,7 +2335,7 @@ multiclass VOP3PX2_Real_ScaledWMMA<string Gen, bits<8> op, bits<8> LdScaleOp, VO
                    VOP3PX2e <op, LdScaleOp, WMMAP>,
                    MFMA_F8F6F4_WithSizeTable_Helper<PS, psName # "_f8_f8_w32_" # Gen> {
       let AsmString = asmName # PS.AsmOperands;
-      let PostEncoderMethod = "postEncodeLdScale";
+      let PostEncoderMethod = "postEncodeVOP3<true, true, false>";
     }
   }
 }
@@ -2462,6 +2492,11 @@ multiclass VOP3P_Realtriple<GFXGen Gen, bits<8> op, string backing_ps_name = NAM
 multiclass VOP3P_Realtriple_gfx11_gfx12<bits<8> op>
   : VOP3P_Realtriple<GFX11Gen, op>, VOP3P_Realtriple<GFX12Gen, op>;
 
+defm V_DOT4_F32_FP8_BF8 : VOP3P_Realtriple_gfx11_gfx12<0x24>;
+defm V_DOT4_F32_BF8_FP8 : VOP3P_Realtriple_gfx11_gfx12<0x25>;
+defm V_DOT4_F32_FP8_FP8 : VOP3P_Realtriple_gfx11_gfx12<0x26>;
+defm V_DOT4_F32_BF8_BF8 : VOP3P_Realtriple_gfx11_gfx12<0x27>;
+
 //===----------------------------------------------------------------------===//
 // GFX12
 //===----------------------------------------------------------------------===//
@@ -2504,7 +2539,7 @@ defm V_FMA_MIX_F32_BF16 : VOP3P_Realtriple<GFX1250Gen, 0x3d>;
 defm V_FMA_MIXLO_BF16   : VOP3P_Realtriple<GFX1250Gen, 0x3e>;
 defm V_FMA_MIXHI_BF16   : VOP3P_Realtriple<GFX1250Gen, 0x3f>;
 
-let PostEncoderMethod = "postEncodeLdScale" in {
+let PostEncoderMethod = "postEncodeVOP3<true, true, false>" in {
   defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3P_Real_gfx1250<0x35>;
   defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3P_Real_gfx1250<0x3a>;
 }
@@ -2515,10 +2550,6 @@ def : AMDGPUMnemonicAlias<"v_fma_mix_f32_f16",  "v_fma_mix_f32">;
 defm V_PK_MINIMUM_F16 : VOP3P_Real_gfx12<0x1d>;
 defm V_PK_MAXIMUM_F16 : VOP3P_Real_gfx12<0x1e>;
 
-defm V_DOT4_F32_FP8_BF8 : VOP3P_Realtriple<GFX12Gen, 0x24>;
-defm V_DOT4_F32_BF8_FP8 : VOP3P_Realtriple<GFX12Gen, 0x25>;
-defm V_DOT4_F32_FP8_FP8 : VOP3P_Realtriple<GFX12Gen, 0x26>;
-defm V_DOT4_F32_BF8_BF8 : VOP3P_Realtriple<GFX12Gen, 0x27>;
 
 //===----------------------------------------------------------------------===//
 // GFX11

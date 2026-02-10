@@ -351,6 +351,10 @@ def ROCDL_ClusterIdXOp : ROCDL_SpecialIdRegisterOp<"cluster.id.x">;
 def ROCDL_ClusterIdYOp : ROCDL_SpecialIdRegisterOp<"cluster.id.y">;
 def ROCDL_ClusterIdZOp : ROCDL_SpecialIdRegisterOp<"cluster.id.z">;
 
+def ROCDL_ClusterWorkgroupIdXOp : ROCDL_SpecialIdRegisterOp<"cluster.workgroup.id.x">;
+def ROCDL_ClusterWorkgroupIdYOp : ROCDL_SpecialIdRegisterOp<"cluster.workgroup.id.y">;
+def ROCDL_ClusterWorkgroupIdZOp : ROCDL_SpecialIdRegisterOp<"cluster.workgroup.id.z">;
+
 def ROCDL_WaveId : ROCDL_SpecialIdRegisterOp<"wave.id">;
 def ROCDL_WavefrontSizeOp : ROCDL_SpecialIdRegisterOp<"wavefrontsize">;
 
