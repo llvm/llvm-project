@@ -339,6 +339,7 @@ def __builtin_amdgcn_image_bvh_intersect_ray_lh : AMDGPUBuiltin<"_ExtVector<4, u
 // TODO: This is a no-op in wave32. Should the builtin require wavefrontsize64?
 def __builtin_amdgcn_permlane64 : AMDGPUBuiltin<"unsigned int(unsigned int)", [Const], "gfx11-insts">;
 def __builtin_amdgcn_s_wait_event_export_ready : AMDGPUBuiltin<"void()", [], "gfx11-insts">;
+def __builtin_amdgcn_s_wait_event : AMDGPUBuiltin<"void(_Constant short)", [], "gfx11-insts">;
 
 //===----------------------------------------------------------------------===//
 // WMMA builtins.
@@ -711,12 +712,12 @@ def __builtin_amdgcn_s_cluster_barrier : AMDGPUBuiltin<"void()", [], "gfx1250-in
 def __builtin_amdgcn_flat_prefetch : AMDGPUBuiltin<"void(void const address_space<0> *, _Constant int)", [Const], "vmem-pref-insts">;
 def __builtin_amdgcn_global_prefetch : AMDGPUBuiltin<"void(void const address_space<1> *, _Constant int)", [Const], "vmem-pref-insts">;
 
-def __builtin_amdgcn_global_load_monitor_b32 : AMDGPUBuiltin<"int(int address_space<1> *, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_global_load_monitor_b64 : AMDGPUBuiltin<"_ExtVector<2, int>(_ExtVector<2, int> address_space<1> *, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_global_load_monitor_b128 : AMDGPUBuiltin<"_ExtVector<4, int>(_ExtVector<4, int> address_space<1> *, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_flat_load_monitor_b32 : AMDGPUBuiltin<"int(int address_space<0> *, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_flat_load_monitor_b64 : AMDGPUBuiltin<"_ExtVector<2, int>(_ExtVector<2, int> address_space<0> *, _Constant int)", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_flat_load_monitor_b128 : AMDGPUBuiltin<"_ExtVector<4, int>(_ExtVector<4, int> address_space<0> *, _Constant int)", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_global_load_monitor_b32 : AMDGPUBuiltin<"int(int address_space<1> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_global_load_monitor_b64 : AMDGPUBuiltin<"_ExtVector<2, int>(_ExtVector<2, int> address_space<1> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_global_load_monitor_b128 : AMDGPUBuiltin<"_ExtVector<4, int>(_ExtVector<4, int> address_space<1> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_flat_load_monitor_b32 : AMDGPUBuiltin<"int(int address_space<0> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_flat_load_monitor_b64 : AMDGPUBuiltin<"_ExtVector<2, int>(_ExtVector<2, int> address_space<0> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_flat_load_monitor_b128 : AMDGPUBuiltin<"_ExtVector<4, int>(_ExtVector<4, int> address_space<0> *, _Constant int, _Constant int)", [Const], "gfx1250-insts">;
 def __builtin_amdgcn_cluster_load_b32 : AMDGPUBuiltin<"int(int address_space<1> *, _Constant int, int)", [Const], "mcast-load-insts,wavefrontsize32">;
 def __builtin_amdgcn_cluster_load_b64 : AMDGPUBuiltin<"_ExtVector<2, int>(_ExtVector<2, int> address_space<1> *, _Constant int, int)", [Const], "mcast-load-insts,wavefrontsize32">;
 def __builtin_amdgcn_cluster_load_b128 : AMDGPUBuiltin<"_ExtVector<4, int>(_ExtVector<4, int> address_space<1> *, _Constant int, int)", [Const], "mcast-load-insts,wavefrontsize32">;

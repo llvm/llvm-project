@@ -1514,9 +1514,9 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
-  if (auto *Phi = dyn_cast<VPPhi>(Def)) {
-    if (Phi->getNumOperands() == 1)
-      Phi->replaceAllUsesWith(Phi->getOperand(0));
+  if (isa<VPPhi, VPWidenPHIRecipe>(Def)) {
+    if (Def->getNumOperands() == 1)
+      Def->replaceAllUsesWith(Def->getOperand(0));
     return;
   }
 
@@ -1796,7 +1796,7 @@ static void simplifyBlends(VPlan &Plan) {
 
       auto *NewBlend =
           new VPBlendRecipe(cast_or_null<PHINode>(Blend->getUnderlyingValue()),
-                            OperandsWithMask, Blend->getDebugLoc());
+                            OperandsWithMask, *Blend, Blend->getDebugLoc());
       NewBlend->insertBefore(&R);
 
       VPValue *DeadMask = Blend->getMask(StartIndex);
@@ -3898,7 +3898,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         for (unsigned I = 1; I != Blend->getNumIncomingValues(); ++I)
           Select = Builder.createSelect(Blend->getMask(I),
                                         Blend->getIncomingValue(I), Select,
-                                        R.getDebugLoc(), "predphi");
+                                        R.getDebugLoc(), "predphi", *Blend);
         Blend->replaceAllUsesWith(Select);
         ToRemove.push_back(Blend);
       }

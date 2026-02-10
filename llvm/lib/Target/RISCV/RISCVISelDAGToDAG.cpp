@@ -1758,13 +1758,27 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case ISD::SMUL_LOHI:
-  case ISD::UMUL_LOHI: {
+  case ISD::UMUL_LOHI:
+  case RISCVISD::WMULSU: {
     // Custom select (S/U)MUL_LOHI to WMUL(U) for RV32P.
     assert(Subtarget->hasStdExtP() && !Subtarget->is64Bit() && VT == MVT::i32 &&
            "Unexpected opcode");
 
-    unsigned Opc =
-        Node->getOpcode() == ISD::SMUL_LOHI ? RISCV::WMUL : RISCV::WMULU;
+    unsigned Opc;
+    switch (Node->getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected opcode");
+    case ISD::SMUL_LOHI:
+      Opc = RISCV::WMUL;
+      break;
+    case ISD::UMUL_LOHI:
+      Opc = RISCV::WMULU;
+      break;
+    case RISCVISD::WMULSU:
+      Opc = RISCV::WMULSU;
+      break;
+    }
+
     SDNode *WMUL = CurDAG->getMachineNode(
         Opc, DL, MVT::Untyped, Node->getOperand(0), Node->getOperand(1));
 
@@ -1893,6 +1907,56 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
                                                 {RegPair, Base, Offset, Chain});
     CurDAG->setNodeMemRefs(New, {cast<MemSDNode>(Node)->getMemOperand()});
     ReplaceUses(SDValue(Node, 0), SDValue(New, 0));
+    CurDAG->RemoveDeadNode(Node);
+    return;
+  }
+  case RISCVISD::WMACCSU:
+  case RISCVISD::WMACCU:
+  case RISCVISD::WMACC: {
+    assert(!Subtarget->is64Bit() && Subtarget->hasStdExtP() &&
+           "Unexpected opcode");
+
+    // WMACCU/WMACC/WMACCSU has 4 operands: (m1, m2, addlo, addhi) -> (lo, hi)
+    SDValue M1 = Node->getOperand(0);
+    SDValue M2 = Node->getOperand(1);
+    SDValue AddLo = Node->getOperand(2);
+    SDValue AddHi = Node->getOperand(3);
+
+    // Build the register pair for the accumulator input
+    SDValue AccOps[] = {
+        CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32),
+        AddLo, CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32),
+        AddHi, CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
+    SDValue Acc = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
+                                                 MVT::Untyped, AccOps),
+                          0);
+
+    unsigned Opc;
+    switch (Node->getOpcode()) {
+    default:
+      llvm_unreachable("Unexpected WMACC opcode");
+    case RISCVISD::WMACCU:
+      Opc = RISCV::WMACCU;
+      break;
+    case RISCVISD::WMACC:
+      Opc = RISCV::WMACC;
+      break;
+    case RISCVISD::WMACCSU:
+      Opc = RISCV::WMACCSU;
+      break;
+    }
+
+    // Instruction format: WMACCU rd, rs1, rs2 (rd is accumulator, comes first)
+    MachineSDNode *New =
+        CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Acc, M1, M2);
+
+    SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL,
+                                                MVT::i32, SDValue(New, 0));
+    SDValue Hi = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL,
+                                                MVT::i32, SDValue(New, 0));
+
+    ReplaceUses(SDValue(Node, 0), Lo);
+    ReplaceUses(SDValue(Node, 1), Hi);
     CurDAG->RemoveDeadNode(Node);
     return;
   }
