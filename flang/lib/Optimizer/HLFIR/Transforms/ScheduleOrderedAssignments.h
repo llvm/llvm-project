@@ -33,7 +33,7 @@ private:
                            bool isAppliedInOrder);
   void insert(hlfir::ElementalOpInterface elementalOp, bool isAppliedInOrder);
   // List of ElementalOpInterface operation forming this tree, as well as a
-  // Boolean to indicate if they are applied in order (that is, if there
+  // Boolean to indicate if they are applied in order (that is, if their
   // indexing space is the same as the one for the array yielded by the mask
   // region that owns this tree).
   llvm::SmallVector<std::pair<mlir::Operation *, bool>> tree;
@@ -50,6 +50,11 @@ struct SaveEntity {
   mlir::Value getSavedValue();
 };
 
+/// Wrapper class around mlir::MemoryEffects::EffectInstance that
+/// allows providing an extra array value that indicates that the
+/// effect is done element by element in array order (one element
+/// accessed at each iteration of the ordered assignment iteration
+/// space).
 class DetailedEffectInstance {
 public:
   DetailedEffectInstance(mlir::MemoryEffects::Effect *effect,
@@ -71,6 +76,8 @@ public:
 
 private:
   mlir::MemoryEffects::EffectInstance effectInstance;
+  // Array whose elements are affected in array order by the
+  // ordered assignment iterations. Null value otherwise.
   mlir::Value orderedElementalEffectOn;
 };
 

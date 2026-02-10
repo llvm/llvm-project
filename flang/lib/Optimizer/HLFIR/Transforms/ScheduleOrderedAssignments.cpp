@@ -469,8 +469,23 @@ static mlir::Value getStorageSource(mlir::Value var) {
 }
 
 namespace {
+
+/// Class to represent conflicts between several accesses (effects) to a memory
+/// location (read after write, write after write).
 struct ConflictKind {
-  enum Kind { None, Aligned, Any };
+  enum Kind {
+    // None: The effects are not affecting the same memory location, or they are
+    // all reads.
+    None,
+    // Aligned: There are both read and write effects affecting the same memory
+    // location, but it is known that these effects are all accessing the memory
+    // location element by element in array order. This means the conflict does
+    // not introduce loop-carried dependencies.
+    Aligned,
+    // Any: There may be both read and write effects affecting the same memory
+    // in any way.
+    Any
+  };
   Kind kind;
 
   ConflictKind(Kind k) : kind(k) {}
