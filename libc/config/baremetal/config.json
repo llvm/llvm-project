@@ -28,7 +28,10 @@
     "LIBC_CONF_PRINTF_DISABLE_STRERROR": {
       "value": true
     },
-    "LIBC_CONF_PRINTF_DISABLE_WIDE" : {
+    "LIBC_CONF_PRINTF_DISABLE_WIDE": {
+      "value": true
+    },
+    "LIBC_COPT_PRINTF_DISABLE_BITINT": {
       "value": true
     }
   },
