@@ -40,7 +40,6 @@
       "value": false,
       "doc": "Use an alternative printf float implementation based on 320-bit floats"
     },
-
     "LIBC_CONF_PRINTF_DISABLE_FIXED_POINT": {
       "value": false,
       "doc": "Disable printing fixed point values in printf and friends."
@@ -94,6 +93,12 @@
     "LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING": {
       "value": false,
       "doc": "Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled."
+    }
+  },
+  "ctype": {
+    "LIBC_CONF_CTYPE_SMALLER_ASCII": {
+      "value": true,
+      "doc": "Shrinks b36_char_to_int by assuming the character encoding is ASCII."
     }
   },
   "codegen": {
