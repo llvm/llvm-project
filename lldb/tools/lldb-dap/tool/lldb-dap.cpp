@@ -542,6 +542,7 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
   }
 
+#ifdef _WIN32
   if (input_args.hasArg(OPT_check_python)) {
     auto python_path_or_err = SetupPythonRuntimeLibrary();
     if (!python_path_or_err) {
@@ -553,7 +554,6 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
   }
 
-#ifdef _WIN32
   auto python_path_or_err = SetupPythonRuntimeLibrary();
   if (!python_path_or_err)
     llvm::WithColor::error()
