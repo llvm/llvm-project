@@ -19,7 +19,6 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/baremetal/file_internal.h"
-#include "src/stdio/baremetal/ungetc_internal.h"
 #include "src/stdio/scanf_core/reader.h"
 #include "src/stdio/scanf_core/scanf_main.h"
 

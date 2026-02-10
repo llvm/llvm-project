@@ -9,7 +9,7 @@
 #include "src/stdio/ungetc.h"
 
 #include "src/__support/common.h"
-#include "src/stdio/baremetal/ungetc_internal.h"
+#include "src/stdio/baremetal/file_internal.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

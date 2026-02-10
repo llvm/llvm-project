@@ -10,17 +10,6 @@ add_object_library(
     libc.src.__support.OSUtil.osutil
 )
 
-add_object_library(
-  ungetc_internal
-  SRCS
-    ungetc_internal.cpp
-  HDRS
-    ungetc_internal.h
-  DEPENDS
-    .file_internal
-    libc.hdr.types.FILE
-)
-
 add_header_library(
   vfprintf_internal
   HDRS
@@ -45,7 +34,6 @@ add_header_library(
     vfscanf_internal.h
   DEPENDS
     .file_internal
-    .ungetc_internal
     libc.hdr.types.FILE
     libc.hdr.stdio_macros
     libc.src.__support.arg_list
@@ -266,7 +254,7 @@ add_entrypoint_object(
   HDRS
     ../ungetc.h
   DEPENDS
-    .ungetc_internal
+    .file_internal
     libc.hdr.stdio_macros
     libc.hdr.types.FILE
 )

@@ -35,7 +35,7 @@ bool pop_ungetc_value(::FILE *stream, unsigned char &out) {
   return true;
 }
 
-int store_ungetc_value(::FILE *stream, int c) {
+int push_ungetc_value(::FILE *stream, int c) {
   if (c == EOF || stream == nullptr)
     return EOF;
 
@@ -49,5 +49,13 @@ int store_ungetc_value(::FILE *stream, int c) {
       cpp::optional<unsigned char>{static_cast<unsigned char>(c)};
   return c;
 }
+
+namespace internal {
+
+int ungetc_internal(int c, ::FILE *stream) {
+  return push_ungetc_value(stream, c);
+}
+
+} // namespace internal
 
 } // namespace LIBC_NAMESPACE_DECL
