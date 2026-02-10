@@ -32,6 +32,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O1:       [[FOR_BODY4]]:
 ; O1-NEXT:    [[J_05:%.*]] = phi i64 [ [[INC5:%.*]], %[[FOR_BODY4]] ], [ 0, %[[FOR_COND1_PREHEADER]] ]
 ; O1-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP0]], i64 [[J_05]]
+; O1-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[ADD_PTR_I]]) ]
 ; O1-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ADD_PTR_I]], align 4, !tbaa [[INT_TBAA2:![0-9]+]]
 ; O1-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP1]], 1
 ; O1-NEXT:    store i32 [[INC]], ptr [[ADD_PTR_I]], align 4, !tbaa [[INT_TBAA2]]
@@ -56,6 +57,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O2:       [[VECTOR_BODY]]:
 ; O2-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ], [ 0, %[[FOR_BODY4_PREHEADER]] ]
 ; O2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP0]], i64 [[INDEX]]
+; O2-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[TMP1]]) ]
 ; O2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
 ; O2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4, !tbaa [[INT_TBAA0:![0-9]+]]
 ; O2-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4, !tbaa [[INT_TBAA0]]
@@ -80,6 +82,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O2:       [[FOR_BODY4]]:
 ; O2-NEXT:    [[J_05:%.*]] = phi i64 [ [[INC5:%.*]], %[[FOR_BODY4]] ], [ [[J_05_PH]], %[[FOR_BODY4_PREHEADER9]] ]
 ; O2-NEXT:    [[ADD_PTR_I:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP0]], i64 [[J_05]]
+; O2-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[ADD_PTR_I]]) ]
 ; O2-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ADD_PTR_I]], align 4, !tbaa [[INT_TBAA0]]
 ; O2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP6]], 1
 ; O2-NEXT:    store i32 [[INC]], ptr [[ADD_PTR_I]], align 4, !tbaa [[INT_TBAA0]]
@@ -104,6 +107,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O3:       [[VECTOR_BODY]]:
 ; O3-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ], [ 0, %[[FOR_COND1_PREHEADER_US]] ]
 ; O3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP0]], i64 [[INDEX]]
+; O3-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[TMP1]]) ]
 ; O3-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
 ; O3-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4, !tbaa [[INT_TBAA0:![0-9]+]]
 ; O3-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4, !tbaa [[INT_TBAA0]]
@@ -122,6 +126,7 @@ define dso_local void @_Z7computeRSt6vectorIiSaIiEEy(ptr noundef nonnull align 8
 ; O3:       [[FOR_BODY4_US]]:
 ; O3-NEXT:    [[J_05_US:%.*]] = phi i64 [ [[INC5_US:%.*]], %[[FOR_BODY4_US]] ], [ [[J_05_US_PH]], %[[FOR_BODY4_US_PREHEADER]] ]
 ; O3-NEXT:    [[ADD_PTR_I_US:%.*]] = getelementptr inbounds [4 x i8], ptr [[TMP0]], i64 [[J_05_US]]
+; O3-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[ADD_PTR_I_US]]) ]
 ; O3-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ADD_PTR_I_US]], align 4, !tbaa [[INT_TBAA0]]
 ; O3-NEXT:    [[INC_US:%.*]] = add nsw i32 [[TMP6]], 1
 ; O3-NEXT:    store i32 [[INC_US]], ptr [[ADD_PTR_I_US]], align 4, !tbaa [[INT_TBAA0]]

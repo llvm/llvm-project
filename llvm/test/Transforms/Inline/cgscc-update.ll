@@ -1,4 +1,4 @@
-; RUN: opt < %s -aa-pipeline=basic-aa -passes='cgscc(function-attrs,inline)' -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes='cgscc(function-attrs,inline,instcombine)' -S | FileCheck %s
 ; This test runs the inliner and the function attribute deduction. It ensures
 ; that when the inliner mutates the call graph it correctly updates the CGSCC
 ; iteration so that we can compute refined function attributes. In this way it

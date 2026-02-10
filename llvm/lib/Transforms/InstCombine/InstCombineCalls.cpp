@@ -3710,7 +3710,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           return CallBase::removeOperandBundle(II, OBU.getTagID());
         }
 
-        // TODO: apply nonnull return attributes to calls and invokes
+        // Fold the assume into a nonnull return attribute
+        // Note that we check the next node, since we care that the assume is
+        // valid after the CallBase, not before
+        // TODO: Fold nonnull into invokes
+        if (auto *CB = dyn_cast<CallBase>(RK.WasOn);
+            CB && !CB->isTerminator() &&
+            isValidAssumeForContext(II, CB->getNextNode(), &DT,
+                                    /*AllowEphemerals=*/true)) {
+          CB->addRetAttr(Attribute::NonNull);
+          Worklist.addValue(CB);
+          return CallBase::removeOperandBundle(II, OBU.getTagID());
+        }
       }
     }
 

@@ -188,6 +188,7 @@ define ptr @callee8() {
 define ptr @caller8_okay_use_after_poison_anyways() {
 ; CHECK-LABEL: define ptr @caller8_okay_use_after_poison_anyways() {
 ; CHECK-NEXT:    [[R_I:%.*]] = call nonnull ptr @foo()
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[R_I]]) ]
 ; CHECK-NEXT:    call void @use.ptr(ptr [[R_I]])
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
@@ -208,6 +209,7 @@ define ptr @callee9() {
 define ptr @caller9_fail_creates_ub() {
 ; CHECK-LABEL: define ptr @caller9_fail_creates_ub() {
 ; CHECK-NEXT:    [[R_I:%.*]] = call noundef ptr @foo()
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[R_I]]) ]
 ; CHECK-NEXT:    call void @use.ptr(ptr [[R_I]])
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
@@ -219,6 +221,7 @@ define ptr @caller9_fail_creates_ub() {
 define ptr @caller9_okay_is_ub_anyways() {
 ; CHECK-LABEL: define ptr @caller9_okay_is_ub_anyways() {
 ; CHECK-NEXT:    [[R_I:%.*]] = call noundef nonnull ptr @foo()
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[R_I]]) ]
 ; CHECK-NEXT:    call void @use.ptr(ptr [[R_I]])
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
@@ -242,6 +245,7 @@ define ptr @caller10_fail_maybe_poison() {
 ; CHECK-LABEL: define ptr @caller10_fail_maybe_poison() {
 ; CHECK-NEXT:    [[R_I:%.*]] = call ptr @foo()
 ; CHECK-NEXT:    call void @use.ptr(ptr [[R_I]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[R_I]]) ]
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
   %r = call nonnull ptr @callee10()
@@ -252,6 +256,7 @@ define ptr @caller10_okay_will_be_ub() {
 ; CHECK-LABEL: define ptr @caller10_okay_will_be_ub() {
 ; CHECK-NEXT:    [[R_I:%.*]] = call noundef nonnull ptr @foo()
 ; CHECK-NEXT:    call void @use.ptr(ptr [[R_I]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[R_I]]) ]
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
   %r = call noundef nonnull ptr @callee10()
@@ -262,6 +267,7 @@ define noundef ptr @caller10_okay_will_be_ub_todo() {
 ; CHECK-LABEL: define noundef ptr @caller10_okay_will_be_ub_todo() {
 ; CHECK-NEXT:    [[R_I:%.*]] = call ptr @foo()
 ; CHECK-NEXT:    call void @use.ptr(ptr [[R_I]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[R_I]]) ]
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
   %r = call nonnull ptr @callee10()
@@ -306,6 +312,7 @@ define ptr @caller11_todo() {
 ; CHECK-NEXT:    [[COND2_I:%.*]] = call i1 @val()
 ; CHECK-NEXT:    br label [[CALLEE11_EXIT]]
 ; CHECK:       callee11.exit:
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[R_I]]) ]
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
   %r = call nonnull ptr @callee11()
@@ -333,6 +340,7 @@ define ptr @caller12_todo() {
 ; CHECK-NEXT:    [[COND_I:%.*]] = call i1 @val() #[[ATTR0]]
 ; CHECK-NEXT:    [[PP_I:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P_I]], i64 -4)
 ; CHECK-NEXT:    [[R_I:%.*]] = select i1 [[COND_I]], ptr [[P_I]], ptr [[PP_I]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[R_I]]) ]
 ; CHECK-NEXT:    ret ptr [[R_I]]
 ;
   %r = call nonnull ptr @callee12()
@@ -434,6 +442,7 @@ define ptr @caller_bad_ret_prop(ptr %p1, ptr %p2, i64 %x, ptr %other) {
 ; CHECK-NEXT:    br label [[CALLEE_BAD_RET_PROP_EXIT]]
 ; CHECK:       callee_bad_ret_prop.exit:
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi ptr [ [[OTHER]], [[T_I]] ], [ [[TMP1]], [[F_I]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[TMP2]]) ]
 ; CHECK-NEXT:    ret ptr [[TMP2]]
 ;
   %1 = call noundef ptr %p1(i64 %x, ptr %p2)

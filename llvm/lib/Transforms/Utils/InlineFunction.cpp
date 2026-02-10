@@ -2718,7 +2718,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
         IFI.GetAssumptionCache ? &IFI.GetAssumptionCache(*Caller) : nullptr;
 
     /// Preserve all attributes on of the call and its parameters.
-    salvageKnowledge(&CB, AC);
+    salvageKnowledgeBeforeInlining(&CB, AC);
 
     // We want the inliner to prune the code as it copies.  We would LOVE to
     // have no dead or constant instructions leftover after inlining occurs
