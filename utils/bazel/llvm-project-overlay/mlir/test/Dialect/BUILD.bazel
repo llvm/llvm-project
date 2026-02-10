@@ -10,8 +10,6 @@ package(default_visibility = ["//visibility:public"])
         srcs = [src],
         data = [
             "EmitC/tosa/td.mlir",
-            "Vector/td/unroll-elements.mlir",
-            "Vector/td/xfer-drop-unit-dims.mlir",
             "Vector/vector-sink-transform.mlir",
             "//llvm:llvm-symbolizer",
             "//mlir:mlir-opt",
@@ -25,6 +23,7 @@ package(default_visibility = ["//visibility:public"])
             "Linalg/transpose-matmul-*.mlir",
             "LLVM/*-symbol-def.mlir",
             "Transform/include/**/*.mlir",
+            "Vector/td/*.mlir",
         ]),
     )
     for src in glob(
@@ -37,8 +36,7 @@ package(default_visibility = ["//visibility:public"])
             "LLVM/*-symbol-def.mlir",
             "Transform/*-symbol-decl-and-schedule.mlir",
             "Transform/include/**/*.mlir",
-            "Vector/td/unroll-elements.mlir",
-            "Vector/td/xfer-drop-unit-dims.mlir",
+            "Vector/td/*.mlir",
             "Vector/vector-sink-transform.mlir",
         ],
     )
