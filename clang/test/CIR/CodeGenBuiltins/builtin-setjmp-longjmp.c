@@ -18,7 +18,7 @@ void test_setjmp(void *env) {
   // CIR-NEXT: [[TWO:%[0-9]+]] = cir.const #cir.int<2>
   // CIR-NEXT: [[GEP:%[0-9]+]] = cir.ptr_stride [[CAST]], [[TWO]] : (!cir.ptr<!cir.ptr<!void>>, !s32i) -> !cir.ptr<!cir.ptr<!void>>
   // CIR-NEXT: cir.store [[SS]], [[GEP]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
-  // CIR-NEXT: [[SJ:%[0-9]+]] = cir.eh.setjmp builtin [[CAST]] : (!cir.ptr<!cir.ptr<!void>>) -> !s32i
+  // CIR-NEXT: [[SJ:%[0-9]+]] = cir.eh.setjmp [[CAST]] : (!cir.ptr<!cir.ptr<!void>>) -> !s32i
 
 
   // LLVM-LABEL: test_setjmp

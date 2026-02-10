@@ -1363,7 +1363,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         builder, loc, ppTy, castBuf, builder.getSInt32(2, loc));
     builder.createStore(loc, stacksave, stackSaveSlot);
     auto op =
-        cir::EhSetjmpOp::create(builder, loc, castBuf, /*is_builtin=*/true);
+        cir::EhSetjmpOp::create(builder, loc, castBuf);
     return RValue::get(op);
   }
   case Builtin::BI__builtin_longjmp: {
