@@ -2371,8 +2371,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         X->getType()->isIntOrIntVectorTy(1)) {
       Type *Ty = II->getType();
       APInt SignBit = APInt::getSignMask(Ty->getScalarSizeInBits());
-      return SelectInst::Create(X, ConstantInt::get(Ty, SignBit),
-                                ConstantInt::getNullValue(Ty));
+      if (ProfcheckDisableMetadataFixes)
+        return SelectInst::Create(X, ConstantInt::get(Ty, SignBit),
+                                  ConstantInt::getNullValue(Ty));
+      auto *Sel = createSelectInstWithUnknownProfile(
+          X, ConstantInt::get(Ty, SignBit), ConstantInt::getNullValue(Ty));
+      Sel->copyMetadata(*II);
+      return Sel;
     }
 
     if (Instruction *crossLogicOpFold =
