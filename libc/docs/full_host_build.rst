@@ -86,22 +86,26 @@ To generate the HTML documentation:
 The generated documentation will be available in the ``docs/libc/html`` directory
 within your build folder.
 
-Building a Sysroot
-==================
+Building a Simple Sysroot
+=========================
 
 .. warning::
    The LLVM libc is missing many critical functions needed to build non-trivial applications. If you
    are not currently working on porting the libc, we recommend sticking with your system libc. However,
    ignoring warnings like this are how most of us got into this business. So: Speak friend and enter.
 
-This document describes how to set up a sysroot and a compiler that uses it from
+This document describes how to set up a simple sysroot and a compiler that uses it from
 scratch. These are not full cross-compilation instructions. We make a few
 assumptions:
 
  * The host and target are the same architecture and OS. For example, building a Linux x86-64 libc on a Linux x86-64 host.
- * The host has a working and recent clang toolchain. Clang 21 has been tested.
+ * The host has a working and recent Clang toolchain. Clang 21 has been tested.
  * Your container is using Debian Testing or a derived distribution. Other distributions likely work but the package names and paths may differ.
  * You have root access to your machine to set up the compiler wrapper.
+
+For more comprehensive instructions on setting up a sysroot, see the `official LLVM
+guide <https://llvm.org/docs/HowToCrossCompileLLVM.html#setting-up-a-sysroot>`_.
+
 
 Step 1: Preparation
 -------------------
