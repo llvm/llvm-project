@@ -348,29 +348,26 @@ public:
   getBinExpr(llvm::SMTSolverRef &Solver, ASTContext &Ctx,
              const llvm::SMTExprRef &LHS, QualType LTy,
              BinaryOperator::Opcode Op, const llvm::SMTExprRef &RHS,
-             QualType RTy, QualType *RetTy) {
+             QualType RTy, QualType &RetTy) {
     llvm::SMTExprRef NewLHS = LHS;
     llvm::SMTExprRef NewRHS = RHS;
     doTypeConversion(Solver, Ctx, NewLHS, NewRHS, LTy, RTy);
 
     // Update the return type parameter if the output type has changed.
-    if (RetTy) {
-      // A boolean result can be represented as an integer type in C/C++, but at
-      // this point we only care about the SMT sorts. Set it as a boolean type
-      // to avoid subsequent SMT errors.
-      if (BinaryOperator::isComparisonOp(Op) ||
-          BinaryOperator::isLogicalOp(Op)) {
-        *RetTy = Ctx.BoolTy;
-      } else {
-        *RetTy = LTy;
-      }
+    // A boolean result can be represented as an integer type in C/C++, but at
+    // this point we only care about the SMT sorts. Set it as a boolean type
+    // to avoid subsequent SMT errors.
+    if (BinaryOperator::isComparisonOp(Op) || BinaryOperator::isLogicalOp(Op)) {
+      RetTy = Ctx.BoolTy;
+    } else {
+      RetTy = LTy;
+    }
 
       // If the two operands are pointers and the operation is a subtraction,
       // the result is of type ptrdiff_t, which is signed
       if (LTy->isAnyPointerType() && RTy->isAnyPointerType() && Op == BO_Sub) {
-        *RetTy = Ctx.getPointerDiffType();
+        RetTy = Ctx.getPointerDiffType();
       }
-    }
 
     return LTy->isRealFloatingType()
                ? fromFloatBinOp(Solver, NewLHS, Op, NewRHS)
@@ -384,13 +381,13 @@ public:
                                                ASTContext &Ctx,
                                                const BinarySymExpr *BSE,
                                                bool *hasComparison,
-                                               QualType *RetTy) {
+                                               QualType &RetTy) {
     QualType LTy, RTy;
     BinaryOperator::Opcode Op = BSE->getOpcode();
 
     if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE)) {
       llvm::SMTExprRef LHS =
-          getSymExpr(Solver, Ctx, SIE->getLHS(), &LTy, hasComparison);
+          getSymExpr(Solver, Ctx, SIE->getLHS(), LTy, hasComparison);
       llvm::APSInt NewRInt;
       std::tie(NewRInt, RTy) = fixAPSInt(Ctx, SIE->getRHS());
       llvm::SMTExprRef RHS =
@@ -404,15 +401,15 @@ public:
       llvm::SMTExprRef LHS =
           Solver->mkBitvector(NewLInt, NewLInt.getBitWidth());
       llvm::SMTExprRef RHS =
-          getSymExpr(Solver, Ctx, ISE->getRHS(), &RTy, hasComparison);
+          getSymExpr(Solver, Ctx, ISE->getRHS(), RTy, hasComparison);
       return getBinExpr(Solver, Ctx, LHS, LTy, Op, RHS, RTy, RetTy);
     }
 
     if (const SymSymExpr *SSM = dyn_cast<SymSymExpr>(BSE)) {
       llvm::SMTExprRef LHS =
-          getSymExpr(Solver, Ctx, SSM->getLHS(), &LTy, hasComparison);
+          getSymExpr(Solver, Ctx, SSM->getLHS(), LTy, hasComparison);
       llvm::SMTExprRef RHS =
-          getSymExpr(Solver, Ctx, SSM->getRHS(), &RTy, hasComparison);
+          getSymExpr(Solver, Ctx, SSM->getRHS(), RTy, hasComparison);
       return getBinExpr(Solver, Ctx, LHS, LTy, Op, RHS, RTy, RetTy);
     }
 
@@ -423,22 +420,20 @@ public:
   // Sets the hasComparison and RetTy parameters. See getExpr().
   static inline llvm::SMTExprRef getSymExpr(llvm::SMTSolverRef &Solver,
                                             ASTContext &Ctx, SymbolRef Sym,
-                                            QualType *RetTy,
+                                            QualType &RetTy,
                                             bool *hasComparison) {
     if (const SymbolData *SD = dyn_cast<SymbolData>(Sym)) {
-      if (RetTy)
-        *RetTy = Sym->getType();
+      RetTy = Sym->getType();
 
       return fromData(Solver, Ctx, SD);
     }
 
     if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym)) {
-      if (RetTy)
-        *RetTy = Sym->getType();
+      RetTy = Sym->getType();
 
       QualType FromTy;
       llvm::SMTExprRef Exp =
-          getSymExpr(Solver, Ctx, SC->getOperand(), &FromTy, hasComparison);
+          getSymExpr(Solver, Ctx, SC->getOperand(), FromTy, hasComparison);
 
       // Casting an expression with a comparison invalidates it. Note that this
       // must occur after the recursive call above.
@@ -449,22 +444,21 @@ public:
     }
 
     if (const UnarySymExpr *USE = dyn_cast<UnarySymExpr>(Sym)) {
-      if (RetTy)
-        *RetTy = Sym->getType();
+      RetTy = Sym->getType();
 
       QualType OperandTy;
       llvm::SMTExprRef OperandExp =
-          getSymExpr(Solver, Ctx, USE->getOperand(), &OperandTy, hasComparison);
+          getSymExpr(Solver, Ctx, USE->getOperand(), OperandTy, hasComparison);
 
       // When the operand is a bool expr, but the operator is an integeral
       // operator, casting the bool expr to the integer before creating the
       // unary operator.
       // E.g. -(5 && a)
-      if (OperandTy == Ctx.BoolTy && OperandTy != *RetTy &&
-          (*RetTy)->isIntegerType()) {
-        OperandExp = fromCast(Solver, OperandExp, (*RetTy),
-                              Ctx.getTypeSize(*RetTy), OperandTy, 1);
-        OperandTy = (*RetTy);
+      if (OperandTy == Ctx.BoolTy && OperandTy != RetTy &&
+          RetTy->isIntegerType()) {
+        OperandExp = fromCast(Solver, OperandExp, RetTy, Ctx.getTypeSize(RetTy),
+                              OperandTy, 1);
+        OperandTy = RetTy;
       }
 
       llvm::SMTExprRef UnaryExp =
@@ -502,7 +496,7 @@ public:
   // promotions and casts.
   static inline llvm::SMTExprRef getExpr(llvm::SMTSolverRef &Solver,
                                          ASTContext &Ctx, SymbolRef Sym,
-                                         QualType *RetTy = nullptr,
+                                         QualType &RetTy,
                                          bool *hasComparison = nullptr) {
     if (hasComparison) {
       *hasComparison = false;
@@ -554,12 +548,14 @@ public:
 
     // Convert symbol
     QualType SymTy;
-    llvm::SMTExprRef Exp = getExpr(Solver, Ctx, Sym, &SymTy);
+    llvm::SMTExprRef Exp = getExpr(Solver, Ctx, Sym, SymTy);
 
     // Construct single (in)equality
-    if (From == To)
+    if (From == To) {
+      QualType UnusedRetTy;
       return getBinExpr(Solver, Ctx, Exp, SymTy, InRange ? BO_EQ : BO_NE,
-                        FromExp, FromTy, /*RetTy=*/nullptr);
+                        FromExp, FromTy, /*RetTy=*/UnusedRetTy);
+    }
 
     QualType ToTy;
     llvm::APSInt NewToInt;
@@ -569,12 +565,13 @@ public:
     assert(FromTy == ToTy && "Range values have different types!");
 
     // Construct two (in)equalities, and a logical and/or
+    QualType UnusedRetTy;
     llvm::SMTExprRef LHS =
         getBinExpr(Solver, Ctx, Exp, SymTy, InRange ? BO_GE : BO_LT, FromExp,
-                   FromTy, /*RetTy=*/nullptr);
+                   FromTy, /*RetTy=*/UnusedRetTy);
     llvm::SMTExprRef RHS = getBinExpr(Solver, Ctx, Exp, SymTy,
                                       InRange ? BO_LE : BO_GT, ToExp, ToTy,
-                                      /*RetTy=*/nullptr);
+                                      /*RetTy=*/UnusedRetTy);
 
     return fromBinOp(Solver, LHS, InRange ? BO_LAnd : BO_LOr, RHS,
                      SymTy->isSignedIntegerOrEnumerationType());
