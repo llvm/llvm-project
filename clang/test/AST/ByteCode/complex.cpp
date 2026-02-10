@@ -467,3 +467,12 @@ namespace Discard {
   }
   static_assert(discardedMulDiv() == 0, "");
 }
+
+namespace MemcpyOp {
+  const double x = 0.;
+
+  void foo() {
+    _Complex double z;
+    z = *(_Complex double *)&x;
+  };
+}

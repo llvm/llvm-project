@@ -180,6 +180,10 @@ bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
     return false;
   }
 
+  // If it is not convergent it does not depend on EXEC.
+  if (!MI.isConvergent())
+    return false;
+
   switch (MI.getOpcode()) {
   default:
     break;
