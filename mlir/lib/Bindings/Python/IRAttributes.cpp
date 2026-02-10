@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -22,7 +23,6 @@
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"
-#include "llvm/ADT/ScopeExit.h"
 
 namespace nb = nanobind;
 using namespace nanobind::literals;
@@ -121,6 +121,45 @@ Raises:
   ValueError: If the type of the buffer or array cannot be matched to an MLIR
     type or if the buffer does not meet expectations.
 )";
+
+/// Local helper checking if the current machine is little endian.
+static bool isLittleEndian() {
+  const uint16_t value = 1;
+  unsigned char first_byte = 0;
+  std::memcpy(&first_byte, &value, 1);
+  return first_byte == 1;
+}
+
+namespace {
+/// Local helper adapted from llvm::scope_exit.
+template <typename Callable>
+class [[nodiscard]] scope_exit {
+  Callable ExitFunction;
+  bool Engaged = true; // False once moved-from or release()d.
+
+public:
+  template <typename Fp>
+  explicit scope_exit(Fp &&F) : ExitFunction(std::forward<Fp>(F)) {}
+
+  scope_exit(scope_exit &&Rhs)
+      : ExitFunction(std::move(Rhs.ExitFunction)), Engaged(Rhs.Engaged) {
+    Rhs.release();
+  }
+  scope_exit(const scope_exit &) = delete;
+  scope_exit &operator=(scope_exit &&) = delete;
+  scope_exit &operator=(const scope_exit &) = delete;
+
+  void release() { Engaged = false; }
+
+  ~scope_exit() {
+    if (Engaged)
+      ExitFunction();
+  }
+};
+
+template <typename Callable>
+scope_exit(Callable) -> scope_exit<Callable>;
+} // namespace
 
 namespace mlir {
 namespace python {
@@ -616,7 +655,7 @@ PyDenseElementsAttribute PyDenseElementsAttribute::getFromBuffer(
   if (PyObject_GetBuffer(array.ptr(), &view, flags) != 0) {
     throw nb::python_error();
   }
-  llvm::scope_exit freeBuffer([&]() { PyBuffer_Release(&view); });
+  scope_exit freeBuffer([&]() { PyBuffer_Release(&view); });
 
   MlirContext context = contextWrapper->get();
   MlirAttribute attr = getAttributeFromBuffer(
@@ -910,7 +949,7 @@ MlirAttribute PyDenseElementsAttribute::getAttributeFromBuffer(
 MlirAttribute PyDenseElementsAttribute::getBitpackedAttributeFromBooleanBuffer(
     Py_buffer &view, std::optional<std::vector<int64_t>> explicitShape,
     MlirContext &context) {
-  if (llvm::endianness::native != llvm::endianness::little) {
+  if (!isLittleEndian()) {
     // Given we have no good way of testing the behavior on big-endian
     // systems we will throw
     throw nb::type_error("Constructing a bit-packed MLIR attribute is "
@@ -938,7 +977,7 @@ MlirAttribute PyDenseElementsAttribute::getBitpackedAttributeFromBooleanBuffer(
 
 std::unique_ptr<nb_buffer_info>
 PyDenseElementsAttribute::getBooleanBufferFromBitpackedAttribute() const {
-  if (llvm::endianness::native != llvm::endianness::little) {
+  if (!isLittleEndian()) {
     // Given we have no good way of testing the behavior on big-endian
     // systems we will throw
     throw nb::type_error("Constructing a numpy array from a MLIR attribute "
@@ -946,7 +985,7 @@ PyDenseElementsAttribute::getBooleanBufferFromBitpackedAttribute() const {
   }
 
   int64_t numBooleans = mlirElementsAttrGetNumElements(*this);
-  int64_t numBitpackedBytes = llvm::divideCeil(numBooleans, 8);
+  int64_t numBitpackedBytes = (numBooleans + 7) / 8;
   uint8_t *bitpackedData = static_cast<uint8_t *>(
       const_cast<void *>(mlirDenseElementsAttrGetRawData(*this)));
   nb::ndarray<uint8_t, nb::numpy, nb::ndim<1>, nb::c_contig> packedArray(
@@ -1126,7 +1165,7 @@ PyDenseResourceElementsAttribute::getFromBuffer(
 
   // This scope releaser will only release if we haven't yet transferred
   // ownership.
-  llvm::scope_exit freeBuffer([&]() {
+  scope_exit freeBuffer([&]() {
     if (view)
       PyBuffer_Release(view.get());
   });

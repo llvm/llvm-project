@@ -1965,8 +1965,7 @@ defm lifetime_safety : BoolFOption<
   LangOpts<"EnableLifetimeSafety">, DefaultTrue,
   PosFlag<SetTrue, [], [CC1Option], "Enable">,
   NegFlag<SetFalse, [], [CC1Option], "Disable">,
-  BothFlags<[], [CC1Option],
-          " experimental lifetime safety for C++">>;
+  BothFlags<[], [CC1Option], " lifetime safety for C++">>;
 
 defm lifetime_safety_inference
     : BoolFOption<"lifetime-safety-inference",
@@ -1974,7 +1973,7 @@ defm lifetime_safety_inference
                   PosFlag<SetTrue, [], [CC1Option], "Enable">,
                   NegFlag<SetFalse, [], [CC1Option], "Disable">,
                   BothFlags<[], [CC1Option],
-                            " experimental lifetime safety inference for C++">>;
+                            " lifetime safety inference for C++">>;
 
 defm lifetime_safety_tu_analysis
     : BoolFOption<"experimental-lifetime-safety-tu-analysis",
