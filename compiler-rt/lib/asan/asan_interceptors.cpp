@@ -212,7 +212,7 @@ static void* mmap_interceptor(Mmap real_mmap, void* addr, SIZE_T length,
 
 template <class Munmap>
 static int munmap_interceptor(Munmap real_munmap, void* addr, SIZE_T length) {
-  const uptr beg = reinterpret_cast<uptr>(addr);
+  const uptr start = reinterpret_cast<uptr>(addr);
 
 #  if SANITIZER_POSIX
   if (length == 0)
