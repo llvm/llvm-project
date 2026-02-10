@@ -29,7 +29,7 @@ entry:
 ; CHECK: OpReturnValue %[[#INSERT_VAL]]
 define spir_func <1 x i16> @test_insertelement(i16 %val) {
 entry:
-  %v = insertelement <1 x i16> undef, i16 %val, i32 0
+  %v = insertelement <1 x i16> poison, i16 %val, i32 0
   ret <1 x i16> %v
 }
 
@@ -37,7 +37,7 @@ entry:
 ; CHECK: OpReturnValue %[[#SHUF_PARAM]]
 define spir_func <1 x i16> @test_shufflevector(<1 x i16> %v) {
 entry:
-  %s = shufflevector <1 x i16> %v, <1 x i16> undef, <1 x i32> zeroinitializer
+  %s = shufflevector <1 x i16> %v, <1 x i16> poison, <1 x i32> zeroinitializer
   ret <1 x i16> %s
 }
 
