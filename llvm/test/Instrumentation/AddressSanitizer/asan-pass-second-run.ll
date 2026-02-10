@@ -8,9 +8,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function with sanitize_address is instrumented.
 ; Function Attrs: nounwind uwtable
 ;.
+; CHECK: @llvm.used = appending global [1 x ptr] [ptr @asan.module_ctor], section "llvm.metadata"
 ; CHECK: @___asan_globals_registered = common hidden global i64 0
 ; CHECK: @__start_asan_globals = extern_weak hidden global i64
 ; CHECK: @__stop_asan_globals = extern_weak hidden global i64
+; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 1, ptr @asan.module_ctor, ptr @asan.module_ctor }]
 ;.
 define void @instr_sa(ptr %a) sanitize_address {
 ; CHECK: Function Attrs: sanitize_address
@@ -31,7 +33,7 @@ define void @instr_sa(ptr %a) sanitize_address {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp sge i8 [[TMP9]], [[TMP4]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[BB11:.*]], label %[[BB12]]
 ; CHECK:       [[BB11]]:
-; CHECK-NEXT:    call void @__asan_report_load4(i64 [[TMP0]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    call void @__asan_report_load4(i64 [[TMP0]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[BB12]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 4
@@ -47,8 +49,9 @@ entry:
 }
 ;.
 ; CHECK: attributes #[[ATTR0]] = { sanitize_address }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #[[ATTR2]] = { nomerge }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR2:[0-9]+]] = { nounwind }
+; CHECK: attributes #[[ATTR3]] = { nomerge }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 4, !"nosanitize_address", i32 1}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}

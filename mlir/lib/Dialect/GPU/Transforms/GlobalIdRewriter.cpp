@@ -11,9 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
-#include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/IR/PatternMatch.h"
 
 using namespace mlir;
@@ -26,13 +26,15 @@ struct GpuGlobalIdRewriter : public OpRewritePattern<gpu::GlobalIdOp> {
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
     auto dim = op.getDimension();
-    auto blockId = gpu::BlockIdOp::create(rewriter, loc, dim);
-    auto blockDim = gpu::BlockDimOp::create(rewriter, loc, dim);
+    Value blockId = gpu::BlockIdOp::create(rewriter, loc, dim);
+    Value blockDim = gpu::BlockDimOp::create(rewriter, loc, dim);
+    auto indexType = rewriter.getIndexType();
     // Compute blockId.x * blockDim.x
-    auto tmp = index::MulOp::create(rewriter, op.getLoc(), blockId, blockDim);
-    auto threadId = gpu::ThreadIdOp::create(rewriter, loc, dim);
+    Value tmp =
+        arith::MulIOp::create(rewriter, loc, indexType, blockId, blockDim);
+    Value threadId = gpu::ThreadIdOp::create(rewriter, loc, dim);
     // Compute threadId.x + blockId.x * blockDim.x
-    rewriter.replaceOpWithNewOp<index::AddOp>(op, threadId, tmp);
+    rewriter.replaceOpWithNewOp<arith::AddIOp>(op, indexType, threadId, tmp);
     return success();
   }
 };

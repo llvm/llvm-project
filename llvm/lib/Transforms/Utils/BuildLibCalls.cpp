@@ -1353,6 +1353,12 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_fmin:
   case LibFunc_fminf:
   case LibFunc_fminl:
+  case LibFunc_fmaximum_num:
+  case LibFunc_fmaximum_numf:
+  case LibFunc_fmaximum_numl:
+  case LibFunc_fminimum_num:
+  case LibFunc_fminimum_numf:
+  case LibFunc_fminimum_numl:
   case LibFunc_labs:
   case LibFunc_llabs:
   case LibFunc_nearbyint:

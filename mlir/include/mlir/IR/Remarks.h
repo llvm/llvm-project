@@ -89,27 +89,40 @@ class Remark {
 public:
   Remark(RemarkKind remarkKind, DiagnosticSeverity severity, Location loc,
          RemarkOpts opts)
-      : remarkKind(remarkKind), functionName(opts.functionName), loc(loc),
-        categoryName(opts.categoryName), subCategoryName(opts.subCategoryName),
-        remarkName(opts.remarkName) {
+      : remarkKind(remarkKind), functionName(opts.functionName.str()), loc(loc),
+        categoryName(opts.categoryName.str()),
+        subCategoryName(opts.subCategoryName.str()),
+        remarkName(opts.remarkName.str()) {
     if (!categoryName.empty() && !subCategoryName.empty()) {
       (llvm::Twine(categoryName) + ":" + subCategoryName)
-          .toStringRef(fullCategoryName);
+          .toVector(fullCategoryName);
     }
   }
 
   // Remark argument that is a key-value pair that can be printed as machine
-  // parsable args.
+  // parsable args. For Attribute arguments, the original attribute is also
+  // stored to allow custom streamers to handle them specially.
   struct Arg {
     std::string key;
     std::string val;
+    /// Optional attribute storage for Attribute-based args. Allows streamers
+    /// to access the original attribute for custom handling.
+    std::optional<Attribute> attr;
+
     Arg(llvm::StringRef m) : key("Remark"), val(m) {}
     Arg(llvm::StringRef k, llvm::StringRef v) : key(k), val(v) {}
     Arg(llvm::StringRef k, std::string v) : key(k), val(std::move(v)) {}
     Arg(llvm::StringRef k, const char *v) : Arg(k, llvm::StringRef(v)) {}
     Arg(llvm::StringRef k, Value v);
     Arg(llvm::StringRef k, Type t);
+    Arg(llvm::StringRef k, Attribute a);
     Arg(llvm::StringRef k, bool b) : key(k), val(b ? "true" : "false") {}
+
+    /// Check if this arg has an associated attribute.
+    bool hasAttribute() const { return attr.has_value(); }
+
+    /// Get the attribute if present.
+    Attribute getAttribute() const { return attr.value_or(Attribute()); }
 
     // One constructor for all arithmetic types except bool.
     template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T> &&
@@ -171,21 +184,25 @@ protected:
   /// Keeps the MLIR diagnostic kind, which is used to determine the
   /// diagnostic kind in the LLVM remark streamer.
   RemarkKind remarkKind;
-  /// Name of the convering function like interface
-  StringRef functionName;
+  /// Name of the covering function like interface.
+  /// Stored as std::string to ensure the Remark owns its data.
+  std::string functionName;
 
   Location loc;
-  /// Sub category passname e.g., "Unroll" or "UnrollAndJam"
-  StringRef categoryName;
+  /// Category name e.g., "Unroll" or "UnrollAndJam".
+  /// Stored as std::string to ensure the Remark owns its data.
+  std::string categoryName;
 
-  /// Sub category name "Loop Optimizer"
-  StringRef subCategoryName;
+  /// Sub category name e.g., "Loop Optimizer".
+  /// Stored as std::string to ensure the Remark owns its data.
+  std::string subCategoryName;
 
   /// Combined name for category and sub-category
   SmallString<64> fullCategoryName;
 
-  /// Remark identifier
-  StringRef remarkName;
+  /// Remark identifier.
+  /// Stored as std::string to ensure the Remark owns its data.
+  std::string remarkName;
 
   /// Args collected via the streaming interface.
   SmallVector<Arg, 4> args;

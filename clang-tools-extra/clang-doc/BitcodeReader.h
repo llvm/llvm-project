@@ -58,7 +58,7 @@ private:
 
   // Helper function to step through blocks to find and dispatch the next record
   // or block to be read.
-  Cursor skipUntilRecordOrBlock(unsigned &BlockOrRecordID);
+  llvm::Expected<Cursor> skipUntilRecordOrBlock(unsigned &BlockOrRecordID);
 
   // Helper function to set up the appropriate type of Info.
   llvm::Expected<std::unique_ptr<Info>> readBlockToInfo(unsigned ID);

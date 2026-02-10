@@ -831,6 +831,10 @@ bool __pointer_to_member_type_info::can_catch_nested(
 #pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #endif
 
+#pragma GCC diagnostic push
+// __dynamic_cast is called by the compiler, so there is no prototype
+#pragma GCC diagnostic ignored "-Wmissing-prototypes"
+
 // __dynamic_cast
 
 // static_ptr: pointer to an object of type static_type; nonnull, and since the
@@ -952,6 +956,8 @@ __dynamic_cast(const void *static_ptr, const __class_type_info *static_type,
 
     return const_cast<void*>(dst_ptr);
 }
+
+#pragma GCC diagnostic pop
 
 #ifdef __clang__
 #pragma clang diagnostic pop

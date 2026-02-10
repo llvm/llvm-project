@@ -10,9 +10,9 @@ body: |
     ; GCN-LABEL: name: ds_atomic_async_barrier_arrive_b64
     ; GCN: liveins: $vgpr0, $vgpr1
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65507
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
     ; GCN-NEXT: DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 $vgpr1, 0, 0, implicit-def $asynccnt, implicit $asynccnt, implicit $exec
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65507
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VmVsrc_0
     DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 $vgpr1, 0, 0, implicit-def $asynccnt, implicit $asynccnt, implicit $exec
 ...
 
@@ -26,7 +26,7 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $sgpr102 = S_MOV_B32 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 61854
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_SaSdst_0
     ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
     $sgpr102 = S_MOV_B32 0
     $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
@@ -42,7 +42,7 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $sgpr103 = S_MOV_B32 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 61854
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_SaSdst_0
     ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_hi, $vgpr0, implicit $exec
     $sgpr103 = S_MOV_B32 0
     $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_hi, $vgpr0, implicit $exec
@@ -55,7 +55,7 @@ body: |
   bb.0:
     ; GCN-LABEL: name: write_s102_read_flat_scr_base
     ; GCN: $sgpr102 = S_MOV_B32 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 61854
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_SaSdst_0
     ; GCN-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $src_flat_scratch_base
     $sgpr102 = S_MOV_B32 0
     $sgpr0_sgpr1 = S_MOV_B64 $src_flat_scratch_base
@@ -68,7 +68,7 @@ body: |
   bb.0:
     ; GCN-LABEL: name: write_s103_read_flat_scr_base
     ; GCN: $sgpr103 = S_MOV_B32 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 61854
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_SaSdst_0
     ; GCN-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $src_flat_scratch_base
     $sgpr103 = S_MOV_B32 0
     $sgpr0_sgpr1 = S_MOV_B64 $src_flat_scratch_base
@@ -81,7 +81,7 @@ body: |
   bb.0:
     ; GCN-LABEL: name: write_s102_s103_read_flat_scr_base
     ; GCN: $sgpr102_sgpr103 = S_MOV_B64 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 61854
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_SaSdst_0
     ; GCN-NEXT: $sgpr0_sgpr1 = S_MOV_B64 $src_flat_scratch_base
     $sgpr102_sgpr103 = S_MOV_B64 0
     $sgpr0_sgpr1 = S_MOV_B64 $src_flat_scratch_base
@@ -97,7 +97,7 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $sgpr102 = S_MOV_B32 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 61854
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_SaSdst_0
     ; GCN-NEXT: $sgpr1 = S_GETREG_B32 20, implicit $mode
     $sgpr102 = S_MOV_B32 0
     $sgpr1 = S_GETREG_B32 20, implicit $mode
@@ -113,7 +113,7 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $sgpr103 = S_MOV_B32 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 61854
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_SaSdst_0
     ; GCN-NEXT: $sgpr1 = S_GETREG_B32 21, implicit $mode
     $sgpr103 = S_MOV_B32 0
     $sgpr1 = S_GETREG_B32 21, implicit $mode
@@ -126,7 +126,7 @@ body: |
   bb.0:
     ; GCN-LABEL: name: write_s102_s103_getreg_flat_scr_base_hi
     ; GCN: $sgpr102_sgpr103 = S_MOV_B64 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 61854
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_SaSdst_0
     ; GCN-NEXT: $sgpr1 = S_GETREG_B32 21, implicit $mode
     $sgpr102_sgpr103 = S_MOV_B64 0
     $sgpr1 = S_GETREG_B32 21, implicit $mode
@@ -154,7 +154,7 @@ body: |
     ; GCN-NEXT: $sgpr6 = S_MOV_B32 0
     ; GCN-NEXT: $sgpr7 = S_MOV_B32 0
     ; GCN-NEXT: $sgpr8_sgpr9 = S_LOAD_DWORDX2_IMM renamable $sgpr4_sgpr5, 0, 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 61854
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_SaSdst_0
     ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
     $sgpr102 = S_MOV_B32 0
     $sgpr0 = S_MOV_B32 0
@@ -241,7 +241,7 @@ body: |
     ; GCN-NEXT: $sgpr6 = S_MOV_B32 0
     ; GCN-NEXT: $sgpr7 = S_MOV_B32 0
     ; GCN-NEXT: $sgpr8_sgpr9 = S_LOAD_DWORDX2_IMM renamable $sgpr4_sgpr5, 0, 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 61854
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_SaSdst_0
     ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_hi, $vgpr0, implicit $exec
     $sgpr103 = S_MOV_B32 0
     $sgpr0 = S_MOV_B32 0
@@ -331,7 +331,7 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $sgpr102 = S_MOV_B32 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 0
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0_VaSdst_0_VaSsrc_0_HoldCnt_0_VmVsrc_0_VaVcc_0_SaSdst_0
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
     $sgpr102 = S_MOV_B32 0
@@ -350,7 +350,7 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $sgpr102 = S_MOV_B32 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 61950
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_SaSdst_0
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
     $sgpr102 = S_MOV_B32 0
@@ -369,9 +369,9 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $sgpr102 = S_MOV_B32 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 61951
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaSdst_0
     ; GCN-NEXT: S_NOP 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 61854
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_SaSdst_0
     ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
     $sgpr102 = S_MOV_B32 0
     S_WAITCNT_DEPCTR 61951
@@ -389,9 +389,9 @@ body: |
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $sgpr102 = S_MOV_B32 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65534
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: S_NOP 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 61854
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_SaSdst_0
     ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
     $sgpr102 = S_MOV_B32 0
     S_WAITCNT_DEPCTR 65534
@@ -410,7 +410,7 @@ body: |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $sgpr102 = S_MOV_B32 0
     ; GCN-NEXT: $sgpr103 = S_MOV_B32 0
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 61854
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_SaSdst_0
     ; GCN-NEXT: $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
     ; GCN-NEXT: $vgpr1 = V_ADD_U32_e32 $src_flat_scratch_base_hi, $vgpr0, implicit $exec
     $sgpr102 = S_MOV_B32 0
@@ -459,7 +459,7 @@ body: |
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   liveins: $vgpr0
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   S_WAITCNT_DEPCTR 61854
+  ; GCN-NEXT:   S_WAITCNT_DEPCTR .VaSdst_0_SaSdst_0
   ; GCN-NEXT:   $vgpr0 = V_ADD_U32_e32 $src_flat_scratch_base_lo, $vgpr0, implicit $exec
   bb.0:
     liveins: $vgpr0, $sgpr0

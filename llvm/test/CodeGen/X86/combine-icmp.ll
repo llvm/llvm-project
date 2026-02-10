@@ -532,18 +532,16 @@ define i64 @concat_icmp_v64i8_v16i8(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2,
 ;
 ; AVX2-LABEL: concat_icmp_v64i8_v16i8:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm4 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
-; AVX2-NEXT:    vpmaxub %xmm4, %xmm0, %xmm5
-; AVX2-NEXT:    vpcmpeqb %xmm5, %xmm0, %xmm0
-; AVX2-NEXT:    vpmaxub %xmm4, %xmm1, %xmm5
-; AVX2-NEXT:    vpcmpeqb %xmm5, %xmm1, %xmm1
-; AVX2-NEXT:    vpmaxub %xmm4, %xmm2, %xmm5
-; AVX2-NEXT:    vpcmpeqb %xmm5, %xmm2, %xmm2
-; AVX2-NEXT:    vpmaxub %xmm4, %xmm3, %xmm4
-; AVX2-NEXT:    vpcmpeqb %xmm4, %xmm3, %xmm3
+; AVX2-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
+; AVX2-NEXT:    vpmaxub %ymm1, %ymm0, %ymm4
+; AVX2-NEXT:    vpcmpeqb %ymm4, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
 ; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm0
+; AVX2-NEXT:    vpmaxub %ymm1, %ymm0, %ymm1
+; AVX2-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpmovmskb %ymm0, %eax
 ; AVX2-NEXT:    shlq $32, %rax
 ; AVX2-NEXT:    orq %rcx, %rax

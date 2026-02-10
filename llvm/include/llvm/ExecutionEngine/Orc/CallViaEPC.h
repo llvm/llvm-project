@@ -25,15 +25,33 @@ namespace llvm::orc {
 
 namespace detail {
 
-// Helper to extract the Expected<T> argument type from a handler callable.
-template <typename HandlerT> struct HandlerTraits {
+template <typename HandlerArgT> struct CallViaEPCRetValueTraits;
+
+template <typename RetT> struct CallViaEPCRetValueTraits<Expected<RetT>> {
+  using value_type = RetT;
+};
+
+template <> struct CallViaEPCRetValueTraits<Error> {
+  using value_type = void;
+};
+
+template <typename RetT> struct CallViaEPCRetValueTraits<MSVCPExpected<RetT>> {
+  using value_type = RetT;
+};
+
+template <> struct CallViaEPCRetValueTraits<MSVCPError> {
+  using value_type = void;
+};
+
+// Helper to extract the argument type from a handler callable.
+template <typename HandlerT> struct CallViaEPCHandlerTraits {
   using ArgInfo = CallableArgInfo<HandlerT>;
   using ArgsTuple = typename ArgInfo::ArgsTupleType;
   static_assert(std::tuple_size_v<ArgsTuple> == 1,
                 "Handler must take exactly one argument");
-  using ExpectedArgType = std::tuple_element_t<0, ArgsTuple>;
-  using RetT = typename std::remove_cv_t<
-      std::remove_reference_t<ExpectedArgType>>::value_type;
+  using HandlerArgT = std::tuple_element_t<0, ArgsTuple>;
+  using RetT = typename CallViaEPCRetValueTraits<
+      std::remove_cv_t<std::remove_reference_t<HandlerArgT>>>::value_type;
 };
 
 } // namespace detail
@@ -43,13 +61,13 @@ template <typename HandlerFn, typename Serializer, typename... ArgTs>
 std::enable_if_t<std::is_invocable_v<HandlerFn, Error>>
 callViaEPC(HandlerFn &&H, ExecutorProcessControl &EPC, Serializer S,
            ExecutorSymbolDef Fn, ArgTs &&...Args) {
-  using RetT = typename detail::HandlerTraits<HandlerFn>::RetT;
+  using RetT = typename detail::CallViaEPCHandlerTraits<HandlerFn>::RetT;
 
   if (auto ArgBytes = S.serialize(std::forward<ArgTs>(Args)...))
     EPC.callWrapperAsync(
         Fn.getAddress(),
         [S = std::move(S), H = std::forward<HandlerFn>(H)](
-            shared::WrapperFunctionResult R) mutable {
+            shared::WrapperFunctionBuffer R) mutable {
           if (const char *ErrMsg = R.getOutOfBandError())
             H(make_error<StringError>(ErrMsg, inconvertibleErrorCode()));
           else

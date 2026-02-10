@@ -2698,7 +2698,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
 
     // ODR should not happen for local linkage.
     if (NewGlobal->hasLocalLinkage()) {
-      ODRIndicator = ConstantInt::get(IntptrTy, -1);
+      ODRIndicator = ConstantInt::getAllOnesValue(IntptrTy);
     } else if (UseOdrIndicator) {
       // With local aliases, we need to provide another externally visible
       // symbol __odr_asan_XXX to detect ODR violation.
@@ -3837,11 +3837,7 @@ void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
   // redzones, and OldSize is number of allocated blocks with
   // ElementSize size, get allocated memory size in bytes by
   // OldSize * ElementSize.
-  const unsigned ElementSize =
-      F.getDataLayout().getTypeAllocSize(AI->getAllocatedType());
-  Value *OldSize =
-      IRB.CreateMul(IRB.CreateIntCast(AI->getArraySize(), IntptrTy, false),
-                    ConstantInt::get(IntptrTy, ElementSize));
+  Value *OldSize = IRB.CreateAllocationSize(IntptrTy, AI);
 
   // PartialSize = OldSize % 32
   Value *PartialSize = IRB.CreateAnd(OldSize, AllocaRzMask);

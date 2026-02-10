@@ -14,9 +14,11 @@
 namespace clang::tidy {
 
 namespace google::readability {
+namespace {
 
 enum class StyleKind { Parentheses, Hyphen };
 
+} // namespace
 } // namespace google::readability
 
 template <> struct OptionEnumMapping<google::readability::StyleKind> {

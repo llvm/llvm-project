@@ -61,3 +61,9 @@
 
 %feature("docstring", "Sets whether to JIT an expression if it cannot be interpreted."
 ) lldb::SBExpressionOptions::SetAllowJIT;
+
+%feature("docstring", "Sets language-plugin specific boolean option for expression evaluation. LLDB currently doesn't validate whether the option being set is understood by the expression evaluator."
+) lldb::SBExpressionOptions::SetBooleanLanguageOption;
+
+%feature("docstring", "Gets language-plugin specific boolean option for expression evaluation. LLDB currently doesn't validate whether the option being retrieved is one that is understood by the expression evaluator."
+) lldb::SBExpressionOptions::GetBooleanLanguageOption;

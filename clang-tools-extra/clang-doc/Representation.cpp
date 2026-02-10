@@ -254,6 +254,7 @@ bool FriendInfo::mergeable(const FriendInfo &Other) {
 void FriendInfo::merge(FriendInfo &&Other) {
   assert(mergeable(Other));
   Ref.merge(std::move(Other.Ref));
+  SymbolInfo::merge(std::move(Other));
 }
 
 void Info::mergeBase(Info &&Other) {
@@ -272,6 +273,10 @@ void Info::mergeBase(Info &&Other) {
   llvm::sort(Description);
   auto Last = llvm::unique(Description);
   Description.erase(Last, Description.end());
+  if (ParentUSR == EmptySID)
+    ParentUSR = Other.ParentUSR;
+  if (DocumentationFileName.empty())
+    DocumentationFileName = Other.DocumentationFileName;
 }
 
 bool Info::mergeable(const Info &Other) {
@@ -368,6 +373,8 @@ void TypedefInfo::merge(TypedefInfo &&Other) {
     IsUsing = Other.IsUsing;
   if (Underlying.Type.Name == "")
     Underlying = Other.Underlying;
+  if (!Template)
+    Template = Other.Template;
   SymbolInfo::merge(std::move(Other));
 }
 
@@ -398,7 +405,7 @@ BaseRecordInfo::BaseRecordInfo() : RecordInfo() {}
 BaseRecordInfo::BaseRecordInfo(SymbolID USR, StringRef Name, StringRef Path,
                                bool IsVirtual, AccessSpecifier Access,
                                bool IsParent)
-    : RecordInfo(USR, Name, Path), IsVirtual(IsVirtual), Access(Access),
+    : RecordInfo(USR, Name, Path), Access(Access), IsVirtual(IsVirtual),
       IsParent(IsParent) {}
 
 llvm::SmallString<16> Info::extractName() const {

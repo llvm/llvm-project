@@ -80,7 +80,7 @@ public:
 
   RuntimeLibcallsInfo() = default;
 
-  explicit RuntimeLibcallsInfo(
+  LLVM_ABI explicit RuntimeLibcallsInfo(
       const Triple &TT,
       ExceptionHandling ExceptionModel = ExceptionHandling::None,
       FloatABI::ABIType FloatABI = FloatABI::Default,
@@ -89,8 +89,8 @@ public:
 
   explicit RuntimeLibcallsInfo(const Module &M);
 
-  bool invalidate(Module &M, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &);
+  LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
+                           ModuleAnalysisManager::Invalidator &);
 
   /// Get the libcall routine name for the specified libcall implementation.
   static StringRef getLibcallImplName(RTLIB::LibcallImpl CallImpl) {

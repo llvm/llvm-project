@@ -106,7 +106,7 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
           cir::ConstantOp falseNVRO = builder.getFalse(loc);
           Address nrvoFlag = createTempAlloca(falseNVRO.getType(),
                                               CharUnits::One(), loc, "nrvo",
-                                              /*arraySize=*/nullptr, &address);
+                                              /*arraySize=*/nullptr);
           assert(builder.getInsertionBlock());
           builder.createStore(loc, falseNVRO, nrvoFlag);
 
@@ -454,7 +454,8 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   if (supportsCOMDAT() && gv.isWeakForLinker())
     gv.setComdat(true);
 
-  assert(!cir::MissingFeatures::opGlobalThreadLocal());
+  if (d.getTLSKind())
+    errorNYI(d.getSourceRange(), "getOrCreateStaticVarDecl: TLS");
 
   setGVProperties(gv, &d);
 
@@ -498,6 +499,67 @@ CIRGenModule::getOrCreateStaticVarDecl(const VarDecl &d,
   }
 
   return gv;
+}
+
+Address CIRGenModule::createUnnamedGlobalFrom(const VarDecl &d,
+                                              mlir::Attribute constAttr,
+                                              CharUnits align) {
+  auto functionName = [&](const DeclContext *dc) -> std::string {
+    if (const auto *fd = dyn_cast<FunctionDecl>(dc)) {
+      if (const auto *cc = dyn_cast<CXXConstructorDecl>(fd))
+        return cc->getNameAsString();
+      if (const auto *cd = dyn_cast<CXXDestructorDecl>(fd))
+        return cd->getNameAsString();
+      return std::string(getMangledName(fd));
+    } else if (const auto *om = dyn_cast<ObjCMethodDecl>(dc)) {
+      return om->getNameAsString();
+    } else if (isa<BlockDecl>(dc)) {
+      return "<block>";
+    } else if (isa<CapturedDecl>(dc)) {
+      return "<captured>";
+    } else {
+      llvm_unreachable("expected a function or method");
+    }
+  };
+
+  // Form a simple per-variable cache of these values in case we find we
+  // want to reuse them.
+  cir::GlobalOp &cacheEntry = initializerConstants[&d];
+  if (!cacheEntry || cacheEntry.getInitialValue() != constAttr) {
+    auto ty = mlir::cast<mlir::TypedAttr>(constAttr).getType();
+    bool isConstant = true;
+
+    std::string name;
+    if (d.hasGlobalStorage())
+      name = getMangledName(&d).str() + ".const";
+    else if (const DeclContext *dc = d.getParentFunctionOrMethod())
+      name = ("__const." + functionName(dc) + "." + d.getName()).str();
+    else
+      llvm_unreachable("local variable has no parent function or method");
+
+    assert(!cir::MissingFeatures::addressSpace());
+    cir::GlobalOp gv = builder.createVersionedGlobal(
+        getModule(), getLoc(d.getLocation()), name, ty, isConstant,
+        cir::GlobalLinkageKind::PrivateLinkage);
+    // TODO(cir): infer visibility from linkage in global op builder.
+    gv.setVisibility(getMLIRVisibilityFromCIRLinkage(
+        cir::GlobalLinkageKind::PrivateLinkage));
+    gv.setInitialValueAttr(constAttr);
+    gv.setAlignment(align.getAsAlign().value());
+    // TODO(cir): Set unnamed address attribute when available in CIR
+
+    cacheEntry = gv;
+  } else if (cacheEntry.getAlignment() < align.getQuantity()) {
+    cacheEntry.setAlignment(align.getAsAlign().value());
+  }
+
+  // Create a GetGlobalOp to get a pointer to the global
+  assert(!cir::MissingFeatures::addressSpace());
+  mlir::Type eltTy = mlir::cast<mlir::TypedAttr>(constAttr).getType();
+  auto ptrTy = builder.getPointerTo(cacheEntry.getSymType());
+  mlir::Value globalPtr = cir::GetGlobalOp::create(
+      builder, getLoc(d.getLocation()), ptrTy, cacheEntry.getSymName());
+  return Address(globalPtr, eltTy, align);
 }
 
 /// Add the initializer for 'd' to the global variable that has already been
@@ -743,11 +805,6 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
   case Decl::Import:
   case Decl::MSGuid: // __declspec(uuid("..."))
   case Decl::TemplateParamObject:
-  case Decl::OMPThreadPrivate:
-  case Decl::OMPGroupPrivate:
-  case Decl::OMPAllocate:
-  case Decl::OMPCapturedExpr:
-  case Decl::OMPRequires:
   case Decl::Empty:
   case Decl::Concept:
   case Decl::LifetimeExtendedTemporary:
@@ -781,6 +838,27 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
   case Decl::OpenACCRoutine:
     emitOpenACCRoutine(cast<OpenACCRoutineDecl>(d));
     return;
+  case Decl::OMPThreadPrivate:
+    emitOMPThreadPrivateDecl(cast<OMPThreadPrivateDecl>(d));
+    return;
+  case Decl::OMPGroupPrivate:
+    emitOMPGroupPrivateDecl(cast<OMPGroupPrivateDecl>(d));
+    return;
+  case Decl::OMPAllocate:
+    emitOMPAllocateDecl(cast<OMPAllocateDecl>(d));
+    return;
+  case Decl::OMPCapturedExpr:
+    emitOMPCapturedExpr(cast<OMPCapturedExprDecl>(d));
+    return;
+  case Decl::OMPRequires:
+    emitOMPRequiresDecl(cast<OMPRequiresDecl>(d));
+    return;
+  case Decl::OMPDeclareMapper:
+    emitOMPDeclareMapper(cast<OMPDeclareMapperDecl>(d));
+    return;
+  case Decl::OMPDeclareReduction:
+    emitOMPDeclareReduction(cast<OMPDeclareReductionDecl>(d));
+    return;
   case Decl::Typedef:     // typedef int X;
   case Decl::TypeAlias: { // using X = int; [C++0x]
     QualType ty = cast<TypedefNameDecl>(d).getUnderlyingType();
@@ -792,8 +870,6 @@ void CIRGenFunction::emitDecl(const Decl &d, bool evaluateConditionDecl) {
   case Decl::ImplicitConceptSpecialization:
   case Decl::TopLevelStmt:
   case Decl::UsingPack:
-  case Decl::OMPDeclareMapper:
-  case Decl::OMPDeclareReduction:
     cgm.errorNYI(d.getSourceRange(),
                  std::string("emitDecl: unhandled decl type: ") +
                      d.getDeclKindName());
@@ -835,7 +911,24 @@ template <class Derived> struct DestroyNRVOVariable : EHScopeStack::Cleanup {
   QualType ty;
 
   void emit(CIRGenFunction &cgf, Flags flags) override {
-    assert(!cir::MissingFeatures::cleanupDestroyNRVOVariable());
+    // Along the exceptions path we always execute the dtor.
+    bool nrvo = flags.isForNormalCleanup() && nrvoFlag;
+
+    CIRGenBuilderTy &builder = cgf.getBuilder();
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    if (nrvo) {
+      // If we exited via NRVO, we skip the destructor call.
+      mlir::Location loc = addr.getPointer().getLoc();
+      mlir::Value didNRVO = builder.createFlagLoad(loc, nrvoFlag);
+      mlir::Value notNRVO = builder.createNot(didNRVO);
+      cir::IfOp::create(builder, loc, notNRVO, /*withElseRegion=*/false,
+                        [&](mlir::OpBuilder &b, mlir::Location) {
+                          static_cast<Derived *>(this)->emitDestructorCall(cgf);
+                          builder.createYield(loc);
+                        });
+    } else {
+      static_cast<Derived *>(this)->emitDestructorCall(cgf);
+    }
   }
 
   virtual ~DestroyNRVOVariable() = default;
@@ -851,7 +944,9 @@ struct DestroyNRVOVariableCXX final
   const CXXDestructorDecl *dtor;
 
   void emitDestructorCall(CIRGenFunction &cgf) {
-    assert(!cir::MissingFeatures::cleanupDestroyNRVOVariable());
+    cgf.emitCXXDestructorCall(dtor, Dtor_Complete,
+                              /*forVirtualBase=*/false,
+                              /*delegating=*/false, addr, ty);
   }
 };
 

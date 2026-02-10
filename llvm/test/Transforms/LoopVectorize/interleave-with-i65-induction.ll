@@ -24,8 +24,8 @@ define void @i65_induction_with_negative_step(ptr %dst) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i64 -4
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP7]], i64 -3
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    store <4 x i64> [[REVERSE]], ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[REVERSE1:%.*]] = shufflevector <4 x i64> [[TMP3]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    store <4 x i64> [[REVERSE]], ptr [[TMP6]], align 8
 ; CHECK-NEXT:    store <4 x i64> [[REVERSE1]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i65 [[INDEX]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD]], splat (i64 -4)

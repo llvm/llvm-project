@@ -1,11 +1,11 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/hello.s -o %t.hello32.o
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %s -o %t32.o
-# RUN: wasm-ld -m wasm32 -no-gc-sections --export=__data_end --export=__heap_base --allow-undefined --no-entry -o %t32.wasm %t32.o %t.hello32.o
+# RUN: wasm-ld -m wasm32 -no-gc-sections --export=__rodata_start --export=__rodata_end --export=__data_end --export=__heap_base --allow-undefined --no-entry -o %t32.wasm %t32.o %t.hello32.o
 # RUN: obj2yaml %t32.wasm | FileCheck -DPTR=I32 %s
 #
 # RUN: llvm-mc -filetype=obj -triple=wasm64-unknown-unknown %p/Inputs/hello.s -o %t.hello64.o
 # RUN: llvm-mc -filetype=obj -triple=wasm64-unknown-unknown %s -o %t64.o
-# RUN: wasm-ld -m wasm64 -no-gc-sections --export=__data_end --export=__heap_base --allow-undefined --no-entry -o %t64.wasm %t64.o %t.hello64.o
+# RUN: wasm-ld -m wasm64 -no-gc-sections --export=__rodata_start --export=__rodata_end --export=__data_end --export=__heap_base --allow-undefined --no-entry -o %t64.wasm %t64.o %t.hello64.o
 # RUN: obj2yaml %t64.wasm | FileCheck --check-prefixes CHECK,CHK64 -DPTR=I64 %s
 
         .section .data.foo,"",@
@@ -25,6 +25,13 @@ aligned_bar:
         .int32  3
         .size   aligned_bar, 4
 
+        .section .rodata.baz,"",@
+        .globl  baz
+        .hidden  baz
+        .p2align        2
+baz:
+        .int32  42
+        .size   baz, 4
 
         .section .data.external_ref,"",@
         .globl  external_ref
@@ -75,6 +82,18 @@ local_struct_internal_ptr:
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          [[PTR]]_CONST
+# CHECK-NEXT:           Value:           65536
+# CHECK-NEXT:       - Index:           3
+# CHECK-NEXT:         Type:            [[PTR]]
+# CHECK-NEXT:         Mutable:         false
+# CHECK-NEXT:         InitExpr:
+# CHECK-NEXT:           Opcode:          [[PTR]]_CONST
+# CHECK-NEXT:           Value:           65547
+# CHECK-NEXT:       - Index:           4
+# CHECK-NEXT:         Type:            [[PTR]]
+# CHECK-NEXT:         Mutable:         false
+# CHECK-NEXT:         InitExpr:
+# CHECK-NEXT:           Opcode:          [[PTR]]_CONST
 # CHECK-NEXT:           Value:           65600
 
 # CHECK:        - Type:            DATA
@@ -84,8 +103,8 @@ local_struct_internal_ptr:
 # CHECK-NEXT:         Offset:
 # CHECK-NEXT:           Opcode:          [[PTR]]_CONST
 # CHECK-NEXT:           Value:           65536
-# CHECK-NEXT:         Content:         68656C6C6F0A00
-# CHECK-NEXT:       - SectionOffset:   22
+# CHECK-NEXT:         Content:         2A00000068656C6C6F0A00
+# CHECK-NEXT:       - SectionOffset:   26
 # CHECK-NEXT:         InitFlags:       0
 # CHECK-NEXT:         Offset:
 # CHECK-NEXT:           Opcode:          [[PTR]]_CONST

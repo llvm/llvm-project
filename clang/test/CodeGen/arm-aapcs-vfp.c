@@ -65,7 +65,7 @@ struct big_struct {
   float f4;
 };
 // CHECK: define{{.*}} arm_aapcs_vfpcc void @test_big([5 x i32] %{{.*}})
-// CHECK64: define{{.*}} void @test_big(ptr dead_on_return noundef %{{.*}})
+// CHECK64: define{{.*}} void @test_big(ptr noundef dead_on_return %{{.*}})
 // CHECK64: call void @llvm.memcpy
 // CHECK64: call void @big_callee(ptr
 extern void big_callee(struct big_struct);

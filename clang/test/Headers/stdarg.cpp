@@ -15,8 +15,8 @@
 
 #include <stdarg.h>
 
-// AARCH64-C: define {{.*}} @f(i32 noundef %n, ptr dead_on_return noundef %list)
-// AARCH64-CXX: define {{.*}} @_Z1fiSt9__va_list(i32 noundef %n, ptr dead_on_return noundef %list)
+// AARCH64-C: define {{.*}} @f(i32 noundef %n, ptr noundef dead_on_return %list)
+// AARCH64-CXX: define {{.*}} @_Z1fiSt9__va_list(i32 noundef %n, ptr noundef dead_on_return %list)
 // X86_64-C: define {{.*}} @f(i32 noundef %n, ptr noundef %list)
 // X86_64-CXX: define {{.*}} @_Z1fiP13__va_list_tag(i32 noundef %n, ptr noundef %list)
 // PPC64-C: define {{.*}} @f(i32 noundef signext %n, ptr noundef %list)

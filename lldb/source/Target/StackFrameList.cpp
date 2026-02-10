@@ -38,12 +38,13 @@ using namespace lldb_private;
 // StackFrameList constructor
 StackFrameList::StackFrameList(Thread &thread,
                                const lldb::StackFrameListSP &prev_frames_sp,
-                               bool show_inline_frames)
+                               bool show_inline_frames,
+                               lldb::frame_list_id_t provider_id)
     : m_thread(thread), m_prev_frames_sp(prev_frames_sp), m_frames(),
       m_selected_frame_idx(), m_concrete_frames_fetched(0),
       m_current_inlined_depth(UINT32_MAX),
       m_current_inlined_pc(LLDB_INVALID_ADDRESS),
-      m_show_inlined_frames(show_inline_frames) {
+      m_show_inlined_frames(show_inline_frames), m_identifier(provider_id) {
   if (prev_frames_sp) {
     m_current_inlined_depth = prev_frames_sp->m_current_inlined_depth;
     m_current_inlined_pc = prev_frames_sp->m_current_inlined_pc;
@@ -58,21 +59,37 @@ StackFrameList::~StackFrameList() {
 
 SyntheticStackFrameList::SyntheticStackFrameList(
     Thread &thread, lldb::StackFrameListSP input_frames,
-    const lldb::StackFrameListSP &prev_frames_sp, bool show_inline_frames)
-    : StackFrameList(thread, prev_frames_sp, show_inline_frames),
-      m_input_frames(std::move(input_frames)) {}
+    const lldb::StackFrameListSP &prev_frames_sp, bool show_inline_frames,
+    lldb::SyntheticFrameProviderSP provider_sp, uint64_t provider_id)
+    : StackFrameList(thread, prev_frames_sp, show_inline_frames, provider_id),
+      m_input_frames(std::move(input_frames)),
+      m_provider(std::move(provider_sp)) {}
 
 bool SyntheticStackFrameList::FetchFramesUpTo(
     uint32_t end_idx, InterruptionControl allow_interrupt) {
-  // Check if the thread has a synthetic frame provider.
-  if (auto provider_sp = m_thread.GetFrameProvider()) {
-    // Use the synthetic frame provider to generate frames lazily.
+
+  size_t num_synthetic_frames = 0;
+  // Use the provider to generate frames lazily.
+  if (m_provider) {
+    // Get starting index under lock.
+    uint32_t start_idx = 0;
+    {
+      std::shared_lock<std::shared_mutex> guard(m_list_mutex);
+      start_idx = m_frames.size();
+    }
+
     // Keep fetching until we reach end_idx or the provider returns an error.
-    for (uint32_t idx = m_frames.size(); idx <= end_idx; idx++) {
+    for (uint32_t idx = start_idx; idx <= end_idx; idx++) {
       if (allow_interrupt &&
           m_thread.GetProcess()->GetTarget().GetDebugger().InterruptRequested())
         return true;
-      auto frame_or_err = provider_sp->GetFrameAtIndex(idx);
+
+      // Call Python WITHOUT holding lock - prevents deadlock.
+      auto frame_or_err = m_provider->GetFrameAtIndex(idx);
+
+      // Acquire lock to modify m_frames.
+      std::unique_lock<std::shared_mutex> guard(m_list_mutex);
+
       if (!frame_or_err) {
         // Provider returned error - we've reached the end.
         LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), frame_or_err.takeError(),
@@ -81,9 +98,12 @@ bool SyntheticStackFrameList::FetchFramesUpTo(
         break;
       }
       StackFrameSP frame_sp = *frame_or_err;
+      if (frame_sp->IsSynthetic())
+        frame_sp->GetStackID().SetCFA(num_synthetic_frames++,
+                                      GetThread().GetProcess().get());
       // Set the frame list weak pointer so ExecutionContextRef can resolve
       // the frame without calling Thread::GetStackFrameList().
-      frame_sp->m_frame_list_wp = shared_from_this();
+      frame_sp->m_frame_list_id = GetIdentifier();
       m_frames.push_back(frame_sp);
     }
 
@@ -369,7 +389,7 @@ void StackFrameList::SynthesizeTailCallFrames(StackFrame &next_frame) {
         m_thread.shared_from_this(), frame_idx, concrete_frame_idx, cfa,
         cfa_is_valid, pc, StackFrame::Kind::Regular, artificial,
         behaves_like_zeroth_frame, &sc);
-    synth_frame->m_frame_list_wp = shared_from_this();
+    synth_frame->m_frame_list_id = GetIdentifier();
     m_frames.push_back(synth_frame);
     LLDB_LOG(log, "Pushed frame {0} at {1:x}", callee->GetDisplayName(), pc);
   }
@@ -403,6 +423,10 @@ bool StackFrameList::GetFramesUpTo(uint32_t end_idx,
     FetchOnlyConcreteFramesUpTo(end_idx);
     return false;
   }
+
+  // Release lock before FetchFramesUpTo which may call Python.
+  // FetchFramesUpTo will acquire locks as needed.
+  guard.unlock();
 
   // We're adding concrete and inlined frames now:
   was_interrupted = FetchFramesUpTo(end_idx, allow_interrupt);
@@ -485,7 +509,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
           unwind_frame_sp = std::make_shared<StackFrame>(
               m_thread.shared_from_this(), m_frames.size(), idx, reg_ctx_sp,
               cfa, pc, behaves_like_zeroth_frame, nullptr);
-          unwind_frame_sp->m_frame_list_wp = shared_from_this();
+          unwind_frame_sp->m_frame_list_id = GetIdentifier();
           m_frames.push_back(unwind_frame_sp);
         }
       } else {
@@ -520,7 +544,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       // although its concrete index will stay the same.
       SynthesizeTailCallFrames(*unwind_frame_sp.get());
 
-      unwind_frame_sp->m_frame_list_wp = shared_from_this();
+      unwind_frame_sp->m_frame_list_id = GetIdentifier();
       m_frames.push_back(unwind_frame_sp);
     }
 
@@ -545,7 +569,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
             unwind_frame_sp->GetRegisterContextSP(), cfa, next_frame_address,
             behaves_like_zeroth_frame, &next_frame_sc));
 
-        frame_sp->m_frame_list_wp = shared_from_this();
+        frame_sp->m_frame_list_id = GetIdentifier();
         m_frames.push_back(frame_sp);
         unwind_sc = next_frame_sc;
         curr_frame_address = next_frame_address;
@@ -602,7 +626,7 @@ bool StackFrameList::FetchFramesUpTo(uint32_t end_idx,
       prev_frame->UpdatePreviousFrameFromCurrentFrame(*curr_frame);
       // Now copy the fixed up previous frame into the current frames so the
       // pointer doesn't change.
-      prev_frame_sp->m_frame_list_wp = shared_from_this();
+      prev_frame_sp->m_frame_list_id = GetIdentifier();
       m_frames[curr_frame_idx] = prev_frame_sp;
 
 #if defined(DEBUG_STACK_FRAMES)
@@ -976,7 +1000,6 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
             dbg, "Interrupted dumping stack for thread {0:x} with {1} shown.",
             m_thread.GetID(), num_frames_displayed))
       break;
-
 
     if (!frame_sp->GetStatus(strm, show_frame_info,
                              num_frames_with_source > (first_frame - frame_idx),

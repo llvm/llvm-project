@@ -19,13 +19,39 @@ using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::shared;
 
-static CWrapperFunctionResult mainWrapper(const char *ArgData, size_t ArgSize) {
+static CWrapperFunctionBuffer voidWrapper(const char *ArgData, size_t ArgSize) {
+  return WrapperFunction<void()>::handle(ArgData, ArgSize, []() {}).release();
+}
+
+static CWrapperFunctionBuffer mainWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<int32_t(SPSSequence<SPSString>)>::handle(
              ArgData, ArgSize,
              [](std::vector<std::string> Args) -> int32_t {
                return Args.size();
              })
       .release();
+}
+
+TEST(CallSPSViaEPCTest, CallVoidViaCallerAsync) {
+  auto EPC = cantFail(SelfExecutorProcessControl::Create());
+  SPSEPCCaller<void()> C(*EPC);
+
+  Error Err = Error::success();
+  {
+    ErrorAsOutParameter _(Err);
+    C([&](Error E) { Err = std::move(E); },
+      ExecutorSymbolDef::fromPtr(voidWrapper));
+  }
+  EXPECT_THAT_ERROR(std::move(Err), Succeeded());
+}
+
+TEST(CallSPSViaEPCTest, CallVoidViaCallerSync) {
+  auto EPC = cantFail(SelfExecutorProcessControl::Create());
+  SPSEPCCaller<void()> C(*EPC);
+
+  Error Err =
+      C(std::promise<MSVCPError>(), ExecutorSymbolDef::fromPtr(voidWrapper));
+  EXPECT_THAT_ERROR(std::move(Err), Succeeded());
 }
 
 TEST(CallSPSViaEPCTest, CallMainViaCallerAsync) {
