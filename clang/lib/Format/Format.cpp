@@ -3810,7 +3810,7 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
       break;
     SearchFrom = Pos + 1;
   }
-  if (!ImportsInBlock.empty())
+  if (HasImport)
     sortJavaImports(Style, ImportsInBlock, Ranges, FileName, Code, Replaces);
   return Replaces;
 }
