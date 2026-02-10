@@ -28,7 +28,17 @@
 using namespace clang;
 using namespace clang::interp;
 
-static bool RetValue(InterpState &S, CodePtr &Pt) {
+#if __has_cpp_attribute(clang::musttail)
+#define MUSTTAIL [[clang::musttail]]
+#elif __has_cpp_attribute(msvc::musttail)
+#define MUSTTAIL [[msvc::musttail]]
+#elif __has_attribute(musttail)
+#define MUSTTAIL __attribute__((musttail))
+#else
+#define MUSTTAIL
+#endif
+
+PRESERVE_NONE static bool RetValue(InterpState &S, CodePtr &Pt) {
   llvm::report_fatal_error("Interpreter cannot return values");
 }
 
@@ -54,76 +64,6 @@ static bool Jf(InterpState &S, CodePtr &PC, int32_t Offset) {
   }
   return S.noteStep(PC);
 }
-
-// https://github.com/llvm/llvm-project/issues/102513
-#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
-#pragma optimize("", off)
-#endif
-// FIXME: We have the large switch over all opcodes here again, and in
-// Interpret().
-static bool BCP(InterpState &S, CodePtr &RealPC, int32_t Offset, PrimType PT) {
-  [[maybe_unused]] CodePtr PCBefore = RealPC;
-  size_t StackSizeBefore = S.Stk.size();
-
-  auto SpeculativeInterp = [&S, RealPC]() -> bool {
-    const InterpFrame *StartFrame = S.Current;
-    CodePtr PC = RealPC;
-
-    for (;;) {
-      auto Op = PC.read<Opcode>();
-      if (Op == OP_EndSpeculation)
-        return true;
-      CodePtr OpPC = PC;
-
-      switch (Op) {
-#define GET_INTERP
-#include "Opcodes.inc"
-#undef GET_INTERP
-      }
-    }
-    llvm_unreachable("We didn't see an EndSpeculation op?");
-  };
-
-  if (SpeculativeInterp()) {
-    if (PT == PT_Ptr) {
-      const auto &Ptr = S.Stk.pop<Pointer>();
-      assert(S.Stk.size() == StackSizeBefore);
-      S.Stk.push<Integral<32, true>>(
-          Integral<32, true>::from(CheckBCPResult(S, Ptr)));
-    } else {
-      // Pop the result from the stack and return success.
-      TYPE_SWITCH(PT, S.Stk.pop<T>(););
-      assert(S.Stk.size() == StackSizeBefore);
-      S.Stk.push<Integral<32, true>>(Integral<32, true>::from(1));
-    }
-  } else {
-    if (!S.inConstantContext())
-      return Invalid(S, RealPC);
-
-    S.Stk.clearTo(StackSizeBefore);
-    S.Stk.push<Integral<32, true>>(Integral<32, true>::from(0));
-  }
-
-  // RealPC should not have been modified.
-  assert(*RealPC == *PCBefore);
-
-  // Jump to end label. This is a little tricker than just RealPC += Offset
-  // because our usual jump instructions don't have any arguments, to the offset
-  // we get is a little too much and we need to subtract the size of the
-  // bool and PrimType arguments again.
-  int32_t ParamSize = align(sizeof(PrimType));
-  assert(Offset >= ParamSize);
-  RealPC += Offset - ParamSize;
-
-  [[maybe_unused]] CodePtr PCCopy = RealPC;
-  assert(PCCopy.read<Opcode>() == OP_EndSpeculation);
-
-  return true;
-}
-// https://github.com/llvm/llvm-project/issues/102513
-#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
-#pragma optimize("", on)
-#endif
 
 static void diagnoseMissingInitializer(InterpState &S, CodePtr OpPC,
                                        const ValueDecl *VD) {
@@ -258,6 +198,9 @@ static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
 namespace clang {
 namespace interp {
+PRESERVE_NONE static bool BCP(InterpState &S, CodePtr &RealPC, int32_t Offset,
+                              PrimType PT);
+
 static void popArg(InterpState &S, const Expr *Arg) {
   PrimType Ty = S.getContext().classify(Arg).value_or(PT_Ptr);
   TYPE_SWITCH(Ty, S.Stk.discard<T>());
@@ -2494,38 +2437,115 @@ bool Destroy(InterpState &S, CodePtr OpPC, uint32_t I) {
   return true;
 }
 
-// https://github.com/llvm/llvm-project/issues/102513
-#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
-#pragma optimize("", off)
-#endif
+PRESERVE_NONE static bool InterpNext(InterpState &S, CodePtr &PC);
+
 bool Interpret(InterpState &S) {
   // The current stack frame when we started Interpret().
   // This is being used by the ops to determine wheter
   // to return from this function and thus terminate
   // interpretation.
-  const InterpFrame *StartFrame = S.Current;
   assert(!S.Current->isRoot());
   CodePtr PC = S.Current->getPC();
 
-  // Empty program.
-  if (!PC)
-    return true;
-
-  for (;;) {
-    auto Op = PC.read<Opcode>();
-    CodePtr OpPC = PC;
-
-    switch (Op) {
-#define GET_INTERP
-#include "Opcodes.inc"
-#undef GET_INTERP
-    }
-  }
+  return InterpNext(S, PC);
 }
-// https://github.com/llvm/llvm-project/issues/102513
-#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
-#pragma optimize("", on)
+
+// The dispatcher functions read the opcode arguments from the
+// bytecode and call the implementation function.
+#define GET_INTERPFN_DISPATCHERS
+#include "Opcodes.inc"
+#undef GET_INTERPFN_DISPATCHERS
+
+using InterpFn = bool (*)(InterpState &, CodePtr &PC) PRESERVE_NONE;
+
+// Array of the dispatcher functions defined above.
+const InterpFn InterpFunctions[] = {
+#define GET_INTERPFN_LIST
+#include "Opcodes.inc"
+#undef GET_INTERPFN_LIST
+};
+
+// Read the next opcode and call the dispatcher function.
+PRESERVE_NONE static bool InterpNext(InterpState &S, CodePtr &PC) {
+  auto Op = PC.read<Opcode>();
+  auto Fn = InterpFunctions[Op];
+  [[clang::musttail]] return Fn(S, PC);
+}
+
+/// This is used to implement speculative execution via __builtin_constant_p
+/// when we generate bytecode.
+/// The setup here is that we use the same tailcall mechanism for speculative
+/// evaluation that we use for the regular one.
+/// Since each speculative execution ends with an EndSpeculation opcode,
+/// that one does NOT call InterpNext() but simply returns true.
+/// This way, we return back to this function when we see an EndSpeculation,
+/// OR (of course), when we encounter an error and one of the opcodes
+/// returns false.
+PRESERVE_NONE static bool BCP(InterpState &S, CodePtr &RealPC, int32_t Offset,
+                              PrimType PT) {
+  [[maybe_unused]] CodePtr PCBefore = RealPC;
+  size_t StackSizeBefore = S.Stk.size();
+
+  // Speculation depth must be at least 1 here, since we must have
+  // passed a StartSpeculation op before.
+#ifndef NDEBUG
+  [[maybe_unused]] unsigned DepthBefore = S.SpeculationDepth;
+  assert(DepthBefore >= 1);
 #endif
+
+  CodePtr PC = RealPC;
+  auto SpeculativeInterp = [&S, &PC]() -> bool {
+    // Ignore diagnostics during speculative execution.
+    PushIgnoreDiags(S, PC);
+    auto _ = llvm::scope_exit([&]() { PopIgnoreDiags(S, PC); });
+
+    auto Op = PC.read<Opcode>();
+    auto Fn = InterpFunctions[Op];
+    return Fn(S, PC);
+  };
+
+  if (SpeculativeInterp()) {
+    // Speculation must've ended naturally via a EndSpeculation opcode.
+    assert(S.SpeculationDepth == DepthBefore - 1);
+    if (PT == PT_Ptr) {
+      const auto &Ptr = S.Stk.pop<Pointer>();
+      assert(S.Stk.size() == StackSizeBefore);
+      S.Stk.push<Integral<32, true>>(
+          Integral<32, true>::from(CheckBCPResult(S, Ptr)));
+    } else {
+      // Pop the result from the stack and return success.
+      TYPE_SWITCH(PT, S.Stk.discard<T>(););
+      assert(S.Stk.size() == StackSizeBefore);
+      S.Stk.push<Integral<32, true>>(Integral<32, true>::from(1));
+    }
+  } else {
+    // End the speculation manually since we didn't call EndSpeculation
+    // naturally.
+    EndSpeculation(S, RealPC);
+
+    if (!S.inConstantContext())
+      return Invalid(S, RealPC);
+
+    S.Stk.clearTo(StackSizeBefore);
+    S.Stk.push<Integral<32, true>>(Integral<32, true>::from(0));
+  }
+
+  // RealPC should not have been modified.
+  assert(*RealPC == *PCBefore);
+
+  // We have already evaluated this speculation's EndSpeculation opcode.
+  assert(S.SpeculationDepth == DepthBefore - 1);
+
+  // Jump to end label. This is a little tricker than just RealPC += Offset
+  // because our usual jump instructions don't have any arguments, to the offset
+  // we get is a little too much and we need to subtract the size of the
+  // bool and PrimType arguments again.
+  int32_t ParamSize = align(sizeof(PrimType));
+  assert(Offset >= ParamSize);
+  RealPC += Offset - ParamSize;
+
+  return true;
+}
 
 } // namespace interp
 } // namespace clang

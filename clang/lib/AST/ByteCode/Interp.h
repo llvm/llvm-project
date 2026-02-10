@@ -33,7 +33,14 @@
 #include "clang/AST/Expr.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/ScopeExit.h"
 #include <type_traits>
+
+#if __has_cpp_attribute(clang::preserve_none)
+#define PRESERVE_NONE [[clang::preserve_none]]
+#else
+#define PRESERVE_NONE
+#endif
 
 namespace clang {
 namespace interp {
@@ -227,7 +234,7 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
                               const Function *Func);
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
-bool Ret(InterpState &S, CodePtr &PC) {
+PRESERVE_NONE bool Ret(InterpState &S, CodePtr &PC) {
   const T &Ret = S.Stk.pop<T>();
 
   assert(S.Current);
@@ -249,7 +256,7 @@ bool Ret(InterpState &S, CodePtr &PC) {
   return true;
 }
 
-inline bool RetVoid(InterpState &S, CodePtr &PC) {
+PRESERVE_NONE inline bool RetVoid(InterpState &S, CodePtr &PC) {
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
 
   if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
@@ -3064,8 +3071,7 @@ static inline bool ShiftFixedPoint(InterpState &S, CodePtr OpPC, bool Left) {
 //===----------------------------------------------------------------------===//
 // NoRet
 //===----------------------------------------------------------------------===//
-
-inline bool NoRet(InterpState &S, CodePtr OpPC) {
+PRESERVE_NONE inline bool NoRet(InterpState &S, CodePtr OpPC) {
   SourceLocation EndLoc = S.Current->getCallee()->getEndLoc();
   S.FFDiag(EndLoc, diag::note_constexpr_no_return);
   return false;
@@ -3286,24 +3292,42 @@ inline bool Unsupported(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
-inline bool StartSpeculation(InterpState &S, CodePtr OpPC) {
-  ++S.SpeculationDepth;
-  if (S.SpeculationDepth != 1)
+inline bool PushIgnoreDiags(InterpState &S, CodePtr OpPC) {
+  ++S.DiagIgnoreDepth;
+  if (S.DiagIgnoreDepth != 1)
     return true;
-
   assert(S.PrevDiags == nullptr);
   S.PrevDiags = S.getEvalStatus().Diag;
   S.getEvalStatus().Diag = nullptr;
+  assert(!S.diagnosing());
   return true;
 }
 
-inline bool EndSpeculation(InterpState &S, CodePtr OpPC) {
-  assert(S.SpeculationDepth != 0);
-  --S.SpeculationDepth;
-  if (S.SpeculationDepth == 0) {
+inline bool PopIgnoreDiags(InterpState &S, CodePtr OpPC) {
+  assert(S.DiagIgnoreDepth != 0);
+  --S.DiagIgnoreDepth;
+  if (S.DiagIgnoreDepth == 0) {
     S.getEvalStatus().Diag = S.PrevDiags;
     S.PrevDiags = nullptr;
   }
+  return true;
+}
+
+inline bool StartSpeculation(InterpState &S, CodePtr OpPC) {
+#ifndef NDEBUG
+  ++S.SpeculationDepth;
+#endif
+  return true;
+}
+
+// This is special-cased in the tablegen opcode emitter.
+// Its dispatch function will NOT call InterpNext
+// and instead simply return true.
+inline bool EndSpeculation(InterpState &S, CodePtr OpPC) {
+#ifndef NDEBUG
+  assert(S.SpeculationDepth != 0);
+  --S.SpeculationDepth;
+#endif
   return true;
 }
 
