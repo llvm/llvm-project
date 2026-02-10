@@ -5,8 +5,8 @@ define i32 @main(i32 %argc, ptr %argv) {
   ret i32 poison
 }
 ; CHECK: Entering function: main
-; CHECK:   i32 %argc = i32 1
-; CHECK:   ptr %argv = ptr 0x8 [argv]
-; CHECK:   ret i32 poison
-; CHECK: Exiting function: main
-; CHECK: error: Execution of function 'main' resulted in poison return value.
+; CHECK-NEXT:   i32 %argc = i32 1
+; CHECK-NEXT:   ptr %argv = ptr 0x8 [argv]
+; CHECK-NEXT:   ret i32 poison
+; CHECK-NEXT: Exiting function: main
+; CHECK-NEXT: error: Execution of function 'main' resulted in poison return value.

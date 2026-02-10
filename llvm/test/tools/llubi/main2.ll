@@ -6,5 +6,5 @@ define i32 @main() {
 }
 
 ; CHECK: Entering function: main
-; CHECK:   ret i32 0
-; CHECK: Exiting function: main
+; CHECK-NEXT:   ret i32 0
+; CHECK-NEXT: Exiting function: main
