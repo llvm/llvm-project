@@ -52,6 +52,14 @@ extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 #define DEBUG_TYPE "memory-builtins"
 
+static void setUnknownProfileMetadata(Value *V, CallInst *CI) {
+  if (ProfcheckDisableMetadataFixes)
+    return;
+  if (auto *I = dyn_cast_or_null<Instruction>(V))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE,
+                                                CI->getFunction());
+}
+
 static cl::opt<bool>
     EnableUnsafeFPShrink("enable-double-float-shrink", cl::Hidden,
                          cl::init(false),
@@ -485,18 +493,12 @@ static Value* memChrToCharCompare(CallInst *CI, Value *NBytes,
     Value *Zero = ConstantInt::get(NBytes->getType(), 0);
     Value *And = B.CreateICmpNE(NBytes, Zero);
     Cmp = B.CreateLogicalAnd(And, Cmp);
-    if (!ProfcheckDisableMetadataFixes)
-      if (auto *I = dyn_cast<Instruction>(Cmp))
-        setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE,
-                                                    CI->getFunction());
+    setUnknownProfileMetadata(Cmp, CI);
   }
 
   Value *NullPtr = Constant::getNullValue(CI->getType());
   Value *Res = B.CreateSelect(Cmp, Src, NullPtr);
-  if (!ProfcheckDisableMetadataFixes)
-    if (auto *I = dyn_cast<Instruction>(Res))
-      setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE,
-                                                  CI->getFunction());
+  setUnknownProfileMetadata(Res, CI);
   return Res;
 }
 
@@ -894,7 +896,9 @@ Value *LibCallSimplifier::optimizeStringNCpy(CallInst *CI, bool RetEnd,
 
     Value *Off1 = B.getInt32(1);
     Value *EndPtr = B.CreateInBoundsGEP(CharTy, Dst, Off1, "stpncpy.end");
-    return B.CreateSelect(Cmp, Dst, EndPtr, "stpncpy.sel");
+    Value *Res = B.CreateSelect(Cmp, Dst, EndPtr, "stpncpy.sel");
+    setUnknownProfileMetadata(Res, CI);
+    return Res;
   }
 
   // If the length of the input string is known set SrcLen to it.
@@ -1060,9 +1064,13 @@ Value *LibCallSimplifier::optimizeStringLength(CallInst *CI, IRBuilderBase &B,
         return OptimizationRemark("instcombine", "simplify-libcalls", CI)
                << "folded strlen(select) to select of constants";
       });
-      return B.CreateSelect(SI->getCondition(),
-                            ConstantInt::get(CI->getType(), LenTrue - 1),
-                            ConstantInt::get(CI->getType(), LenFalse - 1));
+      Value *Res = B.CreateSelect(SI->getCondition(),
+                                  ConstantInt::get(CI->getType(), LenTrue - 1),
+                                  ConstantInt::get(CI->getType(), LenFalse - 1));
+      if (!ProfcheckDisableMetadataFixes)
+        if (auto *I = dyn_cast<Instruction>(Res))
+          I->copyMetadata(*SI);
+      return Res;
     }
   }
 
@@ -1254,7 +1262,9 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
       // Slice off the character's high end bits.
       CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
       Value *Cmp = B.CreateICmpEQ(Val, CharVal, "memrchr.char0cmp");
-      return B.CreateSelect(Cmp, SrcStr, NullPtr, "memrchr.sel");
+      Value *Res = B.CreateSelect(Cmp, SrcStr, NullPtr, "memrchr.sel");
+      setUnknownProfileMetadata(Res, CI);
+      return Res;
     }
   }
 
@@ -1297,7 +1307,9 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
                                    "memrchr.cmp");
       Value *SrcPlus = B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr,
                                            B.getInt64(Pos), "memrchr.ptr_plus");
-      return B.CreateSelect(Cmp, NullPtr, SrcPlus, "memrchr.sel");
+      Value *Res = B.CreateSelect(Cmp, NullPtr, SrcPlus, "memrchr.sel");
+      setUnknownProfileMetadata(Res, CI);
+      return Res;
     }
   }
 
@@ -1316,10 +1328,13 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
   CharVal = B.CreateTrunc(CharVal, Int8Ty);
   Value *CEqS0 = B.CreateICmpEQ(ConstantInt::get(Int8Ty, Str[0]), CharVal);
   Value *And = B.CreateLogicalAnd(NNeZ, CEqS0);
+  setUnknownProfileMetadata(And, CI);
   Value *SizeM1 = B.CreateSub(Size, ConstantInt::get(SizeTy, 1));
   Value *SrcPlus =
       B.CreateInBoundsGEP(Int8Ty, SrcStr, SizeM1, "memrchr.ptr_plus");
-  return B.CreateSelect(And, SrcPlus, NullPtr, "memrchr.sel");
+  Value *Res = B.CreateSelect(And, SrcPlus, NullPtr, "memrchr.sel");
+  setUnknownProfileMetadata(Res, CI);
+  return Res;
 }
 
 Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
@@ -1349,7 +1364,9 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
       // Slice off the character's high end bits.
       CharVal = B.CreateTrunc(CharVal, B.getInt8Ty());
       Value *Cmp = B.CreateICmpEQ(Val, CharVal, "memchr.char0cmp");
-      return B.CreateSelect(Cmp, SrcStr, NullPtr, "memchr.sel");
+      Value *Res = B.CreateSelect(Cmp, SrcStr, NullPtr, "memchr.sel");
+      setUnknownProfileMetadata(Res, CI);
+      return Res;
     }
   }
 
@@ -1371,7 +1388,9 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
                                  "memchr.cmp");
     Value *SrcPlus = B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr, B.getInt64(Pos),
                                          "memchr.ptr");
-    return B.CreateSelect(Cmp, NullPtr, SrcPlus);
+    Value *Res = B.CreateSelect(Cmp, NullPtr, SrcPlus);
+    setUnknownProfileMetadata(Res, CI);
+    return Res;
   }
 
   if (Str.size() == 0)
@@ -1411,13 +1430,16 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
       Value *And = B.CreateAnd(CEqSPos, NGtPos);
       Value *SrcPlus = B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr, PosVal);
       Sel1 = B.CreateSelect(And, SrcPlus, NullPtr, "memchr.sel1");
+      setUnknownProfileMetadata(Sel1, CI);
     }
 
     Value *Str0 = ConstantInt::get(Int8Ty, Str[0]);
     Value *CEqS0 = B.CreateICmpEQ(Str0, CharVal);
     Value *NNeZ = B.CreateICmpNE(Size, ConstantInt::get(SizeTy, 0));
     Value *And = B.CreateAnd(NNeZ, CEqS0);
-    return B.CreateSelect(And, SrcStr, Sel1, "memchr.sel2");
+    Value *Res = B.CreateSelect(And, SrcStr, Sel1, "memchr.sel2");
+    setUnknownProfileMetadata(Res, CI);
+    return Res;
   }
 
   if (!LenC) {
@@ -1511,8 +1533,9 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
 
   // Finally merge both checks and cast to pointer type. The inttoptr
   // implicitly zexts the i1 to intptr type.
-  return B.CreateIntToPtr(B.CreateLogicalAnd(Bounds, Bits, "memchr"),
-                          CI->getType());
+  Value *And = B.CreateLogicalAnd(Bounds, Bits, "memchr");
+  setUnknownProfileMetadata(And, CI);
+  return B.CreateIntToPtr(And, CI->getType());
 }
 
 // Optimize a memcmp or, when StrNCmp is true, strncmp call CI with constant
@@ -1555,7 +1578,9 @@ static Value *optimizeMemCmpVarSize(CallInst *CI, Value *LHS, Value *RHS,
   Value *MaxSize = ConstantInt::get(Size->getType(), Pos);
   Value *Cmp = B.CreateICmp(ICmpInst::ICMP_ULE, Size, MaxSize);
   Value *Res = ConstantInt::getSigned(CI->getType(), IRes);
-  return B.CreateSelect(Cmp, Zero, Res);
+  Value *Select = B.CreateSelect(Cmp, Zero, Res);
+  setUnknownProfileMetadata(Select, CI);
+  return Select;
 }
 
 // Optimize a memcmp call CI with constant size Len.
@@ -2361,6 +2386,7 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
           *NegInf = ConstantFP::getInfinity(Ty, true);
     Value *FCmp = B.CreateFCmpOEQ(Base, NegInf, "isinf");
     Sqrt = B.CreateSelect(FCmp, PosInf, Sqrt);
+    setUnknownProfileMetadata(Sqrt, Pow);
   }
 
   // If the exponent is negative, then get the reciprocal.
@@ -3279,7 +3305,9 @@ Value *LibCallSimplifier::optimizeAbs(CallInst *CI, IRBuilderBase &B) {
   Value *X = CI->getArgOperand(0);
   Value *IsNeg = B.CreateIsNeg(X);
   Value *NegX = B.CreateNSWNeg(X, "neg");
-  return B.CreateSelect(IsNeg, NegX, X);
+  Value *Res = B.CreateSelect(IsNeg, NegX, X);
+  setUnknownProfileMetadata(Res, CI);
+  return Res;
 }
 
 Value *LibCallSimplifier::optimizeIsDigit(CallInst *CI, IRBuilderBase &B) {
