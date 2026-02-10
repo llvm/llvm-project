@@ -14,7 +14,7 @@ namespace {
 
 // Forward declarations needed for the server, we assume these are present.
 extern "C" void *malloc(uint64_t);
-extern "C" void free(const void *);
+extern "C" void free(void *);
 
 // Traits to convert between a tuple and binary representation of an argument
 // list.
@@ -50,13 +50,6 @@ template <typename... Ts> struct tuple_bytes {
 };
 template <typename... Ts>
 struct tuple_bytes<rpc::tuple<Ts...>> : tuple_bytes<Ts...> {};
-
-template <typename> struct function_traits;
-template <typename R, typename... Args> struct function_traits<R (*)(Args...)> {
-  using return_type = R;
-  using arg_types = rpc::tuple<Args...>;
-  static constexpr uint64_t ARITY = sizeof...(Args);
-};
 
 // Client-side dispatch of pointer values. We copy the memory associated with
 // the pointer to the server and recieve back a server-side pointer to replace
@@ -141,12 +134,9 @@ RPC_ATTRS constexpr void finish_arg(rpc::Server::Port &port,
   if constexpr (rpc::is_pointer_v<ArgTy> &&
                 !rpc::is_void_v<rpc::remove_pointer_t<ArgTy>>) {
     for (uint32_t id = 0; id < NUM_LANES; ++id) {
-      if (port.get_lane_mask() & (uint64_t(1) << id)) {
-        if constexpr (rpc::is_same_v<ArgTy, const char *>)
-          free(rpc::get<Idx>(t[id]));
-        else
-          free(rpc::get<Idx>(t[id]));
-      }
+      if (port.get_lane_mask() & (uint64_t(1) << id))
+        free(const_cast<void *>(
+            static_cast<const void *>(rpc::get<Idx>(t[id]))));
     }
   }
 }

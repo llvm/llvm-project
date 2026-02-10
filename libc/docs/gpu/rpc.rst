@@ -171,7 +171,9 @@ Function Dispatch
 There are cases where the client wants to simply execute a function as-is on the
 server. A helper function is provided to make this case almost automatic. By
 default, all memory is assumed to live privately on the client. Pointer
-arguments will be copied between the client and server for correctness.
+arguments will be copied between the client and server for correctness. Pointers
+to void will all be treated as opaque pointers and copied by-value. Constant
+character pointers will be treated as C-strings and copied using its length.
 Functions returning void will wait for the server to complete execution rather
 than submitting asynchronously.
 

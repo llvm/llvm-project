@@ -429,6 +429,14 @@ RPC_ATTRS constexpr uint64_t string_length(const char *s) {
   return static_cast<uint64_t>(end - s + 1);
 }
 
+/// Helper for dealing with function types.
+template <typename> struct function_traits;
+template <typename R, typename... Args> struct function_traits<R (*)(Args...)> {
+  using return_type = R;
+  using arg_types = rpc::tuple<Args...>;
+  static constexpr uint64_t ARITY = sizeof...(Args);
+};
+
 template <class T, class U> RPC_ATTRS constexpr T max(const T &a, const U &b) {
   return (a < b) ? b : a;
 }
