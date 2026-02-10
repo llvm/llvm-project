@@ -20,7 +20,7 @@
 using namespace llvm;
 
 #ifdef LLDB_PYTHON_DLL_RELATIVE_PATH
-static std::wstring GetModulePathW(HMODULE module) {
+static std::string GetModulePath(HMODULE module) {
   std::vector<WCHAR> buffer(MAX_PATH);
   while (buffer.size() <= PATHCCH_MAX_CCH) {
     DWORD len = GetModuleFileNameW(module, buffer.data(), buffer.size());
@@ -39,7 +39,7 @@ static std::wstring GetModulePathW(HMODULE module) {
 }
 
 /// Returns the full path to the lldb.exe executable.
-static std::wstring GetPathToExecutableW() { return GetModulePathW(NULL); }
+static std::string GetPathToExecutable() { return GetModulePath(NULL); }
 
 bool AddPythonDLLToSearchPath() {
   std::string path_str = GetPathToExecutable();
@@ -69,13 +69,10 @@ std::optional<std::string> GetPythonDLLPath() {
   if (!h)
     return std::nullopt;
 
-  std::wstring path = GetModulePathW(h);
+  std::string path = GetModulePath(h);
   FreeLibrary(h);
 
-  std::string utf8_path;
-  if (!convertWideToUTF8(path, utf8_path))
-    return std::nullopt;
-  return utf8_path;
+  return path;
 #undef WIDEN2
 #undef WIDEN
 }
