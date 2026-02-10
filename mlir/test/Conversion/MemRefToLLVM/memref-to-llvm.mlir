@@ -824,7 +824,7 @@ func.func @store_with_alignment(%arg0 : memref<32xf32>, %arg1 : f32, %arg2 : ind
 // CHECK-INTERFACE-LABEL: func @load_volatile(
 func.func @load_volatile(%arg0 : memref<32xf32>, %arg1 : index) {
   // CHECK: llvm.load volatile %{{.*}} : !llvm.ptr -> f32
-  // CHECK-INTERFACE: llvm.load
+  // CHECK-INTERFACE: llvm.load volatile
   %1 = memref.load %arg0[%arg1] {volatile_ = true} : memref<32xf32>
   func.return
 }
@@ -835,7 +835,7 @@ func.func @load_volatile(%arg0 : memref<32xf32>, %arg1 : index) {
 // CHECK-INTERFACE-LABEL: func @store_volatile(
 func.func @store_volatile(%arg0 : memref<32xf32>, %arg1 : f32, %arg2 : index) {
   // CHECK: llvm.store volatile %{{.*}}, %{{.*}} : f32, !llvm.ptr
-  // CHECK-INTERFACE: llvm.store
+  // CHECK-INTERFACE: llvm.store volatile
   memref.store %arg1, %arg0[%arg2] {volatile_ = true} : memref<32xf32>
   func.return
 }
