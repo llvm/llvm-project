@@ -446,6 +446,9 @@ def warn_ignored_clang_option : Warning<"the flag '%0' has been deprecated and w
 def warn_drv_unsupported_opt_for_target : Warning<
   "optimization flag '%0' is not supported for target '%1'">,
   InGroup<IgnoredOptimizationArgument>;
+def warn_drv_riscv_be_experimental : Warning<
+  "big-endian RISC-V target support is experimental">,
+  InGroup<RISCVBEExperimental>;
 def warn_drv_unsupported_debug_info_opt_for_target : Warning<
   "debug information option '%0' is not supported for target '%1'">,
   InGroup<UnsupportedTargetOpt>;
@@ -916,4 +919,7 @@ def warn_drv_gcc_install_dir_libstdcxx : Warning<
     "future releases of the clang compiler will prefer GCC installations "
     "containing libstdc++ include directories; '%0' would be chosen over '%1'">,
     InGroup<DiagGroup<"gcc-install-dir-libstdcxx">>;
+
+def err_drv_reflection_requires_cxx26 : Error<
+  "option '%0' is only supported when compiling in C++26 mode">;
 }

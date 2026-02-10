@@ -18,6 +18,8 @@
 #include "SPIRVSubtarget.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 
 #define DEBUG_TYPE "spirv-lower"
@@ -26,7 +28,14 @@ using namespace llvm;
 
 SPIRVTargetLowering::SPIRVTargetLowering(const TargetMachine &TM,
                                          const SPIRVSubtarget &ST)
-    : TargetLowering(TM, ST), STI(ST) {}
+    : TargetLowering(TM, ST), STI(ST) {
+  // Even with SPV_ALTERA_arbitrary_precision_integers enabled, atomic sizes are
+  // limited by atomicrmw xchg operation, which only supports operand up to 64
+  // bits wide, as defined in SPIR-V legalizer. Currently, spirv-val doesn't
+  // consider 128-bit OpTypeInt as valid either.
+  setMaxAtomicSizeInBitsSupported(64);
+  setMinCmpXchgSizeInBits(8);
+}
 
 // Returns true of the types logically match, as defined in
 // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpCopyLogical.
@@ -151,14 +160,12 @@ static void doInsertBitcast(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
                             SPIRVType *NewPtrType) {
   MachineIRBuilder MIB(I);
   Register NewReg = createVirtualRegister(NewPtrType, &GR, MRI, MIB.getMF());
-  bool Res = MIB.buildInstr(SPIRV::OpBitcast)
-                 .addDef(NewReg)
-                 .addUse(GR.getSPIRVTypeID(NewPtrType))
-                 .addUse(OpReg)
-                 .constrainAllUses(*STI.getInstrInfo(), *STI.getRegisterInfo(),
-                                   *STI.getRegBankInfo());
-  if (!Res)
-    report_fatal_error("insert validation bitcast: cannot constrain all uses");
+  MIB.buildInstr(SPIRV::OpBitcast)
+      .addDef(NewReg)
+      .addUse(GR.getSPIRVTypeID(NewPtrType))
+      .addUse(OpReg)
+      .constrainAllUses(*STI.getInstrInfo(), *STI.getRegisterInfo(),
+                        *STI.getRegBankInfo());
   I.getOperand(OpIdx).setReg(NewReg);
 }
 
@@ -619,10 +626,34 @@ bool SPIRVTargetLowering::insertLogicalCopyOnResult(
   OldType.setReg(NewTypeReg);
 
   MachineIRBuilder MIB(*I.getNextNode());
-  return MIB.buildInstr(SPIRV::OpCopyLogical)
+  MIB.buildInstr(SPIRV::OpCopyLogical)
       .addDef(OldResultReg)
       .addUse(OldTypeReg)
       .addUse(NewResultReg)
       .constrainAllUses(*STI.getInstrInfo(), *STI.getRegisterInfo(),
                         *STI.getRegBankInfo());
+  return true;
+}
+
+TargetLowering::AtomicExpansionKind
+SPIRVTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
+  switch (RMW->getOperation()) {
+  case AtomicRMWInst::FAdd:
+  case AtomicRMWInst::FSub:
+  case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMax:
+    return AtomicExpansionKind::None;
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap:
+    return AtomicExpansionKind::CmpXChg;
+  default:
+    return TargetLowering::shouldExpandAtomicRMWInIR(RMW);
+  }
+}
+
+TargetLowering::AtomicExpansionKind
+SPIRVTargetLowering::shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const {
+  // TODO: Pointer operand should be cast to integer in atomicrmw xchg, since
+  // SPIR-V only supports atomic exchange for integer and floating-point types.
+  return AtomicExpansionKind::None;
 }

@@ -672,7 +672,7 @@ public:
       return true;
     if (isRegSequence() && OpIdx > 1 && (OpIdx % 2) == 0)
       return true;
-    if (isSubregToReg() && OpIdx == 3)
+    if (isSubregToReg() && OpIdx == 2)
       return true;
     return false;
   }
