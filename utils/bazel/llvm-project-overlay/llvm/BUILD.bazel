@@ -4757,6 +4757,21 @@ cc_binary(
     ],
 )
 
+cc_binary(
+    name = "llubi",
+    srcs = glob([
+        "tools/llubi/*.cpp",
+        "tools/llubi/lib/*.cpp",
+        "tools/llubi/lib/*.h",
+    ]),
+    stamp = 0,
+    deps = [
+        ":Analysis",
+        ":Core",
+        ":Support",
+    ],
+)
+
 cc_library(
     name = "llvm-ar-lib",
     srcs = glob(["tools/llvm-ar/*.cpp"]),
