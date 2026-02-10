@@ -270,7 +270,7 @@ define i64 @two_early_exits_same_exit_with_constant_live_outs() {
 ; CHECK-NEXT:     WIDEN ir<%ld.B> = load vp<[[PTRB]]>
 ; CHECK-NEXT:     WIDEN ir<%cmp2> = icmp eq ir<%ld.A>, ir<%ld.B>
 ; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
-; CHECK-NEXT:     EMIT vp<[[OR:%.+]]> = or ir<%cmp1>, ir<%cmp2>
+; CHECK-NEXT:     EMIT vp<[[OR:%.+]]> = logical-or ir<%cmp1>, ir<%cmp2>
 ; CHECK-NEXT:     EMIT vp<[[ANY_OF:%.+]]> = any-of vp<[[OR]]>
 ; CHECK-NEXT:     EMIT vp<[[CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
 ; CHECK-NEXT:     EMIT branch-on-two-conds vp<[[ANY_OF]]>, vp<[[CMP]]>

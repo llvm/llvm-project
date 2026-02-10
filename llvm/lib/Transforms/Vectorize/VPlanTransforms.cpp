@@ -4048,10 +4048,12 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
     return VPDT.dominates(A.EarlyExitingVPBB, B.EarlyExitingVPBB);
   });
 
-  // Build the AnyOf condition for the latch terminator.
+  // Build the AnyOf condition for the latch terminator using logical OR
+  // to avoid poison propagation from later exit conditions when an earlier
+  // exit is taken.
   VPValue *Combined = Exits[0].CondToExit;
   for (const auto &[_, _1, CondToExit] : drop_begin(Exits))
-    Combined = Builder.createOr(Combined, CondToExit);
+    Combined = Builder.createLogicalOr(Combined, CondToExit);
 
   VPValue *IsAnyExitTaken =
       Builder.createNaryOp(VPInstruction::AnyOf, {Combined});
