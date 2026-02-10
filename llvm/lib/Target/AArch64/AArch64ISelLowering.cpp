@@ -20824,7 +20824,7 @@ static SDValue tryCombineToREV(SDNode *N, SelectionDAG &DAG,
       RevOp = AArch64ISD::BSWAP_MERGE_PASSTHRU;
     else if (EltSize == 32)
       RevOp = AArch64ISD::REVH_MERGE_PASSTHRU;
-    else if (EltSize == 64)
+    else /* EltSize == 64 */
       RevOp = AArch64ISD::REVW_MERGE_PASSTHRU;
 
     return DAG.getNode(RevOp, DL, VT, N0.getOperand(0), N0.getOperand(1),
@@ -20859,7 +20859,7 @@ static SDValue tryCombineToREV(SDNode *N, SelectionDAG &DAG,
   if (EltSize == 32) {
     RevOp = AArch64ISD::REV32;
     HalfVT = VT.is64BitVector() ? MVT::v4i16 : MVT::v8i16;
-  } else if (EltSize == 64) {
+  } else /* EltSize == 64 */ {
     RevOp = AArch64ISD::REV64;
     HalfVT = VT.is64BitVector() ? MVT::v2i32 : MVT::v4i32;
   }
