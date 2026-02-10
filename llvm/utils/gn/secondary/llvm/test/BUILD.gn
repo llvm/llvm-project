@@ -268,6 +268,7 @@ group("test") {
     "//llvm/tools/llc",
     "//llvm/tools/lli",
     "//llvm/tools/lli/ChildTarget:lli-child-target",
+    "//llvm/tools/llubi",
     "//llvm/tools/llvm-ar:symlinks",
     "//llvm/tools/llvm-as",
     "//llvm/tools/llvm-bcanalyzer",
