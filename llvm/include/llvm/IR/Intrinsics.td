@@ -1921,8 +1921,7 @@ def int_coro_subfn_addr : DefaultAttrsIntrinsic<
     [IntrReadMem, IntrArgMemOnly, ReadOnly<ArgIndex<0>>,
      NoCapture<ArgIndex<0>>]>;
 
-///===-------------------------- Constant Time Intrinsics
-///--------------------------===//
+///===---------------------- Constant Time Intrinsics ----------------------===//
 //
 // Intrinsic to support constant time select
 def int_ct_select

@@ -247,10 +247,6 @@ public:
                          // and vector values (ex: cmov).
     VectorMaskSelect,    // The target supports vector selects with a vector
                          // mask (ex: x86 blends).
-    CtSelect,            // The target implements a custom constant-time select.
-    ScalarCondVectorValCtSelect, // The target supports selects with a scalar
-                                 // condition and vector values.
-    VectorMaskValCtSelect, // The target supports vector selects with a vector
   };
 
   /// Enum that specifies what an atomic load/AtomicRMWInst is expanded
@@ -481,9 +477,10 @@ public:
   MachineMemOperand::Flags
   getVPIntrinsicMemOperandFlags(const VPIntrinsic &VPIntrin) const;
 
-  virtual bool isSelectSupported(SelectSupportKind kind) const {
-    return kind != CtSelect;
-  }
+  virtual bool isSelectSupported(SelectSupportKind kind) const { return true; }
+
+  /// Return true if the target has custom lowering for constant-time select.
+  virtual bool isCtSelectSupported(EVT VT) const { return false; }
 
   /// Return true if the @llvm.get.active.lane.mask intrinsic should be expanded
   /// using generic code in SelectionDAGBuilder.
