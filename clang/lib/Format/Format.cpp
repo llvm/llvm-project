@@ -3752,7 +3752,7 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
                                       StringRef FileName,
                                       tooling::Replacements &Replaces) {
   unsigned Prev = 0;
-  unsigned SearchFrom = 0;
+  bool HasImport = false;
   llvm::Regex ImportRegex(JavaImportRegexPattern);
   llvm::Regex PackageRegex(JavaPackageRegexPattern);
   SmallVector<StringRef, 4> Matches;
