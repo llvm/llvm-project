@@ -1626,3 +1626,28 @@ func.func @shape_of_0d(%arg0: tensor<f32>) -> tensor<?xindex> {
   %0 = shape.shape_of %arg0 : tensor<f32> -> tensor<?xindex>
   return %0 : tensor<?xindex>
 }
+
+// -----
+
+// GH#179845: Verify shape.broadcast doesn't crash on poison operands.
+// CHECK-LABEL: func @broadcast_poison
+func.func @broadcast_poison() {
+  // CHECK: ub.poison
+  // CHECK: shape.broadcast
+  %2 = ub.poison : tensor<3xindex>
+  %3 = shape.broadcast %2, %2 : tensor<3xindex>, tensor<3xindex> -> tensor<3xindex>
+  return
+}
+
+// -----
+
+// GH#179845: Verify cstr_broadcastable doesn't crash on poison operands.
+// CHECK-LABEL: func @cstr_broadcastable_poison
+func.func @cstr_broadcastable_poison() {
+  // CHECK: ub.poison
+  // CHECK: shape.cstr_broadcastable
+  %2 = ub.poison : !shape.shape
+  %0 = shape.cstr_broadcastable %2, %2 : !shape.shape, !shape.shape
+  "consume.witness"(%0) : (!shape.witness) -> ()
+  return
+}

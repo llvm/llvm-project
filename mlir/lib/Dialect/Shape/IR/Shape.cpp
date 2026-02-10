@@ -102,6 +102,15 @@ static bool eachHasOnlyOneOfTypes(TypeRange l, ranges... rs) {
   return eachHasOnlyOneOfTypes<Ty...>(l) && eachHasOnlyOneOfTypes<Ty...>(rs...);
 }
 
+/// Returns true if any operand of the given operation is defined by a
+/// ub::PoisonOp. This is used to prevent canonicalization/folding when poison
+/// operands are present, as we want to preserve poison semantics.
+static bool hasAnyPoisonOperand(Operation *op) {
+  return llvm::any_of(op->getOperands(), [](Value operand) {
+    return operand.getDefiningOp<ub::PoisonOp>() != nullptr;
+  });
+}
+
 //===----------------------------------------------------------------------===//
 // InlinerInterface
 //===----------------------------------------------------------------------===//
@@ -588,6 +597,11 @@ struct RemoveDuplicateOperandsPattern : public OpRewritePattern<OpTy> {
 
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
+    // Don't remove duplicates if any operand is poison, as this could lead to
+    // incorrect folding that eliminates poison semantics.
+    if (hasAnyPoisonOperand(op))
+      return failure();
+
     // Find unique operands.
     SetVector<Value> unique(op.operand_begin(), op.operand_end());
 
@@ -645,6 +659,11 @@ LogicalResult AssumingAllOp::verify() {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult BroadcastOp::fold(FoldAdaptor adaptor) {
+  // Don't fold if any operand is poison, as we want to preserve poison
+  // semantics in the IR.
+  if (hasAnyPoisonOperand(*this))
+    return nullptr;
+
   if (getShapes().size() == 1) {
     // Otherwise, we need a cast which would be a canonicalization, not folding.
     if (getShapes().front().getType() != getType())
@@ -652,18 +671,18 @@ OpFoldResult BroadcastOp::fold(FoldAdaptor adaptor) {
     return getShapes().front();
   }
 
-  if (!adaptor.getShapes().front())
+  auto firstAttr =
+      llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getShapes().front());
+  if (!firstAttr)
     return nullptr;
 
-  SmallVector<int64_t, 6> resultShape(
-      llvm::cast<DenseIntElementsAttr>(adaptor.getShapes().front())
-          .getValues<int64_t>());
+  SmallVector<int64_t, 6> resultShape(firstAttr.getValues<int64_t>());
 
   for (auto next : adaptor.getShapes().drop_front()) {
-    if (!next)
+    auto nextAttr = llvm::dyn_cast_if_present<DenseIntElementsAttr>(next);
+    if (!nextAttr)
       return nullptr;
-    auto nextShape = llvm::to_vector<6>(
-        llvm::cast<DenseIntElementsAttr>(next).getValues<int64_t>());
+    auto nextShape = llvm::to_vector<6>(nextAttr.getValues<int64_t>());
 
     SmallVector<int64_t, 6> tmpShape;
     // If the shapes are not compatible, we can't fold it.
@@ -732,6 +751,9 @@ struct BroadcastForwardSingleOperandPattern
   LogicalResult matchAndRewrite(BroadcastOp op,
                                 PatternRewriter &rewriter) const override {
     if (op.getNumOperands() != 1)
+      return failure();
+    // Don't forward poison operands to preserve poison semantics.
+    if (hasAnyPoisonOperand(op))
       return failure();
     Value replacement = op.getShapes().front();
 
@@ -978,7 +1000,8 @@ void CstrBroadcastableOp::getCanonicalizationPatterns(
 static bool hasAtMostSingleNonScalar(ArrayRef<Attribute> attributes) {
   bool nonScalarSeen = false;
   for (Attribute a : attributes) {
-    if (!a || llvm::cast<DenseIntElementsAttr>(a).getNumElements() != 0) {
+    auto denseAttr = llvm::dyn_cast_if_present<DenseIntElementsAttr>(a);
+    if (!denseAttr || denseAttr.getNumElements() != 0) {
       if (nonScalarSeen)
         return false;
       nonScalarSeen = true;
@@ -988,6 +1011,11 @@ static bool hasAtMostSingleNonScalar(ArrayRef<Attribute> attributes) {
 }
 
 OpFoldResult CstrBroadcastableOp::fold(FoldAdaptor adaptor) {
+  // Don't fold if any operand is poison, as we want to preserve poison
+  // semantics in the IR.
+  if (hasAnyPoisonOperand(*this))
+    return nullptr;
+
   // No broadcasting is needed if all operands but one are scalar.
   if (hasAtMostSingleNonScalar(adaptor.getShapes()))
     return BoolAttr::get(getContext(), true);
@@ -995,10 +1023,10 @@ OpFoldResult CstrBroadcastableOp::fold(FoldAdaptor adaptor) {
   if ([&] {
         SmallVector<SmallVector<int64_t, 6>, 6> extents;
         for (const auto &operand : adaptor.getShapes()) {
-          if (!operand)
+          auto denseAttr = llvm::dyn_cast_if_present<DenseIntElementsAttr>(operand);
+          if (!denseAttr)
             return false;
-          extents.push_back(llvm::to_vector<6>(
-              llvm::cast<DenseIntElementsAttr>(operand).getValues<int64_t>()));
+          extents.push_back(llvm::to_vector<6>(denseAttr.getValues<int64_t>()));
         }
         return OpTrait::util::staticallyKnownBroadcastable(extents);
       }())
