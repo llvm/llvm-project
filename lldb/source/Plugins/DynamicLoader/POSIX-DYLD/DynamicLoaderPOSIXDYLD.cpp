@@ -550,10 +550,10 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
       return thread_plan_sp;
 
     // Check if any trampoline symbols exists at the file address.
-    SymbolContextList addr_ctx_list;
-    context.module_sp->FindSymbolsContainingFileAddress(
-        context.GetFunctionOrSymbolAddress(), eSymbolTypeTrampoline,
-        addr_ctx_list);
+    SymbolContextList addr_ctx_list =
+        context.module_sp->FindSymbolsContainingFileAddress(
+            context.GetFunctionOrSymbolAddress(), eSymbolTypeTrampoline);
+
     if (addr_ctx_list.IsEmpty())
       return thread_plan_sp;
 
