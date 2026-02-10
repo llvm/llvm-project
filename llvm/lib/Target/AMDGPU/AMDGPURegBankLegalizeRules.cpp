@@ -1246,6 +1246,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniV2S32}, {{UniInVgprV2S32}, {VgprV2S32}}})
       .Any({{DivV2S32}, {{VgprV2S32}, {VgprV2S32}}});
 
+  bool hasPST = ST->hasPseudoScalarTrans();
+  addRulesForGOpcs({G_FSQRT}, Standard)
+      .Div(S16, {{Vgpr16}, {Vgpr16}})
+      .Uni(S16, {{Sgpr16}, {Sgpr16}}, hasPST)
+      .Uni(S16, {{UniInVgprS16}, {Vgpr16}}, !hasPST);
+
   addRulesForGOpcs({G_FPTOUI, G_FPTOSI})
       .Any({{UniS16, S16}, {{UniInVgprS16}, {Vgpr16}}})
       .Any({{DivS16, S16}, {{Vgpr16}, {Vgpr16}}})
