@@ -128,8 +128,12 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
     const auto &Args = R->getValueAsListOfDefs("Args");
     bool ChangesPC = R->getValueAsBit("ChangesPC");
     bool CanFail = R->getValueAsBit("CanFail");
+    bool BothPCs = R->getValueAsBit("BothPCs");
 
     if (Args.empty()) {
+      if (BothPCs)
+        PrintFatalError("BothPCs only makes sense for opcodes with arguments");
+
       if (CanReturn) {
         OS << " MUSTTAIL return " << N;
         PrintTypes(OS, TS);
@@ -162,7 +166,7 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
 
     OS << "  {\n";
 
-    if (!ChangesPC)
+    if (!ChangesPC || BothPCs)
       OS << "    CodePtr OpPC = PC;\n";
 
     // Emit calls to read arguments.
@@ -185,9 +189,11 @@ void ClangOpcodesEmitter::EmitInterpFnDispatchers(raw_ostream &OS, StringRef N,
     OS << N;
     PrintTypes(OS, TS);
     OS << "(S";
-    if (ChangesPC)
+    if (ChangesPC) {
       OS << ", PC";
-    else
+      if (BothPCs)
+        OS << ", OpPC";
+    } else
       OS << ", OpPC";
     for (size_t I = 0, N = Args.size(); I < N; ++I)
       OS << ", V" << I;
@@ -425,6 +431,7 @@ void ClangOpcodesEmitter::EmitEval(raw_ostream &OS, StringRef N,
                 OS << (AsRef ? "const " : " ") << Name << " "
                    << (AsRef ? "&" : "") << "A" << I << ", ";
               }
+              bool BothPCs = R->getValueAsBit("BothPCs");
               OS << "SourceInfo L) {\n";
               OS << "  if (!isActive()) return true;\n";
               OS << "  CurrentSource = L;\n";
@@ -432,6 +439,8 @@ void ClangOpcodesEmitter::EmitEval(raw_ostream &OS, StringRef N,
               OS << "  return " << N;
               PrintTypes(OS, TS);
               OS << "(S, OpPC";
+              if (BothPCs)
+                OS << ", OpPC";
               for (size_t I = 0, N = Args.size(); I < N; ++I)
                 OS << ", A" << I;
               OS << ");\n";

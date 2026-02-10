@@ -62,6 +62,16 @@ protected:
 
   virtual ~EvalEmitter();
 
+  unsigned currentCodeSize() const {
+    llvm_unreachable("Should never be called on EvalEmitter");
+    return 0;
+  }
+
+  void registerExceptionHandler(unsigned From, unsigned To, unsigned Target,
+                                UnsignedOrNone, const Type *T) {
+    llvm_unreachable("Should never be called on EvalEmitter");
+  }
+
   /// Define a label.
   void emitLabel(LabelTy Label);
   /// Create a label.

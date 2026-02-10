@@ -85,6 +85,8 @@ bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
                            const Block *B, AccessKinds AK);
 
+bool diagnoseUncaughtException(InterpState &S, CodePtr OpPC);
+
 /// Checks a direct load of a primitive value from a global or local variable.
 bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B);
 bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B);
@@ -116,15 +118,15 @@ bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 bool SetThreeWayComparisonField(InterpState &S, CodePtr OpPC,
                                 const Pointer &Ptr, const APSInt &IntValue);
 
-bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
+bool CallVar(InterpState &S, CodePtr &PC, CodePtr OpPC, const Function *Func,
              uint32_t VarArgSize);
-bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
+bool Call(InterpState &S, CodePtr &PC, CodePtr OpPC, const Function *Func,
           uint32_t VarArgSize);
-bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
+bool CallVirt(InterpState &S, CodePtr &PC, CodePtr OpPC, const Function *Func,
               uint32_t VarArgSize);
 bool CallBI(InterpState &S, CodePtr OpPC, const CallExpr *CE,
             uint32_t BuiltinID);
-bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
+bool CallPtr(InterpState &S, CodePtr &PC, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE);
 bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T);
 bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index);
@@ -146,6 +148,9 @@ bool isConstexprUnknown(const Pointer &P);
 bool isConstexprUnknown(const Block *B);
 bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestType,
                  bool IsReferenceCast);
+
+bool Throw(InterpState &S, CodePtr &PC);
+bool ReThrow(InterpState &S, CodePtr &PC);
 
 enum class ShiftDir { Left, Right };
 
@@ -302,6 +307,77 @@ PRESERVE_NONE inline bool RetVoid(InterpState &S, CodePtr &PC) {
     S.Current = nullptr;
   }
 
+  return true;
+}
+
+// Inserted at the very end of functions that can throw, if exceptions are
+// enabled. We rewind the stack to the start of the function frame and return
+// nothing. If we arrive at an AfterRet op, we must have thrown an exception.
+PRESERVE_NONE inline bool AfterRet(InterpState &S, CodePtr &PC) {
+  assert(S.getContext().ExceptionsEnabled);
+  assert(S.ThrownValue);
+
+  while (S.Stk.size() != S.Current->getFrameOffset())
+    S.Stk.discardSlow();
+
+  return RetVoid(S, PC);
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool SaveException(InterpState &S, CodePtr OpPC, const Type *Ty,
+                          bool IsPrimitive) {
+  assert(S.getContext().ExceptionsEnabled);
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+  // It is okay for S.ThrownValue to be non-null here, but if it is,
+  // it needs to have been caught already.
+  if (S.ThrownValue)
+    assert(S.ThrownValue->Caught);
+
+  const auto *Source = cast<CXXThrowExpr>(S.Current->getExpr(OpPC));
+  if (IsPrimitive) {
+    S.ThrownValue = std::make_unique<ThrowValue>(Ty, Source, Ptr, Name);
+  } else {
+    S.ThrownValue =
+        std::make_unique<ThrowValue>(Ty, Source, Ptr, /*T=*/std::nullopt);
+  }
+  return true;
+}
+
+inline bool ThrowTrap(InterpState &S, CodePtr OpPC) {
+  assert(S.getContext().ExceptionsEnabled);
+  S.ThrowTrapStackSize = S.Stk.size();
+  return true;
+}
+
+/// Allocate memory to store an exception object. This uses the InterpState
+/// allocator, so has the same lifetime as local variables (minus scoping).
+inline bool AllocException(InterpState &S, CodePtr &PC,
+                           const Descriptor *Desc) {
+  assert(S.getContext().ExceptionsEnabled);
+  assert(Desc);
+  char *Memory = (char *)S.allocate(sizeof(Block) + Desc->getAllocSize());
+  Block *B = new (Memory) Block(~0u, Desc);
+  B->invokeCtor();
+  S.Stk.push<Pointer>(B);
+  return true;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool GetExceptionValue(InterpState &S, CodePtr OpPC) {
+  assert(S.getContext().ExceptionsEnabled);
+  assert(S.ThrownValue);
+  if (S.ThrownValue->T) {
+    S.Stk.push<T>(S.ThrownValue->Ptr.deref<T>());
+    return true;
+  }
+  S.Stk.push<Pointer>(S.ThrownValue->Ptr);
+  return true;
+}
+
+inline bool GetPtrExceptionValue(InterpState &S, CodePtr OpPC) {
+  assert(S.getContext().ExceptionsEnabled);
+  assert(S.ThrownValue);
+  S.Stk.push<Pointer>(S.ThrownValue->Ptr);
   return true;
 }
 
@@ -2384,7 +2460,8 @@ bool Init(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.peek<Pointer>();
   if (!CheckInit(S, OpPC, Ptr))
     return false;
-  Ptr.initialize();
+  if (Ptr.canBeInitialized())
+    Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
   return true;
 }
@@ -2395,7 +2472,8 @@ bool InitPop(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   if (!CheckInit(S, OpPC, Ptr))
     return false;
-  Ptr.initialize();
+  if (Ptr.canBeInitialized())
+    Ptr.initialize();
   new (&Ptr.deref<T>()) T(Value);
   return true;
 }

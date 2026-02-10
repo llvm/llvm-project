@@ -95,6 +95,12 @@ void InterpStack::shrink(size_t Size) {
   StackSize -= Size;
 }
 
+void InterpStack::discardSlow() {
+  assert(!empty());
+
+  TYPE_SWITCH(ItemTypes.back(), { discard<T>(); });
+}
+
 void InterpStack::dump() const {
   llvm::errs() << "Items: " << ItemTypes.size() << ". Size: " << size() << '\n';
   if (ItemTypes.empty())

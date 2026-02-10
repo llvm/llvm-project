@@ -6633,6 +6633,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case X86::BI__builtin_ia32_vpdpbusds256:
   case X86::BI__builtin_ia32_vpdpbusds512:
     return interp__builtin_ia32_vpdp(S, OpPC, Call, true);
+
   default:
     S.FFDiag(S.Current->getLocation(OpPC),
              diag::note_invalid_subexpr_in_const_expr)

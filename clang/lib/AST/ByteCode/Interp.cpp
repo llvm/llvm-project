@@ -234,6 +234,26 @@ static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
 namespace clang {
 namespace interp {
+
+bool diagnoseUncaughtException(InterpState &S, CodePtr OpPC) {
+  assert(S.ThrownValue);
+  QualType UncaughtType = QualType(S.ThrownValue->Ty, 0);
+  std::string ValString;
+
+  if (S.ThrownValue->T) {
+    TYPE_SWITCH(*S.ThrownValue->T, {
+      ValString =
+          S.ThrownValue->Ptr.deref<T>().toDiagnosticString(S.getASTContext());
+    });
+  } else {
+    ValString =
+        Pointer(S.ThrownValue->Ptr).toDiagnosticString(S.getASTContext());
+  }
+  S.FFDiag(S.ThrownValue->ThrowSite, diag::note_constexpr_uncaught_exception)
+      << UncaughtType << ValString;
+  return false;
+}
+
 PRESERVE_NONE static bool BCP(InterpState &S, CodePtr &RealPC, int32_t Offset,
                               PrimType PT);
 
@@ -1353,7 +1373,7 @@ static bool runRecordDestructor(InterpState &S, CodePtr OpPC,
     return false;
 
   S.Stk.push<Pointer>(BasePtr);
-  return Call(S, OpPC, DtorFunc, 0);
+  return Call(S, OpPC, OpPC, DtorFunc, 0);
 }
 
 static bool RunDestructors(InterpState &S, CodePtr OpPC, const Block *B) {
@@ -1814,7 +1834,124 @@ static void compileFunction(InterpState &S, const Function *Func) {
       .compileFunc(Definition, const_cast<Function *>(Func));
 }
 
-bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
+// We have a saved thrown value in InterpState.
+// Now try to catch that value in the current function.
+// If no corresponding catch handler is found, jump to the
+// AfterRet op at the end of the function.
+static bool catchException(InterpState &S, CodePtr &PC, CodePtr OpPC) {
+  assert(S.getContext().ExceptionsEnabled);
+  assert(S.ThrownValue);
+  assert(!S.ThrownValue->Caught);
+
+  // We've reached the bottom frame. We can't go any higher, so diagnose
+  // an uncaught exception.
+  const Function *CurrFunction = S.Current->getFunction();
+  if (!CurrFunction) {
+    assert(S.Current->isBottomFrame());
+    if (!S.checkingPotentialConstantExpression())
+      return diagnoseUncaughtException(S, OpPC);
+    return false;
+  }
+
+  unsigned CodeOffset = PC - CurrFunction->getCodeBegin();
+  std::optional<ExceptionTableEntry> CatchEntry =
+      CurrFunction->findCatchHandler(CodeOffset, S.ThrownValue->Ty);
+
+  if (!CatchEntry) {
+    // We didn't find an appropriate catch handler in the current function.
+    // Skip to the end of the function.
+    bool CanThrow = S.Current->getFunction()
+                        ->getDecl()
+                        ->getType()
+                        ->getAs<FunctionProtoType>()
+                        ->canThrow();
+    if (!CanThrow) {
+      S.CCEDiag(S.Current->getSource(OpPC),
+                diag::note_constexpr_exception_in_noexcept_func);
+      return false;
+    }
+    // Jump to the end of the function. The calling function will handle
+    // catching the exception.
+    PC = S.Current->getFunction()->getCodeEnd() - align(sizeof(Opcode));
+#ifndef NDEBUG
+    CodePtr PCCopy = PC;
+    Opcode Op = PCCopy.read<Opcode>();
+    assert(Op == OP_AfterRet);
+#endif
+    return true;
+  }
+
+  // We *did* find a catch handler. We now need to cast the thrown value to
+  // the correct type, if necessary.
+
+  // NB: CaughtType may be null (for catch-all handlers).
+  const Type *CaughtType = CatchEntry->CatchType;
+  const Type *ThrownType = S.ThrownValue->Ty;
+  assert(ThrownType);
+
+  // There might be some values left on the stack that have been added in
+  // between entering the try{} block and the throw statement. We need to
+  // remove all of those so the stack is in a proper state after the catch
+  // handler finishes.
+  while (S.Stk.size() != S.ThrowTrapStackSize) {
+    S.Stk.discardSlow();
+  }
+
+  if (CaughtType && CaughtType->isPointerOrReferenceType())
+    CaughtType = CaughtType->getPointeeType().getTypePtr();
+  if (ThrownType->isPointerOrReferenceType())
+    ThrownType = ThrownType->getPointeeType().getTypePtr();
+
+  bool NeedsCast = CaughtType &&
+                   !ASTContext::hasSameType(CaughtType, ThrownType) &&
+                   CaughtType->isRecordType() && ThrownType->isRecordType();
+
+  if (!NeedsCast) {
+    // We dont need to change the value at all. Just jump to the exception table
+    // entry.
+    PC = CurrFunction->getCodeBegin() + CatchEntry->Target;
+    S.ThrownValue->Caught = true;
+    return true;
+  }
+
+  Pointer ThrownPtr = Pointer(S.ThrownValue->Ptr);
+  if (S.ThrownValue->T)
+    ThrownPtr = ThrownPtr.deref<Pointer>();
+
+  unsigned BaseOffset = S.getContext().collectBaseOffset(
+      CaughtType->getAsRecordDecl(), ThrownType->getAsRecordDecl());
+
+  S.ThrownValue->Ptr = ThrownPtr.atField(BaseOffset).view();
+  // We unwrapped the thrown pointer, so the value isn't primitive anymore.
+  S.ThrownValue->T = std::nullopt;
+
+  S.ThrownValue->Caught = true;
+  // Jump to the catch handler in this function.
+  PC = CurrFunction->getCodeBegin() + CatchEntry->Target;
+
+  return true;
+}
+
+bool Throw(InterpState &S, CodePtr &PC) {
+  assert(S.getContext().ExceptionsEnabled);
+  return catchException(S, PC, PC);
+}
+
+bool ReThrow(InterpState &S, CodePtr &PC) {
+  assert(S.getContext().ExceptionsEnabled);
+
+  if (!S.ThrownValue) {
+    S.FFDiag(S.Current->getSource(PC),
+             diag::note_constexpr_no_active_exception);
+    return false;
+  }
+
+  assert(S.ThrownValue);
+  S.ThrownValue->Caught = false;
+  return catchException(S, PC, PC);
+}
+
+bool CallVar(InterpState &S, CodePtr &PC, CodePtr OpPC, const Function *Func,
              uint32_t VarArgSize) {
   if (Func->hasThisPointer()) {
     size_t ArgSize = Func->getArgSize() + VarArgSize;
@@ -1853,6 +1990,9 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
 
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
   if (Interpret(S)) {
+    if (S.ThrownValue && !S.ThrownValue->Caught)
+      return catchException(S, PC, OpPC);
+
     assert(S.Current == FrameBefore);
     return true;
   }
@@ -1863,9 +2003,9 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   S.Current = FrameBefore;
   return false;
 }
-bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
-          uint32_t VarArgSize) {
 
+bool Call(InterpState &S, CodePtr &PC, CodePtr OpPC, const Function *Func,
+          uint32_t VarArgSize) {
   // C doesn't have constexpr functions.
   if (!S.getLangOpts().CPlusPlus)
     return Invalid(S, OpPC);
@@ -1946,6 +2086,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
 
   InterpStateCCOverride CCOverride(S, Func->isImmediate());
   bool Success = Interpret(S);
+
   // Remove initializing  block again.
   if (InstancePtrTracked)
     S.InitializingPtrs.pop_back();
@@ -1957,6 +2098,9 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
     S.Current = FrameBefore;
     return false;
   }
+
+  if (S.ThrownValue && !S.ThrownValue->Caught)
+    return catchException(S, PC, OpPC);
 
   assert(S.Current == FrameBefore);
   return true;
@@ -2195,7 +2339,7 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
   return diag(DiagNoBase, TargetType);
 }
 
-bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
+bool CallVirt(InterpState &S, CodePtr &PC, CodePtr OpPC, const Function *Func,
               uint32_t VarArgSize) {
   assert(Func->hasThisPointer());
   assert(Func->isVirtual());
@@ -2259,7 +2403,7 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
     }
   }
 
-  if (!Call(S, OpPC, Func, VarArgSize))
+  if (!Call(S, PC, OpPC, Func, VarArgSize))
     return false;
 
   // Covariant return types. The return type of Overrider is a pointer
@@ -2301,7 +2445,7 @@ bool CallBI(InterpState &S, CodePtr OpPC, const CallExpr *CE,
   return InterpretBuiltin(S, OpPC, CE, BuiltinID);
 }
 
-bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
+bool CallPtr(InterpState &S, CodePtr &PC, CodePtr OpPC, uint32_t ArgSize,
              const CallExpr *CE) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
@@ -2358,9 +2502,9 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
     VarArgSize -= align(primSize(PT_Ptr));
 
   if (F->isVirtual())
-    return CallVirt(S, OpPC, F, VarArgSize);
+    return CallVirt(S, PC, OpPC, F, VarArgSize);
 
-  return Call(S, OpPC, F, VarArgSize);
+  return Call(S, PC, OpPC, F, VarArgSize);
 }
 
 static void startLifetimeRecurse(PtrView Ptr) {
@@ -3120,7 +3264,7 @@ constexpr bool OpReturns(Opcode Op) {
          Op == OP_RetSint64 || Op == OP_RetUint64 || Op == OP_RetIntAP ||
          Op == OP_RetIntAPS || Op == OP_RetBool || Op == OP_RetFixedPoint ||
          Op == OP_RetPtr || Op == OP_RetMemberPtr || Op == OP_RetFloat ||
-         Op == OP_EndSpeculation;
+         Op == OP_EndSpeculation || Op == OP_AfterRet;
 }
 
 #if USE_TAILCALLS
