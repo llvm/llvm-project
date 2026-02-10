@@ -29,14 +29,13 @@ LLVM project, and located in the LLVM monorepo ([github.com/llvm/llvm-project](h
   * **Classic Flang:** [https://github.com/flang-compiler/flang](https://github.com/flang-compiler/flang) 
 
 * **Issues:**  
-  * Issues for LLVM Flang should be reported in GitHub: [https://github.com/llvm/llvm-project/issues](https://github.com/llvm/llvm-project/issues).
-  Use the "flang" tag for flang-related issues, please  
+  * Issues for LLVM Flang should be reported in GitHub: [https://github.com/llvm/llvm-project/issues](https://github.com/llvm/llvm-project/issues). Please use the "flang" tag for flang-related issues.
   * Issues for Classic Flang should be reported to the GitHub issues section at either [https://github.com/flang-compiler/flang/issues](https://github.com/flang-compiler/flang/issues)
   or [flang-compiler/flang-driver](https://github.com/flang-compiler/flang-driver) as appropriate
 
 * **LLVM mailing lists and Discourse channels:** There are now two communication channels hosted by llvm.org:  
-  * The Flang Discourse channel: [https://discourse.llvm.org/c/subprojects/flang/33](https://discourse.llvm.org/c/subprojects/flang/33)   
-  * The flang-commits mailing list: subscribe at [https://lists.llvm.org/cgi-bin/mailman/listinfo/flang-commits](https://lists.llvm.org/cgi-bin/mailman/listinfo/flang-commits) 
+  * The Flang Discourse channel (used primarily for discussions): [https://discourse.llvm.org/c/subprojects/flang/33](https://discourse.llvm.org/c/subprojects/flang/33)
+  * The flang-commits mailing list (used primarily for routine notifications): subscribe at [https://lists.llvm.org/cgi-bin/mailman/listinfo/flang-commits](https://lists.llvm.org/cgi-bin/mailman/listinfo/flang-commits)
 
 * **Slack:** The [flang-compiler.slack.com](http://flang-compiler.slack.com)
 workspace is used for informal real-time communication in the Flang community.  
