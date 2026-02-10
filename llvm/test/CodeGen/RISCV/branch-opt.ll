@@ -122,9 +122,8 @@ define void @bset_case1_a(ptr %a, i32 signext %b, ptr %c, ptr %d) {
 ; CHECK-LABEL: bset_case1_a:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bseti a4, zero, 11
-; CHECK-NEXT:    li a5, 2047
 ; CHECK-NEXT:    sw a4, 0(a0)
-; CHECK-NEXT:    bltu a5, a1, .LBB4_2
+; CHECK-NEXT:    bgeu a1, a4, .LBB4_2
 ; CHECK-NEXT:  # %bb.1: # %block1
 ; CHECK-NEXT:    sw a1, 0(a2)
 ; CHECK-NEXT:    ret
@@ -152,9 +151,8 @@ define void @bset_case2_a(ptr %a, i32 signext %b, ptr %c, ptr %d) {
 ; CHECK-LABEL: bset_case2_a:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a4, 2047
-; CHECK-NEXT:    bseti a5, zero, 11
 ; CHECK-NEXT:    sw a4, 0(a0)
-; CHECK-NEXT:    blt a1, a5, .LBB5_2
+; CHECK-NEXT:    bge a4, a1, .LBB5_2
 ; CHECK-NEXT:  # %bb.1: # %block1
 ; CHECK-NEXT:    sw a1, 0(a2)
 ; CHECK-NEXT:    ret
