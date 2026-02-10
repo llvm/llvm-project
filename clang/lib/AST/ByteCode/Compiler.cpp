@@ -1217,7 +1217,11 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
       return false;
     if (!this->visit(RHS))
       return false;
-    return this->emitMulc(ElemT, E);
+    if (!this->emitMulc(ElemT, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopPtr(E);
+    return true;
   }
 
   if (Op == BO_Div && RHSIsComplex) {
@@ -1254,7 +1258,11 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 
     if (!this->visit(RHS))
       return false;
-    return this->emitDivc(ElemT, E);
+    if (!this->emitDivc(ElemT, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopPtr(E);
+    return true;
   }
 
   // Evaluate LHS and save value to LHSOffset.
