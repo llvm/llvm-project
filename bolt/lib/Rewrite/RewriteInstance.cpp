@@ -2284,6 +2284,12 @@ Error RewriteInstance::readSpecialSections() {
 }
 
 void RewriteInstance::adjustCommandLineOptions() {
+  if (opts::CloneAtOrigin && opts::ForcePatch) {
+    BC->errs() << "BOLT-ERROR: --clone-at-origin is incompatible with "
+                  "--force-patch\n";
+    exit(1);
+  }
+
   if (BC->isAArch64() && !BC->HasRelocations)
     BC->errs() << "BOLT-WARNING: non-relocation mode for AArch64 is not fully "
                   "supported\n";
@@ -5154,6 +5160,23 @@ void RewriteInstance::updateELFSymbolTable(
     return SymbolName;
   };
 
+  // Add a clone symbol at the original address for functions with clone at
+  // origin.
+  auto addCloneSymbol = [&](const ELFSymTy &BaseSym, uint64_t OrigAddr,
+                            uint64_t Size, const BinaryFunction &BF) {
+    ELFSymTy CloneSym = BaseSym;
+    SmallVector<char, 256> Buf;
+    CloneSym.st_name =
+        AddToStrTab(Twine(cantFail(BaseSym.getName(StringSection)))
+                        .concat(".clone.0")
+                        .toStringRef(Buf));
+    CloneSym.st_value = OrigAddr;
+    CloneSym.st_size = Size;
+    CloneSym.st_shndx =
+        getNewSectionIndex(BF.getOriginSection()->getSectionRef().getIndex());
+    Symbols.emplace_back(CloneSym);
+  };
+
   // Add extra symbols for the function.
   //
   // Note that addExtraSymbols() could be called multiple times for the same
@@ -5237,6 +5260,10 @@ void RewriteInstance::updateELFSymbolTable(
       Symbols.emplace_back(DataMarkSym);
       Symbols.emplace_back(CodeMarkSym);
     }
+    // Add clone symbol for function with clone at origin.
+    if (Function.hasCloneAtOrigin())
+      addCloneSymbol(FunctionSymbol, Function.getAddress(), Function.getSize(),
+                     Function);
   };
 
   // For regular (non-dynamic) symbol table, exclude symbols referring
@@ -5368,7 +5395,7 @@ void RewriteInstance::updateELFSymbolTable(
         // Force secondary entry points to have zero size.
         NewSymbol.st_size = 0;
 
-        // Find fragment containing entrypoint
+        // Find fragment containing entry point.
         FunctionLayout::fragment_const_iterator FF = llvm::find_if(
             Function->getLayout().fragments(), [&](const FunctionFragment &FF) {
               uint64_t Lo = FF.getAddress();
@@ -5387,6 +5414,11 @@ void RewriteInstance::updateELFSymbolTable(
 
         NewSymbol.st_shndx =
             Function->getCodeSection(FF->getFragmentNum())->getIndex();
+
+        // Add clone symbol for secondary entry point if function has clone at
+        // origin.
+        if (Function->hasCloneAtOrigin())
+          addCloneSymbol(NewSymbol, Symbol.st_value, 0, *Function);
       } else {
         // Check if the symbol belongs to moved data object and update it.
         BinaryData *BD = opts::ReorderData.empty()

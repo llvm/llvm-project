@@ -407,6 +407,10 @@ private:
   /// All fragments for a parent function.
   FragmentsSetTy Fragments;
 
+  /// True if we created an alias clone at this function's original location
+  /// after relocating optimized version of the function.
+  bool HasCloneAtOrigin{false};
+
   /// The profile data for the number of times the function was executed.
   uint64_t ExecutionCount{COUNT_NO_PROFILE};
 
@@ -869,7 +873,7 @@ public:
   /// Return relocation associated with a given \p Offset in the function,
   /// or nullptr if no such relocation exists.
   const Relocation *getRelocationAt(uint64_t Offset) const {
-    assert(CurrentState == State::Empty &&
+    assert(!isEmitted() &&
            "Relocations unavailable in the current function state.");
     auto RI = Relocations.find(Offset);
     return (RI == Relocations.end()) ? nullptr : &RI->second;
@@ -880,7 +884,7 @@ public:
   /// exists.
   const Relocation *getRelocationInRange(uint64_t StartOffset,
                                          uint64_t EndOffset) const {
-    assert(CurrentState == State::Empty &&
+    assert(!isEmitted() &&
            "Relocations unavailable in the current function state.");
     auto RI = Relocations.lower_bound(StartOffset);
     if (RI != Relocations.end() && RI->first < EndOffset)
@@ -1949,6 +1953,12 @@ public:
 
   /// Return true if the function is a secondary fragment of another function.
   bool isFragment() const { return IsFragment; }
+
+  /// Return true if this function has a clone at its original location.
+  bool hasCloneAtOrigin() const { return HasCloneAtOrigin; }
+
+  /// Mark that a clone exists at the original location.
+  void setHasCloneAtOrigin() { HasCloneAtOrigin = true; }
 
   /// Returns if this function is a child of \p Other function.
   bool isChildOf(const BinaryFunction &Other) const {
