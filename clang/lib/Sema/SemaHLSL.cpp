@@ -3565,59 +3565,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
-  case Builtin::BI__builtin_hlsl_resource_sample: {
-    if (SemaRef.checkArgCountRange(TheCall, 3, 5))
-      return true;
-
-    if (CheckResourceHandle(&SemaRef, TheCall, 0,
-                            [](const HLSLAttributedResourceType *ResType) {
-                              return ResType->getAttrs().ResourceDimension ==
-                                     llvm::dxil::ResourceDimension::Unknown;
-                            }))
-      return true;
-
-    if (CheckResourceHandle(&SemaRef, TheCall, 1,
-                            [](const HLSLAttributedResourceType *ResType) {
-                              return ResType->getAttrs().ResourceClass !=
-                                     llvm::hlsl::ResourceClass::Sampler;
-                            }))
-      return true;
-
-    auto *ResourceTy =
-        TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
-
-    unsigned ExpectedDim =
-        getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
-    if (CheckVectorElementCount(&SemaRef, TheCall->getArg(2)->getType(),
-                                SemaRef.Context.FloatTy, ExpectedDim,
-                                TheCall->getArg(2)->getBeginLoc()))
-      return true;
-
-    if (TheCall->getNumArgs() > 3) {
-      if (CheckVectorElementCount(&SemaRef, TheCall->getArg(3)->getType(),
-                                  SemaRef.Context.IntTy, ExpectedDim,
-                                  TheCall->getArg(3)->getBeginLoc()))
-        return true;
-    }
-
-    if (TheCall->getNumArgs() > 4) {
-      QualType ClampTy = TheCall->getArg(4)->getType();
-      if (!ClampTy->isFloatingType() || ClampTy->isVectorType()) {
-        SemaRef.Diag(TheCall->getArg(4)->getBeginLoc(),
-                     diag::err_typecheck_convert_incompatible)
-            << ClampTy << SemaRef.Context.FloatTy << 1 << 0 << 0;
-        return true;
-      }
-    }
-
-    assert(ResourceTy->hasContainedType() &&
-           "Expecting a contained type for resource with a dimension "
-           "attribute.");
-    QualType ReturnType = ResourceTy->getContainedType();
-    TheCall->setType(ReturnType);
-
-    break;
-  }
   case Builtin::BI__builtin_hlsl_resource_sample:
     return CheckSamplingBuiltin(SemaRef, TheCall, SampleKind::Sample);
   case Builtin::BI__builtin_hlsl_resource_sample_bias:
