@@ -392,13 +392,13 @@ public:
   // [vector.capacity], capacity
   //
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type size() const _NOEXCEPT {
-    return __layout_.size();
+    return __layout_.__size();
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type capacity() const _NOEXCEPT {
-    return __layout_.capacity();
+    return __layout_.__capacity();
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT {
-    return __layout_.empty();
+    return __layout_.__empty();
   }
 
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {
@@ -440,11 +440,11 @@ public:
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI reference back() _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "back() called on an empty vector");
-    return __layout_.back();
+    return __layout_.__back();
   }
   [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reference back() const _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "back() called on an empty vector");
-    return __layout_.back();
+    return __layout_.__back();
   }
 
   //
