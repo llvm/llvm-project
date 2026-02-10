@@ -1426,6 +1426,20 @@ add_header_library(
 )
 
 add_header_library(
+  log2f
+  HDRS
+    log2f.h
+  DEPENDS
+    .common_constants
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   logbf128
   HDRS
     logbf128.h
@@ -1476,6 +1490,45 @@ add_header_library(
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.math.common_constants
     libc.src.__support.uint128
+)
+
+add_header_library(
+  pow
+  HDRS
+    pow.h
+  DEPENDS
+    .common_constants
+    .exp_constants
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  powf
+  HDRS
+    powf.h
+  DEPENDS
+    .common_constants
+    .exp10f
+    .exp2f
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.FPUtil.triple_double
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(

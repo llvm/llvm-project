@@ -151,6 +151,10 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_COPT_PRINTF_DISABLE_WIDE")
   endif()
 
+  if(LIBC_COPT_PRINTF_DISABLE_BITINT)
+    list(APPEND config_options "-DLIBC_COPT_PRINTF_DISABLE_BITINT")
+  endif()
+
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction(_get_compile_options_from_config)
 

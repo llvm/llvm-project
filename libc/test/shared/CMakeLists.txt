@@ -83,6 +83,7 @@ add_fp_unittest(
     libc.src.__support.math.log1p
     libc.src.__support.math.log1pf
     libc.src.__support.math.log2
+    libc.src.__support.math.log2f
     libc.src.__support.math.log2f16
     libc.src.__support.math.logbf
     libc.src.__support.math.logbf128
@@ -96,6 +97,8 @@ add_fp_unittest(
     libc.src.__support.math.llogbf16
     libc.src.__support.math.logf16    
     libc.src.__support.math.llogbl
+    libc.src.__support.math.pow
+    libc.src.__support.math.powf
     libc.src.__support.math.rsqrtf
     libc.src.__support.math.rsqrtf16
     libc.src.__support.math.sqrtf16

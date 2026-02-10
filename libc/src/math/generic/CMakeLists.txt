@@ -1531,18 +1531,7 @@ add_entrypoint_object(
   HDRS
     ../powf.h
   DEPENDS
-    libc.src.__support.math.exp10f
-    libc.src.__support.math.exp2f
-    libc.src.__support.CPP.bit
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.sqrt
-    libc.src.__support.FPUtil.triple_double
-    libc.src.__support.macros.optimization
-    libc.src.__support.math.common_constants
+    libc.src.__support.math.powf
     libc.src.errno.errno
 )
 
@@ -1553,18 +1542,8 @@ add_entrypoint_object(
   HDRS
     ../pow.h
   DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.fenv_macros
-    libc.src.__support.CPP.bit
-    libc.src.__support.FPUtil.double_double
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.sqrt
-    libc.src.__support.macros.optimization
-    libc.src.__support.math.common_constants
+    libc.src.__support.math.pow
+    libc.src.errno.errno
 )
 
 add_entrypoint_object(
@@ -1969,13 +1948,7 @@ add_entrypoint_object(
   HDRS
     ../log2f.h
   DEPENDS
-    libc.src.__support.FPUtil.except_value_utils
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fma
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.macros.optimization
-    libc.src.__support.math.common_constants
+    libc.src.__support.math.log2f
 )
 
 add_entrypoint_object(

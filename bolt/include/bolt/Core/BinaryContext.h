@@ -234,9 +234,6 @@ class BinaryContext {
   /// Functions to be considered for the output in a sorted order.
   BinaryFunctionListType OutputFunctions;
 
-  /// A mutex that is used to control parallel accesses to BinaryFunctions.
-  mutable llvm::sys::RWMutex BinaryFunctionsMutex;
-
   /// Functions injected by BOLT.
   BinaryFunctionListType InjectedBinaryFunctions;
 

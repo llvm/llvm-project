@@ -112,7 +112,9 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_EQ(long(0), LIBC_NAMESPACE::shared::llogbf(1.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::log1pf(0.0f));
   EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::log10f(10.0f));
+  EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::log2f(2.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::logbf(1.0f));
+  EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::powf(0.0f, 0.0f));
   EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::rsqrtf(1.0f));
 
   LIBC_NAMESPACE::shared::sincosf(0.0f, &sin, &cos);
@@ -141,6 +143,7 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log10(1.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log1p(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::log2(1.0));
+  EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::shared::pow(0.0, 0.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::sin(0.0));
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::sqrt(0.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::tan(0.0));
