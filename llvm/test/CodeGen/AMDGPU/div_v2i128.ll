@@ -833,7 +833,7 @@ define <2 x i128> @v_sdiv_v2i128_v_pow2k(<2 x i128> %lhs) {
 ; SDAG-NEXT:    v_mov_b32_e32 v19, v18
 ; SDAG-NEXT:    v_subb_u32_e32 v10, vcc, 0, v1, vcc
 ; SDAG-NEXT:    v_subb_u32_e32 v11, vcc, 0, v2, vcc
-; SDAG-NEXT:    v_cmp_gt_i64_e64 s[4:5], 0, v[2:3]
+; SDAG-NEXT:    v_cmp_gt_i32_e64 s[4:5], 0, v3
 ; SDAG-NEXT:    v_cndmask_b32_e64 v13, v1, v10, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v12, v0, v8, s[4:5]
 ; SDAG-NEXT:    v_subb_u32_e32 v0, vcc, 0, v3, vcc
@@ -991,7 +991,7 @@ define <2 x i128> @v_sdiv_v2i128_v_pow2k(<2 x i128> %lhs) {
 ; SDAG-NEXT:    v_mov_b32_e32 v21, v20
 ; SDAG-NEXT:    v_subb_u32_e32 v3, vcc, 0, v5, vcc
 ; SDAG-NEXT:    v_subb_u32_e32 v8, vcc, 0, v6, vcc
-; SDAG-NEXT:    v_cmp_gt_i64_e64 s[4:5], 0, v[6:7]
+; SDAG-NEXT:    v_cmp_gt_i32_e64 s[4:5], 0, v7
 ; SDAG-NEXT:    v_cndmask_b32_e64 v11, v5, v3, s[4:5]
 ; SDAG-NEXT:    v_cndmask_b32_e64 v10, v4, v2, s[4:5]
 ; SDAG-NEXT:    v_subb_u32_e32 v2, vcc, 0, v7, vcc
