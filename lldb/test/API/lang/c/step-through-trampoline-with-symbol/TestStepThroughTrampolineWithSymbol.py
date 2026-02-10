@@ -5,10 +5,12 @@ Specifically, this tests the scenario where a function's trampoline
 """
 
 import lldb
+from lldbsuite.test.decorators import skipUnlessPlatform
 from lldbsuite.test.lldbtest import TestBase, line_number, configuration
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@skipUnlessPlatform(["linux"])
 class StepThroughTrampolineWithSymbol(TestBase):
     SYMBOL_NAME = "lib_add"
     FAKE_SYMBOL_NAME = "fake_lib_add"
