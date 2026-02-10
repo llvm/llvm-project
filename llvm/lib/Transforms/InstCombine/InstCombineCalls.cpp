@@ -3216,6 +3216,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Select =
           Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 2.0),
                                ConstantFP::get(II->getType(), 1.0));
+      if (!ProfcheckDisableMetadataFixes)
+        if (auto *I = dyn_cast<Instruction>(Select)) {
+          setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE, &F);
+          I->copyMetadata(*II);
+        }
       return BinaryOperator::CreateFMulFMF(Src, Select, II);
     }
     if (match(Exp, m_SExt(m_Value(ExtSrc))) &&
@@ -3223,6 +3228,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Select =
           Builder.CreateSelect(ExtSrc, ConstantFP::get(II->getType(), 0.5),
                                ConstantFP::get(II->getType(), 1.0));
+      if (!ProfcheckDisableMetadataFixes)
+        if (auto *I = dyn_cast<Instruction>(Select)) {
+          setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE, &F);
+          I->copyMetadata(*II);
+        }
       return BinaryOperator::CreateFMulFMF(Src, Select, II);
     }
 
