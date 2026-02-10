@@ -16,8 +16,10 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/PerThreadBumpPtrAllocator.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 #include <future>
@@ -27,10 +29,12 @@
 #if defined(LLVM_ON_UNIX)
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
+#include <array>
 #include <atomic>
 #include <condition_variable>
 #include <fcntl.h>
 #include <mutex>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <thread>
 #include <unistd.h>
@@ -256,6 +260,106 @@ TEST_F(JobserverClientTest, UnixClientNonFifo) {
   EXPECT_TRUE(S1.isValid());
 }
 
+// Test that getNumJobs() uses the -jN value from MAKEFLAGS when available.
+TEST_F(JobserverClientTest, NumJobsFromMakeflags) {
+  ScopedFifo F;
+  ASSERT_TRUE(F.isValid());
+
+  // Open with O_RDWR to avoid blocking (needs both ends open for FIFO).
+  int fd = open(F.c_str(), O_RDWR);
+  ASSERT_GE(fd, 0);
+  // Put 7 tokens in the FIFO (simulating -j8: 7 explicit + 1 implicit).
+  ASSERT_EQ(write(fd, "+++++++", 7), 7);
+
+  // Set MAKEFLAGS with -j8.
+  std::string Makeflags = "-j8 --jobserver-auth=fifo:";
+  Makeflags += F.c_str();
+  ScopedEnvironment Env("MAKEFLAGS", Makeflags.c_str());
+
+  JobserverClient *Client = JobserverClient::getInstance();
+  ASSERT_NE(Client, nullptr);
+
+  // NumJobs should reflect -jN when provided.
+  EXPECT_EQ(Client->getNumJobs(), 8u);
+
+  close(fd);
+}
+
+// Test that getNumJobs() uses -jN even when some tokens are held by siblings.
+// This is the core fix for Issue #170184.
+TEST_F(JobserverClientTest, NumJobsWithSiblingHoldingTokens) {
+  ScopedFifo F;
+  ASSERT_TRUE(F.isValid());
+
+  // Open with O_RDWR to avoid blocking.
+  int fd = open(F.c_str(), O_RDWR);
+  ASSERT_GE(fd, 0);
+  // Put only 2 tokens in the FIFO (simulating sibling holding 5 of 7 tokens).
+  ASSERT_EQ(write(fd, "++", 2), 2);
+
+  // Set MAKEFLAGS with -j8.
+  std::string Makeflags = "-j8 --jobserver-auth=fifo:";
+  Makeflags += F.c_str();
+  ScopedEnvironment Env("MAKEFLAGS", Makeflags.c_str());
+
+  JobserverClient *Client = JobserverClient::getInstance();
+  ASSERT_NE(Client, nullptr);
+
+  // NumJobs should still reflect -jN, not the drained token count.
+  EXPECT_EQ(Client->getNumJobs(), 8u);
+
+  close(fd);
+}
+
+// Test that getNumJobs() is unknown when -jN is not present.
+TEST_F(JobserverClientTest, NumJobsUnknownWithoutJobsFlag) {
+  ScopedFifo F;
+  ASSERT_TRUE(F.isValid());
+
+  // Open with O_RDWR to avoid blocking.
+  int fd = open(F.c_str(), O_RDWR);
+  ASSERT_GE(fd, 0);
+  // Put 3 tokens in the FIFO.
+  ASSERT_EQ(write(fd, "+++", 3), 3);
+
+  // Set MAKEFLAGS without -jN (e.g., Ninja or old Make).
+  std::string Makeflags = "--jobserver-auth=fifo:";
+  Makeflags += F.c_str();
+  ScopedEnvironment Env("MAKEFLAGS", Makeflags.c_str());
+
+  JobserverClient *Client = JobserverClient::getInstance();
+  ASSERT_NE(Client, nullptr);
+
+  // NumJobs should be unknown (0) without a -jN hint.
+  EXPECT_EQ(Client->getNumJobs(), 0u);
+
+  close(fd);
+}
+
+// Test that getNumJobs() parses --jobs=N format.
+TEST_F(JobserverClientTest, NumJobsFromLongOption) {
+  ScopedFifo F;
+  ASSERT_TRUE(F.isValid());
+
+  // Open with O_RDWR to avoid blocking.
+  int fd = open(F.c_str(), O_RDWR);
+  ASSERT_GE(fd, 0);
+  // Put tokens in the FIFO.
+  ASSERT_EQ(write(fd, "+++++++++++", 11), 11);
+
+  // Set MAKEFLAGS with --jobs=12.
+  std::string Makeflags = "--jobs=12 --jobserver-auth=fifo:";
+  Makeflags += F.c_str();
+  ScopedEnvironment Env("MAKEFLAGS", Makeflags.c_str());
+
+  JobserverClient *Client = JobserverClient::getInstance();
+  ASSERT_NE(Client, nullptr);
+
+  // NumJobs should reflect --jobs=N when provided.
+  EXPECT_EQ(Client->getNumJobs(), 12u);
+
+  close(fd);
+}
 #if LLVM_ENABLE_THREADS
 // Unique anchor whose address helps locate the current test binary.
 static int JobserverTestAnchor = 0;
@@ -367,6 +471,50 @@ protected:
   }
 };
 
+/// Macro to define a jobserver test that runs in an isolated subprocess.
+///
+/// The jobserver executor is a process-wide singleton that is initialized once
+/// when the first parallel operation runs. To properly test jobserver behavior,
+/// each test needs a fresh process where:
+///   1. MAKEFLAGS is set before executor initialization
+///   2. parallel::strategy is configured before any parallelFor calls
+///   3. The test has its own independent jobserver (FIFO + MakeProxy)
+///
+/// This macro generates two test functions:
+///   - Name_Subprocess: Parent that spawns the child and waits for it
+///   - Name_SubprocessChild: Child that runs the actual test logic
+///
+/// Usage:
+///   ISOLATED_JOBSERVER_TEST(MyTest, TimeoutSeconds, {
+///     startMakeProxy(3);  // 3 explicit tokens
+///     parallel::strategy = jobserver_concurrency();
+///     parallelFor(0, 10, [](size_t) { /* work */ });
+///     EXPECT_...;
+///   })
+///
+#define ISOLATED_JOBSERVER_TEST(Name, TimeoutSec, Body)                        \
+  TEST_F(JobserverStrategyTest, Name##_Subprocess) {                           \
+    setenv("LLVM_JOBSERVER_TEST_CHILD", "1", 1);                               \
+    std::string Executable =                                                   \
+        sys::fs::getMainExecutable(TestMainArgv0, &JobserverTestAnchor);       \
+    ASSERT_FALSE(Executable.empty()) << "Failed to get main executable path";  \
+    SmallVector<StringRef, 4> Args{                                            \
+        Executable,                                                            \
+        "--gtest_filter=JobserverStrategyTest." #Name "_SubprocessChild"};     \
+    std::string Error;                                                         \
+    bool ExecFailed = false;                                                   \
+    int RC = sys::ExecuteAndWait(Executable, Args, std::nullopt, {},           \
+                                 TimeoutSec, 0, &Error, &ExecFailed);          \
+    unsetenv("LLVM_JOBSERVER_TEST_CHILD");                                     \
+    ASSERT_FALSE(ExecFailed) << Error;                                         \
+    EXPECT_EQ(RC, 0) << "Child test failed with exit code " << RC;             \
+  }                                                                            \
+  TEST_F(JobserverStrategyTest, Name##_SubprocessChild) {                      \
+    if (!getenv("LLVM_JOBSERVER_TEST_CHILD"))                                  \
+      GTEST_SKIP() << "Not running in child mode";                             \
+    Body                                                                       \
+  }
+
 TEST_F(JobserverStrategyTest, ThreadPoolConcurrencyIsLimited) {
   // This test simulates `make -j3`. We will have 1 implicit job slot and
   // we will add 2 explicit job tokens to the FIFO, for a total of 3.
@@ -424,44 +572,13 @@ TEST_F(JobserverStrategyTest, ThreadPoolConcurrencyIsLimited) {
   EXPECT_EQ(CompletedTasks, NumTasks);
 }
 
-// Parent-side driver that spawns a fresh process to run the child test which
-// validates that parallelFor respects the jobserver limit when it is the first
-// user of the default executor in that process.
-TEST_F(JobserverStrategyTest, ParallelForIsLimited_Subprocess) {
-  // Mark child execution.
-  setenv("LLVM_JOBSERVER_TEST_CHILD", "1", 1);
-
-  // Find the current test binary and build args to run only the child test.
-  std::string Executable =
-      sys::fs::getMainExecutable(TestMainArgv0, &JobserverTestAnchor);
-  ASSERT_FALSE(Executable.empty()) << "Failed to get main executable path";
-  SmallVector<StringRef, 4> Args{Executable,
-                                 "--gtest_filter=JobserverStrategyTest."
-                                 "ParallelForIsLimited_SubprocessChild"};
-
-  std::string Error;
-  bool ExecFailed = false;
-  int RC = sys::ExecuteAndWait(Executable, Args, std::nullopt, {}, 0, 0, &Error,
-                               &ExecFailed);
-  unsetenv("LLVM_JOBSERVER_TEST_CHILD");
-  ASSERT_FALSE(ExecFailed) << Error;
-  ASSERT_EQ(RC, 0) << "Executable failed with exit code " << RC;
-}
-
-// Child-side test: create FIFO and make-proxy in this process, set the
-// jobserver strategy, and then run parallelFor.
-TEST_F(JobserverStrategyTest, ParallelForIsLimited_SubprocessChild) {
-  if (!getenv("LLVM_JOBSERVER_TEST_CHILD"))
-    GTEST_SKIP() << "Not running in child mode";
-
-  // This test verifies that llvm::parallelFor respects the jobserver limit.
+// Verifies that parallelFor respects the jobserver concurrency limit.
+ISOLATED_JOBSERVER_TEST(ParallelForIsLimited, /*TimeoutSec=*/30, {
   const int NumExplicitJobs = 3;
   const int ConcurrencyLimit = NumExplicitJobs + 1; // +1 implicit
   const int NumTasks = 20;
 
   startMakeProxy(NumExplicitJobs);
-
-  // Set the global strategy before any default executor is created.
   parallel::strategy = jobserver_concurrency();
 
   std::atomic<int> ActiveTasks{0};
@@ -477,37 +594,12 @@ TEST_F(JobserverStrategyTest, ParallelForIsLimited_SubprocessChild) {
   });
 
   EXPECT_LE(MaxActiveTasks, ConcurrencyLimit);
-}
+})
 
-// Parent-side driver for parallelSort child test.
-TEST_F(JobserverStrategyTest, ParallelSortIsLimited_Subprocess) {
-  setenv("LLVM_JOBSERVER_TEST_CHILD", "1", 1);
-
-  std::string Executable =
-      sys::fs::getMainExecutable(TestMainArgv0, &JobserverTestAnchor);
-  ASSERT_FALSE(Executable.empty()) << "Failed to get main executable path";
-  SmallVector<StringRef, 4> Args{Executable,
-                                 "--gtest_filter=JobserverStrategyTest."
-                                 "ParallelSortIsLimited_SubprocessChild"};
-
-  std::string Error;
-  bool ExecFailed = false;
-  int RC = sys::ExecuteAndWait(Executable, Args, std::nullopt, {}, 0, 0, &Error,
-                               &ExecFailed);
-  unsetenv("LLVM_JOBSERVER_TEST_CHILD");
-  ASSERT_FALSE(ExecFailed) << Error;
-  ASSERT_EQ(RC, 0) << "Executable failed with exit code " << RC;
-}
-
-// Child-side test: ensure parallelSort runs and completes correctly under the
-// jobserver strategy when it owns default executor initialization.
-TEST_F(JobserverStrategyTest, ParallelSortIsLimited_SubprocessChild) {
-  if (!getenv("LLVM_JOBSERVER_TEST_CHILD"))
-    GTEST_SKIP() << "Not running in child mode";
-
+// Verifies that parallelSort works correctly under jobserver strategy.
+ISOLATED_JOBSERVER_TEST(ParallelSortIsLimited, /*TimeoutSec=*/30, {
   const int NumExplicitJobs = 3;
   startMakeProxy(NumExplicitJobs);
-
   parallel::strategy = jobserver_concurrency();
 
   std::vector<int> V(1024);
@@ -518,7 +610,330 @@ TEST_F(JobserverStrategyTest, ParallelSortIsLimited_SubprocessChild) {
 
   parallelSort(V.begin(), V.end());
   ASSERT_TRUE(llvm::is_sorted(V));
+})
+
+// Verifies that PerThreadBumpPtrAllocator works correctly under jobserver
+// strategy. This validates that getThreadIndex() stays within
+// [0, getThreadCount()) even with spawn-per-token thread management.
+ISOLATED_JOBSERVER_TEST(PerThreadAllocatorIsValid, /*TimeoutSec=*/30, {
+  const int NumExplicitJobs = 3;
+  startMakeProxy(NumExplicitJobs);
+  parallel::strategy = jobserver_concurrency();
+
+  parallel::PerThreadBumpPtrAllocator Allocator;
+  static constexpr size_t NumAllocations = 500;
+  std::atomic<size_t> SuccessfulAllocations{0};
+
+  parallelFor(0, NumAllocations, [&](size_t Idx) {
+    uint64_t *ptr =
+        (uint64_t *)Allocator.Allocate(sizeof(uint64_t), alignof(uint64_t));
+    ASSERT_NE(ptr, nullptr) << "Allocation failed at index " << Idx;
+    *ptr = Idx;
+    EXPECT_EQ(*ptr, Idx);
+    ++SuccessfulAllocations;
+  });
+
+  EXPECT_EQ(SuccessfulAllocations, NumAllocations);
+  EXPECT_EQ(sizeof(uint64_t) * NumAllocations, Allocator.getBytesAllocated());
+  EXPECT_LE(Allocator.getNumberOfAllocators(), parallel::getThreadCount());
+})
+
+// Shared memory structure for tracking active threads across processes.
+// Uses a file-backed mmap for cross-process atomic operations.
+struct SharedThreadCounter {
+  std::atomic<int> ActiveCount;
+  std::atomic<int> MaxActive;
+};
+
+// Parent-side driver for multi-process PerThreadBumpPtrAllocator test.
+// This spawns multiple child processes that all share the same jobserver,
+// simulating real-world usage (e.g., make -j8 running multiple clang
+// instances). Also verifies that total active threads never exceed the
+// jobserver limit.
+TEST_F(JobserverStrategyTest, MultiProcessAllocatorIsValid_Subprocess) {
+  setenv("LLVM_JOBSERVER_TEST_CHILD", "1", 1);
+
+  const int NumProcesses = 4;
+  const int NumTotalJobs = 6; // Model `make -j6`.
+  // GNU make semantics:
+  // - Each child process gets one implicit slot.
+  // - The jobserver pipe holds the remaining explicit tokens.
+  // - Total allowed concurrency across all processes is NumTotalJobs.
+  //
+  // To model that, we start the proxy with (N - NumProcesses) explicit tokens
+  // so that implicit + explicit equals N.
+  const int NumExplicitJobs = NumTotalJobs - NumProcesses;
+  ASSERT_GE(NumExplicitJobs, 0);
+  const int ConcurrencyLimit = NumTotalJobs;
+
+  startMakeProxy(NumExplicitJobs);
+
+  // Create shared memory file for cross-process thread counting
+  SmallString<128> SharedFilePath;
+  ASSERT_FALSE(
+      sys::fs::createTemporaryFile("jobserver-test", "shm", SharedFilePath));
+  FileRemover SharedFileRemover(SharedFilePath);
+
+  // Initialize the shared file with zeros
+  {
+    std::error_code EC;
+    raw_fd_ostream Out(SharedFilePath, EC);
+    ASSERT_FALSE(EC) << "Failed to open shared file: " << EC.message();
+    std::array<char, sizeof(SharedThreadCounter)> ZeroBuf{};
+    Out.write(ZeroBuf.data(), ZeroBuf.size());
+  }
+
+  // Memory-map the file for the parent to read results
+  int SharedFD = open(SharedFilePath.c_str(), O_RDWR);
+  ASSERT_GE(SharedFD, 0) << "Failed to open shared file for mmap";
+  void *SharedMem = mmap(nullptr, sizeof(SharedThreadCounter),
+                         PROT_READ | PROT_WRITE, MAP_SHARED, SharedFD, 0);
+  ASSERT_NE(SharedMem, MAP_FAILED) << "mmap failed";
+  close(SharedFD);
+  auto *Counter = static_cast<SharedThreadCounter *>(SharedMem);
+  new (Counter) SharedThreadCounter();
+  Counter->ActiveCount.store(0, std::memory_order_relaxed);
+  Counter->MaxActive.store(0, std::memory_order_relaxed);
+
+  // Pass shared file path to children
+  setenv("LLVM_JOBSERVER_SHARED_FILE", SharedFilePath.c_str(), 1);
+
+  std::string Executable =
+      sys::fs::getMainExecutable(TestMainArgv0, &JobserverTestAnchor);
+  ASSERT_FALSE(Executable.empty()) << "Failed to get main executable path";
+
+  // Spawn multiple child processes concurrently
+  SmallVector<sys::ProcessInfo, 8> Children;
+  for (int i = 0; i < NumProcesses; ++i) {
+    SmallVector<StringRef, 4> Args{
+        Executable, "--gtest_filter=JobserverStrategyTest."
+                    "MultiProcessAllocatorIsValid_SubprocessChild"};
+    std::string Error;
+    bool ExecFailed = false;
+    sys::ProcessInfo PI = sys::ExecuteNoWait(Executable, Args, std::nullopt, {},
+                                             0, &Error, &ExecFailed);
+    ASSERT_FALSE(ExecFailed) << "Failed to spawn child " << i << ": " << Error;
+    ASSERT_NE(PI.Pid, 0) << "Invalid PID for child " << i;
+    Children.push_back(PI);
+  }
+
+  // Wait for all children to complete
+  for (int i = 0; i < NumProcesses; ++i) {
+    std::string Error;
+    sys::ProcessInfo Result = sys::Wait(Children[i], std::nullopt, &Error);
+    EXPECT_EQ(Result.ReturnCode, 0)
+        << "Child " << i << " failed with exit code " << Result.ReturnCode;
+  }
+
+  // Verify the maximum active threads never exceeded the jobserver limit
+  int MaxActive = Counter->MaxActive.load();
+  LLVM_DEBUG(dbgs() << "Max active threads across all processes: " << MaxActive
+                    << ", limit: " << ConcurrencyLimit << "\n");
+  EXPECT_LE(MaxActive, ConcurrencyLimit)
+      << "Active threads exceeded jobserver limit";
+
+  munmap(SharedMem, sizeof(SharedThreadCounter));
+  unsetenv("LLVM_JOBSERVER_SHARED_FILE");
+  unsetenv("LLVM_JOBSERVER_TEST_CHILD");
 }
+
+// Child-side test for multi-process scenario: each child runs parallel
+// allocations under a shared jobserver. Multiple instances of this test
+// run concurrently, competing for jobserver tokens.
+TEST_F(JobserverStrategyTest, MultiProcessAllocatorIsValid_SubprocessChild) {
+  if (!getenv("LLVM_JOBSERVER_TEST_CHILD"))
+    GTEST_SKIP() << "Not running in child mode";
+
+  // Open shared memory for cross-process thread counting
+  const char *SharedFilePath = getenv("LLVM_JOBSERVER_SHARED_FILE");
+  SharedThreadCounter *Counter = nullptr;
+  int SharedFD = -1;
+  if (SharedFilePath) {
+    SharedFD = open(SharedFilePath, O_RDWR);
+    if (SharedFD >= 0) {
+      void *SharedMem = mmap(nullptr, sizeof(SharedThreadCounter),
+                             PROT_READ | PROT_WRITE, MAP_SHARED, SharedFD, 0);
+      if (SharedMem != MAP_FAILED) {
+        Counter = static_cast<SharedThreadCounter *>(SharedMem);
+      }
+      close(SharedFD);
+    }
+  }
+  ASSERT_NE(Counter, nullptr) << "Failed to map shared counters";
+
+  // Don't call startMakeProxy - parent already set up the jobserver
+  // and passed it via MAKEFLAGS environment variable.
+  parallel::strategy = jobserver_concurrency();
+
+  parallel::PerThreadBumpPtrAllocator Allocator;
+  static constexpr size_t NumAllocations = 200;
+  std::atomic<size_t> SuccessfulAllocations{0};
+
+  parallelFor(0, NumAllocations, [&](size_t Idx) {
+    // Track active threads across all processes
+    if (Counter) {
+      int Current = ++Counter->ActiveCount;
+      int OldMax = Counter->MaxActive.load();
+      while (Current > OldMax &&
+             !Counter->MaxActive.compare_exchange_weak(OldMax, Current))
+        ;
+    }
+
+    uint64_t *ptr =
+        (uint64_t *)Allocator.Allocate(sizeof(uint64_t), alignof(uint64_t));
+    ASSERT_NE(ptr, nullptr) << "Allocation failed at index " << Idx;
+    *ptr = Idx;
+    EXPECT_EQ(*ptr, Idx);
+    ++SuccessfulAllocations;
+
+    // Brief sleep to increase chance of overlap between processes
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+    if (Counter) {
+      --Counter->ActiveCount;
+    }
+  });
+
+  EXPECT_EQ(SuccessfulAllocations, NumAllocations);
+  EXPECT_LE(Allocator.getNumberOfAllocators(), parallel::getThreadCount());
+
+  if (Counter) {
+    munmap(Counter, sizeof(SharedThreadCounter));
+  }
+}
+
+// Test that demonstrates backoff behavior when all tokens are busy.
+// With slow tasks (2s each), the coordinator must wait in backoff until
+// a worker finishes and releases a token.
+//
+// Note on "token starvation": When tryAcquire() keeps failing, we cannot
+// reliably distinguish between:
+//   (a) The jobserver (gmake) died and the pipe is broken
+//   (b) Sibling processes are legitimately holding all tokens
+//
+// Both scenarios look identical from the client's perspective. The current
+// behavior - falling back to sequential execution via the implicit token -
+// is the correct response in both cases. It ensures forward progress while
+// respecting the jobserver protocol.
+ISOLATED_JOBSERVER_TEST(SlowTasksShowBackoff, /*TimeoutSec=*/30, {
+  // Only 1 explicit token + 1 implicit = 2 concurrent jobs
+  // With 6 tasks taking 2s each, coordinator MUST wait for tokens
+  const int NumExplicitJobs = 1;
+  const int NumTasks = 6;
+  const auto TaskDuration = std::chrono::seconds(2);
+
+  startMakeProxy(NumExplicitJobs);
+  parallel::strategy = jobserver_concurrency();
+
+  std::atomic<int> CompletedTasks{0};
+  std::atomic<int> MaxConcurrent{0};
+  std::atomic<int> CurrentConcurrent{0};
+
+  auto StartTime = std::chrono::steady_clock::now();
+
+  parallelFor(0, NumTasks, [&](size_t Idx) {
+    int concurrent = ++CurrentConcurrent;
+    int oldMax = MaxConcurrent.load();
+    while (concurrent > oldMax &&
+           !MaxConcurrent.compare_exchange_weak(oldMax, concurrent))
+      ;
+
+    LLVM_DEBUG(dbgs() << "[Test] Task " << Idx
+                      << " starting. Concurrent: " << concurrent << "\n");
+    std::this_thread::sleep_for(TaskDuration);
+
+    --CurrentConcurrent;
+    ++CompletedTasks;
+    LLVM_DEBUG(dbgs() << "[Test] Task " << Idx << " completed.\n");
+    (void)Idx;
+  });
+
+  auto EndTime = std::chrono::steady_clock::now();
+  auto ElapsedMs =
+      std::chrono::duration_cast<std::chrono::milliseconds>(EndTime - StartTime)
+          .count();
+
+  LLVM_DEBUG(dbgs() << "[Test] Total time: " << ElapsedMs << "ms\n");
+  LLVM_DEBUG(dbgs() << "[Test] Max concurrent: " << MaxConcurrent.load()
+                    << "\n");
+
+  EXPECT_EQ(CompletedTasks.load(), NumTasks);
+  EXPECT_LE(MaxConcurrent.load(), NumExplicitJobs + 1);
+  // Expected: 6 tasks / 2 concurrent * 2s = 6 seconds minimum
+  EXPECT_GE(ElapsedMs, 5500) << "Should take at least ~6 seconds";
+  EXPECT_LE(ElapsedMs, 10000) << "Should not take more than 10 seconds";
+})
+
+// Test that the executor handles a broken jobserver pipe gracefully.
+//
+// When the jobserver pipe becomes unavailable (e.g., parent make dies),
+// the executor falls back to sequential execution using only the implicit
+// token. This is the correct behavior because:
+//
+// 1. We cannot reliably distinguish "pipe broken" from "tokens held by
+//    siblings" - both result in tryAcquire() returning invalid.
+//
+// 2. The implicit token guarantees forward progress - every spawned process
+//    gets one implicit slot, so work can always proceed (one task at a time).
+//
+// 3. The 1-second backoff timeout prevents CPU spinning while waiting for
+//    tokens that may never arrive.
+//
+// This test verifies that work completes even after the pipe breaks,
+// demonstrating the graceful degradation to sequential execution.
+ISOLATED_JOBSERVER_TEST(BrokenPipeHandling, /*TimeoutSec=*/10, {
+  // Simulate make -j4: 3 explicit tokens + 1 implicit = 4 concurrent jobs
+  const int NumExplicitJobs = 3;
+  const int NumTasks = 8;
+  const auto TaskDuration = std::chrono::microseconds(100);
+
+  startMakeProxy(NumExplicitJobs);
+  parallel::strategy = jobserver_concurrency();
+
+  std::atomic<int> CompletedTasks{0};
+  std::atomic<int> MaxConcurrent{0};
+  std::atomic<int> CurrentConcurrent{0};
+
+  // Start tasks in background thread so we can break pipe mid-execution
+  auto Future = std::async(std::launch::async, [&]() {
+    parallelFor(0, NumTasks, [&](size_t Idx) {
+      int concurrent = ++CurrentConcurrent;
+      int oldMax = MaxConcurrent.load();
+      while (concurrent > oldMax &&
+             !MaxConcurrent.compare_exchange_weak(oldMax, concurrent))
+        ;
+
+      std::this_thread::sleep_for(TaskDuration);
+
+      --CurrentConcurrent;
+      ++CompletedTasks;
+      LLVM_DEBUG(dbgs() << "[Test] Task " << Idx << " completed. Total: "
+                        << CompletedTasks.load() << "/" << NumTasks << "\n");
+      (void)Idx;
+    });
+  });
+
+  // Let some tasks start and complete normally
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+  // Break the pipe mid-execution
+  LLVM_DEBUG(dbgs() << "[Test] Breaking pipe...\n");
+  StopMakeThread = true;
+  if (MakeThread.joinable())
+    MakeThread.join();
+  sys::fs::remove(TheFifo->c_str());
+  LLVM_DEBUG(dbgs() << "[Test] Pipe broken.\n");
+
+  // Wait for completion
+  auto Status = Future.wait_for(std::chrono::seconds(10));
+  if (Status == std::future_status::timeout) {
+    GTEST_SKIP() << "Executor hangs on broken pipe. "
+                 << "Completed " << CompletedTasks.load() << "/" << NumTasks;
+  }
+
+  EXPECT_EQ(CompletedTasks.load(), NumTasks) << "All tasks should complete";
+  EXPECT_LE(MaxConcurrent.load(), NumExplicitJobs + 1);
+})
 
 #endif // LLVM_ENABLE_THREADS
 

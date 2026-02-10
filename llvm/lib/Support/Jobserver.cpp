@@ -36,6 +36,8 @@ struct JobserverConfig {
   Mode TheMode = None;
   std::string Path;
   FdPair PipeFDs;
+  /// The number of jobs specified by -jN in MAKEFLAGS. 0 if not specified.
+  unsigned ParsedNumJobs = 0;
 };
 
 /// A helper function that checks if `Input` starts with `Prefix`.
@@ -114,6 +116,10 @@ Expected<JobserverConfig> parseNativeMakeFlags(StringRef MakeFlags) {
         return createStringError(inconvertibleErrorCode(),
                                  "Invalid file descriptor pair in MAKEFLAGS");
       }
+    } else if (getPrefixedValue(Arg, "-j", Value) ||
+               getPrefixedValue(Arg, "--jobs=", Value)) {
+      // Parse the job count from -jN or --jobs=N (GNU Make 4.4+).
+      Value.getAsInteger(10, Config.ParsedNumJobs);
     }
   }
 
