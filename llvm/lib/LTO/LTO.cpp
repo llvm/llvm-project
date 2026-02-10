@@ -1559,7 +1559,7 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGlobals,
-      MapVector<StringRef, BitcodeModule> &ModuleMap) {
+      MapVector<StringRef, BitcodeModule> &ModuleMap, Triple TheTriple) {
     auto ModuleID = BM.getModuleIdentifier();
     LTOLLVMContext BackendContext(Conf);
     llvm::TimeTraceScope timeScope("Run ThinLTO backend thread (in-process)",
@@ -1585,15 +1585,10 @@ public:
       // no module hash.
       return RunThinBackend(AddStream);
 
-    auto Mod = ModuleMap.front().second.parseModule(BackendContext);
-    if (!Mod)
-      return Mod.takeError();
-    Triple TT = (*Mod)->getTargetTriple();
-
     // The module may be cached, this helps handling it.
     std::string Key = computeLTOCacheKey(
         Conf, CombinedIndex, ModuleID, ImportList, ExportList, ResolvedODR,
-        DefinedGlobals, TT, CfiFunctionDefs, CfiFunctionDecls);
+        DefinedGlobals, TheTriple, CfiFunctionDefs, CfiFunctionDecls);
     Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, Key, ModuleID);
     if (Error Err = CacheAddStreamOrErr.takeError())
       return Err;
@@ -1609,7 +1604,7 @@ public:
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      MapVector<StringRef, BitcodeModule> &ModuleMap) override {
+      MapVector<StringRef, BitcodeModule> &ModuleMap, Triple TheTriple) override {
     StringRef ModulePath = BM.getModuleIdentifier();
     assert(ModuleToDefinedGVSummaries.count(ModulePath));
     const GVSummaryMapTy &DefinedGlobals =
@@ -1627,7 +1622,7 @@ public:
                                         "thin backend");
           Error E = runThinLTOBackendThread(
               AddStream, Cache, Task, BM, CombinedIndex, ImportList, ExportList,
-              ResolvedODR, DefinedGlobals, ModuleMap);
+              ResolvedODR, DefinedGlobals, ModuleMap, TheTriple);
           if (E) {
             std::unique_lock<std::mutex> L(ErrMu);
             if (Err)
@@ -1677,7 +1672,7 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGlobals,
-      MapVector<StringRef, BitcodeModule> &ModuleMap) override {
+      MapVector<StringRef, BitcodeModule> &ModuleMap, Triple TheTriple) override {
     auto ModuleID = BM.getModuleIdentifier();
     llvm::TimeTraceScope timeScope("Run ThinLTO backend thread (first round)",
                                    ModuleID);
@@ -1709,15 +1704,10 @@ public:
       // no module hash.
       return RunThinBackend(CGAddStream, IRAddStream);
 
-    auto Mod = ModuleMap.front().second.parseModule(BackendContext);
-    if (!Mod)
-      return Mod.takeError();
-    Triple TT = (*Mod)->getTargetTriple();
-
     // Get CGKey for caching object in CGCache.
     std::string CGKey = computeLTOCacheKey(
         Conf, CombinedIndex, ModuleID, ImportList, ExportList, ResolvedODR,
-        DefinedGlobals, TT, CfiFunctionDefs, CfiFunctionDecls);
+        DefinedGlobals, TheTriple, CfiFunctionDefs, CfiFunctionDecls);
     Expected<AddStreamFn> CacheCGAddStreamOrErr =
         CGCache(Task, CGKey, ModuleID);
     if (Error Err = CacheCGAddStreamOrErr.takeError())
@@ -1779,7 +1769,7 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGlobals,
-      MapVector<StringRef, BitcodeModule> &ModuleMap) override {
+      MapVector<StringRef, BitcodeModule> &ModuleMap, Triple TheTriple) override {
     auto ModuleID = BM.getModuleIdentifier();
     llvm::TimeTraceScope timeScope("Run ThinLTO backend thread (second round)",
                                    ModuleID);
@@ -1799,16 +1789,11 @@ public:
       // no module hash.
       return RunThinBackend(AddStream);
 
-    auto Mod = ModuleMap.front().second.parseModule(BackendContext);
-    if (!Mod)
-      return Mod.takeError();
-    Triple TT = (*Mod)->getTargetTriple();
-
     // Get Key for caching the final object file in Cache with the combined
     // CGData hash.
     std::string Key = computeLTOCacheKey(
         Conf, CombinedIndex, ModuleID, ImportList, ExportList, ResolvedODR,
-        DefinedGlobals, TT, CfiFunctionDefs, CfiFunctionDecls);
+        DefinedGlobals, TheTriple, CfiFunctionDefs, CfiFunctionDecls);
     Key = recomputeLTOCacheKey(Key,
                                /*ExtraID=*/std::to_string(CombinedCGDataHash));
     Expected<AddStreamFn> CacheAddStreamOrErr = Cache(Task, Key, ModuleID);
@@ -1901,7 +1886,7 @@ public:
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      MapVector<StringRef, BitcodeModule> &ModuleMap) override {
+      MapVector<StringRef, BitcodeModule> &ModuleMap, Triple TheTriple) override {
     StringRef ModulePath = BM.getModuleIdentifier();
 
     // The contents of this file may be used as input to a native link, and must
@@ -2130,6 +2115,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
       ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;
 
   auto RunBackends = [&](ThinBackendProc *BackendProcess) -> Error {
+    Triple TheTriple = RegularLTO.CombinedModule->getTargetTriple();
     auto ProcessOneModule = [&](int I) -> Error {
       auto &Mod = *(ModuleMap.begin() + I);
       // Tasks 0 through ParallelCodeGenParallelismLevel-1 are reserved for
@@ -2137,7 +2123,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
       return BackendProcess->start(
           RegularLTO.ParallelCodeGenParallelismLevel + I, Mod.second,
           ImportLists[Mod.first], ExportLists[Mod.first],
-          ResolvedODR[Mod.first], ThinLTO.ModuleMap);
+          ResolvedODR[Mod.first], ThinLTO.ModuleMap, TheTriple);
     };
 
     BackendProcess->setup(ModuleMap.size(),
@@ -2407,7 +2393,7 @@ public:
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      MapVector<StringRef, BitcodeModule> &ModuleMap) override {
+      MapVector<StringRef, BitcodeModule> &ModuleMap, class Triple TheTriple) override {
 
     StringRef ModulePath = BM.getModuleIdentifier();
 
