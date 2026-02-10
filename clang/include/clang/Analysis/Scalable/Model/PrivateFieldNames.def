@@ -24,6 +24,7 @@ FIELD(EntityName, Suffix)
 FIELD(EntityName, USR)
 FIELD(NestedBuildNamespace, Namespaces)
 FIELD(TUSummary, Data)
+FIELD(TUSummary, Entities)
 FIELD(TUSummary, IdTable)
 FIELD(TUSummary, TUNamespace)
 

@@ -63,6 +63,7 @@ public:
   bool operator<(const BuildNamespace &Other) const;
 
   friend class SerializationFormat;
+  friend class TestFixture;
 };
 
 /// Represents a hierarchical sequence of build namespaces.
@@ -75,8 +76,6 @@ public:
 /// For example, an entity might be qualified by a compilation unit namespace
 /// followed by a shared library namespace.
 class NestedBuildNamespace {
-  friend class SerializationFormat;
-
   std::vector<BuildNamespace> Namespaces;
 
 public:
@@ -114,8 +113,8 @@ public:
   bool operator!=(const NestedBuildNamespace &Other) const;
   bool operator<(const NestedBuildNamespace &Other) const;
 
-  friend class JSONWriter;
-  friend class LinkUnitResolution;
+  friend class SerializationFormat;
+  friend class TestFixture;
 };
 
 } // namespace clang::ssaf

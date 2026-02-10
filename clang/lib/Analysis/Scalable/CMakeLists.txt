@@ -11,6 +11,7 @@ add_clang_library(clangAnalysisScalable
   Serialization/SerializationFormatRegistry.cpp
   TUSummary/EntitySummary.cpp
   TUSummary/ExtractorRegistry.cpp
+  TUSummary/TUSummaryBuilder.cpp
 
   LINK_LIBS
   clangAST
