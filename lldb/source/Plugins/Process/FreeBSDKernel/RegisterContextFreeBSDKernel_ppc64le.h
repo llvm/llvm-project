@@ -1,9 +1,16 @@
-//===-- RegisterContextFreeBSDKernel_ppc64le.h ------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// This file contains the declaration of the
+/// RegisterContextFreeBSDKernel_ppc64le class, which is used for reading
+/// registers from PCB on ppc64le kernel dump.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNEL_PPC64LE_H
