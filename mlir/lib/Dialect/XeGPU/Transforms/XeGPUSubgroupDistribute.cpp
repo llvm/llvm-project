@@ -1093,10 +1093,9 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
     VectorType maskTy = cast<VectorType>(loadGatherOp.getMask().getType());
     VectorType resultVecTy =
         cast<VectorType>(loadGatherOp.getResult().getType());
-
     // add handling leading unit dimensions support
     int chunkSize = loadGatherOp.getChunkSize().value_or(1);
-    int effectiveVecRank = chunkSize > 1 ? 1 : 2;
+    int effectiveVecRank = (chunkSize == 1) ? 1 : 2;
     for (int i = 0; i < resultVecTy.getRank() - effectiveVecRank; i++) {
       if (resultVecTy.getShape()[i] != 1) {
         return rewriter.notifyMatchFailure(
@@ -1131,20 +1130,6 @@ struct LoadDistribution final : public gpu::WarpDistributionPattern {
 
     SmallVector<Type> operandTypesToYield = {operands[0].getType(),
                                              distOffsetsTy, distMaskTy};
-
-    // Debug print
-    llvm::errs() << "LoadDistribution: operands.size() = " << operands.size()
-                 << "\n";
-    llvm::errs() << "LoadDistribution: operandTypesToYield.size() = "
-                 << operandTypesToYield.size() << "\n";
-    for (size_t i = 0; i < operands.size(); ++i) {
-      llvm::errs() << "  operand[" << i << "] type: " << operands[i].getType()
-                   << "\n";
-    }
-    for (size_t i = 0; i < operandTypesToYield.size(); ++i) {
-      llvm::errs() << "  operandTypesToYield[" << i
-                   << "]: " << operandTypesToYield[i] << "\n";
-    }
 
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
         rewriter, warpOp, operands, operandTypesToYield, newRetIndices);
