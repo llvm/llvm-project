@@ -30,6 +30,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -855,7 +856,7 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   auto DumpImage = [](StringRef Label, StringRef Image, llvm::raw_ostream &Os,
                       int ImageId) {
     std::string Filename = llvm::formatv(
-        "{0}_{1}_image{2}.bin", utils::getExecName(), Label.str(), ImageId);
+        "{0}_{1}_image{2}.bin", utils::os::getExecName(), Label.str(), ImageId);
     std::error_code EC;
     raw_fd_ostream FS(Filename, EC, llvm::sys::fs::OF_None);
     if (EC) {
