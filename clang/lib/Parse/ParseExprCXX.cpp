@@ -1383,6 +1383,9 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     addStaticToLambdaDeclSpecifier(*this, StaticLoc, DS);
     addConstexprToLambdaDeclSpecifier(*this, ConstexprLoc, DS);
     addConstevalToLambdaDeclSpecifier(*this, ConstevalLoc, DS);
+    if (clang::sema::LambdaScopeInfo *LSI = Actions.getCurLambda()) {
+      LSI->Mutable = MutableLoc.isValid();
+    }
   }
 
   Actions.ActOnLambdaClosureParameters(getCurScope(), ParamInfo);
