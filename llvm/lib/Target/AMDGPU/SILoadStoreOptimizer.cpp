@@ -2381,8 +2381,7 @@ void SILoadStoreOptimizer::updateAsyncLDSAddress(MachineInstr &MI,
   MachineOperand *LDSAddr = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
   if (!LDSAddr)
     LDSAddr = TII->getNamedOperand(MI, AMDGPU::OpName::vdata);
-  if (!LDSAddr)
-    return;
+  assert(LDSAddr);
 
   Register OldReg = LDSAddr->getReg();
   Register NewReg = MRI->createVirtualRegister(MRI->getRegClass(OldReg));
