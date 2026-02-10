@@ -44,7 +44,7 @@ void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
 
     SmallVector<char> Buffer;
     bool Invalid = false;
-    StringRef ValueStr = PP->getSpelling(T, Buffer, &Invalid);
+    const StringRef ValueStr = PP->getSpelling(T, Buffer, &Invalid);
     if (Invalid)
       return std::nullopt;
 
