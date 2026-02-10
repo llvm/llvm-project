@@ -42,12 +42,11 @@ void BadSignalToKillThreadCheck::check(const MatchFinder::MatchResult &Result) {
     if (!T.isLiteral())
       return std::nullopt;
 
-    const char *Buffer = nullptr;
+    SmallVector<char> Buffer;
     bool Invalid = false;
-    const unsigned Length = PP->getSpelling(T, Buffer, &Invalid);
+    StringRef ValueStr = PP->getSpelling(T, Buffer, &Invalid);
     if (Invalid)
       return std::nullopt;
-    StringRef ValueStr(Buffer, Length);
 
     llvm::APInt IntValue;
     constexpr unsigned AutoSenseRadix = 0;
