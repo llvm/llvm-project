@@ -921,3 +921,54 @@ module attributes { transform.with_named_sequence } {
     transform.yield
   }
 }
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) -> () {
+    // Intentionally malformed func with no region. This shouldn't crash the
+    // verifier of `with_named_sequence` that runs before we get to the
+    // function.
+    // expected-error @below {{requires one region}}
+    "func.func"() : () -> ()
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) -> () {
+    // Intentionally malformed call with a region. This shouldn't crash the
+    // verifier of `with_named_sequence` that runs before we get to the call.
+    // expected-error @below {{requires zero regions}}
+    "func.call"() <{
+      function_type = () -> (),
+      sym_name = "lambda_function"
+    }> ({
+    ^bb0:
+      "func.return"() : () -> ()
+    }) : () -> ()
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes { transform.with_named_sequence } {
+  // Intentionally malformed sequence where the verifier should not crash.
+  // expected-error @below {{ op expects argument attribute array to have the same number of elements as the number of function arguments, got 1, but expected 3}}
+  "transform.named_sequence"() <{
+    arg_attrs = [{transform.readonly}],
+    function_type = (i1, tensor<f32>, tensor<f32>) -> (),
+    sym_name = "print_message"
+  }> ({}) : () -> ()
+  "transform.named_sequence"() <{
+    function_type = (!transform.any_op) -> (),
+    sym_name = "reference_other_module"
+  }> ({
+  ^bb0(%arg0: !transform.any_op):
+    "transform.include"(%arg0) <{target = @print_message}> : (!transform.any_op) -> ()
+    "transform.yield"() : () -> ()
+  }) : () -> ()
+}

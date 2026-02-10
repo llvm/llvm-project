@@ -160,6 +160,14 @@ LogicalResult OperationVerifier::verifyOnEntrance(Operation &op) {
     if (!operand)
       return op.emitError("null operand found");
 
+  /// Verify that all of the attributes are okay.
+  for (auto attr : op.getDiscardableAttrDictionary()) {
+    // Check for any optional dialect specific attributes.
+    if (auto *dialect = attr.getNameDialect())
+      if (failed(dialect->verifyOperationAttribute(&op, attr)))
+        return failure();
+  }
+
   // If we can get operation info for this, check the custom hook.
   OperationName opName = op.getName();
   std::optional<RegisteredOperationName> registeredInfo =
@@ -227,14 +235,6 @@ LogicalResult OperationVerifier::verifyOnExit(Operation &op) {
   // region invariants need to veirfy.
   if (registeredInfo && failed(registeredInfo->verifyRegionInvariants(&op)))
     return failure();
-
-  /// Verify that all of the attributes are okay.
-  for (auto attr : op.getDiscardableAttrDictionary()) {
-    // Check for any optional dialect specific attributes.
-    if (auto *dialect = attr.getNameDialect())
-      if (failed(dialect->verifyOperationAttribute(&op, attr)))
-        return failure();
-  }
 
   // If this is a registered operation, there is nothing left to do.
   if (registeredInfo)

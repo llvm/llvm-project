@@ -993,7 +993,7 @@ func.func @invalid_ordering_in_fence() {
 
 // expected-error @+1 {{invalid data layout descriptor}}
 module attributes {llvm.data_layout = "#vjkr32"} {
-  func.func private @invalid_data_layout()
+  func.func @invalid_data_layout()
 }
 
 // -----
