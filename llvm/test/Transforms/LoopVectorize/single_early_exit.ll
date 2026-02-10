@@ -621,6 +621,116 @@ exit:
   %res = phi i64 [ -1, %entry ], [ -2, %then ], [ 0, %loop.latch ], [ %iv, %loop.header ]
   ret i64 %res
 }
+
+define i8 @predicate_exit_block_successors(ptr %p0) {
+; CHECK-LABEL: define i8 @predicate_exit_block_successors(
+; CHECK-SAME: ptr [[P0:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[LOOP]] ], [ [[INDEX_NEXT9:%.*]], [[PRED_LOAD_CONTINUE8:%.*]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = add i64 3, [[INDEX1]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, ptr [[P2]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i8> [[WIDE_LOAD]], [[WIDE_LOAD2]]
+; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP2]], i1 false)
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[FIRST_ACTIVE_LANE]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <4 x i64> <i64 0, i64 1, i64 2, i64 3>, [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[CMP3:%.*]] = extractelement <4 x i1> [[TMP3]], i32 0
+; CHECK-NEXT:    br i1 [[CMP3]], label [[LOOP_INC:%.*]], label [[LOOP_END:%.*]]
+; CHECK:       pred.load.if:
+; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[P0]], i64 [[TMP5]]
+; CHECK-NEXT:    [[LD3:%.*]] = load i8, ptr [[ARRAYIDX2]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i8> poison, i8 [[LD3]], i32 0
+; CHECK-NEXT:    br label [[LOOP_END]]
+; CHECK:       pred.load.continue:
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <4 x i8> [ poison, [[VECTOR_BODY]] ], [ [[TMP8]], [[LOOP_INC]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP3]], i32 1
+; CHECK-NEXT:    br i1 [[TMP10]], label [[PRED_LOAD_IF3:%.*]], label [[PRED_LOAD_CONTINUE4:%.*]]
+; CHECK:       pred.load.if3:
+; CHECK-NEXT:    [[INDEX_NEXT:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[P0]], i64 [[INDEX_NEXT]]
+; CHECK-NEXT:    [[TMP13:%.*]] = load i8, ptr [[TMP12]], align 1
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x i8> [[TMP9]], i8 [[TMP13]], i32 1
+; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE4]]
+; CHECK:       pred.load.continue4:
+; CHECK-NEXT:    [[TMP15:%.*]] = phi <4 x i8> [ [[TMP9]], [[LOOP_END]] ], [ [[TMP14]], [[PRED_LOAD_IF3]] ]
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i1> [[TMP3]], i32 2
+; CHECK-NEXT:    br i1 [[TMP16]], label [[PRED_LOAD_IF5:%.*]], label [[PRED_LOAD_CONTINUE6:%.*]]
+; CHECK:       pred.load.if5:
+; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i8, ptr [[P0]], i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP19:%.*]] = load i8, ptr [[TMP18]], align 1
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i8> [[TMP15]], i8 [[TMP19]], i32 2
+; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE6]]
+; CHECK:       pred.load.continue6:
+; CHECK-NEXT:    [[TMP21:%.*]] = phi <4 x i8> [ [[TMP15]], [[PRED_LOAD_CONTINUE4]] ], [ [[TMP20]], [[PRED_LOAD_IF5]] ]
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i1> [[TMP3]], i32 3
+; CHECK-NEXT:    br i1 [[TMP22]], label [[PRED_LOAD_IF7:%.*]], label [[PRED_LOAD_CONTINUE8]]
+; CHECK:       pred.load.if7:
+; CHECK-NEXT:    [[TMP23:%.*]] = add i64 [[INDEX]], 3
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i8, ptr [[P0]], i64 [[TMP23]]
+; CHECK-NEXT:    [[TMP25:%.*]] = load i8, ptr [[TMP24]], align 1
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i8> [[TMP21]], i8 [[TMP25]], i32 3
+; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE8]]
+; CHECK:       pred.load.continue8:
+; CHECK-NEXT:    [[TMP27:%.*]] = phi <4 x i8> [ [[TMP21]], [[PRED_LOAD_CONTINUE6]] ], [ [[TMP26]], [[PRED_LOAD_IF7]] ]
+; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX1]], 4
+; CHECK-NEXT:    [[TMP28:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP29:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP28]])
+; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT9]], 64
+; CHECK-NEXT:    [[TMP31:%.*]] = or i1 [[TMP29]], [[TMP30]]
+; CHECK-NEXT:    br i1 [[TMP31]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK:       middle.split:
+; CHECK-NEXT:    br i1 [[TMP29]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i8> [[TMP27]], i32 3
+; CHECK-NEXT:    br label [[LOOP_END1:%.*]]
+; CHECK:       vector.early.exit:
+; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <4 x i8> [[WIDE_LOAD]], i64 [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    br label [[LOOP_END1]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i8 [ [[TMP33]], [[VECTOR_EARLY_EXIT]] ], [ [[TMP32]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i8 [[RETVAL]]
+;
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %arrayidx1, align 1
+  %cmp3 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp3, label %loop.inc, label %loop.end
+
+loop.inc:
+  %arrayidx2 = getelementptr inbounds i8, ptr %p0, i64 %index
+  %ld3 = load i8, ptr %arrayidx2
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop, label %loop.end
+
+loop.end:
+  %retval = phi i8 [ %ld1, %loop ], [ %ld3, %loop.inc ]
+  ret i8 %retval
+}
+
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -635,4 +745,5 @@ exit:
 ; CHECK: [[LOOP10]] = distinct !{[[LOOP10]], [[META2]], [[META1]]}
 ; CHECK: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP12]] = distinct !{[[LOOP12]], [[META2]], [[META1]]}
+; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]], [[META2]]}
 ;.

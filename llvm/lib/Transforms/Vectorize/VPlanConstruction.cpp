@@ -905,10 +905,31 @@ void VPlanTransforms::handleEarlyExits(VPlan &Plan,
 
   // Disconnect all early exits from the loop leaving it with a single exit from
   // the latch. Early exits that are countable are left for a scalar epilog. The
+  // latch is split to contain only the terminator, and the uncountable exiting
+  // blocks are connected to it, with a predicated edge to their successors. The
   // condition of uncountable early exits (currently at most one is supported)
   // is fused into the latch exit, and used to branch from middle block to the
   // early exit destination.
+  //
+  // BEFORE:                  | AFTER:
+  //                          |
+  //    entry                 |      entry
+  //      |                   |        |
+  //      v                   |        v
+  // earlyexiting -----+      |   earlyexiting-+
+  //      |            |      |        |       |
+  //      v            v      |   [predicated] |
+  //    latch      earlyexit  |        |       |
+  //                          |        v       |
+  //                          |      latch     |
+  //                          |        |       |
+  //                          |        +-------+
+  //                          |        |
+  //                          |        v
+  //                          |    latch.split
+
   [[maybe_unused]] bool HandledUncountableEarlyExit = false;
+  VPBasicBlock *LatchSplitVPBB = nullptr;
   for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
     for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
       if (Pred == MiddleVPBB)
@@ -916,15 +937,22 @@ void VPlanTransforms::handleEarlyExits(VPlan &Plan,
       if (HasUncountableEarlyExit) {
         assert(!HandledUncountableEarlyExit &&
                "can handle exactly one uncountable early exit");
+        if (!LatchSplitVPBB)
+          LatchSplitVPBB =
+              LatchVPBB->splitAt(LatchVPBB->getTerminator()->getIterator());
         handleUncountableEarlyExit(cast<VPBasicBlock>(Pred), EB, Plan,
-                                   cast<VPBasicBlock>(HeaderVPB), LatchVPBB);
+                                   cast<VPBasicBlock>(HeaderVPB),
+                                   LatchSplitVPBB);
         HandledUncountableEarlyExit = true;
+        cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
+        VPBlockUtils::disconnectBlocks(Pred, EB);
+        VPBlockUtils::connectBlocks(Pred, LatchSplitVPBB);
       } else {
         for (VPRecipeBase &R : EB->phis())
           cast<VPIRPhi>(&R)->removeIncomingValueFor(Pred);
+        cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
+        VPBlockUtils::disconnectBlocks(Pred, EB);
       }
-      cast<VPBasicBlock>(Pred)->getTerminator()->eraseFromParent();
-      VPBlockUtils::disconnectBlocks(Pred, EB);
     }
   }
 
