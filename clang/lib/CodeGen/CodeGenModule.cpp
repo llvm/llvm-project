@@ -3521,7 +3521,9 @@ void CodeGenModule::AddDependentLib(StringRef Lib) {
 }
 
 /// Process copyright pragma and create LLVM metadata.
-/// #pragma comment(copyright, "string") embeds copyright information into a loadable program-data section of the object file for inclusion in the linked module.
+/// #pragma comment(copyright, "string") embeds copyright information into a
+/// loadable program-data section of the object file for inclusion in the linked
+/// module.
 ///
 /// Example: #pragma comment(copyright, "Copyright string")
 ///
@@ -3530,8 +3532,8 @@ void CodeGenModule::ProcessPragmaComment(PragmaMSCommentKind Kind,
                                          StringRef Comment,
                                          bool isFromASTFile) {
   // Target Guard: Only AIX supports PCK_Copyright currently.
-  if (!getTriple().isOSAIX())
-    return;
+  assert(getTriple().isOSAIX() &&
+         "pragma comment copyright is supported only on AIX target");
 
   // Deserialization Guard: Only process if copyright originated in this TU.
   if (isFromASTFile)
@@ -3543,9 +3545,8 @@ void CodeGenModule::ProcessPragmaComment(PragmaMSCommentKind Kind,
          "called for PCK_Copyright");
 
   // Only one copyright pragma allowed per translation unit
-  if (LoadTimeComment) {
-    return;
-  }
+  assert(!LoadTimeComment &&
+         "Only one copyright pragma allowed per translation unit");
 
   // Create llvm metadata with the comment string
   auto &C = getLLVMContext();
