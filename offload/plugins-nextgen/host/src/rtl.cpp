@@ -487,7 +487,12 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 
   /// All images (ELF-compatible) should be compatible with this plugin.
   Expected<bool> isELFCompatible(uint32_t, StringRef) const override {
+#if _WIN32
+    // Windows does not support ELF binaries, so return false for all images.
+    return false;
+#else
     return true;
+#endif // _WIN32
   }
 
   Triple::ArchType getTripleArch() const override {
