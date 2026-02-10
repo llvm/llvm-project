@@ -181,3 +181,27 @@ define <4 x i1> @icmp_eq_non_i1_negative_vec(<4 x i8> %x, <4 x i8> %y) {
   %result = icmp eq <4 x i64> %shl, <i64 1, i64 1, i64 1, i64 1>
   ret <4 x i1> %result
 }
+
+; Negative test: should only rewrite pattern if shl
+; has a single use.
+define <2 x i1> @icmp_eq_not_one_use_shl_neg(i1 %x, i1 %y) {
+; CHECK-LABEL: define <2 x i1> @icmp_eq_not_one_use_shl_neg(
+; CHECK-SAME: i1 [[X:%.*]], i1 [[Y:%.*]]) {
+; CHECK-NEXT:    [[X_EXT:%.*]] = zext i1 [[X]] to i32
+; CHECK-NEXT:    [[Y_EXT:%.*]] = zext i1 [[Y]] to i32
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i32 [[X_EXT]], [[Y_EXT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp eq i32 [[SHL]], 1
+; CHECK-NEXT:    [[SECOND_USE:%.*]] = icmp eq i32 [[SHL]], 3
+; CHECK-NEXT:    [[VEC:%.*]] = insertelement <2 x i1> poison, i1 [[RESULT]], i64 0
+; CHECK-NEXT:    [[VEC2:%.*]] = insertelement <2 x i1> [[VEC]], i1 [[SECOND_USE]], i64 1
+; CHECK-NEXT:    ret <2 x i1> [[VEC2]]
+;
+  %x.ext = zext i1 %x to i32
+  %y.ext = zext i1 %y to i32
+  %shl = shl i32 %x.ext, %y.ext
+  %result = icmp eq i32 %shl, 1
+  %second_use = icmp eq i32 %shl, 3
+  %vec = insertelement <2 x i1> undef, i1 %result, i32 0
+  %vec2 = insertelement <2 x i1> %vec, i1 %second_use, i32 1
+  ret <2 x i1> %vec2
+}

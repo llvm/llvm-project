@@ -7900,8 +7900,13 @@ Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {
     Value *A, *B;
     CmpPredicate CmpPred;
 
-    if (match(&I, m_ICmp(CmpPred, m_Shl(m_ZExt(m_Value(A)), m_ZExt(m_Value(B))),
-                         m_One())) &&
+    // If shl is one-use, we eliminate shl and icmp at least,
+    // and introduce a xor and an and, so we expect neutral
+    // to positive benefit.
+    if (match(&I,
+              m_ICmp(CmpPred,
+                     m_OneUse(m_Shl(m_ZExt(m_Value(A)), m_ZExt(m_Value(B)))),
+                     m_One())) &&
         A->getType()->isIntOrIntVectorTy(1) &&
         B->getType()->isIntOrIntVectorTy(1)) {
 
