@@ -276,6 +276,11 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
+  InstructionCost ConvertedCost;
+  if (getConvertedArithmeticInstructionCost(ISD, Ty, CostKind, Op1Info, Op2Info,
+                                            Args, CxtI, ConvertedCost))
+    return ConvertedCost;
+
   if (ISD == ISD::MUL && Args.size() == 2 && LT.second.isVector() &&
       (LT.second.getScalarType() == MVT::i32 ||
        LT.second.getScalarType() == MVT::i64)) {
@@ -364,6 +369,17 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     }
 
     return Cost;
+  }
+
+  // Vector unsigned division/remainder will be simplified to shifts/masks.
+  if ((ISD == ISD::UDIV || ISD == ISD::UREM) && Op2Info.isConstant() &&
+      Op2Info.isPowerOf2()) {
+    if (ISD == ISD::UDIV)
+      return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind,
+                                    Op1Info.getNoProps(), Op2Info.getNoProps());
+    // UREM
+    return getArithmeticInstrCost(Instruction::And, Ty, CostKind,
+                                  Op1Info.getNoProps(), Op2Info.getNoProps());
   }
 
   static const CostKindTblEntry GFNIUniformConstCostTable[] = {
