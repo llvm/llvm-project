@@ -3762,7 +3762,7 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
   bool FormattingOff = false;
 
   for (;;) {
-    auto Pos = Code.find('\n', SearchFrom);
+    auto Pos = Code.find('\n', Prev);
     StringRef Line =
         Code.substr(Prev, (Pos != StringRef::npos ? Pos : Code.size()) - Prev);
 
@@ -3778,13 +3778,14 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
       if (HasImport)
         AssociatedCommentLines.push_back(Line);
     } else if (Trimmed.starts_with("/*")) {
-      Pos = Code.find("*/", Pos + 2);
-      if (Pos != StringRef::npos)
-        Pos = Code.find('\n', Pos + 2);
+      const auto EndPos = Code.find("*/", Prev + 2);
+      Pos = EndPos != StringRef::npos ? Code.find('\n', EndPos + 2)
+                                      : StringRef::npos;
       if (HasImport) {
         // Extend `Line` for a multiline comment to include all lines the
         // comment spans.
-        Line = GetLine();
+        Line =
+            Code.substr(Prev, (Pos != StringRef::npos ? Pos : Code.size()) - Prev);
         AssociatedCommentLines.push_back(Line);
       }
     } else if (ImportRegex.match(Trimmed, &Matches)) {
@@ -3807,7 +3808,6 @@ tooling::Replacements sortJavaImports(const FormatStyle &Style, StringRef Code,
       // statement.
       break;
     }
-    Prev = Pos + 1;
     if (Pos == StringRef::npos || Pos + 1 == Code.size())
       break;
     Prev = Pos + 1;
