@@ -730,9 +730,7 @@ define void @wmaccu_multiple_uses(i32 %a, i32 %b, i64 %c, ptr %out1, ptr %out2) 
 define i32 @merge_i32(i32 %mask, i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: merge_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a2, a0, a2
-; CHECK-NEXT:    andn a0, a1, a0
-; CHECK-NEXT:    or a0, a2, a0
+; CHECK-NEXT:    merge a0, a1, a2
 ; CHECK-NEXT:    ret
   %and1 = and i32 %mask, %b
   %not = xor i32 %mask, -1
@@ -745,9 +743,7 @@ define i32 @merge_i32(i32 %mask, i32 %a, i32 %b) nounwind {
 define i32 @merge_i32_2(i32 %mask, i32 %b, i32 %a) nounwind {
 ; CHECK-LABEL: merge_i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a1, a0, a1
-; CHECK-NEXT:    andn a0, a2, a0
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    merge a0, a2, a1
 ; CHECK-NEXT:    ret
   %and1 = and i32 %mask, %b
   %not = xor i32 %mask, -1
@@ -760,9 +756,7 @@ define i32 @merge_i32_2(i32 %mask, i32 %b, i32 %a) nounwind {
 define i32 @mvm_i32(i32 %a, i32 %mask, i32 %b) nounwind {
 ; CHECK-LABEL: mvm_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a2, a1, a2
-; CHECK-NEXT:    andn a0, a0, a1
-; CHECK-NEXT:    or a0, a2, a0
+; CHECK-NEXT:    mvm a0, a2, a1
 ; CHECK-NEXT:    ret
   %and1 = and i32 %mask, %b
   %not = xor i32 %mask, -1
@@ -775,9 +769,7 @@ define i32 @mvm_i32(i32 %a, i32 %mask, i32 %b) nounwind {
 define i32 @mvm_i32_2(i32 %a, i32 %b, i32 %mask) nounwind {
 ; CHECK-LABEL: mvm_i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    andn a0, a0, a2
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    mvm a0, a1, a2
 ; CHECK-NEXT:    ret
   %and1 = and i32 %mask, %b
   %not = xor i32 %mask, -1
@@ -790,9 +782,7 @@ define i32 @mvm_i32_2(i32 %a, i32 %b, i32 %mask) nounwind {
 define i32 @mvmn_i32(i32 %b, i32 %mask, i32 %a) nounwind {
 ; CHECK-LABEL: mvmn_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    andn a1, a2, a1
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    mvmn a0, a2, a1
 ; CHECK-NEXT:    ret
   %and1 = and i32 %mask, %b
   %not = xor i32 %mask, -1
@@ -805,9 +795,7 @@ define i32 @mvmn_i32(i32 %b, i32 %mask, i32 %a) nounwind {
 define i32 @mvmn_i32_2(i32 %b, i32 %a, i32 %mask) nounwind {
 ; CHECK-LABEL: mvmn_i32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a0, a2, a0
-; CHECK-NEXT:    andn a1, a1, a2
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    mvmn a0, a1, a2
 ; CHECK-NEXT:    ret
   %and1 = and i32 %mask, %b
   %not = xor i32 %mask, -1
@@ -821,12 +809,11 @@ define i32 @mvmn_i32_2(i32 %b, i32 %a, i32 %mask) nounwind {
 define i32 @merge_i32_mv(i32 %mask, i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: merge_i32_mv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a3, a0, a2
-; CHECK-NEXT:    andn a4, a1, a0
+; CHECK-NEXT:    mv a3, a0
+; CHECK-NEXT:    merge a3, a1, a2
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    or a3, a3, a4
-; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    add a0, a3, a0
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    ret
   %and1 = and i32 %mask, %b
   %not = xor i32 %mask, -1
@@ -842,9 +829,7 @@ define i32 @merge_i32_mv(i32 %mask, i32 %a, i32 %b) nounwind {
 define i32 @merge_xor_i32(i32 %mask, i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: merge_xor_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andn a1, a1, a0
-; CHECK-NEXT:    and a0, a2, a0
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    merge a0, a1, a2
 ; CHECK-NEXT:    ret
   %xor1 = xor i32 %a, %b
   %and = and i32 %xor1, %mask
@@ -856,9 +841,7 @@ define i32 @merge_xor_i32(i32 %mask, i32 %a, i32 %b) nounwind {
 define i32 @mvm_xor_i32(i32 %a, i32 %mask, i32 %b) nounwind {
 ; CHECK-LABEL: mvm_xor_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andn a0, a0, a1
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    mvm a0, a2, a1
 ; CHECK-NEXT:    ret
   %xor1 = xor i32 %a, %b
   %and = and i32 %xor1, %mask
@@ -870,9 +853,7 @@ define i32 @mvm_xor_i32(i32 %a, i32 %mask, i32 %b) nounwind {
 define i32 @mvmn_xor_i32(i32 %b, i32 %mask, i32 %a) nounwind {
 ; CHECK-LABEL: mvmn_xor_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andn a2, a2, a1
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    mvmn a0, a2, a1
 ; CHECK-NEXT:    ret
   %xor1 = xor i32 %a, %b
   %and = and i32 %xor1, %mask

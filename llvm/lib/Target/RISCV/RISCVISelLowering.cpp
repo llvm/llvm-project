@@ -10758,7 +10758,7 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
                                        DAG.getConstant(ShiftAmt, DL, XLenVT));
       SDValue Mask = DAG.getConstant(PosMask, DL, XLenVT);
       SDValue Result =
-          DAG.getNode(RISCVISD::MVM, DL, XLenVT, Vec, ShiftedVal, Mask);
+          DAG.getNode(RISCVISD::MERGE, DL, XLenVT, Mask, Vec, ShiftedVal);
       return DAG.getBitcast(VecVT, Result);
     }
 

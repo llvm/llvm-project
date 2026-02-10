@@ -1517,13 +1517,14 @@ def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp>;
 def riscv_mulhru : RVSDNode<"MULHRU", SDTIntBinOp>;
 def riscv_mulhrsu : RVSDNode<"MULHRSU", SDTIntBinOp>;
 
-def SDT_RISCVMVM : SDTypeProfile<1, 3, [SDTCisInt<0>,
-                                        SDTCisSameAs<0, 1>,
-                                        SDTCisSameAs<0, 2>,
-                                        SDTCisSameAs<0, 3>]>;
-def riscv_mvm : RVSDNode<"MVM", SDT_RISCVMVM>;
+def SDT_RISCVMERGE : SDTypeProfile<1, 3, [SDTCisInt<0>,
+                                          SDTCisSameAs<0, 1>,
+                                          SDTCisSameAs<0, 2>,
+                                          SDTCisSameAs<0, 3>]>;
+def riscv_merge : RVSDNode<"MERGE", SDT_RISCVMERGE>;
 
 let Predicates = [HasStdExtP] in {
+
   def : PatGpr<abs, ABS>;
   def : PatGpr<ctls, CLS>;
 
@@ -1532,9 +1533,16 @@ let Predicates = [HasStdExtP] in {
   def : Pat<(XLenVT (fshr GPR:$rs1, GPR:$rd, shiftMaskXLen:$rs2)),
             (SRX GPR:$rd, GPR:$rs1, shiftMaskXLen:$rs2)>;
 
+  // Pseudo version of MERGE without the tied constraint. Will be expanded to
+  // MERGE, MVM, or MVMN after register allocation.
+  def PseudoMERGE : Pseudo<(outs GPR:$dst), (ins GPR:$rd, GPR:$rs1, GPR:$rs2),
+                           []>;
+  def : Pat<(XLenVT (or (and GPR:$rd, GPR:$rs2), (and (not GPR:$rd), GPR:$rs1))),
+            (PseudoMERGE GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+
   // Pattern for insert_vector_elt
-  def : Pat<(XLenVT (riscv_mvm GPR:$rd, GPR:$rs1, GPR:$rs2)),
-            (MVM GPR:$rd, GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVT (riscv_merge GPR:$rd, GPR:$rs1, GPR:$rs2)),
+            (PseudoMERGE GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Basic 8-bit arithmetic patterns
   def: Pat<(XLenVecI8VT (add GPR:$rs1, GPR:$rs2)), (PADD_B GPR:$rs1, GPR:$rs2)>;

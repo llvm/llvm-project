@@ -383,9 +383,7 @@ define i128 @srxi_i128(i128 %x) {
 define i64 @merge_i64(i64 %mask, i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: merge_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a2, a0, a2
-; CHECK-NEXT:    andn a0, a1, a0
-; CHECK-NEXT:    or a0, a2, a0
+; CHECK-NEXT:    merge a0, a1, a2
 ; CHECK-NEXT:    ret
   %and1 = and i64 %mask, %b
   %not = xor i64 %mask, -1
@@ -398,9 +396,7 @@ define i64 @merge_i64(i64 %mask, i64 %a, i64 %b) nounwind {
 define i64 @merge_i64_2(i64 %mask, i64 %b, i64 %a) nounwind {
 ; CHECK-LABEL: merge_i64_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a1, a0, a1
-; CHECK-NEXT:    andn a0, a2, a0
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    merge a0, a2, a1
 ; CHECK-NEXT:    ret
   %and1 = and i64 %mask, %b
   %not = xor i64 %mask, -1
@@ -413,9 +409,7 @@ define i64 @merge_i64_2(i64 %mask, i64 %b, i64 %a) nounwind {
 define i64 @mvm_i64(i64 %a, i64 %mask, i64 %b) nounwind {
 ; CHECK-LABEL: mvm_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a2, a1, a2
-; CHECK-NEXT:    andn a0, a0, a1
-; CHECK-NEXT:    or a0, a2, a0
+; CHECK-NEXT:    mvm a0, a2, a1
 ; CHECK-NEXT:    ret
   %and1 = and i64 %mask, %b
   %not = xor i64 %mask, -1
@@ -428,9 +422,7 @@ define i64 @mvm_i64(i64 %a, i64 %mask, i64 %b) nounwind {
 define i64 @mvm_i64_2(i64 %a, i64 %b, i64 %mask) nounwind {
 ; CHECK-LABEL: mvm_i64_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    andn a0, a0, a2
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    mvm a0, a1, a2
 ; CHECK-NEXT:    ret
   %and1 = and i64 %mask, %b
   %not = xor i64 %mask, -1
@@ -443,9 +435,7 @@ define i64 @mvm_i64_2(i64 %a, i64 %b, i64 %mask) nounwind {
 define i64 @mvmn_i64(i64 %b, i64 %mask, i64 %a) nounwind {
 ; CHECK-LABEL: mvmn_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a0, a1, a0
-; CHECK-NEXT:    andn a1, a2, a1
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    mvmn a0, a2, a1
 ; CHECK-NEXT:    ret
   %and1 = and i64 %mask, %b
   %not = xor i64 %mask, -1
@@ -458,9 +448,7 @@ define i64 @mvmn_i64(i64 %b, i64 %mask, i64 %a) nounwind {
 define i64 @mvmn_i64_2(i64 %b, i64 %a, i64 %mask) nounwind {
 ; CHECK-LABEL: mvmn_i64_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a0, a2, a0
-; CHECK-NEXT:    andn a1, a1, a2
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    mvmn a0, a1, a2
 ; CHECK-NEXT:    ret
   %and1 = and i64 %mask, %b
   %not = xor i64 %mask, -1
@@ -474,12 +462,11 @@ define i64 @mvmn_i64_2(i64 %b, i64 %a, i64 %mask) nounwind {
 define i64 @merge_i64_mv(i64 %mask, i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: merge_i64_mv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    and a3, a0, a2
-; CHECK-NEXT:    andn a4, a1, a0
+; CHECK-NEXT:    mv a3, a0
+; CHECK-NEXT:    merge a3, a1, a2
 ; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    or a3, a3, a4
-; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    add a0, a3, a0
+; CHECK-NEXT:    add a0, a0, a2
 ; CHECK-NEXT:    ret
   %and1 = and i64 %mask, %b
   %not = xor i64 %mask, -1
@@ -495,9 +482,7 @@ define i64 @merge_i64_mv(i64 %mask, i64 %a, i64 %b) nounwind {
 define i64 @merge_xor_i64(i64 %mask, i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: merge_xor_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andn a1, a1, a0
-; CHECK-NEXT:    and a0, a2, a0
-; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    merge a0, a1, a2
 ; CHECK-NEXT:    ret
   %xor1 = xor i64 %a, %b
   %and = and i64 %xor1, %mask
@@ -509,9 +494,7 @@ define i64 @merge_xor_i64(i64 %mask, i64 %a, i64 %b) nounwind {
 define i64 @mvm_xor_i64(i64 %a, i64 %mask, i64 %b) nounwind {
 ; CHECK-LABEL: mvm_xor_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andn a0, a0, a1
-; CHECK-NEXT:    and a1, a2, a1
-; CHECK-NEXT:    or a0, a1, a0
+; CHECK-NEXT:    mvm a0, a2, a1
 ; CHECK-NEXT:    ret
   %xor1 = xor i64 %a, %b
   %and = and i64 %xor1, %mask
@@ -523,9 +506,7 @@ define i64 @mvm_xor_i64(i64 %a, i64 %mask, i64 %b) nounwind {
 define i64 @mvmn_xor_i64(i64 %b, i64 %mask, i64 %a) nounwind {
 ; CHECK-LABEL: mvmn_xor_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andn a2, a2, a1
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    or a0, a0, a2
+; CHECK-NEXT:    mvmn a0, a2, a1
 ; CHECK-NEXT:    ret
   %xor1 = xor i64 %a, %b
   %and = and i64 %xor1, %mask
