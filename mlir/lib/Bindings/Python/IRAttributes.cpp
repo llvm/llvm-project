@@ -122,15 +122,15 @@ Raises:
     type or if the buffer does not meet expectations.
 )";
 
-namespace {
 /// Local helper checking if the current machine is little endian.
-bool isLittleEndian() {
+static bool isLittleEndian() {
   const uint16_t value = 1;
   unsigned char first_byte = 0;
   std::memcpy(&first_byte, &value, 1);
   return first_byte == 1;
 }
 
+namespace {
 /// Local helper adapted from llvm::scope_exit.
 template <typename Callable>
 class [[nodiscard]] scope_exit {
@@ -159,7 +159,6 @@ public:
 
 template <typename Callable>
 scope_exit(Callable) -> scope_exit<Callable>;
-
 } // namespace
 
 namespace mlir {
