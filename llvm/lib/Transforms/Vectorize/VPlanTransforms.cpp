@@ -1298,6 +1298,10 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   if (match(Def, m_LogicalAnd(m_VPValue(X), m_False())))
     return Def->replaceAllUsesWith(Def->getOperand(1));
 
+  // true && x -> x
+  if (match(Def, m_LogicalAnd(m_True(), m_VPValue(X))))
+    return Def->replaceAllUsesWith(X);
+
   // (x && y) | (x && z) -> x && (y | z)
   if (match(Def, m_c_BinaryOr(m_LogicalAnd(m_VPValue(X), m_VPValue(Y)),
                               m_LogicalAnd(m_Deferred(X), m_VPValue(Z)))) &&
@@ -5542,37 +5546,40 @@ struct VPPartialReductionChain {
   unsigned ScaleFactor;
 };
 
-// Transform a partial reduction chain into a partial reduction recipe.
-// Assumes profitability has been checked. Performs RAUW so chained reductions'
-// accumulators are automatically updated. Updates the PHI's scale factor when
-// the accumulator is the reduction PHI.
+// Helper to transform a partial reduction chain into a partial reduction
+// recipe. Assumes profitability has been checked.
 static void transformToPartialReduction(const VPPartialReductionChain &Chain,
-                                        VPTypeAnalysis &TypeInfo, VPlan &Plan) {
+                                        VPTypeAnalysis &TypeInfo, VPlan &Plan,
+                                        VPReductionPHIRecipe *RdxPhi,
+                                        RecurKind RK) {
   VPWidenRecipe *WidenRecipe = Chain.ReductionBinOp;
+  assert(WidenRecipe->getNumOperands() == 2 && "Expected binary operation");
 
   VPValue *BinOp = WidenRecipe->getOperand(0);
   VPValue *Accumulator = WidenRecipe->getOperand(1);
-  if (isa_and_present<VPReductionPHIRecipe, VPReductionRecipe>(
-          BinOp->getDefiningRecipe()))
+
+  // Swap if needed to ensure Accumulator is the PHI or partial reduction.
+  if (isa_and_present<VPReductionPHIRecipe, VPReductionRecipe>(BinOp))
     std::swap(BinOp, Accumulator);
 
-  Type *PhiType = TypeInfo.inferScalarType(Accumulator);
-
-  // Update PHI and start vector scale factors when accumulator is the PHI.
-  if (auto *RdxPhi =
-          dyn_cast<VPReductionPHIRecipe>(Accumulator->getDefiningRecipe())) {
-    assert(RdxPhi->getVFScaleFactor() == 1 && "scale factor must not be set");
-    RdxPhi->setVFScaleFactor(Chain.ScaleFactor);
-    auto *StartInst = cast<VPInstruction>(RdxPhi->getOperand(0));
-    assert(StartInst->getOpcode() == VPInstruction::ReductionStartVector &&
-           "start value must be ReductionStartVector");
-    StartInst->setOperand(2, Plan.getConstantInt(32, Chain.ScaleFactor));
-  }
-
-  // Handle SUB by negating the operand.
-  if (WidenRecipe->getOpcode() == Instruction::Sub) {
+  // Sub-reductions can be implemented in two ways:
+  // (1) negate the operand in the vector loop (the default way).
+  // (2) subtract the reduced value from the init value in the middle block.
+  // Both ways keep the reduction itself as an 'add' reduction.
+  //
+  // The ISD nodes for partial reductions don't support folding the
+  // sub/negation into its operands because the following is not a valid
+  // transformation:
+  //      sub(0, mul(ext(a), ext(b)))
+  //   -> mul(ext(a), ext(sub(0, b)))
+  //
+  // It's therefore better to choose option (2) such that the partial
+  // reduction is always positive (starting at '0') and to do a final
+  // subtract in the middle block.
+  if (WidenRecipe->getOpcode() == Instruction::Sub && RK != RecurKind::Sub) {
     VPBuilder Builder(WidenRecipe);
-    auto *Zero = Plan.getConstantInt(TypeInfo.inferScalarType(BinOp), 0);
+    Type *ElemTy = TypeInfo.inferScalarType(BinOp);
+    auto *Zero = Plan.getConstantInt(ElemTy, 0);
     VPIRFlags Flags = WidenRecipe->getUnderlyingInstr()
                           ? VPIRFlags(*WidenRecipe->getUnderlyingInstr())
                           : VPIRFlags();
@@ -5582,13 +5589,18 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
     BinOp = NegRecipe;
   }
 
-  // Look for predicated reduction's condition and replace select if found.
+  // Check if WidenRecipe is the final result of the reduction. If so look
+  // through selects for predicated reductions.
   VPValue *Cond = nullptr;
-  VPReductionPHIRecipe *RdxPhi;
-  auto *Sel = cast_or_null<VPInstruction>(vputils::findUserOf(
-      WidenRecipe, m_Select(m_VPValue(Cond), m_Specific(WidenRecipe),
-                            m_ReductionPhi(RdxPhi))));
+  VPValue *ExitValue = cast_or_null<VPInstruction>(vputils::findUserOf(
+      WidenRecipe,
+      m_Select(m_VPValue(Cond), m_Specific(WidenRecipe), m_Specific(RdxPhi))));
+  bool IsLastInChain = RdxPhi->getBackedgeValue() == WidenRecipe ||
+                       RdxPhi->getBackedgeValue() == ExitValue;
+  assert((!ExitValue || IsLastInChain) &&
+         "if we found ExitValue, it must match RdxPhi's backedge value");
 
+  Type *PhiType = TypeInfo.inferScalarType(RdxPhi);
   RecurKind RdxKind =
       PhiType->isFloatingPointTy() ? RecurKind::FAdd : RecurKind::Add;
   auto *PartialRed = new VPReductionRecipe(
@@ -5599,9 +5611,45 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
       RdxUnordered{/*VFScaleFactor=*/Chain.ScaleFactor});
   PartialRed->insertBefore(WidenRecipe);
 
-  if (Sel)
-    Sel->replaceAllUsesWith(PartialRed);
+  if (Cond)
+    ExitValue->replaceAllUsesWith(PartialRed);
   WidenRecipe->replaceAllUsesWith(PartialRed);
+
+  // We only need to update the PHI node once, which is when we find the
+  // last reduction in the chain.
+  if (!IsLastInChain)
+    return;
+
+  // Scale the PHI and ReductionStartVector by the VFScaleFactor
+  assert(RdxPhi->getVFScaleFactor() == 1 && "scale factor must not be set");
+  RdxPhi->setVFScaleFactor(Chain.ScaleFactor);
+
+  auto *StartInst = cast<VPInstruction>(RdxPhi->getStartValue());
+  assert(StartInst->getOpcode() == VPInstruction::ReductionStartVector);
+  auto *NewScaleFactor = Plan.getConstantInt(32, Chain.ScaleFactor);
+  StartInst->setOperand(2, NewScaleFactor);
+
+  // If this is the last value in a sub-reduction chain, then update the PHI
+  // node to start at `0` and update the reduction-result to subtract from
+  // the PHI's start value.
+  if (RK != RecurKind::Sub)
+    return;
+
+  VPValue *OldStartValue = StartInst->getOperand(0);
+  StartInst->setOperand(0, StartInst->getOperand(1));
+
+  // Replace reduction_result by 'sub (startval, reductionresult)'.
+  VPInstruction *RdxResult = vputils::findComputeReductionResult(RdxPhi);
+  assert(RdxResult && "Could not find reduction result");
+
+  VPBuilder Builder = VPBuilder::getToInsertAfter(RdxResult);
+  constexpr unsigned SubOpc = Instruction::BinaryOps::Sub;
+  VPInstruction *NewResult = Builder.createNaryOp(
+      SubOpc, {OldStartValue, RdxResult}, VPIRFlags::getDefaultFlags(SubOpc),
+      RdxPhi->getDebugLoc());
+  RdxResult->replaceUsesWithIf(
+      NewResult,
+      [&NewResult](VPUser &U, unsigned Idx) { return &U != NewResult; });
 }
 
 /// Check if a partial reduction chain is is supported by the target (i.e. does
@@ -5835,10 +5883,10 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   };
 
   // Validate chains: check that extends are only used by partial reductions,
-  // and reduction bin ops are only used by other partial reductions with
-  // matching scale factors or the select introduced by tail-folding. Otherwise
-  // we would create users of scaled reductions where the types of the other
-  // operands don't match.
+  // and that reduction bin ops are only used by other partial reductions with
+  // matching scale factors, are outside the loop region or the select
+  // introduced by tail-folding. Otherwise we would create users of scaled
+  // reductions where the types of the other operands don't match.
   for (auto &[RedPhiR, Chains] : ChainsByPhi) {
     for (const VPPartialReductionChain &Chain : Chains) {
       if (!ExtendUsersValid(Chain.ExtendA) ||
@@ -5875,7 +5923,9 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
     }
   }
 
-  for (const auto &[_, Chains] : ChainsByPhi)
+  for (auto &[Phi, Chains] : ChainsByPhi) {
+    RecurKind RK = cast<VPReductionPHIRecipe>(Phi)->getRecurrenceKind();
     for (const VPPartialReductionChain &Chain : Chains)
-      transformToPartialReduction(Chain, CostCtx.Types, Plan);
+      transformToPartialReduction(Chain, CostCtx.Types, Plan, Phi, RK);
+  }
 }
