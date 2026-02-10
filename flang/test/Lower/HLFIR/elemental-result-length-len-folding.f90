@@ -1,4 +1,4 @@
-! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
 
 ! Test that LEN intrinsic in elemental function result specification expression
 ! is lowered efficiently in HLFIR, especially when it involves expressions
