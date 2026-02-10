@@ -1226,6 +1226,9 @@ bool SystemZAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
 void SystemZAsmPrinter::emitEndOfAsmFile(Module &M) {
   auto TT = OutContext.getTargetTriple();
   if (TT.isOSzOS()) {
+    OutStreamer->switchSection(getObjFileLowering().getTextSection());
+    for (auto &Info : DeferredPPA1)
+      emitPPA1(Info);
     emitADASection();
     emitIDRLSection(M);
   }
@@ -1372,12 +1375,7 @@ void SystemZAsmPrinter::emitFunctionBodyEnd() {
     // is used. This is needed to calculate the size of the function.
     MCSymbol *FnEndSym = createTempSymbol("func_end");
     OutStreamer->emitLabel(FnEndSym);
-
-    OutStreamer->pushSection();
-    OutStreamer->switchSection(getObjFileLowering().getTextSection(),
-                               GOFF::SK_PPA1);
-    emitPPA1(FnEndSym);
-    OutStreamer->popSection();
+    calculatePPA1(FnEndSym);
 
     CurrentFnPPA1Sym = nullptr;
     CurrentFnEPMarkerSym = nullptr;
@@ -1503,199 +1501,225 @@ static void emitPPA1Name(std::unique_ptr<MCStreamer> &OutStreamer,
   OutStreamer->emitZeros(ExtraZeros);
 }
 
-void SystemZAsmPrinter::emitPPA1(MCSymbol *FnEndSym) {
+void SystemZAsmPrinter::emitPPA1(PPA1Info &Info) {
   assert(PPA2Sym != nullptr && "PPA2 Symbol not defined");
-
-  const TargetRegisterInfo *TRI = MF->getRegInfo().getTargetRegisterInfo();
-  const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
-  const auto TargetHasVector = Subtarget.hasVector();
-
-  const SystemZMachineFunctionInfo *ZFI =
-      MF->getInfo<SystemZMachineFunctionInfo>();
-  const auto *ZFL = static_cast<const SystemZXPLINKFrameLowering *>(
-      Subtarget.getFrameLowering());
-  const MachineFrameInfo &MFFrame = MF->getFrameInfo();
-
-  // Get saved GPR/FPR/VPR masks.
-  const std::vector<CalleeSavedInfo> &CSI = MFFrame.getCalleeSavedInfo();
-  uint16_t SavedGPRMask = 0;
-  uint16_t SavedFPRMask = 0;
-  uint8_t SavedVRMask = 0;
-  int64_t OffsetFPR = 0;
-  int64_t OffsetVR = 0;
-  const int64_t TopOfStack =
-      MFFrame.getOffsetAdjustment() + MFFrame.getStackSize();
-
-  // Loop over the spilled registers. The CalleeSavedInfo can't be used because
-  // it does not contain all spilled registers.
-  for (unsigned I = ZFI->getSpillGPRRegs().LowGPR,
-                E = ZFI->getSpillGPRRegs().HighGPR;
-       I && E && I <= E; ++I) {
-    unsigned V = TRI->getEncodingValue((Register)I);
-    assert(V < 16 && "GPR index out of range");
-    SavedGPRMask |= 1 << (15 - V);
-  }
-
-  for (auto &CS : CSI) {
-    unsigned Reg = CS.getReg();
-    unsigned I = TRI->getEncodingValue(Reg);
-
-    if (SystemZ::FP64BitRegClass.contains(Reg)) {
-      assert(I < 16 && "FPR index out of range");
-      SavedFPRMask |= 1 << (15 - I);
-      int64_t Temp = MFFrame.getObjectOffset(CS.getFrameIdx());
-      if (Temp < OffsetFPR)
-        OffsetFPR = Temp;
-    } else if (SystemZ::VR128BitRegClass.contains(Reg)) {
-      assert(I >= 16 && I <= 23 && "VPR index out of range");
-      unsigned BitNum = I - 16;
-      SavedVRMask |= 1 << (7 - BitNum);
-      int64_t Temp = MFFrame.getObjectOffset(CS.getFrameIdx());
-      if (Temp < OffsetVR)
-        OffsetVR = Temp;
-    }
-  }
-
-  // Adjust the offset.
-  OffsetFPR += (OffsetFPR < 0) ? TopOfStack : 0;
-  OffsetVR += (OffsetVR < 0) ? TopOfStack : 0;
-
-  // Get alloca register.
-  uint8_t FrameReg = TRI->getEncodingValue(TRI->getFrameRegister(*MF));
-  uint8_t AllocaReg = ZFL->hasFP(*MF) ? FrameReg : 0;
-  assert(AllocaReg < 16 && "Can't have alloca register larger than 15");
-  (void)AllocaReg;
-
-  // Build FPR save area offset.
-  uint32_t FrameAndFPROffset = 0;
-  if (SavedFPRMask) {
-    uint64_t FPRSaveAreaOffset = OffsetFPR;
-    assert(FPRSaveAreaOffset < 0x10000000 && "Offset out of range");
-
-    FrameAndFPROffset = FPRSaveAreaOffset & 0x0FFFFFFF; // Lose top 4 bits.
-    FrameAndFPROffset |= FrameReg << 28;                // Put into top 4 bits.
-  }
-
-  // Build VR save area offset.
-  uint32_t FrameAndVROffset = 0;
-  if (TargetHasVector && SavedVRMask) {
-    uint64_t VRSaveAreaOffset = OffsetVR;
-    assert(VRSaveAreaOffset < 0x10000000 && "Offset out of range");
-
-    FrameAndVROffset = VRSaveAreaOffset & 0x0FFFFFFF; // Lose top 4 bits.
-    FrameAndVROffset |= FrameReg << 28;               // Put into top 4 bits.
-  }
 
   // Emit PPA1 section.
   OutStreamer->AddComment("PPA1");
-  OutStreamer->emitLabel(CurrentFnPPA1Sym);
+  OutStreamer->emitLabel(Info.PPA1);
   OutStreamer->AddComment("Version");
   OutStreamer->emitInt8(0x02); // Version.
   OutStreamer->AddComment("LE Signature X'CE'");
   OutStreamer->emitInt8(0xCE); // CEL signature.
   OutStreamer->AddComment("Saved GPR Mask");
-  OutStreamer->emitInt16(SavedGPRMask);
+  OutStreamer->emitInt16(Info.SavedGPRMask);
   OutStreamer->AddComment("Offset to PPA2");
-  OutStreamer->emitAbsoluteSymbolDiff(PPA2Sym, CurrentFnPPA1Sym, 4);
+  OutStreamer->emitAbsoluteSymbolDiff(PPA2Sym, Info.PPA1, 4);
 
-  bool NeedEmitEHBlock = !MF->getLandingPads().empty();
-
-  // Optional Argument Area Length.
-  // Note: This represents the length of the argument area that we reserve
-  //       in our stack for setting up arguments for calls to other
-  //       routines. If this optional field is not set, LE will reserve
-  //       128 bytes for the argument area. This optional field is
-  //       created if greater than 128 bytes is required - to guarantee
-  //       the required space is reserved on stack extension in the new
-  //       extension.  This optional field is also created if the
-  //       routine has alloca(). This may reduce stack space
-  //       if alloca() call causes a stack extension.
-  bool HasArgAreaLength =
-      (AllocaReg != 0) || (MFFrame.getMaxCallFrameSize() > 128);
-
-  bool HasName =
-      MF->getFunction().hasName() && MF->getFunction().getName().size() > 0;
-
-  emitPPA1Flags(OutStreamer, MF->getFunction().isVarArg(),
-                MFFrame.hasStackProtectorIndex(), SavedFPRMask != 0,
-                TargetHasVector && SavedVRMask != 0, NeedEmitEHBlock,
-                HasArgAreaLength, HasName);
+  emitPPA1Flags(OutStreamer, Info.IsVarArg, Info.HasStackProtector,
+                Info.SavedFPRMask != 0, Info.SavedVRMask != 0,
+                Info.PersonalityRoutine != nullptr, Info.HasArgAreaLength,
+                Info.Name.size() > 0);
 
   OutStreamer->AddComment("Length/4 of Parms");
   OutStreamer->emitInt16(
-      static_cast<uint16_t>(ZFI->getSizeOfFnParams() / 4)); // Parms/4.
+      static_cast<uint16_t>(Info.SizeOfFnParams / 4)); // Parms/4.
   OutStreamer->AddComment("Length of Code");
-  OutStreamer->emitAbsoluteSymbolDiff(FnEndSym, CurrentFnEPMarkerSym, 4);
+  OutStreamer->emitAbsoluteSymbolDiff(Info.FnEnd, Info.EPMarker, 4);
 
-  if (HasArgAreaLength) {
+  if (Info.HasArgAreaLength) {
     OutStreamer->AddComment("Argument Area Length");
-    OutStreamer->emitInt32(MFFrame.getMaxCallFrameSize());
+    OutStreamer->emitInt32(Info.CallFrameSize);
   }
 
   // Emit saved FPR mask and offset to FPR save area (0x20 of flags 3).
-  if (SavedFPRMask) {
+  if (Info.SavedFPRMask) {
     OutStreamer->AddComment("FPR mask");
-    OutStreamer->emitInt16(SavedFPRMask);
+    OutStreamer->emitInt16(Info.SavedFPRMask);
     OutStreamer->AddComment("AR mask");
     OutStreamer->emitInt16(0); // AR Mask, unused currently.
     OutStreamer->AddComment("FPR Save Area Locator");
     OutStreamer->AddComment(Twine("  Bit 0-3: Register R")
-                                .concat(utostr(FrameAndFPROffset >> 28))
+                                .concat(utostr(Info.FrameAndFPROffset >> 28))
                                 .str());
-    OutStreamer->AddComment(Twine("  Bit 4-31: Offset ")
-                                .concat(utostr(FrameAndFPROffset & 0x0FFFFFFF))
-                                .str());
-    OutStreamer->emitInt32(FrameAndFPROffset); // Offset to FPR save area with
-                                               // register to add value to
-                                               // (alloca reg).
+    OutStreamer->AddComment(
+        Twine("  Bit 4-31: Offset ")
+            .concat(utostr(Info.FrameAndFPROffset & 0x0FFFFFFF))
+            .str());
+    OutStreamer->emitInt32(Info.FrameAndFPROffset); // Offset to FPR save area
+                                                    // with register to add
+                                                    // value to (alloca reg).
   }
 
   // Emit saved VR mask to VR save area.
-  if (TargetHasVector && SavedVRMask) {
+  if (Info.SavedVRMask) {
     OutStreamer->AddComment("VR mask");
-    OutStreamer->emitInt8(SavedVRMask);
+    OutStreamer->emitInt8(Info.SavedVRMask);
     OutStreamer->emitInt8(0);  // Reserved.
     OutStreamer->emitInt16(0); // Also reserved.
     OutStreamer->AddComment("VR Save Area Locator");
     OutStreamer->AddComment(Twine("  Bit 0-3: Register R")
-                                .concat(utostr(FrameAndVROffset >> 28))
+                                .concat(utostr(Info.FrameAndVROffset >> 28))
                                 .str());
-    OutStreamer->AddComment(Twine("  Bit 4-31: Offset ")
-                                .concat(utostr(FrameAndVROffset & 0x0FFFFFFF))
-                                .str());
-    OutStreamer->emitInt32(FrameAndVROffset);
+    OutStreamer->AddComment(
+        Twine("  Bit 4-31: Offset ")
+            .concat(utostr(Info.FrameAndVROffset & 0x0FFFFFFF))
+            .str());
+    OutStreamer->emitInt32(Info.FrameAndVROffset);
   }
 
-  // Emit C++ EH information block
-  const Function *Per = nullptr;
-  if (NeedEmitEHBlock) {
-    Per = dyn_cast<Function>(
-        MF->getFunction().getPersonalityFn()->stripPointerCasts());
-    MCSymbol *PersonalityRoutine =
-        Per ? MF->getTarget().getSymbol(Per) : nullptr;
-    assert(PersonalityRoutine && "Missing personality routine");
-
+  // Emit C++ EH information block.
+  if (Info.PersonalityRoutine) {
     OutStreamer->AddComment("Version");
     OutStreamer->emitInt32(1);
     OutStreamer->AddComment("Flags");
     OutStreamer->emitInt32(0); // LSDA field is a WAS offset
     OutStreamer->AddComment("Personality routine");
     OutStreamer->emitInt64(ADATable.insert(
-        PersonalityRoutine, SystemZII::MO_ADA_INDIRECT_FUNC_DESC));
+        Info.PersonalityRoutine, SystemZII::MO_ADA_INDIRECT_FUNC_DESC));
     OutStreamer->AddComment("LSDA location");
-    MCSymbol *GCCEH = MF->getContext().getOrCreateSymbol(
-        Twine("GCC_except_table") + Twine(MF->getFunctionNumber()));
     OutStreamer->emitInt64(
-        ADATable.insert(GCCEH, SystemZII::MO_ADA_DATA_SYMBOL_ADDR));
+        ADATable.insert(Info.GCCEH, SystemZII::MO_ADA_DATA_SYMBOL_ADDR));
   }
 
   // Emit name length and name optional section (0x01 of flags 4)
-  if (HasName)
-    emitPPA1Name(OutStreamer, MF->getFunction().getName());
+  if (Info.Name.size())
+    emitPPA1Name(OutStreamer, Info.Name);
 
   // Emit offset to entry point optional section (0x80 of flags 4).
-  OutStreamer->emitAbsoluteSymbolDiff(CurrentFnEPMarkerSym, CurrentFnPPA1Sym,
-                                      4);
+  OutStreamer->emitAbsoluteSymbolDiff(Info.EPMarker, Info.PPA1, 4);
+}
+
+void SystemZAsmPrinter::calculatePPA1(MCSymbol *FnEndSym) {
+    assert(PPA2Sym != nullptr && "PPA2 Symbol not defined");
+
+    PPA1Info Info;
+
+    const TargetRegisterInfo *TRI = MF->getRegInfo().getTargetRegisterInfo();
+    const SystemZSubtarget &Subtarget = MF->getSubtarget<SystemZSubtarget>();
+    const auto TargetHasVector = Subtarget.hasVector();
+
+    const SystemZMachineFunctionInfo *ZFI =
+        MF->getInfo<SystemZMachineFunctionInfo>();
+    const auto *ZFL = static_cast<const SystemZXPLINKFrameLowering *>(
+        Subtarget.getFrameLowering());
+    const MachineFrameInfo &MFFrame = MF->getFrameInfo();
+
+    // Get saved GPR/FPR/VPR masks.
+    const std::vector<CalleeSavedInfo> &CSI = MFFrame.getCalleeSavedInfo();
+    uint16_t SavedGPRMask = 0;
+    uint16_t SavedFPRMask = 0;
+    uint8_t SavedVRMask = 0;
+    int64_t OffsetFPR = 0;
+    int64_t OffsetVR = 0;
+    const int64_t TopOfStack =
+        MFFrame.getOffsetAdjustment() + MFFrame.getStackSize();
+
+    // Loop over the spilled registers. The CalleeSavedInfo can't be used because
+    // it does not contain all spilled registers.
+    for (unsigned I = ZFI->getSpillGPRRegs().LowGPR,
+                  E = ZFI->getSpillGPRRegs().HighGPR;
+         I && E && I <= E; ++I) {
+      unsigned V = TRI->getEncodingValue((Register)I);
+      assert(V < 16 && "GPR index out of range");
+      SavedGPRMask |= 1 << (15 - V);
+    }
+
+    for (auto &CS : CSI) {
+      unsigned Reg = CS.getReg();
+      unsigned I = TRI->getEncodingValue(Reg);
+
+      if (SystemZ::FP64BitRegClass.contains(Reg)) {
+        assert(I < 16 && "FPR index out of range");
+        SavedFPRMask |= 1 << (15 - I);
+        int64_t Temp = MFFrame.getObjectOffset(CS.getFrameIdx());
+        if (Temp < OffsetFPR)
+          OffsetFPR = Temp;
+      } else if (SystemZ::VR128BitRegClass.contains(Reg)) {
+        assert(I >= 16 && I <= 23 && "VPR index out of range");
+        unsigned BitNum = I - 16;
+        SavedVRMask |= 1 << (7 - BitNum);
+        int64_t Temp = MFFrame.getObjectOffset(CS.getFrameIdx());
+        if (Temp < OffsetVR)
+          OffsetVR = Temp;
+      }
+    }
+
+    // Adjust the offset.
+    OffsetFPR += (OffsetFPR < 0) ? TopOfStack : 0;
+    OffsetVR += (OffsetVR < 0) ? TopOfStack : 0;
+
+    // Get alloca register.
+    uint8_t FrameReg = TRI->getEncodingValue(TRI->getFrameRegister(*MF));
+    uint8_t AllocaReg = ZFL->hasFP(*MF) ? FrameReg : 0;
+    assert(AllocaReg < 16 && "Can't have alloca register larger than 15");
+    (void)AllocaReg;
+
+    // Build FPR save area offset.
+    uint32_t FrameAndFPROffset = 0;
+    if (SavedFPRMask) {
+      uint64_t FPRSaveAreaOffset = OffsetFPR;
+      assert(FPRSaveAreaOffset < 0x10000000 && "Offset out of range");
+
+      FrameAndFPROffset = FPRSaveAreaOffset & 0x0FFFFFFF; // Lose top 4 bits.
+      FrameAndFPROffset |= FrameReg << 28;                // Put into top 4 bits.
+    }
+
+    // Build VR save area offset.
+    uint32_t FrameAndVROffset = 0;
+    if (TargetHasVector && SavedVRMask) {
+      uint64_t VRSaveAreaOffset = OffsetVR;
+      assert(VRSaveAreaOffset < 0x10000000 && "Offset out of range");
+
+      FrameAndVROffset = VRSaveAreaOffset & 0x0FFFFFFF; // Lose top 4 bits.
+      FrameAndVROffset |= FrameReg << 28;               // Put into top 4 bits.
+    }
+
+    MCSymbol *PersonalityRoutine = nullptr;
+    MCSymbol *GCCEH = nullptr;
+    if (!MF->getLandingPads().empty()) {
+      const Function *Per = dyn_cast<Function>(
+          MF->getFunction().getPersonalityFn()->stripPointerCasts());
+      PersonalityRoutine =
+          Per ? MF->getTarget().getSymbol(Per) : nullptr;
+      assert(PersonalityRoutine && "Missing personality routine");
+
+      GCCEH = MF->getContext().getOrCreateSymbol(
+          Twine("GCC_except_table") + Twine(MF->getFunctionNumber()));
+    }
+
+    // Save the calculated values.
+    if (MF->getFunction().hasName())
+        Info.Name = MF->getFunction().getName();
+    Info.PPA1 = CurrentFnPPA1Sym;
+    Info.EPMarker = CurrentFnEPMarkerSym;
+    Info.FnEnd = FnEndSym;
+    Info.PersonalityRoutine = PersonalityRoutine;
+    Info.GCCEH = GCCEH;
+    Info.CallFrameSize = MFFrame.getMaxCallFrameSize();
+    Info.SizeOfFnParams = ZFI->getSizeOfFnParams();
+    Info.FrameAndFPROffset = FrameAndFPROffset;
+    Info.FrameAndVROffset = FrameAndVROffset;
+    Info.SavedGPRMask = SavedGPRMask;
+    Info.SavedFPRMask = SavedFPRMask;
+    Info.SavedVRMask = SavedVRMask;
+    Info.IsVarArg = MF->getFunction().isVarArg();
+    Info.HasStackProtector = MFFrame.hasStackProtectorIndex();
+
+    // Optional Argument Area Length.
+    // Note: This represents the length of the argument area that we reserve
+    //       in our stack for setting up arguments for calls to other
+    //       routines. If this optional field is not set, LE will reserve
+    //       128 bytes for the argument area. This optional field is
+    //       created if greater than 128 bytes is required - to guarantee
+    //       the required space is reserved on stack extension in the new
+    //       extension.  This optional field is also created if the
+    //       routine has alloca(). This may reduce stack space
+    //       if alloca() call causes a stack extension.
+    Info.HasArgAreaLength =
+        (AllocaReg != 0) || (MFFrame.getMaxCallFrameSize() > 128);
+
+    DeferredPPA1.push_back(Info);
 }
 
 void SystemZAsmPrinter::emitStartOfAsmFile(Module &M) {
@@ -1706,8 +1730,7 @@ void SystemZAsmPrinter::emitStartOfAsmFile(Module &M) {
 
 void SystemZAsmPrinter::emitPPA2(Module &M) {
   OutStreamer->pushSection();
-  OutStreamer->switchSection(getObjFileLowering().getTextSection(),
-                             GOFF::SK_PPA2);
+  OutStreamer->switchSection(getObjFileLowering().getTextSection());
   MCContext &OutContext = OutStreamer->getContext();
   // Make CELQSTRT symbol.
   const char *StartSymbolName = "CELQSTRT";
