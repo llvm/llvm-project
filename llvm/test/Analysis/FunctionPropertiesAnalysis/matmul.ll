@@ -1,9 +1,9 @@
 ; RUN: opt < %s -passes='print<func-properties>' -disable-output 2>&1 | FileCheck %s
-; RUN: opt < %s -passes='print<func-properties>' -disable-output 2>&1 -enable-detailed-function-properties | FileCheck %s --check-prefix=DETAILED-PROPERTIES
+; RUN: opt < %s -passes='print<func-properties>' -disable-output 2>&1 | FileCheck %s --check-prefix=PROPERTIES
 
 define i32 @main() {
 ; CHECK-DAG: Printing analysis results of CFA for function 'main':
-; DETAILED-PROPERTIES-DAG: Printing analysis results of CFA for function 'main':
+; PROPERTIES-DAG: Printing analysis results of CFA for function 'main':
 
 entry:
   %retval = alloca i32, align 4
@@ -28,52 +28,52 @@ entry:
 ; CHECK-DAG: MaxLoopDepth: 0
 ; CHECK-DAG: TopLevelLoopCount: 0
 
-; DETAILED-PROPERTIES-DAG: BasicBlockCount: 1
-; DETAILED-PROPERTIES-DAG: BlocksReachedFromConditionalInstruction: 0
-; DETAILED-PROPERTIES-DAG: Uses: 1
-; DETAILED-PROPERTIES-DAG: DirectCallsToDefinedFunctions: 1
-; DETAILED-PROPERTIES-DAG: LoadInstCount: 0
-; DETAILED-PROPERTIES-DAG: StoreInstCount: 1
-; DETAILED-PROPERTIES-DAG: MaxLoopDepth: 0
-; DETAILED-PROPERTIES-DAG: TopLevelLoopCount: 0
-; DETAILED-PROPERTIES-DAG: BasicBlocksWithSingleSuccessor: 0
-; DETAILED-PROPERTIES-DAG: BasicBlocksWithTwoSuccessors: 0
-; DETAILED-PROPERTIES-DAG: BasicBlocksWithMoreThanTwoSuccessors: 0
-; DETAILED-PROPERTIES-DAG: BasicBlocksWithSinglePredecessor: 0
-; DETAILED-PROPERTIES-DAG: BasicBlocksWithTwoPredecessors: 0
-; DETAILED-PROPERTIES-DAG: BasicBlocksWithMoreThanTwoPredecessors: 0
-; DETAILED-PROPERTIES-DAG: BigBasicBlocks: 0
-; DETAILED-PROPERTIES-DAG: MediumBasicBlocks: 0
-; DETAILED-PROPERTIES-DAG: SmallBasicBlocks: 1
-; DETAILED-PROPERTIES-DAG: CastInstructionCount: 0
-; DETAILED-PROPERTIES-DAG: FloatingPointInstructionCount: 0
-; DETAILED-PROPERTIES-DAG: IntegerInstructionCount: 0
-; DETAILED-PROPERTIES-DAG: ConstantIntOperandCount: 14
-; DETAILED-PROPERTIES-DAG: ConstantFPOperandCount: 0
-; DETAILED-PROPERTIES-DAG: ConstantOperandCount: 0
-; DETAILED-PROPERTIES-DAG: InstructionOperandCount: 7
-; DETAILED-PROPERTIES-DAG: BasicBlockOperandCount: 0
-; DETAILED-PROPERTIES-DAG: GlobalValueOperandCount: 1
-; DETAILED-PROPERTIES-DAG: InlineAsmOperandCount: 0
-; DETAILED-PROPERTIES-DAG: ArgumentOperandCount: 0
-; DETAILED-PROPERTIES-DAG: UnknownOperandCount: 0
-; DETAILED-PROPERTIES-DAG: CriticalEdgeCount: 0
-; DETAILED-PROPERTIES-DAG: ControlFlowEdgeCount: 0
-; DETAILED-PROPERTIES-DAG: UnconditionalBranchCount: 0
-; DETAILED-PROPERTIES-DAG: DirectCallCount: 1
-; DETAILED-PROPERTIES-DAG: IndirectCallCount: 0
-; DETAILED-PROPERTIES-DAG: CallReturnsIntegerCount: 0
-; DETAILED-PROPERTIES-DAG: CallReturnsFloatCount: 0
-; DETAILED-PROPERTIES-DAG: CallReturnsPointerCount: 0
-; DETAILED-PROPERTIES-DAG: CallReturnsVectorIntCount: 0
-; DETAILED-PROPERTIES-DAG: CallReturnsVectorFloatCount: 0
-; DETAILED-PROPERTIES-DAG: CallReturnsVectorPointerCount: 0
-; DETAILED-PROPERTIES-DAG: CallWithManyArgumentsCount: 0
-; DETAILED-PROPERTIES-DAG: CallWithPointerArgumentCount: 1
+; PROPERTIES-DAG: BasicBlockCount: 1
+; PROPERTIES-DAG: BlocksReachedFromConditionalInstruction: 0
+; PROPERTIES-DAG: Uses: 1
+; PROPERTIES-DAG: DirectCallsToDefinedFunctions: 1
+; PROPERTIES-DAG: LoadInstCount: 0
+; PROPERTIES-DAG: StoreInstCount: 1
+; PROPERTIES-DAG: MaxLoopDepth: 0
+; PROPERTIES-DAG: TopLevelLoopCount: 0
+; PROPERTIES-DAG: BasicBlocksWithSingleSuccessor: 0
+; PROPERTIES-DAG: BasicBlocksWithTwoSuccessors: 0
+; PROPERTIES-DAG: BasicBlocksWithMoreThanTwoSuccessors: 0
+; PROPERTIES-DAG: BasicBlocksWithSinglePredecessor: 0
+; PROPERTIES-DAG: BasicBlocksWithTwoPredecessors: 0
+; PROPERTIES-DAG: BasicBlocksWithMoreThanTwoPredecessors: 0
+; PROPERTIES-DAG: BigBasicBlocks: 0
+; PROPERTIES-DAG: MediumBasicBlocks: 0
+; PROPERTIES-DAG: SmallBasicBlocks: 1
+; PROPERTIES-DAG: CastInstructionCount: 0
+; PROPERTIES-DAG: FloatingPointInstructionCount: 0
+; PROPERTIES-DAG: IntegerInstructionCount: 0
+; PROPERTIES-DAG: ConstantIntOperandCount: 14
+; PROPERTIES-DAG: ConstantFPOperandCount: 0
+; PROPERTIES-DAG: ConstantOperandCount: 0
+; PROPERTIES-DAG: InstructionOperandCount: 7
+; PROPERTIES-DAG: BasicBlockOperandCount: 0
+; PROPERTIES-DAG: GlobalValueOperandCount: 1
+; PROPERTIES-DAG: InlineAsmOperandCount: 0
+; PROPERTIES-DAG: ArgumentOperandCount: 0
+; PROPERTIES-DAG: UnknownOperandCount: 0
+; PROPERTIES-DAG: CriticalEdgeCount: 0
+; PROPERTIES-DAG: ControlFlowEdgeCount: 0
+; PROPERTIES-DAG: UnconditionalBranchCount: 0
+; PROPERTIES-DAG: DirectCallCount: 1
+; PROPERTIES-DAG: IndirectCallCount: 0
+; PROPERTIES-DAG: CallReturnsIntegerCount: 0
+; PROPERTIES-DAG: CallReturnsFloatCount: 0
+; PROPERTIES-DAG: CallReturnsPointerCount: 0
+; PROPERTIES-DAG: CallReturnsVectorIntCount: 0
+; PROPERTIES-DAG: CallReturnsVectorFloatCount: 0
+; PROPERTIES-DAG: CallReturnsVectorPointerCount: 0
+; PROPERTIES-DAG: CallWithManyArgumentsCount: 0
+; PROPERTIES-DAG: CallWithPointerArgumentCount: 1
 
 define void @multiply(ptr %mat1, ptr %mat2, ptr %res) {
 ; CHECK-DAG: Printing analysis results of CFA for function 'multiply':
-; DETAILED-PROPERTIES-DAG: Printing analysis results of CFA for function 'multiply':
+; PROPERTIES-DAG: Printing analysis results of CFA for function 'multiply':
 entry:
   %mat1.addr = alloca ptr, align 8
   %mat2.addr = alloca ptr, align 8
@@ -185,46 +185,46 @@ for.end26:                                        ; preds = %for.cond
 ; CHECK-DAG: MaxLoopDepth: 3
 ; CHECK-DAG: TopLevelLoopCount: 1
 
-; DETAILED-PROPERTIES-DAG: BasicBlockCount: 13
-; DETAILED-PROPERTIES-DAG: BlocksReachedFromConditionalInstruction: 6
-; DETAILED-PROPERTIES-DAG: Uses: 2
-; DETAILED-PROPERTIES-DAG: DirectCallsToDefinedFunctions: 0
-; DETAILED-PROPERTIES-DAG: LoadInstCount: 21
-; DETAILED-PROPERTIES-DAG: StoreInstCount: 11
-; DETAILED-PROPERTIES-DAG: MaxLoopDepth: 3
-; DETAILED-PROPERTIES-DAG: TopLevelLoopCount: 1
-; DETAILED-PROPERTIES-DAG: BasicBlocksWithSingleSuccessor: 9
-; DETAILED-PROPERTIES-DAG: BasicBlocksWithTwoSuccessors: 3
-; DETAILED-PROPERTIES-DAG: BasicBlocksWithMoreThanTwoSuccessors: 0
-; DETAILED-PROPERTIES-DAG: BasicBlocksWithSinglePredecessor: 9
-; DETAILED-PROPERTIES-DAG: BasicBlocksWithTwoPredecessors: 3
-; DETAILED-PROPERTIES-DAG: BasicBlocksWithMoreThanTwoPredecessors: 0
-; DETAILED-PROPERTIES-DAG: BigBasicBlocks: 0
-; DETAILED-PROPERTIES-DAG: MediumBasicBlocks: 11
-; DETAILED-PROPERTIES-DAG: SmallBasicBlocks: 2
-; DETAILED-PROPERTIES-DAG: CastInstructionCount: 8
-; DETAILED-PROPERTIES-DAG: FloatingPointInstructionCount: 0
-; DETAILED-PROPERTIES-DAG: IntegerInstructionCount: 33
-; DETAILED-PROPERTIES-DAG: ConstantIntOperandCount: 20
-; DETAILED-PROPERTIES-DAG: ConstantFPOperandCount: 0
-; DETAILED-PROPERTIES-DAG: ConstantOperandCount: 0
-; DETAILED-PROPERTIES-DAG: InstructionOperandCount: 73
-; DETAILED-PROPERTIES-DAG: BasicBlockOperandCount: 15
-; DETAILED-PROPERTIES-DAG: GlobalValueOperandCount: 0
-; DETAILED-PROPERTIES-DAG: InlineAsmOperandCount: 0
-; DETAILED-PROPERTIES-DAG: ArgumentOperandCount: 3
-; DETAILED-PROPERTIES-DAG: UnknownOperandCount: 0
-; DETAILED-PROPERTIES-DAG: DirectCallCount: 0
-; DETAILED-PROPERTIES-DAG: IndirectCallCount: 0
-; DETAILED-PROPERTIES-DAG: CriticalEdgeCount: 0
-; DETAILED-PROPERTIES-DAG: ControlFlowEdgeCount: 15
-; DETAILED-PROPERTIES-DAG: UnconditionalBranchCount: 9
-; DETAILED-PROPERTIES-DAG: CallReturnsIntegerCount: 0
-; DETAILED-PROPERTIES-DAG: CallReturnsFloatCount: 0
-; DETAILED-PROPERTIES-DAG: CallReturnsPointerCount: 0
-; DETAILED-PROPERTIES-DAG: CallReturnsVectorIntCount: 0
-; DETAILED-PROPERTIES-DAG: CallReturnsVectorFloatCount: 0
-; DETAILED-PROPERTIES-DAG: CallReturnsVectorPointerCount: 0
-; DETAILED-PROPERTIES-DAG: CallWithManyArgumentsCount: 0
-; DETAILED-PROPERTIES-DAG: CallWithPointerArgumentCount: 0
+; PROPERTIES-DAG: BasicBlockCount: 13
+; PROPERTIES-DAG: BlocksReachedFromConditionalInstruction: 6
+; PROPERTIES-DAG: Uses: 2
+; PROPERTIES-DAG: DirectCallsToDefinedFunctions: 0
+; PROPERTIES-DAG: LoadInstCount: 21
+; PROPERTIES-DAG: StoreInstCount: 11
+; PROPERTIES-DAG: MaxLoopDepth: 3
+; PROPERTIES-DAG: TopLevelLoopCount: 1
+; PROPERTIES-DAG: BasicBlocksWithSingleSuccessor: 9
+; PROPERTIES-DAG: BasicBlocksWithTwoSuccessors: 3
+; PROPERTIES-DAG: BasicBlocksWithMoreThanTwoSuccessors: 0
+; PROPERTIES-DAG: BasicBlocksWithSinglePredecessor: 9
+; PROPERTIES-DAG: BasicBlocksWithTwoPredecessors: 3
+; PROPERTIES-DAG: BasicBlocksWithMoreThanTwoPredecessors: 0
+; PROPERTIES-DAG: BigBasicBlocks: 0
+; PROPERTIES-DAG: MediumBasicBlocks: 11
+; PROPERTIES-DAG: SmallBasicBlocks: 2
+; PROPERTIES-DAG: CastInstructionCount: 8
+; PROPERTIES-DAG: FloatingPointInstructionCount: 0
+; PROPERTIES-DAG: IntegerInstructionCount: 33
+; PROPERTIES-DAG: ConstantIntOperandCount: 20
+; PROPERTIES-DAG: ConstantFPOperandCount: 0
+; PROPERTIES-DAG: ConstantOperandCount: 0
+; PROPERTIES-DAG: InstructionOperandCount: 73
+; PROPERTIES-DAG: BasicBlockOperandCount: 15
+; PROPERTIES-DAG: GlobalValueOperandCount: 0
+; PROPERTIES-DAG: InlineAsmOperandCount: 0
+; PROPERTIES-DAG: ArgumentOperandCount: 3
+; PROPERTIES-DAG: UnknownOperandCount: 0
+; PROPERTIES-DAG: DirectCallCount: 0
+; PROPERTIES-DAG: IndirectCallCount: 0
+; PROPERTIES-DAG: CriticalEdgeCount: 0
+; PROPERTIES-DAG: ControlFlowEdgeCount: 15
+; PROPERTIES-DAG: UnconditionalBranchCount: 9
+; PROPERTIES-DAG: CallReturnsIntegerCount: 0
+; PROPERTIES-DAG: CallReturnsFloatCount: 0
+; PROPERTIES-DAG: CallReturnsPointerCount: 0
+; PROPERTIES-DAG: CallReturnsVectorIntCount: 0
+; PROPERTIES-DAG: CallReturnsVectorFloatCount: 0
+; PROPERTIES-DAG: CallReturnsVectorPointerCount: 0
+; PROPERTIES-DAG: CallWithManyArgumentsCount: 0
+; PROPERTIES-DAG: CallWithPointerArgumentCount: 0
 
