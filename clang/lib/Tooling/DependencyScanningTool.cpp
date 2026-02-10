@@ -313,7 +313,7 @@ std::optional<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
       Rule.Provides = Provided;
       if (Rule.Provides)
         Rule.Provides->SourcePath = Filename.str();
-      Rule.Requires = Requires;
+      Rule.Requires = std::move(Requires);
     }
 
     StringRef getMakeFormatDependencyOutputPath() {
