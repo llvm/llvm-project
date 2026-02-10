@@ -688,16 +688,26 @@ public:
     return m_caches[m_host_uuid];
   }
 
+  bool GetImages(llvm::StringMap<SharedCacheImageInfo> **images,
+                 const UUID &uuid) {
+    if (m_caches.find(uuid) != m_caches.end()) {
+      *images = &m_caches[uuid];
+      return true;
+    }
+    *images = nullptr;
+    return false;
+  }
+
+  /// Given the UUID and filepath to a shared cache on the local debug host
+  /// system, open it and add all of the binary images to m_caches.
+  bool CreateSharedCacheImageList(UUID uuid, std::string filepath);
+
   SharedCacheInfo();
 
 private:
   bool CreateSharedCacheInfoWithInstrospectionSPIs();
   void CreateSharedCacheInfoLLDBsVirtualMemory();
   bool CreateHostSharedCacheImageList();
-
-  // Given the UUID and filepath to a shared cache on the local debug host
-  // system, open it and add all of the binary images to m_caches.
-  bool CreateSharedCacheImageList(UUID uuid, std::string filepath);
 
   std::map<UUID, llvm::StringMap<SharedCacheImageInfo>> m_caches;
   UUID m_host_uuid;
@@ -784,6 +794,10 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
     return {};
 
   Log *log = GetLog(LLDBLog::Modules);
+  LLDB_LOGF(log,
+            "map_shared_cache_binary_segments() mapping segments of "
+            "dyld_image_t %p into lldb address space",
+            image);
   bool log_verbosely = log && log->GetVerbose();
   for (const segment &seg : segments) {
     if (log_verbosely)
@@ -828,6 +842,13 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID uuid,
   if (!m_dyld_image_retain_4HWTrace || !m_dyld_image_release_4HWTrace ||
       !m_dyld_image_segment_data_4HWTrace)
     return false;
+
+  if (filepath.empty())
+    return false;
+
+  Log *log = GetLog(LLDBLog::Modules);
+  LLDB_LOGF(log, "Opening shared cache at %s to check for matching UUID %s",
+            filepath.c_str(), uuid.GetAsString().c_str());
 
   __block bool return_failed = false;
   dyld_shared_cache_for_file(filepath.c_str(), ^(dyld_shared_cache_t cache) {
@@ -952,8 +973,32 @@ void SharedCacheInfo::CreateSharedCacheInfoLLDBsVirtualMemory() {
       });
 }
 
+SharedCacheInfo &GetSharedCacheSingleton() {
+  static SharedCacheInfo g_shared_cache_info;
+  return g_shared_cache_info;
+}
+
 SharedCacheImageInfo
 HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name) {
-  static SharedCacheInfo g_shared_cache_info;
-  return g_shared_cache_info.GetImages().lookup(image_name);
+  return GetSharedCacheSingleton().GetImages().lookup(image_name);
+}
+
+SharedCacheImageInfo
+HostInfoMacOSX::GetSharedCacheImageInfo(llvm::StringRef image_name,
+                                        const UUID &uuid) {
+  llvm::StringMap<SharedCacheImageInfo> *shared_cache_info;
+  if (GetSharedCacheSingleton().GetImages(&shared_cache_info, uuid))
+    return shared_cache_info->lookup(image_name);
+  return {};
+}
+
+bool HostInfoMacOSX::SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid) {
+  // There is a libdyld SPI to iterate over all installed shared caches,
+  // but it can have performance problems if an older Simulator SDK shared
+  // cache is installed.  So require that we are given a filepath of
+  // the shared cache.
+  if (FileSystem::Instance().Exists(filepath))
+    return GetSharedCacheSingleton().CreateSharedCacheImageList(
+        uuid, filepath.GetPath());
+  return false;
 }

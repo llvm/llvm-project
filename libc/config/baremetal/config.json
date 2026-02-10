@@ -27,6 +27,17 @@
     },
     "LIBC_CONF_PRINTF_DISABLE_STRERROR": {
       "value": true
+    },
+    "LIBC_CONF_PRINTF_DISABLE_WIDE" : {
+      "value": true
+    }
+  },
+  "scanf": {
+    "LIBC_CONF_SCANF_DISABLE_INDEX_MODE": {
+      "value": true
+    },
+    "LIBC_CONF_SCANF_DISABLE_FLOAT": {
+      "value": true
     }
   },
   "qsort": {
@@ -36,6 +47,9 @@
   },
   "str_to_float": {
     "LIBC_CONF_STRTOFLOAT_DISABLE_EISEL_LEMIRE": {
+      "value": true
+    },
+    "LIBC_CONF_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH": {
       "value": true
     }
   },
