@@ -4285,23 +4285,19 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
               cast<VPWidenCastRecipe>(VecOp)->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
 
-          if (Red->isPartialReduction()) {
-            TargetTransformInfo::PartialReductionExtendKind ExtKind =
-                TargetTransformInfo::getPartialReductionExtendKind(ExtOpc);
-            // FIXME: Move partial reduction creation, costing and clamping
-            // here from LoopVectorize.cpp.
-            ExtRedCost = Ctx.TTI.getPartialReductionCost(
-                Opcode, SrcTy, nullptr, RedTy, VF, ExtKind,
-                llvm::TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind,
-                RedTy->isFloatingPointTy()
-                    ? std::optional{Red->getFastMathFlags()}
-                    : std::nullopt);
-          } else if (!RedTy->isFloatingPointTy()) {
-            // TTI::getExtendedReductionCost only supports integer types.
-            ExtRedCost = Ctx.TTI.getExtendedReductionCost(
-                Opcode, ExtOpc == Instruction::CastOps::ZExt, RedTy, SrcVecTy,
-                Red->getFastMathFlags(), CostKind);
-          }
+          // For partial reductions, the decision has already been
+          // made at the point of transforming reductions -> partial
+          // reductions for a given plan, based on the cost-model.
+          if (Red->isPartialReduction())
+            return true;
+
+          // TTI::getExtendedReductionCost for in-loop reductions
+          // only supports integer types.
+          if (RedTy->isFloatingPointTy())
+            return false;
+          ExtRedCost = Ctx.TTI.getExtendedReductionCost(
+              Opcode, ExtOpc == Instruction::CastOps::ZExt, RedTy, SrcVecTy,
+              Red->getFastMathFlags(), CostKind);
           return ExtRedCost.isValid() && ExtRedCost < ExtCost + RedCost;
         },
         Range);
@@ -4351,37 +4347,24 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
               Ext0 ? Ctx.Types.inferScalarType(Ext0->getOperand(0)) : RedTy;
           InstructionCost MulAccCost;
 
-          if (Red->isPartialReduction()) {
-            Type *SrcTy2 =
-                Ext1 ? Ctx.Types.inferScalarType(Ext1->getOperand(0)) : nullptr;
-            // FIXME: Move partial reduction creation, costing and clamping
-            // here from LoopVectorize.cpp.
-            MulAccCost = Ctx.TTI.getPartialReductionCost(
-                Opcode, SrcTy, SrcTy2, RedTy, VF,
-                Ext0 ? TargetTransformInfo::getPartialReductionExtendKind(
-                           Ext0->getOpcode())
-                     : TargetTransformInfo::PR_None,
-                Ext1 ? TargetTransformInfo::getPartialReductionExtendKind(
-                           Ext1->getOpcode())
-                     : TargetTransformInfo::PR_None,
-                Mul->getOpcode(), CostKind,
-                RedTy->isFloatingPointTy()
-                    ? std::optional{Red->getFastMathFlags()}
-                    : std::nullopt);
-          } else {
-            // Only partial reductions support mixed or floating-point extends
-            // at the moment.
-            if (Ext0 && Ext1 &&
-                (Ext0->getOpcode() != Ext1->getOpcode() ||
-                 Ext0->getOpcode() == Instruction::CastOps::FPExt))
-              return false;
+          // For partial reductions, the decision has already been
+          // made at the point of transforming reductions -> partial
+          // reductions for a given plan, based on the cost-model.
+          if (Red->isPartialReduction())
+            return true;
 
-            bool IsZExt =
-                !Ext0 || Ext0->getOpcode() == Instruction::CastOps::ZExt;
-            auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
-            MulAccCost = Ctx.TTI.getMulAccReductionCost(IsZExt, Opcode, RedTy,
-                                                        SrcVecTy, CostKind);
-          }
+          // Only partial reductions support mixed or floating-point extends
+          // at the moment.
+          if (Ext0 && Ext1 &&
+              (Ext0->getOpcode() != Ext1->getOpcode() ||
+               Ext0->getOpcode() == Instruction::CastOps::FPExt))
+            return false;
+
+          bool IsZExt =
+              !Ext0 || Ext0->getOpcode() == Instruction::CastOps::ZExt;
+          auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
+          MulAccCost = Ctx.TTI.getMulAccReductionCost(IsZExt, Opcode, RedTy,
+                                                      SrcVecTy, CostKind);
 
           InstructionCost MulCost = Mul->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
@@ -5876,12 +5859,11 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
       [&NewResult](VPUser &U, unsigned Idx) { return &U != NewResult; });
 }
 
-/// Check if a partial reduction chain is is supported by the target (i.e. does
-/// not have an invalid cost) for the given VF range. Clamps the range and
-/// returns true if profitable for any VF.
-static bool isValidPartialReduction(const VPPartialReductionChain &Chain,
-                                    Type *PhiType, VPCostContext &CostCtx,
-                                    VFRange &Range) {
+/// Returns the cost of a link in a partial-reduction chain for a given VF.
+static InstructionCost
+getPartialReductionLinkCost(VPCostContext &CostCtx,
+                            const VPPartialReductionChain &Chain,
+                            ElementCount VF) {
   auto GetExtInfo = [&CostCtx](VPWidenCastRecipe *Ext)
       -> std::pair<Type *, TargetTransformInfo::PartialReductionExtendKind> {
     if (!Ext)
@@ -5891,44 +5873,39 @@ static bool isValidPartialReduction(const VPPartialReductionChain &Chain,
         static_cast<Instruction::CastOps>(Ext->getOpcode()));
     return {ExtOpType, ExtKind};
   };
-  auto ExtInfoA = GetExtInfo(Chain.ExtendA);
-  auto ExtInfoB = GetExtInfo(Chain.ExtendB);
-  Type *ExtOpTypeA = ExtInfoA.first;
-  Type *ExtOpTypeB = ExtInfoB.first;
-  auto ExtKindA = ExtInfoA.second;
-  auto ExtKindB = ExtInfoB.second;
+  auto [ExtOpTypeA, ExtKindA] = GetExtInfo(Chain.ExtendA);
+  auto [ExtOpTypeB, ExtKindB] = GetExtInfo(Chain.ExtendB);
+
+  std::optional<unsigned> BinOpc =
+      (Chain.BinOp && Chain.BinOp != Chain.ReductionBinOp)
+          ? std::optional{Chain.BinOp->getOpcode()}
+          : std::nullopt;
 
   // If ExtendB is nullptr but there's a separate BinOp, the second operand
   // was a constant that can use the same extend kind as the first.
-  if (!Chain.ExtendB && Chain.BinOp && Chain.BinOp != Chain.ReductionBinOp) {
+  if (!Chain.ExtendB && BinOpc) {
     const APInt *Const = nullptr;
     for (VPValue *Op : Chain.BinOp->operands()) {
       if (match(Op, m_APInt(Const)))
         break;
     }
     if (!Const || !canConstantBeExtended(Const, ExtOpTypeA, ExtKindA))
-      return false;
+      return InstructionCost::getInvalid();
     ExtOpTypeB = ExtOpTypeA;
     ExtKindB = ExtKindA;
   }
 
-  std::optional<unsigned> BinOpc =
-      (Chain.BinOp && Chain.BinOp != Chain.ReductionBinOp)
-          ? std::make_optional(Chain.BinOp->getOpcode())
+  Type *RdxType = CostCtx.Types.inferScalarType(Chain.ReductionBinOp);
+  std::optional<llvm::FastMathFlags> Flags =
+      RdxType->isFloatingPointTy()
+          ? std::optional{Chain.ReductionBinOp->getFastMathFlags()}
           : std::nullopt;
-  VPWidenRecipe *WidenRecipe = Chain.ReductionBinOp;
-  return LoopVectorizationPlanner::getDecisionAndClampRange(
-      [&](ElementCount VF) {
-        return CostCtx.TTI
-            .getPartialReductionCost(
-                WidenRecipe->getOpcode(), ExtOpTypeA, ExtOpTypeB, PhiType, VF,
-                ExtKindA, ExtKindB, BinOpc, CostCtx.CostKind,
-                PhiType->isFloatingPointTy()
-                    ? std::optional{WidenRecipe->getFastMathFlags()}
-                    : std::nullopt)
-            .isValid();
-      },
-      Range);
+  unsigned Opcode = Chain.RK == RecurKind::Sub
+                        ? Instruction::Add
+                        : Chain.ReductionBinOp->getOpcode();
+  return CostCtx.TTI.getPartialReductionCost(Opcode, ExtOpTypeA, ExtOpTypeB,
+                                             RdxType, VF, ExtKindA, ExtKindB,
+                                             BinOpc, CostCtx.CostKind, Flags);
 }
 
 /// Examines reduction operations to see if the target can use a cheaper
@@ -5985,8 +5962,7 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPValue *PrevValue,
     assert(Operands.size() <= 2 && "expected at most 2 operands");
 
     for (const auto &[I, OpVal] : enumerate(Operands)) {
-      // Allow constant as second operand - validation happens in
-      // isValidPartialReduction.
+      // Allow constant as second operand - validation happens later.
       const APInt *Unused;
       if (I > 0 && CastRecipes[0] && match(OpVal, m_APInt(Unused)))
         continue;
@@ -6048,7 +6024,15 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPValue *PrevValue,
   VPPartialReductionChain Chain(
       {UpdateR, CastRecipes[0], CastRecipes[1], BinOp,
        static_cast<unsigned>(PHISize.getKnownScalarFactor(ASize)), RK});
-  if (!isValidPartialReduction(Chain, PhiType, CostCtx, Range))
+
+  /// Check if a partial reduction chain is supported by the target (i.e.
+  /// does not have an invalid cost) for the given VF range. Clamps the range
+  /// and returns true if feasible for any VF.
+  if (!LoopVectorizationPlanner::getDecisionAndClampRange(
+          [&](ElementCount VF) {
+            return getPartialReductionLinkCost(CostCtx, Chain, VF).isValid();
+          },
+          Range))
     return false;
 
   Chains.push_back(Chain);
@@ -6104,6 +6088,26 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
     });
   };
 
+  auto IsProfitablePartialReductionChainForVF =
+      [&](ArrayRef<VPPartialReductionChain> Chain, ElementCount VF) -> bool {
+    InstructionCost PartialCost = 0, RegularCost = 0;
+
+    // The chain is a profitable partial reduction chain if
+    // the cost of handling the entire chain is cheaper when
+    // using partial reductions than when handling the entire
+    // chain using regular reductions.
+    for (const VPPartialReductionChain &Link : Chain) {
+      PartialCost += getPartialReductionLinkCost(CostCtx, Link, VF);
+      RegularCost += Link.ReductionBinOp->computeCost(VF, CostCtx);
+      RegularCost += Link.BinOp && Link.BinOp != Link.ReductionBinOp
+                         ? Link.BinOp->computeCost(VF, CostCtx)
+                         : 0;
+      RegularCost += Link.ExtendA ? Link.ExtendA->computeCost(VF, CostCtx) : 0;
+      RegularCost += Link.ExtendB ? Link.ExtendB->computeCost(VF, CostCtx) : 0;
+    }
+    return PartialCost.isValid() && PartialCost <= RegularCost;
+  };
+
   // Validate chains: check that extends are only used by partial reductions,
   // and that reduction bin ops are only used by other partial reductions with
   // matching scale factors, are outside the loop region or the select
@@ -6143,6 +6147,14 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
         }
       }
     }
+
+    // Clear the chain if it is not profitable.
+    if (!LoopVectorizationPlanner::getDecisionAndClampRange(
+            [&](ElementCount VF) {
+              return IsProfitablePartialReductionChainForVF(Chains, VF);
+            },
+            Range))
+      Chains.clear();
   }
 
   for (auto &[Phi, Chains] : ChainsByPhi)
