@@ -45,7 +45,7 @@ class WinEHStateFnPassImpl {
 public:
   WinEHStateFnPassImpl() = default;
 
-  bool init(Module &M);
+  bool initialize(Module &M);
 
   bool finalize(Module &M);
 
@@ -119,7 +119,7 @@ public:
 
   bool runOnFunction(Function &Fn) override { return Impl.runOnFunction(Fn); }
 
-  bool doInitialization(Module &M) override { return Impl.init(M); }
+  bool doInitialization(Module &M) override { return Impl.initialize(M); }
 
   bool doFinalization(Module &M) override { return Impl.finalize(M); }
 
@@ -136,7 +136,7 @@ private:
 PreservedAnalyses X86WinEHStatePass::run(Module &M,
                                          ModuleAnalysisManager &MAM) {
   WinEHStateFnPassImpl Impl;
-  Impl.init(M);
+  Impl.initialize(M);
 
   bool Changed = false;
   for (Function &F : M) {
@@ -161,7 +161,7 @@ char WinEHStateLegacy::ID = 0;
 INITIALIZE_PASS(WinEHStateLegacy, "x86-winehstate",
                 "Insert stores for EH state numbers", false, false)
 
-bool WinEHStateFnPassImpl::init(Module &M) {
+bool WinEHStateFnPassImpl::initialize(Module &M) {
   TheModule = &M;
   return false;
 }
