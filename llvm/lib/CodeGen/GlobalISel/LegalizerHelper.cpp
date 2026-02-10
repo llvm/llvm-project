@@ -7582,26 +7582,22 @@ LegalizerHelper::narrowScalarCTLS(MachineInstr &MI, unsigned TypeIdx,
   auto ShAmt = B.buildConstant(NarrowTy, NarrowSize - 1);
   auto Sign = B.buildAShr(NarrowTy, Hi, ShAmt);
 
-  auto LoSign = B.buildAShr(NarrowTy, Lo, ShAmt);
-  auto LoSameSign = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
-                                LoSign.getReg(0), Sign.getReg(0));
+  auto HiIsSign = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), Hi, Sign);
 
-  auto HiIsSign =
-      B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), Hi, Sign.getReg(0));
+  // Invert Lo if Hi is negative. Then count the leading zeros. If there are no
+  // leading zeros, then the MSB of Lo is different than the MSB of high.
+  // Otherwise the leading zeros represent additional sign bits of the original
+  // value.
+  auto LoInv = B.buildXor(DstTy, Lo, Sign);
+  auto LoCTLZ = B.buildCTLZ(DstTy, LoInv);
 
-  auto LoCTLS = B.buildCTLS(DstTy, Lo);
-  auto GNarrowSize = B.buildConstant(DstTy, NarrowSize);
-  auto HiIsSignCTLS = B.buildAdd(DstTy, LoCTLS, GNarrowSize);
-
-  // If the low half flips sign, the run of redundant bits stops at the
-  // boundary, so use (NarrowSize - 1) instead of extending into Lo.
-  auto GNarrowSizeMinus1 = B.buildConstant(DstTy, NarrowSize - 1);
-  auto HiSignResult =
-      B.buildSelect(DstTy, LoSameSign, HiIsSignCTLS, GNarrowSizeMinus1);
+  // Add NarrowSize-1 to LoCTLZ. This is the full CTLS if Hi is all sign bits.
+  auto C_NarrowSizeM1 = B.buildConstant(DstTy, NarrowSize - 1);
+  auto HiIsSignCTLS = B.buildAdd(DstTy, LoCTLZ, C_NarrowSizeM1);
 
   auto HiCTLS = B.buildCTLS(DstTy, Hi);
 
-  B.buildSelect(DstReg, HiIsSign, HiSignResult, HiCTLS);
+  B.buildSelect(DstReg, HiIsSign, HiIsSignCTLS, HiCTLS);
 
   MI.eraseFromParent();
   return Legalized;
