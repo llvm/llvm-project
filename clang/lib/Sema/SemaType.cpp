@@ -2435,6 +2435,16 @@ QualType Sema::BuildExtVectorType(QualType T, Expr *SizeExpr,
     }
 
     if (VecSize->isNegative()) {
+      if (Context.getTargetInfo().hasFeature("sve")) {
+        // The length of an SVE vector type is only known at runtime, but it is
+        // always a multiple of 128bits.
+        unsigned NumEls = 128U / Context.getTypeSize(T);
+        unsigned NF = static_cast<unsigned>(-1L * VecSize->getZExtValue());
+        QualType Result = Context.getScalableVectorType(T, NumEls * NF);
+        if (!Result.isNull())
+          return Result;
+      }
+
       Diag(SizeExpr->getExprLoc(), diag::err_attribute_vec_negative_size);
       return QualType();
     }

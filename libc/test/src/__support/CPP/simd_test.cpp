@@ -148,3 +148,17 @@ TEST(LlvmLibcSIMDTest, MaskedCompressExpand) {
 
   EXPECT_TRUE(cpp::all_of(!mask_expand || v2 <= SIZE / 2));
 }
+
+#if defined(LIBC_TARGET_CPU_HAS_SVE) || defined(LIBC_TARGET_CPU_HAS_SVE2)
+
+TEST(LlvmLibcSIMDTest, SizelessVectorCreation) {
+  cpp::simd<int, cpp::scalable_size<1>> svsplat = cpp::splat(5);
+  cpp::simd<int, cpp::scalable_size<1>> sviota = cpp::iota(0);
+
+  EXPECT_EQ(svsplat[0], 5);
+  EXPECT_EQ(svsplat[1], 5);
+  EXPECT_EQ(sviota[0], 0);
+  EXPECT_EQ(sviota[1], 1);
+}
+
+#endif

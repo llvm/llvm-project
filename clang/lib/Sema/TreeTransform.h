@@ -5445,6 +5445,9 @@ TypeSourceInfo *TreeTransform<Derived>::TransformType(TypeSourceInfo *TSI) {
   QualType Result = getDerived().TransformType(TLB, TL);
   if (Result.isNull())
     return nullptr;
+  if (isa<DependentSizedExtVectorType>(TL.getType()) &&
+      isa<BuiltinType>(Result))
+    return SemaRef.Context.CreateTypeSourceInfo(Result);
 
   return TLB.getTypeSourceInfo(SemaRef.Context, Result);
 }
@@ -6132,7 +6135,7 @@ QualType TreeTransform<Derived>::TransformDependentSizedExtVectorType(
     DependentSizedExtVectorTypeLoc NewTL
       = TLB.push<DependentSizedExtVectorTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
-  } else {
+  } else if (!isa<BuiltinType>(Result)) {
     ExtVectorTypeLoc NewTL = TLB.push<ExtVectorTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
   }

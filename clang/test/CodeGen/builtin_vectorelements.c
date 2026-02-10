@@ -1,13 +1,7 @@
-// RUN: %clang_cc1 -O1 -triple x86_64                        %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK       %s
-
-// REQUIRES: aarch64-registered-target
-// RUN: %clang_cc1 -O1 -triple aarch64 -target-feature +neon %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,NEON  %s
-
-// REQUIRES: aarch64-registered-target
-// RUN: %clang_cc1 -O1 -triple aarch64 -target-feature +sve  %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,SVE   %s
-
-// REQUIRES: riscv-registered-target
-// RUN: %clang_cc1 -O1 -triple riscv64 -target-feature +v    %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,RISCV %s
+// RUN: %clang_cc1                                  -O1 -triple x86_64                        %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK       %s
+// RUN: %if aarch64-registered-target %{ %clang_cc1 -O1 -triple aarch64 -target-feature +neon %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,NEON  %s %}
+// RUN: %if aarch64-registered-target %{ %clang_cc1 -O1 -triple aarch64 -target-feature +sve  %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,SVE   %s %}
+// RUN: %if riscv-registered-target   %{ %clang_cc1 -O1 -triple riscv64 -target-feature +v    %s -emit-llvm -disable-llvm-passes -o - | FileCheck --check-prefixes=CHECK,RISCV %s %}
 
 /// Note that this does not make sense to check for x86 SIMD types, because
 /// __m128i, __m256i, and __m512i do not specify the element type. There are no
@@ -19,6 +13,10 @@ typedef int int8 __attribute__((vector_size(32)));
 typedef int int16 __attribute__((vector_size(64)));
 typedef float float2 __attribute__((vector_size(8)));
 typedef long extLong4 __attribute__((ext_vector_type(4)));
+#if defined(__ARM_FEATURE_SVE)
+#define SCALABLE_SIZE(N) (-1 * ((signed)(N)))
+typedef long extLong1s __attribute__((ext_vector_type(SCALABLE_SIZE(1))));
+#endif
 
 
 int test_builtin_vectorelements_int1() {
@@ -81,6 +79,22 @@ int test_builtin_vectorelements_neon64x1() {
 
 #if defined(__ARM_FEATURE_SVE)
 #include <arm_sve.h>
+
+long test_builtin_vectorelements_sve64() {
+  // SVE: i64 @test_builtin_vectorelements_sve64(
+  // SVE: [[VSCALE:%.+]] = call i64 [[I64_VSCALE_CALL:@llvm.vscale.i64]]()
+  // SVE: [[RES:%.+]] = mul nuw i64 [[VSCALE]], [[I64_MUL:2]]
+  // SVE: ret i64 [[RES]]
+  return __builtin_vectorelements(svuint64_t);
+}
+
+long test_builtin_vectorelements_extLong1s() {
+  // SVE-LABEL: i64 @test_builtin_vectorelements_extLong1s(
+  // SVE: [[VSCALE:%.+]] = call i64 [[I64_VSCALE_CALL]]()
+  // SVE: [[RES:%.+]] = mul nuw i64 %0, [[I64_MUL]]
+  // SVE: ret i64 [[RES]]
+  return __builtin_vectorelements(extLong1s);
+}
 
 long test_builtin_vectorelements_sve32() {
   // SVE: i64 @test_builtin_vectorelements_sve32(
