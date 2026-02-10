@@ -420,7 +420,7 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
 
-static void startCodegen(const Config &Conf, TargetMachine *TM,
+static void codegen(const Config &Conf, TargetMachine *TM,
                          AddStreamFn AddStream, unsigned Task, Module &Mod,
                          const ModuleSummaryIndex &CombinedIndex) {
   llvm::TimeTraceScope timeScope("codegen");
@@ -533,7 +533,7 @@ static void splitCodeGen(const Config &C, TargetMachine *TM,
               std::unique_ptr<TargetMachine> TM =
                   createTargetMachine(C, T, *MPartInCtx);
 
-              startCodegen(C, TM.get(), AddStream, ThreadId, *MPartInCtx,
+              ::codegen(C, TM.get(), AddStream, ThreadId, *MPartInCtx,
                            CombinedIndex);
             },
             // Pass BC using std::move to ensure that it get moved rather than
@@ -598,7 +598,7 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
   }
 
   if (ParallelCodeGenParallelismLevel == 1) {
-    startCodegen(C, TM.get(), AddStream, 0, Mod, CombinedIndex);
+    ::codegen(C, TM.get(), AddStream, 0, Mod, CombinedIndex);
   } else {
     splitCodeGen(C, TM.get(), AddStream, ParallelCodeGenParallelismLevel, Mod,
                  CombinedIndex);
@@ -659,7 +659,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   if (CodeGenOnly) {
     // If CodeGenOnly is set, we only perform code generation and skip
     // optimization. This value may differ from Conf.CodeGenOnly.
-    startCodegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
+    ::codegen(Conf, TM.get(), AddStream, Task, Mod, CombinedIndex);
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
   }
 
@@ -682,7 +682,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
         if (IRAddStream)
           cgdata::saveModuleForTwoRounds(Mod, Task, IRAddStream);
 
-        startCodegen(Conf, TM, AddStream, Task, Mod, CombinedIndex);
+        ::codegen(Conf, TM, AddStream, Task, Mod, CombinedIndex);
         return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
       };
 
