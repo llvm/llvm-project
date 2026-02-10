@@ -1247,7 +1247,10 @@ OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
   auto resultTy = llvm::dyn_cast<RankedTensorType>(getType());
   if (!lhsTy || !rhsTy || !resultTy)
     return {};
-  if (lhsTy != rhsTy)
+
+  const Type lhsETy = lhsTy.getElementType();
+  const Type rhsETy = rhsTy.getElementType();
+  if (lhsETy != rhsETy)
     return {};
 
   // IntDivOp inputs must be integer type, no need to check for quantized type
