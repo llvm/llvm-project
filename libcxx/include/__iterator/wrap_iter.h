@@ -119,6 +119,7 @@ private:
   friend struct array;
   template <class _Tp, class>
   friend struct __optional_iterator;
+  friend struct __te_impl;
 };
 
 template <class _Iter1>
