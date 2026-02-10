@@ -175,9 +175,9 @@ exit:
 
 ; Same as above but with 'and' instead of 'shl' - any non-multiply binary op
 ; using the extend should prevent partial reduction formation.
-define i64 @no_partial_reduce_for_extend_used_by_and(ptr %src) #0 {
+define i64 @no_partial_reduce_for_extend_used_by_and(ptr %src) {
 ; CHECK-LABEL: define i64 @no_partial_reduce_for_extend_used_by_and(
-; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:

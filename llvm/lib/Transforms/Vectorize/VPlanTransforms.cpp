@@ -5615,9 +5615,9 @@ static bool isValidPartialReduction(const VPPartialReductionChain &Chain,
     if (!Ext)
       return {nullptr, TargetTransformInfo::PR_None};
     Type *ExtOpType = CostCtx.Types.inferScalarType(Ext->getOperand(0));
-    return {ExtOpType,
-            TargetTransformInfo::getPartialReductionExtendKind(
-                static_cast<Instruction::CastOps>(Ext->getOpcode()))};
+    auto ExtKind = TargetTransformInfo::getPartialReductionExtendKind(
+        static_cast<Instruction::CastOps>(Ext->getOpcode()));
+    return {ExtOpType, ExtKind};
   };
   auto ExtInfoA = GetExtInfo(Chain.ExtendA);
   auto ExtInfoB = GetExtInfo(Chain.ExtendB);
@@ -5630,9 +5630,10 @@ static bool isValidPartialReduction(const VPPartialReductionChain &Chain,
   // was a constant that can use the same extend kind as the first.
   if (!Chain.ExtendB && Chain.BinOp && Chain.BinOp != Chain.ReductionBinOp) {
     const APInt *Const = nullptr;
-    for (VPValue *Op : Chain.BinOp->operands())
+    for (VPValue *Op : Chain.BinOp->operands()) {
       if (match(Op, m_APInt(Const)))
         break;
+    }
     if (!Const || !canConstantBeExtended(Const, ExtOpTypeA, ExtKindA))
       return false;
     ExtOpTypeB = ExtOpTypeA;
@@ -5802,13 +5803,13 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
     // Get the backedge value from the reduction PHI and find the
     // ComputeReductionResult that uses it (directly or through a select for
     // predicated reductions).
-    auto *RdxResult = vputils::findComputeReductionResult(RedPhiR);
-    if (!RdxResult)
-      continue;
-    VPValue *ExitValue = RdxResult->getOperand(0);
-    match(ExitValue, m_Select(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
-    getScaledReductions(RedPhiR, ExitValue, ChainsByPhi[RedPhiR], CostCtx,
-                        Range);
+    if (auto *RdxResult = vputils::findComputeReductionResult(RedPhiR)) {
+      VPValue *ExitValue = RdxResult->getOperand(0);
+      match(ExitValue,
+            m_Select(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
+      getScaledReductions(RedPhiR, ExitValue, ChainsByPhi[RedPhiR], CostCtx,
+                          Range);
+    }
   }
 
   if (ChainsByPhi.empty())
