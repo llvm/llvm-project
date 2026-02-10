@@ -40,7 +40,7 @@ define signext i32 @s173() #0 {
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[TMP8]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr getelementptr inbounds nuw (i8, ptr @global_data, i64 128016), i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [4 x i8], ptr getelementptr inbounds nuw (i8, ptr @global_data, i64 128016), i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP9]], i64 16
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP9]], i64 32
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP9]], i64 48

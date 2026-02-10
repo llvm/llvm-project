@@ -13,16 +13,16 @@ define void @same_op2(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = or disjoint i64 [[OFFSET_IDX]], 8
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[WIDE_VEC15:%.*]] = load <8 x float>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_VEC18:%.*]] = load <8 x float>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[WIDE_VEC21:%.*]] = load <8 x float>, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_VEC24:%.*]] = load <8 x float>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[WIDE_VEC27:%.*]] = load <8 x float>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul fast <8 x float> [[WIDE_VEC18]], [[WIDE_VEC]]
@@ -125,12 +125,12 @@ define void @same_op2_splat(ptr noalias noundef %a, ptr noundef %b, ptr noundef 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[OFFSET_IDX]], 8
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x float>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[WIDE_VEC13:%.*]] = load <8 x float>, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_VEC16:%.*]] = load <8 x float>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[WIDE_VEC19:%.*]] = load <8 x float>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <8 x float> [[WIDE_VEC]], [[TMP1]]
@@ -224,11 +224,11 @@ define void @same_op3(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x float>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC16:%.*]] = load <12 x float>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC20:%.*]] = load <12 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <12 x float> [[WIDE_VEC16]], [[WIDE_VEC]]
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <12 x float> [[WIDE_VEC20]], [[TMP3]]
@@ -325,9 +325,9 @@ define void @same_op3_splat(ptr noalias noundef %a, ptr noundef %b, ptr noundef 
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x float>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC14:%.*]] = load <12 x float>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <12 x float> [[WIDE_VEC]], [[TMP2]]
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <12 x float> [[WIDE_VEC14]], [[TMP4]]
@@ -417,11 +417,11 @@ define void @same_op4(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x float>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC17:%.*]] = load <16 x float>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC22:%.*]] = load <16 x float>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <16 x float> [[WIDE_VEC17]], [[WIDE_VEC]]
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <16 x float> [[WIDE_VEC22]], [[TMP3]]
@@ -518,9 +518,9 @@ define void @same_op4_splat(ptr noalias noundef %a, ptr noundef %b, ptr noundef 
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x float>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC15:%.*]] = load <16 x float>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <16 x float> [[WIDE_VEC]], [[TMP1]]
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <16 x float> [[WIDE_VEC15]], [[TMP4]]
@@ -609,9 +609,9 @@ define void @same_op6(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER:.*]]
 ; CHECK:       [[FOR_COND1_PREHEADER]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_COND1_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP0]]
@@ -619,9 +619,9 @@ define void @same_op6(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <4 x float> [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[ARRAYIDX9]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 4
-; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[TMP5]]
-; CHECK-NEXT:    [[ARRAYIDX6_4:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[TMP5]]
-; CHECK-NEXT:    [[ARRAYIDX9_4:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[TMP5]]
+; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[TMP5]]
+; CHECK-NEXT:    [[ARRAYIDX6_4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[TMP5]]
+; CHECK-NEXT:    [[ARRAYIDX9_4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x float>, ptr [[ARRAYIDX_4]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x float>, ptr [[ARRAYIDX6_4]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <2 x float> [[TMP7]], [[TMP6]]
@@ -721,16 +721,16 @@ define void @same_op6_splat(ptr noalias noundef %a, ptr noundef %b, ptr noundef 
 ; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER:.*]]
 ; CHECK:       [[FOR_COND1_PREHEADER]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_COND1_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load <4 x float>, ptr [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <4 x float> [[TMP5]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[ARRAYIDX7]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = fadd fast <4 x float> [[TMP7]], [[TMP6]]
 ; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[ARRAYIDX7]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = add nuw nsw i64 [[INDVARS_IV]], 4
-; CHECK-NEXT:    [[ARRAYIDX4_4:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[TMP9]]
-; CHECK-NEXT:    [[ARRAYIDX7_4:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[TMP9]]
+; CHECK-NEXT:    [[ARRAYIDX4_4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[TMP9]]
+; CHECK-NEXT:    [[ARRAYIDX7_4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load <2 x float>, ptr [[ARRAYIDX4_4]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul fast <2 x float> [[TMP10]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load <2 x float>, ptr [[ARRAYIDX7_4]], align 4
@@ -820,9 +820,9 @@ define void @same_op8(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER:.*]]
 ; CHECK:       [[FOR_COND1_PREHEADER]]:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_COND1_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[ARRAYIDX6]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul fast <4 x float> [[TMP1]], [[TMP0]]
@@ -830,9 +830,9 @@ define void @same_op8(ptr noalias noundef %a, ptr noundef %b, ptr noundef %c) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd fast <4 x float> [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    store <4 x float> [[TMP4]], ptr [[ARRAYIDX9]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = or disjoint i64 [[INDVARS_IV]], 4
-; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds nuw float, ptr [[C]], i64 [[TMP5]]
-; CHECK-NEXT:    [[ARRAYIDX6_4:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[TMP5]]
-; CHECK-NEXT:    [[ARRAYIDX9_4:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[TMP5]]
+; CHECK-NEXT:    [[ARRAYIDX_4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[C]], i64 [[TMP5]]
+; CHECK-NEXT:    [[ARRAYIDX6_4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[TMP5]]
+; CHECK-NEXT:    [[ARRAYIDX9_4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x float>, ptr [[ARRAYIDX_4]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x float>, ptr [[ARRAYIDX6_4]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <4 x float> [[TMP7]], [[TMP6]]
@@ -931,9 +931,9 @@ define void @same_op8_splat(ptr noalias noundef %a, ptr noundef %b, ptr noundef 
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <16 x float>, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC19:%.*]] = load <16 x float>, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <16 x float> [[WIDE_VEC]], [[TMP1]]
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <16 x float> [[WIDE_VEC19]], [[TMP4]]
@@ -1047,9 +1047,9 @@ define void @saxpy_5(i64 %n, float %a, ptr readonly %x, ptr noalias %y) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 5
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw float, ptr [[X]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[X]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <10 x float>, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw float, ptr [[Y]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[Y]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[WIDE_VEC5:%.*]] = load <10 x float>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <10 x float> [[WIDE_VEC]], [[TMP5]]
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = fadd fast <10 x float> [[WIDE_VEC5]], [[TMP8]]
@@ -1067,18 +1067,18 @@ define void @saxpy_5(i64 %n, float %a, ptr readonly %x, ptr noalias %y) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I1:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ [[I1_PH]], %[[LOOP_PREHEADER11]] ]
-; CHECK-NEXT:    [[XGEP1:%.*]] = getelementptr inbounds nuw float, ptr [[X]], i64 [[I1]]
-; CHECK-NEXT:    [[YGEP1:%.*]] = getelementptr inbounds nuw float, ptr [[Y]], i64 [[I1]]
+; CHECK-NEXT:    [[XGEP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[X]], i64 [[I1]]
+; CHECK-NEXT:    [[YGEP1:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[Y]], i64 [[I1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load <4 x float>, ptr [[XGEP1]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = fmul fast <4 x float> [[TMP12]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = load <4 x float>, ptr [[YGEP1]], align 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = fadd fast <4 x float> [[TMP14]], [[TMP13]]
 ; CHECK-NEXT:    store <4 x float> [[TMP15]], ptr [[YGEP1]], align 4
 ; CHECK-NEXT:    [[I5:%.*]] = add nuw nsw i64 [[I1]], 4
-; CHECK-NEXT:    [[XGEP5:%.*]] = getelementptr inbounds nuw float, ptr [[X]], i64 [[I5]]
+; CHECK-NEXT:    [[XGEP5:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[X]], i64 [[I5]]
 ; CHECK-NEXT:    [[X5:%.*]] = load float, ptr [[XGEP5]], align 4
 ; CHECK-NEXT:    [[AX5:%.*]] = fmul fast float [[X5]], [[A]]
-; CHECK-NEXT:    [[YGEP5:%.*]] = getelementptr inbounds nuw float, ptr [[Y]], i64 [[I5]]
+; CHECK-NEXT:    [[YGEP5:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[Y]], i64 [[I5]]
 ; CHECK-NEXT:    [[Y5:%.*]] = load float, ptr [[YGEP5]], align 4
 ; CHECK-NEXT:    [[AXPY5:%.*]] = fadd fast float [[Y5]], [[AX5]]
 ; CHECK-NEXT:    store float [[AXPY5]], ptr [[YGEP5]], align 4

@@ -28,13 +28,13 @@ define void @multiply_noalias_4x4(ptr noalias %A, ptr noalias %B, ptr noalias %C
 ; CHECK:       inner.body:
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = shl i64 [[INNER_IV]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[DOTIDX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr double, ptr [[TMP0]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [8 x i8], ptr [[TMP0]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[DOTIDX17:%.*]] = shl i64 [[COLS_IV]], 5
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[DOTIDX17]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[TMP2]], i64 [[INNER_IV]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [8 x i8], ptr [[TMP2]], i64 [[INNER_IV]]
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i8, ptr [[TMP3]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
@@ -56,7 +56,7 @@ define void @multiply_noalias_4x4(ptr noalias %A, ptr noalias %B, ptr noalias %C
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_STEP]], 4
 ; CHECK-NEXT:    [[DOTIDX18:%.*]] = shl i64 [[COLS_IV]], 5
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[DOTIDX18]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr double, ptr [[TMP8]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr [8 x i8], ptr [[TMP8]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr i8, ptr [[TMP9]], i64 32
 ; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[VEC_GEP16]], align 8
@@ -104,13 +104,13 @@ define void @multiply_noalias_2x4(ptr noalias %A, ptr noalias %B, ptr noalias %C
 ; CHECK:       inner.body:
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = shl i64 [[INNER_IV]], 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[DOTIDX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[TMP0]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [8 x i8], ptr [[TMP0]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x i64>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[DOTIDX17:%.*]] = shl i64 [[COLS_IV]], 5
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[DOTIDX17]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[TMP2]], i64 [[INNER_IV]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [8 x i8], ptr [[TMP2]], i64 [[INNER_IV]]
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i8, ptr [[TMP3]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i64>, ptr [[VEC_GEP3]], align 8
@@ -136,7 +136,7 @@ define void @multiply_noalias_2x4(ptr noalias %A, ptr noalias %B, ptr noalias %C
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_IV]], 0
 ; CHECK-NEXT:    [[DOTIDX18:%.*]] = shl i64 [[COLS_IV]], 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[DOTIDX18]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP12]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [8 x i8], ptr [[TMP12]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr i8, ptr [[TMP13]], i64 16
 ; CHECK-NEXT:    store <2 x i64> [[TMP11]], ptr [[VEC_GEP16]], align 8
@@ -190,13 +190,13 @@ define void @multiply_noalias_4x2_2x8(ptr noalias %A, ptr noalias %B, ptr noalia
 ; CHECK:       inner.body:
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = shl i64 [[INNER_IV]], 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A:%.*]], i64 [[DOTIDX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[TMP0]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [8 x i8], ptr [[TMP0]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 32
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x i64>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[DOTIDX17:%.*]] = shl i64 [[COLS_IV]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[B:%.*]], i64 [[DOTIDX17]]
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[TMP2]], i64 [[INNER_IV]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr [8 x i8], ptr [[TMP2]], i64 [[INNER_IV]]
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x i64>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr i8, ptr [[TMP3]], i64 16
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x i64>, ptr [[VEC_GEP3]], align 8
@@ -222,7 +222,7 @@ define void @multiply_noalias_4x2_2x8(ptr noalias %A, ptr noalias %B, ptr noalia
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_STEP]], 4
 ; CHECK-NEXT:    [[DOTIDX18:%.*]] = shl i64 [[COLS_IV]], 5
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[C:%.*]], i64 [[DOTIDX18]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i64, ptr [[TMP12]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [8 x i8], ptr [[TMP12]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    store <2 x i64> [[TMP7]], ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr i8, ptr [[TMP13]], i64 32
 ; CHECK-NEXT:    store <2 x i64> [[TMP11]], ptr [[VEC_GEP16]], align 8
@@ -307,13 +307,13 @@ define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK:       inner.body:
 ; CHECK-NEXT:    [[DOTIDX1:%.*]] = shl i64 [[INNER_IV]], 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP3]], i64 [[DOTIDX1]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr float, ptr [[TMP8]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr [4 x i8], ptr [[TMP8]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x float>, ptr [[TMP10]], align 4
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr i8, ptr [[TMP10]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD8:%.*]] = load <2 x float>, ptr [[VEC_GEP]], align 4
 ; CHECK-NEXT:    [[DOTIDX24:%.*]] = shl i64 [[COLS_IV]], 3
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[TMP7]], i64 [[DOTIDX24]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr float, ptr [[TMP11]], i64 [[INNER_IV]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr [4 x i8], ptr [[TMP11]], i64 [[INNER_IV]]
 ; CHECK-NEXT:    [[COL_LOAD9:%.*]] = load <2 x float>, ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[VEC_GEP10:%.*]] = getelementptr i8, ptr [[TMP13]], i64 8
 ; CHECK-NEXT:    [[COL_LOAD11:%.*]] = load <2 x float>, ptr [[VEC_GEP10]], align 4
@@ -335,7 +335,7 @@ define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[ROWS_COND_NOT:%.*]] = icmp eq i64 [[ROWS_IV]], 0
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = shl i64 [[COLS_IV]], 3
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[C]], i64 [[DOTIDX]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr float, ptr [[TMP18]], i64 [[ROWS_IV]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr [4 x i8], ptr [[TMP18]], i64 [[ROWS_IV]]
 ; CHECK-NEXT:    store <2 x float> [[TMP15]], ptr [[TMP19]], align 8
 ; CHECK-NEXT:    [[VEC_GEP23:%.*]] = getelementptr i8, ptr [[TMP19]], i64 8
 ; CHECK-NEXT:    store <2 x float> [[TMP17]], ptr [[VEC_GEP23]], align 8
