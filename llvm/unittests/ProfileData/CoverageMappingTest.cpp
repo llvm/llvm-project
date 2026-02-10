@@ -709,13 +709,16 @@ TEST_P(CoverageMappingTest, expansion_gets_first_counter) {
   addCMR(Counter::getCounter(2), "foo", 1, 1, 20, 1);
   addExpansionCMR("bar", "foo", 3, 3, 3, 3);
 
-  writeAndReadCoverageRegions();
-  ASSERT_EQ(1u, OutputFunctions.size());
-  OutputFunctionCoverageData &Output = OutputFunctions.back();
+  ProfileWriter.addRecord({"func", 0x1234, {1, 2, 4}}, Err);
+  EXPECT_THAT_ERROR(loadCoverageMapping(), Succeeded());
 
-  ASSERT_EQ(CounterMappingRegion::ExpansionRegion, Output.Regions[2].Kind);
-  ASSERT_EQ(Counter::getCounter(2), Output.Regions[2].Count);
-  ASSERT_EQ(3U, Output.Regions[2].LineStart);
+  auto FunctionRecords = LoadedCoverage->getCoveredFunctions();
+  ASSERT_EQ(1u, std::distance(FunctionRecords.begin(), FunctionRecords.end()));
+
+  const auto &CR = (*FunctionRecords.begin()).CountedRegions;
+  ASSERT_EQ(CounterMappingRegion::ExpansionRegion, CR[2].Kind);
+  ASSERT_EQ(4u, CR[2].ExecutionCount);
+  ASSERT_EQ(3U, CR[2].LineStart);
 }
 
 TEST_P(CoverageMappingTest, basic_coverage_iteration) {

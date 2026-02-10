@@ -3,27 +3,27 @@
 // CHECK: main
 // CHECK-NEXT: File 0, {{[0-9]+}}:16 -> {{[0-9]+}}:2 = #0
 // CHECK-NEXT: File 0, {{[0-9]+}}:6 -> {{[0-9]+}}:4 = (#0 + #1)
-// CHECK-NEXT: Expansion,File 0, {{[0-9]+}}:7 -> {{[0-9]+}}:20 = (#0 + #1)
+// CHECK-NEXT: Expansion,File 0, {{[0-9]+}}:7 -> {{[0-9]+}}:20 = 0
 // CHECK-NEXT: File 0, {{[0-9]+}}:12 -> {{[0-9]+}}:30 = (#0 + #1)
 
 // CHECK-NEXT: Branch,File 0, {{[0-9]+}}:12 -> {{[0-9]+}}:30 = #1, #0
 // CHECK-NEXT: File 1, [[@LINE+4]]:4 -> [[@LINE+6]]:23 = (#0 + #1)
-// CHECK-NEXT: Expansion,File 1, [[@LINE+3]]:5 -> [[@LINE+3]]:16 = (#0 + #1)
-// CHECK-NEXT: Expansion,File 1, [[@LINE+3]]:16 -> [[@LINE+3]]:21 = (#0 + #1)
+// CHECK-NEXT: Expansion,File 1, [[@LINE+3]]:5 -> [[@LINE+3]]:16 = 0
+// CHECK-NEXT: Expansion,File 1, [[@LINE+3]]:16 -> [[@LINE+3]]:21 = 0
 #define INSERT_STRING(s, match_head) \
    (UPDATE_HASH(ins_h, window[(s) + MIN_MATCH-1]), \
     prev[(s) & WMASK] = match_head = head[ins_h], \
     head[ins_h] = (s))
 // CHECK-NEXT: File 2, [[@LINE+3]]:26 -> [[@LINE+3]]:66 = (#0 + #1)
-// CHECK-NEXT: Expansion,File 2, [[@LINE+2]]:38 -> [[@LINE+2]]:45 = (#0 + #1)
-// CHECK-NEXT: Expansion,File 2, [[@LINE+1]]:56 -> [[@LINE+1]]:65 = (#0 + #1)
+// CHECK-NEXT: Expansion,File 2, [[@LINE+2]]:38 -> [[@LINE+2]]:45 = 0
+// CHECK-NEXT: Expansion,File 2, [[@LINE+1]]:56 -> [[@LINE+1]]:65 = 0
 #define UPDATE_HASH(h,c) (h = (((h)<<H_SHIFT) ^ (c)) & HASH_MASK)
 // CHECK-NEXT: File 3, [[@LINE+1]]:15 -> [[@LINE+1]]:21 = (#0 + #1)
 #define WMASK 0xFFFF
 // CHECK-NEXT: File 4, [[@LINE+4]]:18 -> [[@LINE+4]]:53 = (#0 + #1)
-// CHECK-NEXT: Expansion,File 4, [[@LINE+3]]:20 -> [[@LINE+3]]:29 = (#0 + #1)
-// CHECK-NEXT: Expansion,File 4, [[@LINE+2]]:30 -> [[@LINE+2]]:39 = (#0 + #1)
-// CHECK-NEXT: Expansion,File 4, [[@LINE+1]]:43 -> [[@LINE+1]]:52 = (#0 + #1)
+// CHECK-NEXT: Expansion,File 4, [[@LINE+3]]:20 -> [[@LINE+3]]:29 = 0
+// CHECK-NEXT: Expansion,File 4, [[@LINE+2]]:30 -> [[@LINE+2]]:39 = 0
+// CHECK-NEXT: Expansion,File 4, [[@LINE+1]]:43 -> [[@LINE+1]]:52 = 0
 #define H_SHIFT  ((HASH_BITS+MIN_MATCH-1)/MIN_MATCH)
 // CHECK-NEXT: File 5, [[@LINE+1]]:19 -> [[@LINE+1]]:25 = (#0 + #1)
 #define HASH_MASK 0xFFFF

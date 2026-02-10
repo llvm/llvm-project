@@ -721,6 +721,8 @@ struct CountedRegionEmitter {
 
   /// Evaluated Counters.
   std::map<Counter, uint64_t> CounterValues;
+  /// Induced Counter values for Expansions.
+  DenseMap<const CounterMappingRegion *, uint64_t> ExpansionCounterValues;
 
   /// Decisions are nestable.
   SmallVector<DecisionRecord, 1> DecisionStack;
@@ -763,18 +765,20 @@ struct CountedRegionEmitter {
   }
 
   /// Evaluate C and store its evaluated Value into CounterValues.
-  Error evaluateAndCacheCounter(Counter C) {
-    if (CounterValues.count(C) > 0)
-      return Error::success();
+  Expected<uint64_t> evaluateAndCacheCounter(Counter C) {
+    auto C1 = CounterValues.find(C);
+    if (C1 != CounterValues.end())
+      return C1->second; // Cached
 
     auto ValueOrErr = Ctx.evaluate(C);
     if (!ValueOrErr)
       return ValueOrErr.takeError();
     CounterValues[C] = *ValueOrErr;
-    return Error::success();
+    return ValueOrErr;
   }
 
-  Error walk(unsigned Idx) {
+  Expected<uint64_t> walk(unsigned Idx) {
+    std::optional<uint64_t> FirstCnt;
     assert(Idx < Files.size());
     unsigned B = (Idx == 0 ? 0 : Files[Idx - 1].LastIndex);
     unsigned E = Files[Idx].LastIndex;
@@ -785,12 +789,27 @@ struct CountedRegionEmitter {
       if (Region.FileID != Idx)
         break;
 
-      if (Region.Kind == CounterMappingRegion::ExpansionRegion)
-        if (auto E = walk(Region.ExpandedFileID))
-          return E;
+      if (Region.Kind == CounterMappingRegion::ExpansionRegion) {
+        auto ExpandedCntOrErr = walk(Region.ExpandedFileID);
+        if (!ExpandedCntOrErr)
+          return ExpandedCntOrErr.takeError();
 
-      if (auto E = evaluateAndCacheCounter(Region.Count))
-        return E;
+        // Expansion doesn't have Counters.
+        assert(Region.Count.isZero());
+        ExpansionCounterValues[&Region] = *ExpandedCntOrErr;
+        // Propagate Expanded Count to parent.
+        if (!FirstCnt)
+          FirstCnt = *ExpandedCntOrErr;
+
+        continue;
+      }
+
+      auto TrueCntOrErr = evaluateAndCacheCounter(Region.Count);
+      if (!TrueCntOrErr)
+        return TrueCntOrErr.takeError();
+      // Propagate 1st Count to parent.
+      if (!FirstCnt)
+        FirstCnt = *TrueCntOrErr;
 
       if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion) {
         // Start the new Decision on the stack.
@@ -814,13 +833,13 @@ struct CountedRegionEmitter {
 
       // Evaluate FalseCount
       // It may have the Counter in Branches, or Zero.
-      if (auto E = evaluateAndCacheCounter(Region.FalseCount))
-        return E;
+      if (auto E = evaluateAndCacheCounter(Region.FalseCount); !E)
+        return E.takeError();
     }
 
     assert((Idx != 0 || DecisionStack.empty()) && "Decision wasn't closed");
 
-    return Error::success();
+    return (FirstCnt ? *FirstCnt : 0);
   }
 
   Error emitCountedRegions() {
@@ -829,8 +848,8 @@ struct CountedRegionEmitter {
     // - Emit MCDCRecords
     for (auto [I, F] : enumerate(Files)) {
       if (!F.IsExpanded)
-        if (auto E = walk(I))
-          return E;
+        if (auto E = walk(I); !E)
+          return E.takeError();
     }
     assert(Visited.size() == Files.size() && "Dangling FileID");
 
@@ -838,6 +857,14 @@ struct CountedRegionEmitter {
     for (const auto &Region : Record.MappingRegions) {
       if (Region.Kind == CounterMappingRegion::MCDCDecisionRegion)
         continue; // Don't emit.
+
+      if (auto EI = ExpansionCounterValues.find(&Region);
+          EI != ExpansionCounterValues.end()) {
+        // Adopt the Counter value induced in the Recorder.
+        Function.pushRegion(Region, EI->second, 0);
+        continue;
+      }
+
       // Adopt values from the CounterValues.
       // FalseCount may be Zero unless Branches.
       Function.pushRegion(Region, CounterValues[Region.Count],
