@@ -25,6 +25,11 @@ template <typename _Tp>
 constexpr typename std::remove_reference<_Tp>::type &&move(_Tp &&__t) {
   return static_cast<typename std::remove_reference<_Tp>::type &&>(__t);
 }
+
+template<typename _Tp>
+_Tp&& forward(typename std::remove_reference<_Tp>::type &t) {
+  return static_cast<_Tp&&>(t);
+}
 } // namespace std
 
 struct ExpensiveToCopyType {
@@ -386,4 +391,23 @@ struct B {
 template <typename T>
 void NegativeCallWithDependentAndNondependentArgs(ExpensiveMovableType a, T b) {
     B::bar(std::move(a), b);
+}
+
+// This function template tries to mimic std::map.try_emplace behavior
+// It uses perfect forwarding to then move the arguments just sometimes
+template <typename T>
+void doNotAlwaysMove(T &&a) {
+  static bool shouldMove = false;
+  if (shouldMove) {
+    T b = std::forward<T>(a);
+  } else {
+    T b = a;
+  }
+  shouldMove = !shouldMove;
+}
+
+void PositiveMoveOnPassAsUniversalReference(ExpensiveMovableType a) {
+  doNotAlwaysMove(a);
+  // CHECK-MESSAGES: [[@LINE-1]]:19: warning: parameter 'a' of type 'ExpensiveMovableType' is passed by value and only copied once; consider moving it to avoid unnecessary copies [performance-unnecessary-value-param]
+  // CHECK-FIXES: doNotAlwaysMove(std::move(a));
 }

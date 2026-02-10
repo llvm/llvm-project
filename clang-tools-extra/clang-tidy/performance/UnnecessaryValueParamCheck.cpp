@@ -95,14 +95,19 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
     if (AllDeclRefExprs.size() == 1) {
       auto CanonicalType = Param->getType().getCanonicalType();
       const auto &DeclRefExpr = **AllDeclRefExprs.begin();
+      auto IsPerfectlyForwardedArg =
+          utils::decl_ref_expr::isPerfectlyForwardedArgument(
+              DeclRefExpr, *Function, *Result.Context);
 
       if (!hasLoopStmtAncestor(DeclRefExpr, *Function, *Result.Context) &&
           ((utils::type_traits::hasNonTrivialMoveConstructor(CanonicalType) &&
-            utils::decl_ref_expr::isCopyConstructorArgument(
-                DeclRefExpr, *Function, *Result.Context)) ||
+            (utils::decl_ref_expr::isCopyConstructorArgument(
+                 DeclRefExpr, *Function, *Result.Context) ||
+             IsPerfectlyForwardedArg)) ||
            (utils::type_traits::hasNonTrivialMoveAssignment(CanonicalType) &&
-            utils::decl_ref_expr::isCopyAssignmentArgument(
-                DeclRefExpr, *Function, *Result.Context)))) {
+            (utils::decl_ref_expr::isCopyAssignmentArgument(
+                 DeclRefExpr, *Function, *Result.Context) ||
+             IsPerfectlyForwardedArg)))) {
         handleMoveFix(*Param, DeclRefExpr, *Result.Context);
         return;
       }

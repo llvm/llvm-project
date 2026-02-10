@@ -61,6 +61,11 @@ bool isCopyConstructorArgument(const DeclRefExpr &DeclRef, const Decl &Decl,
 bool isCopyAssignmentArgument(const DeclRefExpr &DeclRef, const Decl &Decl,
                               ASTContext &Context);
 
+/// Returns ``true`` if ``DeclRefExpr`` is perfectly forwarded to a call
+/// expression within ``Decl``.
+bool isPerfectlyForwardedArgument(const DeclRefExpr &DeclRef, const Decl &Decl,
+                                  ASTContext &Context);
+
 } // namespace clang::tidy::utils::decl_ref_expr
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_DECLREFEXPRUTILS_H

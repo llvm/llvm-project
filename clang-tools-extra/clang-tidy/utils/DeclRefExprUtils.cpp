@@ -12,6 +12,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <algorithm>
 #include <cassert>
 
 namespace clang::tidy::utils::decl_ref_expr {
@@ -413,6 +414,33 @@ bool isCopyAssignmentArgument(const DeclRefExpr &DeclRef, const Decl &Decl,
               .bind("operatorCallExpr"))),
       Decl, Context);
   return !Matches.empty();
+}
+
+bool isPerfectlyForwardedArgument(const DeclRefExpr &DeclRef, const Decl &Decl,
+                                  ASTContext &Context) {
+  auto UsedAsArg = forEachArgumentWithParam(
+      ignoringParenImpCasts(declRefExpr(equalsNode(&DeclRef))),
+      parmVarDecl().bind("param"));
+  auto Matches =
+      match(decl(hasDescendant(invocation(UsedAsArg).bind("invocationExpr"))),
+            Decl, Context);
+  return std::any_of(Matches.begin(), Matches.end(), [](const auto &M) {
+    if (const auto *P = M.template getNodeAs<ParmVarDecl>("param")) {
+      if (P->getType()->isRValueReferenceType())
+        return true;
+      if (const auto *Function = dyn_cast<FunctionDecl>(P->getDeclContext())) {
+        if (const auto *Pattern = Function->getTemplateInstantiationPattern()) {
+          const unsigned Index = P->getFunctionScopeIndex();
+          if (Index < Pattern->getNumParams()) {
+            const ParmVarDecl *PatternParam = Pattern->getParamDecl(Index);
+            if (PatternParam->getType()->isRValueReferenceType())
+              return true;
+          }
+        }
+      }
+    }
+    return false;
+  });
 }
 
 } // namespace clang::tidy::utils::decl_ref_expr
