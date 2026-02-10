@@ -33,6 +33,32 @@ define <vscale x 2 x float> @test_load_mask_is_vp_reverse(<vscale x 2 x float>* 
   ret <vscale x 2 x float> %rev
 }
 
+define <vscale x 2 x float> @test_load_mask_is_vp_reverse_with_mask(<vscale x 2 x float>* %ptr, <vscale x 2 x i1> %mask, <vscale x 2 x i1> %revmask, i32 zeroext %evl) {
+; CHECK-LABEL: test_load_mask_is_vp_reverse_with_mask:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
+; CHECK-NEXT:    vmv.v.i v9, 0
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vid.v v10, v0.t
+; CHECK-NEXT:    vrsub.vx v10, v10, a1, v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vrgatherei16.vv v11, v9, v10, v0.t
+; CHECK-NEXT:    vmsne.vi v0, v11, 0, v0.t
+; CHECK-NEXT:    vle32.v v9, (a0), v0.t
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vid.v v8
+; CHECK-NEXT:    vrsub.vx v10, v8, a1
+; CHECK-NEXT:    vrgather.vv v8, v9, v10
+; CHECK-NEXT:    ret
+  %loadmask = call <vscale x 2 x i1> @llvm.experimental.vp.reverse.nxv2i1(<vscale x 2 x i1> %mask, <vscale x 2 x i1> %revmask, i32 %evl)
+  %load = call <vscale x 2 x float> @llvm.vp.load.nxv2f32.p0nxv2f32(<vscale x 2 x float>* %ptr, <vscale x 2 x i1> %loadmask, i32 %evl)
+  %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse.nxv2f32(<vscale x 2 x float> %load, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 2 x float> %rev
+}
+
 define <vscale x 2 x float> @test_load_mask_not_all_one(<vscale x 2 x float>* %ptr, <vscale x 2 x i1> %notallones, i32 zeroext %evl) {
 ; CHECK-LABEL: test_load_mask_not_all_one:
 ; CHECK:       # %bb.0:
