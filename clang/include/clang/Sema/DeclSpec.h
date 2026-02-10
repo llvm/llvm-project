@@ -131,8 +131,6 @@ namespace clang {
     void ParseLexedAttributes() override;
     void ParseLexedTypeAttributes() override;
 
-    void addDecl(Decl *D) { Decls.push_back(D); }
-
     /// Parse this late-parsed type attribute and store results in OutAttrs.
     /// This method can be called from Sema during type transformation to
     /// parse the cached tokens and produce the final attribute.
