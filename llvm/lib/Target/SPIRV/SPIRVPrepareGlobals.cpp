@@ -121,7 +121,7 @@ bool tryAssignPredicateSpecConstIDs(Module &M, Function *F) {
       ConstantDataArray::getString(M.getContext(), Tmp, false);
 
   new GlobalVariable(M, PredSpecIDStr->getType(), true,
-                     GlobalVariable::LinkageTypes::PrivateLinkage,
+                     GlobalVariable::LinkageTypes::ExternalLinkage,
                      PredSpecIDStr, "llvm.amdgcn.feature.predicate.ids");
 
   return true;
@@ -137,9 +137,9 @@ bool SPIRVPrepareGlobals::runOnModule(Module &M) {
   if (M.getTargetTriple().getVendor() != Triple::AMD)
     return Changed;
 
-  // TODO: Currently the symbol can only be inserted via feature predicate use,
-  //       but in the future this will need revisiting if we start making more
-  //       liberal use of the intrinsic.
+  // TODO: Currently, for AMDGCN flavoured SPIR-V, the symbol can only be
+  //       inserted via feature predicate use, but in the future this will need
+  //       revisiting if we start making more liberal use of the intrinsic.
   if (Function *F = M.getFunction("_Z20__spirv_SpecConstantib"))
     Changed |= tryAssignPredicateSpecConstIDs(M, F);
 
