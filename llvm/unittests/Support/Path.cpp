@@ -32,6 +32,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
+#include "llvm/Support/WindowsError.h"
+#include <fileapi.h>
 #include <windows.h>
 #include <winerror.h>
 #endif
@@ -2485,6 +2487,163 @@ TEST_F(FileSystemTest, widenPath) {
 #endif
 
 #ifdef _WIN32
+/// Checks whether short 8.3 form names are enabled in the given UTF-8 path.
+static llvm::Expected<bool> areShortNamesEnabled(llvm::StringRef Path8) {
+  // Create a directory under Path8 with a name long enough that Windows will
+  // provide a short 8.3 form name, if short 8.3 form names are enabled.
+  SmallString<MAX_PATH> Dir(Path8);
+  path::append(Dir, "verylongdir");
+  if (std::error_code EC = fs::create_directories(Dir))
+    return llvm::errorCodeToError(EC);
+  scope_exit Close([&] { fs::remove_directories(Dir); });
+
+  SmallVector<wchar_t, MAX_PATH> Path16;
+  if (std::error_code EC = sys::windows::widenPath(Dir, Path16))
+    return llvm::errorCodeToError(EC);
+
+  WIN32_FIND_DATAW Data;
+  HANDLE H = ::FindFirstFileW(Path16.data(), &Data);
+  if (H == INVALID_HANDLE_VALUE)
+    return llvm::errorCodeToError(llvm::mapWindowsError(::GetLastError()));
+  ::FindClose(H);
+
+  return (Data.cAlternateFileName[0] != L'\0');
+}
+
+/// Returns the short 8.3 form path for the given UTF-8 path, or an empty string
+/// on failure. Uses Win32 GetShortPathNameW.
+static std::string getShortPathName(llvm::StringRef Path8) {
+  // Convert UTF-8 to UTF-16.
+  SmallVector<wchar_t, MAX_PATH> Path16;
+  if (std::error_code EC = sys::windows::widenPath(Path8, Path16))
+    return {};
+
+  // Get the required buffer size for the short 8.3 form path (includes null
+  // terminator).
+  DWORD Required = ::GetShortPathNameW(Path16.data(), nullptr, 0);
+  if (Required == 0)
+    return {};
+
+  SmallVector<wchar_t, MAX_PATH> ShortPath;
+  ShortPath.resize_for_overwrite(Required);
+
+  DWORD Written =
+      ::GetShortPathNameW(Path16.data(), ShortPath.data(), Required);
+  if (Written == 0 || Written >= Required)
+    return {};
+
+  ShortPath.truncate(Written);
+
+  SmallString<MAX_PATH> Utf8Result;
+  if (std::error_code EC = sys::windows::UTF16ToUTF8(
+          ShortPath.data(), ShortPath.size(), Utf8Result))
+    return {};
+
+  return std::string(Utf8Result);
+}
+
+/// Returns true if the two paths refer to the same file or directory by
+/// comparing their UniqueIDs.
+static bool sameEntity(llvm::StringRef P1, llvm::StringRef P2) {
+  fs::UniqueID ID1, ID2;
+  return !fs::getUniqueID(P1, ID1) && !fs::getUniqueID(P2, ID2) && ID1 == ID2;
+}
+
+/// Removes the Windows long path path prefix (\\?\ or \\?\UNC\) from the given
+/// UTF-8 path, if present.
+static std::string stripPrefix(llvm::StringRef P) {
+  if (P.starts_with(R"(\\?\UNC\)"))
+    return "\\" + P.drop_front(7).str();
+  if (P.starts_with(R"(\\?\)"))
+    return P.drop_front(4).str();
+  return P.str();
+}
+
+TEST_F(FileSystemTest, makeLongFormPath) {
+  auto Enabled = areShortNamesEnabled(TestDirectory.str());
+  ASSERT_TRUE(static_cast<bool>(Enabled))
+      << llvm::toString(Enabled.takeError());
+  if (!*Enabled)
+    GTEST_SKIP() << "Short 8.3 form names not enabled in: " << TestDirectory;
+
+  // Setup: A test directory longer than 8 characters for which a distinct
+  // short 8.3 form name will be created on Windows. Typically, 123456~1.
+  constexpr const char *OneDir = "\\123456789"; // >8 chars
+
+  // Setup: Create a path where even if all components were reduced to short 8.3
+  // form names, the total length would exceed MAX_PATH.
+  SmallString<MAX_PATH * 2> Deep(TestDirectory);
+  const size_t NLevels = (MAX_PATH / 8) + 1;
+  for (size_t I = 0; I < NLevels; ++I)
+    Deep.append(OneDir);
+
+  ASSERT_NO_ERROR(fs::create_directories(Deep));
+
+  // Setup: Create prefixed and non-prefixed short 8.3 form paths from the deep
+  // test path we just created.
+  std::string DeepShortWithPrefix = getShortPathName(Deep);
+  ASSERT_TRUE(StringRef(DeepShortWithPrefix).starts_with(R"(\\?\)"))
+      << "Expected prefixed short 8.3 form path, got: " << DeepShortWithPrefix;
+  std::string DeepShort = stripPrefix(DeepShortWithPrefix);
+
+  // Setup: Create a short 8.3 form path for the first-level directory.
+  SmallString<MAX_PATH> FirstLevel(TestDirectory);
+  FirstLevel.append(OneDir);
+  std::string Short = getShortPathName(FirstLevel);
+  ASSERT_FALSE(Short.empty())
+      << "Expected short 8.3 form path for test directory.";
+
+  // Setup: Create a short 8.3 form path with . and .. components for the
+  // first-level directory.
+  llvm::SmallString<MAX_PATH> WithDots(FirstLevel);
+  llvm::sys::path::append(WithDots, ".", "..", OneDir);
+  std::string DotAndDotDot = getShortPathName(WithDots);
+  ASSERT_FALSE(DotAndDotDot.empty())
+      << "Expected short 8.3 form path for test directory.";
+  auto ContainsDotAndDotDot = [](llvm::StringRef S) {
+    return S.contains("\\.\\") && S.contains("\\..\\");
+  };
+  ASSERT_TRUE(ContainsDotAndDotDot(DotAndDotDot))
+      << "Expected '.' and '..' components in: " << DotAndDotDot;
+
+  // Case 1: Non-existent short 8.3 form path.
+  SmallString<MAX_PATH> NoExist("NotEre~1");
+  ASSERT_FALSE(fs::exists(NoExist));
+  SmallString<MAX_PATH> NoExistResult;
+  EXPECT_TRUE(windows::makeLongFormPath(NoExist, NoExistResult));
+  EXPECT_TRUE(NoExistResult.empty());
+
+  // Case 2: Valid short 8.3 form path.
+  SmallString<MAX_PATH> ShortResult;
+  ASSERT_FALSE(windows::makeLongFormPath(Short, ShortResult));
+  EXPECT_TRUE(sameEntity(Short, ShortResult));
+
+  // Case 3: Valid . and .. short 8.3 form path.
+  SmallString<MAX_PATH> DotAndDotDotResult;
+  ASSERT_FALSE(windows::makeLongFormPath(DotAndDotDot, DotAndDotDotResult));
+  EXPECT_TRUE(sameEntity(DotAndDotDot, DotAndDotDotResult));
+  // Assert that '.' and '..' remain as path components.
+  ASSERT_TRUE(ContainsDotAndDotDot(DotAndDotDotResult));
+
+  // Case 4: Deep short 8.3 form path without \\?\ prefix.
+  SmallString<MAX_PATH> DeepResult;
+  ASSERT_FALSE(windows::makeLongFormPath(DeepShort, DeepResult));
+  EXPECT_TRUE(sameEntity(DeepShort, DeepResult));
+  EXPECT_FALSE(StringRef(DeepResult).starts_with(R"(\\?\)"))
+      << "Expected unprefixed result, got: " << DeepResult;
+
+  // Case 5: Deep short 8.3 form path with \\?\ prefix.
+  SmallString<MAX_PATH> DeepPrefixedResult;
+  ASSERT_FALSE(
+      windows::makeLongFormPath(DeepShortWithPrefix, DeepPrefixedResult));
+  EXPECT_TRUE(sameEntity(DeepShortWithPrefix, DeepPrefixedResult));
+  EXPECT_TRUE(StringRef(DeepPrefixedResult).starts_with(R"(\\?\)"))
+      << "Expected prefixed result, got: " << DeepPrefixedResult;
+
+  // Cleanup.
+  ASSERT_NO_ERROR(fs::remove_directories(TestDirectory.str()));
+}
+
 // Windows refuses lock request if file region is already locked by the same
 // process. POSIX system in this case updates the existing lock.
 TEST_F(FileSystemTest, FileLocker) {
