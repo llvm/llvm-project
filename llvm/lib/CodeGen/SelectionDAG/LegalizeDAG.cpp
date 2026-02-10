@@ -4249,19 +4249,51 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Tmp3 = Node->getOperand(2);
     EVT VT = Tmp2.getValueType();
     if (VT.isVector()) {
-      SmallVector<SDValue> Elements;
-      unsigned NumElements = VT.getVectorNumElements();
-      EVT ScalarVT = VT.getScalarType();
-      for (unsigned Idx = 0; Idx < NumElements; ++Idx) {
-        SDValue IdxVal = DAG.getConstant(Idx, dl, MVT::i64);
-        SDValue TVal =
-            DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ScalarVT, Tmp2, IdxVal);
-        SDValue FVal =
-            DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, ScalarVT, Tmp3, IdxVal);
-        Elements.push_back(
-            DAG.getCTSelect(dl, ScalarVT, Tmp1, TVal, FVal, Node->getFlags()));
+      // Constant-time vector blending using pattern F ^ ((T ^ F) & Mask)
+      // where Mask = broadcast(i1 ? -1 : 0) to match vector element width.
+      //
+      // This formulation uses only XOR and AND operations, avoiding branches
+      // that would leak timing information. It's equivalent to:
+      //   Mask==0xFF: F ^ ((T ^ F) & 0xFF) = F ^ (T ^ F) = T
+      //   Mask==0x00: F ^ ((T ^ F) & 0x00) = F ^ 0 = F
+
+      EVT IntVT = VT;
+      SDValue T = Tmp2; // True value
+      SDValue F = Tmp3; // False value
+
+      // Step 1: Handle floating-point vectors by bitcasting to integer
+      if (VT.isFloatingPoint()) {
+        IntVT = EVT::getVectorVT(
+            *DAG.getContext(),
+            EVT::getIntegerVT(*DAG.getContext(), VT.getScalarSizeInBits()),
+            VT.getVectorElementCount());
+        T = DAG.getNode(ISD::BITCAST, dl, IntVT, T);
+        F = DAG.getNode(ISD::BITCAST, dl, IntVT, F);
       }
-      Tmp1 = DAG.getBuildVector(VT, dl, Elements);
+
+      // Step 2: Broadcast the i1 condition to a vector of i1s
+      // Creates [cond, cond, cond, ...] with i1 elements
+      EVT VecI1Ty = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
+                                     VT.getVectorNumElements());
+      SDValue VecCond = DAG.getSplatBuildVector(VecI1Ty, dl, Tmp1);
+
+      // Step 3: Sign-extend i1 vector to get all-bits mask
+      // true (i1=1) -> 0xFFFFFFFF..., false (i1=0) -> 0x00000000
+      // Sign extension is constant-time: pure arithmetic, no branches
+      SDValue Mask = DAG.getNode(ISD::SIGN_EXTEND, dl, IntVT, VecCond);
+
+      // Step 4: Compute constant-time blend: F ^ ((T ^ F) & Mask)
+      // All operations (XOR, AND) execute in constant time
+      SDValue TXorF = DAG.getNode(ISD::XOR, dl, IntVT, T, F);
+      SDValue MaskedDiff = DAG.getNode(ISD::AND, dl, IntVT, TXorF, Mask);
+      Tmp1 = DAG.getNode(ISD::XOR, dl, IntVT, F, MaskedDiff);
+
+      // Step 5: Bitcast back to original floating-point type if needed
+      if (VT.isFloatingPoint()) {
+        Tmp1 = DAG.getNode(ISD::BITCAST, dl, VT, Tmp1);
+      }
+
+      Tmp1->setFlags(Node->getFlags());
     } else if (VT.isFloatingPoint()) {
       EVT IntegerVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
       Tmp2 = DAG.getBitcast(IntegerVT, Tmp2);

@@ -571,17 +571,9 @@ void DAGTypeLegalizer::SplitRes_Select(SDNode *N, SDValue &Lo, SDValue &Hi) {
 }
 
 void DAGTypeLegalizer::SplitRes_CTSELECT(SDNode *N, SDValue &Lo, SDValue &Hi) {
-  SDValue LL, LH, RL, RH, CL, CH;
-  SDLoc dl(N);
-  GetSplitOp(N->getOperand(1), LL, LH);
-  GetSplitOp(N->getOperand(2), RL, RH);
-
-  SDValue Cond = N->getOperand(0);
-  CL = CH = Cond;
-  assert(!Cond.getValueType().isVector() && "Unsupported vector type");
-
-  Lo = DAG.getNode(N->getOpcode(), dl, LL.getValueType(), CL, LL, RL);
-  Hi = DAG.getNode(N->getOpcode(), dl, LH.getValueType(), CH, LH, RH);
+  // Reuse generic select splitting to support scalar and vector conditions.
+  // SplitRes_Select rebuilds with N->getOpcode(), so CTSELECT is preserved.
+  SplitRes_Select(N, Lo, Hi);
 }
 
 void DAGTypeLegalizer::SplitRes_SELECT_CC(SDNode *N, SDValue &Lo,

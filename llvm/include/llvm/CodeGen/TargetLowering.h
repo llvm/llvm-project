@@ -245,7 +245,7 @@ public:
     ScalarValSelect,     // The target supports scalar selects (ex: cmov).
     ScalarCondVectorVal, // The target supports selects with a scalar condition
                          // and vector values (ex: cmov).
-    VectorMaskSelect,    // The target supports vector selects with a vector
+    VectorMaskSelect     // The target supports vector selects with a vector
                          // mask (ex: x86 blends).
   };
 
