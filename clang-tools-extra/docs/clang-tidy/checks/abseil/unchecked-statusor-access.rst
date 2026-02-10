@@ -110,7 +110,7 @@ Ensuring that the status is ok using googletest macros
 The check is aware of ``googletest`` (or ``gtest``) macros and matchers.
 Accessing the value of a ``StatusOr<T>`` object is considered safe if it
 is preceded by an ``ASSERT_`` macro that ensures the status is ok.
-For example
+For example:
 
 .. code:: cpp
 
