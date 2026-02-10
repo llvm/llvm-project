@@ -85,13 +85,16 @@ xegpu::dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
 // a layout attribute.
 bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
   auto result = rootOp->walk([&](Operation *op) {
+    // Skip scf loop ops (e.g., scf.for, scf.while)
+    if (isa<LoopLikeOpInterface>(op))
+      return WalkResult::advance();
     for (OpOperand &operand : op->getOpOperands()) {
       // Layouts are needed for vector type only.
       if (!isa<VectorType>(operand.get().getType()))
         continue;
       // Skip block arguments since they don't have defining ops to attach
-      // layout attributes to
-      if (isa<BlockArgument>(operand.get()) || isa<LoopLikeOpInterface>(op))
+      // layout attributes to.
+      if (isa<BlockArgument>(operand.get()))
         continue;
       auto layout = xegpu::getDistributeLayoutAttr(operand.get());
       if (!layout) {
