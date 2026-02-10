@@ -204,7 +204,9 @@ class Operation(ir.OpView):
     """
 
     @classmethod
-    def __init_subclass__(cls, *, name: str = None, **kwargs):
+    def __init_subclass__(
+        cls, *, name: str | None = None, traits: list | None = None, **kwargs
+    ):
         """
         This method is to perform all magic to make a `Operation` subclass works like a dataclass, like:
         - generate the method to emit IRDL operations,
@@ -224,6 +226,14 @@ class Operation(ir.OpView):
             fields.append(field)
 
         cls._fields = fields
+
+        traits = traits or []
+
+        for base in cls.__bases__:
+            if hasattr(base, "_traits"):
+                traits.extend(base._traits)
+
+        cls._traits = traits
 
         # for subclasses without "name" parameter,
         # just treat them as normal classes
@@ -408,6 +418,14 @@ class Operation(ir.OpView):
                 setattr(cls, result.name, property(lambda self, i=i: self.results[i]))
 
     @classmethod
+    def _attach_trait(cls) -> None:
+        for trait in cls._traits:
+            trait.attach(cls.OPERATION_NAME)
+
+        if hasattr(cls, "verify_trait") or hasattr(cls, "verify_region_trait"):
+            ir.DynamicOpTrait.attach(cls.OPERATION_NAME, cls)
+
+    @classmethod
     def _emit_operation(cls) -> None:
         ctx = ConstraintLoweringContext()
         operands, attrs, results, regions = partition_fields(cls._fields)
@@ -502,6 +520,7 @@ class Dialect(ir.Dialect):
         _cext.register_dialect(cls)
 
         for op in cls.operations:
+            op._attach_trait()
             _cext.register_operation(cls)(op)
 
         cls._mlir_module = mlir_module
