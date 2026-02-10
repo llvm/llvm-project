@@ -16,6 +16,6 @@ namespace mlir {
 class RewritePatternSet;
 } // namespace mlir
 
-#include "mlir/Reducer/ReductionPatternInterface.h.inc"
+#include "mlir/Reducer/DialectReductionPatternInterface.h.inc"
 
 #endif // MLIR_REDUCER_REDUCTIONPATTERNINTERFACE_H
