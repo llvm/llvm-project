@@ -48,9 +48,6 @@ class VPPredicator {
   /// possibly inserting new recipes at \p Dst (using Builder's insertion point)
   VPValue *createEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst);
 
-  /// Compute the edge masks for all incoming edges to \p VPBB.
-  void createIncomingEdgeMasks(VPBasicBlock *VPBB);
-
   /// Record \p Mask as the *entry* mask of \p VPBB, which is expected to not
   /// already have a mask.
   void setBlockInMask(VPBasicBlock *VPBB, VPValue *Mask) {
@@ -135,18 +132,15 @@ VPValue *VPPredicator::createEdgeMask(VPBasicBlock *Src, VPBasicBlock *Dst) {
   return setEdgeMask(Src, Dst, EdgeMask);
 }
 
-void VPPredicator::createIncomingEdgeMasks(VPBasicBlock *VPBB) {
-  // Start inserting after the block's phis, which be replaced by blends later.
+void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
+  // Compute the edge masks for all incoming edges to VPBB. Insert after the
+  // block's phis, which will be replaced by blends later.
+  // TODO: Skip creating edge masks for blocks that are control-flow equivalent
+  // to header and have no phis.
   Builder.setInsertPoint(VPBB, VPBB->getFirstNonPhi());
   for (auto *Predecessor : SetVector<VPBlockBase *>(
            VPBB->getPredecessors().begin(), VPBB->getPredecessors().end()))
     createEdgeMask(cast<VPBasicBlock>(Predecessor), VPBB);
-}
-
-void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
-  // TODO: Skip creating edge masks for blocks that are control-flow equivalent
-  // to header and have no phis.
-  createIncomingEdgeMasks(VPBB);
 
   // Reuse the mask of header block if VPBB is control-flow equivalent to
   // header.
