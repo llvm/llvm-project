@@ -1222,8 +1222,7 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
       !sec->file->ppc64DisableTLSRelax;
 
   // If we are producing an executable and the symbol is non-preemptable, it
-  // must be defined and the code sequence can be optimized to use
-  // Local-Exesec->
+  // must be defined and the code sequence can be optimized to use Local-Exec.
   //
   // ARM and RISC-V do not support any relaxations for TLS relocations, however,
   // we can omit the DTPMOD dynamic relocations and resolve them at link time
@@ -1236,7 +1235,7 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
   // module index, with a special value of 0 for the current module. GOT[e1] is
   // unused. There only needs to be one module index entry.
   if (oneof<R_TLSLD_GOT, R_TLSLD_GOTPLT, R_TLSLD_PC, R_TLSLD_HINT>(expr)) {
-    // Local-Dynamic relocs can be optimized to Local-Exesec->
+    // Local-Dynamic relocs can be optimized to Local-Exec.
     if (execOptimize) {
       sec->addReloc({ctx.target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE),
                      type, offset, addend, &sym});
@@ -1249,7 +1248,7 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
     return 1;
   }
 
-  // Local-Dynamic relocs can be optimized to Local-Exesec->
+  // Local-Dynamic relocs can be optimized to Local-Exec.
   if (expr == R_DTPREL) {
     if (execOptimize)
       expr = ctx.target->adjustTlsExpr(type, R_RELAX_TLS_LD_TO_LE);
@@ -1259,7 +1258,7 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
 
   // Local-Dynamic sequence where offset of tls variable relative to dynamic
   // thread pointer is stored in the got. This cannot be optimized to
-  // Local-Exesec->
+  // Local-Exec.
   if (expr == R_TLSLD_GOT_OFF) {
     sym.setFlags(NEEDS_GOT_DTPREL);
     sec->addReloc({expr, type, offset, addend, &sym});
@@ -1294,7 +1293,7 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
     //
     // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference a non-preemptible
     // label, so TLSDESC=>IE will be categorized as R_RELAX_TLS_GD_TO_LE. We fix
-    // the categorization in RISCV::relocateAllosec->
+    // the categorization in RISCV::relocateAlloc.
     if (sym.isPreemptible) {
       sym.setFlags(NEEDS_TLSIE);
       sec->addReloc({ctx.target->adjustTlsExpr(type, R_RELAX_TLS_GD_TO_IE),

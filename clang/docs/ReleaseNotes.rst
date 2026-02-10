@@ -43,11 +43,19 @@ C/C++ Language Potentially Breaking Changes
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
+- Clang now more aggressively optimizes away stores to objects after they are
+  dead. This behavior can be disabled with ``-fno-lifetime-dse``.
+
 ABI Changes in This Version
 ---------------------------
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
+
+- The JSON AST dump now includes all fields from ``AvailabilityAttr``: ``platform``,
+  ``introduced``, ``deprecated``, ``obsoleted``, ``unavailable``, ``message``,
+  ``strict``, ``replacement``, ``priority``, and ``environment``. Previously, these
+  fields were missing from the JSON output.
 
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
@@ -214,6 +222,10 @@ Improvements to Clang's diagnostics
     };
 
 - Improved ``-Wassign-enum`` performance by caching enum enumerator values. (#GH176454)
+
+- Fixed a false negative in ``-Warray-bounds`` where the warning was suppressed
+  when accessing a member function on a past-the-end array element.
+  (#GH179128)
 
 Improvements to Clang's time-trace
 ----------------------------------

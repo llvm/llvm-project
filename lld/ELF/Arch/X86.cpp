@@ -173,6 +173,125 @@ void X86::writePlt(uint8_t *buf, const Symbol &sym,
   write32le(buf + 12, ctx.in.plt->getVA() - pltEntryAddr - 16);
 }
 
+template <class ELFT, class RelTy>
+void X86::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  sec.relocations.reserve(rels.size());
+
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    const RelTy &rel = *it;
+    uint32_t symIdx = rel.getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    uint64_t offset = rel.r_offset;
+    RelType type = rel.getType(false);
+    if (sym.isUndefined() && symIdx != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    int64_t addend = rs.getAddend<ELFT>(rel, type);
+    RelExpr expr;
+    switch (type) {
+    case R_386_NONE:
+      continue;
+
+      // Absolute relocations:
+    case R_386_8:
+    case R_386_16:
+    case R_386_32:
+      expr = R_ABS;
+      break;
+
+      // PC-relative relocations:
+    case R_386_PC8:
+    case R_386_PC16:
+    case R_386_PC32:
+      rs.processR_PC(type, offset, addend, sym);
+      continue;
+
+      // PLT-generating relocation:
+    case R_386_PLT32:
+      rs.processR_PLT_PC(type, offset, addend, sym);
+      continue;
+
+      // GOT-related relocations:
+    case R_386_GOTPC:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTPLTONLY_PC;
+      break;
+    case R_386_GOTOFF:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTPLTREL;
+      break;
+    case R_386_GOT32:
+    case R_386_GOT32X:
+      // R_386_GOT32(X) is used for both absolute GOT access (foo@GOT,
+      // non-PIC, G + A => R_GOT) and register-relative GOT access
+      // (foo@GOT(%ebx), PIC, G + A - GOT => R_GOTPLT). Both use the same
+      // relocation type, so we check the ModRM byte to distinguish them.
+      expr =
+          (sec.content().data()[offset - 1] & 0xc7) == 0x5 ? R_GOT : R_GOTPLT;
+      if (expr == R_GOTPLT)
+        ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      break;
+
+      // TLS relocations:
+    case R_386_TLS_LE:
+      if (rs.checkTlsLe(offset, sym, type))
+        continue;
+      expr = R_TPREL;
+      break;
+    case R_386_TLS_LE_32:
+      if (rs.checkTlsLe(offset, sym, type))
+        continue;
+      expr = R_TPREL_NEG;
+      break;
+    case R_386_TLS_IE:
+      rs.handleTlsIe(R_GOT, type, offset, addend, sym);
+      continue;
+    case R_386_TLS_GOTIE:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      rs.handleTlsIe(R_GOTPLT, type, offset, addend, sym);
+      continue;
+    case R_386_TLS_GD:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      // Use R_TPREL_NEG for negative TP offset.
+      if (rs.handleTlsGd(R_TLSGD_GOTPLT, R_GOTPLT, R_TPREL_NEG, type, offset,
+                         addend, sym))
+        ++it;
+      continue;
+    case R_386_TLS_LDM:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      if (rs.handleTlsLd(R_TLSLD_GOTPLT, type, offset, addend, sym))
+        ++it;
+      continue;
+    case R_386_TLS_LDO_32:
+      sec.addReloc(
+          {ctx.arg.shared ? R_DTPREL : R_TPREL, type, offset, addend, &sym});
+      continue;
+    case R_386_TLS_GOTDESC:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      rs.handleTlsDesc(R_TLSDESC_GOTPLT, R_GOTPLT, type, offset, addend, sym);
+      continue;
+    case R_386_TLS_DESC_CALL:
+      // For executables, TLSDESC is optimized to IE or LE. Use R_TPREL as the
+      // rewrites for this relocation are identical.
+      if (!ctx.arg.shared)
+        sec.addReloc({R_TPREL, type, offset, addend, &sym});
+      continue;
+
+    default:
+      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+               << "unknown relocation (" << type.v << ") against symbol "
+               << &sym;
+      continue;
+    }
+    rs.process(expr, type, offset, sym, addend);
+  }
+}
+
+void X86::scanSection(InputSectionBase &sec) {
+  elf::scanSection1<X86, ELF32LE>(*this, sec);
+}
+
 int64_t X86::getImplicitAddend(const uint8_t *buf, RelType type) const {
   switch (type) {
   case R_386_8:
@@ -457,125 +576,6 @@ void X86::relocateAlloc(InputSection &sec, uint8_t *buf) const {
       break;
     }
   }
-}
-
-template <class ELFT, class RelTy>
-void X86::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
-  sec.relocations.reserve(rels.size());
-
-  for (auto it = rels.begin(); it != rels.end(); ++it) {
-    const RelTy &rel = *it;
-    uint32_t symIdx = rel.getSymbol(false);
-    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
-    uint64_t offset = rel.r_offset;
-    RelType type = rel.getType(false);
-    if (sym.isUndefined() && symIdx != 0 &&
-        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
-      continue;
-    int64_t addend = rs.getAddend<ELFT>(rel, type);
-    RelExpr expr;
-    switch (type) {
-    case R_386_NONE:
-      continue;
-
-      // Absolute relocations:
-    case R_386_8:
-    case R_386_16:
-    case R_386_32:
-      expr = R_ABS;
-      break;
-
-      // PC-relative relocations:
-    case R_386_PC8:
-    case R_386_PC16:
-    case R_386_PC32:
-      rs.processR_PC(type, offset, addend, sym);
-      continue;
-
-      // PLT-generating relocation:
-    case R_386_PLT32:
-      rs.processR_PLT_PC(type, offset, addend, sym);
-      continue;
-
-      // GOT-related relocations:
-    case R_386_GOTPC:
-      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
-      expr = R_GOTPLTONLY_PC;
-      break;
-    case R_386_GOTOFF:
-      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
-      expr = R_GOTPLTREL;
-      break;
-    case R_386_GOT32:
-    case R_386_GOT32X:
-      // R_386_GOT32(X) is used for both absolute GOT access (foo@GOT,
-      // non-PIC, G + A => R_GOT) and register-relative GOT access
-      // (foo@GOT(%ebx), PIC, G + A - GOT => R_GOTPLT). Both use the same
-      // relocation type, so we check the ModRM byte to distinguish them.
-      expr =
-          (sec.content().data()[offset - 1] & 0xc7) == 0x5 ? R_GOT : R_GOTPLT;
-      if (expr == R_GOTPLT)
-        ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
-      break;
-
-      // TLS relocations:
-    case R_386_TLS_LE:
-      if (rs.checkTlsLe(offset, sym, type))
-        continue;
-      expr = R_TPREL;
-      break;
-    case R_386_TLS_LE_32:
-      if (rs.checkTlsLe(offset, sym, type))
-        continue;
-      expr = R_TPREL_NEG;
-      break;
-    case R_386_TLS_IE:
-      rs.handleTlsIe(R_GOT, type, offset, addend, sym);
-      continue;
-    case R_386_TLS_GOTIE:
-      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
-      rs.handleTlsIe(R_GOTPLT, type, offset, addend, sym);
-      continue;
-    case R_386_TLS_GD:
-      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
-      // Use R_TPREL_NEG for negative TP offset.
-      if (rs.handleTlsGd(R_TLSGD_GOTPLT, R_GOTPLT, R_TPREL_NEG, type, offset,
-                         addend, sym))
-        ++it;
-      continue;
-    case R_386_TLS_LDM:
-      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
-      if (rs.handleTlsLd(R_TLSLD_GOTPLT, type, offset, addend, sym))
-        ++it;
-      continue;
-    case R_386_TLS_LDO_32:
-      sec.addReloc(
-          {ctx.arg.shared ? R_DTPREL : R_TPREL, type, offset, addend, &sym});
-      continue;
-    case R_386_TLS_GOTDESC:
-      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
-      rs.handleTlsDesc(R_TLSDESC_GOTPLT, R_GOTPLT, type, offset, addend, sym);
-      continue;
-    case R_386_TLS_DESC_CALL:
-      // For executables, TLSDESC is optimized to IE or LE. Use R_TPREL as the
-      // rewrites for this relocation are identical.
-      if (!ctx.arg.shared)
-        sec.addReloc({R_TPREL, type, offset, addend, &sym});
-      continue;
-
-    default:
-      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
-               << "unknown relocation (" << type.v << ") against symbol "
-               << &sym;
-      continue;
-    }
-    rs.process(expr, type, offset, sym, addend);
-  }
-}
-
-void X86::scanSection(InputSectionBase &sec) {
-  elf::scanSection1<X86, ELF32LE>(*this, sec);
 }
 
 // If Intel Indirect Branch Tracking is enabled, we have to emit special PLT

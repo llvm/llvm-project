@@ -1217,7 +1217,11 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
       return false;
     if (!this->visit(RHS))
       return false;
-    return this->emitMulc(ElemT, E);
+    if (!this->emitMulc(ElemT, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopPtr(E);
+    return true;
   }
 
   if (Op == BO_Div && RHSIsComplex) {
@@ -1254,7 +1258,11 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
 
     if (!this->visit(RHS))
       return false;
-    return this->emitDivc(ElemT, E);
+    if (!this->emitDivc(ElemT, E))
+      return false;
+    if (DiscardResult)
+      return this->emitPopPtr(E);
+    return true;
   }
 
   // Evaluate LHS and save value to LHSOffset.
@@ -5212,10 +5220,8 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
   if (!this->emitCallBI(E, BuiltinID, E))
     return false;
 
-  if (DiscardResult && !ReturnType->isVoidType()) {
-    assert(ReturnT);
-    return this->emitPop(*ReturnT, E);
-  }
+  if (DiscardResult && !ReturnType->isVoidType())
+    return this->emitPop(ReturnT.value_or(PT_Ptr), E);
 
   return true;
 }
@@ -6036,7 +6042,9 @@ bool Compiler<Emitter>::visitBreakStmt(const BreakStmt *S) {
     }
   }
 
-  assert(TargetLabel);
+  // Faulty break statement (e.g. label redefined or named loops disabled).
+  if (!TargetLabel)
+    return false;
 
   for (VariableScope<Emitter> *C = this->VarScope; C != BreakScope;
        C = C->getParent()) {
@@ -6859,6 +6867,8 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
     if (E->getType()->isMemberPointerType()) {
       // C++11 [expr.unary.op]p3 has very strict rules on how the address of a
       // member can be formed.
+      if (DiscardResult)
+        return true;
       return this->emitGetMemberPtr(cast<DeclRefExpr>(SubExpr)->getDecl(), E);
     }
     // We should already have a pointer when we get here.

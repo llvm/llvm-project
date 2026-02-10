@@ -470,7 +470,6 @@ Transforms/ScalarizeMaskedMemIntrin/X86/expand-masked-gather.ll
 Transforms/ScalarizeMaskedMemIntrin/X86/expand-masked-load.ll
 Transforms/ScalarizeMaskedMemIntrin/X86/expand-masked-scatter.ll
 Transforms/ScalarizeMaskedMemIntrin/X86/expand-masked-store.ll
-Transforms/PreISelIntrinsicLowering/cond-loop.ll
 Transforms/Scalarizer/basic-inseltpoison.ll
 Transforms/Scalarizer/basic.ll
 Transforms/Scalarizer/min-bits.ll

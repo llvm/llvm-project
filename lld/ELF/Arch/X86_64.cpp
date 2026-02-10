@@ -47,7 +47,7 @@ public:
   void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
   bool adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                         uint8_t stOther) const override;
-  bool deleteFallThruJmpInsn(InputSection &is, InputFile *file,
+  bool deleteFallThruJmpInsn(InputSection &is,
                              InputSection *nextIS) const override;
   bool relaxOnce(int pass) const override;
   void applyBranchToBranchOpt() const override;
@@ -178,8 +178,8 @@ static bool isRelocationForJmpInsn(Relocation &R) {
 // next section.
 // TODO: Delete this once psABI reserves a new relocation type for fall thru
 // jumps.
-static bool isFallThruRelocation(InputSection &is, InputFile *file,
-                                 InputSection *nextIS, Relocation &r) {
+static bool isFallThruRelocation(InputSection &is, InputSection *nextIS,
+                                 Relocation &r) {
   if (!isRelocationForJmpInsn(r))
     return false;
 
@@ -240,7 +240,7 @@ static JmpInsnOpcode invertJmpOpcode(const JmpInsnOpcode opcode) {
 //   10: je bar  #jne flipped to je and the jmp is deleted.
 // aa.BB.foo:
 //   ...
-bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
+bool X86_64::deleteFallThruJmpInsn(InputSection &is,
                                    InputSection *nextIS) const {
   const unsigned sizeOfDirectJmpInsn = 5;
 
@@ -264,7 +264,7 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   if (*(secContents + r.offset - 1) != 0xe9)
     return false;
 
-  if (isFallThruRelocation(is, file, nextIS, r)) {
+  if (isFallThruRelocation(is, nextIS, r)) {
     // This is a fall thru and can be deleted.
     r.expr = R_NONE;
     r.offset = 0;
@@ -291,7 +291,7 @@ bool X86_64::deleteFallThruJmpInsn(InputSection &is, InputFile *file,
   if (jmpOpcodeB == J_UNKNOWN)
     return false;
 
-  if (!isFallThruRelocation(is, file, nextIS, rB))
+  if (!isFallThruRelocation(is, nextIS, rB))
     return false;
 
   // jmpCC jumps to the fall thru block, the branch can be flipped and the
@@ -446,6 +446,138 @@ RelType X86_64::getDynRel(RelType type) const {
       type == R_X86_64_SIZE64)
     return type;
   return R_X86_64_NONE;
+}
+
+template <class ELFT, class RelTy>
+void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  sec.relocations.reserve(rels.size());
+
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    const RelTy &rel = *it;
+    uint32_t symIdx = rel.getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    uint64_t offset = rel.r_offset;
+    RelType type = rel.getType(false);
+    if (sym.isUndefined() && symIdx != 0 &&
+        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
+      continue;
+    int64_t addend = rs.getAddend<ELFT>(rel, type);
+    RelExpr expr;
+    switch (type) {
+    case R_X86_64_NONE:
+      continue;
+
+      // Absolute relocations:
+    case R_X86_64_8:
+    case R_X86_64_16:
+    case R_X86_64_32:
+    case R_X86_64_32S:
+    case R_X86_64_64:
+      expr = R_ABS;
+      break;
+
+      // PC-relative relocations:
+    case R_X86_64_PC8:
+    case R_X86_64_PC16:
+    case R_X86_64_PC32:
+    case R_X86_64_PC64:
+      rs.processR_PC(type, offset, addend, sym);
+      continue;
+
+      // GOT-generating relocations:
+    case R_X86_64_GOTPC32:
+    case R_X86_64_GOTPC64:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTPLTONLY_PC;
+      break;
+    case R_X86_64_GOTOFF64:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTPLTREL;
+      break;
+    case R_X86_64_GOT32:
+    case R_X86_64_GOT64:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_GOTPLT;
+      break;
+    case R_X86_64_PLTOFF64:
+      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
+      expr = R_PLT_GOTPLT;
+      break;
+    case R_X86_64_GOTPCREL:
+    case R_X86_64_GOTPCRELX:
+    case R_X86_64_REX_GOTPCRELX:
+    case R_X86_64_CODE_4_GOTPCRELX:
+      expr = R_GOT_PC;
+      break;
+
+      // PLT-generating relocation:
+    case R_X86_64_PLT32:
+      rs.processR_PLT_PC(type, offset, addend, sym);
+      continue;
+
+      // TLS relocations:
+    case R_X86_64_TPOFF32:
+    case R_X86_64_TPOFF64:
+      if (rs.checkTlsLe(offset, sym, type))
+        continue;
+      expr = R_TPREL;
+      break;
+    case R_X86_64_GOTTPOFF:
+    case R_X86_64_CODE_4_GOTTPOFF:
+    case R_X86_64_CODE_6_GOTTPOFF:
+      rs.handleTlsIe(R_GOT_PC, type, offset, addend, sym);
+      continue;
+    case R_X86_64_TLSGD:
+      if (rs.handleTlsGd(R_TLSGD_PC, R_GOT_PC, R_TPREL, type, offset, addend,
+                         sym))
+        ++it;
+      continue;
+    case R_X86_64_TLSLD:
+      if (rs.handleTlsLd(R_TLSLD_PC, type, offset, addend, sym))
+        ++it;
+      continue;
+    case R_X86_64_DTPOFF32:
+    case R_X86_64_DTPOFF64:
+      sec.addReloc(
+          {ctx.arg.shared ? R_DTPREL : R_TPREL, type, offset, addend, &sym});
+      continue;
+    case R_X86_64_TLSDESC_CALL:
+      // For executables, TLSDESC is optimized to IE or LE. Use R_TPREL as the
+      // rewrites for this relocation are identical.
+      if (!ctx.arg.shared)
+        sec.addReloc({R_TPREL, type, offset, addend, &sym});
+      continue;
+    case R_X86_64_GOTPC32_TLSDESC:
+    case R_X86_64_CODE_4_GOTPC32_TLSDESC:
+      rs.handleTlsDesc(R_TLSDESC_PC, R_GOT_PC, type, offset, addend, sym);
+      continue;
+
+      // Misc relocations:
+    case R_X86_64_SIZE32:
+    case R_X86_64_SIZE64:
+      expr = R_SIZE;
+      break;
+
+    default:
+      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+               << "unknown relocation (" << type.v << ") against symbol "
+               << &sym;
+      continue;
+    }
+    rs.process(expr, type, offset, sym, addend);
+  }
+
+  if (ctx.arg.branchToBranch)
+    llvm::stable_sort(sec.relocs(),
+                      [](auto &l, auto &r) { return l.offset < r.offset; });
+}
+
+void X86_64::scanSection(InputSectionBase &sec) {
+  if (ctx.arg.is64)
+    elf::scanSection1<X86_64, ELF64LE>(*this, sec);
+  else // ilp32
+    elf::scanSection1<X86_64, ELF32LE>(*this, sec);
 }
 
 void X86_64::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
@@ -1362,138 +1494,6 @@ void RetpolineZNow::writePlt(uint8_t *buf, const Symbol &sym,
 
   write32le(buf + 3, sym.getGotPltVA(ctx) - pltEntryAddr - 7);
   write32le(buf + 8, ctx.in.plt->getVA() - pltEntryAddr - 12);
-}
-
-template <class ELFT, class RelTy>
-void X86_64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
-  sec.relocations.reserve(rels.size());
-
-  for (auto it = rels.begin(); it != rels.end(); ++it) {
-    const RelTy &rel = *it;
-    uint32_t symIdx = rel.getSymbol(false);
-    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
-    uint64_t offset = rel.r_offset;
-    RelType type = rel.getType(false);
-    if (sym.isUndefined() && symIdx != 0 &&
-        rs.maybeReportUndefined(cast<Undefined>(sym), offset))
-      continue;
-    int64_t addend = rs.getAddend<ELFT>(rel, type);
-    RelExpr expr;
-    switch (type) {
-    case R_X86_64_NONE:
-      continue;
-
-      // Absolute relocations:
-    case R_X86_64_8:
-    case R_X86_64_16:
-    case R_X86_64_32:
-    case R_X86_64_32S:
-    case R_X86_64_64:
-      expr = R_ABS;
-      break;
-
-      // PC-relative relocations:
-    case R_X86_64_PC8:
-    case R_X86_64_PC16:
-    case R_X86_64_PC32:
-    case R_X86_64_PC64:
-      rs.processR_PC(type, offset, addend, sym);
-      continue;
-
-      // GOT-generating relocations:
-    case R_X86_64_GOTPC32:
-    case R_X86_64_GOTPC64:
-      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
-      expr = R_GOTPLTONLY_PC;
-      break;
-    case R_X86_64_GOTOFF64:
-      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
-      expr = R_GOTPLTREL;
-      break;
-    case R_X86_64_GOT32:
-    case R_X86_64_GOT64:
-      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
-      expr = R_GOTPLT;
-      break;
-    case R_X86_64_PLTOFF64:
-      ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
-      expr = R_PLT_GOTPLT;
-      break;
-    case R_X86_64_GOTPCREL:
-    case R_X86_64_GOTPCRELX:
-    case R_X86_64_REX_GOTPCRELX:
-    case R_X86_64_CODE_4_GOTPCRELX:
-      expr = R_GOT_PC;
-      break;
-
-      // PLT-generating relocation:
-    case R_X86_64_PLT32:
-      rs.processR_PLT_PC(type, offset, addend, sym);
-      continue;
-
-      // TLS relocations:
-    case R_X86_64_TPOFF32:
-    case R_X86_64_TPOFF64:
-      if (rs.checkTlsLe(offset, sym, type))
-        continue;
-      expr = R_TPREL;
-      break;
-    case R_X86_64_GOTTPOFF:
-    case R_X86_64_CODE_4_GOTTPOFF:
-    case R_X86_64_CODE_6_GOTTPOFF:
-      rs.handleTlsIe(R_GOT_PC, type, offset, addend, sym);
-      continue;
-    case R_X86_64_TLSGD:
-      if (rs.handleTlsGd(R_TLSGD_PC, R_GOT_PC, R_TPREL, type, offset, addend,
-                         sym))
-        ++it;
-      continue;
-    case R_X86_64_TLSLD:
-      if (rs.handleTlsLd(R_TLSLD_PC, type, offset, addend, sym))
-        ++it;
-      continue;
-    case R_X86_64_DTPOFF32:
-    case R_X86_64_DTPOFF64:
-      sec.addReloc(
-          {ctx.arg.shared ? R_DTPREL : R_TPREL, type, offset, addend, &sym});
-      continue;
-    case R_X86_64_TLSDESC_CALL:
-      // For executables, TLSDESC is optimized to IE or LE. Use R_TPREL as the
-      // rewrites for this relocation are identical.
-      if (!ctx.arg.shared)
-        sec.addReloc({R_TPREL, type, offset, addend, &sym});
-      continue;
-    case R_X86_64_GOTPC32_TLSDESC:
-    case R_X86_64_CODE_4_GOTPC32_TLSDESC:
-      rs.handleTlsDesc(R_TLSDESC_PC, R_GOT_PC, type, offset, addend, sym);
-      continue;
-
-      // Misc relocations:
-    case R_X86_64_SIZE32:
-    case R_X86_64_SIZE64:
-      expr = R_SIZE;
-      break;
-
-    default:
-      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
-               << "unknown relocation (" << type.v << ") against symbol "
-               << &sym;
-      continue;
-    }
-    rs.process(expr, type, offset, sym, addend);
-  }
-
-  if (ctx.arg.branchToBranch)
-    llvm::stable_sort(sec.relocs(),
-                      [](auto &l, auto &r) { return l.offset < r.offset; });
-}
-
-void X86_64::scanSection(InputSectionBase &sec) {
-  if (ctx.arg.is64)
-    elf::scanSection1<X86_64, ELF64LE>(*this, sec);
-  else // ilp32
-    elf::scanSection1<X86_64, ELF32LE>(*this, sec);
 }
 
 void elf::setX86_64TargetInfo(Ctx &ctx) {
