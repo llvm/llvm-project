@@ -843,7 +843,7 @@ void SystemZAsmPrinter::LowerSTACKMAP(const MachineInstr &MI) {
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
   OutStreamer->emitLabel(MILabel);
-  
+
   SM.recordStackMap(*MILabel, MI);
   assert(NumNOPBytes % 2 == 0 && "Invalid number of NOP bytes requested!");
 
@@ -1925,6 +1925,9 @@ void SystemZAsmPrinter::emitFunctionEntryLabel() {
         OutStreamer->AddComment("  Bit 2: 0 = Does not use alloca");
     }
     OutStreamer->emitInt32(DSAAndFlags);
+
+    getTargetStreamer()->emitADA(CurrentFnSym,
+                                 getObjFileLowering().getADASection());
   }
 
   AsmPrinter::emitFunctionEntryLabel();

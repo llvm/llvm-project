@@ -55,10 +55,9 @@ void MCGOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   }
 }
 
-void MCGOFFStreamer::emitLabel(MCSymbol *Sym, SMLoc Loc) {
+void MCGOFFStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   MCSectionGOFF *Section =
       static_cast<MCSectionGOFF *>(getCurrentSectionOnly());
-  MCSymbolGOFF *Symbol = static_cast<MCSymbolGOFF *>(Sym);
   if (Section->isPR()) {
     if (Section->getBeginSymbol() == nullptr)
       Section->setBeginSymbol(Symbol);
@@ -66,9 +65,6 @@ void MCGOFFStreamer::emitLabel(MCSymbol *Sym, SMLoc Loc) {
       getContext().reportError(
           Loc, "only one symbol can be defined in a PR section.");
   }
-  if (Section->getBeginSymbol() && Symbol->getCodeData() == GOFF::ESD_EXE_CODE)
-    Symbol->setADA(
-        static_cast<MCSymbolGOFF *>(Section->getBeginSymbol())->getADA());
   MCObjectStreamer::emitLabel(Symbol, Loc);
 }
 
