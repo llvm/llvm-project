@@ -307,14 +307,12 @@ bool PyGlobals::TracebackLoc::isUserTracebackFilename(
     return os.str();
   };
   if (rebuildUserTracebackIncludeRegex) {
-    userTracebackIncludeRegex.assign(
-        joinWithPipe(userTracebackIncludeFiles));
+    userTracebackIncludeRegex.assign(joinWithPipe(userTracebackIncludeFiles));
     rebuildUserTracebackIncludeRegex = false;
     isUserTracebackFilenameCache.clear();
   }
   if (rebuildUserTracebackExcludeRegex) {
-    userTracebackExcludeRegex.assign(
-        joinWithPipe(userTracebackExcludeFiles));
+    userTracebackExcludeRegex.assign(joinWithPipe(userTracebackExcludeFiles));
     rebuildUserTracebackExcludeRegex = false;
     isUserTracebackFilenameCache.clear();
   }
