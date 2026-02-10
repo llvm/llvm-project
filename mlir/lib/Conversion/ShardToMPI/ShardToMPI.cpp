@@ -694,9 +694,9 @@ struct ConvertAllGatherOp : public CommOpPattern<AllGatherOp> {
       // dim0, ...} to {nRanks*dim0, ...}.
       SmallVector<ReassociationIndices> reassociation;
       reassociation.push_back({0, 1});
-      for (int64_t i = 2; i < (int64_t)gatherShape.size(); ++i) {
+      int64_t numGatherDims = gatherShape.size();
+      for (int64_t i = 2; i < numGatherDims; ++i)
         reassociation.push_back({i});
-      }
       finalOutput = memref::CollapseShapeOp::create(ib, outType, finalOutput,
                                                     reassociation);
 
