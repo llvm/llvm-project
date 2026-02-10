@@ -460,3 +460,12 @@ namespace Discard {
   }
   static_assert(test_side_effect() == 1);
 }
+
+namespace MemcpyOp {
+  const double x = 0.;
+
+  void foo() {
+    _Complex double z;
+    z = *(_Complex double *)&x;
+  };
+}
