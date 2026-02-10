@@ -6122,6 +6122,8 @@ def CIR_EhLongjmpOp : CIR_Op<"eh.longjmp"> {
   let assemblyFormat = [{
       $env `:` qualified(type($env)) attr-dict
   }];
+
+//===----------------------------------------------------------------------===//
 // Flattened EH Operations: EhInitiateOp
 //===----------------------------------------------------------------------===//
 
