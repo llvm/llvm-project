@@ -2937,13 +2937,31 @@ SDValue DAGTypeLegalizer::PromoteIntOp_PATCHPOINT(SDNode *N, unsigned OpNo) {
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
+/// Check if the target has set Promote action for the given register operation
+/// and type. Unlike isOperationLegalOrPromote, this works for illegal types.
+static bool hasPromoteActionForRegisterOp(const TargetLowering &TLI,
+                                           unsigned Opcode, EVT VT) {
+  return VT.isSimple() &&
+         TLI.getOperationAction(Opcode, VT.getSimpleVT()) ==
+             TargetLowering::Promote;
+}
+
 SDValue DAGTypeLegalizer::PromoteIntOp_WRITE_REGISTER(SDNode *N,
                                                       unsigned OpNo) {
-  const Function &Fn = DAG.getMachineFunction().getFunction();
-  Fn.getContext().diagnose(DiagnosticInfoLegalizationFailure(
-      "cannot use llvm.write_register with illegal type", Fn,
-      N->getDebugLoc()));
-  return N->getOperand(0);
+  assert(OpNo == 2 && "Unexpected operand number");
+  EVT VT = N->getOperand(2).getValueType();
+
+  if (!hasPromoteActionForRegisterOp(TLI, ISD::WRITE_REGISTER, VT)) {
+    const Function &Fn = DAG.getMachineFunction().getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoLegalizationFailure(
+        "cannot use llvm.write_register with illegal type", Fn,
+        N->getDebugLoc()));
+    return N->getOperand(0);
+  }
+
+  SDValue Val = GetPromotedInteger(N->getOperand(2));
+  SmallVector<SDValue, 3> Ops = {N->getOperand(0), N->getOperand(1), Val};
+  return SDValue(DAG.UpdateNodeOperands(N, Ops), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_VP_STRIDED(SDNode *N, unsigned OpNo) {
@@ -6385,13 +6403,25 @@ SDValue DAGTypeLegalizer::PromoteIntRes_PATCHPOINT(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::PromoteIntRes_READ_REGISTER(SDNode *N) {
-  const Function &Fn = DAG.getMachineFunction().getFunction();
-  Fn.getContext().diagnose(DiagnosticInfoLegalizationFailure(
-      "cannot use llvm.read_register with illegal type", Fn, N->getDebugLoc()));
+  EVT VT = N->getValueType(0);
 
-  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
-  return DAG.getPOISON(NVT);
+  if (!hasPromoteActionForRegisterOp(TLI, ISD::READ_REGISTER, VT)) {
+    const Function &Fn = DAG.getMachineFunction().getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoLegalizationFailure(
+        "cannot use llvm.read_register with illegal type", Fn,
+        N->getDebugLoc()));
+    EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+    ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
+    return DAG.getPOISON(NVT);
+  }
+
+  SDLoc dl(N);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  SDValue Res = DAG.getNode(ISD::READ_REGISTER, dl,
+                             DAG.getVTList(NVT, MVT::Other),
+                             N->getOperand(0), N->getOperand(1));
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  return Res;
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_EXTRACT_VECTOR_ELT(SDNode *N) {

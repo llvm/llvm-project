@@ -688,6 +688,13 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setOperationAction(ISD::INTRINSIC_VOID, MVT::i32, Custom);
   setOperationAction(ISD::INTRINSIC_VOID, MVT::Other, Custom);
 
+  // Legalize i8 for read/write global named registers.
+  setOperationAction(ISD::WRITE_REGISTER, MVT::i8, Promote);
+  setOperationAction(ISD::READ_REGISTER, MVT::i8, Promote);
+  MVT PromoteToVT = Subtarget.isPPC64() ? MVT::i64 : MVT::i32;
+  AddPromotedToType(ISD::WRITE_REGISTER, MVT::i8, PromoteToVT);
+  AddPromotedToType(ISD::READ_REGISTER, MVT::i8, PromoteToVT);
+
   // Comparisons that require checking two conditions.
   if (Subtarget.hasSPE()) {
     setCondCodeAction(ISD::SETO, MVT::f32, Expand);
