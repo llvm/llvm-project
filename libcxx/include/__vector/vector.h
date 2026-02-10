@@ -592,6 +592,11 @@ private:
   //  Postcondition:  capacity() >= __n
   //  Postcondition:  size() == 0
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __vallocate(size_type __n) {
+    _LIBCPP_ASSERT_INTERNAL(__layout_.begin() == nullptr, "vector::__vallocate can only be called on a vector that hasn't allocated memory. This vector either already owns a buffer, or a deallocation function didn't reset the layout's begin pointer.");
+    _LIBCPP_ASSERT_INTERNAL(__layout_.empty(), "vector::__vallocate can only be called on a vector that hasn't allocated memory. This vector either already owns a buffer, or a deallocation function didn't reset the layout's size.");
+    _LIBCPP_ASSERT_INTERNAL(capacity() == 0, "vector::__vallocate can only be called on a vector that hasn't allocated memory. This vector either already owns a buffer, or a deallocation function didn't reset the layout's capacity.");
+    _LIBCPP_ASSERT_INTERNAL(__n > 0, "vector::__vallocate cannot allocate 0 bytes");
+
     if (__n > max_size())
       this->__throw_length_error();
     auto __allocation = std::__allocate_at_least(this->__layout_.__alloc(), __n);
