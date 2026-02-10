@@ -221,7 +221,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       // Phi node's operands may not have been visited at this point. We create
       // an empty VPInstruction that we will fix once the whole plain CFG has
       // been built.
-      NewR = VPIRBuilder.createScalarPhi({}, Phi->getDebugLoc(), "vec.phi");
+      NewR =
+          VPIRBuilder.createScalarPhi({}, Phi->getDebugLoc(), "vec.phi", *Phi);
       NewR->setUnderlyingValue(Phi);
       if (isHeaderBB(Phi->getParent(), LI->getLoopFor(Phi->getParent()))) {
         // Header phis need to be fixed after the VPBB for the latch has been
@@ -1356,11 +1357,34 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
                      PhiR->getRecurrenceKind()))
       continue;
 
-    // Find the condition for the select.
+    // Find the condition for the select/blend.
     auto *SelectR = cast<VPSingleDefRecipe>(&PhiR->getBackedgeRecipe());
     VPValue *Cond = nullptr, *Op1 = nullptr, *Op2 = nullptr;
+
+    // If we're matching a blend rather than a select, there should be one
+    // incoming value which is the data, then all other incoming values should
+    // be the phi.
+    auto MatchBlend = [&](VPRecipeBase *R) {
+      auto *Blend = dyn_cast<VPBlendRecipe>(R);
+      if (!Blend)
+        return false;
+      assert(!Blend->isNormalized() && "must run before blend normalizaion");
+      unsigned NumIncomingDataValues = 0;
+      for (unsigned I = 0; I < Blend->getNumIncomingValues(); ++I) {
+        VPValue *Incoming = Blend->getIncomingValue(I);
+        if (Incoming != PhiR) {
+          ++NumIncomingDataValues;
+          Cond = Blend->getMask(I);
+          Op1 = Incoming;
+          Op2 = PhiR;
+        }
+      }
+      return NumIncomingDataValues == 1;
+    };
+
     if (!match(SelectR,
-               m_Select(m_VPValue(Cond), m_VPValue(Op1), m_VPValue(Op2))))
+               m_Select(m_VPValue(Cond), m_VPValue(Op1), m_VPValue(Op2))) &&
+        !MatchBlend(SelectR))
       return false;
 
     // Add mask phi.
