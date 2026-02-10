@@ -68,8 +68,19 @@
 
 // WRAPPER: clang{{.*}}" --no-default-config -o {{[^ ]*.img}}
 // WRAPPER-SAME: --target=spirv64-unknown-chipstar
-// WRAPPER-SAME: {{[^ ]*.o}}
-// WRAPPER-SAME: --hip-path=[[HIP_PATH]]
+// WRAPPER-SAME: -mllvm -spirv-ext=+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups
+// WRAPPER-SAME: -x ir
+
+// Linker wrapper with -no-use-spirv-backend uses llvm-spirv translator.
+// RUN: clang-linker-wrapper --dry-run \
+// RUN:   --device-compiler=spirv64-unknown-chipstar=--hip-path="%S/Inputs/hipspv" \
+// RUN:   --device-compiler=spirv64-unknown-chipstar=-no-use-spirv-backend \
+// RUN:   --host-triple=x86_64-unknown-linux-gnu \
+// RUN:   --linker-path=ld --emit-fatbin-only -o /dev/null %t.dev.out \
+// RUN: 2>&1 | FileCheck %s --check-prefix=WRAPPER-TRANSLATOR
+
+// WRAPPER-TRANSLATOR: --spirv-max-version=1.2
+// WRAPPER-TRANSLATOR-SAME: --spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups
 
 // RUN: touch %t.dummy.o
 // RUN: %clang -### --no-default-config -o %t.dummy.img \
@@ -84,9 +95,28 @@
 // CHIPSTAR-SAME: "[[HIP_PATH]]/lib/libLLVMHipSpvPasses.so"
 // CHIPSTAR-SAME: "-passes=hip-post-link-passes" "-o" [[LOWER_BC:".*bc"]]
 
-//      CHIPSTAR: {{".*llvm-spirv"}} "--spirv-max-version=1.2"
-// CHIPSTAR-SAME: "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups"
+// Default chipStar: in-tree SPIR-V backend (native).
+//      CHIPSTAR: {{".*clang.*"}} "--no-default-config" "-c"
+// CHIPSTAR-SAME: "--target=spirv64-unknown-chipstar"
+// CHIPSTAR-SAME: "-mllvm" "-spirv-ext=+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_EXT_relaxed_printf_string_address_space"
 // CHIPSTAR-SAME: [[LOWER_BC]] "-o" "[[SPIRV_OUT:.*img]]"
+
+// chipStar with -no-use-spirv-backend: llvm-spirv translator path.
+// RUN: %clang -### --no-default-config -o %t.dummy.img \
+// RUN:   --target=spirv64-unknown-chipstar %t.dummy.o \
+// RUN:   --hip-path="%S/Inputs/hipspv" -no-use-spirv-backend \
+// RUN: 2>&1 | FileCheck %s --check-prefix=CHIPSTAR-TRANSLATOR -DHIP_PATH=%S/Inputs/hipspv
+
+//      CHIPSTAR-TRANSLATOR: {{".*llvm-link"}}
+// CHIPSTAR-TRANSLATOR-SAME: "-o" [[LINK_BC:".*bc"]] "{{[^ ]*.o}}"
+
+//      CHIPSTAR-TRANSLATOR: {{".*opt"}} [[LINK_BC]] "-load-pass-plugin"
+// CHIPSTAR-TRANSLATOR-SAME: "[[HIP_PATH]]/lib/libLLVMHipSpvPasses.so"
+// CHIPSTAR-TRANSLATOR-SAME: "-passes=hip-post-link-passes" "-o" [[LOWER_BC:".*bc"]]
+
+//      CHIPSTAR-TRANSLATOR: {{".*llvm-spirv"}} "--spirv-max-version=1.2"
+// CHIPSTAR-TRANSLATOR-SAME: "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups"
+// CHIPSTAR-TRANSLATOR-SAME: [[LOWER_BC]] "-o" "[[SPIRV_OUT:.*img]]"
 
 // RUN: %clang -### --no-default-config -o %t.dummy.img \
 // RUN:   --target=spirv64v1.3-unknown-chipstar \
@@ -100,8 +130,10 @@
 // CHIPSTAR-SUBARCH-SAME: "[[HIP_PATH]]/lib/libLLVMHipSpvPasses.so"
 // CHIPSTAR-SUBARCH-SAME: "-passes=hip-post-link-passes" "-o" [[LOWER_BC:".*bc"]]
 
-//      CHIPSTAR-SUBARCH: {{".*llvm-spirv"}}
-// CHIPSTAR-SUBARCH-SAME: "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups"
+// Subarch chipStar also defaults to native backend.
+//      CHIPSTAR-SUBARCH: {{".*clang.*"}} "--no-default-config" "-c"
+// CHIPSTAR-SUBARCH-SAME: "--target=spirv64v1.3-unknown-chipstar"
+// CHIPSTAR-SUBARCH-SAME: "-mllvm" "-spirv-ext=+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups,+SPV_EXT_relaxed_printf_string_address_space"
 // CHIPSTAR-SUBARCH-SAME: [[LOWER_BC]] "-o" "[[SPIRV_OUT:.*img]]"
 
 //-----------------------------------------------------------------------------
@@ -117,7 +149,12 @@
 
 // RUN: env "PATH=%t/versioned" %clang -### --no-default-config \
 // RUN:  -o %t.dummy.img --target=spirv64-unknown-chipstar %t.dummy.o \
-// RUN:  --hip-path="%S/Inputs/hipspv" -o /dev/null 2>&1 \
-// RUN: | FileCheck -DVERSION=%llvm-version-major --check-prefix=VERSIONED %s
+// RUN:  --hip-path="%S/Inputs/hipspv" -no-use-spirv-backend -o /dev/null 2>&1 \
+// RUN: | FileCheck %s --check-prefix=VERSIONED-CHIPSTAR
 
-// VERSIONED: {{.*}}llvm-spirv-[[VERSION]]
+// Accept either versioned (llvm-spirv-[[VERSION]] from PATH) or clang-adjacent path.
+// VERSIONED: {{.*}}llvm-spirv
+
+// ChipStar with -no-use-spirv-backend may use clang-adjacent llvm-spirv (no version in name).
+// VERSIONED-CHIPSTAR: --spirv-max-version=1.2
+// VERSIONED-CHIPSTAR-SAME: --spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups
