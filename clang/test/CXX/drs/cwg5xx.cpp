@@ -475,10 +475,9 @@ namespace cwg535 { // cwg535: 3.1
 // cwg538: na
 
 namespace cwg539 { // cwg539: 3.4
-const f(
-// expected-error@-1 {{a type specifier is required for all declarations}}
-    const a) {
-    // expected-error@-1 {{unknown type name 'a'}}
+const f(const a) {
+// expected-error@-1 {{unknown type name 'a'}}
+// expected-error@-2 {{a type specifier is required for all declarations}}
   const b;
   // expected-error@-1 {{a type specifier is required for all declarations}}
   new const;
@@ -512,8 +511,14 @@ const f(
   { for (const n // #cwg539-for
   // since-cxx11-error@-1 {{unknown type name 'n'}}
          : arr) ; {} }
-         // since-cxx11-error@-1 +{{}}
-         //   since-cxx11-note@#cwg539-for {{}}
+         // since-cxx11-error-re@-1 {{{{.*}}}}
+         // since-cxx11-error-re@-2 {{{{.*}}}}
+         // since-cxx11-error-re@-3 {{{{.*}}}}
+         // since-cxx11-error-re@-4 {{{{.*}}}}
+         // since-cxx11-error-re@-5 {{{{.*}}}}
+         // since-cxx11-error-re@-6 {{{{.*}}}}
+         //   since-cxx11-note-re@#cwg539-for {{{{.*}}}}
+         // since-cxx11-error-re@-8 {{{{.*}}}}
   (void) [](const) {};
   // since-cxx11-error@-1 {{a type specifier is required for all declarations}}
   (void) [](const n) {};
@@ -537,9 +542,9 @@ namespace cwg540 { // cwg540: 2.7
   typedef const a &c; // #cwg540-typedef-a-c
   // expected-warning@-1 {{'const' qualifier on reference type 'a' (aka 'int &') has no effect}}
   typedef const b &c; // #cwg540-typedef-b-c
+  // expected-warning@#cwg540-typedef-b-c {{'const' qualifier on reference type 'b' (aka 'const int &') has no effect}}
   // expected-error@#cwg540-typedef-b-c {{typedef redefinition with different types ('const int &' vs 'int &')}}
   //   expected-note@#cwg540-typedef-a-c {{previous definition is here}}
-  // expected-warning@#cwg540-typedef-b-c {{'const' qualifier on reference type 'b' (aka 'const int &') has no effect}}
 } // namespace cwg540
 
 namespace cwg541 { // cwg541: 2.7
@@ -1150,12 +1155,12 @@ namespace cwg588 { // cwg588: 2.7
     int a = s.f();
     int b = s.n;
     // expected-error@-1 {{member 'n' found in multiple base classes of different types}}
-    //   expected-note@#cwg588-k {{in instantiation of function template specialization 'cwg588::f<cwg588::B>' requested here}}
+    //   expected-note@#cwg588-inst {{in instantiation of function template specialization 'cwg588::f<cwg588::B>' requested here}}
     //   expected-note@#cwg588-A {{member found by ambiguous name lookup}}
     //   expected-note@#cwg588-B {{member found by ambiguous name lookup}}
   }
   struct B { int n; }; // #cwg588-B
-  int k = f<B>(); // #cwg588-k
+  template int f<B>(); // #cwg588-inst
 } // namespace cwg588
 
 namespace cwg589 { // cwg589: 2.7

@@ -125,4 +125,99 @@ exit:
   ret i16 %red.next
 }
 
+; Test that we don't form a partial reduction when the extend is used by both
+; the reduction chain and by a non-multiply binary operation (shift) whose
+; result is subtracted from the reduction.
+define i64 @no_partial_reduce_for_extend_used_by_shl(ptr %src) #0 {
+; CHECK-LABEL: define i64 @no_partial_reduce_for_extend_used_by_shl(
+; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <4 x i32> [[BROADCAST_SPLAT]] to <4 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[TMP1]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP3:%.*]] = shl <4 x i64> [[TMP1]], splat (i64 2)
+; CHECK-NEXT:    [[TMP4]] = sub <4 x i64> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], 80
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP4]])
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i64 [[TMP9]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %accum = phi i64 [ 0, %entry ], [ %sub, %loop ]
+  %ld = load i32, ptr %src, align 4
+  %ext = sext i32 %ld to i64
+  %add = add i64 %ext, %accum
+  %shl = shl i64 %ext, 2
+  %sub = sub i64 %add, %shl
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp ult i32 %iv, 79
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i64 %sub
+}
+
+; Same as above but with 'and' instead of 'shl' - any non-multiply binary op
+; using the extend should prevent partial reduction formation.
+define i64 @no_partial_reduce_for_extend_used_by_and(ptr %src) {
+; CHECK-LABEL: define i64 @no_partial_reduce_for_extend_used_by_and(
+; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = sext <4 x i32> [[BROADCAST_SPLAT]] to <4 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[TMP1]], [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i64> [[TMP1]], splat (i64 255)
+; CHECK-NEXT:    [[TMP4]] = sub <4 x i64> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 80
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> [[TMP4]])
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i64 [[TMP6]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %accum = phi i64 [ 0, %entry ], [ %sub, %loop ]
+  %ld = load i32, ptr %src, align 4
+  %ext = sext i32 %ld to i64
+  %add = add i64 %ext, %accum
+  %and = and i64 %ext, 255
+  %sub = sub i64 %add, %and
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp ult i32 %iv, 79
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i64 %sub
+}
+
 attributes #0 = { "target-cpu"="grace" }

@@ -484,7 +484,7 @@ namespace cwg33 { // cwg33: 9
 
   template<typename T> void t(X::S);
   template<typename T, typename U = void> void u(X::S);
-  // expected-error@-1 0-1 {{default template arguments for a function template are a C++11 extension}}
+  // cxx98-error@-1 {{default template arguments for a function template are a C++11 extension}}
   void templ() { f(t<int>); f(u<int>); }
 
   // Even though v<int> cannot select the first overload, ADL considers it
@@ -1042,16 +1042,16 @@ namespace cwg62 { // cwg62: 2.9
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
   NoNameForLinkagePtr p1 = get<NoNameForLinkagePtr>();
   // cxx98-error@-1 {{template argument uses unnamed type}}
+  //   cxx98-note@-2 {{while substituting explicitly-specified template arguments into function template 'get'}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
-  //   cxx98-note@-3 {{while substituting explicitly-specified template arguments}}
   NoNameForLinkagePtr p2 = get<const NoNameForLinkagePtr>();
   // cxx98-error@-1 {{template argument uses unnamed type}}
+  //   cxx98-note@-2 {{while substituting explicitly-specified template arguments into function template 'get'}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
-  //   cxx98-note@-3 {{while substituting explicitly-specified template arguments}}
   int n1 = take(noNameForLinkagePtr);
   // cxx98-error@-1 {{template argument uses unnamed type}}
+  //   cxx98-note@-2 {{while substituting deduced template arguments into function template 'take' [with T = NoNameForLinkagePtr]}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
-  //   cxx98-note@-3 {{while substituting deduced template arguments}}
 
   X<Danger> x4;
 
@@ -1378,9 +1378,10 @@ namespace cwg92 { // cwg92: 4 c++17
   // considered in this context. In C++17, we *do* perform an implicit
   // conversion (which performs initialization), and the exception specification
   // is part of the type of the parameter, so this is invalid.
-  template<void() throw()> struct X {}; // since-cxx17-note {{template parameter is declared here}}
+  template<void() throw()> struct X {}; // #cwg92-X
   X<&f> xp;
   // since-cxx17-error@-1 {{value of type 'void (*)() throw(int, float)' is not implicitly convertible to 'void (*)() throw()'}}
+  //   since-cxx17-note@#cwg92-X {{template parameter is declared here}}
 
   template<void() throw(int)> struct Y {};
   // since-cxx17-error@-1 {{ISO C++17 does not allow dynamic exception specifications}}
@@ -1440,33 +1441,7 @@ namespace cwg97 { // cwg97: 2.7
   };
 } // namespace cwg97
 
-namespace cwg98 { // cwg98: 2.7
-  void test(int n) {
-    switch (n) {
-      try { // #cwg98-try
-        case 0:
-        // expected-error@-1 {{cannot jump from switch statement to this case label}}
-        //   expected-note@#cwg98-try {{jump bypasses initialization of try block}}
-        x:
-          throw n;
-      } catch (...) { // #cwg98-catch
-        case 1:
-        // expected-error@-1 {{cannot jump from switch statement to this case label}}
-        //   expected-note@#cwg98-catch {{jump bypasses initialization of catch block}}
-        y:
-          throw n;
-      }
-      case 2:
-        goto x;
-        // expected-error@-1 {{cannot jump from this goto statement to its label}}
-        //   expected-note@#cwg98-try {{jump bypasses initialization of try block}}
-      case 3:
-        goto y;
-        // expected-error@-1 {{cannot jump from this goto statement to its label}}
-        //   expected-note@#cwg98-catch {{jump bypasses initialization of catch block}}
-    }
-  }
-} // namespace cwg98
+// cwg98 is in cwg98.cpp
 
 namespace cwg99 { // cwg99: sup 214
   template<typename T> void f(T&);

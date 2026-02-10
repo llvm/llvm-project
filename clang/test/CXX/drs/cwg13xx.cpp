@@ -79,47 +79,40 @@ namespace cwg1310 { // cwg1310: 5
     W<int>::W<int> w1b;
     // expected-error@-1 {{qualified reference to 'W' is a constructor name rather than a template name in this context}}
     W<int>::W<int>::X w1bx;
+#if __cplusplus >= 201103L
     typename W<int>::W w2a;
-    // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a type in this context, despite preceding 'typename' keyword}}
-    // cxx98-error@-2 {{'typename' outside of a template is a C++11 extension}}
+    // since-cxx11-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a type in this context, despite preceding 'typename' keyword}}
     typename W<int>::W::X w2ax;
-    // cxx98-error@-1 {{'typename' outside of a template is a C++11 extension}}
     typename W<int>::W<int> w2b;
-    // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'typename' keyword}}
-    // cxx98-error@-2 {{'typename' outside of a template is a C++11 extension}}
+    // since-cxx11-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'typename' keyword}}
     typename W<int>::W<int>::X w2bx;
-    // cxx98-error@-1 {{'typename' outside of a template is a C++11 extension}}
     W<int>::template W<int> w3;
-    // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'template' keyword}}
-    // cxx98-error@-2 {{'template' keyword outside of a template}}
+    // since-cxx11-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'template' keyword}}
     W<int>::template W<int>::X w3x;
-    // cxx98-error@-1 {{'template' keyword outside of a template}}
     typename W<int>::template W<int> w4;
-    // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'template' keyword}}
-    // cxx98-error@-2 {{'template' keyword outside of a template}}
-    // cxx98-error@-3 {{'typename' outside of a template is a C++11 extension}}
+    // since-cxx11-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'template' keyword}}
     typename W<int>::template W<int>::X w4x;
-    // cxx98-error@-1 {{'template' keyword outside of a template}}
-    // cxx98-error@-2 {{'typename' outside of a template is a C++11 extension}}
+#endif
 
     TT<W<int>::W> tt1;
     // expected-error@-1 {{qualified reference to 'W' is a constructor name rather than a type in this context}}
     TTy<W<int>::W> tt1a;
     // expected-error@-1 {{qualified reference to 'W' is a constructor name rather than a type in this context}}
-    TT<W<int>::template W> tt2;
-    // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'template' keyword}}
-    // cxx98-error@-2 {{'template' keyword outside of a template}}
     TT<W<int>::WBase> tt3;
     TTy<W<int>::WBase> tt3a;
+#if __cplusplus >= 201103L
+    TT<W<int>::template W> tt2;
+    // since-cxx11-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'template' keyword}}
     TT<W<int>::template WBase> tt4;
-    // cxx98-error@-1 {{'template' keyword outside of a template}}
+#endif
 
     W<int> w;
     (void)w.W::W::n;
     (void)w.W<int>::W::n;
     (void)w.W<int>::W<int>::n;
+#if __cplusplus >= 201103L
     (void)w.W<int>::template W<int>::n;
-    // cxx98-error@-1 {{'template' keyword outside of a template}}
+#endif
   }
 
   template<typename W>
@@ -260,19 +253,18 @@ namespace cwg1330 { // cwg1330: 4 c++11
   static_assert(!noexcept(B<Q>().g()), "");
 #endif
 
+#if __cplusplus <= 201402L
   template<typename T> int f() throw(typename T::error) { return 0; } // #cwg1330-f
-  // expected-error@#cwg1330-f {{type 'int' cannot be used prior to '::' because it has no members}}
+  // cxx98-14-error@#cwg1330-f {{type 'int' cannot be used prior to '::' because it has no members}}
   //   cxx98-note@#cwg1330-f-int {{in instantiation of function template specialization 'cwg1330::f<int>' requested here}}
-  //   since-cxx11-note@#cwg1330-f-int {{in instantiation of exception specification for 'f<int>' requested here}}
+  //   cxx11-14-note@#cwg1330-f-int {{in instantiation of exception specification for 'f<int>' requested here}}
+  // cxx11-14-error@#cwg1330-f {{type 'char' cannot be used prior to '::' because it has no members}}
+  //   cxx11-14-note@#cwg1330-f-char {{in instantiation of exception specification for 'f<char>' requested here}}
+  // cxx11-14-error@#cwg1330-f {{type 'float' cannot be used prior to '::' because it has no members}}
+  //   cxx11-14-note@#cwg1330-f-float {{in instantiation of exception specification for 'f<float>' requested here}}
   // cxx98-14-error@#cwg1330-f {{type 'short' cannot be used prior to '::' because it has no members}}
-  //   cxx98-14-note@#cwg1330-f-short {{in instantiation of function template specialization 'cwg1330::f<short>' requested here}}
   //   cxx11-14-note@#cwg1330-f {{in instantiation of exception specification for 'f<short>' requested here}}
-  // since-cxx11-error@#cwg1330-f {{type 'char' cannot be used prior to '::' because it has no members}}
-  //   since-cxx11-note@#cwg1330-f-char {{in instantiation of exception specification for 'f<char>' requested here}}
-  // since-cxx11-error@#cwg1330-f {{type 'float' cannot be used prior to '::' because it has no members}}
-  //   since-cxx11-note@#cwg1330-f-float {{in instantiation of exception specification for 'f<float>' requested here}}
-  // since-cxx17-error@#cwg1330-f {{ISO C++17 does not allow dynamic exception specifications}}
-  //   since-cxx17-note@#cwg1330-f {{use 'noexcept(false)' instead}}
+  //   cxx98-14-note@#cwg1330-f-short {{in instantiation of function template specialization 'cwg1330::f<short>' requested here}}
 
   // An exception-specification is needed even if the function is only used in
   // an unevaluated operand.
@@ -282,9 +274,7 @@ namespace cwg1330 { // cwg1330: 4 c++11
   bool f3 = noexcept(f<float>()); /// #cwg1330-f-float
 #endif
   template int f<short>(); // #cwg1330-f-short
-  // since-cxx17-error@#cwg1330-f {{type 'short' cannot be used prior to '::' because it has no members}}
-  //   since-cxx17-note@#cwg1330-f {{in instantiation of exception specification for 'f<short>' requested here}}
-  //   since-cxx17-note@#cwg1330-f-short {{in instantiation of function template specialization 'cwg1330::f<short>' requested here}}
+#endif
 
   template<typename T> struct C {
     C() throw(typename T::type); // #cwg1330-C
@@ -358,22 +348,17 @@ namespace cwg1346 { // cwg1346: 3.5
   }
   template void f(); // #cwg1346-f
 
-#if __cplusplus >= 201103L
+#if __cplusplus >= 201402L
   void init_capture() {
     [a(1)] {} ();
-    // cxx11-error@-1 {{initialized lambda captures are a C++14 extension}}
     [b(1, 2)] {} ();
-    // cxx11-error@-1 {{initialized lambda captures are a C++14 extension}}
-    // since-cxx11-error@-2 {{initializer for lambda capture 'b' contains multiple expressions}}
+    // since-cxx14-error@-1 {{initializer for lambda capture 'b' contains multiple expressions}}
     [c({})] {} ();
-    // cxx11-error@-1 {{initialized lambda captures are a C++14 extension}}
-    // since-cxx11-error@-2 {{cannot deduce type for lambda capture 'c' from parenthesized initializer list}}
+    // since-cxx14-error@-1 {{cannot deduce type for lambda capture 'c' from parenthesized initializer list}}
     [d({1})] {} ();
-    // cxx11-error@-1 {{initialized lambda captures are a C++14 extension}}
-    // since-cxx11-error@-2 {{cannot deduce type for lambda capture 'd' from parenthesized initializer list}}
+    // since-cxx14-error@-1 {{cannot deduce type for lambda capture 'd' from parenthesized initializer list}}
     [e({1, 2})] {} ();
-    // cxx11-error@-1 {{initialized lambda captures are a C++14 extension}}
-    // since-cxx11-error@-2 {{cannot deduce type for lambda capture 'e' from parenthesized initializer list}}
+    // since-cxx14-error@-1 {{cannot deduce type for lambda capture 'e' from parenthesized initializer list}}
   }
 #endif
 } // namespace cwg1346
