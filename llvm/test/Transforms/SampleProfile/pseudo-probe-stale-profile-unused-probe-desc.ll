@@ -74,3 +74,4 @@ attributes #0 = { nounwind uwtable "target-cpu"="x86-64" "target-features"="+cmo
 !23 = !DILocation(line: 12, column: 3, scope: !15)
 !24 = !DILocation(line: 13, column: 3, scope: !15)
 !25 = !DILocation(line: 15, column: 1, scope: !15)
+!26 = distinct !DISubprogram(name: "foo_hot", scope: !1, file: !1, line: 5, type: !9, scopeLine: 5, flags: DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
