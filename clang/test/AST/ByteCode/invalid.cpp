@@ -164,3 +164,18 @@ namespace NamedLoops {
     } while (0);
   }
 }
+
+constexpr int invalidUnaryOrTypeTrait() {
+  return __builtin_vectorelements * 10; // both-error {{indirection requires pointer operand}}
+}
+
+static_assert(invalidUnaryOrTypeTrait() == 11, ""); // both-error {{not an integral constant expression}}
+
+constexpr int invalidUnaryOrTypeTrait2() {
+  return alignof * 10; // both-error {{indirection requires pointer operand}} \
+                       // both-warning {{'alignof' applied to an expression is a GNU extension}}
+}
+
+/// Pointer::toRValue() of a function type.
+void foo() { *(void (*)()) ""; } // both-warning {{expression result unused}}
+
