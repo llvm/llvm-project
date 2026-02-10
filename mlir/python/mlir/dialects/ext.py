@@ -418,7 +418,7 @@ class Operation(ir.OpView):
                 setattr(cls, result.name, property(lambda self, i=i: self.results[i]))
 
     @classmethod
-    def _attach_trait(cls) -> None:
+    def _attach_traits(cls) -> None:
         for trait in cls._traits:
             trait.attach(cls.OPERATION_NAME)
 
@@ -520,7 +520,7 @@ class Dialect(ir.Dialect):
         _cext.register_dialect(cls)
 
         for op in cls.operations:
-            op._attach_trait()
+            op._attach_traits()
             _cext.register_operation(cls)(op)
 
         cls._mlir_module = mlir_module
