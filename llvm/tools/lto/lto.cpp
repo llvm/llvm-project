@@ -589,7 +589,9 @@ thinlto_code_gen_t thinlto_create_codegen(void) {
       report_fatal_error(Twine("Unable to get status of thinLTO cache path or "
                                "path is not a directory: ") +
                          Err.message());
-    CodeGen->setCacheDir(ThinLTOCacheDir);
+    auto E = CodeGen->setCacheDir(ThinLTOCacheDir);
+    if (E)
+      report_fatal_error(std::move(E));
 
     CodeGen->setCachePruningInterval(ThinLTOCachePruningInterval);
     CodeGen->setCacheEntryExpiration(ThinLTOCacheEntryExpiration);
