@@ -13,6 +13,7 @@ define i32 @cls(i32 %t) {
 ;
 ; CHECKV8-LABEL: cls:
 ; CHECKV8:       @ %bb.0:
+; CHECKV8-NEXT:    push {r7, lr}
 ; CHECKV8-NEXT:    asrs r1, r0, #31
 ; CHECKV8-NEXT:    eors r1, r0
 ; CHECKV8-NEXT:    lsls r0, r1, #1
@@ -79,7 +80,7 @@ define i32 @cls64(i64 %t) {
 ; CHECKV8-NEXT:    push {r4, lr}
 ; CHECKV8-NEXT:    movs r4, r0
 ; CHECKV8-NEXT:    cmp r1, #0
-; CHECKV8-NEXT:    beq .LBB1_2
+; CHECKV8-NEXT:    bpl .LBB1_2
 ; CHECKV8-NEXT:  @ %bb.1:
 ; CHECKV8-NEXT:    mvns r4, r4
 ; CHECKV8-NEXT:  .LBB1_2:
