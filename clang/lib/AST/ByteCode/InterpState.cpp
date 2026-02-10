@@ -51,6 +51,14 @@ bool InterpState::inConstantContext() const {
 }
 
 InterpState::~InterpState() {
+  // Invoke the dtor func of the allocated exception object block.
+  if (ThrownValue) {
+    Block *B = ThrownValue->B;
+    if (B && B->isInitialized())
+      B->invokeDtor();
+    ThrownValue = nullptr;
+  }
+
   while (Current && !Current->isBottomFrame()) {
     InterpFrame *Next = Current->Caller;
     delete Current;

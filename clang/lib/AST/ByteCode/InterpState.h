@@ -15,6 +15,7 @@
 
 #include "Context.h"
 #include "DynamicAllocator.h"
+#include "Exceptions.h"
 #include "Floating.h"
 #include "Function.h"
 #include "InterpFrame.h"
@@ -198,8 +199,10 @@ public:
   const bool InfiniteSteps = false;
   /// ID identifying this evaluation.
   const unsigned EvalID;
+  unsigned ThrowTrapStackSize = 0;
 
   EvaluationKind EvalKind = EvaluationKind::None;
+  std::unique_ptr<ThrowValue> ThrownValue;
 
   /// Things needed to do speculative execution.
   SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;

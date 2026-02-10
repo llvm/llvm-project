@@ -102,6 +102,16 @@ public:
 };
 static_assert(sizeof(OptPrimType) == sizeof(PrimType));
 
+inline OptPrimType getSwappedBytes(OptPrimType T) { return T; }
+
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, OptPrimType T) {
+  if (!T)
+    OS << "None";
+  else
+    OS << static_cast<int>(*T);
+  return OS;
+}
+
 enum class CastKind : uint8_t {
   Reinterpret,
   ReinterpretLike,
