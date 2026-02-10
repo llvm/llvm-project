@@ -476,7 +476,7 @@ def TargetMips32 : TargetArch<["mips", "mipsel"]>;
 def TargetAnyMips : TargetArch<["mips", "mipsel", "mips64", "mips64el"]>;
 def TargetMSP430 : TargetArch<["msp430"]>;
 def TargetM68k : TargetArch<["m68k"]>;
-def TargetRISCV : TargetArch<["riscv32", "riscv64"]>;
+def TargetRISCV : TargetArch<["riscv32", "riscv64", "riscv32be", "riscv64be"]>;
 def TargetX86 : TargetArch<["x86"]>;
 def TargetX86_64 : TargetArch<["x86_64"]>;
 def TargetAnyX86 : TargetArch<["x86", "x86_64"]>;
@@ -5102,12 +5102,22 @@ def HLSLROV : TypeAttr {
 def HLSLResourceClass : TypeAttr {
   let Spellings = [CXX11<"hlsl", "resource_class">];
   let LangOpts = [HLSL];
-  let Args = [
-	EnumArgument<"ResourceClass", "llvm::hlsl::ResourceClass",
-				 /*is_string=*/true, ["SRV", "UAV", "CBuffer", "Sampler"],
-				 ["SRV", "UAV", "CBuffer", "Sampler"],
-				 /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>
-  ];
+  let Args = [EnumArgument<
+      "ResourceClass", "llvm::hlsl::ResourceClass",
+      /*is_string=*/true, ["SRV", "UAV", "CBuffer", "Sampler"],
+      ["SRV", "UAV", "CBuffer", "Sampler"],
+      /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLResourceDimension : TypeAttr {
+  let Spellings = [CXX11<"hlsl", "dimension">];
+  let LangOpts = [HLSL];
+  let Args = [EnumArgument<
+      "Dimension", "llvm::hlsl::ResourceDimension",
+      /*is_string=*/true, ["Unknown", "1D", "2D", "3D", "Cube"],
+      ["Unknown", "Dim1D", "Dim2D", "Dim3D", "Cube"],
+      /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
   let Documentation = [InternalOnly];
 }
 
