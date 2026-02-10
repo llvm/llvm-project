@@ -95,6 +95,7 @@ void X86CodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) const {
   // Only add this pass for 32-bit x86 Windows.
   const Triple &TT = TM.getTargetTriple();
   if (TT.isOSWindows() && TT.isX86_32()) {
+    flushFPMsToMPM(PMW);
     addModulePass(X86WinEHStatePass(), PMW);
   }
 }
