@@ -345,7 +345,8 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
   auto WasNewlyAllocatedForCurrentRegion = [&]() {
     if (!StateInfo)
       return false;
-    bool WasNewlyAllocated = StateInfo->wasNewlyAllocated(HstPtrBegin);
+    bool WasNewlyAllocated =
+        StateInfo->wasNewlyAllocated(HstPtrBegin).has_value();
     if (WasNewlyAllocated)
       ODBG(ODT_Mapping) << "HstPtrBegin " << HstPtrBegin
                         << " was newly allocated for the current region";

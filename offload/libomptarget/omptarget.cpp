@@ -672,7 +672,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                << ").";
       return OFFLOAD_FAIL;
     } else if (TgtPtrBegin && HasPresentModifier &&
-               StateInfo->wasNewlyAllocated(HstPtrBegin)) {
+               StateInfo->wasNewlyAllocated(HstPtrBegin).has_value()) {
       // For "PRESENT" entries, we may have cases like the following:
       //   int *xp = &x[0];
       //   map(alloc: x[:]) map(present, alloc: xp[1])
@@ -860,11 +860,11 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
 
     // Lambda to check if a pointer was newly allocated
     auto WasNewlyAllocated = [&](void *Ptr, const char *PtrName) {
-      bool IsNewlyAllocated = StateInfo.wasNewlyAllocated(Ptr);
+      bool WasNewlyAllocated = StateInfo.wasNewlyAllocated(Ptr).has_value();
       ODBG(ODT_Mapping) << "Attach " << PtrName << " " << Ptr
                         << " was newly allocated: "
-                        << (IsNewlyAllocated ? "yes" : "no");
-      return IsNewlyAllocated;
+                        << (WasNewlyAllocated ? "yes" : "no");
+      return WasNewlyAllocated;
     };
 
     // Only process ATTACH if either the pointee or the pointer was newly
@@ -1173,18 +1173,21 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     if (!TPR.isPresent())
       continue;
 
-    // Track force-deleted pointers so we can use this information if we
-    // encounter FROM entries for the same pointer later on.
-    if (ForceDelete && TPR.Flags.IsLast) {
+    // Track entries whose ref-count went to zero (IsLast=true) so that we
+    // can honor any subsequently encountered FROM entries that fall within
+    // their range.
+    if (TPR.Flags.IsLast) {
       // For assumed-size arrays like map(delete: p[:]), the compiler provides
       // no size information, so we need to get the actual allocated extent from
       // the HDTT entry.
-      int64_t AllocatedSize =
+      void *ReleasedHstPtrBegin =
+          reinterpret_cast<void *>(TPR.getEntry()->HstPtrBegin);
+      int64_t ReleasedSize =
           TPR.getEntry()->HstPtrEnd - TPR.getEntry()->HstPtrBegin;
-      ODBG(ODT_Mapping) << "Marking HstPtr=" << HstPtrBegin
-                        << " for deletion with allocated size="
-                        << AllocatedSize;
-      StateInfo->DeleteEntries[HstPtrBegin] = AllocatedSize;
+      ODBG(ODT_Mapping) << "Tracking released entry: HstPtr="
+                        << ReleasedHstPtrBegin << ", Size=" << ReleasedSize
+                        << ", ForceDelete=" << ForceDelete;
+      StateInfo->ReleasedEntries[ReleasedHstPtrBegin] = ReleasedSize;
     }
 
     // Move data back to the host
@@ -1194,6 +1197,28 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     // Lambda to perform the actual FROM data retrieval from device to host
     auto PerformFromRetrieval = [&](void *HstPtr, void *TgtPtr, int64_t Size,
                                     HostDataToTargetTy *Entry) -> int {
+      // Check if this FROM transfer can be skipped.
+      //
+      // This is an optimization that may help in rare cases when we have
+      // multiple overlapping FROM entries. e.g.
+      //
+      // ... map(always, from: x) map(always, from: x)
+      // ... map(delete: x) map(from: x) map(from: x)
+      //
+      // If we think the overhead makes it not worh it, we can remove it.
+      if (auto TransferredEntry = StateInfo->wasTransferredFrom(HstPtr, Size)) {
+        void *TransferredPtr = TransferredEntry->first;
+        int64_t TransferredSize = TransferredEntry->second;
+        ODBG(ODT_Mapping) << "FROM entry HstPtr=" << HstPtr << " size=" << Size
+                          << " already transferred within [" << TransferredPtr
+                          << ", "
+                          << static_cast<void *>(
+                                 static_cast<char *>(TransferredPtr) +
+                                 TransferredSize)
+                          << ")";
+        return OFFLOAD_SUCCESS;
+      }
+
       ODBG(ODT_Mapping) << "Moving " << Size << " bytes (tgt:" << TgtPtr
                         << ") -> (hst:" << HstPtr << ")";
       TIMESCOPE_WITH_DETAILS_AND_IDENT(
@@ -1222,13 +1247,14 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
           return OFFLOAD_FAIL;
       }
 
+      // Track this transfer to avoid duplicate transfers later on.
+      StateInfo->addTransferredFromEntry(HstPtr, Size);
+
       return OFFLOAD_SUCCESS;
     };
 
-    // Lambda to check if this pointer was previously marked for deletion.
-    // Such a pointer would have had "IsLast" set to true when its DELETE entry
-    // was processed. So, the flag wouldn't be set for any FROM entries seen
-    // later on.
+    // Lambda to check if this pointer was previously released.
+    //
     // This is needed to handle cases like the following:
     //   p1 = p2 = &x;
     //   ... map(delete: p1[:]) map(from: p2[0:1])
@@ -1240,51 +1266,35 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     // the always-modifier or delete-modifier is specified, and if the map
     // type is from, the original list item is updated as if the list item
     // appeared in a from clause on a target_update directive.
-    auto WasPreviouslyMarkedForDeletion = [&]() -> bool {
-      // Check if this pointer falls within the range of any deleted entry
-      for (const auto &DeleteEntry : StateInfo->DeleteEntries) {
-        void *DeletePtr = DeleteEntry.first;
-        int64_t DeleteSize = DeleteEntry.second;
-        if (HstPtrBegin >= DeletePtr &&
-            HstPtrBegin < static_cast<void *>(static_cast<char *>(DeletePtr) +
-                                              DeleteSize)) {
-          ODBG(ODT_Mapping)
-              << "Pointer HstPtr=" << HstPtrBegin
-              << " falls within a range previously marked for deletion ["
-              << DeletePtr << ", "
-              << static_cast<char *>(DeletePtr) + DeleteSize
-              << ") with size=" << DeleteSize;
-          return true;
-        }
-      }
-      return false;
+    auto WasPreviouslyReleased = [&]() -> bool {
+      auto ReleasedEntry = StateInfo->wasPreviouslyReleased(HstPtrBegin);
+      if (!ReleasedEntry)
+        return false;
+
+      void *ReleasedPtr = ReleasedEntry->first;
+      int64_t ReleasedSize = ReleasedEntry->second;
+      ODBG(ODT_Mapping) << "Pointer HstPtr=" << HstPtrBegin
+                        << " falls within a range previously released ["
+                        << ReleasedPtr << ", "
+                        << static_cast<void *>(
+                               static_cast<char *>(ReleasedPtr) + ReleasedSize)
+                        << ") with size=" << ReleasedSize;
+      return true;
     };
 
-    bool FromCopyBackAlreadyDone =
-        StateInfo->TransferredFromPtrs.contains(HstPtrBegin);
     bool IsMapFromOnNonHostNonZeroData =
         HasFrom && !TPR.Flags.IsHostPointer && DataSize != 0;
-    auto IsLastOrHasAlwaysOrWasForceDeleted = [&]() {
-      return TPR.Flags.IsLast || HasAlways || WasPreviouslyMarkedForDeletion();
+
+    auto IsLastOrHasAlwaysOrWasReleased = [&]() {
+      return TPR.Flags.IsLast || HasAlways || WasPreviouslyReleased();
     };
 
-    if (!FromCopyBackAlreadyDone && (IsMapFromOnNonHostNonZeroData &&
-                                     IsLastOrHasAlwaysOrWasForceDeleted())) {
-      // Track that we're doing a FROM transfer for this pointer
-      // NOTE: If we don't care about the case of multiple different maps with
-      // from, always, or multiple map(from)s seen after a map(delete), e.g.
-      // ... map(always, from: x) map(always, from: x)
-      // ... map(delete: x) map(from: x) map(from: x)
-      // Then we can forego tacking TransferredFromPtrs.
-      StateInfo->TransferredFromPtrs.insert(HstPtrBegin);
-
+    if (IsMapFromOnNonHostNonZeroData && IsLastOrHasAlwaysOrWasReleased()) {
       Ret = PerformFromRetrieval(HstPtrBegin, TgtPtrBegin, DataSize,
                                  TPR.getEntry());
       if (Ret != OFFLOAD_SUCCESS)
         return OFFLOAD_FAIL;
-    } else if (!FromCopyBackAlreadyDone &&
-               (IsMapFromOnNonHostNonZeroData &&
-                !IsLastOrHasAlwaysOrWasForceDeleted())) {
+    } else if (IsMapFromOnNonHostNonZeroData) {
       // We can have cases like the following:
       //   p1 = p2 = &x;
       //  ... map(storage: p1[:]) map(from: p2[1:1])
@@ -1307,13 +1317,18 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       // list item, one is the containing structure of the other, at least one
       // is an assumed-size array, or at least one is implicitly mapped due to
       // the list item also appearing in a use_device_addr clause.
-      StateInfo->SkippedFromEntries[HstPtrBegin] = DataSize;
+      StateInfo->addSkippedFromEntry(HstPtrBegin, DataSize);
       ODBG(ODT_Mapping) << "Skipping FROM map transfer for HstPtr="
-                        << HstPtrBegin << " size=" << DataSize;
-    } else if (!FromCopyBackAlreadyDone && TPR.Flags.IsLast) {
-      // Even if this is not a FROM entry, if the ref-count went to
-      // zero (IsLast=true), we should perform any previously skipped FROM
-      // transfers that fall within this entry's range.
+                        << HstPtrBegin << " size=" << DataSize
+                        << " (IsLast=" << TPR.Flags.IsLast << ", TotalRefCount="
+                        << TPR.getEntry()->getTotalRefCount() << ")";
+    }
+
+    // If the ref-count went to zero (IsLast=true), check if any previously
+    // skipped FROM entries fall within this released entry's range.
+    if (TPR.Flags.IsLast && !StateInfo->SkippedFromEntries.empty()) {
+      uintptr_t ReleasedBeginPtrInt = TPR.getEntry()->HstPtrBegin;
+      uintptr_t ReleasedEndPtrInt = TPR.getEntry()->HstPtrEnd;
       SmallVector<void *, 32> ToRemove;
 
       for (auto &SkippedFromEntry : StateInfo->SkippedFromEntries) {
@@ -1321,20 +1336,18 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         int64_t FromDataSize = SkippedFromEntry.second;
         uintptr_t FromBeginPtrInt = reinterpret_cast<uintptr_t>(FromBeginPtr);
 
-        uintptr_t DeleteBeginPtrInt = TPR.getEntry()->HstPtrBegin;
-        uintptr_t DeleteEndPtrInt = TPR.getEntry()->HstPtrEnd;
-
-        // Check if skipped entry overlaps or is contained within current entry
-        if (FromBeginPtrInt >= DeleteBeginPtrInt &&
-            FromBeginPtrInt < DeleteEndPtrInt) {
+        // Check if this skipped FROM entry's starting pointer falls within this
+        // released entry
+        if (FromBeginPtrInt >= ReleasedBeginPtrInt &&
+            FromBeginPtrInt < ReleasedEndPtrInt) {
           ODBG(ODT_Mapping)
               << "Found skipped FROM entry: HstPtr=" << FromBeginPtr
-              << " size=" << FromDataSize << " within region being deleted ["
-              << reinterpret_cast<void *>(DeleteBeginPtrInt) << ", "
-              << reinterpret_cast<void *>(DeleteEndPtrInt) << ")";
+              << " size=" << FromDataSize << " within region being released ["
+              << reinterpret_cast<void *>(ReleasedBeginPtrInt) << ", "
+              << reinterpret_cast<void *>(ReleasedEndPtrInt) << ")";
 
           // Calculate offset within the target pointer
-          int64_t Offset = FromBeginPtrInt - DeleteBeginPtrInt;
+          int64_t Offset = FromBeginPtrInt - ReleasedBeginPtrInt;
           void *FromTgtBeginPtr =
               static_cast<void *>(static_cast<char *>(TgtPtrBegin) + Offset);
 
@@ -1345,7 +1358,6 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
           if (Ret != OFFLOAD_SUCCESS)
             return OFFLOAD_FAIL;
 
-          StateInfo->TransferredFromPtrs.insert(FromBeginPtr);
           ToRemove.push_back(FromBeginPtr);
         }
       }

@@ -512,12 +512,16 @@ struct StateInfoTy {
   llvm::DenseMap<void *, int64_t> SkippedFromEntries;
 
   /// Host pointers for which we have triggered a FROM transfer at some point
-  /// during targetDataEnd. Used to avoid duplicate transfers.
-  llvm::SmallSet<void *, 32> TransferredFromPtrs;
+  /// during targetDataEnd. It's used to avoid duplicate transfers.
+  /// Key: host pointer, Value: transferred size.
+  llvm::DenseMap<void *, int64_t> TransferredFromEntries;
 
-  /// Starting host address and size of the DELETE entries previouly processed
-  /// for the current region. Key: host pointer, Value: allocated size.
-  llvm::DenseMap<void *, int64_t> DeleteEntries;
+  /// Starting host address and size of entries whose ref-count went to zero.
+  /// This includes entries released through explicit DELETE, or normal
+  /// ref-count decrements. It's used to ensure transfers are performed for FROM
+  /// entries whose ref-count is already zero when the entry is encountered.
+  /// Key: host pointer, Value: size.
+  llvm::DenseMap<void *, int64_t> ReleasedEntries;
 
   StateInfoTy() = default;
 
@@ -525,16 +529,75 @@ struct StateInfoTy {
   StateInfoTy(const StateInfoTy &) = delete;
   StateInfoTy &operator=(const StateInfoTy &) = delete;
 
+private:
+  /// Helper to find an entry in \p EntryMap that contains the pointer.
+  /// Returns the matching entry if found, otherwise std::nullopt.
+  std::optional<std::pair<void *, int64_t>>
+  findEntryForPtr(void *Ptr,
+                  const llvm::DenseMap<void *, int64_t> &EntryMap) const {
+    for (const auto &Entry : EntryMap) {
+      void *EntryBegin = Entry.first;
+      int64_t EntrySize = Entry.second;
+      if (Ptr >= EntryBegin &&
+          Ptr < static_cast<void *>(static_cast<char *>(EntryBegin) +
+                                    EntrySize)) {
+        return Entry;
+      }
+    }
+    return std::nullopt;
+  }
+
+public:
   /// Check if a pointer falls within any of the newly allocated ranges.
-  /// Returns true if the pointer is within a newly allocated region.
-  bool wasNewlyAllocated(void *Ptr) const {
-    return llvm::any_of(NewAllocations, [&](const auto &Alloc) {
-      void *AllocPtr = Alloc.first;
-      int64_t AllocSize = Alloc.second;
-      return Ptr >= AllocPtr &&
-             Ptr <
-                 static_cast<void *>(static_cast<char *>(AllocPtr) + AllocSize);
-    });
+  /// Returns the matching entry if found, otherwise std::nullopt.
+  std::optional<std::pair<void *, int64_t>> wasNewlyAllocated(void *Ptr) const {
+    return findEntryForPtr(Ptr, NewAllocations);
+  }
+
+  /// Check if a pointer range [Ptr, Ptr+Size) is fully contained within any
+  /// previously completed FROM transfer.
+  /// Returns the matching entry if found, otherwise std::nullopt.
+  std::optional<std::pair<void *, int64_t>>
+  wasTransferredFrom(void *Ptr, int64_t Size) const {
+    uintptr_t CheckBegin = reinterpret_cast<uintptr_t>(Ptr);
+    uintptr_t CheckEnd = CheckBegin + Size;
+
+    for (const auto &Entry : TransferredFromEntries) {
+      void *RangePtr = Entry.first;
+      int64_t RangeSize = Entry.second;
+      uintptr_t RangeBegin = reinterpret_cast<uintptr_t>(RangePtr);
+      uintptr_t RangeEnd = RangeBegin + RangeSize;
+
+      if (CheckBegin >= RangeBegin && CheckEnd <= RangeEnd) {
+        return Entry;
+      }
+    }
+    return std::nullopt;
+  }
+
+  /// Check if a pointer falls within any released entry's range.
+  /// Returns the matching entry if found, otherwise std::nullopt.
+  std::optional<std::pair<void *, int64_t>>
+  wasPreviouslyReleased(void *Ptr) const {
+    return findEntryForPtr(Ptr, ReleasedEntries);
+  }
+
+  /// Add a skipped FROM entry. Only updates the entry if this is a new pointer
+  /// or if the new size is larger than the existing entry.
+  void addSkippedFromEntry(void *Ptr, int64_t Size) {
+    auto It = SkippedFromEntries.find(Ptr);
+    if (It == SkippedFromEntries.end() || Size > It->second) {
+      SkippedFromEntries[Ptr] = Size;
+    }
+  }
+
+  /// Add a transferred FROM entry. Only updates the entry if this is a new
+  /// pointer or if the new size is larger than the existing entry.
+  void addTransferredFromEntry(void *Ptr, int64_t Size) {
+    auto It = TransferredFromEntries.find(Ptr);
+    if (It == TransferredFromEntries.end() || Size > It->second) {
+      TransferredFromEntries[Ptr] = Size;
+    }
   }
 };
 

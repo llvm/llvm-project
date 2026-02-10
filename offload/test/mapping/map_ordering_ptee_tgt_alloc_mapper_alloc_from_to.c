@@ -40,7 +40,7 @@ int main() {
   }
 
   // clang-format off
-  // DEBUG: omptarget --> Found skipped FROM entry: HstPtr=0x{{0*}}[[#HOST_ADDRX]] size=[[#SIZEX]] within region being deleted
+  // DEBUG: omptarget --> Found skipped FROM entry: HstPtr=0x{{0*}}[[#HOST_ADDRX]] size=[[#SIZEX]] within region being released
   // DEBUG: omptarget --> Moving [[#SIZEX]] bytes (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDRX]])
   // clang-format on
   printf("%d\n", s1.p[1]); // CHECK: 222
