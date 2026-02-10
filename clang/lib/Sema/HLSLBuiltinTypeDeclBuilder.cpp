@@ -22,6 +22,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaHLSL.h"
@@ -1602,6 +1603,56 @@ BuiltinTypeDeclBuilder::addGetDimensionsMethodForBuffer() {
       .addParam("dim", UIntTy, HLSLParamModifierAttr::Keyword_out)
       .callBuiltin("__builtin_hlsl_resource_getdimensions_x", QualType(),
                    PH::Handle, PH::_0)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addInterlockedMethodsForBuffer() {
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  ASTContext &AST = SemaRef.getASTContext();
+  QualType UIntTy = AST.UnsignedIntTy;
+
+  BuiltinTypeMethodBuilder(*this, "InterlockedOr", AST.VoidTy)
+      .addParam("dest", UIntTy, HLSLParamModifierAttr::Keyword_in)
+      .addParam("value", UIntTy, HLSLParamModifierAttr::Keyword_in)
+      .callBuiltin("__builtin_hlsl_interlocked_or", QualType(), PH::Handle,
+                   PH::_0, PH::_1)
+      .finalize();
+
+  return BuiltinTypeMethodBuilder(*this, "InterlockedOr", AST.VoidTy)
+      .addParam("dest", UIntTy, HLSLParamModifierAttr::Keyword_in)
+      .addParam("value", UIntTy, HLSLParamModifierAttr::Keyword_in)
+      .addParam("original_value", UIntTy, HLSLParamModifierAttr::Keyword_out)
+      .callBuiltin("__builtin_hlsl_interlocked_or_ret", UIntTy, PH::Handle,
+                   PH::_0, PH::_1, PH::_2)
+      .finalize();
+}
+
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addInterlocked64MethodsForBuffer() {
+  ASTContext &AST = SemaRef.getASTContext();
+  VersionTuple TargetVersion = AST.getTargetInfo().getTriple().getOSVersion();
+  bool IsDXIL = AST.getTargetInfo().getTriple().getArch() == llvm::Triple::dxil;
+  if (TargetVersion < VersionTuple(6, 6) && IsDXIL)
+    return *this;
+
+  using PH = BuiltinTypeMethodBuilder::PlaceHolder;
+  QualType UIntTy = AST.UnsignedIntTy;
+  QualType ULongTy = AST.UnsignedLongTy;
+
+  BuiltinTypeMethodBuilder(*this, "InterlockedOr64", AST.VoidTy)
+      .addParam("dest", UIntTy, HLSLParamModifierAttr::Keyword_in)
+      .addParam("value", ULongTy, HLSLParamModifierAttr::Keyword_in)
+      .callBuiltin("__builtin_hlsl_interlocked_or64", QualType(), PH::Handle,
+                   PH::_0, PH::_1)
+      .finalize();
+
+  return BuiltinTypeMethodBuilder(*this, "InterlockedOr64", AST.VoidTy)
+      .addParam("dest", UIntTy, HLSLParamModifierAttr::Keyword_in)
+      .addParam("value", ULongTy, HLSLParamModifierAttr::Keyword_in)
+      .addParam("original_value", ULongTy, HLSLParamModifierAttr::Keyword_out)
+      .callBuiltin("__builtin_hlsl_interlocked_or_ret64", ULongTy, PH::Handle,
+                   PH::_0, PH::_1, PH::_2)
       .finalize();
 }
 

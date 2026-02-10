@@ -3325,6 +3325,21 @@ static bool CheckVectorElementCount(Sema *S, QualType PassedType,
   return false;
 }
 
+static bool CheckShaderModelVersion(Sema *S, CallExpr *TheCall,
+                                    VersionTuple MinimumSMVersion) {
+  bool IsDXIL = S->getASTContext().getTargetInfo().getTriple().getArch() ==
+                llvm::Triple::dxil;
+  llvm::VersionTuple SMVersion =
+      S->getASTContext().getTargetInfo().getTriple().getOSVersion();
+  if (SMVersion < MinimumSMVersion && IsDXIL) {
+    S->Diag(TheCall->getBeginLoc(),
+            diag::err_hlsl_intrinsic_in_wrong_shader_model)
+        << TheCall << MinimumSMVersion.getAsString();
+    return true;
+  }
+  return false;
+}
+
 // Note: returning true in this case results in CheckBuiltinFunctionCall
 // returning an ExprError
 bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
@@ -3922,6 +3937,170 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     SetElementTypeAsReturnType(&SemaRef, TheCall,
                                getASTContext().UnsignedIntTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_or: {
+    if (SemaRef.checkArgCountRange(TheCall, 3, 4))
+      return true;
+    auto checkResTy = [this](const HLSLAttributedResourceType *ResTy) -> bool {
+      bool IsValid = false;
+      const ASTContext &AST = SemaRef.getASTContext();
+      // The resource handle must be either
+      // RWByteAddressBuffer or RWStructuredBuffer
+      IsValid |= ResTy->getAttrs().ResourceClass == ResourceClass::UAV &&
+                 ResTy->isRaw() && ResTy->hasContainedType();
+      // RWBuffer<int> or RWBuffer<uint>
+      IsValid |= ResTy->getAttrs().ResourceClass == ResourceClass::UAV &&
+                 !ResTy->isRaw() && ResTy->hasContainedType() &&
+                 (ResTy->getContainedType() == AST.IntTy ||
+                  ResTy->getContainedType() == AST.UnsignedIntTy);
+      // RWTexture<int> or RWTexture<uint> (any dimension)
+      IsValid |= ResTy->getAttrs().ResourceClass == ResourceClass::UAV &&
+                 !ResTy->isRaw() &&
+                 ResTy->getAttrs().ResourceDimension !=
+                     llvm::dxil::ResourceDimension::Unknown &&
+                 (ResTy->getContainedType() == AST.IntTy ||
+                  ResTy->getContainedType() == AST.UnsignedIntTy);
+      return !IsValid;
+    };
+    if (CheckResourceHandle(&SemaRef, TheCall, 0, checkResTy))
+      return true;
+
+    if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2),
+                            SemaRef.getASTContext().UnsignedIntTy))
+      return true;
+    // We will have a second index if handling a RWStructuredBuffer
+    if (TheCall->getNumArgs() == 4)
+      if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(3),
+                              SemaRef.getASTContext().UnsignedIntTy))
+        return true;
+
+    TheCall->setType(SemaRef.getASTContext().VoidTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret: {
+    if (SemaRef.checkArgCountRange(TheCall, 4, 5))
+      return true;
+    auto checkResTy = [this](const HLSLAttributedResourceType *ResTy) -> bool {
+      bool IsValid = false;
+      const ASTContext &AST = SemaRef.getASTContext();
+      // The resource handle must be either
+      // RWByteAddressBuffer or RWStructuredBuffer
+      IsValid |= ResTy->getAttrs().ResourceClass == ResourceClass::UAV &&
+                 ResTy->getAttrs().RawBuffer && ResTy->hasContainedType();
+      // RWBuffer<int> or RWBuffer<uint>
+      IsValid |= ResTy->getAttrs().ResourceClass == ResourceClass::UAV &&
+                 !ResTy->getAttrs().RawBuffer && ResTy->hasContainedType() &&
+                 (ResTy->getContainedType() == AST.IntTy ||
+                  ResTy->getContainedType() == AST.UnsignedIntTy);
+      // TODO: Handle Texture types when implemented
+      return !IsValid;
+    };
+    if (CheckResourceHandle(&SemaRef, TheCall, 0, checkResTy))
+      return true;
+
+    if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2),
+                            SemaRef.getASTContext().UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(3),
+                            SemaRef.getASTContext().UnsignedIntTy))
+      return true;
+    // We will have a second index if handling a RWStructuredBuffer
+    if (TheCall->getNumArgs() == 5)
+      if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(4),
+                              SemaRef.getASTContext().UnsignedIntTy))
+        return true;
+
+    TheCall->setType(SemaRef.getASTContext().UnsignedIntTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_or64: {
+    if (SemaRef.checkArgCountRange(TheCall, 3, 4))
+      return true;
+    if (CheckShaderModelVersion(&SemaRef, TheCall, VersionTuple(6, 6)))
+      return true;
+    auto checkResTy = [this](const HLSLAttributedResourceType *ResTy) -> bool {
+      bool IsValid = false;
+      const ASTContext &AST = SemaRef.getASTContext();
+      // The resource handle must be either
+      // RWByteAddressBuffer or RWStructuredBuffer
+      IsValid |= ResTy->getAttrs().ResourceClass == ResourceClass::UAV &&
+                 ResTy->getAttrs().RawBuffer && ResTy->hasContainedType();
+      // RWBuffer<int> or RWBuffer<uint>
+      IsValid |= ResTy->getAttrs().ResourceClass == ResourceClass::UAV &&
+                 !ResTy->getAttrs().RawBuffer && ResTy->hasContainedType() &&
+                 (ResTy->getContainedType() == AST.LongTy ||
+                  ResTy->getContainedType() == AST.UnsignedLongTy);
+      // TODO: Handle Texture types when implemented
+      return !IsValid;
+    };
+    if (CheckResourceHandle(&SemaRef, TheCall, 0, checkResTy))
+      return true;
+
+    if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy))
+      return true;
+    // We will have a second index if handling a RWStructuredBuffer
+    if (TheCall->getNumArgs() == 4) {
+      if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(2),
+                              SemaRef.getASTContext().UnsignedIntTy) ||
+          CheckArgTypeMatches(&SemaRef, TheCall->getArg(3),
+                              SemaRef.getASTContext().UnsignedLongTy))
+        return true;
+    } else {
+      if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(2),
+                              SemaRef.getASTContext().UnsignedLongTy))
+        return true;
+    }
+
+    TheCall->setType(SemaRef.getASTContext().VoidTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret64: {
+    if (SemaRef.checkArgCountRange(TheCall, 4, 5))
+      return true;
+    if (CheckShaderModelVersion(&SemaRef, TheCall, VersionTuple(6, 6)))
+      return true;
+    auto checkResTy = [this](const HLSLAttributedResourceType *ResTy) -> bool {
+      bool IsValid = false;
+      const ASTContext &AST = SemaRef.getASTContext();
+      // The resource handle must be either
+      // RWByteAddressBuffer or RWStructuredBuffer
+      IsValid |= ResTy->getAttrs().ResourceClass == ResourceClass::UAV &&
+                 ResTy->getAttrs().RawBuffer && ResTy->hasContainedType();
+      // RWBuffer<int> or RWBuffer<uint>
+      IsValid |= ResTy->getAttrs().ResourceClass == ResourceClass::UAV &&
+                 !ResTy->getAttrs().RawBuffer && ResTy->hasContainedType() &&
+                 (ResTy->getContainedType() == AST.LongTy ||
+                  ResTy->getContainedType() == AST.UnsignedLongTy);
+      // TODO: Handle Texture types when implemented
+      return !IsValid;
+    };
+    if (CheckResourceHandle(&SemaRef, TheCall, 0, checkResTy))
+      return true;
+
+    if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(1),
+                            SemaRef.getASTContext().UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(3),
+                            SemaRef.getASTContext().UnsignedLongTy))
+      return true;
+    // We will have a second index if handling a RWStructuredBuffer
+    if (TheCall->getNumArgs() == 5) {
+      if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(2),
+                              SemaRef.getASTContext().UnsignedIntTy) ||
+          CheckArgTypeMatches(&SemaRef, TheCall->getArg(4),
+                              SemaRef.getASTContext().UnsignedLongTy))
+        return true;
+    } else {
+      if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(2),
+                              SemaRef.getASTContext().UnsignedLongTy))
+        return true;
+    }
+
+    TheCall->setType(SemaRef.getASTContext().UnsignedLongTy);
     break;
   }
   }
