@@ -123,16 +123,12 @@ bool RISCVPostRAExpandPseudo::expandMovAddr(MachineBasicBlock &MBB,
 
 /// Transfer implicit operands on the pseudo instruction to the
 /// instructions created from the expansion.
-static void transferImpOps(MachineInstr &OldMI, MachineInstrBuilder &UseMI,
-                           MachineInstrBuilder &DefMI) {
+static void transferImpOps(MachineInstr &OldMI, MachineInstrBuilder &MI) {
   const MCInstrDesc &Desc = OldMI.getDesc();
   for (const MachineOperand &MO :
        llvm::drop_begin(OldMI.operands(), Desc.getNumOperands())) {
     assert(MO.isReg() && MO.getReg());
-    if (MO.isUse())
-      UseMI.add(MO);
-    else
-      DefMI.add(MO);
+    MI.add(MO);
   }
 }
 

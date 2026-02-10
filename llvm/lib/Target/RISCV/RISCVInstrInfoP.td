@@ -1517,6 +1517,7 @@ def riscv_mulhr : RVSDNode<"MULHR", SDTIntBinOp>;
 def riscv_mulhru : RVSDNode<"MULHRU", SDTIntBinOp>;
 def riscv_mulhrsu : RVSDNode<"MULHRSU", SDTIntBinOp>;
 
+// Bitwise merge: res = (~op0 & op1) | (op0 & op2)
 def SDT_RISCVMERGE : SDTypeProfile<1, 3, [SDTCisInt<0>,
                                           SDTCisSameAs<0, 1>,
                                           SDTCisSameAs<0, 2>,
@@ -1535,6 +1536,7 @@ let Predicates = [HasStdExtP] in {
 
   // Pseudo version of MERGE without the tied constraint. Will be expanded to
   // MERGE, MVM, or MVMN after register allocation.
+  // dst = (~rd & rs1) | (rd & rs2)
   def PseudoMERGE : Pseudo<(outs GPR:$dst), (ins GPR:$rd, GPR:$rs1, GPR:$rs2),
                            []>;
   def : Pat<(XLenVT (or (and GPR:$rd, GPR:$rs2), (and (not GPR:$rd), GPR:$rs1))),
