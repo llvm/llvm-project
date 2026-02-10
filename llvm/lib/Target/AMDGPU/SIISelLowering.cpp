@@ -11234,6 +11234,19 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     return DAG.getAtomic(Opcode, SDLoc(Op), M->getMemoryVT(), M->getVTList(),
                          Ops, M->getMemOperand());
   }
+  case Intrinsic::amdgcn_s_alloc_vgpr: {
+    SDValue NumVGPRs = Op.getOperand(2);
+    if (!NumVGPRs->isDivergent())
+      return Op;
+
+    SDValue ReadFirstLaneID =
+        DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, DL, MVT::i32);
+    NumVGPRs = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                           ReadFirstLaneID, NumVGPRs);
+
+    return DAG.getNode(ISD::INTRINSIC_W_CHAIN, DL, Op->getVTList(),
+                       Op.getOperand(0), Op.getOperand(1), NumVGPRs);
+  }
   case Intrinsic::amdgcn_s_get_barrier_state:
   case Intrinsic::amdgcn_s_get_named_barrier_state: {
     SDValue Chain = Op->getOperand(0);

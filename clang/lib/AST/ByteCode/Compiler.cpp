@@ -2255,6 +2255,10 @@ static CharUnits AlignOfType(QualType T, const ASTContext &ASTCtx,
 template <class Emitter>
 bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
     const UnaryExprOrTypeTraitExpr *E) {
+
+  if (E->containsErrors())
+    return false;
+
   UnaryExprOrTypeTrait Kind = E->getKind();
   const ASTContext &ASTCtx = Ctx.getASTContext();
 
@@ -4096,7 +4100,6 @@ bool Compiler<Emitter>::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
   if (E->getNumSubExprs() == 2)
     return this->emitInvalid(E);
 
-  assert(Initializing);
   assert(E->getNumSubExprs() > 2);
 
   const Expr *Vecs[] = {E->getExpr(0), E->getExpr(1)};
@@ -4105,6 +4108,14 @@ bool Compiler<Emitter>::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
   unsigned NumInputElems = VT->getNumElements();
   unsigned NumOutputElems = E->getNumSubExprs() - 2;
   assert(NumOutputElems > 0);
+
+  if (!Initializing) {
+    UnsignedOrNone LocalIndex = allocateLocal(E);
+    if (!LocalIndex)
+      return false;
+    if (!this->emitGetPtrLocal(*LocalIndex, E))
+      return false;
+  }
 
   // Save both input vectors to a local variable.
   unsigned VectorOffsets[2];
@@ -4133,6 +4144,9 @@ bool Compiler<Emitter>::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
     if (!this->emitInitElem(ElemT, I, E))
       return false;
   }
+
+  if (DiscardResult)
+    return this->emitPopPtr(E);
 
   return true;
 }

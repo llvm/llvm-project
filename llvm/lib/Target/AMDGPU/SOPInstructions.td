@@ -433,8 +433,10 @@ let SubtargetPredicate = isGFX11Plus in {
 } // End SubtargetPredicate = isGFX11Plus
 
 let SubtargetPredicate = isGFX12Plus in {
-  let hasSideEffects = 1, Defs = [SCC] in {
-    def S_ALLOC_VGPR : SOP1_0_32 <"s_alloc_vgpr">;
+  let hasSideEffects = 1, isConvergent = 1, Defs = [SCC] in {
+    def S_ALLOC_VGPR : SOP1_0_32 <"s_alloc_vgpr",
+      [(set SCC, (int_amdgcn_s_alloc_vgpr SSrc_b32:$src0))]
+    >;
   }
 } // End SubtargetPredicate = isGFX12Plus
 

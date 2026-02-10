@@ -19,6 +19,7 @@
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/ExtensibleRTTI.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <vector>
 
@@ -30,7 +31,8 @@ class EntityName;
 class EntitySummary;
 
 /// Abstract base class for serialization formats.
-class SerializationFormat {
+class SerializationFormat
+    : public llvm::RTTIExtends<SerializationFormat, llvm::RTTIRoot> {
 protected:
   // Helpers providing access to implementation details of basic data structures
   // for efficient serialization/deserialization.
@@ -60,6 +62,8 @@ public:
 
   virtual void writeTUSummary(const TUSummary &Summary,
                               llvm::StringRef OutputDir) = 0;
+
+  static char ID; // For RTTIExtends.
 
 protected:
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;

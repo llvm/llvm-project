@@ -72,3 +72,5 @@ SerializationFormat::getData(const TUSummary &S) {
 decltype(TUSummary::Data) &SerializationFormat::getData(TUSummary &S) {
   return S.Data;
 }
+
+char SerializationFormat::ID = 0;

@@ -2401,6 +2401,22 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
     return selectDSBvhStackIntrinsic(I);
+  case Intrinsic::amdgcn_s_alloc_vgpr: {
+    // S_ALLOC_VGPR doesn't have a destination register, it just implicitly sets
+    // SCC. We then need to COPY it into the result vreg.
+    MachineBasicBlock *MBB = I.getParent();
+    const DebugLoc &DL = I.getDebugLoc();
+
+    Register ResReg = I.getOperand(0).getReg();
+
+    MachineInstr *AllocMI = BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_ALLOC_VGPR))
+                                .add(I.getOperand(2));
+    (void)BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), ResReg)
+        .addReg(AMDGPU::SCC);
+    I.eraseFromParent();
+    constrainSelectedInstRegOperands(*AllocMI, TII, TRI, RBI);
+    return RBI.constrainGenericRegister(ResReg, AMDGPU::SReg_32RegClass, *MRI);
+  }
   case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_signal_var:
     return selectNamedBarrierInit(I, IntrinsicID);
