@@ -554,6 +554,40 @@ void applyExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+static bool matchSubAddMulReassoc(Register Mul1, Register Mul2, Register Sub,
+                                  Register Src, MachineRegisterInfo &MRI) {
+  if (!MRI.hasOneUse(Sub))
+    return false;
+  if (getIConstantVRegValWithLookThrough(Src, MRI))
+    return false;
+  MachineInstr *M1 = getDefIgnoringCopies(Mul1, MRI);
+  if (M1->getOpcode() != AArch64::G_MUL &&
+      M1->getOpcode() != AArch64::G_SMULL &&
+      M1->getOpcode() != AArch64::G_UMULL)
+    return false;
+  MachineInstr *M2 = getDefIgnoringCopies(Mul2, MRI);
+  if (M2->getOpcode() != AArch64::G_MUL &&
+      M2->getOpcode() != AArch64::G_SMULL &&
+      M2->getOpcode() != AArch64::G_UMULL)
+    return false;
+  return true;
+}
+
+static void applySubAddMulReassoc(MachineInstr &MI, MachineInstr &Sub,
+                                  MachineRegisterInfo &MRI, MachineIRBuilder &B,
+                                  GISelChangeObserver &Observer) {
+  Register Src = MI.getOperand(1).getReg();
+  Register Tmp = MI.getOperand(2).getReg();
+  Register Mul1 = Sub.getOperand(1).getReg();
+  Register Mul2 = Sub.getOperand(2).getReg();
+  Observer.changingInstr(MI);
+  B.buildInstr(AArch64::G_SUB, {Tmp}, {Src, Mul1});
+  MI.getOperand(1).setReg(Tmp);
+  MI.getOperand(2).setReg(Mul2);
+  Sub.eraseFromParent();
+  Observer.changingInstr(MI);
+}
+
 class AArch64PostLegalizerCombinerImpl : public Combiner {
 protected:
   const CombinerHelper Helper;
