@@ -138,40 +138,35 @@ trySplitLastAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
 // If detected, returns the corresponding (tensor dim, grid axes) pair, where
 // the "grid axes" are the removed trailing split axes.
 static std::optional<std::tuple<int64_t, SmallVector<GridAxis>>>
-detectUnsplitLastAxesInResharding(const Sharding &sourceSharding,
-                                  const Sharding &targetSharding) {
-  for (size_t tensorDim = 0; tensorDim < sourceSharding.getSplitAxes().size();
-       ++tensorDim) {
-    if (targetSharding.getSplitAxes().size() > tensorDim) {
+detectUnsplitLastAxesInResharding(const Sharding &srcSharding,
+                                  const Sharding &tgtSharding) {
+  size_t dimOff = 0;
+  size_t srcSize = srcSharding.getSplitAxes().size();
+  for (size_t tensorDim = 0; tensorDim < srcSize; ++tensorDim) {
+    auto srcSplitAxes = srcSharding.getSplitAxes()[tensorDim].asArrayRef();
+    if (tgtSharding.getSplitAxes().size() > tensorDim) {
+      auto tgtSplitAxes = tgtSharding.getSplitAxes()[tensorDim].asArrayRef();
       // No match if the target sharding does not have less split axes than the
       // source sharding along the current tensor dimension.
-      if (sourceSharding.getSplitAxes()[tensorDim].size() <=
-          targetSharding.getSplitAxes()[tensorDim].size())
+      if (srcSplitAxes.size() <= tgtSplitAxes.size())
         continue;
       // No match if the split axes of the target sharding are different from
       // the first split axes of the source sharding.
-      if (!std::equal(
-              targetSharding.getSplitAxes()[tensorDim].asArrayRef().begin(),
-              targetSharding.getSplitAxes()[tensorDim].asArrayRef().end(),
-              sourceSharding.getSplitAxes()[tensorDim].asArrayRef().begin()))
+      if (!std::equal(tgtSplitAxes.begin(), tgtSplitAxes.end(),
+                      srcSplitAxes.begin()))
         continue;
+      dimOff = tgtSplitAxes.size();
     } else {
       // Here the target dimension is replicated; there is nothing to do if the
       // source dimension is also replicated.
-      if (sourceSharding.getSplitAxes()[tensorDim].size() == 0)
+      if (srcSplitAxes.size() == 0)
         continue;
+      dimOff = 0;
     }
     // This is a match. Return the current tensor dimension and the trailing
     // grid axis of the source sharding along this dimension.
-    SmallVector<GridAxis> unsplitAxes;
-    size_t dimOff = tensorDim >= targetSharding.getSplitAxes().size()
-                        ? 0
-                        : targetSharding.getSplitAxes()[tensorDim].size();
-    for (auto a =
-             sourceSharding.getSplitAxes()[tensorDim].asArrayRef().begin() +
-             dimOff;
-         a != sourceSharding.getSplitAxes()[tensorDim].asArrayRef().end(); ++a)
-      unsplitAxes.push_back(*a);
+    ArrayRef<GridAxis> trailingAxes = srcSplitAxes.drop_front(dimOff);
+    SmallVector<GridAxis> unsplitAxes(trailingAxes.begin(), trailingAxes.end());
     return std::make_tuple(tensorDim, unsplitAxes);
   }
   return std::nullopt;
