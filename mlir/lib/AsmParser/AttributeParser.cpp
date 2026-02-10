@@ -253,7 +253,6 @@ OptionalParseResult Parser::parseOptionalAttribute(Attribute &attribute,
   case Token::kw_dense:
   case Token::kw_dense_resource:
   case Token::kw_false:
-  case Token::kw_loc:
   case Token::kw_sparse:
   case Token::kw_true:
   case Token::kw_unit:
