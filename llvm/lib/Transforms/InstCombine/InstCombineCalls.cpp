@@ -3671,6 +3671,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           continue;
         return CallBase::removeOperandBundle(II, OBU.getTagID());
       }
+
+      if (OBU.getTagName() == "nonnull" && OBU.Inputs.size() == 1) {
+        RetainedKnowledge RK = getKnowledgeFromOperandInAssume(
+            *cast<AssumeInst>(II), II->arg_size() + Idx);
+        if (!RK || RK.AttrKind != Attribute::NonNull ||
+            !isKnownNonZero(RK.WasOn,
+                            getSimplifyQuery().getWithInstruction(II)))
+          continue;
+        return CallBase::removeOperandBundle(II, OBU.getTagID());
+      }
     }
 
     // Convert nonnull assume like:
