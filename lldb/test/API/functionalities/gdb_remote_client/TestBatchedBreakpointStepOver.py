@@ -29,7 +29,7 @@ class TestBatchedBreakpointStepOver(GDBRemoteTestBase):
             def __init__(self):
                 MockGDBServerResponder.__init__(self)
                 self.resume_count = 0
-                # Track which threads have completed their step
+                # Track which threads have completed their step.
                 self.stepped_threads = set()
 
             def qSupported(self, client_supported):
@@ -133,7 +133,7 @@ class TestBatchedBreakpointStepOver(GDBRemoteTestBase):
                 report_tid = stepping_tids[0] if stepping_tids else TIDS[0]
                 threads_str = ",".join("{:x}".format(t) for t in TIDS)
                 if all_done:
-                    # All threads moved past breakpoint
+                    # All threads moved past breakpoint.
                     pcs_str = ",".join("{:x}".format(STEPPED_PC) for _ in TIDS)
                 else:
                     # Stepped threads moved, others still at breakpoint.
@@ -161,7 +161,7 @@ class TestBatchedBreakpointStepOver(GDBRemoteTestBase):
         # Continue, LLDB should step all threads over the breakpoint.
         process.Continue()
 
-        # Collect packets from the log
+        # Collect packets from the log.
         received = self.server.responder.packetLog.get_received()
 
         bp_addr_hex = "{:x}".format(BP_ADDR)

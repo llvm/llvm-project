@@ -913,11 +913,12 @@ void ThreadList::RegisterThreadSteppingOverBreakpoint(addr_t breakpoint_addr,
   m_threads_stepping_over_bp[breakpoint_addr].insert(tid);
 
   Log *log = GetLog(LLDBLog::Step);
-  LLDB_LOGF(log,
-            "ThreadList::%s: Registered thread 0x%" PRIx64
-            " stepping over breakpoint at 0x%" PRIx64 " (now %zu threads)",
-            __FUNCTION__, tid, breakpoint_addr,
-            m_threads_stepping_over_bp[breakpoint_addr].size());
+  LLDB_LOGF(
+      log,
+      "ThreadList::%s: Registered thread 0x%" PRIx64
+      " stepping over breakpoint at 0x%" PRIx64 " (now %zu threads)",
+      __FUNCTION__, tid, breakpoint_addr,
+      static_cast<size_t>(m_threads_stepping_over_bp[breakpoint_addr].size()));
 }
 
 void ThreadList::ThreadFinishedSteppingOverBreakpoint(addr_t breakpoint_addr,
@@ -948,7 +949,8 @@ void ThreadList::ThreadFinishedSteppingOverBreakpoint(addr_t breakpoint_addr,
             "ThreadList::%s: Thread 0x%" PRIx64
             " finished stepping over breakpoint at 0x%" PRIx64
             " (%zu threads remaining)",
-            __FUNCTION__, tid, breakpoint_addr, it->second.size());
+            __FUNCTION__, tid, breakpoint_addr,
+            static_cast<size_t>(it->second.size()));
 
   // If no more threads are stepping over this breakpoint, re-enable it.
   if (it->second.empty()) {

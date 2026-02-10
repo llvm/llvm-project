@@ -65,7 +65,7 @@ class ConcurrentBatchedBreakpointStepOver(ConcurrentEventsBase):
         # Verify the deferred re-enable path was used: "finished stepping
         # over breakpoint" messages show threads completed via the tracking
         # mechanism. The last thread may use the direct path (when only 1
-        # hread remains, deferred is not set), so we expect at least N-1.
+        # thread remains, deferred is not set), so we expect at least N-1.
         finished_matches = re.findall(
             r"Thread 0x[0-9a-fA-F]+ finished stepping over breakpoint at "
             r"(0x[0-9a-fA-F]+)",
@@ -78,9 +78,9 @@ class ConcurrentBatchedBreakpointStepOver(ConcurrentEventsBase):
             "messages (deferred path), but got {}.".format(len(finished_matches)),
         )
 
-        # Count z0/Z0 packets for the thread breakpoint address
-        # z0 = remove (disable) software breakpoint
-        # Z0 = set (enable) software breakpoint
+        # Count z0/Z0 packets for the thread breakpoint address.
+        # z0 = remove (disable) software breakpoint.
+        # Z0 = set (enable) software breakpoint.
         # Strip the "0x" prefix and leading zeros to match the GDB packet
         # format (which uses lowercase hex without "0x" prefix).
         bp_addr_hex = thread_bp_addr[2:].lstrip("0") if thread_bp_addr else ""
