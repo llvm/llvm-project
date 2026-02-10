@@ -459,38 +459,21 @@ struct SgToWiMultiDimReduction
   LogicalResult
   matchAndRewrite(vector::MultiDimReductionOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
-    // If no layout, nothing to do.
-    if (!resLayout || !resLayout.isForSubgroup())
-      return failure();
-    VectorType sourceType = op.getSourceVectorType();
-    // Only 2D vectors are supported.
-    if (sourceType.getRank() != 2)
+    // Check if the reduction op is valid for distribution.
+    if (!isValidSubgroupMultiReductionOp(op))
       return rewriter.notifyMatchFailure(
-          op, "Expecting 2D source vector in vector::MultiDimReductionOp at "
-              "subgroup level.");
-    VectorType resVecTy = dyn_cast<VectorType>(op.getType());
-    if (!resVecTy)
-      return rewriter.notifyMatchFailure(op, "Expecting vector result type");
-    // Compute the distributed vector type based on the layout.
-    FailureOr<VectorType> resDistVecTyOrFailure =
-        getDistVecTypeBasedOnLaneLayout(resLayout, resVecTy);
-    if (failed(resDistVecTyOrFailure))
+          op,
+          "Not a valid subgroup multi reduction op that can be distributed.");
+    // Only lane-local reduction is handled here.
+    if (!isReductionLaneLocal(op))
       return rewriter.notifyMatchFailure(
-          op, "Failed to compute the distributed vector type based on the "
-              "layout.");
-    // Check if the reduction is single dim.
-    ArrayRef<int64_t> reductionDims = op.getReductionDims();
-    if (reductionDims.size() != 1)
-      return rewriter.notifyMatchFailure(
-          op, "Only 1 reduction dimension is supported.");
-    // Check if the reduction is lane-local. If not, distributed result type ==
-    // original result type. This case is handled by
-    // `LowerVectorMultiReductionPattern`.
-    if (resVecTy == resDistVecTyOrFailure.value())
-      return rewriter.notifyMatchFailure(
-          op, "Reduction is not lane-local, expected reduction dimension to be "
+          op, "Only lane-local reduction is supported, expected reduction "
+              "dimension to be "
               "not distributed.");
+    auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
+    VectorType resVecTy = dyn_cast<VectorType>(op.getType());
+    auto resDistVecTyOrFailure =
+        getDistVecTypeBasedOnLaneLayout(resLayout, resVecTy);
     // Simply create a new MultiDimReductionOp using adaptor operands and the
     // new result type.
     auto newOp = vector::MultiDimReductionOp::create(
